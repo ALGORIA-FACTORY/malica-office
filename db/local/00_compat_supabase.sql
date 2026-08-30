@@ -98,7 +98,11 @@ grant select, insert, update on auth.users to regalica_api;
 create or replace function auth.uid() returns uuid
 language sql
 stable
-as $$
+-- Chemin figé, comme toutes les autres fonctions du projet : cette fonction est
+-- lue par chacune des 195 politiques, et un chemin ouvert y serait le pire
+-- endroit possible.
+set search_path = ''
+as $
   select nullif(
     coalesce(
       current_setting('request.jwt.claim.sub', true),
@@ -111,7 +115,8 @@ $$;
 create or replace function auth.role() returns text
 language sql
 stable
-as $$
+set search_path = ''
+as $
   select coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), 'anon')
 $$;
 
