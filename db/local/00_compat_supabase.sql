@@ -28,6 +28,25 @@ begin
   end if;
 end $$;
 
+-- --------------------------------------------------------------------------
+-- Le rôle de connexion de l'API.
+--
+-- Il n'EST pas `authenticated` : il en est membre, ce qui lui permet de
+-- l'endosser à chaque transaction. La distinction est essentielle — un rôle
+-- superutilisateur, ou propriétaire des tables, contournerait la RLS et
+-- viderait de son sens tout l'édifice de politiques.
+--
+-- Le mot de passe n'est pas posé ici : il est propre à chaque environnement.
+--   alter role regalica_api with password '...';
+-- --------------------------------------------------------------------------
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'regalica_api') then
+    create role regalica_api login noinherit;
+  end if;
+  grant authenticated to regalica_api;
+end $$;
+
 create schema if not exists auth;
 create schema if not exists storage;
 create schema if not exists extensions;
@@ -61,10 +80,20 @@ create table if not exists auth.users (
 -- exister avec des comptes dedans, et R7 interdit de réécrire ce qui est là.
 alter table auth.users add column if not exists encrypted_password text;
 
--- Personne ne lit cette colonne à travers la RLS : seule l'API, sur le chemin
--- d'authentification, y accède — et par un helper dont le nom est délibérément
--- désagréable pour qu'on hésite à s'en servir ailleurs.
+-- La table des comptes n'est visible ni de `anon` ni de `authenticated` : aucun
+-- chemin utilisateur ne doit pouvoir lire une empreinte de mot de passe, même
+-- la sienne.
 revoke all on auth.users from anon, authenticated;
+
+-- Le rôle de connexion de l'API, lui, y accède — mais seulement tant qu'il n'a
+-- pas endossé `authenticated`. C'est toute la séparation : le chemin
+-- d'authentification travaille sous les droits propres de `regalica_api`, le
+-- chemin métier sous `authenticated` et ses politiques.
+--
+-- `noinherit` sur le rôle rend cette frontière effective : il ne reçoit rien
+-- de `authenticated` sans l'endosser explicitement.
+grant usage on schema auth to regalica_api;
+grant select, insert, update on auth.users to regalica_api;
 
 create or replace function auth.uid() returns uuid
 language sql
