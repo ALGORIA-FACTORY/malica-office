@@ -17,6 +17,7 @@
 
 import type { Requete } from "./db.ts";
 import { banque } from "./depots/banque.ts";
+import { capture } from "./depots/capture.ts";
 import { charges } from "./depots/charges.ts";
 import { collab } from "./depots/collab.ts";
 import { identite } from "./depots/identite.ts";
@@ -33,6 +34,7 @@ import { supervision } from "./depots/supervision.ts";
  */
 const DEPOTS = {
   banque,
+  capture,
   charges,
   collab,
   identite,

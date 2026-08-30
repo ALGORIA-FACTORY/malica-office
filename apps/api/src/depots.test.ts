@@ -95,6 +95,10 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
    */
   function lectures(): Array<[string, string, unknown[]]> {
     return [
+      ["capture", "lister", [pme]],
+      ["capture", "contexteAssistant", [pme, null]],
+      ["capture", "contexteAssistant", [pme, NEANT]],
+
       ["identite", "listMyOrganizations", []],
       ["identite", "listEntities", [pme]],
 
@@ -167,6 +171,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
     const couverts = new Set(lectures().map(([depot]) => depot));
     for (const depot of [
       "banque",
+      "capture",
       "charges",
       "collab",
       "identite",
@@ -178,5 +183,73 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
     ]) {
       assert.ok(couverts.has(depot), `aucune lecture vérifiée pour « ${depot} »`);
     }
+  });
+
+  it("enregistre une pièce, la retrouve, et rend son contexte de lecture", async () => {
+    const enregistree = (await appeler("capture", "enregistrer", [
+      {
+        tenantId: pme,
+        source: "pdf",
+        vis: "personnel",
+        idempotencyKey: `${marque}-piece`,
+        contentType: "application/pdf",
+      },
+    ])) as { id: string; chemin: string };
+
+    // Le chemin se déduit de la base. Aucun segment ne vient de l appelant :
+    // c est ce qui rend la traversée impossible plutôt que filtrée.
+    assert.equal(enregistree.chemin, `${pme}/${enregistree.id}`);
+
+    const liste = (await appeler("capture", "lister", [pme])) as Array<{
+      id: string;
+      storagePath: string;
+    }>;
+    const vue = liste.find((p) => p.id === enregistree.id);
+    assert.ok(vue, "la pièce enregistrée doit apparaître dans la liste");
+    assert.equal(vue.storagePath, enregistree.chemin);
+
+    const dossier = (await appeler("capture", "dossier", [enregistree.id])) as {
+      piece: { id: string };
+      extraction: unknown;
+      citations: unknown[];
+      tokens: unknown[];
+    };
+    assert.equal(dossier.piece.id, enregistree.id);
+    assert.equal(dossier.extraction, null, "une pièce non lue n a pas d extraction");
+    assert.deepEqual(dossier.citations, []);
+    assert.deepEqual(dossier.tokens, []);
+
+    const contexte = (await appeler("capture", "contexteLecture", [enregistree.id])) as {
+      packId: string;
+      piece: { contentType: string | null };
+      taxCodes: Array<{ rate: unknown }>;
+    };
+    assert.equal(contexte.piece.contentType, "application/pdf", "le type vient de la base");
+    assert.ok(contexte.packId, "la lecture exige un pack en vigueur");
+    assert.ok(contexte.taxCodes.length > 0);
+    for (const t of contexte.taxCodes) {
+      // Le taux reste un NOMBRE, comme le rendait PostgREST. Le web le remet en
+      // chaîne à l identique : une décimale de plus changerait l invite.
+      assert.equal(typeof t.rate, "number");
+    }
+  });
+
+  it("la clé d idempotence rend la même pièce, pas une seconde", async () => {
+    const args = [
+      {
+        tenantId: pme,
+        source: "pdf",
+        vis: "personnel",
+        idempotencyKey: `${marque}-idem`,
+        contentType: "application/pdf",
+      },
+    ];
+    const une = (await appeler("capture", "enregistrer", args)) as { id: string };
+    const deux = (await appeler("capture", "enregistrer", args)) as { id: string };
+    assert.equal(deux.id, une.id, "réenregistrer ne doit pas dupliquer la pièce");
+  });
+
+  it("le dossier d une pièce inexistante ne prétend pas exister", async () => {
+    await assert.rejects(appeler("capture", "dossier", [NEANT]), /piece.not_found/);
   });
 });
