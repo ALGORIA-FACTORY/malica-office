@@ -1,0 +1,24 @@
+-- La devise ne se devine pas.
+--
+-- `socle.ecritures.devise` portait `default 'TND'`. R4 interdit une constante
+-- monétaire dans le code ; un défaut de colonne en est une, et la pire espèce :
+-- il s'applique en silence, au moment de l'écriture, sans qu'aucun appelant
+-- n'ait rien demandé. Un cabinet européen aurait vu ses écritures libellées en
+-- dinars sans qu'une ligne de code ne le dise.
+--
+-- Retirer un défaut casse tout appelant qui s'y appuyait. J'ai donc vérifié
+-- AVANT, et non après : six fonctions écrivent dans `socle.ecritures`, et les
+-- six passent la devise explicitement.
+--
+--   socle_ecriture_propose        `p_devise` — paramètre obligatoire
+--   socle_ecriture_review         la copie de l'écriture contrepassée
+--   immo_dotation_constater       `a.devise` — celle du bien
+--   immo_depreciation_constater   `a.devise`
+--   stocks_inventaire_constater   `i.devise` — celle de l'article
+--   stocks_depreciation_constater `i.devise`
+--
+-- Aucun code applicatif n'insère dans cette table : tout passe par ces six.
+-- Le défaut ne servait donc personne — il ne faisait que masquer l'endroit où
+-- la question aurait dû se poser.
+
+alter table socle.ecritures alter column devise drop default;
