@@ -36,7 +36,6 @@ export function aujourdhui(): string {
 export function enVigueur<T extends Record<string, unknown>>(lignes: T[]): T[] {
   const jour = aujourdhui();
   return lignes.filter(
-    (r) =>
-      String(r["valid_from"]) <= jour && (!r["valid_to"] || String(r["valid_to"]) >= jour),
+    (r) => String(r["valid_from"]) <= jour && (!r["valid_to"] || String(r["valid_to"]) >= jour),
   );
 }

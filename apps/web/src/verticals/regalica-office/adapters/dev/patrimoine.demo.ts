@@ -159,21 +159,6 @@ export function createDevImmoRepository(): ImmoRepository {
     async dotations(_tenantId, assetId) {
       return dotations.filter((d) => !assetId || d.assetId === assetId);
     },
-    async recordDotation(input) {
-      const id = makeId();
-      dotations.push({
-        id,
-        assetId: input.assetId,
-        exercice: input.exercice,
-        months: input.months,
-        dotation: input.dotation,
-        cumul: input.cumul,
-        vnc: input.vnc,
-        ecritureId: input.ecritureId ?? null,
-        createdAt: new Date().toISOString(),
-      });
-      return id;
-    },
     async updateAsset(input) {
       const a = assets.find((row) => row.id === input.id);
       if (!a) throw new Error("asset.not_found");
@@ -286,22 +271,6 @@ export function createDevImmoRepository(): ImmoRepository {
 
     async depreciations(_tenantId, assetId) {
       return depreciations.filter((d) => !assetId || d.assetId === assetId);
-    },
-    async recordDepreciation(input) {
-      const id = makeId();
-      depreciations.push({
-        id,
-        assetId: input.assetId,
-        at: input.at,
-        vnc: input.vnc,
-        valeurRecouvrable: input.valeurRecouvrable,
-        mouvement: input.mouvement,
-        cumul: input.cumul,
-        note: input.note ?? null,
-        ecritureId: null,
-        createdAt: new Date().toISOString(),
-      });
-      return id;
     },
     async cessions() {
       return cessions;
@@ -516,9 +485,6 @@ export function createDevStocksRepository(): StocksRepository {
         createdAt: new Date().toISOString(),
       });
       return { depreciationId: id, ecritureId };
-    },
-    async recordInventaire() {
-      return makeId();
     },
   };
 }

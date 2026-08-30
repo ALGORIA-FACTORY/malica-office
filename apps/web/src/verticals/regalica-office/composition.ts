@@ -1,13 +1,4 @@
 import { createSupabaseCaptureRepository } from "./adapters/supabase/capture.repository";
-import { createSupabaseIdentityRepository } from "./adapters/supabase/identity.repository";
-import { createSupabaseOfficeRepository } from "./adapters/supabase/office.repository";
-import { createSupabaseReferentialRepository } from "./adapters/supabase/ref.repository";
-import { createSupabaseSupervisionRepository } from "./adapters/supabase/supervision.repository";
-import { createSupabaseImmoRepository } from "./adapters/supabase/immo.repository";
-import { createSupabaseStocksRepository } from "./adapters/supabase/stocks.repository";
-import { createSupabaseBanqueRepository } from "./adapters/supabase/banque.repository";
-import { createSupabaseCollabRepository } from "./adapters/supabase/collab.repository";
-import { createSupabaseChargesRepository } from "./adapters/supabase/charges.repository";
 import {
   createDevCaptureRepository,
   createDevIdentityRepository,
@@ -25,6 +16,7 @@ import { createDevChargesRepository } from "./adapters/dev/charges.demo";
 import { creerAuthHttp } from "./adapters/http/auth";
 import { creerDepotHttp } from "./adapters/http/rpc";
 import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
+import type { AuthPort } from "./ports/auth";
 import type {
   CaptureRepository,
   IdentityRepository,
@@ -40,20 +32,16 @@ import type {
 
 /**
  * Point de composition unique : seul endroit qui connaît les adaptateurs.
- * Remplacer Supabase par l'API se fait ici, sans toucher un écran.
  *
- * La sortie de Supabase est en cours, dépôt par dépôt. Chaque dépôt porté et
- * vérifié bascule ici, et un seul endroit dit lequel passe par où — plutôt
- * qu'un drapeau global qui basculerait dix dépôts dont neuf ne sont pas prêts.
+ * La sortie de Supabase est faite pour les données : les neuf dépôts métier
+ * passent par l'API, sous la RLS, avec la session portée par cookie httpOnly.
+ * Les adaptateurs Supabase correspondants ont été supprimés — on ne garde pas
+ * un chemin mort en réserve (R9).
  *
- * L'authentification est portée : l'API et l'application partagent la même
- * session, par cookie httpOnly. Un dépôt basculé ici est donc réellement servi
- * par l'API, sous la RLS.
- *
- * Quand les dix seront portés, cette carte disparaîtra avec la branche Supabase.
+ * Reste `capture`, et une seule raison : elle dépose des fichiers. Le stockage
+ * de l'API n'existe pas encore ; le jour où il existera, cette dernière ligne
+ * Supabase partira avec le client.
  */
-const DEPOTS_PORTES = { referential: true } as const;
-import type { AuthPort } from "./ports/auth";
 
 export interface OfficeRuntime {
   /** L'authentification est servie par l'API : plus aucun écran n'appelle un fournisseur. */
@@ -90,18 +78,16 @@ export function office(): OfficeRuntime {
         }
       : {
           auth: creerAuthHttp(),
-          identity: createSupabaseIdentityRepository(),
-          referential: DEPOTS_PORTES.referential
-            ? creerDepotHttp<ReferentialRepository>("referentiel")
-            : createSupabaseReferentialRepository(),
+          identity: creerDepotHttp<IdentityRepository>("identite"),
+          referential: creerDepotHttp<ReferentialRepository>("referentiel"),
           capture: createSupabaseCaptureRepository(),
-          office: createSupabaseOfficeRepository(),
-          supervision: createSupabaseSupervisionRepository(),
-          immo: createSupabaseImmoRepository(),
-          stocks: createSupabaseStocksRepository(),
-          banque: createSupabaseBanqueRepository(),
-          collab: createSupabaseCollabRepository(),
-          charges: createSupabaseChargesRepository(),
+          office: creerDepotHttp<OfficeRepository>("office"),
+          supervision: creerDepotHttp<SupervisionRepository>("supervision"),
+          immo: creerDepotHttp<ImmoRepository>("immo"),
+          stocks: creerDepotHttp<StocksRepository>("stocks"),
+          banque: creerDepotHttp<BanqueRepository>("banque"),
+          collab: creerDepotHttp<CollabRepository>("collab"),
+          charges: creerDepotHttp<ChargesRepository>("charges"),
         };
   }
   return runtime;

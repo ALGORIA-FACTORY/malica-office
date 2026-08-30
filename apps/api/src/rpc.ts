@@ -16,11 +16,15 @@
  */
 
 import type { Requete } from "./db.ts";
+import { banque } from "./depots/banque.ts";
 import { charges } from "./depots/charges.ts";
 import { collab } from "./depots/collab.ts";
 import { identite } from "./depots/identite.ts";
+import { immo } from "./depots/immo.ts";
 import { office } from "./depots/office.ts";
 import { referentiel } from "./depots/referentiel.ts";
+import { stocks } from "./depots/stocks.ts";
+import { supervision } from "./depots/supervision.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -28,11 +32,15 @@ import { referentiel } from "./depots/referentiel.ts";
  * l'oublier.
  */
 const DEPOTS = {
+  banque,
   charges,
   collab,
   identite,
+  immo,
   office,
   referentiel,
+  stocks,
+  supervision,
 } as const;
 
 export type NomDepot = keyof typeof DEPOTS;

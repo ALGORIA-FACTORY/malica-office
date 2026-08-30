@@ -363,29 +363,7 @@ export interface ImmoRepository {
   listAssets(tenantId: string): Promise<Asset[]>;
   createAsset(input: NewAsset): Promise<string>;
   dotations(tenantId: string, assetId?: string): Promise<Dotation[]>;
-  /** Journal ajout-seul : une dotation par immobilisation et par exercice. */
-  recordDotation(input: {
-    tenantId: string;
-    assetId: string;
-    exercice: number;
-    months: number;
-    dotation: string;
-    cumul: string;
-    vnc: string;
-    packVersionId: string;
-    ecritureId?: string | null;
-  }): Promise<string>;
   depreciations(tenantId: string, assetId?: string): Promise<Depreciation[]>;
-  recordDepreciation(input: {
-    tenantId: string;
-    assetId: string;
-    at: string;
-    vnc: string;
-    valeurRecouvrable: string;
-    mouvement: string;
-    cumul: string;
-    note?: string | null;
-  }): Promise<string>;
   /** Édition d'un bien — permise tant qu'aucune dotation n'est constatée. */
   updateAsset(input: {
     id: string;
@@ -550,16 +528,6 @@ export interface StocksRepository {
     packVersionId: string;
     note?: string | null;
   }): Promise<{ depreciationId: string; ecritureId: string }>;
-
-  recordInventaire(input: {
-    tenantId: string;
-    itemId: string | null;
-    period: string;
-    initial: string;
-    final: string;
-    variation: string;
-    packVersionId: string;
-  }): Promise<string>;
 }
 
 // -------------------------------------------------------------------- banque
