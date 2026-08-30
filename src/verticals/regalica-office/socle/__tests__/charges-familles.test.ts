@@ -11,7 +11,9 @@ const familles: FamilleDef[] = [
   { code: "NON_CLASSE", label: "Non classée", ordinal: 999, isFallback: true },
 ];
 
-function art(p: Partial<ArticleFact> & { period: string; familleCode: string; totalHt: string }): ArticleFact {
+function art(
+  p: Partial<ArticleFact> & { period: string; familleCode: string; totalHt: string },
+): ArticleFact {
   return {
     pieceId: "p",
     ordinal: 1,

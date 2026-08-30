@@ -116,7 +116,9 @@ export function createSupabaseBanqueRepository(): BanqueRepository {
     async etat(tenantId): Promise<LettrageEtat[]> {
       const { data, error } = await supabase
         .from("banque_lettrage_etat_v")
-        .select("ligne_id, ecriture_id, active, score, ecart_montant, ecart_jours, reference_exacte, updated_at")
+        .select(
+          "ligne_id, ecriture_id, active, score, ecart_montant, ecart_jours, reference_exacte, updated_at",
+        )
         .eq("tenant_id", tenantId);
       if (error) throw error;
       return (data ?? []).map((r) => ({

@@ -235,13 +235,7 @@ export function RegalicaVoice({
 }
 
 /** Feu de conformité — le verdict porte la justification, le feu la signale. */
-export function SignalLight({
-  tone,
-  label,
-}: {
-  tone: Tone;
-  label: string;
-}) {
+export function SignalLight({ tone, label }: { tone: Tone; label: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       <SignalDot tone={tone} />
@@ -251,13 +245,7 @@ export function SignalLight({
 }
 
 /** Titre de section — filet supérieur, jamais d'ombre. */
-export function SectionTitle({
-  children,
-  action,
-}: {
-  children: ReactNode;
-  action?: ReactNode;
-}) {
+export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
       <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em]">{children}</h2>
@@ -464,15 +452,8 @@ export function StatCards({
   );
 }
 
-
 /** Bloc de parole dans le panneau : une note bordée, jamais une bulle. */
-export function RegalicaNote({
-  kicker,
-  children,
-}: {
-  kicker?: string;
-  children: ReactNode;
-}) {
+export function RegalicaNote({ kicker, children }: { kicker?: string; children: ReactNode }) {
   return (
     <div className="border border-border px-3 py-3">
       {kicker ? <Eyebrow>{kicker}</Eyebrow> : null}

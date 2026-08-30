@@ -42,7 +42,9 @@ function decStr(v: unknown, decimals: number): string {
 async function main() {
   const [readsPath, tenantsPath, sessionPath] = process.argv.slice(2);
   if (!readsPath || !tenantsPath || !sessionPath)
-    throw new Error("usage: bun tests/real/ingest-push.ts <reads.json> <tenants.json> <session.json>");
+    throw new Error(
+      "usage: bun tests/real/ingest-push.ts <reads.json> <tenants.json> <session.json>",
+    );
 
   const url = process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
   const anon =
@@ -155,16 +157,19 @@ async function main() {
       skipped.push(`${base} — état de lecture : ${seenErr.message}`);
       continue;
     }
-    const persistErr = (seen ?? []).length > 0
-      ? null
-      : (await sb.rpc("capture_read_persist", {
-      p_piece: pieceId as string,
-      p_tokens: row.tokens as never,
-      p_contract: row.contract as string,
-      p_extract: row.extract as never,
-      p_citations: row.citations as never,
-      p_flags: row.flags as never,
-        })).error;
+    const persistErr =
+      (seen ?? []).length > 0
+        ? null
+        : (
+            await sb.rpc("capture_read_persist", {
+              p_piece: pieceId as string,
+              p_tokens: row.tokens as never,
+              p_contract: row.contract as string,
+              p_extract: row.extract as never,
+              p_citations: row.citations as never,
+              p_flags: row.flags as never,
+            })
+          ).error;
     if (persistErr) {
       skipped.push(`${base} — lecture : ${persistErr.message}`);
       continue;

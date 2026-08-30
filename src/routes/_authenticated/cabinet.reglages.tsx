@@ -17,9 +17,15 @@ export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   head: () => ({
     meta: [
       { title: "Réglages du cabinet — Regalica Office" },
-      { name: "description", content: "Juridiction, devise et mode de validation de chaque dossier client mandaté." },
+      {
+        name: "description",
+        content: "Juridiction, devise et mode de validation de chaque dossier client mandaté.",
+      },
       { property: "og:title", content: "Réglages du cabinet — Regalica Office" },
-      { property: "og:description", content: "Juridiction, devise et mode de validation de chaque dossier client mandaté." },
+      {
+        property: "og:description",
+        content: "Juridiction, devise et mode de validation de chaque dossier client mandaté.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

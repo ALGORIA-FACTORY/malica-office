@@ -13,7 +13,13 @@ import type { Database } from "@/integrations/supabase/types";
 type Client = SupabaseClient<Database>;
 
 export interface RegalicaContext {
-  organisation: { name: string; kind: string; jurisdiction: string; currency: string; validationMode: string };
+  organisation: {
+    name: string;
+    kind: string;
+    jurisdiction: string;
+    currency: string;
+    validationMode: string;
+  };
   pack: { version: string; effectiveFrom: string } | null;
   pieces: Record<string, number>;
   ecritures: Array<{
@@ -22,7 +28,13 @@ export interface RegalicaContext {
     journal: string;
     libelle: string;
     status: string;
-    lignes: Array<{ compte: string; libelle: string; debit: string; credit: string; taxCode: string | null }>;
+    lignes: Array<{
+      compte: string;
+      libelle: string;
+      debit: string;
+      credit: string;
+      taxCode: string | null;
+    }>;
   }>;
   echeances: Array<{ label: string; dueDate: string; status: string }>;
   motifs: Array<{ code: string; severity: string; requiresNote: boolean }>;
@@ -52,34 +64,39 @@ export async function loadRegalicaContext(
   if (orgErr) throw new Error(orgErr.message);
   if (!org) throw new Error("organisation introuvable ou non autorisée");
 
-  const [{ data: packs }, { data: pieces }, { data: ecritures }, { data: echeances }, { data: motifs }] =
-    await Promise.all([
-      supabase
-        .from("ref_packs_v")
-        .select("id, version, effective_from")
-        .eq("jurisdiction", (org.jurisdiction as string) ?? "TN")
-        .lte("effective_from", today)
-        .order("effective_from", { ascending: false })
-        .limit(1),
-      supabase.from("pieces_v").select("id, status").eq("tenant_id", tenantId).limit(500),
-      supabase
-        .from("ecritures_v")
-        .select("id, date_ecriture, journal, libelle, status")
-        .eq("tenant_id", tenantId)
-        .order("date_ecriture", { ascending: false })
-        .limit(25),
-      supabase
-        .from("echeances_v")
-        .select("label, due_date, status")
-        .eq("tenant_id", tenantId)
-        .order("due_date", { ascending: true })
-        .limit(20),
-      supabase
-        .from("ref_rejet_motifs_v")
-        .select("code, severity, requires_note")
-        .eq("active", true)
-        .limit(40),
-    ]);
+  const [
+    { data: packs },
+    { data: pieces },
+    { data: ecritures },
+    { data: echeances },
+    { data: motifs },
+  ] = await Promise.all([
+    supabase
+      .from("ref_packs_v")
+      .select("id, version, effective_from")
+      .eq("jurisdiction", (org.jurisdiction as string) ?? "TN")
+      .lte("effective_from", today)
+      .order("effective_from", { ascending: false })
+      .limit(1),
+    supabase.from("pieces_v").select("id, status").eq("tenant_id", tenantId).limit(500),
+    supabase
+      .from("ecritures_v")
+      .select("id, date_ecriture, journal, libelle, status")
+      .eq("tenant_id", tenantId)
+      .order("date_ecriture", { ascending: false })
+      .limit(25),
+    supabase
+      .from("echeances_v")
+      .select("label, due_date, status")
+      .eq("tenant_id", tenantId)
+      .order("due_date", { ascending: true })
+      .limit(20),
+    supabase
+      .from("ref_rejet_motifs_v")
+      .select("code, severity, requires_note")
+      .eq("active", true)
+      .limit(40),
+  ]);
 
   const counts: Record<string, number> = {};
   for (const p of pieces ?? []) {

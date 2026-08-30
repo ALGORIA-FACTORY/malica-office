@@ -6,9 +6,12 @@ const decimalString = z.string().regex(/^-?\d+(\.\d+)?$/);
 export const FxRateV1 = z.object({
   base: z.string().length(3),
   quote: z.string().length(3),
-  rate: decimalString,          // 1 base = rate quote
+  rate: decimalString, // 1 base = rate quote
   valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  valid_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  valid_to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
   source: z.string(),
 });
 export type FxRateV1 = z.infer<typeof FxRateV1>;

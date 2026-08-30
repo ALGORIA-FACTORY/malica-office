@@ -4,7 +4,12 @@
  * sortent d'ici. Tolérances passées en paramètres (pack), jamais en dur.
  */
 import { D, toFixedStr } from "../../domain/decimal";
-import type { BankLine, BookLine, RapprochementPaire, RapprochementV1 } from "../../contracts/rapprochement.v1";
+import type {
+  BankLine,
+  BookLine,
+  RapprochementPaire,
+  RapprochementV1,
+} from "../../contracts/rapprochement.v1";
 
 export interface RapprochementParams {
   currency: string;
@@ -45,7 +50,8 @@ export function computeRapprochement(
       if (Math.abs(ecartJours) > params.toleranceJours) continue;
 
       const refExacte =
-        normalizeRef(b.reference).length > 0 && normalizeRef(b.reference) === normalizeRef(k.reference);
+        normalizeRef(b.reference).length > 0 &&
+        normalizeRef(b.reference) === normalizeRef(k.reference);
 
       let score = ecartAbs.isZero() ? 60 : 40;
       score += Math.max(
@@ -65,8 +71,8 @@ export function computeRapprochement(
     }
   }
 
-  candidates.sort((x, y) =>
-    y.score - x.score || (x.bank_id < y.bank_id ? -1 : x.bank_id > y.bank_id ? 1 : 0),
+  candidates.sort(
+    (x, y) => y.score - x.score || (x.bank_id < y.bank_id ? -1 : x.bank_id > y.bank_id ? 1 : 0),
   );
 
   const usedBank = new Set<string>();

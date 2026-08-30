@@ -13,9 +13,17 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
     meta: [
       { title: "Ma pièce — Regalica Office" },
-      { name: "description", content: "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation." },
+      {
+        name: "description",
+        content:
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation.",
+      },
       { property: "og:title", content: "Ma pièce — Regalica Office" },
-      { property: "og:description", content: "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation." },
+      {
+        property: "og:description",
+        content:
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -37,7 +45,13 @@ interface ExtractPayload {
   document_date?: string;
   document_kind?: string;
   currency?: string;
-  lines?: Array<{ label: string; tax_code: string; base_ht: string; vat_amount: string; ttc: string }>;
+  lines?: Array<{
+    label: string;
+    tax_code: string;
+    base_ht: string;
+    vat_amount: string;
+    ttc: string;
+  }>;
   articles?: ExtractArticle[];
   other_charges?: Array<{ code: string; label: string; amount: string }>;
   totals?: { base_ht: string; vat: string; ttc: string };
@@ -144,11 +158,12 @@ function PieceScreen() {
       } else {
         // Jamais de repli sur une proposition ancienne : sans calcul du Socle,
         // il n'y a rien à confirmer, et la raison est affichée telle quelle.
-        throw new Error(proposalAttempt && !proposalAttempt.ok ? proposalAttempt.reason : t("pme.confirm.review"));
+        throw new Error(
+          proposalAttempt && !proposalAttempt.ok ? proposalAttempt.reason : t("pme.confirm.review"),
+        );
       }
       if (!ecritureId) throw new Error(t("pme.confirm.review"));
       await office().office.book(ecritureId);
-
     },
     onSuccess: async () => {
       setError(null);
@@ -157,7 +172,8 @@ function PieceScreen() {
     onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
   });
 
-  if (dossier.isPending) return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  if (dossier.isPending)
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
   const { piece, fileUrl, extraction, citations } = dossier.data;
@@ -264,7 +280,9 @@ function PieceScreen() {
               {confirm.isPending ? t("pme.confirm.pending") : t("pme.book.run")}
             </button>
           ) : (
-            <p className="text-sm text-muted-foreground">{blockReason ?? t("pme.confirm.review")}</p>
+            <p className="text-sm text-muted-foreground">
+              {blockReason ?? t("pme.confirm.review")}
+            </p>
           )}
         </section>
       ) : null}

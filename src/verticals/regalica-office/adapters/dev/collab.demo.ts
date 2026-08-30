@@ -126,20 +126,18 @@ export function createDevCollabRepository(): CollabRepository {
       return id;
     },
     async stats(tenantIds) {
-      return tenantIds.map(
-        (tenantId): ClientStats => ({
-          tenantId,
-          pieces: 24,
-          capturees: 2,
-          lues: 3,
-          proposees: 4,
-          comptabilisees: 9,
-          supervisees: 5,
-          retournees: 1,
-          heuresMoyennes: 18.4,
-          dernierePiece: new Date().toISOString(),
-        }),
-      );
+      return tenantIds.map((tenantId): ClientStats => ({
+        tenantId,
+        pieces: 24,
+        capturees: 2,
+        lues: 3,
+        proposees: 4,
+        comptabilisees: 9,
+        supervisees: 5,
+        retournees: 1,
+        heuresMoyennes: 18.4,
+        dernierePiece: new Date().toISOString(),
+      }));
     },
     async notifications() {
       return [...notifications];

@@ -65,26 +65,17 @@ const stamp = Date.now();
  */
 const BACKEND_CONFIGURE = Boolean(
   process.env["SUPABASE_URL"] &&
-    process.env["SUPABASE_PUBLISHABLE_KEY"] &&
-    process.env["SUPABASE_SERVICE_ROLE_KEY"],
+  process.env["SUPABASE_PUBLISHABLE_KEY"] &&
+  process.env["SUPABASE_SERVICE_ROLE_KEY"],
 );
 
 beforeAll(async () => {
   if (!BACKEND_CONFIGURE) return;
   await Promise.all(Object.values(EMAILS).map(ensureUser));
-  [A, B, C] = await Promise.all([
-    signIn(EMAILS.pmeA),
-    signIn(EMAILS.pmeB),
-    signIn(EMAILS.cabinet),
-  ]);
+  [A, B, C] = await Promise.all([signIn(EMAILS.pmeA), signIn(EMAILS.pmeB), signIn(EMAILS.cabinet)]);
 
   // Chaque organisation est créée par son propre dirigeant, via l'API.
-  const mk = async (
-    s: { client: SupabaseClient },
-    kind: string,
-    name: string,
-    mode: string,
-  ) => {
+  const mk = async (s: { client: SupabaseClient }, kind: string, name: string, mode: string) => {
     const { data, error } = await s.client.rpc("create_organization", {
       p_kind: kind,
       p_name: name,
@@ -163,10 +154,7 @@ describe.skipIf(!BACKEND_CONFIGURE)("isolation des tenants sous jetons réels", 
 
   it("B ne voit que sa pièce et son organisation", async () => {
     const pieces = await B.client.from("pieces_v").select("id").eq("tenant_id", orgB);
-    const orgs = await B.client
-      .from("organizations_v")
-      .select("id")
-      .in("id", [orgA, orgB, orgC]);
+    const orgs = await B.client.from("organizations_v").select("id").in("id", [orgA, orgB, orgC]);
     expect(pieces.data).toHaveLength(1);
     expect(orgs.data?.map((r) => r.id)).toEqual([orgB]);
   });

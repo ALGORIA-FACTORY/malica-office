@@ -97,11 +97,11 @@ export function buildProposal(params: {
     lignes: pivot.lines
       .filter((l) => Number(l.debit) !== 0 || Number(l.credit) !== 0)
       .map((l) => ({
-      account_code: l.account_code,
-      libelle: l.label,
-      debit: l.debit,
-      credit: l.credit,
-      tax_code: l.account_code === mapping.vatAccount ? firstTaxCode : null,
-    })),
+        account_code: l.account_code,
+        libelle: l.label,
+        debit: l.debit,
+        credit: l.credit,
+        tax_code: l.account_code === mapping.vatAccount ? firstTaxCode : null,
+      })),
   };
 }

@@ -116,7 +116,7 @@ export function createSupabaseSupervisionRepository(): SupervisionRepository {
             legalId: (org?.["legal_id"] as string | null) ?? null,
             jurisdiction: (org?.["jurisdiction"] as string) ?? "TN",
             currency: (org?.["currency"] as string) ?? "TND",
-            validationMode: ((org?.["validation_mode"] as ValidationMode) ?? "mandate"),
+            validationMode: (org?.["validation_mode"] as ValidationMode) ?? "mandate",
             engagementStatus: r.status as string,
             counts: counts.get(r.pme_org_id as string) ?? { ...EMPTY_COUNTS },
           } satisfies ClientSummary;

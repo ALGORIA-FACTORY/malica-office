@@ -25,9 +25,17 @@ export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
     meta: [
       { title: "Revue d'une pièce — Regalica Office" },
-      { name: "description", content: "Pièce à gauche, écriture proposée à droite : citations, verdict, comptabilisation ou retour motivé." },
+      {
+        name: "description",
+        content:
+          "Pièce à gauche, écriture proposée à droite : citations, verdict, comptabilisation ou retour motivé.",
+      },
       { property: "og:title", content: "Revue d'une pièce — Regalica Office" },
-      { property: "og:description", content: "Pièce à gauche, écriture proposée à droite : citations, verdict, comptabilisation ou retour motivé." },
+      {
+        property: "og:description",
+        content:
+          "Pièce à gauche, écriture proposée à droite : citations, verdict, comptabilisation ou retour motivé.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -103,13 +111,19 @@ function CabinetReview() {
 
   const { piece, fileUrl, extraction, citations } = dossier.data;
   const articles =
-    ((extraction?.payload as { articles?: Array<{
-      designation: string;
-      quantity: string | null;
-      unit_price_ht: string | null;
-      unit_price_ttc: string | null;
-      total_ht: string | null;
-    }> } | undefined)?.articles) ?? [];
+    (
+      extraction?.payload as
+        | {
+            articles?: Array<{
+              designation: string;
+              quantity: string | null;
+              unit_price_ht: string | null;
+              unit_price_ttc: string | null;
+              total_ht: string | null;
+            }>;
+          }
+        | undefined
+    )?.articles ?? [];
   const byField = new Map(citations.map((c) => [c.field, c]));
   const all = ecritures.data ?? [];
   const booked = all.find((e) => e.status === "booked") ?? null;
@@ -224,11 +238,7 @@ function CabinetReview() {
               </p>
               <InkTable
                 caption={t("cab.review.ecriture")}
-                head={[
-                  t("pme.journal.account"),
-                  t("pme.journal.debit"),
-                  t("pme.journal.credit"),
-                ]}
+                head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
               >
                 {booked.lines.map((line) => (
                   <InkTableRow key={line.ordinal}>
@@ -315,9 +325,14 @@ function CabinetReview() {
           ) : (
             <ul className="grid gap-px border border-border bg-border text-[12px]">
               {(audit.data ?? []).map((entry) => (
-                <li key={entry.id} className="flex items-baseline justify-between gap-3 bg-card px-3 py-2">
+                <li
+                  key={entry.id}
+                  className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+                >
                   <span className="num">{entry.action}</span>
-                  <span className="num text-muted-foreground">{entry.at.slice(0, 16).replace("T", " ")}</span>
+                  <span className="num text-muted-foreground">
+                    {entry.at.slice(0, 16).replace("T", " ")}
+                  </span>
                 </li>
               ))}
             </ul>

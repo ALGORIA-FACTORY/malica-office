@@ -26,9 +26,17 @@ export const Route = createFileRoute("/_authenticated/cabinet/stocks")({
   head: () => ({
     meta: [
       { title: "Stocks — Regalica Office" },
-      { name: "description", content: "Articles, mouvements, valorisation CUMP et FIFO et dépréciations calculées par le Socle." },
+      {
+        name: "description",
+        content:
+          "Articles, mouvements, valorisation CUMP et FIFO et dépréciations calculées par le Socle.",
+      },
       { property: "og:title", content: "Stocks — Regalica Office" },
-      { property: "og:description", content: "Articles, mouvements, valorisation CUMP et FIFO et dépréciations calculées par le Socle." },
+      {
+        property: "og:description",
+        content:
+          "Articles, mouvements, valorisation CUMP et FIFO et dépréciations calculées par le Socle.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -295,9 +303,7 @@ function CabinetStocks() {
       invalidate();
     },
     onError: (e: Error) =>
-      setError(
-        e.message.includes("stocks_mouvements_uniq") ? t("cab.stocks.dup") : e.message,
-      ),
+      setError(e.message.includes("stocks_mouvements_uniq") ? t("cab.stocks.dup") : e.message),
   });
 
   const constaterInventaire = useMutation({
@@ -591,9 +597,7 @@ function CabinetStocks() {
                       value={mouvement.coutUnitaire}
                       disabled={mouvement.sens === "sortie"}
                       required={mouvement.sens === "entree"}
-                      onChange={(e) =>
-                        setMouvement({ ...mouvement, coutUnitaire: e.target.value })
-                      }
+                      onChange={(e) => setMouvement({ ...mouvement, coutUnitaire: e.target.value })}
                     />
                   </label>
                   <label className="space-y-1">
@@ -694,9 +698,7 @@ function CabinetStocks() {
                   }
                   onClick={() => constaterInventaire.mutate()}
                 >
-                  {periodeDejaConstatee
-                    ? t("cab.stocks.invdone")
-                    : t("cab.stocks.constater")}
+                  {periodeDejaConstatee ? t("cab.stocks.invdone") : t("cab.stocks.constater")}
                 </ActionButton>
 
                 {inventaireRows.length > 0 ? (
@@ -753,8 +755,8 @@ function CabinetStocks() {
                   </label>
                 </div>
                 <p className="num text-[12px] text-muted-foreground">
-                  {t("cab.stocks.cost")} : {valo?.totals.valeur ?? "—"} ·{" "}
-                  {t("cab.stocks.cumul")} : {cumulDepreciation}
+                  {t("cab.stocks.cost")} : {valo?.totals.valeur ?? "—"} · {t("cab.stocks.cumul")} :{" "}
+                  {cumulDepreciation}
                 </p>
                 {depreciation ? (
                   <p className="num text-[13px]">

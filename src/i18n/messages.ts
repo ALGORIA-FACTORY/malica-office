@@ -164,7 +164,8 @@ const fr = {
   "pme.extract.pu_ttc": "PU TTC",
   "pme.extract.charges": "Droits et taxes",
   "pme.confirm.pending": "Confirmation en cours…",
-  "pme.confirm.review": "Regalica a transmis cette pièce à votre cabinet : une vérification humaine est requise.",
+  "pme.confirm.review":
+    "Regalica a transmis cette pièce à votre cabinet : une vérification humaine est requise.",
   "pme.doc.loading": "Ouverture du document…",
   "pme.doc.error": "Document illisible.",
   "pme.citation.zoom": "Zone source affichée",
@@ -187,7 +188,8 @@ const fr = {
   "pme.charges.byFamille": "Par famille",
   "pme.charges.articles": "{count} article(s)",
   "pme.charges.empty": "Aucun article lu sur cette période.",
-  "pme.charges.question": "{famille} : {observed} ce mois, contre {baseline} habituellement ({value}). Est-ce exceptionnel ?",
+  "pme.charges.question":
+    "{famille} : {observed} ce mois, contre {baseline} habituellement ({value}). Est-ce exceptionnel ?",
   "pme.charges.answer.exceptionnel": "Oui, exceptionnel",
   "pme.charges.answer.verifier": "À vérifier",
   "pme.charges.answered": "Votre réponse est enregistrée et reste au journal.",
@@ -219,7 +221,8 @@ const fr = {
   "pme.home.card.soon": "Bientôt",
   "pme.home.import": "Importer un fichier",
   "pme.home.returned": "{count} pièce(s) retournée(s) par le cabinet — à corriger.",
-  "pme.home.disclaimer": "Chaque montant affiché porte sa citation. Les propositions restent soumises à la supervision du cabinet.",
+  "pme.home.disclaimer":
+    "Chaque montant affiché porte sa citation. Les propositions restent soumises à la supervision du cabinet.",
   "cab.brand": "Cabinet",
   "cab.nav.today": "Aujourd'hui",
   "cab.nav.clients": "Clients",
@@ -229,7 +232,8 @@ const fr = {
   "cab.nav.stocks": "Stocks",
   "cab.nav.banque": "Rapprochement",
   "cab.immo.title": "Immobilisations et amortissements",
-  "cab.immo.voice": "Le plan sort du Socle : dur\u00e9e et coefficient viennent du pack, jamais d'une constante.",
+  "cab.immo.voice":
+    "Le plan sort du Socle : dur\u00e9e et coefficient viennent du pack, jamais d'une constante.",
   "cab.immo.assets": "Immobilisations inscrites",
   "cab.immo.empty": "Aucune immobilisation pour ce client.",
   "cab.immo.asset": "Bien",
@@ -281,7 +285,8 @@ const fr = {
   "cab.immo.ecriture.proposee": "Proposée",
   "cab.immo.ecriture.supervisee": "Supervisée",
   "cab.stocks.title": "Stocks et variation",
-  "cab.stocks.voice": "CUMP ou FIFO : la m\u00e9thode est celle du pack, la valorisation est calcul\u00e9e, jamais estim\u00e9e.",
+  "cab.stocks.voice":
+    "CUMP ou FIFO : la m\u00e9thode est celle du pack, la valorisation est calcul\u00e9e, jamais estim\u00e9e.",
   "cab.stocks.items": "Articles",
   "cab.stocks.empty": "Aucun article pour ce client.",
   "cab.stocks.reference": "R\u00e9f\u00e9rence",
@@ -336,7 +341,8 @@ const fr = {
   "cab.stocks.debit": "Débit",
   "cab.stocks.credit": "Crédit",
   "cab.banque.title": "Rapprochement bancaire",
-  "cab.banque.voice": "L'appariement est d\u00e9terministe : montant, date, r\u00e9f\u00e9rence. Aucun mod\u00e8le ne d\u00e9cide.",
+  "cab.banque.voice":
+    "L'appariement est d\u00e9terministe : montant, date, r\u00e9f\u00e9rence. Aucun mod\u00e8le ne d\u00e9cide.",
   "cab.banque.account": "Compte",
   "cab.banque.noaccount": "Aucun compte bancaire pour ce client.",
   "cab.banque.suggest": "Appariements propos\u00e9s",
@@ -357,9 +363,11 @@ const fr = {
   "cab.banque.status.rapprochee": "Rapproch\u00e9e",
   "cab.banque.status.ignoree": "Ignor\u00e9e",
   "cab.banque.ignore": "Ignorer",
-  "cab.banque.totals": "Relev\u00e9 {bank} \u2014 comptabilit\u00e9 {book} \u2014 \u00e9cart {ecart} {currency}",
+  "cab.banque.totals":
+    "Relev\u00e9 {bank} \u2014 comptabilit\u00e9 {book} \u2014 \u00e9cart {ecart} {currency}",
   "cab.banque.import": "Importer un relev\u00e9 (CSV)",
-  "cab.banque.csvhint": "Une ligne par op\u00e9ration : date;libell\u00e9;montant;r\u00e9f\u00e9rence",
+  "cab.banque.csvhint":
+    "Une ligne par op\u00e9ration : date;libell\u00e9;montant;r\u00e9f\u00e9rence",
   "cab.banque.importrun": "Importer",
   "cab.banque.imported": "{added} ligne(s) import\u00e9e(s), {skipped} doublon(s) ignor\u00e9(s)",
   "cab.banque.booklines": "\u00c9critures du compte",
@@ -389,13 +397,15 @@ const fr = {
   "cab.nav.group.cabinet": "Cabinet",
   "cab.search": "Tout chercher",
   "cab.today.greeting": "Bonjour.",
-  "cab.today.summary": "{pieces} pi\u00e8ces sur {clients} clients. Tout est propos\u00e9 \u2014 il reste \u00e0 valider.",
+  "cab.today.summary":
+    "{pieces} pi\u00e8ces sur {clients} clients. Tout est propos\u00e9 \u2014 il reste \u00e0 valider.",
   "cab.today.start": "Commencer",
   "cab.today.bulk": "Valider en masse",
   "cab.queue.byclient": "Votre file \u2014 par client",
   "cab.regalica.status": "pr\u00e9sente",
   "cab.regalica.ask": "Demandez-moi un d\u00e9tail\u2026",
-  "regalica.chat.intro": "Posez votre question sur ce dossier. Je ne calcule rien : je restitue ce que le Socle a produit, avec son origine.",
+  "regalica.chat.intro":
+    "Posez votre question sur ce dossier. Je ne calcule rien : je restitue ce que le Socle a produit, avec son origine.",
   "regalica.chat.placeholder": "Demandez-moi un détail…",
   "regalica.chat.send": "Envoyer",
   "regalica.chat.you": "Vous",
@@ -433,18 +443,22 @@ const fr = {
   "cab.review.note": "Note",
   "cab.review.note.required": "Ce motif exige une note.",
   "cab.review.done.valide": "Écriture validée. Pièce supervisée.",
-  "cab.review.done.retourne": "Écriture retournée. Contre-passation inscrite, l'originale reste intacte.",
+  "cab.review.done.retourne":
+    "Écriture retournée. Contre-passation inscrite, l'originale reste intacte.",
   "cab.review.audit": "Journal de la pièce",
   "cab.review.audit.empty": "Aucun événement journalisé.",
   "cab.review.citations": "Citations",
   "cab.review.back": "Retour à la file",
   "cab.review.pack": "Version du pack",
   "cab.regalica.title": "Regalica",
-  "cab.regalica.queue": "Je classe la file : le comptabilisé passe avant le proposé, le retourné reste visible. Je ne décide d'aucune conformité.",
-  "cab.regalica.review": "Chaque montant affiché ouvre sa zone source. Je n'ai transcrit aucun chiffre : le Socle a produit l'écriture, le pack en fixe les comptes.",
+  "cab.regalica.queue":
+    "Je classe la file : le comptabilisé passe avant le proposé, le retourné reste visible. Je ne décide d'aucune conformité.",
+  "cab.regalica.review":
+    "Chaque montant affiché ouvre sa zone source. Je n'ai transcrit aucun chiffre : le Socle a produit l'écriture, le pack en fixe les comptes.",
   "cab.echeances.title": "Échéances",
   "cab.echeances.empty": "Aucune échéance dérivée du pack pour l'instant.",
-  "cab.echeances.lede": "Les échéances déclaratives de tous les dossiers mandatés, dérivées du pack en vigueur.",
+  "cab.echeances.lede":
+    "Les échéances déclaratives de tous les dossiers mandatés, dérivées du pack en vigueur.",
   "cab.echeances.calendar": "Calendrier des dossiers",
   "cab.echeances.kpi.total": "Échéances",
   "cab.echeances.kpi.late": "En retard",
@@ -469,13 +483,15 @@ const fr = {
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
   "pme.coffre.title": "Coffre",
-  "pme.coffre.voice": "{shared} pièces partagées avec votre cabinet, {personal} restées personnelles.",
+  "pme.coffre.voice":
+    "{shared} pièces partagées avec votre cabinet, {personal} restées personnelles.",
   "pme.coffre.tab.partage": "Partagé",
   "pme.coffre.tab.personnel": "Personnel",
   "pme.coffre.empty": "Rien dans cette partie du coffre.",
   "pme.coffre.action.share": "Partager",
   "pme.coffre.action.keep": "Garder pour moi",
-  "pme.coffre.wall": "La cloison est tenue par la base : votre espace personnel est invisible au cabinet, pas seulement masqué.",
+  "pme.coffre.wall":
+    "La cloison est tenue par la base : votre espace personnel est invisible au cabinet, pas seulement masqué.",
   "pme.echeances.title": "Échéances",
   "pme.echeances.list": "À venir",
   "pme.echeances.voice.empty": "Aucune échéance dérivée du pack pour l'instant.",
@@ -501,7 +517,8 @@ const fr = {
   "cab.nav.stats": "Statistiques",
   "cab.nav.pv": "PV",
   "cab.prop.title": "Propositions à superviser",
-  "cab.prop.lede": "Écritures comptabilisées en attente de supervision. La validation en masse écrit un geste par pièce au journal.",
+  "cab.prop.lede":
+    "Écritures comptabilisées en attente de supervision. La validation en masse écrit un geste par pièce au journal.",
   "cab.prop.queue": "File",
   "cab.prop.empty": "Rien à superviser.",
   "cab.prop.all": "Tout sélectionner",
@@ -518,7 +535,8 @@ const fr = {
   "cab.prop.panel.kicker": "File",
   "cab.prop.panel": "{count} écriture(s) attendent votre supervision.",
   "cab.affect.title": "Affectation des clients",
-  "cab.affect.lede": "Un dossier, un collaborateur, un briefing écrit. Chaque réaffectation reste au journal.",
+  "cab.affect.lede":
+    "Un dossier, un collaborateur, un briefing écrit. Chaque réaffectation reste au journal.",
   "cab.affect.form": "Nouvelle affectation",
   "cab.affect.client": "Client",
   "cab.affect.collaborator": "Collaborateur",
@@ -532,7 +550,8 @@ const fr = {
   "cab.affect.past": "Passée",
   "cab.affect.panel": "{assigned} dossier(s) affecté(s) sur {total}.",
   "cab.stats.title": "Statistiques du cabinet",
-  "cab.stats.lede": "Volumes, retours et délais par dossier, agrégés côté base sur le seul périmètre mandaté.",
+  "cab.stats.lede":
+    "Volumes, retours et délais par dossier, agrégés côté base sur le seul périmètre mandaté.",
   "cab.stats.kpi.clients": "Clients",
   "cab.stats.kpi.pieces": "Pièces",
   "cab.stats.kpi.review": "À superviser",
@@ -754,7 +773,8 @@ const en: Dict = {
   "pme.charges.byFamille": "By family",
   "pme.charges.articles": "{count} item(s)",
   "pme.charges.empty": "No line item read for this period.",
-  "pme.charges.question": "{famille}: {observed} this month versus {baseline} usually ({value}). Is this exceptional?",
+  "pme.charges.question":
+    "{famille}: {observed} this month versus {baseline} usually ({value}). Is this exceptional?",
   "pme.charges.answer.exceptionnel": "Yes, exceptional",
   "pme.charges.answer.verifier": "To be checked",
   "pme.charges.answered": "Your answer is recorded and kept in the log.",
@@ -786,7 +806,8 @@ const en: Dict = {
   "pme.home.card.soon": "Coming soon",
   "pme.home.import": "Upload a file",
   "pme.home.returned": "{count} document(s) returned by the practice — please correct.",
-  "pme.home.disclaimer": "Every figure shown carries its citation. Proposals remain subject to accountant review.",
+  "pme.home.disclaimer":
+    "Every figure shown carries its citation. Proposals remain subject to accountant review.",
   "cab.brand": "Practice",
   "cab.nav.today": "Today",
   "cab.nav.clients": "Clients",
@@ -796,7 +817,8 @@ const en: Dict = {
   "cab.nav.stocks": "Inventory",
   "cab.nav.banque": "Reconciliation",
   "cab.immo.title": "Fixed assets and depreciation",
-  "cab.immo.voice": "The schedule comes from the Socle: useful life and coefficient come from the pack, never from a constant.",
+  "cab.immo.voice":
+    "The schedule comes from the Socle: useful life and coefficient come from the pack, never from a constant.",
   "cab.immo.assets": "Registered assets",
   "cab.immo.empty": "No asset for this client.",
   "cab.immo.asset": "Asset",
@@ -848,7 +870,8 @@ const en: Dict = {
   "cab.immo.ecriture.proposee": "Proposed",
   "cab.immo.ecriture.supervisee": "Reviewed",
   "cab.stocks.title": "Inventory and variation",
-  "cab.stocks.voice": "Weighted average or FIFO: the method comes from the pack, the valuation is computed, never estimated.",
+  "cab.stocks.voice":
+    "Weighted average or FIFO: the method comes from the pack, the valuation is computed, never estimated.",
   "cab.stocks.items": "Items",
   "cab.stocks.empty": "No item for this client.",
   "cab.stocks.reference": "Reference",
@@ -956,13 +979,15 @@ const en: Dict = {
   "cab.nav.group.cabinet": "Practice",
   "cab.search": "Search everything",
   "cab.today.greeting": "Hello.",
-  "cab.today.summary": "{pieces} documents across {clients} clients. All proposed \u2014 review remains.",
+  "cab.today.summary":
+    "{pieces} documents across {clients} clients. All proposed \u2014 review remains.",
   "cab.today.start": "Start",
   "cab.today.bulk": "Approve in bulk",
   "cab.queue.byclient": "Your queue \u2014 by client",
   "cab.regalica.status": "present",
   "cab.regalica.ask": "Ask me for a detail\u2026",
-  "regalica.chat.intro": "Ask about this file. I never compute: I restate what the Socle produced, with its origin.",
+  "regalica.chat.intro":
+    "Ask about this file. I never compute: I restate what the Socle produced, with its origin.",
   "regalica.chat.placeholder": "Ask me for a detail…",
   "regalica.chat.send": "Send",
   "regalica.chat.you": "You",
@@ -1000,18 +1025,22 @@ const en: Dict = {
   "cab.review.note": "Note",
   "cab.review.note.required": "This reason requires a note.",
   "cab.review.done.valide": "Entry validated. Document supervised.",
-  "cab.review.done.retourne": "Entry returned. A reversing entry was recorded; the original remains intact.",
+  "cab.review.done.retourne":
+    "Entry returned. A reversing entry was recorded; the original remains intact.",
   "cab.review.audit": "Document log",
   "cab.review.audit.empty": "No logged event.",
   "cab.review.citations": "Citations",
   "cab.review.back": "Back to the queue",
   "cab.review.pack": "Pack version",
   "cab.regalica.title": "Regalica",
-  "cab.regalica.queue": "I order the queue: booked before proposed, returned stays visible. I decide no compliance.",
-  "cab.regalica.review": "Every displayed amount opens its source zone. I transcribed no figure: the engine produced the entry, the pack sets the accounts.",
+  "cab.regalica.queue":
+    "I order the queue: booked before proposed, returned stays visible. I decide no compliance.",
+  "cab.regalica.review":
+    "Every displayed amount opens its source zone. I transcribed no figure: the engine produced the entry, the pack sets the accounts.",
   "cab.echeances.title": "Deadlines",
   "cab.echeances.empty": "No deadline derived from the pack yet.",
-  "cab.echeances.lede": "Filing deadlines across every mandated file, derived from the pack in force.",
+  "cab.echeances.lede":
+    "Filing deadlines across every mandated file, derived from the pack in force.",
   "cab.echeances.calendar": "File calendar",
   "cab.echeances.kpi.total": "Deadlines",
   "cab.echeances.kpi.late": "Overdue",
@@ -1042,7 +1071,8 @@ const en: Dict = {
   "pme.coffre.empty": "Nothing in this part of the vault.",
   "pme.coffre.action.share": "Share",
   "pme.coffre.action.keep": "Keep private",
-  "pme.coffre.wall": "The wall is enforced by the database: your private space is invisible to the practice, not merely hidden.",
+  "pme.coffre.wall":
+    "The wall is enforced by the database: your private space is invisible to the practice, not merely hidden.",
   "pme.echeances.title": "Deadlines",
   "pme.echeances.list": "Upcoming",
   "pme.echeances.voice.empty": "No deadline derived from the pack yet.",
@@ -1068,7 +1098,8 @@ const en: Dict = {
   "cab.nav.stats": "Statistics",
   "cab.nav.pv": "Minutes",
   "cab.prop.title": "Entries to supervise",
-  "cab.prop.lede": "Booked entries awaiting supervision. Bulk approval writes one journal event per document.",
+  "cab.prop.lede":
+    "Booked entries awaiting supervision. Bulk approval writes one journal event per document.",
   "cab.prop.queue": "Queue",
   "cab.prop.empty": "Nothing to supervise.",
   "cab.prop.all": "Select all",
@@ -1085,7 +1116,8 @@ const en: Dict = {
   "cab.prop.panel.kicker": "Queue",
   "cab.prop.panel": "{count} entry(ies) awaiting your supervision.",
   "cab.affect.title": "Client assignment",
-  "cab.affect.lede": "One file, one team member, one written briefing. Every reassignment stays in the journal.",
+  "cab.affect.lede":
+    "One file, one team member, one written briefing. Every reassignment stays in the journal.",
   "cab.affect.form": "New assignment",
   "cab.affect.client": "Client",
   "cab.affect.collaborator": "Team member",
@@ -1099,7 +1131,8 @@ const en: Dict = {
   "cab.affect.past": "Past",
   "cab.affect.panel": "{assigned} of {total} files assigned.",
   "cab.stats.title": "Practice statistics",
-  "cab.stats.lede": "Volumes, returns and delays per file, aggregated in the database over the mandated scope only.",
+  "cab.stats.lede":
+    "Volumes, returns and delays per file, aggregated in the database over the mandated scope only.",
   "cab.stats.kpi.clients": "Clients",
   "cab.stats.kpi.pieces": "Documents",
   "cab.stats.kpi.review": "To supervise",
@@ -1201,7 +1234,8 @@ const ar: Dict = {
   "auth.pending": "لحظة…",
   "auth.signup.check": "تم إنشاء الحساب. تحقق من بريدك لتأكيد العنوان ثم ادخل.",
   "auth.error.generic": "تعذّر الدخول. تحقق من بياناتك.",
-  "auth.error.weakPassword": "كلمة السر شائعة جدًا. اختر كلمة من 10 أحرف على الأقل وغير مستعملة في مكان آخر.",
+  "auth.error.weakPassword":
+    "كلمة السر شائعة جدًا. اختر كلمة من 10 أحرف على الأقل وغير مستعملة في مكان آخر.",
   "auth.error.invalidCredentials": "البريد أو كلمة السر غير صحيحة.",
   "auth.error.userExists": "يوجد حساب بهذا البريد. استعمل تبويب الدخول.",
   "auth.error.notConfirmed": "لم يتم تأكيد العنوان. تحقق من بريدك.",
@@ -1209,7 +1243,8 @@ const ar: Dict = {
   "auth.back": "العودة إلى الصفحة الرئيسية",
 
   "onboarding.title": "مؤسستك",
-  "onboarding.subtitle": "المؤسسة وحدة معزولة: بياناتها منفصلة تمامًا عن غيرها. ستكون أول عضو فيها.",
+  "onboarding.subtitle":
+    "المؤسسة وحدة معزولة: بياناتها منفصلة تمامًا عن غيرها. ستكون أول عضو فيها.",
   "onboarding.kind": "الصنف",
   "onboarding.kind.pme": "مؤسسة — أتولى محاسبتي",
   "onboarding.kind.cabinet": "مكتب — أراقب مؤسسات",
@@ -1317,7 +1352,8 @@ const ar: Dict = {
   "pme.charges.byFamille": "حسب العائلة",
   "pme.charges.articles": "{count} بند",
   "pme.charges.empty": "لا يوجد بند مقروء في هذه الفترة.",
-  "pme.charges.question": "{famille}: {observed} هذا الشهر مقابل {baseline} في المعتاد ({value}). هل هذا استثنائي؟",
+  "pme.charges.question":
+    "{famille}: {observed} هذا الشهر مقابل {baseline} في المعتاد ({value}). هل هذا استثنائي؟",
   "pme.charges.answer.exceptionnel": "نعم، استثنائي",
   "pme.charges.answer.verifier": "يجب التحقق",
   "pme.charges.answered": "تم تسجيل إجابتك وتبقى في السجل.",
@@ -1357,13 +1393,19 @@ const ar: Dict = {
   "cab.nav.settings": "الإعدادات",
   "cab.nav.immo": "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u062b\u0627\u0628\u062a\u0629",
   "cab.nav.stocks": "\u0627\u0644\u0645\u062e\u0632\u0648\u0646",
-  "cab.nav.banque": "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0628\u0646\u0643\u064a\u0629",
-  "cab.immo.title": "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u062b\u0627\u0628\u062a\u0629 \u0648\u0627\u0644\u0627\u0633\u062a\u0647\u0644\u0627\u0643",
-  "cab.immo.voice": "\u062c\u062f\u0648\u0644 \u0627\u0644\u0627\u0633\u062a\u0647\u0644\u0627\u0643 \u064a\u0623\u062a\u064a \u0645\u0646 \u0627\u0644\u0645\u062d\u0631\u0651\u0643: \u0627\u0644\u0645\u062f\u0629 \u0648\u0627\u0644\u0645\u0639\u0627\u0645\u0644 \u0645\u0646 \u0627\u0644\u062d\u0632\u0645\u0629\u060c \u0644\u0627 \u0645\u0646 \u062b\u0627\u0628\u062a \u0641\u064a \u0627\u0644\u0634\u064a\u0641\u0631\u0629.",
-  "cab.immo.assets": "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u0645\u0633\u062c\u0651\u0644\u0629",
-  "cab.immo.empty": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0635\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
+  "cab.nav.banque":
+    "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0628\u0646\u0643\u064a\u0629",
+  "cab.immo.title":
+    "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u062b\u0627\u0628\u062a\u0629 \u0648\u0627\u0644\u0627\u0633\u062a\u0647\u0644\u0627\u0643",
+  "cab.immo.voice":
+    "\u062c\u062f\u0648\u0644 \u0627\u0644\u0627\u0633\u062a\u0647\u0644\u0627\u0643 \u064a\u0623\u062a\u064a \u0645\u0646 \u0627\u0644\u0645\u062d\u0631\u0651\u0643: \u0627\u0644\u0645\u062f\u0629 \u0648\u0627\u0644\u0645\u0639\u0627\u0645\u0644 \u0645\u0646 \u0627\u0644\u062d\u0632\u0645\u0629\u060c \u0644\u0627 \u0645\u0646 \u062b\u0627\u0628\u062a \u0641\u064a \u0627\u0644\u0634\u064a\u0641\u0631\u0629.",
+  "cab.immo.assets":
+    "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u0645\u0633\u062c\u0651\u0644\u0629",
+  "cab.immo.empty":
+    "\u0644\u0627 \u064a\u0648\u062c\u062f \u0623\u0635\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
   "cab.immo.asset": "\u0627\u0644\u0623\u0635\u0644",
-  "cab.immo.mes": "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0633\u062a\u063a\u0644\u0627\u0644",
+  "cab.immo.mes":
+    "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0633\u062a\u063a\u0644\u0627\u0644",
   "cab.immo.method": "\u0627\u0644\u0637\u0631\u064a\u0642\u0629",
   "cab.immo.method.lineaire": "\u062e\u0637\u064a",
   "cab.immo.method.degressif": "\u0645\u062a\u0646\u0627\u0642\u0635",
@@ -1375,10 +1417,12 @@ const ar: Dict = {
   "cab.immo.base": "\u0627\u0644\u0623\u0633\u0627\u0633",
   "cab.immo.dotation": "\u0627\u0644\u0642\u0633\u0637",
   "cab.immo.cumul": "\u0627\u0644\u0645\u062c\u0645\u0648\u0639",
-  "cab.immo.vnc": "\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u064a\u0629",
+  "cab.immo.vnc":
+    "\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u064a\u0629",
   "cab.immo.record": "\u0625\u062b\u0628\u0627\u062a",
   "cab.immo.recorded": "\u0645\u062b\u0628\u064e\u0651\u062a",
-  "cab.immo.totals": "\u0645\u062c\u0645\u0648\u0639 \u0627\u0644\u0623\u0642\u0633\u0627\u0637 {dotations} \u2014 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629 {vnc} {currency}",
+  "cab.immo.totals":
+    "\u0645\u062c\u0645\u0648\u0639 \u0627\u0644\u0623\u0642\u0633\u0627\u0637 {dotations} \u2014 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629 {vnc} {currency}",
   "cab.immo.new": "أصل جديد",
   "cab.immo.edit": "تعديل",
   "cab.immo.save": "حفظ",
@@ -1410,15 +1454,19 @@ const ar: Dict = {
   "cab.immo.ecriture.booked": "مُحاسَب",
   "cab.immo.ecriture.proposee": "مقترح",
   "cab.immo.ecriture.supervisee": "مُراجَع",
-  "cab.stocks.title": "\u0627\u0644\u0645\u062e\u0632\u0648\u0646 \u0648\u0627\u0644\u062a\u063a\u064a\u0651\u0631",
-  "cab.stocks.voice": "\u0627\u0644\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0645\u0631\u062c\u0651\u062d \u0623\u0648 \u0627\u0644\u0648\u0627\u0631\u062f \u0623\u0648\u0644\u064b\u0627: \u0627\u0644\u0637\u0631\u064a\u0642\u0629 \u0645\u0646 \u0627\u0644\u062d\u0632\u0645\u0629\u060c \u0648\u0627\u0644\u062a\u0642\u064a\u064a\u0645 \u0645\u062d\u0633\u0648\u0628 \u0644\u0627 \u0645\u0642\u062f\u064e\u0651\u0631.",
+  "cab.stocks.title":
+    "\u0627\u0644\u0645\u062e\u0632\u0648\u0646 \u0648\u0627\u0644\u062a\u063a\u064a\u0651\u0631",
+  "cab.stocks.voice":
+    "\u0627\u0644\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0645\u0631\u062c\u0651\u062d \u0623\u0648 \u0627\u0644\u0648\u0627\u0631\u062f \u0623\u0648\u0644\u064b\u0627: \u0627\u0644\u0637\u0631\u064a\u0642\u0629 \u0645\u0646 \u0627\u0644\u062d\u0632\u0645\u0629\u060c \u0648\u0627\u0644\u062a\u0642\u064a\u064a\u0645 \u0645\u062d\u0633\u0648\u0628 \u0644\u0627 \u0645\u0642\u062f\u064e\u0651\u0631.",
   "cab.stocks.items": "\u0627\u0644\u0623\u0635\u0646\u0627\u0641",
-  "cab.stocks.empty": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0635\u0646\u0641 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
+  "cab.stocks.empty":
+    "\u0644\u0627 \u064a\u0648\u062c\u062f \u0635\u0646\u0641 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
   "cab.stocks.reference": "\u0627\u0644\u0645\u0631\u062c\u0639",
   "cab.stocks.designation": "\u0627\u0644\u062a\u0633\u0645\u064a\u0629",
   "cab.stocks.unite": "\u0627\u0644\u0648\u062d\u062f\u0629",
   "cab.stocks.method": "\u0627\u0644\u0637\u0631\u064a\u0642\u0629",
-  "cab.stocks.method.cump": "\u0627\u0644\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0645\u0631\u062c\u0651\u062d",
+  "cab.stocks.method.cump":
+    "\u0627\u0644\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0645\u0631\u062c\u0651\u062d",
   "cab.stocks.method.fifo": "\u0627\u0644\u0648\u0627\u0631\u062f \u0623\u0648\u0644\u064b\u0627",
   "cab.stocks.open": "\u0641\u062a\u062d",
   "cab.stocks.mouvements": "\u0627\u0644\u062d\u0631\u0643\u0627\u062a",
@@ -1432,7 +1480,8 @@ const ar: Dict = {
   "cab.stocks.qtyafter": "\u0627\u0644\u0643\u0645\u064a\u0629 \u0628\u0639\u062f",
   "cab.stocks.valafter": "\u0627\u0644\u0642\u064a\u0645\u0629 \u0628\u0639\u062f",
   "cab.stocks.cump": "\u0627\u0644\u0645\u062a\u0648\u0633\u0637",
-  "cab.stocks.totals": "\u0627\u0644\u0645\u062e\u0632\u0648\u0646 {quantite} \u2014 \u0627\u0644\u0642\u064a\u0645\u0629 {valeur} {currency}",
+  "cab.stocks.totals":
+    "\u0627\u0644\u0645\u062e\u0632\u0648\u0646 {quantite} \u2014 \u0627\u0644\u0642\u064a\u0645\u0629 {valeur} {currency}",
   "cab.stocks.new": "مادة جديدة",
   "cab.stocks.edit": "تعديل",
   "cab.stocks.category": "صنف الحزمة",
@@ -1465,12 +1514,17 @@ const ar: Dict = {
   "cab.stocks.account": "الحساب",
   "cab.stocks.debit": "مدين",
   "cab.stocks.credit": "دائن",
-  "cab.banque.title": "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0628\u0646\u0643\u064a\u0629",
-  "cab.banque.voice": "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u062d\u062a\u0645\u064a\u0629: \u0627\u0644\u0645\u0628\u0644\u063a\u060c \u0627\u0644\u062a\u0627\u0631\u064a\u062e\u060c \u0627\u0644\u0645\u0631\u062c\u0639. \u0644\u0627 \u0646\u0645\u0648\u0630\u062c \u064a\u0642\u0631\u0651\u0631.",
+  "cab.banque.title":
+    "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0628\u0646\u0643\u064a\u0629",
+  "cab.banque.voice":
+    "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u062d\u062a\u0645\u064a\u0629: \u0627\u0644\u0645\u0628\u0644\u063a\u060c \u0627\u0644\u062a\u0627\u0631\u064a\u062e\u060c \u0627\u0644\u0645\u0631\u062c\u0639. \u0644\u0627 \u0646\u0645\u0648\u0630\u062c \u064a\u0642\u0631\u0651\u0631.",
   "cab.banque.account": "\u0627\u0644\u062d\u0633\u0627\u0628",
-  "cab.banque.noaccount": "\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u0633\u0627\u0628 \u0628\u0646\u0643\u064a \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
-  "cab.banque.suggest": "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0627\u062a \u0627\u0644\u0645\u0642\u062a\u0631\u062d\u0629",
-  "cab.banque.nopair": "\u0644\u0627 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 \u0647\u0648\u0627\u0645\u0634 \u0627\u0644\u062d\u0632\u0645\u0629.",
+  "cab.banque.noaccount":
+    "\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u0633\u0627\u0628 \u0628\u0646\u0643\u064a \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0631\u064a\u0641.",
+  "cab.banque.suggest":
+    "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0627\u062a \u0627\u0644\u0645\u0642\u062a\u0631\u062d\u0629",
+  "cab.banque.nopair":
+    "\u0644\u0627 \u0645\u0637\u0627\u0628\u0642\u0629 \u062f\u0627\u062e\u0644 \u0647\u0648\u0627\u0645\u0634 \u0627\u0644\u062d\u0632\u0645\u0629.",
   "cab.banque.line": "\u0633\u0637\u0631 \u0627\u0644\u0643\u0634\u0641",
   "cab.banque.book": "\u0627\u0644\u0642\u064a\u062f",
   "cab.banque.score": "\u0627\u0644\u0646\u0642\u0627\u0637",
@@ -1487,21 +1541,30 @@ const ar: Dict = {
   "cab.banque.status.rapprochee": "\u0645\u0637\u0627\u0628\u064e\u0642",
   "cab.banque.status.ignoree": "\u0645\u064f\u062a\u062c\u0627\u0647\u064e\u0644",
   "cab.banque.ignore": "\u062a\u062c\u0627\u0647\u0644",
-  "cab.banque.totals": "\u0627\u0644\u0643\u0634\u0641 {bank} \u2014 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u0629 {book} \u2014 \u0627\u0644\u0641\u0627\u0631\u0642 {ecart} {currency}",
+  "cab.banque.totals":
+    "\u0627\u0644\u0643\u0634\u0641 {bank} \u2014 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u0629 {book} \u2014 \u0627\u0644\u0641\u0627\u0631\u0642 {ecart} {currency}",
   "cab.banque.import": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0643\u0634\u0641 (CSV)",
-  "cab.banque.csvhint": "\u0633\u0637\u0631 \u0644\u0643\u0644 \u0639\u0645\u0644\u064a\u0629: \u0627\u0644\u062a\u0627\u0631\u064a\u062e;\u0627\u0644\u0628\u064a\u0627\u0646;\u0627\u0644\u0645\u0628\u0644\u063a;\u0627\u0644\u0645\u0631\u062c\u0639",
+  "cab.banque.csvhint":
+    "\u0633\u0637\u0631 \u0644\u0643\u0644 \u0639\u0645\u0644\u064a\u0629: \u0627\u0644\u062a\u0627\u0631\u064a\u062e;\u0627\u0644\u0628\u064a\u0627\u0646;\u0627\u0644\u0645\u0628\u0644\u063a;\u0627\u0644\u0645\u0631\u062c\u0639",
   "cab.banque.importrun": "\u0627\u0633\u062a\u064a\u0631\u0627\u062f",
-  "cab.banque.imported": "{added} \u0633\u0637\u0631 \u0645\u0633\u062a\u0648\u0631\u062f\u060c {skipped} \u0645\u0643\u0631\u0631 \u0645\u0647\u0645\u0644",
+  "cab.banque.imported":
+    "{added} \u0633\u0637\u0631 \u0645\u0633\u062a\u0648\u0631\u062f\u060c {skipped} \u0645\u0643\u0631\u0631 \u0645\u0647\u0645\u0644",
   "cab.banque.booklines": "\u0642\u064a\u0648\u062f \u0627\u0644\u062d\u0633\u0627\u0628",
-  "cab.banque.nobook": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0642\u064a\u062f \u0645\u062d\u0627\u0633\u0628\u064a \u0644\u0644\u0641\u062a\u0631\u0629.",
-  "cab.banque.matched": "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0627\u062a \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u0629",
-  "cab.banque.nomatched": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0639\u062a\u0645\u062f\u0629.",
-  "cab.banque.unmatch": "\u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629",
+  "cab.banque.nobook":
+    "\u0644\u0627 \u064a\u0648\u062c\u062f \u0642\u064a\u062f \u0645\u062d\u0627\u0633\u0628\u064a \u0644\u0644\u0641\u062a\u0631\u0629.",
+  "cab.banque.matched":
+    "\u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0627\u062a \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u0629",
+  "cab.banque.nomatched":
+    "\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u0637\u0627\u0628\u0642\u0629 \u0645\u0639\u062a\u0645\u062f\u0629.",
+  "cab.banque.unmatch":
+    "\u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629",
   "cab.banque.motif": "\u0627\u0644\u0633\u0628\u0628",
   "cab.banque.note": "\u0645\u0644\u0627\u062d\u0638\u0629",
-  "cab.banque.motifreq": "\u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u064a\u0642\u062a\u0636\u064a \u0633\u0628\u0628\u064b\u0627 \u0645\u0639\u062a\u0645\u062f\u064b\u0627.",
+  "cab.banque.motifreq":
+    "\u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u064a\u0642\u062a\u0636\u064a \u0633\u0628\u0628\u064b\u0627 \u0645\u0639\u062a\u0645\u062f\u064b\u0627.",
   "cab.banque.journal": "\u0633\u062c\u0644 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0627\u062a",
-  "cab.banque.nojournal": "\u0644\u0627 \u064a\u0648\u062c\u062f \u0642\u0631\u0627\u0631 \u0645\u0633\u062c\u0644.",
+  "cab.banque.nojournal":
+    "\u0644\u0627 \u064a\u0648\u062c\u062f \u0642\u0631\u0627\u0631 \u0645\u0633\u062c\u0644.",
   "cab.banque.audit": "\u0645\u0633\u0627\u0631 \u0627\u0644\u062a\u062f\u0642\u064a\u0642",
   "cab.banque.noaudit": "\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u062d\u062f\u0627\u062b.",
   "cab.banque.action": "\u0627\u0644\u0625\u062c\u0631\u0627\u0621",
@@ -1511,20 +1574,25 @@ const ar: Dict = {
   "cab.banque.openpiece": "\u0641\u062a\u062d \u0627\u0644\u0645\u0633\u062a\u0646\u062f",
   "cab.banque.lettree": "\u0645\u0637\u0627\u0628\u0642\u0629",
   "cab.banque.when": "\u0627\u0644\u062a\u0648\u0642\u064a\u062a",
-  "cab.banque.orphansbank": "\u0623\u0633\u0637\u0631 \u0627\u0644\u0643\u0634\u0641 \u0628\u062f\u0648\u0646 \u0642\u064a\u062f",
-  "cab.banque.orphansbook": "\u0642\u064a\u0648\u062f \u0628\u062f\u0648\u0646 \u0633\u0637\u0631 \u0643\u0634\u0641",
+  "cab.banque.orphansbank":
+    "\u0623\u0633\u0637\u0631 \u0627\u0644\u0643\u0634\u0641 \u0628\u062f\u0648\u0646 \u0642\u064a\u062f",
+  "cab.banque.orphansbook":
+    "\u0642\u064a\u0648\u062f \u0628\u062f\u0648\u0646 \u0633\u0637\u0631 \u0643\u0634\u0641",
   "cab.noorg": "لا يوجد مكتب. أنشئ مكتبًا للإشراف على حرفائك.",
   "cab.today.title": "اليوم",
   "cab.nav.group.work": "\u0639\u0645\u0644\u064a",
   "cab.nav.group.cabinet": "\u0627\u0644\u0645\u0643\u062a\u0628",
   "cab.search": "\u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0627\u0644\u0643\u0644",
   "cab.today.greeting": "\u0645\u0631\u062d\u0628\u0627\u064b.",
-  "cab.today.summary": "{pieces} \u0648\u0631\u0642\u0629 \u0644\u062f\u0649 {clients} \u062d\u0631\u0641\u0627\u0621. \u0627\u0644\u0643\u0644 \u0645\u0642\u062a\u0631\u062d \u2014 \u064a\u0628\u0642\u0649 \u0627\u0644\u062a\u0623\u0643\u064a\u062f.",
+  "cab.today.summary":
+    "{pieces} \u0648\u0631\u0642\u0629 \u0644\u062f\u0649 {clients} \u062d\u0631\u0641\u0627\u0621. \u0627\u0644\u0643\u0644 \u0645\u0642\u062a\u0631\u062d \u2014 \u064a\u0628\u0642\u0649 \u0627\u0644\u062a\u0623\u0643\u064a\u062f.",
   "cab.today.start": "\u0627\u0644\u0628\u062f\u0621",
   "cab.today.bulk": "\u062a\u0623\u0643\u064a\u062f \u062c\u0645\u0627\u0639\u064a",
-  "cab.queue.byclient": "\u0642\u0627\u0626\u0645\u062a\u0643 \u2014 \u062d\u0633\u0628 \u0627\u0644\u062d\u0631\u064a\u0641",
+  "cab.queue.byclient":
+    "\u0642\u0627\u0626\u0645\u062a\u0643 \u2014 \u062d\u0633\u0628 \u0627\u0644\u062d\u0631\u064a\u0641",
   "cab.regalica.status": "\u062d\u0627\u0636\u0631\u0629",
-  "cab.regalica.ask": "\u0627\u0633\u0623\u0644\u0646\u064a \u0639\u0646 \u062a\u0641\u0635\u064a\u0644\u2026",
+  "cab.regalica.ask":
+    "\u0627\u0633\u0623\u0644\u0646\u064a \u0639\u0646 \u062a\u0641\u0635\u064a\u0644\u2026",
   "regalica.chat.intro": "اسأل عن هذا الملف. لا أحتسب شيئًا: أعيد ما أنتجه المحرّك مع مصدره.",
   "regalica.chat.placeholder": "اسألني عن تفصيل…",
   "regalica.chat.send": "إرسال",
@@ -1570,8 +1638,10 @@ const ar: Dict = {
   "cab.review.back": "العودة إلى القائمة",
   "cab.review.pack": "إصدار الحزمة",
   "cab.regalica.title": "ريغاليكا",
-  "cab.regalica.queue": "أرتّب القائمة: المحاسَب قبل المقترح، والمُرجَع يبقى ظاهرًا. لا أقرّر أي مطابقة.",
-  "cab.regalica.review": "كل مبلغ معروض يفتح منطقته الأصلية. لم أنسخ أي رقم: المحرّك أنتج القيد، والحزمة تحدّد الحسابات.",
+  "cab.regalica.queue":
+    "أرتّب القائمة: المحاسَب قبل المقترح، والمُرجَع يبقى ظاهرًا. لا أقرّر أي مطابقة.",
+  "cab.regalica.review":
+    "كل مبلغ معروض يفتح منطقته الأصلية. لم أنسخ أي رقم: المحرّك أنتج القيد، والحزمة تحدّد الحسابات.",
   "cab.echeances.title": "الآجال",
   "cab.echeances.empty": "لا يوجد أجل مستخرج من الحزمة حتى الآن.",
   "cab.echeances.lede": "آجال التصريح لكل الملفات الموكلة، مستخرجة من الحزمة السارية.",
@@ -1662,7 +1732,8 @@ const ar: Dict = {
   "cab.affect.past": "سابق",
   "cab.affect.panel": "{assigned} ملف موزّع من {total}.",
   "cab.stats.title": "إحصائيات المكتب",
-  "cab.stats.lede": "الأحجام والإرجاعات والمُدد لكل ملف، مجمّعة في قاعدة البيانات على النطاق المفوَّض فقط.",
+  "cab.stats.lede":
+    "الأحجام والإرجاعات والمُدد لكل ملف، مجمّعة في قاعدة البيانات على النطاق المفوَّض فقط.",
   "cab.stats.kpi.clients": "الحرفاء",
   "cab.stats.kpi.pieces": "الوثائق",
   "cab.stats.kpi.review": "للإشراف",

@@ -185,7 +185,9 @@ export function createSupabaseImmoRepository(): ImmoRepository {
     async depreciations(tenantId: string, assetId?: string): Promise<Depreciation[]> {
       let q = supabase
         .from("immo_depreciations_v")
-        .select("id, asset_id, at, vnc, valeur_recouvrable, mouvement, cumul, note, ecriture_id, created_at")
+        .select(
+          "id, asset_id, at, vnc, valeur_recouvrable, mouvement, cumul, note, ecriture_id, created_at",
+        )
         .eq("tenant_id", tenantId);
       if (assetId) q = q.eq("asset_id", assetId);
       const { data, error } = await q.order("at", { ascending: true });

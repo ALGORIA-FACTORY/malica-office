@@ -4,12 +4,7 @@
  */
 import { D, toFixedStr, sum } from "../../domain/decimal";
 import { resolveTaxRate } from "../../domain/tax-rates";
-import type {
-  AccountMappingRule,
-  CurrencyDef,
-  TaxRateRow,
-  Tolerances,
-} from "../../domain/types";
+import type { AccountMappingRule, CurrencyDef, TaxRateRow, Tolerances } from "../../domain/types";
 import type { ExtractV1 } from "../../contracts/extract.v1";
 import type { JournalLineV1, Motif, PivotV1 } from "../../contracts/pivot.v1";
 import { evaluateTrafficLight } from "./traffic-light";
@@ -23,7 +18,6 @@ export interface FiscalChargeRule {
   /** Montant fixe au pack (droit de timbre…), chaîne décimale ou null. */
   fixed_amount?: string | null;
 }
-
 
 export interface PivotInput {
   extract: ExtractV1;
@@ -150,19 +144,48 @@ export function computePivot(input: PivotInput): PivotV1 {
   // recopie jamais un TTC dont l'écart ne serait pas justifié.
   const counterparty = totalHT.plus(totalVAT).plus(totalCharges);
 
-
   const lines: JournalLineV1[] = [];
   if (extract.document_kind === "facture_achat") {
-    lines.push({ account_code: mapping.charge_or_product_account, label: extract.issuer, debit: round(totalHT.toString()), credit: "0" });
-    lines.push({ account_code: mapping.vat_account, label: "TVA déductible", debit: round(totalVAT.toString()), credit: "0" });
+    lines.push({
+      account_code: mapping.charge_or_product_account,
+      label: extract.issuer,
+      debit: round(totalHT.toString()),
+      credit: "0",
+    });
+    lines.push({
+      account_code: mapping.vat_account,
+      label: "TVA déductible",
+      debit: round(totalVAT.toString()),
+      credit: "0",
+    });
     for (const c of charges) {
       lines.push({ account_code: c.account_code, label: c.label, debit: c.amount, credit: "0" });
     }
-    lines.push({ account_code: mapping.counterparty_account, label: `Fournisseur ${extract.issuer}`, debit: "0", credit: round(counterparty.toString()) });
+    lines.push({
+      account_code: mapping.counterparty_account,
+      label: `Fournisseur ${extract.issuer}`,
+      debit: "0",
+      credit: round(counterparty.toString()),
+    });
   } else {
-    lines.push({ account_code: mapping.counterparty_account, label: `Client ${extract.issuer}`, debit: round(counterparty.toString()), credit: "0" });
-    lines.push({ account_code: mapping.vat_account, label: "TVA collectée", debit: "0", credit: round(totalVAT.toString()) });
-    lines.push({ account_code: mapping.charge_or_product_account, label: extract.issuer, debit: "0", credit: round(totalHT.toString()) });
+    lines.push({
+      account_code: mapping.counterparty_account,
+      label: `Client ${extract.issuer}`,
+      debit: round(counterparty.toString()),
+      credit: "0",
+    });
+    lines.push({
+      account_code: mapping.vat_account,
+      label: "TVA collectée",
+      debit: "0",
+      credit: round(totalVAT.toString()),
+    });
+    lines.push({
+      account_code: mapping.charge_or_product_account,
+      label: extract.issuer,
+      debit: "0",
+      credit: round(totalHT.toString()),
+    });
     for (const c of charges) {
       lines.push({ account_code: c.account_code, label: c.label, debit: "0", credit: c.amount });
     }

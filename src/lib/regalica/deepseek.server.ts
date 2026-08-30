@@ -86,7 +86,11 @@ export async function callDeepSeek(input: {
 
   if (!res.ok) {
     const retryable = res.status === 429 || res.status >= 500;
-    throw new DeepSeekError(`DeepSeek ${res.status} : ${text.slice(0, 500)}`, res.status, retryable);
+    throw new DeepSeekError(
+      `DeepSeek ${res.status} : ${text.slice(0, 500)}`,
+      res.status,
+      retryable,
+    );
   }
 
   let parsed: {

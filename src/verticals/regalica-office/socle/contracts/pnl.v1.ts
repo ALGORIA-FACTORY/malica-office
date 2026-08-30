@@ -10,12 +10,14 @@ export const PnlV1 = z.object({
   produits: decimalString,
   charges: decimalString,
   resultat: decimalString,
-  by_account: z.array(z.object({
-    account_code: z.string(),
-    label: z.string(),
-    debit: decimalString,
-    credit: decimalString,
-    solde: decimalString,
-  })),
+  by_account: z.array(
+    z.object({
+      account_code: z.string(),
+      label: z.string(),
+      debit: decimalString,
+      credit: decimalString,
+      solde: decimalString,
+    }),
+  ),
 });
 export type PnlV1 = z.infer<typeof PnlV1>;

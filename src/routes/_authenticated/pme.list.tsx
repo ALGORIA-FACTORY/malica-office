@@ -12,9 +12,15 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
     meta: [
       { title: "Mes pièces — Regalica Office" },
-      { name: "description", content: "Toutes mes pièces et leur état, de la capture à la comptabilisation." },
+      {
+        name: "description",
+        content: "Toutes mes pièces et leur état, de la capture à la comptabilisation.",
+      },
       { property: "og:title", content: "Mes pièces — Regalica Office" },
-      { property: "og:description", content: "Toutes mes pièces et leur état, de la capture à la comptabilisation." },
+      {
+        property: "og:description",
+        content: "Toutes mes pièces et leur état, de la capture à la comptabilisation.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -36,7 +42,8 @@ const ORDER: PieceStatus[] = ["capturee", "lue", "comptabilisee"];
 function stepState(status: PieceStatus, step: PieceStatus): StepState {
   const normalized: PieceStatus =
     status === "proposee" ? "lue" : status === "supervisee" ? "comptabilisee" : status;
-  if (status === "retournee") return step === "capturee" ? "done" : step === "lue" ? "current" : "pending";
+  if (status === "retournee")
+    return step === "capturee" ? "done" : step === "lue" ? "current" : "pending";
   const idx = ORDER.indexOf(normalized);
   const stepIdx = ORDER.indexOf(step);
   if (stepIdx < idx) return "done";

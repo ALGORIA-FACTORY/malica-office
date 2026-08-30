@@ -92,12 +92,7 @@ export interface FiscalCharge {
 
 // ------------------------------------------------------------------- capture
 export type PieceStatus =
-  | "capturee"
-  | "lue"
-  | "proposee"
-  | "comptabilisee"
-  | "supervisee"
-  | "retournee";
+  "capturee" | "lue" | "proposee" | "comptabilisee" | "supervisee" | "retournee";
 
 export interface Piece {
   id: string;

@@ -53,7 +53,13 @@ export function buildExtractFromTokenPlan(params: {
   };
 
   const issuer = take("issuer", selection.issuer, "text", "entete", "piece.emetteur");
-  const documentDate = take("document_date", selection.document_date, "date", "entete", "piece.date");
+  const documentDate = take(
+    "document_date",
+    selection.document_date,
+    "date",
+    "entete",
+    "piece.date",
+  );
 
   const lines: Array<Record<string, string>> = [];
   selection.lines.forEach((line, i) => {
@@ -78,7 +84,13 @@ export function buildExtractFromTokenPlan(params: {
     });
   });
 
-  const totalBase = take("totals.base_ht", selection.totals.base_ht, "amount", "totaux", "piece.total.ht");
+  const totalBase = take(
+    "totals.base_ht",
+    selection.totals.base_ht,
+    "amount",
+    "totaux",
+    "piece.total.ht",
+  );
   const totalVat = take("totals.vat", selection.totals.vat, "amount", "totaux", "piece.total.tva");
   const totalTtc = take("totals.ttc", selection.totals.ttc, "amount", "totaux", "piece.total.ttc");
 
@@ -125,18 +137,35 @@ export function buildExtractFromTokenPlan(params: {
     }
   }
 
-
   // Articles : la désignation et les quantités servent l'analyse. Aucun de ces
   // champs n'entre dans l'équilibre ; tous restent adossés à un token cité.
   const articles: Array<Record<string, string | null>> = [];
   selection.articles.forEach((a, i) => {
-    const designation = take(`articles[${i}].designation`, a.designation, "text", "corps", "article.designation");
+    const designation = take(
+      `articles[${i}].designation`,
+      a.designation,
+      "text",
+      "corps",
+      "article.designation",
+    );
     if (!designation) return;
     articles.push({
       designation,
       quantity: take(`articles[${i}].quantity`, a.quantity, "amount", "corps", "article.quantite"),
-      unit_price_ht: take(`articles[${i}].unit_price_ht`, a.unit_price_ht, "amount", "corps", "article.pu.ht"),
-      unit_price_ttc: take(`articles[${i}].unit_price_ttc`, a.unit_price_ttc, "amount", "corps", "article.pu.ttc"),
+      unit_price_ht: take(
+        `articles[${i}].unit_price_ht`,
+        a.unit_price_ht,
+        "amount",
+        "corps",
+        "article.pu.ht",
+      ),
+      unit_price_ttc: take(
+        `articles[${i}].unit_price_ttc`,
+        a.unit_price_ttc,
+        "amount",
+        "corps",
+        "article.pu.ttc",
+      ),
       total_ht: take(`articles[${i}].total_ht`, a.total_ht, "amount", "corps", "article.total.ht"),
       tax_code: a.tax_code ?? null,
     });

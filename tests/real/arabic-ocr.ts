@@ -36,7 +36,8 @@ function normalizeArabic(s: string): string {
 
 async function main() {
   const [imagePath, annPath] = process.argv.slice(2);
-  if (!imagePath || !annPath) throw new Error("usage: bun tests/real/arabic-ocr.ts <image> <ann.json>");
+  if (!imagePath || !annPath)
+    throw new Error("usage: bun tests/real/arabic-ocr.ts <image> <ann.json>");
 
   const bytes = readFileSync(imagePath);
   const mime = imagePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
@@ -50,7 +51,11 @@ async function main() {
     .flatMap((o) =>
       o.tags
         .filter((t) => t.name === "Transcription" && typeof t.value === "string" && t.value.trim())
-        .map((t) => ({ text: t.value as string, points: o.points.exterior, classTitle: o.classTitle })),
+        .map((t) => ({
+          text: t.value as string,
+          points: o.points.exterior,
+          classTitle: o.classTitle,
+        })),
     )
     .filter((g) => g.points.length >= 2);
 
@@ -85,7 +90,8 @@ async function main() {
   }
   const recall = gt.length ? (found / gt.length) * 100 : 0;
   console.log(`rappel des zones transcrites : ${found}/${gt.length} (${recall.toFixed(1)} %)`);
-  if (missing.length) console.log(`non retrouvées (${missing.length}) : ${missing.slice(0, 10).join(" | ")}`);
+  if (missing.length)
+    console.log(`non retrouvées (${missing.length}) : ${missing.slice(0, 10).join(" | ")}`);
 
   // Localisation : le token retrouvé tombe-t-il dans la boîte de la vérité terrain ?
   const { width: W, height: H } = ann.size;
@@ -93,7 +99,9 @@ async function main() {
   let checked = 0;
   for (const g of gt.slice(0, 40)) {
     const needle = normalizeArabic(g.text);
-    const tok = read.tokens.find((t) => needle.includes(normalizeArabic(t.text)) && t.text.trim().length > 1);
+    const tok = read.tokens.find(
+      (t) => needle.includes(normalizeArabic(t.text)) && t.text.trim().length > 1,
+    );
     if (!tok) continue;
     checked += 1;
     const xs = g.points.map((p) => p[0]!);
@@ -109,12 +117,21 @@ async function main() {
   console.log(`boîtes cohérentes : ${inBox}/${checked}`);
 
   // Le filtre : aucune valeur hors plan de tokens.
-  const built = buildExtractFromTokenPlan({ tokens: read.tokens, selection: read.selection, decimals: 3 });
-  console.log(`contrat ${built.contract} — valide=${built.valid}, citations=${built.citations.length}, drapeaux=${built.flags.length}`);
-  for (const f of built.flags.slice(0, 12)) console.log(`  drapeau ${f.field} : ${f.code}${f.detail ? ` (${f.detail})` : ""}`);
+  const built = buildExtractFromTokenPlan({
+    tokens: read.tokens,
+    selection: read.selection,
+    decimals: 3,
+  });
+  console.log(
+    `contrat ${built.contract} — valide=${built.valid}, citations=${built.citations.length}, drapeaux=${built.flags.length}`,
+  );
+  for (const f of built.flags.slice(0, 12))
+    console.log(`  drapeau ${f.field} : ${f.code}${f.detail ? ` (${f.detail})` : ""}`);
   const tokenTexts = new Set(read.tokens.map((t) => t.text));
   const orphans = built.citations.filter((c) => !read.tokens.some((t) => t.page === c.page));
-  console.log(`citations orphelines : ${orphans.length} (attendu 0) — tokens distincts ${tokenTexts.size}`);
+  console.log(
+    `citations orphelines : ${orphans.length} (attendu 0) — tokens distincts ${tokenTexts.size}`,
+  );
   console.log(`durée totale ${Date.now() - started} ms`);
 }
 

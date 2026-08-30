@@ -27,7 +27,10 @@ export function PackBanner({ jurisdiction }: { jurisdiction: string }) {
   if (data.ratified) {
     return (
       <p className="rule-b bg-secondary px-4 py-2 text-xs text-muted-foreground">
-        {t("pack.ratified")} · <span className="num">{data.jurisdiction} {data.version}</span>
+        {t("pack.ratified")} ·{" "}
+        <span className="num">
+          {data.jurisdiction} {data.version}
+        </span>
       </p>
     );
   }

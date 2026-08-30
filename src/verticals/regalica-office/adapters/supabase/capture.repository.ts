@@ -28,7 +28,8 @@ function toPiece(row: Record<string, unknown>): Piece {
 export function createSupabaseCaptureRepository(): CaptureRepository {
   return {
     async register(input: NewPiece): Promise<string> {
-      const ext = input.fileName.split(".").pop()?.toLowerCase() || (input.source === "pdf" ? "pdf" : "jpg");
+      const ext =
+        input.fileName.split(".").pop()?.toLowerCase() || (input.source === "pdf" ? "pdf" : "jpg");
       const objectName = `${input.tenantId}/${crypto.randomUUID()}.${ext}`;
 
       const { error: upErr } = await supabase.storage
@@ -72,22 +73,26 @@ export function createSupabaseCaptureRepository(): CaptureRepository {
       if (!pieceRow) throw new Error("piece.not_found");
       const piece = toPiece(pieceRow as Record<string, unknown>);
 
-      const [{ data: exRows, error: exErr }, { data: citRows, error: cErr }, { data: tokRows, error: tErr }, signed] =
-        await Promise.all([
-          supabase
-            .from("extractions_v")
-            .select("id, contract, payload, flags, created_at")
-            .eq("piece_id", pieceId)
-            .order("created_at", { ascending: false })
-            .limit(1),
-          supabase.from("citations_v").select("field, page, bbox, zone").eq("piece_id", pieceId),
-          supabase
-            .from("token_plan_v")
-            .select("page, ordinal, text, x0, y0, x1, y1")
-            .eq("piece_id", pieceId)
-            .order("ordinal", { ascending: true }),
-          supabase.storage.from("pieces").createSignedUrl(piece.storagePath, 600),
-        ]);
+      const [
+        { data: exRows, error: exErr },
+        { data: citRows, error: cErr },
+        { data: tokRows, error: tErr },
+        signed,
+      ] = await Promise.all([
+        supabase
+          .from("extractions_v")
+          .select("id, contract, payload, flags, created_at")
+          .eq("piece_id", pieceId)
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabase.from("citations_v").select("field, page, bbox, zone").eq("piece_id", pieceId),
+        supabase
+          .from("token_plan_v")
+          .select("page, ordinal, text, x0, y0, x1, y1")
+          .eq("piece_id", pieceId)
+          .order("ordinal", { ascending: true }),
+        supabase.storage.from("pieces").createSignedUrl(piece.storagePath, 600),
+      ]);
       if (exErr) throw exErr;
       if (cErr) throw cErr;
       if (tErr) throw tErr;

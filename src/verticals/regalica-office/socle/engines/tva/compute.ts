@@ -5,7 +5,7 @@ import type { ExtractV1 } from "../../contracts/extract.v1";
 import type { TvaV1 } from "../../contracts/tva.v1";
 
 export interface TvaInput {
-  period: string;                          // "YYYY-MM"
+  period: string; // "YYYY-MM"
   currency: CurrencyDef;
   tax_rates: readonly TaxRateRow[];
   achats: ReadonlyArray<{ item_id: string | null; extract: ExtractV1 }>;
@@ -22,7 +22,10 @@ function bucketize(
     for (const line of extract.lines) {
       const rate = resolveTaxRate(rates, line.tax_code, extract.document_date);
       if (!rate) {
-        refused.push({ reason: `MISSING_TAX_RATE:${line.tax_code}@${extract.document_date}`, item_id });
+        refused.push({
+          reason: `MISSING_TAX_RATE:${line.tax_code}@${extract.document_date}`,
+          item_id,
+        });
         continue;
       }
       const cur = map.get(line.tax_code) ?? { rate: rate.rate, base: "0", vat: "0" };
@@ -46,8 +49,16 @@ export function computeTva(input: TvaInput): TvaV1 {
     contract: "tva.v1",
     period: input.period,
     currency: input.currency.code,
-    collectee: collectee.map((b) => ({ ...b, base: toFixedStr(D(b.base), dec), vat: toFixedStr(D(b.vat), dec) })),
-    deductible: deductible.map((b) => ({ ...b, base: toFixedStr(D(b.base), dec), vat: toFixedStr(D(b.vat), dec) })),
+    collectee: collectee.map((b) => ({
+      ...b,
+      base: toFixedStr(D(b.base), dec),
+      vat: toFixedStr(D(b.vat), dec),
+    })),
+    deductible: deductible.map((b) => ({
+      ...b,
+      base: toFixedStr(D(b.base), dec),
+      vat: toFixedStr(D(b.vat), dec),
+    })),
     totals: {
       collectee: toFixedStr(totCol, dec),
       deductible: toFixedStr(totDed, dec),

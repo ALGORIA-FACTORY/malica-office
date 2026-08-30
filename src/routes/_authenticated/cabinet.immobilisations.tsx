@@ -27,9 +27,17 @@ export const Route = createFileRoute("/_authenticated/cabinet/immobilisations")(
   head: () => ({
     meta: [
       { title: "Immobilisations — Regalica Office" },
-      { name: "description", content: "Fiches d'immobilisation, dotations d'amortissement et dépréciations calculées par le Socle." },
+      {
+        name: "description",
+        content:
+          "Fiches d'immobilisation, dotations d'amortissement et dépréciations calculées par le Socle.",
+      },
       { property: "og:title", content: "Immobilisations — Regalica Office" },
-      { property: "og:description", content: "Fiches d'immobilisation, dotations d'amortissement et dépréciations calculées par le Socle." },
+      {
+        property: "og:description",
+        content:
+          "Fiches d'immobilisation, dotations d'amortissement et dépréciations calculées par le Socle.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -138,9 +146,7 @@ function CabinetImmobilisations() {
   const assetDepreciations = (depreciations.data ?? []).filter((d) => d.assetId === asset?.id);
   const recorded = new Set(assetDotations.map((d) => `${d.exercice}`));
   const cumulDepreciation =
-    assetDepreciations.length > 0
-      ? assetDepreciations[assetDepreciations.length - 1]!.cumul
-      : "0";
+    assetDepreciations.length > 0 ? assetDepreciations[assetDepreciations.length - 1]!.cumul : "0";
 
   // Le plan sort du Socle : durée, coefficient et décimales viennent du pack.
   const plan = useMemo(() => {
@@ -323,9 +329,7 @@ function CabinetImmobilisations() {
                 setAssetId(null);
               }}
             />
-            <ActionButton onClick={() => setForm(emptyForm())}>
-              {t("cab.immo.new")}
-            </ActionButton>
+            <ActionButton onClick={() => setForm(emptyForm())}>{t("cab.immo.new")}</ActionButton>
           </div>
 
           {error ? (
@@ -592,7 +596,9 @@ function CabinetImmobilisations() {
                   </label>
                   <ActionButton
                     onClick={() => recordDep.mutate()}
-                    disabled={!depreciation || depreciation.mouvement === "0" || recordDep.isPending}
+                    disabled={
+                      !depreciation || depreciation.mouvement === "0" || recordDep.isPending
+                    }
                   >
                     {depreciation && Number(depreciation.mouvement) < 0
                       ? t("cab.immo.dep.reprise")
@@ -646,7 +652,8 @@ function CabinetImmobilisations() {
                       <header className="flex flex-wrap items-baseline justify-between gap-2">
                         <h3 className="text-[13px] font-semibold">{e.libelle}</h3>
                         <p className="num text-[11px] text-muted-foreground">
-                          {e.journal} · {e.dateEcriture} · {t(
+                          {e.journal} · {e.dateEcriture} ·{" "}
+                          {t(
                             e.status === "booked"
                               ? "cab.immo.ecriture.booked"
                               : e.status === "supervisee"

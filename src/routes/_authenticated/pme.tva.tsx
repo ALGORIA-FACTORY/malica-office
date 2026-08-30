@@ -9,9 +9,15 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
   head: () => ({
     meta: [
       { title: "TVA de la période — Regalica Office" },
-      { name: "description", content: "La TVA collectée, déductible et à payer de la période, calculée par le Socle." },
+      {
+        name: "description",
+        content: "La TVA collectée, déductible et à payer de la période, calculée par le Socle.",
+      },
       { property: "og:title", content: "TVA de la période — Regalica Office" },
-      { property: "og:description", content: "La TVA collectée, déductible et à payer de la période, calculée par le Socle." },
+      {
+        property: "og:description",
+        content: "La TVA collectée, déductible et à payer de la période, calculée par le Socle.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -49,9 +55,7 @@ function TvaScreen() {
         kicker={t("pme.home.tva.kicker", { month: monthLabel.toUpperCase() })}
         value={tva ? `${tva.totals.solde} ${tva.currency}` : "—"}
         context={
-          count === 0
-            ? t("pme.home.tva.context.zero")
-            : t("pme.home.tva.context.other", { count })
+          count === 0 ? t("pme.home.tva.context.zero") : t("pme.home.tva.context.other", { count })
         }
       />
 

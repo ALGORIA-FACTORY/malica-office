@@ -23,7 +23,6 @@ export const MotifCode = z.enum([
   // Résidu de pied de facture : TTC imprimé − (HT + TVA + droits déclarés).
   "RESIDUAL_MATCHED_PACK_CHARGE",
   "RESIDUAL_UNEXPLAINED",
-
 ]);
 export type MotifCode = z.infer<typeof MotifCode>;
 
@@ -38,8 +37,8 @@ export type Motif = z.infer<typeof Motif>;
 export const JournalLineV1 = z.object({
   account_code: z.string().min(1),
   label: z.string(),
-  debit: decimalString,   // "0" si crédit
-  credit: decimalString,  // "0" si débit
+  debit: decimalString, // "0" si crédit
+  credit: decimalString, // "0" si débit
 });
 export type JournalLineV1 = z.infer<typeof JournalLineV1>;
 

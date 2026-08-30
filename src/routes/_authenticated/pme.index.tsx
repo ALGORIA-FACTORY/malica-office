@@ -12,9 +12,15 @@ export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
     meta: [
       { title: "Mon espace — Regalica Office — Regalica Office" },
-      { name: "description", content: "Le chiffre du moment, la capture en un tap et l'état de mes pièces." },
+      {
+        name: "description",
+        content: "Le chiffre du moment, la capture en un tap et l'état de mes pièces.",
+      },
       { property: "og:title", content: "Mon espace — Regalica Office — Regalica Office" },
-      { property: "og:description", content: "Le chiffre du moment, la capture en un tap et l'état de mes pièces." },
+      {
+        property: "og:description",
+        content: "Le chiffre du moment, la capture en un tap et l'état de mes pièces.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -79,9 +85,7 @@ function PmeHome() {
         kicker={t("pme.home.tva.kicker", { month: monthLabel.toUpperCase() })}
         value={tva ? `${tva.totals.solde} ${tva.currency}` : "—"}
         context={
-          count === 0
-            ? t("pme.home.tva.context.zero")
-            : t("pme.home.tva.context.other", { count })
+          count === 0 ? t("pme.home.tva.context.zero") : t("pme.home.tva.context.other", { count })
         }
       />
 
@@ -99,13 +103,21 @@ function PmeHome() {
           label={t("pme.tva.title")}
           state={tva ? `${tva.totals.solde} ${tva.currency}` : "—"}
         />
-        <StoneCard to="/pme/coffre" label={t("pme.home.card.coffre")} state={t("pme.coffre.tab.partage")} />
+        <StoneCard
+          to="/pme/coffre"
+          label={t("pme.home.card.coffre")}
+          state={t("pme.coffre.tab.partage")}
+        />
         <StoneCard
           to="/pme/charges"
           label={t("pme.home.card.charges")}
           state={t("pme.charges.byFamille")}
         />
-        <StoneCard to="/pme/echeances" label={t("pme.home.card.echeances")} state={t("pme.echeances.list")} />
+        <StoneCard
+          to="/pme/echeances"
+          label={t("pme.home.card.echeances")}
+          state={t("pme.echeances.list")}
+        />
       </div>
 
       {pme.captureError ? (

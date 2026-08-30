@@ -22,9 +22,17 @@ export const Route = createFileRoute("/_authenticated/cabinet/rapprochement")({
   head: () => ({
     meta: [
       { title: "Rapprochement bancaire — Regalica Office" },
-      { name: "description", content: "Lettrage des lignes bancaires avec les écritures, délettrage motivé et journal complet." },
+      {
+        name: "description",
+        content:
+          "Lettrage des lignes bancaires avec les écritures, délettrage motivé et journal complet.",
+      },
       { property: "og:title", content: "Rapprochement bancaire — Regalica Office" },
-      { property: "og:description", content: "Lettrage des lignes bancaires avec les écritures, délettrage motivé et journal complet." },
+      {
+        property: "og:description",
+        content:
+          "Lettrage des lignes bancaires avec les écritures, délettrage motivé et journal complet.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -33,14 +41,32 @@ export const Route = createFileRoute("/_authenticated/cabinet/rapprochement")({
 });
 
 /** Clé d'idempotence d'une ligne de relevé : zéro doublon à l'import. */
-function importKey(compteId: string, at: string, label: string, montant: string, reference: string | null) {
-  return [compteId, at, label.trim().toUpperCase(), montant, (reference ?? "").trim().toUpperCase()].join("|");
+function importKey(
+  compteId: string,
+  at: string,
+  label: string,
+  montant: string,
+  reference: string | null,
+) {
+  return [
+    compteId,
+    at,
+    label.trim().toUpperCase(),
+    montant,
+    (reference ?? "").trim().toUpperCase(),
+  ].join("|");
 }
 
 function parseCsv(
   compteId: string,
   raw: string,
-): Array<{ at: string; label: string; montant: string; reference: string | null; idempotencyKey: string }> {
+): Array<{
+  at: string;
+  label: string;
+  montant: string;
+  reference: string | null;
+  idempotencyKey: string;
+}> {
   const out: Array<{
     at: string;
     label: string;
@@ -82,7 +108,9 @@ function CabinetRapprochement() {
   const [csv, setCsv] = useState("");
   const [importInfo, setImportInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [unmatch, setUnmatch] = useState<{ ligneId: string; motifId: string; note: string } | null>(null);
+  const [unmatch, setUnmatch] = useState<{ ligneId: string; motifId: string; note: string } | null>(
+    null,
+  );
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -161,7 +189,13 @@ function CabinetRapprochement() {
       }));
     const book = bookLines.data
       .filter((b) => !b.lettree)
-      .map((b) => ({ id: b.id, at: b.at, label: b.label, montant: b.montant, reference: b.reference }));
+      .map((b) => ({
+        id: b.id,
+        at: b.at,
+        label: b.label,
+        montant: b.montant,
+        reference: b.reference,
+      }));
     if (bank.length === 0 || book.length === 0) return null;
     return computeRapprochement(
       {
@@ -474,7 +508,9 @@ function CabinetRapprochement() {
                                 <input
                                   aria-label={t("cab.banque.note")}
                                   value={unmatch!.note}
-                                  onChange={(ev) => setUnmatch({ ...unmatch!, note: ev.target.value })}
+                                  onChange={(ev) =>
+                                    setUnmatch({ ...unmatch!, note: ev.target.value })
+                                  }
                                   className="w-full border border-border bg-card px-2 py-1 text-[12px]"
                                   placeholder={t("cab.banque.note")}
                                 />
@@ -498,7 +534,9 @@ function CabinetRapprochement() {
                             </div>
                           ) : (
                             <ActionButton
-                              onClick={() => setUnmatch({ ligneId: e.ligneId, motifId: "", note: "" })}
+                              onClick={() =>
+                                setUnmatch({ ligneId: e.ligneId, motifId: "", note: "" })
+                              }
                             >
                               {t("cab.banque.unmatch")}
                             </ActionButton>
@@ -634,7 +672,9 @@ function CabinetRapprochement() {
                       <InkCell>
                         <EcritureRef id={l.ecritureId} />
                       </InkCell>
-                      <InkCell>{l.motifId ? (motifById.get(l.motifId)?.label ?? l.motifId) : "—"}</InkCell>
+                      <InkCell>
+                        {l.motifId ? (motifById.get(l.motifId)?.label ?? l.motifId) : "—"}
+                      </InkCell>
                       <InkCell>{l.note ?? "—"}</InkCell>
                     </InkTableRow>
                   ))}

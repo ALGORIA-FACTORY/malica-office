@@ -121,7 +121,13 @@ export function computeChargesByFamille(input: ChargesByFamilleInput): ChargesBy
       articles: v.count,
       quantity: toFixedStr(v.qty, 3),
     }))
-    .sort((a, b) => (D(b.total).greaterThan(a.total) ? 1 : D(b.total).lessThan(a.total) ? -1 : a.ordinal - b.ordinal));
+    .sort((a, b) =>
+      D(b.total).greaterThan(a.total)
+        ? 1
+        : D(b.total).lessThan(a.total)
+          ? -1
+          : a.ordinal - b.ordinal,
+    );
 
   // Total de la période précédente immédiate, si disponible.
   const previousPeriod = baselinePeriods[0] ?? null;
@@ -139,7 +145,9 @@ export function computeChargesByFamille(input: ChargesByFamilleInput): ChargesBy
   if (threshold && baselinePeriods.length >= threshold.minPeriods) {
     for (const [code, v] of totals.entries()) {
       const history = baselinePeriods.map((p) =>
-        sum(articles.filter((a) => a.period === p && a.familleCode === code).map((a) => amountOf(a))),
+        sum(
+          articles.filter((a) => a.period === p && a.familleCode === code).map((a) => amountOf(a)),
+        ),
       );
       const nonEmpty = history.filter((h) => !h.isZero());
       if (nonEmpty.length < threshold.minPeriods) continue;
@@ -161,7 +169,9 @@ export function computeChargesByFamille(input: ChargesByFamilleInput): ChargesBy
       }
     }
   }
-  anomalies.sort((a, b) => (D(b.deviationRatio).abs().greaterThan(D(a.deviationRatio).abs()) ? 1 : -1));
+  anomalies.sort((a, b) =>
+    D(b.deviationRatio).abs().greaterThan(D(a.deviationRatio).abs()) ? 1 : -1,
+  );
 
   return {
     period,

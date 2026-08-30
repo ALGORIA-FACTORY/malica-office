@@ -21,9 +21,15 @@ export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({
     meta: [
       { title: "Aujourd'hui — cabinet — Regalica Office" },
-      { name: "description", content: "La file priorisée du jour, les agents au travail et les chiffres du cabinet." },
+      {
+        name: "description",
+        content: "La file priorisée du jour, les agents au travail et les chiffres du cabinet.",
+      },
       { property: "og:title", content: "Aujourd'hui — cabinet — Regalica Office" },
-      { property: "og:description", content: "La file priorisée du jour, les agents au travail et les chiffres du cabinet." },
+      {
+        property: "og:description",
+        content: "La file priorisée du jour, les agents au travail et les chiffres du cabinet.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -83,9 +89,24 @@ function CabinetToday() {
 
       <StatCards
         items={[
-          { key: "review", label: t("cab.kpi.review"), value: String(toReview), tone: toReview ? "warn" : "neutral" },
-          { key: "supervised", label: t("cab.kpi.supervised"), value: String(supervised), tone: supervised ? "ok" : "neutral" },
-          { key: "returned", label: t("cab.kpi.returned"), value: String(returned), tone: returned ? "stop" : "neutral" },
+          {
+            key: "review",
+            label: t("cab.kpi.review"),
+            value: String(toReview),
+            tone: toReview ? "warn" : "neutral",
+          },
+          {
+            key: "supervised",
+            label: t("cab.kpi.supervised"),
+            value: String(supervised),
+            tone: supervised ? "ok" : "neutral",
+          },
+          {
+            key: "returned",
+            label: t("cab.kpi.returned"),
+            value: String(returned),
+            tone: returned ? "stop" : "neutral",
+          },
           { key: "clients", label: t("cab.kpi.clients"), value: String(clientCount) },
         ]}
       />
@@ -130,7 +151,6 @@ function CabinetToday() {
     </div>
   );
 }
-
 
 export function QueueTable({ rows }: { rows: QueueItem[] }) {
   const { t } = useI18n();

@@ -17,13 +17,7 @@ export interface PmeContextValue {
 
 const PmeContext = createContext<PmeContextValue | null>(null);
 
-export function PmeProvider({
-  value,
-  children,
-}: {
-  value: PmeContextValue;
-  children: ReactNode;
-}) {
+export function PmeProvider({ value, children }: { value: PmeContextValue; children: ReactNode }) {
   return <PmeContext.Provider value={value}>{children}</PmeContext.Provider>;
 }
 

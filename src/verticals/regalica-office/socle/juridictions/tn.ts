@@ -81,9 +81,7 @@ export function loadJurisdictionPack(
   jurisdiction: string,
   at: string,
 ): JurisdictionPack {
-  const rules = rows
-    .filter((r) => r.jurisdiction === jurisdiction && isInForce(r, at))
-    .map(toRule);
+  const rules = rows.filter((r) => r.jurisdiction === jurisdiction && isInForce(r, at)).map(toRule);
   if (rules.length === 0) throw new PackUnavailable(jurisdiction, at);
   return { jurisdiction, rules };
 }

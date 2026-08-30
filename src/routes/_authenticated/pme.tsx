@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useNavigate,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Bell, Calendar, Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -63,14 +57,11 @@ function PmeLayout() {
     if (pmeOrgs.length === 0 && hasCabinet) void navigate({ to: "/office" });
   }, [orgsQuery.isPending, pmeOrgs.length, hasCabinet, navigate]);
 
-
-
   function selectOrg(id: string) {
     setActiveId(id);
     writeActiveOrgId(id);
     qc.invalidateQueries();
   }
-
 
   const entitiesQuery = useQuery({
     queryKey: ["entities", org?.id],
@@ -113,8 +104,7 @@ function PmeLayout() {
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
     },
-    onError: (e: unknown) =>
-      setCaptureError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) => setCaptureError(e instanceof Error ? e.message : t("common.error")),
   });
 
   const navItems = [
@@ -173,7 +163,6 @@ function PmeLayout() {
               {t("portal.switch")}
             </Link>
           </div>
-
         </div>
       </header>
 

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeAmount, normalizeDate, resolveFromTokenPlan, type PageToken } from "../token-plan";
+import {
+  normalizeAmount,
+  normalizeDate,
+  resolveFromTokenPlan,
+  type PageToken,
+} from "../token-plan";
 
 const tokens: PageToken[] = [
   { page: 1, ordinal: 0, text: "SOTUMAG", x0: 0.1, y0: 0.1, x1: 0.3, y1: 0.12 },

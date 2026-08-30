@@ -8,7 +8,14 @@ import type { TaxRateRow } from "../domain/types";
 describe("edge branches", () => {
   it("resolveTaxRate — respecte valid_to fini", () => {
     const abrogated: TaxRateRow[] = [
-      { code: "TVA_18", label: "old", rate: "0.18", valid_from: "2015-01-01", valid_to: "2017-12-31", jurisdiction: "TN" },
+      {
+        code: "TVA_18",
+        label: "old",
+        rate: "0.18",
+        valid_from: "2015-01-01",
+        valid_to: "2017-12-31",
+        jurisdiction: "TN",
+      },
     ];
     expect(resolveTaxRate(abrogated, "TVA_18", "2016-06-01")).not.toBeNull();
     expect(resolveTaxRate(abrogated, "TVA_18", "2020-06-01")).toBeNull();
@@ -18,12 +25,22 @@ describe("edge branches", () => {
     // Construit un extract où la sommation avant/après arrondi diffère de 0.001.
     const e = factureAchatSimple();
     e.lines = [
-      { label: "l1", tax_code: "TVA_19", base_ht: "100.0006", vat_amount: "19.0006", ttc: "119.0011" },
+      {
+        label: "l1",
+        tax_code: "TVA_19",
+        base_ht: "100.0006",
+        vat_amount: "19.0006",
+        ttc: "119.0011",
+      },
     ];
     e.totals = { base_ht: "100.0006", vat: "19.0006", ttc: "119.0011" };
     const p = computePivot({
-      extract: e, source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: e,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "ROUNDING_WITHIN_TOLERANCE")).toBe(true);
     expect(p.traffic_light).toBe("ORANGE");
@@ -32,7 +49,8 @@ describe("edge branches", () => {
 
   it("PnL — compte hors classes 6/7 est ignoré, libellé fallback quand absent du COA", () => {
     const r = computePnl({
-      period: "2026-07", currency: TND,
+      period: "2026-07",
+      currency: TND,
       entries: [{ account_code: "607", debit: "100.000", credit: "0" }],
       coa: [], // pas de libellé
     });

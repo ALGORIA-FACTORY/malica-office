@@ -58,7 +58,6 @@ function OfficeHome() {
     if (cabinetOrgs.length > 0 && pmeOrgs.length === 0) void navigate({ to: "/cabinet" });
   }, [orgsQuery.isPending, pmeOrgs.length, cabinetOrgs.length, navigate]);
 
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="rule-b">
@@ -138,7 +137,6 @@ function OfficeHome() {
           </section>
         )}
 
-
         {orgsQuery.isPending ? (
           <p className="mt-8 text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : orgs.length === 0 ? (
@@ -208,7 +206,6 @@ function AccessCard({
     </Link>
   );
 }
-
 
 function OrgCard({
   org,

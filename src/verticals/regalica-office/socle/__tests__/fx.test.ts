@@ -4,7 +4,14 @@ import { EUR, TND } from "./fixtures";
 import type { FxRateV1 } from "../contracts/fx.v1";
 
 const RATES: FxRateV1[] = [
-  { base: "EUR", quote: "TND", rate: "3.35", valid_from: "2026-07-01", valid_to: null, source: "BCT" },
+  {
+    base: "EUR",
+    quote: "TND",
+    rate: "3.35",
+    valid_from: "2026-07-01",
+    valid_to: null,
+    source: "BCT",
+  },
 ];
 
 describe("fx / convert", () => {

@@ -78,8 +78,6 @@ function CabinetLayout() {
     );
   }
 
-
-
   const groups = [
     {
       key: "work",
@@ -118,7 +116,10 @@ function CabinetLayout() {
           >
             <div className="flex items-start justify-between gap-3 px-4 py-3 lg:block lg:px-6 lg:pb-4 lg:pt-6">
               <div className="min-w-0">
-                <Link to="/office" className="block truncate text-[15px] font-semibold tracking-tight">
+                <Link
+                  to="/office"
+                  className="block truncate text-[15px] font-semibold tracking-tight"
+                >
                   {org.name}
                 </Link>
                 <p className="mt-1 text-[12px] text-muted-foreground">
@@ -131,7 +132,6 @@ function CabinetLayout() {
               >
                 {t("portal.switch")}
               </Link>
-
             </div>
 
             <div className="flex gap-6 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-0 lg:space-y-6 lg:overflow-y-auto lg:pb-4">
@@ -209,4 +209,3 @@ function CabinetLayout() {
     />
   );
 }
-

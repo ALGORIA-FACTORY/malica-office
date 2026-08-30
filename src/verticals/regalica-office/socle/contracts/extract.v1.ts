@@ -19,7 +19,7 @@ const confidence = z.number().min(0).max(1);
 
 export const ExtractLineV1 = z.object({
   label: z.string().min(1),
-  tax_code: z.string().min(1),   // ex. "TVA_19" ; référence ref_office.tax_rates.code
+  tax_code: z.string().min(1), // ex. "TVA_19" ; référence ref_office.tax_rates.code
   base_ht: decimalString,
   vat_amount: decimalString,
   ttc: decimalString,

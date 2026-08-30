@@ -191,7 +191,10 @@ export function convexHull(points: readonly Point[]): Point[] {
     (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
   const lower: Point[] = [];
   for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p!) <= 0) {
+    while (
+      lower.length >= 2 &&
+      cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p!) <= 0
+    ) {
       lower.pop();
     }
     lower.push(p!);
@@ -306,12 +309,7 @@ function homography(src: readonly Point[], w: number, h: number): number[] {
   return [...x, 1];
 }
 
-function warp(
-  source: ImageData,
-  quad: readonly Point[],
-  outW: number,
-  outH: number,
-): ImageData {
+function warp(source: ImageData, quad: readonly Point[], outW: number, outH: number): ImageData {
   const H = homography(quad, outW, outH);
   const out = new ImageData(outW, outH);
   const sw = source.width;
@@ -375,8 +373,7 @@ export function sharpness(gray: Uint8ClampedArray, w: number, h: number): number
   for (let y = 1; y < h - 1; y += 1) {
     for (let x = 1; x < w - 1; x += 1) {
       const i = y * w + x;
-      const l =
-        4 * gray[i]! - gray[i - 1]! - gray[i + 1]! - gray[i - w]! - gray[i + w]!;
+      const l = 4 * gray[i]! - gray[i - 1]! - gray[i + 1]! - gray[i - w]! - gray[i + w]!;
       sum += l;
       sumSq += l * l;
       n += 1;

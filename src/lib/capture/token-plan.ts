@@ -64,9 +64,7 @@ export interface ReadFlag {
 
 /** Retrouve un token dans le plan. */
 export function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | null {
-  return (
-    tokens.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null
-  );
+  return tokens.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null;
 }
 
 /**
@@ -105,10 +103,12 @@ export function normalizeAmount(text: string): string | null {
     // comme séparateur de milliers. La virgule, elle, sépare les décimales —
     // le dinar en compte trois.
     const ambiguousThousands =
-      decimalSep === "." && fracPart.length === 3 && intPart.length > 0 && intPart.length <= 3 && !/[.,]/.test(s.slice(0, idx));
-    s = ambiguousThousands
-      ? `${intPart}${fracPart}`
-      : `${intPart || "0"}.${fracPart}`;
+      decimalSep === "." &&
+      fracPart.length === 3 &&
+      intPart.length > 0 &&
+      intPart.length <= 3 &&
+      !/[.,]/.test(s.slice(0, idx));
+    s = ambiguousThousands ? `${intPart}${fracPart}` : `${intPart || "0"}.${fracPart}`;
   } else {
     s = s.replace(/[.,]/g, "");
   }

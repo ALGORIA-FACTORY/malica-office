@@ -36,7 +36,9 @@ function canonical(names: string[]): Map<string, string> {
 async function main() {
   const [readsPath, sessionPath, outPath] = process.argv.slice(2);
   if (!readsPath || !sessionPath || !outPath)
-    throw new Error("usage: bun tests/real/ingest-tenants.ts <reads.json> <session.json> <tenants.json>");
+    throw new Error(
+      "usage: bun tests/real/ingest-tenants.ts <reads.json> <session.json> <tenants.json>",
+    );
 
   const url = process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
   const anon =
@@ -61,7 +63,9 @@ async function main() {
   const pmeNames = [...new Set([...canon.values()])];
   if (pmeNames.length === 0) throw new Error("aucun émetteur de vente lu : aucune PME à ouvrir");
 
-  const { data: existing, error: exErr } = await sb.from("organizations_v").select("id, name, kind");
+  const { data: existing, error: exErr } = await sb
+    .from("organizations_v")
+    .select("id, name, kind");
   if (exErr) throw new Error(exErr.message);
 
   const tenants: Record<string, string> = {};

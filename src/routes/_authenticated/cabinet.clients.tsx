@@ -18,9 +18,17 @@ export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   head: () => ({
     meta: [
       { title: "Clients du cabinet — Regalica Office" },
-      { name: "description", content: "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser." },
+      {
+        name: "description",
+        content:
+          "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser.",
+      },
       { property: "og:title", content: "Clients du cabinet — Regalica Office" },
-      { property: "og:description", content: "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser." },
+      {
+        property: "og:description",
+        content:
+          "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -62,7 +70,6 @@ function CabinetClients() {
       />
 
       <SectionTitle>{t("cab.queue.byclient")}</SectionTitle>
-
 
       {clients.isPending ? (
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>

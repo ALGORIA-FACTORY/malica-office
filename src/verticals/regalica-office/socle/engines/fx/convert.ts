@@ -16,13 +16,15 @@ export function findFxRate(
   quote: string,
   date: string,
 ): FxRateV1 | null {
-  return rates.find(
-    (r) =>
-      r.base === base &&
-      r.quote === quote &&
-      r.valid_from <= date &&
-      (r.valid_to === null || r.valid_to >= date),
-  ) ?? null;
+  return (
+    rates.find(
+      (r) =>
+        r.base === base &&
+        r.quote === quote &&
+        r.valid_from <= date &&
+        (r.valid_to === null || r.valid_to >= date),
+    ) ?? null
+  );
 }
 
 export interface FxConvertInput {

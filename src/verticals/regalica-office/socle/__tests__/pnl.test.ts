@@ -5,11 +5,12 @@ import { TND } from "./fixtures";
 describe("PnL / snapshot", () => {
   it("calcule produits, charges et résultat", () => {
     const r = computePnl({
-      period: "2026-07", currency: TND,
+      period: "2026-07",
+      currency: TND,
       entries: [
         { account_code: "607", debit: "1000.000", credit: "0" },
-        { account_code: "707", debit: "0",       credit: "2000.000" },
-        { account_code: "401", debit: "0",       credit: "1190.000" }, // ignoré
+        { account_code: "707", debit: "0", credit: "2000.000" },
+        { account_code: "401", debit: "0", credit: "1190.000" }, // ignoré
       ],
       coa: [
         { account_code: "607", label: "Achats", parent_code: "60" },

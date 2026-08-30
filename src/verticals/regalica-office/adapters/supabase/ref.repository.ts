@@ -73,7 +73,9 @@ export function createSupabaseReferentialRepository(): ReferentialRepository {
       const today = new Date().toISOString().slice(0, 10);
       const { data, error } = await supabase
         .from("ref_fiscal_charges_v")
-        .select("code, label, document_kind, account_code, fixed_amount, legal_reference, valid_from, valid_to")
+        .select(
+          "code, label, document_kind, account_code, fixed_amount, legal_reference, valid_from, valid_to",
+        )
         .eq("pack_version_id", packId)
         .lte("valid_from", today);
       if (error) throw error;
@@ -84,7 +86,10 @@ export function createSupabaseReferentialRepository(): ReferentialRepository {
           label: r.label as string,
           documentKind: r.document_kind as FiscalCharge["documentKind"],
           accountCode: r.account_code as string,
-          fixedAmount: r.fixed_amount === null || r.fixed_amount === undefined ? null : decStr(r.fixed_amount, 3),
+          fixedAmount:
+            r.fixed_amount === null || r.fixed_amount === undefined
+              ? null
+              : decStr(r.fixed_amount, 3),
           legalReference: (r.legal_reference as string | null) ?? null,
         }));
     },

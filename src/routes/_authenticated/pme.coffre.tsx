@@ -48,10 +48,7 @@ function PmeCoffre() {
 
   const toggle = useMutation({
     mutationFn: (piece: Piece) =>
-      office().collab.setPieceVis(
-        piece.id,
-        piece.vis === "partage" ? "personnel" : "partage",
-      ),
+      office().collab.setPieceVis(piece.id, piece.vis === "partage" ? "personnel" : "partage"),
     onSuccess: async () => {
       setError(null);
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });

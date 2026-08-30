@@ -145,9 +145,7 @@ function CabinetPropositions() {
                   <input
                     type="checkbox"
                     checked={Boolean(selected[r.pieceId])}
-                    onChange={(e) =>
-                      setSelected((s) => ({ ...s, [r.pieceId]: e.target.checked }))
-                    }
+                    onChange={(e) => setSelected((s) => ({ ...s, [r.pieceId]: e.target.checked }))}
                     aria-label={r.libelle ?? r.pieceId}
                   />
                 </InkCell>

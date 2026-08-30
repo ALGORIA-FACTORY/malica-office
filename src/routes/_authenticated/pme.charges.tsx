@@ -130,8 +130,7 @@ function ChargesScreen() {
       new Date(`${p}-01T00:00:00Z`),
     );
 
-  const pct = (v: string) =>
-    `${Number(v) >= 0 ? "+" : ""}${(Number(v) * 100).toFixed(0)} %`;
+  const pct = (v: string) => `${Number(v) >= 0 ? "+" : ""}${(Number(v) * 100).toFixed(0)} %`;
 
   if (refs.isPending || articles.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
@@ -158,7 +157,9 @@ function ChargesScreen() {
             onClick={() => setPeriod(p)}
             aria-pressed={p === period}
             className={`min-h-[44px] border px-3 py-2 text-[11px] uppercase tracking-wide ${
-              p === period ? "border-foreground bg-foreground text-background" : "border-border bg-card"
+              p === period
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-card"
             }`}
           >
             {monthLabel(p)}
@@ -215,8 +216,7 @@ function ChargesScreen() {
                           </div>
                           <p className="num mt-1 text-[11px] text-muted-foreground">
                             {t("pme.extract.qty")} {a.citationQuantity ? a.quantity : "—"} ·{" "}
-                            {t("pme.extract.pu_ht")}{" "}
-                            {a.citationUnitPriceHt ? a.unitPriceHt : "—"} ·{" "}
+                            {t("pme.extract.pu_ht")} {a.citationUnitPriceHt ? a.unitPriceHt : "—"} ·{" "}
                             {t("pme.extract.pu_ttc")}{" "}
                             {a.citationUnitPriceTtc ? a.unitPriceTtc : "—"}
                           </p>
@@ -271,7 +271,9 @@ function ChargesScreen() {
                 <button
                   type="button"
                   disabled={answer.isPending}
-                  onClick={() => answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })}
+                  onClick={() =>
+                    answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
+                  }
                   className="min-h-[52px] border border-border bg-card px-3 text-[15px] disabled:opacity-60"
                 >
                   {t("pme.charges.answer.exceptionnel")}

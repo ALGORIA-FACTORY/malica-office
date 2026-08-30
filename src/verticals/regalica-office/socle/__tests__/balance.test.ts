@@ -2,9 +2,16 @@ import { describe, it, expect } from "vitest";
 import { computePivot } from "../engines/p4/balance";
 import { canApprove } from "../engines/p4/traffic-light";
 import {
-  TND, TAX_RATES_TN, MAP_ACHAT, MAP_VENTE, TOLERANCES,
-  factureAchatSimple, factureAchatMultiTaux, factureDesequilibree,
-  factureTauxManquant, factureVenteSimple,
+  TND,
+  TAX_RATES_TN,
+  MAP_ACHAT,
+  MAP_VENTE,
+  TOLERANCES,
+  factureAchatSimple,
+  factureAchatMultiTaux,
+  factureDesequilibree,
+  factureTauxManquant,
+  factureVenteSimple,
 } from "./fixtures";
 import { PivotV1 } from "../contracts/pivot.v1";
 import { D } from "../domain/decimal";
@@ -12,8 +19,12 @@ import { D } from "../domain/decimal";
 describe("balance / pivot", () => {
   it("golden — facture achat simple : VERT, équilibrée", () => {
     const p = computePivot({
-      extract: factureAchatSimple(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureAchatSimple(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.traffic_light).toBe("VERT");
     expect(p.approvable).toBe(true);
@@ -26,8 +37,12 @@ describe("balance / pivot", () => {
 
   it("golden — facture vente simple : VERT, contreparties 411/4367/707", () => {
     const p = computePivot({
-      extract: factureVenteSimple(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_VENTE, tolerances: TOLERANCES,
+      extract: factureVenteSimple(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_VENTE,
+      tolerances: TOLERANCES,
     });
     expect(p.traffic_light).toBe("VERT");
     expect(p.lines.map((l) => l.account_code).sort()).toEqual(["411", "4367", "707"]);
@@ -35,8 +50,12 @@ describe("balance / pivot", () => {
 
   it("golden — multi-taux : équilibre exact 928.000", () => {
     const p = computePivot({
-      extract: factureAchatMultiTaux(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureAchatMultiTaux(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.traffic_light).toBe("VERT");
     expect(p.totals.debit).toBe("928.000");
@@ -45,17 +64,23 @@ describe("balance / pivot", () => {
 
   it("golden — pièce déséquilibrée : ROUGE + non approvable", () => {
     const p = computePivot({
-      extract: factureDesequilibree(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureDesequilibree(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.traffic_light).toBe("ROUGE");
     expect(p.approvable).toBe(false);
-    expect(
-      p.motifs.some((m) => m.code === "UNBALANCED" || m.code === "RESIDUAL_UNEXPLAINED"),
-    ).toBe(true);
+    expect(p.motifs.some((m) => m.code === "UNBALANCED" || m.code === "RESIDUAL_UNEXPLAINED")).toBe(
+      true,
+    );
 
     const decision = canApprove(p.traffic_light, {
-      bulk_approve_enabled: true, is_bulk: false, approver_role_is_admin: true,
+      bulk_approve_enabled: true,
+      is_bulk: false,
+      approver_role_is_admin: true,
     });
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toBe("traffic_light_red_blocked_by_engine");
@@ -63,8 +88,12 @@ describe("balance / pivot", () => {
 
   it("golden — date sans taux applicable : refus explicite MISSING_TAX_RATE", () => {
     const p = computePivot({
-      extract: factureTauxManquant(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureTauxManquant(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "MISSING_TAX_RATE")).toBe(true);
     expect(p.approvable).toBe(false);
@@ -74,14 +103,20 @@ describe("balance / pivot", () => {
     const base = factureAchatSimple();
     const orange = computePivot({
       extract: { ...base, field_confidence: { total: 0.7 } },
-      source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(orange.traffic_light).toBe("ORANGE");
     const rouge = computePivot({
       extract: { ...base, field_confidence: { total: 0.3 } },
-      source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(rouge.traffic_light).toBe("ROUGE");
     expect(rouge.approvable).toBe(false);
@@ -92,8 +127,12 @@ describe("balance / pivot", () => {
     bad.lines[0]!.vat_amount = "50.000";
     bad.lines[0]!.ttc = "1050.000";
     const p = computePivot({
-      extract: bad, source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: bad,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "TAX_RATE_MISMATCH")).toBe(true);
     expect(p.traffic_light).toBe("ROUGE");
@@ -101,7 +140,9 @@ describe("balance / pivot", () => {
 
   it("bulk approve désactivé : refus quel que soit le rôle", () => {
     const decision = canApprove("VERT", {
-      bulk_approve_enabled: false, is_bulk: true, approver_role_is_admin: true,
+      bulk_approve_enabled: false,
+      is_bulk: true,
+      approver_role_is_admin: true,
     });
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toBe("bulk_approve_disabled");
@@ -109,15 +150,21 @@ describe("balance / pivot", () => {
 
   it("bulk approve activé : accepté", () => {
     const decision = canApprove("VERT", {
-      bulk_approve_enabled: true, is_bulk: true, approver_role_is_admin: true,
+      bulk_approve_enabled: true,
+      is_bulk: true,
+      approver_role_is_admin: true,
     });
     expect(decision.allowed).toBe(true);
   });
 
   it("propriété — idempotence : deux exécutions identiques ⇒ résultats identiques", () => {
     const input = {
-      extract: factureAchatMultiTaux(), source_item_id: "00000000-0000-0000-0000-000000000001",
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureAchatMultiTaux(),
+      source_item_id: "00000000-0000-0000-0000-000000000001",
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     };
     const a = computePivot(input);
     const b = computePivot(input);
@@ -128,8 +175,12 @@ describe("balance / pivot", () => {
     for (const extract of [factureAchatSimple(), factureAchatMultiTaux(), factureVenteSimple()]) {
       const mapping = extract.document_kind === "facture_achat" ? MAP_ACHAT : MAP_VENTE;
       const p = computePivot({
-        extract, source_item_id: null,
-        tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping, tolerances: TOLERANCES,
+        extract,
+        source_item_id: null,
+        tenant_currency: TND,
+        tax_rates: TAX_RATES_TN,
+        mapping,
+        tolerances: TOLERANCES,
       });
       expect(D(p.totals.debit).equals(p.totals.credit)).toBe(true);
     }
@@ -137,8 +188,12 @@ describe("balance / pivot", () => {
 
   it("propriété — aucun montant n'est un float (toutes chaînes)", () => {
     const p = computePivot({
-      extract: factureAchatMultiTaux(), source_item_id: null,
-      tenant_currency: TND, tax_rates: TAX_RATES_TN, mapping: MAP_ACHAT, tolerances: TOLERANCES,
+      extract: factureAchatMultiTaux(),
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      tolerances: TOLERANCES,
     });
     for (const line of p.lines) {
       expect(typeof line.debit).toBe("string");
@@ -168,8 +223,13 @@ describe("balance / droits hors TVA", () => {
       totals: { ...base.totals, ttc: "1191.000" },
     };
     const p = computePivot({
-      extract, source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, fiscal_charges: timbre, tolerances: TOLERANCES,
+      extract,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
     });
     expect(p.totals.debit).toBe("1191.000");
     expect(p.totals.credit).toBe("1191.000");
@@ -183,8 +243,13 @@ describe("balance / droits hors TVA", () => {
     // TTC imprimé = HT + TVA + 1.000 sans ligne de droit lue.
     const extract = { ...base, other_charges: [], totals: { ...base.totals, ttc: "1191.000" } };
     const p = computePivot({
-      extract, source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, fiscal_charges: timbre, tolerances: TOLERANCES,
+      extract,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "RESIDUAL_MATCHED_PACK_CHARGE")).toBe(true);
     expect(p.lines.find((l) => l.account_code === "6654")?.debit).toBe("1.000");
@@ -196,8 +261,13 @@ describe("balance / droits hors TVA", () => {
     const base = factureAchatSimple();
     const extract = { ...base, other_charges: [], totals: { ...base.totals, ttc: "1197.000" } };
     const p = computePivot({
-      extract, source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, fiscal_charges: timbre, tolerances: TOLERANCES,
+      extract,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "RESIDUAL_UNEXPLAINED")).toBe(true);
     expect(p.approvable).toBe(false);
@@ -212,8 +282,13 @@ describe("balance / droits hors TVA", () => {
       totals: { ...base.totals, ttc: "1191.000" },
     };
     const p = computePivot({
-      extract, source_item_id: null, tenant_currency: TND, tax_rates: TAX_RATES_TN,
-      mapping: MAP_ACHAT, fiscal_charges: timbre, tolerances: TOLERANCES,
+      extract,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
     });
     expect(p.motifs.some((m) => m.code === "MISSING_ACCOUNT_MAPPING")).toBe(true);
     expect(p.approvable).toBe(false);

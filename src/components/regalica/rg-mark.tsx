@@ -5,13 +5,7 @@
  * du texte environnant — encre sur papier, papier sur encre. Aucune couleur
  * propre, conformément à la doctrine Edition One.
  */
-export function RgMark({
-  size = 24,
-  className,
-}: {
-  size?: number;
-  className?: string;
-}) {
+export function RgMark({ size = 24, className }: { size?: number; className?: string }) {
   return (
     <span
       aria-hidden="true"

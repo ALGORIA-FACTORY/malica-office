@@ -131,7 +131,15 @@ function CabinetEcheances() {
                   <InkCell numeric>{e.period ?? "—"}</InkCell>
                   <InkCell>
                     <SignalLight
-                      tone={overdue ? "stop" : e.status === "deposee" ? "ok" : d <= 7 ? "warn" : "neutral"}
+                      tone={
+                        overdue
+                          ? "stop"
+                          : e.status === "deposee"
+                            ? "ok"
+                            : d <= 7
+                              ? "warn"
+                              : "neutral"
+                      }
                       label={
                         e.status === "deposee"
                           ? t("cab.echeances.state.done")

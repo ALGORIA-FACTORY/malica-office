@@ -113,7 +113,9 @@ export function RegalicaChat({
           </div>
         ))}
         {mutation.isPending ? (
-          <p className="font-mono text-[11px] text-muted-foreground">{t("regalica.chat.thinking")}</p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {t("regalica.chat.thinking")}
+          </p>
         ) : null}
         {mutation.isError ? (
           <p className="border border-border px-3 py-2 text-[12px]">

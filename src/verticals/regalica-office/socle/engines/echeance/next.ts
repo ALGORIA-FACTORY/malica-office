@@ -7,12 +7,12 @@ import type { EcheanceV1 } from "../../contracts/echeance.v1";
  * la base (socle/juridictions/*).
  */
 export interface JurisdictionRule {
-  kind: string;               // "TVA_MENSUELLE", "IS_ACOMPTE_T1", ...
+  kind: string; // "TVA_MENSUELLE", "IS_ACOMPTE_T1", ...
   label: string;
   cadence: "monthly" | "quarterly" | "yearly";
   // pour monthly : jour du mois suivant ; pour quarterly : jour du mois suivant le trimestre.
   day_of_month: number;
-  month_offset: number;       // combien de mois après la période de référence
+  month_offset: number; // combien de mois après la période de référence
   legal_reference?: string;
 }
 
@@ -21,7 +21,9 @@ export interface JurisdictionPack {
   rules: readonly JurisdictionRule[];
 }
 
-function pad(n: number) { return n.toString().padStart(2, "0"); }
+function pad(n: number) {
+  return n.toString().padStart(2, "0");
+}
 
 /** Découpe une période "YYYY-MM" (ou "YYYY") de façon totale, sans indexation optionnelle. */
 function parsePeriod(period: string): { year: number; month: number } {
@@ -39,7 +41,6 @@ function addMonths(period: string, offset: number): { year: number; month: numbe
   const total = year * 12 + (month - 1) + offset;
   return { year: Math.floor(total / 12), month: (total % 12) + 1 };
 }
-
 
 /** Retourne les échéances applicables pour une période donnée. */
 export function computeEcheances(pack: JurisdictionPack, period: string): EcheanceV1[] {

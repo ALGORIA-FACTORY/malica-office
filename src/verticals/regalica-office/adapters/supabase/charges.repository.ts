@@ -59,7 +59,11 @@ export function createSupabaseChargesRepository(): ChargesRepository {
       };
     },
 
-    async articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]> {
+    async articles(
+      tenantId: string,
+      fromPeriod: string,
+      toPeriod: string,
+    ): Promise<PieceArticle[]> {
       const { data, error } = await supabase
         .from("piece_articles_v")
         .select(

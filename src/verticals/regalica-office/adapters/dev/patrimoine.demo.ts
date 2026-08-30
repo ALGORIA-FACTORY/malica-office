@@ -523,7 +523,6 @@ export function createDevStocksRepository(): StocksRepository {
   };
 }
 
-
 const comptes: BankAccount[] = [
   {
     id: "bank-1",
@@ -647,7 +646,8 @@ export function createDevBanqueRepository(): BanqueRepository {
       }
       const id = makeId();
       const seq =
-        lettrages.filter((l) => l.ligneId === input.ligneId && l.ecritureId === input.ecritureId).length + 1;
+        lettrages.filter((l) => l.ligneId === input.ligneId && l.ecritureId === input.ecritureId)
+          .length + 1;
       lettrages.unshift({
         id,
         ligneId: input.ligneId,
@@ -692,7 +692,8 @@ export function createDevBanqueRepository(): BanqueRepository {
       if (!etat) throw new Error("aucun lettrage actif sur cette ligne");
       const id = makeId();
       const seq =
-        lettrages.filter((l) => l.ligneId === input.ligneId && l.ecritureId === etat.ecritureId).length + 1;
+        lettrages.filter((l) => l.ligneId === input.ligneId && l.ecritureId === etat.ecritureId)
+          .length + 1;
       lettrages.unshift({
         id,
         ligneId: input.ligneId,
@@ -717,7 +718,11 @@ export function createDevBanqueRepository(): BanqueRepository {
         actor: null,
         at: new Date().toISOString(),
         motifId: input.motifId,
-        payload: { ligne_id: input.ligneId, ecriture_id: etat.ecritureId, note: input.note ?? null },
+        payload: {
+          ligne_id: input.ligneId,
+          ecriture_id: etat.ecritureId,
+          note: input.note ?? null,
+        },
       });
       return id;
     },

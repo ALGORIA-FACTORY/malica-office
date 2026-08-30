@@ -132,7 +132,9 @@ export function createSupabaseOfficeRepository(): OfficeRepository {
         .lte("date_ecriture", to);
       if (error) throw error;
       const pieceIds = Array.from(
-        new Set((ecrs ?? []).map((e) => e.piece_id as string | null).filter((v): v is string => !!v)),
+        new Set(
+          (ecrs ?? []).map((e) => e.piece_id as string | null).filter((v): v is string => !!v),
+        ),
       );
       if (pieceIds.length === 0) return [];
 

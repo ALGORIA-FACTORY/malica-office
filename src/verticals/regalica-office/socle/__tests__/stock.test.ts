@@ -55,7 +55,13 @@ describe("garde-fous", () => {
   it("refuse une sortie supérieure au stock", () => {
     expect(() =>
       computeStock(params, [
-        { at: "2026-01-01", sens: "entree", quantite: "1", cout_unitaire: "1.000", reference: null },
+        {
+          at: "2026-01-01",
+          sens: "entree",
+          quantite: "1",
+          cout_unitaire: "1.000",
+          reference: null,
+        },
         { at: "2026-01-02", sens: "sortie", quantite: "2", cout_unitaire: null, reference: null },
       ]),
     ).toThrow(StockMouvementInvalide);
