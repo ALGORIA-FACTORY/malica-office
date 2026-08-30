@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import { creerCompte, emettreJeton, lireJeton, organisations, verifierCompte } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
+import { executerRpc, RpcIntrouvable } from "./rpc.ts";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -145,6 +146,36 @@ app.get("/pieces", exigerIdentite, async (req, res, next) => {
     });
     res.json(lignes);
   } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/**
+ * Le transport des dépôts. Une seule route : le contrat est celui des ports,
+ * pas une API REST inventée par-dessus.
+ */
+const Appel = z.object({
+  depot: z.string().min(1).max(64),
+  methode: z.string().min(1).max(64),
+  args: z.array(z.unknown()).max(8).default([]),
+});
+
+app.post("/rpc", exigerIdentite, async (req, res, next) => {
+  try {
+    const saisie = Appel.safeParse(req.body);
+    if (!saisie.success) {
+      res.status(400).json({ erreur: "appel invalide" });
+      return;
+    }
+    const resultat = await sousIdentite(req.utilisateur!.id, (db) =>
+      executerRpc(db, saisie.data),
+    );
+    res.json({ resultat });
+  } catch (erreur) {
+    if (erreur instanceof RpcIntrouvable) {
+      res.status(404).json({ erreur: erreur.message });
+      return;
+    }
     next(erreur);
   }
 });
