@@ -50,8 +50,18 @@ if (-not $existe) {
   Run "postgres" "create database $Base;"
 }
 
-Write-Host "couche de compatibilite Supabase" -ForegroundColor Cyan
+Write-Host "couche d'authentification et de roles" -ForegroundColor Cyan
 File $Base (Join-Path $PSScriptRoot "00_compat_supabase.sql")
+
+# Le role de connexion de l'API doit avoir un mot de passe pour se connecter.
+# Il est propre a l'environnement : jamais dans le fichier SQL, qui est versionne.
+if ($env:REGALICA_API_PASSWORD) {
+  Run $Base "alter role regalica_api with password '$($env:REGALICA_API_PASSWORD)';"
+  Write-Host "  mot de passe pose sur regalica_api" -ForegroundColor DarkGray
+} else {
+  Write-Host "  REGALICA_API_PASSWORD absente : regalica_api ne pourra pas se connecter." -ForegroundColor Yellow
+  Write-Host "  Definissez-la, ou posez le mot de passe a la main." -ForegroundColor Yellow
+}
 
 # pgvector est present chez Supabase mais absent d'une installation Windows
 # standard. Plutot que d'echouer sur une seule colonne, on adapte la migration

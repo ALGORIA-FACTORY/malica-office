@@ -47,3 +47,55 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  # L'API a sa propre base et ses propres portes. Elle est vérifiée contre un
+  # PostgreSQL réel : la preuve d'isolation ne veut rien dire sans RLS, et la
+  # RLS n'existe pas dans un bouchon.
+  api:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: regalica
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - name: Monter le schéma
+        run: |
+          export PGPASSWORD=postgres
+          psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f db/local/00_compat_supabase.sql
+          for f in supabase/migrations/*.sql; do
+            psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+          psql -h localhost -U postgres -d regalica -q -c "alter role regalica_api with password 'ci';"
+
+      - name: Installer
+        run: npm ci
+        working-directory: api
+
+      - name: Typage
+        run: npm run typecheck
+        working-directory: api
+
+      - name: Preuve d'isolation
+        run: npm test
+        working-directory: api
+        env:
+          DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
+          DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+          JWT_SECRET: integration_continue_seulement_32_caracteres
