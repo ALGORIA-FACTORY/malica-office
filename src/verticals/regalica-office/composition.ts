@@ -22,6 +22,7 @@ import {
 } from "./adapters/dev/patrimoine.demo";
 import { createDevCollabRepository } from "./adapters/dev/collab.demo";
 import { createDevChargesRepository } from "./adapters/dev/charges.demo";
+import { creerDepotHttp } from "./adapters/http/rpc";
 import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 import type {
   CaptureRepository,
@@ -38,8 +39,24 @@ import type {
 
 /**
  * Point de composition unique : seul endroit qui connaît les adaptateurs.
- * Remplacer Supabase par un backend Node/GCP se fait ici, sans toucher un écran.
+ * Remplacer Supabase par l'API se fait ici, sans toucher un écran.
+ *
+ * La sortie de Supabase est en cours, dépôt par dépôt. Chaque dépôt porté et
+ * vérifié bascule ici, et un seul endroit dit lequel passe par où — plutôt
+ * qu'un drapeau global qui basculerait dix dépôts dont neuf ne sont pas prêts.
+ *
+ * Tous à `false` pour l'instant, et la raison mérite d'être écrite : l'API
+ * authentifie par jeton JWT, l'application par Supabase. Tant que les deux ne
+ * sont pas la même chose, un dépôt basculé ici appellerait l'API sans session
+ * et recevrait un 401 sur chaque écran authentifié.
+ *
+ * **L'authentification doit donc être portée avant les données.** L'adaptateur
+ * HTTP et le dépôt `referentiel` sont écrits et vérifiés côté API ; ils
+ * attendent que la session soit commune.
+ *
+ * Quand les dix seront portés, cette carte disparaîtra avec la branche Supabase.
  */
+const DEPOTS_PORTES = { referential: false } as const;
 export interface OfficeRuntime {
   identity: IdentityRepository;
   referential: ReferentialRepository;
@@ -72,7 +89,9 @@ export function office(): OfficeRuntime {
         }
       : {
           identity: createSupabaseIdentityRepository(),
-          referential: createSupabaseReferentialRepository(),
+          referential: DEPOTS_PORTES.referential
+            ? creerDepotHttp<ReferentialRepository>("referentiel")
+            : createSupabaseReferentialRepository(),
           capture: createSupabaseCaptureRepository(),
           office: createSupabaseOfficeRepository(),
           supervision: createSupabaseSupervisionRepository(),

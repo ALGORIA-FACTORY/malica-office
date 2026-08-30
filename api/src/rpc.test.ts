@@ -25,9 +25,7 @@ describe("transport RPC et référentiel", { skip: !BASE_CONFIGUREE }, () => {
       assert.ok(compte);
       identite = compte.id;
     }
-    return sousIdentite(identite, (db) =>
-      executerRpc(db, { depot: "referentiel", methode, args }),
-    );
+    return sousIdentite(identite, (db) => executerRpc(db, { depot: "referentiel", methode, args }));
   }
 
   after(async () => {
@@ -79,7 +77,9 @@ describe("transport RPC et référentiel", { skip: !BASE_CONFIGUREE }, () => {
     // Sans `Object.hasOwn`, `constructor` ou `toString` seraient atteignables.
     for (const methode of ["constructor", "toString", "__proto__"]) {
       await assert.rejects(
-        sousIdentite(identite, (db) => executerRpc(db, { depot: "referentiel", methode, args: [] })),
+        sousIdentite(identite, (db) =>
+          executerRpc(db, { depot: "referentiel", methode, args: [] }),
+        ),
         RpcIntrouvable,
         `« ${methode} » ne doit pas être atteignable`,
       );

@@ -167,9 +167,7 @@ app.post("/rpc", exigerIdentite, async (req, res, next) => {
       res.status(400).json({ erreur: "appel invalide" });
       return;
     }
-    const resultat = await sousIdentite(req.utilisateur!.id, (db) =>
-      executerRpc(db, saisie.data),
-    );
+    const resultat = await sousIdentite(req.utilisateur!.id, (db) => executerRpc(db, saisie.data));
     res.json({ resultat });
   } catch (erreur) {
     if (erreur instanceof RpcIntrouvable) {
