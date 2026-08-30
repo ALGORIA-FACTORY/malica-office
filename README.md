@@ -48,12 +48,15 @@ filtrage après coup.
 
 ## Démarrer
 
-Prérequis : [Bun](https://bun.com) et PostgreSQL 17 (ou 16).
+Prérequis : Node.js 22 et PostgreSQL 17 (ou 16).
 
 ```bash
-bun install
-bun run dev
+npm ci
+npm run dev
 ```
+
+Puis `npm run typecheck`, `npm run lint` et `npm test` — les trois portes que
+la CI exécute à chaque poussée.
 
 Copiez `.env.example` en `.env` et renseignez les valeurs. Le fichier `.env`
 n'est jamais suivi par git.

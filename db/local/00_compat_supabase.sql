@@ -53,6 +53,19 @@ create table if not exists auth.users (
   created_at timestamptz not null default now()
 );
 
+-- L'empreinte du mot de passe. Elle n'existait pas tant que GoTrue tenait
+-- l'authentification ; elle devient nécessaire dès que l'API la tient
+-- elle-même, avec bcrypt comme le prescrit le Guide de Stack.
+--
+-- `add column if not exists` plutôt qu'une redéfinition : la table peut déjà
+-- exister avec des comptes dedans, et R7 interdit de réécrire ce qui est là.
+alter table auth.users add column if not exists encrypted_password text;
+
+-- Personne ne lit cette colonne à travers la RLS : seule l'API, sur le chemin
+-- d'authentification, y accède — et par un helper dont le nom est délibérément
+-- désagréable pour qu'on hésite à s'en servir ailleurs.
+revoke all on auth.users from anon, authenticated;
+
 create or replace function auth.uid() returns uuid
 language sql
 stable

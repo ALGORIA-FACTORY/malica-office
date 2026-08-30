@@ -23,25 +23,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
         with:
-          bun-version: 1.4.0
+          node-version: 22
+          cache: npm
 
-      # --frozen-lockfile : l'installation échoue si le lockfile ne couvre pas
-      # le package.json, au lieu de le réécrire en silence.
+      # `npm ci` installe exactement le lockfile et échoue s'il diverge du
+      # package.json, au lieu de le réécrire en silence.
       - name: Installer
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - name: Typage
-        run: bun run typecheck
+        run: npm run typecheck
 
       - name: Style
-        run: bun run lint
+        run: npm run lint
 
       # La preuve d'isolation s'ignore d'elle-même sans backend configuré : elle
       # se déclenche dès que ces secrets existent sur le dépôt.
       - name: Tests
-        run: bun run test
+        run: npm test
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
