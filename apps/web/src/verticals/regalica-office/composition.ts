@@ -22,6 +22,7 @@ import {
 } from "./adapters/dev/patrimoine.demo";
 import { createDevCollabRepository } from "./adapters/dev/collab.demo";
 import { createDevChargesRepository } from "./adapters/dev/charges.demo";
+import { creerAuthHttp } from "./adapters/http/auth";
 import { creerDepotHttp } from "./adapters/http/rpc";
 import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 import type {
@@ -45,19 +46,18 @@ import type {
  * vérifié bascule ici, et un seul endroit dit lequel passe par où — plutôt
  * qu'un drapeau global qui basculerait dix dépôts dont neuf ne sont pas prêts.
  *
- * Tous à `false` pour l'instant, et la raison mérite d'être écrite : l'API
- * authentifie par jeton JWT, l'application par Supabase. Tant que les deux ne
- * sont pas la même chose, un dépôt basculé ici appellerait l'API sans session
- * et recevrait un 401 sur chaque écran authentifié.
- *
- * **L'authentification doit donc être portée avant les données.** L'adaptateur
- * HTTP et le dépôt `referentiel` sont écrits et vérifiés côté API ; ils
- * attendent que la session soit commune.
+ * L'authentification est portée : l'API et l'application partagent la même
+ * session, par cookie httpOnly. Un dépôt basculé ici est donc réellement servi
+ * par l'API, sous la RLS.
  *
  * Quand les dix seront portés, cette carte disparaîtra avec la branche Supabase.
  */
-const DEPOTS_PORTES = { referential: false } as const;
+const DEPOTS_PORTES = { referential: true } as const;
+import type { AuthPort } from "./ports/auth";
+
 export interface OfficeRuntime {
+  /** L'authentification est servie par l'API : plus aucun écran n'appelle un fournisseur. */
+  auth: AuthPort;
   identity: IdentityRepository;
   referential: ReferentialRepository;
   capture: CaptureRepository;
@@ -76,6 +76,7 @@ export function office(): OfficeRuntime {
   if (!runtime) {
     runtime = isRegalicaDevAccessEnabled()
       ? {
+          auth: creerAuthHttp(),
           identity: createDevIdentityRepository(),
           referential: createDevReferentialRepository(),
           capture: createDevCaptureRepository(),
@@ -88,6 +89,7 @@ export function office(): OfficeRuntime {
           charges: createDevChargesRepository(),
         }
       : {
+          auth: creerAuthHttp(),
           identity: createSupabaseIdentityRepository(),
           referential: DEPOTS_PORTES.referential
             ? creerDepotHttp<ReferentialRepository>("referentiel")

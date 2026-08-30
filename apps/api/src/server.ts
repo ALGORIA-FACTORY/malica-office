@@ -59,6 +59,7 @@ function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
 const Identifiants = z.object({
   email: z.string().email(),
   motDePasse: z.string().min(12, "12 caractères minimum"),
+  nom: z.string().trim().min(1).max(120).optional(),
 });
 
 function poserCookie(res: Response, jeton: string): void {
@@ -77,7 +78,11 @@ app.post("/auth/inscription", async (req, res, next) => {
       res.status(400).json({ erreur: saisie.error.issues[0]?.message ?? "saisie invalide" });
       return;
     }
-    const utilisateur = await creerCompte(saisie.data.email, saisie.data.motDePasse);
+    const utilisateur = await creerCompte(
+      saisie.data.email,
+      saisie.data.motDePasse,
+      saisie.data.nom,
+    );
     if (!utilisateur) {
       // Même réponse que pour un mot de passe faux : dire « cette adresse
       // existe » livrerait la liste de vos clients à qui la demande.
@@ -110,6 +115,12 @@ app.post("/auth/connexion", async (req, res, next) => {
   } catch (erreur) {
     next(erreur);
   }
+});
+
+app.get("/auth/session", exigerIdentite, (req, res) => {
+  // Sans requête en base : la session est portée par le jeton. Cette route est
+  // appelée à chaque navigation, elle doit rester gratuite.
+  res.json({ utilisateur: req.utilisateur });
 });
 
 app.post("/auth/deconnexion", (_req, res) => {

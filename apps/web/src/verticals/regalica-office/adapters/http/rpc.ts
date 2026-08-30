@@ -14,7 +14,7 @@
  * pièces d'un client sur un hôte que personne n'a choisi. En développement, le
  * défaut local évite d'imposer un fichier d'environnement pour lancer l'app.
  */
-function base(): string {
+export function baseApi(): string {
   const declaree = import.meta.env["VITE_API_URL"] as string | undefined;
   if (declaree) return declaree.replace(/\/+$/, "");
   if (import.meta.env.PROD) {
@@ -34,7 +34,7 @@ export class ErreurApi extends Error {
 }
 
 async function appeler(depot: string, methode: string, args: unknown[]): Promise<unknown> {
-  const reponse = await fetch(`${base()}/rpc`, {
+  const reponse = await fetch(`${baseApi()}/rpc`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // La session voyage par cookie httpOnly : jamais de jeton lisible par un

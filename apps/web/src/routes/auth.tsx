@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { office } from "@/verticals/regalica-office/composition";
+import { EchecAuth } from "@/verticals/regalica-office/ports/auth";
 import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 
 export const Route = createFileRoute("/auth")({
@@ -37,7 +38,6 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,9 +46,14 @@ function AuthPage() {
       return;
     }
     let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) void navigate({ to: "/office" });
-    });
+    void office()
+      .auth.session()
+      .then((compte) => {
+        if (active && compte) void navigate({ to: "/office" });
+      })
+      // L'API peut être injoignable : on laisse alors l'écran de connexion,
+      // plutôt que de rejeter une promesse que personne n'attrape.
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -58,28 +63,16 @@ function AuthPage() {
     event.preventDefault();
     setPending(true);
     setError(null);
-    setMessage(null);
     try {
       if (mode === "signup") {
-        const { data, error: err } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth`,
-            data: { display_name: displayName },
-          },
-        });
-        if (err) throw err;
-        if (data.session) {
-          await navigate({ to: "/office" });
-          return;
-        }
-        setMessage(t("auth.signup.check"));
+        // L'inscription ouvre la session dans le même geste : il n'existe pas
+        // de vérification par courriel, et faire attendre une confirmation qui
+        // n'arrivera jamais serait mentir à l'utilisateur.
+        await office().auth.inscription(email, password, displayName || undefined);
       } else {
-        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err) throw err;
-        await navigate({ to: "/office" });
+        await office().auth.connexion(email, password);
       }
+      await navigate({ to: "/office" });
     } catch (err) {
       setError(explain(err, t));
     } finally {
@@ -110,7 +103,6 @@ function AuthPage() {
               onClick={() => {
                 setMode(m);
                 setError(null);
-                setMessage(null);
               }}
               aria-pressed={mode === m}
               className={`flex-1 px-4 py-2 text-xs font-medium uppercase tracking-wide transition-colors ${
@@ -155,11 +147,6 @@ function AuthPage() {
           {error && (
             <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop">{error}</p>
           )}
-          {message && (
-            <p className="border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
-              {message}
-            </p>
-          )}
 
           <button
             type="submit"
@@ -182,16 +169,26 @@ function AuthPage() {
   );
 }
 
-/** Traduit les codes d'erreur d'authentification en langage clair. */
+/**
+ * Traduit un échec d'authentification en langage clair.
+ *
+ * Elle lisait auparavant des messages en anglais du fournisseur — « invalid
+ * login », « already registered » — c'est-à-dire qu'elle dépendait de la
+ * formulation d'un tiers. Le port expose désormais un motif typé : le jour où
+ * un motif s'ajoute, le compilateur le signale.
+ */
 function explain(err: unknown, t: ReturnType<typeof useI18n>["t"]): string {
-  const raw = err instanceof Error ? err.message.toLowerCase() : "";
-  if (raw.includes("weak") || raw.includes("pwned") || raw.includes("password should be"))
-    return t("auth.error.weakPassword");
-  if (raw.includes("invalid login")) return t("auth.error.invalidCredentials");
-  if (raw.includes("already registered") || raw.includes("user already"))
-    return t("auth.error.userExists");
-  if (raw.includes("not confirmed")) return t("auth.error.notConfirmed");
-  return t("auth.error.generic");
+  if (!(err instanceof EchecAuth)) return t("auth.error.generic");
+  switch (err.motif) {
+    case "identifiants":
+      return t("auth.error.invalidCredentials");
+    case "adresse_prise":
+      return t("auth.error.userExists");
+    case "saisie":
+      return t("auth.error.weakPassword");
+    case "reseau":
+      return t("auth.error.generic");
+  }
 }
 
 function Field({

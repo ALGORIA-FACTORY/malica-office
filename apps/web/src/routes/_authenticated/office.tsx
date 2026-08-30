@@ -7,7 +7,6 @@ import { useEffect, type ReactNode } from "react";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { PackBanner } from "@/components/regalica/PackBanner";
 import { useI18n } from "@/i18n";
-import { supabase } from "@/integrations/supabase/client";
 import { office } from "@/verticals/regalica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/office")({
@@ -70,7 +69,7 @@ function OfficeHome() {
             <button
               type="button"
               onClick={async () => {
-                await supabase.auth.signOut();
+                await office().auth.deconnexion();
                 await navigate({ to: "/auth" });
               }}
               className="border border-border px-3 py-2 text-xs uppercase tracking-wide transition-colors hover:bg-accent"

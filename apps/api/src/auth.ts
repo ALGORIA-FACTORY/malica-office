@@ -57,18 +57,22 @@ export function lireJeton(jeton: string): Utilisateur | null {
   }
 }
 
-export async function creerCompte(email: string, motDePasse: string): Promise<Utilisateur | null> {
+export async function creerCompte(
+  email: string,
+  motDePasse: string,
+  nom?: string,
+): Promise<Utilisateur | null> {
   const empreinte = await bcrypt.hash(motDePasse, COUT_BCRYPT);
   return horsRlsAuthentificationSeule(async (db) => {
     const { rows } = await db.query<Utilisateur>(
       // Pas de colonne de confirmation : il n'existe pas de flux de
       // vérification par courriel dans ce produit. En inventer une serait
       // prétendre à une garantie qui n'est pas tenue.
-      `insert into auth.users (email, encrypted_password)
-         values ($1, $2)
+      `insert into auth.users (email, encrypted_password, raw_user_meta_data)
+         values ($1, $2, $3)
          on conflict (email) do nothing
        returning id, email`,
-      [email.toLowerCase(), empreinte],
+      [email.toLowerCase(), empreinte, JSON.stringify(nom ? { display_name: nom } : {})],
     );
     // Aucune ligne : l'adresse existe déjà. L'appelant décidera quoi en dire —
     // et il dira la même chose que pour un mot de passe faux.
