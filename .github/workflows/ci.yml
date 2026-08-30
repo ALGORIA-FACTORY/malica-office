@@ -55,14 +55,8 @@ jobs:
       - name: Installer
         run: npm ci
 
-      # La preuve d'isolation côté Supabase s'ignore d'elle-même sans backend
-      # configuré : elle se déclenche dès que ces secrets existent.
       - name: Tests
         run: npm run test --workspace @regalica/web
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
   # L'API est vérifiée contre un PostgreSQL réel : la preuve d'isolation ne veut
   # rien dire sans RLS, et la RLS n'existe pas dans un bouchon.
@@ -93,7 +87,7 @@ jobs:
         run: |
           export PGPASSWORD=postgres
           psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f db/local/00_compat_supabase.sql
-          for f in supabase/migrations/*.sql; do
+          for f in db/migrations/*.sql; do
             psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f "$f"
           done
           psql -h localhost -U postgres -d regalica -q -c "alter role regalica_api with password 'ci';"

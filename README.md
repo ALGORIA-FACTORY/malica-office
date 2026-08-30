@@ -52,8 +52,9 @@ filtrage après coup.
 apps/
   web/      l'application — PME et cabinet, React + Vite
   api/      Express + pg — remplace PostgREST et GoTrue
-db/local/   la couche d'authentification et de rôles, rejouable
-supabase/   les migrations : la source de vérité du schéma
+db/
+  migrations/ le schéma : la source de vérité, rejouée telle quelle
+  local/      la couche d'authentification et de rôles, rejouable
 docs/       maquettes et marque
 ```
 

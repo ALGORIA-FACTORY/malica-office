@@ -1,7 +1,7 @@
 ﻿# Monte une base Regalica Office locale, à partir des migrations du dépôt.
 #
 # Le schéma n'est pas copié depuis la production : il est REJOUÉ depuis
-# `supabase/migrations`, qui en est la source de vérité. La base locale contient
+# `db/migrations`, qui en est la source de vérité. La base locale contient
 # donc le schéma complet et le référentiel fiscal semé par les migrations —
 # et AUCUNE donnée de tenant. Les pièces et les organisations des clients
 # restent là où elles doivent être.
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $racine = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$migrations = Join-Path $racine "supabase\migrations"
+$migrations = Join-Path $racine "db\migrations"
 
 # PostgreSQL 16 est la version de reference du Guide de Stack (§06). On la
 # prefere si plusieurs versions cohabitent sur le poste.
