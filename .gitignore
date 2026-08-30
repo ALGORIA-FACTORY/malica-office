@@ -40,3 +40,6 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Les pièces déposées en local : des documents de clients, jamais dans git.
+.stockage/
