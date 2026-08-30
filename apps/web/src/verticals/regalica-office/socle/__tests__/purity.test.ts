@@ -1,6 +1,10 @@
 /**
  * Garde-fou de pureté : aucun fichier de `socle/**` ne doit importer un
- * client réseau, un client LLM ou Supabase. Les données arrivent en paramètres.
+ * client réseau ou un client LLM. Les données arrivent en paramètres.
+ *
+ * L'interdiction de l'ancien fournisseur a quitté cette liste : elle est
+ * désormais posée sur tout `src/**` par le garde-fou de sortie dans `src/__tests__/`,
+ * et la répéter ici en ferait une règle à tenir à deux endroits.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -18,8 +22,6 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const FORBIDDEN = [
-  /from ["']@supabase\//,
-  /from ["']@\/integrations\/supabase/,
   /from ["']node:https?["']/,
   /from ["']axios["']/,
   /\bfetch\s*\(/,

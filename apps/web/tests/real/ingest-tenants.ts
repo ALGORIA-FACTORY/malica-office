@@ -5,12 +5,15 @@
  * (l'émetteur cité), jamais d'une invention. Une PME par entreprise émettrice
  * de ses ventes ; ses achats rejoignent les mêmes livres.
  *
- * Usage : bun tests/real/ingest-tenants.ts <reads.json> <session.json> <tenants.json>
+ * La session s'ouvre par l'API (REGALICA_EMAIL / REGALICA_MOTDEPASSE) : le
+ * fichier de session a disparu avec Supabase.
+ *
+ * Usage : node tests/real/ingest-tenants.ts <reads.json> <tenants.json>
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { createClient } from "@supabase/supabase-js";
+import { ouvrirSession } from "./api";
 
 interface ReadRow {
   family: string;
@@ -34,23 +37,11 @@ function canonical(names: string[]): Map<string, string> {
 }
 
 async function main() {
-  const [readsPath, sessionPath, outPath] = process.argv.slice(2);
-  if (!readsPath || !sessionPath || !outPath)
-    throw new Error(
-      "usage: bun tests/real/ingest-tenants.ts <reads.json> <session.json> <tenants.json>",
-    );
+  const [readsPath, outPath] = process.argv.slice(2);
+  if (!readsPath || !outPath)
+    throw new Error("usage: node tests/real/ingest-tenants.ts <reads.json> <tenants.json>");
 
-  const url = process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
-  const anon =
-    process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
-  if (!url || !anon) throw new Error("SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY requis");
-  const session = JSON.parse(readFileSync(sessionPath, "utf8")) as { access_token?: string };
-  if (!session.access_token) throw new Error("session sans access_token");
-
-  const sb = createClient(url, anon, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: `Bearer ${session.access_token}` } },
-  });
+  const api = await ouvrirSession();
 
   const reads = (JSON.parse(readFileSync(readsPath, "utf8")) as ReadRow[]).filter((r) => !r.error);
 
@@ -63,28 +54,22 @@ async function main() {
   const pmeNames = [...new Set([...canon.values()])];
   if (pmeNames.length === 0) throw new Error("aucun émetteur de vente lu : aucune PME à ouvrir");
 
-  const { data: existing, error: exErr } = await sb
-    .from("organizations_v")
-    .select("id, name, kind");
-  if (exErr) throw new Error(exErr.message);
+  const existing = await api.rpc<Array<{ id: string; name: string; kind: string }>>(
+    "identite",
+    "listMyOrganizations",
+  );
 
   const tenants: Record<string, string> = {};
   const ids: string[] = [];
   for (const name of pmeNames) {
-    const found = (existing ?? []).find(
-      (o) => (o.name as string).toLowerCase() === name.toLowerCase() && o.kind === "pme",
+    const found = existing.find(
+      (o) => o.name.toLowerCase() === name.toLowerCase() && o.kind === "pme",
     );
-    let id = found?.id as string | undefined;
+    let id = found?.id;
     if (!id) {
-      const { data, error } = await sb.rpc("create_organization", {
-        p_kind: "pme",
-        p_name: name,
-        p_validation_mode: "mandate",
-        p_jurisdiction: "TN",
-        p_currency: "TND",
-      });
-      if (error) throw new Error(`${name} : ${error.message}`);
-      id = data as unknown as string;
+      id = await api.rpc<string>("identite", "createOrganization", [
+        { kind: "pme", name, validationMode: "mandate", jurisdiction: "TN", currency: "TND" },
+      ]);
       console.log(`PME ouverte : ${name} → ${id}`);
     } else {
       console.log(`PME existante : ${name} → ${id}`);

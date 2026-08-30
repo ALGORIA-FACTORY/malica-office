@@ -1,7 +1,8 @@
 /**
  * Le port d'authentification.
  *
- * Les écrans appelaient `supabase.auth.*` directement — cinq appels dans trois
+ * Les écrans appelaient le fournisseur d'authentification directement — cinq
+ * appels dans trois
  * fichiers. C'était la seule couture par laquelle un changement de fournisseur
  * atteignait l'interface : les données, elles, étaient déjà derrière des ports.
  *

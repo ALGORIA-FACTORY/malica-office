@@ -1,8 +1,8 @@
 /**
  * L'intergiciel de session des fonctions serveur.
  *
- * Il remplace `requireSupabaseAuth`, et fait moins : il ne valide pas le jeton
- * lui-même. Ce n'est pas un raccourci, c'est le bon partage des rôles — l'API
+ * Il remplace l'intergiciel du fournisseur précédent, et fait moins : il ne
+ * valide pas le jeton lui-même. Ce n'est pas un raccourci, c'est le bon partage des rôles — l'API
  * est seule à connaître le secret des jetons, et le valider ici en double
  * créerait un second endroit à tenir juste.
  *

@@ -5,8 +5,8 @@
  * Aucun montant ne sort d'ici sans son token d'origine.
  *
  * Le transport a changé — l'API au lieu de PostgREST, la route de contenu au
- * lieu du stockage Supabase — et rien d'autre. Les deux passes, le plan de
- * tokens et la désignation sont exactement ceux d'avant.
+ * lieu du stockage de l'ancien fournisseur — et rien d'autre. Les deux passes,
+ * le plan de tokens et la désignation sont exactement ceux d'avant.
  *
  * Un détail qui n'en est pas un : les taux et les charges arrivent de l'API
  * avec le même type qu'ils avaient de PostgREST — des nombres — et sont remis

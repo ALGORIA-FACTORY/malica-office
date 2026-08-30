@@ -61,10 +61,12 @@ export const capture = {
       vis: string;
       idempotencyKey: string;
       contentType?: string | null;
+      pageCount?: number | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     const { rows } = await db.query<{ id: string }>(
-      `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t) as id`,
+      `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t,
+                                            null, $7::smallint) as id`,
       [
         input.tenantId,
         input.source,
@@ -74,6 +76,7 @@ export const capture = {
         input.idempotencyKey,
         input.entityId ?? null,
         input.vis,
+        input.pageCount ?? null,
       ],
     );
     const id = rows[0]!.id;

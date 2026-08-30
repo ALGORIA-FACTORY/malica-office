@@ -33,13 +33,14 @@ import type {
 /**
  * Point de composition unique : seul endroit qui connaît les adaptateurs.
  *
- * La sortie de Supabase est faite : les onze dépôts passent par l'API, sous la
- * RLS, avec la session portée par cookie httpOnly. Les adaptateurs Supabase ont
- * été supprimés — on ne garde pas un chemin mort en réserve (R9).
+ * La sortie du fournisseur précédent est faite : les onze dépôts passent par
+ * l'API, sous la RLS, avec la session portée par cookie httpOnly. Ses
+ * adaptateurs ont été supprimés — on ne garde pas un chemin mort en réserve (R9).
  *
- * `capture` a rejoint les autres : les octets passent par `/pieces/:id/contenu`,
- * et le dépôt Supabase n'existe plus. Il n'y a plus une seule ligne de Supabase
- * dans le chemin des données.
+ * `capture` a rejoint les autres : les octets passent par `/pieces/:id/contenu`.
+ * Il ne reste plus une seule ligne de l'ancien fournisseur dans le chemin des
+ * données — et le garde-fou de `src/__tests__/` le vérifie à chaque
+ * exécution, pour que ce paragraphe ne devienne pas faux en silence.
  */
 
 export interface OfficeRuntime {
