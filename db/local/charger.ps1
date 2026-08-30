@@ -63,33 +63,26 @@ if ($env:REGALICA_API_PASSWORD) {
   Write-Host "  Definissez-la, ou posez le mot de passe a la main." -ForegroundColor Yellow
 }
 
-# pgvector est present chez Supabase mais absent d'une installation Windows
-# standard. Plutot que d'echouer sur une seule colonne, on adapte la migration
-# concernee et on le dit franchement.
-$vector = (& $psql -h $PgHost -p $Port -U $PgUser -d $Base -t -A -c "select 1 from pg_extension where extname='vector'")
-if (-not $vector) {
-  Write-Host "pgvector ABSENT — legal.chunks.embedding devient real[], index HNSW ignore" -ForegroundColor Yellow
-}
-
-$temp = Join-Path $env:TEMP "regalica-migrations"
-New-Item -ItemType Directory -Force -Path $temp | Out-Null
-
+# Les migrations sont jouees TELLES QU'ELLES SONT.
+#
+# Ce chargeur a longtemps reecrit leur texte au vol quand pgvector manquait :
+# vector(768) devenait real[], l'index HNSW disparaissait. La base locale et une
+# base de production n'avaient donc pas le meme schema, et rien ne le disait
+# hors d'une ligne de console. Un chargeur qui adapte les migrations n'est pas
+# un chargeur : c'est une divergence automatisee.
+#
+# Le schema legal a ete retire (migration 20260830190000), ce qui supprime le
+# besoin du TYPE vector. Il reste la ligne "create extension if not exists
+# vector" en tete de la migration 20260824130649, qui echouera si l'extension
+# n'est pas disponible sur le serveur.
+#
+# C'est voulu. Un echec bruyant vaut mieux qu'une adaptation silencieuse : il
+# dit qu'il manque quelque chose, la ou l'ancienne version laissait croire que
+# tout allait bien.
 $n = 0
 foreach ($m in Get-ChildItem $migrations -Filter *.sql | Sort-Object Name) {
-  $cible = $m.FullName
-  if (-not $vector) {
-    $texte = Get-Content $m.FullName -Raw
-    if ($texte -match "extensions\.vector") {
-      $texte = $texte -replace "extensions\.vector\(\d+\)", "real[]"
-      # L'index HNSW n'a aucun sens sans le type : on le retire proprement.
-      $texte = $texte -replace "(?ms)create index\s+\S*hnsw\S*.*?;", ""
-      $texte = $texte -replace "(?m)^\s*create extension if not exists vector[^;]*;", ""
-      $cible = Join-Path $temp $m.Name
-      Set-Content -Path $cible -Value $texte -Encoding utf8
-    }
-  }
   Write-Host ("  {0}" -f $m.Name)
-  File $Base $cible
+  File $Base $m.FullName
   $n++
 }
 
