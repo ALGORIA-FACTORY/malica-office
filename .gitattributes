@@ -1,0 +1,34 @@
+# Les fins de ligne sont décidées ici, une fois pour toutes.
+#
+# Sans ce fichier, un clone sous Windows réécrit tout en CRLF alors que les
+# blobs sont en LF : git cache la différence par son cache de statut, puis
+# 222 fichiers apparaissent modifiés au premier outil qui les touche. Toute
+# revue de diff devient impraticable, et le prochain « git add -A » devient
+# un piège. C'est arrivé sur le dépôt précédent.
+
+* text=auto eol=lf
+
+# Fichiers dont la fin de ligne appartient à leur plateforme.
+*.ps1   text eol=crlf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+
+# Binaires : jamais convertis, jamais présentés comme du texte dans un diff.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.svg   text eol=lf
+*.ico   binary
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+
+# Fichiers générés : hors des diffs et des statistiques de langage.
+bun.lock            linguist-generated=true
+**/routeTree.gen.ts linguist-generated=true

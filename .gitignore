@@ -1,0 +1,42 @@
+# Secrets — jamais suivis. Le dépôt précédent suivait .env : les clés
+# n'étaient qu'un « git add -A » de la publication.
+.env
+.env.*
+!.env.example
+
+# Dépendances et sorties de build
+node_modules/
+dist/
+dist-ssr/
+.output/
+.nitro/
+.tanstack/
+.vinxi/
+*.local
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+
+# Journaux
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environnements de développement
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Systèmes de fichiers
+.DS_Store
+Thumbs.db
+desktop.ini
