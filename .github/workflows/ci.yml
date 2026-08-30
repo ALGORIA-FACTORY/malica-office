@@ -18,7 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verifier:
+  # Style et typage sur tout l'espace de travail. Une seule règle de style pour
+  # le dépôt entier : eslint et prettier vivent à la racine.
+  atelier:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,29 +30,42 @@ jobs:
           node-version: 22
           cache: npm
 
-      # `npm ci` installe exactement le lockfile et échoue s'il diverge du
+      # `npm ci` installe exactement le lockfile et échoue s'il diverge des
       # package.json, au lieu de le réécrire en silence.
       - name: Installer
         run: npm ci
 
-      - name: Typage
-        run: npm run typecheck
-
       - name: Style
         run: npm run lint
 
-      # La preuve d'isolation s'ignore d'elle-même sans backend configuré : elle
-      # se déclenche dès que ces secrets existent sur le dépôt.
+      - name: Typage
+        run: npm run typecheck
+
+  # L'application web et ses seize suites.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci
+
+      # La preuve d'isolation côté Supabase s'ignore d'elle-même sans backend
+      # configuré : elle se déclenche dès que ces secrets existent.
       - name: Tests
-        run: npm test
+        run: npm run test --workspace @regalica/web
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-  # L'API a sa propre base et ses propres portes. Elle est vérifiée contre un
-  # PostgreSQL réel : la preuve d'isolation ne veut rien dire sans RLS, et la
-  # RLS n'existe pas dans un bouchon.
+  # L'API est vérifiée contre un PostgreSQL réel : la preuve d'isolation ne veut
+  # rien dire sans RLS, et la RLS n'existe pas dans un bouchon.
   api:
     runs-on: ubuntu-latest
 
@@ -73,7 +88,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: api/package-lock.json
 
       - name: Monter le schéma
         run: |
@@ -86,15 +100,9 @@ jobs:
 
       - name: Installer
         run: npm ci
-        working-directory: api
-
-      - name: Typage
-        run: npm run typecheck
-        working-directory: api
 
       - name: Preuve d'isolation
-        run: npm test
-        working-directory: api
+        run: npm run test --workspace @regalica/api
         env:
           DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
           DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica

@@ -1,5 +1,5 @@
 {
-  "name": "regalica-api",
+  "name": "@regalica/api",
   "private": true,
   "type": "module",
   "description": "API Regalica Office — Express + pg, l'isolation restant portée par la RLS",

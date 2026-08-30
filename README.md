@@ -46,17 +46,42 @@ qui ne correspond à aucun token devient un drapeau, jamais une valeur.
 Halluciner un montant est donc structurellement impossible — ce n'est pas un
 filtrage après coup.
 
+## L'organisation du dépôt
+
+```
+apps/
+  web/      l'application — PME et cabinet, React + Vite
+  api/      Express + pg — remplace PostgREST et GoTrue
+db/local/   la couche d'authentification et de rôles, rejouable
+supabase/   les migrations : la source de vérité du schéma
+docs/       maquettes et marque
+```
+
+Un espace de travail npm, une seule règle de style à la racine. Il n'y a pas
+de `packages/` : rien n'est encore partagé entre les deux applications, et une
+structure créée pour un besoin qui n'existe pas est un encombrement. Elle
+naîtra le jour où un second consommateur existera.
+
 ## Démarrer
 
 Prérequis : Node.js 22 et PostgreSQL 17 (ou 16).
 
 ```bash
 npm ci
-npm run dev
+npm run dev        # l'application, sur le port 8080
+npm run dev:api    # l'API, sur le port 3000
 ```
 
-Puis `npm run typecheck`, `npm run lint` et `npm test` — les trois portes que
-la CI exécute à chaque poussée.
+Copiez `.env.example` en `apps/web/.env` et `apps/api/.env`, puis renseignez
+les valeurs. Aucun `.env` n'est suivi par git.
+
+Les trois portes que la CI exécute à chaque poussée :
+
+```bash
+npm run lint       # tout le dépôt
+npm run typecheck  # les deux applications
+npm test           # les deux applications
+```
 
 Copiez `.env.example` en `.env` et renseignez les valeurs. Le fichier `.env`
 n'est jamais suivi par git.
