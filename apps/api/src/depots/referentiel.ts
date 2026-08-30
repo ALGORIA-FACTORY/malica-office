@@ -11,26 +11,7 @@
 
 import type { Requete } from "../db.ts";
 
-/**
- * Ramène un numérique à sa chaîne décimale, au nombre de décimales du contrat.
- *
- * Attention au piège, découvert en portant ce fichier : PostgREST rendait les
- * `numeric` en NOMBRES JSON, `pg` les rend en CHAÎNES. L'adaptateur d'origine
- * faisait confiance aux chaînes et ne reformatait que les nombres — repris tel
- * quel, il aurait laissé passer « 0.190000 » là où le contrat attend « 0.1900 »,
- * et ce décalage se serait glissé dans chaque décimale du portage sans qu'aucun
- * type ne s'en plaigne.
- *
- * On refixe donc toujours, quelle que soit la représentation d'arrivée.
- */
-function decStr(v: unknown, decimals: number): string {
-  if (v === null || v === undefined) return (0).toFixed(decimals);
-  return Number(v).toFixed(decimals);
-}
-
-function aujourdhui(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { aujourdhui, dec as decStr } from "./decimal.ts";
 
 export const referentiel = {
   async activePack(db: Requete, jurisdiction: string) {

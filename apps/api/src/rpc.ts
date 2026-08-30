@@ -16,6 +16,10 @@
  */
 
 import type { Requete } from "./db.ts";
+import { charges } from "./depots/charges.ts";
+import { collab } from "./depots/collab.ts";
+import { identite } from "./depots/identite.ts";
+import { office } from "./depots/office.ts";
 import { referentiel } from "./depots/referentiel.ts";
 
 /**
@@ -24,6 +28,10 @@ import { referentiel } from "./depots/referentiel.ts";
  * l'oublier.
  */
 const DEPOTS = {
+  charges,
+  collab,
+  identite,
+  office,
   referentiel,
 } as const;
 
