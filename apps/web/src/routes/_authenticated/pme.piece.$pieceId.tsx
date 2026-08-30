@@ -176,7 +176,7 @@ function PieceScreen() {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
-  const { piece, fileUrl, extraction, citations } = dossier.data;
+  const { piece, contenu, extraction, citations } = dossier.data;
   // Une citation par champ : la dernière écrite est celle qui fait foi.
   const byField = new Map(citations.map((c) => [c.field, c]));
   const payload = extraction?.payload as ExtractPayload | undefined;
@@ -194,9 +194,9 @@ function PieceScreen() {
 
       <section className="grid gap-6 md:grid-cols-2">
         <div>
-          {fileUrl ? (
+          {contenu ? (
             <DocumentView
-              fileUrl={fileUrl}
+              contenu={contenu}
               highlight={zoom}
               label={t("pme.piece.title")}
               loadingLabel={t("pme.doc.loading")}

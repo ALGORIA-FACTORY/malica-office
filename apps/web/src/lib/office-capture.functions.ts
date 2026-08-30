@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { readPieceFlow } from "@/lib/capture/read-flow.server";
+import { exigerSession } from "@/lib/session-middleware";
 
 export const readPiece = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([exigerSession])
   .inputValidator((data: unknown) => z.object({ pieceId: z.string().uuid() }).parse(data))
-  .handler(async ({ data, context }) => readPieceFlow(context.supabase, data.pieceId));
+  .handler(async ({ data, context }) => readPieceFlow(context.api, data.pieceId));

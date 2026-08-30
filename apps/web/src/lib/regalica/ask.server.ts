@@ -4,9 +4,7 @@
  * transmis ne contient que des valeurs déjà produites par le Socle.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-import type { Database } from "@/integrations/supabase/types";
+import type { AppelApi } from "@/lib/api.server";
 
 import {
   callDeepSeek,
@@ -15,8 +13,6 @@ import {
   type DeepSeekRole,
 } from "./deepseek.server";
 import { loadRegalicaContext } from "./context.server";
-
-type Client = SupabaseClient<Database>;
 
 const LANGUES: Record<string, string> = {
   fr: "français",
@@ -52,7 +48,7 @@ export interface AskRegalicaResult {
 }
 
 export async function askRegalica(
-  supabase: Client,
+  api: AppelApi,
   input: {
     tenantId: string;
     pieceId?: string | null;
@@ -66,7 +62,7 @@ export async function askRegalica(
   const apiKey = process.env["DEEPSEEK_API_KEY"];
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY absente : Regalica ne peut pas répondre");
 
-  const dossier = await loadRegalicaContext(supabase, input.tenantId, input.pieceId ?? null);
+  const dossier = await loadRegalicaContext(api, input.tenantId, input.pieceId ?? null);
   const role: DeepSeekRole = input.mode ?? "reasoner";
 
   const messages: DeepSeekMessage[] = [
@@ -87,18 +83,30 @@ export async function askRegalica(
     failure = err instanceof Error ? err : new Error(String(err));
   }
 
-  const { data: runId } = await supabase.rpc("agents_run_log", {
-    p_tenant: input.tenantId,
-    p_agent: "regalica.conseil",
-    p_model: result?.model ?? (role === "reasoner" ? "deepseek-reasoner" : "deepseek-chat"),
-    p_role: role,
-    p_status: result ? "ok" : "error",
-    p_latency_ms: result?.latencyMs ?? 0,
-    ...(result?.tokensIn != null ? { p_tokens_in: result.tokensIn } : {}),
-    ...(result?.tokensOut != null ? { p_tokens_out: result.tokensOut } : {}),
-    ...(input.pieceId ? { p_piece: input.pieceId } : {}),
-    ...(failure ? { p_error: failure.message.slice(0, 500) } : {}),
-  });
+  // Le journal est écrit MÊME en cas d'échec, et avant de relancer l'erreur :
+  // un appel qui a coûté un jeton doit laisser une trace, réussi ou non.
+  //
+  // Son propre échec ne remonte pas. L'ancien code ignorait l'erreur de la RPC
+  // en ne déstructurant que `data` ; la conserver telle quelle n'est pas de la
+  // négligence reconduite mais la seule issue correcte : laisser le journal
+  // masquer l'erreur qu'il journalise donnerait à l'appelant « API injoignable »
+  // là où le vrai motif est « DeepSeek a refusé ».
+  const runId = await api
+    .rpc<string | null>("capture", "journaliserAgent", [
+      {
+        tenantId: input.tenantId,
+        agent: "regalica.conseil",
+        model: result?.model ?? (role === "reasoner" ? "deepseek-reasoner" : "deepseek-chat"),
+        role,
+        status: result ? "ok" : "error",
+        latencyMs: result?.latencyMs ?? 0,
+        tokensIn: result?.tokensIn ?? null,
+        tokensOut: result?.tokensOut ?? null,
+        pieceId: input.pieceId ?? null,
+        erreur: failure ? failure.message.slice(0, 500) : null,
+      },
+    ])
+    .catch(() => null);
 
   if (!result) throw failure ?? new Error("Regalica indisponible");
 
@@ -109,6 +117,6 @@ export async function askRegalica(
     latencyMs: result.latencyMs,
     tokensIn: result.tokensIn,
     tokensOut: result.tokensOut,
-    runId: (runId as string | null) ?? null,
+    runId: runId ?? null,
   };
 }

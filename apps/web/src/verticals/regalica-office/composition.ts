@@ -1,4 +1,3 @@
-import { createSupabaseCaptureRepository } from "./adapters/supabase/capture.repository";
 import {
   createDevCaptureRepository,
   createDevIdentityRepository,
@@ -14,6 +13,7 @@ import {
 import { createDevCollabRepository } from "./adapters/dev/collab.demo";
 import { createDevChargesRepository } from "./adapters/dev/charges.demo";
 import { creerAuthHttp } from "./adapters/http/auth";
+import { creerCaptureHttp } from "./adapters/http/capture";
 import { creerDepotHttp } from "./adapters/http/rpc";
 import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 import type { AuthPort } from "./ports/auth";
@@ -33,14 +33,13 @@ import type {
 /**
  * Point de composition unique : seul endroit qui connaît les adaptateurs.
  *
- * La sortie de Supabase est faite pour les données : les neuf dépôts métier
- * passent par l'API, sous la RLS, avec la session portée par cookie httpOnly.
- * Les adaptateurs Supabase correspondants ont été supprimés — on ne garde pas
- * un chemin mort en réserve (R9).
+ * La sortie de Supabase est faite : les onze dépôts passent par l'API, sous la
+ * RLS, avec la session portée par cookie httpOnly. Les adaptateurs Supabase ont
+ * été supprimés — on ne garde pas un chemin mort en réserve (R9).
  *
- * Reste `capture`, et une seule raison : elle dépose des fichiers. Le stockage
- * de l'API n'existe pas encore ; le jour où il existera, cette dernière ligne
- * Supabase partira avec le client.
+ * `capture` a rejoint les autres : les octets passent par `/pieces/:id/contenu`,
+ * et le dépôt Supabase n'existe plus. Il n'y a plus une seule ligne de Supabase
+ * dans le chemin des données.
  */
 
 export interface OfficeRuntime {
@@ -80,7 +79,7 @@ export function office(): OfficeRuntime {
           auth: creerAuthHttp(),
           identity: creerDepotHttp<IdentityRepository>("identite"),
           referential: creerDepotHttp<ReferentialRepository>("referentiel"),
-          capture: createSupabaseCaptureRepository(),
+          capture: creerCaptureHttp(),
           office: creerDepotHttp<OfficeRepository>("office"),
           supervision: creerDepotHttp<SupervisionRepository>("supervision"),
           immo: creerDepotHttp<ImmoRepository>("immo"),

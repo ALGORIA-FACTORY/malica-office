@@ -3,16 +3,21 @@
  * Le cerveau : télécharge la pièce, appelle l'œil (deux passes), passe la
  * sortie au filtre du plan de tokens, persiste par RPC gouvernée.
  * Aucun montant ne sort d'ici sans son token d'origine.
+ *
+ * Le transport a changé — l'API au lieu de PostgREST, la route de contenu au
+ * lieu du stockage Supabase — et rien d'autre. Les deux passes, le plan de
+ * tokens et la désignation sont exactement ceux d'avant.
+ *
+ * Un détail qui n'en est pas un : les taux et les charges arrivent de l'API
+ * avec le même type qu'ils avaient de PostgREST — des nombres — et sont remis
+ * en chaîne ici de la même façon. « 19 » et « 19.0000 » ne sont pas la même
+ * invite, et ce fichier compose une invite.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-import type { Database } from "@/integrations/supabase/types";
+import type { AppelApi } from "@/lib/api.server";
 
 import { buildExtractFromTokenPlan } from "./read-piece.server";
 import { runVisionRead } from "./vision.server";
-
-type Client = SupabaseClient<Database>;
 
 export interface ReadPieceResult {
   pieceId: string;
@@ -26,6 +31,13 @@ export interface ReadPieceResult {
   tokensOut: number | null;
 }
 
+interface ContexteLecture {
+  piece: { id: string; tenantId: string; source: string; contentType: string | null };
+  packId: string;
+  taxCodes: Array<{ code: string; label: string; rate: number }>;
+  chargeCodes: Array<{ code: string; label: string }>;
+}
+
 function toBase64(bytes: Uint8Array): string {
   let bin = "";
   const CHUNK = 0x8000;
@@ -35,62 +47,20 @@ function toBase64(bytes: Uint8Array): string {
   return typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
 }
 
-export async function readPieceFlow(supabase: Client, pieceId: string): Promise<ReadPieceResult> {
-  const { data: piece, error: pieceErr } = await supabase
-    .from("pieces_v")
-    .select("id, tenant_id, storage_path, source")
-    .eq("id", pieceId)
-    .maybeSingle();
-  if (pieceErr) throw new Error(pieceErr.message);
-  if (!piece) throw new Error("pièce introuvable ou non autorisée");
+export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<ReadPieceResult> {
+  // La pièce, son organisation, le pack en vigueur, les taux et les charges :
+  // un appel là où il en fallait cinq, mêmes requêtes côté base.
+  const contexte = await api.rpc<ContexteLecture>("capture", "contexteLecture", [pieceId]);
 
-  const { data: org, error: orgErr } = await supabase
-    .from("organizations_v")
-    .select("jurisdiction, currency")
-    .eq("id", piece.tenant_id as string)
-    .maybeSingle();
-  if (orgErr) throw new Error(orgErr.message);
-
-  // Les codes de taux viennent du pack en base — aucune constante fiscale ici.
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: packs, error: packErr } = await supabase
-    .from("ref_packs_v")
-    .select("id, effective_from")
-    .eq("jurisdiction", (org?.jurisdiction as string) ?? "TN")
-    .lte("effective_from", today)
-    .order("effective_from", { ascending: false })
-    .limit(1);
-  if (packErr) throw new Error(packErr.message);
-  const packId = packs?.[0]?.id as string | undefined;
-  if (!packId) throw new Error("aucun référentiel en vigueur pour cette juridiction");
-
-  const { data: rates, error: ratesErr } = await supabase
-    .from("ref_tva_rates_v")
-    .select("code, label, rate")
-    .eq("pack_version_id", packId);
-  if (ratesErr) throw new Error(ratesErr.message);
-
-  const { data: file, error: dlErr } = await supabase.storage
-    .from("pieces")
-    .download(piece.storage_path as string);
-  if (dlErr || !file)
-    throw new Error(`téléchargement de la pièce impossible : ${dlErr?.message ?? "inconnu"}`);
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const mime = file.type || "image/jpeg";
+  const fichier = await api.contenu(pieceId);
+  const bytes = fichier.octets;
+  // Le type vient de la base. L'ancien flux le tenait du Blob rendu par le
+  // stockage, avec le même repli lorsqu'il était vide.
+  const mime = contexte.piece.contentType || fichier.type || "image/jpeg";
   const dataUrl = `data:${mime};base64,${toBase64(bytes)}`;
 
-  const { data: charges, error: chargesErr } = await supabase
-    .from("ref_fiscal_charges_v")
-    .select("code, label")
-    .eq("pack_version_id", packId);
-  if (chargesErr) throw new Error(chargesErr.message);
   const chargeCodes = Array.from(
-    new Map(
-      (charges ?? []).map((c) => [
-        c.code as string,
-        { code: c.code as string, label: (c.label as string) ?? (c.code as string) },
-      ]),
-    ).values(),
+    new Map(contexte.chargeCodes.map((c) => [c.code, { code: c.code, label: c.label }])).values(),
   );
 
   const read = await runVisionRead({
@@ -99,9 +69,11 @@ export async function readPieceFlow(supabase: Client, pieceId: string): Promise<
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
     bytes,
     chargeCodes,
-    taxCodes: (rates ?? []).map((r) => ({
-      code: r.code as string,
-      label: (r.label as string) ?? (r.code as string),
+    taxCodes: contexte.taxCodes.map((r) => ({
+      code: r.code,
+      label: r.label,
+      // `String(nombre)` : exactement ce que faisait `String(r.rate)` sur la
+      // valeur JSON rendue par PostgREST.
       rate: String(r.rate),
     })),
   });
@@ -112,16 +84,6 @@ export async function readPieceFlow(supabase: Client, pieceId: string): Promise<
     decimals: 3,
   });
 
-  const { error: persistErr } = await supabase.rpc("capture_read_persist", {
-    p_piece: pieceId,
-    p_tokens: read.tokens as unknown as never,
-    p_contract: built.contract,
-    p_extract: built.extract as unknown as never,
-    p_citations: built.citations as unknown as never,
-    p_flags: built.flags as unknown as never,
-  });
-  if (persistErr) throw new Error(persistErr.message);
-
   // Projection des articles cités pour l'analyse par famille (PME).
   // La famille est résolue par le pack (compte, puis motif de désignation) —
   // aucune famille en dur ici, et aucun article sans citation persistée.
@@ -130,24 +92,23 @@ export async function readPieceFlow(supabase: Client, pieceId: string): Promise<
     document_date?: string | null;
     articles?: Array<Record<string, string | null>>;
   };
-  const articles = extract.articles ?? [];
-  if (articles.length > 0) {
-    const { data: mappings, error: mapErr } = await supabase
-      .from("ref_account_mappings_v")
-      .select("document_kind, main_account")
-      .eq("pack_version_id", packId)
-      .eq("document_kind", extract.document_kind ?? "facture_achat");
-    if (mapErr) throw new Error(mapErr.message);
-    const mainAccount = mappings?.[0]?.main_account as string | undefined;
-    const { error: artErr } = await supabase.rpc("capture_articles_persist", {
-      p_piece: pieceId,
-      p_pack: packId,
-      p_document_date: (extract.document_date ?? null) as unknown as string,
-      p_account: (mainAccount ?? null) as unknown as string,
-      p_articles: articles as unknown as never,
-    });
-    if (artErr) throw new Error(artErr.message);
-  }
+
+  // La lecture et ses articles partent ensemble : côté API, une seule
+  // transaction. Une lecture persistée sans ses articles n'existe plus.
+  await api.rpc<void>("capture", "persisterLecture", [
+    {
+      pieceId,
+      packId: contexte.packId,
+      tokens: read.tokens,
+      contract: built.contract,
+      extract: built.extract,
+      citations: built.citations,
+      flags: built.flags,
+      articles: extract.articles ?? [],
+      documentKind: extract.document_kind ?? null,
+      documentDate: extract.document_date ?? null,
+    },
+  ]);
 
   return {
     pieceId,

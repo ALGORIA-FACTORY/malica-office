@@ -48,7 +48,7 @@ const entities: Entity[] = [
 ];
 
 const pieces: Piece[] = [];
-const fileUrls = new Map<string, string>();
+const contenus = new Map<string, ArrayBuffer>();
 const extractions = new Map<string, Extraction>();
 const citations = new Map<string, Citation[]>();
 const tokens = new Map<string, Token[]>();
@@ -58,9 +58,10 @@ function makeId(): string {
   return crypto.randomUUID();
 }
 
-function objectUrl(file: Blob): string | null {
-  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return null;
-  return URL.createObjectURL(file);
+/** La démo garde les octets en mémoire : le port transporte le contenu, pas une URL. */
+async function octets(file: Blob): Promise<ArrayBuffer | null> {
+  if (typeof file.arrayBuffer !== "function") return null;
+  return file.arrayBuffer();
 }
 
 function demoTokenPlan(pieceId: string): void {
@@ -167,8 +168,8 @@ export function createDevCaptureRepository(): CaptureRepository {
         createdAt: new Date().toISOString(),
       };
       pieces.unshift(piece);
-      const url = objectUrl(input.file);
-      if (url) fileUrls.set(id, url);
+      const contenu = await octets(input.file);
+      if (contenu) contenus.set(id, contenu);
       return id;
     },
 
@@ -181,7 +182,7 @@ export function createDevCaptureRepository(): CaptureRepository {
       if (!piece) throw new Error("piece.not_found");
       return {
         piece,
-        fileUrl: fileUrls.get(pieceId) ?? null,
+        contenu: contenus.get(pieceId) ?? null,
         extraction: extractions.get(pieceId) ?? null,
         citations: citations.get(pieceId) ?? [],
         tokens: tokens.get(pieceId) ?? [],

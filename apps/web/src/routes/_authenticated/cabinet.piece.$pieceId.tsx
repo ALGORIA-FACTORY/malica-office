@@ -109,7 +109,7 @@ function CabinetReview() {
   }
   if (!dossier.data) return <EmptyState>{t("cab.review.nodoc")}</EmptyState>;
 
-  const { piece, fileUrl, extraction, citations } = dossier.data;
+  const { piece, contenu, extraction, citations } = dossier.data;
   const articles =
     (
       extraction?.payload as
@@ -149,9 +149,9 @@ function CabinetReview() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
-          {fileUrl ? (
+          {contenu ? (
             <DocumentView
-              fileUrl={fileUrl}
+              contenu={contenu}
               highlight={zoom}
               label={t("cab.review.document")}
               loadingLabel={t("pme.doc.loading")}

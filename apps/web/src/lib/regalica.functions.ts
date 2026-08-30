@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { askRegalica } from "@/lib/regalica/ask.server";
+import { exigerSession } from "@/lib/session-middleware";
 
 const AskInput = z.object({
   tenantId: z.string().uuid(),
@@ -17,10 +17,10 @@ const AskInput = z.object({
 });
 
 export const regalicaAsk = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([exigerSession])
   .inputValidator((data: unknown) => AskInput.parse(data))
   .handler(async ({ data, context }) =>
-    askRegalica(context.supabase, {
+    askRegalica(context.api, {
       tenantId: data.tenantId,
       pieceId: data.pieceId ?? null,
       question: data.question,

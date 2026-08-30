@@ -132,7 +132,18 @@ export interface Extraction {
 
 export interface PieceDossier {
   piece: Piece;
-  fileUrl: string | null;
+  /**
+   * Les octets de la pièce, pas une URL.
+   *
+   * Une URL signée supposait un stockage qui en émettait. Les pièces sont
+   * servies par l'API, sous cookie de session : ni un `<img src>` vers une
+   * autre origine ni une règle CSS `url()` n'emporteraient ce cookie. On
+   * transporte donc le contenu, et la visionneuse en fabrique ce qu'il lui faut.
+   *
+   * `null` dit que la ligne existe mais pas ses octets — un dépôt interrompu.
+   * C'est une information, pas une erreur à masquer.
+   */
+  contenu: ArrayBuffer | null;
   extraction: Extraction | null;
   citations: Citation[];
   tokens: Token[];

@@ -8,12 +8,13 @@
  * du rendu, pas une approximation.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Citation } from "@/verticals/regalica-office/ports/repositories";
 
 interface Props {
-  fileUrl: string;
+  /** Les octets de la pièce. pdf.js les accepte tels quels ; l'image en tire une URL locale. */
+  contenu: ArrayBuffer;
   highlight: Citation | null;
   label: string;
   loadingLabel: string;
@@ -25,7 +26,7 @@ const RENDER_WIDTH = 1400;
 const PAD_X = 0.06;
 const PAD_Y = 0.02;
 
-export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLabel }: Props) {
+export function DocumentView({ contenu, highlight, label, loadingLabel, errorLabel }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const zoomRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -34,6 +35,12 @@ export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLab
   const [pageCount, setPageCount] = useState(1);
   const [page, setPage] = useState(1);
   const [rendered, setRendered] = useState(0);
+
+  // Une image ne s'affiche pas depuis un ArrayBuffer : il lui faut une URL.
+  // Celle-ci est locale au navigateur, vit le temps du composant, et n'expose
+  // donc rien — contrairement à une URL signée, qui circule.
+  const urlLocale = useMemo(() => URL.createObjectURL(new Blob([contenu])), [contenu]);
+  useEffect(() => () => URL.revokeObjectURL(urlLocale), [urlLocale]);
 
   // La page citée prime : une citation en page 3 ouvre la page 3.
   useEffect(() => {
@@ -46,9 +53,7 @@ export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLab
 
     (async () => {
       try {
-        const res = await fetch(fileUrl);
-        if (!res.ok) throw new Error(String(res.status));
-        const buf = await res.arrayBuffer();
+        const buf = contenu;
         const head = new Uint8Array(buf.slice(0, 5));
         const isPdf = String.fromCharCode(...head) === "%PDF-";
         if (cancelled) return;
@@ -89,7 +94,7 @@ export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLab
       cancelled = true;
       cleanup?.();
     };
-  }, [fileUrl, page]);
+  }, [contenu, page]);
 
   // Amener la zone citée à l'écran : sans cela, le surlignage reste invisible
   // sur mobile, où le document est au-dessus des champs.
@@ -157,7 +162,7 @@ export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLab
           const cx = (b.x0 + b.x1) / 2;
           const cy = (b.y0 + b.y1) / 2;
           return {
-            backgroundImage: `url(${fileUrl})`,
+            backgroundImage: `url(${urlLocale})`,
             backgroundSize: `${100 / w}% auto`,
             backgroundPosition: `${(cx * 100).toFixed(2)}% ${(cy * 100).toFixed(2)}%`,
             aspectRatio: `${w} / ${h}`,
@@ -169,7 +174,7 @@ export function DocumentView({ fileUrl, highlight, label, loadingLabel, errorLab
     <div ref={wrapRef} className="space-y-2">
       <div className="relative overflow-hidden border border-border bg-paper">
         {state === "image" ? (
-          <img src={fileUrl} alt={label} className="block w-full" />
+          <img src={urlLocale} alt={label} className="block w-full" />
         ) : (
           <canvas ref={canvasRef} className="block w-full" aria-label={label} />
         )}
