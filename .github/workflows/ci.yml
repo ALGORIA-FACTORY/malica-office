@@ -1,0 +1,48 @@
+# Ce qui rend une règle exécutable.
+#
+# Le dépôt précédent portait seize suites de tests, dont les garde-fous qui
+# tiennent la doctrine — pureté du domaine, zéro constante réglementaire. Aucune
+# commande ne les lançait, aucune CI n'existait. Des garde-fous que rien
+# n'exécute ne sont pas des garde-fous.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Une nouvelle poussée annule la vérification en cours de la même branche :
+# seul le dernier état compte, et la file ne s'allonge pas pour rien.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      # --frozen-lockfile : l'installation échoue si le lockfile ne couvre pas
+      # le package.json, au lieu de le réécrire en silence.
+      - name: Installer
+        run: bun install --frozen-lockfile
+
+      - name: Typage
+        run: bun run typecheck
+
+      - name: Style
+        run: bun run lint
+
+      # La preuve d'isolation s'ignore d'elle-même sans backend configuré : elle
+      # se déclenche dès que ces secrets existent sur le dépôt.
+      - name: Tests
+        run: bun run test
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

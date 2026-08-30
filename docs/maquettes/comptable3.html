@@ -1,0 +1,319 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+body{background:#DCDCE1;font-family:Inter,'IBM Plex Sans Arabic',sans-serif}
+.wrap{display:flex;flex-direction:column;gap:46px;padding:54px;align-items:center}
+.lab{font:600 13px Inter;color:#1A1A1C;align-self:flex-start;margin-left:2px}
+.labn{font:600 11px 'IBM Plex Mono';color:#7C7C82;letter-spacing:.04em;align-self:flex-start;margin:-6px 0 4px 2px}
+:root{--bg:#FAFAFA;--sf:#FFFFFF;--sf2:#F4F4F5;--ink:#0A0A0A;--t2:#48484A;--t3:#9A9AA0;--ln:#E8E8EC;--lns:#D8D8DD;--ev:#245A36;--ve:#A03819;--am:#8A6510;--az:#2968A5;--mg:#C45E3F}
+.scr{width:1460px;height:880px;background:var(--bg);border:1px solid var(--lns);display:grid;grid-template-columns:218px 1fr 300px;overflow:hidden;color:var(--ink);font-family:Inter}
+.nav{border-right:1px solid var(--ln);padding:20px 14px;display:flex;flex-direction:column;background:var(--sf)}
+.brand{display:flex;align-items:center;gap:9px}
+.rg{width:21px;height:21px;color:var(--ink);background:currentColor;-webkit-mask:url(assets/rg_mark.svg) center/contain no-repeat;mask:url(assets/rg_mark.svg) center/contain no-repeat;flex:0 0 auto}
+.cab{font:600 13.5px Inter;letter-spacing:-.01em}.role{font:500 11px Inter;color:var(--t3);margin:1px 0 0 30px}
+.navsec{font:600 9px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:18px 0 6px 4px}
+.navi{display:flex;align-items:center;gap:10px;padding:7px 9px;font:500 12.5px Inter;color:var(--t2)}
+.navi .ic{width:15px;height:15px;flex:0 0 auto}
+.navi.act{background:var(--sf2);color:var(--ink);font-weight:600}
+.navi .cnt{margin-left:auto;font:600 10.5px 'IBM Plex Mono';color:var(--t3)}.navi.act .cnt{color:var(--ink)}
+.kbd{margin-top:auto;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--ln);padding:7px 10px;font:500 10.5px Inter;color:var(--t3)}
+.kbd b{font:600 10.5px 'IBM Plex Mono';border:1px solid var(--lns);padding:1px 5px;color:var(--t2)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.top{height:54px;border-bottom:1px solid var(--ln);display:flex;align-items:center;gap:16px;padding:0 24px;flex:0 0 auto}
+.crumb{font:500 12.5px Inter;color:var(--t2)}.crumb b{color:var(--ink);font-weight:600}
+.spaces{display:flex;border:1px solid var(--lns);font:600 11px Inter;margin-left:auto}
+.spaces span{padding:6px 12px;color:var(--t3)}.spaces span.on{background:var(--ink);color:var(--bg)}
+.content{padding:22px 24px;overflow:hidden;flex:1}
+.h{font:600 21px Inter;letter-spacing:-.025em}.sub{font:400 13.5px Inter;color:var(--t2);margin-top:3px}
+.eye{font:600 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:18px 0 9px;display:block}
+.num{font-family:'IBM Plex Mono';font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:-.02em}
+.grid{display:grid;gap:14px}
+.card{border:1px solid var(--ln);background:var(--sf);padding:15px}
+.ev{color:var(--ev)}.ve{color:var(--ve)}.am{color:var(--am)}.az{color:var(--az)}.t3{color:var(--t3)}.t2{color:var(--t2)}
+.d{width:6px;height:6px;display:inline-block}
+.stat{display:inline-flex;align-items:center;gap:6px;font:600 11px Inter}
+table{width:100%;border-collapse:collapse}
+th{font:600 10px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);text-align:left;padding:9px 10px;border-bottom:1px solid var(--lns)}
+td{padding:11px 10px;border-bottom:1px solid var(--ln);font:500 12.5px Inter;vertical-align:middle}
+td.n{font-family:'IBM Plex Mono';font-weight:500;text-align:right;font-size:12px}
+.av{width:24px;height:24px;object-fit:cover;filter:grayscale(1);flex:0 0 auto}
+.who{display:flex;align-items:center;gap:8px}
+.btn{height:38px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;font:600 13px Inter;background:var(--ink);color:var(--bg)}
+.btn2{height:38px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;font:500 13px Inter;color:var(--ink);border:1px solid var(--lns)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;font:600 10.5px Inter;border:1px solid var(--lns)}
+.kpi{font-family:'IBM Plex Mono';font-weight:500;font-size:27px;letter-spacing:-.03em}.kpis{font-size:.42em;color:var(--t2);margin-left:3px}
+.ktag{font:600 9.5px Inter;letter-spacing:.07em;text-transform:uppercase;color:var(--t3)}
+.bars{display:flex;align-items:flex-end;gap:7px;height:80px}.bars>i{flex:1;background:var(--lns)}.bars>i.on{background:var(--ink)}
+.feu{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font:600 11px Inter}
+/* Regalica persistent panel */
+.rega{border-left:1px solid var(--ln);background:var(--sf);display:flex;flex-direction:column;padding:16px 15px}
+.rega .hd{display:flex;align-items:center;gap:9px;padding-bottom:12px;border-bottom:1px solid var(--ln)}
+.rega .hd img{width:30px;height:30px;object-fit:cover;filter:grayscale(1)}
+.rega .nm{font:600 13px Inter}.rega .st{font:500 10.5px Inter;color:var(--t3)}
+.rega .ctx{font:400 13px Inter;color:var(--ink);line-height:1.5;margin:14px 0 6px}
+.rega .ctx b{font-weight:600}
+.agentsec{font:600 9px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:16px 0 8px}
+.agent{display:flex;align-items:center;gap:8px;padding:6px 0;font:500 12px Inter;color:var(--t2)}
+.agent .ad{width:5px;height:5px;background:var(--ev);flex:0 0 auto}
+.agent .as{margin-left:auto;font:500 10px Inter;color:var(--t3)}
+.rega .ask{margin-top:auto;border:1px solid var(--ln);padding:10px 12px;color:var(--t3);font:400 12.5px Inter;display:flex;align-items:center;gap:8px}
+.rega .ask .s{margin-left:auto;width:16px;height:16px;color:var(--ink)}
+.lawcol{border:1px solid var(--ln);background:var(--sf2);padding:12px;font:400 12px 'IBM Plex Mono';line-height:1.55;color:var(--t2)}.lawcol b{color:var(--ink);font-weight:600}
+/* responsive frames */
+.scrt{width:834px;height:720px;grid-template-columns:62px 1fr;display:grid}
+.scrt .navi span:not(.cnt){display:none}.scrt .role,.scrt .cab,.scrt .navsec{display:none}
+.scrm{width:390px;height:780px;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--lns);overflow:hidden;font-family:Inter;color:var(--ink)}
+.mtop{height:50px;border-bottom:1px solid var(--ln);display:flex;align-items:center;gap:10px;padding:0 16px;font:600 14px Inter}
+.mbody{flex:1;overflow:hidden;padding:14px 16px}
+.mdock{height:64px;border-top:1px solid var(--ln);display:flex;align-items:center;justify-content:space-around;background:var(--sf)}
+.mdi{display:flex;flex-direction:column;align-items:center;gap:3px;font:600 9px Inter;color:var(--t3)}.mdi.act{color:var(--ink)}.mdi .ic{width:19px;height:19px}
+.fab{position:absolute;width:50px;height:50px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center}
+
+.miniphone{width:260px;height:520px;border:1px solid var(--lns);background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+.mp-sb{height:34px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0;font:600 10px 'IBM Plex Mono';color:var(--ink)}
+.mp-body{padding:14px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.cal div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font:500 11px 'IBM Plex Mono';color:var(--t3);border:1px solid transparent}
+.cal div.has{border-color:var(--lns);color:var(--ink)}.cal div.due{background:var(--ink);color:var(--bg)}
+.tl{position:relative;padding-left:22px}
+.tl:before{content:"";position:absolute;left:4px;top:6px;bottom:8px;width:1px;background:var(--lns)}
+.tle{position:relative;padding:9px 0;border-bottom:1px solid var(--ln)}
+.tle:before{content:"";position:absolute;left:-22px;top:13px;width:9px;height:9px;border-radius:50%;background:var(--ink)}
+.tle.fut:before{background:var(--bg);border:1.5px solid var(--lns)}
+.toggle{display:inline-flex;border:1px solid var(--lns);font:600 11px Inter}.toggle span{padding:6px 12px;color:var(--t3)}.toggle span.on{background:var(--ink);color:var(--bg)}
+.ecr{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font:500 13px Inter;padding:9px 0;border-bottom:1px solid var(--ln)}.ecr .n{font-family:'IBM Plex Mono';font-variant-numeric:tabular-nums;text-align:right;font-size:12px;font-weight:500}
+</style></head><body><div class="wrap">
+<div class="lab">10 · Rapprochement bancaire — côte à côte</div><div class="labn">RELEVÉ ↔ ÉCRITURES · AUTO-MATCHÉ</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Sonia B. · Collaboratrice</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb">SOTUTEX ›&nbsp; <b>Rapprochement</b> · avril 2026</div><div class="spaces"><span class="on">À rapprocher</span><span>Rapproché</span></div></div>
+ <div class="content">
+  <div class="h" style="font-size:19px">Rapprochement bancaire</div>
+  <div class="sub">J'ai aligné le relevé sur vos écritures. 38 lignes sur 42 rapprochées automatiquement.</div>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+   <div class="card"><div class="ktag ev">Rapprochées auto</div><div class="kpi ev" style="margin-top:4px">38</div></div>
+   <div class="card"><div class="ktag am">À confirmer</div><div class="kpi am" style="margin-top:4px">3</div></div>
+   <div class="card"><div class="ktag">Sans écriture</div><div class="kpi" style="margin-top:4px">1</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--ln);margin-top:16px">
+   <div style="padding:14px;border-right:1px solid var(--ln);background:var(--sf2)">
+    <div style="font:600 10px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Relevé bancaire</div>
+    <div class="ecr" style="grid-template-columns:1fr auto;border-top:1px solid var(--ln)"><span>14/04 · Vir. SOTUTEX</span><span class="n">-1 250,500</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto"><span>18/04 · Encaiss. client B.</span><span class="n ev">+3 920,000</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto"><span>22/04 · STEG prélèvement</span><span class="n">-486,200</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="am">28/04 · Frais bancaires</span><span class="n am">-42,000</span></div>
+   </div>
+   <div style="padding:14px">
+    <div style="font:600 10px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Écritures</div>
+    <div class="ecr" style="grid-template-columns:1fr auto;border-top:1px solid var(--ln)"><span class="ev">401 SOTUTEX · réglé</span><span class="feu ev" style="padding:3px 8px"><span class="d" style="background:var(--ev)"></span>lié</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto"><span class="ev">411 client B. · encaissé</span><span class="feu ev" style="padding:3px 8px"><span class="d" style="background:var(--ev)"></span>lié</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto"><span class="ev">606 STEG · réglé</span><span class="feu ev" style="padding:3px 8px"><span class="d" style="background:var(--ev)"></span>lié</span></div>
+    <div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="am">627 frais ? · à créer</span><span class="btn2" style="height:28px;font-size:11px">Créer</span></div>
+   </div>
+  </div>
+  <div style="margin-top:14px"><span class="btn">Confirmer les 38 + 3</span> <span class="btn2" style="margin-left:8px">Créer l'écriture manquante</span></div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Rapprocheur</div></div></div><div class="ctx">J'ai relié 38 lignes sur 42. Une seule n'a pas d'écriture (frais bancaires) — je vous propose de la créer en 627.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Rapprocheur · 38 liées<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Investigator · 1 sans écriture<span class="as">fait</span></div><div class="ask">« Crée le 627 »<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">11 · Échéances cabinet — tous clients</div><div class="labn">ANTICIPÉ · NON ANXIOGÈNE · PAR CLIENT</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Faten Khelifi · Patronne</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb"><b>Échéances</b> · mai 2026 · 42 clients</div></div>
+ <div class="content">
+  <div class="h" style="font-size:19px">Échéances du cabinet</div>
+  <div class="sub">Rien d'urgent. Tout est anticipé, et je préviens chaque chargé 7 jours avant.</div>
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:14px">
+   <div>
+    <span class="eye">Les 7 prochains jours</span>
+    <div class="tl">
+     <div class="tle"><div style="display:flex;justify-content:space-between"><span style="font:600 13px Inter">TVA avril — SOTUTEX, MEUBLATEX, +6</span><span class="num t3" style="font-size:11px">28/05 · J-2</span></div><div class="t2" style="font:400 11.5px Inter;margin-top:2px">8 déclarations · 6 prêtes, 2 en cours</div></div>
+     <div class="tle"><div style="display:flex;justify-content:space-between"><span style="font:600 13px Inter">CNSS T1 — 12 clients</span><span class="num t3" style="font-size:11px">31/05 · J-5</span></div><div class="ev" style="font:500 11.5px Inter;margin-top:2px">toutes préparées</div></div>
+     <div class="tle fut"><div style="display:flex;justify-content:space-between"><span style="font:600 13px Inter;color:var(--t2)">Acompte provisionnel — Délice</span><span class="num t3" style="font-size:11px">04/06 · J-9</span></div></div>
+    </div>
+   </div>
+   <div>
+    <span class="eye">Mai</span>
+    <div class="card"><div class="cal">
+     <div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div>
+     <div>26</div><div class="has">27</div><div class="due">28</div><div>29</div><div>30</div><div>31</div><div>1</div>
+     <div>2</div><div>3</div><div class="has">4</div><div>5</div><div>6</div><div>7</div><div>8</div>
+    </div>
+    <div style="border-top:1px solid var(--ln);margin-top:12px;padding-top:10px;font:500 12px Inter"><span class="num">28</span> · 8 déclarations TVA · <span class="ev">6 prêtes</span></div></div>
+   </div>
+  </div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Échéancier</div></div></div><div class="ctx">Je surveille toutes les échéances des 42 clients. Le 28, 8 déclarations TVA — 6 sont déjà prêtes. Je relancerai Mehdi pour les 2 restantes demain.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Échéancier · 42 clients suivis<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Notification · rappels J-7<span class="as">programmé</span></div><div class="ask">« Qui est en retard ? »<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">12 · PV de réunion — préparé par Regalica</div><div class="labn">CONCIERGE · NOTES → PROCÈS-VERBAL</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Faten Khelifi · Patronne</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb">Délice Holding ›&nbsp; <b>Réunion du 05/05</b> · PV</div></div>
+ <div class="content" style="max-width:760px">
+  <div class="h" style="font-size:19px">Procès-verbal — point trimestriel</div>
+  <div class="sub">Délice Holding · 05/05/2026 · M. Triki (gérant), Rim A. (cabinet). J'ai rédigé le PV à partir de vos échanges.</div>
+  <div class="card" style="margin-top:14px">
+   <div class="eye" style="margin:0 0 8px">Décisions</div>
+   <div style="font:400 13.5px Inter;line-height:1.7;color:var(--ink)">• Passage en TVA mensuelle confirmé dès juin.<br>• Provision pour congés payés à constituer au S1.<br>• Acompte provisionnel : échéancier en 3 fois validé.</div>
+   <div class="eye" style="margin:16px 0 8px">Actions</div>
+   <div style="font:400 13.5px Inter;line-height:1.7;color:var(--t2)">• Cabinet : préparer l'option TVA mensuelle (Rim · avant 31/05).<br>• Client : transmettre les contrats de travail manquants (M. Triki · avant 15/05).</div>
+   <div class="eye" style="margin:16px 0 8px">Prochaine réunion</div>
+   <div style="font:400 13.5px Inter;color:var(--t2)">Août 2026 · clôture semestrielle.</div>
+  </div>
+  <div style="margin-top:14px"><span class="btn">Valider & envoyer au client</span> <span class="btn2" style="margin-left:8px">Modifier</span> <span class="btn2" style="margin-left:8px">Exporter en PDF</span></div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Reporter</div></div></div><div class="ctx">J'ai structuré vos notes en décisions, actions et suite. Relisez — vous gardez la main sur chaque ligne avant l'envoi.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Reporter · PV rédigé<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Échéancier · actions datées<span class="as">fait</span></div><div class="ask">« Ajoute une action »<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">13 · Restitution — vue des deux bords  <span style="color:#A03819">MIROIR</span></div><div class="labn">LE COMPTABLE DÉPOSE → LE PME REÇOIT</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Sonia B. · Collaboratrice</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb">SOTUTEX ›&nbsp; <b>Restituer</b> · déclaration TVA avril</div></div>
+ <div class="content">
+  <div class="h" style="font-size:19px">Ce que vous déposez, ce qu'il reçoit</div>
+  <div class="sub">La restitution est un geste à deux faces. À gauche votre dépôt, à droite ce que le client voit aussitôt.</div>
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:28px;margin-top:18px;align-items:start">
+   <div>
+    <span class="eye">Votre dépôt</span>
+    <div class="card"><div class="ecr" style="grid-template-columns:1fr auto;border-top:none"><span class="t2">Document</span><span class="num">Déclaration TVA — avril</span></div>
+     <div class="ecr" style="grid-template-columns:1fr auto"><span class="t2">Version</span><span class="num">1</span></div>
+     <div class="ecr" style="grid-template-columns:1fr auto"><span class="t2">Destination</span><span class="num">Coffre · SOTUTEX</span></div>
+     <div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="t2">Accès client</span><span class="num">lecture seule</span></div></div>
+    <div style="margin-top:14px"><span class="btn">Déposer dans le Coffre</span></div>
+    <div style="display:flex;align-items:center;gap:9px;margin-top:14px"><img class="av" src="assets/persona.jpg" style="width:22px;height:22px"><div class="t2" style="font:400 12px Inter;line-height:1.4">Le client recevra une bonne nouvelle, pas une tâche. Conservé 10 ans, versionné.</div></div>
+   </div>
+   <div>
+    <span class="eye">Côté client — en direct</span>
+    <div class="miniphone"><div class="mp-sb">08:32<span>5G</span></div>
+     <div class="mp-body">
+      <img src="assets/persona.jpg" style="width:42px;height:42px;object-fit:cover;filter:grayscale(1)">
+      <div style="font:600 15px Inter;margin-top:12px">Une bonne nouvelle.</div>
+      <div style="font:400 12px Inter;color:var(--t2);margin-top:6px;line-height:1.45">Mme Khelifi a déposé votre <b style="color:var(--ink)">déclaration de TVA d'avril</b> dans votre Coffre.</div>
+      <div style="border:1px solid var(--lns);padding:10px;margin-top:14px;display:flex;gap:9px;align-items:center;width:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/></svg><div style="text-align:left"><div style="font:600 11px Inter">TVA — avril</div><div style="font:500 9px 'IBM Plex Mono';color:var(--t3)">v1 · lecture seule</div></div></div>
+     </div></div>
+   </div>
+  </div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Ged + Notification</div></div></div><div class="ctx">Au moment où vous déposez, je préviens le client avec douceur et je range le document dans son Coffre — versionné, en lecture seule.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Ged · dépôt Coffre<span class="as">prêt</span></div><div class="agent"><span class="ad"></span>Notification · bonne nouvelle<span class="as">prête</span></div><div class="ask">Changer de document…<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">14 · Notifications — la boîte du cabinet</div><div class="labn">CALME · GROUPÉE · GOUVERNÉE</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Sonia B. · Collaboratrice</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb"><b>Notifications</b> · 5 nouvelles</div></div>
+ <div class="content" style="max-width:780px">
+  <div class="h" style="font-size:19px">Votre activité</div>
+  <div class="sub">Ce qui compte, groupé. Pas de bruit, pas de fausse urgence.</div>
+  <span class="eye">Aujourd'hui</span>
+  <div class="card" style="padding:0">
+   <div class="ecr" style="grid-template-columns:auto 1fr auto;padding:13px 14px;border-top:none;align-items:center"><span class="d" style="background:var(--az);width:7px;height:7px"></span><span style="font:500 13px Inter">SOTUTEX a transmis 6 nouvelles pièces<br><span class="t3" style="font:400 11.5px Inter">prêtes à traiter · il y a 20 min</span></span><span class="t3">Ouvrir ›</span></div>
+   <div class="ecr" style="grid-template-columns:auto 1fr auto;padding:13px 14px;align-items:center"><span class="d" style="background:var(--ev);width:7px;height:7px"></span><span style="font:500 13px Inter">MEUBLATEX a repris la facture retournée<br><span class="t3" style="font:400 11.5px Inter">lisible désormais · il y a 1 h</span></span><span class="t3">Ouvrir ›</span></div>
+   <div class="ecr" style="grid-template-columns:auto 1fr auto;padding:13px 14px;align-items:center"><span class="d" style="background:var(--am);width:7px;height:7px"></span><span style="font:500 13px Inter">Échéance TVA dans 7 jours — 8 clients<br><span class="t3" style="font:400 11.5px Inter">6 prêtes · Regalica a relancé les 2 autres</span></span><span class="t3">Voir ›</span></div>
+  </div>
+  <span class="eye">Plus tôt cette semaine</span>
+  <div class="card" style="padding:0">
+   <div class="ecr" style="grid-template-columns:auto 1fr auto;padding:13px 14px;border-top:none;align-items:center"><span class="d" style="background:var(--ev);width:7px;height:7px"></span><span style="font:500 13px Inter">Délice Holding — restitution confirmée<br><span class="t3" style="font:400 11.5px Inter">le client a consulté sa déclaration</span></span><span class="t3">Ouvrir ›</span></div>
+  </div>
+  <div style="font:400 12px Inter;color:var(--t3);margin-top:14px">Heures calmes actives · aucune notification de 19 h à 8 h.</div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Notification</div></div></div><div class="ctx">Je regroupe pour ne pas vous fragmenter. Une chose vraiment urgente vous arriverait seule — le reste attend votre disponibilité.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Notification · 5 groupées<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Échéancier · relances faites<span class="as">fait</span></div><div class="ask">Tout marquer lu…<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">15 · Réglages cabinet</div><div class="labn">RÔLES · JURIDICTIONS · PLAN · SÉCURITÉ</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Faten Khelifi · Patronne</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb"><b>Réglages cabinet</b></div><div class="spaces"><span class="on">Équipe</span><span>Juridictions</span><span>Plan</span><span>Sécurité</span></div></div>
+ <div class="content" style="max-width:820px">
+  <div class="h" style="font-size:19px">Équipe & rôles</div>
+  <div class="sub">Qui fait quoi. Les collaboratrices ne voient que leurs clients ; vous voyez tout.</div>
+  <table style="margin-top:6px">
+   <tr><th>Membre</th><th>Rôle</th><th>Clients</th><th>Accès</th><th></th></tr>
+   <tr><td><div class="who"><img class="av" src="assets/persona.jpg">Faten Khelifi</div></td><td><span class="pill" style="border-color:var(--ink)">Patronne</span></td><td class="num">14</td><td class="t2" style="font:500 12px Inter">tout + équipe</td><td class="t3">Gérer ›</td></tr>
+   <tr><td><div class="who"><img class="av" src="assets/m1.jpg">Sonia B.</div></td><td><span class="pill">Collaboratrice</span></td><td class="num">9</td><td class="t2" style="font:500 12px Inter">ses clients</td><td class="t3">Gérer ›</td></tr>
+   <tr><td><div class="who"><img class="av" src="assets/m2.jpg">Mehdi T.</div></td><td><span class="pill">Collaboratrice</span></td><td class="num">11</td><td class="t2" style="font:500 12px Inter">ses clients</td><td class="t3">Gérer ›</td></tr>
+   <tr><td><div class="who"><img class="av" src="assets/m3.jpg">Rim A.</div></td><td><span class="pill">Collaboratrice</span></td><td class="num">8</td><td class="t2" style="font:500 12px Inter">ses clients</td><td class="t3">Gérer ›</td></tr>
+  </table>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px">
+   <div><span class="eye" style="margin-top:0">Juridiction</span><div class="card"><div class="ecr" style="grid-template-columns:1fr auto;border-top:none"><span>Tunisie · Système Comptable Tunisien</span><span class="pill ev" style="border-color:var(--ev)"><span class="d" style="background:var(--ev)"></span>active</span></div><div class="ecr" style="grid-template-columns:1fr auto"><span class="t2">UEMOA / OHADA</span><span class="t3" style="font:500 11px Inter">disponible</span></div><div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="t2">Loi de finance 2026</span><span class="ev" style="font:500 11px Inter">à jour</span></div></div></div>
+   <div><span class="eye" style="margin-top:0">Sécurité</span><div class="card"><div class="ecr" style="grid-template-columns:1fr auto;border-top:none"><span>Double authentification (MFA)</span><span class="pill ev" style="border-color:var(--ev)">activée</span></div><div class="ecr" style="grid-template-columns:1fr auto"><span class="t2">Journal d'accès</span><span class="t3" style="font:500 11px Inter">tracé · 10 ans</span></div><div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="t2">Espace privé cabinet</span><span class="t3" style="font:500 11px Inter">invisible aux clients</span></div></div></div>
+  </div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · gardienne</div></div></div><div class="ctx">Je tiens à jour la juridiction et la loi de finance pour tout le cabinet. Chaque rôle ne voit que ce qui le concerne — la frontière est réelle, pas un filtre.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Référentiel · loi 2026<span class="as">à jour</span></div><div class="agent"><span class="ad"></span>Notification · rôles appliqués<span class="as">fait</span></div><div class="ask">Inviter un membre…<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+<div class="lab">16 · Client 360 — la fiche complète</div><div class="labn">IDENTITÉ · ÉVOLUTION · PIÈCES · COFFRE</div>
+<div class="scr"><div class="nav">  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div><div class="role">Sonia B. · Collaboratrice</div>
+  <div class="navsec">Mon travail</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
+  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h7l2-4 3 8 2-4h4"/></svg>Rapprochement<span class="cnt">2</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
+  <div class="navsec">Cabinet</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Notifications<span class="cnt">5</span></div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil</div>
+  <div class="navi "><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Réglages cabinet</div>
+  <div class="kbd">Tout chercher<b>⌘K</b></div></div><div class="main">
+ <div class="top"><div class="crumb">Mes clients ›&nbsp; <b>Délice Holding</b></div><div class="spaces"><span class="on">Vue 360</span><span>Plan de travail</span><span>Partagé</span></div></div>
+ <div class="content">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between"><div><div class="h">Délice Holding · SARL</div><div class="sub">MF 1234567/A/M/000 · agroalimentaire · chargé : Rim A.</div></div><div style="display:flex;gap:7px"><span class="pill"><span class="d" style="background:var(--ev)"></span>à jour</span><span class="pill">TVA mensuelle</span><span class="pill">exportatrice</span></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px">
+   <div class="card"><div class="ktag">CA 2025</div><div class="kpi" style="margin-top:4px;font-size:22px">1,24<span class="kpis">M</span></div><div class="ev" style="font:500 10px Inter">+12 % vs 2024</div></div>
+   <div class="card"><div class="ktag">Résultat 2025</div><div class="kpi ev" style="margin-top:4px;font-size:22px">+148<span class="kpis">K</span></div></div>
+   <div class="card"><div class="ktag">Régularité</div><div class="kpi ev" style="margin-top:4px;font-size:22px">14/14</div><div class="t3" style="font:500 10px Inter">échéances tenues</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px">
+   <div><span class="eye">Évolution (états déposés)</span>
+    <div class="barr" style="grid-template-columns:46px 1fr auto"><span>2023</span><span class="tr" style="height:7px;background:var(--lns);position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:62%;background:var(--ink)"></i></span><span class="num" style="font-size:11px">988 K</span></div>
+    <div class="barr" style="grid-template-columns:46px 1fr auto"><span>2024</span><span class="tr" style="height:7px;background:var(--lns);position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:80%;background:var(--ink)"></i></span><span class="num" style="font-size:11px">1,11 M</span></div>
+    <div class="barr" style="grid-template-columns:46px 1fr auto"><span style="font-weight:600">2025</span><span class="tr" style="height:7px;background:var(--lns);position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:92%;background:var(--ink)"></i></span><span class="num" style="font-size:11px;font-weight:600">1,24 M</span></div>
+   </div>
+   <div><span class="eye">Le Coffre — restitué</span>
+    <div class="card" style="padding:0">
+     <div class="ecr" style="grid-template-columns:1fr auto;padding:10px 13px;border-top:none"><span>États financiers 2025</span><span class="t3" style="font:500 11px Inter">PDF</span></div>
+     <div class="ecr" style="grid-template-columns:1fr auto;padding:10px 13px"><span>Déclarations TVA · jan-avr</span><span class="t3" style="font:500 11px Inter">4</span></div>
+     <div class="ecr" style="grid-template-columns:1fr auto;padding:10px 13px;border-bottom:none"><span>Dépôt RNE</span><span class="ev" style="font:500 11px Inter">à jour</span></div>
+    </div>
+   </div>
+  </div>
+  <div style="margin-top:16px"><span class="btn">Ouvrir le plan de travail</span> <span class="btn2" style="margin-left:8px">Restituer un document</span> <span class="btn2" style="margin-left:8px">Planifier une réunion</span></div>
+ </div></div><div class="rega"><div class="hd"><img src="assets/persona.jpg"><div><div class="nm">Regalica</div><div class="st"><span class="d" style="background:var(--ev)"></span> présente · Historical + Visualizer</div></div></div><div class="ctx">Voici Délice Holding en un coup d'œil : une société qui progresse, ponctuelle, exportatrice. Tout son historique et son Coffre sont là, cités.</div><div class="agentsec">Sous la surface</div><div class="agent"><span class="ad"></span>Historical · 3 exercices<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Visualizer · courbe CA<span class="as">fait</span></div><div class="agent"><span class="ad"></span>Échéancier · prochaine TVA<span class="as">J-6</span></div><div class="ask">« Prépare sa clôture »<svg class="s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+</div></body></html>
