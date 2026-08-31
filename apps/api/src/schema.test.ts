@@ -170,13 +170,20 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
    * donnée de référence, versionnée, et non un littéral au fond du schéma.
    */
   it("aucune colonne de devise ou de juridiction n'a de valeur par défaut", async () => {
+    // pg_attribute, PAS information_schema : cette dernière ne rend que les
+    // colonnes sur lesquelles l'appelant a un privilège. Un garde-fou qui
+    // n'inspecte que ce qu'il a le droit de voir passe au vert sur ce qu'il ne
+    // voit pas — c'est un faux vert, la seule chose pire qu'un rouge.
     const defauts = await interroger<{ colonne: string; defaut: string }>(`
-      select table_schema || '.' || table_name || '.' || column_name as colonne,
-             column_default as defaut
-        from information_schema.columns
-       where column_default is not null
-         and table_schema not in ('pg_catalog', 'information_schema')
-         and column_name in ('devise', 'currency', 'jurisdiction')
+      select n.nspname || '.' || c.relname || '.' || a.attname as colonne,
+             pg_get_expr(d.adbin, d.adrelid) as defaut
+        from pg_attribute a
+        join pg_class c on c.oid = a.attrelid and c.relkind = 'r'
+        join pg_namespace n on n.oid = c.relnamespace
+        join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+       where a.attnum > 0 and not a.attisdropped
+         and n.nspname not in ('pg_catalog', 'information_schema')
+         and a.attname in ('devise', 'currency', 'jurisdiction')
        order by 1`);
 
     assert.deepEqual(
@@ -187,29 +194,36 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   /**
-   * Le schéma legal a disparu, et avec lui la substitution du chargeur.
+   * Aucune colonne ne se fait passer pour un vecteur.
    *
-   * Tant qu'il existait sans pgvector, sa colonne d'empreintes était un
-   * real[] déguisé en vector(768) : la base locale et une base de production
-   * n'avaient pas le même schéma. Ce test interdit son retour tant que
-   * l'extension n'est pas là — le jour où elle le sera, il se remplace par la
-   * vérification inverse, que la colonne est bien de type vector.
+   * La formulation précédente — « le schéma legal ne revient pas sans pgvector »
+   * — était fausse deux fois. Elle interrogeait `information_schema.schemata`,
+   * qui filtre par privilège : le schéma est revenu avec le corpus juridique et
+   * le test est resté VERT, sans rien voir. Et elle visait le mauvais objet : ce
+   * schéma-ci ne porte aucune empreinte vectorielle, il n'a jamais eu besoin de
+   * pgvector.
+   *
+   * Ce qu'il fallait interdire est plus précis : la SUBSTITUTION. Le chargeur
+   * réécrivait `vector(768)` en `real[]` quand l'extension manquait, et une
+   * colonne d'empreintes devenue tableau de réels ressemble à s'y méprendre à
+   * une colonne d'empreintes. C'est cela qu'on refuse.
    */
-  it("le schéma legal ne revient pas sans pgvector", async () => {
-    const etat = await interroger<{ vector: number; legal: number }>(`
-      select (select count(*) from pg_extension where extname = 'vector') as vector,
-             (select count(*) from information_schema.schemata
-               where schema_name = 'legal') as legal`);
+  it("aucune colonne d'empreintes n'est un tableau déguisé en vecteur", async () => {
+    const deguisees = await interroger<{ colonne: string; type_: string }>(`
+      select n.nspname || '.' || c.relname || '.' || a.attname as colonne,
+             format_type(a.atttypid, a.atttypmod) as type_
+        from pg_attribute a
+        join pg_class c on c.oid = a.attrelid and c.relkind = 'r'
+        join pg_namespace n on n.oid = c.relnamespace
+       where a.attnum > 0 and not a.attisdropped
+         and a.attname in ('embedding', 'embeddings')
+         and format_type(a.atttypid, a.atttypmod) <> 'vector'
+       order by 1`);
 
-    const ligne = etat[0];
-    assert.ok(ligne, "la requête d'état doit rendre une ligne");
-
-    if (Number(ligne.vector) === 0) {
-      assert.equal(
-        Number(ligne.legal),
-        0,
-        "legal sans pgvector : ses empreintes seraient un tableau déguisé en vecteur",
-      );
-    }
+    assert.deepEqual(
+      deguisees.map((d) => `${d.colonne} : ${d.type_}`),
+      [],
+      "une empreinte qui n'est pas un vecteur ne fait aucune recherche sémantique",
+    );
   });
 });
