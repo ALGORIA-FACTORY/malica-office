@@ -122,6 +122,28 @@ export const office = {
     return (rows as Record<string, unknown>[]).map((r) => versEcriture(r, lignes));
   },
 
+  /**
+   * Les lignes comptabilisées d'une période, par la fonction du Socle.
+   *
+   * On n'écrit pas la requête équivalente ici : `socle_periode_lignes` porte
+   * la définition de « comptabilisé », et deux définitions concurrentes
+   * finiraient par diverger — l'écran dirait un résultat, la balance un autre.
+   */
+  async periodeLignes(db: Requete, tenantId: string, from: string, to: string) {
+    const { rows } = await db.query(
+      `select date_ecriture, journal, account_code, debit, credit
+         from public.socle_periode_lignes($1, $2, $3)`,
+      [tenantId, from, to],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      dateEcriture: r["date_ecriture"] as string,
+      journal: r["journal"] as string,
+      accountCode: r["account_code"] as string,
+      debit: dec(r["debit"]),
+      credit: dec(r["credit"]),
+    }));
+  },
+
   async bookedExtracts(db: Requete, tenantId: string, from: string, to: string) {
     // Une seule requête là où l'adaptateur en faisait deux puis dédoublonnait
     // en JavaScript : `distinct on` rend la dernière extraction de chaque pièce,

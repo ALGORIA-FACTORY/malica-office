@@ -1,0 +1,214 @@
+/**
+ * Ce que l'accueil a le droit d'afficher.
+ *
+ * ============================================================ LA RÈGLE (R2)
+ *
+ * Aucun chiffre n'est fabriqué ici. La TVA vient de `computeTva`, le résultat
+ * de `computePnl`, l'avancement d'un comptage de pièces réelles. Ce module
+ * n'assemble que des entrées et invoque les moteurs — c'est exactement ce que
+ * fait déjà `use-tva`, à une échelle plus large.
+ *
+ * Quand une donnée manque, la valeur est `null` et l'écran le dit. Il ne dit
+ * jamais « 0,000 » à la place : zéro est un fait comptable, l'absence n'en est
+ * pas un, et les confondre sur l'écran d'accueil d'un dirigeant est la pire
+ * chose que ce produit puisse faire.
+ *
+ * ==================================================== POURQUOI UN SEUL APPEL
+ *
+ * La maquette montre douze mois de trajectoire. Douze requêtes donneraient
+ * douze allers-retours pour un écran qui doit s'ouvrir en moins d'une seconde
+ * sur un téléphone d'entrée de gamme. On charge donc UNE fenêtre de douze
+ * mois, et on invoque le moteur douze fois sur des données déjà en mémoire :
+ * les moteurs sont purs, cela ne coûte que du calcul.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+
+import { usePme } from "@/components/regalica/pme-context";
+import { office } from "@/verticals/regalica-office/composition";
+import { computePnl, computeTva } from "@/verticals/regalica-office/socle";
+import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
+import { currencyDecimals } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+
+import { monthBounds } from "./use-tva";
+
+/** Douze mois : celui-ci et les onze qui précèdent. */
+const FENETRE = 12;
+
+export interface MoisDeTva {
+  /** « 2026-04 ». */
+  periode: string;
+  /** La TVA déductible du mois, ou null si le mois n'a rien à dire. */
+  recuperee: string | null;
+}
+
+export interface Accueil {
+  devise: string;
+  /** La TVA récupérée du mois courant. `null` : rien de comptabilisé. */
+  recuperee: string | null;
+  /** L'écart avec le mois précédent, signé. `null` si l'un des deux manque. */
+  ecart: string | null;
+  /** Douze mois, du plus ancien au mois courant. */
+  serie: MoisDeTva[];
+  /** Combien de mois d'affilée la récupération progresse, mois courant inclus. */
+  moisDeSuite: number;
+  /** Part des pièces du mois déjà comptabilisées, de 0 à 1. `null` : aucune pièce. */
+  avancement: number | null;
+  /** Le résultat du mois — produits moins charges. `null` : rien de comptabilisé. */
+  resultat: string | null;
+  /** Les pièces que le cabinet a retournées, et qui attendent le dirigeant. */
+  retournees: number;
+  enCours: boolean;
+}
+
+/** Le mois qui précède, en « AAAA-MM ». */
+function moisPrecedent(periode: string, recul: number): string {
+  const [a, m] = periode.split("-").map(Number);
+  const d = new Date(Date.UTC(a!, m! - 1 - recul, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+export function useAccueil(periode: string): Accueil {
+  const pme = usePme();
+  const devise = pme.currency;
+  const decimales = currencyDecimals(devise);
+
+  const debut = moisPrecedent(periode, FENETRE - 1);
+  const { from } = monthBounds(debut);
+  const { to } = monthBounds(periode);
+
+  const extraits = useQuery({
+    queryKey: ["accueil-extraits", pme.tenantId, from, to],
+    queryFn: () => office().office.bookedExtracts(pme.tenantId, from, to),
+  });
+
+  const taux = useQuery({
+    queryKey: ["tax-rates", pme.packId],
+    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction),
+    enabled: !!pme.packId,
+  });
+
+  const lignes = useQuery({
+    queryKey: ["accueil-lignes", pme.tenantId, periode],
+    queryFn: () => {
+      const bornes = monthBounds(periode);
+      return office().office.periodeLignes(pme.tenantId, bornes.from, bornes.to);
+    },
+  });
+
+  const pieces = useQuery({
+    queryKey: ["pieces", pme.tenantId],
+    queryFn: () => office().capture.list(pme.tenantId),
+  });
+
+  // ------------------------------------------------------ la série de douze
+  const serie = useMemo<MoisDeTva[]>(() => {
+    const mois: MoisDeTva[] = [];
+    for (let i = FENETRE - 1; i >= 0; i -= 1) {
+      mois.push({ periode: moisPrecedent(periode, i), recuperee: null });
+    }
+    if (!extraits.data || !taux.data) return mois;
+
+    // Les extraits sont rangés par mois de document : c'est la date de la
+    // pièce qui décide de la période, jamais celle de la saisie.
+    const parMois = new Map<string, Array<{ item_id: string | null; extract: ExtractV1 }>>();
+    for (const ligne of extraits.data) {
+      const lu = ExtractV1.safeParse(ligne.extract);
+      if (!lu.success) continue;
+      const cle = lu.data.document_date.slice(0, 7);
+      const liste = parMois.get(cle) ?? [];
+      liste.push({ item_id: ligne.pieceId, extract: lu.data });
+      parMois.set(cle, liste);
+    }
+
+    const tarifs = taux.data.map((r) => ({
+      code: r.code,
+      label: r.label,
+      rate: r.rate,
+      valid_from: r.validFrom,
+      valid_to: r.validTo,
+      jurisdiction: r.jurisdiction,
+    }));
+
+    return mois.map((m) => {
+      const dedans = parMois.get(m.periode);
+      if (!dedans || dedans.length === 0) return m;
+      const calcul = computeTva({
+        period: m.periode,
+        currency: { code: devise, decimals: decimales },
+        tax_rates: tarifs,
+        achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
+        ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
+      });
+      return { periode: m.periode, recuperee: calcul.totals.deductible };
+    });
+  }, [extraits.data, taux.data, periode, devise, decimales]);
+
+  const courant = serie[serie.length - 1]?.recuperee ?? null;
+  const precedent = serie[serie.length - 2]?.recuperee ?? null;
+
+  const ecart = useMemo(() => {
+    if (courant === null || precedent === null) return null;
+    const delta = Number(courant) - Number(precedent);
+    return delta.toFixed(decimales);
+  }, [courant, precedent, decimales]);
+
+  // Combien de mois d'affilée la récupération progresse. Un mois sans donnée
+  // coupe la série : on ne comble pas un trou par une hypothèse.
+  const moisDeSuite = useMemo(() => {
+    let compte = 0;
+    for (let i = serie.length - 1; i > 0; i -= 1) {
+      const ici = serie[i]!.recuperee;
+      const avant = serie[i - 1]!.recuperee;
+      if (ici === null || avant === null) break;
+      if (Number(ici) <= Number(avant)) break;
+      compte += 1;
+    }
+    return compte;
+  }, [serie]);
+
+  // ------------------------------------------------------------- le résultat
+  const resultat = useMemo(() => {
+    if (!lignes.data || lignes.data.length === 0) return null;
+    const pnl = computePnl({
+      period: periode,
+      currency: { code: devise, decimals: decimales },
+      entries: lignes.data.map((l) => ({
+        account_code: l.accountCode,
+        debit: l.debit,
+        credit: l.credit,
+      })),
+      // Les libellés de comptes ne servent qu'au détail par compte, que
+      // l'accueil n'affiche pas. On ne charge pas six cent vingt-six lignes
+      // pour un seul nombre.
+      coa: [],
+    });
+    return pnl.resultat;
+  }, [lignes.data, periode, devise, decimales]);
+
+  // ----------------------------------------------------------- l'avancement
+  const { avancement, retournees } = useMemo(() => {
+    const liste = pieces.data ?? [];
+    const duMois = liste.filter((p) => p.createdAt.slice(0, 7) === periode);
+    const closes = duMois.filter(
+      (p) => p.status === "comptabilisee" || p.status === "supervisee",
+    ).length;
+    return {
+      avancement: duMois.length === 0 ? null : closes / duMois.length,
+      retournees: liste.filter((p) => p.status === "retournee").length,
+    };
+  }, [pieces.data, periode]);
+
+  return {
+    devise,
+    recuperee: courant,
+    ecart,
+    serie,
+    moisDeSuite,
+    avancement,
+    resultat,
+    retournees,
+    enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,
+  };
+}

@@ -237,6 +237,97 @@ async function selonLePlan(cabinetId, lignes) {
  * `propose` remplace une proposition existante ; c'est comptabiliser qui grave.
  * On ne repasse donc que si la pièce ne porte encore aucune écriture gravée.
  */
+/**
+ * La lecture citée d'une pièce.
+ *
+ * Le jeu d'essai s'arrêtait au dépôt des octets : aucune pièce n'était lue.
+ * Conséquence, l'écran de revue disait « Pièce non encore lue », la
+ * visionneuse n'avait aucune zone à surligner, et l'accueil PME affichait
+ * « — » pour la TVA parce que `bookedExtracts` ne rendait rien. Le jeu
+ * d'essai montrait un produit amputé de sa moitié la plus visible.
+ *
+ * On ne simule pas le lecteur : on appelle la MÊME RPC que lui,
+ * `capture.persisterLecture`, avec un extrait conforme au contrat. Si le
+ * contrat change, le jeu d'essai casse — c'est le but.
+ *
+ * Les boîtes des jetons suivent la mise en page du PDF généré plus haut :
+ * titre à y=780, lignes à 740 − 18i, sur une page A4 de 595 × 842. Le
+ * repère du PDF part d'en bas, celui de la visionneuse d'en haut : d'où le
+ * 1 − y/842.
+ */
+async function lecture(pieceId, packId, titre, lignes, extrait, aCiter) {
+  const boite = (i) => {
+    const yPdf = i === 0 ? 780 : 740 - (i - 1) * 18;
+    const hauteur = i === 0 ? 16 : 12;
+    return {
+      x0: 60 / 595,
+      x1: Math.min(1, (60 + (i === 0 ? titre.length : lignes[i - 1].length) * 5.6) / 595),
+      y0: 1 - (yPdf + hauteur) / 842,
+      y1: 1 - yPdf / 842,
+    };
+  };
+
+  const textes = [titre, ...lignes];
+  const jetons = textes.map((texte, i) => ({
+    page: 1,
+    ordinal: i + 1,
+    text: texte,
+    confidence: 0.98,
+    ...boite(i),
+  }));
+
+  // Chaque champ cité pointe le jeton qui le porte — c'est ce lien, et lui
+  // seul, qui fait qu'un montant à l'écran ouvre sa zone source.
+  const citations = Object.entries(aCiter).flatMap(([champ, aiguille]) => {
+    const i = textes.findIndex((l) => l.includes(aiguille));
+    if (i < 0) throw new Error(`citation ${champ} : « ${aiguille} » absent de la pièce`);
+    return [{ field: champ, page: 1, ordinal: i + 1, zone: `p.1` }];
+  });
+
+  await rpc("capture", "persisterLecture", [
+    {
+      pieceId,
+      packId,
+      tokens: jetons,
+      contract: "extract.v1",
+      extract: extrait,
+      citations,
+      flags: [],
+      articles: [],
+      documentKind: extrait.document_kind,
+      documentDate: extrait.document_date,
+    },
+  ]);
+}
+
+/** Un extrait conforme au contrat, à partir des trois montants de la pièce. */
+function extrait(kind, emetteur, date, reference, ht, tva, timbre) {
+  const ttc = (Number(ht) + Number(tva) + Number(timbre ?? 0)).toFixed(3);
+  return {
+    contract: "extract.v1",
+    issuer: emetteur,
+    document_date: date,
+    currency: "TND",
+    document_kind: kind,
+    lines: [
+      {
+        label: kind === "facture_vente" ? "Ventes" : "Achats",
+        tax_code: "TVA19",
+        base_ht: ht,
+        vat_amount: tva,
+        ttc: (Number(ht) + Number(tva)).toFixed(3),
+      },
+    ],
+    articles: [],
+    other_charges: timbre
+      ? [{ code: "DROIT_TIMBRE", label: "Droit de timbre", amount: timbre }]
+      : [],
+    totals: { base_ht: ht, vat: tva, ttc },
+    references: { invoice_no: reference },
+    field_confidence: { issuer: 0.98, document_date: 0.97, total: 0.99 },
+  };
+}
+
 async function ecriture(pieceId, packId, journal, libelle, date, lignes, comptabiliser) {
   const existantes = await rpc("office", "ecrituresForPiece", [pieceId]);
   if (existantes.some((e) => e.status === "booked")) return null;
@@ -285,41 +376,128 @@ async function main() {
   await tiers(atlas, "client", "SUPER01", "SUPERETTE EL MENZAH", "411", "5678901/E/R/000");
   console.log(`  tiers            5`);
 
-  const p1 = await piece(optic, "optic-achat-1", "FACTURE No 2026-114", [
-    "VERRES DE TUNISIE - MF 3456789/C/P/000",
-    "Client : DREAM OPTIC",
-    "",
-    "Verres organiques traites          1 200,000 TND HT",
-    "TVA 19%                              228,000 TND",
-    "Droit de timbre                        1,000 TND",
-    "TOTAL TTC                          1 429,000 TND",
-  ]);
-  const p2 = await piece(optic, "optic-vente-1", "FACTURE No V-2026-058", [
-    "DREAM OPTIC - MF 1111111/A/M/000",
-    "Client : PHARMACIE CENTRALE",
-    "",
-    "Montures et verres                 2 500,000 TND HT",
-    "TVA 19%                              475,000 TND",
-    "Droit de timbre                        1,000 TND",
-    "TOTAL TTC                          2 976,000 TND",
-  ]);
-  const p3 = await piece(atlas, "atlas-achat-1", "FACTURE No 4471", [
-    "GROSSISTE DU SUD - MF 4567890/D/Q/000",
-    "Client : ATLAS DISTRIBUTION",
-    "",
-    "Marchandises diverses                860,000 TND HT",
-    "TVA 19%                              163,400 TND",
-    "TOTAL TTC                          1 023,400 TND",
-  ]);
-  const p4 = await piece(atlas, "atlas-achat-2", "FACTURE No 4488", [
-    "GROSSISTE DU SUD - MF 4567890/D/Q/000",
-    "Client : ATLAS DISTRIBUTION",
-    "",
-    "Fournitures de bureau                340,000 TND HT",
-    "TVA 19%                               64,600 TND",
-    "TOTAL TTC                            404,600 TND",
-  ]);
+  // Un seul endroit décrit chaque pièce : le PDF et sa lecture lisent la même
+  // chose, et une modification de l'un ne peut pas laisser l'autre en arrière.
+  // Un seul endroit décrit chaque pièce : le PDF et sa lecture citée lisent la
+  // même chose, et modifier l'un ne peut pas laisser l'autre en arrière.
+  const LIGNES = {
+    p1: {
+      dossier: optic,
+      marque: "optic-achat-1",
+      titre: "FACTURE No 2026-114",
+      lignes: [
+        "VERRES DE TUNISIE - MF 3456789/C/P/000",
+        "Client : DREAM OPTIC",
+        "",
+        "Verres organiques traites          1 200,000 TND HT",
+        "TVA 19%                              228,000 TND",
+        "Droit de timbre                        1,000 TND",
+        "TOTAL TTC                          1 429,000 TND",
+      ],
+    },
+    p2: {
+      dossier: optic,
+      marque: "optic-vente-1",
+      titre: "FACTURE No V-2026-058",
+      lignes: [
+        "DREAM OPTIC - MF 1111111/A/M/000",
+        "Client : PHARMACIE CENTRALE",
+        "",
+        "Montures et verres                 2 500,000 TND HT",
+        "TVA 19%                              475,000 TND",
+        "Droit de timbre                        1,000 TND",
+        "TOTAL TTC                          2 976,000 TND",
+      ],
+    },
+    p3: {
+      dossier: atlas,
+      marque: "atlas-achat-1",
+      titre: "FACTURE No 4471",
+      lignes: [
+        "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+        "Client : ATLAS DISTRIBUTION",
+        "",
+        "Marchandises diverses                860,000 TND HT",
+        "TVA 19%                              163,400 TND",
+        "TOTAL TTC                          1 023,400 TND",
+      ],
+    },
+    p4: {
+      dossier: atlas,
+      marque: "atlas-achat-2",
+      titre: "FACTURE No 4488",
+      lignes: [
+        "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+        "Client : ATLAS DISTRIBUTION",
+        "",
+        "Fournitures de bureau                340,000 TND HT",
+        "TVA 19%                               64,600 TND",
+        "TOTAL TTC                            404,600 TND",
+      ],
+    },
+  };
+
+  const depose = async (cle) => {
+    const d = LIGNES[cle];
+    return piece(d.dossier, d.marque, d.titre, d.lignes);
+  };
+  const p1 = await depose("p1");
+  const p2 = await depose("p2");
+  const p3 = await depose("p3");
+  const p4 = await depose("p4");
   console.log(`  pièces           4, avec leurs octets`);
+
+  // Chaque pièce est lue : citations, extrait, jetons. Sans cela l'écran de
+  // revue affiche « pièce non lue » et l'accueil PME n'a aucune TVA à montrer.
+  await lecture(
+    p1,
+    pack.id,
+    LIGNES.p1.titre,
+    LIGNES.p1.lignes,
+    extrait(
+      "facture_achat",
+      "VERRES DE TUNISIE",
+      "2026-08-31",
+      "2026-114",
+      "1200.000",
+      "228.000",
+      "1.000",
+    ),
+    { issuer: "VERRES DE TUNISIE", document_date: "FACTURE No", total: "TOTAL TTC" },
+  );
+  await lecture(
+    p2,
+    pack.id,
+    LIGNES.p2.titre,
+    LIGNES.p2.lignes,
+    extrait(
+      "facture_vente",
+      "PHARMACIE CENTRALE",
+      "2026-08-31",
+      "V-2026-058",
+      "2500.000",
+      "475.000",
+      "1.000",
+    ),
+    { issuer: "PHARMACIE CENTRALE", document_date: "FACTURE No", total: "TOTAL TTC" },
+  );
+  await lecture(
+    p3,
+    pack.id,
+    LIGNES.p3.titre,
+    LIGNES.p3.lignes,
+    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4471", "860.000", "163.400", null),
+    { issuer: "GROSSISTE DU SUD", document_date: "FACTURE No", total: "TOTAL TTC" },
+  );
+  await lecture(
+    p4,
+    pack.id,
+    LIGNES.p4.titre,
+    LIGNES.p4.lignes,
+    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4488", "340.000", "64.600", null),
+    { issuer: "GROSSISTE DU SUD", document_date: "FACTURE No", total: "TOTAL TTC" },
+  );
+  console.log(`  lectures         4, citées`);
 
   // Deux lignes équilibrées : la RPC refuse tout déséquilibre, et c'est bien.
   const achat = (ht, tva) =>
@@ -357,7 +535,10 @@ async function main() {
   await ecriture(
     p2,
     pack.id,
-    "VTE",
+    // « VTE » n'existe pas dans ref.journals — le journal des ventes s'y appelle
+    // « VEN ». Aucune clé étrangère ne porte encore socle.ecritures.journal :
+    // la faute de frappe entrait donc dans le grand livre sans un mot.
+    "VEN",
     "Vente — PHARMACIE CENTRALE — Réf. V-2026-058 du 31/08/2026",
     "2026-08-31",
     await vente("2500.000", "475.000"),

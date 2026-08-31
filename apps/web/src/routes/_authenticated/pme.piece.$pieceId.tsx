@@ -195,13 +195,7 @@ function PieceScreen() {
       <section className="grid gap-6 md:grid-cols-2">
         <div>
           {contenu ? (
-            <DocumentView
-              contenu={contenu}
-              highlight={zoom}
-              label={t("pme.piece.title")}
-              loadingLabel={t("pme.doc.loading")}
-              errorLabel={t("pme.doc.error")}
-            />
+            <DocumentView contenu={contenu} highlight={zoom} label={t("pme.piece.title")} />
           ) : (
             <p className="border border-border bg-card p-4 text-xs text-muted-foreground">
               {t("pme.doc.error")}

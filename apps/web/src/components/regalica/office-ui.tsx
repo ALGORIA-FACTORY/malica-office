@@ -3,9 +3,10 @@
  * produit, réaligné sur la doctrine Edition One : monochrome, coins nets,
  * élévation par bordures, aucune ombre. La couleur est un signal rare.
  */
-import type { ReactNode } from "react";
+import type { ReactNode, ComponentPropsWithoutRef } from "react";
 import { Link } from "@tanstack/react-router";
 
+import marqueRg from "@/assets/rg-mark.svg";
 import regalica from "@/assets/regalica.jpeg";
 import { cn } from "@/lib/utils";
 
@@ -201,10 +202,18 @@ export function RegalicaAvatar({
   size = 36,
   alt,
   className,
+  rond,
 }: {
   size?: number;
   alt: string;
   className?: string;
+  /**
+   * Le portrait rond, cerclé de marigold — la forme de l'accueil PME.
+   *
+   * Le cadrage `center 18%` n'est pas cosmétique : la photo est en pied, et
+   * un recadrage centré rendrait un buste sans visage à 26 px.
+   */
+  rond?: boolean;
 }) {
   return (
     <img
@@ -213,8 +222,37 @@ export function RegalicaAvatar({
       width={size}
       height={size}
       loading="lazy"
-      style={{ width: size, height: size }}
-      className={cn("shrink-0 border border-border object-cover", className)}
+      style={{ width: size, height: size, ...(rond ? { objectPosition: "center 18%" } : null) }}
+      className={cn(
+        "shrink-0 object-cover",
+        rond ? "rounded-full border-2 border-marigold" : "border border-border",
+        className,
+      )}
+    />
+  );
+}
+
+/**
+ * Le sigle RG.
+ *
+ * Il sert à deux échelles opposées : dix-neuf pixels dans le bandeau de
+ * présence, deux cent trente-huit en filigrane de masthead. C'est le même
+ * fichier, teinté par `currentColor` — d'où le masque plutôt qu'une balise
+ * `img`, qui ne saurait pas s'inverser en thème sombre.
+ */
+export function MarqueRg({ className, ...reste }: ComponentPropsWithoutRef<"span">) {
+  return (
+    <span
+      {...reste}
+      className={cn("inline-block bg-current", className)}
+      style={{
+        maskImage: `url(${marqueRg})`,
+        WebkitMaskImage: `url(${marqueRg})`,
+        maskSize: "100% 100%",
+        WebkitMaskSize: "100% 100%",
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+      }}
     />
   );
 }

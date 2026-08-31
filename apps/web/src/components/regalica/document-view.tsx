@@ -1,44 +1,108 @@
 /**
- * Visionneuse de pièce — PDF rendu page par page, zone source surlignée.
+ * Visionneuse de pièce — le document tel qu'il est, pas une vignette.
  *
- * Les pièces sont stockées en PDF (une photo est cadrée puis encodée en PDF à
- * la capture). Les pièces images antérieures restent affichables. La zone
- * citée est surlignée, amenée à l'écran ET agrandie dans une loupe : sur un
- * téléphone, un cadre de 3 mm ne montre rien. La loupe est un recadrage exact
- * du rendu, pas une approximation.
+ * ===================================================== POURQUOI ELLE EXISTE
+ *
+ * C'est l'écran le plus regardé du produit. Un expert-comptable passe sa
+ * journée à comparer une pièce et une écriture ; s'il ne peut pas lire un
+ * matricule fiscal imprimé petit, ou redresser un scan de travers, il ouvre le
+ * PDF ailleurs — et la citation, le surlignage, tout le travail du Socle reste
+ * sur l'écran qu'il vient de quitter.
+ *
+ * D'où : zoom réel, rotation, ajustement, clavier, et la zone citée qui
+ * survit aux trois.
+ *
+ * ============================================== LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * « Document illisible » s'affichait un affichage sur deux. La cause n'était
+ * pas le PDF : `getDocument({ data })` TRANSFÈRE le tampon au worker, ce qui le
+ * DÉTACHE. React Query, lui, garde le même `ArrayBuffer` en cache pour la
+ * pièce. Le premier rendu marchait ; tout retour sur la pièce recevait un
+ * tampon vide, et la visionneuse concluait que le fichier était corrompu.
+ *
+ * On ne donne donc jamais les octets du cache : on en donne une copie. Un
+ * mégaoctet copié vaut mieux qu'un cache qu'on vide sans le dire.
+ *
+ * ===================================================== CE QU'ELLE NE FAIT PAS
+ *
+ * Elle ne recharge pas le document à chaque page. Le `PDFDocumentProxy` vit
+ * dans une référence : changer de page, zoomer ou tourner ne fait qu'un
+ * nouveau rendu. La version précédente reparsait tout le fichier à chaque
+ * geste.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useI18n } from "@/i18n";
+import { cn } from "@/lib/utils";
 import type { Citation } from "@/verticals/regalica-office/ports/repositories";
 
 interface Props {
-  /** Les octets de la pièce. pdf.js les accepte tels quels ; l'image en tire une URL locale. */
+  /** Les octets de la pièce. On ne les consomme jamais : on les copie. */
   contenu: ArrayBuffer;
   highlight: Citation | null;
   label: string;
-  loadingLabel: string;
-  errorLabel: string;
 }
 
-const RENDER_WIDTH = 1400;
-/** Marge autour de la zone citée, en fraction de la largeur de page. */
+/** Les paliers de zoom. Au-delà de 4×, un scan à 200 ppp ne montre plus rien. */
+const PALIERS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+
+/** Marge autour de la zone citée, en fraction de la page. */
 const PAD_X = 0.06;
 const PAD_Y = 0.02;
 
-export function DocumentView({ contenu, highlight, label, loadingLabel, errorLabel }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const zoomRef = useRef<HTMLCanvasElement | null>(null);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const markRef = useRef<HTMLSpanElement | null>(null);
-  const [state, setState] = useState<"loading" | "pdf" | "image" | "error">("loading");
-  const [pageCount, setPageCount] = useState(1);
-  const [page, setPage] = useState(1);
-  const [rendered, setRendered] = useState(0);
+type Ajustement = "largeur" | "page" | null;
+type Rotation = 0 | 90 | 180 | 270;
 
-  // Une image ne s'affiche pas depuis un ArrayBuffer : il lui faut une URL.
-  // Celle-ci est locale au navigateur, vit le temps du composant, et n'expose
-  // donc rien — contrairement à une URL signée, qui circule.
+/**
+ * La zone citée, tournée avec la page.
+ *
+ * Les coordonnées d'une citation sont des fractions de la page NON tournée —
+ * c'est le lecteur qui les a produites. Tourner l'affichage sans les tourner
+ * ferait pointer le surlignage à côté, et l'expert conclurait que la citation
+ * est fausse.
+ */
+function tourner(bbox: Citation["bbox"], rotation: Rotation) {
+  const vu = (x: number, y: number): [number, number] => {
+    if (rotation === 90) return [1 - y, x];
+    if (rotation === 180) return [1 - x, 1 - y];
+    if (rotation === 270) return [y, 1 - x];
+    return [x, y];
+  };
+  const a = vu(bbox.x0, bbox.y0);
+  const b = vu(bbox.x1, bbox.y1);
+  return {
+    x0: Math.min(a[0], b[0]),
+    y0: Math.min(a[1], b[1]),
+    x1: Math.max(a[0], b[0]),
+    y1: Math.max(a[1], b[1]),
+  };
+}
+
+export function DocumentView({ contenu, highlight, label }: Props) {
+  const { t } = useI18n();
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const loupeRef = useRef<HTMLCanvasElement | null>(null);
+  const cadreRef = useRef<HTMLDivElement | null>(null);
+  const marqueRef = useRef<HTMLSpanElement | null>(null);
+  const docRef = useRef<PDFDocumentProxy | null>(null);
+  const tacheRef = useRef<RenderTask | null>(null);
+
+  const [etat, setEtat] = useState<"chargement" | "pdf" | "image" | "erreur">("chargement");
+  const [raison, setRaison] = useState<string | null>(null);
+  const [pages, setPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [echelle, setEchelle] = useState(1);
+  const [ajustement, setAjustement] = useState<Ajustement>("largeur");
+  const [rotation, setRotation] = useState<Rotation>(0);
+  const [rendus, setRendus] = useState(0);
+  const [essai, setEssai] = useState(0);
+
+  // Une image ne s'affiche pas depuis un tampon : il lui faut une URL. Celle-ci
+  // est locale au navigateur et meurt avec le composant — contrairement à une
+  // URL signée, qui circule.
   const urlLocale = useMemo(() => URL.createObjectURL(new Blob([contenu])), [contenu]);
   useEffect(() => () => URL.revokeObjectURL(urlLocale), [urlLocale]);
 
@@ -47,190 +111,386 @@ export function DocumentView({ contenu, highlight, label, loadingLabel, errorLab
     if (highlight && highlight.page >= 1) setPage(highlight.page);
   }, [highlight]);
 
+  // ------------------------------------------------------ ouvrir le document
   useEffect(() => {
-    let cancelled = false;
-    let cleanup: (() => void) | undefined;
+    let annule = false;
+    let chargement: PDFDocumentLoadingTask | null = null;
 
-    (async () => {
+    void (async () => {
+      setEtat("chargement");
+      setRaison(null);
       try {
-        const buf = contenu;
-        const head = new Uint8Array(buf.slice(0, 5));
-        const isPdf = String.fromCharCode(...head) === "%PDF-";
-        if (cancelled) return;
-        if (!isPdf) {
-          setState("image");
+        const entete = new Uint8Array(contenu.slice(0, 5));
+        if (entete.length === 0) throw new Error("octets absents");
+        if (String.fromCharCode(...entete) !== "%PDF-") {
+          if (!annule) setEtat("image");
           return;
         }
+
         const pdfjs = await import("pdfjs-dist");
         const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-        const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
-        if (cancelled) {
-          void doc.cleanup();
-          return;
-        }
-        setPageCount(doc.numPages);
-        const target = Math.min(Math.max(page, 1), doc.numPages);
-        const pdfPage = await doc.getPage(target);
-        const base = pdfPage.getViewport({ scale: 1 });
-        const viewport = pdfPage.getViewport({ scale: RENDER_WIDTH / base.width });
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        canvas.width = Math.round(viewport.width);
-        canvas.height = Math.round(viewport.height);
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("canvas");
-        await pdfPage.render({ canvas, canvasContext: context, viewport }).promise;
-        if (cancelled) return;
-        setState("pdf");
-        setRendered((n) => n + 1);
-        cleanup = () => void doc.cleanup();
-      } catch {
-        if (!cancelled) setState("error");
+
+        // La copie, et la raison d'être du commentaire d'en-tête : `contenu`
+        // appartient au cache, pdf.js détacherait l'original.
+        chargement = pdfjs.getDocument({ data: new Uint8Array(contenu.slice(0)) });
+        const doc = await chargement.promise;
+        if (annule) return;
+        docRef.current = doc;
+        setPages(doc.numPages);
+        setPage((p) => Math.min(Math.max(p, 1), doc.numPages));
+        setEtat("pdf");
+      } catch (e) {
+        if (annule) return;
+        setRaison(e instanceof Error ? e.message : String(e));
+        setEtat("erreur");
       }
     })();
 
     return () => {
-      cancelled = true;
-      cleanup?.();
+      annule = true;
+      tacheRef.current?.cancel();
+      tacheRef.current = null;
+      docRef.current = null;
+      void chargement?.destroy();
     };
-  }, [contenu, page]);
+  }, [contenu, essai]);
 
-  // Amener la zone citée à l'écran : sans cela, le surlignage reste invisible
-  // sur mobile, où le document est au-dessus des champs.
+  // ----------------------------------------------------------- rendre la page
+  const rendre = useCallback(async () => {
+    const doc = docRef.current;
+    const canvas = canvasRef.current;
+    const cadre = cadreRef.current;
+    if (!doc || !canvas || !cadre) return;
+
+    // Un rendu déjà en cours sur le même canvas fait échouer les deux : pdf.js
+    // le dit explicitement. On annule avant de recommencer.
+    tacheRef.current?.cancel();
+
+    const pdfPage = await doc.getPage(Math.min(Math.max(page, 1), doc.numPages));
+    const nature = pdfPage.getViewport({ scale: 1, rotation });
+
+    // L'ajustement se calcule sur la largeur RÉELLE du cadre, pas sur une
+    // constante : les 1400 px d'avant étaient flous sur un écran 4K et
+    // gaspillés sur un téléphone.
+    const dispo = cadre.clientWidth || 800;
+    const facteur =
+      ajustement === "largeur"
+        ? dispo / nature.width
+        : ajustement === "page"
+          ? Math.min(dispo / nature.width, (window.innerHeight * 0.66) / nature.height)
+          : echelle;
+
+    const vue = pdfPage.getViewport({ scale: facteur, rotation });
+    // Le rapport de pixels rend le texte net là où l'écran l'est vraiment.
+    const densite = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(vue.width * densite);
+    canvas.height = Math.round(vue.height * densite);
+    canvas.style.width = `${Math.round(vue.width)}px`;
+    canvas.style.height = `${Math.round(vue.height)}px`;
+
+    const contexte = canvas.getContext("2d");
+    if (!contexte) return;
+    contexte.setTransform(densite, 0, 0, densite, 0, 0);
+
+    const tache = pdfPage.render({ canvas, canvasContext: contexte, viewport: vue });
+    tacheRef.current = tache;
+    try {
+      await tache.promise;
+      setRendus((n) => n + 1);
+      if (ajustement) setEchelle(facteur);
+    } catch (e) {
+      // Une annulation n'est pas une panne : c'est le geste suivant.
+      if ((e as { name?: string }).name !== "RenderingCancelledException") {
+        setRaison(e instanceof Error ? e.message : String(e));
+        setEtat("erreur");
+      }
+    }
+  }, [page, echelle, ajustement, rotation]);
+
+  useEffect(() => {
+    if (etat !== "pdf") return;
+    void rendre();
+  }, [etat, rendre]);
+
+  // Le cadre change de largeur — panneau de Regalica ouvert ou fermé, téléphone
+  // tourné. Un ajustement qui ne suit pas n'ajuste rien.
+  useEffect(() => {
+    if (etat !== "pdf" || !ajustement) return;
+    const cadre = cadreRef.current;
+    if (!cadre || typeof ResizeObserver === "undefined") return;
+    let dernier = cadre.clientWidth;
+    const observateur = new ResizeObserver(() => {
+      // Un pixel de différence ne justifie pas un nouveau rendu.
+      if (Math.abs(cadre.clientWidth - dernier) < 8) return;
+      dernier = cadre.clientWidth;
+      void rendre();
+    });
+    observateur.observe(cadre);
+    return () => observateur.disconnect();
+  }, [etat, ajustement, rendre]);
+
+  // ------------------------------------------- amener la zone citée à l'écran
   useEffect(() => {
     if (!highlight) return;
-    const mark = markRef.current;
-    const wrap = wrapRef.current;
-    if (!mark || !wrap) return;
-    wrap.scrollIntoView({ behavior: "smooth", block: "center" });
-    const timer = window.setTimeout(() => {
-      mark.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-    }, 220);
-    return () => window.clearTimeout(timer);
-  }, [highlight, state, page]);
+    const marque = marqueRef.current;
+    if (!marque) return;
+    const minuteur = window.setTimeout(() => {
+      marque.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }, 120);
+    return () => window.clearTimeout(minuteur);
+  }, [highlight, etat, page, rendus]);
 
-  // Loupe : recadrage pixel du rendu autour de la zone citée.
+  // ------------------------------------------------------------------- loupe
   useEffect(() => {
-    const src = canvasRef.current;
-    const dst = zoomRef.current;
-    if (!highlight || !dst || state !== "pdf" || !src || !src.width) return;
-    const b = highlight.bbox;
-    const x0 = Math.max(0, (b.x0 - PAD_X) * src.width);
-    const x1 = Math.min(src.width, (b.x1 + PAD_X) * src.width);
-    const y0 = Math.max(0, (b.y0 - PAD_Y) * src.height);
-    const y1 = Math.min(src.height, (b.y1 + PAD_Y) * src.height);
+    const source = canvasRef.current;
+    const cible = loupeRef.current;
+    if (!highlight || !cible || etat !== "pdf" || !source || !source.width) return;
+    const b = tourner(highlight.bbox, rotation);
+    const x0 = Math.max(0, (b.x0 - PAD_X) * source.width);
+    const x1 = Math.min(source.width, (b.x1 + PAD_X) * source.width);
+    const y0 = Math.max(0, (b.y0 - PAD_Y) * source.height);
+    const y1 = Math.min(source.height, (b.y1 + PAD_Y) * source.height);
     const sw = Math.max(1, x1 - x0);
     const sh = Math.max(1, y1 - y0);
-    const outW = 900;
-    const outH = Math.max(80, Math.round((sh / sw) * outW));
-    dst.width = outW;
-    dst.height = outH;
-    const ctx = dst.getContext("2d");
+    const largeur = 900;
+    const hauteur = Math.max(80, Math.round((sh / sw) * largeur));
+    cible.width = largeur;
+    cible.height = hauteur;
+    const ctx = cible.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = true;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, outW, outH);
-    ctx.drawImage(src, x0, y0, sw, sh, 0, 0, outW, outH);
-    // Encadrer exactement le token cité dans la loupe.
-    const k = outW / sw;
+    ctx.fillRect(0, 0, largeur, hauteur);
+    ctx.drawImage(source, x0, y0, sw, sh, 0, 0, largeur, hauteur);
+    const k = largeur / sw;
     ctx.strokeStyle = "#b45309";
     ctx.lineWidth = 3;
     ctx.strokeRect(
-      (b.x0 * src.width - x0) * k,
-      (b.y0 * src.height - y0) * k,
-      Math.max(6, (b.x1 - b.x0) * src.width * k),
-      Math.max(6, (b.y1 - b.y0) * src.height * k),
+      (b.x0 * source.width - x0) * k,
+      (b.y0 * source.height - y0) * k,
+      Math.max(6, (b.x1 - b.x0) * source.width * k),
+      Math.max(6, (b.y1 - b.y0) * source.height * k),
     );
-  }, [highlight, state, page, rendered]);
+  }, [highlight, etat, page, rotation, rendus]);
 
-  const box = highlight
+  // ------------------------------------------------------------------ gestes
+  const zoomer = useCallback((sens: 1 | -1) => {
+    setAjustement(null);
+    setEchelle((actuelle) => {
+      if (sens > 0) return PALIERS.find((p) => p > actuelle + 0.01) ?? actuelle;
+      const dessous = PALIERS.filter((p) => p < actuelle - 0.01);
+      return dessous[dessous.length - 1] ?? actuelle;
+    });
+  }, []);
+
+  const allerA = useCallback(
+    (n: number) => setPage((p) => (n >= 1 && n <= pages ? n : p)),
+    [pages],
+  );
+
+  // Le clavier n'est pas un supplément : on compare des dizaines de pièces par
+  // jour, et repasser par la souris fait perdre le fil du document.
+  const auClavier = useCallback(
+    (e: React.KeyboardEvent) => {
+      const gestes: Record<string, () => void> = {
+        ArrowLeft: () => allerA(page - 1),
+        ArrowRight: () => allerA(page + 1),
+        PageUp: () => allerA(page - 1),
+        PageDown: () => allerA(page + 1),
+        Home: () => allerA(1),
+        End: () => allerA(pages),
+        "+": () => zoomer(1),
+        "=": () => zoomer(1),
+        "-": () => zoomer(-1),
+        r: () => setRotation((r) => ((r + 90) % 360) as Rotation),
+        R: () => setRotation((r) => ((r + 270) % 360) as Rotation),
+      };
+      const geste = gestes[e.key];
+      if (!geste) return;
+      e.preventDefault();
+      geste();
+    },
+    [allerA, page, pages, zoomer],
+  );
+
+  const bbox = highlight ? tourner(highlight.bbox, rotation) : null;
+  const cadreCite = bbox
     ? {
-        left: `${highlight.bbox.x0 * 100}%`,
-        top: `${highlight.bbox.y0 * 100}%`,
-        width: `${Math.max(highlight.bbox.x1 - highlight.bbox.x0, 0.012) * 100}%`,
-        height: `${Math.max(highlight.bbox.y1 - highlight.bbox.y0, 0.012) * 100}%`,
+        left: `${bbox.x0 * 100}%`,
+        top: `${bbox.y0 * 100}%`,
+        width: `${Math.max(bbox.x1 - bbox.x0, 0.012) * 100}%`,
+        height: `${Math.max(bbox.y1 - bbox.y0, 0.012) * 100}%`,
       }
     : null;
 
-  const imageZoom =
-    highlight && state === "image"
+  const loupeImage =
+    highlight && etat === "image"
       ? (() => {
           const b = highlight.bbox;
-          const w = Math.max(b.x1 - b.x0 + PAD_X * 2, 0.08);
+          const l = Math.max(b.x1 - b.x0 + PAD_X * 2, 0.08);
           const h = Math.max(b.y1 - b.y0 + PAD_Y * 2, 0.03);
-          const cx = (b.x0 + b.x1) / 2;
-          const cy = (b.y0 + b.y1) / 2;
+          const cx = ((b.x0 + b.x1) / 2) * 100;
+          const cy = ((b.y0 + b.y1) / 2) * 100;
           return {
             backgroundImage: `url(${urlLocale})`,
-            backgroundSize: `${100 / w}% auto`,
-            backgroundPosition: `${(cx * 100).toFixed(2)}% ${(cy * 100).toFixed(2)}%`,
-            aspectRatio: `${w} / ${h}`,
+            backgroundSize: `${100 / l}% auto`,
+            backgroundPosition: `${cx.toFixed(2)}% ${cy.toFixed(2)}%`,
+            aspectRatio: `${l} / ${h}`,
           } as const;
         })()
       : null;
 
+  const outil =
+    "min-h-[32px] border border-border px-2 text-[11px] uppercase tracking-wide hover:bg-accent disabled:opacity-40";
+
   return (
-    <div ref={wrapRef} className="space-y-2">
-      <div className="relative overflow-hidden border border-border bg-paper">
-        {state === "image" ? (
-          <img src={urlLocale} alt={label} className="block w-full" />
-        ) : (
-          <canvas ref={canvasRef} className="block w-full" aria-label={label} />
-        )}
-        {box ? (
-          <span
-            ref={markRef}
-            className="pointer-events-none absolute border-2 border-signal-warn bg-signal-warn/10"
-            style={box}
-          />
-        ) : null}
-        {state === "loading" ? (
-          <p className="p-4 text-xs text-muted-foreground">{loadingLabel}</p>
-        ) : null}
-        {state === "error" ? <p className="p-4 text-xs text-signal-warn">{errorLabel}</p> : null}
+    <div className="space-y-2">
+      {/* La barre reste visible : un zoom qu'il faut chercher n'est pas un zoom. */}
+      <div className="flex flex-wrap items-center gap-1 border border-border bg-card px-2 py-1.5">
+        <button
+          type="button"
+          onClick={() => zoomer(-1)}
+          className={outil}
+          title={t("doc.zoom.out")}
+        >
+          −
+        </button>
+        <span className="num min-w-[3.5rem] text-center text-[11px] text-muted-foreground">
+          {Math.round(echelle * 100)}%
+        </span>
+        <button type="button" onClick={() => zoomer(1)} className={outil} title={t("doc.zoom.in")}>
+          +
+        </button>
+
+        <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+
+        <button
+          type="button"
+          onClick={() => setAjustement("largeur")}
+          className={cn(outil, ajustement === "largeur" && "bg-accent font-semibold")}
+        >
+          {t("doc.fit.width")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAjustement("page")}
+          className={cn(outil, ajustement === "page" && "bg-accent font-semibold")}
+        >
+          {t("doc.fit.page")}
+        </button>
+
+        <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+
+        {/* Un scan arrive de travers une fois sur trois. Sans rotation, on
+            penche la tête, ou on ouvre le fichier ailleurs. */}
+        <button
+          type="button"
+          onClick={() => setRotation((r) => ((r + 90) % 360) as Rotation)}
+          className={outil}
+          title={t("doc.rotate")}
+        >
+          ↻
+        </button>
+
+        <span className="ms-auto flex items-center gap-1">
+          {pages > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => allerA(page - 1)}
+                disabled={page <= 1}
+                className={outil}
+                aria-label={t("doc.page.prev")}
+              >
+                ‹
+              </button>
+              <span className="num text-[11px] text-muted-foreground">
+                {page} / {pages}
+              </span>
+              <button
+                type="button"
+                onClick={() => allerA(page + 1)}
+                disabled={page >= pages}
+                className={outil}
+                aria-label={t("doc.page.next")}
+              >
+                ›
+              </button>
+            </>
+          ) : null}
+          <a
+            href={urlLocale}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(outil, "inline-flex items-center")}
+          >
+            {t("doc.open")}
+          </a>
+        </span>
       </div>
 
-      {highlight ? (
+      <div
+        ref={cadreRef}
+        tabIndex={0}
+        onKeyDown={auClavier}
+        aria-label={label}
+        className="relative max-h-[70vh] overflow-auto border border-border bg-paper focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
+      >
+        {etat === "erreur" ? (
+          <div className="space-y-3 p-6 text-center">
+            <p className="text-[13px] text-signal-warn">{t("pme.doc.error")}</p>
+            {/* La raison, telle quelle. « Illisible » sans motif n'aide
+                personne à décider s'il faut redemander la pièce. */}
+            {raison ? <p className="num text-[11px] text-muted-foreground">{raison}</p> : null}
+            <div className="flex justify-center gap-2">
+              <button type="button" onClick={() => setEssai((n) => n + 1)} className={outil}>
+                {t("doc.retry")}
+              </button>
+              <a href={urlLocale} target="_blank" rel="noreferrer" className={outil}>
+                {t("doc.open")}
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="relative inline-block min-w-full">
+            {etat === "image" ? (
+              <img src={urlLocale} alt={label} className="block w-full" />
+            ) : (
+              <canvas ref={canvasRef} className="block" />
+            )}
+            {cadreCite && etat !== "chargement" ? (
+              <span
+                ref={marqueRef}
+                className="pointer-events-none absolute border-2 border-signal-warn bg-signal-warn/10"
+                style={cadreCite}
+              />
+            ) : null}
+            {etat === "chargement" ? (
+              <p className="p-6 text-center text-[12px] text-muted-foreground">
+                {t("pme.doc.loading")}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {highlight && etat !== "erreur" ? (
         <div className="border border-border bg-paper">
-          {imageZoom ? (
+          {loupeImage ? (
             <div
               className="w-full bg-no-repeat"
-              style={imageZoom}
+              style={loupeImage}
               role="img"
               aria-label={`${label} — ${highlight.field}`}
             />
           ) : (
             <canvas
-              ref={zoomRef}
+              ref={loupeRef}
               className="block w-full"
               aria-label={`${label} — ${highlight.field}`}
             />
           )}
-        </div>
-      ) : null}
-
-      {pageCount > 1 ? (
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="min-h-[44px] border border-border px-3 text-xs uppercase tracking-wide disabled:opacity-40"
-          >
-            ‹
-          </button>
-          <span className="num text-xs text-muted-foreground">
-            {page} / {pageCount}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-            disabled={page >= pageCount}
-            className="min-h-[44px] border border-border px-3 text-xs uppercase tracking-wide disabled:opacity-40"
-          >
-            ›
-          </button>
         </div>
       ) : null}
     </div>

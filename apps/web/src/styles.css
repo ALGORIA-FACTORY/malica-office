@@ -65,6 +65,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-marigold: var(--marigold);
+  --color-marigold-on-ink: var(--marigold-on-ink);
+  --color-text-2: var(--text-2);
+  --color-line-strong: var(--line-strong);
 }
 
 :root {
@@ -95,6 +100,15 @@
   --signal-warn: oklch(0.62 0.13 75);
   --signal-stop: oklch(0.47 0.16 25);
   --signal-soft: oklch(0.955 0.018 60);
+
+  /* La voix de Regalica. Sur papier : #C8901F. */
+  --marigold: oklch(0.66 0.12 78);
+  /* Sa contrepartie sur fond d'encre, plus claire : #E3B75C. */
+  --marigold-on-ink: oklch(0.8 0.11 82);
+  /* Texte secondaire de la maquette (#48484A) — plus sombre que muted. */
+  --text-2: oklch(0.38 0.003 90);
+  /* Filet fort (#D8D8DD), distinct du filet ordinaire. */
+  --line-strong: oklch(0.87 0.004 285);
 
   --chart-1: oklch(0.19 0.004 90);
   --chart-2: oklch(0.4 0.004 90);
@@ -137,6 +151,12 @@
   --signal-stop: oklch(0.62 0.17 25);
   --signal-soft: oklch(0.27 0.02 60);
 
+  /* Les deux marigolds s'échangent : sur fond d'encre c'est le clair qui porte. */
+  --marigold: oklch(0.8 0.11 82);
+  --marigold-on-ink: oklch(0.66 0.12 78);
+  --text-2: oklch(0.82 0.003 90);
+  --line-strong: oklch(0.42 0.003 285);
+
   --chart-1: oklch(0.955 0.002 90);
   --chart-2: oklch(0.8 0.003 90);
   --chart-3: oklch(0.65 0.003 90);
@@ -150,6 +170,112 @@
   --sidebar-accent-foreground: oklch(0.955 0.002 90);
   --sidebar-border: oklch(0.34 0.003 90);
   --sidebar-ring: oklch(0.8 0.003 90);
+}
+
+/*
+ * Les trois signes de vie de Regalica.
+ *
+ * Ils sont lents et discrets par choix : sur l'écran d'accueil d'un dirigeant,
+ * une animation rapide dit « urgence ». Ceux-ci disent « je suis là ». Ils
+ * s'arrêtent tous pour qui a demandé moins de mouvement — c'est le réglage
+ * système, pas une option de l'application.
+ */
+@keyframes rg-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes rg-wave-soft {
+  from {
+    transform: scale(1);
+    opacity: 0.38;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes rg-bell-soft {
+  0%,
+  68%,
+  100% {
+    transform: rotate(0);
+  }
+  75% {
+    transform: rotate(9deg);
+  }
+  83% {
+    transform: rotate(-7deg);
+  }
+  91% {
+    transform: rotate(3.5deg);
+  }
+  96% {
+    transform: rotate(-1.5deg);
+  }
+}
+
+@keyframes rg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rg-blink,
+  .rg-wave,
+  .rg-bell,
+  .rg-rise {
+    animation: none !important;
+  }
+}
+
+.rg-blink {
+  animation: rg-blink 2.6s ease-in-out infinite;
+}
+.rg-wave {
+  animation: rg-wave-soft 5s ease-out infinite;
+}
+.rg-bell {
+  animation: rg-bell-soft 3.6s ease-in-out infinite;
+  transform-origin: 50% 15%;
+}
+.rg-rise {
+  animation: rg-rise 0.32s ease both;
+}
+
+/*
+ * Le papier réglé du bloc d'encre : une trame de filets d'un pixel, à la place
+ * d'une ombre. L'invariant « élévation par bordures » tient, et le bloc gagne
+ * une matière que l'aplat n'avait pas.
+ */
+.rg-regle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 25px,
+    currentColor 25px 26px
+  );
+  /*
+   * .09 sur un aplat blanc de la maquette ; sur notre encre le contraste est
+   * plus fort et la trame se voyait comme des rayures. .05 rend la matière
+   * sans la donner à lire.
+   */
+  opacity: 0.05;
+  pointer-events: none;
 }
 
 @layer base {

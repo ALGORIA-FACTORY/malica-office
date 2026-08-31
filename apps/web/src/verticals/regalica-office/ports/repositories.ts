@@ -347,8 +347,26 @@ export interface ProposedEcriture {
   }>;
 }
 
+/** Une ligne comptabilisée d'une période — de quoi calculer, rien de plus. */
+export interface LigneDePeriode {
+  dateEcriture: string;
+  journal: string;
+  accountCode: string;
+  debit: string;
+  credit: string;
+}
+
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
+  /**
+   * Les lignes comptabilisées entre deux dates.
+   *
+   * C'est la fonction `socle_periode_lignes` du Socle, pas une requête montée
+   * ici : le périmètre de ce qui est « comptabilisé » est une décision de la
+   * base, et un écran qui la redéfinirait afficherait un résultat que la
+   * balance ne confirmerait pas.
+   */
+  periodeLignes(tenantId: string, from: string, to: string): Promise<LigneDePeriode[]>;
   book(ecritureId: string): Promise<void>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;

@@ -294,13 +294,7 @@ function CabinetReview() {
         <section className="space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
-            <DocumentView
-              contenu={contenu}
-              highlight={zoom}
-              label={t("cab.review.document")}
-              loadingLabel={t("pme.doc.loading")}
-              errorLabel={t("pme.doc.error")}
-            />
+            <DocumentView contenu={contenu} highlight={zoom} label={t("cab.review.document")} />
           ) : (
             <p className="border border-border bg-card p-3 text-xs text-muted-foreground">
               {t("cab.review.nodoc")}
