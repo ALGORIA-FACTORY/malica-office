@@ -186,7 +186,7 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
               : { texte: t("scan.hint.searching"), bon: false };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
+    <div className="fixed inset-0 z-50 mx-auto w-full max-w-md overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
       <video
         ref={videoRef}
         playsInline

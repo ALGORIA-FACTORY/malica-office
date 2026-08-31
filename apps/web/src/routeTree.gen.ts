@@ -35,6 +35,7 @@ import { Route as AuthenticatedPmeEcheancesRouteImport } from './routes/_authent
 import { Route as AuthenticatedPmeListRouteImport } from './routes/_authenticated/pme.list'
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
+import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
 import { Route as AuthenticatedPmeTvaRouteImport } from './routes/_authenticated/pme.tva'
 import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './routes/_authenticated/cabinet.dossier.$clientId'
 import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_authenticated/cabinet.piece.$pieceId'
@@ -183,6 +184,11 @@ const AuthenticatedPmeReglagesRoute =
     path: '/reglages',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedPmeReglerRoute = AuthenticatedPmeReglerRouteImport.update({
+  id: '/regler',
+  path: '/regler',
+  getParentRoute: () => AuthenticatedPmeRoute,
+} as any)
 const AuthenticatedPmeTvaRoute = AuthenticatedPmeTvaRouteImport.update({
   id: '/tva',
   path: '/tva',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/pme/list': typeof AuthenticatedPmeListRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
+  '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/pme/': typeof AuthenticatedPmeIndexRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/pme/list': typeof AuthenticatedPmeListRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
+  '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/cabinet': typeof AuthenticatedCabinetIndexRoute
   '/pme': typeof AuthenticatedPmeIndexRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/_authenticated/pme/list': typeof AuthenticatedPmeListRoute
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
+  '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/_authenticated/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/_authenticated/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/_authenticated/pme/': typeof AuthenticatedPmeIndexRoute
@@ -326,6 +335,7 @@ export interface FileRouteTypes {
     | '/pme/list'
     | '/pme/notifications'
     | '/pme/reglages'
+    | '/pme/regler'
     | '/pme/tva'
     | '/cabinet/'
     | '/pme/'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/pme/list'
     | '/pme/notifications'
     | '/pme/reglages'
+    | '/pme/regler'
     | '/pme/tva'
     | '/cabinet'
     | '/pme'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/list'
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
+    | '/_authenticated/pme/regler'
     | '/_authenticated/pme/tva'
     | '/_authenticated/cabinet/'
     | '/_authenticated/pme/'
@@ -585,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeReglagesRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/regler': {
+      id: '/_authenticated/pme/regler'
+      path: '/regler'
+      fullPath: '/pme/regler'
+      preLoaderRoute: typeof AuthenticatedPmeReglerRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/tva': {
       id: '/_authenticated/pme/tva'
       path: '/tva'
@@ -663,6 +682,7 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeListRoute: typeof AuthenticatedPmeListRoute
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
+  AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
   AuthenticatedPmeTvaRoute: typeof AuthenticatedPmeTvaRoute
   AuthenticatedPmeIndexRoute: typeof AuthenticatedPmeIndexRoute
   AuthenticatedPmePiecePieceIdRoute: typeof AuthenticatedPmePiecePieceIdRoute
@@ -675,6 +695,7 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeListRoute: AuthenticatedPmeListRoute,
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,
+  AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,
   AuthenticatedPmeTvaRoute: AuthenticatedPmeTvaRoute,
   AuthenticatedPmeIndexRoute: AuthenticatedPmeIndexRoute,
   AuthenticatedPmePiecePieceIdRoute: AuthenticatedPmePiecePieceIdRoute,

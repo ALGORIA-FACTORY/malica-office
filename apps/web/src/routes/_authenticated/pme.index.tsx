@@ -297,7 +297,7 @@ function PmeHome() {
          */}
         {a.retournees > 0 ? (
           <Ligne
-            to="/pme/list"
+            to="/pme/regler"
             label={
               cabinet.data
                 ? t("pme.home.attend.cabinet", {
@@ -377,7 +377,7 @@ function PmeHome() {
        * depuis son visage.
        */}
       {regalica.ouvert ? (
-        <div className="fixed inset-0 z-30 flex flex-col bg-background">
+        <div className="fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
           <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
             <RegalicaAvatar size={34} alt="Regalica" rond />
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
