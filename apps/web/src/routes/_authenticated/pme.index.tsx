@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
@@ -7,6 +8,7 @@ import { MarqueRg, RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useAccueil, type MoisDeTva } from "@/hooks/use-accueil";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
+import { office } from "@/verticals/regalica-office/composition";
 import { deMois, montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +66,15 @@ function PmeHome() {
   const periode = currentPeriod();
   const a = useAccueil(periode);
 
+  // Le bandeau « référentiel non ratifié » flottait au-dessus de tous les
+  // écrans. Un avertissement partout n'avertit nulle part : il descend ici,
+  // contre le chiffre qu'il qualifie, et disparaît dès que le pack est ratifié.
+  const pack = useQuery({
+    queryKey: ["ref-pack", pme.jurisdiction],
+    queryFn: () => office().referential.activePack(pme.jurisdiction),
+  });
+  const indicatif = pack.data ? !pack.data.ratified : false;
+
   const mois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
       new Date(`${p}-01T00:00:00Z`),
@@ -93,9 +104,9 @@ function PmeHome() {
         : t("pme.home.voix.manque", { mois: moisCourant });
 
   return (
-    <div className="rg-rise -mx-4 -mt-4 space-y-0 sm:-mx-6">
+    <div className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col sm:-mx-6">
       {/* ------------------------------------------------ présence et salutation */}
-      <header className="relative overflow-hidden px-[22px] pb-5 pt-2.5">
+      <header className="rg-rise relative overflow-hidden px-[22px] pb-4 pt-2">
         {/*
          * Le filigrane : 238 px à 2,5 % d'opacité, débordant en haut à droite.
          * C'est la marque devenue architecture — on ne la lit pas, on la sent.
@@ -117,7 +128,7 @@ function PmeHome() {
           </Link>
         </div>
 
-        <div className="relative mt-[22px] flex items-start gap-[14px]">
+        <div className="relative mt-4 flex items-start gap-[14px]">
           {/*
            * Son visage ouvre le fil — le même geste qu'au cabinet. L'onde et la
            * clochette disent qu'elle a quelque chose à dire ; elles s'arrêtent
@@ -164,7 +175,7 @@ function PmeHome() {
       </header>
 
       {/* ------------------------------------------- le bloc d'encre, à fond perdu */}
-      <section className="rg-regle relative overflow-hidden border-t-[3px] border-marigold-on-ink bg-foreground p-[22px] text-background">
+      <section className="rg-rise rg-regle relative overflow-hidden border-t-[3px] border-marigold-on-ink bg-foreground px-[22px] py-5 text-background">
         <p className="relative font-mono text-[10px] font-medium uppercase tracking-[0.2em] opacity-65">
           {t("pme.home.recuperee", { mois: moisCourant })}
         </p>
@@ -176,6 +187,15 @@ function PmeHome() {
         </p>
 
         <Trajectoire serie={a.serie} />
+
+        {indicatif ? (
+          <p className="relative mt-3 border-s-2 border-marigold-on-ink ps-2.5 font-mono text-[10px] uppercase leading-[1.5] tracking-[0.08em] opacity-70">
+            {t("pme.home.indicatif", {
+              jurisdiction: pack.data!.jurisdiction,
+              version: pack.data!.version,
+            })}
+          </p>
+        ) : null}
 
         <p
           className={cn(
@@ -203,7 +223,7 @@ function PmeHome() {
       </section>
 
       {/* ------------------------------------------------ ce qu'elle a préparé */}
-      <section className="flex flex-col px-[22px] pt-5">
+      <section className="flex min-h-0 flex-1 flex-col px-[22px] pt-5">
         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
           {t("pme.home.prepare")}
         </p>
@@ -238,7 +258,13 @@ function PmeHome() {
           />
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3 pb-5 pt-[18px]">
+        {/*
+         * Deux cartes, et `mt-auto` les pousse au bas de l'écran : c'est ce
+         * qui tient la page en UNE page. Échéances et alertes sont parties —
+         * les alertes restent atteignables par l'engrenage du bandeau, les
+         * échéances n'ont plus de porte sur cet écran.
+         */}
+        <div className="mt-auto grid grid-cols-2 gap-3 pb-4 pt-4">
           <Carte
             to="/pme/charges"
             label={t("pme.home.card.charges")}
@@ -267,47 +293,49 @@ function PmeHome() {
         </div>
       </section>
 
-      {/* --------------------------------------------------- le reste, inchangé */}
-      <div className="space-y-4 px-[22px] pb-6">
-        {pme.captureError ? (
-          <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop">
-            {pme.captureError}
-          </p>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={() => pme.capture("pdf")}
-          disabled={pme.capturing}
-          className="mx-auto block text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-50"
+      {/*
+       * Un échec de capture se dit là où on l'a provoqué, sans rien pousser :
+       * il flotte au-dessus de la barre basse et disparaît au geste suivant.
+       */}
+      {pme.captureError ? (
+        <p
+          role="alert"
+          className="fixed inset-x-3 bottom-[92px] z-20 border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12px]"
         >
-          {pme.capturing ? t("pme.capture.sending") : t("pme.home.import")}
-        </button>
-
-        {regalica.ouvert ? (
-          <section className="border border-border bg-card px-3 py-3">
-            <div className="flex items-baseline justify-between gap-3 pb-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {t("regalica.chat.her")}
-              </p>
-              <button
-                type="button"
-                onClick={regalica.fermer}
-                aria-label={t("regalica.panneau.fermer")}
-                title={t("regalica.panneau.fermer")}
-                className="border border-border px-2 py-0.5 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                ×
-              </button>
-            </div>
-            <RegalicaChat tenantId={pme.tenantId} />
-          </section>
-        ) : null}
-
-        <p className="pt-1 text-center text-[10px] italic text-muted-foreground">
-          {t("pme.home.disclaimer")}
+          {pme.captureError}
         </p>
-      </div>
+      ) : null}
+
+      {/*
+       * Le fil de Regalica passe PAR-DESSUS.
+       *
+       * Il était une section de plus dans le flux : l'ouvrir allongeait la
+       * page et forçait à faire défiler l'accueil, ce que la maquette
+       * interdit. En panneau, il recouvre l'écran le temps de la question et
+       * le rend intact — c'est l'écran « converser » de la maquette, appelé
+       * depuis son visage.
+       */}
+      {regalica.ouvert ? (
+        <div className="fixed inset-0 z-30 flex flex-col bg-background">
+          <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
+            <RegalicaAvatar size={34} alt="Regalica" rond />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
+              {t("regalica.chat.her")}
+            </p>
+            <button
+              type="button"
+              onClick={regalica.fermer}
+              aria-label={t("regalica.panneau.fermer")}
+              className="ms-auto border border-border px-2.5 py-1 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-[22px] py-4">
+            <RegalicaChat tenantId={pme.tenantId} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

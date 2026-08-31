@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Bell, Calendar, Camera, Home as HomeIcon, Lock } from "lucide-react";
+import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
 import { CameraScanner } from "@/components/regalica/CameraScanner";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
-import { PackBanner } from "@/components/regalica/PackBanner";
 import { PmeProvider, type CaptureKind } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
@@ -117,62 +116,39 @@ function PmeLayout() {
       label: t("pme.nav.coffre"),
       active: path.startsWith("/pme/coffre"),
     },
-    {
-      to: "/pme/echeances",
-      icon: Calendar,
-      label: t("pme.nav.echeances"),
-      active: path.startsWith("/pme/echeances"),
-    },
-    {
-      to: "/pme/notifications",
-      icon: Bell,
-      label: t("pme.nav.notifs"),
-      active: path.startsWith("/pme/notifications"),
-    },
   ] as const;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24 text-foreground">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-20 text-foreground">
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {t("brand.name")} · {t("portal.current.pme")}
-            </p>
-            {pmeOrgs.length > 1 ? (
-              <select
-                aria-label={t("pme.org.switch")}
-                value={org?.id ?? ""}
-                onChange={(e) => selectOrg(e.target.value)}
-                className="-ms-1 max-w-[190px] truncate border-0 bg-transparent px-1 py-0 text-sm font-semibold focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {pmeOrgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="truncate text-sm font-semibold">{org?.name ?? "—"}</p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <LanguageSwitcher />
-            {aUnCabinet ? (
-              <Link
-                to="/office"
-                className="border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
-              >
-                {t("portal.switch")}
-              </Link>
-            ) : null}
-          </div>
+        <div className="flex items-center justify-end gap-2 px-4 py-2">
+          {pmeOrgs.length > 1 ? (
+            <select
+              aria-label={t("pme.org.switch")}
+              value={org?.id ?? ""}
+              onChange={(e) => selectOrg(e.target.value)}
+              className="me-auto min-w-0 max-w-[104px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {pmeOrgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <LanguageSwitcher />
+          {aUnCabinet ? (
+            <Link
+              to="/office"
+              className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
+            >
+              {t("portal.switch")}
+            </Link>
+          ) : null}
         </div>
       </header>
 
-      {org ? <PackBanner jurisdiction={org.jurisdiction} /> : null}
-
-      <main className="flex-1 px-4 py-5">
+      <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
         {orgsQuery.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : !org ? (
@@ -206,23 +182,21 @@ function PmeLayout() {
 
       <nav
         aria-label={t("pme.nav.aria")}
-        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-5 items-center border-t border-border bg-background/95 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-3 items-center border-t border-border bg-card"
       >
         <NavItem {...navItems[0]} />
-        <NavItem {...navItems[1]} />
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center py-[11px]">
           <button
             type="button"
             disabled={!org || capture.isPending}
             onClick={() => setScanning(true)}
             aria-label={t("pme.nav.add")}
-            className="grid h-14 w-14 place-items-center border border-foreground bg-foreground text-background disabled:opacity-50"
+            className="grid h-[58px] w-[58px] place-items-center bg-foreground text-background outline outline-1 outline-line-strong disabled:opacity-50"
           >
-            <Camera className="h-6 w-6" aria-hidden />
+            <Camera className="h-[25px] w-[25px]" aria-hidden />
           </button>
         </div>
-        <NavItem {...navItems[2]} />
-        <NavItem {...navItems[3]} />
+        <NavItem {...navItems[1]} />
       </nav>
 
       {scanning ? (
