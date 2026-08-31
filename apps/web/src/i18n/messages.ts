@@ -401,6 +401,18 @@ const fr = {
   "pme.home.card.soon": "Bientôt",
   "pme.home.echeances.sous": "Ce qui arrive",
   "pme.home.alertes.sous": "Ce que j'ai signalé",
+  "pme.bienvenue.titre.1": "Je m'appelle",
+  "pme.bienvenue.titre.2": "Regalica.",
+  "pme.bienvenue.lede":
+    "Vous photographiez. Je lis, je classe, je calcule. Votre comptable tranche. Vous, vous travaillez.",
+  "pme.bienvenue.p1":
+    "Je ne devine jamais un montant. Chaque chiffre que je vous montre pointe vers l'endroit exact de la pièce où je l'ai lu.",
+  "pme.bienvenue.p2":
+    "Ce que vous gardez dans Mon espace reste à vous seul. Rien ne part sans votre geste.",
+  "pme.bienvenue.p3":
+    "Vos échéances sont là avant d'arriver, avec les jours qui restent. Elles viennent du pack fiscal en vigueur, jamais d'une saisie.",
+  "pme.bienvenue.commencer": "Photographier ma première facture",
+  "pme.bienvenue.plusTard": "Plus tard",
   "pme.home.veille": "je veille",
   "pme.home.voix.rien": "Rien encore. Photographiez une facture, je m'occupe du reste.",
   "pme.home.voix.enOrdre": "Tout est en ordre. {mois} est bouclé.",
@@ -1250,6 +1262,18 @@ const en: Dict = {
   "pme.home.card.soon": "Coming soon",
   "pme.home.echeances.sous": "What is coming",
   "pme.home.alertes.sous": "What I flagged",
+  "pme.bienvenue.titre.1": "My name is",
+  "pme.bienvenue.titre.2": "Regalica.",
+  "pme.bienvenue.lede":
+    "You photograph. I read, I file, I compute. Your accountant decides. You get on with your work.",
+  "pme.bienvenue.p1":
+    "I never guess an amount. Every figure I show you points to the exact spot on the document where I read it.",
+  "pme.bienvenue.p2":
+    "What you keep in My space stays yours alone. Nothing leaves without your say-so.",
+  "pme.bienvenue.p3":
+    "Your deadlines are here before they arrive, with the days left. They come from the fiscal pack in force, never from typing.",
+  "pme.bienvenue.commencer": "Photograph my first invoice",
+  "pme.bienvenue.plusTard": "Later",
   "pme.home.veille": "on watch",
   "pme.home.voix.rien": "Nothing yet. Photograph an invoice — I'll take it from there.",
   "pme.home.voix.enOrdre": "All in order. {mois} is closed.",
@@ -2085,6 +2109,16 @@ const ar: Dict = {
   "pme.home.card.soon": "قريبًا",
   "pme.home.echeances.sous": "ما هو قادم",
   "pme.home.alertes.sous": "ما نبّهتُ إليه",
+  "pme.bienvenue.titre.1": "اسمي",
+  "pme.bienvenue.titre.2": "ريغاليكا.",
+  "pme.bienvenue.lede": "أنت تصوّر. أنا أقرأ وأصنّف وأحتسب. محاسبك يقرّر. وأنت تعمل.",
+  "pme.bienvenue.p1":
+    "لا أخمّن مبلغًا أبدًا. كل رقم أعرضه عليك يشير إلى الموضع الدقيق في الوثيقة حيث قرأته.",
+  "pme.bienvenue.p2": "ما تحفظه في «مساحتي» يبقى لك وحدك. لا شيء يخرج دون إذنك.",
+  "pme.bienvenue.p3":
+    "آجالك حاضرة قبل حلولها، مع الأيام المتبقية. مصدرها الحزمة الجبائية السارية، لا إدخال يدوي.",
+  "pme.bienvenue.commencer": "تصوير أول فاتورة",
+  "pme.bienvenue.plusTard": "لاحقًا",
   "pme.home.veille": "أنا أراقب",
   "pme.home.voix.rien": "لا شيء بعد. صوّر فاتورة وأنا أتكفّل بالباقي.",
   "pme.home.voix.enOrdre": "كل شيء على ما يرام. {mois} مُقفَل.",

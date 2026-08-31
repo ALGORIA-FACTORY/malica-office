@@ -68,6 +68,13 @@ export interface Accueil {
   /** Combien de documents le mois porte, tous états confondus. */
   documents: number;
   /**
+   * Vrai quand le dossier n'a JAMAIS reçu de pièce, tous mois confondus.
+   *
+   * Ce n'est pas « zéro ce mois-ci » : un dossier actif peut avoir un mois
+   * creux. C'est la seule mesure qui autorise à montrer l'arrivée.
+   */
+  jamaisRienDepose: boolean;
+  /**
    * L'écart de charges avec le mois précédent, en pourcentage signé.
    *
    * `null` quand l'un des deux mois n'a rien à dire : « en baisse de 100 % »
@@ -225,7 +232,7 @@ export function useAccueil(periode: string): Accueil {
   }, [lignes.data, periode, devise, decimales]);
 
   // ----------------------------------------------------------- l'avancement
-  const { avancement, documents, retournees } = useMemo(() => {
+  const { avancement, documents, jamaisRienDepose, retournees } = useMemo(() => {
     const liste = pieces.data ?? [];
     const duMois = liste.filter((p) => p.createdAt.slice(0, 7) === periode);
     const closes = duMois.filter(
@@ -234,6 +241,7 @@ export function useAccueil(periode: string): Accueil {
     return {
       avancement: duMois.length === 0 ? null : closes / duMois.length,
       documents: duMois.length,
+      jamaisRienDepose: liste.length === 0,
       retournees: liste.filter((p) => p.status === "retournee").length,
     };
   }, [pieces.data, periode]);
@@ -247,6 +255,7 @@ export function useAccueil(periode: string): Accueil {
     aReverser: serie[serie.length - 1]?.solde ?? null,
     avancement,
     documents,
+    jamaisRienDepose,
     chargesEcart,
     retournees,
     enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,

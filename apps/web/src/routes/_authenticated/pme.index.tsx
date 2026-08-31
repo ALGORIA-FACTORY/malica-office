@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
+import { bienvenueDejaVue } from "@/components/regalica/bienvenue";
 import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
 import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaChat } from "@/components/regalica/RegalicaChat";
@@ -7,6 +8,7 @@ import { MarqueRg, RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useAccueil, type MoisDeTva } from "@/hooks/use-accueil";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
@@ -66,6 +68,23 @@ function PmeHome() {
   const regalica = usePanneauRegalica("pme");
   const periode = currentPeriod();
   const a = useAccueil(periode);
+  const navigate = useNavigate();
+
+  /**
+   * L'arrivée, une seule fois.
+   *
+   * Deux conditions, et il faut les deux : un dossier qui n'a jamais reçu de
+   * pièce, ET une présentation jamais congédiée. Sans la seconde, « plus
+   * tard » ramènerait ici et la présentation reviendrait au rechargement —
+   * un écran dont on ne peut pas sortir.
+   *
+   * On attend que les pièces soient chargées : rediriger pendant le
+   * chargement montrerait l'arrivée à un dossier qui en a déjà cent.
+   */
+  const dossierNeuf = !a.enCours && a.jamaisRienDepose;
+  useEffect(() => {
+    if (dossierNeuf && !bienvenueDejaVue()) void navigate({ to: "/pme/bienvenue" });
+  }, [dossierNeuf, navigate]);
 
   // Qui attend, exactement. « Votre comptable » est une périphrase : le
   // dirigeant connaît son cabinet par son nom, et c'est ce nom qui doit
