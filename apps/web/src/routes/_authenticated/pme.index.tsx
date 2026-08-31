@@ -262,13 +262,25 @@ function PmeHome() {
           {t("pme.home.prepare")}
         </p>
 
+        {/*
+         * Le signe change le mot, pas seulement le chiffre.
+         *
+         * Un solde négatif n'est pas « à reverser » : c'est un crédit qui se
+         * reporte sur le mois suivant. Afficher « TVA à reverser · −64,600 »
+         * demanderait au dirigeant de faire la traduction lui-même — c'est
+         * exactement le travail que ce produit lui retire.
+         */}
         <Ligne
           to="/pme/tva"
-          label={t("pme.home.declaration", { mois: moisCourant, deMois: duMois })}
-          valeur={a.avancement === null ? "—" : `${Math.round(a.avancement * 100)} %`}
+          label={
+            a.aReverser === null || Number(a.aReverser) > 0
+              ? t("pme.home.reverser", { mois: moisCourant })
+              : t("pme.home.credit", { mois: moisCourant })
+          }
+          valeur={a.aReverser === null ? "—" : montant(a.aReverser.replace(/^-/, ""), locale)}
         />
         {/* La jauge n'existe que s'il y a quelque chose à jauger. */}
-        <div className="relative mb-0.5 h-[3px] bg-line-strong">
+        <div className="relative h-[3px] bg-line-strong">
           {a.avancement === null ? null : (
             <i
               className="absolute inset-y-0 start-0 bg-marigold"
@@ -276,11 +288,16 @@ function PmeHome() {
             />
           )}
         </div>
+        <p className="mt-[5px] text-end font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          {a.avancement === null
+            ? t("pme.home.prete.rien")
+            : t("pme.home.prete", { pourcent: Math.round(a.avancement * 100) })}
+        </p>
 
         <Ligne
           to="/pme/list"
-          label={t("pme.home.resultat", { mois: moisCourant, deMois: duMois })}
-          valeur={a.resultat === null ? "—" : montantSigne(a.resultat, locale)}
+          label={t("pme.home.documents", { deMois: duMois, mois: moisCourant })}
+          valeur={String(a.documents)}
         />
 
         {a.retournees > 0 ? (
@@ -302,7 +319,13 @@ function PmeHome() {
           <Carte
             to="/pme/charges"
             label={t("pme.home.card.charges")}
-            sous={t("pme.home.charges.sous")}
+            sous={
+              a.chargesEcart === null
+                ? t("pme.home.charges.sous")
+                : a.chargesEcart < 0
+                  ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
+                  : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })
+            }
           >
             <span className="flex h-[26px] items-end gap-1">
               <i className="h-full w-[5px] bg-foreground" />

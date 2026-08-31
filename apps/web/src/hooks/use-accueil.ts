@@ -41,6 +41,8 @@ export interface MoisDeTva {
   periode: string;
   /** La TVA déductible du mois, ou null si le mois n'a rien à dire. */
   recuperee: string | null;
+  /** Collectée moins déductible. Positif : à reverser. */
+  solde: string | null;
 }
 
 export interface Accueil {
@@ -53,10 +55,25 @@ export interface Accueil {
   serie: MoisDeTva[];
   /** Combien de mois d'affilée la récupération progresse, mois courant inclus. */
   moisDeSuite: number;
+  /**
+   * Ce qu'il restera à reverser à l'État : TVA collectée moins déductible.
+   *
+   * Positif, c'est un décaissement à prévoir ; négatif, un crédit qui se
+   * reporte. C'est le seul chiffre de cet écran sur lequel un dirigeant doit
+   * agir, et c'est pour cela qu'il vient en premier.
+   */
+  aReverser: string | null;
   /** Part des pièces du mois déjà comptabilisées, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
-  /** Le résultat du mois — produits moins charges. `null` : rien de comptabilisé. */
-  resultat: string | null;
+  /** Combien de documents le mois porte, tous états confondus. */
+  documents: number;
+  /**
+   * L'écart de charges avec le mois précédent, en pourcentage signé.
+   *
+   * `null` quand l'un des deux mois n'a rien à dire : « en baisse de 100 % »
+   * parce que le mois d'avant était vide n'est pas une baisse, c'est un trou.
+   */
+  chargesEcart: number | null;
   /** Les pièces que le cabinet a retournées, et qui attendent le dirigeant. */
   retournees: number;
   enCours: boolean;
@@ -92,8 +109,11 @@ export function useAccueil(periode: string): Accueil {
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],
     queryFn: () => {
-      const bornes = monthBounds(periode);
-      return office().office.periodeLignes(pme.tenantId, bornes.from, bornes.to);
+      // Deux mois d'un coup : la carte des charges compare, et une seconde
+      // requête pour un seul pourcentage ne se justifie pas.
+      const debut = monthBounds(moisPrecedent(periode, 1));
+      const fin = monthBounds(periode);
+      return office().office.periodeLignes(pme.tenantId, debut.from, fin.to);
     },
   });
 
@@ -106,7 +126,7 @@ export function useAccueil(periode: string): Accueil {
   const serie = useMemo<MoisDeTva[]>(() => {
     const mois: MoisDeTva[] = [];
     for (let i = FENETRE - 1; i >= 0; i -= 1) {
-      mois.push({ periode: moisPrecedent(periode, i), recuperee: null });
+      mois.push({ periode: moisPrecedent(periode, i), recuperee: null, solde: null });
     }
     if (!extraits.data || !taux.data) return mois;
 
@@ -141,7 +161,11 @@ export function useAccueil(periode: string): Accueil {
         achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
         ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
       });
-      return { periode: m.periode, recuperee: calcul.totals.deductible };
+      return {
+        periode: m.periode,
+        recuperee: calcul.totals.deductible,
+        solde: calcul.totals.solde,
+      };
     });
   }, [extraits.data, taux.data, periode, devise, decimales]);
 
@@ -168,27 +192,40 @@ export function useAccueil(periode: string): Accueil {
     return compte;
   }, [serie]);
 
-  // ------------------------------------------------------------- le résultat
-  const resultat = useMemo(() => {
+  // ---------------------------------------------------- les charges, comparées
+  //
+  // Le moteur du compte de résultat sert deux fois, sur deux mois. Il ne rend
+  // les charges qu'en creux — `resultat = produits − charges` — donc on lui
+  // passe les lignes d'un mois à la fois et on lit ce qu'il en dit.
+  const chargesEcart = useMemo(() => {
     if (!lignes.data || lignes.data.length === 0) return null;
-    const pnl = computePnl({
-      period: periode,
-      currency: { code: devise, decimals: decimales },
-      entries: lignes.data.map((l) => ({
-        account_code: l.accountCode,
-        debit: l.debit,
-        credit: l.credit,
-      })),
-      // Les libellés de comptes ne servent qu'au détail par compte, que
-      // l'accueil n'affiche pas. On ne charge pas six cent vingt-six lignes
-      // pour un seul nombre.
-      coa: [],
-    });
-    return pnl.resultat;
+    const avant = moisPrecedent(periode, 1);
+    const chargesDe = (mois: string): number | null => {
+      const duMois = lignes.data!.filter((l) => l.dateEcriture.slice(0, 7) === mois);
+      if (duMois.length === 0) return null;
+      const pnl = computePnl({
+        period: mois,
+        currency: { code: devise, decimals: decimales },
+        entries: duMois.map((l) => ({
+          account_code: l.accountCode,
+          debit: l.debit,
+          credit: l.credit,
+        })),
+        // Les libellés ne servent qu'au détail par compte, que l'accueil
+        // n'affiche pas : on ne charge pas six cent vingt-six lignes pour un
+        // seul pourcentage.
+        coa: [],
+      });
+      return Number(pnl.charges);
+    };
+    const ici = chargesDe(periode);
+    const la = chargesDe(avant);
+    if (ici === null || la === null || la === 0) return null;
+    return ((ici - la) / la) * 100;
   }, [lignes.data, periode, devise, decimales]);
 
   // ----------------------------------------------------------- l'avancement
-  const { avancement, retournees } = useMemo(() => {
+  const { avancement, documents, retournees } = useMemo(() => {
     const liste = pieces.data ?? [];
     const duMois = liste.filter((p) => p.createdAt.slice(0, 7) === periode);
     const closes = duMois.filter(
@@ -196,6 +233,7 @@ export function useAccueil(periode: string): Accueil {
     ).length;
     return {
       avancement: duMois.length === 0 ? null : closes / duMois.length,
+      documents: duMois.length,
       retournees: liste.filter((p) => p.status === "retournee").length,
     };
   }, [pieces.data, periode]);
@@ -206,8 +244,10 @@ export function useAccueil(periode: string): Accueil {
     ecart,
     serie,
     moisDeSuite,
+    aReverser: serie[serie.length - 1]?.solde ?? null,
     avancement,
-    resultat,
+    documents,
+    chargesEcart,
     retournees,
     enCours: extraits.isPending || taux.isPending || lignes.isPending || pieces.isPending,
   };
