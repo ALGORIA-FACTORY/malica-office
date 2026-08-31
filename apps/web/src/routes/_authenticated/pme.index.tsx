@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/pme/")({
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
-  const regalica = usePanneauRegalica();
+  const regalica = usePanneauRegalica("pme");
   const period = currentPeriod();
 
   const pieces = useQuery({

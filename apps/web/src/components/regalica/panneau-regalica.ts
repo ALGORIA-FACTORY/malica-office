@@ -10,20 +10,29 @@ import { useCallback, useEffect, useState } from "react";
  *
  * Elle est ouverte au départ. Un assistant qu'il faut découvrir n'assiste
  * personne ; celui qui gêne se ferme d'un clic, et se rappelle d'un autre.
+ *
+ * Le choix est retenu PAR ESPACE. Les deux surfaces ne se ressemblent pas :
+ * au cabinet, Regalica est une colonne de trois cents pixels en travers d'une
+ * balance ; sur le téléphone, elle est une section en bas d'une page qu'on
+ * fait défiler. Refermer la première n'est pas une raison de masquer la
+ * seconde — la PME et le cabinet restent séparés, jusque dans leurs
+ * préférences d'écran.
  */
-const CLE = "regalica.panneau.ouvert";
+type Espace = "cabinet" | "pme";
 
-function auDepart(): boolean {
+const cle = (espace: Espace) => `regalica.panneau.ouvert.${espace}`;
+
+function auDepart(espace: Espace): boolean {
   if (typeof window === "undefined") return true;
   try {
-    return window.localStorage.getItem(CLE) !== "0";
+    return window.localStorage.getItem(cle(espace)) !== "0";
   } catch {
     // Navigation privée, stockage refusé : on ouvre, sans rien casser.
     return true;
   }
 }
 
-export function usePanneauRegalica(): {
+export function usePanneauRegalica(espace: Espace): {
   ouvert: boolean;
   ouvrir: () => void;
   fermer: () => void;
@@ -33,17 +42,20 @@ export function usePanneauRegalica(): {
   const [ouvert, setOuvert] = useState(true);
 
   useEffect(() => {
-    setOuvert(auDepart());
-  }, []);
+    setOuvert(auDepart(espace));
+  }, [espace]);
 
-  const poser = useCallback((valeur: boolean) => {
-    setOuvert(valeur);
-    try {
-      window.localStorage.setItem(CLE, valeur ? "1" : "0");
-    } catch {
-      // Le panneau suit quand même : seule la mémoire du choix est perdue.
-    }
-  }, []);
+  const poser = useCallback(
+    (valeur: boolean) => {
+      setOuvert(valeur);
+      try {
+        window.localStorage.setItem(cle(espace), valeur ? "1" : "0");
+      } catch {
+        // Le panneau suit quand même : seule la mémoire du choix est perdue.
+      }
+    },
+    [espace],
+  );
 
   return {
     ouvert,

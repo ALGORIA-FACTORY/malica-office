@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/cabinet")({
 
 function CabinetLayout() {
   const { t } = useI18n();
-  const regalica = usePanneauRegalica();
+  const regalica = usePanneauRegalica("cabinet");
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
