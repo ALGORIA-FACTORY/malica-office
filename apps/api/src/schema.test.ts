@@ -141,4 +141,60 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
       "un compte qui porte deux natures rend toute déclaration bâtie dessus fausse",
     );
   });
+
+  /**
+   * Aucune colonne de devise ou de juridiction ne porte de valeur par défaut.
+   *
+   * Un défaut de colonne est la pire forme de constante : il s'applique en
+   * silence, à l'écriture, sans qu aucun appelant n'ait rien demandé. Six
+   * colonnes en portaient une — un cabinet européen aurait tenu ses livres en
+   * dinars sans qu'une ligne de code ne le dise.
+   *
+   * La devise vit désormais dans ref.jurisdiction_packs, avec le pack qui la
+   * porte. Ce n'est pas la constante qui a disparu, c'est l'endroit : une
+   * donnée de référence, versionnée, et non un littéral au fond du schéma.
+   */
+  it("aucune colonne de devise ou de juridiction n'a de valeur par défaut", async () => {
+    const defauts = await interroger<{ colonne: string; defaut: string }>(`
+      select table_schema || '.' || table_name || '.' || column_name as colonne,
+             column_default as defaut
+        from information_schema.columns
+       where column_default is not null
+         and table_schema not in ('pg_catalog', 'information_schema')
+         and column_name in ('devise', 'currency', 'jurisdiction')
+       order by 1`);
+
+    assert.deepEqual(
+      defauts.map((d) => `${d.colonne} = ${d.defaut}`),
+      [],
+      "une devise posée par défaut est une décision fiscale prise par omission",
+    );
+  });
+
+  /**
+   * Le schéma legal a disparu, et avec lui la substitution du chargeur.
+   *
+   * Tant qu'il existait sans pgvector, sa colonne d'empreintes était un
+   * real[] déguisé en vector(768) : la base locale et une base de production
+   * n'avaient pas le même schéma. Ce test interdit son retour tant que
+   * l'extension n'est pas là — le jour où elle le sera, il se remplace par la
+   * vérification inverse, que la colonne est bien de type vector.
+   */
+  it("le schéma legal ne revient pas sans pgvector", async () => {
+    const etat = await interroger<{ vector: number; legal: number }>(`
+      select (select count(*) from pg_extension where extname = 'vector') as vector,
+             (select count(*) from information_schema.schemata
+               where schema_name = 'legal') as legal`);
+
+    const ligne = etat[0];
+    assert.ok(ligne, "la requête d'état doit rendre une ligne");
+
+    if (Number(ligne.vector) === 0) {
+      assert.equal(
+        Number(ligne.legal),
+        0,
+        "legal sans pgvector : ses empreintes seraient un tableau déguisé en vecteur",
+      );
+    }
+  });
 });

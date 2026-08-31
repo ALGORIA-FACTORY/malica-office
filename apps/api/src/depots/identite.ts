@@ -58,8 +58,8 @@ export const identite = {
       name: string;
       validationMode?: string;
       legalId?: string;
-      jurisdiction?: string;
-      currency?: string;
+      jurisdiction: string;
+      currency: string;
       defaultEntityName?: string;
     },
   ): Promise<string> {
@@ -70,8 +70,10 @@ export const identite = {
         input.name,
         input.validationMode ?? "mandate",
         input.legalId ?? null,
-        input.jurisdiction ?? "TN",
-        input.currency ?? "TND",
+        // Plus de repli : la juridiction vient de l'écran, la devise du pack.
+        // Un `?? "TN"` ici décidait de la fiscalité d'un client par omission.
+        input.jurisdiction,
+        input.currency,
       ],
     );
     const orgId = rows[0]!.id;

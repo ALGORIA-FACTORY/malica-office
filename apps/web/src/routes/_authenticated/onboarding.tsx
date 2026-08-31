@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -38,6 +38,21 @@ function Onboarding() {
   const [legalId, setLegalId] = useState("");
   const [mode, setMode] = useState<ValidationMode>("mandate");
   const [entityName, setEntityName] = useState("");
+  const [jurisdiction, setJurisdiction] = useState("");
+
+  // Les juridictions viennent du référentiel : une option s'affiche parce qu'un
+  // pack est en vigueur, jamais parce qu'un code l'a écrite. Le jour où un pack
+  // français est semé, la France apparaît ici sans qu'on touche à cet écran.
+  const juridictions = useQuery({
+    queryKey: ["juridictions"],
+    queryFn: () => office().referential.juridictions(),
+  });
+
+  // Une seule juridiction disponible : elle est choisie d'office. Ce n'est pas
+  // un défaut en dur — c'est le référentiel qui n'en propose qu'une.
+  const choisie =
+    jurisdiction || (juridictions.data?.length === 1 ? juridictions.data[0]!.jurisdiction : "");
+  const devise = juridictions.data?.find((j) => j.jurisdiction === choisie)?.currency ?? "";
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,10 +61,16 @@ function Onboarding() {
     setPending(true);
     setError(null);
     try {
+      if (!choisie || !devise) throw new Error(t("onboarding.jurisdiction.required"));
       await office().identity.createOrganization({
         kind,
         name: name.trim(),
         legalId: legalId.trim() || null,
+        jurisdiction: choisie,
+        // La devise n'est pas demandée : elle appartient au pack de la
+        // juridiction. Laisser l'utilisateur en choisir une autre reviendrait à
+        // tenir une comptabilité tunisienne en euros.
+        currency: devise,
         validationMode: mode,
         defaultEntityName: entityName,
       });
@@ -98,6 +119,31 @@ function Onboarding() {
               ))}
             </div>
           </fieldset>
+
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("onboarding.jurisdiction")}
+            </span>
+            <select
+              value={choisie}
+              onChange={(e) => setJurisdiction(e.target.value)}
+              required
+              disabled={juridictions.isPending}
+              className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+            >
+              <option value="" disabled>
+                {t("onboarding.jurisdiction.choose")}
+              </option>
+              {(juridictions.data ?? []).map((j) => (
+                <option key={j.jurisdiction} value={j.jurisdiction}>
+                  {j.jurisdiction} — {j.currency}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {t("onboarding.jurisdiction.help")}
+            </span>
+          </label>
 
           <label className="block">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">

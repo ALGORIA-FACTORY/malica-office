@@ -1,10 +1,18 @@
--- PROPOSITION — NON APPLIQUÉE. Les NUMÉROS attendent l'expert-comptable.
+-- Le droit de timbre et la retenue à la source quittent la série de la TVA.
 --
--- Hors de `db/migrations/` volontairement : un `charger.ps1 -Recreate` ne doit
--- pas l'emporter. Le jour où les numéros sont validés, ce fichier est déplacé
--- dans `db/migrations/` sous un horodatage, et pas avant.
+-- NON APPLIQUÉE — EN ATTENTE DE LA VALIDATION D'UN EXPERT-COMPTABLE.
 --
--- Remplace `proposition_compte_4369.sql`, dont la conclusion était fausse :
+-- Volontairement hors de `db/migrations/` : un `charger.ps1 -Recreate` ne doit
+-- pas l'emporter. Le jour où les numéros sont confirmés, ce fichier est déplacé
+-- dans `db/migrations/` sous un horodatage — c'est un déplacement, rien d'autre
+-- n'est à changer.
+--
+-- Ce qu'elle fera ce jour-là n'est pas anodin : elle SUPPRIME deux lignes de
+-- ref.accounts et COMPTABILISE des écritures de reclassement. Une écriture
+-- comptabilisée ne se retire pas — c'est R7, et le déclencheur le refuserait.
+-- D'où l'exigence de validation : ce n'est pas une précaution de forme.
+--
+-- Elle remplace `proposition_compte_4369.sql`, dont la conclusion était fausse :
 -- 4369 porte un libellé juste dans une série fausse.
 --
 -- ====================================================== CE QUI EST TRANCHÉ
@@ -20,12 +28,11 @@
 -- La RETENUE À LA SOURCE relève de la série 432, « Impôts et taxes retenus à la
 -- source ».
 --
--- ====================================================== CE QUI NE L'EST PAS
+-- ================================================= CE QUI RESTE À CONFIRMER
 --
--- Les NUMÉROS de sous-compte. J'écris 4371 et 4321 parce qu'il faut bien écrire
--- quelque chose ; ce sont les premiers libres de chaque série, pas une autorité.
--- Un plan comptable tunisien peut les vouloir ailleurs. Cherchez « 4371 » et
--- « 4321 » dans ce fichier : ce sont les deux seules valeurs à arrêter.
+-- Les NUMÉROS de sous-compte. 4371 et 4321 sont les premiers libres de leur
+-- série ; un plan comptable tunisien peut les vouloir ailleurs. Ce sont les
+-- deux seules valeurs de ce fichier qu'un expert doit encore confirmer.
 --
 -- ====================================================== ÉTAT CONSTATÉ EN BASE
 --
@@ -80,9 +87,9 @@ select p.id, v.code, v.parent, '4', v.label
        (values
          ('432',  '43', 'Etat - Impots et taxes retenus a la source'),
          ('437',  '43', 'Etat - Autres impots, taxes et versements assimiles'),
-         -- ------------------------------------------------ À VALIDER : 4321
+         -- numéro à confirmer
          ('4321', '432', 'Etat - Retenue a la source'),
-         -- ------------------------------------------------ À VALIDER : 4371
+         -- numéro à confirmer
          ('4371', '437', 'Etat - Timbre fiscal collecte')
        ) as v(code, parent, label)
  where p.jurisdiction = 'TN'
@@ -93,7 +100,7 @@ on conflict do nothing;
 -- Le côté VENTE seulement. Le côté achat reste sur 6654.
 
 update ref.fiscal_charges fc
-   set account_code = '4371'          -- À VALIDER
+   set account_code = '4371'          -- numéro à confirmer
   from ref.jurisdiction_packs p
  where fc.pack_version_id = p.id
    and p.jurisdiction = 'TN'
@@ -138,37 +145,50 @@ select e.tenant_id,
 -- Elle référence la pièce d'origine quand il n'y en a qu'une ; sinon `null`,
 -- parce qu'un reclassement qui agrège plusieurs pièces n'appartient à aucune.
 --
--- Laissé en commentaire : le journal et le libellé sont des choix comptables.
---
--- do $$
--- declare t record; nouvelle uuid; v_pack uuid; v_piece uuid;
--- begin
---   select id into v_pack from ref.jurisdiction_packs
---    where jurisdiction = 'TN' order by effective_from desc limit 1;
---
---   for t in
---     select e.tenant_id, e.devise, sum(l.credit::numeric) as montant,
---            min(e.piece_id) as piece_unique, count(distinct e.piece_id) as pieces
---       from socle.ecriture_lignes l
---       join socle.ecritures e on e.id = l.ecriture_id
---      where l.account_code = '4367' and l.libelle ilike '%timbre%'
---        and e.status = 'booked'
---      group by e.tenant_id, e.devise
---      having sum(l.credit::numeric) > 0
---   loop
---     v_piece := case when t.pieces = 1 then t.piece_unique else null end;
---     nouvelle := public.socle_ecriture_propose(
---       v_piece, 'OD', current_date,
---       'Reclassement du droit de timbre - 4367 vers 4371',
---       v_pack,
---       jsonb_build_array(
---         jsonb_build_object('ordinal', 1, 'account_code', '4367',
---                            'libelle', 'Timbre extrait de la TVA collectee',
---                            'debit', t.montant, 'credit', 0),
---         jsonb_build_object('ordinal', 2, 'account_code', '4371',
---                            'libelle', 'Timbre fiscal collecte',
---                            'debit', 0, 'credit', t.montant)),
---       t.devise);
---     perform public.socle_ecriture_book(nouvelle);
---   end loop;
--- end $$;
+-- Le journal est « OD » — opérations diverses —, qui est la place d'un
+-- reclassement. Le libellé nomme l'opération et les deux comptes, pour qu'un
+-- contrôleur comprenne sans avoir à ouvrir le dossier.
+
+do $$
+declare
+  t        record;
+  nouvelle uuid;
+  v_pack   uuid;
+  v_piece  uuid;
+  n        integer := 0;
+begin
+  select id into v_pack from ref.jurisdiction_packs
+   where jurisdiction = 'TN' order by effective_from desc limit 1;
+
+  for t in
+    select e.tenant_id, e.devise, sum(l.credit::numeric) as montant,
+           min(e.piece_id) as piece_unique, count(distinct e.piece_id) as pieces
+      from socle.ecriture_lignes l
+      join socle.ecritures e on e.id = l.ecriture_id
+     where l.account_code = '4367' and l.libelle ilike '%timbre%'
+       and e.status = 'booked'
+     group by e.tenant_id, e.devise
+     having sum(l.credit::numeric) > 0
+  loop
+    -- La pièce d'origine n'est référencée que s'il n'y en a qu'une : un
+    -- reclassement qui agrège plusieurs pièces n'appartient à aucune.
+    v_piece := case when t.pieces = 1 then t.piece_unique else null end;
+
+    nouvelle := public.socle_ecriture_propose(
+      v_piece, 'OD', current_date,
+      'Reclassement du droit de timbre - 4367 vers 4371',
+      v_pack,
+      jsonb_build_array(
+        jsonb_build_object('ordinal', 1, 'account_code', '4367',
+                           'libelle', 'Timbre extrait de la TVA collectee',
+                           'debit', t.montant, 'credit', 0),
+        jsonb_build_object('ordinal', 2, 'account_code', '4371',
+                           'libelle', 'Timbre fiscal collecte',
+                           'debit', 0, 'credit', t.montant)),
+      t.devise);
+    perform public.socle_ecriture_book(nouvelle);
+    n := n + 1;
+  end loop;
+
+  raise notice '% ecriture(s) de reclassement passee(s)', n;
+end $$;

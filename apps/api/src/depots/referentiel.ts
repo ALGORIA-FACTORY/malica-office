@@ -14,9 +14,31 @@ import type { Requete } from "../db.ts";
 import { aujourdhui, dec as decStr } from "./decimal.ts";
 
 export const referentiel = {
+  /**
+   * Les juridictions que le produit sait traiter, et leur devise.
+   *
+   * C'est la seule source : un écran qui propose « Tunisie » le fait parce
+   * qu'un pack tunisien est en vigueur, pas parce que quelqu'un a écrit « TN »
+   * dans un menu déroulant.
+   */
+  async juridictions(db: Requete) {
+    const { rows } = await db.query(
+      `select distinct on (jurisdiction) jurisdiction, currency, version
+         from ref_packs_v
+        where effective_from <= $1
+        order by jurisdiction, effective_from desc`,
+      [aujourdhui()],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      jurisdiction: r["jurisdiction"] as string,
+      currency: r["currency"] as string,
+      version: r["version"] as string,
+    }));
+  },
+
   async activePack(db: Requete, jurisdiction: string) {
     const { rows } = await db.query(
-      `select id, jurisdiction, version, effective_from, ratified
+      `select id, jurisdiction, version, effective_from, ratified, currency
          from ref_packs_v
         where jurisdiction = $1 and effective_from <= $2
         order by effective_from desc
@@ -31,6 +53,7 @@ export const referentiel = {
       version: row["version"] as string,
       effectiveFrom: row["effective_from"] as string,
       ratified: Boolean(row["ratified"]),
+      currency: row["currency"] as string,
     };
   },
 

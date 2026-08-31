@@ -42,8 +42,10 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
     // production, pas injectées par-dessous.
     await sousIdentite(a.id, async (db) => {
       const { rows } = await db.query<{ create_organization: string }>(
-        `select public.create_organization($1, $2, $3) as create_organization`,
-        ["pme", `ESSAI ${marque}`, "autonome"],
+        `select public.create_organization($1, $2, $3, null, $4, $5) as create_organization`,
+        // La juridiction et la devise ne sont plus devinées par la base :
+        // le test les fournit comme le ferait l'écran.
+        ["pme", `ESSAI ${marque}`, "autonome", "TN", "TND"],
       );
       orgA = rows[0]!.create_organization;
 

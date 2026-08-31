@@ -45,8 +45,10 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
     await sousIdentite(identite, async (db) => {
       const org = async (kind: string, nom: string, mode: string) => {
         const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization($1, $2, $3) as id`,
-          [kind, nom, mode],
+          `select public.create_organization($1, $2, $3, null, $4, $5) as id`,
+          // La juridiction et la devise ne sont plus devinées par la base :
+          // le test les fournit comme le ferait l'écran.
+          [kind, nom, mode, "TN", "TND"],
         );
         return rows[0]!.id;
       };

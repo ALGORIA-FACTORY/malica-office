@@ -33,8 +33,16 @@ export interface NewOrganization {
   kind: OrgKind;
   name: string;
   legalId?: string | null;
-  jurisdiction?: string;
-  currency?: string;
+  /**
+   * Obligatoires, et c'est le fond du sujet.
+   *
+   * Elles étaient facultatives, et l'omission valait « Tunisie, dinar ». Une
+   * organisation créée sans que personne n'ait choisi sa juridiction héritait
+   * d'une fiscalité par défaut — dans un produit dont la raison d'être est de
+   * l'appliquer correctement.
+   */
+  jurisdiction: string;
+  currency: string;
   validationMode?: ValidationMode;
   defaultEntityName?: string;
 }
@@ -51,9 +59,18 @@ export interface JurisdictionPack {
   version: string;
   effectiveFrom: string;
   ratified: boolean;
+  currency: string;
+}
+
+/** Une juridiction que le produit sait traiter, telle que le référentiel la déclare. */
+export interface Juridiction {
+  jurisdiction: string;
+  currency: string;
+  version: string;
 }
 
 export interface ReferentialRepository {
+  juridictions(): Promise<Juridiction[]>;
   activePack(jurisdiction: string): Promise<JurisdictionPack | null>;
   taxRates(packId: string, jurisdiction: string): Promise<TaxRate[]>;
   accountMappings(packId: string): Promise<AccountMapping[]>;

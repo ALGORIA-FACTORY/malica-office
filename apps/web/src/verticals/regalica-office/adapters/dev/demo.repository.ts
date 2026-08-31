@@ -22,6 +22,10 @@ type DevOrganization = Organization & { role: string };
 
 const DEV_TENANT_ID = "00000000-0000-4000-8000-000000000101";
 const DEV_ENTITY_ID = "00000000-0000-4000-8000-000000000201";
+/** La démo n'invente pas une juridiction : elle reprend celle du pack semé. */
+const DEV_JURIDICTION = "TN";
+const DEV_DEVISE = "TND";
+
 const DEV_PACK_ID = "00000000-0000-4000-8000-000000000301";
 
 const organizations: DevOrganization[] = [
@@ -122,6 +126,11 @@ export function createDevIdentityRepository(): IdentityRepository {
 
 export function createDevReferentialRepository(): ReferentialRepository {
   return {
+    // La démo annonce la même juridiction que le référentiel semé, pour que
+    // l'écran d'accueil se comporte pareil des deux côtés.
+    async juridictions() {
+      return [{ jurisdiction: DEV_JURIDICTION, currency: DEV_DEVISE, version: "DEV" }];
+    },
     async activePack(jurisdiction: string): Promise<JurisdictionPack | null> {
       return {
         id: DEV_PACK_ID,
@@ -129,6 +138,7 @@ export function createDevReferentialRepository(): ReferentialRepository {
         version: "DEV",
         effectiveFrom: "2026-01-01",
         ratified: false,
+        currency: DEV_DEVISE,
       };
     },
     async taxRates() {

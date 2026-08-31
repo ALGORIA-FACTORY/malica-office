@@ -88,8 +88,10 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
   async function creerOrg(utilisateur: string, nom: string): Promise<string> {
     return sousIdentite(utilisateur, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization($1, $2, $3) as id`,
-        ["pme", nom, "autonome"],
+        `select public.create_organization($1, $2, $3, null, $4, $5) as id`,
+        // La juridiction et la devise ne sont plus devinées par la base :
+        // le test les fournit comme le ferait l'écran.
+        ["pme", nom, "autonome", "TN", "TND"],
       );
       return rows[0]!.id;
     });
