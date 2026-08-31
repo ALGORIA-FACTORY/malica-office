@@ -254,6 +254,50 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
   );
 }
 
+/**
+ * Section repliable — même filet, même titre, un état en plus.
+ *
+ * Les longues listes du paramétrage — cent soixante rôles, six cent vingt-six
+ * comptes — se replient pour laisser voir la structure de la page. Le compteur
+ * reste visible replié : on doit savoir ce qu'''on cache.
+ *
+ * Le bouton porte le titre lui-même plutôt qu'''un chevron seul : c'''est la cible
+ * la plus large, et elle se lit au clavier comme à la souris.
+ */
+export function SectionRepliable({
+  titre,
+  ouvert,
+  onBascule,
+  resume,
+  children,
+}: {
+  titre: ReactNode;
+  ouvert: boolean;
+  onBascule: () => void;
+  resume?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+        <button
+          type="button"
+          onClick={onBascule}
+          aria-expanded={ouvert}
+          className="flex min-h-[36px] items-baseline gap-2 text-start text-[13px] font-semibold uppercase tracking-[0.16em]"
+        >
+          <span aria-hidden className="text-[11px] opacity-60">
+            {ouvert ? "−" : "+"}
+          </span>
+          {titre}
+        </button>
+        {resume ? <span className="text-[12px] text-muted-foreground">{resume}</span> : null}
+      </div>
+      {ouvert ? children : null}
+    </section>
+  );
+}
+
 /** Bandeau de chiffres gouvernés — chaque valeur vient du Socle. */
 export function KpiRow({
   items,

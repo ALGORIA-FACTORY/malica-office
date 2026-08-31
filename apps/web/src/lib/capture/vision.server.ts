@@ -361,6 +361,20 @@ export async function runVisionRead(params: {
   bytes?: Uint8Array;
   taxCodes: ReadonlyArray<{ code: string; label: string; rate: string }>;
   chargeCodes?: ReadonlyArray<{ code: string; label: string }>;
+  /**
+   * Les tiers déjà connus du dossier.
+   *
+   * Le raisonneur ne les invente pas : il DÉSIGNE. La liste l'aide à lire une
+   * raison sociale que le relevé a pu abîmer — « REAM OPTI » pour « DREAM
+   * OPTIC » — sans jamais se substituer à ce qui est imprimé : ce qu'il rend
+   * reste un token du plan.
+   *
+   * Ce qu'elle NE fait PAS encore : rendre le tiers reconnu. Le contrat de
+   * sortie n'a pas de champ pour cela, et en ajouter un touche la persistance,
+   * le lettrage et la balance auxiliaire. C'est une fonctionnalité à part, pas
+   * un effet de bord d'une invite.
+   */
+  tiers?: ReadonlyArray<{ code: string; raisonSociale: string; nature: string }>;
 }): Promise<VisionRead> {
   const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
   if (!cleDeepSeek)
@@ -390,6 +404,14 @@ export async function runVisionRead(params: {
   const ratesText = params.taxCodes.map((r) => `${r.code} — ${r.label} (${r.rate})`).join("\n");
   const chargesText =
     (params.chargeCodes ?? []).map((c) => `${c.code} — ${c.label}`).join("\n") || "(aucun)";
+  // Plafonné : une liste de tiers peut être longue, et l'invite a une fin. On
+  // coupe explicitement plutôt que de laisser le modèle recevoir un texte
+  // tronqué au hasard.
+  const tiersText =
+    (params.tiers ?? [])
+      .slice(0, 300)
+      .map((x) => `${x.code} — ${x.raisonSociale} (${x.nature})`)
+      .join("\n") || "(aucun)";
   const pass2 = await withRetry("désignation", async () => {
     const res = await callDeepSeek({
       apiKey: cleDeepSeek,
@@ -398,7 +420,7 @@ export async function runVisionRead(params: {
         { role: "system", content: SYSTEM_SELECT },
         {
           role: "user",
-          content: `Codes de taux autorisés :\n${ratesText}\n\nCodes de droits hors TVA autorisés :\n${chargesText}\n\nPlan de tokens — une ligne par mot, colonnes séparées par une tabulation :\npage.ordinal\tx0,y0,x1,y1\ttexte\nLes coordonnées sont normalisées entre 0 et 1, l'origine en haut à gauche : deux mots de même y appartiennent à la même ligne imprimée, et x croît de gauche à droite.\n\n${planText}`,
+          content: `Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raison sociale que le relevé a pu abîmer — « REAM OPTI » pour « DREAM OPTIC ». Tu désignes toujours un token du plan, jamais une entrée de cette liste : elle aide à lire, elle ne remplace pas ce qui est imprimé.\n${tiersText}\n\nCodes de taux autorisés :\n${ratesText}\n\nCodes de droits hors TVA autorisés :\n${chargesText}\n\nPlan de tokens — une ligne par mot, colonnes séparées par une tabulation :\npage.ordinal\tx0,y0,x1,y1\ttexte\nLes coordonnées sont normalisées entre 0 et 1, l'origine en haut à gauche : deux mots de même y appartiennent à la même ligne imprimée, et x croît de gauche à droite.\n\n${planText}`,
         },
       ],
     });

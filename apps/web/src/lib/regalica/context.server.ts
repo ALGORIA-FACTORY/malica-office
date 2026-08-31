@@ -39,6 +39,16 @@ export interface RegalicaContext {
   }>;
   echeances: Array<{ label: string; dueDate: string; status: string }>;
   motifs: Array<{ code: string; severity: string; requiresNote: boolean }>;
+  /**
+   * Le paramétrage tel qu'il s'applique à ce dossier.
+   *
+   * C'est ce qui empêche Regalica de répondre sur le plan livré quand le cabinet
+   * a choisi autre chose. Sans ces trois listes, elle citerait un compte que
+   * personne n'emploie et contredirait le produit lui-même.
+   */
+  roles: Array<{ code: string; libelle: string; compte: string | null; origine: string }>;
+  sousComptes: Array<{ code: string; libelle: string; parent: string }>;
+  tiers: Array<{ code: string; raisonSociale: string; nature: string; compteCollectif: string }>;
   piece: {
     id: string;
     status: string;
@@ -72,6 +82,9 @@ interface ContexteBrut {
   }>;
   echeances: RegalicaContext["echeances"];
   motifs: RegalicaContext["motifs"];
+  roles: RegalicaContext["roles"];
+  sousComptes: RegalicaContext["sousComptes"];
+  tiers: RegalicaContext["tiers"];
   piece: RegalicaContext["piece"];
 }
 
@@ -120,6 +133,9 @@ export async function loadRegalicaContext(
     })),
     echeances: brut.echeances,
     motifs: brut.motifs,
+    roles: brut.roles,
+    sousComptes: brut.sousComptes,
+    tiers: brut.tiers,
     piece: brut.piece,
   };
 }

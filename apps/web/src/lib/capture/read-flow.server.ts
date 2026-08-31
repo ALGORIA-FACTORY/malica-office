@@ -36,6 +36,12 @@ interface ContexteLecture {
   packId: string;
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
+  tiers: Array<{
+    code: string;
+    raisonSociale: string;
+    nature: string;
+    identifiantFiscal: string | null;
+  }>;
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -69,6 +75,9 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Rea
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
     bytes,
     chargeCodes,
+    // Les tiers du dossier : l'œil doit reconnaître un fournisseur déjà
+    // enregistré au lieu de le relire comme un inconnu à chaque facture.
+    tiers: contexte.tiers,
     taxCodes: contexte.taxCodes.map((r) => ({
       code: r.code,
       label: r.label,

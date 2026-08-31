@@ -28,6 +28,7 @@ import {
   InkTable,
   InkTableRow,
   RegalicaNote,
+  SectionRepliable,
   SectionTitle,
   SignalLight,
 } from "@/components/regalica/office-ui";
@@ -275,20 +276,20 @@ function Personnalisation() {
 
   const surcharges = (roles.data ?? []).filter((r) => r.origine === "cabinet").length;
 
+  // Les deux sections sont longues : repliées, la page se lit d'un coup d'œil.
+  // Celle des rôles s'ouvre par défaut — c'est le geste courant.
+  const [voirRoles, setVoirRoles] = useState(true);
+
   return (
     <div className="space-y-10">
-      <section className="space-y-3">
-        <SectionTitle
-          action={
-            <span className="text-[12px] text-muted-foreground">
-              {t("plan.summary")
-                .replace("{surcharges}", String(surcharges))
-                .replace("{total}", String(roles.data?.length ?? 0))}
-            </span>
-          }
-        >
-          {t("plan.roles.title")}
-        </SectionTitle>
+      <SectionRepliable
+        titre={t("plan.roles.title")}
+        ouvert={voirRoles}
+        onBascule={() => setVoirRoles((v) => !v)}
+        resume={t("plan.summary")
+          .replace("{surcharges}", String(surcharges))
+          .replace("{total}", String(roles.data?.length ?? 0))}
+      >
         <p className="text-[12px] text-muted-foreground">{t("plan.roles.lede")}</p>
 
         <div className="flex flex-wrap gap-1">
@@ -408,7 +409,7 @@ function Personnalisation() {
             ))}
           </InkTable>
         )}
-      </section>
+      </SectionRepliable>
 
       <PlanEtSousComptes />
     </div>
@@ -500,17 +501,17 @@ function PlanEtSousComptes() {
 
   const miens = (plan.data ?? []).filter((c) => c.origine === "cabinet").length;
 
+  // Repliée par défaut : six cent vingt-six comptes n'ont pas à s'ouvrir sur
+  // une page dont ce n'est pas le premier sujet.
+  const [voirPlan, setVoirPlan] = useState(false);
+
   return (
-    <section className="space-y-3">
-      <SectionTitle
-        action={
-          <span className="text-[12px] text-muted-foreground">
-            {t("plan.sous.count").replace("{n}", String(miens))}
-          </span>
-        }
-      >
-        {t("plan.sous.title")}
-      </SectionTitle>
+    <SectionRepliable
+      titre={t("plan.sous.title")}
+      ouvert={voirPlan}
+      onBascule={() => setVoirPlan((v) => !v)}
+      resume={t("plan.sous.count").replace("{n}", String(miens))}
+    >
       <p className="text-[12px] text-muted-foreground">{t("plan.sous.lede")}</p>
 
       <div className="flex flex-wrap items-center gap-1">
@@ -639,7 +640,7 @@ function PlanEtSousComptes() {
           ))}
         </InkTable>
       )}
-    </section>
+    </SectionRepliable>
   );
 }
 

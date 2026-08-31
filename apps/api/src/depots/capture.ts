@@ -198,11 +198,20 @@ export const capture = {
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
 
-    const [{ rows: taux }, { rows: charges }] = await Promise.all([
+    const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
         packId,
       ]),
       db.query(`select code, label from ref_fiscal_charges_v where pack_version_id = $1`, [packId]),
+      // Les tiers déjà connus du dossier. Sans eux, l'œil relit « DREAM OPTIC »
+      // comme un inconnu à chaque facture, alors qu'il porte un code auxiliaire
+      // et un compte. Les rapprocher reste le travail du filtre : on donne la
+      // liste au modèle, il ne l'invente pas.
+      db.query(
+        `select code, raison_sociale, nature, identifiant_fiscal
+           from tiers_v where tenant_id = $1 and actif order by nature, code`,
+        [piece["tenant_id"] as string],
+      ),
     ]);
 
     return {
@@ -227,6 +236,12 @@ export const capture = {
       chargeCodes: (charges as Record<string, unknown>[]).map((c) => ({
         code: c["code"] as string,
         label: (c["label"] as string) ?? (c["code"] as string),
+      })),
+      tiers: (tiers as Record<string, unknown>[]).map((x) => ({
+        code: x["code"] as string,
+        raisonSociale: x["raison_sociale"] as string,
+        nature: x["nature"] as string,
+        identifiantFiscal: (x["identifiant_fiscal"] as string | null) ?? null,
       })),
     };
   },
@@ -306,7 +321,10 @@ export const capture = {
       { rows: motifs },
     ] = await Promise.all([
       db.query(
-        `select version, effective_from from ref_packs_v
+        // `id` est indispensable : la résolution des rôles joint dessus. Sans lui,
+        // les 160 rôles remontaient « aucun compte » et l'''IA aurait répondu
+        // qu'''aucune imputation n'''existe.
+        `select id, version, effective_from from ref_packs_v
             where jurisdiction = $1 and effective_from <= current_date
             order by effective_from desc limit 1`,
         [(org["jurisdiction"] as string) ?? "TN"],
@@ -371,7 +389,47 @@ export const capture = {
       }
     }
 
+    // ------------------------------------------- ce que le cabinet a arrêté
+    //
+    // Sans cela, Regalica répondrait sur le plan livré et contredirait le
+    // paramétrage — elle citerait 4371 quand le cabinet a choisi autre chose.
+    //
+    // La résolution est celle du moteur, à trois niveaux : le dossier d'abord,
+    // le cabinet qui le mandate ensuite, le pack en dernier. Le cabinet se
+    // trouve par l'engagement, puisque c'est lui qui porte les règles maison.
     const pack = (packs as Record<string, unknown>[])[0];
+
+    const { rows: roles } = await db.query(
+      `select r.code, r.libelle,
+              coalesce(d.account_code, c.account_code, p.account_code) as compte,
+              case when d.account_code is not null then 'dossier'
+                   when c.account_code is not null then 'cabinet'
+                   when p.account_code is not null then 'pack'
+                   else 'aucun' end as origine
+         from ref.account_roles r
+         left join ref.role_bindings p
+           on p.role_code = r.code and p.pack_version_id = $2
+         left join parametrage_role_bindings_v d
+           on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
+         left join parametrage_role_bindings_v c
+           on c.role_code = r.code and c.portee = 'cabinet'
+          and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)
+        order by r.code`,
+      [tenantId, (pack?.["id"] as string | undefined) ?? null],
+    );
+
+    const [{ rows: sousComptes }, { rows: auxiliaires }] = await Promise.all([
+      db.query(
+        `select account_code, label, parent_code from plan_comptable_v
+          where tenant_id = $1 order by account_code`,
+        [tenantId],
+      ),
+      db.query(
+        `select code, raison_sociale, nature, compte_collectif
+           from tiers_v where tenant_id = $1 and actif order by nature, code`,
+        [tenantId],
+      ),
+    ]);
     return {
       organisation: {
         name: org["name"] as string,
@@ -412,6 +470,27 @@ export const capture = {
         code: m["code"] as string,
         severity: m["severity"] as string,
         requiresNote: Boolean(m["requires_note"]),
+      })),
+      // Le paramétrage tel qu'il s'applique à CE dossier. Les 160 rôles, pas
+      // seulement ceux qui diffèrent : Regalica doit pouvoir répondre « sur quel
+      // compte » à n'importe quelle question, pas seulement sur les cas que le
+      // cabinet a retouchés.
+      roles: (roles as Record<string, unknown>[]).map((r) => ({
+        code: r["code"] as string,
+        libelle: r["libelle"] as string,
+        compte: (r["compte"] as string | null) ?? null,
+        origine: r["origine"] as string,
+      })),
+      sousComptes: (sousComptes as Record<string, unknown>[]).map((c) => ({
+        code: c["account_code"] as string,
+        libelle: c["label"] as string,
+        parent: c["parent_code"] as string,
+      })),
+      tiers: (auxiliaires as Record<string, unknown>[]).map((x) => ({
+        code: x["code"] as string,
+        raisonSociale: x["raison_sociale"] as string,
+        nature: x["nature"] as string,
+        compteCollectif: x["compte_collectif"] as string,
       })),
       piece,
     };
