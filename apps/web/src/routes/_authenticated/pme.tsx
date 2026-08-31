@@ -176,6 +176,7 @@ function PmeLayout() {
               choisirDossier: selectOrg,
               aUnCabinet,
               capture: (kind) => capture.mutate(kind),
+              ouvrirScanner: () => setScanning(true),
               capturing: capture.isPending,
               captureError,
             }}

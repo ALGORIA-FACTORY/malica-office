@@ -22,6 +22,13 @@ export interface PmeContextValue {
   aUnCabinet: boolean;
   /** Geste cœur : un tap, moins de dix secondes. Piloté par le shell. */
   capture: (kind: CaptureKind) => void;
+  /**
+   * Rouvrir l'appareil photo depuis n'importe quel écran.
+   *
+   * Le numériseur vit dans la coque ; sans ce geste, « corriger » depuis une
+   * pièce obligerait à revenir à l'accueil pour retrouver l'obturateur.
+   */
+  ouvrirScanner: () => void;
   capturing: boolean;
   captureError: string | null;
 }

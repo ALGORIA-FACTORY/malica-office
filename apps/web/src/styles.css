@@ -66,6 +66,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-signal-info: var(--signal-info);
   --color-marigold: var(--marigold);
   --color-marigold-on-ink: var(--marigold-on-ink);
   --color-text-2: var(--text-2);
@@ -100,6 +101,8 @@
   --signal-warn: oklch(0.62 0.13 75);
   --signal-stop: oklch(0.47 0.16 25);
   --signal-soft: oklch(0.955 0.018 60);
+  /* Le bleu des renvois à la source (#2968A5). Il ne juge rien : il relie. */
+  --signal-info: oklch(0.5 0.11 250);
 
   /* La voix de Regalica. Sur papier : #C8901F. */
   --marigold: oklch(0.66 0.12 78);
@@ -150,6 +153,7 @@
   --signal-warn: oklch(0.76 0.13 75);
   --signal-stop: oklch(0.62 0.17 25);
   --signal-soft: oklch(0.27 0.02 60);
+  --signal-info: oklch(0.72 0.09 250);
 
   /* Les deux marigolds s'échangent : sur fond d'encre c'est le clair qui porte. */
   --marigold: oklch(0.8 0.11 82);

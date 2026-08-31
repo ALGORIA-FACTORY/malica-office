@@ -25,7 +25,10 @@ export function montant(valeur: string, locale: string): string {
   const [entiere = "0", decimale] = sansSigne.split(".");
 
   const separateurs = new Intl.NumberFormat(locale).formatToParts(12345.6);
-  const millier = separateurs.find((p) => p.type === "group")?.value ?? " ";
+  const brut = separateurs.find((p) => p.type === "group")?.value ?? "\u00a0";
+  // U+202F, l'espace fine insécable du français, s'efface dans une police
+  // proportionnelle. U+00A0 dit la même chose et se voit partout.
+  const millier = brut === "\u202f" ? "\u00a0" : brut;
   const virgule = separateurs.find((p) => p.type === "decimal")?.value ?? ",";
 
   // On groupe à la main : `Intl` formaterait un `Number`, donc arrondirait.

@@ -4,8 +4,8 @@ import { deMois, montant, montantSigne } from "../lisible";
 
 describe("un montant, dans la langue du lecteur", () => {
   it("groupe les milliers et pose la virgule française", () => {
-    expect(montant("1240.500", "fr")).toBe("1\u202f240,500");
-    expect(montant("6420.000", "fr")).toBe("6\u202f420,000");
+    expect(montant("1240.500", "fr")).toBe("1\u00a0240,500");
+    expect(montant("6420.000", "fr")).toBe("6\u00a0420,000");
   });
 
   it("garde les décimales que le Socle a décidées", () => {
@@ -18,7 +18,7 @@ describe("un montant, dans la langue du lecteur", () => {
   it("ne perd pas un chiffre sur un grand nombre", () => {
     // Passer par Number() arrondirait au-delà de quinze chiffres significatifs.
     expect(montant("123456789012345678.123", "fr")).toBe(
-      "123\u202f456\u202f789\u202f012\u202f345\u202f678,123",
+      "123\u00a0456\u00a0789\u00a0012\u00a0345\u00a0678,123",
     );
   });
 

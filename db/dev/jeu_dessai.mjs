@@ -256,6 +256,9 @@ async function selonLePlan(cabinetId, lignes) {
  * 1 − y/842.
  */
 async function lecture(pieceId, packId, titre, lignes, extrait, aCiter) {
+  const dossier = await rpc("capture", "dossier", [pieceId]);
+  if (dossier.extraction) return;
+
   const boite = (i) => {
     const yPdf = i === 0 ? 780 : 740 - (i - 1) * 18;
     const hauteur = i === 0 ? 16 : 12;
@@ -301,7 +304,7 @@ async function lecture(pieceId, packId, titre, lignes, extrait, aCiter) {
 }
 
 /** Un extrait conforme au contrat, à partir des trois montants de la pièce. */
-function extrait(kind, emetteur, date, reference, ht, tva, timbre) {
+function extrait(kind, emetteur, date, reference, ht, tva, timbre, articles) {
   const ttc = (Number(ht) + Number(tva) + Number(timbre ?? 0)).toFixed(3);
   return {
     contract: "extract.v1",
@@ -318,7 +321,7 @@ function extrait(kind, emetteur, date, reference, ht, tva, timbre) {
         ttc: (Number(ht) + Number(tva)).toFixed(3),
       },
     ],
-    articles: [],
+    articles: articles ?? [],
     other_charges: timbre
       ? [{ code: "DROIT_TIMBRE", label: "Droit de timbre", amount: timbre }]
       : [],
@@ -462,8 +465,31 @@ async function main() {
       "1200.000",
       "228.000",
       "1.000",
+      [
+        {
+          designation: "Verres organiques traites 1.5",
+          quantity: "40",
+          unit_price_ht: "22.500",
+          unit_price_ttc: "26.775",
+          total_ht: "900.000",
+          tax_code: "TVA19",
+        },
+        {
+          designation: "Traitement antireflet",
+          quantity: "40",
+          unit_price_ht: "7.500",
+          unit_price_ttc: "8.925",
+          total_ht: "300.000",
+          tax_code: "TVA19",
+        },
+      ],
     ),
-    { issuer: "VERRES DE TUNISIE", document_date: "FACTURE No", total: "TOTAL TTC" },
+    {
+      issuer: "VERRES DE TUNISIE",
+      document_date: "FACTURE No",
+      "totals.vat": "TVA 19%",
+      "totals.ttc": "TOTAL TTC",
+    },
   );
   await lecture(
     p2,
@@ -478,24 +504,83 @@ async function main() {
       "2500.000",
       "475.000",
       "1.000",
+      [
+        {
+          designation: "Montures acetate",
+          quantity: "25",
+          unit_price_ht: "64.000",
+          unit_price_ttc: "76.160",
+          total_ht: "1600.000",
+          tax_code: "TVA19",
+        },
+        {
+          designation: "Verres unifocaux",
+          quantity: "30",
+          unit_price_ht: "30.000",
+          unit_price_ttc: "35.700",
+          total_ht: "900.000",
+          tax_code: "TVA19",
+        },
+      ],
     ),
-    { issuer: "PHARMACIE CENTRALE", document_date: "FACTURE No", total: "TOTAL TTC" },
+    {
+      issuer: "PHARMACIE CENTRALE",
+      document_date: "FACTURE No",
+      "totals.vat": "TVA 19%",
+      "totals.ttc": "TOTAL TTC",
+    },
   );
   await lecture(
     p3,
     pack.id,
     LIGNES.p3.titre,
     LIGNES.p3.lignes,
-    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4471", "860.000", "163.400", null),
-    { issuer: "GROSSISTE DU SUD", document_date: "FACTURE No", total: "TOTAL TTC" },
+    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4471", "860.000", "163.400", null, [
+      {
+        designation: "Marchandises diverses",
+        quantity: "1",
+        unit_price_ht: "860.000",
+        unit_price_ttc: "1023.400",
+        total_ht: "860.000",
+        tax_code: "TVA19",
+      },
+    ]),
+    {
+      issuer: "GROSSISTE DU SUD",
+      document_date: "FACTURE No",
+      "totals.vat": "TVA 19%",
+      "totals.ttc": "TOTAL TTC",
+    },
   );
   await lecture(
     p4,
     pack.id,
     LIGNES.p4.titre,
     LIGNES.p4.lignes,
-    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4488", "340.000", "64.600", null),
-    { issuer: "GROSSISTE DU SUD", document_date: "FACTURE No", total: "TOTAL TTC" },
+    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4488", "340.000", "64.600", null, [
+      {
+        designation: "Ramettes A4 80g",
+        quantity: "300",
+        unit_price_ht: "0.900",
+        unit_price_ttc: "1.071",
+        total_ht: "270.000",
+        tax_code: "TVA19",
+      },
+      {
+        designation: "Cartouches encre noire",
+        quantity: "5",
+        unit_price_ht: "14.000",
+        unit_price_ttc: "16.660",
+        total_ht: "70.000",
+        tax_code: "TVA19",
+      },
+    ]),
+    {
+      issuer: "GROSSISTE DU SUD",
+      document_date: "FACTURE No",
+      "totals.vat": "TVA 19%",
+      "totals.ttc": "TOTAL TTC",
+    },
   );
   console.log(`  lectures         4, citées`);
 
