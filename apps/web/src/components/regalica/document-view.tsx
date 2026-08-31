@@ -89,6 +89,8 @@ export function DocumentView({ contenu, highlight, label }: Props) {
   const marqueRef = useRef<HTMLSpanElement | null>(null);
   const docRef = useRef<PDFDocumentProxy | null>(null);
   const tacheRef = useRef<RenderTask | null>(null);
+  /** La largeur du cadre au dernier rendu réussi — l'observateur s'y compare. */
+  const largeurRenduRef = useRef(0);
 
   const [etat, setEtat] = useState<"chargement" | "pdf" | "image" | "erreur">("chargement");
   const [raison, setRaison] = useState<string | null>(null);
@@ -157,14 +159,26 @@ export function DocumentView({ contenu, highlight, label }: Props) {
   }, [contenu, essai]);
 
   // ----------------------------------------------------------- rendre la page
+  //
+  // On peint À CÔTÉ, puis on recopie.
+  //
+  // La première version peignait directement dans le canevas visible. Or
+  // fixer `canvas.width` EFFACE le canevas : à chaque rendu la page
+  // disparaissait avant de revenir. Et comme un rendu annulé ne repeint
+  // jamais, il suffisait d'une annulation — l'apparition d'une barre de
+  // défilement changeait la largeur du cadre, l'observateur relançait, et le
+  // rendu en cours mourait — pour laisser une page blanche définitive.
+  //
+  // Un tampon hors écran coûte une copie. La page à l'écran, elle, n'est
+  // jamais effacée avant d'avoir son remplacement.
   const rendre = useCallback(async () => {
     const doc = docRef.current;
     const canvas = canvasRef.current;
     const cadre = cadreRef.current;
     if (!doc || !canvas || !cadre) return;
 
-    // Un rendu déjà en cours sur le même canvas fait échouer les deux : pdf.js
-    // le dit explicitement. On annule avant de recommencer.
+    // Un rendu déjà en cours sur le même tampon fait échouer les deux :
+    // pdf.js le dit explicitement.
     tacheRef.current?.cancel();
 
     const pdfPage = await doc.getPage(Math.min(Math.max(page, 1), doc.numPages));
@@ -172,8 +186,10 @@ export function DocumentView({ contenu, highlight, label }: Props) {
 
     // L'ajustement se calcule sur la largeur RÉELLE du cadre, pas sur une
     // constante : les 1400 px d'avant étaient flous sur un écran 4K et
-    // gaspillés sur un téléphone.
-    const dispo = cadre.clientWidth || 800;
+    // gaspillés sur un téléphone. On retire la place d'une barre de
+    // défilement, faute de quoi le rendu la fait apparaître, ce qui rétrécit
+    // le cadre, ce qui relance le rendu.
+    const dispo = Math.max(120, (cadre.clientWidth || 800) - 2);
     const facteur =
       ajustement === "largeur"
         ? dispo / nature.width
@@ -184,19 +200,27 @@ export function DocumentView({ contenu, highlight, label }: Props) {
     const vue = pdfPage.getViewport({ scale: facteur, rotation });
     // Le rapport de pixels rend le texte net là où l'écran l'est vraiment.
     const densite = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(vue.width * densite);
-    canvas.height = Math.round(vue.height * densite);
-    canvas.style.width = `${Math.round(vue.width)}px`;
-    canvas.style.height = `${Math.round(vue.height)}px`;
+    const largeur = Math.round(vue.width * densite);
+    const hauteur = Math.round(vue.height * densite);
 
-    const contexte = canvas.getContext("2d");
+    const tampon = document.createElement("canvas");
+    tampon.width = largeur;
+    tampon.height = hauteur;
+    const contexte = tampon.getContext("2d");
     if (!contexte) return;
     contexte.setTransform(densite, 0, 0, densite, 0, 0);
 
-    const tache = pdfPage.render({ canvas, canvasContext: contexte, viewport: vue });
+    const tache = pdfPage.render({ canvas: tampon, canvasContext: contexte, viewport: vue });
     tacheRef.current = tache;
     try {
       await tache.promise;
+      // Le canevas visible ne change qu'ici, une fois la page prête.
+      canvas.width = largeur;
+      canvas.height = hauteur;
+      canvas.style.width = `${Math.round(vue.width)}px`;
+      canvas.style.height = `${Math.round(vue.height)}px`;
+      canvas.getContext("2d")?.drawImage(tampon, 0, 0);
+      largeurRenduRef.current = cadre.clientWidth;
       setRendus((n) => n + 1);
       if (ajustement) setEchelle(facteur);
     } catch (e) {
@@ -219,11 +243,12 @@ export function DocumentView({ contenu, highlight, label }: Props) {
     if (etat !== "pdf" || !ajustement) return;
     const cadre = cadreRef.current;
     if (!cadre || typeof ResizeObserver === "undefined") return;
-    let dernier = cadre.clientWidth;
     const observateur = new ResizeObserver(() => {
-      // Un pixel de différence ne justifie pas un nouveau rendu.
-      if (Math.abs(cadre.clientWidth - dernier) < 8) return;
-      dernier = cadre.clientWidth;
+      // Le seuil dépasse la largeur d'une barre de défilement : sans cela,
+      // son apparition relance un rendu qui la fait disparaître, et ainsi de
+      // suite. On se compare au dernier rendu RÉUSSI, pas à une largeur notée
+      // par l'observateur, qui dériverait à chaque annulation.
+      if (Math.abs(cadre.clientWidth - largeurRenduRef.current) < 24) return;
       void rendre();
     });
     observateur.observe(cadre);
