@@ -9,6 +9,17 @@ export interface PmeContextValue {
   currency: string;
   packId: string | null;
   orgName: string;
+  /**
+   * Les dossiers de cet utilisateur, et de quoi en changer.
+   *
+   * Ils descendent du shell parce que l'accueil porte désormais le bandeau :
+   * il doit pouvoir proposer le changement de dossier sans redemander la liste
+   * à l'API, que le shell a déjà.
+   */
+  dossiers: ReadonlyArray<{ id: string; name: string }>;
+  choisirDossier: (id: string) => void;
+  /** Vrai si ce compte suit aussi un cabinet — sinon la bascule n'a nulle part où aller. */
+  aUnCabinet: boolean;
   /** Geste cœur : un tap, moins de dix secondes. Piloté par le shell. */
   capture: (kind: CaptureKind) => void;
   capturing: boolean;

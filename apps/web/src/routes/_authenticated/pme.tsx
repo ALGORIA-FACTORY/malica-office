@@ -120,33 +120,35 @@ function PmeLayout() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-20 text-foreground">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-end gap-2 px-4 py-2">
-          {pmeOrgs.length > 1 ? (
-            <select
-              aria-label={t("pme.org.switch")}
-              value={org?.id ?? ""}
-              onChange={(e) => selectOrg(e.target.value)}
-              className="me-auto min-w-0 max-w-[104px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {pmeOrgs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <LanguageSwitcher />
-          {aUnCabinet ? (
-            <Link
-              to="/office"
-              className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
-            >
-              {t("portal.switch")}
-            </Link>
-          ) : null}
-        </div>
-      </header>
+      {path === "/pme" ? null : (
+        <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+          <div className="flex items-center justify-end gap-2 px-4 py-2">
+            {pmeOrgs.length > 1 ? (
+              <select
+                aria-label={t("pme.org.switch")}
+                value={org?.id ?? ""}
+                onChange={(e) => selectOrg(e.target.value)}
+                className="me-auto min-w-0 max-w-[104px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {pmeOrgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <LanguageSwitcher />
+            {aUnCabinet ? (
+              <Link
+                to="/office"
+                className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
+              >
+                {t("portal.switch")}
+              </Link>
+            ) : null}
+          </div>
+        </header>
+      )}
 
       <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
         {orgsQuery.isPending ? (
@@ -170,6 +172,9 @@ function PmeLayout() {
               currency: org.currency,
               packId: packQuery.data?.id ?? null,
               orgName: org.name,
+              dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
+              choisirDossier: selectOrg,
+              aUnCabinet,
               capture: (kind) => capture.mutate(kind),
               capturing: capture.isPending,
               captureError,

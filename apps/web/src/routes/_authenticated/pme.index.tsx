@@ -116,16 +116,50 @@ function PmeHome() {
           className="pointer-events-none absolute -right-[84px] -top-[58px] h-[238px] w-[238px] opacity-[0.025]"
         />
 
+        {/*
+         * Une seule ligne en haut de l'écran, et le sigle la commande.
+         *
+         * Le sélecteur de dossier prend la place de « je veille » quand il y
+         * a plusieurs dossiers : les deux ne tiennent pas côte à côte sous
+         * 375 px, et une PME — qui n'en a qu'un — ne voit jamais le premier.
+         */}
         <div className="relative flex items-center gap-[9px]">
           <MarqueRg aria-hidden className="h-[19px] w-[19px] flex-none" />
           <span className="rg-blink h-[5px] w-[5px] flex-none bg-marigold" />
-          <span className="text-[11px] text-muted-foreground">{t("pme.home.veille")}</span>
-          <Link
-            to="/pme/notifications"
-            className="ms-auto border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
-          >
-            {locale.toUpperCase()} · ⚙
-          </Link>
+          {pme.dossiers.length > 1 ? (
+            <select
+              aria-label={t("pme.org.switch")}
+              value={pme.tenantId}
+              onChange={(e) => pme.choisirDossier(e.target.value)}
+              className="min-w-0 max-w-[110px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {pme.dossiers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="truncate text-[11px] text-muted-foreground">
+              {t("pme.home.veille")}
+            </span>
+          )}
+          <span className="ms-auto flex items-center gap-1.5">
+            {pme.aUnCabinet ? (
+              <Link
+                to="/office"
+                className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide text-text-2 hover:bg-accent"
+              >
+                {t("portal.switch")}
+              </Link>
+            ) : null}
+            <Link
+              to="/pme/notifications"
+              className="whitespace-nowrap border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
+            >
+              {locale.toUpperCase()} · ⚙
+            </Link>
+          </span>
         </div>
 
         <div className="relative mt-4 flex items-start gap-[14px]">
@@ -264,7 +298,7 @@ function PmeHome() {
          * les alertes restent atteignables par l'engrenage du bandeau, les
          * échéances n'ont plus de porte sur cet écran.
          */}
-        <div className="mt-auto grid grid-cols-2 gap-3 pb-4 pt-4">
+        <div className="my-auto grid grid-cols-2 gap-3 py-4">
           <Carte
             to="/pme/charges"
             label={t("pme.home.card.charges")}
