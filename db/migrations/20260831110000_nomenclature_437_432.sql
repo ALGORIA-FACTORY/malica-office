@@ -1,19 +1,20 @@
 -- Le droit de timbre et la retenue à la source quittent la série de la TVA.
 --
--- NON APPLIQUÉE — EN ATTENTE DE LA VALIDATION D'UN EXPERT-COMPTABLE.
+-- Le défaut livré par Regalica (R10). L'expert l'arrête au paramétrage.
 --
--- Volontairement hors de `db/migrations/` : un `charger.ps1 -Recreate` ne doit
--- pas l'emporter. Le jour où les numéros sont confirmés, ce fichier est déplacé
--- dans `db/migrations/` sous un horodatage — c'est un déplacement, rien d'autre
--- n'est à changer.
+-- La doctrine a été précisée : Regalica livre une nomenclature de DÉPART, pour
+-- qu'un cabinet puisse commencer le jour de son inscription. L'expert-comptable
+-- intervient ensuite, au paramétrage, et c'est lui qui arrête ce qui fait foi
+-- pour ses dossiers.
 --
--- Ce qu'elle fera ce jour-là n'est pas anodin : elle SUPPRIME deux lignes de
--- ref.accounts et COMPTABILISE des écritures de reclassement. Une écriture
--- comptabilisée ne se retire pas — c'est R7, et le déclencheur le refuserait.
--- D'où l'exigence de validation : ce n'est pas une précaution de forme.
+-- 4321 et 4371 sont donc des défauts, pas des vérités : les premiers libres de
+-- leur série. Deux cabinets tunisiens peuvent loger le même droit de timbre à
+-- deux endroits, et les deux ont raison chez eux.
 --
--- Elle remplace `proposition_compte_4369.sql`, dont la conclusion était fausse :
--- 4369 porte un libellé juste dans une série fausse.
+-- Ce qui reste vrai quoi qu'il arrive, et qui justifie cette migration : le
+-- timbre ne peut PAS rester sur 4367, qui est le compte de TVA collectée. Ce
+-- n'est pas une question de préférence de cabinet — c'est un solde qui mélange
+-- deux natures et rend toute déclaration de TVA fausse.
 --
 -- ====================================================== CE QUI EST TRANCHÉ
 --
@@ -162,7 +163,11 @@ begin
 
   for t in
     select e.tenant_id, e.devise, sum(l.credit::numeric) as montant,
-           min(e.piece_id) as piece_unique, count(distinct e.piece_id) as pieces
+           -- PostgreSQL n'a pas de min() sur uuid : on prend le premier du
+           -- tableau agrégé, ce qui suffit puisqu'on ne s'en sert que lorsqu'il
+           -- n'y en a qu'un.
+           (array_agg(distinct e.piece_id))[1] as piece_unique,
+           count(distinct e.piece_id) as pieces
       from socle.ecriture_lignes l
       join socle.ecritures e on e.id = l.ecriture_id
      where l.account_code = '4367' and l.libelle ilike '%timbre%'

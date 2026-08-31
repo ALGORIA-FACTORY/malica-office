@@ -17,11 +17,26 @@ import { fermerLePool, horsRlsAuthentificationSeule } from "./db.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
+/**
+ * Lit le catalogue et le référentiel sous le rôle `authenticated`.
+ *
+ * Le rôle de connexion est `noinherit` : il n'hérite RIEN d'authenticated tant
+ * qu'il ne l'endosse pas. Sans ce `set local role`, une lecture de `ref.*`
+ * rend un 42501 — et un test qui échoue sur un droit refusé RESSEMBLE à un test
+ * qui a trouvé le défaut qu'il cherchait. C'est exactement l'erreur que j'ai
+ * faite en écrivant la première version : j ai annoncé qu il détectait le
+ * compte 4367 sans lire son message d échec.
+ *
+ * Aucun claim n'est posé : les tables de référence ont une politique
+ * `using (true)`, elles ne dépendent d aucune identité. Les vues du catalogue,
+ * elles, sont lisibles par tous.
+ */
 async function interroger<T extends Record<string, unknown>>(
   sql: string,
   args: unknown[] = [],
 ): Promise<T[]> {
   return horsRlsAuthentificationSeule(async (db) => {
+    await db.query("set local role authenticated");
     const { rows } = await db.query<T>(sql, args);
     return rows;
   });

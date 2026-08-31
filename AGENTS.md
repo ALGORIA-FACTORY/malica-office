@@ -41,6 +41,10 @@ renseignée lève une erreur explicite. Elle ne lit pas « tunisien » par
 défaut — un référentiel silencieusement faux produit un résultat plausible,
 et c'est la pire forme d'erreur.
 
+À ne pas confondre avec R10 : un défaut LIVRÉ, visible et surchargeable, n'est
+pas un repli implicite. Ce que R4 interdit, c'est la valeur qu'on ne voit pas
+et qu'on ne peut pas changer.
+
 *Vérifié par* un test qui refuse tout littéral réglementaire dans le code de
 production.
 
@@ -80,3 +84,34 @@ stub, aucun placeholder — un dossier vide en attente d'un futur travail est
 un placeholder.
 
 *Vérifié par* `knip` en CI.
+
+## R10 — Regalica propose un défaut, l'expert arrête le paramétrage
+
+Le produit livre une nomenclature, des imputations et des seuils **par défaut**.
+Ce sont des valeurs de départ raisonnables, pas des vérités : elles permettent à
+un cabinet de commencer le jour de son inscription, sans attendre personne.
+
+L'expert-comptable intervient **ensuite**, au paramétrage, et c'est lui qui
+arrête ce qui fait foi pour ses dossiers. Un plan comptable n'est pas une
+constante universelle — deux cabinets tunisiens peuvent loger le même droit de
+timbre à deux endroits, et les deux ont raison chez eux.
+
+Trois conséquences, et la troisième est la plus contraignante :
+
+1. **Un défaut n'est pas un blocage.** Livrer une imputation que l'expert
+   changera n'est pas une faute ; ne rien livrer et attendre sa validation
+   l'est, parce que le produit devient inutilisable entre-temps.
+
+2. **Un défaut se dit.** Toute valeur réglementaire livrée par Regalica est
+   marquée comme telle et reste distinguable de ce que l'expert a arrêté. On
+   doit pouvoir répondre à « qui a décidé ce compte » sans lire un historique.
+
+3. **Un défaut se change sans migration.** Si l'expert doit attendre un
+   déploiement pour corriger une imputation, ce n'est pas un paramétrage : c'est
+   une constante avec un délai. Le paramétrage vit dans une couche par
+   organisation, au-dessus du pack, et l'application résout dans cet ordre :
+   ce que le cabinet a arrêté, puis le défaut du pack.
+
+R4 n'est pas affaibli : la constante reste interdite **dans le code**. Elle est
+seulement admise dans le référentiel livré, où elle est datée, versionnée et
+surchargeable — c'est-à-dire là où elle cesse d'être une constante.
