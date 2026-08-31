@@ -56,6 +56,7 @@ db/
   migrations/ le schéma : la source de vérité, rejouée telle quelle
   local/      la couche d'authentification et de rôles, rejouable
   corpus/     le chargement du corpus juridique, qui s'alimente à part
+  dev/        le jeu d'essai : un cabinet, deux dossiers, de quoi voir
 docs/       maquettes et marque
 ```
 

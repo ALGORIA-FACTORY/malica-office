@@ -102,7 +102,7 @@ stable
 -- lue par chacune des 195 politiques, et un chemin ouvert y serait le pire
 -- endroit possible.
 set search_path = ''
-as $
+as $$
   select nullif(
     coalesce(
       current_setting('request.jwt.claim.sub', true),
@@ -116,7 +116,7 @@ create or replace function auth.role() returns text
 language sql
 stable
 set search_path = ''
-as $
+as $$
   select coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), 'anon')
 $$;
 

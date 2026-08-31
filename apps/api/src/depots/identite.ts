@@ -51,6 +51,30 @@ export const identite = {
     });
   },
 
+  /**
+   * Un cabinet prend un dossier en charge.
+   *
+   * Le geste manquait : les mandats existaient en base, avec leurs politiques,
+   * et aucun chemin applicatif ne permettait d'''en créer un. On mandatait donc à
+   * la main, ce qu'''aucun cabinet ne fera.
+   *
+   * La politique décide qui a le droit : le dirigeant de la PME ou l'''expert du
+   * cabinet. Ici on insère, la base tranche.
+   */
+  async creerMandat(
+    db: Requete,
+    input: { pmeOrgId: string; cabinetOrgId: string; status?: string },
+  ): Promise<string> {
+    const { rows } = await db.query<{ id: string }>(
+      `insert into engagements_v (pme_org_id, cabinet_org_id, status, created_by)
+       values ($1, $2, $3, auth.uid())
+       on conflict (pme_org_id, cabinet_org_id) do update set status = excluded.status
+       returning id`,
+      [input.pmeOrgId, input.cabinetOrgId, input.status ?? "actif"],
+    );
+    return rows[0]!.id;
+  },
+
   async createOrganization(
     db: Requete,
     input: {

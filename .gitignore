@@ -43,3 +43,6 @@ desktop.ini
 
 # Les pièces déposées en local : des documents de clients, jamais dans git.
 .stockage/
+
+# Sauvegardes de la base locale : des dumps, reconstructibles, jamais dans git.
+db/sauvegardes/
