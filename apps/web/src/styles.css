@@ -221,6 +221,32 @@
   }
 }
 
+/*
+ * Le souffle de l'attente. Une barre de progression mentirait — la lecture
+ * n'a pas d'étapes connues d'avance. Celle-ci ne prétend rien mesurer.
+ */
+@keyframes rg-breathe {
+  0%,
+  100% {
+    transform: scaleX(0.18);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* La coche qui se trace : la seule célébration que le produit s'autorise. */
+@keyframes rg-draw {
+  from {
+    stroke-dashoffset: 34;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes rg-scan {
   0% {
     top: 0;
@@ -254,7 +280,9 @@
   .rg-wave,
   .rg-bell,
   .rg-rise,
-  .rg-scan {
+  .rg-scan,
+  .rg-breathe,
+  .rg-draw {
     animation: none !important;
   }
 }
@@ -280,6 +308,12 @@
  */
 .rg-scan {
   animation: rg-scan 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.rg-breathe {
+  animation: rg-breathe 1.5s ease-in-out infinite;
+}
+.rg-draw {
+  animation: rg-draw 0.5s 0.1s ease both;
 }
 
 /*
