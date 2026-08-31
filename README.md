@@ -55,6 +55,7 @@ apps/
 db/
   migrations/ le schéma : la source de vérité, rejouée telle quelle
   local/      la couche d'authentification et de rôles, rejouable
+  corpus/     le chargement du corpus juridique, qui s'alimente à part
 docs/       maquettes et marque
 ```
 
