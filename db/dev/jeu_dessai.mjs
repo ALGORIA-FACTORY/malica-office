@@ -55,20 +55,69 @@ async function rpc(depot, methode, args = []) {
   return corps.resultat;
 }
 
-/** Un PDF minuscule mais valide : la visionneuse reconnaît « %PDF- ». */
-function pdf(titre) {
-  const contenu = `%PDF-1.4
-1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
-2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
-3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
-4 0 obj<</Length 90>>stream
-BT /F1 18 Tf 60 760 Td (${titre}) Tj ET
-endstream
-endobj
-5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
-trailer<</Root 1 0 R>>
-%%EOF`;
-  return new TextEncoder().encode(contenu);
+/**
+ * Un PDF réellement valide.
+ *
+ * La première version n'avait ni table `xref` ni `startxref` : pdf.js la
+ * refusait, et la visionneuse affichait « Document illisible ». Un PDF n'est
+ * pas un texte qui commence par %PDF- — c'est un fichier indexé, et l'index
+ * porte l'offset EN OCTETS de chaque objet.
+ *
+ * D'où la construction par morceaux : on encode au fur et à mesure et on note
+ * la position de chaque objet. Écrire le fichier comme une chaîne puis compter
+ * les caractères donnerait des offsets faux dès le premier accent.
+ */
+function pdf(titre, lignes) {
+  const enc = new TextEncoder();
+  const morceaux = [];
+  let position = 0;
+  const offsets = [0];
+
+  const ajouter = (texte) => {
+    const octets = enc.encode(texte);
+    morceaux.push(octets);
+    position += octets.length;
+  };
+  const objet = (n, corps) => {
+    offsets[n] = position;
+    ajouter(`${n} 0 obj\n${corps}\nendobj\n`);
+  };
+
+  // Le texte de la page. Helvetica n'a pas d'accents en encodage standard :
+  // on reste en ASCII, ce qui suffit pour un jeu d'essai.
+  const flux =
+    "BT /F1 14 Tf 60 780 Td (" +
+    titre.replace(/[()\\]/g, "") +
+    ") Tj ET\n" +
+    lignes
+      .map((l, i) => `BT /F1 10 Tf 60 ${740 - i * 18} Td (${l.replace(/[()\\]/g, "")}) Tj ET`)
+      .join("\n");
+
+  ajouter("%PDF-1.4\n");
+  objet(1, "<< /Type /Catalog /Pages 2 0 R >>");
+  objet(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+  objet(
+    3,
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
+      "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+  );
+  objet(4, `<< /Length ${enc.encode(flux).length} >>\nstream\n${flux}\nendstream`);
+  objet(5, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+
+  const debutXref = position;
+  const entree = (o) => String(o).padStart(10, "0") + " 00000 n \n";
+  ajouter("xref\n0 6\n0000000000 65535 f \n");
+  for (let n = 1; n <= 5; n += 1) ajouter(entree(offsets[n]));
+  ajouter(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${debutXref}\n%%EOF\n`);
+
+  const total = morceaux.reduce((n, m) => n + m.length, 0);
+  const fichier = new Uint8Array(total);
+  let curseur = 0;
+  for (const m of morceaux) {
+    fichier.set(m, curseur);
+    curseur += m.length;
+  }
+  return fichier;
 }
 
 async function ouvrirSession() {
@@ -127,7 +176,7 @@ async function tiers(dossier, nature, code, raisonSociale, compteCollectif, matr
   ]);
 }
 
-async function piece(dossier, marque, titre) {
+async function piece(dossier, marque, titre, lignes) {
   const enregistree = await rpc("capture", "enregistrer", [
     {
       tenantId: dossier,
@@ -141,7 +190,7 @@ async function piece(dossier, marque, titre) {
   const depot = await appelerBrut(`/pieces/${enregistree.id}/contenu`, {
     method: "POST",
     headers: { "Content-Type": "application/pdf" },
-    body: pdf(titre),
+    body: pdf(titre, lignes),
   });
   if (!depot.ok) throw new Error(`dépôt de la pièce ${marque} : ${depot.status}`);
   return enregistree.id;
@@ -192,9 +241,32 @@ async function main() {
   await tiers(atlas, "client", "SUPER01", "SUPERETTE EL MENZAH", "411", "5678901/E/R/000");
   console.log(`  tiers            5`);
 
-  const p1 = await piece(optic, "optic-achat-1", "Facture VERRES DE TUNISIE");
-  const p2 = await piece(optic, "optic-vente-1", "Facture PHARMACIE CENTRALE");
-  const p3 = await piece(atlas, "atlas-achat-1", "Facture GROSSISTE DU SUD");
+  const p1 = await piece(optic, "optic-achat-1", "FACTURE No 2026-114", [
+    "VERRES DE TUNISIE - MF 3456789/C/P/000",
+    "Client : DREAM OPTIC",
+    "",
+    "Verres organiques traites          1 200,000 TND HT",
+    "TVA 19%                              228,000 TND",
+    "Droit de timbre                        1,000 TND",
+    "TOTAL TTC                          1 429,000 TND",
+  ]);
+  const p2 = await piece(optic, "optic-vente-1", "FACTURE No V-2026-058", [
+    "DREAM OPTIC - MF 1111111/A/M/000",
+    "Client : PHARMACIE CENTRALE",
+    "",
+    "Montures et verres                 2 500,000 TND HT",
+    "TVA 19%                              475,000 TND",
+    "Droit de timbre                        1,000 TND",
+    "TOTAL TTC                          2 976,000 TND",
+  ]);
+  const p3 = await piece(atlas, "atlas-achat-1", "FACTURE No 4471", [
+    "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+    "Client : ATLAS DISTRIBUTION",
+    "",
+    "Marchandises diverses                860,000 TND HT",
+    "TVA 19%                              163,400 TND",
+    "TOTAL TTC                          1 023,400 TND",
+  ]);
   console.log(`  pièces           3, avec leurs octets`);
 
   // Deux lignes équilibrées : la RPC refuse tout déséquilibre, et c'est bien.

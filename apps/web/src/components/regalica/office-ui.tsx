@@ -6,7 +6,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
-import regalicaAvatar from "@/assets/regalica-avatar.jpg.asset.json";
+import regalica from "@/assets/regalica.jpeg";
 import { cn } from "@/lib/utils";
 
 export type Tone = "ok" | "warn" | "stop" | "neutral";
@@ -185,6 +185,18 @@ export function Timeline({
 }
 
 /** Le visage de Regalica — image en niveaux de gris, coins nets, bordure seule. */
+/**
+ * Le visage de Regalica.
+ *
+ * L'''image vit dans le dépôt, importée par Vite : elle est empreintée, servie
+ * avec le reste du bundle, et ne dépend d'''aucun hébergeur.
+ *
+ * Ce n'''était pas le cas avant : un fichier JSON pointait vers le CDN du
+ * fournisseur précédent, et le jour où nous sommes partis il a rendu 404 : le
+ * panneau affichait le texte de remplacement. Le garde-fou de sortie ne pouvait
+ * pas le voir — le nom du fournisseur n'''apparaissait nulle part dans le fichier,
+ * seulement dans un chemin d'''URL opaque.
+ */
 export function RegalicaAvatar({
   size = 36,
   alt,
@@ -196,7 +208,7 @@ export function RegalicaAvatar({
 }) {
   return (
     <img
-      src={regalicaAvatar.url}
+      src={regalica}
       alt={alt}
       width={size}
       height={size}
