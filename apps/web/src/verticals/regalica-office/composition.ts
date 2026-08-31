@@ -28,6 +28,7 @@ import type {
   BanqueRepository,
   CollabRepository,
   ChargesRepository,
+  ParametrageRepository,
 } from "./ports/repositories";
 
 /**
@@ -56,6 +57,7 @@ export interface OfficeRuntime {
   banque: BanqueRepository;
   collab: CollabRepository;
   charges: ChargesRepository;
+  parametrage: ParametrageRepository;
 }
 
 let runtime: OfficeRuntime | null = null;
@@ -75,6 +77,9 @@ export function office(): OfficeRuntime {
           banque: createDevBanqueRepository(),
           collab: createDevCollabRepository(),
           charges: createDevChargesRepository(),
+          // La démonstration ne simule pas le paramétrage : elle passe par
+          // l'API comme la production. Un faux plan comptable ne dirait rien.
+          parametrage: creerDepotHttp<ParametrageRepository>("parametrage"),
         }
       : {
           auth: creerAuthHttp(),
@@ -88,6 +93,7 @@ export function office(): OfficeRuntime {
           banque: creerDepotHttp<BanqueRepository>("banque"),
           collab: creerDepotHttp<CollabRepository>("collab"),
           charges: creerDepotHttp<ChargesRepository>("charges"),
+          parametrage: creerDepotHttp<ParametrageRepository>("parametrage"),
         };
   }
   return runtime;

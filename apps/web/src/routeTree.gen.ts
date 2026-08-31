@@ -21,6 +21,7 @@ import { Route as AuthenticatedCabinetAffectationRouteImport } from './routes/_a
 import { Route as AuthenticatedCabinetClientsRouteImport } from './routes/_authenticated/cabinet.clients'
 import { Route as AuthenticatedCabinetEcheancesRouteImport } from './routes/_authenticated/cabinet.echeances'
 import { Route as AuthenticatedCabinetImmobilisationsRouteImport } from './routes/_authenticated/cabinet.immobilisations'
+import { Route as AuthenticatedCabinetPlanRouteImport } from './routes/_authenticated/cabinet.plan'
 import { Route as AuthenticatedCabinetPropositionsRouteImport } from './routes/_authenticated/cabinet.propositions'
 import { Route as AuthenticatedCabinetPvRouteImport } from './routes/_authenticated/cabinet.pv'
 import { Route as AuthenticatedCabinetRapprochementRouteImport } from './routes/_authenticated/cabinet.rapprochement'
@@ -100,6 +101,12 @@ const AuthenticatedCabinetImmobilisationsRoute =
   AuthenticatedCabinetImmobilisationsRouteImport.update({
     id: '/immobilisations',
     path: '/immobilisations',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetPlanRoute =
+  AuthenticatedCabinetPlanRouteImport.update({
+    id: '/plan',
+    path: '/plan',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetPropositionsRoute =
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
@@ -231,6 +239,7 @@ export interface FileRoutesByTo {
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/_authenticated/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/_authenticated/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/_authenticated/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/_authenticated/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/_authenticated/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/_authenticated/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/cabinet/clients'
     | '/cabinet/echeances'
     | '/cabinet/immobilisations'
+    | '/cabinet/plan'
     | '/cabinet/propositions'
     | '/cabinet/pv'
     | '/cabinet/rapprochement'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/cabinet/clients'
     | '/cabinet/echeances'
     | '/cabinet/immobilisations'
+    | '/cabinet/plan'
     | '/cabinet/propositions'
     | '/cabinet/pv'
     | '/cabinet/rapprochement'
@@ -350,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/clients'
     | '/_authenticated/cabinet/echeances'
     | '/_authenticated/cabinet/immobilisations'
+    | '/_authenticated/cabinet/plan'
     | '/_authenticated/cabinet/propositions'
     | '/_authenticated/cabinet/pv'
     | '/_authenticated/cabinet/rapprochement'
@@ -459,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/immobilisations'
       fullPath: '/cabinet/immobilisations'
       preLoaderRoute: typeof AuthenticatedCabinetImmobilisationsRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/plan': {
+      id: '/_authenticated/cabinet/plan'
+      path: '/plan'
+      fullPath: '/cabinet/plan'
+      preLoaderRoute: typeof AuthenticatedCabinetPlanRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/propositions': {
@@ -581,6 +601,7 @@ interface AuthenticatedCabinetRouteChildren {
   AuthenticatedCabinetClientsRoute: typeof AuthenticatedCabinetClientsRoute
   AuthenticatedCabinetEcheancesRoute: typeof AuthenticatedCabinetEcheancesRoute
   AuthenticatedCabinetImmobilisationsRoute: typeof AuthenticatedCabinetImmobilisationsRoute
+  AuthenticatedCabinetPlanRoute: typeof AuthenticatedCabinetPlanRoute
   AuthenticatedCabinetPropositionsRoute: typeof AuthenticatedCabinetPropositionsRoute
   AuthenticatedCabinetPvRoute: typeof AuthenticatedCabinetPvRoute
   AuthenticatedCabinetRapprochementRoute: typeof AuthenticatedCabinetRapprochementRoute
@@ -598,6 +619,7 @@ const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
   AuthenticatedCabinetEcheancesRoute: AuthenticatedCabinetEcheancesRoute,
   AuthenticatedCabinetImmobilisationsRoute:
     AuthenticatedCabinetImmobilisationsRoute,
+  AuthenticatedCabinetPlanRoute: AuthenticatedCabinetPlanRoute,
   AuthenticatedCabinetPropositionsRoute: AuthenticatedCabinetPropositionsRoute,
   AuthenticatedCabinetPvRoute: AuthenticatedCabinetPvRoute,
   AuthenticatedCabinetRapprochementRoute:

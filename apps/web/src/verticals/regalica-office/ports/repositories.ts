@@ -80,6 +80,70 @@ export interface ReferentialRepository {
   socleParams(packId: string): Promise<SocleParams>;
 }
 
+// ---------------------------------------------------------------- paramétrage
+/**
+ * Un rôle comptable, avec le compte que le paramétrage lui donne aujourd'hui.
+ *
+ * `origine` est la colonne qui porte le sens : elle dit QUI répond de ce
+ * choix — le pack livré, le cabinet, ou ce dossier précis. Sans elle, l'écran
+ * afficherait un numéro sans dire d'où il vient.
+ */
+export interface RoleComptable {
+  code: string;
+  libelle: string;
+  famille: string;
+  classesAdmises: number[];
+  note: string | null;
+  compte: string | null;
+  compteLibelle: string | null;
+  origine: "pack" | "cabinet" | "dossier" | "aucun";
+  motif: string | null;
+  decideLe: string | null;
+  defautDuPack: string | null;
+  justificationDuPack: string | null;
+}
+
+/** Une ligne du plan comptable tel qu'un cabinet le voit. */
+export interface CompteDuPlan {
+  code: string;
+  libelle: string;
+  parent: string | null;
+  classe: string;
+  sensUsuel: string | null;
+  /** officiel = verbatim NC 01 ; extension = ouverte par Regalica ; cabinet = la vôtre. */
+  origine: "officiel" | "extension" | "cabinet";
+  officiel: boolean;
+  source: string | null;
+}
+
+export interface ParametrageRepository {
+  roles(tenantId: string, dossierId: string | null): Promise<RoleComptable[]>;
+  plan(tenantId: string, classes: number[] | null): Promise<CompteDuPlan[]>;
+  ouvrirCompte(input: {
+    tenantId: string;
+    code: string;
+    libelle: string;
+    parent: string;
+    sensUsuel?: string | null;
+    motif?: string | null;
+  }): Promise<string>;
+  fermerCompte(tenantId: string, code: string): Promise<void>;
+  definirLiaison(input: {
+    tenantId: string;
+    portee: "cabinet" | "dossier";
+    porteeId: string;
+    roleCode: string;
+    compte: string;
+    motif?: string | null;
+  }): Promise<void>;
+  rendreAuPack(input: {
+    tenantId: string;
+    portee: "cabinet" | "dossier";
+    porteeId: string;
+    roleCode: string;
+  }): Promise<void>;
+}
+
 // ---------------------------------------------------------------- référentiel
 export interface TaxRate {
   code: string;

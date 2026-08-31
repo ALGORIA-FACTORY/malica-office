@@ -99,6 +99,7 @@ function CabinetLayout() {
         { to: "/cabinet/affectation", label: t("cab.nav.affectation"), exact: false },
         { to: "/cabinet/statistiques", label: t("cab.nav.stats"), exact: false },
         { to: "/cabinet/pv", label: t("cab.nav.pv"), exact: false },
+        { to: "/cabinet/plan", label: t("cab.nav.plan"), exact: false },
         { to: "/cabinet/reglages", label: t("cab.nav.settings"), exact: false },
       ],
     },
