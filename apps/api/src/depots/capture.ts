@@ -113,6 +113,50 @@ export const capture = {
    * Le dossier d'une pièce : sa dernière extraction, ses citations, son plan de
    * tokens. Les octets ne sont pas ici — ils ont leur route.
    */
+  /**
+   * Les pièces d'un dossier, chacune avec sa dernière lecture.
+   *
+   * `left join lateral` plutôt qu'une seconde requête recollée en mémoire :
+   * la dernière extraction de chaque pièce se choisit là où sont les lignes.
+   * Les pièces jamais lues restent dans le résultat, avec des colonnes nulles
+   * — les cacher reviendrait à nier qu'elles ont été déposées.
+   */
+  async listAvecLecture(db: Requete, tenantId: string) {
+    const { rows } = await db.query(
+      `select p.id, p.status, p.created_at, x.payload
+         from pieces_v p
+         left join lateral (
+           select e.payload
+             from extractions_v e
+            where e.piece_id = p.id and e.contract = 'extract.v1'
+            order by e.created_at desc
+            limit 1
+         ) x on true
+        where p.tenant_id = $1
+        order by p.created_at desc`,
+      [tenantId],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => {
+      const lu = (r["payload"] ?? null) as {
+        issuer?: string;
+        document_date?: string;
+        document_kind?: string;
+        currency?: string;
+        totals?: { ttc?: string };
+      } | null;
+      return {
+        id: r["id"] as string,
+        status: r["status"] as string,
+        createdAt: r["created_at"] as string,
+        emetteur: lu?.issuer ?? null,
+        dateDocument: lu?.document_date ?? null,
+        kind: (lu?.document_kind as string | undefined) ?? null,
+        total: lu?.totals?.ttc ?? null,
+        devise: lu?.currency ?? null,
+      };
+    });
+  },
+
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at

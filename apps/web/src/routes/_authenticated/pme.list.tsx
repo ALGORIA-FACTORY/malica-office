@@ -5,6 +5,7 @@ import { useState } from "react";
 import { usePme } from "@/components/regalica/pme-context";
 import { Chip, Timeline, type StepState } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
+import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/regalica-office/composition";
 import type { PieceStatus } from "@/verticals/regalica-office/ports/repositories";
 
@@ -52,13 +53,13 @@ function stepState(status: PieceStatus, step: PieceStatus): StepState {
 }
 
 function PiecesList() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pme = usePme();
   const [filter, setFilter] = useState<PieceStatus | "all">("all");
 
   const pieces = useQuery({
-    queryKey: ["pieces", pme.tenantId],
-    queryFn: () => office().capture.list(pme.tenantId),
+    queryKey: ["pieces-lues", pme.tenantId],
+    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
   });
 
   const rows = (pieces.data ?? []).filter((p) => filter === "all" || p.status === filter);
@@ -98,9 +99,14 @@ function PiecesList() {
                     {t(`pme.status.${p.status}` as MessageKey)}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("pme.piece.source")} · {p.source.toUpperCase()}
-                </p>
+                <div className="mt-1 flex items-baseline justify-between gap-3">
+                  <span className="truncate text-[14px] font-medium">
+                    {p.emetteur ?? t("pme.list.nonLue")}
+                  </span>
+                  <span className="num flex-none text-[13px] font-medium">
+                    {p.total === null ? "—" : montant(p.total, locale)}
+                  </span>
+                </div>
                 <Timeline
                   steps={ORDER.map((s) => ({
                     key: s,

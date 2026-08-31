@@ -301,9 +301,38 @@ export interface NewPiece {
   idempotencyKey: string;
 }
 
+/**
+ * Une pièce telle que l'écran « Vos documents » doit la montrer.
+ *
+ * L'état seul ne suffisait pas : une liste qui dit « comptabilisée » sans dire
+ * DE QUI ni COMBIEN oblige à ouvrir chaque ligne pour reconnaître sa facture.
+ * Ce que Regalica a lu vient donc avec — et vaut `null` tant qu'elle n'a pas lu.
+ */
+export interface PieceLue {
+  id: string;
+  status: PieceStatus;
+  createdAt: string;
+  /** L'émetteur, tel que la lecture l'a relevé. */
+  emetteur: string | null;
+  /** La date portée par le DOCUMENT, qui décide de son mois. */
+  dateDocument: string | null;
+  kind: "facture_achat" | "facture_vente" | null;
+  /** Le total TTC, chaîne décimale du Socle. */
+  total: string | null;
+  devise: string | null;
+}
+
 export interface CaptureRepository {
   register(input: NewPiece): Promise<string>;
   list(tenantId: string): Promise<Piece[]>;
+  /**
+   * Les pièces d'un dossier, chacune avec sa dernière lecture.
+   *
+   * Une seule requête pour tout l'écran : demander la lecture pièce par pièce
+   * ferait autant d'allers-retours que de documents, et l'écran s'ouvre sur
+   * un mois qui peut en compter cinquante.
+   */
+  listAvecLecture(tenantId: string): Promise<PieceLue[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   read(pieceId: string): Promise<{ contract: string; citations: number; valid: boolean }>;
 }

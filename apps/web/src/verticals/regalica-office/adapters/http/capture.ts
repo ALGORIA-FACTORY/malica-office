@@ -27,6 +27,7 @@ import type {
   Piece,
   PieceDossier,
   PieceStatus,
+  PieceLue,
   Token,
 } from "../../ports/repositories";
 import { appeler, baseApi, ErreurApi } from "./rpc";
@@ -58,6 +59,11 @@ function versPiece(p: Record<string, unknown>): Piece {
 
 export function creerCaptureHttp(): CaptureRepository {
   return {
+    // L'API rend déjà la forme du port : rien à transposer ici.
+    async listAvecLecture(tenantId: string): Promise<PieceLue[]> {
+      return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
+    },
+
     async register(input: NewPiece): Promise<string> {
       const { id } = await rpc<{ id: string; chemin: string }>("capture", "enregistrer", [
         {
