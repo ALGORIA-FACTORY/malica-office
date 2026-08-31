@@ -123,7 +123,7 @@ export const capture = {
    */
   async listAvecLecture(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, x.payload
+      `select p.id, p.status, p.created_at, p.vis, x.payload
          from pieces_v p
          left join lateral (
            select e.payload
@@ -148,6 +148,7 @@ export const capture = {
         id: r["id"] as string,
         status: r["status"] as string,
         createdAt: r["created_at"] as string,
+        vis: r["vis"] as string,
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
         kind: (lu?.document_kind as string | undefined) ?? null,

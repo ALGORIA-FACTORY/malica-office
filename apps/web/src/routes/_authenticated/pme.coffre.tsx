@@ -3,29 +3,25 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePme } from "@/components/regalica/pme-context";
-import {
-  EmptyState,
-  RegalicaVoice,
-  SectionTitle,
-  SignalDot,
-} from "@/components/regalica/office-ui";
+import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useI18n } from "@/i18n";
+import { montant } from "@/lib/lisible";
+import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { Piece } from "@/verticals/regalica-office/ports/repositories";
+import type { PieceLue } from "@/verticals/regalica-office/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
     meta: [
-      { title: "Coffre — Regalica Office" },
+      { title: "Le Coffre — Regalica Office" },
       {
         name: "description",
-        content:
-          "Le coffre de la PME : ce qui reste personnel, ce qui est partagé avec le cabinet. La cloison est tenue par la base, pas par l'affichage.",
+        content: "Ce qui part chez votre comptable, et ce qui reste entre vous et Regalica.",
       },
-      { property: "og:title", content: "Coffre — Regalica Office" },
+      { property: "og:title", content: "Le Coffre — Regalica Office" },
       {
         property: "og:description",
-        content: "Personnel ou partagé : chaque bascule est journalisée.",
+        content: "Ce qui part chez votre comptable, et ce qui reste entre vous et Regalica.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,109 +30,245 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
   component: PmeCoffre,
 });
 
+/**
+ * Le Coffre et Mon espace — deux onglets, un mur entre eux.
+ *
+ * ============================================================ CE QUI EST VRAI
+ *
+ * Le prototype montre, côté comptable, des documents que le cabinet PRODUIT :
+ * déclaration déposée, quittance, états financiers, dépôt RNE. Rien de tout
+ * cela n'existe encore dans le produit — le cabinet ne dépose aucun document
+ * vers la PME.
+ *
+ * Ce que le mur sépare RÉELLEMENT, c'est la visibilité d'une pièce : partagée
+ * avec le cabinet, ou gardée pour soi. C'est le même mur, vu de l'autre côté,
+ * et il est déjà tenu par la RLS. L'écran dit donc ce qui est, sans inventer
+ * un dépôt qui n'a pas lieu.
+ *
+ * ============================================================== LE SEUL GESTE
+ *
+ * Transmettre. Il bascule `vis` de `personnel` à `partage`, par la fonction
+ * gouvernée du Socle qui le journalise. Dans l'autre sens aussi — une pièce
+ * partagée par erreur se reprend, et le journal garde les deux mouvements.
+ */
 function PmeCoffre() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"partage" | "personnel">("partage");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [onglet, setOnglet] = useState<"partage" | "personnel">("partage");
 
   const pieces = useQuery({
-    queryKey: ["pieces", pme.tenantId],
-    queryFn: () => office().capture.list(pme.tenantId),
+    queryKey: ["pieces-lues", pme.tenantId],
+    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
   });
 
-  const toggle = useMutation({
-    mutationFn: (piece: Piece) =>
-      office().collab.setPieceVis(piece.id, piece.vis === "partage" ? "personnel" : "partage"),
+  const cabinet = useQuery({
+    queryKey: ["mon-cabinet", pme.tenantId],
+    queryFn: () => office().identity.monCabinet(pme.tenantId),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const basculer = useMutation({
+    mutationFn: (p: PieceLue) =>
+      office().collab.setPieceVis(p.id, p.vis === "partage" ? "personnel" : "partage"),
     onSuccess: async () => {
-      setError(null);
+      setErreur(null);
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) => setErreur(e instanceof Error ? e.message : t("common.error")),
   });
 
-  const list = pieces.data ?? [];
-  const shared = list.filter((p) => p.vis === "partage");
-  const personal = list.filter((p) => p.vis === "personnel");
-  const visible = tab === "partage" ? shared : personal;
+  const toutes = pieces.data ?? [];
+  const partagees = toutes.filter((p) => p.vis === "partage");
+  const privees = toutes.filter((p) => p.vis === "personnel");
+  const visibles = onglet === "partage" ? partagees : privees;
 
-  const fmt = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", timeZone: "UTC" }).format(
-      new Date(iso),
-    );
+  const nomDuCabinet = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+
+  const jour = (p: PieceLue) => {
+    const iso = p.dateDocument ?? p.createdAt;
+    return new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "UTC",
+    }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
+  };
+
+  /**
+   * Une pièce ne se reprend que tant qu'elle n'est pas comptabilisée.
+   *
+   * Au-delà, le cabinet a bâti une écriture dessus : la retirer de son champ
+   * de vision laisserait un fait comptable sans sa preuve. La base l'interdit,
+   * et l'écran cesse de le proposer plutôt que de laisser essayer.
+   */
+  const reprenable = (p: PieceLue) =>
+    onglet === "personnel" || p.status === "capturee" || p.status === "lue";
+
+  const bouton = "flex-1 border-0 px-3 py-[11px] text-[11.5px] font-semibold";
 
   return (
-    <div className="space-y-6">
-      <RegalicaVoice
-        greeting={t("pme.coffre.title")}
-        sentence={t("pme.coffre.voice", { shared: shared.length, personal: personal.length })}
-      />
-
-      <div className="grid grid-cols-2 border border-border">
-        {(["partage", "personnel"] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={
-              "px-3 py-2 text-[11px] font-semibold uppercase tracking-wide " +
-              (tab === key ? "bg-foreground text-background" : "bg-card hover:bg-accent")
-            }
-          >
-            {t(`pme.coffre.tab.${key}`)} · {key === "partage" ? shared.length : personal.length}
-          </button>
-        ))}
+    <div className="rg-rise px-1 pt-2">
+      <div className="flex border border-line-strong">
+        <button
+          type="button"
+          onClick={() => setOnglet("personnel")}
+          className={cn(
+            bouton,
+            onglet === "personnel"
+              ? "bg-foreground text-background"
+              : "bg-transparent text-muted-foreground",
+          )}
+        >
+          {t("pme.coffre.tab.personnel")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOnglet("partage")}
+          className={cn(
+            bouton,
+            onglet === "partage"
+              ? "bg-foreground text-background"
+              : "bg-transparent text-muted-foreground",
+          )}
+        >
+          {t("pme.coffre.tab.partage")}
+        </button>
       </div>
 
-      {error ? (
-        <p className="border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12px]">
-          {error}
-        </p>
+      {onglet === "personnel" ? (
+        <div className="mt-[18px] flex gap-3">
+          <RegalicaAvatar size={32} alt="Regalica" rond />
+          <p className="text-[14px] leading-[1.5] text-text-2">
+            {t("pme.prive.confidente", { cabinet: nomDuCabinet })}
+          </p>
+        </div>
       ) : null}
 
-      <SectionTitle>{t(`pme.coffre.tab.${tab}`)}</SectionTitle>
+      <p className="mt-[18px] text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
+        {onglet === "partage" ? t("pme.coffre.titre") : t("pme.prive.titre")}
+      </p>
+      <p className="mt-[5px] text-[13.5px] text-text-2">
+        {onglet === "partage"
+          ? t("pme.coffre.sous", { cabinet: nomDuCabinet })
+          : t("pme.prive.sous")}
+      </p>
+
+      {/* La promesse, avec son icône. Elle n'est pas décorative : c'est la
+          seule chose que le dirigeant veut savoir avant de déposer. */}
+      <p className="mt-3 flex items-center gap-2 text-[11.5px] font-medium text-muted-foreground">
+        {onglet === "partage" ? (
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
+            <path d="M4 12.5l5 5L20 6.5" />
+          </svg>
+        ) : (
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
+            <rect x="5" y="11" width="14" height="9" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+        )}
+        {onglet === "partage" ? t("pme.coffre.promesse") : t("pme.prive.promesse")}
+      </p>
+
+      {erreur ? <p className="mt-3 text-xs text-signal-warn">{erreur}</p> : null}
 
       {pieces.isPending ? (
-        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : visible.length === 0 ? (
-        <EmptyState>{t("pme.coffre.empty")}</EmptyState>
+        <p className="mt-5 text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : visibles.length === 0 ? (
+        <p className="mt-4 border border-border bg-card p-4 text-[13.5px] leading-[1.55] text-text-2">
+          {onglet === "partage" ? t("pme.coffre.vide") : t("pme.prive.vide")}
+        </p>
       ) : (
-        <ul className="divide-y divide-border border border-border bg-card">
-          {visible.map((piece) => {
-            const locked = piece.status === "comptabilisee" || piece.status === "supervisee";
-            return (
-              <li key={piece.id} className="flex items-center gap-3 px-3 py-3">
-                <SignalDot tone={piece.status === "retournee" ? "stop" : "neutral"} />
-                <div className="min-w-0 flex-1">
-                  <Link
-                    to="/pme/piece/$pieceId"
-                    params={{ pieceId: piece.id }}
-                    className="block truncate text-[13px] font-medium underline-offset-4 hover:underline"
-                  >
-                    {t(`pme.status.${piece.status}`)} · {piece.source.toUpperCase()}
-                  </Link>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {fmt(piece.createdAt)}
-                  </p>
-                </div>
+        <div className="mt-2">
+          {visibles.map((p, i) => (
+            <div
+              key={p.id}
+              className={cn(
+                "py-3.5",
+                i === 0 ? "border-t border-foreground" : "border-t border-border",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <Link
+                  to="/pme/piece/$pieceId"
+                  params={{ pieceId: p.id }}
+                  className="min-w-0 flex-1"
+                >
+                  <span className="block truncate text-[14.5px] font-medium">
+                    {p.emetteur ?? t("pme.list.nonLue")}
+                  </span>
+                  <span className="mt-0.5 block text-[12.5px] text-text-2">
+                    {jour(p)} ·{" "}
+                    {p.total === null
+                      ? t(`pme.status.${p.status}` as never)
+                      : `${montant(p.total, locale)} ${p.devise ?? pme.currency}`}
+                  </span>
+                </Link>
+                <span className="num flex-none text-[11px] uppercase text-muted-foreground">
+                  {onglet === "partage" ? t("pme.coffre.badge") : t("pme.prive.badge")}
+                </span>
+              </div>
+
+              {/*
+               * Le geste, sur la pièce — mais seulement quand il est possible.
+               *
+               * La base refuse de reprendre une pièce COMPTABILISÉE : « une
+               * pièce comptabilisée reste partagée ». C'est juste — le cabinet
+               * a bâti une écriture dessus, la retirer laisserait un fait
+               * comptable sans sa preuve. On ne propose donc pas le bouton :
+               * on dit pourquoi il n'y en a pas.
+               */}
+              {reprenable(p) ? (
                 <button
                   type="button"
-                  disabled={locked && piece.vis === "partage"}
-                  onClick={() => toggle.mutate(piece)}
-                  className="shrink-0 border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent disabled:opacity-40"
+                  disabled={basculer.isPending}
+                  onClick={() => basculer.mutate(p)}
+                  className={cn(
+                    "mt-3 h-11 w-full text-[14px] font-semibold disabled:opacity-60",
+                    onglet === "personnel"
+                      ? "bg-foreground text-background"
+                      : "border border-line-strong",
+                  )}
                 >
-                  {piece.vis === "partage"
-                    ? t("pme.coffre.action.keep")
-                    : t("pme.coffre.action.share")}
+                  {onglet === "personnel"
+                    ? t("pme.prive.transmettre", { cabinet: nomDuCabinet })
+                    : t("pme.coffre.reprendre")}
                 </button>
-              </li>
-            );
-          })}
-        </ul>
+              ) : (
+                <p className="mt-2 text-[12px] leading-[1.5] text-muted-foreground">
+                  {t("pme.coffre.scellee")}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
-      <p className="text-[10px] italic text-muted-foreground">{t("pme.coffre.wall")}</p>
+      {onglet === "partage" ? (
+        <div className="mt-[18px] flex gap-3 pb-6">
+          <RegalicaAvatar size={32} alt="Regalica" rond />
+          <p className="text-[14px] leading-[1.5] text-text-2">{t("pme.coffre.note")}</p>
+        </div>
+      ) : (
+        <div className="pb-6" />
+      )}
     </div>
   );
 }

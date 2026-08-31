@@ -312,6 +312,8 @@ export interface PieceLue {
   id: string;
   status: PieceStatus;
   createdAt: string;
+  /** Partagé avec le cabinet, ou gardé pour soi. */
+  vis: "personnel" | "partage";
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
