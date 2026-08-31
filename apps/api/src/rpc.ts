@@ -23,6 +23,7 @@ import { collab } from "./depots/collab.ts";
 import { identite } from "./depots/identite.ts";
 import { immo } from "./depots/immo.ts";
 import { office } from "./depots/office.ts";
+import { parametrage } from "./depots/parametrage.ts";
 import { referentiel } from "./depots/referentiel.ts";
 import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
@@ -40,6 +41,7 @@ const DEPOTS = {
   identite,
   immo,
   office,
+  parametrage,
   referentiel,
   stocks,
   supervision,

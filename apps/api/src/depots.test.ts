@@ -98,6 +98,11 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
   function lectures(): Array<[string, string, unknown[]]> {
     return [
       ["capture", "lister", [pme]],
+
+      ["parametrage", "roles", [cabinet, null]],
+      ["parametrage", "roles", [cabinet, pme]],
+      ["parametrage", "plan", [cabinet, null]],
+      ["parametrage", "plan", [cabinet, [4]]],
       ["capture", "contexteAssistant", [pme, null]],
       ["capture", "contexteAssistant", [pme, NEANT]],
 
@@ -179,6 +184,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       "identite",
       "immo",
       "office",
+      "parametrage",
       "referentiel",
       "stocks",
       "supervision",
