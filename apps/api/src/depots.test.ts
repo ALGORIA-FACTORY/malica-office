@@ -103,6 +103,10 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       ["parametrage", "roles", [cabinet, pme]],
       ["parametrage", "plan", [cabinet, null]],
       ["parametrage", "plan", [cabinet, [4]]],
+
+      ["tiers", "lister", [pme, null]],
+      ["tiers", "lister", [pme, "client"]],
+      ["tiers", "comptesCollectifs", []],
       ["capture", "contexteAssistant", [pme, null]],
       ["capture", "contexteAssistant", [pme, NEANT]],
 
@@ -188,6 +192,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       "referentiel",
       "stocks",
       "supervision",
+      "tiers",
     ]) {
       assert.ok(couverts.has(depot), `aucune lecture vérifiée pour « ${depot} »`);
     }

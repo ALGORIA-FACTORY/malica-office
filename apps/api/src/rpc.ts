@@ -27,6 +27,7 @@ import { parametrage } from "./depots/parametrage.ts";
 import { referentiel } from "./depots/referentiel.ts";
 import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
+import { tiers } from "./depots/tiers.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -45,6 +46,7 @@ const DEPOTS = {
   referentiel,
   stocks,
   supervision,
+  tiers,
 } as const;
 
 export type NomDepot = keyof typeof DEPOTS;
