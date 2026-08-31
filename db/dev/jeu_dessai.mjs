@@ -296,7 +296,7 @@ async function lecture(pieceId, packId, titre, lignes, extrait, aCiter) {
       extract: extrait,
       citations,
       flags: [],
-      articles: [],
+      articles: extrait.articles ?? [],
       documentKind: extrait.document_kind,
       documentDate: extrait.document_date,
     },

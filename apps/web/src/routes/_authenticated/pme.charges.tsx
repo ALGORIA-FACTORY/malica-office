@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { usePme } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
+import { montant } from "@/lib/lisible";
+import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import { computeChargesByFamille } from "@/verticals/regalica-office/socle/engines/charges/familles";
 
@@ -141,140 +143,187 @@ function ChargesScreen() {
   const evolution = evolutionValue === null ? null : Number(evolutionValue);
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight">
-          {t("pme.charges.title")}
-        </h1>
-        <p className="text-[15px] text-muted-foreground">{t("pme.charges.subtitle")}</p>
-      </header>
+    <div className="rg-rise px-1 pt-2">
+      <p className="text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
+        {t("pme.charges.title")}
+      </p>
+      <p className="mt-[5px] text-[13.5px] text-text-2">
+        {period === periods[0] ? t("pme.charges.subtitle") : monthLabel(period)}
+      </p>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t("pme.charges.period")}>
+      {/*
+       * La tendance en un mot, et sa couleur suit le fait : une baisse est une
+       * bonne nouvelle, une hausse une question. Le prototype n'écrit pas
+       * « écart de −6 % » — il écrit « en baisse de 6 %, beau travail ».
+       */}
+      {evolution !== null ? (
+        <span
+          className={cn(
+            "mt-3 inline-flex items-center gap-2 border px-3 py-2 text-[13px] font-medium",
+            evolution < 0
+              ? "border-signal-ok text-signal-ok"
+              : "border-signal-warn text-signal-warn",
+          )}
+        >
+          <span aria-hidden className="h-[5px] w-[5px] bg-current" />
+          {evolution < 0
+            ? t("pme.charges.trend.down", { value: pct(evolutionValue!) })
+            : t("pme.charges.trend.up", { value: pct(evolutionValue!) })}
+        </span>
+      ) : null}
+
+      {/*
+       * Les six mois d'historique. Le prototype n'en montre qu'un ; les cacher
+       * retirerait la seule façon de voir qu'une hausse dure depuis trois mois.
+       */}
+      <div
+        className="mt-3 flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={t("pme.charges.period")}
+      >
         {periods.map((p) => (
           <button
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
             aria-pressed={p === period}
-            className={`min-h-[44px] border px-3 py-2 text-[11px] uppercase tracking-wide ${
+            className={cn(
+              "border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.06em]",
               p === period
                 ? "border-foreground bg-foreground text-background"
-                : "border-border bg-card"
-            }`}
+                : "border-border bg-transparent text-text-2",
+            )}
           >
             {monthLabel(p)}
           </button>
         ))}
       </div>
 
-      {evolution !== null ? (
-        <p className="flex items-center gap-2 bg-signal-soft px-3 py-3 text-[15px] text-signal-warn">
-          <span aria-hidden className="inline-block h-2 w-2 bg-signal-warn" />
-          {evolution < 0
-            ? t("pme.charges.trend.down", { value: pct(evolutionValue!) })
-            : t("pme.charges.trend.up", { value: pct(evolutionValue!) })}
-        </p>
-      ) : null}
-
       {result && result.familles.length > 0 ? (
-        <section aria-label={t("pme.charges.byFamille")}>
-          <ul>
+        <>
+          <div className="mt-[18px] flex flex-col gap-3">
             {result.familles.map((f) => {
               const open = openFamille === f.code;
               const detail = (articles.data ?? []).filter(
                 (a) => a.period === period && a.familleCode === f.code,
               );
               const width = maxTotal > 0 ? Math.round((Number(f.total) / maxTotal) * 100) : 0;
+              const suspecte = (result.anomalies ?? []).some((a) => a.familleCode === f.code);
               return (
-                <li key={f.code} className="border-b border-border/60 py-2">
+                <div key={f.code}>
                   <button
                     type="button"
                     onClick={() => setOpenFamille(open ? null : f.code)}
                     aria-expanded={open}
-                    className="flex min-h-[44px] w-full items-center gap-3 text-start"
+                    className="grid w-full grid-cols-[92px_1fr_auto] items-center gap-2.5 text-start text-[14px] font-medium"
                   >
-                    <span className="w-[34%] shrink-0 truncate text-[16px]">{f.label}</span>
-                    <span className="h-[10px] flex-1 bg-muted">
-                      <span className="block h-full bg-foreground" style={{ width: `${width}%` }} />
+                    <span className="truncate">{f.label}</span>
+                    <span className="relative h-[7px] bg-line-strong">
+                      {/*
+                       * Le poste qui a déclenché une question porte la couleur
+                       * de l'alerte : on voit LEQUEL sans avoir à lire.
+                       */}
+                      <i
+                        className={cn(
+                          "absolute inset-y-0 start-0",
+                          suspecte ? "bg-signal-warn" : "bg-foreground",
+                        )}
+                        style={{ width: `${width}%` }}
+                      />
                     </span>
-                    <span className="num shrink-0 text-[16px] tabular-nums">{f.total}</span>
+                    <span className="num text-[13px] font-medium">{montant(f.total, locale)}</span>
                   </button>
 
                   {open ? (
-                    <ul className="mt-2 divide-y divide-border border border-border">
+                    <div className="mt-2 border border-border">
                       {detail.map((a) => (
-                        <li key={`${a.pieceId}-${a.ordinal}`} className="px-3 py-2 text-[12px]">
+                        <div
+                          key={`${a.pieceId}-${a.ordinal}`}
+                          className="border-b border-border px-3 py-2 last:border-b-0"
+                        >
                           <div className="flex items-baseline justify-between gap-2">
                             <Link
                               to="/pme/piece/$pieceId"
                               params={{ pieceId: a.pieceId }}
-                              className="underline underline-offset-4"
+                              className="text-[13px] underline underline-offset-4"
                             >
                               {a.designation}
                             </Link>
-                            <span className="num">{a.citationTotalHt ? a.totalHt : "—"}</span>
+                            <span className="num text-[12.5px]">
+                              {a.citationTotalHt && a.totalHt ? montant(a.totalHt, locale) : "—"}
+                            </span>
                           </div>
                           <p className="num mt-1 text-[11px] text-muted-foreground">
-                            {t("pme.extract.qty")} {a.citationQuantity ? a.quantity : "—"} ·{" "}
-                            {t("pme.extract.pu_ht")} {a.citationUnitPriceHt ? a.unitPriceHt : "—"} ·{" "}
-                            {t("pme.extract.pu_ttc")}{" "}
-                            {a.citationUnitPriceTtc ? a.unitPriceTtc : "—"}
+                            {t("pme.detail.qte", {
+                              q: a.citationQuantity && a.quantity ? a.quantity : "—",
+                            })}
+                            {a.citationUnitPriceHt && a.unitPriceHt
+                              ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })
+                              : ""}
                           </p>
-                        </li>
+                        </div>
                       ))}
                       {detail.length === 0 ? (
-                        <li className="px-3 py-2 text-[12px] text-muted-foreground">
+                        <p className="px-3 py-2 text-[12px] text-muted-foreground">
                           {t("pme.charges.empty")}
-                        </li>
+                        </p>
                       ) : null}
-                    </ul>
+                    </div>
                   ) : null}
-                </li>
+                </div>
               );
             })}
-          </ul>
-          <p className="mt-3 flex items-baseline justify-between gap-3 text-[13px] text-muted-foreground">
-            <span className="uppercase tracking-[0.18em]">{t("pme.charges.total")}</span>
-            <span className="num text-[16px] text-foreground">
-              {result.total} {pme.currency}
+          </div>
+
+          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
+            <span className="text-[13.5px] font-semibold">{t("pme.charges.total")}</span>
+            <span className="num text-[15px] font-semibold">
+              {montant(result.total, locale)} {pme.currency}
             </span>
-          </p>
-        </section>
+          </div>
+        </>
       ) : (
-        <p className="border border-border bg-card px-4 py-4 text-sm text-muted-foreground">
+        <p className="mt-4 border border-border bg-card p-4 text-[13.5px] text-text-2">
           {t("pme.charges.empty")}
         </p>
       )}
 
+      {/*
+       * Elle interroge, elle ne tranche pas. Les deux réponses ont le même
+       * poids visuel : aucune n'est présentée comme la bonne, parce qu'aucune
+       * ne l'est — seul le dirigeant sait s'il a fait un achat exceptionnel.
+       */}
       {(result?.anomalies ?? []).map((a) => {
         const done = answered.has(`${a.period}|${a.familleCode}`);
         return (
-          <section
+          <div
             key={a.familleCode}
-            className="border border-border border-s-[3px] border-s-foreground bg-card px-4 py-4"
+            className="mt-[22px] border border-border border-s-[3px] border-s-foreground bg-card p-4"
           >
-            <div className="flex items-start gap-3">
-              <RegalicaAvatar size={44} alt="Regalica" />
-              <p className="min-w-0 flex-1 text-[16px] leading-relaxed">
+            <div className="flex gap-3">
+              <RegalicaAvatar size={32} alt="Regalica" rond />
+              <p className="min-w-0 flex-1 text-[15px] leading-[1.5]">
                 {t("pme.charges.question", {
                   famille: a.label,
                   value: pct(a.deviationRatio),
-                  baseline: `${a.baseline} ${pme.currency}`,
-                  observed: `${a.observed} ${pme.currency}`,
+                  baseline: montant(a.baseline, locale) + " " + pme.currency,
+                  observed: montant(a.observed, locale) + " " + pme.currency,
                 })}
               </p>
             </div>
             {done ? (
-              <p className="mt-3 text-xs text-muted-foreground">{t("pme.charges.answered")}</p>
+              <p className="mt-3.5 border-t border-border pt-3 text-[13px] font-medium text-signal-ok">
+                {t("pme.charges.answered")}
+              </p>
             ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-3.5 flex gap-2.5">
                 <button
                   type="button"
                   disabled={answer.isPending}
                   onClick={() =>
                     answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
                   }
-                  className="min-h-[52px] border border-border bg-card px-3 text-[15px] disabled:opacity-60"
+                  className="h-11 flex-1 border border-line-strong text-[14px] font-medium disabled:opacity-60"
                 >
                   {t("pme.charges.answer.exceptionnel")}
                 </button>
@@ -282,19 +331,21 @@ function ChargesScreen() {
                   type="button"
                   disabled={answer.isPending}
                   onClick={() => answer.mutate({ familleCode: a.familleCode, reply: "a_verifier" })}
-                  className="min-h-[52px] border border-border bg-card px-3 text-[15px] disabled:opacity-60"
+                  className="h-11 flex-1 border border-line-strong text-[14px] font-medium disabled:opacity-60"
                 >
                   {t("pme.charges.answer.verifier")}
                 </button>
               </div>
             )}
-          </section>
+          </div>
         );
       })}
 
-      {error ? <p className="text-xs text-signal-warn">{error}</p> : null}
+      {error ? <p className="mt-3 text-xs text-signal-warn">{error}</p> : null}
 
-      <p className="text-[10px] italic text-muted-foreground">{t("pme.charges.disclaimer")}</p>
+      <p className="mt-3.5 pb-6 text-[11.5px] leading-[1.5] text-muted-foreground">
+        {t("pme.charges.disclaimer")}
+      </p>
     </div>
   );
 }
