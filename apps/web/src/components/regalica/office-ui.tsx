@@ -219,21 +219,43 @@ export function RegalicaAvatar({
   );
 }
 
-/** La parole de Regalica — visage + salutation + phrase de cadrage. */
+/**
+ * La parole de Regalica — visage + salutation + phrase de cadrage.
+ *
+ * Si `onVisage` est fourni, son visage devient cliquable : c'est ainsi qu'on
+ * lui adresse la parole. Sans lui, l'image reste une image, et rien ne laisse
+ * croire à une porte qui n'existe pas.
+ */
 export function RegalicaVoice({
   greeting,
   sentence,
   amount,
   avatarAlt = "Regalica",
+  onVisage,
+  visageLibelle,
 }: {
   greeting: string;
   sentence: string;
   amount?: string | null;
   avatarAlt?: string;
+  onVisage?: () => void;
+  visageLibelle?: string;
 }) {
   return (
     <section className="flex items-start gap-3">
-      <RegalicaAvatar size={36} alt={avatarAlt} />
+      {onVisage ? (
+        <button
+          type="button"
+          onClick={onVisage}
+          title={visageLibelle}
+          aria-label={visageLibelle}
+          className="shrink-0 transition-opacity hover:opacity-80"
+        >
+          <RegalicaAvatar size={36} alt={avatarAlt} />
+        </button>
+      ) : (
+        <RegalicaAvatar size={36} alt={avatarAlt} />
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="text-[19px] font-medium leading-snug tracking-tight">{greeting}</p>
@@ -403,6 +425,41 @@ export function EmptyState({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * La poignée qui rappelle Regalica.
+ *
+ * C'est son visage, et rien d'autre : on clique sur la personne à qui l'on
+ * veut parler. Un bouton « assistant » posé à côté d'elle poserait deux fois
+ * la même question.
+ */
+export function RegalicaPoignee({
+  nom,
+  onOuvrir,
+  libelle,
+  className,
+}: {
+  nom: string;
+  onOuvrir: () => void;
+  libelle: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOuvrir}
+      title={libelle}
+      aria-label={libelle}
+      className={cn(
+        "z-30 flex items-center gap-2 border border-border bg-card p-1 shadow-sm transition-colors hover:bg-accent",
+        className,
+      )}
+    >
+      <RegalicaAvatar size={36} alt={nom} />
+      <span className="pe-2 text-[11px] font-semibold uppercase tracking-wide">{nom}</span>
+    </button>
+  );
+}
+
 /** Panneau latéral de Regalica — elle perçoit, rappelle, propose ; jamais un chiffre sans le Socle. */
 export function RegalicaPanel({
   title,
@@ -411,6 +468,8 @@ export function RegalicaPanel({
   footer,
   children,
   framed = true,
+  onFermer,
+  fermerLibelle,
 }: {
   title: string;
   status?: string;
@@ -419,12 +478,15 @@ export function RegalicaPanel({
   footer?: ReactNode;
   children: ReactNode;
   framed?: boolean;
+  /** Absent : le panneau ne se ferme pas. */
+  onFermer?: () => void;
+  fermerLibelle?: string;
 }) {
   return (
     <aside className={cn("flex h-full flex-col bg-card", framed && "border-s border-border")}>
       <div className="flex items-center gap-3 border-b border-border px-4 py-4">
         <RegalicaAvatar size={40} alt={title} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold tracking-tight">{title}</p>
           {status ? (
             <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -433,6 +495,17 @@ export function RegalicaPanel({
             </p>
           ) : null}
         </div>
+        {onFermer ? (
+          <button
+            type="button"
+            onClick={onFermer}
+            aria-label={fermerLibelle ?? "Fermer"}
+            title={fermerLibelle ?? "Fermer"}
+            className="shrink-0 border border-border px-2 py-0.5 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            ×
+          </button>
+        ) : null}
       </div>
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 text-[13px] leading-relaxed">
         {children}

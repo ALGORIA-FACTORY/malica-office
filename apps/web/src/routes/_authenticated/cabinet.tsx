@@ -5,7 +5,13 @@ import { useEffect } from "react";
 import { CabinetProvider } from "@/components/regalica/cabinet-context";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { PackBanner } from "@/components/regalica/PackBanner";
-import { EmptyState, RegalicaPanel, RegalicaNote } from "@/components/regalica/office-ui";
+import {
+  EmptyState,
+  RegalicaPanel,
+  RegalicaNote,
+  RegalicaPoignee,
+} from "@/components/regalica/office-ui";
+import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
 import { RegalicaChat } from "@/components/regalica/RegalicaChat";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -34,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/cabinet")({
 
 function CabinetLayout() {
   const { t } = useI18n();
+  const regalica = usePanneauRegalica();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -109,7 +116,14 @@ function CabinetLayout() {
     <CabinetProvider
       org={org}
       render={({ panel }) => (
-        <div className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[264px_minmax(0,1fr)_300px]">
+        <div
+          className={cn(
+            "min-h-screen bg-background text-foreground lg:grid",
+            regalica.ouvert
+              ? "lg:grid-cols-[264px_minmax(0,1fr)_300px]"
+              : "lg:grid-cols-[264px_minmax(0,1fr)]",
+          )}
+        >
           {/* Navigation responsive : rail complet desktop, barre compacte en mobile/tablette. */}
           <nav
             aria-label={t("cab.brand")}
@@ -186,27 +200,49 @@ function CabinetLayout() {
 
           <main className="min-w-0 px-4 py-6 sm:px-6 lg:h-screen lg:overflow-y-auto lg:px-10 lg:py-8">
             <Outlet />
-            <section className="mt-8 border border-border bg-card lg:hidden">
+            {regalica.ouvert ? (
+              <section className="mt-8 border border-border bg-card lg:hidden">
+                <RegalicaPanel
+                  title={t("cab.regalica.title")}
+                  status={t("cab.regalica.status")}
+                  footer={<RegalicaChat tenantId={org.id} />}
+                  framed={false}
+                  onFermer={regalica.fermer}
+                  fermerLibelle={t("regalica.panneau.fermer")}
+                >
+                  {panel ?? <RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>}
+                </RegalicaPanel>
+              </section>
+            ) : (
+              <RegalicaPoignee
+                nom={t("cab.regalica.title")}
+                libelle={t("regalica.panneau.ouvrir")}
+                onOuvrir={regalica.ouvrir}
+                className="mt-8 lg:hidden"
+              />
+            )}
+          </main>
+
+          {regalica.ouvert ? (
+            <div className="hidden lg:block lg:h-screen lg:overflow-y-auto">
               <RegalicaPanel
                 title={t("cab.regalica.title")}
                 status={t("cab.regalica.status")}
                 footer={<RegalicaChat tenantId={org.id} />}
-                framed={false}
+                onFermer={regalica.fermer}
+                fermerLibelle={t("regalica.panneau.fermer")}
               >
                 {panel ?? <RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>}
               </RegalicaPanel>
-            </section>
-          </main>
-
-          <div className="hidden lg:block lg:h-screen lg:overflow-y-auto">
-            <RegalicaPanel
-              title={t("cab.regalica.title")}
-              status={t("cab.regalica.status")}
-              footer={<RegalicaChat tenantId={org.id} />}
-            >
-              {panel ?? <RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>}
-            </RegalicaPanel>
-          </div>
+            </div>
+          ) : (
+            <RegalicaPoignee
+              nom={t("cab.regalica.title")}
+              libelle={t("regalica.panneau.ouvrir")}
+              onOuvrir={regalica.ouvrir}
+              className="fixed bottom-5 end-5 hidden lg:flex"
+            />
+          )}
         </div>
       )}
     />

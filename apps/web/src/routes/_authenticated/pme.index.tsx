@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
 import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaChat } from "@/components/regalica/RegalicaChat";
 import { BigNumber, InkCard, RegalicaVoice, StoneCard } from "@/components/regalica/office-ui";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/pme/")({
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const regalica = usePanneauRegalica();
   const period = currentPeriod();
 
   const pieces = useQuery({
@@ -79,7 +81,12 @@ function PmeHome() {
 
   return (
     <div className="space-y-6">
-      <RegalicaVoice greeting={greeting} sentence={sentence} />
+      <RegalicaVoice
+        greeting={greeting}
+        sentence={sentence}
+        onVisage={regalica.ouvert ? regalica.fermer : regalica.ouvrir}
+        visageLibelle={regalica.ouvert ? t("regalica.panneau.fermer") : t("regalica.panneau.ouvrir")}
+      />
 
       <BigNumber
         kicker={t("pme.home.tva.kicker", { month: monthLabel.toUpperCase() })}
@@ -135,12 +142,25 @@ function PmeHome() {
         {pme.capturing ? t("pme.capture.sending") : t("pme.home.import")}
       </button>
 
-      <section className="border border-border bg-card px-3 py-3">
-        <p className="pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {t("regalica.chat.her")}
-        </p>
-        <RegalicaChat tenantId={pme.tenantId} />
-      </section>
+      {regalica.ouvert ? (
+        <section className="border border-border bg-card px-3 py-3">
+          <div className="flex items-baseline justify-between gap-3 pb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {t("regalica.chat.her")}
+            </p>
+            <button
+              type="button"
+              onClick={regalica.fermer}
+              aria-label={t("regalica.panneau.fermer")}
+              title={t("regalica.panneau.fermer")}
+              className="border border-border px-2 py-0.5 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
+          <RegalicaChat tenantId={pme.tenantId} />
+        </section>
+      ) : null}
 
       <p className="pt-1 text-center text-[10px] italic text-muted-foreground">
         {t("pme.home.disclaimer")}
