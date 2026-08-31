@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
@@ -7,6 +6,8 @@ import { RegalicaChat } from "@/components/regalica/RegalicaChat";
 import { MarqueRg, RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useAccueil, type MoisDeTva } from "@/hooks/use-accueil";
 import { currentPeriod } from "@/hooks/use-tva";
+import { useQuery } from "@tanstack/react-query";
+
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
 import { deMois, montant, montantSigne } from "@/lib/lisible";
@@ -66,14 +67,14 @@ function PmeHome() {
   const periode = currentPeriod();
   const a = useAccueil(periode);
 
-  // Le bandeau « référentiel non ratifié » flottait au-dessus de tous les
-  // écrans. Un avertissement partout n'avertit nulle part : il descend ici,
-  // contre le chiffre qu'il qualifie, et disparaît dès que le pack est ratifié.
-  const pack = useQuery({
-    queryKey: ["ref-pack", pme.jurisdiction],
-    queryFn: () => office().referential.activePack(pme.jurisdiction),
+  // Qui attend, exactement. « Votre comptable » est une périphrase : le
+  // dirigeant connaît son cabinet par son nom, et c'est ce nom qui doit
+  // apparaître quand quelque chose lui est retourné.
+  const cabinet = useQuery({
+    queryKey: ["mon-cabinet", pme.tenantId],
+    queryFn: () => office().identity.monCabinet(pme.tenantId),
+    staleTime: 10 * 60 * 1000,
   });
-  const indicatif = pack.data ? !pack.data.ratified : false;
 
   const mois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
@@ -222,23 +223,10 @@ function PmeHome() {
 
         <Trajectoire serie={a.serie} />
 
-        {indicatif ? (
-          <p className="relative mt-3 border-s-2 border-marigold-on-ink ps-2.5 font-mono text-[10px] uppercase leading-[1.5] tracking-[0.08em] opacity-70">
-            {t("pme.home.indicatif", {
-              jurisdiction: pack.data!.jurisdiction,
-              version: pack.data!.version,
-            })}
-          </p>
-        ) : null}
-
         <p
           className={cn(
             "relative mt-3.5 text-[12px] font-medium",
-            a.ecart === null
-              ? "opacity-60"
-              : Number(a.ecart) >= 0
-                ? "text-signal-ok"
-                : "text-signal-stop",
+            a.ecart !== null && Number(a.ecart) < 0 ? "text-signal-stop" : "text-signal-ok",
           )}
         >
           {a.ecart === null
@@ -300,14 +288,30 @@ function PmeHome() {
           valeur={String(a.documents)}
         />
 
+        {/*
+         * La troisième ligne existe toujours, et elle change de sujet.
+         *
+         * Quand le cabinet a retourné quelque chose, elle le dit — et elle le
+         * dit à son nom. Sinon elle mène aux échéances, qui n'avaient plus
+         * aucune porte depuis que la barre basse est passée à trois.
+         */}
         {a.retournees > 0 ? (
           <Ligne
             to="/pme/list"
-            label={t("pme.home.attend", { count: a.retournees })}
+            label={
+              cabinet.data
+                ? t("pme.home.attend.cabinet", {
+                    cabinet: cabinet.data.name,
+                    count: a.retournees,
+                  })
+                : t("pme.home.attend", { count: a.retournees })
+            }
             valeur="›"
             accent
           />
-        ) : null}
+        ) : (
+          <Ligne to="/pme/echeances" label={t("pme.home.voirEcheances")} valeur="›" accent />
+        )}
 
         {/*
          * Deux cartes, et `mt-auto` les pousse au bas de l'écran : c'est ce

@@ -49,6 +49,13 @@ export interface NewOrganization {
 
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;
+  /**
+   * Le cabinet qui suit ce dossier, vu depuis la PME.
+   *
+   * `null` quand personne ne la mandate — et l'écran dit alors autre chose
+   * plutôt que d'inventer un interlocuteur.
+   */
+  monCabinet(pmeTenantId: string): Promise<{ id: string; name: string } | null>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
 }

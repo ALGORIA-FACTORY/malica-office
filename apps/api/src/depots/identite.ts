@@ -61,6 +61,27 @@ export const identite = {
    * La politique décide qui a le droit : le dirigeant de la PME ou l'''expert du
    * cabinet. Ici on insère, la base tranche.
    */
+  /**
+   * Le cabinet qui mandate cette PME.
+   *
+   * Aucun filtre de sécurité ici : `engagements_sel` ne rend la ligne qu'aux
+   * deux parties, et `organizations_sel` ne rend le cabinet qu'à qui lui est
+   * lié. La RLS décide, comme partout.
+   */
+  async monCabinet(db: Requete, pmeTenantId: string) {
+    const { rows } = await db.query(
+      `select o.id, o.name
+         from engagements_v e
+         join organizations_v o on o.id = e.cabinet_org_id
+        where e.pme_org_id = $1 and e.status = 'actif'
+        order by o.name
+        limit 1`,
+      [pmeTenantId],
+    );
+    const trouve = (rows as Record<string, unknown>[])[0];
+    return trouve ? { id: trouve["id"] as string, name: trouve["name"] as string } : null;
+  },
+
   async creerMandat(
     db: Requete,
     input: { pmeOrgId: string; cabinetOrgId: string; status?: string },
