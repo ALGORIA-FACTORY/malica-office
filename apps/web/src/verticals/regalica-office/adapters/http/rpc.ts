@@ -33,7 +33,7 @@ export class ErreurApi extends Error {
   }
 }
 
-async function appeler(depot: string, methode: string, args: unknown[]): Promise<unknown> {
+export async function appeler(depot: string, methode: string, args: unknown[]): Promise<unknown> {
   const reponse = await fetch(`${baseApi()}/rpc`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -29,21 +29,18 @@ import type {
   PieceStatus,
   Token,
 } from "../../ports/repositories";
-import { baseApi, ErreurApi } from "./rpc";
+import { appeler, baseApi, ErreurApi } from "./rpc";
 
+/**
+ * Le même appel que le mandataire générique, typé.
+ *
+ * Une première version recopiait ici le corps de `appeler` — deux fabriques
+ * pour un seul protocole, dont la seconde aurait dérivé au premier changement
+ * d'en-tête. Elle est réutilisée telle quelle ; seul le type de retour est
+ * précisé, ce que le mandataire ne peut pas faire.
+ */
 async function rpc<T>(depot: string, methode: string, args: unknown[]): Promise<T> {
-  const reponse = await fetch(`${baseApi()}/rpc`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ depot, methode, args }),
-  });
-  if (!reponse.ok) {
-    const corps = (await reponse.json().catch(() => null)) as { erreur?: string } | null;
-    throw new ErreurApi(corps?.erreur ?? `appel ${depot}.${methode} refusé`, reponse.status);
-  }
-  const { resultat } = (await reponse.json()) as { resultat: T };
-  return resultat;
+  return (await appeler(depot, methode, args)) as T;
 }
 
 function versPiece(p: Record<string, unknown>): Piece {

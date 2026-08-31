@@ -25,7 +25,7 @@
 import type { Requete } from "../db.ts";
 
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
-export function cheminRelatif(tenantId: string, pieceId: string): string {
+function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
 }
 

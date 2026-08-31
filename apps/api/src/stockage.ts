@@ -72,7 +72,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * si un jour quelqu'un fait passer un segment par là, la fonction refuse au lieu
  * de servir `/etc/passwd`.
  */
-export function cheminAbsolu(tenantId: string, pieceId: string): string {
+function cheminAbsolu(tenantId: string, pieceId: string): string {
   const base = racine();
   const resolu = path.resolve(base, tenantId, pieceId);
   const prefixe = base.endsWith(path.sep) ? base : base + path.sep;
