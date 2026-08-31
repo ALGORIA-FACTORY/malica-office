@@ -9,7 +9,7 @@
  * silence. Une page vierge ferme automatiquement le document.
  */
 
-import { Camera, Check, ImageUp, X } from "lucide-react";
+import { Check, ImageUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { analyzeFrame, type FrameAnalysis } from "@/capabilities/scanner";
@@ -162,110 +162,144 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
     setPages((p) => [...p, blob]);
   }, [grabFrame, onDone, pages]);
 
-  const hint = camError
-    ? t("scan.hint.nocam")
+  /**
+   * Le verdict de cadrage, en un mot et une couleur.
+   *
+   * Il ne décore pas : il vient de `analyzeFrame`, qui mesure les quatre
+   * coins, la netteté et la part de l'image occupée. Vert veut dire que la
+   * prise sera acceptée ; ambre dit exactement ce qui manque. Un voyant vert
+   * permanent serait pire que pas de voyant du tout — il ferait prendre des
+   * photos que le produit refuse ensuite.
+   */
+  const verdict = camError
+    ? { texte: t("scan.hint.nocam"), bon: false }
     : analysis?.blank && pages.length > 0
-      ? t("scan.hint.blank")
+      ? { texte: t("scan.hint.blank"), bon: false }
       : analysis?.reason === "no_document"
-        ? t("scan.hint.searching")
+        ? { texte: t("scan.hint.searching"), bon: false }
         : analysis?.reason === "too_small"
-          ? t("scan.hint.closer")
+          ? { texte: t("scan.hint.closer"), bon: false }
           : analysis?.reason === "blurry"
-            ? t("scan.hint.blurry")
-            : t("scan.hint.ready");
+            ? { texte: t("scan.hint.blurry"), bon: false }
+            : analysis?.ok
+              ? { texte: t("scan.verdict.ok"), bon: true }
+              : { texte: t("scan.hint.searching"), bon: false };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          {t("scan.title")}
+    <div className="fixed inset-0 z-50 overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className="absolute inset-0 h-full w-full object-cover"
+        aria-label={t("scan.title")}
+      />
+      <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+
+      {/*
+       * Le cadre et ses quatre équerres. Ils ne rognent rien — c'est le
+       * module de capacité qui détecte les coins réels et redresse. Ils
+       * disent où poser le document pour que la détection aboutisse.
+       */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-12 inset-y-[110px] border border-[#FAFAFA]/[0.22]"
+      >
+        <span className="absolute -start-px -top-px h-[26px] w-[26px] border-s-2 border-t-2 border-[#FAFAFA]" />
+        <span className="absolute -end-px -top-px h-[26px] w-[26px] border-e-2 border-t-2 border-[#FAFAFA]" />
+        <span className="absolute -bottom-px -start-px h-[26px] w-[26px] border-b-2 border-s-2 border-[#FAFAFA]" />
+        <span className="absolute -bottom-px -end-px h-[26px] w-[26px] border-b-2 border-e-2 border-[#FAFAFA]" />
+        <span className="rg-scan absolute inset-x-0 top-0 h-px bg-[#FAFAFA]" />
+      </div>
+
+      {/* Le verdict, au-dessus du cadre. */}
+      <div className="absolute inset-x-0 top-[58px] flex justify-center px-4">
+        <span
+          aria-live="polite"
+          className={
+            verdict.bon
+              ? "inline-flex items-center gap-2 bg-[#15331E] px-[13px] py-2 text-[13px] font-medium text-[#7EC492]"
+              : "inline-flex items-center gap-2 bg-[#33260F] px-[13px] py-2 text-[13px] font-medium text-[#E3B75C]"
+          }
+        >
+          <span aria-hidden className="h-[5px] w-[5px] bg-current" />
+          {verdict.texte}
+        </span>
+      </div>
+
+      {camError ? (
+        <div className="absolute inset-0 grid place-items-center p-6 text-center">
+          <div className="border border-[#3A3A3C] bg-[#161618] p-5">
+            <p className="text-sm">{t("scan.hint.nocam")}</p>
+            <button
+              type="button"
+              onClick={onFallback}
+              className="mt-4 inline-flex items-center gap-2 border border-[#FAFAFA] bg-[#FAFAFA] px-4 py-2 text-xs uppercase tracking-wide text-[#0A0A0A]"
+            >
+              <ImageUp className="h-4 w-4" aria-hidden />
+              {t("scan.fallback")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="absolute inset-x-6 bottom-[154px] text-center text-[13.5px] leading-[1.5] text-[#9A9AA0]">
+        {t("scan.pose.1")}
+        <br />
+        {t("scan.pose.2")}
+      </p>
+
+      {/* Le refus d'une prise, avec son motif. Jamais un échec muet. */}
+      {rejected ? (
+        <p
+          role="alert"
+          className="absolute inset-x-6 bottom-[118px] text-center text-[12.5px] text-[#E08163]"
+        >
+          {rejected === "blurry" ? t("scan.reject.blurry") : t("scan.reject.frame")}
         </p>
+      ) : null}
+
+      <div className="absolute inset-x-0 bottom-10 flex items-center justify-center">
         <button
           type="button"
-          onClick={onCancel}
-          aria-label={t("common.cancel")}
-          className="grid h-9 w-9 place-items-center border border-border"
+          onClick={() => void capture()}
+          disabled={!!camError}
+          aria-label={t("scan.capture")}
+          className="grid h-[74px] w-[74px] place-items-center border border-[#3A3A3C] bg-[#FAFAFA] active:bg-[#C7C7CC] disabled:opacity-40"
         >
-          <X className="h-4 w-4" aria-hidden />
+          <span aria-hidden className="h-[52px] w-[52px] border-2 border-[#0A0A0A]" />
         </button>
-      </header>
-
-      <div className="relative flex-1 overflow-hidden bg-muted">
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          className="h-full w-full object-cover"
-          aria-label={t("scan.title")}
-        />
-        <canvas ref={overlayRef} className="pointer-events-none absolute inset-0 h-full w-full" />
-        {camError ? (
-          <div className="absolute inset-0 grid place-items-center p-6 text-center">
-            <div className="border border-border bg-card p-5">
-              <p className="text-sm">{t("scan.hint.nocam")}</p>
-              <button
-                type="button"
-                onClick={onFallback}
-                className="mt-4 inline-flex items-center gap-2 border border-foreground bg-foreground px-4 py-2 text-xs uppercase tracking-wide text-background"
-              >
-                <ImageUp className="h-4 w-4" aria-hidden />
-                {t("scan.fallback")}
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
 
-      <div className="border-t border-border px-4 py-3">
-        <p aria-live="polite" className="min-h-[2.5rem] text-sm">
-          {hint}
-          {rejected ? (
-            <span className="ms-1 text-muted-foreground">
-              {rejected === "blurry" ? t("scan.reject.blurry") : t("scan.reject.frame")}
-            </span>
-          ) : null}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="absolute bottom-[60px] start-6 text-[14px] font-medium text-[#C7C7CC]"
+      >
+        {t("common.cancel")}
+      </button>
+
+      {/*
+       * Le multipage reste, discrètement : une facture de deux pages n'est
+       * pas un cas rare, et le prototype ne le montre pas parce qu'il ne
+       * montre qu'une prise. Le bouton n'apparaît qu'une fois une page prise.
+       */}
+      {pages.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => onDone(pages)}
+          className="absolute bottom-[60px] end-6 flex items-center gap-2 text-[14px] font-medium text-[#FAFAFA]"
+        >
+          <Check className="h-4 w-4" aria-hidden />
+          {t("scan.finish")} · {pages.length}
+        </button>
+      ) : null}
+
+      {autoClosed ? (
+        <p className="absolute inset-x-6 bottom-[196px] text-center text-[11px] text-[#9A9AA0]">
+          {t("scan.autoclosed")}
         </p>
-        <p className="mt-1 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-          {t("scan.pages", { count: String(pages.length) })}
-          {analysis
-            ? ` · ${t("scan.metrics", {
-                sharp: analysis.sharpness.toFixed(4),
-                coverage: `${Math.round(analysis.coverage * 100)}%`,
-              })}`
-            : null}
-        </p>
-        <div className="mt-3 grid grid-cols-3 items-center gap-3">
-          <button
-            type="button"
-            onClick={onFallback}
-            className="flex h-12 items-center justify-center gap-2 border border-border px-3 text-[11px] uppercase tracking-wide"
-          >
-            <ImageUp className="h-4 w-4" aria-hidden />
-            {t("scan.fallback")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void capture()}
-            disabled={!!camError}
-            aria-label={t("scan.capture")}
-            className="mx-auto grid h-16 w-16 place-items-center border border-foreground bg-foreground text-background disabled:opacity-40"
-          >
-            <Camera className="h-6 w-6" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => onDone(pages)}
-            disabled={pages.length === 0}
-            className="flex h-12 items-center justify-center gap-2 border border-foreground px-3 text-[11px] uppercase tracking-wide disabled:opacity-40"
-          >
-            <Check className="h-4 w-4" aria-hidden />
-            {t("scan.finish")}
-          </button>
-        </div>
-        {autoClosed ? (
-          <p className="mt-2 text-[11px] text-muted-foreground">{t("scan.autoclosed")}</p>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

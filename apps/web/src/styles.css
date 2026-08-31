@@ -221,6 +221,23 @@
   }
 }
 
+@keyframes rg-scan {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 @keyframes rg-rise {
   from {
     opacity: 0;
@@ -236,7 +253,8 @@
   .rg-blink,
   .rg-wave,
   .rg-bell,
-  .rg-rise {
+  .rg-rise,
+  .rg-scan {
     animation: none !important;
   }
 }
@@ -253,6 +271,15 @@
 }
 .rg-rise {
   animation: rg-rise 0.32s ease both;
+}
+/*
+ * Le balayage parcourt la HAUTEUR DU CADRE, pas une distance fixe. D'où
+ * l'animation de `top` en pourcentage : il se résout sur l'ancêtre
+ * positionné, donc sur le cadre, qui s'étire avec l'écran. Une constante de
+ * maquette s'arrêterait au milieu sur un grand téléphone.
+ */
+.rg-scan {
+  animation: rg-scan 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /*
