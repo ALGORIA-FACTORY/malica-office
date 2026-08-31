@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,7 +27,10 @@ export const Route = createFileRoute("/")({
 
 function Landing() {
   const { t } = useI18n();
-  const workspaceRoute = isRegalicaDevAccessEnabled() ? "/office" : "/auth";
+  // Une seule porte : on se connecte, puis on choisit son espace. Le mode de
+  // démonstration ouvrait un raccourci vers /office sans session — il montrait
+  // une application qui n'était pas celle qui tourne.
+  const workspaceRoute = "/auth";
 
   const pillars = [1, 2, 3, 4] as const;
 

@@ -5,7 +5,6 @@ import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
 import { EchecAuth } from "@/verticals/regalica-office/ports/auth";
-import { isRegalicaDevAccessEnabled } from "@/lib/dev-access";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -41,10 +40,6 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isRegalicaDevAccessEnabled()) {
-      void navigate({ to: "/office" });
-      return;
-    }
     let active = true;
     void office()
       .auth.session()

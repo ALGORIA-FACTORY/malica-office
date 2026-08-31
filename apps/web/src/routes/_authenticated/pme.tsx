@@ -49,6 +49,8 @@ function PmeLayout() {
   const pmeOrgs = (orgsQuery.data ?? []).filter((o) => o.kind === "pme");
   const [activeId, setActiveId] = useState<string | null>(() => readActiveOrgId());
   const org = pmeOrgs.find((o) => o.id === activeId) ?? pmeOrgs[0] ?? null;
+  // La bascule n'a de sens que si l'on a un cabinet où aller.
+  const aUnCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
 
   // Garde de rôle : sans appartenance PME, on renvoie au portail plutôt qu'un écran muet.
@@ -156,12 +158,14 @@ function PmeLayout() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <LanguageSwitcher />
-            <Link
-              to="/office"
-              className="border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
-            >
-              {t("portal.switch")}
-            </Link>
+            {aUnCabinet ? (
+              <Link
+                to="/office"
+                className="border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
+              >
+                {t("portal.switch")}
+              </Link>
+            ) : null}
           </div>
         </div>
       </header>

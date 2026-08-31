@@ -127,12 +127,14 @@ function CabinetLayout() {
                   {t("portal.current.cabinet")}
                 </p>
               </div>
-              <Link
-                to="/office"
-                className="shrink-0 border border-border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide hover:bg-accent lg:hidden"
-              >
-                {t("portal.switch")}
-              </Link>
+              {hasPme ? (
+                <Link
+                  to="/office"
+                  className="shrink-0 border border-border px-3 py-2 text-[10px] font-semibold uppercase tracking-wide hover:bg-accent lg:mt-3 lg:inline-block"
+                >
+                  {t("portal.switch")}
+                </Link>
+              ) : null}
             </div>
 
             <div className="flex gap-6 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-0 lg:space-y-6 lg:overflow-y-auto lg:pb-4">
