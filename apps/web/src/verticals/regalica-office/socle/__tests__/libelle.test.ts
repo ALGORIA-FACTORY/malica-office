@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  composerLibelle,
-  critiquerLibelle,
-  nomDeLaNature,
-} from "../engines/libelle";
+import { composerLibelle, critiquerLibelle, nomDeLaNature } from "../engines/libelle";
 
 describe("composer un libellé d'écriture", () => {
   it("porte les quatre faits, dans l'ordre où on les cherche", () => {

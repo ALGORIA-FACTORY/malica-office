@@ -6,6 +6,8 @@
  */
 
 import { computePivot } from "../socle";
+import { composerLibelle } from "../socle/engines/libelle";
+import { faitsDuLibelle } from "./libelle-de-piece";
 import type { ExtractV1 as ExtractV1Type } from "../socle/contracts/extract.v1";
 import { ExtractV1 } from "../socle/contracts/extract.v1";
 import type { PivotV1 } from "../socle/contracts/pivot.v1";
@@ -22,6 +24,15 @@ export interface ProposalResult {
   pivot: PivotV1;
   extract: ExtractV1Type;
   journal: string;
+  /**
+   * Le libellé de l’écriture, composé.
+   *
+   * Il portait le seul nom de l’émetteur : deux factures du même fournisseur
+   * dans le même mois donnaient deux écritures indiscernables en balance.
+   * Il porte maintenant nature, contrepartie, référence et date — la forme que
+   * SAF-T, le FEC et ISO 21378 demandent en substance.
+   */
+  libelle: string;
   lignes: Array<{
     account_code: string;
     libelle: string;
@@ -91,6 +102,7 @@ export function buildProposal(params: {
     pivot,
     extract,
     journal: extract.document_kind === "facture_achat" ? "ACH" : "VEN",
+    libelle: composerLibelle(faitsDuLibelle(extract)),
     // Une ligne nulle (TVA à zéro sur pièce exonérée) ne porte aucun fait
     // comptable : la base l'interdit, on ne la persiste pas. Le pivot du Socle
     // reste intact — c'est la seule vue persistée qui est filtrée.

@@ -150,7 +150,7 @@ function PieceScreen() {
           pieceId,
           journal: proposal.journal,
           date: proposal.pivot.entry_date,
-          libelle: proposal.extract.issuer,
+          libelle: proposal.libelle,
           packVersionId: pme.packId,
           devise: proposal.pivot.currency,
           lignes: proposal.lignes,

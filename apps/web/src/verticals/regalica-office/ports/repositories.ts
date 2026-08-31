@@ -319,6 +319,15 @@ export interface Ecriture {
   devise: string;
   libelle: string;
   status: string;
+  /**
+   * Le pack sous lequel cette écriture a été arrêtée.
+   *
+   * Une correction doit rester sous LE MÊME pack, pas sous celui du jour :
+   * une écriture de 2025 corrigée en 2026 relève du droit de 2025. Sans cette
+   * colonne, l'écran ne pouvait que deviner, et il aurait deviné faux au
+   * premier changement de version.
+   */
+  packVersionId: string;
   lines: EcritureLine[];
 }
 

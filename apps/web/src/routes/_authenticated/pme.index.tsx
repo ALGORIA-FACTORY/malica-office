@@ -85,7 +85,9 @@ function PmeHome() {
         greeting={greeting}
         sentence={sentence}
         onVisage={regalica.ouvert ? regalica.fermer : regalica.ouvrir}
-        visageLibelle={regalica.ouvert ? t("regalica.panneau.fermer") : t("regalica.panneau.ouvrir")}
+        visageLibelle={
+          regalica.ouvert ? t("regalica.panneau.fermer") : t("regalica.panneau.ouvrir")
+        }
       />
 
       <BigNumber

@@ -106,6 +106,7 @@ const fr = {
     "Un schéma d’écriture cite un rôle, jamais un numéro. Rebrancher un rôle change toutes les écritures qui l’emploient.",
   "plan.subdivide": "Subdiviser",
   "plan.collectif": "Compte collectif — reçoit des tiers, pas des sous-comptes",
+  "plan.collectif.court": "Collectif",
   "plan.sous.count": "{n} sous-compte(s) ouvert(s)",
   "plan.sous.title": "Le plan, et vos subdivisions",
   "plan.sous.lede":
@@ -538,6 +539,19 @@ const fr = {
   "cab.review.note": "Note",
   "cab.review.note.required": "Ce motif exige une note.",
   "cab.review.done.valide": "Écriture validée. Pièce supervisée.",
+  "cab.review.correct.open": "Forcer l'imputation",
+  "cab.review.correct.title": "Forcer l'imputation",
+  "cab.review.correct.lede":
+    "Une écriture comptabilisée ne se modifie pas. Elle sera contre-passée, puis réimputée : l'erreur, son annulation et la correction restent lisibles toutes les trois.",
+  "cab.review.correct.libelle": "Libellé de l'écriture",
+  "cab.review.correct.unknown": "Inconnu du plan — la base refusera",
+  "cab.review.correct.motif.needed":
+    "Choisissez le motif ci-dessous : il justifie la contre-passation au journal.",
+  "cab.review.correct.apply": "Contre-passer et réimputer",
+  "cab.review.correct.cancel": "Renoncer",
+  "cab.review.correct.nothing": "Rien à corriger.",
+  "cab.review.done.corrige":
+    "Imputation forcée. L'écriture d'origine est contre-passée, la corrigée est comptabilisée : les trois restent au journal.",
   "cab.review.done.retourne":
     "Écriture retournée. Contre-passation inscrite, l'originale reste intacte.",
   "cab.review.audit": "Journal de la pièce",
@@ -787,6 +801,7 @@ const en: Dict = {
     "An entry template cites a role, never a number. Rebinding a role changes every entry that uses it.",
   "plan.subdivide": "Subdivide",
   "plan.collectif": "Control account — takes parties, not sub-accounts",
+  "plan.collectif.court": "Control account",
   "plan.sous.count": "{n} sub-account(s) opened",
   "plan.sous.title": "The chart, and your subdivisions",
   "plan.sous.lede":
@@ -1213,6 +1228,19 @@ const en: Dict = {
   "cab.review.note": "Note",
   "cab.review.note.required": "This reason requires a note.",
   "cab.review.done.valide": "Entry validated. Document supervised.",
+  "cab.review.correct.open": "Override the posting",
+  "cab.review.correct.title": "Override the posting",
+  "cab.review.correct.lede":
+    "A booked entry is never edited. It will be reversed, then reposted: the error, its reversal and the correction all stay readable.",
+  "cab.review.correct.libelle": "Entry narration",
+  "cab.review.correct.unknown": "Not in the chart — the database will refuse",
+  "cab.review.correct.motif.needed":
+    "Pick the reason below: it justifies the reversal in the journal.",
+  "cab.review.correct.apply": "Reverse and repost",
+  "cab.review.correct.cancel": "Cancel",
+  "cab.review.correct.nothing": "Nothing to correct.",
+  "cab.review.done.corrige":
+    "Posting overridden. The original entry is reversed and the corrected one is booked: all three remain in the journal.",
   "cab.review.done.retourne":
     "Entry returned. A reversing entry was recorded; the original remains intact.",
   "cab.review.audit": "Document log",
@@ -1457,6 +1485,7 @@ const ar: Dict = {
   "plan.roles.lede": "نموذج القيد يذكر دوراً لا رقماً. إعادة ربط دور تغيّر كل القيود التي تستعمله.",
   "plan.subdivide": "تقسيم",
   "plan.collectif": "حساب جامع — يستقبل أطرافاً لا حسابات فرعية",
+  "plan.collectif.court": "حساب جامع",
   "plan.sous.count": "{n} حساباً فرعياً مفتوحاً",
   "plan.sous.title": "الدليل وتقسيماتكم",
   "plan.sous.lede":
@@ -1909,6 +1938,18 @@ const ar: Dict = {
   "cab.review.note": "ملاحظة",
   "cab.review.note.required": "هذا السبب يقتضي ملاحظة.",
   "cab.review.done.valide": "تمت المصادقة على القيد. الوثيقة مُشرَف عليها.",
+  "cab.review.correct.open": "فرض التوجيه المحاسبي",
+  "cab.review.correct.title": "فرض التوجيه المحاسبي",
+  "cab.review.correct.lede":
+    "القيد المسجَّل لا يُعدَّل. سيُعكَس ثم يُعاد توجيهه: الخطأ وعكسه والتصحيح تبقى كلّها قابلة للقراءة.",
+  "cab.review.correct.libelle": "بيان القيد",
+  "cab.review.correct.unknown": "غير موجود في الدليل — ستَرفضه القاعدة",
+  "cab.review.correct.motif.needed": "اختر السبب أدناه: هو ما يبرّر القيد المعاكس في اليومية.",
+  "cab.review.correct.apply": "اعكس وأعد التوجيه",
+  "cab.review.correct.cancel": "تراجع",
+  "cab.review.correct.nothing": "لا شيء للتصحيح.",
+  "cab.review.done.corrige":
+    "تم فرض التوجيه. القيد الأصلي معكوس والمصحَّح مسجَّل: الثلاثة تبقى في اليومية.",
   "cab.review.done.retourne": "تم إرجاع القيد. سُجِّل قيد معاكس، والأصل يبقى سليمًا.",
   "cab.review.audit": "سجل الوثيقة",
   "cab.review.audit.empty": "لا يوجد حدث مُسجَّل.",

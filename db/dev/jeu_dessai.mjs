@@ -196,12 +196,56 @@ async function piece(dossier, marque, titre, lignes) {
   return enregistree.id;
 }
 
-async function ecriture(pieceId, packId, journal, libelle, lignes, comptabiliser) {
+/**
+ * Le plan du cabinet, lu une fois.
+ *
+ * Le jeu d'essai écrivait ses libellés de ligne à la main — « Fournisseur »,
+ * « TVA déductible ». Deux d'entre eux ne correspondaient à aucun compte : le
+ * 43661 n'existe pas en NC 01, la TVA déductible s'y appelle 4366. On écrivait
+ * donc des écritures sur un compte que personne ne peut nommer.
+ *
+ * Le produit importe le libellé du plan ; le jeu d'essai fait pareil. S'il
+ * cite un compte absent, il échoue au lieu de produire une donnée impossible.
+ */
+let PLAN = null;
+
+async function libelleDuCompte(cabinetId, code) {
+  PLAN ??= new Map(
+    (await rpc("parametrage", "plan", [cabinetId, null])).map((c) => [c.code, c.libelle]),
+  );
+  const libelle = PLAN.get(code);
+  if (!libelle) throw new Error(`compte ${code} absent du plan comptable`);
+  return libelle;
+}
+
+/** Complète chaque ligne avec le libellé que le plan donne à son compte. */
+async function selonLePlan(cabinetId, lignes) {
+  return Promise.all(
+    lignes.map(async (l) => ({ ...l, libelle: await libelleDuCompte(cabinetId, l.account_code) })),
+  );
+}
+
+/**
+ * Une écriture, une seule fois.
+ *
+ * Le fichier annonçait « rejouable : une seconde exécution ne duplique rien ».
+ * C'était vrai des pièces et des tiers, faux des écritures : chaque exécution
+ * en empilait une de plus, et l'écran de revue en choisissait une au hasard
+ * parmi cinq. Une écriture comptabilisée ne se supprime pas — il faut donc ne
+ * pas la créer deux fois.
+ *
+ * `propose` remplace une proposition existante ; c'est comptabiliser qui grave.
+ * On ne repasse donc que si la pièce ne porte encore aucune écriture gravée.
+ */
+async function ecriture(pieceId, packId, journal, libelle, date, lignes, comptabiliser) {
+  const existantes = await rpc("office", "ecrituresForPiece", [pieceId]);
+  if (existantes.some((e) => e.status === "booked")) return null;
+
   const id = await rpc("office", "propose", [
     {
       pieceId,
       journal,
-      date: new Date().toISOString().slice(0, 10),
+      date,
       libelle,
       packVersionId: packId,
       lignes,
@@ -267,57 +311,85 @@ async function main() {
     "TVA 19%                              163,400 TND",
     "TOTAL TTC                          1 023,400 TND",
   ]);
-  console.log(`  pièces           3, avec leurs octets`);
+  const p4 = await piece(atlas, "atlas-achat-2", "FACTURE No 4488", [
+    "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+    "Client : ATLAS DISTRIBUTION",
+    "",
+    "Fournitures de bureau                340,000 TND HT",
+    "TVA 19%                               64,600 TND",
+    "TOTAL TTC                            404,600 TND",
+  ]);
+  console.log(`  pièces           4, avec leurs octets`);
 
   // Deux lignes équilibrées : la RPC refuse tout déséquilibre, et c'est bien.
-  const achat = (ht, tva) => [
-    { ordinal: 1, account_code: "607", libelle: "Achats de marchandises", debit: ht, credit: 0 },
-    { ordinal: 2, account_code: "43661", libelle: "TVA déductible", debit: tva, credit: 0 },
-    {
-      ordinal: 3,
-      account_code: "401",
-      libelle: "Fournisseur",
-      debit: 0,
-      credit: (Number(ht) + Number(tva)).toFixed(3),
-    },
-  ];
-  const vente = (ht, tva) => [
-    {
-      ordinal: 1,
-      account_code: "411",
-      libelle: "Client",
-      debit: (Number(ht) + Number(tva)).toFixed(3),
-      credit: 0,
-    },
-    { ordinal: 2, account_code: "707", libelle: "Ventes de marchandises", debit: 0, credit: ht },
-    { ordinal: 3, account_code: "43671", libelle: "TVA collectée", debit: 0, credit: tva },
-  ];
+  const achat = (ht, tva) =>
+    selonLePlan(cabinet, [
+      { ordinal: 1, account_code: "601", debit: ht, credit: 0 },
+      { ordinal: 2, account_code: "4366", debit: tva, credit: 0 },
+      {
+        ordinal: 3,
+        account_code: "401",
+        debit: 0,
+        credit: (Number(ht) + Number(tva)).toFixed(3),
+      },
+    ]);
+  const vente = (ht, tva) =>
+    selonLePlan(cabinet, [
+      {
+        ordinal: 1,
+        account_code: "411",
+        debit: (Number(ht) + Number(tva)).toFixed(3),
+        credit: 0,
+      },
+      { ordinal: 2, account_code: "701", debit: 0, credit: ht },
+      { ordinal: 3, account_code: "4367", debit: 0, credit: tva },
+    ]);
 
   await ecriture(
     p1,
     pack.id,
     "ACH",
-    "Facture VERRES DE TUNISIE",
-    achat("1200.000", "228.000"),
+    "Achat — VERRES DE TUNISIE — Réf. 2026-114 du 31/08/2026",
+    "2026-08-31",
+    await achat("1200.000", "228.000"),
     true,
   );
   await ecriture(
     p2,
     pack.id,
     "VTE",
-    "Facture PHARMACIE CENTRALE",
-    vente("2500.000", "475.000"),
+    "Vente — PHARMACIE CENTRALE — Réf. V-2026-058 du 31/08/2026",
+    "2026-08-31",
+    await vente("2500.000", "475.000"),
     true,
   );
   await ecriture(
     p3,
     pack.id,
     "ACH",
-    "Facture GROSSISTE DU SUD",
-    achat("860.000", "163.400"),
+    "Achat — GROSSISTE DU SUD — Réf. 4471 du 31/08/2026",
+    "2026-08-31",
+    await achat("860.000", "163.400"),
     false,
   );
-  console.log(`  écritures        3 — deux comptabilisées, une en proposition`);
+  await ecriture(
+    p4,
+    pack.id,
+    "ACH",
+    "Achat — GROSSISTE DU SUD — Réf. 4488 du 31/08/2026",
+    "2026-08-31",
+    await achat("340.000", "64.600"),
+    true,
+  );
+  console.log(`  écritures        4 — trois comptabilisées, une en proposition`);
+  console.log(
+    `
+  À superviser : la pièce d'ATLAS (mode autonome) se valide, se retourne` +
+      `
+  et se corrige. Celles de DREAM OPTIC (mode mandat) refusent : le` +
+      `
+  quatre-yeux interdit de superviser ce qu'on a soi-même comptabilisé.`,
+  );
 
   console.log(`\nOuvrez http://localhost:8080 et connectez-vous :`);
   console.log(`  ${EMAIL}`);

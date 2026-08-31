@@ -62,6 +62,7 @@ function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) 
     devise: r["devise"] as string,
     libelle: (r["libelle"] as string) ?? "",
     status: r["status"] as string,
+    packVersionId: r["pack_version_id"] as string,
     lines: lignes.get(r["id"] as string) ?? [],
   };
 }
@@ -101,7 +102,7 @@ export const office = {
   async ecrituresByIds(db: Requete, ids: string[]) {
     if (ids.length === 0) return [];
     const { rows } = await db.query(
-      `select id, piece_id, journal, date_ecriture, devise, libelle, status
+      `select id, piece_id, journal, date_ecriture, devise, libelle, status, pack_version_id
          from ecritures_v where id = any($1::uuid[]) order by date_ecriture desc`,
       [ids],
     );
@@ -111,7 +112,7 @@ export const office = {
 
   async ecrituresForPiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select id, piece_id, journal, date_ecriture, devise, libelle, status
+      `select id, piece_id, journal, date_ecriture, devise, libelle, status, pack_version_id
          from ecritures_v where piece_id = $1 order by created_at desc`,
       [pieceId],
     );
