@@ -81,7 +81,7 @@ export const parametrage = {
   async plan(db: Requete, tenantId: string, classes: number[] | null) {
     const { rows } = await db.query(
       `select account_code, label, parent_code, account_class, normal_side,
-              origine, is_official, source_ref
+              origine, is_official, source_ref, is_collective
          from plan_comptable_v
         where (tenant_id is null or tenant_id = $1)
           and ($2::int[] is null or account_class::int = any($2))
@@ -96,6 +96,9 @@ export const parametrage = {
       sensUsuel: (r["normal_side"] as string | null) ?? null,
       origine: r["origine"] as string,
       officiel: Boolean(r["is_official"]),
+      // Un collectif reçoit des tiers, pas des subdivisions : l'écran doit
+      // pouvoir le dire AVANT que l'expert ne tente.
+      collectif: Boolean(r["is_collective"]),
       source: (r["source_ref"] as string | null) ?? null,
     }));
   },

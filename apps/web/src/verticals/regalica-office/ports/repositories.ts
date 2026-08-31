@@ -113,6 +113,8 @@ export interface CompteDuPlan {
   /** officiel = verbatim NC 01 ; extension = ouverte par Regalica ; cabinet = la vôtre. */
   origine: "officiel" | "extension" | "cabinet";
   officiel: boolean;
+  /** Un compte collectif reçoit des tiers, jamais des sous-comptes. */
+  collectif: boolean;
   source: string | null;
 }
 

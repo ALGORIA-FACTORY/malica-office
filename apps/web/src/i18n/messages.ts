@@ -104,10 +104,12 @@ const fr = {
   "plan.origin.extension": "Extension Regalica",
   "plan.roles.lede":
     "Un schéma d’écriture cite un rôle, jamais un numéro. Rebrancher un rôle change toutes les écritures qui l’emploient.",
-  "plan.sous.title": "Vos sous-comptes",
+  "plan.subdivide": "Subdiviser",
+  "plan.collectif": "Compte collectif — reçoit des tiers, pas des sous-comptes",
+  "plan.sous.count": "{n} sous-compte(s) ouvert(s)",
+  "plan.sous.title": "Le plan, et vos subdivisions",
   "plan.sous.lede":
-    "Une subdivision que la norme ne prévoit pas. Elle prolonge son rattachement — 6011 sous 601 — et n’est visible que de votre cabinet.",
-  "plan.sous.empty": "Aucun sous-compte ouvert. La norme suffit tant qu’elle suffit.",
+    "Parcourez la norme et ouvrez une subdivision sous le compte de votre choix. Le code est proposé, vous pouvez le changer. Les comptes collectifs en sont exclus : ils reçoivent des tiers.",
   "plan.tiers.title": "Tiers du dossier",
   "plan.tiers.lede":
     "Clients, fournisseurs, salariés, associés, banques. Un tiers est l’auxiliaire de son compte collectif — jamais un compte du plan. Il appartient au dossier, pas au cabinet.",
@@ -781,10 +783,12 @@ const en: Dict = {
   "plan.origin.extension": "Regalica extension",
   "plan.roles.lede":
     "An entry template cites a role, never a number. Rebinding a role changes every entry that uses it.",
-  "plan.sous.title": "Your sub-accounts",
+  "plan.subdivide": "Subdivide",
+  "plan.collectif": "Control account — takes parties, not sub-accounts",
+  "plan.sous.count": "{n} sub-account(s) opened",
+  "plan.sous.title": "The chart, and your subdivisions",
   "plan.sous.lede":
-    "A subdivision the standard does not provide. It extends its parent — 6011 under 601 — and is visible to your firm only.",
-  "plan.sous.empty": "No sub-account opened. The standard is enough until it is not.",
+    "Browse the standard and open a subdivision under any account. The code is suggested, you can change it. Control accounts are excluded: they take parties.",
   "plan.tiers.title": "Parties of the file",
   "plan.tiers.lede":
     "Customers, suppliers, employees, partners, banks. A party is an auxiliary of its control account — never an account of the chart. It belongs to the file, not to the firm.",
@@ -1447,10 +1451,12 @@ const ar: Dict = {
   "plan.origin.officiel": "NC 01",
   "plan.origin.extension": "امتداد Regalica",
   "plan.roles.lede": "نموذج القيد يذكر دوراً لا رقماً. إعادة ربط دور تغيّر كل القيود التي تستعمله.",
-  "plan.sous.title": "حساباتكم الفرعية",
+  "plan.subdivide": "تقسيم",
+  "plan.collectif": "حساب جامع — يستقبل أطرافاً لا حسابات فرعية",
+  "plan.sous.count": "{n} حساباً فرعياً مفتوحاً",
+  "plan.sous.title": "الدليل وتقسيماتكم",
   "plan.sous.lede":
-    "تقسيم لا ينص عليه المعيار. يمتد من حسابه الأصل — 6011 تحت 601 — ولا يراه إلا مكتبكم.",
-  "plan.sous.empty": "لم يُفتح أي حساب فرعي. المعيار يكفي ما دام يكفي.",
+    "تصفّح المعيار وافتح تقسيماً تحت الحساب الذي تختاره. الرمز مقترح ويمكن تغييره. الحسابات الجامعة مستثناة: فهي تستقبل أطرافاً.",
   "plan.tiers.title": "أطراف الملف",
   "plan.tiers.lede":
     "حرفاء، مزودون، أجراء، شركاء، بنوك. الطرف هو حساب مساعد لحسابه الجامع — وليس حساباً من الدليل. ينتمي إلى الملف لا إلى المكتب.",

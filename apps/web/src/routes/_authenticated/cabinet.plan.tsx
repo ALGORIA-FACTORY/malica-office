@@ -410,20 +410,35 @@ function Personnalisation() {
         )}
       </section>
 
-      <SousComptes />
+      <PlanEtSousComptes />
     </div>
   );
 }
 
-/** Les subdivisions ouvertes par le cabinet, au-dessus de la norme. */
-function SousComptes() {
+/**
+ * Le plan officiel, avec la main pour le subdiviser.
+ *
+ * L'ancienne version demandait un rattachement, un code et un libellé dans trois
+ * champs vides — on ne paramètre pas ce qu'on ne voit pas. Ici le geste part du
+ * compte : on parcourt la norme, on choisit la ligne, on ouvre dessous.
+ *
+ * Le code est PROPOSÉ — le prochain libre sous ce parent — et reste modifiable :
+ * un cabinet qui numérote par agence ou par chantier garde la main.
+ *
+ * Les comptes collectifs sont montrés mais fermés à la subdivision : 401, 411,
+ * 425 reçoivent des tiers, et l'écran le dit sur la ligne plutôt que de laisser
+ * l'expert le découvrir par un refus.
+ */
+function PlanEtSousComptes() {
   const { t } = useI18n();
   const { org } = useCabinet();
   const queryClient = useQueryClient();
 
+  const [classe, setClasse] = useState<string>("6");
+  const [cherche, setCherche] = useState("");
+  const [ouvertSous, setOuvertSous] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [libelle, setLibelle] = useState("");
-  const [parent, setParent] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
 
   const plan = useQuery({
@@ -432,110 +447,193 @@ function SousComptes() {
   });
 
   const ouvrir = useMutation({
-    mutationFn: () =>
+    mutationFn: (parent: string) =>
       office().parametrage.ouvrirCompte({
         tenantId: org.id,
         code: code.trim(),
         libelle: libelle.trim(),
-        parent: parent.trim(),
+        parent,
       }),
     onSuccess: async () => {
+      setOuvertSous(null);
       setCode("");
       setLibelle("");
-      setParent("");
       setErreur(null);
       await queryClient.invalidateQueries({ queryKey: ["param-plan", org.id] });
     },
-    // Le message vient de la base : ce sont ses quatre règles, et elles savent
-    // mieux que l'écran pourquoi elles refusent.
+    // Le message vient de la base : ce sont ses règles, et elles savent mieux
+    // que l'écran pourquoi elles refusent.
     onError: (e) => setErreur(e instanceof Error ? e.message : String(e)),
   });
 
-  const miens = (plan.data ?? [])
-    .filter((c) => c.origine === "cabinet")
-    .sort((a, b) => a.code.localeCompare(b.code));
+  /**
+   * Le prochain code libre sous un parent.
+   *
+   * On prend les enfants directs — ceux qui prolongent le parent d'un chiffre —
+   * et on propose le suivant. Si la norme est déjà dense, on remonte : 6011,
+   * 6012… puis 60111 si tout est pris. La proposition n'est jamais imposée.
+   */
+  function prochainCode(parent: string): string {
+    const enfants = (plan.data ?? [])
+      .map((c) => c.code)
+      .filter((c) => c.startsWith(parent) && c.length === parent.length + 1);
+    for (let i = 1; i <= 9; i += 1) {
+      const essai = parent + String(i);
+      if (!enfants.includes(essai)) return essai;
+    }
+    return parent + "01";
+  }
+
+  const parClasse = useMemo(() => {
+    const n: Record<string, number> = {};
+    for (const c of plan.data ?? []) n[c.classe] = (n[c.classe] ?? 0) + 1;
+    return n;
+  }, [plan.data]);
+
+  const lignes = useMemo(() => {
+    const q = cherche.trim().toLowerCase();
+    return (plan.data ?? [])
+      .filter((c) => (q ? true : c.classe === classe))
+      .filter((c) => !q || c.code.includes(q) || c.libelle.toLowerCase().includes(q))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [plan.data, classe, cherche]);
+
+  const miens = (plan.data ?? []).filter((c) => c.origine === "cabinet").length;
 
   return (
     <section className="space-y-3">
-      <SectionTitle>{t("plan.sous.title")}</SectionTitle>
+      <SectionTitle
+        action={
+          <span className="text-[12px] text-muted-foreground">
+            {t("plan.sous.count").replace("{n}", String(miens))}
+          </span>
+        }
+      >
+        {t("plan.sous.title")}
+      </SectionTitle>
       <p className="text-[12px] text-muted-foreground">{t("plan.sous.lede")}</p>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          ouvrir.mutate();
-        }}
-        className="grid gap-2 border border-border bg-card p-3 sm:grid-cols-[8rem_8rem_1fr_auto]"
-      >
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t("plan.field.parent")}
-          </span>
-          <input
-            value={parent}
-            onChange={(e) => setParent(e.target.value)}
-            required
-            placeholder="601"
-            className="num mt-1 w-full border border-input bg-card px-2 py-1 text-[13px]"
-          />
-        </label>
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t("plan.field.code")}
-          </span>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-            placeholder="6011"
-            className="num mt-1 w-full border border-input bg-card px-2 py-1 text-[13px]"
-          />
-        </label>
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t("plan.field.libelle")}
-          </span>
-          <input
-            value={libelle}
-            onChange={(e) => setLibelle(e.target.value)}
-            required
-            className="mt-1 w-full border border-input bg-card px-2 py-1 text-[13px]"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={ouvrir.isPending}
-          className="min-h-[44px] self-end border border-foreground bg-foreground px-3 text-xs uppercase tracking-wide text-background disabled:opacity-40"
-        >
-          {t("plan.open")}
-        </button>
-      </form>
+      <div className="flex flex-wrap items-center gap-1">
+        {CLASSES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => {
+              setClasse(c);
+              setCherche("");
+            }}
+            aria-pressed={classe === c && !cherche}
+            className={`min-h-[36px] border px-3 text-[11px] uppercase tracking-wide ${
+              classe === c && !cherche ? "border-foreground" : "border-border text-muted-foreground"
+            }`}
+          >
+            {t(`plan.classe.${c}`)}
+            <span className="num ms-2 opacity-60">{parClasse[c] ?? 0}</span>
+          </button>
+        ))}
+        <input
+          value={cherche}
+          onChange={(e) => setCherche(e.target.value)}
+          placeholder={t("plan.search")}
+          className="ms-auto min-h-[36px] w-48 border border-input bg-card px-2 text-[12px]"
+        />
+      </div>
 
       {erreur ? <p className="text-[12px] text-signal-warn">{erreur}</p> : null}
 
-      {miens.length === 0 ? (
-        <EmptyState>{t("plan.sous.empty")}</EmptyState>
+      {plan.isPending ? (
+        <EmptyState>{t("plan.loading")}</EmptyState>
+      ) : lignes.length === 0 ? (
+        <EmptyState>{t("plan.nct.empty")}</EmptyState>
       ) : (
         <InkTable
           caption={t("plan.sous.title")}
-          head={[t("plan.col.code"), t("plan.col.libelle"), t("plan.col.parent"), ""]}
+          head={[t("plan.col.code"), t("plan.col.libelle"), t("plan.col.nature"), ""]}
         >
-          {miens.map((c) => (
+          {lignes.map((c) => (
             <InkTableRow key={c.code}>
               <InkCell numeric>{c.code}</InkCell>
-              <InkCell>{c.libelle}</InkCell>
-              <InkCell numeric>{c.parent}</InkCell>
               <InkCell>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await office().parametrage.fermerCompte(org.id, c.code);
-                    await queryClient.invalidateQueries({ queryKey: ["param-plan", org.id] });
-                  }}
-                  className="min-h-[36px] border border-border px-2 text-[11px] uppercase tracking-wide text-muted-foreground"
-                >
-                  {t("plan.close")}
-                </button>
+                {c.libelle}
+                {ouvertSous === c.code ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      ouvrir.mutate(c.code);
+                    }}
+                    className="mt-2 grid gap-2 border border-border bg-paper p-2 sm:grid-cols-[7rem_1fr_auto]"
+                  >
+                    <label className="block">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {t("plan.field.code")}
+                      </span>
+                      <input
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        required
+                        className="num mt-1 w-full border border-input bg-card px-2 py-1 text-[13px]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {t("plan.field.libelle")}
+                      </span>
+                      <input
+                        value={libelle}
+                        onChange={(e) => setLibelle(e.target.value)}
+                        required
+                        autoFocus
+                        className="mt-1 w-full border border-input bg-card px-2 py-1 text-[13px]"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={ouvrir.isPending}
+                      className="min-h-[36px] self-end border border-foreground bg-foreground px-3 text-[11px] uppercase tracking-wide text-background disabled:opacity-40"
+                    >
+                      {t("plan.open")}
+                    </button>
+                  </form>
+                ) : null}
+              </InkCell>
+              <InkCell>
+                <SignalLight
+                  tone={c.origine === "cabinet" ? "ok" : "neutral"}
+                  label={t(`plan.origin.${c.origine}`)}
+                />
+                {c.collectif ? (
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
+                    {t("plan.collectif")}
+                  </span>
+                ) : null}
+              </InkCell>
+              <InkCell>
+                {c.collectif ? null : c.origine === "cabinet" ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await office().parametrage.fermerCompte(org.id, c.code);
+                      await queryClient.invalidateQueries({ queryKey: ["param-plan", org.id] });
+                    }}
+                    className="min-h-[36px] border border-border px-2 text-[11px] uppercase tracking-wide text-muted-foreground"
+                  >
+                    {t("plan.close")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const suivant = ouvertSous === c.code ? null : c.code;
+                      setOuvertSous(suivant);
+                      setErreur(null);
+                      setLibelle("");
+                      setCode(suivant ? prochainCode(c.code) : "");
+                    }}
+                    className="min-h-[36px] border border-border px-2 text-[11px] uppercase tracking-wide"
+                  >
+                    {ouvertSous === c.code ? t("plan.cancel") : t("plan.subdivide")}
+                  </button>
+                )}
               </InkCell>
             </InkTableRow>
           ))}

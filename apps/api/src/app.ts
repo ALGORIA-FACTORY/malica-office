@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { creerCompte, emettreJeton, lireJeton, organisations, verifierCompte } from "./auth.ts";
 import { sousIdentite } from "./db.ts";
+import { refusLisible } from "./refus.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
 import { deposerContenu, servirContenu } from "./stockage.ts";
 
@@ -204,6 +205,13 @@ app.post("/rpc", exigerIdentite, async (req, res, next) => {
   } catch (erreur) {
     if (erreur instanceof RpcIntrouvable) {
       res.status(404).json({ erreur: erreur.message });
+      return;
+    }
+    // Une règle métier qui refuse a écrit son message pour l'''appelant : le
+    // masquer derrière « erreur interne » lui retirerait la seule chose utile.
+    const refus = refusLisible(erreur);
+    if (refus) {
+      res.status(400).json({ erreur: refus });
       return;
     }
     next(erreur);
