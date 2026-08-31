@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { useApparence } from "@/components/regalica/apparence";
 import { I18nProvider } from "@/i18n";
 
 function NotFoundComponent() {
@@ -141,6 +142,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // À la racine : le thème vaut pour toute l'application, cabinet compris, et
+  // il survit à la navigation. Le poser sur l'écran des réglages ne l'aurait
+  // tenu que le temps d'y rester.
+  useApparence();
 
   return (
     <QueryClientProvider client={queryClient}>

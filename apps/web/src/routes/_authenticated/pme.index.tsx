@@ -155,7 +155,7 @@ function PmeHome() {
               </Link>
             ) : null}
             <Link
-              to="/pme/notifications"
+              to="/pme/reglages"
               className="whitespace-nowrap border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
             >
               {locale.toUpperCase()} · ⚙
