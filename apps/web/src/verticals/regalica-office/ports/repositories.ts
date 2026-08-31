@@ -144,6 +144,58 @@ export interface ParametrageRepository {
   }): Promise<void>;
 }
 
+// --------------------------------------------------------------------- tiers
+/**
+ * Un tiers : l'auxiliaire d'un compte collectif.
+ *
+ * Il appartient au DOSSIER, pas au cabinet qui le saisit — « DREAM OPTIC » est
+ * un client de la PME A, et la PME B n'a rien à voir dans ses créances.
+ */
+export interface Tiers {
+  id: string;
+  nature: NatureTiers;
+  code: string;
+  raisonSociale: string;
+  identifiantFiscal: string | null;
+  compteCollectif: string;
+  compteLibelle: string | null;
+  actif: boolean;
+  note: string | null;
+  creeLe: string;
+}
+
+export type NatureTiers = "client" | "fournisseur" | "salarie" | "associe" | "compte_bancaire";
+
+/** Un compte du plan qui accepte un auxiliaire — 401, 411, 425, 442… */
+export interface CompteCollectif {
+  code: string;
+  libelle: string;
+  classe: string;
+  exigeAuxiliaire: boolean;
+}
+
+export interface TiersRepository {
+  lister(tenantId: string, nature: NatureTiers | null): Promise<Tiers[]>;
+  comptesCollectifs(): Promise<CompteCollectif[]>;
+  creer(input: {
+    tenantId: string;
+    nature: NatureTiers;
+    code: string;
+    raisonSociale: string;
+    compteCollectif: string;
+    identifiantFiscal?: string | null;
+    note?: string | null;
+  }): Promise<string>;
+  modifier(input: {
+    id: string;
+    raisonSociale: string;
+    compteCollectif: string;
+    identifiantFiscal?: string | null;
+    note?: string | null;
+  }): Promise<void>;
+  desactiver(id: string, actif: boolean): Promise<void>;
+}
+
 // ---------------------------------------------------------------- référentiel
 export interface TaxRate {
   code: string;
