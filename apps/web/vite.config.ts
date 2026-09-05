@@ -75,15 +75,6 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "@tanstack/react-router"],
   },
 
-  /*
-   * @napi-rs/canvas est un module natif qui ne sert QU'AU SERVEUR (la lecture
-   * d'une page dense par bandes). L'optimiseur de dépendances tentait de le
-   * charger comme un module JavaScript et faisait tomber le serveur au
-   * démarrage. Il reste externe : Node le charge, Vite ne l'empaquette pas.
-   */
-  optimizeDeps: { exclude: ["@napi-rs/canvas"] },
-  ssr: { external: ["@napi-rs/canvas"] },
-
   server: {
     /*
      * 8080 par défaut, et strictement : l'aperçu et les scripts pointent

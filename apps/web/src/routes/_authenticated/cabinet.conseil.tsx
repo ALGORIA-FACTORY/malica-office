@@ -16,7 +16,6 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
@@ -28,7 +27,6 @@ import {
 } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@regalica/socle/conseil";
-import { conseilRepondre } from "@/lib/conseil.functions";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
@@ -889,12 +887,12 @@ function SeuilDeCertitude({ file }: { file: Arbitrage[] }) {
 function CorpusReglementaire() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
-  const repondre = useServerFn(conseilRepondre);
   const [question, setQuestion] = useState("");
   const maintenant = Date.now();
 
   const reponse = useMutation({
-    mutationFn: (q: string) => repondre({ data: { tenantId: org.id, question: q, locale } }),
+    mutationFn: (q: string) =>
+      office().regalica.repondreAuCabinet({ tenantId: org.id, question: q, locale }),
   });
   const veille = useQuery({
     queryKey: ["cab-conseil-veille", org.jurisdiction],

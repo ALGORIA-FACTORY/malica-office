@@ -14,20 +14,12 @@
  * par le navigateur serait un fil qu'on peut forger.
  */
 
-import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
-import {
-  regalicaAsk,
-  regalicaConversations,
-  regalicaJuger,
-  regalicaOuvrirFil,
-  regalicaRenommerFil,
-  regalicaSupprimerFil,
-} from "@/lib/regalica.functions";
 import { cn } from "@/lib/utils";
+import { office } from "@/verticals/regalica-office/composition";
 
 interface Turn {
   role: "user" | "assistant";
@@ -65,12 +57,6 @@ export function RegalicaChat({
 }) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
-  const ask = useServerFn(regalicaAsk);
-  const juger = useServerFn(regalicaJuger);
-  const lister = useServerFn(regalicaConversations);
-  const ouvrir = useServerFn(regalicaOuvrirFil);
-  const renommer = useServerFn(regalicaRenommerFil);
-  const supprimer = useServerFn(regalicaSupprimerFil);
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
@@ -88,7 +74,7 @@ export function RegalicaChat({
 
   const fils = useQuery({
     queryKey: ["regalica-fils", tenantId],
-    queryFn: () => lister({ data: { tenantId: tenantId! } }),
+    queryFn: () => office().conversations.lister(tenantId!),
     enabled: !!tenantId,
   });
 
@@ -97,15 +83,13 @@ export function RegalicaChat({
   const mutation = useMutation({
     mutationFn: async (question: string) => {
       if (!tenantId) throw new Error(t("regalica.chat.noTenant"));
-      return ask({
-        data: {
-          tenantId,
-          pieceId: pieceId ?? null,
-          question,
-          locale,
-          mode: "reasoner" as const,
-          conversationId: filId,
-        },
+      return office().regalica.demander({
+        tenantId,
+        pieceId: pieceId ?? null,
+        question,
+        locale,
+        mode: "reasoner",
+        conversationId: filId,
       });
     },
     onSuccess: (res) => {
@@ -129,7 +113,7 @@ export function RegalicaChat({
   });
 
   const reprise = useMutation({
-    mutationFn: (id: string) => ouvrir({ data: { conversationId: id } }),
+    mutationFn: (id: string) => office().conversations.ouvrir(id),
     onSuccess: (messages, id) => {
       setFilId(id);
       setTurns(
@@ -149,7 +133,8 @@ export function RegalicaChat({
   });
 
   const renommage = useMutation({
-    mutationFn: (v: { conversationId: string; titre: string }) => renommer({ data: v }),
+    mutationFn: (v: { conversationId: string; titre: string }) =>
+      office().conversations.renommer(v),
     onSuccess: () => {
       setEnRenommage(null);
       void qc.invalidateQueries({ queryKey: ["regalica-fils", tenantId] });
@@ -157,7 +142,7 @@ export function RegalicaChat({
   });
 
   const effacement = useMutation({
-    mutationFn: (id: string) => supprimer({ data: { conversationId: id } }),
+    mutationFn: (id: string) => office().conversations.supprimer(id),
     onSuccess: (_r, id) => {
       setAEffacer(null);
       if (id === filId) {
@@ -179,7 +164,7 @@ export function RegalicaChat({
   function marquer(messageId: string, verdict: "juste" | "faux") {
     if (!tenantId) return;
     setJuges((p) => ({ ...p, [messageId]: verdict }));
-    void juger({ data: { tenantId, messageId, verdict } });
+    void office().conversations.juger({ tenantId, messageId, verdict, attendu: null });
   }
 
   function submit() {

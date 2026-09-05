@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
@@ -9,16 +8,10 @@ import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { usePme } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
-import {
-  ficheCourante,
-  ficheEtablir,
-  ficheLireCarte,
-  ficheFormes,
-  ficheRegimes,
-  type RegimeDisponible,
-} from "@/lib/fiche.functions";
 import { cn } from "@/lib/utils";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { office } from "@/verticals/regalica-office/composition";
+import type { RegimeDisponible } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/fiche")({
   head: () => ({
@@ -42,20 +35,6 @@ export const Route = createFileRoute("/_authenticated/pme/fiche")({
 });
 
 const OU = "routes/_authenticated/pme.fiche";
-
-/**
- * Une image que le navigateur n'a pas su lire.
- *
- * Le message est écrit par nous, dans la langue de la personne : il doit
- * arriver à l'écran tel quel, et non être remplacé par la phrase générique
- * réservée aux erreurs d'origine inconnue.
- */
-class ImageIllisible extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ImageIllisible";
-  }
-}
 
 /**
  * La situation fiscale du dossier — lue sur la carte, arrêtée par la personne.
@@ -87,12 +66,6 @@ function FicheFiscale() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  const lireCarte = useServerFn(ficheLireCarte);
-  const etablir = useServerFn(ficheEtablir);
-  const listerRegimes = useServerFn(ficheRegimes);
-  const listerFormes = useServerFn(ficheFormes);
-  const lireFiche = useServerFn(ficheCourante);
-
   const [scanne, setScanne] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [luDeLaCarte, setLuDeLaCarte] = useState<Set<string>>(new Set());
@@ -108,11 +81,11 @@ function FicheFiscale() {
 
   const regimes = useQuery({
     queryKey: ["regimes", pme.jurisdiction],
-    queryFn: () => listerRegimes({ data: { jurisdiction: pme.jurisdiction } }),
+    queryFn: () => office().identity.regimesDisponibles(pme.jurisdiction),
   });
   const formes = useQuery({
     queryKey: ["formes", pme.jurisdiction],
-    queryFn: () => listerFormes({ data: { jurisdiction: pme.jurisdiction } }),
+    queryFn: () => office().identity.formesDisponibles(pme.jurisdiction),
   });
   // Les codes viennent du référentiel ; leur libellé, du dictionnaire.
   const choixDe = (axe: "forme" | "mode") =>
@@ -122,7 +95,7 @@ function FicheFiscale() {
 
   const courante = useQuery({
     queryKey: ["fiche", pme.tenantId],
-    queryFn: () => lireFiche({ data: { tenantId: pme.tenantId } }),
+    queryFn: () => office().identity.ficheCourante(pme.tenantId),
   });
 
   const parAxe = (axe: RegimeDisponible["axe"]) =>
@@ -156,17 +129,10 @@ function FicheFiscale() {
 
   /** Une image, lue par l'œil, qui remplit le formulaire sans rien décider. */
   const lecture = useMutation({
-    mutationFn: async (blob: Blob) => {
-      const dataUrl = await new Promise<string>((resoudre, rejeter) => {
-        const lecteur = new FileReader();
-        lecteur.onload = () => resoudre(String(lecteur.result));
-        lecteur.onerror = () => rejeter(new ImageIllisible(t("fiche.erreur.image")));
-        lecteur.readAsDataURL(blob);
-      });
-      return lireCarte({
-        data: { jurisdiction: pme.jurisdiction, dataUrl, mime: blob.type || "image/jpeg" },
-      });
-    },
+    // Les octets partent tels quels : l'œil les reçoit par leur propre route,
+    // sans passer par une adresse de données de plusieurs mégaoctets.
+    mutationFn: (blob: Blob) =>
+      office().regalica.lireCarte({ jurisdiction: pme.jurisdiction, fichier: blob }),
     onSuccess: (res) => {
       setErreur(null);
       const c = res.carte;
@@ -191,28 +157,25 @@ function FicheFiscale() {
       }
       setLuDeLaCarte(lus);
     },
-    onError: (e: unknown) =>
-      setErreur(e instanceof ImageIllisible ? e.message : texteDeLErreur(e, OU, t("common.error"))),
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   const enregistrement = useMutation({
     mutationFn: () =>
-      etablir({
-        data: {
-          tenantId: pme.tenantId,
-          regimeImposition: regimeImposition || null,
-          regimeTva: regimeTva || null,
-          prorataTva: regimeTva === "partiel" && prorata ? Number(prorata) : null,
-          secteur: secteur.trim() || null,
-          debutActivite: debut || null,
-          clotureExercice: cloture || null,
-          formeJuridique: forme || null,
-          modeDepot: mode || null,
-          // La source dit d'où vient la fiche, et elle ne ment pas : « carte »
-          // seulement si l'œil a réellement rempli quelque chose.
-          source: luDeLaCarte.size > 0 ? ("carte" as const) : ("saisie" as const),
-          validFrom: new Date().toISOString().slice(0, 10),
-        },
+      office().identity.etablirFiche({
+        tenantId: pme.tenantId,
+        regimeImposition: regimeImposition || null,
+        regimeTva: regimeTva || null,
+        prorataTva: regimeTva === "partiel" && prorata ? Number(prorata) : null,
+        secteur: secteur.trim() || null,
+        debutActivite: debut || null,
+        clotureExercice: cloture || null,
+        formeJuridique: forme || null,
+        modeDepot: mode || null,
+        // La source dit d'où vient la fiche, et elle ne ment pas : « carte »
+        // seulement si l'œil a réellement rempli quelque chose.
+        source: luDeLaCarte.size > 0 ? ("carte" as const) : ("saisie" as const),
+        validFrom: new Date().toISOString().slice(0, 10),
       }),
     onSuccess: async () => {
       setErreur(null);

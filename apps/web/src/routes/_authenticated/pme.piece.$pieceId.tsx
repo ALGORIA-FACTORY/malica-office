@@ -155,7 +155,7 @@ function PieceScreen() {
   const lue = dossier.data?.extraction != null;
   const etat = useQuery({
     queryKey: ["lecture-en-cours", pieceId],
-    queryFn: () => office().capture.etatLecture(pieceId),
+    queryFn: () => office().regalica.etatDeLecture(pieceId),
     enabled: !lue,
     refetchInterval: (q) => (q.state.data?.enCours || attente ? 3_000 : false),
   });
@@ -264,7 +264,7 @@ function PieceScreen() {
   });
 
   const read = useMutation({
-    mutationFn: () => office().capture.read(pieceId),
+    mutationFn: () => office().regalica.lirePiece(pieceId),
     onSuccess: async () => {
       setError(null);
       await invalidate();

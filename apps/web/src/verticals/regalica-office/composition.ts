@@ -1,9 +1,12 @@
 import { creerAuthHttp } from "./adapters/http/auth";
 import { creerCaptureHttp } from "./adapters/http/capture";
+import { creerRegalicaHttp } from "./adapters/http/regalica";
 import { creerDepotHttp } from "./adapters/http/rpc";
 import type { AuthPort } from "@regalica/socle/ports/auth";
+import type { RegalicaPort } from "@regalica/socle/ports/regalica";
 import type {
   CaptureRepository,
+  ConversationsRepository,
   IdentityRepository,
   OfficeRepository,
   ReferentialRepository,
@@ -66,6 +69,10 @@ export interface OfficeRuntime {
   honoraires: HonorairesRepository;
   integrations: IntegrationsRepository;
   exports: ExportsRepository;
+  /** Les fils de conversation — de la base, sans modèle : un dépôt comme les autres. */
+  conversations: ConversationsRepository;
+  /** La couche agentique : tout ce qui fait parler un modèle, sur ses propres routes. */
+  regalica: RegalicaPort;
 }
 
 let runtime: OfficeRuntime | null = null;
@@ -91,6 +98,8 @@ export function office(): OfficeRuntime {
       honoraires: creerDepotHttp<HonorairesRepository>("honoraires"),
       integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
       exports: creerDepotHttp<ExportsRepository>("exports"),
+      conversations: creerDepotHttp<ConversationsRepository>("conversations"),
+      regalica: creerRegalicaHttp(),
     };
   }
 

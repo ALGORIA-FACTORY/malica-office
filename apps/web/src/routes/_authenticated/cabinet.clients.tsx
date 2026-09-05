@@ -15,7 +15,6 @@
  */
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
@@ -28,7 +27,6 @@ import {
   SectionTitle,
 } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { ficheCourante, ficheRegimes } from "@/lib/fiche.functions";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
@@ -72,8 +70,6 @@ const ENGAGEMENT: Record<string, MessageKey> = {
 function CabinetClients() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
-  const lireFiche = useServerFn(ficheCourante);
-  const lireRegimes = useServerFn(ficheRegimes);
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -94,7 +90,7 @@ function CabinetClients() {
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   const regimes = useQuery({
     queryKey: ["fiche-regimes", org.jurisdiction],
-    queryFn: () => lireRegimes({ data: { jurisdiction: org.jurisdiction } }),
+    queryFn: () => office().identity.regimesDisponibles(org.jurisdiction),
   });
   const rows = useMemo(() => clients.data ?? [], [clients.data]);
   // La fiche de chaque client, pour son régime : une requête par mandat,
@@ -102,7 +98,7 @@ function CabinetClients() {
   const fiches = useQueries({
     queries: rows.map((c) => ({
       queryKey: ["fiche", c.tenantId],
-      queryFn: () => lireFiche({ data: { tenantId: c.tenantId } }),
+      queryFn: () => office().identity.ficheCourante(c.tenantId),
     })),
   });
 

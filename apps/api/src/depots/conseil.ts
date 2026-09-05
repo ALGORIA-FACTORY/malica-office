@@ -7,7 +7,7 @@
  * réponse citée et mesure sa certitude. Au-dessus du seuil du cabinet elle
  * répond seule ; en dessous elle retient sa réponse et la remet à l'expert.
  * Ce dépôt garde ces remises et ce que le cabinet en fait. Il ne fait dire
- * rien à personne : l'appel au modèle vit côté web, là où est la clé.
+ * rien à personne : l'appel au modèle vit dans `regalica.ts`, où est la clé.
  *
  * ============================================================= L'ISOLATION
  *

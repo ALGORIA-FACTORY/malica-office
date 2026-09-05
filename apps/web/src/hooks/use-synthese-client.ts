@@ -14,11 +14,9 @@
  * clôture). Sans fiche, l'année civile — et l'écran le dit.
  */
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo } from "react";
 
 import { debutDExercice, finDuMois } from "@regalica/socle/exercice";
-import { ficheCourante } from "@/lib/fiche.functions";
 import { office } from "@/verticals/regalica-office/composition";
 import type { ClientSummary } from "@regalica/socle/ports/repositories";
 import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
@@ -40,7 +38,6 @@ export interface SyntheseClient {
 }
 
 export function useSyntheseClient(client: ClientSummary | null, periode: string): SyntheseClient {
-  const lireFiche = useServerFn(ficheCourante);
   const tenantId = client?.tenantId ?? null;
   // Aucune devise de repli (R4) : sans client, rien n'est calculé.
   const devise = client?.currency ?? null;
@@ -52,7 +49,7 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
   });
   const fiche = useQuery({
     queryKey: ["fiche", tenantId],
-    queryFn: () => lireFiche({ data: { tenantId: tenantId! } }),
+    queryFn: () => office().identity.ficheCourante(tenantId!),
     enabled: tenantId !== null,
   });
   const debutExercice = debutDExercice(fiche.data?.clotureExercice ?? null, periode);

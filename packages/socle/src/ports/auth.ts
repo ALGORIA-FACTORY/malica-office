@@ -35,11 +35,12 @@ export interface AuthPort {
 export type MotifEchecAuth = "identifiants" | "adresse_prise" | "saisie" | "reseau";
 
 export class EchecAuth extends Error {
-  constructor(
-    readonly motif: MotifEchecAuth,
-    message: string,
-  ) {
+  // Champ déclaré puis affecté : Node décape les types sans compiler, et une
+  // propriété de paramètre est la seule syntaxe qu'il ne sait pas effacer.
+  readonly motif: MotifEchecAuth;
+  constructor(motif: MotifEchecAuth, message: string) {
     super(message);
     this.name = "EchecAuth";
+    this.motif = motif;
   }
 }

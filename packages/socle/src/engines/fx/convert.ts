@@ -4,8 +4,13 @@ import type { FxConversionV1, FxRateV1 } from "../../contracts/fx.v1.ts";
 
 export class FxRateUnavailable extends Error {
   code = "FX_RATE_UNAVAILABLE" as const;
-  constructor(public detail: { base: string; quote: string; date: string }) {
+  // Pas de propriété de paramètre (`constructor(public detail)`) : Node décape
+  // les types sans compiler, et cette syntaxe-là est la seule qu'il ne sait pas
+  // effacer. Le champ est déclaré, puis affecté.
+  readonly detail: { base: string; quote: string; date: string };
+  constructor(detail: { base: string; quote: string; date: string }) {
     super(`Aucun taux FX ${detail.base}→${detail.quote} au ${detail.date}`);
+    this.detail = detail;
   }
 }
 

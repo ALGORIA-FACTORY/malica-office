@@ -20,12 +20,14 @@ import "dotenv/config";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 
-import { creerCompte, emettreJeton, lireJeton, organisations, verifierCompte } from "./auth.ts";
+import { creerCompte, emettreJeton, organisations, verifierCompte } from "./auth.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sousIdentite } from "./db.ts";
 import { refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
+import { regalica } from "./regalica.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
+import { exigerIdentite, NOM_COOKIE } from "./session.ts";
 import { deposerContenu, servirContenu } from "./stockage.ts";
 
 /** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
@@ -58,33 +60,6 @@ app.use(
   }),
 );
 
-/** L'identité de l'appelant, attachée par `exigerIdentite`. */
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      utilisateur?: { id: string; email: string };
-    }
-  }
-}
-
-const NOM_COOKIE = "regalica_session";
-
-function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
-  const entete = req.headers.authorization;
-  const jeton = entete?.startsWith("Bearer ")
-    ? entete.slice(7)
-    : (req.cookies as Record<string, string> | undefined)?.[NOM_COOKIE];
-
-  const utilisateur = jeton ? lireJeton(jeton) : null;
-  if (!utilisateur) {
-    res.status(401).json({ erreur: "authentification requise" });
-    return;
-  }
-  req.utilisateur = utilisateur;
-  next();
-}
-
 /**
  * Une session, ou une clé d'API du cabinet — voir `cles-api.ts`. La clé ne
  * change rien à la RLS : elle pose le cabinet en claim, et la base décide.
@@ -106,6 +81,13 @@ app.get("/pieces/:id/contenu", exigerIdentite, (req, res, next) => {
 });
 
 app.use(express.json({ limit: "1mb" }));
+
+/*
+ * Regalica — tout ce qui fait parler un modèle. Hors de `/rpc`, parce que
+ * ces gestes durent plus longtemps qu'une transaction ne peut rester ouverte.
+ * Voir `regalica.ts`.
+ */
+app.use("/regalica", regalica);
 
 const Identifiants = z.object({
   email: z.string().email(),

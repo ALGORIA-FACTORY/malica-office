@@ -14,7 +14,6 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
@@ -24,7 +23,6 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { finDuMois } from "@regalica/socle/exercice";
 import { montant } from "@/lib/lisible";
-import { pvRediger } from "@/lib/pv.functions";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import type { CollabRepository, PvChiffre, PvReunion } from "@regalica/socle/ports/repositories";
@@ -89,7 +87,6 @@ function CabinetPv() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
-  const rediger = useServerFn(pvRediger);
 
   const [selection, setSelection] = useState<string | null>(null);
   const [filtre, setFiltre] = useState("");
@@ -156,7 +153,7 @@ function CabinetPv() {
         titre: t("cab.pv.titre.defaut", { client }),
         participants: form.presents.trim() || null,
       });
-      const resultat = await rediger({ data: { pvId: id, locale } });
+      const resultat = await office().regalica.redigerLePv({ pvId: id, locale });
       return { id, resultat };
     },
     onSuccess: async ({ id, resultat }) => {
@@ -171,7 +168,7 @@ function CabinetPv() {
   });
 
   const rerediger = useMutation({
-    mutationFn: (id: string) => rediger({ data: { pvId: id, locale } }),
+    mutationFn: (id: string) => office().regalica.redigerLePv({ pvId: id, locale }),
     onSuccess: async (resultat) => {
       setErreur(null);
       setMessage(null);

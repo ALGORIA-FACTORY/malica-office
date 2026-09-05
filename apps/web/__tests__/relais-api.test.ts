@@ -36,6 +36,9 @@ describe("qui relaie quoi", () => {
     // sur l'appareil qui l'a produite, et le défaut se corrige à l'aveugle —
     // ce qui a coûté trois corrections inutiles.
     expect(estPourLApi("/journal-atelier")).toBe(true);
+    // Regalica : la lecture, la réponse, la rédaction — sur leurs propres routes.
+    expect(estPourLApi("/regalica/lectures/abc")).toBe(true);
+    expect(estPourLApi("/regalica/demander")).toBe(true);
   });
 
   it("ne relaie aucune page de l application", () => {

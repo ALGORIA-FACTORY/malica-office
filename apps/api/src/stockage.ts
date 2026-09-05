@@ -26,13 +26,14 @@
  */
 
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
 import type { Request, Response } from "express";
 
 import { sousLAppelant } from "./cles-api.ts";
+import type { Requete } from "./db.ts";
 
 /**
  * La racine du stockage, exigée au démarrage comme `JWT_SECRET`.
@@ -117,13 +118,37 @@ async function pieceAutorisee(
   pieceId: string | undefined,
 ): Promise<LignePiece | null> {
   if (!pieceId || !UUID.test(pieceId)) return null;
-  return sousLAppelant(req, async (db) => {
-    const { rows } = await db.query<LignePiece>(
-      `select id, tenant_id, content_type from pieces_v where id = $1`,
-      [pieceId],
-    );
-    return rows[0] ?? null;
-  });
+  return sousLAppelant(req, (db) => lignePiece(db, pieceId));
+}
+
+async function lignePiece(db: Requete, pieceId: string): Promise<LignePiece | null> {
+  const { rows } = await db.query<LignePiece>(
+    `select id, tenant_id, content_type from pieces_v where id = $1`,
+    [pieceId],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Les octets d'une pièce, pour Regalica — sur une connexion déjà placée sous
+ * l'identité de l'appelant. Même `select`, même RLS que la route : ce que la
+ * base ne rend pas n'existe pas, et `null` ne distingue pas l'interdit de
+ * l'absent.
+ */
+export async function lireContenu(
+  db: Requete,
+  pieceId: string,
+): Promise<{ octets: Uint8Array; type: string } | null> {
+  if (!UUID.test(pieceId)) return null;
+  const piece = await lignePiece(db, pieceId);
+  if (!piece) return null;
+  try {
+    const octets = await readFile(cheminAbsolu(piece.tenant_id, piece.id));
+    return { octets: new Uint8Array(octets), type: piece.content_type ?? TYPE_INCONNU };
+  } catch {
+    // La ligne existe, les octets non : le dépôt n'a jamais abouti.
+    return null;
+  }
 }
 
 /** Dépose les octets d'une pièce. Idempotent : redéposer remplace. */

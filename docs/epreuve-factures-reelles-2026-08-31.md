@@ -44,10 +44,10 @@ exactement 1,000 DT — le timbre fiscal. Le système n'a pas comblé le trou, i
 
 ## 2. Le défaut structurel : le sens du document n'a pas de propriétaire
 
-| Famille | Documents | Classés conformément | Classés à l'envers |
-|---|---|---|---|
-| facture achat | 8 | **1** | **7** |
-| facture vente | 10 | 10 | 0 |
+| Famille       | Documents | Classés conformément | Classés à l'envers |
+| ------------- | --------- | -------------------- | ------------------ |
+| facture achat | 8         | **1**                | **7**              |
+| facture vente | 10        | 10                   | 0                  |
 
 **7 des 8 factures d'achat sont classées `facture_vente`.** Et les dix ventes sont « justes ».
 Cette répartition n'est pas un défaut de qualité du modèle : c'est la signature d'une erreur de
@@ -68,7 +68,7 @@ journal: extract.document_kind === "facture_achat" ? "ACH" : "VEN",
 et le choix de l'imputation :
 
 ```ts
-params.mappings.find((m) => m.documentKind === extract.document_kind && m.taxCode === firstTaxCode)
+params.mappings.find((m) => m.documentKind === extract.document_kind && m.taxCode === firstTaxCode);
 ```
 
 Une facture d'achat mal classée part donc au **journal des ventes**, avec un **compte de produit**
@@ -95,11 +95,11 @@ plan, et la résolution doit vivre dans le Socle, à un seul endroit.
 
 Mesuré sur les 18 documents lus :
 
-| Élément | Capté |
-|---|---|
-| Articles (désignation, quantité, prix) | **18 / 18** |
-| Timbre fiscal | **0 / 18** — `other_charges` est vide partout |
-| Remise commerciale | **0 / 18** — aucun champ de remise dans le contrat d'extrait |
+| Élément                                | Capté                                                        |
+| -------------------------------------- | ------------------------------------------------------------ |
+| Articles (désignation, quantité, prix) | **18 / 18**                                                  |
+| Timbre fiscal                          | **0 / 18** — `other_charges` est vide partout                |
+| Remise commerciale                     | **0 / 18** — aucun champ de remise dans le contrat d'extrait |
 
 **Le timbre fiscal.** Il figure explicitement sur les factures (`Timbre Fiscal : 1,000`,
 `TIM 2023`). Il n'entre nulle part. C'est une charge fiscale réelle, avec son propre compte, et
@@ -116,11 +116,11 @@ explique qu'un prix TTC net paraisse inférieur à un prix HT brut.
 
 ## 4. Coût et tenue de charge
 
-| Mesure | Valeur |
-|---|---|
-| Latence moyenne par document | **139 s** (min 74 s, max 225 s) |
-| Jetons modèle sur 18 documents | 127 237 en entrée, 321 249 en sortie |
-| Documents refusés pour plafond de jetons | 2 sur 20 (10 %) |
+| Mesure                                   | Valeur                               |
+| ---------------------------------------- | ------------------------------------ |
+| Latence moyenne par document             | **139 s** (min 74 s, max 225 s)      |
+| Jetons modèle sur 18 documents           | 127 237 en entrée, 321 249 en sortie |
+| Documents refusés pour plafond de jetons | 2 sur 20 (10 %)                      |
 
 Deux points à retenir. **Deux minutes par facture** est tenable pour un dépôt à l'unité, pas pour
 une reprise d'exercice : un cabinet qui charge 2 000 pièces attendrait 77 heures en séquentiel. Il
@@ -136,7 +136,7 @@ la géométrie des tokens.
 
 ## 5. Ce qu'il faut faire avant de déposer ces lectures en base
 
-La passe 2 (`tests/real/ingest-push.ts`) est prête et la base est saine. Mais la déposer en
+La passe 2 (`apps/api/tests/real/ingest-push.ts`) est prête et la base est saine. Mais la déposer en
 l'état écrirait **7 écritures fausses sur 18** — factures d'achat au journal des ventes, en
 produits et en TVA collectée. Le grand livre serait faux sans qu'aucun contrôle ne bronche, ce
 qui est exactement la classe de défaut que ce produit existe pour empêcher.
@@ -166,7 +166,7 @@ en passe 2 sans repayer un seul appel de modèle, dès que les corrections sont 
   reads.json       les 18 lectures, avec tokens, citations et drapeaux
 ```
 
-Passe 1 : `bun tests/real/ingest-read.ts <selection.tsv> <reads.json> <taxcodes.json>` depuis
+Passe 1 : `bun apps/api/tests/real/ingest-read.ts <selection.tsv> <reads.json> <taxcodes.json>` depuis
 `apps/web`. Passe 2 : `bun tests/real/ingest-push.ts <reads.json> <tenants.json>`, avec
 `REGALICA_EMAIL`, `REGALICA_MOTDEPASSE` et `REGALICA_API_URL=http://127.0.0.1:3000` (l'API écoute
 en IPv4 ; `localhost` se résout en `::1` sous Node et la connexion échoue).

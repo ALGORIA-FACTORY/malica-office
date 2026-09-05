@@ -12,12 +12,9 @@
  * symétrique, plus pénible : un fichier sans ligne, invisible et impossible à
  * retrouver.
  *
- * Et il porte une lecture qui ne se fait pas ici. `read` appelle une fonction
- * serveur du web, parce que l'œil et le raisonneur ont besoin de clés qui ne
- * doivent jamais atteindre le navigateur.
+ * La lecture, elle, n'est plus ici : elle fait parler un modèle, et c'est
+ * l'affaire de Regalica — voir `regalica.ts`, à côté.
  */
-
-import { etatLecture, readPiece } from "@/lib/office-capture.functions";
 
 import type {
   CaptureRepository,
@@ -137,15 +134,6 @@ export function creerCaptureHttp(): CaptureRepository {
 
     async supprimer(pieceId: string): Promise<boolean> {
       return (await appeler("capture", "supprimer", [pieceId])) as boolean;
-    },
-
-    async read(pieceId: string) {
-      const res = await readPiece({ data: { pieceId } });
-      return { contract: res.contract, citations: res.citations, valid: res.valid };
-    },
-
-    async etatLecture(pieceId: string) {
-      return etatLecture({ data: { pieceId } });
     },
   };
 }

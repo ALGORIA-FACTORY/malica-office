@@ -102,6 +102,104 @@ export interface IdentityRepository {
     cabinetTenantId: string,
     legalId: string,
   ): Promise<{ id: string; pmeTenantId: string; pmeName: string; status: string; deja: boolean }>;
+  /** Les régimes que la juridiction connaît, tels que la base les porte. */
+  regimesDisponibles(jurisdiction: string): Promise<RegimeDisponible[]>;
+  /** Les formes juridiques et modes de dépôt que le calendrier distingue. */
+  formesDisponibles(jurisdiction: string): Promise<FormeDisponible[]>;
+  ficheCourante(tenantId: string): Promise<FicheCourante | null>;
+  /**
+   * L'expert arrête la fiche (R10) : une entrée nouvelle, datée. Lire une
+   * carte n'établit rien — c'est ce geste-ci, et lui seul, qui fait foi.
+   */
+  etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
+}
+
+export interface RegimeDisponible {
+  axe: "imposition" | "tva";
+  code: string;
+  libelle: string;
+  fondement: string;
+}
+
+/** Une forme juridique ou un mode de dépôt que le calendrier distingue. */
+export interface FormeDisponible {
+  axe: "forme" | "mode";
+  code: string;
+}
+
+export interface FicheCourante {
+  id: string;
+  regimeImposition: string | null;
+  regimeTva: string | null;
+  prorataTva: string | null;
+  secteur: string | null;
+  debutActivite: string | null;
+  clotureExercice: string | null;
+  formeJuridique: string | null;
+  modeDepot: string | null;
+  source: string;
+  pieceId: string | null;
+  validFrom: string;
+  validTo: string | null;
+}
+
+export interface NouvelleFiche {
+  tenantId: string;
+  regimeImposition: string | null;
+  regimeTva: string | null;
+  prorataTva: number | null;
+  secteur: string | null;
+  debutActivite: string | null;
+  clotureExercice: string | null;
+  formeJuridique: string | null;
+  modeDepot: string | null;
+  /** D'où vient la fiche, et elle ne ment pas : « carte » seulement si l'œil a rempli quelque chose. */
+  source: "carte" | "saisie";
+  pieceId?: string | null;
+  validFrom: string;
+}
+
+// ------------------------------------------------- les fils de Regalica
+/**
+ * Aucune de ces méthodes ne dit à qui appartient un fil : la base le sait, et
+ * elle seule décide. R6 — un filtre applicatif oublié ouvre l'accès, une
+ * politique oubliée le refuse.
+ */
+export interface ConversationsRepository {
+  lister(tenantId: string): Promise<ConversationResume[]>;
+  ouvrir(conversationId: string): Promise<MessageDuFil[]>;
+  renommer(input: { conversationId: string; titre: string }): Promise<void>;
+  /**
+   * Le geste du comptable : juste, ou faux. C'est ce qui construit la banque
+   * de cas sans que personne n'écrive une question à froid.
+   */
+  juger(input: {
+    tenantId: string;
+    messageId: string;
+    verdict: "juste" | "faux";
+    attendu: string | null;
+  }): Promise<void>;
+  supprimer(conversationId: string): Promise<void>;
+}
+
+export interface ConversationResume {
+  id: string;
+  titre: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: number;
+}
+
+export interface MessageDuFil {
+  id: string;
+  role: "user" | "assistant";
+  contenu: string;
+  raisonnement: string | null;
+  model: string | null;
+  tokensIn: number | null;
+  tokensOut: number | null;
+  latencyMs: number | null;
+  createdAt: string;
 }
 
 export interface JurisdictionPack {
@@ -526,13 +624,6 @@ export interface CaptureRepository {
    */
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
-  read(pieceId: string): Promise<{ contract: string; citations: number; valid: boolean }>;
-  /**
-   * Une lecture est-elle en cours pour cette pièce ? Sert à l'écran qui
-   * revient après une coupure : attendre, plutôt qu'annoncer une panne ou
-   * relancer la lecture.
-   */
-  etatLecture(pieceId: string): Promise<{ enCours: boolean; depuisMs: number | null }>;
   /**
    * Ce que la personne précise quand la lecture ne pouvait pas conclure —
    * aujourd'hui le sens de la pièce, achat ou vente. Une entrée nouvelle,

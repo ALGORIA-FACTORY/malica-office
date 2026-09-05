@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "dev:telephone": "node outils/dev-telephone.mjs",
     "certificat": "node outils/certificat-local.mjs",
-    "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs"
+    "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs",
+    "verifier": "node outils/verifier.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

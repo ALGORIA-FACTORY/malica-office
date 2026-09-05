@@ -17,7 +17,6 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
@@ -30,7 +29,6 @@ import {
   SectionTitle,
 } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { briefingRediger } from "@/lib/briefing.functions";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
 import { etatDeCharge, santeDuMandat, tauxDeRetour } from "@/lib/pilotage";
@@ -151,16 +149,13 @@ function CabinetPilotage() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [fait, setFait] = useState(false);
   // Regalica rédige le briefing depuis les faits du dossier ; l'expert relit et complète.
-  const rediger = useServerFn(briefingRediger);
   const redaction = useMutation({
     mutationFn: () =>
-      rediger({
-        data: {
-          cabinetId: org.id,
-          clientId,
-          collaborateur: emailDe.get(userId) ?? "",
-          langue: locale,
-        },
+      office().regalica.redigerLeBriefing({
+        cabinetId: org.id,
+        clientId,
+        collaborateur: emailDe.get(userId) ?? "",
+        langue: locale,
       }),
     onSuccess: (r) => {
       setErreur(null);

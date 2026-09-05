@@ -771,7 +771,6 @@ const fr = {
   "fiche.promesse": "Un champ vide reste vide : je préfère l'ignorer que le supposer.",
   "fiche.dejaEtablie":
     "Établie depuis le {depuis}. L'enregistrer la clôture et en ouvre une autre.",
-  "fiche.erreur.image": "Cette image n'a pas pu être lue.",
   "regalica.fils.titre": "Vos conversations",
   "regalica.fils.voir": "Mes conversations",
   "regalica.fils.retour": "Retour au fil",
@@ -2895,7 +2894,6 @@ const en: Dict = {
   "fiche.enregistrer": "Save my profile",
   "fiche.promesse": "An empty field stays empty: I would rather not know than assume.",
   "fiche.dejaEtablie": "In place since {depuis}. Saving closes it and opens another.",
-  "fiche.erreur.image": "This image could not be read.",
   "regalica.fils.titre": "Your conversations",
   "regalica.fils.voir": "My conversations",
   "regalica.fils.retour": "Back to the thread",
@@ -5011,7 +5009,6 @@ const ar: Dict = {
   "fiche.enregistrer": "حفظ وضعيتي",
   "fiche.promesse": "الحقل الفارغ يبقى فارغًا: أفضّل الجهل على الافتراض.",
   "fiche.dejaEtablie": "سارية منذ {depuis}. الحفظ يختمها ويفتح أخرى.",
-  "fiche.erreur.image": "تعذّرت قراءة هذه الصورة.",
   "regalica.fils.titre": "محادثاتك",
   "regalica.fils.voir": "محادثاتي",
   "regalica.fils.retour": "العودة إلى المحادثة",
