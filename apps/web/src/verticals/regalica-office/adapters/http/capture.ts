@@ -29,7 +29,7 @@ import type {
   PieceStatus,
   PieceLue,
   Token,
-} from "../../ports/repositories";
+} from "@regalica/socle/ports/repositories";
 import { appeler, baseApi, ErreurApi } from "./rpc";
 
 /**

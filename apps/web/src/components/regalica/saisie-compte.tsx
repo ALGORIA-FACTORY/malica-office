@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import type { CompteDuPlan } from "@/verticals/regalica-office/ports/repositories";
+import type { CompteDuPlan } from "@regalica/socle/ports/repositories";
 import { cn } from "@/lib/utils";
 
 /**

@@ -17,8 +17,8 @@
 
 import { readFileSync } from "node:fs";
 
-import { buildProposal } from "@/verticals/regalica-office/use-cases/propose-ecriture";
-import type { AccountMapping, TaxRate } from "@/verticals/regalica-office/ports/repositories";
+import { buildProposal } from "@regalica/socle/use-cases/propose-ecriture";
+import type { AccountMapping, TaxRate } from "@regalica/socle/ports/repositories";
 
 import { ouvrirSession } from "./api";
 

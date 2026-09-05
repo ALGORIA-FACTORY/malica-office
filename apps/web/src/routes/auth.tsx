@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
-import { EchecAuth } from "@/verticals/regalica-office/ports/auth";
+import { EchecAuth } from "@regalica/socle/ports/auth";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({

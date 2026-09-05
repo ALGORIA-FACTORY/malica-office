@@ -21,13 +21,13 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { sommeDecimale } from "@/lib/somme-decimale";
+import { sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import type {
   FactureHonorairesDossier,
   LigneHonorairesSaisie,
-} from "@/verticals/regalica-office/ports/repositories";
+} from "@regalica/socle/ports/repositories";
 
 import { LignesEditables } from "./cabinet.honoraires";
 

@@ -27,9 +27,9 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/regalica/pme-context";
 import { office } from "@/verticals/regalica-office/composition";
-import { computePnl, computeTva } from "@/verticals/regalica-office/socle";
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import { currencyDecimals } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import { computePnl, computeTva } from "@regalica/socle";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
 
 import { monthBounds } from "./use-tva";
 

@@ -37,7 +37,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
 import { cn } from "@/lib/utils";
-import type { Citation } from "@/verticals/regalica-office/ports/repositories";
+import type { Citation } from "@regalica/socle/ports/repositories";
 
 interface Props {
   /** Les octets de la pièce. On ne les consomme jamais : on les copie. */

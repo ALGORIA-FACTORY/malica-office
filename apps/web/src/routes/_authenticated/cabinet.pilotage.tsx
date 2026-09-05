@@ -36,7 +36,7 @@ import { initialesDe } from "@/lib/initiales";
 import { etatDeCharge, santeDuMandat, tauxDeRetour } from "@/lib/pilotage";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { ClientStats, ClientSummary } from "@/verticals/regalica-office/ports/repositories";
+import type { ClientStats, ClientSummary } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/pilotage")({
   head: () => ({

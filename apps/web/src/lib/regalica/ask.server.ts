@@ -18,8 +18,8 @@
  */
 
 import type { AppelApi } from "@/lib/api.server";
-import { texte } from "@/lib/conseil";
-import type { ContexteConseil, SourceCitee } from "@/verticals/regalica-office/ports/repositories";
+import { texte } from "@regalica/socle/conseil";
+import type { ContexteConseil, SourceCitee } from "@regalica/socle/ports/repositories";
 
 import {
   callDeepSeek,

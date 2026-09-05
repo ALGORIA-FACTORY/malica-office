@@ -19,7 +19,7 @@ import { useSyntheseClient } from "@/hooks/use-synthese-client";
 import { useI18n } from "@/i18n";
 import { libelleDeLAction } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@/lib/exercice";
+import { finDuMois } from "@regalica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";

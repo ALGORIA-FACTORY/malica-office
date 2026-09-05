@@ -1,0 +1,22 @@
+{
+  "name": "@regalica/socle",
+  "private": true,
+  "type": "module",
+  "description": "Le Socle — contrats, moteurs déterministes, ports et dictionnaire, partagés par l'application et l'API",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^4"
+  }
+}

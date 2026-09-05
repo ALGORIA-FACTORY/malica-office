@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Regalica Office — racine d'espace de travail",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace @regalica/web",

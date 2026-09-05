@@ -18,7 +18,7 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { QueueItem } from "@/verticals/regalica-office/ports/repositories";
+import type { QueueItem } from "@regalica/socle/ports/repositories";
 
 import { useCabinet } from "./cabinet-context";
 

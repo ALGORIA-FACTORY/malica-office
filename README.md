@@ -32,11 +32,11 @@ ne voit jamais la pièce.
 **Passe 1 — le relevé.** Ce qui est écrit, mot par mot, avec sa boîte. Trois
 chemins, un seul contrat de sortie :
 
-| Pièce | Relevé par | Coût |
-|---|---|---|
-| PDF natif | sa propre couche de texte (pdf.js) | aucun — ni modèle ni réseau |
-| PDF scanné | image extraite sans canvas, puis l'œil | un appel |
-| Image | l'œil (Qwen-VL-OCR) | un appel |
+| Pièce      | Relevé par                             | Coût                        |
+| ---------- | -------------------------------------- | --------------------------- |
+| PDF natif  | sa propre couche de texte (pdf.js)     | aucun — ni modèle ni réseau |
+| PDF scanné | image extraite sans canvas, puis l'œil | un appel                    |
+| Image      | l'œil (Qwen-VL-OCR)                    | un appel                    |
 
 **Passe 2 — la désignation.** Le raisonneur reçoit le plan de tokens, jamais
 l'image. Il ne renvoie que des couples `page`/`ordinal`. Aucun montant ne
@@ -52,6 +52,8 @@ filtrage après coup.
 apps/
   web/      l'application — PME et cabinet, React + Vite
   api/      Express + pg — remplace PostgREST et GoTrue
+packages/
+  socle/    les contrats, les moteurs, les ports et le dictionnaire — partagés
 db/
   migrations/ le schéma : la source de vérité, rejouée telle quelle
   local/      la couche d'authentification et de rôles, rejouable
@@ -60,10 +62,11 @@ db/
 docs/       maquettes et marque
 ```
 
-Un espace de travail npm, une seule règle de style à la racine. Il n'y a pas
-de `packages/` : rien n'est encore partagé entre les deux applications, et une
-structure créée pour un besoin qui n'existe pas est un encombrement. Elle
-naîtra le jour où un second consommateur existera.
+Un espace de travail npm, une seule règle de style à la racine. `packages/socle`
+est né le jour où l'API est devenue le second consommateur des moteurs : la
+lecture citée et Regalica y tournent désormais, à côté de l'application. Le
+paquet ne se compile pas — Node en décape les types, Vite les résout — et il ne
+déclare que `decimal.js` et `zod`.
 
 ## Démarrer
 

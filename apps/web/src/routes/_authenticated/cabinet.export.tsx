@@ -24,7 +24,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { ExportGenere, FormatExport } from "@/verticals/regalica-office/ports/repositories";
+import type { ExportGenere, FormatExport } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/export")({
   head: () => ({

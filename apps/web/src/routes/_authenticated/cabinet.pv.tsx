@@ -22,16 +22,12 @@ import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/of
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@/lib/exercice";
+import { finDuMois } from "@regalica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { pvRediger } from "@/lib/pv.functions";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  CollabRepository,
-  PvChiffre,
-  PvReunion,
-} from "@/verticals/regalica-office/ports/repositories";
+import type { CollabRepository, PvChiffre, PvReunion } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/pv")({
   head: () => ({

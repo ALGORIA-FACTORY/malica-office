@@ -33,15 +33,15 @@ import {
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant, montantSigne, quantite } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@/lib/somme-decimale";
+import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { StockItem } from "@/verticals/regalica-office/ports/repositories";
+import type { StockItem } from "@regalica/socle/ports/repositories";
 import {
   computeStock,
   computeStockDepreciation,
   computeStockVariation,
-} from "@/verticals/regalica-office/socle/engines/stock/valorisation";
+} from "@regalica/socle/engines/stock/valorisation";
 
 export const Route = createFileRoute("/_authenticated/cabinet/stocks")({
   head: () => ({

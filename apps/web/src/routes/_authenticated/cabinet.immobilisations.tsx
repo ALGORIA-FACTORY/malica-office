@@ -33,21 +33,21 @@ import {
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@/lib/somme-decimale";
+import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { Asset } from "@/verticals/regalica-office/ports/repositories";
+import type { Asset } from "@regalica/socle/ports/repositories";
 import type {
   AmortissementLigne,
   AmortissementV1,
-} from "@/verticals/regalica-office/socle/contracts/amortissement.v1";
+} from "@regalica/socle/contracts/amortissement.v1";
 import {
   computeAmortissement,
   computeCession,
   computeDepreciation,
   cumulAt,
   vncNette,
-} from "@/verticals/regalica-office/socle/engines/immo/amortissement";
+} from "@regalica/socle/engines/immo/amortissement";
 
 export const Route = createFileRoute("/_authenticated/cabinet/immobilisations")({
   head: () => ({

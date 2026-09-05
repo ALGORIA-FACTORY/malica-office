@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import type { Organization } from "@/verticals/regalica-office/ports/repositories";
+import type { Organization } from "@regalica/socle/ports/repositories";
 
 interface CabinetValue {
   org: Organization;

@@ -22,10 +22,10 @@ import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/of
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@/lib/exercice";
+import { finDuMois } from "@regalica/socle/exercice";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { Echeance } from "@/verticals/regalica-office/ports/repositories";
+import type { Echeance } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/echeances")({
   head: () => ({

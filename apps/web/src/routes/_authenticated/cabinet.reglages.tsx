@@ -27,10 +27,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  ObligationDuCalendrier,
-  ReglagesCabinet,
-} from "@/verticals/regalica-office/ports/repositories";
+import type { ObligationDuCalendrier, ReglagesCabinet } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   head: () => ({

@@ -27,7 +27,7 @@ import {
   SectionTitle,
 } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@/lib/conseil";
+import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@regalica/socle/conseil";
 import { conseilRepondre } from "@/lib/conseil.functions";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ import type {
   Arbitrage,
   DecisionArbitrage,
   StatutArbitrage,
-} from "@/verticals/regalica-office/ports/repositories";
+} from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/conseil")({
   head: () => ({

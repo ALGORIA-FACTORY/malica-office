@@ -1,7 +1,7 @@
 import { creerAuthHttp } from "./adapters/http/auth";
 import { creerCaptureHttp } from "./adapters/http/capture";
 import { creerDepotHttp } from "./adapters/http/rpc";
-import type { AuthPort } from "./ports/auth";
+import type { AuthPort } from "@regalica/socle/ports/auth";
 import type {
   CaptureRepository,
   IdentityRepository,
@@ -20,7 +20,7 @@ import type {
   HonorairesRepository,
   ExportsRepository,
   IntegrationsRepository,
-} from "./ports/repositories";
+} from "@regalica/socle/ports/repositories";
 
 /**
  * Point de composition unique : seul endroit qui connaît les adaptateurs.

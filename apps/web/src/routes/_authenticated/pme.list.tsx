@@ -6,10 +6,10 @@ import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { sommeDecimale } from "@/lib/somme-decimale";
+import { sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { PieceLue } from "@/verticals/regalica-office/ports/repositories";
+import type { PieceLue } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({

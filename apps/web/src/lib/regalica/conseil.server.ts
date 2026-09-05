@@ -26,7 +26,7 @@
 
 import { z } from "zod";
 
-import type { SourceCitee } from "@/verticals/regalica-office/ports/repositories";
+import type { SourceCitee } from "@regalica/socle/ports/repositories";
 
 import type { FragmentDeDroit } from "./corpus.server";
 

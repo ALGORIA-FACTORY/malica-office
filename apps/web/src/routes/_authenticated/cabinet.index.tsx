@@ -32,7 +32,7 @@ import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { QueueItem } from "@/verticals/regalica-office/ports/repositories";
+import type { QueueItem } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({

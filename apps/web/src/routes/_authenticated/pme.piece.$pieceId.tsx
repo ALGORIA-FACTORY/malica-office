@@ -9,11 +9,8 @@ import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/regalica-office/composition";
-import type { Citation } from "@/verticals/regalica-office/ports/repositories";
-import {
-  buildProposal,
-  LectureIncomplete,
-} from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import type { Citation } from "@regalica/socle/ports/repositories";
+import { buildProposal, LectureIncomplete } from "@regalica/socle/use-cases/propose-ecriture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({

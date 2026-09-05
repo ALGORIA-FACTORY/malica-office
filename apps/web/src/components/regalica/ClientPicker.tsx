@@ -1,4 +1,4 @@
-import type { ClientSummary } from "@/verticals/regalica-office/ports/repositories";
+import type { ClientSummary } from "@regalica/socle/ports/repositories";
 
 /**
  * Sélecteur de client pour les écrans cabinet.

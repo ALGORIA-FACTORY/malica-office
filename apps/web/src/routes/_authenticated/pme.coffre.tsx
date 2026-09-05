@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { PieceLue } from "@/verticals/regalica-office/ports/repositories";
+import type { PieceLue } from "@regalica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({

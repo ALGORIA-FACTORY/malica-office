@@ -8,10 +8,16 @@ import {
   type ReactNode,
 } from "react";
 
-import { LOCALES, MESSAGES, RTL_LOCALES, type Locale, type MessageKey } from "./messages";
+import {
+  LOCALES,
+  MESSAGES,
+  RTL_LOCALES,
+  type Locale,
+  type MessageKey,
+} from "@regalica/socle/messages";
 
-export { LOCALES, LOCALE_NAMES, RTL_LOCALES } from "./messages";
-export type { Locale, MessageKey } from "./messages";
+export { LOCALES, LOCALE_NAMES, RTL_LOCALES } from "@regalica/socle/messages";
+export type { Locale, MessageKey } from "@regalica/socle/messages";
 
 const STORAGE_KEY = "regalica.locale";
 const DEFAULT_LOCALE: Locale = "fr";

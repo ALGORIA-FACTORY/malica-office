@@ -41,7 +41,7 @@ jobs:
       - name: Typage
         run: npm run typecheck
 
-  # L'application web et ses seize suites.
+  # Le socle partagé, puis l'application web et ses suites.
   web:
     runs-on: ubuntu-latest
     steps:
@@ -54,6 +54,9 @@ jobs:
 
       - name: Installer
         run: npm ci
+
+      - name: Tests du socle
+        run: npm run test --workspace @regalica/socle
 
       - name: Tests
         run: npm run test --workspace @regalica/web

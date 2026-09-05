@@ -24,6 +24,12 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const RACINE = join(__dirname, "..");
+/**
+ * Le socle a quitté `apps/web/src` pour `packages/socle`, où l'API le lit
+ * aussi. Le garde-fou le suit : un paquet partagé est précisément l'endroit où
+ * un import copié ferait le plus de dégâts, des deux côtés à la fois.
+ */
+const SOCLE = join(__dirname, "..", "..", "..", "..", "packages", "socle", "src");
 
 /**
  * Le seul fichier exempté : celui-ci. Un garde-fou doit nommer ce qu'il
@@ -45,8 +51,8 @@ function horsCommentaires(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
 }
 
-describe("sortie de Supabase — apps/web/src", () => {
-  const fichiers = parcourir(RACINE);
+describe("sortie de Supabase — apps/web/src et packages/socle/src", () => {
+  const fichiers = [...parcourir(RACINE), ...parcourir(SOCLE)];
 
   it("parcourt bien l'arborescence", () => {
     // Un garde-fou qui ne lit aucun fichier passerait toujours. On vérifie donc
@@ -55,7 +61,7 @@ describe("sortie de Supabase — apps/web/src", () => {
   });
 
   for (const fichier of fichiers) {
-    const nom = relative(RACINE, fichier).replace(/\\/g, "/");
+    const nom = relative(fichier.startsWith(SOCLE) ? SOCLE : RACINE, fichier).replace(/\\/g, "/");
     if (GARDE_FOUS.has(nom)) continue;
 
     it(`sans Supabase : ${nom}`, () => {

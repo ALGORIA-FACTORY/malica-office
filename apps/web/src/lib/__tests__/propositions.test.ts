@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Ecriture } from "@/verticals/regalica-office/ports/repositories";
+import type { Ecriture } from "@regalica/socle/ports/repositories";
 
 import { compteDeCharge, ecritureEnMasse, lotDe } from "../propositions";
 

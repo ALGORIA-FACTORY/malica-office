@@ -22,7 +22,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { CleApi, CleApiCreee } from "@/verticals/regalica-office/ports/repositories";
+import type { CleApi, CleApiCreee } from "@regalica/socle/ports/repositories";
 
 /** Toute clé commence ainsi ; l'écran ne montre que ce qui suit, tronqué. */
 const PREFIXE_CLE = "rgo_live_";

@@ -32,7 +32,7 @@ import { ficheCourante, ficheRegimes } from "@/lib/fiche.functions";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { ClientSummary } from "@/verticals/regalica-office/ports/repositories";
+import type { ClientSummary } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   head: () => ({

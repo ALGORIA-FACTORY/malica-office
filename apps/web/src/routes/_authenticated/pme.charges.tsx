@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import { computeChargesByFamille } from "@/verticals/regalica-office/socle/engines/charges/familles";
+import { computeChargesByFamille } from "@regalica/socle/engines/charges/familles";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/charges")({

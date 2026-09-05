@@ -15,13 +15,13 @@ import { z } from "zod";
 import type { FicheCourante } from "@/lib/fiche.functions";
 import { redigerDepuisLesFaits, type Fait } from "@/lib/regalica/redaction.server";
 import { exigerSession } from "@/lib/session-middleware";
-import { sommeDecimale } from "@/lib/somme-decimale";
+import { sommeDecimale } from "@regalica/socle/somme-decimale";
 import type {
   ClientSummary,
   Echeance,
   QueueItem,
   ReglagesCabinet,
-} from "@/verticals/regalica-office/ports/repositories";
+} from "@regalica/socle/ports/repositories";
 
 const Input = z.object({
   cabinetId: z.string().uuid(),

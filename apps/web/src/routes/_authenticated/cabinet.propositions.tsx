@@ -25,14 +25,10 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
 import { compteDeCharge, ecritureEnMasse, lotDe, type Lot } from "@/lib/propositions";
-import { sommeDecimale } from "@/lib/somme-decimale";
+import { sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  CompteDuPlan,
-  Ecriture,
-  QueueItem,
-} from "@/verticals/regalica-office/ports/repositories";
+import type { CompteDuPlan, Ecriture, QueueItem } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/propositions")({
   head: () => ({

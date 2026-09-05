@@ -59,11 +59,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  ClientSummary,
-  MonAcces,
-  Organization,
-} from "@/verticals/regalica-office/ports/repositories";
+import type { ClientSummary, MonAcces, Organization } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({

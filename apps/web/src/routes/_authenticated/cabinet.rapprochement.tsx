@@ -33,14 +33,11 @@ import { currentPeriod, monthBounds } from "@/hooks/use-tva";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@/lib/somme-decimale";
+import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  BankBookLine,
-  BankStatementLine,
-} from "@/verticals/regalica-office/ports/repositories";
-import { computeRapprochement } from "@/verticals/regalica-office/socle/engines/banque/rapprochement";
+import type { BankBookLine, BankStatementLine } from "@regalica/socle/ports/repositories";
+import { computeRapprochement } from "@regalica/socle/engines/banque/rapprochement";
 
 export const Route = createFileRoute("/_authenticated/cabinet/rapprochement")({
   head: () => ({

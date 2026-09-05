@@ -10,6 +10,7 @@
     "test": "node --experimental-strip-types --env-file-if-exists=.env --test"
   },
   "dependencies": {
+    "@regalica/socle": "*",
     "bcryptjs": "2.4.3",
     "cookie-parser": "1.4.7",
     "cors": "2.8.5",

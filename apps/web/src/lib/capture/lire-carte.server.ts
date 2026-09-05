@@ -28,7 +28,7 @@
  * se trompe sur son régime, la carte non.
  */
 
-import { CarteFiscaleV1 } from "../../verticals/regalica-office/socle/contracts/carte-fiscale.v1";
+import { CarteFiscaleV1 } from "@regalica/socle/contracts/carte-fiscale.v1";
 
 import { callDeepSeek } from "../regalica/deepseek.server";
 import { resolveFromTokenPlan, type FieldCitation, type ReadFlag } from "./token-plan";

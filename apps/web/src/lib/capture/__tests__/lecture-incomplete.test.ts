@@ -5,7 +5,7 @@ import {
   buildProposal,
   champMetier,
   LectureIncomplete,
-} from "../../../verticals/regalica-office/use-cases/propose-ecriture";
+} from "@regalica/socle/use-cases/propose-ecriture";
 
 /**
  * ============================================== LE DÉFAUT QUE CECI VERROUILLE

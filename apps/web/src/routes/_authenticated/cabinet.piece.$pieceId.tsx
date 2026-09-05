@@ -19,17 +19,10 @@ import {
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/regalica-office/composition";
-import type {
-  Citation,
-  CompteDuPlan,
-  Ecriture,
-} from "@/verticals/regalica-office/ports/repositories";
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import {
-  composerLibelle,
-  critiquerLibelle,
-} from "@/verticals/regalica-office/socle/engines/libelle";
-import { faitsDuLibelle } from "@/verticals/regalica-office/use-cases/libelle-de-piece";
+import type { Citation, CompteDuPlan, Ecriture } from "@regalica/socle/ports/repositories";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import { composerLibelle, critiquerLibelle } from "@regalica/socle/engines/libelle";
+import { faitsDuLibelle } from "@regalica/socle/use-cases/libelle-de-piece";
 
 import {
   libelleDeLAction,

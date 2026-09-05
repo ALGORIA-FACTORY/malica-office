@@ -44,7 +44,7 @@ import type {
   NatureTiers,
   RoleComptable,
   Tiers,
-} from "@/verticals/regalica-office/ports/repositories";
+} from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/plan")({
   head: () => ({

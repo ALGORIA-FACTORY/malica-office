@@ -17,16 +17,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo } from "react";
 
-import { debutDExercice, finDuMois } from "@/lib/exercice";
+import { debutDExercice, finDuMois } from "@regalica/socle/exercice";
 import { ficheCourante } from "@/lib/fiche.functions";
 import { office } from "@/verticals/regalica-office/composition";
-import type { ClientSummary } from "@/verticals/regalica-office/ports/repositories";
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import type { PnlV1 } from "@/verticals/regalica-office/socle/contracts/pnl.v1";
-import type { TvaV1 } from "@/verticals/regalica-office/socle/contracts/tva.v1";
-import { computePnl } from "@/verticals/regalica-office/socle/engines/pnl/snapshot";
-import { computeTva } from "@/verticals/regalica-office/socle/engines/tva/compute";
-import { currencyDecimals } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import type { ClientSummary } from "@regalica/socle/ports/repositories";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import type { PnlV1 } from "@regalica/socle/contracts/pnl.v1";
+import type { TvaV1 } from "@regalica/socle/contracts/tva.v1";
+import { computePnl } from "@regalica/socle/engines/pnl/snapshot";
+import { computeTva } from "@regalica/socle/engines/tva/compute";
+import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
 
 export interface SyntheseClient {
   pack: { id: string; version: string; ratified: boolean } | null;

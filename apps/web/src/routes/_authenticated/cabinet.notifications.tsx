@@ -23,7 +23,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
-import type { Notification } from "@/verticals/regalica-office/ports/repositories";
+import type { Notification } from "@regalica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/notifications")({
   head: () => ({

@@ -6,9 +6,9 @@
  * Rien ici n'est un moteur : les seuils viennent des réglages du cabinet,
  * les montants du Socle ; on classe et l'on additionne, exactement.
  */
-import type { Ecriture, EcritureLine } from "@/verticals/regalica-office/ports/repositories";
+import type { Ecriture, EcritureLine } from "@regalica/socle/ports/repositories";
 
-import { sommeDecimale } from "./somme-decimale";
+import { sommeDecimale } from "@regalica/socle/somme-decimale";
 
 export type Lot = "haut" | "moyen" | "bas" | "sans";
 

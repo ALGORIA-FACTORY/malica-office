@@ -27,9 +27,9 @@
  * Ce que l'écran reçoit ne contient aucun texte technique : un résultat, ou
  * une raison codée qu'il traduit.
  */
-import { MESSAGES, type Locale } from "@/i18n/messages";
+import { MESSAGES, type Locale } from "@regalica/socle/messages";
 import type { AppelApi } from "@/lib/api.server";
-import { debutDExercice, finDuMois } from "@/lib/exercice";
+import { debutDExercice, finDuMois } from "@regalica/socle/exercice";
 import { lireSections, texteDesSections } from "@/lib/pv-redaction";
 import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "@/lib/regalica/deepseek.server";
 import { type Fait, nombresEtrangers } from "@/lib/regalica/redaction.server";
@@ -43,11 +43,11 @@ import type {
   QueueItem,
   ReglagesCabinet,
   TaxRate,
-} from "@/verticals/regalica-office/ports/repositories";
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import { computePnl } from "@/verticals/regalica-office/socle/engines/pnl/snapshot";
-import { computeTva } from "@/verticals/regalica-office/socle/engines/tva/compute";
-import { currencyDecimals } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+} from "@regalica/socle/ports/repositories";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import { computePnl } from "@regalica/socle/engines/pnl/snapshot";
+import { computeTva } from "@regalica/socle/engines/tva/compute";
+import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
 
 /** Trente jours : l'horizon des « échéances à venir », le même que le dossier. */
 const JOUR_MS = 86_400_000;

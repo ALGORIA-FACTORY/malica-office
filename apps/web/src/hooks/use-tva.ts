@@ -3,10 +3,10 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/regalica/pme-context";
 import { office } from "@/verticals/regalica-office/composition";
-import { computeTva } from "@/verticals/regalica-office/socle";
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import type { TvaV1 } from "@/verticals/regalica-office/socle/contracts/tva.v1";
-import { currencyDecimals } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import { computeTva } from "@regalica/socle";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import type { TvaV1 } from "@regalica/socle/contracts/tva.v1";
+import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
 
 export function monthBounds(period: string): { from: string; to: string } {
   const [y, m] = period.split("-").map(Number);

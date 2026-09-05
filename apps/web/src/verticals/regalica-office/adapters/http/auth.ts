@@ -7,7 +7,7 @@
  * `localStorage`, pas de rafraîchissement à orchestrer.
  */
 
-import { EchecAuth, type AuthPort, type Compte } from "../../ports/auth";
+import { EchecAuth, type AuthPort, type Compte } from "@regalica/socle/ports/auth";
 import { baseApi } from "./rpc";
 
 async function appeler(

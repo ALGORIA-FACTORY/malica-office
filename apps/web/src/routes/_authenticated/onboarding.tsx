@@ -5,7 +5,7 @@ import { useState } from "react";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
-import type { OrgKind, ValidationMode } from "@/verticals/regalica-office/ports/repositories";
+import type { OrgKind, ValidationMode } from "@regalica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({

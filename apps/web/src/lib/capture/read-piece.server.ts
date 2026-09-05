@@ -6,8 +6,8 @@
  * primitives du Socle (jamais par le modèle) et explicitement drapeauté.
  */
 
-import { ExtractV1 } from "@/verticals/regalica-office/socle/contracts/extract.v1";
-import { D, toFixedStr } from "@/verticals/regalica-office/socle/domain/decimal";
+import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
+import { D, toFixedStr } from "@regalica/socle/domain/decimal";
 
 import {
   resolveFromTokenPlan,
