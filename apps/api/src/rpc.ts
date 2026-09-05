@@ -32,6 +32,7 @@ import { integrations } from "./depots/integrations.ts";
 import { office } from "./depots/office.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { referentiel } from "./depots/referentiel.ts";
+import { signalements } from "./depots/signalements.ts";
 import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
 import { tiers } from "./depots/tiers.ts";
@@ -58,6 +59,7 @@ const DEPOTS = {
   office,
   parametrage,
   referentiel,
+  signalements,
   stocks,
   supervision,
   tiers,

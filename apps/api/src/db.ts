@@ -134,6 +134,11 @@ export async function horsRlsAuthentificationSeule<T>(
   }
 }
 
+/** La sonde de `/sante/profonde` : la base répond-elle, sous le rôle de l'API ? */
+export async function sonderLaBase(): Promise<void> {
+  await pool.query("select 1");
+}
+
 export async function fermerLePool(): Promise<void> {
   await pool.end();
 }

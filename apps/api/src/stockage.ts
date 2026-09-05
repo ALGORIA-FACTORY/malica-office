@@ -26,8 +26,9 @@
  */
 
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 
 import type { Request, Response } from "express";
@@ -151,6 +152,44 @@ export async function lireContenu(
   }
 }
 
+/**
+ * Quarante mégaoctets : vingt-quatre pages photographiées et emballées en PDF
+ * tiennent dessous. Au-delà, ce n'est plus une pièce comptable — et sans
+ * borne, un seul envoi remplirait le disque de tout le monde.
+ */
+export const TAILLE_MAX_PIECE = 40 * 1024 * 1024;
+
+class PieceTropGrosse extends Error {}
+
+/** Un passe-plat qui compte, et coupe le flux au-delà de la borne. */
+function borneDeTaille(max: number): Transform {
+  let recu = 0;
+  return new Transform({
+    transform(morceau: Buffer, _encodage, suite) {
+      recu += morceau.length;
+      if (recu > max) {
+        suite(new PieceTropGrosse());
+        return;
+      }
+      suite(null, morceau);
+    },
+  });
+}
+
+/**
+ * La sonde de `/sante/profonde` : le stockage accepte-t-il d'écrire, puis de
+ * relire ? Un disque plein ou un volume démonté se voient ici, avant la
+ * première pièce d'un client.
+ */
+export async function sonderLeStockage(): Promise<void> {
+  const temoin = path.join(racine(), `.sonde-${process.pid}`);
+  await mkdir(racine(), { recursive: true });
+  await writeFile(temoin, "ok");
+  const relu = await readFile(temoin, "utf8");
+  await rm(temoin, { force: true });
+  if (relu !== "ok") throw new Error("le stockage ne relit pas ce qu'il écrit");
+}
+
 /** Dépose les octets d'une pièce. Idempotent : redéposer remplace. */
 export async function deposerContenu(req: Request, res: Response): Promise<void> {
   const piece = await pieceAutorisee(req, req.params["id"]);
@@ -167,10 +206,14 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   // qu'une pièce absente. Le renommage, lui, est atomique.
   const provisoire = `${destination}.${process.pid}.partiel`;
   try {
-    await pipeline(req, createWriteStream(provisoire));
+    await pipeline(req, borneDeTaille(TAILLE_MAX_PIECE), createWriteStream(provisoire));
     await rename(provisoire, destination);
   } catch (erreur) {
     await rm(provisoire, { force: true });
+    if (erreur instanceof PieceTropGrosse) {
+      res.status(413).json({ erreur: "pièce trop volumineuse" });
+      return;
+    }
     throw erreur;
   }
 

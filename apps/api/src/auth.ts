@@ -8,6 +8,8 @@
  * d'appartenance prend effet immédiatement, sans attendre son expiration.
  */
 
+import { createHash, randomBytes } from "node:crypto";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -113,4 +115,109 @@ export async function organisations(utilisateur: Utilisateur) {
     );
     return rows;
   });
+}
+
+/* ------------------------------------------------ le jeton de rafraîchissement
+ *
+ * Le jeton d'accès est court parce qu'il n'est pas révocable. Sur un téléphone,
+ * douze heures voudraient dire un mot de passe chaque matin, et une file hors
+ * ligne qui se vide la nuit tomberait en 401. D'où un second jeton, long, qui
+ * l'est — révocable — parce qu'il vit en base, par son empreinte, et tourne à
+ * chaque usage : un jeton volé ne vaut qu'un seul rafraîchissement, et le
+ * légitime, présenté ensuite, est refusé — ce qui se voit.
+ *
+ * Le navigateur n'en reçoit pas : il garde le cookie de douze heures.
+ */
+
+/** Trente jours : un dirigeant qui n'ouvre pas l'application pendant un mois se reconnecte. */
+const DUREE_RAFRAICHISSEMENT_MS = 30 * 24 * 60 * 60 * 1000;
+
+function empreinteDe(secret: string): string {
+  return createHash("sha256").update(secret).digest("hex");
+}
+
+function nouveauSecret(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/** Émet un jeton de rafraîchissement pour cet utilisateur. Rend le secret, une seule fois. */
+export async function emettreJetonDeRafraichissement(
+  utilisateur: Utilisateur,
+  appareil: string | null,
+): Promise<string> {
+  const secret = nouveauSecret();
+  await horsRlsAuthentificationSeule((db) =>
+    db.query(
+      `insert into auth.refresh_tokens (user_id, empreinte, appareil, expire_le)
+         values ($1, $2, $3, $4)`,
+      [
+        utilisateur.id,
+        empreinteDe(secret),
+        appareil,
+        new Date(Date.now() + DUREE_RAFRAICHISSEMENT_MS),
+      ],
+    ),
+  );
+  return secret;
+}
+
+/**
+ * Tourne un jeton : l'ancien est révoqué, un nouveau est émis, l'identité est
+ * rendue. `null` si le jeton est inconnu, expiré ou déjà tourné — on ne dit
+ * pas lequel, pour la même raison qu'à la connexion.
+ */
+export async function rafraichir(
+  secret: string,
+  appareil: string | null,
+): Promise<{ utilisateur: Utilisateur; jetonRafraichissement: string } | null> {
+  const nouveau = nouveauSecret();
+  return horsRlsAuthentificationSeule(async (db) => {
+    const { rows } = await db.query<{
+      id: string;
+      user_id: string;
+      email: string;
+      expire_le: Date;
+      revoque_le: Date | null;
+    }>(
+      `select t.id, t.user_id, u.email, t.expire_le, t.revoque_le
+         from auth.refresh_tokens t
+         join auth.users u on u.id = t.user_id
+        where t.empreinte = $1
+        for update of t`,
+      [empreinteDe(secret)],
+    );
+    const ancien = rows[0];
+    if (!ancien || ancien.revoque_le || ancien.expire_le.getTime() < Date.now()) return null;
+
+    const { rows: emis } = await db.query<{ id: string }>(
+      `insert into auth.refresh_tokens (user_id, empreinte, appareil, expire_le)
+         values ($1, $2, $3, $4)
+       returning id`,
+      [
+        ancien.user_id,
+        empreinteDe(nouveau),
+        appareil,
+        new Date(Date.now() + DUREE_RAFRAICHISSEMENT_MS),
+      ],
+    );
+    await db.query(
+      `update auth.refresh_tokens set revoque_le = now(), remplace_par = $2 where id = $1`,
+      [ancien.id, emis[0]!.id],
+    );
+    return {
+      utilisateur: { id: ancien.user_id, email: ancien.email },
+      jetonRafraichissement: nouveau,
+    };
+  });
+}
+
+/** Révoque un jeton — la déconnexion. Un jeton inconnu ou déjà révoqué ne dit rien. */
+export async function revoquerJetonDeRafraichissement(secret: string): Promise<void> {
+  await horsRlsAuthentificationSeule((db) =>
+    db.query(
+      `update auth.refresh_tokens set revoque_le = now()
+        where empreinte = $1 and revoque_le is null`,
+      [empreinteDe(secret)],
+    ),
+  );
 }

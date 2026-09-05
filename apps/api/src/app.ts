@@ -18,22 +18,36 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import "dotenv/config";
 import express, { type NextFunction, type Request, type Response } from "express";
+import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 
-import { creerCompte, emettreJeton, organisations, verifierCompte } from "./auth.ts";
+import {
+  creerCompte,
+  emettreJeton,
+  emettreJetonDeRafraichissement,
+  organisations,
+  rafraichir,
+  revoquerJetonDeRafraichissement,
+  verifierCompte,
+  type Utilisateur,
+} from "./auth.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
-import { sousIdentite } from "./db.ts";
+import { sonderLaBase, sousIdentite } from "./db.ts";
 import { refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { regalica } from "./regalica.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
-import { exigerIdentite, NOM_COOKIE } from "./session.ts";
-import { deposerContenu, servirContenu } from "./stockage.ts";
+import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
+import { deposerContenu, servirContenu, sonderLeStockage } from "./stockage.ts";
 
 /** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
 const JOURNAL_ATELIER = new URL("../journal-atelier.log", import.meta.url);
 
 export const app = express();
+// Derrière Caddy, l'adresse et le protocole vus par Express sont ceux du
+// relais : sans ceci, la limitation par adresse compterait tout le monde
+// comme une seule personne, et les journaux nommeraient le relais.
+app.set("trust proxy", 1);
 app.use(cookieParser());
 app.use(
   cors({
@@ -59,6 +73,9 @@ app.use(
     credentials: true,
   }),
 );
+// Qui parle — « coque-android/0.3.1 », « web/abc1234 » — et un 426 pour une
+// coque trop ancienne. Avant toute route : un contrat rompu se refuse à la porte.
+app.use(presenterLeClient);
 
 /**
  * Une session, ou une clé d'API du cabinet — voir `cles-api.ts`. La clé ne
@@ -95,6 +112,38 @@ const Identifiants = z.object({
   nom: z.string().trim().min(1).max(120).optional(),
 });
 
+/**
+ * Trente essais par minute et par adresse sur les portes d'entrée. Assez pour
+ * une famille derrière une même box, trop peu pour deviner un mot de passe.
+ * Réglable, parce qu'un jeu d'essai qui crée des comptes en rafale n'est pas
+ * une attaque.
+ */
+const limiteAuth = rateLimit({
+  windowMs: 60_000,
+  limit: Number(process.env["AUTH_ESSAIS_PAR_MINUTE"] ?? 30),
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { erreur: "trop d'essais : réessayez dans une minute" },
+});
+
+/**
+ * Le jeton de rafraîchissement, pour la coque seulement.
+ *
+ * Le navigateur garde son cookie de douze heures et ne reçoit rien de plus :
+ * un jeton long dans une page web serait une clé de trente jours à portée du
+ * premier script. La coque, elle, le range dans son coffre.
+ */
+async function jetonPourLaCoque(
+  req: Request,
+  utilisateur: Utilisateur,
+): Promise<{ jetonRafraichissement?: string }> {
+  if (!estUneCoque(req)) return {};
+  const appareil = req.clientDeclare
+    ? `${req.clientDeclare.nom}/${req.clientDeclare.version}`
+    : null;
+  return { jetonRafraichissement: await emettreJetonDeRafraichissement(utilisateur, appareil) };
+}
+
 function poserCookie(res: Response, jeton: string): void {
   res.cookie(NOM_COOKIE, jeton, {
     httpOnly: true,
@@ -104,7 +153,7 @@ function poserCookie(res: Response, jeton: string): void {
   });
 }
 
-app.post("/auth/inscription", async (req, res, next) => {
+app.post("/auth/inscription", limiteAuth, async (req, res, next) => {
   try {
     const saisie = Identifiants.safeParse(req.body);
     if (!saisie.success) {
@@ -124,13 +173,13 @@ app.post("/auth/inscription", async (req, res, next) => {
     }
     const jeton = emettreJeton(utilisateur);
     poserCookie(res, jeton);
-    res.status(201).json({ utilisateur, jeton });
+    res.status(201).json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
     next(erreur);
   }
 });
 
-app.post("/auth/connexion", async (req, res, next) => {
+app.post("/auth/connexion", limiteAuth, async (req, res, next) => {
   try {
     const saisie = Identifiants.safeParse(req.body);
     if (!saisie.success) {
@@ -144,7 +193,41 @@ app.post("/auth/connexion", async (req, res, next) => {
     }
     const jeton = emettreJeton(utilisateur);
     poserCookie(res, jeton);
-    res.json({ utilisateur, jeton });
+    res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/**
+ * Rafraîchir : un jeton long contre un jeton d'accès neuf — et un jeton long
+ * neuf, l'ancien étant révoqué. Un jeton inconnu, expiré ou déjà tourné
+ * reçoit le même 401, sans dire lequel.
+ */
+app.post("/auth/rafraichir", limiteAuth, async (req, res, next) => {
+  try {
+    const saisie = z
+      .object({ jetonRafraichissement: z.string().min(16).max(200) })
+      .safeParse(req.body);
+    if (!saisie.success) {
+      res.status(400).json({ erreur: "saisie invalide" });
+      return;
+    }
+    const appareil = req.clientDeclare
+      ? `${req.clientDeclare.nom}/${req.clientDeclare.version}`
+      : null;
+    const tourne = await rafraichir(saisie.data.jetonRafraichissement, appareil);
+    if (!tourne) {
+      res.status(401).json({ erreur: "jeton de rafraîchissement invalide" });
+      return;
+    }
+    const jeton = emettreJeton(tourne.utilisateur);
+    poserCookie(res, jeton);
+    res.json({
+      utilisateur: tourne.utilisateur,
+      jeton,
+      jetonRafraichissement: tourne.jetonRafraichissement,
+    });
   } catch (erreur) {
     next(erreur);
   }
@@ -156,9 +239,23 @@ app.get("/auth/session", exigerIdentite, (req, res) => {
   res.json({ utilisateur: req.utilisateur });
 });
 
-app.post("/auth/deconnexion", (_req, res) => {
-  res.clearCookie(NOM_COOKIE);
-  res.status(204).end();
+/**
+ * Se déconnecter : le cookie tombe, et le jeton long, si la coque le rend,
+ * est révoqué en base — c'est ce qui fait qu'une déconnexion sur un téléphone
+ * perdu compte pour quelque chose.
+ */
+app.post("/auth/deconnexion", async (req, res, next) => {
+  try {
+    const secret = (req.body as { jetonRafraichissement?: unknown } | undefined)
+      ?.jetonRafraichissement;
+    if (typeof secret === "string" && secret.length > 0) {
+      await revoquerJetonDeRafraichissement(secret);
+    }
+    res.clearCookie(NOM_COOKIE);
+    res.status(204).end();
+  } catch (erreur) {
+    next(erreur);
+  }
 });
 
 app.get("/moi", exigerIdentite, async (req, res, next) => {
@@ -239,6 +336,32 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
 
 app.get("/sante", (_req, res) => {
   res.json({ etat: "ok" });
+});
+
+/**
+ * La sonde profonde — ce que la surveillance interroge toutes les deux minutes.
+ *
+ * `/sante` dit que le processus répond ; celle-ci dit que la base répond sous
+ * le rôle de l'API et que le stockage écrit puis relit. Un disque plein ou une
+ * base injoignable se voient ici, avant la première pièce d'un client. Elle
+ * ne révèle rien d'autre que « ok » ou « hs », et la version servie.
+ */
+app.get("/sante/profonde", async (_req, res) => {
+  const verdict = {
+    etat: "ok",
+    version: process.env["REGALICA_VERSION"] ?? "atelier",
+    base: "ok",
+    stockage: "ok",
+  };
+  await sonderLaBase().catch(() => {
+    verdict.base = "hs";
+  });
+  await sonderLeStockage().catch(() => {
+    verdict.stockage = "hs";
+  });
+  const sain = verdict.base === "ok" && verdict.stockage === "ok";
+  verdict.etat = sain ? "ok" : "degrade";
+  res.status(sain ? 200 : 503).json(verdict);
 });
 
 /**
