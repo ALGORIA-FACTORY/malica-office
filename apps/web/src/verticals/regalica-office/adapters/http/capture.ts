@@ -17,7 +17,7 @@
  * doivent jamais atteindre le navigateur.
  */
 
-import { readPiece } from "@/lib/office-capture.functions";
+import { etatLecture, readPiece } from "@/lib/office-capture.functions";
 
 import type {
   CaptureRepository,
@@ -99,6 +99,7 @@ export function creerCaptureHttp(): CaptureRepository {
       const brut = await rpc<{
         piece: Record<string, unknown>;
         extraction: Extraction | null;
+        precisions?: Record<string, string>;
         citations: Citation[];
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
@@ -116,14 +117,35 @@ export function creerCaptureHttp(): CaptureRepository {
         piece: versPiece(brut.piece),
         contenu,
         extraction: brut.extraction,
+        precisions: brut.precisions ?? {},
         citations: brut.citations,
         tokens: brut.tokens,
       };
     },
 
+    async preciser(
+      pieceId: string,
+      champ: "document_kind",
+      valeur: "facture_achat" | "facture_vente",
+    ) {
+      return (await appeler("capture", "preciser", [pieceId, champ, valeur])) as {
+        id: string;
+        champ: string;
+        valeur: string;
+      };
+    },
+
+    async supprimer(pieceId: string): Promise<boolean> {
+      return (await appeler("capture", "supprimer", [pieceId])) as boolean;
+    },
+
     async read(pieceId: string) {
       const res = await readPiece({ data: { pieceId } });
       return { contract: res.contract, citations: res.citations, valid: res.valid };
+    },
+
+    async etatLecture(pieceId: string) {
+      return etatLecture({ data: { pieceId } });
     },
   };
 }

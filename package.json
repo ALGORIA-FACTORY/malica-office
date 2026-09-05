@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "description": "Regalica Office — racine d'espace de travail",
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace @regalica/web",
     "dev:api": "npm run dev --workspace @regalica/api",
@@ -11,7 +13,10 @@
     "typecheck": "npm run typecheck --workspaces",
     "test": "npm run test --workspaces",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev:telephone": "node outils/dev-telephone.mjs",
+    "certificat": "node outils/certificat-local.mjs",
+    "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

@@ -83,7 +83,29 @@ export async function readPdfTextLayer(bytes: Uint8Array): Promise<PdfTextLayer>
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
   const tache = pdfjs.getDocument({
-    data: bytes,
+    /*
+     * ============================ « Cannot transfer object of unsupported type. »
+     *
+     * Une COPIE, jamais les octets de l'appelant.
+     *
+     * `getDocument({ data })` TRANSFÈRE le tableau au moteur de pdf.js, ce qui
+     * le DÉTACHE : après cet appel, le tableau de l'appelant a une longueur de
+     * zéro. Il ne le sait pas.
+     *
+     * La lecture d'une pièce appelle pdf.js deux fois sur les mêmes octets —
+     * la couche de texte, puis les images incrustées. Le second appel tentait
+     * donc de transférer un tampon déjà détaché, et Node répond, mot pour mot :
+     *
+     *   DataCloneError: Cannot transfer object of unsupported type.
+     *
+     * Ce message est remonté jusqu'à l'écran du client, en anglais. Seize
+     * pièces capturées, une seule lue.
+     *
+     * La copie appartient à cet appel : chacun protège l'appelant plutôt que
+     * de compter sur sa prudence. Un mégaoctet copié vaut mieux qu'un tableau
+     * vidé sans le dire.
+     */
+    data: new Uint8Array(bytes),
     // Une pièce comptable est une donnée, jamais un programme : aucune police
     // téléchargée, aucune ressource distante. (pdf.js v6 a supprimé l'évaluation
     // dynamique, il n'y a donc plus d'option à désactiver de ce côté.)

@@ -7,14 +7,19 @@ import type {
   IdentityRepository,
   OfficeRepository,
   ReferentialRepository,
+  AccesRepository,
   SupervisionRepository,
   ImmoRepository,
   StocksRepository,
   BanqueRepository,
   CollabRepository,
   ChargesRepository,
+  ConseilRepository,
   ParametrageRepository,
   TiersRepository,
+  HonorairesRepository,
+  ExportsRepository,
+  IntegrationsRepository,
 } from "./ports/repositories";
 
 /**
@@ -49,13 +54,18 @@ export interface OfficeRuntime {
   capture: CaptureRepository;
   office: OfficeRepository;
   supervision: SupervisionRepository;
+  acces: AccesRepository;
   immo: ImmoRepository;
   stocks: StocksRepository;
   banque: BanqueRepository;
   collab: CollabRepository;
   charges: ChargesRepository;
+  conseil: ConseilRepository;
   parametrage: ParametrageRepository;
   tiers: TiersRepository;
+  honoraires: HonorairesRepository;
+  integrations: IntegrationsRepository;
+  exports: ExportsRepository;
 }
 
 let runtime: OfficeRuntime | null = null;
@@ -69,13 +79,18 @@ export function office(): OfficeRuntime {
       capture: creerCaptureHttp(),
       office: creerDepotHttp<OfficeRepository>("office"),
       supervision: creerDepotHttp<SupervisionRepository>("supervision"),
+      acces: creerDepotHttp<AccesRepository>("acces"),
       immo: creerDepotHttp<ImmoRepository>("immo"),
       stocks: creerDepotHttp<StocksRepository>("stocks"),
       banque: creerDepotHttp<BanqueRepository>("banque"),
       collab: creerDepotHttp<CollabRepository>("collab"),
       charges: creerDepotHttp<ChargesRepository>("charges"),
+      conseil: creerDepotHttp<ConseilRepository>("conseil"),
       parametrage: creerDepotHttp<ParametrageRepository>("parametrage"),
       tiers: creerDepotHttp<TiersRepository>("tiers"),
+      honoraires: creerDepotHttp<HonorairesRepository>("honoraires"),
+      integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
+      exports: creerDepotHttp<ExportsRepository>("exports"),
     };
   }
 

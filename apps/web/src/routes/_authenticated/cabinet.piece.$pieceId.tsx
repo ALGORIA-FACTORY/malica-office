@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
@@ -17,6 +17,7 @@ import {
   StickyActions,
 } from "@/components/regalica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
+import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/regalica-office/composition";
 import type {
   Citation,
@@ -30,7 +31,15 @@ import {
 } from "@/verticals/regalica-office/socle/engines/libelle";
 import { faitsDuLibelle } from "@/verticals/regalica-office/use-cases/libelle-de-piece";
 
-import { toneForStatus } from "./cabinet.index";
+import {
+  libelleDeLAction,
+  libelleDuChamp,
+  libelleDuCode,
+  valeurDuChamp,
+  valeurLisible,
+} from "@/lib/champ-lisible";
+import { toneForStatus } from "@/lib/file-cabinet";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
@@ -142,6 +151,22 @@ function CabinetReview() {
   // Le plan tel que CE cabinet le voit : le verbatim NC 01, les extensions
   // livrées, et les comptes qu'il a ouverts lui-même. C'est de là que le
   // libellé d'une ligne s'importe — jamais de la frappe de l'expert.
+  /*
+   * La file entière, pour situer cette pièce : son rang, la précédente, la
+   * suivante. C'est l'ordre de la file du jour — le même que sur « Aujourd'hui ».
+   */
+  const navigate = useNavigate();
+  const file = useQuery({
+    queryKey: ["cab-queue", org.id],
+    queryFn: () => office().supervision.queue(org.id),
+  });
+  const rangDansLaFile = (file.data ?? []).findIndex((r) => r.pieceId === pieceId);
+  const dansLaFile = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile] ?? null) : null;
+  const precedente = rangDansLaFile > 0 ? ((file.data ?? [])[rangDansLaFile - 1] ?? null) : null;
+  const suivante = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile + 1] ?? null) : null;
+  const allerA = (id: string) =>
+    void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id } });
+
   const plan = useQuery({
     queryKey: ["plan-cabinet", org.id],
     queryFn: () => office().parametrage.plan(org.id, null),
@@ -174,7 +199,10 @@ function CabinetReview() {
         qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
       ]);
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) =>
+      setError(
+        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
+      ),
   });
 
   /**
@@ -232,7 +260,10 @@ function CabinetReview() {
         qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
       ]);
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) =>
+      setError(
+        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
+      ),
   });
 
   if (dossier.isPending) {
@@ -274,24 +305,75 @@ function CabinetReview() {
   })();
   const compteVide = correction?.lignes.some((l) => !l.compte.trim()) ?? false;
   const correctionPrete = Boolean(correction && motifId && !noteMissing && !compteVide);
+  // Une date d'écriture, dans la langue de la personne — jamais l'ISO brut de la base.
+  const jour = (iso: string) =>
+    new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(iso));
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{t("cab.review.title")}</h1>
-        <div className="flex items-center gap-4">
-          <SignalLight
-            tone={toneForStatus(piece.status)}
-            label={t(`pme.status.${piece.status}` as MessageKey)}
-          />
-          <Link to="/cabinet" className="text-[11px] uppercase tracking-wide underline">
-            {t("cab.review.back")}
-          </Link>
+      <header className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
+        <Link
+          to="/cabinet"
+          aria-label={t("cab.review.back")}
+          title={t("cab.review.back")}
+          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+        >
+          ←
+        </Link>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            {t("cab.review.ref")}
+            {rangDansLaFile >= 0 ? (
+              <>
+                {" · "}
+                <span className="num">
+                  {t("cab.review.rank", { n: rangDansLaFile + 1, total: (file.data ?? []).length })}
+                </span>
+              </>
+            ) : null}
+          </p>
+          <h1 className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.02em]">
+            {dansLaFile?.clientName ?? t("cab.review.title")}
+            {dansLaFile?.libelle ? (
+              <span className="text-text-2"> — {dansLaFile.libelle}</span>
+            ) : null}
+          </h1>
         </div>
+        <SignalLight
+          tone={toneForStatus(piece.status)}
+          label={t(`pme.status.${piece.status}` as MessageKey)}
+        />
+        <span className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={() => precedente && allerA(precedente.pieceId)}
+            disabled={!precedente}
+            aria-label={t("cab.review.prev")}
+            title={t("cab.review.prev")}
+            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={() => suivante && allerA(suivante.pieceId)}
+            disabled={!suivante}
+            aria-label={t("cab.review.next")}
+            title={t("cab.review.next")}
+            className="flex h-[34px] w-[34px] items-center justify-center border border-border bg-card hover:bg-accent disabled:opacity-40"
+          >
+            ↓
+          </button>
+        </span>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
+      <div className="grid gap-8 xl:grid-cols-[1.15fr_1fr]">
+        <section className="min-w-0 space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
             <DocumentView contenu={contenu} highlight={zoom} label={t("cab.review.document")} />
@@ -317,17 +399,33 @@ function CabinetReview() {
                 {articles.map((article, index) => (
                   <InkTableRow key={index}>
                     <InkCell>{article.designation}</InkCell>
-                    <InkCell numeric>{article.quantity ?? "—"}</InkCell>
-                    <InkCell numeric>{article.unit_price_ht ?? "—"}</InkCell>
-                    <InkCell numeric>{article.unit_price_ttc ?? "—"}</InkCell>
-                    <InkCell numeric>{article.total_ht ?? "—"}</InkCell>
+                    <InkCell numeric>
+                      {article.quantity ? quantite(article.quantity, locale) : "—"}
+                    </InkCell>
+                    <InkCell numeric>
+                      {article.unit_price_ht ? montant(article.unit_price_ht, locale) : "—"}
+                    </InkCell>
+                    <InkCell numeric>
+                      {article.unit_price_ttc ? montant(article.unit_price_ttc, locale) : "—"}
+                    </InkCell>
+                    <InkCell numeric>
+                      {article.total_ht ? montant(article.total_ht, locale) : "—"}
+                    </InkCell>
                   </InkTableRow>
                 ))}
               </InkTable>
             </>
           ) : null}
 
-          <SectionTitle>{t("cab.review.citations")}</SectionTitle>
+          <SectionTitle
+            action={
+              <span className="text-[11px] text-muted-foreground">
+                {t("cab.review.citations.hint")}
+              </span>
+            }
+          >
+            {t("cab.review.citations")}
+          </SectionTitle>
           {citations.length === 0 ? (
             <EmptyState>{t("pme.read.none")}</EmptyState>
           ) : (
@@ -339,9 +437,19 @@ function CabinetReview() {
                     onClick={() => setZoom(citation)}
                     className="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-start hover:bg-accent"
                   >
-                    <span className="num text-[12px]">{citation.field}</span>
-                    <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {citation.zone ?? `p.${citation.page}`}
+                    <span className="min-w-0">
+                      <span className="block text-[11px] text-muted-foreground">
+                        {libelleDuChamp(citation.field, t)}
+                      </span>
+                      <span className="num block truncate text-[12.5px]">
+                        {(() => {
+                          const v = valeurDuChamp(extraction?.payload, citation.field);
+                          return v ? valeurLisible(citation.field, v, locale) : "—";
+                        })()}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                      {citation.zone ?? t("cab.review.pages", { n: citation.page })}
                     </span>
                   </button>
                 </li>
@@ -356,8 +464,12 @@ function CabinetReview() {
               </p>
               <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
                 {extraction.flags.map((flag, index) => (
-                  <li key={index} className="num">
-                    {flag.field} — {flag.code}
+                  <li key={index}>
+                    <span className="font-medium text-foreground">
+                      {libelleDuChamp(flag.field, t)}
+                    </span>
+                    {" — "}
+                    {libelleDuCode(flag.code, t)}
                   </li>
                 ))}
               </ul>
@@ -372,7 +484,11 @@ function CabinetReview() {
           ) : (
             <>
               <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
-                {booked.journal} · {booked.dateEcriture} · {booked.devise}
+                {t("cab.review.ecriture.meta", {
+                  journal: booked.journal,
+                  date: jour(booked.dateEcriture),
+                  devise: booked.devise,
+                })}
               </p>
               <InkTable
                 caption={t("cab.review.ecriture")}
@@ -384,8 +500,8 @@ function CabinetReview() {
                       <span className="num">{line.accountCode}</span>{" "}
                       <span className="text-muted-foreground">{line.libelle}</span>
                     </InkCell>
-                    <InkCell numeric>{line.debit}</InkCell>
-                    <InkCell numeric>{line.credit}</InkCell>
+                    <InkCell numeric>{montant(line.debit, locale)}</InkCell>
+                    <InkCell numeric>{montant(line.credit, locale)}</InkCell>
                   </InkTableRow>
                 ))}
               </InkTable>
@@ -468,12 +584,6 @@ function CabinetReview() {
                     {t("cab.review.correct.motif.needed")}
                   </p>
 
-                  {corriger.isError ? (
-                    <p className="border border-s-2 border-border border-s-signal-stop bg-background px-3 py-2 text-[12px]">
-                      {corriger.error instanceof Error ? corriger.error.message : t("common.error")}
-                    </p>
-                  ) : null}
-
                   <div className="flex flex-wrap gap-2">
                     <ActionButton
                       variant="ink"
@@ -492,7 +602,7 @@ function CabinetReview() {
               {reversal ? (
                 <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
                   <p className="font-medium">{reversal.libelle}</p>
-                  <p className="num mt-1 text-muted-foreground">{reversal.dateEcriture}</p>
+                  <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
                 </div>
               ) : null}
 
@@ -578,9 +688,14 @@ function CabinetReview() {
                   key={entry.id}
                   className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
                 >
-                  <span className="num">{entry.action}</span>
-                  <span className="num text-muted-foreground">
-                    {entry.at.slice(0, 16).replace("T", " ")}
+                  <span>{libelleDeLAction(entry.action, t)}</span>
+                  <span className="num shrink-0 text-muted-foreground">
+                    {new Intl.DateTimeFormat(locale, {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(new Date(entry.at))}
                   </span>
                 </li>
               ))}

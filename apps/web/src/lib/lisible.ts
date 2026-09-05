@@ -44,6 +44,28 @@ export function montantSigne(valeur: string, locale: string): string {
 }
 
 /**
+ * Une quantité du Socle, dans la langue du lecteur.
+ *
+ * Une quantité N'EST PAS un montant, et l'afficher comme tel ment : la base
+ * stocke « 300.000 » parce que la colonne porte trois décimales, mais on
+ * n'achète pas 300,000 ramettes — on en achète 300. Le dinar garde ses trois
+ * décimales parce que le dinar EST divisé en millimes ; une ramette, non.
+ *
+ * On retire donc les zéros de queue — et le séparateur décimal avec eux
+ * quand il ne reste rien derrière. « 2.500 » devient « 2,5 » : la demie
+ * compte, les zéros non.
+ *
+ * Aucune arithmétique ici non plus : on coupe la chaîne, on ne l'arrondit
+ * pas. « 0.001 » reste « 0,001 ».
+ */
+export function quantite(valeur: string, locale: string): string {
+  const propre = valeur.trim();
+  if (!propre.includes(".")) return montant(propre, locale);
+  const sansZeros = propre.replace(/0+$/, "").replace(/\.$/, "");
+  return montant(sansZeros === "" || sansZeros === "-" ? "0" : sansZeros, locale);
+}
+
+/**
  * « de » ou « d' » devant un nom de mois.
  *
  * « Déclaration de août » n'est pas du français. La règle : on élide devant

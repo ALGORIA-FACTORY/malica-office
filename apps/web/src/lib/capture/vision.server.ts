@@ -19,7 +19,8 @@ import { callDeepSeek } from "../regalica/deepseek.server";
 import { repairArticles } from "./article-repair";
 import { extrairePagesScannees } from "./pdf-image.server";
 import { readPdfTextLayer } from "./pdf-text.server";
-import { lireAvecQwen } from "./qwen.server";
+import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.server";
+import { lireAvecQwen, QwenError } from "./qwen.server";
 import type { PageToken, TokenRef } from "./token-plan";
 
 /**
@@ -31,6 +32,19 @@ import type { PageToken, TokenRef } from "./token-plan";
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
 const MODELE_DESIGNATION = "deepseek-reasoner";
+
+/*
+ * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
+ * lecture dont le modèle ne répond pas restait « en cours » sans fin. Le
+ * raisonneur est lent par nature — plusieurs minutes sur une facture
+ * dense — d'où sa marge.
+ */
+const DELAI_RELEVE_MS = 120_000;
+const DELAI_DESIGNATION_MS = 300_000;
+
+function delaiDepasse(e: unknown): boolean {
+  return e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+}
 
 const RefSchema = z
   .object({
@@ -51,7 +65,9 @@ const orDefault = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (v === null ? undefined : v), schema);
 
 const SelectionResponse = z.object({
-  document_kind: orDefault(z.enum(["facture_achat", "facture_vente"]).default("facture_achat")),
+  // `null` est une RÉPONSE : « aucune des deux parties n'est le dossier ».
+  // Aucune valeur par défaut — deviner « achat » classait des ventes.
+  document_kind: z.enum(["facture_achat", "facture_vente"]).nullable().default(null),
   currency: orDefault(z.string().min(3).max(3).default("TND")),
   issuer: RefSchema,
   document_date: RefSchema,
@@ -174,7 +190,15 @@ function labelText(
  * inventée : on referme les tableaux/objets ouverts et on abandonne le dernier
  * élément incomplet. Aucun contenu n'est ajouté.
  */
-function parseJsonLoose(raw: string): unknown {
+/**
+ * Le relevé et la lecture souple du JSON servent à TOUS les documents.
+ *
+ * La première passe — ce qui est écrit sur le papier, et où — ne dépend pas de
+ * ce que le papier EST. Une facture et une carte d'identification fiscale
+ * produisent le même plan de tokens ; seule la désignation qui suit diffère.
+ * Les exporter évite d'écrire un second œil pour le second document.
+ */
+export function parseJsonLoose(raw: string): unknown {
   const text = raw
     .trim()
     .replace(/^```(?:json)?/i, "")
@@ -242,6 +266,9 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
       return await fn();
     } catch (e) {
       last = e;
+      // Un délai dépassé n'est pas passager : le rejouer ferait attendre
+      // deux fois. On le nomme, et l'écran le traduit.
+      if (delaiDepasse(e)) throw new Error("lecture.trop_longue");
       const msg = e instanceof Error ? e.message : String(e);
       const transient =
         /\b(429|5\d\d)\b/.test(msg) || /Unrecognized token|illisible|JSON/i.test(msg);
@@ -257,7 +284,7 @@ Tu ne transcris JAMAIS une valeur : tu renvoies uniquement l'emplacement du toke
 sous la forme {"page":n,"ordinal":n}. Si un élément est absent de la pièce, renvoie null — ne
 devine jamais.
 Réponds STRICTEMENT en JSON :
-{"document_kind":"facture_achat"|"facture_vente","currency":"TND",
+{"document_kind":"facture_achat"|"facture_vente"|null,"currency":"TND",
  "issuer":{"page":1,"ordinal":3},"document_date":{"page":1,"ordinal":12},
  "lines":[{"label":"...","tax_code":"<un code de la liste fournie>",
            "base_ht":{...},"vat_amount":{...},"ttc":{...}}],
@@ -286,7 +313,13 @@ Un montant total de pied de facture n'est jamais une ligne d'article.
 DROITS HORS TVA : si la pièce imprime un droit de timbre ou un droit assimilé, désigne le token
 de son montant avec le code correspondant de la liste des droits fournie. Sinon, tableau vide.
 Une ligne par taux de TVA présent sur la pièce. Le code de taux vient exclusivement de la liste
-fournie ; s'il n'y a pas de correspondance, n'émets pas la ligne.`;
+fournie ; s'il n'y a pas de correspondance, n'émets pas la ligne.
+SENS DE LA PIÈCE : on te donne le DOSSIER (raison sociale, matricule fiscal). Si la pièce est
+ÉMISE PAR le dossier (son nom ou son matricule figure comme émetteur/vendeur), "document_kind"
+vaut "facture_vente". Si la pièce est ADRESSÉE AU dossier (client/livré à/facturé à), elle vaut
+"facture_achat". Si NI l'émetteur NI le destinataire n'est le dossier, ou si tu ne peux pas
+l'établir, renvoie null : la personne tranchera. Ne déduis jamais le sens du seul vocabulaire
+(« facture », « bon de livraison ») ni de la présence d'un tiers connu.`;
 
 /**
  * Le relevé — trois chemins, un seul contrat de sortie.
@@ -300,7 +333,70 @@ fournie ; s'il n'y a pas de correspondance, n'émets pas la ligne.`;
  * Quel que soit le chemin, il en sort un plan de tokens — du texte et sa
  * géométrie — et la suite ignore d'où il vient.
  */
-async function relever(params: { dataUrl: string; mime: string; bytes?: Uint8Array }): Promise<{
+function estTronque(e: unknown): boolean {
+  return e instanceof QwenError && e.code === "tronque";
+}
+
+/**
+ * Lire UNE page : entière d'abord ; si l'œil la tronque, en deux bandes ;
+ * si une bande est encore trop dense, en quatre. Au-delà, la page n'est pas
+ * dense, elle est illisible — et on le dit.
+ *
+ * Chaque bande est un appel de modèle : on ne coupe que quand il le faut.
+ * Le recollage (`fusionnerBandes`) est pur et éprouvé.
+ */
+async function lireUnePage(image: { dataUrl: string; page: number }): Promise<{
+  tokens: PageToken[];
+  tokensIn: number;
+  tokensOut: number;
+}> {
+  const uneBande = (dataUrl: string) =>
+    withRetry(`relevé page ${image.page}`, () =>
+      lireAvecQwen({
+        dataUrl,
+        parseJson: parseJsonLoose,
+        page: image.page,
+        signal: AbortSignal.timeout(DELAI_RELEVE_MS),
+      }),
+    );
+
+  try {
+    const lu = await uneBande(image.dataUrl);
+    return { tokens: lu.tokens, tokensIn: lu.tokensIn ?? 0, tokensOut: lu.tokensOut ?? 0 };
+  } catch (e) {
+    if (!estTronque(e)) throw e;
+  }
+
+  for (let nombre = 2; nombre <= BANDES_MAX; nombre *= 2) {
+    const bandes = await decouperEnBandes(image.dataUrl, nombre);
+    const lues: Array<{ bande: (typeof bandes)[number]; tokens: PageToken[] }> = [];
+    let entree = 0;
+    let sortie = 0;
+    let tropDense = false;
+    for (const bande of bandes) {
+      try {
+        const lu = await uneBande(bande.dataUrl);
+        lues.push({ bande, tokens: lu.tokens });
+        entree += lu.tokensIn ?? 0;
+        sortie += lu.tokensOut ?? 0;
+      } catch (e) {
+        if (!estTronque(e)) throw e;
+        tropDense = true;
+        break;
+      }
+    }
+    if (!tropDense) {
+      return { tokens: fusionnerBandes(lues, image.page), tokensIn: entree, tokensOut: sortie };
+    }
+  }
+  throw new Error("lecture.trop_dense");
+}
+
+export async function relever(params: {
+  dataUrl: string;
+  mime: string;
+  bytes?: Uint8Array;
+}): Promise<{
   tokens: PageToken[];
   source: string;
   tokensIn: number | null;
@@ -319,7 +415,10 @@ async function relever(params: { dataUrl: string; mime: string; bytes?: Uint8Arr
     // On extrait l'image de chaque page — sans canvas — et l'œil la lit.
     const pages = await extrairePagesScannees(params.bytes);
     if (pages.length === 0) {
-      throw new Error("PDF sans couche de texte ni image exploitable : pièce illisible");
+      // Ni couche de texte, ni image extractible : un code, que l'écran
+      // traduit dans la langue du dirigeant. La prose ne franchit pas la
+      // frontière serveur → client autrement qu'en message nu.
+      throw new Error("lecture.illisible");
     }
 
     const tokens: PageToken[] = [];
@@ -329,12 +428,10 @@ async function relever(params: { dataUrl: string; mime: string; bytes?: Uint8Arr
       // Le modèle ne voit qu'une image à la fois : la page réelle du PDF lui
       // est imposée, sinon deux pages porteraient les mêmes `page.ordinal` et
       // une citation désignerait deux tokens différents.
-      const lu = await withRetry(`relevé page ${image.page}`, () =>
-        lireAvecQwen({ dataUrl: image.dataUrl, parseJson: parseJsonLoose, page: image.page }),
-      );
+      const lu = await lireUnePage(image);
       tokens.push(...lu.tokens);
-      entree += lu.tokensIn ?? 0;
-      sortie += lu.tokensOut ?? 0;
+      entree += lu.tokensIn;
+      sortie += lu.tokensOut;
     }
     return {
       tokens,
@@ -344,14 +441,12 @@ async function relever(params: { dataUrl: string; mime: string; bytes?: Uint8Arr
     };
   }
 
-  const lecture = await withRetry("plan de tokens", () =>
-    lireAvecQwen({ dataUrl: params.dataUrl, parseJson: parseJsonLoose }),
-  );
+  const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
     tokens: lecture.tokens,
-    source: lecture.model,
-    tokensIn: lecture.tokensIn,
-    tokensOut: lecture.tokensOut,
+    source: process.env["QWEN_OCR_MODEL"] ?? "qwen",
+    tokensIn: lecture.tokensIn || null,
+    tokensOut: lecture.tokensOut || null,
   };
 }
 
@@ -375,6 +470,8 @@ export async function runVisionRead(params: {
    * un effet de bord d'une invite.
    */
   tiers?: ReadonlyArray<{ code: string; raisonSociale: string; nature: string }>;
+  /** Le dossier lui-même : ce qui décide du sens de la pièce. */
+  dossier?: { raisonSociale: string; identifiantFiscal: string | null };
 }): Promise<VisionRead> {
   const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
   if (!cleDeepSeek)
@@ -388,7 +485,8 @@ export async function runVisionRead(params: {
     ...(params.bytes ? { bytes: params.bytes } : {}),
   });
   const tokens = pass1.tokens;
-  if (tokens.length === 0) throw new Error("aucun token lisible sur la pièce");
+  // L'œil a regardé, et n'a rien lu d'exploitable. Même contrat : un code.
+  if (tokens.length === 0) throw new Error("lecture.vide");
 
   // ---- Passe 2 : désignation, sans aucune valeur.
   // Le désignateur ne voit pas la pièce : la géométrie voyage donc dans le plan.
@@ -416,11 +514,14 @@ export async function runVisionRead(params: {
     const res = await callDeepSeek({
       apiKey: cleDeepSeek,
       role: "reasoner",
+      signal: AbortSignal.timeout(DELAI_DESIGNATION_MS),
       messages: [
         { role: "system", content: SYSTEM_SELECT },
         {
           role: "user",
-          content: `Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raison sociale que le relevé a pu abîmer — « REAM OPTI » pour « DREAM OPTIC ». Tu désignes toujours un token du plan, jamais une entrée de cette liste : elle aide à lire, elle ne remplace pas ce qui est imprimé.\n${tiersText}\n\nCodes de taux autorisés :\n${ratesText}\n\nCodes de droits hors TVA autorisés :\n${chargesText}\n\nPlan de tokens — une ligne par mot, colonnes séparées par une tabulation :\npage.ordinal\tx0,y0,x1,y1\ttexte\nLes coordonnées sont normalisées entre 0 et 1, l'origine en haut à gauche : deux mots de même y appartiennent à la même ligne imprimée, et x croît de gauche à droite.\n\n${planText}`,
+          content: `DOSSIER : ${params.dossier?.raisonSociale || "(inconnu)"} — matricule fiscal ${params.dossier?.identifiantFiscal || "(inconnu)"}.
+
+Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raison sociale que le relevé a pu abîmer — « REAM OPTI » pour « DREAM OPTIC ». Tu désignes toujours un token du plan, jamais une entrée de cette liste : elle aide à lire, elle ne remplace pas ce qui est imprimé.\n${tiersText}\n\nCodes de taux autorisés :\n${ratesText}\n\nCodes de droits hors TVA autorisés :\n${chargesText}\n\nPlan de tokens — une ligne par mot, colonnes séparées par une tabulation :\npage.ordinal\tx0,y0,x1,y1\ttexte\nLes coordonnées sont normalisées entre 0 et 1, l'origine en haut à gauche : deux mots de même y appartiennent à la même ligne imprimée, et x croît de gauche à droite.\n\n${planText}`,
         },
       ],
     });

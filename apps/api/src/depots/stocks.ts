@@ -60,7 +60,7 @@ export const stocks = {
     db: Requete,
     input: {
       tenantId: string;
-      entityId: string;
+      entityId: string | null;
       categoryId: string;
       reference: string;
       designation: string;
@@ -240,7 +240,7 @@ export const stocks = {
       mouvement: string;
       cumul: string;
       packVersionId: string;
-      note?: string;
+      note?: string | null;
     },
   ) {
     const { rows } = await db.query<{ depreciation: string; ecriture: string }>(

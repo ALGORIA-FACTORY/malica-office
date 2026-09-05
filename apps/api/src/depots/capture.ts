@@ -23,6 +23,7 @@
  */
 
 import type { Requete } from "../db.ts";
+import { effacerContenu } from "../stockage.ts";
 
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
 function cheminRelatif(tenantId: string, pieceId: string): string {
@@ -123,7 +124,10 @@ export const capture = {
    */
   async listAvecLecture(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, p.vis, x.payload
+      `select p.id, p.status, p.created_at, p.vis, x.payload,
+              (select valeur from precisions_v q
+                where q.piece_id = p.id and q.champ = 'document_kind'
+                order by decided_at desc limit 1) as precision_kind
          from pieces_v p
          left join lateral (
            select e.payload
@@ -151,7 +155,10 @@ export const capture = {
         vis: r["vis"] as string,
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
-        kind: (lu?.document_kind as string | undefined) ?? null,
+        kind:
+          (lu?.document_kind as string | undefined) ??
+          (r["precision_kind"] as string | null) ??
+          null,
         total: lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
       };
@@ -167,7 +174,7 @@ export const capture = {
     const brut = (pieces as Record<string, unknown>[])[0];
     if (!brut) throw new Error("piece.not_found");
 
-    const [{ rows: ex }, { rows: cit }, { rows: tok }] = await Promise.all([
+    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }] = await Promise.all([
       db.query(
         `select id, contract, payload, flags, created_at
            from extractions_v where piece_id = $1 order by created_at desc limit 1`,
@@ -179,20 +186,45 @@ export const capture = {
            from token_plan_v where piece_id = $1 order by ordinal`,
         [pieceId],
       ),
+      // La dernière précision par champ : ce que la personne a tranché.
+      db.query(
+        `select distinct on (champ) champ, valeur
+           from precisions_v where piece_id = $1 order by champ, decided_at desc`,
+        [pieceId],
+      ),
     ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
+    const precisions = Object.fromEntries(
+      (prec as Record<string, unknown>[]).map((p) => [p["champ"] as string, p["valeur"] as string]),
+    );
+    /*
+     * L'extraction est immuable (R7) ; la précision la complète sans la
+     * toucher. Le payload RENDU porte la réponse de la personne là où la
+     * lecture avait laissé un vide — l'écran, la proposition d'écriture et la
+     * liste voient une lecture complète, et la base garde les deux entrées.
+     */
+    const payloadRendu = (() => {
+      const brutPayload = extraction?.["payload"];
+      if (!brutPayload || typeof brutPayload !== "object") return brutPayload;
+      const p = { ...(brutPayload as Record<string, unknown>) };
+      if (p["document_kind"] == null && precisions["document_kind"]) {
+        p["document_kind"] = precisions["document_kind"];
+      }
+      return p;
+    })();
     return {
       piece: versPiece(brut),
       extraction: extraction
         ? {
             id: extraction["id"] as string,
             contract: extraction["contract"] as string,
-            payload: extraction["payload"],
+            payload: payloadRendu,
             flags: extraction["flags"] ?? [],
             createdAt: extraction["created_at"] as string,
           }
         : null,
+      precisions,
       citations: (cit as Record<string, unknown>[]).map((c) => ({
         field: c["field"] as string,
         page: Number(c["page"]),
@@ -227,8 +259,11 @@ export const capture = {
     const piece = (pieces as Record<string, unknown>[])[0];
     if (!piece) throw new Error("piece.introuvable");
 
+    // Le nom et le matricule du dossier : c'est ce qui permet de dire si la
+    // pièce est émise PAR lui (vente) ou POUR lui (achat) — et, quand aucune
+    // des deux parties n'est lui, de ne pas trancher.
     const { rows: orgs } = await db.query(
-      `select jurisdiction, currency from organizations_v where id = $1`,
+      `select name, legal_id, jurisdiction, currency from organizations_v where id = $1`,
       [piece["tenant_id"] as string],
     );
     const org = (orgs as Record<string, unknown>[])[0];
@@ -269,6 +304,10 @@ export const capture = {
       },
       jurisdiction,
       currency: (org?.["currency"] as string) ?? null,
+      dossier: {
+        raisonSociale: (org?.["name"] as string) ?? "",
+        identifiantFiscal: (org?.["legal_id"] as string | null) ?? null,
+      },
       packId,
       // `rate` et les montants restent des NOMBRES ici, comme les rendait
       // PostgREST. Le web les remet en chaîne exactement comme avant : une
@@ -298,6 +337,27 @@ export const capture = {
    * l'une après l'autre par le réseau. Une lecture persistée sans ses articles
    * n'existe plus.
    */
+  /**
+   * Ce que la personne précise quand la lecture ne pouvait pas conclure.
+   * Une entrée nouvelle, jamais une modification : la fonction SQL contraint
+   * le champ, la valeur et l'état de la pièce.
+   */
+  async preciser(
+    db: Requete,
+    pieceId: string,
+    champ: string,
+    valeur: string,
+  ): Promise<{ id: string; champ: string; valeur: string }> {
+    const { rows } = await db.query(`select public.capture_precision_persist($1, $2, $3) as p`, [
+      pieceId,
+      champ,
+      valeur,
+    ]);
+    const p = (rows as Array<{ p: { id: string; champ: string; valeur: string } }>)[0]?.p;
+    if (!p) throw new Error("precision.non_enregistree");
+    return { id: p.id, champ: p.champ, valeur: p.valeur };
+  },
+
   async persisterLecture(
     db: Requete,
     input: {
@@ -327,12 +387,18 @@ export const capture = {
 
     if (input.articles.length === 0) return;
 
-    const { rows } = await db.query(
-      `select main_account from ref_account_mappings_v
-        where pack_version_id = $1 and document_kind = $2`,
-      [input.packId, input.documentKind ?? "facture_achat"],
-    );
-    const compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+    // Sans sens de facture, pas de compte : on ne suppose pas « achat ».
+    // Les articles sont gardés sans imputation ; elle viendra avec la
+    // précision de la personne, au moment de la proposition.
+    let compte: string | undefined;
+    if (input.documentKind) {
+      const { rows } = await db.query(
+        `select main_account from ref_account_mappings_v
+          where pack_version_id = $1 and document_kind = $2`,
+        [input.packId, input.documentKind],
+      );
+      compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+    }
 
     await db.query(`select public.capture_articles_persist($1, $2, $3::date, $4, $5::jsonb)`, [
       input.pieceId,
@@ -357,6 +423,39 @@ export const capture = {
     );
     const org = (orgs as Record<string, unknown>[])[0];
     if (!org) throw new Error("organisation.introuvable");
+
+    /*
+     * La fiche fiscale du dossier.
+     *
+     * Sans elle, Regalica ne sait pas si le client est assujetti à la TVA ni
+     * s'il relève du réel : elle ne peut donc ni qualifier une opération ni
+     * répondre sur la déduction. Elle supposerait, ou elle interrogerait.
+     *
+     * Absente, elle reste NULLE. Un dossier sans fiche n'est pas un dossier au
+     * régime réel par défaut — c'est un dossier dont on ignore le régime, et
+     * Regalica doit le dire plutôt que de choisir.
+     */
+    const { rows: fiches } = await db.query(
+      `select f.regime_imposition, f.regime_tva, f.prorata_tva, f.secteur,
+              f.debut_activite, f.cloture_exercice, f.valid_from,
+              ri.libelle as regime_imposition_libelle,
+              rt.libelle as regime_tva_libelle
+         from identity.fiches_fiscales f
+         left join ref.regimes_fiscaux ri
+           on ri.jurisdiction = $2 and ri.axe = 'imposition'
+          and ri.code = f.regime_imposition
+          and ri.valid_from <= f.valid_from
+          and (ri.valid_to is null or ri.valid_to > f.valid_from)
+         left join ref.regimes_fiscaux rt
+           on rt.jurisdiction = $2 and rt.axe = 'tva'
+          and rt.code = f.regime_tva
+          and rt.valid_from <= f.valid_from
+          and (rt.valid_to is null or rt.valid_to > f.valid_from)
+        where f.tenant_id = $1 and f.valid_to is null
+        order by f.valid_from desc limit 1`,
+      [tenantId, (org["jurisdiction"] as string) ?? "TN"],
+    );
+    const fiche = (fiches as Record<string, unknown>[])[0] ?? null;
 
     const [
       { rows: packs },
@@ -486,6 +585,17 @@ export const capture = {
       pack: pack
         ? { version: pack["version"] as string, effectiveFrom: pack["effective_from"] as string }
         : null,
+      // Ce que le client EST au regard de l'impôt. Nul quand on l'ignore.
+      fiche: fiche
+        ? {
+            regimeImposition: (fiche["regime_imposition_libelle"] as string | null) ?? null,
+            regimeTva: (fiche["regime_tva_libelle"] as string | null) ?? null,
+            prorataTva: fiche["prorata_tva"] === null ? null : String(fiche["prorata_tva"]),
+            secteur: (fiche["secteur"] as string | null) ?? null,
+            debutActivite: (fiche["debut_activite"] as string | null) ?? null,
+            clotureExercice: (fiche["cloture_exercice"] as string | null) ?? null,
+          }
+        : null,
       pieces: (pieces as Record<string, unknown>[]).map((p) => ({
         status: (p["status"] as string) ?? "inconnu",
       })),
@@ -574,5 +684,32 @@ export const capture = {
       ],
     );
     return rows[0]?.id ?? null;
+  },
+
+  /**
+   * Supprimer une pièce qui n'est encore partie nulle part.
+   *
+   * ============================================== CE QUI DÉCIDE, ET OÙ
+   *
+   * Pas ici. C'est `capture_piece_supprimer` qui refuse — pièce transmise,
+   * pièce engagée, pièce servant de justificatif — et la RLS qui décide de ce
+   * que l'appelant voit. Cette méthode ne fait qu'enchaîner deux gestes que la
+   * base ne peut pas faire seule : demander, puis effacer les octets.
+   *
+   * L'ordre compte. On lit le tenant AVANT la suppression : après, la ligne
+   * n'existe plus et l'on ne saurait plus où est le fichier.
+   */
+  async supprimer(db: Requete, pieceId: string): Promise<boolean> {
+    const { rows } = await db.query<{ tenant_id: string }>(
+      `select tenant_id from pieces_v where id = $1`,
+      [pieceId],
+    );
+    const tenantId = rows[0]?.tenant_id;
+    if (!tenantId) return false;
+
+    await db.query(`select public.capture_piece_supprimer($1)`, [pieceId]);
+    // La base a dit oui : les octets n'ont plus de raison d'exister.
+    await effacerContenu(tenantId, pieceId);
+    return true;
   },
 };

@@ -17,28 +17,34 @@ import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPmeRouteImport } from './routes/_authenticated/pme'
 import { Route as AuthenticatedCabinetIndexRouteImport } from './routes/_authenticated/cabinet.index'
-import { Route as AuthenticatedCabinetAffectationRouteImport } from './routes/_authenticated/cabinet.affectation'
 import { Route as AuthenticatedCabinetClientsRouteImport } from './routes/_authenticated/cabinet.clients'
+import { Route as AuthenticatedCabinetConseilRouteImport } from './routes/_authenticated/cabinet.conseil'
 import { Route as AuthenticatedCabinetEcheancesRouteImport } from './routes/_authenticated/cabinet.echeances'
+import { Route as AuthenticatedCabinetExportRouteImport } from './routes/_authenticated/cabinet.export'
+import { Route as AuthenticatedCabinetHonorairesRouteImport } from './routes/_authenticated/cabinet.honoraires'
 import { Route as AuthenticatedCabinetImmobilisationsRouteImport } from './routes/_authenticated/cabinet.immobilisations'
+import { Route as AuthenticatedCabinetMiseEnRouteRouteImport } from './routes/_authenticated/cabinet.mise-en-route'
+import { Route as AuthenticatedCabinetNotificationsRouteImport } from './routes/_authenticated/cabinet.notifications'
+import { Route as AuthenticatedCabinetPilotageRouteImport } from './routes/_authenticated/cabinet.pilotage'
 import { Route as AuthenticatedCabinetPlanRouteImport } from './routes/_authenticated/cabinet.plan'
 import { Route as AuthenticatedCabinetPropositionsRouteImport } from './routes/_authenticated/cabinet.propositions'
 import { Route as AuthenticatedCabinetPvRouteImport } from './routes/_authenticated/cabinet.pv'
 import { Route as AuthenticatedCabinetRapprochementRouteImport } from './routes/_authenticated/cabinet.rapprochement'
 import { Route as AuthenticatedCabinetReglagesRouteImport } from './routes/_authenticated/cabinet.reglages'
-import { Route as AuthenticatedCabinetStatistiquesRouteImport } from './routes/_authenticated/cabinet.statistiques'
 import { Route as AuthenticatedCabinetStocksRouteImport } from './routes/_authenticated/cabinet.stocks'
 import { Route as AuthenticatedPmeIndexRouteImport } from './routes/_authenticated/pme.index'
 import { Route as AuthenticatedPmeBienvenueRouteImport } from './routes/_authenticated/pme.bienvenue'
 import { Route as AuthenticatedPmeChargesRouteImport } from './routes/_authenticated/pme.charges'
 import { Route as AuthenticatedPmeCoffreRouteImport } from './routes/_authenticated/pme.coffre'
 import { Route as AuthenticatedPmeEcheancesRouteImport } from './routes/_authenticated/pme.echeances'
+import { Route as AuthenticatedPmeFicheRouteImport } from './routes/_authenticated/pme.fiche'
 import { Route as AuthenticatedPmeListRouteImport } from './routes/_authenticated/pme.list'
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
 import { Route as AuthenticatedPmeTvaRouteImport } from './routes/_authenticated/pme.tva'
 import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './routes/_authenticated/cabinet.dossier.$clientId'
+import { Route as AuthenticatedCabinetFactureFactureIdRouteImport } from './routes/_authenticated/cabinet.facture.$factureId'
 import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_authenticated/cabinet.piece.$pieceId'
 import { Route as AuthenticatedPmePiecePieceIdRouteImport } from './routes/_authenticated/pme.piece.$pieceId'
 
@@ -82,16 +88,16 @@ const AuthenticatedCabinetIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
-const AuthenticatedCabinetAffectationRoute =
-  AuthenticatedCabinetAffectationRouteImport.update({
-    id: '/affectation',
-    path: '/affectation',
-    getParentRoute: () => AuthenticatedCabinetRoute,
-  } as any)
 const AuthenticatedCabinetClientsRoute =
   AuthenticatedCabinetClientsRouteImport.update({
     id: '/clients',
     path: '/clients',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetConseilRoute =
+  AuthenticatedCabinetConseilRouteImport.update({
+    id: '/conseil',
+    path: '/conseil',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetEcheancesRoute =
@@ -100,10 +106,40 @@ const AuthenticatedCabinetEcheancesRoute =
     path: '/echeances',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
+const AuthenticatedCabinetExportRoute =
+  AuthenticatedCabinetExportRouteImport.update({
+    id: '/export',
+    path: '/export',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetHonorairesRoute =
+  AuthenticatedCabinetHonorairesRouteImport.update({
+    id: '/honoraires',
+    path: '/honoraires',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
 const AuthenticatedCabinetImmobilisationsRoute =
   AuthenticatedCabinetImmobilisationsRouteImport.update({
     id: '/immobilisations',
     path: '/immobilisations',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetMiseEnRouteRoute =
+  AuthenticatedCabinetMiseEnRouteRouteImport.update({
+    id: '/mise-en-route',
+    path: '/mise-en-route',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetNotificationsRoute =
+  AuthenticatedCabinetNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetPilotageRoute =
+  AuthenticatedCabinetPilotageRouteImport.update({
+    id: '/pilotage',
+    path: '/pilotage',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetPlanRoute =
@@ -133,12 +169,6 @@ const AuthenticatedCabinetReglagesRoute =
   AuthenticatedCabinetReglagesRouteImport.update({
     id: '/reglages',
     path: '/reglages',
-    getParentRoute: () => AuthenticatedCabinetRoute,
-  } as any)
-const AuthenticatedCabinetStatistiquesRoute =
-  AuthenticatedCabinetStatistiquesRouteImport.update({
-    id: '/statistiques',
-    path: '/statistiques',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetStocksRoute =
@@ -174,6 +204,11 @@ const AuthenticatedPmeEcheancesRoute =
     path: '/echeances',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedPmeFicheRoute = AuthenticatedPmeFicheRouteImport.update({
+  id: '/fiche',
+  path: '/fiche',
+  getParentRoute: () => AuthenticatedPmeRoute,
+} as any)
 const AuthenticatedPmeListRoute = AuthenticatedPmeListRouteImport.update({
   id: '/list',
   path: '/list',
@@ -207,6 +242,12 @@ const AuthenticatedCabinetDossierClientIdRoute =
     path: '/dossier/$clientId',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
+const AuthenticatedCabinetFactureFactureIdRoute =
+  AuthenticatedCabinetFactureFactureIdRouteImport.update({
+    id: '/facture/$factureId',
+    path: '/facture/$factureId',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
 const AuthenticatedCabinetPiecePieceIdRoute =
   AuthenticatedCabinetPiecePieceIdRouteImport.update({
     id: '/piece/$pieceId',
@@ -227,21 +268,26 @@ export interface FileRoutesByFullPath {
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pme': typeof AuthenticatedPmeRouteWithChildren
-  '/cabinet/affectation': typeof AuthenticatedCabinetAffectationRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
+  '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
+  '/cabinet/export': typeof AuthenticatedCabinetExportRoute
+  '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
+  '/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
+  '/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
   '/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
-  '/cabinet/statistiques': typeof AuthenticatedCabinetStatistiquesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
+  '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
@@ -250,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/pme/': typeof AuthenticatedPmeIndexRoute
   '/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
+  '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -258,21 +305,26 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
-  '/cabinet/affectation': typeof AuthenticatedCabinetAffectationRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
+  '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
+  '/cabinet/export': typeof AuthenticatedCabinetExportRoute
+  '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
+  '/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
+  '/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
   '/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
-  '/cabinet/statistiques': typeof AuthenticatedCabinetStatistiquesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
+  '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
@@ -281,6 +333,7 @@ export interface FileRoutesByTo {
   '/cabinet': typeof AuthenticatedCabinetIndexRoute
   '/pme': typeof AuthenticatedPmeIndexRoute
   '/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
+  '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -293,21 +346,26 @@ export interface FileRoutesById {
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pme': typeof AuthenticatedPmeRouteWithChildren
-  '/_authenticated/cabinet/affectation': typeof AuthenticatedCabinetAffectationRoute
   '/_authenticated/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
+  '/_authenticated/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/_authenticated/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
+  '/_authenticated/cabinet/export': typeof AuthenticatedCabinetExportRoute
+  '/_authenticated/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/_authenticated/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/_authenticated/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
+  '/_authenticated/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
+  '/_authenticated/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
   '/_authenticated/cabinet/plan': typeof AuthenticatedCabinetPlanRoute
   '/_authenticated/cabinet/propositions': typeof AuthenticatedCabinetPropositionsRoute
   '/_authenticated/cabinet/pv': typeof AuthenticatedCabinetPvRoute
   '/_authenticated/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/_authenticated/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
-  '/_authenticated/cabinet/statistiques': typeof AuthenticatedCabinetStatistiquesRoute
   '/_authenticated/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/_authenticated/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/_authenticated/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/_authenticated/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/_authenticated/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
+  '/_authenticated/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/_authenticated/pme/list': typeof AuthenticatedPmeListRoute
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
@@ -316,6 +374,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/': typeof AuthenticatedCabinetIndexRoute
   '/_authenticated/pme/': typeof AuthenticatedPmeIndexRoute
   '/_authenticated/cabinet/dossier/$clientId': typeof AuthenticatedCabinetDossierClientIdRoute
+  '/_authenticated/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/_authenticated/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
   '/_authenticated/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -328,21 +387,26 @@ export interface FileRouteTypes {
     | '/office'
     | '/onboarding'
     | '/pme'
-    | '/cabinet/affectation'
     | '/cabinet/clients'
+    | '/cabinet/conseil'
     | '/cabinet/echeances'
+    | '/cabinet/export'
+    | '/cabinet/honoraires'
     | '/cabinet/immobilisations'
+    | '/cabinet/mise-en-route'
+    | '/cabinet/notifications'
+    | '/cabinet/pilotage'
     | '/cabinet/plan'
     | '/cabinet/propositions'
     | '/cabinet/pv'
     | '/cabinet/rapprochement'
     | '/cabinet/reglages'
-    | '/cabinet/statistiques'
     | '/cabinet/stocks'
     | '/pme/bienvenue'
     | '/pme/charges'
     | '/pme/coffre'
     | '/pme/echeances'
+    | '/pme/fiche'
     | '/pme/list'
     | '/pme/notifications'
     | '/pme/reglages'
@@ -351,6 +415,7 @@ export interface FileRouteTypes {
     | '/cabinet/'
     | '/pme/'
     | '/cabinet/dossier/$clientId'
+    | '/cabinet/facture/$factureId'
     | '/cabinet/piece/$pieceId'
     | '/pme/piece/$pieceId'
   fileRoutesByTo: FileRoutesByTo
@@ -359,21 +424,26 @@ export interface FileRouteTypes {
     | '/auth'
     | '/office'
     | '/onboarding'
-    | '/cabinet/affectation'
     | '/cabinet/clients'
+    | '/cabinet/conseil'
     | '/cabinet/echeances'
+    | '/cabinet/export'
+    | '/cabinet/honoraires'
     | '/cabinet/immobilisations'
+    | '/cabinet/mise-en-route'
+    | '/cabinet/notifications'
+    | '/cabinet/pilotage'
     | '/cabinet/plan'
     | '/cabinet/propositions'
     | '/cabinet/pv'
     | '/cabinet/rapprochement'
     | '/cabinet/reglages'
-    | '/cabinet/statistiques'
     | '/cabinet/stocks'
     | '/pme/bienvenue'
     | '/pme/charges'
     | '/pme/coffre'
     | '/pme/echeances'
+    | '/pme/fiche'
     | '/pme/list'
     | '/pme/notifications'
     | '/pme/reglages'
@@ -382,6 +452,7 @@ export interface FileRouteTypes {
     | '/cabinet'
     | '/pme'
     | '/cabinet/dossier/$clientId'
+    | '/cabinet/facture/$factureId'
     | '/cabinet/piece/$pieceId'
     | '/pme/piece/$pieceId'
   id:
@@ -393,21 +464,26 @@ export interface FileRouteTypes {
     | '/_authenticated/office'
     | '/_authenticated/onboarding'
     | '/_authenticated/pme'
-    | '/_authenticated/cabinet/affectation'
     | '/_authenticated/cabinet/clients'
+    | '/_authenticated/cabinet/conseil'
     | '/_authenticated/cabinet/echeances'
+    | '/_authenticated/cabinet/export'
+    | '/_authenticated/cabinet/honoraires'
     | '/_authenticated/cabinet/immobilisations'
+    | '/_authenticated/cabinet/mise-en-route'
+    | '/_authenticated/cabinet/notifications'
+    | '/_authenticated/cabinet/pilotage'
     | '/_authenticated/cabinet/plan'
     | '/_authenticated/cabinet/propositions'
     | '/_authenticated/cabinet/pv'
     | '/_authenticated/cabinet/rapprochement'
     | '/_authenticated/cabinet/reglages'
-    | '/_authenticated/cabinet/statistiques'
     | '/_authenticated/cabinet/stocks'
     | '/_authenticated/pme/bienvenue'
     | '/_authenticated/pme/charges'
     | '/_authenticated/pme/coffre'
     | '/_authenticated/pme/echeances'
+    | '/_authenticated/pme/fiche'
     | '/_authenticated/pme/list'
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
@@ -416,6 +492,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/'
     | '/_authenticated/pme/'
     | '/_authenticated/cabinet/dossier/$clientId'
+    | '/_authenticated/cabinet/facture/$factureId'
     | '/_authenticated/cabinet/piece/$pieceId'
     | '/_authenticated/pme/piece/$pieceId'
   fileRoutesById: FileRoutesById
@@ -484,18 +561,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetIndexRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
-    '/_authenticated/cabinet/affectation': {
-      id: '/_authenticated/cabinet/affectation'
-      path: '/affectation'
-      fullPath: '/cabinet/affectation'
-      preLoaderRoute: typeof AuthenticatedCabinetAffectationRouteImport
-      parentRoute: typeof AuthenticatedCabinetRoute
-    }
     '/_authenticated/cabinet/clients': {
       id: '/_authenticated/cabinet/clients'
       path: '/clients'
       fullPath: '/cabinet/clients'
       preLoaderRoute: typeof AuthenticatedCabinetClientsRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/conseil': {
+      id: '/_authenticated/cabinet/conseil'
+      path: '/conseil'
+      fullPath: '/cabinet/conseil'
+      preLoaderRoute: typeof AuthenticatedCabinetConseilRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/echeances': {
@@ -505,11 +582,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetEcheancesRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
+    '/_authenticated/cabinet/export': {
+      id: '/_authenticated/cabinet/export'
+      path: '/export'
+      fullPath: '/cabinet/export'
+      preLoaderRoute: typeof AuthenticatedCabinetExportRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/honoraires': {
+      id: '/_authenticated/cabinet/honoraires'
+      path: '/honoraires'
+      fullPath: '/cabinet/honoraires'
+      preLoaderRoute: typeof AuthenticatedCabinetHonorairesRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
     '/_authenticated/cabinet/immobilisations': {
       id: '/_authenticated/cabinet/immobilisations'
       path: '/immobilisations'
       fullPath: '/cabinet/immobilisations'
       preLoaderRoute: typeof AuthenticatedCabinetImmobilisationsRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/mise-en-route': {
+      id: '/_authenticated/cabinet/mise-en-route'
+      path: '/mise-en-route'
+      fullPath: '/cabinet/mise-en-route'
+      preLoaderRoute: typeof AuthenticatedCabinetMiseEnRouteRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/notifications': {
+      id: '/_authenticated/cabinet/notifications'
+      path: '/notifications'
+      fullPath: '/cabinet/notifications'
+      preLoaderRoute: typeof AuthenticatedCabinetNotificationsRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/pilotage': {
+      id: '/_authenticated/cabinet/pilotage'
+      path: '/pilotage'
+      fullPath: '/cabinet/pilotage'
+      preLoaderRoute: typeof AuthenticatedCabinetPilotageRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/plan': {
@@ -545,13 +657,6 @@ declare module '@tanstack/react-router' {
       path: '/reglages'
       fullPath: '/cabinet/reglages'
       preLoaderRoute: typeof AuthenticatedCabinetReglagesRouteImport
-      parentRoute: typeof AuthenticatedCabinetRoute
-    }
-    '/_authenticated/cabinet/statistiques': {
-      id: '/_authenticated/cabinet/statistiques'
-      path: '/statistiques'
-      fullPath: '/cabinet/statistiques'
-      preLoaderRoute: typeof AuthenticatedCabinetStatistiquesRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/stocks': {
@@ -596,6 +701,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeEcheancesRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/fiche': {
+      id: '/_authenticated/pme/fiche'
+      path: '/fiche'
+      fullPath: '/pme/fiche'
+      preLoaderRoute: typeof AuthenticatedPmeFicheRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/list': {
       id: '/_authenticated/pme/list'
       path: '/list'
@@ -638,6 +750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetDossierClientIdRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
+    '/_authenticated/cabinet/facture/$factureId': {
+      id: '/_authenticated/cabinet/facture/$factureId'
+      path: '/facture/$factureId'
+      fullPath: '/cabinet/facture/$factureId'
+      preLoaderRoute: typeof AuthenticatedCabinetFactureFactureIdRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
     '/_authenticated/cabinet/piece/$pieceId': {
       id: '/_authenticated/cabinet/piece/$pieceId'
       path: '/piece/$pieceId'
@@ -656,39 +775,51 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedCabinetRouteChildren {
-  AuthenticatedCabinetAffectationRoute: typeof AuthenticatedCabinetAffectationRoute
   AuthenticatedCabinetClientsRoute: typeof AuthenticatedCabinetClientsRoute
+  AuthenticatedCabinetConseilRoute: typeof AuthenticatedCabinetConseilRoute
   AuthenticatedCabinetEcheancesRoute: typeof AuthenticatedCabinetEcheancesRoute
+  AuthenticatedCabinetExportRoute: typeof AuthenticatedCabinetExportRoute
+  AuthenticatedCabinetHonorairesRoute: typeof AuthenticatedCabinetHonorairesRoute
   AuthenticatedCabinetImmobilisationsRoute: typeof AuthenticatedCabinetImmobilisationsRoute
+  AuthenticatedCabinetMiseEnRouteRoute: typeof AuthenticatedCabinetMiseEnRouteRoute
+  AuthenticatedCabinetNotificationsRoute: typeof AuthenticatedCabinetNotificationsRoute
+  AuthenticatedCabinetPilotageRoute: typeof AuthenticatedCabinetPilotageRoute
   AuthenticatedCabinetPlanRoute: typeof AuthenticatedCabinetPlanRoute
   AuthenticatedCabinetPropositionsRoute: typeof AuthenticatedCabinetPropositionsRoute
   AuthenticatedCabinetPvRoute: typeof AuthenticatedCabinetPvRoute
   AuthenticatedCabinetRapprochementRoute: typeof AuthenticatedCabinetRapprochementRoute
   AuthenticatedCabinetReglagesRoute: typeof AuthenticatedCabinetReglagesRoute
-  AuthenticatedCabinetStatistiquesRoute: typeof AuthenticatedCabinetStatistiquesRoute
   AuthenticatedCabinetStocksRoute: typeof AuthenticatedCabinetStocksRoute
   AuthenticatedCabinetIndexRoute: typeof AuthenticatedCabinetIndexRoute
   AuthenticatedCabinetDossierClientIdRoute: typeof AuthenticatedCabinetDossierClientIdRoute
+  AuthenticatedCabinetFactureFactureIdRoute: typeof AuthenticatedCabinetFactureFactureIdRoute
   AuthenticatedCabinetPiecePieceIdRoute: typeof AuthenticatedCabinetPiecePieceIdRoute
 }
 
 const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
-  AuthenticatedCabinetAffectationRoute: AuthenticatedCabinetAffectationRoute,
   AuthenticatedCabinetClientsRoute: AuthenticatedCabinetClientsRoute,
+  AuthenticatedCabinetConseilRoute: AuthenticatedCabinetConseilRoute,
   AuthenticatedCabinetEcheancesRoute: AuthenticatedCabinetEcheancesRoute,
+  AuthenticatedCabinetExportRoute: AuthenticatedCabinetExportRoute,
+  AuthenticatedCabinetHonorairesRoute: AuthenticatedCabinetHonorairesRoute,
   AuthenticatedCabinetImmobilisationsRoute:
     AuthenticatedCabinetImmobilisationsRoute,
+  AuthenticatedCabinetMiseEnRouteRoute: AuthenticatedCabinetMiseEnRouteRoute,
+  AuthenticatedCabinetNotificationsRoute:
+    AuthenticatedCabinetNotificationsRoute,
+  AuthenticatedCabinetPilotageRoute: AuthenticatedCabinetPilotageRoute,
   AuthenticatedCabinetPlanRoute: AuthenticatedCabinetPlanRoute,
   AuthenticatedCabinetPropositionsRoute: AuthenticatedCabinetPropositionsRoute,
   AuthenticatedCabinetPvRoute: AuthenticatedCabinetPvRoute,
   AuthenticatedCabinetRapprochementRoute:
     AuthenticatedCabinetRapprochementRoute,
   AuthenticatedCabinetReglagesRoute: AuthenticatedCabinetReglagesRoute,
-  AuthenticatedCabinetStatistiquesRoute: AuthenticatedCabinetStatistiquesRoute,
   AuthenticatedCabinetStocksRoute: AuthenticatedCabinetStocksRoute,
   AuthenticatedCabinetIndexRoute: AuthenticatedCabinetIndexRoute,
   AuthenticatedCabinetDossierClientIdRoute:
     AuthenticatedCabinetDossierClientIdRoute,
+  AuthenticatedCabinetFactureFactureIdRoute:
+    AuthenticatedCabinetFactureFactureIdRoute,
   AuthenticatedCabinetPiecePieceIdRoute: AuthenticatedCabinetPiecePieceIdRoute,
 }
 
@@ -700,6 +831,7 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeChargesRoute: typeof AuthenticatedPmeChargesRoute
   AuthenticatedPmeCoffreRoute: typeof AuthenticatedPmeCoffreRoute
   AuthenticatedPmeEcheancesRoute: typeof AuthenticatedPmeEcheancesRoute
+  AuthenticatedPmeFicheRoute: typeof AuthenticatedPmeFicheRoute
   AuthenticatedPmeListRoute: typeof AuthenticatedPmeListRoute
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
@@ -714,6 +846,7 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeChargesRoute: AuthenticatedPmeChargesRoute,
   AuthenticatedPmeCoffreRoute: AuthenticatedPmeCoffreRoute,
   AuthenticatedPmeEcheancesRoute: AuthenticatedPmeEcheancesRoute,
+  AuthenticatedPmeFicheRoute: AuthenticatedPmeFicheRoute,
   AuthenticatedPmeListRoute: AuthenticatedPmeListRoute,
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,

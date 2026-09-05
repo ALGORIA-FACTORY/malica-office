@@ -13,9 +13,33 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { useApparence } from "@/components/regalica/apparence";
 import { I18nProvider } from "@/i18n";
+import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
+
+/*
+ * Comme la frontière d'erreur : ce composant se rend HORS du fournisseur de
+ * traductions — il porte ses phrases lui-même, dans les trois langues.
+ */
+const INTROUVABLE = {
+  fr: {
+    titre: "Cette page n'existe pas.",
+    corps: "L'adresse est peut-être ancienne, ou mal recopiée.",
+    accueil: "Revenir à l'accueil",
+  },
+  en: {
+    titre: "This page does not exist.",
+    corps: "The address may be old, or mistyped.",
+    accueil: "Back home",
+  },
+  ar: {
+    titre: "هذه الصفحة غير موجودة.",
+    corps: "ربما يكون العنوان قديمًا أو منسوخًا بشكل خاطئ.",
+    accueil: "العودة إلى الرئيسية",
+  },
+} as const;
 
 function NotFoundComponent() {
   const router = useRouter();
+  const langue = langueDeSecours();
   const path = useRouterState({ select: (state) => state.location.pathname });
 
   useEffect(() => {
@@ -34,16 +58,14 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">{INTROUVABLE[langue].titre}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{INTROUVABLE[langue].corps}</p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            {INTROUVABLE[langue].accueil}
           </Link>
         </div>
       </div>
@@ -51,19 +73,76 @@ function NotFoundComponent() {
   );
 }
 
+/**
+ * Ce qui s'affiche quand un écran ne peut pas se rendre.
+ *
+ * ================================================== POURQUOI PAS `useI18n` ICI
+ *
+ * Cette frontière REMPLACE l'arbre qui vient d'échouer — et le fournisseur de
+ * traductions est dans cet arbre. L'appeler ici marcherait tant que la panne
+ * vient d'ailleurs, et planterait le jour où c'est lui qui tombe : l'écran
+ * d'erreur ne doit jamais pouvoir échouer à son tour.
+ *
+ * On lit donc la langue là où elle est rangée, et l'on porte les trois phrases
+ * dont on a besoin. Trois phrases dupliquées valent mieux qu'un écran de
+ * secours qui dépend de ce qu'il secourt.
+ */
+const SECOURS = {
+  fr: {
+    titre: "Cet écran n'a pas pu s'afficher.",
+    corps: "Ce n'est pas votre faute. Réessayez, ou revenez à l'accueil.",
+    reessayer: "Réessayer",
+    accueil: "Revenir à l'accueil",
+  },
+  en: {
+    titre: "This screen could not be displayed.",
+    corps: "It is not your fault. Try again, or go back home.",
+    reessayer: "Try again",
+    accueil: "Back home",
+  },
+  ar: {
+    titre: "تعذّر عرض هذه الشاشة.",
+    corps: "ليس خطأك. أعد المحاولة أو عد إلى الصفحة الرئيسية.",
+    reessayer: "أعد المحاولة",
+    accueil: "العودة إلى الرئيسية",
+  },
+} as const;
+
+function langueDeSecours(): keyof typeof SECOURS {
+  try {
+    const rangee = window.localStorage.getItem("regalica.locale");
+    if (rangee === "en" || rangee === "ar" || rangee === "fr") return rangee;
+  } catch {
+    // Stockage inaccessible — navigation privée, réglage du navigateur.
+  }
+  return "fr";
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
+  const mots = SECOURS[langueDeSecours()];
+
+  /*
+   * ============================================ CE QU'ON N'AFFICHE PLUS JAMAIS
+   *
+   * Le message d'origine ne va PAS à l'écran. Un utilisateur a vu
+   * « Cannot transfer object of unsupported type. » en anglais au milieu d'une
+   * interface française : le texte d'un moteur, qui ne lui apprend rien et
+   * qu'il ne peut pas corriger.
+   *
+   * Il part au journal de l'atelier, avec sa pile d'appels. Rien n'est perdu —
+   * ce que l'utilisateur ne voit plus, le poste de développement le reçoit.
+   */
+  useEffect(() => {
+    console.error(error);
+    noterAuJournal("frontière d'erreur", error);
+  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">{mots.titre}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{mots.corps}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -72,13 +151,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {mots.reessayer}
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {mots.accueil}
           </a>
         </div>
       </div>
@@ -146,6 +225,11 @@ function RootComponent() {
   // il survit à la navigation. Le poser sur l'écran des réglages ne l'aurait
   // tenu que le temps d'y rester.
   useApparence();
+
+  // En developpement seulement : rapporte la PILE d une erreur au poste de
+  // l atelier. Sans elle, un defaut propre a un appareil ne livre que son
+  // texte, et l on corrige a l aveugle.
+  useEffect(() => installerJournalAtelier(), []);
 
   return (
     <QueryClientProvider client={queryClient}>

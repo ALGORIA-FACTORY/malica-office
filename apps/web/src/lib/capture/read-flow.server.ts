@@ -34,6 +34,7 @@ export interface ReadPieceResult {
 interface ContexteLecture {
   piece: { id: string; tenantId: string; source: string; contentType: string | null };
   packId: string;
+  dossier: { raisonSociale: string; identifiantFiscal: string | null };
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
   tiers: Array<{
@@ -78,6 +79,7 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Rea
     // Les tiers du dossier : l'œil doit reconnaître un fournisseur déjà
     // enregistré au lieu de le relire comme un inconnu à chaque facture.
     tiers: contexte.tiers,
+    dossier: contexte.dossier,
     taxCodes: contexte.taxCodes.map((r) => ({
       code: r.code,
       label: r.label,
@@ -104,6 +106,12 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Rea
 
   // La lecture et ses articles partent ensemble : côté API, une seule
   // transaction. Une lecture persistée sans ses articles n'existe plus.
+  // Un sens indéterminé n'est pas une lecture ratée : c'est une question
+  // posée à la personne. On la marque pour que l'écran la pose.
+  const flags = extract.document_kind
+    ? built.flags
+    : [...built.flags, { field: "document_kind", code: "direction.incertaine" }];
+
   await api.rpc<void>("capture", "persisterLecture", [
     {
       pieceId,
@@ -112,10 +120,17 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Rea
       contract: built.contract,
       extract: built.extract,
       citations: built.citations,
-      flags: built.flags,
+      flags,
       articles: extract.articles ?? [],
       documentKind: extract.document_kind ?? null,
-      documentDate: extract.document_date ?? null,
+      /*
+       * Une date NON LUE vaut `null`, jamais la chaîne vide.
+       *
+       * `??` ne retient que `null` et `undefined` : une chaîne vide passait au
+       * travers et arrivait à Postgres en `''::date`, qui refuse. Toute la
+       * persistance de la lecture échouait alors — pour un champ absent.
+       */
+      documentDate: extract.document_date?.trim() ? extract.document_date : null,
     },
   ]);
 
@@ -123,7 +138,7 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Rea
     pieceId,
     contract: built.contract,
     citations: built.citations.length,
-    flags: built.flags,
+    flags,
     valid: built.valid,
     model: read.model,
     latencyMs: read.latencyMs,

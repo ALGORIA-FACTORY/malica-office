@@ -9,7 +9,180 @@
 
 import type { Requete } from "../db.ts";
 
+/** Un mandat proposé, vu depuis la PME qui doit y répondre. */
+export interface MandatPropose {
+  id: string;
+  cabinetTenantId: string;
+  cabinet: string;
+  proposeLe: string;
+}
+import { enDate } from "./dates.ts";
+
+/** Une fiche fiscale, telle que l'écran et Regalica la lisent. */
+export interface FicheFiscale {
+  id: string;
+  regimeImposition: string | null;
+  regimeTva: string | null;
+  prorataTva: string | null;
+  secteur: string | null;
+  debutActivite: string | null;
+  clotureExercice: string | null;
+  /** physique | morale — la forme décide du délai de dépôt. */
+  formeJuridique: string | null;
+  /** papier | electronique — la télédéclaration réduit le délai. */
+  modeDepot: string | null;
+  source: string;
+  pieceId: string | null;
+  validFrom: string;
+  validTo: string | null;
+}
+
+/** pg rend une date SQL à minuit locale : `toISOString` afficherait la veille. */
+
 export const identite = {
+  /**
+   * Les régimes que la juridiction connaît, à la date demandée.
+   *
+   * L'écran ne propose JAMAIS une liste écrite dans son code : il propose ce
+   * que le référentiel porte. Le jour où un régime naît ou disparaît, la liste
+   * suit sans qu'on touche au produit — R4.
+   */
+  async regimesDisponibles(db: Requete, jurisdiction: string, jour?: string | null) {
+    const { rows } = await db.query<Record<string, unknown>>(
+      `select axe, code, libelle, fondement
+         from ref.regimes_fiscaux
+        where jurisdiction = $1
+          and valid_from <= coalesce($2::date, current_date)
+          and (valid_to is null or valid_to > coalesce($2::date, current_date))
+        order by axe, libelle`,
+      [jurisdiction, jour ?? null],
+    );
+    return rows.map((r) => ({
+      axe: r["axe"] as "imposition" | "tva",
+      code: r["code"] as string,
+      libelle: r["libelle"] as string,
+      fondement: r["fondement"] as string,
+    }));
+  },
+
+  /**
+   * Les formes juridiques et les modes de dépôt que le calendrier des
+   * obligations distingue. Ils viennent du référentiel : une forme qu'aucune
+   * obligation ne nomme n'aurait pas de sens ici.
+   */
+  async formesDisponibles(db: Requete, jurisdiction: string) {
+    const { rows } = await db.query<{ axe: string; code: string }>(
+      `select 'forme' as axe, forme_juridique as code
+         from ref.fiscal_obligations
+        where jurisdiction = $1 and forme_juridique is not null
+       union
+       select 'mode', mode_depot
+         from ref.fiscal_obligations
+        where jurisdiction = $1 and mode_depot is not null
+       order by 1, 2`,
+      [jurisdiction],
+    );
+    return rows.map((r) => ({ axe: r.axe as "forme" | "mode", code: r.code }));
+  },
+
+  /**
+   * La fiche en vigueur pour ce dossier, ou rien.
+   *
+   * « Rien » est une réponse : un dossier sans fiche n'est pas un dossier au
+   * régime réel par défaut. Supposer serait la faute que cette table existe
+   * pour empêcher.
+   */
+  async ficheCourante(db: Requete, tenantId: string): Promise<FicheFiscale | null> {
+    const { rows } = await db.query<Record<string, unknown>>(
+      `select id, regime_imposition, regime_tva, prorata_tva, secteur,
+              debut_activite, cloture_exercice, forme_juridique, mode_depot,
+              source, piece_id, valid_from, valid_to
+         from identity.fiches_fiscales
+        where tenant_id = $1 and valid_to is null
+        order by valid_from desc limit 1`,
+      [tenantId],
+    );
+    const r = rows[0];
+    if (!r) return null;
+    return {
+      id: r["id"] as string,
+      regimeImposition: (r["regime_imposition"] as string | null) ?? null,
+      regimeTva: (r["regime_tva"] as string | null) ?? null,
+      prorataTva: r["prorata_tva"] === null ? null : String(r["prorata_tva"]),
+      secteur: (r["secteur"] as string | null) ?? null,
+      debutActivite: enDate(r["debut_activite"]),
+      clotureExercice: (r["cloture_exercice"] as string | null) ?? null,
+      formeJuridique: (r["forme_juridique"] as string | null) ?? null,
+      modeDepot: (r["mode_depot"] as string | null) ?? null,
+      source: r["source"] as string,
+      pieceId: (r["piece_id"] as string | null) ?? null,
+      validFrom: enDate(r["valid_from"]) ?? "",
+      validTo: enDate(r["valid_to"]),
+    };
+  },
+
+  /**
+   * Établir une fiche : clôturer celle qui court, en ouvrir une neuve.
+   *
+   * Les deux gestes dans la MÊME transaction. Séparés, une panne entre les
+   * deux laisserait le dossier sans fiche du tout — pire que l'ancienne, qui
+   * au moins disait quelque chose de vrai jusqu'à hier.
+   *
+   * La base refuse de réécrire une fiche (R7) et refuse deux fiches sur la
+   * même période. Ce dépôt n'a donc rien à vérifier : il enchaîne, et la base
+   * arbitre.
+   */
+  async etablirFiche(
+    db: Requete,
+    input: {
+      tenantId: string;
+      regimeImposition?: string | null;
+      regimeTva?: string | null;
+      prorataTva?: number | null;
+      secteur?: string | null;
+      debutActivite?: string | null;
+      clotureExercice?: string | null;
+      formeJuridique?: string | null;
+      modeDepot?: string | null;
+      source: "carte" | "saisie";
+      pieceId?: string | null;
+      validFrom: string;
+    },
+  ): Promise<{ id: string }> {
+    await db.query(
+      `update identity.fiches_fiscales
+          set valid_to = $2::date
+        where tenant_id = $1 and valid_to is null and valid_from < $2::date`,
+      [input.tenantId, input.validFrom],
+    );
+
+    const { rows } = await db.query<{ id: string }>(
+      `insert into identity.fiches_fiscales
+         (tenant_id, regime_imposition, regime_tva, prorata_tva, secteur,
+          debut_activite, cloture_exercice, forme_juridique, mode_depot,
+          source, piece_id, valid_from)
+       values ($1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11, $12::date)
+       returning id`,
+      [
+        input.tenantId,
+        input.regimeImposition ?? null,
+        input.regimeTva ?? null,
+        input.prorataTva ?? null,
+        input.secteur ?? null,
+        input.debutActivite ?? null,
+        input.clotureExercice ?? null,
+        input.formeJuridique ?? null,
+        input.modeDepot ?? null,
+        input.source,
+        input.pieceId ?? null,
+        input.validFrom,
+      ],
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error("fiche.creation_refusee");
+    return { id };
+  },
+
   async listMyOrganizations(db: Requete) {
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency,
@@ -82,6 +255,30 @@ export const identite = {
     return trouve ? { id: trouve["id"] as string, name: trouve["name"] as string } : null;
   },
 
+  /** Les mandats qu'un cabinet propose à cette PME, et qui attendent sa réponse. */
+  async mandatsProposes(db: Requete, pmeTenantId: string): Promise<MandatPropose[]> {
+    const { rows } = await db.query<{ r: MandatPropose[] | null }>(
+      `select public.mandats_proposes_lire($1) as r`,
+      [pmeTenantId],
+    );
+    return rows[0]?.r ?? [];
+  },
+
+  /** La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le termine. */
+  async repondreAuMandat(
+    db: Requete,
+    engagementId: string,
+    accepte: boolean,
+  ): Promise<{ id: string; status: string }> {
+    const { rows } = await db.query<{ r: { id: string; status: string } }>(
+      `select public.mandat_repondre($1, $2) as r`,
+      [engagementId, accepte],
+    );
+    const r = rows[0]?.r;
+    if (!r) throw new Error("mandat.sans_reponse");
+    return r;
+  },
+
   async creerMandat(
     db: Requete,
     input: { pmeOrgId: string; cabinetOrgId: string; status?: string },
@@ -94,6 +291,49 @@ export const identite = {
       [input.pmeOrgId, input.cabinetOrgId, input.status ?? "actif"],
     );
     return rows[0]!.id;
+  },
+
+  /**
+   * Proposer un mandat à une PME inscrite, par son identifiant fiscal.
+   *
+   * Le cabinet ne voit pas les PME qu'il ne mandate pas : la recherche passe
+   * par une fonction sous définisseur, qui ne rend que le nom de celle qu'il
+   * vient de solliciter. Le mandat naît « proposé » ; la PME l'active.
+   */
+  async proposerMandat(db: Requete, cabinetTenantId: string, legalId: string) {
+    const { rows } = await db.query<{
+      r: { id: string; pmeTenantId: string; pmeName: string; status: string; deja: boolean };
+    }>(`select public.mandat_proposer($1, $2) as r`, [cabinetTenantId, legalId]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("mandat.non_propose");
+    return { ...r, deja: Boolean(r.deja) };
+  },
+
+  /**
+   * Le cabinet se décrit. La devise n'est pas passée : la base la lit dans le
+   * pack de la juridiction, et refuse une juridiction sans pack (R4).
+   */
+  async definirOrganisation(
+    db: Requete,
+    input: { tenantId: string; name: string; legalId: string | null; jurisdiction: string },
+  ) {
+    const { rows } = await db.query<{
+      r: {
+        id: string;
+        name: string;
+        legalId: string | null;
+        jurisdiction: string;
+        currency: string;
+      };
+    }>(`select public.organisation_definir($1, $2, $3, $4) as r`, [
+      input.tenantId,
+      input.name,
+      input.legalId,
+      input.jurisdiction,
+    ]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("organisation.non_definie");
+    return { ...r, legalId: r.legalId ?? null };
   },
 
   async createOrganization(

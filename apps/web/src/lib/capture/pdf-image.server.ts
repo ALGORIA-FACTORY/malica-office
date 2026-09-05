@@ -163,7 +163,11 @@ export interface PageImage {
 export async function extrairePagesScannees(bytes: Uint8Array, maxPages = 5): Promise<PageImage[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const tache = pdfjs.getDocument({
-    data: bytes,
+    // Une COPIE : `getDocument` transfère le tableau et le DÉTACHE. Voir le
+    // commentaire détaillé dans `pdf-text.server.ts` — c'est le même défaut,
+    // et il faut le corriger des deux côtés, sans quoi l'ordre des appels
+    // décide de qui casse.
+    data: new Uint8Array(bytes),
     disableFontFace: true,
     useSystemFonts: false,
     // Faux : on veut les octets bruts du bitmap, pas un ImageBitmap

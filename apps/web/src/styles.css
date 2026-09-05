@@ -395,3 +395,34 @@
 @utility rule-b {
   border-bottom: 1px solid var(--color-border);
 }
+
+/*
+ * L'impression d'un procès-verbal.
+ *
+ * « Exporter PDF » est l'impression du navigateur : seul le document marqué
+ * `.pv-document` reste visible, posé en haut de la page, sans la coquille du
+ * cabinet autour. Ce n'est pas un rendu à part : c'est le même document.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .pv-document,
+  .pv-document * {
+    visibility: visible;
+  }
+
+  .pv-document {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    padding: 0;
+  }
+
+  .pv-document a {
+    text-decoration: none;
+  }
+}

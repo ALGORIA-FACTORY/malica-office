@@ -10,15 +10,54 @@
  * Ici, chaque greffon est nommé, son ordre est visible, et la cible n'est plus
  * décidée par un tiers.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 
+import { relaisApi } from "./relais-api";
+
+const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const CERT = join(RACINE, ".certificats", "certificat.pem");
+const CLE = join(RACINE, ".certificats", "cle.pem");
+
+/**
+ * Le HTTPS de développement — sur demande, jamais par défaut.
+ *
+ * ============================================================== POURQUOI
+ *
+ * La caméra en direct n'existe que sur une page sécurisée : sans HTTPS, un
+ * téléphone du réseau ne peut pas cadrer, quel que soit son matériel.
+ *
+ * ==================================================== POURQUOI PAS TOUJOURS
+ *
+ * Parce que le certificat est signé par lui-même, et que tout ce qui n'est pas
+ * un navigateur humain le refuse : l'aperçu intégré, les sondes, les scripts.
+ * L'activer en permanence pour un besoin ponctuel casserait le travail courant
+ * — ce qui est arrivé, et c'est ce qui a décidé de ce commutateur.
+ *
+ *   npm run dev              le poste, en clair. L'aperçu fonctionne.
+ *   npm run dev:telephone    HTTPS, pour cadrer depuis un appareil du réseau.
+ *
+ * Le certificat se fabrique par `node outils/certificat-local.mjs`. Absent, la
+ * demande de HTTPS est ignorée plutôt que de bloquer un démarrage.
+ */
+const https =
+  process.env["REGALICA_HTTPS"] === "1" && existsSync(CERT) && existsSync(CLE)
+    ? { key: readFileSync(CLE), cert: readFileSync(CERT) }
+    : undefined;
+
 export default defineConfig({
   // L'ordre compte : Tailwind avant le compilateur de routes, nitro après lui.
   plugins: [
+    // Avant tout le reste : le relais doit voir la requête avant la chaîne de
+    // rendu, qui répondrait sinon par la page 404 de l'application.
+    relaisApi(),
     tailwindcss(),
     // `server.entry` renvoie l'entrée serveur vers src/server.ts, qui enveloppe
     // les erreurs de rendu côté serveur.
@@ -36,11 +75,28 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "@tanstack/react-router"],
   },
 
+  /*
+   * @napi-rs/canvas est un module natif qui ne sert QU'AU SERVEUR (la lecture
+   * d'une page dense par bandes). L'optimiseur de dépendances tentait de le
+   * charger comme un module JavaScript et faisait tomber le serveur au
+   * démarrage. Il reste externe : Node le charge, Vite ne l'empaquette pas.
+   */
+  optimizeDeps: { exclude: ["@napi-rs/canvas"] },
+  ssr: { external: ["@napi-rs/canvas"] },
+
   server: {
-    // Port figé : l'aperçu et les scripts pointent dessus. Une bascule
-    // silencieuse sur un autre port ferait croire à une application morte.
-    port: 8080,
+    /*
+     * 8080 par défaut, et strictement : l'aperçu et les scripts pointent
+     * dessus, et une bascule silencieuse sur un autre port ferait croire à une
+     * application morte.
+     *
+     * L'instance HTTPS pour le téléphone en prend un autre — c'est ce qui
+     * permet aux DEUX de tourner ensemble : on garde l'aperçu en clair sur
+     * 8080 pendant qu'on essaie au doigt sur 8443.
+     */
+    port: Number(process.env["REGALICA_PORT"] ?? 8080),
     strictPort: true,
     host: true,
+    ...(https ? { https } : {}),
   },
 });

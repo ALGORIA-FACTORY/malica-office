@@ -135,7 +135,7 @@ function PmeTva() {
             ? count === 0
               ? t("pme.tva.contexte.vide")
               : t("pme.tva.contexte.mois", { count })
-            : t("pme.tva.contexte.annee", { mois: moisRenseignes.length })}
+            : t("pme.tva.contexte.annee", { count: moisRenseignes.length })}
         </p>
       </section>
 

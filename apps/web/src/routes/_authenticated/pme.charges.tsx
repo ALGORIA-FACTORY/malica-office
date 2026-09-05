@@ -5,10 +5,11 @@ import { useMemo, useState } from "react";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { usePme } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
-import { montant } from "@/lib/lisible";
+import { montant, quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import { computeChargesByFamille } from "@/verticals/regalica-office/socle/engines/charges/familles";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/charges")({
   head: () => ({
@@ -118,7 +119,8 @@ function ChargesScreen() {
       setError(null);
       await qc.invalidateQueries({ queryKey: ["charge-questions", pme.tenantId] });
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.charges", t("common.error"))),
   });
 
   const answered = new Set(
@@ -215,9 +217,9 @@ function ChargesScreen() {
                     type="button"
                     onClick={() => setOpenFamille(open ? null : f.code)}
                     aria-expanded={open}
-                    className="grid w-full grid-cols-[92px_1fr_auto] items-center gap-2.5 text-start text-[14px] font-medium"
+                    className="grid w-full grid-cols-[minmax(64px,auto)_1fr_auto] items-center gap-2.5 text-start text-[14px] font-medium"
                   >
-                    <span className="truncate">{f.label}</span>
+                    <span className="whitespace-nowrap">{f.label}</span>
                     <span className="relative h-[7px] bg-line-strong">
                       {/*
                        * Le poste qui a déclenché une question porte la couleur
@@ -255,7 +257,10 @@ function ChargesScreen() {
                           </div>
                           <p className="num mt-1 text-[11px] text-muted-foreground">
                             {t("pme.detail.qte", {
-                              q: a.citationQuantity && a.quantity ? a.quantity : "—",
+                              q:
+                                a.citationQuantity && a.quantity
+                                  ? quantite(a.quantity, locale)
+                                  : "—",
                             })}
                             {a.citationUnitPriceHt && a.unitPriceHt
                               ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })

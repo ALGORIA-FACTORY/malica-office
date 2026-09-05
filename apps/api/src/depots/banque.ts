@@ -10,8 +10,24 @@
  * ne suppose pas.
  */
 
+import { createHash } from "node:crypto";
+
 import type { Requete } from "../db.ts";
 import { dec } from "./decimal.ts";
+
+const FORME_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Le lot d'import est un identifiant unique en base. Un appelant qui nomme
+ * son lot autrement (« relevé-2026-09 ») obtient le même identifiant à
+ * chaque fois : le nom reste idempotent, et la base n'a pas à refuser.
+ */
+function lotEnUuid(batchId: string): string {
+  const lot = batchId.trim();
+  if (FORME_UUID.test(lot)) return lot.toLowerCase();
+  const h = createHash("sha256").update(`regalica.banque.lot:${lot}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 export const banque = {
   async listAccounts(db: Requete, tenantId: string) {
@@ -35,7 +51,7 @@ export const banque = {
     db: Requete,
     input: {
       tenantId: string;
-      entityId: string;
+      entityId: string | null;
       label: string;
       iban?: string | null;
       devise: string;
@@ -106,7 +122,7 @@ export const banque = {
       [
         input.tenantId,
         input.compteId,
-        input.batchId,
+        lotEnUuid(input.batchId),
         input.lines.map((l) => l.at),
         input.lines.map((l) => l.label),
         input.lines.map((l) => l.montant),
@@ -213,7 +229,7 @@ export const banque = {
 
   async delettrer(
     db: Requete,
-    input: { ligneId: string; motifId: string; note?: string },
+    input: { ligneId: string; motifId: string; note?: string | null },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string | null }>(
       `select public.banque_delettrer($1, $2, $3) ->> 'lettrage_id' as id`,

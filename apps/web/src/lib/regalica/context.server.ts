@@ -22,6 +22,23 @@ export interface RegalicaContext {
     validationMode: string;
   };
   pack: { version: string; effectiveFrom: string } | null;
+  /**
+   * Ce que le client EST au regard de l'impôt : régime, assujettissement,
+   * secteur, exercice.
+   *
+   * NULLE quand on l'ignore, et il faut alors le dire plutôt que de supposer.
+   * Un dossier sans fiche n'est pas un dossier au régime réel par défaut :
+   * c'est un dossier dont on ne connaît pas le régime, et la moitié des
+   * réponses fiscales en dépendent.
+   */
+  fiche: {
+    regimeImposition: string | null;
+    regimeTva: string | null;
+    prorataTva: string | null;
+    secteur: string | null;
+    debutActivite: string | null;
+    clotureExercice: string | null;
+  } | null;
   pieces: Record<string, number>;
   ecritures: Array<{
     id: string;
@@ -64,6 +81,7 @@ export interface RegalicaContext {
 interface ContexteBrut {
   organisation: RegalicaContext["organisation"];
   pack: RegalicaContext["pack"];
+  fiche: RegalicaContext["fiche"];
   pieces: Array<{ status: string }>;
   ecritures: Array<{
     id: string;
@@ -122,6 +140,7 @@ export async function loadRegalicaContext(
   return {
     organisation: brut.organisation,
     pack: brut.pack,
+    fiche: brut.fiche,
     pieces: counts,
     ecritures: brut.ecritures.map((e) => ({
       id: e.id,

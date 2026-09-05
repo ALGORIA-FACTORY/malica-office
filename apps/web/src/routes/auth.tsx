@@ -171,6 +171,17 @@ function AuthPage() {
  * login », « already registered » — c'est-à-dire qu'elle dépendait de la
  * formulation d'un tiers. Le port expose désormais un motif typé : le jour où
  * un motif s'ajoute, le compilateur le signale.
+ *
+ * ============================================ NE PAS ACCUSER L'INNOCENT
+ *
+ * Le motif « reseau » rendait le même message que « identifiants » :
+ * « Connexion impossible. Vérifiez vos identifiants. » Quand le service
+ * d'authentification est arrêté, on disait donc à la personne de vérifier son
+ * mot de passe — un mot de passe juste, qu'elle a alors retapé trois fois.
+ *
+ * Le port distinguait pourtant les deux cas depuis toujours. C'est l'écran qui
+ * les confondait, et cette confusion a coûté du temps réel à des gens qui
+ * cherchaient une faute chez eux.
  */
 function explain(err: unknown, t: ReturnType<typeof useI18n>["t"]): string {
   if (!(err instanceof EchecAuth)) return t("auth.error.generic");
@@ -182,7 +193,7 @@ function explain(err: unknown, t: ReturnType<typeof useI18n>["t"]): string {
     case "saisie":
       return t("auth.error.weakPassword");
     case "reseau":
-      return t("auth.error.generic");
+      return t("auth.error.unreachable");
   }
 }
 

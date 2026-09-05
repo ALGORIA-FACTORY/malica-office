@@ -4,6 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Building2, Smartphone } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
+import { InvitationsPourMoi } from "@/components/regalica/InvitationsPourMoi";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { PackBanner } from "@/components/regalica/PackBanner";
 import { useI18n } from "@/i18n";
@@ -103,6 +104,8 @@ function OfficeHome() {
             {t("app.orgs.create")}
           </Link>
         </div>
+
+        <InvitationsPourMoi />
 
         {!orgsQuery.isPending && pmeOrgs.length === 0 && cabinetOrgs.length === 0 ? (
           <p className="mt-8 border border-border bg-card p-6 text-sm text-muted-foreground">

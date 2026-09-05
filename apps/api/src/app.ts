@@ -12,6 +12,8 @@
  * gestionnaires à la main ne prouverait rien sur ce qui tourne en production.
  */
 
+import { appendFileSync } from "node:fs";
+
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import "dotenv/config";
@@ -19,18 +21,39 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { z } from "zod";
 
 import { creerCompte, emettreJeton, lireJeton, organisations, verifierCompte } from "./auth.ts";
+import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sousIdentite } from "./db.ts";
 import { refusLisible } from "./refus.ts";
+import { origineAutorisee } from "./origines.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
 import { deposerContenu, servirContenu } from "./stockage.ts";
+
+/** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
+const JOURNAL_ATELIER = new URL("../journal-atelier.log", import.meta.url);
 
 export const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    // Liste explicite : un `*` avec cookies serait refusé par le navigateur, et
-    // le refléter aveuglément reviendrait à n'avoir aucune restriction.
-    origin: (process.env["CORS_ORIGINS"] ?? "http://localhost:8080").split(","),
+    /*
+     * Liste explicite : un `*` avec cookies serait refusé par le navigateur, et
+     * le refléter aveuglément reviendrait à n'avoir aucune restriction.
+     *
+     * S'y ajoute, EN DÉVELOPPEMENT SEULEMENT, le réseau local : sans cela, on
+     * ne peut pas ouvrir l'application depuis un téléphone du même Wi-Fi sans
+     * inscrire à la main une adresse IP qui change de réseau en réseau.
+     *
+     * La frontière est réelle et disparaît en production — voir `origines.ts`,
+     * qui refuse notamment les domaines imitant une adresse privée.
+     */
+    origin: (origine, suite) => {
+      const autorisee = origineAutorisee(
+        origine,
+        (process.env["CORS_ORIGINS"] ?? "http://localhost:8080").split(","),
+        process.env["NODE_ENV"] === "production",
+      );
+      suite(null, autorisee);
+    },
     credentials: true,
   }),
 );
@@ -63,12 +86,18 @@ function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
 }
 
 /**
+ * Une session, ou une clé d'API du cabinet — voir `cles-api.ts`. La clé ne
+ * change rien à la RLS : elle pose le cabinet en claim, et la base décide.
+ */
+const exigerAppelant = ouParCleApi(exigerIdentite);
+
+/**
  * Les octets d'une pièce.
  *
  * Ces deux routes sont montées AVANT `express.json` : un dépôt se lit comme un
  * flux, et un intergiciel qui aurait déjà consommé le corps le rendrait vide.
  */
-app.post("/pieces/:id/contenu", exigerIdentite, (req, res, next) => {
+app.post("/pieces/:id/contenu", exigerAppelant, exigerPorteeDepot, (req, res, next) => {
   deposerContenu(req, res).catch(next);
 });
 
@@ -193,16 +222,24 @@ const Appel = z.object({
   args: z.array(z.unknown()).max(8).default([]),
 });
 
-app.post("/rpc", exigerIdentite, async (req, res, next) => {
+app.post("/rpc", exigerAppelant, async (req, res, next) => {
   try {
     const saisie = Appel.safeParse(req.body);
     if (!saisie.success) {
       res.status(400).json({ erreur: "appel invalide" });
       return;
     }
-    const resultat = await sousIdentite(req.utilisateur!.id, (db) => executerRpc(db, saisie.data));
+    const resultat = req.cleApi
+      ? await executerSousCle(req.cleApi, saisie.data)
+      : await sousIdentite(req.utilisateur!.id, (db) => executerRpc(db, saisie.data));
     res.json({ resultat });
   } catch (erreur) {
+    if (erreur instanceof PorteeInsuffisante) {
+      // La clé existe mais ne couvre pas ce geste. On le dit, sans dire ce
+      // qu'elle couvre par ailleurs.
+      res.status(403).json({ erreur: erreur.message });
+      return;
+    }
     if (erreur instanceof RpcIntrouvable) {
       res.status(404).json({ erreur: erreur.message });
       return;
@@ -221,6 +258,56 @@ app.post("/rpc", exigerIdentite, async (req, res, next) => {
 app.get("/sante", (_req, res) => {
   res.json({ etat: "ok" });
 });
+
+/**
+ * Le journal d'atelier — ce que l'appareil de l'utilisateur a vraiment vu.
+ *
+ * ============================================================== POURQUOI
+ *
+ * Un défaut n'existait que sur un téléphone : « Cannot transfer object of
+ * unsupported type ». Trois corrections à l'aveugle, trois échecs — parce que
+ * le poste de développement, lui, n'a jamais reproduit la panne. Une page de
+ * diagnostic a montré que le navigateur savait tout faire : le message venait
+ * donc d'ailleurs, et son TEXTE seul ne le disait pas.
+ *
+ * Ce qui manquait est la TRACE : le fichier et la ligne. Cette route la reçoit
+ * de l'appareil et l'écrit dans le journal du serveur, là où on peut la lire.
+ *
+ * ========================================================= CE QU'ELLE N'EST PAS
+ *
+ * Ni de la télémétrie, ni un service de suivi d'erreurs. Elle n'existe qu'en
+ * développement — `NODE_ENV` en décide — et rien ne sort de la machine :
+ * l'appareil parle au poste de l'atelier, sur le réseau local.
+ */
+if (process.env["NODE_ENV"] !== "production") {
+  app.post("/journal-atelier", (req, res) => {
+    const c = req.body as {
+      message?: unknown;
+      pile?: unknown;
+      ou?: unknown;
+      appareil?: unknown;
+    };
+    const ligne = (v: unknown, max = 4000) => String(v ?? "").slice(0, max);
+    const texte = [
+      "",
+      "──────────── journal d'atelier ────────────",
+      `  où       : ${ligne(c.ou, 200)}`,
+      `  appareil : ${ligne(c.appareil, 300)}`,
+      `  message  : ${ligne(c.message, 500)}`,
+      "  pile     :",
+      ligne(c.pile)
+        .split("\n")
+        .map((l) => `    ${l}`)
+        .join("\n"),
+      "───────────────────────────────────────────",
+      "",
+    ].join("\n");
+    console.error(texte);
+    // Aussi dans un fichier : la console d'un terminal ne se relit pas après coup.
+    appendFileSync(JOURNAL_ATELIER, `${new Date().toISOString()}${texte}`);
+    res.status(204).end();
+  });
+}
 
 app.use((erreur: unknown, _req: Request, res: Response, _next: NextFunction) => {
   // Le détail va au journal, jamais au client : un message de Postgres révèle

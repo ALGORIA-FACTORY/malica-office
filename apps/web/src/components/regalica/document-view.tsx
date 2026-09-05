@@ -35,6 +35,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
+import { noterAuJournal } from "@/lib/journal-atelier";
 import { cn } from "@/lib/utils";
 import type { Citation } from "@/verticals/regalica-office/ports/repositories";
 
@@ -92,8 +93,14 @@ export function DocumentView({ contenu, highlight, label }: Props) {
   /** La largeur du cadre au dernier rendu réussi — l'observateur s'y compare. */
   const largeurRenduRef = useRef(0);
 
-  const [etat, setEtat] = useState<"chargement" | "pdf" | "image" | "erreur">("chargement");
-  const [raison, setRaison] = useState<string | null>(null);
+  /*
+   * « natif » : le lecteur intégré a renoncé, celui du navigateur prend le
+   * relais. Voir le bloc de secours plus bas — c'est ce qui évite d'annoncer
+   * un document illisible alors qu'il est parfaitement lisible.
+   */
+  const [etat, setEtat] = useState<"chargement" | "pdf" | "image" | "natif" | "erreur">(
+    "chargement",
+  );
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [echelle, setEchelle] = useState(1);
@@ -120,18 +127,40 @@ export function DocumentView({ contenu, highlight, label }: Props) {
 
     void (async () => {
       setEtat("chargement");
-      setRaison(null);
       try {
         const entete = new Uint8Array(contenu.slice(0, 5));
-        if (entete.length === 0) throw new Error("octets absents");
+        if (entete.length === 0) {
+          setEtat("erreur");
+          return;
+        }
         if (String.fromCharCode(...entete) !== "%PDF-") {
           if (!annule) setEtat("image");
           return;
         }
 
         const pdfjs = await import("pdfjs-dist");
-        const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-        pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+        /*
+         * ============================ « Cannot transfer object of unsupported type »
+         *
+         * Ce message, que l'utilisateur a vu tel quel sur son téléphone, ne
+         * vient pas du document : il vient du repli de pdf.js.
+         *
+         * On lui donnait l'ADRESSE du fichier du worker (`?url`). pdf.js
+         * ouvrait alors lui-même un worker, en devinant s'il fallait un worker
+         * classique ou un module — et il devinait mal : le fichier de pdf.js
+         * est un module ES. Le worker mourait à sa première ligne, pdf.js
+         * basculait sans rien dire sur son « faux worker », qui fait passer les
+         * images par un canal incapable de transférer un tampon. D'où ce
+         * message, en anglais, au milieu d'un écran français.
+         *
+         * On ne lui donne plus une adresse mais le worker LUI-MÊME, construit
+         * par Vite avec le bon type. Il n'y a plus rien à deviner, donc plus de
+         * repli possible — ni en développement, ni dans le paquet livré.
+         *
+         * `workerPort` prime sur `workerSrc` : il n'en reste qu'un chemin.
+         */
+        const { default: PdfWorker } = await import("pdfjs-dist/build/pdf.worker.min.mjs?worker");
+        pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
 
         // La copie, et la raison d'être du commentaire d'en-tête : `contenu`
         // appartient au cache, pdf.js détacherait l'original.
@@ -142,10 +171,26 @@ export function DocumentView({ contenu, highlight, label }: Props) {
         setPages(doc.numPages);
         setPage((p) => Math.min(Math.max(p, 1), doc.numPages));
         setEtat("pdf");
-      } catch (e) {
+      } catch (raison) {
         if (annule) return;
-        setRaison(e instanceof Error ? e.message : String(e));
-        setEtat("erreur");
+        // La trace part au journal de l atelier : sans elle, on ne saurait
+        // jamais POURQUOI le lecteur integre a renonce sur cet appareil-la.
+        noterAuJournal("visionneuse : ouverture", raison);
+        /*
+         * ================================================ POURQUOI PAS UNE ERREUR
+         *
+         * Les octets commencent par « %PDF- » : le document EST un PDF. Si le
+         * lecteur intégré échoue, ce n'est pas la pièce qui est en cause, c'est
+         * lui — le plus souvent parce que son processus de rendu n'a pas pu
+         * démarrer sur cet appareil, et qu'il se rabat alors sur un canal
+         * interne incapable de transporter l'image.
+         *
+         * Annoncer « document illisible » serait faux, et afficher le message
+         * de la bibliothèque l'était doublement : c'est du jargon anglais que
+         * l'utilisateur a vu tel quel à l'écran. Le navigateur sait ouvrir un
+         * PDF ; on lui passe la main sans rien dire de tout cela.
+         */
+        setEtat("natif");
       }
     })();
 
@@ -226,8 +271,10 @@ export function DocumentView({ contenu, highlight, label }: Props) {
     } catch (e) {
       // Une annulation n'est pas une panne : c'est le geste suivant.
       if ((e as { name?: string }).name !== "RenderingCancelledException") {
-        setRaison(e instanceof Error ? e.message : String(e));
-        setEtat("erreur");
+        noterAuJournal("visionneuse : rendu de page", e);
+        // Le rendu d une page a echoue : le lecteur du navigateur, pas un
+        // message d erreur emprunte a la bibliotheque.
+        setEtat("natif");
       }
     }
   }, [page, echelle, ajustement, rotation]);
@@ -462,12 +509,22 @@ export function DocumentView({ contenu, highlight, label }: Props) {
         aria-label={label}
         className="relative max-h-[70vh] overflow-auto border border-border bg-paper focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
       >
-        {etat === "erreur" ? (
+        {etat === "natif" ? (
+          // Le lecteur du navigateur, avec le lien pour l'ouvrir en grand si
+          // l'appareil ne sait pas afficher un PDF dans la page.
+          <div className="flex min-h-[60vh] flex-col">
+            <object data={urlLocale} type="application/pdf" className="min-h-[60vh] w-full">
+              <div className="space-y-3 p-6 text-center">
+                <p className="text-[13px] text-muted-foreground">{t("pme.doc.native")}</p>
+                <a href={urlLocale} target="_blank" rel="noreferrer" className={outil}>
+                  {t("doc.open")}
+                </a>
+              </div>
+            </object>
+          </div>
+        ) : etat === "erreur" ? (
           <div className="space-y-3 p-6 text-center">
             <p className="text-[13px] text-signal-warn">{t("pme.doc.error")}</p>
-            {/* La raison, telle quelle. « Illisible » sans motif n'aide
-                personne à décider s'il faut redemander la pièce. */}
-            {raison ? <p className="num text-[11px] text-muted-foreground">{raison}</p> : null}
             <div className="flex justify-center gap-2">
               <button type="button" onClick={() => setEssai((n) => n + 1)} className={outil}>
                 {t("doc.retry")}

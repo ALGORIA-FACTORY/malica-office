@@ -42,6 +42,61 @@ export interface ProposalResult {
   }>;
 }
 
+/**
+ * La lecture n'a pas tout trouvé — et l'écriture ne peut donc pas être proposée.
+ *
+ * ============================================== LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * L'utilisateur voyait ceci, en anglais, au milieu d'un écran français :
+ *
+ *   [{"validation":"regex","code":"invalid_string",
+ *     "message":"Date ISO YYYY-MM-DD requise","path":["document_date"]}]
+ *
+ * C'était le message brut d'un `ZodError`, affiché tel quel. La lecture avait
+ * pourtant réussi : l'émetteur, les lignes, les totaux étaient là. Seule la
+ * date manquait — et la pièce restait bloquée sans qu'on sache pourquoi.
+ *
+ * ===================================================== POURQUOI ON REFUSE QUAND MÊME
+ *
+ * Le Socle a raison de s'arrêter : sans date, aucun taux de TVA ne peut être
+ * retrouvé, et une écriture datée au hasard est une écriture fausse. C'est la
+ * règle R2 — on n'invente jamais une valeur.
+ *
+ * Ce qui était fautif n'est pas le refus : c'est la MANIÈRE de refuser. On
+ * nomme donc les champs manquants en langage métier, et l'écran demande à
+ * l'utilisateur de les compléter.
+ */
+export class LectureIncomplete extends Error {
+  /** Les champs manquants, en clés métier — jamais des chemins de schéma. */
+  readonly champs: readonly string[];
+
+  constructor(champs: readonly string[]) {
+    super(`lecture incomplète : ${champs.join(", ")}`);
+    this.name = "LectureIncomplete";
+    this.champs = champs;
+  }
+}
+
+/**
+ * Du chemin d'un schéma vers un nom que l'utilisateur reconnaît.
+ *
+ * `document_date` ne veut rien dire pour un dirigeant de PME ; « la date de la
+ * facture », si. Un chemin inconnu retombe sur sa racine plutôt que d'être tu :
+ * mieux vaut un nom technique isolé qu'un champ manquant passé sous silence.
+ */
+export function champMetier(chemin: readonly (string | number)[]): string {
+  const noms: Record<string, string> = {
+    document_date: "date",
+    issuer: "emetteur",
+    currency: "devise",
+    lines: "lignes",
+    totals: "totaux",
+    document_kind: "type",
+  };
+  const racine = String(chemin[0] ?? "");
+  return noms[racine] ?? racine;
+}
+
 export function buildProposal(params: {
   pieceId: string;
   payload: unknown;
@@ -50,7 +105,13 @@ export function buildProposal(params: {
   fiscalCharges?: readonly FiscalCharge[];
   currency: string;
 }): ProposalResult {
-  const extract = ExtractV1.parse(params.payload);
+  const lu = ExtractV1.safeParse(params.payload);
+  if (!lu.success) {
+    // Dédoublonné et ordonné : deux erreurs sur `lines` ne font qu'un manque.
+    const champs = [...new Set(lu.error.issues.map((i) => champMetier(i.path)))].sort();
+    throw new LectureIncomplete(champs);
+  }
+  const extract = lu.data;
   const decimals = currencyDecimals(extract.currency || params.currency);
   const firstTaxCode = extract.lines[0]?.tax_code ?? null;
 

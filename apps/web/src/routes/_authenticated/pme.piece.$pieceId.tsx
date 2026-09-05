@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useI18n, type MessageKey } from "@/i18n";
 import { usePme } from "@/components/regalica/pme-context";
 import { DocumentView } from "@/components/regalica/document-view";
+import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
-import { montant } from "@/lib/lisible";
+import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/regalica-office/composition";
 import type { Citation } from "@/verticals/regalica-office/ports/repositories";
-import { buildProposal } from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import {
+  buildProposal,
+  LectureIncomplete,
+} from "@/verticals/regalica-office/use-cases/propose-ecriture";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -32,6 +37,30 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   }),
   component: PieceScreen,
 });
+
+/**
+ * Du nom métier d'un champ vers son libellé d'écran.
+ *
+ * La correspondance vit ICI, et non dans le cas d'usage : le Socle nomme ses
+ * champs, il n'a pas à connaître les clés de traduction. Et le compilateur
+ * vérifie chaque clé — un libellé oublié ne passe pas.
+ */
+/** Les raisons MÉTIER pour lesquelles une lecture s'arrête, et leur phrase. */
+const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
+  "lecture.illisible": "pme.lire.illisible",
+  "lecture.vide": "pme.lire.vide",
+  "lecture.trop_longue": "pme.lire.tropLongue",
+  "lecture.trop_dense": "pme.lire.tropDense",
+};
+
+const LIBELLE_DU_CHAMP: Record<string, MessageKey> = {
+  date: "piece.champ.date",
+  emetteur: "piece.champ.emetteur",
+  devise: "piece.champ.devise",
+  lignes: "piece.champ.lignes",
+  totaux: "piece.champ.totaux",
+  type: "piece.champ.type",
+};
 
 interface ExtractArticle {
   designation: string;
@@ -72,6 +101,12 @@ function PieceScreen() {
   const qc = useQueryClient();
   const [zoom, setZoom] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * La requête de lecture est morte en route — téléphone verrouillé, page
+   * rechargée, réseau coupé — mais la lecture continue côté serveur. On
+   * attend son résultat au lieu d'annoncer une panne.
+   */
+  const [attente, setAttente] = useState(false);
   /**
    * Le soulagement n'arrive qu'une fois.
    *
@@ -98,6 +133,43 @@ function PieceScreen() {
     queryKey: ["piece", pieceId],
     queryFn: () => office().capture.dossier(pieceId),
   });
+
+  /*
+   * ==================================================== LE SCAN FINAL
+   *
+   * Ce que la personne voit avant de taper « Lire » est EXACTEMENT ce qui
+   * sera lu : les images de page telles qu'elles sont enregistrées dans le
+   * PDF, découpées sans les décoder. Un PDF qui ne vient pas de nous (un
+   * fichier déposé) n'en porte pas forcément : la visionneuse prend alors
+   * le relais.
+   */
+  const contenuBrut = dossier.data?.contenu ?? null;
+  const pagesScan = useMemo(
+    () => (contenuBrut ? pagesJpegDuPdf(contenuBrut).map((b) => URL.createObjectURL(b)) : []),
+    [contenuBrut],
+  );
+  useEffect(() => () => pagesScan.forEach((u) => URL.revokeObjectURL(u)), [pagesScan]);
+
+  /*
+   * Une lecture tourne-t-elle déjà pour cette pièce ? Demandé au retour sur
+   * l'écran, et redemandé tant que c'est le cas : le résultat arrive par le
+   * dossier, pas par la requête qui l'a lancée.
+   */
+  const lue = dossier.data?.extraction != null;
+  const etat = useQuery({
+    queryKey: ["lecture-en-cours", pieceId],
+    queryFn: () => office().capture.etatLecture(pieceId),
+    enabled: !lue,
+    refetchInterval: (q) => (q.state.data?.enCours || attente ? 3_000 : false),
+  });
+  useEffect(() => {
+    if (!etat.data || etat.data.enCours) return;
+    if (attente) {
+      setAttente(false);
+      void qc.invalidateQueries({ queryKey: ["piece", pieceId] });
+      void qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+    }
+  }, [etat.data, attente, qc, pieceId, pme.tenantId]);
 
   const ecritures = useQuery({
     queryKey: ["ecritures", pieceId],
@@ -126,18 +198,133 @@ function PieceScreen() {
     ]);
   };
 
+  /*
+   * ================================================ EFFACER UN BROUILLON
+   *
+   * Une photo ratée, un reçu personnel, un document qui n'a rien à faire là :
+   * il n'existait aucun moyen de l'effacer, et le coffre accumulait.
+   *
+   * La base décide, pas cet écran : `capture_piece_supprimer` refuse une pièce
+   * transmise, engagée dans une écriture, ou servant de justificatif. On ne
+   * propose donc le geste que lorsqu'il a une chance d'aboutir — mais si
+   * quelqu'un le tente ailleurs, le refus vient quand même.
+   *
+   * Deux temps, jamais un seul : un effacement ne se déclenche pas par mégarde.
+   */
+  const [confirmerSuppression, setConfirmerSuppression] = useState(false);
+  const supprimer = useMutation({
+    mutationFn: () => office().capture.supprimer(pieceId),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      void navigate({ to: "/pme/list" });
+    },
+    onError: (e: unknown) => {
+      setConfirmerSuppression(false);
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error")));
+    },
+  });
+
+  /**
+   * Supprimer et reprendre : la page ne convient pas, on la retire et l'on
+   * rouvre l'appareil photo. Un scan non lu et non transmis n'engage rien.
+   */
+  const reprendre = useMutation({
+    mutationFn: () => office().capture.supprimer(pieceId),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      await navigate({ to: "/pme" });
+      pme.ouvrirScanner();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
+   * Le sens de la pièce, quand la lecture n'a pas pu le dire : un achat ou
+   * une vente. La réponse est une entrée nouvelle (jamais une modification
+   * de la lecture) ; le dossier la rend ensuite comme si elle avait été lue.
+   */
+  const preciser = useMutation({
+    mutationFn: (valeur: "facture_achat" | "facture_vente") =>
+      office().capture.preciser(pieceId, "document_kind", valeur),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /** Transmettre au cabinet — sur décision du dirigeant, jamais toute seule. */
+  const transmettre = useMutation({
+    mutationFn: () => office().collab.setPieceVis(pieceId, "partage"),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
   const read = useMutation({
     mutationFn: () => office().capture.read(pieceId),
     onSuccess: async () => {
       setError(null);
       await invalidate();
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) => {
+      /*
+       * La chaîne de lecture parle en CODES, jamais en prose : la fonction
+       * serveur ne transmet qu'un message nu, et c'est ici qu'il devient une
+       * phrase dans la langue du dirigeant. Un message qui n'est pas un code
+       * connu est technique : il va au journal, l'écran dit seulement qu'il
+       * n'a pas pu.
+       */
+      // Une requête morte n'est pas une lecture morte : le serveur continue.
+      // On attend, et le dossier dira quand c'est lu.
+      if (e instanceof TypeError) {
+        setAttente(true);
+        void etat.refetch();
+        return;
+      }
+      const code = e instanceof Error ? e.message : "";
+      const libelle = MESSAGE_DU_CODE_DE_LECTURE[code];
+      if (libelle) {
+        setError(t(libelle));
+        return;
+      }
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error")));
+    },
   });
 
+  /*
+   * ================================================ LA DATE QUAND LA PIÈCE N'EN PORTE PAS
+   *
+   * Certaines pièces n'affichent aucune date lisible : un ticket effacé, un
+   * bon de livraison, un coin plié. Sans date, aucun taux de TVA n'est
+   * applicable et rien ne peut être comptabilisé — la pièce restait bloquée.
+   *
+   * On propose donc le JOUR DU SCAN. Mais on ne le glisse pas en douce dans la
+   * lecture : il s'affiche, il est modifiable, et il ne devient la date de la
+   * pièce qu'au moment où l'utilisateur confirme. L'extraction, elle, garde sa
+   * date vide — c'est ce qui s'est réellement lu sur le document.
+   *
+   * La distinction n'est pas une subtilité : une facture de janvier scannée en
+   * mars et datée de mars part dans la mauvaise déclaration de TVA. C'est à
+   * l'utilisateur de dire quelle est la vraie date ; nous ne faisons que la
+   * pré-remplir avec la seule que nous connaissions.
+   */
+  const jourDuScan = (dossier.data?.piece.createdAt ?? new Date().toISOString()).slice(0, 10);
+  const [dateSaisie, setDateSaisie] = useState<string | null>(null);
+  const dateRetenue = dateSaisie ?? jourDuScan;
+
   const proposalAttempt = useMemo(() => {
-    const payload = dossier.data?.extraction?.payload;
-    if (!payload || !refs.data) return null;
+    const brut = dossier.data?.extraction?.payload;
+    if (!brut || !refs.data) return null;
+    // La date saisie ne complète que ce qui manque : une date lue sur la pièce
+    // n'est jamais remplacée.
+    const lue = (brut as { document_date?: string }).document_date;
+    const payload = lue?.trim() ? brut : { ...brut, document_date: dateRetenue };
     try {
       return {
         ok: true as const,
@@ -151,9 +338,26 @@ function PieceScreen() {
         }),
       };
     } catch (e) {
-      return { ok: false as const, reason: e instanceof Error ? e.message : String(e) };
+      /*
+       * ================================================ CE QUE L'ON N'AFFICHE PLUS
+       *
+       * Le message brut d'un `ZodError` s'affichait ici, en anglais :
+       * « [{"validation":"regex","message":"Date ISO YYYY-MM-DD requise",
+       *    "path":["document_date"]}] ». La facture était pourtant bien lue —
+       * seule la date manquait — et l'utilisateur restait devant un tableau
+       * JSON sans savoir quoi faire.
+       *
+       * On nomme désormais les champs manquants en clair, et l'on dit quoi
+       * faire. Le refus reste : sans date, aucun taux de TVA n'est applicable,
+       * et Regalica n'invente pas de valeur.
+       */
+      if (e instanceof LectureIncomplete) {
+        const champs = e.champs.map((c) => t(LIBELLE_DU_CHAMP[c] ?? "common.error")).join(", ");
+        return { ok: false as const, reason: t("piece.incomplete", { champs }) };
+      }
+      return { ok: false as const, reason: t("common.error") };
     }
-  }, [dossier.data, refs.data, pieceId, pme.currency]);
+  }, [dossier.data, refs.data, pieceId, pme.currency, dateRetenue, t]);
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
 
   const booked = (ecritures.data ?? []).find((e) => e.status === "booked");
@@ -194,7 +398,8 @@ function PieceScreen() {
       setRegle(true);
       await invalidate();
     },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
   if (dossier.isPending)
@@ -202,6 +407,9 @@ function PieceScreen() {
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
   const { piece, contenu, extraction, citations } = dossier.data;
+  const sensIndetermine =
+    extraction != null &&
+    (extraction.payload as { document_kind?: string | null } | null)?.document_kind == null;
   // Une citation par champ : la dernière écrite est celle qui fait foi.
   const byField = new Map(citations.map((c) => [c.field, c]));
   const payload = extraction?.payload as ExtractPayload | undefined;
@@ -321,7 +529,7 @@ function PieceScreen() {
    * d'avance. Un souffle dit la vérité : je travaille, et je ne sais pas
    * encore pour combien de temps.
    */
-  if (read.isPending) {
+  if (read.isPending || attente || etat.data?.enCours) {
     return (
       <div className="rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
         <RegalicaAvatar size={66} alt="Regalica" rond />
@@ -368,7 +576,16 @@ function PieceScreen() {
         </svg>
         <p className="mt-5 text-[27px] font-semibold tracking-[-0.03em]">{t("pme.regle.titre")}</p>
         <p className="mt-2.5 max-w-[280px] text-[15px] leading-[1.55] text-text-2">
-          {cabinet.data
+          {/*
+           * On ne dit « transmis » que si la pièce l'est VRAIMENT.
+           *
+           * Cette phrase annonçait la transmission au cabinet dans tous les
+           * cas, parce que la capture partageait tout d'office. Maintenant que
+           * la transmission est un geste, la promettre sans qu'elle ait eu
+           * lieu serait un mensonge — et sur une pièce comptable, un mensonge
+           * qui coûte cher à découvrir.
+           */}
+          {cabinet.data && piece.vis === "partage"
             ? t("pme.regle.classe.cabinet", { classe: classement, cabinet: cabinet.data.name })
             : t("pme.regle.classe", { classe: classement })}
         </p>
@@ -471,7 +688,9 @@ function PieceScreen() {
                     </span>
                   </div>
                   <p className="num mt-1 text-[11.5px] text-muted-foreground">
-                    {a.quantity ? t("pme.detail.qte", { q: a.quantity }) : t("pme.detail.sansQte")}
+                    {a.quantity
+                      ? t("pme.detail.qte", { q: quantite(a.quantity, locale) })
+                      : t("pme.detail.sansQte")}
                     {a.unit_price_ht
                       ? " · " + t("pme.detail.pu", { pu: lisible(a.unit_price_ht) ?? "—" })
                       : ""}
@@ -495,14 +714,39 @@ function PieceScreen() {
     );
   }
 
-  /* ========================================================= PAS ENCORE LUE */
+  /* ========================================================= PAS ENCORE LUE
+   *
+   * Le scan final, en grand, AVANT le geste : c'est lui qui sera lu, pas
+   * l'aperçu de l'appareil photo. Deux gestes seulement — lire, ou retirer
+   * et reprendre. Rien ne part tant que la personne n'a pas vu.
+   */
   if (!extraction) {
     return (
       <div className="rg-rise flex flex-col gap-4 px-1 pt-2">
         <p className="text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
           {t("pme.piece.title")}
         </p>
-        <p className="text-[13.5px] leading-[1.55] text-text-2">{t("pme.read.none")}</p>
+        <p className="text-[13.5px] leading-[1.55] text-text-2">{t("pme.scan.final")}</p>
+        {pagesScan.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {pagesScan.map((url, i) => (
+              <figure key={url} className="border border-border bg-card">
+                <img src={url} alt={t("pme.scan.page", { n: i + 1 })} className="block w-full" />
+                {pagesScan.length > 1 ? (
+                  <figcaption className="num px-3 py-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {t("pme.scan.page", { n: i + 1 })}
+                  </figcaption>
+                ) : null}
+              </figure>
+            ))}
+          </div>
+        ) : contenu ? (
+          <DocumentView contenu={contenu} highlight={null} label={t("pme.piece.title")} />
+        ) : (
+          <p className="border border-border bg-card p-4 text-xs text-muted-foreground">
+            {t("pme.doc.error")}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => read.mutate()}
@@ -510,22 +754,14 @@ function PieceScreen() {
         >
           {t("pme.read.run")}
         </button>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setPiece(true)}
-            className="h-[48px] border border-border text-[14px] font-medium"
-          >
-            {t("pme.piece.voir")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetail(true)}
-            className="h-[48px] border border-border text-[14px] font-medium"
-          >
-            {t("pme.detail.voir")}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => reprendre.mutate()}
+          disabled={reprendre.isPending}
+          className="h-[48px] w-full border border-border text-[14px] font-medium disabled:opacity-40"
+        >
+          {t("pme.scan.reprendre")}
+        </button>
         {error ? <p className="text-xs text-signal-warn">{error}</p> : null}
       </div>
     );
@@ -603,18 +839,35 @@ function PieceScreen() {
           className="flex items-center justify-between gap-3 border-t border-border py-[11px]"
         >
           <span className="text-[13.5px] text-text-2">{l.label}</span>
-          <span className="num text-[13.5px] font-medium">
-            {l.valeur ?? "—"}
-            {byField.get(l.champ) ? (
-              <button
-                type="button"
-                onClick={() => voirLaSource(l.champ)}
-                className="ms-2 border-b border-dotted border-current text-[11px] font-medium text-signal-info"
-              >
-                {t("pme.citation.source")}
-              </button>
-            ) : null}
-          </span>
+          {l.cle === "date" && l.valeur === null ? (
+            /*
+             * La pièce ne porte pas de date lisible. On propose le jour du
+             * scan — affiché, modifiable — plutôt que de bloquer. Il ne
+             * devient la date de l'écriture qu'à la confirmation.
+             */
+            <span className="flex flex-col items-end gap-1">
+              <input
+                type="date"
+                value={dateRetenue}
+                onChange={(e) => setDateSaisie(e.target.value)}
+                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium"
+              />
+              <span className="text-[11px] text-muted-foreground">{t("piece.date.duScan")}</span>
+            </span>
+          ) : (
+            <span className="num text-[13.5px] font-medium">
+              {l.valeur ?? "—"}
+              {byField.get(l.champ) ? (
+                <button
+                  type="button"
+                  onClick={() => voirLaSource(l.champ)}
+                  className="ms-2 border-b border-dotted border-current text-[11px] font-medium text-signal-info"
+                >
+                  {t("pme.citation.source")}
+                </button>
+              ) : null}
+            </span>
+          )}
         </div>
       ))}
 
@@ -682,10 +935,117 @@ function PieceScreen() {
             >
               {t("pme.verifie.corriger")}
             </button>
-            {!confirmable ? (
+            {sensIndetermine ? (
+              /*
+               * La lecture n'a pas pu dire si la pièce est un achat ou une
+               * vente : ni l'émetteur ni le destinataire n'est ce dossier.
+               * Elle ne devine pas ; elle demande. La réponse est enregistrée
+               * à côté de la lecture, datée et signée.
+               */
+              <div className="mt-2 border border-border bg-card p-4">
+                <p className="text-[14px] font-medium">{t("pme.sens.question")}</p>
+                <p className="mt-1 text-[12.5px] leading-[1.5] text-text-2">
+                  {t("pme.sens.pourquoi")}
+                </p>
+                <div className="mt-3 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => preciser.mutate("facture_achat")}
+                    disabled={preciser.isPending}
+                    className="min-h-[46px] border border-foreground px-3 text-[14px] font-medium disabled:opacity-40"
+                  >
+                    {t("pme.sens.achat")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => preciser.mutate("facture_vente")}
+                    disabled={preciser.isPending}
+                    className="min-h-[46px] border border-foreground px-3 text-[14px] font-medium disabled:opacity-40"
+                  >
+                    {t("pme.sens.vente")}
+                  </button>
+                </div>
+              </div>
+            ) : !confirmable ? (
               <p className="pt-2 text-center text-[12.5px] text-signal-warn">
                 {blockReason ?? t("pme.confirm.review")}
               </p>
+            ) : null}
+
+            {/*
+             * ==================================== LA TRANSMISSION EST UN GESTE
+             *
+             * Toute pièce photographiée partait au cabinet automatiquement —
+             * un reçu personnel, une photo ratée, un document sans rapport.
+             * Personne ne l'avait décidé.
+             *
+             * Elle reste maintenant chez le dirigeant jusqu'à ce qu'il appuie.
+             * Et l'écran dit toujours où elle en est : chez vous, ou partie.
+             */}
+            {cabinet.data ? (
+              <div className="mt-4 border-t border-border pt-4">
+                {piece.vis === "partage" ? (
+                  <p className="text-center text-[12.5px] text-signal-ok">
+                    {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
+                  </p>
+                ) : (
+                  <>
+                    <p className="pb-2.5 text-center text-[12.5px] text-text-2">
+                      {t("pme.transmettre.chezvous")}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={transmettre.isPending}
+                      onClick={() => transmettre.mutate()}
+                      className="h-[50px] w-full border border-foreground text-[15px] font-medium disabled:opacity-50"
+                    >
+                      {transmettre.isPending
+                        ? t("common.loading")
+                        : t("pme.transmettre.action", { cabinet: cabinet.data.name })}
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {/* Effacer : offert seulement tant que la pièce n'est partie nulle
+                part. La base refuse de toute façon dans les autres cas. */}
+            {piece.vis === "personnel" &&
+            (piece.status === "capturee" || piece.status === "lue") ? (
+              <div className="mt-3">
+                {confirmerSuppression ? (
+                  <div className="space-y-2 border border-signal-warn p-3">
+                    <p className="text-center text-[12.5px] text-signal-warn">
+                      {t("pme.supprimer.sur")}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={supprimer.isPending}
+                        onClick={() => supprimer.mutate()}
+                        className="h-[44px] flex-1 bg-signal-warn text-[14px] font-semibold text-background disabled:opacity-50"
+                      >
+                        {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmerSuppression(false)}
+                        className="h-[44px] flex-1 border border-border text-[14px] font-medium"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmerSuppression(true)}
+                    className="w-full py-2 text-center text-[12.5px] text-muted-foreground underline underline-offset-4"
+                  >
+                    {t("pme.supprimer.action")}
+                  </button>
+                )}
+              </div>
             ) : null}
           </>
         )}

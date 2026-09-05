@@ -62,7 +62,35 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       dir: dirFor(locale),
       setLocale,
       t: (key, vars) => {
-        const raw = dict[key] ?? MESSAGES[DEFAULT_LOCALE][key] ?? key;
+        let raw = dict[key] ?? MESSAGES[DEFAULT_LOCALE][key] ?? key;
+
+        /*
+         * Le pluriel se choisit, il ne s'écrit pas entre parenthèses.
+         *
+         * « 1 document(s) » est un aveu : on n'a pas su accorder, alors on a
+         * mis les deux. Aucune langue ne s'écrit comme ça, et l'arabe ne s'y
+         * plie même pas — il compte SIX formes (aucun, un, deux, quelques,
+         * beaucoup, autre), là où le français en a deux.
+         *
+         * `Intl.PluralRules` connaît ces règles pour chaque langue. Quand une
+         * variable `count` est présente, on cherche la variante `clé#forme` ;
+         * on retombe sur `clé#other`, puis sur la clé nue. Cette chaîne compte :
+         * une langue à qui il manque une forme reçoit un pluriel correct au
+         * lieu de la parenthèse.
+         */
+        const n = vars?.["count"];
+        if (typeof n === "number") {
+          const formes = [new Intl.PluralRules(locale).select(n), "other"];
+          for (const forme of formes) {
+            const variante = `${key}#${forme}` as MessageKey;
+            const trouvee = dict[variante] ?? MESSAGES[DEFAULT_LOCALE][variante];
+            if (trouvee !== undefined) {
+              raw = trouvee;
+              break;
+            }
+          }
+        }
+
         if (!vars) return raw;
         return Object.entries(vars).reduce(
           (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),

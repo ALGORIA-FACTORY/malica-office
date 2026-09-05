@@ -63,3 +63,17 @@ export function usePanneauRegalica(espace: Espace): {
     fermer: useCallback(() => poser(false), [poser]),
   };
 }
+
+/** La préférence telle qu'elle est mémorisée sur ce poste — vraie par défaut. */
+export function panneauOuvertParDefaut(espace: Espace): boolean {
+  return auDepart(espace);
+}
+
+/** Régler la préférence de ce poste ; le prochain montage la lit. */
+export function definirPanneauParDefaut(espace: Espace, valeur: boolean): void {
+  try {
+    window.localStorage.setItem(cle(espace), valeur ? "1" : "0");
+  } catch {
+    // Stockage refusé : la préférence ne survit pas, rien d'autre ne casse.
+  }
+}

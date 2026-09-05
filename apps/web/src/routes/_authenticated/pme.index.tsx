@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { bienvenueDejaVue } from "@/components/regalica/bienvenue";
+import { EntetePme } from "@/components/regalica/entete-pme";
+import { MandatsProposes } from "@/components/regalica/MandatsProposes";
 import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
 import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaChat } from "@/components/regalica/RegalicaChat";
@@ -12,7 +14,7 @@ import { useEffect } from "react";
 
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
-import { deMois, montant, montantSigne } from "@/lib/lisible";
+import { montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
@@ -102,7 +104,6 @@ function PmeHome() {
   const moisCourant = mois(periode);
   // « Déclaration de août » n'est pas du français. Chaque clé reçoit les deux
   // formes ; chaque langue prend celle dont elle a besoin.
-  const duMois = deMois(moisCourant, locale);
 
   const heure = new Date().getHours();
   const salut = t(
@@ -125,8 +126,12 @@ function PmeHome() {
 
   return (
     <div className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col sm:-mx-6">
+      {/* Un cabinet propose ? Le dirigeant répond avant tout le reste. */}
+      <div className="pt-3">
+        <MandatsProposes tenantId={pme.tenantId} />
+      </div>
       {/* ------------------------------------------------ présence et salutation */}
-      <header className="rg-rise relative overflow-hidden px-[22px] pb-4 pt-2">
+      <header className="rg-rise relative overflow-hidden px-[22px] pb-3 pt-2">
         {/*
          * Le filigrane : 238 px à 2,5 % d'opacité, débordant en haut à droite.
          * C'est la marque devenue architecture — on ne la lit pas, on la sent.
@@ -136,51 +141,12 @@ function PmeHome() {
           className="pointer-events-none absolute -right-[84px] -top-[58px] h-[238px] w-[238px] opacity-[0.025]"
         />
 
-        {/*
-         * Une seule ligne en haut de l'écran, et le sigle la commande.
-         *
-         * Le sélecteur de dossier prend la place de « je veille » quand il y
-         * a plusieurs dossiers : les deux ne tiennent pas côte à côte sous
-         * 375 px, et une PME — qui n'en a qu'un — ne voit jamais le premier.
-         */}
-        <div className="relative flex items-center gap-[9px]">
-          <MarqueRg aria-hidden className="h-[19px] w-[19px] flex-none" />
-          <span className="rg-blink h-[5px] w-[5px] flex-none bg-marigold" />
-          {pme.dossiers.length > 1 ? (
-            <select
-              aria-label={t("pme.org.switch")}
-              value={pme.tenantId}
-              onChange={(e) => pme.choisirDossier(e.target.value)}
-              className="min-w-0 max-w-[110px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {pme.dossiers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="truncate text-[11px] text-muted-foreground">
-              {t("pme.home.veille")}
-            </span>
-          )}
-          <span className="ms-auto flex items-center gap-1.5">
-            {pme.aUnCabinet ? (
-              <Link
-                to="/office"
-                className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide text-text-2 hover:bg-accent"
-              >
-                {t("portal.switch")}
-              </Link>
-            ) : null}
-            <Link
-              to="/pme/reglages"
-              className="whitespace-nowrap border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
-            >
-              {locale.toUpperCase()} · ⚙
-            </Link>
-          </span>
-        </div>
+        <EntetePme
+          dossiers={pme.dossiers}
+          dossierActif={pme.tenantId}
+          choisirDossier={pme.choisirDossier}
+          aUnCabinet={pme.aUnCabinet}
+        />
 
         <div className="relative mt-4 flex items-start gap-[14px]">
           {/*
@@ -264,7 +230,7 @@ function PmeHome() {
       </section>
 
       {/* ------------------------------------------------ ce qu'elle a préparé */}
-      <section className="flex min-h-0 flex-1 flex-col px-[22px] pt-5">
+      <section className="flex min-h-0 flex-1 flex-col px-[22px] pt-3.5">
         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
           {t("pme.home.prepare")}
         </p>
@@ -277,35 +243,6 @@ function PmeHome() {
          * demanderait au dirigeant de faire la traduction lui-même — c'est
          * exactement le travail que ce produit lui retire.
          */}
-        <Ligne
-          to="/pme/tva"
-          label={
-            a.aReverser === null || Number(a.aReverser) > 0
-              ? t("pme.home.reverser", { mois: moisCourant })
-              : t("pme.home.credit", { mois: moisCourant })
-          }
-          valeur={a.aReverser === null ? "—" : montant(a.aReverser.replace(/^-/, ""), locale)}
-        />
-        {/* La jauge n'existe que s'il y a quelque chose à jauger. */}
-        <div className="relative h-[3px] bg-line-strong">
-          {a.avancement === null ? null : (
-            <i
-              className="absolute inset-y-0 start-0 bg-marigold"
-              style={{ width: `${Math.round(a.avancement * 100)}%` }}
-            />
-          )}
-        </div>
-        <p className="mt-[5px] text-end font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-          {a.avancement === null
-            ? t("pme.home.prete.rien")
-            : t("pme.home.prete", { pourcent: Math.round(a.avancement * 100) })}
-        </p>
-
-        <Ligne
-          to="/pme/list"
-          label={t("pme.home.documents", { deMois: duMois, mois: moisCourant })}
-          valeur={String(a.documents)}
-        />
 
         {/*
          * La troisième ligne existe toujours, et elle change de sujet.
@@ -338,7 +275,57 @@ function PmeHome() {
          * les alertes restent atteignables par l'engrenage du bandeau, les
          * échéances n'ont plus de porte sur cet écran.
          */}
-        <div className="my-auto grid grid-cols-2 gap-3 py-4">
+        <div className="my-auto grid grid-cols-2 gap-2.5 py-1">
+          {/*
+           * Le signe change le mot, pas seulement le chiffre.
+           *
+           * Un solde négatif n'est pas « à reverser » : c'est un crédit qui se
+           * reporte sur le mois suivant. Afficher « TVA à reverser · −64,600 »
+           * demanderait au dirigeant de faire la traduction lui-même — c'est
+           * exactement le travail que ce produit lui retire.
+           */}
+          <Carte
+            to="/pme/tva"
+            label={
+              a.aReverser === null || Number(a.aReverser) > 0
+                ? t("pme.home.reverser")
+                : t("pme.home.credit")
+            }
+            sous={
+              a.avancement === null
+                ? t("pme.home.prete.rien")
+                : t("pme.home.prete", { pourcent: Math.round(a.avancement * 100) })
+            }
+          >
+            {/*
+             * Deux barres, deux couleurs — la même langue que « Vos charges ».
+             *
+             * Pas le chiffre : le montant est DÉJÀ le grand nombre du bloc
+             * d'encre, deux doigts au-dessus. Pas la jauge non plus : elle
+             * disait la même chose que « prête à 33 % », juste en dessous.
+             *
+             * Ce que les deux barres disent, c'est le rapport entre ce qui
+             * entre et ce qui sort — la nature même d'un solde de TVA.
+             */}
+            <span className="flex h-[26px] w-full flex-col justify-end gap-[5px]">
+              <i className="h-[6px] w-[72%] bg-foreground" />
+              <i className="h-[6px] w-[44%] bg-marigold" />
+            </span>
+          </Carte>
+          <Carte
+            to="/pme/list"
+            label={t("pme.home.documents.titre")}
+            sous={t("pme.home.documents.sous")}
+          >
+            {/*
+             * Le compte porte la couleur du produit. Ce n'est pas un ornement :
+             * c'est le seul chiffre de la rangée basse, et la marigold le
+             * désigne comme telle — la même encre que la jauge d'à côté.
+             */}
+            <span className="num block text-[24px] font-medium leading-none tracking-[-0.035em] text-marigold">
+              {a.documents}
+            </span>
+          </Carte>
           <Carte
             to="/pme/charges"
             label={t("pme.home.card.charges")}
@@ -360,7 +347,7 @@ function PmeHome() {
           <button
             type="button"
             onClick={regalica.ouvrir}
-            className="flex min-h-[96px] flex-col justify-between gap-3.5 border border-border p-3.5 text-start hover:bg-accent"
+            className="flex min-h-[86px] flex-col justify-between gap-2.5 border border-border p-3 text-start hover:bg-accent"
           >
             <RegalicaAvatar size={26} alt="" rond />
             <span>
@@ -468,7 +455,7 @@ function Ligne({
     <Link
       to={to}
       className={cn(
-        "flex w-full items-center justify-between gap-3 border-t border-border py-[15px] text-start hover:bg-secondary",
+        "flex w-full items-center justify-between gap-3 border-t border-border py-[13px] text-start hover:bg-secondary",
         accent && "border-s-2 border-s-marigold ps-[11px]",
       )}
     >
@@ -486,19 +473,21 @@ function Carte({
   children,
 }: {
   to: string;
-  label: string;
+  // Le mois s'écrit plus petit que le sujet : « Vos documents » porte la
+  // carte, « de septembre » la précise. Un libellé balisé le permet.
+  label: React.ReactNode;
   sous: string;
   children: React.ReactNode;
 }) {
   return (
     <Link
       to={to}
-      className="flex min-h-[96px] flex-col justify-between gap-3.5 border border-border p-3.5 hover:bg-accent"
+      className="flex min-h-[86px] flex-col justify-between gap-2 border border-border p-3 hover:bg-accent"
     >
       {children}
       <span>
-        <span className="block text-[14.5px] font-medium">{label}</span>
-        <span className="mt-0.5 block text-[11.5px] text-text-2">{sous}</span>
+        <span className="block text-[13.5px] font-medium leading-[1.25]">{label}</span>
+        <span className="mt-[3px] block text-[11px] text-text-2">{sous}</span>
       </span>
     </Link>
   );

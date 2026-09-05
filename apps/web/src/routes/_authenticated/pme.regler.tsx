@@ -90,7 +90,9 @@ function ARegler() {
     (motifs.data ?? []).find((m) => m.id === id)?.label ?? t("pme.regler.motifInconnu");
 
   const emetteur = (pieceId: string | undefined) =>
-    enAttente.find((p) => p.id === pieceId)?.emetteur ?? t("pme.list.nonLue");
+    // Une pièce en attente de règlement a forcément été lue : le repli
+    // « pas encore lue » y serait faux à tous les coups.
+    enAttente.find((p) => p.id === pieceId)?.emetteur ?? t("pme.list.sansEmetteur");
 
   return (
     <div className="rg-rise flex min-h-0 flex-1 flex-col px-1 pt-2">

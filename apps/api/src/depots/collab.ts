@@ -9,8 +9,51 @@
 
 import type { Requete } from "../db.ts";
 
+/** Une invitation reçue, vue par la personne qui peut la rejoindre. */
+export interface InvitationRecue {
+  id: string;
+  cabinetTenantId: string;
+  cabinet: string;
+  role: string;
+  expiresAt: string;
+}
+
 function texte(v: unknown, defaut = "—"): string {
   return (v as string | null) ?? defaut;
+}
+
+const COLONNES_PV = `id, cabinet_tenant_id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions,
+       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_regalica`;
+
+/** Un PV tel que la vue le rend. Les tableaux JSON arrivent déjà décodés par pg. */
+function versPv(p: Record<string, unknown>) {
+  return {
+    id: p["id"] as string,
+    cabinetTenantId: p["cabinet_tenant_id"] as string,
+    clientTenantId: (p["client_tenant_id"] as string | null) ?? null,
+    at: p["at"] as string,
+    titre: p["titre"] as string,
+    participants: (p["participants"] as string | null) ?? null,
+    ordreDuJour: (p["ordre_du_jour"] as string | null) ?? null,
+    decisions: (p["decisions"] as string | null) ?? null,
+    createdAt: p["created_at"] as string,
+    sections: Array.isArray(p["sections"])
+      ? (p["sections"] as Array<{ kicker: string; corps: string }>)
+      : [],
+    chiffres: Array.isArray(p["chiffres"])
+      ? (p["chiffres"] as Array<{
+          label: string;
+          valeur: string;
+          source: string;
+          genre: "montant" | "nombre";
+          devise: string | null;
+        }>)
+      : [],
+    ton: (p["ton"] as string | null) ?? null,
+    statut: (p["statut"] as string) ?? "brouillon",
+    envoyeLe: (p["envoye_le"] as string | null) ?? null,
+    redigeParRegalica: Boolean(p["redige_par_regalica"]),
+  };
 }
 
 export const collab = {
@@ -64,20 +107,132 @@ export const collab = {
 
   async pvList(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
-      `select id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions, created_at
-         from collab_pv_v where cabinet_tenant_id = $1 order by at desc`,
+      `select ${COLONNES_PV}
+         from collab_pv_v where cabinet_tenant_id = $1 order by at desc, created_at desc`,
       [cabinetTenantId],
     );
-    return (rows as Record<string, unknown>[]).map((p) => ({
-      id: p["id"] as string,
-      clientTenantId: (p["client_tenant_id"] as string | null) ?? null,
-      at: p["at"] as string,
-      titre: p["titre"] as string,
-      participants: (p["participants"] as string | null) ?? null,
-      ordreDuJour: (p["ordre_du_jour"] as string | null) ?? null,
-      decisions: (p["decisions"] as string | null) ?? null,
-      createdAt: p["created_at"] as string,
+    return (rows as Record<string, unknown>[]).map(versPv);
+  },
+
+  async pvOuvrir(db: Requete, id: string) {
+    const { rows } = await db.query(`select ${COLONNES_PV} from collab_pv_v where id = $1`, [id]);
+    const p = (rows as Record<string, unknown>[])[0];
+    return p ? versPv(p) : null;
+  },
+
+  /**
+   * Reprendre un brouillon : le texte, les chiffres, les décisions. Ce qu'on
+   * ne passe pas reste tel quel. Un PV envoyé est refusé par le déclencheur
+   * de la base (R7) — ce dépôt n'a rien à vérifier.
+   *
+   * Les tableaux passent en JSON explicite : pg rendrait sinon un tableau
+   * PostgreSQL, que la colonne jsonb refuserait.
+   */
+  async pvEnregistrer(
+    db: Requete,
+    input: {
+      id: string;
+      titre?: string;
+      participants?: string | null;
+      decisions?: string | null;
+      sections?: Array<{ kicker: string; corps: string }>;
+      chiffres?: Array<{
+        label: string;
+        valeur: string;
+        source: string;
+        genre: "montant" | "nombre";
+        devise: string | null;
+      }>;
+      ton?: string | null;
+      redigeParRegalica?: boolean;
+    },
+  ) {
+    const { rows } = await db.query(
+      `update collab_pv_v
+          set titre               = coalesce($2, titre),
+              participants        = case when $3::boolean then $4 else participants end,
+              decisions           = case when $5::boolean then $6 else decisions end,
+              sections            = coalesce($7::jsonb, sections),
+              chiffres            = coalesce($8::jsonb, chiffres),
+              ton                 = case when $9::boolean then $10 else ton end,
+              redige_par_regalica = coalesce($11, redige_par_regalica)
+        where id = $1
+        returning ${COLONNES_PV}`,
+      [
+        input.id,
+        input.titre ?? null,
+        input.participants !== undefined,
+        input.participants ?? null,
+        input.decisions !== undefined,
+        input.decisions ?? null,
+        input.sections ? JSON.stringify(input.sections) : null,
+        input.chiffres ? JSON.stringify(input.chiffres) : null,
+        input.ton !== undefined,
+        input.ton ?? null,
+        input.redigeParRegalica ?? null,
+      ],
+    );
+    const p = (rows as Record<string, unknown>[])[0];
+    if (!p) throw new Error("pv.introuvable");
+    return versPv(p);
+  },
+
+  async pvEnvoyer(db: Requete, id: string) {
+    const { rows } = await db.query<{
+      r: { id: string; statut: string; envoyeLe: string | null };
+    }>(`select public.pv_envoyer($1) as r`, [id]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("pv.introuvable");
+    return { id: r.id, statut: r.statut, envoyeLe: r.envoyeLe ?? null };
+  },
+
+  async invitations(db: Requete, cabinetTenantId: string) {
+    const { rows } = await db.query(
+      `select id, tenant_id, email, role, expires_at, accepted_at, created_at
+         from invitations_v where tenant_id = $1 order by created_at desc`,
+      [cabinetTenantId],
+    );
+    return (rows as Record<string, unknown>[]).map((i) => ({
+      id: i["id"] as string,
+      tenantId: i["tenant_id"] as string,
+      email: i["email"] as string,
+      role: i["role"] as string,
+      expiresAt: i["expires_at"] as string,
+      acceptedAt: (i["accepted_at"] as string | null) ?? null,
+      createdAt: i["created_at"] as string,
     }));
+  },
+
+  /** Les invitations adressées à l'adresse du compte connecté, encore valables. */
+  async invitationsPourMoi(db: Requete): Promise<InvitationRecue[]> {
+    const { rows } = await db.query<{ r: InvitationRecue[] | null }>(
+      `select public.invitations_pour_moi() as r`,
+    );
+    return rows[0]?.r ?? [];
+  },
+
+  /** Rejoindre le cabinet avec le rôle réservé, ou décliner. */
+  async repondreAInvitation(
+    db: Requete,
+    id: string,
+    accepte: boolean,
+  ): Promise<{ id: string; tenantId: string; role: string; rejoint: boolean }> {
+    const { rows } = await db.query<{
+      r: { id: string; tenantId: string; role: string; rejoint: boolean };
+    }>(`select public.invitation_repondre($1, $2) as r`, [id, accepte]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.sans_reponse");
+    return { ...r, rejoint: Boolean(r.rejoint) };
+  },
+
+  /** Consigne une invitation ; la base refuse une adresse déjà membre. */
+  async inviter(db: Requete, input: { tenantId: string; email: string; role: string }) {
+    const { rows } = await db.query<{
+      r: { id: string; email: string; role: string; expiresAt: string; deja: boolean };
+    }>(`select public.cabinet_inviter($1, $2, $3) as r`, [input.tenantId, input.email, input.role]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_creee");
+    return { ...r, deja: Boolean(r.deja) };
   },
 
   async addPv(
@@ -155,11 +310,16 @@ export const collab = {
     await db.query(`update notifications_v set read_at = now() where id = $1`, [id]);
   },
 
+  /**
+   * Les échéances des dossiers, avec l'obligation qui fonde chacune : sa
+   * règle littérale, son texte, son article. Rien ici n'est saisi.
+   */
   async echeances(db: Requete, tenantIds: string[]) {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      `select id, tenant_id, kind, label, period, due_date, status
-         from echeances_v where tenant_id = any($1::uuid[]) order by due_date`,
+      `select id, tenant_id, kind, label, period, due_date, status, fait_le,
+              echeance_regle, texte_source, article, periodicite
+         from echeances_v where tenant_id = any($1::uuid[]) order by due_date, label`,
       [tenantIds],
     );
     return (rows as Record<string, unknown>[]).map((e) => ({
@@ -170,7 +330,41 @@ export const collab = {
       period: (e["period"] as string | null) ?? null,
       dueDate: e["due_date"] as string,
       status: (e["status"] as string) ?? "a_venir",
+      faitLe: (e["fait_le"] as string | null) ?? null,
+      regle: (e["echeance_regle"] as string | null) ?? null,
+      texteSource: (e["texte_source"] as string | null) ?? null,
+      article: (e["article"] as string | null) ?? null,
+      periodicite: (e["periodicite"] as string | null) ?? null,
     }));
+  },
+
+  /**
+   * Dériver le calendrier de chaque dossier depuis le pack. Idempotent : ce
+   * qui existe est mis à jour, ce qui est fait reste fait. Quand rien ne
+   * peut être dérivé, la raison le dit — et l'écran la montre.
+   */
+  async deriverEcheances(db: Requete, tenantIds: string[]) {
+    const resultats: Array<{ tenantId: string; generees: number; raison: string | null }> = [];
+    for (const tenantId of tenantIds) {
+      const { rows } = await db.query<{ r: { generees: number; raison: string | null } }>(
+        `select public.echeances_deriver($1) as r`,
+        [tenantId],
+      );
+      const r = rows[0]?.r;
+      resultats.push({ tenantId, generees: r?.generees ?? 0, raison: r?.raison ?? null });
+    }
+    return resultats;
+  },
+
+  /** L'expert dit qu'une échéance est faite, ou la rouvre. Le journal le garde. */
+  async marquerEcheance(db: Requete, id: string, fait: boolean): Promise<{ status: string }> {
+    const { rows } = await db.query<{ r: { status: string } }>(
+      `select public.echeance_marquer($1, $2) as r`,
+      [id, fait],
+    );
+    const status = rows[0]?.r.status;
+    if (!status) throw new Error("echeance.introuvable");
+    return { status };
   },
 
   async setPieceVis(db: Requete, pieceId: string, vis: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deMois, montant, montantSigne } from "../lisible";
+import { deMois, montant, montantSigne, quantite } from "../lisible";
 
 describe("un montant, dans la langue du lecteur", () => {
   it("groupe les milliers et pose la virgule française", () => {
@@ -34,6 +34,36 @@ describe("un montant, dans la langue du lecteur", () => {
     expect(montantSigne("180.500", "fr")).toBe("+180,500");
     expect(montantSigne("-180.500", "fr")).toBe("−180,500");
     expect(montantSigne("0.000", "fr")).toBe("0,000");
+  });
+});
+
+describe("une quantité n'est pas un montant", () => {
+  it("retire les zéros de queue que la colonne impose", () => {
+    expect(quantite("300.000", "fr-FR")).toBe("300");
+    expect(quantite("1.000", "fr-FR")).toBe("1");
+    expect(quantite("5.000", "fr-FR")).toBe("5");
+  });
+
+  it("garde la décimale qui compte", () => {
+    expect(quantite("2.500", "fr-FR")).toBe("2,5");
+    expect(quantite("0.750", "fr-FR")).toBe("0,75");
+    expect(quantite("0.001", "fr-FR")).toBe("0,001");
+  });
+
+  it("groupe les milliers comme un montant", () => {
+    expect(quantite("12000.000", "fr-FR")).toBe("12 000");
+  });
+
+  it("laisse un entier sans point intact", () => {
+    expect(quantite("42", "fr-FR")).toBe("42");
+  });
+
+  it("ne rend jamais une chaîne vide", () => {
+    expect(quantite("0.000", "fr-FR")).toBe("0");
+  });
+
+  it("suit la langue du lecteur", () => {
+    expect(quantite("2.500", "en-US")).toBe("2.5");
   });
 });
 

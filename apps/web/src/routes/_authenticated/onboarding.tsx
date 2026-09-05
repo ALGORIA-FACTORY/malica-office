@@ -6,6 +6,7 @@ import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
 import type { OrgKind, ValidationMode } from "@/verticals/regalica-office/ports/repositories";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
@@ -77,7 +78,7 @@ function Onboarding() {
       await queryClient.invalidateQueries();
       await navigate({ to: "/office" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("onboarding.error"));
+      setError(texteDeLErreur(err, "routes/_authenticated/onboarding", t("onboarding.error")));
     } finally {
       setPending(false);
     }

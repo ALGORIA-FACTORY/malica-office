@@ -200,7 +200,9 @@ export function buildExtractFromTokenPlan(params: {
       ttc: totalTtc ?? "0",
     },
     references,
-    field_confidence: {},
+    // La confiance globale du désignateur, sous une clé stable : c'est
+    // elle qui groupe les propositions du cabinet par confiance.
+    field_confidence: { overall: selection.overall_confidence },
     document_kind: selection.document_kind,
   };
 

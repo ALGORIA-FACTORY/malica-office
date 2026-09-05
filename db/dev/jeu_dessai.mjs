@@ -30,6 +30,20 @@
 
 const API = process.env["REGALICA_API_URL"] ?? "http://localhost:3000";
 const EMAIL = "dev@regalica.local";
+
+/**
+ * Le jour du dépôt — le dernier jour du mois EN COURS.
+ *
+ * Une date figée vieillit : le 1er septembre, un jeu d'essai daté d'août
+ * ouvre sur des écrans vides — pas parce que le câblage est faux, mais parce
+ * que le mois a tourné. La marque d'idempotence porte le même mois : rejouer
+ * le jeu ne duplique rien DANS le mois, et le mois suivant repart propre.
+ */
+const AUJOURDHUI = new Date();
+const MOIS = AUJOURDHUI.toISOString().slice(0, 7);
+const LE_JOUR = new Date(Date.UTC(AUJOURDHUI.getUTCFullYear(), AUJOURDHUI.getUTCMonth() + 1, 0))
+  .toISOString()
+  .slice(0, 10);
 const MOTDEPASSE = "DeveloppeurRegalica2026!";
 
 let cookie = "";
@@ -144,8 +158,17 @@ async function ouvrirSession() {
   console.log(`  session ouverte  ${EMAIL}`);
 }
 
-/** Retrouve une organisation par son nom, ou la crée. */
-async function organisation(kind, name, validationMode) {
+/**
+ * Retrouve une organisation par son nom, ou la crée.
+ *
+ * Le matricule fiscal n'est pas un ornement : c'est lui qui dit si une facture
+ * est un achat ou une vente. Le meme document est une vente pour son emetteur
+ * et un achat pour son destinataire ; seule la comparaison du matricule du
+ * dossier avec ceux portes par la piece tranche. Sans lui, la lecture classe
+ * toute facture en vente, et une facture d'achat part au journal des ventes,
+ * en produits, avec de la TVA collectee au lieu de deductible.
+ */
+async function organisation(kind, name, validationMode, legalId) {
   const miennes = await rpc("identite", "listMyOrganizations");
   const trouvee = miennes.find((o) => o.name === name && o.kind === kind);
   if (trouvee) return trouvee.id;
@@ -154,6 +177,7 @@ async function organisation(kind, name, validationMode) {
       kind,
       name,
       validationMode,
+      legalId,
       jurisdiction: "TN",
       currency: "TND",
       defaultEntityName: "Siège",
@@ -182,7 +206,7 @@ async function piece(dossier, marque, titre, lignes) {
       tenantId: dossier,
       source: "pdf",
       vis: "partage",
-      idempotencyKey: `jeu-dessai:${marque}`,
+      idempotencyKey: `jeu-dessai:${MOIS}:${marque}`,
       contentType: "application/pdf",
       pageCount: 1,
     },
@@ -358,9 +382,10 @@ async function main() {
   const pack = await rpc("referentiel", "activePack", ["TN"]);
   if (!pack) throw new Error("aucun pack tunisien en vigueur : chargez les migrations d'abord");
 
-  const cabinet = await organisation("cabinet", "CABINET REGALICA", "mandate");
-  const optic = await organisation("pme", "DREAM OPTIC", "mandate");
-  const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome");
+  // Le matricule de DREAM OPTIC est celui qui figure sur ses vraies factures.
+  const cabinet = await organisation("cabinet", "CABINET REGALICA", "mandate", "1234567/A/M/000");
+  const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882/F/P/C/000");
+  const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543/B/N/000");
   console.log(`  cabinet          CABINET REGALICA`);
   console.log(`  dossiers         DREAM OPTIC · ATLAS DISTRIBUTION`);
 
@@ -460,7 +485,7 @@ async function main() {
     extrait(
       "facture_achat",
       "VERRES DE TUNISIE",
-      "2026-08-31",
+      LE_JOUR,
       "2026-114",
       "1200.000",
       "228.000",
@@ -499,7 +524,7 @@ async function main() {
     extrait(
       "facture_vente",
       "PHARMACIE CENTRALE",
-      "2026-08-31",
+      LE_JOUR,
       "V-2026-058",
       "2500.000",
       "475.000",
@@ -535,7 +560,7 @@ async function main() {
     pack.id,
     LIGNES.p3.titre,
     LIGNES.p3.lignes,
-    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4471", "860.000", "163.400", null, [
+    extrait("facture_achat", "GROSSISTE DU SUD", LE_JOUR, "4471", "860.000", "163.400", null, [
       {
         designation: "Marchandises diverses",
         quantity: "1",
@@ -557,7 +582,7 @@ async function main() {
     pack.id,
     LIGNES.p4.titre,
     LIGNES.p4.lignes,
-    extrait("facture_achat", "GROSSISTE DU SUD", "2026-08-31", "4488", "340.000", "64.600", null, [
+    extrait("facture_achat", "GROSSISTE DU SUD", LE_JOUR, "4488", "340.000", "64.600", null, [
       {
         designation: "Ramettes A4 80g",
         quantity: "300",
@@ -585,10 +610,14 @@ async function main() {
   console.log(`  lectures         4, citées`);
 
   // Deux lignes équilibrées : la RPC refuse tout déséquilibre, et c'est bien.
+  // Le code de taxe sur la ligne de TVA : sans lui, la declaration de TVA ne
+  // peut pas etre construite depuis le grand livre. `buildProposal` le pose en
+  // production ; le jeu d'essai l'oubliait, et le controle « ligne de TVA sans
+  // code de taxe » restait vrai sur toutes les ecritures de demonstration.
   const achat = (ht, tva) =>
     selonLePlan(cabinet, [
       { ordinal: 1, account_code: "601", debit: ht, credit: 0 },
-      { ordinal: 2, account_code: "4366", debit: tva, credit: 0 },
+      { ordinal: 2, account_code: "4366", debit: tva, credit: 0, tax_code: "TVA19" },
       {
         ordinal: 3,
         account_code: "401",
@@ -605,7 +634,7 @@ async function main() {
         credit: 0,
       },
       { ordinal: 2, account_code: "701", debit: 0, credit: ht },
-      { ordinal: 3, account_code: "4367", debit: 0, credit: tva },
+      { ordinal: 3, account_code: "4367", debit: 0, credit: tva, tax_code: "TVA19" },
     ]);
 
   await ecriture(
@@ -613,7 +642,7 @@ async function main() {
     pack.id,
     "ACH",
     "Achat — VERRES DE TUNISIE — Réf. 2026-114 du 31/08/2026",
-    "2026-08-31",
+    LE_JOUR,
     await achat("1200.000", "228.000"),
     true,
   );
@@ -625,7 +654,7 @@ async function main() {
     // la faute de frappe entrait donc dans le grand livre sans un mot.
     "VEN",
     "Vente — PHARMACIE CENTRALE — Réf. V-2026-058 du 31/08/2026",
-    "2026-08-31",
+    LE_JOUR,
     await vente("2500.000", "475.000"),
     true,
   );
@@ -634,7 +663,7 @@ async function main() {
     pack.id,
     "ACH",
     "Achat — GROSSISTE DU SUD — Réf. 4471 du 31/08/2026",
-    "2026-08-31",
+    LE_JOUR,
     await achat("860.000", "163.400"),
     false,
   );
@@ -643,7 +672,7 @@ async function main() {
     pack.id,
     "ACH",
     "Achat — GROSSISTE DU SUD — Réf. 4488 du 31/08/2026",
-    "2026-08-31",
+    LE_JOUR,
     await achat("340.000", "64.600"),
     true,
   );

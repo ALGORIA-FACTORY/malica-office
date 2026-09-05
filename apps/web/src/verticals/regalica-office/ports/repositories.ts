@@ -47,6 +47,23 @@ export interface NewOrganization {
   defaultEntityName?: string;
 }
 
+/** Un mandat proposé, vu depuis la PME qui doit y répondre. */
+export interface MandatPropose {
+  id: string;
+  cabinetTenantId: string;
+  cabinet: string;
+  proposeLe: string;
+}
+
+/** Une invitation reçue, vue par la personne qui peut la rejoindre. */
+export interface InvitationRecue {
+  id: string;
+  cabinetTenantId: string;
+  cabinet: string;
+  role: string;
+  expiresAt: string;
+}
+
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;
   /**
@@ -56,8 +73,35 @@ export interface IdentityRepository {
    * plutôt que d'inventer un interlocuteur.
    */
   monCabinet(pmeTenantId: string): Promise<{ id: string; name: string } | null>;
+  /** Les mandats proposés à cette PME, qui attendent sa réponse. */
+  mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
+  repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
+  /**
+   * Le cabinet se décrit : nom, identifiant fiscal, juridiction. La devise
+   * n'est pas demandée, elle suit le pack de la juridiction (R4).
+   */
+  definirOrganisation(input: {
+    tenantId: string;
+    name: string;
+    legalId: string | null;
+    jurisdiction: string;
+  }): Promise<{
+    id: string;
+    name: string;
+    legalId: string | null;
+    jurisdiction: string;
+    currency: string;
+  }>;
+  /**
+   * Proposer un mandat à une PME inscrite, par son identifiant fiscal. Le
+   * mandat naît « proposé » ; c'est la PME qui l'active.
+   */
+  proposerMandat(
+    cabinetTenantId: string,
+    legalId: string,
+  ): Promise<{ id: string; pmeTenantId: string; pmeName: string; status: string; deja: boolean }>;
 }
 
 export interface JurisdictionPack {
@@ -125,7 +169,102 @@ export interface CompteDuPlan {
   source: string | null;
 }
 
+/** Les seuils et préférences d'un cabinet. `regle` dit si une ligne existe ou si ce sont les défauts. */
+export interface ReglagesCabinet {
+  /** Au-dessus de cette confiance de lecture, un lot se valide d'un geste (0..1). */
+  seuilConfianceLot: number;
+  /** En dessous de cette confiance, chaque pièce se revoit une à une (0..1). */
+  seuilConfianceRevue: number;
+  /** Au-delà de ce montant, une écriture demande deux signatures ; `null` : jamais. */
+  doubleValidationAuDela: string | null;
+  propositionsProactives: boolean;
+  /** La capacité de référence d'un collaborateur, en dossiers actifs. */
+  capaciteDossiers: number;
+  /** Le registre des restitutions que Regalica rédige : sobre | chaleureux. */
+  ton: string;
+  /** Au-dessus de cette certitude (0..1), Regalica répond seule à une question de conseil ; en dessous, elle la remet au cabinet. */
+  seuilCertitudeConseil: number;
+  regle: boolean;
+}
+
+/** Une obligation du calendrier du cabinet, pour un exercice et un secteur. */
+export interface ObligationDuCalendrier {
+  /** Le code du référentiel, ou « CAB:<id> » pour une obligation propre. */
+  code: string;
+  libelle: string;
+  periodicite: string;
+  echeanceJour: number;
+  echeanceMois: number | null;
+  /** La règle littérale, qui fait foi. */
+  regle: string;
+  texteSource: string | null;
+  article: string | null;
+  propre: boolean;
+  secteur: string;
+  /**
+   * À qui l'obligation s'applique : la forme juridique (physique | morale),
+   * le mode de dépôt (papier | electronique), le régime — ou rien quand elle
+   * vise tout le monde. Une obligation propre ne vise personne en particulier.
+   */
+  formeJuridique: string | null;
+  modeDepot: string | null;
+  regime: string | null;
+  /** Les mandats concernés, comptés depuis leurs fiches. */
+  mandats: number;
+  active: boolean;
+  rappelJours: number;
+  regleParLeCabinet: boolean;
+}
+
+/** Qui je suis dans ce cabinet, et si je suis opérateur de plateforme. */
+export interface MonAcces {
+  /** dirigeant | collaborateur | expert | assistant, ou rien si je ne suis pas membre. */
+  role: string | null;
+  plateforme: boolean;
+}
+
+export interface AccesRepository {
+  monAcces(tenantId: string): Promise<MonAcces>;
+}
+
 export interface ParametrageRepository {
+  reglagesCabinet(tenantId: string): Promise<ReglagesCabinet>;
+  /** Quand la mise en route a été terminée, ou rien si elle ne l'a jamais été. */
+  miseEnRoute(tenantId: string): Promise<{ termineeLe: string | null }>;
+  terminerMiseEnRoute(tenantId: string): Promise<{ termineeLe: string }>;
+  definirReglagesCabinet(input: {
+    tenantId: string;
+    seuilConfianceLot: number;
+    seuilConfianceRevue: number;
+    doubleValidationAuDela: string | null;
+    propositionsProactives: boolean;
+    capaciteDossiers: number;
+    ton: string;
+    seuilCertitudeConseil: number;
+  }): Promise<ReglagesCabinet>;
+  calendrierCabinet(
+    tenantId: string,
+    exercice: number,
+    secteur: string,
+  ): Promise<ObligationDuCalendrier[]>;
+  definirObligation(input: {
+    tenantId: string;
+    code: string;
+    exercice: number;
+    secteur: string;
+    active: boolean;
+    rappelJours: number;
+  }): Promise<{ active: boolean; rappelJours: number }>;
+  creerObligationPropre(input: {
+    tenantId: string;
+    libelle: string;
+    periodicite: string;
+    echeanceJour: number;
+    echeanceMois: number | null;
+    regle: string;
+    secteur: string;
+  }): Promise<{ id: string }>;
+  secteursDuCabinet(tenantId: string): Promise<string[]>;
   roles(tenantId: string, dossierId: string | null): Promise<RoleComptable[]>;
   plan(tenantId: string, classes: number[] | null): Promise<CompteDuPlan[]>;
   ouvrirCompte(input: {
@@ -151,6 +290,51 @@ export interface ParametrageRepository {
     porteeId: string;
     roleCode: string;
   }): Promise<void>;
+}
+
+// ------------------------------------------------------------- intégrations
+/** Une clé d'API du cabinet, telle que l'écran la voit : jamais la valeur en clair. */
+export interface CleApi {
+  id: string;
+  libelle: string;
+  /** Les huit premiers caractères après le préfixe, et les quatre derniers. */
+  prefixe: string;
+  suffixe: string;
+  /** Ce que la clé ouvre : ecritures.lire, pieces.deposer. */
+  portees: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+/** Rendue une seule fois, à la création : la valeur en clair ne se relit jamais. */
+export interface CleApiCreee {
+  id: string;
+  cle: string;
+  prefixe: string;
+  suffixe: string;
+}
+
+/** L'état des intégrations, tel que les tables le disent — rien n'est déclaré. */
+export interface EtatIntegrations {
+  clesActives: number;
+  dernierUsage: string | null;
+  /** Les pièces arrivées par l'application PME, sur les mandats. */
+  piecesApp30j: number;
+  dernierePieceApp: string | null;
+  /** Les lignes de relevé importées dans le rapprochement, sur les mandats. */
+  lignesReleves30j: number;
+  dernierImportReleve: string | null;
+  /** Les exports produits par le cabinet. */
+  exports30j: number;
+  dernierExport: string | null;
+}
+
+export interface IntegrationsRepository {
+  cles(tenantId: string): Promise<CleApi[]>;
+  creerCle(tenantId: string, libelle: string, portees: string[]): Promise<CleApiCreee>;
+  revoquerCle(id: string): Promise<void>;
+  etat(tenantId: string): Promise<EtatIntegrations>;
 }
 
 // --------------------------------------------------------------------- tiers
@@ -287,6 +471,12 @@ export interface PieceDossier {
    */
   contenu: ArrayBuffer | null;
   extraction: Extraction | null;
+  /**
+   * Les précisions posées par la personne, par champ, la dernière faisant
+   * foi. Le payload de l'extraction rendu ici les intègre déjà ; elles sont
+   * exposées à part pour que l'écran sache ce qui vient d'elle.
+   */
+  precisions: Record<string, string>;
   citations: Citation[];
   tokens: Token[];
 }
@@ -337,6 +527,32 @@ export interface CaptureRepository {
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   read(pieceId: string): Promise<{ contract: string; citations: number; valid: boolean }>;
+  /**
+   * Une lecture est-elle en cours pour cette pièce ? Sert à l'écran qui
+   * revient après une coupure : attendre, plutôt qu'annoncer une panne ou
+   * relancer la lecture.
+   */
+  etatLecture(pieceId: string): Promise<{ enCours: boolean; depuisMs: number | null }>;
+  /**
+   * Ce que la personne précise quand la lecture ne pouvait pas conclure —
+   * aujourd'hui le sens de la pièce, achat ou vente. Une entrée nouvelle,
+   * jamais une modification de la lecture (R7) ; la base contraint le champ,
+   * la valeur et l'état de la pièce.
+   */
+  preciser(
+    pieceId: string,
+    champ: "document_kind",
+    valeur: "facture_achat" | "facture_vente",
+  ): Promise<{ id: string; champ: string; valeur: string }>;
+  /**
+   * Efface une pièce qui n'est encore partie nulle part.
+   *
+   * La base refuse si elle a été transmise au cabinet, si elle est engagée
+   * dans une écriture, ou si quoi que ce soit s'en sert de justificatif.
+   * Une pièce effacée emporte ses citations, son plan de tokens et ses
+   * octets — il ne doit rien en rester.
+   */
+  supprimer(pieceId: string): Promise<boolean>;
 }
 
 // ------------------------------------------------------------------- écriture
@@ -434,6 +650,8 @@ export interface ClientSummary {
   currency: string;
   validationMode: ValidationMode;
   engagementStatus: string;
+  /** Le premier jour du mandat, ou rien si l'engagement ne le dit pas. */
+  mandatDepuis: string | null;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
 }
@@ -448,6 +666,12 @@ export interface QueueItem {
   ecritureId: string | null;
   libelle: string | null;
   dateEcriture: string | null;
+  /** La somme des débits de l'écriture comptabilisée, posée par le Socle. */
+  montant: string | null;
+  /** L'adresse du collaborateur affecté au client, s'il y en a un. */
+  collaborateur: string | null;
+  /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
+  confiance: number | null;
 }
 
 export interface AuditEntry {
@@ -459,7 +683,30 @@ export interface AuditEntry {
   payload: unknown;
 }
 
+/** Les statistiques d'un cabinet, agrégées en base sur ses mandats. */
+export interface StatistiquesCabinet {
+  /** Écritures supervisées, par mois (« YYYY-MM ») et par collaborateur (adresse, ou rien). */
+  parMois: Array<{ mois: string; collaborateur: string | null; supervisees: number }>;
+  /** Les cinq motifs de retour les plus fréquents, dans la langue demandée. */
+  motifsDeRetour: Array<{ label: string; retours: number }>;
+  /** Ce que le Socle a produit sur trente jours ; le délai est une médiane, en heures, ou rien. */
+  socle: {
+    lues: number;
+    proposees: number;
+    comptabilisees: number;
+    delaiMedianHeures: number | null;
+  };
+}
+
 export interface SupervisionRepository {
+  statistiques(cabinetTenantId: string, locale: string): Promise<StatistiquesCabinet>;
+  /** Les derniers événements d'un dossier mandaté, du plus récent au plus ancien. */
+  journalDuMandat(
+    tenantId: string,
+    limite?: number,
+  ): Promise<
+    Array<{ id: string; action: string; at: string; objet: string | null; objetId: string | null }>
+  >;
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
@@ -877,14 +1124,55 @@ export interface Assignment {
   createdAt: string;
 }
 
+/** Une section du procès-verbal : un intitulé et son corps. Le texte, jamais un chiffre. */
+export interface PvSection {
+  kicker: string;
+  corps: string;
+}
+
+/**
+ * Un chiffre cité par le procès-verbal, avec le moteur qui l'a produit.
+ *
+ * `label` et `source` sont des codes que l'écran traduit ; `valeur` est la
+ * chaîne décimale du Socle, ou un comptage. Aucune de ces valeurs n'a
+ * traversé un modèle de langage (R3).
+ */
+export interface PvChiffre {
+  label: string;
+  valeur: string;
+  source: string;
+  genre: "montant" | "nombre";
+  devise: string | null;
+}
+
 export interface PvReunion {
   id: string;
+  cabinetTenantId: string;
   clientTenantId: string | null;
   at: string;
   titre: string;
   participants: string | null;
   ordreDuJour: string | null;
   decisions: string | null;
+  createdAt: string;
+  sections: PvSection[];
+  chiffres: PvChiffre[];
+  /** Le registre demandé à Regalica : sobre | chaleureux, ou rien si personne n'a rédigé. */
+  ton: string | null;
+  /** brouillon | envoye — envoyé, le PV est figé (R7). */
+  statut: string;
+  envoyeLe: string | null;
+  redigeParRegalica: boolean;
+}
+
+/** Une invitation à rejoindre le cabinet, consignée en attendant d'être acceptée. */
+export interface Invitation {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  acceptedAt: string | null;
   createdAt: string;
 }
 
@@ -914,11 +1202,27 @@ export interface Notification {
 export interface Echeance {
   id: string;
   tenantId: string;
+  /** Le code de l'obligation dans le référentiel. */
   kind: string;
   label: string;
   period: string | null;
   dueDate: string;
+  /** a_venir | fait | en_retard — le retard se constate, il ne se saisit pas. */
   status: string;
+  faitLe: string | null;
+  /** La règle littérale du référentiel, qui fait foi. */
+  regle: string | null;
+  texteSource: string | null;
+  article: string | null;
+  periodicite: string | null;
+}
+
+/** Ce que la dérivation a produit pour un dossier — ou pourquoi rien. */
+export interface DerivationEcheances {
+  tenantId: string;
+  generees: number;
+  /** fiche.absente | fiche.incomplete | pack.absent, ou rien. */
+  raison: string | null;
 }
 
 export interface CollabRepository {
@@ -941,12 +1245,218 @@ export interface CollabRepository {
     ordreDuJour?: string | null;
     decisions?: string | null;
   }): Promise<string>;
+  pvOuvrir(id: string): Promise<PvReunion | null>;
+  /** Ce qu'on ne passe pas reste tel quel. Refusé par la base une fois envoyé (R7). */
+  pvEnregistrer(input: {
+    id: string;
+    titre?: string;
+    participants?: string | null;
+    decisions?: string | null;
+    sections?: PvSection[];
+    chiffres?: PvChiffre[];
+    ton?: string | null;
+    redigeParRegalica?: boolean;
+  }): Promise<PvReunion>;
+  /** Fige le PV, le journalise et prévient le client. */
+  pvEnvoyer(id: string): Promise<{ id: string; statut: string; envoyeLe: string | null }>;
+  invitations(cabinetTenantId: string): Promise<Invitation[]>;
+  /** Les invitations adressées à mon adresse, encore valables. */
+  invitationsPourMoi(): Promise<InvitationRecue[]>;
+  repondreAInvitation(
+    id: string,
+    accepte: boolean,
+  ): Promise<{ id: string; tenantId: string; role: string; rejoint: boolean }>;
+  inviter(input: {
+    tenantId: string;
+    email: string;
+    role: string;
+  }): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
   stats(tenantIds: string[]): Promise<ClientStats[]>;
   notifications(tenantIds: string[]): Promise<Notification[]>;
   markRead(id: string): Promise<void>;
   echeances(tenantIds: string[]): Promise<Echeance[]>;
+  /** Dériver le calendrier de chaque dossier depuis le pack ; idempotent. */
+  deriverEcheances(tenantIds: string[]): Promise<DerivationEcheances[]>;
+  marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
+}
+
+// ------------------------------------------------------------------ exports
+/** Les formats qu'un cabinet peut produire. Le libellé humain est dans le dictionnaire. */
+export type FormatExport = "fec" | "csv_ecritures" | "csv_plan";
+
+/** Un exercice qu'on peut exporter, borné par la clôture inscrite sur la fiche. */
+export interface ExerciceExportable {
+  exercice: number;
+  du: string;
+  au: string;
+  clos: boolean;
+  /** Faux quand la fiche ne dit pas la clôture : l'année civile s'applique, et l'écran le dit. */
+  clotureConnue: boolean;
+  ecritures: number;
+}
+
+/** Le fichier produit — le navigateur en fait un téléchargement. */
+export interface ExportGenere {
+  id: string;
+  contenu: string;
+  nomDeFichier: string;
+  typeMime: string;
+  /** En octets, mesurés sur le contenu. */
+  taille: number;
+  lignes: number;
+  /** SHA-256 du contenu, tel que le journal le garde. */
+  empreinte: string;
+}
+
+export interface ExportRecent {
+  id: string;
+  clientTenantId: string | null;
+  clientNom: string | null;
+  format: FormatExport;
+  du: string;
+  au: string;
+  lignes: number;
+  taille: number;
+  empreinte: string;
+  auteur: string | null;
+  createdAt: string;
+}
+
+export interface ExportsRepository {
+  exercices(cabinetTenantId: string, clientTenantId: string | null): Promise<ExerciceExportable[]>;
+  /** La taille réelle du fichier qui serait produit : calculée sur le contenu, pas estimée. */
+  estimer(
+    cabinetTenantId: string,
+    clientTenantId: string | null,
+    du: string,
+    au: string,
+    format: FormatExport,
+  ): Promise<{ lignes: number; taille: number }>;
+  /** Produit, journalise (append-only + audit), rend le contenu. */
+  generer(
+    cabinetTenantId: string,
+    clientTenantId: string | null,
+    du: string,
+    au: string,
+    format: FormatExport,
+  ): Promise<ExportGenere>;
+  historique(cabinetTenantId: string): Promise<ExportRecent[]>;
+}
+
+// ------------------------------------------------------------------ conseil
+/** Un article sur lequel une réponse de conseil s'appuie, tel qu'il a été transmis. */
+export interface SourceCitee {
+  corpus: string;
+  numero: string;
+  validFrom: string | null;
+  validTo: string | null;
+  langue: string | null;
+}
+
+/**
+ * en_attente : Regalica a retenu sa réponse et la remet au cabinet ·
+ * repondue : elle l'a envoyée seule, au-dessus du seuil, cabinet en copie ·
+ * approuvee · corrigee · ecartee : ce que le cabinet en a décidé.
+ */
+export type StatutArbitrage = "en_attente" | "repondue" | "approuvee" | "corrigee" | "ecartee";
+export type DecisionArbitrage = "approuvee" | "corrigee" | "ecartee";
+
+/** Une question de conseil d'un client mandaté, et ce que Regalica en a proposé. */
+export interface Arbitrage {
+  id: string;
+  tenantId: string;
+  client: string | null;
+  cabinetTenantId: string;
+  conversationId: string | null;
+  messageId: string | null;
+  /** L'adresse de la personne qui a demandé, figée à la création. */
+  demandeur: string | null;
+  question: string;
+  reponseProposee: string;
+  sources: SourceCitee[];
+  /** La certitude déclarée par Regalica, 0..1. */
+  certitude: number;
+  /** Pourquoi elle la remet — dans ses mots. */
+  doute: string | null;
+  canal: string;
+  /** Le sujet en quelques mots, posé à la création : c'est ce qui compte les sujets qui reviennent. */
+  theme: string | null;
+  /** La langue du client : la réponse du cabinet lui parvient dans celle-là. */
+  langue: string;
+  statut: StatutArbitrage;
+  reponseCabinet: string | null;
+  articleCabinet: string | null;
+  decideLe: string | null;
+  createdAt: string;
+}
+
+export interface StatistiquesConseil {
+  totaux: {
+    enAttente: number;
+    repondues: number;
+    approuvees: number;
+    corrigees: number;
+    ecartees: number;
+    plusAncienneEnAttente: string | null;
+  };
+  parClient: Array<{
+    tenantId: string;
+    client: string | null;
+    questions: number;
+    enAttente: number;
+    repondues: number;
+    approuvees: number;
+    corrigees: number;
+    ecartees: number;
+    dernierSujet: string | null;
+    derniereLe: string | null;
+  }>;
+  sujets: Array<{ theme: string; questions: number }>;
+}
+
+/** Une édition du corpus : les articles d'un corpus entrés en vigueur le même jour. */
+export interface EditionDuCorpus {
+  corpus: string;
+  nom: string | null;
+  famille: string | null;
+  validFrom: string;
+  articles: number;
+  modifiePar: string | null;
+  jort: string | null;
+  langue: string | null;
+}
+
+/** Ce que Regalica doit savoir d'un dossier avant de répondre à son client. */
+export interface ContexteConseil {
+  cabinetId: string | null;
+  cabinetNom: string | null;
+  seuil: number | null;
+  appelantMembre: boolean;
+}
+
+export interface ConseilRepository {
+  /** La file du cabinet : ce qui attend d'abord. `statut` la restreint. */
+  file(cabinetTenantId: string, statut?: StatutArbitrage | null): Promise<Arbitrage[]>;
+  lire(id: string): Promise<Arbitrage | null>;
+  /**
+   * Le geste du cabinet. `message` est ce que le client lira dans son fil,
+   * composé dans SA langue ; absent, rien ne part.
+   */
+  decider(
+    id: string,
+    decision: DecisionArbitrage,
+    reponse?: string | null,
+    article?: string | null,
+    message?: string | null,
+  ): Promise<Arbitrage>;
+  contexte(pmeTenantId: string): Promise<ContexteConseil>;
+  statistiques(cabinetTenantId: string): Promise<StatistiquesConseil>;
+  /** Les éditions du corpus de cette juridiction, la plus récente en tête. */
+  veille(jurisdiction: string, limite?: number): Promise<EditionDuCorpus[]>;
+  /** Les noms des corpus, pour écrire « code de la TVA » et non son sigle. */
+  nomsDesCorpus(codes: string[]): Promise<Record<string, string>>;
 }
 
 // ------------------------------------------------- charges par famille (PME)
@@ -1012,4 +1522,191 @@ export interface ChargesRepository {
     packVersionId: string;
     answer: "exceptionnel" | "a_verifier";
   }): Promise<string>;
+}
+
+// ------------------------------------------------------------------ honoraires
+/**
+ * Un mandat d'honoraires ouvert : mode, fréquence, jour, barème, délai,
+ * couverture. Un mandat ne se corrige pas — on le clôt et on en ouvre un
+ * autre, daté.
+ */
+export interface MandatHonoraires {
+  id: string;
+  clientTenantId: string;
+  clientName: string;
+  /** forfait | temps | mixte */
+  mode: string;
+  /** mensuelle | trimestrielle | annuelle */
+  frequence: string;
+  jourFacturation: number;
+  /** Chaîne décimale, ou rien quand le mode ne porte pas de forfait. */
+  forfait: string | null;
+  tauxHoraire: string | null;
+  /** Jours après l'émission ; saisi par le cabinet, jamais supposé. */
+  delaiPaiementJours: number;
+  /** Les prestations couvertes, telles que le cabinet les nomme. */
+  couverture: string[];
+  validFrom: string;
+  /** La prochaine date d'émission, dérivée en base ; rien si le mandat est clos. */
+  prochaine: string | null;
+}
+
+/** Une ligne telle que l'expert la saisit : aucun total, la base le déduit. */
+export interface LigneHonorairesSaisie {
+  libelle: string;
+  quantite: string;
+  prixUnitaire: string;
+}
+
+export interface LigneHonoraires extends LigneHonorairesSaisie {
+  id: string;
+  ordre: number;
+  /** Déduit en base : quantité × prix unitaire. */
+  montantHt: string;
+}
+
+/**
+ * Une facture d'honoraires. Brouillon, elle se réécrit ; émise, elle prend
+ * son numéro et se fige — elle s'encaisse, ou s'annule par un avoir.
+ */
+export interface FactureHonoraires {
+  id: string;
+  tenantId: string;
+  clientTenantId: string;
+  clientName: string;
+  mandatId: string | null;
+  /** H-AAAA-NNNN, attribué à l'émission ; rien pour un brouillon. */
+  numero: string | null;
+  periodeDu: string;
+  periodeAu: string;
+  /** brouillon | emise | payee | annulee */
+  statut: string;
+  /** Le code du taux du pack, et le taux photographié à l'établissement. */
+  tauxTvaCode: string;
+  tauxTva: string;
+  totalHt: string;
+  totalTva: string;
+  /** Les droits fixes du pack (timbre), et leur nom. */
+  droitsFixes: string;
+  droitsLibelle: string | null;
+  totalTtc: string;
+  /** La somme des encaissements, faite en base. */
+  encaisse: string;
+  devise: string;
+  emiseLe: string | null;
+  /** Émission + délai du mandat, figée à l'émission. */
+  echeanceLe: string | null;
+  payeeLe: string | null;
+  annuleeLe: string | null;
+  /** La facture que cet avoir annule. */
+  avoirDe: string | null;
+  createdAt: string;
+}
+
+export interface EncaissementHonoraires {
+  id: string;
+  montant: string;
+  encaisseLe: string;
+  /** virement | cheque | especes | carte | autre */
+  moyen: string;
+  reference: string | null;
+}
+
+export interface EncaissementDuMois extends EncaissementHonoraires {
+  factureId: string;
+  numero: string | null;
+  clientName: string;
+}
+
+/** Une mention que le pack exige sur une facture — lue, jamais écrite dans le code. */
+export interface MentionDuPack {
+  code: string;
+  label: string;
+  mandatory: boolean;
+  legalReference: string | null;
+}
+
+export interface FactureHonorairesDossier extends FactureHonoraires {
+  cabinet: { name: string; legalId: string | null };
+  client: { name: string; legalId: string | null };
+  mandat: {
+    mode: string;
+    frequence: string;
+    delaiPaiementJours: number;
+    couverture: string[];
+    forfait: string | null;
+    tauxHoraire: string | null;
+  } | null;
+  lignes: LigneHonoraires[];
+  encaissements: EncaissementHonoraires[];
+  mentions: MentionDuPack[];
+}
+
+/** La synthèse d'un mois, entièrement sommée en base. */
+export interface SyntheseHonoraires {
+  mois: string;
+  devise: string;
+  factureHt: string;
+  factureTtc: string;
+  nbFactures: number;
+  encaisse: string;
+  nbEncaissements: number;
+  resteDu: string;
+  nbOuvertes: number;
+  enRetard: string;
+  nbRetard: number;
+  /** Encaissé du mois sur facturé TTC du mois ; rien quand rien n'est facturé. */
+  tauxEncaissement: string | null;
+  nbBrouillons: number;
+}
+
+export interface HonorairesRepository {
+  mandats(cabinetTenantId: string): Promise<MandatHonoraires[]>;
+  /** Clôt le mandat ouvert du client, s'il existe, et en ouvre un autre. */
+  definirMandat(input: {
+    cabinetTenantId: string;
+    clientTenantId: string;
+    mode: string;
+    frequence: string;
+    jourFacturation: number;
+    forfait: string | null;
+    tauxHoraire: string | null;
+    delaiPaiementJours: number;
+    couverture: string[];
+  }): Promise<{ id: string }>;
+  cloreMandat(id: string): Promise<{ id: string }>;
+  factures(
+    cabinetTenantId: string,
+    filtres?: { mois?: string | null; statut?: string | null; clientTenantId?: string | null },
+  ): Promise<FactureHonoraires[]>;
+  encaissements(cabinetTenantId: string, mois: string): Promise<EncaissementDuMois[]>;
+  facture(id: string): Promise<FactureHonorairesDossier | null>;
+  creerBrouillon(input: {
+    cabinetTenantId: string;
+    clientTenantId: string;
+    periodeDu: string;
+    periodeAu: string;
+    tauxTvaCode: string;
+    lignes: LigneHonorairesSaisie[];
+  }): Promise<{ id: string }>;
+  modifierBrouillon(input: {
+    id: string;
+    periodeDu: string;
+    periodeAu: string;
+    tauxTvaCode: string;
+    lignes: LigneHonorairesSaisie[];
+  }): Promise<{ id: string }>;
+  supprimerBrouillon(id: string): Promise<boolean>;
+  /** Numérote, fige, journalise. */
+  emettre(id: string): Promise<{ id: string; numero: string }>;
+  encaisser(input: {
+    factureId: string;
+    montant: string;
+    encaisseLe: string;
+    moyen: string;
+    reference: string | null;
+  }): Promise<{ id: string; encaisse: string; soldee: boolean }>;
+  /** Crée l'avoir négatif et annule la facture. */
+  avoir(id: string): Promise<{ id: string; numero: string }>;
+  synthese(cabinetTenantId: string, mois: string): Promise<SyntheseHonoraires>;
 }

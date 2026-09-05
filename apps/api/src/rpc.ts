@@ -16,12 +16,19 @@
  */
 
 import type { Requete } from "./db.ts";
+import { acces } from "./depots/acces.ts";
 import { banque } from "./depots/banque.ts";
 import { capture } from "./depots/capture.ts";
 import { charges } from "./depots/charges.ts";
 import { collab } from "./depots/collab.ts";
+import { conseil } from "./depots/conseil.ts";
+import { conversations } from "./depots/conversations.ts";
+import { corpus } from "./depots/corpus.ts";
+import { honoraires } from "./depots/honoraires.ts";
+import { exports } from "./depots/exports.ts";
 import { identite } from "./depots/identite.ts";
 import { immo } from "./depots/immo.ts";
+import { integrations } from "./depots/integrations.ts";
 import { office } from "./depots/office.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { referentiel } from "./depots/referentiel.ts";
@@ -35,12 +42,19 @@ import { tiers } from "./depots/tiers.ts";
  * l'oublier.
  */
 const DEPOTS = {
+  acces,
   banque,
   capture,
   charges,
   collab,
+  conseil,
+  conversations,
+  corpus,
+  honoraires,
+  exports,
   identite,
   immo,
+  integrations,
   office,
   parametrage,
   referentiel,

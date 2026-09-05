@@ -1,5 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+/**
+ * Clients — le portefeuille du cabinet.
+ *
+ * ============================================================== POURQUOI
+ *
+ * L'écran du design : quatre chiffres, des filtres, et une table où chaque
+ * mandat se lit d'un coup d'œil — qui, quel régime, qui s'en occupe, ce qui
+ * attend, ce qui est arrivé ce mois, qui valide. Un clic ouvre le dossier.
+ *
+ * Tout vient de l'API : les mandats et leurs comptes (`listClients`), la
+ * file du cabinet pour ce qui est arrivé ce mois, les affectations et les
+ * membres pour le collaborateur, la fiche fiscale de chaque client pour
+ * son régime. Les valeurs que la base nomme en code — mode de validation,
+ * statut d'engagement — sont traduites : aucun mot de machine à l'écran.
+ */
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
 import {
@@ -7,12 +24,15 @@ import {
   InkCell,
   InkTable,
   InkTableRow,
-  KpiRow,
   RegalicaNote,
   SectionTitle,
 } from "@/components/regalica/office-ui";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
+import { ficheCourante, ficheRegimes } from "@/lib/fiche.functions";
+import { initialesDe } from "@/lib/initiales";
+import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
+import type { ClientSummary } from "@/verticals/regalica-office/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   head: () => ({
@@ -21,13 +41,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/clients")({
       {
         name: "description",
         content:
-          "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser.",
+          "Les dossiers mandatés du cabinet, leur régime, leur collaborateur et le volume à superviser.",
       },
       { property: "og:title", content: "Clients du cabinet — Regalica Office" },
       {
         property: "og:description",
         content:
-          "Les dossiers mandatés du cabinet, leur mode de validation et le volume de pièces à superviser.",
+          "Les dossiers mandatés du cabinet, leur régime, leur collaborateur et le volume à superviser.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -36,84 +56,300 @@ export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   component: CabinetClients,
 });
 
+type Filtre = "tous" | "attente" | "sans" | "miens";
+
+const MODE: Record<string, MessageKey> = {
+  autonome: "cab.mode.autonome",
+  mandate: "cab.mode.mandate",
+};
+const ENGAGEMENT: Record<string, MessageKey> = {
+  propose: "cab.engagement.propose",
+  actif: "cab.engagement.actif",
+  suspendu: "cab.engagement.suspendu",
+  termine: "cab.engagement.termine",
+};
+
 function CabinetClients() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
+  const lireFiche = useServerFn(ficheCourante);
+  const lireRegimes = useServerFn(ficheRegimes);
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
+  const queue = useQuery({
+    queryKey: ["cab-queue", org.id],
+    queryFn: () => office().supervision.queue(org.id),
+  });
+  const membres = useQuery({
+    queryKey: ["cab-members", org.id],
+    queryFn: () => office().collab.members(org.id),
+  });
+  const affectations = useQuery({
+    queryKey: ["cab-assignments", org.id],
+    queryFn: () => office().collab.assignments(org.id),
+  });
+  const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
+  const regimes = useQuery({
+    queryKey: ["fiche-regimes", org.jurisdiction],
+    queryFn: () => lireRegimes({ data: { jurisdiction: org.jurisdiction } }),
+  });
+  const rows = useMemo(() => clients.data ?? [], [clients.data]);
+  // La fiche de chaque client, pour son régime : une requête par mandat,
+  // mise en cache par client — un cabinet en a des dizaines, pas des milliers.
+  const fiches = useQueries({
+    queries: rows.map((c) => ({
+      queryKey: ["fiche", c.tenantId],
+      queryFn: () => lireFiche({ data: { tenantId: c.tenantId } }),
+    })),
+  });
 
   useRegalicaPanel(<RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>, [locale]);
 
-  const rows = clients.data ?? [];
+  /* ---- le collaborateur de chaque client */
+  const collabDe = useMemo(() => {
+    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.email]));
+    const carte = new Map<string, string>();
+    for (const a of (affectations.data ?? []).filter((x) => x.active)) {
+      const email = parUser.get(a.collaboratorId);
+      if (email && !carte.has(a.clientTenantId)) carte.set(a.clientTenantId, email);
+    }
+    return carte;
+  }, [membres.data, affectations.data]);
 
-  const totalReview = rows.reduce((s, c) => s + c.counts.comptabilisee, 0);
-  const totalReturned = rows.reduce((s, c) => s + c.counts.retournee, 0);
-  const totalSupervised = rows.reduce((s, c) => s + c.counts.supervisee, 0);
+  /* ---- ce qui est arrivé ce mois, par client */
+  const ceMois = useMemo(() => {
+    const debut = new Date();
+    debut.setUTCDate(1);
+    debut.setUTCHours(0, 0, 0, 0);
+    const carte = new Map<string, number>();
+    for (const r of queue.data ?? []) {
+      if (new Date(r.createdAt) < debut) continue;
+      carte.set(r.tenantId, (carte.get(r.tenantId) ?? 0) + 1);
+    }
+    return carte;
+  }, [queue.data]);
+
+  const regimeDe = (index: number): string => {
+    const fiche = fiches[index]?.data;
+    const code = fiche?.regimeImposition ?? null;
+    if (!code) return t("cab.clients.regime.inconnu");
+    return (
+      (regimes.data ?? []).find((r) => r.axe === "imposition" && r.code === code)?.libelle ?? code
+    );
+  };
+
+  /* ---- les chiffres */
+  const attente = rows.reduce((s, c) => s + c.counts.comptabilisee, 0);
+  const sans = rows.filter((c) => !collabDe.has(c.tenantId)).length;
+  const retournees = rows.reduce((s, c) => s + c.counts.retournee, 0);
+  const moi = compte.data?.email ?? null;
+
+  /* ---- les filtres */
+  const [filtre, setFiltre] = useState<Filtre>("tous");
+  const visibles = rows.filter((c) => {
+    if (filtre === "attente") return c.counts.comptabilisee > 0;
+    if (filtre === "sans") return !collabDe.has(c.tenantId);
+    if (filtre === "miens") return moi !== null && collabDe.get(c.tenantId) === moi;
+    return true;
+  });
+  const compteDe = (f: Filtre) =>
+    f === "tous"
+      ? rows.length
+      : f === "attente"
+        ? rows.filter((c) => c.counts.comptabilisee > 0).length
+        : f === "sans"
+          ? sans
+          : rows.filter((c) => moi !== null && collabDe.get(c.tenantId) === moi).length;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">{t("cab.clients.title")}</h1>
-        <p className="mt-1 text-[12px] text-muted-foreground">{t("cab.clients.lede")}</p>
+      <header>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          {t("cab.clients.kicker")}
+        </p>
+        <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.025em]">
+          {t("cab.clients.title")}
+        </h1>
+        <p className="mt-1 max-w-[62ch] text-[13.5px] leading-[1.5] text-text-2">
+          {t("cab.clients.lede")}
+        </p>
+      </header>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { key: "mandats", label: t("cab.clients.kpi.mandats"), value: rows.length, tone: "" },
+          {
+            key: "attente",
+            label: t("cab.clients.kpi.attente"),
+            value: attente,
+            tone: attente ? "text-marigold" : "",
+          },
+          {
+            key: "sans",
+            label: t("cab.clients.kpi.sans"),
+            value: sans,
+            tone: sans ? "text-signal-warn" : "",
+          },
+          {
+            key: "retournees",
+            label: t("cab.kpi.returned"),
+            value: retournees,
+            tone: retournees ? "text-signal-stop" : "",
+          },
+        ].map((k) => (
+          <div key={k.key} className="border border-border bg-card px-4 py-4">
+            <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {k.label}
+            </p>
+            <p className={cn("num mt-1.5 text-[28px] leading-none", k.tone)}>{k.value}</p>
+          </div>
+        ))}
       </div>
 
-      <KpiRow
-        items={[
-          { key: "clients", label: t("cab.kpi.clients"), value: String(rows.length) },
-          { key: "review", label: t("cab.kpi.review"), value: String(totalReview) },
-          { key: "supervised", label: t("cab.kpi.supervised"), value: String(totalSupervised) },
-          { key: "returned", label: t("cab.kpi.returned"), value: String(totalReturned) },
-        ]}
-      />
-
-      <SectionTitle>{t("cab.queue.byclient")}</SectionTitle>
-
-      {clients.isPending ? (
-        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-      ) : rows.length === 0 ? (
-        <EmptyState>{t("cab.clients.empty")}</EmptyState>
-      ) : (
-        <InkTable
-          caption={t("cab.clients.title")}
-          head={[
-            t("cab.queue.client"),
-            t("cab.clients.mandate"),
-            t("cab.clients.mode"),
-            t("cab.kpi.review"),
-            t("cab.kpi.returned"),
-            "",
-          ]}
+      <section className="space-y-3">
+        <SectionTitle
+          action={
+            <span className="num text-[11px] text-muted-foreground">
+              {t("cab.clients.count", { count: visibles.length })}
+            </span>
+          }
         >
-          {rows.map((client) => (
-            <InkTableRow key={client.tenantId}>
-              <InkCell>
-                <span className="font-medium">{client.name}</span>
-                {client.legalId ? (
-                  <span className="num ms-2 text-[11px] text-muted-foreground">
-                    {client.legalId}
-                  </span>
-                ) : null}
-              </InkCell>
-              <InkCell>{client.engagementStatus}</InkCell>
-              <InkCell>{client.validationMode}</InkCell>
-              <InkCell numeric>{client.counts.comptabilisee}</InkCell>
-              <InkCell numeric>{client.counts.retournee}</InkCell>
-              <InkCell>
-                <Link
-                  to="/cabinet/dossier/$clientId"
-                  params={{ clientId: client.tenantId }}
-                  className="text-[11px] uppercase tracking-wide underline"
-                >
-                  {t("cab.queue.open")}
-                </Link>
-              </InkCell>
-            </InkTableRow>
+          {t("cab.clients.mandate")}
+        </SectionTitle>
+        <div className="flex flex-wrap border border-border">
+          {(
+            [
+              ["tous", "cab.clients.filter.tous"],
+              ["attente", "cab.clients.filter.attente"],
+              ["sans", "cab.clients.filter.sans"],
+              ["miens", "cab.clients.filter.miens"],
+            ] as Array<[Filtre, MessageKey]>
+          ).map(([f, cle]) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFiltre(f)}
+              aria-pressed={filtre === f}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]",
+                filtre === f ? "bg-foreground text-background" : "bg-card hover:bg-accent",
+              )}
+            >
+              {t(cle)}
+              <span className="num font-normal opacity-70">{compteDe(f)}</span>
+            </button>
           ))}
-        </InkTable>
-      )}
+        </div>
+
+        {clients.isPending ? (
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        ) : visibles.length === 0 ? (
+          <EmptyState>{t("cab.clients.empty")}</EmptyState>
+        ) : (
+          <InkTable
+            caption={t("cab.clients.title")}
+            head={[
+              t("cab.clients.mandate"),
+              t("cab.clients.col.regime"),
+              t("cab.clients.col.collab"),
+              t("cab.kpi.review"),
+              t("cab.clients.col.mois"),
+              t("cab.kpi.returned"),
+              t("cab.clients.mode"),
+              "",
+            ]}
+          >
+            {visibles.map((client) => (
+              <LigneClient
+                key={client.tenantId}
+                client={client}
+                regime={regimeDe(rows.indexOf(client))}
+                collab={collabDe.get(client.tenantId) ?? null}
+                mois={ceMois.get(client.tenantId) ?? 0}
+              />
+            ))}
+          </InkTable>
+        )}
+      </section>
     </div>
+  );
+}
+
+function LigneClient({
+  client,
+  regime,
+  collab,
+  mois,
+}: {
+  client: ClientSummary;
+  regime: string;
+  collab: string | null;
+  mois: number;
+}) {
+  const { t } = useI18n();
+  const engagement = ENGAGEMENT[client.engagementStatus];
+  return (
+    <InkTableRow>
+      <InkCell>
+        <Link
+          to="/cabinet/dossier/$clientId"
+          params={{ clientId: client.tenantId }}
+          className="block font-medium hover:underline"
+        >
+          {client.name}
+        </Link>
+        <span className="num block text-[10.5px] text-muted-foreground">
+          {client.legalId ?? "—"}
+          {engagement && client.engagementStatus !== "actif" ? ` · ${t(engagement)}` : ""}
+        </span>
+      </InkCell>
+      <InkCell>
+        <span className="text-[12px]">{regime}</span>
+      </InkCell>
+      <InkCell>
+        {collab ? (
+          <span className="flex items-center gap-1.5 text-[12px]">
+            <span className="num bg-foreground px-1 text-[9px] text-background">
+              {initialesDe(collab)}
+            </span>
+            <span className="truncate">{collab}</span>
+          </span>
+        ) : (
+          <span className="text-[12px] text-signal-warn">{t("cab.clients.collab.aucun")}</span>
+        )}
+      </InkCell>
+      <InkCell numeric>
+        <span
+          className={cn(client.counts.comptabilisee ? "text-marigold" : "text-muted-foreground")}
+        >
+          {client.counts.comptabilisee}
+        </span>
+      </InkCell>
+      <InkCell numeric>{mois}</InkCell>
+      <InkCell numeric>
+        <span
+          className={cn(client.counts.retournee ? "text-signal-stop" : "text-muted-foreground")}
+        >
+          {client.counts.retournee}
+        </span>
+      </InkCell>
+      <InkCell>
+        <span className="border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
+          {t(MODE[client.validationMode] ?? "cab.mode.mandate")}
+        </span>
+      </InkCell>
+      <InkCell>
+        <Link
+          to="/cabinet/dossier/$clientId"
+          params={{ clientId: client.tenantId }}
+          className="border border-border px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
+        >
+          {t("cab.queue.open")}
+        </Link>
+      </InkCell>
+    </InkTableRow>
   );
 }

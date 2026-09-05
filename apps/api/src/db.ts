@@ -21,6 +21,18 @@
 import pg from "pg";
 import type { PoolClient } from "pg";
 
+/*
+ * ============================================ UNE DATE EST UNE DATE
+ *
+ * Sans cela, `pg` convertit une colonne `date` en `Date` JavaScript à minuit
+ * LOCAL, que la sérialisation rend en instant UTC : « 2026-09-30 » devenait
+ * « 2026-09-29T23:00:00.000Z » sur un poste en UTC+1, et les écrans lisaient
+ * la veille. Une date comptable n'a pas d'heure ni de fuseau : elle
+ * traverse l'API telle que la base l'écrit, « YYYY-MM-DD ».
+ */
+const OID_DATE = 1082;
+pg.types.setTypeParser(OID_DATE, (valeur: string) => valeur);
+
 const { Pool } = pg;
 
 export type Requete = PoolClient;
@@ -53,12 +65,40 @@ export async function sousIdentite<T>(
   utilisateur: string,
   travail: (db: Requete) => Promise<T>,
 ): Promise<T> {
+  return sousClaims({ sub: utilisateur }, travail);
+}
+
+/**
+ * Exécute un travail sous une clé d'API du cabinet.
+ *
+ * Deux claims au lieu d'un. `sub` reste la personne qui a créé la clé : c'est
+ * elle que l'audit nomme comme acteur. `api_tenant` est le cabinet de la clé,
+ * et sa présence change UNE chose en base : `app.member_orgs()` rend ce
+ * cabinet et rien d'autre — pas les autres organisations de cette personne,
+ * pas la plateforme. La frontière est donc posée par la base, pas par la clé.
+ *
+ * Ce que la clé peut FAIRE (ses portées) se décide avant d'arriver ici, dans
+ * `cles-api.ts` ; ce qu'elle peut VOIR se décide ici, par les politiques.
+ */
+export async function sousCleDuCabinet<T>(
+  cle: { tenantId: string; auNomDe: string },
+  travail: (db: Requete) => Promise<T>,
+): Promise<T> {
+  return sousClaims({ sub: cle.auNomDe, api_tenant: cle.tenantId }, travail);
+}
+
+async function sousClaims<T>(
+  claims: Record<string, string>,
+  travail: (db: Requete) => Promise<T>,
+): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("begin");
     await client.query("set local role authenticated");
-    // Le troisième argument à `true` limite la valeur à la transaction.
-    await client.query("select set_config('request.jwt.claim.sub', $1, true)", [utilisateur]);
+    for (const [nom, valeur] of Object.entries(claims)) {
+      // Le troisième argument à `true` limite la valeur à la transaction.
+      await client.query("select set_config($1, $2, true)", [`request.jwt.claim.${nom}`, valeur]);
+    }
     const resultat = await travail(client);
     await client.query("commit");
     return resultat;

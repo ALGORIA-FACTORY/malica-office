@@ -6,6 +6,7 @@ import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
+import { sommeDecimale } from "@/lib/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import type { PieceLue } from "@/verticals/regalica-office/ports/repositories";
@@ -73,7 +74,7 @@ function VosDocuments() {
     queryFn: () => office().capture.listAvecLecture(pme.tenantId),
   });
 
-  const toutes = pieces.data ?? [];
+  const toutes = useMemo(() => pieces.data ?? [], [pieces.data]);
 
   /** Le mois d'une pièce : celui du DOCUMENT s'il est lu, sinon celui du dépôt. */
   const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
@@ -148,13 +149,15 @@ function VosDocuments() {
       .map(([cle, liste]) => ({
         mois: cle,
         n: liste.length,
-        total: liste.reduce((n, p) => n + Number(p.total ?? 0), 0),
+        // Une somme de montants se fait en décimal exact, jamais en flottant.
+        total: sommeDecimale(liste.map((p) => String(p.total ?? "0"))),
       }))
       .sort((a, b) => b.mois.localeCompare(a.mois));
   }, [toutes]);
 
-  const plusHaut = Math.max(...parMois.map((m) => m.total), 0);
-  const totalAnnuel = toutes.reduce((n, p) => n + Number(p.total ?? 0), 0);
+  // Les barres ne montrent qu'une proportion : le flottant y suffit.
+  const plusHaut = Math.max(...parMois.map((m) => Number(m.total)), 0);
+  const totalAnnuel = sommeDecimale(toutes.map((p) => String(p.total ?? "0")));
   const parType = useMemo(() => {
     const carte = new Map<string, number>();
     for (const p of toutes) {
@@ -278,8 +281,24 @@ function VosDocuments() {
                         <span aria-hidden className={cn("h-[6px] w-[6px]", pastille(p))} />
                         <span className="num text-[11px] text-muted-foreground">{jour(p)}</span>
                         <span className="min-w-0">
+                          {/*
+                           * ================================ LE TITRE NE MENT PLUS
+                           *
+                           * Il valait `p.emetteur ?? "Pas encore lue"` : dès que
+                           * l'émetteur manquait, la ligne annonçait une pièce non
+                           * lue — y compris quand le statut juste en dessous
+                           * affichait « Lue ». Deux phrases contradictoires sur
+                           * la même ligne, et c'est celle du haut qu'on croit.
+                           *
+                           * Une pièce lue dont l'émetteur reste introuvable
+                           * existe : un ticket effacé, une photo d'autre chose.
+                           * Elle mérite sa propre phrase, qui dit quoi faire.
+                           */}
                           <span className="block truncate text-[14px] font-medium">
-                            {p.emetteur ?? t("pme.list.nonLue")}
+                            {p.emetteur ??
+                              (p.status === "capturee"
+                                ? t("pme.list.nonLue")
+                                : t("pme.list.sansEmetteur"))}
                           </span>
                           <span
                             className={cn(
@@ -316,7 +335,7 @@ function VosDocuments() {
             </p>
             <p className="relative mt-2 flex items-baseline gap-2">
               <span className="num text-[clamp(2rem,11vw,46px)] font-medium leading-[0.92] tracking-[-0.045em]">
-                {toutes.length === 0 ? "—" : montant(totalAnnuel.toFixed(3), locale)}
+                {toutes.length === 0 ? "—" : montant(totalAnnuel, locale)}
               </span>
               <span className="num text-[14px] font-medium opacity-60">{pme.currency}</span>
             </p>
@@ -341,14 +360,12 @@ function VosDocuments() {
                   <i
                     className="absolute inset-y-0 start-0 bg-foreground"
                     style={{
-                      width: `${plusHaut > 0 ? Math.round((m.total / plusHaut) * 100) : 0}%`,
+                      width: `${plusHaut > 0 ? Math.round((Number(m.total) / plusHaut) * 100) : 0}%`,
                     }}
                   />
                 </span>
                 <span className="num text-end text-[11px] text-muted-foreground">{m.n}</span>
-                <span className="num text-[13px] font-medium">
-                  {montant(m.total.toFixed(3), locale)}
-                </span>
+                <span className="num text-[13px] font-medium">{montant(m.total, locale)}</span>
               </button>
             ))}
 

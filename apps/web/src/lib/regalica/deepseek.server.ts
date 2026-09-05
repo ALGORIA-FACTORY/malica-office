@@ -50,6 +50,11 @@ export async function callDeepSeek(input: {
   /** Le raisonneur n'accepte ni température ni pénalités : on ne les envoie pas. */
   temperature?: number;
   signal?: AbortSignal;
+  /**
+   * `json` : le fournisseur garantit un objet JSON en sortie. L'invite doit
+   * le demander aussi — le mode ne fait que l'imposer, il ne le décrit pas.
+   */
+  format?: "json";
 }): Promise<DeepSeekResult> {
   const model = DEEPSEEK_MODELS[input.role];
   const body: Record<string, unknown> = {
@@ -59,6 +64,9 @@ export async function callDeepSeek(input: {
   };
   if (input.role === "chat") {
     body["temperature"] = input.temperature ?? 0;
+  }
+  if (input.format === "json") {
+    body["response_format"] = { type: "json_object" };
   }
 
   const started = Date.now();

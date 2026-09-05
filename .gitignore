@@ -46,3 +46,12 @@ desktop.ini
 
 # Sauvegardes de la base locale : des dumps, reconstructibles, jamais dans git.
 db/sauvegardes/
+
+# Le certificat de développement : propre à chaque machine, jamais partagé.
+.certificats/
+
+# Les PDF telecharges par le corpus et le texte qu'on en tire : un cache, pas
+# une source. Il se refait avec db/corpus/reconstruire.mjs et notes.mjs.
+db/corpus/pdf/
+db/corpus/pdf-nc/
+journal-atelier.log

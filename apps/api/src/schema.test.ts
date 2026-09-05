@@ -207,6 +207,13 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
    * réécrivait `vector(768)` en `real[]` quand l'extension manquait, et une
    * colonne d'empreintes devenue tableau de réels ressemble à s'y méprendre à
    * une colonne d'empreintes. C'est cela qu'on refuse.
+   *
+   * On compare le NOM du type, pas son rendu. `format_type` qualifie par le
+   * schéma dès que celui-ci n'est pas sur le chemin de recherche, et il colle
+   * la dimension : la vraie colonne se rend « extensions.vector(1024) », que
+   * l'égalité à « vector » rejetait comme un imposteur. Le nom, lui, vaut
+   * `vector` où que l'extension soit installée et quelle que soit la
+   * dimension — tandis qu'un `real[]` s'appelle `_float4`.
    */
   it("aucune colonne d'empreintes n'est un tableau déguisé en vecteur", async () => {
     const deguisees = await interroger<{ colonne: string; type_: string }>(`
@@ -215,9 +222,10 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
         from pg_attribute a
         join pg_class c on c.oid = a.attrelid and c.relkind = 'r'
         join pg_namespace n on n.oid = c.relnamespace
+        join pg_type t on t.oid = a.atttypid
        where a.attnum > 0 and not a.attisdropped
          and a.attname in ('embedding', 'embeddings')
-         and format_type(a.atttypid, a.atttypmod) <> 'vector'
+         and t.typname <> 'vector'
        order by 1`);
 
     assert.deepEqual(

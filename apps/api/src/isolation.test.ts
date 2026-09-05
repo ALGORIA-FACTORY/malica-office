@@ -142,6 +142,82 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  /*
+   * Les conversations avec Regalica.
+   *
+   * Elles ne sont pas cloisonnées par organisation mais par PERSONNE : deux
+   * associés d'une même société ne lisent pas les questions l'un de l'autre.
+   * C'est un cloisonnement de plus que celui des pièces, et il mérite donc
+   * d'être prouvé séparément — le vérifier sur un tiers sans accès au dossier
+   * ne prouverait que ce que les autres tests prouvent déjà.
+   */
+  it("une conversation n'appartient qu'à son auteur", async () => {
+    const filA = await sousIdentite(a.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into agents.conversations (tenant_id, titre)
+         values ($1, 'essai isolation') returning id`,
+        [orgA],
+      );
+      const id = rows[0]!.id;
+      await db.query(
+        `insert into agents.conversation_messages (conversation_id, role, contenu)
+         values ($1, 'user', 'une question que personne d autre ne doit lire')`,
+        [id],
+      );
+      return id;
+    });
+
+    const sienne = await sousIdentite(a.id, async (db) => {
+      const { rows } = await db.query(`select id from agents.conversations`);
+      return rows;
+    });
+    assert.equal(sienne.length, 1, "l'auteur relit son fil");
+
+    const vuesParB = await sousIdentite(b.id, async (db) => {
+      const { rows } = await db.query(`select id from agents.conversations`);
+      return rows;
+    });
+    assert.equal(vuesParB.length, 0, "un tiers ne voit aucun fil");
+
+    const messagesVusParB = await sousIdentite(b.id, async (db) => {
+      const { rows } = await db.query(`select id from agents.conversation_messages`);
+      return rows;
+    });
+    assert.equal(messagesVusParB.length, 0, "un tiers ne lit aucun message");
+
+    // Ni en connaissant l'identifiant : le fil est protégé par la politique,
+    // pas par l'ignorance de son adresse.
+    const cible = await sousIdentite(b.id, async (db) => {
+      const { rows } = await db.query(`select id from agents.conversations where id = $1`, [filA]);
+      return rows;
+    });
+    assert.equal(cible.length, 0, "connaître l'identifiant ne suffit pas");
+
+    // Et il ne se supprime pas non plus : `delete` ne trouve rien à effacer.
+    const efface = await sousIdentite(b.id, async (db) => {
+      const r = await db.query(`delete from agents.conversations where id = $1`, [filA]);
+      return r.rowCount;
+    });
+    assert.equal(efface, 0, "un tiers ne peut pas effacer le fil d'un autre");
+  });
+
+  it("une conversation ne change ni d'auteur ni de dossier", async () => {
+    await sousIdentite(a.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into agents.conversations (tenant_id) values ($1) returning id`,
+        [orgA],
+      );
+      const id = rows[0]!.id;
+      // Renommer est permis ; changer d'auteur ne l'est pas. Une politique ne
+      // voit pas OLD : c'est un déclencheur qui le refuse.
+      await db.query(`update agents.conversations set titre = 'renommé' where id = $1`, [id]);
+      await assert.rejects(
+        db.query(`update agents.conversations set created_by = $2 where id = $1`, [id, b.id]),
+        "changer l'auteur d'une conversation doit être refusé",
+      );
+    });
+  });
+
   it("le rôle de connexion ne contourne pas la RLS", async () => {
     // Si `regalica_api` était superutilisateur, propriétaire ou `bypassrls`,
     // tout ce qui précède passerait sans rien prouver. On le vérifie.

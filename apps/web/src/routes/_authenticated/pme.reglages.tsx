@@ -104,6 +104,32 @@ function PmeReglages() {
       </p>
 
       <p className="mb-1 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {t("fiche.titre")}
+      </p>
+      {/*
+       * La porte vers la situation fiscale.
+       *
+       * Elle est ici et non sur l'accueil : l'accueil tient en une page, et ce
+       * réglage se fait une fois puis se revisite rarement. Mais il commande la
+       * moitié des réponses de Regalica — sans régime connu, elle ne peut ni
+       * qualifier une opération ni répondre sur une déduction.
+       */}
+      <Link
+        to="/pme/fiche"
+        className="flex items-center justify-between gap-3 border-t border-foreground py-3.5"
+      >
+        <span>
+          <span className="block text-[14.5px] font-medium">{t("fiche.champ.imposition")}</span>
+          <span className="mt-0.5 block text-[12.5px] leading-[1.45] text-text-2">
+            {t("fiche.sous")}
+          </span>
+        </span>
+        <span aria-hidden className="flex-none text-[17px] text-muted-foreground">
+          ›
+        </span>
+      </Link>
+
+      <p className="mb-1 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {t("pme.reglages.alertes")}
       </p>
       {/*

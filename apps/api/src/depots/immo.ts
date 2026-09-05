@@ -7,8 +7,12 @@
  * qui n'écrivaient que le journal, ne sont pas portées : elles sont supprimées.
  *
  * `recordCession` reste, elle : la cession n'a pas encore d'équivalent
- * indivisible. Le moteur `computeCession` existe et attend son écran — c'est
- * un orphelin de l'audit, pas un piège.
+ * indivisible. L'écran des immobilisations calcule le résultat de cession
+ * par `computeCession`, enregistre la cession, puis passe le bien à « cédé ».
+ *
+ * Dès qu'une dotation, une dépréciation ou une cession est constatée, la base
+ * refuse de modifier ce qui fonde le plan du bien (valeur, durée, méthode,
+ * mise en service) : seuls le libellé et l'état restent ouverts.
  *
  * Signatures relues avant écriture : les deux fonctions rendent du `jsonb`.
  */
@@ -68,7 +72,7 @@ export const immo = {
     db: Requete,
     input: {
       tenantId: string;
-      entityId: string;
+      entityId: string | null;
       vis?: string;
       pieceId?: string | null;
       categoryId: string;
@@ -229,7 +233,7 @@ export const immo = {
       mouvement: string;
       cumul: string;
       packVersionId: string;
-      note?: string;
+      note?: string | null;
     },
   ) {
     const { rows } = await db.query<{ depreciation: string; ecriture: string }>(

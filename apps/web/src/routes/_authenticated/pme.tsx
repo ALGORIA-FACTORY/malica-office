@@ -1,16 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Camera, Home as HomeIcon, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
 import { CameraScanner } from "@/components/regalica/CameraScanner";
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
+import { EntetePme } from "@/components/regalica/entete-pme";
 import { PmeProvider, type CaptureKind } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
@@ -95,7 +96,18 @@ function PmeLayout() {
         file: picked.blob,
         fileName: picked.name,
         source: picked.source,
-        vis: "partage",
+        /*
+         * ============================================ LA PIÈCE RESTE CHEZ VOUS
+         *
+         * Elle était marquée « partage » dès la photo : tout ce qui passait
+         * devant l'objectif partait au cabinet, sans que personne l'ait
+         * décidé. Un reçu personnel, une photo ratée, un document qui n'a rien
+         * à voir — tout arrivait chez l'expert-comptable.
+         *
+         * On capture donc en « personnel ». La transmission est un GESTE, sur
+         * l'écran de la pièce, et c'est le dirigeant qui le fait.
+         */
+        vis: "personnel",
         idempotencyKey: files.newIdempotencyKey(),
       });
     },
@@ -105,8 +117,31 @@ function PmeLayout() {
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
     },
-    onError: (e: unknown) => setCaptureError(e instanceof Error ? e.message : t("common.error")),
+    onError: (e: unknown) =>
+      setCaptureError(texteDeLErreur(e, "routes/_authenticated/pme", t("common.error"))),
   });
+
+  /*
+   * Ouvrir la capture : le scanner de l'appareil s'il y en a un, le nôtre sinon.
+   *
+   * VisionKit et ML Kit sont déjà dans le téléphone, entraînés pour cela, et ne
+   * coûtent aucun téléchargement. Notre cadrage reste la voie du navigateur :
+   * l'aperçu, un poste de bureau, une démonstration.
+   *
+   * Les deux rendent la même chose — des pages redressées — donc la suite est
+   * identique. Un abandon ne rend rien, et ce n'est pas une panne.
+   */
+  const ouvrirCapture = useCallback(() => {
+    const natif = files.scannerDeLAppareil();
+    if (!natif) {
+      setScanning(true);
+      return;
+    }
+    void (async () => {
+      const pages = await natif.capturer();
+      if (pages.length > 0) capture.mutate({ pages });
+    })();
+  }, [capture]);
 
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
@@ -121,32 +156,13 @@ function PmeLayout() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-20 text-foreground">
       {path === "/pme" ? null : (
-        <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex items-center justify-end gap-2 px-4 py-2">
-            {pmeOrgs.length > 1 ? (
-              <select
-                aria-label={t("pme.org.switch")}
-                value={org?.id ?? ""}
-                onChange={(e) => selectOrg(e.target.value)}
-                className="me-auto min-w-0 max-w-[104px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {pmeOrgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <LanguageSwitcher />
-            {aUnCabinet ? (
-              <Link
-                to="/office"
-                className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide hover:bg-accent"
-              >
-                {t("portal.switch")}
-              </Link>
-            ) : null}
-          </div>
+        <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
+          <EntetePme
+            dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
+            dossierActif={org?.id ?? null}
+            choisirDossier={selectOrg}
+            aUnCabinet={aUnCabinet}
+          />
         </header>
       )}
 
@@ -176,7 +192,7 @@ function PmeLayout() {
               choisirDossier: selectOrg,
               aUnCabinet,
               capture: (kind) => capture.mutate(kind),
-              ouvrirScanner: () => setScanning(true),
+              ouvrirScanner: ouvrirCapture,
               capturing: capture.isPending,
               captureError,
             }}
@@ -195,7 +211,7 @@ function PmeLayout() {
           <button
             type="button"
             disabled={!org || capture.isPending}
-            onClick={() => setScanning(true)}
+            onClick={ouvrirCapture}
             aria-label={t("pme.nav.add")}
             className="grid h-[58px] w-[58px] place-items-center bg-foreground text-background outline outline-1 outline-line-strong disabled:opacity-50"
           >

@@ -3,6 +3,7 @@
  * Le passage à Capacitor remplace cette implémentation, pas les écrans.
  */
 
+import { numeriseurDeLAppareil } from "./numerisation";
 import { scanPagesToPdf, scanToPdf } from "./scanner";
 
 export interface PickedFile {
@@ -67,6 +68,14 @@ async function scanPages(pages: readonly Blob[], baseName = "piece"): Promise<Pi
 }
 
 export const files = {
+  /**
+   * Le scanner de l'appareil lui-même — VisionKit sur iOS, ML Kit sur Android.
+   *
+   * `null` hors de la coque native, et c'est le cas courant : l'écran ouvre
+   * alors son propre cadrage. Rien d'autre ne change, parce que les deux
+   * rendent la même chose : des pages déjà redressées.
+   */
+  scannerDeLAppareil: numeriseurDeLAppareil,
   takePhoto: () => scan(IMAGE_ACCEPT, true),
   pickImage: () => scan(IMAGE_ACCEPT, false),
   pickPdf: () => pick(PDF_ACCEPT, false),

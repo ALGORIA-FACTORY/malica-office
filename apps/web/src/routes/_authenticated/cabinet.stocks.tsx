@@ -1,9 +1,25 @@
+/**
+ * Stocks et variation — la valorisation d'un article, mouvement par mouvement.
+ *
+ * ============================================================== POURQUOI
+ *
+ * L'écran du design : un kicker qui dit la méthode et le mois, la table des
+ * mouvements valorisés, et à droite l'encart de variation d'inventaire qui se
+ * constate d'un bouton. Tout chiffre vient du moteur de stock du Socle : la
+ * méthode est celle du pack ou de l'article, les décimales celles du pack,
+ * et l'écran ne fait que grouper les milliers dans la langue du lecteur.
+ *
+ * Les formulaires — article, mouvement, dépréciation — restent à portée,
+ * derrière les boutons de l'en-tête ou dans des sections repliables : ils
+ * n'écrasent plus la lecture.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
 import { ClientPicker } from "@/components/regalica/ClientPicker";
+import { ecrireDossierCourant, useDossierCourant } from "@/components/regalica/dossier-courant";
 import {
   ActionButton,
   EmptyState,
@@ -11,9 +27,14 @@ import {
   InkTable,
   InkTableRow,
   RegalicaNote,
+  SectionRepliable,
   SectionTitle,
 } from "@/components/regalica/office-ui";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { montant, montantSigne, quantite } from "@/lib/lisible";
+import { estNul, sommeDecimale } from "@/lib/somme-decimale";
+import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import type { StockItem } from "@/verticals/regalica-office/ports/repositories";
 import {
@@ -44,8 +65,12 @@ export const Route = createFileRoute("/_authenticated/cabinet/stocks")({
   component: CabinetStocks,
 });
 
-const FIELD = "border border-border bg-background px-2 py-1 text-[13px] outline-none";
-const LABEL = "block text-[10px] uppercase tracking-wide text-muted-foreground";
+const OU = "routes/_authenticated/cabinet.stocks";
+/** Une chaîne décimale telle que le Socle l'accepte — la virgule du clavier français est admise. */
+const DECIMAL = /^-?\d+(\.\d+)?$/;
+const FIELD = "border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none";
+const LABEL = "block text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground";
+const KICKER = "text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground";
 
 interface ItemForm {
   id: string | null;
@@ -102,19 +127,29 @@ function emptyMouvementForm(): MouvementForm {
 function CabinetStocks() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
+  const dossierCourant = useDossierCourant();
   const qc = useQueryClient();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
   const [form, setForm] = useState<ItemForm | null>(null);
   const [mouvement, setMouvement] = useState<MouvementForm>(emptyMouvementForm);
   const [error, setError] = useState<string | null>(null);
+  const [mouvOuvert, setMouvOuvert] = useState(false);
+  const [articlesOuvert, setArticlesOuvert] = useState(false);
+  const [depOuvert, setDepOuvert] = useState(false);
+  const [ecrituresOuvert, setEcrituresOuvert] = useState(false);
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
   const rows = clients.data ?? [];
-  const client = rows.find((c) => c.tenantId === tenantId) ?? rows[0] ?? null;
+  const client =
+    rows.find((c) => c.tenantId === tenantId) ??
+    // Sans choix ici, l'onglet s'ouvre sur le dossier courant du cabinet.
+    rows.find((c) => c.tenantId === dossierCourant?.id) ??
+    rows[0] ??
+    null;
 
   const pack = useQuery({
     queryKey: ["pack", client?.jurisdiction],
@@ -155,18 +190,21 @@ function CabinetStocks() {
     enabled: !!client && !!item,
   });
 
-  const decimals = params.data?.moneyDecimals ?? 3;
   const inventaireRows = inventaires.data ?? [];
   const depreciationRows = depreciations.data ?? [];
 
-  // La valorisation vient du Socle ; la méthode est celle du pack ou de l'article.
-  const valo = useMemo(() => {
+  // La valorisation vient du Socle ; la méthode est celle du pack ou de l'article,
+  // les décimales celles du pack — sans repli : sans pack, rien ne se calcule (R4).
+  // Un mouvement que le moteur refuse ne se montre pas en clair : sa raison part
+  // au journal de l'atelier, l'écran dit une phrase lisible.
+  const lecture = useMemo(() => {
     if (!item || !params.data || !client || !mouvements.data) return null;
+    const decimals = params.data.moneyDecimals;
     try {
-      return computeStock(
+      const valo = computeStock(
         {
           currency: item.devise || client.currency,
-          decimals: params.data.moneyDecimals,
+          decimals,
           quantiteDecimals: params.data.stockQuantiteDecimals,
           methode: item.methode ?? params.data.stockMethode,
         },
@@ -178,31 +216,59 @@ function CabinetStocks() {
           reference: m.reference,
         })),
       );
+      return { valo, decimals, erreur: null };
     } catch (e) {
-      setError((e as Error).message);
-      return null;
+      return {
+        valo: null,
+        decimals,
+        erreur: texteDeLErreur(e, OU, t("cab.stocks.valo.illisible")),
+      };
     }
-  }, [item, params.data, client, mouvements.data]);
+  }, [item, params.data, client, mouvements.data, t]);
+  const valo = lecture?.valo ?? null;
 
   // ------------------------------------------------------- variation d'inventaire
   const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
   const [invDate, setInvDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const derniereFinale =
-    inventaireRows.length > 0 ? inventaireRows[inventaireRows.length - 1]!.final : "0";
+  // Le stock initial de la période est le final de la dernière période constatée
+  // AVANT elle — pas de la dernière constatée tout court, qui peut lui être
+  // postérieure si l'expert revient sur un mois ancien.
+  const inventairePrecedent = inventaireRows.filter((i) => i.period < period).at(-1) ?? null;
+  const stockInitial = inventairePrecedent?.final ?? "0";
+
+  // Le stock final de la période : la valeur après le dernier mouvement qui la
+  // précède ou lui appartient. Les lignes du moteur sont chronologiques.
+  const stockFinal = valo
+    ? (valo.lignes.filter((l) => l.at.slice(0, 7) <= period).at(-1)?.valeur_apres ?? "0")
+    : null;
 
   const variation =
-    valo && client
+    lecture && client && stockFinal !== null
       ? computeStockVariation({
           currency: item?.devise || client.currency,
-          decimals,
+          decimals: lecture.decimals,
           period,
-          initial: derniereFinale,
-          final: valo.totals.valeur,
+          initial: stockInitial,
+          final: stockFinal,
         })
       : null;
 
   const periodeDejaConstatee = inventaireRows.some((i) => i.period === period);
+  const inventaireConstatable =
+    !!lecture && !!variation && !estNul(variation.variation, lecture.decimals);
+
+  // Les entrées et sorties du mois : la somme exacte des lignes du moteur, en entiers.
+  const duMois = useMemo(() => {
+    if (!lecture?.valo) return null;
+    const lignes = lecture.valo.lignes.filter((l) => l.at.slice(0, 7) === period);
+    const somme = (sens: "entree" | "sortie") =>
+      sommeDecimale(
+        lignes.filter((l) => l.sens === sens).map((l) => l.valeur_mouvement),
+        lecture.decimals,
+      );
+    return { entrees: somme("entree"), sorties: somme("sortie") };
+  }, [lecture, period]);
 
   // ------------------------------------------------------------- dépréciation
   const [depAt, setDepAt] = useState(() => new Date().toISOString().slice(0, 10));
@@ -212,17 +278,27 @@ function CabinetStocks() {
   const cumulDepreciation =
     depreciationRows.length > 0 ? depreciationRows[depreciationRows.length - 1]!.cumul : "0";
 
+  // Le coût du stock à la date de la dépréciation, pas à la fin de tous les mouvements.
+  const coutAuJour = valo
+    ? (valo.lignes.filter((l) => l.at.slice(0, 10) <= depAt).at(-1)?.valeur_apres ?? "0")
+    : null;
+
+  // La saisie ne part au moteur que lorsqu'elle est un nombre : « abc » n'est
+  // pas une valeur nette, et le moteur le refuserait en pleine lecture.
+  const valeurNetteSaisie = valeurNette.trim().replace(",", ".");
   const depreciation =
-    valo && client && valeurNette.trim() !== ""
+    lecture && client && coutAuJour !== null && DECIMAL.test(valeurNetteSaisie)
       ? computeStockDepreciation({
           currency: item?.devise || client.currency,
-          decimals,
+          decimals: lecture.decimals,
           at: depAt,
-          valeurStock: valo.totals.valeur,
-          valeurNette,
+          valeurStock: coutAuJour,
+          valeurNette: valeurNetteSaisie,
           cumulAvant: cumulDepreciation,
         })
       : null;
+  const depreciationConstatable =
+    !!lecture && !!depreciation && !estNul(depreciation.mouvement, lecture.decimals);
 
   // ---------------------------------------------------- écritures du Socle
   const ecritureIds = [
@@ -281,7 +357,7 @@ function CabinetStocks() {
       setItemId(id);
       invalidate();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: unknown) => setError(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   const addMouvement = useMutation({
@@ -302,8 +378,12 @@ function CabinetStocks() {
       setError(null);
       invalidate();
     },
-    onError: (e: Error) =>
-      setError(e.message.includes("stocks_mouvements_uniq") ? t("cab.stocks.dup") : e.message),
+    onError: (e: unknown) =>
+      setError(
+        e instanceof Error && e.message.includes("stocks_mouvements_uniq")
+          ? t("cab.stocks.dup")
+          : texteDeLErreur(e, OU, t("common.error")),
+      ),
   });
 
   const constaterInventaire = useMutation({
@@ -323,11 +403,12 @@ function CabinetStocks() {
       setError(null);
       invalidate();
     },
-    onError: (e: Error) =>
+    onError: (e: unknown) =>
       setError(
-        e.message.includes("deja constate") || e.message.includes("stocks_inventaires_uniq")
+        e instanceof Error &&
+          (e.message.includes("deja constate") || e.message.includes("stocks_inventaires_uniq"))
           ? t("cab.stocks.invdup")
-          : e.message,
+          : texteDeLErreur(e, OU, t("common.error")),
       ),
   });
 
@@ -351,7 +432,7 @@ function CabinetStocks() {
       setError(null);
       invalidate();
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: unknown) => setError(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   useRegalicaPanel(<RegalicaNote>{t("cab.stocks.voice")}</RegalicaNote>, [locale]);
@@ -362,144 +443,521 @@ function CabinetStocks() {
   }, [client?.tenantId]);
 
   const categoryRows = categories.data ?? [];
-  const packMethode = params.data?.stockMethode ?? "cump";
+  const devise = valo?.currency ?? item?.devise ?? client?.currency ?? "";
+
+  // ---------------------------------------------------------------- lecture
+  const dateLisible = (iso: string) =>
+    new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
+  const moisLong = (mois: string) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(`${mois}-01T00:00:00Z`),
+    );
+  const signe = (valeur: string) =>
+    Number(valeur) > 0 ? "text-signal-ok" : Number(valeur) < 0 ? "text-signal-stop" : "";
+
+  // La méthode se lit dans le résultat du moteur, à défaut sur l'article, à défaut au pack.
+  const methode = valo?.methode ?? item?.methode ?? params.data?.stockMethode ?? null;
+  const kicker = methode
+    ? t("cab.stocks.kicker", { methode: t(`cab.stocks.method.${methode}`), mois: moisLong(period) })
+    : moisLong(period);
+
+  const categorie = form ? categoryRows.find((c) => c.id === form.categoryId) : undefined;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold tracking-tight">{t("cab.stocks.title")}</h1>
-
-      {rows.length === 0 ? (
-        <EmptyState>{t("cab.clients.empty")}</EmptyState>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-end gap-4">
+    <div className="space-y-8">
+      {/* ---- masthead */}
+      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-foreground pb-6">
+        <div className="min-w-0">
+          <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+            {kicker}
+          </p>
+          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
+            {t("cab.stocks.title")}
+          </h1>
+          {item ? (
+            <p className="mt-3 text-[13.5px] leading-[1.55] text-text-2">
+              <span className="num">{item.reference}</span> · {item.designation} · {item.unite}
+            </p>
+          ) : null}
+        </div>
+        {rows.length > 0 ? (
+          <div className="flex flex-wrap items-end gap-2">
             <ClientPicker
               label={t("cab.queue.client")}
               clients={rows}
               value={client?.tenantId ?? null}
               onChange={(id) => {
                 setTenantId(id);
+                const choisi = rows.find((c) => c.tenantId === id);
+                if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
                 setItemId(null);
               }}
             />
-            <ActionButton onClick={() => setForm(emptyItemForm(packMethode))}>
-              {t("cab.stocks.new")}
-            </ActionButton>
+            {itemRows.length > 0 ? (
+              <label className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide">
+                <span className="text-muted-foreground">{t("cab.stocks.article")}</span>
+                <select
+                  value={item?.id ?? ""}
+                  onChange={(e) => setItemId(e.target.value)}
+                  className="max-w-[260px] border border-border bg-card px-3 py-2 text-[13px] font-normal normal-case tracking-normal"
+                >
+                  {itemRows.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.reference} · {i.designation}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {/* La méthode proposée au nouvel article est celle du pack : sans pack lu, pas de proposition. */}
+            {params.data ? (
+              <ActionButton onClick={() => setForm(emptyItemForm(params.data.stockMethode))}>
+                {t("cab.stocks.new")}
+              </ActionButton>
+            ) : null}
+            {item ? (
+              <ActionButton
+                variant={mouvOuvert ? "ink" : "stone"}
+                onClick={() => setMouvOuvert((o) => !o)}
+              >
+                {t("cab.stocks.mouvement.nouveau")}
+              </ActionButton>
+            ) : null}
           </div>
+        ) : null}
+      </header>
 
-          {error ? (
-            <p className="border border-destructive px-3 py-2 text-[12px] text-destructive">
-              {error}
+      {[lecture?.erreur, error]
+        .filter((m): m is string => !!m)
+        .map((m) => (
+          <p
+            key={m}
+            className="border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12.5px]"
+          >
+            {m}
+          </p>
+        ))}
+
+      {/* ---- l'article, à créer ou à corriger */}
+      {form ? (
+        <form
+          className="space-y-4 border border-border bg-card p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveItem.mutate(form);
+          }}
+        >
+          <SectionTitle>{form.id ? t("cab.stocks.edit") : t("cab.stocks.new")}</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="space-y-1">
+              <span className={LABEL}>{t("cab.stocks.category")}</span>
+              <select
+                className={`${FIELD} w-full`}
+                value={form.categoryId}
+                disabled={!!form.id}
+                required={!form.id}
+                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+              >
+                <option value="">—</option>
+                {categoryRows.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className={LABEL}>{t("cab.stocks.reference")}</span>
+              <input
+                className={`${FIELD} num w-full`}
+                value={form.reference}
+                disabled={!!form.id}
+                required
+                onChange={(e) => setForm({ ...form, reference: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className={LABEL}>{t("cab.stocks.designation")}</span>
+              <input
+                className={`${FIELD} w-full`}
+                value={form.designation}
+                required
+                onChange={(e) => setForm({ ...form, designation: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className={LABEL}>{t("cab.stocks.unite")}</span>
+              <input
+                className={`${FIELD} w-full`}
+                value={form.unite}
+                required
+                onChange={(e) => setForm({ ...form, unite: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className={LABEL}>{t("cab.stocks.method")}</span>
+              <select
+                className={`${FIELD} w-full`}
+                value={form.methode}
+                onChange={(e) =>
+                  setForm({ ...form, methode: e.target.value as ItemForm["methode"] })
+                }
+              >
+                <option value="cump">{t("cab.stocks.method.cump")}</option>
+                <option value="fifo">{t("cab.stocks.method.fifo")}</option>
+              </select>
+            </label>
+            {form.id ? (
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.active")}</span>
+                <select
+                  className={`${FIELD} w-full`}
+                  value={form.active ? "1" : "0"}
+                  onChange={(e) => setForm({ ...form, active: e.target.value === "1" })}
+                >
+                  <option value="1">{t("cab.stocks.yes")}</option>
+                  <option value="0">{t("cab.stocks.no")}</option>
+                </select>
+              </label>
+            ) : null}
+          </div>
+          {categorie ? (
+            <p className="text-[11px] text-muted-foreground">
+              <span className="num">
+                {t("cab.stocks.comptes", {
+                  stock: categorie.accountStock,
+                  variation: categorie.accountVariation,
+                  provision: categorie.accountProvision,
+                })}
+              </span>
+              {categorie.legalReference ? (
+                <span className="mt-0.5 block text-signal-info">{categorie.legalReference}</span>
+              ) : null}
             </p>
           ) : null}
+          <div className="flex gap-2">
+            <ActionButton variant="ink" type="submit" disabled={saveItem.isPending}>
+              {t("cab.stocks.save")}
+            </ActionButton>
+            <ActionButton onClick={() => setForm(null)}>{t("cab.stocks.cancel")}</ActionButton>
+          </div>
+        </form>
+      ) : null}
 
-          {form ? (
+      {rows.length === 0 ? (
+        <EmptyState>{t("cab.clients.empty")}</EmptyState>
+      ) : pack.data === null ? (
+        // Sans pack en vigueur, ni décimales ni méthode : on le dit, on ne devine pas (R4).
+        <EmptyState>{t("pack.none")}</EmptyState>
+      ) : items.isPending ? (
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : !item ? (
+        <EmptyState>{t("cab.stocks.empty")}</EmptyState>
+      ) : (
+        <>
+          {/* ---- le mouvement, derrière le bouton de l'en-tête */}
+          {mouvOuvert ? (
             <form
-              className="space-y-4 border border-border p-4"
+              className="grid gap-3 border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                saveItem.mutate(form);
+                addMouvement.mutate(mouvement);
               }}
             >
-              <SectionTitle>{form.id ? t("cab.stocks.edit") : t("cab.stocks.new")}</SectionTitle>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <label className="space-y-1">
-                  <span className={LABEL}>{t("cab.stocks.category")}</span>
-                  <select
-                    className={`${FIELD} w-full`}
-                    value={form.categoryId}
-                    disabled={!!form.id}
-                    required={!form.id}
-                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                  >
-                    <option value="">—</option>
-                    {categoryRows.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1">
-                  <span className={LABEL}>{t("cab.stocks.reference")}</span>
-                  <input
-                    className={`${FIELD} num w-full`}
-                    value={form.reference}
-                    disabled={!!form.id}
-                    required
-                    onChange={(e) => setForm({ ...form, reference: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className={LABEL}>{t("cab.stocks.designation")}</span>
-                  <input
-                    className={`${FIELD} w-full`}
-                    value={form.designation}
-                    required
-                    onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className={LABEL}>{t("cab.stocks.unite")}</span>
-                  <input
-                    className={`${FIELD} w-full`}
-                    value={form.unite}
-                    required
-                    onChange={(e) => setForm({ ...form, unite: e.target.value })}
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className={LABEL}>{t("cab.stocks.method")}</span>
-                  <select
-                    className={`${FIELD} w-full`}
-                    value={form.methode}
-                    onChange={(e) =>
-                      setForm({ ...form, methode: e.target.value as ItemForm["methode"] })
-                    }
-                  >
-                    <option value="cump">{t("cab.stocks.method.cump")}</option>
-                    <option value="fifo">{t("cab.stocks.method.fifo")}</option>
-                  </select>
-                </label>
-                {form.id ? (
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.active")}</span>
-                    <select
-                      className={`${FIELD} w-full`}
-                      value={form.active ? "1" : "0"}
-                      onChange={(e) => setForm({ ...form, active: e.target.value === "1" })}
-                    >
-                      <option value="1">{t("cab.stocks.yes")}</option>
-                      <option value="0">{t("cab.stocks.no")}</option>
-                    </select>
-                  </label>
-                ) : null}
-              </div>
-              {form.categoryId ? (
-                <p className="num text-[11px] text-muted-foreground">
-                  {(() => {
-                    const cat = categoryRows.find((c) => c.id === form.categoryId);
-                    return cat
-                      ? `${cat.accountStock} / ${cat.accountVariation} / ${cat.accountProvision} — ${cat.legalReference ?? ""}`
-                      : "";
-                  })()}
-                </p>
-              ) : null}
-              <div className="flex gap-2">
-                <ActionButton type="submit" disabled={saveItem.isPending}>
-                  {t("cab.stocks.save")}
-                </ActionButton>
-                <ActionButton variant="stone" onClick={() => setForm(null)}>
-                  {t("cab.stocks.cancel")}
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.sens")}</span>
+                <select
+                  className={`${FIELD} w-full`}
+                  value={mouvement.sens}
+                  onChange={(e) =>
+                    setMouvement({ ...mouvement, sens: e.target.value as MouvementForm["sens"] })
+                  }
+                >
+                  <option value="entree">{t("cab.stocks.sens.entree")}</option>
+                  <option value="sortie">{t("cab.stocks.sens.sortie")}</option>
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.date")}</span>
+                <input
+                  type="date"
+                  className={`${FIELD} num w-full`}
+                  value={mouvement.at}
+                  required
+                  onChange={(e) => setMouvement({ ...mouvement, at: e.target.value })}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.qty")}</span>
+                <input
+                  inputMode="decimal"
+                  className={`${FIELD} num w-full`}
+                  value={mouvement.quantite}
+                  required
+                  onChange={(e) => setMouvement({ ...mouvement, quantite: e.target.value })}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.cu")}</span>
+                <input
+                  inputMode="decimal"
+                  className={`${FIELD} num w-full`}
+                  value={mouvement.coutUnitaire}
+                  disabled={mouvement.sens === "sortie"}
+                  required={mouvement.sens === "entree"}
+                  onChange={(e) => setMouvement({ ...mouvement, coutUnitaire: e.target.value })}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className={LABEL}>{t("cab.stocks.ref")}</span>
+                <input
+                  className={`${FIELD} num w-full`}
+                  value={mouvement.reference}
+                  onChange={(e) => setMouvement({ ...mouvement, reference: e.target.value })}
+                />
+              </label>
+              <div className="flex items-end">
+                <ActionButton variant="ink" type="submit" disabled={addMouvement.isPending}>
+                  {t("cab.stocks.addmouv")}
                 </ActionButton>
               </div>
             </form>
           ) : null}
 
-          <SectionTitle>{t("cab.stocks.items")}</SectionTitle>
-          {itemRows.length === 0 ? (
-            <EmptyState>{t("cab.stocks.empty")}</EmptyState>
-          ) : (
+          <div className="grid gap-8 xl:grid-cols-[1.7fr_1fr]">
+            {/* ---- les mouvements valorisés */}
+            <section className="min-w-0 space-y-3">
+              <SectionTitle
+                action={
+                  valo && valo.lignes.length > 0 ? (
+                    <span className="num text-[10.5px] text-muted-foreground">
+                      {t("cab.stocks.totals", {
+                        quantite: quantite(valo.totals.quantite, locale),
+                        valeur: montant(valo.totals.valeur, locale),
+                        currency: valo.currency,
+                      })}
+                    </span>
+                  ) : null
+                }
+              >
+                {t("cab.stocks.mouvements.titre")}
+              </SectionTitle>
+
+              {mouvements.isPending || params.isPending ? (
+                <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+              ) : !valo || valo.lignes.length === 0 ? (
+                <EmptyState>{t("cab.stocks.nomouv")}</EmptyState>
+              ) : (
+                <div className="overflow-x-auto border border-border bg-card">
+                  <table className="min-w-full border-collapse text-[12.5px]">
+                    <caption className="sr-only">{t("cab.stocks.mouvements.titre")}</caption>
+                    <thead>
+                      <tr className="border-b border-foreground">
+                        {[
+                          [t("cab.stocks.date"), false],
+                          [t("cab.stocks.sens"), false],
+                          [t("cab.stocks.qty"), true],
+                          [t("cab.stocks.col.valeur", { devise }), true],
+                          [t("cab.stocks.qtyafter"), true],
+                          // Le coût unitaire après mouvement — moyen en CUMP, du
+                          // dernier lot en FIFO : la colonne ne nomme pas une méthode.
+                          [t("cab.stocks.cu.apres"), true],
+                        ].map(([h, fin]) => (
+                          <th
+                            key={String(h)}
+                            scope="col"
+                            className={cn(
+                              "whitespace-nowrap px-3 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                              fin ? "text-end" : "text-start",
+                            )}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {valo.lignes.map((l, index) => (
+                        <tr
+                          key={`${l.at}-${index}`}
+                          className="border-b border-border last:border-b-0 hover:bg-secondary/60"
+                        >
+                          <td className="num whitespace-nowrap px-3 py-2 text-[11.5px]">
+                            {dateLisible(l.at)}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            <span className="inline-flex items-center gap-2">
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  "inline-block h-[7px] w-[7px]",
+                                  l.sens === "entree" ? "bg-foreground" : "bg-muted-foreground",
+                                )}
+                              />
+                              {t(`cab.stocks.sens.${l.sens}`)}
+                            </span>
+                          </td>
+                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                            {l.sens === "sortie"
+                              ? `−${quantite(l.quantite, locale)}`
+                              : quantite(l.quantite, locale)}
+                          </td>
+                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                            {montant(l.valeur_mouvement, locale)}
+                          </td>
+                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                            {quantite(l.quantite_apres, locale)}
+                          </td>
+                          <td className="num whitespace-nowrap px-3 py-2 text-end font-medium">
+                            {montant(l.cump, locale)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            {/* ---- la variation d'inventaire */}
+            <aside className="min-w-0 space-y-4">
+              <div className="border border-border bg-card p-4">
+                <p className={KICKER}>{t("cab.stocks.inventaire")}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="space-y-1">
+                    <span className={LABEL}>{t("cab.stocks.period")}</span>
+                    <input
+                      type="month"
+                      className={`${FIELD} num w-full`}
+                      value={period}
+                      onChange={(e) => e.target.value && setPeriod(e.target.value)}
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className={LABEL}>{t("cab.stocks.invdate")}</span>
+                    <input
+                      type="date"
+                      className={`${FIELD} num w-full`}
+                      value={invDate}
+                      onChange={(e) => e.target.value && setInvDate(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <ul className="mt-4 space-y-3">
+                  {[
+                    {
+                      key: "initial",
+                      label: t("cab.stocks.initial"),
+                      detail: inventairePrecedent ? moisLong(inventairePrecedent.period) : null,
+                      value: variation ? montant(variation.initial, locale) : "—",
+                      fort: false,
+                      tone: "",
+                    },
+                    {
+                      key: "entrees",
+                      label: t("cab.stocks.var.entrees"),
+                      detail: null,
+                      value: duMois ? montantSigne(duMois.entrees, locale) : "—",
+                      fort: false,
+                      tone: "",
+                    },
+                    {
+                      key: "sorties",
+                      label: t("cab.stocks.var.sorties"),
+                      detail: null,
+                      value: duMois ? montant(duMois.sorties, locale) : "—",
+                      fort: false,
+                      tone: "",
+                    },
+                    {
+                      key: "final",
+                      label: t("cab.stocks.final"),
+                      detail: null,
+                      value: variation ? montant(variation.final, locale) : "—",
+                      fort: true,
+                      tone: "",
+                    },
+                    {
+                      key: "variation",
+                      label: t("cab.stocks.variation"),
+                      detail: null,
+                      value: variation ? montantSigne(variation.variation, locale) : "—",
+                      fort: true,
+                      tone: variation ? signe(variation.variation) : "",
+                    },
+                  ].map((v) => (
+                    <li
+                      key={v.key}
+                      className={cn(
+                        "flex items-baseline justify-between gap-3 border-t border-border pt-3",
+                        v.fort ? "font-semibold" : "text-text-2",
+                        v.tone,
+                      )}
+                    >
+                      <span className="text-[12.5px]">
+                        {v.label}
+                        {v.detail ? (
+                          <span className="num ms-1.5 text-[10.5px] font-normal text-muted-foreground">
+                            {v.detail}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="num whitespace-nowrap text-[13px]">{v.value}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  disabled={
+                    !inventaireConstatable || periodeDejaConstatee || constaterInventaire.isPending
+                  }
+                  onClick={() => constaterInventaire.mutate()}
+                  className="mt-5 w-full border border-foreground bg-foreground px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-background transition-colors hover:border-marigold hover:bg-marigold hover:text-foreground disabled:opacity-40 disabled:hover:border-foreground disabled:hover:bg-foreground disabled:hover:text-background"
+                >
+                  {periodeDejaConstatee
+                    ? t("cab.stocks.invdone")
+                    : t("cab.stocks.constater.periode")}
+                </button>
+              </div>
+
+              {inventaireRows.length > 0 ? (
+                <div className="border border-border bg-card p-4">
+                  <p className={KICKER}>{t("cab.stocks.historique")}</p>
+                  <ul className="mt-3 divide-y divide-border">
+                    {inventaireRows.map((i) => (
+                      <li
+                        key={i.id}
+                        className="flex items-baseline justify-between gap-3 py-2 text-[12.5px]"
+                      >
+                        <span className="num">{moisLong(i.period)}</span>
+                        <span className="num text-end">
+                          <span className={cn("block", signe(i.variation))}>
+                            {montantSigne(i.variation, locale)}
+                          </span>
+                          <span className="block text-[10.5px] text-muted-foreground">
+                            {montant(i.initial, locale)} → {montant(i.final, locale)}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </aside>
+          </div>
+
+          {/* ---- les articles du client */}
+          <SectionRepliable
+            titre={t("cab.stocks.items")}
+            ouvert={articlesOuvert}
+            onBascule={() => setArticlesOuvert((o) => !o)}
+            resume={t("cab.stocks.articles.count", { count: itemRows.length })}
+          >
             <InkTable
               caption={t("cab.stocks.items")}
               head={[
@@ -512,23 +970,27 @@ function CabinetStocks() {
             >
               {itemRows.map((i) => (
                 <InkTableRow key={i.id}>
-                  <InkCell numeric>{i.reference}</InkCell>
-                  <InkCell>{i.designation}</InkCell>
+                  <InkCell numeric className={i.id === item.id ? "font-semibold" : ""}>
+                    {i.reference}
+                  </InkCell>
+                  <InkCell className={i.id === item.id ? "font-semibold" : ""}>
+                    {i.designation}
+                  </InkCell>
                   <InkCell>{i.unite}</InkCell>
                   <InkCell>{t(`cab.stocks.method.${i.methode}`)}</InkCell>
                   <InkCell>
-                    <span className="flex gap-3">
+                    <span className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setItemId(i.id)}
-                        className="text-[11px] uppercase tracking-wide underline"
+                        className="border border-border px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
                       >
                         {t("cab.stocks.open")}
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm(fromItem(i))}
-                        className="text-[11px] uppercase tracking-wide underline"
+                        className="border border-border px-2 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
                       >
                         {t("cab.stocks.edit")}
                       </button>
@@ -537,308 +999,158 @@ function CabinetStocks() {
                 </InkTableRow>
               ))}
             </InkTable>
-          )}
+          </SectionRepliable>
 
-          {item ? (
-            <>
-              <section className="space-y-3">
-                <SectionTitle>
-                  {t("cab.stocks.mouvements")} — {item.designation}
-                </SectionTitle>
-
-                <form
-                  className="grid gap-3 border border-border p-4 sm:grid-cols-2 lg:grid-cols-6"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    addMouvement.mutate(mouvement);
-                  }}
+          {/* ---- la dépréciation */}
+          <SectionRepliable
+            titre={t("cab.stocks.depreciation")}
+            ouvert={depOuvert}
+            onBascule={() => setDepOuvert((o) => !o)}
+            resume={
+              <span className="num">
+                {t("cab.stocks.cumul")} : {montant(cumulDepreciation, locale)}
+              </span>
+            }
+          >
+            <div className="space-y-4 border border-border bg-card p-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <label className="space-y-1">
+                  <span className={LABEL}>{t("cab.stocks.date")}</span>
+                  <input
+                    type="date"
+                    className={`${FIELD} num w-full`}
+                    value={depAt}
+                    onChange={(e) => e.target.value && setDepAt(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className={LABEL}>{t("cab.stocks.vnr")}</span>
+                  <input
+                    inputMode="decimal"
+                    className={`${FIELD} num w-full`}
+                    value={valeurNette}
+                    onChange={(e) => setValeurNette(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-1 lg:col-span-2">
+                  <span className={LABEL}>{t("cab.stocks.note")}</span>
+                  <input
+                    className={`${FIELD} w-full`}
+                    value={depNote}
+                    onChange={(e) => setDepNote(e.target.value)}
+                  />
+                </label>
+              </div>
+              <ul className="grid gap-x-6 gap-y-2 text-[12.5px] sm:grid-cols-2">
+                <li className="flex items-baseline justify-between gap-3 border-t border-border pt-2 text-text-2">
+                  <span>{t("cab.stocks.cost")}</span>
+                  <span className="num">
+                    {coutAuJour !== null ? montant(coutAuJour, locale) : "—"}
+                  </span>
+                </li>
+                <li className="flex items-baseline justify-between gap-3 border-t border-border pt-2 text-text-2">
+                  <span>{t("cab.stocks.cumul")}</span>
+                  <span className="num">{montant(cumulDepreciation, locale)}</span>
+                </li>
+                <li
+                  className={cn(
+                    "flex items-baseline justify-between gap-3 border-t border-border pt-2 font-semibold",
+                    depreciation ? signe(depreciation.mouvement) : "",
+                  )}
                 >
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.sens")}</span>
-                    <select
-                      className={`${FIELD} w-full`}
-                      value={mouvement.sens}
-                      onChange={(e) =>
-                        setMouvement({
-                          ...mouvement,
-                          sens: e.target.value as MouvementForm["sens"],
-                        })
-                      }
-                    >
-                      <option value="entree">{t("cab.stocks.sens.entree")}</option>
-                      <option value="sortie">{t("cab.stocks.sens.sortie")}</option>
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.date")}</span>
-                    <input
-                      type="date"
-                      className={`${FIELD} num w-full`}
-                      value={mouvement.at}
-                      required
-                      onChange={(e) => setMouvement({ ...mouvement, at: e.target.value })}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.qty")}</span>
-                    <input
-                      inputMode="decimal"
-                      className={`${FIELD} num w-full`}
-                      value={mouvement.quantite}
-                      required
-                      onChange={(e) => setMouvement({ ...mouvement, quantite: e.target.value })}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.cu")}</span>
-                    <input
-                      inputMode="decimal"
-                      className={`${FIELD} num w-full`}
-                      value={mouvement.coutUnitaire}
-                      disabled={mouvement.sens === "sortie"}
-                      required={mouvement.sens === "entree"}
-                      onChange={(e) => setMouvement({ ...mouvement, coutUnitaire: e.target.value })}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.ref")}</span>
-                    <input
-                      className={`${FIELD} num w-full`}
-                      value={mouvement.reference}
-                      onChange={(e) => setMouvement({ ...mouvement, reference: e.target.value })}
-                    />
-                  </label>
-                  <div className="flex items-end">
-                    <ActionButton type="submit" disabled={addMouvement.isPending}>
-                      {t("cab.stocks.addmouv")}
-                    </ActionButton>
-                  </div>
-                </form>
+                  <span>{t("cab.stocks.movement")}</span>
+                  <span className="num">
+                    {depreciation ? montantSigne(depreciation.mouvement, locale) : "—"}
+                  </span>
+                </li>
+                <li className="flex items-baseline justify-between gap-3 border-t border-border pt-2 font-semibold">
+                  <span>{t("cab.stocks.cumulafter")}</span>
+                  <span className="num">
+                    {depreciation ? montant(depreciation.cumul_apres, locale) : "—"}
+                  </span>
+                </li>
+              </ul>
+              <ActionButton
+                variant="ink"
+                disabled={!depreciationConstatable || constaterDepreciation.isPending}
+                onClick={() => constaterDepreciation.mutate()}
+              >
+                {depreciation && Number(depreciation.mouvement) < 0
+                  ? t("cab.stocks.reprise")
+                  : t("cab.stocks.constater")}
+              </ActionButton>
+            </div>
 
-                {mouvements.isPending ? (
-                  <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-                ) : !valo || valo.lignes.length === 0 ? (
-                  <EmptyState>{t("cab.stocks.nomouv")}</EmptyState>
-                ) : (
-                  <>
+            {depreciationRows.length > 0 ? (
+              <InkTable
+                caption={t("cab.stocks.depreciation")}
+                head={[
+                  t("cab.stocks.date"),
+                  t("cab.stocks.cost"),
+                  t("cab.stocks.vnr"),
+                  t("cab.stocks.movement"),
+                  t("cab.stocks.cumul"),
+                  t("cab.stocks.note"),
+                ]}
+              >
+                {depreciationRows.map((d) => (
+                  <InkTableRow key={d.id}>
+                    <InkCell numeric>{dateLisible(d.at)}</InkCell>
+                    <InkCell numeric>{montant(d.valeurStock, locale)}</InkCell>
+                    <InkCell numeric>{montant(d.valeurNette, locale)}</InkCell>
+                    <InkCell numeric className={signe(d.mouvement)}>
+                      {montantSigne(d.mouvement, locale)}
+                    </InkCell>
+                    <InkCell numeric>{montant(d.cumul, locale)}</InkCell>
+                    <InkCell>{d.note ?? "—"}</InkCell>
+                  </InkTableRow>
+                ))}
+              </InkTable>
+            ) : null}
+          </SectionRepliable>
+
+          {/* ---- les écritures produites */}
+          {ecritureIds.length > 0 ? (
+            <SectionRepliable
+              titre={t("cab.stocks.ecritures")}
+              ouvert={ecrituresOuvert}
+              onBascule={() => setEcrituresOuvert((o) => !o)}
+              resume={t("cab.stocks.ecritures.count", { count: ecritureIds.length })}
+            >
+              {ecritures.isPending ? (
+                <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+              ) : (
+                (ecritures.data ?? []).map((e) => (
+                  <div key={e.id} className="space-y-2 border border-border bg-card p-3">
+                    <p className="text-[12px]">
+                      <span className="num">{dateLisible(e.dateEcriture)}</span>
+                      <span className="num ms-2 bg-foreground px-1 text-[9px] text-background">
+                        {e.journal}
+                      </span>
+                      <span className="ms-2">{e.libelle}</span>
+                    </p>
                     <InkTable
-                      caption={t("cab.stocks.mouvements")}
+                      caption={e.libelle}
                       head={[
-                        t("cab.stocks.date"),
-                        t("cab.stocks.sens"),
-                        t("cab.stocks.qty"),
-                        t("cab.stocks.movement"),
-                        t("cab.stocks.qtyafter"),
-                        t("cab.stocks.valafter"),
-                        t("cab.stocks.cump"),
+                        t("cab.stocks.account"),
+                        t("cab.stocks.designation"),
+                        t("cab.stocks.debit"),
+                        t("cab.stocks.credit"),
                       ]}
                     >
-                      {valo.lignes.map((l, index) => (
-                        <InkTableRow key={`${l.at}-${index}`}>
-                          <InkCell numeric>{l.at}</InkCell>
-                          <InkCell>{t(`cab.stocks.sens.${l.sens}`)}</InkCell>
-                          <InkCell numeric>{l.quantite}</InkCell>
-                          <InkCell numeric>{l.valeur_mouvement}</InkCell>
-                          <InkCell numeric>{l.quantite_apres}</InkCell>
-                          <InkCell numeric>{l.valeur_apres}</InkCell>
-                          <InkCell numeric>{l.cump}</InkCell>
+                      {e.lines.map((l) => (
+                        <InkTableRow key={`${e.id}-${l.ordinal}`}>
+                          <InkCell numeric>{l.accountCode}</InkCell>
+                          <InkCell>{l.libelle}</InkCell>
+                          <InkCell numeric>{montant(l.debit, locale)}</InkCell>
+                          <InkCell numeric>{montant(l.credit, locale)}</InkCell>
                         </InkTableRow>
                       ))}
                     </InkTable>
-                    <p className="num text-[11px] text-muted-foreground">
-                      {t("cab.stocks.totals", {
-                        quantite: valo.totals.quantite,
-                        valeur: valo.totals.valeur,
-                        currency: valo.currency,
-                      })}
-                    </p>
-                  </>
-                )}
-              </section>
-
-              {/* ------------------------------------------- variation d'inventaire */}
-              <section className="space-y-3 border border-border p-4">
-                <SectionTitle>{t("cab.stocks.inventaire")}</SectionTitle>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.period")}</span>
-                    <input
-                      type="month"
-                      className={`${FIELD} num w-full`}
-                      value={period}
-                      onChange={(e) => setPeriod(e.target.value)}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.invdate")}</span>
-                    <input
-                      type="date"
-                      className={`${FIELD} num w-full`}
-                      value={invDate}
-                      onChange={(e) => setInvDate(e.target.value)}
-                    />
-                  </label>
-                  <p className="num self-end text-[12px]">
-                    {t("cab.stocks.initial")} : {variation?.initial ?? "—"}
-                  </p>
-                  <p className="num self-end text-[12px]">
-                    {t("cab.stocks.final")} : {variation?.final ?? "—"}
-                  </p>
-                </div>
-                <p className="num text-[13px]">
-                  {t("cab.stocks.variation")} : {variation?.variation ?? "—"}{" "}
-                  {variation?.currency ?? ""}
-                </p>
-                <ActionButton
-                  disabled={
-                    !variation ||
-                    variation.variation.replace(/[-0.]/g, "") === "" ||
-                    periodeDejaConstatee ||
-                    constaterInventaire.isPending
-                  }
-                  onClick={() => constaterInventaire.mutate()}
-                >
-                  {periodeDejaConstatee ? t("cab.stocks.invdone") : t("cab.stocks.constater")}
-                </ActionButton>
-
-                {inventaireRows.length > 0 ? (
-                  <InkTable
-                    caption={t("cab.stocks.inventaire")}
-                    head={[
-                      t("cab.stocks.period"),
-                      t("cab.stocks.initial"),
-                      t("cab.stocks.final"),
-                      t("cab.stocks.variation"),
-                    ]}
-                  >
-                    {inventaireRows.map((i) => (
-                      <InkTableRow key={i.id}>
-                        <InkCell numeric>{i.period}</InkCell>
-                        <InkCell numeric>{i.initial}</InkCell>
-                        <InkCell numeric>{i.final}</InkCell>
-                        <InkCell numeric>{i.variation}</InkCell>
-                      </InkTableRow>
-                    ))}
-                  </InkTable>
-                ) : null}
-              </section>
-
-              {/* -------------------------------------------------- dépréciation */}
-              <section className="space-y-3 border border-border p-4">
-                <SectionTitle>{t("cab.stocks.depreciation")}</SectionTitle>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.date")}</span>
-                    <input
-                      type="date"
-                      className={`${FIELD} num w-full`}
-                      value={depAt}
-                      onChange={(e) => setDepAt(e.target.value)}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className={LABEL}>{t("cab.stocks.vnr")}</span>
-                    <input
-                      inputMode="decimal"
-                      className={`${FIELD} num w-full`}
-                      value={valeurNette}
-                      onChange={(e) => setValeurNette(e.target.value)}
-                    />
-                  </label>
-                  <label className="space-y-1 lg:col-span-2">
-                    <span className={LABEL}>{t("cab.stocks.note")}</span>
-                    <input
-                      className={`${FIELD} w-full`}
-                      value={depNote}
-                      onChange={(e) => setDepNote(e.target.value)}
-                    />
-                  </label>
-                </div>
-                <p className="num text-[12px] text-muted-foreground">
-                  {t("cab.stocks.cost")} : {valo?.totals.valeur ?? "—"} · {t("cab.stocks.cumul")} :{" "}
-                  {cumulDepreciation}
-                </p>
-                {depreciation ? (
-                  <p className="num text-[13px]">
-                    {t("cab.stocks.movement")} : {depreciation.mouvement} ·{" "}
-                    {t("cab.stocks.cumulafter")} : {depreciation.cumul_apres}
-                  </p>
-                ) : null}
-                <ActionButton
-                  disabled={
-                    !depreciation ||
-                    Number(depreciation.mouvement) === 0 ||
-                    constaterDepreciation.isPending
-                  }
-                  onClick={() => constaterDepreciation.mutate()}
-                >
-                  {depreciation && Number(depreciation.mouvement) < 0
-                    ? t("cab.stocks.reprise")
-                    : t("cab.stocks.constater")}
-                </ActionButton>
-
-                {depreciationRows.length > 0 ? (
-                  <InkTable
-                    caption={t("cab.stocks.depreciation")}
-                    head={[
-                      t("cab.stocks.date"),
-                      t("cab.stocks.cost"),
-                      t("cab.stocks.vnr"),
-                      t("cab.stocks.movement"),
-                      t("cab.stocks.cumul"),
-                      t("cab.stocks.note"),
-                    ]}
-                  >
-                    {depreciationRows.map((d) => (
-                      <InkTableRow key={d.id}>
-                        <InkCell numeric>{d.at}</InkCell>
-                        <InkCell numeric>{d.valeurStock}</InkCell>
-                        <InkCell numeric>{d.valeurNette}</InkCell>
-                        <InkCell numeric>{d.mouvement}</InkCell>
-                        <InkCell numeric>{d.cumul}</InkCell>
-                        <InkCell>{d.note ?? "—"}</InkCell>
-                      </InkTableRow>
-                    ))}
-                  </InkTable>
-                ) : null}
-              </section>
-
-              {/* ------------------------------------------- écritures produites */}
-              {ecritureIds.length > 0 ? (
-                <section className="space-y-3">
-                  <SectionTitle>{t("cab.stocks.ecritures")}</SectionTitle>
-                  {ecritures.isPending ? (
-                    <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-                  ) : (
-                    (ecritures.data ?? []).map((e) => (
-                      <div key={e.id} className="space-y-2 border border-border p-3">
-                        <p className="num text-[12px]">
-                          {e.dateEcriture} · {e.journal} · {e.libelle}
-                        </p>
-                        <InkTable
-                          caption={e.libelle}
-                          head={[
-                            t("cab.stocks.account"),
-                            t("cab.stocks.designation"),
-                            t("cab.stocks.debit"),
-                            t("cab.stocks.credit"),
-                          ]}
-                        >
-                          {e.lines.map((l) => (
-                            <InkTableRow key={`${e.id}-${l.ordinal}`}>
-                              <InkCell numeric>{l.accountCode}</InkCell>
-                              <InkCell>{l.libelle}</InkCell>
-                              <InkCell numeric>{l.debit}</InkCell>
-                              <InkCell numeric>{l.credit}</InkCell>
-                            </InkTableRow>
-                          ))}
-                        </InkTable>
-                      </div>
-                    ))
-                  )}
-                </section>
-              ) : null}
-            </>
+                  </div>
+                ))
+              )}
+            </SectionRepliable>
           ) : null}
         </>
       )}

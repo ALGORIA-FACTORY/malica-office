@@ -32,7 +32,7 @@ import { pipeline } from "node:stream/promises";
 
 import type { Request, Response } from "express";
 
-import { sousIdentite } from "./db.ts";
+import { sousLAppelant } from "./cles-api.ts";
 
 /**
  * La racine du stockage, exigée au démarrage comme `JWT_SECRET`.
@@ -82,6 +82,23 @@ function cheminAbsolu(tenantId: string, pieceId: string): string {
   return resolu;
 }
 
+/**
+ * Effacer les octets d'une pièce supprimée.
+ *
+ * ============================================================== POURQUOI
+ *
+ * La base supprime la ligne ; le fichier, lui, reste sur le disque. Une photo
+ * qu'un dirigeant a demandé d'effacer et qui survit quelque part n'est pas une
+ * suppression — c'est une promesse non tenue, et sur un document d'entreprise
+ * elle se paie cher.
+ *
+ * Un fichier déjà absent n'est pas une erreur : la suppression est un état
+ * qu'on atteint, pas une opération qu'on compte.
+ */
+export async function effacerContenu(tenantId: string, pieceId: string): Promise<void> {
+  await rm(cheminAbsolu(tenantId, pieceId), { force: true });
+}
+
 interface LignePiece {
   id: string;
   tenant_id: string;
@@ -89,17 +106,18 @@ interface LignePiece {
 }
 
 /**
- * Demande la pièce à la base sous l'identité de l'appelant.
+ * Demande la pièce à la base sous l'identité de l'appelant — une session, ou
+ * une clé d'API du cabinet : les deux passent par la même RLS.
  *
  * Aucun filtre de tenant ici — c'est le point. Ce que ce `select` rend est
  * exactement ce que les politiques autorisent.
  */
 async function pieceAutorisee(
-  utilisateur: string,
+  req: Request,
   pieceId: string | undefined,
 ): Promise<LignePiece | null> {
   if (!pieceId || !UUID.test(pieceId)) return null;
-  return sousIdentite(utilisateur, async (db) => {
+  return sousLAppelant(req, async (db) => {
     const { rows } = await db.query<LignePiece>(
       `select id, tenant_id, content_type from pieces_v where id = $1`,
       [pieceId],
@@ -110,7 +128,7 @@ async function pieceAutorisee(
 
 /** Dépose les octets d'une pièce. Idempotent : redéposer remplace. */
 export async function deposerContenu(req: Request, res: Response): Promise<void> {
-  const piece = await pieceAutorisee(req.utilisateur!.id, req.params["id"]);
+  const piece = await pieceAutorisee(req, req.params["id"]);
   if (!piece) {
     res.status(404).json({ erreur: "pièce introuvable" });
     return;
@@ -137,7 +155,7 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
 
 /** Rend les octets d'une pièce, avec le type que porte la base. */
 export async function servirContenu(req: Request, res: Response): Promise<void> {
-  const piece = await pieceAutorisee(req.utilisateur!.id, req.params["id"]);
+  const piece = await pieceAutorisee(req, req.params["id"]);
   if (!piece) {
     res.status(404).json({ erreur: "pièce introuvable" });
     return;

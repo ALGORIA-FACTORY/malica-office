@@ -37,6 +37,8 @@ export class QwenError extends Error {
     message: string,
     readonly status: number,
     readonly retryable: boolean,
+    /** Ce que l'appelant peut faire : « tronque » se relit en bandes. */
+    readonly code: "tronque" | null = null,
   ) {
     super(message);
     this.name = "QwenError";
@@ -205,9 +207,30 @@ export async function lireAvecQwen(input: {
           },
         ],
       },
-      // La tâche intégrée qui rend le texte AVEC sa géométrie. Sans elle, le
-      // modèle ne renvoie qu'une transcription à plat, inutilisable ici.
-      parameters: { ocr_options: { task: "advanced_recognition" } },
+      parameters: {
+        // La tâche intégrée qui rend le texte AVEC sa géométrie. Sans elle, le
+        // modèle ne renvoie qu'une transcription à plat, inutilisable ici.
+        ocr_options: { task: "advanced_recognition" },
+        /*
+         * ============================================ LE PLAFOND DE SORTIE
+         *
+         * Il n'était pas fixé, donc DashScope appliquait le sien — bas. Une
+         * facture de fournisseur avec son tableau d'articles le dépassait, la
+         * réponse était coupée en plein relevé, et la lecture échouait :
+         *
+         *   « Qwen a tronqué le relevé (plafond de jetons atteint) »
+         *
+         * C'est le message qui est remonté du téléphone. Le relevé de position
+         * est verbeux par nature — chaque mot vient avec son rectangle —, et
+         * une pièce dense en produit beaucoup.
+         *
+         * Le garde-fou plus bas reste : un relevé tronqué produit des ordinaux
+         * qui ne désignent plus rien, et mieux vaut échouer que livrer un plan
+         * de tokens amputé sur lequel des montants seraient cités de travers.
+         * Ce plafond ne le remplace pas, il le rend rare.
+         */
+        max_tokens: 8192,
+      },
     }),
     ...(input.signal ? { signal: input.signal } : {}),
   });
@@ -235,7 +258,12 @@ export async function lireAvecQwen(input: {
   if (choix?.finish_reason === "length") {
     // Un relevé tronqué produit des ordinaux qui ne désignent plus rien : mieux
     // vaut échouer que livrer un plan de tokens amputé.
-    throw new QwenError("Qwen a tronqué le relevé (plafond de jetons atteint)", 502, false);
+    throw new QwenError(
+      "Qwen a tronqué le relevé (plafond de jetons atteint)",
+      502,
+      false,
+      "tronque",
+    );
   }
 
   const bloc = choix?.message?.content?.[0];
