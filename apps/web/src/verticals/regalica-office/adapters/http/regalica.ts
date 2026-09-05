@@ -23,7 +23,8 @@ import type {
   ResultatRedaction,
 } from "@regalica/socle/ports/regalica";
 
-import { baseApi, ErreurApi } from "./rpc";
+import { transport } from "@/lib/transport";
+import { ErreurApi } from "@/lib/transport/erreurs";
 
 /**
  * Un appel à une route de Regalica. Le corps est un JSON, ou des octets tels
@@ -34,9 +35,8 @@ async function appelerRoute<T>(
   chemin: string,
   init: { method?: "GET" | "POST"; corps?: unknown; octets?: Blob } = {},
 ): Promise<T> {
-  const reponse = await fetch(`${baseApi()}/regalica${chemin}`, {
+  const reponse = await transport().appeler(`/regalica${chemin}`, {
     method: init.method ?? "POST",
-    credentials: "include",
     ...(init.octets
       ? { headers: init.octets.type ? { "Content-Type": init.octets.type } : {}, body: init.octets }
       : init.corps !== undefined

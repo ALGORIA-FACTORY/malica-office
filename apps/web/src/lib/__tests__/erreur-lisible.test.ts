@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { texteDeLErreur, vientDeNous } from "../erreur-lisible";
-import { ErreurApi } from "../../verticals/regalica-office/adapters/http/rpc";
+import { ErreurApi } from "../transport/erreurs";
 
 const DEFAUT = "Une erreur est survenue.";
 

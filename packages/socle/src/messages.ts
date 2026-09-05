@@ -2128,6 +2128,7 @@ const fr = {
   "scan.metrics": "netteté {sharp} · cadre {coverage}",
   "scan.autoclosed": "Fin de document détectée automatiquement.",
   "common.error": "Une erreur est survenue.",
+  "common.horsLigne": "Pas de connexion. Ce geste sera possible au retour du réseau.",
   "piece.incomplete":
     "J'ai lu la pièce, mais il me manque : {champs}. Complétez-la et je prépare l'écriture.",
   "piece.champ.date": "la date",
@@ -4234,6 +4235,7 @@ const en: Dict = {
   "scan.metrics": "sharpness {sharp} · frame {coverage}",
   "scan.autoclosed": "End of document detected automatically.",
   "common.error": "Something went wrong.",
+  "common.horsLigne": "No connection. This will be possible once the network is back.",
   "piece.incomplete":
     "I read the document, but I am missing: {champs}. Complete it and I will prepare the entry.",
   "piece.champ.date": "the date",
@@ -6302,6 +6304,7 @@ const ar: Dict = {
   "scan.metrics": "الوضوح {sharp} · الإطار {coverage}",
   "scan.autoclosed": "تم اكتشاف نهاية المستند تلقائيًا.",
   "common.error": "حدث خطأ.",
+  "common.horsLigne": "لا يوجد اتصال. سيكون هذا ممكنًا عند عودة الشبكة.",
   "piece.incomplete": "قرأت الوثيقة، لكن ينقصني: {champs}. أكملها وسأحضّر القيد.",
   "piece.champ.date": "التاريخ",
   "piece.date.duScan": "غير مقروء على الوثيقة — يُقترح يوم المسح",

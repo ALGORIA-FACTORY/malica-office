@@ -35,9 +35,12 @@
  * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le poste le
  * reçoit avec sa pile d'appels.
  */
-import { ErreurApi } from "../verticals/regalica-office/adapters/http/rpc";
+import { MESSAGES } from "@regalica/socle/messages";
+
+import { localeRangee } from "@/i18n";
 
 import { noterAuJournal } from "./journal-atelier";
+import { ErreurApi, ErreurReseau } from "./transport/erreurs";
 
 /** Une erreur écrite par nous, destinée à être lue par le client. */
 export function vientDeNous(raison: unknown): raison is Error {
@@ -52,6 +55,9 @@ export function vientDeNous(raison: unknown): raison is Error {
  */
 export function texteDeLErreur(raison: unknown, ou: string, defaut: string): string {
   if (vientDeNous(raison)) return raison.message;
+  // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
+  // le journal ne dirait rien qu'on ne sache déjà.
+  if (raison instanceof ErreurReseau) return MESSAGES[localeRangee()]["common.horsLigne"];
   noterAuJournal(ou, raison);
   return defaut;
 }

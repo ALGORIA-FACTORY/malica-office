@@ -12,8 +12,10 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { useApparence } from "@/components/regalica/apparence";
+import { GardeDeVersion } from "@/components/regalica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
+import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 /*
  * Comme la frontière d'erreur : ce composant se rend HORS du fournisseur de
@@ -221,6 +223,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
   // À la racine : le thème vaut pour toute l'application, cabinet compris, et
   // il survit à la navigation. Le poser sur l'écran des réglages ne l'aurait
   // tenu que le temps d'y rester.
@@ -231,11 +234,25 @@ function RootComponent() {
   // texte, et l on corrige a l aveugle.
   useEffect(() => installerJournalAtelier(), []);
 
+  // Le transport a vu la session finir — un jeton long refusé, deux 401 de
+  // suite. Ce qui était affiché appartenait à cette session : on l'oublie,
+  // et l'on revient à la porte.
+  useEffect(
+    () =>
+      ecouterLaDeconnexion(() => {
+        queryClient.clear();
+        void router.navigate({ to: "/auth", replace: true });
+      }),
+    [queryClient, router],
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <GardeDeVersion>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </GardeDeVersion>
       </I18nProvider>
     </QueryClientProvider>
   );

@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { resoudreApi } from "../rpc";
+import { resoudreApi } from "@/lib/transport/base";
 
 describe("en développement — le relais du serveur web", () => {
   it("appelle la même origine quand l'adresse déclarée est locale", () => {

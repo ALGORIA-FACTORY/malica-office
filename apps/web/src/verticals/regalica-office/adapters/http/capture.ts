@@ -27,7 +27,9 @@ import type {
   PieceLue,
   Token,
 } from "@regalica/socle/ports/repositories";
-import { appeler, baseApi, ErreurApi } from "./rpc";
+import { transport } from "@/lib/transport";
+import { ErreurApi } from "@/lib/transport/erreurs";
+import { appeler } from "./rpc";
 
 /**
  * Le même appel que le mandataire générique, typé.
@@ -75,10 +77,9 @@ export function creerCaptureHttp(): CaptureRepository {
         },
       ]);
 
-      const depot = await fetch(`${baseApi()}/pieces/${id}/contenu`, {
+      const depot = await transport().appeler(`/pieces/${id}/contenu`, {
         method: "POST",
         headers: input.file.type ? { "Content-Type": input.file.type } : {},
-        credentials: "include",
         body: input.file,
       });
       if (!depot.ok) {
@@ -101,13 +102,11 @@ export function creerCaptureHttp(): CaptureRepository {
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
 
-      // Les octets viennent par leur propre route, avec le cookie de session :
-      // une URL nue ne conviendrait pas — les pièces ne sont pas publiques, et
-      // un `<img src>` vers une autre origine n'emporte pas le cookie.
+      // Les octets viennent par leur propre route, avec la session : une URL
+      // nue ne conviendrait pas — les pièces ne sont pas publiques, et un
+      // `<img src>` vers une autre origine n'emporte ni cookie ni jeton.
       let contenu: ArrayBuffer | null = null;
-      const reponse = await fetch(`${baseApi()}/pieces/${pieceId}/contenu`, {
-        credentials: "include",
-      });
+      const reponse = await transport().appeler(`/pieces/${pieceId}/contenu`);
       if (reponse.ok) contenu = await reponse.arrayBuffer();
 
       return {

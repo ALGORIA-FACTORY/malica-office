@@ -23,6 +23,13 @@ import { defineConfig } from "vite";
 import { relaisApi } from "./relais-api";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+/**
+ * La version que le client déclare à l'API — celle du dépôt, une seule pour
+ * le site et pour la coque. C'est elle que `CLIENT_MIN_VERSION` compare.
+ */
+const VERSION = (
+  JSON.parse(readFileSync(join(RACINE, "package.json"), "utf8")) as { version: string }
+).version;
 const CERT = join(RACINE, ".certificats", "certificat.pem");
 const CLE = join(RACINE, ".certificats", "cle.pem");
 
@@ -53,6 +60,8 @@ const https =
     : undefined;
 
 export default defineConfig({
+  define: { "import.meta.env.VITE_VERSION_CLIENT": JSON.stringify(VERSION) },
+
   // L'ordre compte : Tailwind avant le compilateur de routes, nitro après lui.
   plugins: [
     // Avant tout le reste : le relais doit voir la requête avant la chaîne de

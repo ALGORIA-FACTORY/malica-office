@@ -41,6 +41,21 @@ function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }
 
+/**
+ * La langue que la personne a choisie, lue hors de React — pour ce qui parle
+ * avant le montage ou en dehors de l'arbre : une erreur réseau à traduire,
+ * l'écran de secours. Sans choix, ou sans stockage, le français.
+ */
+export function localeRangee(): Locale {
+  try {
+    const rangee = window.localStorage.getItem(STORAGE_KEY);
+    if (isLocale(rangee)) return rangee;
+  } catch {
+    // Stockage inaccessible — navigation privée, réglage du navigateur.
+  }
+  return DEFAULT_LOCALE;
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
