@@ -1,0 +1,209 @@
+# Regalica Office — l'application Android PME : architecture, stack, tests, pilote
+
+## Contexte
+
+La surface PME existe déjà en web : 13 routes (`apps/web/src/routes/_authenticated/pme*.tsx`, ~4 500 lignes), React 19 + TanStack Start SSR + TanStack Query + Tailwind 4, fidèles au prototype `docs/maquettes/regalica.html`. La coque Capacitor 8 est configurée (`capacitor.config.ts`, scanner ML Kit via `@capgo/capacitor-document-scanner`, pont abstrait dans `apps/web/src/capabilities/numerisation.ts`) mais jamais compilée : le poste n'a ni Java ni SDK Android. Rien n'est hébergé hors du poste. L'auth est un JWT de 12 h en cookie, sans rafraîchissement.
+
+Décisions prises avec l'utilisateur : capture **hors ligne obligatoire** ; hébergement sur **VPS géré par lui** ; distribution **Google Play, piste de test fermé** ; pilote **1 cabinet + 10 PME ou plus**.
+
+Objectif : une application Android intuitive et robuste, sans dupliquer l'interface, avec une architecture qui tient les règles R1–R10 de `AGENTS.md`, et un chemin de test et de pilote qui mène en production.
+
+## Les réponses courtes
+
+**Le stack** : pas de réécriture native. Le même `apps/web` produit deux formes : le site SSR (cabinet + PME web) et un **bundle SPA embarqué** dans la coque Capacitor 8 (Android d'abord, iOS plus tard sur le même code). Ce qui est natif : le scanner ML Kit, le stockage de la file hors ligne, le bouton retour, la barre d'état, le clavier, les mises à jour en vol (Capgo), les plantages (Sentry). Le serveur : Express + PostgreSQL 17 (RLS) derrière Caddy sur une seule origine par environnement, en Docker Compose sur Hetzner.
+
+**Pourquoi pas Kotlin/Compose, Flutter ou React Native** : ils dupliqueraient 4 500 lignes d'écrans, l'i18n FR/AR RTL et les ports du Socle, pour un développeur seul, alors que le seul composant que le web ne sait pas faire aussi bien (le cadrage) est déjà natif via ML Kit. Le gain de « ressenti natif » se fait par six chantiers précis (§4), pas par un second code.
+
+**Comment tester** : une pyramide qui part de l'existant (vitest, `node --test` contre Postgres, épreuves HTTP) et ajoute : contrat API↔app figé, épreuve hors ligne rejouant les envois idempotents, Playwright en viewport mobile FR + AR, Maestro sur émulateur Google APIs, Firebase Test Lab + deux téléphones réels (Infinix/Tecno, Redmi), une liste de contrôle manuelle par appareil, des budgets de performance vérifiés en CI.
+
+**Le pilote** : trois environnements (`staging` synthétique, `pilote` sur données réelles construit avec la rigueur de la production, puis `pilote` devient `production` par bascule de domaine). Alpha interne d'une semaine chez le cabinet, puis bêta fermée de 4 à 6 semaines en deux vagues de PME, métriques chiffrées et revue go/no-go.
+
+## Décisions d'architecture
+
+| Sujet | Décision |
+|---|---|
+| Fonctions serveur (15 `createServerFn` dans `apps/web/src/lib/*.functions.ts`) | **Migrées dans l'API Express** comme dépôts `/rpc` (`lecture`, `regalica`, `fiche`, `pv`, `briefing`, `conseil.repondre`). Le serveur web n'a plus aucun secret ni fonction serveur. |
+| Code partagé | **`packages/socle`** (`@regalica/socle`) : contrats, moteurs, ports, messages i18n, helpers purs. Le second consommateur (l'API) existe désormais, comme le README l'exigeait. R1 s'y applique tel quel. |
+| Build coque | Même `vite.config.ts` ; `--mode coque-staging|pilote|prod` active le mode `spa` de TanStack Start (shell prérendu → `apps/web/.output/public/index.html`). `capacitor.config.ts` passe de `server.url` à `webDir`. |
+| Auth sur l'appareil | Jeton d'accès (12 h) en mémoire ; **jeton de rafraîchissement** (30 j, rotation, révocable en base) dans `@capacitor/preferences` derrière une interface `CoffreJetons`. Bearer en natif (déjà accepté par `exigerIdentite`, `apps/api/src/app.ts:73-86`), cookie httpOnly inchangé sur le web. |
+| Transport | Un module `apps/web/src/lib/transport/` remplace les trois `fetch` épars (rpc, auth, capture) : en-tête `X-Regalica-Client`, Bearer si natif, 401 → rafraîchir (vol unique) → rejouer une fois, 426 → écran « mettez à jour », réseau ≠ serveur. |
+| File hors ligne | **Côté client**, persistée avant tout réseau : `@capacitor/filesystem` (Directory.Data, un `.pdf` + un `.json` par élément) en natif, IndexedDB (`idb`) sur le web et dans les tests. Rejeu en deux temps avec la même `idempotencyKey` (le serveur est déjà idempotent : `unique (tenant_id, idempotency_key)` + `ON CONFLICT DO UPDATE`, dépôt d'octets atomique). Lecture demandée automatiquement après dépôt. |
+| `sync.outbox` | Table jamais câblée : supprimée par migration (R9). |
+| Cache de lecture | `persistQueryClient` sur liste blanche de clés, `networkMode: "offlineFirst"`, mention « données du <date> » hors ligne. Les moteurs du Socle tournent déjà dans le navigateur sur des extraits gouvernés : le cache ne déplace aucun calcul (R3). |
+| Une origine par environnement | Caddy reproduit la liste `CHEMINS` de `apps/web/relais-api.ts:52-61` (`/rpc /moi /sante /pieces/* /auth/* /signalements` → api:3000 ; `/auth` exact et le reste → web:8080). Plus de CORS ni de domaine de cookie à gérer. |
+| Mises à jour | Capgo cloud (UE) pour tout changement web ; le magasin seulement pour un greffon natif, une permission, une montée de Capacitor. `notifyAppReady()` après le premier rendu de route réussi. |
+| Erreurs | Sentry (`@sentry/capacitor` + `@sentry/react`, région UE) avec `beforeSend` qui vide les corps de requête ; `POST /signalements` pour les signalements volontaires ; `/journal-atelier` reste réservé au développement. |
+
+**Alternatives écartées.** Garder les fonctions serveur et les appeler depuis la coque : URL relative à `window.location` cassable à chaque montée de version de Start, CSRF à affaiblir pour le seul client sans cookie, deux systèmes d'auth à tenir justes, deux processus dont dépend le téléphone, aucune épreuve possible par le harnais `/rpc`. Hybride : deux mécanismes permanents pour le même besoin. File hors ligne côté serveur (`sync.outbox`) : elle sert une synchronisation multi-appareils avec conflits, pas le besoin. IndexedDB en natif : soumis à l'éviction sur les téléphones à stockage plein, précisément ceux du marché.
+
+## Architecture cible
+
+```
+Téléphone (coque Capacitor, bundle SPA embarqué, https://localhost)
+  écrans PME ── office() ── adapters/http ── transport (Bearer, 401→rafraîchir, 426)
+                    │                            │
+                    └── vidage ── file hors ligne (Filesystem) ─┘
+                              (enregistrer → déposer → lecture.demander)
+                                        │ HTTPS
+Caddy (pilote.regalica.tn) ─┬─ /rpc /auth/* /pieces/* /moi /sante /signalements → api:3000
+                            └─ le reste (site SSR cabinet + PME web)             → web:8080
+api ── PostgreSQL 17 + pgvector (RLS) ── disque des pièces ── Qwen / DeepSeek (clés ici seulement)
+```
+
+## Lot 0 — dérisquer tout de suite (2 j + délais externes)
+
+Ce lot ne dépend de rien et ouvre le chemin critique (comptes, révision Play, 14 jours de test fermé).
+
+- Comptes et attentes longues, jour 1 : compte développeur Play (organisation Algoria Factory si D-U-N-S possible, sinon personnel — la règle « 12 testeurs pendant 14 jours » s'applique alors et le pilote la satisfait), domaine `.tn` (registrar agréé ATI) ou repli `regalica.app`, Hetzner (CX22 staging, CX32 + Volume 40 Go pilote, Storage Box BX11), Sentry UE, Capgo, compte de service Google Cloud invité dans Play Console.
+- Outillage : `winget install Google.AndroidStudio EclipseAdoptium.Temurin.21.JDK` (Capacitor 8 impose JDK 21, compileSdk 36, minSdk 24), `JAVA_HOME`, `ANDROID_HOME`, image système Google APIs x86_64 API 35 (ML Kit a besoin des services Google).
+- Dans le dépôt : `npm i -D @capacitor/cli@8 && npm i @capacitor/android@8`, `npx cap add android` (dossier `android/` commité), `.gitignore` complété (`android/app/build/`, `android/.gradle/`, `android/local.properties`, `android/keystore.properties`, `*.jks`).
+- `android/app/src/main/AndroidManifest.xml` : permission caméra, `uses-feature camera required=false`, `android:allowBackup="false"`.
+- **Coque v0** : APK de débogage avec la configuration `server.url` actuelle pointée sur `staging` dès que le lot 5 le sert. Elle valide sur de vrais appareils les quatre cas de `docs/coque-native.md` (ticket à bout de bras, facture de biais, carte d'identification fiscale, abandon sans erreur), les permissions et le pipeline Play interne — trois semaines avant que le hors ligne existe. Elle ne sort jamais du canal interne.
+
+## Lot 1 — `packages/socle` et fonctions serveur dans l'API (4,5 j)
+
+1. Créer `packages/socle/` (`"exports": { "./*": "./src/*.ts" }`, dépendances `decimal.js` + `zod` seulement) et y déplacer : `apps/web/src/verticals/regalica-office/socle/*` (contrats, domain, engines, juridictions), `ports/`, `use-cases/propose-ecriture.ts`, `apps/web/src/i18n/messages.ts` (données pures), `lib/conseil.ts` (`texte()`), `lib/exercice.ts`, `lib/somme-decimale.ts`, et leurs tests (`purity.test.ts`, `no-fiscal-literals.test.ts`, …). Racine : `"workspaces": ["apps/*", "packages/*"]`. Vérifier d'abord sur un seul import que `--experimental-strip-types` résout le paquet depuis `apps/api` (repli : `tsc --build` vers `dist/`).
+2. `apps/api/src/regalica/appel-local.ts` : `creerAppelLocal(db): AppelApi` qui réalise `rpc()` par `executerRpc(db, …)` en mémoire et `contenu()` par lecture du fichier sous RLS. Le type `AppelApi` (aujourd'hui `apps/web/src/lib/api.server.ts`) déménage ici.
+3. Déplacer les modules `.server.ts` sans changer une ligne de logique : `apps/web/src/lib/capture/*.server.ts` → `apps/api/src/regalica/lecture/` (dont `bandes.ts` avec `@napi-rs/canvas`, `lectures-en-cours.ts` qui devient enfin unique), `lib/regalica/*.server.ts` → `regalica/conseil/`, `lib/pv/rediger.server.ts` → `regalica/pv/`. Clés `QWEN_*`, `DEEPSEEK_*` passent dans `apps/api/.env` ; ajouter `DEEPSEEK_BASE_URL` (bouchons en CI). `@napi-rs/canvas` et `pdfjs-dist` deviennent dépendances de l'API ; retirer `optimizeDeps.exclude`/`ssr.external` de `vite.config.ts`.
+4. Nouveaux dépôts dans `apps/api/src/depots/` enregistrés dans `DEPOTS` de `apps/api/src/rpc.ts` : `lecture.lire` (attend), **`lecture.demander`** (lance sans attendre, rend `{ enCours: true }` — c'est ce que la file appelle), `lecture.etat` ; `regalica.*` ×6 ; `fiche.*` ×5 ; `conseil.repondre` ; `pv.rediger` ; `briefing.rediger`. Validation zod reprise des `.functions.ts`. Tests purs convertis à `node:test` (un seul lanceur par application).
+5. Côté web : nouveaux ports (`LectureRepository`, `RegalicaRepository`, `FicheRepository`, `PvRepository`, `BriefingRepository`) montés par `creerDepotHttp` dans `composition.ts` ; les six écrans quittent `useServerFn` ; suppression (R9) de `lib/*.functions.ts`, `lib/session-middleware.ts`, `lib/api.server.ts`, `src/start.ts`.
+6. Épreuve `outils/epreuves/lecture.mjs` : enregistrer, déposer, `lecture.demander` deux fois → une seule lecture, `fiche.regimes`. Première épreuve de la lecture citée par le harnais.
+
+Validable dans Chrome : l'application est fonctionnellement identique après ce lot.
+
+## Lot 2 — transport, jetons, API pour un client natif (4 j)
+
+**API (`apps/api/src/`)** :
+- `app.set("trust proxy", 1)` ; `CORS_ORIGINS` accepte `https://localhost` (origine WebView Android).
+- Migration `db/migrations/<horodatage>_les_jetons_de_rafraichissement.sql` : `auth.refresh_tokens (id, user_id, empreinte sha256, appareil, cree_le, expire_le, revoque_le)`. Routes `POST /auth/rafraichir` (rotation, 30 j) et `POST /auth/deconnexion` (révocation). `/auth/connexion` et `/auth/inscription` rendent `jetonRafraichissement` **seulement si** `X-Regalica-Client` commence par `coque-`.
+- `CLIENT_MIN_VERSION` → `426 Upgrade Required` ; `/sante/profonde` (select 1 sous `regalica_api`, fichier témoin dans `STOCKAGE_RACINE`, `{etat, version, schema}`) ; `express-rate-limit` sur `/auth/*` ; plafond 40 Mo sur `/pieces/:id/contenu` (aujourd'hui aucun) ; `POST /signalements` → table `app.signalements`.
+- Tests `node --test` : `auth-rafraichir.test.ts` (rotation, ancien jeton refusé, révocation), `version-client.test.ts`, `depots/lecture.test.ts`.
+
+**Web (`apps/web/src/lib/transport/`)** : `transport.ts` (`creerTransport({ base, natif, coffre, versionClient, fetch, surDeconnexion, surMiseAJourRequise })`), `jetons.ts` (`CoffreJetons` : `coffreMemoire()` web/tests, `coffrePreferences()` natif en import dynamique), `rafraichir.ts` (promesse partagée), `erreurs.ts` (`ErreurReseau`, `ErreurApi` déménagée depuis `rpc.ts`, `ErreurVersion`). `adapters/http/{rpc,auth,capture}.ts` réécrits dessus ; `session()` en natif part du coffre et rafraîchit en un aller-retour. `__root.tsx` rend `<MiseAJourRequise />` sur 426. `lib/erreur-lisible.ts:60` distingue enfin « Pas de connexion » de « une erreur est survenue ». `router.tsx` : `retry: 1`, `staleTime: 30_000`, `networkMode: "offlineFirst"`.
+
+Tests vitest : `lib/transport/__tests__/transport.test.ts` (Bearer seulement si natif ; 401 → rafraîchir → rejeu une fois ; deux 401 concurrents = un rafraîchissement ; 426 ; `/auth/*` jamais rafraîchi ; rejet réseau → `ErreurReseau`).
+
+Validable dans Chrome avec `VITE_CIBLE=coque` dans `.env.local` (force le chemin Bearer).
+
+## Lot 3 — la file hors ligne et ses écrans (4,5 j)
+
+- `apps/web/src/lib/hors-ligne/` : `depot.ts` (interface `DepotDeFile` : lister, ecrire, octets, supprimer, tailleTotale), `depot-idb.ts`, `depot-fichiers.ts` (natif), `file.ts` (fonction pure `transition(element, evenement)` sur les états `a_envoyer → enregistree → deposee → lecture_demandee | echec_definitif`, et `creerVidage()` : vol unique, FIFO, un élément à la fois, backoff `min(2^n s, 5 min)`, arrêt de la passe sur erreur réseau, `echec_definitif` sur 4xx lisible, plafond 50 éléments / 250 Mo → `FilePleine`).
+- Scinder `CaptureRepository.register` (`adapters/http/capture.ts:67-91`) en `enregistrer(meta)` et `deposerOctets(pieceId, blob, type)` : le vidage reprend entre les deux. La clé = `idempotencyKey` générée **avant** la persistance.
+- `hooks/use-file-d-attente.ts` (déclencheurs : après dépôt, reprise de l'application, changement de réseau, ouverture de l'espace, bouton Réessayer, minuteur 60 s tant qu'il reste des éléments) et `hooks/use-reseau.ts`.
+- Écrans : `pme.tsx` — la mutation de capture devient `vidage.deposer` puis `vidage.attendre(cle, 4 s)` (en ligne : navigation vers la pièce comme aujourd'hui ; hors ligne : vers la liste) ; `pme.list.tsx` — les éléments locaux fusionnés en tête (« À envoyer », « Envoi… », « Échec — réessayer », feuille locale avec aperçu et Réessayer/Abandonner) ; `pme.index.tsx` — pastille « à envoyer : N » ; `components/regalica/bandeau-hors-ligne.tsx` ; `pme.piece.$pieceId.tsx` — la pièce fraîche arrive en lecture déjà demandée, plus de bouton « Lire » à presser (il reste pour l'import PDF et après un échec) + bouton « Continuer en arrière-plan » sur « Je lis ».
+- Les autres mutations (confirmer, transmettre, préciser) ne sont pas mises en file en v1 : hors ligne, elles disent « ce geste sera possible au retour du réseau ».
+- `lib/requetes-persistantes.ts` : persistance idb sur liste blanche (`my-organizations`, `entities`, `ref-pack`, `pieces`, `pieces-lues`, `tax-rates`, `ref-data`, `mon-cabinet`, `echeances`, `accueil-extraits`, `charges-*`, `notifications`), `buster = VITE_VERSION_CLIENT`.
+- Migration `db/migrations/<horodatage>_suppression_sync_outbox.sql`.
+
+Tests vitest : `file.test.ts` (chaque événement depuis chaque état), `vidage.test.ts` (rejeu après « mort » entre `enregistree` et `deposee` = même pieceId ; arrêt et backoff ; vol unique ; purge ; plafond), `depot-idb.test.ts` (`fake-indexeddb`). Épreuve `outils/epreuves/hors-ligne.mjs` contre la vraie API : même clé deux fois → même id, dépôt double → un seul fichier, `lecture.demander` puis `etat`.
+
+Validable dans Chrome : DevTools « Offline », capturer, revenir en ligne, voir partir.
+
+## Lot 4 — le bundle embarqué et le ressenti natif (5,5 j)
+
+**Build** : `vite.config.ts` en `defineConfig(({ mode }) => …)` : `mode.startsWith("coque-")` retire `relaisApi()` et active `tanstackStart({ spa: { enabled: true, maskPath: "/", prerender: { outputPath: "/index" } } })`. Fichiers suivis `apps/web/.env.coque-staging|pilote|prod` (`VITE_CIBLE=coque`, `VITE_API_URL`, `VITE_CANAL_OTA`, `VITE_SENTRY_DSN` — des adresses publiques, pas des secrets). `VITE_VERSION_CLIENT` injectée par `define`. Scripts : `build:coque:<env>` dans `apps/web`, `coque:sync`, `coque:ouvrir`, `ota:pilote` à la racine. `capacitor.config.ts` : `server.url` supprimé, `webDir` réel, `plugins.Keyboard.resize = "body"`, `plugins.CapacitorUpdater`. `capabilities/coque.ts` : `CIBLE_COQUE` (compile-time) et `coque(): PontCoque` (runtime, imports dynamiques de `@capacitor/app|network|filesystem|preferences|status-bar|splash-screen|keyboard`, `pontNavigateur()` pour le web — même patron que `numerisation.ts`).
+
+**Les six chantiers du ressenti natif** (audit des écrans, P0) :
+1. **Voie native sans recadrage** : `files.scanPages(pages, { dejaCadrees: true })` fait sauter à `preparePage` (`capabilities/scanner.ts:1113-1180`) le cadrage, `affinerLesCoins`, `warp` et surtout l'appel à scanic qui télécharge un modèle ONNX depuis un CDN sur le fil principal — 5 à 15 s d'écran figé pour cinq pages sur un téléphone à 3 Go. Ne reste que redimension + normalisation + JPEG.
+2. **Écran d'attente de capture** « Je prépare vos pages · n/N » piloté par `capture.isPending` dans `pme.tsx`, et l'erreur de capture affichée dans la coque (aujourd'hui seulement sur l'accueil, `pme.index.tsx:367`).
+3. **Bouton retour** : listener `@capacitor/app` dans `__root.tsx` ; pile de superpositions dans `pme-context.tsx` (chat Regalica, visionneuse, détail des lignes, scanner, confirmation de suppression — toutes de l'état local que le retour traverse aujourd'hui) ; `replace: true` dans `auth.tsx:71`, `office.tsx:57-58`, `pme.index.tsx:88` (sans quoi retour depuis l'accueil boucle vers `/office` → `/auth`) ; `exitApp` seulement sur `/pme`.
+4. **Zone sûre edge-to-edge** (Android 15 l'impose) : `viewport-fit=cover` (`__root.tsx:172`), `env(safe-area-inset-bottom)` sur la nav `fixed bottom-0` (`pme.tsx:207`) et le `pb-20` (`pme.tsx:157`), inset haut sur le header sticky et les `fixed inset-0` ; `StatusBar` selon le thème ; script inline pré-hydratation pour la classe `.dark` (flash blanc au lancement) et `lang`/`dir`.
+5. **Locale et polices** : `I18nProvider` lit `localStorage` dans l'initialiseur d'état (plus de flash FR) ; polices `@fontsource/inter`, `ibm-plex-mono`, `noto-kufi-arabic` embarquées **pour le web aussi**, et la police arabe enfin assignée par `:lang(ar)` (elle est chargée mais jamais utilisée aujourd'hui) ; dates en `ar` avec `-u-nu-latn` pour cohérence avec les montants.
+6. **Toucher** : zones tactiles ≥ 44 px sans changer le dessin (en-tête, onglets, filtres, « source », « Retour », « Annuler »), `user-select: none` hors `input`, `overscroll-behavior: contain` sur les conteneurs défilants, `CameraScanner` en import paresseux (jamais chargé dans la coque).
+
+**Capgo et Sentry** : `CapacitorUpdater.setChannel(VITE_CANAL_OTA)`, `notifyAppReady()` et `SplashScreen.hide()` au premier `onResolved` du routeur ; `lib/telemetrie.ts` (`release = VITE_VERSION_CLIENT`, `sendDefaultPii: false`, `beforeSend` vide `request.data`, fils d'Ariane fetch réduits à url + statut, tags `client`, `bundle`, `tenant` uuid) ; test vitest sur `beforeSend`. Bouton « Signaler un problème » dans `pme.reglages.tsx` → `/signalements`.
+
+Reporté (dit explicitement) : app links pour l'invitation, verrou biométrique, Web Worker pour le cadrage web, découpage de `pme.piece.$pieceId.tsx` (1 149 lignes, un seul composant, `Field`/`Amount` morts aux lignes 1103-1149).
+
+Premier APK réel à la fin de ce lot, sur émulateur puis sur un Infinix/Tecno.
+
+## Lot 5 — infrastructure staging et pilote (7 j)
+
+- `infra/compose.yml` : `caddy:2.9` (TLS Let's Encrypt, `request_body max_size 40MB`, HSTS), `web` et `api` (images `node:22-bookworm-slim` — glibc pour `@napi-rs/canvas` —, construites par `infra/web.Dockerfile` et `infra/api.Dockerfile`, publiées sur GHCR étiquetées par SHA et version), `pgvector/pgvector:pg17` (jamais exposé), `migrer` (one-shot avant `api`/`web`), `sauvegarde`. `infra/caddy/Caddyfile` avec la liste de chemins de `relais-api.ts` ; test `infra/caddy/Caddyfile.test.mjs` qui échoue si les deux listes divergent.
+- `db/migrer.mjs` : table `app.migrations (nom, sha256, applique_le)`, joue les fichiers absents dans l'ordre, une transaction chacun, refuse un fichier déjà appliqué dont le sha a changé ; premier passage joue `db/local/00_compat_supabase.sql` et pose le mot de passe de `regalica_api`. `ci.yml` bascule dessus (un seul chemin de montage du schéma). Signaler au passage les quatre paires d'horodatages en collision dans `db/migrations/` (ordre alphabétique déterministe mais fragile).
+- `infra/provisionner.sh` (docker, ufw, fail2ban, utilisateur `regalica`, `/srv/regalica/{.env,pieces,postgres,caddy,sauvegardes}`) ; `infra/deployer.sh <version>` (pull, migrer, up, sonde `/sante/profonde`) ; clé SSH de déploiement limitée par `command=`. Workflow de déploiement : `staging` à chaque fusion sur `main`, `pilote` sur étiquette `v0.x.y` avec confirmation.
+- Sauvegardes : `pg_dump -Fc` toutes les 6 h + `restic` chiffré vers la Storage Box (autre site), rétention 24 h / 14 j / 8 sem / 12 mois, `restic check` mensuel ; `infra/sauvegarde/restaurer.sh` ; **répétition de restauration avant l'alpha puis mensuelle**, RTO consigné dans `docs/exploitation.md`. PITR (pgBackRest) noté comme seuil de décision après le pilote.
+- Uptime Kuma (ou UptimeRobot) sur `/sante/profonde` et `/`, alerte courriel + Telegram. Secrets générés par `openssl rand -base64 48`, dans le coffre ; rotation de `JWT_SECRET` documentée (invalide tous les jetons, hors jours d'échéance).
+- Résidence des données, à dire tôt : loi 2004-63 / INPDP ; sous-traitants nommés (Hetzner DE, Model Studio SG, DeepSeek, Sentry UE, Capgo UE, Google Play) dans la convention de pilote ; `infra/` est portable vers un hébergeur tunisien si un cabinet l'exige, mais le flux OCR/LLM restera étranger.
+
+## Lot 6 — pipeline Android, Play, OTA (6,5 j)
+
+- `android/app/build.gradle` : saveurs `pilote` (nom « Regalica (pilote) », icône badgée) et `prod`, **un seul `applicationId`** `tn.algoria.regalica` (la règle des 12 testeurs s'applique à l'application qui ira en production). `versionName` = `package.json`.version, `versionCode` = `GITHUB_RUN_NUMBER`, passés par `-P`. Clé d'envoi `regalica-upload.jks` (Play App Signing garde la clé de signature), `android/keystore.properties` ignoré, copie chiffrée hors ligne.
+- `.github/workflows/android.yml` (étiquette `android-v*` ou `workflow_dispatch` saveur/piste) : setup-node 22, setup-java temurin 21, gradle cache, `build:coque:<saveur>`, `cap sync`, `bundle<Saveur>Release`, artefact AAB + `mapping.txt`, `r0adkll/upload-google-play` vers la piste choisie avec `whatsnew-fr-FR` / `whatsnew-ar`. Premier AAB envoyé à la main (l'API refuse de créer la première version).
+- Play Console : fiche FR + AR, politique de confidentialité publiée, compte de démonstration **sur staging**, formulaire sécurité des données (nom, courriel, documents financiers, photos, journaux de plantage ; chiffrés en transit ; suppression sur demande), classification, test fermé « Pilote » avec liste de courriels (≥ 14 inscrits pour la marge), API cible 36.
+- `.github/workflows/ota.yml` (étiquette `web-v*`) : `build:coque:pilote` puis `capgo bundle upload --channel pilote`. Politique : OTA pour le web, magasin pour le natif. Retour arrière en un clic par canal.
+
+## Lot 7 — la pyramide de tests (9 j)
+
+| Niveau | Quoi | Où |
+|---|---|---|
+| Unitaire | l'existant (46 fichiers vitest, 15 dans le socle) + file, transport, locale, `beforeSend`, `coque` | `__tests__/` voisins ; `packages/socle/__tests__/` |
+| API | l'existant (`node --test` contre Postgres) + rafraîchissement, 426, `lecture.demander`, contrat | `apps/api/src/*.test.ts` |
+| Contrat | `outils/contrat-rpc.mjs --ecrire` → `contrat/rpc.json` (dépôts, méthodes, arités) ; test API à la dérive, test web que chaque port existe dans le contrat | `contrat/`, `apps/api/src/contrat.test.ts` |
+| Épreuves HTTP | l'existant (`epreuve-bout-en-bout.mjs`, `epreuves/*.mjs`) **enfin lancé en CI** + `lecture.mjs`, `hors-ligne.mjs` | job `epreuves` de `ci.yml` (api + web construit + `db/dev/jeu_dessai.mjs` + bouchons `outils/bouchons/{qwen,deepseek}.mjs`) |
+| Navigateur | Playwright, projets `pme-android-fr` (Pixel 7), `pme-android-ar` (RTL, captures de référence), `cabinet-bureau-fr` ; parcours connexion → capture par fichier synthétique → lecture → vérification → transmission → file du cabinet | `apps/web/e2e/`, `.github/workflows/e2e.yml` |
+| Émulateur | Maestro : connexion, capture depuis fichier, **annuler le scanner ML Kit sans erreur**, arabe RTL, mode avion (3 pièces puis drainage < 60 s), application tuée pendant l'envoi (aucun doublon, sha256 identique) | `android/maestro/`, `.github/workflows/android-e2e.yml` (`android-emulator-runner`, Google APIs API 34, saveur `emulateur` → `http://10.0.2.2:8080`) |
+| Appareils | Firebase Test Lab en Robo (A15, A54, Redmi) hebdomadaire ; **deux téléphones achetés** (Tecno Spark ou Infinix Hot, Redmi 13C) ; un Huawei emprunté (sans services Google → repli sur le cadrage navigateur) ; liste de contrôle `docs/protocole-appareils.md` (les quatre cas, permission refusée puis accordée, sombre, RTL, rotation, retour à chaque écran, disque faible, réseau lent, économiseur de batterie, mode avion, tué pendant l'envoi, police 130 %) | `docs/pilote/appareils.md` |
+| Budgets | démarrage à froid < 2 s (A15) / < 3,5 s (Tecno) ; scanner → aperçu < 1,5 s (1 page) / < 4 s (5 pages) ; JS initial < 350 Ko gz (`outils/budget-bundle.mjs` en CI) ; AAB < 12 Mo ; OTA < 3 Mo ; envoi 600 Ko en 3G < 25 s avec reprise | CI + protocole |
+| CI | ajouter `knip` (R9 le promet, `ci.yml` ne le lance pas), `db/migrer.mjs` à la place de la boucle `psql` | `.github/workflows/ci.yml` |
+
+Ce que ML Kit lui-même n'aura jamais : un test automatisé de son écran (activité des services Google, scène caméra virtuelle fragile). Il est couvert par les appareils réels et par l'abandon en Maestro.
+
+## Lot 8 — le pilote (≈ 1,5 j/semaine pendant 6 à 8 semaines)
+
+| Phase | Durée | Qui | Sortie |
+|---|---|---|---|
+| 0 — Préparation | jusqu'au J0 | fondateur | `pilote` en ligne, restauration répétée, Sentry et Capgo branchés, convention signée, fiche Play en révision, kit prêt |
+| 1 — Alpha interne | 1 semaine | fondateur + expert + 2 collaborateurs, un dossier réel | 0 plantage sur 5 appareils, 30 pièces, 20 écritures validées |
+| 2 — Bêta fermée | 4 à 6 semaines | 10+ PME en **deux vagues** (5 puis 5+ ; la première corrige l'onboarding pour la seconde) | critères ci-dessous, 14 jours continus de test fermé |
+| 3 — Revue go/no-go | 1 semaine | fondateur, expert, 2 patrons | décision écrite, demande d'accès production, bascule `app.regalica.tn` |
+
+- `docs/pilote/kit-onboarding.md` : le cabinet invite (flux `collab.invitations` existant) → lien Play + courriel → première capture accompagnée ; vidéo de 2 min (scrcpy, voix tunisienne, sous-titres FR/AR) ; fiche « Comment photographier une facture » ; groupe WhatsApp par cabinet, support 9h–18h < 2 h ; aide à créer un compte Google (les patrons sans Gmail).
+- Cadence : lundi tableau de bord (`outils/pilote/tableau-de-bord.sql`, rôle `regalica_lecture`) + `docs/pilote/semaine-NN.md` ; mardi OTA si besoin ; jeudi 30 min avec l'expert ; vendredi tri des signalements (projet GitHub « Pilote »). **Gel** du J-3 au jour de l'échéance mensuelle de TVA et les vendredis après 14 h.
+- Critères de go : sessions sans plantage ≥ 99,5 % ; captures réussies ≥ 95 % ; pièces lues sans précision ≥ 70 % et croissant ; photo → proposition p95 < 120 s ; photo → écriture validée médiane < 48 h ; échecs de lecture < 3 % ; drainage de la file p95 < 10 min ; ≥ 80 % des PME actives (1 capture/semaine) ; 0 bloquant ouvert ; acceptation signée de l'expert (≥ 8/10) ; dernière restauration répétée < 30 jours.
+- Données réelles : `docs/pilote/convention-pilote.md` (rôles, sous-traitants et pays, consentement OCR/LLM, déclaration INPDP, incident sous 72 h, conservation 10 ans par archivage — R7 —, purge des fichiers sur demande écrite par `outils/pilote/purger-pieces.mjs`) ; **aucune donnée réelle sur staging ni sur un poste**.
+- Retour arrière en trois couches : Capgo (minutes), `android.yml` sur l'étiquette précédente (heures), `infra/deployer.sh <version précédente>` avec migrations « expansion puis contraction » pendant tout le pilote.
+
+## Ordre et effort (un développeur)
+
+| Semaine | Lots | Jalon |
+|---|---|---|
+| 1 | 0 (comptes, outillage, `cap add android`) + début 5 (staging) | staging en ligne, coque v0 sur staging, premier AAB en interne |
+| 2–3 | 1 (socle + fonctions serveur → API) | web identique, aucun secret sur le serveur web, `lecture.mjs` verte |
+| 3–4 | 2 (transport, jetons, API natif) | chemin Bearer validé dans Chrome |
+| 4–5 | 3 (file hors ligne) | capture hors ligne dans Chrome, `hors-ligne.mjs` verte |
+| 6 | 4 (bundle, natif) | **premier APK réel avec hors ligne**, sur Infinix |
+| 7 | 5 (fin : sauvegardes, pilote), 6 (pipeline, Play, Capgo, Sentry) | AAB signé sur piste interne, OTA, restauration répétée |
+| 8–9 | 7 (tests), matrice d'appareils, kit d'onboarding | CI complète, `docs/protocole-appareils.md` rempli |
+| 10 | alpha interne | critères de la phase 1 |
+| 11–16 | bêta fermée, deux vagues | critères de go |
+| 17 | revue go/no-go | production |
+
+Total avant la bêta : ≈ 45 jours de travail sur ~9 semaines (les délais externes — vérification du compte Play, première révision, 14 jours de test fermé — courent en parallèle grâce au lot 0). Chaque lot laisse la CI verte et le dépôt déployable ; les lots 1 à 3 améliorent déjà le web sans qu'aucun APK n'existe.
+
+Risques à vérifier tôt : (a) `--experimental-strip-types` sur `packages/socle` depuis l'API (lot 1, jour 1) ; (b) le shell `spa` de Start 1.168 produit bien `index.html` (lot 4, avant tout le reste) ; (c) la taille des chaînes base64 par le pont Filesystem sur un PDF de 8 Mo (lot 4, mesurer ; repli `writeFile({ data: blob })`) ; (d) la règle Play des 12 testeurs, à relire dans la console au moment de créer le compte.
+
+## Vérification de bout en bout
+
+1. `npm run lint && npm run typecheck && npm test` verts après chaque lot ; `knip` sans mort.
+2. Lot 1 : `node outils/epreuves/lecture.mjs` et `node outils/epreuve-bout-en-bout.mjs` contre le poste ; `apps/web/.env` ne contient plus de clé de modèle.
+3. Lot 2–3 dans Chrome (viewport 392×846, `VITE_CIBLE=coque` en `.env.local`) : se connecter, couper le réseau dans DevTools, capturer trois PDF, voir « à envoyer : 3 », rétablir, voir partir et la lecture démarrer seule ; `node outils/epreuves/hors-ligne.mjs`.
+4. Lot 4 : `npm run build:coque:staging -w @regalica/web` produit `index.html` ; `vite preview --mode coque-staging` fonctionne contre staging ; `npx cap sync android && npx cap open android` ; sur l'émulateur puis l'Infinix : les quatre cas du scanner, mode avion, application tuée pendant l'envoi (`adb shell am force-stop`), retour matériel à chaque écran, arabe RTL, police 130 %.
+5. Lot 5 : `infra/deployer.sh` sur staging, `/sante/profonde` en 200, `restaurer.sh` d'un dump réel et `epreuve-bout-en-bout.mjs` contre la base restaurée (RTO consigné).
+6. Lot 6 : AAB du workflow visible sur la piste interne, installation depuis Play sur un téléphone, OTA d'un bundle puis retour arrière par le canal.
+7. Lot 7 : `e2e.yml` et `android-e2e.yml` verts ; budgets tenus ; `docs/pilote/appareils.md` rempli.
+8. Alpha : critères de la phase 1 ; bêta : tableau de bord hebdomadaire ; revue : `docs/pilote/revue-go-no-go.md`.
+
+## Fichiers critiques
+
+- `apps/web/src/verticals/regalica-office/adapters/http/capture.ts` — scission `enregistrer`/`deposerOctets`, pivot de la file.
+- `apps/web/src/verticals/regalica-office/adapters/http/rpc.ts` — `resoudreApi`, `ErreurApi`, `creerDepotHttp` ; à réécrire sur le transport.
+- `apps/web/src/routes/_authenticated/pme.tsx` — capture → vidage, attente, nav et zone sûre, hooks file/réseau/retour.
+- `apps/web/src/routes/_authenticated/pme.piece.$pieceId.tsx` — lecture automatique, « Continuer en arrière-plan ».
+- `apps/web/src/capabilities/scanner.ts` — `preparePage` sans recadrage sur la voie native.
+- `apps/web/src/capabilities/numerisation.ts` — le patron « pont derrière interface » à reproduire dans `coque.ts`.
+- `apps/web/vite.config.ts` et `capacitor.config.ts` — mode `coque-*`, `spa`, `webDir`.
+- `apps/api/src/rpc.ts`, `apps/api/src/app.ts`, `apps/api/src/auth.ts` — dépôts `lecture`/`regalica`/`fiche`/`pv`/`briefing`, rafraîchissement, 426, `/sante/profonde`, `/signalements`.
+- `apps/web/relais-api.ts` — la liste de chemins que `infra/caddy/Caddyfile` doit reproduire.
+- `.github/workflows/ci.yml` — modèle des workflows `android.yml`, `ota.yml`, `e2e.yml`, `android-e2e.yml`.
+- `docs/coque-native.md` — à réécrire une fois la coque construite.
