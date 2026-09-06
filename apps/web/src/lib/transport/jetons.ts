@@ -45,17 +45,27 @@ const CLE = "regalica.jeton-long";
  * est faux). Le greffon vient en import différé : jamais dans un navigateur.
  */
 export function coffrePreferences(): CoffreJetons {
-  const greffon = () => import("@capacitor/preferences").then((m) => m.Preferences);
+  /*
+   * Le greffon est un Proxy : toute propriété lue devient un appel natif.
+   * Le rendre comme valeur d'une promesse (`.then((m) => m.Preferences)`)
+   * fait lire `.then` par JavaScript — Capacitor appelait alors une méthode
+   * native « then » qui n'existe pas, et l'application s'ouvrait sur un
+   * écran blanc. Une fonction `async` résout son retour de la même façon.
+   * On ne rend donc jamais le greffon à travers une promesse : on rend le
+   * module (un espace de noms, inoffensif), et on y prend le greffon au
+   * moment de s'en servir. `coffre-preferences.test.ts` tient ce piège.
+   */
+  const module = () => import("@capacitor/preferences");
   return {
     async lire() {
-      const { value } = await (await greffon()).get({ key: CLE });
+      const { value } = await (await module()).Preferences.get({ key: CLE });
       return value;
     },
     async ecrire(jeton) {
-      await (await greffon()).set({ key: CLE, value: jeton });
+      await (await module()).Preferences.set({ key: CLE, value: jeton });
     },
     async effacer() {
-      await (await greffon()).remove({ key: CLE });
+      await (await module()).Preferences.remove({ key: CLE });
     },
   };
 }
