@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
+import { FileLocale } from "@/components/regalica/file-locale";
 import { usePme } from "@/components/regalica/pme-context";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { useI18n } from "@/i18n";
@@ -248,6 +249,7 @@ function VosDocuments() {
           ) : null}
 
           <div className="flex-1 px-[22px] pt-2.5">
+            <FileLocale />
             {pieces.isPending ? (
               <p className="pt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
             ) : visibles.length === 0 ? (

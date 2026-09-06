@@ -589,6 +589,17 @@ export interface NewPiece {
   idempotencyKey: string;
 }
 
+/** La ligne d'une pièce, sans ses octets — ce que `enregistrer` écrit. */
+export interface NouvellePiece {
+  tenantId: string;
+  entityId: string | null;
+  source: "photo" | "pdf";
+  vis: "personnel" | "partage";
+  /** Générée AVANT tout appel : la même clé rend la même pièce, toujours. */
+  idempotencyKey: string;
+  contentType: string | null;
+}
+
 /**
  * Une pièce telle que l'écran « Vos documents » doit la montrer.
  *
@@ -613,6 +624,15 @@ export interface PieceLue {
 }
 
 export interface CaptureRepository {
+  /**
+   * Les deux pas d'un dépôt, séparés pour que la file hors ligne reprenne
+   * entre les deux : la ligne d'abord (même clé → même pièce), les octets
+   * ensuite (redéposer remplace). Une application tuée au milieu rejoue le pas
+   * manquant, jamais les deux.
+   */
+  enregistrer(piece: NouvellePiece): Promise<string>;
+  deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void>;
+  /** Les deux pas d'un trait, pour qui n'a pas de file — le cabinet, un import. */
   register(input: NewPiece): Promise<string>;
   list(tenantId: string): Promise<Piece[]>;
   /**

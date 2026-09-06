@@ -21,6 +21,7 @@ import type {
   Citation,
   Extraction,
   NewPiece,
+  NouvellePiece,
   Piece,
   PieceDossier,
   PieceStatus,
@@ -63,28 +64,35 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
     },
 
-    async register(input: NewPiece): Promise<string> {
-      const { id } = await rpc<{ id: string; chemin: string }>("capture", "enregistrer", [
-        {
-          tenantId: input.tenantId,
-          entityId: input.entityId,
-          source: input.source,
-          vis: input.vis,
-          idempotencyKey: input.idempotencyKey,
-          // Le type du fichier est écrit en base à l'enregistrement : c'est là
-          // qu'on le connaît, et c'est de là qu'il sera relu.
-          contentType: input.file.type || null,
-        },
-      ]);
+    async enregistrer(piece: NouvellePiece): Promise<string> {
+      // Le type du fichier est écrit en base à l'enregistrement : c'est là
+      // qu'on le connaît, et c'est de là qu'il sera relu.
+      const { id } = await rpc<{ id: string; chemin: string }>("capture", "enregistrer", [piece]);
+      return id;
+    },
 
-      const depot = await transport().appeler(`/pieces/${id}/contenu`, {
+    async deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void> {
+      const depot = await transport().appeler(`/pieces/${pieceId}/contenu`, {
         method: "POST",
-        headers: input.file.type ? { "Content-Type": input.file.type } : {},
-        body: input.file,
+        headers: contentType ? { "Content-Type": contentType } : {},
+        body: octets,
       });
       if (!depot.ok) {
-        throw new ErreurApi("dépôt du fichier impossible", depot.status);
+        const corps = (await depot.json().catch(() => null)) as { erreur?: string } | null;
+        throw new ErreurApi(corps?.erreur ?? "dépôt du fichier impossible", depot.status);
       }
+    },
+
+    async register(input: NewPiece): Promise<string> {
+      const id = await this.enregistrer({
+        tenantId: input.tenantId,
+        entityId: input.entityId,
+        source: input.source,
+        vis: input.vis,
+        idempotencyKey: input.idempotencyKey,
+        contentType: input.file.type || null,
+      });
+      await this.deposerOctets(id, input.file, input.file.type);
       return id;
     },
 

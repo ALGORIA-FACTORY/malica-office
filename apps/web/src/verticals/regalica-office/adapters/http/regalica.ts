@@ -62,6 +62,10 @@ export function creerRegalicaHttp(): RegalicaPort {
       return appelerRoute(`/lectures/${pieceId}`, { method: "GET" });
     },
 
+    async demanderLaLecture(pieceId: string): Promise<void> {
+      await appelerRoute<{ enCours: boolean }>(`/lectures/${pieceId}?attendre=0`);
+    },
+
     lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte> {
       return appelerRoute(`/carte?jurisdiction=${encodeURIComponent(input.jurisdiction)}`, {
         octets: input.fichier,

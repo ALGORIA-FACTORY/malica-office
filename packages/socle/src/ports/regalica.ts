@@ -244,6 +244,11 @@ export interface RegalicaPort {
    * relancer la lecture.
    */
   etatDeLecture(pieceId: string): Promise<EtatDeLecture>;
+  /**
+   * Lancer la lecture sans l'attendre : ce que la file hors ligne demande
+   * après avoir déposé les octets. Le dossier dira quand c'est lu.
+   */
+  demanderLaLecture(pieceId: string): Promise<void>;
   /** L'œil lit la carte d'identification fiscale ; l'écran propose, l'expert arrête (R10). */
   lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte>;
   demander(question: QuestionARegalica): Promise<ReponseDeRegalica>;

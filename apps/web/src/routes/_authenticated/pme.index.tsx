@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { bienvenueDejaVue } from "@/components/regalica/bienvenue";
 import { EntetePme } from "@/components/regalica/entete-pme";
+import { PastilleAEnvoyer } from "@/components/regalica/file-locale";
 import { MandatsProposes } from "@/components/regalica/MandatsProposes";
 import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
 import { usePme } from "@/components/regalica/pme-context";
@@ -129,6 +130,7 @@ function PmeHome() {
       {/* Un cabinet propose ? Le dirigeant répond avant tout le reste. */}
       <div className="pt-3">
         <MandatsProposes tenantId={pme.tenantId} />
+        <PastilleAEnvoyer />
       </div>
       {/* ------------------------------------------------ présence et salutation */}
       <header className="rg-rise relative overflow-hidden px-[22px] pb-3 pt-2">

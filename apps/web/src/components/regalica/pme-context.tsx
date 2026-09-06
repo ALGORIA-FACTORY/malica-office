@@ -1,6 +1,15 @@
 import { createContext, useContext, type ReactNode } from "react";
 
+import type { ElementDeFile } from "@/lib/hors-ligne/file";
+
 export type CaptureKind = "photo" | "pdf";
+
+/** Ce qui attend de partir pour ce dossier, et les deux gestes sur un échec. */
+export interface FileDAttente {
+  elements: ReadonlyArray<ElementDeFile>;
+  reessayer: (cle: string) => void;
+  abandonner: (cle: string) => void;
+}
 
 export interface PmeContextValue {
   tenantId: string;
@@ -31,6 +40,8 @@ export interface PmeContextValue {
   ouvrirScanner: () => void;
   capturing: boolean;
   captureError: string | null;
+  /** La file hors ligne de ce dossier : ce que la liste et l'accueil montrent. */
+  file: FileDAttente;
 }
 
 const PmeContext = createContext<PmeContextValue | null>(null);

@@ -4,11 +4,15 @@ import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
+import { BandeauHorsLigne } from "@/components/regalica/bandeau-hors-ligne";
 import { CameraScanner } from "@/components/regalica/CameraScanner";
 import { EntetePme } from "@/components/regalica/entete-pme";
 import { PmeProvider, type CaptureKind } from "@/components/regalica/pme-context";
+import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useI18n } from "@/i18n";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
+import { vidage } from "@/lib/hors-ligne";
+import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -90,36 +94,59 @@ function PmeLayout() {
             ? await files.pickPdf()
             : await files.takePhoto();
       if (!picked) return null;
-      return office().capture.register({
-        tenantId: org.id,
-        entityId,
-        file: picked.blob,
-        fileName: picked.name,
-        source: picked.source,
-        /*
-         * ============================================ LA PIÈCE RESTE CHEZ VOUS
-         *
-         * Elle était marquée « partage » dès la photo : tout ce qui passait
-         * devant l'objectif partait au cabinet, sans que personne l'ait
-         * décidé. Un reçu personnel, une photo ratée, un document qui n'a rien
-         * à voir — tout arrivait chez l'expert-comptable.
-         *
-         * On capture donc en « personnel ». La transmission est un GESTE, sur
-         * l'écran de la pièce, et c'est le dirigeant qui le fait.
-         */
-        vis: "personnel",
-        idempotencyKey: files.newIdempotencyKey(),
-      });
+      /*
+       * ============================================ RANGÉE AVANT DE PARTIR
+       *
+       * La pièce va dans la file, sur l'appareil, avant tout appel réseau. En
+       * ligne, elle est chez l'API dans la seconde et on l'ouvre. Hors ligne,
+       * elle attend dans « Vos documents » et part au retour du réseau — la
+       * photo n'est jamais à refaire.
+       */
+      const cle = await vidage().deposer(
+        {
+          cle: files.newIdempotencyKey(),
+          tenantId: org.id,
+          entityId,
+          source: picked.source,
+          /*
+           * ============================================ LA PIÈCE RESTE CHEZ VOUS
+           *
+           * Elle était marquée « partage » dès la photo : tout ce qui passait
+           * devant l'objectif partait au cabinet, sans que personne l'ait
+           * décidé. Un reçu personnel, une photo ratée, un document qui n'a rien
+           * à voir — tout arrivait chez l'expert-comptable.
+           *
+           * On capture donc en « personnel ». La transmission est un GESTE, sur
+           * l'écran de la pièce, et c'est le dirigeant qui le fait.
+           */
+          vis: "personnel",
+          contentType: picked.blob.type || "application/pdf",
+          nomFichier: picked.name,
+        },
+        picked.blob,
+      );
+      const element = await vidage().attendre(cle, 4_000);
+      return element?.pieceId ?? null;
     },
     onSuccess: async (pieceId) => {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", org.id] });
+      // Arrivée chez l'API : on ouvre la pièce, dont la lecture est déjà
+      // demandée. Sinon elle attend, visible, dans la liste.
       if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
+      else await navigate({ to: "/pme/list" });
     },
     onError: (e: unknown) =>
-      setCaptureError(texteDeLErreur(e, "routes/_authenticated/pme", t("common.error"))),
+      setCaptureError(
+        e instanceof FilePleine
+          ? t("pme.file.pleine")
+          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+      ),
   });
+
+  const file = useFileDAttente(org?.id ?? null);
 
   /*
    * Ouvrir la capture : le scanner de l'appareil s'il y en a un, le nôtre sinon.
@@ -155,6 +182,7 @@ function PmeLayout() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-20 text-foreground">
+      <BandeauHorsLigne />
       {path === "/pme" ? null : (
         <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
           <EntetePme
@@ -195,6 +223,7 @@ function PmeLayout() {
               ouvrirScanner: ouvrirCapture,
               capturing: capture.isPending,
               captureError,
+              file,
             }}
           >
             <Outlet />
