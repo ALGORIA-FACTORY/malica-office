@@ -1,4 +1,4 @@
-package tn.algoria.regalica;
+package com.algoriafactory.regalica;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -1,6 +1,6 @@
 # Le bouton retour d'Android : il recule d'un écran, jamais hors de
 # l'application depuis un écran intérieur ; depuis l'accueil, il quitte.
-appId: com.algoria.regalica.office.emulateur
+appId: com.algoriafactory.regalica.emulateur
 ---
 - launchApp
 - runFlow: connexion.yaml

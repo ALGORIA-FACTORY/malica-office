@@ -24,10 +24,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "tn.algoria.regalica"
+    namespace = "com.algoriafactory.regalica"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.algoria.regalica.office"
+        applicationId "com.algoriafactory.regalica"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode versionCodeDeclare

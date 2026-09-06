@@ -40,7 +40,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.algoria.regalica.office",
+  appId: "com.algoriafactory.regalica",
   appName: "Regalica Office",
   webDir: ".output/public",
   android: { path: "../../android" },

@@ -1,5 +1,5 @@
 # L'arabe : les réglages changent la langue, l'application se retourne.
-appId: com.algoria.regalica.office.emulateur
+appId: com.algoriafactory.regalica.emulateur
 ---
 - launchApp
 - runFlow: connexion.yaml

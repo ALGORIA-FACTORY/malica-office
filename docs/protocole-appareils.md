@@ -62,7 +62,7 @@ phrase, et un signalement depuis les réglages) ou **NA**.
    Couper le mode avion : les trois partent sans un geste, en moins de 60 s,
    et la lecture démarre seule.
 8. ◆ **Tuée pendant l'envoi** : photographier une pièce lourde (cinq pages)
-   sur 3G, et forcer l'arrêt (`adb shell am force-stop com.algoria.regalica.office`
+   sur 3G, et forcer l'arrêt (`adb shell am force-stop com.algoriafactory.regalica`
    ou par les réglages) pendant « Envoi… ». Rouvrir : la pièce repart,
    **une seule** pièce existe côté cabinet, avec la même empreinte.
 9. **Réseau lent** : 2G/EDGE simulée (réglages développeur, ou l'émulateur).
