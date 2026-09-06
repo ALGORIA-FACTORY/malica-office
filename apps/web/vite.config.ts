@@ -128,7 +128,8 @@ export default defineConfig(({ mode }) => {
        * permet aux DEUX de tourner ensemble : on garde l'aperçu en clair sur
        * 8080 pendant qu'on essaie au doigt sur 8443.
        */
-      port: Number(process.env["REGALICA_PORT"] ?? 8080),
+      // REGALICA_PORT pour le poste ; PORT quand un outil assigne le port lui-même.
+      port: Number(process.env["REGALICA_PORT"] ?? process.env["PORT"] ?? 8080),
       strictPort: true,
       host: true,
       ...(https ? { https } : {}),
