@@ -5,17 +5,27 @@
 /*
  * Les polices, embarquées. Elles venaient d'un tiers à chaque page : rien ne
  * s'affichait dans la bonne police hors ligne, et l'arabe, chargé, n'était
- * jamais assigné. Trois graisses, celles que le produit emploie.
+ * jamais assigné. Trois graisses, celles que le produit emploie, et seuls
+ * les alphabets qu'il écrit : latin et latin étendu (le français), arabe.
+ * Les fichiers `400.css` de fontsource embarquaient aussi le cyrillique, le
+ * grec et le vietnamien — 51 fichiers, 740 Ko qu'une mise à jour en vol
+ * transportait pour rien.
  */
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
-@import "@fontsource/ibm-plex-mono/600.css";
-@import "@fontsource/noto-kufi-arabic/400.css";
-@import "@fontsource/noto-kufi-arabic/500.css";
-@import "@fontsource/noto-kufi-arabic/600.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/inter/latin-ext-400.css";
+@import "@fontsource/inter/latin-ext-500.css";
+@import "@fontsource/inter/latin-ext-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-400.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-500.css";
+@import "@fontsource/ibm-plex-mono/latin-ext-600.css";
+@import "@fontsource/noto-kufi-arabic/arabic-400.css";
+@import "@fontsource/noto-kufi-arabic/arabic-500.css";
+@import "@fontsource/noto-kufi-arabic/arabic-600.css";
 
 @custom-variant dark (&:is(.dark *));
 
