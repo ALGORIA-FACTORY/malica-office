@@ -13,7 +13,7 @@
     "dev:api": "npm run dev --workspace @regalica/api",
     "build": "npm run build --workspace @regalica/web",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces",
+    "test": "npm run test --workspaces && node --test infra/caddy/Caddyfile.test.mjs db/decouper-sql.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "dev:telephone": "node outils/dev-telephone.mjs",

@@ -1,0 +1,49 @@
+# Une origine publique par environnement.
+#
+# Les chemins de l'API sont ceux de `apps/web/relais-api.ts`, à l'identique —
+# `Caddyfile.test.mjs` échoue s'ils divergent. Le relais de développement a
+# déjà tranché : page et API sur la même origine, donc plus de CORS ni de
+# domaine de cookie. `/auth` tout seul est l'écran de connexion de
+# l'application ; ses sous-chemins sont l'API.
+
+{$DOMAINE} {
+	encode zstd gzip
+
+	# Vingt-quatre pages en PDF tiennent bien en dessous ; l'API coupe elle
+	# aussi à quarante mégaoctets.
+	request_body {
+		max_size 40MB
+	}
+
+	@api {
+		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
+		path /journal-atelier /journal-atelier/* /regalica/* /auth/*
+	}
+
+	# Une lecture par Regalica peut durer des minutes.
+	handle @api {
+		reverse_proxy api:3000 {
+			transport http {
+				response_header_timeout 300s
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy web:8080
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	log {
+		output file /data/acces.log {
+			roll_size 50mb
+			roll_keep 5
+		}
+	}
+}

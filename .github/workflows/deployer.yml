@@ -1,0 +1,50 @@
+# Déployer une version sur le pilote ou la production — à la main, jamais seul.
+#
+# On donne l'étiquette (v0.3.1 : ses images existent, images.yml les a
+# publiées) et l'environnement. L'environnement GitHub `pilote` et
+# `production` exigent une approbation : la même personne relit ce qu'elle
+# envoie. Revenir en arrière est le même geste avec l'étiquette d'avant.
+
+name: Déployer
+
+on:
+  workflow_dispatch:
+    inputs:
+      environnement:
+        description: "Où"
+        type: choice
+        options: [pilote, production]
+        default: pilote
+      version:
+        description: "Étiquette du dépôt (v0.3.1)"
+        type: string
+        required: true
+
+concurrency:
+  group: deployer-${{ github.event.inputs.environnement }}
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environnement }}
+      url: https://${{ vars.DOMAINE }}
+    steps:
+      - name: Vérifier l'étiquette
+        run: |
+          [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]] \
+            || { echo "une étiquette v<majeure>.<mineure>.<correctif> est attendue" >&2; exit 1; }
+
+      - name: Déployer ${{ github.event.inputs.version }} sur ${{ github.event.inputs.environnement }}
+        env:
+          CLE: ${{ secrets.DEPLOI_CLE_SSH }}
+          HOTE: ${{ vars.DEPLOI_HOTE }}
+          EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploi
+          chmod 600 ~/.ssh/deploi
+          printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer $VERSION"

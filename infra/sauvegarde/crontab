@@ -1,0 +1,7 @@
+# Heure d'Afrique/Tunis. La sortie va dans le journal du conteneur.
+# Toutes les six heures : dump de la base, puis dumps et pièces hors site.
+0 */6 * * * /usr/local/bin/sauvegarder.sh >>/proc/1/fd/1 2>&1
+# Dimanche 03:30 : la rétention (24 h / 14 j / 8 sem / 12 mois).
+30 3 * * 0 /usr/local/bin/sauvegarder.sh elaguer >>/proc/1/fd/1 2>&1
+# Le premier du mois, 04:30 : vérification du dépôt, un dixième des données relu.
+30 4 1 * * /usr/local/bin/sauvegarder.sh verifier >>/proc/1/fd/1 2>&1

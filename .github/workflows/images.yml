@@ -1,0 +1,84 @@
+# Les images, et le staging qui les suit.
+#
+# À chaque poussée sur main et à chaque étiquette `v*`, les trois images
+# (api, web, sauvegarde) sont construites et publiées sur GHCR sous la même
+# étiquette que le dépôt — `main` ou `v0.3.1` — plus l'empreinte git. Puis,
+# sur main seulement, le staging se déploie tout seul : `deployer main`.
+#
+# Le pilote et la production ne se déploient jamais d'ici : deployer.yml, à la
+# main, sur une étiquette, avec l'approbation que l'environnement GitHub exige.
+#
+# Chaque environnement GitHub (staging, pilote, production) porte :
+#   variables  DEPLOI_HOTE (l'adresse), DEPLOI_EMPREINTE_HOTE (la ligne known_hosts), DOMAINE
+#   secret     DEPLOI_CLE_SSH (la clé privée dont la publique est dans ~regalica/.ssh/authorized_keys, derrière porte-ssh.sh)
+
+name: Images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: [api, web, sauvegarde]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Le nom est mis en minuscules par l'action : GHCR l'exige.
+      - id: etiquettes
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/regalica-${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image == 'sauvegarde' && 'infra/sauvegarde' || '.' }}
+          file: ${{ matrix.image == 'sauvegarde' && 'infra/sauvegarde/Dockerfile' || format('infra/{0}.Dockerfile', matrix.image) }}
+          push: true
+          tags: ${{ steps.etiquettes.outputs.tags }}
+          labels: ${{ steps.etiquettes.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  staging:
+    needs: publier
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://${{ vars.DOMAINE }}
+    steps:
+      - name: Déployer main sur le staging
+        env:
+          CLE: ${{ secrets.DEPLOI_CLE_SSH }}
+          HOTE: ${{ vars.DEPLOI_HOTE }}
+          EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploi
+          chmod 600 ~/.ssh/deploi
+          printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer main"

@@ -41,6 +41,11 @@ jobs:
       - name: Typage
         run: npm run typecheck
 
+      # Le Caddyfile route vers l'API les mêmes chemins que le relais de
+      # développement : une route qui marche sur le poste marche en production.
+      - name: Infra
+        run: node --test infra/caddy/Caddyfile.test.mjs
+
   # Le socle partagé, puis l'application web et ses suites.
   web:
     runs-on: ubuntu-latest
@@ -86,17 +91,16 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Monter le schéma
-        run: |
-          export PGPASSWORD=postgres
-          psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f db/local/00_compat_supabase.sql
-          for f in db/migrations/*.sql; do
-            psql -h localhost -U postgres -d regalica -v ON_ERROR_STOP=1 -q -f "$f"
-          done
-          psql -h localhost -U postgres -d regalica -q -c "alter role regalica_api with password 'ci';"
-
       - name: Installer
         run: npm ci
+
+      # Le même chemin qu'en production : `db/migrer.mjs` tient la table des
+      # migrations appliquées. Une boucle psql rejouait tout — sur une base
+      # neuve c'est pareil, sur un serveur qui vit ce serait faux.
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base postgres://postgres:postgres@localhost:5432/regalica --mot-de-passe-api
+        env:
+          REGALICA_API_PASSWORD: ci
 
       - name: Preuve d'isolation
         run: npm run test --workspace @regalica/api

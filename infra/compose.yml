@@ -1,0 +1,142 @@
+# Regalica Office — un environnement complet sur une machine.
+#
+# Le même fichier sert staging, pilote et production ; seul `.env` change.
+# Une origine publique par environnement : Caddy prend le TLS et route vers
+# l'API (les chemins de caddy/Caddyfile, les mêmes que le relais de
+# développement) et vers le site pour tout le reste.
+#
+# Sur le serveur, tout passe par deployer.sh, qui lance compose avec
+# `--project-directory /srv/regalica/depot/infra --env-file /srv/regalica/.env` :
+# les chemins relatifs ci-dessous partent de ce dossier.
+#
+# Les images sont construites par la CI (images.yml) et publiées sur GHCR,
+# étiquetées par la version du dépôt ; deployer.sh les tire.
+
+name: regalica
+
+services:
+  caddy:
+    image: caddy:2.9
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAINE: ${DOMAINE}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+    logging: &journal
+      driver: json-file
+      options: { max-size: "50m", max-file: "5" }
+
+  # Joue les migrations manquantes puis s'arrête. L'API et le site attendent
+  # sa fin : un schéma en retard ne sert jamais une requête. Pose aussi le mot
+  # de passe du rôle de l'API : le changer dans .env suffit.
+  migrer:
+    image: ${REGISTRE}/regalica-api:${VERSION}
+    command: ["node", "db/migrer.mjs", "--mot-de-passe-api"]
+    working_dir: /srv
+    environment:
+      DATABASE_URL_ADMIN: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/regalica
+      REGALICA_API_PASSWORD: ${REGALICA_API_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    logging: *journal
+
+  api:
+    image: ${REGISTRE}/regalica-api:${VERSION}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgres://regalica_api:${REGALICA_API_PASSWORD}@postgres:5432/regalica
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: https://${DOMAINE},https://localhost
+      STOCKAGE_RACINE: /pieces
+      CLIENT_MIN_VERSION: ${CLIENT_MIN_VERSION:-}
+      AUTH_ESSAIS_PAR_MINUTE: ${AUTH_ESSAIS_PAR_MINUTE:-30}
+      REGALICA_VERSION: ${VERSION}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      QWEN_API_KEY: ${QWEN_API_KEY}
+      QWEN_BASE_URL: ${QWEN_BASE_URL}
+      QWEN_OCR_MODEL: ${QWEN_OCR_MODEL}
+    volumes:
+      - ${PIECES_DIR}:/pieces
+    depends_on:
+      migrer:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/sante').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *journal
+
+  web:
+    image: ${REGISTRE}/regalica-web:${VERSION}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      # Vu du serveur web, l'API est à côté : jamais par l'origine publique.
+      VITE_API_URL: http://api:3000
+    depends_on:
+      migrer:
+        condition: service_completed_successfully
+    logging: *journal
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: regalica
+    command: ["postgres", "-c", "shared_buffers=1GB", "-c", "max_connections=100"]
+    volumes:
+      - ${POSTGRES_DIR}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d regalica"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *journal
+
+  # Un dump toutes les six heures, chiffré et poussé hors site par restic avec
+  # les pièces (sauvegarde/). Le même conteneur restaure : restaurer.sh.
+  sauvegarde:
+    image: ${REGISTRE}/regalica-sauvegarde:${VERSION}
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      SAUVEGARDE_SIGNAL_URL: ${SAUVEGARDE_SIGNAL_URL:-}
+    volumes:
+      - ${PIECES_DIR}:/pieces:ro
+      - ${RESTAURATION_DIR}:/restauration
+      - sauvegardes:/sauvegardes
+      - restic_cache:/root/.cache/restic
+      - ${RESTIC_CLE_SSH}:/root/.ssh/id_ed25519:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *journal
+
+volumes:
+  caddy_data:
+  caddy_config:
+  sauvegardes:
+  restic_cache:
