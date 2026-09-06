@@ -60,6 +60,23 @@ tiennent cette promesse. Sans `VITE_SENTRY_DSN`, rien ne part. Un bouton
 « Quelque chose n'a pas marché ? » dans les réglages envoie un signalement
 volontaire (`app.signalements`), jamais une pièce.
 
+**La fiche Google Play** : l'application `com.algoriafactory.regalica` du
+compte organisation ALGORIA Factory, version 0.1.0 (1) sur la piste de test
+interne, liste « Pilote interne ». Tout ce que Play exige avant une revue est
+déclaré, et fidèle au code : politique de confidentialité et adresse de
+suppression des données (`/confidentialite`, ancre `#suppression`, contact
+`hello@algoria-factory.com`), classification IARC « Everyone / PEGI 3 » avec
+l'élément « les utilisateurs interagissent » (les messages avec le cabinet),
+sécurité des données (nom, e-mail, identifiants ; pièces financières, photos,
+fichiers, messages ; journaux de plantage et diagnostics — collectés, jamais
+partagés, chiffrés en transit, supprimables sur demande), public 18 ans et
+plus, aucune publicité, aucun identifiant publicitaire, ni application
+gouvernementale, financière ou de santé, compte de test pour la revue,
+catégorie « Business », tags Business / Finance / Productivity, contact de la
+fiche `hello@algoria-factory.com` et `https://algoria-factory.com`. Le nom
+provisoire « (unreviewed) » que voient les testeurs internes tombe à la
+première version envoyée en revue, c'est-à-dire à la piste de test fermé.
+
 ## Comment construire
 
 ```bash
@@ -136,6 +153,12 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
 2. **L'émulateur** — une image système « Google APIs » (ML Kit a besoin des
    services Google), pour Maestro en CI.
 3. **iOS** — un Mac, Xcode, un compte développeur Apple ; le même code.
+4. **Google Play, la suite** — les captures tablette 10 pouces sur la fiche
+   (`android/play/`, à téléverser à la main : le navigateur de l'automate ne
+   sait pas déposer un fichier) ; la piste de test fermé « Pilote » avec le
+   cabinet et les PME, qui déclenche la première revue ; un compte de service
+   Play (`PLAY_SERVICE_ACCOUNT_JSON`) pour que `android.yml` publie seul ; un
+   compte Capgo et un projet Sentry, et leurs clés dans les secrets.
 
 ## Ce qui reste au détecteur du navigateur
 
