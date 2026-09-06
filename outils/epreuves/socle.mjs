@@ -18,11 +18,16 @@ export const COMPTE_DEV = { email: "dev@regalica.local", motDePasse: "Developpeu
 
 export function creerEpreuve(nom, base = process.env["REGALICA_BASE"] ?? "http://localhost:8080") {
   const BASE = base.replace(/\/+$/, "");
+  /*
+   * En HTTPS sur une adresse privée, le certificat est celui du poste, signé
+   * par lui-même : on cesse de le vérifier, pour ce cas seulement. Sur un
+   * hôte public (le staging, le pilote), le certificat est vrai et se vérifie
+   * comme dans un téléphone.
+   */
   if (BASE.startsWith("https:")) {
     const hote = new URL(BASE).hostname;
     const prive = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hote);
-    if (!prive) throw new Error(`Refus : ${hote} n'est pas une adresse privée.`);
-    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+    if (prive) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
   let cookie = "";

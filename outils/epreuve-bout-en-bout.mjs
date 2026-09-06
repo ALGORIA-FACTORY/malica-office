@@ -37,11 +37,9 @@ const MOTDEPASSE = "DeveloppeurRegalica2026!";
 if (BASE.startsWith("https:")) {
   const hote = new URL(BASE).hostname;
   const prive = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hote);
-  if (!prive) {
-    console.error(`Refus : ${hote} n'est pas une adresse privée.`);
-    process.exit(1);
-  }
-  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+  // Un hôte public (le staging, le pilote) porte un vrai certificat : il se
+  // vérifie comme dans un téléphone. Seul le certificat du poste est passé.
+  if (prive) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 }
 
 let cookie = "";
