@@ -25,7 +25,7 @@ export const Route = createFileRoute("/confidentialite")({
 });
 
 const MISE_A_JOUR = "6 septembre 2026";
-const CONTACT = "w.barouni@algoria-factory.com";
+const CONTACT = "hello@algoria-factory.com";
 
 function Confidentialite() {
   return (
