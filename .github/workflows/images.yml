@@ -16,7 +16,9 @@ name: Images
 
 on:
   push:
-    branches: [main]
+    # Le staging suit la branche d'intégration du moment : main, et la
+    # branche du chantier Android tant qu'elle n'y est pas fondue.
+    branches: [main, application-android]
     tags: ["v*"]
 
 concurrency:
@@ -65,20 +67,21 @@ jobs:
 
   staging:
     needs: publier
-    if: github.ref == 'refs/heads/main'
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     environment:
       name: staging
       url: https://${{ vars.DOMAINE }}
     steps:
-      - name: Déployer main sur le staging
+      - name: Déployer la branche sur le staging
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
           HOTE: ${{ vars.DEPLOI_HOTE }}
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
+          BRANCHE: ${{ github.ref_name }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer main"
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer $BRANCHE"
