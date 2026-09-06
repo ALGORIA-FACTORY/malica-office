@@ -29,7 +29,7 @@ export interface SourceCitee {
   langue: string | null;
 }
 
-export type StatutArbitrage = "en_attente" | "repondue" | "approuvee" | "corrigee" | "ecartee";
+type StatutArbitrage = "en_attente" | "repondue" | "approuvee" | "corrigee" | "ecartee";
 export type DecisionArbitrage = "approuvee" | "corrigee" | "ecartee";
 
 export interface Arbitrage {

@@ -46,6 +46,11 @@ jobs:
       - name: Infra
         run: node --test infra/caddy/Caddyfile.test.mjs
 
+      # R9 : aucun code mort. Fichiers, exports et dépendances que rien
+      # n'atteint — la configuration (knip.jsonc) dit ce qui est ignoré et pourquoi.
+      - name: Code mort
+        run: npm run code-mort
+
   # Le socle partagé, puis l'application web et ses suites.
   web:
     runs-on: ubuntu-latest
@@ -65,6 +70,14 @@ jobs:
 
       - name: Tests
         run: npm run test --workspace @regalica/web
+
+      # Le bundle de la coque, et ce qu'il pèse : 350 Ko de JavaScript initial,
+      # 3 Mo pour une mise à jour en vol. Au-delà, un Tecno démarre en plus de
+      # 3,5 s et une mise à jour en 3G se coupe.
+      - name: Le bundle de la coque et son budget
+        run: |
+          npm run build:coque:staging --workspace @regalica/web
+          npm run budget --workspace @regalica/web
 
   # L'API est vérifiée contre un PostgreSQL réel : la preuve d'isolation ne veut
   # rien dire sans RLS, et la RLS n'existe pas dans un bouchon.
@@ -109,3 +122,91 @@ jobs:
           DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
           JWT_SECRET: integration_continue_seulement_32_caracteres
           STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+
+  # Les épreuves : l'application vivante — API, site avec son relais, base
+  # réelle, jeu de données — parcourue par les mêmes scripts que sur le poste
+  # (`npm run verifier`), puis par un navigateur (Playwright, en téléphone).
+  # Aucun modèle n'est appelé ici ; la chaîne réelle avec les modèles est
+  # `epreuve-reelle.yml`, la nuit.
+  epreuves:
+    runs-on: ubuntu-latest
+    needs: [atelier]
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: regalica
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+      JWT_SECRET: integration_continue_seulement_32_caracteres
+      STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+      CORS_ORIGINS: http://localhost:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci
+
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          REGALICA_API_PASSWORD: ci
+
+      # L'API sur 3000, le site sur 8080 avec le relais : la même topologie
+      # que le poste. Les deux tournent en arrière-plan le temps du job.
+      - name: Démarrer l'API et le site
+        run: |
+          (npm run start -w @regalica/api > api.log 2>&1 &)
+          (npm run dev -w @regalica/web > web.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/sante
+
+      - name: Peupler le jeu de données
+        run: node outils/jeu-de-donnees.mjs http://localhost:8080
+
+      - name: Les épreuves par module
+        run: |
+          for f in outils/epreuves/*.mjs; do
+            [ "$(basename "$f")" = "socle.mjs" ] && continue
+            node "$f" http://localhost:8080
+          done
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Le site est déjà là : Playwright ne relance rien (reuseExistingServer).
+      - name: Parcours dans un navigateur
+        run: npm run e2e -w @regalica/web
+        env:
+          REGALICA_BASE: http://localhost:8080
+
+      - name: Journaux des serveurs
+        if: failure()
+        run: |
+          echo "::group::api"; tail -100 api.log; echo "::endgroup::"
+          echo "::group::web"; tail -100 web.log; echo "::endgroup::"
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright
+          path: apps/web/e2e/sortie
+          retention-days: 7

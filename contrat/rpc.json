@@ -1,0 +1,203 @@
+{
+  "acces": [
+    "monAcces"
+  ],
+  "banque": [
+    "audit",
+    "bookLines",
+    "createAccount",
+    "delettrer",
+    "etat",
+    "importLines",
+    "lettrages",
+    "lettrer",
+    "lines",
+    "listAccounts",
+    "setLineStatus"
+  ],
+  "capture": [
+    "contexteAssistant",
+    "contexteLecture",
+    "dossier",
+    "enregistrer",
+    "journaliserAgent",
+    "listAvecLecture",
+    "lister",
+    "persisterLecture",
+    "preciser",
+    "supprimer"
+  ],
+  "charges": [
+    "anomalyThreshold",
+    "answer",
+    "articles",
+    "familles",
+    "questions"
+  ],
+  "collab": [
+    "addPv",
+    "assign",
+    "assignments",
+    "deriverEcheances",
+    "echeances",
+    "invitations",
+    "invitationsPourMoi",
+    "inviter",
+    "markRead",
+    "marquerEcheance",
+    "members",
+    "notifications",
+    "pvEnregistrer",
+    "pvEnvoyer",
+    "pvList",
+    "pvOuvrir",
+    "repondreAInvitation",
+    "setPieceVis",
+    "stats"
+  ],
+  "conseil": [
+    "contexte",
+    "creer",
+    "decider",
+    "file",
+    "lire",
+    "nomsDesCorpus",
+    "statistiques",
+    "veille"
+  ],
+  "conversations": [
+    "ajouter",
+    "dernierMessage",
+    "journaliserControles",
+    "juger",
+    "lister",
+    "ouvrir",
+    "ouvrirNouvelle",
+    "renommer",
+    "supprimer"
+  ],
+  "corpus": [
+    "editionsPlusRecentes",
+    "modeleEmpreinte",
+    "parametresPour",
+    "rechercher"
+  ],
+  "exports": [
+    "estimer",
+    "exercices",
+    "generer",
+    "historique"
+  ],
+  "honoraires": [
+    "avoir",
+    "cloreMandat",
+    "creerBrouillon",
+    "definirMandat",
+    "emettre",
+    "encaissements",
+    "encaisser",
+    "facture",
+    "factures",
+    "mandats",
+    "modifierBrouillon",
+    "supprimerBrouillon",
+    "synthese"
+  ],
+  "identite": [
+    "createOrganization",
+    "creerMandat",
+    "definirOrganisation",
+    "etablirFiche",
+    "ficheCourante",
+    "formesDisponibles",
+    "listEntities",
+    "listMyOrganizations",
+    "mandatsProposes",
+    "monCabinet",
+    "proposerMandat",
+    "regimesDisponibles",
+    "repondreAuMandat"
+  ],
+  "immo": [
+    "categories",
+    "cessions",
+    "constaterDepreciation",
+    "constaterDotation",
+    "createAsset",
+    "depreciations",
+    "dotations",
+    "listAssets",
+    "recordCession",
+    "updateAsset"
+  ],
+  "integrations": [
+    "cles",
+    "creerCle",
+    "etat",
+    "revoquerCle"
+  ],
+  "office": [
+    "book",
+    "bookedExtracts",
+    "ecrituresByIds",
+    "ecrituresForPiece",
+    "periodeLignes",
+    "propose"
+  ],
+  "parametrage": [
+    "calendrierCabinet",
+    "creerObligationPropre",
+    "definirLiaison",
+    "definirObligation",
+    "definirReglagesCabinet",
+    "fermerCompte",
+    "miseEnRoute",
+    "ouvrirCompte",
+    "plan",
+    "reglagesCabinet",
+    "rendreAuPack",
+    "roles",
+    "secteursDuCabinet",
+    "terminerMiseEnRoute"
+  ],
+  "referentiel": [
+    "accountMappings",
+    "activePack",
+    "fiscalCharges",
+    "juridictions",
+    "socleParams",
+    "taxRates"
+  ],
+  "signalements": [
+    "deposer"
+  ],
+  "stocks": [
+    "addMouvement",
+    "categories",
+    "constaterDepreciation",
+    "constaterInventaire",
+    "createItem",
+    "depreciations",
+    "inventaires",
+    "listItems",
+    "mouvements",
+    "updateItem"
+  ],
+  "supervision": [
+    "auditForPiece",
+    "journalDuMandat",
+    "listClients",
+    "listMyCabinets",
+    "motifs",
+    "queue",
+    "review",
+    "statistiques"
+  ],
+  "tiers": [
+    "comptesCollectifs",
+    "creer",
+    "desactiver",
+    "lister",
+    "modifier"
+  ]
+}

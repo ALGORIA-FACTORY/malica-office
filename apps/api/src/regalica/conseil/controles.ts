@@ -303,12 +303,3 @@ export function controler(entree: EntreeDeControle): Verdict[] {
 
   return verdicts;
 }
-
-/** Ce que le cabinet voit, et ce que le client ne voit pas. */
-export function pourLeCabinet(verdicts: readonly Verdict[]): Verdict[] {
-  return [...verdicts];
-}
-
-export function bloquants(verdicts: readonly Verdict[]): Verdict[] {
-  return verdicts.filter((v) => v.suite === "retirer");
-}

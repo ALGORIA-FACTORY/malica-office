@@ -122,7 +122,7 @@ const SelectionResponse = z.object({
   overall_confidence: orDefault(z.coerce.number().min(0).max(1).default(0.5)),
 });
 
-export interface VisionLine {
+interface VisionLine {
   label: string;
   tax_code: string;
   base_ht: TokenRef | null;
@@ -139,7 +139,7 @@ export interface VisionArticle {
   tax_code: string | null;
 }
 
-export interface VisionCharge {
+interface VisionCharge {
   code: string;
   amount: TokenRef | null;
 }

@@ -1,0 +1,126 @@
+# La coque sur un émulateur — Maestro, avec l'API et le site de la machine
+# hôte derrière (10.0.2.2), le jeu de données, et une image « Google APIs »
+# pour que ML Kit existe.
+#
+# Chaque nuit et à la demande : un émulateur met dix minutes à se lever, ce
+# n'est pas le prix d'une fusion. Ce qu'il éprouve, aucun navigateur ne le
+# sait : l'abandon du scanner natif, le bouton retour matériel, le mode avion
+# de l'appareil, l'arabe dans une WebView.
+#
+# La saveur `emulateur` parle en clair à la machine hôte ; elle n'est jamais
+# signée ni envoyée (voir android/app/build.gradle).
+
+name: Android sur émulateur
+
+on:
+  schedule:
+    - cron: "47 2 * * *" # 02:47 UTC
+  workflow_dispatch:
+
+jobs:
+  maestro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: regalica
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+      JWT_SECRET: integration_continue_seulement_32_caracteres
+      STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+      # La WebView de l'émulateur se présente depuis http://localhost (clair, saveur emulateur).
+      CORS_ORIGINS: http://localhost:8080,http://localhost,https://localhost
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # L'émulateur veut la virtualisation matérielle.
+      - name: Activer KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Installer
+        run: npm ci
+
+      - name: Monter le schéma
+        run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
+        env:
+          REGALICA_API_PASSWORD: ci
+
+      - name: Démarrer l'API et le site
+        run: |
+          (npm run start -w @regalica/api > api.log 2>&1 &)
+          (npm run dev -w @regalica/web -- --host 0.0.0.0 > web.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8080/sante
+
+      - name: Peupler le jeu de données
+        run: node outils/jeu-de-donnees.mjs http://localhost:8080
+
+      - name: Construire l'APK de l'émulateur
+        run: |
+          npm run build:coque:emulateur -w @regalica/web
+          REGALICA_COQUE_EMULATEUR=1 npm run coque:sync -w @regalica/web
+          cd android && ./gradlew assembleEmulateurDebug -PversionName=0.0.0 --no-daemon
+
+      - name: Installer Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Lancer l'émulateur et les flux
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
+            maestro test --format junit --output maestro.xml android/maestro/
+
+      - name: Journaux
+        if: failure()
+        run: |
+          echo "::group::api"; tail -100 api.log; echo "::endgroup::"
+          echo "::group::web"; tail -100 web.log; echo "::endgroup::"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: maestro
+          path: |
+            maestro.xml
+            ~/.maestro/tests
+          retention-days: 7

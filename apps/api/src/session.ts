@@ -42,7 +42,7 @@ declare global {
 }
 
 export const NOM_COOKIE = "regalica_session";
-export const EN_TETE_CLIENT = "x-regalica-client";
+const EN_TETE_CLIENT = "x-regalica-client";
 
 export function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
   const entete = req.headers.authorization;

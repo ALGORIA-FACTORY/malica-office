@@ -29,7 +29,7 @@
  * devient une table — son contrat ne change pas.
  */
 
-export interface LectureEnCours {
+interface LectureEnCours {
   /** Instant du départ, en millisecondes. */
   depuis: number;
 }

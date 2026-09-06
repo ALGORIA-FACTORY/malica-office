@@ -1,0 +1,14 @@
+# L'arabe : les réglages changent la langue, l'application se retourne.
+appId: tn.algoria.regalica.emulateur
+---
+- launchApp
+- runFlow: connexion.yaml
+- tapOn: "Mon espace"
+- tapOn: "Réglages"
+- assertVisible: "Langue"
+- tapOn: "العربية"
+- assertVisible: "الإعدادات"
+- assertVisible: "اللغة"
+# Retour au français, pour les flux suivants.
+- tapOn: "Français"
+- assertVisible: "Réglages"

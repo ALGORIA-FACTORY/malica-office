@@ -25,8 +25,8 @@ import { dec } from "./decimal.ts";
 import { referentiel } from "./referentiel.ts";
 
 /** Les formats que ce dépôt sait produire. Le libellé humain vit dans l'écran. */
-export const FORMATS_EXPORT = ["fec", "csv_ecritures", "csv_plan"] as const;
-export type FormatExport = (typeof FORMATS_EXPORT)[number];
+const FORMATS_EXPORT = ["fec", "csv_ecritures", "csv_plan"] as const;
+type FormatExport = (typeof FORMATS_EXPORT)[number];
 
 /** Les dix-huit colonnes du fichier des écritures comptables, dans l'ordre du format. */
 export const COLONNES_FEC = [
@@ -70,7 +70,7 @@ export const COLONNES_CSV_ECRITURES = [
 ] as const;
 
 /** Les colonnes du CSV du plan comptable. */
-export const COLONNES_CSV_PLAN = ["compte", "libelle", "parent", "classe", "origine"] as const;
+const COLONNES_CSV_PLAN = ["compte", "libelle", "parent", "classe", "origine"] as const;
 
 /** Une ligne comptabilisée, telle que la base la rend pour un fichier. */
 export interface LigneExport {
@@ -97,7 +97,7 @@ export interface LigneExport {
 }
 
 /** Un compte du plan, tel qu'il sort : le pack livré, puis ce que le cabinet a ouvert. */
-export interface CompteExport {
+interface CompteExport {
   compte: string;
   libelle: string;
   parent: string | null;
@@ -183,7 +183,7 @@ export function formaterFec(
 }
 
 /** Un CSV : marque d'ordre d'octets, en-tête, lignes. */
-export function formaterCsv(entete: readonly string[], lignes: string[][]): string {
+function formaterCsv(entete: readonly string[], lignes: string[][]): string {
   const sortie = [entete.join(SEPARATEUR_CSV)];
   for (const l of lignes) sortie.push(l.map(champCsv).join(SEPARATEUR_CSV));
   return BOM + sortie.join(FIN_DE_LIGNE) + FIN_DE_LIGNE;
@@ -212,7 +212,7 @@ export function formaterCsvEcritures(lignes: LigneExport[], decimales: number): 
   );
 }
 
-export function formaterCsvPlan(comptes: CompteExport[]): string {
+function formaterCsvPlan(comptes: CompteExport[]): string {
   return formaterCsv(
     COLONNES_CSV_PLAN,
     comptes.map((c) => [c.compte, c.libelle, c.parent ?? "", c.classe, c.origine]),

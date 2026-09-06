@@ -16,7 +16,7 @@ export interface CitationBinding {
 }
 
 /** Retrouve un token dans le plan. */
-export function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | null {
+function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | null {
   return tokens.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null;
 }
 

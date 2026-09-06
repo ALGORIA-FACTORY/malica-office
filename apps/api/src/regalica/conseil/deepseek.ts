@@ -10,7 +10,7 @@
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 /** Rôles tarifés en base — le nom du modèle ne vit qu'ici et dans la table. */
-export const DEEPSEEK_MODELS = {
+const DEEPSEEK_MODELS = {
   reasoner: "deepseek-reasoner",
   chat: "deepseek-chat",
 } as const;

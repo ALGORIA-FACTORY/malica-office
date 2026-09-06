@@ -20,6 +20,8 @@
     "certificat": "node outils/certificat-local.mjs",
     "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs",
     "verifier": "node outils/verifier.mjs",
+    "code-mort": "knip",
+    "contrat": "node --experimental-strip-types contrat/relever.mjs --ecrire",
     "coque:staging": "npm run build:coque:staging -w @regalica/web && npm run coque:sync -w @regalica/web",
     "coque:pilote": "npm run build:coque:pilote -w @regalica/web && npm run coque:sync -w @regalica/web",
     "coque:ouvrir": "npm run coque:ouvrir -w @regalica/web"
@@ -32,8 +34,12 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
+    "knip": "^6.34.0",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }

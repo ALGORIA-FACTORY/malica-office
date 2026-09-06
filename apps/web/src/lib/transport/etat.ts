@@ -27,12 +27,7 @@ export function signalerMiseAJourRequise(versionMinimale: string | null): void {
   publier({ ...etat, miseAJourRequise: { versionMinimale } });
 }
 
-/** Pour les épreuves, et pour un rechargement après mise à jour. */
-export function reinitialiserEtatTransport(): void {
-  publier({ miseAJourRequise: null });
-}
-
-export function lireEtatTransport(): EtatTransport {
+function lireEtatTransport(): EtatTransport {
   return etat;
 }
 

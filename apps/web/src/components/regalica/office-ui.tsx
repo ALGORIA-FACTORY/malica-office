@@ -24,98 +24,6 @@ export function SignalDot({ tone = "neutral" }: { tone?: Tone }) {
   return <span aria-hidden className={cn("inline-block h-2 w-2 shrink-0", color)} />;
 }
 
-export function Eyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-      {children}
-    </p>
-  );
-}
-
-/** Le chiffre : kicker mono, nombre large, contexte discret. */
-export function BigNumber({
-  kicker,
-  value,
-  context,
-}: {
-  kicker: string;
-  value: string;
-  context?: string;
-}) {
-  return (
-    <div>
-      <p className="num text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{kicker}</p>
-      <p className="num mt-1 text-[44px] font-medium leading-none tracking-tight">{value}</p>
-      {context ? <p className="mt-2 text-[13px] text-muted-foreground">{context}</p> : null}
-    </div>
-  );
-}
-
-/** Card primaire pleine encre — une seule par écran. */
-export function InkCard({
-  to,
-  label,
-  state,
-  onClick,
-}: {
-  to?: string;
-  label: string;
-  state?: string;
-  onClick?: () => void;
-}) {
-  const inner = (
-    <div className="border border-foreground bg-foreground px-4 py-5 text-background">
-      <p className="text-sm font-medium">{label}</p>
-      <p className="mt-2 text-xs text-background/70">{state || "\u00A0"}</p>
-    </div>
-  );
-  if (to) {
-    return (
-      <Link to={to} className="block">
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <button type="button" onClick={onClick} className="block w-full text-start">
-      {inner}
-    </button>
-  );
-}
-
-/** Card pierre — bordure, jamais d'ombre, jamais de chevron. */
-export function StoneCard({
-  to,
-  label,
-  state,
-  disabled,
-}: {
-  to?: string;
-  label: string;
-  state?: string;
-  disabled?: boolean;
-}) {
-  const inner = (
-    <div
-      className={cn(
-        "flex h-full min-h-[86px] flex-col justify-between border border-border bg-card px-4 py-4",
-        disabled ? "opacity-60" : "hover:bg-accent",
-      )}
-    >
-      <p className="text-sm font-medium">{label}</p>
-      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">{state || "\u00A0"}</p>
-    </div>
-  );
-  if (to && !disabled) {
-    return (
-      <Link to={to} className="block">
-        {inner}
-      </Link>
-    );
-  }
-  return <div aria-disabled={disabled}>{inner}</div>;
-}
-
 export function Chip({
   active,
   children,
@@ -139,49 +47,6 @@ export function Chip({
     >
       {children}
     </button>
-  );
-}
-
-export type StepState = "done" | "current" | "pending";
-
-/** Timeline verticale d'une pièce — capturée → lue → comptabilisée. */
-export function Timeline({
-  steps,
-}: {
-  steps: Array<{ key: string; label: string; state: StepState }>;
-}) {
-  return (
-    <ol className="relative ms-1 mt-3">
-      <span
-        aria-hidden
-        className="absolute bottom-1.5 top-1.5 w-px bg-border"
-        style={{ insetInlineStart: "5px" }}
-      />
-      {steps.map((s) => (
-        <li key={s.key} className="relative py-1" style={{ paddingInlineStart: "22px" }}>
-          <span
-            aria-hidden
-            className={cn(
-              "absolute top-[9px] h-[11px] w-[11px] border",
-              s.state === "done"
-                ? "border-foreground bg-foreground"
-                : s.state === "current"
-                  ? "border-foreground bg-background"
-                  : "border-border bg-background",
-            )}
-            style={{ insetInlineStart: 0 }}
-          />
-          <span
-            className={cn(
-              "text-[11px]",
-              s.state === "pending" ? "text-muted-foreground" : "font-medium text-foreground",
-            )}
-          >
-            {s.label}
-          </span>
-        </li>
-      ))}
-    </ol>
   );
 }
 
@@ -370,31 +235,6 @@ export function SectionRepliable({
   );
 }
 
-/** Bandeau de chiffres gouvernés — chaque valeur vient du Socle. */
-export function KpiRow({
-  items,
-}: {
-  items: Array<{ key: string; label: string; value: string; context?: string }>;
-}) {
-  return (
-    <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-      {items.map((item) => (
-        <div key={item.key} className="bg-card px-4 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {item.label}
-          </p>
-          <p className="num mt-2 text-[26px] font-medium leading-none tracking-tight">
-            {item.value}
-          </p>
-          {item.context ? (
-            <p className="mt-2 text-[11px] text-muted-foreground">{item.context}</p>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /** Table d'encre — filets, chiffres en mono, aucune zébrure colorée. */
 export function InkTable({
   head,
@@ -562,63 +402,6 @@ export function RegalicaPanel({
   );
 }
 
-/** Liste d'agents au travail — état factuel, jamais un chiffre inventé. */
-export function AgentList({
-  title,
-  items,
-}: {
-  title: string;
-  items: Array<{ key: string; label: string; state: string; tone?: Tone }>;
-}) {
-  return (
-    <div>
-      <p className="pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        {title}
-      </p>
-      <ul className="space-y-2">
-        {items.map((item) => (
-          <li key={item.key} className="flex items-baseline justify-between gap-3">
-            <span className="flex items-baseline gap-2 text-[13px]">
-              <SignalDot tone={item.tone ?? "ok"} />
-              {item.label}
-            </span>
-            <span className="text-[11px] text-muted-foreground">{item.state}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/** Cartes de chiffres autonomes — filets séparés, comme la maquette. */
-export function StatCards({
-  items,
-}: {
-  items: Array<{ key: string; label: string; value: string; tone?: Tone }>;
-}) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <div key={item.key} className="border border-border bg-card px-4 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {item.label}
-          </p>
-          <p
-            className={cn(
-              "num mt-3 text-[34px] font-medium leading-none tracking-tight",
-              item.tone === "ok" && "text-signal-ok",
-              item.tone === "warn" && "text-signal-warn",
-              item.tone === "stop" && "text-signal-stop",
-            )}
-          >
-            {item.value}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /** Bloc de parole dans le panneau : une note bordée, jamais une bulle. */
 export function RegalicaNote({ kicker, children }: { kicker?: string; children: ReactNode }) {
   return (
@@ -665,5 +448,14 @@ export function ActionButton({
     >
       {children}
     </button>
+  );
+}
+
+/** Le petit titre en capitales espacées, au-dessus d'un bloc. */
+function Eyebrow({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      {children}
+    </p>
   );
 }

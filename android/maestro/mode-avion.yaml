@@ -1,0 +1,18 @@
+# Le hors ligne : en mode avion, la coque le dit d'un bandeau et garde
+# l'écran ; au retour du réseau, le bandeau tombe. La capture elle-même (le
+# scanner, la file qui se vide) se joue sur appareil réel — protocole
+# d'appareil, points 7 et 8.
+appId: tn.algoria.regalica.emulateur
+---
+- launchApp
+- runFlow: connexion.yaml
+- setAirplaneMode: enabled
+- assertVisible:
+    text: "Hors ligne — vos photos partiront au retour du réseau."
+    timeout: 10000
+- tapOn: "Mon espace"
+- assertVisible: "Coffre"
+- setAirplaneMode: disabled
+- assertNotVisible:
+    text: "Hors ligne — vos photos partiront au retour du réseau."
+    timeout: 20000

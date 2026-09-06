@@ -15,7 +15,7 @@ export interface Compte {
   email: string;
 }
 
-export interface Rafraichissement {
+interface Rafraichissement {
   jeton: string;
   utilisateur: Compte;
 }

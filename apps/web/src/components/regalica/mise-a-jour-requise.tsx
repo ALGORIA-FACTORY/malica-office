@@ -41,7 +41,7 @@ function langueRangee(): keyof typeof MOTS {
   return "fr";
 }
 
-export function MiseAJourRequise({ versionMinimale }: { versionMinimale: string | null }) {
+function MiseAJourRequise({ versionMinimale }: { versionMinimale: string | null }) {
   const mots = MOTS[langueRangee()];
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

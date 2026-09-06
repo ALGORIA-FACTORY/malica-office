@@ -14,7 +14,7 @@
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import type { VisionArticle } from "./vision.ts";
 
-export type ArticleColumn = "quantity" | "unit_price_ht" | "unit_price_ttc" | "total_ht";
+type ArticleColumn = "quantity" | "unit_price_ht" | "unit_price_ttc" | "total_ht";
 
 interface ColumnBand {
   column: ArticleColumn;

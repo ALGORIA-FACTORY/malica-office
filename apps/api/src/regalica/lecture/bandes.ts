@@ -37,7 +37,7 @@ export interface Bande {
 }
 
 /** Part de la hauteur de page partagée par deux bandes voisines. */
-export const CHEVAUCHEMENT = 0.06;
+const CHEVAUCHEMENT = 0.06;
 
 /** Le nombre de bandes maximal : au-delà, la page n'est pas dense, elle est illisible. */
 export const BANDES_MAX = 4;

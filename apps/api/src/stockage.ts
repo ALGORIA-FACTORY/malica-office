@@ -157,7 +157,7 @@ export async function lireContenu(
  * tiennent dessous. Au-delà, ce n'est plus une pièce comptable — et sans
  * borne, un seul envoi remplirait le disque de tout le monde.
  */
-export const TAILLE_MAX_PIECE = 40 * 1024 * 1024;
+const TAILLE_MAX_PIECE = 40 * 1024 * 1024;
 
 class PieceTropGrosse extends Error {}
 

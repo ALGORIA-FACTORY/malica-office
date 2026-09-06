@@ -18,13 +18,13 @@ import {
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 
-export { LOCALES, LOCALE_NAMES, RTL_LOCALES } from "@regalica/socle/messages";
+export { LOCALES, LOCALE_NAMES } from "@regalica/socle/messages";
 export type { Locale, MessageKey } from "@regalica/socle/messages";
 
 const STORAGE_KEY = "regalica.locale";
 const DEFAULT_LOCALE: Locale = "fr";
 
-export function dirFor(locale: Locale): "ltr" | "rtl" {
+function dirFor(locale: Locale): "ltr" | "rtl" {
   return RTL_LOCALES.includes(locale) ? "rtl" : "ltr";
 }
 

@@ -43,7 +43,7 @@ const PAGE_BYTES_BUDGET = 190_000;
 /** Netteté minimale acceptée (variance du laplacien normalisée). */
 export const SHARPNESS_MIN = 0.0022;
 /** Part d'encre au-dessous de laquelle une page est considérée vierge. */
-export const BLANK_INK_MAX = 0.012;
+const BLANK_INK_MAX = 0.012;
 
 /*
  * ============================================ CE QUE LE DÉTECTEUR NE SUPPOSE PAS
@@ -584,7 +584,7 @@ export function grayOf(data: ImageData): Uint8ClampedArray {
  * Une photo floue produit un laplacien plat ; le seuil est indépendant de
  * l'exposition, donc utilisable tel quel sur mobile.
  */
-export function sharpness(gray: Uint8ClampedArray, w: number, h: number): number {
+function sharpness(gray: Uint8ClampedArray, w: number, h: number): number {
   if (w < 3 || h < 3) return 0;
   let sum = 0;
   let sumSq = 0;
@@ -605,7 +605,7 @@ export function sharpness(gray: Uint8ClampedArray, w: number, h: number): number
 }
 
 /** Part de pixels sombres : sert à repérer une page vierge (fin de document). */
-export function inkRatio(gray: Uint8ClampedArray): number {
+function inkRatio(gray: Uint8ClampedArray): number {
   const hist = new Uint32Array(256);
   for (let i = 0; i < gray.length; i += 1) hist[gray[i]!] = hist[gray[i]!]! + 1;
   const t = otsu(hist, gray.length);
@@ -1195,7 +1195,7 @@ export async function preparePage(
 }
 
 /** Un seul PDF compact par pièce, quel que soit le nombre de pages. */
-export function pagesToPdf(pages: readonly PreparedPage[], baseName = "piece"): ScanResult {
+function pagesToPdf(pages: readonly PreparedPage[], baseName = "piece"): ScanResult {
   if (pages.length === 0) throw new Error("aucune page à encoder");
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const name = `${baseName}-${stamp}.pdf`;

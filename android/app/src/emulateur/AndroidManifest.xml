@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    La saveur « emulateur », pour la CI seulement : l'API tourne sur la machine
+    hôte, en clair, que l'émulateur voit en 10.0.2.2. Ce manifeste se fusionne
+    avec le principal et n'autorise le clair que dans cette saveur — les
+    saveurs pilote et prod n'en héritent pas.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+</manifest>

@@ -46,9 +46,16 @@ const config: CapacitorConfig = {
   android: { path: "../../android" },
 
   server: {
-    // Jamais de clair : la coque parle à l'API en HTTPS, ou ne parle pas.
-    cleartext: false,
-    androidScheme: "https",
+    /*
+     * Jamais de clair : la coque parle à l'API en HTTPS, ou ne parle pas.
+     * Une seule exception, l'émulateur de la CI (REGALICA_COQUE_EMULATEUR=1
+     * au moment de `cap sync`) : l'API de la machine hôte est en clair sur
+     * 10.0.2.2, et la page doit l'être aussi pour qu'un contenu mixte ne
+     * bloque pas l'appel. La saveur Gradle `emulateur` est la seule dont le
+     * manifeste l'autorise.
+     */
+    cleartext: process.env["REGALICA_COQUE_EMULATEUR"] === "1",
+    androidScheme: process.env["REGALICA_COQUE_EMULATEUR"] === "1" ? "http" : "https",
   },
 
   plugins: {

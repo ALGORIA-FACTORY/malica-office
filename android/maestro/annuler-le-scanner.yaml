@@ -1,0 +1,16 @@
+# Ouvrir le scanner de l'appareil et l'abandonner : aucune erreur, l'écran
+# d'avant intact. C'est le cas que le navigateur ne sait pas jouer — ML Kit
+# est une activité des services Google, hors de la page.
+appId: tn.algoria.regalica.emulateur
+---
+- launchApp
+- runFlow: connexion.yaml
+- tapOn: "Photographier"
+# La permission caméra, la première fois.
+- tapOn:
+    text: "Lors de l'utilisation de l'application|While using the app|Autoriser|Allow"
+    optional: true
+# L'activité ML Kit est ouverte : le retour matériel l'abandonne.
+- back
+- assertVisible: "Vos documents"
+- assertNotVisible: "Une erreur est survenue."

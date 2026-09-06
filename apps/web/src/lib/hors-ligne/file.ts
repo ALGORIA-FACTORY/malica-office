@@ -132,8 +132,3 @@ export function estADeclencher(e: ElementDeFile, maintenant: number): boolean {
   if (e.etat === "echec_definitif" || e.etat === "lecture_demandee") return false;
   return e.prochainEssaiLe === null || Date.parse(e.prochainEssaiLe) <= maintenant;
 }
-
-/** Vrai si la pièce existe déjà côté API — l'écran peut l'ouvrir. */
-export function estArrivee(e: ElementDeFile): boolean {
-  return e.pieceId !== null && e.etat !== "a_envoyer";
-}

@@ -74,7 +74,7 @@ declare global {
 
 export class PorteeInsuffisante extends Error {}
 
-export function methodeCouverte(portees: string[], depot: string, methode: string): boolean {
+function methodeCouverte(portees: string[], depot: string, methode: string): boolean {
   const nom = `${depot}.${methode}`;
   return portees.some((portee) => METHODES_PAR_PORTEE[portee]?.has(nom) ?? false);
 }

@@ -1,0 +1,26 @@
+// R9 : aucun code mort. knip relève les fichiers, exports et dépendances que
+// rien n'atteint. Les points d'entrée sont les scripts qu'on lance à la main
+// ou en CI ; ce qui est ignoré l'est pour une raison écrite ici.
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["db/**/*.mjs", "outils/**/*.mjs", "infra/**/*.mjs"],
+      // Le certificat de développement se génère avec l'openssl du poste.
+      "ignoreBinaries": ["openssl"],
+    },
+    "apps/api": {
+      "entry": ["src/**/*.test.ts", "tests/real/*.ts"],
+    },
+    "apps/web": {
+      "entry": ["src/routes/**/*.tsx", "scripts/*.mjs", "e2e/**/*.ts"],
+      // @capacitor/android est le projet Gradle (android/capacitor.settings.gradle
+      // le désigne) ; @capacitor/keyboard est un greffon natif enregistré par
+      // cap sync et configuré dans capacitor.config.ts, sans import JavaScript.
+      "ignoreDependencies": ["@capacitor/android", "@capacitor/keyboard"],
+    },
+    "packages/socle": {
+      "entry": ["src/**/*.ts"],
+    },
+  },
+}

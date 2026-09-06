@@ -1,0 +1,18 @@
+# Le bouton retour d'Android : il recule d'un écran, jamais hors de
+# l'application depuis un écran intérieur ; depuis l'accueil, il quitte.
+appId: tn.algoria.regalica.emulateur
+---
+- launchApp
+- runFlow: connexion.yaml
+- tapOn: "Mon espace"
+- assertVisible: "Coffre"
+- back
+- assertVisible: "Vos documents"
+# Le fil de Regalica, ouvert par-dessus l'accueil, se ferme d'un retour.
+- tapOn: "Parler à Regalica"
+- assertVisible: "Conversation en cours"
+- back
+- assertVisible: "Vos documents"
+# Depuis l'accueil, le retour quitte : l'application n'est plus au premier plan.
+- back
+- assertNotVisible: "Vos documents"

@@ -65,7 +65,24 @@ const DEPOTS = {
   tiers,
 } as const;
 
-export type NomDepot = keyof typeof DEPOTS;
+type NomDepot = keyof typeof DEPOTS;
+
+/**
+ * Le contrat tel qu'il est servi : chaque dépôt et ses méthodes, triés.
+ * `contrat/rpc.json` en est la copie figée ; `contrat.test.ts` échoue si
+ * l'un bouge sans l'autre, et le test web vérifie que chaque port de
+ * l'application existe ici.
+ */
+export function contratRpc(): Record<string, string[]> {
+  const contrat: Record<string, string[]> = {};
+  for (const nom of Object.keys(DEPOTS).sort()) {
+    const depot = DEPOTS[nom as NomDepot] as Record<string, unknown>;
+    contrat[nom] = Object.keys(depot)
+      .filter((m) => typeof depot[m] === "function")
+      .sort();
+  }
+  return contrat;
+}
 
 export interface AppelRpc {
   depot: string;

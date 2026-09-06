@@ -55,6 +55,16 @@ android {
             dimension "cible"
             resValue "string", "app_name", "Regalica Office"
         }
+        /*
+         * Pour l'émulateur de la CI (Maestro) seulement : le bundle vise l'API
+         * de la machine hôte en clair (10.0.2.2), et son manifeste l'autorise.
+         * Jamais signée, jamais envoyée : un suffixe la rend inconfondable.
+         */
+        emulateur {
+            dimension "cible"
+            applicationIdSuffix ".emulateur"
+            resValue "string", "app_name", "Regalica (émulateur)"
+        }
     }
 
     signingConfigs {
