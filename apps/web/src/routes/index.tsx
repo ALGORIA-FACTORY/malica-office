@@ -1,9 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
+import { CIBLE_COQUE } from "@/capabilities/coque";
 import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/")({
+  // L'application Android est l'espace PME, et rien d'autre : la vitrine et
+  // le cabinet restent sur le web. La coque s'ouvre directement sur le dossier.
+  beforeLoad: () => {
+    if (CIBLE_COQUE) throw redirect({ to: "/pme" });
+  },
   head: () => ({
     meta: [
       { title: "Regalica Office — comptabilité augmentée, chiffre gouverné" },

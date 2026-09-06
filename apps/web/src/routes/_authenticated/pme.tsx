@@ -3,6 +3,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
+import { CIBLE_COQUE } from "@/capabilities/coque";
 import { files } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/regalica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/regalica/entete-pme";
@@ -70,7 +71,9 @@ function PmeLayout() {
   // Garde de rôle : sans appartenance PME, on renvoie au portail plutôt qu'un écran muet.
   useEffect(() => {
     if (orgsQuery.isPending) return;
-    if (pmeOrgs.length === 0 && hasCabinet) void navigate({ to: "/office" });
+    // Dans la coque, pas de portail où aller : l'écran dit qu'il n'y a pas de
+    // dossier PME, et propose d'en créer un.
+    if (pmeOrgs.length === 0 && hasCabinet && !CIBLE_COQUE) void navigate({ to: "/office" });
   }, [orgsQuery.isPending, pmeOrgs.length, hasCabinet, navigate]);
 
   function selectOrg(id: string) {

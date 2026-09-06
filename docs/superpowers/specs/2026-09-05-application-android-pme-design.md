@@ -217,3 +217,7 @@ Branche `application-android`. Faits et verts (typage, 372 épreuves web, 158 so
 Écarts avec le plan : les gestes de Regalica sont des routes `/regalica/*` et non des dépôts `/rpc` (transaction coupée après 10 s) ; `fiche.*` et `conversations.*` sont des méthodes `/rpc` ordinaires ; la carte fiscale voyage en octets bruts sur `POST /regalica/carte` ; les signalements passent par un dépôt `/rpc` sous RLS plutôt qu'une route ; le prérendu de la coquille prend le port 4177 par un greffon posé après nitro.
 
 Points ouverts : erreur d'hydratation React (#418) au démarrage de la coquille, présente avant le chantier ; Capgo et Sentry non branchés (lot 6) ; `vite preview` sert le rendu serveur — la coque s'éprouve dans Chrome en servant `.output/public` en statique avec repli sur `index.html`.
+
+## Décision du 6 septembre : PME uniquement sur Android
+
+L'application Android est l'espace du dirigeant, et rien d'autre. Le cabinet et la vitrine restent sur le web. Dans le bundle de coque, `/` et `/office` mènent à `/pme`, et un compte sans dossier PME voit « aucun dossier » avec de quoi en créer un, au lieu de basculer vers le cabinet. Les écrans du cabinet restent dans le bundle tant qu'ils partagent le même code de routes ; les en retirer est une optimisation de poids, pas une décision de produit.

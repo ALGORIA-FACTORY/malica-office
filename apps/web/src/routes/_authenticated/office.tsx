@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { Building2, Smartphone } from "lucide-react";
+
+import { CIBLE_COQUE } from "@/capabilities/coque";
 import { useEffect, type ReactNode } from "react";
 
 import { InvitationsPourMoi } from "@/components/regalica/InvitationsPourMoi";
@@ -53,6 +55,12 @@ function OfficeHome() {
 
   // Un seul espace disponible : on y entre directement, sans écran intermédiaire.
   useEffect(() => {
+    // Dans la coque, il n'y a qu'un espace : celui du dirigeant. Le cabinet
+    // reste sur le web, quel que soit le compte.
+    if (CIBLE_COQUE) {
+      void navigate({ to: "/pme", replace: true });
+      return;
+    }
     if (orgsQuery.isPending) return;
     if (pmeOrgs.length > 0 && cabinetOrgs.length === 0) void navigate({ to: "/pme" });
     if (cabinetOrgs.length > 0 && pmeOrgs.length === 0) void navigate({ to: "/cabinet" });
