@@ -14,6 +14,8 @@
 # clos. Il exige REMPLACER=oui dans l'environnement, pour qu'un doigt qui
 # glisse ne suffise pas.
 set -euo pipefail
+# Une substitution $(…) hérite de -e : un pg_restore qui tombe arrête tout.
+shopt -s inherit_errexit
 
 CIBLE=/restauration
 ARGS_SFTP="-i /root/.ssh/id_ed25519 -p 23 -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
@@ -26,7 +28,8 @@ maintenant() { date +%Y-%m-%dT%H:%M:%S; }
 ramener_le_dump() {
   local instantane="${1:-latest}"
   rm -rf "$CIBLE/base"
-  r restore "$instantane" --tag base --target "$CIBLE/base" --quiet
+  # Le résumé de restic va sur stderr : seule la sortie de cette fonction est le chemin du dump.
+  r restore "$instantane" --tag base --target "$CIBLE/base" --quiet >&2
   local dump
   dump=$(find "$CIBLE/base" -name 'regalica-*.dump' | sort | tail -n 1)
   [ -n "$dump" ] || {
@@ -41,7 +44,10 @@ charger() {
   local dump="$1" base="$2"
   psql_admin -d postgres -c "drop database if exists $base with (force)"
   psql_admin -d postgres -c "create database $base"
-  pg_restore -h postgres -U postgres -d "$base" --no-owner --no-privileges --exit-on-error "$dump"
+  pg_restore -h postgres -U postgres -d "$base" --no-owner --no-privileges --exit-on-error "$dump" || {
+    echo "pg_restore a échoué sur $dump" >&2
+    return 1
+  }
   psql_admin -d "$base" -c "select count(*) from pg_tables where schemaname not in ('pg_catalog','information_schema')"
 }
 
