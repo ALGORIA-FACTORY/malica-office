@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ConfidentialiteRouteImport } from './routes/confidentialite'
 import { Route as AuthenticatedCabinetRouteImport } from './routes/_authenticated/cabinet'
 import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated/office'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -60,6 +61,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfidentialiteRoute = ConfidentialiteRouteImport.update({
+  id: '/confidentialite',
+  path: '/confidentialite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCabinetRoute = AuthenticatedCabinetRouteImport.update({
@@ -264,6 +270,7 @@ const AuthenticatedPmePiecePieceIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/confidentialite': typeof ConfidentialiteRoute
   '/cabinet': typeof AuthenticatedCabinetRouteWithChildren
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/confidentialite': typeof ConfidentialiteRoute
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/confidentialite': typeof ConfidentialiteRoute
   '/_authenticated/cabinet': typeof AuthenticatedCabinetRouteWithChildren
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/confidentialite'
     | '/cabinet'
     | '/office'
     | '/onboarding'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/confidentialite'
     | '/office'
     | '/onboarding'
     | '/cabinet/clients'
@@ -460,6 +471,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/confidentialite'
     | '/_authenticated/cabinet'
     | '/_authenticated/office'
     | '/_authenticated/onboarding'
@@ -501,6 +513,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ConfidentialiteRoute: typeof ConfidentialiteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confidentialite': {
+      id: '/confidentialite'
+      path: '/confidentialite'
+      fullPath: '/confidentialite'
+      preLoaderRoute: typeof ConfidentialiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/cabinet': {
@@ -880,6 +900,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ConfidentialiteRoute: ConfidentialiteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
