@@ -142,6 +142,42 @@ function Confidentialite() {
               soixante-douze heures, avec ce qui s'est passé et ce qui a été fait.
             </p>
           </Section>
+
+          <Section id="suppression" titre="Demander la suppression de vos données">
+            <p>
+              Pour demander la suppression de vos données dans Regalica Office, éditée par Algoria
+              Factory :
+            </p>
+            <ol className="list-decimal space-y-2 ps-6">
+              <li>
+                Écrivez à{" "}
+                <a
+                  className="underline"
+                  href={`mailto:${CONTACT}?subject=Suppression%20de%20mes%20donn%C3%A9es`}
+                >
+                  {CONTACT}
+                </a>{" "}
+                depuis l'adresse e-mail de votre compte, avec l'objet « Suppression de mes données
+                ».
+              </li>
+              <li>
+                Nous vérifions que la demande vient bien du titulaire du compte, puis nous
+                confirmons la suppression par retour d'e-mail, sous trente jours au plus.
+              </li>
+            </ol>
+            <p>
+              <strong>Ce qui est supprimé</strong> : votre compte, votre adresse e-mail, votre nom
+              affiché, vos échanges avec Regalica et votre cabinet, vos signalements et les rapports
+              de plantage qui vous concernent, ainsi que les photos en attente sur votre appareil
+              (effacées à la désinstallation).
+            </p>
+            <p>
+              <strong>Ce qui est conservé</strong> : les pièces comptables et les écritures de
+              l'entreprise, que la loi oblige à archiver dix ans ; elles restent au nom de
+              l'entreprise, sans lien avec votre compte. Vous pouvez aussi ne demander que la
+              suppression d'une partie de vos données : dites-le dans votre message.
+            </p>
+          </Section>
         </article>
 
         <hr className="my-12 border-border" />
@@ -235,6 +271,37 @@ function Confidentialite() {
               إذا مسّ حادث بياناتك، يُعلَم مكتبك وأنت خلال اثنتين وسبعين ساعة، بما وقع وما تم فعله.
             </p>
           </Section>
+
+          <Section id="حذف" titre="طلب حذف بياناتك">
+            <p>لطلب حذف بياناتك من ريغاليكا أوفيس، الذي تنشره Algoria Factory:</p>
+            <ol className="list-decimal space-y-2 ps-6">
+              <li>
+                راسل{" "}
+                <a
+                  className="underline"
+                  href={`mailto:${CONTACT}?subject=Suppression%20de%20mes%20donn%C3%A9es`}
+                  dir="ltr"
+                >
+                  {CONTACT}
+                </a>{" "}
+                من عنوان البريد الإلكتروني لحسابك، بعنوان «حذف بياناتي».
+              </li>
+              <li>
+                نتحقق من أن الطلب صادر عن صاحب الحساب، ثم نؤكد الحذف بالبريد الإلكتروني خلال ثلاثين
+                يومًا على الأكثر.
+              </li>
+            </ol>
+            <p>
+              <strong>ما يُحذف</strong>: حسابك، بريدك الإلكتروني، اسمك المعروض، مراسلاتك مع ريغاليكا
+              ومكتبك، بلاغاتك وتقارير الأعطال المتعلقة بك، والصور المنتظرة على جهازك (تُمحى عند
+              إزالة التطبيق).
+            </p>
+            <p>
+              <strong>ما يُحتفظ به</strong>: الوثائق المحاسبية وقيود المؤسسة، التي يُلزم القانون
+              بأرشفتها عشر سنوات؛ تبقى باسم المؤسسة دون ارتباط بحسابك. يمكنك أيضًا طلب حذف جزء من
+              بياناتك فقط: اذكر ذلك في رسالتك.
+            </p>
+          </Section>
         </article>
       </main>
 
@@ -247,9 +314,17 @@ function Confidentialite() {
   );
 }
 
-function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
+function Section({
+  id,
+  titre,
+  children,
+}: {
+  id?: string;
+  titre: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="space-y-3">
+    <section id={id} className="scroll-mt-20 space-y-3">
       <h2 className="text-lg font-semibold">{titre}</h2>
       {children}
     </section>
