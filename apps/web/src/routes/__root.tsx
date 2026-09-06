@@ -17,6 +17,7 @@ import { GardeDeVersion } from "@/components/regalica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
+import { CANAL, demarrerLaTelemetrie } from "@/lib/telemetrie";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
 /*
@@ -279,9 +280,19 @@ function RootComponent() {
     [router],
   );
 
-  // Le premier écran est là : l'écran de lancement peut tomber.
+  // Les plantages de la coque partent chez Sentry — dans la coque seulement,
+  // et jamais un document (voir `lib/telemetrie.ts`).
+  useEffect(() => {
+    void demarrerLaTelemetrie();
+  }, []);
+
+  // Le premier écran est là : l'écran de lancement peut tomber, et la coque
+  // s'inscrit sur le canal de mise à jour en vol de sa cible.
   useEffect(() => {
     void coque().demarrage.pret();
+    void coque()
+      .misesAJour.suivreLeCanal(CANAL)
+      .catch((raison) => noterAuJournal("canal de mise à jour", raison));
   }, []);
 
   return (

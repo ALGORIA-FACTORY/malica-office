@@ -22,15 +22,28 @@
  * `npm run build:coque:<env> -w @regalica/web` (voir `vite.config.ts`), et
  * l'API est jointe par l'adresse déclarée dans `apps/web/.env.coque-<env>`.
  *
- * Les mises à jour du bundle sans repasser par les magasins viendront par la
- * mise à jour en vol ; le magasin ne servira qu'aux greffons natifs.
+ * Les mises à jour du bundle sans repasser par les magasins partent par la
+ * mise à jour en vol (Capgo) ; le magasin ne sert qu'aux greffons natifs.
+ *
+ * ============================================= POURQUOI LE FICHIER EST ICI
+ *
+ * La CLI de Capacitor découvre les greffons natifs dans les dépendances du
+ * package.json du dossier où elle tourne. Posé à la racine de l'espace de
+ * travail, ce fichier ne voyait aucun greffon — `capacitor.plugins.json`
+ * restait vide, et le scanner, le coffre, la file, tout ce qui est natif
+ * n'était pas dans l'APK. Les greffons sont des dépendances de `apps/web`,
+ * parce que c'est le web qui les appelle ; la configuration vit donc ici, et
+ * `android/` reste à la racine, désigné par son chemin.
+ *
+ *   npm run coque:sync -w @regalica/web      cap sync android
  */
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "tn.algoria.regalica",
   appName: "Regalica Office",
-  webDir: "apps/web/.output/public",
+  webDir: ".output/public",
+  android: { path: "../../android" },
 
   server: {
     // Jamais de clair : la coque parle à l'API en HTTPS, ou ne parle pas.
@@ -45,6 +58,18 @@ const config: CapacitorConfig = {
     // L'écran de lancement reste jusqu'à ce que l'application dise qu'elle
     // est prête — `coque().demarrage.pret()`, après le premier rendu.
     SplashScreen: { launchAutoHide: false },
+    /*
+     * La mise à jour en vol (Capgo) : le bundle web publié par `ota.yml` sur
+     * le canal de la cible est pris au prochain démarrage. `notifyAppReady()`
+     * est appelé après le premier écran ; sans lui, la coque revient au bundle
+     * d'avant. Une mise à jour par le magasin remet le bundle embarqué
+     * (`resetWhenUpdate`) : c'est lui qui porte les greffons natifs neufs.
+     */
+    CapacitorUpdater: {
+      autoUpdate: true,
+      resetWhenUpdate: true,
+      appReadyTimeout: 10_000,
+    },
   },
 
   ios: {

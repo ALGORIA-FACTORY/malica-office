@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 
-import { estNatif, versionClient } from "../coque";
+import { coque, estNatif, versionClient } from "../coque";
 
 const global = globalThis as { Capacitor?: unknown };
 
@@ -26,5 +26,10 @@ describe("la coque, vue d'un navigateur", () => {
 
   it("se présente comme un client web, avec une version de la forme attendue par l'API", () => {
     expect(versionClient()).toMatch(/^web\/\d+(\.\d+)*$/);
+  });
+
+  it("n'a pas de mise à jour en vol ni d'écran de lancement, et ne s'en plaint pas", async () => {
+    await expect(coque().misesAJour.suivreLeCanal("pilote")).resolves.toBeUndefined();
+    await expect(coque().demarrage.pret()).resolves.toBeUndefined();
   });
 });

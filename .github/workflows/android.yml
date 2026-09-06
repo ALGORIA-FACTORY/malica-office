@@ -68,7 +68,7 @@ jobs:
         run: npm run build:coque:${{ env.SAVEUR == 'prod' && 'prod' || 'pilote' }} -w @regalica/web
 
       - name: Synchroniser le projet Android
-        run: npx cap sync android
+        run: npm run coque:sync -w @regalica/web
 
       - name: Poser la clé d'envoi
         if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}

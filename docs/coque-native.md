@@ -43,8 +43,22 @@ ce qui est ouvert par-dessus (`lib/superpositions.ts`), « continuer en
 arrière-plan » pendant une lecture, un écran d'attente pendant la préparation.
 
 **Le projet Android** : `android/`, généré par `npx cap add android` et commité.
-`capacitor.config.ts` : `webDir` réel, `cleartext: false`, clavier en `body`,
-écran de lancement tenu jusqu'au premier rendu.
+`apps/web/capacitor.config.ts` : `webDir` réel, `cleartext: false`, clavier en
+`body`, écran de lancement tenu jusqu'au premier rendu. Le fichier vit dans
+`apps/web` et non à la racine : la CLI de Capacitor découvre les greffons
+natifs dans les dépendances du package.json d'où elle tourne, et depuis la
+racine elle n'en voyait aucun — `capacitor.plugins.json` restait vide, l'APK
+n'avait ni scanner, ni coffre, ni file. `npm run coque:sync -w @regalica/web`
+en enregistre dix.
+
+**La mise à jour en vol et les plantages** : Capgo prend le bundle publié par
+`ota.yml` sur le canal de la cible (`VITE_CANAL_OTA`), la coque le dit prête
+après le premier écran (`notifyAppReady`, sinon retour au bundle d'avant) ;
+Sentry (`lib/telemetrie.ts`) reçoit les plantages de la coque seulement, sans
+corps de requête, en-tête, cookie ni console — deux fonctions pures, testées,
+tiennent cette promesse. Sans `VITE_SENTRY_DSN`, rien ne part. Un bouton
+« Quelque chose n'a pas marché ? » dans les réglages envoie un signalement
+volontaire (`app.signalements`), jamais une pièce.
 
 ## Comment construire
 

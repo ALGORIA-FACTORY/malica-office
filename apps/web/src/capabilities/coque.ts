@@ -58,6 +58,14 @@ export interface PontCoque {
     /** Le premier écran est rendu : l'écran de lancement peut tomber. */
     pret(): Promise<void>;
   };
+  misesAJour: {
+    /**
+     * Le canal de mise à jour en vol de cette cible (staging, pilote,
+     * production). La coque y prend le bundle web publié par `ota.yml` sans
+     * repasser par le magasin.
+     */
+    suivreLeCanal(canal: string): Promise<void>;
+  };
 }
 
 /** Un auditeur posé par un greffon dont l'import est différé. */
@@ -102,6 +110,15 @@ function pontNatif(): PontCoque {
     },
     demarrage: {
       async pret() {
+        /*
+         * Capgo : l'application a démarré et rendu. Sans ce signal dans les
+         * dix secondes, la coque tient le bundle pour cassé et revient au
+         * précédent au prochain lancement — c'est le filet de la mise à jour
+         * en vol, et il ne se tend qu'ici, après le premier écran.
+         */
+        void import("@capgo/capacitor-updater")
+          .then(({ CapacitorUpdater }) => CapacitorUpdater.notifyAppReady())
+          .catch(() => undefined);
         const [{ SplashScreen }, { StatusBar }] = await Promise.all([
           import("@capacitor/splash-screen"),
           import("@capacitor/status-bar"),
@@ -110,6 +127,14 @@ function pontNatif(): PontCoque {
         // seul le bas — la barre de gestes — reste à gérer par la zone sûre.
         await StatusBar.setOverlaysWebView({ overlay: false }).catch(() => undefined);
         await SplashScreen.hide();
+      },
+    },
+    misesAJour: {
+      async suivreLeCanal(canal) {
+        const { CapacitorUpdater } = await import("@capgo/capacitor-updater");
+        const actuel = await CapacitorUpdater.getChannel().catch(() => null);
+        if (actuel?.channel === canal) return;
+        await CapacitorUpdater.setChannel({ channel: canal, triggerAutoUpdate: true });
       },
     },
   };
@@ -143,6 +168,8 @@ function pontNavigateur(): PontCoque {
       },
     },
     demarrage: { pret: async () => undefined },
+    // Pas de mise à jour en vol dans un navigateur : il recharge la page.
+    misesAJour: { suivreLeCanal: async () => undefined },
   };
 }
 

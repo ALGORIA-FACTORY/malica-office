@@ -1821,3 +1821,26 @@ export interface HonorairesRepository {
   avoir(id: string): Promise<{ id: string; numero: string }>;
   synthese(cabinetTenantId: string, mois: string): Promise<SyntheseHonoraires>;
 }
+
+/* ============================================================================
+ * Les signalements — ce que la personne envoie volontairement quand quelque
+ * chose n'a pas marché. Un geste, avec où, sur quel appareil, quelle version ;
+ * jamais une image, un montant, un texte de pièce.
+ * ========================================================================= */
+
+export interface SignalementSaisie {
+  tenantId?: string | null;
+  /** « coque-android/0.3.1 », « web/0.3.1 » — ce que la coque dit d'elle. */
+  versionClient: string;
+  /** Le navigateur ou l'appareil, tel qu'il se présente. */
+  appareil?: string | null;
+  /** L'écran d'où le signalement part. */
+  ou?: string | null;
+  message: string;
+  pile?: string | null;
+  pieceId?: string | null;
+}
+
+export interface SignalementsRepository {
+  deposer(saisie: SignalementSaisie): Promise<{ id: string; creeLe: string }>;
+}

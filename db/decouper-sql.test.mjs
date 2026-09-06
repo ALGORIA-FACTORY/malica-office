@@ -29,8 +29,10 @@ test("un commentaire de ligne ou de bloc ne coupe pas", () => {
 });
 
 test("un corps de fonction entre $$ ou $tag$ reste entier", () => {
-  const fonction = "create function f() returns void as $$ begin perform 1; end; $$ language plpgsql";
-  const etiquetee = "create function g() returns void as $corps$ begin perform 2; end; $corps$ language plpgsql";
+  const fonction =
+    "create function f() returns void as $$ begin perform 1; end; $$ language plpgsql";
+  const etiquetee =
+    "create function g() returns void as $corps$ begin perform 2; end; $corps$ language plpgsql";
   assert.deepEqual(decouperSql(`${fonction};\n${etiquetee};`), [fonction, etiquetee]);
 });
 

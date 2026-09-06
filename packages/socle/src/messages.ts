@@ -1437,6 +1437,12 @@ const fr = {
   "pme.reglages.alertes.sous": "Ce que j'ai signalé, et ce que votre comptable a répondu",
   "pme.reglages.echeances.sous": "Les dates qui viennent, annoncées à l'avance",
   "pme.reglages.pied": "Regalica — Édition One · Algoria Factory",
+  "pme.reglages.signaler": "Quelque chose n'a pas marché ?",
+  "pme.reglages.signaler.sous":
+    "Dites-le en une phrase. Elle arrive telle quelle à l'équipe, avec l'écran et la version — jamais vos documents.",
+  "pme.reglages.signaler.champ": "Ce qui s'est passé, et ce que vous attendiez",
+  "pme.reglages.signaler.envoyer": "Envoyer",
+  "pme.reglages.signaler.merci": "Reçu. Merci — on regarde.",
   "pme.coffre.title": "Coffre",
   "pme.coffre.voice":
     "{shared} pièces partagées avec votre cabinet, {personal} restées personnelles.",
@@ -3566,6 +3572,12 @@ const en: Dict = {
   "pme.reglages.alertes.sous": "What I flagged, and what your accountant answered",
   "pme.reglages.echeances.sous": "The dates coming up, announced ahead of time",
   "pme.reglages.pied": "Regalica — Edition One · Algoria Factory",
+  "pme.reglages.signaler": "Something didn't work?",
+  "pme.reglages.signaler.sous":
+    "Say it in one sentence. It reaches the team as is, with the screen and the version — never your documents.",
+  "pme.reglages.signaler.champ": "What happened, and what you expected",
+  "pme.reglages.signaler.envoyer": "Send",
+  "pme.reglages.signaler.merci": "Received. Thank you — we're looking.",
   "pme.coffre.title": "Vault",
   "pme.coffre.voice": "{shared} documents shared with your practice, {personal} kept private.",
   "pme.coffre.scellee":
@@ -5667,6 +5679,12 @@ const ar: Dict = {
   "pme.reglages.alertes.sous": "ما نبّهتُ إليه، وما أجاب عنه محاسبك",
   "pme.reglages.echeances.sous": "المواعيد القادمة، مُعلَنة مسبقًا",
   "pme.reglages.pied": "ريغاليكا — إصدار One · Algoria Factory",
+  "pme.reglages.signaler": "هل تعطّل شيء؟",
+  "pme.reglages.signaler.sous":
+    "قله في جملة واحدة. تصل إلى الفريق كما هي، مع الشاشة والإصدار — ولا تصل وثائقك أبدًا.",
+  "pme.reglages.signaler.champ": "ما الذي حدث، وما الذي كنت تتوقعه",
+  "pme.reglages.signaler.envoyer": "إرسال",
+  "pme.reglages.signaler.merci": "وصلت. شكرًا — سننظر فيها.",
   "pme.coffre.title": "الخزنة",
   "pme.coffre.voice": "{shared} وثيقة مشتركة مع المكتب، و{personal} تبقى شخصية.",
   "pme.coffre.scellee": "محاسبك بنى قيدًا على هذه الوثيقة: تبقى هنا لأنها دليله.",

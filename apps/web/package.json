@@ -13,12 +13,15 @@
     "test:watch": "vitest",
     "build:coque:staging": "vite build --mode coque-staging",
     "build:coque:pilote": "vite build --mode coque-pilote",
-    "build:coque:prod": "vite build --mode coque-prod"
+    "build:coque:prod": "vite build --mode coque-prod",
+    "coque:sync": "cap sync android",
+    "coque:ouvrir": "cap open android"
   },
   "overrides": {
     "rolldown": "1.2.1"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.1",
     "@capacitor/filesystem": "^8.1.3",
@@ -28,6 +31,7 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
     "@capgo/capacitor-document-scanner": "^8.4.3",
+    "@capgo/capacitor-updater": "^8.51.15",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/noto-kufi-arabic": "^5.3.0",
@@ -38,6 +42,8 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@regalica/socle": "*",
+    "@sentry/capacitor": "^4.3.0",
+    "@sentry/react": "^10.69.0",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.101.1",
     "@tanstack/react-router": "1.170.18",
@@ -58,7 +64,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.63.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^22.16.5",

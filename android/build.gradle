@@ -22,6 +22,17 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    /*
+     * Un dépôt synchronisé (OneDrive) verrouille les fichiers que Gradle écrit
+     * par milliers : AccessDeniedException au milieu d'une construction. La
+     * propriété `dossierBuild` — posée dans ~/.gradle/gradle.properties sur le
+     * poste, jamais dans le dépôt — sort les sorties de build hors du dossier
+     * synchronisé. Sans elle (la CI), tout reste sous android/.
+     */
+    if (project.hasProperty('dossierBuild')) {
+        layout.buildDirectory = file("${project.property('dossierBuild')}/${project.name}")
+    }
 }
 
 task clean(type: Delete) {

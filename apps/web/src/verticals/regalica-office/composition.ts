@@ -23,6 +23,7 @@ import type {
   HonorairesRepository,
   ExportsRepository,
   IntegrationsRepository,
+  SignalementsRepository,
 } from "@regalica/socle/ports/repositories";
 
 /**
@@ -71,6 +72,8 @@ export interface OfficeRuntime {
   exports: ExportsRepository;
   /** Les fils de conversation — de la base, sans modèle : un dépôt comme les autres. */
   conversations: ConversationsRepository;
+  /** Ce que la personne signale elle-même quand quelque chose n'a pas marché. */
+  signalements: SignalementsRepository;
   /** La couche agentique : tout ce qui fait parler un modèle, sur ses propres routes. */
   regalica: RegalicaPort;
 }
@@ -99,6 +102,7 @@ export function office(): OfficeRuntime {
       integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
       exports: creerDepotHttp<ExportsRepository>("exports"),
       conversations: creerDepotHttp<ConversationsRepository>("conversations"),
+      signalements: creerDepotHttp<SignalementsRepository>("signalements"),
       regalica: creerRegalicaHttp(),
     };
   }

@@ -1,8 +1,14 @@
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 
+import { versionClient } from "@/capabilities/coque";
 import { useApparence, type Apparence } from "@/components/regalica/apparence";
+import { usePme } from "@/components/regalica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
+import { office } from "@/verticals/regalica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
   head: () => ({
@@ -166,7 +172,72 @@ function PmeReglages() {
         </span>
       </Link>
 
+      <p className="mb-1 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {t("pme.reglages.signaler")}
+      </p>
+      <Signalement />
+
       <p className="mt-[22px] pb-6 text-[11.5px] text-muted-foreground">{t("pme.reglages.pied")}</p>
+    </div>
+  );
+}
+
+/*
+ * Signaler un problème.
+ *
+ * Ni de la télémétrie ni un journal : un geste. La phrase de la personne
+ * arrive telle quelle, avec l'écran, l'appareil et la version — ce que le
+ * pilote lit chaque semaine. Aucune pièce ne passe par là : pas d'image, pas
+ * de montant, pas de texte relevé.
+ */
+function Signalement() {
+  const { t } = useI18n();
+  const pme = usePme();
+  const [message, setMessage] = useState("");
+
+  const envoi = useMutation({
+    mutationFn: () =>
+      office().signalements.deposer({
+        tenantId: pme.tenantId,
+        versionClient: versionClient(),
+        appareil: typeof navigator === "undefined" ? null : navigator.userAgent.slice(0, 300),
+        ou: "/pme/reglages",
+        message: message.trim(),
+      }),
+    onSuccess: () => setMessage(""),
+  });
+
+  const retour = envoi.isSuccess
+    ? t("pme.reglages.signaler.merci")
+    : envoi.isError
+      ? texteDeLErreur(envoi.error, "routes/_authenticated/pme.reglages", t("common.error"))
+      : "";
+
+  return (
+    <div className="border-t border-foreground pt-3">
+      <p className="text-[12.5px] leading-[1.45] text-text-2">{t("pme.reglages.signaler.sous")}</p>
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        maxLength={2000}
+        rows={3}
+        placeholder={t("pme.reglages.signaler.champ")}
+        aria-label={t("pme.reglages.signaler")}
+        className="mt-2 w-full border border-line-strong bg-transparent px-3 py-2 text-[14px] leading-[1.45] placeholder:text-muted-foreground"
+      />
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <span className="text-[11.5px] text-muted-foreground" aria-live="polite">
+          {retour}
+        </span>
+        <button
+          type="button"
+          disabled={message.trim() === "" || envoi.isPending}
+          onClick={() => envoi.mutate()}
+          className="border border-foreground bg-foreground px-4 py-2 text-xs uppercase tracking-wide text-background disabled:opacity-40"
+        >
+          {t("pme.reglages.signaler.envoyer")}
+        </button>
+      </div>
     </div>
   );
 }

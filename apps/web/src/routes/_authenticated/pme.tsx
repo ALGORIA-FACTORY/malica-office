@@ -18,6 +18,7 @@ import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { etiqueterLeDossier } from "@/lib/telemetrie";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -64,6 +65,9 @@ function PmeLayout() {
   const pmeOrgs = (orgsQuery.data ?? []).filter((o) => o.kind === "pme");
   const [activeId, setActiveId] = useState<string | null>(() => readActiveOrgId());
   const org = pmeOrgs.find((o) => o.id === activeId) ?? pmeOrgs[0] ?? null;
+
+  // Les plantages se regroupent par dossier — un uuid, jamais un nom.
+  useEffect(() => etiqueterLeDossier(org?.id ?? null), [org?.id]);
   // La bascule n'a de sens que si l'on a un cabinet où aller.
   const aUnCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");

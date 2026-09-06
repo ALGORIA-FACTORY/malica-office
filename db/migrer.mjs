@@ -26,6 +26,11 @@
  *
  * L'URL n'est jamais affichée. Les messages français des migrations exigent
  * un client en UTF-8 : `pg` l'est toujours — c'est ce qui a manqué à psql.
+ *
+ * Un rôle PostgreSQL est global au serveur, pas à une base : `--mot-de-passe-api`
+ * sur une base jetable change le mot de passe de `regalica_api` pour TOUTES
+ * les bases du même serveur — sur un poste, l'API locale en meurt. Sur un
+ * serveur de production, c'est l'intention ; sur un poste, on s'en passe.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
