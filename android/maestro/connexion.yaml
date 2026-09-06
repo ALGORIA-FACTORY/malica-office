@@ -4,7 +4,7 @@
 # 10.0.2.2). Le compte est celui du jeu de données, sur une base d'essai.
 #
 #   maestro test android/maestro/connexion.yaml
-appId: tn.algoria.regalica.emulateur
+appId: com.algoria.regalica.office.emulateur
 ---
 - launchApp:
     clearState: true

@@ -27,7 +27,7 @@ android {
     namespace = "tn.algoria.regalica"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "tn.algoria.regalica"
+        applicationId "com.algoria.regalica.office"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode versionCodeDeclare
