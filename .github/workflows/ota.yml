@@ -1,0 +1,51 @@
+# La mise à jour en vol du bundle web — sans repasser par Google Play.
+#
+# La cadence du pilote est hebdomadaire ; la revue de Play prend des heures
+# à des jours. Tout changement qui ne touche que le web part donc par Capgo,
+# sur le canal de la cible, et la coque le prend au prochain démarrage. Un
+# retour arrière est un clic par canal.
+#
+# Le bundle ne contient aucun secret : les clés des modèles sont dans l'API.
+#
+# Secret attendu : CAPGO_CLE (clé d'API Capgo, droit « upload »).
+# Déclenchée par une étiquette `web-v*`, ou à la main avec le canal.
+
+name: Mise à jour en vol
+
+on:
+  push:
+    tags: ["web-v*"]
+  workflow_dispatch:
+    inputs:
+      canal:
+        description: "Canal Capgo"
+        type: choice
+        options: [staging, pilote, production]
+        default: pilote
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    env:
+      CANAL: ${{ github.event.inputs.canal || 'pilote' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer
+        run: npm ci
+
+      - name: Construire le bundle de la coque
+        run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @regalica/web
+
+      - name: Envoyer sur le canal
+        run: |
+          npx @capgo/cli@latest bundle upload \
+            --apikey "${{ secrets.CAPGO_CLE }}" \
+            --channel "$CANAL" \
+            --bundle "$(node -p "require('./package.json').version")-${{ github.run_number }}" \
+            --path apps/web/.output/public

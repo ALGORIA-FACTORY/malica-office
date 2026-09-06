@@ -50,8 +50,20 @@ arrière-plan » pendant une lecture, un écran d'attente pendant la préparatio
 
 ```bash
 npm run coque:staging        # le bundle contre staging, puis cap sync android
-npm run coque:ouvrir         # Android Studio sur android/
+npm run coque:ouvrir         # Android Studio sur android/, si on le veut
 ```
+
+Sans Android Studio, un APK de débogage se construit depuis `android/` avec
+le JDK 21 et le SDK (voir « L'outillage » plus bas) :
+
+```bash
+cd android && ./gradlew assemblePiloteDebug -PversionName=0.1.0
+# → android/app/build/outputs/apk/pilote/debug/app-pilote-debug.apk
+```
+
+Il s'installe sur un téléphone en mode développeur par `adb install`. Le
+nom affiché est « Regalica (pilote) » ; l'AAB signé pour Play, lui, ne se
+construit qu'en CI (`.github/workflows/android.yml`), avec la clé d'envoi.
 
 Un bundle de coque s'éprouve aussi dans Chrome, sans téléphone :
 
@@ -62,22 +74,36 @@ cd apps/web && npx vite preview --mode coque-staging
 Il se comporte alors comme le site (cookie, cadrage de la page) — c'est
 `estNatif()` qui décide, pas le mode de build.
 
-## Ce qui reste, et pourquoi pas ici
+## L'outillage
 
-Cette machine n'a **ni Java, ni SDK Android** : la coque ne se compile pas ici.
+Installé sans droits d'administration, dans l'espace de l'utilisateur :
 
-1. **Outillage** — Android Studio (JDK 21, SDK 36, une image système « Google
-   APIs » pour l'émulateur : ML Kit a besoin des services Google).
-2. **`AndroidManifest.xml`** — la permission caméra, `uses-feature camera
-   required=false`, `android:allowBackup="false"` (la file ne doit pas être
-   restaurée sur un autre appareil).
-3. **Sur un vrai appareil** — les quatre cas du scanner : un ticket de caisse
+- le JDK 21 (Temurin) dans `%LOCALAPPDATA%\Regalica\outils\jdk\jdk-21` — le
+  chemin ne doit porter ni `+` ni espace, Gradle s'y casse ;
+- le SDK dans `%LOCALAPPDATA%\Android\Sdk` : `cmdline-tools/latest`,
+  `platform-tools`, `platforms;android-36`, `build-tools;36.0.0` ;
+- `android/local.properties` (ignoré par git) avec
+  `sdk.dir=C:/Users/<nom>/AppData/Local/Android/Sdk` — en barres obliques :
+  le format Java lit une barre inverse comme un échappement.
+
+`JAVA_HOME` pointe sur le JDK au moment de lancer `gradlew`. Le premier APK
+(`app-pilote-debug.apk`, 7,3 Mo, 207 fichiers du bundle embarqués) a été
+construit le 6 septembre 2026 en 1 min 31.
+
+**`AndroidManifest.xml`** porte la permission caméra, `uses-feature camera
+required=false`, `android:allowBackup="false"` (la file ne doit pas être
+restaurée sur un autre appareil).
+
+## Ce qui reste
+
+1. **Sur un vrai appareil** — les quatre cas du scanner : un ticket de caisse
    tenu à bout de bras, une facture prise de biais, une carte d'identification
    fiscale, l'abandon sans erreur ; puis le mode avion, l'application tuée
-   pendant l'envoi, le retour à chaque écran, l'arabe, la police à 130 %.
-4. **La mise à jour en vol** (Capgo) et les plantages (Sentry) : la coque les
-   attend, ils ne sont pas encore branchés.
-5. **iOS** — un Mac, Xcode, un compte développeur Apple ; le même code.
+   pendant l'envoi, le retour à chaque écran, l'arabe, la police à 130 %. Le
+   protocole est dans `docs/protocole-appareils.md`.
+2. **L'émulateur** — une image système « Google APIs » (ML Kit a besoin des
+   services Google), pour Maestro en CI.
+3. **iOS** — un Mac, Xcode, un compte développeur Apple ; le même code.
 
 ## Ce qui reste au détecteur du navigateur
 

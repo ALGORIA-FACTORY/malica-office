@@ -83,9 +83,11 @@ La coque Android — le bundle embarqué, puis le projet `android/` synchronisé
 ```bash
 npm run coque:staging   # build:coque:staging, puis cap sync android
 npm run coque:ouvrir    # Android Studio sur android/
+cd android && ./gradlew assemblePiloteDebug -PversionName=0.1.0   # un APK de débogage, sans Android Studio
 ```
 
-Voir [docs/coque-native.md](docs/coque-native.md).
+Voir [docs/coque-native.md](docs/coque-native.md) pour l'outillage (JDK 21,
+SDK), et [docs/exploitation.md](docs/exploitation.md) pour les serveurs.
 
 Copiez `.env.example` en `apps/web/.env` et `apps/api/.env`, puis renseignez
 les valeurs. Aucun `.env` n'est suivi par git.

@@ -1,0 +1,111 @@
+# La coque Android : le bundle web, le projet Gradle, un AAB signé, et son
+# envoi sur une piste de Google Play.
+#
+# Déclenchée par une étiquette `android-v*` (la version du dépôt), ou à la
+# main avec la saveur et la piste. Le magasin ne sert qu'aux changements
+# natifs — un greffon, une permission, une montée de Capacitor — ; le bundle
+# web, lui, part par `ota.yml` sans repasser par la revue de Play.
+#
+# Secrets attendus :
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+#   ANDROID_KEY_PASSWORD   la clé d'envoi (Play garde la clé de signature)
+#   PLAY_SERVICE_ACCOUNT_JSON   le compte de service invité dans Play Console,
+#                               droit « Gérer les versions en test » sur l'app
+#
+# Le premier AAB d'une application neuve s'envoie à la main dans Play Console :
+# l'API refuse de créer la toute première version.
+
+name: Android
+
+on:
+  push:
+    tags: ["android-v*"]
+  workflow_dispatch:
+    inputs:
+      saveur:
+        description: "pilote (staging/pilote) ou prod"
+        type: choice
+        options: [pilote, prod]
+        default: pilote
+      piste:
+        description: "Piste Play"
+        type: choice
+        options: [internal, alpha, production]
+        default: internal
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    env:
+      SAVEUR: ${{ github.event.inputs.saveur || 'pilote' }}
+      PISTE: ${{ github.event.inputs.piste || 'internal' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Capacitor 8 impose le JDK 21.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Installer
+        run: npm ci
+
+      # Le bundle web porte la cible : `.env.coque-<saveur>` — des adresses
+      # publiques suivies par git, jamais une clé.
+      - name: Construire le bundle de la coque
+        run: npm run build:coque:${{ env.SAVEUR == 'prod' && 'prod' || 'pilote' }} -w @regalica/web
+
+      - name: Synchroniser le projet Android
+        run: npx cap sync android
+
+      - name: Poser la clé d'envoi
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/regalica-upload.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=regalica-upload.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      # La version du dépôt, et le numéro du workflow — monotone, jamais réutilisé.
+      - name: Construire l'AAB
+        working-directory: android
+        run: |
+          SAVEUR_MAJ="$(echo "$SAVEUR" | sed 's/./\U&/')"
+          ./gradlew "bundle${SAVEUR_MAJ}Release" \
+            -PversionName="$(node -p "require('../package.json').version")" \
+            -PversionCode="${{ github.run_number }}" \
+            --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aab-${{ env.SAVEUR }}-${{ github.run_number }}
+          path: |
+            android/app/build/outputs/bundle/*/*.aab
+            android/app/build/outputs/mapping/*/mapping.txt
+          retention-days: 90
+
+      - name: Envoyer sur Google Play
+        if: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1.1.3
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: tn.algoria.regalica
+          releaseFiles: android/app/build/outputs/bundle/*/*.aab
+          track: ${{ env.PISTE }}
+          status: completed
+          whatsNewDirectory: android/whatsnew

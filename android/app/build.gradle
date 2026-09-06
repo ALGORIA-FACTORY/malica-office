@@ -1,5 +1,28 @@
 apply plugin: 'com.android.application'
 
+/*
+ * La version vient de la CI, jamais d'ici.
+ *
+ *   -PversionName=0.1.0     la version du dépôt (package.json), la même que le bundle web
+ *   -PversionCode=123       le numéro du workflow — monotone, jamais réutilisé
+ *
+ * Une construction locale vaut versionCode 1 : elle ne peut pas être envoyée
+ * au magasin par erreur, Play refusant un code déjà vu.
+ */
+def versionNameDeclaree = project.findProperty("versionName") ?: "0.0.0"
+def versionCodeDeclare = (project.findProperty("versionCode") ?: "1").toInteger()
+
+/*
+ * La clé d'envoi vit dans android/keystore.properties, jamais dans git. Absente,
+ * la variante release se construit sans signature — utile pour vérifier qu'elle
+ * compile, inutilisable sur un téléphone : c'est voulu.
+ */
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "tn.algoria.regalica"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +30,8 @@ android {
         applicationId "tn.algoria.regalica"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode versionCodeDeclare
+        versionName versionNameDeclaree
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +39,42 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
+    /*
+     * Un seul applicationId, deux saveurs. Le bundle web embarqué porte la
+     * cible (staging, pilote, production) ; la saveur ne change que le nom
+     * affiché, pour qu'on sache d'un coup d'œil sur quel serveur on est.
+     */
+    flavorDimensions += "cible"
+    productFlavors {
+        pilote {
+            dimension "cible"
+            resValue "string", "app_name", "Regalica (pilote)"
+        }
+        prod {
+            dimension "cible"
+            resValue "string", "app_name", "Regalica Office"
+        }
+    }
+
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                storeFile rootProject.file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
