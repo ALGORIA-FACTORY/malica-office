@@ -6,7 +6,8 @@
 # domaine de cookie. `/auth` tout seul est l'écran de connexion de
 # l'application ; ses sous-chemins sont l'API.
 
-{$DOMAINE} {
+# DOMAINE_ALIAS : un second nom (le temps d'une bascule de domaine), vide sinon.
+{$DOMAINE} {$DOMAINE_ALIAS} {
 	encode zstd gzip
 
 	# Vingt-quatre pages en PDF tiennent bien en dessous ; l'API coupe elle

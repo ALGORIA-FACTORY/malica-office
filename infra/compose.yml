@@ -23,6 +23,7 @@ services:
       - "443:443"
     environment:
       DOMAINE: ${DOMAINE}
+      DOMAINE_ALIAS: ${DOMAINE_ALIAS:-}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -58,7 +59,7 @@ services:
       PORT: "3000"
       DATABASE_URL: postgres://regalica_api:${REGALICA_API_PASSWORD}@postgres:5432/regalica
       JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGINS: https://${DOMAINE},https://localhost
+      CORS_ORIGINS: https://${DOMAINE},https://${DOMAINE_ALIAS:-localhost},https://localhost
       STOCKAGE_RACINE: /pieces
       CLIENT_MIN_VERSION: ${CLIENT_MIN_VERSION:-}
       AUTH_ESSAIS_PAR_MINUTE: ${AUTH_ESSAIS_PAR_MINUTE:-30}
