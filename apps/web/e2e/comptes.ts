@@ -9,9 +9,18 @@ const MOT_DE_PASSE = "JeuDeDonnees2026!";
 export const DIRIGEANT = { email: "contact@sotumag.tn", dossier: "SOTUMAG" };
 export const EXPERT = { email: "leila.bensalah@bensalah.tn", cabinet: "Ben Salah" };
 
+/**
+ * Où Playwright écrit traces, captures, rapport et sessions. `e2e/sortie`
+ * par défaut (la CI y prend son artefact) ; `REGALICA_E2E_SORTIE` pour un
+ * dossier hors de OneDrive sur le poste — la synchronisation retire des
+ * fichiers de trace pendant qu'ils s'écrivent, et la campagne meurt sur un
+ * ENOENT à la fermeture du navigateur.
+ */
+export const SORTIE = process.env["REGALICA_E2E_SORTIE"] ?? "e2e/sortie";
+
 /** Les sessions ouvertes par `connexion.setup.ts`, réutilisées par les parcours. */
-export const ETAT_DIRIGEANT = "e2e/sortie/session-dirigeant.json";
-export const ETAT_EXPERT = "e2e/sortie/session-expert.json";
+export const ETAT_DIRIGEANT = `${SORTIE}/session-dirigeant.json`;
+export const ETAT_EXPERT = `${SORTIE}/session-expert.json`;
 
 /** L'écran de connexion, tel que la personne le remplit. */
 export async function seConnecter(page: Page, email: string, motDePasse = MOT_DE_PASSE) {

@@ -15,21 +15,21 @@
  */
 import { defineConfig, devices } from "@playwright/test";
 
-import { ETAT_DIRIGEANT, ETAT_EXPERT } from "./e2e/comptes";
+import { ETAT_DIRIGEANT, ETAT_EXPERT, SORTIE } from "./e2e/comptes";
 
 const BASE = process.env["REGALICA_BASE"] ?? "http://localhost:8090";
 const PORT = Number(new URL(BASE).port || 80);
 
 export default defineConfig({
   testDir: "./e2e",
-  outputDir: "./e2e/sortie",
+  outputDir: SORTIE,
   fullyParallel: false,
   workers: 1,
   retries: process.env["CI"] ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: process.env["CI"]
-    ? [["list"], ["html", { open: "never", outputFolder: "e2e/sortie/rapport" }]]
+    ? [["list"], ["html", { open: "never", outputFolder: `${SORTIE}/rapport` }]]
     : "list",
   use: {
     baseURL: BASE,
