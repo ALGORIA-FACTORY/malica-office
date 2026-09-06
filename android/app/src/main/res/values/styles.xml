@@ -15,8 +15,15 @@
         <item name="android:background">@null</item>
     </style>
 
-
+    <!--
+        L'écran de lancement : le fond papier et la marque, comme l'icône.
+        Android 12 et plus dessinent le leur à partir de l'icône adaptative ;
+        le greffon SplashScreen tient ensuite @drawable/splash jusqu'à ce que
+        l'application dise qu'elle est prête (coque().demarrage.pret()).
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:background">@drawable/splash</item>
     </style>
 </resources>
