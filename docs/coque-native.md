@@ -108,6 +108,24 @@ construit le 6 septembre 2026 en 1 min 31.
 required=false`, `android:allowBackup="false"` (la file ne doit pas être
 restaurée sur un autre appareil).
 
+## Le piège du greffon rendu par une promesse
+
+Le premier APK s'ouvrait sur un écran blanc. Un greffon Capacitor
+(`Preferences`, `App`, `SplashScreen`…) est un Proxy : toute propriété lue
+devient un appel natif. Le coffre des jetons rendait `Preferences` comme
+valeur d'une promesse ; JavaScript lit alors `.then` pour l'adopter, et la
+coque appelait une méthode native « then » qui n'existe pas — avant le
+premier écran. Une fonction `async` qui rend le greffon fait la même chose.
+Règle : on rend le **module** (`await import("@capacitor/preferences")`),
+jamais le greffon ; on prend `.Preferences` au moment de s'en servir.
+`lib/transport/__tests__/coffre-preferences.test.ts` tient ce piège avec un
+greffon factice qui explose sur `.then`.
+
+Pour reproduire ce genre de défaut sans téléphone : servir `.output/public`
+en statique et charger la page dans Chromium avec un `window.Capacitor`
+factice (`isNativePlatform: () => true`) posé avant tout script — les
+chemins natifs s'exécutent, et la console dit ce qui casse.
+
 ## Ce qui reste
 
 1. **Sur un vrai appareil** — les quatre cas du scanner : un ticket de caisse
