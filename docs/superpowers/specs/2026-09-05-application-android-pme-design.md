@@ -209,3 +209,11 @@ Risques à vérifier tôt : (a) `--experimental-strip-types` sur `packages/socle
 - `apps/web/relais-api.ts` — la liste de chemins que `infra/caddy/Caddyfile` doit reproduire.
 - `.github/workflows/ci.yml` — modèle des workflows `android.yml`, `ota.yml`, `e2e.yml`, `android-e2e.yml`.
 - `docs/coque-native.md` — à réécrire une fois la coque construite.
+
+## État au 6 septembre 2026
+
+Branche `application-android`. Faits et verts (typage, 372 épreuves web, 158 socle, 159 API sur le Postgres local, lint) : les lots 1, 2, 3 et la partie code du lot 4 — le bundle de coque se construit (`npm run build:coque:staging -w @regalica/web`), `android/` est généré et synchronisé, sans APK faute d'Android Studio sur ce poste.
+
+Écarts avec le plan : les gestes de Regalica sont des routes `/regalica/*` et non des dépôts `/rpc` (transaction coupée après 10 s) ; `fiche.*` et `conversations.*` sont des méthodes `/rpc` ordinaires ; la carte fiscale voyage en octets bruts sur `POST /regalica/carte` ; les signalements passent par un dépôt `/rpc` sous RLS plutôt qu'une route ; le prérendu de la coquille prend le port 4177 par un greffon posé après nitro.
+
+Points ouverts : erreur d'hydratation React (#418) au démarrage de la coquille, présente avant le chantier ; Capgo et Sentry non branchés (lot 6) ; `vite preview` sert le rendu serveur — la coque s'éprouve dans Chrome en servant `.output/public` en statique avec repli sur `index.html`.

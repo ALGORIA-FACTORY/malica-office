@@ -78,6 +78,15 @@ npm run dev        # l'application, sur le port 8080
 npm run dev:api    # l'API, sur le port 3000
 ```
 
+La coque Android — le bundle embarqué, puis le projet `android/` synchronisé :
+
+```bash
+npm run coque:staging   # build:coque:staging, puis cap sync android
+npm run coque:ouvrir    # Android Studio sur android/
+```
+
+Voir [docs/coque-native.md](docs/coque-native.md).
+
 Copiez `.env.example` en `apps/web/.env` et `apps/api/.env`, puis renseignez
 les valeurs. Aucun `.env` n'est suivi par git.
 
