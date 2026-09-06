@@ -148,7 +148,8 @@ jobs:
       DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
       DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
       JWT_SECRET: integration_continue_seulement_32_caracteres
-      STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+      # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
+      STOCKAGE_RACINE: /tmp/regalica-pieces
       CORS_ORIGINS: http://localhost:8080
 
     steps:
