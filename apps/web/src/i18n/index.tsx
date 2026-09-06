@@ -16,6 +16,8 @@ import {
   type MessageKey,
 } from "@regalica/socle/messages";
 
+import { CIBLE_COQUE } from "@/capabilities/coque";
+
 export { LOCALES, LOCALE_NAMES, RTL_LOCALES } from "@regalica/socle/messages";
 export type { Locale, MessageKey } from "@regalica/socle/messages";
 
@@ -57,7 +59,12 @@ export function localeRangee(): Locale {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // Dans la coque, rien n'est rendu côté serveur : la langue choisie peut être
+  // lue tout de suite, et l'écran naît dans la bonne. Sur le site, le premier
+  // rendu doit rester celui du serveur — on lit après l'hydratation.
+  const [locale, setLocaleState] = useState<Locale>(() =>
+    CIBLE_COQUE && typeof window !== "undefined" ? localeRangee() : DEFAULT_LOCALE,
+  );
 
   // Lecture après hydratation : jamais dans un initialiseur d'état.
   useEffect(() => {

@@ -4,11 +4,13 @@
  * C'est ici que la file rencontre les ports : les deux pas de la capture, la
  * lecture demandée à Regalica. Et c'est ici que le dépôt est choisi — IndexedDB
  * dans un navigateur, la mémoire là où il n'y en a pas. Le stockage de
- * l'appareil, pour la coque, prendra sa place quand la coque existera.
+ * l'appareil pour la coque, que rien n'évacue.
  */
+import { estNatif } from "@/capabilities/coque";
 import { office } from "@/verticals/regalica-office/composition";
 
 import { depotMemoire } from "./depot";
+import { creerDepotFichiers } from "./depot-fichiers";
 import { creerDepotIdb } from "./depot-idb";
 import { creerVidage, type Vidage } from "./vidage";
 
@@ -17,7 +19,11 @@ let instance: Vidage | null = null;
 export function vidage(): Vidage {
   if (!instance) {
     instance = creerVidage({
-      depot: typeof indexedDB === "undefined" ? depotMemoire() : creerDepotIdb(),
+      depot: estNatif()
+        ? creerDepotFichiers()
+        : typeof indexedDB === "undefined"
+          ? depotMemoire()
+          : creerDepotIdb(),
       ports: {
         enregistrer: (e) =>
           office().capture.enregistrer({

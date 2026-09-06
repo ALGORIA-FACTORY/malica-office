@@ -10,7 +10,7 @@ import { CIBLE_COQUE, estNatif, versionClient } from "@/capabilities/coque";
 
 import { baseApi } from "./base";
 import { signalerLaDeconnexion, signalerMiseAJourRequise } from "./etat";
-import { coffreDuStockageLocal, coffreMemoire } from "./jetons";
+import { coffreDuStockageLocal, coffreMemoire, coffrePreferences } from "./jetons";
 import { creerTransport, type Transport } from "./transport";
 
 let instance: Transport | null = null;
@@ -22,7 +22,12 @@ export function transport(): Transport {
       natif: estNatif(),
       // Le coffre n'entre dans le paquet que pour la coque : dans un site web,
       // un jeton de trente jours dans le stockage de la page serait une faute.
-      coffre: CIBLE_COQUE ? coffreDuStockageLocal() : coffreMemoire(),
+      // Sur l'appareil, le stockage de l'application ; dans Chrome, celui de la page.
+      coffre: !CIBLE_COQUE
+        ? coffreMemoire()
+        : estNatif()
+          ? coffrePreferences()
+          : coffreDuStockageLocal(),
       versionClient: versionClient(),
       surDeconnexion: signalerLaDeconnexion,
       surMiseAJourRequise: signalerMiseAJourRequise,

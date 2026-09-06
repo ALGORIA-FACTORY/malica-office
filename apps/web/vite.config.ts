@@ -59,44 +59,79 @@ const https =
     ? { key: readFileSync(CLE), cert: readFileSync(CERT) }
     : undefined;
 
-export default defineConfig({
-  define: { "import.meta.env.VITE_VERSION_CLIENT": JSON.stringify(VERSION) },
+/*
+ * ============================================================ DEUX FORMES
+ *
+ * Le même code produit le site — rendu côté serveur, pour le cabinet et la
+ * PME dans un navigateur — et le bundle de la coque, une application d'une
+ * seule page embarquée dans le paquet Android. Le mode Vite décide :
+ *
+ *   vite build                     le site, comme avant
+ *   vite build --mode coque-pilote le bundle, avec `.env.coque-pilote`
+ *
+ * En mode coque, Start prérend une coquille — l'en-tête, la feuille de style,
+ * les scripts, aucun contenu de route — dans `index.html`, et le routeur
+ * fait le reste sur l'appareil. Le relais de développement n'y est pas : la
+ * coque parle à l'API par l'adresse déclarée, jamais par la même origine.
+ */
+export default defineConfig(({ mode }) => {
+  const coque = mode.startsWith("coque-");
+  return {
+    define: { "import.meta.env.VITE_VERSION_CLIENT": JSON.stringify(VERSION) },
 
-  // L'ordre compte : Tailwind avant le compilateur de routes, nitro après lui.
-  plugins: [
-    // Avant tout le reste : le relais doit voir la requête avant la chaîne de
-    // rendu, qui répondrait sinon par la page 404 de l'application.
-    relaisApi(),
-    tailwindcss(),
-    // `server.entry` renvoie l'entrée serveur vers src/server.ts, qui enveloppe
-    // les erreurs de rendu côté serveur.
-    tanstackStart({ server: { entry: "server" } }),
-    viteReact(),
-    nitro(),
-  ],
+    // L'ordre compte : Tailwind avant le compilateur de routes, nitro après lui.
+    plugins: [
+      // Avant tout le reste : le relais doit voir la requête avant la chaîne de
+      // rendu, qui répondrait sinon par la page 404 de l'application.
+      ...(coque ? [] : [relaisApi()]),
+      tailwindcss(),
+      // `server.entry` renvoie l'entrée serveur vers src/server.ts, qui enveloppe
+      // les erreurs de rendu côté serveur.
+      tanstackStart({
+        server: { entry: "server" },
+        ...(coque
+          ? { spa: { enabled: true, maskPath: "/", prerender: { outputPath: "/index" } } }
+          : {}),
+      }),
+      viteReact(),
+      nitro(),
+      /*
+       * L'aperçu du build — et le prérendu de la coquille, qui le lance le temps
+       * du build — écoute sur 4177. Start lui demandait un port libre (0), et
+       * le greffon de nitro lit `config.preview.port || 3000` : zéro est faux,
+       * et 3000 est le port de l'API. Le relancement de l'aperçu ne transmet
+       * pas le mode, donc ce greffon vaut pour tous les modes, après nitro.
+       */
+      {
+        name: "regalica:port-de-l-apercu",
+        enforce: "post" as const,
+        config: () => ({ preview: { port: 4177, strictPort: false } }),
+      },
+    ],
 
-  resolve: {
-    // Résolution native des alias du tsconfig — Vite la fournit désormais, le
-    // greffon vite-tsconfig-paths n'a plus lieu d'être.
-    tsconfigPaths: true,
-    // React et le routeur doivent exister en un seul exemplaire : deux copies
-    // donnent des erreurs de contexte impossibles à lire.
-    dedupe: ["react", "react-dom", "@tanstack/react-router"],
-  },
+    resolve: {
+      // Résolution native des alias du tsconfig — Vite la fournit désormais, le
+      // greffon vite-tsconfig-paths n'a plus lieu d'être.
+      tsconfigPaths: true,
+      // React et le routeur doivent exister en un seul exemplaire : deux copies
+      // donnent des erreurs de contexte impossibles à lire.
+      dedupe: ["react", "react-dom", "@tanstack/react-router"],
+    },
 
-  server: {
-    /*
-     * 8080 par défaut, et strictement : l'aperçu et les scripts pointent
-     * dessus, et une bascule silencieuse sur un autre port ferait croire à une
-     * application morte.
-     *
-     * L'instance HTTPS pour le téléphone en prend un autre — c'est ce qui
-     * permet aux DEUX de tourner ensemble : on garde l'aperçu en clair sur
-     * 8080 pendant qu'on essaie au doigt sur 8443.
-     */
-    port: Number(process.env["REGALICA_PORT"] ?? 8080),
-    strictPort: true,
-    host: true,
-    ...(https ? { https } : {}),
-  },
+    server: {
+      /*
+       * 8080 par défaut, et strictement : l'aperçu et les scripts pointent
+       * dessus, et une bascule silencieuse sur un autre port ferait croire à une
+       * application morte.
+       *
+       * L'instance HTTPS pour le téléphone en prend un autre — c'est ce qui
+       * permet aux DEUX de tourner ensemble : on garde l'aperçu en clair sur
+       * 8080 pendant qu'on essaie au doigt sur 8443.
+       */
+      port: Number(process.env["REGALICA_PORT"] ?? 8080),
+      strictPort: true,
+      host: true,
+      ...(https ? { https } : {}),
+    },
+  };
 });

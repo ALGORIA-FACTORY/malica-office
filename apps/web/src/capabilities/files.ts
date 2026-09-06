@@ -4,7 +4,7 @@
  */
 
 import { numeriseurDeLAppareil } from "./numerisation";
-import { scanPagesToPdf, scanToPdf } from "./scanner";
+import { scanPagesToPdf, scanToPdf, type OptionsDePreparation } from "./scanner";
 
 export interface PickedFile {
   blob: Blob;
@@ -61,9 +61,13 @@ async function scan(accept: string, capture: boolean): Promise<PickedFile | null
 /**
  * Plusieurs pages, un seul PDF compact : la pièce reste une pièce.
  */
-async function scanPages(pages: readonly Blob[], baseName = "piece"): Promise<PickedFile | null> {
+async function scanPages(
+  pages: readonly Blob[],
+  options: OptionsDePreparation = {},
+  baseName = "piece",
+): Promise<PickedFile | null> {
   if (pages.length === 0) return null;
-  const scanned = await scanPagesToPdf(pages, baseName);
+  const scanned = await scanPagesToPdf(pages, baseName, options);
   return { blob: scanned.blob, name: scanned.name, source: "photo", cropped: scanned.cropped };
 }
 

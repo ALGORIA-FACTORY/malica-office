@@ -1110,7 +1110,21 @@ export interface PreparedPage extends PdfPageImage {
  * Photo → page redressée, normalisée et encodée sous budget.
  * L'image d'origine ne quitte jamais cette frontière.
  */
-export async function preparePage(input: Blob): Promise<PreparedPage> {
+export interface OptionsDePreparation {
+  /**
+   * La page vient du scanner de l'appareil — VisionKit, ML Kit — et ses bords
+   * sont déjà trouvés, redressés, retouchés au doigt. La recadrer ici
+   * refaisait tout le travail sur le fil principal, modèle compris : cinq à
+   * quinze secondes d'écran figé pour cinq pages sur un téléphone à 3 Go. On
+   * ne fait plus que réduire, normaliser et encoder.
+   */
+  dejaCadree?: boolean;
+}
+
+export async function preparePage(
+  input: Blob,
+  options: OptionsDePreparation = {},
+): Promise<PreparedPage> {
   const img = await decode(input);
   const { w: iw, h: ih } = sizeOf(img);
   if (!iw || !ih) throw new Error("image illisible");
@@ -1145,10 +1159,12 @@ export async function preparePage(input: Blob): Promise<PreparedPage> {
    * dernier recours. Et quand les trois échouent, `cadrage.origine` vaut
    * « aucune » — l'écran le sait et propose d'ajuster les coins.
    */
-  const cadrage = await cadrer(petite);
+  const cadrage: Cadrage = options.dejaCadree
+    ? { coins: null, certitude: null, origine: "appareil" }
+    : await cadrer(petite);
 
   let out = full;
-  let cropped = false;
+  let cropped = cadrage.origine === "appareil";
   const quadSmall = cadrage.coins;
   if (quadSmall && quadSmall.length === 4) {
     const quad = quadSmall.map((p) => ({
@@ -1203,9 +1219,10 @@ export function pagesToPdf(pages: readonly PreparedPage[], baseName = "piece"): 
 export async function scanPagesToPdf(
   inputs: readonly Blob[],
   baseName = "piece",
+  options: OptionsDePreparation = {},
 ): Promise<ScanResult> {
   const pages: PreparedPage[] = [];
-  for (const input of inputs) pages.push(await preparePage(input));
+  for (const input of inputs) pages.push(await preparePage(input, options));
   return pagesToPdf(pages, baseName);
 }
 

@@ -58,7 +58,7 @@ export interface Cadrage {
    * qui ne sait pas répondre à cette question-là.
    */
   certitude: number | null;
-  origine: "modele" | "algorithme" | "maison" | "aucune";
+  origine: "appareil" | "modele" | "algorithme" | "maison" | "aucune";
 }
 
 /** Ce que la cascade attend d'un détecteur, quel qu'il soit. */

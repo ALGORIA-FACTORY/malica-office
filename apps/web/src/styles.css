@@ -2,6 +2,21 @@
 @source "../src";
 @import "tw-animate-css";
 
+/*
+ * Les polices, embarquées. Elles venaient d'un tiers à chaque page : rien ne
+ * s'affichait dans la bonne police hors ligne, et l'arabe, chargé, n'était
+ * jamais assigné. Trois graisses, celles que le produit emploie.
+ */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/noto-kufi-arabic/400.css";
+@import "@fontsource/noto-kufi-arabic/500.css";
+@import "@fontsource/noto-kufi-arabic/600.css";
+
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -22,7 +37,7 @@
   --radius-3xl: 0px;
   --radius-4xl: 0px;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Noto Kufi Arabic", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --color-background: var(--background);
@@ -425,4 +440,18 @@
   .pv-document a {
     text-decoration: none;
   }
+}
+
+/*
+ * La zone sûre : la barre de gestes d'Android, l'encoche d'iOS. Depuis
+ * Android 15, l'écran va jusqu'aux bords que l'application le veuille ou non ;
+ * ce qui est fixé en bas doit laisser la place.
+ */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* L'arabe d'abord en Kufi : Inter n'a pas ces glyphes, et le repli système varie. */
+:lang(ar) {
+  font-family: "Noto Kufi Arabic", "Inter", ui-sans-serif, system-ui, sans-serif;
 }

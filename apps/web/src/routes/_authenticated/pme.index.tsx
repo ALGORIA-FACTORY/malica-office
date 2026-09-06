@@ -13,6 +13,8 @@ import { currentPeriod } from "@/hooks/use-tva";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
+import { useSuperposition } from "@/hooks/use-superposition";
+
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/regalica-office/composition";
 import { montant, montantSigne } from "@/lib/lisible";
@@ -69,6 +71,7 @@ function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const regalica = usePanneauRegalica("pme");
+  useSuperposition(regalica.ouvert, regalica.fermer);
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
@@ -86,7 +89,9 @@ function PmeHome() {
    */
   const dossierNeuf = !a.enCours && a.jamaisRienDepose;
   useEffect(() => {
-    if (dossierNeuf && !bienvenueDejaVue()) void navigate({ to: "/pme/bienvenue" });
+    // `replace` : revenir depuis l'accueil de bienvenue ne doit pas retomber
+    // sur l'accueil qui renvoie aussitôt à la bienvenue.
+    if (dossierNeuf && !bienvenueDejaVue()) void navigate({ to: "/pme/bienvenue", replace: true });
   }, [dossierNeuf, navigate]);
 
   // Qui attend, exactement. « Votre comptable » est une périphrase : le

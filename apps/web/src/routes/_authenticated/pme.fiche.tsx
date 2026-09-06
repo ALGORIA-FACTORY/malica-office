@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
-import { CameraScanner } from "@/components/regalica/CameraScanner";
+import { useSuperposition } from "@/hooks/use-superposition";
 import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { usePme } from "@/components/regalica/pme-context";
 import { useI18n } from "@/i18n";
@@ -12,6 +12,10 @@ import { cn } from "@/lib/utils";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/regalica-office/composition";
 import type { RegimeDisponible } from "@regalica/socle/ports/repositories";
+
+const CameraScanner = lazy(() =>
+  import("@/components/regalica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
+);
 
 export const Route = createFileRoute("/_authenticated/pme/fiche")({
   head: () => ({
@@ -67,6 +71,10 @@ function FicheFiscale() {
   const navigate = useNavigate();
 
   const [scanne, setScanne] = useState(false);
+  useSuperposition(
+    scanne,
+    useCallback(() => setScanne(false), []),
+  );
   const [erreur, setErreur] = useState<string | null>(null);
   const [luDeLaCarte, setLuDeLaCarte] = useState<Set<string>>(new Set());
 
@@ -341,30 +349,32 @@ function FicheFiscale() {
       </p>
 
       {scanne ? (
-        <CameraScanner
-          onCancel={() => setScanne(false)}
-          /*
-           * Le repli DOIT photographier.
-           *
-           * Il fermait seulement l'obturateur : sur un téléphone en HTTP — là
-           * où le cadrage assisté est refusé et où ce bouton est justement le
-           * seul chemin — on tapait dans le vide.
-           *
-           * L'appareil photo natif donne la même image, et la lecture qui suit
-           * est identique.
-           */
-          onFallback={() => {
-            setScanne(false);
-            void files.takePhoto().then((pris) => {
-              if (pris) lecture.mutate(pris.blob);
-            });
-          }}
-          onDone={(pages) => {
-            setScanne(false);
-            // Une carte tient sur une face : on lit la première prise.
-            if (pages[0]) lecture.mutate(pages[0]);
-          }}
-        />
+        <Suspense fallback={null}>
+          <CameraScanner
+            onCancel={() => setScanne(false)}
+            /*
+             * Le repli DOIT photographier.
+             *
+             * Il fermait seulement l'obturateur : sur un téléphone en HTTP — là
+             * où le cadrage assisté est refusé et où ce bouton est justement le
+             * seul chemin — on tapait dans le vide.
+             *
+             * L'appareil photo natif donne la même image, et la lecture qui suit
+             * est identique.
+             */
+            onFallback={() => {
+              setScanne(false);
+              void files.takePhoto().then((pris) => {
+                if (pris) lecture.mutate(pris.blob);
+              });
+            }}
+            onDone={(pages) => {
+              setScanne(false);
+              // Une carte tient sur une face : on lit la première prise.
+              if (pages[0]) lecture.mutate(pages[0]);
+            }}
+          />
+        </Suspense>
       ) : null}
     </div>
   );

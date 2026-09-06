@@ -44,7 +44,7 @@ function AuthPage() {
     void office()
       .auth.session()
       .then((compte) => {
-        if (active && compte) void navigate({ to: "/office" });
+        if (active && compte) void navigate({ to: "/office", replace: true });
       })
       // L'API peut être injoignable : on laisse alors l'écran de connexion,
       // plutôt que de rejeter une promesse que personne n'attrape.
@@ -67,7 +67,7 @@ function AuthPage() {
       } else {
         await office().auth.connexion(email, password);
       }
-      await navigate({ to: "/office" });
+      await navigate({ to: "/office", replace: true });
     } catch (err) {
       setError(explain(err, t));
     } finally {

@@ -3,6 +3,8 @@
 .env
 .env.*
 !.env.example
+# Les cibles de la coque : des adresses publiques, jamais une clé. Suivies.
+!apps/web/.env.coque-*
 
 # Dépendances et sorties de build
 node_modules/
@@ -55,3 +57,16 @@ db/sauvegardes/
 db/corpus/pdf/
 db/corpus/pdf-nc/
 journal-atelier.log
+
+# La coque Android : le projet est suivi, ce que Gradle et cap sync produisent ne l'est pas.
+android/app/build/
+android/build/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/keystore.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+*.jks
+*.keystore

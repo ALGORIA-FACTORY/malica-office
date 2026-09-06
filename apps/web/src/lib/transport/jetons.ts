@@ -40,6 +40,27 @@ export function coffreMemoire(initial: string | null = null): CoffreJetons {
 const CLE = "regalica.jeton-long";
 
 /**
+ * Le stockage de l'application, sur l'appareil — ce que la coque garde pour
+ * elle seule, et que la sauvegarde d'Android ne recopie pas (`allowBackup`
+ * est faux). Le greffon vient en import différé : jamais dans un navigateur.
+ */
+export function coffrePreferences(): CoffreJetons {
+  const greffon = () => import("@capacitor/preferences").then((m) => m.Preferences);
+  return {
+    async lire() {
+      const { value } = await (await greffon()).get({ key: CLE });
+      return value;
+    },
+    async ecrire(jeton) {
+      await (await greffon()).set({ key: CLE, value: jeton });
+    },
+    async effacer() {
+      await (await greffon()).remove({ key: CLE });
+    },
+  };
+}
+
+/**
  * Le stockage de la page — réservé au bundle de la coque, où il appartient à
  * l'application seule. Il tient lieu de coffre tant que le stockage natif
  * n'est pas branché, et sert à vérifier dans Chrome qu'une session survit à

@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Camera, Home as HomeIcon, Lock } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/regalica/bandeau-hors-ligne";
-import { CameraScanner } from "@/components/regalica/CameraScanner";
 import { EntetePme } from "@/components/regalica/entete-pme";
+import { RegalicaAvatar } from "@/components/regalica/office-ui";
 import { PmeProvider, type CaptureKind } from "@/components/regalica/pme-context";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
+import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
@@ -16,6 +17,15 @@ import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+
+/*
+ * Le cadrage du navigateur — détection, redressement, et un modèle qui se
+ * télécharge — n'est chargé que si on l'ouvre. Dans la coque, il ne l'est
+ * jamais : le scanner de l'appareil prend sa place.
+ */
+const CameraScanner = lazy(() =>
+  import("@/components/regalica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
+);
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
@@ -85,11 +95,11 @@ function PmeLayout() {
     (entitiesQuery.data ?? []).find((e) => e.isDefault)?.id ?? entitiesQuery.data?.[0]?.id ?? null;
 
   const capture = useMutation({
-    mutationFn: async (input: CaptureKind | { pages: Blob[] }) => {
+    mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
       if (!org) return null;
       const picked =
         typeof input === "object"
-          ? await files.scanPages(input.pages)
+          ? await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true })
           : input === "pdf"
             ? await files.pickPdf()
             : await files.takePhoto();
@@ -166,9 +176,16 @@ function PmeLayout() {
     }
     void (async () => {
       const pages = await natif.capturer();
-      if (pages.length > 0) capture.mutate({ pages });
+      // Déjà cadrées par l'appareil : on ne refait pas le travail.
+      if (pages.length > 0) capture.mutate({ pages, dejaCadrees: true });
     })();
   }, [capture]);
+
+  // Le scanner de la page se ferme au bouton retour, avant de reculer.
+  useSuperposition(
+    scanning,
+    useCallback(() => setScanning(false), []),
+  );
 
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
@@ -181,7 +198,7 @@ function PmeLayout() {
   ] as const;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-20 text-foreground">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground">
       <BandeauHorsLigne />
       {path === "/pme" ? null : (
         <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
@@ -233,7 +250,7 @@ function PmeLayout() {
 
       <nav
         aria-label={t("pme.nav.aria")}
-        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-3 items-center border-t border-border bg-card"
+        className="pb-safe fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-3 items-center border-t border-border bg-card"
       >
         <NavItem {...navItems[0]} />
         <div className="flex justify-center py-[11px]">
@@ -250,18 +267,35 @@ function PmeLayout() {
         <NavItem {...navItems[1]} />
       </nav>
 
+      {/*
+       * Entre l'obturateur et l'écran de la pièce, la page se réduit, s'encode,
+       * part. Sans rien à l'écran, cinq pages sur un téléphone lent
+       * ressemblent à une application figée.
+       */}
+      {capture.isPending ? (
+        <div className="rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+          <RegalicaAvatar size={66} alt="Regalica" rond />
+          <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
+            {t("pme.capture.preparation")}
+          </p>
+          <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
+        </div>
+      ) : null}
+
       {scanning ? (
-        <CameraScanner
-          onCancel={() => setScanning(false)}
-          onFallback={() => {
-            setScanning(false);
-            capture.mutate("photo");
-          }}
-          onDone={(pages) => {
-            setScanning(false);
-            if (pages.length > 0) capture.mutate({ pages });
-          }}
-        />
+        <Suspense fallback={null}>
+          <CameraScanner
+            onCancel={() => setScanning(false)}
+            onFallback={() => {
+              setScanning(false);
+              capture.mutate("photo");
+            }}
+            onDone={(pages) => {
+              setScanning(false);
+              if (pages.length > 0) capture.mutate({ pages });
+            }}
+          />
+        </Suspense>
       ) : null}
     </div>
   );

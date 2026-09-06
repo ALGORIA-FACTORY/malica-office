@@ -11,11 +11,23 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { coque } from "@/capabilities/coque";
 import { useApparence } from "@/components/regalica/apparence";
 import { GardeDeVersion } from "@/components/regalica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
+import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
+
+/*
+ * La langue et le sens d'écriture, AVANT le premier rendu : lus dans le
+ * stockage par un script en tête, pour qu'une personne arabophone ne voie
+ * jamais un écran français basculer sous ses yeux. Le fournisseur de
+ * traductions, lui, s'accorde après montage — la coquille tolère l'écart.
+ */
+const LANGUE_AVANT_RENDU =
+  '(function(){try{var l=localStorage.getItem("regalica.locale");var d=document.documentElement;' +
+  'if(l==="ar"){d.lang="ar";d.dir="rtl"}else if(l==="en"){d.lang="en"}}catch(e){}})();';
 
 /*
  * Comme la frontière d'erreur : ce composant se rend HORS du fournisseur de
@@ -171,7 +183,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // `viewport-fit=cover` : l'écran va jusqu'aux bords, et la zone sûre —
+      // la barre de gestes d'Android — se gère par `env(safe-area-inset-*)`.
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Regalica Office" },
       {
         name: "description",
@@ -188,18 +202,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Kufi+Arabic:wght@400;500;600&display=swap",
-      },
+      // Les polices sont embarquées avec la feuille de style : rien ne se
+      // charge depuis un tiers, et l'arabe s'affiche hors ligne aussi.
       {
         rel: "stylesheet",
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
+    scripts: [{ children: LANGUE_AVANT_RENDU }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -209,7 +220,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr" dir="ltr">
+    // Le script en tête a pu changer la langue avant l'hydratation : l'écart
+    // sur ces deux attributs est voulu.
+    <html lang="fr" dir="ltr" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -245,6 +258,31 @@ function RootComponent() {
       }),
     [queryClient, router],
   );
+
+  /*
+   * Le bouton retour d'Android : d'abord ce qui est ouvert par-dessus, puis
+   * l'historique, puis — depuis un accueil — quitter. Sans cet auditeur, la
+   * coque reculait à travers les superpositions et sortait de la pièce.
+   */
+  useEffect(
+    () =>
+      coque().app.surBoutonRetour(() => {
+        if (fermerLaDerniereSuperposition()) return;
+        if (router.history.canGoBack()) {
+          router.history.back();
+          return;
+        }
+        const chemin = router.state.location.pathname;
+        if (chemin === "/pme" || chemin === "/office" || chemin === "/") coque().app.quitter();
+        else void router.navigate({ to: "/pme", replace: true });
+      }),
+    [router],
+  );
+
+  // Le premier écran est là : l'écran de lancement peut tomber.
+  useEffect(() => {
+    void coque().demarrage.pret();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

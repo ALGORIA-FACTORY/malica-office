@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
 import { usePme } from "@/components/regalica/pme-context";
@@ -114,6 +116,15 @@ function PieceScreen() {
   const [regle, setRegle] = useState(false);
   const [montrerPiece, setPiece] = useState(false);
   const [montrerDetail, setDetail] = useState(false);
+  // Le bouton retour ferme d'abord ce qui est ouvert par-dessus la pièce.
+  useSuperposition(
+    montrerPiece,
+    useCallback(() => setPiece(false), []),
+  );
+  useSuperposition(
+    montrerDetail,
+    useCallback(() => setDetail(false), []),
+  );
 
   // Qui reçoit la pièce. Sans mandat, elle reste au dossier — et l'écran le
   // dit autrement plutôt que d'inventer un destinataire.
@@ -209,6 +220,10 @@ function PieceScreen() {
    * Deux temps, jamais un seul : un effacement ne se déclenche pas par mégarde.
    */
   const [confirmerSuppression, setConfirmerSuppression] = useState(false);
+  useSuperposition(
+    confirmerSuppression,
+    useCallback(() => setConfirmerSuppression(false), []),
+  );
   const supprimer = useMutation({
     mutationFn: () => office().capture.supprimer(pieceId),
     onSuccess: async () => {
@@ -535,6 +550,17 @@ function PieceScreen() {
         </p>
         <p className="mt-2 text-[14px] leading-[1.6] text-text-2">{t("pme.lecture.sous")}</p>
         <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
+        {/*
+         * La lecture continue sans l'écran : le serveur la mène à son terme et
+         * le dossier le dira. Rester devant n'est pas une obligation — c'est
+         * le geste natif attendu, et une lecture dure des minutes.
+         */}
+        <Link
+          to="/pme/list"
+          className="mt-8 inline-flex min-h-[44px] items-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+        >
+          {t("pme.lecture.arrierePlan")}
+        </Link>
         {/*
          * Le prototype annonce « Relevé · 312 mots situés ». On ne l'affiche
          * que lorsqu'un relevé existe déjà — à la relecture d'une pièce. En
