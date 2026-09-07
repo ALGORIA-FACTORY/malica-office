@@ -44,7 +44,7 @@ jobs:
       CORS_ORIGINS: http://localhost:8080,http://localhost,https://localhost
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # L'émulateur veut la virtualisation matérielle.
       - name: Activer KVM
@@ -53,17 +53,17 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Installer
         run: npm ci
@@ -117,7 +117,7 @@ jobs:
           echo "::group::api"; tail -100 api.log; echo "::endgroup::"
           echo "::group::web"; tail -100 web.log; echo "::endgroup::"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: maestro
