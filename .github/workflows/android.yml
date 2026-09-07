@@ -150,6 +150,6 @@ jobs:
           serviceAccountJson: ${{ steps.identite.outputs.credentials_file_path }}
           packageName: com.algoriafactory.regalica
           releaseFiles: android/app/build/outputs/bundle/*/*.aab
-          track: ${{ env.PISTE }}
+          tracks: ${{ env.PISTE }}
           status: completed
           whatsNewDirectory: android/whatsnew
