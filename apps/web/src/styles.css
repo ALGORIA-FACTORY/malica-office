@@ -453,12 +453,28 @@
 }
 
 /*
- * La zone sûre : la barre de gestes d'Android, l'encoche d'iOS. Depuis
- * Android 15, l'écran va jusqu'aux bords que l'application le veuille ou non ;
- * ce qui est fixé en bas doit laisser la place.
+ * La zone sûre : la barre d'état et la barre de gestes d'Android, l'encoche
+ * d'iOS. Depuis Android 15, l'écran va jusqu'aux bords que l'application le
+ * veuille ou non, et `viewport-fit=cover` (`__root.tsx`) le demande
+ * partout : ce qui touche le haut ou le bas de l'écran doit laisser la place.
+ * En haut, la barre d'état prend les touches — un bouton dessous n'est pas
+ * cliquable ; c'est le bug du premier essai sur téléphone (6 sept. 2026).
+ *
+ *   pt-safe      un écran plein (`fixed inset-0`) ou la racine d'une page
+ *   top-safe     ce qui est collé en haut (`sticky`) sous la barre peinte
+ *   h-safe-top   la bande qui peint la barre d'état par-dessus le défilement
  */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility top-safe {
+  top: env(safe-area-inset-top);
+}
+@utility h-safe-top {
+  height: env(safe-area-inset-top);
 }
 
 /* L'arabe d'abord en Kufi : Inter n'a pas ces glyphes, et le repli système varie. */

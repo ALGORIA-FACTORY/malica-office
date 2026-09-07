@@ -205,10 +205,19 @@ function PmeLayout() {
   ] as const;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground">
+    <div className="pt-safe mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground">
+      {/*
+       * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
+       * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des
+       * écrans pleins (z-30 et plus), qui peignent la leur avec `pt-safe`.
+       */}
+      <div
+        aria-hidden
+        className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-md bg-background/95 backdrop-blur"
+      />
       <BandeauHorsLigne />
       {path === "/pme" ? null : (
-        <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
+        <header className="top-safe sticky z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
           <EntetePme
             dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
             dossierActif={org?.id ?? null}
@@ -280,7 +289,7 @@ function PmeLayout() {
        * ressemblent à une application figée.
        */}
       {capture.isPending ? (
-        <div className="rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+        <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
           <RegalicaAvatar size={66} alt="Regalica" rond />
           <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
             {t("pme.capture.preparation")}

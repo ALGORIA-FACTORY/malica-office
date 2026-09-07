@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { coque } from "@/capabilities/coque";
+
 /**
  * Paper ou Ink — l'apparence, et qui la décide.
  *
@@ -39,6 +41,8 @@ function appliquer(a: Apparence) {
   const sombre =
     a === "ink" || (a === "systeme" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", sombre);
+  // La barre d'état du téléphone suit : icônes claires sur Ink, sombres sur Paper.
+  coque().apparence.appliquer(sombre);
 }
 
 export function useApparence(): {

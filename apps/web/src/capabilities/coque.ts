@@ -66,6 +66,15 @@ export interface PontCoque {
      */
     suivreLeCanal(canal: string): Promise<void>;
   };
+  apparence: {
+    /**
+     * L'application vient de passer en sombre ou en clair : les icônes de la
+     * barre d'état (heure, batterie) suivent, sinon elles disparaissent sur
+     * un fond de la même couleur. La coque suit le thème du téléphone par
+     * défaut ; c'est l'application qui a le dernier mot (`apparence.ts`).
+     */
+    appliquer(sombre: boolean): void;
+  };
 }
 
 /** Un auditeur posé par un greffon dont l'import est différé. */
@@ -123,10 +132,23 @@ function pontNatif(): PontCoque {
           import("@capacitor/splash-screen"),
           import("@capacitor/status-bar"),
         ]);
-        // La barre d'état garde sa place : l'écran ne passe pas dessous, et
-        // seul le bas — la barre de gestes — reste à gérer par la zone sûre.
+        /*
+         * Avant Android 15, la barre d'état garde sa place : l'écran ne passe
+         * pas dessous. Depuis Android 15, l'écran va jusqu'aux bords quoi
+         * qu'on demande — cet appel n'y fait rien — et c'est la page qui
+         * réserve la zone sûre du haut (`pt-safe`, `styles.css`).
+         */
         await StatusBar.setOverlaysWebView({ overlay: false }).catch(() => undefined);
         await SplashScreen.hide();
+      },
+    },
+    apparence: {
+      appliquer(sombre) {
+        void import("@capacitor/status-bar")
+          .then(({ StatusBar, Style }) =>
+            StatusBar.setStyle({ style: sombre ? Style.Dark : Style.Light }),
+          )
+          .catch(() => undefined);
       },
     },
     misesAJour: {
@@ -170,6 +192,8 @@ function pontNavigateur(): PontCoque {
     demarrage: { pret: async () => undefined },
     // Pas de mise à jour en vol dans un navigateur : il recharge la page.
     misesAJour: { suivreLeCanal: async () => undefined },
+    // Le navigateur peint sa propre barre ; `color-scheme` suffit.
+    apparence: { appliquer: () => undefined },
   };
 }
 

@@ -65,7 +65,7 @@ function Bienvenue() {
   const promesses = [t("pme.bienvenue.p1"), t("pme.bienvenue.p2"), t("pme.bienvenue.p3")];
 
   return (
-    <div className="fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
+    <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
       {/* Le sigle en fond, énorme et presque invisible : la marque comme lieu. */}
       <MarqueRg
         aria-hidden
