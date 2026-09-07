@@ -156,9 +156,18 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
 4. **Google Play, la suite** — les captures tablette 10 pouces sur la fiche
    (`android/play/`, à téléverser à la main : le navigateur de l'automate ne
    sait pas déposer un fichier) ; la piste de test fermé « Pilote » avec le
-   cabinet et les PME, qui déclenche la première revue ; un serveur de mises
-   à jour en vol et un projet Sentry.
-5. **Google Play, sans clé** — fait le 7 septembre 2026 : `android.yml` publie
+   cabinet et les PME, qui déclenche la première revue ; un projet Sentry.
+5. **Mises à jour en vol, sans le magasin** — fait le 7 septembre 2026 :
+   compte Capgo au nom de w.barouni@algoria-factory.com, app
+   `com.algoriafactory.regalica`, canaux `staging`, `pilote` et `production`
+   que l'appareil choisit lui-même (`VITE_CANAL_OTA` de sa cible). Une
+   étiquette `web-v<version>` publie le bundle web sur le canal ; la version
+   du bundle est celle du dépôt, sans suffixe, parce que la coque refuse tout
+   bundle sous sa version native et qu'en semver « 0.1.1-2 » est sous
+   « 0.1.1 ». Chaque mise à jour en vol est donc une version : on monte
+   package.json, on étiquette, la coque l'a au lancement suivant. La clé
+   d'API est le secret `CAPGO_CLE` ; sur le poste, `%LOCALAPPDATA%Regalicacapgo.token`.
+6. **Google Play, sans clé** — fait le 7 septembre 2026 : `android.yml` publie
    seul par identité fédérée. Le projet Google Cloud `regalica-office` porte
    le compte de service `publication-play`, invité dans Play Console avec le
    seul droit « Release apps to testing tracks », et un pool d'identité
