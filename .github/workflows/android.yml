@@ -74,20 +74,20 @@ jobs:
       # workflow pour ne jamais retomber dessous — Play refuserait l'AAB.
       DECALAGE_VERSION: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
 
       # Capacitor 8 impose le JDK 21.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Installer
         run: npm ci
@@ -123,7 +123,7 @@ jobs:
             -PversionCode="$((github_run_number + DECALAGE_VERSION))" \
             --no-daemon
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: aab-${{ env.CIBLE }}-${{ github.run_number }}
           path: |
@@ -138,7 +138,7 @@ jobs:
       - name: S'identifier auprès de Google Cloud
         if: env.PLAY_PRESENT == 'true'
         id: identite
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.PLAY_FOURNISSEUR_IDENTITE }}
           service_account: ${{ vars.PLAY_COMPTE_DE_SERVICE }}
