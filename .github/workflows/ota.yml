@@ -7,6 +7,12 @@
 #
 # Le bundle ne contient aucun secret : les clés des modèles sont dans l'API.
 #
+# La VERSION du bundle est celle du dépôt (package.json), sans suffixe : la
+# coque refuse tout bundle dont la version est sous sa version native, et en
+# semver « 0.1.1-2 » est SOUS « 0.1.1 ». Chaque mise à jour en vol est donc
+# une version à part entière — 0.1.2, 0.1.3 — portée par l'étiquette
+# `web-v<version>`, qui doit dire la même chose que package.json.
+#
 # Secret attendu : CAPGO_CLE (clé d'API Capgo, droit « upload »).
 # Déclenchée par une étiquette `web-v*`, ou à la main avec le canal.
 
@@ -39,17 +45,28 @@ jobs:
       - name: Installer
         run: npm ci
 
+      # L'étiquette et le dépôt doivent dire la même version : un bundle
+      # étiqueté 0.1.2 qui porterait 0.1.1 serait refusé par la coque, sans
+      # un mot. Autant refuser ici, avec un mot.
+      - name: Vérifier la version
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version du dépôt : $VERSION"
+          if [[ "${{ github.ref }}" == refs/tags/web-v* && "${{ github.ref_name }}" != "web-v$VERSION" ]]; then
+            echo "::error::l'étiquette ${{ github.ref_name }} ne correspond pas à la version $VERSION du dépôt"
+            exit 1
+          fi
+
       - name: Construire le bundle de la coque
         run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @regalica/web
 
       # La CLI lit l'identifiant de l'app dans apps/web/capacitor.config.ts :
-      # elle tourne donc de là. La version est celle du dépôt, suffixée du
-      # numéro du run — monotone, jamais réutilisée.
+      # elle tourne donc de là.
       - name: Envoyer sur le canal
         working-directory: apps/web
         run: |
           npx @capgo/cli@latest bundle upload \
             --apikey "${{ secrets.CAPGO_CLE }}" \
             --channel "$CANAL" \
-            --bundle "$(node -p "require('../../package.json').version")-${{ github.run_number }}" \
+            --bundle "$(node -p "require('../../package.json').version")" \
             --path .output/public
