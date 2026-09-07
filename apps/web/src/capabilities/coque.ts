@@ -66,6 +66,14 @@ export interface PontCoque {
      */
     suivreLeCanal(canal: string): Promise<void>;
   };
+  versions: {
+    /**
+     * L'application native que l'appareil fait tourner — celle du magasin —
+     * et son numéro de construction. Les écrans, eux, disent leur version par
+     * `versionClient()` : en vol, ils sont souvent plus récents que l'app.
+     */
+    native(): Promise<{ version: string; build: string } | null>;
+  };
   apparence: {
     /**
      * L'application vient de passer en sombre ou en clair : les icônes de la
@@ -142,6 +150,14 @@ function pontNatif(): PontCoque {
         await SplashScreen.hide();
       },
     },
+    versions: {
+      async native() {
+        const { App } = await import("@capacitor/app");
+        // Un objet neuf, jamais le greffon ni sa réponse telle quelle.
+        const info = await App.getInfo();
+        return { version: info.version, build: info.build };
+      },
+    },
     apparence: {
       appliquer(sombre) {
         void import("@capacitor/status-bar")
@@ -192,6 +208,8 @@ function pontNavigateur(): PontCoque {
     demarrage: { pret: async () => undefined },
     // Pas de mise à jour en vol dans un navigateur : il recharge la page.
     misesAJour: { suivreLeCanal: async () => undefined },
+    // Pas d'application native autour d'un navigateur.
+    versions: { native: async () => null },
     // Le navigateur peint sa propre barre ; `color-scheme` suffit.
     apparence: { appliquer: () => undefined },
   };

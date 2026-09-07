@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { versionClient } from "@/capabilities/coque";
+import { coque, versionClient } from "@/capabilities/coque";
 import { useApparence, type Apparence } from "@/components/regalica/apparence";
 import { usePme } from "@/components/regalica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/regalica-office/composition";
 
@@ -177,8 +178,59 @@ function PmeReglages() {
       </p>
       <Signalement />
 
+      <p className="mb-1 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {t("pme.reglages.version")}
+      </p>
+      <Versions />
+
       <p className="mt-[22px] pb-6 text-[11.5px] text-muted-foreground">{t("pme.reglages.pied")}</p>
     </div>
+  );
+}
+
+/*
+ * Ce que l'appareil fait tourner.
+ *
+ * Trois nombres, parce qu'il y a trois choses : les ÉCRANS (le bundle web,
+ * mis à jour en vol), l'APPLICATION (celle du magasin, qui porte les greffons
+ * natifs), et le CANAL (staging, pilote, production — l'adresse de l'API et
+ * la file des mises à jour). Pendant le test, c'est la première chose qu'on
+ * demande à qui signale une anomalie ; autant qu'elle soit sous ses yeux.
+ */
+function Versions() {
+  const { t } = useI18n();
+  const [native, setNative] = useState<{ version: string; build: string } | null>(null);
+
+  useEffect(() => {
+    let vivant = true;
+    void coque()
+      .versions.native()
+      .then((v) => {
+        if (vivant) setNative(v);
+      })
+      .catch(() => undefined);
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  const ecrans = versionClient().split("/")[1] ?? "0.0.0";
+
+  return (
+    <p className="text-[11.5px] leading-[1.7] text-muted-foreground">
+      {t("pme.reglages.version.ecrans")} <span className="text-foreground">{ecrans}</span>
+      {native ? (
+        <>
+          {" · "}
+          {t("pme.reglages.version.application")}{" "}
+          <span className="text-foreground">
+            {native.version} ({native.build})
+          </span>
+        </>
+      ) : null}
+      {" · "}
+      {t("pme.reglages.version.canal")} <span className="text-foreground">{CANAL}</span>
+    </p>
   );
 }
 
