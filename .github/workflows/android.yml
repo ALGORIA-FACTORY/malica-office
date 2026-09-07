@@ -9,11 +9,23 @@
 # Secrets attendus :
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
 #   ANDROID_KEY_PASSWORD   la clé d'envoi (Play garde la clé de signature)
-#   PLAY_SERVICE_ACCOUNT_JSON   le compte de service invité dans Play Console,
-#                               droit « Gérer les versions en test » sur l'app
+#
+# Variables attendues (pas des secrets : rien ici n'ouvre quoi que ce soit
+# sans le jeton OIDC que GitHub ne délivre qu'à CE dépôt) :
+#   PLAY_FOURNISSEUR_IDENTITE   le fournisseur d'identité fédérée du projet
+#       Google Cloud « regalica-office » — projects/<numéro>/locations/global/
+#       workloadIdentityPools/github/providers/github-actions — dont la
+#       condition n'accepte que wbarouni/regalica-office
+#   PLAY_COMPTE_DE_SERVICE      publication-play@regalica-office.iam.gserviceaccount.com,
+#       invité dans Play Console avec le droit « Publier sur les pistes de test »
+#
+# Aucune clé de compte de service n'existe, nulle part : le workflow échange
+# son jeton OIDC contre un accès d'une heure. Rien à faire tourner, rien à
+# voler, rien à révoquer.
 #
 # Le premier AAB d'une application neuve s'envoie à la main dans Play Console :
-# l'API refuse de créer la toute première version.
+# l'API refuse de créer la toute première version. Les deux premières versions
+# (0.1.0 (1) et 0.1.1 (2)) l'ont été ; le numéro de version part donc de 3.
 
 name: Android
 
@@ -22,11 +34,16 @@ on:
     tags: ["android-v*"]
   workflow_dispatch:
     inputs:
-      saveur:
-        description: "pilote (staging/pilote) ou prod"
+      # La CIBLE est l'adresse de l'API que le bundle web embarque
+      # (`apps/web/.env.coque-<cible>`). La saveur Gradle en découle : `prod`
+      # pour la production, `pilote` pour tout le reste — le paquet est le
+      # même, seule l'adresse change. Tant que le serveur pilote n'existe pas,
+      # la piste de test interne tourne sur staging.
+      cible:
+        description: "Adresse de l'API embarquée : staging, pilote ou prod"
         type: choice
-        options: [pilote, prod]
-        default: pilote
+        options: [staging, pilote, prod]
+        default: staging
       piste:
         description: "Piste Play"
         type: choice
@@ -40,13 +57,22 @@ concurrency:
 jobs:
   construire:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Le jeton OIDC que Google Cloud échange contre un accès au compte de service.
+      id-token: write
     env:
-      SAVEUR: ${{ github.event.inputs.saveur || 'pilote' }}
+      CIBLE: ${{ github.event.inputs.cible || 'staging' }}
+      SAVEUR: ${{ github.event.inputs.cible == 'prod' && 'prod' || 'pilote' }}
       PISTE: ${{ github.event.inputs.piste || 'internal' }}
       # Le contexte secrets n'est pas lisible dans le `if` d'une étape : on
       # décide ici, au niveau du job, si la clé et le compte de service existent.
       CLE_PRESENTE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-      PLAY_PRESENT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+      PLAY_PRESENT: ${{ vars.PLAY_FOURNISSEUR_IDENTITE != '' && vars.PLAY_COMPTE_DE_SERVICE != '' }}
+      # Le numéro de version : monotone, jamais réutilisé. Les deux premiers
+      # (1 et 2) ont été construits sur le poste ; on décale le numéro du
+      # workflow pour ne jamais retomber dessous — Play refuserait l'AAB.
+      DECALAGE_VERSION: 2
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +95,7 @@ jobs:
       # Le bundle web porte la cible : `.env.coque-<saveur>` — des adresses
       # publiques suivies par git, jamais une clé.
       - name: Construire le bundle de la coque
-        run: npm run build:coque:${{ env.SAVEUR == 'prod' && 'prod' || 'pilote' }} -w @regalica/web
+        run: npm run build:coque:$CIBLE -w @regalica/web
 
       - name: Synchroniser le projet Android
         run: npm run coque:sync -w @regalica/web
@@ -88,26 +114,40 @@ jobs:
       # La version du dépôt, et le numéro du workflow — monotone, jamais réutilisé.
       - name: Construire l'AAB
         working-directory: android
+        env:
+          github_run_number: ${{ github.run_number }}
         run: |
           SAVEUR_MAJ="$(echo "$SAVEUR" | sed 's/./\U&/')"
           ./gradlew "bundle${SAVEUR_MAJ}Release" \
             -PversionName="$(node -p "require('../package.json').version")" \
-            -PversionCode="${{ github.run_number }}" \
+            -PversionCode="$((github_run_number + DECALAGE_VERSION))" \
             --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
-          name: aab-${{ env.SAVEUR }}-${{ github.run_number }}
+          name: aab-${{ env.CIBLE }}-${{ github.run_number }}
           path: |
             android/app/build/outputs/bundle/*/*.aab
             android/app/build/outputs/mapping/*/mapping.txt
           retention-days: 90
 
+      # L'identité : le jeton OIDC de ce run, échangé contre un accès d'une
+      # heure au compte de service. Le fichier d'identifiants écrit ici est un
+      # « compte externe », sans secret — l'action d'envoi le lit comme des
+      # identifiants par défaut de l'application.
+      - name: S'identifier auprès de Google Cloud
+        if: env.PLAY_PRESENT == 'true'
+        id: identite
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.PLAY_FOURNISSEUR_IDENTITE }}
+          service_account: ${{ vars.PLAY_COMPTE_DE_SERVICE }}
+
       - name: Envoyer sur Google Play
         if: env.PLAY_PRESENT == 'true'
         uses: r0adkll/upload-google-play@v1.1.3
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          serviceAccountJson: ${{ steps.identite.outputs.credentials_file_path }}
           packageName: com.algoriafactory.regalica
           releaseFiles: android/app/build/outputs/bundle/*/*.aab
           track: ${{ env.PISTE }}

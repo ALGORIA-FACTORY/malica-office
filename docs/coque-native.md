@@ -156,9 +156,16 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
 4. **Google Play, la suite** — les captures tablette 10 pouces sur la fiche
    (`android/play/`, à téléverser à la main : le navigateur de l'automate ne
    sait pas déposer un fichier) ; la piste de test fermé « Pilote » avec le
-   cabinet et les PME, qui déclenche la première revue ; un compte de service
-   Play (`PLAY_SERVICE_ACCOUNT_JSON`) pour que `android.yml` publie seul ; un
-   compte Capgo et un projet Sentry, et leurs clés dans les secrets.
+   cabinet et les PME, qui déclenche la première revue ; un serveur de mises
+   à jour en vol et un projet Sentry.
+5. **Google Play, sans clé** — fait le 7 septembre 2026 : `android.yml` publie
+   seul par identité fédérée. Le projet Google Cloud `regalica-office` porte
+   le compte de service `publication-play`, invité dans Play Console avec le
+   seul droit « Release apps to testing tracks », et un pool d'identité
+   `github` dont le fournisseur OIDC `github-actions` n'accepte que le dépôt
+   `wbarouni/regalica-office`. Le workflow échange son jeton OIDC contre un
+   accès d'une heure : aucune clé n'existe, nulle part. Les deux variables de
+   dépôt `PLAY_FOURNISSEUR_IDENTITE` et `PLAY_COMPTE_DE_SERVICE` suffisent.
 
 ## Ce qui reste au détecteur du navigateur
 
