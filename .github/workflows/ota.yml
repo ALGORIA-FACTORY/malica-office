@@ -21,13 +21,13 @@ on:
         description: "Canal Capgo"
         type: choice
         options: [staging, pilote, production]
-        default: pilote
+        default: staging
 
 jobs:
   publier:
     runs-on: ubuntu-latest
     env:
-      CANAL: ${{ github.event.inputs.canal || 'pilote' }}
+      CANAL: ${{ github.event.inputs.canal || 'staging' }}
     steps:
       - uses: actions/checkout@v7
 
