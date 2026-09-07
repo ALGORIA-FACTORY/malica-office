@@ -42,10 +42,14 @@ jobs:
       - name: Construire le bundle de la coque
         run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @regalica/web
 
+      # La CLI lit l'identifiant de l'app dans apps/web/capacitor.config.ts :
+      # elle tourne donc de là. La version est celle du dépôt, suffixée du
+      # numéro du run — monotone, jamais réutilisée.
       - name: Envoyer sur le canal
+        working-directory: apps/web
         run: |
           npx @capgo/cli@latest bundle upload \
             --apikey "${{ secrets.CAPGO_CLE }}" \
             --channel "$CANAL" \
-            --bundle "$(node -p "require('./package.json').version")-${{ github.run_number }}" \
-            --path apps/web/.output/public
+            --bundle "$(node -p "require('../../package.json').version")-${{ github.run_number }}" \
+            --path .output/public
