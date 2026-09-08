@@ -824,6 +824,10 @@ async function comptabiliser(pieceId, piece) {
   const existantes = await rpc("office", "ecrituresForPiece", [pieceId]);
   const gravee = existantes.find((x) => x.status === "booked");
   if (gravee) return { id: gravee.id, detail: "déjà comptabilisée" };
+  // La lecture du jeu porte le type de la pièce, mais la règle R2 veut
+  // qu'une personne le confirme avant toute écriture : le jeu joue la
+  // personne, comme le fait l'écran de la pièce.
+  await rpc("capture", "preciser", [pieceId, "document_kind", piece.kind]);
   const p = lignesDuPivot(piece);
   const id = await rpc("office", "propose", [
     {
