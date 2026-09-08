@@ -43,7 +43,8 @@ principal() {
   }
 
   echo "▶ dépôt → $version"
-  git -C "$DEPOT" fetch --tags --prune --quiet origin
+  # --force : une étiquette déplacée sur GitHub (une version refaite) ne bloque pas le déploiement.
+  git -C "$DEPOT" fetch --tags --force --prune --quiet origin
   if git -C "$DEPOT" rev-parse --verify --quiet "refs/tags/$version" >/dev/null; then
     git -C "$DEPOT" checkout --quiet --detach "refs/tags/$version"
   else
