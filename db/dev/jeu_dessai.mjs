@@ -359,6 +359,15 @@ async function ecriture(pieceId, packId, journal, libelle, date, lignes, comptab
   const existantes = await rpc("office", "ecrituresForPiece", [pieceId]);
   if (existantes.some((e) => e.status === "booked")) return null;
 
+  // La lecture a porté le type de la pièce, mais la règle R2 veut qu'une
+  // personne le confirme avant toute écriture : le jeu joue la personne,
+  // comme le « Oui » de l'écran. Le journal dit le sens de la facture.
+  await rpc("capture", "preciser", [
+    pieceId,
+    "document_kind",
+    journal === "VEN" ? "facture_vente" : "facture_achat",
+  ]);
+
   const id = await rpc("office", "propose", [
     {
       pieceId,
