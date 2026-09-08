@@ -187,6 +187,15 @@ jobs:
       - name: Peupler le jeu de données
         run: node outils/jeu-de-donnees.mjs http://localhost:8080
 
+      # Les épreuves par module parlent avec le compte de développement
+      # (dev@malica.local et son cabinet) : c'est le jeu d'essai du développeur
+      # qui le crée, par l'API, comme sur le poste. Sans lui, la première
+      # connexion est refusée (401) et le job n'a jamais été vert.
+      - name: Le jeu d'essai du développeur
+        run: node db/dev/jeu_dessai.mjs
+        env:
+          MALICA_API_URL: http://localhost:3000
+
       - name: Les épreuves par module
         run: |
           for f in outils/epreuves/*.mjs; do
