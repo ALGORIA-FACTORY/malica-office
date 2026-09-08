@@ -153,10 +153,14 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
 2. **L'émulateur** — une image système « Google APIs » (ML Kit a besoin des
    services Google), pour Maestro en CI.
 3. **iOS** — un Mac, Xcode, un compte développeur Apple ; le même code.
-4. **Google Play, la suite** — les captures tablette 10 pouces sur la fiche
-   (`android/play/`, à téléverser à la main : le navigateur de l'automate ne
-   sait pas déposer un fichier) ; la piste de test fermé « Pilote » avec le
-   cabinet et les PME, qui déclenche la première revue ; un projet Sentry.
+4. **Google Play, la suite** — la fiche du magasin : les captures d'écran
+   sont de VRAIES captures de l'application qui tourne, produites par
+   `node outils/captures.mjs` (téléphone en français et en arabe, tablettes
+   7 et 10 pouces sur le cabinet) dans `android/play/` ; l'icône et la
+   bannière y sont des fichiers dessinés, on ne les régénère pas. Le
+   téléversement se fait depuis le Chrome de l'utilisateur (l'extension y
+   dépose les fichiers) ; la piste de test fermé « Pilote » avec le cabinet
+   et les PME, qui déclenche la première revue ; un projet Sentry.
 5. **Mises à jour en vol, sans le magasin** — fait le 7 septembre 2026 :
    compte Capgo au nom de w.barouni@algoria-factory.com, app
    `com.algoriafactory.malica`, canaux `staging`, `pilote` et `production`

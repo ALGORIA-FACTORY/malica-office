@@ -32,7 +32,18 @@ export default tseslint.config(
           ],
         },
       ],
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      /*
+       * Un contexte vit avec son hook (`useCabinet` à côté de `CabinetProvider`) :
+       * c'est le même module, la même responsabilité. Le rechargement à chaud
+       * y perd seulement la finesse d'un composant ; il ne casse rien.
+       */
+      "react-refresh/only-export-components": [
+        "warn",
+        {
+          allowConstantExport: true,
+          allowExportNames: ["useCabinet", "useMalicaPanel", "usePme", "useI18n", "localeRangee"],
+        },
+      ],
       "@typescript-eslint/no-unused-vars": "off",
     },
   },

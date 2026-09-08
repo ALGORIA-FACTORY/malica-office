@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "dev:telephone": "node outils/dev-telephone.mjs",
     "certificat": "node outils/certificat-local.mjs",
+    "captures": "node outils/captures.mjs",
     "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs",
     "verifier": "node outils/verifier.mjs",
     "code-mort": "knip",
@@ -35,6 +36,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "knip": "^6.34.0",
+    "playwright": "^1.63.0",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1"
