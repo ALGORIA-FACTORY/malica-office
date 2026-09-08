@@ -19,7 +19,7 @@
 -- schéma est livré par migration ; le contenu arrive par ingestion.
 --
 -- Pour charger le corpus d'aujourd'hui :
---   tar -xzf "docs/Base de connaissance/referentielregalica20260831.tar.gz"
+--   tar -xzf "docs/Base de connaissance/referentielmalica20260831.tar.gz"
 --   psql "$DATABASE_URL_ADMIN" -f paquet/dump_referentiel.sql   # sections legal.*
 --
 -- ========================================================== CE QUI REVIENT

@@ -1,5 +1,5 @@
 /**
- * Module de capacité « pages du PDF » — retrouver, dans un PDF que Regalica a
+ * Module de capacité « pages du PDF » — retrouver, dans un PDF que Malica a
  * construit, les images de page telles qu'elles y sont enregistrées.
  *
  * ============================================================== POURQUOI

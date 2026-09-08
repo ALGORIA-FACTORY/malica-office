@@ -14,9 +14,9 @@
  *   e.conclure();
  */
 
-export const COMPTE_DEV = { email: "dev@regalica.local", motDePasse: "DeveloppeurRegalica2026!" };
+export const COMPTE_DEV = { email: "dev@malica.local", motDePasse: "DeveloppeurMalica2026!" };
 
-export function creerEpreuve(nom, base = process.env["REGALICA_BASE"] ?? "http://localhost:8080") {
+export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://localhost:8080") {
   const BASE = base.replace(/\/+$/, "");
   /*
    * En HTTPS sur une adresse privée, le certificat est celui du poste, signé

@@ -50,7 +50,7 @@ describe("les clés d'API du cabinet", { skip: !BASE_CONFIGUREE }, () => {
   let cleId = "";
 
   before(async () => {
-    racineEssai = await mkdtemp(path.join(tmpdir(), "regalica-cles-"));
+    racineEssai = await mkdtemp(path.join(tmpdir(), "malica-cles-"));
     process.env["STOCKAGE_RACINE"] = racineEssai;
 
     const { app } = await import("./app.ts");

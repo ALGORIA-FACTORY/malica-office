@@ -14,10 +14,10 @@
 # migrations restent « expansion puis contraction » (docs/exploitation.md).
 #
 # Lancé par la CI à travers porte-ssh.sh, ou à la main par l'utilisateur
-# regalica. Un seul déploiement à la fois.
+# malica. Un seul déploiement à la fois.
 set -euo pipefail
 
-RACINE=/srv/regalica
+RACINE=/srv/malica
 DEPOT=$RACINE/depot
 ENV=$RACINE/.env
 

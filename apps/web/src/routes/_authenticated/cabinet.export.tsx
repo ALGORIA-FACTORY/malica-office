@@ -17,25 +17,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaNote } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaNote } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ExportGenere, FormatExport } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { ExportGenere, FormatExport } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/export")({
   head: () => ({
     meta: [
-      { title: "Export FEC et CSV — Regalica Office" },
+      { title: "Export FEC et CSV — Malica Office" },
       {
         name: "description",
         content:
           "Les écritures comptabilisées de vos mandats, au format légal ou tabulé, horodatées avec leur pack de rattachement.",
       },
-      { property: "og:title", content: "Export FEC et CSV — Regalica Office" },
+      { property: "og:title", content: "Export FEC et CSV — Malica Office" },
       {
         property: "og:description",
         content: "Sortie de données du cabinet : FEC, CSV des écritures, CSV du plan.",
@@ -164,12 +164,12 @@ function CabinetExport() {
   });
 
   const versionDuPack = pack.data ? `${org.jurisdiction} ${pack.data.version}` : null;
-  useRegalicaPanel(
-    <RegalicaNote kicker={t("cab.export.panel.kicker")}>
+  useMalicaPanel(
+    <MalicaNote kicker={t("cab.export.panel.kicker")}>
       {versionDuPack
         ? t("cab.export.panel", { pack: versionDuPack })
         : t("cab.export.panel.sansPack")}
-    </RegalicaNote>,
+    </MalicaNote>,
     [locale, versionDuPack],
   );
 

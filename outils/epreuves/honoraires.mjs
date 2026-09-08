@@ -18,7 +18,7 @@ import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("les honoraires du cabinet", process.argv[2]);
 
-const DIRIGEANT = { email: "epreuve.dirigeant@regalica.local", motDePasse: "EpreuveRegalica2026!" };
+const DIRIGEANT = { email: "epreuve.dirigeant@malica.local", motDePasse: "EpreuveMalica2026!" };
 const PME = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999/E/P/000" };
 const COUVERTURE = ["Tenue comptable", "Déclarations de TVA"];
 

@@ -20,7 +20,7 @@
  *
  *   node db/migrer.mjs                       DATABASE_URL_ADMIN d'apps/api/.env
  *   node db/migrer.mjs --base <url>          une autre base (une base jetable)
- *   node db/migrer.mjs --mot-de-passe-api    pose REGALICA_API_PASSWORD sur le rôle de l'API
+ *   node db/migrer.mjs --mot-de-passe-api    pose MALICA_API_PASSWORD sur le rôle de l'API
  *   node db/migrer.mjs --forcer              rejoue un fichier dont l'empreinte a changé
  *   node db/migrer.mjs --adopter             une base montée par psql : inscrit l'existant sans le jouer
  *
@@ -28,7 +28,7 @@
  * un client en UTF-8 : `pg` l'est toujours — c'est ce qui a manqué à psql.
  *
  * Un rôle PostgreSQL est global au serveur, pas à une base : `--mot-de-passe-api`
- * sur une base jetable change le mot de passe de `regalica_api` pour TOUTES
+ * sur une base jetable change le mot de passe de `malica_api` pour TOUTES
  * les bases du même serveur — sur un poste, l'API locale en meurt. Sur un
  * serveur de production, c'est l'intention ; sur un poste, on s'en passe.
  */
@@ -180,15 +180,15 @@ try {
   }
 
   if (option("--mot-de-passe-api") !== null) {
-    const mdp = process.env["REGALICA_API_PASSWORD"];
+    const mdp = process.env["MALICA_API_PASSWORD"];
     if (!mdp) {
-      console.error("REGALICA_API_PASSWORD absente : le rôle de l'API garde son mot de passe.");
+      console.error("MALICA_API_PASSWORD absente : le rôle de l'API garde son mot de passe.");
       process.exit(2);
     }
     // Pas de paramètre lié possible sur un ALTER ROLE : le mot de passe est
     // cité par le pilote, jamais concaténé à la main.
-    await client.query(`alter role regalica_api with password ${pg.escapeLiteral(mdp)}`);
-    console.log("  mot de passe posé sur regalica_api");
+    await client.query(`alter role malica_api with password ${pg.escapeLiteral(mdp)}`);
+    console.log("  mot de passe posé sur malica_api");
   }
 
   console.log(

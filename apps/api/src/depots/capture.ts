@@ -15,7 +15,7 @@
  *    filtres — le transport change, pas ce que le modèle reçoit.
  *
  * 3. Le contexte de l'assistant. Même principe : `contexteAssistant` reproduit
- *    exactement les requêtes de `loadRegalicaContext`.
+ *    exactement les requêtes de `loadMalicaContext`.
  *
  * Ce que ce dépôt ne fait PAS : lire. Les deux passes, le plan de tokens et la
  * désignation restent côté web, où vivent l'œil et le raisonneur. L'API sert
@@ -412,7 +412,7 @@ export const capture = {
   /**
    * Le dossier que l'assistant a le droit de lire.
    *
-   * Reproduit `loadRegalicaContext` requête pour requête, limites comprises :
+   * Reproduit `loadMalicaContext` requête pour requête, limites comprises :
    * 500 pièces, 25 écritures, 20 échéances, 40 motifs, 80 citations.
    */
   async contexteAssistant(db: Requete, tenantId: string, pieceId: string | null) {
@@ -427,13 +427,13 @@ export const capture = {
     /*
      * La fiche fiscale du dossier.
      *
-     * Sans elle, Regalica ne sait pas si le client est assujetti à la TVA ni
+     * Sans elle, Malica ne sait pas si le client est assujetti à la TVA ni
      * s'il relève du réel : elle ne peut donc ni qualifier une opération ni
      * répondre sur la déduction. Elle supposerait, ou elle interrogerait.
      *
      * Absente, elle reste NULLE. Un dossier sans fiche n'est pas un dossier au
      * régime réel par défaut — c'est un dossier dont on ignore le régime, et
-     * Regalica doit le dire plutôt que de choisir.
+     * Malica doit le dire plutôt que de choisir.
      */
     const { rows: fiches } = await db.query(
       `select f.regime_imposition, f.regime_tva, f.prorata_tva, f.secteur,
@@ -535,7 +535,7 @@ export const capture = {
 
     // ------------------------------------------- ce que le cabinet a arrêté
     //
-    // Sans cela, Regalica répondrait sur le plan livré et contredirait le
+    // Sans cela, Malica répondrait sur le plan livré et contredirait le
     // paramétrage — elle citerait 4371 quand le cabinet a choisi autre chose.
     //
     // La résolution est celle du moteur, à trois niveaux : le dossier d'abord,
@@ -627,7 +627,7 @@ export const capture = {
         requiresNote: Boolean(m["requires_note"]),
       })),
       // Le paramétrage tel qu'il s'applique à CE dossier. Les 160 rôles, pas
-      // seulement ceux qui diffèrent : Regalica doit pouvoir répondre « sur quel
+      // seulement ceux qui diffèrent : Malica doit pouvoir répondre « sur quel
       // compte » à n'importe quelle question, pas seulement sur les cas que le
       // cabinet a retouchés.
       roles: (roles as Record<string, unknown>[]).map((r) => ({

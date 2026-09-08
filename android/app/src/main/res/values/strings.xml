@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="title_activity_main">Regalica Office</string>
-    <string name="package_name">com.algoriafactory.regalica</string>
-    <string name="custom_url_scheme">com.algoriafactory.regalica</string>
+    <string name="title_activity_main">Malica Office</string>
+    <string name="package_name">com.algoriafactory.malica</string>
+    <string name="custom_url_scheme">com.algoriafactory.malica</string>
 </resources>

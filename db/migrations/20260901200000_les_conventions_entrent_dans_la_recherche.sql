@@ -4,7 +4,7 @@
 --
 -- CE QUI SE PASSAIT AVANT
 --
--- Regalica ne voyait AUCUNE des 43 conventions fiscales que la Tunisie a
+-- Malica ne voyait AUCUNE des 43 conventions fiscales que la Tunisie a
 -- signées. Pas parce qu'elle oubliait de les consulter : parce qu'elles
 -- étaient structurellement exclues de sa recherche.
 --

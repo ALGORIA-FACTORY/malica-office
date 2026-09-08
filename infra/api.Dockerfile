@@ -2,14 +2,14 @@
 # glibc, et Alpine ne l'a pas.
 #
 # Construite depuis la racine du dépôt :
-#   docker build -f infra/api.Dockerfile -t regalica-api .
+#   docker build -f infra/api.Dockerfile -t malica-api .
 FROM node:22-bookworm-slim AS dependances
 WORKDIR /srv
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/socle/package.json packages/socle/
-RUN npm ci --omit=dev --workspace @regalica/api --workspace @regalica/socle --include-workspace-root
+RUN npm ci --omit=dev --workspace @malica/api --workspace @malica/socle --include-workspace-root
 
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production

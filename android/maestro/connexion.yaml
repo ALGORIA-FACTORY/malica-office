@@ -4,20 +4,20 @@
 # 10.0.2.2). Le compte est celui du jeu de données, sur une base d'essai.
 #
 #   maestro test android/maestro/connexion.yaml
-appId: com.algoriafactory.regalica.emulateur
+appId: com.algoriafactory.malica.emulateur
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Espace Regalica Office"
+- assertVisible: "Espace Malica Office"
 - tapOn: "Adresse e-mail"
 - inputText: "contact@sotumag.tn"
 - tapOn: "Mot de passe"
 - inputText: "JeuDeDonnees2026!"
 - hideKeyboard
 - tapOn: "Entrer"
-# À la toute première visite, le fil de Regalica recouvre l'accueil : on le referme.
+# À la toute première visite, le fil de Malica recouvre l'accueil : on le referme.
 - tapOn:
-    text: "Fermer le fil de Regalica"
+    text: "Fermer le fil de Malica"
     optional: true
     timeout: 20000
 - assertVisible:

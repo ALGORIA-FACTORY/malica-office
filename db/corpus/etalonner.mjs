@@ -6,11 +6,11 @@
  * `chercherDansLeDroit` ecarte les fragments au-dela d'une distance. Ce seuil
  * decide de deux erreurs opposees :
  *
- *   trop haut  — du texte hors sujet entre dans la reponse. Regalica cite
+ *   trop haut  — du texte hors sujet entre dans la reponse. Malica cite
  *                alors un article REEL a l'appui d'une affirmation fausse.
  *                C'est le pire cas : la citation rend l'erreur credible.
  *   trop bas   — le corpus se tait alors qu'il contient la reponse, et
- *                Regalica dit « je n'ai pas ce texte » a tort.
+ *                Malica dit « je n'ai pas ce texte » a tort.
  *
  * On ne devine pas ce seuil. On le mesure : des questions qui DOIVENT trouver,
  * des questions qui ne doivent RIEN trouver, et on regarde ou les deux nuages
@@ -79,7 +79,7 @@ const ETRANGERES = [
  * legitimes sans faire taire ces dernieres.
  *
  * Ce nuage ne se traite donc PAS par le seuil, mais par la consigne : le
- * corpus est tunisien, et Regalica doit refuser une question sur un autre
+ * corpus est tunisien, et Malica doit refuser une question sur un autre
  * droit meme quand elle a du texte proche sous les yeux. On les mesure ici
  * pour verifier qu'ils restent au-dessus des questions legitimes — le jour ou
  * ils passeraient dessous, la consigne serait le seul rempart, et il faudrait
@@ -185,9 +185,15 @@ const j = stat(mesures.horsJuridiction);
 const e = stat(mesures.etrangeres);
 
 console.log(`\n===== VERDICT =====`);
-console.log(`  doivent trouver    : min ${a.min.toFixed(4)}  med ${a.med.toFixed(4)}  MAX ${a.max.toFixed(4)}`);
-console.log(`  hors juridiction   : min ${j.min.toFixed(4)}  med ${j.med.toFixed(4)}  max ${j.max.toFixed(4)}   (a la consigne, pas au seuil)`);
-console.log(`  hors sujet         : MIN ${e.min.toFixed(4)}  med ${e.med.toFixed(4)}  max ${e.max.toFixed(4)}`);
+console.log(
+  `  doivent trouver    : min ${a.min.toFixed(4)}  med ${a.med.toFixed(4)}  MAX ${a.max.toFixed(4)}`,
+);
+console.log(
+  `  hors juridiction   : min ${j.min.toFixed(4)}  med ${j.med.toFixed(4)}  max ${j.max.toFixed(4)}   (a la consigne, pas au seuil)`,
+);
+console.log(
+  `  hors sujet         : MIN ${e.min.toFixed(4)}  med ${e.med.toFixed(4)}  max ${e.max.toFixed(4)}`,
+);
 
 // Le seuil separe « doivent trouver » de « hors sujet ». Le hors-juridiction
 // n'entre pas dans ce calcul : il se refuse par la consigne.
@@ -198,7 +204,9 @@ if (a.max < e.min) {
   console.log(`    — il laisse passer toutes les questions legitimes (max ${a.max.toFixed(4)}),`);
   console.log(`    — il tient dehors tout le hors-sujet (min ${e.min.toFixed(4)}).`);
 } else {
-  console.log(`\n  Les deux nuages SE CHEVAUCHENT sur [${e.min.toFixed(4)} ; ${a.max.toFixed(4)}].`);
+  console.log(
+    `\n  Les deux nuages SE CHEVAUCHENT sur [${e.min.toFixed(4)} ; ${a.max.toFixed(4)}].`,
+  );
   console.log(`  Aucun seuil ne separe parfaitement. R2 dit de refuser plutot que`);
   console.log(`  de deviner : on se pose au plus bas.`);
   console.log(`  Seuil conseille : ${(Math.floor(e.min * 100) / 100).toFixed(2)}`);

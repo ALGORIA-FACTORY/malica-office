@@ -3,7 +3,7 @@
 -- ========================================================== CE QUI ARRIVE
 --
 -- Le paquet `docs/Base de connaissance` apporte la nomenclature NC 01 verbatim —
--- 611 comptes — plus quinze extensions Regalica justifiées une par une, 160 rôles
+-- 611 comptes — plus quinze extensions Malica justifiées une par une, 160 rôles
 -- comptables, 182 schémas d'écriture, 454 paramètres fiscaux datés et sourcés, et
 -- 43 obligations déclaratives.
 --
@@ -40,10 +40,10 @@
 --
 -- ========================================================== R10 EN ACTE
 --
--- C'est exactement ce que R10 décrit : Regalica avait livré un défaut pour que le
+-- C'est exactement ce que R10 décrit : Malica avait livré un défaut pour que le
 -- produit tourne, l'expert a fait le travail, le défaut cède. La colonne
 -- `is_official` rend désormais la frontière lisible — ce qui est verbatim NC 01
--- ne se modifie pas, ce que Regalica a ouvert reste ajustable.
+-- ne se modifie pas, ce que Malica a ouvert reste ajustable.
 
 -- ------------------------------------------------- 1. les colonnes du socle
 --
@@ -60,7 +60,7 @@ alter table ref.accounts
 
 comment on column ref.accounts.is_official is
   'true = verbatim NC 01 (nomenclature officielle SCE), non modifiable. '
-  'false = subdivision ouverte par Regalica, ajustable par l''expert.';
+  'false = subdivision ouverte par Malica, ajustable par l''expert.';
 
 comment on column ref.accounts.normal_side is
   'Convention produit, absente du texte officiel : sens usuel du solde, pour '

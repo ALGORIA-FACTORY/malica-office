@@ -32,7 +32,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const DEPOT = join(ICI, "..", "..");
-const { default: pg } = await import(pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href);
+const { default: pg } = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href
+);
 import { encoder, modeleEnVigueur } from "./empreintes.mjs";
 
 function env(fichier) {
@@ -76,11 +78,21 @@ async function main() {
   let jour = null;
   const mots = [];
   for (let i = 0; i < args.length; i += 1) {
-    if (args[i] === "--nb") { nb = Number(args[i + 1]); i += 1; continue; }
-    if (args[i] === "--historique") { historique = true; continue; }
+    if (args[i] === "--nb") {
+      nb = Number(args[i + 1]);
+      i += 1;
+      continue;
+    }
+    if (args[i] === "--historique") {
+      historique = true;
+      continue;
+    }
     // La doctrine administrative n'est pas de l'histoire : c'est ce que le fisc
     // dit aujourd'hui du texte en vigueur. Elle a donc son propre commutateur.
-    if (args[i] === "--doctrine") { doctrine = true; continue; }
+    if (args[i] === "--doctrine") {
+      doctrine = true;
+      continue;
+    }
     if (args[i] === "--au") {
       jour = normaliserDate(args[i + 1]);
       i += 1;
@@ -93,7 +105,9 @@ async function main() {
   }
   const question = mots.join(" ").trim();
   if (!question) {
-    throw new Error('usage: bun db/corpus/rechercher.mjs "votre question" [--nb 20] [--au AAAA-MM-JJ] [--historique] [--doctrine]');
+    throw new Error(
+      'usage: bun db/corpus/rechercher.mjs "votre question" [--nb 20] [--au AAAA-MM-JJ] [--historique] [--doctrine]',
+    );
   }
 
   const client = new pg.Client({ connectionString: API["DATABASE_URL_ADMIN"] });
@@ -269,8 +283,13 @@ async function main() {
   const ms = Date.now() - debut;
 
   console.log(`\nquestion : ${question}`);
-  const perimetre = ["droit en vigueur : codes, conventions, normes comptables", doctrine ? "doctrine DGELF" : null, historique ? "lois de finances" : null]
-    .filter(Boolean).join(" + ");
+  const perimetre = [
+    "droit en vigueur : codes, conventions, normes comptables",
+    doctrine ? "doctrine DGELF" : null,
+    historique ? "lois de finances" : null,
+  ]
+    .filter(Boolean)
+    .join(" + ");
   console.log(`etat     : ${jour ? `du droit au ${jour}` : "le plus recent"} — ${perimetre}`);
   console.log(`modele   : ${modele} — ${resultats.rowCount} resultats en ${ms} ms\n`);
   // Ce que valent les mots employes ci-dessous :
@@ -289,11 +308,15 @@ async function main() {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   };
   for (const r of resultats.rows) {
-    const validite = r.valid_to ? `${enDate(r.valid_from)} au ${enDate(r.valid_to)}` : `depuis ${enDate(r.valid_from)}`;
+    const validite = r.valid_to
+      ? `${enDate(r.valid_from)} au ${enDate(r.valid_to)}`
+      : `depuis ${enDate(r.valid_from)}`;
     // Une note commune ne se cite pas « art. 12 du corpus NC-2015 » mais
     // « note commune n° 12 de 2015 » : c'est ainsi qu'elle est referencee.
     const nc = /^NC-(\d{4})$/.exec(r.corpus);
-    const intitule = nc ? `note commune n° ${r.numero} de ${nc[1]}` : `${r.corpus} art. ${r.numero}`;
+    const intitule = nc
+      ? `note commune n° ${r.numero} de ${nc[1]}`
+      : `${r.corpus} art. ${r.numero}`;
     console.log(`— ${intitule}  (fragment ${r.ordinal}, ${r.langue}, ${validite})`);
     const nature = r.nature ?? "nature non determinee";
     const portee = r.opposable_a ? `opposable a : ${r.opposable_a}` : "opposable a personne";
@@ -303,10 +326,10 @@ async function main() {
     // Officiel : ce n'est pas un numero du journal, c'est une compilation.
     const sansRef = r.consolide ? "non relevee (edition consolidee)" : "non relevee";
     console.log(`  publication : ${r.jort_reference ?? sansRef} | texte ${r.extraction_confiance}`);
-    const rangs = [
-      r.rang_sens ? `sens #${r.rang_sens}` : null,
-      r.rang_mots ? `mots #${r.rang_mots}` : null,
-    ].filter(Boolean).join(", ") || "aucun rang";
+    const rangs =
+      [r.rang_sens ? `sens #${r.rang_sens}` : null, r.rang_mots ? `mots #${r.rang_mots}` : null]
+        .filter(Boolean)
+        .join(", ") || "aucun rang";
     console.log(`  score ${r.score} (${rangs}${r.distance ? `, distance ${r.distance}` : ""})`);
     console.log(`  ${r.extrait.replace(/\s+/g, " ").trim()}\n`);
   }

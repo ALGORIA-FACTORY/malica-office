@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Ecriture } from "@regalica/socle/ports/repositories";
+import type { Ecriture } from "@malica/socle/ports/repositories";
 
 import { compteDeCharge, ecritureEnMasse, lotDe } from "../propositions";
 

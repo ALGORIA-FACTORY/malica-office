@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@capacitor/app", () => ({
   App: {
     getInfo: async () => ({
-      name: "Regalica Office",
-      id: "com.algoriafactory.regalica",
+      name: "Malica Office",
+      id: "com.algoriafactory.malica",
       build: "6",
       version: "0.1.1",
     }),

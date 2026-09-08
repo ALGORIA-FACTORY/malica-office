@@ -36,9 +36,9 @@ describe("qui relaie quoi", () => {
     // sur l'appareil qui l'a produite, et le défaut se corrige à l'aveugle —
     // ce qui a coûté trois corrections inutiles.
     expect(estPourLApi("/journal-atelier")).toBe(true);
-    // Regalica : la lecture, la réponse, la rédaction — sur leurs propres routes.
-    expect(estPourLApi("/regalica/lectures/abc")).toBe(true);
-    expect(estPourLApi("/regalica/demander")).toBe(true);
+    // Malica : la lecture, la réponse, la rédaction — sur leurs propres routes.
+    expect(estPourLApi("/malica/lectures/abc")).toBe(true);
+    expect(estPourLApi("/malica/demander")).toBe(true);
   });
 
   it("ne relaie aucune page de l application", () => {
@@ -117,7 +117,7 @@ describe("le retour de l API", () => {
       connection: "keep-alive",
       "keep-alive": "timeout=5",
       "content-type": "application/json",
-      "set-cookie": ["regalica_session=abc; Path=/"],
+      "set-cookie": ["malica_session=abc; Path=/"],
     });
     expect(propres["connection"]).toBeUndefined();
     expect(propres["keep-alive"]).toBeUndefined();
@@ -125,8 +125,8 @@ describe("le retour de l API", () => {
   });
 
   it("laisse passer le cookie que l API pose", () => {
-    const propres = sansEntetesDeConnexion({ "set-cookie": ["regalica_session=abc; Path=/"] });
-    expect(propres["set-cookie"]).toEqual(["regalica_session=abc; Path=/"]);
+    const propres = sansEntetesDeConnexion({ "set-cookie": ["malica_session=abc; Path=/"] });
+    expect(propres["set-cookie"]).toEqual(["malica_session=abc; Path=/"]);
   });
 
   it("laisse passer un statut numerique tel quel", () => {
@@ -137,8 +137,8 @@ describe("le retour de l API", () => {
 
 describe("ce qui DOIT passer", () => {
   it("laisse le cookie de session, qui porte l'identité", () => {
-    const propres = entetesRelayees({ cookie: "regalica_session=abc" }, HOTE);
-    expect(propres["cookie"]).toBe("regalica_session=abc");
+    const propres = entetesRelayees({ cookie: "malica_session=abc" }, HOTE);
+    expect(propres["cookie"]).toBe("malica_session=abc");
   });
 
   it("laisse l'autorisation et le type de contenu", () => {

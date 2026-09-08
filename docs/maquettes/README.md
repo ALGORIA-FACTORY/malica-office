@@ -1,4 +1,4 @@
-# Maquettes Regalica Office — référence visuelle
+# Maquettes Malica Office — référence visuelle
 
 Ces fichiers sont la **source de vérité visuelle** du produit. Ils ne sont pas
 compilés par l'application : on s'y réfère, on en extrait le vocabulaire, on ne
@@ -6,15 +6,15 @@ les importe pas.
 
 ## Fichiers
 
-| Fichier | Surface | Écrans |
-|---|---|---|
-| `regalica.html` | PME mobile 392×846 | 20 (accueil → restitution, thème Ink, arabe RTL, espace personnel) |
-| `comptable.html` | Cabinet 2 colonnes 1320×836 | 7 — **itération antérieure, dépassée** |
-| `comptable2.html` | Cabinet 3 colonnes 1460×880 | 9 (onboarding → arabe RTL) |
-| `comptable3.html` | Cabinet 3 colonnes 1460×880 | 16 (rapprochement → client 360) |
+| Fichier           | Surface                     | Écrans                                                             |
+| ----------------- | --------------------------- | ------------------------------------------------------------------ |
+| `malica.html`     | PME mobile 392×846          | 20 (accueil → restitution, thème Ink, arabe RTL, espace personnel) |
+| `comptable.html`  | Cabinet 2 colonnes 1320×836 | 7 — **itération antérieure, dépassée**                             |
+| `comptable2.html` | Cabinet 3 colonnes 1460×880 | 9 (onboarding → arabe RTL)                                         |
+| `comptable3.html` | Cabinet 3 colonnes 1460×880 | 16 (rapprochement → client 360)                                    |
 
 **Référence cabinet = `comptable2.html` + `comptable3.html`** : grille
-nav 218px / centre / **panneau Regalica 300px** permanent à droite.
+nav 218px / centre / **panneau Malica 300px** permanent à droite.
 `comptable.html` est conservé pour l'historique uniquement.
 
 `apercus/` contient les rendus PNG, dont trois planches d'ensemble.
@@ -68,5 +68,5 @@ uniquement par bordures 1px.
 
 ## Sigle
 
-`public/rg-mark.svg` — utilisé via `src/components/regalica/rg-mark.tsx`, en
+`public/rg-mark.svg` — utilisé via `src/components/malica/rg-mark.tsx`, en
 masque CSS sur `currentColor`. Ne jamais le colorier en dur.

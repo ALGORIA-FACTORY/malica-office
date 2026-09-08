@@ -18,7 +18,7 @@ lieu, accompagnée, dans les 48 heures qui suivent l'invitation.
 ## L'appel de mise en route (20 minutes)
 
 1. **Installer** : le lien Play de la piste « Pilote » (le compte Google du
-   téléphone doit être celui inscrit). Le nom affiché est « Regalica (pilote) ».
+   téléphone doit être celui inscrit). Le nom affiché est « Malica (pilote) ».
 2. **Entrer** : le lien d'invitation du courriel ouvre l'application sur la
    création d'accès ; l'e-mail est celui de l'invitation ; le mot de passe est
    choisi par le dirigeant — jamais dicté, jamais noté par nous.
@@ -43,7 +43,7 @@ lieu, accompagnée, dans les 48 heures qui suivent l'invitation.
   et image WhatsApp) : à plat, toute la feuille dans le cadre, la lumière
   devant, pas d'ombre de la main, le ticket thermique tout de suite (il
   s'efface).
-- **La fiche « Ce que Regalica fait de vos documents »** : la pièce est lue
+- **La fiche « Ce que Malica fait de vos documents »** : la pièce est lue
   par une machine à l'étranger (voir la convention), rien n'est envoyé au
   cabinet sans votre geste « transmettre », vos documents personnels restent
   dans votre coffre.

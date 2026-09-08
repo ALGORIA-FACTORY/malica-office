@@ -17,42 +17,42 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { ClientPicker } from "@/components/regalica/ClientPicker";
-import { ecrireDossierCourant, useDossierCourant } from "@/components/regalica/dossier-courant";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { ClientPicker } from "@/components/malica/ClientPicker";
+import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
 import {
   ActionButton,
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionRepliable,
   SectionTitle,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant, montantSigne, quantite } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
+import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { StockItem } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { StockItem } from "@malica/socle/ports/repositories";
 import {
   computeStock,
   computeStockDepreciation,
   computeStockVariation,
-} from "@regalica/socle/engines/stock/valorisation";
+} from "@malica/socle/engines/stock/valorisation";
 
 export const Route = createFileRoute("/_authenticated/cabinet/stocks")({
   head: () => ({
     meta: [
-      { title: "Stocks — Regalica Office" },
+      { title: "Stocks — Malica Office" },
       {
         name: "description",
         content:
           "Articles, mouvements, valorisation CUMP et FIFO et dépréciations calculées par le Socle.",
       },
-      { property: "og:title", content: "Stocks — Regalica Office" },
+      { property: "og:title", content: "Stocks — Malica Office" },
       {
         property: "og:description",
         content:
@@ -435,7 +435,7 @@ function CabinetStocks() {
     onError: (e: unknown) => setError(texteDeLErreur(e, OU, t("common.error"))),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.stocks.voice")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.stocks.voice")}</MalicaNote>, [locale]);
 
   useEffect(() => {
     setForm(null);

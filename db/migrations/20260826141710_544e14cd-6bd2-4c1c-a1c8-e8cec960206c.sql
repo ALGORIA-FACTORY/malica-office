@@ -65,7 +65,7 @@ create index if not exists piece_articles_tenant_period_idx
 
 select app.enable_tenant_rls('capture', 'piece_articles', true, false);
 
--- Questions Regalica sur un écart de consommation : append-only, la réponse est un fait.
+-- Questions Malica sur un écart de consommation : append-only, la réponse est un fait.
 create table if not exists collab.charge_questions (
   id               uuid primary key default gen_random_uuid(),
   tenant_id        uuid not null references identity.organizations(id) on delete cascade,

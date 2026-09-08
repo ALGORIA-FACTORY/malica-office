@@ -1,37 +1,36 @@
 # Le corpus juridique tunisien — état au 1er septembre 2026
 
-*Ce document remplace la note du matin. Les chiffres qu'il porte sont mesurés,
-pas estimés : ils sortent de `db/verification/qualite_corpus.sql`, qui se rejoue.*
+_Ce document remplace la note du matin. Les chiffres qu'il porte sont mesurés,
+pas estimés : ils sortent de `db/verification/qualite_corpus.sql`, qui se rejoue._
 
 ## Où l'on en est
 
-| | Avant | Après |
-|---|---|---|
-| Articles | 2 221 | **9 014** |
-| Versions | 3 045 | **11 262** |
-| Fragments encodés | 6 150 | **22 762** (aucun manquant) |
-| Vérités connues vérifiées | 2/5 | **10/10** |
-| Années couvertes | 2016-2026 | **1978-2026** |
-| Codes | 8, tous fiscaux | **13**, dont le droit des sociétés, des contrats, du commerce, du travail et le système comptable |
-| Notes communes DGELF | 0 | **680** |
-| Articles rattachés à leur autorité | 0 | **9 014 sur 9 014** |
-| Versions portant leur référence de publication | 0 | **4 030** (JORT ou Bulletin officiel des douanes et des impôts) |
-| Articles dont on connaît le statut | 0 | **4 585** (4 489 en vigueur, 96 abrogés) |
+|                                                | Avant           | Après                                                                                             |
+| ---------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+| Articles                                       | 2 221           | **9 014**                                                                                         |
+| Versions                                       | 3 045           | **11 262**                                                                                        |
+| Fragments encodés                              | 6 150           | **22 762** (aucun manquant)                                                                       |
+| Vérités connues vérifiées                      | 2/5             | **10/10**                                                                                         |
+| Années couvertes                               | 2016-2026       | **1978-2026**                                                                                     |
+| Codes                                          | 8, tous fiscaux | **13**, dont le droit des sociétés, des contrats, du commerce, du travail et le système comptable |
+| Notes communes DGELF                           | 0               | **680**                                                                                           |
+| Articles rattachés à leur autorité             | 0               | **9 014 sur 9 014**                                                                               |
+| Versions portant leur référence de publication | 0               | **4 030** (JORT ou Bulletin officiel des douanes et des impôts)                                   |
+| Articles dont on connaît le statut             | 0               | **4 585** (4 489 en vigueur, 96 abrogés)                                                          |
 
 ## Les huit défauts corrigés
 
 ### 1. L'arabe ne se découpait pas
 
 L'arabe fait foi en Tunisie autant que le français. Le découpeur ne le lisait
-qu'à moitié : il ignorait les rangs écrits en toutes lettres — *مكرر*, *ثالثا*,
-*رابعا* — si bien que les huit articles 13 du code de la TVA se confondaient en
+qu'à moitié : il ignorait les rangs écrits en toutes lettres — _مكرر_, _ثالثا_,
+_رابعا_ — si bien que les huit articles 13 du code de la TVA se confondaient en
 un seul. L'édition arabe rendait **11 articles là où le français en rendait 30**.
 
 Trois pièges propres à l'arabe ont été traités : l'extraction colle les mots
-(`الفصل13مكرر`), elle intervertit parfois les lettres de *الأول* (article
+(`الفصل13مكرر`), elle intervertit parfois les lettres de _الأول_ (article
 premier), et les rangs s'écrivent en toutes lettres. Résultat : le code des
-droits et procédures fiscaux est **intégralement bilingue (170 articles sur
-170)**, le code de la TVA aussi (30/30), le code d'enregistrement à 103 sur 144.
+droits et procédures fiscaux est **intégralement bilingue (170 articles sur 170)**, le code de la TVA aussi (30/30), le code d'enregistrement à 103 sur 144.
 
 ### 2. Le corps du code se confondait avec ses annexes
 
@@ -57,8 +56,8 @@ avalé. Il est revenu.
 
 ### 4. Le recueil écrasait quarante textes en un seul
 
-Le *Recueil des textes relatifs aux droits et taxes non incorporés dans les codes
-fiscaux* n'est pas un code : il compile des dizaines d'arrêtés, décrets et lois,
+Le _Recueil des textes relatifs aux droits et taxes non incorporés dans les codes
+fiscaux_ n'est pas un code : il compile des dizaines d'arrêtés, décrets et lois,
 chacun renumérotant à partir de 1. Les confondre donnait cinquante « article
 premier » dont un seul survivait, et huit articles pesant plus de douze mille
 caractères.
@@ -116,14 +115,14 @@ chaque bloc (« ARRÊTÉ DU 15 MAI 1992 PRIS EN APPLICATION DU DÉCRET DU 25 MAI
 1950 » est un arrêté, pas un décret : on lit le premier mot d'une ligne, pas le
 dernier mot de l'entête).
 
-| Type | Articles |
-|---|---|
-| Loi de finances | 3 644 |
-| Loi ordinaire | 1 048 |
-| Décret | 391 |
-| Arrêté ministériel | 238 |
-| Décret-loi | 113 |
-| **Non rattaché** | **0** |
+| Type               | Articles |
+| ------------------ | -------- |
+| Loi de finances    | 3 644    |
+| Loi ordinaire      | 1 048    |
+| Décret             | 391      |
+| Arrêté ministériel | 238      |
+| Décret-loi         | 113      |
+| **Non rattaché**   | **0**    |
 
 Le décret-loi manquait au référentiel : les lois de finances 2011, 2021, 2022 et
 2023 ont été prises sous cette forme. Il a été ajouté.
@@ -139,21 +138,21 @@ retiré : numéro du journal, date, et **page où commence l'article**.
   sont des compilations administratives, pas des numéros du Journal Officiel.
   Leur absence de référence n'est pas un défaut, c'est un fait.
 
-Exemple de ce qu'une réponse affiche désormais : *LFC-1988 art. 7 — publication :
-JORT n° 39 du 10 juin 1988, p. 828*.
+Exemple de ce qu'une réponse affiche désormais : _LFC-1988 art. 7 — publication :
+JORT n° 39 du 10 juin 1988, p. 828_.
 
 ### Le statut de chaque article
 
 Le vocabulaire n'est pas interchangeable, et les effets non plus :
 
-| Statut | Ce que ça veut dire |
-|---|---|
-| `en_vigueur` | l'article s'applique |
-| `abroge` | une loi postérieure l'a supprimé — **pour l'avenir** : les faits antérieurs restent régis par lui |
-| `annule` | le juge administratif l'a effacé **rétroactivement** : réputé n'avoir jamais existé |
-| `caduc` | il s'est éteint seul, son terme étant échu |
-| `non_entre_en_vigueur` | publié, mais sa date d'effet n'est pas atteinte |
-| `indetermine` | nous ne savons pas — et nous le disons |
+| Statut                 | Ce que ça veut dire                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `en_vigueur`           | l'article s'applique                                                                              |
+| `abroge`               | une loi postérieure l'a supprimé — **pour l'avenir** : les faits antérieurs restent régis par lui |
+| `annule`               | le juge administratif l'a effacé **rétroactivement** : réputé n'avoir jamais existé               |
+| `caduc`                | il s'est éteint seul, son terme étant échu                                                        |
+| `non_entre_en_vigueur` | publié, mais sa date d'effet n'est pas atteinte                                                   |
+| `indetermine`          | nous ne savons pas — et nous le disons                                                            |
 
 L'information était déjà dans nos textes : « ARTICLE 21 (Abrogé par l'article 7
 de la loi n°2000-82 du 9 août 2000) ». On la relève **verbatim**, en français
@@ -175,11 +174,11 @@ bun db/corpus/rechercher.mjs "taux de la taxe sur la valeur ajoutée" --au 1990-
 > Loi de finances (normative) — opposable à : administration, contribuable, juge
 > statut : indéterminé
 > publication : JORT n° 39 du 10 juin 1988, p. 828 — texte incertain
-> *« Sont soumis à la taxe sur la valeur ajoutée au taux de 17%, les opérations
-> portant sur les biens et les services non soumis à un autre taux. »*
+> _« Sont soumis à la taxe sur la valeur ajoutée au taux de 17%, les opérations
+> portant sur les biens et les services non soumis à un autre taux. »_
 
 Au 31 décembre 2019, la même question rend le code de la TVA article 7 dans son
-édition 2019 : *« au taux de 19% »*. Sans date, elle rend le dernier état.
+édition 2019 : _« au taux de 19% »_. Sans date, elle rend le dernier état.
 
 **Ce que `--au` sait et ne sait pas.** Les bornes de validité viennent des
 éditions détenues : un texte identique en 2018 et en 2020, différent en 2022,
@@ -192,11 +191,11 @@ répond. Avant 2016, où nous n'avons que les lois de finances, ce sont elles.
 
 ## Ce que vaut le texte que l'on sert
 
-| | Versions | Ce que ça veut dire |
-|---|---|---|
-| `verbatim` | 5 474 | extrait tel quel du PDF officiel |
-| `incertain` | 1 204 | microfilm passé à la reconnaissance optique |
-| `partiel` | 506 | PDF à police maison, déchiffré : lettres sûres, quelques signes perdus |
+|             | Versions | Ce que ça veut dire                                                    |
+| ----------- | -------- | ---------------------------------------------------------------------- |
+| `verbatim`  | 5 474    | extrait tel quel du PDF officiel                                       |
+| `incertain` | 1 204    | microfilm passé à la reconnaissance optique                            |
+| `partiel`   | 506      | PDF à police maison, déchiffré : lettres sûres, quelques signes perdus |
 
 Servir de l'OCR sans le dire serait mentir. La provenance s'affiche dans chaque
 résultat de recherche.
@@ -206,16 +205,16 @@ résultat de recherche.
 Le corpus était purement fiscal : huit codes, tous des impôts. Or un cabinet
 comptable travaille d'abord sur ce qu'on a le **droit** de faire.
 
-| Code | Articles | Couverture de la numérotation |
-|---|---|---|
-| COC — obligations et contrats (1907) | 1 409 | 92 % (le reste abrogé) |
-| CCOM — code de commerce | 538 | 71 % (le livre sur la faillite a été remplacé en 1995) |
-| CSC — sociétés commerciales | 492, **dont 489 en arabe** | 100 % |
-| CTRAV — code du travail (édition 2020) | 441 | 95 % |
-| SCE — loi 96-112, système comptable | 27 | 100 % |
+| Code                                   | Articles                   | Couverture de la numérotation                          |
+| -------------------------------------- | -------------------------- | ------------------------------------------------------ |
+| COC — obligations et contrats (1907)   | 1 409                      | 92 % (le reste abrogé)                                 |
+| CCOM — code de commerce                | 538                        | 71 % (le livre sur la faillite a été remplacé en 1995) |
+| CSC — sociétés commerciales            | 492, **dont 489 en arabe** | 100 %                                                  |
+| CTRAV — code du travail (édition 2020) | 441                        | 95 %                                                   |
+| SCE — loi 96-112, système comptable    | 27                         | 100 %                                                  |
 
-Ce qui change concrètement : à la question *« délai de dépôt des comptes annuels
-de la SARL »*, la base répond maintenant CSC art. 14 (immatriculation dans le
+Ce qui change concrètement : à la question _« délai de dépôt des comptes annuels
+de la SARL »_, la base répond maintenant CSC art. 14 (immatriculation dans le
 mois), SCE art. 21 (états financiers dans les trois mois de la clôture) et
 CIRPPIS art. 57 (dépôt au centre de contrôle). Trois codes différents, une seule
 question. Ce matin, aucun des trois n'était dans la base.
@@ -237,17 +236,17 @@ directe, 102 par reconnaissance optique. Voir
 
 Elles portent `source_code = 'NOTE_COMMUNE'`, donc l'autorité
 « interprétative » et l'opposabilité « administration » seule. C'est ce qui
-distingue Regalica d'un moteur de recherche : à la question *« retenue à la
-source sur les honoraires des avocats »*, la réponse remonte la note commune
+distingue Malica d'un moteur de recherche : à la question _« retenue à la
+source sur les honoraires des avocats »_, la réponse remonte la note commune
 n° 12 de 2015 **et dit qu'elle engage le fisc, pas le contribuable**.
 
 La recherche a donc trois périmètres :
 
-| Commutateur | Ce qu'il ouvre |
-|---|---|
-| *(par défaut)* | les codes consolidés — le droit en vigueur |
-| `--doctrine` | + les notes communes de la DGELF |
-| `--historique` | + les lois de finances |
+| Commutateur       | Ce qu'il ouvre                                    |
+| ----------------- | ------------------------------------------------- |
+| _(par défaut)_    | les codes consolidés — le droit en vigueur        |
+| `--doctrine`      | + les notes communes de la DGELF                  |
+| `--historique`    | + les lois de finances                            |
 | `--au AAAA-MM-JJ` | l'état du droit à cette date (ouvre l'historique) |
 
 ## Aucun article sauté : la vérification
@@ -257,15 +256,15 @@ absents entre le premier et le dernier article, **puis on vérifie si ces numér
 figurent quand même en tête de ligne dans le PDF** — c'est-à-dire si le découpage
 les a ratés.
 
-| Code | Numéros absents | Dont réellement présents dans le PDF |
-|---|---|---|
-| CCOM | 215 | **0** |
-| COC | 124 | **0** |
-| CTRAV | 21 | **0** |
-| CDET | 18 | **0** |
-| CIRPPIS | 8 | 2 — vérifiés un par un : ce sont des citations, pas des articles |
-| CCP | 6 | **0** |
-| CSC, CDPF, CTVA, CFL, SCE, INCITATIONS | 0 | — |
+| Code                                   | Numéros absents | Dont réellement présents dans le PDF                             |
+| -------------------------------------- | --------------- | ---------------------------------------------------------------- |
+| CCOM                                   | 215             | **0**                                                            |
+| COC                                    | 124             | **0**                                                            |
+| CTRAV                                  | 21              | **0**                                                            |
+| CDET                                   | 18              | **0**                                                            |
+| CIRPPIS                                | 8               | 2 — vérifiés un par un : ce sont des citations, pas des articles |
+| CCP                                    | 6               | **0**                                                            |
+| CSC, CDPF, CTVA, CFL, SCE, INCITATIONS | 0               | —                                                                |
 
 Autrement dit : **sur 9 014 articles, tout ce que les sources contiennent est
 dans la base.** Les numéros absents sont ceux que les éditions officielles ne
@@ -290,15 +289,15 @@ contiennent pas — abrogés, ou transférés vers un autre code.
 
 ## Où sont les choses
 
-| Fichier | Rôle |
-|---|---|
-| `db/corpus/segmenter.mjs` | découpage d'un fascicule en articles, français et arabe |
-| `db/corpus/entetes.mjs` | retrait des en-têtes de page du JORT |
-| `db/corpus/dechiffrer.mjs` | déchiffrement des PDF à police maison |
-| `db/corpus/reconstruire.mjs` | PDF → texte → articles → versions, et l'écriture en base |
-| `db/corpus/vectoriser.mjs` | encodage des fragments, modèle lu dans `agents.model_pricing` |
-| `db/corpus/notes.mjs` | ingestion des notes communes de la DGELF |
-| `db/corpus/rechercher.mjs` | recherche, avec `--au`, `--doctrine`, `--historique` |
-| `db/corpus/provenance.json` | d'où vient le texte de chaque édition |
-| `db/verification/qualite_corpus.sql` | les douze contrôles ci-dessus, rejouables |
-| `db/migrations/20260901143000_…sql` | autorité, statut, référence au Journal Officiel |
+| Fichier                              | Rôle                                                          |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `db/corpus/segmenter.mjs`            | découpage d'un fascicule en articles, français et arabe       |
+| `db/corpus/entetes.mjs`              | retrait des en-têtes de page du JORT                          |
+| `db/corpus/dechiffrer.mjs`           | déchiffrement des PDF à police maison                         |
+| `db/corpus/reconstruire.mjs`         | PDF → texte → articles → versions, et l'écriture en base      |
+| `db/corpus/vectoriser.mjs`           | encodage des fragments, modèle lu dans `agents.model_pricing` |
+| `db/corpus/notes.mjs`                | ingestion des notes communes de la DGELF                      |
+| `db/corpus/rechercher.mjs`           | recherche, avec `--au`, `--doctrine`, `--historique`          |
+| `db/corpus/provenance.json`          | d'où vient le texte de chaque édition                         |
+| `db/verification/qualite_corpus.sql` | les douze contrôles ci-dessus, rejouables                     |
+| `db/migrations/20260901143000_…sql`  | autorité, statut, référence au Journal Officiel               |

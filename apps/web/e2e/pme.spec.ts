@@ -1,7 +1,7 @@
 /**
  * Le dirigeant, sur son téléphone, en français.
  *
- * Le parcours de base : arriver sur son accueil, refermer Regalica à la
+ * Le parcours de base : arriver sur son accueil, refermer Malica à la
  * première visite, aller à son espace et à ses pièces, en ouvrir une,
  * signaler un problème depuis les réglages. Ce que la caméra fait n'est pas
  * ici (protocole d'appareil) ; ce que la lecture par un modèle rend non plus
@@ -23,12 +23,12 @@ test("la session ouverte mène à l'accueil du dirigeant", async ({ page }) => {
   await expect(page.getByText("Vos documents")).toBeVisible();
 });
 
-test("à la première visite, Regalica accueille, et se referme d'un geste", async ({ page }) => {
+test("à la première visite, Malica accueille, et se referme d'un geste", async ({ page }) => {
   await preparerLAppareil(page, "fr", { premiereVisite: true });
   await page.goto("/pme");
   const panneau = page.locator("div.fixed.inset-0");
   await expect(panneau.getByText(/conversation en cours/i)).toBeVisible();
-  await panneau.getByRole("button", { name: "Fermer le fil de Regalica" }).click();
+  await panneau.getByRole("button", { name: "Fermer le fil de Malica" }).click();
   await expect(page.getByText("Vos documents")).toBeVisible();
   // Et le choix tient : la page rechargée s'ouvre sur l'accueil.
   await page.reload();

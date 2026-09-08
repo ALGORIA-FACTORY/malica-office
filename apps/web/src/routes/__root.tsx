@@ -12,8 +12,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { coque } from "@/capabilities/coque";
-import { useApparence } from "@/components/regalica/apparence";
-import { GardeDeVersion } from "@/components/regalica/mise-a-jour-requise";
+import { useApparence } from "@/components/malica/apparence";
+import { GardeDeVersion } from "@/components/malica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
@@ -27,7 +27,7 @@ import { ecouterLaDeconnexion } from "@/lib/transport/etat";
  * traductions, lui, s'accorde après montage — la coquille tolère l'écart.
  */
 const LANGUE_AVANT_RENDU =
-  '(function(){try{var l=localStorage.getItem("regalica.locale");var d=document.documentElement;' +
+  '(function(){try{var l=localStorage.getItem("malica.locale");var d=document.documentElement;' +
   'if(l==="ar"){d.lang="ar";d.dir="rtl"}else if(l==="en"){d.lang="en"}}catch(e){}})();';
 
 /*
@@ -64,7 +64,7 @@ function NotFoundComponent() {
   if (path === "/index") {
     return (
       <div className="grid min-h-screen place-items-center bg-background px-4 text-foreground">
-        <p className="text-sm text-muted-foreground">Ouverture de Regalica Office…</p>
+        <p className="text-sm text-muted-foreground">Ouverture de Malica Office…</p>
       </div>
     );
   }
@@ -125,7 +125,7 @@ const SECOURS = {
 
 function langueDeSecours(): keyof typeof SECOURS {
   try {
-    const rangee = window.localStorage.getItem("regalica.locale");
+    const rangee = window.localStorage.getItem("malica.locale");
     if (rangee === "en" || rangee === "ar" || rangee === "fr") return rangee;
   } catch {
     // Stockage inaccessible — navigation privée, réglage du navigateur.
@@ -187,14 +187,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // `viewport-fit=cover` : l'écran va jusqu'aux bords, et la zone sûre —
       // la barre de gestes d'Android — se gère par `env(safe-area-inset-*)`.
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Regalica Office" },
+      { title: "Malica Office" },
       {
         name: "description",
         content:
           "Suite comptable augmentée : lecture citée des pièces, écritures déterministes, supervision par expert-comptable.",
       },
       { name: "author", content: "Algoria Factory" },
-      { property: "og:title", content: "Regalica Office" },
+      { property: "og:title", content: "Malica Office" },
       {
         property: "og:description",
         content: "Comptabilité augmentée, chiffre gouverné. Système Comptable Tunisien.",

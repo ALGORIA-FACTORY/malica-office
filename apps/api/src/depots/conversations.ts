@@ -1,5 +1,5 @@
 /**
- * Les conversations avec Regalica.
+ * Les conversations avec Malica.
  *
  * ============================================================= L'ISOLATION
  *
@@ -89,7 +89,7 @@ export const conversations = {
     }));
   },
 
-  /** Un fil neuf, sans titre : Regalica le nommera après le premier échange. */
+  /** Un fil neuf, sans titre : Malica le nommera après le premier échange. */
   async ouvrirNouvelle(db: Requete, tenantId: string): Promise<{ id: string }> {
     const { rows } = await db.query<{ id: string }>(
       `insert into agents.conversations (tenant_id) values ($1) returning id`,
@@ -208,7 +208,7 @@ export const conversations = {
   /**
    * Le titre du fil.
    *
-   * Sert à Regalica pour le nommer, et à la personne pour le renommer : c'est
+   * Sert à Malica pour le nommer, et à la personne pour le renommer : c'est
    * le même geste, et la base ne distingue pas les deux. La politique de mise
    * à jour n'ouvre le droit qu'à l'auteur, dans les deux cas.
    */

@@ -86,7 +86,9 @@ export async function encoder(textes, type, { base, cle, modele }) {
   }
   for (const v of vecteurs) {
     if (v.length !== DIMENSION) {
-      throw new Error(`dimension ${v.length} recue, ${DIMENSION} attendue — la colonne ne peut pas l'accueillir.`);
+      throw new Error(
+        `dimension ${v.length} recue, ${DIMENSION} attendue — la colonne ne peut pas l'accueillir.`,
+      );
     }
   }
   return { vecteurs, usage: donnees.usage ?? null };

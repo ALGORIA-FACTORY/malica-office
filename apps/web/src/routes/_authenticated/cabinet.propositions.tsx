@@ -18,28 +18,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
 import { compteDeCharge, ecritureEnMasse, lotDe, type Lot } from "@/lib/propositions";
-import { sommeDecimale } from "@regalica/socle/somme-decimale";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { CompteDuPlan, Ecriture, QueueItem } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { CompteDuPlan, Ecriture, QueueItem } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/propositions")({
   head: () => ({
     meta: [
-      { title: "Propositions du Socle — Regalica Office" },
+      { title: "Propositions du Socle — Malica Office" },
       {
         name: "description",
         content:
           "Les écritures comptabilisées sur les pièces lues, groupées par confiance et par client : validation d'un geste, ou réimputation gouvernée.",
       },
-      { property: "og:title", content: "Propositions du Socle — Regalica Office" },
+      { property: "og:title", content: "Propositions du Socle — Malica Office" },
       {
         property: "og:description",
         content: "Validation en masse par client, écriture en masse, réimputation gouvernée.",
@@ -96,10 +96,10 @@ function CabinetPropositions() {
     [ecritures.data],
   );
 
-  useRegalicaPanel(
-    <RegalicaNote kicker={t("cab.prop.panel.kicker")}>
+  useMalicaPanel(
+    <MalicaNote kicker={t("cab.prop.panel.kicker")}>
       {t("cab.prop.panel", { count: rows.length })}
-    </RegalicaNote>,
+    </MalicaNote>,
     [rows.length, locale],
   );
 

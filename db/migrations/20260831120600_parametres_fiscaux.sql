@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Paramètres fiscaux tunisiens, état constaté dans les éditions 2026
+--  Malica Office — Paramètres fiscaux tunisiens, état constaté dans les éditions 2026
 --
 --  RÈGLE FONDATRICE : aucun montant sans citation.
 --  Chaque ligne porte son corpus, son article et un extrait littéral. Un paramètre sans

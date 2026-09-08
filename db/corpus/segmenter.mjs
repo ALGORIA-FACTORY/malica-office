@@ -115,7 +115,6 @@ function nombre(texte) {
   return Number(enChiffresOccidentaux(texte));
 }
 
-
 // « Article premier » est la graphie legale francaise du numero 1 : sans elle,
 // le premier article de chaque code manquait. Le point d'« Art. » est facultatif :
 // la reconnaissance optique des vieux JORT le perd une fois sur dix.
@@ -133,14 +132,26 @@ export const RE_ARTICLE =
  */
 function ordinauxArabes() {
   const unites = [
-    ["الأول", "الأولى"], ["الثاني", "الثانية"], ["الثالث", "الثالثة"],
-    ["الرابع", "الرابعة"], ["الخامس", "الخامسة"], ["السادس", "السادسة"],
-    ["السابع", "السابعة"], ["الثامن", "الثامنة"], ["التاسع", "التاسعة"],
+    ["الأول", "الأولى"],
+    ["الثاني", "الثانية"],
+    ["الثالث", "الثالثة"],
+    ["الرابع", "الرابعة"],
+    ["الخامس", "الخامسة"],
+    ["السادس", "السادسة"],
+    ["السابع", "السابعة"],
+    ["الثامن", "الثامنة"],
+    ["التاسع", "التاسعة"],
     ["العاشر", "العاشرة"],
   ];
-  const dizaines = [[20, ["العشرون", "العشرين"]], [30, ["الثلاثون", "الثلاثين"]], [40, ["الأربعون", "الأربعين"]]];
+  const dizaines = [
+    [20, ["العشرون", "العشرين"]],
+    [30, ["الثلاثون", "الثلاثين"]],
+    [40, ["الأربعون", "الأربعين"]],
+  ];
   const table = new Map();
-  const poser = (mots, valeur) => { for (const m of mots) table.set(m, valeur); };
+  const poser = (mots, valeur) => {
+    for (const m of mots) table.set(m, valeur);
+  };
   unites.forEach(([m, f], i) => poser([m, f], i + 1));
   // 11 a 19 : l'unite suivie de « عشر » ou « عشرة ».
   for (let i = 0; i < 9; i += 1) {
@@ -167,31 +178,68 @@ const MOTIF_ORDINAL_AR = [...ORDINAUX_AR.keys()]
   .join("|");
 
 const SUF_AR = {
-  "مكرر": "bis", "ثالثا": "ter", "رابعا": "quater", "خامسا": "quinquies",
-  "سادسا": "sexies", "سابعا": "septies", "ثامنا": "octies", "تاسعا": "nonies",
-  "عاشرا": "decies",
+  مكرر: "bis",
+  ثالثا: "ter",
+  رابعا: "quater",
+  خامسا: "quinquies",
+  سادسا: "sexies",
+  سابعا: "septies",
+  ثامنا: "octies",
+  تاسعا: "nonies",
+  عاشرا: "decies",
 };
 const NOMS_AR = Object.keys(SUF_AR);
 // « الأول » ressort de l'extraction tantot ا-ل-أ-و-ل, tantot ا-أ-ل-و-ل : on
 // reconnait cinq lettres dont les trois premieres sont des alif ou des lam.
-const CLASSE_ALIF = "[اأإآ]".split("").map((c) => (FORMES.get(c) ?? "")).join("");
+const CLASSE_ALIF = "[اأإآ]"
+  .split("")
+  .map((c) => FORMES.get(c) ?? "")
+  .join("");
 const CLASSE_LAM = FORMES.get("ل") ?? "";
 const ALIF_OU_LAM = `[الأإآ${CLASSE_ALIF}${CLASSE_LAM}]`;
-const PREMIER_AR = `[اأإآ${CLASSE_ALIF}]` + D +
-  `(?:${ALIF_OU_LAM}${D}${ALIF_OU_LAM}|[${LIGATURES_LAM_ALIF}])` + D +
-  lettre("و") + D + lettre("ل");
+const PREMIER_AR =
+  `[اأإآ${CLASSE_ALIF}]` +
+  D +
+  `(?:${ALIF_OU_LAM}${D}${ALIF_OU_LAM}|[${LIGATURES_LAM_ALIF}])` +
+  D +
+  lettre("و") +
+  D +
+  lettre("ل");
 export const RE_ARTICLE_AR = new RegExp(
   // « الفصل » dans les codes, « المادة » dans les conventions internationales :
   // les deux mots designent l'article, et une convention ratifiee entre au
   // corpus comme un code.
-  "^[ \\t]*(?:" + mot("الفصل") + "|" + mot("المادة") + ")[ \\t]*(?:\\([ \\t]*)?(" + CHIFFRE + "{1,4}|" + MOTIF_ORDINAL_AR + "|" + PREMIER_AR + ")[ \\t]*" +
-  "(" + NOMS_AR.map(mot).join("|") + ")?[ \\t]*" +
-  "(?:\\)[ \\t]*)?(\\([ \\t]*" + mot("جديد") + "[ \\t]*\\))?[ \\t]*[.:\\-–]?[ \\t]*", "gm");
-
+  "^[ \\t]*(?:" +
+    mot("الفصل") +
+    "|" +
+    mot("المادة") +
+    ")[ \\t]*(?:\\([ \\t]*)?(" +
+    CHIFFRE +
+    "{1,4}|" +
+    MOTIF_ORDINAL_AR +
+    "|" +
+    PREMIER_AR +
+    ")[ \\t]*" +
+    "(" +
+    NOMS_AR.map(mot).join("|") +
+    ")?[ \\t]*" +
+    "(?:\\)[ \\t]*)?(\\([ \\t]*" +
+    mot("جديد") +
+    "[ \\t]*\\))?[ \\t]*[.:\\-–]?[ \\t]*",
+  "gm",
+);
 
 const RANG_SUFFIXE = {
-  "": 0, bis: 1, ter: 2, quater: 3, quinquies: 4, sexies: 5,
-  septies: 6, octies: 7, nonies: 8, decies: 9,
+  "": 0,
+  bis: 1,
+  ter: 2,
+  quater: 3,
+  quinquies: 4,
+  sexies: 5,
+  septies: 6,
+  octies: 7,
+  nonies: 8,
+  decies: 9,
 };
 const RE_SUF_AR = new RegExp("^(?:" + NOMS_AR.map((n) => `(${mot(n)})`).join("|") + ")$");
 
@@ -206,7 +254,10 @@ function sufAr(s) {
 /** Le numero tel qu'il est ecrit : chiffres, ordinal en toutes lettres, ou « premier ». */
 function numeroLu(brut) {
   if (new RegExp(`^${CHIFFRE}+$`).test(brut)) return nombre(brut);
-  const normalise = brut.replace(/[\u064B-\u0652\u0640]/g, "").replace(/\s+/g, " ").trim();
+  const normalise = brut
+    .replace(/[\u064B-\u0652\u0640]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return ORDINAUX_AR.get(normalise) ?? 1;
 }
 
@@ -224,7 +275,9 @@ export function occurrences(texte, langue) {
 }
 
 /** Cle d'ordre : 13 bis vient apres 13 et avant 14. */
-function rang(o) { return o.num * 10 + (RANG_SUFFIXE[o.suf] ?? 0); }
+function rang(o) {
+  return o.num * 10 + (RANG_SUFFIXE[o.suf] ?? 0);
+}
 
 // Un code saute des numeros abroges. Mais un saut ne se juge pas dans l'absolu :
 // dans le code des obligations et des contrats, qui compte 1 531 articles, les
@@ -233,7 +286,7 @@ function rang(o) { return o.num * 10 + (RANG_SUFFIXE[o.suf] ?? 0); }
 // un autre texte. Le saut tolere est donc PROPORTIONNEL au numero atteint, avec
 // un plancher pour les textes courts.
 const SAUT_PLANCHER = 15;
-const SAUT_FRACTION = 0.20;
+const SAUT_FRACTION = 0.2;
 function sautTolere(rangPrecedent) {
   return Math.max(SAUT_PLANCHER * 10, rangPrecedent * SAUT_FRACTION);
 }
@@ -248,7 +301,10 @@ function chaine(bloc) {
   for (let i = 1; i < n; i += 1) {
     for (let j = 0; j < i; j += 1) {
       const d = rang(bloc[i]) - rang(bloc[j]);
-      if (d >= 0 && d <= sautTolere(rang(bloc[j])) && long[j] + 1 > long[i]) { long[i] = long[j] + 1; prec[i] = j; }
+      if (d >= 0 && d <= sautTolere(rang(bloc[j])) && long[j] + 1 > long[i]) {
+        long[i] = long[j] + 1;
+        prec[i] = j;
+      }
     }
     if (long[i] > long[meilleur]) meilleur = i;
   }
@@ -262,7 +318,10 @@ function blocs(occ) {
   const out = [];
   let courant = [];
   for (const o of occ) {
-    if (o.num === 1 && o.suf === "" && courant.length) { out.push(courant); courant = []; }
+    if (o.num === 1 && o.suf === "" && courant.length) {
+      out.push(courant);
+      courant = [];
+    }
     courant.push(o);
   }
   if (courant.length) out.push(courant);
@@ -290,7 +349,10 @@ const CITATIONS_TOLEREES = 2;
 const MINIMUM_AVANT_COUTURE = 5;
 
 export function corpsDuCode(occ) {
-  const chaines = blocs(occ).map(chaine).map(dedoublonner).filter((c) => c.length > 1);
+  const chaines = blocs(occ)
+    .map(chaine)
+    .map(dedoublonner)
+    .filter((c) => c.length > 1);
   if (chaines.length === 0) return [];
 
   // RECOUDRE. Un « article premier » cite au milieu d'un code y ouvre une fausse
@@ -306,8 +368,12 @@ export function corpsDuCode(occ) {
     const fin = rang(prec[prec.length - 1]);
     let k = 0;
     while (k < chaines[i].length && rang(chaines[i][k]) <= fin) k += 1;
-    if (k <= CITATIONS_TOLEREES && k * 3 < chaines[i].length && chaines[i].length - k >= 2
-        && prec.length >= MINIMUM_AVANT_COUTURE) {
+    if (
+      k <= CITATIONS_TOLEREES &&
+      k * 3 < chaines[i].length &&
+      chaines[i].length - k >= 2 &&
+      prec.length >= MINIMUM_AVANT_COUTURE
+    ) {
       candidats[candidats.length - 1] = prec.concat(chaines[i].slice(k));
     } else candidats.push(chaines[i]);
   }
@@ -322,7 +388,10 @@ export function corpsDuCode(occ) {
   let max = -1;
   for (const c of finalistes) {
     const etendue = c[c.length - 1].pos - c[0].pos;
-    if (etendue > max) { max = etendue; corps = c; }
+    if (etendue > max) {
+      max = etendue;
+      corps = c;
+    }
   }
   return dedoublonner(corps);
 }
@@ -330,12 +399,39 @@ export function corpsDuCode(occ) {
 // ============================================================ LES RECUEILS
 
 const MOIS = {
-  janvier: 1, jan: 1, "جانفي": 1, fevrier: 2, "février": 2, "فيفري": 2,
-  mars: 3, "مارس": 3, "مار": 3, avril: 4, "أفريل": 4, "افريل": 4,
-  mai: 5, "ماي": 5, juin: 6, "جوان": 6, juillet: 7, "جويلية": 7,
-  aout: 8, "août": 8, "أوت": 8, "اوت": 8, septembre: 9, "سبتمبر": 9,
-  octobre: 10, "أكتوبر": 10, "اكتوبر": 10, "أثتوبر": 10, novembre: 11, "نوفمبر": 11,
-  decembre: 12, "décembre": 12, "ديسمبر": 12,
+  janvier: 1,
+  jan: 1,
+  جانفي: 1,
+  fevrier: 2,
+  février: 2,
+  فيفري: 2,
+  mars: 3,
+  مارس: 3,
+  مار: 3,
+  avril: 4,
+  أفريل: 4,
+  افريل: 4,
+  mai: 5,
+  ماي: 5,
+  juin: 6,
+  جوان: 6,
+  juillet: 7,
+  جويلية: 7,
+  aout: 8,
+  août: 8,
+  أوت: 8,
+  اوت: 8,
+  septembre: 9,
+  سبتمبر: 9,
+  octobre: 10,
+  أكتوبر: 10,
+  اكتوبر: 10,
+  أثتوبر: 10,
+  novembre: 11,
+  نوفمبر: 11,
+  decembre: 12,
+  décembre: 12,
+  ديسمبر: 12,
 };
 const RE_MOIS = new RegExp("(\\d{1,2})\\s*(" + Object.keys(MOIS).join("|") + ")\\s*(\\d{4})", "i");
 const RE_NUM_AR = /عدد\s*(\d{1,4})\s*(?:لسنة\s*(\d{4}))?/;
@@ -399,7 +495,8 @@ export function referenceDuTexte(entete) {
   if (fr) {
     // « n° 2017-1061 » : l'annee est le membre a quatre chiffres ; « n° 60-22 »
     // porte un millesime a deux chiffres, d'avant l'an 2000 au-dela de 40.
-    const a = Number(fr[1]), b = Number(fr[2]);
+    const a = Number(fr[1]),
+      b = Number(fr[2]);
     return a > 1800 ? `${b}-${a}` : `${b}-${a < 100 ? (a > 40 ? 1900 + a : 2000 + a) : a}`;
   }
   if (ar) {
@@ -447,11 +544,18 @@ function detacherAnnexe(article) {
   if (annexe.length < 30 || tete.length < 30) return [article];
   return [
     { ...article, texte: tete, fin: article.debut + coupe },
-    { numero: `${article.numero} annexe`, texte: annexe, debut: article.debut + coupe, fin: article.fin },
+    {
+      numero: `${article.numero} annexe`,
+      texte: annexe,
+      debut: article.debut + coupe,
+      fin: article.fin,
+    },
   ];
 }
 
-function etiquette(o) { return o.suf ? `${o.num} ${o.suf}` : String(o.num); }
+function etiquette(o) {
+  return o.suf ? `${o.num} ${o.suf}` : String(o.num);
+}
 
 function tailler(texte, corps, finDuCorps, nom) {
   const articles = [];
@@ -466,7 +570,10 @@ function tailler(texte, corps, finDuCorps, nom) {
 }
 
 function decouperRecueil(texte, occ) {
-  const groupes = blocs(occ).map(chaine).map(dedoublonner).filter((c) => c.length >= 2);
+  const groupes = blocs(occ)
+    .map(chaine)
+    .map(dedoublonner)
+    .filter((c) => c.length >= 2);
   const articles = [];
   const vus = new Set();
   for (let g = 0; g < groupes.length; g += 1) {

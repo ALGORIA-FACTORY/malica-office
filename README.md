@@ -1,4 +1,4 @@
-# Regalica Office
+# Malica Office
 
 Suite comptable augmentée pour les PME et leurs experts-comptables. La PME
 photographie une pièce ; le Socle en tire l'écriture, la TVA et l'échéance ;
@@ -10,13 +10,13 @@ Extension prévue à l'UEMOA et à l'OHADA par packs de juridiction versionnés.
 ## Le principe fondateur — deux cerveaux
 
 **Un chiffre qui lie relève du Socle ; un texte qui explique relève de
-Regalica.**
+Malica.**
 
 Le Socle est un ensemble de moteurs déterministes en TypeScript — lecture,
 écriture, TVA, P&L, échéances, rapprochement, change. Mêmes entrées, même
 sortie, toujours. Aucun modèle de langage n'y intervient.
 
-Regalica est la couche agentique. Elle perçoit, organise, rappelle et
+Malica est la couche agentique. Elle perçoit, organise, rappelle et
 explique — mais ne calcule jamais. Pour tout chiffre, elle appelle un moteur
 du Socle et restitue le résultat avec sa citation.
 
@@ -64,7 +64,7 @@ docs/       maquettes et marque
 
 Un espace de travail npm, une seule règle de style à la racine. `packages/socle`
 est né le jour où l'API est devenue le second consommateur des moteurs : la
-lecture citée et Regalica y tournent désormais, à côté de l'application. Le
+lecture citée et Malica y tournent désormais, à côté de l'application. Le
 paquet ne se compile pas — Node en décape les types, Vite les résout — et il ne
 déclare que `decimal.js` et `zod`.
 

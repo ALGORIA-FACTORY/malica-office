@@ -1,6 +1,6 @@
 -- Couche de compatibilité Supabase, pour un PostgreSQL nu.
 --
--- Les migrations de Regalica Office sont écrites pour Supabase : elles
+-- Les migrations de Malica Office sont écrites pour Supabase : elles
 -- s'appuient sur `auth.uid()`, sur les rôles `authenticated` / `service_role`
 -- et sur `storage.objects`. Un Postgres fraîchement installé n'a rien de tout
 -- cela, et les 21 migrations échouent dès la première politique RLS.
@@ -37,14 +37,14 @@ end $$;
 -- viderait de son sens tout l'édifice de politiques.
 --
 -- Le mot de passe n'est pas posé ici : il est propre à chaque environnement.
---   alter role regalica_api with password '...';
+--   alter role malica_api with password '...';
 -- --------------------------------------------------------------------------
 do $$
 begin
-  if not exists (select 1 from pg_roles where rolname = 'regalica_api') then
-    create role regalica_api login noinherit;
+  if not exists (select 1 from pg_roles where rolname = 'malica_api') then
+    create role malica_api login noinherit;
   end if;
-  grant authenticated to regalica_api;
+  grant authenticated to malica_api;
 end $$;
 
 create schema if not exists auth;
@@ -87,13 +87,13 @@ revoke all on auth.users from anon, authenticated;
 
 -- Le rôle de connexion de l'API, lui, y accède — mais seulement tant qu'il n'a
 -- pas endossé `authenticated`. C'est toute la séparation : le chemin
--- d'authentification travaille sous les droits propres de `regalica_api`, le
+-- d'authentification travaille sous les droits propres de `malica_api`, le
 -- chemin métier sous `authenticated` et ses politiques.
 --
 -- `noinherit` sur le rôle rend cette frontière effective : il ne reçoit rien
 -- de `authenticated` sans l'endosser explicitement.
-grant usage on schema auth to regalica_api;
-grant select, insert, update on auth.users to regalica_api;
+grant usage on schema auth to malica_api;
+grant select, insert, update on auth.users to malica_api;
 
 create or replace function auth.uid() returns uuid
 language sql

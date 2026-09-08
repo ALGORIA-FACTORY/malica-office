@@ -24,7 +24,7 @@ par git.
 et aucun cookie ; un jeton long de trente jours dans le coffre de l'appareil
 (`@capacitor/preferences`), qui tourne à chaque usage et fait revivre la
 session au démarrage sans mot de passe ; un 426 qui rend l'écran « mettez à
-jour ». L'API sait tout cela (`X-Regalica-Client`, `/auth/rafraichir`,
+jour ». L'API sait tout cela (`X-Malica-Client`, `/auth/rafraichir`,
 `CLIENT_MIN_VERSION`).
 
 **La file hors ligne** (`apps/web/src/lib/hors-ligne/`) : la pièce est rangée
@@ -48,7 +48,7 @@ arrière-plan » pendant une lecture, un écran d'attente pendant la préparatio
 `apps/web` et non à la racine : la CLI de Capacitor découvre les greffons
 natifs dans les dépendances du package.json d'où elle tourne, et depuis la
 racine elle n'en voyait aucun — `capacitor.plugins.json` restait vide, l'APK
-n'avait ni scanner, ni coffre, ni file. `npm run coque:sync -w @regalica/web`
+n'avait ni scanner, ni coffre, ni file. `npm run coque:sync -w @malica/web`
 en enregistre dix.
 
 **La mise à jour en vol et les plantages** : Capgo prend le bundle publié par
@@ -60,7 +60,7 @@ tiennent cette promesse. Sans `VITE_SENTRY_DSN`, rien ne part. Un bouton
 « Quelque chose n'a pas marché ? » dans les réglages envoie un signalement
 volontaire (`app.signalements`), jamais une pièce.
 
-**La fiche Google Play** : l'application `com.algoriafactory.regalica` du
+**La fiche Google Play** : l'application `com.algoriafactory.malica` du
 compte organisation ALGORIA Factory, version 0.1.0 (1) sur la piste de test
 interne, liste « Pilote interne ». Tout ce que Play exige avant une revue est
 déclaré, et fidèle au code : politique de confidentialité et adresse de
@@ -93,7 +93,7 @@ cd android && ./gradlew assemblePiloteDebug -PversionName=0.1.0
 ```
 
 Il s'installe sur un téléphone en mode développeur par `adb install`. Le
-nom affiché est « Regalica (pilote) » ; l'AAB signé pour Play, lui, ne se
+nom affiché est « Malica (pilote) » ; l'AAB signé pour Play, lui, ne se
 construit qu'en CI (`.github/workflows/android.yml`), avec la clé d'envoi.
 
 Un bundle de coque s'éprouve aussi dans Chrome, sans téléphone :
@@ -109,7 +109,7 @@ Il se comporte alors comme le site (cookie, cadrage de la page) — c'est
 
 Installé sans droits d'administration, dans l'espace de l'utilisateur :
 
-- le JDK 21 (Temurin) dans `%LOCALAPPDATA%\Regalica\outils\jdk\jdk-21` — le
+- le JDK 21 (Temurin) dans `%LOCALAPPDATA%\Malica\outils\jdk\jdk-21` — le
   chemin ne doit porter ni `+` ni espace, Gradle s'y casse ;
 - le SDK dans `%LOCALAPPDATA%\Android\Sdk` : `cmdline-tools/latest`,
   `platform-tools`, `platforms;android-36`, `build-tools;36.0.0` ;
@@ -159,20 +159,20 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
    cabinet et les PME, qui déclenche la première revue ; un projet Sentry.
 5. **Mises à jour en vol, sans le magasin** — fait le 7 septembre 2026 :
    compte Capgo au nom de w.barouni@algoria-factory.com, app
-   `com.algoriafactory.regalica`, canaux `staging`, `pilote` et `production`
+   `com.algoriafactory.malica`, canaux `staging`, `pilote` et `production`
    que l'appareil choisit lui-même (`VITE_CANAL_OTA` de sa cible). Une
    étiquette `web-v<version>` publie le bundle web sur le canal ; la version
    du bundle est celle du dépôt, sans suffixe, parce que la coque refuse tout
    bundle sous sa version native et qu'en semver « 0.1.1-2 » est sous
    « 0.1.1 ». Chaque mise à jour en vol est donc une version : on monte
    package.json, on étiquette, la coque l'a au lancement suivant. La clé
-   d'API est le secret `CAPGO_CLE` ; sur le poste, `%LOCALAPPDATA%Regalicacapgo.token`.
+   d'API est le secret `CAPGO_CLE` ; sur le poste, `%LOCALAPPDATA%Malicacapgo.token`.
 6. **Google Play, sans clé** — fait le 7 septembre 2026 : `android.yml` publie
-   seul par identité fédérée. Le projet Google Cloud `regalica-office` porte
+   seul par identité fédérée. Le projet Google Cloud `malica-office` porte
    le compte de service `publication-play`, invité dans Play Console avec le
    seul droit « Release apps to testing tracks », et un pool d'identité
    `github` dont le fournisseur OIDC `github-actions` n'accepte que le dépôt
-   `wbarouni/regalica-office`. Le workflow échange son jeton OIDC contre un
+   `wbarouni/malica-office`. Le workflow échange son jeton OIDC contre un
    accès d'une heure : aucune clé n'existe, nulle part. Les deux variables de
    dépôt `PLAY_FOURNISSEUR_IDENTITE` et `PLAY_COMPTE_DE_SERVICE` suffisent.
 

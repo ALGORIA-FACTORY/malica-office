@@ -27,7 +27,7 @@ import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
 const e = creerEpreuve("conseil, PV et mise en route", process.argv[2]);
 
 const PME = { name: "ÉPREUVE CONSEIL SARL", legalId: "9999997/E/P/000" };
-const INVITEE = { email: "epreuve.assistant@regalica.local", role: "assistant" };
+const INVITEE = { email: "epreuve.assistant@malica.local", role: "assistant" };
 const TITRE_PV = "Épreuve — procès-verbal de restitution";
 const AUJOURDHUI = new Date().toISOString().slice(0, 10);
 
@@ -324,7 +324,7 @@ e.verdict(
 const filApprouve = await e.rpc("conversations", "ouvrir", [premier.conversationId]);
 const dernierApprouve = filApprouve[filApprouve.length - 1];
 e.verdict(
-  "la réponse relue arrive dans le fil du client, signée Regalica",
+  "la réponse relue arrive dans le fil du client, signée Malica",
   dernierApprouve?.role === "assistant" && dernierApprouve.contenu === messageApprouve,
   `${filApprouve.length} message(s)`,
 );
@@ -499,13 +499,13 @@ const sections = [
   },
 ];
 const enregistre = await e.rpc("collab", "pvEnregistrer", [
-  { id: pvId, sections, chiffres: [], ton: reglages.ton, redigeParRegalica: false },
+  { id: pvId, sections, chiffres: [], ton: reglages.ton, redigeParMalica: false },
 ]);
 e.verdict(
-  "les sections s'enregistrent, sans chiffre et sans Regalica",
+  "les sections s'enregistrent, sans chiffre et sans Malica",
   enregistre.sections.length === sections.length &&
     enregistre.chiffres.length === 0 &&
-    enregistre.redigeParRegalica === false &&
+    enregistre.redigeParMalica === false &&
     enregistre.ton === reglages.ton,
 );
 e.verdict(

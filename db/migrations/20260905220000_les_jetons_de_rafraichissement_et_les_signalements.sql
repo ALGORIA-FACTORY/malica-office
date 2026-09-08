@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Les jetons de rafraîchissement, et les signalements.
+--  Malica Office — Les jetons de rafraîchissement, et les signalements.
 --
 --  POURQUOI : le jeton d'accès dure douze heures parce qu'il n'est pas
 --  révocable. Sur un téléphone, douze heures veulent dire un mot de passe à
@@ -40,7 +40,7 @@ create table if not exists auth.refresh_tokens (
 create index if not exists refresh_tokens_user_idx on auth.refresh_tokens (user_id, cree_le desc);
 
 revoke all on auth.refresh_tokens from public, anon, authenticated;
-grant select, insert, update on auth.refresh_tokens to regalica_api;
+grant select, insert, update on auth.refresh_tokens to malica_api;
 
 -- --- 2. Les signalements -------------------------------------------------------------
 create table if not exists app.signalements (

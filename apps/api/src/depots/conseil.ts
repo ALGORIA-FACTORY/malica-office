@@ -3,11 +3,11 @@
  *
  * ================================================================ LE PRINCIPE
  *
- * Quand un client mandaté pose une question de droit, Regalica compose une
+ * Quand un client mandaté pose une question de droit, Malica compose une
  * réponse citée et mesure sa certitude. Au-dessus du seuil du cabinet elle
  * répond seule ; en dessous elle retient sa réponse et la remet à l'expert.
  * Ce dépôt garde ces remises et ce que le cabinet en fait. Il ne fait dire
- * rien à personne : l'appel au modèle vit dans `regalica.ts`, où est la clé.
+ * rien à personne : l'appel au modèle vit dans `malica.ts`, où est la clé.
  *
  * ============================================================= L'ISOLATION
  *
@@ -55,7 +55,7 @@ export interface Arbitrage {
   createdAt: string;
 }
 
-/** Ce que Regalica doit savoir d'un dossier avant de répondre à son client. */
+/** Ce que Malica doit savoir d'un dossier avant de répondre à son client. */
 export interface ContexteConseil {
   cabinetId: string | null;
   cabinetNom: string | null;
@@ -194,7 +194,7 @@ export const conseil = {
     return versArbitrage(r);
   },
 
-  /** Ce que Regalica doit savoir d'un dossier avant d'y répondre. */
+  /** Ce que Malica doit savoir d'un dossier avant d'y répondre. */
   async contexte(db: Requete, pmeTenantId: string): Promise<ContexteConseil> {
     const { rows } = await db.query<{ r: Record<string, unknown> }>(
       `select public.conseil_contexte($1) as r`,
@@ -213,7 +213,7 @@ export const conseil = {
   /**
    * Un arbitrage nouveau, posé après que le fil a rangé la question.
    *
-   * `statut` dit ce que Regalica a fait : `en_attente` si elle a retenu sa
+   * `statut` dit ce que Malica a fait : `en_attente` si elle a retenu sa
    * réponse, `repondue` si elle l'a envoyée seule. Sans cabinet mandaté, la
    * base refuse — il n'y a personne à qui remettre.
    */

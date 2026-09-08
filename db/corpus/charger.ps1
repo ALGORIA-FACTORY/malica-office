@@ -26,11 +26,11 @@
 # Le mot de passe passe par $env:PGPASSWORD, jamais par la ligne de commande.
 
 param(
-  [string]$Base = "regalica_local",
+  [string]$Base = "malica_local",
   [string]$PgUser = "postgres",
   [string]$PgHost = "localhost",
   [int]$Port = 5432,
-  [string]$Archive = "docs\Base de connaissance\referentielregalica20260831.tar.gz"
+  [string]$Archive = "docs\Base de connaissance\referentielmalica20260831.tar.gz"
 )
 
 $ErrorActionPreference = "Stop"
@@ -51,7 +51,7 @@ if (-not $env:PGPASSWORD) {
 $archivePath = Join-Path $racine $Archive
 if (-not (Test-Path $archivePath)) { throw "archive introuvable : $archivePath" }
 
-$temp = Join-Path $env:TEMP "regalica-corpus"
+$temp = Join-Path $env:TEMP "malica-corpus"
 if (Test-Path $temp) { Remove-Item $temp -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $temp | Out-Null
 

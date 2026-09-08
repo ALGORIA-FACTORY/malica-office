@@ -2,12 +2,12 @@
  * La file hors ligne de l'application — une seule, montée au premier appel.
  *
  * C'est ici que la file rencontre les ports : les deux pas de la capture, la
- * lecture demandée à Regalica. Et c'est ici que le dépôt est choisi — IndexedDB
+ * lecture demandée à Malica. Et c'est ici que le dépôt est choisi — IndexedDB
  * dans un navigateur, la mémoire là où il n'y en a pas. Le stockage de
  * l'appareil pour la coque, que rien n'évacue.
  */
 import { estNatif } from "@/capabilities/coque";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 import { depotMemoire } from "./depot";
 import { creerDepotFichiers } from "./depot-fichiers";
@@ -36,7 +36,7 @@ export function vidage(): Vidage {
           }),
         deposerOctets: (pieceId, octets, contentType) =>
           office().capture.deposerOctets(pieceId, octets, contentType),
-        demanderLaLecture: (pieceId) => office().regalica.demanderLaLecture(pieceId),
+        demanderLaLecture: (pieceId) => office().malica.demanderLaLecture(pieceId),
       },
       enLigne: () => (typeof navigator === "undefined" ? true : navigator.onLine),
     });

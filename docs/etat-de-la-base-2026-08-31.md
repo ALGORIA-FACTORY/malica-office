@@ -1,8 +1,8 @@
 # État de la base locale — 31 août 2026
 
-Constat établi en lecture sur `regalica_local` (PostgreSQL 17.11, poste
+Constat établi en lecture sur `malica_local` (PostgreSQL 17.11, poste
 « algoria »), puis vérifié par un rejeu complet des migrations sur une base
-neuve `regalica_verif`. Aucune écriture sur `regalica_local`.
+neuve `malica_verif`. Aucune écriture sur `malica_local`.
 
 ## 1. Ce qui va bien
 
@@ -67,7 +67,7 @@ Trois issues possibles, à arbitrer :
    intactes, l'historique n'est pas réécrit. C'est la voie la plus propre si
    l'installation est possible sans chaîne de compilation.
 2. **Retirer la dépendance morte** de `20260824130649` : la ligne `create
-   extension`, la table `legal.chunks`, l'index HNSW — et, en regard, la partie
+extension`, la table `legal.chunks`, l'index HNSW — et, en regard, la partie
    de `20260830190000` qui les supprime. C'est une réécriture d'historique,
    assumée, cohérente avec R9 (rien de mort dans le dépôt).
 3. **Conditionner la création de l'extension.** Écartée : ce serait exactement
@@ -92,12 +92,12 @@ La plupart des tables concernées sont encore vides — le coût est aujourd'hui
 nul. Il ne le restera pas. Les plus exposées, parce qu'elles portent déjà des
 données :
 
-| Table | Clé étrangère | Lignes |
-|---|---|---|
-| `capture.citations` | `token_id` | 97 000 |
-| `socle.ecritures` | `entity_id`, `pack_version_id`, `reversal_reason_id`, `review_motif_id` | 7 760 |
-| `capture.pieces` | `entity_id` | 4 200 |
-| `audit.event_log` | `motif_id`, `pack_version_id` | 635 |
+| Table               | Clé étrangère                                                           | Lignes |
+| ------------------- | ----------------------------------------------------------------------- | ------ |
+| `capture.citations` | `token_id`                                                              | 97 000 |
+| `socle.ecritures`   | `entity_id`, `pack_version_id`, `reversal_reason_id`, `review_motif_id` | 7 760  |
+| `capture.pieces`    | `entity_id`                                                             | 4 200  |
+| `audit.event_log`   | `motif_id`, `pack_version_id`                                           | 635    |
 
 La liste complète est reproductible par la requête G du script d'audit.
 
@@ -110,12 +110,12 @@ tout rejouer. À traiter une fois le point 2.2 arbitré.
 ## 4. Sauvegardes
 
 Une sauvegarde complète a été prise avant toute intervention :
-`db/sauvegardes/regalica_local_20260831_123448.dump` (18,2 Mo, format `custom`).
+`db/sauvegardes/malica_local_20260831_123448.dump` (18,2 Mo, format `custom`).
 Le dossier `db/sauvegardes/` est exclu de git — un dump contient des données de
 tenant, il n'a rien à faire dans un dépôt.
 
 Restauration :
 
 ```
-pg_restore -U postgres -h localhost -d regalica_local --clean --if-exists <fichier.dump>
+pg_restore -U postgres -h localhost -d malica_local --clean --if-exists <fichier.dump>
 ```

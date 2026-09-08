@@ -1,7 +1,7 @@
-# Évaluation d'architecture — base Regalica Office
+# Évaluation d'architecture — base Malica Office
 
 **Date** : 31 août 2026
-**Objet** : `regalica_local`, PostgreSQL 17.11 — 27 schémas, 88 tables, 54 vues, 220 politiques RLS
+**Objet** : `malica_local`, PostgreSQL 17.11 — 27 schémas, 88 tables, 54 vues, 220 politiques RLS
 **Méthode** : cinq audits menés en parallèle, en lecture seule, par cinq architectes séniors sur cinq
 périmètres (socle comptable, isolation multi-tenant, référentiel et temporalité, chaîne de capture,
 facturation et commissionnement). Chaque défaut cité ci-dessous est adossé à un nom d'objet réel, à
@@ -76,7 +76,7 @@ documente son propre piège de performance, c'est rare.
 **Les 54 vues `public.*_v` sont toutes en `security_invoker = true`.** Zéro exception. C'est
 l'erreur numéro un des schémas de type Supabase, et elle a été évitée partout.
 
-**Le rôle de connexion de l'API ne peut pas contourner l'isolation par héritage.** `regalica_api`
+**Le rôle de connexion de l'API ne peut pas contourner l'isolation par héritage.** `malica_api`
 est `NOINHERIT`, sans `BYPASSRLS` ; `service_role`, qui porte `BYPASSRLS`, est `NOLOGIN` et n'a
 aucun membre. `anon` n'a strictement aucun privilège de table dans toute la base.
 
@@ -88,8 +88,8 @@ de faits, plus `freeze_booked`, `freeze_lignes`, `freeze_issued`.
 choix de conception du schéma.
 
 **La séparation du plan officiel et des extensions.** `ref.accounts.is_official` + `source_ref`
-distinguent les 611 comptes NC 01 verbatim des 15 extensions Regalica, chacune portant sa
-justification en clair (« Extension Regalica sous 437. NC 01 ne subdivise pas 437. Le timbre n'est
+distinguent les 611 comptes NC 01 verbatim des 15 extensions Malica, chacune portant sa
+justification en clair (« Extension Malica sous 437. NC 01 ne subdivise pas 437. Le timbre n'est
 pas une taxe sur le CA : série 436 exclue. »). `ref.proteger_comptes_officiels()` verrouille le
 verbatim. C'est exactement R10.
 
@@ -119,13 +119,13 @@ même choix, et il se corrige en un seul geste d'architecture.
 **Le choix.** L'invariant métier est écrit dans une fonction PL/pgSQL, et la table reste ouverte en
 écriture directe au rôle `authenticated`. Exemples, tous vérifiés :
 
-| L'invariant | Où il est écrit | Ce que `authenticated` détient sur la table |
-|---|---|---|
-| Une citation pointe le token qui porte le montant (R2) | `public.capture_read_persist`, `security invoker` | `INSERT, UPDATE, DELETE` sur `capture.citations` |
-| Une écriture comptabilisée est immuable (R7) | `socle.freeze_booked`, `BEFORE UPDATE` seulement | `DELETE` sur `socle.ecritures`, politique ouverte |
-| Le journal d'audit dit la vérité | `app.deny_mutation` sur UPDATE/DELETE | `INSERT` libre, `actor` non contraint |
-| Un tenant ne dépasse pas son budget d'agents | nulle part | `UPDATE` sur sa propre table `agents.budgets` |
-| Le paramétrage du cabinet est cohérent | `parametrage.verifier_compte_cabinet` | `INSERT/UPDATE` direct |
+| L'invariant                                            | Où il est écrit                                   | Ce que `authenticated` détient sur la table       |
+| ------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------- |
+| Une citation pointe le token qui porte le montant (R2) | `public.capture_read_persist`, `security invoker` | `INSERT, UPDATE, DELETE` sur `capture.citations`  |
+| Une écriture comptabilisée est immuable (R7)           | `socle.freeze_booked`, `BEFORE UPDATE` seulement  | `DELETE` sur `socle.ecritures`, politique ouverte |
+| Le journal d'audit dit la vérité                       | `app.deny_mutation` sur UPDATE/DELETE             | `INSERT` libre, `actor` non contraint             |
+| Un tenant ne dépasse pas son budget d'agents           | nulle part                                        | `UPDATE` sur sa propre table `agents.budgets`     |
+| Le paramétrage du cabinet est cohérent                 | `parametrage.verifier_compte_cabinet`             | `INSERT/UPDATE` direct                            |
 
 **Pourquoi c'est structurellement faux.** Une fonction `security invoker` n'apporte aucun privilège
 que l'appelant n'ait déjà : elle ne peut donc rien interdire qu'il ne puisse faire sans elle. Elle
@@ -169,16 +169,16 @@ suivantes vérifiables.
 
 ## 4. Les huit blocages, par ordre de gravité
 
-| # | Blocage | Domaine | Ce qui se produit concrètement |
-|---|---|---|---|
-| 1 | Un expert s'auto-attribue un mandat sur n'importe quelle organisation | Isolation | Lecture complète des dossiers d'un client qui ne l'a jamais mandaté |
-| 2 | La confidentialité `vis` n'est pas propagée aux tables filles | Isolation | Le texte OCR intégral d'une pièce « personnelle » reste lisible par le cabinet |
-| 3 | Aucune clôture d'exercice, aucune numérotation chronologique | Comptabilité | Le résultat d'un exercice signé reste modifiable ; aucun FEC produisible |
-| 4 | `DELETE` non protégé sur le grand livre ; la cascade contourne le gel | Comptabilité | Une écriture comptabilisée disparaît sans trace |
-| 5 | Aucune clé étrangère sur `account_code` ni `journal` | Comptabilité | **Déjà arrivé** : compte `43661` inexistant, journal `VTE` inexistant, montants évaporés |
-| 6 | La citation peut désigner le token d'un autre tenant ; la pièce est substituable | Capture | R2 tombe : le montant cité ne prouve plus rien |
-| 7 | RLS produit un parcours séquentiel intégral | Performance | 2 083 blocs lus pour 0 ligne rendue ; ~1,7 Go par requête à l'échelle cible |
-| 8 | Le modèle de facturation ne porte aucune des règles commerciales | Facturation | Ni seuil de commission, ni réduction, ni wallet, ni versement, ni Europe |
+| #   | Blocage                                                                          | Domaine      | Ce qui se produit concrètement                                                           |
+| --- | -------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------- |
+| 1   | Un expert s'auto-attribue un mandat sur n'importe quelle organisation            | Isolation    | Lecture complète des dossiers d'un client qui ne l'a jamais mandaté                      |
+| 2   | La confidentialité `vis` n'est pas propagée aux tables filles                    | Isolation    | Le texte OCR intégral d'une pièce « personnelle » reste lisible par le cabinet           |
+| 3   | Aucune clôture d'exercice, aucune numérotation chronologique                     | Comptabilité | Le résultat d'un exercice signé reste modifiable ; aucun FEC produisible                 |
+| 4   | `DELETE` non protégé sur le grand livre ; la cascade contourne le gel            | Comptabilité | Une écriture comptabilisée disparaît sans trace                                          |
+| 5   | Aucune clé étrangère sur `account_code` ni `journal`                             | Comptabilité | **Déjà arrivé** : compte `43661` inexistant, journal `VTE` inexistant, montants évaporés |
+| 6   | La citation peut désigner le token d'un autre tenant ; la pièce est substituable | Capture      | R2 tombe : le montant cité ne prouve plus rien                                           |
+| 7   | RLS produit un parcours séquentiel intégral                                      | Performance  | 2 083 blocs lus pour 0 ligne rendue ; ~1,7 Go par requête à l'échelle cible              |
+| 8   | Le modèle de facturation ne porte aucune des règles commerciales                 | Facturation  | Ni seuil de commission, ni réduction, ni wallet, ni versement, ni Europe                 |
 
 Les cinq premiers sont des défauts de **conformité et de sécurité** : ils bloquent la mise en
 production chez un cabinet. Le sixième est un défaut de **preuve** : il vide R2 de sa substance. Le
@@ -250,7 +250,7 @@ employé, et correctement, par `pieces_storage_read_membre`. À généraliser pa
 un test qui échoue dès qu'une table référence par clé étrangère une table portant `vis` sans
 reprendre la porte.
 
-**A3 — SÉRIEUX. `regalica_api` lit et écrit `auth.users.encrypted_password`, table sans RLS.**
+**A3 — SÉRIEUX. `malica_api` lit et écrit `auth.users.encrypted_password`, table sans RLS.**
 
 449 comptes, aucune politique, un `GRANT` colonne direct au rôle de connexion. Comme l'identité
 applicative repose sur un GUC (`current_setting('request.jwt.claim.sub')`) que tout rôle peut
@@ -304,9 +304,9 @@ déclencheurs de `socle.ecritures` sont tous `BEFORE UPDATE`. Le privilège est 
 permissive. Pire, le garde-fou des lignes est contourné par la cascade : `freeze_lignes()` lit le
 statut du parent, or pendant une cascade `ON DELETE` le parent a déjà disparu — `v_status` vaut
 `NULL`, le test est faux, l'exception n'est jamais levée. Une écriture comptabilisée et toutes ses
-lignes disparaissent, et `audit.event_log` ne journalise aucune suppression. *(Mécanisme déduit du
+lignes disparaissent, et `audit.event_log` ne journalise aucune suppression. _(Mécanisme déduit du
 code, non exécuté — mandat de lecture seule ; l'absence de tout déclencheur `BEFORE DELETE` et
-l'ouverture de la politique sont, elles, des faits.)*
+l'ouverture de la politique sont, elles, des faits.)_
 
 **B4 — BLOQUANT. Aucune clé étrangère sur `account_code` ni sur `journal` — et le grand livre est
 déjà corrompu.** Résultat de la requête d'intégrité sur les données réelles :
@@ -376,7 +376,7 @@ montant lettré. Un virement client soldant trois factures n'est pas lettrable. 
 partiel, règlement groupé, remise de chèques : tous les cas réels de trésorerie sont hors modèle,
 et le lettrage devrait porter sur la **ligne** d'écriture, pas sur l'écriture entière.
 
-**Manque de fond** : aucun index sur `account_code` — or *toute* requête comptable filtre sur le
+**Manque de fond** : aucun index sur `account_code` — or _toute_ requête comptable filtre sur le
 compte ; et `ref.journals` est global, sans `tenant_id` et sans journal d'à-nouveaux, ce qui rendra
 la réouverture d'exercice impossible sans migration.
 
@@ -392,11 +392,11 @@ de R7, appliqué à la couche qui décide où l'écriture va.
 
 **C2 — BLOQUANT. Trois implémentations de la même résolution, et elles divergent.**
 
-| Endroit | Comment le cabinet est trouvé |
-|---|---|
-| `ref.compte_du_role()` | `portee = 'cabinet' and portee_id = p_tenant` |
-| `apps/api/src/depots/parametrage.ts:49` | `c.portee_id = $1` *(tenantId)* |
-| `apps/api/src/depots/capture.ts:414` | `c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)` |
+| Endroit                                 | Comment le cabinet est trouvé                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| `ref.compte_du_role()`                  | `portee = 'cabinet' and portee_id = p_tenant`                                     |
+| `apps/api/src/depots/parametrage.ts:49` | `c.portee_id = $1` _(tenantId)_                                                   |
+| `apps/api/src/depots/capture.ts:414`    | `c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)` |
 
 Les deux premières cherchent une liaison posée sur le tenant lui-même, la troisième sur le cabinet
 qui le mandate. Pour un dossier PME, ce ne sont pas les mêmes lignes : **l'écran de paramétrage
@@ -481,7 +481,7 @@ aucun déclencheur `BEFORE INSERT` sur `capture.citations`. Un montant peut donc
 la facture d'un autre client, et l'écran de surlignage affichera une bbox parfaitement cohérente —
 celle du token étranger. Correction : la clé référencée existe déjà
 (`token_plan_piece_id_page_ordinal_key`) ; une FK composite `(piece_id, page, ordinal)` rend la
-citation *structurellement incapable* de désigner le token d'une autre pièce.
+citation _structurellement incapable_ de désigner le token d'une autre pièce.
 
 **D2 — BLOQUANT. L'ancre de la chaîne est modifiable : le document sous les citations est
 substituable.** `capture.pieces` ne porte que `pieces_touch`, et la politique autorise le membre à
@@ -536,20 +536,20 @@ Ce domaine est un **squelette CRUD mono-pays, mono-devise, bi-partite**. Vérifi
 à `billing.`, `commissions.`, `payments.` ni `next_invoice_number` dans tout le code TypeScript du
 dépôt. Le reprendre maintenant ne casse rien.
 
-| Règle commerciale que vous avez posée | Portée aujourd'hui | Ce qui manque |
-|---|---|---|
-| Le cabinet inscrit des PME | **Oui** | — |
-| La PME appelle un cabinet | Oui en création, non en traçabilité | L'appel n'est pas un objet : ni initiateur, ni date, ni refus enregistré |
-| Plusieurs users par PME, plusieurs comptables par cabinet | **Oui** | FK manquante sur `memberships.user_id` |
-| Commission par seuil paramétrable | **Non** | Aucune table de tranches (`basis` ∈ {pourcentage, fixe} seulement) |
-| Commission à l'appel **et** au paiement | **Non** | `entries` n'a ni événement déclencheur ni lien paiement |
-| Réduction si cabinet hors portefeuille | **Non** | Aucune colonne de remise nulle part ; le fait « hors portefeuille » n'est pas daté |
-| Seuils ALGORIA de réduction ou gratuité | **Non** | ALGORIA n'existe pas comme organisation |
-| Facturation de toutes les parties | **Non** | La facture ne désigne pas son client |
-| Carte ou wallet selon le pays | **Non** | `wallet` n'apparaît nulle part dans la base |
-| Paiements partiels, remboursements | **Non** | `amount > 0` interdit le remboursement ; ni solde ni statut |
-| Versement des commissions | **Non** | Aucune table de payout ; `beneficiary` est un uuid sans FK |
-| Europe et réglementations locales | **Non** | Ni pays, ni n° de TVA, ni régime, ni `pack_version_id`, ni récap TVA, ni change |
+| Règle commerciale que vous avez posée                     | Portée aujourd'hui                  | Ce qui manque                                                                      |
+| --------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- |
+| Le cabinet inscrit des PME                                | **Oui**                             | —                                                                                  |
+| La PME appelle un cabinet                                 | Oui en création, non en traçabilité | L'appel n'est pas un objet : ni initiateur, ni date, ni refus enregistré           |
+| Plusieurs users par PME, plusieurs comptables par cabinet | **Oui**                             | FK manquante sur `memberships.user_id`                                             |
+| Commission par seuil paramétrable                         | **Non**                             | Aucune table de tranches (`basis` ∈ {pourcentage, fixe} seulement)                 |
+| Commission à l'appel **et** au paiement                   | **Non**                             | `entries` n'a ni événement déclencheur ni lien paiement                            |
+| Réduction si cabinet hors portefeuille                    | **Non**                             | Aucune colonne de remise nulle part ; le fait « hors portefeuille » n'est pas daté |
+| Seuils ALGORIA de réduction ou gratuité                   | **Non**                             | ALGORIA n'existe pas comme organisation                                            |
+| Facturation de toutes les parties                         | **Non**                             | La facture ne désigne pas son client                                               |
+| Carte ou wallet selon le pays                             | **Non**                             | `wallet` n'apparaît nulle part dans la base                                        |
+| Paiements partiels, remboursements                        | **Non**                             | `amount > 0` interdit le remboursement ; ni solde ni statut                        |
+| Versement des commissions                                 | **Non**                             | Aucune table de payout ; `beneficiary` est un uuid sans FK                         |
+| Europe et réglementations locales                         | **Non**                             | Ni pays, ni n° de TVA, ni régime, ni `pack_version_id`, ni récap TVA, ni change    |
 
 Trois blocages sont structurels et non contournables par du code :
 
@@ -725,7 +725,7 @@ L'ordre compte : chaque vague rend la suivante vérifiable.
 
 - `db/local/00_compat_supabase.sql` : coquille `as $` → `as $$` corrigée (lignes 105 et 119).
 - **pgvector 0.8.6 compilé et installé** sur PostgreSQL 17 (outils de compilation C++ installés,
-  extension créée dans `regalica_local` et `regalica_verif`).
+  extension créée dans `malica_local` et `malica_verif`).
 - **Le dépôt reconstruit désormais la base à l'identique** : rejeu des 49 migrations sur une base
   vierge → **0 erreur**, 88 tables, 54 vues, 220 politiques, et les mêmes 12 comptes de données
   référentielles (626 comptes, 454 paramètres fiscaux, 182 modèles d'écriture…) que la base vivante.
@@ -741,7 +741,7 @@ L'ordre compte : chaque vague rend la suivante vérifiable.
 4. Déclencheurs `BEFORE DELETE` sur `socle.ecritures`, `socle.ecriture_lignes`, `stocks.mouvements`
    (B3, B12) et correction de `freeze_lignes` sur `v_status IS NULL`.
 5. FK composites : `(pack_version_id, account_code)` et `journal` sur le socle (B4) ; `(piece_id,
-   page, ordinal)` sur les citations (D1) ; `(id, tenant_id)` sur les lignes d'écriture.
+page, ordinal)` sur les citations (D1) ; `(id, tenant_id)` sur les lignes d'écriture.
    **Corriger d'abord les trois lignes déjà fautives** (`43661`, `VTE`).
 6. `auth.users` : RLS + retrait des droits sur `encrypted_password` (A3). `storage.objects` : activer
    la RLS (A4). `audit.event_log` : retirer l'`INSERT` direct (A5).
@@ -787,7 +787,7 @@ L'ordre compte : chaque vague rend la suivante vérifiable.
 - `db/local/charger.ps1 -Recreate` — reconstruit une base complète depuis les migrations. **Depuis
   aujourd'hui, cette commande fonctionne de bout en bout.**
 - `docs/etat-de-la-base-2026-08-31.md` — constat initial et détail de la panne de reconstruction.
-- Sauvegarde antérieure à toute intervention : `db/sauvegardes/regalica_local_20260831_123448.dump`.
+- Sauvegarde antérieure à toute intervention : `db/sauvegardes/malica_local_20260831_123448.dump`.
 
 Trois vérifications restent ouvertes, faute d'avoir voulu écrire dans la base vivante : le
 comportement exact de la cascade `ecritures → ecriture_lignes` face à `freeze_lignes` (déduit du

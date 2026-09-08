@@ -17,31 +17,31 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionTitle,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ClientSummary } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { ClientSummary } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/clients")({
   head: () => ({
     meta: [
-      { title: "Clients du cabinet — Regalica Office" },
+      { title: "Clients du cabinet — Malica Office" },
       {
         name: "description",
         content:
           "Les dossiers mandatés du cabinet, leur régime, leur collaborateur et le volume à superviser.",
       },
-      { property: "og:title", content: "Clients du cabinet — Regalica Office" },
+      { property: "og:title", content: "Clients du cabinet — Malica Office" },
       {
         property: "og:description",
         content:
@@ -102,7 +102,7 @@ function CabinetClients() {
     })),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.malica.queue")}</MalicaNote>, [locale]);
 
   /* ---- le collaborateur de chaque client */
   const collabDe = useMemo(() => {

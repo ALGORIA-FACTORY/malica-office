@@ -1,7 +1,7 @@
 # Semaine NN du pilote — du JJ/MM au JJ/MM
 
 Copier ce fichier en `docs/pilote/semaine-NN.md` chaque lundi, le remplir
-avec `db/pilote/tableau-de-bord.sql` (rôle `regalica_lecture`), Sentry et le
+avec `db/pilote/tableau-de-bord.sql` (rôle `malica_lecture`), Sentry et le
 projet GitHub « Pilote ». Le jeudi, il se lit avec l'expert en 30 minutes.
 
 ## Les chiffres de la semaine

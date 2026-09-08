@@ -16,7 +16,7 @@ sont capturées telles quelles : c'est le seul pont fiable pour reconstituer l'h
 import os, re, hashlib, time
 import psycopg2, psycopg2.extras
 
-DSN = os.environ.get("REGALICA_DSN", "postgres:///regalica_paquet")
+DSN = os.environ.get("MALICA_DSN", "postgres:///malica_paquet")
 
 # Les codes consolidés écrivent « Article 52 » ; les lois de finances écrivent « Art. 52 - ».
 # Un seul motif rate la moitié du corpus : il faut accepter les deux graphies.

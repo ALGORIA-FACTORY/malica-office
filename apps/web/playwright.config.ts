@@ -5,11 +5,11 @@
  * arabe (miroir, police, chiffres), et le cabinet sur un bureau. Chacun
  * s'appuie sur une session ouverte une fois par compte (`connexion.setup.ts`).
  * Ils parlent à l'application vivante — le site avec son relais, l'API, la
- * base et le jeu de données — sur `REGALICA_BASE` (le poste : 8080 ; la CI :
+ * base et le jeu de données — sur `MALICA_BASE` (le poste : 8080 ; la CI :
  * pareil). Si rien ne tourne, Playwright lance le site sur 8090 contre l'API
  * du poste.
  *
- *   npm run e2e -w @regalica/web                 tout
+ *   npm run e2e -w @malica/web                 tout
  *   npx playwright test --project pme-android-fr  un projet
  *   npx playwright test --ui                      pas à pas
  */
@@ -17,7 +17,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import { ETAT_DIRIGEANT, ETAT_EXPERT, SORTIE } from "./e2e/comptes";
 
-const BASE = process.env["REGALICA_BASE"] ?? "http://localhost:8090";
+const BASE = process.env["MALICA_BASE"] ?? "http://localhost:8090";
 const PORT = Number(new URL(BASE).port || 80);
 
 export default defineConfig({
@@ -67,6 +67,6 @@ export default defineConfig({
     url: `${BASE}/sante`,
     reuseExistingServer: true,
     timeout: 120_000,
-    env: { REGALICA_PORT: String(PORT) },
+    env: { MALICA_PORT: String(PORT) },
   },
 });

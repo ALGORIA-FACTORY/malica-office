@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, redirect, useRouter } from "@tanstack/react-router";
 
 import { useI18n } from "@/i18n";
-import { EchecAuth } from "@regalica/socle/ports/auth";
-import { office } from "@/verticals/regalica-office/composition";
+import { EchecAuth } from "@malica/socle/ports/auth";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,

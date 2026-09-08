@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Plan comptable tunisien par défaut
+--  Malica Office — Plan comptable tunisien par défaut
 --  Source : NC 01 « Norme Comptable Générale », Troisième partie —
 --           Nomenclature des comptes et fonctionnement général des comptes.
 --           Système Comptable des Entreprises (loi n° 96-112 du 30 décembre 1996,

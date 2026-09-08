@@ -17,48 +17,45 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { ClientPicker } from "@/components/regalica/ClientPicker";
-import { ecrireDossierCourant, useDossierCourant } from "@/components/regalica/dossier-courant";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { ClientPicker } from "@/components/malica/ClientPicker";
+import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
 import {
   ActionButton,
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionRepliable,
   SectionTitle,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
+import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { Asset } from "@regalica/socle/ports/repositories";
-import type {
-  AmortissementLigne,
-  AmortissementV1,
-} from "@regalica/socle/contracts/amortissement.v1";
+import { office } from "@/verticals/malica-office/composition";
+import type { Asset } from "@malica/socle/ports/repositories";
+import type { AmortissementLigne, AmortissementV1 } from "@malica/socle/contracts/amortissement.v1";
 import {
   computeAmortissement,
   computeCession,
   computeDepreciation,
   cumulAt,
   vncNette,
-} from "@regalica/socle/engines/immo/amortissement";
+} from "@malica/socle/engines/immo/amortissement";
 
 export const Route = createFileRoute("/_authenticated/cabinet/immobilisations")({
   head: () => ({
     meta: [
-      { title: "Immobilisations — Regalica Office" },
+      { title: "Immobilisations — Malica Office" },
       {
         name: "description",
         content:
           "Fiches d'immobilisation, dotations d'amortissement et dépréciations calculées par le Socle.",
       },
-      { property: "og:title", content: "Immobilisations — Regalica Office" },
+      { property: "og:title", content: "Immobilisations — Malica Office" },
       {
         property: "og:description",
         content:
@@ -534,7 +531,7 @@ function CabinetImmobilisations() {
       ),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.immo.voice")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.immo.voice")}</MalicaNote>, [locale]);
 
   useEffect(() => {
     setForm(null);

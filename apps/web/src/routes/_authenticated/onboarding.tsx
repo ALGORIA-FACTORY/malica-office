@@ -2,22 +2,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/regalica-office/composition";
-import type { OrgKind, ValidationMode } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { OrgKind, ValidationMode } from "@malica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
-      { title: "Créer une organisation — Regalica Office" },
+      { title: "Créer une organisation — Malica Office" },
       {
         name: "description",
         content:
-          "Créez votre organisation Regalica Office : nature PME ou cabinet, mode de validation, établissement principal.",
+          "Créez votre organisation Malica Office : nature PME ou cabinet, mode de validation, établissement principal.",
       },
-      { property: "og:title", content: "Créer une organisation — Regalica Office" },
+      { property: "og:title", content: "Créer une organisation — Malica Office" },
       {
         property: "og:description",
         content: "Nature, mode de validation et établissement principal de votre organisation.",

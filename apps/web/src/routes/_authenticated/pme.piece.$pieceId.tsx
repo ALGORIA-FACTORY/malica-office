@@ -5,26 +5,26 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
-import { usePme } from "@/components/regalica/pme-context";
-import { DocumentView } from "@/components/regalica/document-view";
+import { usePme } from "@/components/malica/pme-context";
+import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { montant, quantite } from "@/lib/lisible";
-import { office } from "@/verticals/regalica-office/composition";
-import type { Citation } from "@regalica/socle/ports/repositories";
-import { buildProposal, LectureIncomplete } from "@regalica/socle/use-cases/propose-ecriture";
+import { office } from "@/verticals/malica-office/composition";
+import type { Citation } from "@malica/socle/ports/repositories";
+import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
     meta: [
-      { title: "Ma pièce — Regalica Office" },
+      { title: "Ma pièce — Malica Office" },
       {
         name: "description",
         content:
           "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation.",
       },
-      { property: "og:title", content: "Ma pièce — Regalica Office" },
+      { property: "og:title", content: "Ma pièce — Malica Office" },
       {
         property: "og:description",
         content:
@@ -166,7 +166,7 @@ function PieceScreen() {
   const lue = dossier.data?.extraction != null;
   const etat = useQuery({
     queryKey: ["lecture-en-cours", pieceId],
-    queryFn: () => office().regalica.etatDeLecture(pieceId),
+    queryFn: () => office().malica.etatDeLecture(pieceId),
     enabled: !lue,
     refetchInterval: (q) => (q.state.data?.enCours || attente ? 3_000 : false),
   });
@@ -279,7 +279,7 @@ function PieceScreen() {
   });
 
   const read = useMutation({
-    mutationFn: () => office().regalica.lirePiece(pieceId),
+    mutationFn: () => office().malica.lirePiece(pieceId),
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -361,7 +361,7 @@ function PieceScreen() {
        *
        * On nomme désormais les champs manquants en clair, et l'on dit quoi
        * faire. Le refus reste : sans date, aucun taux de TVA n'est applicable,
-       * et Regalica n'invente pas de valeur.
+       * et Malica n'invente pas de valeur.
        */
       if (e instanceof LectureIncomplete) {
         const champs = e.champs.map((c) => t(LIBELLE_DU_CHAMP[c] ?? "common.error")).join(", ");
@@ -544,7 +544,7 @@ function PieceScreen() {
   if (read.isPending || attente || etat.data?.enCours) {
     return (
       <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
-        <RegalicaAvatar size={66} alt="Regalica" rond />
+        <MalicaAvatar size={66} alt="Malica" rond />
         <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
           {t("pme.lecture.titre")}
         </p>
@@ -904,7 +904,7 @@ function PieceScreen() {
       {/* Sa question, pas un ordre : c'est le dirigeant qui tranche. */}
       {!booked ? (
         <div className="mt-5 flex gap-3">
-          <RegalicaAvatar size={32} alt="Regalica" rond />
+          <MalicaAvatar size={32} alt="Malica" rond />
           <p className="text-[15px] leading-[1.5]">
             {payload?.totals?.ttc
               ? t("pme.verifie.question", {

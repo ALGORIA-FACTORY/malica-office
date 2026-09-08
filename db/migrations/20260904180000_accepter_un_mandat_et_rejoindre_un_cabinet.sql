@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Accepter un mandat, rejoindre un cabinet.
+--  Malica Office — Accepter un mandat, rejoindre un cabinet.
 --
 --  POURQUOI : un cabinet PROPOSE un mandat (mandat_proposer) et INVITE un
 --  collaborateur (cabinet_inviter) — mais personne ne pouvait dire oui. Ce

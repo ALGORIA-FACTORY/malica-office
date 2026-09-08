@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { office } from "@/verticals/regalica-office/composition";
-import { computeTva } from "@regalica/socle";
-import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
-import type { TvaV1 } from "@regalica/socle/contracts/tva.v1";
-import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
+import { usePme } from "@/components/malica/pme-context";
+import { office } from "@/verticals/malica-office/composition";
+import { computeTva } from "@malica/socle";
+import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
+import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 export function monthBounds(period: string): { from: string; to: string } {
   const [y, m] = period.split("-").map(Number);

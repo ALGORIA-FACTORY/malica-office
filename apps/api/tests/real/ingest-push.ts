@@ -17,8 +17,8 @@
 
 import { readFileSync } from "node:fs";
 
-import { buildProposal } from "@regalica/socle/use-cases/propose-ecriture";
-import type { AccountMapping, TaxRate } from "@regalica/socle/ports/repositories";
+import { buildProposal } from "@malica/socle/use-cases/propose-ecriture";
+import type { AccountMapping, TaxRate } from "@malica/socle/ports/repositories";
 
 import { ouvrirSession } from "./api.ts";
 

@@ -5,7 +5,7 @@
  * et persistant, jamais « la première trouvée ». La valeur n'est qu'un
  * identifiant de tenant ; le mur de visibilité reste posé par la RLS.
  */
-const KEY = "regalica.pme.org";
+const KEY = "malica.pme.org";
 
 export function readActiveOrgId(): string | null {
   if (typeof window === "undefined") return null;

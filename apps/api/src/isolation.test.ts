@@ -69,7 +69,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
     //
     // Le schéma prévoyait la sortie : `archived_at` et `archived_reason`.
     //
-    // L'archivage demande des droits que `regalica_api` n'a pas — et ne doit pas
+    // L'archivage demande des droits que `malica_api` n'a pas — et ne doit pas
     // avoir. On passe par une connexion d'administration propre au test ; sans
     // elle, on le dit plutôt que de laisser croire que c'est fait.
     const admin = process.env["DATABASE_URL_ADMIN"];
@@ -143,7 +143,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   /*
-   * Les conversations avec Regalica.
+   * Les conversations avec Malica.
    *
    * Elles ne sont pas cloisonnées par organisation mais par PERSONNE : deux
    * associés d'une même société ne lisent pas les questions l'un de l'autre.
@@ -219,7 +219,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("le rôle de connexion ne contourne pas la RLS", async () => {
-    // Si `regalica_api` était superutilisateur, propriétaire ou `bypassrls`,
+    // Si `malica_api` était superutilisateur, propriétaire ou `bypassrls`,
     // tout ce qui précède passerait sans rien prouver. On le vérifie.
     const { superuser, bypassrls } = await horsRlsAuthentificationSeule(async (db) => {
       const { rows } = await db.query<{ superuser: boolean; bypassrls: boolean }>(

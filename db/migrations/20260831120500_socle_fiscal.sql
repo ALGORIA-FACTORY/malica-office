@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Couche fiscale : le schéma
+--  Malica Office — Couche fiscale : le schéma
 --
 --  DEUX OBJETS, JAMAIS CONFONDUS
 --

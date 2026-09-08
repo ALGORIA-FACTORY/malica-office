@@ -66,18 +66,18 @@ jobs:
         run: npm ci
 
       - name: Tests du socle
-        run: npm run test --workspace @regalica/socle
+        run: npm run test --workspace @malica/socle
 
       - name: Tests
-        run: npm run test --workspace @regalica/web
+        run: npm run test --workspace @malica/web
 
       # Le bundle de la coque, et ce qu'il pèse : 350 Ko de JavaScript initial,
       # 3 Mo pour une mise à jour en vol. Au-delà, un Tecno démarre en plus de
       # 3,5 s et une mise à jour en 3G se coupe.
       - name: Le bundle de la coque et son budget
         run: |
-          npm run build:coque:staging --workspace @regalica/web
-          npm run budget --workspace @regalica/web
+          npm run build:coque:staging --workspace @malica/web
+          npm run budget --workspace @malica/web
 
   # L'API est vérifiée contre un PostgreSQL réel : la preuve d'isolation ne veut
   # rien dire sans RLS, et la RLS n'existe pas dans un bouchon.
@@ -89,7 +89,7 @@ jobs:
         image: pgvector/pgvector:pg17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: regalica
+          POSTGRES_DB: malica
         options: >-
           --health-cmd pg_isready --health-interval 5s
           --health-timeout 5s --health-retries 10
@@ -111,15 +111,15 @@ jobs:
       # migrations appliquées. Une boucle psql rejouait tout — sur une base
       # neuve c'est pareil, sur un serveur qui vit ce serait faux.
       - name: Monter le schéma
-        run: node db/migrer.mjs --base postgres://postgres:postgres@localhost:5432/regalica --mot-de-passe-api
+        run: node db/migrer.mjs --base postgres://postgres:postgres@localhost:5432/malica --mot-de-passe-api
         env:
-          REGALICA_API_PASSWORD: ci
+          MALICA_API_PASSWORD: ci
 
       - name: Preuve d'isolation
-        run: npm run test --workspace @regalica/api
+        run: npm run test --workspace @malica/api
         env:
-          DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
-          DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+          DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+          DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
           JWT_SECRET: integration_continue_seulement_32_caracteres
           STOCKAGE_RACINE: ${{ runner.temp }}/pieces
 
@@ -137,7 +137,7 @@ jobs:
         image: pgvector/pgvector:pg17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: regalica
+          POSTGRES_DB: malica
         options: >-
           --health-cmd pg_isready --health-interval 5s
           --health-timeout 5s --health-retries 10
@@ -145,11 +145,11 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
-      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+      DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
-      STOCKAGE_RACINE: /tmp/regalica-pieces
+      STOCKAGE_RACINE: /tmp/malica-pieces
       CORS_ORIGINS: http://localhost:8080
 
     steps:
@@ -166,14 +166,14 @@ jobs:
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
         env:
-          REGALICA_API_PASSWORD: ci
+          MALICA_API_PASSWORD: ci
 
       # L'API sur 3000, le site sur 8080 avec le relais : la même topologie
       # que le poste. Les deux tournent en arrière-plan le temps du job.
       - name: Démarrer l'API et le site
         run: |
-          (npm run start -w @regalica/api > api.log 2>&1 &)
-          (npm run dev -w @regalica/web > web.log 2>&1 &)
+          (npm run start -w @malica/api > api.log 2>&1 &)
+          (npm run dev -w @malica/web > web.log 2>&1 &)
           for i in $(seq 1 60); do
             curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
             sleep 2
@@ -195,9 +195,9 @@ jobs:
 
       # Le site est déjà là : Playwright ne relance rien (reuseExistingServer).
       - name: Parcours dans un navigateur
-        run: npm run e2e -w @regalica/web
+        run: npm run e2e -w @malica/web
         env:
-          REGALICA_BASE: http://localhost:8080
+          MALICA_BASE: http://localhost:8080
 
       - name: Journaux des serveurs
         if: failure()

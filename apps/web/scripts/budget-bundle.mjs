@@ -2,7 +2,7 @@
  * Le budget du bundle de la coque — ce qu'un téléphone télécharge avant le
  * premier écran, et ce qu'une mise à jour en vol lui coûte.
  *
- *   npm run build:coque:staging -w @regalica/web && node scripts/budget-bundle.mjs
+ *   npm run build:coque:staging -w @malica/web && node scripts/budget-bundle.mjs
  *
  * Deux nombres, deux plafonds :
  *   - le JavaScript initial (l'entrée et ce que index.html précharge), gzippé :

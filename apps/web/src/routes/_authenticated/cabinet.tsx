@@ -4,9 +4,9 @@
  * ============================================================== POURQUOI
  *
  * Trois colonnes, comme le design : un rail repliable à gauche (254 px
- * ouvert, 64 px replié), la colonne de travail, le panneau de Regalica à
+ * ouvert, 64 px replié), la colonne de travail, le panneau de Malica à
  * droite (320 px). Une barre du haut porte le fil d'Ariane, la recherche,
- * la cloche et le bouton de Regalica. Un bandeau de dossier apparaît quand
+ * la cloche et le bouton de Malica. Un bandeau de dossier apparaît quand
  * on visite un client.
  *
  * Le rail suit la doctrine de navigation du design : « ce qui traverse les
@@ -43,34 +43,34 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { CabinetProvider } from "@/components/regalica/cabinet-context";
-import { useDossierCourant } from "@/components/regalica/dossier-courant";
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
+import { CabinetProvider } from "@/components/malica/cabinet-context";
+import { useDossierCourant } from "@/components/malica/dossier-courant";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import {
   EmptyState,
-  RegalicaAvatar,
-  RegalicaPanel,
-  RegalicaPoignee,
-} from "@/components/regalica/office-ui";
-import { PanneauCabinet } from "@/components/regalica/panneau-cabinet";
-import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
-import { RegalicaChat } from "@/components/regalica/RegalicaChat";
+  MalicaAvatar,
+  MalicaPanel,
+  MalicaPoignee,
+} from "@/components/malica/office-ui";
+import { PanneauCabinet } from "@/components/malica/panneau-cabinet";
+import { usePanneauMalica } from "@/components/malica/panneau-malica";
+import { MalicaChat } from "@/components/malica/MalicaChat";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ClientSummary, MonAcces, Organization } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({
     meta: [
-      { title: "Supervision cabinet — Regalica Office" },
+      { title: "Supervision cabinet — Malica Office" },
       {
         name: "description",
         content:
           "File priorisée, écran côte-à-côte pièce et écriture, retour avec motif gouverné et contre-passation datée.",
       },
-      { property: "og:title", content: "Supervision cabinet — Regalica Office" },
+      { property: "og:title", content: "Supervision cabinet — Malica Office" },
       {
         property: "og:description",
         content: "File priorisée, revue côte-à-côte, retour avec motif gouverné.",
@@ -143,7 +143,7 @@ function railReplieAuDepart(): boolean {
 
 function CabinetLayout() {
   const { t } = useI18n();
-  const regalica = usePanneauRegalica("cabinet");
+  const malica = usePanneauMalica("cabinet");
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -195,9 +195,9 @@ function CabinetLayout() {
           org={org}
           hasPme={hasPme}
           path={path}
-          panneauOuvert={regalica.ouvert}
-          ouvrirPanneau={regalica.ouvrir}
-          fermerPanneau={regalica.fermer}
+          panneauOuvert={malica.ouvert}
+          ouvrirPanneau={malica.ouvrir}
+          fermerPanneau={malica.fermer}
           panel={panel}
         />
       )}
@@ -423,22 +423,22 @@ function Coquille({
           <Outlet />
           {panneauOuvert ? (
             <section className="mt-8 border border-border bg-card lg:hidden">
-              <RegalicaPanel
-                title={t("cab.regalica.title")}
-                status={t("cab.regalica.status")}
-                footer={<RegalicaChat tenantId={org.id} technique />}
+              <MalicaPanel
+                title={t("cab.malica.title")}
+                status={t("cab.malica.status")}
+                footer={<MalicaChat tenantId={org.id} technique />}
                 framed={false}
                 onFermer={fermerPanneau}
-                fermerLibelle={t("regalica.panneau.fermer")}
+                fermerLibelle={t("malica.panneau.fermer")}
               >
                 <PanneauCabinet />
                 {panel ? <div className="mt-5 border-t border-border pt-4">{panel}</div> : null}
-              </RegalicaPanel>
+              </MalicaPanel>
             </section>
           ) : (
-            <RegalicaPoignee
-              nom={t("cab.regalica.title")}
-              libelle={t("regalica.panneau.ouvrir")}
+            <MalicaPoignee
+              nom={t("cab.malica.title")}
+              libelle={t("malica.panneau.ouvrir")}
               onOuvrir={ouvrirPanneau}
               className="mt-8 lg:hidden"
             />
@@ -448,21 +448,21 @@ function Coquille({
 
       {panneauOuvert ? (
         <div className="hidden border-s border-border lg:block lg:h-screen lg:overflow-y-auto">
-          <RegalicaPanel
-            title={t("cab.regalica.title")}
-            status={t("cab.regalica.status")}
-            footer={<RegalicaChat tenantId={org.id} technique />}
+          <MalicaPanel
+            title={t("cab.malica.title")}
+            status={t("cab.malica.status")}
+            footer={<MalicaChat tenantId={org.id} technique />}
             onFermer={fermerPanneau}
-            fermerLibelle={t("regalica.panneau.fermer")}
+            fermerLibelle={t("malica.panneau.fermer")}
           >
             <PanneauCabinet />
             {panel ? <div className="mt-5 border-t border-border pt-4">{panel}</div> : null}
-          </RegalicaPanel>
+          </MalicaPanel>
         </div>
       ) : (
-        <RegalicaPoignee
-          nom={t("cab.regalica.title")}
-          libelle={t("regalica.panneau.ouvrir")}
+        <MalicaPoignee
+          nom={t("cab.malica.title")}
+          libelle={t("malica.panneau.ouvrir")}
           onOuvrir={ouvrirPanneau}
           className="fixed bottom-5 end-5 hidden lg:flex"
         />
@@ -705,7 +705,7 @@ function Rail({
         <div className="fixed inset-0 z-40 flex lg:hidden">
           <button
             type="button"
-            aria-label={t("regalica.panneau.fermer")}
+            aria-label={t("malica.panneau.fermer")}
             onClick={fermerTiroir}
             className="flex-1 bg-foreground/30"
           />
@@ -897,15 +897,15 @@ function BarreDuHaut({
       <button
         type="button"
         onClick={basculerPanneau}
-        aria-label={t("cab.top.regalica")}
+        aria-label={t("cab.top.malica")}
         aria-pressed={panneauOuvert}
-        title={t("cab.top.regalica")}
+        title={t("cab.top.malica")}
         className={cn(
           "flex shrink-0 items-center justify-center border p-[3px]",
           panneauOuvert ? "border-foreground bg-card" : "border-border bg-card hover:bg-accent",
         )}
       >
-        <RegalicaAvatar size={26} alt="Regalica" rond />
+        <MalicaAvatar size={26} alt="Malica" rond />
       </button>
     </div>
   );

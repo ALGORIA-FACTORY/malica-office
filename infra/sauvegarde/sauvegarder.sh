@@ -24,12 +24,12 @@ maintenant() { date +%Y-%m-%dT%H:%M:%S; }
 sauvegarder() {
   local horodatage
   horodatage=$(date +%Y%m%d-%H%M%S)
-  local dump="$DUMPS/regalica-$horodatage.dump"
+  local dump="$DUMPS/malica-$horodatage.dump"
 
   echo "[$(maintenant)] dump → $dump"
-  pg_dump -h postgres -U postgres -d regalica -Fc --no-owner -f "$dump.tmp"
+  pg_dump -h postgres -U postgres -d malica -Fc --no-owner -f "$dump.tmp"
   mv "$dump.tmp" "$dump"
-  ls -1t "$DUMPS"/regalica-*.dump | tail -n +3 | xargs -r rm -f
+  ls -1t "$DUMPS"/malica-*.dump | tail -n +3 | xargs -r rm -f
 
   echo "[$(maintenant)] hors site"
   r snapshots >/dev/null 2>&1 || r init

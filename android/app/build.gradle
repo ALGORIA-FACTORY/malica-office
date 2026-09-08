@@ -24,10 +24,10 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.algoriafactory.regalica"
+    namespace = "com.algoriafactory.malica"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.algoriafactory.regalica"
+        applicationId "com.algoriafactory.malica"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode versionCodeDeclare
@@ -49,11 +49,11 @@ android {
     productFlavors {
         pilote {
             dimension "cible"
-            resValue "string", "app_name", "Regalica (pilote)"
+            resValue "string", "app_name", "Malica (pilote)"
         }
         prod {
             dimension "cible"
-            resValue "string", "app_name", "Regalica Office"
+            resValue "string", "app_name", "Malica Office"
         }
         /*
          * Pour l'émulateur de la CI (Maestro) seulement : le bundle vise l'API
@@ -63,7 +63,7 @@ android {
         emulateur {
             dimension "cible"
             applicationIdSuffix ".emulateur"
-            resValue "string", "app_name", "Regalica (émulateur)"
+            resValue "string", "app_name", "Malica (émulateur)"
         }
     }
 

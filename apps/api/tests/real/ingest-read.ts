@@ -11,8 +11,8 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { buildExtractFromTokenPlan } from "../../src/regalica/lecture/read-piece.ts";
-import { runVisionRead } from "../../src/regalica/lecture/vision.ts";
+import { buildExtractFromTokenPlan } from "../../src/malica/lecture/read-piece.ts";
+import { runVisionRead } from "../../src/malica/lecture/vision.ts";
 
 interface TaxCode {
   code: string;

@@ -2,27 +2,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { DocumentView } from "@/components/regalica/document-view";
-import { ListeDesComptes, SaisieDeCompte } from "@/components/regalica/saisie-compte";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { DocumentView } from "@/components/malica/document-view";
+import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import {
   ActionButton,
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionTitle,
   SignalLight,
   StickyActions,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
-import { office } from "@/verticals/regalica-office/composition";
-import type { Citation, CompteDuPlan, Ecriture } from "@regalica/socle/ports/repositories";
-import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
-import { composerLibelle, critiquerLibelle } from "@regalica/socle/engines/libelle";
-import { faitsDuLibelle } from "@regalica/socle/use-cases/libelle-de-piece";
+import { office } from "@/verticals/malica-office/composition";
+import type { Citation, CompteDuPlan, Ecriture } from "@malica/socle/ports/repositories";
+import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { composerLibelle, critiquerLibelle } from "@malica/socle/engines/libelle";
+import { faitsDuLibelle } from "@malica/socle/use-cases/libelle-de-piece";
 
 import {
   libelleDeLAction,
@@ -37,13 +37,13 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
     meta: [
-      { title: "Revue d'une pièce — Regalica Office" },
+      { title: "Revue d'une pièce — Malica Office" },
       {
         name: "description",
         content:
           "Pièce à gauche, écriture proposée à droite : citations, verdict, comptabilisation ou retour motivé.",
       },
-      { property: "og:title", content: "Revue d'une pièce — Regalica Office" },
+      { property: "og:title", content: "Revue d'une pièce — Malica Office" },
       {
         property: "og:description",
         content:
@@ -88,7 +88,7 @@ function libelleDuCompte(plan: readonly CompteDuPlan[], code: string): string | 
 
 /**
  * La correction part de l'écriture telle qu'elle est : on force, on ne
- * recommence pas. Le libellé, lui, part de ce que Regalica propose — l'expert
+ * recommence pas. Le libellé, lui, part de ce que Malica propose — l'expert
  * arrête le paramétrage, il ne le compose pas de zéro (R10). À défaut de
  * lecture exploitable, on garde celui qui est en base plutôt que rien.
  */
@@ -166,7 +166,7 @@ function CabinetReview() {
     staleTime: 5 * 60 * 1000,
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.regalica.review")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.malica.review")}</MalicaNote>, [locale]);
 
   const selectedMotif = useMemo(
     () => (motifs.data ?? []).find((m) => m.id === motifId) ?? null,
@@ -290,7 +290,7 @@ function CabinetReview() {
   // mais il voit ce qu'un contrôleur verra. Un refus se contourne en tapant
   // n'importe quoi ; une remarque, non.
   const remarques = correction ? critiquerLibelle(correction.libelle) : [];
-  // Le libellé que Regalica propose pour cette pièce, s'il est composable.
+  // Le libellé que Malica propose pour cette pièce, s'il est composable.
   // Une lecture partielle ne compose rien : on ne devine pas une contrepartie.
   const libellePropose = (() => {
     const lu = ExtractV1.safeParse(dossier.data?.extraction?.payload);

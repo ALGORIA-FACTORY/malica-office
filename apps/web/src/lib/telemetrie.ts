@@ -90,8 +90,8 @@ export async function demarrerLaTelemetrie(): Promise<boolean> {
   Sentry.init(
     {
       dsn: DSN,
-      // Une version Sentry ne porte pas de barre oblique : « regalica-coque@0.3.1 ».
-      release: `regalica-coque@${VERSION}`,
+      // Une version Sentry ne porte pas de barre oblique : « malica-coque@0.3.1 ».
+      release: `malica-coque@${VERSION}`,
       environment: CANAL,
       sendDefaultPii: false,
       tracesSampleRate: 0,

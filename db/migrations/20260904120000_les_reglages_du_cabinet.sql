@@ -24,7 +24,7 @@ create table collab.reglages_cabinet (
   -- Au-delà de ce montant, une écriture demande une seconde signature. Nul : jamais.
   double_validation_au_dela numeric(18,3)
                             check (double_validation_au_dela is null or double_validation_au_dela >= 0),
-  -- Regalica propose-t-elle d''elle-même dans le panneau ?
+  -- Malica propose-t-elle d''elle-même dans le panneau ?
   propositions_proactives   boolean not null default true,
   updated_by                uuid not null default auth.uid(),
   updated_at                timestamptz not null default now(),

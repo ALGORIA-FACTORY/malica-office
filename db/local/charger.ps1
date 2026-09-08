@@ -1,4 +1,4 @@
-﻿# Monte une base Regalica Office locale, à partir des migrations du dépôt.
+﻿# Monte une base Malica Office locale, à partir des migrations du dépôt.
 #
 # Le schéma n'est pas copié depuis la production : il est REJOUÉ depuis
 # `db/migrations`, qui en est la source de vérité. La base locale contient
@@ -6,11 +6,11 @@
 # et AUCUNE donnée de tenant. Les pièces et les organisations des clients
 # restent là où elles doivent être.
 #
-#   .\db\local\charger.ps1                  # crée regalica_local
+#   .\db\local\charger.ps1                  # crée malica_local
 #   .\db\local\charger.ps1 -Recreate        # la supprime d'abord
 
 param(
-  [string]$Base = "regalica_local",
+  [string]$Base = "malica_local",
   [string]$PgUser = "postgres",
   [string]$PgHost = "localhost",
   [int]$Port = 5432,
@@ -55,11 +55,11 @@ File $Base (Join-Path $PSScriptRoot "00_compat_supabase.sql")
 
 # Le role de connexion de l'API doit avoir un mot de passe pour se connecter.
 # Il est propre a l'environnement : jamais dans le fichier SQL, qui est versionne.
-if ($env:REGALICA_API_PASSWORD) {
-  Run $Base "alter role regalica_api with password '$($env:REGALICA_API_PASSWORD)';"
-  Write-Host "  mot de passe pose sur regalica_api" -ForegroundColor DarkGray
+if ($env:MALICA_API_PASSWORD) {
+  Run $Base "alter role malica_api with password '$($env:MALICA_API_PASSWORD)';"
+  Write-Host "  mot de passe pose sur malica_api" -ForegroundColor DarkGray
 } else {
-  Write-Host "  REGALICA_API_PASSWORD absente : regalica_api ne pourra pas se connecter." -ForegroundColor Yellow
+  Write-Host "  MALICA_API_PASSWORD absente : malica_api ne pourra pas se connecter." -ForegroundColor Yellow
   Write-Host "  Definissez-la, ou posez le mot de passe a la main." -ForegroundColor Yellow
 }
 

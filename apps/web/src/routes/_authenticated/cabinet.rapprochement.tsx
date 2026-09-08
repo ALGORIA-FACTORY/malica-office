@@ -16,39 +16,39 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { ClientPicker } from "@/components/regalica/ClientPicker";
-import { ecrireDossierCourant, useDossierCourant } from "@/components/regalica/dossier-courant";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { ClientPicker } from "@/components/malica/ClientPicker";
+import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
 import {
   ActionButton,
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionRepliable,
   SectionTitle,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { currentPeriod, monthBounds } from "@/hooks/use-tva";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { estNul, sommeDecimale } from "@regalica/socle/somme-decimale";
+import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { BankBookLine, BankStatementLine } from "@regalica/socle/ports/repositories";
-import { computeRapprochement } from "@regalica/socle/engines/banque/rapprochement";
+import { office } from "@/verticals/malica-office/composition";
+import type { BankBookLine, BankStatementLine } from "@malica/socle/ports/repositories";
+import { computeRapprochement } from "@malica/socle/engines/banque/rapprochement";
 
 export const Route = createFileRoute("/_authenticated/cabinet/rapprochement")({
   head: () => ({
     meta: [
-      { title: "Rapprochement bancaire — Regalica Office" },
+      { title: "Rapprochement bancaire — Malica Office" },
       {
         name: "description",
         content:
           "Lettrage des lignes bancaires avec les écritures, délettrage motivé et journal complet.",
       },
-      { property: "og:title", content: "Rapprochement bancaire — Regalica Office" },
+      { property: "og:title", content: "Rapprochement bancaire — Malica Office" },
       {
         property: "og:description",
         content:
@@ -504,7 +504,7 @@ function CabinetRapprochement() {
       setError(texteDeLErreur(e, "routes/_authenticated/cabinet.rapprochement", t("common.error"))),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.banque.voice")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.banque.voice")}</MalicaNote>, [locale]);
 
   /* ---- ce que l'écran lit */
   const lignesRows = lignes.data ?? [];

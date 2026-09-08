@@ -84,8 +84,8 @@ x509_extensions = v3
 prompt = no
 
 [dn]
-CN = Regalica Office (développement)
-O = Regalica Office
+CN = Malica Office (développement)
+O = Malica Office
 
 [v3]
 subjectAltName = @noms
@@ -106,11 +106,20 @@ try {
   execFileSync(
     "openssl",
     [
-      "req", "-x509", "-newkey", "rsa:2048", "-sha256",
-      "-days", "365", "-nodes",
-      "-keyout", cheminCle,
-      "-out", cheminCert,
-      "-config", cheminConfig,
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-sha256",
+      "-days",
+      "365",
+      "-nodes",
+      "-keyout",
+      cheminCle,
+      "-out",
+      cheminCert,
+      "-config",
+      cheminConfig,
     ],
     { stdio: ["ignore", "ignore", "pipe"] },
   );

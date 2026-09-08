@@ -27,7 +27,7 @@ jobs:
         image: pgvector/pgvector:pg17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: regalica
+          POSTGRES_DB: malica
         options: >-
           --health-cmd pg_isready --health-interval 5s
           --health-timeout 5s --health-retries 10
@@ -35,11 +35,11 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgres://regalica_api:ci@localhost:5432/regalica
-      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/regalica
+      DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
-      STOCKAGE_RACINE: /tmp/regalica-pieces
+      STOCKAGE_RACINE: /tmp/malica-pieces
       CORS_ORIGINS: http://localhost:8080
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
@@ -59,12 +59,12 @@ jobs:
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
         env:
-          REGALICA_API_PASSWORD: ci
+          MALICA_API_PASSWORD: ci
 
       - name: Démarrer l'API et le site
         run: |
-          (npm run start -w @regalica/api > api.log 2>&1 &)
-          (npm run dev -w @regalica/web > web.log 2>&1 &)
+          (npm run start -w @malica/api > api.log 2>&1 &)
+          (npm run dev -w @malica/web > web.log 2>&1 &)
           for i in $(seq 1 60); do
             curl -fsS http://localhost:8080/sante >/dev/null 2>&1 && break
             sleep 2

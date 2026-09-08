@@ -1,5 +1,5 @@
 /**
- * L'API Regalica Office — les routes, sans l'écoute.
+ * L'API Malica Office — les routes, sans l'écoute.
  *
  * Elle remplace PostgREST et GoTrue. Elle ne remplace pas la RLS : chaque
  * requête métier passe par `sousIdentite`, qui endosse le rôle `authenticated`
@@ -35,7 +35,7 @@ import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } f
 import { sonderLaBase, sousIdentite } from "./db.ts";
 import { refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
-import { regalica } from "./regalica.ts";
+import { malica } from "./malica.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
 import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
 import { deposerContenu, servirContenu, sonderLeStockage } from "./stockage.ts";
@@ -100,11 +100,11 @@ app.get("/pieces/:id/contenu", exigerIdentite, (req, res, next) => {
 app.use(express.json({ limit: "1mb" }));
 
 /*
- * Regalica — tout ce qui fait parler un modèle. Hors de `/rpc`, parce que
+ * Malica — tout ce qui fait parler un modèle. Hors de `/rpc`, parce que
  * ces gestes durent plus longtemps qu'une transaction ne peut rester ouverte.
- * Voir `regalica.ts`.
+ * Voir `malica.ts`.
  */
-app.use("/regalica", regalica);
+app.use("/malica", malica);
 
 const Identifiants = z.object({
   email: z.string().email(),
@@ -349,7 +349,7 @@ app.get("/sante", (_req, res) => {
 app.get("/sante/profonde", async (_req, res) => {
   const verdict = {
     etat: "ok",
-    version: process.env["REGALICA_VERSION"] ?? "atelier",
+    version: process.env["MALICA_VERSION"] ?? "atelier",
     base: "ok",
     stockage: "ok",
   };

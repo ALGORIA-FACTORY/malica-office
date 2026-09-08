@@ -40,7 +40,7 @@ export function creerRafraichisseur(deps: {
     try {
       reponse = await deps.fetch(`${deps.base}/auth/rafraichir`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Regalica-Client": deps.versionClient },
+        headers: { "Content-Type": "application/json", "X-Malica-Client": deps.versionClient },
         credentials: "omit",
         body: JSON.stringify({ jetonRafraichissement: ancien }),
       });

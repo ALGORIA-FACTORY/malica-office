@@ -15,7 +15,7 @@
 --
 -- ============================================================== POURQUOI CE REFUS
 --
--- Le plan de tokens EST la preuve de ce que Regalica a lu sur la pièce : chaque
+-- Le plan de tokens EST la preuve de ce que Malica a lu sur la pièce : chaque
 -- mot, sa position, et les citations qui s'y accrochent. C'est ce qui permet,
 -- des mois plus tard, de montrer d'où venait un montant. L'effacer reviendrait
 -- à retirer la pièce justificative d'un raisonnement déjà tenu — exactement ce

@@ -86,7 +86,7 @@ export type CarteFiscaleV1 = z.infer<typeof CarteFiscaleV1>;
  *
  * Sert à l'écran : il montre les champs manquants pour que l'expert les
  * complète, au lieu de laisser croire que la fiche est complète. R10 —
- * Regalica propose ce qu'elle a lu, l'expert arrête le paramétrage.
+ * Malica propose ce qu'elle a lu, l'expert arrête le paramétrage.
  */
 export function champsManquants(carte: CarteFiscaleV1): string[] {
   const attendus: Array<[string, unknown]> = [

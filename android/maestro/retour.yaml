@@ -1,6 +1,6 @@
 # Le bouton retour d'Android : il recule d'un écran, jamais hors de
 # l'application depuis un écran intérieur ; depuis l'accueil, il quitte.
-appId: com.algoriafactory.regalica.emulateur
+appId: com.algoriafactory.malica.emulateur
 ---
 - launchApp
 - runFlow: connexion.yaml
@@ -8,8 +8,8 @@ appId: com.algoriafactory.regalica.emulateur
 - assertVisible: "Coffre"
 - back
 - assertVisible: "Vos documents"
-# Le fil de Regalica, ouvert par-dessus l'accueil, se ferme d'un retour.
-- tapOn: "Parler à Regalica"
+# Le fil de Malica, ouvert par-dessus l'accueil, se ferme d'un retour.
+- tapOn: "Parler à Malica"
 - assertVisible: "Conversation en cours"
 - back
 - assertVisible: "Vos documents"

@@ -19,7 +19,7 @@ interface SchemaDeFile extends DBSchema {
   };
 }
 
-const NOM = "regalica-file";
+const NOM = "malica-file";
 
 export function creerDepotIdb(): DepotDeFile {
   let base: Promise<IDBPDatabase<SchemaDeFile>> | null = null;

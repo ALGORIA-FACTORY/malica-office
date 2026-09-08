@@ -1,10 +1,10 @@
 -- ============================================================================
--- L'arbitrage du conseil — ce que Regalica n'ose pas envoyer seule.
+-- L'arbitrage du conseil — ce que Malica n'ose pas envoyer seule.
 -- ============================================================================
 --
 -- CE QUI SE PASSAIT AVANT
 --
--- Un dirigeant posait une question de droit à Regalica, et elle répondait —
+-- Un dirigeant posait une question de droit à Malica, et elle répondait —
 -- citée, contrôlée, mais seule. Son comptable n'en savait rien, et n'avait
 -- aucun moyen de reprendre une réponse avant qu'elle ne soit lue. Une réponse
 -- juste à 60 % partait avec la même assurance qu'une réponse juste à 95 %.
@@ -13,7 +13,7 @@
 --
 -- Un seuil, une table, deux gestes.
 --
--- Le SEUIL est au cabinet : au-dessus de sa certitude déclarée, Regalica
+-- Le SEUIL est au cabinet : au-dessus de sa certitude déclarée, Malica
 -- répond seule et le cabinet est informé ; en dessous, elle retient sa réponse
 -- et la remet à l'expert. Ce n'est pas une constante (R4) : c'est une colonne
 -- de `collab.reglages_cabinet`, avec un défaut livré et surchargeable (R10).
@@ -26,7 +26,7 @@
 -- Les deux GESTES sont des fonctions `security definer` gardées par le
 -- mandat, parce que la RLS du helper ne suffit pas ici : c'est le cabinet
 -- qui décide, et il n'est pas membre du dossier ; c'est le client qui pose la
--- question, et il ne doit pas pouvoir approuver lui-même ce que Regalica lui
+-- question, et il ne doit pas pouvoir approuver lui-même ce que Malica lui
 -- destine. Aucune politique d'écriture directe ne reste donc sur la table.
 --
 -- ============================================================ POURQUOI PAS R7
@@ -48,7 +48,7 @@ alter table collab.reglages_cabinet
   check (seuil_certitude_conseil between 0 and 1);
 
 comment on column collab.reglages_cabinet.seuil_certitude_conseil is
-  'Au-dessus, Regalica répond seule à une question de conseil et met le cabinet en copie ; en dessous, elle lui remet la réponse.';
+  'Au-dessus, Malica répond seule à une question de conseil et met le cabinet en copie ; en dessous, elle lui remet la réponse.';
 
 -- La vue se recompose sur TOUTES les colonnes de la table, dans leur ordre.
 -- Plusieurs migrations du même jour ajoutent chacune une colonne à ces
@@ -213,7 +213,7 @@ create index if not exists arbitrages_cabinet_idx
   on agents.arbitrages (cabinet_tenant_id, statut, created_at desc);
 
 comment on table agents.arbitrages is
-  'Les questions de conseil des clients mandatés : la réponse que Regalica propose, et ce que le cabinet en décide.';
+  'Les questions de conseil des clients mandatés : la réponse que Malica propose, et ce que le cabinet en décide.';
 
 -- La lecture par le helper : membres du dossier et cabinet mandaté. Les
 -- écritures, elles, passent toutes par les deux fonctions ci-dessous — on
@@ -233,7 +233,7 @@ select a.id, a.tenant_id, o.name as client, a.cabinet_tenant_id, a.conversation_
   left join identity.organizations o on o.id = a.tenant_id;
 grant select on public.arbitrages_v to authenticated;
 
--- --- 3. Ce que Regalica doit savoir avant de répondre à un client ------------------------
+-- --- 3. Ce que Malica doit savoir avant de répondre à un client ------------------------
 -- Le cabinet mandaté sur ce dossier, son seuil, et si l''appelant est membre du
 -- dossier (un client) ou seulement mandaté (le cabinet lui-même, qui n''a pas à
 -- s''arbitrer). Le seuil du cabinet n''est pas lisible par le client : la
@@ -417,7 +417,7 @@ begin
    where id = p_id;
 
   -- Le message part dans le fil du client, s''il existe encore. Il est signé
-  -- Regalica dans le fil — c''est elle qui parle au client — mais le journal
+  -- Malica dans le fil — c''est elle qui parle au client — mais le journal
   -- d''audit dit qui a décidé.
   if p_message is not null and length(btrim(p_message)) > 0
      and v_a.conversation_id is not null

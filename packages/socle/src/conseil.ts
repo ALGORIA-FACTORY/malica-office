@@ -59,7 +59,7 @@ export function nomDeLaSource(
 /**
  * Ce que le client lira dans son fil après la décision du cabinet.
  *
- *   approuvee — la réponse de Regalica, ses sources, et la mention que le
+ *   approuvee — la réponse de Malica, ses sources, et la mention que le
  *               comptable l'a relue. Rien ne part si elle était déjà envoyée.
  *   corrigee  — la réponse du cabinet, précédée de qui parle, suivie de
  *               l'article invoqué s'il y en a un.

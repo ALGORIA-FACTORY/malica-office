@@ -11,9 +11,9 @@
  * avec des identifiants d'environnement : une variable de moins à transporter,
  * et un jeton qui ne traîne pas sur le disque.
  *
- *   REGALICA_API_URL=http://localhost:3000
- *   REGALICA_EMAIL=...
- *   REGALICA_MOTDEPASSE=...
+ *   MALICA_API_URL=http://localhost:3000
+ *   MALICA_EMAIL=...
+ *   MALICA_MOTDEPASSE=...
  */
 
 export interface ClientApi {
@@ -28,9 +28,9 @@ function exiger(nom: string): string {
 }
 
 export async function ouvrirSession(): Promise<ClientApi> {
-  const base = (process.env["REGALICA_API_URL"] ?? "http://localhost:3000").replace(/\/+$/, "");
-  const email = exiger("REGALICA_EMAIL");
-  const motDePasse = exiger("REGALICA_MOTDEPASSE");
+  const base = (process.env["MALICA_API_URL"] ?? "http://localhost:3000").replace(/\/+$/, "");
+  const email = exiger("MALICA_EMAIL");
+  const motDePasse = exiger("MALICA_MOTDEPASSE");
 
   const connexion = await fetch(`${base}/auth/connexion`, {
     method: "POST",
@@ -38,7 +38,7 @@ export async function ouvrirSession(): Promise<ClientApi> {
     body: JSON.stringify({ email, motDePasse }),
   });
   if (!connexion.ok) {
-    throw new Error(`connexion refusée (${connexion.status}) — vérifiez REGALICA_EMAIL`);
+    throw new Error(`connexion refusée (${connexion.status}) — vérifiez MALICA_EMAIL`);
   }
   const { jeton } = (await connexion.json()) as { jeton: string };
   const entetes = { Authorization: `Bearer ${jeton}` };

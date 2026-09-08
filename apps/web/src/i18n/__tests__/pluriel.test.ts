@@ -12,7 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { LOCALES, MESSAGES, type Locale } from "@regalica/socle/messages";
+import { LOCALES, MESSAGES, type Locale } from "@malica/socle/messages";
 
 /** Le choix de forme du moteur, isolé de React. */
 function forme(locale: Locale, n: number): string {

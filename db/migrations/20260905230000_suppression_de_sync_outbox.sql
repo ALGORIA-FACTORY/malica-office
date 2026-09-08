@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — La table sync.outbox s'en va.
+--  Malica Office — La table sync.outbox s'en va.
 --
 --  POURQUOI : elle avait été prévue pour une file côté serveur, et personne ne
 --  l'a jamais écrite ni lue — aucun dépôt, aucun outil. La file hors ligne du

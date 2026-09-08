@@ -5,7 +5,7 @@
  * (l'émetteur cité), jamais d'une invention. Une PME par entreprise émettrice
  * de ses ventes ; ses achats rejoignent les mêmes livres.
  *
- * La session s'ouvre par l'API (REGALICA_EMAIL / REGALICA_MOTDEPASSE) : le
+ * La session s'ouvre par l'API (MALICA_EMAIL / MALICA_MOTDEPASSE) : le
  * fichier de session a disparu avec Supabase.
  *
  * Usage : node apps/api/tests/real/ingest-tenants.ts <reads.json> <tenants.json>

@@ -13,7 +13,7 @@ const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_
 
 describe("le jeton de rafraîchissement", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `rafraichir-${Date.now()}`;
-  const COQUE = { "X-Regalica-Client": "coque-android/0.1.0" };
+  const COQUE = { "X-Malica-Client": "coque-android/0.1.0" };
   let base = "";
   let arret: (() => Promise<void>) | null = null;
 

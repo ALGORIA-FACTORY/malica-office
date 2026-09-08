@@ -5,7 +5,7 @@
 -- `jort_reference`. Les trois premières sont récupérables — la quatrième ne
 -- l'est pas depuis le texte, et reste nulle plutôt que d'être inventée.
 --
---   psql -U postgres -h localhost -d regalica_local -f db/corpus/completer.sql
+--   psql -U postgres -h localhost -d malica_local -f db/corpus/completer.sql
 
 \echo '===== 1. L''URL de la source ====='
 -- Une version d'article sans son URL est une citation qu'on ne peut pas

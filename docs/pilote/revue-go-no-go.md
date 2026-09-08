@@ -29,12 +29,12 @@ sur décision de l'expert.
 ## L'acceptation de l'expert-comptable
 
 Sur dix : la qualité des lectures, la justesse des propositions, le temps
-gagné par dossier, la confiance dans ce que Regalica dit ne pas savoir, la
+gagné par dossier, la confiance dans ce que Malica dit ne pas savoir, la
 volonté de continuer avec ses clients. Note, remarques, signature, date.
 
 ## Ce que le go déclenche
 
-1. `docs/exploitation.md` § Déployer : `DOMAINE=app.regalica.tn` dans `.env`,
+1. `docs/exploitation.md` § Déployer : `DOMAINE=app.malica.tn` dans `.env`,
    `deployer.sh <version>` — Caddy obtient le certificat, rien n'est recopié.
 2. Play Console : demande d'accès à la production, fiche FR/AR relue, la
    version de la piste fermée promue.

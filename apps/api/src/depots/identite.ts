@@ -18,7 +18,7 @@ export interface MandatPropose {
 }
 import { enDate } from "./dates.ts";
 
-/** Une fiche fiscale, telle que l'écran et Regalica la lisent. */
+/** Une fiche fiscale, telle que l'écran et Malica la lisent. */
 export interface FicheFiscale {
   id: string;
   regimeImposition: string | null;

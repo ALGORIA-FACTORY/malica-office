@@ -4,7 +4,7 @@
  * ============================================================== POURQUOI
  *
  * Un seul plan, trois origines, et l'origine est la colonne qui compte : le
- * compte livré verbatim par la norme du pack, l'extension ouverte par Regalica,
+ * compte livré verbatim par la norme du pack, l'extension ouverte par Malica,
  * la subdivision que le cabinet a arrêtée. L'écran les montre ensemble, et
  * marque à l'or ce qui vient du cabinet — on doit pouvoir répondre à « qui a
  * décidé ce compte » sans lire un historique (R10).
@@ -25,37 +25,37 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionRepliable,
   SignalLight,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import type {
   CompteDuPlan,
   NatureTiers,
   RoleComptable,
   Tiers,
-} from "@regalica/socle/ports/repositories";
+} from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/plan")({
   head: () => ({
     meta: [
-      { title: "Plan comptable — Regalica Office" },
+      { title: "Plan comptable — Malica Office" },
       {
         name: "description",
         content:
           "Le plan de référence du pack, les extensions du cabinet, les rôles comptables et les tiers de chaque dossier.",
       },
-      { property: "og:title", content: "Plan comptable — Regalica Office" },
+      { property: "og:title", content: "Plan comptable — Malica Office" },
       {
         property: "og:description",
         content:
@@ -88,7 +88,7 @@ function libelleClasse(t: (cle: MessageKey) => string, classe: string): string {
   return libelle === cle ? classe : libelle;
 }
 
-/** La couleur de l'origine : l'encre pour la norme, l'information pour Regalica, l'or pour le cabinet. */
+/** La couleur de l'origine : l'encre pour la norme, l'information pour Malica, l'or pour le cabinet. */
 const TON_ORIGINE: Record<Origine, string> = {
   officiel: "text-muted-foreground",
   extension: "text-signal-info",
@@ -119,10 +119,9 @@ function PlanComptable() {
     queryFn: () => office().referential.activePack(org.jurisdiction),
   });
 
-  useRegalicaPanel(
-    <RegalicaNote kicker={t("plan.regalica.kicker")}>{t("plan.regalica")}</RegalicaNote>,
-    [locale],
-  );
+  useMalicaPanel(<MalicaNote kicker={t("plan.malica.kicker")}>{t("plan.malica")}</MalicaNote>, [
+    locale,
+  ]);
 
   const comptes = useMemo(() => plan.data ?? [], [plan.data]);
   const extensionsDuCabinet = comptes.filter((c) => c.origine === "cabinet").length;

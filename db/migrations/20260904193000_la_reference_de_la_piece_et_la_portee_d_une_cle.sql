@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Deux refus lisibles et une référence qui en est une.
+--  Malica Office — Deux refus lisibles et une référence qui en est une.
 --
 --  POURQUOI, trouvé par les épreuves de bout en bout :
 --    · une clé d'API créée sans portée tombait sur la contrainte de la table,

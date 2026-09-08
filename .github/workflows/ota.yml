@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Construire le bundle de la coque
-        run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @regalica/web
+        run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @malica/web
 
       # La CLI lit l'identifiant de l'app dans apps/web/capacitor.config.ts :
       # elle tourne donc de là.

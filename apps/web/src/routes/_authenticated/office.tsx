@@ -6,22 +6,22 @@ import { Building2, Smartphone } from "lucide-react";
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { useEffect, type ReactNode } from "react";
 
-import { InvitationsPourMoi } from "@/components/regalica/InvitationsPourMoi";
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
-import { PackBanner } from "@/components/regalica/PackBanner";
+import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
+import { PackBanner } from "@/components/malica/PackBanner";
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/office")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Regalica Office" },
+      { title: "Mon espace — Malica Office" },
       {
         name: "description",
         content:
-          "Vos organisations, établissements et référentiel fiscal en vigueur dans Regalica Office.",
+          "Vos organisations, établissements et référentiel fiscal en vigueur dans Malica Office.",
       },
-      { property: "og:title", content: "Mon espace — Regalica Office" },
+      { property: "og:title", content: "Mon espace — Malica Office" },
       {
         property: "og:description",
         content: "Organisations, établissements et référentiel fiscal en vigueur.",

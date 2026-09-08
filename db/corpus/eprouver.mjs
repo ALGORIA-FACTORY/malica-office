@@ -11,7 +11,11 @@ const VERITES = {
   CTVA: [
     ["7", /taux de 19\s*%|19\s*%/i, "l'article 7 fixe le taux normal"],
     ["9", /d[ée]duct/i, "l'article 9 traite du droit a deduction"],
-    ["1", /champ d'application|soumises? [àa] la taxe/i, "l'article 1 ouvre le champ d'application"],
+    [
+      "1",
+      /champ d'application|soumises? [àa] la taxe/i,
+      "l'article 1 ouvre le champ d'application",
+    ],
     ["18", /obligation|facture|registre/i, "l'article 18 porte les obligations"],
   ],
   CIRPPIS: [
@@ -24,8 +28,16 @@ const VERITES = {
     ["20", /tarif|droit/i, "l'article 20 porte le tarif des droits"],
   ],
   CDPF: [
-    ["1", /pr[ée]sent code fixe|droits et obligations du contribuable/i, "l'article 1 ouvre le code"],
-    ["10", /administration fiscale/i, "l'article 10 porte sur les significations de l'administration"],
+    [
+      "1",
+      /pr[ée]sent code fixe|droits et obligations du contribuable/i,
+      "l'article 1 ouvre le code",
+    ],
+    [
+      "10",
+      /administration fiscale/i,
+      "l'article 10 porte sur les significations de l'administration",
+    ],
   ],
   CFL: [
     ["1", /taxe|collectivit[ée]s? locales?|immeuble/i, "l'article 1 ouvre le code"],
@@ -48,7 +60,9 @@ if (articles.length) {
   );
   const long = articles.reduce((a, b) => (b.texte.length > a.texte.length ? b : a));
   const moy = Math.round(articles.reduce((s, a) => s + a.texte.length, 0) / articles.length);
-  console.log(`  longueur moyenne ${moy}, plus long : art ${long.numero} (${long.texte.length} car.)`);
+  console.log(
+    `  longueur moyenne ${moy}, plus long : art ${long.numero} (${long.texte.length} car.)`,
+  );
 }
 
 const attendus = VERITES[corpus] ?? [];

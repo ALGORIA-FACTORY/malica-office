@@ -5,8 +5,8 @@
  *   node db/pilote/purger-pieces.mjs <tenant_id> --confirmer  efface
  *
  * Sur le serveur, dans le conteneur de l'API (il voit le disque des pièces) :
- *   docker compose --project-directory /srv/regalica/depot/infra --env-file /srv/regalica/.env \
- *     run --rm -e DATABASE_URL_ADMIN=postgres://postgres:<mdp>@postgres:5432/regalica \
+ *   docker compose --project-directory /srv/malica/depot/infra --env-file /srv/malica/.env \
+ *     run --rm -e DATABASE_URL_ADMIN=postgres://postgres:<mdp>@postgres:5432/malica \
  *     api node db/pilote/purger-pieces.mjs <tenant_id> --confirmer
  *
  * Ce qui part : les fichiers (photos, PDF, versions) du dossier sur le

@@ -54,7 +54,7 @@ e.section("Le cabinet et le dossier de l'épreuve");
 const moi = await e.connecter(COMPTE_DEV);
 const orgs = await e.rpc("identite", "listMyOrganizations");
 const cabinet =
-  orgs.find((o) => o.kind === "cabinet" && o.name === "CABINET REGALICA") ??
+  orgs.find((o) => o.kind === "cabinet" && o.name === "CABINET MALICA") ??
   orgs.find((o) => o.kind === "cabinet");
 e.verdict("le compte de développement a un cabinet", Boolean(cabinet), cabinet?.name ?? "");
 if (!cabinet) e.conclure();

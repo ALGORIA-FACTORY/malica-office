@@ -16,15 +16,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { debutDExercice, finDuMois } from "@regalica/socle/exercice";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ClientSummary } from "@regalica/socle/ports/repositories";
-import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
-import type { PnlV1 } from "@regalica/socle/contracts/pnl.v1";
-import type { TvaV1 } from "@regalica/socle/contracts/tva.v1";
-import { computePnl } from "@regalica/socle/engines/pnl/snapshot";
-import { computeTva } from "@regalica/socle/engines/tva/compute";
-import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
+import { debutDExercice, finDuMois } from "@malica/socle/exercice";
+import { office } from "@/verticals/malica-office/composition";
+import type { ClientSummary } from "@malica/socle/ports/repositories";
+import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import type { PnlV1 } from "@malica/socle/contracts/pnl.v1";
+import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
+import { computePnl } from "@malica/socle/engines/pnl/snapshot";
+import { computeTva } from "@malica/socle/engines/tva/compute";
+import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 export interface SyntheseClient {
   pack: { id: string; version: string; ratified: boolean } | null;

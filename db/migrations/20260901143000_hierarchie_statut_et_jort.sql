@@ -5,7 +5,7 @@
 -- La table legal.sources dit, pour chaque type de texte, ce qu'il vaut et a qui
 -- il est opposable : une note commune de la DGELF n'oblige que l'administration,
 -- ni le contribuable ni le juge, en vertu de l'article 54 de la LFC 2012. Cette
--- table etait juste, et debranchee : aucun article n'y renvoyait. Regalica
+-- table etait juste, et debranchee : aucun article n'y renvoyait. Malica
 -- pouvait donc citer un texte sans savoir s'il oblige le contribuable.
 --
 -- Trois manques, trois colonnes :

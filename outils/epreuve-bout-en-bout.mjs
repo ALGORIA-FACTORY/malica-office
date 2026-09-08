@@ -9,7 +9,7 @@
  * parlant au vrai serveur, avec la vraie base derrière.
  *
  * Cette épreuve-ci ne simule rien. Elle se connecte, dépose une pièce, la fait
- * lire, interroge Regalica, et vérifie ce que la base en a retenu — par le
+ * lire, interroge Malica, et vérifie ce que la base en a retenu — par le
  * MÊME chemin que le navigateur, relais compris.
  *
  *   node outils/epreuve-bout-en-bout.mjs                     (http://localhost:8080)
@@ -23,8 +23,8 @@
  * qui est ici est tout le reste, c'est-à-dire l'essentiel de ce qui casse.
  */
 const BASE = (process.argv[2] ?? "http://localhost:8080").replace(/\/+$/, "");
-const EMAIL = "dev@regalica.local";
-const MOTDEPASSE = "DeveloppeurRegalica2026!";
+const EMAIL = "dev@malica.local";
+const MOTDEPASSE = "DeveloppeurMalica2026!";
 
 /*
  * Le certificat de développement est signé par lui-même : l'épreuve doit

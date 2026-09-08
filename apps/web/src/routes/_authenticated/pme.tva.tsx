@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useAccueil } from "@/hooks/use-accueil";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/pme/tva")({
   head: () => ({
     meta: [
-      { title: "Votre TVA — Regalica Office" },
+      { title: "Votre TVA — Malica Office" },
       {
         name: "description",
         content: "Ce que vous encaissez, ce que vous récupérez, ce que vous reversez.",
       },
-      { property: "og:title", content: "Votre TVA — Regalica Office" },
+      { property: "og:title", content: "Votre TVA — Malica Office" },
       {
         property: "og:description",
         content: "Ce que vous encaissez, ce que vous récupérez, ce que vous reversez.",
@@ -178,7 +178,7 @@ function PmeTva() {
           {/* Ce qui manque encore, dit par elle — pas un avertissement système. */}
           {annee.avancement !== null && annee.avancement < 1 ? (
             <div className="mt-3.5 flex gap-3 border border-border bg-card p-3.5">
-              <RegalicaAvatar size={32} alt="Regalica" rond />
+              <MalicaAvatar size={32} alt="Malica" rond />
               <p className="text-[14px] leading-[1.5]">
                 {t("pme.tva.manque", {
                   pourcent: Math.round(annee.avancement * 100),

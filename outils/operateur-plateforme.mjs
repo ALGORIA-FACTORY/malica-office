@@ -1,7 +1,7 @@
 /**
  * Faire d'un compte un opérateur de plateforme — le développeur qui voit tout.
  *
- *   node outils/operateur-plateforme.mjs dev@regalica.local
+ *   node outils/operateur-plateforme.mjs dev@malica.local
  *
  * La base lit `app.platform_operators` dans chaque politique de lecture
  * (`app.is_platform()`), et le rail du cabinet le dit : « Développeur · accès

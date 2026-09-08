@@ -7,7 +7,7 @@
  * mesure sans jugement humain, parce que `legal.sondages` ne contient que des
  * questions dont l'article attendu est connu PAR CONSTRUCTION.
  *
- * Il ne mesure PAS si la reponse de Regalica est juste. Cela demande un expert
+ * Il ne mesure PAS si la reponse de Malica est juste. Cela demande un expert
  * qui signe, et c'est le role de `legal.banque_cas`.
  *
  * ====================================================== CE QU'IL COMPARE
@@ -36,7 +36,9 @@ import { encoder, modeleEnVigueur } from "./empreintes.mjs";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const DEPOT = join(ICI, "..", "..");
-const { default: pg } = await import(pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href);
+const { default: pg } = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href
+);
 
 function env(fichier) {
   const v = {};
@@ -45,7 +47,9 @@ function env(fichier) {
       const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(l);
       if (m) v[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
     }
-  } catch { /* absent : on leve plus bas */ }
+  } catch {
+    /* absent : on leve plus bas */
+  }
   return v;
 }
 const API = env("apps/api/.env");
@@ -165,7 +169,7 @@ async function main() {
     `select id, famille, question, corpus_attendu, numero_attendu
        from legal.sondages
       where ($1::text is null or famille = $1)
-      order by famille, md5(id::text || 'graine-regalica')
+      order by famille, md5(id::text || 'graine-malica')
       ${tout ? "" : "limit 100000"}`,
     [famille],
   );
@@ -177,7 +181,9 @@ async function main() {
   }
   const choisis = [...parFamille.values()].flat();
   console.log(`modele    ${modele}`);
-  console.log(`sondages  ${choisis.length} (${[...parFamille].map(([f, l]) => `${f} ${l.length}`).join(", ")})\n`);
+  console.log(
+    `sondages  ${choisis.length} (${[...parFamille].map(([f, l]) => `${f} ${l.length}`).join(", ")})\n`,
+  );
 
   const resultats = new Map();
   const LOT = 10;
@@ -206,13 +212,19 @@ async function main() {
       process.stdout.write(`  ${Math.min(i + LOT, choisis.length)}/${choisis.length} — ${s} s\r`);
     }
   }
-  console.log(`  ${choisis.length}/${choisis.length} — ${Math.round((Date.now() - debut) / 1000)} s\n`);
+  console.log(
+    `  ${choisis.length}/${choisis.length} — ${Math.round((Date.now() - debut) / 1000)} s\n`,
+  );
 
   console.log("l'article attendu est-il rendu, et a quel rang ?\n");
   console.log("famille    classement   rang 1    rang 5    rang 20");
   console.log("--------------------------------------------------");
   for (const [f, liste] of resultats) {
-    for (const [nom, cle] of [["sens  ", "rang_sens"], ["mots  ", "rang_mots"], ["fusion", "rang_fusion"]]) {
+    for (const [nom, cle] of [
+      ["sens  ", "rang_sens"],
+      ["mots  ", "rang_mots"],
+      ["fusion", "rang_fusion"],
+    ]) {
       const rangs = liste.map((r) => r[cle]);
       console.log(
         `${f.padEnd(10)} ${nom}   ` +

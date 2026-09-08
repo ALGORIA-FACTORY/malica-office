@@ -1,19 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { MarqueRg } from "@/components/regalica/office-ui";
-import { marquerBienvenueVue } from "@/components/regalica/bienvenue";
+import { usePme } from "@/components/malica/pme-context";
+import { MarqueRg } from "@/components/malica/office-ui";
+import { marquerBienvenueVue } from "@/components/malica/bienvenue";
 import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/pme/bienvenue")({
   head: () => ({
     meta: [
-      { title: "Je m'appelle Regalica — Regalica Office" },
+      { title: "Je m'appelle Malica — Malica Office" },
       {
         name: "description",
         content: "Vous photographiez. Je lis, je classe, je calcule. Votre comptable tranche.",
       },
-      { property: "og:title", content: "Je m'appelle Regalica — Regalica Office" },
+      { property: "og:title", content: "Je m'appelle Malica — Malica Office" },
       {
         property: "og:description",
         content: "Vous photographiez. Je lis, je classe, je calcule. Votre comptable tranche.",

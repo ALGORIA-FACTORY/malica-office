@@ -168,5 +168,5 @@ en passe 2 sans repayer un seul appel de modèle, dès que les corrections sont 
 
 Passe 1 : `bun apps/api/tests/real/ingest-read.ts <selection.tsv> <reads.json> <taxcodes.json>` depuis
 `apps/web`. Passe 2 : `bun tests/real/ingest-push.ts <reads.json> <tenants.json>`, avec
-`REGALICA_EMAIL`, `REGALICA_MOTDEPASSE` et `REGALICA_API_URL=http://127.0.0.1:3000` (l'API écoute
+`MALICA_EMAIL`, `MALICA_MOTDEPASSE` et `MALICA_API_URL=http://127.0.0.1:3000` (l'API écoute
 en IPv4 ; `localhost` se résout en `::1` sous Node et la connexion échoue).

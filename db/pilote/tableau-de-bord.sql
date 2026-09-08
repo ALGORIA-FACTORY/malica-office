@@ -3,8 +3,8 @@
 -- Se lance sur le serveur, en lecture, sous le superutilisateur (aucune
 -- écriture ici) :
 --
---   docker compose --project-directory /srv/regalica/depot/infra --env-file /srv/regalica/.env \
---     exec -T postgres psql -U postgres -d regalica -v semaines=6 -f - < db/pilote/tableau-de-bord.sql
+--   docker compose --project-directory /srv/malica/depot/infra --env-file /srv/malica/.env \
+--     exec -T postgres psql -U postgres -d malica -v semaines=6 -f - < db/pilote/tableau-de-bord.sql
 --
 -- Chaque bloc rend une ligne par semaine (lundi) sur les :semaines dernières
 -- semaines. Les seuils sont ceux de docs/pilote/revue-go-no-go.md.

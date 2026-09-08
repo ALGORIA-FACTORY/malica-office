@@ -1,6 +1,6 @@
 # Les notes communes de la DGELF
 
-*1er septembre 2026*
+_1er septembre 2026_
 
 ## Pourquoi elles comptent plus qu'il n'y paraît
 
@@ -49,12 +49,12 @@ pas seulement le citer.
 
 687 notes en file, de 2002 à 2026.
 
-| Étape | Résultat |
-|---|---|
-| Téléchargées | 687 / 687 |
-| Texte extrait directement du PDF | 585 |
-| PDF numérisés, passés à la reconnaissance optique | 102 |
-| **Exploitables au total** | **687 / 687** |
+| Étape                                             | Résultat      |
+| ------------------------------------------------- | ------------- |
+| Téléchargées                                      | 687 / 687     |
+| Texte extrait directement du PDF                  | 585           |
+| PDF numérisés, passés à la reconnaissance optique | 102           |
+| **Exploitables au total**                         | **687 / 687** |
 
 Les 102 notes numérisées — surtout les millésimes 2015 à 2023 — ont été
 rasterisées puis lues par Tesseract, en français ou en arabe selon l'édition.
@@ -72,7 +72,7 @@ Une recherche qui remonte une note commune affiche désormais :
   publication : BODI n° 2016/…, texte n° DGI 2016/… | texte incertain
 ```
 
-La ligne « opposable à : administration » est ce qui distingue Regalica d'un
+La ligne « opposable à : administration » est ce qui distingue Malica d'un
 moteur de recherche : elle dit, sans que l'utilisateur ait à le savoir, que ce
 texte engage le fisc et pas lui.
 

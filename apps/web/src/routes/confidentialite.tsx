@@ -13,11 +13,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/confidentialite")({
   head: () => ({
     meta: [
-      { title: "Politique de confidentialité — Regalica Office" },
+      { title: "Politique de confidentialité — Malica Office" },
       {
         name: "description",
         content:
-          "Ce que Regalica Office collecte, pourquoi, chez qui les données passent, et combien de temps elles restent.",
+          "Ce que Malica Office collecte, pourquoi, chez qui les données passent, et combien de temps elles restent.",
       },
     ],
   }),
@@ -33,7 +33,7 @@ function Confidentialite() {
       <header className="rule-b">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <Link to="/" className="text-sm font-semibold uppercase tracking-[0.2em]">
-            Regalica Office
+            Malica Office
           </Link>
           <span className="text-xs text-muted-foreground">Mise à jour : {MISE_A_JOUR}</span>
         </div>
@@ -43,7 +43,7 @@ function Confidentialite() {
         <article lang="fr" className="space-y-6 text-[15px] leading-relaxed">
           <h1 className="text-3xl font-semibold tracking-tight">Politique de confidentialité</h1>
           <p>
-            Regalica Office est une application de comptabilité pour les petites et moyennes
+            Malica Office est une application de comptabilité pour les petites et moyennes
             entreprises, tenue avec leur cabinet d'expertise comptable. Elle est éditée par{" "}
             <strong>Algoria Factory</strong> (Tunisie). Cette page dit ce que l'application
             collecte, pourquoi, chez qui les données passent, et combien de temps elles restent.
@@ -61,8 +61,8 @@ function Confidentialite() {
                 émetteur, lignes) et les écritures comptables qui en découlent.
               </li>
               <li>
-                <strong>Vos échanges</strong> : les questions posées à Regalica sur votre dossier,
-                les réponses, et les messages avec votre cabinet.
+                <strong>Vos échanges</strong> : les questions posées à Malica sur votre dossier, les
+                réponses, et les messages avec votre cabinet.
               </li>
               <li>
                 <strong>Le fonctionnement</strong> : les signalements que vous envoyez depuis les
@@ -145,7 +145,7 @@ function Confidentialite() {
 
           <Section id="suppression" titre="Demander la suppression de vos données">
             <p>
-              Pour demander la suppression de vos données dans Regalica Office, éditée par Algoria
+              Pour demander la suppression de vos données dans Malica Office, éditée par Algoria
               Factory :
             </p>
             <ol className="list-decimal space-y-2 ps-6">
@@ -167,7 +167,7 @@ function Confidentialite() {
             </ol>
             <p>
               <strong>Ce qui est supprimé</strong> : votre compte, votre adresse e-mail, votre nom
-              affiché, vos échanges avec Regalica et votre cabinet, vos signalements et les rapports
+              affiché, vos échanges avec Malica et votre cabinet, vos signalements et les rapports
               de plantage qui vous concernent, ainsi que les photos en attente sur votre appareil
               (effacées à la désinstallation).
             </p>
@@ -185,7 +185,7 @@ function Confidentialite() {
         <article lang="ar" dir="rtl" className="space-y-6 text-[15px] leading-relaxed">
           <h1 className="text-3xl font-semibold tracking-tight">سياسة الخصوصية</h1>
           <p>
-            ريغاليكا أوفيس تطبيق محاسبة للمؤسسات الصغيرة والمتوسطة، يُمسَك مع مكتب الخبرة المحاسبية.
+            ماليكا أوفيس تطبيق محاسبة للمؤسسات الصغيرة والمتوسطة، يُمسَك مع مكتب الخبرة المحاسبية.
             تنشره <strong>Algoria Factory</strong> (تونس). تبيّن هذه الصفحة ما يجمعه التطبيق،
             ولماذا، وعند من تمرّ البيانات، وكم تبقى.
           </p>
@@ -202,7 +202,7 @@ function Confidentialite() {
                 عنها.
               </li>
               <li>
-                <strong>مراسلاتك</strong>: أسئلتك لريغاليكا عن ملفك، والأجوبة، والرسائل مع مكتبك.
+                <strong>مراسلاتك</strong>: أسئلتك لماليكا عن ملفك، والأجوبة، والرسائل مع مكتبك.
               </li>
               <li>
                 <strong>التشغيل</strong>: البلاغات التي ترسلها من الإعدادات (الشاشة، الإصدار،
@@ -273,7 +273,7 @@ function Confidentialite() {
           </Section>
 
           <Section id="حذف" titre="طلب حذف بياناتك">
-            <p>لطلب حذف بياناتك من ريغاليكا أوفيس، الذي تنشره Algoria Factory:</p>
+            <p>لطلب حذف بياناتك من ماليكا أوفيس، الذي تنشره Algoria Factory:</p>
             <ol className="list-decimal space-y-2 ps-6">
               <li>
                 راسل{" "}
@@ -292,7 +292,7 @@ function Confidentialite() {
               </li>
             </ol>
             <p>
-              <strong>ما يُحذف</strong>: حسابك، بريدك الإلكتروني، اسمك المعروض، مراسلاتك مع ريغاليكا
+              <strong>ما يُحذف</strong>: حسابك، بريدك الإلكتروني، اسمك المعروض، مراسلاتك مع ماليكا
               ومكتبك، بلاغاتك وتقارير الأعطال المتعلقة بك، والصور المنتظرة على جهازك (تُمحى عند
               إزالة التطبيق).
             </p>
@@ -307,7 +307,7 @@ function Confidentialite() {
 
       <footer className="rule-t">
         <div className="mx-auto max-w-3xl px-6 py-6 text-xs text-muted-foreground">
-          Regalica Office · Algoria Factory · {CONTACT}
+          Malica Office · Algoria Factory · {CONTACT}
         </div>
       </footer>
     </div>

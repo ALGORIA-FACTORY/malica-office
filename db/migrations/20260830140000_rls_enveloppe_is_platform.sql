@@ -5,7 +5,7 @@
 -- l'exécute pour CHAQUE ligne examinée, sur les 41 tables passées sous le
 -- helper.
 --
--- Mesuré sur regalica_local, 97 000 citations, un locataire qui en possède
+-- Mesuré sur malica_local, 97 000 citations, un locataire qui en possède
 -- 1 000 :
 --
 --     Seq Scan on citations  (rows=1000, Rows Removed by Filter: 96000)

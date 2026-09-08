@@ -18,7 +18,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 // Plus aucune fonction serveur ici : ce qui faisait parler un modèle vit dans
-// l'API, sous `/regalica`. L'intergiciel CSRF que Start réservait aux fonctions
+// l'API, sous `/malica`. L'intergiciel CSRF que Start réservait aux fonctions
 // serveur n'a donc plus rien à protéger, et ne figure plus.
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware],

@@ -46,7 +46,7 @@ begin
   -- Le seul passage autorisé : la cascade d'une suppression de pièce que
   -- `capture_piece_supprimer` a validée, et pour CETTE pièce précisément.
   if tg_op = 'DELETE'
-     and coalesce(current_setting('regalica.piece_effacable', true), '') = old.piece_id::text
+     and coalesce(current_setting('malica.piece_effacable', true), '') = old.piece_id::text
   then
     return old;
   end if;
@@ -143,9 +143,9 @@ begin
 
   -- Tous les contrôles sont passés : la pièce n'a servi à rien. On lève
   -- l'immuabilité pour ELLE SEULE, et le temps de cette transaction.
-  perform set_config('regalica.piece_effacable', p_piece::text, true);
+  perform set_config('malica.piece_effacable', p_piece::text, true);
   delete from capture.pieces where id = p_piece;
-  perform set_config('regalica.piece_effacable', '', true);
+  perform set_config('malica.piece_effacable', '', true);
 
   return true;
 end;

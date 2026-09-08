@@ -1,7 +1,7 @@
 -- Audit des défauts, en lecture seule. Ne liste QUE les anomalies :
 -- un résultat vide est un résultat correct.
 --
---   psql -U postgres -h localhost -d regalica_local -f db/verification/audit_defauts.sql
+--   psql -U postgres -h localhost -d malica_local -f db/verification/audit_defauts.sql
 
 \pset pager off
 \pset footer off

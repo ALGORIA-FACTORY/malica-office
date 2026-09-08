@@ -27,7 +27,7 @@
 --
 -- L'en-tete n'entre PAS dans `legal.chunks.texte` : le texte servi reste
 -- l'extrait exact de la version, mot pour mot. L'en-tete est une aide a la
--- recherche, rangee a part, et Regalica ne la cite jamais.
+-- recherche, rangee a part, et Malica ne la cite jamais.
 
 begin;
 

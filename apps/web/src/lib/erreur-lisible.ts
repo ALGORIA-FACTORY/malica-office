@@ -9,7 +9,7 @@
  *
  * Puis, une autre fois, un tableau JSON de validation. Ces textes viennent
  * d'un moteur ou d'une bibliothèque ; ils ne veulent rien dire pour un
- * dirigeant de PME, et ils contredisent une règle du produit : Regalica ne
+ * dirigeant de PME, et ils contredisent une règle du produit : Malica ne
  * montre aucun détail technique.
  *
  * Quatorze écrans affichaient `e.message` tel quel.
@@ -35,7 +35,7 @@
  * Rien n'est donc perdu : ce que l'utilisateur ne voit plus, le poste le
  * reçoit avec sa pile d'appels.
  */
-import { MESSAGES } from "@regalica/socle/messages";
+import { MESSAGES } from "@malica/socle/messages";
 
 import { localeRangee } from "@/i18n";
 

@@ -12,7 +12,7 @@
  *
  * ================================================================ LA RÈGLE
  *
- *   1. `X-Regalica-Client` sur chaque requête : qui parle, en quelle version.
+ *   1. `X-Malica-Client` sur chaque requête : qui parle, en quelle version.
  *   2. Natif : `Authorization: Bearer` et pas de cookie. Web : le cookie, et
  *      rien d'autre — la page ne voit jamais un jeton.
  *   3. `fetch` rejette → ErreurReseau. Hors ligne si le navigateur le dit,
@@ -84,7 +84,7 @@ export function creerTransport(deps: DependancesTransport): Transport {
 
   async function envoyer(chemin: string, init: RequestInit): Promise<Response> {
     const entetes = new Headers(init.headers ?? {});
-    entetes.set("X-Regalica-Client", deps.versionClient);
+    entetes.set("X-Malica-Client", deps.versionClient);
     if (deps.natif && jetonAcces) entetes.set("Authorization", `Bearer ${jetonAcces}`);
     try {
       return await appelerReseau(`${deps.base}${chemin}`, {

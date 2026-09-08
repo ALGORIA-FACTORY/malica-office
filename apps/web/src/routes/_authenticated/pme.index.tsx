@@ -1,13 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
-import { bienvenueDejaVue } from "@/components/regalica/bienvenue";
-import { EntetePme } from "@/components/regalica/entete-pme";
-import { PastilleAEnvoyer } from "@/components/regalica/file-locale";
-import { MandatsProposes } from "@/components/regalica/MandatsProposes";
-import { usePanneauRegalica } from "@/components/regalica/panneau-regalica";
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaChat } from "@/components/regalica/RegalicaChat";
-import { MarqueRg, RegalicaAvatar } from "@/components/regalica/office-ui";
+import { bienvenueDejaVue } from "@/components/malica/bienvenue";
+import { EntetePme } from "@/components/malica/entete-pme";
+import { PastilleAEnvoyer } from "@/components/malica/file-locale";
+import { MandatsProposes } from "@/components/malica/MandatsProposes";
+import { usePanneauMalica } from "@/components/malica/panneau-malica";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaChat } from "@/components/malica/MalicaChat";
+import { MarqueRg, MalicaAvatar } from "@/components/malica/office-ui";
 import { useAccueil, type MoisDeTva } from "@/hooks/use-accueil";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useQuery } from "@tanstack/react-query";
@@ -16,22 +16,22 @@ import { useEffect } from "react";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import { montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Regalica Office" },
+      { title: "Mon espace — Malica Office" },
       {
         name: "description",
-        content: "Ce que Regalica a préparé : la TVA récupérée, le résultat, ce qui attend.",
+        content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
       },
-      { property: "og:title", content: "Mon espace — Regalica Office" },
+      { property: "og:title", content: "Mon espace — Malica Office" },
       {
         property: "og:description",
-        content: "Ce que Regalica a préparé : la TVA récupérée, le résultat, ce qui attend.",
+        content: "Ce que Malica a préparé : la TVA récupérée, le résultat, ce qui attend.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/pme/")({
  *      l'invariant « élévation par bordures ».
  *   3. Un seul bloc inversé : l'inversion EST la hiérarchie.
  *   4. Le mono devient la voix des chiffres, à l'échelle éditoriale.
- *   5. Regalica parle humain — plus un mot de vocabulaire comptable.
+ *   5. Malica parle humain — plus un mot de vocabulaire comptable.
  *
  * Le cinquième est le plus exigeant, et il a coûté des clés de traduction :
  * « 3 pièce(s) attendent votre confirmation » est devenu « il me manque trois
@@ -70,8 +70,8 @@ export const Route = createFileRoute("/_authenticated/pme/")({
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
-  const regalica = usePanneauRegalica("pme");
-  useSuperposition(regalica.ouvert, regalica.fermer);
+  const malica = usePanneauMalica("pme");
+  useSuperposition(malica.ouvert, malica.fermer);
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
@@ -163,17 +163,15 @@ function PmeHome() {
            */}
           <button
             type="button"
-            onClick={regalica.ouvert ? regalica.fermer : regalica.ouvrir}
-            aria-label={
-              regalica.ouvert ? t("regalica.panneau.fermer") : t("regalica.panneau.ouvrir")
-            }
+            onClick={malica.ouvert ? malica.fermer : malica.ouvrir}
+            aria-label={malica.ouvert ? t("malica.panneau.fermer") : t("malica.panneau.ouvrir")}
             className="relative grid h-[52px] w-[52px] flex-none place-items-center"
           >
             <span
               aria-hidden
               className="rg-wave absolute h-[52px] w-[52px] rounded-full border border-marigold"
             />
-            <RegalicaAvatar size={52} alt="Regalica" rond />
+            <MalicaAvatar size={52} alt="Malica" rond />
             <span
               aria-hidden
               className="absolute -end-[7px] -bottom-[5px] grid h-[25px] w-[25px] place-items-center rounded-full border-2 border-background bg-marigold"
@@ -353,10 +351,10 @@ function PmeHome() {
           </Carte>
           <button
             type="button"
-            onClick={regalica.ouvrir}
+            onClick={malica.ouvrir}
             className="flex min-h-[86px] flex-col justify-between gap-2.5 border border-border p-3 text-start hover:bg-accent"
           >
-            <RegalicaAvatar size={26} alt="" rond />
+            <MalicaAvatar size={26} alt="" rond />
             <span>
               <span className="block text-[14.5px] font-medium">{t("pme.home.demander")}</span>
               <span className="mt-0.5 block text-[11.5px] text-text-2">
@@ -381,7 +379,7 @@ function PmeHome() {
       ) : null}
 
       {/*
-       * Le fil de Regalica passe PAR-DESSUS.
+       * Le fil de Malica passe PAR-DESSUS.
        *
        * Il était une section de plus dans le flux : l'ouvrir allongeait la
        * page et forçait à faire défiler l'accueil, ce que la maquette
@@ -389,24 +387,24 @@ function PmeHome() {
        * le rend intact — c'est l'écran « converser » de la maquette, appelé
        * depuis son visage.
        */}
-      {regalica.ouvert ? (
+      {malica.ouvert ? (
         <div className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
           <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
-            <RegalicaAvatar size={34} alt="Regalica" rond />
+            <MalicaAvatar size={34} alt="Malica" rond />
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
-              {t("regalica.chat.her")}
+              {t("malica.chat.her")}
             </p>
             <button
               type="button"
-              onClick={regalica.fermer}
-              aria-label={t("regalica.panneau.fermer")}
+              onClick={malica.fermer}
+              aria-label={t("malica.panneau.fermer")}
               className="ms-auto border border-border px-2.5 py-1 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               ×
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-[22px] py-4">
-            <RegalicaChat tenantId={pme.tenantId} />
+            <MalicaChat tenantId={pme.tenantId} />
           </div>
         </div>
       ) : null}

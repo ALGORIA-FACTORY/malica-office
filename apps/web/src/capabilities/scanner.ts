@@ -817,7 +817,7 @@ export function buildImagesPdf(pages: readonly PdfPageImage[], title: string): B
 
   startObject();
   push(
-    `${infoObj} 0 obj\n<< /Title (${pdfEscape(title)}) /Producer (Regalica Office) ` +
+    `${infoObj} 0 obj\n<< /Title (${pdfEscape(title)}) /Producer (Malica Office) ` +
       `/CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14)}Z) >>\nendobj\n`,
   );
 

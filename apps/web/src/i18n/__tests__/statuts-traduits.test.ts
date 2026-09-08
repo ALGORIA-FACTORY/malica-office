@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MESSAGES, LOCALES } from "@regalica/socle/messages";
+import { MESSAGES, LOCALES } from "@malica/socle/messages";
 
 /**
  * ============================================== LE DÉFAUT QUE CECI VERROUILLE

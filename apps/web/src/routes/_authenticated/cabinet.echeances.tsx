@@ -16,27 +16,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { ecrireDossierCourant, useDossierCourant } from "@/components/regalica/dossier-courant";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@regalica/socle/exercice";
+import { finDuMois } from "@malica/socle/exercice";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { Echeance } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { Echeance } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/echeances")({
   head: () => ({
     meta: [
-      { title: "Échéances du cabinet — Regalica Office" },
+      { title: "Échéances du cabinet — Malica Office" },
       {
         name: "description",
         content:
           "Les échéances déclaratives de tous les dossiers mandatés, dérivées du pack de juridiction en vigueur.",
       },
-      { property: "og:title", content: "Échéances du cabinet — Regalica Office" },
+      { property: "og:title", content: "Échéances du cabinet — Malica Office" },
       {
         property: "og:description",
         content:
@@ -172,10 +172,10 @@ function CabinetEcheances() {
   // Ce qui a échoué se dit ; une requête muette laisserait croire à un calendrier vide.
   const echec = [clients, derivation, echeances].find((q) => q.isError)?.error ?? null;
 
-  useRegalicaPanel(
-    <RegalicaNote kicker={t("cab.echeances.panel.kicker")}>
+  useMalicaPanel(
+    <MalicaNote kicker={t("cab.echeances.panel.kicker")}>
       {t("cab.echeances.panel", { late: enRetard.length, week: sousSept.length })}
-    </RegalicaNote>,
+    </MalicaNote>,
     [enRetard.length, sousSept.length, locale],
   );
 

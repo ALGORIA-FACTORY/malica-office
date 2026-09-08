@@ -19,33 +19,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionTitle,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
 import { etatDeCharge, santeDuMandat, tauxDeRetour } from "@/lib/pilotage";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ClientStats, ClientSummary } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { ClientStats, ClientSummary } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/pilotage")({
   head: () => ({
     meta: [
-      { title: "Pilotage — cabinet — Regalica Office" },
+      { title: "Pilotage — cabinet — Malica Office" },
       {
         name: "description",
         content:
           "La charge et le rendement du cabinet : qui porte quoi, ce que le Socle produit, où la file s'accumule.",
       },
-      { property: "og:title", content: "Pilotage — cabinet — Regalica Office" },
+      { property: "og:title", content: "Pilotage — cabinet — Malica Office" },
       {
         property: "og:description",
         content: "Charge par collaborateur, affectations, statistiques du cabinet.",
@@ -92,7 +92,7 @@ function CabinetPilotage() {
     queryFn: () => office().supervision.statistiques(org.id, locale),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.pil.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.pil.panel")}</MalicaNote>, [locale]);
 
   const statsDe = useMemo(
     () => new Map((stats.data ?? []).map((s) => [s.tenantId, s])),
@@ -148,10 +148,10 @@ function CabinetPilotage() {
   const [briefing, setBriefing] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [fait, setFait] = useState(false);
-  // Regalica rédige le briefing depuis les faits du dossier ; l'expert relit et complète.
+  // Malica rédige le briefing depuis les faits du dossier ; l'expert relit et complète.
   const redaction = useMutation({
     mutationFn: () =>
-      office().regalica.redigerLeBriefing({
+      office().malica.redigerLeBriefing({
         cabinetId: org.id,
         clientId,
         collaborateur: emailDe.get(userId) ?? "",

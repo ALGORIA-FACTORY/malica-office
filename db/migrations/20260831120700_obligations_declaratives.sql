@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Calendrier des obligations déclaratives, Tunisie
+--  Malica Office — Calendrier des obligations déclaratives, Tunisie
 --
 --  LA DÉCOUVERTE QUI JUSTIFIE CE FICHIER : l'échéance ne dépend pas seulement de la forme
 --  juridique, elle dépend du MODE DE DÉPÔT. Une personne morale a 28 jours, la même

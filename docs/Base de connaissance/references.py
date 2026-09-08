@@ -14,7 +14,7 @@ Un modèle sert à COMPRENDRE ce qu'un texte veut dire. Il ne sert pas à repér
 import os, re, sys, time
 import psycopg2, psycopg2.extras
 
-DSN = os.environ.get("REGALICA_DSN", "postgres:///regalica_paquet")
+DSN = os.environ.get("MALICA_DSN", "postgres:///malica_paquet")
 
 CORPUS_ALIAS = [
  (r"(?:code|مجلة)[^.;\n]{0,60}?(?:imp[oô]t sur le revenu|IRPP|الضريبة على دخل)", "CIRPPIS"),

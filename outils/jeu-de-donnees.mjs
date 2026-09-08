@@ -64,12 +64,31 @@ const MOT_DE_PASSE = "JeuDeDonnees2026!";
 const JURIDICTION = "TN";
 
 /* ------------------------------------------------------------ les identités */
-const LEILA = { email: "leila.bensalah@bensalah.tn", motDePasse: MOT_DE_PASSE, nom: "Leïla Ben Salah" };
+const LEILA = {
+  email: "leila.bensalah@bensalah.tn",
+  motDePasse: MOT_DE_PASSE,
+  nom: "Leïla Ben Salah",
+};
 const CABINET = { name: "Cabinet Ben Salah", legalId: "1234567/A/M/000" };
 const EQUIPE = [
-  { email: "amine.bouzid@bensalah.tn", motDePasse: MOT_DE_PASSE, nom: "Amine Bouzid", role: "collaborateur" },
-  { email: "nour.khelifi@bensalah.tn", motDePasse: MOT_DE_PASSE, nom: "Nour Khelifi", role: "collaborateur" },
-  { email: "sana.trabelsi@bensalah.tn", motDePasse: MOT_DE_PASSE, nom: "Sana Trabelsi", role: "assistant" },
+  {
+    email: "amine.bouzid@bensalah.tn",
+    motDePasse: MOT_DE_PASSE,
+    nom: "Amine Bouzid",
+    role: "collaborateur",
+  },
+  {
+    email: "nour.khelifi@bensalah.tn",
+    motDePasse: MOT_DE_PASSE,
+    nom: "Nour Khelifi",
+    role: "collaborateur",
+  },
+  {
+    email: "sana.trabelsi@bensalah.tn",
+    motDePasse: MOT_DE_PASSE,
+    nom: "Sana Trabelsi",
+    role: "assistant",
+  },
 ];
 
 /**
@@ -78,41 +97,113 @@ const EQUIPE = [
  */
 const PMES = {
   sotumag: {
-    name: "SOTUMAG SARL", legalId: "7654321/B/M/000", email: "contact@sotumag.tn", nom: "Direction SOTUMAG",
+    name: "SOTUMAG SARL",
+    legalId: "7654321/B/M/000",
+    email: "contact@sotumag.tn",
+    nom: "Direction SOTUMAG",
     validationMode: "mandate",
-    fiche: { forme: "morale", mode: "electronique", imposition: "reel", tva: "assujetti", secteur: "commerce de gros", cloture: "12-31", debut: "2015-04-01" },
-    mandat: true, affecte: "amine.bouzid@bensalah.tn",
+    fiche: {
+      forme: "morale",
+      mode: "electronique",
+      imposition: "reel",
+      tva: "assujetti",
+      secteur: "commerce de gros",
+      cloture: "12-31",
+      debut: "2015-04-01",
+    },
+    mandat: true,
+    affecte: "amine.bouzid@bensalah.tn",
   },
   medina: {
-    name: "Medina Textile", legalId: "2345678/C/M/000", email: "contact@medina-textile.tn", nom: "Direction Medina Textile",
+    name: "Medina Textile",
+    legalId: "2345678/C/M/000",
+    email: "contact@medina-textile.tn",
+    nom: "Direction Medina Textile",
     validationMode: "mandate",
-    fiche: { forme: "morale", mode: "papier", imposition: "reel", tva: "assujetti", secteur: "industrie et transformation", cloture: "12-31", debut: "2009-09-01" },
-    mandat: true, affecte: "amine.bouzid@bensalah.tn",
+    fiche: {
+      forme: "morale",
+      mode: "papier",
+      imposition: "reel",
+      tva: "assujetti",
+      secteur: "industrie et transformation",
+      cloture: "12-31",
+      debut: "2009-09-01",
+    },
+    mandat: true,
+    affecte: "amine.bouzid@bensalah.tn",
   },
   cleopatre: {
-    name: "Cléopâtre Voyages", legalId: "3456789/D/M/000", email: "contact@cleopatre-voyages.tn", nom: "Direction Cléopâtre Voyages",
+    name: "Cléopâtre Voyages",
+    legalId: "3456789/D/M/000",
+    email: "contact@cleopatre-voyages.tn",
+    nom: "Direction Cléopâtre Voyages",
     validationMode: "mandate",
-    fiche: { forme: "morale", mode: "electronique", imposition: "reel", tva: "assujetti", secteur: "tourisme et hôtellerie", cloture: "06-30", debut: "2018-01-15" },
-    mandat: true, affecte: "nour.khelifi@bensalah.tn",
+    fiche: {
+      forme: "morale",
+      mode: "electronique",
+      imposition: "reel",
+      tva: "assujetti",
+      secteur: "tourisme et hôtellerie",
+      cloture: "06-30",
+      debut: "2018-01-15",
+    },
+    mandat: true,
+    affecte: "nour.khelifi@bensalah.tn",
   },
   tunisfresh: {
-    name: "TunisFresh SA", legalId: "4567890/E/M/000", email: "contact@tunisfresh.tn", nom: "Direction TunisFresh",
+    name: "TunisFresh SA",
+    legalId: "4567890/E/M/000",
+    email: "contact@tunisfresh.tn",
+    nom: "Direction TunisFresh",
     validationMode: "autonome",
-    fiche: { forme: "morale", mode: "electronique", imposition: "reel", tva: "assujetti", secteur: "commerce et distribution", cloture: "12-31", debut: "2021-06-01" },
-    mandat: true, affecte: null,
+    fiche: {
+      forme: "morale",
+      mode: "electronique",
+      imposition: "reel",
+      tva: "assujetti",
+      secteur: "commerce et distribution",
+      cloture: "12-31",
+      debut: "2021-06-01",
+    },
+    mandat: true,
+    affecte: null,
   },
   zitouna: {
-    name: "Atelier Zitouna", legalId: "5678901/F/P/000", email: "contact@atelier-zitouna.tn", nom: "Atelier Zitouna",
+    name: "Atelier Zitouna",
+    legalId: "5678901/F/P/000",
+    email: "contact@atelier-zitouna.tn",
+    nom: "Atelier Zitouna",
     validationMode: "mandate",
     // Les codes préférés ; remplacés par ce que le référentiel connaît.
-    fiche: { forme: "physique", mode: "papier", imposition: "forfaitaire", tva: "non_assujetti", secteur: "artisanat", cloture: "12-31", debut: "2012-03-01" },
-    mandat: true, affecte: "sana.trabelsi@bensalah.tn",
+    fiche: {
+      forme: "physique",
+      mode: "papier",
+      imposition: "forfaitaire",
+      tva: "non_assujetti",
+      secteur: "artisanat",
+      cloture: "12-31",
+      debut: "2012-03-01",
+    },
+    mandat: true,
+    affecte: "sana.trabelsi@bensalah.tn",
   },
   nabeul: {
-    name: "Nabeul Céramique", legalId: "6789012/G/M/000", email: "contact@nabeul-ceramique.tn", nom: "Direction Nabeul Céramique",
+    name: "Nabeul Céramique",
+    legalId: "6789012/G/M/000",
+    email: "contact@nabeul-ceramique.tn",
+    nom: "Direction Nabeul Céramique",
     validationMode: "mandate",
-    fiche: { forme: null, mode: null, imposition: "reel", tva: "assujetti", secteur: "artisanat", cloture: "12-31", debut: "2016-10-01" },
-    mandat: false, affecte: null,
+    fiche: {
+      forme: null,
+      mode: null,
+      imposition: "reel",
+      tva: "assujetti",
+      secteur: "artisanat",
+      cloture: "12-31",
+      debut: "2016-10-01",
+    },
+    mandat: false,
+    affecte: null,
   },
 };
 
@@ -182,14 +273,22 @@ function pdf(titre, lignes) {
     offsets[n] = position;
     ajouter(`${n} 0 obj\n${corps}\nendobj\n`);
   };
-  const ascii = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7e]/g, "").replace(/[()\\]/g, "");
+  const ascii = (s) =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^\x20-\x7e]/g, "")
+      .replace(/[()\\]/g, "");
   const flux =
     `BT /F1 14 Tf 60 780 Td (${ascii(titre)}) Tj ET\n` +
     lignes.map((l, i) => `BT /F1 10 Tf 60 ${740 - i * 18} Td (${ascii(l)}) Tj ET`).join("\n");
   ajouter("%PDF-1.4\n");
   objet(1, "<< /Type /Catalog /Pages 2 0 R >>");
   objet(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
-  objet(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>");
+  objet(
+    3,
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+  );
   objet(4, `<< /Length ${enc.encode(flux).length} >>\nstream\n${flux}\nendstream`);
   objet(5, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   const debutXref = position;
@@ -207,7 +306,10 @@ function pdf(titre, lignes) {
 }
 
 /* ------------------------------------------------------------ les aides */
-const message = (err) => String(err?.message ?? err).replace(/\s+/g, " ").slice(0, 160);
+const message = (err) =>
+  String(err?.message ?? err)
+    .replace(/\s+/g, " ")
+    .slice(0, 160);
 
 /** Une étape qui peut échouer sans arrêter le jeu : l'échec devient un verdict. */
 async function etape(libelle, fn) {
@@ -244,19 +346,35 @@ async function referentiel() {
 e.section("Le cabinet Ben Salah");
 await e.inscrireOuConnecter(LEILA, LEILA.nom);
 const ref = await referentiel();
-e.verdict("le pack de la juridiction est en vigueur", Boolean(ref.pack.id), `${ref.pack.jurisdiction} ${ref.pack.version}`);
+e.verdict(
+  "le pack de la juridiction est en vigueur",
+  Boolean(ref.pack.id),
+  `${ref.pack.jurisdiction} ${ref.pack.version}`,
+);
 
-let cabinet = (await mesOrganisations()).find((o) => o.kind === "cabinet" && o.legalId === CABINET.legalId);
+let cabinet = (await mesOrganisations()).find(
+  (o) => o.kind === "cabinet" && o.legalId === CABINET.legalId,
+);
 if (!cabinet) {
   const id = await rpc("identite", "createOrganization", [
-    { kind: "cabinet", name: CABINET.name, legalId: CABINET.legalId, jurisdiction: JURIDICTION, currency: ref.pack.currency },
+    {
+      kind: "cabinet",
+      name: CABINET.name,
+      legalId: CABINET.legalId,
+      jurisdiction: JURIDICTION,
+      currency: ref.pack.currency,
+    },
   ]);
   cabinet = (await mesOrganisations()).find((o) => o.id === id);
   e.verdict("le cabinet est créé", Boolean(cabinet), cabinet?.name ?? "");
 } else {
   e.verdict("le cabinet existe déjà", true, cabinet.name);
 }
-e.verdict("la créatrice est expert du cabinet", cabinet?.role === "expert", cabinet?.role ?? "aucun rôle");
+e.verdict(
+  "la créatrice est expert du cabinet",
+  cabinet?.role === "expert",
+  cabinet?.role ?? "aucun rôle",
+);
 if (!cabinet) e.conclure();
 
 /* ============================================================ 2. l'équipe */
@@ -267,14 +385,25 @@ for (const personne of EQUIPE) {
   const dejaMembre = membres.some((m) => m.email === personne.email);
   if (!dejaMembre) {
     const invitation = await etape(`invitation de ${personne.nom}`, () =>
-      rpc("collab", "inviter", [{ tenantId: cabinet.id, email: personne.email, role: personne.role }]),
+      rpc("collab", "inviter", [
+        { tenantId: cabinet.id, email: personne.email, role: personne.role },
+      ]),
     );
-    if (invitation) e.verdict(`${personne.nom} est invité(e) comme ${personne.role}`, Boolean(invitation.id), invitation.deja ? "invitation déjà en attente" : "nouvelle invitation");
+    if (invitation)
+      e.verdict(
+        `${personne.nom} est invité(e) comme ${personne.role}`,
+        Boolean(invitation.id),
+        invitation.deja ? "invitation déjà en attente" : "nouvelle invitation",
+      );
   }
   await e.inscrireOuConnecter(personne, personne.nom);
   const siennes = await mesOrganisations();
   if (siennes.some((o) => o.id === cabinet.id)) {
-    e.verdict(`${personne.nom} est déjà membre du cabinet`, true, siennes.find((o) => o.id === cabinet.id).role);
+    e.verdict(
+      `${personne.nom} est déjà membre du cabinet`,
+      true,
+      siennes.find((o) => o.id === cabinet.id).role,
+    );
     continue;
   }
   const pourMoi = await rpc("collab", "invitationsPourMoi");
@@ -283,8 +412,15 @@ for (const personne of EQUIPE) {
     e.verdict(`${personne.nom} voit son invitation`, false, "aucune invitation pour ce cabinet");
     continue;
   }
-  const reponse = await etape(`${personne.nom} rejoint le cabinet`, () => rpc("collab", "repondreAInvitation", [mienne.id, true]));
-  if (reponse) e.verdict(`${personne.nom} rejoint le cabinet comme ${personne.role}`, reponse.rejoint === true && reponse.role === personne.role, reponse.role);
+  const reponse = await etape(`${personne.nom} rejoint le cabinet`, () =>
+    rpc("collab", "repondreAInvitation", [mienne.id, true]),
+  );
+  if (reponse)
+    e.verdict(
+      `${personne.nom} rejoint le cabinet comme ${personne.role}`,
+      reponse.rejoint === true && reponse.role === personne.role,
+      reponse.role,
+    );
 }
 
 /* ============================================================ 3. les PME */
@@ -293,7 +429,8 @@ const codeRegime = (axe, prefere, repli) => {
   const codes = ref.regimes.filter((r) => r.axe === axe).map((r) => r.code);
   return codes.includes(prefere) ? prefere : repli;
 };
-const codeForme = (axe, code) => (code && ref.formes.some((f) => f.axe === axe && f.code === code) ? code : null);
+const codeForme = (axe, code) =>
+  code && ref.formes.some((f) => f.axe === axe && f.code === code) ? code : null;
 
 for (const [cle, pme] of Object.entries(PMES)) {
   const compte = { email: pme.email, motDePasse: MOT_DE_PASSE };
@@ -302,7 +439,15 @@ for (const [cle, pme] of Object.entries(PMES)) {
   if (!org) {
     const id = await etape(`création de ${pme.name}`, () =>
       rpc("identite", "createOrganization", [
-        { kind: "pme", name: pme.name, legalId: pme.legalId, jurisdiction: JURIDICTION, currency: ref.pack.currency, validationMode: pme.validationMode, defaultEntityName: "Siège" },
+        {
+          kind: "pme",
+          name: pme.name,
+          legalId: pme.legalId,
+          jurisdiction: JURIDICTION,
+          currency: ref.pack.currency,
+          validationMode: pme.validationMode,
+          defaultEntityName: "Siège",
+        },
       ]),
     );
     org = (await mesOrganisations()).find((o) => o.id === id);
@@ -316,7 +461,11 @@ for (const [cle, pme] of Object.entries(PMES)) {
 
   const fiche = await rpc("identite", "ficheCourante", [org.id]);
   if (fiche) {
-    e.verdict(`la fiche de ${pme.name} existe déjà`, true, `${fiche.regimeImposition ?? "—"} · ${fiche.regimeTva ?? "—"} · forme ${fiche.formeJuridique ?? "absente"}`);
+    e.verdict(
+      `la fiche de ${pme.name} existe déjà`,
+      true,
+      `${fiche.regimeImposition ?? "—"} · ${fiche.regimeTva ?? "—"} · forme ${fiche.formeJuridique ?? "absente"}`,
+    );
     continue;
   }
   const f = pme.fiche;
@@ -345,8 +494,15 @@ for (const [cle, pme] of Object.entries(PMES)) {
     );
   }
   if (cle === "nabeul") {
-    const derive = await etape("Nabeul dérive ses échéances", () => rpc("collab", "deriverEcheances", [[org.id]]));
-    if (derive) e.verdict("une fiche incomplète ne dérive aucune échéance", derive[0]?.raison === "fiche.incomplete", derive[0]?.raison ?? `${derive[0]?.generees} générées`);
+    const derive = await etape("Nabeul dérive ses échéances", () =>
+      rpc("collab", "deriverEcheances", [[org.id]]),
+    );
+    if (derive)
+      e.verdict(
+        "une fiche incomplète ne dérive aucune échéance",
+        derive[0]?.raison === "fiche.incomplete",
+        derive[0]?.raison ?? `${derive[0]?.generees} générées`,
+      );
   }
 }
 
@@ -356,10 +512,16 @@ await e.connecter(LEILA);
 const propositions = {};
 for (const [cle, pme] of Object.entries(PMES)) {
   if (!pme.id) continue;
-  const p = await etape(`mandat proposé à ${pme.name}`, () => rpc("identite", "proposerMandat", [cabinet.id, pme.legalId]));
+  const p = await etape(`mandat proposé à ${pme.name}`, () =>
+    rpc("identite", "proposerMandat", [cabinet.id, pme.legalId]),
+  );
   if (p) {
     propositions[cle] = p;
-    e.verdict(`le cabinet propose un mandat à ${pme.name}`, p.pmeTenantId === pme.id, `${p.status}${p.deja ? " (déjà)" : ""}`);
+    e.verdict(
+      `le cabinet propose un mandat à ${pme.name}`,
+      p.pmeTenantId === pme.id,
+      `${p.status}${p.deja ? " (déjà)" : ""}`,
+    );
   }
 }
 for (const [cle, pme] of Object.entries(PMES)) {
@@ -372,9 +534,19 @@ for (const [cle, pme] of Object.entries(PMES)) {
   await e.connecter(pme.compte);
   const proposes = await rpc("identite", "mandatsProposes", [pme.id]);
   const visible = proposes.find((m) => m.id === p.id);
-  e.verdict(`${pme.name} voit le mandat proposé par ${cabinet.name}`, visible?.cabinet === cabinet.name);
-  const reponse = await etape(`${pme.name} accepte le mandat`, () => rpc("identite", "repondreAuMandat", [p.id, true]));
-  if (reponse) e.verdict(`${pme.name} accepte : le mandat est actif`, reponse.status === "actif", reponse.status);
+  e.verdict(
+    `${pme.name} voit le mandat proposé par ${cabinet.name}`,
+    visible?.cabinet === cabinet.name,
+  );
+  const reponse = await etape(`${pme.name} accepte le mandat`, () =>
+    rpc("identite", "repondreAuMandat", [p.id, true]),
+  );
+  if (reponse)
+    e.verdict(
+      `${pme.name} accepte : le mandat est actif`,
+      reponse.status === "actif",
+      reponse.status,
+    );
 }
 if (propositions.nabeul) {
   // Le jeu laisse ce mandat proposé ; si quelqu'un y a répondu depuis, le
@@ -406,7 +578,11 @@ for (const pme of Object.values(PMES)) {
   if (!pme.id || !pme.mandat) continue;
   const active = affectations.find((a) => a.clientTenantId === pme.id && a.active);
   if (!pme.affecte) {
-    e.verdict(`${pme.name} reste sans collaborateur`, !active, active ? "une affectation active existe" : "aucune main");
+    e.verdict(
+      `${pme.name} reste sans collaborateur`,
+      !active,
+      active ? "une affectation active existe" : "aucune main",
+    );
     continue;
   }
   const collaborateur = membres.find((m) => m.email === pme.affecte);
@@ -419,7 +595,14 @@ for (const pme of Object.values(PMES)) {
     continue;
   }
   const id = await etape(`affectation de ${pme.name}`, () =>
-    rpc("collab", "assign", [{ cabinetTenantId: cabinet.id, clientTenantId: pme.id, collaboratorId: collaborateur.userId, briefing: briefingDe(pme) }]),
+    rpc("collab", "assign", [
+      {
+        cabinetTenantId: cabinet.id,
+        clientTenantId: pme.id,
+        collaboratorId: collaborateur.userId,
+        briefing: briefingDe(pme),
+      },
+    ]),
   );
   if (id) e.verdict(`${pme.name} est affectée à ${pme.affecte}`, Boolean(id));
 }
@@ -427,15 +610,28 @@ for (const pme of Object.values(PMES)) {
 /* ============================================================ 6. les pièces */
 e.section("Les pièces, leurs lectures et leurs écritures");
 
-const timbre = (kind) => ref.charges.find((c) => c.code === "DROIT_TIMBRE" && c.documentKind === kind);
+const timbre = (kind) =>
+  ref.charges.find((c) => c.code === "DROIT_TIMBRE" && c.documentKind === kind);
 const tauxParCode = (code) => ref.taux.find((t) => t.code === code);
-const tauxNormal = ref.taux.find((t) => /normal/i.test(t.label)) ?? [...ref.taux].sort((a, b) => Number(b.rate) - Number(a.rate))[0];
+const tauxNormal =
+  ref.taux.find((t) => /normal/i.test(t.label)) ??
+  [...ref.taux].sort((a, b) => Number(b.rate) - Number(a.rate))[0];
 
 /**
  * Une pièce décrite une seule fois : le PDF, la lecture et l'écriture lisent
  * la même description. `lue: false` dépose seulement les octets.
  */
-function facture({ kind, issuer, ref: reference, date, ht, taxCode, avecTimbre, articles, lue = true }) {
+function facture({
+  kind,
+  issuer,
+  ref: reference,
+  date,
+  ht,
+  taxCode,
+  avecTimbre,
+  articles,
+  lue = true,
+}) {
   const taux = tauxParCode(taxCode);
   if (!taux) throw new Error(`taux ${taxCode} absent du pack`);
   const tva = tvaDe(ht, taux.rate);
@@ -459,9 +655,20 @@ function facture({ kind, issuer, ref: reference, date, ht, taxCode, avecTimbre, 
         document_date: date,
         currency: ref.pack.currency,
         document_kind: kind,
-        lines: [{ label: nature === "Vente" ? "Ventes" : "Achats", tax_code: taxCode, base_ht: ht, vat_amount: tva, ttc: somme(ht, tva), confidence: 0.97 }],
+        lines: [
+          {
+            label: nature === "Vente" ? "Ventes" : "Achats",
+            tax_code: taxCode,
+            base_ht: ht,
+            vat_amount: tva,
+            ttc: somme(ht, tva),
+            confidence: 0.97,
+          },
+        ],
         articles: articles ?? [],
-        other_charges: droit ? [{ code: droit.code, label: droit.label, amount: droit.fixedAmount }] : [],
+        other_charges: droit
+          ? [{ code: droit.code, label: droit.label, amount: droit.fixedAmount }]
+          : [],
         totals: { base_ht: ht, vat: tva, ttc },
         references: { invoice_no: reference },
         field_confidence: { issuer: 0.98, document_date: 0.97, overall: 0.96, "totals.ttc": 0.99 },
@@ -492,14 +699,34 @@ function lignesDuPivot(x) {
       ? [
           { account_code: mapping.mainAccount, libelle: ex.issuer, debit: ht, credit: "0" },
           { account_code: mapping.vatAccount, libelle: "TVA déductible", debit: tva, credit: "0" },
-          ...charges.map((c) => ({ account_code: c.account, libelle: c.label, debit: c.amount, credit: "0" })),
-          { account_code: mapping.counterpartyAccount, libelle: `Fournisseur ${ex.issuer}`, debit: "0", credit: contrepartie },
+          ...charges.map((c) => ({
+            account_code: c.account,
+            libelle: c.label,
+            debit: c.amount,
+            credit: "0",
+          })),
+          {
+            account_code: mapping.counterpartyAccount,
+            libelle: `Fournisseur ${ex.issuer}`,
+            debit: "0",
+            credit: contrepartie,
+          },
         ]
       : [
-          { account_code: mapping.counterpartyAccount, libelle: `Client ${ex.issuer}`, debit: contrepartie, credit: "0" },
+          {
+            account_code: mapping.counterpartyAccount,
+            libelle: `Client ${ex.issuer}`,
+            debit: contrepartie,
+            credit: "0",
+          },
           { account_code: mapping.vatAccount, libelle: "TVA collectée", debit: "0", credit: tva },
           { account_code: mapping.mainAccount, libelle: ex.issuer, debit: "0", credit: ht },
-          ...charges.map((c) => ({ account_code: c.account, libelle: c.label, debit: "0", credit: c.amount })),
+          ...charges.map((c) => ({
+            account_code: c.account,
+            libelle: c.label,
+            debit: "0",
+            credit: c.amount,
+          })),
         ];
   return {
     mapping,
@@ -513,7 +740,14 @@ function lignesDuPivot(x) {
 
 async function deposer(tenantId, cle, piece) {
   const enregistree = await rpc("capture", "enregistrer", [
-    { tenantId, source: "pdf", vis: "partage", idempotencyKey: cle, contentType: "application/pdf", pageCount: 1 },
+    {
+      tenantId,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: cle,
+      contentType: "application/pdf",
+      pageCount: 1,
+    },
   ]);
   const deja = await e.appel(`/pieces/${enregistree.id}/contenu`);
   if (deja.status !== 200) {
@@ -535,10 +769,27 @@ async function lire(pieceId, piece) {
   const boite = (i) => {
     const yPdf = i === 0 ? 780 : 740 - (i - 1) * 18;
     const hauteur = i === 0 ? 16 : 12;
-    return { x0: 60 / 595, x1: Math.min(1, (60 + textes[i].length * 5.6) / 595), y0: 1 - (yPdf + hauteur) / 842, y1: 1 - yPdf / 842 };
+    return {
+      x0: 60 / 595,
+      x1: Math.min(1, (60 + textes[i].length * 5.6) / 595),
+      y0: 1 - (yPdf + hauteur) / 842,
+      y1: 1 - yPdf / 842,
+    };
   };
-  const tokens = textes.map((text, i) => ({ page: 1, ordinal: i + 1, text, confidence: 0.98, ...boite(i) }));
-  const aCiter = { issuer: piece.issuer, document_date: "Date :", "totals.vat": tauxParCode(piece.taxCode).label, "totals.ttc": "TOTAL TTC", ...(piece.droit ? { "other_charges[0].amount": piece.droit.label } : {}) };
+  const tokens = textes.map((text, i) => ({
+    page: 1,
+    ordinal: i + 1,
+    text,
+    confidence: 0.98,
+    ...boite(i),
+  }));
+  const aCiter = {
+    issuer: piece.issuer,
+    document_date: "Date :",
+    "totals.vat": tauxParCode(piece.taxCode).label,
+    "totals.ttc": "TOTAL TTC",
+    ...(piece.droit ? { "other_charges[0].amount": piece.droit.label } : {}),
+  };
   const citations = Object.entries(aCiter).map(([field, aiguille]) => {
     const i = textes.findIndex((t) => t.includes(aiguille));
     if (i < 0) throw new Error(`citation ${field} : « ${aiguille} » absent de la pièce`);
@@ -546,7 +797,18 @@ async function lire(pieceId, piece) {
   });
   const persister = (articles) =>
     rpc("capture", "persisterLecture", [
-      { pieceId, packId: ref.pack.id, tokens, contract: "extract.v1", extract: piece.extrait, citations, flags: [], articles, documentKind: piece.kind, documentDate: piece.date },
+      {
+        pieceId,
+        packId: ref.pack.id,
+        tokens,
+        contract: "extract.v1",
+        extract: piece.extrait,
+        citations,
+        flags: [],
+        articles,
+        documentKind: piece.kind,
+        documentDate: piece.date,
+      },
     ]);
   try {
     await persister(piece.extrait.articles);
@@ -564,7 +826,15 @@ async function comptabiliser(pieceId, piece) {
   if (gravee) return { id: gravee.id, detail: "déjà comptabilisée" };
   const p = lignesDuPivot(piece);
   const id = await rpc("office", "propose", [
-    { pieceId, journal: p.journal, date: piece.date, libelle: p.libelle, packVersionId: ref.pack.id, lignes: p.lignes, devise: ref.pack.currency },
+    {
+      pieceId,
+      journal: p.journal,
+      date: piece.date,
+      libelle: p.libelle,
+      packVersionId: ref.pack.id,
+      lignes: p.lignes,
+      devise: ref.pack.currency,
+    },
   ]);
   await rpc("office", "book", [id]);
   return { id, detail: `${p.journal} · ${p.lignes.length} lignes` };
@@ -576,8 +846,19 @@ async function tiers(tenantId, liste) {
   let crees = 0;
   for (const t of liste) {
     if (existants.some((x) => x.code === t.code)) continue;
-    const mapping = ref.mappings.find((m) => m.documentKind === (t.nature === "client" ? "facture_vente" : "facture_achat"));
-    await rpc("tiers", "creer", [{ tenantId, nature: t.nature, code: t.code, raisonSociale: t.raisonSociale, compteCollectif: mapping.counterpartyAccount, identifiantFiscal: t.identifiantFiscal ?? null }]);
+    const mapping = ref.mappings.find(
+      (m) => m.documentKind === (t.nature === "client" ? "facture_vente" : "facture_achat"),
+    );
+    await rpc("tiers", "creer", [
+      {
+        tenantId,
+        nature: t.nature,
+        code: t.code,
+        raisonSociale: t.raisonSociale,
+        compteCollectif: mapping.counterpartyAccount,
+        identifiantFiscal: t.identifiantFiscal ?? null,
+      },
+    ]);
     crees += 1;
   }
   return crees;
@@ -586,43 +867,220 @@ async function tiers(tenantId, liste) {
 const PIECES = {
   sotumag: {
     tiers: [
-      { nature: "fournisseur", code: "ELECTRO01", raisonSociale: "ELECTRO IMPORT TUNISIE", identifiantFiscal: "1122334/H/A/M/000" },
-      { nature: "client", code: "MANAR01", raisonSociale: "SUPERMARCHE EL MANAR", identifiantFiscal: "2233445/J/A/M/000" },
+      {
+        nature: "fournisseur",
+        code: "ELECTRO01",
+        raisonSociale: "ELECTRO IMPORT TUNISIE",
+        identifiantFiscal: "1122334/H/A/M/000",
+      },
+      {
+        nature: "client",
+        code: "MANAR01",
+        raisonSociale: "SUPERMARCHE EL MANAR",
+        identifiantFiscal: "2233445/J/A/M/000",
+      },
     ],
     pieces: [
-      facture({ kind: "facture_achat", issuer: "ELECTRO IMPORT TUNISIE", ref: "EI-2026-0417", date: jourDuMois(3), ht: "4200.000", taxCode: tauxNormal.code, avecTimbre: true,
-        articles: [{ designation: "Televiseurs LED 43 pouces", quantity: "12", unit_price_ht: "350.000", unit_price_ttc: null, total_ht: "4200.000", tax_code: tauxNormal.code }] }),
-      facture({ kind: "facture_vente", issuer: "SUPERMARCHE EL MANAR", ref: "SM-2026-0088", date: jourDuMois(7), ht: "3600.000", taxCode: tauxNormal.code, avecTimbre: true,
-        articles: [{ designation: "Televiseurs LED 43 pouces", quantity: "8", unit_price_ht: "450.000", unit_price_ttc: null, total_ht: "3600.000", tax_code: tauxNormal.code }] }),
-      facture({ kind: "facture_achat", issuer: "STEG", ref: "STEG-0926-114", date: jourDuMois(9), ht: "310.000", taxCode: tauxNormal.code, avecTimbre: false, lue: false }),
-      facture({ kind: "facture_achat", issuer: "TUNISIE TELECOM", ref: "TT-0926-5521", date: jourDuMois(11), ht: "95.000", taxCode: tauxNormal.code, avecTimbre: false, lue: false }),
+      facture({
+        kind: "facture_achat",
+        issuer: "ELECTRO IMPORT TUNISIE",
+        ref: "EI-2026-0417",
+        date: jourDuMois(3),
+        ht: "4200.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        articles: [
+          {
+            designation: "Televiseurs LED 43 pouces",
+            quantity: "12",
+            unit_price_ht: "350.000",
+            unit_price_ttc: null,
+            total_ht: "4200.000",
+            tax_code: tauxNormal.code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_vente",
+        issuer: "SUPERMARCHE EL MANAR",
+        ref: "SM-2026-0088",
+        date: jourDuMois(7),
+        ht: "3600.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        articles: [
+          {
+            designation: "Televiseurs LED 43 pouces",
+            quantity: "8",
+            unit_price_ht: "450.000",
+            unit_price_ttc: null,
+            total_ht: "3600.000",
+            tax_code: tauxNormal.code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "STEG",
+        ref: "STEG-0926-114",
+        date: jourDuMois(9),
+        ht: "310.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        lue: false,
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "TUNISIE TELECOM",
+        ref: "TT-0926-5521",
+        date: jourDuMois(11),
+        ht: "95.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        lue: false,
+      }),
     ],
   },
   medina: {
     tiers: [
-      { nature: "fournisseur", code: "FILSAHEL", raisonSociale: "FILATURE DU SAHEL", identifiantFiscal: "3344556/K/A/M/000" },
-      { nature: "client", code: "BOUTSFAX", raisonSociale: "MAISON BOUTIQUE SFAX", identifiantFiscal: "4455667/L/A/M/000" },
+      {
+        nature: "fournisseur",
+        code: "FILSAHEL",
+        raisonSociale: "FILATURE DU SAHEL",
+        identifiantFiscal: "3344556/K/A/M/000",
+      },
+      {
+        nature: "client",
+        code: "BOUTSFAX",
+        raisonSociale: "MAISON BOUTIQUE SFAX",
+        identifiantFiscal: "4455667/L/A/M/000",
+      },
     ],
     pieces: [
-      facture({ kind: "facture_achat", issuer: "FILATURE DU SAHEL", ref: "FS-2026-1205", date: jourDuMois(4), ht: "8500.000", taxCode: tauxNormal.code, avecTimbre: false,
-        articles: [{ designation: "Fil de coton peigne", quantity: "1000", unit_price_ht: "8.500", unit_price_ttc: null, total_ht: "8500.000", tax_code: tauxNormal.code }] }),
-      facture({ kind: "facture_vente", issuer: "MAISON BOUTIQUE SFAX", ref: "MT-2026-0312", date: jourDuMois(10), ht: "2400.000", taxCode: tauxNormal.code, avecTimbre: true,
-        articles: [{ designation: "Nappes brodees", quantity: "60", unit_price_ht: "40.000", unit_price_ttc: null, total_ht: "2400.000", tax_code: tauxNormal.code }] }),
-      facture({ kind: "facture_achat", issuer: "SONEDE", ref: "SON-0926-2210", date: jourDuMois(12), ht: "140.000", taxCode: tauxNormal.code, avecTimbre: false, lue: false }),
+      facture({
+        kind: "facture_achat",
+        issuer: "FILATURE DU SAHEL",
+        ref: "FS-2026-1205",
+        date: jourDuMois(4),
+        ht: "8500.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        articles: [
+          {
+            designation: "Fil de coton peigne",
+            quantity: "1000",
+            unit_price_ht: "8.500",
+            unit_price_ttc: null,
+            total_ht: "8500.000",
+            tax_code: tauxNormal.code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_vente",
+        issuer: "MAISON BOUTIQUE SFAX",
+        ref: "MT-2026-0312",
+        date: jourDuMois(10),
+        ht: "2400.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        articles: [
+          {
+            designation: "Nappes brodees",
+            quantity: "60",
+            unit_price_ht: "40.000",
+            unit_price_ttc: null,
+            total_ht: "2400.000",
+            tax_code: tauxNormal.code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "SONEDE",
+        ref: "SON-0926-2210",
+        date: jourDuMois(12),
+        ht: "140.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        lue: false,
+      }),
     ],
   },
   cleopatre: {
     tiers: [
-      { nature: "fournisseur", code: "ORANGERS", raisonSociale: "HOTEL LES ORANGERS", identifiantFiscal: "5566778/M/A/M/000" },
-      { nature: "client", code: "ALPHACON", raisonSociale: "ALPHA CONSEIL", identifiantFiscal: "6677889/N/A/M/000" },
+      {
+        nature: "fournisseur",
+        code: "ORANGERS",
+        raisonSociale: "HOTEL LES ORANGERS",
+        identifiantFiscal: "5566778/M/A/M/000",
+      },
+      {
+        nature: "client",
+        code: "ALPHACON",
+        raisonSociale: "ALPHA CONSEIL",
+        identifiantFiscal: "6677889/N/A/M/000",
+      },
     ],
     pieces: [
-      facture({ kind: "facture_achat", issuer: "HOTEL LES ORANGERS", ref: "HO-2026-3388", date: jourDuMois(5), ht: "1500.000", taxCode: (tauxParCode("TVA07") ?? tauxNormal).code, avecTimbre: false,
-        articles: [{ designation: "Nuitees en demi-pension", quantity: "10", unit_price_ht: "150.000", unit_price_ttc: null, total_ht: "1500.000", tax_code: (tauxParCode("TVA07") ?? tauxNormal).code }] }),
-      facture({ kind: "facture_vente", issuer: "ALPHA CONSEIL", ref: "CV-2026-0151", date: jourDuMois(12), ht: "2000.000", taxCode: tauxNormal.code, avecTimbre: true,
-        articles: [{ designation: "Seminaire d'entreprise, forfait", quantity: "1", unit_price_ht: "2000.000", unit_price_ttc: null, total_ht: "2000.000", tax_code: tauxNormal.code }] }),
-      facture({ kind: "facture_achat", issuer: "TUNISAIR", ref: "TU-2026-77812", date: jourDuMois(6), ht: "980.000", taxCode: tauxNormal.code, avecTimbre: false, lue: false }),
-      facture({ kind: "facture_achat", issuer: "LOUAGE EXPRESS", ref: "LX-0926-41", date: jourDuMois(8), ht: "120.000", taxCode: tauxNormal.code, avecTimbre: false, lue: false }),
+      facture({
+        kind: "facture_achat",
+        issuer: "HOTEL LES ORANGERS",
+        ref: "HO-2026-3388",
+        date: jourDuMois(5),
+        ht: "1500.000",
+        taxCode: (tauxParCode("TVA07") ?? tauxNormal).code,
+        avecTimbre: false,
+        articles: [
+          {
+            designation: "Nuitees en demi-pension",
+            quantity: "10",
+            unit_price_ht: "150.000",
+            unit_price_ttc: null,
+            total_ht: "1500.000",
+            tax_code: (tauxParCode("TVA07") ?? tauxNormal).code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_vente",
+        issuer: "ALPHA CONSEIL",
+        ref: "CV-2026-0151",
+        date: jourDuMois(12),
+        ht: "2000.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: true,
+        articles: [
+          {
+            designation: "Seminaire d'entreprise, forfait",
+            quantity: "1",
+            unit_price_ht: "2000.000",
+            unit_price_ttc: null,
+            total_ht: "2000.000",
+            tax_code: tauxNormal.code,
+          },
+        ],
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "TUNISAIR",
+        ref: "TU-2026-77812",
+        date: jourDuMois(6),
+        ht: "980.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        lue: false,
+      }),
+      facture({
+        kind: "facture_achat",
+        issuer: "LOUAGE EXPRESS",
+        ref: "LX-0926-41",
+        date: jourDuMois(8),
+        ht: "120.000",
+        taxCode: tauxNormal.code,
+        avecTimbre: false,
+        lue: false,
+      }),
     ],
   },
 };
@@ -633,7 +1091,8 @@ for (const [cle, jeu] of Object.entries(PIECES)) {
   if (!pme.id) continue;
   await e.connecter(pme.compte);
   const nb = await etape(`tiers de ${pme.name}`, () => tiers(pme.id, jeu.tiers));
-  if (nb !== null) e.verdict(`les tiers de ${pme.name} sont connus`, true, nb ? `${nb} créé(s)` : "déjà là");
+  if (nb !== null)
+    e.verdict(`les tiers de ${pme.name} sont connus`, true, nb ? `${nb} créé(s)` : "déjà là");
   ECRITURES[cle] = [];
   for (const [i, piece] of jeu.pieces.entries()) {
     const marque = `jeu-${cle}-${i + 1}`;
@@ -645,28 +1104,75 @@ for (const [cle, jeu] of Object.entries(PIECES)) {
     if (lecture) e.verdict(`${piece.reference} est lue sans IA`, true, lecture);
     const ecriture = await etape(`écriture ${marque}`, () => comptabiliser(pieceId, piece));
     if (ecriture) {
-      e.verdict(`${piece.reference} est proposée puis comptabilisée`, Boolean(ecriture.id), ecriture.detail);
+      e.verdict(
+        `${piece.reference} est proposée puis comptabilisée`,
+        Boolean(ecriture.id),
+        ecriture.detail,
+      );
       ECRITURES[cle].push({ pieceId, ecritureId: ecriture.id, piece });
     }
   }
   const historique = await rpc("capture", "listAvecLecture", [pme.id]);
-  e.verdict(`l'historique de ${pme.name} porte ses pièces`, historique.length >= jeu.pieces.length, `${historique.length} pièce(s), ${historique.filter((p) => p.status === "comptabilisee").length} comptabilisée(s)`);
+  e.verdict(
+    `l'historique de ${pme.name} porte ses pièces`,
+    historique.length >= jeu.pieces.length,
+    `${historique.length} pièce(s), ${historique.filter((p) => p.status === "comptabilisee").length} comptabilisée(s)`,
+  );
 }
 
 await e.connecter(LEILA);
 const file = await rpc("supervision", "queue", [cabinet.id]);
-e.verdict("la file du cabinet porte les pièces transmises", file.length > 0, `${file.length} pièce(s), ${file.filter((p) => p.status === "comptabilisee").length} à superviser`);
+e.verdict(
+  "la file du cabinet porte les pièces transmises",
+  file.length > 0,
+  `${file.length} pièce(s), ${file.filter((p) => p.status === "comptabilisee").length} à superviser`,
+);
 
 /* ============================================================ 7. les honoraires */
 e.section("Les honoraires");
 await e.connecter(LEILA);
-const COUVERTURE = ["Tenue comptable", "Déclarations de TVA", "Déclarations sociales", "Bilan annuel"];
+const COUVERTURE = [
+  "Tenue comptable",
+  "Déclarations de TVA",
+  "Déclarations sociales",
+  "Bilan annuel",
+];
 const MANDATS = {
-  sotumag: { mode: "forfait", frequence: "mensuelle", jourFacturation: 5, forfait: "450.000", tauxHoraire: null },
-  medina: { mode: "forfait", frequence: "mensuelle", jourFacturation: 5, forfait: "380.000", tauxHoraire: null },
-  tunisfresh: { mode: "forfait", frequence: "mensuelle", jourFacturation: 10, forfait: "600.000", tauxHoraire: null },
-  cleopatre: { mode: "mixte", frequence: "mensuelle", jourFacturation: 5, forfait: "300.000", tauxHoraire: "80.000" },
-  zitouna: { mode: "temps", frequence: "trimestrielle", jourFacturation: 15, forfait: null, tauxHoraire: "60.000" },
+  sotumag: {
+    mode: "forfait",
+    frequence: "mensuelle",
+    jourFacturation: 5,
+    forfait: "450.000",
+    tauxHoraire: null,
+  },
+  medina: {
+    mode: "forfait",
+    frequence: "mensuelle",
+    jourFacturation: 5,
+    forfait: "380.000",
+    tauxHoraire: null,
+  },
+  tunisfresh: {
+    mode: "forfait",
+    frequence: "mensuelle",
+    jourFacturation: 10,
+    forfait: "600.000",
+    tauxHoraire: null,
+  },
+  cleopatre: {
+    mode: "mixte",
+    frequence: "mensuelle",
+    jourFacturation: 5,
+    forfait: "300.000",
+    tauxHoraire: "80.000",
+  },
+  zitouna: {
+    mode: "temps",
+    frequence: "trimestrielle",
+    jourFacturation: 15,
+    forfait: null,
+    tauxHoraire: "60.000",
+  },
 };
 const mandatsHonoraires = await rpc("honoraires", "mandats", [cabinet.id]);
 for (const [cle, m] of Object.entries(MANDATS)) {
@@ -674,13 +1180,30 @@ for (const [cle, m] of Object.entries(MANDATS)) {
   if (!pme.id) continue;
   const ouvert = mandatsHonoraires.find((x) => x.clientTenantId === pme.id);
   if (ouvert) {
-    e.verdict(`le mandat d'honoraires de ${pme.name} existe`, true, `${ouvert.mode} · ${ouvert.frequence}`);
+    e.verdict(
+      `le mandat d'honoraires de ${pme.name} existe`,
+      true,
+      `${ouvert.mode} · ${ouvert.frequence}`,
+    );
     continue;
   }
   const defini = await etape(`mandat d'honoraires de ${pme.name}`, () =>
-    rpc("honoraires", "definirMandat", [{ cabinetTenantId: cabinet.id, clientTenantId: pme.id, ...m, delaiPaiementJours: 30, couverture: m.mode === "temps" ? [] : COUVERTURE }]),
+    rpc("honoraires", "definirMandat", [
+      {
+        cabinetTenantId: cabinet.id,
+        clientTenantId: pme.id,
+        ...m,
+        delaiPaiementJours: 30,
+        couverture: m.mode === "temps" ? [] : COUVERTURE,
+      },
+    ]),
   );
-  if (defini) e.verdict(`le mandat d'honoraires de ${pme.name} est défini`, Boolean(defini.id), `${m.mode} · ${m.frequence}`);
+  if (defini)
+    e.verdict(
+      `le mandat d'honoraires de ${pme.name} est défini`,
+      Boolean(defini.id),
+      `${m.mode} · ${m.frequence}`,
+    );
 }
 
 const periode = moisPrecedent();
@@ -693,17 +1216,36 @@ for (const cle of ["sotumag", "medina"]) {
   if (!f) {
     const cree = await etape(`brouillon d'honoraires de ${pme.name}`, () =>
       rpc("honoraires", "creerBrouillon", [
-        { cabinetTenantId: cabinet.id, clientTenantId: pme.id, periodeDu: periode.du, periodeAu: periode.au, tauxTvaCode: tauxNormal.code,
-          lignes: [{ libelle: `Forfait mensuel — ${COUVERTURE.join(", ").toLowerCase()}`, quantite: "1", prixUnitaire: MANDATS[cle].forfait }] },
+        {
+          cabinetTenantId: cabinet.id,
+          clientTenantId: pme.id,
+          periodeDu: periode.du,
+          periodeAu: periode.au,
+          tauxTvaCode: tauxNormal.code,
+          lignes: [
+            {
+              libelle: `Forfait mensuel — ${COUVERTURE.join(", ").toLowerCase()}`,
+              quantite: "1",
+              prixUnitaire: MANDATS[cle].forfait,
+            },
+          ],
+        },
       ]),
     );
     if (!cree) continue;
     f = await rpc("honoraires", "facture", [cree.id]);
-    e.verdict(`un brouillon d'honoraires est créé pour ${pme.name}`, f?.statut === "brouillon", `HT ${f?.totalHt} · TVA ${f?.totalTva} · TTC ${f?.totalTtc}`);
+    e.verdict(
+      `un brouillon d'honoraires est créé pour ${pme.name}`,
+      f?.statut === "brouillon",
+      `HT ${f?.totalHt} · TVA ${f?.totalTva} · TTC ${f?.totalTtc}`,
+    );
   }
   if (f.statut === "brouillon") {
-    const emise = await etape(`émission de la facture de ${pme.name}`, () => rpc("honoraires", "emettre", [f.id]));
-    if (emise) e.verdict(`la facture de ${pme.name} est émise`, Boolean(emise.numero), emise.numero);
+    const emise = await etape(`émission de la facture de ${pme.name}`, () =>
+      rpc("honoraires", "emettre", [f.id]),
+    );
+    if (emise)
+      e.verdict(`la facture de ${pme.name} est émise`, Boolean(emise.numero), emise.numero);
   } else {
     e.verdict(`la facture de ${pme.name} est déjà ${f.statut}`, true, f.numero ?? "");
   }
@@ -715,22 +1257,48 @@ if (FACTURES.sotumag) {
     e.verdict("SOTUMAG a déjà un encaissement partiel", true, `${f.encaisse} / ${f.totalTtc}`);
   } else if (f.statut === "emise") {
     const enc = await etape("encaissement partiel SOTUMAG", () =>
-      rpc("honoraires", "encaisser", [{ factureId: f.id, montant: moitie(f.totalTtc), encaisseLe: ISO_JOUR, moyen: "virement", reference: `VIR ${f.numero}` }]),
+      rpc("honoraires", "encaisser", [
+        {
+          factureId: f.id,
+          montant: moitie(f.totalTtc),
+          encaisseLe: ISO_JOUR,
+          moyen: "virement",
+          reference: `VIR ${f.numero}`,
+        },
+      ]),
     );
-    if (enc) e.verdict("SOTUMAG règle la moitié de sa facture", enc.soldee === false, `${enc.encaisse} encaissé sur ${f.totalTtc}`);
+    if (enc)
+      e.verdict(
+        "SOTUMAG règle la moitié de sa facture",
+        enc.soldee === false,
+        `${enc.encaisse} encaissé sur ${f.totalTtc}`,
+      );
   }
 }
-const synthese = await etape("synthèse des honoraires", () => rpc("honoraires", "synthese", [cabinet.id, MOIS]));
-if (synthese) e.verdict("la synthèse du mois se lit", true, `${synthese.nbFactures} facture(s) · encaissé ${synthese.encaisse} · reste dû ${synthese.resteDu}`);
+const synthese = await etape("synthèse des honoraires", () =>
+  rpc("honoraires", "synthese", [cabinet.id, MOIS]),
+);
+if (synthese)
+  e.verdict(
+    "la synthèse du mois se lit",
+    true,
+    `${synthese.nbFactures} facture(s) · encaissé ${synthese.encaisse} · reste dû ${synthese.resteDu}`,
+  );
 
 /* ============================================================ 8. le calendrier */
 e.section("Le calendrier et les réglages du cabinet");
 await e.connecter(LEILA);
-const derives = await etape("dérivation des échéances", () => rpc("collab", "deriverEcheances", [actifs.map((p) => p.id)]));
+const derives = await etape("dérivation des échéances", () =>
+  rpc("collab", "deriverEcheances", [actifs.map((p) => p.id)]),
+);
 if (derives) {
   for (const d of derives) {
     const pme = actifs.find((p) => p.id === d.tenantId);
-    e.verdict(`les échéances de ${pme?.name} dérivent du pack`, d.raison === null, d.raison ?? `${d.generees} échéance(s)`);
+    e.verdict(
+      `les échéances de ${pme?.name} dérivent du pack`,
+      d.raison === null,
+      d.raison ?? `${d.generees} échéance(s)`,
+    );
   }
 }
 if (PMES.sotumag.id) {
@@ -741,35 +1309,75 @@ if (PMES.sotumag.id) {
   } else {
     const prochaine = echeances.find((x) => x.status !== "fait");
     if (prochaine) {
-      const m = await etape("marquer une échéance faite", () => rpc("collab", "marquerEcheance", [prochaine.id, true]));
-      if (m) e.verdict("une échéance de SOTUMAG est marquée faite", m.status === "fait", `${prochaine.label} · ${prochaine.dueDate}`);
+      const m = await etape("marquer une échéance faite", () =>
+        rpc("collab", "marquerEcheance", [prochaine.id, true]),
+      );
+      if (m)
+        e.verdict(
+          "une échéance de SOTUMAG est marquée faite",
+          m.status === "fait",
+          `${prochaine.label} · ${prochaine.dueDate}`,
+        );
     } else {
       e.verdict("SOTUMAG a une échéance à marquer", false, "aucune échéance dérivée");
     }
   }
 }
-const secteurs = await etape("secteurs du cabinet", () => rpc("parametrage", "secteursDuCabinet", [cabinet.id]));
+const secteurs = await etape("secteurs du cabinet", () =>
+  rpc("parametrage", "secteursDuCabinet", [cabinet.id]),
+);
 const secteur = secteurs?.[0] ?? "*";
-const calendrier = await etape("calendrier du cabinet", () => rpc("parametrage", "calendrierCabinet", [cabinet.id, ANNEE, secteur]));
+const calendrier = await etape("calendrier du cabinet", () =>
+  rpc("parametrage", "calendrierCabinet", [cabinet.id, ANNEE, secteur]),
+);
 if (calendrier) {
   const obligation = calendrier.find((o) => !o.propre);
   if (obligation) {
     const reglee = await etape("réglage d'une obligation", () =>
-      rpc("parametrage", "definirObligation", [{ tenantId: cabinet.id, code: obligation.code, exercice: ANNEE, secteur, active: true, rappelJours: 10 }]),
+      rpc("parametrage", "definirObligation", [
+        {
+          tenantId: cabinet.id,
+          code: obligation.code,
+          exercice: ANNEE,
+          secteur,
+          active: true,
+          rappelJours: 10,
+        },
+      ]),
     );
-    if (reglee) e.verdict(`l'obligation « ${obligation.libelle} » est réglée par le cabinet`, reglee.active === true, `rappel à ${reglee.rappelJours} jours · secteur ${secteur}`);
+    if (reglee)
+      e.verdict(
+        `l'obligation « ${obligation.libelle} » est réglée par le cabinet`,
+        reglee.active === true,
+        `rappel à ${reglee.rappelJours} jours · secteur ${secteur}`,
+      );
   } else {
-    e.verdict("le calendrier du cabinet porte une obligation du pack", false, `${calendrier.length} ligne(s)`);
+    e.verdict(
+      "le calendrier du cabinet porte une obligation du pack",
+      false,
+      `${calendrier.length} ligne(s)`,
+    );
   }
 }
-const reglages = await etape("lecture des réglages", () => rpc("parametrage", "reglagesCabinet", [cabinet.id]));
+const reglages = await etape("lecture des réglages", () =>
+  rpc("parametrage", "reglagesCabinet", [cabinet.id]),
+);
 if (reglages) {
   if (reglages.regle && reglages.ton === "chaleureux") {
     e.verdict("le ton du cabinet est déjà réglé", true, reglages.ton);
   } else {
     const { regle: _regle, ...champs } = reglages;
-    const definis = await etape("réglages du cabinet", () => rpc("parametrage", "definirReglagesCabinet", [{ tenantId: cabinet.id, ...champs, ton: "chaleureux" }]));
-    if (definis) e.verdict("le cabinet arrête ses réglages, ton chaleureux", definis.regle === true && definis.ton === "chaleureux", `seuils ${definis.seuilConfianceLot}/${definis.seuilConfianceRevue}`);
+    const definis = await etape("réglages du cabinet", () =>
+      rpc("parametrage", "definirReglagesCabinet", [
+        { tenantId: cabinet.id, ...champs, ton: "chaleureux" },
+      ]),
+    );
+    if (definis)
+      e.verdict(
+        "le cabinet arrête ses réglages, ton chaleureux",
+        definis.regle === true && definis.ton === "chaleureux",
+        `seuils ${definis.seuilConfianceLot}/${definis.seuilConfianceRevue}`,
+      );
   }
 }
 
@@ -781,24 +1389,48 @@ if (PMES.sotumag.id) {
   const LIBELLE_COMPTE = "BIAT — compte courant";
   // Le compte de banque du plan : « Banques » de préférence, sinon le plus
   // court des comptes de classe 5 qui portent ce mot.
-  const plan = await etape("plan comptable, classe 5", () => rpc("parametrage", "plan", [pme.id, [5]]));
+  const plan = await etape("plan comptable, classe 5", () =>
+    rpc("parametrage", "plan", [pme.id, [5]]),
+  );
   const banque =
     plan?.find((c) => /^banques?$/i.test(c.libelle.trim())) ??
-    plan?.filter((c) => /banque/i.test(c.libelle)).sort((a, b) => a.code.length - b.code.length || a.code.localeCompare(b.code))[0];
-  let compte = (await rpc("banque", "listAccounts", [pme.id])).find((c) => c.label === LIBELLE_COMPTE);
+    plan
+      ?.filter((c) => /banque/i.test(c.libelle))
+      .sort((a, b) => a.code.length - b.code.length || a.code.localeCompare(b.code))[0];
+  let compte = (await rpc("banque", "listAccounts", [pme.id])).find(
+    (c) => c.label === LIBELLE_COMPTE,
+  );
   if (!compte) {
     const entite = (await rpc("identite", "listEntities", [pme.id])).find((x) => x.isDefault);
     if (banque && entite) {
       const id = await etape("création du compte bancaire", () =>
-        rpc("banque", "createAccount", [{ tenantId: pme.id, entityId: entite.id, label: LIBELLE_COMPTE, iban: "TN59 0800 1000 0123 4567 8901", devise: ref.pack.currency, accountCode: banque.code }]),
+        rpc("banque", "createAccount", [
+          {
+            tenantId: pme.id,
+            entityId: entite.id,
+            label: LIBELLE_COMPTE,
+            iban: "TN59 0800 1000 0123 4567 8901",
+            devise: ref.pack.currency,
+            accountCode: banque.code,
+          },
+        ]),
       );
       compte = id ? { id, accountCode: banque.code } : null;
-      if (compte) e.verdict("SOTUMAG ouvre un compte bancaire", true, `${banque.code} ${banque.libelle}`);
+      if (compte)
+        e.verdict("SOTUMAG ouvre un compte bancaire", true, `${banque.code} ${banque.libelle}`);
     } else {
-      e.verdict("un compte de banque existe au plan", false, plan ? `${plan.length} compte(s) de classe 5, aucun nommé banque` : "plan illisible");
+      e.verdict(
+        "un compte de banque existe au plan",
+        false,
+        plan ? `${plan.length} compte(s) de classe 5, aucun nommé banque` : "plan illisible",
+      );
     }
   } else {
-    e.verdict("le compte bancaire de SOTUMAG existe", true, `${compte.accountCode} — le rapprochement lit ce code comme préfixe`);
+    e.verdict(
+      "le compte bancaire de SOTUMAG existe",
+      true,
+      `${compte.accountCode} — le rapprochement lit ce code comme préfixe`,
+    );
   }
   if (compte && banque) {
     /*
@@ -809,22 +1441,34 @@ if (PMES.sotumag.id) {
      */
     const params = await rpc("referentiel", "socleParams", [ref.pack.id]);
     const ecartJours = Math.max(0, Math.min(1, params.rapprochementToleranceJours - 1));
-    const compteBanque = compte.accountCode.length >= banque.code.length ? compte.accountCode : banque.code;
+    const compteBanque =
+      compte.accountCode.length >= banque.code.length ? compte.accountCode : banque.code;
     const lignes = [];
     for (const { ecritureId, piece } of ECRITURES.sotumag ?? []) {
       const [facturee] = await rpc("office", "ecrituresByIds", [[ecritureId]]);
       if (!facturee) continue;
       const p = lignesDuPivot(piece);
-      const contrepartie = facturee.lines.find((l) => l.accountCode === p.mapping.counterpartyAccount);
+      const contrepartie = facturee.lines.find(
+        (l) => l.accountCode === p.mapping.counterpartyAccount,
+      );
       if (!contrepartie) continue;
       const achat = piece.kind === "facture_achat";
       const montant = achat ? contrepartie.credit : contrepartie.debit;
       const dateReglement = plusJours(facturee.dateEcriture.slice(0, 10), 6);
       const avis = {
         titre: `${achat ? "AVIS DE DEBIT" : "AVIS DE CREDIT"} ${piece.reference}`,
-        lignes: [LIBELLE_COMPTE, `Date : ${enJour(dateReglement)}`, "", `${achat ? "Virement emis" : "Virement recu"} ${piece.issuer}`, `Reference ${piece.reference}`, `Montant ${montant} ${ref.pack.currency}`],
+        lignes: [
+          LIBELLE_COMPTE,
+          `Date : ${enJour(dateReglement)}`,
+          "",
+          `${achat ? "Virement emis" : "Virement recu"} ${piece.issuer}`,
+          `Reference ${piece.reference}`,
+          `Montant ${montant} ${ref.pack.currency}`,
+        ],
       };
-      const avisId = await etape(`avis de banque ${piece.reference}`, () => deposer(pme.id, `jeu-sotumag-reglement-${piece.reference}`, avis));
+      const avisId = await etape(`avis de banque ${piece.reference}`, () =>
+        deposer(pme.id, `jeu-sotumag-reglement-${piece.reference}`, avis),
+      );
       if (!avisId) continue;
       const reglement = await etape(`règlement ${piece.reference}`, async () => {
         const existantes = await rpc("office", "ecrituresForPiece", [avisId]);
@@ -832,21 +1476,57 @@ if (PMES.sotumag.id) {
         if (gravee) return { id: gravee.id, detail: "déjà comptabilisé" };
         const lignesBq = achat
           ? [
-              { account_code: p.mapping.counterpartyAccount, libelle: `Fournisseur ${piece.issuer}`, debit: montant, credit: "0", tax_code: null },
-              { account_code: compteBanque, libelle: banque.libelle, debit: "0", credit: montant, tax_code: null },
+              {
+                account_code: p.mapping.counterpartyAccount,
+                libelle: `Fournisseur ${piece.issuer}`,
+                debit: montant,
+                credit: "0",
+                tax_code: null,
+              },
+              {
+                account_code: compteBanque,
+                libelle: banque.libelle,
+                debit: "0",
+                credit: montant,
+                tax_code: null,
+              },
             ]
           : [
-              { account_code: compteBanque, libelle: banque.libelle, debit: montant, credit: "0", tax_code: null },
-              { account_code: p.mapping.counterpartyAccount, libelle: `Client ${piece.issuer}`, debit: "0", credit: montant, tax_code: null },
+              {
+                account_code: compteBanque,
+                libelle: banque.libelle,
+                debit: montant,
+                credit: "0",
+                tax_code: null,
+              },
+              {
+                account_code: p.mapping.counterpartyAccount,
+                libelle: `Client ${piece.issuer}`,
+                debit: "0",
+                credit: montant,
+                tax_code: null,
+              },
             ];
         const id = await rpc("office", "propose", [
-          { pieceId: avisId, journal: "BQ", date: dateReglement, libelle: `${achat ? "Règlement fournisseur" : "Encaissement client"} — ${piece.issuer} — Réf. ${piece.reference} du ${enJour(dateReglement)}`, packVersionId: ref.pack.id, lignes: lignesBq, devise: ref.pack.currency },
+          {
+            pieceId: avisId,
+            journal: "BQ",
+            date: dateReglement,
+            libelle: `${achat ? "Règlement fournisseur" : "Encaissement client"} — ${piece.issuer} — Réf. ${piece.reference} du ${enJour(dateReglement)}`,
+            packVersionId: ref.pack.id,
+            lignes: lignesBq,
+            devise: ref.pack.currency,
+          },
         ]);
         await rpc("office", "book", [id]);
         return { id, detail: `BQ · ${compteBanque}` };
       });
       if (!reglement) continue;
-      e.verdict(`le règlement de ${piece.reference} est comptabilisé en banque`, true, reglement.detail);
+      e.verdict(
+        `le règlement de ${piece.reference} est comptabilisé en banque`,
+        true,
+        reglement.detail,
+      );
       lignes.push({
         at: plusJours(dateReglement, ecartJours),
         label: `${achat ? "VIR EMIS" : "VIR RECU"} ${piece.issuer} ${piece.reference}`,
@@ -856,19 +1536,55 @@ if (PMES.sotumag.id) {
       });
     }
     // Une ligne sans écriture en face : le Socle doit la laisser orpheline.
-    lignes.push({ at: jourDuMois(2), label: "COMMISSION TENUE DE COMPTE", montant: "-15.000", reference: null, idempotencyKey: "jeu-sotumag-banque-commission" });
+    lignes.push({
+      at: jourDuMois(2),
+      label: "COMMISSION TENUE DE COMPTE",
+      montant: "-15.000",
+      reference: null,
+      idempotencyKey: "jeu-sotumag-banque-commission",
+    });
     const importees = await etape("import du relevé", () =>
-      rpc("banque", "importLines", [{ tenantId: pme.id, compteId: compte.id, batchId: uuidDe(`jeu-sotumag-releve-${MOIS}`), lines: lignes }]),
+      rpc("banque", "importLines", [
+        {
+          tenantId: pme.id,
+          compteId: compte.id,
+          batchId: uuidDe(`jeu-sotumag-releve-${MOIS}`),
+          lines: lignes,
+        },
+      ]),
     );
-    if (importees !== null) e.verdict("le relevé de SOTUMAG est importé", true, importees ? `${importees} ligne(s) nouvelle(s)` : "déjà importé");
+    if (importees !== null)
+      e.verdict(
+        "le relevé de SOTUMAG est importé",
+        true,
+        importees ? `${importees} ligne(s) nouvelle(s)` : "déjà importé",
+      );
     const releve = await rpc("banque", "lines", [pme.id, compte.id]);
     e.verdict("le relevé se relit", releve.length >= lignes.length, `${releve.length} ligne(s)`);
     const livre = await etape("écritures du compte de banque", () =>
-      rpc("banque", "bookLines", [{ tenantId: pme.id, accountCode: compte.accountCode, from: `${MOIS}-01`, to: plusJours(`${MOIS}-01`, 40) }]),
+      rpc("banque", "bookLines", [
+        {
+          tenantId: pme.id,
+          accountCode: compte.accountCode,
+          from: `${MOIS}-01`,
+          to: plusJours(`${MOIS}-01`, 40),
+        },
+      ]),
     );
     if (livre) {
-      const appariables = releve.filter((l) => livre.some((k) => enMillimes(k.montant) === enMillimes(l.montant) && Math.abs((Date.parse(l.at.slice(0, 10)) - Date.parse(k.at.slice(0, 10))) / 86400000) <= params.rapprochementToleranceJours));
-      e.verdict("le Socle a de quoi apparier : montants égaux, dates dans la tolérance", appariables.length >= 2, `${appariables.length} ligne(s) appariable(s) sur ${releve.length}, tolérance ${params.rapprochementToleranceJours} j`);
+      const appariables = releve.filter((l) =>
+        livre.some(
+          (k) =>
+            enMillimes(k.montant) === enMillimes(l.montant) &&
+            Math.abs((Date.parse(l.at.slice(0, 10)) - Date.parse(k.at.slice(0, 10))) / 86400000) <=
+              params.rapprochementToleranceJours,
+        ),
+      );
+      e.verdict(
+        "le Socle a de quoi apparier : montants égaux, dates dans la tolérance",
+        appariables.length >= 2,
+        `${appariables.length} ligne(s) appariable(s) sur ${releve.length}, tolérance ${params.rapprochementToleranceJours} j`,
+      );
     }
   }
 }
@@ -882,7 +1598,16 @@ if (PMES.sotumag.id) {
   let pv = pvs.find((p) => p.titre === TITRE && p.clientTenantId === PMES.sotumag.id);
   if (!pv) {
     const id = await etape("création du PV", () =>
-      rpc("collab", "addPv", [{ cabinetTenantId: cabinet.id, clientTenantId: PMES.sotumag.id, at: ISO_JOUR, titre: TITRE, participants: "Leïla Ben Salah, Amine Bouzid, direction SOTUMAG", ordreDuJour: "Pièces du mois, trésorerie, échéances à venir" }]),
+      rpc("collab", "addPv", [
+        {
+          cabinetTenantId: cabinet.id,
+          clientTenantId: PMES.sotumag.id,
+          at: ISO_JOUR,
+          titre: TITRE,
+          participants: "Leïla Ben Salah, Amine Bouzid, direction SOTUMAG",
+          ordreDuJour: "Pièces du mois, trésorerie, échéances à venir",
+        },
+      ]),
     );
     pv = id ? await rpc("collab", "pvOuvrir", [id]) : null;
     if (pv) e.verdict("un PV brouillon est ouvert pour SOTUMAG", pv.statut === "brouillon");
@@ -893,8 +1618,20 @@ if (PMES.sotumag.id) {
     const [stats] = await rpc("collab", "stats", [[PMES.sotumag.id]]);
     const chiffres = stats
       ? [
-          { label: "Pièces reçues", valeur: String(stats.pieces), source: "collab.stats", genre: "nombre", devise: null },
-          { label: "Pièces comptabilisées", valeur: String(stats.comptabilisees), source: "collab.stats", genre: "nombre", devise: null },
+          {
+            label: "Pièces reçues",
+            valeur: String(stats.pieces),
+            source: "collab.stats",
+            genre: "nombre",
+            devise: null,
+          },
+          {
+            label: "Pièces comptabilisées",
+            valeur: String(stats.comptabilisees),
+            source: "collab.stats",
+            genre: "nombre",
+            devise: null,
+          },
         ]
       : [];
     const enregistre = await etape("rédaction du PV", () =>
@@ -902,18 +1639,36 @@ if (PMES.sotumag.id) {
         {
           id: pv.id,
           sections: [
-            { kicker: "Pièces du mois", corps: "Les factures transmises ont été lues et comptabilisées. Des pièces restent à lire, dont une facture d'énergie : elles seront traitées à la prochaine remise." },
-            { kicker: "Trésorerie", corps: "Le relevé bancaire du mois a été importé. Le rapprochement est en cours ; les règlements fournisseur et client attendus y figurent." },
-            { kicker: "Échéances", corps: "Le calendrier déclaratif est dérivé du pack en vigueur. La première échéance du mois est marquée faite ; les suivantes sont suivies par le cabinet." },
+            {
+              kicker: "Pièces du mois",
+              corps:
+                "Les factures transmises ont été lues et comptabilisées. Des pièces restent à lire, dont une facture d'énergie : elles seront traitées à la prochaine remise.",
+            },
+            {
+              kicker: "Trésorerie",
+              corps:
+                "Le relevé bancaire du mois a été importé. Le rapprochement est en cours ; les règlements fournisseur et client attendus y figurent.",
+            },
+            {
+              kicker: "Échéances",
+              corps:
+                "Le calendrier déclaratif est dérivé du pack en vigueur. La première échéance du mois est marquée faite ; les suivantes sont suivies par le cabinet.",
+            },
           ],
           chiffres,
-          decisions: "Transmettre les pièces au fil de l'eau ; le cabinet prépare la déclaration de TVA dès réception des factures manquantes.",
+          decisions:
+            "Transmettre les pièces au fil de l'eau ; le cabinet prépare la déclaration de TVA dès réception des factures manquantes.",
           ton: reglages?.ton ?? null,
-          redigeParRegalica: false,
+          redigeParMalica: false,
         },
       ]),
     );
-    if (enregistre) e.verdict("le PV est rédigé, chiffres tirés des statistiques", enregistre.sections.length === 3, `${enregistre.chiffres.length} chiffre(s) cité(s)`);
+    if (enregistre)
+      e.verdict(
+        "le PV est rédigé, chiffres tirés des statistiques",
+        enregistre.sections.length === 3,
+        `${enregistre.chiffres.length} chiffre(s) cité(s)`,
+      );
   }
 }
 
@@ -921,9 +1676,17 @@ if (PMES.sotumag.id) {
 e.section("Le conseil : trois arbitrages");
 await e.connecter(LEILA);
 const parametres = await etape("paramètres cités du corpus", () =>
-  rpc("corpus", "parametresPour", [{ jurisdiction: JURIDICTION, mots: ["forfaitaires", "acomptes", "retenue", "honoraires"], nb: 60 }]),
+  rpc("corpus", "parametresPour", [
+    {
+      jurisdiction: JURIDICTION,
+      mots: ["forfaitaires", "acomptes", "retenue", "honoraires"],
+      nb: 60,
+    },
+  ]),
 );
-const nomsCorpus = parametres ? await rpc("conseil", "nomsDesCorpus", [[...new Set(parametres.map((p) => p.corpus))]]) : {};
+const nomsCorpus = parametres
+  ? await rpc("conseil", "nomsDesCorpus", [[...new Set(parametres.map((p) => p.corpus))]])
+  : {};
 const fileAvant = await rpc("conseil", "file", [cabinet.id]);
 
 /** Une réponse composée du seul texte du corpus : l'article, sa citation. */
@@ -933,31 +1696,59 @@ function reponseDepuis(param) {
   return `Le ${nom}, ${param.article ?? "article non précisé"}${depuis}, dispose : ${param.citation ?? param.libelle}. ${param.note ?? ""}`.trim();
 }
 function sourceDepuis(param) {
-  return { corpus: param.corpus, numero: String(param.article ?? "").replace(/^\s*art(icle|\.)?\s*/i, "").trim() || param.code, validFrom: param.validFrom, validTo: param.validTo, langue: "fr" };
+  return {
+    corpus: param.corpus,
+    numero:
+      String(param.article ?? "")
+        .replace(/^\s*art(icle|\.)?\s*/i, "")
+        .trim() || param.code,
+    validFrom: param.validFrom,
+    validTo: param.validTo,
+    langue: "fr",
+  };
 }
 const ARBITRAGES = [
   {
-    cle: "sotumag", code: "AVANCE_VENTES_FORFAITAIRES", theme: "avance sur ventes aux forfaitaires",
-    question: "Nous vendons à un détaillant au régime forfaitaire : devons-nous facturer l'avance sur nos ventes aux forfaitaires ?",
-    doute: "La qualité de forfaitaire du client n'est pas établie au dossier.", decider: false,
+    cle: "sotumag",
+    code: "AVANCE_VENTES_FORFAITAIRES",
+    theme: "avance sur ventes aux forfaitaires",
+    question:
+      "Nous vendons à un détaillant au régime forfaitaire : devons-nous facturer l'avance sur nos ventes aux forfaitaires ?",
+    doute: "La qualité de forfaitaire du client n'est pas établie au dossier.",
+    decider: false,
   },
   {
-    cle: "cleopatre", code: "ACOMPTES_ECHEANCES_PM", theme: "acomptes provisionnels",
-    question: "Notre exercice clôture en milieu d'année civile : à quelles dates tombent nos acomptes provisionnels ?",
-    doute: "La date de clôture décalée demande de recompter les mois depuis la clôture ; à vérifier avec le cabinet.", decider: false,
+    cle: "cleopatre",
+    code: "ACOMPTES_ECHEANCES_PM",
+    theme: "acomptes provisionnels",
+    question:
+      "Notre exercice clôture en milieu d'année civile : à quelles dates tombent nos acomptes provisionnels ?",
+    doute:
+      "La date de clôture décalée demande de recompter les mois depuis la clôture ; à vérifier avec le cabinet.",
+    decider: false,
   },
   {
-    cle: "medina", code: "RAS_HONORAIRES_REEL", theme: "retenue à la source sur honoraires",
-    question: "Devons-nous opérer une retenue à la source sur les honoraires que nous verse notre cabinet comptable ?",
-    doute: "Le régime du bénéficiaire conditionne le taux : à confirmer.", decider: true,
+    cle: "medina",
+    code: "RAS_HONORAIRES_REEL",
+    theme: "retenue à la source sur honoraires",
+    question:
+      "Devons-nous opérer une retenue à la source sur les honoraires que nous verse notre cabinet comptable ?",
+    doute: "Le régime du bénéficiaire conditionne le taux : à confirmer.",
+    decider: true,
   },
 ];
 for (const a of ARBITRAGES) {
   const pme = PMES[a.cle];
   if (!pme.id || !parametres) continue;
-  const param = parametres.find((p) => p.code === a.code) ?? parametres.find((p) => p.libelle.toLowerCase().includes(a.theme.split(" ")[0]));
+  const param =
+    parametres.find((p) => p.code === a.code) ??
+    parametres.find((p) => p.libelle.toLowerCase().includes(a.theme.split(" ")[0]));
   if (!param) {
-    e.verdict(`un paramètre du corpus fonde l'arbitrage de ${pme.name}`, false, `${a.code} introuvable`);
+    e.verdict(
+      `un paramètre du corpus fonde l'arbitrage de ${pme.name}`,
+      false,
+      `${a.code} introuvable`,
+    );
     continue;
   }
   let arbitrage = fileAvant.find((x) => x.tenantId === pme.id && x.question === a.question);
@@ -965,7 +1756,11 @@ for (const a of ARBITRAGES) {
     await e.connecter(pme.compte);
     const contexte = await rpc("conseil", "contexte", [pme.id]);
     if (contexte.seuil === null) {
-      e.verdict(`${pme.name} a un cabinet qui arbitre`, false, "aucun seuil : pas de cabinet mandaté");
+      e.verdict(
+        `${pme.name} a un cabinet qui arbitre`,
+        false,
+        "aucun seuil : pas de cabinet mandaté",
+      );
       continue;
     }
     const certitude = Math.max(0.05, Math.round((contexte.seuil - 0.2) * 100) / 100);
@@ -973,16 +1768,38 @@ for (const a of ARBITRAGES) {
     let fil = (await rpc("conversations", "lister", [pme.id])).find((f) => f.titre === titre);
     if (!fil) {
       fil = await rpc("conversations", "ouvrirNouvelle", [pme.id]);
-      await rpc("conversations", "ajouter", [{ conversationId: fil.id, question: a.question, reponse: "Votre question est relue par votre cabinet avant réponse." }]);
+      await rpc("conversations", "ajouter", [
+        {
+          conversationId: fil.id,
+          question: a.question,
+          reponse: "Votre question est relue par votre cabinet avant réponse.",
+        },
+      ]);
       await rpc("conversations", "renommer", [{ conversationId: fil.id, titre }]);
     }
     const cree = await etape(`arbitrage de ${pme.name}`, () =>
       rpc("conseil", "creer", [
-        { tenantId: pme.id, conversationId: fil.id, question: a.question, reponse: reponseDepuis(param), sources: [sourceDepuis(param)], certitude, doute: a.doute, canal: "conversation", theme: a.theme, langue: "fr", statut: "en_attente" },
+        {
+          tenantId: pme.id,
+          conversationId: fil.id,
+          question: a.question,
+          reponse: reponseDepuis(param),
+          sources: [sourceDepuis(param)],
+          certitude,
+          doute: a.doute,
+          canal: "conversation",
+          theme: a.theme,
+          langue: "fr",
+          statut: "en_attente",
+        },
       ]),
     );
     if (!cree) continue;
-    e.verdict(`${pme.name} pose une question de conseil, retenue sous le seuil`, cree.cabinetId === cabinet.id, `certitude ${certitude} < seuil ${contexte.seuil} · ${param.corpus} ${param.article}`);
+    e.verdict(
+      `${pme.name} pose une question de conseil, retenue sous le seuil`,
+      cree.cabinetId === cabinet.id,
+      `certitude ${certitude} < seuil ${contexte.seuil} · ${param.corpus} ${param.article}`,
+    );
     await e.connecter(LEILA);
     arbitrage = await rpc("conseil", "lire", [cree.id]);
   } else {
@@ -991,14 +1808,32 @@ for (const a of ARBITRAGES) {
   if (a.decider && arbitrage?.statut === "en_attente") {
     await e.connecter(LEILA);
     const decide = await etape(`approbation de l'arbitrage de ${pme.name}`, () =>
-      rpc("conseil", "decider", [arbitrage.id, "approuvee", null, null, `${arbitrage.reponseProposee}\n\nRéponse relue et approuvée par ${cabinet.name}.`]),
+      rpc("conseil", "decider", [
+        arbitrage.id,
+        "approuvee",
+        null,
+        null,
+        `${arbitrage.reponseProposee}\n\nRéponse relue et approuvée par ${cabinet.name}.`,
+      ]),
     );
-    if (decide) e.verdict(`le cabinet approuve la réponse à ${pme.name}`, decide.statut === "approuvee", decide.statut);
+    if (decide)
+      e.verdict(
+        `le cabinet approuve la réponse à ${pme.name}`,
+        decide.statut === "approuvee",
+        decide.statut,
+      );
   }
 }
 await e.connecter(LEILA);
-const stats = await etape("statistiques du conseil", () => rpc("conseil", "statistiques", [cabinet.id]));
-if (stats) e.verdict("la file du conseil porte deux attentes et une approbation", stats.totaux.enAttente >= 2 && stats.totaux.approuvees >= 1, `${stats.totaux.enAttente} en attente · ${stats.totaux.approuvees} approuvée(s)`);
+const stats = await etape("statistiques du conseil", () =>
+  rpc("conseil", "statistiques", [cabinet.id]),
+);
+if (stats)
+  e.verdict(
+    "la file du conseil porte deux attentes et une approbation",
+    stats.totaux.enAttente >= 2 && stats.totaux.approuvees >= 1,
+    `${stats.totaux.enAttente} en attente · ${stats.totaux.approuvees} approuvée(s)`,
+  );
 
 /* ============================================================ fin */
 e.section("Pour ouvrir le jeu");

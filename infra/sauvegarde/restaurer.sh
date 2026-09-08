@@ -2,7 +2,7 @@
 # Restaurer — la répétition mensuelle, et l'incident.
 #
 #   restaurer.sh lister                         les instantanés hors site
-#   restaurer.sh repeter [instantané]           dans regalica_restauree, à côté de la base vivante ; mesure le temps
+#   restaurer.sh repeter [instantané]           dans malica_restauree, à côté de la base vivante ; mesure le temps
 #   restaurer.sh remplacer <instantané>         la base vivante devient celle de l'instantané (API et site arrêtés avant)
 #   restaurer.sh pieces <instantané> [dossier]  les pièces, dans /restauration/pieces par défaut
 #
@@ -10,7 +10,7 @@
 #   docker compose run --rm sauvegarde restaurer.sh repeter
 #
 # « remplacer » ne détruit rien : la base d'avant est renommée
-# regalica_avant_<horodatage>, et se supprime à la main une fois l'incident
+# malica_avant_<horodatage>, et se supprime à la main une fois l'incident
 # clos. Il exige REMPLACER=oui dans l'environnement, pour qu'un doigt qui
 # glisse ne suffise pas.
 set -euo pipefail
@@ -31,7 +31,7 @@ ramener_le_dump() {
   # Le résumé de restic va sur stderr : seule la sortie de cette fonction est le chemin du dump.
   r restore "$instantane" --tag base --target "$CIBLE/base" --quiet >&2
   local dump
-  dump=$(find "$CIBLE/base" -name 'regalica-*.dump' | sort | tail -n 1)
+  dump=$(find "$CIBLE/base" -name 'malica-*.dump' | sort | tail -n 1)
   [ -n "$dump" ] || {
     echo "aucun dump dans l'instantané $instantane" >&2
     exit 1
@@ -62,11 +62,11 @@ repeter() {
   local dump
   dump=$(ramener_le_dump "${1:-latest}")
   local tables
-  tables=$(charger "$dump" regalica_restauree)
+  tables=$(charger "$dump" malica_restauree)
   local duree=$(($(date +%s) - debut))
-  echo "[$(maintenant)] regalica_restauree : $tables tables, restaurée en $duree s depuis $(basename "$dump")"
+  echo "[$(maintenant)] malica_restauree : $tables tables, restaurée en $duree s depuis $(basename "$dump")"
   echo "À consigner dans docs/exploitation.md (registre des répétitions), puis :"
-  echo "  docker compose run --rm sauvegarde psql -h postgres -U postgres -c 'drop database regalica_restauree'"
+  echo "  docker compose run --rm sauvegarde psql -h postgres -U postgres -c 'drop database malica_restauree'"
 }
 
 remplacer() {
@@ -80,11 +80,11 @@ remplacer() {
   echo "[$(maintenant)] remplacement depuis $instantane"
   local dump
   dump=$(ramener_le_dump "$instantane")
-  charger "$dump" regalica_restauree >/dev/null
-  local avant="regalica_avant_$(date +%Y%m%d_%H%M%S)"
-  psql_admin -d postgres -c "alter database regalica rename to $avant"
-  psql_admin -d postgres -c "alter database regalica_restauree rename to regalica"
-  echo "[$(maintenant)] regalica remplacée en $(($(date +%s) - debut)) s ; l'ancienne est $avant. Relancez : docker compose up -d"
+  charger "$dump" malica_restauree >/dev/null
+  local avant="malica_avant_$(date +%Y%m%d_%H%M%S)"
+  psql_admin -d postgres -c "alter database malica rename to $avant"
+  psql_admin -d postgres -c "alter database malica_restauree rename to malica"
+  echo "[$(maintenant)] malica remplacée en $(($(date +%s) - debut)) s ; l'ancienne est $avant. Relancez : docker compose up -d"
 }
 
 pieces() {

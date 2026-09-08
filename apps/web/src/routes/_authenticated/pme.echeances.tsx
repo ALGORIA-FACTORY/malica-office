@@ -1,22 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/echeances")({
   head: () => ({
     meta: [
-      { title: "Vos échéances — Regalica Office" },
+      { title: "Vos échéances — Malica Office" },
       {
         name: "description",
         content: "Les dates qui viennent, annoncées à l'avance, jamais à la dernière minute.",
       },
-      { property: "og:title", content: "Vos échéances — Regalica Office" },
+      { property: "og:title", content: "Vos échéances — Malica Office" },
       {
         property: "og:description",
         content: "Les dates qui viennent, annoncées à l'avance.",
@@ -35,7 +35,7 @@ const OU = "routes/_authenticated/pme.echeances";
  * Vos échéances — anticipé, non anxiogène.
  *
  * C'est la note du prototype, et elle commande toute la page : une échéance
- * n'est pas une alarme. Elle s'annonce, elle se prépare, et Regalica dit
+ * n'est pas une alarme. Elle s'annonce, elle se prépare, et Malica dit
  * combien de temps il reste plutôt que de crier qu'il n'en reste plus.
  *
  * D'où l'ordre : sa phrase rassurante D'ABORD, la liste ensuite. Un écran qui
@@ -99,7 +99,7 @@ function PmeEcheances() {
 
       {/* Sa parole avant la liste : le ton se donne en premier. */}
       <div className="mt-3 flex gap-3">
-        <RegalicaAvatar size={32} alt="Regalica" rond />
+        <MalicaAvatar size={32} alt="Malica" rond />
         <p className="text-[14.5px] leading-[1.5]">{phrase}</p>
       </div>
 

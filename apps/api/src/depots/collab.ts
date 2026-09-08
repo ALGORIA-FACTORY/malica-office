@@ -23,7 +23,7 @@ function texte(v: unknown, defaut = "—"): string {
 }
 
 const COLONNES_PV = `id, cabinet_tenant_id, client_tenant_id, at, titre, participants, ordre_du_jour, decisions,
-       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_regalica`;
+       created_at, sections, chiffres, ton, statut, envoye_le, redige_par_malica`;
 
 /** Un PV tel que la vue le rend. Les tableaux JSON arrivent déjà décodés par pg. */
 function versPv(p: Record<string, unknown>) {
@@ -52,7 +52,7 @@ function versPv(p: Record<string, unknown>) {
     ton: (p["ton"] as string | null) ?? null,
     statut: (p["statut"] as string) ?? "brouillon",
     envoyeLe: (p["envoye_le"] as string | null) ?? null,
-    redigeParRegalica: Boolean(p["redige_par_regalica"]),
+    redigeParMalica: Boolean(p["redige_par_malica"]),
   };
 }
 
@@ -144,7 +144,7 @@ export const collab = {
         devise: string | null;
       }>;
       ton?: string | null;
-      redigeParRegalica?: boolean;
+      redigeParMalica?: boolean;
     },
   ) {
     const { rows } = await db.query(
@@ -155,7 +155,7 @@ export const collab = {
               sections            = coalesce($7::jsonb, sections),
               chiffres            = coalesce($8::jsonb, chiffres),
               ton                 = case when $9::boolean then $10 else ton end,
-              redige_par_regalica = coalesce($11, redige_par_regalica)
+              redige_par_malica = coalesce($11, redige_par_malica)
         where id = $1
         returning ${COLONNES_PV}`,
       [
@@ -169,7 +169,7 @@ export const collab = {
         input.chiffres ? JSON.stringify(input.chiffres) : null,
         input.ton !== undefined,
         input.ton ?? null,
-        input.redigeParRegalica ?? null,
+        input.redigeParMalica ?? null,
       ],
     );
     const p = (rows as Record<string, unknown>[])[0];

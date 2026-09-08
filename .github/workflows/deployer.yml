@@ -47,4 +47,4 @@ jobs:
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer $VERSION"
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"

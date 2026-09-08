@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Les honoraires du cabinet : mandats, factures, encaissements.
+--  Malica Office — Les honoraires du cabinet : mandats, factures, encaissements.
 --
 --  POURQUOI : ce que chaque mandat doit produire, ce qui est facturé, ce qui est
 --  encaissé. Un montant n'est jamais deviné : il vient du barème du mandat ou
@@ -150,7 +150,7 @@ begin
     return case when tg_op = 'DELETE' then old else new end;
   end if;
   if tg_op = 'UPDATE'
-     and coalesce(current_setting('regalica.honoraires_transition', true), '') = old.id::text
+     and coalesce(current_setting('malica.honoraires_transition', true), '') = old.id::text
   then
     return new;
   end if;
@@ -657,9 +657,9 @@ begin
     from collab.encaissements_honoraires where facture_id = p_facture;
 
   if v_somme >= f.total_ttc then
-    perform set_config('regalica.honoraires_transition', p_facture::text, true);
+    perform set_config('malica.honoraires_transition', p_facture::text, true);
     update collab.factures_honoraires set statut = 'payee', payee_le = p_date where id = p_facture;
-    perform set_config('regalica.honoraires_transition', '', true);
+    perform set_config('malica.honoraires_transition', '', true);
   end if;
 
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
@@ -714,9 +714,9 @@ begin
      set statut = 'emise', numero = v_numero, emise_le = v_jour, echeance_le = v_jour
    where id = v_avoir;
 
-  perform set_config('regalica.honoraires_transition', p_id::text, true);
+  perform set_config('malica.honoraires_transition', p_id::text, true);
   update collab.factures_honoraires set statut = 'annulee', annulee_le = v_jour where id = p_id;
-  perform set_config('regalica.honoraires_transition', '', true);
+  perform set_config('malica.honoraires_transition', '', true);
 
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
   values (f.tenant_id, auth.uid(), 'honoraires.avoir', 'collab', 'factures_honoraires', v_avoir,

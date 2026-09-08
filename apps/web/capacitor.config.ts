@@ -19,7 +19,7 @@
  * version en ligne, mise à jour sans les magasins. C'était simple, et c'était
  * une page blanche sans réseau — le contraire de ce qu'on demande à cette
  * application. Le bundle est donc DANS le paquet, construit en mode SPA par
- * `npm run build:coque:<env> -w @regalica/web` (voir `vite.config.ts`), et
+ * `npm run build:coque:<env> -w @malica/web` (voir `vite.config.ts`), et
  * l'API est jointe par l'adresse déclarée dans `apps/web/.env.coque-<env>`.
  *
  * Les mises à jour du bundle sans repasser par les magasins partent par la
@@ -35,27 +35,27 @@
  * parce que c'est le web qui les appelle ; la configuration vit donc ici, et
  * `android/` reste à la racine, désigné par son chemin.
  *
- *   npm run coque:sync -w @regalica/web      cap sync android
+ *   npm run coque:sync -w @malica/web      cap sync android
  */
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.algoriafactory.regalica",
-  appName: "Regalica Office",
+  appId: "com.algoriafactory.malica",
+  appName: "Malica Office",
   webDir: ".output/public",
   android: { path: "../../android" },
 
   server: {
     /*
      * Jamais de clair : la coque parle à l'API en HTTPS, ou ne parle pas.
-     * Une seule exception, l'émulateur de la CI (REGALICA_COQUE_EMULATEUR=1
+     * Une seule exception, l'émulateur de la CI (MALICA_COQUE_EMULATEUR=1
      * au moment de `cap sync`) : l'API de la machine hôte est en clair sur
      * 10.0.2.2, et la page doit l'être aussi pour qu'un contenu mixte ne
      * bloque pas l'appel. La saveur Gradle `emulateur` est la seule dont le
      * manifeste l'autorise.
      */
-    cleartext: process.env["REGALICA_COQUE_EMULATEUR"] === "1",
-    androidScheme: process.env["REGALICA_COQUE_EMULATEUR"] === "1" ? "http" : "https",
+    cleartext: process.env["MALICA_COQUE_EMULATEUR"] === "1",
+    androidScheme: process.env["MALICA_COQUE_EMULATEUR"] === "1" ? "http" : "https",
   },
 
   plugins: {

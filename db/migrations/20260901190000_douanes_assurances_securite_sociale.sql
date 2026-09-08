@@ -2,7 +2,7 @@
 --
 --   CTVA 2024   l'edition francaise 2024 du code de la TVA. Nos editions
 --               francaises s'arretaient a 2023 et les seules plus recentes
---               etaient arabes : interrogee sur 2026, Regalica repondait qu'elle
+--               etaient arabes : interrogee sur 2026, Malica repondait qu'elle
 --               n'avait pas le texte francais en vigueur. Elle l'a maintenant.
 --   CDOUANE     code des douanes — la TVA a l'importation, les regimes
 --               suspensifs, la valeur en douane. Une PME importatrice y est tous

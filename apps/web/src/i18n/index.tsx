@@ -14,14 +14,14 @@ import {
   RTL_LOCALES,
   type Locale,
   type MessageKey,
-} from "@regalica/socle/messages";
+} from "@malica/socle/messages";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 
-export { LOCALES, LOCALE_NAMES } from "@regalica/socle/messages";
-export type { Locale, MessageKey } from "@regalica/socle/messages";
+export { LOCALES, LOCALE_NAMES } from "@malica/socle/messages";
+export type { Locale, MessageKey } from "@malica/socle/messages";
 
-const STORAGE_KEY = "regalica.locale";
+const STORAGE_KEY = "malica.locale";
 const DEFAULT_LOCALE: Locale = "fr";
 
 function dirFor(locale: Locale): "ltr" | "rtl" {

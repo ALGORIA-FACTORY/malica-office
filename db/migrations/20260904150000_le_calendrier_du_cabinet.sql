@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Le calendrier du cabinet, et le ton de ses restitutions.
+--  Malica Office — Le calendrier du cabinet, et le ton de ses restitutions.
 --
 --  POURQUOI : le pack dit quelles obligations existent ; le cabinet dit
 --  lesquelles il suit pour ses mandats, par secteur et par exercice, avec
@@ -7,7 +7,7 @@
 --  (une taxe locale, une convention de place). Une obligation désactivée
 --  DISPARAÎT du calendrier des dossiers concernés : la dérivation la lit.
 --
---  Le ton des restitutions est un réglage du cabinet : les PV que Regalica
+--  Le ton des restitutions est un réglage du cabinet : les PV que Malica
 --  rédige le portent.
 --
 --  Idempotent.
@@ -18,11 +18,21 @@ alter table collab.reglages_cabinet
   add column if not exists ton_restitutions text not null default 'sobre'
     check (ton_restitutions in ('sobre', 'chaleureux'));
 
-create or replace view public.reglages_cabinet_v with (security_invoker = true) as
-select tenant_id, seuil_confiance_lot, seuil_confiance_revue, double_validation_au_dela,
-       propositions_proactives, updated_by, updated_at, capacite_dossiers_par_collaborateur,
-       ton_restitutions
-from collab.reglages_cabinet;
+-- La vue se recompose depuis le catalogue : rejouée après qu'une migration
+-- plus récente l'a élargie, elle garde toutes les colonnes (une vue remplacée
+-- ne peut pas en perdre).
+do $$
+declare
+  v_cols text;
+begin
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+    into v_cols
+    from information_schema.columns
+   where table_schema = 'collab' and table_name = 'reglages_cabinet';
+  execute format(
+    'create or replace view public.reglages_cabinet_v with (security_invoker = true) as select %s from collab.reglages_cabinet',
+    v_cols);
+end $$;
 grant select on public.reglages_cabinet_v to authenticated;
 
 create or replace function public.cabinet_reglages_lire(p_tenant uuid)

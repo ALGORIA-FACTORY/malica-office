@@ -2,25 +2,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
-import { usePme } from "@/components/regalica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import { computeChargesByFamille } from "@regalica/socle/engines/charges/familles";
+import { office } from "@/verticals/malica-office/composition";
+import { computeChargesByFamille } from "@malica/socle/engines/charges/familles";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/charges")({
   head: () => ({
     meta: [
-      { title: "Mes charges par famille — Regalica Office" },
+      { title: "Mes charges par famille — Malica Office" },
       {
         name: "description",
         content:
           "Les charges de la période regroupées par famille, à partir d'articles cités, avec les écarts inhabituels signalés.",
       },
-      { property: "og:title", content: "Mes charges par famille — Regalica Office" },
+      { property: "og:title", content: "Mes charges par famille — Malica Office" },
       {
         property: "og:description",
         content:
@@ -46,7 +46,7 @@ function monthsBack(n: number): string {
 /**
  * « Vos charges » — lecture par famille. Aucun chiffre calculé ici : le total
  * et l'écart viennent du moteur du Socle, à partir d'articles cités et de
- * seuils du pack. Regalica pose la question, elle ne modifie rien.
+ * seuils du pack. Malica pose la question, elle ne modifie rien.
  */
 function ChargesScreen() {
   const { t, locale } = useI18n();
@@ -306,7 +306,7 @@ function ChargesScreen() {
             className="mt-[22px] border border-border border-s-[3px] border-s-foreground bg-card p-4"
           >
             <div className="flex gap-3">
-              <RegalicaAvatar size={32} alt="Regalica" rond />
+              <MalicaAvatar size={32} alt="Malica" rond />
               <p className="min-w-0 flex-1 text-[15px] leading-[1.5]">
                 {t("pme.charges.question", {
                   famille: a.label,

@@ -3,23 +3,23 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { coque, versionClient } from "@/capabilities/coque";
-import { useApparence, type Apparence } from "@/components/regalica/apparence";
-import { usePme } from "@/components/regalica/pme-context";
+import { useApparence, type Apparence } from "@/components/malica/apparence";
+import { usePme } from "@/components/malica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
   head: () => ({
     meta: [
-      { title: "Réglages — Regalica Office" },
-      { name: "description", content: "Langue, apparence, et ce dont Regalica vous prévient." },
-      { property: "og:title", content: "Réglages — Regalica Office" },
+      { title: "Réglages — Malica Office" },
+      { name: "description", content: "Langue, apparence, et ce dont Malica vous prévient." },
+      { property: "og:title", content: "Réglages — Malica Office" },
       {
         property: "og:description",
-        content: "Langue, apparence, et ce dont Regalica vous prévient.",
+        content: "Langue, apparence, et ce dont Malica vous prévient.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -118,7 +118,7 @@ function PmeReglages() {
        *
        * Elle est ici et non sur l'accueil : l'accueil tient en une page, et ce
        * réglage se fait une fois puis se revisite rarement. Mais il commande la
-       * moitié des réponses de Regalica — sans régime connu, elle ne peut ni
+       * moitié des réponses de Malica — sans régime connu, elle ne peut ni
        * qualifier une opération ni répondre sur une déduction.
        */}
       <Link

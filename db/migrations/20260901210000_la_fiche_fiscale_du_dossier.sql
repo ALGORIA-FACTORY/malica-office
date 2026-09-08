@@ -4,7 +4,7 @@
 --
 -- CE QUI SE PASSAIT AVANT
 --
--- Regalica ne savait rien du client. La base ne portait que ceci :
+-- Malica ne savait rien du client. La base ne portait que ceci :
 --
 --     id · kind · name · legal_id · jurisdiction · currency · validation_mode
 --
@@ -97,7 +97,7 @@ create table if not exists identity.fiches_fiscales (
   tenant_id         uuid not null references identity.organizations(id) on delete cascade,
 
   -- Ce que la fiche établit. Tout est NULLABLE : une fiche partielle vaut
-  -- mieux qu'une fiche complétée par des suppositions, et Regalica sait dire
+  -- mieux qu'une fiche complétée par des suppositions, et Malica sait dire
   -- ce qu'elle ignore.
   regime_imposition text,
   regime_tva        text,

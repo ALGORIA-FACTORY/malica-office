@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Un bien constaté ne se recalcule pas.
+--  Malica Office — Un bien constaté ne se recalcule pas.
 --
 --  POURQUOI : la dotation d'un exercice est constatée avec son écriture (R7 :
 --  l'écriture ne se réécrit pas). Or rien n'empêchait, ensuite, de changer la

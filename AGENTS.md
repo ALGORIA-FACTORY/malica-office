@@ -11,7 +11,7 @@ modèle. Il reçoit des valeurs, il rend des valeurs. Les dépendances sortent
 par les ports ; un seul fichier de composition sait quelle implémentation est
 branchée.
 
-*Vérifié par* le test de pureté, et par le fait que le paquet ne déclare
+_Vérifié par_ le test de pureté, et par le fait que le paquet ne déclare
 aucune de ces dépendances.
 
 ## R2 — Zéro hallucination, dès la lecture
@@ -23,7 +23,7 @@ relues dans le plan, jamais dans sa réponse.
 
 Cette chaîne ne se modifie pas sans raison impérieuse.
 
-## R3 — Regalica appelle, ne calcule pas
+## R3 — Malica appelle, ne calcule pas
 
 La couche agentique n'émet aucune valeur liante. Pour tout chiffre, elle
 invoque un moteur du Socle et restitue son résultat avec la citation. Le seul
@@ -45,7 +45,7 @@ et c'est la pire forme d'erreur.
 pas un repli implicite. Ce que R4 interdit, c'est la valeur qu'on ne voit pas
 et qu'on ne peut pas changer.
 
-*Vérifié par* un test qui refuse tout littéral réglementaire dans le code de
+_Vérifié par_ un test qui refuse tout littéral réglementaire dans le code de
 production.
 
 ## R5 — Un seul moteur, N juridictions
@@ -61,7 +61,7 @@ utilisateur n'emprunte un rôle privilégié.
 La raison est structurelle : un filtre par tenant oublié dans du code
 applicatif **ouvre** l'accès ; une politique RLS oubliée le **refuse**.
 
-*Vérifié par* un test qui échoue dès qu'une table passe sous RLS de tenant
+_Vérifié par_ un test qui échoue dès qu'une table passe sous RLS de tenant
 sans index menant par `tenant_id` — sans quoi chaque lecture parcourt la
 table entière, tous tenants confondus.
 
@@ -83,9 +83,9 @@ Aucun fichier, composant ou paquet non importé. Aucun doublon d'écran, aucun
 stub, aucun placeholder — un dossier vide en attente d'un futur travail est
 un placeholder.
 
-*Vérifié par* `knip` en CI.
+_Vérifié par_ `knip` en CI.
 
-## R10 — Regalica propose un défaut, l'expert arrête le paramétrage
+## R10 — Malica propose un défaut, l'expert arrête le paramétrage
 
 Le produit livre une nomenclature, des imputations et des seuils **par défaut**.
 Ce sont des valeurs de départ raisonnables, pas des vérités : elles permettent à
@@ -102,7 +102,7 @@ Trois conséquences, et la troisième est la plus contraignante :
    changera n'est pas une faute ; ne rien livrer et attendre sa validation
    l'est, parce que le produit devient inutilisable entre-temps.
 
-2. **Un défaut se dit.** Toute valeur réglementaire livrée par Regalica est
+2. **Un défaut se dit.** Toute valeur réglementaire livrée par Malica est
    marquée comme telle et reste distinguable de ce que l'expert a arrêté. On
    doit pouvoir répondre à « qui a décidé ce compte » sans lire un historique.
 

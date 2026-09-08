@@ -16,33 +16,33 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
   InkCell,
   InkTable,
   InkTableRow,
-  RegalicaNote,
+  MalicaNote,
   SectionTitle,
   SignalLight,
-} from "@/components/regalica/office-ui";
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { joursDAttente, toneForStatus } from "@/lib/file-cabinet";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { QueueItem } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { QueueItem } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({
     meta: [
-      { title: "Aujourd'hui — cabinet — Regalica Office" },
+      { title: "Aujourd'hui — cabinet — Malica Office" },
       {
         name: "description",
         content: "La file priorisée du jour, la charge du cabinet et les échéances proches.",
       },
-      { property: "og:title", content: "Aujourd'hui — cabinet — Regalica Office" },
+      { property: "og:title", content: "Aujourd'hui — cabinet — Malica Office" },
       {
         property: "og:description",
         content: "La file priorisée du jour, la charge du cabinet et les échéances proches.",
@@ -85,7 +85,7 @@ function CabinetToday() {
     enabled: clientIds.length > 0,
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.regalica.queue")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.malica.queue")}</MalicaNote>, [locale]);
 
   const rows = useMemo(() => queue.data ?? [], [queue.data]);
   const toReview = rows.filter((r) => r.status === "comptabilisee").length;

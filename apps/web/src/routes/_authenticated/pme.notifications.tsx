@@ -1,5 +1,5 @@
 /**
- * Les notifications de la PME — ce que le cabinet et Regalica lui disent.
+ * Les notifications de la PME — ce que le cabinet et Malica lui disent.
  *
  * Chaque genre a sa phrase dans le dictionnaire ; ce que la notification
  * porte en plus — le titre d'un procès-verbal, le nom du cabinet, le sujet
@@ -9,28 +9,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { usePme } from "@/components/regalica/pme-context";
-import {
-  EmptyState,
-  RegalicaVoice,
-  SectionTitle,
-  SignalDot,
-} from "@/components/regalica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
+import { EmptyState, MalicaVoice, SectionTitle, SignalDot } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/notifications")({
   head: () => ({
     meta: [
-      { title: "Notifications — Regalica Office" },
+      { title: "Notifications — Malica Office" },
       {
         name: "description",
         content:
           "Les retours du cabinet et les validations, avec le motif gouverné et le lien vers la pièce concernée. Aucune notification-appât.",
       },
-      { property: "og:title", content: "Notifications — Regalica Office" },
+      { property: "og:title", content: "Notifications — Malica Office" },
       {
         property: "og:description",
         content: "Retours motivés du cabinet et validations, rien d'autre.",
@@ -110,7 +105,7 @@ function PmeNotifications() {
 
   return (
     <div className="space-y-6">
-      <RegalicaVoice
+      <MalicaVoice
         greeting={t("pme.notifs.title")}
         sentence={
           rows.length === 0

@@ -1,25 +1,25 @@
 # Le corpus juridique et ses empreintes vectorielles
 
 **Date** : 1er septembre 2026
-**État** : en service sur `regalica_local`. Migration
+**État** : en service sur `malica_local`. Migration
 `20260901090000_empreintes_vectorielles_du_corpus.sql`.
 
 ---
 
 ## 1. Ce qui est en base
 
-| | |
-|---|---|
-| Documents en file d'ingestion | 788, dont 786 ingérés |
-| Articles | 3 110 |
-| Versions datées | 4 902 |
-| Références juridiques extraites | 23 631 |
-| Fragments (`legal.chunks`) | **13 662**, tous encodés |
-| Modèle d'empreinte | `alibaba/qwen3.7-text-embedding`, 1024 dimensions |
-| Coût de l'encodage complet | **0,52 $** pour 7 496 708 jetons |
-| Durée | 32 minutes |
-| Taille de `legal.chunks` | 203 Mo, dont 105 Mo d'index HNSW |
-| Latence de recherche mesurée | **6 à 74 ms** |
+|                                 |                                                   |
+| ------------------------------- | ------------------------------------------------- |
+| Documents en file d'ingestion   | 788, dont 786 ingérés                             |
+| Articles                        | 3 110                                             |
+| Versions datées                 | 4 902                                             |
+| Références juridiques extraites | 23 631                                            |
+| Fragments (`legal.chunks`)      | **13 662**, tous encodés                          |
+| Modèle d'empreinte              | `alibaba/qwen3.7-text-embedding`, 1024 dimensions |
+| Coût de l'encodage complet      | **0,52 $** pour 7 496 708 jetons                  |
+| Durée                           | 32 minutes                                        |
+| Taille de `legal.chunks`        | 203 Mo, dont 105 Mo d'index HNSW                  |
+| Latence de recherche mesurée    | **6 à 74 ms**                                     |
 
 ---
 
@@ -119,13 +119,13 @@ schéma `extensions`, hors du `search_path` par défaut, et un appel non qualifi
 
 ### Résultats sur des questions réelles
 
-| Question | Premier résultat | Distance |
-|---|---|---|
-| droit de timbre sur les factures | **CDET art. 127** — l'article qui impose la mention « droit de timbre payé sur déclaration » sur les factures | 0,210 |
-| retenue à la source sur les honoraires | **CIRPPIS art. 52** — 15 % puis 10 % au titre des honoraires | 0,244 |
-| taux de TVA applicable aux services | **LF-1998 art. 25** (18 %), puis **LF-2018 art. 43** (18 % → 19 %) | 0,248 |
-| الأداء على القيمة المضافة | **CTVA art. 9 et 10** — droit à déduction de la TVA | 0,390 |
-| معاليم التسجيل والطابع الجبائي | **CDET art. 117** — recouvrement du droit de timbre | 0,312 |
+| Question                               | Premier résultat                                                                                              | Distance |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------- |
+| droit de timbre sur les factures       | **CDET art. 127** — l'article qui impose la mention « droit de timbre payé sur déclaration » sur les factures | 0,210    |
+| retenue à la source sur les honoraires | **CIRPPIS art. 52** — 15 % puis 10 % au titre des honoraires                                                  | 0,244    |
+| taux de TVA applicable aux services    | **LF-1998 art. 25** (18 %), puis **LF-2018 art. 43** (18 % → 19 %)                                            | 0,248    |
+| الأداء على القيمة المضافة              | **CTVA art. 9 et 10** — droit à déduction de la TVA                                                           | 0,390    |
+| معاليم التسجيل والطابع الجبائي         | **CDET art. 117** — recouvrement du droit de timbre                                                           | 0,312    |
 
 Le corpus répond en arabe comme en français, sur le même index.
 
@@ -152,8 +152,7 @@ l'arabe, soit `langue_faisant_foi` cesse d'affirmer ce qui n'est pas là.
 ### 5.2 La recherche n'est pas datée
 
 Une même question remonte aujourd'hui plusieurs éditions du même article — la
-recherche « droit de timbre » rend CDET art. 127 dans ses versions 2018, 2020 et
-2025. C'est correct pour explorer, faux pour répondre : à une question posée
+recherche « droit de timbre » rend CDET art. 127 dans ses versions 2018, 2020 et 2025. C'est correct pour explorer, faux pour répondre : à une question posée
 pour un exercice donné, seule la version en vigueur à cette date fait foi.
 
 `legal.article_versions` porte déjà `valid_from` et `valid_to`. Il manque le

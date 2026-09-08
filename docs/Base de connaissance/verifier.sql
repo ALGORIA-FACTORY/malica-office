@@ -1,6 +1,6 @@
 \echo '=== COMPTAGES ==='
 select 'comptes officiels (NC 01)      ' l, count(*) n from ref.accounts where is_official
-union all select 'extensions Regalica            ', count(*) from ref.accounts where not is_official
+union all select 'extensions Malica            ', count(*) from ref.accounts where not is_official
 union all select 'rôles comptables               ', count(*) from ref.account_roles
 union all select 'liaisons rôle -> compte (TN)   ', count(*) from ref.role_bindings
 union all select 'schémas d''écriture             ', count(*) from ref.entry_templates

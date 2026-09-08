@@ -5,10 +5,10 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { files } from "@/capabilities/files";
-import { BandeauHorsLigne } from "@/components/regalica/bandeau-hors-ligne";
-import { EntetePme } from "@/components/regalica/entete-pme";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
-import { PmeProvider, type CaptureKind } from "@/components/regalica/pme-context";
+import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
+import { EntetePme } from "@/components/malica/entete-pme";
+import { MalicaAvatar } from "@/components/malica/office-ui";
+import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
@@ -16,7 +16,7 @@ import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
 
@@ -26,19 +26,19 @@ import { etiqueterLeDossier } from "@/lib/telemetrie";
  * jamais : le scanner de l'appareil prend sa place.
  */
 const CameraScanner = lazy(() =>
-  import("@/components/regalica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
+  import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
 );
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
-      { title: "Espace PME — Regalica Office" },
+      { title: "Espace PME — Malica Office" },
       {
         name: "description",
         content:
           "Photographiez une facture, lisez-la avec citation de la zone source, confirmez l'écriture et suivez la TVA de la période.",
       },
-      { property: "og:title", content: "Espace PME — Regalica Office" },
+      { property: "og:title", content: "Espace PME — Malica Office" },
       {
         property: "og:description",
         content: "Capture citée, écriture proposée par le Socle, TVA de la période.",
@@ -290,7 +290,7 @@ function PmeLayout() {
        */}
       {capture.isPending ? (
         <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
-          <RegalicaAvatar size={66} alt="Regalica" rond />
+          <MalicaAvatar size={66} alt="Malica" rond />
           <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
             {t("pme.capture.preparation")}
           </p>

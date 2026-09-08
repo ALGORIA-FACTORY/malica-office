@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — File d'ingestion du corpus juridique tunisien
+--  Malica Office — File d'ingestion du corpus juridique tunisien
 --
 --  Ce fichier ne contient AUCUN texte de loi. Il contient la LISTE de ce qu'il faut lire,
 --  vérifiée document par document : chaque URL a répondu, chaque langue a été mesurée sur

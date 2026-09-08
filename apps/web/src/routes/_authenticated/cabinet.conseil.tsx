@@ -1,10 +1,10 @@
 /**
- * Le conseil — ce que Regalica n'ose pas envoyer seule, et le corpus qu'elle cite.
+ * Le conseil — ce que Malica n'ose pas envoyer seule, et le corpus qu'elle cite.
  *
  * ============================================================== POURQUOI
  *
  * Deux registres. « Questions des clients » est la file d'arbitrage : chaque
- * question de conseil qu'un client mandaté a posée, la réponse que Regalica
+ * question de conseil qu'un client mandaté a posée, la réponse que Malica
  * propose, ses articles, sa certitude, et son doute — l'expert lève le pouce,
  * écrit la bonne réponse, ou écarte. « Corpus réglementaire » est la même
  * conseillère pour l'expert lui-même : une question libre, une réponse citée,
@@ -18,34 +18,29 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import {
-  EmptyState,
-  RegalicaAvatar,
-  RegalicaNote,
-  SectionTitle,
-} from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaAvatar, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@regalica/socle/conseil";
+import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@malica/socle/conseil";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import type {
   Arbitrage,
   DecisionArbitrage,
   StatutArbitrage,
-} from "@regalica/socle/ports/repositories";
+} from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/conseil")({
   head: () => ({
     meta: [
-      { title: "Conseil — Regalica Office" },
+      { title: "Conseil — Malica Office" },
       {
         name: "description",
         content:
-          "La file d'arbitrage des questions de conseil des clients, et le corpus réglementaire cité par Regalica.",
+          "La file d'arbitrage des questions de conseil des clients, et le corpus réglementaire cité par Malica.",
       },
-      { property: "og:title", content: "Conseil — Regalica Office" },
+      { property: "og:title", content: "Conseil — Malica Office" },
       {
         property: "og:description",
         content: "Questions des clients à arbitrer, et réponses citées du corpus juridique.",
@@ -136,7 +131,7 @@ function CabinetConseil() {
     queryFn: () => office().referential.activePack(org.jurisdiction),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.conseil.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.conseil.panel")}</MalicaNote>, [locale]);
 
   const classeOnglet = (actif: boolean) =>
     cn(
@@ -446,7 +441,7 @@ function QuestionsDesClients() {
 
                     <div className="px-4 py-3.5">
                       <div className="flex items-start gap-3">
-                        <RegalicaAvatar size={34} alt={t("brand.name")} rond />
+                        <MalicaAvatar size={34} alt={t("brand.name")} rond />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-marigold-on-paper">
@@ -892,7 +887,7 @@ function CorpusReglementaire() {
 
   const reponse = useMutation({
     mutationFn: (q: string) =>
-      office().regalica.repondreAuCabinet({ tenantId: org.id, question: q, locale }),
+      office().malica.repondreAuCabinet({ tenantId: org.id, question: q, locale }),
   });
   const veille = useQuery({
     queryKey: ["cab-conseil-veille", org.jurisdiction],
@@ -971,7 +966,7 @@ function CorpusReglementaire() {
           </p>
         ) : reponse.isError ? (
           <p role="alert" className="mt-4 text-[12.5px] text-signal-stop">
-            {texteDeLErreur(reponse.error, OU, t("regalica.chat.error"))}
+            {texteDeLErreur(reponse.error, OU, t("malica.chat.error"))}
           </p>
         ) : r ? (
           <>

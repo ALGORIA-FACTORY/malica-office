@@ -99,17 +99,17 @@ e.section("Une pièce trop volumineuse");
 }
 
 e.section("Demander la lecture sans attendre");
-const demande1 = await e.appel(`/regalica/lectures/${premiere.id}?attendre=0`, { method: "POST" });
+const demande1 = await e.appel(`/malica/lectures/${premiere.id}?attendre=0`, { method: "POST" });
 const d1 = await demande1.json();
 e.verdict("la demande répond tout de suite", demande1.status === 200 && d1.enCours === true);
-const demande2 = await e.appel(`/regalica/lectures/${premiere.id}?attendre=0`, { method: "POST" });
+const demande2 = await e.appel(`/malica/lectures/${premiere.id}?attendre=0`, { method: "POST" });
 const d2 = await demande2.json();
 e.verdict("la redemander rejoint la même lecture", demande2.status === 200 && d2.enCours === true);
 
 e.section("Rien ne reste");
 // La lecture, réelle ou non, doit se terminer avant qu'on supprime la pièce.
 for (let i = 0; i < 120; i += 1) {
-  const s = await (await e.appel(`/regalica/lectures/${premiere.id}`)).json();
+  const s = await (await e.appel(`/malica/lectures/${premiere.id}`)).json();
   if (!s.enCours) break;
   await new Promise((r) => setTimeout(r, 1000));
 }

@@ -21,7 +21,7 @@ import { retirerEntetesDePage } from "./entetes.mjs";
  *
  * « N° 148 Journal Officiel de la Republique Tunisienne — 12 decembre 2025
  * Page 3343 ». Trois informations : le numero du journal, sa date, et la page.
- * Elles sont la preuve de la publication officielle — sans elles, Regalica cite
+ * Elles sont la preuve de la publication officielle — sans elles, Malica cite
  * un article sans pouvoir montrer ou il a paru, ce qui ne tient pas devant un
  * controle. On les releve AVANT de retirer les entetes du texte.
  *
@@ -31,8 +31,24 @@ import { retirerEntetesDePage } from "./entetes.mjs";
  */
 const RE_ENTETE_JORT =
   /^[ \t]*([^\n]{0,40}?)Journal[ \t]+Officiel[ \t]+de[ \t]+la[ \t]+R[\u00e9e]publique[ \t]+Tunisienne([^\n]{0,80})$/gim;
-const MOIS_FR = ["janvier","f\u00e9vrier","mars","avril","mai","juin","juillet","ao\u00fbt","septembre","octobre","novembre","d\u00e9cembre"];
-const RE_DATE_JORT = new RegExp("(\\d{1,2})(?:\\s*[-\u2013]\\s*\\d{1,2})?\\s+(" + MOIS_FR.join("|") + ")\\s+(\\d{4})", "i");
+const MOIS_FR = [
+  "janvier",
+  "f\u00e9vrier",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "ao\u00fbt",
+  "septembre",
+  "octobre",
+  "novembre",
+  "d\u00e9cembre",
+];
+const RE_DATE_JORT = new RegExp(
+  "(\\d{1,2})(?:\\s*[-\u2013]\\s*\\d{1,2})?\\s+(" + MOIS_FR.join("|") + ")\\s+(\\d{4})",
+  "i",
+);
 
 function releverJort(texte) {
   const pages = [];
@@ -55,7 +71,8 @@ function releverJort(texte) {
   const date = majoritaire(dates);
   if (!numero && !date) return null;
   const tete = ["JORT", numero ? `n\u00b0 ${numero}` : null, date ? `du ${date}` : null]
-    .filter(Boolean).join(" ");
+    .filter(Boolean)
+    .join(" ");
   pages.sort((a, b) => a.pos - b.pos);
   return { tete, pages };
 }
@@ -76,7 +93,8 @@ function pageDe(jort, position) {
  * « ARTICLE 21 (Abroge par l'article 7 de la loi n\u00b02000-82 du 9 aout 2000) ».
  * On releve la mention VERBATIM ; on n'en deduit rien qu'elle ne dise.
  */
-const RE_ABROGATION = /\((\s*(?:Abrog|abrog|ABROG|\u0623\u0644\u063a|\u0645\u0644\u063a)[^)]{0,240})\)/;
+const RE_ABROGATION =
+  /\((\s*(?:Abrog|abrog|ABROG|\u0623\u0644\u063a|\u0645\u0644\u063a)[^)]{0,240})\)/;
 
 function abrogation(texte) {
   const m = RE_ABROGATION.exec(texte.slice(0, 400));
@@ -108,7 +126,9 @@ function anneeDeduite(texteBrut) {
   const texte = enChiffresOccidentaux(texteBrut);
   const maintenant = new Date().getFullYear();
   let max = null;
-  const retenir = (a) => { if (a <= maintenant && (max === null || a > max)) max = a; };
+  const retenir = (a) => {
+    if (a <= maintenant && (max === null || a > max)) max = a;
+  };
   for (const m of texte.matchAll(/\b(19\d{2}|20\d{2})\b/g)) retenir(Number(m[1]));
   // Certains textes ne datent qu'en chiffres a deux positions : la convention
   // avec l'Egypte porte « 08/12/89 » et pas une seule annee a quatre chiffres.
@@ -134,9 +154,14 @@ function sourceDuCorpus(typeDocument, corpus) {
 }
 
 const ICI = dirname(fileURLToPath(import.meta.url));
-const DEPOT = "C:/Users/wisse/OneDrive/Bureau/ALGORIA Factory/Platefomre/Regalica Office/regalica-office";
-const { default: pg } = await import(pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href);
-const pdfjs = await import(pathToFileURL(join(DEPOT, "node_modules/pdfjs-dist/legacy/build/pdf.mjs")).href);
+const DEPOT =
+  "C:/Users/wisse/OneDrive/Bureau/ALGORIA Factory/Platefomre/Malica Office/malica-office";
+const { default: pg } = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href
+);
+const pdfjs = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pdfjs-dist/legacy/build/pdf.mjs")).href
+);
 
 // Les recueils ne sont pas des codes : ils compilent des textes separes.
 const COMPILATIONS = new Set(["RECUEIL"]);
@@ -178,7 +203,9 @@ function env(fichier) {
       const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(l);
       if (m) v[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
     }
-  } catch { /* le .env manquant leve plus bas */ }
+  } catch {
+    /* le .env manquant leve plus bas */
+  }
   return v;
 }
 const API = env("apps/api/.env");
@@ -195,7 +222,6 @@ function nettoyerTexte(t) {
     .replace(/[\uD800-\uDFFF]/g, "")
     .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
 }
-
 
 async function texteDuPdf(chemin) {
   const cache = chemin.replace(/\.pdf$/i, ".txt");
@@ -216,9 +242,15 @@ async function texteDuPdf(chemin) {
     for (const item of contenu.items) {
       if (!("str" in item)) continue;
       const y = Math.round(item.transform[5]);
-      if (dernierY !== null && Math.abs(y - dernierY) > 2) { lignes.push(ligne.trim()); ligne = ""; }
+      if (dernierY !== null && Math.abs(y - dernierY) > 2) {
+        lignes.push(ligne.trim());
+        ligne = "";
+      }
       ligne += item.str;
-      if (item.hasEOL) { lignes.push(ligne.trim()); ligne = ""; }
+      if (item.hasEOL) {
+        lignes.push(ligne.trim());
+        ligne = "";
+      }
       dernierY = y;
     }
     if (ligne.trim()) lignes.push(ligne.trim());
@@ -240,7 +272,7 @@ async function telecharger(url, destination) {
   try {
     r = await fetch(adresse, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Regalica/1.0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Malica/1.0",
         Accept: "application/pdf,*/*",
       },
       redirect: "follow",
@@ -249,9 +281,15 @@ async function telecharger(url, destination) {
     process.stdout.write(`(${e.message.slice(0, 40)}) `);
     return false;
   }
-  if (!r.ok) { process.stdout.write(`(HTTP ${r.status}) `); return false; }
+  if (!r.ok) {
+    process.stdout.write(`(HTTP ${r.status}) `);
+    return false;
+  }
   const octets = Buffer.from(await r.arrayBuffer());
-  if (octets.length < 1000) { process.stdout.write("(fichier vide) "); return false; }
+  if (octets.length < 1000) {
+    process.stdout.write("(fichier vide) ");
+    return false;
+  }
   writeFileSync(destination, octets);
   return true;
 }
@@ -351,7 +389,11 @@ async function main() {
         // La nature du texte se lit sur son titre dans un recueil ; ailleurs
         // elle vaut pour tout le corpus.
         source: a.source ?? sourceDuCorpus(d.type_document, d.corpus),
-        jort: jort ? [jort.tete, pageDe(jort, a.debut) ? `p. ${pageDe(jort, a.debut)}` : null].filter(Boolean).join(", ") : null,
+        jort: jort
+          ? [jort.tete, pageDe(jort, a.debut) ? `p. ${pageDe(jort, a.debut)}` : null]
+              .filter(Boolean)
+              .join(", ")
+          : null,
         sha: createHash("sha256").update(propre, "utf8").digest("hex"),
       });
     }
@@ -386,7 +428,9 @@ async function main() {
   if (rejetees.size) {
     console.log(
       `\neditions trop pauvres, ecartees (${rejetees.size}) : ` +
-        [...rejetees].map((c) => c.replace(" ", " ") + ` (${parEdition.get(c)} articles)`).join(", "),
+        [...rejetees]
+          .map((c) => c.replace(" ", " ") + ` (${parEdition.get(c)} articles)`)
+          .join(", "),
     );
     for (let i = extraits.length - 1; i >= 0; i -= 1) {
       if (rejetees.has(`${extraits[i].corpus} ${extraits[i].edition}`)) extraits.splice(i, 1);
@@ -395,9 +439,14 @@ async function main() {
 
   console.log(`\ntotal : ${extraits.length} occurrences d'articles`);
   if (echecs.length) {
-    console.log(`editions ecartees (${echecs.length}) : ${echecs.map(([n, r]) => `${n} (${r})`).join(", ")}`);
+    console.log(
+      `editions ecartees (${echecs.length}) : ${echecs.map(([n, r]) => `${n} (${r})`).join(", ")}`,
+    );
   }
-  if (sec) { await client.end(); return; }
+  if (sec) {
+    await client.end();
+    return;
+  }
 
   // ---------------------------------------------------------------- ecriture
   //
@@ -415,13 +464,25 @@ async function main() {
   for (const e of extraits) {
     if (e.edition == null) continue;
     const cle = `${e.corpus}\u0000${e.numero}\u0000${e.sha}`;
-    const v = parCle.get(cle) ?? { corpus: e.corpus, numero: e.numero, sha: e.sha, editions: [], adresses: new Map(), texte: e.texte, langue: e.langue, confiance: e.confiance, source: e.source, jort: e.jort };
+    const v = parCle.get(cle) ?? {
+      corpus: e.corpus,
+      numero: e.numero,
+      sha: e.sha,
+      editions: [],
+      adresses: new Map(),
+      texte: e.texte,
+      langue: e.langue,
+      confiance: e.confiance,
+      source: e.source,
+      jort: e.jort,
+    };
     // Une version peut venir de plusieurs editions : on retient l'adresse de la
     // PLUS ANCIENNE, celle ou ce texte apparait pour la premiere fois.
     if (e.url) v.adresses.set(e.edition, e.url);
     // Une meme version peut venir de plusieurs editions : elle ne vaut pas mieux
     // que la moins sure d'entre elles.
-    if (CONFIANCES.indexOf(e.confiance) > CONFIANCES.indexOf(v.confiance)) v.confiance = e.confiance;
+    if (CONFIANCES.indexOf(e.confiance) > CONFIANCES.indexOf(v.confiance))
+      v.confiance = e.confiance;
     v.editions.push(e.edition);
     parCle.set(cle, v);
   }
@@ -524,9 +585,11 @@ async function main() {
   // est en vigueur : c'est ce que « consolide » veut dire. Ailleurs — dans une
   // loi de finances de 1986 — nous n'en savons rien, et nous le disons.
   const consolides = new Set(
-    (await client.query(
-      `select distinct corpus from legal.ingestion_queue where type_document = 'CODE_CONSOLIDE'`,
-    )).rows.map((r) => r.corpus),
+    (
+      await client.query(
+        `select distinct corpus from legal.ingestion_queue where type_document = 'CODE_CONSOLIDE'`,
+      )
+    ).rows.map((r) => r.corpus),
   );
   let abroges = 0;
   let enVigueur = 0;
@@ -538,12 +601,18 @@ async function main() {
     const derniere = recentes[recentes.length - 1];
     const mention = recentes.map((v) => abrogation(v.texte)).find(Boolean) ?? null;
     let statut = "indetermine";
-    if (mention) { statut = "abroge"; abroges += 1; }
-    else if (consolides.has(derniere.corpus)) { statut = "en_vigueur"; enVigueur += 1; }
-    await client.query(
-      `update legal.articles set statut = $2, abroge_par = $3 where id = $1`,
-      [identites.get(cle), statut, mention],
-    );
+    if (mention) {
+      statut = "abroge";
+      abroges += 1;
+    } else if (consolides.has(derniere.corpus)) {
+      statut = "en_vigueur";
+      enVigueur += 1;
+    }
+    await client.query(`update legal.articles set statut = $2, abroge_par = $3 where id = $1`, [
+      identites.get(cle),
+      statut,
+      mention,
+    ]);
   }
 
   // La file doit dire la verite : ce qui a produit des articles est ingere, ce
@@ -589,9 +658,13 @@ async function main() {
 
   await client.query("commit");
   console.log(`versions ecrites     : ${versions}`);
-  console.log(`file mise a jour     : ${reussis.length} ingeres, ${rates.length - rendus} en echec` +
-    (rendus ? `, ${rendus} conservees d'une passe anterieure` : ""));
-  console.log(`statuts              : ${enVigueur} en vigueur, ${abroges} abroges, ${identites.size - enVigueur - abroges} indetermines`);
+  console.log(
+    `file mise a jour     : ${reussis.length} ingeres, ${rates.length - rendus} en echec` +
+      (rendus ? `, ${rendus} conservees d'une passe anterieure` : ""),
+  );
+  console.log(
+    `statuts              : ${enVigueur} en vigueur, ${abroges} abroges, ${identites.size - enVigueur - abroges} indetermines`,
+  );
   await client.end();
 }
 

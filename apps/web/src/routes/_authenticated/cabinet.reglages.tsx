@@ -14,31 +14,31 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { IntegrationsEtApi } from "@/components/regalica/integrations-panel";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import {
   definirPanneauParDefaut,
   panneauOuvertParDefaut,
-} from "@/components/regalica/panneau-regalica";
+} from "@/components/malica/panneau-malica";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { ObligationDuCalendrier, ReglagesCabinet } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { ObligationDuCalendrier, ReglagesCabinet } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   head: () => ({
     meta: [
-      { title: "Réglages du cabinet — Regalica Office" },
+      { title: "Réglages du cabinet — Malica Office" },
       {
         name: "description",
         content:
-          "Seuils de supervision, pack de juridiction, ton de Regalica, équipe et calendrier des obligations du cabinet.",
+          "Seuils de supervision, pack de juridiction, ton de Malica, équipe et calendrier des obligations du cabinet.",
       },
-      { property: "og:title", content: "Réglages du cabinet — Regalica Office" },
+      { property: "og:title", content: "Réglages du cabinet — Malica Office" },
       {
         property: "og:description",
         content: "Seuils, pack, équipe et calendrier des obligations du cabinet.",
@@ -93,7 +93,7 @@ function CabinetReglages() {
   const { org } = useCabinet();
   const [onglet, setOnglet] = useState<Onglet>("cabinet");
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.settings.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.settings.panel")}</MalicaNote>, [locale]);
 
   const classeOnglet = (actif: boolean) =>
     cn(
@@ -289,8 +289,8 @@ function CabinetEtEquipe() {
           </Ligne>
         </Groupe>
 
-        {/* ---- Regalica */}
-        <Groupe titre={t("cab.settings.g.regalica")} lede={t("cab.settings.g.regalica.lede")}>
+        {/* ---- Malica */}
+        <Groupe titre={t("cab.settings.g.malica")} lede={t("cab.settings.g.malica.lede")}>
           <Ligne label={t("cab.settings.panneau")} hint={t("cab.settings.panneau.hint")}>
             <Interrupteur
               actif={panneau}

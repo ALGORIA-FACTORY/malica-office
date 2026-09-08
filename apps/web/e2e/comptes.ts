@@ -11,12 +11,12 @@ export const EXPERT = { email: "leila.bensalah@bensalah.tn", cabinet: "Ben Salah
 
 /**
  * Où Playwright écrit traces, captures, rapport et sessions. `e2e/sortie`
- * par défaut (la CI y prend son artefact) ; `REGALICA_E2E_SORTIE` pour un
+ * par défaut (la CI y prend son artefact) ; `MALICA_E2E_SORTIE` pour un
  * dossier hors de OneDrive sur le poste — la synchronisation retire des
  * fichiers de trace pendant qu'ils s'écrivent, et la campagne meurt sur un
  * ENOENT à la fermeture du navigateur.
  */
-export const SORTIE = process.env["REGALICA_E2E_SORTIE"] ?? "e2e/sortie";
+export const SORTIE = process.env["MALICA_E2E_SORTIE"] ?? "e2e/sortie";
 
 /** Les sessions ouvertes par `connexion.setup.ts`, réutilisées par les parcours. */
 export const ETAT_DIRIGEANT = `${SORTIE}/session-dirigeant.json`;
@@ -41,8 +41,8 @@ export async function seConnecter(page: Page, email: string, motDePasse = MOT_DE
 
 /**
  * L'appareil tel qu'une personne qui revient l'a laissé : sa langue, et le
- * fil de Regalica refermé — il est ouvert à la toute première visite, et
- * recouvre alors l'accueil (voir `panneau-regalica.ts`).
+ * fil de Malica refermé — il est ouvert à la toute première visite, et
+ * recouvre alors l'accueil (voir `panneau-malica.ts`).
  */
 export async function preparerLAppareil(
   page: Page,
@@ -51,9 +51,9 @@ export async function preparerLAppareil(
 ) {
   await page.addInitScript(
     ({ l, premiere }) => {
-      window.localStorage.setItem("regalica.locale", l);
-      if (premiere) window.localStorage.removeItem("regalica.panneau.ouvert.pme");
-      else window.localStorage.setItem("regalica.panneau.ouvert.pme", "0");
+      window.localStorage.setItem("malica.locale", l);
+      if (premiere) window.localStorage.removeItem("malica.panneau.ouvert.pme");
+      else window.localStorage.setItem("malica.panneau.ouvert.pme", "0");
     },
     { l: locale, premiere: premiereVisite },
   );

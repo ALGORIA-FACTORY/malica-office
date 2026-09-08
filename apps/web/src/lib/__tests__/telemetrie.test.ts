@@ -41,7 +41,7 @@ describe("un événement, avant de partir", () => {
     const evenement = {
       type: undefined,
       request: {
-        url: "https://pilote.regalica.tn/pme",
+        url: "https://pilote.malica.tn/pme",
         headers: { Authorization: "Bearer x", Cookie: "session=y" },
         cookies: { session: "y" },
         data: { pieces: ["…"] },
@@ -56,7 +56,7 @@ describe("un événement, avant de partir", () => {
 
     const prepare = preparerEvenement(evenement);
 
-    expect(prepare.request).toEqual({ url: "https://pilote.regalica.tn/pme" });
+    expect(prepare.request).toEqual({ url: "https://pilote.malica.tn/pme" });
     expect(prepare.user).toBeUndefined();
     expect(prepare.breadcrumbs).toEqual([
       { category: "fetch", data: { url: "/rpc", method: "POST", status_code: 500 } },

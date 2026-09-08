@@ -1,8 +1,8 @@
 -- Le droit de timbre et la retenue à la source quittent la série de la TVA.
 --
--- Le défaut livré par Regalica (R10). L'expert l'arrête au paramétrage.
+-- Le défaut livré par Malica (R10). L'expert l'arrête au paramétrage.
 --
--- La doctrine a été précisée : Regalica livre une nomenclature de DÉPART, pour
+-- La doctrine a été précisée : Malica livre une nomenclature de DÉPART, pour
 -- qu'un cabinet puisse commencer le jour de son inscription. L'expert-comptable
 -- intervient ensuite, au paramétrage, et c'est lui qui arrête ce qui fait foi
 -- pour ses dossiers.

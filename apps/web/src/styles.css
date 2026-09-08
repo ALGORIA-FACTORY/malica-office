@@ -30,7 +30,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Edition One — design system Regalica Office.
+ * Edition One — design system Malica Office.
  *
  * Doctrine : monochrome. Encre, papier, pierre. La couleur est un signal rare
  * (feu vert / ambre / rouge, uniquement pour un verdict de conformité).
@@ -129,7 +129,7 @@
   /* Le bleu des renvois à la source (#2968A5). Il ne juge rien : il relie. */
   --signal-info: oklch(0.5 0.11 250);
 
-  /* La voix de Regalica. Sur papier : #C8901F. */
+  /* La voix de Malica. Sur papier : #C8901F. */
   --marigold: oklch(0.66 0.12 78);
   /* Sa contrepartie sur fond d'encre, plus claire : #E3B75C. */
   --marigold-on-ink: oklch(0.8 0.11 82);
@@ -202,7 +202,7 @@
 }
 
 /*
- * Les trois signes de vie de Regalica.
+ * Les trois signes de vie de Malica.
  *
  * Ils sont lents et discrets par choix : sur l'écran d'accueil d'un dirigeant,
  * une animation rapide dit « urgence ». Ceux-ci disent « je suis là ». Ils

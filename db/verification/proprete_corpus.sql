@@ -5,7 +5,7 @@
 -- exemplaires, rien ne doit se contredire. Chaque bloc doit rendre zéro — sauf
 -- ceux dont le commentaire dit explicitement ce qu'ils tolèrent.
 --
---   psql -U postgres -d regalica_local -f db/verification/proprete_corpus.sql
+--   psql -U postgres -d malica_local -f db/verification/proprete_corpus.sql
 
 \pset pager off
 \pset footer off

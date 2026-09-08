@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/regler")({
   head: () => ({
     meta: [
-      { title: "À régler — Regalica Office" },
+      { title: "À régler — Malica Office" },
       { name: "description", content: "Ce que votre comptable vous a retourné, et pourquoi." },
-      { property: "og:title", content: "À régler — Regalica Office" },
+      { property: "og:title", content: "À régler — Malica Office" },
       {
         property: "og:description",
         content: "Ce que votre comptable vous a retourné, et pourquoi.",
@@ -109,7 +109,7 @@ function ARegler() {
               {t("pme.regler.rien.titre")}
             </p>
             <div className="mt-3 flex gap-3">
-              <RegalicaAvatar size={32} alt="Regalica" rond />
+              <MalicaAvatar size={32} alt="Malica" rond />
               <p className="text-[14.5px] leading-[1.5] text-text-2">
                 {t("pme.regler.rien.sous", { cabinet: nomDuCabinet })}
               </p>
@@ -127,7 +127,7 @@ function ARegler() {
                 className="mt-2.5 border border-border border-s-[3px] border-s-signal-warn bg-card p-4"
               >
                 <div className="flex gap-3">
-                  <RegalicaAvatar size={32} alt="Regalica" rond />
+                  <MalicaAvatar size={32} alt="Malica" rond />
                   <p className="min-w-0 flex-1 text-[15px] leading-[1.5]">
                     {t("pme.regler.demande", {
                       cabinet: nomDuCabinet,

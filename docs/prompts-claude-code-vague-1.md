@@ -28,8 +28,8 @@ mémoire de nos échanges.
 ### Bloc de contexte commun (à coller en tête de chaque prompt)
 
 ```
-Tu travailles sur le dépôt Regalica Office :
-C:\Users\wisse\OneDrive\Bureau\ALGORIA Factory\Platefomre\Regalica Office\regalica-office
+Tu travailles sur le dépôt Malica Office :
+C:\Users\wisse\OneDrive\Bureau\ALGORIA Factory\Platefomre\Malica Office\malica-office
 
 Lis AGENTS.md avant toute chose. Les dix règles R1 à R10 y sont exécutables : la CI échoue
 si elles sont violées. Ton travail doit les respecter et, quand c'est possible, les rendre
@@ -55,9 +55,9 @@ Convention de migration :
 Vérification obligatoire avant de dire que c'est fini — les trois, dans cet ordre :
 
   1. Rejeu complet sur une base neuve. Depuis la racine du dépôt, dans PowerShell :
-       $env:PGPASSWORD = 'regalica_local_2026'
-       $env:REGALICA_API_PASSWORD = 'api_local_2026'
-       .\db\local\charger.ps1 -Base regalica_ci -Recreate
+       $env:PGPASSWORD = 'malica_local_2026'
+       $env:MALICA_API_PASSWORD = 'api_local_2026'
+       .\db\local\charger.ps1 -Base malica_ci -Recreate
      Le rejeu doit se terminer avec ZÉRO ligne contenant "ERREUR" ou "ERROR".
      Il applique aujourd'hui 49 migrations et produit 88 tables, 54 vues, 220 politiques.
      Après ta migration, le compte de tables/vues/politiques doit être celui que tu attends,
@@ -65,7 +65,7 @@ Vérification obligatoire avant de dire que c'est fini — les trois, dans cet o
 
   2. Audit des défauts :
        & 'C:\Program Files\PostgreSQL\17\bin\psql.exe' -U postgres -h localhost `
-         -d regalica_ci -f db\verification\audit_defauts.sql
+         -d malica_ci -f db\verification\audit_defauts.sql
      Aucune section ne doit régresser.
 
   3. npm test  (puis npm run typecheck si tu as touché du TypeScript)
@@ -73,8 +73,8 @@ Vérification obligatoire avant de dire que c'est fini — les trois, dans cet o
 Ne dis jamais qu'un travail est terminé sans avoir exécuté ces trois étapes et collé leur
 sortie réelle. Si une étape échoue, corrige — ne contourne pas, ne désactive pas un test.
 
-Ne touche pas à regalica_local sans me le dire : c'est la base de travail. Fais tes essais
-sur regalica_ci.
+Ne touche pas à malica_local sans me le dire : c'est la base de travail. Fais tes essais
+sur malica_ci.
 ```
 
 ---
@@ -281,7 +281,7 @@ postérieures — donc le coût des ventes, donc le résultat — sans qu'aucune
 comptable ne bouge.
 
 Ce mécanisme de cascade est déduit du code, pas exécuté. Commence par le PROUVER dans une
-transaction annulée (BEGIN ... ROLLBACK) sur regalica_ci, et colle-moi la sortie. Si le
+transaction annulée (BEGIN ... ROLLBACK) sur malica_ci, et colle-moi la sortie. Si le
 comportement diffère de ce que je décris, dis-le et adapte : je préfère être corrigé.
 
 ## Ce que tu dois faire
@@ -348,7 +348,7 @@ tout en restant dans une écriture parfaitement équilibrée. C'est la pire clas
 comptable : invisible et permanent.
 
 L'origine du 43661 est dans le dépôt :
-  apps/web/src/verticals/regalica-office/use-cases/__tests__/propose-ecriture.test.ts:21
+  apps/web/src/verticals/malica-office/use-cases/__tests__/propose-ecriture.test.ts:21
     vatAccount: "43661",
 C'est une valeur de fixture inventée. VTE ne figure nulle part dans le dépôt : il vient d'une
 insertion manuelle. Corrige la fixture pour qu'elle utilise un compte réel du plan livré —
@@ -371,9 +371,9 @@ fonction est security invoker, donc contournable. Le banc d'essai du dépôt
 
 ## Ce que tu dois faire
 
-1. Réparer d'abord la fixture de test, puis les trois lignes fautives de regalica_ci — et
-   dis-moi quoi faire des mêmes lignes dans regalica_local avant que la contrainte ne les
-   rejette. Ne touche pas à regalica_local sans mon accord.
+1. Réparer d'abord la fixture de test, puis les trois lignes fautives de malica_ci — et
+   dis-moi quoi faire des mêmes lignes dans malica_local avant que la contrainte ne les
+   rejette. Ne touche pas à malica_local sans mon accord.
 
 2. socle.ecritures.journal → clé étrangère vers ref.journals(code).
 
@@ -512,23 +512,23 @@ inadvertance dans six mois.
 ```
 [BLOC DE CONTEXTE COMMUN]
 
-## Défaut 1 — auth.users est sans RLS et regalica_api lit les mots de passe
+## Défaut 1 — auth.users est sans RLS et malica_api lit les mots de passe
 
   TABLES_SANS_RLS : auth.users, storage.buckets, storage.objects
-  regalica_api | encrypted_password | INSERT, SELECT, UPDATE
-  regalica_api | email              | INSERT, SELECT, UPDATE
+  malica_api | encrypted_password | INSERT, SELECT, UPDATE
+  malica_api | email              | INSERT, SELECT, UPDATE
 
 449 comptes, aucune politique, un GRANT colonne direct au rôle de connexion.
 
 L'identité applicative repose sur un GUC : auth.uid() lit
 current_setting('request.jwt.claim.sub', true). Or tout rôle peut positionner un GUC. Une
 seule injection SQL, n'importe où dans le code, suffit alors à usurper un compte, puis — par
-RESET ROLE, qui ramène toujours au rôle de session regalica_api — à lire ou réécrire la table
+RESET ROLE, qui ramène toujours au rôle de session malica_api — à lire ou réécrire la table
 des mots de passe. La qualité de l'isolation RLS est donc exactement égale à l'absence
 d'injection SQL dans tout le code : c'est précisément ce que R6 dit vouloir éviter.
 
 À faire :
-- retirer SELECT et UPDATE sur encrypted_password à regalica_api ;
+- retirer SELECT et UPDATE sur encrypted_password à malica_api ;
 - faire passer vérification et changement de mot de passe par deux fonctions security definer
   à surface étroite, seules détentrices du droit ;
 - activer enable + force row level security sur auth.users, avec une politique

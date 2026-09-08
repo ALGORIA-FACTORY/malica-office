@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Les échéances dérivent du pack.
+--  Malica Office — Les échéances dérivent du pack.
 --
 --  POURQUOI : la table schedule.echeances existait, l'écran existait, et rien
 --  ne l'alimentait. Le calendrier du cabinet était vide par construction.
@@ -8,7 +8,7 @@
 --  obligations (ref.fiscal_obligations) et de ce que la fiche fiscale du
 --  dossier établit — sa forme juridique et son mode de dépôt, parce que la
 --  personne morale qui télédéclare a vingt jours là où la même sur papier en
---  a vingt-huit. Sans ces deux faits, Regalica ne dérive rien et le dit,
+--  a vingt-huit. Sans ces deux faits, Malica ne dérive rien et le dit,
 --  plutôt que de supposer un délai.
 --
 --  Seules les obligations PÉRIODIQUES (mensuelles, trimestrielles) à quantième

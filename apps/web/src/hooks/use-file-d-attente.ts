@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-import type { FileDAttente } from "@/components/regalica/pme-context";
+import type { FileDAttente } from "@/components/malica/pme-context";
 import { vidage } from "@/lib/hors-ligne";
 import type { ElementDeFile } from "@/lib/hors-ligne/file";
 

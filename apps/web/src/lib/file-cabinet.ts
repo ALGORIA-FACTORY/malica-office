@@ -2,7 +2,7 @@
  * Ce que la file du cabinet lit dans une pièce — hors de tout écran, pour
  * que plusieurs écrans le lisent pareil et qu'une épreuve le fixe.
  */
-import type { PieceStatus } from "@regalica/socle/ports/repositories";
+import type { PieceStatus } from "@malica/socle/ports/repositories";
 
 /** Le ton d'un statut : ce qui attend un geste est or, ce qui est réglé est vert. */
 export function toneForStatus(status: PieceStatus): "ok" | "warn" | "stop" | "neutral" {

@@ -1,0 +1,2532 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #dcdce1;
+        font-family: Inter, "IBM Plex Sans Arabic", sans-serif;
+      }
+      .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 44px;
+        padding: 54px;
+        align-items: flex-start;
+        justify-content: center;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+        align-items: center;
+      }
+      .cap {
+        font: 600 12px Inter;
+        color: #1a1a1c;
+      }
+      .capn {
+        font: 600 10.5px "IBM Plex Mono";
+        color: #8e8e93;
+        letter-spacing: 0.04em;
+      }
+      [data-t="paper"] {
+        --bg: #fafafa;
+        --sf: #ffffff;
+        --sf2: #f4f4f5;
+        --ink: #0a0a0a;
+        --t2: #48484a;
+        --t3: #9a9aa0;
+        --ln: #e5e5ea;
+        --lns: #d1d1d6;
+      }
+      [data-t="ink"] {
+        --bg: #0a0a0a;
+        --sf: #161618;
+        --sf2: #1c1c1e;
+        --ink: #fafafa;
+        --t2: #c7c7cc;
+        --t3: #7c7c82;
+        --ln: #262628;
+        --lns: #3a3a3c;
+      }
+      .phone {
+        width: 392px;
+        height: 846px;
+        background: var(--bg);
+        border: 1px solid var(--lns);
+        position: relative;
+        overflow: hidden;
+        color: var(--ink);
+        font-family: Inter;
+      }
+      .phone.dark {
+        --bg: #0a0a0a;
+        --ink: #fafafa;
+        --t2: #c7c7cc;
+        --t3: #7c7c82;
+        --ln: #262628;
+      }
+      .sb {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px 0;
+        font: 600 13px "IBM Plex Mono";
+        color: var(--ink);
+      }
+      .sb .r {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        opacity: 0.85;
+        font-size: 12px;
+      }
+      .body {
+        padding: 2px 22px 0;
+        height: 800px;
+        overflow: hidden;
+        position: relative;
+      }
+      .pres {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0 6px;
+      }
+      .rg {
+        width: 24px;
+        height: 24px;
+        color: var(--ink);
+        background: currentColor;
+        -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+        mask: url(assets/rg_mark.svg) center/contain no-repeat;
+        flex: 0 0 auto;
+      }
+      .pname {
+        font: 600 14px Inter;
+      }
+      .pstat {
+        font: 400 12.5px Inter;
+        color: var(--t2);
+        margin-top: 1px;
+      }
+      .dot {
+        width: 5px;
+        height: 5px;
+        background: var(--ink);
+        display: inline-block;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      .h1 {
+        font: 600 27px Inter;
+        letter-spacing: -0.025em;
+        margin: 10px 0 3px;
+        line-height: 1.06;
+      }
+      .sub {
+        font: 400 15.5px Inter;
+        color: var(--t2);
+        margin-bottom: 6px;
+      }
+      .eye {
+        font: 600 10.5px Inter;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--t3);
+        margin: 20px 0 9px;
+        display: block;
+      }
+      .card {
+        border: 1px solid var(--ln);
+        background: var(--sf);
+        padding: 16px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 2px;
+        border-top: 1px solid var(--ln);
+      }
+      .row:first-child {
+        border-top: none;
+      }
+      .lab {
+        font: 500 15px Inter;
+      }
+      .lab2 {
+        font: 400 12.5px Inter;
+        color: var(--t2);
+        margin-top: 2px;
+      }
+      .num {
+        font-family: "IBM Plex Mono";
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+      .hero {
+        font-family: "IBM Plex Mono";
+        font-weight: 500;
+        font-size: 40px;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+      .tnd {
+        font-size: 0.4em;
+        color: var(--t2);
+        font-weight: 500;
+        margin-left: 5px;
+        letter-spacing: 0;
+      }
+      .btn {
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 600 16px Inter;
+        background: var(--ink);
+        color: var(--bg);
+        width: 100%;
+      }
+      .btn2 {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 500 16px Inter;
+        color: var(--ink);
+        width: 100%;
+      }
+      .az {
+        color: #2968a5;
+      }
+      .ev {
+        color: #245a36;
+      }
+      .am {
+        color: #8a6510;
+      }
+      .ve {
+        color: #a03819;
+      }
+      .mg {
+        color: #c45e3f;
+      }
+      .cz {
+        background: #e9f1fa;
+        color: #1a426b;
+      }
+      .cm {
+        background: #fbf4e2;
+        color: #6e5210;
+      }
+      .ce {
+        background: #eaf5ee;
+        color: #245a36;
+      }
+      .cg {
+        background: #fbede5;
+        color: #9a4426;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 13px;
+        font: 500 13.5px Inter;
+      }
+      .chip .dot {
+        background: currentColor;
+      }
+      .prog {
+        height: 3px;
+        background: var(--lns);
+        position: relative;
+        margin-top: 12px;
+      }
+      .prog > i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--ink);
+      }
+      .spark {
+        display: flex;
+        align-items: flex-end;
+        gap: 5px;
+        height: 46px;
+        margin-top: 14px;
+      }
+      .spark > i {
+        flex: 1;
+        background: var(--lns);
+      }
+      .spark > i.on {
+        background: var(--ink);
+      }
+      .persona {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        flex: 0 0 auto;
+        filter: grayscale(1) contrast(1.02);
+      }
+      .bub {
+        display: flex;
+        gap: 11px;
+        margin: 14px 0;
+      }
+      .bub p {
+        font: 400 15.5px Inter;
+        line-height: 1.5;
+        color: var(--ink);
+      }
+      .dock {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 86px;
+        border-top: 1px solid var(--ln);
+        background: var(--sf);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 30px;
+      }
+      .di {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--t3);
+        font: 600 10px Inter;
+        letter-spacing: 0.02em;
+      }
+      .di.act {
+        color: var(--ink);
+      }
+      .di .ic {
+        width: 22px;
+        height: 22px;
+        color: currentColor;
+      }
+      .shut {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -22px;
+        border: 4px solid var(--bg);
+        box-shadow: 0 0 0 1px var(--lns);
+      }
+      .shut svg {
+        width: 24px;
+        height: 24px;
+        color: var(--bg);
+      }
+      .dockact {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 16px 22px 22px;
+        background: linear-gradient(transparent, var(--bg) 26%);
+      }
+      .miniask {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--ln);
+        background: var(--sf);
+        padding: 12px 14px;
+        color: var(--t3);
+        font: 400 14.5px Inter;
+      }
+      .miniask .ic {
+        margin-left: auto;
+        width: 20px;
+        height: 20px;
+        color: var(--ink);
+      }
+      .tl {
+        position: relative;
+        padding-left: 26px;
+        margin-top: 6px;
+      }
+      .tl:before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 6px;
+        bottom: 14px;
+        width: 1px;
+        background: var(--lns);
+      }
+      .tle {
+        position: relative;
+        padding: 11px 0;
+      }
+      .tle:before {
+        content: "";
+        position: absolute;
+        left: -24px;
+        top: 15px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--ink);
+      }
+      .tle.fut:before {
+        background: var(--bg);
+        border: 1.5px solid var(--lns);
+      }
+      .tle .lab {
+        font: 500 14.5px Inter;
+      }
+      .tle .dt {
+        font: 500 12px "IBM Plex Mono";
+        color: var(--t3);
+        margin-top: 2px;
+      }
+      .bars {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+        margin-top: 6px;
+      }
+      .barr {
+        display: grid;
+        grid-template-columns: 96px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        font: 500 14px Inter;
+      }
+      .barr .tr {
+        height: 7px;
+        background: var(--lns);
+        position: relative;
+      }
+      .barr .tr > i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--ink);
+      }
+      .note {
+        font: 400 12px Inter;
+        color: var(--t3);
+        margin-top: 14px;
+        line-height: 1.45;
+      }
+      .toggle {
+        display: inline-flex;
+        border: 1px solid var(--lns);
+        font: 600 11px Inter;
+      }
+      .toggle span {
+        padding: 6px 12px;
+        color: var(--t3);
+      }
+      .toggle span.on {
+        background: var(--ink);
+        color: var(--bg);
+      }
+      .fld {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 0;
+        border-top: 1px solid var(--ln);
+      }
+      .fld .k {
+        font: 400 13.5px Inter;
+        color: var(--t2);
+      }
+      .fld .v {
+        font: 500 13.5px "IBM Plex Mono";
+      }
+      .cite {
+        font: 500 11px Inter;
+        color: #1a426b;
+        border-bottom: 1px dotted #2968a5;
+        padding-bottom: 1px;
+      }
+      h2.lt {
+        font: 400 20px Inter;
+        line-height: 1.35;
+        letter-spacing: -0.01em;
+        margin: 4px 0;
+      }
+      .lawcol {
+        border: 1px solid var(--ln);
+        background: var(--sf2);
+        padding: 13px;
+        font: 400 13px "IBM Plex Mono";
+        line-height: 1.55;
+        color: var(--t2);
+      }
+      .lawcol b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .fold {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 2px;
+        border-top: 1px solid var(--ln);
+      }
+      .fold .fi {
+        width: 18px;
+        height: 18px;
+        color: var(--ink);
+      }
+      .fold .fn {
+        font: 500 15px Inter;
+      }
+      .fold .fc {
+        font: 500 14px "IBM Plex Mono";
+        color: var(--t2);
+      }
+      .stat {
+        font: 500 11.5px Inter;
+      }
+      .scanbox {
+        position: absolute;
+        inset: 120px 56px;
+        border: 1px solid #3a3a3c;
+      }
+      .brk {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border: 2px solid #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- 01 ACCUEIL -->
+      <div class="col">
+        <div class="cap">01 · Accueil</div>
+        <div class="capn">PRÉSENCE · TVA RÉCUPÉRÉE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px; overflow: hidden">
+            <div class="pres">
+              <div class="rg"></div>
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat"><span class="dot"></span>en ligne · je réponds en clair</div>
+              </div>
+            </div>
+            <div class="h1">Bonjour, Khaled.</div>
+            <div class="sub">Voici où en est votre dossier.</div>
+            <span class="eye az">Échéance dans 7 jours</span>
+            <div class="card">
+              <div style="font: 600 17px Inter">Je m'en occupe avec vous.</div>
+              <div
+                style="font: 400 14px Inter; color: var(--t2); margin-top: 6px; line-height: 1.45"
+              >
+                Votre déclaration de période est prête à 90 %. Je vous préviens dès qu'il ne manque
+                plus rien.
+              </div>
+              <div class="prog"><i style="width: 90%"></i></div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 8px;
+                  font: 500 11px Inter;
+                  color: var(--t3);
+                "
+              >
+                <span>PRÉPARÉ PAR MES SOINS</span
+                ><span class="num" style="color: var(--ink)">90 %</span>
+              </div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                margin: 22px 0 0;
+              "
+            >
+              <span class="eye" style="margin: 0">TVA récupérée — ce mois</span
+              ><span class="toggle"><span class="on">Mois</span><span>Année</span></span>
+            </div>
+            <div style="display: flex; align-items: baseline; margin-top: 8px">
+              <span class="hero">1 240,500</span><span class="tnd">TND</span>
+            </div>
+            <div style="font: 500 12.5px Inter" class="ev">+180,500 depuis le mois dernier</div>
+            <div class="spark">
+              <i style="height: 38%"></i><i style="height: 52%"></i><i style="height: 44%"></i
+              ><i style="height: 61%"></i><i style="height: 55%"></i><i style="height: 70%"></i
+              ><i style="height: 64%"></i><i style="height: 78%"></i><i style="height: 72%"></i
+              ><i style="height: 85%"></i><i style="height: 80%"></i
+              ><i class="on" style="height: 100%"></i>
+            </div>
+            <span class="eye">Ce que je vous ai préparé</span>
+            <div class="row">
+              <div>
+                <div class="lab">Votre TVA d'avril</div>
+                <div class="lab2">Solde à reverser</div>
+              </div>
+              <div class="num" style="font-size: 15px">1 312,400 ›</div>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab">Votre résultat d'avril</div>
+                <div class="lab2">Bénéfice de période</div>
+              </div>
+              <div class="num" style="font-size: 15px">+8 740,200 ›</div>
+            </div>
+            <div style="font: 500 13px Inter; color: var(--t3); margin-top: 14px">
+              47 pièces · 44 comptabilisées · 2 en cours ·
+              <span class="am" style="font-weight: 600">1 à corriger</span>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di act">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 02 CAPTURE -->
+      <div class="col">
+        <div class="cap">02 · Capture</div>
+        <div class="capn">LE GESTE SACRÉ · 1 TAP</div>
+        <div class="phone dark">
+          <div class="sb" style="color: #fafafa">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="overflow: hidden">
+            <div class="scanbox"></div>
+            <div
+              class="brk"
+              style="top: 118px; left: 54px; border-right: none; border-bottom: none"
+            ></div>
+            <div
+              class="brk"
+              style="top: 118px; right: 54px; border-left: none; border-bottom: none"
+            ></div>
+            <div
+              class="brk"
+              style="bottom: 230px; left: 54px; border-right: none; border-top: none"
+            ></div>
+            <div
+              class="brk"
+              style="bottom: 230px; right: 54px; border-left: none; border-top: none"
+            ></div>
+            <div
+              style="
+                position: absolute;
+                inset: 120px 56px;
+                opacity: 0.16;
+                color: #fff;
+                padding: 22px;
+                font: 400 11px &quot;IBM Plex Mono&quot;;
+                line-height: 1.9;
+              "
+            >
+              SOTUTEX SARL<br />FACTURE 2026-0417<br />—————————<br />Marchandises … 1 050,000<br />TVA
+              19% ……… 199,500<br />—————————<br />TOTAL …… 1 250,500
+            </div>
+            <div
+              style="
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 300px;
+                height: 1px;
+                background: #fafafa;
+                opacity: 0.5;
+              "
+            ></div>
+            <div
+              style="
+                position: absolute;
+                top: 90px;
+                left: 0;
+                right: 0;
+                display: flex;
+                justify-content: center;
+              "
+            >
+              <span class="chip ce" style="background: #15331e; color: #7ec492"
+                ><span class="dot"></span>Cadrage net, lisible</span
+              >
+            </div>
+            <div
+              style="
+                position: absolute;
+                bottom: 120px;
+                left: 0;
+                right: 0;
+                text-align: center;
+                color: #9a9aa0;
+                font: 400 13px Inter;
+              "
+            >
+              Posez le document à plat. Je m'occupe du reste.
+            </div>
+            <div
+              style="
+                position: absolute;
+                bottom: 44px;
+                left: 0;
+                right: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <div
+                class="shut"
+                style="
+                  border-color: #0a0a0a;
+                  box-shadow: 0 0 0 1px #3a3a3c;
+                  margin: 0;
+                  background: #fafafa;
+                "
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2">
+                  <circle cx="12" cy="12" r="8" />
+                </svg>
+              </div>
+            </div>
+            <div
+              style="
+                position: absolute;
+                bottom: 58px;
+                left: 30px;
+                color: #c7c7cc;
+                font: 500 14px Inter;
+              "
+            >
+              Annuler
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 03 MALICA LIT -->
+      <div class="col">
+        <div class="cap">03 · Malica lit</div>
+        <div class="capn">MOMENT D'ADRESSE · PERSONA</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div
+            class="body"
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 800px;
+            "
+          >
+            <img
+              class="persona"
+              src="assets/persona.jpg"
+              style="width: 66px; height: 66px; margin-bottom: 20px"
+            />
+            <div
+              style="font: 400 18px Inter; text-align: center; line-height: 1.45; max-width: 280px"
+            >
+              Je lis votre document.<br />Je vérifie chaque ligne avant de vous répondre.
+            </div>
+            <div
+              style="
+                width: 120px;
+                height: 2px;
+                background: var(--ink);
+                margin-top: 24px;
+                transform: scaleX(0.4);
+                opacity: 0.7;
+              "
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 04 CONFIRMATION -->
+      <div class="col">
+        <div class="cap">04 · Confirmation</div>
+        <div class="capn">CONFIANCE GAGNÉE · CITÉE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 120px">
+            <div class="h1" style="font-size: 23px">Une seconde de vérification.</div>
+            <div class="card" style="padding: 0; margin-top: 14px">
+              <div
+                style="
+                  padding: 14px 16px;
+                  font: 400 11px &quot;IBM Plex Mono&quot;;
+                  color: var(--t2);
+                  line-height: 1.8;
+                  border-bottom: 1px solid var(--ln);
+                "
+              >
+                SOTUTEX SARL · FACTURE 2026-0417<br />Marchandises&nbsp;&nbsp;&nbsp;1 050,000<br />TVA
+                19%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;199,500
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 14px 16px;
+                  background: var(--sf2);
+                "
+              >
+                <span style="font: 600 13px Inter">Total lu</span
+                ><span
+                  class="num"
+                  style="font-size: 17px; border: 1px solid var(--ink); padding: 3px 9px"
+                  >1 250,500</span
+                >
+              </div>
+            </div>
+            <span class="eye">Ce que j'ai déjà lu</span>
+            <div class="fld">
+              <span class="k">Fournisseur</span
+              ><span class="v">SOTUTEX SARL <span class="cite">source</span></span>
+            </div>
+            <div class="fld">
+              <span class="k">Date</span
+              ><span class="v">12/04/2026 <span class="cite">source</span></span>
+            </div>
+            <div class="fld">
+              <span class="k">TVA déductible</span
+              ><span class="v">199,500 <span class="cite">source</span></span>
+            </div>
+            <div class="bub" style="margin-top: 18px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p>Je lis un total de <b>1 250,500 TND</b>. C'est bien le bon montant ?</p>
+            </div>
+          </div>
+          <div class="dockact">
+            <div class="btn">Oui, c'est le bon montant</div>
+            <div class="btn2">Corriger</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 05 RÉGLÉ -->
+      <div class="col">
+        <div class="cap">05 · Réglé</div>
+        <div class="capn">PIC DE SOULAGEMENT · PEAK-END</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div
+            class="body"
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 800px;
+              text-align: center;
+            "
+          >
+            <svg
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--ink)"
+              stroke-width="2"
+            >
+              <path d="M4 12.5l5 5L20 6.5" />
+            </svg>
+            <div style="font: 600 24px Inter; margin-top: 18px; letter-spacing: -0.02em">
+              C'est réglé.
+            </div>
+            <div
+              style="
+                font: 400 15px Inter;
+                color: var(--t2);
+                margin-top: 8px;
+                max-width: 270px;
+                line-height: 1.5;
+              "
+            >
+              Classé dans <b style="color: var(--ink); font-weight: 600">Achats · Fournitures</b>,
+              transmis à Mme Khelifi. Vous n'avez plus rien à faire.
+            </div>
+            <div
+              class="chip ce"
+              style="margin-top: 22px; background: transparent; color: #245a36; font-weight: 600"
+            >
+              <span class="dot"></span>+199,500 TND de TVA récupérable
+            </div>
+            <div
+              style="
+                font: 500 13px Inter;
+                color: var(--t3);
+                margin-top: 34px;
+                border-bottom: 1px solid var(--lns);
+                padding-bottom: 2px;
+              "
+            >
+              Voir la pièce source
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 06 SUIVI / TIMELINE -->
+      <div class="col">
+        <div class="cap">06 · Suivi de la pièce <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">VOIR CE QUE LE COMPTABLE A FAIT</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: var(--t2);
+                font: 500 13px Inter;
+                margin: 8px 0 2px;
+              "
+            >
+              <span>‹ Retour</span>
+            </div>
+            <div class="h1" style="font-size: 22px">Facture SOTUTEX</div>
+            <div class="sub" style="font-size: 13.5px">2026-0417 · 1 250,500 TND</div>
+            <div class="tl" style="margin-top: 18px">
+              <div class="tle">
+                <div class="lab">Reçue</div>
+                <div class="dt">11/04 · 08:32</div>
+              </div>
+              <div class="tle">
+                <div class="lab">Lue et vérifiée</div>
+                <div class="dt">11/04 · 08:32 · par Malica</div>
+              </div>
+              <div class="tle">
+                <div class="lab">Confirmée par vous</div>
+                <div class="dt">11/04 · 08:33</div>
+              </div>
+              <div class="tle">
+                <div class="lab">Vue par Mme Khelifi</div>
+                <div class="dt">11/04 · 16:10</div>
+              </div>
+              <div class="tle">
+                <div class="lab">Comptabilisée</div>
+                <div class="dt">12/04 · 09:48</div>
+              </div>
+              <div class="tle fut">
+                <div class="lab" style="color: var(--t3)">Déclarée (période avril)</div>
+                <div class="dt">à venir · 28/05</div>
+              </div>
+            </div>
+            <div
+              class="card"
+              style="
+                margin-top: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+              "
+            >
+              <div>
+                <div style="font: 600 14px Inter">Voir l'écriture comptabilisée</div>
+                <div style="font: 400 12.5px Inter; color: var(--t2); margin-top: 3px">
+                  Côte à côte avec votre facture
+                </div>
+              </div>
+              <span style="font: 500 18px Inter; color: var(--t3)">›</span>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di act">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 07 RETOUR -->
+      <div class="col">
+        <div class="cap">07 · Retour <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">RÉCUPÉRATION D'ERREUR · 2 TAPS</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 120px">
+            <div class="pres">
+              <div class="rg"></div>
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat"><span class="dot"></span>une chose à régler ensemble</div>
+              </div>
+            </div>
+            <span class="eye am">À corriger · 1</span>
+            <div class="card" style="border-left: 3px solid #b58614">
+              <div class="bub" style="margin: 0">
+                <img class="persona" src="assets/persona.jpg" />
+                <p>
+                  Mme Khelifi a besoin d'une précision sur la facture <b>SOTUTEX</b> : la pièce est
+                  un peu illisible en bas. Pouvez-vous la reprendre en photo ?
+                </p>
+              </div>
+              <div
+                style="
+                  border-top: 1px solid var(--ln);
+                  margin-top: 14px;
+                  padding-top: 12px;
+                  font: 400 13px Inter;
+                  color: var(--t2);
+                "
+              >
+                Motif indiqué&nbsp;: <b style="color: var(--ink)">illisible</b> · zone du total
+              </div>
+            </div>
+            <div style="font: 400 13px Inter; color: var(--t3); margin-top: 14px; line-height: 1.5">
+              Aucune urgence. Dès que c'est repris, je la renvoie et je vous tiens au courant.
+            </div>
+          </div>
+          <div class="dockact">
+            <div class="btn">Reprendre la photo</div>
+            <div class="btn2">Répondre à Mme Khelifi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 08 DOCUMENTS -->
+      <div class="col">
+        <div class="cap">08 · Documents</div>
+        <div class="capn">CLASSÉ · EXPLIQUÉ · CHERCHABLE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="h1" style="font-size: 24px">Vos documents</div>
+            <div class="sub" style="font-size: 13.5px">Tout est rangé. Rien à trier.</div>
+            <div class="miniask" style="margin: 6px 0 4px">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="color: var(--t3)"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4-4" /></svg
+              >Rechercher un fournisseur, un montant…
+            </div>
+            <span class="eye">Dossiers</span>
+            <div class="fold">
+              <svg
+                class="fi"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M3 7h6l2 2h10v10H3z" />
+              </svg>
+              <div class="fn">Achats</div>
+              <div class="fc">32</div>
+            </div>
+            <div class="fold">
+              <svg
+                class="fi"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M3 7h6l2 2h10v10H3z" />
+              </svg>
+              <div class="fn">Ventes</div>
+              <div class="fc">11</div>
+            </div>
+            <div class="fold">
+              <svg
+                class="fi"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M3 7h6l2 2h10v10H3z" />
+              </svg>
+              <div class="fn">Banque</div>
+              <div class="fc">4</div>
+            </div>
+            <div class="fold">
+              <svg
+                class="fi"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M3 7h6l2 2h10v10H3z" />
+              </svg>
+              <div class="fn">Fiscal</div>
+              <div class="fc">3</div>
+            </div>
+            <span class="eye">Récemment classé</span>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14px">SOTUTEX SARL</div>
+                <div class="lab2">Rangé dans Achats · TVA déductible</div>
+              </div>
+              <span class="stat ev">Transmis</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14px">STEG</div>
+                <div class="lab2">Rangé dans Achats · Énergie</div>
+              </div>
+              <span class="stat am">À vérifier</span>
+            </div>
+            <div
+              style="font: 400 11.5px Inter; color: var(--t3); margin-top: 14px; line-height: 1.5"
+            >
+              Je classe d'après le fournisseur et la nature lus sur la pièce. Un tap pour déplacer
+              si je me suis trompée.
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 09 TVA -->
+      <div class="col">
+        <div class="cap">09 · TVA — récompense</div>
+        <div class="capn">MOIS → ANNÉE · TRAJECTOIRE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between">
+              <span class="eye" style="margin: 14px 0 0">TVA déductible récupérée</span
+              ><span class="toggle"><span>Mois</span><span class="on">Année</span></span>
+            </div>
+            <div style="display: flex; align-items: baseline; margin-top: 10px">
+              <span class="hero">9 480,200</span><span class="tnd">TND</span>
+            </div>
+            <div class="ev" style="font: 500 12.5px Inter">
+              récupérés depuis janvier — sur vos achats scannés
+            </div>
+            <div class="spark" style="height: 54px">
+              <i style="height: 30%"></i><i style="height: 40%"></i><i style="height: 48%"></i
+              ><i style="height: 44%"></i><i style="height: 60%"></i><i style="height: 55%"></i
+              ><i style="height: 70%"></i><i style="height: 66%"></i><i style="height: 80%"></i
+              ><i style="height: 74%"></i><i style="height: 88%"></i
+              ><i class="on" style="height: 100%"></i>
+            </div>
+            <span class="eye">Solde de la période · avril</span>
+            <div class="fld">
+              <span class="k">Encaissée</span
+              ><span class="v" style="font-size: 14px">2 187,900</span>
+            </div>
+            <div class="fld">
+              <span class="k">Récupérable</span
+              ><span class="v" style="font-size: 14px">875,500</span>
+            </div>
+            <div class="fld" style="border-top: 1px solid var(--ink)">
+              <span class="k" style="color: var(--ink); font-weight: 600">À reverser</span
+              ><span class="v" style="font-size: 16px; font-weight: 600">1 312,400</span>
+            </div>
+            <div class="bub" style="margin-top: 6px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p style="font-size: 14px">
+                2 pièces d'achat manquent encore — <b>≈ 140 TND</b> de TVA à récupérer. Voulez-vous
+                les ajouter ?
+              </p>
+            </div>
+            <div class="note">
+              Calculé par le Socle à partir de 47 pièces. Chaque montant pointe vers sa source.
+              Échéance le 28 mai — je vous le rappellerai.
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10 CHARGES + QUESTION -->
+      <div class="col">
+        <div class="cap">10 · Charges + question <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">L'ACCOMPAGNATRICE QUI INTERROGE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="h1" style="font-size: 24px">Vos charges</div>
+            <div class="sub" style="font-size: 13.5px">Par poste, ce mois-ci.</div>
+            <div class="chip cg" style="margin: 8px 0 4px; background: #fbede5; color: #9a4426">
+              <span class="dot"></span>En baisse de 6 % — beau travail.
+            </div>
+            <div class="bars">
+              <div class="barr">
+                <span>Salaires</span><span class="tr"><i style="width: 92%"></i></span
+                ><span class="num" style="font-size: 13px">9 240,000</span>
+              </div>
+              <div class="barr">
+                <span>Loyer</span><span class="tr"><i style="width: 42%"></i></span
+                ><span class="num" style="font-size: 13px">4 100,000</span>
+              </div>
+              <div class="barr">
+                <span>Fournitures</span><span class="tr"><i style="width: 33%"></i></span
+                ><span class="num" style="font-size: 13px">3 187,500</span>
+              </div>
+              <div class="barr">
+                <span>Transport</span><span class="tr"><i style="width: 28%"></i></span
+                ><span class="num" style="font-size: 13px">2 852,300</span>
+              </div>
+              <div class="barr">
+                <span>Propreté</span><span class="tr"><i style="width: 18%"></i></span
+                ><span class="num" style="font-size: 13px">540,000</span>
+              </div>
+            </div>
+            <div class="card" style="margin-top: 20px; border-left: 3px solid var(--ink)">
+              <div class="bub" style="margin: 0">
+                <img class="persona" src="assets/persona.jpg" />
+                <p style="font-size: 15px">
+                  Vos achats de produits de propreté sont passés de <b>180</b> à <b>540 TND</b> ce
+                  mois-ci. Quelque chose d'exceptionnel ?
+                </p>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 14px">
+                <div
+                  class="btn2"
+                  style="border: 1px solid var(--lns); height: 42px; font-size: 14px"
+                >
+                  Oui, exceptionnel
+                </div>
+                <div
+                  class="btn2"
+                  style="border: 1px solid var(--lns); height: 42px; font-size: 14px"
+                >
+                  À vérifier
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11 RÉGLEMENTAIRE -->
+      <div class="col">
+        <div class="cap">
+          11 · Conseil réglementaire <span style="color: #9a4426">NOUVEAU</span>
+        </div>
+        <div class="capn">EXPLIQUÉ EN CLAIR · TEXTE CITÉ</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="pres">
+              <div class="rg"></div>
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat"><span class="dot"></span>je m'appuie sur les textes</div>
+              </div>
+            </div>
+            <div
+              style="
+                font: 500 14px Inter;
+                color: var(--t2);
+                background: var(--sf2);
+                border: 1px solid var(--ln);
+                padding: 11px 13px;
+                margin-top: 4px;
+              "
+            >
+              « Puis-je déduire la TVA sur le carburant de mes véhicules ? »
+            </div>
+            <h2 class="lt" style="margin-top: 16px">
+              En principe, <b style="font-weight: 600">non</b> pour les voitures de tourisme : la
+              TVA sur leur carburant n'est pas déductible. Elle l'est pour les véhicules utilitaires
+              affectés à l'exploitation.
+            </h2>
+            <span class="eye">Le texte sur lequel je m'appuie</span>
+            <div class="lawcol">
+              <b>Code de la TVA — art. 10</b> · exclusions du droit à déduction.<br />« N'ouvre pas
+              droit à déduction la taxe ayant grevé […] les produits pétroliers, à l'exception de
+              ceux utilisés comme matières premières ou consommés dans […] »<br /><span
+                style="color: #1a426b; font-weight: 600"
+                >Note commune DGI n°12/2021</span
+              >
+              · date d'effet 01/01/2021.
+            </div>
+            <div class="bub" style="margin-top: 14px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p style="font-size: 14px">
+                Pour trancher sur vos véhicules précis, je peux transmettre à Mme Khelifi.
+              </p>
+            </div>
+            <div class="note">
+              J'explique le texte, je ne donne pas d'avis engageant. La validation revient à votre
+              comptable.
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12 ÉCHÉANCES -->
+      <div class="col">
+        <div class="cap">12 · Échéances</div>
+        <div class="capn">ANTICIPÉ · NON ANXIOGÈNE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="h1" style="font-size: 24px">Vos échéances</div>
+            <div class="bub" style="margin: 6px 0 8px">
+              <div class="rg" style="width: 20px; height: 20px; margin-top: 2px"></div>
+              <p style="font-size: 14px">
+                Rien d'urgent. Je garde un œil sur les dates et je vous préviens toujours en avance.
+              </p>
+            </div>
+            <div class="row" style="border-top: 1px solid var(--ink)">
+              <div>
+                <div class="lab" style="font-size: 14.5px">
+                  <span class="dot az" style="background: #2968a5"></span> Déclaration de TVA —
+                  avril
+                </div>
+                <div class="lab2">Prête à 90 %. Je termine dès que les pièces sont là.</div>
+              </div>
+              <div class="num" style="font-size: 12px; color: var(--t2)">28/05</div>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">
+                  <span class="dot" style="background: var(--lns)"></span> Acompte provisionnel
+                </div>
+                <div class="lab2">Dans 24 jours. Je vous le rappellerai à temps.</div>
+              </div>
+              <div class="num" style="font-size: 12px; color: var(--t2)">14/06</div>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">
+                  <span class="dot" style="background: var(--lns)"></span> Retenue à la source —
+                  mars
+                </div>
+                <div class="lab2">Transmise à votre comptable le 12/04.</div>
+              </div>
+              <span class="stat ev">Réglée</span>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 13 CONVERSER -->
+      <div class="col">
+        <div class="cap">13 · Converser</div>
+        <div class="capn">L'ÂME · ARTEFACTS DANS LE FIL</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 84px">
+            <div class="pres">
+              <img class="persona" src="assets/persona.jpg" style="width: 30px; height: 30px" />
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat"><span class="dot"></span>en ligne</div>
+              </div>
+            </div>
+            <div class="bub">
+              <div class="rg" style="width: 20px; height: 20px; margin-top: 2px"></div>
+              <p style="font-size: 15px">
+                Bonjour Khaled. Voici vos charges du mois — elles baissent légèrement.
+              </p>
+            </div>
+            <div class="card" style="margin-left: 31px">
+              <div
+                style="
+                  font: 600 12px Inter;
+                  color: var(--t3);
+                  text-transform: uppercase;
+                  letter-spacing: 0.06em;
+                "
+              >
+                Charges · avril
+              </div>
+              <div class="bars" style="margin-top: 10px">
+                <div class="barr" style="grid-template-columns: 70px 1fr auto; font-size: 12.5px">
+                  <span>Salaires</span><span class="tr"><i style="width: 92%"></i></span
+                  ><span class="num" style="font-size: 11px">9 240,000</span>
+                </div>
+                <div class="barr" style="grid-template-columns: 70px 1fr auto; font-size: 12.5px">
+                  <span>Loyer</span><span class="tr"><i style="width: 42%"></i></span
+                  ><span class="num" style="font-size: 11px">4 100,000</span>
+                </div>
+              </div>
+            </div>
+            <div class="bub">
+              <div class="rg" style="width: 20px; height: 20px; margin-top: 2px"></div>
+              <p style="font-size: 15px">
+                La facture SOTUTEX a été comptabilisée. <span class="cite">voir l'écriture</span>
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 0 31px">
+              <span
+                class="chip"
+                style="background: var(--sf2); border: 1px solid var(--ln); font-size: 12.5px"
+                >Ma TVA du mois ?</span
+              >
+              <span
+                class="chip"
+                style="background: var(--sf2); border: 1px solid var(--ln); font-size: 12.5px"
+                >Mes échéances</span
+              >
+            </div>
+          </div>
+          <div class="dockact" style="padding-bottom: 18px">
+            <div class="miniask">
+              <img
+                class="persona"
+                src="assets/persona.jpg"
+                style="width: 22px; height: 22px"
+              />Confiez-moi quelque chose…<svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14 RÉUNION -->
+      <div class="col">
+        <div class="cap">14 · Réunion</div>
+        <div class="capn">LE LIEN AVEC LE COMPTABLE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 120px">
+            <div class="bub" style="margin-top: 10px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p>Je vous propose un point avec Mme Khelifi. Un geste suffit pour confirmer.</p>
+            </div>
+            <span class="eye">Créneau proposé</span>
+            <div class="card" style="text-align: center; padding: 22px">
+              <div class="num" style="font-size: 34px; letter-spacing: -0.03em">05/05</div>
+              <div style="font: 500 14px Inter; color: var(--t2); margin-top: 2px">lundi</div>
+              <div class="num" style="font-size: 16px; margin-top: 12px">10:30 — 11:00</div>
+              <div
+                style="
+                  font: 400 13px Inter;
+                  color: var(--t2);
+                  margin-top: 10px;
+                  border-top: 1px solid var(--ln);
+                  padding-top: 12px;
+                "
+              >
+                Avec Mme Faten Khelifi · à distance
+              </div>
+            </div>
+          </div>
+          <div class="dockact">
+            <div class="btn">Confirmer ce créneau</div>
+            <div class="btn2">Proposer un autre moment</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 15 RÉGLAGES -->
+      <div class="col">
+        <div class="cap">15 · Réglages</div>
+        <div class="capn">LANGUE · THÈME · NOTIFS GOUVERNÉES</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body">
+            <div class="h1" style="font-size: 24px">Réglages</div>
+            <span class="eye">Langue</span>
+            <div class="toggle" style="width: 100%; display: flex">
+              <span class="on" style="flex: 1; text-align: center; padding: 11px">Français</span
+              ><span style="flex: 1; text-align: center; padding: 11px">English</span
+              ><span style="flex: 1; text-align: center; padding: 11px">العربية</span>
+            </div>
+            <span class="eye">Apparence</span>
+            <div class="toggle" style="width: 100%; display: flex">
+              <span class="on" style="flex: 1; text-align: center; padding: 11px">Paper</span
+              ><span style="flex: 1; text-align: center; padding: 11px">Ink</span>
+            </div>
+            <span class="eye">Ce dont je vous préviens</span>
+            <div class="row" style="border-top: 1px solid var(--ink)">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Échéances</div>
+                <div class="lab2">Je préviens 7 jours avant, jamais à la dernière minute</div>
+              </div>
+              <div style="width: 42px; height: 25px; background: var(--ink); position: relative">
+                <span
+                  style="
+                    position: absolute;
+                    right: 3px;
+                    top: 3px;
+                    width: 19px;
+                    height: 19px;
+                    background: var(--bg);
+                  "
+                ></span>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Bonnes nouvelles</div>
+                <div class="lab2">Un progrès, une TVA récupérée — sans vous déranger pour rien</div>
+              </div>
+              <div style="width: 42px; height: 25px; background: var(--ink); position: relative">
+                <span
+                  style="
+                    position: absolute;
+                    right: 3px;
+                    top: 3px;
+                    width: 19px;
+                    height: 19px;
+                    background: var(--bg);
+                  "
+                ></span>
+              </div>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Heures calmes</div>
+                <div class="lab2">Aucune notification de 19 h à 8 h</div>
+              </div>
+              <div style="width: 42px; height: 25px; background: var(--lns); position: relative">
+                <span
+                  style="
+                    position: absolute;
+                    left: 3px;
+                    top: 3px;
+                    width: 19px;
+                    height: 19px;
+                    background: var(--bg);
+                  "
+                ></span>
+              </div>
+            </div>
+            <div style="font: 400 11.5px Inter; color: var(--t3); margin-top: 22px">
+              Malica — Édition One · Algoria Factory
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 16 RÉSULTAT INK -->
+      <div class="col">
+        <div class="cap">16 · Résultat — thème Ink</div>
+        <div class="capn">NOIR ABSOLU · MOIS COURANT EN BLANC</div>
+        <div class="phone" data-t="ink">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 84px">
+            <div class="h1" style="font-size: 24px">Votre résultat d'avril</div>
+            <div class="sub" style="font-size: 13.5px">Bénéfice de la période</div>
+            <div style="display: flex; align-items: baseline; margin-top: 6px">
+              <span class="hero" style="font-size: 44px">+8 740,200</span
+              ><span class="tnd">TND</span>
+            </div>
+            <div
+              class="spark"
+              style="height: 120px; align-items: flex-end; gap: 14px; margin-top: 24px"
+            >
+              <div style="flex: 1; text-align: center">
+                <div style="background: var(--lns); height: 70px"></div>
+                <div
+                  style="
+                    font: 500 11px &quot;IBM Plex Mono&quot;;
+                    color: var(--t3);
+                    margin-top: 8px;
+                  "
+                >
+                  déc
+                </div>
+              </div>
+              <div style="flex: 1; text-align: center">
+                <div style="background: var(--lns); height: 86px"></div>
+                <div
+                  style="
+                    font: 500 11px &quot;IBM Plex Mono&quot;;
+                    color: var(--t3);
+                    margin-top: 8px;
+                  "
+                >
+                  jan
+                </div>
+              </div>
+              <div style="flex: 1; text-align: center">
+                <div style="background: var(--lns); height: 64px"></div>
+                <div
+                  style="
+                    font: 500 11px &quot;IBM Plex Mono&quot;;
+                    color: var(--t3);
+                    margin-top: 8px;
+                  "
+                >
+                  fév
+                </div>
+              </div>
+              <div style="flex: 1; text-align: center">
+                <div style="background: var(--lns); height: 98px"></div>
+                <div
+                  style="
+                    font: 500 11px &quot;IBM Plex Mono&quot;;
+                    color: var(--t3);
+                    margin-top: 8px;
+                  "
+                >
+                  mar
+                </div>
+              </div>
+              <div style="flex: 1; text-align: center">
+                <div style="background: #fafafa; height: 120px"></div>
+                <div
+                  style="
+                    font: 500 11px &quot;IBM Plex Mono&quot;;
+                    color: var(--ink);
+                    margin-top: 8px;
+                  "
+                >
+                  avr
+                </div>
+              </div>
+            </div>
+            <div class="fld" style="border-top: 1px solid var(--ln)">
+              <span class="k">Ce que vous avez gagné</span
+              ><span class="v" style="font-size: 15px">31 420,000</span>
+            </div>
+            <div class="fld">
+              <span class="k">Ce que vous avez dépensé</span
+              ><span class="v" style="font-size: 15px">−22 679,800</span>
+            </div>
+            <div class="bub" style="margin-top: 16px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p style="font-size: 14.5px">
+                Votre mois est positif — c'est le troisième de suite. Vos recettes couvrent
+                largement vos dépenses.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 17 ACCUEIL ARABE RTL -->
+      <div class="col">
+        <div class="cap">17 · Accueil — العربية RTL</div>
+        <div class="capn">MIROIR COMPLET · BIDIRECTIONNEL</div>
+        <div
+          class="phone"
+          data-t="paper"
+          dir="rtl"
+          style="font-family: &quot;IBM Plex Sans Arabic&quot;, Inter"
+        >
+          <div class="sb" dir="ltr" style="flex-direction: row-reverse">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px; text-align: right">
+            <div class="pres" style="flex-direction: row-reverse">
+              <div class="rg"></div>
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat">
+                  <span class="dot" style="margin-right: 0; margin-left: 6px"></span>متّصلة · أُجيب
+                  بوضوح
+                </div>
+              </div>
+            </div>
+            <div class="h1" style="font-size: 25px">أهلاً، خالد.</div>
+            <div class="sub">إليك وضع ملفّك اليوم.</div>
+            <span class="eye az">استحقاق خلال 7 أيام</span>
+            <div class="card">
+              <div style="font: 600 17px &quot;IBM Plex Sans Arabic&quot;">أتكفّل بها معك.</div>
+              <div
+                style="
+                  font: 400 14px &quot;IBM Plex Sans Arabic&quot;;
+                  color: var(--t2);
+                  margin-top: 6px;
+                  line-height: 1.6;
+                "
+              >
+                تصريح الفترة جاهز بنسبة 90 ٪. سأُعلمك حالما لا يبقى شيء.
+              </div>
+              <div class="prog"><i style="width: 90%; left: auto; right: 0"></i></div>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                margin: 22px 0 0;
+                flex-direction: row-reverse;
+              "
+            >
+              <span class="eye" style="margin: 0">ض.ق.م المُسترَدّة — هذا الشهر</span>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                margin-top: 8px;
+                flex-direction: row-reverse;
+              "
+            >
+              <span class="hero" dir="ltr">1 240,500</span><span class="tnd">د.ت</span>
+            </div>
+            <div class="ev" style="font: 500 12.5px &quot;IBM Plex Sans Arabic&quot;">
+              ‎+180,500 عن الشهر الماضي
+            </div>
+            <div class="spark">
+              <i class="on" style="height: 100%"></i><i style="height: 80%"></i
+              ><i style="height: 85%"></i><i style="height: 72%"></i><i style="height: 78%"></i
+              ><i style="height: 64%"></i><i style="height: 70%"></i><i style="height: 55%"></i
+              ><i style="height: 61%"></i><i style="height: 44%"></i><i style="height: 52%"></i
+              ><i style="height: 38%"></i>
+            </div>
+            <span class="eye">ما أعددتُه لك</span>
+            <div class="row" style="flex-direction: row-reverse">
+              <div style="text-align: right">
+                <div class="lab">ض.ق.م لشهر أفريل</div>
+                <div class="lab2">الرصيد الواجب دفعه</div>
+              </div>
+              <div class="num" style="font-size: 15px" dir="ltr">‹ 1 312,400</div>
+            </div>
+          </div>
+          <div class="dock" style="flex-direction: row-reverse">
+            <div class="di act">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >المتابعة
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 18 ESPACE PERSONNEL -->
+      <div class="col">
+        <div class="cap">18 · Espace personnel <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">PRIVÉ · INVISIBLE AU COMPTABLE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="toggle" style="width: 100%; display: flex; margin: 8px 0 14px">
+              <span class="on" style="flex: 1; text-align: center; padding: 10px">Mon espace</span
+              ><span style="flex: 1; text-align: center; padding: 10px">Avec mon comptable</span>
+            </div>
+            <div class="pres">
+              <div class="rg"></div>
+              <div>
+                <div class="pname">Malica</div>
+                <div class="pstat"><span class="dot"></span>ici, je suis votre confidente</div>
+              </div>
+            </div>
+            <div class="h1" style="font-size: 24px">Mon espace</div>
+            <div
+              class="sub"
+              style="font-size: 13.5px; display: flex; align-items: center; gap: 6px"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="color: var(--t3)"
+              >
+                <rect x="5" y="11" width="14" height="9" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg
+              >Visible par vous seul.
+            </div>
+            <span class="eye">À soumettre</span>
+            <div class="card" style="padding: 14px">
+              <div style="display: flex; justify-content: space-between; align-items: start">
+                <div>
+                  <div class="lab" style="font-size: 14.5px">Facture MEUBLATEX</div>
+                  <div class="lab2">Brouillon · lu, prêt · 1 480,000 TND</div>
+                </div>
+                <span class="stat" style="color: var(--t3)">privé</span>
+              </div>
+              <div class="btn" style="height: 42px; font-size: 14px; margin-top: 12px">
+                Partager avec mon comptable
+              </div>
+            </div>
+            <span class="eye">Privé · pour vous</span>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Achat véhicule — perso</div>
+                <div class="lab2">Hors compta · note personnelle</div>
+              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="color: var(--t3)"
+              >
+                <rect x="5" y="11" width="14" height="9" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              </svg>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Simulation : 2ᵉ employé</div>
+                <div class="lab2">Et si j'embauche ? — entre nous</div>
+              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="color: var(--t3)"
+              >
+                <rect x="5" y="11" width="14" height="9" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+              </svg>
+            </div>
+            <div class="bub" style="margin-top: 16px">
+              <div class="rg" style="width: 20px; height: 20px; margin-top: 2px"></div>
+              <p style="font-size: 14px">
+                Ce que vous gardez ici reste entre nous. Mme Khelifi n'y a pas accès.
+              </p>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di act">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 19 GESTE DE PARTAGE -->
+      <div class="col">
+        <div class="cap">19 · Le geste de partage <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">PRIVÉ → PARTAGÉ · CONSCIENT</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div
+            class="body"
+            style="
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              height: 800px;
+              padding-bottom: 120px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+                color: var(--t3);
+                font: 600 11px Inter;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                margin-bottom: 22px;
+              "
+            >
+              <span>Mon espace</span
+              ><svg
+                width="22"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--ink)"
+                stroke-width="2"
+              >
+                <path d="M4 12h15M14 6l6 6-6 6" /></svg
+              ><span style="color: var(--ink)">Partagé</span>
+            </div>
+            <div class="card" style="padding: 0">
+              <div
+                style="
+                  padding: 14px 16px;
+                  font: 400 11px &quot;IBM Plex Mono&quot;;
+                  color: var(--t2);
+                  line-height: 1.8;
+                  border-bottom: 1px solid var(--ln);
+                "
+              >
+                MEUBLATEX · FACTURE 2026-0488<br />Total …… 1 480,000 TND
+              </div>
+              <div
+                style="
+                  padding: 14px 16px;
+                  display: flex;
+                  justify-content: space-between;
+                  background: var(--sf2);
+                "
+              >
+                <span style="font: 600 13px Inter">Facture MEUBLATEX</span
+                ><span class="num" style="font-size: 14px">1 480,000</span>
+              </div>
+            </div>
+            <div class="bub" style="margin-top: 20px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p>
+                Je transmets cette facture à <b>Mme Khelifi</b>. Elle la verra et pourra la
+                comptabiliser.
+              </p>
+            </div>
+          </div>
+          <div class="dockact">
+            <div class="btn">Transmettre à Mme Khelifi</div>
+            <div class="btn2">Garder pour moi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 20 RESTITUTION — BONNE NOUVELLE -->
+      <div class="col">
+        <div class="cap">20 · Restitution <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">DÉPÔT DU COMPTABLE · BONNE NOUVELLE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div
+            class="body"
+            style="
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              height: 800px;
+              text-align: center;
+              padding-bottom: 120px;
+            "
+          >
+            <div style="display: flex; justify-content: center">
+              <img class="persona" src="assets/persona.jpg" style="width: 54px; height: 54px" />
+            </div>
+            <div style="font: 600 21px Inter; margin-top: 18px; letter-spacing: -0.02em">
+              Une bonne nouvelle.
+            </div>
+            <div
+              style="
+                font: 400 15px Inter;
+                color: var(--t2);
+                margin-top: 8px;
+                max-width: 290px;
+                align-self: center;
+                line-height: 1.5;
+              "
+            >
+              Mme Khelifi a déposé votre
+              <b style="color: var(--ink)">déclaration de TVA d'avril</b> dans votre Coffre.
+            </div>
+            <div
+              class="card"
+              style="
+                margin-top: 22px;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                gap: 13px;
+              "
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--ink)"
+                stroke-width="1.6"
+              >
+                <path d="M6 3h9l4 4v14H6z" />
+                <path d="M14 3v5h5" />
+              </svg>
+              <div style="flex: 1">
+                <div style="font: 600 14px Inter">Déclaration TVA — avril</div>
+                <div
+                  style="
+                    font: 500 12px &quot;IBM Plex Mono&quot;;
+                    color: var(--t2);
+                    margin-top: 2px;
+                  "
+                >
+                  déposée 12/04 · version 1 · lecture seule
+                </div>
+              </div>
+            </div>
+            <div
+              style="
+                font: 500 13px Inter;
+                color: var(--t3);
+                margin-top: 24px;
+                border-bottom: 1px solid var(--lns);
+                padding-bottom: 2px;
+                align-self: center;
+              "
+            >
+              Voir dans le Coffre
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 21 LE COFFRE -->
+      <div class="col">
+        <div class="cap">21 · Le Coffre <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">PARTAGÉ · OFFICIEL · LECTURE SEULE</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="toggle" style="width: 100%; display: flex; margin: 8px 0 14px">
+              <span style="flex: 1; text-align: center; padding: 10px">Mon espace</span
+              ><span class="on" style="flex: 1; text-align: center; padding: 10px"
+                >Avec mon comptable</span
+              >
+            </div>
+            <div class="h1" style="font-size: 24px">Le Coffre</div>
+            <div class="sub" style="font-size: 13.5px">
+              Vos documents officiels, déposés par Mme Khelifi.
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font: 500 11.5px Inter;
+                color: var(--t3);
+                margin-bottom: 4px;
+              "
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 12.5l5 5L20 6.5" /></svg
+              >Authentiques · lecture seule · conservés 10 ans
+            </div>
+            <div class="row" style="border-top: 1px solid var(--ink)">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Déclaration TVA — avril</div>
+                <div class="lab2">Déposée 12/04 · version 1</div>
+              </div>
+              <span class="stat ev">Nouveau</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Quittance — acompte provisionnel</div>
+                <div class="lab2">Payé 30/03 · 2 400,000 TND</div>
+              </div>
+              <span class="num" style="font-size: 11px; color: var(--t3)">PDF</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">États financiers 2025</div>
+                <div class="lab2">Bilan · résultat · annexes</div>
+              </div>
+              <span class="num" style="font-size: 11px; color: var(--t3)">PDF</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Déclaration d'employeur 2025</div>
+                <div class="lab2">Salaires · retenues</div>
+              </div>
+              <span class="num" style="font-size: 11px; color: var(--t3)">PDF</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="lab" style="font-size: 14.5px">Dépôt RNE</div>
+                <div class="lab2">Fiche société · à jour 02/2026</div>
+              </div>
+              <span class="stat ev">À jour</span>
+            </div>
+            <div class="bub" style="margin-top: 16px">
+              <div class="rg" style="width: 20px; height: 20px; margin-top: 2px"></div>
+              <p style="font-size: 14px">
+                Tout ce que votre comptable produit pour vous est rangé ici, en sécurité.
+              </p>
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 22 L'ÉVOLUTION -->
+      <div class="col">
+        <div class="cap">22 · L'Évolution <span style="color: #9a4426">NOUVEAU</span></div>
+        <div class="capn">LONGITUDINAL · CALCULÉ · CITÉ</div>
+        <div class="phone" data-t="paper">
+          <div class="sb">
+            08:32
+            <div class="r">5G ▰▰▰▰</div>
+          </div>
+          <div class="body" style="padding-bottom: 90px">
+            <div class="h1" style="font-size: 24px">Votre évolution</div>
+            <div class="bub" style="margin: 8px 0 4px">
+              <img class="persona" src="assets/persona.jpg" />
+              <p style="font-size: 14.5px">
+                Votre chiffre d'affaires progresse, vos capitaux propres se renforcent, et vous
+                payez tout à temps.
+              </p>
+            </div>
+            <span class="eye">Chiffre d'affaires</span>
+            <div class="bars">
+              <div class="barr" style="grid-template-columns: 54px 1fr auto">
+                <span>2023</span><span class="tr"><i style="width: 62%"></i></span
+                ><span class="num" style="font-size: 12px">248 000</span>
+              </div>
+              <div class="barr" style="grid-template-columns: 54px 1fr auto">
+                <span>2024</span><span class="tr"><i style="width: 78%"></i></span
+                ><span class="num" style="font-size: 12px">312 000</span>
+              </div>
+              <div class="barr" style="grid-template-columns: 54px 1fr auto">
+                <span style="font-weight: 600">2025</span
+                ><span class="tr"><i style="width: 92%; background: var(--ink)"></i></span
+                ><span class="num" style="font-size: 12px; font-weight: 600">372 400</span>
+              </div>
+            </div>
+            <div class="fld" style="border-top: 1px solid var(--ink); margin-top: 14px">
+              <span class="k">Résultat 2025</span
+              ><span class="v ev" style="font-size: 14px">+38 200</span>
+            </div>
+            <div class="fld">
+              <span class="k">Capitaux propres</span
+              ><span class="v" style="font-size: 14px">+12 % vs 2024</span>
+            </div>
+            <div class="fld">
+              <span class="k">Régularité des paiements</span
+              ><span class="v ev" style="font-size: 13px">à temps · 3/3</span>
+            </div>
+            <div class="card" style="margin-top: 16px; background: var(--sf2)">
+              <div style="font: 500 13.5px Inter; line-height: 1.5">
+                Mon estimation d'avril sera <b>confirmée par vos états financiers</b> à la clôture.
+                Estimation aujourd'hui, vérité demain.
+              </div>
+            </div>
+            <div class="note">
+              Calculé par le Socle à partir de vos états financiers déposés (2023–2025). Chaque
+              chiffre pointe vers sa source.
+            </div>
+          </div>
+          <div class="dock">
+            <div class="di">
+              <div
+                class="ic rg"
+                style="
+                  background: currentColor;
+                  -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                  mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                "
+              ></div>
+              Malica
+            </div>
+            <div class="shut">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.2-1.8A1 1 0 0 1 9 4.7h6a1 1 0 0 1 .8.5L17 7h2.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"
+                />
+                <circle cx="12" cy="13" r="3.4" />
+              </svg>
+            </div>
+            <div class="di">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M4 6h16M4 12h16M4 18h10" /></svg
+              >Suivi
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

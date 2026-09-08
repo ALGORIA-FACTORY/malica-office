@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Les exports du cabinet : FEC et CSV.
+--  Malica Office — Les exports du cabinet : FEC et CSV.
 --
 --  POURQUOI : un cabinet qui ne peut pas partir n'est pas un client, c'est un
 --  otage. Les écritures COMPTABILISÉES sortent telles que le Socle les tient,

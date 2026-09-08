@@ -1,11 +1,11 @@
 -- =====================================================================================
---  Regalica Office — Un encaissement ne dépasse pas le reste dû.
+--  Malica Office — Un encaissement ne dépasse pas le reste dû.
 --
 --  POURQUOI : `honoraires_encaisser` acceptait n'importe quel montant. Un
 --  encaissement nul tombait sur la contrainte de la table — un message interne,
 --  masqué à l'écran — et un encaissement supérieur au reste dû passait en
 --  silence : la facture était « réglée » avec un trop-perçu que rien ne
---  portait. Regalica ne devine pas un avoir ni un acompte sur la facture
+--  portait. Malica ne devine pas un avoir ni un acompte sur la facture
 --  suivante : elle refuse, et dit pourquoi.
 --
 --  Au passage, la somme encaissée rendue à l'appelant voyage en texte, comme
@@ -61,9 +61,9 @@ begin
   v_somme := v_deja + p_montant;
 
   if v_somme >= f.total_ttc then
-    perform set_config('regalica.honoraires_transition', p_facture::text, true);
+    perform set_config('malica.honoraires_transition', p_facture::text, true);
     update collab.factures_honoraires set statut = 'payee', payee_le = p_date where id = p_facture;
-    perform set_config('regalica.honoraires_transition', '', true);
+    perform set_config('malica.honoraires_transition', '', true);
   end if;
 
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)

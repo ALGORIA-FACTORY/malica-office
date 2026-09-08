@@ -47,7 +47,7 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
   before(async () => {
     // La racine est posée AVANT le premier import de l'application : elle est
     // lue au montage, et un test qui la poserait après ne testerait rien.
-    racineEssai = await mkdtemp(path.join(tmpdir(), "regalica-stockage-"));
+    racineEssai = await mkdtemp(path.join(tmpdir(), "malica-stockage-"));
     process.env["STOCKAGE_RACINE"] = racineEssai;
 
     const { app } = await import("./app.ts");

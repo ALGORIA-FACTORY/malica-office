@@ -71,7 +71,7 @@ describe("le 426 par le réseau", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   const sante = (client?: string) =>
-    fetch(`${base}/sante`, { headers: client ? { "X-Regalica-Client": client } : {} });
+    fetch(`${base}/sante`, { headers: client ? { "X-Malica-Client": client } : {} });
 
   it("une coque trop ancienne reçoit 426, avant toute route", async () => {
     const r = await sante("coque-android/0.1.9");

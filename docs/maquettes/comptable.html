@@ -1,347 +1,1456 @@
-<!DOCTYPE html><html><head><meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
-body{background:#DCDCE1;font-family:Inter,sans-serif}
-.wrap{display:flex;flex-direction:column;gap:46px;padding:54px;align-items:center}
-.lab{font:600 13px Inter;color:#1A1A1C;align-self:flex-start;margin-left:2px}
-.labn{font:600 11px 'IBM Plex Mono';color:#7C7C82;letter-spacing:.04em;align-self:flex-start;margin:-6px 0 4px 2px}
-:root{--bg:#FAFAFA;--sf:#FFFFFF;--sf2:#F4F4F5;--ink:#0A0A0A;--t2:#48484A;--t3:#9A9AA0;--ln:#E8E8EC;--lns:#D8D8DD;--ev:#245A36;--ve:#A03819;--am:#8A6510;--az:#2968A5}
-.scr{width:1320px;height:836px;background:var(--bg);border:1px solid var(--lns);display:grid;grid-template-columns:236px 1fr;overflow:hidden;color:var(--ink);font-family:Inter}
-.nav{border-right:1px solid var(--ln);padding:22px 16px;display:flex;flex-direction:column;background:var(--sf)}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:3px}
-.rg{width:22px;height:22px;color:var(--ink);background:currentColor;-webkit-mask:url(assets/rg_mark.svg) center/contain no-repeat;mask:url(assets/rg_mark.svg) center/contain no-repeat;flex:0 0 auto}
-.cab{font:600 14px Inter;letter-spacing:-.01em}.role{font:500 11px Inter;color:var(--t3);margin:1px 0 0 32px}
-.navsec{font:600 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:20px 0 7px 4px}
-.navi{display:flex;align-items:center;gap:11px;padding:8px 10px;font:500 13px Inter;color:var(--t2);border-radius:0}
-.navi .ic{width:16px;height:16px;flex:0 0 auto}
-.navi.act{background:var(--sf2);color:var(--ink);font-weight:600}
-.navi .cnt{margin-left:auto;font:600 11px 'IBM Plex Mono';color:var(--t3)}
-.navi.act .cnt{color:var(--ink)}
-.kbd{margin-top:auto;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--ln);padding:8px 11px;font:500 11px Inter;color:var(--t3)}
-.kbd b{font:600 11px 'IBM Plex Mono';border:1px solid var(--lns);padding:1px 5px;color:var(--t2)}
-.main{display:flex;flex-direction:column;overflow:hidden}
-.top{height:56px;border-bottom:1px solid var(--ln);display:flex;align-items:center;gap:18px;padding:0 26px;flex:0 0 auto}
-.crumb{font:500 13px Inter;color:var(--t2)}.crumb b{color:var(--ink);font-weight:600}
-.search{margin-left:auto;width:300px;border:1px solid var(--ln);padding:8px 12px;color:var(--t3);font:400 12.5px Inter;display:flex;align-items:center;gap:8px;background:var(--sf)}
-.spaces{display:flex;border:1px solid var(--lns);font:600 11.5px Inter}
-.spaces span{padding:7px 14px;color:var(--t3)}.spaces span.on{background:var(--ink);color:var(--bg)}
-.content{padding:24px 28px;overflow:hidden;flex:1}
-.h{font:600 22px Inter;letter-spacing:-.025em}.sub{font:400 14px Inter;color:var(--t2);margin-top:3px}
-.eye{font:600 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:22px 0 10px;display:block}
-.num{font-family:'IBM Plex Mono';font-variant-numeric:tabular-nums;font-weight:500;letter-spacing:-.02em}
-.grid{display:grid;gap:16px}
-.card{border:1px solid var(--ln);background:var(--sf);padding:16px}
-.stat{display:inline-flex;align-items:center;gap:6px;font:600 11.5px Inter}
-.d{width:6px;height:6px;display:inline-block}
-.ev{color:var(--ev)}.ve{color:var(--ve)}.am{color:var(--am)}.az{color:var(--az)}
-.t3{color:var(--t3)}.t2{color:var(--t2)}
-table{width:100%;border-collapse:collapse}
-th{font:600 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);text-align:left;padding:10px 12px;border-bottom:1px solid var(--lns)}
-td{padding:13px 12px;border-bottom:1px solid var(--ln);font:500 13.5px Inter;vertical-align:middle}
-td.n{font-family:'IBM Plex Mono';font-weight:500;text-align:right;font-size:13px}
-.av{width:26px;height:26px;object-fit:cover;filter:grayscale(1);flex:0 0 auto}
-.who{display:flex;align-items:center;gap:9px}
-.btn{height:40px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;font:600 13.5px Inter;background:var(--ink);color:var(--bg)}
-.btn2{height:40px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;font:500 13.5px Inter;color:var(--ink);border:1px solid var(--lns)}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;font:600 11px Inter;border:1px solid var(--lns)}
-.bars{display:flex;align-items:flex-end;gap:9px;height:90px}
-.bars>i{flex:1;background:var(--lns)}.bars>i.on{background:var(--ink)}
-.kpi{font-family:'IBM Plex Mono';font-weight:500;font-size:30px;letter-spacing:-.03em}
-.kpis{font-size:.42em;color:var(--t2);margin-left:4px}
-.feu{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;font:600 12px Inter}
-.split{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--ln);height:560px}
-.pane{padding:20px;overflow:hidden}
-.pane.l{border-right:1px solid var(--ln);background:var(--sf2)}
-.docline{font:400 12px 'IBM Plex Mono';color:var(--t2);line-height:2.1}
-.hl{background:#E9F1FA;border:1px solid #2968A5;padding:1px 5px;color:#1A426B}
-.cite{font:500 11px Inter;color:#1A426B;border-bottom:1px dotted #2968A5}
-.ecr{display:grid;grid-template-columns:1fr auto auto;gap:8px;font:500 13px Inter;padding:9px 0;border-bottom:1px solid var(--ln)}
-.ecr .n{font-family:'IBM Plex Mono';text-align:right;font-size:12.5px}
-.barr{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:12px;font:500 13px Inter;padding:7px 0}
-.barr .tr{height:7px;background:var(--lns);position:relative}.barr .tr>i{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
-.assignrow{display:grid;grid-template-columns:1fr 200px;gap:14px;align-items:center;padding:12px;border:1px solid var(--ln);background:var(--sf);margin-bottom:8px}
-.chiprow{display:flex;gap:7px}
-.lawcol{border:1px solid var(--ln);background:var(--sf2);padding:14px;font:400 13px 'IBM Plex Mono';line-height:1.6;color:var(--t2)}
-.lawcol b{color:var(--ink);font-weight:600}
-</style></head><body><div class="wrap">
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        background: #dcdce1;
+        font-family: Inter, sans-serif;
+      }
+      .wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 46px;
+        padding: 54px;
+        align-items: center;
+      }
+      .lab {
+        font: 600 13px Inter;
+        color: #1a1a1c;
+        align-self: flex-start;
+        margin-left: 2px;
+      }
+      .labn {
+        font: 600 11px "IBM Plex Mono";
+        color: #7c7c82;
+        letter-spacing: 0.04em;
+        align-self: flex-start;
+        margin: -6px 0 4px 2px;
+      }
+      :root {
+        --bg: #fafafa;
+        --sf: #ffffff;
+        --sf2: #f4f4f5;
+        --ink: #0a0a0a;
+        --t2: #48484a;
+        --t3: #9a9aa0;
+        --ln: #e8e8ec;
+        --lns: #d8d8dd;
+        --ev: #245a36;
+        --ve: #a03819;
+        --am: #8a6510;
+        --az: #2968a5;
+      }
+      .scr {
+        width: 1320px;
+        height: 836px;
+        background: var(--bg);
+        border: 1px solid var(--lns);
+        display: grid;
+        grid-template-columns: 236px 1fr;
+        overflow: hidden;
+        color: var(--ink);
+        font-family: Inter;
+      }
+      .nav {
+        border-right: 1px solid var(--ln);
+        padding: 22px 16px;
+        display: flex;
+        flex-direction: column;
+        background: var(--sf);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 3px;
+      }
+      .rg {
+        width: 22px;
+        height: 22px;
+        color: var(--ink);
+        background: currentColor;
+        -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+        mask: url(assets/rg_mark.svg) center/contain no-repeat;
+        flex: 0 0 auto;
+      }
+      .cab {
+        font: 600 14px Inter;
+        letter-spacing: -0.01em;
+      }
+      .role {
+        font: 500 11px Inter;
+        color: var(--t3);
+        margin: 1px 0 0 32px;
+      }
+      .navsec {
+        font: 600 9.5px Inter;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--t3);
+        margin: 20px 0 7px 4px;
+      }
+      .navi {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 8px 10px;
+        font: 500 13px Inter;
+        color: var(--t2);
+        border-radius: 0;
+      }
+      .navi .ic {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+      }
+      .navi.act {
+        background: var(--sf2);
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .navi .cnt {
+        margin-left: auto;
+        font: 600 11px "IBM Plex Mono";
+        color: var(--t3);
+      }
+      .navi.act .cnt {
+        color: var(--ink);
+      }
+      .kbd {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid var(--ln);
+        padding: 8px 11px;
+        font: 500 11px Inter;
+        color: var(--t3);
+      }
+      .kbd b {
+        font: 600 11px "IBM Plex Mono";
+        border: 1px solid var(--lns);
+        padding: 1px 5px;
+        color: var(--t2);
+      }
+      .main {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .top {
+        height: 56px;
+        border-bottom: 1px solid var(--ln);
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 26px;
+        flex: 0 0 auto;
+      }
+      .crumb {
+        font: 500 13px Inter;
+        color: var(--t2);
+      }
+      .crumb b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .search {
+        margin-left: auto;
+        width: 300px;
+        border: 1px solid var(--ln);
+        padding: 8px 12px;
+        color: var(--t3);
+        font: 400 12.5px Inter;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--sf);
+      }
+      .spaces {
+        display: flex;
+        border: 1px solid var(--lns);
+        font: 600 11.5px Inter;
+      }
+      .spaces span {
+        padding: 7px 14px;
+        color: var(--t3);
+      }
+      .spaces span.on {
+        background: var(--ink);
+        color: var(--bg);
+      }
+      .content {
+        padding: 24px 28px;
+        overflow: hidden;
+        flex: 1;
+      }
+      .h {
+        font: 600 22px Inter;
+        letter-spacing: -0.025em;
+      }
+      .sub {
+        font: 400 14px Inter;
+        color: var(--t2);
+        margin-top: 3px;
+      }
+      .eye {
+        font: 600 10px Inter;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--t3);
+        margin: 22px 0 10px;
+        display: block;
+      }
+      .num {
+        font-family: "IBM Plex Mono";
+        font-variant-numeric: tabular-nums;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .card {
+        border: 1px solid var(--ln);
+        background: var(--sf);
+        padding: 16px;
+      }
+      .stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: 600 11.5px Inter;
+      }
+      .d {
+        width: 6px;
+        height: 6px;
+        display: inline-block;
+      }
+      .ev {
+        color: var(--ev);
+      }
+      .ve {
+        color: var(--ve);
+      }
+      .am {
+        color: var(--am);
+      }
+      .az {
+        color: var(--az);
+      }
+      .t3 {
+        color: var(--t3);
+      }
+      .t2 {
+        color: var(--t2);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        font: 600 10.5px Inter;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--t3);
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--lns);
+      }
+      td {
+        padding: 13px 12px;
+        border-bottom: 1px solid var(--ln);
+        font: 500 13.5px Inter;
+        vertical-align: middle;
+      }
+      td.n {
+        font-family: "IBM Plex Mono";
+        font-weight: 500;
+        text-align: right;
+        font-size: 13px;
+      }
+      .av {
+        width: 26px;
+        height: 26px;
+        object-fit: cover;
+        filter: grayscale(1);
+        flex: 0 0 auto;
+      }
+      .who {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .btn {
+        height: 40px;
+        padding: 0 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font: 600 13.5px Inter;
+        background: var(--ink);
+        color: var(--bg);
+      }
+      .btn2 {
+        height: 40px;
+        padding: 0 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font: 500 13.5px Inter;
+        color: var(--ink);
+        border: 1px solid var(--lns);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        font: 600 11px Inter;
+        border: 1px solid var(--lns);
+      }
+      .bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 9px;
+        height: 90px;
+      }
+      .bars > i {
+        flex: 1;
+        background: var(--lns);
+      }
+      .bars > i.on {
+        background: var(--ink);
+      }
+      .kpi {
+        font-family: "IBM Plex Mono";
+        font-weight: 500;
+        font-size: 30px;
+        letter-spacing: -0.03em;
+      }
+      .kpis {
+        font-size: 0.42em;
+        color: var(--t2);
+        margin-left: 4px;
+      }
+      .feu {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 12px;
+        font: 600 12px Inter;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        border: 1px solid var(--ln);
+        height: 560px;
+      }
+      .pane {
+        padding: 20px;
+        overflow: hidden;
+      }
+      .pane.l {
+        border-right: 1px solid var(--ln);
+        background: var(--sf2);
+      }
+      .docline {
+        font: 400 12px "IBM Plex Mono";
+        color: var(--t2);
+        line-height: 2.1;
+      }
+      .hl {
+        background: #e9f1fa;
+        border: 1px solid #2968a5;
+        padding: 1px 5px;
+        color: #1a426b;
+      }
+      .cite {
+        font: 500 11px Inter;
+        color: #1a426b;
+        border-bottom: 1px dotted #2968a5;
+      }
+      .ecr {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 8px;
+        font: 500 13px Inter;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--ln);
+      }
+      .ecr .n {
+        font-family: "IBM Plex Mono";
+        text-align: right;
+        font-size: 12.5px;
+      }
+      .barr {
+        display: grid;
+        grid-template-columns: 120px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        font: 500 13px Inter;
+        padding: 7px 0;
+      }
+      .barr .tr {
+        height: 7px;
+        background: var(--lns);
+        position: relative;
+      }
+      .barr .tr > i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--ink);
+      }
+      .assignrow {
+        display: grid;
+        grid-template-columns: 1fr 200px;
+        gap: 14px;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid var(--ln);
+        background: var(--sf);
+        margin-bottom: 8px;
+      }
+      .chiprow {
+        display: flex;
+        gap: 7px;
+      }
+      .lawcol {
+        border: 1px solid var(--ln);
+        background: var(--sf2);
+        padding: 14px;
+        font: 400 13px "IBM Plex Mono";
+        line-height: 1.6;
+        color: var(--t2);
+      }
+      .lawcol b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- A · AUJOURD'HUI (collaboratrice) -->
+      <div class="lab">A · Aujourd'hui — vue collaboratrice</div>
+      <div class="labn">LE RITUEL DU MATIN · LA FILE QUI SE VIDE</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Sonia B. · Collaboratrice</div>
+          <div class="navsec">Mon travail</div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" /></svg
+            >Aujourd'hui<span class="cnt">14</span>
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Mes clients<span class="cnt">9</span>
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="5" width="16" height="16" rx="0" />
+              <path d="M8 3v4M16 3v4M4 11h16" /></svg
+            >Échéances<span class="cnt">3</span>
+          </div>
+          <div class="navsec">Cabinet</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 21V8l7-4 7 4v13" />
+              <path d="M9 21v-6h6v6" /></svg
+            >Conseil réglementaire
+          </div>
+          <div class="navi">
+            <div
+              class="ic rg"
+              style="
+                background: currentColor;
+                -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                mask: url(assets/rg_mark.svg) center/contain no-repeat;
+              "
+            ></div>
+            Demander à Malica
+          </div>
+          <div class="kbd">Tout chercher<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb"><b>Aujourd'hui</b> · vendredi 30 mai</div>
+            <div class="search">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4-4" /></svg
+              >Client, pièce, écriture…
+            </div>
+          </div>
+          <div class="content">
+            <div style="display: flex; align-items: center; gap: 11px">
+              <img class="av" src="assets/persona.jpg" style="width: 30px; height: 30px" />
+              <div><div class="h" style="font-size: 20px">Bonjour Sonia.</div></div>
+            </div>
+            <div class="sub" style="margin-top: 4px">
+              14 pièces vous attendent sur 4 clients. J'ai déjà tout proposé — il vous reste à
+              valider. Environ <b style="color: var(--ink)">35 min</b> de travail.
+            </div>
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr); margin-top: 18px">
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  À traiter
+                </div>
+                <div class="kpi" style="margin-top: 6px">14</div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Prêtes (feu vert)
+                </div>
+                <div class="kpi ev" style="margin-top: 6px">11</div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  À vérifier
+                </div>
+                <div class="kpi am" style="margin-top: 6px">3</div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Échéance ≤ 7 j
+                </div>
+                <div class="kpi" style="margin-top: 6px">2</div>
+              </div>
+            </div>
+            <span class="eye">Votre file — par client</span>
+            <table>
+              <tr>
+                <th>Client</th>
+                <th>À traiter</th>
+                <th>Prêtes</th>
+                <th>État</th>
+                <th></th>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <span class="num t3" style="font-size: 11px">01</span>SOTUTEX SARL
+                  </div>
+                </td>
+                <td class="num">6</td>
+                <td class="num ev">6</td>
+                <td>
+                  <span class="stat ev"
+                    ><span class="d" style="background: var(--ev)"></span>tout prêt</span
+                  >
+                </td>
+                <td class="n"><span class="t3">Ouvrir ›</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <span class="num t3" style="font-size: 11px">02</span>MEUBLATEX
+                  </div>
+                </td>
+                <td class="num">4</td>
+                <td class="num ev">3</td>
+                <td>
+                  <span class="stat am"
+                    ><span class="d" style="background: var(--am)"></span>1 à vérifier</span
+                  >
+                </td>
+                <td class="n"><span class="t3">Ouvrir ›</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <span class="num t3" style="font-size: 11px">03</span>Délice Holding
+                  </div>
+                </td>
+                <td class="num">3</td>
+                <td class="num ev">2</td>
+                <td>
+                  <span class="stat am"
+                    ><span class="d" style="background: var(--am)"></span>1 à vérifier</span
+                  >
+                </td>
+                <td class="n"><span class="t3">Ouvrir ›</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="who">
+                    <span class="num t3" style="font-size: 11px">04</span>Comptoir du Sud
+                  </div>
+                </td>
+                <td class="num">1</td>
+                <td class="num ev">0</td>
+                <td>
+                  <span class="stat am"
+                    ><span class="d" style="background: var(--am)"></span>1 à vérifier</span
+                  >
+                </td>
+                <td class="n"><span class="t3">Ouvrir ›</span></td>
+              </tr>
+            </table>
+            <div style="margin-top: 18px">
+              <span class="btn">Commencer — SOTUTEX (6 prêtes)</span>
+              <span class="btn2" style="margin-left: 8px">Tout valider les feux verts</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<!-- A · AUJOURD'HUI (collaboratrice) -->
-<div class="lab">A · Aujourd'hui — vue collaboratrice</div><div class="labn">LE RITUEL DU MATIN · LA FILE QUI SE VIDE</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Sonia B. · Collaboratrice</div>
-  <div class="navsec">Mon travail</div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="0"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
-  <div class="navsec">Cabinet</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/></svg>Conseil réglementaire</div>
-  <div class="navi"><div class="ic rg" style="background:currentColor;-webkit-mask:url(assets/rg_mark.svg) center/contain no-repeat;mask:url(assets/rg_mark.svg) center/contain no-repeat"></div>Demander à Regalica</div>
-  <div class="kbd">Tout chercher<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb"><b>Aujourd'hui</b> · vendredi 30 mai</div><div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Client, pièce, écriture…</div></div>
-  <div class="content">
-   <div style="display:flex;align-items:center;gap:11px"><img class="av" src="assets/persona.jpg" style="width:30px;height:30px"><div><div class="h" style="font-size:20px">Bonjour Sonia.</div></div></div>
-   <div class="sub" style="margin-top:4px">14 pièces vous attendent sur 4 clients. J'ai déjà tout proposé — il vous reste à valider. Environ <b style="color:var(--ink)">35 min</b> de travail.</div>
-   <div class="grid" style="grid-template-columns:repeat(4,1fr);margin-top:18px">
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">À traiter</div><div class="kpi" style="margin-top:6px">14</div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Prêtes (feu vert)</div><div class="kpi ev" style="margin-top:6px">11</div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">À vérifier</div><div class="kpi am" style="margin-top:6px">3</div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Échéance ≤ 7 j</div><div class="kpi" style="margin-top:6px">2</div></div>
-   </div>
-   <span class="eye">Votre file — par client</span>
-   <table>
-    <tr><th>Client</th><th>À traiter</th><th>Prêtes</th><th>État</th><th></th></tr>
-    <tr><td><div class="who"><span class="num t3" style="font-size:11px">01</span>SOTUTEX SARL</div></td><td class="num">6</td><td class="num ev">6</td><td><span class="stat ev"><span class="d" style="background:var(--ev)"></span>tout prêt</span></td><td class="n"><span class="t3">Ouvrir ›</span></td></tr>
-    <tr><td><div class="who"><span class="num t3" style="font-size:11px">02</span>MEUBLATEX</div></td><td class="num">4</td><td class="num ev">3</td><td><span class="stat am"><span class="d" style="background:var(--am)"></span>1 à vérifier</span></td><td class="n"><span class="t3">Ouvrir ›</span></td></tr>
-    <tr><td><div class="who"><span class="num t3" style="font-size:11px">03</span>Délice Holding</div></td><td class="num">3</td><td class="num ev">2</td><td><span class="stat am"><span class="d" style="background:var(--am)"></span>1 à vérifier</span></td><td class="n"><span class="t3">Ouvrir ›</span></td></tr>
-    <tr><td><div class="who"><span class="num t3" style="font-size:11px">04</span>Comptoir du Sud</div></td><td class="num">1</td><td class="num ev">0</td><td><span class="stat am"><span class="d" style="background:var(--am)"></span>1 à vérifier</span></td><td class="n"><span class="t3">Ouvrir ›</span></td></tr>
-   </table>
-   <div style="margin-top:18px"><span class="btn">Commencer — SOTUTEX (6 prêtes)</span> <span class="btn2" style="margin-left:8px">Tout valider les feux verts</span></div>
-  </div>
- </div>
-</div>
+      <!-- B · UN CLIENT — PLAN DE TRAVAIL -->
+      <div class="lab">B · Un client — plan de travail</div>
+      <div class="labn">FILE PAR CLIENT · ESPACES PRIVÉ / PARTAGÉ</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Sonia B. · Collaboratrice</div>
+          <div class="navsec">Mon travail</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" /></svg
+            >Aujourd'hui<span class="cnt">14</span>
+          </div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Mes clients<span class="cnt">9</span>
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="5" width="16" height="16" />
+              <path d="M8 3v4M16 3v4M4 11h16" /></svg
+            >Échéances<span class="cnt">3</span>
+          </div>
+          <div class="navsec">Cabinet</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 21V8l7-4 7 4v13" /></svg
+            >Conseil réglementaire
+          </div>
+          <div class="navi">
+            <div
+              class="ic rg"
+              style="
+                background: currentColor;
+                -webkit-mask: url(assets/rg_mark.svg) center/contain no-repeat;
+                mask: url(assets/rg_mark.svg) center/contain no-repeat;
+              "
+            ></div>
+            Demander à Malica
+          </div>
+          <div class="kbd">Tout chercher<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb">Mes clients ›&nbsp; <b>SOTUTEX SARL</b> · MF 1234567/A/M/000</div>
+            <div class="spaces" style="margin-left: auto">
+              <span class="on">Plan de travail</span><span>Privé cabinet</span
+              ><span>Partagé avec client</span>
+            </div>
+          </div>
+          <div class="content">
+            <div style="display: flex; align-items: flex-end; justify-content: space-between">
+              <div>
+                <div class="h">SOTUTEX SARL</div>
+                <div class="sub">
+                  Période avril 2026 · 6 pièces prêtes · TVA à déclarer le 28/05
+                </div>
+              </div>
+              <div class="chiprow">
+                <span class="pill"
+                  ><span class="d" style="background: var(--ev)"></span>6 prêtes</span
+                ><span class="pill"
+                  ><span class="d" style="background: var(--am)"></span>0 à vérifier</span
+                >
+              </div>
+            </div>
+            <span class="eye">File de la période</span>
+            <table>
+              <tr>
+                <th>Pièce</th>
+                <th>Fournisseur / Tiers</th>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Feu</th>
+                <th>Écriture proposée</th>
+              </tr>
+              <tr>
+                <td>FA 2026-0417</td>
+                <td>SOTUTEX (achat)</td>
+                <td class="num t2">12/04</td>
+                <td class="n">1 250,500</td>
+                <td>
+                  <span class="feu ev"
+                    ><span class="d" style="background: var(--ev)"></span>Vert</span
+                  >
+                </td>
+                <td class="t3" style="font: 500 12px Inter">607 / 4366 / 401 ›</td>
+              </tr>
+              <tr>
+                <td>FA 2026-0418</td>
+                <td>STEG (énergie)</td>
+                <td class="num t2">14/04</td>
+                <td class="n">486,200</td>
+                <td>
+                  <span class="feu ev"
+                    ><span class="d" style="background: var(--ev)"></span>Vert</span
+                  >
+                </td>
+                <td class="t3" style="font: 500 12px Inter">606 / 4366 / 401 ›</td>
+              </tr>
+              <tr>
+                <td>FA 2026-0421</td>
+                <td>Vente — client B.</td>
+                <td class="num t2">18/04</td>
+                <td class="n">3 920,000</td>
+                <td>
+                  <span class="feu ev"
+                    ><span class="d" style="background: var(--ev)"></span>Vert</span
+                  >
+                </td>
+                <td class="t3" style="font: 500 12px Inter">411 / 707 / 4367 ›</td>
+              </tr>
+              <tr>
+                <td>FA 2026-0423</td>
+                <td>MEUBLATEX (achat)</td>
+                <td class="num t2">21/04</td>
+                <td class="n">1 480,000</td>
+                <td>
+                  <span class="feu ev"
+                    ><span class="d" style="background: var(--ev)"></span>Vert</span
+                  >
+                </td>
+                <td class="t3" style="font: 500 12px Inter">218 / 4366 / 404 ›</td>
+              </tr>
+              <tr>
+                <td>BQ 2026-04</td>
+                <td>Relevé bancaire</td>
+                <td class="num t2">30/04</td>
+                <td class="n">—</td>
+                <td>
+                  <span class="feu am"
+                    ><span class="d" style="background: var(--am)"></span>Rappro.</span
+                  >
+                </td>
+                <td class="t3" style="font: 500 12px Inter">à rapprocher ›</td>
+              </tr>
+            </table>
+            <div style="margin-top: 18px">
+              <span class="btn">Ouvrir la 1ʳᵉ pièce</span>
+              <span class="btn2" style="margin-left: 8px">Comptabiliser les 4 feux verts</span>
+              <span class="btn2" style="margin-left: 8px">Restituer un document…</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<!-- B · UN CLIENT — PLAN DE TRAVAIL -->
-<div class="lab">B · Un client — plan de travail</div><div class="labn">FILE PAR CLIENT · ESPACES PRIVÉ / PARTAGÉ</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Sonia B. · Collaboratrice</div>
-  <div class="navsec">Mon travail</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
-  <div class="navsec">Cabinet</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil réglementaire</div>
-  <div class="navi"><div class="ic rg" style="background:currentColor;-webkit-mask:url(assets/rg_mark.svg) center/contain no-repeat;mask:url(assets/rg_mark.svg) center/contain no-repeat"></div>Demander à Regalica</div>
-  <div class="kbd">Tout chercher<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb">Mes clients ›&nbsp; <b>SOTUTEX SARL</b> · MF 1234567/A/M/000</div>
-   <div class="spaces" style="margin-left:auto"><span class="on">Plan de travail</span><span>Privé cabinet</span><span>Partagé avec client</span></div></div>
-  <div class="content">
-   <div style="display:flex;align-items:flex-end;justify-content:space-between"><div><div class="h">SOTUTEX SARL</div><div class="sub">Période avril 2026 · 6 pièces prêtes · TVA à déclarer le 28/05</div></div>
-    <div class="chiprow"><span class="pill"><span class="d" style="background:var(--ev)"></span>6 prêtes</span><span class="pill"><span class="d" style="background:var(--am)"></span>0 à vérifier</span></div></div>
-   <span class="eye">File de la période</span>
-   <table>
-    <tr><th>Pièce</th><th>Fournisseur / Tiers</th><th>Date</th><th>Montant</th><th>Feu</th><th>Écriture proposée</th></tr>
-    <tr><td>FA 2026-0417</td><td>SOTUTEX (achat)</td><td class="num t2">12/04</td><td class="n">1 250,500</td><td><span class="feu ev"><span class="d" style="background:var(--ev)"></span>Vert</span></td><td class="t3" style="font:500 12px Inter">607 / 4366 / 401 ›</td></tr>
-    <tr><td>FA 2026-0418</td><td>STEG (énergie)</td><td class="num t2">14/04</td><td class="n">486,200</td><td><span class="feu ev"><span class="d" style="background:var(--ev)"></span>Vert</span></td><td class="t3" style="font:500 12px Inter">606 / 4366 / 401 ›</td></tr>
-    <tr><td>FA 2026-0421</td><td>Vente — client B.</td><td class="num t2">18/04</td><td class="n">3 920,000</td><td><span class="feu ev"><span class="d" style="background:var(--ev)"></span>Vert</span></td><td class="t3" style="font:500 12px Inter">411 / 707 / 4367 ›</td></tr>
-    <tr><td>FA 2026-0423</td><td>MEUBLATEX (achat)</td><td class="num t2">21/04</td><td class="n">1 480,000</td><td><span class="feu ev"><span class="d" style="background:var(--ev)"></span>Vert</span></td><td class="t3" style="font:500 12px Inter">218 / 4366 / 404 ›</td></tr>
-    <tr><td>BQ 2026-04</td><td>Relevé bancaire</td><td class="num t2">30/04</td><td class="n">—</td><td><span class="feu am"><span class="d" style="background:var(--am)"></span>Rappro.</span></td><td class="t3" style="font:500 12px Inter">à rapprocher ›</td></tr>
-   </table>
-   <div style="margin-top:18px"><span class="btn">Ouvrir la 1ʳᵉ pièce</span> <span class="btn2" style="margin-left:8px">Comptabiliser les 4 feux verts</span> <span class="btn2" style="margin-left:8px">Restituer un document…</span></div>
-  </div>
- </div>
-</div>
+      <!-- C · ÉCRITURE ↔ PIÈCE -->
+      <div class="lab">
+        C · Écriture ↔ pièce — côte à côte <span style="color: #a03819">CŒUR DU MÉTIER</span>
+      </div>
+      <div class="labn">VALIDER · RETOURNER · RESTITUER</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Sonia B. · Collaboratrice</div>
+          <div class="navsec">Mon travail</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" /></svg
+            >Aujourd'hui<span class="cnt">14</span>
+          </div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Mes clients<span class="cnt">9</span>
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="5" width="16" height="16" />
+              <path d="M8 3v4M16 3v4M4 11h16" /></svg
+            >Échéances<span class="cnt">3</span>
+          </div>
+          <div class="kbd">Pièce suivante<b>J</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb">SOTUTEX ›&nbsp; <b>FA 2026-0417</b> · pièce 1 / 6</div>
+            <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+              <span class="feu ev"
+                ><span class="d" style="background: var(--ev)"></span>Feu vert · signaux
+                concordants</span
+              >
+            </div>
+          </div>
+          <div class="content" style="padding: 22px 26px">
+            <div class="split">
+              <div class="pane l">
+                <div
+                  style="
+                    font: 600 11px Inter;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: var(--t3);
+                    margin-bottom: 12px;
+                  "
+                >
+                  La pièce
+                </div>
+                <div class="docline">
+                  SOTUTEX SARL<br />MF 1234567/A/M/000<br />FACTURE&nbsp;&nbsp;<span class="hl"
+                    >2026-0417</span
+                  ><br />Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">12/04/2026</span
+                  ><br />—————————————<br />Marchandises&nbsp;&nbsp;&nbsp;<span class="hl"
+                    >1 050,000</span
+                  ><br />TVA 19 %&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl"
+                    >199,500</span
+                  ><br />—————————————<br />TOTAL TTC&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl"
+                    >1 250,500</span
+                  >
+                </div>
+                <div
+                  style="
+                    margin-top: 16px;
+                    font: 400 11.5px Inter;
+                    color: var(--t3);
+                    line-height: 1.5;
+                  "
+                >
+                  Chaque montant lu pointe vers sa zone sur la pièce (citation à bbox). Cliquez un
+                  champ pour le localiser.
+                </div>
+              </div>
+              <div class="pane">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      font: 600 11px Inter;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: var(--t3);
+                    "
+                  >
+                    L'écriture proposée par Malica
+                  </div>
+                  <span class="cite">preuve de calcul</span>
+                </div>
+                <div class="ecr" style="border-top: 1px solid var(--ln)">
+                  <span class="t3" style="font: 600 11px Inter">COMPTE</span
+                  ><span class="t3" style="font: 600 11px Inter; text-align: right">DÉBIT</span
+                  ><span class="t3" style="font: 600 11px Inter; text-align: right">CRÉDIT</span>
+                </div>
+                <div class="ecr">
+                  <span>607 · Achats de marchandises</span><span class="n">1 050,000</span
+                  ><span class="n t3">—</span>
+                </div>
+                <div class="ecr">
+                  <span>4366 · TVA déductible</span><span class="n">199,500</span
+                  ><span class="n t3">—</span>
+                </div>
+                <div class="ecr">
+                  <span>401 · Fournisseur SOTUTEX</span><span class="n t3">—</span
+                  ><span class="n">1 250,500</span>
+                </div>
+                <div class="ecr" style="border-bottom: none; font-weight: 600">
+                  <span>Équilibre</span><span class="n">1 250,500</span
+                  ><span class="n">1 250,500</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap">
+                  <span class="pill ev" style="border-color: var(--ev)"
+                    ><span class="d" style="background: var(--ev)"></span>Équilibrée</span
+                  >
+                  <span class="pill ev" style="border-color: var(--ev)"
+                    ><span class="d" style="background: var(--ev)"></span>TVA recalculée OK</span
+                  >
+                  <span class="pill ev" style="border-color: var(--ev)"
+                    ><span class="d" style="background: var(--ev)"></span>Tiers résolu</span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-top: 16px;
+                    border-top: 1px solid var(--ln);
+                    padding-top: 14px;
+                  "
+                >
+                  <img class="av" src="assets/persona.jpg" style="width: 24px; height: 24px" />
+                  <div style="font: 400 12.5px Inter; color: var(--t2); line-height: 1.4">
+                    607 plutôt que 601 : la pièce porte « marchandises destinées à la revente ». Je
+                    peux me tromper — corrigez d'un mot.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 18px">
+              <span class="btn"
+                >Comptabiliser
+                <b style="font-weight: 600; margin-left: 8px; opacity: 0.6">↵</b></span
+              >
+              <span class="btn2">Corriger le compte</span>
+              <span class="btn2">Retourner au client</span>
+              <span class="btn2">Restituer un document</span>
+              <span style="margin-left: auto; font: 500 12px Inter; color: var(--t3)"
+                >J / K pour naviguer · ↵ pour valider</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
 
-<!-- C · ÉCRITURE ↔ PIÈCE -->
-<div class="lab">C · Écriture ↔ pièce — côte à côte  <span style="color:#A03819">CŒUR DU MÉTIER</span></div><div class="labn">VALIDER · RETOURNER · RESTITUER</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Sonia B. · Collaboratrice</div>
-  <div class="navsec">Mon travail</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>Échéances<span class="cnt">3</span></div>
-  <div class="kbd">Pièce suivante<b>J</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb">SOTUTEX ›&nbsp; <b>FA 2026-0417</b> · pièce 1 / 6</div>
-   <div style="margin-left:auto;display:flex;gap:8px;align-items:center"><span class="feu ev"><span class="d" style="background:var(--ev)"></span>Feu vert · signaux concordants</span></div></div>
-  <div class="content" style="padding:22px 26px">
-   <div class="split">
-    <div class="pane l">
-     <div style="font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-bottom:12px">La pièce</div>
-     <div class="docline">SOTUTEX SARL<br>MF 1234567/A/M/000<br>FACTURE&nbsp;&nbsp;<span class="hl">2026-0417</span><br>Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">12/04/2026</span><br>—————————————<br>Marchandises&nbsp;&nbsp;&nbsp;<span class="hl">1 050,000</span><br>TVA 19 %&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">199,500</span><br>—————————————<br>TOTAL TTC&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">1 250,500</span></div>
-     <div style="margin-top:16px;font:400 11.5px Inter;color:var(--t3);line-height:1.5">Chaque montant lu pointe vers sa zone sur la pièce (citation à bbox). Cliquez un champ pour le localiser.</div>
+      <!-- D · RESTITUER AU CLIENT -->
+      <div class="lab">
+        D · Restituer un document au client <span style="color: #a03819">NOUVEAU</span>
+      </div>
+      <div class="labn">DÉPÔT AUTORITATIF DANS LE COFFRE · DISTINCT DU RETOUR</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Sonia B. · Collaboratrice</div>
+          <div class="navsec">Mon travail</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" /></svg
+            >Aujourd'hui<span class="cnt">14</span>
+          </div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Mes clients<span class="cnt">9</span>
+          </div>
+          <div class="kbd">Tout chercher<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb">SOTUTEX ›&nbsp; <b>Restituer un document</b></div>
+          </div>
+          <div class="content" style="max-width: 720px">
+            <div class="h" style="font-size: 20px">Restituer un document officiel</div>
+            <div class="sub">
+              Il ira dans le Coffre du client, en lecture seule. Distinct d'un retour pour
+              correction.
+            </div>
+            <span class="eye">Type de document</span>
+            <div class="grid" style="grid-template-columns: repeat(3, 1fr)">
+              <div class="card" style="border-color: var(--ink)">
+                <div style="font: 600 13.5px Inter">Déclaration de TVA</div>
+                <div class="t3" style="font: 400 11.5px Inter; margin-top: 3px">avril 2026</div>
+              </div>
+              <div class="card">
+                <div style="font: 600 13.5px Inter">Quittance de paiement</div>
+                <div class="t3" style="font: 400 11.5px Inter; margin-top: 3px">
+                  acompte, retenue…
+                </div>
+              </div>
+              <div class="card">
+                <div style="font: 600 13.5px Inter">États financiers</div>
+                <div class="t3" style="font: 400 11.5px Inter; margin-top: 3px">
+                  bilan, résultat
+                </div>
+              </div>
+              <div class="card">
+                <div style="font: 600 13.5px Inter">Déclaration d'employeur</div>
+              </div>
+              <div class="card"><div style="font: 600 13.5px Inter">Dépôt RNE</div></div>
+              <div class="card"><div style="font: 600 13.5px Inter">Autre…</div></div>
+            </div>
+            <span class="eye">Détails</span>
+            <div class="card">
+              <div class="ecr" style="grid-template-columns: 1fr auto; border-top: none">
+                <span class="t2">Période / exercice</span><span class="num">avril 2026</span>
+              </div>
+              <div class="ecr" style="grid-template-columns: 1fr auto">
+                <span class="t2">Version</span><span class="num">1 (première restitution)</span>
+              </div>
+              <div class="ecr" style="grid-template-columns: 1fr auto; border-bottom: none">
+                <span class="t2">Fichier</span
+                ><span class="num t3">declaration_tva_avril.pdf · 240 Ko</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 18px">
+              <span class="btn">Déposer dans le Coffre du client</span
+              ><span class="btn2">Annuler</span>
+              <span
+                style="
+                  margin-left: auto;
+                  font: 400 12px Inter;
+                  color: var(--t3);
+                  max-width: 260px;
+                  line-height: 1.4;
+                "
+                >Le client recevra une bonne nouvelle, pas une tâche. Conservé 10 ans.</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- E · TABLEAU DE BORD ÉQUIPE (patronne) -->
+      <div class="lab">
+        E · Tableau de bord équipe — vue patronne <span style="color: #a03819">RÔLE PATRON</span>
+      </div>
+      <div class="labn">PERFORMANCE · RENDEMENT AVEC MALICA</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Faten Khelifi · Patronne</div>
+          <div class="navsec">Cabinet</div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19V5M10 19v-8M16 19v-5M22 19H2" /></svg
+            >Tableau de bord
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="8" r="3" />
+              <path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 0 0 0-6" /></svg
+            >Équipe & affectation
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Tous les clients<span class="cnt">42</span>
+          </div>
+          <div class="navsec">Mon travail</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" /></svg
+            >Aujourd'hui<span class="cnt">5</span>
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 21V8l7-4 7 4v13" /></svg
+            >Conseil réglementaire
+          </div>
+          <div class="kbd">Tout chercher<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb"><b>Tableau de bord</b> · cabinet · mai 2026</div>
+            <div class="search">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4-4" /></svg
+              >Chercher…
+            </div>
+          </div>
+          <div class="content">
+            <div class="grid" style="grid-template-columns: repeat(4, 1fr)">
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Heures économisées · mois
+                </div>
+                <div class="kpi ev" style="margin-top: 6px">128<span class="kpis">h</span></div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Pièces traitées
+                </div>
+                <div class="kpi" style="margin-top: 6px">3 412</div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Échéances tenues
+                </div>
+                <div class="kpi ev" style="margin-top: 6px">100<span class="kpis">%</span></div>
+              </div>
+              <div class="card">
+                <div
+                  class="t3"
+                  style="font: 600 10px Inter; letter-spacing: 0.08em; text-transform: uppercase"
+                >
+                  Auto-proposé accepté
+                </div>
+                <div class="kpi" style="margin-top: 6px">94<span class="kpis">%</span></div>
+              </div>
+            </div>
+            <div class="grid" style="grid-template-columns: 1.4fr 1fr; margin-top: 18px">
+              <div>
+                <span class="eye">L'équipe ce mois</span>
+                <table>
+                  <tr>
+                    <th>Collaborateur</th>
+                    <th>Clients</th>
+                    <th>Traitées</th>
+                    <th>Temps gagné</th>
+                    <th>Échéances</th>
+                    <th>Retours</th>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="who"><img class="av" src="assets/m1.jpg" />Sonia B.</div>
+                    </td>
+                    <td class="num">9</td>
+                    <td class="num">1 240</td>
+                    <td class="num ev">46 h</td>
+                    <td class="num ev">12/12</td>
+                    <td class="num">1,2 %</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="who"><img class="av" src="assets/m2.jpg" />Mehdi T.</div>
+                    </td>
+                    <td class="num">11</td>
+                    <td class="num">1 080</td>
+                    <td class="num ev">41 h</td>
+                    <td class="num ev">14/14</td>
+                    <td class="num">1,8 %</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="who"><img class="av" src="assets/m3.jpg" />Rim A.</div>
+                    </td>
+                    <td class="num">8</td>
+                    <td class="num">760</td>
+                    <td class="num ev">29 h</td>
+                    <td class="num am">9/10</td>
+                    <td class="num">2,1 %</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="who"><img class="av" src="assets/persona.jpg" />Faten (vous)</div>
+                    </td>
+                    <td class="num">14</td>
+                    <td class="num">332</td>
+                    <td class="num ev">12 h</td>
+                    <td class="num ev">8/8</td>
+                    <td class="num">0,9 %</td>
+                  </tr>
+                </table>
+              </div>
+              <div>
+                <span class="eye">Rendement avec Malica</span>
+                <div class="card">
+                  <div style="font: 400 13px Inter; color: var(--t2); line-height: 1.45">
+                    Heures économisées par mois depuis le démarrage.
+                  </div>
+                  <div class="bars" style="margin-top: 16px; height: 96px">
+                    <i style="height: 24%"></i><i style="height: 38%"></i><i style="height: 46%"></i
+                    ><i style="height: 55%"></i><i style="height: 64%"></i
+                    ><i style="height: 72%"></i><i style="height: 81%"></i
+                    ><i class="on" style="height: 100%"></i>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      font: 500 10px &quot;IBM Plex Mono&quot;;
+                      color: var(--t3);
+                      margin-top: 6px;
+                    "
+                  >
+                    <span>oct</span><span>mai</span>
+                  </div>
+                  <div
+                    style="
+                      border-top: 1px solid var(--ln);
+                      margin-top: 14px;
+                      padding-top: 12px;
+                      font: 500 13px Inter;
+                    "
+                  >
+                    Cumul : <span class="num ev">+612 h</span> sur 8 mois.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- F · AFFECTATION DES CLIENTS (patronne) -->
+      <div class="lab">F · Équipe & affectation — vue patronne</div>
+      <div class="labn">RÉPARTIR LES CLIENTS · ÉQUILIBRER LA CHARGE</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Faten Khelifi · Patronne</div>
+          <div class="navsec">Cabinet</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19V5M10 19v-8M16 19v-5M22 19H2" /></svg
+            >Tableau de bord
+          </div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="8" r="3" />
+              <path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 0 0 0-6" /></svg
+            >Équipe & affectation
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Tous les clients<span class="cnt">42</span>
+          </div>
+          <div class="kbd">Tout chercher<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb"><b>Équipe & affectation</b> · 42 clients · 4 collaborateurs</div>
+          </div>
+          <div class="content">
+            <div class="sub" style="margin-bottom: 6px">
+              Glissez un client vers un collaborateur, ou laissez Malica équilibrer la charge.
+            </div>
+            <div class="grid" style="grid-template-columns: repeat(2, 1fr)">
+              <div>
+                <div class="assignrow">
+                  <div class="who"><img class="av" src="assets/m1.jpg" />Sonia B.</div>
+                  <div>
+                    <div class="barr" style="grid-template-columns: 1fr auto; padding: 0">
+                      <span class="tr"><i style="width: 60%"></i></span
+                      ><span class="num" style="font-size: 12px; margin-left: 8px">9</span>
+                    </div>
+                    <div class="t3" style="font: 400 11px Inter; margin-top: 4px">
+                      charge équilibrée
+                    </div>
+                  </div>
+                </div>
+                <div class="assignrow">
+                  <div class="who"><img class="av" src="assets/m2.jpg" />Mehdi T.</div>
+                  <div>
+                    <div class="barr" style="grid-template-columns: 1fr auto; padding: 0">
+                      <span class="tr"><i style="width: 78%"></i></span
+                      ><span class="num" style="font-size: 12px; margin-left: 8px">11</span>
+                    </div>
+                    <div class="am" style="font: 500 11px Inter; margin-top: 4px">
+                      proche du plafond
+                    </div>
+                  </div>
+                </div>
+                <div class="assignrow">
+                  <div class="who"><img class="av" src="assets/m3.jpg" />Rim A.</div>
+                  <div>
+                    <div class="barr" style="grid-template-columns: 1fr auto; padding: 0">
+                      <span class="tr"><i style="width: 52%"></i></span
+                      ><span class="num" style="font-size: 12px; margin-left: 8px">8</span>
+                    </div>
+                    <div class="ev" style="font: 500 11px Inter; margin-top: 4px">
+                      peut en prendre 3
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <span class="eye" style="margin-top: 0">Non affectés · 5</span>
+                <div class="card" style="padding: 0">
+                  <div
+                    class="ecr"
+                    style="grid-template-columns: 1fr auto; padding: 12px 14px; border-top: none"
+                  >
+                    <span>Nouvelle SARL Tanit</span
+                    ><span class="btn2" style="height: 30px; font-size: 12px">Affecter</span>
+                  </div>
+                  <div class="ecr" style="grid-template-columns: 1fr auto; padding: 12px 14px">
+                    <span>Boutique El Médina</span
+                    ><span class="btn2" style="height: 30px; font-size: 12px">Affecter</span>
+                  </div>
+                  <div class="ecr" style="grid-template-columns: 1fr auto; padding: 12px 14px">
+                    <span>Transport Sahel</span
+                    ><span class="btn2" style="height: 30px; font-size: 12px">Affecter</span>
+                  </div>
+                  <div
+                    class="ecr"
+                    style="grid-template-columns: 1fr auto; padding: 12px 14px; border-bottom: none"
+                  >
+                    <span>+ 2 autres</span><span class="t3" style="font: 500 12px Inter">voir</span>
+                  </div>
+                </div>
+                <div style="margin-top: 14px">
+                  <span class="btn">Laisser Malica équilibrer</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 9px; margin-top: 14px">
+                  <img class="av" src="assets/persona.jpg" style="width: 22px; height: 22px" />
+                  <div class="t2" style="font: 400 12px Inter; line-height: 1.4">
+                    Je suggère Rim pour ces 5 : elle a de la marge et connaît déjà le secteur.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G · CONSEIL RÉGLEMENTAIRE (cabinet) -->
+      <div class="lab">G · Conseil réglementaire — cabinet</div>
+      <div class="labn">MÊME MOTEUR, PROFONDEUR EXPERTE · TOUJOURS CITÉ</div>
+      <div class="scr">
+        <div class="nav">
+          <div class="brand">
+            <div class="rg"></div>
+            <div class="cab">Cabinet Khelifi</div>
+          </div>
+          <div class="role">Faten Khelifi · Patronne</div>
+          <div class="navsec">Cabinet</div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19V5M10 19v-8M16 19v-5M22 19H2" /></svg
+            >Tableau de bord
+          </div>
+          <div class="navi">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h6l2 2h8v9H4z" /></svg
+            >Tous les clients<span class="cnt">42</span>
+          </div>
+          <div class="navi act">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 21V8l7-4 7 4v13" /></svg
+            >Conseil réglementaire
+          </div>
+          <div class="kbd">Nouvelle question<b>⌘K</b></div>
+        </div>
+        <div class="main">
+          <div class="top">
+            <div class="crumb">
+              <b>Conseil réglementaire</b> · corpus à jour · loi de finance 2026
+            </div>
+          </div>
+          <div class="content" style="max-width: 880px">
+            <div
+              style="
+                border: 1px solid var(--ln);
+                background: var(--sf);
+                padding: 12px 14px;
+                font: 500 14px Inter;
+                color: var(--t2);
+              "
+            >
+              « Régime de la retenue à la source sur honoraires versés à un non-résident en 2026 ? »
+            </div>
+            <h2
+              style="
+                font: 400 19px Inter;
+                line-height: 1.4;
+                letter-spacing: -0.01em;
+                margin: 16px 0;
+              "
+            >
+              Taux de <b style="font-weight: 600">15 %</b> en principe, sauf convention de
+              non-double imposition applicable qui peut le réduire ou l'écarter. La RAS est
+              libératoire pour le non-résident non établi.
+            </h2>
+            <span class="eye">Les textes sur lesquels je m'appuie</span>
+            <div class="grid" style="grid-template-columns: 1fr 1fr">
+              <div class="lawcol">
+                <b>Code de l'IRPP et de l'IS — art. 52 & 3</b><br />Retenue à la source sur les
+                sommes versées aux non-résidents · taux de droit commun.<br /><span
+                  style="color: #1a426b; font-weight: 600"
+                  >Loi de finance 2026 · art. 28</span
+                >
+                · date d'effet 01/01/2026.
+              </div>
+              <div class="lawcol">
+                <b>Note commune DGI n°04/2026</b><br />Articulation avec les conventions fiscales
+                internationales · justificatifs de résidence requis.<br /><span
+                  style="color: #1a426b; font-weight: 600"
+                  >Convention TN–FR</span
+                >
+                · art. 12 (redevances).
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 18px">
+              <span class="btn">Insérer dans une note au client</span>
+              <span class="btn2">Voir l'historique des versions</span>
+              <span
+                style="
+                  margin-left: auto;
+                  font: 400 12px Inter;
+                  color: var(--t3);
+                  max-width: 300px;
+                  line-height: 1.4;
+                "
+                >J'explique les textes cités. La décision engage le cabinet — c'est vous qui
+                tranchez.</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="pane">
-     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)">L'écriture proposée par Regalica</div><span class="cite">preuve de calcul</span></div>
-     <div class="ecr" style="border-top:1px solid var(--ln)"><span class="t3" style="font:600 11px Inter">COMPTE</span><span class="t3" style="font:600 11px Inter;text-align:right">DÉBIT</span><span class="t3" style="font:600 11px Inter;text-align:right">CRÉDIT</span></div>
-     <div class="ecr"><span>607 · Achats de marchandises</span><span class="n">1 050,000</span><span class="n t3">—</span></div>
-     <div class="ecr"><span>4366 · TVA déductible</span><span class="n">199,500</span><span class="n t3">—</span></div>
-     <div class="ecr"><span>401 · Fournisseur SOTUTEX</span><span class="n t3">—</span><span class="n">1 250,500</span></div>
-     <div class="ecr" style="border-bottom:none;font-weight:600"><span>Équilibre</span><span class="n">1 250,500</span><span class="n">1 250,500</span></div>
-     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-      <span class="pill ev" style="border-color:var(--ev)"><span class="d" style="background:var(--ev)"></span>Équilibrée</span>
-      <span class="pill ev" style="border-color:var(--ev)"><span class="d" style="background:var(--ev)"></span>TVA recalculée OK</span>
-      <span class="pill ev" style="border-color:var(--ev)"><span class="d" style="background:var(--ev)"></span>Tiers résolu</span>
-     </div>
-     <div style="display:flex;align-items:center;gap:10px;margin-top:16px;border-top:1px solid var(--ln);padding-top:14px"><img class="av" src="assets/persona.jpg" style="width:24px;height:24px"><div style="font:400 12.5px Inter;color:var(--t2);line-height:1.4">607 plutôt que 601 : la pièce porte « marchandises destinées à la revente ». Je peux me tromper — corrigez d'un mot.</div></div>
-    </div>
-   </div>
-   <div style="display:flex;align-items:center;gap:10px;margin-top:18px">
-    <span class="btn">Comptabiliser <b style="font-weight:600;margin-left:8px;opacity:.6">↵</b></span>
-    <span class="btn2">Corriger le compte</span>
-    <span class="btn2">Retourner au client</span>
-    <span class="btn2">Restituer un document</span>
-    <span style="margin-left:auto;font:500 12px Inter;color:var(--t3)">J / K pour naviguer · ↵ pour valider</span>
-   </div>
-  </div>
- </div>
-</div>
-
-<!-- D · RESTITUER AU CLIENT -->
-<div class="lab">D · Restituer un document au client  <span style="color:#A03819">NOUVEAU</span></div><div class="labn">DÉPÔT AUTORITATIF DANS LE COFFRE · DISTINCT DU RETOUR</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Sonia B. · Collaboratrice</div>
-  <div class="navsec">Mon travail</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">14</span></div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Mes clients<span class="cnt">9</span></div>
-  <div class="kbd">Tout chercher<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb">SOTUTEX ›&nbsp; <b>Restituer un document</b></div></div>
-  <div class="content" style="max-width:720px">
-   <div class="h" style="font-size:20px">Restituer un document officiel</div>
-   <div class="sub">Il ira dans le Coffre du client, en lecture seule. Distinct d'un retour pour correction.</div>
-   <span class="eye">Type de document</span>
-   <div class="grid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="card" style="border-color:var(--ink)"><div style="font:600 13.5px Inter">Déclaration de TVA</div><div class="t3" style="font:400 11.5px Inter;margin-top:3px">avril 2026</div></div>
-    <div class="card"><div style="font:600 13.5px Inter">Quittance de paiement</div><div class="t3" style="font:400 11.5px Inter;margin-top:3px">acompte, retenue…</div></div>
-    <div class="card"><div style="font:600 13.5px Inter">États financiers</div><div class="t3" style="font:400 11.5px Inter;margin-top:3px">bilan, résultat</div></div>
-    <div class="card"><div style="font:600 13.5px Inter">Déclaration d'employeur</div></div>
-    <div class="card"><div style="font:600 13.5px Inter">Dépôt RNE</div></div>
-    <div class="card"><div style="font:600 13.5px Inter">Autre…</div></div>
-   </div>
-   <span class="eye">Détails</span>
-   <div class="card">
-    <div class="ecr" style="grid-template-columns:1fr auto;border-top:none"><span class="t2">Période / exercice</span><span class="num">avril 2026</span></div>
-    <div class="ecr" style="grid-template-columns:1fr auto"><span class="t2">Version</span><span class="num">1 (première restitution)</span></div>
-    <div class="ecr" style="grid-template-columns:1fr auto;border-bottom:none"><span class="t2">Fichier</span><span class="num t3">declaration_tva_avril.pdf · 240 Ko</span></div>
-   </div>
-   <div style="display:flex;align-items:center;gap:10px;margin-top:18px"><span class="btn">Déposer dans le Coffre du client</span><span class="btn2">Annuler</span>
-    <span style="margin-left:auto;font:400 12px Inter;color:var(--t3);max-width:260px;line-height:1.4">Le client recevra une bonne nouvelle, pas une tâche. Conservé 10 ans.</span></div>
-  </div>
- </div>
-</div>
-
-<!-- E · TABLEAU DE BORD ÉQUIPE (patronne) -->
-<div class="lab">E · Tableau de bord équipe — vue patronne  <span style="color:#A03819">RÔLE PATRON</span></div><div class="labn">PERFORMANCE · RENDEMENT AVEC REGALICA</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Faten Khelifi · Patronne</div>
-  <div class="navsec">Cabinet</div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M10 19v-8M16 19v-5M22 19H2"/></svg>Tableau de bord</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 0 0 0-6"/></svg>Équipe & affectation</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Tous les clients<span class="cnt">42</span></div>
-  <div class="navsec">Mon travail</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Aujourd'hui<span class="cnt">5</span></div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil réglementaire</div>
-  <div class="kbd">Tout chercher<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb"><b>Tableau de bord</b> · cabinet · mai 2026</div><div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Chercher…</div></div>
-  <div class="content">
-   <div class="grid" style="grid-template-columns:repeat(4,1fr)">
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Heures économisées · mois</div><div class="kpi ev" style="margin-top:6px">128<span class="kpis">h</span></div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Pièces traitées</div><div class="kpi" style="margin-top:6px">3 412</div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Échéances tenues</div><div class="kpi ev" style="margin-top:6px">100<span class="kpis">%</span></div></div>
-    <div class="card"><div class="t3" style="font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase">Auto-proposé accepté</div><div class="kpi" style="margin-top:6px">94<span class="kpis">%</span></div></div>
-   </div>
-   <div class="grid" style="grid-template-columns:1.4fr 1fr;margin-top:18px">
-    <div>
-     <span class="eye">L'équipe ce mois</span>
-     <table>
-      <tr><th>Collaborateur</th><th>Clients</th><th>Traitées</th><th>Temps gagné</th><th>Échéances</th><th>Retours</th></tr>
-      <tr><td><div class="who"><img class="av" src="assets/m1.jpg">Sonia B.</div></td><td class="num">9</td><td class="num">1 240</td><td class="num ev">46 h</td><td class="num ev">12/12</td><td class="num">1,2 %</td></tr>
-      <tr><td><div class="who"><img class="av" src="assets/m2.jpg">Mehdi T.</div></td><td class="num">11</td><td class="num">1 080</td><td class="num ev">41 h</td><td class="num ev">14/14</td><td class="num">1,8 %</td></tr>
-      <tr><td><div class="who"><img class="av" src="assets/m3.jpg">Rim A.</div></td><td class="num">8</td><td class="num">760</td><td class="num ev">29 h</td><td class="num am">9/10</td><td class="num">2,1 %</td></tr>
-      <tr><td><div class="who"><img class="av" src="assets/persona.jpg">Faten (vous)</div></td><td class="num">14</td><td class="num">332</td><td class="num ev">12 h</td><td class="num ev">8/8</td><td class="num">0,9 %</td></tr>
-     </table>
-    </div>
-    <div>
-     <span class="eye">Rendement avec Regalica</span>
-     <div class="card">
-      <div style="font:400 13px Inter;color:var(--t2);line-height:1.45">Heures économisées par mois depuis le démarrage.</div>
-      <div class="bars" style="margin-top:16px;height:96px"><i style="height:24%"></i><i style="height:38%"></i><i style="height:46%"></i><i style="height:55%"></i><i style="height:64%"></i><i style="height:72%"></i><i style="height:81%"></i><i class="on" style="height:100%"></i></div>
-      <div style="display:flex;justify-content:space-between;font:500 10px 'IBM Plex Mono';color:var(--t3);margin-top:6px"><span>oct</span><span>mai</span></div>
-      <div style="border-top:1px solid var(--ln);margin-top:14px;padding-top:12px;font:500 13px Inter">Cumul : <span class="num ev">+612 h</span> sur 8 mois.</div>
-     </div>
-    </div>
-   </div>
-  </div>
- </div>
-</div>
-
-<!-- F · AFFECTATION DES CLIENTS (patronne) -->
-<div class="lab">F · Équipe & affectation — vue patronne</div><div class="labn">RÉPARTIR LES CLIENTS · ÉQUILIBRER LA CHARGE</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Faten Khelifi · Patronne</div>
-  <div class="navsec">Cabinet</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M10 19v-8M16 19v-5M22 19H2"/></svg>Tableau de bord</div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 0 0 0-6"/></svg>Équipe & affectation</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Tous les clients<span class="cnt">42</span></div>
-  <div class="kbd">Tout chercher<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb"><b>Équipe & affectation</b> · 42 clients · 4 collaborateurs</div></div>
-  <div class="content">
-   <div class="sub" style="margin-bottom:6px">Glissez un client vers un collaborateur, ou laissez Regalica équilibrer la charge.</div>
-   <div class="grid" style="grid-template-columns:repeat(2,1fr)">
-    <div>
-     <div class="assignrow"><div class="who"><img class="av" src="assets/m1.jpg">Sonia B.</div><div><div class="barr" style="grid-template-columns:1fr auto;padding:0"><span class="tr"><i style="width:60%"></i></span><span class="num" style="font-size:12px;margin-left:8px">9</span></div><div class="t3" style="font:400 11px Inter;margin-top:4px">charge équilibrée</div></div></div>
-     <div class="assignrow"><div class="who"><img class="av" src="assets/m2.jpg">Mehdi T.</div><div><div class="barr" style="grid-template-columns:1fr auto;padding:0"><span class="tr"><i style="width:78%"></i></span><span class="num" style="font-size:12px;margin-left:8px">11</span></div><div class="am" style="font:500 11px Inter;margin-top:4px">proche du plafond</div></div></div>
-     <div class="assignrow"><div class="who"><img class="av" src="assets/m3.jpg">Rim A.</div><div><div class="barr" style="grid-template-columns:1fr auto;padding:0"><span class="tr"><i style="width:52%"></i></span><span class="num" style="font-size:12px;margin-left:8px">8</span></div><div class="ev" style="font:500 11px Inter;margin-top:4px">peut en prendre 3</div></div></div>
-    </div>
-    <div>
-     <span class="eye" style="margin-top:0">Non affectés · 5</span>
-     <div class="card" style="padding:0">
-      <div class="ecr" style="grid-template-columns:1fr auto;padding:12px 14px;border-top:none"><span>Nouvelle SARL Tanit</span><span class="btn2" style="height:30px;font-size:12px">Affecter</span></div>
-      <div class="ecr" style="grid-template-columns:1fr auto;padding:12px 14px"><span>Boutique El Médina</span><span class="btn2" style="height:30px;font-size:12px">Affecter</span></div>
-      <div class="ecr" style="grid-template-columns:1fr auto;padding:12px 14px"><span>Transport Sahel</span><span class="btn2" style="height:30px;font-size:12px">Affecter</span></div>
-      <div class="ecr" style="grid-template-columns:1fr auto;padding:12px 14px;border-bottom:none"><span>+ 2 autres</span><span class="t3" style="font:500 12px Inter">voir</span></div>
-     </div>
-     <div style="margin-top:14px"><span class="btn">Laisser Regalica équilibrer</span></div>
-     <div style="display:flex;align-items:center;gap:9px;margin-top:14px"><img class="av" src="assets/persona.jpg" style="width:22px;height:22px"><div class="t2" style="font:400 12px Inter;line-height:1.4">Je suggère Rim pour ces 5 : elle a de la marge et connaît déjà le secteur.</div></div>
-    </div>
-   </div>
-  </div>
- </div>
-</div>
-
-<!-- G · CONSEIL RÉGLEMENTAIRE (cabinet) -->
-<div class="lab">G · Conseil réglementaire — cabinet</div><div class="labn">MÊME MOTEUR, PROFONDEUR EXPERTE · TOUJOURS CITÉ</div>
-<div class="scr">
- <div class="nav">
-  <div class="brand"><div class="rg"></div><div class="cab">Cabinet Khelifi</div></div>
-  <div class="role">Faten Khelifi · Patronne</div>
-  <div class="navsec">Cabinet</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M10 19v-8M16 19v-5M22 19H2"/></svg>Tableau de bord</div>
-  <div class="navi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h6l2 2h8v9H4z"/></svg>Tous les clients<span class="cnt">42</span></div>
-  <div class="navi act"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 21V8l7-4 7 4v13"/></svg>Conseil réglementaire</div>
-  <div class="kbd">Nouvelle question<b>⌘K</b></div>
- </div>
- <div class="main">
-  <div class="top"><div class="crumb"><b>Conseil réglementaire</b> · corpus à jour · loi de finance 2026</div></div>
-  <div class="content" style="max-width:880px">
-   <div style="border:1px solid var(--ln);background:var(--sf);padding:12px 14px;font:500 14px Inter;color:var(--t2)">« Régime de la retenue à la source sur honoraires versés à un non-résident en 2026 ? »</div>
-   <h2 style="font:400 19px Inter;line-height:1.4;letter-spacing:-.01em;margin:16px 0">Taux de <b style="font-weight:600">15 %</b> en principe, sauf convention de non-double imposition applicable qui peut le réduire ou l'écarter. La RAS est libératoire pour le non-résident non établi.</h2>
-   <span class="eye">Les textes sur lesquels je m'appuie</span>
-   <div class="grid" style="grid-template-columns:1fr 1fr">
-    <div class="lawcol"><b>Code de l'IRPP et de l'IS — art. 52 & 3</b><br>Retenue à la source sur les sommes versées aux non-résidents · taux de droit commun.<br><span style="color:#1A426B;font-weight:600">Loi de finance 2026 · art. 28</span> · date d'effet 01/01/2026.</div>
-    <div class="lawcol"><b>Note commune DGI n°04/2026</b><br>Articulation avec les conventions fiscales internationales · justificatifs de résidence requis.<br><span style="color:#1A426B;font-weight:600">Convention TN–FR</span> · art. 12 (redevances).</div>
-   </div>
-   <div style="display:flex;align-items:center;gap:10px;margin-top:18px">
-    <span class="btn">Insérer dans une note au client</span>
-    <span class="btn2">Voir l'historique des versions</span>
-    <span style="margin-left:auto;font:400 12px Inter;color:var(--t3);max-width:300px;line-height:1.4">J'explique les textes cités. La décision engage le cabinet — c'est vous qui tranchez.</span>
-   </div>
-  </div>
- </div>
-</div>
-
-</div></body></html>
+  </body>
+</html>

@@ -2,24 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { PieceLue } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { PieceLue } from "@malica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Regalica Office" },
+      { title: "Mon espace — Malica Office" },
       {
         name: "description",
         content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",
       },
-      { property: "og:title", content: "Mon espace — Regalica Office" },
+      { property: "og:title", content: "Mon espace — Malica Office" },
       {
         property: "og:description",
         content: "Ce que vous gardez pour vous seul, invisible au cabinet mandaté.",
@@ -115,7 +115,7 @@ function PmeCoffre() {
   return (
     <div className="rg-rise px-1 pt-2">
       <div className="mt-[18px] flex gap-3">
-        <RegalicaAvatar size={32} alt="Regalica" rond />
+        <MalicaAvatar size={32} alt="Malica" rond />
         <p className="text-[14px] leading-[1.5] text-text-2">
           {t("pme.prive.confidente", { cabinet: nomDuCabinet })}
         </p>

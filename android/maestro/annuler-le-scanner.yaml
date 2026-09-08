@@ -1,7 +1,7 @@
 # Ouvrir le scanner de l'appareil et l'abandonner : aucune erreur, l'écran
 # d'avant intact. C'est le cas que le navigateur ne sait pas jouer — ML Kit
 # est une activité des services Google, hors de la page.
-appId: com.algoriafactory.regalica.emulateur
+appId: com.algoriafactory.malica.emulateur
 ---
 - launchApp
 - runFlow: connexion.yaml

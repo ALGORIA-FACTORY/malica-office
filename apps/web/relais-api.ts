@@ -56,8 +56,8 @@ const CHEMINS: ReadonlyArray<{ base: string; exact: boolean }> = [
   { base: "/pieces", exact: true },
   // Le journal d'atelier : ce que l'appareil de l'utilisateur a vraiment vu.
   { base: "/journal-atelier", exact: true },
-  // Regalica : tout ce qui fait parler un modèle, hors de /rpc.
-  { base: "/regalica", exact: false },
+  // Malica : tout ce qui fait parler un modèle, hors de /rpc.
+  { base: "/malica", exact: false },
   // Seuls les sous-chemins : /auth est l'écran de connexion.
   { base: "/auth", exact: false },
 ];
@@ -141,7 +141,7 @@ export function relaisApi(cible = "http://localhost:3000"): Plugin {
   const { hostname, port } = new URL(cible);
 
   return {
-    name: "regalica:relais-api",
+    name: "malica:relais-api",
     apply: "serve",
     enforce: "pre",
     configureServer(serveur) {

@@ -14,8 +14,8 @@
  *
  * ========================================================== CE QU'IL CRÉE
  *
- *   un compte              dev@regalica.local
- *   un cabinet             CABINET REGALICA
+ *   un compte              dev@malica.local
+ *   un cabinet             CABINET MALICA
  *   deux dossiers          DREAM OPTIC · ATLAS DISTRIBUTION
  *   deux mandats           le cabinet suit les deux
  *   des tiers              clients, fournisseurs, une banque
@@ -28,8 +28,8 @@
  *   node db/dev/jeu_dessai.mjs
  */
 
-const API = process.env["REGALICA_API_URL"] ?? "http://localhost:3000";
-const EMAIL = "dev@regalica.local";
+const API = process.env["MALICA_API_URL"] ?? "http://localhost:3000";
+const EMAIL = "dev@malica.local";
 
 /**
  * Le jour du dépôt — le dernier jour du mois EN COURS.
@@ -44,7 +44,7 @@ const MOIS = AUJOURDHUI.toISOString().slice(0, 7);
 const LE_JOUR = new Date(Date.UTC(AUJOURDHUI.getUTCFullYear(), AUJOURDHUI.getUTCMonth() + 1, 0))
   .toISOString()
   .slice(0, 10);
-const MOTDEPASSE = "DeveloppeurRegalica2026!";
+const MOTDEPASSE = "DeveloppeurMalica2026!";
 
 let cookie = "";
 
@@ -375,7 +375,7 @@ async function ecriture(pieceId, packId, journal, libelle, date, lignes, comptab
 }
 
 async function main() {
-  console.log("Jeu d'essai Regalica Office\n");
+  console.log("Jeu d'essai Malica Office\n");
 
   await ouvrirSession();
 
@@ -383,10 +383,10 @@ async function main() {
   if (!pack) throw new Error("aucun pack tunisien en vigueur : chargez les migrations d'abord");
 
   // Le matricule de DREAM OPTIC est celui qui figure sur ses vraies factures.
-  const cabinet = await organisation("cabinet", "CABINET REGALICA", "mandate", "1234567/A/M/000");
+  const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234567/A/M/000");
   const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882/F/P/C/000");
   const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543/B/N/000");
-  console.log(`  cabinet          CABINET REGALICA`);
+  console.log(`  cabinet          CABINET MALICA`);
   console.log(`  dossiers         DREAM OPTIC · ATLAS DISTRIBUTION`);
 
   for (const pme of [optic, atlas]) {

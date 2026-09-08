@@ -1,21 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/regalica-office/composition";
-import { EchecAuth } from "@regalica/socle/ports/auth";
+import { office } from "@/verticals/malica-office/composition";
+import { EchecAuth } from "@malica/socle/ports/auth";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Connexion — Regalica Office" },
+      { title: "Connexion — Malica Office" },
       {
         name: "description",
         content:
-          "Accédez à votre espace Regalica Office : capture de pièces, écritures proposées par le Socle, supervision par votre cabinet.",
+          "Accédez à votre espace Malica Office : capture de pièces, écritures proposées par le Socle, supervision par votre cabinet.",
       },
-      { property: "og:title", content: "Connexion — Regalica Office" },
+      { property: "og:title", content: "Connexion — Malica Office" },
       {
         property: "og:description",
         content: "Espace réservé aux organisations et à leurs cabinets mandatés.",

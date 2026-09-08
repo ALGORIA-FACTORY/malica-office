@@ -64,7 +64,7 @@ describe("ce que chaque requête porte", () => {
     const r = reseau(() => json(200, { ok: true }));
     const { t } = transportDe(false, r.fetch);
     await t.json("/rpc", { method: "POST" });
-    expect(entete(r.appels[0]!, "X-Regalica-Client")).toBe("web/0.1.0");
+    expect(entete(r.appels[0]!, "X-Malica-Client")).toBe("web/0.1.0");
     expect(entete(r.appels[0]!, "Authorization")).toBeNull();
     expect(r.appels[0]!.init.credentials).toBe("include");
   });

@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Catalogue systématique des schémas comptables tunisiens
+--  Malica Office — Catalogue systématique des schémas comptables tunisiens
 --
 --  182 schémas, 463 lignes, 160 rôles, 10 cycles.
 --

@@ -18,10 +18,10 @@
 
 	@api {
 		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
-		path /journal-atelier /journal-atelier/* /regalica/* /auth/*
+		path /journal-atelier /journal-atelier/* /malica/* /auth/*
 	}
 
-	# Une lecture par Regalica peut durer des minutes.
+	# Une lecture par Malica peut durer des minutes.
 	handle @api {
 		reverse_proxy api:3000 {
 			transport http {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Préparer un serveur neuf (Ubuntu 24.04 LTS) pour Regalica Office.
+# Préparer un serveur neuf (Ubuntu 24.04 LTS) pour Malica Office.
 #
 #   bash provisionner.sh [url-du-depot]
 #
@@ -10,11 +10,11 @@
 # docs/exploitation.md).
 #
 # Ce que ce script ne fait pas, et qui reste à la main : .env, la clé SSH de
-# la CI dans ~regalica/.ssh/authorized_keys, la clé de la Storage Box.
+# la CI dans ~malica/.ssh/authorized_keys, la clé de la Storage Box.
 set -euo pipefail
 
-UTILISATEUR=regalica
-RACINE=/srv/regalica
+UTILISATEUR=malica
+RACINE=/srv/malica
 DEPOT_URL="${1:-}"
 
 [ "$(id -u)" -eq 0 ] || {
@@ -41,7 +41,7 @@ fi
 systemctl enable --now docker
 
 # L'utilisateur de déploiement : membre de docker, sans mot de passe, sa clé
-# SSH limitée à porte-ssh.sh. Tout ce qui est à lui vit sous /srv/regalica.
+# SSH limitée à porte-ssh.sh. Tout ce qui est à lui vit sous /srv/malica.
 id "$UTILISATEUR" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "$UTILISATEUR"
 usermod -aG docker "$UTILISATEUR"
 install -d -o "$UTILISATEUR" -g "$UTILISATEUR" -m 0750 \

@@ -55,7 +55,7 @@ const CLE = join(RACINE, ".certificats", "cle.pem");
  * demande de HTTPS est ignorée plutôt que de bloquer un démarrage.
  */
 const https =
-  process.env["REGALICA_HTTPS"] === "1" && existsSync(CERT) && existsSync(CLE)
+  process.env["MALICA_HTTPS"] === "1" && existsSync(CERT) && existsSync(CLE)
     ? { key: readFileSync(CLE), cert: readFileSync(CERT) }
     : undefined;
 
@@ -103,7 +103,7 @@ export default defineConfig(({ mode }) => {
        * pas le mode, donc ce greffon vaut pour tous les modes, après nitro.
        */
       {
-        name: "regalica:port-de-l-apercu",
+        name: "malica:port-de-l-apercu",
         enforce: "post" as const,
         config: () => ({ preview: { port: 4177, strictPort: false } }),
       },
@@ -128,8 +128,8 @@ export default defineConfig(({ mode }) => {
        * permet aux DEUX de tourner ensemble : on garde l'aperçu en clair sur
        * 8080 pendant qu'on essaie au doigt sur 8443.
        */
-      // REGALICA_PORT pour le poste ; PORT quand un outil assigne le port lui-même.
-      port: Number(process.env["REGALICA_PORT"] ?? process.env["PORT"] ?? 8080),
+      // MALICA_PORT pour le poste ; PORT quand un outil assigne le port lui-même.
+      port: Number(process.env["MALICA_PORT"] ?? process.env["PORT"] ?? 8080),
       strictPort: true,
       host: true,
       ...(https ? { https } : {}),

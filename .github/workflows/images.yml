@@ -10,7 +10,7 @@
 #
 # Chaque environnement GitHub (staging, pilote, production) porte :
 #   variables  DEPLOI_HOTE (l'adresse), DEPLOI_EMPREINTE_HOTE (la ligne known_hosts), DOMAINE
-#   secret     DEPLOI_CLE_SSH (la clé privée dont la publique est dans ~regalica/.ssh/authorized_keys, derrière porte-ssh.sh)
+#   secret     DEPLOI_CLE_SSH (la clé privée dont la publique est dans ~malica/.ssh/authorized_keys, derrière porte-ssh.sh)
 
 name: Images
 
@@ -49,7 +49,7 @@ jobs:
       - id: etiquettes
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/regalica-${{ matrix.image }}
+          images: ghcr.io/${{ github.repository_owner }}/malica-${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -84,4 +84,4 @@ jobs:
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "regalica@$HOTE" "deployer $BRANCHE"
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"

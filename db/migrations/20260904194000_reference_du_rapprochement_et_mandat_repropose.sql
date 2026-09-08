@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Une référence qui en est une, et un mandat qu'on peut reproposer.
+--  Malica Office — Une référence qui en est une, et un mandat qu'on peut reproposer.
 --
 --  POURQUOI, trouvé par les épreuves et le jeu de données :
 --    · le rapprochement prenait `max(tax_code)` pour « référence » d'une
@@ -84,7 +84,7 @@ begin
    where kind = 'pme' and archived_at is null and legal_id = v_legal
    order by created_at limit 1;
   if v_pme is null then
-    raise exception 'Aucune PME ne porte cet identifiant fiscal dans Regalica Office.'
+    raise exception 'Aucune PME ne porte cet identifiant fiscal dans Malica Office.'
       using errcode = 'P0002';
   end if;
 

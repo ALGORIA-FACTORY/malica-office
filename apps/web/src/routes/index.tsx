@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
-import { LanguageSwitcher } from "@/components/regalica/LanguageSwitcher";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/")({
@@ -12,13 +12,13 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Regalica Office — comptabilité augmentée, chiffre gouverné" },
+      { title: "Malica Office — comptabilité augmentée, chiffre gouverné" },
       {
         name: "description",
         content:
-          "Photographiez une facture : Regalica Office la lit avec citation de la zone source, en tire l'écriture, la TVA et l'échéance. Supervision par expert-comptable, Système Comptable Tunisien.",
+          "Photographiez une facture : Malica Office la lit avec citation de la zone source, en tire l'écriture, la TVA et l'échéance. Supervision par expert-comptable, Système Comptable Tunisien.",
       },
-      { property: "og:title", content: "Regalica Office — comptabilité augmentée" },
+      { property: "og:title", content: "Malica Office — comptabilité augmentée" },
       {
         property: "og:description",
         content:

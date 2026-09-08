@@ -131,7 +131,7 @@ async function lignePiece(db: Requete, pieceId: string): Promise<LignePiece | nu
 }
 
 /**
- * Les octets d'une pièce, pour Regalica — sur une connexion déjà placée sous
+ * Les octets d'une pièce, pour Malica — sur une connexion déjà placée sous
  * l'identité de l'appelant. Même `select`, même RLS que la route : ce que la
  * base ne rend pas n'existe pas, et `null` ne distingue pas l'interdit de
  * l'absent.

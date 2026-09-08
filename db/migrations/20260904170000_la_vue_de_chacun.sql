@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — La vue de chacun.
+--  Malica Office — La vue de chacun.
 --
 --  POURQUOI : un cabinet n'est pas une seule paire d'yeux. L'expert (le chef
 --  de cabinet) et le dirigeant voient tous les mandats ; un collaborateur ou

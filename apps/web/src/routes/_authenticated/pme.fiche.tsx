@@ -4,29 +4,29 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { files } from "@/capabilities/files";
 import { useSuperposition } from "@/hooks/use-superposition";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
-import { usePme } from "@/components/regalica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
+import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { office } from "@/verticals/regalica-office/composition";
-import type { RegimeDisponible } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { RegimeDisponible } from "@malica/socle/ports/repositories";
 
 const CameraScanner = lazy(() =>
-  import("@/components/regalica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
+  import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
 );
 
 export const Route = createFileRoute("/_authenticated/pme/fiche")({
   head: () => ({
     meta: [
-      { title: "Votre situation fiscale — Regalica Office" },
+      { title: "Votre situation fiscale — Malica Office" },
       {
         name: "description",
         content:
           "Le régime, l'assujettissement à la TVA et l'exercice du dossier, lus sur la carte d'identification fiscale et confirmés par vous.",
       },
-      { property: "og:title", content: "Votre situation fiscale — Regalica Office" },
+      { property: "og:title", content: "Votre situation fiscale — Malica Office" },
       {
         property: "og:description",
         content: "Photographiez votre carte : je lis, vous confirmez.",
@@ -45,7 +45,7 @@ const OU = "routes/_authenticated/pme.fiche";
  *
  * ============================================================ POURQUOI CET ÉCRAN
  *
- * Sans lui, Regalica ignore si le dossier est assujetti à la TVA et s'il relève
+ * Sans lui, Malica ignore si le dossier est assujetti à la TVA et s'il relève
  * du réel. Elle ne peut donc ni qualifier une opération, ni répondre sur une
  * déduction — ses deux issues seraient de supposer en silence, ou d'interroger
  * le client à chaque question.
@@ -62,7 +62,7 @@ const OU = "routes/_authenticated/pme.fiche";
  *
  * La lecture REMPLIT le formulaire, elle ne l'enregistre pas. Tout reste
  * modifiable, et ce qu'elle n'a pas su lire reste vide au lieu d'être deviné.
- * C'est R10 : Regalica propose, l'expert arrête le paramétrage.
+ * C'est R10 : Malica propose, l'expert arrête le paramétrage.
  */
 function FicheFiscale() {
   const { t, locale } = useI18n();
@@ -140,7 +140,7 @@ function FicheFiscale() {
     // Les octets partent tels quels : l'œil les reçoit par leur propre route,
     // sans passer par une adresse de données de plusieurs mégaoctets.
     mutationFn: (blob: Blob) =>
-      office().regalica.lireCarte({ jurisdiction: pme.jurisdiction, fichier: blob }),
+      office().malica.lireCarte({ jurisdiction: pme.jurisdiction, fichier: blob }),
     onSuccess: (res) => {
       setErreur(null);
       const c = res.carte;
@@ -228,7 +228,7 @@ function FicheFiscale() {
 
       {/* ------------------------------------------------- lire la carte */}
       <div className="mt-3 flex gap-2.5">
-        <RegalicaAvatar size={28} alt="Regalica" rond />
+        <MalicaAvatar size={28} alt="Malica" rond />
         <p className="text-[13px] leading-[1.45] text-text-2">{t("fiche.voix")}</p>
       </div>
 
@@ -299,7 +299,7 @@ function FicheFiscale() {
         />
 
         {/* La forme et le mode de dépôt décident des délais : sans les deux,
-            Regalica ne dérive aucune échéance — et le dit. */}
+            Malica ne dérive aucune échéance — et le dit. */}
         <div className="grid grid-cols-2 gap-2.5">
           <Choix
             label={t("fiche.champ.forme")}

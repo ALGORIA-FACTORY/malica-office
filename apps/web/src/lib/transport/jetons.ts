@@ -37,7 +37,7 @@ export function coffreMemoire(initial: string | null = null): CoffreJetons {
   };
 }
 
-const CLE = "regalica.jeton-long";
+const CLE = "malica.jeton-long";
 
 /**
  * Le stockage de l'application, sur l'appareil — ce que la coque garde pour

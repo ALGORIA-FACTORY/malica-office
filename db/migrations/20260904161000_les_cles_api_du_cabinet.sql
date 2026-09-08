@@ -1,5 +1,5 @@
 -- =====================================================================================
---  Regalica Office — Les clés d'API du cabinet.
+--  Malica Office — Les clés d'API du cabinet.
 --
 --  POURQUOI : une intégration parle au Socle avec une clé, pas avec un compte.
 --  La clé désigne un cabinet et des portées ; elle ne PORTE aucune frontière.

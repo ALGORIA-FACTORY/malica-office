@@ -17,32 +17,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { Chip, EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { Chip, EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@regalica/socle/exercice";
+import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
-import { sommeDecimale } from "@regalica/socle/somme-decimale";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import type {
   FactureHonoraires,
   LigneHonorairesSaisie,
   MandatHonoraires,
-} from "@regalica/socle/ports/repositories";
+} from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/honoraires")({
   head: () => ({
     meta: [
-      { title: "Honoraires et mandats — Regalica Office" },
+      { title: "Honoraires et mandats — Malica Office" },
       {
         name: "description",
         content:
           "Facturation, trésorerie et mandats d'honoraires du cabinet : chaque montant vient du mandat ou de la facture émise.",
       },
-      { property: "og:title", content: "Honoraires et mandats — Regalica Office" },
+      { property: "og:title", content: "Honoraires et mandats — Malica Office" },
       {
         property: "og:description",
         content:
@@ -117,7 +117,7 @@ function CabinetHonoraires() {
     queryFn: () => office().honoraires.synthese(org.id, mois),
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.hono.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.hono.panel")}</MalicaNote>, [locale]);
 
   const dateLongue = (iso: string) =>
     new Intl.DateTimeFormat(locale, {

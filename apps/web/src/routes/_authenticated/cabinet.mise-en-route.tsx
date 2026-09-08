@@ -5,35 +5,35 @@
  *
  * Un cabinet qui vient de s'inscrire doit pouvoir travailler le jour même
  * (R10). Le parcours le prend par la main : qui il est, qui travaille avec
- * lui, quels dossiers il suit, ce qu'il délègue à Regalica. Rien ici n'est
+ * lui, quels dossiers il suit, ce qu'il délègue à Malica. Rien ici n'est
  * propre à cet écran : chaque étape lit et écrit ce que les réglages, les
  * membres et les mandats portent déjà. On peut le rejouer sans rien casser.
  *
  * Aucune valeur par défaut n'est écrite ici : le seuil vient de la base, et
- * l'écran dit quand c'est encore le défaut de Regalica, pas celui du cabinet.
+ * l'écran dit quand c'est encore le défaut de Malica, pas celui du cabinet.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaAvatar, RegalicaNote } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaAvatar, MalicaNote } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/cabinet/mise-en-route")({
   head: () => ({
     meta: [
-      { title: "Mise en route — Regalica Office" },
+      { title: "Mise en route — Malica Office" },
       {
         name: "description",
         content:
           "Les quatre étapes de mise en route d'un cabinet : le cabinet, l'équipe, les premiers mandats, le seuil de délégation.",
       },
-      { property: "og:title", content: "Mise en route — Regalica Office" },
+      { property: "og:title", content: "Mise en route — Malica Office" },
       {
         property: "og:description",
         content: "Le cabinet, l'équipe, les premiers mandats, le seuil de délégation.",
@@ -82,7 +82,7 @@ function MiseEnRoute() {
   });
   const termineeLe = avancement.data?.termineeLe ?? null;
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.onb.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.onb.panel")}</MalicaNote>, [locale]);
 
   const dateLongue = (iso: string) =>
     new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(iso));
@@ -173,7 +173,7 @@ function MiseEnRoute() {
 
       <aside className="flex min-w-0 flex-col gap-3.5">
         <div className="flex items-start gap-3 border border-s-2 border-border border-s-marigold bg-card p-4">
-          <RegalicaAvatar size={40} alt={t("brand.name")} rond />
+          <MalicaAvatar size={40} alt={t("brand.name")} rond />
           <span className="min-w-0">
             <span className="block text-[9.5px] font-semibold uppercase tracking-[0.2em] text-marigold-on-paper">
               {t("cab.onb.accompagne")}

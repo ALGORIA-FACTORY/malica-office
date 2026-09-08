@@ -7,7 +7,7 @@
 -- Rien en base ne disait ce que « CDPF » veut dire. Deux conséquences, et la
 -- seconde est la plus grave.
 --
--- La première se voit : Regalica écrivait « CDPF art. 89 » à un dirigeant de
+-- La première se voit : Malica écrivait « CDPF art. 89 » à un dirigeant de
 -- PME qui n'a aucune raison de connaître cette abréviation.
 --
 -- La seconde ne se voit pas : quand elle écrit correctement « code des droits
@@ -16,7 +16,7 @@
 -- qu'il est en vigueur. La citation devient invérifiable au moment même où
 -- elle devient lisible.
 --
--- Cette table est donc le pont : elle sert à Regalica pour nommer, et aux
+-- Cette table est donc le pont : elle sert à Malica pour nommer, et aux
 -- contrôles pour reconnaître.
 --
 -- ==================================================== CE QU'ELLE NE FAIT PAS
@@ -24,7 +24,7 @@
 -- Elle n'invente aucun nom. Un corpus dont le titre n'a pas été vérifié dans
 -- son propre texte reste sans nom : `nom_fr` est nul, et l'affichage retombe
 -- sur le code. Un nom approximatif serait pire que pas de nom — il ferait
--- citer par Regalica un code qui n'existe pas sous ce titre.
+-- citer par Malica un code qui n'existe pas sous ce titre.
 --
 -- ============================================================= LES FAMILLES
 --

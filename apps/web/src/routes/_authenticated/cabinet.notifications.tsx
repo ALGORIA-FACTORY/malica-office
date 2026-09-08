@@ -17,20 +17,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { Notification } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { Notification } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/notifications")({
   head: () => ({
     meta: [
-      { title: "Notifications — cabinet — Regalica Office" },
+      { title: "Notifications — cabinet — Malica Office" },
       { name: "description", content: "Ce que les dossiers mandatés ont fait savoir au cabinet." },
-      { property: "og:title", content: "Notifications — cabinet — Regalica Office" },
+      { property: "og:title", content: "Notifications — cabinet — Malica Office" },
       {
         property: "og:description",
         content: "Ce que les dossiers mandatés ont fait savoir au cabinet.",
@@ -106,7 +106,7 @@ function CabinetNotifications() {
     enabled: clientIds.length > 0,
   });
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.notif.regalica")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.notif.malica")}</MalicaNote>, [locale]);
 
   const invalider = () => qc.invalidateQueries({ queryKey: ["cab-notifications", org.id] });
 

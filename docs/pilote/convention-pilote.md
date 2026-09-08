@@ -1,4 +1,4 @@
-# Convention de pilote — Regalica Office
+# Convention de pilote — Malica Office
 
 Entre **Algoria Factory** (l'éditeur), le **cabinet** signataire, et chaque
 **entreprise** que le cabinet inscrit au pilote. Ce document est signé par
@@ -9,7 +9,7 @@ commerciale.
 
 ## 1. Objet et durée
 
-Le pilote éprouve l'application Regalica Office (Android pour les
+Le pilote éprouve l'application Malica Office (Android pour les
 entreprises, web pour le cabinet) sur des dossiers réels, du **J0** à la
 **revue de fin de pilote** (six à huit semaines), prolongeable par écrit.
 Une seule phase : les données saisies pendant le pilote **restent** dans
@@ -32,7 +32,7 @@ qui devient la production, sans recopie.
   montants, dates, tiers et numéros qui en sont extraits, les écritures
   proposées et validées.
 - **Dossier** : la situation fiscale déclarée (régime, TVA, matricule), les
-  échéances, les échanges avec Regalica et avec le cabinet.
+  échéances, les échanges avec Malica et avec le cabinet.
 - **Technique** : journaux d'accès (adresse IP, date, chemin) 30 jours ;
   plantages (pile d'exécution, écran, version, identifiant du dossier —
   jamais le contenu d'une pièce) ; signalements volontaires.
@@ -99,7 +99,7 @@ ou **arrêt** — l'export complet de chaque dossier est remis au cabinet sous
 
 ## Annexe — acceptation par l'entreprise
 
-> J'ai lu la fiche « Ce que Regalica fait de vos documents ». Je comprends
+> J'ai lu la fiche « Ce que Malica fait de vos documents ». Je comprends
 > que mes pièces sont lues par des services à l'étranger (Singapour, Chine)
 > pour en extraire les montants, que rien ne part au cabinet sans mon geste,
 > et que je peux demander l'export et la purge de mon dossier par écrit.

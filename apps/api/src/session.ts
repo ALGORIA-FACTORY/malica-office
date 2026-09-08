@@ -5,12 +5,12 @@
  * par cookie httpOnly, la coque native par en-tête `Authorization`. Les deux
  * nomment la même identité, et la base seule décide de ce qu'elle peut faire.
  *
- * Le client se présente aussi, par `X-Regalica-Client` — « coque-android/0.3.1 »
+ * Le client se présente aussi, par `X-Malica-Client` — « coque-android/0.3.1 »
  * ou « web/abc1234 ». Ce n'est pas une identité : c'est ce qui permet de dire
  * à un téléphone trop ancien qu'il doit se mettre à jour (426), la seule façon
  * d'imposer une mise à jour quand un contrat change.
  *
- * Ce module existe à part d'`app.ts` pour que les routeurs — `/regalica` —
+ * Ce module existe à part d'`app.ts` pour que les routeurs — `/malica` —
  * exigent l'identité sans importer l'application qui les monte.
  */
 import type { NextFunction, Request, Response } from "express";
@@ -41,8 +41,8 @@ declare global {
   }
 }
 
-export const NOM_COOKIE = "regalica_session";
-const EN_TETE_CLIENT = "x-regalica-client";
+export const NOM_COOKIE = "malica_session";
+const EN_TETE_CLIENT = "x-malica-client";
 
 export function exigerIdentite(req: Request, res: Response, next: NextFunction): void {
   const entete = req.headers.authorization;

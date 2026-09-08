@@ -98,7 +98,7 @@ export const corpus = {
    * Il y en a 454, tous en vigueur, et cent kilo-octets de texte. Les
    * transmettre à chaque question quadruplerait le coût et noierait la
    * question sous le référentiel. Il faut choisir, et le choix doit être
-   * MÉCANIQUE — un paramètre écarté par erreur, c'est un chiffre que Regalica
+   * MÉCANIQUE — un paramètre écarté par erreur, c'est un chiffre que Malica
    * n'a pas et qu'elle ira chercher dans le texte de loi, au risque de le lire
    * de travers.
    *
@@ -199,7 +199,7 @@ export const corpus = {
    * éditions alternent : le code de la TVA a ses trois dernières éditions
    * françaises jusqu'en 2023, puis deux arabes, 2025 et 2026.
    *
-   * Regalica reçoit alors le français de 2023, constate qu'il a expiré, et
+   * Malica reçoit alors le français de 2023, constate qu'il a expiré, et
    * conclut qu'elle ne connaît pas le droit en vigueur — alors que l'arabe de
    * 2026 dit la même chose et fait foi. Mesuré : 304 articles, sur trois
    * codes, n'ont AUCUNE édition française en cours.
@@ -242,7 +242,7 @@ export const corpus = {
    *
    * La requête est celle de `db/corpus/rechercher.mjs`, à l'identique : une
    * seule formulation de « ce que dit le droit », partagée par l'outil en
-   * ligne de commande et par Regalica. Deux formulations divergeraient.
+   * ligne de commande et par Malica. Deux formulations divergeraient.
    *
    *   `jour`        — l'état du droit à cette date. Une facture de mars 2025
    *                   se juge sur l'article en vigueur en mars 2025, pas sur

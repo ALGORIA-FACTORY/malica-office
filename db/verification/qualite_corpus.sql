@@ -4,7 +4,7 @@
 -- que personne ne mesure ses défauts produit des réponses plausibles et
 -- fausses, ce qui est pire que pas de réponse du tout.
 --
---   psql -U postgres -h localhost -d regalica_local -f db/verification/qualite_corpus.sql
+--   psql -U postgres -h localhost -d malica_local -f db/verification/qualite_corpus.sql
 
 \pset pager off
 \pset footer off
@@ -167,7 +167,7 @@ select count(*) as versions,
 \echo ''
 \echo '===== 9. AUTORITÉ : chaque article sait-il ce qu''il vaut ? ====='
 -- La table legal.sources dit, par type de texte, son autorité et à qui il est
--- opposable. Tant qu''aucun article n''y renvoie, Regalica cite un texte sans
+-- opposable. Tant qu''aucun article n''y renvoie, Malica cite un texte sans
 -- savoir s''il oblige le contribuable ou seulement l''administration.
 select coalesce(a.source_code, '(non rattaché)') as source,
        coalesce(s.libelle, '—') as nature,

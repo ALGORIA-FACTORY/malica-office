@@ -159,7 +159,7 @@ export interface NouvelleFiche {
   validFrom: string;
 }
 
-// ------------------------------------------------- les fils de Regalica
+// ------------------------------------------------- les fils de Malica
 /**
  * Aucune de ces méthodes ne dit à qui appartient un fil : la base le sait, et
  * elle seule décide. R6 — un filtre applicatif oublié ouvre l'accès, une
@@ -259,7 +259,7 @@ export interface CompteDuPlan {
   parent: string | null;
   classe: string;
   sensUsuel: string | null;
-  /** officiel = verbatim NC 01 ; extension = ouverte par Regalica ; cabinet = la vôtre. */
+  /** officiel = verbatim NC 01 ; extension = ouverte par Malica ; cabinet = la vôtre. */
   origine: "officiel" | "extension" | "cabinet";
   officiel: boolean;
   /** Un compte collectif reçoit des tiers, jamais des sous-comptes. */
@@ -278,9 +278,9 @@ export interface ReglagesCabinet {
   propositionsProactives: boolean;
   /** La capacité de référence d'un collaborateur, en dossiers actifs. */
   capaciteDossiers: number;
-  /** Le registre des restitutions que Regalica rédige : sobre | chaleureux. */
+  /** Le registre des restitutions que Malica rédige : sobre | chaleureux. */
   ton: string;
-  /** Au-dessus de cette certitude (0..1), Regalica répond seule à une question de conseil ; en dessous, elle la remet au cabinet. */
+  /** Au-dessus de cette certitude (0..1), Malica répond seule à une question de conseil ; en dessous, elle la remet au cabinet. */
   seuilCertitudeConseil: number;
   regle: boolean;
 }
@@ -605,7 +605,7 @@ export interface NouvellePiece {
  *
  * L'état seul ne suffisait pas : une liste qui dit « comptabilisée » sans dire
  * DE QUI ni COMBIEN oblige à ouvrir chaque ligne pour reconnaître sa facture.
- * Ce que Regalica a lu vient donc avec — et vaut `null` tant qu'elle n'a pas lu.
+ * Ce que Malica a lu vient donc avec — et vaut `null` tant qu'elle n'a pas lu.
  */
 export interface PieceLue {
   id: string;
@@ -1268,12 +1268,12 @@ export interface PvReunion {
   createdAt: string;
   sections: PvSection[];
   chiffres: PvChiffre[];
-  /** Le registre demandé à Regalica : sobre | chaleureux, ou rien si personne n'a rédigé. */
+  /** Le registre demandé à Malica : sobre | chaleureux, ou rien si personne n'a rédigé. */
   ton: string | null;
   /** brouillon | envoye — envoyé, le PV est figé (R7). */
   statut: string;
   envoyeLe: string | null;
-  redigeParRegalica: boolean;
+  redigeParMalica: boolean;
 }
 
 /** Une invitation à rejoindre le cabinet, consignée en attendant d'être acceptée. */
@@ -1366,7 +1366,7 @@ export interface CollabRepository {
     sections?: PvSection[];
     chiffres?: PvChiffre[];
     ton?: string | null;
-    redigeParRegalica?: boolean;
+    redigeParMalica?: boolean;
   }): Promise<PvReunion>;
   /** Fige le PV, le journalise et prévient le client. */
   pvEnvoyer(id: string): Promise<{ id: string; statut: string; envoyeLe: string | null }>;
@@ -1467,14 +1467,14 @@ export interface SourceCitee {
 }
 
 /**
- * en_attente : Regalica a retenu sa réponse et la remet au cabinet ·
+ * en_attente : Malica a retenu sa réponse et la remet au cabinet ·
  * repondue : elle l'a envoyée seule, au-dessus du seuil, cabinet en copie ·
  * approuvee · corrigee · ecartee : ce que le cabinet en a décidé.
  */
 export type StatutArbitrage = "en_attente" | "repondue" | "approuvee" | "corrigee" | "ecartee";
 export type DecisionArbitrage = "approuvee" | "corrigee" | "ecartee";
 
-/** Une question de conseil d'un client mandaté, et ce que Regalica en a proposé. */
+/** Une question de conseil d'un client mandaté, et ce que Malica en a proposé. */
 export interface Arbitrage {
   id: string;
   tenantId: string;
@@ -1487,7 +1487,7 @@ export interface Arbitrage {
   question: string;
   reponseProposee: string;
   sources: SourceCitee[];
-  /** La certitude déclarée par Regalica, 0..1. */
+  /** La certitude déclarée par Malica, 0..1. */
   certitude: number;
   /** Pourquoi elle la remet — dans ses mots. */
   doute: string | null;
@@ -1539,7 +1539,7 @@ export interface EditionDuCorpus {
   langue: string | null;
 }
 
-/** Ce que Regalica doit savoir d'un dossier avant de répondre à son client. */
+/** Ce que Malica doit savoir d'un dossier avant de répondre à son client. */
 export interface ContexteConseil {
   cabinetId: string | null;
   cabinetNom: string | null;

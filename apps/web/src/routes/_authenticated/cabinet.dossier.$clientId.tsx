@@ -12,30 +12,30 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { ecrireDossierCourant } from "@/components/regalica/dossier-courant";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { ecrireDossierCourant } from "@/components/malica/dossier-courant";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useSyntheseClient } from "@/hooks/use-synthese-client";
 import { useI18n } from "@/i18n";
 import { libelleDeLAction } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@regalica/socle/exercice";
+import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 
 import { QueueTable } from "./cabinet.index";
 
 export const Route = createFileRoute("/_authenticated/cabinet/dossier/$clientId")({
   head: () => ({
     meta: [
-      { title: "Dossier client — Regalica Office" },
+      { title: "Dossier client — Malica Office" },
       {
         name: "description",
         content:
           "La synthèse d'un dossier mandaté : compte de résultat, TVA du mois, pièces, feux de conformité et journal du mandat.",
       },
-      { property: "og:title", content: "Dossier client — Regalica Office" },
+      { property: "og:title", content: "Dossier client — Malica Office" },
       {
         property: "og:description",
         content: "Compte de résultat, TVA, pièces et journal d'un dossier mandaté.",
@@ -91,7 +91,7 @@ function CabinetClient() {
   const affectation =
     (affectations.data ?? []).find((a) => a.active && a.clientTenantId === clientId) ?? null;
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.dos.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.dos.panel")}</MalicaNote>, [locale]);
 
   const rows = queue.data ?? [];
   const aSuperviser = rows.filter((r) => r.status === "comptabilisee");

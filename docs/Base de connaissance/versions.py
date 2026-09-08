@@ -13,7 +13,7 @@ un article sont la même version. Aucune interprétation, seulement de l'arithm�
 """
 import os, time
 import psycopg2, psycopg2.extras
-DSN = os.environ.get("REGALICA_DSN", "postgres:///regalica_paquet")
+DSN = os.environ.get("MALICA_DSN", "postgres:///malica_paquet")
 
 def main():
     cn = psycopg2.connect(DSN); cn.autocommit=False

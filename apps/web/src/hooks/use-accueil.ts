@@ -25,11 +25,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { usePme } from "@/components/regalica/pme-context";
-import { office } from "@/verticals/regalica-office/composition";
-import { computePnl, computeTva } from "@regalica/socle";
-import { ExtractV1 } from "@regalica/socle/contracts/extract.v1";
-import { currencyDecimals } from "@regalica/socle/use-cases/propose-ecriture";
+import { usePme } from "@/components/malica/pme-context";
+import { office } from "@/verticals/malica-office/composition";
+import { computePnl, computeTva } from "@malica/socle";
+import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 import { monthBounds } from "./use-tva";
 

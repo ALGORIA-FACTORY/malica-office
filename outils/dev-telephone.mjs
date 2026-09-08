@@ -42,7 +42,7 @@ if (!existsSync(CERT)) {
  * Les deux relaient la même API, donc partagent la même session et les mêmes
  * données. Ce qu'on fait sur le téléphone se voit dans l'aperçu.
  */
-const PORT = process.env["REGALICA_PORT"] ?? "8443";
+const PORT = process.env["MALICA_PORT"] ?? "8443";
 
 const adresses = Object.values(networkInterfaces())
   .flatMap((cartes) => cartes ?? [])
@@ -58,9 +58,9 @@ console.log(
     "8080, et les deux partagent la même API — donc la même session.\n",
 );
 
-const enfant = spawn("npm", ["run", "dev", "--workspace", "@regalica/web"], {
+const enfant = spawn("npm", ["run", "dev", "--workspace", "@malica/web"], {
   cwd: RACINE,
-  env: { ...process.env, REGALICA_HTTPS: "1", REGALICA_PORT: PORT },
+  env: { ...process.env, MALICA_HTTPS: "1", MALICA_PORT: PORT },
   stdio: "inherit",
   shell: process.platform === "win32",
 });

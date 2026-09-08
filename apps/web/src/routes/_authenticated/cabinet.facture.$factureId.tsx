@@ -15,32 +15,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaNote } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaNote } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
-import { sommeDecimale } from "@regalica/socle/somme-decimale";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
+import { office } from "@/verticals/malica-office/composition";
 import type {
   FactureHonorairesDossier,
   LigneHonorairesSaisie,
-} from "@regalica/socle/ports/repositories";
+} from "@malica/socle/ports/repositories";
 
 import { LignesEditables } from "./cabinet.honoraires";
 
 export const Route = createFileRoute("/_authenticated/cabinet/facture/$factureId")({
   head: () => ({
     meta: [
-      { title: "Facture d'honoraires — Regalica Office" },
+      { title: "Facture d'honoraires — Malica Office" },
       {
         name: "description",
         content:
           "Une facture d'honoraires du cabinet : brouillon modifiable, puis pièce numérotée et figée, encaissée ou annulée par avoir.",
       },
-      { property: "og:title", content: "Facture d'honoraires — Regalica Office" },
+      { property: "og:title", content: "Facture d'honoraires — Malica Office" },
       {
         property: "og:description",
         content:
@@ -111,7 +111,7 @@ function CabinetFacture() {
     (r) => r.validFrom <= today && (!r.validTo || r.validTo >= today),
   );
 
-  useRegalicaPanel(<RegalicaNote>{t("cab.hono.facture.panel")}</RegalicaNote>, [locale]);
+  useMalicaPanel(<MalicaNote>{t("cab.hono.facture.panel")}</MalicaNote>, [locale]);
 
   const f = facture.data ?? null;
 
@@ -217,7 +217,7 @@ function CabinetFacture() {
     setModifie(true);
   };
 
-  // Ce que Regalica vérifie : des faits, jamais une règle inventée.
+  // Ce que Malica vérifie : des faits, jamais une règle inventée.
   const verifications: Array<{ key: string; ok: boolean; label: string }> = [
     {
       key: "cabinet",

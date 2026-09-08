@@ -15,7 +15,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 
 const RACINE = new URL("..", import.meta.url);
-const BASE = process.env["REGALICA_BASE"] ?? "http://localhost:8080";
+const BASE = process.env["MALICA_BASE"] ?? "http://localhost:8080";
 const rapide = process.argv.includes("--vite");
 
 const etapes = [];

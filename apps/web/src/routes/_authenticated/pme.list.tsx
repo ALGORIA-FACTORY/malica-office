@@ -2,28 +2,28 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { FileLocale } from "@/components/regalica/file-locale";
-import { usePme } from "@/components/regalica/pme-context";
-import { RegalicaAvatar } from "@/components/regalica/office-ui";
+import { FileLocale } from "@/components/malica/file-locale";
+import { usePme } from "@/components/malica/pme-context";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { sommeDecimale } from "@regalica/socle/somme-decimale";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { PieceLue } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { PieceLue } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
     meta: [
-      { title: "Vos documents — Regalica Office" },
+      { title: "Vos documents — Malica Office" },
       {
         name: "description",
-        content: "Ce que Regalica a lu et classé, par mois ou par année.",
+        content: "Ce que Malica a lu et classé, par mois ou par année.",
       },
-      { property: "og:title", content: "Vos documents — Regalica Office" },
+      { property: "og:title", content: "Vos documents — Malica Office" },
       {
         property: "og:description",
-        content: "Ce que Regalica a lu et classé, par mois ou par année.",
+        content: "Ce que Malica a lu et classé, par mois ou par année.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -322,7 +322,7 @@ function VosDocuments() {
                 ))}
 
                 <div className="mt-3 flex gap-2.5 border-t border-border pt-3">
-                  <RegalicaAvatar size={30} alt="Regalica" rond />
+                  <MalicaAvatar size={30} alt="Malica" rond />
                   <p className="text-[13px] leading-[1.45] text-text-2">{t("pme.doc.note")}</p>
                 </div>
               </>

@@ -9,7 +9,7 @@ describe("initialesDe", () => {
   });
 
   it("prend les deux premières lettres d'un seul mot", () => {
-    expect(initialesDe("support@regalica.tn")).toBe("SU");
+    expect(initialesDe("support@malica.tn")).toBe("SU");
     expect(initialesDe("dev")).toBe("DE");
   });
 
@@ -19,6 +19,6 @@ describe("initialesDe", () => {
 
   it("ne rend jamais rien", () => {
     expect(initialesDe("")).toBe("—");
-    expect(initialesDe("@regalica.tn")).toBe("—");
+    expect(initialesDe("@malica.tn")).toBe("—");
   });
 });

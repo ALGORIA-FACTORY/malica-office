@@ -4,7 +4,7 @@
 --
 -- CE QUI SE PASSAIT AVANT
 --
--- On ne savait pas si Regalica s'améliorait. On avait des impressions : « elle
+-- On ne savait pas si Malica s'améliorait. On avait des impressions : « elle
 -- répond mieux qu'avant ». Aucun chiffre, donc aucun moyen de voir qu'un
 -- réglage a cassé quelque chose — jusqu'à ce qu'un client le trouve.
 --

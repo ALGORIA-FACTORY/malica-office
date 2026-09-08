@@ -13,10 +13,10 @@
 # Variables attendues (pas des secrets : rien ici n'ouvre quoi que ce soit
 # sans le jeton OIDC que GitHub ne délivre qu'à CE dépôt) :
 #   PLAY_FOURNISSEUR_IDENTITE   le fournisseur d'identité fédérée du projet
-#       Google Cloud « regalica-office » — projects/<numéro>/locations/global/
+#       Google Cloud « malica-office » — projects/<numéro>/locations/global/
 #       workloadIdentityPools/github/providers/github-actions — dont la
-#       condition n'accepte que wbarouni/regalica-office
-#   PLAY_COMPTE_DE_SERVICE      publication-play@regalica-office.iam.gserviceaccount.com,
+#       condition n'accepte que wbarouni/malica-office
+#   PLAY_COMPTE_DE_SERVICE      publication-play@malica-office.iam.gserviceaccount.com,
 #       invité dans Play Console avec le droit « Publier sur les pistes de test »
 #
 # Aucune clé de compte de service n'existe, nulle part : le workflow échange
@@ -95,17 +95,17 @@ jobs:
       # Le bundle web porte la cible : `.env.coque-<saveur>` — des adresses
       # publiques suivies par git, jamais une clé.
       - name: Construire le bundle de la coque
-        run: npm run build:coque:$CIBLE -w @regalica/web
+        run: npm run build:coque:$CIBLE -w @malica/web
 
       - name: Synchroniser le projet Android
-        run: npm run coque:sync -w @regalica/web
+        run: npm run coque:sync -w @malica/web
 
       - name: Poser la clé d'envoi
         if: env.CLE_PRESENTE == 'true'
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/regalica-upload.jks
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/malica-upload.jks
           cat > android/keystore.properties <<EOF
-          storeFile=regalica-upload.jks
+          storeFile=malica-upload.jks
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -148,7 +148,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1.1.5
         with:
           serviceAccountJson: ${{ steps.identite.outputs.credentials_file_path }}
-          packageName: com.algoriafactory.regalica
+          packageName: com.algoriafactory.malica
           releaseFiles: android/app/build/outputs/bundle/*/*.aab
           tracks: ${{ env.PISTE }}
           status: completed

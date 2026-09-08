@@ -5,7 +5,7 @@
 -- espaces. Une colonne entierement nulle est soit une colonne morte, soit une
 -- promesse non tenue : dans les deux cas elle merite d'etre nommee.
 --
---   psql -U postgres -h localhost -d regalica_local -f db/verification/audit_colonnes.sql
+--   psql -U postgres -h localhost -d malica_local -f db/verification/audit_colonnes.sql
 
 \pset pager off
 \pset footer off

@@ -1,5 +1,5 @@
 /**
- * Le PV de réunion — rédigé par Regalica, arrêté par le cabinet.
+ * Le PV de réunion — rédigé par Malica, arrêté par le cabinet.
  *
  * ============================================================== POURQUOI
  *
@@ -16,30 +16,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { useCabinet, useRegalicaPanel } from "@/components/regalica/cabinet-context";
-import { EmptyState, RegalicaNote, SectionTitle } from "@/components/regalica/office-ui";
+import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { finDuMois } from "@regalica/socle/exercice";
+import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { office } from "@/verticals/regalica-office/composition";
-import type { CollabRepository, PvChiffre, PvReunion } from "@regalica/socle/ports/repositories";
+import { office } from "@/verticals/malica-office/composition";
+import type { CollabRepository, PvChiffre, PvReunion } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/pv")({
   head: () => ({
     meta: [
-      { title: "PV de réunion — Regalica Office" },
+      { title: "PV de réunion — Malica Office" },
       {
         name: "description",
         content:
-          "Le procès-verbal de restitution d'un dossier : rédigé par Regalica, chaque chiffre portant le moteur du Socle qui l'a produit.",
+          "Le procès-verbal de restitution d'un dossier : rédigé par Malica, chaque chiffre portant le moteur du Socle qui l'a produit.",
       },
-      { property: "og:title", content: "PV de réunion — Regalica Office" },
+      { property: "og:title", content: "PV de réunion — Malica Office" },
       {
         property: "og:description",
-        content: "Le texte est de Regalica ; les chiffres sont du Socle. Envoyé, le PV est figé.",
+        content: "Le texte est de Malica ; les chiffres sont du Socle. Envoyé, le PV est figé.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -153,7 +153,7 @@ function CabinetPv() {
         titre: t("cab.pv.titre.defaut", { client }),
         participants: form.presents.trim() || null,
       });
-      const resultat = await office().regalica.redigerLePv({ pvId: id, locale });
+      const resultat = await office().malica.redigerLePv({ pvId: id, locale });
       return { id, resultat };
     },
     onSuccess: async ({ id, resultat }) => {
@@ -168,7 +168,7 @@ function CabinetPv() {
   });
 
   const rerediger = useMutation({
-    mutationFn: (id: string) => office().regalica.redigerLePv({ pvId: id, locale }),
+    mutationFn: (id: string) => office().malica.redigerLePv({ pvId: id, locale }),
     onSuccess: async (resultat) => {
       setErreur(null);
       setMessage(null);
@@ -199,11 +199,11 @@ function CabinetPv() {
     onError: signaler,
   });
 
-  useRegalicaPanel(
-    <RegalicaNote kicker={t("cab.pv.panel.kicker")}>
-      {pv?.redigeParRegalica ? t("cab.pv.panel.doc") : t("cab.pv.panel", { count: rows.length })}
-    </RegalicaNote>,
-    [rows.length, pv?.redigeParRegalica, locale],
+  useMalicaPanel(
+    <MalicaNote kicker={t("cab.pv.panel.kicker")}>
+      {pv?.redigeParMalica ? t("cab.pv.panel.doc") : t("cab.pv.panel", { count: rows.length })}
+    </MalicaNote>,
+    [rows.length, pv?.redigeParMalica, locale],
   );
 
   const enCours =
@@ -419,7 +419,7 @@ function DocumentPv({
   onEnregistrer: (input: {
     sections?: PvReunion["sections"];
     decisions?: string | null;
-    redigeParRegalica?: boolean;
+    redigeParMalica?: boolean;
   }) => void;
 }) {
   const { t, locale } = useI18n();
@@ -502,7 +502,7 @@ function DocumentPv({
                       kicker: s.kicker.trim(),
                       corps: s.corps.trim(),
                     })),
-                    redigeParRegalica: false,
+                    redigeParMalica: false,
                   });
                   setReprise(false);
                 }}
@@ -571,12 +571,12 @@ function DocumentPv({
 
       {/* ---- la marge */}
       <aside className="flex min-w-0 flex-col gap-3.5">
-        {pv.redigeParRegalica ? (
+        {pv.redigeParMalica ? (
           <div className="border border-s-2 border-border border-s-marigold bg-card p-3.5">
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-marigold-on-paper">
-              {t("cab.pv.regalica.kicker")}
+              {t("cab.pv.malica.kicker")}
             </p>
-            <p className="mt-2 text-[12.5px] leading-[1.55]">{t("cab.pv.regalica.corps")}</p>
+            <p className="mt-2 text-[12.5px] leading-[1.55]">{t("cab.pv.malica.corps")}</p>
           </div>
         ) : pv.sections.length > 0 ? (
           <div className="border border-s-2 border-border border-s-foreground bg-card p-3.5">

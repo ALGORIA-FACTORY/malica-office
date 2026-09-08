@@ -42,7 +42,7 @@ export interface PortsDuVidage {
   enregistrer(element: ElementDeFile): Promise<string>;
   /** `/pieces/:id/contenu` : les octets. */
   deposerOctets(pieceId: string, octets: Blob, contentType: string): Promise<void>;
-  /** `/regalica/lectures/:id?attendre=0` : la lecture part, on n'attend pas. */
+  /** `/malica/lectures/:id?attendre=0` : la lecture part, on n'attend pas. */
   demanderLaLecture(pieceId: string): Promise<void>;
 }
 

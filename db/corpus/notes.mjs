@@ -39,9 +39,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
-const DEPOT = "C:/Users/wisse/OneDrive/Bureau/ALGORIA Factory/Platefomre/Regalica Office/regalica-office";
-const { default: pg } = await import(pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href);
-const pdfjs = await import(pathToFileURL(join(DEPOT, "node_modules/pdfjs-dist/legacy/build/pdf.mjs")).href);
+const DEPOT =
+  "C:/Users/wisse/OneDrive/Bureau/ALGORIA Factory/Platefomre/Malica Office/malica-office";
+const { default: pg } = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href
+);
+const pdfjs = await import(
+  pathToFileURL(join(DEPOT, "node_modules/pdfjs-dist/legacy/build/pdf.mjs")).href
+);
 
 function env(fichier) {
   const v = {};
@@ -50,7 +55,9 @@ function env(fichier) {
       const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(l);
       if (m) v[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
     }
-  } catch { /* le .env manquant leve plus bas */ }
+  } catch {
+    /* le .env manquant leve plus bas */
+  }
   return v;
 }
 const API = env("apps/api/.env");
@@ -75,8 +82,9 @@ function numeroDuTexte(titre, type) {
     const m = /\bNCT?[ \t]*(\d{1,2})\b/i.exec(titre);
     return m ? String(Number(m[1])) : null;
   }
-  const m = /\bNC[ \t]*(\d{1,3})\s*\/\s*(\d{4})/i.exec(titre)
-    ?? /note[ \t]+commune[^0-9]{0,20}(\d{1,3})/i.exec(titre);
+  const m =
+    /\bNC[ \t]*(\d{1,3})\s*\/\s*(\d{4})/i.exec(titre) ??
+    /note[ \t]+commune[^0-9]{0,20}(\d{1,3})/i.exec(titre);
   return m ? String(Number(m[1])) : null;
 }
 
@@ -148,9 +156,15 @@ async function texteDuPdf(chemin) {
     for (const item of contenu.items) {
       if (!("str" in item)) continue;
       const y = Math.round(item.transform[5]);
-      if (dernierY !== null && Math.abs(y - dernierY) > 2) { lignes.push(ligne.trim()); ligne = ""; }
+      if (dernierY !== null && Math.abs(y - dernierY) > 2) {
+        lignes.push(ligne.trim());
+        ligne = "";
+      }
       ligne += item.str;
-      if (item.hasEOL) { lignes.push(ligne.trim()); ligne = ""; }
+      if (item.hasEOL) {
+        lignes.push(ligne.trim());
+        ligne = "";
+      }
       dernierY = y;
     }
     if (ligne.trim()) lignes.push(ligne.trim());
@@ -166,7 +180,7 @@ async function telecharger(url, destination) {
   if (existsSync(destination) && statSync(destination).size > 1000) return true;
   // Les URL de jibaya.tn portent des caracteres arabes : il faut les encoder.
   const adresse = /[^\x00-\x7F]/.test(url) ? encodeURI(url) : url;
-  const r = await fetch(adresse, { headers: { "User-Agent": "Regalica/1.0" } });
+  const r = await fetch(adresse, { headers: { "User-Agent": "Malica/1.0" } });
   if (!r.ok) return false;
   const octets = Buffer.from(await r.arrayBuffer());
   if (octets.length < 1000) return false;
@@ -185,7 +199,10 @@ async function telecharger(url, destination) {
  */
 function publicationDeLaNote(texte) {
   const tete = texte.slice(0, 1200);
-  const bodi = /BULLETIN[ \t]+OFFICIEL[ \t]+DES[ \t]+DOUANES[ \t]+ET[ \t]+DES[ \t]+IMPOTS[ \t]*N[\u00b0\u00bao][ \t]*([\d\/.-]+)/i.exec(tete);
+  const bodi =
+    /BULLETIN[ \t]+OFFICIEL[ \t]+DES[ \t]+DOUANES[ \t]+ET[ \t]+DES[ \t]+IMPOTS[ \t]*N[\u00b0\u00bao][ \t]*([\d\/.-]+)/i.exec(
+      tete,
+    );
   const dgi = /Texte[ \t]+n[\u00b0\u00bao][ \t]*((?:DGI|D\.G\.I)[ \t\d\/.-]+)/i.exec(tete);
   const bouts = [];
   if (bodi) bouts.push(`BODI n\u00b0 ${bodi[1].trim()}`);
@@ -257,7 +274,10 @@ async function main() {
   for (const n of notes) {
     if (aFaire.length >= limite) break;
     const numero = numeroDuTexte(n.titre, n.type_document);
-    if (!numero) { echecs.push([n.titre.slice(0, 60), "numero illisible"]); continue; }
+    if (!numero) {
+      echecs.push([n.titre.slice(0, 60), "numero illisible"]);
+      continue;
+    }
     // Une note peut exister en francais et en arabe : la langue fait partie du
     // nom du fichier, pas de l'identite de la note.
     const langue = n.langue === "ar" ? "ar" : "fr";
@@ -270,21 +290,26 @@ async function main() {
   const PARALLELE = 6;
   let curseur = 0;
   let recus = 0;
-  await Promise.all(Array.from({ length: PARALLELE }, async () => {
-    while (curseur < aFaire.length) {
-      const t = aFaire[curseur];
-      curseur += 1;
-      t.recu = await telecharger(t.url_fichier, join(dossier, `${t.nom}.pdf`));
-      recus += 1;
-      if (recus % 25 === 0) process.stdout.write(`  ${recus}/${aFaire.length} telecharges\r`);
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: PARALLELE }, async () => {
+      while (curseur < aFaire.length) {
+        const t = aFaire[curseur];
+        curseur += 1;
+        t.recu = await telecharger(t.url_fichier, join(dossier, `${t.nom}.pdf`));
+        recus += 1;
+        if (recus % 25 === 0) process.stdout.write(`  ${recus}/${aFaire.length} telecharges\r`);
+      }
+    }),
+  );
   console.log(`  ${recus}/${aFaire.length} telecharges`);
 
   for (const n of aFaire) {
     const { numero, langue, nom } = n;
     const pdf = join(dossier, `${nom}.pdf`);
-    if (!n.recu) { echecs.push([nom, "telechargement"]); continue; }
+    if (!n.recu) {
+      echecs.push([nom, "telechargement"]);
+      continue;
+    }
     let texte;
     try {
       texte = nettoyerTexte(await texteDuPdf(pdf));
@@ -292,7 +317,10 @@ async function main() {
       echecs.push([nom, `extraction : ${e.message.slice(0, 40)}`]);
       continue;
     }
-    if (texte.trim().length < TEXTE_MINIMUM) { echecs.push([nom, "PDF sans texte (numerise)"]); continue; }
+    if (texte.trim().length < TEXTE_MINIMUM) {
+      echecs.push([nom, "PDF sans texte (numerise)"]);
+      continue;
+    }
     const famille = FAMILLES[n.type_document];
     let annee = n.annee ?? anneeDeduite(texte);
     let numeroRetenu = numero;
@@ -306,7 +334,10 @@ async function main() {
       numeroRetenu = String(Number(entete.numero));
       annee = entete.annee;
     }
-    if (!annee) { echecs.push([nom, "millesime introuvable"]); continue; }
+    if (!annee) {
+      echecs.push([nom, "millesime introuvable"]);
+      continue;
+    }
     retenues.push({
       corpus: famille.corpus({ ...n, annee }),
       source: famille.source,
@@ -333,17 +364,26 @@ async function main() {
 
   console.log(`\ntextes exploitables : ${retenues.length}`);
   if (redressees.length) {
-    console.log(`identites redressees sur l'en-tete (${redressees.length}) : ${redressees.join(", ")}`);
+    console.log(
+      `identites redressees sur l'en-tete (${redressees.length}) : ${redressees.join(", ")}`,
+    );
   }
   if (brouillees.length) {
-    console.log(`chiffres brouilles par le PDF (${brouillees.length}), passees en « incertain » : ${brouillees.join(", ")}`);
+    console.log(
+      `chiffres brouilles par le PDF (${brouillees.length}), passees en « incertain » : ${brouillees.join(", ")}`,
+    );
   }
   if (echecs.length) {
     const motifs = new Map();
     for (const [, m] of echecs) motifs.set(m, (motifs.get(m) ?? 0) + 1);
-    console.log(`ecartees (${echecs.length}) : ${[...motifs].map(([m, c]) => `${m} x${c}`).join(", ")}`);
+    console.log(
+      `ecartees (${echecs.length}) : ${[...motifs].map(([m, c]) => `${m} x${c}`).join(", ")}`,
+    );
   }
-  if (sec) { await client.end(); return; }
+  if (sec) {
+    await client.end();
+    return;
+  }
 
   await client.query("begin");
   // On ne touche qu'aux notes communes.
@@ -423,10 +463,16 @@ async function main() {
             jort_reference)
          values ($1, $2, $3, $4, $5, $6, $7, make_date($8,1,1), null, $10, $8, $8, $9)`,
         [
-          articleId, i + 1,
+          articleId,
+          i + 1,
           v.langue === "ar" ? null : v.texte,
           v.langue === "ar" ? v.texte : null,
-          v.langue, v.sha, v.url, v.annee, v.publication, v.confiance,
+          v.langue,
+          v.sha,
+          v.url,
+          v.annee,
+          v.publication,
+          v.confiance,
         ],
       );
       ecrites += 1;

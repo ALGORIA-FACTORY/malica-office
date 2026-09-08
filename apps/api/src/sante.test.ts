@@ -18,7 +18,7 @@ describe("la sonde profonde", { skip: !BASE_CONFIGUREE }, () => {
   let arret: (() => Promise<void>) | null = null;
 
   before(async () => {
-    racineEssai = await mkdtemp(path.join(tmpdir(), "regalica-sante-"));
+    racineEssai = await mkdtemp(path.join(tmpdir(), "malica-sante-"));
     process.env["STOCKAGE_RACINE"] = racineEssai;
     const { app } = await import("./app.ts");
     const serveur = app.listen(0);
@@ -53,7 +53,7 @@ describe("la sonde profonde", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("reste gratuite : aucune identité n'est exigée", async () => {
-    const r = await fetch(`${base}/sante/profonde`, { headers: { "X-Regalica-Client": "web/x" } });
+    const r = await fetch(`${base}/sante/profonde`, { headers: { "X-Malica-Client": "web/x" } });
     assert.equal(r.status, 200);
   });
 });

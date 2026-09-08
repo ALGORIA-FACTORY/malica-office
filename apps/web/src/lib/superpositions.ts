@@ -3,7 +3,7 @@
  *
  * ============================================================== POURQUOI
  *
- * Le fil de Regalica, la visionneuse, le détail des lignes, le scanner, une
+ * Le fil de Malica, la visionneuse, le détail des lignes, le scanner, une
  * confirmation : autant d'écrans plein écran qui sont de l'ÉTAT local, pas des
  * routes. Le bouton retour d'Android ne les voit pas — il traverse tout et
  * sort de la pièce, alors que la personne voulait seulement fermer ce qu'elle

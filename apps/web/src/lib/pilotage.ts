@@ -5,7 +5,7 @@
  * un réglage, la moyenne est celle des données.
  */
 import type { MessageKey } from "@/i18n";
-import type { ClientStats } from "@regalica/socle/ports/repositories";
+import type { ClientStats } from "@malica/socle/ports/repositories";
 
 /** L'état d'un collaborateur, déduit de sa charge et de la capacité réglée par le cabinet. */
 export function etatDeCharge(dossiers: number, capacite: number): MessageKey {
