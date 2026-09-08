@@ -150,6 +150,10 @@ jobs:
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
       STOCKAGE_RACINE: /tmp/malica-pieces
+      # Le jeu de données ouvre une session par compte, à la file, depuis une
+      # seule adresse : la limite de trente connexions par minute — faite pour
+      # freiner une devinette de mot de passe — le refusait (429).
+      AUTH_ESSAIS_PAR_MINUTE: "1000"
       CORS_ORIGINS: http://localhost:8080
 
     steps:
