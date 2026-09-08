@@ -33,6 +33,7 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
   let cookie = "";
   let reussites = 0;
   let echecs = 0;
+  let sansObjets = 0;
   console.log(`\nÉpreuve — ${nom} — ${BASE}\n`);
 
   async function appel(chemin, opts = {}) {
@@ -102,8 +103,20 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
     console.log(`\n${titre}`);
   }
 
+  /**
+   * Ce qui ne peut pas se jouer ici — et le dit. Une épreuve qui a besoin
+   * d'une donnée absente de cette instance (le corpus réglementaire, par
+   * exemple) ne réussit pas en silence et n'échoue pas à tort : elle nomme ce
+   * qui manque, et le bilan le compte à part.
+   */
+  function sansObjet(libelle, raison) {
+    sansObjets += 1;
+    console.log(`  —     ${libelle}  — sans objet : ${raison}`);
+  }
+
   function conclure() {
-    console.log(`\n${reussites} réussites · ${echecs} échecs\n`);
+    const aPart = sansObjets > 0 ? ` · ${sansObjets} sans objet` : "";
+    console.log(`\n${reussites} réussites · ${echecs} échecs${aPart}\n`);
     if (echecs > 0) process.exit(1);
   }
 
@@ -115,6 +128,7 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
     connecter,
     inscrireOuConnecter,
     verdict,
+    sansObjet,
     section,
     conclure,
   };

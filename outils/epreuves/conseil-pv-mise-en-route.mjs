@@ -164,301 +164,318 @@ e.verdict(
 );
 
 /* ================================================================= CONSEIL */
+/*
+ * Le conseil cite un article réel : il lui faut le corpus réglementaire, que
+ * charge `db/corpus/charger.ps1` sur le poste et sur le staging. Une base
+ * montée des seules migrations (la CI) n'en a pas : ces sections se déclarent
+ * alors sans objet, et le PV, qui n'en dépend pas, se joue quand même.
+ */
 e.section("Le conseil — un article réel, lu dans le corpus");
 const veille = await e.rpc("conseil", "veille", [cabinet.jurisdiction]);
-e.verdict(
-  "la veille rend des éditions du corpus",
-  Array.isArray(veille) && veille.length > 0,
-  `${veille.length} édition(s)`,
-);
-const editionTva =
-  veille.find((v) => v.corpus === "CTVA") ?? veille.find((v) => v.famille === "code") ?? veille[0];
-const noms = await e.rpc("conseil", "nomsDesCorpus", [[editionTva.corpus]]);
-const nomDuCorpus = noms[editionTva.corpus] ?? editionTva.corpus;
-e.verdict("le corpus a un nom lisible", Boolean(noms[editionTva.corpus]), nomDuCorpus);
-
-// Un paramètre du référentiel cite son article : c'est un article que le
-// corpus porte, pas un numéro écrit ici. On le confirme par ses éditions —
-// de préférence dans le code que la veille vient de montrer.
-const parametres = await e.rpc("corpus", "parametresPour", [
-  { jurisdiction: cabinet.jurisdiction, mots: ["taux", "valeur", "ajoutee"], nb: 40 },
-]);
-const dAbordLaVeille = (a, b) =>
-  Number(b.corpus === editionTva.corpus) - Number(a.corpus === editionTva.corpus);
-let article = null;
-for (const p of [...parametres].sort(dAbordLaVeille)) {
-  const m =
-    /article\s+(\d+(?:\s*(?:bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies))?)/i.exec(
-      p.article ?? "",
-    );
-  if (!m || p.confiance !== "confirme") continue;
-  const editions = await e.rpc("corpus", "editionsPlusRecentes", [
-    [{ corpus: p.corpus, numero: m[1], validFrom: "1900-01-01" }],
-  ]);
-  const edition = editions[0];
-  if (!edition) continue;
-  article = {
-    corpus: p.corpus,
-    numero: edition.numero,
-    validFrom: edition.validFrom,
-    validTo: null,
-    langue: edition.langue,
-  };
-  break;
-}
-e.verdict(
-  "un article cité par le référentiel existe dans le corpus, avec son édition",
-  article !== null,
-  article
-    ? `${article.corpus} art. ${article.numero} · depuis ${article.validFrom} (${article.langue})`
-    : "aucun",
-);
-if (!article) e.conclure();
-const nomsCites = await e.rpc("conseil", "nomsDesCorpus", [[article.corpus]]);
-const nomDeLaSource = `${nomsCites[article.corpus] ?? article.corpus} art. ${article.numero}`;
-
-e.section("Le conseil — le contexte du dossier");
-const contexte = await e.rpc("conseil", "contexte", [pme.id]);
-e.verdict(
-  "le dossier connaît son cabinet mandaté",
-  contexte.cabinetId === cabinet.id,
-  contexte.cabinetNom ?? "aucun",
-);
-e.verdict(
-  "le seuil lu pour le dossier est celui du cabinet",
-  contexte.seuil === reglages.seuilCertitudeConseil,
-);
-e.verdict(
-  "l'appelant est membre du dossier : c'est un client qui parle",
-  contexte.appelantMembre === true,
-);
-
-/** Un fil du client, avec sa question rangée, puis l'arbitrage qui s'y rattache. */
-async function poserUnArbitrage({ question, reponse, theme, doute, certitude, statut }) {
-  const { id: conversationId } = await e.rpc("conversations", "ouvrirNouvelle", [pme.id]);
-  await e.rpc("conversations", "ajouter", [
-    {
-      conversationId,
-      question,
-      reponse: "Votre comptable relit ma réponse avant qu'elle ne vous parvienne.",
-      model: null,
-    },
-  ]);
-  const cree = await e.rpc("conseil", "creer", [
-    {
-      tenantId: pme.id,
-      conversationId,
-      question,
-      reponse,
-      sources: [article],
-      certitude,
-      doute,
-      canal: "conversation",
-      theme,
-      langue: "fr",
-      statut,
-    },
-  ]);
-  return { conversationId, ...cree };
+if (!Array.isArray(veille) || veille.length === 0) {
+  e.sansObjet("le conseil, du corpus à l'arbitrage", "aucune édition du corpus sur cette instance");
+} else {
+  await leConseil();
 }
 
-// En dessous du seuil du cabinet, la réponse se retient : la moitié du seuil
-// l'est à coup sûr, quel que soit le réglage.
-const certitudeRetenue = Math.round((reglages.seuilCertitudeConseil / 2) * 100) / 100;
+async function leConseil() {
+  e.verdict("la veille rend des éditions du corpus", true, `${veille.length} édition(s)`);
+  const editionTva =
+    veille.find((v) => v.corpus === "CTVA") ??
+    veille.find((v) => v.famille === "code") ??
+    veille[0];
+  const noms = await e.rpc("conseil", "nomsDesCorpus", [[editionTva.corpus]]);
+  const nomDuCorpus = noms[editionTva.corpus] ?? editionTva.corpus;
+  e.verdict("le corpus a un nom lisible", Boolean(noms[editionTva.corpus]), nomDuCorpus);
 
-e.section("Le conseil — un arbitrage en attente, lu dans la file, approuvé");
-const premier = await poserUnArbitrage({
-  question:
-    "Nous avons acheté une voiture de tourisme pour le gérant : peut-on récupérer la TVA sur cette facture ?",
-  reponse:
-    "Non. La TVA qui grève l'acquisition d'une voiture de tourisme n'ouvre pas droit à déduction lorsque le véhicule ne constitue pas l'objet principal de l'exploitation : la facture se comptabilise toutes taxes comprises.",
-  theme: "Déduction de TVA sur véhicule de tourisme",
-  doute:
-    "L'usage du véhicule n'est pas renseigné dans la fiche : un véhicule utilitaire changerait la réponse.",
-  certitude: certitudeRetenue,
-  statut: "en_attente",
-});
-e.verdict(
-  "l'arbitrage est créé pour le cabinet mandaté",
-  Boolean(premier.id) && premier.cabinetId === cabinet.id,
-);
-const enAttente = await e.rpc("conseil", "file", [cabinet.id, "en_attente"]);
-e.verdict(
-  "il attend dans la file du cabinet",
-  enAttente.some((a) => a.id === premier.id),
-);
-const lu = await e.rpc("conseil", "lire", [premier.id]);
-e.verdict(
-  "lu, il porte la question, la source et le demandeur",
-  lu?.statut === "en_attente" &&
-    lu.sources[0]?.numero === article.numero &&
-    lu.demandeur === moi.email,
-  lu?.demandeur ?? "",
-);
-e.verdict(
-  "il retrouve le message de la question dans le fil",
-  lu?.conversationId === premier.conversationId && lu.messageId !== null,
-);
-e.verdict(
-  "sa certitude est sous le seuil : c'est pourquoi il attend",
-  lu !== null && lu.certitude < reglages.seuilCertitudeConseil,
-  `${lu?.certitude} < ${reglages.seuilCertitudeConseil}`,
-);
+  // Un paramètre du référentiel cite son article : c'est un article que le
+  // corpus porte, pas un numéro écrit ici. On le confirme par ses éditions —
+  // de préférence dans le code que la veille vient de montrer.
+  const parametres = await e.rpc("corpus", "parametresPour", [
+    { jurisdiction: cabinet.jurisdiction, mots: ["taux", "valeur", "ajoutee"], nb: 40 },
+  ]);
+  const dAbordLaVeille = (a, b) =>
+    Number(b.corpus === editionTva.corpus) - Number(a.corpus === editionTva.corpus);
+  let article = null;
+  for (const p of [...parametres].sort(dAbordLaVeille)) {
+    const m =
+      /article\s+(\d+(?:\s*(?:bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies))?)/i.exec(
+        p.article ?? "",
+      );
+    if (!m || p.confiance !== "confirme") continue;
+    const editions = await e.rpc("corpus", "editionsPlusRecentes", [
+      [{ corpus: p.corpus, numero: m[1], validFrom: "1900-01-01" }],
+    ]);
+    const edition = editions[0];
+    if (!edition) continue;
+    article = {
+      corpus: p.corpus,
+      numero: edition.numero,
+      validFrom: edition.validFrom,
+      validTo: null,
+      langue: edition.langue,
+    };
+    break;
+  }
+  e.verdict(
+    "un article cité par le référentiel existe dans le corpus, avec son édition",
+    article !== null,
+    article
+      ? `${article.corpus} art. ${article.numero} · depuis ${article.validFrom} (${article.langue})`
+      : "aucun",
+  );
+  if (!article) {
+    e.conclure();
+    return;
+  }
+  const nomsCites = await e.rpc("conseil", "nomsDesCorpus", [[article.corpus]]);
+  const nomDeLaSource = `${nomsCites[article.corpus] ?? article.corpus} art. ${article.numero}`;
 
-const messageApprouve = [
-  lu.reponseProposee,
-  `Sources : ${nomDeLaSource}`,
-  "Relu et validé par votre comptable.",
-].join("\n\n");
-const approuve = await e.rpc("conseil", "decider", [
-  premier.id,
-  "approuvee",
-  null,
-  null,
-  messageApprouve,
-]);
-e.verdict(
-  "le pouce levé change le statut, daté",
-  approuve.statut === "approuvee" && approuve.decideLe !== null,
-);
-const filApprouve = await e.rpc("conversations", "ouvrir", [premier.conversationId]);
-const dernierApprouve = filApprouve[filApprouve.length - 1];
-e.verdict(
-  "la réponse relue arrive dans le fil du client, signée Malica",
-  dernierApprouve?.role === "assistant" && dernierApprouve.contenu === messageApprouve,
-  `${filApprouve.length} message(s)`,
-);
-const deuxFois = await e.rpcAttenduEnEchec("conseil", "decider", [
-  premier.id,
-  "ecartee",
-  null,
-  null,
-  null,
-]);
-e.verdict("un arbitrage ne se décide pas deux fois", deuxFois !== null);
+  e.section("Le conseil — le contexte du dossier");
+  const contexte = await e.rpc("conseil", "contexte", [pme.id]);
+  e.verdict(
+    "le dossier connaît son cabinet mandaté",
+    contexte.cabinetId === cabinet.id,
+    contexte.cabinetNom ?? "aucun",
+  );
+  e.verdict(
+    "le seuil lu pour le dossier est celui du cabinet",
+    contexte.seuil === reglages.seuilCertitudeConseil,
+  );
+  e.verdict(
+    "l'appelant est membre du dossier : c'est un client qui parle",
+    contexte.appelantMembre === true,
+  );
 
-e.section("Le conseil — un arbitrage corrigé, avec réponse et article");
-const deuxieme = await poserUnArbitrage({
-  question:
-    "Un fournisseur français nous facture une prestation de conseil : devons-nous retenir quelque chose sur le paiement ?",
-  reponse:
-    "Une retenue à la source s'applique aux rémunérations versées à un prestataire non résident, sous réserve de la convention entre la Tunisie et la France, qui peut en limiter le taux.",
-  theme: "Retenue à la source sur prestataire non résident",
-  doute:
-    "Le certificat de résidence fiscale du prestataire n'est pas au dossier ; sans lui, le droit commun s'applique.",
-  certitude: certitudeRetenue,
-  statut: "en_attente",
-});
-const reponseDuCabinet =
-  "Oui : sans certificat de résidence fiscale du prestataire, la retenue de droit commun s'applique sur le montant hors TVA. Envoyez-nous la facture avant tout paiement, nous établissons la retenue et la déclaration qui va avec.";
-const articleDuCabinet = `${nomsCites[article.corpus] ?? article.corpus}, art. ${article.numero}`;
-const messageCorrige = [
-  "Votre comptable a relu ma réponse et la corrige :",
-  reponseDuCabinet,
-  `Fondement : ${articleDuCabinet}`,
-].join("\n\n");
-const corrige = await e.rpc("conseil", "decider", [
-  deuxieme.id,
-  "corrigee",
-  reponseDuCabinet,
-  articleDuCabinet,
-  messageCorrige,
-]);
-e.verdict(
-  "la correction garde la réponse et l'article du cabinet",
-  corrige.statut === "corrigee" &&
-    corrige.reponseCabinet === reponseDuCabinet &&
-    corrige.articleCabinet === articleDuCabinet,
-);
-const filCorrige = await e.rpc("conversations", "ouvrir", [deuxieme.conversationId]);
-const dernierCorrige = filCorrige[filCorrige.length - 1];
-e.verdict(
-  "la correction arrive dans le fil du client",
-  dernierCorrige?.role === "assistant" && dernierCorrige.contenu === messageCorrige,
-);
-const sansReponse = await e.rpcAttenduEnEchec("conseil", "decider", [
-  premier.id,
-  "corrigee",
-  "   ",
-  null,
-  null,
-]);
-e.verdict("une correction sans réponse est refusée", sansReponse !== null);
+  /** Un fil du client, avec sa question rangée, puis l'arbitrage qui s'y rattache. */
+  async function poserUnArbitrage({ question, reponse, theme, doute, certitude, statut }) {
+    const { id: conversationId } = await e.rpc("conversations", "ouvrirNouvelle", [pme.id]);
+    await e.rpc("conversations", "ajouter", [
+      {
+        conversationId,
+        question,
+        reponse: "Votre comptable relit ma réponse avant qu'elle ne vous parvienne.",
+        model: null,
+      },
+    ]);
+    const cree = await e.rpc("conseil", "creer", [
+      {
+        tenantId: pme.id,
+        conversationId,
+        question,
+        reponse,
+        sources: [article],
+        certitude,
+        doute,
+        canal: "conversation",
+        theme,
+        langue: "fr",
+        statut,
+      },
+    ]);
+    return { conversationId, ...cree };
+  }
 
-e.section("Le conseil — un arbitrage écarté");
-const troisieme = await poserUnArbitrage({
-  question: "Peut-on passer le mariage de ma fille en frais de réception de la société ?",
-  reponse:
-    "Non : une dépense sans lien avec l'exploitation n'est pas déductible, et elle serait regardée comme un avantage accordé au dirigeant.",
-  theme: "Dépense personnelle du dirigeant",
-  doute:
-    "La question touche à la situation personnelle du dirigeant : elle se traite de vive voix.",
-  certitude: certitudeRetenue,
-  statut: "en_attente",
-});
-const messageEcarte = "Votre comptable préfère en parler avec vous de vive voix.";
-const ecarte = await e.rpc("conseil", "decider", [
-  troisieme.id,
-  "ecartee",
-  null,
-  null,
-  messageEcarte,
-]);
-e.verdict(
-  "l'arbitrage est écarté, sans réponse du cabinet",
-  ecarte.statut === "ecartee" && ecarte.reponseCabinet === null,
-);
-const filEcarte = await e.rpc("conversations", "ouvrir", [troisieme.conversationId]);
-e.verdict(
-  "le client lit qu'on lui en parlera",
-  filEcarte[filEcarte.length - 1]?.contenu === messageEcarte,
-);
+  // En dessous du seuil du cabinet, la réponse se retient : la moitié du seuil
+  // l'est à coup sûr, quel que soit le réglage.
+  const certitudeRetenue = Math.round((reglages.seuilCertitudeConseil / 2) * 100) / 100;
 
-e.section("Le conseil — les statistiques et le seuil");
-const stats = await e.rpc("conseil", "statistiques", [cabinet.id]);
-e.verdict(
-  "les totaux comptent l'approuvé, le corrigé et l'écarté",
-  stats.totaux.approuvees >= 1 && stats.totaux.corrigees >= 1 && stats.totaux.ecartees >= 1,
-  `${stats.totaux.approuvees} / ${stats.totaux.corrigees} / ${stats.totaux.ecartees} · ${stats.totaux.enAttente} en attente`,
-);
-const ligne = stats.parClient.find((c) => c.tenantId === pme.id);
-e.verdict(
-  "la PME a sa ligne, avec au moins trois questions et son dernier sujet",
-  Boolean(ligne) &&
-    ligne.questions >= 3 &&
-    ligne.client === PME.name &&
-    ligne.dernierSujet === "Dépense personnelle du dirigeant",
-  ligne ? `${ligne.questions} question(s)` : "aucune ligne",
-);
-e.verdict(
-  "les sujets qui reviennent comptent ceux posés",
-  stats.sujets.some(
-    (s) => s.theme === "Déduction de TVA sur véhicule de tourisme" && s.questions >= 1,
-  ),
-);
-const toute = await e.rpc("conseil", "file", [cabinet.id]);
-e.verdict(
-  "la file complète rend ce qui attend d'abord",
-  toute.length >= 3 &&
-    toute.findIndex((a) => a.statut !== "en_attente") >=
-      toute.filter((a) => a.statut === "en_attente").length,
-  `${toute.length} arbitrage(s)`,
-);
-const notifsConseil = await e.rpc("collab", "notifications", [[pme.id]]);
-e.verdict(
-  "le dossier a été notifié de la remise, puis de la décision",
-  notifsConseil.some(
-    (n) => n.kind === "conseil.arbitrage" && n.payload?.arbitrage_id === premier.id,
-  ) &&
-    notifsConseil.some(
-      (n) =>
-        n.kind === "conseil.decide" &&
-        n.payload?.arbitrage_id === premier.id &&
-        n.payload?.decision === "approuvee",
+  e.section("Le conseil — un arbitrage en attente, lu dans la file, approuvé");
+  const premier = await poserUnArbitrage({
+    question:
+      "Nous avons acheté une voiture de tourisme pour le gérant : peut-on récupérer la TVA sur cette facture ?",
+    reponse:
+      "Non. La TVA qui grève l'acquisition d'une voiture de tourisme n'ouvre pas droit à déduction lorsque le véhicule ne constitue pas l'objet principal de l'exploitation : la facture se comptabilise toutes taxes comprises.",
+    theme: "Déduction de TVA sur véhicule de tourisme",
+    doute:
+      "L'usage du véhicule n'est pas renseigné dans la fiche : un véhicule utilitaire changerait la réponse.",
+    certitude: certitudeRetenue,
+    statut: "en_attente",
+  });
+  e.verdict(
+    "l'arbitrage est créé pour le cabinet mandaté",
+    Boolean(premier.id) && premier.cabinetId === cabinet.id,
+  );
+  const enAttente = await e.rpc("conseil", "file", [cabinet.id, "en_attente"]);
+  e.verdict(
+    "il attend dans la file du cabinet",
+    enAttente.some((a) => a.id === premier.id),
+  );
+  const lu = await e.rpc("conseil", "lire", [premier.id]);
+  e.verdict(
+    "lu, il porte la question, la source et le demandeur",
+    lu?.statut === "en_attente" &&
+      lu.sources[0]?.numero === article.numero &&
+      lu.demandeur === moi.email,
+    lu?.demandeur ?? "",
+  );
+  e.verdict(
+    "il retrouve le message de la question dans le fil",
+    lu?.conversationId === premier.conversationId && lu.messageId !== null,
+  );
+  e.verdict(
+    "sa certitude est sous le seuil : c'est pourquoi il attend",
+    lu !== null && lu.certitude < reglages.seuilCertitudeConseil,
+    `${lu?.certitude} < ${reglages.seuilCertitudeConseil}`,
+  );
+
+  const messageApprouve = [
+    lu.reponseProposee,
+    `Sources : ${nomDeLaSource}`,
+    "Relu et validé par votre comptable.",
+  ].join("\n\n");
+  const approuve = await e.rpc("conseil", "decider", [
+    premier.id,
+    "approuvee",
+    null,
+    null,
+    messageApprouve,
+  ]);
+  e.verdict(
+    "le pouce levé change le statut, daté",
+    approuve.statut === "approuvee" && approuve.decideLe !== null,
+  );
+  const filApprouve = await e.rpc("conversations", "ouvrir", [premier.conversationId]);
+  const dernierApprouve = filApprouve[filApprouve.length - 1];
+  e.verdict(
+    "la réponse relue arrive dans le fil du client, signée Malica",
+    dernierApprouve?.role === "assistant" && dernierApprouve.contenu === messageApprouve,
+    `${filApprouve.length} message(s)`,
+  );
+  const deuxFois = await e.rpcAttenduEnEchec("conseil", "decider", [
+    premier.id,
+    "ecartee",
+    null,
+    null,
+    null,
+  ]);
+  e.verdict("un arbitrage ne se décide pas deux fois", deuxFois !== null);
+
+  e.section("Le conseil — un arbitrage corrigé, avec réponse et article");
+  const deuxieme = await poserUnArbitrage({
+    question:
+      "Un fournisseur français nous facture une prestation de conseil : devons-nous retenir quelque chose sur le paiement ?",
+    reponse:
+      "Une retenue à la source s'applique aux rémunérations versées à un prestataire non résident, sous réserve de la convention entre la Tunisie et la France, qui peut en limiter le taux.",
+    theme: "Retenue à la source sur prestataire non résident",
+    doute:
+      "Le certificat de résidence fiscale du prestataire n'est pas au dossier ; sans lui, le droit commun s'applique.",
+    certitude: certitudeRetenue,
+    statut: "en_attente",
+  });
+  const reponseDuCabinet =
+    "Oui : sans certificat de résidence fiscale du prestataire, la retenue de droit commun s'applique sur le montant hors TVA. Envoyez-nous la facture avant tout paiement, nous établissons la retenue et la déclaration qui va avec.";
+  const articleDuCabinet = `${nomsCites[article.corpus] ?? article.corpus}, art. ${article.numero}`;
+  const messageCorrige = [
+    "Votre comptable a relu ma réponse et la corrige :",
+    reponseDuCabinet,
+    `Fondement : ${articleDuCabinet}`,
+  ].join("\n\n");
+  const corrige = await e.rpc("conseil", "decider", [
+    deuxieme.id,
+    "corrigee",
+    reponseDuCabinet,
+    articleDuCabinet,
+    messageCorrige,
+  ]);
+  e.verdict(
+    "la correction garde la réponse et l'article du cabinet",
+    corrige.statut === "corrigee" &&
+      corrige.reponseCabinet === reponseDuCabinet &&
+      corrige.articleCabinet === articleDuCabinet,
+  );
+  const filCorrige = await e.rpc("conversations", "ouvrir", [deuxieme.conversationId]);
+  const dernierCorrige = filCorrige[filCorrige.length - 1];
+  e.verdict(
+    "la correction arrive dans le fil du client",
+    dernierCorrige?.role === "assistant" && dernierCorrige.contenu === messageCorrige,
+  );
+  const sansReponse = await e.rpcAttenduEnEchec("conseil", "decider", [
+    premier.id,
+    "corrigee",
+    "   ",
+    null,
+    null,
+  ]);
+  e.verdict("une correction sans réponse est refusée", sansReponse !== null);
+
+  e.section("Le conseil — un arbitrage écarté");
+  const troisieme = await poserUnArbitrage({
+    question: "Peut-on passer le mariage de ma fille en frais de réception de la société ?",
+    reponse:
+      "Non : une dépense sans lien avec l'exploitation n'est pas déductible, et elle serait regardée comme un avantage accordé au dirigeant.",
+    theme: "Dépense personnelle du dirigeant",
+    doute:
+      "La question touche à la situation personnelle du dirigeant : elle se traite de vive voix.",
+    certitude: certitudeRetenue,
+    statut: "en_attente",
+  });
+  const messageEcarte = "Votre comptable préfère en parler avec vous de vive voix.";
+  const ecarte = await e.rpc("conseil", "decider", [
+    troisieme.id,
+    "ecartee",
+    null,
+    null,
+    messageEcarte,
+  ]);
+  e.verdict(
+    "l'arbitrage est écarté, sans réponse du cabinet",
+    ecarte.statut === "ecartee" && ecarte.reponseCabinet === null,
+  );
+  const filEcarte = await e.rpc("conversations", "ouvrir", [troisieme.conversationId]);
+  e.verdict(
+    "le client lit qu'on lui en parlera",
+    filEcarte[filEcarte.length - 1]?.contenu === messageEcarte,
+  );
+
+  e.section("Le conseil — les statistiques et le seuil");
+  const stats = await e.rpc("conseil", "statistiques", [cabinet.id]);
+  e.verdict(
+    "les totaux comptent l'approuvé, le corrigé et l'écarté",
+    stats.totaux.approuvees >= 1 && stats.totaux.corrigees >= 1 && stats.totaux.ecartees >= 1,
+    `${stats.totaux.approuvees} / ${stats.totaux.corrigees} / ${stats.totaux.ecartees} · ${stats.totaux.enAttente} en attente`,
+  );
+  const ligne = stats.parClient.find((c) => c.tenantId === pme.id);
+  e.verdict(
+    "la PME a sa ligne, avec au moins trois questions et son dernier sujet",
+    Boolean(ligne) &&
+      ligne.questions >= 3 &&
+      ligne.client === PME.name &&
+      ligne.dernierSujet === "Dépense personnelle du dirigeant",
+    ligne ? `${ligne.questions} question(s)` : "aucune ligne",
+  );
+  e.verdict(
+    "les sujets qui reviennent comptent ceux posés",
+    stats.sujets.some(
+      (s) => s.theme === "Déduction de TVA sur véhicule de tourisme" && s.questions >= 1,
     ),
-);
+  );
+  const toute = await e.rpc("conseil", "file", [cabinet.id]);
+  e.verdict(
+    "la file complète rend ce qui attend d'abord",
+    toute.length >= 3 &&
+      toute.findIndex((a) => a.statut !== "en_attente") >=
+        toute.filter((a) => a.statut === "en_attente").length,
+    `${toute.length} arbitrage(s)`,
+  );
+  const notifsConseil = await e.rpc("collab", "notifications", [[pme.id]]);
+  e.verdict(
+    "le dossier a été notifié de la remise, puis de la décision",
+    notifsConseil.some(
+      (n) => n.kind === "conseil.arbitrage" && n.payload?.arbitrage_id === premier.id,
+    ) &&
+      notifsConseil.some(
+        (n) =>
+          n.kind === "conseil.decide" &&
+          n.payload?.arbitrage_id === premier.id &&
+          n.payload?.decision === "approuvee",
+      ),
+  );
 
-/* ================================================================= LE PV */
+  /* ================================================================= LE PV */
+}
+
+/* ====================================================================== PV */
 e.section("Le PV — un brouillon, ses sections, aucun chiffre");
 const pvId = await e.rpc("collab", "addPv", [
   {
