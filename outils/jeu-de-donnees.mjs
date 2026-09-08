@@ -1475,8 +1475,15 @@ if (PMES.sotumag.id) {
       );
       if (!avisId) continue;
       const reglement = await etape(`règlement ${piece.reference}`, async () => {
-        const existantes = await rpc("office", "ecrituresForPiece", [avisId]);
-        const gravee = existantes.find((x) => x.status === "booked");
+        /*
+         * L'écriture de banque est portée par la FACTURE, pas par l'avis : dans
+         * le vocabulaire (ref.document_types), seules les factures portent une
+         * écriture — un avis ou un relevé de banque sert au rapprochement, et
+         * le verrou R2 refuserait une écriture qui s'y adosse. L'avis reste
+         * déposé dans le dossier, comme pièce justificative.
+         */
+        const existantes = await rpc("office", "ecrituresForPiece", [facturee.pieceId]);
+        const gravee = existantes.find((x) => x.status === "booked" && x.journal === "BQ");
         if (gravee) return { id: gravee.id, detail: "déjà comptabilisé" };
         const lignesBq = achat
           ? [
@@ -1513,7 +1520,7 @@ if (PMES.sotumag.id) {
             ];
         const id = await rpc("office", "propose", [
           {
-            pieceId: avisId,
+            pieceId: facturee.pieceId,
             journal: "BQ",
             date: dateReglement,
             libelle: `${achat ? "Règlement fournisseur" : "Encaissement client"} — ${piece.issuer} — Réf. ${piece.reference} du ${enJour(dateReglement)}`,
