@@ -222,5 +222,7 @@ jobs:
         if: failure()
         with:
           name: playwright
-          path: apps/web/e2e/sortie
+          path: |
+            apps/web/e2e/sortie
+            apps/web/e2e/sortie-rapport
           retention-days: 7

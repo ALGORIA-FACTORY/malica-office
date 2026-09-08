@@ -29,7 +29,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: process.env["CI"]
-    ? [["list"], ["html", { open: "never", outputFolder: `${SORTIE}/rapport` }]]
+    ? // Le rapport à côté des sorties, jamais dedans : Playwright refuse de
+      // ranger le rapport dans le dossier qu'il vide à chaque campagne.
+      [["list"], ["html", { open: "never", outputFolder: `${SORTIE}-rapport` }]]
     : "list",
   use: {
     baseURL: BASE,

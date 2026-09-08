@@ -73,3 +73,4 @@ android/app/src/main/assets/capacitor.plugins.json
 
 # Les sorties de Playwright : traces, captures, rapport.
 apps/web/e2e/sortie/
+apps/web/e2e/sortie-rapport/
