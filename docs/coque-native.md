@@ -156,8 +156,9 @@ chemins natifs s'exécutent, et la console dit ce qui casse.
 4. **Google Play, la suite** — la fiche du magasin : les captures d'écran
    sont de VRAIES captures de l'application qui tourne, produites par
    `node outils/captures.mjs` (téléphone en français et en arabe, tablettes
-   7 et 10 pouces sur le cabinet) dans `android/play/` ; l'icône et la
-   bannière y sont des fichiers dessinés, on ne les régénère pas. Le
+   7 et 10 pouces sur le cabinet) dans `android/play/` ; l'icône y est un
+   fichier dessiné ; la bannière sort de `node outils/banniere.mjs` (le sigle
+   de l'application et son nom, même police). Le
    téléversement se fait depuis le Chrome de l'utilisateur (l'extension y
    dépose les fichiers) ; la piste de test fermé « Pilote » avec le cabinet
    et les PME, qui déclenche la première revue ; un projet Sentry.

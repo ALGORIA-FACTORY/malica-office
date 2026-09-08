@@ -19,6 +19,7 @@
     "dev:telephone": "node outils/dev-telephone.mjs",
     "certificat": "node outils/certificat-local.mjs",
     "captures": "node outils/captures.mjs",
+    "banniere": "node outils/banniere.mjs",
     "epreuve:bout-en-bout": "node outils/epreuve-bout-en-bout.mjs",
     "verifier": "node outils/verifier.mjs",
     "code-mort": "knip",
