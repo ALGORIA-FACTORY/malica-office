@@ -371,6 +371,9 @@ function PieceScreen() {
     }
   }, [dossier.data, refs.data, pieceId, pme.currency, dateRetenue, t]);
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
+  // Le payload dont la proposition est tirée : la lecture, complétée de la
+  // précision de la personne si la lecture n'avait pas su.
+  const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
 
   const booked = (ecritures.data ?? []).find((e) => e.status === "booked");
 
@@ -386,6 +389,21 @@ function PieceScreen() {
       let ecritureId: string | null = null;
       if (proposal) {
         if (!pme.packId || !proposal.pivot.approvable) throw new Error(t("pme.confirm.review"));
+        /*
+         * Le « Oui » vaut pour tout ce qui est à l'écran, le sens de la pièce
+         * compris. Tant que le type n'a été que lu, la personne le confirme
+         * ici, avant l'écriture : c'est ce que le verrou R2 attend, et la
+         * précision reste datée et signée à côté de la lecture.
+         */
+        const pieceLue = dossier.data?.piece;
+        const type = (payloadDeLaProposition as { document_kind?: string } | null)?.document_kind;
+        if (
+          pieceLue &&
+          pieceLue.documentKindStatut !== "confirme" &&
+          (type === "facture_achat" || type === "facture_vente")
+        ) {
+          await office().capture.preciser(pieceId, "document_kind", type);
+        }
         ecritureId = await office().office.propose({
           pieceId,
           journal: proposal.journal,

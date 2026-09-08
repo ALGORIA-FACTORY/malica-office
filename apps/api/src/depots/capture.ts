@@ -40,6 +40,10 @@ function versPiece(r: Record<string, unknown>) {
     vis: r["vis"] as string,
     storagePath: r["storage_path"] as string,
     createdAt: r["created_at"] as string,
+    documentKind: (r["document_kind"] as string | null) ?? null,
+    documentKindStatut:
+      (r["document_kind_statut"] as "a_determiner" | "a_confirmer" | "confirme" | undefined) ??
+      "a_determiner",
   };
 }
 

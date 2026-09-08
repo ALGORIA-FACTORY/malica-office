@@ -54,6 +54,9 @@ function versPiece(p: Record<string, unknown>): Piece {
     vis: p["vis"] as "personnel" | "partage",
     storagePath: p["storagePath"] as string,
     createdAt: p["createdAt"] as string,
+    documentKind: (p["documentKind"] as string | null) ?? null,
+    documentKindStatut:
+      (p["documentKindStatut"] as Piece["documentKindStatut"] | undefined) ?? "a_determiner",
   };
 }
 

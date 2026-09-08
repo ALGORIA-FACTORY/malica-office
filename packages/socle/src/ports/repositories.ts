@@ -527,6 +527,14 @@ export interface Piece {
   vis: "personnel" | "partage";
   storagePath: string;
   createdAt: string;
+  /**
+   * Le type de la pièce (facture d'achat, de vente…) et ce qu'on en sait :
+   * lu par Malica (`a_confirmer`), tranché par une personne (`confirme`),
+   * ou encore inconnu. Le verrou R2 n'accepte une écriture que sur un type
+   * confirmé : l'écran confirme donc le type avec le « Oui » du dirigeant.
+   */
+  documentKind: string | null;
+  documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
 }
 
 export interface Token {
