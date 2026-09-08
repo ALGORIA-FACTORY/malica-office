@@ -235,6 +235,7 @@ async function assurerPiece(marque, source, reference) {
   );
   let ecritureId = dansLaFile?.ecritureId ?? null;
   if (!ecritureId) {
+    await e.confirmerLeType(piece.id, "facture_achat");
     ecritureId = await e.rpc("office", "propose", [
       {
         pieceId: piece.id,
@@ -426,6 +427,7 @@ const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
 /* ---- corriger : contre-passer puis réimputer, jamais modifier */
 {
   const avant = (await e.rpc("office", "ecrituresForPiece", [pieceB.id])).length;
+  await e.confirmerLeType(pieceB.id, "facture_achat");
   const id = await e.rpc("office", "propose", [
     {
       pieceId: pieceB.id,

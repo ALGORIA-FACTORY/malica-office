@@ -482,6 +482,9 @@ if (!ecriture) {
   const compteVentes = (await e.rpc("parametrage", "plan", [pmeA.id, [7]])).find(
     (c) => !c.collectif && c.code.startsWith("70") && c.code.length >= 3,
   );
+  // Une pièce jamais lue n'a pas de type : la personne le donne (une vente
+  // encaissée), sinon le verrou R2 refuse l'écriture.
+  await e.confirmerLeType(piece.id, "facture_vente");
   const id = await e.rpc("office", "propose", [
     {
       pieceId: piece.id,

@@ -92,6 +92,17 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
     return connecter(compte);
   }
 
+  /**
+   * Le verrou R2 : une personne confirme le type d'une pièce avant toute
+   * écriture. L'épreuve joue la personne — une fois : une pièce déjà
+   * confirmée, ou déjà engagée par une écriture, ne se précise plus.
+   */
+  async function confirmerLeType(pieceId, kind) {
+    const { piece } = await rpc("capture", "dossier", [pieceId]);
+    if (piece.documentKindStatut === "confirme") return;
+    await rpc("capture", "preciser", [pieceId, "document_kind", kind]);
+  }
+
   function verdict(libelle, ok, detail = "") {
     if (ok) reussites += 1;
     else echecs += 1;
@@ -127,6 +138,7 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
     rpcAttenduEnEchec,
     connecter,
     inscrireOuConnecter,
+    confirmerLeType,
     verdict,
     sansObjet,
     section,

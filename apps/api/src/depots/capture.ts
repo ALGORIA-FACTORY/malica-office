@@ -107,7 +107,8 @@ export const capture = {
 
   async lister(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at
+      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
+                document_kind, document_kind_statut
          from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
       [tenantId],
     );
@@ -171,7 +172,8 @@ export const capture = {
 
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
-      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at
+      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
+              document_kind, document_kind_statut
          from pieces_v where id = $1`,
       [pieceId],
     );
