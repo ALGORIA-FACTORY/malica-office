@@ -198,10 +198,16 @@ export interface OptionsSolveur {
    */
   decimales: number;
   /**
-   * Tolérance d'arrondi sur un produit, en unités mineures. L'arrondi au
-   * millime interdit l'égalité stricte : 2,5 × 7,549 fait 18,8725. Trop serrée,
-   * la tolérance rejette des factures justes ; trop lâche, elle valide des
-   * lectures fausses. Elle se calibre sur le banc, pas à l'intuition.
+   * Tolérance d'arrondi sur un produit, en unités mineures.
+   *
+   * Ce n'est pas un réglage, c'est la borne de l'arrondi : 2,5 × 7,549 fait
+   * 18,8725, et le papier porte 18,873 ou 18,872 selon le sens choisi par celui
+   * qui l'a imprimé. Une unité, jamais deux — d'où le défaut, qui ne dépend
+   * d'aucune juridiction.
+   *
+   * Elle reste un paramètre pour le jour où le banc montrera qu'une somme de n
+   * lignes déjà arrondies en demande n : cette valeur-là dépendra de la forme
+   * de la facture, donc de l'appelant, jamais de ce module.
    */
   tolerance?: number;
   /**

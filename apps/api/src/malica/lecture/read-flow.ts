@@ -23,6 +23,9 @@ import type { LectureDePiece } from "@malica/socle/ports/malica";
 interface ContexteLecture {
   piece: { id: string; tenantId: string; source: string; contentType: string | null };
   packId: string;
+  /** La devise du dossier et son échelle, toutes deux issues du pack. */
+  currency: string;
+  moneyDecimals: number;
   dossier: { raisonSociale: string; identifiantFiscal: string | null };
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
@@ -69,6 +72,9 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     // enregistré au lieu de le relire comme un inconnu à chaque facture.
     tiers: contexte.tiers,
     dossier: contexte.dossier,
+    // La devise du dossier : elle sert quand la pièce n'en imprime aucune.
+    // Sans elle, une facture muette devenait tunisienne par défaut.
+    devise: contexte.currency,
     taxCodes: contexte.taxCodes.map((r) => ({
       code: r.code,
       label: r.label,
@@ -81,7 +87,9 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
   const built = buildExtractFromTokenPlan({
     tokens: read.tokens,
     selection: read.selection,
-    decimals: 3,
+    // Trois décimales pour le dinar — mais dites par le pack, jamais écrites
+    // ici : le solveur des montants s'en sert pour décider de l'ambiguïté.
+    decimals: contexte.moneyDecimals,
   });
 
   // Projection des articles cités pour l'analyse par famille (PME).

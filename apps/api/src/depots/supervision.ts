@@ -86,8 +86,11 @@ export const supervision = {
           tenantId: r["pme_org_id"] as string,
           name: (r["name"] as string) ?? "—",
           legalId: (r["legal_id"] as string | null) ?? null,
-          jurisdiction: (r["jurisdiction"] as string) ?? "TN",
-          currency: (r["currency"] as string) ?? "TND",
+          // Les deux colonnes sont NOT NULL en base, et la jointure part du
+          // mandat : le repli ne pouvait rien sauver, seulement afficher
+          // « Tunisie, dinar » sur un dossier qui dirait autre chose.
+          jurisdiction: r["jurisdiction"] as string,
+          currency: r["currency"] as string,
           validationMode: (r["validation_mode"] as string) ?? "mandate",
           engagementStatus: r["status"] as string,
           mandatDepuis: (r["starts_on"] as string | null) ?? null,

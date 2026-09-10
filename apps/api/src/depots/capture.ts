@@ -25,6 +25,8 @@
 import type { Requete } from "../db.ts";
 import { effacerContenu } from "../stockage.ts";
 
+import { referentiel } from "./referentiel.ts";
+
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
 function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
@@ -273,7 +275,15 @@ export const capture = {
       [piece["tenant_id"] as string],
     );
     const org = (orgs as Record<string, unknown>[])[0];
-    const jurisdiction = (org?.["jurisdiction"] as string) ?? "TN";
+    // ============================== NI JURIDICTION NI DEVISE PAR DÉFAUT
+    //
+    // Un `?? "TN"` ici choisissait le pack tunisien pour un dossier dont la
+    // juridiction manque, et l'échelle du millime avec lui. R4, corollaire :
+    // un référentiel silencieusement faux produit un résultat plausible, et
+    // c'est la pire forme d'erreur. Les deux colonnes sont NOT NULL en base :
+    // si la ligne manque, c'est la pièce qui ne mène nulle part.
+    if (!org) throw new Error("organisation.introuvable");
+    const jurisdiction = org["jurisdiction"] as string;
 
     const { rows: packs } = await db.query(
       `select id from ref_packs_v
@@ -283,6 +293,11 @@ export const capture = {
     );
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
+
+    // L'échelle de la devise vient du pack, pas du code. La lecture des
+    // montants s'en sert pour décider si un texte est ambigu : « 2.800 » se lit
+    // de deux façons à trois décimales, d'une seule à deux.
+    const { moneyDecimals } = await referentiel.socleParams(db, packId);
 
     const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
@@ -309,10 +324,11 @@ export const capture = {
         contentType: (piece["content_type"] as string | null) ?? null,
       },
       jurisdiction,
-      currency: (org?.["currency"] as string) ?? null,
+      currency: org["currency"] as string,
+      moneyDecimals,
       dossier: {
-        raisonSociale: (org?.["name"] as string) ?? "",
-        identifiantFiscal: (org?.["legal_id"] as string | null) ?? null,
+        raisonSociale: (org["name"] as string) ?? "",
+        identifiantFiscal: (org["legal_id"] as string | null) ?? null,
       },
       packId,
       // `rate` et les montants restent des NOMBRES ici, comme les rendait
@@ -459,7 +475,7 @@ export const capture = {
           and (rt.valid_to is null or rt.valid_to > f.valid_from)
         where f.tenant_id = $1 and f.valid_to is null
         order by f.valid_from desc limit 1`,
-      [tenantId, (org["jurisdiction"] as string) ?? "TN"],
+      [tenantId, org["jurisdiction"] as string],
     );
     const fiche = (fiches as Record<string, unknown>[])[0] ?? null;
 
@@ -477,7 +493,7 @@ export const capture = {
         `select id, version, effective_from from ref_packs_v
             where jurisdiction = $1 and effective_from <= current_date
             order by effective_from desc limit 1`,
-        [(org["jurisdiction"] as string) ?? "TN"],
+        [org["jurisdiction"] as string],
       ),
       db.query(`select id, status from pieces_v where tenant_id = $1 limit 500`, [tenantId]),
       db.query(

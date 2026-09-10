@@ -274,11 +274,20 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
 
     const contexte = (await appeler("capture", "contexteLecture", [enregistree.id])) as {
       packId: string;
+      currency: string;
+      moneyDecimals: number;
       piece: { contentType: string | null };
       taxCodes: Array<{ rate: unknown }>;
     };
     assert.equal(contexte.piece.contentType, "application/pdf", "le type vient de la base");
     assert.ok(contexte.packId, "la lecture exige un pack en vigueur");
+    // La lecture des montants a besoin de l échelle de la devise, et elle vient
+    // du pack : « 2.800 » est ambigu à trois décimales — 2,800 ou 2 800 — et ne
+    // l est plus à deux. Un « 3 » écrit dans le code lirait un dossier en euros
+    // comme un dossier en dinars, sans rien signaler.
+    assert.equal(contexte.currency, "TND", "la devise vient du dossier");
+    assert.equal(contexte.moneyDecimals, 3, "le pack tunisien tient le millime");
+
     assert.ok(contexte.taxCodes.length > 0);
     for (const t of contexte.taxCodes) {
       // Le taux reste un NOMBRE, comme le rendait PostgREST. Le web le remet en

@@ -68,7 +68,13 @@ const SelectionResponse = z.object({
   // `null` est une RÉPONSE : « aucune des deux parties n'est le dossier ».
   // Aucune valeur par défaut — deviner « achat » classait des ventes.
   document_kind: z.enum(["facture_achat", "facture_vente"]).nullable().default(null),
-  currency: orDefault(z.string().min(3).max(3).default("TND")),
+  // Aucune devise par défaut : ce que la pièce n'imprime pas, le dossier le
+  // dit. Un « TND » écrit ici lisait une facture en euros comme une facture en
+  // dinars, et l'écart ne se voyait nulle part.
+  currency: z.preprocess(
+    (v) => (v === null || v === "" ? undefined : v),
+    z.string().min(3).max(3).optional(),
+  ),
   issuer: RefSchema,
   document_date: RefSchema,
   lines: orDefault(
@@ -146,8 +152,10 @@ interface VisionCharge {
 
 export type VisionSelection = Omit<
   z.infer<typeof SelectionResponse>,
-  "lines" | "articles" | "other_charges"
+  "lines" | "articles" | "other_charges" | "currency"
 > & {
+  /** Toujours renseignée : celle de la pièce, sinon celle du dossier. */
+  currency: string;
   lines: VisionLine[];
   articles: VisionArticle[];
   other_charges: VisionCharge[];
@@ -284,7 +292,7 @@ Tu ne transcris JAMAIS une valeur : tu renvoies uniquement l'emplacement du toke
 sous la forme {"page":n,"ordinal":n}. Si un élément est absent de la pièce, renvoie null — ne
 devine jamais.
 Réponds STRICTEMENT en JSON :
-{"document_kind":"facture_achat"|"facture_vente"|null,"currency":"TND",
+{"document_kind":"facture_achat"|"facture_vente"|null,"currency":"<code ISO de la devise imprimée, ou null>",
  "issuer":{"page":1,"ordinal":3},"document_date":{"page":1,"ordinal":12},
  "lines":[{"label":"...","tax_code":"<un code de la liste fournie>",
            "base_ht":{...},"vat_amount":{...},"ttc":{...}}],
@@ -472,6 +480,8 @@ export async function runVisionRead(params: {
   tiers?: ReadonlyArray<{ code: string; raisonSociale: string; nature: string }>;
   /** Le dossier lui-même : ce qui décide du sens de la pièce. */
   dossier?: { raisonSociale: string; identifiantFiscal: string | null };
+  /** La devise du dossier, retenue quand la pièce n'en imprime aucune. */
+  devise: string;
 }): Promise<VisionRead> {
   const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
   if (!cleDeepSeek)
@@ -532,6 +542,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
 
   const selection: VisionSelection = {
     ...raw,
+    currency: raw.currency ?? params.devise,
     issuer: toRef(raw.issuer),
     document_date: toRef(raw.document_date),
     lines: raw.lines
