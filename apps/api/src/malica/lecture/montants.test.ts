@@ -162,3 +162,30 @@ describe("resoudreFacture — l'arithmétique tranche", () => {
     assert.equal(r.ambigus.length, 20);
   });
 });
+
+describe("treillisMontant — ce qui n'est pas un montant", () => {
+  // Trouvé sur les vraies pièces du staging : le relevé porte des dates et des
+  // heures, et l'ancienne normalisation retirait « / » et « : » avant de lire
+  // les chiffres restants. « 08/09/2026 » devenait un montant de 8 092,026 D.
+  // C'est exactement la faute que ce module existe pour supprimer : décider à
+  // la place du papier. Un jeton qui n'est pas un nombre n'a aucune lecture.
+  it("une date n'est pas un montant", () => {
+    assert.deepEqual(valeurs("08/09/2026"), []);
+    assert.deepEqual(valeurs("2026-09-08"), []);
+  });
+
+  it("une heure n'est pas un montant", () => {
+    assert.deepEqual(valeurs("23:18"), []);
+  });
+
+  it("un numéro de pièce n'est pas un montant", () => {
+    assert.deepEqual(valeurs("FA/2026/00412"), []);
+  });
+
+  it("la devise et le pourcentage restent de la décoration", () => {
+    assert.deepEqual(valeurs("1.234,56 TND"), [1234560]);
+    assert.deepEqual(valeurs("1 234,560 €"), [1234560]);
+    assert.deepEqual(valeurs("19%"), [19000]);
+    assert.deepEqual(valeurs("١٢٣ د.ت"), []);
+  });
+});

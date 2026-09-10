@@ -70,11 +70,24 @@ export function enDecimal(millimes: number, decimales: number): string {
  * ce n'est pas à la lecture de la prendre.
  */
 export function treillisMontant(texte: string, decimales: number): Hypothese[] {
-  let s = texte
-    .replace(/\u00a0|\u202f|\s/g, "")
-    .replace(/[A-Za-z؀-ۿ%]/g, "")
-    .replace(/[^\d.,()\-+]/g, "");
-  if (!s) return [];
+  // Les lettres, les symboles de devise, le pourcentage et les espaces sont
+  // de la décoration : « 1 234,560 TND », « 19 % », « 1 234,56 € ».
+  const nu = texte.replace(/[\p{L}\p{Sc}\p{Mn}%\s]/gu, "");
+
+  /*
+   * ============================ TOUT LE RESTE DÉCIDE, ET DIT NON
+   *
+   * Un « / » ou un « : » ne se retire pas : il dit que ce jeton est une date,
+   * une heure ou un numéro de pièce — pas un montant. L'ancienne
+   * normalisation les effaçait et lisait les chiffres qui restaient. Sur le
+   * ticket MOKA du staging, « 08/09/2026 » devenait ainsi un montant de
+   * 8 092,026 dinars, et « 23:18 » un montant de 2,318 dinars.
+   *
+   * Effacer un caractère qu'on ne comprend pas, c'est décider à la place du
+   * papier — la faute même que ce module existe pour supprimer.
+   */
+  if (!nu || !/^[\d.,()+-]+$/.test(nu)) return [];
+  let s = nu;
 
   let negatif = false;
   if (/^\(.*\)$/.test(s)) {
