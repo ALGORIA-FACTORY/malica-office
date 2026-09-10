@@ -1127,6 +1127,10 @@ const fr = {
   "cab.code.direction":
     "Sens de la pièce à confirmer : ni l’émetteur ni le destinataire n’est le dossier.",
   "cab.code.tronque": "Relevé tronqué : la page a été relue en bandes.",
+  "cab.code.separateur":
+    "Montant à confirmer : le séparateur se lit de deux façons, et rien sur la pièce ne tranche.",
+  "cab.code.arithmetique":
+    "Montant tranché par l’arithmétique de la facture : c’est la seule lecture qui boucle.",
   "cab.code.autre": "Signalement de lecture.",
   "cab.audit.extract": "Lecture citée, contrat v1.",
   "cab.audit.autre": "Événement du dossier.",
@@ -3270,6 +3274,10 @@ const en: Dict = {
   "cab.champ.numero": "Document number",
   "cab.code.direction": "Direction to confirm: neither the issuer nor the recipient is the file.",
   "cab.code.tronque": "Truncated reading: the page was re-read in bands.",
+  "cab.code.separateur":
+    "Amount to confirm: the separator reads two ways, and nothing on the document settles it.",
+  "cab.code.arithmetique":
+    "Amount settled by the invoice arithmetic: it is the only reading that balances.",
   "cab.code.autre": "Reading flag.",
   "cab.audit.extract": "Cited reading, contract v1.",
   "cab.audit.autre": "Event on the file.",
@@ -5390,6 +5398,8 @@ const ar: Dict = {
   "cab.champ.numero": "رقم الوثيقة",
   "cab.code.direction": "اتجاه الوثيقة يحتاج تأكيدًا: لا المُصدر ولا المُرسل إليه هو الملف.",
   "cab.code.tronque": "قراءة مبتورة: أُعيدت قراءة الصفحة على شرائح.",
+  "cab.code.separateur": "مبلغ يحتاج تأكيدًا: الفاصل يُقرأ بوجهين، ولا شيء في الوثيقة يحسم.",
+  "cab.code.arithmetique": "مبلغ حسمته حسابات الفاتورة: هي القراءة الوحيدة التي تتوازن.",
   "cab.code.autre": "تنبيه قراءة.",
   "cab.audit.extract": "قراءة مُستشهَدة، عقد الإصدار 1.",
   "cab.audit.autre": "حدث في الملف.",

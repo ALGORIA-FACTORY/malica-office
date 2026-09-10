@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { normalizeDate, resolveFromTokenPlan, type PageToken } from "./token-plan.ts";
+import { lireMontantDuPlan, normalizeDate, type PageToken } from "./token-plan.ts";
+
+/** Le dinar : trois décimales. Aucune devise n'est supposée par défaut. */
+const DINAR = 3;
 import {
   buildProposal,
   champMetier,
@@ -163,11 +166,11 @@ describe("un montant coupé par l'espace des milliers", () => {
   ];
 
   it("recolle les jetons que le modèle a désignés", () => {
-    const r = resolveFromTokenPlan(
+    const r = lireMontantDuPlan(
       jetons,
       "totals.ttc",
       { page: 1, ordinal: 1, ordinalEnd: 2 },
-      "amount",
+      DINAR,
     );
     assert.equal(r.value, "1000.000");
     assert.equal(r.flag, null);
@@ -176,16 +179,16 @@ describe("un montant coupé par l'espace des milliers", () => {
   it("ne recolle rien de sa propre initiative", () => {
     // Sans plage désignée, on lit le seul jeton cité. Joindre le voisin
     // reviendrait à fabriquer un montant — ce que la règle R2 interdit.
-    const r = resolveFromTokenPlan(jetons, "totals.ttc", { page: 1, ordinal: 1 }, "amount");
-    assert.equal(r.value, "1");
+    const r = lireMontantDuPlan(jetons, "totals.ttc", { page: 1, ordinal: 1 }, DINAR);
+    assert.equal(r.value, "1.000");
   });
 
   it("cite toujours le premier jeton de la plage, pour le surlignage", () => {
-    const r = resolveFromTokenPlan(
+    const r = lireMontantDuPlan(
       jetons,
       "totals.ttc",
       { page: 1, ordinal: 1, ordinalEnd: 2 },
-      "amount",
+      DINAR,
     );
     assert.equal(r.citation?.ordinal, 1);
     assert.equal(r.citation?.ui_role, "montant");

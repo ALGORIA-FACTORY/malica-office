@@ -62,6 +62,10 @@ export interface ReadFlag {
     | "MISSING_CITATION"
     | "TOKEN_NOT_FOUND"
     | "VALUE_NOT_A_NUMBER"
+    /** Le texte porte plusieurs lectures admissibles et rien ne les départage. */
+    | "SEPARATEUR_AMBIGU"
+    /** Le texte était ambigu ; l’arithmétique de la facture a tranché. */
+    | "DECIDE_PAR_ARITHMETIQUE"
     | "DATE_UNREADABLE"
     | "DERIVED_BY_SOCLE";
   detail?: string;

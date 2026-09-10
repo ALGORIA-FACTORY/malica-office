@@ -125,6 +125,8 @@ export function libelleDuCode(code: string, t: T): string {
   const CODES: Record<string, MessageKey> = {
     "direction.incertaine": "cab.code.direction",
     tronque: "cab.code.tronque",
+    SEPARATEUR_AMBIGU: "cab.code.separateur",
+    DECIDE_PAR_ARITHMETIQUE: "cab.code.arithmetique",
   };
   return t(CODES[code] ?? "cab.code.autre");
 }

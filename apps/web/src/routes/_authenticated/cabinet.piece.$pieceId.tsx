@@ -463,6 +463,7 @@ function CabinetReview() {
                     </span>
                     {" — "}
                     {libelleDuCode(flag.code, t)}
+                    {flag.detail ? <span className="num"> {flag.detail}</span> : null}
                   </li>
                 ))}
               </ul>

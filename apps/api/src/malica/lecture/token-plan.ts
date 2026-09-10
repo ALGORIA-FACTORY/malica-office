@@ -1,4 +1,6 @@
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
+
+import { enDecimal, treillisMontant, type Hypothese } from "./montants.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
  *
@@ -21,55 +23,18 @@ function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | nul
 }
 
 /**
- * Normalise un texte de token en chaîne décimale.
- * Accepte « 1 234,560 », « 1.234,56 », « 12 345.678 TND », « (123,45) ».
- * Retourne null si le token ne porte pas de nombre — la valeur reste alors
- * absente et drapeautée : jamais devinée.
- */
-export function normalizeAmount(text: string): string | null {
-  let s = text
-    .replace(/\u00a0|\u202f|\s/g, "")
-    .replace(/[A-Za-z\u0600-\u06FF%]/g, "")
-    .replace(/[^\d.,()\-+]/g, "");
-  if (!s) return null;
-
-  let negative = false;
-  if (/^\(.*\)$/.test(s)) {
-    negative = true;
-    s = s.slice(1, -1);
-  }
-  if (s.startsWith("-")) {
-    negative = true;
-    s = s.slice(1);
-  }
-  s = s.replace(/^\+/, "");
-
-  const lastDot = s.lastIndexOf(".");
-  const lastComma = s.lastIndexOf(",");
-  const decimalSep = lastDot > lastComma ? "." : lastComma > -1 ? "," : null;
-
-  if (decimalSep) {
-    const idx = s.lastIndexOf(decimalSep);
-    const intPart = s.slice(0, idx).replace(/[.,]/g, "");
-    const fracPart = s.slice(idx + 1).replace(/[.,]/g, "");
-    // Un POINT suivi de trois chiffres reste ambigu (« 1.234 ») : on le lit
-    // comme séparateur de milliers. La virgule, elle, sépare les décimales —
-    // le dinar en compte trois.
-    const ambiguousThousands =
-      decimalSep === "." &&
-      fracPart.length === 3 &&
-      intPart.length > 0 &&
-      intPart.length <= 3 &&
-      !/[.,]/.test(s.slice(0, idx));
-    s = ambiguousThousands ? `${intPart}${fracPart}` : `${intPart || "0"}.${fracPart}`;
-  } else {
-    s = s.replace(/[.,]/g, "");
-  }
-
-  if (!/^\d+(\.\d+)?$/.test(s)) return null;
-  const out = `${negative ? "-" : ""}${s}`;
-  return out;
-}
+/**
+ * ================================== CE QUI A ÉTÉ RETIRÉ D'ICI, ET POURQUOI
+ *
+ * Ce module portait `normalizeAmount`, qui rendait UNE valeur par token. Pour
+ * y arriver, il tranchait ce que le papier ne tranche pas : « 2.800 » y était
+ * lu 2 800 dinars, par une règle fixe. Sur un ticket, c'est 2,800 dinar — et
+ * l'erreur ne se voyait pas, puisque le résultat avait la forme d'un montant.
+ *
+ * La lecture d'un montant vit désormais dans `montants.ts` : elle rend TOUTES
+ * les lectures admissibles, et c'est l'arithmétique de la facture qui choisit
+ * (`lireMontantDuPlan`, plus bas). Ce qu'elle ne choisit pas est demandé à
+ * l'écran plutôt que deviné.
 
 /**
  * Une date existe-t-elle vraiment ?
@@ -116,6 +81,25 @@ export function normalizeDate(text: string): string | null {
   return null;
 }
 
+/** La citation d'un token : ce que l'écran surligne, et à quel titre. */
+function citer(
+  token: PageToken,
+  field: string,
+  role: "montant" | "date" | "texte",
+  zone?: string | null,
+  binding?: CitationBinding,
+): FieldCitation {
+  return {
+    field,
+    page: token.page,
+    ordinal: token.ordinal,
+    zone: binding?.zone ?? zone ?? null,
+    ui_field: binding?.uiField ?? field,
+    ui_role: role,
+    bbox: { x0: token.x0, y0: token.y0, x1: token.x1, y1: token.y1 },
+  };
+}
+
 export interface ResolvedValue {
   /** Valeur relue depuis le token, jamais depuis le modèle. */
   value: string | null;
@@ -146,7 +130,7 @@ export function resolveFromTokenPlan(
   tokens: readonly PageToken[],
   field: string,
   ref: TokenRef | null | undefined,
-  kind: "amount" | "date" | "text",
+  kind: "date" | "text",
   zone?: string | null,
   binding?: CitationBinding,
 ): ResolvedValue {
@@ -165,43 +149,7 @@ export function resolveFromTokenPlan(
       },
     };
   }
-  const citation: FieldCitation = {
-    field,
-    page: token.page,
-    ordinal: token.ordinal,
-    zone: binding?.zone ?? zone ?? null,
-    ui_field: binding?.uiField ?? field,
-    ui_role: kind === "amount" ? "montant" : kind === "date" ? "date" : "texte",
-    bbox: { x0: token.x0, y0: token.y0, x1: token.x1, y1: token.y1 },
-  };
-  if (kind === "amount") {
-    /*
-     * ============================== « 1 000,000 » LU COMME « 1 »
-     *
-     * En Tunisie comme en France, les milliers se séparent par une ESPACE :
-     * « 1 000,000 TND ». Le découpage en jetons se fait sur les espaces — le
-     * montant arrive donc en deux morceaux, « 1 » et « 000,000 ».
-     *
-     * Le schéma prévoit une plage de jetons (`ordinal_end`) pour ce cas, et
-     * elle n'était honorée que pour le TEXTE : la branche des montants rendait
-     * la main avant de l'atteindre. Un total de 1 190 dinars devenait 1 dinar,
-     * sans le moindre signalement — l'erreur la plus grave qu'un produit
-     * fiscal puisse commettre, parce qu'elle a l'air d'un montant.
-     *
-     * On ne recolle QUE ce que le modèle a lui-même désigné. Joindre des
-     * jetons qu'il n'a pas cités reviendrait à fabriquer un montant, ce que la
-     * règle R2 interdit.
-     */
-    const texte = texteDeLaPlage(tokens, ref, token);
-    const value = normalizeAmount(texte);
-    return value === null
-      ? {
-          value: null,
-          citation,
-          flag: { field, code: "VALUE_NOT_A_NUMBER", detail: token.text },
-        }
-      : { value, citation, flag: null };
-  }
+  const citation = citer(token, field, kind === "date" ? "date" : "texte", zone, binding);
   if (kind === "date") {
     const value = normalizeDate(token.text);
     return value === null
@@ -213,6 +161,87 @@ export function resolveFromTokenPlan(
       : { value, citation, flag: null };
   }
   return { value: texteDeLaPlage(tokens, ref, token), citation, flag: null };
+}
+
+/** Un montant lu au plan : sa valeur si elle est certaine, et toutes ses lectures. */
+export interface MontantLu extends ResolvedValue {
+  hypotheses: Hypothese[];
+}
+
+/**
+ * Lit un montant au plan de tokens, sans jamais trancher à la place du papier.
+ *
+ * Trois sorties, et c'est tout le dispositif :
+ *
+ *   une seule lecture admissible  → la valeur, sans drapeau ;
+ *   plusieurs lectures            → aucune valeur, drapeau « SEPARATEUR_AMBIGU »
+ *                                   qui porte les deux lectures, pour que
+ *                                   l'écran pose la question ;
+ *   aucune lecture                → aucune valeur, drapeau « pas un nombre ».
+ *
+ * La deuxième sortie est celle qui manquait. Le solveur (`read-piece.ts`) la
+ * reprend ensuite : quand l'arithmétique de la facture ne laisse qu'une
+ * lecture debout, le drapeau devient « DECIDE_PAR_ARITHMETIQUE ».
+ */
+export function lireMontantDuPlan(
+  tokens: readonly PageToken[],
+  field: string,
+  ref: TokenRef | null | undefined,
+  decimales: number,
+  zone?: string | null,
+  binding?: CitationBinding,
+): MontantLu {
+  if (!ref) {
+    return {
+      value: null,
+      citation: null,
+      flag: { field, code: "MISSING_CITATION" },
+      hypotheses: [],
+    };
+  }
+  const token = findToken(tokens, ref);
+  if (!token) {
+    return {
+      value: null,
+      citation: null,
+      flag: {
+        field,
+        code: "TOKEN_NOT_FOUND",
+        detail: `page ${ref.page} · token ${ref.ordinal}`,
+      },
+      hypotheses: [],
+    };
+  }
+  const citation = citer(token, field, "montant", zone, binding);
+  const texte = texteDeLaPlage(tokens, ref, token);
+  const hypotheses = treillisMontant(texte, decimales);
+
+  if (hypotheses.length === 0) {
+    return {
+      value: null,
+      citation,
+      flag: { field, code: "VALUE_NOT_A_NUMBER", detail: token.text },
+      hypotheses,
+    };
+  }
+  if (hypotheses.length === 1) {
+    return {
+      value: enDecimal(hypotheses[0]!.millimes, decimales),
+      citation,
+      flag: null,
+      hypotheses,
+    };
+  }
+  return {
+    value: null,
+    citation,
+    flag: {
+      field,
+      code: "SEPARATEUR_AMBIGU",
+      detail: `« ${texte} » se lit ${hypotheses.map((h) => enDecimal(h.millimes, decimales)).join(" ou ")}`,
+    },
+    hypotheses,
+  };
 }
 
 export type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";

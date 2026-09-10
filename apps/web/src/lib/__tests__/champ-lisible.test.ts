@@ -82,6 +82,13 @@ describe("codes et actions", () => {
     expect(libelleDuCode("inconnu", t as never)).toBe("cab.code.autre");
   });
 
+  it("nomme l'hésitation sur un montant, et la décision qui l'a levée", () => {
+    // « Signalement de lecture » ne dit pas quoi faire. Ces deux-là, si :
+    // l'un demande une confirmation, l'autre explique pourquoi il n'y en a pas.
+    expect(libelleDuCode("SEPARATEUR_AMBIGU", t as never)).toBe("cab.code.separateur");
+    expect(libelleDuCode("DECIDE_PAR_ARITHMETIQUE", t as never)).toBe("cab.code.arithmetique");
+  });
+
   it("traduit une action d'audit et retombe sur une phrase générique", () => {
     expect(libelleDeLAction("extract.v1", t as never)).toBe("cab.audit.extract");
     expect(libelleDeLAction("ecriture.booked", t as never)).toBe("cab.notif.kind.ecriture.booked");

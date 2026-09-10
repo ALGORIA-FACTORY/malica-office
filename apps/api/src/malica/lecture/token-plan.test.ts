@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
-  normalizeAmount,
+  lireMontantDuPlan,
   normalizeDate,
   resolveFromTokenPlan,
   type PageToken,
 } from "./token-plan.ts";
+
+/** Le dinar : trois décimales. Aucune devise n'est supposée par défaut. */
+const DINAR = 3;
 
 const tokens: PageToken[] = [
   { page: 1, ordinal: 0, text: "SOTUMAG", x0: 0.1, y0: 0.1, x1: 0.3, y1: 0.12 },
@@ -14,20 +17,6 @@ const tokens: PageToken[] = [
   { page: 1, ordinal: 2, text: "1 234,560", x0: 0.6, y0: 0.5, x1: 0.8, y1: 0.52 },
   { page: 1, ordinal: 3, text: "TND", x0: 0.82, y0: 0.5, x1: 0.9, y1: 0.52 },
 ];
-
-describe("normalizeAmount", () => {
-  it("relit les montants tunisiens à trois décimales", () => {
-    assert.equal(normalizeAmount("1 234,560"), "1234.560");
-    assert.equal(normalizeAmount("1.234,56 TND"), "1234.56");
-    assert.equal(normalizeAmount("12345.678"), "12345.678");
-    assert.equal(normalizeAmount("(123,45)"), "-123.45");
-  });
-
-  it("refuse ce qui n'est pas un nombre plutôt que de deviner", () => {
-    assert.equal(normalizeAmount("Total"), null);
-    assert.equal(normalizeAmount("—"), null);
-  });
-});
 
 describe("normalizeDate", () => {
   it("lit les deux ordres usuels", () => {
@@ -39,14 +28,14 @@ describe("normalizeDate", () => {
 
 describe("resolveFromTokenPlan — R2", () => {
   it("relit la valeur depuis le token, jamais depuis le modèle", () => {
-    const r = resolveFromTokenPlan(tokens, "totals.ttc", { page: 1, ordinal: 2 }, "amount");
+    const r = lireMontantDuPlan(tokens, "totals.ttc", { page: 1, ordinal: 2 }, DINAR);
     assert.equal(r.value, "1234.560");
     assert.partialDeepStrictEqual(r.citation, { field: "totals.ttc", page: 1, ordinal: 2 });
     assert.equal(r.flag, null);
   });
 
   it("drapeaute une désignation orpheline sans produire de valeur", () => {
-    const r = resolveFromTokenPlan(tokens, "totals.vat", { page: 1, ordinal: 99 }, "amount");
+    const r = lireMontantDuPlan(tokens, "totals.vat", { page: 1, ordinal: 99 }, DINAR);
     assert.equal(r.value, null);
     assert.equal(r.citation, null);
     assert.equal(r.flag?.code, "TOKEN_NOT_FOUND");
@@ -59,7 +48,7 @@ describe("resolveFromTokenPlan — R2", () => {
   });
 
   it("refuse un token non numérique désigné comme montant", () => {
-    const r = resolveFromTokenPlan(tokens, "totals.base_ht", { page: 1, ordinal: 3 }, "amount");
+    const r = lireMontantDuPlan(tokens, "totals.base_ht", { page: 1, ordinal: 3 }, DINAR);
     assert.equal(r.value, null);
     assert.notEqual(r.citation, null);
     assert.equal(r.flag?.code, "VALUE_NOT_A_NUMBER");
