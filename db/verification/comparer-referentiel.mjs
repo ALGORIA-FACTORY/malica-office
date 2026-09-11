@@ -19,8 +19,14 @@
  * l'empreinte — sinon tout différerait sans que rien n'ait changé :
  *   - les UUID (`gen_random_uuid()`, dont les clés du pack que les autres
  *     tables reprennent) ;
- *   - les horodatages ;
- *   - toute colonne dont le défaut est l'heure ou la date du chargement.
+ *   - les horodatages (`created_at`, `applique_le`…).
+ *
+ * Et RIEN d'autre. Une première version écartait aussi toute colonne dont le
+ * défaut est la date du chargement : elle masquait précisément ce qu'on
+ * cherche. `ref.rejet_motifs.valid_from` prend `current_date` par défaut, la
+ * migration qui sème les motifs ne le donne pas, et la date du jour où l'on
+ * joue la migration entre ainsi dans le référentiel. Une date de validité est
+ * une donnée : elle se compare.
  * Les lignes sont comparées comme des multiensembles : une ligne en double
  * d'un côté compte.
  *
@@ -86,10 +92,7 @@ async function colonnesDe(c, s, t) {
   return rows;
 }
 
-const fabriquee = (col) =>
-  col.type === "uuid" ||
-  col.type.startsWith("timestamp") ||
-  /now\(\)|current_date|current_timestamp|clock_timestamp/i.test(col.defaut);
+const fabriquee = (col) => col.type === "uuid" || col.type.startsWith("timestamp");
 
 async function lignes(c, s, t, cols) {
   if (cols.length === 0) {
@@ -169,7 +172,7 @@ p(
 );
 p();
 p(
-  "Colonnes exclues de l'empreinte, parce que chaque chargement les fabrique à neuf : les UUID, les horodatages, et toute colonne dont le défaut est la date ou l'heure du chargement.",
+  "Colonnes exclues de l'empreinte, parce que chaque chargement les fabrique à neuf : les UUID et les horodatages — rien d'autre. Une date de validité est une donnée, et se compare.",
 );
 p();
 p(

@@ -115,3 +115,36 @@ Trois conséquences, et la troisième est la plus contraignante :
 R4 n'est pas affaibli : la constante reste interdite **dans le code**. Elle est
 seulement admise dans le référentiel livré, où elle est datée, versionnée et
 surchargeable — c'est-à-dire là où elle cesse d'être une constante.
+
+## R11 — Une migration donne le même référentiel, quel que soit le jour où on la joue
+
+Le dépôt décrit une base, et une seule. La base de test et le témoin vierge
+qui vérifie `ref` reposent sur cette hypothèse : deux machines qui jouent le
+même dépôt à deux jours d'intervalle doivent obtenir le même référentiel.
+
+Une migration n'écrit donc dans une donnée de référence — le schéma `ref`,
+`agents.model_pricing`, `storage.buckets` — ni `current_date`, ni `now()`, ni
+`current_timestamp`, ni `clock_timestamp()`, ni `random()`, ni
+`gen_random_uuid()`. Une date de validité s'écrit en littéral :
+`date '2026-01-01'`.
+
+La faute a une forme cachée, et c'est la plus courante : une insertion qui
+**omet** une colonne dont le défaut est daté. Rien n'est écrit, et pourtant la
+date du jour entre dans le référentiel.
+
+Ce qui reste permis : un défaut de colonne en lui-même (c'est du schéma), un
+identifiant ou un horodatage laissés à leur défaut, le corps d'une fonction
+(il s'exécute plus tard), et une donnée métier datée du jour.
+
+**Défauts connus**, dans des migrations déjà appliquées, qu'on ne réécrit pas —
+trouvés le 11 septembre 2026 en comparant `ref` à une base vierge
+(`docs/verification-referentiel.md`) :
+
+- `20260824132104` sème les 9 motifs de `ref.rejet_motifs` sans `valid_from`,
+  dont le défaut est `current_date` ;
+- `20260826163000` clôt le tarif Gemini par `effective_to = current_date` et
+  date le tarif `pdf-text` du jour où on la joue.
+
+_Vérifié par_ `db/reproductibilite.test.mjs`, dans `npm test` : il relit toutes
+les migrations dans l'ordre et échoue sur toute violation autre que ces deux
+exceptions, nommées une par une.
