@@ -26,7 +26,8 @@
     "contrat": "node --experimental-strip-types contrat/relever.mjs --ecrire",
     "coque:staging": "npm run build:coque:staging -w @malica/web && npm run coque:sync -w @malica/web",
     "coque:pilote": "npm run build:coque:pilote -w @malica/web && npm run coque:sync -w @malica/web",
-    "coque:ouvrir": "npm run coque:ouvrir -w @malica/web"
+    "coque:ouvrir": "npm run coque:ouvrir -w @malica/web",
+    "base-de-test": "node db/base-de-test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

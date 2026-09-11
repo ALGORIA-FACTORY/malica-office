@@ -100,6 +100,18 @@ npm run typecheck  # les deux applications
 npm test           # les deux applications
 ```
 
+Les tests de l'API ont leur propre base, `malica_test`, montée depuis les
+migrations seules : lancez `npm run base-de-test` une fois avant `npm test`,
+et chaque fois que vous voulez repartir d'une base vierge. Ils refusent de
+s'exécuter contre `malica_local`, la base de travail.
+
+Les épreuves (`outils/epreuves/*.mjs`, `npm run verifier`,
+`npm run epreuve:bout-en-bout`), elles, parcourent l'application en marche et
+écrivent donc dans `malica_local`. Depuis la remise à zéro du métier du
+11 septembre 2026, elles sont **attendues en échec** jusqu'à ce que le parcours
+d'onboarding ait recréé un cabinet et sa PME : ne les lancez pas entre les deux,
+elles recréeraient les organisations d'essai que la remise à zéro a vidées.
+
 Copiez `.env.example` en `.env` et renseignez les valeurs. Le fichier `.env`
 n'est jamais suivi par git.
 
