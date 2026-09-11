@@ -12,25 +12,33 @@
  * dit ce que `ref` DEVRAIT contenir. Ce script dit en quoi `malica_local`
  * s'en écarte, table par table, et l'écrit dans `docs/verification-referentiel.md`.
  *
- * ============================================================== COMMENT
+ * ============================================================== LA RÈGLE
  *
- * Pour chaque table : le nombre de lignes, et une empreinte du contenu. Les
- * colonnes que chaque chargement fabrique à neuf n'entrent pas dans
- * l'empreinte — sinon tout différerait sans que rien n'ait changé :
- *   - les UUID (`gen_random_uuid()`, dont les clés du pack que les autres
- *     tables reprennent) ;
- *   - les horodatages (`created_at`, `applique_le`…).
+ * Dans un comparateur, une exclusion est NOMINATIVE et JUSTIFIÉE, jamais
+ * catégorielle. Toute colonne est comparée, sauf celles nommées une à une
+ * dans `EXCLUES`, chacune avec sa raison. Une colonne nouvelle est donc
+ * comparée par défaut : si elle diffère, elle apparaît en écart, et c'est à
+ * quelqu'un de décider, nommément, de l'exclure.
  *
- * Et RIEN d'autre. Une première version écartait aussi toute colonne dont le
- * défaut est la date du chargement : elle masquait précisément ce qu'on
- * cherche. `ref.rejet_motifs.valid_from` prend `current_date` par défaut, la
- * migration qui sème les motifs ne le donne pas, et la date du jour où l'on
- * joue la migration entre ainsi dans le référentiel. Une date de validité est
- * une donnée : elle se compare.
+ * Deux versions précédentes l'ont appris à leurs dépens, le 11 septembre 2026 :
+ *   - la première écartait « toute colonne dont le défaut est daté » : elle
+ *     masquait `ref.rejet_motifs.valid_from`, où la date du jour où l'on joue
+ *     la migration entre dans le référentiel ;
+ *   - la deuxième écartait « tous les UUID et tous les horodatages » : elle
+ *     masquait encore `ref.jurisdiction_packs.validated_at` et `validated_by`
+ *     — qui a validé le pack, et quand : une donnée, pas un artefact — et
+ *     jetait les 13 `pack_version_id`, qui se comparent très bien par la clé
+ *     naturelle du pack qu'ils désignent.
+ *
+ * Une colonne qui désigne une autre ligne par un UUID tiré au chargement est
+ * TRADUITE (`TRADUITES`) : on compare ce qu'elle désigne, pas son UUID.
+ *
+ * Chaque écart connu est EXPLIQUÉ nommément (`EXPLIQUES`) ; un écart qui ne
+ * l'est pas est marqué « NON EXPLIQUÉ » dans le document.
+ *
  * Les lignes sont comparées comme des multiensembles : une ligne en double
- * d'un côté compte.
- *
- * Lecture seule des deux côtés (transactions `READ ONLY`). Aucune URL affichée.
+ * d'un côté compte. Lecture seule des deux côtés (transactions `READ ONLY`).
+ * Aucune URL affichée.
  */
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -41,6 +49,69 @@ import pg from "pg";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SORTIE = join(RACINE, "docs", "verification-referentiel.md");
+
+/* ------------------------------------------------ exclusions, une par une */
+
+const CLE_TECHNIQUE =
+  "clé technique : `gen_random_uuid()` à chaque chargement, ne porte aucun contenu";
+const HORODATAGE = "horodatage du chargement : `now()`, ne porte aucun contenu";
+
+const EXCLUES = {
+  "agents.model_pricing.id": CLE_TECHNIQUE,
+  "agents.model_pricing.created_at": HORODATAGE,
+  "app.migrations.applique_le": "horodatage de l'application de la migration sur CETTE base",
+  "ref.account_mappings.id": CLE_TECHNIQUE,
+  "ref.accounts.id": CLE_TECHNIQUE,
+  "ref.anomaly_thresholds.id": CLE_TECHNIQUE,
+  "ref.charge_famille_rules.id": CLE_TECHNIQUE,
+  "ref.charge_familles.id": CLE_TECHNIQUE,
+  "ref.document_types.created_at": HORODATAGE,
+  "ref.fiscal_charges.id": CLE_TECHNIQUE,
+  "ref.fiscal_obligations.id": CLE_TECHNIQUE,
+  "ref.fiscal_parameters.id": CLE_TECHNIQUE,
+  "ref.immo_categories.id": CLE_TECHNIQUE,
+  "ref.jurisdiction_packs.id": CLE_TECHNIQUE,
+  "ref.jurisdiction_packs.created_at": HORODATAGE,
+  "ref.labels.id": CLE_TECHNIQUE,
+  "ref.mentions.id": CLE_TECHNIQUE,
+  "ref.pack_rules.id": CLE_TECHNIQUE,
+  "ref.regimes_fiscaux.id": CLE_TECHNIQUE,
+  "ref.rejet_motifs.id": CLE_TECHNIQUE,
+  "ref.socle_params.id": CLE_TECHNIQUE,
+  "ref.stock_categories.id": CLE_TECHNIQUE,
+  "ref.stock_categories.created_at": HORODATAGE,
+  "ref.tva_rates.id": CLE_TECHNIQUE,
+  "storage.buckets.created_at": HORODATAGE,
+};
+
+/** Colonnes qui désignent le pack par son UUID : comparées par `juridiction/version`. */
+const TRADUITES = Object.fromEntries(
+  [
+    "ref.account_mappings",
+    "ref.accounts",
+    "ref.anomaly_thresholds",
+    "ref.charge_famille_rules",
+    "ref.charge_familles",
+    "ref.fiscal_charges",
+    "ref.immo_categories",
+    "ref.mentions",
+    "ref.pack_rules",
+    "ref.role_bindings",
+    "ref.socle_params",
+    "ref.stock_categories",
+    "ref.tva_rates",
+  ].map((t) => [`${t}.pack_version_id`, "pack"]),
+);
+
+/** Les écarts connus, et pourquoi. Tout autre écart est « NON EXPLIQUÉ ». */
+const EXPLIQUES = {
+  "ref.rejet_motifs":
+    "Forme **cachée** de R11. La table déclare `valid_from date not null default current_date` (`20260824130649`), et `20260824132104` sème les 9 motifs sans donner `valid_from` : chaque base reçoit la date du jour où elle joue la migration — le 31 août 2026 pour `malica_local`. Codes, sévérités, ordre : identiques.",
+  "agents.model_pricing":
+    "Forme **écrite** de R11, dans `20260826163000` : `effective_to = current_date` sur le tarif Gemini, `effective_from = current_date` sur le tarif `pdf-text`. Prix, rôles, devises : identiques. La ligne `qwen3.7-text-embedding`, cible de `legal.chunks.pricing_id`, est identique.",
+};
+
+/* ---------------------------------------------------------------- bases */
 
 const env = (fichier) =>
   Object.fromEntries(
@@ -84,24 +155,37 @@ async function tablesDe(c) {
 
 async function colonnesDe(c, s, t) {
   const { rows } = await c.query(
-    `select column_name as nom, data_type as type, coalesce(column_default, '') as defaut
-       from information_schema.columns where table_schema = $1 and table_name = $2
-      order by ordinal_position`,
+    `select column_name as nom from information_schema.columns
+      where table_schema = $1 and table_name = $2 order by ordinal_position`,
     [s, t],
   );
-  return rows;
+  return rows.map((r) => r.nom);
 }
 
-const fabriquee = (col) => col.type === "uuid" || col.type.startsWith("timestamp");
+/** Chaque pack, par son UUID dans CETTE base → sa clé naturelle. */
+async function packsDe(c) {
+  const { rows } = await c.query(
+    `select id::text as id, jurisdiction || '/' || version as cle from ref.jurisdiction_packs`,
+  );
+  return new Map(rows.map((r) => [r.id, r.cle]));
+}
+const packs = new Map([
+  [travail, await packsDe(travail)],
+  [vierge, await packsDe(vierge)],
+]);
 
 async function lignes(c, s, t, cols) {
   if (cols.length === 0) {
     const { rows } = await c.query(`select count(*)::int as n from "${s}"."${t}"`);
     return Array.from({ length: rows[0].n }, () => "{}");
   }
-  const liste = cols.map((x) => `"${x}"`).join(", ");
+  const liste = cols.map((x) => `"${x}"::text as "${x}"`).join(", ");
   const { rows } = await c.query(`select ${liste} from "${s}"."${t}"`);
-  return rows.map((r) => JSON.stringify(cols.map((x) => r[x])));
+  const traduire = (col, v) =>
+    TRADUITES[`${s}.${t}.${col}`] && v !== null
+      ? `pack:${packs.get(c).get(v) ?? `INCONNU(${v})`}`
+      : v;
+  return rows.map((r) => JSON.stringify(cols.map((x) => traduire(x, r[x]))));
 }
 
 const compter = (arr) => arr.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map());
@@ -112,16 +196,27 @@ const empreinte = (arr) =>
     .slice(0, 12);
 
 const tables = [...(await tablesDe(vierge)), ...HORS_REF];
-const tablesTravail = new Set((await tablesDe(travail)).map(([s, t]) => `${s}.${t}`));
+
+// Une exclusion ou une traduction qui ne désigne plus rien est périmée : on
+// s'arrête plutôt que de laisser une liste mentir sur ce qu'elle écarte.
+const toutesColonnes = new Set();
+for (const [s, t] of tables)
+  for (const c of await colonnesDe(vierge, s, t)) toutesColonnes.add(`${s}.${t}.${c}`);
+const perimees = [...Object.keys(EXCLUES), ...Object.keys(TRADUITES)].filter(
+  (k) => !toutesColonnes.has(k),
+);
+if (perimees.length) {
+  console.error(`Refus : exclusion ou traduction périmée — ${perimees.join(", ")}`);
+  process.exit(2);
+}
 
 const resultats = [];
 for (const [s, t] of tables) {
   const colsV = await colonnesDe(vierge, s, t);
   const colsT = await colonnesDe(travail, s, t);
-  const nomsV = colsV.map((c) => c.nom).join(",");
-  const nomsT = colsT.map((c) => c.nom).join(",");
-  const comparees = colsV.filter((c) => !fabriquee(c)).map((c) => c.nom);
-  const exclues = colsV.filter(fabriquee).map((c) => c.nom);
+  const comparees = colsV.filter((c) => !EXCLUES[`${s}.${t}.${c}`]);
+  const exclues = colsV.filter((c) => EXCLUES[`${s}.${t}.${c}`]);
+  const traduites = colsV.filter((c) => TRADUITES[`${s}.${t}.${c}`]);
   const lv = await lignes(vierge, s, t, comparees);
   const lt = colsT.length ? await lignes(travail, s, t, comparees) : [];
   const cv = compter(lv);
@@ -132,10 +227,10 @@ for (const [s, t] of tables) {
   for (const [k, n] of cv) for (let i = 0; i < n - (ct.get(k) ?? 0); i++) enMoins.push(k);
   resultats.push({
     table: `${s}.${t}`,
-    presenteEnTravail: s !== "ref" || tablesTravail.has(`${s}.${t}`),
-    memesColonnes: nomsV === nomsT,
+    memesColonnes: colsV.join(",") === colsT.join(","),
     comparees,
     exclues,
+    traduites,
     nTravail: lt.length,
     nVierge: lv.length,
     eTravail: empreinte(lt),
@@ -151,7 +246,9 @@ await vierge.end();
 
 /* ------------------------------------------------------------ le document */
 
-const ecarts = resultats.filter((r) => r.enPlus.length || r.enMoins.length || !r.memesColonnes);
+const enEcart = (r) => r.enPlus.length || r.enMoins.length || !r.memesColonnes;
+const ecarts = resultats.filter(enEcart);
+const nonExpliques = ecarts.filter((r) => !EXPLIQUES[r.table]);
 const L = [];
 const p = (s = "") => L.push(s);
 const n = (x) => Number(x).toLocaleString("fr-FR").replace(/ | /g, " ");
@@ -165,22 +262,23 @@ p(
 );
 p();
 p(
-  `**${resultats.length} tables comparées, ${ecarts.length} en écart.** ` +
-    (ecarts.length === 0
-      ? "Le référentiel de la base de travail est exactement celui que produisent les migrations."
-      : "Chaque écart est détaillé plus bas ; tant qu'il n'est pas expliqué, la table n'est préservée que sous réserve."),
+  `**${resultats.length} tables comparées, ${resultats.length - ecarts.length} identiques, ${ecarts.length} en écart` +
+    (ecarts.length ? `, dont ${nonExpliques.length} non expliqué(s).**` : ".**"),
 );
 p();
-p(
-  "Colonnes exclues de l'empreinte, parce que chaque chargement les fabrique à neuf : les UUID et les horodatages — rien d'autre. Une date de validité est une donnée, et se compare.",
-);
+if (ecarts.length)
+  p(
+    nonExpliques.length
+      ? "Un écart non expliqué suspend la confiance dans sa table : elle n'est préservée que sous réserve, jusqu'à ce qu'on sache d'où il vient."
+      : "Chaque écart est expliqué plus bas. Les tables en écart sont préservées sous une réserve connue.",
+  );
 p();
 p(
   "| Table | Lignes (travail) | Lignes (vierge) | Empreinte (travail) | Empreinte (vierge) | En plus | En moins |",
 );
 p("| --- | ---: | ---: | --- | --- | ---: | ---: |");
 for (const r of resultats) {
-  const marque = r.enPlus.length || r.enMoins.length || !r.memesColonnes ? " **≠**" : "";
+  const marque = enEcart(r) ? (EXPLIQUES[r.table] ? " ≠ expliqué" : " **≠ NON EXPLIQUÉ**") : "";
   p(
     `| \`${r.table}\`${marque} | ${n(r.nTravail)} | ${n(r.nVierge)} | \`${r.eTravail}\` | \`${r.eVierge}\` | ${r.enPlus.length} | ${r.enMoins.length} |`,
   );
@@ -188,21 +286,22 @@ for (const r of resultats) {
 p();
 
 if (ecarts.length) {
-  p("## Les écarts, ligne par ligne");
+  p("## Les écarts");
   p();
   for (const r of ecarts) {
-    p(`### \`${r.table}\``);
+    p(`### \`${r.table}\` — ${EXPLIQUES[r.table] ? "expliqué" : "**NON EXPLIQUÉ**"}`);
     p();
+    if (EXPLIQUES[r.table]) {
+      p(EXPLIQUES[r.table]);
+      p();
+    }
     if (!r.memesColonnes) p("**Les colonnes diffèrent entre les deux bases.**\n");
-    p(`Colonnes comparées : ${r.comparees.map((c) => `\`${c}\``).join(", ") || "(aucune)"}.`);
-    if (r.exclues.length) p(`Exclues : ${r.exclues.map((c) => `\`${c}\``).join(", ")}.`);
-    p();
     for (const [titre, liste] of [
       [`En plus dans \`malica_local\` (${r.enPlus.length})`, r.enPlus],
       [`Absentes de \`malica_local\` (${r.enMoins.length})`, r.enMoins],
     ]) {
       if (!liste.length) continue;
-      p(`**${titre}**`);
+      p(`**${titre}**, colonnes ${r.comparees.map((c) => `\`${c}\``).join(", ")} :`);
       p();
       p("```");
       for (const l of liste.slice(0, 25)) p(l);
@@ -213,11 +312,30 @@ if (ecarts.length) {
   }
 }
 
+p("## Ce qui n'est pas comparé, et pourquoi");
+p();
+p(
+  "Une exclusion est nominative et justifiée : chaque colonne est nommée ci-dessous avec sa raison. Toute colonne absente de cette liste est comparée.",
+);
+p();
+p("| Colonne exclue | Raison |");
+p("| --- | --- |");
+for (const [k, raison] of Object.entries(EXCLUES)) p(`| \`${k}\` | ${raison} |`);
+p();
+p(
+  `Et ${Object.keys(TRADUITES).length} colonnes **traduites**, pas exclues : chaque \`pack_version_id\` est comparé par la clé naturelle du pack qu'il désigne (\`juridiction/version\`), puisque l'UUID du pack est tiré au chargement.`,
+);
+p();
+p(
+  "R11 (`AGENTS.md`) interdit désormais les deux formes d'écart relevées ici ; `db/reproductibilite.test.mjs` le vérifie dans `npm test`.",
+);
+p();
+
 writeFileSync(SORTIE, L.join("\n"));
 console.log(
-  `${resultats.length} tables comparées, ${ecarts.length} en écart → docs/verification-referentiel.md`,
+  `${resultats.length} tables comparées, ${ecarts.length} en écart, ${nonExpliques.length} non expliqué(s) → docs/verification-referentiel.md`,
 );
 for (const r of ecarts)
   console.log(
-    `  ≠ ${r.table} : ${r.nTravail} contre ${r.nVierge} · +${r.enPlus.length} / −${r.enMoins.length}`,
+    `  ≠ ${r.table}${EXPLIQUES[r.table] ? "" : " (NON EXPLIQUÉ)"} : ${r.nTravail} contre ${r.nVierge} · +${r.enPlus.length} / −${r.enMoins.length}`,
   );
