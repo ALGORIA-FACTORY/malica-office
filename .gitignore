@@ -74,3 +74,7 @@ android/app/src/main/assets/capacitor.plugins.json
 # Les sorties de Playwright : traces, captures, rapport.
 apps/web/e2e/sortie/
 apps/web/e2e/sortie-rapport/
+
+# Les pièces mises de côté par la remise à zéro du métier (11 septembre 2026) :
+# des documents de clients, comme .stockage, jamais dans git.
+.stockage.avant-remise-a-zero-*/
