@@ -80,6 +80,16 @@ jobs:
       - name: Peupler le jeu de données
         run: node outils/jeu-de-donnees.mjs http://localhost:8080
 
+      # La chaîne réelle parle avec le compte de développement
+      # (dev@malica.local) : c'est le jeu d'essai du développeur qui le crée,
+      # comme dans ci.yml. Sans lui, la connexion est refusée (401). Ce défaut
+      # était caché derrière le 429 du jeu de données, qui arrêtait le job
+      # une étape plus tôt.
+      - name: Le jeu d'essai du développeur
+        run: node db/dev/jeu_dessai.mjs
+        env:
+          MALICA_API_URL: http://localhost:3000
+
       - name: La chaîne réelle
         run: node outils/epreuve-bout-en-bout.mjs http://localhost:8080
 
