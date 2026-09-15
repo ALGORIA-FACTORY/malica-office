@@ -1,11 +1,24 @@
--- Remise à zéro du métier de la base locale — un geste d'administration, assumé.
+-- Remise à zéro du métier d'une base nommée — un geste d'administration, assumé.
 --
 --   psql "<URL d'administration>" -v ON_ERROR_STOP=1 \
---        -v sauvegarde=<fichier .dump pris juste avant> -v mode=essai \
+--        -v base=<malica_local | malica> \
+--        -v sauvegarde=<chemin ABSOLU du .dump, tel que le SERVEUR PostgreSQL le voit> \
+--        -v mode=essai \
 --        -f db/maintenance/purge_metier.sql
 --
 --   mode=essai   tout s'exécute, puis ROLLBACK : rien ne change.
 --   mode=reel    tout s'exécute, puis COMMIT.
+--
+-- Deux bases seulement, nommées : `malica_local` (le poste) et `malica` (le
+-- staging, remis à zéro le 15 septembre 2026). La base se nomme en argument ET
+-- doit être celle où l'on est connecté : un doigt qui glisse sur l'URL ne
+-- suffit pas. Une base qui n'est pas dans la liste est refusée, quel que soit
+-- l'argument.
+--
+-- La sauvegarde n'est pas un nom qu'on écrit pour mémoire : le SERVEUR lit le
+-- fichier (pg_stat_file, pg_read_binary_file — d'où le superutilisateur). Il
+-- doit exister, commencer par la signature d'un pg_dump (PGDMP), n'être pas
+-- vide, et dater de moins d'une heure. Sinon, refus.
 --
 -- ==================================================================== POURQUOI
 --
@@ -21,7 +34,9 @@
 -- une remise à zéro d'administration décidée explicitement, sur une base de
 -- développement. D'où les verrous, tous bloquants :
 --
---   1. la base s'appelle `malica_local`, sinon RAISE EXCEPTION ;
+--   1. la base est nommée en argument, c'est celle où l'on est, et elle est
+--      dans la liste blanche (`malica_local`, `malica`) ; une sauvegarde de
+--      moins d'une heure existe sur le serveur ; sinon RAISE EXCEPTION ;
 --   2. aucun CASCADE : chaque table est nommée ci-dessous ; si une table hors
 --      de la liste en référence une de la liste, on s'arrête — on n'ajoute pas
 --      CASCADE ;
@@ -47,9 +62,13 @@
 
 -- --------------------------------------------------------------- les paramètres
 
+\if :{?base}
+\else
+do $$ begin raise exception 'Refus : -v base=<nom de la base> est obligatoire (malica_local ou malica).'; end $$;
+\endif
 \if :{?sauvegarde}
 \else
-do $$ begin raise exception 'Refus : -v sauvegarde=<fichier de sauvegarde pris juste avant> est obligatoire.'; end $$;
+do $$ begin raise exception 'Refus : -v sauvegarde=<chemin absolu du .dump pris juste avant> est obligatoire.'; end $$;
 \endif
 \if :{?mode}
 \else
@@ -67,21 +86,49 @@ do $$ begin raise exception 'Refus : impossible de lire l''utilisateur du poste 
 
 begin;
 set local lock_timeout = '5s';
-select set_config('purge.sauvegarde', :'sauvegarde', true),
+select set_config('purge.base', :'base', true),
+       set_config('purge.sauvegarde', :'sauvegarde', true),
        set_config('purge.mode', :'mode', true),
        set_config('purge.utilisateur_poste', :'utilisateur_poste', true) \gset
 
 -- ------------------------------------------------------------------ verrou 1
 
 do $$
+declare
+  nommee  text := current_setting('purge.base');
+  fichier text := current_setting('purge.sauvegarde');
+  etat    record;
 begin
-  if current_database() <> 'malica_local' then
-    raise exception 'Refus : cette purge ne s''exécute que sur malica_local (base actuelle : %).',
+  if nommee <> current_database() then
+    raise exception 'Refus : la base nommée (%) n''est pas celle où l''on est connecté (%).',
+      nommee, current_database();
+  end if;
+  -- La liste blanche, nommée, et rien d'autre.
+  if current_database() not in ('malica_local', 'malica') then
+    raise exception 'Refus : % n''est pas dans la liste blanche (malica_local, malica).',
       current_database();
   end if;
   if current_setting('purge.mode') not in ('essai', 'reel') then
     raise exception 'Refus : mode % inconnu (essai ou reel).', current_setting('purge.mode');
   end if;
+
+  -- La sauvegarde, lue par le serveur lui-même.
+  select * into etat from pg_stat_file(fichier, true);
+  if etat.size is null then
+    raise exception 'Refus : la sauvegarde % n''existe pas sur le serveur PostgreSQL.', fichier;
+  end if;
+  if etat.isdir or etat.size = 0 then
+    raise exception 'Refus : la sauvegarde % est vide ou n''est pas un fichier.', fichier;
+  end if;
+  if pg_read_binary_file(fichier, 0, 5) <> 'PGDMP'::bytea then
+    raise exception 'Refus : % n''est pas un fichier pg_dump (signature PGDMP absente).', fichier;
+  end if;
+  if etat.modification < now() - interval '1 hour' then
+    raise exception 'Refus : la sauvegarde % date du % — plus d''une heure. Refaites-la.',
+      fichier, etat.modification;
+  end if;
+  perform set_config('purge.sauvegarde_octets', etat.size::text, true),
+          set_config('purge.sauvegarde_date', etat.modification::text, true);
 end $$;
 
 -- ------------------------------------------------------- le corpus, avant
@@ -242,6 +289,14 @@ begin
   end if;
 end $$;
 
+-- Pendant : dans la transaction, après le TRUNCATE, avant COMMIT ou ROLLBACK.
+\unset QUIET
+\echo '=== Pendant : les 72 tables, recomptées après le TRUNCATE ==='
+select count(*) as tables, sum(n) as lignes_restantes
+  from purge_tables t,
+       lateral (select (xpath('/row/n/text()', query_to_xml(format('select count(*) as n from %s', t.nom::regclass), false, true, '')))[1]::text::bigint as n) c;
+\set QUIET on
+
 -- ------------------------------------------------- le corpus, après — verrou 5
 
 insert into purge_corpus
@@ -280,6 +335,8 @@ select 'plateforme.remise_a_zero_metier',
          'base', current_database(),
          'mode', current_setting('purge.mode'),
          'sauvegarde', current_setting('purge.sauvegarde'),
+         'sauvegarde_octets', current_setting('purge.sauvegarde_octets')::bigint,
+         'sauvegarde_date', current_setting('purge.sauvegarde_date'),
          'script', 'db/maintenance/purge_metier.sql',
          'instruction', current_setting('purge.instruction'),
          'tables', (select jsonb_object_agg(nom, lignes) from purge_lignes),
