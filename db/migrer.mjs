@@ -22,7 +22,14 @@
  *   node db/migrer.mjs --base <url>          une autre base (une base jetable)
  *   node db/migrer.mjs --mot-de-passe-api    pose MALICA_API_PASSWORD sur le rôle de l'API
  *   node db/migrer.mjs --forcer              rejoue un fichier dont l'empreinte a changé
- *   node db/migrer.mjs --adopter             une base montée par psql : inscrit l'existant sans le jouer
+ *
+ * Il n'existe AUCUN moyen d'inscrire une migration sans la jouer. Un mode
+ * `--adopter` l'a permis, pour les bases montées à la main par psql : le
+ * 8 septembre 2026, il a inscrit 93 migrations dans `malica_local` sur la foi
+ * du dépôt, alors que la base portait six objets d'une autre époque. Le
+ * registre a menti une semaine sans que rien ne le voie. Le mode est retiré ;
+ * `db/registre.mjs` (et son test dans `npm test`) compare désormais les objets
+ * d'une base à ceux que produisent les migrations, pas leur nombre.
  *
  * L'URL n'est jamais affichée. Les messages français des migrations exigent
  * un client en UTF-8 : `pg` l'est toujours — c'est ce qui a manqué à psql.
@@ -112,25 +119,6 @@ try {
   const fichiers = readdirSync(MIGRATIONS)
     .filter((f) => f.endsWith(".sql"))
     .sort();
-
-  /*
-   * Une base montée avant ce script (les postes de développement, par psql)
-   * porte déjà tout le schéma mais pas la table. `--adopter` y inscrit les
-   * fichiers présents comme appliqués, sans les jouer, et seulement si la
-   * table est vide : ensuite, seules les migrations nouvelles se jouent.
-   */
-  if (option("--adopter") !== null) {
-    if (appliquees.size > 0) {
-      console.error("--adopter : app.migrations n'est pas vide, rien à adopter.");
-      process.exit(1);
-    }
-    for (const nom of fichiers) {
-      const sha = empreinte(readFileSync(join(MIGRATIONS, nom), "utf8"));
-      await client.query("insert into app.migrations (nom, sha256) values ($1, $2)", [nom, sha]);
-      appliquees.set(nom, sha);
-    }
-    console.log(`  ${fichiers.length} migrations adoptées comme déjà appliquées`);
-  }
 
   let jouees = 0;
   for (const nom of fichiers) {

@@ -38,6 +38,12 @@ jobs:
       DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
       DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
       JWT_SECRET: integration_continue_seulement_32_caracteres
+      # Le jeu de données ouvre une session par compte, à la file, depuis une
+      # seule adresse : la limite de trente connexions par minute — faite pour
+      # freiner une devinette de mot de passe — le refuse (429). ci.yml la
+      # relevait déjà ; cette épreuve de nuit ne la relevait pas, et échouait
+      # chaque nuit depuis le 9 septembre 2026 sur « connexion refusée : 429 ».
+      AUTH_ESSAIS_PAR_MINUTE: "1000"
       # Le contexte runner n'existe pas au niveau du job : un chemin fixe du runner Linux.
       STOCKAGE_RACINE: /tmp/malica-pieces
       # La WebView de l'émulateur se présente depuis http://localhost (clair, saveur emulateur).

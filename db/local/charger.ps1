@@ -19,7 +19,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $racine = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$migrations = Join-Path $racine "db\migrations"
 
 # PostgreSQL 16 est la version de reference du Guide de Stack (§06). On la
 # prefere si plusieurs versions cohabitent sur le poste.
@@ -36,7 +35,6 @@ if (-not $env:PGPASSWORD) {
 }
 
 function Run($db, $sql)  { & $psql -h $PgHost -p $Port -U $PgUser -d $db -v ON_ERROR_STOP=1 -q -c $sql }
-function File($db, $f)   { & $psql -h $PgHost -p $Port -U $PgUser -d $db -v ON_ERROR_STOP=1 -q -f $f }
 
 if ($Recreate) {
   Write-Host "suppression de $Base" -ForegroundColor DarkYellow
@@ -50,20 +48,13 @@ if (-not $existe) {
   Run "postgres" "create database $Base;"
 }
 
-Write-Host "couche d'authentification et de roles" -ForegroundColor Cyan
-File $Base (Join-Path $PSScriptRoot "00_compat_supabase.sql")
-
-# Le role de connexion de l'API doit avoir un mot de passe pour se connecter.
-# Il est propre a l'environnement : jamais dans le fichier SQL, qui est versionne.
-if ($env:MALICA_API_PASSWORD) {
-  Run $Base "alter role malica_api with password '$($env:MALICA_API_PASSWORD)';"
-  Write-Host "  mot de passe pose sur malica_api" -ForegroundColor DarkGray
-} else {
-  Write-Host "  MALICA_API_PASSWORD absente : malica_api ne pourra pas se connecter." -ForegroundColor Yellow
-  Write-Host "  Definissez-la, ou posez le mot de passe a la main." -ForegroundColor Yellow
-}
-
-# Les migrations sont jouees TELLES QU'ELLES SONT.
+# Les migrations sont jouees TELLES QU'ELLES SONT, et par db/migrer.mjs : le
+# seul chemin qui tient le registre app.migrations. Ce chargeur les jouait par
+# psql, sans registre ; une base montee ainsi ne pouvait ensuite rejoindre
+# migrer.mjs qu'en etant « adoptee » — inscrite sans verification. C'est ce qui
+# a fait mentir le registre de malica_local le 8 septembre 2026. Il n'y a plus
+# qu'un chemin : celui de la CI et des serveurs. migrer.mjs joue aussi la
+# couche de compatibilite (auth, roles) avant les migrations.
 #
 # Ce chargeur a longtemps reecrit leur texte au vol quand pgvector manquait :
 # vector(768) devenait real[], l'index HNSW disparaissait. La base locale et une
@@ -79,15 +70,18 @@ if ($env:MALICA_API_PASSWORD) {
 # C'est voulu. Un echec bruyant vaut mieux qu'une adaptation silencieuse : il
 # dit qu'il manque quelque chose, la ou l'ancienne version laissait croire que
 # tout allait bien.
-$n = 0
-foreach ($m in Get-ChildItem $migrations -Filter *.sql | Sort-Object Name) {
-  Write-Host ("  {0}" -f $m.Name)
-  File $Base $m.FullName
-  $n++
+$url = "postgres://{0}:{1}@{2}:{3}/{4}" -f $PgUser, [uri]::EscapeDataString($env:PGPASSWORD), $PgHost, $Port, $Base
+$arguments = @((Join-Path $racine "db\migrer.mjs"), "--base", $url)
+# Le role de connexion de l'API doit avoir un mot de passe pour se connecter.
+# Il est propre a l'environnement : jamais dans un fichier versionne. Le role
+# est global au serveur : le poser change aussi celui des autres bases.
+if ($env:MALICA_API_PASSWORD) {
+  $arguments += "--mot-de-passe-api"
+} else {
+  Write-Host "  MALICA_API_PASSWORD absente : le mot de passe de malica_api reste celui qu'il est." -ForegroundColor Yellow
 }
-
-Write-Host ""
-Write-Host "$n migrations appliquees sur $Base" -ForegroundColor Green
+& node @arguments
+if ($LASTEXITCODE -ne 0) { throw "db/migrer.mjs a echoue sur $Base" }
 
 $resume = "select table_schema, count(*) as tables from information_schema.tables " +
           "where table_type='BASE TABLE' and table_schema not in " +

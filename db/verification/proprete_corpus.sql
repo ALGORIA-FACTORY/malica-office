@@ -72,13 +72,37 @@ union all
 -- encodé ce jour-là. Si le statut d'un article change, ou si une édition
 -- s'ajoute, l'en-tête vieillit sans que rien ne le signale. Ce contrôle le
 -- signale — et la réponse est de réencoder les fragments concernés.
+--
+-- DÉFAUT CONNU, ACCEPTÉ NOMMÉMENT le 15 septembre 2026 (docs/etat-staging.md,
+-- constat 10) : le corpus a été encodé avec une version antérieure de
+-- `legal.entete_de_fragment`, qui écrivait « , opposable à » là où la migration
+-- 20260902140000 écrit « , opposable à : ». La base de travail portait cette
+-- version d'avant (registre adopté le 8 septembre, sans être joué). L'écart est
+-- de deux caractères, sans portée sémantique ; réencoder 31 863 fragments
+-- supposerait de reconstruire l'index HNSW sur le staging (2,7 Go, sans swap).
+-- On ne réencode pas. Cette exception, et elle seule, est retirée du compte :
+-- une en-tête qui diffère AUTREMENT reste une anomalie. Et quand plus aucune
+-- en-tête ne relève de l'exception (après un réencodage), la ligne suivante
+-- le dit : l'exception est périmée, on la retire.
 select 'en-têtes vieillies depuis l''encodage',
        (select count(*)::text
           from legal.chunks c
           join legal.article_versions v on v.id = c.article_version_id
           join legal.articles a on a.id = v.article_id
-         where c.entete is distinct from
-               legal.entete_de_fragment(a.corpus, a.numero, v.edition_min, a.source_code, a.statut));
+         cross join lateral (select legal.entete_de_fragment(a.corpus, a.numero, v.edition_min, a.source_code, a.statut) as attendue) f
+         where c.entete is distinct from f.attendue
+           and c.entete is distinct from replace(f.attendue, ', opposable à : ', ', opposable à '));
+
+\echo ''
+\echo '===== 2 bis. DÉFAUTS CONNUS, ACCEPTÉS NOMMÉMENT : comptés, pas en anomalie ====='
+select 'en-têtes « opposable à » sans deux-points (accepté le 2026-09-15 ; 0 = exception périmée, la retirer)' quoi,
+       (select count(*)::text
+          from legal.chunks c
+          join legal.article_versions v on v.id = c.article_version_id
+          join legal.articles a on a.id = v.article_id
+         cross join lateral (select legal.entete_de_fragment(a.corpus, a.numero, v.edition_min, a.source_code, a.statut) as attendue) f
+         where c.entete is distinct from f.attendue
+           and c.entete = replace(f.attendue, ', opposable à : ', ', opposable à ')) combien;
 
 \echo ''
 \echo '===== 3. DOUBLONS ====='
