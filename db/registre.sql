@@ -3,11 +3,66 @@
 -- Relevée sur un serveur distant par psql :
 --   psql -At -c "select coalesce(json_agg(c), '[]') from ( <cette requête> ) c"
 --
--- Les droits sont rendus comme des ENSEMBLES triés (aclexplode) et le défaut
--- est explicité (acldefault) : l'ordre des GRANT n'est pas un écart.
--- Les objets appartenant à une extension sont écartés (pg_depend, 'e').
--- Les noms sont qualifiés à la main (quote_ident), jamais par ::regclass,
--- qui dépendrait du search_path.
+-- ================================================================ CE QUI EST COMPARÉ
+--
+-- La base elle-même (encodage, locale, limite de connexions, droits, réglages
+-- propres à la base, commentaire) ; schémas ; extensions (leur version) ;
+-- types autonomes ; relations (genre, propriétaire, RLS activée et forcée,
+-- persistance, identité de réplication, options, clé et bornes de partition,
+-- droits) ; colonnes (position, type, nullabilité, défaut, génération,
+-- identité, collation, stockage, compression, cible de statistiques, options,
+-- droits) ; contraintes ; index (définition, options, regroupement, identité
+-- de réplication) ; séquences (paramètres, colonne propriétaire) ; vues ;
+-- fonctions, procédures et agrégats (définition complète, propriétaire,
+-- droits) ; déclencheurs ; politiques ; règles ; héritage ; droits par défaut ;
+-- conversions de types ; opérateurs, classes et familles d'opérateurs ;
+-- méthodes d'accès ; langages ; transformations ; conversions d'encodage ;
+-- collations ; configurations, dictionnaires, analyseurs et modèles de
+-- recherche textuelle ; statistiques étendues ; publications et
+-- souscriptions ; enveloppes, serveurs et correspondances d'utilisateurs
+-- étrangers ; déclencheurs d'événement ; étiquettes de sécurité ;
+-- commentaires.
+--
+-- Les droits sont rendus comme des ENSEMBLES triés (aclexplode), le défaut
+-- explicité (acldefault) : l'ordre des GRANT n'est pas un écart. Les noms sont
+-- qualifiés à la main (quote_ident), jamais par ::regclass, qui dépendrait du
+-- search_path. registre.mjs ramène les fins de ligne à LF : c'est la SEULE
+-- normalisation du texte — un corps qui ne diffère que par des CR n'est pas
+-- un écart, tout autre caractère en est un.
+--
+-- ================================================================ CE QUI NE L'EST PAS, ET POURQUOI
+--
+-- Rien d'autre n'est écarté. Une catégorie absente de cette liste et de la
+-- précédente est un oubli : l'ajouter à la requête, pas à la liste.
+--
+--   - Les DONNÉES : le référentiel semé par les migrations a son comparateur
+--     (db/verification/comparer-referentiel.mjs), le corpus ses empreintes
+--     par table (docs/etat-staging.md, B.1).
+--   - Le contenu de app.migrations : registre.mjs le confronte aux fichiers du
+--     dépôt, nom et empreinte (ecartsDuRegistre) ; la date d'application varie
+--     par nature.
+--   - Le NOM et le PROPRIÉTAIRE de la base : ils diffèrent par construction
+--     entre la base de travail et la base jetable de référence. Dans les
+--     droits de la base, le propriétaire est rendu « <propriétaire> ».
+--   - Les RÔLES et leurs appartenances : globaux au serveur, partagés par ses
+--     bases. Ce qu'un rôle PEUT faire dans la base est comparé par les droits ;
+--     que malica_api ne contourne pas la RLS est éprouvé par
+--     apps/api/src/isolation.test.ts.
+--   - L'intérieur des EXTENSIONS (pgvector, pgcrypto, btree_gist) : leurs
+--     objets suivent leur version, qui est comparée (pg_depend, deptype 'e').
+--   - Les objets du serveur : pg_catalog, information_schema, pg_toast, et les
+--     langages, méthodes d'accès et conversions de types créés par initdb
+--     (numéro d'objet < 16384), présents avant toute migration.
+--   - Les déclencheurs INTERNES : ceux qui mettent en œuvre les clés
+--     étrangères, comparées comme contraintes.
+--   - Les options des tables TOAST, et les colonnes SUPPRIMÉES : la position
+--     d'une colonne est son rang parmi les colonnes vivantes.
+--   - Le STOCKAGE PHYSIQUE : tailles, gonflement, statistiques du
+--     planificateur, tablespaces, grands objets. Le dépôt n'en crée aucun.
+--
+-- Une base relevée sur un AUTRE serveur que la référence (registre.mjs
+-- --catalogue) peut différer sur la ligne « base » — encodage, locale : c'est
+-- une différence réelle d'environnement, dite, pas écartée.
 with ns as (
   select oid, nspname
     from pg_namespace
@@ -27,14 +82,30 @@ rel as (
    where c.relkind in ('r', 'p', 'v', 'm', 'S', 'f', 'i', 'I')
      and not exists (select 1 from ext where ext.classid = 'pg_class'::regclass and ext.objid = c.oid)
 )
+-- la base elle-même : ni son nom ni son propriétaire (voir l'en-tête)
+select 'base' as genre, 'courante' as objet,
+       'encodage=' || pg_encoding_to_char(d.encoding) || ' fournisseur=' || d.datlocprovider::text
+       || ' collate=' || d.datcollate || ' ctype=' || d.datctype || ' locale=' || coalesce(d.datlocale, '')
+       || ' règles_icu=' || coalesce(d.daticurules, '') || ' limite_connexions=' || d.datconnlimit
+       || ' droits=' ||
+       (select coalesce(string_agg(format('%s=%s%s/%s',
+                case when a.grantee = 0 then 'PUBLIC' when a.grantee = d.datdba then '<propriétaire>' else pg_get_userbyid(a.grantee) end,
+                a.privilege_type, case when a.is_grantable then '*' else '' end,
+                case when a.grantor = d.datdba then '<propriétaire>' else pg_get_userbyid(a.grantor) end), ',' order by 1), '')
+          from aclexplode(coalesce(d.datacl, acldefault('d', d.datdba))) a)
+       || ' réglages=' || coalesce((select array_to_string(st.setconfig, ',') from pg_db_role_setting st
+                                     where st.setdatabase = d.oid and st.setrole = 0), '') as definition
+  from pg_database d
+ where d.datname = current_database()
+union all
 -- les schémas
-select 'schéma' as genre, quote_ident(n.nspname) as objet,
+select 'schéma', quote_ident(n.nspname),
        'propriétaire=' || pg_get_userbyid(n.nspowner) || ' droits=' ||
        (select coalesce(string_agg(format('%s=%s%s/%s',
                 case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end,
                 a.privilege_type, case when a.is_grantable then '*' else '' end,
                 pg_get_userbyid(a.grantor)), ',' order by 1), '')
-          from aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a) as definition
+          from aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a)
   from pg_namespace n join ns on ns.oid = n.oid
 union all
 -- les extensions : leur version, pas leur contenu
@@ -73,6 +144,8 @@ select 'relation', r.nom,
        || ' persistance=' || r.relpersistence::text
        || ' identité_réplication=' || r.relreplident::text
        || ' options=' || coalesce(array_to_string(r.reloptions, ','), '')
+       || ' clé_de_partition=' || coalesce(case when r.relkind = 'p' then pg_get_partkeydef(r.oid) end, '')
+       || ' bornes=' || coalesce((select pg_get_expr(c.relpartbound, c.oid) from pg_class c where c.oid = r.oid), '')
        || ' droits=' ||
        (select coalesce(string_agg(format('%s=%s%s/%s',
                 case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end,
@@ -93,6 +166,8 @@ select 'colonne', r.nom || '.' || quote_ident(a.attname),
        || ' collation=' || case when a.attcollation <> t.typcollation
                                 then coalesce((select collname from pg_collation where oid = a.attcollation), '?')
                                 else '' end
+       || ' stockage=' || a.attstorage::text
+       || ' compression=' || a.attcompression::text
        || ' statistiques=' || coalesce(a.attstattarget::text, '')
        || ' options=' || coalesce(array_to_string(a.attoptions, ','), '')
        || ' droits=' ||
@@ -119,6 +194,7 @@ union all
 select 'index', r.nom,
        pg_get_indexdef(r.oid) || ' options=' || coalesce(array_to_string(r.reloptions, ','), '')
        || ' regroupé=' || (select i.indisclustered from pg_index i where i.indexrelid = r.oid)
+       || ' identité_réplication=' || (select i.indisreplident from pg_index i where i.indexrelid = r.oid)
   from rel r
  where r.relkind in ('i', 'I')
 union all
@@ -126,6 +202,12 @@ union all
 select 'séquence', r.nom,
        format('type=%s début=%s incrément=%s min=%s max=%s cache=%s cycle=%s',
               format_type(s.seqtypid, null), s.seqstart, s.seqincrement, s.seqmin, s.seqmax, s.seqcache, s.seqcycle)
+       || ' possédée_par=' || coalesce((select t.nom || '.' || quote_ident(att.attname)
+                                          from pg_depend dp
+                                          join rel t on t.oid = dp.refobjid
+                                          join pg_attribute att on att.attrelid = dp.refobjid and att.attnum = dp.refobjsubid
+                                         where dp.classid = 'pg_class'::regclass and dp.objid = s.seqrelid
+                                           and dp.refclassid = 'pg_class'::regclass and dp.deptype in ('a', 'i')), '')
   from pg_sequence s join rel r on r.oid = s.seqrelid
 union all
 -- les vues
@@ -135,7 +217,13 @@ select 'vue', r.nom, pg_get_viewdef(r.oid)
 union all
 -- les fonctions et procédures : définition complète, propriétaire, droits
 select 'fonction', quote_ident(ns.nspname) || '.' || quote_ident(p.proname) || '(' || pg_get_function_identity_arguments(p.oid) || ')',
-       case when p.prokind = 'a' then 'agrégat' else pg_get_functiondef(p.oid) end
+       case when p.prokind = 'a'
+            then (select format('agrégat transition=%s type=%s finale=%s combinaison=%s initiale=%s tri=%s genre=%s',
+                                ag.aggtransfn::regproc, format_type(ag.aggtranstype, null), ag.aggfinalfn::regproc,
+                                ag.aggcombinefn::regproc, coalesce(ag.agginitval, ''), ag.aggsortop::regoper, ag.aggkind)
+                    from pg_aggregate ag where ag.aggfnoid = p.oid)
+                 || ' arguments=' || pg_get_function_arguments(p.oid)
+            else pg_get_functiondef(p.oid) end
        || ' propriétaire=' || pg_get_userbyid(p.proowner) || ' droits=' ||
        (select coalesce(string_agg(format('%s=%s%s/%s',
                 case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end,
@@ -220,16 +308,86 @@ select 'publication', quote_ident(pu.pubname),
        'toutes_tables=' || pu.puballtables || ' ins=' || pu.pubinsert || ' upd=' || pu.pubupdate || ' del=' || pu.pubdelete
   from pg_publication pu
 union all
+-- les langages, méthodes d'accès, classes et familles d'opérateurs,
+-- transformations, conversions d'encodage, analyseurs et modèles de recherche
+select 'langage', quote_ident(l.lanname),
+       'fiable=' || l.lanpltrusted || ' propriétaire=' || pg_get_userbyid(l.lanowner) || ' droits=' ||
+       (select coalesce(string_agg(format('%s=%s%s/%s',
+                case when a.grantee = 0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end,
+                a.privilege_type, case when a.is_grantable then '*' else '' end,
+                pg_get_userbyid(a.grantor)), ',' order by 1), '')
+          from aclexplode(coalesce(l.lanacl, acldefault('l', l.lanowner))) a)
+  from pg_language l
+ where l.oid >= 16384
+   and not exists (select 1 from ext where ext.classid = 'pg_language'::regclass and ext.objid = l.oid)
+union all
+select 'méthode_d_accès', quote_ident(am.amname), am.amtype::text || ' ' || am.amhandler::regproc::text
+  from pg_am am
+ where am.oid >= 16384
+   and not exists (select 1 from ext where ext.classid = 'pg_am'::regclass and ext.objid = am.oid)
+union all
+select 'classe_d_opérateurs', quote_ident(ns.nspname) || '.' || quote_ident(oc.opcname) || ' ' || am.amname,
+       'type=' || format_type(oc.opcintype, null) || ' défaut=' || oc.opcdefault
+  from pg_opclass oc join ns on ns.oid = oc.opcnamespace join pg_am am on am.oid = oc.opcmethod
+ where not exists (select 1 from ext where ext.classid = 'pg_opclass'::regclass and ext.objid = oc.oid)
+union all
+select 'famille_d_opérateurs', quote_ident(ns.nspname) || '.' || quote_ident(ofa.opfname) || ' ' || am.amname, ''
+  from pg_opfamily ofa join ns on ns.oid = ofa.opfnamespace join pg_am am on am.oid = ofa.opfmethod
+ where not exists (select 1 from ext where ext.classid = 'pg_opfamily'::regclass and ext.objid = ofa.oid)
+union all
+select 'transformation', format_type(tr.trftype, null) || ' ' || (select lanname from pg_language where oid = tr.trflang),
+       tr.trffromsql::regproc::text || ' ' || tr.trftosql::regproc::text
+  from pg_transform tr
+ where not exists (select 1 from ext where ext.classid = 'pg_transform'::regclass and ext.objid = tr.oid)
+union all
+select 'conversion_d_encodage', quote_ident(ns.nspname) || '.' || quote_ident(cv.conname),
+       pg_encoding_to_char(cv.conforencoding) || ' -> ' || pg_encoding_to_char(cv.contoencoding)
+       || ' ' || cv.conproc::regproc::text || ' défaut=' || cv.condefault
+  from pg_conversion cv join ns on ns.oid = cv.connamespace
+ where not exists (select 1 from ext where ext.classid = 'pg_conversion'::regclass and ext.objid = cv.oid)
+union all
+select 'analyseur_de_recherche', quote_ident(ns.nspname) || '.' || quote_ident(pr.prsname), pr.prsstart::regproc::text
+  from pg_ts_parser pr join ns on ns.oid = pr.prsnamespace
+ where not exists (select 1 from ext where ext.classid = 'pg_ts_parser'::regclass and ext.objid = pr.oid)
+union all
+select 'modèle_de_recherche', quote_ident(ns.nspname) || '.' || quote_ident(tm.tmplname), tm.tmpllexize::regproc::text
+  from pg_ts_template tm join ns on ns.oid = tm.tmplnamespace
+ where not exists (select 1 from ext where ext.classid = 'pg_ts_template'::regclass and ext.objid = tm.oid)
+union all
+-- les données étrangères, les souscriptions, les étiquettes de sécurité
+select 'enveloppe_étrangère', quote_ident(fw.fdwname),
+       coalesce(fw.fdwhandler::regproc::text, '') || ' options=' || coalesce(array_to_string(fw.fdwoptions, ','), '')
+  from pg_foreign_data_wrapper fw
+ where not exists (select 1 from ext where ext.classid = 'pg_foreign_data_wrapper'::regclass and ext.objid = fw.oid)
+union all
+select 'serveur_étranger', quote_ident(sv.srvname),
+       'type=' || coalesce(sv.srvtype, '') || ' options=' || coalesce(array_to_string(sv.srvoptions, ','), '')
+  from pg_foreign_server sv
+union all
+select 'correspondance_utilisateur', um.srvname || ' ' || um.usename, coalesce(array_to_string(um.umoptions, ','), '')
+  from pg_user_mappings um
+union all
+select 'souscription', quote_ident(su.subname), 'publications=' || array_to_string(su.subpublications, ',')
+  from pg_subscription su
+ where su.subdbid = (select oid from pg_database where datname = current_database())
+union all
+select 'étiquette_de_sécurité', sl.provider || ' ' || io.type || ' ' || io.identity, sl.label
+  from pg_seclabel sl
+  cross join lateral pg_identify_object(sl.classoid, sl.objoid, sl.objsubid) io
+union all
 -- les déclencheurs d'événement
 select 'déclencheur_événement', quote_ident(ev.evtname),
        ev.evtevent || ' ' || ev.evtfoid::regproc::text || ' état=' || ev.evtenabled::text
   from pg_event_trigger ev
 union all
--- les commentaires, sur tout objet créé par le dépôt (pg_identify_object : non traduit)
-select 'commentaire', io.type || ' ' || io.identity, d.description
+-- les commentaires (pg_identify_object : non traduit) ; celui de la base
+-- courante sous un nom neutre, puisque le nom diffère par construction
+select 'commentaire',
+       case when d.classoid = 'pg_database'::regclass then 'base courante' else io.type || ' ' || io.identity end,
+       d.description
   from pg_description d
   cross join lateral pg_identify_object(d.classoid, d.objoid, d.objsubid) io
- where d.objoid >= 16384
-   and d.classoid <> 'pg_database'::regclass
+ where (d.classoid <> 'pg_database'::regclass
+        or d.objoid = (select oid from pg_database where datname = current_database()))
    and not exists (select 1 from ext where ext.classid = d.classoid and ext.objid = d.objoid)
    and coalesce(io.schema, '') not in ('pg_catalog', 'information_schema')

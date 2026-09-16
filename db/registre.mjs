@@ -15,23 +15,18 @@
  * qui comparaient des NOMBRES de migrations l'ont vu conforme.
  *
  * Ce script ne croit pas le registre sur parole. Il monte une base neuve
- * depuis les seules migrations du dépôt, relève le catalogue des deux —
- * schémas, types, tables, colonnes et leurs défauts, contraintes, index,
- * séquences, vues, fonctions, déclencheurs, politiques, règles, droits,
- * droits par défaut, commentaires — et nomme chaque écart.
+ * depuis les seules migrations du dépôt, relève le catalogue des deux et
+ * nomme chaque écart.
  *
- * ============================================================== CE QUI N'EST PAS COMPARÉ
+ * ============================================================== LE PÉRIMÈTRE
  *
- *   - les DONNÉES : le corpus a ses empreintes (docs/etat-staging.md, B.1) ;
- *   - les objets des extensions (pgvector, pgcrypto…) : leur version est
- *     comparée, pas leurs milliers de fonctions ;
- *   - les rôles, globaux au serveur ;
- *   - la date d'application dans `app.migrations`.
- *
- * Les définitions sont celles que PostgreSQL rend (pg_get_functiondef,
- * pg_get_viewdef…), fin de ligne ramenée à LF. Les droits sont comparés
- * comme ENSEMBLES (aclexplode, trié), le défaut explicité par acldefault :
- * l'ordre des GRANT ne fait pas un écart, un droit en plus ou en moins oui.
+ * Ce qui est comparé, et CE QUI NE L'EST PAS avec sa raison, est écrit en tête
+ * de db/registre.sql — et nulle part ailleurs, pour qu'il n'y ait qu'une liste
+ * à tenir. Une première version de ce contrôle (15 septembre 2026) ignorait
+ * sans le dire les droits, la position des colonnes et les commentaires :
+ * elle a annoncé trois objets divergents là où il y en avait six. Un outil de
+ * contrôle qui écarte en silence cache ce qu'il devait trouver ; une exclusion
+ * qui n'est pas écrite dans cet en-tête est un oubli.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

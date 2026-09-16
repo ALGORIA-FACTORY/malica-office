@@ -150,7 +150,7 @@ describe(
     });
 
     // En dernier : ce test abîme la base jetable pour prouver que la comparaison le voit.
-    it("voit un droit retiré, une fonction réécrite et une colonne déplacée", async () => {
+    it("voit un droit retiré, une fonction réécrite, une colonne déplacée, un commentaire changé", async () => {
       const client = new pg.Client({ connectionString: jetable.url });
       await client.connect();
       try {
@@ -160,7 +160,8 @@ describe(
         returns text language sql stable as $fn$ select 'une autre époque' $fn$`);
         await client.query(`drop view public.reglages_cabinet_v;
         alter table collab.reglages_cabinet drop column seuil_certitude_conseil;
-        alter table collab.reglages_cabinet add column seuil_certitude_conseil numeric(3,2) not null default 0.80`);
+        alter table collab.reglages_cabinet add column seuil_certitude_conseil numeric(3,2) not null default 0.80;
+        comment on table capture.pieces is 'une autre époque'`);
         const { ecarts } = comparerCatalogues(await lireCatalogue(client), reference, []);
         const cles = new Set(ecarts.map((e) => e.cle));
         assert.ok(cles.has("relation capture.token_plan"), "droit retiré non vu");
@@ -173,6 +174,7 @@ describe(
           "colonne déplacée non vue",
         );
         assert.ok(cles.has("vue public.reglages_cabinet_v"), "vue retirée non vue");
+        assert.ok(cles.has("commentaire table capture.pieces"), "commentaire changé non vu");
       } finally {
         await client.end();
       }
