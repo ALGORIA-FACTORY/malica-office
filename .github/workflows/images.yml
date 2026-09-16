@@ -5,6 +5,14 @@
 # étiquette que le dépôt — `main` ou `v0.3.1` — plus l'empreinte git. Puis,
 # sur main seulement, le staging se déploie tout seul : `deployer main`.
 #
+# SUR MAIN SEULEMENT, et c'est le déclencheur ci-dessous qui le tient, pas ce
+# commentaire. Jusqu'au 15 septembre 2026, la branche du chantier Android
+# déclenchait aussi le déploiement : pousser `application-android` jouait des
+# migrations en superutilisateur sur la base qu'interroge l'application
+# publiée sur Google Play, sans relecture ni approbation — pendant que cet
+# en-tête affirmait déjà « sur main seulement ». Un déploiement du staging est
+# un geste voulu : il passe par main.
+#
 # Le pilote et la production ne se déploient jamais d'ici : deployer.yml, à la
 # main, sur une étiquette, avec l'approbation que l'environnement GitHub exige.
 #
@@ -16,9 +24,8 @@ name: Images
 
 on:
   push:
-    # Le staging suit la branche d'intégration du moment : main, et la
-    # branche du chantier Android tant qu'elle n'y est pas fondue.
-    branches: [main, application-android]
+    # Le staging suit main, et main seule (voir l'en-tête).
+    branches: [main]
     tags: ["v*"]
 
 concurrency:
