@@ -129,7 +129,15 @@ jobs:
           disk-size: 6000M
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          # Deux processeurs, rendu logiciel : l'interface système de l'émulateur
+          # tarde, et Android pose « System UI isn't responding » par-dessus
+          # l'application — les assertions ne voient plus l'écran, qui est
+          # pourtant bien là (exécution 35091995778, capture de connexion). Ces
+          # fenêtres d'erreur système sont masquées ; une vraie panne de
+          # l'application reste visible, puisque son écran n'apparaît pas.
           script: |
+            adb shell settings put global hide_error_dialogs 1
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
             adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
             maestro test --format junit --output maestro.xml android/maestro/
 
