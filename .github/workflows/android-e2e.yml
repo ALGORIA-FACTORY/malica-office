@@ -103,6 +103,21 @@ jobs:
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
+      # L'émulateur n'a jamais démarré ici : « Not enough space to create
+      # userdata partition. Available: 5639.93 MB, need 7372.80 MB »
+      # (exécution 34994360064, 15 septembre 2026). Les nuits précédentes
+      # tombaient plus tôt, sur le 429 du jeu de données, et le cachaient :
+      # aucun flux Maestro n'a jamais tourné. La machine de GitHub porte des
+      # chaînes d'outils dont ce job ne se sert pas ; on les retire, et le
+      # disque de l'émulateur est borné.
+      - name: Libérer de la place pour l'émulateur
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/powershell /usr/share/swift
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+
       - name: Lancer l'émulateur et les flux
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -111,6 +126,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           ram-size: 4096M
+          disk-size: 6000M
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
