@@ -6,6 +6,10 @@
 #   maestro test android/maestro/connexion.yaml
 appId: com.algoriafactory.malica.emulateur
 ---
+# Chaque flux part d'un appareil en ligne. Un flux qui échoue en mode avion
+# (mode-avion.yaml) laissait l'émulateur hors ligne, et le flux suivant
+# tombait sur « Pas de connexion » (exécution 35093087941).
+- setAirplaneMode: disabled
 - launchApp:
     clearState: true
 - assertVisible: "Espace Malica Office"
@@ -15,7 +19,10 @@ appId: com.algoriafactory.malica.emulateur
 - inputText: "JeuDeDonnees2026!"
 - hideKeyboard
 - tapOn: "Entrer"
-# À la toute première visite, le fil de Malica recouvre l'accueil : on le referme.
+# À la toute première visite, le fil de Malica recouvre l'accueil : on le
+# referme. Il peut s'ouvrir AVANT ou APRÈS que l'accueil s'affiche — sur
+# l'émulateur de la CI, il est venu après, et recouvrait « Mon espace » pour
+# les flux suivants (exécution 35093087941). On le guette donc des deux côtés.
 #
 # Maestro n'accepte pas `timeout` sur tapOn ni assertVisible — « Unknown
 # Property: timeout » (CI du 16 septembre 2026, le premier jour où ces flux ont
@@ -23,7 +30,7 @@ appId: com.algoriafactory.malica.emulateur
 # extendedWaitUntil.
 - extendedWaitUntil:
     visible: "Fermer le fil de Malica"
-    timeout: 20000
+    timeout: 15000
     optional: true
 - tapOn:
     text: "Fermer le fil de Malica"
@@ -31,3 +38,11 @@ appId: com.algoriafactory.malica.emulateur
 - extendedWaitUntil:
     visible: "Vos documents"
     timeout: 20000
+- extendedWaitUntil:
+    visible: "Fermer le fil de Malica"
+    timeout: 8000
+    optional: true
+- tapOn:
+    text: "Fermer le fil de Malica"
+    optional: true
+- assertVisible: "Vos documents"
