@@ -16,10 +16,18 @@ appId: com.algoriafactory.malica.emulateur
 - hideKeyboard
 - tapOn: "Entrer"
 # À la toute première visite, le fil de Malica recouvre l'accueil : on le referme.
+#
+# Maestro n'accepte pas `timeout` sur tapOn ni assertVisible — « Unknown
+# Property: timeout » (CI du 16 septembre 2026, le premier jour où ces flux ont
+# été lus : l'émulateur n'avait jamais démarré avant). Attendre, c'est
+# extendedWaitUntil.
+- extendedWaitUntil:
+    visible: "Fermer le fil de Malica"
+    timeout: 20000
+    optional: true
 - tapOn:
     text: "Fermer le fil de Malica"
     optional: true
-    timeout: 20000
-- assertVisible:
-    text: "Vos documents"
+- extendedWaitUntil:
+    visible: "Vos documents"
     timeout: 20000

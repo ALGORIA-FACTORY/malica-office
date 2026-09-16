@@ -7,12 +7,13 @@ appId: com.algoriafactory.malica.emulateur
 - launchApp
 - runFlow: connexion.yaml
 - setAirplaneMode: enabled
-- assertVisible:
-    text: "Hors ligne — vos photos partiront au retour du réseau."
+# Attendre, c'est extendedWaitUntil : assertVisible n'accepte pas de timeout.
+- extendedWaitUntil:
+    visible: "Hors ligne — vos photos partiront au retour du réseau."
     timeout: 10000
 - tapOn: "Mon espace"
 - assertVisible: "Coffre"
 - setAirplaneMode: disabled
-- assertNotVisible:
-    text: "Hors ligne — vos photos partiront au retour du réseau."
+- extendedWaitUntil:
+    notVisible: "Hors ligne — vos photos partiront au retour du réseau."
     timeout: 20000
