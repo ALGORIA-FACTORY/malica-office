@@ -13,12 +13,16 @@
  * conversation, lit l'historique, transmet au cabinet, et vérifie ce que la base
  * en a retenu — par le MÊME chemin que le navigateur, relais compris.
  *
- * ELLE N'APPELLE AUCUN MODÈLE. Elle ne fait lire aucune pièce (les « pièces
- * lues » qu'elle compte l'ont été sans IA, par le jeu de données) et n'interroge
- * pas Malica : aucune route /malica/*. Son en-tête a longtemps dit le contraire ;
- * le journal de la CI du 15 septembre 2026 l'a démenti. La chaîne de lecture —
- * l'œil, la désignation, le corpus — n'est éprouvée par personne tant qu'une
- * étape ne l'appelle pas.
+ * SANS `--modeles`, ELLE N'APPELLE AUCUN MODÈLE : les « pièces lues » qu'elle
+ * compte l'ont été sans IA, par le jeu de données. Son en-tête a longtemps dit
+ * le contraire ; le journal de la CI du 15 septembre 2026 l'a démenti.
+ *
+ * AVEC `--modeles` (l'épreuve de nuit), elle fait lire une image par l'œil et
+ * la désignation, et pose une question à Malica — et pour chaque appel, le
+ * journal écrit la route, le modèle et les jetons. Un appel sans jetons est un
+ * échec.
+ *
+ *   node outils/epreuve-bout-en-bout.mjs http://localhost:8080 --modeles
  *
  *   node outils/epreuve-bout-en-bout.mjs                     (http://localhost:8080)
  *   node outils/epreuve-bout-en-bout.mjs https://192.168.1.192:8443
@@ -394,6 +398,97 @@ console.log("\nCe que la base refuse");
     refuse = true;
   }
   verdict("un fil étranger ne rend rien", refuse);
+}
+
+/* ------------------------------------- la chaîne de lecture (--modeles) */
+/*
+ * Seulement avec `--modeles` : ces deux appels sont payants (quelques
+ * centimes par nuit) et exigent les clés. L'épreuve de nuit les passe ; un
+ * poste sans clés s'en tient au parcours applicatif.
+ *
+ * Le journal doit PROUVER l'appel, pas le laisser supposer : pour chacun, la
+ * route, le modèle que l'API dit avoir interrogé, et les jetons consommés. Un
+ * appel sans jetons n'a pas eu lieu — c'est un échec, pas un succès silencieux.
+ *
+ * La pièce est une image dessinée ici, sans aucune donnée réelle : une image
+ * force l'œil (Qwen-VL) et la désignation (DeepSeek). Un PDF à texte natif
+ * serait lu sans modèle, et ne prouverait rien.
+ */
+if (process.argv.includes("--modeles")) {
+  console.log("\nLa chaîne de lecture (modèles)");
+  const { createCanvas } = await import("@napi-rs/canvas");
+  const toile = createCanvas(1240, 1754);
+  const c = toile.getContext("2d");
+  c.fillStyle = "#ffffff";
+  c.fillRect(0, 0, 1240, 1754);
+  c.fillStyle = "#000000";
+  const lignes = [
+    ["ÉPREUVE FOURNITURES SARL", 44, 140],
+    ["Matricule fiscal 0000000/A/M/000", 30, 200],
+    ["FACTURE N° EP-2026-0001", 40, 320],
+    ["Date : 15/09/2026", 30, 380],
+    ["Client : ATLAS DISTRIBUTION", 30, 440],
+    ["Papier A4, 10 ramettes", 30, 600],
+    ["Total HT : 100,000 DT", 34, 900],
+    ["TVA 19 % : 19,000 DT", 34, 960],
+    ["Total TTC : 119,000 DT", 38, 1030],
+  ];
+  for (const [texte, taille, y] of lignes) {
+    c.font = `${taille}px sans-serif`;
+    c.fillText(texte, 110, y);
+  }
+  const image = toile.toBuffer("image/png");
+
+  const lue = await rpc("capture", "enregistrer", [
+    {
+      tenantId: dossier.id,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `bout-en-bout-modeles-${Date.now()}`,
+      contentType: "image/png",
+      pageCount: 1,
+    },
+  ]);
+  const depot = await appel(`/pieces/${lue.id}/contenu`, {
+    method: "POST",
+    headers: { "Content-Type": "image/png" },
+    body: image,
+  });
+  verdict("l'image se dépose", depot.status === 201, `${depot.status}`);
+
+  {
+    const route = `/malica/lectures/${lue.id}`;
+    const r = await appel(route, { method: "POST" });
+    const corps = r.ok ? await r.json() : { erreur: (await r.text()).slice(0, 200) };
+    const lecture = corps.resultat ?? corps;
+    const preuve = `POST ${route} · modèle ${lecture.model ?? "?"} · jetons ${lecture.tokensIn ?? "?"} → ${lecture.tokensOut ?? "?"}`;
+    verdict(
+      "une pièce est lue par les modèles",
+      r.ok && Boolean(lecture.model) && (lecture.tokensIn ?? 0) > 0,
+      r.ok ? preuve : `${r.status} ${corps.erreur ?? ""}`,
+    );
+  }
+  {
+    const route = "/malica/demander";
+    const r = await appel(route, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenantId: dossier.id,
+        question: "Combien de pièces ai-je déposées ce mois-ci ?",
+        locale: "fr",
+        mode: "chat",
+      }),
+    });
+    const corps = r.ok ? await r.json() : { erreur: (await r.text()).slice(0, 200) };
+    const reponse = corps.resultat ?? corps;
+    const preuve = `POST ${route} · modèle ${reponse.model ?? "?"} · jetons ${reponse.tokensIn ?? "?"} → ${reponse.tokensOut ?? "?"}`;
+    verdict(
+      "Malica répond à une question",
+      r.ok && Boolean(reponse.model) && (reponse.tokensIn ?? 0) > 0,
+      r.ok ? preuve : `${r.status} ${corps.erreur ?? ""}`,
+    );
+  }
 }
 
 console.log(`\n${reussites} réussites · ${echecs} échecs\n`);

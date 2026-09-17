@@ -1,16 +1,18 @@
 # L'épreuve de nuit — chaque nuit, et à la demande.
 #
-# CE QU'ELLE ÉPROUVE AUJOURD'HUI : le PARCOURS APPLICATIF, à travers le relais
-# et contre une vraie base — pages, session, référentiel, dépôt et relecture
-# des octets, conversations, historique, transmission au cabinet
-# (`outils/epreuve-bout-en-bout.mjs`). Elle n'appelle AUCUN modèle : aucune
-# route /malica/*, aucune lecture de pièce par l'œil ni par la désignation,
-# aucune question au corpus. Constaté le 16 septembre 2026 dans le journal de
-# l'exécution 34994665757 : verte, sans un appel.
+# CE QU'ELLE ÉPROUVE : le PARCOURS APPLICATIF, à travers le relais et contre
+# une vraie base — pages, session, référentiel, dépôt et relecture des octets,
+# conversations, historique, transmission au cabinet — PUIS LA CHAÎNE DE
+# LECTURE : une image lue par l'œil (Qwen-VL) et la désignation (DeepSeek), et
+# une question à Malica (DeepSeek). Pour chaque appel, le journal écrit la
+# route, le modèle et les jetons ; un appel sans jetons est un échec
+# (`outils/epreuve-bout-en-bout.mjs --modeles`).
 #
-# Elle a été appelée « la chaîne réelle ». Tant qu'aucune étape n'appelle de
-# modèle, ce nom mentait — et une épreuve verte qui prétend éprouver les
-# modèles sans les appeler est pire qu'une épreuve absente.
+# Jusqu'au 17 septembre 2026, elle s'appelait « la chaîne réelle » et n'appelait
+# aucun modèle : verte, sans un appel (exécution 34994665757).
+#
+# Coût mesuré sur les appels journalisés : de l'ordre de 0,05 $ par nuit au
+# plus, soit environ 1,50 $ par mois.
 #
 # Secrets attendus : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL — la lecture
 # d'une photo et l'encodage des questions passent aujourd'hui par Qwen, la
@@ -112,8 +114,8 @@ jobs:
         env:
           MALICA_API_URL: http://localhost:3000
 
-      - name: Le parcours applicatif (sans modèle)
-        run: node outils/epreuve-bout-en-bout.mjs http://localhost:8080
+      - name: Le parcours applicatif et la chaîne de lecture (modèles)
+        run: node outils/epreuve-bout-en-bout.mjs http://localhost:8080 --modeles
 
       - name: Journaux des serveurs
         if: failure()
