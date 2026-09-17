@@ -60,7 +60,6 @@ import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
-import { EcranPlein } from "@/components/EcranPlein";
 
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({
@@ -703,7 +702,7 @@ function Rail({
       </nav>
       {/* Étroit : un tiroir. */}
       {ouvert ? (
-        <EcranPlein className="fixed inset-0 z-40 flex lg:hidden">
+        <div className="fixed inset-0 z-40 flex lg:hidden">
           <button
             type="button"
             aria-label={t("malica.panneau.fermer")}
@@ -716,7 +715,7 @@ function Rail({
           >
             {contenu}
           </nav>
-        </EcranPlein>
+        </div>
       ) : null}
     </>
   );

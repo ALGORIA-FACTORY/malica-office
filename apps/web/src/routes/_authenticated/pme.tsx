@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
-import { EcranPlein } from "@/components/EcranPlein";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -290,13 +289,13 @@ function PmeLayout() {
        * ressemblent à une application figée.
        */}
       {capture.isPending ? (
-        <EcranPlein className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+        <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
           <MalicaAvatar size={66} alt="Malica" rond />
           <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
             {t("pme.capture.preparation")}
           </p>
           <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
-        </EcranPlein>
+        </div>
       ) : null}
 
       {scanning ? (

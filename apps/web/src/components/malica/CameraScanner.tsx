@@ -17,7 +17,6 @@ import { analyzeFrame, type FrameAnalysis } from "@/capabilities/scanner";
 import { cleDuMotif, motifCamera, type MotifCamera } from "@/capabilities/camera";
 import { useI18n, type MessageKey } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
-import { EcranPlein } from "@/components/EcranPlein";
 
 const ANALYSIS_SIDE = 480;
 
@@ -459,7 +458,7 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
   if (apercu) {
     const derniere = pages.length;
     return (
-      <EcranPlein className="fixed inset-0 z-50 mx-auto flex w-full max-w-md flex-col bg-[#0A0A0A] text-[#FAFAFA]">
+      <div className="fixed inset-0 z-50 mx-auto flex w-full max-w-md flex-col bg-[#0A0A0A] text-[#FAFAFA]">
         <div className="flex items-center justify-between px-5 pb-3 pt-[18px]">
           <span className="text-[13px] font-medium text-[#C7C7CC]">
             {t("scan.apercu.page", { n: derniere })}
@@ -516,12 +515,12 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
             </button>
           </div>
         </div>
-      </EcranPlein>
+      </div>
     );
   }
 
   return (
-    <EcranPlein className="fixed inset-0 z-50 mx-auto w-full max-w-md overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
+    <div className="fixed inset-0 z-50 mx-auto w-full max-w-md overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
       {preparation ? (
         <div className="absolute inset-0 z-[60] grid place-items-center bg-[#0A0A0A]/80">
           <p className="text-[14px] font-medium">{t("scan.apercu.preparation")}</p>
@@ -700,6 +699,6 @@ export function CameraScanner({ onDone, onCancel, onFallback }: CameraScannerPro
           {t("scan.autoclosed")}
         </p>
       ) : null}
-    </EcranPlein>
+    </div>
   );
 }

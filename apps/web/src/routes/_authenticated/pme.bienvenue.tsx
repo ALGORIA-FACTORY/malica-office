@@ -4,7 +4,6 @@ import { usePme } from "@/components/malica/pme-context";
 import { MarqueRg } from "@/components/malica/office-ui";
 import { marquerBienvenueVue } from "@/components/malica/bienvenue";
 import { useI18n } from "@/i18n";
-import { EcranPlein } from "@/components/EcranPlein";
 
 export const Route = createFileRoute("/_authenticated/pme/bienvenue")({
   head: () => ({
@@ -66,7 +65,7 @@ function Bienvenue() {
   const promesses = [t("pme.bienvenue.p1"), t("pme.bienvenue.p2"), t("pme.bienvenue.p3")];
 
   return (
-    <EcranPlein className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
+    <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0A0A0A] text-[#FAFAFA]">
       {/* Le sigle en fond, énorme et presque invisible : la marque comme lieu. */}
       <MarqueRg
         aria-hidden
@@ -114,6 +113,6 @@ function Bienvenue() {
           {t("pme.bienvenue.plusTard")}
         </button>
       </div>
-    </EcranPlein>
+    </div>
   );
 }

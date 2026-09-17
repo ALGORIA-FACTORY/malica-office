@@ -19,7 +19,6 @@ import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import { montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { EcranPlein } from "@/components/EcranPlein";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
@@ -389,7 +388,7 @@ function PmeHome() {
        * depuis son visage.
        */}
       {malica.ouvert ? (
-        <EcranPlein className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
+        <div className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
           <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
             <MalicaAvatar size={34} alt="Malica" rond />
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
@@ -407,7 +406,7 @@ function PmeHome() {
           <div className="flex-1 overflow-y-auto px-[22px] py-4">
             <MalicaChat tenantId={pme.tenantId} />
           </div>
-        </EcranPlein>
+        </div>
       ) : null}
     </div>
   );
