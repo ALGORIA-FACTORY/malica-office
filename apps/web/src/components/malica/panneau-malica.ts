@@ -37,9 +37,13 @@ export function usePanneauMalica(espace: Espace): {
   ouvrir: () => void;
   fermer: () => void;
 } {
-  // Le premier rendu doit être identique au serveur, sinon React réhydrate à
-  // faux. On lit la préférence après le montage.
-  const [ouvert, setOuvert] = useState(true);
+  // FERMÉ jusqu'à ce que la préférence soit lue. Il était ouvert au départ, le
+  // temps que l'effet relise le choix : un fil refermé était posé ouvert dans
+  // le DOM à chaque montage de l'écran ([true, false] au test de rendu, 17 sept.
+  // 2026) — sur un téléphone lent, de quoi recouvrir l'accueil et recevoir le
+  // doigt qui tape. Fermé au départ, rien ne s'ouvre qu'on n'ait voulu ouvrir ;
+  // et le premier rendu reste identique au serveur, qui ne lit aucun stockage.
+  const [ouvert, setOuvert] = useState(false);
 
   useEffect(() => {
     setOuvert(auDepart(espace));

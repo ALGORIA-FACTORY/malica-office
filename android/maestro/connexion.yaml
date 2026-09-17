@@ -29,32 +29,21 @@ appId: com.algoriafactory.malica.emulateur
 # été lus : l'émulateur n'avait jamais démarré avant). Attendre, c'est
 # extendedWaitUntil.
 #
-# « Fermer le fil de Malica » désigne DEUX boutons quand le fil est ouvert : la
-# croix de son en-tête, et le visage de Malica sur l'accueil — recouvert par le
-# fil, mais présent dans la hiérarchie que lit Maestro. Tapé seul, le texte
-# visait le visage, sous le fil : le tap ne faisait rien, et « Vos documents »,
-# lu sous le fil, laissait croire l'accueil dégagé (exécution 35094473857,
-# journal maestro.log). On vise la croix — la seule au-dessus de « Mes
-# conversations » — et on vérifie que le fil est FERMÉ, pas seulement que
-# l'accueil existe quelque part sous lui.
+# « Fermer le fil de Malica » a désigné deux boutons : la croix du fil, et le
+# visage de Malica sur l'accueil — recouvert par le fil, mais lisible sous lui.
+# Maestro tapait le visage, sans effet (exécution 35094473857). C'était un défaut
+# de l'application, pas du flux : un utilisateur de TalkBack aurait fait de même.
+# Depuis EcranPlein (17 septembre 2026), ce que recouvre un écran plein est
+# inerte : seule la croix répond à ce nom. On exige que le fil soit FERMÉ, pas
+# seulement que l'accueil existe quelque part sous lui.
 #
-# Aucun sélecteur de texte ne distingue les deux boutons : « above » a encore
-# choisi le visage (exécution 35203441551, tap en (125, 354)). On vise donc la
-# croix par sa place, mesurée dans la hiérarchie de cette même exécution —
-# bornes [939,170][1026,248] sur l'écran 1080×2400 du profil pixel_6 de la CI.
-# Le vrai défaut est dans l'application : le contenu recouvert par le fil reste
-# exposé à l'accessibilité (voir le compte rendu du 17 septembre).
+# Le fil ouvert, l'accueil n'est plus lisible sous lui : on attend donc l'un OU
+# l'autre (le texte cherché est une expression régulière), puis on ferme.
 - extendedWaitUntil:
-    visible: "Vos documents"
+    visible: "Fermer le fil de Malica|Vos documents"
     timeout: 20000
-- extendedWaitUntil:
-    visible: "Mes conversations"
-    timeout: 8000
+- tapOn:
+    text: "Fermer le fil de Malica"
     optional: true
-- runFlow:
-    when:
-      visible: "Conversation en cours"
-    commands:
-      - tapOn:
-          point: "91%,9%"
 - assertNotVisible: "Conversation en cours"
+- assertVisible: "Vos documents"

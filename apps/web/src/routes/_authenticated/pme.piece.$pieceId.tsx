@@ -14,6 +14,7 @@ import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { EcranPlein } from "@/components/EcranPlein";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -561,7 +562,7 @@ function PieceScreen() {
    */
   if (read.isPending || attente || etat.data?.enCours) {
     return (
-      <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+      <EcranPlein className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
         <MalicaAvatar size={66} alt="Malica" rond />
         <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
           {t("pme.lecture.titre")}
@@ -590,7 +591,7 @@ function PieceScreen() {
             {t("pme.lecture.releve", { mots: dossier.data.tokens.length })}
           </p>
         ) : null}
-      </div>
+      </EcranPlein>
     );
   }
 
@@ -602,7 +603,7 @@ function PieceScreen() {
    */
   if (regle) {
     return (
-      <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-10 text-center">
+      <EcranPlein className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-10 text-center">
         <svg
           width="34"
           height="34"
@@ -645,7 +646,7 @@ function PieceScreen() {
         >
           {t("pme.regle.voir")}
         </button>
-      </div>
+      </EcranPlein>
     );
   }
 
@@ -658,7 +659,7 @@ function PieceScreen() {
    */
   if (montrerPiece) {
     return (
-      <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
+      <EcranPlein className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
         <div className="flex items-center gap-3 border-b border-border px-[22px] py-3">
           <button
             type="button"
@@ -682,7 +683,7 @@ function PieceScreen() {
             </p>
           )}
         </div>
-      </div>
+      </EcranPlein>
     );
   }
 
@@ -697,7 +698,7 @@ function PieceScreen() {
    */
   if (montrerDetail) {
     return (
-      <div className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
+      <EcranPlein className="pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col bg-background">
         <div className="flex items-center gap-3 border-b border-border px-[22px] py-3">
           <button
             type="button"
@@ -751,7 +752,7 @@ function PieceScreen() {
             {t("pme.detail.provenance")}
           </p>
         </div>
-      </div>
+      </EcranPlein>
     );
   }
 
