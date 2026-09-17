@@ -12,7 +12,7 @@ appId: com.algoriafactory.malica.emulateur
     visible: "Hors ligne — vos photos partiront au retour du réseau."
     timeout: 10000
 - tapOn: "Mon espace"
-- assertVisible: "Coffre"
+- assertVisible: "Visible par vous seul"
 - setAirplaneMode: disabled
 - extendedWaitUntil:
     notVisible: "Hors ligne — vos photos partiront au retour du réseau."

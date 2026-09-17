@@ -11,7 +11,7 @@ appId: com.algoriafactory.malica.emulateur
 - takeScreenshot: panneau-1-accueil-fil-ferme
 - tapOn: "Mon espace"
 - extendedWaitUntil:
-    visible: "Coffre"
+    visible: "Visible par vous seul"
     timeout: 20000
 - takeScreenshot: panneau-2-mon-espace
 - tapOn: "Accueil"
