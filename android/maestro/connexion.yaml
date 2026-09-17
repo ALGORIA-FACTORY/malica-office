@@ -37,6 +37,13 @@ appId: com.algoriafactory.malica.emulateur
 # journal maestro.log). On vise la croix — la seule au-dessus de « Mes
 # conversations » — et on vérifie que le fil est FERMÉ, pas seulement que
 # l'accueil existe quelque part sous lui.
+#
+# Aucun sélecteur de texte ne distingue les deux boutons : « above » a encore
+# choisi le visage (exécution 35203441551, tap en (125, 354)). On vise donc la
+# croix par sa place, mesurée dans la hiérarchie de cette même exécution —
+# bornes [939,170][1026,248] sur l'écran 1080×2400 du profil pixel_6 de la CI.
+# Le vrai défaut est dans l'application : le contenu recouvert par le fil reste
+# exposé à l'accessibilité (voir le compte rendu du 17 septembre).
 - extendedWaitUntil:
     visible: "Vos documents"
     timeout: 20000
@@ -44,8 +51,10 @@ appId: com.algoriafactory.malica.emulateur
     visible: "Mes conversations"
     timeout: 8000
     optional: true
-- tapOn:
-    text: "Fermer le fil de Malica"
-    above: "Mes conversations"
-    optional: true
+- runFlow:
+    when:
+      visible: "Conversation en cours"
+    commands:
+      - tapOn:
+          point: "91%,9%"
 - assertNotVisible: "Conversation en cours"
