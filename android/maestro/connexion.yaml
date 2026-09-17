@@ -19,10 +19,10 @@ appId: com.algoriafactory.malica.emulateur
 - inputText: "JeuDeDonnees2026!"
 - hideKeyboard
 - tapOn: "Entrer"
-# À la toute première visite, le fil de Malica recouvre l'accueil : on le
-# referme. Il peut s'ouvrir AVANT ou APRÈS que l'accueil s'affiche — sur
-# l'émulateur de la CI, il est venu après, et recouvrait « Mon espace » pour
-# les flux suivants (exécution 35093087941). On le guette donc des deux côtés.
+# À la toute première visite, le fil de Malica recouvre l'accueil (c'est voulu :
+# usePanneauMalica l'ouvre tant qu'aucun choix n'est retenu) : on le referme.
+# Le 16 septembre, on a cru qu'il s'ouvrait APRÈS l'accueil ; c'était faux — le
+# flux tapait un bouton recouvert et ne le fermait jamais (voir plus bas).
 #
 # Maestro n'accepte pas `timeout` sur tapOn ni assertVisible — « Unknown
 # Property: timeout » (CI du 16 septembre 2026, le premier jour où ces flux ont
