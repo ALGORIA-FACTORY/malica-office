@@ -1,9 +1,12 @@
 # L'arabe : les réglages changent la langue, l'application se retourne.
+#
+# Les réglages ne sont plus dans « Mon espace » : ils s'ouvrent par le lien
+# « FR · ⚙ » de l'en-tête, nommé « Réglages » pour le lecteur d'écran (et donc
+# pour Maestro) depuis le 17 septembre 2026.
 appId: com.algoriafactory.malica.emulateur
 ---
 - launchApp
 - runFlow: connexion.yaml
-- tapOn: "Mon espace"
 - tapOn: "Réglages"
 - assertVisible: "Langue"
 - tapOn: "العربية"

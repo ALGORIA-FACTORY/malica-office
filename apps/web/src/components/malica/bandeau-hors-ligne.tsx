@@ -14,7 +14,7 @@ export function BandeauHorsLigne() {
   if (enLigne) return null;
   return (
     <p
-      role="status"
+      aria-live="polite"
       className="border-b border-border bg-card px-[22px] py-1.5 text-center text-[11px] text-text-2"
     >
       {t("pme.horsLigne.bandeau")}

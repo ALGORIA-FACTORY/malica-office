@@ -78,6 +78,8 @@ export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }
          */}
         <Link
           to="/pme/reglages"
+          // Le lecteur d'écran lisait « FR point engrenage » : le lien dit où il mène.
+          aria-label={t("pme.reglages.titre")}
           className="whitespace-nowrap border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
         >
           {locale.toUpperCase()} · ⚙
