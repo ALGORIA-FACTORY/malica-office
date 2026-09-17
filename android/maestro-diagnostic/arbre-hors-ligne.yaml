@@ -1,0 +1,10 @@
+# Diagnostic D25 — l'accueil en mode avion : le bandeau « Hors ligne » est-il
+# dans l'arbre ? Le mode avion est défait par le workflow après le relevé.
+appId: com.algoriafactory.malica.emulateur
+---
+- runFlow: ../maestro/connexion.yaml
+- setAirplaneMode: enabled
+- extendedWaitUntil:
+    visible: "__attente_fixe__"
+    timeout: 10000
+    optional: true

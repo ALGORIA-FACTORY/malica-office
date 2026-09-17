@@ -37,18 +37,25 @@ function Page({ ouvert }: { ouvert: boolean }) {
 describe("l'écran plein", () => {
   afterEach(() => cleanup());
 
-  it("se déclare comme une boîte de dialogue modale", () => {
+  /*
+   * inert SEUL. Avec aria-hidden sur le fond et aria-modal sur l'écran, la
+   * WebView Android ne présentait plus RIEN à l'arbre d'accessibilité quand le
+   * fil de Malica était ouvert — ni le fond, ni le fil (exécution 35221075339).
+   * Un contenu que TalkBack ne lit plus du tout est pire qu'un fond lu à tort :
+   * aucun des deux attributs n'est posé tant que l'émulateur n'a pas tranché.
+   */
+  it("se déclare comme une boîte de dialogue, sans aria-modal", () => {
     render(<Page ouvert />);
-    const dialogue = screen.getByRole("dialog", { hidden: true });
-    expect(dialogue.getAttribute("aria-modal")).toBe("true");
+    const dialogue = screen.getByRole("dialog");
+    expect(dialogue.hasAttribute("aria-modal")).toBe(false);
   });
 
-  it("rend inerte et masqué tout ce qu'il recouvre, et rien de ce qu'il contient", () => {
+  it("rend inerte tout ce qu'il recouvre, sans y poser aria-hidden, et rien de ce qu'il contient", () => {
     render(<Page ouvert />);
     for (const nom of ["derrière, en tête", "derrière, dans la page"]) {
       const bouton = screen.getByText(nom);
       expect(bouton.closest("[inert]"), nom).not.toBeNull();
-      expect(bouton.closest('[aria-hidden="true"]'), nom).not.toBeNull();
+      expect(bouton.closest('[aria-hidden="true"]'), nom).toBeNull();
     }
     const devant = screen.getByText("devant");
     expect(devant.closest("[inert]")).toBeNull();

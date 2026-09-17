@@ -1,0 +1,15 @@
+# Diagnostic D25 — le fil de Malica ouvert par-dessus l'accueil, comme dans
+# retour.yaml. Le flux ne vérifie rien à l'écran : l'arbre relevé juste après
+# est la seule preuve. Il suit arbre-accueil.yaml (session ouverte, fil fermé).
+appId: com.algoriafactory.malica.emulateur
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Parler à Malica"
+    timeout: 20000
+- tapOn: "Parler à Malica"
+# Laisser la WebView publier son arbre : une attente fixe, qui ne lit pas l'écran.
+- extendedWaitUntil:
+    visible: "__attente_fixe__"
+    timeout: 8000
+    optional: true

@@ -135,10 +135,22 @@ jobs:
           # pourtant bien là (exécution 35091995778, capture de connexion). Ces
           # fenêtres d'erreur système sont masquées ; une vraie panne de
           # l'application reste visible, puisque son écran n'apparaît pas.
+          #
+          # Diagnostic D25 (17 septembre 2026), avant les flux : l'arbre
+          # d'accessibilité relevé fil fermé, fil ouvert, hors ligne — la preuve
+          # de ce que lit un lecteur d'écran, qu'une capture ne donne pas.
           script: |
             adb shell settings put global hide_error_dialogs 1
             adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
             adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
+            maestro test android/maestro-diagnostic/arbre-accueil.yaml || true
+            maestro hierarchy > arbre-1-accueil.json || true
+            maestro test android/maestro-diagnostic/arbre-fil-ouvert.yaml || true
+            maestro hierarchy > arbre-2-fil-ouvert.json || true
+            maestro test android/maestro-diagnostic/arbre-hors-ligne.yaml || true
+            maestro hierarchy > arbre-3-hors-ligne.json || true
+            adb shell cmd connectivity airplane-mode disable || true
+            node android/maestro-diagnostic/lire-arbre.mjs arbre-1-accueil.json arbre-2-fil-ouvert.json arbre-3-hors-ligne.json || true
             maestro test --format junit --output maestro.xml android/maestro/
 
       - name: Journaux
@@ -155,4 +167,5 @@ jobs:
             maestro.xml
             ~/.maestro/tests
             panneau-*.png
+            arbre-*.json
           retention-days: 7

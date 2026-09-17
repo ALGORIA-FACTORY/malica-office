@@ -13,16 +13,18 @@
  *
  * Tant qu'il est monté, ce composant rend INERTE tout ce qui l'entoure : chaque
  * frère de chacun de ses ancêtres, jusqu'au <body>. `inert` retire du toucher,
- * du focus et de l'arbre d'accessibilité ; `aria-hidden` double pour les
- * WebView plus anciennes. Au démontage, chaque élément retrouve exactement
- * l'état qu'il avait — y compris un `aria-hidden` qu'il portait déjà.
+ * du focus et de l'arbre d'accessibilité. Au démontage, chaque élément retrouve
+ * exactement l'état qu'il avait.
  *
- * Il se déclare en boîte de dialogue modale : le lecteur d'écran l'annonce comme
- * ce qu'il est.
+ * INERT SEUL — ni `aria-hidden` sur le fond, ni `aria-modal` sur l'écran. La
+ * première version posait les trois ; sur l'émulateur, le fil de Malica ouvert,
+ * la WebView ne présentait plus RIEN à l'arbre d'accessibilité, pas même le fil
+ * (exécution 35221075339). En cours d'épreuve : si `inert` seul ne rend pas
+ * l'arbre, cette correction est retirée (D25).
  */
 import { useLayoutEffect, useRef, type HTMLAttributes, type ReactNode } from "react";
 
-type Etat = { element: Element; inert: string | null; ariaHidden: string | null };
+type Etat = { element: Element; inert: string | null };
 
 /** Rend inerte tout ce qui entoure `element`. Rend ce qui restaure l'état d'avant. */
 function rendreLeResteInerte(element: HTMLElement): () => void {
@@ -34,18 +36,14 @@ function rendreLeResteInerte(element: HTMLElement): () => void {
       touches.push({
         element: frere,
         inert: frere.getAttribute("inert"),
-        ariaHidden: frere.getAttribute("aria-hidden"),
       });
       frere.setAttribute("inert", "");
-      frere.setAttribute("aria-hidden", "true");
     }
   }
   return () => {
-    for (const { element: e, inert, ariaHidden } of touches.reverse()) {
+    for (const { element: e, inert } of touches.reverse()) {
       if (inert === null) e.removeAttribute("inert");
       else e.setAttribute("inert", inert);
-      if (ariaHidden === null) e.removeAttribute("aria-hidden");
-      else e.setAttribute("aria-hidden", ariaHidden);
     }
   };
 }
@@ -58,7 +56,7 @@ export function EcranPlein({
   // Avant la peinture : aucune image où l'écran est ouvert et le fond encore actif.
   useLayoutEffect(() => (ref.current ? rendreLeResteInerte(ref.current) : undefined), []);
   return (
-    <div ref={ref} role="dialog" aria-modal="true" {...attributs}>
+    <div ref={ref} role="dialog" {...attributs}>
       {children}
     </div>
   );

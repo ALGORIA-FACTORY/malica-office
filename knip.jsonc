@@ -5,7 +5,12 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["db/**/*.mjs", "outils/**/*.mjs", "infra/**/*.mjs"],
+      "entry": [
+        "db/**/*.mjs",
+        "outils/**/*.mjs",
+        "infra/**/*.mjs",
+        "android/maestro-diagnostic/*.mjs",
+      ],
       // Le certificat de développement se génère avec l'openssl du poste.
       "ignoreBinaries": ["openssl"],
     },
