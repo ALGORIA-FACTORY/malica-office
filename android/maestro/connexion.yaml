@@ -28,21 +28,24 @@ appId: com.algoriafactory.malica.emulateur
 # Property: timeout » (CI du 16 septembre 2026, le premier jour où ces flux ont
 # été lus : l'émulateur n'avait jamais démarré avant). Attendre, c'est
 # extendedWaitUntil.
-- extendedWaitUntil:
-    visible: "Fermer le fil de Malica"
-    timeout: 15000
-    optional: true
-- tapOn:
-    text: "Fermer le fil de Malica"
-    optional: true
+#
+# « Fermer le fil de Malica » désigne DEUX boutons quand le fil est ouvert : la
+# croix de son en-tête, et le visage de Malica sur l'accueil — recouvert par le
+# fil, mais présent dans la hiérarchie que lit Maestro. Tapé seul, le texte
+# visait le visage, sous le fil : le tap ne faisait rien, et « Vos documents »,
+# lu sous le fil, laissait croire l'accueil dégagé (exécution 35094473857,
+# journal maestro.log). On vise la croix — la seule au-dessus de « Mes
+# conversations » — et on vérifie que le fil est FERMÉ, pas seulement que
+# l'accueil existe quelque part sous lui.
 - extendedWaitUntil:
     visible: "Vos documents"
     timeout: 20000
 - extendedWaitUntil:
-    visible: "Fermer le fil de Malica"
+    visible: "Mes conversations"
     timeout: 8000
     optional: true
 - tapOn:
     text: "Fermer le fil de Malica"
+    above: "Mes conversations"
     optional: true
-- assertVisible: "Vos documents"
+- assertNotVisible: "Conversation en cours"

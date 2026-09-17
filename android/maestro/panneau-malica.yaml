@@ -1,0 +1,20 @@
+# Le fil de Malica, une fois fermé, reste fermé.
+#
+# Refermé par la croix, il ne doit pas revenir par-dessus l'accueil quand on y
+# retourne. Les captures gardent la preuve de chaque état : le fil fermé, puis
+# l'accueil retrouvé juste après la navigation — c'est là qu'un fil qui
+# s'ouvrirait le temps de relire la préférence se verrait, sur un appareil lent.
+appId: com.algoriafactory.malica.emulateur
+---
+- launchApp
+- runFlow: connexion.yaml
+- takeScreenshot: panneau-1-accueil-fil-ferme
+- tapOn: "Mon espace"
+- extendedWaitUntil:
+    visible: "Coffre"
+    timeout: 20000
+- takeScreenshot: panneau-2-mon-espace
+- tapOn: "Accueil"
+- takeScreenshot: panneau-3-retour-accueil-immediat
+- assertNotVisible: "Conversation en cours"
+- takeScreenshot: panneau-4-retour-accueil

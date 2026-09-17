@@ -154,4 +154,5 @@ jobs:
           path: |
             maestro.xml
             ~/.maestro/tests
+            panneau-*.png
           retention-days: 7
