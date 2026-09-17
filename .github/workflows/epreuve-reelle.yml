@@ -1,16 +1,24 @@
-# La chaîne réelle, avec les modèles — chaque nuit, et à la demande.
+# L'épreuve de nuit — chaque nuit, et à la demande.
 #
-# `ci.yml` n'appelle aucun modèle : une lecture coûte un appel payant, et un
-# modèle indisponible ne doit pas bloquer une fusion. Mais la chaîne qui va
-# de la pièce déposée à l'écriture proposée casse aussi — à chaque changement
-# d'invite, de parseur, de version de modèle. Cette épreuve la parcourt en
-# entier (`outils/epreuve-bout-en-bout.mjs`), une fois par nuit, avec les
-# vraies clés ; un échec est un courriel au matin, pas une surprise chez une
-# PME.
+# CE QU'ELLE ÉPROUVE AUJOURD'HUI : le PARCOURS APPLICATIF, à travers le relais
+# et contre une vraie base — pages, session, référentiel, dépôt et relecture
+# des octets, conversations, historique, transmission au cabinet
+# (`outils/epreuve-bout-en-bout.mjs`). Elle n'appelle AUCUN modèle : aucune
+# route /malica/*, aucune lecture de pièce par l'œil ni par la désignation,
+# aucune question au corpus. Constaté le 16 septembre 2026 dans le journal de
+# l'exécution 34994665757 : verte, sans un appel.
 #
-# Secrets attendus : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL.
+# Elle a été appelée « la chaîne réelle ». Tant qu'aucune étape n'appelle de
+# modèle, ce nom mentait — et une épreuve verte qui prétend éprouver les
+# modèles sans les appeler est pire qu'une épreuve absente.
+#
+# Secrets attendus : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL — la lecture
+# d'une photo et l'encodage des questions passent aujourd'hui par Qwen, la
+# désignation et le conseil par DeepSeek. SANS EUX, L'ÉPREUVE S'ARRÊTE dès sa
+# première étape, en rouge, et le dit : « chaîne de lecture non éprouvée, clés
+# absentes ». Ni verte, ni silencieuse.
 
-name: Épreuve réelle
+name: Épreuve de nuit
 
 on:
   schedule:
@@ -52,6 +60,20 @@ jobs:
       QWEN_BASE_URL: ${{ secrets.QWEN_BASE_URL }}
 
     steps:
+      # Sans clés, rien de ce qui suit ne dirait la vérité sur la chaîne de
+      # lecture : on s'arrête ici, et on le dit.
+      - name: Les clés des modèles
+        run: |
+          manquantes=""
+          [ -n "$DEEPSEEK_API_KEY" ] || manquantes="$manquantes DEEPSEEK_API_KEY"
+          [ -n "$QWEN_API_KEY" ] || manquantes="$manquantes QWEN_API_KEY"
+          [ -n "$QWEN_BASE_URL" ] || manquantes="$manquantes QWEN_BASE_URL"
+          if [ -n "$manquantes" ]; then
+            echo "::error title=Chaîne de lecture non éprouvée::chaîne de lecture non éprouvée, clés absentes :$manquantes"
+            exit 1
+          fi
+          echo "clés présentes : DEEPSEEK_API_KEY, QWEN_API_KEY, QWEN_BASE_URL"
+
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
@@ -90,7 +112,7 @@ jobs:
         env:
           MALICA_API_URL: http://localhost:3000
 
-      - name: La chaîne réelle
+      - name: Le parcours applicatif (sans modèle)
         run: node outils/epreuve-bout-en-bout.mjs http://localhost:8080
 
       - name: Journaux des serveurs

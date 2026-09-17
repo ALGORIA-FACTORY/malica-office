@@ -41,11 +41,38 @@ const MIGRATIONS = join(RACINE, "db", "migrations");
 const REQUETE_CATALOGUE = readFileSync(join(RACINE, "db", "registre.sql"), "utf8");
 
 /**
- * Écarts ACCEPTÉS, nommément : genre, objet, raison, date. Vide aujourd'hui.
- * Un écart qui disparaît rend le script rouge aussi — une exception périmée
- * ne reste pas dans la liste.
+ * Écarts ACCEPTÉS, nommément : genre, objet, raison, date, condition de retrait.
+ * Un écart accepté qui n'est plus constaté rend le script rouge aussi — une
+ * exception périmée ne reste pas dans la liste.
+ *
+ * `portee: "autre-serveur"` : l'exception ne vaut que pour un catalogue relevé
+ * sur un AUTRE serveur que la référence (--catalogue) ; entre deux bases du même
+ * serveur, elle ne s'applique pas et ne peut donc pas être « périmée ».
+ * `correspond` : l'écart n'est accepté que s'il est EXACTEMENT celui-là.
  */
-const ECARTS_ACCEPTES = [];
+const LOCALE_POSTE = "collate=French_Tunisia.1252 ctype=French_Tunisia.1252";
+const LOCALE_STAGING = "collate=en_US.utf8 ctype=en_US.utf8";
+const sansLocale = (definition) => definition.replace(/collate=\S+ ctype=\S+/, "collate=… ctype=…");
+const ECARTS_ACCEPTES = [
+  {
+    genre: "base",
+    objet: "courante",
+    portee: "autre-serveur",
+    date: "2026-09-17",
+    raison:
+      "Le staging (glibc) est en en_US.utf8, le poste (Windows) en French_Tunisia.1252 : " +
+      "la base se crée avec la locale de son serveur, aucune migration ne la pose. " +
+      "Conséquence connue : `legal.chunks.recherche` diffère sur 791 fragments (docs/etat-staging.md, B.1).",
+    retrait:
+      "Le jour où poste et staging portent la même locale (ou le même fournisseur ICU) : " +
+      "l'écart disparaît, cette exception devient périmée et le contrôle rougit — la retirer alors.",
+    correspond: (e) =>
+      e.nature === "différent" &&
+      e.base.includes(LOCALE_STAGING) &&
+      e.reference.includes(LOCALE_POSTE) &&
+      sansLocale(e.base) === sansLocale(e.reference),
+  },
+];
 
 /** Relève le catalogue d'une base : Map « genre objet » → définition. */
 export async function lireCatalogue(client) {
@@ -67,7 +94,13 @@ export function versCatalogue(lignes) {
  * Compare une base à la référence. Rend les écarts non acceptés et les
  * acceptations périmées (acceptées, mais plus constatées).
  */
-export function comparerCatalogues(base, reference, acceptes = ECARTS_ACCEPTES) {
+export function comparerCatalogues(
+  base,
+  reference,
+  tousAcceptes = ECARTS_ACCEPTES,
+  { autreServeur = false } = {},
+) {
+  const acceptes = tousAcceptes.filter((a) => a.portee !== "autre-serveur" || autreServeur);
   const ecarts = [];
   for (const [cle, def] of reference) {
     if (!base.has(cle)) ecarts.push({ cle, nature: "absent de la base" });
@@ -77,13 +110,15 @@ export function comparerCatalogues(base, reference, acceptes = ECARTS_ACCEPTES) 
   for (const cle of base.keys()) {
     if (!reference.has(cle)) ecarts.push({ cle, nature: "en trop dans la base" });
   }
-  const accepte = (e) => acceptes.some((a) => `${a.genre} ${a.objet}` === e.cle);
-  const constates = new Set(ecarts.map((e) => e.cle));
+  const vise = (a, e) => `${a.genre} ${a.objet}` === e.cle && (!a.correspond || a.correspond(e));
+  const accepte = (e) => acceptes.some((a) => vise(a, e));
   return {
     objets: reference.size,
     ecarts: ecarts.filter((e) => !accepte(e)),
-    acceptes: ecarts.filter(accepte),
-    perimes: acceptes.filter((a) => !constates.has(`${a.genre} ${a.objet}`)),
+    acceptes: ecarts
+      .filter(accepte)
+      .map((e) => ({ ...e, exception: acceptes.find((a) => vise(a, e)) })),
+    perimes: acceptes.filter((a) => !ecarts.some((e) => vise(a, e))),
   };
 }
 
@@ -167,7 +202,10 @@ function decrire(resultat) {
     if (e.nature === "différent")
       lignes.push(`  base      : ${e.base}`, `  migrations: ${e.reference}`);
   }
-  for (const e of resultat.acceptes) lignes.push(`accepté  ${e.cle} — ${e.nature}`);
+  for (const e of resultat.acceptes)
+    lignes.push(
+      `accepté  ${e.cle} — ${e.nature}, depuis le ${e.exception.date} : ${e.exception.raison}`,
+    );
   for (const a of resultat.perimes)
     lignes.push(`PÉRIMÉ  ${a.genre} ${a.objet} — accepté, mais plus constaté`);
   lignes.push(
@@ -204,7 +242,9 @@ async function principal() {
       await client.end();
     }
   }
-  const resultat = comparerCatalogues(base, reference);
+  const resultat = comparerCatalogues(base, reference, undefined, {
+    autreServeur: Boolean(fichier),
+  });
   console.log(decrire(resultat));
   if (resultat.ecarts.length || resultat.perimes.length) process.exitCode = 1;
 }

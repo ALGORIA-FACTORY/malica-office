@@ -85,6 +85,45 @@ describe("la comparaison de catalogues", () => {
     );
   });
 
+  it("n'accepte l'écart de locale du staging que venu d'un autre serveur, et exactement celui-là", () => {
+    const def = (locale) =>
+      `encodage=UTF8 fournisseur=c ${locale} locale= règles_icu= limite_connexions=-1 droits=x réglages=`;
+    const poste = versCatalogue([
+      ligne("base", "courante", def("collate=French_Tunisia.1252 ctype=French_Tunisia.1252")),
+    ]);
+    const staging = versCatalogue([
+      ligne("base", "courante", def("collate=en_US.utf8 ctype=en_US.utf8")),
+    ]);
+    const stagingEtAutreChose = versCatalogue([
+      ligne(
+        "base",
+        "courante",
+        def("collate=en_US.utf8 ctype=en_US.utf8").replace("droits=x", "droits=y"),
+      ),
+    ]);
+
+    const venuDAilleurs = comparerCatalogues(staging, poste, undefined, { autreServeur: true });
+    assert.equal(venuDAilleurs.ecarts.length, 0);
+    assert.equal(venuDAilleurs.acceptes[0].exception.date, "2026-09-17");
+
+    // Sur le même serveur, l'exception ne s'applique pas : l'écart reste un écart…
+    assert.equal(comparerCatalogues(staging, poste).ecarts.length, 1);
+    // … et une base conforme ne la rend pas « périmée ».
+    assert.deepEqual(comparerCatalogues(poste, poste).perimes, []);
+
+    // Un autre écart glissé sur la même ligne n'est pas couvert.
+    assert.equal(
+      comparerCatalogues(stagingEtAutreChose, poste, undefined, { autreServeur: true }).ecarts
+        .length,
+      1,
+    );
+    // Le jour où le staging a la locale du poste, l'exception est périmée : on la retire.
+    assert.equal(
+      comparerCatalogues(poste, poste, undefined, { autreServeur: true }).perimes.length,
+      1,
+    );
+  });
+
   it("refuse un catalogue qui relève deux fois le même objet", () => {
     assert.throws(
       () => versCatalogue([ligne("vue", "a.v", "1"), ligne("vue", "a.v", "2")]),

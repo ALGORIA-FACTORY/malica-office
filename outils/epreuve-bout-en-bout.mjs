@@ -1,5 +1,5 @@
 /**
- * L'épreuve de bout en bout : la chaîne réelle, à travers le relais.
+ * L'épreuve de bout en bout : le parcours applicatif, à travers le relais.
  *
  * ============================================================== POURQUOI
  *
@@ -8,9 +8,17 @@
  * route qui rendait l'application inaccessible. Chacune ne se voyait qu'en
  * parlant au vrai serveur, avec la vraie base derrière.
  *
- * Cette épreuve-ci ne simule rien. Elle se connecte, dépose une pièce, la fait
- * lire, interroge Malica, et vérifie ce que la base en a retenu — par le
- * MÊME chemin que le navigateur, relais compris.
+ * Cette épreuve-ci ne simule rien de ce qu'elle parcourt. Elle se connecte,
+ * dépose une pièce et en relit les octets, ouvre et referme un fil de
+ * conversation, lit l'historique, transmet au cabinet, et vérifie ce que la base
+ * en a retenu — par le MÊME chemin que le navigateur, relais compris.
+ *
+ * ELLE N'APPELLE AUCUN MODÈLE. Elle ne fait lire aucune pièce (les « pièces
+ * lues » qu'elle compte l'ont été sans IA, par le jeu de données) et n'interroge
+ * pas Malica : aucune route /malica/*. Son en-tête a longtemps dit le contraire ;
+ * le journal de la CI du 15 septembre 2026 l'a démenti. La chaîne de lecture —
+ * l'œil, la désignation, le corpus — n'est éprouvée par personne tant qu'une
+ * étape ne l'appelle pas.
  *
  *   node outils/epreuve-bout-en-bout.mjs                     (http://localhost:8080)
  *   node outils/epreuve-bout-en-bout.mjs https://192.168.1.192:8443
