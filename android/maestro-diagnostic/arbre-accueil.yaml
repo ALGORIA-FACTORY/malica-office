@@ -1,5 +1,0 @@
-# Diagnostic D25 — l'accueil, le fil de Malica fermé. Référence de l'arbre
-# d'accessibilité : relevé ensuite par `maestro hierarchy` (android-e2e.yml).
-appId: com.algoriafactory.malica.emulateur
----
-- runFlow: ../maestro/connexion.yaml

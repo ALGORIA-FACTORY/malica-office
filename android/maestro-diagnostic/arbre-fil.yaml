@@ -1,0 +1,16 @@
+# Diagnostic D25 — l'arbre d'accessibilité, le fil de Malica fermé puis ouvert
+# (comme dans retour.yaml). Les sondes attendent un texte qui n'existe pas :
+# optionnelles, elles échouent sans arrêter le flux, et Maestro garde l'arbre
+# qu'il lisait à cet instant (screen-hierarchy). Seul cet arbre fait preuve.
+appId: com.algoriafactory.malica.emulateur
+---
+- runFlow: ../maestro/connexion.yaml
+- extendedWaitUntil:
+    visible: "__sonde_1_fil_ferme__"
+    timeout: 8000
+    optional: true
+- tapOn: "Parler à Malica"
+- extendedWaitUntil:
+    visible: "__sonde_2_fil_ouvert__"
+    timeout: 8000
+    optional: true

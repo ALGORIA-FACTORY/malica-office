@@ -2,7 +2,7 @@
 // et les écrit côte à côte dans le journal : ce que lit un lecteur d'écran, pas
 // ce que montre une capture.
 //
-//   node android/maestro-diagnostic/lire-arbre.mjs arbre-1-accueil.json …
+//   node android/maestro-diagnostic/lire-arbre.mjs <screen-hierarchy/*.json> …
 import { readFileSync } from "node:fs";
 
 const TEMOINS = {

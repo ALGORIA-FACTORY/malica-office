@@ -38,16 +38,17 @@ describe("l'écran plein", () => {
   afterEach(() => cleanup());
 
   /*
-   * inert SEUL. Avec aria-hidden sur le fond et aria-modal sur l'écran, la
-   * WebView Android ne présentait plus RIEN à l'arbre d'accessibilité quand le
-   * fil de Malica était ouvert — ni le fond, ni le fil (exécution 35221075339).
-   * Un contenu que TalkBack ne lit plus du tout est pire qu'un fond lu à tort :
-   * aucun des deux attributs n'est posé tant que l'émulateur n'a pas tranché.
+   * inert SEUL — ni aria-hidden, ni aria-modal, ni role="dialog". Avec
+   * aria-hidden et aria-modal, puis avec role="dialog" et inert, la WebView
+   * Android ne présentait plus RIEN à l'arbre d'accessibilité, le fil de Malica
+   * ouvert (exécutions 35221075339 et 35225328747). Avant EcranPlein, le fil y
+   * était. Une variable par exécution, jusqu'à ce que l'émulateur tranche.
    */
-  it("se déclare comme une boîte de dialogue, sans aria-modal", () => {
+  it("ne pose ni rôle, ni aria-modal", () => {
     render(<Page ouvert />);
-    const dialogue = screen.getByRole("dialog");
-    expect(dialogue.hasAttribute("aria-modal")).toBe(false);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const devant = screen.getByText("devant").parentElement!;
+    expect(devant.hasAttribute("aria-modal")).toBe(false);
   });
 
   it("rend inerte tout ce qu'il recouvre, sans y poser aria-hidden, et rien de ce qu'il contient", () => {
