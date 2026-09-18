@@ -149,7 +149,9 @@
     "ecrituresByIds",
     "ecrituresForPiece",
     "periodeLignes",
-    "propose"
+    "propose",
+    "proposerDepuisPiece",
+    "propositionDePiece"
   ],
   "parametrage": [
     "calendrierCabinet",

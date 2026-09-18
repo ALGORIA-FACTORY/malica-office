@@ -48,6 +48,28 @@ const PARAMETRES = [
 /** La bande du haut de la première page, où s'imprime le titre du document. */
 const HAUT_DE_PAGE = 0.25;
 
+/**
+ * Le paramétrage daté de la lecture : décimales, seuils de confiance,
+ * tolérance d'arrondi. Un paramètre absent est une erreur, jamais un défaut.
+ */
+export async function lireParametres(
+  db: Requete,
+  pack: string,
+  date: string,
+): Promise<Record<(typeof PARAMETRES)[number], number>> {
+  const { rows } = await db.query<{ code: string; value_num: string }>(
+    `select distinct on (code) code, value_num from ref.socle_params
+      where pack_version_id = $1 and code = any($2) and valid_from <= $3::date
+        and (valid_to is null or valid_to >= $3::date)
+      order by code, valid_from desc`,
+    [pack, PARAMETRES, date],
+  );
+  const p = Object.fromEntries(rows.map((r) => [r.code, Number(r.value_num)]));
+  const manquant = PARAMETRES.find((c) => !(c in p));
+  if (manquant) throw refus(`Paramètre « ${manquant} » absent du paramétrage au ${date}.`);
+  return p as Record<(typeof PARAMETRES)[number], number>;
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -114,17 +136,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   const pack = packs[0]?.id;
   if (!pack) throw refus(`Aucun pack en vigueur pour ${org.jurisdiction} au ${dateRef}.`);
 
-  // Le paramétrage daté. Un paramètre absent est une erreur, jamais un défaut.
-  const { rows: params } = await db.query<{ code: string; value_num: string }>(
-    `select distinct on (code) code, value_num from ref.socle_params
-      where pack_version_id = $1 and code = any($2) and valid_from <= $3::date
-        and (valid_to is null or valid_to >= $3::date)
-      order by code, valid_from desc`,
-    [pack, PARAMETRES, dateRef],
-  );
-  const p = Object.fromEntries(params.map((r) => [r.code, Number(r.value_num)]));
-  const manquant = PARAMETRES.find((c) => !(c in p));
-  if (manquant) throw refus(`Paramètre « ${manquant} » absent du paramétrage au ${dateRef}.`);
+  const p = await lireParametres(db, pack, dateRef);
 
   // Le texte imprimé de chaque champ cité, jetons réassemblés dans l'ordre.
   const { rows: cites } = await db.query<{ field: string; text: string }>(

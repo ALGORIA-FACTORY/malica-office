@@ -488,6 +488,25 @@ if (process.argv.includes("--modeles")) {
       r.ok && VERDICTS.includes(lecture.verdict),
       lecture.verdict ?? "aucun verdict",
     );
+    // 3B-6 : la proposition d'écriture vient du SERVEUR, depuis les montants
+    // imprimés et normalisés — le client n'envoie aucune ligne.
+    if (["à comptabiliser", "à comptabiliser avec réserve"].includes(lecture.verdict)) {
+      const p = await rpc("office", "propositionDePiece", [lue.id]);
+      const lignes = p.ok ? p.proposition.lignes : [];
+      const debit = lignes.reduce((t, l) => t + Math.round(Number(l.debit) * 1000), 0);
+      const credit = lignes.reduce((t, l) => t + Math.round(Number(l.credit) * 1000), 0);
+      verdict(
+        "le serveur propose une écriture équilibrée, depuis les montants imprimés",
+        p.ok && lignes.length > 0 && debit === credit,
+        p.ok
+          ? `${lignes.length} lignes, ${(debit / 1000).toFixed(3)} au débit comme au crédit`
+          : p.raison,
+      );
+      const ecriture = p.ok ? await rpc("office", "proposerDepuisPiece", [lue.id]) : null;
+      verdict("le serveur l'enregistre lui-même", typeof ecriture === "string", ecriture ?? "");
+    } else {
+      console.log(`  —    la proposition d'écriture — sans objet : verdict « ${lecture.verdict} »`);
+    }
     const journal = Array.isArray(lecture.journal) ? lecture.journal : [];
     verdict(
       "les deux organes de la lecture rendent compte au journal",

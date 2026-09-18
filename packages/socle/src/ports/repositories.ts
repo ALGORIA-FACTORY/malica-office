@@ -3,6 +3,8 @@
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
  */
 
+import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
+
 export type OrgKind = "pme" | "cabinet";
 export type ValidationMode = "autonome" | "mandate";
 
@@ -781,8 +783,21 @@ export interface LigneDePeriode {
   credit: string;
 }
 
+/** La proposition d'écriture calculée par le serveur (3B-6), ou son refus motivé. */
+export type PropositionDePiece =
+  | { ok: true; verdict: string; packVersionId: string; proposition: ProposalResult }
+  | { ok: false; raison: string; verdict?: string };
+
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
+  /**
+   * La proposition d'écriture d'une pièce, calculée côté SERVEUR : depuis les
+   * montants imprimés et normalisés, seulement si le verdict la déclare
+   * comptabilisable. `dateSaisie` complète une date non lue, jamais une date lue.
+   */
+  propositionDePiece(pieceId: string, dateSaisie?: string | null): Promise<PropositionDePiece>;
+  /** Enregistre la proposition du serveur : aucune ligne ne vient du client. */
+  proposerDepuisPiece(pieceId: string, dateSaisie?: string | null): Promise<string>;
   /**
    * Les lignes comptabilisées entre deux dates.
    *

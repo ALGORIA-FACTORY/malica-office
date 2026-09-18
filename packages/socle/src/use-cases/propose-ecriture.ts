@@ -104,6 +104,12 @@ export function buildProposal(params: {
   mappings: readonly AccountMapping[];
   fiscalCharges?: readonly FiscalCharge[];
   currency: string;
+  /**
+   * Les paramètres lus au paramétrage daté — le serveur les donne toujours
+   * (3B-6). Absents, on retombe sur la table de devises et les seuils 0,7 / 0,4
+   * d'avant : les versions installées de l'application calculent encore ici.
+   */
+  parametres?: { decimals: number; confianceReserve: number; confianceBloquante: number };
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -112,7 +118,8 @@ export function buildProposal(params: {
     throw new LectureIncomplete(champs);
   }
   const extract = lu.data;
-  const decimals = currencyDecimals(extract.currency || params.currency);
+  const decimals =
+    params.parametres?.decimals ?? currencyDecimals(extract.currency || params.currency);
   const firstTaxCode = extract.lines[0]?.tax_code ?? null;
 
   const mapping =
@@ -154,8 +161,8 @@ export function buildProposal(params: {
 
     tolerances: {
       rounding_tolerance: (1 / 10 ** decimals).toFixed(decimals),
-      confidence_orange: 0.7,
-      confidence_red: 0.4,
+      confidence_orange: params.parametres?.confianceReserve ?? 0.7,
+      confidence_red: params.parametres?.confianceBloquante ?? 0.4,
     },
   });
 

@@ -62,3 +62,37 @@ describe("l'écriture proposée", () => {
     expect(proposer(factureVenteSimple()).libelle).toBe("Vente — Client SA — du 10/07/2026");
   });
 });
+
+describe("les paramètres viennent du paramétrage daté, quand l'appelant les donne (3B-6)", () => {
+  const parametres = { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 };
+
+  it("les seuils de confiance sont ceux de l'appelant, pas 0,7 et 0,4 en dur", () => {
+    const payload = { ...factureAchatSimple(), field_confidence: { overall: 0.9 } };
+    expect(proposer(payload).pivot.approvable).toBe(true);
+    const severe = buildProposal({
+      pieceId: "11111111-1111-1111-1111-111111111111",
+      payload,
+      taxRates,
+      mappings,
+      currency: "TND",
+      parametres: { decimals: 3, confianceReserve: 0.99, confianceBloquante: 0.95 },
+    });
+    expect(severe.pivot.approvable).toBe(false);
+  });
+
+  it("les décimales sont celles de l'appelant, pas celles d'une table de devises", () => {
+    // Une devise absente de la table retombait sur deux décimales.
+    const payload = { ...factureAchatSimple(), currency: "XYZ" };
+    const avecTable = proposer(payload);
+    const avecParametres = buildProposal({
+      pieceId: "11111111-1111-1111-1111-111111111111",
+      payload,
+      taxRates,
+      mappings,
+      currency: "XYZ",
+      parametres,
+    });
+    expect(avecTable.lignes[0]!.debit).toMatch(/\.\d{2}$/);
+    expect(avecParametres.lignes[0]!.debit).toMatch(/\.\d{3}$/);
+  });
+});

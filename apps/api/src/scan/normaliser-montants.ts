@@ -6,10 +6,11 @@
  * Les pièces réelles écrivent un même montant de dix façons : « 1 234,560 »,
  * « 1234.560 », « 1,234.560 », « 1.234,560 », « 1'234.560 », « 1 234 560 »,
  * « 1234560 », « 1 234,56 », « 1234,5600 », « 1 234,560DT ». Plusieurs sont
- * AMBIGUËS prises seules : « 1234.560 » est mille deux cent trente-quatre
- * dinars et cinq cent soixante millimes, ou un million deux cent trente-quatre
- * mille cinq cent soixante dinars ; « 1234560 » est écrit en dinars, ou en
- * millimes sans séparateur.
+ * AMBIGUËS prises seules : « 2.800 » est deux dinars huit cents millimes, ou
+ * deux mille huit cents dinars ; « 1234560 » est écrit en dinars, ou en
+ * millimes sans séparateur ; « 100,000 » est cent dinars, ou cent mille à
+ * l'anglaise. (« 1234.560 », lui, n'a qu'une lecture : un premier groupe de
+ * quatre chiffres n'est pas un groupe de milliers.)
  *
  * ============================================================== LA RÈGLE
  *
@@ -24,9 +25,12 @@
  * Une seule : la convention est tranchée. Aucune : la facture ne tient pas.
  * Plusieurs, distinctes : on ne choisit pas — aucun chiffre n'est rendu.
  *
- * Une égalité proportionnelle ne tranche pas l'ÉCHELLE : lus tous en dinars ou
- * tous en millimes, HT × 1,19 = TTC tient pareil. Seul un montant d'échelle
- * connue (un timbre fixe, une TVA imprimée sans ambiguïté) la rompt.
+ * L'ÉCHELLE se tranche d'elle-même quand l'arrondi laisse un reste : lu en
+ * dinars, 1 234 560 × 1,19 laisse 400 millimes qui ne tombent pas sur le TTC.
+ * Sans reste (100,000 × 1,19 = 119,000), lus tous en dinars ou tous en
+ * millimes, les montants tiennent pareil — un timbre imprimé aussi, puisqu'il
+ * est lui-même ambigu. Ce qui la rompt alors, c'est un droit dont le
+ * PARAMÉTRAGE fixe la valeur (le timbre à 1,000 DT) : `autres[].attendu`.
  *
  * ============================================================== CE QU'ELLE NE PORTE PAS
  *
@@ -394,4 +398,13 @@ export function normaliserMontants(
       raison,
     };
   }
+}
+
+/**
+ * La TVA d'une base, en unités mineures : arrondi(HT × taux), le taux lu comme
+ * un rationnel exact — le calcul même qui vérifie la facture.
+ */
+export function tvaDeBase(htMineur: number, taux: string | number): number {
+  const [num, den] = rationnel(taux);
+  return Number(arrondi(BigInt(htMineur) * num, den));
 }

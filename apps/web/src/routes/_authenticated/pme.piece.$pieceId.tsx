@@ -12,7 +12,6 @@ import { MalicaAvatar } from "@/components/malica/office-ui";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
-import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
@@ -50,15 +49,6 @@ const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
   "lecture.vide": "pme.lire.vide",
   "lecture.trop_longue": "pme.lire.tropLongue",
   "lecture.trop_dense": "pme.lire.tropDense",
-};
-
-const LIBELLE_DU_CHAMP: Record<string, MessageKey> = {
-  date: "piece.champ.date",
-  emetteur: "piece.champ.emetteur",
-  devise: "piece.champ.devise",
-  lignes: "piece.champ.lignes",
-  totaux: "piece.champ.totaux",
-  type: "piece.champ.type",
 };
 
 interface ExtractArticle {
@@ -182,20 +172,6 @@ function PieceScreen() {
   const ecritures = useQuery({
     queryKey: ["ecritures", pieceId],
     queryFn: () => office().office.ecrituresForPiece(pieceId),
-  });
-
-  const refs = useQuery({
-    queryKey: ["ref-data", pme.packId],
-    queryFn: async () => {
-      const packId = pme.packId!;
-      const [taxRates, mappings, fiscalCharges] = await Promise.all([
-        office().referential.taxRates(packId, pme.jurisdiction),
-        office().referential.accountMappings(packId),
-        office().referential.fiscalCharges(packId),
-      ]);
-      return { taxRates, mappings, fiscalCharges };
-    },
-    enabled: !!pme.packId,
   });
 
   const invalidate = async () => {
@@ -330,46 +306,23 @@ function PieceScreen() {
   const [dateSaisie, setDateSaisie] = useState<string | null>(null);
   const dateRetenue = dateSaisie ?? jourDuScan;
 
-  const proposalAttempt = useMemo(() => {
-    const brut = dossier.data?.extraction?.payload;
-    if (!brut || !refs.data) return null;
-    // La date saisie ne complète que ce qui manque : une date lue sur la pièce
-    // n'est jamais remplacée.
-    const lue = (brut as { document_date?: string }).document_date;
-    const payload = lue?.trim() ? brut : { ...brut, document_date: dateRetenue };
-    try {
-      return {
-        ok: true as const,
-        value: buildProposal({
-          pieceId,
-          payload,
-          taxRates: refs.data.taxRates,
-          mappings: refs.data.mappings,
-          fiscalCharges: refs.data.fiscalCharges,
-          currency: pme.currency,
-        }),
-      };
-    } catch (e) {
-      /*
-       * ================================================ CE QUE L'ON N'AFFICHE PLUS
-       *
-       * Le message brut d'un `ZodError` s'affichait ici, en anglais :
-       * « [{"validation":"regex","message":"Date ISO YYYY-MM-DD requise",
-       *    "path":["document_date"]}] ». La facture était pourtant bien lue —
-       * seule la date manquait — et l'utilisateur restait devant un tableau
-       * JSON sans savoir quoi faire.
-       *
-       * On nomme désormais les champs manquants en clair, et l'on dit quoi
-       * faire. Le refus reste : sans date, aucun taux de TVA n'est applicable,
-       * et Malica n'invente pas de valeur.
-       */
-      if (e instanceof LectureIncomplete) {
-        const champs = e.champs.map((c) => t(LIBELLE_DU_CHAMP[c] ?? "common.error")).join(", ");
-        return { ok: false as const, reason: t("piece.incomplete", { champs }) };
-      }
-      return { ok: false as const, reason: t("common.error") };
-    }
-  }, [dossier.data, refs.data, pieceId, pme.currency, dateRetenue, t]);
+  /*
+   * La proposition d'écriture est calculée par le SERVEUR (3B-6) : depuis les
+   * montants imprimés et normalisés, seulement si le verdict de la pièce la
+   * déclare comptabilisable. L'écran ne compose plus rien ; il montre ce que le
+   * serveur propose, ou la raison pour laquelle il ne propose rien. La date
+   * saisie ne complète qu'une date non lue.
+   */
+  const propositionServeur = useQuery({
+    queryKey: ["proposition", pieceId, dateRetenue, dossier.data?.extraction?.id ?? null],
+    queryFn: () => office().office.propositionDePiece(pieceId, dateRetenue),
+    enabled: Boolean(dossier.data?.extraction),
+  });
+  const proposalAttempt = propositionServeur.data
+    ? propositionServeur.data.ok
+      ? { ok: true as const, value: propositionServeur.data.proposition }
+      : { ok: false as const, reason: propositionServeur.data.raison }
+    : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
   // précision de la personne si la lecture n'avait pas su.
@@ -404,15 +357,8 @@ function PieceScreen() {
         ) {
           await office().capture.preciser(pieceId, "document_kind", type);
         }
-        ecritureId = await office().office.propose({
-          pieceId,
-          journal: proposal.journal,
-          date: proposal.pivot.entry_date,
-          libelle: proposal.libelle,
-          packVersionId: pme.packId,
-          devise: proposal.pivot.currency,
-          lignes: proposal.lignes,
-        });
+        // Le serveur recalcule et enregistre : aucune ligne ne part d'ici.
+        ecritureId = await office().office.proposerDepuisPiece(pieceId, dateRetenue);
       } else {
         // Jamais de repli sur une proposition ancienne : sans calcul du Socle,
         // il n'y a rien à confirmer, et la raison est affichée telle quelle.

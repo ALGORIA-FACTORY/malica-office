@@ -8,6 +8,8 @@
  */
 
 import type { Requete } from "../db.ts";
+import { propositionDePiece } from "../scan/proposition.ts";
+
 import { dec } from "./decimal.ts";
 
 interface Ligne {
@@ -68,6 +70,38 @@ function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) 
 }
 
 export const office = {
+  /**
+   * La proposition d'écriture d'une pièce, calculée par le SERVEUR (3B-6) :
+   * depuis les montants imprimés et normalisés, seulement si le verdict la
+   * déclare comptabilisable. `dateSaisie` complète une date non lue — elle ne
+   * remplace jamais une date lue.
+   */
+  async propositionDePiece(db: Requete, pieceId: string, dateSaisie: string | null = null) {
+    return propositionDePiece(db, pieceId, dateSaisie);
+  },
+
+  /**
+   * Enregistre la proposition que le serveur calcule : aucune ligne ne vient
+   * du client. Refuse, avec le motif, ce que `propositionDePiece` refuse.
+   */
+  async proposerDepuisPiece(
+    db: Requete,
+    pieceId: string,
+    dateSaisie: string | null = null,
+  ): Promise<string> {
+    const r = await propositionDePiece(db, pieceId, dateSaisie);
+    if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
+    return office.propose(db, {
+      pieceId,
+      journal: r.proposition.journal,
+      date: r.proposition.pivot.entry_date,
+      libelle: r.proposition.libelle,
+      packVersionId: r.packVersionId,
+      devise: r.proposition.pivot.currency,
+      lignes: r.proposition.lignes,
+    });
+  },
+
   async propose(
     db: Requete,
     input: {
