@@ -8,7 +8,9 @@
  * et c'est ce qu'on éprouve sans file ni téléphone :
  *
  *   — enregistrer deux fois avec la même clé rend la MÊME pièce ;
- *   — déposer deux fois les octets ne laisse qu'un fichier, celui du dernier envoi ;
+ *   — redéposer les MÊMES octets (la file rejoue ceux qu'elle a rangés) est
+ *     sans effet ; d'autres octets sur la même pièce sont refusés (409) : son
+ *     contenu est scellé par son empreinte depuis le premier dépôt (3B-1) ;
  *   — une pièce trop volumineuse est refusée en 413, lisiblement, sans laisser
  *     de fichier partiel ;
  *   — demander la lecture sans attendre répond tout de suite, et la redemander
@@ -53,17 +55,29 @@ const depot1 = await e.appel(`/pieces/${premiere.id}/contenu`, {
   body: OCTETS_A,
 });
 e.verdict("le premier dépôt est accepté", depot1.status === 201, `${depot1.status}`);
-const depot2 = await e.appel(`/pieces/${premiere.id}/contenu`, {
+// La file rejoue les octets qu'elle a rangés : les mêmes, à l'octet près.
+const rejeu = await e.appel(`/pieces/${premiere.id}/contenu`, {
+  method: "POST",
+  headers: { "Content-Type": "application/pdf" },
+  body: OCTETS_A,
+});
+e.verdict("le rejeu des mêmes octets est accepté", rejeu.status === 201, `${rejeu.status}`);
+// D'autres octets sous le même identifiant : le contenu est scellé.
+const autres = await e.appel(`/pieces/${premiere.id}/contenu`, {
   method: "POST",
   headers: { "Content-Type": "application/pdf" },
   body: OCTETS_B,
 });
-e.verdict("le second aussi : redéposer remplace", depot2.status === 201, `${depot2.status}`);
+e.verdict(
+  "d'autres octets sont refusés : le contenu est scellé",
+  autres.status === 409,
+  `${autres.status}`,
+);
 const relu = await e.appel(`/pieces/${premiere.id}/contenu`);
 const octetsRelus = new Uint8Array(await relu.arrayBuffer());
 e.verdict(
-  "ce qu'on relit est le dernier envoi, octet pour octet",
-  octetsRelus.length === OCTETS_B.length && octetsRelus.every((o, i) => o === OCTETS_B[i]),
+  "ce qu'on relit est le premier envoi, octet pour octet",
+  octetsRelus.length === OCTETS_A.length && octetsRelus.every((o, i) => o === OCTETS_A[i]),
   `${octetsRelus.length} octets`,
 );
 

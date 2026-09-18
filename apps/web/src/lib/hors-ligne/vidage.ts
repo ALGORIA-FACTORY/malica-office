@@ -10,7 +10,8 @@
  *   — un élément à la fois, du plus ancien au plus récent : deux dépôts de
  *     quatre mégaoctets en parallèle ne vont pas plus vite sur un réseau mobile.
  *   — trois pas, chacun rejouable : enregistrer (même clé → même pièce),
- *     déposer les octets (redéposer remplace), demander la lecture (rejoindre
+ *     déposer les octets (rejouer les mêmes est sans effet ; le contenu est
+ *     scellé par son empreinte), demander la lecture (rejoindre
  *     celle qui tourne). Puis l'élément est purgé.
  *   — un réseau absent ou une panne serveur arrête la passe et recule
  *     l'élément (1 s, 2 s, 4 s… cinq minutes au plus) ; un refus lisible de
