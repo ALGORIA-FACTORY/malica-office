@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
+import { lireSuite, type SuiteApresConnexion } from "@/lib/suite-apres-connexion";
 import { office } from "@/verticals/malica-office/composition";
 import { EchecAuth } from "@malica/socle/ports/auth";
 
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/auth")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): SuiteApresConnexion => lireSuite(search),
   component: AuthPage,
 });
 
@@ -32,7 +34,9 @@ type Mode = "signin" | "signup";
 function AuthPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("signin");
+  const { suite, mode: modeInitial } = Route.useSearch();
+  const destination = suite ?? "/office";
+  const [mode, setMode] = useState<Mode>(modeInitial ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -44,7 +48,7 @@ function AuthPage() {
     void office()
       .auth.session()
       .then((compte) => {
-        if (active && compte) void navigate({ to: "/office", replace: true });
+        if (active && compte) void navigate({ to: destination, replace: true });
       })
       // L'API peut être injoignable : on laisse alors l'écran de connexion,
       // plutôt que de rejeter une promesse que personne n'attrape.
@@ -52,7 +56,7 @@ function AuthPage() {
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [navigate, destination]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -67,7 +71,7 @@ function AuthPage() {
       } else {
         await office().auth.connexion(email, password);
       }
-      await navigate({ to: "/office", replace: true });
+      await navigate({ to: destination, replace: true });
     } catch (err) {
       setError(explain(err, t));
     } finally {

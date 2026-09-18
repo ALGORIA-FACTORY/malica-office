@@ -18,6 +18,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { OuvrirDossier } from "@/components/malica/OuvrirDossier";
 import {
   EmptyState,
   InkCell,
@@ -88,6 +89,11 @@ function CabinetClients() {
     queryFn: () => office().collab.assignments(org.id),
   });
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
+  // La même clé que le rail du cabinet : une seule lecture du rôle.
+  const acces = useQuery({
+    queryKey: ["cab-acces", org.id],
+    queryFn: () => office().acces.monAcces(org.id),
+  });
   const regimes = useQuery({
     queryKey: ["fiche-regimes", org.jurisdiction],
     queryFn: () => office().identity.regimesDisponibles(org.jurisdiction),
@@ -173,6 +179,9 @@ function CabinetClients() {
           {t("cab.clients.lede")}
         </p>
       </header>
+
+      {/* Seul un expert ouvre un dossier au nom du cabinet — la base le refuse à tout autre. */}
+      {acces.data?.role === "expert" ? <OuvrirDossier cabinetId={org.id} /> : null}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
