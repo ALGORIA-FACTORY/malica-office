@@ -37,6 +37,7 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
   let jetonEtranger = "";
   let orgA = "";
   let pieceA = "";
+  let proprietaire = "";
 
   before(async () => {
     process.env["STOCKAGE_RACINE"] = await mkdtemp(path.join(tmpdir(), "malica-existence-"));
@@ -53,6 +54,7 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
     const a = await creerCompte(`a-${marque}@essai.local`, "MotDePasseTresLong2026!");
     const b = await creerCompte(`b-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(a && b);
+    proprietaire = a.id;
     jetonEtranger = emettreJeton(b);
     orgA = await sousIdentite(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
@@ -156,6 +158,9 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
   it("et la pièce existe bien : son propriétaire la lit", async () => {
     // Sans ce témoin, deux réponses identiques pourraient venir de ce que la
     // pièce n'a jamais été créée.
-    assert.match(pieceA, /^[0-9a-f-]{36}$/);
+    const lue = (await sousIdentite(proprietaire, (db) =>
+      executerRpc(db, { depot: "capture", methode: "dossier", args: [pieceA] }),
+    )) as { piece: { id: string } } | { id: string };
+    assert.equal("piece" in lue ? lue.piece.id : lue.id, pieceA);
   });
 });
