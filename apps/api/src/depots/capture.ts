@@ -71,6 +71,9 @@ export const capture = {
       pageCount?: number | null;
     },
   ): Promise<{ id: string; chemin: string }> {
+    // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
+    // ne sont pas encore arrivés. Elle est calculée sur le flux reçu et scellée
+    // par la route de dépôt (stockage.ts, capture_sceller_empreinte).
     const { rows } = await db.query<{ id: string }>(
       `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t,
                                             null, $7::smallint) as id`,

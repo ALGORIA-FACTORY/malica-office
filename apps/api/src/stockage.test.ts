@@ -129,7 +129,12 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
       body: OCTETS,
     });
     assert.equal(depot.status, 201);
-    assert.deepEqual(await depot.json(), { pieceId: pieceA, octets: OCTETS.length });
+    // Les champs que lisent les versions installées, inchangés ; l'empreinte et
+    // le doublon s'y AJOUTENT (3B-1, reception.test.ts).
+    const corps = (await depot.json()) as Record<string, unknown>;
+    assert.equal(corps["pieceId"], pieceA);
+    assert.equal(corps["octets"], OCTETS.length);
+    assert.match(String(corps["sha256"]), /^[0-9a-f]{64}$/);
 
     const lecture = await fetch(`${base}/pieces/${pieceA}/contenu`, { headers: entetes(jetonA) });
     assert.equal(lecture.status, 200);

@@ -25,6 +25,7 @@
  * garantie qu'on ne veut pas voir dépendre d'une relecture attentive.
  */
 
+import { createHash } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -176,6 +177,18 @@ function borneDeTaille(max: number): Transform {
   });
 }
 
+/** Un passe-plat qui hache ce qui passe : l'empreinte des octets écrits, pas d'autres. */
+function hacheur(): { flux: Transform; empreinte: () => string } {
+  const h = createHash("sha256");
+  const flux = new Transform({
+    transform(morceau: Buffer, _encodage, suite) {
+      h.update(morceau);
+      suite(null, morceau);
+    },
+  });
+  return { flux, empreinte: () => h.digest("hex") };
+}
+
 /**
  * La sonde de `/sante/profonde` : le stockage accepte-t-il d'écrire, puis de
  * relire ? Un disque plein ou un volume démonté se voient ici, avant la
@@ -190,7 +203,15 @@ export async function sonderLeStockage(): Promise<void> {
   if (relu !== "ok") throw new Error("le stockage ne relit pas ce qu'il écrit");
 }
 
-/** Dépose les octets d'une pièce. Idempotent : redéposer remplace. */
+/**
+ * Dépose les octets d'une pièce, et scelle leur empreinte SHA-256.
+ *
+ * Redéposer les MÊMES octets est sans effet (un renvoi réseau) ; d'autres
+ * octets sur une pièce scellée sont refusés (409) — le contenu d'une pièce
+ * comptable ne change pas sous son identifiant. Un doublon strict du tenant est
+ * reçu, puis désigné (`doublonDe`) : le refuser ferait réessayer sans fin les
+ * versions installées de l'application.
+ */
 export async function deposerContenu(req: Request, res: Response): Promise<void> {
   const piece = await pieceAutorisee(req, req.params["id"]);
   if (!piece) {
@@ -205,8 +226,20 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   // partiel, et un fichier partiel servi comme une pièce comptable est pire
   // qu'une pièce absente. Le renommage, lui, est atomique.
   const provisoire = `${destination}.${process.pid}.partiel`;
+  const hache = hacheur();
+  let scelle: { sha256: string; doublonDe: string | null };
   try {
-    await pipeline(req, borneDeTaille(TAILLE_MAX_PIECE), createWriteStream(provisoire));
+    await pipeline(req, borneDeTaille(TAILLE_MAX_PIECE), hache.flux, createWriteStream(provisoire));
+    // La base d'abord, le renommage ensuite : un contenu refusé ne remplace
+    // jamais les octets scellés.
+    const sha256 = hache.empreinte();
+    scelle = await sousLAppelant(req, async (db) => {
+      const { rows } = await db.query<{ r: { sha256: string; doublonDe: string | null } }>(
+        `select public.capture_sceller_empreinte($1, $2) as r`,
+        [piece.id, sha256],
+      );
+      return rows[0]!.r;
+    });
     await rename(provisoire, destination);
   } catch (erreur) {
     await rm(provisoire, { force: true });
@@ -214,11 +247,20 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
       res.status(413).json({ erreur: "pièce trop volumineuse" });
       return;
     }
+    if ((erreur as { code?: string }).code === "23514") {
+      res.status(409).json({ erreur: "le contenu de cette pièce est scellé" });
+      return;
+    }
     throw erreur;
   }
 
   const { size } = await stat(destination);
-  res.status(201).json({ pieceId: piece.id, octets: size });
+  res.status(201).json({
+    pieceId: piece.id,
+    octets: size,
+    sha256: scelle.sha256,
+    doublonDe: scelle.doublonDe,
+  });
 }
 
 /** Rend les octets d'une pièce, avec le type que porte la base. */
