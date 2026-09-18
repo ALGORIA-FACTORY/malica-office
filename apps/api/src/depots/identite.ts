@@ -294,6 +294,123 @@ export const identite = {
   },
 
   /**
+   * Le cabinet ouvre le dossier d'une PME qui n'existe pas encore : la PME,
+   * son établissement principal et un mandat actif, en un geste. Un matricule
+   * qui a déjà un dossier est refusé — on lui propose un mandat.
+   */
+  async ouvrirDossier(
+    db: Requete,
+    input: { cabinetTenantId: string; name: string; legalId: string; adresse: string | null },
+  ): Promise<{ id: string; name: string; legalId: string; adresse: string | null }> {
+    const { rows } = await db.query<{
+      r: { id: string; name: string; legalId: string; adresse: string | null };
+    }>(`select public.cabinet_ouvrir_dossier($1, $2, $3, $4) as r`, [
+      input.cabinetTenantId,
+      input.name,
+      input.legalId,
+      input.adresse,
+    ]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("dossier.non_ouvert");
+    return { ...r, adresse: r.adresse ?? null };
+  },
+
+  /**
+   * Le cabinet invite le contact du dossier. Le jeton n'est rendu qu'ici, une
+   * fois : la base n'en garde que l'empreinte. Le cabinet transmet le lien.
+   */
+  async inviterContact(
+    db: Requete,
+    pmeTenantId: string,
+    email: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    jeton: string;
+    expiresAt: string;
+  }> {
+    const { rows } = await db.query<{
+      r: { id: string; email: string; jeton: string; expiresAt: string };
+    }>(`select public.dossier_inviter_contact($1, $2) as r`, [pmeTenantId, email]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_emise");
+    return r;
+  },
+
+  /** Les invitations d'un dossier et leur état, pour le cabinet mandaté. Jamais le jeton. */
+  async invitationsDuDossier(
+    db: Requete,
+    pmeTenantId: string,
+  ): Promise<
+    {
+      id: string;
+      email: string;
+      statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
+      expiresAt: string;
+      createdAt: string;
+      acceptedAt: string | null;
+      revokedAt: string | null;
+    }[]
+  > {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select public.dossier_invitations_lire($1) as r`,
+      [pmeTenantId],
+    );
+    return (rows[0]?.r ?? []) as Awaited<ReturnType<typeof identite.invitationsDuDossier>>;
+  },
+
+  /** Le cabinet révoque une invitation encore en attente. */
+  async revoquerInvitation(
+    db: Requete,
+    invitationId: string,
+  ): Promise<{ id: string; statut: "revoquee" }> {
+    const { rows } = await db.query<{ r: { id: string; statut: "revoquee" } }>(
+      `select public.dossier_revoquer_invitation($1) as r`,
+      [invitationId],
+    );
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_revoquee");
+    return r;
+  },
+
+  /** Ce que le lien fait rejoindre ; null pour un jeton inconnu. */
+  async lireInvitationParLien(
+    db: Requete,
+    jeton: string,
+  ): Promise<{
+    pme: string;
+    cabinet: string | null;
+    email: string;
+    statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
+    valable: boolean;
+  } | null> {
+    const { rows } = await db.query<{
+      r: {
+        pme: string;
+        cabinet: string | null;
+        email: string;
+        statut: "en_attente" | "acceptee" | "expiree" | "revoquee";
+        valable: boolean;
+      } | null;
+    }>(`select public.invitation_par_lien_lire($1) as r`, [jeton]);
+    return rows[0]?.r ?? null;
+  },
+
+  /** Le contact rejoint le dossier ; son compte doit porter l'adresse invitée. */
+  async accepterInvitationParLien(
+    db: Requete,
+    jeton: string,
+  ): Promise<{ tenantId: string; role: string }> {
+    const { rows } = await db.query<{ r: { tenantId: string; role: string } }>(
+      `select public.invitation_par_lien_accepter($1) as r`,
+      [jeton],
+    );
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_acceptee");
+    return r;
+  },
+
+  /**
    * Proposer un mandat à une PME inscrite, par son identifiant fiscal.
    *
    * Le cabinet ne voit pas les PME qu'il ne mandate pas : la recherche passe

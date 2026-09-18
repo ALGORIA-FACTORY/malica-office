@@ -104,19 +104,25 @@
     "synthese"
   ],
   "identite": [
+    "accepterInvitationParLien",
     "createOrganization",
     "creerMandat",
     "definirOrganisation",
     "etablirFiche",
     "ficheCourante",
     "formesDisponibles",
+    "invitationsDuDossier",
+    "inviterContact",
+    "lireInvitationParLien",
     "listEntities",
     "listMyOrganizations",
     "mandatsProposes",
     "monCabinet",
+    "ouvrirDossier",
     "proposerMandat",
     "regimesDisponibles",
-    "repondreAuMandat"
+    "repondreAuMandat",
+    "revoquerInvitation"
   ],
   "immo": [
     "categories",

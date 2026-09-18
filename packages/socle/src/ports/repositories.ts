@@ -102,6 +102,43 @@ export interface IdentityRepository {
     cabinetTenantId: string,
     legalId: string,
   ): Promise<{ id: string; pmeTenantId: string; pmeName: string; status: string; deja: boolean }>;
+  /**
+   * Le cabinet ouvre le dossier d'une PME qui n'existe pas encore : la PME, son
+   * établissement principal et un mandat actif. Un matricule qui a déjà un
+   * dossier est refusé.
+   */
+  ouvrirDossier(input: {
+    cabinetTenantId: string;
+    name: string;
+    legalId: string;
+    adresse: string | null;
+  }): Promise<{ id: string; name: string; legalId: string; adresse: string | null }>;
+  /**
+   * Le cabinet invite le contact du dossier. Le jeton n'est rendu qu'ici, une
+   * fois ; le cabinet transmet le lien lui-même.
+   */
+  inviterContact(
+    pmeTenantId: string,
+    email: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    jeton: string;
+    expiresAt: string;
+  }>;
+  /** Les invitations d'un dossier et leur état. Jamais le jeton. */
+  invitationsDuDossier(pmeTenantId: string): Promise<InvitationDuDossier[]>;
+  revoquerInvitation(invitationId: string): Promise<{ id: string; statut: "revoquee" }>;
+  /** Ce que le lien fait rejoindre ; null pour un jeton inconnu. */
+  lireInvitationParLien(jeton: string): Promise<{
+    pme: string;
+    cabinet: string | null;
+    email: string;
+    statut: StatutInvitation;
+    valable: boolean;
+  } | null>;
+  /** Le contact rejoint le dossier ; son compte doit porter l'adresse invitée. */
+  accepterInvitationParLien(jeton: string): Promise<{ tenantId: string; role: string }>;
   /** Les régimes que la juridiction connaît, tels que la base les porte. */
   regimesDisponibles(jurisdiction: string): Promise<RegimeDisponible[]>;
   /** Les formes juridiques et modes de dépôt que le calendrier distingue. */
@@ -112,6 +149,18 @@ export interface IdentityRepository {
    * carte n'établit rien — c'est ce geste-ci, et lui seul, qui fait foi.
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
+}
+
+export type StatutInvitation = "en_attente" | "acceptee" | "expiree" | "revoquee";
+
+export interface InvitationDuDossier {
+  id: string;
+  email: string;
+  statut: StatutInvitation;
+  expiresAt: string;
+  createdAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
 }
 
 export interface RegimeDisponible {
