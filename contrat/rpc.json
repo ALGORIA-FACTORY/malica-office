@@ -16,6 +16,7 @@
     "setLineStatus"
   ],
   "capture": [
+    "analyser",
     "contexteAssistant",
     "contexteLecture",
     "dossier",

@@ -310,16 +310,18 @@ export function buildExtractFromTokenPlan(params: {
 
   const candidate = {
     contract: "extract.v1",
-    issuer: issuer ?? "",
-    document_date: documentDate ?? "",
+    // Illisible, un champ reste VIDE : jamais « » ni « 0 », qui passaient la
+    // validation du contrat et pouvaient finir dans une écriture (3B, 18 sept.).
+    issuer: issuer ?? null,
+    document_date: documentDate ?? null,
     currency: selection.currency.toUpperCase(),
     lines,
     articles,
     other_charges: otherCharges,
     totals: {
-      base_ht: totalBase ?? "0",
-      vat: totalVat ?? "0",
-      ttc: totalTtc ?? "0",
+      base_ht: totalBase ?? null,
+      vat: totalVat ?? null,
+      ttc: totalTtc ?? null,
     },
     references,
     // La confiance globale du désignateur, sous une clé stable : c'est

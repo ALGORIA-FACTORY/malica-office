@@ -16,6 +16,8 @@
 
 import type { AppelApi } from "../appel-local.ts";
 
+import { confianceParChamp } from "../../scan/confiance.ts";
+
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { runVisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
@@ -128,8 +130,56 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
        * persistance de la lecture échouait alors — pour un champ absent.
        */
       documentDate: extract.document_date?.trim() ? extract.document_date : null,
+      // Comment la pièce a été relevée, et la confiance de chaque champ lu :
+      // posées avec la lecture, qui est immuable (R7).
+      mode: read.readModel,
+      confianceParChamp: confianceParChamp(
+        built.citations as Array<{ field: string; page: number; ordinal: number }>,
+        read.tokens,
+        read.selection.overall_confidence,
+      ),
     },
   ]);
+
+  // Le journal des exécutions : une ligne par organe, chacune à son tarif.
+  // Un organe sans tarif en vigueur (Qwen-VL-OCR, dont le prix n'a pas été
+  // relevé) ne se journalise pas : agents_run_log refuse d'écrire un coût sans
+  // origine. On le DIT dans la réponse, au lieu de l'avaler.
+  const journal = await Promise.all(
+    (
+      [
+        ["malica.lecture.releve", read.readModel, "vision", read.releve],
+        ["malica.lecture.designation", read.selectModel, "reasoner", read.designation],
+      ] as const
+    ).map(([agent, model, role, passe]) =>
+      api
+        .rpc<string | null>("capture", "journaliserAgent", [
+          {
+            tenantId: contexte.piece.tenantId,
+            agent,
+            model,
+            role,
+            status: "ok",
+            latencyMs: passe.latencyMs,
+            tokensIn: passe.tokensIn,
+            tokensOut: passe.tokensOut,
+            pieceId,
+          },
+        ])
+        .then(
+          () => ({ agent, model, journalise: true as const }),
+          (e: unknown) => ({
+            agent,
+            model,
+            journalise: false as const,
+            raison: e instanceof Error ? e.message.slice(0, 200) : String(e),
+          }),
+        ),
+    ),
+  );
+
+  // La pièce se juge sur ce que la base porte désormais.
+  const analyse = await api.rpc<{ verdict: string }>("capture", "analyser", [pieceId]);
 
   return {
     pieceId,
@@ -141,5 +191,7 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     latencyMs: read.latencyMs,
     tokensIn: read.tokensIn,
     tokensOut: read.tokensOut,
+    verdict: analyse.verdict,
+    journal,
   };
 }

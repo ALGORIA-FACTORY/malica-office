@@ -23,6 +23,7 @@
  */
 
 import type { Requete } from "../db.ts";
+import { analyserPiece } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { referentiel } from "./referentiel.ts";
@@ -383,6 +384,14 @@ export const capture = {
     return { id: p.id, champ: p.champ, valeur: p.valeur };
   },
 
+  /**
+   * Juger une pièce lue : normalisation des montants, contrôles motivés,
+   * verdict — posés dans `capture.analyses`. Voir `scan/analyse.ts`.
+   */
+  async analyser(db: Requete, pieceId: string) {
+    return analyserPiece(db, pieceId);
+  },
+
   async persisterLecture(
     db: Requete,
     input: {
@@ -396,10 +405,15 @@ export const capture = {
       articles: unknown[];
       documentKind: string | null;
       documentDate: string | null;
+      /** Comment la pièce a été relevée (pdf-text, le modèle de vision…). Facultatif : les appels d'avant le 18 septembre ne le passaient pas. */
+      mode?: string | null;
+      /** La confiance de chaque champ lu, entre 0 et 1. Facultative, même raison. */
+      confianceParChamp?: Record<string, number>;
     },
   ): Promise<void> {
     await db.query(
-      `select public.capture_read_persist($1, $2::jsonb, $3, $4::jsonb, $5::jsonb, $6::jsonb)`,
+      `select public.capture_read_persist($1, $2::jsonb, $3, $4::jsonb, $5::jsonb, $6::jsonb,
+                                          $7, $8::jsonb)`,
       [
         input.pieceId,
         JSON.stringify(input.tokens),
@@ -407,6 +421,8 @@ export const capture = {
         JSON.stringify(input.extract),
         JSON.stringify(input.citations),
         JSON.stringify(input.flags),
+        input.mode ?? null,
+        JSON.stringify(input.confianceParChamp ?? {}),
       ],
     );
 

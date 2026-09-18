@@ -83,6 +83,10 @@ export interface LectureDePiece {
   latencyMs: number;
   tokensIn: number | null;
   tokensOut: number | null;
+  /** Le verdict de la pièce, jugée après la lecture (3B). Facultatif : absent avant le 18 sept. 2026. */
+  verdict?: string;
+  /** Chaque organe de la lecture, journalisé ou non (et pourquoi). */
+  journal?: Array<{ agent: string; model: string; journalise: boolean; raison?: string }>;
 }
 
 export interface EtatDeLecture {

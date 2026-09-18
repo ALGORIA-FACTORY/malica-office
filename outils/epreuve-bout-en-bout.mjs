@@ -425,13 +425,20 @@ if (process.argv.includes("--modeles")) {
   const lignes = [
     ["ÉPREUVE FOURNITURES SARL", 44, 140],
     ["Matricule fiscal 0000000/A/M/000", 30, 200],
-    ["FACTURE N° EP-2026-0001", 40, 320],
+    // Un numéro par exécution : rejouée sur la même base, l'épreuve ne doit pas
+    // se reconnaître elle-même comme un doublon à rapprocher.
+    [`FACTURE N° EP-${Date.now().toString(36).toUpperCase()}`, 40, 320],
     ["Date : 15/09/2026", 30, 380],
-    ["Client : ATLAS DISTRIBUTION", 30, 440],
+    // Le matricule du client : celui du dossier, lu dans la base — le contrôle
+    // du destinataire (3B) doit pouvoir le reconnaître.
+    [`Client : ${dossier.name} — MF ${dossier.legalId ?? dossier.legal_id ?? ""}`, 30, 440],
     ["Papier A4, 10 ramettes", 30, 600],
     ["Total HT : 100,000 DT", 34, 900],
     ["TVA 19 % : 19,000 DT", 34, 960],
-    ["Total TTC : 119,000 DT", 38, 1030],
+    // Un droit de timbre imprimé : un montant d'échelle connue, qui tranche la
+    // convention d'écriture (dinars ou millimes) que 100 × 1,19 laisse ouverte.
+    ["Droit de timbre : 1,000 DT", 30, 1000],
+    ["Total TTC : 120,000 DT", 38, 1070],
   ];
   for (const [texte, taille, y] of lignes) {
     c.font = `${taille}px sans-serif`;
@@ -466,6 +473,31 @@ if (process.argv.includes("--modeles")) {
       "une pièce est lue par les modèles",
       r.ok && Boolean(lecture.model) && (lecture.tokensIn ?? 0) > 0,
       r.ok ? preuve : `${r.status} ${corps.erreur ?? ""}`,
+    );
+    // 3B : la pièce lue est jugée, et chaque organe de la lecture dit s'il est
+    // journalisé — ou pourquoi il ne l'est pas (un organe sans tarif relevé).
+    const VERDICTS = [
+      "à comptabiliser",
+      "à comptabiliser avec réserve",
+      "à rapprocher",
+      "à rejeter",
+      "anomalie à signaler",
+    ];
+    verdict(
+      "la pièce lue est jugée, d'un verdict connu",
+      r.ok && VERDICTS.includes(lecture.verdict),
+      lecture.verdict ?? "aucun verdict",
+    );
+    const journal = Array.isArray(lecture.journal) ? lecture.journal : [];
+    verdict(
+      "les deux organes de la lecture rendent compte au journal",
+      journal.length === 2,
+      journal
+        .map(
+          (j) =>
+            `${j.model} : ${j.journalise ? "journalisé" : `non journalisé (${j.raison ?? "?"})`}`,
+        )
+        .join(" ; ") || "rien",
     );
   }
   {

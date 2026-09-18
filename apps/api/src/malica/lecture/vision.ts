@@ -178,6 +178,9 @@ export interface VisionRead {
   latencyMs: number;
   tokensIn: number | null;
   tokensOut: number | null;
+  /** Chaque passe séparément, pour le journal des exécutions (`agents.agent_runs`). */
+  releve: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
+  designation: { latencyMs: number; tokensIn: number | null; tokensOut: number | null };
 }
 
 /** Le libellé de ligne est relu dans le plan quand le modèle l'a désigné. */
@@ -300,8 +303,11 @@ Réponds STRICTEMENT en JSON :
              "unit_price_ht":{...},"unit_price_ttc":{...},"total_ht":{...},"tax_code":"<code ou null>"}],
  "other_charges":[{"code":"<un code de droits fournis>","amount":{...}}],
  "totals":{"base_ht":{...},"vat":{...},"ttc":{...}},
- "references":{"matricule_fiscal":{...},"numero":{...}},
+ "references":{"matricule_fiscal":{...},"matricule_fiscal_client":{...},"numero":{...}},
  "overall_confidence":0.0}
+MATRICULES : "references.matricule_fiscal" est celui de l'ÉMETTEUR de la pièce ;
+"references.matricule_fiscal_client" est celui du CLIENT (facturé à, livré à, destinataire), s'il
+est imprimé — sinon null. Ne les intervertis jamais.
 Pour un champ TEXTUEL (issuer, references) dont la valeur occupe plusieurs tokens contigus
 (raison sociale, numéro en deux morceaux), ajoute "ordinal_end" : {"page":1,"ordinal":3,"ordinal_end":5}.
 Un MONTANT ou une DATE ne porte jamais "ordinal_end" : un seul token.
@@ -495,6 +501,7 @@ export async function runVisionRead(params: {
     ...(params.bytes ? { bytes: params.bytes } : {}),
   });
   const tokens = pass1.tokens;
+  const finReleve = Date.now();
   // L'œil a regardé, et n'a rien lu d'exploitable. Même contrat : un code.
   if (tokens.length === 0) throw new Error("lecture.vide");
 
@@ -587,5 +594,15 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     latencyMs: Date.now() - started,
     tokensIn: (pass1.tokensIn ?? 0) + (pass2.tokensIn ?? 0) || null,
     tokensOut: (pass1.tokensOut ?? 0) + (pass2.tokensOut ?? 0) || null,
+    releve: {
+      latencyMs: finReleve - started,
+      tokensIn: pass1.tokensIn ?? null,
+      tokensOut: pass1.tokensOut ?? null,
+    },
+    designation: {
+      latencyMs: Date.now() - finReleve,
+      tokensIn: pass2.tokensIn ?? null,
+      tokensOut: pass2.tokensOut ?? null,
+    },
   };
 }

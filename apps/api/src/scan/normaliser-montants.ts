@@ -48,8 +48,13 @@ export interface EntreeMontants {
   bases: Array<{ ht: string | null; taux: string | number }>;
   /** La TVA imprimée, si elle l'est. */
   tva?: string | null;
-  /** Les autres montants qui entrent dans le TTC (droit de timbre…), tels qu'imprimés. */
-  autres?: string[];
+  /**
+   * Les autres montants qui entrent dans le TTC (droit de timbre…), tels
+   * qu'imprimés. Un droit FIXÉ par le paramétrage daté porte sa valeur attendue
+   * (en unités mineures) : c'est lui qui ancre l'échelle quand l'égalité, sans
+   * reste d'arrondi, la laisse ouverte.
+   */
+  autres?: Array<string | { brut: string; attendu?: number }>;
   /** Le TTC imprimé. */
   ttc?: string | null;
 }
@@ -245,18 +250,38 @@ export function normaliserMontants(
   if (entree.bases.some((b) => b.ht === null || b.ht.trim() === ""))
     return vide("illisible", "un HT est absent : la facture ne peut pas être vérifiée");
   if (entree.tva) champs.push({ nom: "tva", brut: entree.tva });
-  (entree.autres ?? []).forEach((a, i) => champs.push({ nom: `autre${i}`, brut: a }));
+  const attendus = new Map<string, number>();
+  (entree.autres ?? []).forEach((a, i) => {
+    const nom = `autre${i}`;
+    if (typeof a === "string") return champs.push({ nom, brut: a });
+    if (a.attendu !== undefined) attendus.set(nom, a.attendu);
+    return champs.push({ nom, brut: a.brut });
+  });
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
-  const lectures = champs.map((c) => candidatsMontant(c.brut, p.decimales));
-  const illisible = champs.findIndex((_, i) => lectures[i]!.length === 0);
+  const brutes = champs.map((c) => candidatsMontant(c.brut, p.decimales));
+  const illisible = champs.findIndex((_, i) => brutes[i]!.length === 0);
   if (illisible >= 0)
     return vide("illisible", `montant illisible : « ${champs[illisible]!.brut} »`);
+
+  // Un droit fixé par le paramétrage ne se lit qu'à sa valeur. Imprimé
+  // autrement, il n'ancre rien et garde toutes ses lectures.
+  let ancre = false;
+  const lectures = brutes.map((l, i) => {
+    const attendu = attendus.get(champs[i]!.nom);
+    if (attendu === undefined) return l;
+    const retenues = l.filter((c) => c.mineur === attendu);
+    if (retenues.length === 0) return l;
+    if (retenues.length < l.length) ancre = true;
+    return retenues;
+  });
 
   const rats = entree.bases.map((b) => rationnel(b.taux));
   const tol = BigInt(p.toleranceMineure);
   const aVerifier = Boolean(entree.ttc) || Boolean(entree.tva);
-  const unique = lectures.every((l) => l.length === 1);
+  // L'ambiguïté se mesure sur ce qui est IMPRIMÉ : une lecture levée par
+  // l'ancre n'était pas unique.
+  const unique = brutes.every((l) => l.length === 1);
 
   if (!aVerifier) {
     if (!unique)
@@ -319,7 +344,9 @@ export function normaliserMontants(
     1,
     unique
       ? "lecture unique, vérifiée par la facture"
-      : "convention tranchée par l'arithmétique de la facture",
+      : ancre
+        ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
+        : "convention tranchée par l'arithmétique de la facture",
   );
 
   function valeurs(pris: Candidat[]) {

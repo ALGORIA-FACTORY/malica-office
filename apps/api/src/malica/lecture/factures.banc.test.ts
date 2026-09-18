@@ -116,3 +116,34 @@ describe("banc des factures — l'exemple de l'étude", () => {
     assert.equal(drapeau(lu, "totals.vat"), undefined);
   });
 });
+
+describe("banc des factures — aucun chiffre inventé (3B, 18 septembre 2026)", () => {
+  // Un total illisible était écrit « 0 », un émetteur ou une date illisibles
+  // « » : un zéro qui n'est imprimé nulle part passait la validation du contrat
+  // et pouvait finir dans une proposition d'écriture. Un champ illisible reste
+  // VIDE ; la lecture se dit alors partielle.
+  const lu = buildExtractFromTokenPlan({
+    tokens: [jeton(0, "FACTURE")],
+    selection: selection({}),
+    decimals: 3,
+  });
+  const extrait = lu.extract as {
+    issuer: unknown;
+    document_date: unknown;
+    totals: Record<string, unknown>;
+  };
+
+  it("un total illisible reste vide, jamais « 0 »", () => {
+    assert.deepEqual(extrait.totals, { base_ht: null, vat: null, ttc: null });
+  });
+
+  it("un émetteur et une date illisibles restent vides, jamais « »", () => {
+    assert.equal(extrait.issuer, null);
+    assert.equal(extrait.document_date, null);
+  });
+
+  it("et la lecture se dit partielle", () => {
+    assert.equal(lu.contract, "extract.v1.partiel");
+    assert.equal(lu.valid, false);
+  });
+});

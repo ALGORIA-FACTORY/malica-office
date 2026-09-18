@@ -199,3 +199,33 @@ describe("les lectures d'un montant isolé", () => {
     assert.deepEqual(candidatsMontant("1234,5678", 3), []);
   });
 });
+
+describe("un droit fixe du paramétrage ancre l'échelle", () => {
+  // « 100,000 / 19,000 / 1,000 / 120,000 » : lus tous en millimes ou tous en
+  // dinars (virgule des milliers), la facture tient pareil — le timbre imprimé
+  // est lui-même ambigu. Ce qui tranche, c'est ce qu'il DOIT valoir : le droit
+  // de timbre est fixé par le paramétrage daté (1,000 DT).
+  const facture = {
+    bases: [{ ht: "100,000", taux: "0.19" }],
+    tva: "19,000",
+    ttc: "120,000",
+  };
+
+  it("sans ancre : ambigu, aucun chiffre", () => {
+    const r = normaliserMontants({ ...facture, autres: ["1,000"] }, P);
+    assert.equal(r.etat, "ambigu");
+  });
+
+  it("avec la valeur que le paramétrage fixe au timbre : tranché", () => {
+    const r = normaliserMontants({ ...facture, autres: [{ brut: "1,000", attendu: 1_000 }] }, P);
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 100_000);
+    assert.equal(r.montants.ttc, 120_000);
+    assert.match(r.raison, /paramétrage/);
+  });
+
+  it("un droit imprimé qui ne vaut pas ce que fixe le paramétrage n'ancre rien", () => {
+    const r = normaliserMontants({ ...facture, autres: [{ brut: "1,000", attendu: 2_000 }] }, P);
+    assert.equal(r.etat, "ambigu");
+  });
+});
