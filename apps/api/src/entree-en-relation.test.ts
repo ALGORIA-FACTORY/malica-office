@@ -182,9 +182,15 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
       jeton: string;
       email: string;
       expiresAt: string;
+      courriel: string;
+      lien: string | null;
     };
     jeton = r.jeton;
     jetonsEmis.push(r.jeton);
+    // Les tests n'envoient pas de courriel (garde-base-de-test) : la réponse le dit,
+    // et le lien reste à transmettre par le cabinet.
+    assert.equal(r.courriel, "non_configure");
+    assert.equal(r.lien, null);
     assert.match(jeton, /^[0-9a-f]{64}$/);
     assert.equal(r.email, emailContact);
     const enClair = await sousIdentite(expert.id, async (db) => {
@@ -194,6 +200,57 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
       return rows.length;
     });
     assert.equal(enClair, 0, "le jeton n'est pas stocké en clair");
+  });
+
+  it("Brevo configuré : le courriel part par le vrai dispatcher, aux noms du dossier et du cabinet", async () => {
+    // Un second dossier, pour ne pas toucher au lien du premier. fetch est
+    // intercepté : rien ne sort du poste.
+    const second = (await rpc(expert, "identite", "ouvrirDossier", {
+      cabinetTenantId: cabinet,
+      name: `SECOND DOSSIER ${marque}`,
+      legalId: `MF-SECOND-${marque}`,
+      adresse: null,
+    })) as { id: string };
+    const avant = { ...process.env };
+    const fetchReel = globalThis.fetch;
+    let envoye: { to: { email: string }[]; subject: string; htmlContent: string } | undefined;
+    Object.assign(process.env, {
+      BREVO_API_KEY: "cle-de-test",
+      MALICA_COURRIEL_EXPEDITEUR: "w.barouni@algoria-factory.com",
+      MALICA_URL_PUBLIQUE: "http://localhost:8080",
+    });
+    globalThis.fetch = (async (_u: string | URL | Request, init?: RequestInit) => {
+      envoye = JSON.parse(String(init?.body));
+      return new Response("{}", { status: 201 });
+    }) as typeof fetch;
+    try {
+      const r = (await rpc(expert, "identite", "inviterContact", second.id, emailContact)) as {
+        jeton: string;
+        courriel: string;
+        lien: string;
+      };
+      assert.equal(r.courriel, "envoye");
+      assert.equal(r.lien, `http://localhost:8080/invitation#${r.jeton}`);
+      assert.deepEqual(envoye!.to, [{ email: emailContact }]);
+      assert.match(envoye!.subject, /Cabinet d'Expertises CADG/);
+      assert.ok(envoye!.htmlContent.includes(`SECOND DOSSIER ${marque}`));
+      assert.ok(envoye!.htmlContent.includes(r.lien));
+    } finally {
+      globalThis.fetch = fetchReel;
+      for (const k of ["BREVO_API_KEY", "MALICA_COURRIEL_EXPEDITEUR", "MALICA_URL_PUBLIQUE"]) {
+        if (avant[k] === undefined) delete process.env[k];
+        else process.env[k] = avant[k];
+      }
+      const pool = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
+      await pool
+        .query(
+          `update identity.organizations set archived_at = now(),
+                  archived_reason = 'fixture de test automatisé' where id = $1`,
+          [second.id],
+        )
+        .catch(() => undefined);
+      await pool.end();
+    }
   });
 
   it("le jeton est tiré au hasard : deux invitations, deux jetons sans rapport", async () => {

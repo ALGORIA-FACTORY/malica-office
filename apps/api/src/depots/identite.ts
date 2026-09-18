@@ -7,6 +7,8 @@
  * en une requête au lieu de deux, et l'appartenance n'a pas à transiter.
  */
 
+import { configurationCourriel } from "../courriel/brevo.ts";
+import { envoyerInvitation, type StatutCourriel } from "../courriel/invitation.ts";
 import type { Requete } from "../db.ts";
 
 /** Un mandat proposé, vu depuis la PME qui doit y répondre. */
@@ -317,7 +319,11 @@ export const identite = {
 
   /**
    * Le cabinet invite le contact du dossier. Le jeton n'est rendu qu'ici, une
-   * fois : la base n'en garde que l'empreinte. Le cabinet transmet le lien.
+   * fois : la base n'en garde que l'empreinte.
+   *
+   * Si Brevo est configuré, le courriel part aussitôt ; sinon, ou s'il échoue,
+   * l'invitation vaut quand même et le cabinet transmet le lien lui-même.
+   * `courriel` dit lequel des trois s'est produit.
    */
   async inviterContact(
     db: Requete,
@@ -328,13 +334,34 @@ export const identite = {
     email: string;
     jeton: string;
     expiresAt: string;
+    courriel: StatutCourriel;
+    lien: string | null;
   }> {
     const { rows } = await db.query<{
       r: { id: string; email: string; jeton: string; expiresAt: string };
     }>(`select public.dossier_inviter_contact($1, $2) as r`, [pmeTenantId, email]);
     const r = rows[0]?.r;
     if (!r) throw new Error("invitation.non_emise");
-    return r;
+
+    let config: ReturnType<typeof configurationCourriel>;
+    try {
+      config = configurationCourriel(process.env);
+    } catch (e) {
+      console.error(`[invitation] configuration du courriel : ${(e as Error).message}`);
+      return { ...r, courriel: "echec", lien: null };
+    }
+    const noms = config ? await identite.lireInvitationParLien(db, r.jeton) : null;
+    const envoi = await envoyerInvitation(
+      {
+        cabinet: noms?.cabinet ?? "Votre cabinet",
+        pme: noms?.pme ?? "",
+        email: r.email,
+        jeton: r.jeton,
+        expireLe: new Date(r.expiresAt),
+      },
+      config,
+    );
+    return { ...r, ...envoi };
   },
 
   /** Les invitations d'un dossier et leur état, pour le cabinet mandaté. Jamais le jeton. */

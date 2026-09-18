@@ -32,4 +32,14 @@ export function refuserLaBaseDeTravail(env: Record<string, string | undefined>):
   }
 }
 
+/**
+ * Aucun test n'envoie de vrai courriel. La clé Brevo vit dans `apps/api/.env`,
+ * que les tests lisent aussi : sans cette coupure, une invitation d'essai
+ * partirait vers une adresse @essai.local — et coûterait un envoi réel.
+ */
+export function couperLeCourriel(env: Record<string, string | undefined>): void {
+  delete env["BREVO_API_KEY"];
+}
+
 refuserLaBaseDeTravail(process.env);
+couperLeCourriel(process.env);

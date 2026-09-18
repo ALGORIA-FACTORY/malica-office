@@ -115,7 +115,8 @@ export interface IdentityRepository {
   }): Promise<{ id: string; name: string; legalId: string; adresse: string | null }>;
   /**
    * Le cabinet invite le contact du dossier. Le jeton n'est rendu qu'ici, une
-   * fois ; le cabinet transmet le lien lui-même.
+   * fois. `courriel` dit si un courriel est parti ; sinon le cabinet transmet
+   * le lien lui-même.
    */
   inviterContact(
     pmeTenantId: string,
@@ -125,6 +126,8 @@ export interface IdentityRepository {
     email: string;
     jeton: string;
     expiresAt: string;
+    courriel: "envoye" | "non_configure" | "echec";
+    lien: string | null;
   }>;
   /** Les invitations d'un dossier et leur état. Jamais le jeton. */
   invitationsDuDossier(pmeTenantId: string): Promise<InvitationDuDossier[]>;

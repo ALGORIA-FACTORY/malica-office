@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { refuserLaBaseDeTravail } from "./garde-base-de-test.ts";
+import { couperLeCourriel, refuserLaBaseDeTravail } from "./garde-base-de-test.ts";
 
 /**
  * Un test qui écrit dans la base de travail est un bug, pas une commodité.
@@ -55,5 +55,13 @@ describe("la garde de la base de test", () => {
 
   it("laisse passer une exécution sans base : les tests de base se sautent alors d'eux-mêmes", () => {
     assert.doesNotThrow(() => refuserLaBaseDeTravail({}));
+  });
+});
+
+describe("aucun test n'envoie de vrai courriel", () => {
+  it("la clé Brevo du poste est retirée de l'environnement des tests", () => {
+    const env: Record<string, string | undefined> = { BREVO_API_KEY: "cle-du-poste" };
+    couperLeCourriel(env);
+    assert.equal(env["BREVO_API_KEY"], undefined);
   });
 });
