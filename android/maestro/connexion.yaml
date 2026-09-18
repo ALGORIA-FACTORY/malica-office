@@ -1,9 +1,11 @@
 # Se connecter, arriver sur l'accueil du dirigeant.
 #
 # Sur l'émulateur de la CI (saveur `emulateur`, API de la machine hôte en
-# 10.0.2.2). Le compte est celui du jeu de données, sur une base d'essai.
+# 10.0.2.2). Le compte est celui du jeu de données, sur une base d'essai ; il
+# vit dans outils/comptes-de-parcours.json, et android-e2e.yml le passe en
+# variables :
 #
-#   maestro test android/maestro/connexion.yaml
+#   maestro test -e MALICA_EMAIL=… -e MALICA_MOT_DE_PASSE=… android/maestro/connexion.yaml
 appId: com.algoriafactory.malica.emulateur
 ---
 # Chaque flux part d'un appareil en ligne. Un flux qui échoue en mode avion
@@ -14,9 +16,9 @@ appId: com.algoriafactory.malica.emulateur
     clearState: true
 - assertVisible: "Espace Malica Office"
 - tapOn: "Adresse e-mail"
-- inputText: "contact@sotumag.tn"
+- inputText: ${MALICA_EMAIL}
 - tapOn: "Mot de passe"
-- inputText: "JeuDeDonnees2026!"
+- inputText: ${MALICA_MOT_DE_PASSE}
 - hideKeyboard
 - tapOn: "Entrer"
 # À la toute première visite, le fil de Malica recouvre l'accueil (c'est voulu :

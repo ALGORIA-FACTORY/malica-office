@@ -21,7 +21,7 @@
  *
  * ================================================================ LE MONDE
  *
- *   Cabinet Ben Salah            leila.bensalah@bensalah.tn (expert, créatrice)
+ *   Cabinet Ben Salah            l'experte de comptes-de-parcours.json (créatrice)
  *     Amine Bouzid               collaborateur — SOTUMAG, Medina Textile
  *     Nour Khelifi               collaborateur — Cléopâtre Voyages
  *     Sana Trabelsi              assistant     — Atelier Zitouna
@@ -32,9 +32,10 @@
  *   Atelier Zitouna              mandat actif, personne physique, forfaitaire
  *   Nabeul Céramique             mandat PROPOSÉ, fiche incomplète
  *
- * Mot de passe de tous les comptes : JeuDeDonnees2026!
+ * Mot de passe de tous les comptes : celui de outils/comptes-de-parcours.json.
  */
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { creerEpreuve } from "./epreuves/socle.mjs";
 
 const e = creerEpreuve("le jeu de données", process.argv[2]);
@@ -60,12 +61,18 @@ function uuidDe(nom) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
-const MOT_DE_PASSE = "JeuDeDonnees2026!";
+// Les comptes de parcours (le dirigeant de SOTUMAG, l'experte du cabinet) et
+// leur mot de passe, commun à tout le jeu : un seul fichier, lu aussi par
+// Playwright, Maestro et captures.mjs.
+const COMPTES = JSON.parse(
+  readFileSync(new URL("./comptes-de-parcours.json", import.meta.url), "utf8"),
+);
+const MOT_DE_PASSE = COMPTES.motDePasse;
 const JURIDICTION = "TN";
 
 /* ------------------------------------------------------------ les identités */
 const LEILA = {
-  email: "leila.bensalah@bensalah.tn",
+  email: COMPTES.expert.email,
   motDePasse: MOT_DE_PASSE,
   nom: "Leïla Ben Salah",
 };
@@ -99,7 +106,7 @@ const PMES = {
   sotumag: {
     name: "SOTUMAG SARL",
     legalId: "7654321/B/M/000",
-    email: "contact@sotumag.tn",
+    email: COMPTES.dirigeant.email,
     nom: "Direction SOTUMAG",
     validationMode: "mandate",
     fiche: {

@@ -1,13 +1,24 @@
 /**
  * Les comptes du jeu de données (`outils/jeu-de-donnees.mjs`) — des
- * identités fixes, sur une base d'essai, jamais un compte réel.
+ * identités fixes, sur une base d'essai, jamais un compte réel. Ils vivent
+ * dans `outils/comptes-de-parcours.json`, lu aussi par Maestro et captures.mjs.
  */
+import { readFileSync } from "node:fs";
+
 import { expect, type Page } from "@playwright/test";
 
-const MOT_DE_PASSE = "JeuDeDonnees2026!";
+const COMPTES = JSON.parse(
+  readFileSync(new URL("../../../outils/comptes-de-parcours.json", import.meta.url), "utf8"),
+) as {
+  motDePasse: string;
+  dirigeant: { email: string; dossier: string };
+  expert: { email: string; cabinet: string };
+};
 
-export const DIRIGEANT = { email: "contact@sotumag.tn", dossier: "SOTUMAG" };
-export const EXPERT = { email: "leila.bensalah@bensalah.tn", cabinet: "Ben Salah" };
+const MOT_DE_PASSE = COMPTES.motDePasse;
+
+export const DIRIGEANT = COMPTES.dirigeant;
+export const EXPERT = COMPTES.expert;
 
 /**
  * Où Playwright écrit traces, captures, rapport et sessions. `e2e/sortie`

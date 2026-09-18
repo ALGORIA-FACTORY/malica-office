@@ -104,6 +104,13 @@ jobs:
           MALICA_COQUE_EMULATEUR=1 npm run coque:sync -w @malica/web
           cd android && ./gradlew assembleEmulateurDebug -PversionName=0.0.0 --no-daemon
 
+      # Les comptes de parcours vivent dans un seul fichier, lu aussi par
+      # Playwright et captures.mjs ; Maestro les reçoit en variables (-e).
+      - name: Les comptes de parcours
+        run: |
+          echo "MALICA_EMAIL=$(node -p "require('./outils/comptes-de-parcours.json').dirigeant.email")" >> "$GITHUB_ENV"
+          echo "MALICA_MOT_DE_PASSE=$(node -p "require('./outils/comptes-de-parcours.json').motDePasse")" >> "$GITHUB_ENV"
+
       - name: Installer Maestro
         run: |
           curl -fsSL "https://get.maestro.mobile.dev" | bash
@@ -152,11 +159,11 @@ jobs:
             adb shell settings put global hide_error_dialogs 1
             adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
             adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
-            maestro test android/maestro-diagnostic/arbre-fil.yaml || true
-            maestro test android/maestro-diagnostic/arbre-hors-ligne.yaml || true
+            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-fil.yaml || true
+            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-hors-ligne.yaml || true
             adb shell cmd connectivity airplane-mode disable || true
             node android/maestro-diagnostic/lire-arbre.mjs $(find ~/.maestro/tests -path '*arbre-*/screen-hierarchy/*.json' | sort) || true
-            maestro test --format junit --output maestro.xml android/maestro/
+            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" --format junit --output maestro.xml android/maestro/
 
       - name: Journaux
         if: failure()

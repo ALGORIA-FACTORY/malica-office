@@ -1,0 +1,6 @@
+{
+  "_": "Les comptes de parcours : créés par outils/jeu-de-donnees.mjs sur une base d'essai, lus par Playwright (apps/web/e2e/comptes.ts), Maestro (android-e2e.yml les passe en -e) et outils/captures.mjs. Un seul endroit : outils/comptes-de-parcours.test.mjs refuse toute copie ailleurs. Jamais un compte réel.",
+  "motDePasse": "JeuDeDonnees2026!",
+  "dirigeant": { "email": "contact@sotumag.tn", "dossier": "SOTUMAG" },
+  "expert": { "email": "leila.bensalah@bensalah.tn", "cabinet": "Ben Salah" }
+}

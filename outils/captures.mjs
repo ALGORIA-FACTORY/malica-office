@@ -28,7 +28,7 @@
  *
  * Le rendu passe par le Chromium de Playwright, déjà là pour les parcours e2e.
  */
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,9 +38,11 @@ const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PLAY = join(RACINE, "android/play");
 
 const BASE = (process.env["MALICA_BASE"] ?? "http://localhost:8080").replace(/\/+$/, "");
-const MOT_DE_PASSE = "JeuDeDonnees2026!";
-const DIRIGEANT = "contact@sotumag.tn";
-const EXPERT = "leila.bensalah@bensalah.tn";
+// Les comptes de parcours : un seul fichier, lu aussi par Playwright et Maestro.
+const COMPTES = JSON.parse(readFileSync(join(RACINE, "outils/comptes-de-parcours.json"), "utf8"));
+const MOT_DE_PASSE = COMPTES.motDePasse;
+const DIRIGEANT = COMPTES.dirigeant.email;
+const EXPERT = COMPTES.expert.email;
 
 async function seConnecter(page, email) {
   await page.goto(`${BASE}/auth`, { waitUntil: "networkidle" });
