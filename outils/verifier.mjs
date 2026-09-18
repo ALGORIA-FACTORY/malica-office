@@ -1,8 +1,12 @@
 /**
  * La porte de vérification — ce que toute session lance avant de rendre.
  *
- *   npm run verifier            # typage, lint, tests, puis les épreuves si l'app tourne
- *   npm run verifier -- --vite  # typage, lint, tests seulement
+ *   npm run verifier            # typage, lint, code mort, tests, puis les épreuves si l'app tourne
+ *   npm run verifier -- --vite  # typage, lint, code mort, tests seulement
+ *
+ * Elle lance au moins tout ce que lance le job « atelier » de la CI
+ * (verifier.test.mjs y veille) : sans knip, une dépendance importée sans être
+ * déclarée passait la porte et cassait la CI (27beb39, 17 septembre 2026).
  *
  * Deux sessions travaillent dans le même dépôt : une porte unique, lisible,
  * dit si ce qui vient d'être fait a cassé quelque chose — dans son propre
@@ -40,6 +44,7 @@ async function appTourne() {
 
 lancer("typage (tous les espaces de travail)", "npm run typecheck");
 lancer("lint", "npm run lint");
+lancer("code mort (knip)", "npm run code-mort");
 lancer("tests (tous les espaces de travail)", "npm run test");
 
 if (rapide) {

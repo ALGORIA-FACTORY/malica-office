@@ -7,6 +7,12 @@
 # sait : l'abandon du scanner natif, le bouton retour matériel, le mode avion
 # de l'appareil, l'arabe dans une WebView.
 #
+# SA LIMITE (D27, 17 septembre 2026) : dans cette WebView, un contenu qui
+# apparaît après un geste, sans changement de page — le bandeau « Hors ligne »,
+# le fil de Malica ouvert d'un tap — n'entre pas dans l'arbre que lit Maestro.
+# Ces flux ne prouvent donc que ce qui est présent au chargement d'une page ; une
+# assertion d'absence n'y prouve rien, et le hors ligne n'est pas vérifié ici.
+#
 # La saveur `emulateur` parle en clair à la machine hôte ; elle n'est jamais
 # signée ni envoyée (voir android/app/build.gradle).
 
