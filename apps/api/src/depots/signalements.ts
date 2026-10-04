@@ -16,6 +16,15 @@ import { z } from "zod";
 import type { Requete } from "../db.ts";
 
 const Saisie = z.object({
+  /*
+   * Qui parle : la personne, ou le programme.
+   *
+   * « plantage » vient de la frontière d'erreur, qui rapporte toute seule ce
+   * qu'aucun humain n'aurait su dire — le fichier et la ligne. Son texte est
+   * expurgé AVANT l'envoi (apps/web/src/lib/rapport-plantage.ts) ; le serveur
+   * ne s'en remet pas à cela pour autant : il borne comme pour le reste.
+   */
+  origine: z.enum(["personne", "plantage"]).default("personne"),
   tenantId: z.string().uuid().nullish(),
   versionClient: z.string().min(1).max(120),
   appareil: z.string().max(300).nullish(),
@@ -38,8 +47,8 @@ export const signalements = {
     const creeLe = new Date();
     await db.query(
       `insert into app.signalements
-         (id, cree_le, tenant_id, version_client, appareil, ou, message, pile, piece_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         (id, cree_le, tenant_id, version_client, appareil, ou, message, pile, piece_id, origine)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         id,
         creeLe,
@@ -50,6 +59,7 @@ export const signalements = {
         s.message,
         s.pile ?? null,
         s.pieceId ?? null,
+        s.origine,
       ],
     );
     return { id, creeLe: creeLe.toISOString() };

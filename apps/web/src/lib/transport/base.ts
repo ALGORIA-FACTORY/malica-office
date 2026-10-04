@@ -26,6 +26,21 @@
  * L'adresse reste EXIGÉE. La deviner enverrait les pièces d'un client sur un
  * hôte que personne n'a choisi — et une page servie depuis un domaine compromis
  * désignerait alors elle-même sa destination.
+ *
+ * ====================================== LA MÊME ORIGINE, DITE EXPLICITEMENT
+ *
+ * Le 4 octobre 2026, personne ne pouvait se connecter au site du staging.
+ * L'écran accusait les identifiants ; ils étaient bons. Aucune requête ne
+ * partait : l'image du site se construit avec `VITE_API_URL` vide, et la règle
+ * ci-dessus levait avant le premier appel.
+ *
+ * La règle n'était pas en cause — l'oubli l'était. Un site servi derrière un
+ * relais parle à SA PROPRE origine : Caddy route `/rpc`, `/auth/*`, `/pieces`
+ * vers l'API, et le navigateur n'a aucun hôte à connaître. Ce n'est pas une
+ * devinette, c'est une configuration. Elle manquait d'un moyen de se dire.
+ *
+ * D'où « / » : la même origine, DÉCLARÉE. Vide ou absente reste une erreur,
+ * parce que l'absence d'une décision n'est pas une décision.
  */
 
 /** Les noms qui désignent la machine où tourne le navigateur, et elle seule. */
@@ -35,14 +50,20 @@ function estBoucleLocale(hote: string): boolean {
   return BOUCLE_LOCALE.has(hote.toLowerCase());
 }
 
+/** « / » : la même origine que la page, dite explicitement. */
+const MEME_ORIGINE = "/";
+
 export function resoudreApi(declaree: string | undefined, production: boolean): string {
-  const propre = declaree?.replace(/\/+$/, "");
+  // On taille les espaces AVANT tout : sans cela, une variable d'environnement
+  // laissée à « " " » passait pour une adresse et servait de préfixe.
+  const declare = declaree?.trim();
+  const propre = declare === MEME_ORIGINE ? "" : declare?.replace(/\/+$/, "");
 
   if (production) {
-    if (!propre) {
+    if (declare !== MEME_ORIGINE && !propre) {
       throw new Error("VITE_API_URL absente : l'adresse de l'API doit être déclarée");
     }
-    return propre;
+    return propre ?? "";
   }
 
   // En développement, une adresse distante déclarée est une décision : on la

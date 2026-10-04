@@ -11,11 +11,12 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { coque } from "@/capabilities/coque";
+import { coque, versionClient } from "@/capabilities/coque";
 import { useApparence } from "@/components/malica/apparence";
 import { GardeDeVersion } from "@/components/malica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
+import { rapporterPlantage } from "@/lib/rapport-plantage";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
 import { CANAL, demarrerLaTelemetrie } from "@/lib/telemetrie";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
@@ -147,10 +148,25 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
    *
    * Il part au journal de l'atelier, avec sa pile d'appels. Rien n'est perdu —
    * ce que l'utilisateur ne voit plus, le poste de développement le reçoit.
+   *
+   * ============================================== ET DEPUIS L'APPLICATION LIVRÉE
+   *
+   * Le journal d'atelier n'existe qu'en développement. Le 4 octobre 2026, un
+   * plantage sur un téléphone n'a donc laissé AUCUNE trace, et le diagnostic
+   * s'est arrêté là. `rapporterPlantage` ferme ce trou : le même message et la
+   * même pile partent vers notre serveur, expurgés de tout ce qui pourrait
+   * nommer une personne, une société, une somme ou un secret.
    */
   useEffect(() => {
     console.error(error);
     noterAuJournal("frontière d'erreur", error);
+    void rapporterPlantage({
+      ou: "frontière d'erreur",
+      message: error,
+      pile: error.stack,
+      versionClient: versionClient(),
+      appareil: typeof navigator === "undefined" ? undefined : navigator.userAgent,
+    });
   }, [error]);
 
   return (
