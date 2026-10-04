@@ -37,8 +37,19 @@ const ANALYSIS_SIDE = 640;
 /** Qualité de départ, puis recherche descendante jusqu'au budget de poids. */
 const JPEG_QUALITY_MAX = 0.78;
 const JPEG_QUALITY_MIN = 0.42;
-/** Budget de poids par page : au-delà, la qualité descend d'un cran. */
-const PAGE_BYTES_BUDGET = 190_000;
+/**
+ * Budget de poids par page : au-delà, la qualité descend d'un cran.
+ *
+ * 190 000 octets convenaient à une page GRISE, dont les plans de chrominance
+ * sont plats. L'archive garde désormais la couleur (voir
+ * `etirerEnGardantLaCouleur`), et une page couleur pèse davantage à qualité
+ * égale. Le plafond demandé est de 350 Ko ; on se tient sous lui avec une
+ * marge, et la garantie est STRUCTURELLE — la boucle de `compresserPage`
+ * descend la qualité jusqu'à ce que la page y entre, elle n'espère pas.
+ *
+ * `archive-couleur.test.ts` vérifie que ce budget reste sous le plafond.
+ */
+export const PAGE_BYTES_BUDGET = 340_000;
 
 /** Netteté minimale acceptée (variance du laplacien normalisée). */
 export const SHARPNESS_MIN = 0.0022;
@@ -1045,12 +1056,27 @@ async function encodeUnderBudget(canvas: HTMLCanvasElement): Promise<Uint8Array>
 }
 
 /**
- * Passage en niveaux de gris avec étirement de dynamique : le texte gagne en
- * contraste, les plans de chrominance du JPEG deviennent plats — la page pèse
- * deux à trois fois moins pour une lisibilité supérieure.
+ * Étirement de dynamique — EN GARDANT LA COULEUR.
+ *
+ * ============================================== CE QUE CETTE FONCTION FAISAIT
+ *
+ * Elle passait la page en niveaux de gris. Le gain était réel et mesuré : les
+ * plans de chrominance du JPEG devenaient plats, la page pesait deux à trois
+ * fois moins. Mais l'archive est la PREUVE. Un tampon bleu, un surlignage, une
+ * mention manuscrite à l'encre rouge disparaissaient — et dix ans plus tard,
+ * rien ne les rétablit. Mesuré sur la première facture réelle du 4 octobre
+ * 2026 : saturation moyenne ZÉRO.
+ *
+ * Le gris reste utile à la lecture automatique. Il se refabrique à tout moment
+ * depuis la couleur ; l'inverse est faux. C'est donc la couleur qu'on garde.
+ *
+ * ===================================================================== COMMENT
+ *
+ * L'étirement s'applique à la LUMINANCE, et chaque pixel est multiplié par le
+ * gain qui en résulte. Les rapports entre rouge, vert et bleu sont préservés :
+ * le texte gagne exactement le même contraste qu'avant, le tampon reste bleu.
  */
-function normalizeForReading(g: CanvasRenderingContext2D, w: number, h: number): void {
-  const data = g.getImageData(0, 0, w, h);
+export function etirerEnGardantLaCouleur(data: ImageData): void {
   const gray = grayOf(data);
   const hist = new Uint32Array(256);
   for (let i = 0; i < gray.length; i += 1) hist[gray[i]!] = hist[gray[i]!]! + 1;
@@ -1079,14 +1105,30 @@ function normalizeForReading(g: CanvasRenderingContext2D, w: number, h: number):
   for (let v = 0; v < 256; v += 1) {
     lut[v] = Math.min(255, Math.max(0, ((v - lo) / span) * 255));
   }
+  const d = data.data;
   for (let i = 0; i < gray.length; i += 1) {
     const o = i * 4;
-    const v = lut[gray[i]!]!;
-    data.data[o] = v;
-    data.data[o + 1] = v;
-    data.data[o + 2] = v;
-    data.data[o + 3] = 255;
+    const lum = gray[i]!;
+    const cible = lut[lum]!;
+    if (lum === 0) {
+      // Un pixel noir n'a aucune direction de couleur à préserver.
+      d[o] = cible;
+      d[o + 1] = cible;
+      d[o + 2] = cible;
+    } else {
+      const gain = cible / lum;
+      d[o] = Math.min(255, d[o]! * gain);
+      d[o + 1] = Math.min(255, d[o + 1]! * gain);
+      d[o + 2] = Math.min(255, d[o + 2]! * gain);
+    }
+    d[o + 3] = 255;
   }
+}
+
+/** Pose l'étirement sur le canevas de la page. */
+function normalizeForReading(g: CanvasRenderingContext2D, w: number, h: number): void {
+  const data = g.getImageData(0, 0, w, h);
+  etirerEnGardantLaCouleur(data);
   g.putImageData(data, 0, 0);
 }
 

@@ -12,6 +12,7 @@ import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
+import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
@@ -68,6 +69,18 @@ function PmeLayout() {
 
   // Les plantages se regroupent par dossier — un uuid, jamais un nom.
   useEffect(() => etiqueterLeDossier(org?.id ?? null), [org?.id]);
+  /*
+   * Y a-t-il un cabinet mandaté ? C'est lui qui décide si la pièce part au
+   * cabinet dès la photo — voir `visibiliteALaCapture` et les deux défauts
+   * qu'elle arbitre.
+   */
+  const monCabinet = useQuery({
+    queryKey: ["mon-cabinet", org?.id],
+    queryFn: () => office().identity.monCabinet(org!.id),
+    enabled: Boolean(org?.id),
+    staleTime: 10 * 60 * 1000,
+  });
+
   // La bascule n'a de sens que si l'on a un cabinet où aller.
   const aUnCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
@@ -126,17 +139,19 @@ function PmeLayout() {
           entityId,
           source: picked.source,
           /*
-           * ============================================ LA PIÈCE RESTE CHEZ VOUS
+           * ====================================== SOUS MANDAT, ELLE PART
            *
-           * Elle était marquée « partage » dès la photo : tout ce qui passait
-           * devant l'objectif partait au cabinet, sans que personne l'ait
-           * décidé. Un reçu personnel, une photo ratée, un document qui n'a rien
-           * à voir — tout arrivait chez l'expert-comptable.
+           * Le produit s'est trompé dans les deux sens. D'abord tout partait,
+           * sans que personne l'ait décidé. Puis plus rien ne partait : le
+           * 4 octobre 2026, la première facture réelle est restée invisible au
+           * cabinet, et rien à l'écran ne disait qu'un geste manquait.
            *
-           * On capture donc en « personnel ». La transmission est un GESTE, sur
-           * l'écran de la pièce, et c'est le dirigeant qui le fait.
+           * Sous mandat actif, elle part — c'est ce qu'attend quelqu'un qui
+           * photographie une facture pour son comptable. L'écran dit « transmise
+           * à [cabinet] », et un geste la retire tant qu'elle n'est pas
+           * comptabilisée.
            */
-          vis: "personnel",
+          vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
           contentType: picked.blob.type || "application/pdf",
           nomFichier: picked.name,
         },

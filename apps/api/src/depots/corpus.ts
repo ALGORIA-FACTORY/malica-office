@@ -344,8 +344,20 @@ export const corpus = {
         where (consolide and not est_doctrine)
            or ($5 and est_doctrine)
            or ($3 and not consolide and not est_doctrine)
-        order by (case when $4::date is null then 0 else (not consolide)::int end),
-                 distance limit $2`,
+        /*
+         * LE CODE AVANT LA DOCTRINE, TOUJOURS.
+         *
+         * Ce classement ne préférait le texte consolidé que lorsqu'une date
+         * était demandée ; sans date, seule la distance décidait. Le
+         * 4 octobre 2026, « le taux de TVA en 2026 » a donc rendu ONZE notes
+         * communes avant l'article 7 du Code de la TVA — qui arrivait
+         * douzième et tombait hors du filet de six.
+         *
+         * Une note commune dit ce que l'administration pense du texte ; le
+         * code dit le texte. Quand les deux répondent, c'est le texte qui
+         * passe devant — et la note le suit, à sa place.
+         */
+        order by (not consolide)::int, distance limit $2`,
       [
         `[${vecteur.join(",")}]`,
         nb,

@@ -135,4 +135,38 @@ describe("la recherche dans le droit", { skip: !BASE_CONFIGUREE }, () => {
 
     assert.deepEqual(hors, [], `du droit hors de la date demandée (${jour})`);
   });
+
+  it("le texte consolidé précède la doctrine administrative", async (t) => {
+    if (!corpusCharge) return t.skip("aucun fragment vectorisé sur cette instance");
+
+    const trouves = await sousAuthenticated((db) =>
+      corpus.rechercher(db, { vecteur: VECTEUR_QUELCONQUE, nb: 20, jour: null, doctrine: true }),
+    );
+
+    /*
+     * Le 4 octobre 2026, « le taux de TVA en 2026 » a rendu ONZE notes
+     * communes avant l'article 7 du Code de la TVA — qui arrivait douzième et
+     * tombait donc hors du filet de six. Malica a répondu, honnêtement, qu'elle
+     * n'avait pas la grille des taux : elle ne l'avait pas reçue.
+     *
+     * Une note commune dit ce que l'administration pense du texte ; le code dit
+     * le texte. Quand les deux répondent, c'est le texte qui passe devant.
+     */
+    const estDoctrine = (corpusDuFragment: string) => corpusDuFragment.startsWith("NC-");
+
+    /*
+     * On n'exige pas que les deux natures soient présentes — avec un vecteur
+     * arbitraire, elles ne le sont pas toujours. On exige que l'ordre soit
+     * MONOTONE : une fois la doctrine commencée, plus aucun texte consolidé ne
+     * revient derrière. C'est vrai quelle que soit la composition du résultat.
+     */
+    const fautifs: string[] = [];
+    let doctrineVue = false;
+    for (const f of trouves) {
+      if (estDoctrine(f.corpus)) doctrineVue = true;
+      else if (doctrineVue) fautifs.push(`${f.corpus} art. ${f.numero}`);
+    }
+
+    assert.deepEqual(fautifs, [], "du texte consolidé est relégué derrière de la doctrine");
+  });
 });
