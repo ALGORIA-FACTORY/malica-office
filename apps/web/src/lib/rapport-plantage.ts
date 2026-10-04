@@ -65,10 +65,27 @@ const MOTIFS: ReadonlyArray<readonly [RegExp, string]> = [
  * une somme ou un secret. Fonction pure : elle se teste, et c'est elle qui
  * tient la promesse — pas une case cochée dans une console.
  */
+/*
+ * Une position dans un fichier — « :12:150823 » — ne nomme personne, et c'est
+ * elle qui dit OÙ le code a cassé. La règle des six chiffres l'avait prise
+ * pour un montant au premier vrai plantage remonté. On la met donc à l'abri
+ * le temps du nettoyage, puis on la rend.
+ */
+const POSITION = /:\d{1,7}:\d{1,7}(?=[)\s]|$)/g;
+const ABRI = "\u0000position\u0000";
+
 export function expurger(texte: string | null | undefined): string {
   if (texte === null || texte === undefined) return "";
-  let sorti = String(texte);
+  const positions: string[] = [];
+  let sorti = String(texte).replace(POSITION, (p) => {
+    positions.push(p);
+    return ABRI;
+  });
   for (const [motif, remplacement] of MOTIFS) sorti = sorti.replace(motif, remplacement);
+  let i = 0;
+  sorti = sorti
+    .split(ABRI)
+    .reduce((acc, bout, k) => (k === 0 ? bout : acc + (positions[i++] ?? "") + bout), "");
   return sorti.slice(0, TAILLE_MAX);
 }
 

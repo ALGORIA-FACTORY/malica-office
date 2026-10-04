@@ -71,3 +71,24 @@ describe("l'expurgation d'un rapport de plantage", () => {
     expect(expurger(null)).toBe("");
   });
 });
+
+describe("ce que l'expurgation doit ÉPARGNER", () => {
+  it("garde la ligne ET la colonne d'une pile, même à six chiffres", () => {
+    /*
+     * Relevé sur le premier vrai plantage remonté, le 4 octobre 2026 :
+     *   at $u (https://localhost/assets/index-DsYR1TaX.js:12:[retiré])
+     * La colonne avait six chiffres, et la règle « six chiffres ou plus » l'a
+     * prise pour un montant. Sans elle, il faut lire le paquet minifié à la
+     * main pour retrouver l'endroit. Une position dans un fichier ne nomme
+     * personne : elle reste.
+     */
+    const pile = "at $u (https://localhost/assets/index-DsYR1TaX.js:12:150823)";
+    const sorti = expurger(pile);
+    expect(sorti).toContain(":12:150823");
+  });
+
+  it("retire quand même un montant qui suit un deux-points", () => {
+    // La protection vaut pour « ligne:colonne », pas pour « total: 1234567 ».
+    expect(expurger("total: 1234567")).not.toContain("1234567");
+  });
+});

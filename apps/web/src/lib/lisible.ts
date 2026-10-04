@@ -18,8 +18,22 @@
  * Les décimales ne sont ni ajoutées ni retirées : « 1240.500 » garde ses trois
  * décimales parce que le dinar en a trois, et c'est le Socle qui l'a décidé.
  */
-export function montant(valeur: string, locale: string): string {
+export function montant(valeur: string | null | undefined, locale: string): string {
+  /*
+   * ================================================== UN MONTANT PEUT MANQUER
+   *
+   * La signature disait `string`, et elle mentait : le serveur rend du JSON,
+   * où un montant absent vaut `null`. Le 4 octobre 2026, l'écran d'une pièce
+   * a planté sur un téléphone — « Cannot read properties of null (reading
+   * 'trim') » — parce qu'un appelant se gardait de `undefined` et pas de
+   * `null`. Corriger le seul appelant aurait laissé le piège aux suivants.
+   *
+   * « Rien » se rend par RIEN, pas par « 0,000 » : un montant absent n'est pas
+   * un montant nul, et une facture sans total ne doit pas afficher zéro.
+   */
+  if (valeur === null || valeur === undefined) return "";
   const propre = valeur.trim();
+  if (propre === "") return "";
   const negatif = propre.startsWith("-");
   const sansSigne = negatif ? propre.slice(1) : propre;
   const [entiere = "0", decimale] = sansSigne.split(".");
@@ -58,8 +72,10 @@ export function montantSigne(valeur: string, locale: string): string {
  * Aucune arithmétique ici non plus : on coupe la chaîne, on ne l'arrondit
  * pas. « 0.001 » reste « 0,001 ».
  */
-export function quantite(valeur: string, locale: string): string {
+export function quantite(valeur: string | null | undefined, locale: string): string {
+  if (valeur === null || valeur === undefined) return "";
   const propre = valeur.trim();
+  if (propre === "") return "";
   if (!propre.includes(".")) return montant(propre, locale);
   const sansZeros = propre.replace(/0+$/, "").replace(/\.$/, "");
   return montant(sansZeros === "" || sansZeros === "-" ? "0" : sansZeros, locale);

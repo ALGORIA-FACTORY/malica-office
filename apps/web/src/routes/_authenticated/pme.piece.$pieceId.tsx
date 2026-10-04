@@ -391,9 +391,16 @@ function PieceScreen() {
   const payload = extraction?.payload as ExtractPayload | undefined;
   const confirmable = Boolean(proposal?.pivot.approvable);
 
-  /** Un montant du Socle, dans la langue du lecteur — ou rien s'il n'y en a pas. */
-  const lisible = (valeur: string | undefined) =>
-    valeur === undefined ? null : montant(valeur, locale);
+  /**
+   * Un montant du Socle, dans la langue du lecteur — ou rien s'il n'y en a pas.
+   *
+   * Le type disait `string | undefined` ; le serveur rend `null`. C'est ce
+   * mensonge qui a planté l'écran le 4 octobre 2026.
+   */
+  const lisible = (valeur: string | null | undefined) => {
+    const rendu = montant(valeur, locale);
+    return rendu === "" ? null : rendu;
+  };
 
   /** « 2026-08-31 » se lit mal ; « 31/08/2026 » se lit. */
   const jourLisible = (iso: string | undefined) => {

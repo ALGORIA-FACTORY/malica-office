@@ -85,3 +85,41 @@ describe("« de » ou « d' » devant un mois", () => {
     expect(deMois("أوت", "ar")).toBe("أوت");
   });
 });
+
+describe("un montant absent", () => {
+  /*
+   * ================================================= LE PLANTAGE DU 4 OCTOBRE
+   *
+   * L'écran de la pièce affichait « Cet écran n'a pas pu s'afficher » sur un
+   * téléphone, sans laisser de trace. La remontée des plantages, posée le jour
+   * même, a rendu la ligne exacte :
+   *
+   *   TypeError: Cannot read properties of null (reading 'trim')
+   *       at pme.piece._pieceId-D7ZJFj8f.js:1:5517
+   *
+   * L'appelant se gardait de `undefined` et pas de `null`. Or le serveur rend
+   * du JSON, où un montant absent vaut `null` — jamais `undefined`. La
+   * signature disait `string`, et elle mentait.
+   *
+   * On ne corrige pas que l'appelant : le même mensonge se reproduira ailleurs.
+   * Le formateur rend « rien » pour « rien », et ne lève plus.
+   */
+  it("ne lève pas sur null : c'est ce que le serveur envoie", () => {
+    expect(() => montant(null as unknown as string, "fr")).not.toThrow();
+    expect(montant(null as unknown as string, "fr")).toBe("");
+  });
+
+  it("ne lève pas sur undefined", () => {
+    expect(montant(undefined as unknown as string, "fr")).toBe("");
+  });
+
+  it("rend vide sur une chaîne vide, plutôt qu'un zéro inventé", () => {
+    // Afficher « 0,000 » pour un montant absent ferait croire à un montant nul.
+    expect(montant("", "fr")).toBe("");
+    expect(montant("   ", "fr")).toBe("");
+  });
+
+  it("une quantité absente se tait pareil", () => {
+    expect(quantite(null as unknown as string, "fr")).toBe("");
+  });
+});
