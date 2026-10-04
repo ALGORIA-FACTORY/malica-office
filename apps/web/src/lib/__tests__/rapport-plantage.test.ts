@@ -24,8 +24,8 @@ import { expurger } from "../rapport-plantage";
 
 describe("l'expurgation d'un rapport de plantage", () => {
   it("retire une adresse de courriel", () => {
-    const sorti = expurger("échec pour contact@sotumag.tn lors de la lecture");
-    expect(sorti).not.toContain("contact@sotumag.tn");
+    const sorti = expurger("échec pour personne@exemple-fictif.tn lors de la lecture");
+    expect(sorti).not.toContain("personne@exemple-fictif.tn");
     expect(sorti).toContain("[retiré]");
   });
 

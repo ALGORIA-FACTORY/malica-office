@@ -33,6 +33,21 @@ import type { FragmentDeDroit } from "./corpus.ts";
 export interface ReponseDeConseil {
   /** La question relève-t-elle du conseil — appliquer ou interpréter une règle ? */
   conseil: boolean;
+  /**
+   * La portée de la réponse — et, par elle, qui la relit.
+   *
+   * « generale »   : une règle valable pour tous, qu'on lirait au Journal
+   *                  officiel. Elle part tout de suite.
+   * « dossier »    : la règle appliquée à CETTE personne — ses chiffres, son
+   *                  régime, sa situation. Le comptable relit : il signe.
+   * « incertaine » : Malica ne sait pas trancher. On fait relire.
+   *
+   * C'est la portée qui décide, pas la certitude : le 4 octobre 2026, retenir
+   * sur la certitude a mis en attente des questions dont la réponse est au
+   * Journal officiel. Et « incertaine » est le DÉFAUT — une réponse dont on
+   * ignore la nature se relit, elle ne se lâche pas.
+   */
+  portee: "generale" | "dossier" | "incertaine";
   /** Le sujet, en quelques mots. Sert à voir revenir les mêmes questions. */
   theme: string | null;
   /** Ce que le client lira. */
@@ -58,12 +73,59 @@ export function consigneDeForme(): string {
     `Tu rends UNIQUEMENT un objet JSON, sans texte autour, avec exactement ces clés :`,
     `- "reponse" : ta réponse à la personne, telle qu’elle la lira — dans la langue et la forme décrites plus haut.`,
     `- "conseil" : true si la question demande d’appliquer ou d’interpréter une règle fiscale, sociale ou réglementaire (un taux, une déduction, un régime, une obligation, un délai, une pénalité) ; false si elle porte seulement sur les chiffres du dossier, une pièce, une écriture ou une échéance déjà calculée.`,
+    `- "portee" : « generale » si tu énonces une règle valable pour tous, qu’on pourrait lire au Journal officiel — un taux, une définition, une échéance légale. « dossier » si ta réponse applique la règle à CETTE personne : ses chiffres, son régime, sa situation, ce qu’elle doit faire dans son cas. « incertaine » si tu hésites entre les deux. N’hésite pas à répondre « incertaine » : une réponse relue arrive un peu plus tard, une réponse engageante lâchée trop vite engage quelqu’un.`,
     `- "theme" : le sujet en trois à cinq mots, sans verbe, comme « Déduction de TVA sur véhicule » ; null si ce n’est pas du conseil.`,
     `- "certitude" : un nombre entre 0 et 1 — ta confiance que la réponse est juste ET complète pour CETTE personne. 1 : texte clair, en vigueur, un seul texte possible, tous les faits connus. Baisse-la dès qu’un fait manque, que deux textes se recoupent mal, qu’une note commune seule répond, que le régime du client n’est pas renseigné, ou qu’une lecture est marquée partielle ou incertaine. Si aucun texte transmis ne répond : 0.`,
     `- "sources" : les articles TRANSMIS sur lesquels ta réponse s’appuie, sous la forme [{"corpus": "…", "numero": "…"}], recopiés exactement tels qu’ils te sont donnés — jamais un article qui ne t’a pas été transmis. Vide si aucun.`,
     `- "doute" : en une ou deux phrases, ce qui te fait hésiter et ce que l’expert-comptable devrait vérifier avant d’envoyer ; null si rien.`,
     `Si "conseil" est false : "theme" et "doute" valent null, "sources" est vide, "certitude" vaut 1.`,
+    ``,
+    `LA LANGUE`,
+    `Tu réponds dans la langue de la personne, toujours.`,
+    `Le droit tunisien fait foi EN ARABE : c'est le texte publié au JORT qui engage. Quand le passage décisif t'est transmis en arabe, cite-le dans sa langue, entre guillemets, puis donne-en le sens dans la langue de la personne en écrivant « traduction non officielle ». Ne présente jamais ta traduction comme le texte.`,
+    `Quand le passage t'est transmis en français, cite-le tel quel : une édition française consolidée n'a pas à être retraduite.`,
   ].join("\n");
+}
+
+/**
+ * Faut-il faire relire cette réponse par le comptable ?
+ *
+ * Pure, et c'est voulu : la règle se lit, se teste branche par branche, et ne
+ * dépend d'aucun réseau. `relecture.test.ts` dit pourquoi elle est ce qu'elle
+ * est, et quel défaut l'a fait naître.
+ *
+ * Trois conditions, toutes nécessaires :
+ *   — la portée n'est pas « generale » : soit elle engage le dossier, soit
+ *     Malica n'a pas su trancher — dans le doute, on fait relire ;
+ *   — c'est bien le client qui demande, pas le cabinet sur son propre client ;
+ *   — un cabinet mandaté existe pour relire. Sans lui, retenir ferait attendre
+ *     une validation qui ne viendrait jamais.
+ */
+export function doitEtreRelue(
+  lu: Pick<ReponseDeConseil, "conseil" | "portee">,
+  contexte: { appelantMembre: boolean; cabinetId: string | null } | null,
+): boolean {
+  if (!lu.conseil || lu.portee === "generale") return false;
+  if (!contexte?.appelantMembre) return false;
+  return contexte.cabinetId !== null;
+}
+
+/**
+ * La réponse part-elle au cabinet ?
+ *
+ * Non, sauf si elle est RETENUE : le client attend alors son comptable, et la
+ * file est le seul chemin par lequel la réponse lui reviendra. Hors ce cas, la
+ * conversation avec Malica appartient à la personne qui l'a tenue — même sous
+ * mandat, même pour une question de droit. Le cabinet la consulte si, et
+ * seulement si, elle la lui partage.
+ *
+ * Le produit a brièvement déposé une COPIE de chaque réponse de conseil dans
+ * la file du cabinet, avec le statut « repondue ». C'était une fuite : rien
+ * n'avait été demandé, et rien n'était dit à la personne. Corrigé le
+ * 4 octobre 2026, à la demande du commanditaire.
+ */
+export function partAuCabinet(retenue: boolean): boolean {
+  return retenue;
 }
 
 const SourceSchema = z.object({
@@ -74,6 +136,7 @@ const SourceSchema = z.object({
 const ReponseSchema = z.object({
   reponse: z.coerce.string().default(""),
   conseil: z.coerce.boolean().default(false),
+  portee: z.enum(["generale", "dossier", "incertaine"]).catch("incertaine").default("incertaine"),
   theme: z.string().nullish(),
   certitude: z.coerce.number().min(0).max(1).catch(0),
   sources: z.array(SourceSchema).catch([]),
@@ -149,6 +212,11 @@ export function lireReponseDeConseil(
   if (!lu || !lu.success || lu.data.reponse.trim().length === 0) {
     return {
       conseil: fragments.length > 0,
+      // Du texte libre : on ne sait pas s'il engage le dossier. On ne le
+      // suppose pas — la relecture se demande, elle ne se devine pas.
+      // Du texte libre : on ignore sa portée. On ne la suppose pas « générale »,
+      // sans quoi un défaut de format ferait partir un avis engageant.
+      portee: "incertaine" as const,
       theme: null,
       reponse: brut.trim(),
       certitude: 0,
@@ -166,6 +234,7 @@ export function lireReponseDeConseil(
     : 1;
   return {
     conseil: d.conseil,
+    portee: d.conseil ? d.portee : "generale",
     theme: d.conseil ? d.theme?.trim().slice(0, 120) || null : null,
     reponse: d.reponse.trim(),
     certitude,

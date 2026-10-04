@@ -272,14 +272,32 @@ export const corpus = {
     const nb = Math.min(Math.max(input.nb ?? 6, 1), 20);
 
     const { rows } = await db.query<Record<string, unknown>>(
+      /*
+       * UNE SEULE VERSION PAR ARTICLE, ET ELLE EST EN VIGUEUR.
+       *
+       * Ce bloc rendait auparavant une version PAR LANGUE, et ne filtrait pas
+       * du tout quand aucune date n'était demandée. Le 4 octobre 2026, la
+       * première question réelle — « le taux de TVA en 2026 » — a reçu
+       * l'article 7 du Code de la TVA dans sa version close le 1er janvier
+       * 2025 : les éditions 2025 et 2026 n'ayant été ingérées qu'en arabe, la
+       * dernière version FRANÇAISE s'arrêtait en 2024, et une question posée
+       * en français la faisait gagner.
+       *
+       * L'arabe fait foi. On ne choisit donc plus par langue : on choisit la
+       * version en vigueur à la date demandée — aujourd'hui par défaut — et
+       * l'on rend le texte tel qu'il existe, fût-il arabe. Malica répond dans
+       * la langue de la personne et dit que sa traduction n'est pas officielle.
+       *
+       * Un conseil fondé sur un article abrogé est pire qu'un silence.
+       */
       `with derniere as (
-         select distinct on (v.article_id, v.langue_faisant_foi)
+         select distinct on (v.article_id)
                 v.id, v.article_id, v.valid_from, v.valid_to,
                 v.jort_reference, v.extraction_confiance
            from legal.article_versions v
-          where $4::date is null
-             or (v.valid_from <= $4::date and (v.valid_to is null or v.valid_to > $4::date))
-          order by v.article_id, v.langue_faisant_foi, v.valid_from desc nulls last,
+          where v.valid_from <= coalesce($4::date, current_date)
+            and (v.valid_to is null or v.valid_to > coalesce($4::date, current_date))
+          order by v.article_id, v.valid_from desc nulls last,
                    v.version_num desc
        ),
        proches as (

@@ -28,7 +28,13 @@ import {
   type DeepSeekRole,
 } from "./deepseek.ts";
 import { loadMalicaContext, type MalicaContext } from "./context.ts";
-import { consigneDeForme, lireReponseDeConseil, type ReponseDeConseil } from "./conseil.ts";
+import {
+  consigneDeForme,
+  doitEtreRelue,
+  lireReponseDeConseil,
+  partAuCabinet,
+  type ReponseDeConseil,
+} from "./conseil.ts";
 import {
   chercherDansLeDroit,
   enTexte,
@@ -344,11 +350,27 @@ export async function askMalica(
    */
   let droit = "";
   let fragments: FragmentDeDroit[] = [];
+  /*
+   * LA RECHERCHE N'ÉCHOUE PLUS EN SILENCE.
+   *
+   * Ce `catch` remettait `droit` à vide et passait à la suite. Le produit se
+   * comportait alors exactement comme si le corpus était muet — Malica
+   * répondait de mémoire, sans source, donc à certitude zéro, donc retenue —
+   * et PERSONNE ne l'apprenait : ni journal, ni message, ni trace.
+   *
+   * Encodeur injoignable, clé refusée, délai dépassé : ce sont des pannes, et
+   * une panne se dit. On la note côté serveur avec sa cause, et l'on garde le
+   * motif pour que la réponse puisse l'avouer au lieu de faire semblant.
+   */
+  let corpusMuet: string | null = null;
   try {
     fragments = await chercherDansLeDroit(api, input.question);
     droit = enTexte(fragments);
-  } catch {
+    if (fragments.length === 0) corpusMuet = "aucun texte ne répond à cette question";
+  } catch (erreur) {
     droit = "";
+    corpusMuet = erreur instanceof Error ? erreur.message : String(erreur);
+    console.error(`[conseil] recherche dans le droit indisponible : ${corpusMuet}`);
   }
 
   /*
@@ -400,7 +422,22 @@ export async function askMalica(
               `tunisien pour cette question) :\n${droit}`,
           },
         ]
-      : []),
+      : [
+          /*
+           * Le silence se dit. Sans cette phrase, le modèle ne sait pas s'il
+           * n'a rien reçu parce que rien ne répond, ou parce que la recherche
+           * est tombée — et il comble, de mémoire. C'est exactement ce qu'il a
+           * fait le 4 octobre 2026.
+           */
+          {
+            role: "system" as const,
+            content:
+              "DROIT : AUCUN TEXTE ne t'a été transmis pour cette question " +
+              `(${corpusMuet ?? "raison inconnue"}). Dis-le à la personne, en une ` +
+              "phrase, et n'énonce aucune règle de mémoire. « sources » vide, " +
+              "« certitude » 0.",
+          },
+        ]),
     { role: "system", content: consigneDeForme() },
     ...passe
       .slice(-TOURS_TRANSMIS)
@@ -468,7 +505,11 @@ export async function askMalica(
   }
   const arbitrable = Boolean(lu.conseil && contexte?.appelantMembre);
   const cabinet = arbitrable && contexte?.cabinetId ? contexte : null;
-  const retenue = Boolean(cabinet && cabinet.seuil !== null && lu.certitude < cabinet.seuil);
+  /*
+   * Ce n'est plus la certitude qui décide — voir `doitEtreRelue` et son test.
+   * Le seuil du cabinet reste lu et affiché ; il informe, il ne retient plus.
+   */
+  const retenue = doitEtreRelue(lu, contexte);
 
   const reponseRendue = retenue
     ? texte(input.locale, "pme.conseil.relecture")
@@ -492,15 +533,18 @@ export async function askMalica(
   ]);
 
   /*
-   * La remise au cabinet — ou sa copie.
+   * La remise au cabinet — seulement si la réponse est retenue.
    *
    * Une réponse retenue qui ne pourrait pas être rangée dans la file serait
    * perdue : le client attend son comptable, et le comptable ne saurait rien.
-   * Cet échec-là remonte. Une copie qui échoue, elle, n'enlève rien au client
-   * — la réponse est partie ; on ne la fait pas échouer après coup.
+   * Cet échec-là remonte, et c'est pourquoi il n'est pas avalé.
+   *
+   * Le reste ne part PAS. La conversation appartient à la personne qui l'a
+   * tenue, même sous mandat : le cabinet la consulte si elle la lui partage.
+   * Voir `partAuCabinet`, et le défaut qu'elle corrige.
    */
-  if (cabinet) {
-    const creation = api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
+  if (cabinet && partAuCabinet(retenue)) {
+    await api.rpc<{ id: string; cabinetId: string }>("conseil", "creer", [
       {
         tenantId: input.tenantId,
         conversationId,
@@ -512,11 +556,9 @@ export async function askMalica(
         canal: "conversation",
         theme: lu.theme,
         langue: input.locale,
-        statut: retenue ? "en_attente" : "repondue",
+        statut: "en_attente",
       },
     ]);
-    if (retenue) await creation;
-    else await creation.catch(() => null);
   }
 
   let controles: Verdict[] = [];
