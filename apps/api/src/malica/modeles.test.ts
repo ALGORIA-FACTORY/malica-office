@@ -32,19 +32,13 @@ const ATTENDUS: Array<{ modele: string; role: string; quoi: string }> = [
 /**
  * Les écarts acceptés — chacun daté, motivé, et destiné à disparaître.
  *
- * D31 : le prix de Qwen-VL-OCR n'a jamais été relevé dans la console du
- * fournisseur, donc aucune migration ne peut l'inscrire sans l'inventer, ce que
- * R11 interdit. Conséquence assumée et mesurée : la passe de relevé ne se
- * journalise pas. Le jour où le prix est connu, une migration datée l'inscrit
- * ET cette ligne disparaît — le test le rappellera.
+ * Vide depuis le 4 octobre 2026. D31 y figurait : le prix de Qwen-VL-OCR
+ * n'avait jamais été relevé chez le fournisseur, et R11 interdisait de
+ * l'inventer. Il l'a été, `20261004120000_le_prix_de_l_oeil.sql` l'inscrit, et
+ * la dispense est tombée d'elle-même — c'est le deuxième test ci-dessous qui
+ * l'aurait exigé si on l'avait oubliée.
  */
-const ACCEPTES: Array<{ modele: string; depuis: string; raison: string }> = [
-  {
-    modele: "qwen-vl-ocr-2025-11-20",
-    depuis: "2026-09-18",
-    raison: "D31 — prix non relevé chez le fournisseur ; R11 interdit de l'inventer",
-  },
-];
+const ACCEPTES: Array<{ modele: string; depuis: string; raison: string }> = [];
 
 async function tarifsEnVigueur(): Promise<Set<string>> {
   return horsRlsAuthentificationSeule(async (db) => {
@@ -88,31 +82,34 @@ describe("les modèles du code et la table des tarifs", { skip: !BASE_CONFIGUREE
     );
   });
 
-  it("le tarif d'un rôle se désigne sans ambiguïté", async () => {
+  it("le tarif d'un modèle se désigne sans ambiguïté", async () => {
     /*
-     * Pas « un seul tarif en vigueur par rôle » : le jour d'une bascule, deux
-     * lignes le sont légitimement. La migration qui remplace un modèle ferme
-     * l'ancien à `current_date` et ouvre le nouveau le même jour, et les bornes
-     * sont inclusives des deux côtés. `agents_run_log` tranche alors par
-     * `order by effective_from desc limit 1` : la plus récemment ouverte gagne.
+     * Le bon grain d'analyse est le COUPLE (modèle, rôle), pas le rôle seul.
+     * `public.agents_run_log` cherche `where model = p_model and role = p_role`,
+     * puis `order by effective_from desc limit 1`. Deux modèles distincts
+     * peuvent donc parfaitement servir le même rôle en même temps — `pdf-text`
+     * et `qwen-vl-ocr-2025-11-20` le font pour la vision, l'un quand le PDF
+     * porte sa couche de texte, l'autre sinon.
      *
-     * J'ai d'abord écrit l'invariant trop fort, et la CI l'a montré — une base
-     * neuve migrée aujourd'hui porte les deux lignes de vision du même jour,
-     * là où le poste les a reçues à deux jours d'écart. Le poste ne pouvait pas
-     * voir le défaut : c'est la base jetable qui l'a vu.
+     * Deux erreurs successives ont mené ici, et elles valent d'être dites.
+     * D'abord « un seul tarif en vigueur par rôle » : la CI l'a cassée, car le
+     * jour d'une bascule l'ancien et le nouveau sont tous deux en vigueur,
+     * bornes inclusives. Ensuite « deux tarifs du même rôle ouverts le même
+     * jour » : toujours trop large, puisque deux modèles différents peuvent
+     * naître le même jour sans se disputer quoi que ce soit.
      *
-     * L'ambiguïté réelle est ailleurs : DEUX lignes du même rôle ouvertes LE
-     * MÊME JOUR. Là, `desc limit 1` départage sur rien, et le coût d'un appel
-     * dépend de l'ordre physique des lignes.
+     * L'ambiguïté réelle est étroite : le MÊME modèle, le MÊME rôle, deux
+     * lignes en vigueur ouvertes le même jour. Là, `desc limit 1` départage sur
+     * rien, et le coût d'un appel dépendrait de l'ordre physique des lignes.
      */
     const ambigus = await horsRlsAuthentificationSeule(async (db) => {
       await db.query("set local role authenticated");
-      const { rows } = await db.query<{ role: string; jour: string; n: string }>(
-        `select role, effective_from::text jour, count(*) n
+      const { rows } = await db.query<{ modele: string; role: string; jour: string; n: string }>(
+        `select model modele, role, effective_from::text jour, count(*) n
            from agents.model_pricing
           where effective_from <= current_date
             and (effective_to is null or effective_to >= current_date)
-          group by role, effective_from
+          group by model, role, effective_from
          having count(*) > 1
           order by 1, 2`,
       );
@@ -120,9 +117,9 @@ describe("les modèles du code et la table des tarifs", { skip: !BASE_CONFIGUREE
     });
 
     assert.deepEqual(
-      ambigus.map((a) => `${a.role} : ${a.n} tarifs ouverts le ${a.jour}`),
+      ambigus.map((a) => `${a.modele} (${a.role}) : ${a.n} tarifs ouverts le ${a.jour}`),
       [],
-      "deux tarifs ouverts le même jour pour un rôle : rien ne les départage",
+      "deux tarifs du même modèle ouverts le même jour : rien ne les départage",
     );
   });
 });
