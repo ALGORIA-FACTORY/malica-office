@@ -14,21 +14,65 @@
  *   e.conclure();
  */
 
-export const COMPTE_DEV = { email: "dev@malica.local", motDePasse: "DeveloppeurMalica2026!" };
+/*
+ * Les identités d'épreuve vivent ICI, et nulle part ailleurs.
+ *
+ * Elles étaient recopiées dans cinq fichiers : le même mot de passe écrit cinq
+ * fois, la même adresse deux fois. Un secret recopié ne se change jamais —
+ * on en oublie toujours une copie — et `outils/comptes-de-parcours.test.mjs`
+ * interdit déjà cette recopie pour les comptes de parcours. Même règle ici.
+ *
+ * Elles restent FICTIVES et jetables : des comptes `@malica.local` sur des
+ * bases de travail. Le jour où une épreuve a besoin d'une identité du monde
+ * réel, c'est l'épreuve qu'il faut corriger — un matricule réel dans une
+ * épreuve est une collision qui attend son tour (4 octobre 2026).
+ *
+ * Le mot de passe se remplace par `MALICA_MDP_EPREUVE` : sur un environnement
+ * joignable depuis Internet, on ne laisse pas un mot de passe que le dépôt
+ * publie.
+ */
+const MDP_PAR_DEFAUT = "EpreuveMalica2026!";
+export const MDP_EPREUVE = process.env["MALICA_MDP_EPREUVE"] ?? MDP_PAR_DEFAUT;
+
+export const COMPTE_DEV = {
+  email: "dev@malica.local",
+  motDePasse: process.env["MALICA_MDP_DEV"] ?? "DeveloppeurMalica2026!",
+};
+
+/** Le dirigeant d'épreuve, partagé par les épreuves qui en ont besoin. */
+export const DIRIGEANT_EPREUVE = {
+  email: "epreuve.dirigeant@malica.local",
+  motDePasse: MDP_EPREUVE,
+};
+
+/** Sa PME. Matricule volontairement impossible : sept neuf, puis E/P. */
+export const PME_EPREUVE = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999/E/P/000" };
+
+/** Les adresses qui ne quittent pas la machine ou le réseau local. */
+const PRIVEE = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
+
+/**
+ * Cesser de vérifier le certificat — pour une adresse privée, et elle seule.
+ *
+ * En HTTPS sur une adresse privée, le certificat est celui du poste, signé par
+ * lui-même : le refuser empêcherait d'éprouver l'instance qui sert le
+ * téléphone. Sur un hôte public — le staging, le pilote — le certificat est
+ * vrai et se vérifie comme dans un téléphone : une épreuve qui l'accepterait
+ * les yeux fermés ne prouverait plus rien de ce qu'elle traverse.
+ *
+ * Ce choix était recopié dans trois fichiers. Une tolérance au certificat qui
+ * existe en trois exemplaires finit par être élargie dans un seul.
+ */
+export function tolererLeCertificatLocal(base) {
+  if (!base.startsWith("https:")) return false;
+  if (!PRIVEE.test(new URL(base).hostname)) return false;
+  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+  return true;
+}
 
 export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://localhost:8080") {
   const BASE = base.replace(/\/+$/, "");
-  /*
-   * En HTTPS sur une adresse privée, le certificat est celui du poste, signé
-   * par lui-même : on cesse de le vérifier, pour ce cas seulement. Sur un
-   * hôte public (le staging, le pilote), le certificat est vrai et se vérifie
-   * comme dans un téléphone.
-   */
-  if (BASE.startsWith("https:")) {
-    const hote = new URL(BASE).hostname;
-    const prive = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hote);
-    if (prive) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-  }
+  tolererLeCertificatLocal(BASE);
 
   let cookie = "";
   let reussites = 0;

@@ -2,26 +2,53 @@
  * Faire d'un compte un opérateur de plateforme — le développeur qui voit tout.
  *
  *   node outils/operateur-plateforme.mjs dev@malica.local
+ *   node outils/operateur-plateforme.mjs moi@exemple.tn --base <url>
  *
  * La base lit `app.platform_operators` dans chaque politique de lecture
  * (`app.is_platform()`), et le rail du cabinet le dit : « Développeur · accès
- * à tout ». L'URL d'administration vient de apps/api/.env et n'est jamais
- * affichée.
+ * à tout ». L'URL d'administration n'est jamais affichée.
+ *
+ * `--base` existe parce que ce niveau ne s'accorde par aucune route : il se
+ * pose dans la base, et les bases d'un serveur ne sont pas celles du poste.
+ * Même ordre de résolution que `db/migrer.mjs` et `db/registre.mjs` — l'option,
+ * puis l'environnement, puis `apps/api/.env` — pour qu'un seul réflexe serve
+ * partout. Le fichier se lit depuis la racine du dépôt et non le dossier
+ * courant : l'outil se lance d'où l'on veut.
  */
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import pg from "pg";
 
-const email = process.argv[2]?.trim();
+const RACINE = fileURLToPath(new URL("..", import.meta.url));
+
+const args = process.argv.slice(2);
+const iBase = args.indexOf("--base");
+const base = iBase === -1 ? undefined : args[iBase + 1]?.trim();
+if (iBase !== -1 && !base) {
+  console.error("--base attend une URL");
+  process.exit(1);
+}
+const positionnels = iBase === -1 ? args : args.filter((_, i) => i !== iBase && i !== iBase + 1);
+const email = positionnels[0]?.trim();
 if (!email) {
-  console.error("usage : node outils/operateur-plateforme.mjs <email>");
+  console.error("usage : node outils/operateur-plateforme.mjs <email> [--base <url>]");
   process.exit(1);
 }
 
-const env = readFileSync("apps/api/.env", "utf8");
-const url = /^DATABASE_URL_ADMIN=(.*)$/m.exec(env)?.[1]?.trim().replace(/^"|"$/g, "");
+function duFichier() {
+  try {
+    const env = readFileSync(join(RACINE, "apps", "api", ".env"), "utf8");
+    return /^DATABASE_URL_ADMIN=(.*)$/m.exec(env)?.[1]?.trim().replace(/^"|"$/g, "");
+  } catch {
+    return undefined;
+  }
+}
+
+const url = base || process.env["DATABASE_URL_ADMIN"]?.trim() || duFichier();
 if (!url) {
-  console.error("DATABASE_URL_ADMIN absente de apps/api/.env");
+  console.error("aucune base : passez --base <url>, DATABASE_URL_ADMIN, ou apps/api/.env");
   process.exit(1);
 }
 

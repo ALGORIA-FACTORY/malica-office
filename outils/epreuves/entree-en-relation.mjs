@@ -1,30 +1,37 @@
 /**
  * Épreuve — l'entrée en relation, de bout en bout, à travers le relais.
  *
- * Le Cabinet d'Expertises CADG ouvre le dossier d'ALGORIA FACTORY SARL, qui
- * n'existe pas encore ; il invite son contact par un lien ; le contact crée
- * son accès, lit ce qu'il rejoint, accepte, et arrive dans un espace vide — le
- * sien, et seulement le sien.
+ * Le Cabinet d'Expertises CADG ouvre le dossier d'une PME qui n'existe pas
+ * encore ; il invite son contact par un lien ; le contact crée son accès, lit
+ * ce qu'il rejoint, accepte, et arrive dans un espace vide — le sien, et
+ * seulement le sien.
  *
  *   node outils/epreuves/entree-en-relation.mjs [http://localhost:8080]
  *
  * Rejouable : les comptes portent des identités d'essai fixes ; un cabinet, un
  * dossier ou une appartenance qui existent déjà sont repris tels quels, et
  * l'épreuve dit lesquels.
+ *
+ * L'IDENTITÉ DU DOSSIER EST FICTIVE, et doit le rester. Elle a d'abord été
+ * celle d'ALGORIA FACTORY, la société du commanditaire, parce que le chantier
+ * 3A s'écrivait sur cet exemple. Le jour où ce dossier a été ouvert pour de
+ * vrai (4 octobre 2026), l'épreuve est tombée sur « ce matricule fiscal a déjà
+ * un dossier » — et sur un environnement partagé elle aurait fait pire que
+ * tomber : son compte de contact serait devenu dirigeant de la vraie société.
+ * Un matricule réel dans une épreuve est une collision qui attend son tour.
  */
-import { creerEpreuve } from "./socle.mjs";
+import { MDP_EPREUVE as MDP, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("entrée en relation", process.argv[2]);
 
-const MDP = "EpreuveMalica2026!";
 const EXPERT = { email: "epreuve.expert.cadg@malica.local", motDePasse: MDP };
 const CONTACT = { email: "epreuve.contact.algoria@malica.local", motDePasse: MDP };
 const INTRUS = { email: "epreuve.intrus@malica.local", motDePasse: MDP };
 const CABINET = "Cabinet d'Expertises CADG";
 const DOSSIER = {
-  name: "ALGORIA FACTORY SARL",
-  legalId: "1856324/A/M/000",
-  adresse: "Immeuble Le Cristal, Rue du Lac Turkana, Les Berges du Lac 1 — 1053 Tunis",
+  name: "ÉPREUVE ENTRÉE EN RELATION SARL",
+  legalId: "9000002/A/M/000",
+  adresse: "Immeuble d'épreuve, Rue de l'Essai — 1053 Tunis",
 };
 
 /* ------------------------------------------------ le cabinet */
@@ -73,7 +80,7 @@ e.verdict("le même matricule n'ouvre pas un second dossier", doublon !== null, 
 
 /* ------------------------------------------------ l'invitation */
 e.section("L'invitation du contact, par un lien");
-await e.inscrireOuConnecter(CONTACT, "Contact ALGORIA (épreuve)");
+await e.inscrireOuConnecter(CONTACT, "Contact du dossier (épreuve)");
 const dejaMembre = (await e.rpc("identite", "listMyOrganizations")).some(
   (o) => o.id === dossier.tenantId,
 );
@@ -125,7 +132,7 @@ e.section("Un espace vide, le sien seulement");
 await e.connecter(CONTACT);
 const siens = await e.rpc("identite", "listMyOrganizations");
 e.verdict(
-  "le contact n'est membre que du dossier ALGORIA FACTORY",
+  "le contact n'est membre que du dossier qu'il a rejoint",
   siens.length === 1 && siens[0].id === dossier.tenantId,
   siens.map((o) => o.name).join(", "),
 );

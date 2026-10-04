@@ -55,4 +55,52 @@ describe("refus lisible", () => {
     assert.equal(refusLisible({ code: "23514", message: "   " }), null);
     assert.equal(refusLisible({ code: "23514" }), null);
   });
+
+  describe("les refus que PostgreSQL rédige lui-même", () => {
+    // Relevés le 4 octobre 2026 en ouvrant un cabinet : l'un et l'autre
+    // rendaient « erreur interne » pour une faute de saisie.
+    const ENUM_FR = {
+      code: "22P02",
+      message: "valeur en entrée invalide pour le enum app.validation_mode_t : « assistee »",
+    };
+    const ENUM_EN = {
+      code: "22P02",
+      message: 'invalid input value for enum app.validation_mode_t: "assistee"',
+    };
+    const CHEVAUCHEMENT = {
+      code: "23P01",
+      message:
+        "la valeur d'une clé en conflit rompt la contrainte d'exclusion « fiches_sans_chevauchement »",
+      constraint: "fiches_sans_chevauchement",
+      table: "fiches_fiscales",
+    };
+
+    it("rend la valeur refusée, et elle seule", () => {
+      assert.equal(refusLisible(ENUM_FR), "cette valeur n'est pas admise : « assistee »");
+    });
+
+    it("lit aussi la ponctuation anglaise : la locale du serveur n'est pas la nôtre", () => {
+      assert.equal(refusLisible(ENUM_EN), "cette valeur n'est pas admise : « assistee »");
+    });
+
+    it("ne livre ni le schéma, ni le type, ni la contrainte", () => {
+      for (const erreur of [ENUM_FR, ENUM_EN, CHEVAUCHEMENT]) {
+        const rendu = refusLisible(erreur) ?? "";
+        assert.doesNotMatch(rendu, /app\.|_t\b|fiches_sans_chevauchement|fiches_fiscales/, rendu);
+      }
+    });
+
+    it("traduit un chevauchement bien que PostgreSQL ait nommé la contrainte", () => {
+      // Le filtre `constraint || table || column` tairait ce message ; la
+      // traduction passe avant lui, justement parce qu'elle n'en répète rien.
+      assert.match(refusLisible(CHEVAUCHEMENT) ?? "", /couvre déjà cette période/);
+    });
+
+    it("se replie sur une phrase sans valeur quand il n'y en a pas à citer", () => {
+      assert.equal(
+        refusLisible({ code: "22P02", message: "entrée invalide" }),
+        "une des valeurs envoyées n'est pas admise",
+      );
+    });
+  });
 });

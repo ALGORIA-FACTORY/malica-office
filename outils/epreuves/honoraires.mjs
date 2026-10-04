@@ -14,12 +14,12 @@
  * est repris. Une facture émise ne s'efface pas (R7) : chaque passage en
  * laisse une, réglée puis annulée par son avoir.
  */
-import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
+import { COMPTE_DEV, DIRIGEANT_EPREUVE, PME_EPREUVE, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("les honoraires du cabinet", process.argv[2]);
 
-const DIRIGEANT = { email: "epreuve.dirigeant@malica.local", motDePasse: "EpreuveMalica2026!" };
-const PME = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999/E/P/000" };
+const DIRIGEANT = DIRIGEANT_EPREUVE;
+const PME = PME_EPREUVE;
 const COUVERTURE = ["Tenue comptable", "Déclarations de TVA"];
 
 /* ------------------------------------------------ l'arithmétique exacte */

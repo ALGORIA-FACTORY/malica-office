@@ -34,25 +34,21 @@
  * d'un PDF. Aucun script ne peut en juger — il faut un appareil et un œil. Ce
  * qui est ici est tout le reste, c'est-à-dire l'essentiel de ce qui casse.
  */
+// L'identité du compte de développement vient du socle des épreuves : une
+// seule déclaration pour tout le dépôt, qu'une variable d'environnement
+// remplace sur un environnement joignable depuis Internet.
+import { COMPTE_DEV, tolererLeCertificatLocal } from "./epreuves/socle.mjs";
+
 const BASE = (process.argv[2] ?? "http://localhost:8080").replace(/\/+$/, "");
-const EMAIL = "dev@malica.local";
-const MOTDEPASSE = "DeveloppeurMalica2026!";
+const EMAIL = COMPTE_DEV.email;
+const MOTDEPASSE = COMPTE_DEV.motDePasse;
 
 /*
  * Le certificat de développement est signé par lui-même : l'épreuve doit
  * pouvoir parler à l'instance HTTPS comme un téléphone qui a accepté une fois.
- *
- * Cette tolérance ne vaut QUE pour une adresse privée. Sur un hôte public, un
- * certificat invalide est une alerte et non une formalité — l'épreuve refuse
- * plutôt que de prendre l'habitude de passer outre.
+ * La règle — et sa limite au réseau local — vit dans le socle.
  */
-if (BASE.startsWith("https:")) {
-  const hote = new URL(BASE).hostname;
-  const prive = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hote);
-  // Un hôte public (le staging, le pilote) porte un vrai certificat : il se
-  // vérifie comme dans un téléphone. Seul le certificat du poste est passé.
-  if (prive) process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-}
+tolererLeCertificatLocal(BASE);
 
 let cookie = "";
 let reussites = 0;

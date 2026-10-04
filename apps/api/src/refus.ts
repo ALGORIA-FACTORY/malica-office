@@ -38,6 +38,41 @@ interface ErreurPostgres {
 }
 
 /**
+ * Les refus que PostgreSQL rédige lui-même — et que nous réécrivons.
+ *
+ * Deux erreurs sont de vrais refus adressés à l'appelant, mais aucun de nos
+ * déclencheurs ne les lève : c'est le moteur qui parle, dans SA langue et avec
+ * SES noms. « valeur en entrée invalide pour le enum app.validation_mode_t »
+ * livre un schéma et un type ; « rompt la contrainte d'exclusion
+ * "fiches_sans_chevauchement" » livre un nom de contrainte. Les taire rendait
+ * `500 « erreur interne »` pour une faute de saisie (famille D29) ; les répéter
+ * serait la fuite que ce fichier existe pour empêcher.
+ *
+ * Alors on les traduit : notre phrase, et d'elles on ne retient que ce qui
+ * vient déjà de l'appelant — la valeur qu'il a proposée.
+ *
+ * La langue des messages de PostgreSQL suit la locale du serveur : français
+ * sur le poste, anglais sur le staging. L'extraction accepte donc les deux
+ * ponctuations, et se replie sur une phrase sans valeur plutôt que d'en
+ * inventer une.
+ */
+const TRADUCTIONS: Record<string, (e: ErreurPostgres) => string> = {
+  // invalid_text_representation — un mode de validation qui n'existe pas, une
+  // date illisible, un identifiant tronqué.
+  "22P02": (e) => {
+    const m = /(?:«\s*(.*?)\s*»|"(.*?)")\s*$/.exec(e.message ?? "");
+    const valeur = (m?.[1] ?? m?.[2])?.trim();
+    return valeur
+      ? `cette valeur n'est pas admise : « ${valeur} »`
+      : "une des valeurs envoyées n'est pas admise";
+  },
+  // exclusion_violation — deux versions datées se chevauchent : une fiche
+  // fiscale réécrite à la date où commence déjà la précédente, par exemple.
+  "23P01": () =>
+    "une version couvre déjà cette période : faites commencer la nouvelle à une autre date",
+};
+
+/**
  * Rend le message si l'erreur est un refus rédigé, `null` sinon.
  *
  * `null` ne veut pas dire « tout va bien » : il veut dire « cette erreur n'a pas
@@ -48,7 +83,14 @@ export function refusLisible(erreur: unknown): string | null {
   if (typeof erreur !== "object" || erreur === null) return null;
   const e = erreur as ErreurPostgres;
 
-  if (!e.code || !CODES_DE_REFUS.has(e.code)) return null;
+  if (!e.code) return null;
+
+  // Traduit avant tout filtre : on ne répète jamais la phrase du moteur, donc
+  // les champs qu'il a peuplés ne menacent rien ici.
+  const traduire = TRADUCTIONS[e.code];
+  if (traduire) return traduire(e);
+
+  if (!CODES_DE_REFUS.has(e.code)) return null;
 
   // Peuplés par PostgreSQL, jamais par un `raise` : c'est la signature d'une
   // violation détectée par le moteur, dont le message porte des noms internes.

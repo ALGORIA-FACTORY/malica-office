@@ -234,4 +234,77 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
       "une empreinte qui n'est pas un vecteur ne fait aucune recherche sémantique",
     );
   });
+
+  /*
+   * ================================================ LE CLOISONNEMENT, EN BLOC
+   *
+   * `isolation.test.ts` prouve le comportement sur des tables nommées : un
+   * tiers ne voit ni l'organisation, ni la pièce, ni la conversation d'un
+   * autre. C'est la preuve qui compte, et elle ne couvre que ce qu'elle nomme.
+   *
+   * La faute classique du multi-tenant n'est pas une politique fausse : c'est
+   * une table AJOUTÉE avec un `tenant_id` et sans politique. Elle ne casse
+   * aucun test — elle n'en a aucun — et elle est lisible par tout le monde.
+   *
+   * Les deux vérifications qui suivent portent donc sur TOUTES les tables qui
+   * portent un `tenant_id`, présentes et à venir. 63 au 4 octobre 2026.
+   */
+
+  it("toute table portant un tenant_id a une RLS activée, FORCÉE, et au moins une politique", async () => {
+    // `force` compte autant qu'`enable` : sans elle, le propriétaire de la
+    // table — et toute fonction `security definer` qui lui appartient —
+    // traverse les politiques sans les voir.
+    const nues = await interroger<{ table_: string; etat: string }>(`
+      select ns.nspname || '.' || cl.relname as table_,
+             'rls=' || cl.relrowsecurity || ' force=' || cl.relforcerowsecurity ||
+             ' politiques=' || (select count(*) from pg_policies p
+                                 where p.schemaname = ns.nspname and p.tablename = cl.relname) as etat
+        from pg_class cl
+        join pg_namespace ns on ns.oid = cl.relnamespace
+        join pg_attribute a on a.attrelid = cl.oid and a.attname = 'tenant_id'
+                           and a.attnum > 0 and not a.attisdropped
+       where cl.relkind = 'r'
+         and ns.nspname not in ('pg_catalog', 'information_schema')
+         and (not cl.relrowsecurity
+              or not cl.relforcerowsecurity
+              or not exists (select 1 from pg_policies p
+                              where p.schemaname = ns.nspname and p.tablename = cl.relname))
+       order by 1`);
+
+    assert.deepEqual(
+      nues.map((n) => `${n.table_} — ${n.etat}`),
+      [],
+      "table de tenant sans cloisonnement : ses lignes sont lisibles par tous",
+    );
+  });
+
+  it("aucune politique de table de tenant n'est inconditionnelle", async () => {
+    /*
+     * Une politique sur une table de tenant doit se cadrer sur quelque chose :
+     * le tenant (`tenant_id`, `app.member_orgs()`, `app.engaged_orgs()`,
+     * `app.has_org_role()`), la plateforme (`app.is_platform()`), ou LA
+     * PERSONNE (`auth.uid()`, `app.current_uid()`) — ce dernier cas est plus
+     * strict que le tenant, pas plus laxiste : les conversations de Malica
+     * n'appartiennent qu'à leur auteur, même entre collègues du même cabinet.
+     *
+     * Ce qui est interdit, c'est l'absence de condition : un `using (true)`
+     * sur une table de tenant ouvre la table au premier compte venu.
+     */
+    const ouvertes = await interroger<{ table_: string; politique: string; cmd: string }>(`
+      select p.schemaname || '.' || p.tablename as table_, p.policyname as politique, p.cmd
+        from pg_policies p
+        join pg_class cl on cl.relname = p.tablename
+        join pg_namespace ns on ns.oid = cl.relnamespace and ns.nspname = p.schemaname
+        join pg_attribute a on a.attrelid = cl.oid and a.attname = 'tenant_id'
+                           and a.attnum > 0 and not a.attisdropped
+       where coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '') !~
+             'tenant_id|member_orgs|engaged_orgs|has_org_role|is_platform|auth\\.uid|current_uid'
+       order by 1, 2`);
+
+    assert.deepEqual(
+      ouvertes.map((o) => `${o.table_} / ${o.politique} (${o.cmd})`),
+      [],
+      "politique sans condition sur une table de tenant",
+    );
+  });
 });

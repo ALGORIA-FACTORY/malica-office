@@ -28,8 +28,14 @@
  *   node db/dev/jeu_dessai.mjs
  */
 
+// C'est ce script qui CRÉE le compte de développement, et les épreuves qui s'y
+// connectent. Les deux lisent donc la même déclaration, dans le socle des
+// épreuves : deux copies d'un mot de passe, c'est une copie qu'on oubliera de
+// changer.
+import { COMPTE_DEV } from "../../outils/epreuves/socle.mjs";
+
 const API = process.env["MALICA_API_URL"] ?? "http://localhost:3000";
-const EMAIL = "dev@malica.local";
+const EMAIL = COMPTE_DEV.email;
 
 /**
  * Le jour du dépôt — le dernier jour du mois EN COURS.
@@ -44,7 +50,7 @@ const MOIS = AUJOURDHUI.toISOString().slice(0, 7);
 const LE_JOUR = new Date(Date.UTC(AUJOURDHUI.getUTCFullYear(), AUJOURDHUI.getUTCMonth() + 1, 0))
   .toISOString()
   .slice(0, 10);
-const MOTDEPASSE = "DeveloppeurMalica2026!";
+const MOTDEPASSE = COMPTE_DEV.motDePasse;
 
 let cookie = "";
 

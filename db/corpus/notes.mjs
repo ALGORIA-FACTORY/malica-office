@@ -39,8 +39,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 
 const ICI = dirname(fileURLToPath(import.meta.url));
-const DEPOT =
-  "C:/Users/wisse/OneDrive/Bureau/ALGORIA Factory/Platefomre/Malica Office/malica-office";
+// La racine du dépôt se déduit d'ici : un chemin absolu écrit en dur suit la
+// machine qui l'a écrit, et meurt au premier déménagement. Celui-ci pointait
+// encore un dossier OneDrive disparu (constaté le 4 octobre 2026).
+const DEPOT = join(ICI, "..", "..");
 const { default: pg } = await import(
   pathToFileURL(join(DEPOT, "node_modules/pg/lib/index.js")).href
 );

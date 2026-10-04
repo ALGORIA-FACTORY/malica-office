@@ -9,13 +9,11 @@
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
-/** Rôles tarifés en base — le nom du modèle ne vit qu'ici et dans la table. */
-const DEEPSEEK_MODELS = {
-  reasoner: "deepseek-reasoner",
-  chat: "deepseek-chat",
-} as const;
+// Les noms des modèles vivent dans `../modeles.ts`, avec la raison pour
+// laquelle ils sont figés et le test qui les confronte à la table des tarifs.
+import { DEEPSEEK_MODELS, type DeepSeekRole } from "../modeles.ts";
 
-export type DeepSeekRole = keyof typeof DEEPSEEK_MODELS;
+export type { DeepSeekRole };
 
 export interface DeepSeekMessage {
   role: "system" | "user" | "assistant";

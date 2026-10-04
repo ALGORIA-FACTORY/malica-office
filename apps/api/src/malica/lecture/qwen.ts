@@ -16,6 +16,7 @@
  * selon la région (Singapour, Pékin, Virginie). Une valeur devinée enverrait
  * les pièces d'un client au mauvais endroit : on exige donc `QWEN_BASE_URL`.
  */
+import { modeleOcr } from "../modeles.ts";
 
 import type { PageToken } from "./token-plan.ts";
 
@@ -78,7 +79,7 @@ function config(): QwenConfig {
      * changerait le relevé sans qu'aucune ligne de code ne bouge, et une pièce
      * relue ne donnerait plus la même chose qu'à sa comptabilisation.
      */
-    model: process.env["QWEN_OCR_MODEL"] ?? "qwen-vl-ocr-2025-11-20",
+    model: modeleOcr(),
   };
 }
 

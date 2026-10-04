@@ -7,16 +7,13 @@
  * Rejouable : les comptes et l'organisation qu'elle crée portent des
  * identités fixes ; ce qui existe déjà est repris tel quel.
  */
-import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
+import { COMPTE_DEV, DIRIGEANT_EPREUVE, MDP_EPREUVE, PME_EPREUVE, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("mandats et invitations", process.argv[2]);
 
-const COLLABORATEUR = {
-  email: "epreuve.collaborateur@malica.local",
-  motDePasse: "EpreuveMalica2026!",
-};
-const DIRIGEANT = { email: "epreuve.dirigeant@malica.local", motDePasse: "EpreuveMalica2026!" };
-const PME = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999/E/P/000" };
+const COLLABORATEUR = { email: "epreuve.collaborateur@malica.local", motDePasse: MDP_EPREUVE };
+const DIRIGEANT = DIRIGEANT_EPREUVE;
+const PME = PME_EPREUVE;
 
 /* ------------------------------------------------ le cabinet et son expert */
 e.section("Le cabinet");

@@ -31,7 +31,8 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  * reçoit que le plan de tokens, et ne peut donc rien lire qui n'y figure pas.
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
-const MODELE_DESIGNATION = "deepseek-reasoner";
+// Le nom vient de `../modeles.ts` : il était écrit une seconde fois ici.
+import { MODELE_DESIGNATION } from "../modeles.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
