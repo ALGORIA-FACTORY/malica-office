@@ -88,24 +88,41 @@ describe("les modèles du code et la table des tarifs", { skip: !BASE_CONFIGUREE
     );
   });
 
-  it("aucun rôle n'est tarifé deux fois le même jour", async () => {
-    const doubles = await horsRlsAuthentificationSeule(async (db) => {
+  it("le tarif d'un rôle se désigne sans ambiguïté", async () => {
+    /*
+     * Pas « un seul tarif en vigueur par rôle » : le jour d'une bascule, deux
+     * lignes le sont légitimement. La migration qui remplace un modèle ferme
+     * l'ancien à `current_date` et ouvre le nouveau le même jour, et les bornes
+     * sont inclusives des deux côtés. `agents_run_log` tranche alors par
+     * `order by effective_from desc limit 1` : la plus récemment ouverte gagne.
+     *
+     * J'ai d'abord écrit l'invariant trop fort, et la CI l'a montré — une base
+     * neuve migrée aujourd'hui porte les deux lignes de vision du même jour,
+     * là où le poste les a reçues à deux jours d'écart. Le poste ne pouvait pas
+     * voir le défaut : c'est la base jetable qui l'a vu.
+     *
+     * L'ambiguïté réelle est ailleurs : DEUX lignes du même rôle ouvertes LE
+     * MÊME JOUR. Là, `desc limit 1` départage sur rien, et le coût d'un appel
+     * dépend de l'ordre physique des lignes.
+     */
+    const ambigus = await horsRlsAuthentificationSeule(async (db) => {
       await db.query("set local role authenticated");
-      const { rows } = await db.query<{ role: string; n: string }>(
-        `select role, count(*) n from agents.model_pricing
+      const { rows } = await db.query<{ role: string; jour: string; n: string }>(
+        `select role, effective_from::text jour, count(*) n
+           from agents.model_pricing
           where effective_from <= current_date
             and (effective_to is null or effective_to >= current_date)
-          group by role having count(*) > 1`,
+          group by role, effective_from
+         having count(*) > 1
+          order by 1, 2`,
       );
       return rows;
     });
 
-    // Deux lignes en vigueur pour un rôle, et `agents_run_log` en choisit une
-    // par `order by effective_from desc limit 1` : le coût dépendrait d'un
-    // détail d'ordre plutôt que d'une décision.
     assert.deepEqual(
-      doubles.map((d) => `${d.role} : ${d.n} tarifs en vigueur`),
+      ambigus.map((a) => `${a.role} : ${a.n} tarifs ouverts le ${a.jour}`),
       [],
+      "deux tarifs ouverts le même jour pour un rôle : rien ne les départage",
     );
   });
 });
