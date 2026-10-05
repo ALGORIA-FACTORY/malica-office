@@ -61,6 +61,37 @@ describe("l'expurgation d'un rapport de plantage", () => {
     expect(expurger("émetteur 1456987L/A/P/000")).not.toContain("1456987L/A/P/000");
   });
 
+  it("retire TOUTES les variantes du matricule, les vingt-cinq", () => {
+    /*
+     * Un matricule tunisien porte un code de TVA (A, B, P, D, N) et une
+     * catégorie d'établissement (M, C, P, N, E). Vingt-cinq combinaisons, et
+     * un motif d'expurgation qui n'en couvrirait que certaines laisserait
+     * fuir les autres — sans que rien ne le signale.
+     *
+     * Le cas du 5 octobre a montré comment cela arrive : le motif couvrait la
+     * forme des fixtures et pas celle des vraies pièces, et le test était
+     * complice parce qu'il n'exerçait que la forme des fixtures. On exerce
+     * donc TOUT l'espace, pas un représentant.
+     */
+    const fuites: string[] = [];
+    for (const tva of ["A", "B", "P", "D", "N"]) {
+      for (const cat of ["M", "C", "P", "N", "E"]) {
+        const mf = `1876543W/${tva}/${cat}/000`;
+        if (expurger(`dossier ${mf} refusé`).includes(mf)) fuites.push(mf);
+      }
+    }
+    expect(fuites).toEqual([]);
+  });
+
+  it("retire un matricule d'établissement secondaire", () => {
+    // Le dernier groupe n'est pas toujours « 000 ».
+    expect(expurger("succursale 1876543W/A/E/042")).not.toContain("1876543W/A/E/042");
+  });
+
+  it("retire un matricule en minuscules, que l'OCR rend parfois ainsi", () => {
+    expect(expurger("lu 1876543w/a/m/000")).not.toContain("1876543w/a/m/000");
+  });
+
   it("retire une longue suite de chiffres — montant, téléphone, identifiant", () => {
     const sorti = expurger("total 1234567 dinars, tel 21698765432");
     expect(sorti).not.toContain("1234567");

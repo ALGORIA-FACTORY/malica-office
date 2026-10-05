@@ -106,6 +106,83 @@ describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
     assert.match(erreur, /1876543W\/A\/M\/000/, `le message doit montrer un exemple : ${erreur}`);
   });
 
+  /**
+   * ===================== LES VARIANTES, ET POURQUOI « A/M » NE SUFFIT PAS
+   *
+   * Corrigé le 5 octobre 2026 sur signalement du commanditaire. Le premier
+   * motif posé ce matin acceptait n'importe quelle lettre aux deux positions du
+   * milieu, ce qui couvrait les variantes par accident — mais acceptait aussi
+   * « /Z/Q/ », qui n'existe pas. Permissif et faux à la fois.
+   *
+   * La forme complète :
+   *
+   *   7 chiffres + lettre de contrôle / code de TVA / catégorie / 3 chiffres
+   *                                     A B P D N     M C P N E
+   *
+   * Les deux séries sont énumérées : c'est ce qui distingue une validation
+   * d'une apparence de validation. Une faute de frappe sur la catégorie est
+   * exactement le genre d'erreur qui bloque ensuite TOUTES les pièces du
+   * dossier, et c'est ici qu'on l'arrête.
+   *
+   * Si une série devait s'élargir, elle s'élargit dans `ref.identifiant_formats`
+   * — daté, versionné, sans déploiement. C'est tout l'intérêt d'avoir sorti le
+   * motif du code (R4).
+   */
+  const CODES_TVA = ["A", "B", "P", "D", "N"] as const;
+  const CATEGORIES = ["M", "C", "P", "N", "E"] as const;
+
+  it("accepte les vingt-cinq combinaisons déclarées", async () => {
+    const refuses: string[] = [];
+    for (const tva of CODES_TVA) {
+      for (const cat of CATEGORIES) {
+        const mf = `1234567A/${tva}/${cat}/000`;
+        if (await creer(mf)) refuses.push(mf);
+      }
+    }
+    assert.deepEqual(refuses, [], `ces formes sont valides et doivent passer`);
+  });
+
+  it("accepte un établissement secondaire, dont le numéro n'est pas 000", async () => {
+    // Le dernier groupe numérote l'établissement : une succursale ne porte pas
+    // « 000 ». Le refuser couperait les PME à plusieurs établissements.
+    assert.equal(await creer("1234567A/A/E/001"), null);
+    assert.equal(await creer("1234567A/A/E/042"), null);
+  });
+
+  it("accepte la minuscule, que l'OCR rend parfois ainsi — et la RANGE en capitales", async () => {
+    /*
+     * On accepte large, on range net.
+     *
+     * Refuser pour une casse n'apprend rien à la personne. Mais ENREGISTRER la
+     * minuscule préparerait un défaut silencieux : le contrôle `destinataire`
+     * compare la fiche au matricule lu sur la pièce, qui est imprimé en
+     * capitales. Une fiche en minuscules ferait rejeter toutes les pièces du
+     * dossier, pour une différence invisible à l'œil.
+     */
+    assert.equal(await creer("1234567a/a/m/000"), null);
+    const rangee = await sousIdentite(u.id, async (db) => {
+      const { rows } = await db.query<{ legal_id: string }>(
+        `select legal_id from identity.organizations where id = $1`,
+        [creees[creees.length - 1]],
+      );
+      return rows[0]!.legal_id;
+    });
+    assert.equal(rangee, "1234567A/A/M/000");
+  });
+
+  it("REFUSE un code de TVA qui n'existe pas", async () => {
+    // « Z » n'est pas un code de TVA tunisien. Le motif du matin l'acceptait.
+    for (const faux of ["1234567A/Z/M/000", "1234567A/X/M/000", "1234567A/1/M/000"]) {
+      assert.ok(await creer(faux), `« ${faux} » doit être refusé`);
+    }
+  });
+
+  it("REFUSE une catégorie d'établissement qui n'existe pas", async () => {
+    for (const faux of ["1234567A/A/Q/000", "1234567A/A/Z/000", "1234567A/A/0/000"]) {
+      assert.ok(await creer(faux), `« ${faux} » doit être refusé`);
+    }
+  });
+
   it("refuse les autres façons de se tromper", async () => {
     for (const faux of [
       "1876543W/A/M/00", // trois chiffres attendus à la fin
