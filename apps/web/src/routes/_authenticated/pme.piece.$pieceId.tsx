@@ -9,6 +9,8 @@ import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
+import { libelleDuChamp } from "@/lib/champ-lisible";
+import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
@@ -313,6 +315,21 @@ function PieceScreen() {
    * serveur propose, ou la raison pour laquelle il ne propose rien. La date
    * saisie ne complète qu'une date non lue.
    */
+  /*
+   * Les droits hors TVA, et le pack qui les nomme.
+   *
+   * Le libellé et la référence légale d'un droit vivent dans `ref.fiscal_charges`,
+   * datés et versionnés : on les lit (R4), on ne les écrit pas dans l'écran.
+   * Si le pack n'a pas encore répondu, le droit s'affiche quand même sous son
+   * code, signalé — c'est l'ABSENCE du timbre qui a coûté le 4 octobre, pas un
+   * libellé imparfait.
+   */
+  const packDroits = useQuery({
+    queryKey: ["droits-du-pack", pme.packId],
+    enabled: !!pme.packId,
+    queryFn: () => office().referential.fiscalCharges(pme.packId!),
+  });
+
   const propositionServeur = useQuery({
     queryKey: ["proposition", pieceId, dateRetenue, dossier.data?.extraction?.id ?? null],
     queryFn: () => office().office.propositionDePiece(pieceId, dateRetenue),
@@ -456,6 +473,7 @@ function PieceScreen() {
 
   /** Les articles relevés sur la pièce. Le contrat les porte ; l'écran les montre. */
   const articles = payload?.articles ?? [];
+  const droits = droitsDeLaPiece(payload?.other_charges, packDroits.data ?? []);
 
   /** Le numéro porté par le document, s'il en porte un. */
   const reference = payload?.references
@@ -620,9 +638,24 @@ function PieceScreen() {
           >
             ‹ {t("pme.piece.retour")}
           </button>
+          {/*
+           * Le NOM du champ, pas son chemin.
+           *
+           * Cette ligne rendait `zoom.field` — le chemin machine dans
+           * l'extraction — avec la classe `uppercase`. La personne lisait donc
+           * « ISSUER » sous la photo de sa facture, en capitales anglaises,
+           * alors que `pme.extract.issuer` existe dans les trois langues.
+           *
+           * Le traducteur de chemins était écrit, testé, et utilisé par l'écran
+           * du cabinet. Il n'était simplement pas importé ici. Et rien
+           * n'interdisait d'afficher un identifiant machine : ni test, ni règle
+           * de lint — c'est la dette D42.
+           *
+           * `num` est retiré avec le chemin : cette classe sert aux chiffres.
+           */}
           {zoom ? (
-            <span className="num ms-auto text-[11px] uppercase tracking-wide text-muted-foreground">
-              {zoom.field}
+            <span className="ms-auto text-[11px] uppercase tracking-wide text-muted-foreground">
+              {libelleDuChamp(zoom.field, t)}
             </span>
           ) : null}
         </div>
@@ -803,6 +836,26 @@ function PieceScreen() {
           {t("pme.extract.base")} {lisible(payload?.totals?.base_ht) ?? "—"}
           <br />
           {t("pme.extract.vat")} {lisible(payload?.totals?.vat) ?? "—"}
+          {/*
+           * Les droits hors TVA — le timbre, surtout.
+           *
+           * Le 4 octobre 2026, le timbre de la facture de loyer était lu,
+           * exact, en base, et invisible : `other_charges` n'apparaissait
+           * qu'une fois dans ce fichier, dans la déclaration de type. C'est
+           * aussi lui qui fait la différence entre HT + TVA et le TTC imprimé :
+           * ne pas le montrer rendait l'écart inexplicable à l'écran.
+           *
+           * Le libellé vient du pack (R4), avec sa référence légale quand il la
+           * porte : « d'où vient ce chiffre » doit avoir une réponse ici.
+           */}
+          {droits.map((d, i) => (
+            <span key={`${d.code}-${i}`}>
+              <br />
+              {d.libelle} {lisible(d.montant) ?? "—"}
+              {d.reference ? ` · ${d.reference}` : ""}
+              {d.connu ? "" : ` · ${t("pme.extract.droitInconnu")}`}
+            </span>
+          ))}
         </div>
         <div className="flex items-center justify-between gap-3 bg-secondary px-4 py-3.5">
           <span className="text-[13px] font-semibold">{t("pme.verifie.total")}</span>

@@ -311,6 +311,15 @@ const fr = {
   "pme.extract.kind": "Nature",
   "pme.extract.base": "Base HT",
   "pme.extract.vat": "TVA",
+  /*
+   * Le droit de timbre de la facture du 4 octobre 2026 était lu, exact, et
+   * invisible : 'other_charges' n'apparaissait qu'une fois dans l'écran, dans
+   * la déclaration de type. Ces deux clés le font apparaître, et la seconde
+   * avoue quand le pack ne connaît pas le code — plutôt que de présenter un
+   * identifiant machine comme un libellé, ce qui fut le défaut « ISSUER ».
+   */
+  "pme.extract.droits": "Droits hors TVA",
+  "pme.extract.droitInconnu": "code non reconnu par votre paramétrage",
   "pme.extract.ttc": "TTC",
   "pme.extract.line": "Ligne",
   "pme.citation.show": "Voir la zone source",
@@ -2516,6 +2525,8 @@ const en: Dict = {
   "pme.extract.kind": "Kind",
   "pme.extract.base": "Net amount",
   "pme.extract.vat": "VAT",
+  "pme.extract.droits": "Duties outside VAT",
+  "pme.extract.droitInconnu": "code not recognised by your settings",
   "pme.extract.ttc": "Gross",
   "pme.extract.line": "Line",
   "pme.citation.show": "Show source area",
@@ -4683,6 +4694,8 @@ const ar: Dict = {
   "pme.extract.kind": "النوع",
   "pme.extract.base": "المبلغ دون أداء",
   "pme.extract.vat": "الأداء",
+  "pme.extract.droits": "رسوم خارج الأداء على القيمة المضافة",
+  "pme.extract.droitInconnu": "رمز غير معروف في إعداداتك",
   "pme.extract.ttc": "المبلغ جملة",
   "pme.extract.line": "سطر",
   "pme.citation.show": "عرض المنطقة المصدر",
