@@ -23,6 +23,7 @@
  */
 
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
 
 import { enDecimal, resoudreFacture, type Contrainte } from "./montants.ts";
@@ -59,6 +60,16 @@ export function buildExtractFromTokenPlan(params: {
   tokens: readonly PageToken[];
   selection: VisionSelection;
   decimals: number;
+  /*
+   * Le matricule de la fiche du dossier. OBLIGATOIRE, et null quand la fiche
+   * n'en porte pas — jamais absent du paramètre.
+   *
+   * C'est lui qui permet de DÉDUIRE le sens de la pièce au lieu de le croire :
+   * le dossier connaît son propre matricule, donc sa position sur le document
+   * dit si la pièce est un achat ou une vente. Le rendre facultatif aurait
+   * permis à un appelant de perdre cette garantie sans s'en apercevoir.
+   */
+  matriculeDossier: string | null;
 }): BuiltRead {
   const { tokens, selection, decimals } = params;
   const citations: FieldCitation[] = [];
@@ -330,6 +341,28 @@ export function buildExtractFromTokenPlan(params: {
     if (v !== null) references[key] = v;
   }
 
+  /*
+   * Le sens de la pièce, déduit des matricules relus au plan.
+   *
+   * Placé ICI et pas plus haut : il a besoin des références, qui viennent
+   * d'être relues. Et placé dans le filtre et non dans les contrôles, parce
+   * qu'un contrôle en aval ne fait que signaler — il ne rend pas le sens juste,
+   * et c'est `document_kind` qui décide du journal dans lequel la pièce part.
+   */
+  const sens = lireLeSens({
+    matriculeDossier: params.matriculeDossier,
+    matriculeEmetteur: references["matricule_fiscal"] ?? null,
+    matriculeClient: references["matricule_fiscal_client"] ?? null,
+    sensDuModele: selection.document_kind,
+  });
+  if (sens.signalement) {
+    flags.push({
+      field: "document_kind",
+      code: "SENS_A_CONFIRMER",
+      detail: sens.signalement,
+    });
+  }
+
   const candidate = {
     contract: "extract.v1",
     // Illisible, un champ reste VIDE : jamais « » ni « 0 », qui passaient la
@@ -349,7 +382,21 @@ export function buildExtractFromTokenPlan(params: {
     // La confiance globale du désignateur, sous une clé stable : c'est
     // elle qui groupe les propositions du cabinet par confiance.
     field_confidence: { overall: selection.overall_confidence },
-    document_kind: selection.document_kind,
+    /*
+     * LE SENS EST DÉDUIT, PAS CRU.
+     *
+     * Le dossier connaît son matricule : la position de celui-ci sur la pièce
+     * dit si elle est un achat ou une vente, sans appeler personne. Le modèle
+     * n'est consulté que là où aucun matricule n'est lisible, et confronté
+     * partout ailleurs.
+     *
+     * Quand la déduction refuse de trancher — matricule du dossier des deux
+     * côtés, d'aucun des deux, ou incomplet — `document_kind` reste null. Le
+     * contrat l'exige non nul, donc la lecture se dit PARTIELLE et l'écran pose
+     * la question. C'est exactement ce qu'on veut : pas de choix silencieux sur
+     * le sens d'une pièce.
+     */
+    document_kind: sens.sens,
   };
 
   /*

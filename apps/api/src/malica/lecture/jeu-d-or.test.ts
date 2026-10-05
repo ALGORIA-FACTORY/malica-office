@@ -80,6 +80,7 @@ function jouer(cas: CasDOr) {
     tokens: cas.tokens,
     selection: cas.designation,
     decimals: cas.decimales,
+    matriculeDossier: cas.matriculeDossier,
   });
 }
 

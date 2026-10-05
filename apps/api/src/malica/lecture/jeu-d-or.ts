@@ -42,6 +42,14 @@ export interface CasDOr {
   provenance: string;
   /** Décimales de la devise de la pièce. */
   decimales: number;
+  /**
+   * Le matricule de la fiche du dossier au moment de la lecture.
+   *
+   * Sans lui, le sens de la pièce ne se DÉDUIT pas : il se croit. Le banc
+   * mesurerait alors une chaîne différente de celle de la production, et
+   * c'est précisément cet écart qui rend un banc vert sur un produit faux.
+   */
+  matriculeDossier: string | null;
   /** Ce que l'œil a relevé. */
   tokens: PageToken[];
   /** Ce que le désignateur doit renvoyer. */
@@ -293,6 +301,9 @@ const LOYER_SEPTEMBRE_2026: CasDOr = {
     "essai réel du 4 octobre 2026 · pièce 73ae6059-7a81-459e-9795-f6fa21e5dd89 sur le staging · " +
     "plan de jetons relevé tel quel dans capture.token_plan, 177 jetons",
   decimales: 3,
+  // La facture est adressée à ALGORIA : son matricule est du côté CLIENT, donc
+  // le sens se déduit — « facture_achat » — sans croire le modèle.
+  matriculeDossier: "1876543W/A/M/000",
   tokens: JETONS_LOYER,
   designation: {
     document_kind: "facture_achat",
@@ -375,6 +386,16 @@ const LOYER_SEPTEMBRE_2026: CasDOr = {
      * elle, si bien que le contrôle du destinataire trouve tout cohérent.
      */
     document_kind: "facture_achat",
+    /*
+     * LES DEUX MATRICULES, et pas seulement le sens.
+     *
+     * Le 5 octobre, un modèle les a inversés : l'émetteur portait celui du
+     * dossier et le client celui du bailleur. Le sens basculait avec eux, et
+     * tout restait cohérent — donc invisible. Les attendre nommément est ce
+     * qui rend l'inversion mesurable au lieu d'être découverte en production.
+     */
+    "references.matricule_fiscal": "1456987L/A/P/000",
+    "references.matricule_fiscal_client": "1876543W/A/M/000",
     issuer: "Mme Leila BEN SALEM",
     document_date: "2026-09-01",
     "articles[0].quantity": "1.000",

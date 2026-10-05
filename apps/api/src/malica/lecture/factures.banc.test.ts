@@ -57,6 +57,9 @@ describe("banc des factures — pièce 286ea66b, ticket MOKA", () => {
     tokens: [jeton(0, "TOTAL"), jeton(1, "2.800")],
     selection: selection({ ttc: ref(1) }),
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
 
   it("ne tranche pas ce que la pièce ne dit pas", () => {
@@ -83,6 +86,9 @@ describe("banc des factures — pièce b97ed23c, manuscrit ABDERRAHIM", () => {
     tokens: [jeton(0, "16000"), jeton(1, "44400")],
     selection: selection({ base_ht: ref(0), ttc: ref(1) }),
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
 
   it("laisse les deux montants à confirmer", () => {
@@ -98,6 +104,9 @@ describe("banc des factures — l'exemple de l'étude", () => {
     tokens: [jeton(0, "1.200"), jeton(1, "228"), jeton(2, "1.428")],
     selection: selection({ base_ht: ref(0), vat: ref(1), ttc: ref(2) }),
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
 
   it("l'arithmétique décide les trois montants", () => {
@@ -126,6 +135,9 @@ describe("banc des factures — aucun chiffre inventé (3B, 18 septembre 2026)",
     tokens: [jeton(0, "FACTURE")],
     selection: selection({}),
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
   const extrait = lu.extract as {
     issuer: unknown;
@@ -165,6 +177,9 @@ describe("banc des factures — pièce 73ae6059, le loyer tronqué (5 octobre 20
     tokens: [jeton(0, "3"), jeton(1, "573,800"), jeton(2, "3")],
     selection: selection({ base_ht: ref(0), vat: ref(1), ttc: ref(2) }),
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
 
   it("dit que la facture ne boucle pas", () => {
@@ -221,6 +236,9 @@ describe("banc des factures — le timbre appartient à l'équation (5 octobre 2
       other_charges: [{ code: "DROIT_TIMBRE", amount: ref(3) }],
     } as unknown as VisionSelection,
     decimals: 3,
+    // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
+    // et les cas d'origine gardent exactement leur comportement.
+    matriculeDossier: "1856324K/A/M/000",
   });
 
   it("lit les montants coupés par l'espace des milliers", () => {

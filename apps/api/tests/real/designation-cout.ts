@@ -239,6 +239,7 @@ ${planTexte(cas.tokens)}`,
       tokens: cas.tokens,
       selection: selectionDepuisReponse(parseJsonLoose(res.answer), "TND", cas.tokens),
       decimals: cas.decimales,
+      matriculeDossier: cas.matriculeDossier,
     });
     drapeaux = lu.flags.map((f) => `${f.field} : ${f.code}`);
     valeursRendues = lu.extract;

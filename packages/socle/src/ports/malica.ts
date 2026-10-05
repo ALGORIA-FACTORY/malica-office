@@ -76,6 +76,16 @@ export interface ReadFlag {
      * ne juge pas la lecture d'un champ : il juge si la facture BOUCLE.
      */
     | "ARITHMETIQUE_INCOHERENTE"
+    /**
+     * Le sens de la pièce — achat ou vente — ne se tranche pas sans risque.
+     *
+     * Posé le 5 octobre 2026. Un modèle avait rendu « vente » sur un achat,
+     * avec les deux matricules inversés : faux, et cohérent dans son inversion,
+     * donc invisible au contrôle du destinataire. Le sens se déduit désormais de
+     * la position du matricule du dossier, et ce drapeau porte les cas où la
+     * déduction refuse de choisir.
+     */
+    | "SENS_A_CONFIRMER"
     | "DATE_UNREADABLE"
     | "DERIVED_BY_SOCLE";
   detail?: string;

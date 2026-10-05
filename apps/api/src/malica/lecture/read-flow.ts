@@ -92,6 +92,9 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     // Trois décimales pour le dinar — mais dites par le pack, jamais écrites
     // ici : le solveur des montants s'en sert pour décider de l'ambiguïté.
     decimals: contexte.moneyDecimals,
+    // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
+    // lieu de croire ce que le modèle en dit.
+    matriculeDossier: contexte.dossier.identifiantFiscal,
   });
 
   // Projection des articles cités pour l'analyse par famille (PME).
