@@ -362,6 +362,19 @@ const LOYER_SEPTEMBRE_2026: CasDOr = {
     document_date: "Tunis, le 1 septembre 2026",
   },
   attendu: {
+    /*
+     * Le SENS, en tête des attentes — et il y manquait.
+     *
+     * Le 5 octobre 2026, l'épreuve de coût a montré `deepseek-chat` rendre
+     * « facture_vente » sur cette facture d'achat. L'instrument comptait zéro
+     * valeur fausse, parce que `document_kind` n'était pas dans cette liste.
+     *
+     * C'est pourtant la plus grave des erreurs possibles : aucune arithmétique
+     * ne la rattrape — le sens n'est pas un montant — et la pièce part dans le
+     * mauvais journal, en vente au lieu d'achat. Les matricules s'inversent avec
+     * elle, si bien que le contrôle du destinataire trouve tout cohérent.
+     */
+    document_kind: "facture_achat",
     issuer: "Mme Leila BEN SALEM",
     document_date: "2026-09-01",
     "articles[0].quantity": "1.000",

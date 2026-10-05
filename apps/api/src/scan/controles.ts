@@ -37,7 +37,9 @@ export interface ResultatControle {
     | "destinataire"
     | "doublon"
     | "coherence_dates"
-    | "confiance_lecture";
+    | "confiance_lecture"
+    /** Le sens lu contredit ce que la pièce porte (5 octobre 2026). */
+    | "sens_de_la_piece";
   statut: Statut;
   motif: string;
   preuves: Record<string, unknown>;
@@ -266,6 +268,116 @@ function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatContro
   };
 }
 
+/**
+ * Les mots d'un nom d'entreprise, sans sa forme juridique ni sa ponctuation.
+ *
+ * « ALGORIA FACTORY SARL » et « Algoria Factory » désignent la même entreprise.
+ * Un contrôle qui exigerait l'égalité stricte crierait sur toutes les ventes, et
+ * on apprendrait à l'ignorer — ce qui est pire qu'un contrôle absent.
+ *
+ * Les formes juridiques sont retirées ici et non dans le référentiel : ce ne
+ * sont pas des valeurs réglementaires mais des mots d'une langue, au même titre
+ * que les accents. R4 ne les concerne pas.
+ */
+const FORMES = /\b(sarl|suarl|sa|spa|snc|sas|sasu|eurl|ste|societe|société|et\s+cie)\b/g;
+
+function motsDuNom(nom: string): Set<string> {
+  return new Set(
+    nom
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(FORMES, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((m) => m.length > 2),
+  );
+}
+
+/** Deux noms désignent-ils la même entreprise ? */
+function memeEntreprise(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  const ma = motsDuNom(a);
+  const mb = motsDuNom(b);
+  if (ma.size === 0 || mb.size === 0) return false;
+  // Tous les mots du plus court se retrouvent dans l'autre : « Algoria Factory »
+  // reconnaît « ALGORIA FACTORY SARL », et « Factory » seul ne suffit pas.
+  const [court, long] = ma.size <= mb.size ? [ma, mb] : [mb, ma];
+  if (court.size < 2 && long.size >= 2) return false;
+  return [...court].every((m) => long.has(m));
+}
+
+/**
+ * Le sens de la pièce tient-il avec ce que la pièce porte ?
+ *
+ * ================================================================= POURQUOI
+ *
+ * Posé le 5 octobre 2026, après qu'un modèle de désignation ait rendu, sur une
+ * facture d'achat :
+ *
+ *   document_kind "facture_vente" · issuer « Mme Leila BEN SALEM »
+ *   matricule_fiscal celui du DOSSIER · matricule_fiscal_client celui du bailleur
+ *
+ * Tout était inversé, et COHÉRENT dans son inversion. Le contrôle
+ * `destinataire` ne regarde qu'UNE partie — l'émetteur, pour une vente — y
+ * trouve le matricule du dossier, et conclut « conforme ». La pièce serait
+ * partie en VENTE dans les comptes du client.
+ *
+ * Aucune arithmétique ne rattrape cela : le sens n'est pas un montant. C'est la
+ * définition de l'erreur silencieuse, et elle valait une écriture fausse.
+ *
+ * Ce qui la trahit est à l'intérieur de la pièce : une vente émise par le
+ * dossier porte le NOM du dossier comme émetteur. Ici l'émetteur s'appelle
+ * autrement. La contradiction se voit sans modèle, sans référentiel et sans
+ * arithmétique — donc ce contrôle est gratuit et sûr.
+ *
+ * Il rend `anomalie` et non `rejet` : la pièce n'est pas mauvaise, c'est sa
+ * LECTURE qui se contredit. Le geste attendu est de confirmer le sens, pas de
+ * jeter le document.
+ */
+function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle {
+  const vente = p.documentKind === "facture_vente";
+  const achat = p.documentKind === "facture_achat";
+  if (!vente && !achat)
+    return {
+      code: "sens_de_la_piece",
+      statut: "non_evaluable",
+      motif: "Le sens de la pièce n'est pas déterminé : il reste à confirmer.",
+      preuves: { documentKind: p.documentKind },
+    };
+  if (!p.emetteur.nom)
+    return {
+      code: "sens_de_la_piece",
+      statut: "non_evaluable",
+      motif: "Le nom de l'émetteur n'a pas été lu : le sens ne peut pas être confronté.",
+      preuves: {},
+    };
+
+  const emetteurEstLeDossier = memeEntreprise(p.emetteur.nom, ctx.tenant.nom);
+  if (vente === emetteurEstLeDossier)
+    return {
+      code: "sens_de_la_piece",
+      statut: "conforme",
+      motif: vente
+        ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}.`
+        : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom}.`,
+      preuves: { documentKind: p.documentKind, emetteur: p.emetteur.nom },
+    };
+
+  return {
+    code: "sens_de_la_piece",
+    statut: "anomalie",
+    motif: vente
+      ? `La pièce est lue comme une VENTE, mais elle est émise par ${p.emetteur.nom}, et non par ${ctx.tenant.nom} : le sens est à confirmer.`
+      : `La pièce est lue comme un ACHAT, mais elle est émise par ${ctx.tenant.nom} : le sens est à confirmer.`,
+    preuves: {
+      documentKind: p.documentKind,
+      emetteur: p.emetteur.nom,
+      dossier: ctx.tenant.nom,
+    },
+  };
+}
+
 function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   if (p.reception.doublonDe)
     return {
@@ -359,6 +471,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     mentions(p, ctx),
     nature(p, ctx),
     destinataire(p, ctx),
+    sensDeLaPiece(p, ctx),
     doublon(p, ctx),
     dates(p),
     confiance(p, ctx),

@@ -141,10 +141,29 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     },
   ]);
 
-  // Le journal des exécutions : une ligne par organe, chacune à son tarif.
-  // Un organe sans tarif en vigueur (Qwen-VL-OCR, dont le prix n'a pas été
-  // relevé) ne se journalise pas : agents_run_log refuse d'écrire un coût sans
-  // origine. On le DIT dans la réponse, au lieu de l'avaler.
+  /*
+   * Le journal des exécutions : une ligne par organe, chacune à son tarif.
+   *
+   * Un organe sans tarif en vigueur ne se journalise pas : `agents_run_log`
+   * refuse d'écrire un coût sans origine, et c'est juste.
+   *
+   * ================================================= CE QUI A ÉTÉ CORRIGÉ ICI
+   *
+   * Le commentaire précédent affirmait que le prix de Qwen-VL-OCR « n'a pas été
+   * relevé ». Il était périmé : le tarif est en base depuis le 4 octobre 2026.
+   *
+   * Et surtout, l'échec ne partait QUE dans le champ `journal` de la réponse,
+   * que rien ne lit. Résultat, mesuré le 5 octobre : zéro ligne de relevé dans
+   * `agents.agent_runs`, et personne ne le savait. La cause était banale — les
+   * deux pièces d'essai ont été lues à 14:47:40, et la migration du tarif
+   * appliquée à 15:00:22, treize minutes trop tard — mais c'est l'INVISIBILITÉ
+   * qui a coûté : sans coût journalisé, le plafond de `agents.budgets` ne mord
+   * sur rien.
+   *
+   * Un échec de journalisation crie donc maintenant dans le journal du serveur.
+   * Il ne fait toujours pas échouer la lecture : la pièce est lue, et une
+   * dépense non mesurée ne doit pas priver la personne de son résultat.
+   */
   const journal = await Promise.all(
     (
       [
@@ -168,12 +187,15 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
         ])
         .then(
           () => ({ agent, model, journalise: true as const }),
-          (e: unknown) => ({
-            agent,
-            model,
-            journalise: false as const,
-            raison: e instanceof Error ? e.message.slice(0, 200) : String(e),
-          }),
+          (e: unknown) => {
+            const raison = e instanceof Error ? e.message.slice(0, 200) : String(e);
+            // Fort, et non dans un champ que personne ne lit : une dépense non
+            // mesurée est une dépense sans plafond.
+            console.error(
+              `coût NON journalisé — agent ${agent}, modèle ${model}, rôle ${role} : ${raison}`,
+            );
+            return { agent, model, journalise: false as const, raison };
+          },
         ),
     ),
   );

@@ -32,7 +32,7 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
 // Le nom vient de `../modeles.ts` : il était écrit une seconde fois ici.
-import { MODELE_DESIGNATION } from "../modeles.ts";
+import { MODELE_DESIGNATION, ROLE_DESIGNATION } from "../modeles.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
@@ -306,9 +306,23 @@ Réponds STRICTEMENT en JSON :
  "totals":{"base_ht":{...},"vat":{...},"ttc":{...}},
  "references":{"matricule_fiscal":{...},"matricule_fiscal_client":{...},"numero":{...}},
  "overall_confidence":0.0}
-MATRICULES : "references.matricule_fiscal" est celui de l'ÉMETTEUR de la pièce ;
-"references.matricule_fiscal_client" est celui du CLIENT (facturé à, livré à, destinataire), s'il
-est imprimé — sinon null. Ne les intervertis jamais.
+LE SENS DE LA PIÈCE, À TRANCHER EN PREMIER : tout le reste en dépend.
+On te donne le DOSSIER (raison sociale, matricule fiscal). Il est l'UNE des deux parties, jamais
+les deux. L'ÉMETTEUR est la partie dont le nom et l'adresse OUVRENT le document, en haut : c'est
+elle qui facture. Le CLIENT est l'autre, nommée ensuite, souvent introduite par « facturé à »,
+« client », « doit », ou simplement posée sous l'émetteur.
+ — le DOSSIER est le CLIENT   → "document_kind" vaut "facture_achat"
+ — le DOSSIER est l'ÉMETTEUR  → "document_kind" vaut "facture_vente"
+MATRICULES : ils DÉCOULENT du sens, ils ne se devinent pas séparément.
+"references.matricule_fiscal" est celui de l'ÉMETTEUR de la pièce ;
+"references.matricule_fiscal_client" est celui du CLIENT, s'il est imprimé — sinon null.
+Donc, pour une "facture_achat", le matricule du DOSSIER va dans "matricule_fiscal_client", et
+JAMAIS dans "matricule_fiscal" : celui-là porte le matricule du fournisseur.
+Si NI l'émetteur NI le client n'est le dossier, ou si tu ne peux pas l'établir, renvoie null pour
+"document_kind" : la personne tranchera. Ne déduis jamais le sens du seul vocabulaire
+(« facture », « bon de livraison ») ni de la présence d'un tiers connu.
+VÉRIFIE CECI AVANT DE RÉPONDRE : si "document_kind" vaut "facture_achat" et que
+"matricule_fiscal" porte le matricule du DOSSIER, tu t'es trompé — intervertis-les.
 PLAGES DE TOKENS. Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs
 tokens contigus. Dans ce cas, et dans ce cas seulement, ajoute "ordinal_end" pour couvrir TOUS ses
 tokens : {"page":1,"ordinal":3,"ordinal_end":5}. Cela vaut pour n'importe quel champ.
@@ -342,13 +356,7 @@ fournie ; s'il n'y a pas de correspondance, n'émets pas la ligne.
 Le "ttc" d'une ligne ne se renseigne que si la pièce imprime un TTC PAR TAUX. Le total TTC du
 pied de facture n'est le TTC d'aucune ligne : il porte aussi les droits hors TVA (timbre), qui
 n'appartiennent à aucun taux. Il va dans "totals.ttc" et nulle part ailleurs — sinon renvoie null
-pour le "ttc" de la ligne.
-SENS DE LA PIÈCE : on te donne le DOSSIER (raison sociale, matricule fiscal). Si la pièce est
-ÉMISE PAR le dossier (son nom ou son matricule figure comme émetteur/vendeur), "document_kind"
-vaut "facture_vente". Si la pièce est ADRESSÉE AU dossier (client/livré à/facturé à), elle vaut
-"facture_achat". Si NI l'émetteur NI le destinataire n'est le dossier, ou si tu ne peux pas
-l'établir, renvoie null : la personne tranchera. Ne déduis jamais le sens du seul vocabulaire
-(« facture », « bon de livraison ») ni de la présence d'un tiers connu.`;
+pour le "ttc" de la ligne.`;
 
 /**
  * Le relevé — trois chemins, un seul contrat de sortie.
@@ -479,6 +487,58 @@ export async function relever(params: {
   };
 }
 
+/**
+ * La réponse du désignateur, convertie en sélection — le seul chemin.
+ *
+ * Sortie de `runVisionRead` le 5 octobre 2026 pour que l'épreuve de coût
+ * (`tests/real/designation-cout.ts`) emprunte EXACTEMENT ce que la production
+ * emprunte. Une épreuve qui recopierait cette conversion mesurerait sa propre
+ * copie, et dériverait d'elle en silence — c'est ainsi qu'on obtient un banc
+ * vert sur un produit faux.
+ */
+export function selectionDepuisReponse(
+  reponse: unknown,
+  devise: string,
+  tokens: readonly PageToken[],
+): VisionSelection {
+  const raw = SelectionResponse.parse(reponse);
+  return {
+    ...raw,
+    currency: raw.currency ?? devise,
+    issuer: toRef(raw.issuer),
+    document_date: toRef(raw.document_date),
+    lines: raw.lines
+      .filter((l): l is typeof l & { tax_code: string } => Boolean(l.tax_code))
+      .map((l) => ({
+        ...l,
+        label: labelText(l.label, tokens),
+        base_ht: toRef(l.base_ht),
+        vat_amount: toRef(l.vat_amount),
+        ttc: toRef(l.ttc),
+      })),
+    // Colonnes manquantes complétées par géométrie, jamais par le modèle :
+    // le token désigné existe déjà dans le plan.
+    articles: repairArticles(
+      tokens,
+      raw.articles.map((a) => ({
+        designation: toRef(a.designation),
+        quantity: toRef(a.quantity),
+        unit_price_ht: toRef(a.unit_price_ht),
+        unit_price_ttc: toRef(a.unit_price_ttc),
+        total_ht: toRef(a.total_ht),
+        tax_code: a.tax_code ?? null,
+      })),
+    ),
+    other_charges: raw.other_charges.map((c) => ({ code: c.code, amount: toRef(c.amount) })),
+    totals: {
+      base_ht: toRef(raw.totals.base_ht),
+      vat: toRef(raw.totals.vat),
+      ttc: toRef(raw.totals.ttc),
+    },
+    references: Object.fromEntries(Object.entries(raw.references).map(([k, v]) => [k, toRef(v)])),
+  };
+}
+
 export async function runVisionRead(params: {
   dataUrl: string;
   mime?: string;
@@ -545,7 +605,7 @@ export async function runVisionRead(params: {
   const pass2 = await withRetry("désignation", async () => {
     const res = await callDeepSeek({
       apiKey: cleDeepSeek,
-      role: "reasoner",
+      role: ROLE_DESIGNATION,
       signal: AbortSignal.timeout(DELAI_DESIGNATION_MS),
       messages: [
         { role: "system", content: SYSTEM_SELECT },
@@ -560,43 +620,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     parseJsonLoose(res.answer);
     return res;
   });
-  const raw = SelectionResponse.parse(parseJsonLoose(pass2.answer));
-
-  const selection: VisionSelection = {
-    ...raw,
-    currency: raw.currency ?? params.devise,
-    issuer: toRef(raw.issuer),
-    document_date: toRef(raw.document_date),
-    lines: raw.lines
-      .filter((l): l is typeof l & { tax_code: string } => Boolean(l.tax_code))
-      .map((l) => ({
-        ...l,
-        label: labelText(l.label, tokens),
-        base_ht: toRef(l.base_ht),
-        vat_amount: toRef(l.vat_amount),
-        ttc: toRef(l.ttc),
-      })),
-    // Colonnes manquantes complétées par géométrie, jamais par le modèle :
-    // le token désigné existe déjà dans le plan.
-    articles: repairArticles(
-      tokens,
-      raw.articles.map((a) => ({
-        designation: toRef(a.designation),
-        quantity: toRef(a.quantity),
-        unit_price_ht: toRef(a.unit_price_ht),
-        unit_price_ttc: toRef(a.unit_price_ttc),
-        total_ht: toRef(a.total_ht),
-        tax_code: a.tax_code ?? null,
-      })),
-    ),
-    other_charges: raw.other_charges.map((c) => ({ code: c.code, amount: toRef(c.amount) })),
-    totals: {
-      base_ht: toRef(raw.totals.base_ht),
-      vat: toRef(raw.totals.vat),
-      ttc: toRef(raw.totals.ttc),
-    },
-    references: Object.fromEntries(Object.entries(raw.references).map(([k, v]) => [k, toRef(v)])),
-  };
+  const selection = selectionDepuisReponse(parseJsonLoose(pass2.answer), params.devise, tokens);
 
   return {
     tokens,

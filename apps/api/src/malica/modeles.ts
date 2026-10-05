@@ -51,5 +51,48 @@ export function modeleOcr(): string {
   return process.env["QWEN_OCR_MODEL"] ?? MODELE_OCR_PAR_DEFAUT;
 }
 
-/** Celui qui désigne les champs : il ne voit jamais la pièce, seulement les tokens. */
-export const MODELE_DESIGNATION = DEEPSEEK_MODELS.reasoner;
+/**
+ * Celui qui désigne les champs : il ne voit jamais la pièce, seulement les tokens.
+ *
+ * ========================================== POURQUOI LE CHAT, ET PLUS LE RAISONNEUR
+ *
+ * Mesuré le 5 octobre 2026 sur le journal de production, puis au banc
+ * (`tests/real/designation-cout.ts`, trois passages par modèle) :
+ *
+ *                      champs justes  valeurs fausses  sortie   coût/appel
+ *   deepseek-reasoner      27/28            0          3 792      0,0097 $
+ *   deepseek-chat        23 à 25/28         1          414        0,0020 $
+ *
+ * En production, le raisonneur rendait 9 022 jetons de raisonnement et prenait
+ * 36 472 ms — pour produire une vingtaine de `page/ordinal`. Trente-six
+ * secondes d'attente pour quelqu'un qui tient son téléphone, et quatre fois le
+ * budget visé.
+ *
+ * Le chat est 4,7 fois moins cher et rend neuf fois moins de jetons. Il est
+ * aussi moins précis, et sa seule VALEUR fausse était un `document_kind` lu
+ * « vente » sur un achat — l'erreur la plus grave possible, qu'aucune
+ * arithmétique ne rattrape.
+ *
+ * On ne bascule donc PAS pour économiser : on bascule parce que cette erreur
+ * est désormais attrapée. Le contrôle `sens_de_la_piece` (`scan/controles.ts`)
+ * confronte le sens lu au NOM de l'émetteur, et refuse la contradiction. Il a
+ * été écrit avant cette bascule, exprès.
+ *
+ * Reste à mesurer sur les onze factures du prototype, puis à comparer à
+ * `qwen3.8-flash`, qui voit l'image — il entrera quand son tarif sera en base
+ * (R8) et que le client saura l'appeler.
+ */
+export const ROLE_DESIGNATION: DeepSeekRole = "chat";
+
+/*
+ * Le modèle est DÉRIVÉ du rôle, et non écrit à côté de lui.
+ *
+ * L'appel de `vision.ts` forçait `role: "reasoner"` en dur pendant que cette
+ * constante nommait le modèle. Changer l'un sans l'autre désaccordait le couple,
+ * et `agents_run_log` ne trouve alors AUCUN tarif pour (modèle, rôle) : l'appel
+ * s'exécute, et son coût n'est pas journalisé. C'est exactement par là que le
+ * coût de l'œil a disparu du journal (D47).
+ *
+ * Dériver rend la désynchronisation impossible, plutôt qu'interdite.
+ */
+export const MODELE_DESIGNATION = DEEPSEEK_MODELS[ROLE_DESIGNATION];

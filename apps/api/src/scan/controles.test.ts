@@ -72,7 +72,14 @@ const statut = (p: PieceAControler, code: string, ctx = CONTEXTE) =>
   controlerPiece(p, ctx).find((c) => c.code === code)!;
 
 describe("chaque contrôle rend un statut motivé, jamais un booléen", () => {
-  it("les sept contrôles, tous présents, tous motivés", () => {
+  it("les huit contrôles, tous présents, tous motivés", () => {
+    /*
+     * La liste est écrite en entier, exprès : un contrôle qui disparaîtrait
+     * d'un refactoring ne se verrait nulle part ailleurs, et le produit
+     * continuerait à rendre des verdicts — avec un garde en moins.
+     *
+     * `sens_de_la_piece` est le huitième, ajouté le 5 octobre 2026.
+     */
     const cs = controlerPiece(facture(), CONTEXTE);
     assert.deepEqual(
       cs.map((c) => c.code).sort(),
@@ -84,6 +91,7 @@ describe("chaque contrôle rend un statut motivé, jamais un booléen", () => {
         "doublon",
         "mentions_obligatoires",
         "nature_piece",
+        "sens_de_la_piece",
       ].sort(),
     );
     for (const c of cs) {
@@ -235,6 +243,107 @@ describe("destinataire", () => {
       tenant: { nom: "X", identifiantFiscal: null },
     });
     assert.equal(c.statut, "non_evaluable");
+  });
+});
+
+/**
+ * ================ LE SENS DE LA PIÈCE DOIT TENIR AVEC CE QU'ELLE PORTE
+ *
+ * Trouvé le 5 octobre 2026 en mesurant les modèles de désignation.
+ * `deepseek-chat` a rendu, sur la facture de loyer :
+ *
+ *   document_kind              "facture_vente"
+ *   issuer                     « Mme Leila BEN SALEM »
+ *   matricule_fiscal           celui d'ALGORIA  (le dossier)
+ *   matricule_fiscal_client    celui du bailleur
+ *
+ * Tout est inversé, et COHÉRENT dans son inversion. Le contrôle `destinataire`
+ * ne regarde qu'UNE partie — l'émetteur pour une vente — y trouve le matricule
+ * du dossier, et conclut « conforme ». La pièce partirait donc en VENTE dans
+ * les comptes du client, sur une facture d'achat.
+ *
+ * Aucune arithmétique ne rattrape cela : le sens n'est pas un montant. C'est la
+ * définition même de l'erreur silencieuse.
+ *
+ * Ce qui la trahit est à l'intérieur de la pièce : une vente émise par le
+ * dossier porte le NOM du dossier comme émetteur. Ici, l'émetteur s'appelle
+ * « Mme Leila BEN SALEM ». La contradiction se voit sans modèle, sans
+ * référentiel, et sans arithmétique.
+ */
+describe("le sens de la pièce, confronté à ce qu'elle porte", () => {
+  it("une vente dont l'émetteur n'est pas le dossier est une contradiction", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        // Le matricule du dossier mis du côté de l'émetteur : l'inversion.
+        emetteur: { nom: "Mme Leila BEN SALEM", identifiantFiscal: "1856324K/A/M/000" },
+        destinataire: { nom: null, identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+    assert.match(c.motif, /Mme Leila BEN SALEM/, "le motif nomme l'émetteur lu");
+  });
+
+  it("une vente réellement émise par le dossier est conforme", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
+        destinataire: { nom: "CLIENT SA", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "conforme");
+  });
+
+  it("un achat dont l'émetteur est le dossier est la même contradiction, à l'envers", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_achat",
+        emetteur: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+
+  it("un achat ordinaire est conforme", () => {
+    assert.equal(statut(facture(), "sens_de_la_piece").statut, "conforme");
+  });
+
+  it("sans nom d'émetteur lu, le contrôle ne se prononce pas", () => {
+    // Ne rien pouvoir vérifier n'est pas une anomalie. Une pièce dont le nom de
+    // l'émetteur est illisible a déjà sa réserve au contrôle des mentions.
+    const c = statut(
+      facture({ documentKind: "facture_vente", emetteur: { nom: null, identifiantFiscal: null } }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "non_evaluable");
+  });
+
+  it("sans sens déterminé, le contrôle ne se prononce pas non plus", () => {
+    // `document_kind` null veut dire « la personne tranchera » : on ne lui
+    // reproche pas une contradiction qu'elle n'a pas encore eu l'occasion de
+    // lever.
+    const c = statut(facture({ documentKind: null }), "sens_de_la_piece");
+    assert.equal(c.statut, "non_evaluable");
+  });
+
+  it("reconnaît le dossier malgré la forme juridique et la casse", () => {
+    /*
+     * « ALGORIA FACTORY SARL » dans la fiche, « Algoria Factory » sur la pièce :
+     * c'est la même entreprise. Un contrôle qui exigerait l'égalité stricte
+     * crierait sur toutes les ventes, et on apprendrait à l'ignorer.
+     */
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "Algoria Factory", identifiantFiscal: "1856324K/A/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "conforme");
   });
 });
 
