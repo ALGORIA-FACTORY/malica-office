@@ -11,9 +11,9 @@ estimations longtemps.
 
 ## Ce que coûte la lecture aujourd'hui — et le vrai problème
 
-| | modèle | jetons entrée → sortie | latence | coût/appel |
-|---|---|---|---|---|
-| Désignation | `deepseek-reasoner` | 5 256 → **9 022** | **36 472 ms** | **0,0182 $** |
+|             | modèle              | jetons entrée → sortie | latence       | coût/appel   |
+| ----------- | ------------------- | ---------------------- | ------------- | ------------ |
+| Désignation | `deepseek-reasoner` | 5 256 → **9 022**      | **36 472 ms** | **0,0182 $** |
 
 **(relevé)**, sur 4 appels. Le raisonneur produit neuf mille jetons de
 raisonnement pour rendre une vingtaine de `page/ordinal`. C'est quatre fois le
@@ -29,26 +29,60 @@ prochaine lecture réelle (dette ouverte).
 **Conclusion** : remplacer le raisonneur par Qwen3-VL n'est pas une
 optimisation, c'est la correction du poste de coût ET de latence dominant.
 
-| | modèle | tarif entrée / sortie |
-|---|---|---|
-| aujourd'hui | `deepseek-reasoner` | 0,56 / 1,68 $ par Mtok |
-| visé | `qwen3-vl-flash` | **0,05 / 0,40** $ par Mtok |
+### Ce qui a été fait le jour même, et mesuré
 
-Soit onze fois moins cher en entrée, quatre fois en sortie — et surtout plus
-aucun jeton de raisonnement. **(projeté)** : ~0,0007 $ pour la compréhension,
-~0,0004 $ pour l'œil, **~0,0011 $ par pièce**, sous le budget visé, avec une
-latence de quelques secondes au lieu de trente-six.
+La désignation a quitté le raisonneur pour **`deepseek-chat`**, après mesure sur
+la facture réelle — trois passages par modèle,
+`tests/real/designation-cout.ts` :
+
+|                     | champs justes | valeurs fausses | silencieuses | sortie  | coût/appel   |
+| ------------------- | ------------- | --------------- | ------------ | ------- | ------------ |
+| `deepseek-reasoner` | 27/28         | 0               | 0            | 3 792 j | 0,0097 $     |
+| `deepseek-chat`     | 23–25/28      | 1               | **1**        | 414 j   | **0,0020 $** |
+
+**(relevé)**, prompt mis en cache côté fournisseur — donc les latences de ce
+banc ne valent rien, seuls les jetons et le coût comptent.
+
+La seule valeur fausse du chat était un `document_kind` lu « vente » sur un
+achat. **Aucune arithmétique ne rattrape un sens faux**, et les matricules
+s'inversent avec lui, si bien que le contrôle `destinataire` — qui ne regarde
+qu'UNE partie — conclut « conforme ». La pièce serait partie en vente dans les
+comptes du client.
+
+On n'a donc pas basculé pour économiser : on a d'abord posé le contrôle
+**`sens_de_la_piece`**, qui confronte le sens lu au NOM de l'émetteur. Une
+vente émise par un tiers est une contradiction, et elle se voit sans modèle,
+sans référentiel et sans arithmétique.
+
+### Le modèle visé
+
+|             | modèle              | tarif entrée / sortie  |
+| ----------- | ------------------- | ---------------------- |
+| hier        | `deepseek-reasoner` | 0,56 / 1,68 $ par Mtok |
+| aujourd'hui | `deepseek-chat`     | 0,27 / 1,10 $ par Mtok |
+| visé        | **`qwen3.8-flash`** | à relever              |
+
+**`qwen3-vl-flash` est écarté : il est retiré le 10 octobre 2026.** Sont
+également écartés `qwen3-vl-plus`, `qwen-vl-max` et `qwen-vl-plus`. La cible est
+`qwen3.8-flash`, et pour le second témoin **PaddleOCR PP-OCRv6** si disponible,
+sinon v5. _(Décision du commanditaire, note de projet
+« decisions-paddleocr-modeles-alibaba-infra-2026-10-05 » — que je n'ai pas eue
+sous les yeux : je l'applique sur son énoncé.)_
+
+Son tarif n'est pas encore en base, donc son coût par pièce reste à mesurer, et
+la bascule passera par une migration (R8 : le modèle vient de la table qui le
+tarife).
 
 ---
 
 ## A. La lecture en six étapes
 
 **0 · Capture.** Déclenchement automatique sur netteté, quatre coins détectés,
-rafale de trois avec sélection de la plus nette. *Aujourd'hui : un tap, une
-photo.*
+rafale de trois avec sélection de la plus nette. _Aujourd'hui : un tap, une
+photo._
 
 **1 · Deux témoins littéraux, en parallèle.** `qwen-vl-ocr` et PaddleOCR
-PP-OCRv5 (processeur, sur notre serveur). Fusion en un plan de lecture, et
+**PP-OCRv6** si disponible, sinon v5 (processeur, sur notre serveur). Fusion en un plan de lecture, et
 **recollage des nombres coupés par l'espace des milliers dès l'OCR** — même
 ligne, écart horizontal faible.
 
@@ -64,7 +98,7 @@ Un second témoin a un autre effet, moins évident et plus précieux : deux
 lectures qui divergent sur un chiffre désignent la zone à relire. C'est une
 mesure de doute qui ne vient pas d'un modèle.
 
-**2 · Compréhension.** `qwen3-vl-flash` voit l'image **et** le plan, et rend
+**2 · Compréhension.** `qwen3.8-flash` voit l'image **et** le plan, et rend
 les champs d'`extract.v1` en citant les jetons. R2 est tenue autrement
 qu'aujourd'hui : le modèle voit la pièce, mais il ne transcrit toujours aucune
 valeur — il désigne, et la valeur est relue dans le plan. Qu'il voie l'image
@@ -76,7 +110,7 @@ confusions d'OCR connues (3/8, 1/7, 5/6, virgule/point). Contraintes : les
 le montant en toutes lettres (fr et ar), le format du matricule. Une seule
 solution survit, ou on pose une question.
 
-*Acquis ce matin* : le solveur vérifie désormais TOUJOURS ses contraintes et
+_Acquis ce matin_ : le solveur vérifie désormais TOUJOURS ses contraintes et
 nomme celle qui tombe, avec les deux nombres. Il sortait auparavant sans rien
 regarder dès qu'aucun champ n'était ambigu — et un montant tronqué n'est pas
 ambigu.
@@ -101,12 +135,12 @@ qui compte vraiment : c'est celle qui a coûté le 4 octobre.
 
 ## B. La base de correction — quatre couches, datées et sourcées
 
-| couche | contenu | où |
-|---|---|---|
-| 1 · Règles fiscales | taux, droits, seuils, échéances — **chacune citant son article** | `ref.fiscal_parameters` |
-| 2 · Référentiel métier | plan comptable, dossiers, mots-clés de nature → compte, mentions obligatoires | `ref.accounts`, `ref.account_mappings`, `ref.mentions` |
-| 3 · Mémoire fournisseurs | matricule, noms fr/ar, repères de mise en page, taux habituel, retenue, compte | nouvelle, **collective** |
-| 4 · Dictionnaires de lecture | mois fr/ar, chiffres arabes, nombres en lettres, confusions d'OCR, format du matricule | nouvelle |
+| couche                       | contenu                                                                                | où                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 1 · Règles fiscales          | taux, droits, seuils, échéances — **chacune citant son article**                       | `ref.fiscal_parameters`                                |
+| 2 · Référentiel métier       | plan comptable, dossiers, mots-clés de nature → compte, mentions obligatoires          | `ref.accounts`, `ref.account_mappings`, `ref.mentions` |
+| 3 · Mémoire fournisseurs     | matricule, noms fr/ar, repères de mise en page, taux habituel, retenue, compte         | nouvelle, **collective**                               |
+| 4 · Dictionnaires de lecture | mois fr/ar, chiffres arabes, nombres en lettres, confusions d'OCR, format du matricule | nouvelle                                               |
 
 Les couches 1 et 2 ne sont modifiables que par ALGORIA et l'expert-comptable
 partenaire, avec historique. Les couches 3 et 4 s'enrichissent des corrections.
@@ -120,7 +154,7 @@ mais les mois vivent encore dans le code, et devront descendre en base comme le
 format l'a fait.
 
 **Réserve de conception, à trancher avant d'écrire la couche 3.** Une mémoire
-fournisseurs *collective* fait traverser une frontière de tenant à une donnée.
+fournisseurs _collective_ fait traverser une frontière de tenant à une donnée.
 Elle ne doit porter que ce qui est **public par nature** — matricule, raison
 sociale, mise en page d'une facture type — et jamais un montant, une habitude
 d'achat ou un volume. R6 porte l'isolation par la base : une table partagée est
@@ -136,8 +170,8 @@ photo maître est supprimée après lecture ; le plan de jetons, compressé, vit
 côté du PDF.
 
 **Niveau 1.** JPEG via mozjpeg, côté long 1 800–2 000 px, budget ~250 Ko/page,
-couche de texte invisible. *Acquis le 4 octobre : la couleur est conservée (le
-gain est appliqué par pixel), budget porté à 340 Ko.*
+couche de texte invisible. _Acquis le 4 octobre : la couleur est conservée (le
+gain est appliqué par pixel), budget porté à 340 Ko._
 
 **Niveau 2.** Compression MRC : fond couleur basse résolution, calque texte
 haute résolution **sans perte** (CCITT G4, ou JBIG2 génériquement sans perte).
@@ -149,21 +183,60 @@ haute résolution **sans perte** (CCITT G4, ou JBIG2 génériquement sans perte)
 > faute la plus grave qu'une archive puisse commettre : elle est invisible,
 > elle est plausible, et elle est irréversible.
 
-**Stockage.** Hetzner Object Storage 24 mois, puis Storage Box ; copie chiffrée
-restic ; audit d'intégrité annuel par empreinte.
+**Stockage : Google Cloud Storage**, projet `malica-office-algoria`, région
+`europe-west1`. Cycle de vie Standard → Nearline (30 j) → Coldline (90 j) →
+Archive (365 j), verrou de conservation de 10 ans, et une copie de sécurité
+séparée. _Hetzner reste la production en attendant ; rien n'est créé sur Google
+Cloud avant votre accord sur ce qui suit._
 
-**Ordre de grandeur** pour 1 000 PME × 100 pages/mois :
+### Le plan chiffré — et il renverse la conclusion
 
-| | par mois | sur 1 an (cumul) | sur 10 ans (cumul) |
-|---|---|---|---|
-| Niveau 1 (~250 Ko) | 25 Go | 300 Go | 3,0 To |
-| Niveau 2 (~125 Ko) | 12,5 Go | 150 Go | 1,5 To |
+Tarifs `europe-west1` : Standard 0,020 · Nearline 0,010 · Coldline 0,004 ·
+Archive 0,0012 $ par Go et par mois. Pour 1 000 PME × 100 pages/mois :
 
-**(projeté)**, à confirmer par le poids réel mesuré sur les onze factures du
-prototype. Le chiffre à dix ans est celui qui décide : une rétention légale de
-dix ans sans palier froid rend le niveau 2 obligatoire, pas optionnel.
+|                         | stock à 10 ans | **cumul sur 10 ans** | facture du 120ᵉ mois |
+| ----------------------- | -------------- | -------------------- | -------------------- |
+| Niveau 1 (~250 Ko/page) | 3 000 Go       | **398 $**            | 5,14 $               |
+| Niveau 2 (~125 Ko/page) | 1 500 Go       | **199 $**            | 2,57 $               |
 
----
+Copie de sécurité séparée, 3 000 Go : **3,60 $/mois** en Archive sur une
+seconde région, contre 12,00 $/mois sur une Storage Box Hetzner.
+
+**Ce que ces nombres disent, et ce n'est pas ce qu'on attendait : l'archive
+n'est pas un problème de coût.** Quatre cents dollars sur dix ans pour mille PME,
+soit **quarante cents par PME et par an**. La compression MRC du niveau 2
+économiserait 199 $ _sur dix ans_ — vingt dollars l'an.
+
+Or le niveau 2 porte un risque sérieux : c'est la famille de compression où
+l'affaire Xerox s'est produite, et un calque mal réglé altère des chiffres de
+façon invisible et irréversible. **Vingt dollars par an ne paient pas ce
+risque.** Si le niveau 2 se justifie, ce sera pour la bande passante et le
+temps de chargement sur un téléphone — pas pour le stockage. Je recommande de
+le remettre après le pilote, et de mesurer d'abord le poids réel sur les onze
+factures.
+
+### Deux réserves avant de créer quoi que ce soit
+
+**1. Le verrou de conservation de 10 ans empêche la purge que le produit
+promet.** Un `retention lock` GCS rend un objet indestructible avant son
+échéance — par nous aussi. Or le dépôt porte `db/pilote/purger-pieces.mjs`,
+« purge des fichiers sur demande écrite », dont je me suis servi ce matin même.
+Avec le verrou, cette demande deviendrait impossible à honorer, et une demande
+d'effacement de données personnelles avec elle. Les deux exigences sont
+contradictoires : il faut trancher laquelle prime, ou distinguer deux
+compartiments — les pièces comptables sous verrou, le reste non.
+
+**2. Le coût réel n'est pas le stockage, c'est la RELECTURE.** Archive facture
+0,05 $ par Go restitué, avec 365 jours de durée minimale. Un cabinet qui
+reparcourt les pièces d'un exercice clos déclenche des frais de restitution et
+de sortie qui dépassent vite les quelques dollars de stockage. Il faut donc
+savoir à quelle fréquence une pièce de plus d'un an est relue — je ne le sais
+pas, et aucune mesure du produit ne le dit aujourd'hui. À instrumenter avant de
+poser le cycle de vie, sans quoi on optimise 400 $ et on en dépense 4 000.
+
+**Crédits ou argent réel** : je ne connais pas l'état de vos crédits Google
+Cloud. Les montants ci-dessus sont en argent réel, hors crédits — dites-moi ce
+qu'ils couvrent et sur quelle durée, et je referai le calcul.
 
 ## Ce qui bloque le prototype
 
@@ -176,27 +249,35 @@ Ce qu'il me faut, et qui ne demande aucune manipulation technique : les
 photographier avec l'application. Je relève moi-même ce que la machine a lu, et
 l'expert-comptable valide les montants attendus.
 
-Deux autres dépendances, à décider :
+Trois autres dépendances, à décider :
 
-1. **PaddleOCR PP-OCRv5** demande un service sur le serveur (processeur). Le
-   staging est une CX23 : 2 vCPU et 3,8 Go partagés avec PostgreSQL, l'API, le
-   site et les sauvegardes. Un OCR sur processeur à côté de cela ne tiendra pas.
-   Le second témoin demande donc une machine, ou un report.
-2. **Qwen3-VL** n'a pas de ligne de tarif en base. R8 veut que le modèle vienne
-   de la table qui le tarife : la bascule passe par une migration, pas par un
-   déploiement.
+1. **PaddleOCR PP-OCRv6** (sinon v5) demande un service sur le serveur
+   (processeur). Le staging est une CX23 : 2 vCPU et 3,8 Go partagés avec
+   PostgreSQL, l'API, le site et les sauvegardes. Un OCR sur processeur à côté
+   de cela ne tiendra pas. Le second témoin demande donc une machine, ou un
+   report.
+2. **`qwen3.8-flash`** n'a pas de ligne de tarif en base. R8 veut que le modèle
+   vienne de la table qui le tarife : la bascule passe par une migration, pas
+   par un déploiement.
+3. **Le verrou de conservation de 10 ans contre la purge sur demande** : les
+   deux exigences se contredisent, et il faut trancher avant de créer le seau.
 
 ---
 
 ## Ce que je recommande, dans cet ordre
 
-1. **Le recollage à l'OCR** (étape 1), sur le plan réel que j'ai déjà. C'est la
-   garantie structurelle contre le défaut du 4 octobre, et elle ne dépend
-   d'aucun modèle ni d'aucune machine. Prototypable aujourd'hui.
-2. **Qwen3-VL à la place du raisonneur** (étape 2). Un tarif en migration, une
-   bascule, et la mesure côte à côte sur la facture de loyer : coût, latence, et
-   surtout si la désignation reste juste.
-3. **Les onze factures**, dès que vous les avez photographiées. Sans elles, tout
-   le reste se mesure sur une pièce, et une pièce ne prouve pas un taux de 98 %.
-4. **Le second témoin et l'archive niveau 2**, qui demandent tous deux une
-   décision d'infrastructure.
+1. ~~Le recollage à l'OCR~~ **fait** (prototype non branché, 21 cas), et il a
+   trouvé qu'un numéro de téléphone a la même forme qu'un montant tunisien.
+2. ~~Sortir du raisonneur~~ **fait** : `deepseek-chat`, après mesure, et avec le
+   contrôle `sens_de_la_piece` posé AVANT la bascule parce que la mesure avait
+   montré une erreur de sens silencieuse.
+3. **Les onze factures**, dès que vous les aurez photographiées. C'est le
+   bloquant principal : tout se mesure aujourd'hui sur une pièce, et une pièce
+   ne prouve pas un taux de 98 %.
+4. **Instrumenter la fréquence de relecture** d'une pièce de plus d'un an. Sans
+   ce chiffre, poser un cycle de vie Archive revient à optimiser 400 $ de
+   stockage en risquant 4 000 $ de restitution.
+5. **`qwen3.8-flash`** : relever son tarif, le mettre en base, puis le mesurer
+   contre `deepseek-chat` sur les onze factures.
+6. **Le second témoin et le niveau 2 d'archive**, qui demandent tous deux une
+   décision d'infrastructure — et le niveau 2 n'est plus justifié par le coût.
