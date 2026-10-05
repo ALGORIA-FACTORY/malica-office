@@ -339,6 +339,10 @@ DROITS HORS TVA : si la pièce imprime un droit de timbre ou un droit assimilé,
 de son montant avec le code correspondant de la liste des droits fournie. Sinon, tableau vide.
 Une ligne par taux de TVA présent sur la pièce. Le code de taux vient exclusivement de la liste
 fournie ; s'il n'y a pas de correspondance, n'émets pas la ligne.
+Le "ttc" d'une ligne ne se renseigne que si la pièce imprime un TTC PAR TAUX. Le total TTC du
+pied de facture n'est le TTC d'aucune ligne : il porte aussi les droits hors TVA (timbre), qui
+n'appartiennent à aucun taux. Il va dans "totals.ttc" et nulle part ailleurs — sinon renvoie null
+pour le "ttc" de la ligne.
 SENS DE LA PIÈCE : on te donne le DOSSIER (raison sociale, matricule fiscal). Si la pièce est
 ÉMISE PAR le dossier (son nom ou son matricule figure comme émetteur/vendeur), "document_kind"
 vaut "facture_vente". Si la pièce est ADRESSÉE AU dossier (client/livré à/facturé à), elle vaut

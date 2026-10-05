@@ -64,6 +64,27 @@ describe("la consigne de désignation d'une facture", () => {
     assert.match(SYSTEM_SELECT, /"ordinal_end"/);
   });
 
+  it("dit que le TTC du pied n'est pas le TTC d'une ligne de taux", () => {
+    /*
+     * Trouvé en interrogeant le VRAI modèle sur le vrai plan de jetons, le
+     * 5 octobre 2026, juste après avoir levé l'interdiction.
+     *
+     * Il désignait correctement toutes les plages — et affectait le TTC global
+     * du pied, 3 594,800, au TTC de la ligne « TVA 19 % ». Or cette ligne vaut
+     * 3 020,000 + 573,800 = 3 593,800 : l'écart est le dinar de timbre, qui
+     * appartient au pied et à aucun taux.
+     *
+     * Conséquence : le garde posé le matin même aurait crié sur une facture
+     * parfaitement valide. La consigne doit donc dire que le TTC d'une ligne
+     * ne s'écrit que si la pièce imprime un TTC PAR TAUX.
+     *
+     * C'est la démonstration que relecture juste et désignation juste sont deux
+     * garanties distinctes : le banc du jeu d'or était vert, et la production
+     * aurait été fausse.
+     */
+    assert.match(SYSTEM_SELECT, /TTC\s+par\s+taux/i);
+  });
+
   it("continue d'interdire l'invention, qui est l'autre moitié de R2", () => {
     // La plage est une autorisation de CITER plus large, jamais de deviner.
     // `\s+` et non une espace : l'invite est écrite à la main, et ses retours
