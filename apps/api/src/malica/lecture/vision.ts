@@ -291,7 +291,7 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
   throw new Error(`${label} : ${last instanceof Error ? last.message : String(last)}`);
 }
 
-const SYSTEM_SELECT = `Tu es un désignateur. On te donne le plan de tokens déjà lu sur une facture.
+export const SYSTEM_SELECT = `Tu es un désignateur. On te donne le plan de tokens déjà lu sur une facture.
 Tu ne transcris JAMAIS une valeur : tu renvoies uniquement l'emplacement du token qui la porte,
 sous la forme {"page":n,"ordinal":n}. Si un élément est absent de la pièce, renvoie null — ne
 devine jamais.
@@ -309,9 +309,18 @@ Réponds STRICTEMENT en JSON :
 MATRICULES : "references.matricule_fiscal" est celui de l'ÉMETTEUR de la pièce ;
 "references.matricule_fiscal_client" est celui du CLIENT (facturé à, livré à, destinataire), s'il
 est imprimé — sinon null. Ne les intervertis jamais.
-Pour un champ TEXTUEL (issuer, references) dont la valeur occupe plusieurs tokens contigus
-(raison sociale, numéro en deux morceaux), ajoute "ordinal_end" : {"page":1,"ordinal":3,"ordinal_end":5}.
-Un MONTANT ou une DATE ne porte jamais "ordinal_end" : un seul token.
+PLAGES DE TOKENS. Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs
+tokens contigus. Dans ce cas, et dans ce cas seulement, ajoute "ordinal_end" pour couvrir TOUS ses
+tokens : {"page":1,"ordinal":3,"ordinal_end":5}. Cela vaut pour n'importe quel champ.
+Les trois cas où c'est indispensable :
+ — un MONTANT coupé par l'espace des milliers. « 2 800,000 » est DEUX tokens (« 2 » puis
+   « 800,000 ») : désigne-les ensemble. Ne cite jamais « 2 » seul — ce serait rendre 2 dinars pour
+   2 800 dinars. Même chose pour « 3 020,000 », « 1 234,560 », « 12 500 ».
+ — une DATE en toutes lettres. « 1 septembre 2026 » est TROIS tokens : désigne-les ensemble.
+ — un TEXTE en plusieurs mots : raison sociale, numéro en deux morceaux, désignation d'article.
+Une valeur qui tient dans un seul token n'a pas de "ordinal_end" : « 220,000 » se cite seul.
+La plage ne sert qu'à CITER plus large, jamais à assembler ce qui n'est pas contigu : les tokens
+d'une plage doivent se suivre, et porter une seule valeur.
 ARTICLES : une entrée par ligne du tableau des articles/prestations, dans l'ordre imprimé.
 N'OMETS AUCUNE LIGNE du tableau, même sans prix unitaire, même sur plusieurs pages.
 Méthode imposée : repère d'abord la ligne d'ENTÊTES du tableau (Désignation, Qté, P.U., P.U. TTC,
@@ -320,7 +329,8 @@ ligne du tableau prends les tokens de la MÊME bande horizontale, colonne par co
 imprimé de gauche à droite (de droite à gauche si la pièce est en arabe).
 La désignation est un champ TEXTUEL (utilise "ordinal_end" pour couvrir tous ses tokens, y compris
 une désignation qui court sur deux lignes).
-La quantité et les prix unitaires sont des MONTANTS : un seul token chacun, jamais "ordinal_end".
+La quantité, les prix unitaires et les totaux de ligne suivent la règle des PLAGES ci-dessus :
+un seul token quand la valeur en tient un, "ordinal_end" dès qu'une espace de milliers la coupe.
 Ne confonds jamais la colonne du prix unitaire avec celle du total de ligne, ni le taux de TVA
 (« 19 », « 19% ») avec un prix. Si une colonne n'est pas imprimée sur la pièce (pas de prix
 unitaire TTC par exemple), renvoie null pour elle — ne la reconstitue jamais.

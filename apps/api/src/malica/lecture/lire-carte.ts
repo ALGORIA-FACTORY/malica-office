@@ -64,7 +64,7 @@ const DesignationCarte = z.object({
   regime_tva: z.string().min(1).nullish(),
 });
 
-const SYSTEM_CARTE = `Tu es un désignateur. On te donne le plan de tokens relevé sur une CARTE
+export const SYSTEM_CARTE = `Tu es un désignateur. On te donne le plan de tokens relevé sur une CARTE
 D'IDENTIFICATION FISCALE tunisienne.
 
 Tu ne transcris JAMAIS une valeur : tu renvoies uniquement l'emplacement du token qui la porte,
@@ -81,11 +81,12 @@ Réponds STRICTEMENT en JSON :
  "regime_imposition":"<un code de la liste des régimes d'imposition, ou null>",
  "regime_tva":"<un code de la liste des régimes de TVA, ou null>"}
 
-Pour un champ TEXTUEL dont la valeur occupe plusieurs tokens contigus — une raison sociale, une
-adresse, une activité —, ajoute "ordinal_end" pour couvrir tous ses tokens.
-Le MATRICULE FISCAL et la DATE ne portent jamais "ordinal_end" : un seul token chacun. Un
-matricule tunisien s'écrit sous la forme 1234567/A/M/000 ; s'il est éclaté sur plusieurs tokens,
-désigne celui qui porte le numéro à sept chiffres.
+Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs tokens contigus. Dans
+ce cas, ajoute "ordinal_end" pour couvrir tous ses tokens — une raison sociale, une adresse, une
+activité, et aussi une date écrite en toutes lettres (« 1 septembre 2026 » est TROIS tokens).
+Le MATRICULE FISCAL fait exception : désigne un seul token. Un matricule tunisien s'écrit sous la
+forme 1234567/A/M/000 ; s'il est éclaté sur plusieurs tokens, désigne celui qui porte le numéro à
+sept chiffres.
 
 LES DEUX RÉGIMES sont les seuls champs où tu ne désignes pas un token : tu CHOISIS un code dans
 les listes fournies, d'après ce que la carte imprime. Si la carte ne le dit pas clairement, ou si

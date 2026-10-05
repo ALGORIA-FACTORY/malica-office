@@ -138,10 +138,34 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
 
   const p = await lireParametres(db, pack, dateRef);
 
-  // Le texte imprimé de chaque champ cité, jetons réassemblés dans l'ordre.
+  /*
+   * Le texte imprimé de chaque champ cité, jetons réassemblés dans l'ordre.
+   *
+   * ================================ UNE PROMESSE QUI N'ÉTAIT PAS TENUE
+   *
+   * L'en-tête de ce fichier annonce depuis le 24 août que ce mécanisme règle
+   * « le piège des montants coupés en deux jetons (« 1 » et « 234,560 ») : ils
+   * se réunissent ici, par leurs citations ». C'était faux, et c'est resté
+   * faux six semaines.
+   *
+   * La requête ne joignait que `c.token_id`, soit le PREMIER jeton de la
+   * plage. Il n'y avait qu'une citation par champ, donc le `join(" ")`
+   * ci-dessous ne joignait jamais rien, et la normalisation recevait « 3 » là
+   * où la pièce imprimait « 3 020,000 ».
+   *
+   * Depuis `20261005120000`, la citation porte `ordinal_end`. On joint donc
+   * l'INTERVALLE, et la promesse devient un mécanisme. Pour une citation sans
+   * plage, `coalesce` ramène l'intervalle au seul jeton cité : le comportement
+   * des citations déjà en base ne change pas.
+   */
   const { rows: cites } = await db.query<{ field: string; text: string }>(
     `select c.field, t.text
-       from capture.citations c join capture.token_plan t on t.id = c.token_id
+       from capture.citations c
+       join capture.token_plan d on d.id = c.token_id
+       join capture.token_plan t
+         on t.piece_id = c.piece_id
+        and t.page = d.page
+        and t.ordinal between d.ordinal and coalesce(c.ordinal_end, d.ordinal)
       where c.piece_id = $1
       order by c.field, t.page, t.ordinal`,
     [pieceId],

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
-import type { PageToken } from "./token-plan.ts";
+import type { PageToken, TokenRef } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
 
 /**
@@ -30,9 +30,9 @@ const jeton = (ordinal: number, text: string): PageToken => ({
 const ref = (ordinal: number) => ({ page: 1, ordinal });
 
 const selection = (totals: {
-  base_ht?: { page: number; ordinal: number } | null;
-  vat?: { page: number; ordinal: number } | null;
-  ttc?: { page: number; ordinal: number } | null;
+  base_ht?: TokenRef | null;
+  vat?: TokenRef | null;
+  ttc?: TokenRef | null;
 }): VisionSelection =>
   ({
     issuer: null,
@@ -145,5 +145,91 @@ describe("banc des factures — aucun chiffre inventé (3B, 18 septembre 2026)",
   it("et la lecture se dit partielle", () => {
     assert.equal(lu.contract, "extract.v1.partiel");
     assert.equal(lu.valid, false);
+  });
+});
+
+describe("banc des factures — pièce 73ae6059, le loyer tronqué (5 octobre 2026)", () => {
+  /*
+   * Les trois montants EXACTEMENT comme ils sont sortis en production, le
+   * 4 octobre, sur une facture dont le papier portait 3 020,000 / 573,800 /
+   * 3 594,800. Chaque montant coupé par l'espace des milliers a été réduit à
+   * son premier jeton.
+   *
+   * Aucun de ces trois nombres n'est ambigu : « 3 » a une lecture unique. Tous
+   * les drapeaux du produit visaient l'ambiguïté, donc aucun ne s'est levé, et
+   * la pièce est partie avec HT 3,000, TVA 573,800, TTC 3,000.
+   *
+   * 3,000 + 573,800 ne fait pas 3,000. C'est ce que ce cas exige de voir.
+   */
+  const lu = buildExtractFromTokenPlan({
+    tokens: [jeton(0, "3"), jeton(1, "573,800"), jeton(2, "3")],
+    selection: selection({ base_ht: ref(0), vat: ref(1), ttc: ref(2) }),
+    decimals: 3,
+  });
+
+  it("dit que la facture ne boucle pas", () => {
+    const incoherence = drapeau(lu, "totals.ttc");
+    assert.equal(incoherence?.code, "ARITHMETIQUE_INCOHERENTE");
+  });
+
+  it("montre les deux nombres, pas un reproche vague", () => {
+    // « La facture ne tient pas » n'apprend rien à qui doit la corriger. Le
+    // détail doit porter ce que l'équation donne et ce que la pièce imprime :
+    // c'est l'écart qui désigne le montant à relire.
+    const detail = drapeau(lu, "totals.ttc")?.detail ?? "";
+    assert.match(detail, /576\.800/, `l'équation donne 576,800 : ${detail}`);
+    assert.match(detail, /3\.000/, `la pièce porte 3,000 : ${detail}`);
+  });
+
+  it("ne confond pas incohérence et ambiguïté", () => {
+    // Le drapeau d'ambiguïté dit « je ne sais pas lire ». Celui-ci dit « je
+    // sais lire, et ce que je lis ne tient pas ». Les deux gestes de
+    // correction sont différents, donc les deux drapeaux doivent l'être.
+    assert.notEqual(drapeau(lu, "totals.ttc")?.code, "SEPARATEUR_AMBIGU");
+  });
+});
+
+describe("banc des factures — le timbre appartient à l'équation (5 octobre 2026)", () => {
+  /*
+   * La même facture, lue JUSTE. Son arithmétique boucle au millime :
+   *
+   *   3 020,000 + 573,800 + 1,000 (timbre) = 3 594,800
+   *
+   * L'équation du produit était « TTC = HT + TVA », sans les droits hors TVA.
+   * Elle tombait à 3 593,800 : toute facture tunisienne portant un timbre —
+   * c'est-à-dire presque toutes — violait donc une contrainte du solveur.
+   *
+   * Sans ce cas, le garde posé le 5 octobre aurait crié sur des pièces
+   * valides. Un garde qui crie à tort est pire qu'un garde muet : on apprend
+   * à l'ignorer, et il ne protège plus de rien.
+   */
+  const lu = buildExtractFromTokenPlan({
+    tokens: [
+      jeton(0, "3"),
+      jeton(1, "020,000"),
+      jeton(2, "573,800"),
+      jeton(3, "1,000"),
+      jeton(4, "3"),
+      jeton(5, "594,800"),
+    ],
+    selection: {
+      ...selection({
+        base_ht: { page: 1, ordinal: 0, ordinalEnd: 1 },
+        vat: ref(2),
+        ttc: { page: 1, ordinal: 4, ordinalEnd: 5 },
+      }),
+      other_charges: [{ code: "DROIT_TIMBRE", amount: ref(3) }],
+    } as unknown as VisionSelection,
+    decimals: 3,
+  });
+
+  it("lit les montants coupés par l'espace des milliers", () => {
+    const totals = lu.extract["totals"] as Record<string, string>;
+    assert.equal(totals["base_ht"], "3020.000");
+    assert.equal(totals["ttc"], "3594.800");
+  });
+
+  it("ne crie pas : HT + TVA + timbre = TTC", () => {
+    assert.equal(drapeau(lu, "totals.ttc")?.code, undefined);
   });
 });

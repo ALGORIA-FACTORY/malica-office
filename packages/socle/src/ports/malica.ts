@@ -66,6 +66,16 @@ export interface ReadFlag {
     | "SEPARATEUR_AMBIGU"
     /** Le texte était ambigu ; l’arithmétique de la facture a tranché. */
     | "DECIDE_PAR_ARITHMETIQUE"
+    /**
+     * Les valeurs RETENUES ne vérifient pas une équation de la facture.
+     *
+     * Posé le 5 octobre 2026, après qu'un montant coupé par l'espace des
+     * milliers soit sorti en production sans aucun avertissement. Un montant
+     * tronqué n'est pas ambigu — « 2 » a une lecture unique — donc il
+     * franchissait tous les drapeaux, qui visaient tous l'ambiguïté. Celui-ci
+     * ne juge pas la lecture d'un champ : il juge si la facture BOUCLE.
+     */
+    | "ARITHMETIQUE_INCOHERENTE"
     | "DATE_UNREADABLE"
     | "DERIVED_BY_SOCLE";
   detail?: string;

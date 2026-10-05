@@ -189,3 +189,185 @@ describe("treillisMontant — ce qui n'est pas un montant", () => {
     assert.deepEqual(valeurs("١٢٣ د.ت"), []);
   });
 });
+
+/**
+ * ============================= LE GARDE QUI MANQUAIT : LA CONTRAINTE VIOLÉE
+ *
+ * Diagnostic du 5 octobre 2026, et c'est sa conclusion la plus importante :
+ *
+ *   UN MONTANT TRONQUÉ N'EST PAS UN MONTANT AMBIGU.
+ *
+ * Tout le dispositif de `resoudreFacture` est tourné contre l'ambiguïté : il
+ * énumère les lectures, laisse l'arithmétique trancher, et déclare ambigu ce
+ * qu'aucune équation ne départage. C'est juste, et insuffisant.
+ *
+ * « 2 » est un nombre net, à lecture unique. Un plan de jetons coupé à
+ * l'espace des milliers produit donc des champs tous CERTAINS — et le solveur
+ * sortait alors par la porte de devant, `doutes.length === 0`, AVANT d'avoir
+ * évalué la moindre contrainte. Les équations étaient posées, jamais lues.
+ *
+ * Pire, dans le cas où des doutes subsistaient : `scores` ne faisait que
+ * COMPTER les contraintes satisfaites. Une contrainte violée baissait un
+ * score — elle ne levait aucun drapeau. Une facture qui ne boucle pas passait
+ * donc en silence dès lors qu'aucune autre lecture n'était disponible.
+ *
+ * Ces cas exigent l'inverse : le solveur évalue TOUJOURS ses contraintes sur
+ * les valeurs qu'il retient, et rend la liste de celles qui tombent.
+ */
+describe("resoudreFacture — une contrainte violée se dit", () => {
+  const champ = (nom: string, texte: string, decimales = DINAR): ChampMontant => ({
+    champ: nom,
+    hypotheses: treillisMontant(texte, decimales),
+  });
+
+  it("la facture du 4 octobre, telle que le produit l'avait lue", () => {
+    /*
+     * Les valeurs exactes qui sont sorties en production : les montants coupés
+     * par l'espace ont été réduits à leur premier jeton, les autres sont
+     * justes. Chaque champ n'a qu'une lecture, donc aucun doute, donc l'ancien
+     * solveur rendait `{ ambigus: [], marge: 0 }` et personne n'était averti.
+     *
+     * 3,000 + 573,800 ne fait pas 3,000. C'est visible à l'œil nu, et le
+     * produit ne le voyait pas.
+     */
+    const r = resoudreFacture(
+      [champ("totals.base_ht", "3"), champ("totals.vat", "573,800"), champ("totals.ttc", "3")],
+      [{ type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat"] }],
+      { decimales: DINAR },
+    );
+
+    assert.deepEqual(r.ambigus, [], "rien n'est ambigu : c'est tout le piège");
+    assert.equal(r.violations.length, 1, "et pourtant la facture ne boucle pas");
+    const v = r.violations[0]!;
+    assert.equal(v.champ, "totals.ttc");
+    assert.deepEqual([...v.parties], ["totals.base_ht", "totals.vat"]);
+    assert.equal(v.lu, 3000, "ce que la pièce porte, en millimes");
+    assert.equal(v.calcule, 576800, "ce que l'équation donne");
+  });
+
+  it("une facture qui boucle ne porte aucune violation", () => {
+    const r = resoudreFacture(
+      [
+        champ("totals.base_ht", "3 020,000"),
+        champ("totals.vat", "573,800"),
+        champ("timbre", "1,000"),
+        champ("totals.ttc", "3 594,800"),
+      ],
+      [
+        {
+          type: "somme",
+          total: "totals.ttc",
+          parties: ["totals.base_ht", "totals.vat", "timbre"],
+        },
+      ],
+      { decimales: DINAR },
+    );
+    assert.deepEqual(r.violations, []);
+    assert.equal(r.valeurs.get("totals.ttc")?.millimes, 3594800);
+  });
+
+  it("le timbre oublié de l'équation ferait crier sur une pièce valide", () => {
+    /*
+     * La même facture, avec l'équation du dépôt d'avant le 5 octobre — « TTC =
+     * HT + TVA », sans les droits hors TVA. Elle tombe à 3 593,800 : faux
+     * d'exactement le dinar de timbre.
+     *
+     * Ce cas n'est pas là pour verrouiller un comportement souhaitable, mais
+     * pour garder la trace de ce que l'équation incomplète produisait. Un garde
+     * qui crie sur une pièce valide est pire qu'un garde muet : on apprend à
+     * l'ignorer, et il ne protège plus de rien.
+     */
+    const r = resoudreFacture(
+      [
+        champ("totals.base_ht", "3 020,000"),
+        champ("totals.vat", "573,800"),
+        champ("totals.ttc", "3 594,800"),
+      ],
+      [{ type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat"] }],
+      { decimales: DINAR },
+    );
+    assert.equal(r.violations.length, 1);
+    assert.equal(r.violations[0]!.calcule, 3593800);
+    assert.equal(r.violations[0]!.lu, 3594800);
+  });
+
+  it("une contrainte dont un terme manque ne se prononce pas", () => {
+    // Un champ illisible n'est pas une incohérence : la différence est tout
+    // l'intérêt du drapeau. On ne reproche pas à une facture d'être incomplète.
+    const r = resoudreFacture(
+      [champ("totals.base_ht", "1 000,000"), champ("totals.vat", "pas un nombre")],
+      [{ type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat"] }],
+      { decimales: DINAR },
+    );
+    assert.deepEqual(r.violations, []);
+  });
+
+  it("un produit violé se dit aussi, à la tolérance d'arrondi près", () => {
+    const violee = resoudreFacture(
+      [
+        champ("articles[0].quantity", "2,000"),
+        champ("articles[0].unit_price_ht", "10,000"),
+        champ("articles[0].total_ht", "25,000"),
+      ],
+      [
+        {
+          type: "produit",
+          total: "articles[0].total_ht",
+          quantite: "articles[0].quantity",
+          unitaire: "articles[0].unit_price_ht",
+        },
+      ],
+      { decimales: DINAR },
+    );
+    assert.equal(violee.violations.length, 1);
+    assert.equal(violee.violations[0]!.champ, "articles[0].total_ht");
+
+    // 2,5 × 7,549 = 18,8725 : le papier porte 18,873 ou 18,872 selon le sens
+    // d'arrondi de celui qui l'a imprimé. Ce n'est pas une incohérence.
+    const arrondie = resoudreFacture(
+      [
+        champ("articles[0].quantity", "2,500"),
+        champ("articles[0].unit_price_ht", "7,549"),
+        champ("articles[0].total_ht", "18,873"),
+      ],
+      [
+        {
+          type: "produit",
+          total: "articles[0].total_ht",
+          quantite: "articles[0].quantity",
+          unitaire: "articles[0].unit_price_ht",
+        },
+      ],
+      { decimales: DINAR },
+    );
+    assert.deepEqual(arrondie.violations, []);
+  });
+
+  it("quand l'arithmétique a tranché, c'est la valeur RETENUE qui est jugée", () => {
+    /*
+     * Le solveur choisit une affectation, puis on vérifie celle-là. Sans quoi
+     * on jugerait une facture sur des lectures qu'on vient d'écarter — et un
+     * champ ambigu produirait toujours une violation, puisque l'une au moins
+     * de ses lectures est fausse.
+     */
+    const r = resoudreFacture(
+      [champ("base_ht", "1.200"), champ("tva", "228"), champ("ttc", "1.428")],
+      [{ type: "somme", total: "ttc", parties: ["base_ht", "tva"] }],
+      { decimales: DINAR },
+    );
+    assert.equal(r.valeurs.get("ttc")?.decidePar, "arithmetique");
+    assert.deepEqual(r.violations, [], "l'affectation retenue est celle qui boucle");
+  });
+
+  it("un champ resté ambigu ne produit pas de violation", () => {
+    // Rien n'a été retenu pour lui : on ne peut rien lui reprocher. Le drapeau
+    // d'ambiguïté est déjà posé ailleurs, et l'écran posera la question.
+    const r = resoudreFacture(
+      [champ("totals.ttc", "2.800"), champ("totals.base_ht", "1 000,000")],
+      [{ type: "somme", total: "totals.ttc", parties: ["totals.base_ht"] }],
+      { decimales: DINAR },
+    );
+    assert.deepEqual(r.ambigus, ["totals.ttc"]);
+    assert.deepEqual(r.violations, []);
+  });
+});

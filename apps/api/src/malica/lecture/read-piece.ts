@@ -32,6 +32,7 @@ import {
   type FieldCitation,
   type PageToken,
   type ReadFlag,
+  type TokenRef,
 } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
 
@@ -43,7 +44,16 @@ export interface BuiltRead {
   valid: boolean;
 }
 
-type Ref = { page: number; ordinal: number } | null | undefined;
+/**
+ * Une désignation de token, telle que le modèle la rend.
+ *
+ * Elle était déclarée `{ page, ordinal }`, sans la fin de plage. Le type
+ * mentait sans rien casser : la structure passait, `ordinalEnd` arrivait bien
+ * à la relecture, et personne ne pouvait le savoir en lisant ce fichier. Le
+ * jour où il a fallu comprendre pourquoi « 2 800,000 » se lisait « 2,000 »,
+ * ce type a fait partie des raisons de chercher ailleurs.
+ */
+type Ref = TokenRef | null | undefined;
 
 export function buildExtractFromTokenPlan(params: {
   tokens: readonly PageToken[];
@@ -82,8 +92,15 @@ export function buildExtractFromTokenPlan(params: {
 
   // Les équations. Aucune ne connaît de taux : un taux vit dans le paramétrage
   // daté (R4), et la TVA n'entre ici que comme un montant lu, additionné.
+  //
+  // Les DROITS HORS TVA en font partie, et c'est une correction du 5 octobre
+  // 2026 : l'équation était « TTC = HT + TVA », sans eux. Sur la facture de
+  // loyer du 4 octobre — 3 020,000 + 573,800 + 1,000 de timbre = 3 594,800 —
+  // elle tombait à 3 593,800. Presque toute facture tunisienne porte un droit
+  // de timbre, donc presque toute facture tunisienne violait cette contrainte.
+  const droits = selection.other_charges.map((_, k) => `other_charges[${k}].amount`);
   const contraintes: Contrainte[] = [
-    { type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat"] },
+    { type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat", ...droits] },
   ];
   selection.lines.forEach((_, i) =>
     contraintes.push({
@@ -101,7 +118,12 @@ export function buildExtractFromTokenPlan(params: {
       contraintes.push({
         type: "somme",
         total,
-        parties: selection.lines.map((_, i) => `lines[${i}].${champ}`),
+        parties: [
+          ...selection.lines.map((_, i) => `lines[${i}].${champ}`),
+          // Même raison que ci-dessus : le TTC du pied porte les droits hors
+          // TVA, que les lignes par taux, elles, ne portent pas.
+          ...(champ === "ttc" ? droits : []),
+        ],
       });
     }
   }
@@ -329,6 +351,30 @@ export function buildExtractFromTokenPlan(params: {
     field_confidence: { overall: selection.overall_confidence },
     document_kind: selection.document_kind,
   };
+
+  /*
+   * Les équations qui ne tiennent pas, dites une fois chacune.
+   *
+   * Posé le 5 octobre 2026. Jusque-là le solveur évaluait ses contraintes pour
+   * CHOISIR entre des lectures, et ne disait jamais rien quand il n'avait rien
+   * à choisir : une facture dont tous les montants sont nets mais faux passait
+   * en silence. C'est ce qui est arrivé au loyer du 4 octobre.
+   *
+   * Le détail porte les deux nombres, délibérément : « la facture ne tient
+   * pas » n'apprend rien à qui doit la corriger, alors que l'écart entre ce
+   * que l'équation donne et ce que la pièce imprime désigne le montant à
+   * relire. Ici, 576,800 contre 3,000 — l'ordre de grandeur suffit à voir
+   * qu'un montant a été amputé.
+   */
+  for (const v of resolution.violations) {
+    flags.push({
+      field: v.champ,
+      code: "ARITHMETIQUE_INCOHERENTE",
+      detail:
+        `${v.parties.join(" + ")} donne ${enDecimal(v.calcule, decimals)}, ` +
+        `la pièce porte ${enDecimal(v.lu, decimals)}`,
+    });
+  }
 
   const parsed = ExtractV1.safeParse(candidate);
   return {

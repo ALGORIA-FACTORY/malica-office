@@ -60,8 +60,110 @@ function dateReelle(y: string, m: string, d: string): boolean {
   return jour <= dernier;
 }
 
+/**
+ * Les chiffres arabes et persans, ramenés aux latins.
+ *
+ * Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les deux séries de
+ * chiffres sont contiguës dans Unicode, donc la conversion est un décalage —
+ * pas une table, pas un cas particulier.
+ *
+ * Volontairement limité aux DATES. Les montants en chiffres arabes ne sont
+ * toujours pas lus (`montants.test.ts` verrouille ce refus) : élargir la
+ * lecture d'un montant demande le banc du jeu d'or, pas une ligne ici.
+ */
+function enChiffresLatins(s: string): string {
+  return s
+    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
+}
+
+/**
+ * Ce qui rend deux écritures d'un même mois comparables.
+ *
+ * Une OCR rend « fevrier » aussi souvent que « février » : refuser le premier
+ * reviendrait à perdre la date pour un accent. On décompose donc, puis on
+ * retire les marques — mais en DEUX plages, et c'est le piège qui a coûté un
+ * test rouge : « أغسطس » décomposé donne « ا » suivi de U+0654, qui vit dans
+ * le bloc arabe et non dans celui des diacritiques latins. Retirer seulement
+ * U+0300–U+036F réunit « février » et « fevrier », et laisse « أوت » et
+ * « اوت » distincts.
+ *
+ * Les marques arabes retirées couvrent aussi le tashkeel (U+064B–U+0652) :
+ * une facture vocalisée se lit comme une facture qui ne l'est pas.
+ */
+function comparable(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[ؐ-ًؚ-ٰٟ]/g, "")
+    .toLowerCase();
+}
+
+/**
+ * Les mois, en toutes lettres.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Le 4 octobre 2026, une vraie facture portait « Tunis, le 1 septembre 2026 ».
+ * Le produit a rendu `null`, le contrat exige la date, et la pièce entière est
+ * sortie partielle. Aucun nom de mois n'existait alors dans le code de lecture.
+ *
+ * Les deux séries arabes sont présentes, et ce n'est pas un excès de zèle : la
+ * Tunisie dit « جانفي », « فيفري », « أوت », là où le Machrek dit « يناير »,
+ * « فبراير », « أغسطس ». Une facture peut porter l'une ou l'autre, et l'arabe
+ * fait foi.
+ */
+const MOIS: Readonly<Record<string, number>> = {
+  janvier: 1,
+  fevrier: 2,
+  mars: 3,
+  avril: 4,
+  mai: 5,
+  juin: 6,
+  juillet: 7,
+  aout: 8,
+  septembre: 9,
+  octobre: 10,
+  novembre: 11,
+  decembre: 12,
+  // Arabe du Maghreb.
+  جانفي: 1,
+  فيفري: 2,
+  افريل: 4,
+  ماي: 5,
+  جوان: 6,
+  جويلية: 7,
+  اوت: 8,
+  // Arabe du Machrek, employé aussi par une partie des éditeurs.
+  يناير: 1,
+  فبراير: 2,
+  ابريل: 4,
+  مايو: 5,
+  يونيو: 6,
+  يوليو: 7,
+  اغسطس: 8,
+  // Communs aux deux.
+  مارس: 3,
+  سبتمبر: 9,
+  اكتوبر: 10,
+  نوفمبر: 11,
+  ديسمبر: 12,
+};
+
+/*
+ * « 1er septembre 2026 », « le 15 mars 2026 ».
+ *
+ * L'année est exigée sur QUATRE chiffres. Une date en lettres abrégée —
+ * « 15 mars 26 » — est refusée plutôt que rattachée au siècle courant : sur
+ * une pièce comptable, choisir un siècle au jugé est une écriture fausse, et
+ * la date décide de la période de TVA.
+ */
+const MOTIF_EN_LETTRES = new RegExp(
+  `(\\d{1,2})\\s*(?:er|re)?\\s+(${Object.keys(MOIS).join("|")})\\s+(\\d{4})`,
+);
+
 export function normalizeDate(text: string): string | null {
-  const s = text.trim();
+  const s = enChiffresLatins(text.trim());
   const rendre = (y: string, m: string, d: string): string | null =>
     dateReelle(y, m, d) ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
 
@@ -78,25 +180,55 @@ export function normalizeDate(text: string): string | null {
     // fausse. Une date qui n'existe pas est rendue absente, et demandée.
     return rendre(y, dmy[2]!, dmy[1]!);
   }
+
+  const lettres = comparable(s).match(MOTIF_EN_LETTRES);
+  if (lettres) return rendre(lettres[3]!, String(MOIS[lettres[2]!]), lettres[1]!);
+
   return null;
 }
 
-/** La citation d'un token : ce que l'écran surligne, et à quel titre. */
+/**
+ * La citation d'une plage de tokens : ce que l'écran surligne, et à quel titre.
+ *
+ * ============================================= POURQUOI UNE PLAGE, ET NON UN TOKEN
+ *
+ * Elle ne prenait qu'un token, et perdait donc `ordinalEnd`. Trois
+ * conséquences, trouvées le 5 octobre 2026 :
+ *
+ *   — l'écran surlignait « 2 » d'un montant imprimé « 2 800,000 » : il montrait
+ *     à la personne un chiffre qui n'était pas celui qu'on lui annonçait ;
+ *   — la relecture d'audit ne pouvait pas retrouver la valeur à partir de sa
+ *     citation, ce qui est exactement ce que R2 promet ;
+ *   — `analyse.ts` annonçait en commentaire réassembler les tokens cités d'un
+ *     champ — un `join(" ")` qui ne joignait jamais rien, faute de second token.
+ *
+ * Le cadre rendu est l'UNION des tokens de la plage. Pour un token seul, c'est
+ * son cadre, et `ordinalEnd` reste absent : une plage d'un token n'est pas une
+ * plage, et la citation ne doit pas prétendre le contraire.
+ */
 function citer(
-  token: PageToken,
+  plage: readonly PageToken[],
   field: string,
   role: "montant" | "date" | "texte",
   zone?: string | null,
   binding?: CitationBinding,
 ): FieldCitation {
+  const premier = plage[0]!;
+  const dernier = plage[plage.length - 1]!;
   return {
     field,
-    page: token.page,
-    ordinal: token.ordinal,
+    page: premier.page,
+    ordinal: premier.ordinal,
+    ...(plage.length > 1 ? { ordinalEnd: dernier.ordinal } : {}),
     zone: binding?.zone ?? zone ?? null,
     ui_field: binding?.uiField ?? field,
     ui_role: role,
-    bbox: { x0: token.x0, y0: token.y0, x1: token.x1, y1: token.y1 },
+    bbox: {
+      x0: Math.min(...plage.map((t) => t.x0)),
+      y0: Math.min(...plage.map((t) => t.y0)),
+      x1: Math.max(...plage.map((t) => t.x1)),
+      y1: Math.max(...plage.map((t) => t.y1)),
+    },
   };
 }
 
@@ -114,13 +246,19 @@ export interface ResolvedValue {
  * montant coupé par l'espace des milliers, un libellé en plusieurs mots. La
  * plage est celle qu'il a lui-même donnée — on ne l'étend jamais.
  */
-function texteDeLaPlage(tokens: readonly PageToken[], ref: TokenRef, token: PageToken): string {
-  if (typeof ref.ordinalEnd !== "number" || ref.ordinalEnd <= ref.ordinal) return token.text;
+function jetonsDeLaPlage(
+  tokens: readonly PageToken[],
+  ref: TokenRef,
+  token: PageToken,
+): PageToken[] {
+  if (typeof ref.ordinalEnd !== "number" || ref.ordinalEnd <= ref.ordinal) return [token];
   const plage = tokens
     .filter((t) => t.page === ref.page && t.ordinal >= ref.ordinal && t.ordinal <= ref.ordinalEnd!)
     .sort((a, b) => a.ordinal - b.ordinal);
-  return plage.length > 1 ? plage.map((t) => t.text).join(" ") : token.text;
+  return plage.length > 1 ? plage : [token];
 }
+
+const texteDeLaPlage = (plage: readonly PageToken[]): string => plage.map((t) => t.text).join(" ");
 
 /**
  * Filtre du plan de tokens : traduit une désignation de token en valeur.
@@ -149,18 +287,29 @@ export function resolveFromTokenPlan(
       },
     };
   }
-  const citation = citer(token, field, kind === "date" ? "date" : "texte", zone, binding);
+  const plage = jetonsDeLaPlage(tokens, ref, token);
+  const texte = texteDeLaPlage(plage);
+  const citation = citer(plage, field, kind === "date" ? "date" : "texte", zone, binding);
   if (kind === "date") {
-    const value = normalizeDate(token.text);
+    /*
+     * La date se relit sur TOUTE la plage, comme un texte.
+     *
+     * Elle ne lisait que `token.text`, alors même que la plage était calculée
+     * juste à côté pour les champs textuels. Sur « 1 septembre 2026 » — trois
+     * tokens — elle recevait « 1 », et rendait « illisible ». Le drapeau
+     * portait d'ailleurs ce « 1 » en détail, ce qui désignait le défaut sans
+     * que personne le lise.
+     */
+    const value = normalizeDate(texte);
     return value === null
       ? {
           value: null,
           citation,
-          flag: { field, code: "DATE_UNREADABLE", detail: token.text },
+          flag: { field, code: "DATE_UNREADABLE", detail: texte },
         }
       : { value, citation, flag: null };
   }
-  return { value: texteDeLaPlage(tokens, ref, token), citation, flag: null };
+  return { value: texte, citation, flag: null };
 }
 
 /** Un montant lu au plan : sa valeur si elle est certaine, et toutes ses lectures. */
@@ -212,8 +361,9 @@ export function lireMontantDuPlan(
       hypotheses: [],
     };
   }
-  const citation = citer(token, field, "montant", zone, binding);
-  const texte = texteDeLaPlage(tokens, ref, token);
+  const plage = jetonsDeLaPlage(tokens, ref, token);
+  const citation = citer(plage, field, "montant", zone, binding);
+  const texte = texteDeLaPlage(plage);
   const hypotheses = treillisMontant(texte, decimales);
 
   if (hypotheses.length === 0) {

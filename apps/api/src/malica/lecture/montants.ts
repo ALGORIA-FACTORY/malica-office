@@ -189,10 +189,43 @@ interface ValeurResolue {
   decidePar: "lecture" | "arithmetique";
 }
 
+/**
+ * Une équation que les valeurs RETENUES ne vérifient pas.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Le 4 octobre 2026, une facture est sortie avec HT 3,000, TVA 573,800 et TTC
+ * 3,000 — trois montants coupés par l'espace des milliers, donc trois lectures
+ * UNIQUES, donc aucun doute, donc le solveur sortait avant même de regarder
+ * ses équations. Elles étaient posées ; personne ne les lisait.
+ *
+ * Un montant tronqué n'est pas un montant ambigu : c'est pour cela qu'aucun
+ * drapeau ne le voyait. Celui-ci ne juge pas un champ, il juge la facture.
+ */
+interface Violation {
+  /** Le champ qui porte le total de l'équation. */
+  champ: string;
+  /** Les champs dont il devrait être la somme, ou le produit. */
+  parties: readonly string[];
+  /** Ce que l'équation donne, en unités mineures. */
+  calcule: number;
+  /** Ce que la pièce imprime, en unités mineures. */
+  lu: number;
+}
+
 export interface Resolution {
   valeurs: Map<string, ValeurResolue>;
   /** Les champs qu'aucune équation ne départage : l'écran les demande. */
   ambigus: string[];
+  /**
+   * Les équations que les valeurs retenues violent. Vide : la facture boucle.
+   *
+   * Jugées sur ce qui est RETENU, jamais sur les hypothèses écartées — sans
+   * quoi tout champ ambigu produirait une violation, puisque l'une au moins de
+   * ses lectures est fausse. Un champ resté ambigu n'en produit donc aucune :
+   * rien n'a été retenu pour lui, rien ne lui est reproché.
+   */
+  violations: Violation[];
   /**
    * L'écart entre la meilleure affectation et la suivante, en nombre
    * d'équations vérifiées.
@@ -231,17 +264,32 @@ export interface OptionsSolveur {
   combinaisonsMax?: number;
 }
 
-function verifie(
+/**
+ * Évalue une équation, et dit du même coup ce qu'elle donne.
+ *
+ * Une seule fonction rend le verdict ET la mesure, délibérément : quand le
+ * solveur jugeait d'un côté et qu'on rapportait de l'autre, les deux pouvaient
+ * se contredire. Ici le drapeau montré à la personne porte exactement les
+ * nombres sur lesquels la décision a été prise.
+ *
+ * Rend `null` quand un terme manque : une facture incomplète n'est pas une
+ * facture incohérente, et la distinction est tout l'intérêt du drapeau.
+ */
+function evaluer(
   c: Contrainte,
   lu: (champ: string) => number | undefined,
   decimales: number,
   tolerance: number,
-): boolean | null {
+): { ok: boolean; violation: Violation } | null {
   if (c.type === "somme") {
     const total = lu(c.total);
     const parties = c.parties.map(lu);
     if (total === undefined || parties.some((p) => p === undefined)) return null;
-    return parties.reduce((s, p) => s! + p!, 0) === total;
+    const calcule = parties.reduce((s, p) => s! + p!, 0)!;
+    return {
+      ok: calcule === total,
+      violation: { champ: c.total, parties: c.parties, calcule, lu: total },
+    };
   }
   const total = lu(c.total);
   const quantite = lu(c.quantite);
@@ -251,7 +299,26 @@ function verifie(
   // l'échelle, jamais à un flottant. Un produit de montants n'a pas de virgule
   // tant qu'on ne le divise pas — alors on ne le divise pas.
   const facteur = echelle(decimales);
-  return Math.abs(quantite * unitaire - total * facteur) <= tolerance * facteur;
+  return {
+    ok: Math.abs(quantite * unitaire - total * facteur) <= tolerance * facteur,
+    violation: {
+      champ: c.total,
+      parties: [c.quantite, c.unitaire],
+      // Le quotient n'est arrondi QUE pour être montré : la comparaison
+      // ci-dessus, elle, reste entière.
+      calcule: Math.round((quantite * unitaire) / facteur),
+      lu: total,
+    },
+  };
+}
+
+function verifie(
+  c: Contrainte,
+  lu: (champ: string) => number | undefined,
+  decimales: number,
+  tolerance: number,
+): boolean | null {
+  return evaluer(c, lu, decimales, tolerance)?.ok ?? null;
 }
 
 /**
@@ -273,6 +340,22 @@ export function resoudreFacture(
   const valeurs = new Map<string, ValeurResolue>();
   const ambigus: string[] = [];
 
+  /**
+   * Les équations, mesurées sur ce qui est retenu.
+   *
+   * Appelée à CHAQUE sortie de cette fonction, et c'est le point : la version
+   * d'avant le 5 octobre avait trois sorties, dont deux ne regardaient aucune
+   * contrainte. Une seule suffisait pour qu'une facture fausse passe en
+   * silence — et c'est par celle-là que la facture du 4 octobre est passée.
+   */
+  const violations = (): Violation[] => {
+    const retenu = (champ: string): number | undefined => valeurs.get(champ)?.millimes;
+    return contraintes
+      .map((c) => evaluer(c, retenu, decimales, tolerance))
+      .filter((e): e is NonNullable<typeof e> => e !== null && !e.ok)
+      .map((e) => e.violation);
+  };
+
   const lisibles = champs.filter((c) => c.hypotheses.length > 0);
   const certains = lisibles.filter((c) => c.hypotheses.length === 1);
   const doutes = lisibles.filter((c) => c.hypotheses.length > 1);
@@ -283,11 +366,11 @@ export function resoudreFacture(
     valeurs.set(c.champ, { millimes: c.hypotheses[0]!.millimes, decidePar: "lecture" });
   }
 
-  if (doutes.length === 0) return { valeurs, ambigus, marge: 0 };
+  if (doutes.length === 0) return { valeurs, ambigus, violations: violations(), marge: 0 };
 
   const combinaisons = doutes.reduce((n, c) => n * c.hypotheses.length, 1);
   if (combinaisons > combinaisonsMax) {
-    return { valeurs, ambigus: doutes.map((c) => c.champ), marge: 0 };
+    return { valeurs, ambigus: doutes.map((c) => c.champ), violations: violations(), marge: 0 };
   }
 
   // Énumération des affectations, du produit cartésien des treillis.
@@ -332,5 +415,5 @@ export function resoudreFacture(
     }
   });
 
-  return { valeurs, ambigus, marge };
+  return { valeurs, ambigus, violations: violations(), marge };
 }
