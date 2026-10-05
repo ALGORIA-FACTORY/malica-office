@@ -131,6 +131,50 @@ describe("mentions obligatoires", () => {
     assert.equal(c.statut, "reserve");
     assert.deepEqual(c.preuves["manquantes"], ["IDENT_FISCAL_EMETTEUR"]);
   });
+
+  /**
+   * ============== UN MONTANT INCOHÉRENT N'EST PAS UN MONTANT ABSENT
+   *
+   * Relevé le 5 octobre 2026 sur la facture de loyer du 4. Elle imprimait très
+   * lisiblement sa base, sa TVA et son total — et le produit a répondu :
+   *
+   *   « Mentions obligatoires absentes ou illisibles : Date de la facture,
+   *     Base imposable hors taxes, Montant de la TVA, Total toutes taxes
+   *     comprises. »
+   *
+   * Trois de ces quatre reproches étaient faux. La cause est en amont : quand
+   * la normalisation conclut `incoherent`, `vide()` met tous les montants à
+   * `null`, et ce contrôle lisait la SORTIE de la normalisation au lieu de ce
+   * que la pièce porte.
+   *
+   * C'est la pire espèce de message : vérifiable, et faux. La personne regarde
+   * un total imprimé en gras et lit qu'il est absent — après quoi elle ne croit
+   * plus aucun message du produit, y compris les justes.
+   */
+  it("une mention imprimée reste présente, même quand la facture ne tient pas", () => {
+    const incoherent = normaliserMontants(
+      // Les valeurs exactes sorties en production : les montants coupés par
+      // l'espace des milliers réduits à leur premier jeton.
+      { bases: [{ ht: "3", taux: "0.19" }], tva: "573,800", ttc: "3" },
+      P,
+    );
+    const c = statut(facture({ montants: incoherent }), "mentions_obligatoires");
+    assert.deepEqual(
+      c.preuves["manquantes"],
+      [],
+      "la pièce imprime son total : il n'est pas « absent ou illisible »",
+    );
+    assert.equal(c.statut, "conforme");
+  });
+
+  it("et une mention vraiment absente le reste", () => {
+    // La correction ne doit pas rendre ce contrôle complaisant : un TTC que la
+    // pièce ne porte pas manque toujours.
+    const sansTtc = normaliserMontants({ bases: [{ ht: "1 000,000", taux: "0.19" }] }, P);
+    const c = statut(facture({ montants: sansTtc }), "mentions_obligatoires");
+    assert.deepEqual(c.preuves["manquantes"], ["TOTAL_TTC"]);
+    assert.equal(c.statut, "reserve");
+  });
 });
 
 describe("nature de la pièce", () => {

@@ -159,9 +159,18 @@ function mentions(p: PieceAControler, ctx: ContexteControle): ResultatControle {
     IDENT_FISCAL_CLIENT: () => Boolean(p.destinataire.identifiantFiscal),
     DATE_FACTURE: () => Boolean(p.date),
     NUMERO_SEQUENTIEL: () => Boolean(p.numero),
-    BASE_HT: () => p.montants.montants.bases.some((b) => b.ht !== null),
-    MONTANT_TVA: () => p.montants.montants.tva !== null,
-    TOTAL_TTC: () => p.montants.montants.ttc !== null,
+    /*
+     * Sur `imprime`, jamais sur `montants`.
+     *
+     * Ce contrôle répond à « la pièce porte-t-elle cette mention ? ». La
+     * sortie de la normalisation répond à « quelle valeur retient-on ? », et
+     * elle est légitimement vide quand la facture ne tient pas. Les confondre
+     * faisait dire au produit qu'un total imprimé en gras était « absent ou
+     * illisible » — un message vérifiable, et faux (5 octobre 2026).
+     */
+    BASE_HT: () => p.montants.imprime.bases.some((ht) => ht !== null),
+    MONTANT_TVA: () => p.montants.imprime.tva !== null,
+    TOTAL_TTC: () => p.montants.imprime.ttc !== null,
   };
   const manquantes: string[] = [];
   const nonObservables: string[] = [];

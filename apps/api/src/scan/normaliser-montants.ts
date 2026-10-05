@@ -85,6 +85,33 @@ export interface ResultatNormalisation {
     autres: Array<number | null>;
     ttc: number | null;
   };
+  /**
+   * Ce que la pièce PORTE, tel qu'imprimé — indépendamment de ce qui a été
+   * retenu.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Le 5 octobre 2026. La facture de loyer imprimait sa base, sa TVA et son
+   * total en gras, et le produit répondait : « Mentions obligatoires absentes
+   * ou illisibles : Base imposable hors taxes, Montant de la TVA, Total toutes
+   * taxes comprises. » Trois reproches sur quatre étaient faux.
+   *
+   * La cause : quand cette normalisation conclut `incoherent` ou `illisible`,
+   * `vide()` met tous les montants à `null` — ce qui est juste, on ne retient
+   * aucun chiffre — et le contrôle des mentions lisait cette sortie pour juger
+   * de la PRÉSENCE d'une mention. Un montant qu'on refuse de retenir devenait
+   * un montant que la pièce ne porte pas.
+   *
+   * Les deux questions sont distinctes, et doivent être posées à deux endroits
+   * différents : « la pièce imprime-t-elle un total ? » se lit ici ; « quelle
+   * est sa valeur ? » se lit dans `montants`, et peut légitimement rester vide.
+   */
+  imprime: {
+    bases: Array<string | null>;
+    tva: string | null;
+    autres: Array<string | null>;
+    ttc: string | null;
+  };
   /** Indice de confiance, de 0 à 1 — 0 quand aucun chiffre n'est rendu. */
   confiance: number;
   /** Les conventions retenues, montant par montant. */
@@ -226,6 +253,22 @@ export function normaliserMontants(
   p: ParametresMontants,
 ): ResultatNormalisation {
   const taux = entree.bases.map((b) => String(b.taux));
+
+  /*
+   * Ce que la piece porte, releve UNE fois et rendu par toutes les sorties.
+   * Un texte vide vaut absent : une chaine blanche n'est pas une mention.
+   */
+  const texte = (v: string | null | undefined): string | null => {
+    const s = (v ?? "").trim();
+    return s === "" ? null : s;
+  };
+  const imprime = {
+    bases: entree.bases.map((b) => texte(b.ht)),
+    tva: texte(entree.tva),
+    autres: (entree.autres ?? []).map((a) => texte(typeof a === "string" ? a : a.brut)),
+    ttc: texte(entree.ttc),
+  };
+
   const vide = (
     etat: EtatNormalisation,
     raison: string,
@@ -238,6 +281,7 @@ export function normaliserMontants(
       autres: (entree.autres ?? []).map(() => null),
       ttc: null,
     },
+    imprime,
     confiance: 0,
     conventions: [],
     lecturesValides,
@@ -392,6 +436,7 @@ export function normaliserMontants(
         autres: v.autres.map(Number),
         ttc: v.ttc === undefined ? null : Number(v.ttc),
       },
+      imprime,
       confiance,
       conventions: pris.map((c, i) => `${champs[i]!.nom} : ${c.convention}`),
       lecturesValides,

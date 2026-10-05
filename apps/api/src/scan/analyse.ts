@@ -228,6 +228,30 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
             autres: Array.from({ length: nbAutres }, () => null),
             ttc: null,
           },
+          /*
+           * Ce que la pièce imprime, même ici — surtout ici.
+           *
+           * Ce court-circuit se déclenche quand aucune base par taux n'est
+           * lisible, ou quand un code de taux est inconnu du paramétrage. La
+           * pièce, elle, continue d'imprimer ses totaux : les déclarer absents
+           * ajouterait un reproche faux à un reproche juste (5 octobre 2026).
+           *
+           * Sans ligne par taux, la base imprimée est le HT global du pied :
+           * une facture qui ne ventile pas sa TVA porte quand même sa base.
+           */
+          imprime: {
+            bases:
+              lignes.length === 0
+                ? [brut("totals.base_ht")]
+                : lignes.map(
+                    (_, i) =>
+                      brut(`lines[${i}].base_ht`) ??
+                      (lignes.length === 1 ? brut("totals.base_ht") : null),
+                  ),
+            tva: brut("totals.vat"),
+            autres: droits.map((_, i) => brut(`other_charges[${i}].amount`)),
+            ttc: brut("totals.ttc"),
+          },
           confiance: 0,
           conventions: [],
           lecturesValides: 0,
