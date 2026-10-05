@@ -46,7 +46,7 @@ export const DIRIGEANT_EPREUVE = {
 };
 
 /** Sa PME. Matricule volontairement impossible : sept neuf, puis E/P. */
-export const PME_EPREUVE = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999/E/P/000" };
+export const PME_EPREUVE = { name: "ÉPREUVE ATELIER SARL", legalId: "9999999E/E/P/000" };
 
 /** Les adresses qui ne quittent pas la machine ou le réseau local. */
 const PRIVEE = /^(localhost$|127\.|::1$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;

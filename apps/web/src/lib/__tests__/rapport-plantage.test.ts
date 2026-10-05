@@ -33,6 +33,34 @@ describe("l'expurgation d'un rapport de plantage", () => {
     expect(expurger("tenant 1856324/A/M/000 refusé")).not.toContain("1856324/A/M/000");
   });
 
+  it("retire un matricule au FORMAT RÉEL, lettre de clé comprise", () => {
+    /*
+     * Fuite trouvée le 5 octobre 2026, en posant la validation du format.
+     *
+     * Un matricule tunisien s'écrit « 1876543W/A/M/000 » : sept chiffres, UNE
+     * LETTRE DE CLÉ, puis trois groupes. Le motif d'expurgation attendait
+     * `\d{7}` suivi immédiatement d'une barre : il reconnaissait donc la forme
+     * tronquée des fixtures du dépôt, et PAS celle que portent les vraies
+     * pièces.
+     *
+     * Conséquence : le matricule d'un vrai client partait en clair dans un
+     * rapport de plantage. C'est exactement ce que ce module promet
+     * d'empêcher, et la promesse était fausse pour le seul format qui existe
+     * en production.
+     *
+     * Les fixtures mal formées ont caché la fuite : le test passait sur une
+     * valeur qu'aucune pièce réelle ne porte.
+     */
+    const sorti = expurger("tenant 1876543W/A/M/000 refusé");
+    expect(sorti).not.toContain("1876543W/A/M/000");
+    expect(sorti).not.toContain("1876543");
+  });
+
+  it("retire aussi celui d'un émetteur, dont le troisième groupe diffère", () => {
+    // 1456987L/A/P/000 — relevé sur la facture du 4 octobre 2026.
+    expect(expurger("émetteur 1456987L/A/P/000")).not.toContain("1456987L/A/P/000");
+  });
+
   it("retire une longue suite de chiffres — montant, téléphone, identifiant", () => {
     const sorti = expurger("total 1234567 dinars, tel 21698765432");
     expect(sorti).not.toContain("1234567");

@@ -75,7 +75,7 @@ describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFI
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SARL', 'autonome',
-                                           '1856324/A/M/000', 'TN', 'TND') as id`,
+                                           '1856324K/A/M/000', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
@@ -159,7 +159,7 @@ describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFI
   it("adressée à une autre entreprise : à rejeter, destinataire", async () => {
     const piece = await pieceLue(
       "autre",
-      lecture({ clientMf: "9999999/Z/M/000", numero: "F-AUTRE" }),
+      lecture({ clientMf: "9999999Z/Z/M/000", numero: "F-AUTRE" }),
     );
     const a = (await rpc("capture", "analyser", piece)) as {
       verdict: string;

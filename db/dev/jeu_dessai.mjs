@@ -398,7 +398,7 @@ async function main() {
   if (!pack) throw new Error("aucun pack tunisien en vigueur : chargez les migrations d'abord");
 
   // Le matricule de DREAM OPTIC est celui qui figure sur ses vraies factures.
-  const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234567/A/M/000");
+  const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234567A/A/M/000");
   const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882/F/P/C/000");
   const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543/B/N/000");
   console.log(`  cabinet          CABINET MALICA`);
@@ -412,10 +412,10 @@ async function main() {
   console.log(`  mandats          2 actifs`);
 
   // Les comptes collectifs viennent du plan, jamais d'une constante ici.
-  await tiers(optic, "client", "PHARMA01", "PHARMACIE CENTRALE", "411", "1234567/A/M/000");
+  await tiers(optic, "client", "PHARMA01", "PHARMACIE CENTRALE", "411", "1234567A/A/M/000");
   await tiers(optic, "client", "OPTIQ02", "OPTIQUE DU LAC", "411", "2345678/B/N/000");
-  await tiers(optic, "fournisseur", "VERRES01", "VERRES DE TUNISIE", "401", "3456789/C/P/000");
-  await tiers(atlas, "fournisseur", "GROSSI01", "GROSSISTE DU SUD", "401", "4567890/D/Q/000");
+  await tiers(optic, "fournisseur", "VERRES01", "VERRES DE TUNISIE", "401", "3456789C/C/P/000");
+  await tiers(atlas, "fournisseur", "GROSSI01", "GROSSISTE DU SUD", "401", "4567890D/D/Q/000");
   await tiers(atlas, "client", "SUPER01", "SUPERETTE EL MENZAH", "411", "5678901/E/R/000");
   console.log(`  tiers            5`);
 
@@ -429,7 +429,7 @@ async function main() {
       marque: "optic-achat-1",
       titre: "FACTURE No 2026-114",
       lignes: [
-        "VERRES DE TUNISIE - MF 3456789/C/P/000",
+        "VERRES DE TUNISIE - MF 3456789C/C/P/000",
         "Client : DREAM OPTIC",
         "",
         "Verres organiques traites          1 200,000 TND HT",
@@ -457,7 +457,7 @@ async function main() {
       marque: "atlas-achat-1",
       titre: "FACTURE No 4471",
       lignes: [
-        "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+        "GROSSISTE DU SUD - MF 4567890D/D/Q/000",
         "Client : ATLAS DISTRIBUTION",
         "",
         "Marchandises diverses                860,000 TND HT",
@@ -470,7 +470,7 @@ async function main() {
       marque: "atlas-achat-2",
       titre: "FACTURE No 4488",
       lignes: [
-        "GROSSISTE DU SUD - MF 4567890/D/Q/000",
+        "GROSSISTE DU SUD - MF 4567890D/D/Q/000",
         "Client : ATLAS DISTRIBUTION",
         "",
         "Fournitures de bureau                340,000 TND HT",

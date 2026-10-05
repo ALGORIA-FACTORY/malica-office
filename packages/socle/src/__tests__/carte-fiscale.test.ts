@@ -63,7 +63,7 @@ describe("une carte complète passe entière", () => {
     const r = CarteFiscaleV1.parse({
       ...NUE,
       raison_sociale: "ALGORIA FACTORY",
-      matricule_fiscal: "1234567/A/M/000",
+      matricule_fiscal: "1234567A/A/M/000",
       regime_imposition: "reel",
       regime_tva: "assujetti",
       activite: "Conseil en systèmes informatiques",
@@ -71,7 +71,7 @@ describe("une carte complète passe entière", () => {
       cloture_exercice: "12-31",
       field_confidence: { matricule_fiscal: 0.98 },
     });
-    expect(r.matricule_fiscal).toBe("1234567/A/M/000");
+    expect(r.matricule_fiscal).toBe("1234567A/A/M/000");
     expect(r.regime_imposition).toBe("reel");
     expect(champsManquants(r)).toEqual([]);
   });

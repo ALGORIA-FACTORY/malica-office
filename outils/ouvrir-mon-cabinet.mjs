@@ -3,7 +3,7 @@
  *
  *   node outils/ouvrir-mon-cabinet.mjs http://localhost:3000 moi@exemple.tn '<mot de passe>'
  *   node outils/ouvrir-mon-cabinet.mjs https://staging.… moi@exemple.tn '<mot de passe>' \
- *        --nom "Prénom Nom" --cabinet "AUDICORP:9000001/A/M/000"
+ *        --nom "Prénom Nom" --cabinet "AUDICORP:9000001A/A/M/000"
  *
  * Ce que l'outil fait, et pourquoi dans cet ordre : il inscrit le compte (ou s'y
  * connecte), crée le cabinet puis la PME — le créateur est expert de l'un et
@@ -24,7 +24,7 @@
  * réel n'en ajoute pas un quatrième.
  *
  * L'identifiant fiscal du cabinet par défaut est un BOUCHE-TROU de la bonne
- * forme (`9000001/A/M/000`) : remplacez-le par le vrai, avec `--cabinet`.
+ * forme (`9000001A/A/M/000`) : remplacez-le par le vrai, avec `--cabinet`.
  */
 
 import { tolererLeCertificatLocal } from "./epreuves/socle.mjs";
@@ -50,7 +50,7 @@ function option(nom, defaut) {
   return valeur;
 }
 
-/** « NOM:1234567/A/M/000 » — le séparateur est le dernier deux-points. */
+/** « NOM:1234567A/A/M/000 » — le séparateur est le dernier deux-points. */
 function organisation(brut, kind) {
   const coupe = brut.lastIndexOf(":");
   if (coupe <= 0 || coupe === brut.length - 1) {
@@ -61,8 +61,8 @@ function organisation(brut, kind) {
 }
 
 const NOM = option("nom", "Développeur");
-const CABINET = organisation(option("cabinet", "AUDICORP:9000001/A/M/000"), "cabinet");
-const PME = organisation(option("pme", "ALGORIA FACTORY SARL:1856324/A/M/000"), "pme");
+const CABINET = organisation(option("cabinet", "AUDICORP:9000001A/A/M/000"), "cabinet");
+const PME = organisation(option("pme", "ALGORIA FACTORY SARL:1856324K/A/M/000"), "pme");
 
 /* Sur une adresse privée en HTTPS, le certificat est auto-signé : on ne le
  * vérifie pas. Sur un hôte public, il est vrai et se vérifie comme dans un

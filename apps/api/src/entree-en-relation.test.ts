@@ -24,7 +24,7 @@ const MDP = "MotDePasseTresLong2026!";
 describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `essai-${Date.now()}`;
   // Le matricule d'ALGORIA FACTORY, rendu unique pour que le test se rejoue.
-  const mf = `1856324/A/M/000-${marque}`;
+  const mf = `1856324K/A/M/000-${marque}`;
   const adresse = "Immeuble Le Cristal, Rue du Lac Turkana, Les Berges du Lac 1 — 1053 Tunis";
   const emailContact = `contact-${marque}@essai.local`;
 
@@ -170,7 +170,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
       rpc(intrus, "identite", "ouvrirDossier", {
         cabinetTenantId: cabinet,
         name: `INTRUSION ${marque}`,
-        legalId: `MF-INTRUS-${marque}`,
+        legalId: `${String(Date.now()).slice(-7)}I/A/M/000`,
         adresse: null,
       }),
       /Seul un expert du cabinet/,
@@ -208,7 +208,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     const second = (await rpc(expert, "identite", "ouvrirDossier", {
       cabinetTenantId: cabinet,
       name: `SECOND DOSSIER ${marque}`,
-      legalId: `MF-SECOND-${marque}`,
+      legalId: `${String(Date.now()).slice(-7)}S/A/M/000`,
       adresse: null,
     })) as { id: string };
     const avant = { ...process.env };

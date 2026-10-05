@@ -85,7 +85,7 @@ Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs t
 ce cas, ajoute "ordinal_end" pour couvrir tous ses tokens — une raison sociale, une adresse, une
 activité, et aussi une date écrite en toutes lettres (« 1 septembre 2026 » est TROIS tokens).
 Le MATRICULE FISCAL fait exception : désigne un seul token. Un matricule tunisien s'écrit sous la
-forme 1234567/A/M/000 ; s'il est éclaté sur plusieurs tokens, désigne celui qui porte le numéro à
+forme 1234567A/A/M/000 ; s'il est éclaté sur plusieurs tokens, désigne celui qui porte le numéro à
 sept chiffres.
 
 LES DEUX RÉGIMES sont les seuls champs où tu ne désignes pas un token : tu CHOISIS un code dans

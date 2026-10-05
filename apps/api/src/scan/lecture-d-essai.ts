@@ -37,10 +37,10 @@ export function lecture(
     [opts.titre ?? "FACTURE", 0.05], // 0
     ["FOURNISSEUR", 0.12], // 1
     ["SA", 0.12], // 2
-    ["1234567/B/M/000", 0.15], // 3
+    ["1234567B/B/M/000", 0.15], // 3
     [numero, 0.18], // 4
     ["10/09/2026", 0.2], // 5
-    [opts.clientMf ?? "1856324/A/M/000", 0.25], // 6
+    [opts.clientMf ?? "1856324K/A/M/000", 0.25], // 6
     [opts.ht?.[0] ?? "1", 0.7], // 7 ─┐ « 1 234,560 », coupé en deux jetons
     [opts.ht?.[1] ?? "234,560", 0.7], // 8 ─┘
     [opts.tva ?? "234,566", 0.74], // 9
@@ -94,8 +94,8 @@ export function lecture(
       : { base_ht: "1234.560", vat: "234.566", ttc: "1470.126" },
     references: {
       numero,
-      matricule_fiscal: "1234567/B/M/000",
-      matricule_fiscal_client: opts.clientMf ?? "1856324/A/M/000",
+      matricule_fiscal: "1234567B/B/M/000",
+      matricule_fiscal_client: opts.clientMf ?? "1856324K/A/M/000",
     },
     field_confidence: { overall: opts.confianceGlobale ?? 0.9 },
     document_kind: "facture_achat",

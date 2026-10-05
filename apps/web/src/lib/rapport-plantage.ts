@@ -49,8 +49,20 @@ const MOTIFS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\?[^\s"')]+/g, `?${MARQUE}`],
   // Une adresse de courriel nomme une personne.
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, MARQUE],
-  // Le matricule fiscal tunisien : 1234567/A/M/000.
-  [/\d{7}\s*\/\s*[A-Za-z]\s*\/\s*[A-Za-z]\s*\/\s*\d{3}/g, MARQUE],
+  /*
+   * Le matricule fiscal tunisien : 1876543W/A/M/000.
+   *
+   * La lettre de clé après les sept chiffres est FACULTATIVE dans ce motif, et
+   * c'est délibéré : elle est obligatoire dans la vraie forme, mais le motif
+   * doit aussi couvrir ce que des fiches anciennes ou abîmées portent.
+   *
+   * Elle manquait, et la fuite est restée invisible jusqu'au 5 octobre 2026 :
+   * le motif reconnaissait la forme tronquée des fixtures du dépôt et PAS
+   * celle que portent les vraies pièces. Le matricule d'un vrai client partait
+   * donc en clair dans un rapport de plantage — le contraire exact de ce que
+   * ce module promet. Des fixtures mal formées avaient rendu le test complice.
+   */
+  [/\d{7}\s*[A-Za-z]?\s*\/\s*[A-Za-z]\s*\/\s*[A-Za-z]\s*\/\s*\d{3}/g, MARQUE],
   // Un jeton de session : trois segments séparés par des points.
   [/[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, MARQUE],
   // Une empreinte ou un blob encodé.

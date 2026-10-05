@@ -102,7 +102,7 @@ describe("la consigne de désignation d'une carte fiscale", () => {
   it("garde la règle du matricule, qui est fondée", () => {
     /*
      * Ici l'interdiction du token unique n'est pas une erreur : un matricule
-     * tunisien s'écrit 1234567/A/M/000, et quand l'œil l'éclate, la consigne
+     * tunisien s'écrit 1234567A/A/M/000, et quand l'œil l'éclate, la consigne
      * dit lequel désigner. On ne retire pas une règle juste parce qu'une autre,
      * voisine et mal fondée, vient de tomber.
      */

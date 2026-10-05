@@ -28,7 +28,13 @@ const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_
 
 describe("un mandat ne s'active qu'avec l'accord de la PME", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `essai-${Date.now()}`;
-  const legalId = `MF-${marque}`;
+  /*
+   * Un matricule FICTIF, mais bien formé : depuis le 5 octobre 2026, la
+   * création d’organisation refuse une forme que le pack ne reconnaît pas.
+   * Les sept chiffres viennent de l’horodatage, pour rester uniques d’une
+   * exécution à l’autre sans jamais désigner une entreprise réelle.
+   */
+  const legalId = `${String(Date.now()).slice(-7)}E/A/M/000`;
   let dirigeant: Utilisateur;
   let expert: Utilisateur;
   let pme = "";

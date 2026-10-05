@@ -97,7 +97,7 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
 /**
  * L'identité fiscale tunisienne tient dans ses sept chiffres et sa lettre clé ;
  * le reste (code TVA, catégorie, établissement) varie d'une écriture à
- * l'autre. « 1856324/A/M/000 », « 1856324 A M 000 », « 1856324A » : une même
+ * l'autre. « 1856324K/A/M/000 », « 1856324 A M 000 », « 1856324A » : une même
  * entreprise.
  */
 function identite(mf: string | null): string | null {

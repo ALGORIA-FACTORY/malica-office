@@ -36,8 +36,8 @@ function facture(modif: Partial<PieceAControler> = {}): PieceAControler {
   return {
     documentKind: "facture_achat",
     titre: "FACTURE",
-    emetteur: { nom: "FOURNISSEUR SA", identifiantFiscal: "1234567/B/M/000" },
-    destinataire: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324/A/M/000" },
+    emetteur: { nom: "FOURNISSEUR SA", identifiantFiscal: "1234567B/B/M/000" },
+    destinataire: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
     numero: "F-2026-0042",
     date: "2026-09-10",
     montants: montantsJustes,
@@ -49,7 +49,7 @@ function facture(modif: Partial<PieceAControler> = {}): PieceAControler {
 
 /** Le paramétrage — ici fixé par le test ; dans la vraie vie, lu en base, daté. */
 const CONTEXTE: ContexteControle = {
-  tenant: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324/A/M/000" },
+  tenant: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
   typesDocument: [
     { code: "facture_achat", porteEcriture: true },
     { code: "facture_vente", porteEcriture: true },
@@ -201,14 +201,14 @@ describe("nature de la pièce", () => {
 describe("destinataire", () => {
   it("adressée au tenant — matricule écrit autrement, même identité : conforme", () => {
     const c = statut(
-      facture({ destinataire: { nom: "ALGORIA", identifiantFiscal: "1856324 A M 000" } }),
+      facture({ destinataire: { nom: "ALGORIA", identifiantFiscal: "1856324K A M 000" } }),
       "destinataire",
     );
     assert.equal(c.statut, "conforme");
   });
   it("adressée à un autre : rejet, et le motif dit à qui", () => {
     const c = statut(
-      facture({ destinataire: { nom: "AUTRE SARL", identifiantFiscal: "9999999/Z/M/000" } }),
+      facture({ destinataire: { nom: "AUTRE SARL", identifiantFiscal: "9999999Z/Z/M/000" } }),
       "destinataire",
     );
     assert.equal(c.statut, "rejet");
@@ -224,7 +224,7 @@ describe("destinataire", () => {
   it("une vente : c'est l'émetteur qui doit être le tenant", () => {
     const vente = facture({
       documentKind: "facture_vente",
-      emetteur: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324/A/M/000" },
+      emetteur: { nom: "ALGORIA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
       destinataire: { nom: "CLIENT SA", identifiantFiscal: "7654321/C/M/000" },
     });
     assert.equal(statut(vente, "destinataire").statut, "conforme");
@@ -321,7 +321,7 @@ describe("le verdict", () => {
       controlerPiece(facture(), {
         ...CONTEXTE,
         autresPieces: [
-          { id: "p", emetteurIdentifiantFiscal: "1234567/B/M/000", numero: "F-2026-0042" },
+          { id: "p", emetteurIdentifiantFiscal: "1234567B/B/M/000", numero: "F-2026-0042" },
         ],
       }),
     );

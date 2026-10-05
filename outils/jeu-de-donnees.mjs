@@ -76,7 +76,7 @@ const LEILA = {
   motDePasse: MOT_DE_PASSE,
   nom: "Leïla Ben Salah",
 };
-const CABINET = { name: "Cabinet Ben Salah", legalId: "1234567/A/M/000" };
+const CABINET = { name: "Cabinet Ben Salah", legalId: "1234567A/A/M/000" };
 const EQUIPE = [
   {
     email: "amine.bouzid@bensalah.tn",
