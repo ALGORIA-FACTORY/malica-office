@@ -181,7 +181,15 @@ describe("recoller les milliers — les nombres longs, qui ont plus de deux morc
   const suite = (textes: string[]): PageToken[] => {
     let x = 0.1;
     return textes.map((text, ordinal) => {
-      const t: PageToken = { page: 1, ordinal, text, x0: x, y0: 0.5, x1: x + 0.008 * text.length, y1: 0.512 };
+      const t: PageToken = {
+        page: 1,
+        ordinal,
+        text,
+        x0: x,
+        y0: 0.5,
+        x1: x + 0.008 * text.length,
+        y1: 0.512,
+      };
       x = t.x1 + 0.008;
       return t;
     });
@@ -222,8 +230,15 @@ describe("recoller les milliers — les nombres longs, qui ont plus de deux morc
   });
 
   it("garde la confiance du morceau le moins sûr", () => {
-    const morceaux = suite(["1", "234,560"]).map((t, i) => ({ ...t, confidence: i === 1 ? 0.42 : 0.99 }));
+    const morceaux = suite(["1", "234,560"]).map((t, i) => ({
+      ...t,
+      confidence: i === 1 ? 0.42 : 0.99,
+    }));
     const r = recollerLesMilliers(morceaux);
-    assert.equal(r[0]!.confidence, 0.42, "un nombre ne vaut pas mieux que sa partie la plus douteuse");
+    assert.equal(
+      r[0]!.confidence,
+      0.42,
+      "un nombre ne vaut pas mieux que sa partie la plus douteuse",
+    );
   });
 });
