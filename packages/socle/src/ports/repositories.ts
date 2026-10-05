@@ -1692,10 +1692,33 @@ export interface ChargeQuestionRow {
   answeredAt: string | null;
 }
 
+/**
+ * Ce qui attend sa date, et n'entre donc dans aucun mois.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Depuis le 5 octobre 2026, une pièce dont la date n'a pas été lue n'est plus
+ * rangée au mois du scan : sa période reste vide (R4, aucun repli implicite).
+ *
+ * Corriger cela crée un devoir, sinon la correction est pire que le défaut :
+ * ces pièces sortaient d'un faux total, elles ne doivent pas tomber dans un
+ * silence. Un montant qu'on retire d'un écran doit apparaître ailleurs, nommé,
+ * avec le geste qui le débloque — ici : saisir la date.
+ */
+export interface ChargesEnAttenteDeDate {
+  /** Nombre d'articles dont la pièce n'a pas de date lue. */
+  articles: number;
+  /** Nombre de pièces distinctes concernées : c'est ce que la personne compte. */
+  pieces: number;
+  /** Total HT en attente, pour que l'écart avec le total du mois s'explique. */
+  totalHt: string | null;
+}
+
 export interface ChargesRepository {
   familles(packId: string): Promise<ChargeFamille[]>;
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
+  enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;
   questions(tenantId: string): Promise<ChargeQuestionRow[]>;
   answer(input: {
     tenantId: string;

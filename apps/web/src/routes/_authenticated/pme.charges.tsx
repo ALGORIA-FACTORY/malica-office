@@ -86,6 +86,19 @@ function ChargesScreen() {
     queryFn: () => office().charges.questions(pme.tenantId),
   });
 
+  /*
+   * Ce qui attend sa date n'entre dans aucun mois, depuis le 5 octobre 2026 :
+   * une pièce dont la date n'a pas été lue n'est plus rangée au mois du scan.
+   *
+   * Il faut donc le dire ici. Retirer un montant d'un total sans le nommer
+   * remplacerait un chiffre faux par un silence, et la personne chercherait
+   * en vain pourquoi son total a baissé.
+   */
+  const sansDate = useQuery({
+    queryKey: ["charges-sans-date", pme.tenantId],
+    queryFn: () => office().charges.enAttenteDeDate(pme.tenantId),
+  });
+
   const result = useMemo(() => {
     if (!refs.data || !articles.data) return null;
     const baseline = periods.filter((p) => p < period);
@@ -292,6 +305,35 @@ function ChargesScreen() {
           {t("pme.charges.empty")}
         </p>
       )}
+
+      {/*
+       * Ce qui attend sa date, sous le total et hors de lui.
+       *
+       * Posé le 5 octobre 2026, avec la fin du repli sur le mois du scan. Le
+       * bloc dit trois choses, et les trois sont nécessaires : COMBIEN de
+       * pièces, POURQUOI elles ne comptent pas, et le MONTANT qu'elles
+       * représentent — sans quoi l'écart avec ce que la personne attend reste
+       * inexpliqué. Il ne s'affiche pas quand il n'y a rien : une information
+       * qui apparaît toujours cesse d'être lue.
+       */}
+      {sansDate.data && sansDate.data.pieces > 0 ? (
+        <div className="mt-4 border border-signal-warn bg-card p-4">
+          <p className="text-[13.5px] font-semibold">
+            {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}
+          </p>
+          <p className="mt-1 text-[12.5px] text-text-2">
+            {t("pme.charges.sansDate.detail", {
+              amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
+            })}
+          </p>
+          <Link
+            to="/pme/list"
+            className="mt-2 inline-block text-[12.5px] underline underline-offset-2"
+          >
+            {t("pme.charges.sansDate.action")}
+          </Link>
+        </div>
+      ) : null}
 
       {/*
        * Elle interroge, elle ne tranche pas. Les deux réponses ont le même

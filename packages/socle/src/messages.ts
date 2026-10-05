@@ -383,6 +383,19 @@ const fr = {
   "pme.charges.evolution": "{value} par rapport au mois précédent",
   "pme.charges.byFamille": "Par famille",
   "pme.charges.empty": "Aucun article lu sur cette période.",
+  /*
+   * Depuis le 5 octobre 2026, une pièce dont la date n'a pas été lue n'est plus
+   * rangée au mois du scan : elle n'entre dans aucun mois (R4, aucun repli
+   * implicite). Ces trois clés sont le devoir qui vient avec cette correction —
+   * un montant retiré d'un total doit se voir ailleurs, nommé, avec le geste
+   * qui le débloque. Sans elles, on aurait remplacé un faux par un silence.
+   */
+  "pme.charges.sansDate.titre": "{count} pièces attendent leur date",
+  "pme.charges.sansDate.titre#one": "1 pièce attend sa date",
+  "pme.charges.sansDate.titre#other": "{count} pièces attendent leur date",
+  "pme.charges.sansDate.detail":
+    "Elles ne comptent dans aucun mois tant que leur date n'est pas lue : {amount}.",
+  "pme.charges.sansDate.action": "Les ouvrir pour saisir la date",
   "pme.charges.question":
     "{famille} : {observed} ce mois, contre {baseline} habituellement ({value}). Est-ce exceptionnel ?",
   "pme.charges.answer.exceptionnel": "Oui, exceptionnel",
@@ -2574,6 +2587,11 @@ const en: Dict = {
   "pme.charges.evolution": "{value} versus the previous month",
   "pme.charges.byFamille": "By family",
   "pme.charges.empty": "No line item read for this period.",
+  "pme.charges.sansDate.titre": "{count} documents are waiting for their date",
+  "pme.charges.sansDate.titre#one": "1 document is waiting for its date",
+  "pme.charges.sansDate.titre#other": "{count} documents are waiting for their date",
+  "pme.charges.sansDate.detail": "They count towards no month until their date is read: {amount}.",
+  "pme.charges.sansDate.action": "Open them to enter the date",
   "pme.charges.question":
     "{famille}: {observed} this month versus {baseline} usually ({value}). Is this exceptional?",
   "pme.charges.answer.exceptionnel": "Yes, exceptional",
@@ -4734,6 +4752,11 @@ const ar: Dict = {
   "pme.charges.evolution": "{value} مقارنة بالشهر السابق",
   "pme.charges.byFamille": "حسب العائلة",
   "pme.charges.empty": "لا يوجد بند مقروء في هذه الفترة.",
+  "pme.charges.sansDate.titre": "{count} وثائق تنتظر تاريخها",
+  "pme.charges.sansDate.titre#one": "وثيقة واحدة تنتظر تاريخها",
+  "pme.charges.sansDate.titre#other": "{count} وثائق تنتظر تاريخها",
+  "pme.charges.sansDate.detail": "لا تُحسب في أي شهر ما لم يُقرأ تاريخها: {amount}.",
+  "pme.charges.sansDate.action": "افتحها لإدخال التاريخ",
   "pme.charges.question":
     "{famille}: {observed} هذا الشهر مقابل {baseline} في المعتاد ({value}). هل هذا استثنائي؟",
   "pme.charges.answer.exceptionnel": "نعم، استثنائي",

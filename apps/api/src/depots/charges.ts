@@ -42,6 +42,31 @@ export const charges = {
     };
   },
 
+  /**
+   * Ce qui attend sa date, et n'entre donc dans aucun mois.
+   *
+   * Depuis le 5 octobre 2026, une pièce sans date lue a une période NULLE : le
+   * filtre `period >= … and period <= …` d'`articles` l'écarte, et c'est voulu.
+   * Mais l'écarter d'un total sans le dire reviendrait à remplacer un chiffre
+   * faux par un silence — l'écran doit pouvoir nommer ce qui manque et dire
+   * quel geste le débloque.
+   */
+  async enAttenteDeDate(db: Requete, tenantId: string) {
+    const { rows } = await db.query(
+      `select count(*) as articles, count(distinct piece_id) as pieces,
+              sum(total_ht) as total_ht
+         from piece_articles_v
+        where tenant_id = $1 and period is null`,
+      [tenantId],
+    );
+    const r = (rows as Record<string, unknown>[])[0] ?? {};
+    return {
+      articles: Number(r["articles"] ?? 0),
+      pieces: Number(r["pieces"] ?? 0),
+      totalHt: decOuNul(r["total_ht"], 3),
+    };
+  },
+
   async articles(db: Requete, tenantId: string, fromPeriod: string, toPeriod: string) {
     const { rows } = await db.query(
       `select piece_id, ordinal, designation, quantity, unit_price_ht, unit_price_ttc,
