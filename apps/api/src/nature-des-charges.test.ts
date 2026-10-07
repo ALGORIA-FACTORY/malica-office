@@ -71,28 +71,166 @@ describe("la famille d'une charge, d'après son libellé", { skip: !BASE_CONFIGU
     }
   });
 
-  it("les deux lignes de la facture de loyer sont du loyer", async () => {
-    for (const ligne of [
-      "Loyer mensuel local à usage de bureaux - Immeuble Le Prestige, 3e étage (Sept. 2026)",
-      "Quote-part charges communes (syndic, ascenseur, gardiennage)",
-    ]) {
-      assert.equal((await famille(ligne)).famille_code, "LOYER", ligne);
-    }
+  it("la facture de loyer se range en DEUX natures, et c'est plus juste", async () => {
+    /*
+     * Le loyer et la quote-part de charges communes ne sont pas la même chose
+     * dans le plan comptable tunisien : 613 « Locations » d'un côté, 614
+     * « Charges locatives et de copropriété » de l'autre.
+     *
+     * Ce cas attendait « LOYER » pour les deux, faute d'une famille pour les
+     * secondes. Les distinguer n'est pas un raffinement : c'est ce qui permet
+     * de comparer un loyer d'un mois sur l'autre sans que le syndic le brouille.
+     */
+    assert.equal(
+      (await famille("Loyer mensuel local à usage de bureaux - Immeuble Le Prestige")).famille_code,
+      "LOYER",
+    );
+    assert.equal(
+      (await famille("Quote-part charges communes (syndic, ascenseur, gardiennage)")).famille_code,
+      "CHARGES_LOCATIVES",
+    );
   });
 
-  it("reconnaît les natures courantes d'une PME tunisienne", async () => {
-    const attendus: ReadonlyArray<readonly [string, string]> = [
-      ["Honoraires de conseil", "HONORAIRES"],
-      ["Gasoil station Shell", "TRANSPORT"],
-      ["Abonnement internet fibre", "TELECOM"],
-      ["Facture Ooredoo mobile", "TELECOM"],
-      ["Ramette papier A4", "FOURNITURES"],
-      ["Commission bancaire sur virement", "SERVICES_BANCAIRES"],
-      ["Droit de timbre", "IMPOTS_DROITS"],
-    ];
-    for (const [ligne, code] of attendus) {
-      assert.equal((await famille(ligne)).famille_code, code, ligne);
+  /**
+   * ============ LES NATURES D'UNE PME TUNISIENNE, UNE PAR UNE
+   *
+   * Vingt et une familles, et ces libellés sont écrits comme une facture les
+   * écrit — avec le nom du fournisseur quand la facture ne dit pas sa nature.
+   * Une facture STEG ne porte pas le mot « électricité », une facture Ooredoo
+   * ne porte pas « télécom » : nommer les monopoles et les opérateurs
+   * tunisiens n'est pas un raccourci, c'est la seule façon de les reconnaître.
+   *
+   * La liste est exhaustive par famille, exprès : une famille sans cas est une
+   * famille dont personne ne sait si elle marche.
+   */
+  const CAS: ReadonlyArray<readonly [string, string]> = [
+    // Les trois lignes de la facture CASA-ELECT du 6 octobre 2026.
+    ["Prise 2P+T somef 45", "FOURNITURES"],
+    ["Boite app 2 module", "FOURNITURES"],
+    ["Cable souple 3*2.5 extra cable", "FOURNITURES"],
+    // Les deux lignes de la facture de loyer du 4 octobre 2026.
+    ["Loyer mensuel local à usage de bureaux", "LOYER"],
+    ["Quote-part charges communes (syndic, ascenseur, gardiennage)", "CHARGES_LOCATIVES"],
+    // Les deux monopoles tunisiens.
+    ["Facture STEG consommation électricité", "ENERGIE_EAU"],
+    ["SONEDE consommation d'eau", "ENERGIE_EAU"],
+    // Les opérateurs et fournisseurs d'accès.
+    ["Abonnement internet fibre TOPNET", "TELECOM"],
+    ["Facture Ooredoo mobile", "TELECOM"],
+    ["Affranchissement Rapide Poste", "TELECOM"],
+    // Le reste des natures, une chacune.
+    ["Honoraires expert-comptable", "HONORAIRES"],
+    ["Prime d'assurance multirisque COMAR", "ASSURANCE"],
+    ["Gasoil station AGIL", "TRANSPORT"],
+    ["Nuitée hôtel Tunis mission", "DEPLACEMENT"],
+    ["Écran Dell 24 pouces", "PETIT_EQUIPEMENT"],
+    ["Licence Microsoft 365", "LOGICIELS"],
+    ["Nom de domaine et hébergement", "LOGICIELS"],
+    ["Entretien climatiseur", "ENTRETIEN"],
+    ["Impression de flyers", "PUBLICITE"],
+    ["Intérim 3 jours", "PERSONNEL_EXTERIEUR"],
+    ["Travail à façon découpe", "SOUS_TRAITANCE"],
+    ["Bureau d'études structure", "ETUDES"],
+    ["Ramette papier A4", "FOURNITURES"],
+    ["Commission bancaire sur virement", "SERVICES_BANCAIRES"],
+    ["Droit de timbre", "IMPOTS_DROITS"],
+    ["Matière première résine", "MATIERES_PREMIERES"],
+    ["Marchandises destinées à la revente", "MARCHANDISES"],
+  ];
+
+  it("reconnaît les vingt-six natures, et par le LIBELLÉ", async () => {
+    const rates: string[] = [];
+    for (const [ligne, code] of CAS) {
+      const r = await famille(ligne);
+      if (r.famille_code !== code) rates.push(`${ligne} → ${r.famille_code} (attendu ${code})`);
+      else if (r.famille_source !== "designation_pattern")
+        rates.push(`${ligne} : reconnu par le COMPTE et non par le libellé`);
     }
+    assert.deepEqual(rates, [], `\n  ${rates.join("\n  ")}`);
+  });
+
+  it("couvre toutes les familles livrées : aucune n'est sans cas", async () => {
+    /*
+     * Une famille déclarée mais qu'aucun libellé n'atteint est une famille
+     * morte : elle gonfle le référentiel sans rien classer. Ce cas compare la
+     * liste ci-dessus aux familles de la base.
+     */
+    const { rows } = await pool.query<{ code: string }>(
+      `select code from ref.charge_familles where not is_fallback and valid_to is null`,
+    );
+    const atteintes = new Set(CAS.map(([, code]) => code));
+    const orphelines = rows.map((r) => r.code).filter((c) => !atteintes.has(c));
+    assert.deepEqual(orphelines, [], "familles qu'aucun libellé n'atteint");
+  });
+
+  it("chaque famille porte un compte du plan comptable, et il existe", async () => {
+    /*
+     * `main_account` est documentaire au 7 octobre 2026 — la proposition
+     * d'écriture ne le lit pas encore. Mais un compte inventé y resterait
+     * invisible jusqu'au jour où on s'en servirait, et ce jour-là il produirait
+     * une écriture fausse. On vérifie donc qu'il existe VRAIMENT.
+     */
+    const { rows } = await pool.query<{ code: string; main_account: string | null }>(
+      `select f.code, f.main_account
+         from ref.charge_familles f
+        where not f.is_fallback and f.valid_to is null`,
+    );
+    const manquants: string[] = [];
+    for (const f of rows) {
+      if (!f.main_account) {
+        manquants.push(`${f.code} : aucun compte`);
+        continue;
+      }
+      const { rows: trouve } = await pool.query(
+        `select 1 from ref.accounts where account_code = $1`,
+        [f.main_account],
+      );
+      if (trouve.length === 0)
+        manquants.push(`${f.code} : compte ${f.main_account} inconnu du plan`);
+    }
+    assert.deepEqual(manquants, []);
+  });
+
+  it("les deux règles fausses sont closes, pas effacées", async () => {
+    /*
+     * « Marchandises » pointait le compte 601, qui est « Matières premières »
+     * dans le Système Comptable des Entreprises — les marchandises sont au 607.
+     * Et « Honoraires » pointait le 665, qui est « Autres impôts et taxes » —
+     * les honoraires sont au 622.
+     *
+     * Elles sont CLOSES par une date d'effet et non supprimées : une règle qui
+     * a servi à ranger des pièces reste dans le référentiel, pour qu'on puisse
+     * expliquer un classement ancien.
+     */
+    const { rows } = await pool.query<{ famille_code: string; valid_to: string | null }>(
+      `select famille_code, valid_to::text from ref.charge_famille_rules
+        where match_kind = 'account_prefix'
+          and ((famille_code = 'MARCHANDISES' and pattern = '601')
+            or (famille_code = 'HONORAIRES' and pattern = '665'))`,
+    );
+    assert.equal(rows.length, 2, "les deux règles doivent encore exister");
+    for (const r of rows) assert.ok(r.valid_to, `${r.famille_code} : doit être close`);
+  });
+
+  it("et les deux comptes justes sont en place", async () => {
+    assert.equal((await famille("article quelconque", "607")).famille_code, "MARCHANDISES");
+    assert.equal((await famille("article quelconque", "622")).famille_code, "HONORAIRES");
+  });
+
+  it("un service de développement n'est pas une licence de logiciel", async () => {
+    /*
+     * Mesuré, et corrigé avant de livrer : le motif attrapait le mot
+     * « logiciel » seul, et rangeait « prestation de développement logiciel »
+     * en redevances. C'est un service.
+     *
+     * Il tombe donc en « non classée », ce qui est la bonne réponse : le
+     * produit ne sait pas, et il le dit.
+     */
+    assert.equal(
+      (await famille("Prestation de développement logiciel")).famille_code,
+      "NON_CLASSE",
+    );
+    assert.equal((await famille("Progiciel de gestion")).famille_code, "LOGICIELS");
   });
 
   it("le libellé passe AVANT le compte", async () => {
@@ -107,12 +245,24 @@ describe("la famille d'une charge, d'après son libellé", { skip: !BASE_CONFIGU
     assert.equal(r.famille_source, "designation_pattern");
   });
 
-  it("ce qu'aucune règle ne reconnaît garde le défaut du compte", async () => {
-    // R10 : un défaut n'est pas un blocage. Une charge non reconnue reçoit la
-    // famille du compte, et le cabinet la corrige.
-    const r = await famille("Écran Dell 24 pouces");
-    assert.equal(r.famille_source, "account_prefix");
-    assert.equal(r.famille_code, "MARCHANDISES");
+  it("ce qu'aucune règle ne reconnaît reste NON CLASSÉ, et le dit", async () => {
+    /*
+     * ======================= POURQUOI « JE NE SAIS PAS » PLUTÔT QU'UNE FAMILLE
+     *
+     * Il serait facile de ne jamais afficher « non classée » : il suffirait
+     * d'une règle « compte 601 → matières premières », et comme l'imputation
+     * vaut 601 pour TOUT achat, chaque charge recevrait une famille.
+     *
+     * Elle serait fausse pour presque toutes. Et une famille plausible se
+     * propage dans l'analyse sans que personne la corrige — alors qu'un
+     * « non classée » se voit et se corrige d'un geste.
+     *
+     * C'est le même arbitrage que partout dans ce dépôt : un refus vaut mieux
+     * qu'une valeur inventée. Vingt-sept règles de libellé rendent le cas rare ;
+     * elles ne le rendent pas impossible, et c'est tant mieux.
+     */
+    const r = await famille("Article divers réf. 44821");
+    assert.equal(r.famille_code, "NON_CLASSE");
   });
 
   it("une vente ne reçoit aucune famille de charge", async () => {
