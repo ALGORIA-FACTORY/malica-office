@@ -725,10 +725,46 @@ function PieceScreen() {
                   </p>
                 </div>
               ))}
-              <div className="flex items-baseline justify-between gap-3 border-t border-foreground py-3">
+              {/*
+               * LE PIED DE FACTURE EN ENTIER, et pas seulement la base.
+               *
+               * Le 7 octobre 2026, le commanditaire signale : « la TVA n'est
+               * pas affichée ». Elle était bien lue — 2,347 sur la facture
+               * CASA-ELECT — mais ce pied ne montrait QUE la base HT. Ni TVA,
+               * ni droits, ni total.
+               *
+               * C'est le même défaut que le timbre invisible du 4 octobre : la
+               * valeur existe, le contrat la porte, et l'écran s'arrête avant.
+               * Montrer une base sans sa TVA et sans son total laisse la
+               * personne incapable de vérifier que le produit a bien lu — ce
+               * qui est la seule chose qu'on lui demande.
+               */}
+              <div className="flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
                 <span className="text-[13.5px] font-semibold">{t("pme.extract.base")}</span>
                 <span className="num text-[13.5px] font-semibold">
                   {lisible(payload?.totals?.base_ht) ?? "—"}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-3 pt-1.5">
+                <span className="text-[13.5px]">{t("pme.extract.vat")}</span>
+                <span className="num text-[13.5px]">{lisible(payload?.totals?.vat) ?? "—"}</span>
+              </div>
+              {droits.map((d, i) => (
+                <div
+                  key={`${d.code}-${i}`}
+                  className="flex items-baseline justify-between gap-3 pt-1.5"
+                >
+                  <span className="text-[13.5px]">
+                    {d.libelle}
+                    {d.connu ? "" : ` · ${t("pme.extract.droitInconnu")}`}
+                  </span>
+                  <span className="num text-[13.5px]">{lisible(d.montant) ?? "—"}</span>
+                </div>
+              ))}
+              <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
+                <span className="text-[14px] font-semibold">{t("pme.verifie.total")}</span>
+                <span className="num text-[15px] font-semibold">
+                  {lisible(payload?.totals?.ttc) ?? "—"} {payload?.currency ?? pme.currency}
                 </span>
               </div>
             </div>
@@ -1037,19 +1073,36 @@ function PieceScreen() {
                   </p>
                 ) : (
                   <>
-                    <p className="pb-2.5 text-center text-[12.5px] text-text-2">
-                      {t("pme.transmettre.chezvous")}
+                    {/*
+                     * LA QUESTION, POSÉE — pas une mention qu'on peut manquer.
+                     *
+                     * Le 4 octobre, « rien ne partait » : le geste existait,
+                     * personne ne l'avait fait, et une ligne de 12,5 px disait
+                     * « chez vous ». On a alors transmis d'office à la photo, et
+                     * le 7 octobre une facture rejetée était déjà partie.
+                     *
+                     * Les deux erreurs ont la même cause : la transmission
+                     * n'était pas une DÉCISION. Elle l'est ici, en deux boutons
+                     * de même poids. Aucun n'est présenté comme le bon : garder
+                     * une facture chez soi est un choix légitime, l'envoyer
+                     * aussi, et seul le dirigeant sait lequel.
+                     */}
+                    <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
+                      {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
                     </p>
                     <button
                       type="button"
                       disabled={transmettre.isPending}
                       onClick={() => transmettre.mutate()}
-                      className="h-[50px] w-full border border-foreground text-[15px] font-medium disabled:opacity-50"
+                      className="h-[50px] w-full border border-foreground bg-foreground text-[15px] font-medium text-background disabled:opacity-50"
                     >
                       {transmettre.isPending
                         ? t("common.loading")
                         : t("pme.transmettre.action", { cabinet: cabinet.data.name })}
                     </button>
+                    <p className="pt-2.5 text-center text-[12.5px] text-text-2">
+                      {t("pme.transmettre.chezvous")}
+                    </p>
                   </>
                 )}
               </div>

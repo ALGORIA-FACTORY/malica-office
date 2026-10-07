@@ -150,8 +150,38 @@ export function lireLeSens(e: {
     );
   }
 
-  // Des matricules ont été lus, et aucun n'est celui du dossier.
+  /*
+   * ============ DEUX SITUATIONS QUI N'ONT RIEN À VOIR, ET QUI DISAIENT PAREIL
+   *
+   * Relevé le 7 octobre 2026 sur la facture SUARL CASA-ELECT. Elle imprime le
+   * matricule du FOURNISSEUR et pas celui du client — ce qui est le cas le plus
+   * courant d'une facture d'achat tunisienne, et non une anomalie.
+   *
+   * Le message unique disait « la pièce concerne peut-être une autre
+   * entreprise ». Alarmant, et faux : il n'y a rien d'anormal à ce qu'un
+   * fournisseur n'imprime pas le matricule de son client.
+   *
+   * Les deux cas se traitent donc à part :
+   *
+   *   un seul côté lu, et ce n'est pas le dossier  → le cas normal d'un achat,
+   *                                                  dont il manque la confirmation
+   *   les DEUX côtés lus, et aucun n'est le dossier → là, oui, c'est douteux
+   *
+   * Dans les deux cas on ne tranche pas — le dirigeant déclare. Mais on ne lui
+   * fait pas craindre une erreur quand il n'y en a pas : un avertissement qui
+   * se révèle infondé une fois sur deux cesse d'être lu.
+   */
+  if (client.cle === null) {
+    return aConfirmer(
+      "Le matricule du client n'est pas imprimé sur la pièce — c'est courant sur une facture d'achat. Indiquez s'il s'agit d'un achat ou d'une vente.",
+    );
+  }
+  if (emetteur.cle === null) {
+    return aConfirmer(
+      "Le matricule de l'émetteur n'est pas imprimé sur la pièce. Indiquez s'il s'agit d'un achat ou d'une vente.",
+    );
+  }
   return aConfirmer(
-    "Aucun des matricules lus n'est celui du dossier : la pièce concerne peut-être une autre entreprise.",
+    "Les deux matricules lus sur la pièce sont étrangers au dossier : elle concerne peut-être une autre entreprise.",
   );
 }

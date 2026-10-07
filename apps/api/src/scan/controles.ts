@@ -241,6 +241,29 @@ function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatContro
       motif: "Le dossier n'a pas de matricule fiscal : le destinataire ne peut pas être vérifié.",
       preuves: {},
     };
+  /*
+   * SANS SENS, PAS DE VERDICT.
+   *
+   * Ce contrôle regardait l'émetteur pour une vente et le destinataire pour
+   * tout le reste — donc il traitait un sens INCONNU comme un achat, en
+   * silence. Le 6 octobre, une facture d'achat de SUARL CASA-ELECT a été lue
+   * « vente » par le modèle : le contrôle a vérifié que l'émetteur était
+   * ALGORIA, a trouvé CASA-ELECT, et a REJETÉ une facture parfaitement normale.
+   *
+   * Le sens se déduit désormais des matricules (`lireLeSens`), et quand il
+   * reste à confirmer, ce contrôle ne se prononce pas. Vérifier la mauvaise
+   * partie est pire que ne rien vérifier : cela produit un rejet motivé, donc
+   * crédible, et faux.
+   */
+  if (p.documentKind !== "facture_achat" && p.documentKind !== "facture_vente")
+    return {
+      code: "destinataire",
+      statut: "non_evaluable",
+      motif:
+        "Le sens de la pièce n'est pas confirmé : on ne peut pas encore dire quelle partie devrait être le dossier.",
+      preuves: { documentKind: p.documentKind },
+    };
+
   // Un achat est adressé au tenant ; une vente est émise par lui.
   const vente = p.documentKind === "facture_vente";
   const partie = vente ? p.emetteur : p.destinataire;

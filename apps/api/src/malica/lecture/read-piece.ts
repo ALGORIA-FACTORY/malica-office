@@ -418,7 +418,7 @@ export function buildExtractFromTokenPlan(params: {
       field: v.champ,
       code: "ARITHMETIQUE_INCOHERENTE",
       detail:
-        `${v.parties.join(" + ")} donne ${enDecimal(v.calcule, decimals)}, ` +
+        `${v.parties.join(v.operation === "produit" ? " × " : " + ")} donne ${enDecimal(v.calcule, decimals)}, ` +
         `la pièce porte ${enDecimal(v.lu, decimals)}`,
     });
   }

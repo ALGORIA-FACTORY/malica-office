@@ -190,8 +190,29 @@ export function normaliserMatricule(brut: string | null | undefined): MatriculeL
   // le trouverait décalé dans un nombre plus long.
   const DEBUT = "(?:^|[^0-9])";
 
+  /*
+   * La lettre de contrôle est collée aux chiffres… ou séparée comme les autres
+   * groupes.
+   *
+   * Relevé le 7 octobre 2026 sur la facture SUARL CASA-ELECT :
+   *
+   *     1589037 /M/P/M/000
+   *
+   * Sept chiffres, une ESPACE, puis QUATRE groupes. Les treize écritures
+   * connues jusque-là collaient la lettre au numéro (« 1876543W/A/M/000 »).
+   *
+   * Le séparateur est donc FACULTATIF entre les chiffres et la lettre. Ce qui
+   * distingue toujours les deux cas reste le nombre de groupes : quatre, la
+   * lettre est là ; trois, elle manque. On ne devine rien, on compte.
+   *
+   * Ce qu'une écriture non reconnue a coûté, et c'est pour cela que la
+   * correction est ici et non ailleurs : sans matricule lisible, la déduction
+   * du sens ne pouvait pas se faire, le modèle a gardé la main, il a dit
+   * « vente » sur un achat, et le contrôle du destinataire a rejeté une facture
+   * d'achat parfaitement normale.
+   */
   const avecLettre = new RegExp(
-    `${DEBUT}(${C}{7})\\s*([A-Za-z])${SEP}([A-Za-z])${SEP}([A-Za-z])${SEP}(\\d{3})`,
+    `${DEBUT}(${C}{7})(?:${SEP}|\\s*)([A-Za-z])${SEP}([A-Za-z])${SEP}([A-Za-z])${SEP}(\\d{3})`,
   );
   const sansLettre = new RegExp(`${DEBUT}(${C}{7})${SEP}([A-Za-z])${SEP}([A-Za-z])${SEP}(\\d{3})`);
   const courte = new RegExp(`${DEBUT}(${C}{7})\\s*([A-Za-z])(?![0-9A-Za-z])`);

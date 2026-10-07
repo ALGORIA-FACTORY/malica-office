@@ -2218,7 +2218,13 @@ const fr = {
     "J'ai lu la pièce, mais il me manque : {champs}. Complétez-la et je prépare l'écriture.",
   "piece.champ.date": "la date",
   "piece.date.duScan": "Non lue sur la pièce — jour du scan proposé",
-  "pme.transmettre.chezvous": "Cette pièce est chez vous. Votre cabinet ne la voit pas encore.",
+  /*
+   * La question, posée. Une mention qu'on peut manquer a coûté deux défauts
+   * en trois jours : le 4 octobre rien ne partait, le 7 une facture rejetée
+   * était déjà partie. La transmission est une DÉCISION, donc une question.
+   */
+  "pme.transmettre.question": "Envoyer cette pièce à {cabinet} ?",
+  "pme.transmettre.chezvous": "Sinon elle reste chez vous, et votre cabinet ne la voit pas.",
   "pme.transmettre.action": "Transmettre à {cabinet}",
   "pme.transmettre.faite": "Transmise à {cabinet}.",
   "pme.supprimer.action": "Supprimer cette pièce",
@@ -4394,7 +4400,8 @@ const en: Dict = {
     "I read the document, but I am missing: {champs}. Complete it and I will prepare the entry.",
   "piece.champ.date": "the date",
   "piece.date.duScan": "Not readable on the document — scan day proposed",
-  "pme.transmettre.chezvous": "This document is yours. Your firm cannot see it yet.",
+  "pme.transmettre.question": "Send this document to {cabinet}?",
+  "pme.transmettre.chezvous": "Otherwise it stays with you, and your firm cannot see it.",
   "pme.transmettre.action": "Send to {cabinet}",
   "pme.transmettre.faite": "Sent to {cabinet}.",
   "pme.supprimer.action": "Delete this document",
@@ -6527,7 +6534,8 @@ const ar: Dict = {
   "piece.incomplete": "قرأت الوثيقة، لكن ينقصني: {champs}. أكملها وسأحضّر القيد.",
   "piece.champ.date": "التاريخ",
   "piece.date.duScan": "غير مقروء على الوثيقة — يُقترح يوم المسح",
-  "pme.transmettre.chezvous": "هذه الوثيقة عندك. مكتبك لا يراها بعد.",
+  "pme.transmettre.question": "إرسال هذه الوثيقة إلى {cabinet}؟",
+  "pme.transmettre.chezvous": "وإلا تبقى عندك، ولا يراها مكتبك.",
   "pme.transmettre.action": "إرسال إلى {cabinet}",
   "pme.transmettre.faite": "أُرسلت إلى {cabinet}.",
   "pme.supprimer.action": "حذف هذه الوثيقة",

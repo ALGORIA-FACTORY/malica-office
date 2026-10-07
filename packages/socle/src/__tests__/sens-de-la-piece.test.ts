@@ -114,6 +114,40 @@ describe("les trois situations qui ne se tranchent pas toutes seules", () => {
     expect(r.signalement).toMatch(/deux côtés/);
   });
 
+  it("la facture CASA-ELECT : seul le matricule du fournisseur est imprimé", () => {
+    /*
+     * LE CAS RÉEL DU 6 OCTOBRE 2026, et la chaîne qu'il a déclenchée.
+     *
+     * Facture d'achat de SUARL CASA-ELECT : elle imprime « 1589037 /M/P/M/000 »
+     * — le matricule du FOURNISSEUR — et pas celui du client, ce qui est le cas
+     * le plus courant d'une facture d'achat tunisienne.
+     *
+     * Le normaliseur ne savait pas lire cette écriture (lettre de contrôle
+     * séparée par une espace et une barre). Aucun matricule comparable, donc le
+     * modèle gardait la main : il a dit « facture_vente ». Et de là :
+     *
+     *   — le contrôle du destinataire a vérifié que l'ÉMETTEUR était ALGORIA,
+     *     a trouvé CASA-ELECT, et a REJETÉ une facture parfaitement normale ;
+     *   — l'imputation est devenue 701 (vente) au lieu de 601 (achat), donc la
+     *     charge est tombée dans « NON_CLASSE ».
+     *
+     * Une écriture de matricule non reconnue a produit trois défauts visibles.
+     *
+     * Ce que le produit doit faire maintenant : ne PAS trancher, et le dire
+     * sans alarmer — il n'y a rien d'anormal ici.
+     */
+    const r = lireLeSens({
+      matriculeDossier: DOSSIER,
+      matriculeEmetteur: "1589037 /M/P/M/000",
+      matriculeClient: null,
+      sensDuModele: "facture_vente",
+    });
+    expect(r.sens).toBeNull();
+    expect(r.origine).toBe("a_confirmer");
+    expect(r.signalement).toMatch(/courant sur une facture d'achat/);
+    expect(r.signalement).not.toMatch(/autre entreprise/);
+  });
+
   it("le dossier d'AUCUN des deux, alors que les deux sont lus : à confirmer", () => {
     // La pièce concerne peut-être une autre entreprise. On ne choisit pas un
     // sens par défaut sur une pièce qui n'est peut-être pas la nôtre.

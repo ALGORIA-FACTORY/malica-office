@@ -205,6 +205,12 @@ interface ValeurResolue {
 interface Violation {
   /** Le champ qui porte le total de l'équation. */
   champ: string;
+  /**
+   * Somme ou produit. Sans elle, le drapeau disait « quantité + prix unitaire
+   * donne 48.994 » sur une MULTIPLICATION — relevé le 7 octobre 2026 sur une
+   * vraie facture. Un message faux sur l'opération fait douter du reste.
+   */
+  operation: "somme" | "produit";
   /** Les champs dont il devrait être la somme, ou le produit. */
   parties: readonly string[];
   /** Ce que l'équation donne, en unités mineures. */
@@ -288,7 +294,7 @@ function evaluer(
     const calcule = parties.reduce((s, p) => s! + p!, 0)!;
     return {
       ok: calcule === total,
-      violation: { champ: c.total, parties: c.parties, calcule, lu: total },
+      violation: { champ: c.total, operation: "somme", parties: c.parties, calcule, lu: total },
     };
   }
   const total = lu(c.total);
@@ -303,6 +309,7 @@ function evaluer(
     ok: Math.abs(quantite * unitaire - total * facteur) <= tolerance * facteur,
     violation: {
       champ: c.total,
+      operation: "produit",
       parties: [c.quantite, c.unitaire],
       // Le quotient n'est arrondi QUE pour être montré : la comparaison
       // ci-dessus, elle, reste entière.

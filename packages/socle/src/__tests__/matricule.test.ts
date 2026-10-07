@@ -40,6 +40,29 @@ const VARIANTES: ReadonlyArray<readonly [string, string]> = [
   ["confusion B pour 8", "1B76543W/A/M/000"],
 ];
 
+/**
+ * ===================== LA QUATORZIÈME, VENUE D'UNE VRAIE FACTURE
+ *
+ * Relevée le 7 octobre 2026 sur la facture SUARL CASA-ELECT (FA262266),
+ * photographiée par le commanditaire :
+ *
+ *     1589037 /M/P/M/000
+ *
+ * Sept chiffres, UNE ESPACE, puis QUATRE groupes. La lettre de contrôle — le
+ * « M » — est séparée du numéro comme les autres groupes, alors que les treize
+ * écritures précédentes la collaient aux chiffres.
+ *
+ * Mon normaliseur la rendait « illisible ». Conséquence en cascade, et c'est
+ * ce qui en fait un cas et non un détail : sans matricule lisible, la déduction
+ * du sens ne pouvait pas se faire, le modèle gardait la main, il a dit
+ * « facture_vente » sur une facture d'achat, et le contrôle du destinataire a
+ * alors vérifié que l'ÉMETTEUR était ALGORIA. Il a trouvé CASA-ELECT, et il a
+ * REJETÉ une facture d'achat parfaitement normale.
+ *
+ * Une écriture de matricule non reconnue a donc suffi à faire rejeter la pièce.
+ */
+const CASA_ELECT = "1589037 /M/P/M/000";
+
 describe("les treize écritures d'un même matricule", () => {
   it("il y en a bien treize, nommées", () => {
     // Si la liste d'origine en porte d'autres, ce compte doit changer avec
@@ -83,6 +106,37 @@ describe("les treize écritures d'un même matricule", () => {
       "chiffres arabes convertis",
     );
     expect(normaliserMatricule("MF : 1876543W/A/M/000").corrections).toContain("étiquette retirée");
+  });
+});
+
+describe("la lettre de contrôle séparée par un séparateur — vraie facture CASA-ELECT", () => {
+  it("se lit, et rend la clé 1589037M", () => {
+    const lu = normaliserMatricule(CASA_ELECT);
+    expect(lu.cle).toBe("1589037M");
+    expect(lu.forme).toBe("complete");
+    expect(lu.complet).toBe("1589037M/P/M/000");
+  });
+
+  it("égale la même entreprise écrite sans l'espace", () => {
+    expect(memeMatricule(CASA_ELECT, "1589037M/P/M/000")).toBe(true);
+  });
+
+  it("et n'est PAS confondue avec le dossier", () => {
+    // C'est le fournisseur. La déduction du sens doit donc dire « ce n'est pas
+    // le dossier », et non « je ne sais pas lire ».
+    expect(memeMatricule(CASA_ELECT, "1876543W/A/M/000")).toBe(false);
+  });
+
+  it("les quatre groupes ne sont pas pris pour trois", () => {
+    /*
+     * Le piège exact : lu comme TROIS groupes, « /M/P/M/000 » donnerait un
+     * matricule SANS lettre de contrôle, de clé nulle — et la pièce repartirait
+     * en question au lieu d'être déduite. Lu comme QUATRE, le premier groupe
+     * est la lettre de contrôle.
+     */
+    const lu = normaliserMatricule(CASA_ELECT);
+    expect(lu.chiffres).toBe("1589037");
+    expect(lu.cle).not.toBeNull();
   });
 });
 
