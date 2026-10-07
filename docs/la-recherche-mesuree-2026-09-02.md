@@ -8,12 +8,12 @@ fait, mesuré sur 800 questions dont la bonne réponse est connue d'avance.
 `legal.sondages` porte **12 101 questions dont l'article attendu est connu par
 construction**. Aucune n'a demandé le jugement d'un expert, et aucune ne porte
 de réponse rédigée : elles mesurent une seule chose, la seule qui se mesure sans
-personne — *la recherche ramène-t-elle le bon article ?*
+personne — _la recherche ramène-t-elle le bon article ?_
 
-| famille | nombre | ce qu'elle éprouve |
-|---|---|---|
-| **identité** | 11 434 | « article 84 nonies — code des droits et procédures fiscaux ». La façon dont un praticien désigne un texte. |
-| **objet** | 667 | l'objet de chaque note commune, écrit par la DGELF, privé de son numéro. La question n'a presque aucun mot commun avec le texte. |
+| famille      | nombre | ce qu'elle éprouve                                                                                                               |
+| ------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **identité** | 11 434 | « article 84 nonies — code des droits et procédures fiscaux ». La façon dont un praticien désigne un texte.                      |
+| **objet**    | 667    | l'objet de chaque note commune, écrit par la DGELF, privé de son numéro. La question n'a presque aucun mot commun avec le texte. |
 
 `db/corpus/sonder.mjs` rejoue un échantillon tiré de façon reproductible et
 compare trois classements sur le même périmètre : le **sens** (vecteurs seuls,
@@ -24,14 +24,14 @@ ce que faisait la recherche jusqu'ici), les **mots** (index lexical seul), et la
 
 800 sondages, 400 par famille.
 
-| famille | classement | rang 1 | rang 5 | rang 20 |
-|---|---|---|---|---|
-| identité | sens | 34,0 % | 60,5 % | 77,8 % |
-| identité | mots | 99,3 % | 100,0 % | 100,0 % |
-| identité | **fusion** | 84,8 % | 99,5 % | **100,0 %** |
-| objet | sens | 43,0 % | 58,5 % | 69,5 % |
-| objet | mots | 65,3 % | 69,3 % | 75,8 % |
-| objet | **fusion** | 65,3 % | 82,3 % | **87,3 %** |
+| famille  | classement | rang 1 | rang 5  | rang 20     |
+| -------- | ---------- | ------ | ------- | ----------- |
+| identité | sens       | 34,0 % | 60,5 %  | 77,8 %      |
+| identité | mots       | 99,3 % | 100,0 % | 100,0 %     |
+| identité | **fusion** | 84,8 % | 99,5 %  | **100,0 %** |
+| objet    | sens       | 43,0 % | 58,5 %  | 69,5 %      |
+| objet    | mots       | 65,3 % | 69,3 %  | 75,8 %      |
+| objet    | **fusion** | 65,3 % | 82,3 %  | **87,3 %**  |
 
 **Ce que la journée a gagné, en une ligne :** à vingt résultats — le nombre que
 la recherche rend désormais — le bon article passe de **77,8 % à 100 %** sur les
@@ -64,8 +64,8 @@ gains tiennent ensemble.
 
 ## Le français atteint enfin l'arabe
 
-Mesure faite avant : à la question française *« convention fiscale entre la
-Tunisie et l'Arabie saoudite : imposition des dividendes »*, la recherche rendait
+Mesure faite avant : à la question française _« convention fiscale entre la
+Tunisie et l'Arabie saoudite : imposition des dividendes »_, la recherche rendait
 cinq articles du code de l'impôt sur le revenu. **Pas un fragment arabe**, alors
 que cette convention n'existe qu'en arabe dans la base.
 
@@ -78,7 +78,7 @@ Deux causes, toutes deux corrigées :
    par défaut porte désormais les codes, **les conventions et les normes
    comptables**.
 2. **L'en-tête de contexte est bilingue.** Chaque fragment porte le nom de son
-   corpus en français *et* en arabe. Le nom français colle maintenant au
+   corpus en français _et_ en arabe. Le nom français colle maintenant au
    fragment arabe.
 
 Résultat : la convention Tunisie–Arabie saoudite remonte, en arabe, sur son
@@ -115,15 +115,15 @@ tracé pour des vecteurs qui n'existent plus : il répond encore, et il répond 
 sans rien signaler. Il a donc été **reconstruit** (18 secondes), avec ses
 paramètres écrits explicitement plutôt que laissés au défaut.
 
-La règle est désormais dans la migration : *tout réencodage du corpus se termine
-par une reconstruction de l'index.*
+La règle est désormais dans la migration : _tout réencodage du corpus se termine
+par une reconstruction de l'index._
 
 ## Chiffres de la journée
 
-| | |
-|---|---|
-| Fragments réencodés | 31 863, avec en-tête de contexte et encodage asymétrique |
-| Coût du réencodage | 0,49 USD |
-| Jetons | ~14,5 millions |
-| Sondages disponibles | 12 101 |
-| Cas amorcés dans la banque de référence | 667, en attente de la réponse de l'expert |
+|                                         |                                                          |
+| --------------------------------------- | -------------------------------------------------------- |
+| Fragments réencodés                     | 31 863, avec en-tête de contexte et encodage asymétrique |
+| Coût du réencodage                      | 0,49 USD                                                 |
+| Jetons                                  | ~14,5 millions                                           |
+| Sondages disponibles                    | 12 101                                                   |
+| Cas amorcés dans la banque de référence | 667, en attente de la réponse de l'expert                |

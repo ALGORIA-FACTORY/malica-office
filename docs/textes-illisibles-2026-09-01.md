@@ -1,6 +1,6 @@
 # Les vingt-sept éditions que la base ne savait pas lire
 
-*1er septembre 2026*
+_1er septembre 2026_
 
 ## Le problème
 
@@ -8,10 +8,10 @@ Sur les cent éditions de la file d'ingestion, vingt-sept ne rendaient aucun tex
 Elles n'étaient pas défectueuses : elles étaient illisibles **de deux façons
 différentes**, et il a fallu deux remèdes différents.
 
-| Type | Éditions | Ce que rendait l'extraction |
-|---|---|---|
-| Microfilms du JORT | 19 (LF 1978-1994, LFC 1980-1991) | rien du tout : ce sont des images |
-| PDF à police maison | 8 (LF 2000-2005, LFC 2002 et 2004) | `75$'8&7,21)5$1d$,6(` |
+| Type                | Éditions                           | Ce que rendait l'extraction       |
+| ------------------- | ---------------------------------- | --------------------------------- |
+| Microfilms du JORT  | 19 (LF 1978-1994, LFC 1980-1991)   | rien du tout : ce sont des images |
+| PDF à police maison | 8 (LF 2000-2005, LFC 2002 et 2004) | `75$'8&7,21)5$1d$,6(`             |
 
 ## Remède 1 — les microfilms : reconnaissance optique
 
@@ -69,10 +69,10 @@ Un texte issu de la reconnaissance optique ne doit jamais se faire passer pour l
 Journal Officiel. La colonne `legal.article_versions.extraction_confiance` porte
 donc trois valeurs :
 
-| Valeur | Ce que ça veut dire |
-|---|---|
-| `verbatim` | texte extrait tel quel du PDF officiel |
-| `partiel` | PDF à police maison, déchiffré : lettres sûres, quelques signes perdus |
+| Valeur      | Ce que ça veut dire                                                                 |
+| ----------- | ----------------------------------------------------------------------------------- |
+| `verbatim`  | texte extrait tel quel du PDF officiel                                              |
+| `partiel`   | PDF à police maison, déchiffré : lettres sûres, quelques signes perdus              |
 | `incertain` | microfilm passé à la reconnaissance optique : lisible, pas fiable au caractère près |
 
 La correspondance est portée par `db/corpus/pdf/provenance.json`, lu par
@@ -82,7 +82,7 @@ d'entre elles.
 
 ## Ce qui reste écarté, et pourquoi
 
-| Édition | Raison |
-|---|---|
-| LF-1979 | microfilm trop dégradé : les numéros d'articles sont illisibles |
+| Édition  | Raison                                                                                                                                                                                                                                                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LF-1979  | microfilm trop dégradé : les numéros d'articles sont illisibles                                                                                                                                                                                                                                                  |
 | LFC-2008 | ce PDF n'est pas une loi mais un numéro entier du JORT : lois, décrets et arrêtés mêlés, chacun renumérotant à partir de 1. Le découpage y trouvait auparavant les huit articles d'un décret sur une unité de gestion, et les étiquetait « LFC 2008 ». Rendre zéro est plus honnête que rendre le mauvais texte. |

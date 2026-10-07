@@ -10,14 +10,14 @@ La base ne se contredit plus. Les six contrôles de propreté rendent zéro sur
 toutes leurs lignes, et les cinq documents qui n'ont rien produit portent chacun
 la raison, vérifiée sur le document lui-même.
 
-| | Avant | Après |
-|---|---|---|
-| Versions en double (même texte, deux fois) | 7 | **0** |
-| Notes rangées sous une année qui n'est pas la leur | 13 | **0** |
-| Notes dont l'en-tête contredit l'identité en base | 17 | **0** |
-| Versions sans l'adresse du fichier d'origine | 2 265 | **0** |
-| Documents de la file au statut faux | 96 | **0** |
-| Documents « n'a rien produit » sans motif écrit | 8 | **0** |
+|                                                    | Avant | Après |
+| -------------------------------------------------- | ----- | ----- |
+| Versions en double (même texte, deux fois)         | 7     | **0** |
+| Notes rangées sous une année qui n'est pas la leur | 13    | **0** |
+| Notes dont l'en-tête contredit l'identité en base  | 17    | **0** |
+| Versions sans l'adresse du fichier d'origine       | 2 265 | **0** |
+| Documents de la file au statut faux                | 96    | **0** |
+| Documents « n'a rien produit » sans motif écrit    | 8     | **0** |
 
 ## Ce qui n'allait pas, et pourquoi
 
@@ -35,7 +35,7 @@ en le présentant comme un texte de 2010.
 **Corrigé à la cause** : `db/corpus/notes.mjs` lit désormais l'identité dans
 l'en-tête de la note elle-même (« NOTE COMMUNE N° 11/2009 ») ; le titre du
 portail n'est plus qu'un secours. **Corrigé dans les données** : les fantômes ont
-été retirés, non pas nommés un par un, mais *dérivés* — un article dont le texte
+été retirés, non pas nommés un par un, mais _dérivés_ — un article dont le texte
 est identique à celui d'un autre, et dont l'identité contredit son propre
 en-tête quand celle de l'autre le confirme, est le fantôme. La note 8 de 2009,
 qui n'existait que sous 2010, est retournée à son millésime.
@@ -107,12 +107,12 @@ avoir produit, ou si un échec n'a pas de motif.
 
 ## Ce qui a été gagné en chemin
 
-| | |
-|---|---|
-| Conventions Égypte et Arabie saoudite | **+56 articles** |
-| Code des sociétés commerciales, édition française | **+490 versions** |
+|                                                                |                   |
+| -------------------------------------------------------------- | ----------------- |
+| Conventions Égypte et Arabie saoudite                          | **+56 articles**  |
+| Code des sociétés commerciales, édition française              | **+490 versions** |
 | Lois de finances arabes 2014-2022 et complémentaires 2013-2016 | **+816 articles** |
-| Décret-loi de finances de novembre 2022 | **+6 articles** |
+| Décret-loi de finances de novembre 2022                        | **+6 articles**   |
 
 La convention avec l'Arabie saoudite méritait son détour : sa couche de texte
 rendait « 2111 » là où le papier porte 2010, et l'édition entière était écartée
@@ -126,13 +126,13 @@ chiffres arabo-indiens — « ١٩٩٤ » vaut 1994.
 
 Cinq documents n'ont rien produit. Chacun porte son motif dans la file :
 
-| Document | Pourquoi |
-|---|---|
+| Document                                 | Pourquoi                                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Convention Tunisie–Côte d'Ivoire (arabe) | PDF numérisé et trop dégradé : la reconnaissance optique n'en tire ni numéros d'articles ni date |
-| Convention Tunisie–Singapour (arabe) | l'édition du portail ne porte aucune date, ni de signature ni de ratification |
-| Convention Tunisie–Vietnam | le PDF du portail est un **projet non signé** : il porte « Fait à ……… le ……… » en blanc |
-| Loi de finances 1979 | microfilm du Journal Officiel trop dégradé |
-| Loi de finances complémentaire 2008 | le PDF est un numéro entier du Journal Officiel, pas le texte de la loi |
+| Convention Tunisie–Singapour (arabe)     | l'édition du portail ne porte aucune date, ni de signature ni de ratification                    |
+| Convention Tunisie–Vietnam               | le PDF du portail est un **projet non signé** : il porte « Fait à ……… le ……… » en blanc          |
+| Loi de finances 1979                     | microfilm du Journal Officiel trop dégradé                                                       |
+| Loi de finances complémentaire 2008      | le PDF est un numéro entier du Journal Officiel, pas le texte de la loi                          |
 
 Restent aussi, connus et mesurés :
 

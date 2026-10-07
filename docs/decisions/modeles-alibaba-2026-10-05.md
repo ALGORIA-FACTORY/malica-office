@@ -15,12 +15,12 @@ l'écart est noté pour qu'on sache qu'il existe.
 
 ## Les modèles retenus
 
-| rôle | modèle | entrée / sortie, $ par Mtok |
-|---|---|---|
-| Témoin OCR | `qwen-vl-ocr-2025-11-20` | 0,07 / 0,16 |
-| Compréhension de page | `qwen3.8-flash` | 0,15 / 0,47 |
-| Cas difficiles, en option | `qwen3.6-plus` | 0,5 / 3 |
-| Embeddings | `qwen3.7-text-embedding` | — |
+| rôle                      | modèle                   | entrée / sortie, $ par Mtok |
+| ------------------------- | ------------------------ | --------------------------- |
+| Témoin OCR                | `qwen-vl-ocr-2025-11-20` | 0,07 / 0,16                 |
+| Compréhension de page     | `qwen3.8-flash`          | 0,15 / 0,47                 |
+| Cas difficiles, en option | `qwen3.6-plus`           | 0,5 / 3                     |
+| Embeddings                | `qwen3.7-text-embedding` | —                           |
 
 ## Les modèles interdits
 
@@ -60,11 +60,11 @@ visible plus tôt. À écrire avec la bascule.
 
 ## État au 5 octobre 2026, le soir
 
-| | aujourd'hui dans le code | cible |
-|---|---|---|
-| relevé (l'œil) | `qwen-vl-ocr-2025-11-20` | inchangé |
-| compréhension / désignation | `deepseek-chat` | `qwen3.8-flash` |
-| second témoin | — | PP-OCRv6, sinon v5 |
+|                             | aujourd'hui dans le code | cible              |
+| --------------------------- | ------------------------ | ------------------ |
+| relevé (l'œil)              | `qwen-vl-ocr-2025-11-20` | inchangé           |
+| compréhension / désignation | `deepseek-chat`          | `qwen3.8-flash`    |
+| second témoin               | —                        | PP-OCRv6, sinon v5 |
 
 `deepseek-chat` a remplacé `deepseek-reasoner` le 5 octobre après mesure
 (`tests/real/designation-cout.ts`) : 414 jetons de sortie contre 3 792, et
