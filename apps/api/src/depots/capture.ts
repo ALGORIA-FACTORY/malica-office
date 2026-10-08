@@ -434,8 +434,14 @@ export const capture = {
     let compte: string | undefined;
     if (input.documentKind) {
       const { rows } = await db.query(
+        // Une ligne par code de taxe : cinq pour un achat, cinq pour une
+        // vente, et le même `main_account` sur les cinq. Sans ordre, deux
+        // bases pouvaient rendre une ligne différente — et le jour où un pack
+        // distinguerait l'imputation par code de taxe, l'imputation d'une
+        // pièce aurait dépendu du plan d'exécution (R11).
         `select main_account from ref_account_mappings_v
-          where pack_version_id = $1 and document_kind = $2`,
+          where pack_version_id = $1 and document_kind = $2
+          order by main_account limit 1`,
         [input.packId, input.documentKind],
       );
       compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
