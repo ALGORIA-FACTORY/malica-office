@@ -29,7 +29,7 @@
  * suit sans être touchée.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -40,8 +40,20 @@ const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL_ADMIN"]);
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
-/** Les fichiers qui sèment des organisations ou des tiers. */
-const JEUX = ["outils/jeu-de-donnees.mjs", "db/dev/jeu_dessai.mjs"];
+/**
+ * Les dossiers qui sèment des organisations ou des tiers.
+ *
+ * Des DOSSIERS, pas une liste de fichiers : la première version de cette
+ * épreuve nommait deux fichiers, et l'épreuve de bout en bout est retombée
+ * aussitôt sur un septième matricule, dans `outils/epreuves/`. Une liste tenue
+ * à la main manque ce qu'on y ajoute.
+ *
+ * Ce qui est volontairement HORS du périmètre : `docs/`, qui CITE des
+ * matricules réellement observés, fautes comprises — un diagnostic qui corrige
+ * ce qu'il a vu ne vaut plus rien ; et les épreuves du code, qui éprouvent
+ * justement le refus des formes invalides.
+ */
+const DOSSIERS = ["outils", "db/dev"];
 
 /**
  * Ce qui RESSEMBLE à un matricule : des chiffres, puis au moins deux groupes
@@ -61,13 +73,24 @@ describe("les matricules des jeux d'essai", { skip: !BASE_CONFIGUREE }, () => {
     await pool.end();
   });
 
-  for (const fichier of JEUX) {
-    it(`${fichier} n'écrit que des matricules que le référentiel accepte`, async () => {
-      const texte = readFileSync(join(RACINE, fichier), "utf8");
-      const trouves = [...new Set(texte.match(FORME) ?? [])];
+  for (const dossier of DOSSIERS) {
+    it(`${dossier}/ n'écrit que des matricules que le référentiel accepte`, async () => {
+      const fichiers = readdirSync(join(RACINE, dossier), {
+        recursive: true,
+        withFileTypes: true,
+      }).filter((e) => e.isFile() && (e.name.endsWith(".mjs") || e.name.endsWith(".js")));
+
+      const parValeur = new Map<string, string>();
+      for (const f of fichiers) {
+        const chemin = join(f.parentPath, f.name);
+        for (const m of readFileSync(chemin, "utf8").match(FORME) ?? []) {
+          if (!parValeur.has(m)) parValeur.set(m, chemin.slice(RACINE.length + 1));
+        }
+      }
+      const trouves = [...parValeur.keys()];
       assert.ok(
         trouves.length > 0,
-        `aucun matricule trouvé dans ${fichier} : l'épreuve ne mesure plus rien`,
+        `aucun matricule trouvé dans ${dossier}/ : l'épreuve ne mesure plus rien`,
       );
 
       const { rows } = await pool.query<{ valeur: string; ok: boolean }>(
@@ -80,11 +103,13 @@ describe("les matricules des jeux d'essai", { skip: !BASE_CONFIGUREE }, () => {
         [trouves],
       );
 
-      const refuses = rows.filter((r) => !r.ok).map((r) => r.valeur);
+      const refuses = rows
+        .filter((r) => !r.ok)
+        .map((r) => `${parValeur.get(r.valeur)} : ${r.valeur}`);
       assert.deepEqual(
         refuses,
         [],
-        `${fichier} : le produit refuserait ces matricules à la saisie, donc le jeu d'essai ne se monte pas`,
+        "le produit refuserait ces matricules à la saisie, donc le jeu d'essai ne se monte pas",
       );
     });
   }

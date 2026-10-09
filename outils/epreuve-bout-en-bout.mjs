@@ -420,7 +420,7 @@ if (process.argv.includes("--modeles")) {
   c.fillStyle = "#000000";
   const lignes = [
     ["ÉPREUVE FOURNITURES SARL", 44, 140],
-    ["Matricule fiscal 0000000/A/M/000", 30, 200],
+    ["Matricule fiscal 0000000A/A/M/000", 30, 200],
     // Un numéro par exécution : rejouée sur la même base, l'épreuve ne doit pas
     // se reconnaître elle-même comme un doublon à rapprocher.
     [`FACTURE N° EP-${Date.now().toString(36).toUpperCase()}`, 40, 320],

@@ -26,7 +26,7 @@ import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("conseil, PV et mise en route", process.argv[2]);
 
-const PME = { name: "ÉPREUVE CONSEIL SARL", legalId: "9999997/E/P/000" };
+const PME = { name: "ÉPREUVE CONSEIL SARL", legalId: "9999997C/A/P/000" };
 const INVITEE = { email: "epreuve.assistant@malica.local", role: "assistant" };
 const TITRE_PV = "Épreuve — procès-verbal de restitution";
 const AUJOURDHUI = new Date().toISOString().slice(0, 10);
@@ -133,7 +133,7 @@ if (proposition.status === "propose") {
 }
 const inconnu = await e.rpcAttenduEnEchec("identite", "proposerMandat", [
   cabinet.id,
-  "0000000/Z/Z/000",
+  "0000000Z/A/M/000",
 ]);
 e.verdict("un identifiant que personne ne porte est refusé", inconnu !== null);
 const clients = await e.rpc("supervision", "listClients", [cabinet.id]);
