@@ -105,7 +105,7 @@ const EQUIPE = [
 const PMES = {
   sotumag: {
     name: "SOTUMAG SARL",
-    legalId: "7654321/B/M/000",
+    legalId: "7654321B/A/M/000",
     email: COMPTES.dirigeant.email,
     nom: "Direction SOTUMAG",
     validationMode: "mandate",
@@ -123,7 +123,7 @@ const PMES = {
   },
   medina: {
     name: "Medina Textile",
-    legalId: "2345678/C/M/000",
+    legalId: "2345678C/A/M/000",
     email: "contact@medina-textile.tn",
     nom: "Direction Medina Textile",
     validationMode: "mandate",
@@ -141,7 +141,7 @@ const PMES = {
   },
   cleopatre: {
     name: "Cléopâtre Voyages",
-    legalId: "3456789/D/M/000",
+    legalId: "3456789D/A/M/000",
     email: "contact@cleopatre-voyages.tn",
     nom: "Direction Cléopâtre Voyages",
     validationMode: "mandate",
@@ -159,7 +159,7 @@ const PMES = {
   },
   tunisfresh: {
     name: "TunisFresh SA",
-    legalId: "4567890/E/M/000",
+    legalId: "4567890E/A/M/000",
     email: "contact@tunisfresh.tn",
     nom: "Direction TunisFresh",
     validationMode: "autonome",
@@ -177,7 +177,7 @@ const PMES = {
   },
   zitouna: {
     name: "Atelier Zitouna",
-    legalId: "5678901/F/P/000",
+    legalId: "5678901F/P/P/000",
     email: "contact@atelier-zitouna.tn",
     nom: "Atelier Zitouna",
     validationMode: "mandate",
@@ -196,7 +196,7 @@ const PMES = {
   },
   nabeul: {
     name: "Nabeul Céramique",
-    legalId: "6789012/G/M/000",
+    legalId: "6789012G/A/M/000",
     email: "contact@nabeul-ceramique.tn",
     nom: "Direction Nabeul Céramique",
     validationMode: "mandate",
@@ -882,13 +882,13 @@ const PIECES = {
         nature: "fournisseur",
         code: "ELECTRO01",
         raisonSociale: "ELECTRO IMPORT TUNISIE",
-        identifiantFiscal: "1122334/H/A/M/000",
+        identifiantFiscal: "1122334H/A/M/000",
       },
       {
         nature: "client",
         code: "MANAR01",
         raisonSociale: "SUPERMARCHE EL MANAR",
-        identifiantFiscal: "2233445/J/A/M/000",
+        identifiantFiscal: "2233445J/A/M/000",
       },
     ],
     pieces: [
@@ -958,13 +958,13 @@ const PIECES = {
         nature: "fournisseur",
         code: "FILSAHEL",
         raisonSociale: "FILATURE DU SAHEL",
-        identifiantFiscal: "3344556/K/A/M/000",
+        identifiantFiscal: "3344556K/A/M/000",
       },
       {
         nature: "client",
         code: "BOUTSFAX",
         raisonSociale: "MAISON BOUTIQUE SFAX",
-        identifiantFiscal: "4455667/L/A/M/000",
+        identifiantFiscal: "4455667L/A/M/000",
       },
     ],
     pieces: [
@@ -1024,13 +1024,13 @@ const PIECES = {
         nature: "fournisseur",
         code: "ORANGERS",
         raisonSociale: "HOTEL LES ORANGERS",
-        identifiantFiscal: "5566778/M/A/M/000",
+        identifiantFiscal: "5566778M/A/M/000",
       },
       {
         nature: "client",
         code: "ALPHACON",
         raisonSociale: "ALPHA CONSEIL",
-        identifiantFiscal: "6677889/N/A/M/000",
+        identifiantFiscal: "6677889N/A/M/000",
       },
     ],
     pieces: [

@@ -399,8 +399,8 @@ async function main() {
 
   // Le matricule de DREAM OPTIC est celui qui figure sur ses vraies factures.
   const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234567A/A/M/000");
-  const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882/F/P/C/000");
-  const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543/B/N/000");
+  const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882F/P/C/000");
+  const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543B/B/N/000");
   console.log(`  cabinet          CABINET MALICA`);
   console.log(`  dossiers         DREAM OPTIC · ATLAS DISTRIBUTION`);
 
@@ -413,10 +413,10 @@ async function main() {
 
   // Les comptes collectifs viennent du plan, jamais d'une constante ici.
   await tiers(optic, "client", "PHARMA01", "PHARMACIE CENTRALE", "411", "1234567A/A/M/000");
-  await tiers(optic, "client", "OPTIQ02", "OPTIQUE DU LAC", "411", "2345678/B/N/000");
-  await tiers(optic, "fournisseur", "VERRES01", "VERRES DE TUNISIE", "401", "3456789C/C/P/000");
-  await tiers(atlas, "fournisseur", "GROSSI01", "GROSSISTE DU SUD", "401", "4567890D/D/Q/000");
-  await tiers(atlas, "client", "SUPER01", "SUPERETTE EL MENZAH", "411", "5678901/E/R/000");
+  await tiers(optic, "client", "OPTIQ02", "OPTIQUE DU LAC", "411", "2345678B/A/N/000");
+  await tiers(optic, "fournisseur", "VERRES01", "VERRES DE TUNISIE", "401", "3456789C/A/P/000");
+  await tiers(atlas, "fournisseur", "GROSSI01", "GROSSISTE DU SUD", "401", "4567890D/A/C/000");
+  await tiers(atlas, "client", "SUPER01", "SUPERETTE EL MENZAH", "411", "5678901E/A/M/000");
   console.log(`  tiers            5`);
 
   // Un seul endroit décrit chaque pièce : le PDF et sa lecture lisent la même
@@ -429,7 +429,7 @@ async function main() {
       marque: "optic-achat-1",
       titre: "FACTURE No 2026-114",
       lignes: [
-        "VERRES DE TUNISIE - MF 3456789C/C/P/000",
+        "VERRES DE TUNISIE - MF 3456789C/A/P/000",
         "Client : DREAM OPTIC",
         "",
         "Verres organiques traites          1 200,000 TND HT",
@@ -443,7 +443,7 @@ async function main() {
       marque: "optic-vente-1",
       titre: "FACTURE No V-2026-058",
       lignes: [
-        "DREAM OPTIC - MF 1111111/A/M/000",
+        "DREAM OPTIC - MF 1128882F/P/C/000",
         "Client : PHARMACIE CENTRALE",
         "",
         "Montures et verres                 2 500,000 TND HT",
@@ -457,7 +457,7 @@ async function main() {
       marque: "atlas-achat-1",
       titre: "FACTURE No 4471",
       lignes: [
-        "GROSSISTE DU SUD - MF 4567890D/D/Q/000",
+        "GROSSISTE DU SUD - MF 4567890D/A/C/000",
         "Client : ATLAS DISTRIBUTION",
         "",
         "Marchandises diverses                860,000 TND HT",
@@ -470,7 +470,7 @@ async function main() {
       marque: "atlas-achat-2",
       titre: "FACTURE No 4488",
       lignes: [
-        "GROSSISTE DU SUD - MF 4567890D/D/Q/000",
+        "GROSSISTE DU SUD - MF 4567890D/A/C/000",
         "Client : ATLAS DISTRIBUTION",
         "",
         "Fournitures de bureau                340,000 TND HT",
