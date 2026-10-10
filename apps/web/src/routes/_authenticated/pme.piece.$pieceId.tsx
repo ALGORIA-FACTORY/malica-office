@@ -256,6 +256,17 @@ function PieceScreen() {
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
+  /** Le geste inverse : la pièce revient chez le dirigeant seul. */
+  const rappeler = useMutation({
+    mutationFn: () => office().collab.setPieceVis(pieceId, "personnel"),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
   const read = useMutation({
     mutationFn: () => office().malica.lirePiece(pieceId),
     onSuccess: async () => {
@@ -338,7 +349,7 @@ function PieceScreen() {
   const proposalAttempt = propositionServeur.data
     ? propositionServeur.data.ok
       ? { ok: true as const, value: propositionServeur.data.proposition }
-      : { ok: false as const, reason: propositionServeur.data.raison }
+      : { ok: false as const, verdict: propositionServeur.data.verdict ?? null }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
@@ -378,10 +389,9 @@ function PieceScreen() {
         ecritureId = await office().office.proposerDepuisPiece(pieceId, dateRetenue);
       } else {
         // Jamais de repli sur une proposition ancienne : sans calcul du Socle,
-        // il n'y a rien à confirmer, et la raison est affichée telle quelle.
-        throw new Error(
-          proposalAttempt && !proposalAttempt.ok ? proposalAttempt.reason : t("pme.confirm.review"),
-        );
+        // il n'y a rien à confirmer. La raison rendue est celle de l'écran,
+        // traduite — jamais la prose du serveur, qui parle au cabinet.
+        throw new Error(raisonDuBlocage);
       }
       if (!ecritureId) throw new Error(t("pme.confirm.review"));
       await office().office.book(ecritureId);
@@ -479,7 +489,26 @@ function PieceScreen() {
   const reference = payload?.references
     ? (Object.values(payload.references).find((v) => v && v.trim().length > 0) ?? null)
     : null;
-  const blockReason = proposalAttempt && !proposalAttempt.ok ? proposalAttempt.reason : null;
+  /**
+   * Pourquoi la confirmation est impossible, DIT À LA PERSONNE.
+   *
+   * Le serveur rend deux choses : un `verdict` — qui est un code, même s'il
+   * s'écrit en français — et une `raison` en prose, faite pour le cabinet.
+   * L'écran de la PME ne rend que le premier, traduit. La prose reste au
+   * cabinet, qui en parle la langue.
+   *
+   * Le repli n'est pas un défaut caché : un verdict inconnu donne la phrase
+   * générique, et le dirigeant sait quand même qu'il doit attendre.
+   */
+  const verdictBloquant = proposalAttempt && !proposalAttempt.ok ? proposalAttempt.verdict : null;
+  const raisonDuBlocage =
+    verdictBloquant === "à rejeter"
+      ? t("pme.bloque.rejet")
+      : verdictBloquant === "anomalie à signaler"
+        ? t("pme.bloque.anomalie")
+        : verdictBloquant === "à rapprocher"
+          ? t("pme.bloque.rapprocher")
+          : t("pme.confirm.review");
 
   /**
    * Trois lignes, chacune pointant sa source.
@@ -998,6 +1027,39 @@ function PieceScreen() {
           </div>
         ) : (
           <>
+            {/*
+             * ============================ LA RAISON PASSE DEVANT LE BOUTON MORT
+             *
+             * 10 octobre 2026. Le commanditaire surligne ce que l'écran lui
+             * montrait sous un bouton gris :
+             *
+             *   « Aucune écriture ne se propose : la pièce est « anomalie à
+             *     signaler ». Aucun montant n'est retenu — ils sont à saisir :
+             *     montant illisible : « 514,700 514,700 ». »
+             *
+             *   « Le texte sélectionné ne doit pas apparaître aux PME. »
+             *
+             * Il a raison deux fois. Cette phrase est construite côté serveur
+             * en collant un VERDICT — qui est une chaîne française servant de
+             * code — à des motifs techniques ; elle ne se traduit pas, et elle
+             * parle le vocabulaire de l'outil, pas celui du dirigeant.
+             *
+             * Et sa place était fausse : 12,5 px, centrée, SOUS le bouton,
+             * donc hors de l'écran. Ce que le dirigeant voyait, c'était le
+             * plus gros élément de la page, gris, sans explication.
+             *
+             * Quand une action est impossible, la RAISON est l'information
+             * principale. Le bouton n'est qu'un rappel de ce qui viendra
+             * après.
+             */}
+            {!confirmable && !sensIndetermine ? (
+              <div className="mb-3 border-s-[3px] border-signal-warn bg-accent px-3.5 py-3">
+                <p className="text-[14.5px] font-medium leading-[1.45]">{raisonDuBlocage}</p>
+                <p className="mt-1.5 text-[13px] leading-[1.45] text-text-2">
+                  {t("pme.bloque.geste")}
+                </p>
+              </div>
+            ) : null}
             <button
               type="button"
               disabled={confirm.isPending || !confirmable}
@@ -1049,10 +1111,6 @@ function PieceScreen() {
                   </button>
                 </div>
               </div>
-            ) : !confirmable ? (
-              <p className="pt-2 text-center text-[12.5px] text-signal-warn">
-                {blockReason ?? t("pme.confirm.review")}
-              </p>
             ) : null}
 
             {/*
@@ -1068,9 +1126,40 @@ function PieceScreen() {
             {cabinet.data ? (
               <div className="mt-4 border-t border-border pt-4">
                 {piece.vis === "partage" ? (
-                  <p className="text-center text-[12.5px] text-signal-ok">
-                    {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
-                  </p>
+                  /*
+                   * ======================================== ET ON PEUT REVENIR
+                   *
+                   * 10 octobre 2026 : « facture transmise au comptable sans
+                   * autorisation ». La pièce avait été photographiée par une
+                   * version antérieure, qui partageait à la prise de vue — ce
+                   * qui est corrigé depuis le 7 octobre.
+                   *
+                   * Mais l'écran n'offrait RIEN. Il annonçait « Transmise à
+                   * AUDICORP » et s'arrêtait là : aucune manière de revenir,
+                   * pour une pièce que personne n'avait décidé d'envoyer.
+                   *
+                   * Un état qu'on n'a pas choisi et dont on ne peut pas sortir
+                   * est le pire des deux. Le geste inverse existait déjà au
+                   * coffre ; il manquait seulement ici, là où la question se
+                   * pose.
+                   *
+                   * Une pièce déjà comptabilisée, elle, ne se rappelle pas —
+                   * la base le refuse, et c'est juste : on ne retire pas une
+                   * pièce sur laquelle une écriture s'appuie.
+                   */
+                  <div className="text-center">
+                    <p className="text-[13px] text-signal-ok">
+                      {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => rappeler.mutate()}
+                      disabled={rappeler.isPending}
+                      className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
+                    >
+                      {t("pme.transmettre.rappeler")}
+                    </button>
+                  </div>
                 ) : (
                   <>
                     {/*
