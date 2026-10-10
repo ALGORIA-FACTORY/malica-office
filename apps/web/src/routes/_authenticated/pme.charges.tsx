@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { usePme } from "@/components/malica/pme-context";
+import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
+import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
@@ -33,15 +35,7 @@ export const Route = createFileRoute("/_authenticated/pme/charges")({
   component: ChargesScreen,
 });
 
-const HISTORY_MONTHS = 6;
 const THRESHOLD_CODE = "FAMILLE_CONSO";
-
-function monthsBack(n: number): string {
-  const d = new Date();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() - n);
-  return d.toISOString().slice(0, 7);
-}
 
 /**
  * « Vos charges » — lecture par famille. Aucun chiffre calculé ici : le total
@@ -52,14 +46,14 @@ function ChargesScreen() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
-  const [period, setPeriod] = useState(monthsBack(0));
+  const [period, setPeriod] = useState(currentPeriod());
   const [openFamille, setOpenFamille] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const periods = useMemo(
-    () => Array.from({ length: HISTORY_MONTHS }, (_, i) => monthsBack(i)),
-    [],
-  );
+  // Les douze mois de l'exercice, de janvier à décembre. Une fenêtre de six
+  // mois écrite ici ne correspondait à rien : un dossier se boucle par
+  // exercice, et deux autres écrans en montraient douze et quatre.
+  const periods = useMoisDeLExercice(period);
 
   const refs = useQuery({
     queryKey: ["charges-refs", pme.packId],
@@ -75,10 +69,18 @@ function ChargesScreen() {
     },
   });
 
+  // L'exercice entier, du premier mois au dernier.
+  //
+  // L'ancienne fenêtre était rangée du plus RÉCENT au plus ancien, et la
+  // requête prenait donc `periods[dernier]` comme borne basse. Les mois de
+  // l'exercice vont dans l'autre sens : prendre la même case rendrait une
+  // plage inversée, donc vide. Les bornes sont désormais nommées.
+  const premierMois = periods[0]?.periode ?? period;
+  const dernierMois = periods[periods.length - 1]?.periode ?? period;
+
   const articles = useQuery({
-    queryKey: ["charges-articles", pme.tenantId, periods[periods.length - 1], period],
-    queryFn: () =>
-      office().charges.articles(pme.tenantId, periods[periods.length - 1]!, monthsBack(0)),
+    queryKey: ["charges-articles", pme.tenantId, premierMois, dernierMois],
+    queryFn: () => office().charges.articles(pme.tenantId, premierMois, dernierMois),
   });
 
   const questions = useQuery({
@@ -101,7 +103,11 @@ function ChargesScreen() {
 
   const result = useMemo(() => {
     if (!refs.data || !articles.data) return null;
-    const baseline = periods.filter((p) => p < period);
+    // La base de comparaison : les mois de l'exercice ANTÉRIEURS au mois
+    // regardé. Un mois à venir en est exclu de fait, et il doit l'être — une
+    // moyenne calculée sur des mois qui n'ont pas eu lieu signalerait une
+    // anomalie à chaque début d'exercice.
+    const baseline = periods.filter((p) => p.periode < period).map((p) => p.periode);
     return computeChargesByFamille({
       articles: articles.data,
       familles: refs.data.familles,
@@ -163,7 +169,7 @@ function ChargesScreen() {
         {t("pme.charges.title")}
       </p>
       <p className="mt-[5px] text-[13.5px] text-text-2">
-        {period === periods[0] ? t("pme.charges.subtitle") : monthLabel(period)}
+        {period === currentPeriod() ? t("pme.charges.subtitle") : monthLabel(period)}
       </p>
 
       {/*
@@ -198,18 +204,22 @@ function ChargesScreen() {
       >
         {periods.map((p) => (
           <button
-            key={p}
+            key={p.periode}
             type="button"
-            onClick={() => setPeriod(p)}
-            aria-pressed={p === period}
+            onClick={() => setPeriod(p.periode)}
+            disabled={p.aVenir}
+            aria-pressed={p.periode === period}
             className={cn(
               "border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.06em]",
-              p === period
+              p.periode === period
                 ? "border-foreground bg-foreground text-background"
                 : "border-border bg-transparent text-text-2",
+              // Un mois à venir fait partie de l'exercice, mais il n'a pas eu
+              // lieu : visible, en pointillé, et il ne s'ouvre pas.
+              p.aVenir ? "border-dashed opacity-45" : "",
             )}
           >
-            {monthLabel(p)}
+            {monthLabel(p.periode)}
           </button>
         ))}
       </div>
