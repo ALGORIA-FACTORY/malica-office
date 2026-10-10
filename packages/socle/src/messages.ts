@@ -252,6 +252,14 @@ const fr = {
   "pme.lecture.titre": "Je lis votre document.",
   "pme.lecture.sous":
     "Je relève chaque mot avant de vous répondre — je ne devine jamais un montant.",
+  "pme.bloque.anomalie":
+    "Les montants de cette pièce ne se recoupent pas. Je ne propose rien plutôt que de proposer un chiffre faux.",
+  "pme.bloque.rejet": "Cette pièce ne peut pas être comptabilisée telle quelle.",
+  "pme.bloque.rapprocher": "Il manque un rapprochement avant que je puisse proposer l'écriture.",
+  "pme.bloque.geste":
+    "Reprenez la photo si elle est floue, ou envoyez-la à votre comptable : il tranchera.",
+  "pme.transmettre.rappeler": "Rappeler cette pièce",
+  "pme.transmettre.rappelee": "Rappelée. Elle est de nouveau chez vous seul.",
   "pme.verifie.titre.1": "Une seconde,",
   "pme.verifie.titre.2": "et c'est classé.",
   "pme.verifie.tvaRecuperee": "TVA que vous récupérez",
@@ -2474,6 +2482,14 @@ const en: Dict = {
   "pme.read.running": "Reading…",
   "pme.lecture.titre": "I'm reading your document.",
   "pme.lecture.sous": "I note every word before answering — I never guess an amount.",
+  "pme.bloque.anomalie":
+    "The amounts on this document don't add up. I'd rather propose nothing than propose a wrong figure.",
+  "pme.bloque.rejet": "This document cannot be posted as it stands.",
+  "pme.bloque.rapprocher": "A reconciliation is missing before I can propose the entry.",
+  "pme.bloque.geste":
+    "Retake the photo if it is blurred, or send it to your accountant — they will decide.",
+  "pme.transmettre.rappeler": "Recall this document",
+  "pme.transmettre.rappelee": "Recalled. It is yours alone again.",
   "pme.verifie.titre.1": "One second,",
   "pme.verifie.titre.2": "and it's filed.",
   "pme.verifie.tvaRecuperee": "VAT you recover",
@@ -4649,6 +4665,13 @@ const ar: Dict = {
   "pme.read.running": "جارٍ القراءة…",
   "pme.lecture.titre": "أقرأ وثيقتك.",
   "pme.lecture.sous": "أرصد كل كلمة قبل أن أجيبك — لا أخمّن مبلغًا أبدًا.",
+  "pme.bloque.anomalie":
+    "مبالغ هذه الوثيقة لا تتطابق. أفضّل ألّا أقترح شيئًا على أن أقترح رقمًا خاطئًا.",
+  "pme.bloque.rejet": "لا يمكن محاسبة هذه الوثيقة على حالها.",
+  "pme.bloque.rapprocher": "تنقص مطابقة قبل أن أقترح القيد.",
+  "pme.bloque.geste": "أعد التصوير إن كانت الصورة غير واضحة، أو أرسلها إلى محاسبك ليقرّر.",
+  "pme.transmettre.rappeler": "استرجاع هذه الوثيقة",
+  "pme.transmettre.rappelee": "تم الاسترجاع. عادت إليك وحدك.",
   "pme.verifie.titre.1": "لحظة،",
   "pme.verifie.titre.2": "وتُصنَّف.",
   "pme.verifie.tvaRecuperee": "الأداء الذي تسترجعه",

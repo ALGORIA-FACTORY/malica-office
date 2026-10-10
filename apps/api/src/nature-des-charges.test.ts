@@ -245,6 +245,50 @@ describe("la famille d'une charge, d'après son libellé", { skip: !BASE_CONFIGU
     assert.equal(r.famille_source, "designation_pattern");
   });
 
+  it("le consommable de bureau de la facture PAPETERIE NOUR est une fourniture", async () => {
+    /*
+     * 10 octobre 2026, 21 h 58. « Non classé revient encore une fois » :
+     * « Post-it 76×76 (lot de 12) », 47,700 TND, à côté de 467,000 de
+     * fournitures bien reconnues. Le motif énumérait stylo, classeur,
+     * agrafeuse — et pas le post-it.
+     *
+     * Les libellés ci-dessous sont écrits comme une facture tunisienne les
+     * écrit, abréviations comprises.
+     */
+    for (const ligne of [
+      "Post-it 76×76 (lot de 12)",
+      "Post it 50x40",
+      "Bloc-notes A5 quadrillé",
+      "Cahier 96 pages",
+      "Chemise cartonnée à sangle",
+      "Ruban adhésif transparent 19mm",
+      "Scotch double face",
+      "Marqueur permanent noir",
+      "Surligneur fluo jaune",
+      "Boîte de trombones n°3",
+      "Calculatrice de bureau 12 chiffres",
+      "قرطاسية مكتبية",
+    ]) {
+      const r = await famille(ligne);
+      assert.equal(r.famille_code, "FOURNITURES", ligne);
+      assert.equal(r.famille_source, "designation_pattern", `${ligne} : le libellé doit décider`);
+    }
+  });
+
+  it("et élargir le motif n'a pas rendu « non classé » impossible", async () => {
+    /*
+     * La garantie qui empêche la dérive. Il serait facile d'élargir le motif
+     * jusqu'à ce que plus rien ne tombe en « non classé » — et ce serait la
+     * pire issue : une ligne faussement classée ne se voit jamais, une ligne
+     * visiblement non classée se corrige en un geste.
+     *
+     * « lot de » qualifie un conditionnement, pas une nature : s'il entrait
+     * dans le motif, un lot de n'importe quoi deviendrait une fourniture.
+     */
+    assert.equal((await famille("Lot de 12 pneus 205/55 R16")).famille_code, "NON_CLASSE");
+    assert.equal((await famille("Prestation XJ-440 selon devis")).famille_code, "NON_CLASSE");
+  });
+
   it("ce qu'aucune règle ne reconnaît reste NON CLASSÉ, et le dit", async () => {
     /*
      * ======================= POURQUOI « JE NE SAIS PAS » PLUTÔT QU'UNE FAMILLE
