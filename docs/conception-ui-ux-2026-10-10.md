@@ -197,6 +197,51 @@ dit pas ce qu'elle attend.
 
 ---
 
+## Défaut 9 — Trois sélecteurs de mois, trois fenêtres, aucune n'est l'année
+
+Relevé en vérifiant la demande du commanditaire du 10 octobre. Trois écrans
+proposent de choisir un mois, et chacun porte sa propre constante :
+
+| Écran             | Fichier              | Fenêtre                       |
+| ----------------- | -------------------- | ----------------------------- |
+| TVA mois par mois | `use-accueil.ts:37`  | `FENETRE = 12` mois glissants |
+| Vos charges       | `pme.charges.tsx:36` | `HISTORY_MONTHS = 6`          |
+| Vos documents     | `pme.list.tsx:36`    | `MOIS_VISIBLES = 4`           |
+
+Douze, six, quatre. Trois nombres écrits à trois endroits, qui ne se
+connaissent pas, et dont aucun n'a de raison d'être ce qu'il est. Le dirigeant
+qui cherche mars le trouve sur un écran et pas sur les deux autres.
+
+**Décision du commanditaire, 10 octobre : tous les mois de l'année paraissent,
+à partir de janvier.** C'est la bonne réponse, et pas seulement pour la
+cohérence : l'exercice comptable tunisien va de janvier à décembre, un dossier
+se boucle par année, et une fenêtre glissante ne correspond à aucun objet du
+métier. « Nov, Déc, Jan… » ne décrit rien que le comptable connaisse.
+
+### Ce que cela demande, et le piège
+
+1. **Une seule règle, à un seul endroit** : les douze mois de l'exercice
+   affiché, de janvier à décembre, pour les trois écrans. Les trois constantes
+   disparaissent.
+2. **Un choix d'année**, puisque la fenêtre ne suit plus le mois courant. Deux
+   écrans portent déjà une bascule _Mois · Année_ — elle devient le sélecteur
+   d'exercice.
+3. **Les mois à venir existent, et se voient comme tels.** En octobre, novembre
+   et décembre sont des lignes de l'exercice ; les montrer vides ferait croire à
+   une donnée manquante. Elles doivent se lire « pas encore », et non « — ».
+4. **Le piège, et c'est le seul risque de ce changement :** la fenêtre
+   d'AFFICHAGE n'est pas la fenêtre de CALCUL. L'accueil compare le mois courant
+   au précédent (`use-accueil.ts:209`) et compte les mois de progression
+   consécutifs (`:190`). Si la série est coupée à janvier, **janvier perd son
+   comparatif** — son mois précédent est décembre de l'exercice d'avant — et la
+   progression repartirait de zéro chaque 1ᵉʳ janvier, silencieusement.
+
+   Le calcul garde donc sa fenêtre glissante ; seul l'affichage devient l'année.
+   Les confondre produirait exactement la forme d'erreur que R4 nomme la pire :
+   plausible, invisible, et fausse une fois par an.
+
+---
+
 ## Ce qui n'est pas un défaut, et qu'il faut trancher
 
 **L'interface est en anglais.** Le sélecteur du bandeau dit « EN ». Ce n'est pas
@@ -249,6 +294,10 @@ Cinq corrections, toutes petites, toutes dans les écrans. Aucune migration.
 10. **Des états vides qui disent ce qu'ils attendent** (défaut 8, et le « — »
     du bloc d'encre) : une phrase à la place d'une grille vide, et l'année sur
     les mois.
+11. **L'exercice remplace les trois fenêtres glissantes** (défaut 9) : janvier
+    à décembre partout, une seule règle, un choix d'année, les mois à venir
+    marqués comme tels — et la fenêtre de calcul laissée glissante, pour que
+    janvier ne perde pas son comparatif.
 
 ---
 
