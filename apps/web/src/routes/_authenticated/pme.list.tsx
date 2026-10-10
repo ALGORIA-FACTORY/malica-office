@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { FileLocale } from "@/components/malica/file-locale";
 import { usePme } from "@/components/malica/pme-context";
 import { MalicaAvatar } from "@/components/malica/office-ui";
+import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
+import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
@@ -32,16 +34,6 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
   component: VosDocuments,
 });
 
-/** Quatre mois en pastilles : au-delà, on passe à la vue année. */
-const MOIS_VISIBLES = 4;
-
-function moisEnArriere(n: number): string {
-  const d = new Date();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() - n);
-  return d.toISOString().slice(0, 7);
-}
-
 /**
  * Vos documents — classés par elle, mois / année / type.
  *
@@ -67,8 +59,9 @@ function VosDocuments() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const [vue, setVue] = useState<"mois" | "annee">("mois");
-  const [mois, setMois] = useState(moisEnArriere(0));
+  const [mois, setMois] = useState(currentPeriod());
   const [type, setType] = useState<"tous" | "facture_achat" | "facture_vente">("tous");
+  const moisDeLExercice = useMoisDeLExercice(mois);
 
   const pieces = useQuery({
     queryKey: ["pieces-lues", pme.tenantId],
@@ -79,11 +72,6 @@ function VosDocuments() {
 
   /** Le mois d'une pièce : celui du DOCUMENT s'il est lu, sinon celui du dépôt. */
   const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
-
-  const derniersMois = useMemo(
-    () => Array.from({ length: MOIS_VISIBLES }, (_, i) => moisEnArriere(i)),
-    [],
-  );
 
   const duMois = toutes.filter((p) => moisDe(p) === mois);
 
@@ -209,19 +197,30 @@ function VosDocuments() {
 
       {vue === "mois" ? (
         <>
-          <div className="flex gap-1.5 px-[22px] pt-3.5">
-            {derniersMois.map((m) => (
+          {/*
+           * Les douze mois de l'exercice, de janvier à décembre, et jamais une
+           * fenêtre glissante : un dossier se boucle par exercice, et le
+           * dirigeant qui cherche mars doit le trouver ici comme ailleurs.
+           *
+           * Un mois À VENIR reste visible — l'exercice est entier — mais il ne
+           * se choisit pas : il n'a pas de donnée pour une raison qui n'est
+           * pas une perte, et l'ouvrir ne montrerait qu'un vide trompeur.
+           */}
+          <div className="grid grid-cols-6 gap-1.5 px-[22px] pt-3.5">
+            {moisDeLExercice.map((m) => (
               <button
-                key={m}
+                key={m.periode}
                 type="button"
-                onClick={() => setMois(m)}
-                aria-pressed={m === mois}
+                onClick={() => setMois(m.periode)}
+                disabled={m.aVenir}
+                aria-pressed={m.periode === mois}
                 className={cn(
-                  "flex-1 border border-line-strong py-[7px] font-mono text-[11px] font-semibold tracking-[0.04em]",
-                  m === mois ? "bg-foreground text-background" : "bg-transparent",
+                  "border border-line-strong py-[7px] font-mono text-[11px] font-semibold tracking-[0.04em]",
+                  m.periode === mois ? "bg-foreground text-background" : "bg-transparent",
+                  m.aVenir ? "border-dashed text-text-2 opacity-45" : "",
                 )}
               >
-                {nomDuMois(m, true)}
+                {nomDuMois(m.periode, true)}
               </button>
             ))}
           </div>

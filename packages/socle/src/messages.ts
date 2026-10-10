@@ -373,6 +373,7 @@ const fr = {
   "pme.tva.reversez": "Ce que vous reversez",
   "pme.tva.reporte": "Ce qui se reporte au mois suivant",
   "pme.tva.douzeMois": "Récupéré, mois par mois",
+  "pme.tva.mois.aVenir": "pas encore",
   "pme.tva.manque":
     "{mois} est prêt à {pourcent} %. Dès que les dernières factures arrivent, je termine le calcul.",
   "pme.tva.source":
@@ -2585,6 +2586,7 @@ const en: Dict = {
   "pme.tva.reversez": "What you remit",
   "pme.tva.reporte": "What carries to next month",
   "pme.tva.douzeMois": "Recovered, month by month",
+  "pme.tva.mois.aVenir": "not yet",
   "pme.tva.manque":
     "{mois} is {pourcent} % ready. As soon as the last invoices arrive, I finish the calculation.",
   "pme.tva.source":
@@ -4755,6 +4757,7 @@ const ar: Dict = {
   "pme.tva.reversez": "ما تدفعه",
   "pme.tva.reporte": "ما يُرحَّل إلى الشهر الموالي",
   "pme.tva.douzeMois": "المسترجَع، شهرًا بشهر",
+  "pme.tva.mois.aVenir": "لم يحن بعد",
   "pme.tva.manque": "{mois} جاهز بنسبة {pourcent} %. حالما تصل آخر الفواتير أُنهي الاحتساب.",
   "pme.tva.source": "كل مبلغ مصدره وثيقة أكّدتها. لا أحتسب شيئًا لا أستطيع الاستشهاد بمصدره.",
   "pme.tva.title": "الأداء على القيمة المضافة للفترة",

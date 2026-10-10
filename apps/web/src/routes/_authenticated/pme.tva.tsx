@@ -5,6 +5,7 @@ import { usePme } from "@/components/malica/pme-context";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useAccueil } from "@/hooks/use-accueil";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
+import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
@@ -67,8 +68,28 @@ function PmeTva() {
   const lisible = (v: string | null | undefined) =>
     v === null || v === undefined ? "—" : montant(v, locale);
 
-  // Sur l'année : la somme des douze mois de récupération, mois vides exclus.
-  const moisRenseignes = annee.serie.filter((m) => m.recuperee !== null);
+  /*
+   * ================================== LES DOUZE MOIS DE L'EXERCICE, PAS GLISSANTS
+   *
+   * La liste commençait au mois courant moins onze : « Nov, Déc, Jan … Oct »,
+   * sans année, ce qui se lit comme une erreur tant qu'on n'a pas deviné qu'il
+   * s'agit d'une fenêtre glissante. Un dossier se boucle par exercice, et le
+   * commanditaire l'a tranché le 10 octobre : tous les mois paraissent, dès
+   * janvier.
+   *
+   * `annee.serie` reste la fenêtre de CALCUL — elle traverse le changement
+   * d'exercice, pour que janvier garde son comparatif. On ne fait que RANGER
+   * ses valeurs dans les mois de l'exercice.
+   */
+  const moisDeLExercice = useMoisDeLExercice(periode);
+  const valeurDuMois = new Map(annee.serie.map((m) => [m.periode, m]));
+  const lignesDeLAnnee = moisDeLExercice.map((m) => ({
+    ...m,
+    recuperee: valeurDuMois.get(m.periode)?.recuperee ?? null,
+  }));
+
+  // Sur l'année : la somme des mois de récupération, mois vides exclus.
+  const moisRenseignes = lignesDeLAnnee.filter((m) => m.recuperee !== null);
   const totalAnnuel = moisRenseignes.reduce((n, m) => n + Number(m.recuperee), 0);
   const haut = Math.max(...moisRenseignes.map((m) => Number(m.recuperee)), 0);
 
@@ -192,10 +213,15 @@ function PmeTva() {
         </div>
       ) : (
         <div className="px-[22px] pt-5">
+          {/*
+           * L'exercice est NOMMÉ. Sans son année, « Nov, Déc, Jan … » se lit
+           * comme une erreur de tri : c'est ce que montrait la capture du
+           * 10 octobre.
+           */}
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {t("pme.tva.douzeMois")}
+            {t("pme.tva.douzeMois")} · {lignesDeLAnnee[0]?.periode.slice(0, 4)}
           </p>
-          {annee.serie.map((m) => {
+          {lignesDeLAnnee.map((m) => {
             const v = m.recuperee === null ? null : Number(m.recuperee);
             const part = v === null || haut === 0 ? 0 : (v / haut) * 100;
             const nom = new Intl.DateTimeFormat(locale, {
@@ -215,11 +241,22 @@ function PmeTva() {
                 >
                   {nom}
                 </span>
-                {/* Un mois sans écriture n'a pas de barre — pas une barre à zéro. */}
+                {/*
+                 * Trois états, et ils ne se confondent pas :
+                 *   un montant      → une barre ;
+                 *   un mois PASSÉ sans écriture → un filet, et « — » ;
+                 *   un mois À VENIR → rien, et le mot. Un mois qui n'a pas eu
+                 *     lieu n'est pas un mois vide, et le montrer comme tel
+                 *     ferait chercher une donnée perdue.
+                 */}
                 <span
                   className={cn(
                     "relative",
-                    v === null ? "h-px bg-border" : "h-[6px] bg-line-strong",
+                    m.aVenir
+                      ? "h-px bg-transparent"
+                      : v === null
+                        ? "h-px bg-border"
+                        : "h-[6px] bg-line-strong",
                   )}
                 >
                   {v === null ? null : (
@@ -229,8 +266,17 @@ function PmeTva() {
                     />
                   )}
                 </span>
-                <span className="num text-[13px] font-medium">
-                  {v === null ? "—" : montant(m.recuperee!, locale)}
+                <span
+                  className={cn(
+                    "num text-[13px] font-medium",
+                    m.aVenir ? "text-[11px] font-normal text-muted-foreground" : "",
+                  )}
+                >
+                  {m.aVenir
+                    ? t("pme.tva.mois.aVenir")
+                    : v === null
+                      ? "—"
+                      : montant(m.recuperee!, locale)}
                 </span>
               </div>
             );
