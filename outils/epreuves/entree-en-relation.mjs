@@ -30,7 +30,7 @@ const INTRUS = { email: "epreuve.intrus@malica.local", motDePasse: MDP };
 const CABINET = "Cabinet d'Expertises CADG";
 const DOSSIER = {
   name: "ÉPREUVE ENTRÉE EN RELATION SARL",
-  legalId: "9000002/A/M/000",
+  legalId: "9000002A/A/M/000",
   adresse: "Immeuble d'épreuve, Rue de l'Essai — 1053 Tunis",
 };
 

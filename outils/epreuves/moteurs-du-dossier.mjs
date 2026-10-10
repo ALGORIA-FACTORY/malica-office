@@ -16,8 +16,8 @@ import { COMPTE_DEV, creerEpreuve } from "./socle.mjs";
 
 const e = creerEpreuve("les moteurs du dossier", process.argv[2]);
 
-const PME_A = { name: "ÉPREUVE MOTEURS SARL", legalId: "9999998M/M/P/000" };
-const PME_B = { name: "ÉPREUVE SANS FICHE SARL", legalId: "9999997S/S/P/000" };
+const PME_A = { name: "ÉPREUVE MOTEURS SARL", legalId: "9999998M/A/P/000" };
+const PME_B = { name: "ÉPREUVE SANS FICHE SARL", legalId: "9999997S/A/P/000" };
 const FICHE = {
   regimeImposition: "reel",
   regimeTva: "assujetti",
