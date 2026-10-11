@@ -106,7 +106,8 @@ export const supervision = {
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
-              m.montant, c.email as collaborateur, cf.confiance
+              m.montant, c.email as collaborateur, cf.confiance,
+              dem.objet as demande_objet
          from pieces_v p
          join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
           and p.tenant_id in (select app.mandats_visibles($1))
@@ -139,6 +140,27 @@ export const supervision = {
             where a.cabinet_tenant_id = $1 and a.client_tenant_id = p.tenant_id and a.active
             order by a.created_at desc limit 1
          ) c on true
+         -- La demande en attente, s'il y en a une.
+         --
+         -- Le 11 octobre, le commanditaire a posé que le rappel d'une pièce
+         -- transmise doit être APPROUVÉ par le cabinet. J'avais livré la
+         -- demande et le bouton côté PME, et aucun écran pour y répondre : on
+         -- pouvait demander, personne ne pouvait trancher.
+         --
+         -- Elle paraît donc ICI, dans la file, et non dans un écran séparé :
+         -- une demande qu'il faut aller chercher est une demande qui dort.
+         -- Le DERNIER fait décide : une demande accordée hier n'est plus en
+         -- attente aujourd'hui, et la file ne doit pas la redemander. D'où le
+         -- test sur le dernier fait plutôt qu'un filtre sur « demandee » :
+         -- ce filtre ressortirait une vieille demande déjà tranchée, parce
+         -- qu'il y a toujours une ligne « demandee » quelque part dans
+         -- l'histoire.
+         left join lateral (
+           select case when d.fait = 'demandee' then d.objet end as objet
+             from demandes_sur_piece_v d
+            where d.piece_id = p.id
+            order by d.created_at desc limit 1
+         ) dem on true
         -- La file du cabinet, c'est ce qui lui a été TRANSMIS : une pièce « chez
         -- vous » n'y paraît pas, même pour un compte membre des deux côtés.
         where p.vis = 'partage'
@@ -162,6 +184,7 @@ export const supervision = {
         montant: (p["montant"] as string | null) ?? null,
         collaborateur: (p["collaborateur"] as string | null) ?? null,
         confiance: p["confiance"] == null ? null : Number(p["confiance"]),
+        demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
       }))
       .sort((a, b) => {
         const d = (PRIORITE[a.status] ?? 9) - (PRIORITE[b.status] ?? 9);

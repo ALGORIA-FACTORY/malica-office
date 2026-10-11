@@ -117,6 +117,9 @@ function CabinetReview() {
   const [note, setNote] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"valide" | "retourne" | "corrige" | null>(null);
+  // Le motif d'un refus. Exige par la base, et exige ici : un refus sans
+  // motif n'apprend rien a celui qui a demande.
+  const [noteDeRefus, setNoteDeRefus] = useState<string>("");
   // `null` : on n'a pas ouvert la correction. Une fois ouverte, on tient la
   // saisie à part de l'écriture d'origine — celle-ci ne se modifie jamais.
   const [correction, setCorrection] = useState<Correction | null>(null);
@@ -155,6 +158,9 @@ function CabinetReview() {
   });
   const rangDansLaFile = (file.data ?? []).findIndex((r) => r.pieceId === pieceId);
   const dansLaFile = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile] ?? null) : null;
+  // Ce que le client attend sur cette piece, s'il attend quelque chose. La
+  // file le porte deja : pas de seconde requete pour une valeur en main.
+  const demandeEnAttente = dansLaFile?.demandeEnAttente ?? null;
   const precedente = rangDansLaFile > 0 ? ((file.data ?? [])[rangDansLaFile - 1] ?? null) : null;
   const suivante = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile + 1] ?? null) : null;
   const allerA = (id: string) =>
@@ -172,6 +178,28 @@ function CabinetReview() {
     () => (motifs.data ?? []).find((m) => m.id === motifId) ?? null,
     [motifs.data, motifId],
   );
+
+  /**
+   * Le cabinet tranche la demande du client, et l'accord FAIT la chose.
+   *
+   * Un accord de rappel remet la piece chez le dirigeant dans la meme
+   * transaction, cote base : deux gestes separes laisseraient une demande
+   * accordee sans effet, et personne ne saurait laquelle des deux verites
+   * croire.
+   */
+  const repondre = useMutation({
+    mutationFn: ({ accorde }: { accorde: boolean }) =>
+      office().collab.repondreSurPiece(
+        pieceId,
+        demandeEnAttente!,
+        accorde,
+        accorde ? null : noteDeRefus.trim(),
+      ),
+    onSuccess: async () => {
+      setNoteDeRefus("");
+      await qc.invalidateQueries();
+    },
+  });
 
   const review = useMutation({
     mutationFn: (outcome: "valide" | "retourne") =>
@@ -398,6 +426,55 @@ function CabinetReview() {
           </button>
         </span>
       </header>
+
+      {/*
+       * ====================== CE QUE LE CLIENT DEMANDE PASSE AVANT TOUT LE RESTE
+       *
+       * 11 octobre 2026 : « le rappel de la pièce doit être approuvé par le
+       * cabinet ». J'avais livré la demande et le bouton côté PME, et aucun
+       * écran pour y répondre — on pouvait demander, personne ne pouvait
+       * trancher. Le trou est de moi.
+       *
+       * Elle est EN TÊTE de la pièce, pas au bas : un client qui attend une
+       * réponse attend sur un geste que le comptable ne doit pas chercher.
+       *
+       * Et le refus exige sa note, ici comme en base. Un refus sans motif
+       * n'apprend rien à celui qui a demandé, et la question reviendra la
+       * semaine suivante.
+       */}
+      {demandeEnAttente ? (
+        <div className="mb-6 border border-s-[3px] border-border border-s-signal-warn bg-card p-4">
+          <p className="text-[13px] font-medium">
+            {t(demandeEnAttente === "rappel" ? "cab.demande.rappel" : "cab.demande.suppression", {
+              client: dansLaFile?.clientName ?? "",
+            })}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => repondre.mutate({ accorde: true })}
+              disabled={repondre.isPending}
+              className="h-9 border border-foreground bg-foreground px-3 text-[13px] font-medium text-background disabled:opacity-40"
+            >
+              {t("cab.demande.accorder")}
+            </button>
+            <input
+              value={noteDeRefus}
+              onChange={(e) => setNoteDeRefus(e.target.value)}
+              placeholder={t("cab.demande.motif")}
+              className="h-9 min-w-[220px] flex-1 border border-border bg-background px-2 text-[13px]"
+            />
+            <button
+              type="button"
+              onClick={() => repondre.mutate({ accorde: false })}
+              disabled={repondre.isPending || noteDeRefus.trim().length === 0}
+              className="h-9 border border-border px-3 text-[13px] font-medium disabled:opacity-40"
+            >
+              {t("cab.demande.refuser")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-8 xl:grid-cols-[1.15fr_1fr]">
         <section className="min-w-0 space-y-3">

@@ -56,8 +56,17 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
  * ============================================================== LE SEUL GESTE
  *
  * Transmettre. Il bascule `vis` de `personnel` à `partage`, par la fonction
- * gouvernée du Socle qui le journalise. Dans l'autre sens aussi — une pièce
- * partagée par erreur se reprend, et le journal garde les deux mouvements.
+ * gouvernée du Socle qui le journalise.
+ *
+ * DANS CE SENS SEULEMENT, depuis le 11 octobre 2026. Ce commentaire disait
+ * « dans l'autre sens aussi — une pièce partagée par erreur se reprend » ;
+ * c'est faux désormais, et le code qui composait encore `personnel` pour une
+ * pièce partagée est retiré. Une pièce que le cabinet a reçue ne revient que
+ * par son accord, et c'est la BASE qui le refuse, plus le filtre de cette
+ * liste.
+ *
+ * Le sens libre reste libre, et il le restera : « j'ai classé dans mon
+ * coffre, j'aurai toujours la possibilité de transmettre au cabinet ».
  */
 function PmeCoffre() {
   const { t, locale } = useI18n();
@@ -77,8 +86,7 @@ function PmeCoffre() {
   });
 
   const basculer = useMutation({
-    mutationFn: (p: PieceLue) =>
-      office().collab.setPieceVis(p.id, p.vis === "partage" ? "personnel" : "partage"),
+    mutationFn: (p: PieceLue) => office().collab.setPieceVis(p.id, "partage"),
     onSuccess: async () => {
       setErreur(null);
       await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
