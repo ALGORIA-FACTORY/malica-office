@@ -13,12 +13,23 @@ import { ExtractV1 } from "../contracts/extract.v1.ts";
 import type { PivotV1 } from "../contracts/pivot.v1.ts";
 import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositories.ts";
 
-/** Décimales ISO 4217 (norme monétaire, pas une règle fiscale). */
-const ISO_DECIMALS: Record<string, number> = { TND: 3, EUR: 2, USD: 2, LYD: 3, MAD: 2, XOF: 0 };
-
-export function currencyDecimals(code: string): number {
-  return ISO_DECIMALS[code.toUpperCase()] ?? 2;
-}
+/*
+ * ==================== LES DECIMALES D'UNE DEVISE VIENNENT DU PACK, PAS D'ICI
+ *
+ * Une table de six codes vivait ici — TND 3, EUR 2, XOF 0 — avec un repli
+ * implicite a 2. R4 nomme le « code devise » parmi les interdits, et son
+ * corollaire interdit le repli implicite, pour une raison que ce cas
+ * illustre : une juridiction a 2 decimales affichait un dinar la ou il y
+ * avait un millime, sans aucune erreur. Plausible et faux.
+ *
+ * `ref.socle_params` porte `money.decimals` depuis le 25 aout, et
+ * `referentiel.socleParams` LEVE une erreur explicite quand il manque. Cinq
+ * chemins vivants appelaient la table d'ici plutot que lui.
+ *
+ * Le parametre est donc desormais exige. Une proposition sans decimales est
+ * une proposition dont on ne sait pas lire les montants : mieux vaut s'en
+ * apercevoir a l'appel qu'a la balance.
+ */
 
 export interface ProposalResult {
   pivot: PivotV1;
@@ -105,11 +116,19 @@ export function buildProposal(params: {
   fiscalCharges?: readonly FiscalCharge[];
   currency: string;
   /**
-   * Les paramètres lus au paramétrage daté — le serveur les donne toujours
-   * (3B-6). Absents, on retombe sur la table de devises et les seuils 0,7 / 0,4
-   * d'avant : les versions installées de l'application calculent encore ici.
+   * Les paramètres lus au paramétrage daté. EXIGÉS.
+   *
+   * Ils étaient facultatifs, et l'on retombait sur une table de six devises
+   * et sur les seuils 0,7 / 0,4 écrits ici. Les trois valeurs existent en
+   * base depuis le 25 août et le 18 septembre, aux mêmes chiffres — donc
+   * deux sources pour la même vérité, qui pouvaient diverger sans qu'aucune
+   * épreuve ne le dise. R4 interdit le seuil et le code devise en
+   * TypeScript, et son corollaire interdit le repli implicite.
+   *
+   * Un appel sans eux est refusé plutôt que deviné : mieux vaut s'en
+   * apercevoir à l'appel qu'à la balance.
    */
-  parametres?: { decimals: number; confianceReserve: number; confianceBloquante: number };
+  parametres: { decimals: number; confianceReserve: number; confianceBloquante: number };
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -118,8 +137,7 @@ export function buildProposal(params: {
     throw new LectureIncomplete(champs);
   }
   const extract = lu.data;
-  const decimals =
-    params.parametres?.decimals ?? currencyDecimals(extract.currency || params.currency);
+  const decimals = params.parametres.decimals;
   const firstTaxCode = extract.lines[0]?.tax_code ?? null;
 
   const mapping =
@@ -161,8 +179,8 @@ export function buildProposal(params: {
 
     tolerances: {
       rounding_tolerance: (1 / 10 ** decimals).toFixed(decimals),
-      confidence_orange: params.parametres?.confianceReserve ?? 0.7,
-      confidence_red: params.parametres?.confianceBloquante ?? 0.4,
+      confidence_orange: params.parametres.confianceReserve,
+      confidence_red: params.parametres.confianceBloquante,
     },
   });
 

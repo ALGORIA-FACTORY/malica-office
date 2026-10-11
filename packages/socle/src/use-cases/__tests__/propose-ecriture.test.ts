@@ -30,6 +30,15 @@ const mappings: AccountMapping[] = [
   },
 ];
 
+/**
+ * Les décimales sont EXIGÉES depuis le 11 octobre 2026 : une table de six
+ * codes devise vivait dans le Socle, avec un repli implicite à 2, et quatre
+ * écrans l'appelaient. R4 l'interdit, et son corollaire interdit le repli —
+ * une juridiction à 2 décimales affichait un dinar pour un millime, sans
+ * aucune erreur.
+ *
+ * Ce helper les passe donc, comme le fait l'appelant réel.
+ */
 function proposer(payload: unknown) {
   return buildProposal({
     pieceId: "11111111-1111-1111-1111-111111111111",
@@ -37,6 +46,7 @@ function proposer(payload: unknown) {
     taxRates,
     mappings,
     currency: "TND",
+    parametres: { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 },
   });
 }
 
@@ -80,10 +90,34 @@ describe("les paramètres viennent du paramétrage daté, quand l'appelant les d
     expect(severe.pivot.approvable).toBe(false);
   });
 
-  it("les décimales sont celles de l'appelant, pas celles d'une table de devises", () => {
-    // Une devise absente de la table retombait sur deux décimales.
+  it("les décimales viennent du pack, et sans elles on REFUSE de proposer", () => {
+    /*
+     * Cette épreuve comparait jadis la table de devises au paramètre, et
+     * attendait deux décimales pour une devise inconnue : elle figeait donc
+     * le repli implicite.
+     *
+     * La table est supprimée depuis le 11 octobre 2026. Ce qui compte
+     * désormais est plus fort : sans décimales, on ne propose RIEN. Une
+     * proposition dont on ne sait pas lire les montants vaut moins qu'une
+     * erreur à l'appel — R4, corollaire : pas de repli implicite, parce
+     * qu'un résultat plausible et faux est la pire forme d'erreur.
+     */
     const payload = { ...factureAchatSimple(), currency: "XYZ" };
-    const avecTable = proposer(payload);
+    expect(() =>
+      buildProposal({
+        pieceId: "11111111-1111-1111-1111-111111111111",
+        payload,
+        taxRates,
+        mappings,
+        currency: "XYZ",
+        // @ts-expect-error — l'absence de paramètres est désormais un refus
+        // du TYPE autant que de l'exécution : c'est la garantie la plus forte.
+        parametres: undefined,
+      }),
+    ).toThrow();
+
+    // Et une devise que personne n'avait prévue se propose très bien, dès
+    // lors que le pack dit son échelle. C'est R5 : un pack, pas un fork.
     const avecParametres = buildProposal({
       pieceId: "11111111-1111-1111-1111-111111111111",
       payload,
@@ -92,7 +126,6 @@ describe("les paramètres viennent du paramétrage daté, quand l'appelant les d
       currency: "XYZ",
       parametres,
     });
-    expect(avecTable.lignes[0]!.debit).toMatch(/\.\d{2}$/);
     expect(avecParametres.lignes[0]!.debit).toMatch(/\.\d{3}$/);
   });
 });

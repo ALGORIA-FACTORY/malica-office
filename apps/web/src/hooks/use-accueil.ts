@@ -26,10 +26,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
-import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
 
@@ -117,7 +117,8 @@ const moisPrecedent = moisDecale;
 export function useAccueil(periode: string): Accueil {
   const pme = usePme();
   const devise = pme.currency;
-  const decimales = currencyDecimals(devise);
+  // Du pack, jamais d'une table de devises écrite en TypeScript (R4).
+  const decimalesDuPack = useDecimales();
 
   const debut = moisPrecedent(periode, FENETRE - 1);
   const { from } = monthBounds(debut);
@@ -157,7 +158,8 @@ export function useAccueil(periode: string): Accueil {
       recuperee: null,
       solde: null,
     }));
-    if (!extraits.data || !taux.data) return mois;
+    if (!extraits.data || !taux.data || decimalesDuPack === null) return mois;
+    const decimales = decimalesDuPack;
 
     /*
      * ================== LA TVA SE RANGE AU MOIS OÙ LE CABINET A REÇU LA PIÈCE
@@ -210,16 +212,16 @@ export function useAccueil(periode: string): Accueil {
         solde: calcul.totals.solde,
       };
     });
-  }, [extraits.data, taux.data, periode, devise, decimales]);
+  }, [extraits.data, taux.data, periode, devise, decimalesDuPack]);
 
   const courant = serie[serie.length - 1]?.recuperee ?? null;
   const precedent = serie[serie.length - 2]?.recuperee ?? null;
 
   const ecart = useMemo(() => {
-    if (courant === null || precedent === null) return null;
+    if (courant === null || precedent === null || decimalesDuPack === null) return null;
     const delta = Number(courant) - Number(precedent);
-    return delta.toFixed(decimales);
-  }, [courant, precedent, decimales]);
+    return delta.toFixed(decimalesDuPack);
+  }, [courant, precedent, decimalesDuPack]);
 
   // Combien de mois d'affilée la récupération progresse. Un mois sans donnée
   // coupe la série : on ne comble pas un trou par une hypothèse.
@@ -245,10 +247,10 @@ export function useAccueil(periode: string): Accueil {
     const avant = moisPrecedent(periode, 1);
     const chargesDe = (mois: string): number | null => {
       const duMois = lignes.data!.filter((l) => l.dateEcriture.slice(0, 7) === mois);
-      if (duMois.length === 0) return null;
+      if (duMois.length === 0 || decimalesDuPack === null) return null;
       const pnl = computePnl({
         period: mois,
-        currency: { code: devise, decimals: decimales },
+        currency: { code: devise, decimals: decimalesDuPack },
         entries: duMois.map((l) => ({
           account_code: l.accountCode,
           debit: l.debit,
@@ -265,7 +267,7 @@ export function useAccueil(periode: string): Accueil {
     const la = chargesDe(avant);
     if (ici === null || la === null || la === 0) return null;
     return ((ici - la) / la) * 100;
-  }, [lignes.data, periode, devise, decimales]);
+  }, [lignes.data, periode, devise, decimalesDuPack]);
 
   // ----------------------------------------------------------- l'avancement
   const { avancement, enAttente, documentsLus, documentsNonLus, jamaisRienDepose, retournees } =

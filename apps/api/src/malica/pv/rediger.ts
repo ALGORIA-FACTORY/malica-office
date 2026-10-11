@@ -47,7 +47,6 @@ import type {
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
 import { computeTva } from "@malica/socle/engines/tva/compute";
-import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 import type { Fait, RaisonDEchec, ResultatRedaction } from "@malica/socle/ports/malica";
 
 /** Trente jours : l'horizon des « échéances à venir », le même que le dossier. */
@@ -82,7 +81,6 @@ async function rassemblerLesChiffres(
   const periode = jourDuPv.slice(0, 7);
   const fin = finDuMois(periode);
   const devise = client.currency;
-  const decimales = currencyDecimals(devise);
 
   const [fiche, pack, plan, extraits, file, echeances] = await Promise.all([
     api.rpc<FicheCourante | null>("identite", "ficheCourante", [client.tenantId]),
@@ -102,12 +100,24 @@ async function rassemblerLesChiffres(
   ]);
 
   const debut = debutDExercice(fiche?.clotureExercice ?? null, periode);
-  const [lignes, taux] = await Promise.all([
+  const [lignes, taux, params] = await Promise.all([
     api.rpc<LigneDePeriode[]>("office", "periodeLignes", [client.tenantId, debut, fin]),
     pack
       ? api.rpc<TaxRate[]>("referentiel", "taxRates", [pack.id, client.jurisdiction])
       : Promise.resolve([] as TaxRate[]),
+    // Les décimales viennent du pack, jamais d'une table de devises écrite
+    // en TypeScript (R4). Le dépôt lève une erreur explicite si le paramètre
+    // manque : un PV aux montants à la mauvaise échelle serait signé.
+    pack
+      ? api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id])
+      : Promise.resolve(null),
   ]);
+  if (!params) {
+    throw new Error(
+      "Aucun pack en vigueur : le nombre de décimales de la devise est inconnu, et un PV ne se chiffre pas sans lui.",
+    );
+  }
+  const decimales = params.moneyDecimals;
 
   const chiffres: PvChiffre[] = [];
   const montant = (label: string, valeur: string, source: string): PvChiffre => ({

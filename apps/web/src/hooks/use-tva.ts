@@ -3,11 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
-import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 export function monthBounds(period: string): { from: string; to: string } {
   // Le dernier jour du mois vient du Socle : il y était déjà, calculé de la
@@ -30,6 +30,10 @@ export function useTvaPeriod(period: string): {
   isPending: boolean;
 } {
   const pme = usePme();
+  // Les décimales viennent du pack (R4) : sans elles, aucun montant n'est
+  // écrivable, et mieux vaut ne rien rendre qu'un chiffre à la mauvaise
+  // échelle.
+  const decimales = useDecimales();
   const { from, to } = monthBounds(period);
 
   // La TVA du mois est celle des pièces TRANSMISES ce mois-là : le cabinet
@@ -47,7 +51,7 @@ export function useTvaPeriod(period: string): {
   });
 
   const tva = useMemo<TvaV1 | null>(() => {
-    if (!extracts.data || !rates.data) return null;
+    if (!extracts.data || !rates.data || decimales === null) return null;
     const achats: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
     const ventes: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
     for (const row of extracts.data) {
@@ -59,7 +63,7 @@ export function useTvaPeriod(period: string): {
     }
     return computeTva({
       period,
-      currency: { code: pme.currency, decimals: currencyDecimals(pme.currency) },
+      currency: { code: pme.currency, decimals: decimales },
       tax_rates: rates.data.map((r) => ({
         code: r.code,
         label: r.label,
@@ -71,7 +75,7 @@ export function useTvaPeriod(period: string): {
       achats,
       ventes,
     });
-  }, [extracts.data, rates.data, period, pme.currency]);
+  }, [extracts.data, rates.data, decimales, period, pme.currency]);
 
   return {
     tva,

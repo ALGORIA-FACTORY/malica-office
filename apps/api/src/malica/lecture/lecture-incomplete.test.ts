@@ -48,6 +48,9 @@ function proposer(payload: unknown) {
     taxRates: [],
     mappings: [],
     currency: "TND",
+    // Exigés depuis le 11 octobre 2026 : les décimales et les seuils viennent
+    // du pack, jamais d'un défaut écrit dans le Socle.
+    parametres: { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 },
   });
 }
 
