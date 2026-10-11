@@ -116,7 +116,7 @@ export function useAccueil(periode: string): Accueil {
 
   const extraits = useQuery({
     queryKey: ["accueil-extraits", pme.tenantId, from, to],
-    queryFn: () => office().office.bookedExtracts(pme.tenantId, from, to),
+    queryFn: () => office().office.extraitsTransmis(pme.tenantId, from, to),
   });
 
   const taux = useQuery({
@@ -149,13 +149,27 @@ export function useAccueil(periode: string): Accueil {
     }
     if (!extraits.data || !taux.data) return mois;
 
-    // Les extraits sont rangés par mois de document : c'est la date de la
-    // pièce qui décide de la période, jamais celle de la saisie.
+    /*
+     * ================== LA TVA SE RANGE AU MOIS OÙ LE CABINET A REÇU LA PIÈCE
+     *
+     * Décision du commanditaire, 10 octobre 2026 : « le calcul de TVA dans le
+     * dashboard serait imputé à la date de transmission au comptable, car le
+     * comptable est censé la déclarer dans le mois courant ».
+     *
+     * Avant, deux dates se croisaient sans que personne le dise : la requête
+     * sélectionnait sur la date d'ÉCRITURE, puis cette boucle regroupait sur
+     * la date du DOCUMENT. Une facture de février comptabilisée en octobre
+     * était retenue, puis rangée en février.
+     *
+     * Les charges, elles, restent rangées à la date de la FACTURE : c'est la
+     * dépense, et elle appartient à son mois. Les deux lectures diffèrent
+     * exprès, et chaque écran dit laquelle il montre.
+     */
     const parMois = new Map<string, Array<{ item_id: string | null; extract: ExtractV1 }>>();
     for (const ligne of extraits.data) {
       const lu = ExtractV1.safeParse(ligne.extract);
       if (!lu.success) continue;
-      const cle = lu.data.document_date.slice(0, 7);
+      const cle = ligne.transmiseLe.slice(0, 7);
       const liste = parMois.get(cle) ?? [];
       liste.push({ item_id: ligne.pieceId, extract: lu.data });
       parMois.set(cle, liste);

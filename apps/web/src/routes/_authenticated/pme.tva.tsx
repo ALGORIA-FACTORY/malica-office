@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -9,6 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/tva")({
   head: () => ({
@@ -59,6 +61,14 @@ function PmeTva() {
   const periode = currentPeriod();
 
   const { tva, count, isPending } = useTvaPeriod(periode);
+
+  // Les pièces parties sans date d'envoi : elles ne sont dans aucun mois, et
+  // l'écran doit pouvoir le dire plutôt que de les laisser disparaître.
+  const sansDate = useQuery({
+    queryKey: ["transmises-sans-date", pme.tenantId],
+    queryFn: () => office().office.transmisesSansDate(pme.tenantId),
+    staleTime: 5 * 60 * 1000,
+  });
   const annee = useAccueil(periode);
 
   const nomDuMois = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
@@ -284,7 +294,32 @@ function PmeTva() {
         </div>
       )}
 
-      <p className="px-[22px] pb-6 pt-4 text-[11.5px] leading-[1.5] text-muted-foreground">
+      {/*
+       * ====================== L'ÉCRAN DIT QUELLE DATE IL EMPLOIE, ET IL LE DOIT
+       *
+       * Le 5 octobre, « Vos charges » affichait 222 000 et « Votre TVA » zéro
+       * pour le même mois ; le 10, l'accueil disait 1 document et « Vos
+       * documents » zéro. Chaque fois les deux écrans avaient raison dans
+       * leur définition, et aucun ne disait laquelle.
+       *
+       * C'est cette mention — pas la règle — qui empêche deux chiffres de se
+       * contredire en silence.
+       */}
+      <p className="px-[22px] pt-4 text-[11.5px] leading-[1.5] text-muted-foreground">
+        {t("pme.tva.rangee")}
+      </p>
+      {sansDate.data ? (
+        /*
+         * Les pièces parties avant le 11 octobre n'ont pas de date d'envoi :
+         * la transmission n'était alors qu'un drapeau. Elles ne pèsent dans
+         * aucun mois — et une pièce qui disparaît des totaux sans que rien ne
+         * la nomme est pire qu'une pièce mal rangée.
+         */
+        <p className="mt-2 border-s-[3px] border-signal-warn px-[22px] text-[12px] leading-[1.5] text-text-2">
+          {t("pme.tva.sansDate", { count: sansDate.data })}
+        </p>
+      ) : null}
+      <p className="px-[22px] pb-6 pt-3 text-[11.5px] leading-[1.5] text-muted-foreground">
         {t("pme.tva.source")}
       </p>
     </div>

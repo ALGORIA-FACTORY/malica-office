@@ -30,9 +30,12 @@ export function useTvaPeriod(period: string): {
   const pme = usePme();
   const { from, to } = monthBounds(period);
 
+  // La TVA du mois est celle des pièces TRANSMISES ce mois-là : le cabinet
+  // ne déclare que ce qu'il a reçu, et une pièce gardée au coffre n'entre
+  // dans aucune déclaration. Décision du commanditaire du 10 octobre 2026.
   const extracts = useQuery({
-    queryKey: ["booked-extracts", pme.tenantId, from, to],
-    queryFn: () => office().office.bookedExtracts(pme.tenantId, from, to),
+    queryKey: ["extraits-transmis", pme.tenantId, from, to],
+    queryFn: () => office().office.extraitsTransmis(pme.tenantId, from, to),
   });
 
   const rates = useQuery({
