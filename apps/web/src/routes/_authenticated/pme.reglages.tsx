@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { coque, versionClient } from "@/capabilities/coque";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
+import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -63,7 +64,14 @@ function PmeReglages() {
         {t("pme.reglages.titre")}
       </p>
 
-      <p className="mb-2 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      {/*
+       * Qui d'autre entre dans ce dossier. En TÊTE des réglages, parce que
+       * c'est la seule décision de cet écran qui engage quelqu'un d'autre —
+       * le reste n'est que confort d'affichage.
+       */}
+      <InviterDansMonDossier />
+
+      <p className="mb-2 mt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {t("pme.reglages.langue")}
       </p>
       <div className="flex border border-line-strong">
