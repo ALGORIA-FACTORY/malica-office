@@ -265,6 +265,40 @@ function CabinetReview() {
   if (!dossier.data) return <EmptyState>{t("cab.review.nodoc")}</EmptyState>;
 
   const { piece, contenu, extraction, citations } = dossier.data;
+
+  /*
+   * ============================ UNE CITATION PAR ZONE DE LA PIÈCE, PAS PAR CHAMP
+   *
+   * 11 octobre 2026 : « dans la partie comptable supprime ceci pour alléger ».
+   * La liste affichait « Ligne TVA 1 · Base HT 514,700 » puis « Base HT
+   * 514,700 » puis de nouveau « Ligne TVA 1 · Base HT 514,700 ».
+   *
+   * Ce n'était pas un doublon : quand la facture n'imprime pas de tableau de
+   * TVA, le Socle reconstruit une ligne unique depuis les totaux du pied, et
+   * `citerAussi` pointe alors le MÊME jeton sous un second nom de champ. La
+   * traçabilité l'exige — on doit savoir d'où vient chaque champ.
+   *
+   * Mais le comptable, lui, clique pour SITUER une valeur sur la pièce : deux
+   * entrées qui mènent au même endroit ne lui apprennent rien et noient les
+   * autres. On regroupe donc par zone — même page, même cadre — et les noms
+   * de champs se lisent sur une ligne.
+   *
+   * Rien n'est perdu : chaque champ reste nommé, et le lien vers la pièce est
+   * le même puisque c'est le même jeton.
+   */
+  const citationsGroupees = (() => {
+    const parZone = new Map<string, (typeof citations)[number] & { champs: string[] }>();
+    for (const c of citations) {
+      const cle = `${c.page}|${c.bbox.x0}|${c.bbox.y0}|${c.bbox.x1}|${c.bbox.y1}`;
+      const vu = parZone.get(cle);
+      if (vu) {
+        if (!vu.champs.includes(c.field)) vu.champs.push(c.field);
+      } else {
+        parZone.set(cle, { ...c, champs: [c.field] });
+      }
+    }
+    return [...parZone.values()];
+  })();
   const articles =
     (
       extraction?.payload as
@@ -423,7 +457,7 @@ function CabinetReview() {
             <EmptyState>{t("pme.read.none")}</EmptyState>
           ) : (
             <ul className="grid gap-px border border-border bg-border">
-              {citations.map((citation) => (
+              {citationsGroupees.map((citation) => (
                 <li key={`${citation.field}-${citation.page}`} className="bg-card">
                   <button
                     type="button"
@@ -432,7 +466,7 @@ function CabinetReview() {
                   >
                     <span className="min-w-0">
                       <span className="block text-[11px] text-muted-foreground">
-                        {libelleDuChamp(citation.field, t)}
+                        {citation.champs.map((c) => libelleDuChamp(c, t)).join(" · ")}
                       </span>
                       <span className="num block truncate text-[12.5px]">
                         {(() => {
@@ -455,15 +489,23 @@ function CabinetReview() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-signal-warn">
                 {t("pme.read.flags")}
               </p>
+              {/*
+               * Les signalements se disent UNE FOIS par cause.
+               *
+               * La capture du 11 octobre montrait cinq lignes « Article n ·
+               * PU TTC — Signalement de lecture. », rigoureusement
+               * identiques. Cinq fois la même cause, sur cinq champs : c'est
+               * une information, pas cinq.
+               */}
               <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
-                {extraction.flags.map((flag, index) => (
+                {grouperLesSignalements(extraction.flags).map((g, index) => (
                   <li key={index}>
                     <span className="font-medium text-foreground">
-                      {libelleDuChamp(flag.field, t)}
+                      {g.champs.map((c) => libelleDuChamp(c, t)).join(" · ")}
                     </span>
                     {" — "}
-                    {libelleDuCode(flag.code, t)}
-                    {flag.detail ? <span className="num"> {flag.detail}</span> : null}
+                    {libelleDuCode(g.code, t)}
+                    {g.detail ? <span className="num"> {g.detail}</span> : null}
                   </li>
                 ))}
               </ul>
@@ -701,4 +743,34 @@ function CabinetReview() {
       {error ? <p className="num text-[12px] text-signal-warn">{error}</p> : null}
     </div>
   );
+}
+
+/**
+ * Les signalements de lecture, regroupés par cause.
+ *
+ * Un même code sur cinq champs est UNE information, pas cinq : la capture du
+ * 11 octobre montrait cinq lignes « Article n · PU TTC — Signalement de
+ * lecture. » à l'identique, et un panneau qui se répète cesse d'être lu.
+ *
+ * Le détail fait partie de la clé : « TVA = TTC − base HT » et « TTC de ligne
+ * = base HT + TVA » sont deux causes différentes sous le même code, et les
+ * confondre perdrait justement ce qui les distingue.
+ */
+function grouperLesSignalements(
+  flags: Array<{ field: string; code: string; detail?: string }>,
+): Array<{ code: string; detail: string | undefined; champs: string[] }> {
+  const parCause = new Map<
+    string,
+    { code: string; detail: string | undefined; champs: string[] }
+  >();
+  for (const f of flags) {
+    const cle = `${f.code}|${f.detail ?? ""}`;
+    const vu = parCause.get(cle);
+    if (vu) {
+      if (!vu.champs.includes(f.field)) vu.champs.push(f.field);
+    } else {
+      parCause.set(cle, { code: f.code, detail: f.detail, champs: [f.field] });
+    }
+  }
+  return [...parCause.values()];
 }
