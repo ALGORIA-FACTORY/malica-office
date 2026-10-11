@@ -47,6 +47,8 @@ function versPiece(r: Record<string, unknown>) {
     documentKindStatut:
       (r["document_kind_statut"] as "a_determiner" | "a_confirmer" | "confirme" | undefined) ??
       "a_determiner",
+    // `null` = la question est encore ouverte, et l'écran doit la poser.
+    gardeeLe: (r["gardee_le"] as string | null) ?? null,
   };
 }
 
@@ -124,7 +126,7 @@ export const capture = {
   async lister(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-                document_kind, document_kind_statut
+                document_kind, document_kind_statut, gardee_le
          from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
       [tenantId],
     );
@@ -189,7 +191,7 @@ export const capture = {
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut
+              document_kind, document_kind_statut, gardee_le
          from pieces_v where id = $1`,
       [pieceId],
     );

@@ -58,6 +58,8 @@ function versPiece(p: Record<string, unknown>): Piece {
     documentKind: (p["documentKind"] as string | null) ?? null,
     documentKindStatut:
       (p["documentKindStatut"] as Piece["documentKindStatut"] | undefined) ?? "a_determiner",
+    // `null` = la question « cabinet ou espace privé » est encore ouverte.
+    gardeeLe: (p["gardeeLe"] as string | null) ?? null,
   };
 }
 

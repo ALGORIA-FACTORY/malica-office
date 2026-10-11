@@ -258,6 +258,26 @@ function PieceScreen() {
   });
 
   /**
+   * Garder chez soi — l'autre moitié de la décision.
+   *
+   * Elle manquait. Le commentaire d'à côté affirmait « deux boutons de même
+   * poids » et il n'y en avait qu'un ; garder était ce qui arrivait quand on
+   * ne faisait rien. Pire : rien ne distinguait « j'ai décidé de la garder »
+   * de « je n'ai pas encore répondu », donc la question revenait à chaque
+   * visite — et un écran qui redemande ce qu'on vient de lui dire apprend à
+   * ne plus répondre.
+   */
+  const garder = useMutation({
+    mutationFn: () => office().collab.garderPiece(pieceId),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * Le geste inverse SE DEMANDE, il ne se prend pas.
    *
    * Le 10 octobre j'avais livré un rappel unilatéral, pour sortir d'un état
@@ -1223,22 +1243,72 @@ function PieceScreen() {
                      * une facture chez soi est un choix légitime, l'envoyer
                      * aussi, et seul le dirigeant sait lequel.
                      */}
-                    <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
-                      {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
-                    </p>
-                    <button
-                      type="button"
-                      disabled={transmettre.isPending}
-                      onClick={() => transmettre.mutate()}
-                      className="h-[50px] w-full border border-foreground bg-foreground text-[15px] font-medium text-background disabled:opacity-50"
-                    >
-                      {transmettre.isPending
-                        ? t("common.loading")
-                        : t("pme.transmettre.action", { cabinet: cabinet.data.name })}
-                    </button>
-                    <p className="pt-2.5 text-center text-[12.5px] text-text-2">
-                      {t("pme.transmettre.chezvous")}
-                    </p>
+                    {piece.gardeeLe ? (
+                      /*
+                       * LA DÉCISION PRISE, ET SON CHEMIN DE RETOUR.
+                       *
+                       * On ne repose pas la question : elle a été tranchée, et
+                       * la date le dit. Mais « Transmettre quand même » reste
+                       * là, parce que c'est l'exemple même du commanditaire —
+                       * « j'ai classé dans mon coffre, j'aurai toujours la
+                       * possibilité de transmettre au cabinet ». Ce sens-là ne
+                       * demande rien à personne et ne doit jamais se fermer.
+                       */
+                      <div className="text-center">
+                        <p className="text-[13px] text-text-2">{t("pme.garder.faite")}</p>
+                        <button
+                          type="button"
+                          disabled={transmettre.isPending}
+                          onClick={() => transmettre.mutate()}
+                          className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
+                        >
+                          {transmettre.isPending
+                            ? t("common.loading")
+                            : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
+                          {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
+                        </p>
+                        {/*
+                         * DEUX BOUTONS DE MÊME POIDS — et cette fois ils sont
+                         * deux.
+                         *
+                         * Le 11 octobre : « et le choix entre transmettre au
+                         * cabinet ou espace privé ? » Il n'existait pas :
+                         * « Transmettre » tenait toute la largeur, et garder
+                         * se lisait dans une ligne de 12,5 px qu'on ne tape
+                         * pas. Aucun des deux n'est présenté comme le bon —
+                         * garder une facture chez soi est un choix légitime,
+                         * l'envoyer aussi, et seul le dirigeant sait lequel.
+                         */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={garder.isPending || transmettre.isPending}
+                            onClick={() => garder.mutate()}
+                            className="h-[50px] border border-foreground text-[14.5px] font-medium disabled:opacity-50"
+                          >
+                            {garder.isPending ? t("common.loading") : t("pme.garder.action")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={transmettre.isPending || garder.isPending}
+                            onClick={() => transmettre.mutate()}
+                            className="h-[50px] border border-foreground bg-foreground text-[14.5px] font-medium text-background disabled:opacity-50"
+                          >
+                            {transmettre.isPending
+                              ? t("common.loading")
+                              : t("pme.transmettre.action")}
+                          </button>
+                        </div>
+                        <p className="pt-2.5 text-center text-[12.5px] text-text-2">
+                          {t("pme.transmettre.chezvous")}
+                        </p>
+                      </>
+                    )}
                   </>
                 )}
               </div>

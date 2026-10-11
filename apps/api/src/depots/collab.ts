@@ -377,6 +377,21 @@ export const collab = {
   },
 
   /**
+   * Garder la pièce chez soi, et le DIRE.
+   *
+   * La base refuse le geste sur une pièce déjà transmise : ce retour-là passe
+   * par l'accord du cabinet, et un bouton « garder » qui l'autoriserait
+   * contournerait la seule règle qui en exige un.
+   */
+  async garderPiece(db: Requete, pieceId: string): Promise<{ changed: boolean }> {
+    const { rows } = await db.query<{ changed: boolean }>(
+      `select (public.capture_piece_garder($1) ->> 'changed')::boolean as changed`,
+      [pieceId],
+    );
+    return { changed: Boolean(rows[0]?.changed) };
+  },
+
+  /**
    * La PME demande au cabinet de rappeler ou d'effacer une pièce transmise.
    *
    * ================================================================= POURQUOI

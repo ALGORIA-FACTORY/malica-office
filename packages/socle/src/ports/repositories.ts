@@ -624,6 +624,15 @@ export interface Piece {
    */
   documentKind: string | null;
   documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
+  /**
+   * Quand le dirigeant a décidé de garder la pièce chez lui.
+   *
+   * `null` ne veut pas dire « non » : il veut dire « pas encore répondu », et
+   * c'est à cela que l'écran reconnaît qu'il doit poser la question. Sans
+   * cette distinction, `vis = "personnel"` disait à la fois « j'ai décidé »
+   * et « je n'ai rien dit », et la question revenait à chaque visite.
+   */
+  gardeeLe: string | null;
 }
 
 export interface Token {
@@ -1577,6 +1586,17 @@ export interface CollabRepository {
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
+  /**
+   * Inscrire la décision de garder la pièce dans l'espace privé.
+   *
+   * Elle ne change pas la visibilité : elle la CONFIRME. Sans cette
+   * confirmation, « personnel » voulait dire à la fois « j'ai décidé » et
+   * « je n'ai pas répondu », et l'écran reposait la question à chaque visite.
+   *
+   * Garder ne ferme rien : la pièce part au cabinet quand son dirigeant le
+   * veut. C'est l'inverse qui demande un accord.
+   */
+  garderPiece(pieceId: string): Promise<{ changed: boolean }>;
   /**
    * Ce que la PME demande au cabinet sur une pièce déjà transmise.
    *

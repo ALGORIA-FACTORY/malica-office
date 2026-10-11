@@ -2276,7 +2276,13 @@ const fr = {
    */
   "pme.transmettre.question": "Envoyer cette pièce à {cabinet} ?",
   "pme.transmettre.chezvous": "Sinon elle reste chez vous, et votre cabinet ne la voit pas.",
-  "pme.transmettre.action": "Transmettre à {cabinet}",
+  // Court, parce que le bouton ne tient plus que la moitié de la largeur :
+  // « garder chez moi » occupe l'autre, et la question au-dessus nomme déjà
+  // le cabinet.
+  "pme.transmettre.action": "Transmettre",
+  "pme.garder.action": "Garder chez moi",
+  "pme.garder.faite": "Gardée dans votre espace privé.",
+  "pme.garder.quandmeme": "La transmettre à {cabinet} finalement",
   "pme.transmettre.faite": "Transmise à {cabinet}.",
   "pme.supprimer.action": "Supprimer cette pièce",
   "pme.supprimer.sur": "Cette pièce sera effacée définitivement. Vous êtes sûr ?",
@@ -4504,7 +4510,10 @@ const en: Dict = {
   "piece.date.duScan": "Not readable on the document — scan day proposed",
   "pme.transmettre.question": "Send this document to {cabinet}?",
   "pme.transmettre.chezvous": "Otherwise it stays with you, and your firm cannot see it.",
-  "pme.transmettre.action": "Send to {cabinet}",
+  "pme.transmettre.action": "Send it",
+  "pme.garder.action": "Keep it private",
+  "pme.garder.faite": "Kept in your private space.",
+  "pme.garder.quandmeme": "Send it to {cabinet} after all",
   "pme.transmettre.faite": "Sent to {cabinet}.",
   "pme.supprimer.action": "Delete this document",
   "pme.supprimer.sur": "This document will be permanently erased. Are you sure?",
@@ -6687,7 +6696,10 @@ const ar: Dict = {
   "piece.date.duScan": "غير مقروء على الوثيقة — يُقترح يوم المسح",
   "pme.transmettre.question": "إرسال هذه الوثيقة إلى {cabinet}؟",
   "pme.transmettre.chezvous": "وإلا تبقى عندك، ولا يراها مكتبك.",
-  "pme.transmettre.action": "إرسال إلى {cabinet}",
+  "pme.transmettre.action": "إرسالها",
+  "pme.garder.action": "الاحتفاظ بها عندي",
+  "pme.garder.faite": "محفوظة في مساحتك الخاصة.",
+  "pme.garder.quandmeme": "إرسالها إلى {cabinet} في النهاية",
   "pme.transmettre.faite": "أُرسلت إلى {cabinet}.",
   "pme.supprimer.action": "حذف هذه الوثيقة",
   "pme.supprimer.sur": "ستُحذف هذه الوثيقة نهائيًا. هل أنت متأكد؟",
