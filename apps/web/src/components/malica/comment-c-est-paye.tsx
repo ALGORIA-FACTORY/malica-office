@@ -30,21 +30,34 @@
  * suivante — avec des libellés justes et des comptes faux, donc invisible.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Camera } from "lucide-react";
 import { useState } from "react";
 
+import { files } from "@/capabilities/files";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { vidage } from "@/lib/hors-ligne";
 import { office } from "@/verticals/malica-office/composition";
 
 export function CommentCEstPaye({
   pieceId,
+  visDeLaPiece,
   dateDeLaPiece,
   ttcMineur,
   devise,
 }: {
   pieceId: string;
+  /**
+   * La visibilité de la facture, que la preuve reprend.
+   *
+   * « Et qui doit être transmis au comptable avec la photo » : si la facture
+   * est partie, le talon part avec elle. Une preuve restée personnelle sur une
+   * facture transmise donnerait au cabinet une pièce dont le justificatif
+   * existe et reste invisible.
+   */
+  visDeLaPiece: "personnel" | "partage";
   /** La date de la pièce : c'est à elle que le pack est lu, jamais à l'horloge. */
   dateDeLaPiece: string | null;
   /** Le total lu, en unités mineures — proposé par défaut, jamais imposé. */
@@ -70,9 +83,56 @@ export function CommentCEstPaye({
     queryFn: () => office().capture.paiementsDUnePiece(pieceId),
   });
 
+  /**
+   * La photo du justificatif — même capture, même archive, même chiffrement.
+   *
+   * Elle passe par la FILE, comme toute pièce : hors ligne, la preuve attend
+   * dans l'appareil et part au retour du réseau. Photographier un talon de
+   * chèque dans un parking sans réseau est précisément le cas qui se présente.
+   *
+   * Son type, `justificatif_paiement`, porte `porte_ecriture = false` : un
+   * document transmis au cabinet et comptabilisable une seconde fois est la
+   * façon la plus simple de compter une charge deux fois.
+   */
+  async function photographierLaPreuve(): Promise<string | null> {
+    const [pris] = await files.takePhoto();
+    if (!pris) return null;
+    const cle = await vidage().deposer(
+      {
+        cle: files.newIdempotencyKey(),
+        tenantId: pme.tenantId,
+        entityId: pme.entityId,
+        source: pris.source,
+        // La preuve suit la facture : si celle-ci est partie au cabinet, le
+        // talon part avec elle — « transmise au comptable avec la photo ».
+        vis: visDeLaPiece,
+        contentType: pris.blob.type || "application/pdf",
+        documentKind: "justificatif_paiement",
+        nomFichier: pris.name,
+      },
+      pris.blob,
+    );
+    const element = await vidage().attendre(cle, 8_000);
+    return element?.pieceId ?? null;
+  }
+
   const inscrire = useMutation({
-    mutationFn: (moyenCode: string) => {
+    /*
+     * ============================ LA PHOTO D'ABORD, QUAND LE MOYEN L'EXIGE
+     *
+     * Demandé le 10 octobre : « à l'exception d'espèces les autres on doit
+     * prendre une photo et la rattacher à la facture ». L'appareil s'ouvre
+     * donc au tap, avant l'inscription, et le paiement naît déjà prouvé —
+     * une seule écriture, et la table des paiements reste en ajout seul.
+     *
+     * Un abandon de l'appareil n'annule RIEN : le paiement s'inscrit sans
+     * preuve, la ligne dit « justificatif à photographier », et le bouton
+     * reste là. Un écran qui refuse d'avancer se contourne en cochant
+     * « espèces », et l'information est perdue au lieu d'être gagnée.
+     */
+    mutationFn: async (moyenCode: string) => {
       const paye = moyenCode !== "non_paye";
+      const justificatifPieceId = exigeUnePreuve(moyenCode) ? await photographierLaPreuve() : null;
       return office().capture.enregistrerPaiement({
         pieceId,
         packId: pme.packId!,
@@ -82,7 +142,29 @@ export function CommentCEstPaye({
         montantMineur: paye ? ttcMineur : null,
         devise,
         payeLe: paye && ttcMineur !== null ? new Date().toISOString().slice(0, 10) : null,
+        justificatifPieceId,
       });
+    },
+    onSuccess: async () => {
+      setErreur(null);
+      await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
+    },
+    onError: (e: unknown) =>
+      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+  });
+
+  /**
+   * La preuve qui arrive APRÈS — et c'est le cas courant.
+   *
+   * Le paiement est en ajout seul : il ne se réécrit pas. Le rattachement est
+   * donc une écriture nouvelle, et la dernière vaut — reprendre une photo
+   * floue n'est pas l'exception.
+   */
+  const rattacher = useMutation({
+    mutationFn: async (paiementId: string) => {
+      const preuve = await photographierLaPreuve();
+      if (!preuve) return;
+      await office().capture.rattacherJustificatif(paiementId, preuve);
     },
     onSuccess: async () => {
       setErreur(null);
@@ -121,9 +203,24 @@ export function CommentCEstPaye({
                       : montant((p.montantMineur / 1000).toFixed(3), locale)}
                   </span>
                 </span>
+                {/*
+                 * Le manque était dit, et rien ne permettait d'y répondre :
+                 * une ligne orange sur toutes les pièces, pour toujours. Elle
+                 * est devenue le bouton qui ouvre l'appareil.
+                 */}
                 {p.justificatifPieceId === null && exigeUnePreuve(p.moyenCode) ? (
-                  <span className="mt-0.5 block text-[11.5px] text-signal-warn">
-                    {t("pme.paiement.preuve.manque")}
+                  <button
+                    type="button"
+                    onClick={() => rattacher.mutate(p.id)}
+                    disabled={rattacher.isPending}
+                    className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-signal-warn underline underline-offset-2 disabled:opacity-40"
+                  >
+                    <Camera className="h-[13px] w-[13px]" aria-hidden />
+                    {rattacher.isPending ? t("common.loading") : t("pme.paiement.preuve.prendre")}
+                  </button>
+                ) : p.justificatifPieceId !== null ? (
+                  <span className="mt-0.5 block text-[11.5px] text-signal-ok">
+                    {t("pme.paiement.preuve.jointe")}
                   </span>
                 ) : null}
               </li>

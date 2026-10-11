@@ -75,6 +75,10 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<string>("capture", "enregistrerPaiement", [input]);
     },
 
+    async rattacherJustificatif(paiementId: string, pieceId: string) {
+      await rpc<void>("capture", "rattacherJustificatif", [paiementId, pieceId]);
+    },
+
     async paiementsDUnePiece(pieceId: string) {
       return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
     },

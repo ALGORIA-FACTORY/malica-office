@@ -850,6 +850,17 @@ export const capture = {
     return id;
   },
 
+  /**
+   * Rattacher une preuve à un paiement DÉJÀ inscrit.
+   *
+   * Le paiement est en ajout seul : il ne se réécrit pas. La preuve tardive
+   * est donc une écriture nouvelle, et c'est la dernière qui vaut — reprendre
+   * une photo floue est le cas normal.
+   */
+  async rattacherJustificatif(db: Requete, paiementId: string, pieceId: string): Promise<void> {
+    await db.query(`select public.paiement_rattacher_justificatif($1, $2)`, [paiementId, pieceId]);
+  },
+
   /** Les paiements d'une pièce, du plus ancien au plus récent. */
   async paiementsDUnePiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(

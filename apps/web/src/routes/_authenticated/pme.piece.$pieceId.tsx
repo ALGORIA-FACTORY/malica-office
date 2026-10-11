@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useDecimales } from "@/hooks/use-decimales";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
@@ -91,6 +92,9 @@ function PieceScreen() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
+  // Les décimales de la devise viennent du pack. `null` tant qu'on ne les a
+  // pas : on n'en suppose aucune (R4).
+  const decimales = useDecimales();
   const [zoom, setZoom] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
   /*
@@ -1163,9 +1167,19 @@ function PieceScreen() {
              */}
             <CommentCEstPaye
               pieceId={pieceId}
+              visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
               dateDeLaPiece={payload?.document_date ?? null}
+              /*
+               * Le facteur vient du PACK, pas d'un « × 1000 » écrit ici.
+               * Trois décimales sont tunisiennes ; la première juridiction à
+               * deux aurait proposé mille fois le montant payé, et l'écran
+               * n'aurait rien signalé. R4 : aucune constante réglementaire
+               * dans le code.
+               */
               ttcMineur={
-                payload?.totals?.ttc ? Math.round(Number(payload.totals.ttc) * 1000) : null
+                payload?.totals?.ttc && decimales !== null
+                  ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
+                  : null
               }
               devise={payload?.currency ?? pme.currency}
             />

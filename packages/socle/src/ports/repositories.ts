@@ -802,6 +802,15 @@ export interface CaptureRepository {
     payeLe?: string | null;
     justificatifPieceId?: string | null;
   }): Promise<string>;
+  /**
+   * Rattacher une preuve à un paiement déjà inscrit.
+   *
+   * Le paiement ne se réécrit pas : la preuve tardive est une écriture
+   * nouvelle, et c'est la dernière qui vaut. Sans ce chemin, il faudrait soit
+   * bloquer le paiement jusqu'à la photo — donc faire cocher « espèces » pour
+   * avancer — soit inscrire un second paiement, qui doublerait le montant.
+   */
+  rattacherJustificatif(paiementId: string, pieceId: string): Promise<void>;
   /** Les paiements d'une pièce, du plus ancien au plus récent. */
   paiementsDUnePiece(pieceId: string): Promise<PaiementDUnePiece[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
