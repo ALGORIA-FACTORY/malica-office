@@ -886,6 +886,13 @@ export interface QueueItem {
   collaborateur: string | null;
   /** La confiance globale de la dernière lecture (0..1), ou rien si elle n'a pas été mesurée. */
   confiance: number | null;
+  /**
+   * Ce que la PME demande sur cette pièce, et qui attend le cabinet.
+   *
+   * Dans la file, et non dans un écran séparé : une demande qu'il faut aller
+   * chercher est une demande qui dort. `null` quand il n'y a rien à trancher.
+   */
+  demandeEnAttente: DemandeSurPiece | null;
 }
 
 export interface AuditEntry {

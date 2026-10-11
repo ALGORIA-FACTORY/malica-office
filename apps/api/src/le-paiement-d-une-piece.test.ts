@@ -218,17 +218,40 @@ describe("la date de transmission d'une pièce", { skip: !BASE_CONFIGUREE }, () 
   });
 
   it("le drapeau et la date changent ensemble, par la même porte", async () => {
-    // La fonction est la SEULE porte par laquelle `vis` bouge. Si la date
-    // était posée ailleurs, les deux divergeraient et une pièce partagée sans
-    // date disparaîtrait de toutes les déclarations.
+    /*
+     * `capture_piece_set_vis` est la SEULE porte par laquelle `vis` bouge.
+     *
+     * Le 11 octobre, en recopiant son corps pour y poser la date, je l'ai
+     * réécrite SOUS UN AUTRE NOM : le dépôt a porté deux portes, et
+     * l'application passait par celle que je n'avais pas corrigée. Aucune
+     * transmission ne se datait plus.
+     *
+     * Cette épreuve nomme donc la fonction RÉELLE, et la suivante vérifie
+     * qu'il n'y en a pas d'autre.
+     */
     const { rows } = await pool.query<{ src: string }>(
       `select prosrc as src from pg_proc p
          join pg_namespace n on n.oid = p.pronamespace
-        where n.nspname = 'public' and p.proname = 'piece_definir_visibilite'`,
+        where n.nspname = 'public' and p.proname = 'capture_piece_set_vis'`,
     );
     assert.equal(rows.length, 1);
     assert.match(rows[0]!.src, /transmise_le = case when p_vis = 'partage'/);
     assert.match(rows[0]!.src, /else null end/, "un rappel doit effacer la date");
+  });
+
+  it("et il n'existe qu'UNE porte : un doublon est une divergence programmée", async () => {
+    const { rows } = await pool.query<{ proname: string }>(
+      `select p.proname from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.prosrc like '%transmise_le = case when p_vis%'
+        order by p.proname`,
+    );
+    assert.deepEqual(
+      rows.map((r) => r.proname),
+      ["capture_piece_set_vis"],
+      "deux fonctions qui posent la date divergeront : la prochaine correction ira dans celle qu'on aura sous les yeux",
+    );
   });
 
   it("les paiements sont append-only : un fait ne se réécrit pas (R7)", async () => {

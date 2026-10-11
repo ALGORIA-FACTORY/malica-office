@@ -66,6 +66,12 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "mandat.accepte": "cab.notif.kind.mandat.accepte",
   "mandat.refuse": "cab.notif.kind.mandat.refuse",
   "pv.envoye": "cab.notif.kind.pv.envoye",
+  // Le client demande le retour ou l'effacement d'une pièce transmise. Sans
+  // ces deux entrées, la demande arrivait sous une phrase générique et
+  // n'était pas signalée comme attendant un geste : le canal de retour était
+  // muet des deux côtés.
+  "piece.demande": "cab.notif.kind.piece.demande",
+  "piece.demande_tranchee": "cab.notif.kind.piece.demande_tranchee",
 };
 
 /** Un genre qui attend un geste du cabinet se lit en or. */
@@ -75,6 +81,8 @@ const ATTEND_LE_CABINET = new Set([
   "ecriture.proposed",
   "conseil.arbitrage",
   "mandat.refuse",
+  // Un client qui attend une réponse attend sur un geste du cabinet.
+  "piece.demande",
 ]);
 
 /** Les genres qui mènent ailleurs qu'à une pièce : la file d'arbitrage, les mandats, les PV. */
