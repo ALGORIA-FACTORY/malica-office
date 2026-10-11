@@ -222,6 +222,51 @@ describe("destinataire", () => {
     assert.equal(c.statut, "rejet");
     assert.match(c.motif, /9999999/);
   });
+  it("un matricule SANS lettre de contrôle ne se confond pas avec un autre", () => {
+    /*
+     * ============================ LE PIÈGE QUE CE CONTRÔLE PORTAIT EN PRODUCTION
+     *
+     * Ce fichier avait sa propre version du normaliseur : elle compactait la
+     * chaîne puis prenait la première lettre venue pour la lettre de
+     * contrôle. Sur « 1856324/A/M/000 » — qui n'en porte PAS — elle rendait
+     * « 1856324A », fabriquant une identité à partir du CODE DE TVA.
+     *
+     * Le dossier porte « 1856324K/A/M/000 », de lettre de contrôle K. La
+     * pièce ci-dessous porte les mêmes sept chiffres sans lettre : on ne sait
+     * donc PAS si c'est la même entreprise, et l'ancienne version répondait
+     * « 1856324A ≠ 1856324K », donc REJET — pour une raison inventée.
+     *
+     * Le Socle, lui, sait dire qu'un matricule est partiel. Le verdict ne
+     * doit pas être un rejet : on ne rejette pas sur ce qu'on n'a pas lu.
+     */
+    const c = statut(
+      facture({ destinataire: { nom: "ALGORIA", identifiantFiscal: "1856324/A/M/000" } }),
+      "destinataire",
+    );
+    assert.notEqual(
+      c.statut,
+      "rejet",
+      "un matricule incomplet ne prouve rien, ni dans un sens ni dans l'autre",
+    );
+  });
+
+  it("et deux entreprises que l'ancienne version confondait restent distinctes", () => {
+    /*
+     * « 1856324A/B/M/000 » : lettre de contrôle A, code de TVA B. L'ancienne
+     * version la compactait en « 1856324AB... » et en tirait « 1856324A »,
+     * exactement la clé qu'elle fabriquait pour « 1856324/A/M/000 ». Deux
+     * entreprises différentes, une seule clé.
+     *
+     * Ici le dossier est « 1856324K/… » : les deux sont étrangères au
+     * dossier, et c'est bien un rejet — mais pour la bonne raison.
+     */
+    const c = statut(
+      facture({ destinataire: { nom: "AUTRE", identifiantFiscal: "1856324A/B/M/000" } }),
+      "destinataire",
+    );
+    assert.equal(c.statut, "rejet");
+  });
+
   it("destinataire non identifié : réserve", () => {
     assert.equal(
       statut(facture({ destinataire: { nom: null, identifiantFiscal: null } }), "destinataire")

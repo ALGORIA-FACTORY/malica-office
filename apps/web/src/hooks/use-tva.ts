@@ -1,3 +1,4 @@
+import { finDuMois } from "@malica/socle/exercice";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -9,9 +10,10 @@ import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
 export function monthBounds(period: string): { from: string; to: string } {
-  const [y, m] = period.split("-").map(Number);
-  const last = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
-  return { from: `${period}-01`, to: `${period}-${String(last).padStart(2, "0")}` };
+  // Le dernier jour du mois vient du Socle : il y était déjà, calculé de la
+  // même façon et couvert par ses propres épreuves, et six fichiers
+  // l'importaient pendant que celui-ci le recalculait.
+  return { from: `${period}-01`, to: finDuMois(period) };
 }
 
 export function currentPeriod(): string {

@@ -31,9 +31,17 @@ import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { currencyDecimals } from "@malica/socle/use-cases/propose-ecriture";
 
+import { moisDecale, moisGlissants } from "@malica/socle/exercice";
+
 import { monthBounds } from "./use-tva";
 
-/** Douze mois : celui-ci et les onze qui précèdent. */
+/**
+ * Douze mois : celui-ci et les onze qui précèdent.
+ *
+ * C'est la fenêtre de CALCUL, pas celle d'affichage — elle traverse le
+ * changement d'exercice exprès, pour que janvier garde son comparatif.
+ * `moisGlissants` du Socle en porte la définition et la raison.
+ */
 const FENETRE = 12;
 
 export interface MoisDeTva {
@@ -98,12 +106,13 @@ export interface Accueil {
   enCours: boolean;
 }
 
-/** Le mois qui précède, en « AAAA-MM ». */
-function moisPrecedent(periode: string, recul: number): string {
-  const [a, m] = periode.split("-").map(Number);
-  const d = new Date(Date.UTC(a!, m! - 1 - recul, 1));
-  return d.toISOString().slice(0, 7);
-}
+/*
+ * `moisPrecedent` vivait ici, identique ligne pour ligne à `moisDecale` du
+ * Socle — lequel avait été écrit le 10 octobre EN NOMMANT ce fichier parmi
+ * les trois qui portaient chacun leur propre fenêtre. Deux des trois ont été
+ * corrigés le jour même ; celui-ci, nommément cité, était resté.
+ */
+const moisPrecedent = moisDecale;
 
 export function useAccueil(periode: string): Accueil {
   const pme = usePme();
@@ -143,10 +152,11 @@ export function useAccueil(periode: string): Accueil {
 
   // ------------------------------------------------------ la série de douze
   const serie = useMemo<MoisDeTva[]>(() => {
-    const mois: MoisDeTva[] = [];
-    for (let i = FENETRE - 1; i >= 0; i -= 1) {
-      mois.push({ periode: moisPrecedent(periode, i), recuperee: null, solde: null });
-    }
+    const mois: MoisDeTva[] = moisGlissants(periode, FENETRE).map((p) => ({
+      periode: p,
+      recuperee: null,
+      solde: null,
+    }));
     if (!extraits.data || !taux.data) return mois;
 
     /*
