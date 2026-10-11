@@ -225,7 +225,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      /*
+       * L'icône porte la marque ALGORIA, et elle vient du kit.
+       *
+       * 11 octobre 2026 : « le favicon de lovable doit être supprimé et
+       * remplacé par algoria ». L'onglet affichait encore l'icône de l'outil
+       * qui a servi à démarrer le projet — sur un produit qu'un dirigeant
+       * ouvre devant son comptable, c'est la marque de quelqu'un d'autre.
+       *
+       * Deux fichiers et non un : `favicon.ico` porte trois tailles pour
+       * l'onglet, et l'icône Apple manquait — sans elle, un raccourci ajouté
+       * depuis Safari prend une capture de la page.
+       */
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
     scripts: [{ children: LANGUE_AVANT_RENDU }],
   }),
