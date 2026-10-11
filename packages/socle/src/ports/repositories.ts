@@ -275,12 +275,14 @@ export interface Juridiction {
 export interface ReferentialRepository {
   juridictions(): Promise<Juridiction[]>;
   activePack(jurisdiction: string): Promise<JurisdictionPack | null>;
-  taxRates(packId: string, jurisdiction: string): Promise<TaxRate[]>;
+  /** Les taux du pack. Le libelle est traduit : il descend a l ecran. */
+  taxRates(packId: string, jurisdiction: string, locale?: string): Promise<TaxRate[]>;
   accountMappings(packId: string): Promise<AccountMapping[]>;
   /** Ce qu'est chaque classe du plan : le compte de résultat en a besoin. */
   classesDeComptes(packId: string): Promise<AccountClass[]>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
-  fiscalCharges(packId: string): Promise<FiscalCharge[]>;
+  /** Les droits hors TVA du pack, libelle traduit. */
+  fiscalCharges(packId: string, locale?: string): Promise<FiscalCharge[]>;
   /** Paramètres du Socle (décimales, méthode de stock, tolérances) lus au pack. */
   /**
    * Les types de document proposés au moment de la photo, traduits.
@@ -1942,7 +1944,8 @@ export interface ChargesEnAttenteDeDate {
 }
 
 export interface ChargesRepository {
-  familles(packId: string): Promise<ChargeFamille[]>;
+  /** Les familles de charges du pack, libelle traduit. */
+  familles(packId: string, locale?: string): Promise<ChargeFamille[]>;
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
   enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;

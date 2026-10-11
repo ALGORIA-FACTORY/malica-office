@@ -61,7 +61,7 @@ function ChargesScreen() {
     queryFn: async () => {
       const packId = pme.packId!;
       const [familles, threshold, params] = await Promise.all([
-        office().charges.familles(packId),
+        office().charges.familles(packId, locale),
         office().charges.anomalyThreshold(packId, THRESHOLD_CODE),
         office().referential.socleParams(packId),
       ]);

@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { debutDExercice, finDuMois } from "@malica/socle/exercice";
+import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
@@ -41,6 +42,7 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
   // Aucune devise de repli (R4) : sans client, rien n'est calculé.
   const devise = client?.currency ?? null;
 
+  const { locale } = useI18n();
   const pack = useQuery({
     queryKey: ["ref-pack", client?.jurisdiction],
     queryFn: () => office().referential.activePack(client!.jurisdiction),
@@ -90,7 +92,7 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
 
   const taux = useQuery({
     queryKey: ["tax-rates", pack.data?.id],
-    queryFn: () => office().referential.taxRates(pack.data!.id, client!.jurisdiction),
+    queryFn: () => office().referential.taxRates(pack.data!.id, client!.jurisdiction, locale),
     enabled: Boolean(pack.data) && client !== null,
   });
 

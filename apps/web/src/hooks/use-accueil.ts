@@ -26,6 +26,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useI18n } from "@/i18n";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
@@ -118,6 +119,7 @@ export function useAccueil(periode: string): Accueil {
   const pme = usePme();
   const devise = pme.currency;
   // Du pack, jamais d'une table de devises écrite en TypeScript (R4).
+  const { locale } = useI18n();
   const decimalesDuPack = useDecimales();
 
   const debut = moisPrecedent(periode, FENETRE - 1);
@@ -138,8 +140,10 @@ export function useAccueil(periode: string): Accueil {
   });
 
   const taux = useQuery({
-    queryKey: ["tax-rates", pme.packId],
-    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction),
+    // La langue entre dans la cle : les libelles des taux sont traduits, et
+    // un cache commun aurait servi l arabe a un ecran francais.
+    queryKey: ["tax-rates", pme.packId, locale],
+    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction, locale),
     enabled: !!pme.packId,
   });
 

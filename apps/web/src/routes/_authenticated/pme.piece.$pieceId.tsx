@@ -403,7 +403,7 @@ function PieceScreen() {
   const packDroits = useQuery({
     queryKey: ["droits-du-pack", pme.packId],
     enabled: !!pme.packId,
-    queryFn: () => office().referential.fiscalCharges(pme.packId!),
+    queryFn: () => office().referential.fiscalCharges(pme.packId!, locale),
   });
 
   const propositionServeur = useQuery({

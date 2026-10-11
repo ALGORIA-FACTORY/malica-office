@@ -57,11 +57,27 @@ export const referentiel = {
     };
   },
 
-  async taxRates(db: Requete, packId: string, jurisdiction: string) {
+  /**
+   * Les taux de TVA du pack, traduits.
+   *
+   * Le libellé vient de `ref.labels`, pas de la colonne `label` de la table,
+   * qui est FRANÇAISE. L'espace de noms `tva_rate` existait depuis le 24 août 2026
+   * et aucun code ne le joignait : un écran en arabe affichait du français au
+   * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
+   * français est explicite — un libellé sans traduction s'affiche, il ne vide
+   * pas l'écran.
+   */
+  async taxRates(db: Requete, packId: string, jurisdiction: string, locale = "fr") {
     const { rows } = await db.query(
-      `select code, label, rate, valid_from, valid_to
-         from ref_tva_rates_v where pack_version_id = $1`,
-      [packId],
+      `select t.code, t.rate, t.valid_from, t.valid_to,
+              coalesce(demandee.value, francais.value, t.label) as label
+         from ref_tva_rates_v t
+         left join ref_labels_v demandee
+           on demandee.ns = 'tva_rate' and demandee.key = t.code and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'tva_rate' and francais.key = t.code and francais.locale = 'fr'
+        where t.pack_version_id = $1`,
+      [packId, locale],
     );
     return rows.map((r) => {
       const row = r as Record<string, unknown>;
@@ -125,14 +141,31 @@ export const referentiel = {
     }));
   },
 
-  async fiscalCharges(db: Requete, packId: string) {
+  /**
+   * Les droits et taxes hors TVA du pack, traduits.
+   *
+   * Le libellé vient de `ref.labels`, pas de la colonne `label` de la table,
+   * qui est FRANÇAISE. L'espace de noms `fiscal_charge` existait depuis le 24 août 2026
+   * et aucun code ne le joignait : un écran en arabe affichait du français au
+   * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
+   * français est explicite — un libellé sans traduction s'affiche, il ne vide
+   * pas l'écran.
+   */
+  async fiscalCharges(db: Requete, packId: string, locale = "fr") {
     const jour = aujourdhui();
     const { rows } = await db.query(
-      `select code, label, document_kind, account_code, fixed_amount,
-              legal_reference, valid_from, valid_to
-         from ref_fiscal_charges_v
-        where pack_version_id = $1 and valid_from <= $2`,
-      [packId, jour],
+      `select c.code, c.document_kind, c.account_code, c.fixed_amount,
+              c.legal_reference, c.valid_from, c.valid_to,
+              coalesce(demandee.value, francais.value, c.label) as label
+         from ref_fiscal_charges_v c
+         left join ref_labels_v demandee
+           on demandee.ns = 'fiscal_charge' and demandee.key = c.code
+          and demandee.locale = $3
+         left join ref_labels_v francais
+           on francais.ns = 'fiscal_charge' and francais.key = c.code
+          and francais.locale = 'fr'
+        where c.pack_version_id = $1 and c.valid_from <= $2`,
+      [packId, jour, locale],
     );
     return rows
       .map((r) => r as Record<string, unknown>)
