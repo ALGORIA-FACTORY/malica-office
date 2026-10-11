@@ -142,11 +142,22 @@ function ChargesScreen() {
       setError(texteDeLErreur(e, "routes/_authenticated/pme.charges", t("common.error"))),
   });
 
-  const answered = new Set(
-    (questions.data ?? [])
-      .filter((q) => q.answer !== null)
-      .map((q) => `${q.period}|${q.familleCode}`),
-  );
+  /**
+   * La derniere reponse par question, et PAR QUI.
+   *
+   * 11 octobre 2026 : « aussi la reponse du comptable aux questions envoyees
+   * par Malica ». L'ecran disait « Repondu » sans dire qui — or
+   * « exceptionnel » dit par l'expert est un avis professionnel, et dit par
+   * le dirigeant une declaration. Ce n'est pas la meme phrase.
+   *
+   * La lecture rend les reponses de la plus recente a la plus ancienne : la
+   * premiere rencontree est donc celle qui vaut.
+   */
+  const repondue = new Map<string, { par: "pme" | "cabinet" | null }>();
+  for (const q of questions.data ?? []) {
+    const cle = `${q.period}|${q.familleCode}`;
+    if (q.answer !== null && !repondue.has(cle)) repondue.set(cle, { par: q.answeredSide });
+  }
 
   const monthLabel = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "short", year: "2-digit", timeZone: "UTC" }).format(
@@ -351,7 +362,7 @@ function ChargesScreen() {
        * ne l'est — seul le dirigeant sait s'il a fait un achat exceptionnel.
        */}
       {(result?.anomalies ?? []).map((a) => {
-        const done = answered.has(`${a.period}|${a.familleCode}`);
+        const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
         return (
           <div
             key={a.familleCode}
@@ -368,9 +379,11 @@ function ChargesScreen() {
                 })}
               </p>
             </div>
-            {done ? (
+            {faite ? (
               <p className="mt-3.5 border-t border-border pt-3 text-[13px] font-medium text-signal-ok">
-                {t("pme.charges.answered")}
+                {faite.par === "cabinet"
+                  ? t("pme.charges.answered.cabinet")
+                  : t("pme.charges.answered")}
               </p>
             ) : (
               <div className="mt-3.5 flex gap-2.5">

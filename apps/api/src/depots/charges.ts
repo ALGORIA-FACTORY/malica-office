@@ -104,7 +104,7 @@ export const charges = {
   async questions(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, period, famille_code, observed, baseline, deviation_ratio,
-              threshold_code, answer, answered_at
+              threshold_code, answer, answered_at, answered_side
          from charge_questions_v where tenant_id = $1 order by created_at desc`,
       [tenantId],
     );
@@ -120,6 +120,9 @@ export const charges = {
         thresholdCode: row["threshold_code"] as string,
         answer: (row["answer"] as string | null) ?? null,
         answeredAt: (row["answered_at"] as string | null) ?? null,
+        // « pme » ou « cabinet » : un « exceptionnel » dit par l'expert est un
+        // avis professionnel, pas une déclaration du dirigeant.
+        answeredSide: (row["answered_side"] as string | null) ?? null,
       };
     });
   },

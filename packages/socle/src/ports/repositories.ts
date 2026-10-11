@@ -1872,6 +1872,14 @@ export interface ChargeQuestionRow {
   thresholdCode: string;
   answer: "exceptionnel" | "a_verifier" | null;
   answeredAt: string | null;
+  /**
+   * Qui a répondu : le dossier lui-même, ou son cabinet.
+   *
+   * « Exceptionnel » dit par le dirigeant est une déclaration ; dit par
+   * l'expert, c'est un avis professionnel. Sans ce mot, l'écran ne peut pas
+   * faire la différence, et la réponse arrive anonyme.
+   */
+  answeredSide: "pme" | "cabinet" | null;
 }
 
 /**
