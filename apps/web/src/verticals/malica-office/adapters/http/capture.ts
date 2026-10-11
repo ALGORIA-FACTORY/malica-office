@@ -82,6 +82,10 @@ export function creerCaptureHttp(): CaptureRepository {
       );
     },
 
+    async daterLaPiece(pieceId: string, date: string) {
+      return rpc<{ periode: string | null }>("capture", "daterLaPiece", [pieceId, date]);
+    },
+
     async rattacherJustificatif(paiementId: string, pieceId: string) {
       await rpc<void>("capture", "rattacherJustificatif", [paiementId, pieceId]);
     },

@@ -20,6 +20,7 @@ import {
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { Citation, CompteDuPlan, Ecriture } from "@malica/socle/ports/repositories";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { composerLibelle, critiquerLibelle } from "@malica/socle/engines/libelle";
@@ -113,7 +114,6 @@ function CabinetReview() {
   const { org } = useCabinet();
   const qc = useQueryClient();
 
-  const [zoom, setZoom] = useState<Citation | null>(null);
   const [motifId, setMotifId] = useState<string>("");
   const [note, setNote] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +143,28 @@ function CabinetReview() {
     queryKey: ["rejet-motifs", locale],
     queryFn: () => office().supervision.motifs(locale),
   });
+
+  /*
+   * Le pack sert à TRADUIRE les moyens de paiement, et il est lu à la date de
+   * la pièce : un cabinet peut retirer un moyen, et les pièces d'avant gardent
+   * celui qu'elles portaient. La juridiction est celle du cabinet, faute de
+   * mieux sur cet écran — la pièce, elle, ne porte pas la sienne.
+   */
+  /*
+   * Les décimales de la devise viennent du pack, jamais d'un « / 1000 »
+   * écrit ici : trois sont tunisiennes, et la première juridiction à deux
+   * aurait affiché mille fois le montant payé (R4).
+   */
+  const packPaiements = useQuery({
+    queryKey: ["ref-pack", org.jurisdiction],
+    queryFn: () => office().referential.activePack(org.jurisdiction),
+  });
+  // La date de la pièce quand elle a été lue ; à défaut aujourd'hui, et c'est
+  // sans conséquence : cette date ne sert qu'à CHOISIR le libellé traduit d'un
+  // moyen de paiement, jamais à ranger ou à calculer quoi que ce soit.
+  const piecePourMoyens =
+    (dossier.data?.extraction?.payload as { document_date?: string } | undefined)?.document_date ??
+    new Date().toISOString().slice(0, 10);
 
   const audit = useQuery({
     queryKey: ["piece-audit", pieceId],
@@ -197,6 +219,49 @@ function CabinetReview() {
     queryKey: ["pieces-issues", pieceId],
     queryFn: () => office().capture.piecesIssuesDe(pieceId),
   });
+
+  /**
+   * COMMENT LA PIÈCE A ÉTÉ PAYÉE — ce que la PME transmet au cabinet.
+   *
+   * 11 octobre 2026 : « chaque opération ou doc le cabinet doit voir le moyen
+   * de paiement et le reçu et peut les télécharger », et « le moyen de
+   * paiement, photo ou information, transmis par la PME au cabinet ».
+   *
+   * La donnée était lisible par le cabinet — sa RLS couvre les dossiers sous
+   * mandat — et aucun écran du cabinet ne la demandait. L'expert imputait donc
+   * une facture sans savoir si elle avait été réglée en espèces ou par chèque,
+   * alors que c'est cela qui décide du compte de trésorerie.
+   */
+  const parametres = useQuery({
+    queryKey: ["socle-params", packPaiements.data?.id],
+    queryFn: () => office().referential.socleParams(packPaiements.data!.id),
+    enabled: !!packPaiements.data?.id,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  // `null` tant qu'on ne les a pas : on n'en suppose aucune (R4).
+  const decimales = parametres.data?.moneyDecimals ?? null;
+
+  const paiements = useQuery({
+    queryKey: ["paiements", pieceId],
+    queryFn: () => office().capture.paiementsDUnePiece(pieceId),
+  });
+
+  /**
+   * Les moyens du pack, traduits, à la date de la pièce.
+   *
+   * Le code `cheque_banque` affiché tel quel serait un identifiant machine à
+   * l'écran — le défaut « ISSUER » du 5 octobre, sous un autre nom.
+   */
+  const moyens = useQuery({
+    queryKey: ["moyens-paiement", packPaiements.data?.id, locale, piecePourMoyens],
+    queryFn: () =>
+      office().referential.moyensDePaiement(packPaiements.data!.id, locale, piecePourMoyens),
+    enabled: !!packPaiements.data?.id,
+    staleTime: 60 * 60 * 1000,
+  });
+  const libelleDuMoyen = (code: string) =>
+    (moyens.data ?? []).find((m) => m.code === code)?.libelle ?? code;
 
   /** Les types de document du référentiel, traduits — pour NOMMER un joint. */
   const typesDoc = useQuery({
@@ -363,41 +428,8 @@ function CabinetReview() {
   }
   if (!dossier.data) return <EmptyState>{t("cab.review.nodoc")}</EmptyState>;
 
-  const { piece, contenu, extraction, citations } = dossier.data;
+  const { piece, contenu, extraction } = dossier.data;
 
-  /*
-   * ============================ UNE CITATION PAR ZONE DE LA PIÈCE, PAS PAR CHAMP
-   *
-   * 11 octobre 2026 : « dans la partie comptable supprime ceci pour alléger ».
-   * La liste affichait « Ligne TVA 1 · Base HT 514,700 » puis « Base HT
-   * 514,700 » puis de nouveau « Ligne TVA 1 · Base HT 514,700 ».
-   *
-   * Ce n'était pas un doublon : quand la facture n'imprime pas de tableau de
-   * TVA, le Socle reconstruit une ligne unique depuis les totaux du pied, et
-   * `citerAussi` pointe alors le MÊME jeton sous un second nom de champ. La
-   * traçabilité l'exige — on doit savoir d'où vient chaque champ.
-   *
-   * Mais le comptable, lui, clique pour SITUER une valeur sur la pièce : deux
-   * entrées qui mènent au même endroit ne lui apprennent rien et noient les
-   * autres. On regroupe donc par zone — même page, même cadre — et les noms
-   * de champs se lisent sur une ligne.
-   *
-   * Rien n'est perdu : chaque champ reste nommé, et le lien vers la pièce est
-   * le même puisque c'est le même jeton.
-   */
-  const citationsGroupees = (() => {
-    const parZone = new Map<string, (typeof citations)[number] & { champs: string[] }>();
-    for (const c of citations) {
-      const cle = `${c.page}|${c.bbox.x0}|${c.bbox.y0}|${c.bbox.x1}|${c.bbox.y1}`;
-      const vu = parZone.get(cle);
-      if (vu) {
-        if (!vu.champs.includes(c.field)) vu.champs.push(c.field);
-      } else {
-        parZone.set(cle, { ...c, champs: [c.field] });
-      }
-    }
-    return [...parZone.values()];
-  })();
   const articles =
     (
       extraction?.payload as
@@ -412,7 +444,6 @@ function CabinetReview() {
           }
         | undefined
     )?.articles ?? [];
-  const byField = new Map(citations.map((c) => [c.field, c]));
   const all = ecritures.data ?? [];
   const booked = all.find((e) => e.status === "booked") ?? null;
   const reversal = all.find((e) => e.libelle.startsWith("Contre-passation")) ?? null;
@@ -552,7 +583,9 @@ function CabinetReview() {
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
             <>
-              <DocumentView contenu={contenu} highlight={zoom} label={t("cab.review.document")} />
+              {/* La pièce ne se surligne plus ici : la liste des citations est
+                  partie, et plus rien ne désigne de zone. */}
+              <DocumentView contenu={contenu} highlight={null} label={t("cab.review.document")} />
               {/*
                * ============================================ SORTIR LA PIÈCE DE L'ÉCRAN
                *
@@ -577,6 +610,68 @@ function CabinetReview() {
                 <p className="text-[12px] text-text-2">
                   {t("cab.review.enregistre", { chemin: cheminEnregistre })}
                 </p>
+              ) : null}
+
+              {/*
+               * ============================== COMMENT ELLE A ÉTÉ PAYÉE
+               *
+               * 11 octobre 2026 : « chaque opération ou doc le cabinet doit
+               * voir le moyen de paiement et le reçu et peut les
+               * télécharger ».
+               *
+               * Ce n'est pas un détail d'affichage : le moyen décide du
+               * compte de trésorerie. Un expert qui impute une facture sans
+               * savoir si elle a été réglée en espèces ou par chèque choisit
+               * le compte au hasard — et c'est un rapprochement bancaire qui
+               * s'en apercevra, un mois plus tard.
+               */}
+              {(paiements.data ?? []).length > 0 ? (
+                <>
+                  <SectionTitle>{t("cab.review.paiements")}</SectionTitle>
+                  <ul className="grid gap-px border border-border bg-border">
+                    {(paiements.data ?? []).map((p) => (
+                      <li key={p.id} className="bg-card px-3 py-2.5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-[13px] font-medium">
+                            {libelleDuMoyen(p.moyenCode)}
+                          </span>
+                          <span className="num shrink-0 text-[13px]">
+                            {p.montantMineur === null || decimales === null
+                              ? "—"
+                              : `${montant(depuisUniteMineure(p.montantMineur, decimales), locale)} ${p.devise}`}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between gap-3">
+                          <span className="text-[11.5px] text-muted-foreground">
+                            {p.payeLe ?? t("cab.review.paiement.sansDate")}
+                          </span>
+                          {/*
+                           * La photo du talon — « le moyen de paiement, photo
+                           * ou information, transmis par la PME au cabinet ».
+                           * Elle se télécharge, parce qu'une preuve qu'on ne
+                           * peut pas joindre à un dossier n'est pas une
+                           * preuve.
+                           */}
+                          {p.justificatifPieceId ? (
+                            <button
+                              type="button"
+                              onClick={() => telechargerUnJoint.mutate(p.justificatifPieceId!)}
+                              disabled={telechargerUnJoint.isPending}
+                              className="inline-flex h-7 shrink-0 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+                            >
+                              <Download className="h-[12px] w-[12px]" aria-hidden />
+                              {t("cab.review.paiement.preuve")}
+                            </button>
+                          ) : (
+                            <span className="text-[11.5px] text-signal-warn">
+                              {t("cab.review.paiement.sansPreuve")}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               ) : null}
 
               {/*
@@ -658,46 +753,6 @@ function CabinetReview() {
               </InkTable>
             </>
           ) : null}
-
-          <SectionTitle
-            action={
-              <span className="text-[11px] text-muted-foreground">
-                {t("cab.review.citations.hint")}
-              </span>
-            }
-          >
-            {t("cab.review.citations")}
-          </SectionTitle>
-          {citations.length === 0 ? (
-            <EmptyState>{t("pme.read.none")}</EmptyState>
-          ) : (
-            <ul className="grid gap-px border border-border bg-border">
-              {citationsGroupees.map((citation) => (
-                <li key={`${citation.field}-${citation.page}`} className="bg-card">
-                  <button
-                    type="button"
-                    onClick={() => setZoom(citation)}
-                    className="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-start hover:bg-accent"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-[11px] text-muted-foreground">
-                        {citation.champs.map((c) => libelleDuChamp(c, t)).join(" · ")}
-                      </span>
-                      <span className="num block truncate text-[12.5px]">
-                        {(() => {
-                          const v = valeurDuChamp(extraction?.payload, citation.field);
-                          return v ? valeurLisible(citation.field, v, locale) : "—";
-                        })()}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                      {citation.zone ?? t("cab.review.pages", { n: citation.page })}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
 
           {extraction && extraction.flags.length > 0 ? (
             <div className="border border-s-2 border-border border-s-signal-warn bg-card p-3">

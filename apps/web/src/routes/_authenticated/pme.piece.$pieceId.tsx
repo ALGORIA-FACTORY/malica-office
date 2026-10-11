@@ -262,6 +262,27 @@ function PieceScreen() {
   });
 
   /**
+   * Donner la date que la lecture n'a pas su lire.
+   *
+   * La base refuse une date a venir : un doigt qui ripe sur un selecteur
+   * donne « 2027 » aussi facilement que « 2026 », et une facture rangee dans
+   * un exercice qui n'a pas commence disparait de toutes les declarations
+   * sans rien signaler.
+   */
+  const dater = useMutation({
+    mutationFn: (date: string) => office().capture.daterLaPiece(pieceId, date),
+    onSuccess: async () => {
+      setError(null);
+      // Les charges changent de mois : leur lecture est a refaire.
+      await qc.invalidateQueries({ queryKey: ["charges-sans-date", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: ["charges-articles", pme.tenantId] });
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * Garder chez soi — l'autre moitié de la décision.
    *
    * Elle manquait. Le commentaire d'à côté affirmait « deux boutons de même
@@ -1002,13 +1023,36 @@ function PieceScreen() {
              * devient la date de l'écriture qu'à la confirmation.
              */
             <span className="flex flex-col items-end gap-1">
+              {/*
+               * ============================== ET LA DATE S'ENREGISTRE, ENFIN
+               *
+               * Ce champ existait et ne servait QU'À la proposition
+               * d'écriture : l'écriture était datée, et la pièce restait sans
+               * mois. Elle continuait donc de figurer dans « ces pièces
+               * attendent leur date », après que la personne ait répondu —
+               * et son montant restait hors des charges du mois.
+               *
+               * La saisie pose désormais une PRÉCISION, qui reprojette les
+               * articles. L'extraction, elle, garde sa date vide : c'est ce
+               * qui s'est réellement lu sur le document (R7).
+               */}
               <input
                 type="date"
                 value={dateRetenue}
-                onChange={(e) => setDateSaisie(e.target.value)}
-                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium"
+                max={new Date().toISOString().slice(0, 10)}
+                disabled={dater.isPending}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDateSaisie(v);
+                  // Un champ `date` rend une chaîne vide tant que la saisie
+                  // est incomplète : on n'enregistre que ce qui est une date.
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
+                }}
+                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium disabled:opacity-50"
               />
-              <span className="text-[11px] text-muted-foreground">{t("piece.date.duScan")}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
+              </span>
             </span>
           ) : (
             <span className="num text-[13.5px] font-medium">

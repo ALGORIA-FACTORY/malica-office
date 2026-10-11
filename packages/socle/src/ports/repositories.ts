@@ -828,6 +828,14 @@ export interface CaptureRepository {
    */
   piecesIssuesDe(pieceId: string): Promise<Piece[]>;
   /**
+   * Donner a la main la date qu'on n'a pas su lire.
+   *
+   * La precision s'inscrit, puis les articles SE REPROJETTENT : sans la
+   * reprojection, la date serait enregistree et la piece resterait hors de
+   * tous les mois — le drapeau changerait, pas le chiffre.
+   */
+  daterLaPiece(pieceId: string, date: string): Promise<{ periode: string | null }>;
+  /**
    * Rattacher une preuve à un paiement déjà inscrit.
    *
    * Le paiement ne se réécrit pas : la preuve tardive est une écriture

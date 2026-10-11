@@ -177,6 +177,17 @@ export function buildProposal(params: {
         fixed_amount: c.fixedAmount,
       })),
 
+    /*
+     * Le compte de TVA par code, quand le pack en distingue. Le mapping choisi
+     * plus haut l'est par le PREMIER code de taxe : sans cette table, la TVA
+     * d'un second taux partirait sur le compte du premier.
+     */
+    vat_accounts_by_tax_code: Object.fromEntries(
+      params.mappings
+        .filter((m) => m.documentKind === extract.document_kind && m.taxCode !== null)
+        .map((m) => [m.taxCode as string, m.vatAccount]),
+    ),
+
     tolerances: {
       rounding_tolerance: (1 / 10 ** decimals).toFixed(decimals),
       confidence_orange: params.parametres.confianceReserve,
@@ -199,7 +210,16 @@ export function buildProposal(params: {
         libelle: l.label,
         debit: l.debit,
         credit: l.credit,
-        tax_code: l.account_code === mapping.vatAccount ? firstTaxCode : null,
+        /*
+         * Le code vient de la LIGNE, et non plus du premier code de la pièce.
+         *
+         * Il était posé ainsi : `l.account_code === mapping.vatAccount ?
+         * firstTaxCode : null`. Sur une facture à deux taux, le moteur rendait
+         * une seule ligne de TVA — la somme — et elle recevait le code du
+         * premier taux. Toute la TVA d'une facture de restaurant partait donc
+         * à 7 %, ou à 19 % selon l'ordre des lignes, sans que rien ne le dise.
+         */
+        tax_code: l.tax_code ?? null,
       })),
   };
 }

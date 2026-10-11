@@ -33,6 +33,54 @@ function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
 }
 
+/**
+ * Projeter les articles d'une pièce — un seul endroit.
+ *
+ * Deux chemins y mènent : la lecture, et la date donnée à la main quand la
+ * lecture n'a pas su la lire. Recopier ce corps pour le second aurait donné
+ * deux imputations possibles pour la même pièce selon le chemin emprunté, et
+ * c'est le genre d'écart qu'on ne voit qu'à la balance.
+ */
+async function projeterLesArticles(
+  db: Requete,
+  input: {
+    pieceId: string;
+    packId: string;
+    articles: unknown[];
+    documentKind: string | null;
+    documentDate: string | null;
+  },
+): Promise<void> {
+  if (input.articles.length === 0) return;
+
+  // Sans sens de facture, pas de compte : on ne suppose pas « achat ». Les
+  // articles sont gardés sans imputation ; elle viendra avec la précision de
+  // la personne, au moment de la proposition.
+  let compte: string | undefined;
+  if (input.documentKind) {
+    const { rows } = await db.query(
+      // Une ligne par code de taxe : cinq pour un achat, cinq pour une vente,
+      // et le même `main_account` sur les cinq. Sans ordre, deux bases
+      // pouvaient rendre une ligne différente — et le jour où un pack
+      // distinguerait l'imputation par code de taxe, l'imputation d'une pièce
+      // aurait dépendu du plan d'exécution (R11).
+      `select main_account from ref_account_mappings_v
+        where pack_version_id = $1 and document_kind = $2
+        order by main_account limit 1`,
+      [input.packId, input.documentKind],
+    );
+    compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+  }
+
+  await db.query(`select public.capture_articles_persist($1, $2, $3::date, $4, $5::jsonb)`, [
+    input.pieceId,
+    input.packId,
+    input.documentDate ?? null,
+    compte ?? null,
+    JSON.stringify(input.articles),
+  ]);
+}
+
 function versPiece(r: Record<string, unknown>) {
   return {
     id: r["id"] as string,
@@ -446,34 +494,81 @@ export const capture = {
       ],
     );
 
-    if (input.articles.length === 0) return;
+    await projeterLesArticles(db, input);
+  },
 
-    // Sans sens de facture, pas de compte : on ne suppose pas « achat ».
-    // Les articles sont gardés sans imputation ; elle viendra avec la
-    // précision de la personne, au moment de la proposition.
-    let compte: string | undefined;
-    if (input.documentKind) {
-      const { rows } = await db.query(
-        // Une ligne par code de taxe : cinq pour un achat, cinq pour une
-        // vente, et le même `main_account` sur les cinq. Sans ordre, deux
-        // bases pouvaient rendre une ligne différente — et le jour où un pack
-        // distinguerait l'imputation par code de taxe, l'imputation d'une
-        // pièce aurait dépendu du plan d'exécution (R11).
-        `select main_account from ref_account_mappings_v
-          where pack_version_id = $1 and document_kind = $2
-          order by main_account limit 1`,
-        [input.packId, input.documentKind],
-      );
-      compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+  /**
+   * Donner à la main la date qu'on n'a pas su lire.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Depuis le 5 octobre 2026, une pièce dont la date n'a pas été lue a une
+   * période NULLE — « pas de rangement plutôt qu'un rangement faux ». C'était
+   * juste, et c'est resté incomplet : l'écran des charges annonçait « 3 pièces
+   * attendent leur date » et aucun geste ne les débloquait. Une impasse
+   * annoncée reste une impasse.
+   *
+   * Deux temps, et le second est celui qu'on oublie : la précision s'inscrit,
+   * puis les articles SE REPROJETTENT. Sans la reprojection, la date serait
+   * enregistrée et la pièce resterait hors de tous les mois — le drapeau
+   * changerait, pas le chiffre.
+   */
+  async daterLaPiece(
+    db: Requete,
+    pieceId: string,
+    date: string,
+  ): Promise<{ periode: string | null }> {
+    await db.query(`select public.capture_precision_persist($1, 'document_date', $2)`, [
+      pieceId,
+      date,
+    ]);
+
+    // Ce qu'il faut pour reprojeter : la dernière lecture, le type tranché, et
+    // le pack du dossier. Rien n'est recalculé — ce sont les mêmes valeurs qui
+    // ont servi à la lecture, avec la date en plus.
+    const { rows } = await db.query<{
+      tenant_id: string;
+      document_kind: string | null;
+      payload: { articles?: unknown[] } | null;
+      jurisdiction: string;
+    }>(
+      `select p.tenant_id, p.document_kind, e.payload, o.jurisdiction
+         from pieces_v p
+         join organizations_v o on o.id = p.tenant_id
+         left join lateral (
+           select payload from extractions_v x
+            where x.piece_id = p.id order by x.created_at desc limit 1
+         ) e on true
+        where p.id = $1`,
+      [pieceId],
+    );
+    const ligne = rows[0];
+    if (!ligne) throw new Error("piece introuvable ou non autorisee");
+
+    const articles = ligne.payload?.articles ?? [];
+    if (articles.length === 0) return { periode: date.slice(0, 7) };
+
+    const { rows: packs } = await db.query<{ id: string }>(
+      `select id from ref_packs_v
+        where jurisdiction = $1 and effective_from <= $2
+        order by effective_from desc limit 1`,
+      [ligne.jurisdiction, date],
+    );
+    const packId = packs[0]?.id;
+    if (!packId) {
+      // R4 : pas de repli. Un dossier sans pack à cette date ne se projette
+      // pas en silence sous un pack voisin.
+      throw new Error(`aucun pack en vigueur au ${date} pour ${ligne.jurisdiction}`);
     }
 
-    await db.query(`select public.capture_articles_persist($1, $2, $3::date, $4, $5::jsonb)`, [
-      input.pieceId,
-      input.packId,
-      input.documentDate ?? null,
-      compte ?? null,
-      JSON.stringify(input.articles),
-    ]);
+    await projeterLesArticles(db, {
+      pieceId,
+      packId,
+      articles,
+      documentKind: ligne.document_kind,
+      documentDate: date,
+    });
+    return { periode: date.slice(0, 7) };
   },
 
   /**
