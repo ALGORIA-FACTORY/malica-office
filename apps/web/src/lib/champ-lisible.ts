@@ -122,11 +122,28 @@ export function valeurLisible(chemin: string, valeur: string, locale: string): s
 
 /** Ce qu'un code de signalement veut dire. */
 export function libelleDuCode(code: string, t: T): string {
+  /*
+   * ====================================== QUATRE CODES SUR UNE DOUZAINE ÉMISE
+   *
+   * 11 octobre 2026 : l'écran du cabinet montrait neuf lignes dont sept
+   * disaient exactement « Signalement de lecture. ». Cette table ne
+   * connaissait que quatre codes, et le repli JETAIT le code — donc la seule
+   * information qui restait.
+   *
+   * Un panneau qui répète sept fois la même phrase vide apprend à ne plus le
+   * lire. Les codes réellement émis par la chaîne y sont maintenant tous.
+   */
   const CODES: Record<string, MessageKey> = {
     "direction.incertaine": "cab.code.direction",
     tronque: "cab.code.tronque",
     SEPARATEUR_AMBIGU: "cab.code.separateur",
     DECIDE_PAR_ARITHMETIQUE: "cab.code.arithmetique",
+    DERIVED_BY_SOCLE: "cab.code.derive",
+    MISSING_CITATION: "cab.code.sansCitation",
+    TOKEN_NOT_FOUND: "cab.code.jetonIntrouvable",
+    VALUE_NOT_A_NUMBER: "cab.code.pasUnNombre",
+    DATE_UNREADABLE: "cab.code.dateIllisible",
+    SENS_A_CONFIRMER: "cab.code.sensAConfirmer",
   };
   return t(CODES[code] ?? "cab.code.autre");
 }

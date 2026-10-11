@@ -375,4 +375,58 @@ export const collab = {
     );
     return Boolean(rows[0]?.changed);
   },
+
+  /**
+   * La PME demande au cabinet de rappeler ou d'effacer une pièce transmise.
+   *
+   * ================================================================= POURQUOI
+   *
+   * 11 octobre 2026 : « le rappel de la pièce doit être approuvé par le
+   * cabinet ». La veille j'avais livré un rappel unilatéral — corrigeant un
+   * défaut par un autre : le cabinet travaille sur ce qu'il a reçu, et une
+   * pièce qui disparaît de sa file sans un mot est pire que l'état bloqué
+   * qu'on voulait défaire.
+   *
+   * Un seul mécanisme pour les deux motifs : « une pièce transmise au cabinet
+   * peut être effacée par accord du cabinet » (7 octobre) est la même phrase,
+   * le même geste, la même partie qui tranche.
+   */
+  async demanderSurPiece(db: Requete, pieceId: string, objet: "rappel" | "suppression") {
+    const { rows } = await db.query<{ deja: boolean }>(
+      `select (public.piece_demander($1, $2) ->> 'deja')::boolean as deja`,
+      [pieceId, objet],
+    );
+    return { dejaDemandee: Boolean(rows[0]?.deja) };
+  },
+
+  /** Le cabinet tranche. Un accord de rappel remet la pièce chez la PME, ici même. */
+  async repondreSurPiece(
+    db: Requete,
+    pieceId: string,
+    objet: "rappel" | "suppression",
+    accorde: boolean,
+    note?: string | null,
+  ) {
+    await db.query(`select public.piece_repondre($1, $2, $3, $4)`, [
+      pieceId,
+      objet,
+      accorde,
+      note ?? null,
+    ]);
+  },
+
+  /** Les demandes portées sur une pièce, du fait le plus récent au plus ancien. */
+  async demandesDUnePiece(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select objet, fait, note, created_at from demandes_sur_piece_v
+        where piece_id = $1 order by created_at desc`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      objet: r["objet"] as "rappel" | "suppression",
+      fait: r["fait"] as "demandee" | "accordee" | "refusee",
+      note: (r["note"] as string | null) ?? null,
+      createdAt: (r["created_at"] as Date).toISOString(),
+    }));
+  },
 };

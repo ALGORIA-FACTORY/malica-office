@@ -256,9 +256,19 @@ function PieceScreen() {
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
-  /** Le geste inverse : la pièce revient chez le dirigeant seul. */
+  /**
+   * Le geste inverse SE DEMANDE, il ne se prend pas.
+   *
+   * Le 10 octobre j'avais livré un rappel unilatéral, pour sortir d'un état
+   * qu'on n'avait pas choisi. Le commanditaire a tranché le lendemain : « le
+   * rappel de la pièce doit être approuvé par le cabinet ».
+   *
+   * Il a raison, et j'avais corrigé un défaut par un autre : le cabinet
+   * travaille sur ce qu'il a reçu, et une pièce qui disparaît de sa file sans
+   * un mot est pire que l'état bloqué qu'on voulait défaire.
+   */
   const rappeler = useMutation({
-    mutationFn: () => office().collab.setPieceVis(pieceId, "personnel"),
+    mutationFn: () => office().collab.demanderSurPiece(pieceId, "rappel"),
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -266,6 +276,15 @@ function PieceScreen() {
     onError: (e: unknown) =>
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
+
+  // L'état de la demande, s'il y en a une : son dernier fait.
+  const demandes = useQuery({
+    queryKey: ["demandes-piece", pieceId],
+    queryFn: () => office().collab.demandesDUnePiece(pieceId),
+  });
+  const dernierFaitDuRappel = demandes.data?.find((d) => d.objet === "rappel") ?? null;
+  const demandeDeRappel = dernierFaitDuRappel?.fait ?? null;
+  const noteDuRappel = dernierFaitDuRappel?.note ?? null;
 
   const read = useMutation({
     mutationFn: () => office().malica.lirePiece(pieceId),
@@ -1151,14 +1170,24 @@ function PieceScreen() {
                     <p className="text-[13px] text-signal-ok">
                       {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => rappeler.mutate()}
-                      disabled={rappeler.isPending}
-                      className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
-                    >
-                      {t("pme.transmettre.rappeler")}
-                    </button>
+                    {demandeDeRappel === "demandee" ? (
+                      <p className="mt-2 text-[12.5px] text-text-2">
+                        {t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}
+                      </p>
+                    ) : demandeDeRappel === "refusee" ? (
+                      <p className="mt-2 text-[12.5px] text-signal-warn">
+                        {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => rappeler.mutate()}
+                        disabled={rappeler.isPending}
+                        className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
+                      >
+                        {t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <>

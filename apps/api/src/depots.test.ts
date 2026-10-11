@@ -138,6 +138,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       ["office", "bookedExtracts", [pme, "2020-01-01", "2030-12-31"]],
       ["office", "extraitsTransmis", [pme, "2020-01-01", "2030-12-31"]],
       ["office", "transmisesSansDate", [pme]],
+      ["collab", "demandesDUnePiece", [NEANT]],
 
       ["supervision", "listMyCabinets", []],
       ["supervision", "listClients", [cabinet]],

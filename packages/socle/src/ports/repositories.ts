@@ -601,6 +601,20 @@ export interface Token {
   y1: number;
 }
 
+/** Ce qu'une PME peut demander au cabinet sur une pièce transmise. */
+export type DemandeSurPiece = "rappel" | "suppression";
+
+/**
+ * Un fait d'une demande. Une demande n'est pas une ligne qui change d'état :
+ * c'est une suite de faits, et l'état courant est le dernier inscrit (R7).
+ */
+export interface FaitDeDemande {
+  objet: DemandeSurPiece;
+  fait: "demandee" | "accordee" | "refusee";
+  note: string | null;
+  createdAt: string;
+}
+
 export interface Citation {
   field: string;
   page: number;
@@ -1480,6 +1494,23 @@ export interface CollabRepository {
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
+  /**
+   * Ce que la PME demande au cabinet sur une pièce déjà transmise.
+   *
+   * Une pièce partie ne revient pas d'elle-même : le cabinet travaille sur ce
+   * qu'il a reçu, et une pièce qui disparaît de sa file sans un mot est pire
+   * que l'état bloqué qu'on voulait défaire. Deux motifs, un mécanisme.
+   */
+  demanderSurPiece(pieceId: string, objet: DemandeSurPiece): Promise<{ dejaDemandee: boolean }>;
+  /** Le cabinet tranche. Un accord de rappel remet la pièce chez la PME. */
+  repondreSurPiece(
+    pieceId: string,
+    objet: DemandeSurPiece,
+    accorde: boolean,
+    note?: string | null,
+  ): Promise<void>;
+  /** Les faits d'une demande, du plus récent au plus ancien. L'état courant est le premier. */
+  demandesDUnePiece(pieceId: string): Promise<FaitDeDemande[]>;
 }
 
 // ------------------------------------------------------------------ exports
