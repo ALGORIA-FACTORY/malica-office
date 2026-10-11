@@ -33,6 +33,7 @@ export function vidage(): Vidage {
             vis: e.vis,
             idempotencyKey: e.cle,
             contentType: e.contentType,
+            documentKind: e.documentKind ?? null,
           }),
         deposerOctets: (pieceId, octets, contentType) =>
           office().capture.deposerOctets(pieceId, octets, contentType),

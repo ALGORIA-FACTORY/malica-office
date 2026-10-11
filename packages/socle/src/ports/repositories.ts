@@ -280,6 +280,22 @@ export interface ReferentialRepository {
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
   fiscalCharges(packId: string): Promise<FiscalCharge[]>;
   /** Paramètres du Socle (décimales, méthode de stock, tolérances) lus au pack. */
+  /**
+   * Les types de document proposés au moment de la photo, traduits.
+   *
+   * Six, pas les dix-sept du pack : choisir dans une liste de dix-sept est un
+   * autre genre d'abandon. Le libellé vient de `ref.labels`, pas de la
+   * colonne française.
+   */
+  typesDeDocumentALaCapture(locale: string): Promise<
+    Array<{
+      code: string;
+      famille: string;
+      libelle: string;
+      porteEcriture: boolean;
+      transmissible: boolean;
+    }>
+  >;
   socleParams(packId: string): Promise<SocleParams>;
 }
 
@@ -674,6 +690,16 @@ export interface NouvellePiece {
   /** Générée AVANT tout appel : la même clé rend la même pièce, toujours. */
   idempotencyKey: string;
   contentType: string | null;
+  /**
+   * Ce que la personne a DÉCLARÉ au moment de la photo.
+   *
+   * Déclaré, pas vérifié : la pièce naît « a_confirmer », et la lecture
+   * pourra le contredire — c'est elle qui tranche, par la position du
+   * matricule. Une déclaration est une intention, pas une preuve.
+   *
+   * Nul quand la question n'a pas été posée : un import, une reprise.
+   */
+  documentKind?: string | null;
 }
 
 /**

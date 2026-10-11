@@ -162,4 +162,53 @@ export const referentiel = {
       rapprochementToleranceMontant: num("rapprochement.tolerance_montant").toFixed(decimals),
     };
   },
+
+  /**
+   * Les types de document proposés AU MOMENT DE LA PHOTO, traduits.
+   *
+   * ================================================================= POURQUOI
+   *
+   * La lecture partait en aveugle sur une invite de facture : un extrait
+   * bancaire était lu comme une facture ratée plutôt que reconnu. Le type
+   * décide de l'invite, et l'invite décide de la qualité — d'où une question
+   * AVANT la lecture, et non une correction après.
+   *
+   * ============================================ POURQUOI SIX, ET PAS DIX-SEPT
+   *
+   * `ref.document_types` en porte dix-sept. Ils ne tiennent pas sur un écran
+   * de téléphone, et choisir dans une liste de dix-sept est un autre genre
+   * d'abandon. La colonne `propose_a_la_capture` dit lesquels se proposent ;
+   * les autres restent atteignables ensuite, sur la pièce.
+   *
+   * ========================================== ET LE LIBELLÉ VIENT DE ref.labels
+   *
+   * Pas de la colonne `libelle`, qui est française. Le produit lit l'arabe :
+   * un écran en arabe affichait « Facture d'achat » partout où une table de
+   * référentiel portait un libellé, parce que six namespaces de `ref.labels`
+   * existaient et qu'un seul était joint. Le repli sur le français est
+   * explicite : un type sans traduction s'affiche, il ne disparaît pas.
+   */
+  async typesDeDocumentALaCapture(db: Requete, locale: string) {
+    const { rows } = await db.query(
+      `select d.code, d.famille, d.porte_ecriture, d.transmissible,
+              coalesce(demandee.value, francais.value, d.libelle) as libelle
+         from ref.document_types d
+         left join ref_labels_v demandee
+           on demandee.ns = 'document_type' and demandee.key = d.code
+          and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'document_type' and francais.key = d.code
+          and francais.locale = 'fr'
+        where d.propose_a_la_capture
+        order by d.rang`,
+      [locale],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      code: r["code"] as string,
+      famille: r["famille"] as string,
+      libelle: r["libelle"] as string,
+      porteEcriture: Boolean(r["porte_ecriture"]),
+      transmissible: Boolean(r["transmissible"]),
+    }));
+  },
 };

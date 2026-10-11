@@ -258,6 +258,8 @@ const fr = {
   "pme.bloque.rapprocher": "Il manque un rapprochement avant que je puisse proposer l'écriture.",
   "pme.bloque.geste":
     "Reprenez la photo si elle est floue, ou envoyez-la à votre comptable : il tranchera.",
+  "pme.type.titre": "Qu'est-ce que c'est ?",
+  "pme.type.passer": "Je ne sais pas — lis-le quand même",
   "pme.transmettre.rappeler": "Demander le rappel à {cabinet}",
   "pme.transmettre.rappel.enAttente":
     "Rappel demandé. {cabinet} doit l'accorder — la pièce reste chez lui en attendant.",
@@ -2519,6 +2521,8 @@ const en: Dict = {
   "pme.bloque.rapprocher": "A reconciliation is missing before I can propose the entry.",
   "pme.bloque.geste":
     "Retake the photo if it is blurred, or send it to your accountant — they will decide.",
+  "pme.type.titre": "What is it?",
+  "pme.type.passer": "I don't know — read it anyway",
   "pme.transmettre.rappeler": "Ask {cabinet} to return it",
   "pme.transmettre.rappel.enAttente":
     "Recall requested. {cabinet} has to agree — the document stays with them until then.",
@@ -4732,6 +4736,8 @@ const ar: Dict = {
   "pme.bloque.rejet": "لا يمكن محاسبة هذه الوثيقة على حالها.",
   "pme.bloque.rapprocher": "تنقص مطابقة قبل أن أقترح القيد.",
   "pme.bloque.geste": "أعد التصوير إن كانت الصورة غير واضحة، أو أرسلها إلى محاسبك ليقرّر.",
+  "pme.type.titre": "ما هذا؟",
+  "pme.type.passer": "لا أعرف — اقرأها على أي حال",
   "pme.transmettre.rappeler": "اطلب الاسترجاع من {cabinet}",
   "pme.transmettre.rappel.enAttente":
     "طُلب الاسترجاع. على {cabinet} الموافقة — تبقى الوثيقة لديه في انتظار ذلك.",

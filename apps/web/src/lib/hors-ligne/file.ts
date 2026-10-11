@@ -35,6 +35,14 @@ export interface ElementDeFile {
   /** Personnel ou partagé — décidé par l'écran, jamais ici. */
   vis: "personnel" | "partage";
   contentType: string;
+  /**
+   * Ce que la personne a déclaré à la photo, s'il lui a été demandé.
+   *
+   * Il voyage avec la pièce dans la file : une photo prise hors ligne doit
+   * garder la réponse donnée hors ligne, sans quoi la question se reposerait
+   * au retour du réseau — ou pire, ne se reposerait pas.
+   */
+  documentKind?: string | null;
   nomFichier: string;
   /** En octets — pour le plafond, et pour dire « 1,2 Mo » à l'écran. */
   taille: number;
@@ -50,7 +58,15 @@ export interface ElementDeFile {
 
 export type NouvelElement = Pick<
   ElementDeFile,
-  "cle" | "tenantId" | "entityId" | "source" | "vis" | "contentType" | "nomFichier" | "taille"
+  | "cle"
+  | "tenantId"
+  | "entityId"
+  | "source"
+  | "vis"
+  | "contentType"
+  | "documentKind"
+  | "nomFichier"
+  | "taille"
 >;
 
 export type Evenement =

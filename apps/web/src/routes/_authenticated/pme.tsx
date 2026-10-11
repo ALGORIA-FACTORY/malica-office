@@ -4,11 +4,12 @@ import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
-import { files } from "@/capabilities/files";
+import { files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
+import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
@@ -114,16 +115,52 @@ function PmeLayout() {
   const entityId =
     (entitiesQuery.data ?? []).find((e) => e.isDefault)?.id ?? entitiesQuery.data?.[0]?.id ?? null;
 
-  const capture = useMutation({
+  /*
+   * ========================= LA QUESTION SE POSE AVANT LA LECTURE, PAS APRÈS
+   *
+   * Demandé quatre fois depuis le 10 octobre : « après le scan un écran
+   * apparaît pour que l'utilisateur choisisse autre document, achat ou vente,
+   * extrait bancaire, gouvernance. Et après le choix Malica lit le document
+   * sur cette base. »
+   *
+   * La capture se coupe donc en deux. Le fichier est choisi d'abord et gardé
+   * ICI, en mémoire ; rien n'est envoyé tant que la question n'a pas de
+   * réponse. Poser la question après aurait voulu dire lire sur la mauvaise
+   * hypothèse, puis corriger — et un extrait bancaire lu avec une invite de
+   * facture donne une facture ratée, pas un relevé.
+   *
+   * Le fichier ne se reprend pas : s'il est là et que la personne ferme la
+   * question, il part sans type plutôt que d'être perdu. Une photo refaite
+   * est le pire prix qu'on puisse lui demander.
+   */
+  const [aTyper, setATyper] = useState<PickedFile | null>(null);
+
+  const choisir = useMutation({
     mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
-      if (!org) return null;
       const picked =
         typeof input === "object"
           ? await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true })
           : input === "pdf"
             ? await files.pickPdf()
             : await files.takePhoto();
-      if (!picked) return null;
+      return picked ?? null;
+    },
+    onSuccess: (picked) => {
+      setCaptureError(null);
+      if (picked) setATyper(picked);
+    },
+    onError: (e: unknown) =>
+      setCaptureError(
+        e instanceof FilePleine
+          ? t("pme.file.pleine")
+          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+      ),
+  });
+
+  const capture = useMutation({
+    mutationFn: async (input: { picked: PickedFile; documentKind: string | null }) => {
+      if (!org) return null;
+      const { picked } = input;
       /*
        * ============================================ RANGÉE AVANT DE PARTIR
        *
@@ -139,20 +176,25 @@ function PmeLayout() {
           entityId,
           source: picked.source,
           /*
-           * ====================================== SOUS MANDAT, ELLE PART
+           * ================================== ELLE NAÎT CHEZ SON DIRIGEANT
            *
-           * Le produit s'est trompé dans les deux sens. D'abord tout partait,
-           * sans que personne l'ait décidé. Puis plus rien ne partait : le
-           * 4 octobre 2026, la première facture réelle est restée invisible au
-           * cabinet, et rien à l'écran ne disait qu'un geste manquait.
+           * Ce commentaire disait « sous mandat actif, elle part », et c'est
+           * FAUX depuis le 7 octobre 2026 : la fonction rend « personnel »,
+           * toujours.
            *
-           * Sous mandat actif, elle part — c'est ce qu'attend quelqu'un qui
-           * photographie une facture pour son comptable. L'écran dit « transmise
-           * à [cabinet] », et un geste la retire tant qu'elle n'est pas
-           * comptabilisée.
+           * Le produit s'est trompé dans les deux sens. Le 4 octobre, rien ne
+           * partait et rien à l'écran ne disait qu'un geste manquait. On a
+           * alors transmis d'office à la photo, et le 7 une facture rejetée
+           * était déjà chez le comptable — partie avant d'être lue, donc
+           * avant que son verdict existe.
+           *
+           * La transmission est depuis une DÉCISION, prise à la fin de la
+           * lecture, en deux boutons de même poids. Et le retour d'une pièce
+           * transmise demande l'accord du cabinet.
            */
           vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
           contentType: picked.blob.type || "application/pdf",
+          documentKind: input.documentKind,
           nomFichier: picked.name,
         },
         picked.blob,
@@ -199,9 +241,9 @@ function PmeLayout() {
     void (async () => {
       const pages = await natif.capturer();
       // Déjà cadrées par l'appareil : on ne refait pas le travail.
-      if (pages.length > 0) capture.mutate({ pages, dejaCadrees: true });
+      if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
     })();
-  }, [capture]);
+  }, [choisir]);
 
   // Le scanner de la page se ferme au bouton retour, avant de reculer.
   useSuperposition(
@@ -267,9 +309,9 @@ function PmeLayout() {
               dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
               choisirDossier: selectOrg,
               aUnCabinet,
-              capture: (kind) => capture.mutate(kind),
+              capture: (kind) => choisir.mutate(kind),
               ouvrirScanner: ouvrirCapture,
-              capturing: capture.isPending,
+              capturing: capture.isPending || choisir.isPending,
               captureError,
               file,
             }}
@@ -278,6 +320,25 @@ function PmeLayout() {
           </PmeProvider>
         )}
       </main>
+
+      {aTyper ? (
+        <QuestionDuType
+          nomDuFichier={aTyper.name}
+          onRepondre={(code) => {
+            const picked = aTyper;
+            setATyper(null);
+            capture.mutate({ picked, documentKind: code });
+          }}
+          onPasser={() => {
+            // Le fichier est deja choisi : passer l'envoie sans type plutot
+            // que de le perdre. Une photo refaite est le pire prix qu'on
+            // puisse demander.
+            const picked = aTyper;
+            setATyper(null);
+            capture.mutate({ picked, documentKind: null });
+          }}
+        />
+      ) : null}
 
       <nav
         aria-label={t("pme.nav.aria")}
@@ -319,11 +380,11 @@ function PmeLayout() {
             onCancel={() => setScanning(false)}
             onFallback={() => {
               setScanning(false);
-              capture.mutate("photo");
+              choisir.mutate("photo");
             }}
             onDone={(pages) => {
               setScanning(false);
-              if (pages.length > 0) capture.mutate({ pages });
+              if (pages.length > 0) choisir.mutate({ pages });
             }}
           />
         </Suspense>
