@@ -49,6 +49,7 @@ function versPiece(r: Record<string, unknown>) {
       "a_determiner",
     // `null` = la question est encore ouverte, et l'écran doit la poser.
     gardeeLe: (r["gardee_le"] as string | null) ?? null,
+    sourcePieceId: (r["source_piece_id"] as string | null) ?? null,
   };
 }
 
@@ -81,6 +82,12 @@ export const capture = {
        * preuve.
        */
       documentKind?: string | null;
+      /**
+       * La pièce dont celle-ci est issue : la facture, pour un reçu de
+       * paiement ou un justificatif. Sans elle, le cabinet voit un reçu
+       * flottant et personne ne peut dire ce qu'il atteste.
+       */
+      sourcePieceId?: string | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
@@ -88,7 +95,7 @@ export const capture = {
     // par la route de dépôt (stockage.ts, capture_sceller_empreinte).
     const { rows } = await db.query<{ id: string }>(
       `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t,
-                                            null, $7::smallint, $8) as id`,
+                                            null, $7::smallint, $8, $9) as id`,
       [
         input.tenantId,
         input.source,
@@ -100,6 +107,7 @@ export const capture = {
         input.vis,
         input.pageCount ?? null,
         input.documentKind ?? null,
+        input.sourcePieceId ?? null,
       ],
     );
     const id = rows[0]!.id;
@@ -126,7 +134,7 @@ export const capture = {
   async lister(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-                document_kind, document_kind_statut, gardee_le
+                document_kind, document_kind_statut, gardee_le, source_piece_id
          from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
       [tenantId],
     );
@@ -191,7 +199,7 @@ export const capture = {
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut, gardee_le
+              document_kind, document_kind_statut, gardee_le, source_piece_id
          from pieces_v where id = $1`,
       [pieceId],
     );

@@ -213,6 +213,42 @@ export const referentiel = {
   },
 
   /**
+   * Les mentions que le pack exige, TRADUITES.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Le reçu de paiement les porte en pied, et c'est R4 en action : aucune
+   * mention obligatoire n'est écrite dans le code, elle est lue au pack.
+   *
+   * Le namespace `mention` de `ref.labels` existait depuis le 24 août 2026 —
+   * trois langues, chaque mention — et AUCUN code ne le joignait. Les
+   * honoraires lisent encore la colonne `label`, qui est française : un reçu
+   * en arabe aurait porté « Identifiant fiscal de l'émetteur ». Le repli sur
+   * le français est explicite : une mention sans traduction s'affiche, elle
+   * ne disparaît pas d'un document légal.
+   */
+  async mentionsDuPack(db: Requete, packId: string, locale: string) {
+    const { rows } = await db.query(
+      `select m.code, m.mandatory, m.legal_reference,
+              coalesce(demandee.value, francais.value, m.label) as label
+         from ref_mentions_v m
+         left join ref_labels_v demandee
+           on demandee.ns = 'mention' and demandee.key = m.code and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'mention' and francais.key = m.code and francais.locale = 'fr'
+        where m.pack_version_id = $1
+        order by m.mandatory desc, m.code`,
+      [packId, locale],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      code: r["code"] as string,
+      label: r["label"] as string,
+      mandatory: Boolean(r["mandatory"]),
+      legalReference: (r["legal_reference"] as string | null) ?? null,
+    }));
+  },
+
+  /**
    * Les moyens de paiement du pack, traduits, en vigueur à une date.
    *
    * ================================================================= POURQUOI

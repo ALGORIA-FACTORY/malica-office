@@ -315,6 +315,13 @@ export interface ReferentialRepository {
       transmissible: boolean;
     }>
   >;
+  /**
+   * Les mentions que le pack exige, traduites.
+   *
+   * R4 : aucune mention obligatoire n'est écrite dans le code. Le reçu de
+   * paiement les porte en pied, et c'est le pack qui dit lesquelles.
+   */
+  mentionsDuPack(packId: string, locale: string): Promise<MentionDuPack[]>;
   socleParams(packId: string): Promise<SocleParams>;
 }
 
@@ -624,6 +631,8 @@ export interface Piece {
    */
   documentKind: string | null;
   documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
+  /** La facture dont cette pièce est issue — un reçu, un justificatif. */
+  sourcePieceId: string | null;
   /**
    * Quand le dirigeant a décidé de garder la pièce chez lui.
    *
@@ -741,6 +750,12 @@ export interface NouvellePiece {
    * Nul quand la question n'a pas été posée : un import, une reprise.
    */
   documentKind?: string | null;
+  /**
+   * La facture dont cette pièce est issue : un reçu de paiement, un
+   * justificatif. Sans ce lien, le cabinet voit un document flottant et
+   * personne ne peut dire ce qu'il atteste.
+   */
+  sourcePieceId?: string | null;
 }
 
 /**

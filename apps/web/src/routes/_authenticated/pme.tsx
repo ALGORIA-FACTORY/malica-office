@@ -345,6 +345,7 @@ function PmeLayout() {
               currency: org.currency,
               packId: packQuery.data?.id ?? null,
               orgName: org.name,
+              matricule: org.legalId,
               dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
               choisirDossier: selectOrg,
               aUnCabinet,

@@ -1182,6 +1182,23 @@ function PieceScreen() {
                   : null
               }
               devise={payload?.currency ?? pme.currency}
+              /*
+               * Le sens vient du TYPE TRANCHÉ, et de nulle part ailleurs.
+               * `null` quand il ne l'est pas, et le reçu ne se propose alors
+               * pas : un « reçu de dépense » posé sur une vente est un
+               * document faux, et un document faux remis à un tiers est pire
+               * qu'un document absent.
+               */
+              sens={
+                payload?.document_kind === "facture_achat"
+                  ? "depense"
+                  : payload?.document_kind === "facture_vente"
+                    ? "revenu"
+                    : null
+              }
+              tiers={payload?.issuer ?? null}
+              reference={reference}
+              decimales={decimales}
             />
 
             {/*

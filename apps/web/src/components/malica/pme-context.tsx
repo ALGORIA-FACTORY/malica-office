@@ -19,6 +19,14 @@ export interface PmeContextValue {
   packId: string | null;
   orgName: string;
   /**
+   * Le matricule fiscal du dossier.
+   *
+   * Il descend du shell parce que le reçu de paiement le porte en mention
+   * obligatoire : sans lui, le Socle refuse de produire le document plutôt
+   * que de le fabriquer à moitié.
+   */
+  matricule: string | null;
+  /**
    * Les dossiers de cet utilisateur, et de quoi en changer.
    *
    * Ils descendent du shell parce que l'accueil porte désormais le bandeau :

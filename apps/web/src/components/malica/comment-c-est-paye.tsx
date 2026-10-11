@@ -30,7 +30,7 @@
  * suivante — avec des libellés justes et des comptes faux, donc invisible.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera } from "lucide-react";
+import { Camera, FileText } from "lucide-react";
 import { useState } from "react";
 
 import { files } from "@/capabilities/files";
@@ -40,6 +40,8 @@ import { montant } from "@/lib/lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { vidage } from "@/lib/hors-ligne";
 import { office } from "@/verticals/malica-office/composition";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
+import { construireRecu } from "@malica/socle/use-cases/recu-de-paiement";
 
 export function CommentCEstPaye({
   pieceId,
@@ -47,6 +49,10 @@ export function CommentCEstPaye({
   dateDeLaPiece,
   ttcMineur,
   devise,
+  sens,
+  tiers,
+  reference,
+  decimales,
 }: {
   pieceId: string;
   /**
@@ -63,8 +69,22 @@ export function CommentCEstPaye({
   /** Le total lu, en unités mineures — proposé par défaut, jamais imposé. */
   ttcMineur: number | null;
   devise: string;
+  /**
+   * Dépense ou revenu — pour le titre du reçu.
+   *
+   * `null` quand la lecture n'a pas tranché le sens : le reçu ne se produit
+   * alors pas, parce qu'un « reçu de dépense » posé sur une vente est un
+   * document faux, et qu'un document faux remis à un tiers est pire qu'un
+   * document absent.
+   */
+  sens: "depense" | "revenu" | null;
+  /** Le tiers et la référence, tels que la lecture les a cités. */
+  tiers: string | null;
+  reference: string | null;
+  /** Les décimales de la devise, lues au pack. `null` tant qu'on ne les a pas. */
+  decimales: number | null;
 }) {
-  const { t, locale } = useI18n();
+  const { t, locale, dir } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
   const [erreur, setErreur] = useState<string | null>(null);
@@ -180,6 +200,98 @@ export function CommentCEstPaye({
   const exigeUnePreuve = (code: string) =>
     (moyens.data ?? []).find((m) => m.code === code)?.exigeJustificatif ?? false;
 
+  /**
+   * ============================================= LE REÇU DE DÉPENSE OU DE REVENU
+   *
+   * Demandé le 10 octobre : « Malica génère le reçu de dépense ou de revenu
+   * et le moyen de paiement ».
+   *
+   * Le contenu vient du Socle — la somme en unités mineures, le refus d'un
+   * reçu sans paiement, les décimales du pack. Cet écran ne compose rien : il
+   * rassemble ce que la lecture a cité, appelle le moteur, dessine, et dépose
+   * le résultat comme une PIÈCE de plus, rattachée à la facture.
+   *
+   * Les mentions obligatoires descendent du pack, traduites (R4). Une mention
+   * écrite ici serait fausse dans la juridiction suivante, et personne ne le
+   * verrait avant un contrôle.
+   */
+  const recu = useMutation({
+    mutationFn: async () => {
+      if (sens === null || decimales === null || !pme.packId) return null;
+      const mentions = await office().referential.mentionsDuPack(pme.packId, locale);
+      const emisLe = new Date().toISOString().slice(0, 10);
+      const construit = construireRecu({
+        sens,
+        decimales,
+        devise,
+        dossier: { nom: pme.orgName, matricule: pme.matricule },
+        tiers,
+        piece: { reference, date: dateDeLaPiece },
+        /*
+         * Seuls les paiements QUI ONT EU LIEU. « Pas encore payé » est une
+         * réponse valable sur une facture à trente jours, et ce n'est pas un
+         * règlement : le faire figurer sur un reçu attesterait d'un versement
+         * qui n'existe pas.
+         */
+        paiements: deja
+          .filter((p) => p.montantMineur !== null)
+          .map((p) => ({
+            moyen: libelleDuMoyen(p.moyenCode),
+            montant: depuisUniteMineure(p.montantMineur!, decimales),
+            date: p.payeLe,
+          })),
+        // Seulement celles que le pack rend obligatoires : un reçu qui
+        // recopierait toute la liste serait illisible.
+        mentions: mentions.filter((m) => m.mandatory).map((m) => m.label),
+        libelles: {
+          titreDepense: t("pme.recu.titre.depense"),
+          titreRevenu: t("pme.recu.titre.revenu"),
+          dossier: t("pme.recu.dossier"),
+          matricule: t("pme.recu.matricule"),
+          tiers: t("pme.recu.tiers"),
+          piece: t("pme.recu.piece"),
+          date: t("pme.recu.date"),
+          moyen: t("pme.paiement.moyen"),
+          montant: t("pme.recu.montant"),
+          total: t("pme.recu.total"),
+          emisLe: t("pme.recu.emisLe"),
+        },
+        emisLe,
+      });
+
+      const { rendreRecuEnPdf } = await import("@/capabilities/recu-pdf");
+      const rendu = await rendreRecuEnPdf(construit, dir);
+      const cle = await vidage().deposer(
+        {
+          cle: files.newIdempotencyKey(),
+          tenantId: pme.tenantId,
+          entityId: pme.entityId,
+          source: "pdf",
+          // Le reçu suit la facture : transmise, il part avec elle.
+          vis: visDeLaPiece,
+          contentType: "application/pdf",
+          documentKind: "recu_de_paiement",
+          sourcePieceId: pieceId,
+          nomFichier: rendu.name,
+        },
+        rendu.blob,
+      );
+      return vidage().attendre(cle, 8_000);
+    },
+    onSuccess: async () => {
+      setErreur(null);
+      await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: ["piece", pieceId] });
+    },
+    onError: (e: unknown) =>
+      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+  });
+
+  // Un reçu atteste d'un règlement : sans montant payé, il n'atteste de rien.
+  // Le Socle le refuse ; l'écran ne propose donc pas le geste.
+  const recuPossible =
+    sens !== null && decimales !== null && deja.some((p) => p.montantMineur !== null);
+
   return (
     <section className="mt-6 border-t border-border pt-5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
@@ -227,6 +339,26 @@ export function CommentCEstPaye({
             ))}
           </ul>
           <p className="mt-2 text-[12px] text-text-2">{t("pme.paiement.ajouter")}</p>
+
+          {/*
+           * ========================================== LE REÇU, QUAND IL A UN SENS
+           *
+           * Il n'apparaît qu'une fois un règlement inscrit, et seulement si la
+           * lecture a tranché dépense ou revenu : un « reçu de dépense » posé
+           * sur une vente est un document faux, et un document faux remis à un
+           * tiers est pire qu'un document absent.
+           */}
+          {recuPossible ? (
+            <button
+              type="button"
+              onClick={() => recu.mutate()}
+              disabled={recu.isPending}
+              className="mt-2.5 flex min-h-[44px] w-full items-center justify-center gap-2 border border-foreground text-[13.5px] font-medium hover:bg-accent disabled:opacity-40"
+            >
+              <FileText className="h-[15px] w-[15px]" aria-hidden />
+              {recu.isPending ? t("common.loading") : t("pme.recu.generer")}
+            </button>
+          ) : null}
         </>
       ) : (
         <p className="mt-1.5 text-[13px] leading-[1.5] text-text-2">{t("pme.paiement.lede")}</p>
