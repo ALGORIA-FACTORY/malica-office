@@ -1,5 +1,6 @@
 import { D, sum, toFixedStr } from "../../domain/decimal.ts";
 import type { CurrencyDef, AccountRow } from "../../domain/types.ts";
+import type { AccountClass } from "../../ports/repositories.ts";
 import type { PnlV1 } from "../../contracts/pnl.v1.ts";
 
 export interface JournalLineRow {
@@ -13,9 +14,21 @@ export interface PnlInput {
   currency: CurrencyDef;
   entries: readonly JournalLineRow[];
   coa: readonly AccountRow[];
+  /**
+   * Ce qu'est chaque classe du plan, lu au pack. EXIGÉ.
+   *
+   * Le moteur testait `code.startsWith("6")` : une propriété du plan tunisien
+   * écrite dans le code du produit. La première juridiction qui numérote
+   * autrement aurait rendu un compte de résultat VIDE — et zéro charge sur un
+   * mois qui en porte est un chiffre plausible, donc invisible (R4).
+   */
+  classes: readonly AccountClass[];
 }
 
-/** Compte de résultat simplifié : classes 6 (charges) et 7 (produits). */
+/**
+ * Compte de résultat simplifié : les comptes dont la classe est une charge ou
+ * un produit, le référentiel disant lesquelles.
+ */
 export function computePnl(input: PnlInput): PnlV1 {
   const dec = input.currency.decimals;
   const byAccount = new Map<string, { debit: string; credit: string }>();
@@ -28,8 +41,25 @@ export function computePnl(input: PnlInput): PnlV1 {
   const rows: PnlV1["by_account"] = [];
   let charges = D(0);
   let produits = D(0);
+  /*
+   * La classe se reconnaît au préfixe du code, et le PLUS LONG gagne : un pack
+   * qui sortirait un jour les charges financières du résultat le dirait par
+   * « 66 », et « 66 » doit l'emporter sur « 6 ».
+   */
+  const classes = [...input.classes].sort((a, b) => b.prefix.length - a.prefix.length);
+  const natureDe = (code: string) => classes.find((c) => code.startsWith(c.prefix))?.nature ?? null;
+
   for (const [code, v] of byAccount) {
-    if (!code.startsWith("6") && !code.startsWith("7")) continue;
+    const nature = natureDe(code);
+    /*
+     * Ni charge ni produit : hors du compte de résultat, mais PAS hors de
+     * l'écran. Un compte d'une classe inconnue — créé par un cabinet, absent
+     * du plan livré — figure au détail à zéro d'effet. Un montant qui
+     * s'évapore d'un compte de résultat est pire qu'un montant mal rangé : le
+     * second se corrige, le premier ne se cherche pas.
+     */
+    if (nature !== null && nature !== "charge" && nature !== "produit") continue;
+
     const label = input.coa.find((a) => a.account_code === code)?.label ?? code;
     const solde = D(v.debit).minus(v.credit);
     rows.push({
@@ -39,8 +69,9 @@ export function computePnl(input: PnlInput): PnlV1 {
       credit: toFixedStr(D(v.credit), dec),
       solde: toFixedStr(solde, dec),
     });
-    if (code.startsWith("6")) charges = charges.plus(solde);
-    if (code.startsWith("7")) produits = produits.plus(solde.negated()); // produits = crédit - débit
+    if (nature === "charge") charges = charges.plus(solde);
+    // Un produit est un crédit : son solde débiteur est négatif.
+    if (nature === "produit") produits = produits.plus(solde.negated());
   }
   const resultat = produits.minus(charges);
   return {

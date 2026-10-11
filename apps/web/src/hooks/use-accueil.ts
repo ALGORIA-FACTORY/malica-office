@@ -124,6 +124,14 @@ export function useAccueil(periode: string): Accueil {
   const { from } = monthBounds(debut);
   const { to } = monthBounds(periode);
 
+  // La nature des classes du plan, lue au pack. Elle decide de ce qui EST une
+  // charge : le moteur le testait sur le premier chiffre du code (R4).
+  const classes = useQuery({
+    queryKey: ["ref-classes", pme.packId],
+    queryFn: () => office().referential.classesDeComptes(pme.packId!),
+    enabled: Boolean(pme.packId),
+    staleTime: 60 * 60 * 1000,
+  });
   const extraits = useQuery({
     queryKey: ["accueil-extraits", pme.tenantId, from, to],
     queryFn: () => office().office.extraitsTransmis(pme.tenantId, from, to),
@@ -260,6 +268,9 @@ export function useAccueil(periode: string): Accueil {
         // n'affiche pas : on ne charge pas six cent vingt-six lignes pour un
         // seul pourcentage.
         coa: [],
+        // La nature des classes, elle, décide de ce qui EST une charge : sans
+        // elle le pourcentage serait calculé sur un total vide (R4).
+        classes: classes.data ?? [],
       });
       return Number(pnl.charges);
     };
@@ -267,7 +278,7 @@ export function useAccueil(periode: string): Accueil {
     const la = chargesDe(avant);
     if (ici === null || la === null || la === 0) return null;
     return ((ici - la) / la) * 100;
-  }, [lignes.data, periode, devise, decimalesDuPack]);
+  }, [lignes.data, periode, devise, decimalesDuPack, classes.data]);
 
   // ----------------------------------------------------------- l'avancement
   const { avancement, enAttente, documentsLus, documentsNonLus, jamaisRienDepose, retournees } =

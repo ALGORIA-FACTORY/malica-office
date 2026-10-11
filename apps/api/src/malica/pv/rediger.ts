@@ -100,7 +100,7 @@ async function rassemblerLesChiffres(
   ]);
 
   const debut = debutDExercice(fiche?.clotureExercice ?? null, periode);
-  const [lignes, taux, params] = await Promise.all([
+  const [lignes, taux, params, classes] = await Promise.all([
     api.rpc<LigneDePeriode[]>("office", "periodeLignes", [client.tenantId, debut, fin]),
     pack
       ? api.rpc<TaxRate[]>("referentiel", "taxRates", [pack.id, client.jurisdiction])
@@ -111,6 +111,15 @@ async function rassemblerLesChiffres(
     pack
       ? api.rpc<{ moneyDecimals: number }>("referentiel", "socleParams", [pack.id])
       : Promise.resolve(null),
+    // Ce qu'est chaque classe du plan. Le moteur testait `startsWith("6")` :
+    // une propriété du plan tunisien écrite dans le code du produit (R4).
+    pack
+      ? api.rpc<Array<{ prefix: string; nature: "charge" | "produit" | "actif" | "passif" }>>(
+          "referentiel",
+          "classesDeComptes",
+          [pack.id],
+        )
+      : Promise.resolve([]),
   ]);
   if (!params) {
     throw new Error(
@@ -145,6 +154,7 @@ async function rassemblerLesChiffres(
         credit: l.credit,
       })),
       coa: plan.map((c) => ({ account_code: c.code, label: c.libelle, parent_code: c.parent })),
+      classes,
     });
     chiffres.push(
       montant("ca", pnl.produits, "pnl"),

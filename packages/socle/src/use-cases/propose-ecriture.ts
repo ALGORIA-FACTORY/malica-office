@@ -149,6 +149,21 @@ export function buildProposal(params: {
 
   if (!mapping) throw new Error("MISSING_ACCOUNT_MAPPING");
 
+  /*
+   * ================================= LE JOURNAL VIENT DU PACK, OU L'ON REFUSE
+   *
+   * Il était écrit ici : `document_kind === "facture_achat" ? "ACH" : "VEN"`.
+   * Un code de journal appartient au plan de l'organisation, pas au produit
+   * (R4), et `ref.journals` en porte quatre depuis le 31 août 2026 sans que
+   * rien ne les lise.
+   *
+   * Son absence LÈVE. R4, corollaire : aucun repli implicite. Une écriture
+   * rangée dans un journal inventé est une écriture qu'aucun grand-livre ne
+   * retrouve, et le défaut ne se voit qu'à la clôture.
+   */
+  const journalDuPack = mapping.journalCode;
+  if (!journalDuPack) throw new Error("MISSING_JOURNAL");
+
   const pivot = computePivot({
     extract,
     source_item_id: params.pieceId,
@@ -198,7 +213,7 @@ export function buildProposal(params: {
   return {
     pivot,
     extract,
-    journal: extract.document_kind === "facture_achat" ? "ACH" : "VEN",
+    journal: journalDuPack,
     libelle: composerLibelle(faitsDuLibelle(extract)),
     // Une ligne nulle (TVA à zéro sur pièce exonérée) ne porte aucun fait
     // comptable : la base l'interdit, on ne la persiste pas. Le pivot du Socle

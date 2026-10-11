@@ -78,7 +78,8 @@ export const referentiel = {
 
   async accountMappings(db: Requete, packId: string) {
     const { rows } = await db.query(
-      `select document_kind, tax_code, main_account, vat_account, counterparty_account
+      `select document_kind, tax_code, main_account, vat_account, counterparty_account,
+              journal_code
          from ref_account_mappings_v where pack_version_id = $1`,
       [packId],
     );
@@ -90,8 +91,38 @@ export const referentiel = {
         mainAccount: row["main_account"] as string,
         vatAccount: row["vat_account"] as string,
         counterpartyAccount: row["counterparty_account"] as string,
+        // Le journal où l'écriture s'inscrit. Il était écrit en TypeScript —
+        // « achat ? ACH : VEN » — et appartient au plan de l'organisation.
+        journalCode: (row["journal_code"] as string | null) ?? null,
       };
     });
+  },
+
+  /**
+   * Ce qu'est chaque classe du plan : charge, produit, actif, passif.
+   *
+   * Le moteur du compte de résultat testait `code.startsWith("6")`. C'est une
+   * propriété du plan tunisien écrite dans le code du produit, et la première
+   * juridiction qui numérote autrement aurait rendu un résultat VIDE — zéro
+   * charge sur un mois qui en porte étant un chiffre parfaitement plausible.
+   *
+   * La reconnaissance se fait par préfixe, le plus long d'abord, ce qui couvre
+   * aussi les comptes qu'un cabinet crée hors du plan livré.
+   */
+  async classesDeComptes(db: Requete, packId: string) {
+    const jour = aujourdhui();
+    const { rows } = await db.query(
+      `select prefix, nature from ref_account_classes_v
+        where pack_version_id = $1
+          and valid_from <= $2
+          and (valid_to is null or valid_to >= $2)
+        order by length(prefix) desc, prefix`,
+      [packId, jour],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      prefix: r["prefix"] as string,
+      nature: r["nature"] as "charge" | "produit" | "actif" | "passif",
+    }));
   },
 
   async fiscalCharges(db: Requete, packId: string) {

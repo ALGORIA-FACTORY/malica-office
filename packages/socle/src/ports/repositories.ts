@@ -277,6 +277,8 @@ export interface ReferentialRepository {
   activePack(jurisdiction: string): Promise<JurisdictionPack | null>;
   taxRates(packId: string, jurisdiction: string): Promise<TaxRate[]>;
   accountMappings(packId: string): Promise<AccountMapping[]>;
+  /** Ce qu'est chaque classe du plan : le compte de résultat en a besoin. */
+  classesDeComptes(packId: string): Promise<AccountClass[]>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
   fiscalCharges(packId: string): Promise<FiscalCharge[]>;
   /** Paramètres du Socle (décimales, méthode de stock, tolérances) lus au pack. */
@@ -601,6 +603,33 @@ export interface AccountMapping {
   mainAccount: string;
   vatAccount: string;
   counterpartyAccount: string;
+  /**
+   * Le journal où l'écriture s'inscrit, lu au pack.
+   *
+   * Il était écrit dans le code — « achat ? ACH : VEN » — et un code de
+   * journal appartient au plan de l'organisation, pas au produit (R4). `null`
+   * quand le pack ne le dit pas : la proposition REFUSE alors, plutôt que de
+   * ranger l'écriture dans un journal inventé qu'aucun grand-livre ne
+   * retrouverait.
+   */
+  journalCode: string | null;
+}
+
+/**
+ * Ce qu'est une classe du plan comptable : charge, produit, actif ou passif.
+ *
+ * Le moteur du compte de résultat testait `code.startsWith("6")`. C'est une
+ * propriété du plan tunisien écrite dans le code du produit, et la première
+ * juridiction numérotant autrement aurait rendu un résultat VIDE — sans
+ * aucune erreur à l'écran.
+ *
+ * La reconnaissance se fait par PRÉFIXE, le plus long d'abord : c'est la règle
+ * du plan lui-même, et elle vaut aussi pour un compte qu'un cabinet a créé et
+ * qui n'est pas dans le plan livré.
+ */
+export interface AccountClass {
+  prefix: string;
+  nature: "charge" | "produit" | "actif" | "passif";
 }
 
 export interface FiscalCharge {

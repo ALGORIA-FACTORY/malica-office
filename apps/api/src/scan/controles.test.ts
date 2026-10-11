@@ -65,6 +65,9 @@ const CONTEXTE: ContexteControle = {
   ],
   seuilConfianceReserve: 0.7,
   seuilConfianceBloquant: 0.4,
+  // Soixante jours, comme le pack tunisien : au-delà, l'écart entre la date de
+  // la pièce et celle de sa réception est signalé.
+  ecartDateJours: 60,
   autresPieces: [],
 };
 
@@ -501,5 +504,73 @@ describe("le verdict", () => {
   });
   it("un verdict sans motif est refusé", () => {
     assert.throws(() => rendreVerdict([]), /motif/);
+  });
+});
+
+/**
+ * Une date trop ancienne se signale.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Vérification comptable du 11 octobre 2026. L'écran de la pièce propose le
+ * jour du scan quand la date n'a pas été lue — affiché et modifiable, donc pas
+ * le repli implicite que R4 interdit. Mais rien ne distinguait une date
+ * VÉRIFIÉE d'une date acceptée sans la lire, et une facture de janvier
+ * confirmée en mars part dans la déclaration de mars.
+ */
+describe("l'écart entre la date de la pièce et sa réception", () => {
+  const dateDe = (r: ReturnType<typeof controlerPiece>) =>
+    r.find((c) => c.code === "coherence_dates")!;
+
+  it("un écart ordinaire ne dit rien", () => {
+    const c = dateDe(
+      controlerPiece(
+        facture({ date: "2026-09-01", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        CONTEXTE,
+      ),
+    );
+    assert.equal(c.statut, "conforme");
+    assert.equal(c.preuves["ecartJours"], 14);
+  });
+
+  it("au-delà du seuil du pack, la pièce est SIGNALÉE — pas refusée", () => {
+    /*
+     * Signalée, parce qu'un dirigeant qui rattrape six mois de factures saisit
+     * des dates de six mois, et c'est légitime. Refuser rendrait le rattrapage
+     * impossible, et c'est le cas d'usage le plus courant.
+     */
+    const c = dateDe(
+      controlerPiece(
+        facture({ date: "2026-01-10", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        CONTEXTE,
+      ),
+    );
+    assert.equal(c.statut, "reserve");
+    assert.equal(c.preuves["seuilJours"], 60);
+    assert.ok(Number(c.preuves["ecartJours"]) > 60);
+  });
+
+  it("et le seuil vient du PACK, pas du code", () => {
+    // Le même écart, un seuil plus large : plus de signalement. C'est la
+    // preuve que le nombre est lu et non écrit (R4).
+    const c = dateDe(
+      controlerPiece(
+        facture({ date: "2026-01-10", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        { ...CONTEXTE, ecartDateJours: 400 },
+      ),
+    );
+    assert.equal(c.statut, "conforme");
+  });
+
+  it("une date À VENIR reste une anomalie, et non une réserve", () => {
+    // Elle ne s'explique par aucun rattrapage : une pièce ne peut pas être
+    // datée après le jour où on l'a reçue.
+    const c = dateDe(
+      controlerPiece(
+        facture({ date: "2026-10-01", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        CONTEXTE,
+      ),
+    );
+    assert.equal(c.statut, "anomalie");
   });
 });

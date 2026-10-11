@@ -184,6 +184,7 @@
   "referentiel": [
     "accountMappings",
     "activePack",
+    "classesDeComptes",
     "fiscalCharges",
     "juridictions",
     "mentionsDuPack",

@@ -46,6 +46,14 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
     queryFn: () => office().referential.activePack(client!.jurisdiction),
     enabled: client !== null,
   });
+  // Ce qu est chaque classe du plan : sans elle, le compte de resultat ne sait
+  // pas ce qui est une charge, et le testait sur le premier chiffre du code.
+  const classes = useQuery({
+    queryKey: ["ref-classes", pack.data?.id],
+    queryFn: () => office().referential.classesDeComptes(pack.data!.id),
+    enabled: Boolean(pack.data),
+    staleTime: 60 * 60 * 1000,
+  });
   const fiche = useQuery({
     queryKey: ["fiche", tenantId],
     queryFn: () => office().identity.ficheCourante(tenantId!),
@@ -96,13 +104,14 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
         debit: l.debit,
         credit: l.credit,
       })),
+      classes: classes.data ?? [],
       coa: (plan.data ?? []).map((c) => ({
         account_code: c.code,
         label: c.libelle,
         parent_code: c.parent,
       })),
     });
-  }, [lignes.data, plan.data, periode, devise, decimales]);
+  }, [lignes.data, plan.data, periode, devise, decimales, classes.data]);
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!devise || !extraits.data || !taux.data || extraits.data.length === 0) return null;

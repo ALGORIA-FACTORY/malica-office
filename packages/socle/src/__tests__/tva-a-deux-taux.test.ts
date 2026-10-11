@@ -66,6 +66,8 @@ const IMPUTATIONS: AccountMapping[] = [
     mainAccount: "6061",
     vatAccount: "43661",
     counterpartyAccount: "401",
+    // Le journal vient du pack : son absence fait REFUSER la proposition (R4).
+    journalCode: "ACH",
   },
 ];
 
