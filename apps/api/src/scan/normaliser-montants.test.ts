@@ -110,6 +110,67 @@ describe("une facture qui ne tient pas", () => {
     assert.match(r.raison, /TTC/);
   });
 
+  /*
+   * ====================== UNE PLAGE QUI A COUVERT LE MÊME MONTANT DEUX FOIS
+   *
+   * 10 octobre 2026. La facture PAPETERIE NOUR reste bloquée, et l'écran dit :
+   * « montant illisible : « 514,700 514,700 » ».
+   *
+   * C'est l'envers de la plage de jetons ouverte le 5 octobre pour recoller
+   * « 2 800,000 », coupé par l'espace des milliers. Une plage peut désormais
+   * couvrir DEUX montants — ici le même, imprimé deux fois côte à côte, comme
+   * le font les factures qui répètent le total en pied de colonne.
+   *
+   * Deux virgules décimales : aucune lecture ne tient, et la chaîne a eu
+   * raison de ne rien rendre plutôt que d'inventer. Le garde a fonctionné.
+   *
+   * Mais il existe un cas où ne rien rendre est excessif : quand les blocs
+   * répétés sont IDENTIQUES. « 514,700 514,700 » n'a qu'une valeur possible,
+   * quelle que soit la façon dont on décide où la plage aurait dû s'arrêter.
+   * La rendre n'est pas une supposition — c'est la seule lecture cohérente.
+   *
+   * La limite est stricte, et les deux épreuves suivantes la tiennent : des
+   * blocs DIFFÉRENTS restent illisibles, parce que là on ne sait pas lequel
+   * est le bon ; et « 2 800,000 » ne se coupe pas en « 2 » et « 800,000 »,
+   * parce que ses blocs ne sont pas identiques.
+   */
+  it("le même montant répété n'a qu'une valeur, et elle se lit", () => {
+    assert.deepEqual(
+      candidatsMontant("514,700 514,700", 3).map((c) => c.mineur),
+      candidatsMontant("514,700", 3).map((c) => c.mineur),
+      "une plage qui a couvert deux fois le même montant lit ce montant",
+    );
+    // La facture PAPETERIE NOUR telle qu'elle est imprimée : le droit de
+    // timbre ancre l'échelle, sans quoi 514,700 se lit en dinars OU en
+    // millimes et la facture reste légitimement ambiguë.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "514,700 514,700", taux: "0.19" }],
+        tva: "97,793",
+        autres: [{ brut: "1,000", attendu: 1000 }],
+        ttc: "613,493",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 514_700, "en millimes");
+    assert.equal(r.montants.ttc, 613_493);
+  });
+
+  it("deux montants DIFFÉRENTS restent illisibles : on ne choisit pas", () => {
+    assert.deepEqual(candidatsMontant("514,700 200,000", 3), []);
+    assert.deepEqual(candidatsMontant("1 000,000 2 000,000", 3), []);
+  });
+
+  it("et un montant coupé par l'espace des milliers se recolle toujours", () => {
+    // La garantie du 5 octobre. Si la règle de répétition la cassait, la
+    // troncature des milliers reviendrait — et c'était le défaut n° 1.
+    assert.deepEqual(
+      candidatsMontant("2 800,000", 3).map((c) => c.mineur),
+      candidatsMontant("2800,000", 3).map((c) => c.mineur),
+    );
+  });
+
   it("un montant illisible reste vide, avec sa raison", () => {
     const r = normaliserMontants(
       { bases: [{ ht: "mille deux cents", taux: TAUX }], ttc: "1 469,126" },

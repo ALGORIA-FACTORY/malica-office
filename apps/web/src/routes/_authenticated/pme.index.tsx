@@ -120,15 +120,32 @@ function PmeHome() {
         : "pme.home.greet.evening",
   );
 
-  // Sa phrase. Elle dit ce qui manque, pas ce qui a été traité : c'est la
-  // seule information sur laquelle le dirigeant peut agir ce matin.
-  const restantes = a.avancement === null ? 0 : Math.round((1 - a.avancement) * 100) === 0 ? 0 : 1;
+  /*
+   * ================================================= « PRESQUE » À 0 %, ET POURQUOI
+   *
+   * 10 octobre 2026. L'accueil disait « Presque. Il me manque encore quelques
+   * factures pour boucler octobre » pendant que la carte d'à côté disait
+   * « prête à 0 % ». Quatre centimètres d'écart, deux affirmations
+   * contradictoires.
+   *
+   * La cause tenait en une ligne :
+   *
+   *     const restantes = … Math.round((1 - a.avancement) * 100) === 0 ? 0 : 1;
+   *
+   * `restantes` ne comptait rien : c'était un booléen déguisé en nombre, qui
+   * valait 1 dès que l'avancement n'était pas exactement 100 % — donc aussi à
+   * 0 %. Et « quelques factures » inventait une quantité que le produit ne
+   * peut pas connaître : il ne voit que ce qu'on lui a donné.
+   *
+   * La phrase dit maintenant ce qui est VRAI et sur quoi on peut agir : ce
+   * qui attend une réponse, compté, ou rien.
+   */
   const phrase =
     a.avancement === null
       ? t("pme.home.voix.rien")
-      : restantes === 0
+      : a.enAttente === 0
         ? t("pme.home.voix.enOrdre", { mois: moisCourant })
-        : t("pme.home.voix.manque", { mois: moisCourant });
+        : t("pme.home.voix.attendent", { count: a.enAttente, mois: moisCourant });
 
   return (
     <div className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col sm:-mx-6">
@@ -303,24 +320,50 @@ function PmeHome() {
             }
           >
             {/*
-             * Deux barres, deux couleurs — la même langue que « Vos charges ».
+             * ================================ LA BARRE QUI NE DISAIT RIEN
              *
-             * Pas le chiffre : le montant est DÉJÀ le grand nombre du bloc
-             * d'encre, deux doigts au-dessus. Pas la jauge non plus : elle
-             * disait la même chose que « prête à 33 % », juste en dessous.
+             * Ici vivaient deux barres, « w-[72%] » et « w-[44%] », écrites en
+             * dur. Elles ne bougeaient jamais, quelle que soit la donnée — et
+             * sur la capture du 10 octobre l'une d'elles était à moitié pleine
+             * au-dessus de « prête à 0 % ».
              *
-             * Ce que les deux barres disent, c'est le rapport entre ce qui
-             * entre et ce qui sort — la nature même d'un solde de TVA.
+             * Un chiffre faux se corrige. Un graphique décoratif apprend au
+             * dirigeant que les graphiques de ce produit ne veulent rien dire,
+             * et il contredit mot pour mot ce que le produit imprime deux
+             * écrans plus loin : « chaque montant vient d'un document que vous
+             * avez confirmé ».
+             *
+             * La jauge dit maintenant l'avancement, qui est la seule donnée
+             * que cette carte porte — et elle disparaît quand il n'y a rien à
+             * montrer, plutôt que de montrer un vide plein.
              */}
-            <span className="flex h-[26px] w-full flex-col justify-end gap-[5px]">
-              <i className="h-[6px] w-[72%] bg-foreground" />
-              <i className="h-[6px] w-[44%] bg-marigold" />
-            </span>
+            {a.avancement === null ? null : (
+              <span className="flex h-[26px] w-full flex-col justify-end">
+                <i className="block h-[6px] w-full bg-line-strong">
+                  <i
+                    className="block h-full bg-foreground"
+                    style={{ width: `${Math.round(a.avancement * 100)}%` }}
+                  />
+                </i>
+              </span>
+            )}
           </Carte>
+          {/*
+           * « Lus et classés » surmontait un compte de TOUTES les pièces du
+           * mois, états confondus — y compris une pièce jamais lue. Le libellé
+           * affirmait deux choses fausses à la fois, et il était consigné
+           * depuis le 4 octobre sans être corrigé.
+           *
+           * Il dit maintenant ce que le chiffre est.
+           */}
           <Carte
             to="/pme/list"
             label={t("pme.home.documents.titre")}
-            sous={t("pme.home.documents.sous")}
+            sous={
+              a.documentsNonLus > 0
+                ? t("pme.home.documents.dont", { count: a.documentsNonLus })
+                : t("pme.home.documents.lus")
+            }
           >
             {/*
              * Le compte porte la couleur du produit. Ce n'est pas un ornement :
@@ -328,7 +371,7 @@ function PmeHome() {
              * désigne comme telle — la même encre que la jauge d'à côté.
              */}
             <span className="num block text-[24px] font-medium leading-none tracking-[-0.035em] text-marigold">
-              {a.documents}
+              {a.documentsLus}
             </span>
           </Carte>
           <Carte
@@ -342,12 +385,15 @@ function PmeHome() {
                   : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })
             }
           >
-            <span className="flex h-[26px] items-end gap-1">
-              <i className="h-full w-[5px] bg-foreground" />
-              <i className="h-[64%] w-[5px] bg-line-strong" />
-              <i className="h-[44%] w-[5px] bg-line-strong" />
-              <i className="h-[30%] w-[5px] bg-marigold" />
-            </span>
+            {/*
+             * Quatre barres écrites en dur — 100 %, 64 %, 44 %, 30 % — qui
+             * dessinaient une courbe de charges décroissante pour un dossier
+             * qui en portait une. Elles sont parties : une carte sans
+             * graphique se lit, un graphique faux désapprend.
+             *
+             * Elles reviendront branchées sur la série réelle des charges,
+             * quand cette série sera lue par l'accueil.
+             */}
           </Carte>
           <button
             type="button"
@@ -482,7 +528,14 @@ function Carte({
   // carte, « de septembre » la précise. Un libellé balisé le permet.
   label: React.ReactNode;
   sous: string;
-  children: React.ReactNode;
+  /**
+   * La figure de la carte, quand il y en a une À DIRE.
+   *
+   * Elle est facultative depuis le 11 octobre : trois cartes portaient des
+   * barres écrites en dur, qui ne bougeaient jamais. Une carte sans figure se
+   * lit très bien ; une figure fausse désapprend à lire toutes les autres.
+   */
+  children?: React.ReactNode;
 }) {
   return (
     <Link
