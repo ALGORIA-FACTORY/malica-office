@@ -26,6 +26,7 @@ import {
 } from "@malica/socle/use-cases/propose-ecriture";
 
 import type { Requete } from "../db.ts";
+import { enDecimal } from "../malica/lecture/montants.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
 import { analyserPiece, lireParametres } from "./analyse.ts";
@@ -46,16 +47,12 @@ export type PropositionDePiece =
     }
   | { ok: false; raison: string; verdict?: string };
 
-/** Des unités mineures en chaîne décimale, sans flottant : 1470126, 3 → « 1470.126 ». */
-function enDecimal(mineur: number, decimales: number): string {
-  const signe = mineur < 0 ? "-" : "";
-  const chiffres = BigInt(Math.abs(mineur))
-    .toString()
-    .padStart(decimales + 1, "0");
-  return decimales === 0
-    ? `${signe}${chiffres}`
-    : `${signe}${chiffres.slice(0, -decimales)}.${chiffres.slice(-decimales)}`;
-}
+/*
+ * `enDecimal` vivait ici en double : même signature, même sémantique, deux
+ * implémentations. La première qui aurait corrigé un cas limite aurait laissé
+ * l'autre en arrière — et c'est celle-ci qui écrit l'écriture comptable.
+ * Elle vient désormais de la lecture, où elle est éprouvée.
+ */
 
 export async function propositionDePiece(
   db: Requete,

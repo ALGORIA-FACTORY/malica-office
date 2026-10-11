@@ -25,6 +25,8 @@
  * et les seuils de confiance arrivent par le contexte, lus dans le paramétrage.
  */
 
+import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
+
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
 
 type Statut = "conforme" | "non_evaluable" | "reserve" | "rapprocher" | "anomalie" | "rejet";
@@ -97,17 +99,38 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
 };
 
 /**
- * L'identité fiscale tunisienne tient dans ses sept chiffres et sa lettre clé ;
- * le reste (code TVA, catégorie, établissement) varie d'une écriture à
- * l'autre. « 1856324K/A/M/000 », « 1856324 A M 000 », « 1856324A » : une même
- * entreprise.
+ * L'identité fiscale tunisienne tient dans ses sept chiffres et sa lettre de
+ * CONTRÔLE ; le reste — code de TVA, catégorie, établissement — varie d'une
+ * écriture à l'autre.
+ *
+ * ============================= LE BUG QUI VIVAIT ICI, ET QUI REJETAIT DES PIÈCES
+ *
+ * Ce fichier portait sa propre version :
+ *
+ *     const nu = mf.toUpperCase().replace(/[^0-9A-Z]/g, "");
+ *     const m = /^(\d{7})([A-Z])/.exec(nu);
+ *
+ * Elle COMPACTE tout, puis prend la première lettre venue pour la lettre de
+ * contrôle. Sur « 1856324/A/M/000 » — un matricule qui n'en porte PAS — elle
+ * rend « 1856324A » : elle fabrique une identité à partir du code de TVA.
+ *
+ * Deux conséquences, et les deux sont des verdicts liants :
+ *
+ *   — « 1856324/A/M/000 » et « 1856324A/B/M/000 » reçoivent la même clé, donc
+ *     deux entreprises différentes sont jugées identiques ;
+ *   — « 1856324/A/M/000 » et « 1856324/B/M/000 » en reçoivent deux
+ *     différentes, alors qu'on ne sait rien de leur lettre de contrôle.
+ *
+ * C'est EXACTEMENT le défaut que le normaliseur du Socle a été écrit pour
+ * tuer le 5 octobre, et dont il documente la coïncidence silencieuse. Le
+ * Socle a donc été corrigé, et la copie fautive est restée ici — dans le
+ * contrôle qui REJETTE les pièces.
+ *
+ * Le normaliseur du Socle travaille sur la forme ÉCRITE, séparateurs
+ * compris, et sait dire qu'un matricule est « partiel » plutôt que d'en
+ * inventer la clé. Sa fonction de comparaison n'avait, jusqu'ici, aucun
+ * appelant de production.
  */
-function identite(mf: string | null): string | null {
-  if (!mf) return null;
-  const nu = mf.toUpperCase().replace(/[^0-9A-Z]/g, "");
-  const m = /^(\d{7})([A-Z])/.exec(nu);
-  return m ? `${m[1]}${m[2]}` : nu || null;
-}
 
 const normNumero = (n: string | null) => (n ? n.toUpperCase().replace(/[^0-9A-Z]/g, "") : null);
 
@@ -233,8 +256,8 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
 }
 
 function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatControle {
-  const tenant = identite(ctx.tenant.identifiantFiscal);
-  if (!tenant)
+  const tenant = ctx.tenant.identifiantFiscal;
+  if (!normaliserMatricule(tenant).cle)
     return {
       code: "destinataire",
       statut: "non_evaluable",
@@ -268,15 +291,15 @@ function destinataire(p: PieceAControler, ctx: ContexteControle): ResultatContro
   const vente = p.documentKind === "facture_vente";
   const partie = vente ? p.emetteur : p.destinataire;
   const role = vente ? "l'émetteur" : "le destinataire";
-  const lu = identite(partie.identifiantFiscal);
-  if (!lu)
+  const lu = partie.identifiantFiscal;
+  if (!normaliserMatricule(lu).cle)
     return {
       code: "destinataire",
       statut: "reserve",
       motif: `Le matricule fiscal de ${role} n'a pas été lu : impossible de vérifier que la pièce concerne ${ctx.tenant.nom}.`,
       preuves: { role },
     };
-  if (lu !== tenant)
+  if (!memeMatricule(lu, tenant))
     return {
       code: "destinataire",
       statut: "rejet",
@@ -409,13 +432,30 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       motif: "Doublon strict : le même fichier, à l'octet près, a déjà été reçu.",
       preuves: { original: p.reception.doublonDe },
     };
-  const emetteur = identite(p.emetteur.identifiantFiscal);
+  /*
+   * ============== UN REJET EXIGE LA CERTITUDE, UN RAPPROCHEMENT LA VRAISEMBLANCE
+   *
+   * Le contrôle du destinataire REJETTE : il ne compare donc que des clés
+   * complètes, lettre de contrôle comprise. Celui-ci ne fait que SIGNALER —
+   * « regardez ces deux pièces » — et la bonne mesure n'y est pas la même.
+   *
+   * Les SEPT CHIFFRES suffisent ici : deux pièces du même numéro, du même
+   * émetteur à sept chiffres près, méritent un coup d'œil même si l'une des
+   * deux n'imprime pas sa lettre de contrôle. Exiger la clé complète ferait
+   * passer le doublon le plus courant — la même facture photographiée deux
+   * fois, lue une fois avec la lettre et une fois sans.
+   *
+   * C'est une distinction, pas un relâchement : la conclusion de ce contrôle
+   * est « à rapprocher », et personne n'est rejeté sur sa foi.
+   */
+  const emetteur = normaliserMatricule(p.emetteur.identifiantFiscal).chiffres;
   const numero = normNumero(p.numero);
   const semblable =
     emetteur && numero
       ? ctx.autresPieces.find(
           (a) =>
-            identite(a.emetteurIdentifiantFiscal) === emetteur && normNumero(a.numero) === numero,
+            normaliserMatricule(a.emetteurIdentifiantFiscal).chiffres === emetteur &&
+            normNumero(a.numero) === numero,
         )
       : undefined;
   if (semblable)
