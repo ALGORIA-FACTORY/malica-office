@@ -3,6 +3,7 @@
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
  */
 
+import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
 export type OrgKind = "pme" | "cabinet";
@@ -956,9 +957,23 @@ export interface LigneDePeriode {
 }
 
 /** La proposition d'écriture calculée par le serveur (3B-6), ou son refus motivé. */
+/**
+ * La proposition d une piece, ou son refus.
+ *
+ * Le verdict voyage sous DEUX formes : la phrase inscrite en base, qui est
+ * l historique (R7), et le CODE, sur lequel les ecrans branchent. L ecran
+ * comparait la phrase francaise accent par accent, dans un autre paquet que
+ * celui qui la produit.
+ */
 export type PropositionDePiece =
-  | { ok: true; verdict: string; packVersionId: string; proposition: ProposalResult }
-  | { ok: false; raison: string; verdict?: string };
+  | {
+      ok: true;
+      verdict: string;
+      verdictCode: CodeVerdict | null;
+      packVersionId: string;
+      proposition: ProposalResult;
+    }
+  | { ok: false; raison: string; verdict?: string; verdictCode?: CodeVerdict | null };
 
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;

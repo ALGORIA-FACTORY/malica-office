@@ -17,6 +17,7 @@ import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { codeDuVerdict } from "@malica/socle/verdicts";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -414,7 +415,11 @@ function PieceScreen() {
   const proposalAttempt = propositionServeur.data
     ? propositionServeur.data.ok
       ? { ok: true as const, value: propositionServeur.data.proposition }
-      : { ok: false as const, verdict: propositionServeur.data.verdict ?? null }
+      : {
+          ok: false as const,
+          verdict: propositionServeur.data.verdict ?? null,
+          verdictCode: propositionServeur.data.verdictCode ?? null,
+        }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
@@ -565,13 +570,27 @@ function PieceScreen() {
    * Le repli n'est pas un défaut caché : un verdict inconnu donne la phrase
    * générique, et le dirigeant sait quand même qu'il doit attendre.
    */
-  const verdictBloquant = proposalAttempt && !proposalAttempt.ok ? proposalAttempt.verdict : null;
+  /*
+   * ============================== ON BRANCHE SUR UN CODE, PAS SUR UNE PHRASE
+   *
+   * Cette comparaison était `verdict === "à rejeter"` : un code écrit en
+   * français, comparé accent par accent, dans un autre paquet que celui qui le
+   * produit. Le jour où quelqu'un reformule « à rejeter », l'écran tombait
+   * silencieusement sur sa phrase générique — et aucune épreuve ne l'aurait vu,
+   * parce que la comparaison compile et que le repli est légitime.
+   *
+   * La conversion vit au Socle, en un seul endroit, avec son épreuve.
+   */
+  const verdictBloquant =
+    proposalAttempt && !proposalAttempt.ok
+      ? (proposalAttempt.verdictCode ?? codeDuVerdict(proposalAttempt.verdict ?? null))
+      : null;
   const raisonDuBlocage =
-    verdictBloquant === "à rejeter"
+    verdictBloquant === "rejet"
       ? t("pme.bloque.rejet")
-      : verdictBloquant === "anomalie à signaler"
+      : verdictBloquant === "anomalie"
         ? t("pme.bloque.anomalie")
-        : verdictBloquant === "à rapprocher"
+        : verdictBloquant === "rapprocher"
           ? t("pme.bloque.rapprocher")
           : t("pme.confirm.review");
 
