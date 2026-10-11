@@ -27,6 +27,7 @@
     "lister",
     "paiementsDUnePiece",
     "persisterLecture",
+    "piecesIssuesDe",
     "preciser",
     "rattacherJustificatif",
     "supprimer"
@@ -188,7 +189,7 @@
     "moyensDePaiement",
     "socleParams",
     "taxRates",
-    "typesDeDocumentALaCapture"
+    "typesDeDocument"
   ],
   "signalements": [
     "deposer"

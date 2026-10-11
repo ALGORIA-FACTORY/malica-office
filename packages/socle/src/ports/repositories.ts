@@ -306,13 +306,15 @@ export interface ReferentialRepository {
       exigeJustificatif: boolean;
     }>
   >;
-  typesDeDocumentALaCapture(locale: string): Promise<
+  typesDeDocument(locale: string): Promise<
     Array<{
       code: string;
       famille: string;
       libelle: string;
       porteEcriture: boolean;
       transmissible: boolean;
+      /** Vrai pour les types proposés au moment de la photo — six, pas dix-sept. */
+      proposeALaCapture: boolean;
     }>
   >;
   /**
@@ -817,6 +819,14 @@ export interface CaptureRepository {
     payeLe?: string | null;
     justificatifPieceId?: string | null;
   }): Promise<string>;
+  /**
+   * Les pièces issues d'une pièce : son reçu, ses justificatifs.
+   *
+   * Le cabinet les télécharge avec la facture. Sans cette lecture, elles
+   * existent, sont transmises, et restent introuvables depuis la pièce
+   * qu'elles accompagnent.
+   */
+  piecesIssuesDe(pieceId: string): Promise<Piece[]>;
   /**
    * Rattacher une preuve à un paiement déjà inscrit.
    *

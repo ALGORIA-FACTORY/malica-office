@@ -859,6 +859,23 @@ export const capture = {
   },
 
   /**
+   * Les pièces ISSUES d'une pièce : son reçu, ses justificatifs.
+   *
+   * Le cabinet doit pouvoir les télécharger avec la facture — « aussi du reçu
+   * de dépense ou revenu ». Sans cette lecture, les documents existent, sont
+   * transmis, et restent introuvables depuis la pièce qu'ils accompagnent.
+   */
+  async piecesIssuesDe(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
+              document_kind, document_kind_statut, gardee_le, source_piece_id
+         from pieces_v where source_piece_id = $1 order by created_at`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map(versPiece);
+  },
+
+  /**
    * Rattacher une preuve à un paiement DÉJÀ inscrit.
    *
    * Le paiement est en ajout seul : il ne se réécrit pas. La preuve tardive

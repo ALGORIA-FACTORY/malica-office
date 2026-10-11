@@ -164,7 +164,7 @@ export const referentiel = {
   },
 
   /**
-   * Les types de document proposés AU MOMENT DE LA PHOTO, traduits.
+   * Les types de document, traduits, avec le drapeau de ceux qu'on propose.
    *
    * ================================================================= POURQUOI
    *
@@ -180,6 +180,14 @@ export const referentiel = {
    * d'abandon. La colonne `propose_a_la_capture` dit lesquels se proposent ;
    * les autres restent atteignables ensuite, sur la pièce.
    *
+   * ================================== POURQUOI TOUS, ET PAS SEULEMENT CES SIX
+   *
+   * Cette lecture ne rendait QUE les six, et le cabinet n'avait alors aucun
+   * moyen de nommer les onze autres : un reçu de paiement joint à une facture
+   * s'affichait « Document », parce que la seule lecture qui connaissait son
+   * libellé le filtrait. Le drapeau descend donc avec les lignes, et c'est
+   * l'écran de la photo qui filtre.
+   *
    * ========================================== ET LE LIBELLÉ VIENT DE ref.labels
    *
    * Pas de la colonne `libelle`, qui est française. Le produit lit l'arabe :
@@ -188,9 +196,9 @@ export const referentiel = {
    * existaient et qu'un seul était joint. Le repli sur le français est
    * explicite : un type sans traduction s'affiche, il ne disparaît pas.
    */
-  async typesDeDocumentALaCapture(db: Requete, locale: string) {
+  async typesDeDocument(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select d.code, d.famille, d.porte_ecriture, d.transmissible,
+      `select d.code, d.famille, d.porte_ecriture, d.transmissible, d.propose_a_la_capture,
               coalesce(demandee.value, francais.value, d.libelle) as libelle
          from ref.document_types d
          left join ref_labels_v demandee
@@ -199,7 +207,6 @@ export const referentiel = {
          left join ref_labels_v francais
            on francais.ns = 'document_type' and francais.key = d.code
           and francais.locale = 'fr'
-        where d.propose_a_la_capture
         order by d.rang`,
       [locale],
     );
@@ -209,6 +216,7 @@ export const referentiel = {
       libelle: r["libelle"] as string,
       porteEcriture: Boolean(r["porte_ecriture"]),
       transmissible: Boolean(r["transmissible"]),
+      proposeALaCapture: Boolean(r["propose_a_la_capture"]),
     }));
   },
 

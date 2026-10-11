@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -120,6 +121,10 @@ function CabinetReview() {
   // Le motif d'un refus. Exige par la base, et exige ici : un refus sans
   // motif n'apprend rien a celui qui a demande.
   const [noteDeRefus, setNoteDeRefus] = useState<string>("");
+  // Dans la coque native il n'y a pas de dossier de téléchargements qu'on
+  // puisse ouvrir : on dit OÙ le fichier a été écrit. Un bouton qui semble ne
+  // rien faire est pire que pas de bouton.
+  const [cheminEnregistre, setCheminEnregistre] = useState<string | null>(null);
   // `null` : on n'a pas ouvert la correction. Une fois ouverte, on tient la
   // saisie à part de l'écriture d'origine — celle-ci ne se modifie jamais.
   const [correction, setCorrection] = useState<Correction | null>(null);
@@ -187,6 +192,72 @@ function CabinetReview() {
    * accordee sans effet, et personne ne saurait laquelle des deux verites
    * croire.
    */
+  /** Ce qui accompagne la pièce : son reçu de paiement, ses justificatifs. */
+  const joints = useQuery({
+    queryKey: ["pieces-issues", pieceId],
+    queryFn: () => office().capture.piecesIssuesDe(pieceId),
+  });
+
+  /** Les types de document du référentiel, traduits — pour NOMMER un joint. */
+  const typesDoc = useQuery({
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+  const nomDuType = (code: string | null) =>
+    code ? ((typesDoc.data ?? []).find((ty) => ty.code === code)?.libelle ?? null) : null;
+
+  /**
+   * Sortir la pièce de l'écran.
+   *
+   * Les octets sont déjà là — l'affichage les a chargés. Le nom donné au
+   * fichier porte la référence du document quand elle a été lue : un dossier
+   * de déclaration qui reçoit douze fichiers « piece.pdf » est un dossier
+   * qu'on ne peut pas relire.
+   */
+  const telecharger = useMutation({
+    mutationFn: async () => {
+      const octets = dossier.data?.contenu;
+      if (!octets) return null;
+      const payload = dossier.data?.extraction?.payload as
+        { references?: Record<string, string> } | undefined;
+      const ref = payload?.references
+        ? Object.values(payload.references).find((v) => v && v.trim().length > 0)
+        : null;
+      const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
+      const { chemin } = await enregistrerUnFichier(octets, `${ref ?? pieceId}.pdf`);
+      return chemin;
+    },
+    onSuccess: (chemin) => setCheminEnregistre(chemin),
+    onError: (e: unknown) =>
+      setError(
+        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
+      ),
+  });
+
+  /**
+   * Et un document joint — le reçu, un talon.
+   *
+   * Ses octets ne sont pas chargés : on les demande à la lecture du dossier de
+   * CETTE pièce-là, par la même route sous RLS. Les précharger tous rendrait
+   * l'écran lent pour un geste qu'on fait rarement.
+   */
+  const telechargerUnJoint = useMutation({
+    mutationFn: async (jointId: string) => {
+      const d = await office().capture.dossier(jointId);
+      if (!d.contenu) return null;
+      const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
+      const nom = nomDuType(d.piece.documentKind) ?? jointId;
+      const { chemin } = await enregistrerUnFichier(d.contenu, `${nom}.pdf`);
+      return chemin;
+    },
+    onSuccess: (chemin) => setCheminEnregistre(chemin),
+    onError: (e: unknown) =>
+      setError(
+        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
+      ),
+  });
+
   const repondre = useMutation({
     mutationFn: ({ accorde }: { accorde: boolean }) =>
       office().collab.repondreSurPiece(
@@ -480,7 +551,74 @@ function CabinetReview() {
         <section className="min-w-0 space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
-            <DocumentView contenu={contenu} highlight={zoom} label={t("cab.review.document")} />
+            <>
+              <DocumentView contenu={contenu} highlight={zoom} label={t("cab.review.document")} />
+              {/*
+               * ============================================ SORTIR LA PIÈCE DE L'ÉCRAN
+               *
+               * 11 octobre 2026 : « le cabinet peut faire le download de la
+               * facture ou n'importe quel document partagé ».
+               *
+               * Les octets étaient déjà chargés pour l'affichage. Un expert
+               * qui doit joindre une facture à une déclaration n'avait
+               * pourtant aucun moyen de la sortir : il ne restait que la
+               * capture d'écran.
+               */}
+              <button
+                type="button"
+                onClick={() => telecharger.mutate()}
+                disabled={telecharger.isPending}
+                className="inline-flex h-9 items-center gap-2 border border-border px-3 text-[13px] font-medium hover:bg-accent disabled:opacity-40"
+              >
+                <Download className="h-[14px] w-[14px]" aria-hidden />
+                {telecharger.isPending ? t("common.loading") : t("cab.review.telecharger")}
+              </button>
+              {cheminEnregistre ? (
+                <p className="text-[12px] text-text-2">
+                  {t("cab.review.enregistre", { chemin: cheminEnregistre })}
+                </p>
+              ) : null}
+
+              {/*
+               * ===================================== CE QUI ACCOMPAGNE LA PIÈCE
+               *
+               * Le reçu de paiement, les talons de chèque. Ils sont transmis
+               * avec la facture et étaient introuvables depuis elle : le lien
+               * existait en base, aucun écran ne le suivait.
+               */}
+              {(joints.data ?? []).length > 0 ? (
+                <>
+                  <SectionTitle>{t("cab.review.joints")}</SectionTitle>
+                  <ul className="grid gap-px border border-border bg-border">
+                    {(joints.data ?? []).map((j) => (
+                      <li
+                        key={j.id}
+                        className="flex items-center justify-between gap-3 bg-card px-3 py-2"
+                      >
+                        {/*
+                         * Le libellé vient du RÉFÉRENTIEL, traduit. Un
+                         * « recu_de_paiement » affiché tel quel est un
+                         * identifiant machine à l'écran — le défaut « ISSUER »
+                         * du 5 octobre, sous un autre nom.
+                         */}
+                        <span className="truncate text-[13px]">
+                          {nomDuType(j.documentKind) ?? t("cab.review.document")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => telechargerUnJoint.mutate(j.id)}
+                          disabled={telechargerUnJoint.isPending}
+                          className="inline-flex h-8 shrink-0 items-center gap-1.5 border border-border px-2.5 text-[12.5px] font-medium hover:bg-accent disabled:opacity-40"
+                        >
+                          <Download className="h-[13px] w-[13px]" aria-hidden />
+                          {t("cab.review.telecharger")}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </>
           ) : (
             <p className="border border-border bg-card p-3 text-xs text-muted-foreground">
               {t("cab.review.nodoc")}

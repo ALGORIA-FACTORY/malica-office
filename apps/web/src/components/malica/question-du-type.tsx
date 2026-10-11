@@ -56,10 +56,14 @@ export function QuestionDuType({
 }) {
   const { t, locale } = useI18n();
   const types = useQuery({
-    queryKey: ["types-capture", locale],
-    queryFn: () => office().referential.typesDeDocumentALaCapture(locale),
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
     staleTime: 60 * 60 * 1000,
   });
+
+  // Six, pas les dix-sept du pack : choisir dans une liste de dix-sept est un
+  // autre genre d'abandon. Le référentiel dit lesquels, par son drapeau.
+  const proposes = (types.data ?? []).filter((ty) => ty.proposeALaCapture);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/40">
@@ -77,7 +81,7 @@ export function QuestionDuType({
         </p>
 
         <div className="mt-4 grid gap-1.5">
-          {(types.data ?? []).map((ty) => (
+          {proposes.map((ty) => (
             <button
               key={ty.code}
               type="button"

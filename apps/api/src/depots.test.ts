@@ -132,7 +132,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       ["referentiel", "accountMappings", [pack]],
       ["referentiel", "fiscalCharges", [pack]],
       ["referentiel", "taxRates", [pack, "TN"]],
-      ["referentiel", "typesDeDocumentALaCapture", ["fr"]],
+      ["referentiel", "typesDeDocument", ["fr"]],
       ["referentiel", "moyensDePaiement", [pack, "fr", "2026-10-11"]],
       ["capture", "paiementsDUnePiece", [NEANT]],
 
