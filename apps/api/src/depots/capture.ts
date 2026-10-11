@@ -70,6 +70,15 @@ export const capture = {
       idempotencyKey: string;
       contentType?: string | null;
       pageCount?: number | null;
+      /**
+       * Ce que la personne a DÉCLARÉ au moment de la photo.
+       *
+       * Déclaré, pas vérifié : le statut posé est « a_confirmer », et la
+       * lecture pourra le contredire — c'est elle qui tranche, par la
+       * position du matricule. Une déclaration est une intention, pas une
+       * preuve.
+       */
+      documentKind?: string | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
@@ -77,7 +86,7 @@ export const capture = {
     // par la route de dépôt (stockage.ts, capture_sceller_empreinte).
     const { rows } = await db.query<{ id: string }>(
       `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t,
-                                            null, $7::smallint) as id`,
+                                            null, $7::smallint, $8) as id`,
       [
         input.tenantId,
         input.source,
@@ -88,6 +97,7 @@ export const capture = {
         input.entityId ?? null,
         input.vis,
         input.pageCount ?? null,
+        input.documentKind ?? null,
       ],
     );
     const id = rows[0]!.id;
