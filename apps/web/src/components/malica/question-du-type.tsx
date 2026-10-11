@@ -35,12 +35,22 @@ import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 
+/**
+ * ============================================ UNE QUESTION POUR TOUT LE LOT
+ *
+ * 11 octobre 2026, avec l'arrivée des PDF par lots : dix documents ne font
+ * pas dix questions. Un lot est presque toujours d'une seule nature — un mois
+ * d'achats, un carnet de ventes — et dix questions d'affilée sont dix
+ * occasions d'abandonner, la dixième recevant une réponse au hasard.
+ *
+ * Chaque pièce reste retypable ensuite, sur son écran.
+ */
 export function QuestionDuType({
-  nomDuFichier,
+  documents,
   onRepondre,
   onPasser,
 }: {
-  nomDuFichier: string;
+  documents: readonly string[];
   onRepondre: (code: string) => void;
   onPasser: () => void;
 }) {
@@ -57,7 +67,14 @@ export function QuestionDuType({
         <p className="text-[20px] font-semibold leading-[1.2] tracking-[-0.02em]">
           {t("pme.type.titre")}
         </p>
-        <p className="mt-1 truncate text-[12.5px] text-text-2">{nomDuFichier}</p>
+        {/*
+         * Un seul document : son nom, qui dit à la personne de quoi on parle.
+         * Plusieurs : leur nombre, parce que dix noms de fichiers empilés ne
+         * renseignent sur rien et poussent les boutons sous l'écran.
+         */}
+        <p className="mt-1 truncate text-[12.5px] text-text-2">
+          {documents.length === 1 ? documents[0] : t("pme.type.lot", { count: documents.length })}
+        </p>
 
         <div className="mt-4 grid gap-1.5">
           {(types.data ?? []).map((ty) => (

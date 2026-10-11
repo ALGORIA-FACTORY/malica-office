@@ -18,29 +18,43 @@ export interface PickedFile {
 const IMAGE_ACCEPT = "image/*";
 const PDF_ACCEPT = "application/pdf";
 
-function pick(accept: string, capture: boolean): Promise<PickedFile | null> {
+/**
+ * Choisir des fichiers.
+ *
+ * ================================================= POURQUOI « PLUSIEURS »
+ *
+ * 11 octobre 2026 : « et l'upload plusieurs doc pdf ? »
+ *
+ * L'entrée n'avait pas l'attribut `multiple` : un document à la fois. Pour
+ * quelqu'un qui rattrape un mois de factures, c'est trente allers-retours —
+ * et trente occasions d'arrêter en route.
+ *
+ * `plusieurs` ne change rien au cas d'un seul : l'appel rend un tableau, et
+ * un tableau d'un élément se traite comme avant. La photo, elle, reste
+ * unitaire : on ne prend pas deux photos à la fois, et le multi-page d'UNE
+ * pièce a déjà son chemin.
+ */
+function pick(accept: string, capture: boolean, plusieurs: boolean): Promise<PickedFile[]> {
   return new Promise((resolve) => {
     if (typeof document === "undefined") {
-      resolve(null);
+      resolve([]);
       return;
     }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = accept;
     if (capture) input.setAttribute("capture", "environment");
+    if (plusieurs) input.multiple = true;
     input.onchange = () => {
-      const file = input.files?.[0] ?? null;
       resolve(
-        file
-          ? {
-              blob: file,
-              name: file.name,
-              source: file.type === "application/pdf" ? "pdf" : "photo",
-            }
-          : null,
+        [...(input.files ?? [])].map((file) => ({
+          blob: file,
+          name: file.name,
+          source: file.type === "application/pdf" ? ("pdf" as const) : ("photo" as const),
+        })),
       );
     };
-    input.oncancel = () => resolve(null);
+    input.oncancel = () => resolve([]);
     input.click();
   });
 }
@@ -48,14 +62,29 @@ function pick(accept: string, capture: boolean): Promise<PickedFile | null> {
 /**
  * Une image ne quitte jamais cette frontière : elle est cadrée, redressée puis
  * encodée en PDF. Aucune pièce n'est stockée en image.
+ *
+ * Le cadrage se fait EN SÉRIE, une image après l'autre. Dix images cadrées
+ * ensemble font dix canevas vivants en même temps, et un téléphone d'entrée
+ * de gamme rend l'âme avant la cinquième.
  */
-async function scan(accept: string, capture: boolean): Promise<PickedFile | null> {
-  const picked = await pick(accept, capture);
-  if (!picked) return null;
-  if (picked.source === "pdf") return picked;
-  const base = picked.name.replace(/\.[^.]+$/, "") || "piece";
-  const scanned = await scanToPdf(picked.blob, base);
-  return { blob: scanned.blob, name: scanned.name, source: "photo", cropped: scanned.cropped };
+async function scan(accept: string, capture: boolean, plusieurs = false): Promise<PickedFile[]> {
+  const choisis = await pick(accept, capture, plusieurs);
+  const prets: PickedFile[] = [];
+  for (const picked of choisis) {
+    if (picked.source === "pdf") {
+      prets.push(picked);
+      continue;
+    }
+    const base = picked.name.replace(/\.[^.]+$/, "") || "piece";
+    const scanned = await scanToPdf(picked.blob, base);
+    prets.push({
+      blob: scanned.blob,
+      name: scanned.name,
+      source: "photo",
+      cropped: scanned.cropped,
+    });
+  }
+  return prets;
 }
 
 /**
@@ -80,9 +109,13 @@ export const files = {
    * rendent la même chose : des pages déjà redressées.
    */
   scannerDeLAppareil: numeriseurDeLAppareil,
+  /** Une photo : on n'en prend pas deux à la fois. */
   takePhoto: () => scan(IMAGE_ACCEPT, true),
-  pickImage: () => scan(IMAGE_ACCEPT, false),
-  pickPdf: () => pick(PDF_ACCEPT, false),
+  /** Plusieurs images d'un coup — autant de pièces, chacune cadrée. */
+  pickImages: () => scan(IMAGE_ACCEPT, false, true),
+  /** Plusieurs PDF d'un coup : c'est le cas du rattrapage d'un mois. */
+  pickPdfs: () => pick(PDF_ACCEPT, false, true),
+  /** Plusieurs PAGES d'UNE pièce — à ne pas confondre avec ce qui précède. */
   scanPages,
   newIdempotencyKey: () => crypto.randomUUID(),
 };

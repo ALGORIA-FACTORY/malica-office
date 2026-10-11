@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { FileUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { FileLocale } from "@/components/malica/file-locale";
@@ -193,6 +194,30 @@ function VosDocuments() {
             ? t("pme.doc.lead.mois", { count: duMois.length, mois: nomDuMois(mois) })
             : t("pme.doc.lead.annee", { count: toutes.length })}
         </p>
+
+        {/*
+         * ===================================== L'IMPORT DE FICHIERS, ENFIN VISIBLE
+         *
+         * 11 octobre 2026 : « et l'upload plusieurs doc pdf ? »
+         *
+         * Le chemin existait dans le code — le contexte portait `capture("pdf")`
+         * depuis des semaines — et AUCUN écran ne l'appelait. Un dirigeant qui
+         * reçoit ses factures par courriel n'avait que l'appareil photo :
+         * photographier un écran pour envoyer un PDF.
+         *
+         * Ici, et pas sur l'obturateur : c'est l'écran du rattrapage, celui
+         * où l'on vient quand un mois est en retard. Et l'entrée accepte
+         * plusieurs fichiers d'un coup.
+         */}
+        <button
+          type="button"
+          onClick={() => pme.capture("pdf")}
+          disabled={pme.capturing}
+          className="mt-3 inline-flex min-h-[40px] items-center gap-2 border border-border px-3 text-[13px] font-medium hover:bg-accent disabled:opacity-40"
+        >
+          <FileUp className="h-[15px] w-[15px]" aria-hidden />
+          {t("pme.doc.importer")}
+        </button>
       </div>
 
       {vue === "mois" ? (
