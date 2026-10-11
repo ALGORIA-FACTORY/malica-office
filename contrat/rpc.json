@@ -149,10 +149,12 @@
     "bookedExtracts",
     "ecrituresByIds",
     "ecrituresForPiece",
+    "extraitsTransmis",
     "periodeLignes",
     "propose",
     "proposerDepuisPiece",
-    "propositionDePiece"
+    "propositionDePiece",
+    "transmisesSansDate"
   ],
   "parametrage": [
     "calendrierCabinet",

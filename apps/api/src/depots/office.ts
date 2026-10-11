@@ -198,4 +198,81 @@ export const office = {
       extract: r["payload"],
     }));
   },
+
+  /**
+   * Les lectures des pièces TRANSMISES dans la fenêtre, avec leur date d'envoi.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Décision du commanditaire, 10 octobre 2026 : « le calcul de TVA dans le
+   * dashboard serait imputé à la date de transmission au comptable, car le
+   * comptable est censé la déclarer dans le mois courant ».
+   *
+   * C'est la réponse à une contradiction qu'il voyait depuis le 5 octobre :
+   * « Vos charges » affichait 514,700 et « Votre TVA » zéro, pour le même
+   * mois. Les deux avaient raison — l'un lisait les pièces LUES, l'autre les
+   * pièces COMPTABILISÉES — et aucun ne disait lequel.
+   *
+   * Sa règle tranche, et elle est juste pour une raison simple : une TVA se
+   * récupère sur une déclaration, une déclaration est déposée par le cabinet,
+   * et le cabinet ne peut déclarer que ce qu'il a reçu. Une pièce gardée au
+   * coffre n'entre dans aucune déclaration, et doit donc peser zéro.
+   *
+   * ================================= POURQUOI CETTE MÉTHODE, ET PAS `bookedExtracts`
+   *
+   * `bookedExtracts` sélectionne sur la date d'ÉCRITURE et sert au cabinet —
+   * c'est son journal, et il a raison de le voir ainsi. Les deux lectures
+   * coexistent, chacune nommée, et chaque écran dit laquelle il emploie :
+   * c'est cette mention, et non la règle, qui empêche deux chiffres de se
+   * contredire en silence.
+   *
+   * Noter ce que `bookedExtracts` faisait, et qui était incohérent : il
+   * sélectionnait par date d'écriture puis l'appelant regroupait par date de
+   * DOCUMENT. Une facture de février comptabilisée en octobre était donc
+   * retenue, puis rangée en février — dans un mois que la fenêtre n'avait pas
+   * demandé.
+   *
+   * ============================================ CE QU'UNE DATE NULLE VEUT DIRE
+   *
+   * Les pièces transmises avant le 11 octobre n'ont pas de date d'envoi : la
+   * transmission n'était qu'un drapeau. Elles ne sont dans aucune fenêtre, et
+   * c'est voulu — leur donner la date du jour les ferait toutes entrer dans la
+   * déclaration du mois courant, ce qui serait faux et invisible. L'écran les
+   * nomme à part.
+   */
+  async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
+    const { rows } = await db.query(
+      `select distinct on (x.piece_id)
+              x.piece_id, x.payload, p.transmise_le
+         from extractions_v x
+         join pieces_v p on p.id = x.piece_id
+        where p.tenant_id = $1
+          and p.transmise_le >= $2::date
+          and p.transmise_le < ($3::date + interval '1 day')
+          and x.contract = 'extract.v1'
+        order by x.piece_id, x.created_at desc`,
+      [tenantId, from, to],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      pieceId: r["piece_id"] as string,
+      extract: r["payload"],
+      transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+    }));
+  },
+
+  /**
+   * Combien de pièces sont parties au cabinet sans qu'on sache quand.
+   *
+   * Elles ne pèsent dans aucune déclaration, et il faut pouvoir le dire :
+   * une pièce qui disparaît des totaux sans que rien ne la nomme est pire
+   * qu'une pièce mal rangée.
+   */
+  async transmisesSansDate(db: Requete, tenantId: string): Promise<number> {
+    const { rows } = await db.query<{ n: string }>(
+      `select count(*)::text as n from pieces_v
+        where tenant_id = $1 and vis = 'partage' and transmise_le is null`,
+      [tenantId],
+    );
+    return Number(rows[0]?.n ?? 0);
+  },
 };

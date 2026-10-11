@@ -386,6 +386,14 @@ const fr = {
     "{mois} est prêt à {pourcent} %. Dès que les dernières factures arrivent, je termine le calcul.",
   "pme.tva.source":
     "Chaque montant vient d'une pièce que vous avez confirmée. Je ne calcule rien que je ne puisse citer.",
+  "pme.tva.rangee":
+    "Une pièce compte dans le mois où vous l'avez envoyée à votre comptable — c'est lui qui la déclare. Vos charges, elles, se rangent à la date de la facture.",
+  "pme.tva.sansDate":
+    "{count} pièces sont parties avant que je note la date d'envoi : elles ne sont dans aucun mois. À reprendre avec votre comptable.",
+  "pme.tva.sansDate#one":
+    "Une pièce est partie avant que je note la date d'envoi : elle n'est dans aucun mois. À reprendre avec votre comptable.",
+  "pme.tva.sansDate#other":
+    "{count} pièces sont parties avant que je note la date d'envoi : elles ne sont dans aucun mois. À reprendre avec votre comptable.",
   "pme.tva.title": "TVA de la période",
   "pme.tva.period": "Période",
   "pme.tva.collectee": "TVA collectée",
@@ -2612,6 +2620,14 @@ const en: Dict = {
     "{mois} is {pourcent} % ready. As soon as the last invoices arrive, I finish the calculation.",
   "pme.tva.source":
     "Every amount comes from a document you confirmed. I compute nothing I cannot cite.",
+  "pme.tva.rangee":
+    "A document counts in the month you sent it to your accountant — they are the one who files it. Your expenses, in contrast, sit at the invoice date.",
+  "pme.tva.sansDate":
+    "{count} documents went out before I recorded the send date: they are in no month. To be sorted out with your accountant.",
+  "pme.tva.sansDate#one":
+    "One document went out before I recorded the send date: it is in no month. To be sorted out with your accountant.",
+  "pme.tva.sansDate#other":
+    "{count} documents went out before I recorded the send date: they are in no month. To be sorted out with your accountant.",
   "pme.tva.title": "VAT for the period",
   "pme.tva.period": "Period",
   "pme.tva.collectee": "Output VAT",
@@ -4793,6 +4809,14 @@ const ar: Dict = {
   "pme.tva.mois.aVenir": "لم يحن بعد",
   "pme.tva.manque": "{mois} جاهز بنسبة {pourcent} %. حالما تصل آخر الفواتير أُنهي الاحتساب.",
   "pme.tva.source": "كل مبلغ مصدره وثيقة أكّدتها. لا أحتسب شيئًا لا أستطيع الاستشهاد بمصدره.",
+  "pme.tva.rangee":
+    "تُحتسب الوثيقة في الشهر الذي أرسلتَها فيه إلى محاسبك — فهو من يصرّح بها. أمّا مصاريفك فتُرتَّب حسب تاريخ الفاتورة.",
+  "pme.tva.sansDate":
+    "{count} وثائق غادرت قبل أن أسجّل تاريخ الإرسال: ليست في أي شهر. تُراجَع مع محاسبك.",
+  "pme.tva.sansDate#one":
+    "وثيقة واحدة غادرت قبل أن أسجّل تاريخ الإرسال: ليست في أي شهر. تُراجَع مع محاسبك.",
+  "pme.tva.sansDate#other":
+    "{count} وثائق غادرت قبل أن أسجّل تاريخ الإرسال: ليست في أي شهر. تُراجَع مع محاسبك.",
   "pme.tva.title": "الأداء على القيمة المضافة للفترة",
   "pme.tva.period": "الفترة",
   "pme.tva.collectee": "الأداء المحصَّل",

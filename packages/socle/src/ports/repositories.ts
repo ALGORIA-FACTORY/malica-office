@@ -815,6 +815,20 @@ export interface OfficeRepository {
     from: string,
     to: string,
   ): Promise<Array<{ pieceId: string; extract: unknown }>>;
+  /**
+   * Les lectures des pièces TRANSMISES au cabinet dans la fenêtre.
+   *
+   * La lecture de la PME, là où `bookedExtracts` est celle du cabinet. Une
+   * TVA se récupère sur une déclaration, et le cabinet ne déclare que ce
+   * qu'il a reçu : une pièce gardée au coffre pèse zéro, et c'est juste.
+   */
+  extraitsTransmis(
+    tenantId: string,
+    from: string,
+    to: string,
+  ): Promise<Array<{ pieceId: string; extract: unknown; transmiseLe: string }>>;
+  /** Les pièces parties au cabinet sans qu'on sache quand. Voir `extraitsTransmis`. */
+  transmisesSansDate(tenantId: string): Promise<number>;
 }
 
 // --------------------------------------------------------------- supervision
