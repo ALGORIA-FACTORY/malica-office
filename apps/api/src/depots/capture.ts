@@ -769,4 +769,101 @@ export const capture = {
     await effacerContenu(tenantId, pieceId);
     return true;
   },
+
+  /**
+   * Inscrire un paiement sur une pièce.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Demandé le 10 octobre 2026 : après la lecture, le moyen de paiement, et
+   * la photo de son justificatif sauf en espèces.
+   *
+   * =========================================== UN PAIEMENT S'AJOUTE, IL NE SE CORRIGE PAS
+   *
+   * La table est append-only (R7). Un acompte puis un solde font DEUX lignes,
+   * et c'est la réalité : une colonne sur la pièce aurait dit « payée par
+   * chèque » là où il y a eu des espèces le 3 et un chèque le 28.
+   *
+   * Une erreur se corrige donc par un paiement d'annulation, daté, qui laisse
+   * l'histoire lisible — jamais en réécrivant celui d'avant.
+   *
+   * ============================================ CE QUE CETTE MÉTHODE VÉRIFIE
+   *
+   * Que le moyen existe AU PACK, à la date du paiement. Un code inventé
+   * passerait sinon sans bruit et l'écriture s'appuierait sur un compte de
+   * trésorerie qui n'existe pas — faute invisible jusqu'à la balance.
+   *
+   * Ce qu'elle NE vérifie PAS : la présence du justificatif. Un dirigeant qui
+   * n'a pas son talon sous la main doit pouvoir avancer, la pièce marquée
+   * comme il se doit. Un écran qui refuse se contourne en cochant
+   * « espèces », et l'information est perdue au lieu d'être gagnée.
+   */
+  async enregistrerPaiement(
+    db: Requete,
+    input: {
+      pieceId: string;
+      packId: string;
+      moyenCode: string;
+      /** En unités mineures. Nul quand rien n'a encore été payé. */
+      montantMineur?: number | null;
+      devise: string;
+      payeLe?: string | null;
+      justificatifPieceId?: string | null;
+    },
+  ): Promise<string> {
+    const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
+    const { rows: moyen } = await db.query<{ code: string }>(
+      `select code from ref_payment_means_v
+        where pack_version_id = $1 and code = $2
+          and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
+      [input.packId, input.moyenCode, au],
+    );
+    if (moyen.length === 0) {
+      throw Object.assign(
+        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
+        { code: "22023" },
+      );
+    }
+
+    const { rows } = await db.query<{ id: string }>(
+      `insert into capture.paiements
+         (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
+          montant_mineur, devise, paye_le, justificatif_piece_id)
+       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
+              $4::bigint, $5, $6::date, $7
+         from pieces_v p where p.id = $1
+       returning id`,
+      [
+        input.pieceId,
+        input.moyenCode,
+        input.packId,
+        input.montantMineur ?? null,
+        input.devise,
+        input.payeLe ?? null,
+        input.justificatifPieceId ?? null,
+      ],
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error("piece introuvable ou non autorisee");
+    return id;
+  },
+
+  /** Les paiements d'une pièce, du plus ancien au plus récent. */
+  async paiementsDUnePiece(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select id, moyen_code, montant_mineur, devise, paye_le,
+              justificatif_piece_id, created_at
+         from paiements_v where piece_id = $1 order by created_at`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r["id"] as string,
+      moyenCode: r["moyen_code"] as string,
+      montantMineur: r["montant_mineur"] === null ? null : Number(r["montant_mineur"]),
+      devise: r["devise"] as string,
+      payeLe: (r["paye_le"] as string | null) ?? null,
+      justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,
+      createdAt: (r["created_at"] as Date).toISOString(),
+    }));
+  },
 };

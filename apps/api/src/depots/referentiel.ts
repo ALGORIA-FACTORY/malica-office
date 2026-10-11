@@ -211,4 +211,50 @@ export const referentiel = {
       transmissible: Boolean(r["transmissible"]),
     }));
   },
+
+  /**
+   * Les moyens de paiement du pack, traduits, en vigueur à une date.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Le référentiel a été posé le 11 octobre 2026 — huit moyens, leur compte
+   * de trésorerie, vingt-quatre libellés traduits — et personne ne le lisait.
+   * Pendant ce temps la même nomenclature vivait en dur dans deux écrans du
+   * cabinet, trois fois plus pauvre : trois moyens au lieu de huit, et une
+   * quatrième liste dans un commentaire de port qui inventait « carte ».
+   *
+   * C'est le motif récurrent de ce dépôt à l'état pur : l'outil est
+   * construit, daté, traduit, commenté — et le consommateur ne l'importe pas.
+   *
+   * ======================================== POURQUOI UNE DATE, ET PAS « MAINTENANT »
+   *
+   * Un moyen de paiement a une date d'effet : un cabinet peut en retirer un,
+   * et les pièces d'avant doivent garder celui qu'elles portaient. La date
+   * est donc donnée par l'appelant — celle de la pièce — et non lue à
+   * l'horloge (R11).
+   */
+  async moyensDePaiement(db: Requete, packId: string, locale: string, au: string) {
+    const { rows } = await db.query(
+      `select m.code, m.tresorerie_account, m.exige_justificatif, m.rang,
+              coalesce(demandee.value, francais.value, m.libelle) as libelle
+         from ref_payment_means_v m
+         left join ref_labels_v demandee
+           on demandee.ns = 'moyen_paiement' and demandee.key = m.code
+          and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'moyen_paiement' and francais.key = m.code
+          and francais.locale = 'fr'
+        where m.pack_version_id = $1
+          and m.valid_from <= $3::date
+          and (m.valid_to is null or m.valid_to >= $3::date)
+        order by m.rang`,
+      [packId, locale, au],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      code: r["code"] as string,
+      libelle: r["libelle"] as string,
+      tresorerieAccount: (r["tresorerie_account"] as string | null) ?? null,
+      exigeJustificatif: Boolean(r["exige_justificatif"]),
+    }));
+  },
 };

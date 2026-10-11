@@ -287,6 +287,25 @@ export interface ReferentialRepository {
    * autre genre d'abandon. Le libellé vient de `ref.labels`, pas de la
    * colonne française.
    */
+  /**
+   * Les moyens de paiement du pack, traduits, en vigueur à une date.
+   *
+   * La date vient de l'appelant — celle de la pièce — et non de l'horloge :
+   * un cabinet peut retirer un moyen, et les pièces d'avant gardent celui
+   * qu'elles portaient.
+   */
+  moyensDePaiement(
+    packId: string,
+    locale: string,
+    au: string,
+  ): Promise<
+    Array<{
+      code: string;
+      libelle: string;
+      tresorerieAccount: string | null;
+      exigeJustificatif: boolean;
+    }>
+  >;
   typesDeDocumentALaCapture(locale: string): Promise<
     Array<{
       code: string;
@@ -631,6 +650,19 @@ export interface FaitDeDemande {
   createdAt: string;
 }
 
+/** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
+export interface PaiementDUnePiece {
+  id: string;
+  moyenCode: string;
+  /** En unités mineures. Nul quand rien n'a encore été payé. */
+  montantMineur: number | null;
+  devise: string;
+  payeLe: string | null;
+  /** La photo du talon, du ticket ou de l'avis — une pièce à part entière. */
+  justificatifPieceId: string | null;
+  createdAt: string;
+}
+
 export interface Citation {
   field: string;
   page: number;
@@ -745,6 +777,24 @@ export interface CaptureRepository {
    * un mois qui peut en compter cinquante.
    */
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
+  /**
+   * Inscrire un paiement sur une pièce. Append-only (R7).
+   *
+   * Un acompte puis un solde font DEUX lignes : une colonne sur la pièce
+   * dirait « payée par chèque » là où il y a eu des espèces le 3 et un
+   * chèque le 28. Une erreur se corrige par un paiement d'annulation, daté.
+   */
+  enregistrerPaiement(input: {
+    pieceId: string;
+    packId: string;
+    moyenCode: string;
+    montantMineur?: number | null;
+    devise: string;
+    payeLe?: string | null;
+    justificatifPieceId?: string | null;
+  }): Promise<string>;
+  /** Les paiements d'une pièce, du plus ancien au plus récent. */
+  paiementsDUnePiece(pieceId: string): Promise<PaiementDUnePiece[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
    * Ce que la personne précise quand la lecture ne pouvait pas conclure —

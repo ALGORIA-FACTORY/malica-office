@@ -27,6 +27,7 @@ import type {
   PieceStatus,
   PieceLue,
   Token,
+  PaiementDUnePiece,
 } from "@malica/socle/ports/repositories";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
@@ -65,6 +66,15 @@ export function creerCaptureHttp(): CaptureRepository {
     // L'API rend déjà la forme du port : rien à transposer ici.
     async listAvecLecture(tenantId: string): Promise<PieceLue[]> {
       return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
+    },
+
+    // Le paiement d'une pièce : l'API rend déjà la forme du port.
+    async enregistrerPaiement(input: Parameters<CaptureRepository["enregistrerPaiement"]>[0]) {
+      return rpc<string>("capture", "enregistrerPaiement", [input]);
+    },
+
+    async paiementsDUnePiece(pieceId: string) {
+      return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
     },
 
     async enregistrer(piece: NouvellePiece): Promise<string> {
