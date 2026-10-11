@@ -335,6 +335,10 @@ Les trois cas où c'est indispensable :
 Une valeur qui tient dans un seul token n'a pas de "ordinal_end" : « 220,000 » se cite seul.
 La plage ne sert qu'à CITER plus large, jamais à assembler ce qui n'est pas contigu : les tokens
 d'une plage doivent se suivre, et porter une seule valeur.
+UNE PLAGE NE COUVRE JAMAIS DEUX MONTANTS. Beaucoup de factures répètent le même total côte à côte
+(pied de colonne, puis récapitulatif) : « 514,700 514,700 » est DEUX montants, pas un montant en
+deux tokens. Cite le premier seul. Le repère est la VIRGULE DÉCIMALE : si la plage que tu désignes
+en contient deux, elle est trop large.
 ARTICLES : une entrée par ligne du tableau des articles/prestations, dans l'ordre imprimé.
 N'OMETS AUCUNE LIGNE du tableau, même sans prix unitaire, même sur plusieurs pages.
 Méthode imposée : repère d'abord la ligne d'ENTÊTES du tableau (Désignation, Qté, P.U., P.U. TTC,

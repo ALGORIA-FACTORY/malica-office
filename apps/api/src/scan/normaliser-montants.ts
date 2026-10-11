@@ -137,7 +137,57 @@ const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
 const ESPACES = /[\s\u00A0\u202F]/u;
 
 /** Les lectures possibles d'un montant imprimé. Vide : illisible. */
+/**
+ * Les blocs d'une plage qui a couvert le MÊME montant plusieurs fois.
+ *
+ * ================================================================= POURQUOI
+ *
+ * 10 octobre 2026. La facture PAPETERIE NOUR reste bloquée sur « montant
+ * illisible : « 514,700 514,700 » ».
+ *
+ * C'est l'envers de la plage de jetons ouverte le 5 octobre pour recoller
+ * « 2 800,000 », que l'espace des milliers coupait en deux. Une plage peut
+ * désormais couvrir deux montants — ici le même, imprimé deux fois côte à
+ * côte, comme le font les factures qui répètent le total en pied de colonne.
+ *
+ * Deux virgules décimales : aucune lecture ne tient, et la chaîne a eu raison
+ * de ne rien rendre plutôt que d'inventer.
+ *
+ * ========================================== POURQUOI CE N'EST PAS UNE SUPPOSITION
+ *
+ * Quand les blocs répétés sont TEXTUELLEMENT IDENTIQUES, il n'y a qu'une
+ * valeur possible — quel que soit l'endroit où la plage aurait dû s'arrêter,
+ * on lit le même nombre. Rendre cette valeur ne choisit rien.
+ *
+ * La règle est donc volontairement étroite, et deux choses la bornent :
+ *
+ *   — des blocs DIFFÉRENTS ne se départagent pas. « 514,700 200,000 » reste
+ *     illisible, parce qu'on ne sait pas lequel était visé ;
+ *   — elle ne s'applique qu'APRÈS l'échec de la lecture entière, donc
+ *     « 2 800,000 » se recolle comme avant — ses blocs ne sont pas identiques.
+ *
+ * R2 tient : aucune valeur n'est inventée, et celle-ci pointe toujours vers
+ * les jetons de la plage.
+ */
+function blocsIdentiques(texte: string): string | null {
+  // `\s` couvre déjà l'espace insécable et l'espace fine insécable. Les
+  // écrire eux-mêmes dans une classe les ferait entrer littéralement dans le
+  // fichier, invisibles — ce que le lint refuse, à juste titre.
+  const blocs = texte.split(/\s+/u).filter((b) => b.length > 0);
+  if (blocs.length < 2) return null;
+  return blocs.every((b) => b === blocs[0]) ? blocs[0]! : null;
+}
+
 export function candidatsMontant(brut: string, decimales: number): Candidat[] {
+  const repete = blocsIdentiques(brut.trim());
+  if (repete !== null) {
+    const lectures = candidatsMontant(repete, decimales);
+    // La répétition ne sert que si elle DÉBLOQUE. Si le texte entier se lit
+    // déjà, c'est lui qui fait foi : « 2 2 » peut être deux fois deux, et la
+    // lecture entière le dit mieux que la règle.
+    if (lectures.length > 0 && candidatsMontant(brut.replace(/\s+/gu, ""), decimales).length === 0)
+      return lectures;
+  }
   let texte = brut.trim();
   // La devise, collée ou non, en tête ou en queue — et rien d'autre de littéral.
   texte = texte.replace(

@@ -65,8 +65,20 @@ export interface Accueil {
   aReverser: string | null;
   /** Part des pièces du mois déjà comptabilisées, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
-  /** Combien de documents le mois porte, tous états confondus. */
-  documents: number;
+  /**
+   * Les pièces qui attendent une réponse DU DIRIGEANT : lues, et pas encore
+   * confirmées.
+   *
+   * Ce n'est pas un compte par mois, et c'est voulu. Le 10 octobre, l'accueil
+   * disait « Presque » à 0 % et « quelques factures » sans en connaître le
+   * nombre. Compter ce qui attend une réponse est vrai, actionnable, et
+   * n'oblige pas à choisir entre la date de la photo et celle de la facture —
+   * un dossier n'a qu'une pile d'attente, pas une par mois.
+   */
+  enAttente: number;
+  /** Les pièces LUES du dossier, et celles qui ne le sont pas encore. */
+  documentsLus: number;
+  documentsNonLus: number;
   /**
    * Vrai quand le dossier n'a JAMAIS reçu de pièce, tous mois confondus.
    *
@@ -232,19 +244,37 @@ export function useAccueil(periode: string): Accueil {
   }, [lignes.data, periode, devise, decimales]);
 
   // ----------------------------------------------------------- l'avancement
-  const { avancement, documents, jamaisRienDepose, retournees } = useMemo(() => {
-    const liste = pieces.data ?? [];
-    const duMois = liste.filter((p) => p.createdAt.slice(0, 7) === periode);
-    const closes = duMois.filter(
-      (p) => p.status === "comptabilisee" || p.status === "supervisee",
-    ).length;
-    return {
-      avancement: duMois.length === 0 ? null : closes / duMois.length,
-      documents: duMois.length,
-      jamaisRienDepose: liste.length === 0,
-      retournees: liste.filter((p) => p.status === "retournee").length,
-    };
-  }, [pieces.data, periode]);
+  const { avancement, enAttente, documentsLus, documentsNonLus, jamaisRienDepose, retournees } =
+    useMemo(() => {
+      const liste = pieces.data ?? [];
+      /*
+       * ======================================= LES ÉTATS, ET CE QU'ILS VEULENT DIRE
+       *
+       * capturee                       déposée, pas encore lue
+       * lue · proposee                 lue, et elle attend le dirigeant
+       * confirmee                      il a répondu, le cabinet suit
+       * comptabilisee · supervisee     close
+       * retournee                      le cabinet la renvoie
+       *
+       * Le compte du mois, lui, a disparu d'ici : il était pris sur
+       * `createdAt` — la date de la PHOTO — pendant que « Vos documents »
+       * comptait par la date de la FACTURE. D'où « 1 » sur l'accueil et « 0 »
+       * sur l'autre écran, le 10 octobre. Une seule définition, et elle vit
+       * là où la date de la pièce est connue.
+       */
+      const lues = liste.filter((p) => p.status !== "capturee");
+      const closes = liste.filter(
+        (p) => p.status === "comptabilisee" || p.status === "supervisee",
+      ).length;
+      return {
+        avancement: liste.length === 0 ? null : closes / liste.length,
+        enAttente: liste.filter((p) => p.status === "lue" || p.status === "proposee").length,
+        documentsLus: lues.length,
+        documentsNonLus: liste.length - lues.length,
+        jamaisRienDepose: liste.length === 0,
+        retournees: liste.filter((p) => p.status === "retournee").length,
+      };
+    }, [pieces.data]);
 
   return {
     devise,
@@ -254,7 +284,9 @@ export function useAccueil(periode: string): Accueil {
     moisDeSuite,
     aReverser: serie[serie.length - 1]?.solde ?? null,
     avancement,
-    documents,
+    enAttente,
+    documentsLus,
+    documentsNonLus,
     jamaisRienDepose,
     chargesEcart,
     retournees,
