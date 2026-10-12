@@ -259,6 +259,15 @@ const fr = {
   "pme.bloque.rapprocher": "Il manque un rapprochement avant que je puisse proposer l'écriture.",
   "pme.bloque.geste":
     "Reprenez la photo si elle est floue, ou envoyez-la à votre comptable : il tranchera.",
+  "pme.membres.titre": "Qui entre dans ce dossier",
+  "pme.membres.lede":
+    "Invitez quelqu'un par son adresse. Il crée son compte lui-même, et votre invitation l'attend — son mot de passe ne passe par personne.",
+  "pme.membres.role.dirigeant": "Dirigeant — tout",
+  "pme.membres.role.collaborateur": "Collaborateur — le quotidien",
+  "pme.membres.adresse": "adresse e-mail",
+  "pme.membres.inviter": "Inviter",
+  "pme.membres.envoyee": "Invitation envoyée à {email}.",
+  "pme.membres.attend": "en attente",
   "pme.paiement.titre": "Comment avez-vous payé ?",
   "pme.date.manque.titre": "Quelle est la date de ce document ?",
   "pme.date.manque.lede":
@@ -2568,6 +2577,15 @@ const en: Dict = {
   "pme.bloque.rapprocher": "A reconciliation is missing before I can propose the entry.",
   "pme.bloque.geste":
     "Retake the photo if it is blurred, or send it to your accountant — they will decide.",
+  "pme.membres.titre": "Who gets into this file",
+  "pme.membres.lede":
+    "Invite someone by their address. They create their own account, and your invitation is waiting for them — their password goes through no one.",
+  "pme.membres.role.dirigeant": "Owner — everything",
+  "pme.membres.role.collaborateur": "Collaborator — day to day",
+  "pme.membres.adresse": "email address",
+  "pme.membres.inviter": "Invite",
+  "pme.membres.envoyee": "Invitation sent to {email}.",
+  "pme.membres.attend": "pending",
   "pme.paiement.titre": "How did you pay?",
   "pme.date.manque.titre": "What is this document's date?",
   "pme.date.manque.lede":
@@ -4826,6 +4844,15 @@ const ar: Dict = {
   "pme.bloque.rejet": "لا يمكن محاسبة هذه الوثيقة على حالها.",
   "pme.bloque.rapprocher": "تنقص مطابقة قبل أن أقترح القيد.",
   "pme.bloque.geste": "أعد التصوير إن كانت الصورة غير واضحة، أو أرسلها إلى محاسبك ليقرّر.",
+  "pme.membres.titre": "من يدخل هذا الملف",
+  "pme.membres.lede":
+    "ادعُ شخصًا بعنوانه. ينشئ حسابه بنفسه، ودعوتك في انتظاره — كلمة سرّه لا تمرّ بأحد.",
+  "pme.membres.role.dirigeant": "مسيّر — كل شيء",
+  "pme.membres.role.collaborateur": "متعاون — اليومي",
+  "pme.membres.adresse": "عنوان البريد الإلكتروني",
+  "pme.membres.inviter": "دعوة",
+  "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
+  "pme.membres.attend": "في الانتظار",
   "pme.paiement.titre": "كيف دفعتَ؟",
   "pme.date.manque.titre": "ما تاريخ هذه الوثيقة؟",
   "pme.date.manque.lede":
