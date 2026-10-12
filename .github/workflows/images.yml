@@ -123,7 +123,13 @@ jobs:
           ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
             "deposer $BRANCHE" < /tmp/depot.bundle
 
-          # Le jeton part sur l'entrée standard, jamais sur la ligne de
-          # commande : un argument se lit dans la liste des processus.
-          printf '%s' "$JETON" | ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
-            "deployer $BRANCHE"
+          # Le nom et le jeton partent sur l'entrée standard, jamais sur la ligne
+          # de commande : un argument se lit dans la liste des processus.
+          #
+          # Le NOM compte autant que le jeton. Avec un nom qui n'est pas celui du
+          # porteur, GHCR accepte la connexion et délivre une autorisation VIDE :
+          # le « login » réussit, le « pull » répond « unauthorized », et aucun des
+          # deux ne dit pourquoi. C'est exactement ce qui est arrivé au premier
+          # essai réel de ce chemin.
+          printf '%s\n%s' "$GITHUB_ACTOR" "$JETON" |
+            ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"
