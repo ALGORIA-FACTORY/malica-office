@@ -69,7 +69,10 @@ deposer() {
     echo "KO : aucun paquet reçu sur l'entrée standard" >&2
     exit 2
   }
-  git bundle verify "$paquet" >/dev/null 2>&1 || {
+  # `-C` : sshd demarre dans le dossier personnel, et `git bundle verify`
+  # exige d etre DANS un depot — « need a repository to verify a bundle ».
+  # Le premier essai reel du nouveau chemin est tombe exactement la.
+  git -C "$DEPOT" bundle verify "$paquet" >/dev/null 2>&1 || {
     echo "KO : le paquet reçu n'est pas un bundle git lisible" >&2
     exit 2
   }

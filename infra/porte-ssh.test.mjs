@@ -113,3 +113,47 @@ describe("la porte SSH du déploiement", () => {
     }
   });
 });
+
+/**
+ * Le dépôt du code se vérifie DANS le dépôt git.
+ *
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * Premier essai réel du nouveau chemin, 12 octobre 2026 : la CI a envoyé le
+ * paquet, et le serveur a répondu « le paquet reçu n'est pas un bundle git
+ * lisible ». Le paquet était parfait. `git bundle verify` exige seulement
+ * d'être DANS un dépôt — « need a repository to verify a bundle » — et sshd
+ * démarre dans le dossier personnel de l'utilisateur, qui n'en est pas un.
+ *
+ * Six épreuves tenaient la porte, aucune ne tenait ce qui se passe derrière.
+ * Celle-ci lit le script : la vérification doit nommer le dépôt.
+ */
+describe("le déposeur", () => {
+  const DEPLOYEUR = fileURLToPath(new URL("./deployer.sh", import.meta.url));
+  const source = readFileSync(DEPLOYEUR, "utf8");
+
+  it("vérifie le paquet en nommant le dépôt, et non le dossier courant", () => {
+    assert.match(
+      source,
+      /git -C "\$DEPOT" bundle verify/,
+      'sans `-C "$DEPOT"`, la vérification échoue depuis le dossier personnel où sshd démarre',
+    );
+    assert.doesNotMatch(
+      source,
+      /^\s*git bundle verify/m,
+      "aucune commande git du déposeur ne doit dépendre du dossier courant",
+    );
+  });
+
+  it("refuse un paquet vide, et le dit", () => {
+    // Une entrée standard vide est le cas d'un `ssh` lancé à la main sans
+    // redirection : il faut le dire, pas déployer la version d'avant.
+    assert.match(source, /aucun paquet reçu sur l'entrée standard/);
+  });
+
+  it("efface le paquet dans tous les cas", () => {
+    // Un bundle de sept mégaoctets par déploiement, laissé derrière, remplit
+    // un disque de serveur en quelques semaines.
+    assert.match(source, /trap "rm -f '\$paquet'" EXIT/);
+  });
+});
