@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
+import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
 import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
@@ -1131,6 +1132,23 @@ function PieceScreen() {
                 </div>
               </div>
             ) : null}
+
+            {/*
+             * ============================ LE PAIEMENT, AVANT LE RANGEMENT
+             *
+             * Il descend sous les montants, sur la MÊME page : quatre écrans
+             * font quatre occasions d'abandonner. Et il vient avant « où ça
+             * va », parce qu'une pièce qui part au cabinet doit partir avec
+             * la façon dont elle a été réglée.
+             */}
+            <CommentCEstPaye
+              pieceId={pieceId}
+              dateDeLaPiece={payload?.document_date ?? null}
+              ttcMineur={
+                payload?.totals?.ttc ? Math.round(Number(payload.totals.ttc) * 1000) : null
+              }
+              devise={payload?.currency ?? pme.currency}
+            />
 
             {/*
              * ==================================== LA TRANSMISSION EST UN GESTE

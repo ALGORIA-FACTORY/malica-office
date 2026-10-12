@@ -258,6 +258,11 @@ const fr = {
   "pme.bloque.rapprocher": "Il manque un rapprochement avant que je puisse proposer l'écriture.",
   "pme.bloque.geste":
     "Reprenez la photo si elle est floue, ou envoyez-la à votre comptable : il tranchera.",
+  "pme.paiement.titre": "Comment avez-vous payé ?",
+  "pme.paiement.lede":
+    "Choisissez le moyen. Si vous n'avez pas encore payé, dites-le : cette facture rejoindra vos échéances.",
+  "pme.paiement.ajouter": "Un acompte puis un solde ? Ajoutez le second ci-dessous.",
+  "pme.paiement.preuve.manque": "Justificatif à photographier",
   "pme.type.titre": "Qu'est-ce que c'est ?",
   "pme.type.passer": "Je ne sais pas — lis-le quand même",
   "pme.transmettre.rappeler": "Demander le rappel à {cabinet}",
@@ -2521,6 +2526,11 @@ const en: Dict = {
   "pme.bloque.rapprocher": "A reconciliation is missing before I can propose the entry.",
   "pme.bloque.geste":
     "Retake the photo if it is blurred, or send it to your accountant — they will decide.",
+  "pme.paiement.titre": "How did you pay?",
+  "pme.paiement.lede":
+    "Pick the method. If you haven't paid yet, say so: this invoice will join your due dates.",
+  "pme.paiement.ajouter": "A deposit then a balance? Add the second one below.",
+  "pme.paiement.preuve.manque": "Proof still to photograph",
   "pme.type.titre": "What is it?",
   "pme.type.passer": "I don't know — read it anyway",
   "pme.transmettre.rappeler": "Ask {cabinet} to return it",
@@ -4736,6 +4746,10 @@ const ar: Dict = {
   "pme.bloque.rejet": "لا يمكن محاسبة هذه الوثيقة على حالها.",
   "pme.bloque.rapprocher": "تنقص مطابقة قبل أن أقترح القيد.",
   "pme.bloque.geste": "أعد التصوير إن كانت الصورة غير واضحة، أو أرسلها إلى محاسبك ليقرّر.",
+  "pme.paiement.titre": "كيف دفعتَ؟",
+  "pme.paiement.lede": "اختر الوسيلة. إن لم تدفع بعد، قل ذلك: ستلتحق هذه الفاتورة بآجالك.",
+  "pme.paiement.ajouter": "دفعة أولى ثم رصيد؟ أضف الثانية أدناه.",
+  "pme.paiement.preuve.manque": "يبقى تصوير المؤيّد",
   "pme.type.titre": "ما هذا؟",
   "pme.type.passer": "لا أعرف — اقرأها على أي حال",
   "pme.transmettre.rappeler": "اطلب الاسترجاع من {cabinet}",

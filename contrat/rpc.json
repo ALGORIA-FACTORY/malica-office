@@ -21,9 +21,11 @@
     "contexteLecture",
     "dossier",
     "enregistrer",
+    "enregistrerPaiement",
     "journaliserAgent",
     "listAvecLecture",
     "lister",
+    "paiementsDUnePiece",
     "persisterLecture",
     "preciser",
     "supprimer"
@@ -180,6 +182,7 @@
     "activePack",
     "fiscalCharges",
     "juridictions",
+    "moyensDePaiement",
     "socleParams",
     "taxRates",
     "typesDeDocumentALaCapture"
