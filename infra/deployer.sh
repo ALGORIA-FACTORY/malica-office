@@ -59,10 +59,13 @@ deposer() {
     exit 2
   }
 
+  # Le fichier est confié au ménage unique posé en bas du script, et non à un
+  # `trap` local : deux `trap … EXIT` ne cohabitent pas, le second remplace le
+  # premier sans un mot — et celui qui tombait ici emportait l'effacement de la
+  # copie du script.
   local paquet
   paquet=$(mktemp "$RACINE/.depose.XXXXXX.bundle")
-  # shellcheck disable=SC2064
-  trap "rm -f '$paquet'" EXIT
+  PAQUET_RECU="$paquet"
   cat >"$paquet"
 
   [ -s "$paquet" ] || {
@@ -127,27 +130,44 @@ principal() {
   #
   # Son absence n'est pas une erreur : un déploiement local, sur des images
   # déjà présentes, n'a personne à qui demander.
-  local jeton=""
-  if [ ! -t 0 ]; then read -r jeton || true; fi
+  # L'identité du registre arrive sur l'entrée standard, en DEUX lignes : le
+  # nom, puis le jeton.
+  #
+  # ============================== POURQUOI LE NOM VOYAGE AVEC LE JETON
+  #
+  # Première écriture : seul le jeton arrivait, et le nom valait
+  # « x-access-token » — la convention de git sur HTTPS, qui n'est pas celle
+  # d'un registre. GHCR a accepté la connexion et délivré une autorisation
+  # VIDE : le `login` réussissait, le `pull` répondait « unauthorized », et
+  # rien dans les deux ne disait pourquoi.
+  #
+  # Le nom doit être celui du porteur du jeton — `github.actor` pour la CI —
+  # et il change d'un appelant à l'autre : une personne, le robot des actions
+  # planifiées. Le mettre dans `.env` du serveur l'aurait figé sur un seul
+  # appelant, et aurait redonné à la machine une identité à garder. Il voyage
+  # donc avec le jeton, et disparaît avec lui.
+  local utilisateur="" jeton=""
+  if [ ! -t 0 ]; then
+    read -r utilisateur || true
+    read -r jeton || true
+  fi
   if [ -n "$jeton" ]; then
-    local registre utilisateur
+    local registre
     registre=$(grep -E '^REGISTRE=' "$ENV" | cut -d= -f2- | cut -d/ -f1)
     registre=${registre:-ghcr.io}
-    utilisateur=$(grep -E '^REGISTRE_UTILISATEUR=' "$ENV" | cut -d= -f2-)
+    [ -n "$utilisateur" ] || {
+      echo "KO : un jeton de registre est arrivé sans son nom de porteur." >&2
+      echo "     L'entrée standard attend deux lignes : le nom, puis le jeton." >&2
+      exit 2
+    }
     printf '%s' "$jeton" |
-      docker login "$registre" -u "${utilisateur:-x-access-token}" --password-stdin >/dev/null
+      docker login "$registre" -u "$utilisateur" --password-stdin >/dev/null
     jeton=""
-    # La déconnexion part sur EXIT, et non sur RETURN.
-    #
-    # Première écriture : `trap … RETURN`. Elle ne se déclenche QUE si la
-    # fonction rend la main — or ce script meurt par `exit 1` dès qu'une étape
-    # échoue, et un `trap RETURN` ne court pas sur un `exit`. Le jeton serait
-    # donc resté dans ~/.docker/config.json exactement dans le cas où cela
-    # compte : le déploiement raté, celui qu'on laisse en l'état pour aller
-    # voir. C'était le défaut que ce mécanisme est censé supprimer, replacé
-    # deux lignes plus bas.
-    # shellcheck disable=SC2064
-    trap "docker logout '$registre' >/dev/null 2>&1 || true" EXIT
+    # Le ménage est posé UNE fois, en bas du fichier, sur EXIT. Ici on dit
+    # seulement de quoi se déconnecter : deux `trap … EXIT` dans un même script
+    # ne cohabitent pas — le second remplace le premier, en silence, et c'est
+    # ainsi qu'on perd soit la déconnexion, soit l'effacement de la copie.
+    REGISTRE_CONNECTE="$registre"
   fi
   compose pull --quiet
 
@@ -178,6 +198,46 @@ principal() {
   compose logs --tail 40 api web caddy >&2 || true
   exit 1
 }
+
+# ================================== LE SCRIPT NE SE LIT PAS PENDANT QU'IL CHANGE
+#
+# `deployer` fait un `git checkout` du dépôt — et ce script EST dans le dépôt.
+# Bash lit un script par morceaux, au fil de l'exécution : réécrire le fichier
+# sous ses pieds lui fait reprendre la lecture à un décalage devenu faux, et il
+# exécute une ligne coupée en deux. Le symptôme serait une erreur de syntaxe
+# surgie au milieu d'un déploiement qui marchait la veille, sur une machine où
+# le fichier est juste.
+#
+# Rien ne l'a encore déclenché : il faut que la version déployée modifie ce
+# fichier, ce qui est arrivé deux fois aujourd'hui sans dégât — l'amorçage à la
+# main avait mis le script à jour AVANT que la CI ne le lance.
+#
+# On se recopie donc hors du dépôt, une fois, et on se relance depuis la copie.
+# `MALICA_DEPLOYEUR_FIGE` coupe la récursion.
+if [ -z "${MALICA_DEPLOYEUR_FIGE:-}" ] && [ "${0#"$DEPOT"}" != "$0" ]; then
+  copie=$(mktemp "$RACINE/.deployeur.XXXXXX.sh")
+  cp "$0" "$copie"
+  chmod +x "$copie"
+  # La copie s'efface elle-même : un `trap` ici ne courrait pas, `exec`
+  # remplace le processus.
+  MALICA_DEPLOYEUR_FIGE=1 MALICA_DEPLOYEUR_COPIE="$copie" exec "$copie" "$@"
+fi
+
+# ======================================================= UN SEUL MÉNAGE, SUR EXIT
+#
+# Deux `trap … EXIT` dans un même script ne cohabitent pas : le second remplace
+# le premier, sans un mot. Tout ce qui doit partir à la fin part donc d'ici.
+#
+# Et sur EXIT, pas sur RETURN : ce script meurt par `exit 1` dès qu'une étape
+# échoue, et un `trap RETURN` ne court pas sur un `exit`. Le jeton serait resté
+# dans ~/.docker/config.json exactement dans le cas où cela compte — le
+# déploiement raté, celui qu'on laisse en l'état pour aller voir.
+menage() {
+  [ -z "${REGISTRE_CONNECTE:-}" ] || docker logout "$REGISTRE_CONNECTE" >/dev/null 2>&1 || true
+  [ -z "${PAQUET_RECU:-}" ] || rm -f "$PAQUET_RECU"
+  [ -z "${MALICA_DEPLOYEUR_COPIE:-}" ] || rm -f "$MALICA_DEPLOYEUR_COPIE"
+}
+trap menage EXIT
 
 if [ "${1:-}" = "--deposer" ]; then
   shift

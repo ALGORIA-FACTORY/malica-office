@@ -154,7 +154,10 @@ describe("le déposeur", () => {
   it("efface le paquet dans tous les cas", () => {
     // Un bundle de sept mégaoctets par déploiement, laissé derrière, remplit
     // un disque de serveur en quelques semaines.
-    assert.match(source, /trap "rm -f '\$paquet'" EXIT/);
+    // Confié au ménage unique, et non à un trap local qui aurait remplacé le
+    // sien — sept mégaoctets par déploiement laissés derrière remplissent un
+    // disque de serveur en quelques semaines.
+    assert.match(source, /PAQUET_RECU="\$paquet"/);
   });
 });
 
@@ -176,7 +179,9 @@ describe("le jeton prêté par la CI", () => {
   const source = readFileSync(fileURLToPath(new URL("./deployer.sh", import.meta.url)), "utf8");
 
   it("se retire sur EXIT, donc aussi quand le déploiement échoue", () => {
-    assert.match(source, /trap "docker logout[^"]*" EXIT/);
+    // La déconnexion vit dans le ménage unique, lui-même posé sur EXIT : c'est
+    // la suite voisine qui tient l'unicité du trap.
+    assert.match(source, /docker logout "\$REGISTRE_CONNECTE"/);
     assert.doesNotMatch(
       source,
       /trap .*docker logout.* RETURN/,
@@ -184,6 +189,32 @@ describe("le jeton prêté par la CI", () => {
     );
   });
 
+  it("vient avec le nom de son porteur, en deux lignes", () => {
+    /*
+     * Premiere ecriture : seul le jeton arrivait, et le nom valait
+     * « x-access-token » — la convention de git sur HTTPS, qui n est pas celle
+     * d un registre. GHCR a accepte la connexion et delivre une autorisation
+     * VIDE : le login reussissait, le pull repondait « unauthorized », et
+     * aucun des deux ne disait pourquoi. Une heure perdue a chercher une
+     * permission d organisation qui n y etait pour rien.
+     */
+    assert.match(source, /read -r utilisateur/);
+    assert.match(source, /read -r jeton/);
+    assert.match(source, /docker login "\$registre" -u "\$utilisateur"/);
+    // Le motif vise le CODE, pas le commentaire : la phrase qui raconte
+    // l'erreur doit rester, c'est elle qui empêche de la refaire.
+    assert.doesNotMatch(
+      source,
+      /-u +"?\$?\{?[A-Za-z_]*:-x-access-token/,
+      "le nom du porteur ne se devine pas : il voyage avec le jeton",
+    );
+  });
+
+  it("refuse un jeton arrive sans son nom", () => {
+    // Sinon on retombe sur le defaut precedent : une connexion qui reussit et
+    // une autorisation vide, ce qui est la pire des deux issues.
+    assert.match(source, /un jeton de registre est arrivé sans son nom de porteur/);
+  });
   it("arrive par l'entrée standard, jamais par un argument", () => {
     // Un argument se lit dans la liste des processus, par n'importe qui sur la
     // machine, pendant tout le déploiement.
@@ -203,5 +234,51 @@ describe("le jeton prêté par la CI", () => {
      * impossible — c'est-à-dire le dernier recours quand la CI est en panne.
      */
     assert.match(source, /if \[ -n "\$jeton" \]; then/);
+  });
+});
+
+/**
+ * Le script se protège de lui-même.
+ *
+ * ============================================= DEUX DÉFAUTS QUE RIEN NE RÉVÈLE
+ *
+ * 1. `deployer` fait un `git checkout` du dépôt — et ce script EST dans le
+ *    dépôt. Bash lit un script par morceaux, au fil de l'exécution : réécrire
+ *    le fichier sous ses pieds lui fait reprendre la lecture à un décalage
+ *    devenu faux, et il exécute une ligne coupée en deux. Le symptôme serait
+ *    une erreur de syntaxe surgie au milieu d'un déploiement qui marchait la
+ *    veille, sur une machine où le fichier est juste. Rien ne l'a déclenché
+ *    les deux fois d'aujourd'hui, parce que l'amorçage à la main avait mis le
+ *    script à jour AVANT que la CI ne le lance : le hasard, pas la rigueur.
+ *
+ * 2. Deux `trap … EXIT` dans un même script ne cohabitent pas : le second
+ *    remplace le premier, sans un mot. Il y en a eu trois dans la journée —
+ *    la déconnexion du registre, l'effacement du paquet reçu, l'effacement de
+ *    la copie du script — et deux se seraient annulées, dont celle qui retire
+ *    le jeton.
+ */
+describe("le script de déploiement", () => {
+  const source = readFileSync(fileURLToPath(new URL("./deployer.sh", import.meta.url)), "utf8");
+
+  it("se recopie hors du dépôt avant de le réécrire", () => {
+    assert.match(source, /MALICA_DEPLOYEUR_FIGE/, "la garde contre la récursion doit exister");
+    assert.match(source, /exec "\$copie" "\$@"/, "le script doit se relancer depuis sa copie");
+  });
+
+  it("ne pose QU'UN SEUL trap, et sur EXIT", () => {
+    const traps = source.match(/^\s*trap\s/gm) ?? [];
+    assert.equal(
+      traps.length,
+      1,
+      `${traps.length} traps : le dernier posé remplace les autres, et celui qui tombe est perdu`,
+    );
+    assert.match(source, /^trap menage EXIT$/m);
+  });
+
+  it("et ce ménage retire les trois choses qui ne doivent pas rester", () => {
+    const menage = source.slice(source.indexOf("menage() {"), source.indexOf("trap menage EXIT"));
+    assert.match(menage, /docker logout/, "le jeton du registre");
+    assert.match(menage, /PAQUET_RECU/, "le paquet git reçu, sept mégaoctets par déploiement");
+    assert.match(menage, /MALICA_DEPLOYEUR_COPIE/, "la copie du script");
   });
 });
