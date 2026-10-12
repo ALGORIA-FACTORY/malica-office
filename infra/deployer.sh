@@ -50,7 +50,7 @@ compose() {
 # Le paquet est un « bundle » git : il porte les objets et la référence HEAD du
 # commit à déployer. On l'écrit dans un fichier temporaire — git refuse de lire
 # un bundle sur un tuyau, il lui faut pouvoir revenir en arrière dedans — puis
-# on le range sous `refs/remotes/origin/<version>`, là où le déploiement va le
+# on le range sous `refs/depose/<version>`, là où le déploiement va le
 # chercher. Le fichier part dans tous les cas, succès ou échec.
 deposer() {
   local version="${1:?usage : deployer.sh --deposer <version>}"
@@ -80,8 +80,19 @@ deposer() {
     exit 2
   }
 
-  git -C "$DEPOT" fetch --quiet "$paquet" "HEAD:refs/remotes/origin/$version"
-  echo "▶ déposé  $(git -C "$DEPOT" log -1 --format='%h %s' "refs/remotes/origin/$version")"
+  # ======================================= POURQUOI « refs/depose » ET NON « origin »
+  #
+  # Première écriture : `refs/remotes/origin/<version>`. Cet espace APPARTIENT
+  # à un dépôt distant nommé `origin` — et le 12 octobre 2026, en retirant de
+  # ce serveur le dépôt distant devenu inutile (il n'a plus de clé pour le
+  # joindre), `git remote remove origin` a effacé la référence déposée avec
+  # lui. Le déploiement suivant aurait dit « cette version n'a pas été
+  # déposée » sur un serveur qui l'avait reçue dix minutes plus tôt.
+  #
+  # Une référence qui ne vient d'aucun dépôt distant ne se range pas dans
+  # l'espace d'un dépôt distant. Celle-ci a le sien, que rien ne nettoie.
+  git -C "$DEPOT" fetch --quiet "$paquet" "HEAD:refs/depose/$version"
+  echo "▶ déposé  $(git -C "$DEPOT" log -1 --format='%h %s' "refs/depose/$version")"
 }
 
 principal() {
@@ -105,14 +116,14 @@ principal() {
   # Aucun appel à GitHub : le code a été DÉPOSÉ juste avant (`--deposer`), et
   # le serveur n'a aucune clé pour aller le chercher. Si la référence manque,
   # on le dit au lieu de déployer la version d'avant en silence.
-  git -C "$DEPOT" rev-parse --verify --quiet "refs/remotes/origin/$version" >/dev/null || {
+  git -C "$DEPOT" rev-parse --verify --quiet "refs/depose/$version" >/dev/null || {
     echo "KO : « $version » n'a pas été déposée sur ce serveur." >&2
     echo "     La CI envoie le code par « deposer $version » avant de déployer ;" >&2
     echo "     à la main : git bundle create p.bundle HEAD puis" >&2
     echo "     ssh malica@… \"deposer $version\" < p.bundle" >&2
     exit 2
   }
-  git -C "$DEPOT" checkout --quiet --detach "refs/remotes/origin/$version"
+  git -C "$DEPOT" checkout --quiet --detach "refs/depose/$version"
   echo "  $(git -C "$DEPOT" log -1 --format='%h %s')"
 
   # L'étiquette d'image est la version. Retenue dans .env : un `up` ultérieur,
