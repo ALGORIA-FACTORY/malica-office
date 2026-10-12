@@ -157,3 +157,51 @@ describe("le déposeur", () => {
     assert.match(source, /trap "rm -f '\$paquet'" EXIT/);
   });
 });
+
+/**
+ * Le jeton du registre ne survit pas au déploiement, même raté.
+ *
+ * ================================================= LE DÉFAUT QU'ELLES TIENNENT
+ *
+ * Première écriture du mécanisme : `trap … RETURN`. Elle ne se déclenche que
+ * si la fonction rend la main — or ce script meurt par `exit 1` dès qu'une
+ * étape échoue, et un `trap RETURN` ne court pas sur un `exit`. Le jeton
+ * restait donc dans `~/.docker/config.json` exactement dans le cas où cela
+ * compte : le déploiement raté, celui qu'on laisse en l'état pour aller voir.
+ *
+ * Tout le mécanisme existe pour qu'il n'y ait rien à voler sur cette machine
+ * entre deux déploiements. Un `trap` posé sur le mauvais signal l'annulait.
+ */
+describe("le jeton prêté par la CI", () => {
+  const source = readFileSync(fileURLToPath(new URL("./deployer.sh", import.meta.url)), "utf8");
+
+  it("se retire sur EXIT, donc aussi quand le déploiement échoue", () => {
+    assert.match(source, /trap "docker logout[^"]*" EXIT/);
+    assert.doesNotMatch(
+      source,
+      /trap .*docker logout.* RETURN/,
+      "un trap RETURN ne court pas sur un `exit` : le jeton survivrait au déploiement raté",
+    );
+  });
+
+  it("arrive par l'entrée standard, jamais par un argument", () => {
+    // Un argument se lit dans la liste des processus, par n'importe qui sur la
+    // machine, pendant tout le déploiement.
+    assert.match(source, /--password-stdin/);
+    assert.doesNotMatch(source, /docker login[^|\n]*--password [^-]/);
+  });
+
+  it("ne touche pas le disque, et la variable est vidée après l'usage", () => {
+    assert.match(source, /printf '%s' "\$jeton" \|/, "le jeton passe par un tuyau");
+    assert.match(source, /\n\s*jeton=""\n/, "la variable est vidée dès que le login est fait");
+  });
+
+  it("et son absence n'est pas une erreur", () => {
+    /*
+     * Un déploiement local, sur des images déjà présentes, n'a personne à qui
+     * demander un jeton. Exiger le jeton rendrait le déploiement manuel
+     * impossible — c'est-à-dire le dernier recours quand la CI est en panne.
+     */
+    assert.match(source, /if \[ -n "\$jeton" \]; then/);
+  });
+});
