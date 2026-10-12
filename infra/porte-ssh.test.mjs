@@ -282,3 +282,40 @@ describe("le script de déploiement", () => {
     assert.match(menage, /MALICA_DEPLOYEUR_COPIE/, "la copie du script");
   });
 });
+
+/**
+ * Une référence déposée ne vit pas dans l'espace d'un dépôt distant.
+ *
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * Première écriture : le paquet se rangeait sous `refs/remotes/origin/<version>`.
+ * Cet espace APPARTIENT à un dépôt distant nommé `origin` — et en retirant de
+ * ce serveur le dépôt distant devenu inutile (il n'a plus de clé pour le
+ * joindre), `git remote remove origin` a effacé la référence déposée avec lui.
+ *
+ * Le déploiement suivant aurait dit « cette version n'a pas été déposée » sur
+ * un serveur qui l'avait reçue dix minutes plus tôt. Le nettoyage d'une chose
+ * morte emportait une chose vivante, parce qu'elles partageaient un nom.
+ */
+describe("l'espace des références déposées", () => {
+  const source = readFileSync(fileURLToPath(new URL("./deployer.sh", import.meta.url)), "utf8");
+  /** Le code, sans les commentaires : eux doivent garder la trace de l'erreur. */
+  const code = source
+    .split("\n")
+    .filter((l) => !/^\s*#/.test(l))
+    .join("\n");
+
+  it("dépose sous `refs/depose`, et nulle part ailleurs", () => {
+    assert.match(code, /fetch --quiet "\$paquet" "HEAD:refs\/depose\/\$version"/);
+    assert.doesNotMatch(
+      code,
+      /refs\/remotes\//,
+      "`git remote remove` emporterait la référence déposée avec le dépôt distant",
+    );
+  });
+
+  it("et relit au même endroit — le dépôt et la lecture ne peuvent pas diverger", () => {
+    assert.match(code, /rev-parse --verify --quiet "refs\/depose\/\$version"/);
+    assert.match(code, /checkout --quiet --detach "refs\/depose\/\$version"/);
+  });
+});
