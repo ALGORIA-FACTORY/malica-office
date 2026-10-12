@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { estNul, sommeDecimale } from "../somme-decimale.ts";
+import { depuisUniteMineure, estNul, sommeDecimale } from "../somme-decimale.ts";
 
 describe("sommeDecimale", () => {
   it("additionne sans perdre un millime", () => {
@@ -31,5 +31,23 @@ describe("estNul", () => {
     expect(estNul("0.000")).toBe(true);
     expect(estNul("0.001")).toBe(false);
     expect(estNul("abc")).toBe(false);
+  });
+});
+
+describe("depuisUniteMineure — de l'entier de la base à la chaîne du document", () => {
+  it("rend les décimales du pack, pas celles qu'on devine", () => {
+    // 613493 millimes = 613,493 dinars. À deux décimales, le MÊME entier vaut
+    // 6134,93 : c'est le pack qui dit lequel, pas un « / 1000 » dans un écran.
+    expect(depuisUniteMineure(613_493, 3)).toBe("613.493");
+    expect(depuisUniteMineure(613_493, 2)).toBe("6134.93");
+    expect(depuisUniteMineure(613_493, 0)).toBe("613493");
+  });
+
+  it("garde les zéros de queue : un document ne porte pas « 500.5 » pour 500,500", () => {
+    expect(depuisUniteMineure(500_000, 3)).toBe("500.000");
+  });
+
+  it("et refuse ce qui n'est pas un entier : une unité mineure fractionnaire n'existe pas", () => {
+    expect(() => depuisUniteMineure(1.5, 3)).toThrow(/non entière/);
   });
 });

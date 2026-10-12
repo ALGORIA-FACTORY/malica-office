@@ -104,7 +104,7 @@ function CabinetFacture() {
   });
   const taux = useQuery({
     queryKey: ["ref-taux", pack.data?.id, org.jurisdiction],
-    queryFn: () => office().referential.taxRates(pack.data!.id, org.jurisdiction),
+    queryFn: () => office().referential.taxRates(pack.data!.id, org.jurisdiction, locale),
     enabled: Boolean(pack.data),
   });
   const tauxEnVigueur = (taux.data ?? []).filter(

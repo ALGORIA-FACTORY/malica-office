@@ -26,6 +26,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useI18n } from "@/i18n";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
@@ -118,20 +119,31 @@ export function useAccueil(periode: string): Accueil {
   const pme = usePme();
   const devise = pme.currency;
   // Du pack, jamais d'une table de devises écrite en TypeScript (R4).
+  const { locale } = useI18n();
   const decimalesDuPack = useDecimales();
 
   const debut = moisPrecedent(periode, FENETRE - 1);
   const { from } = monthBounds(debut);
   const { to } = monthBounds(periode);
 
+  // La nature des classes du plan, lue au pack. Elle decide de ce qui EST une
+  // charge : le moteur le testait sur le premier chiffre du code (R4).
+  const classes = useQuery({
+    queryKey: ["ref-classes", pme.packId],
+    queryFn: () => office().referential.classesDeComptes(pme.packId!),
+    enabled: Boolean(pme.packId),
+    staleTime: 60 * 60 * 1000,
+  });
   const extraits = useQuery({
     queryKey: ["accueil-extraits", pme.tenantId, from, to],
     queryFn: () => office().office.extraitsTransmis(pme.tenantId, from, to),
   });
 
   const taux = useQuery({
-    queryKey: ["tax-rates", pme.packId],
-    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction),
+    // La langue entre dans la cle : les libelles des taux sont traduits, et
+    // un cache commun aurait servi l arabe a un ecran francais.
+    queryKey: ["tax-rates", pme.packId, locale],
+    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction, locale),
     enabled: !!pme.packId,
   });
 
@@ -260,6 +272,9 @@ export function useAccueil(periode: string): Accueil {
         // n'affiche pas : on ne charge pas six cent vingt-six lignes pour un
         // seul pourcentage.
         coa: [],
+        // La nature des classes, elle, décide de ce qui EST une charge : sans
+        // elle le pourcentage serait calculé sur un total vide (R4).
+        classes: classes.data ?? [],
       });
       return Number(pnl.charges);
     };
@@ -267,7 +282,7 @@ export function useAccueil(periode: string): Accueil {
     const la = chargesDe(avant);
     if (ici === null || la === null || la === 0) return null;
     return ((ici - la) / la) * 100;
-  }, [lignes.data, periode, devise, decimalesDuPack]);
+  }, [lignes.data, periode, devise, decimalesDuPack, classes.data]);
 
   // ----------------------------------------------------------- l'avancement
   const { avancement, enAttente, documentsLus, documentsNonLus, jamaisRienDepose, retournees } =

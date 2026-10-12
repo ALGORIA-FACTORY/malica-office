@@ -57,11 +57,27 @@ export const referentiel = {
     };
   },
 
-  async taxRates(db: Requete, packId: string, jurisdiction: string) {
+  /**
+   * Les taux de TVA du pack, traduits.
+   *
+   * Le libellé vient de `ref.labels`, pas de la colonne `label` de la table,
+   * qui est FRANÇAISE. L'espace de noms `tva_rate` existait depuis le 24 août 2026
+   * et aucun code ne le joignait : un écran en arabe affichait du français au
+   * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
+   * français est explicite — un libellé sans traduction s'affiche, il ne vide
+   * pas l'écran.
+   */
+  async taxRates(db: Requete, packId: string, jurisdiction: string, locale = "fr") {
     const { rows } = await db.query(
-      `select code, label, rate, valid_from, valid_to
-         from ref_tva_rates_v where pack_version_id = $1`,
-      [packId],
+      `select t.code, t.rate, t.valid_from, t.valid_to,
+              coalesce(demandee.value, francais.value, t.label) as label
+         from ref_tva_rates_v t
+         left join ref_labels_v demandee
+           on demandee.ns = 'tva_rate' and demandee.key = t.code and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'tva_rate' and francais.key = t.code and francais.locale = 'fr'
+        where t.pack_version_id = $1`,
+      [packId, locale],
     );
     return rows.map((r) => {
       const row = r as Record<string, unknown>;
@@ -78,7 +94,8 @@ export const referentiel = {
 
   async accountMappings(db: Requete, packId: string) {
     const { rows } = await db.query(
-      `select document_kind, tax_code, main_account, vat_account, counterparty_account
+      `select document_kind, tax_code, main_account, vat_account, counterparty_account,
+              journal_code
          from ref_account_mappings_v where pack_version_id = $1`,
       [packId],
     );
@@ -90,18 +107,65 @@ export const referentiel = {
         mainAccount: row["main_account"] as string,
         vatAccount: row["vat_account"] as string,
         counterpartyAccount: row["counterparty_account"] as string,
+        // Le journal où l'écriture s'inscrit. Il était écrit en TypeScript —
+        // « achat ? ACH : VEN » — et appartient au plan de l'organisation.
+        journalCode: (row["journal_code"] as string | null) ?? null,
       };
     });
   },
 
-  async fiscalCharges(db: Requete, packId: string) {
+  /**
+   * Ce qu'est chaque classe du plan : charge, produit, actif, passif.
+   *
+   * Le moteur du compte de résultat testait `code.startsWith("6")`. C'est une
+   * propriété du plan tunisien écrite dans le code du produit, et la première
+   * juridiction qui numérote autrement aurait rendu un résultat VIDE — zéro
+   * charge sur un mois qui en porte étant un chiffre parfaitement plausible.
+   *
+   * La reconnaissance se fait par préfixe, le plus long d'abord, ce qui couvre
+   * aussi les comptes qu'un cabinet crée hors du plan livré.
+   */
+  async classesDeComptes(db: Requete, packId: string) {
     const jour = aujourdhui();
     const { rows } = await db.query(
-      `select code, label, document_kind, account_code, fixed_amount,
-              legal_reference, valid_from, valid_to
-         from ref_fiscal_charges_v
-        where pack_version_id = $1 and valid_from <= $2`,
+      `select prefix, nature from ref_account_classes_v
+        where pack_version_id = $1
+          and valid_from <= $2
+          and (valid_to is null or valid_to >= $2)
+        order by length(prefix) desc, prefix`,
       [packId, jour],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      prefix: r["prefix"] as string,
+      nature: r["nature"] as "charge" | "produit" | "actif" | "passif",
+    }));
+  },
+
+  /**
+   * Les droits et taxes hors TVA du pack, traduits.
+   *
+   * Le libellé vient de `ref.labels`, pas de la colonne `label` de la table,
+   * qui est FRANÇAISE. L'espace de noms `fiscal_charge` existait depuis le 24 août 2026
+   * et aucun code ne le joignait : un écran en arabe affichait du français au
+   * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
+   * français est explicite — un libellé sans traduction s'affiche, il ne vide
+   * pas l'écran.
+   */
+  async fiscalCharges(db: Requete, packId: string, locale = "fr") {
+    const jour = aujourdhui();
+    const { rows } = await db.query(
+      `select c.code, c.document_kind, c.account_code, c.fixed_amount,
+              c.legal_reference, c.valid_from, c.valid_to,
+              coalesce(demandee.value, francais.value, c.label) as label
+         from ref_fiscal_charges_v c
+         left join ref_labels_v demandee
+           on demandee.ns = 'fiscal_charge' and demandee.key = c.code
+          and demandee.locale = $3
+         left join ref_labels_v francais
+           on francais.ns = 'fiscal_charge' and francais.key = c.code
+          and francais.locale = 'fr'
+        where c.pack_version_id = $1 and c.valid_from <= $2`,
+      [packId, jour, locale],
     );
     return rows
       .map((r) => r as Record<string, unknown>)
@@ -164,7 +228,7 @@ export const referentiel = {
   },
 
   /**
-   * Les types de document proposés AU MOMENT DE LA PHOTO, traduits.
+   * Les types de document, traduits, avec le drapeau de ceux qu'on propose.
    *
    * ================================================================= POURQUOI
    *
@@ -180,6 +244,14 @@ export const referentiel = {
    * d'abandon. La colonne `propose_a_la_capture` dit lesquels se proposent ;
    * les autres restent atteignables ensuite, sur la pièce.
    *
+   * ================================== POURQUOI TOUS, ET PAS SEULEMENT CES SIX
+   *
+   * Cette lecture ne rendait QUE les six, et le cabinet n'avait alors aucun
+   * moyen de nommer les onze autres : un reçu de paiement joint à une facture
+   * s'affichait « Document », parce que la seule lecture qui connaissait son
+   * libellé le filtrait. Le drapeau descend donc avec les lignes, et c'est
+   * l'écran de la photo qui filtre.
+   *
    * ========================================== ET LE LIBELLÉ VIENT DE ref.labels
    *
    * Pas de la colonne `libelle`, qui est française. Le produit lit l'arabe :
@@ -188,9 +260,9 @@ export const referentiel = {
    * existaient et qu'un seul était joint. Le repli sur le français est
    * explicite : un type sans traduction s'affiche, il ne disparaît pas.
    */
-  async typesDeDocumentALaCapture(db: Requete, locale: string) {
+  async typesDeDocument(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select d.code, d.famille, d.porte_ecriture, d.transmissible,
+      `select d.code, d.famille, d.porte_ecriture, d.transmissible, d.propose_a_la_capture,
               coalesce(demandee.value, francais.value, d.libelle) as libelle
          from ref.document_types d
          left join ref_labels_v demandee
@@ -199,7 +271,6 @@ export const referentiel = {
          left join ref_labels_v francais
            on francais.ns = 'document_type' and francais.key = d.code
           and francais.locale = 'fr'
-        where d.propose_a_la_capture
         order by d.rang`,
       [locale],
     );
@@ -209,6 +280,43 @@ export const referentiel = {
       libelle: r["libelle"] as string,
       porteEcriture: Boolean(r["porte_ecriture"]),
       transmissible: Boolean(r["transmissible"]),
+      proposeALaCapture: Boolean(r["propose_a_la_capture"]),
+    }));
+  },
+
+  /**
+   * Les mentions que le pack exige, TRADUITES.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Le reçu de paiement les porte en pied, et c'est R4 en action : aucune
+   * mention obligatoire n'est écrite dans le code, elle est lue au pack.
+   *
+   * Le namespace `mention` de `ref.labels` existait depuis le 24 août 2026 —
+   * trois langues, chaque mention — et AUCUN code ne le joignait. Les
+   * honoraires lisent encore la colonne `label`, qui est française : un reçu
+   * en arabe aurait porté « Identifiant fiscal de l'émetteur ». Le repli sur
+   * le français est explicite : une mention sans traduction s'affiche, elle
+   * ne disparaît pas d'un document légal.
+   */
+  async mentionsDuPack(db: Requete, packId: string, locale: string) {
+    const { rows } = await db.query(
+      `select m.code, m.mandatory, m.legal_reference,
+              coalesce(demandee.value, francais.value, m.label) as label
+         from ref_mentions_v m
+         left join ref_labels_v demandee
+           on demandee.ns = 'mention' and demandee.key = m.code and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'mention' and francais.key = m.code and francais.locale = 'fr'
+        where m.pack_version_id = $1
+        order by m.mandatory desc, m.code`,
+      [packId, locale],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      code: r["code"] as string,
+      label: r["label"] as string,
+      mandatory: Boolean(r["mandatory"]),
+      legalReference: (r["legal_reference"] as string | null) ?? null,
     }));
   },
 

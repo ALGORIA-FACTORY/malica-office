@@ -291,7 +291,7 @@ interface Outils {
 
 /* ------------------------------------------------------------ facturation */
 function Facturation({ mois, today, dateLongue, compteADate, somme, moisLong }: Outils) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const [filtre, setFiltre] = useState<string>("");
   const [nouvelle, setNouvelle] = useState(false);
@@ -361,7 +361,7 @@ function TableFactures({
   compteADate: (iso: string) => string;
   somme: (valeur: string, devise: string) => string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <div className="overflow-x-auto border border-border bg-card">
       <table className="min-w-full border-collapse text-[12.5px]">
@@ -463,7 +463,7 @@ function TableFactures({
 
 /** Un brouillon : le client, la période, le taux du pack, les lignes — rien n'est calculé ici. */
 function NouvelleFacture({ mois, onCree }: { mois: string; onCree: () => void }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -485,7 +485,7 @@ function NouvelleFacture({ mois, onCree }: { mois: string; onCree: () => void })
   });
   const taux = useQuery({
     queryKey: ["ref-taux", pack.data?.id, org.jurisdiction],
-    queryFn: () => office().referential.taxRates(pack.data!.id, org.jurisdiction),
+    queryFn: () => office().referential.taxRates(pack.data!.id, org.jurisdiction, locale),
     enabled: Boolean(pack.data),
   });
   const tauxEnVigueur = (taux.data ?? []).filter(
@@ -771,7 +771,7 @@ export function LignesEditables({
 
 /* ------------------------------------------------------------ trésorerie */
 function Tresorerie({ mois, today, dateLongue, compteADate, somme, moisLong }: Outils) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const emises = useQuery({
     queryKey: ["cab-hono-factures", org.id, "emise"],
@@ -958,7 +958,7 @@ function Mandats({
   compteADate,
   somme,
 }: Pick<Outils, "dateLongue" | "compteADate" | "somme">) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const [client, setClient] = useState("");
 
@@ -1087,7 +1087,7 @@ function FormulaireMandat({
   compteADate: (iso: string) => string;
   somme: (valeur: string, devise: string) => string;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
   const [mode, setMode] = useState(mandat?.mode ?? "forfait");

@@ -58,6 +58,9 @@ function versPiece(p: Record<string, unknown>): Piece {
     documentKind: (p["documentKind"] as string | null) ?? null,
     documentKindStatut:
       (p["documentKindStatut"] as Piece["documentKindStatut"] | undefined) ?? "a_determiner",
+    // `null` = la question « cabinet ou espace privé » est encore ouverte.
+    gardeeLe: (p["gardeeLe"] as string | null) ?? null,
+    sourcePieceId: (p["sourcePieceId"] as string | null) ?? null,
   };
 }
 
@@ -71,6 +74,20 @@ export function creerCaptureHttp(): CaptureRepository {
     // Le paiement d'une pièce : l'API rend déjà la forme du port.
     async enregistrerPaiement(input: Parameters<CaptureRepository["enregistrerPaiement"]>[0]) {
       return rpc<string>("capture", "enregistrerPaiement", [input]);
+    },
+
+    async piecesIssuesDe(pieceId: string) {
+      return (await rpc<Record<string, unknown>[]>("capture", "piecesIssuesDe", [pieceId])).map(
+        versPiece,
+      );
+    },
+
+    async daterLaPiece(pieceId: string, date: string) {
+      return rpc<{ periode: string | null }>("capture", "daterLaPiece", [pieceId, date]);
+    },
+
+    async rattacherJustificatif(paiementId: string, pieceId: string) {
+      await rpc<void>("capture", "rattacherJustificatif", [paiementId, pieceId]);
     },
 
     async paiementsDUnePiece(pieceId: string) {

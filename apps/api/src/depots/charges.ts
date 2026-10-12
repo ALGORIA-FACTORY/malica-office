@@ -10,11 +10,29 @@ import type { Requete } from "../db.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
 
 export const charges = {
-  async familles(db: Requete, packId: string) {
+  /**
+   * Les familles de charges du pack, traduites.
+   *
+   * Le libellé vient de `ref.labels`, pas de la colonne `label` de la table,
+   * qui est FRANÇAISE. L'espace de noms `charge_famille` existait depuis le 24 août 2026
+   * et aucun code ne le joignait : un écran en arabe affichait du français au
+   * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
+   * français est explicite — un libellé sans traduction s'affiche, il ne vide
+   * pas l'écran.
+   */
+  async familles(db: Requete, packId: string, locale = "fr") {
     const { rows } = await db.query(
-      `select code, label, ordinal, is_fallback, valid_from, valid_to
-         from ref_charge_familles_v where pack_version_id = $1`,
-      [packId],
+      `select f.code, f.ordinal, f.is_fallback, f.valid_from, f.valid_to,
+              coalesce(demandee.value, francais.value, f.label) as label
+         from ref_charge_familles_v f
+         left join ref_labels_v demandee
+           on demandee.ns = 'charge_famille' and demandee.key = f.code
+          and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'charge_famille' and francais.key = f.code
+          and francais.locale = 'fr'
+        where f.pack_version_id = $1`,
+      [packId, locale],
     );
     return enVigueur(rows as Record<string, unknown>[])
       .map((r) => ({
@@ -104,7 +122,7 @@ export const charges = {
   async questions(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, period, famille_code, observed, baseline, deviation_ratio,
-              threshold_code, answer, answered_at
+              threshold_code, answer, answered_at, answered_side
          from charge_questions_v where tenant_id = $1 order by created_at desc`,
       [tenantId],
     );
@@ -120,6 +138,9 @@ export const charges = {
         thresholdCode: row["threshold_code"] as string,
         answer: (row["answer"] as string | null) ?? null,
         answeredAt: (row["answered_at"] as string | null) ?? null,
+        // « pme » ou « cabinet » : un « exceptionnel » dit par l'expert est un
+        // avis professionnel, pas une déclaration du dirigeant.
+        answeredSide: (row["answered_side"] as string | null) ?? null,
       };
     });
   },

@@ -25,6 +25,8 @@ import {
   type ProposalResult,
 } from "@malica/socle/use-cases/propose-ecriture";
 
+import { autoriseUneEcriture, codeDuVerdict, type CodeVerdict } from "@malica/socle/verdicts";
+
 import type { Requete } from "../db.ts";
 import { enDecimal } from "../malica/lecture/montants.ts";
 import { referentiel } from "../depots/referentiel.ts";
@@ -36,16 +38,20 @@ type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
 const sensConnu = (k: string): k is SensConnu["documentKind"] =>
   k === "facture_achat" || k === "facture_vente";
 
-const COMPTABILISABLES = new Set(["à comptabiliser", "à comptabiliser avec réserve"]);
+// La liste vivait ici, en phrases francaises. Elle vit au Socle, avec son
+// epreuve, parce que les deux rives en ont besoin — celle qui inscrit et
+// celle qui affiche. Un verdict inconnu n autorise rien.
 
 export type PropositionDePiece =
   | {
       ok: true;
       verdict: string;
+      /** Le verdict sous forme de CODE : c est la-dessus que les ecrans branchent. */
+      verdictCode: CodeVerdict | null;
       packVersionId: string;
       proposition: ProposalResult;
     }
-  | { ok: false; raison: string; verdict?: string };
+  | { ok: false; raison: string; verdict?: string; verdictCode?: CodeVerdict | null };
 
 /*
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
@@ -102,16 +108,22 @@ export async function propositionDePiece(
   const n = ligne.normalisation!;
   const pack = ligne.pack_version_id!;
 
-  if (!COMPTABILISABLES.has(verdict))
+  if (!autoriseUneEcriture(verdict))
     return {
       ok: false,
       verdict,
+      verdictCode: codeDuVerdict(verdict),
       raison: `Aucune écriture ne se propose : la pièce est « ${verdict} ». ${(ligne.motifs ?? [])
         .map((m) => m.motif)
         .join(" ")}`,
     };
   if (n.etat !== "tranche" && n.etat !== "non_verifie")
-    return { ok: false, verdict, raison: `Aucune écriture ne se propose : ${n.raison}.` };
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: `Aucune écriture ne se propose : ${n.raison}.`,
+    };
 
   const payload = ligne.payload as {
     document_date?: string | null;
@@ -132,12 +144,14 @@ export async function propositionDePiece(
     return {
       ok: false,
       verdict,
+      verdictCode: codeDuVerdict(verdict),
       raison: "Aucune écriture ne se propose : une base n'a pas été lue.",
     };
   if (m.autres.length !== droits.length || m.autres.some((a) => a === null))
     return {
       ok: false,
       verdict,
+      verdictCode: codeDuVerdict(verdict),
       raison: "Aucune écriture ne se propose : un droit hors TVA n'a pas été lu.",
     };
 
@@ -197,20 +211,29 @@ export async function propositionDePiece(
       return {
         ok: false,
         verdict,
+        verdictCode: codeDuVerdict(verdict),
         raison: `L'écriture ne s'équilibre pas : ${proposition.pivot.motifs.map((x) => x.message).join(" ; ")}`,
       };
-    return { ok: true, verdict, packVersionId: pack, proposition };
+    return {
+      ok: true,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      packVersionId: pack,
+      proposition,
+    };
   } catch (e) {
     if (e instanceof LectureIncomplete)
       return {
         ok: false,
         verdict,
+        verdictCode: codeDuVerdict(verdict),
         raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
       };
     if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
       return {
         ok: false,
         verdict,
+        verdictCode: codeDuVerdict(verdict),
         raison:
           "Aucune écriture ne se propose : le paramétrage n'a pas de compte pour ce type de pièce.",
       };

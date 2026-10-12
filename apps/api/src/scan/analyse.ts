@@ -43,6 +43,11 @@ const PARAMETRES = [
   "lecture.confiance_reserve",
   "lecture.confiance_bloquante",
   "lecture.tolerance_arrondi_mineure",
+  // Au-dela de cet ecart entre la date de la piece et sa reception, la piece
+  // est SIGNALEE. Rien ne distinguait une date confirmee d une date acceptee
+  // sans la lire, et une facture de janvier confirmee en mars part dans la
+  // declaration de mars.
+  "piece.ecart_date_jours",
 ] as const;
 
 /** La bande du haut de la première page, où s'imprime le titre du document. */
@@ -321,6 +326,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),
     seuilConfianceReserve: p["lecture.confiance_reserve"]!,
     seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
+    ecartDateJours: p["piece.ecart_date_jours"]!,
     autresPieces: autres.map((a) => ({
       id: a.id,
       emetteurIdentifiantFiscal: a.mf,

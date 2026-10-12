@@ -20,6 +20,8 @@ const mappings: AccountMapping[] = [
     mainAccount: "6071",
     vatAccount: "43661",
     counterpartyAccount: "4011",
+    // Le journal vient du pack : son absence fait REFUSER la proposition (R4).
+    journalCode: "ACH",
   },
   {
     documentKind: "facture_vente",
@@ -27,6 +29,8 @@ const mappings: AccountMapping[] = [
     mainAccount: "7071",
     vatAccount: "43671",
     counterpartyAccount: "4111",
+    // Le journal vient du pack : son absence fait REFUSER la proposition (R4).
+    journalCode: "ACH",
   },
 ];
 

@@ -32,6 +32,17 @@ export interface PivotInput {
   mapping: AccountMappingRule;
   /** Droits et taxes hors TVA du pack (droit de timbre…) : compte par code. */
   fiscal_charges?: readonly FiscalChargeRule[];
+  /**
+   * Le compte de TVA par code de taxe, quand le pack en distingue.
+   *
+   * Sans cette table, le compte était celui du PREMIER code de taxe de la
+   * pièce, pour toute la TVA — et le jour où un pack distingue l'imputation
+   * par taux, la TVA du second taux partait sur le compte du premier.
+   *
+   * Facultative : un pack qui impute tous ses taux au même compte — c'est le
+   * cas du pack tunisien — n'a rien à dire ici.
+   */
+  vat_accounts_by_tax_code?: Readonly<Record<string, string>>;
   tolerances: Tolerances;
 }
 
@@ -80,6 +91,37 @@ export function computePivot(input: PivotInput): PivotV1 {
   // 3) Construire les lignes de journal (double-partie).
   const totalHT = sum(extract.lines.map((l) => l.base_ht));
   const totalVAT = sum(extract.lines.map((l) => l.vat_amount));
+
+  /*
+   * ============================================= LA TVA SE VENTILE PAR TAUX
+   *
+   * Vérification du 11 octobre 2026, « comme un expert-comptable » : le moteur
+   * posait UNE ligne de TVA portant la somme de tous les taux, et la
+   * proposition la timbrait du code de la PREMIÈRE ligne de la pièce.
+   *
+   * Sur une facture de restaurant — 7 % sur les plats, 19 % sur les boissons —
+   * la totalité de la TVA se retrouvait déclarée à un seul taux. L'écriture
+   * était équilibrée au millime, le contrôle de cohérence taux ↔ montants
+   * passait (il travaille ligne par ligne), et rien ne signalait l'erreur. Elle
+   * n'apparaissait qu'au moment de ventiler la TVA par taux, chez l'expert, un
+   * mois plus tard et sans trace de son origine.
+   *
+   * Une ligne par code, donc, dans l'ordre d'apparition sur la pièce — l'ordre
+   * décide du rendu, et deux bases doivent rendre la même écriture (R11).
+   */
+  const vatParCode: Array<{ code: string; montant: string; compte: string }> = [];
+  for (const { line } of perLineRate) {
+    const dejaVu = vatParCode.find((v) => v.code === line.tax_code);
+    if (dejaVu) {
+      dejaVu.montant = round(D(dejaVu.montant).plus(line.vat_amount).toString());
+      continue;
+    }
+    vatParCode.push({
+      code: line.tax_code,
+      montant: round(line.vat_amount),
+      compte: input.vat_accounts_by_tax_code?.[line.tax_code] ?? mapping.vat_account,
+    });
+  }
 
   // Droits et taxes hors TVA imprimés sur la pièce : le montant est lu (cité),
   // le compte vient du pack. Une charge sans compte au pack bloque l'écriture.
@@ -157,12 +199,15 @@ export function computePivot(input: PivotInput): PivotV1 {
       debit: round(totalHT.toString()),
       credit: "0",
     });
-    lines.push({
-      account_code: mapping.vat_account,
-      label: "TVA déductible",
-      debit: round(totalVAT.toString()),
-      credit: "0",
-    });
+    for (const v of vatParCode) {
+      lines.push({
+        account_code: v.compte,
+        label: `TVA déductible ${v.code}`,
+        debit: v.montant,
+        credit: "0",
+        tax_code: v.code,
+      });
+    }
     for (const c of charges) {
       lines.push({ account_code: c.account_code, label: c.label, debit: c.amount, credit: "0" });
     }
@@ -179,12 +224,15 @@ export function computePivot(input: PivotInput): PivotV1 {
       debit: round(counterparty.toString()),
       credit: "0",
     });
-    lines.push({
-      account_code: mapping.vat_account,
-      label: "TVA collectée",
-      debit: "0",
-      credit: round(totalVAT.toString()),
-    });
+    for (const v of vatParCode) {
+      lines.push({
+        account_code: v.compte,
+        label: `TVA collectée ${v.code}`,
+        debit: "0",
+        credit: v.montant,
+        tax_code: v.code,
+      });
+    }
     lines.push({
       account_code: mapping.charge_or_product_account,
       label: extract.issuer,

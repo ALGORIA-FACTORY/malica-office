@@ -67,6 +67,13 @@ export interface ContexteControle {
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
+  /**
+   * Au-dela de combien de jours l ecart entre la date de la piece et celle de
+   * sa reception est signale. Lu au pack (R4) : soixante jours en Tunisie,
+   * c est-a-dire le delai au-dela duquel une facture echappe a la declaration
+   * du mois de sa date.
+   */
+  ecartDateJours: number;
   autresPieces: Array<{
     id: string;
     emetteurIdentifiantFiscal: string | null;
@@ -476,7 +483,14 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   };
 }
 
-function dates(p: PieceAControler): ResultatControle {
+/** Les jours entiers entre deux dates ISO. Ni fuseau, ni heure : des jours. */
+function joursEntre(debut: string, fin: string): number {
+  const d = Date.parse(`${debut.slice(0, 10)}T00:00:00Z`);
+  const f = Date.parse(`${fin.slice(0, 10)}T00:00:00Z`);
+  return Math.round((f - d) / 86_400_000);
+}
+
+function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   if (!p.date)
     return {
       code: "coherence_dates",
@@ -491,11 +505,38 @@ function dates(p: PieceAControler): ResultatControle {
       motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe}.`,
       preuves: { date: p.date, recueLe: p.reception.recueLe },
     };
+  /*
+   * ======================================= UNE DATE TROP ANCIENNE SE SIGNALE
+   *
+   * Vérification comptable du 11 octobre 2026. L'écran propose le jour du scan
+   * quand la date n'a pas été lue — visible et modifiable, donc pas le repli
+   * que R4 interdit. Mais RIEN ne distinguait une date vérifiée d'une date
+   * acceptée sans la lire, et une facture de janvier confirmée en mars part
+   * dans la déclaration de mars.
+   *
+   * Signalé, jamais refusé : un dirigeant qui rattrape six mois de factures
+   * saisit des dates de six mois, et c'est légitime. Ce qui ne l'est pas,
+   * c'est que personne ne le remarque. Le seuil vient du pack.
+   */
+  const ecart = joursEntre(p.date, p.reception.recueLe);
+  if (ecart > ctx.ecartDateJours)
+    return {
+      code: "coherence_dates",
+      statut: "reserve",
+      motif: `La pièce est datée du ${p.date} et n'a été reçue que le ${p.reception.recueLe}, soit ${ecart} jours plus tard : à vérifier avant de la ranger dans un mois.`,
+      preuves: {
+        date: p.date,
+        recueLe: p.reception.recueLe,
+        ecartJours: ecart,
+        seuilJours: ctx.ecartDateJours,
+      },
+    };
+
   return {
     code: "coherence_dates",
     statut: "conforme",
     motif: `Datée du ${p.date}, reçue le ${p.reception.recueLe}.`,
-    preuves: { date: p.date, recueLe: p.reception.recueLe },
+    preuves: { date: p.date, recueLe: p.reception.recueLe, ecartJours: ecart },
   };
 }
 
@@ -536,7 +577,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     destinataire(p, ctx),
     sensDeLaPiece(p, ctx),
     doublon(p, ctx),
-    dates(p),
+    dates(p, ctx),
     confiance(p, ctx),
   ];
 }

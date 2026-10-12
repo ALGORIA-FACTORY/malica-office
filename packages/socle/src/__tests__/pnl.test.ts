@@ -10,7 +10,12 @@ describe("PnL / snapshot", () => {
       entries: [
         { account_code: "607", debit: "1000.000", credit: "0" },
         { account_code: "707", debit: "0", credit: "2000.000" },
-        { account_code: "401", debit: "0", credit: "1190.000" }, // ignoré
+        { account_code: "401", debit: "0", credit: "1190.000" }, // ni charge ni produit
+      ],
+      classes: [
+        { prefix: "4", nature: "actif" },
+        { prefix: "6", nature: "charge" },
+        { prefix: "7", nature: "produit" },
       ],
       coa: [
         { account_code: "607", label: "Achats", parent_code: "60" },

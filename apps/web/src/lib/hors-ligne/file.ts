@@ -43,6 +43,14 @@ export interface ElementDeFile {
    * au retour du réseau — ou pire, ne se reposerait pas.
    */
   documentKind?: string | null;
+  /**
+   * La facture dont cette pièce est issue — un reçu, un justificatif.
+   *
+   * Elle voyage dans la file pour la même raison que le type : une preuve
+   * photographiée hors ligne doit retrouver sa facture au retour du réseau,
+   * et non arriver orpheline.
+   */
+  sourcePieceId?: string | null;
   nomFichier: string;
   /** En octets — pour le plafond, et pour dire « 1,2 Mo » à l'écran. */
   taille: number;
@@ -65,6 +73,7 @@ export type NouvelElement = Pick<
   | "vis"
   | "contentType"
   | "documentKind"
+  | "sourcePieceId"
   | "nomFichier"
   | "taille"
 >;

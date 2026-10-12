@@ -47,12 +47,17 @@ describe("edge branches", () => {
     expect(p.approvable).toBe(true);
   });
 
-  it("PnL — compte hors classes 6/7 est ignoré, libellé fallback quand absent du COA", () => {
+  it("PnL — un compte sans libellé au plan garde son code, et la classe vient du pack", () => {
     const r = computePnl({
       period: "2026-07",
       currency: TND,
       entries: [{ account_code: "607", debit: "100.000", credit: "0" }],
       coa: [], // pas de libellé
+      classes: [
+        { prefix: "4", nature: "actif" },
+        { prefix: "6", nature: "charge" },
+        { prefix: "7", nature: "produit" },
+      ],
     });
     expect(r.by_account[0]!.label).toBe("607");
   });

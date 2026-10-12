@@ -19,6 +19,7 @@
     "analyser",
     "contexteAssistant",
     "contexteLecture",
+    "daterLaPiece",
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
@@ -27,7 +28,9 @@
     "lister",
     "paiementsDUnePiece",
     "persisterLecture",
+    "piecesIssuesDe",
     "preciser",
+    "rattacherJustificatif",
     "supprimer"
   ],
   "charges": [
@@ -46,6 +49,7 @@
     "demandesDUnePiece",
     "deriverEcheances",
     "echeances",
+    "garderPiece",
     "invitations",
     "invitationsPourMoi",
     "inviter",
@@ -180,12 +184,14 @@
   "referentiel": [
     "accountMappings",
     "activePack",
+    "classesDeComptes",
     "fiscalCharges",
     "juridictions",
+    "mentionsDuPack",
     "moyensDePaiement",
     "socleParams",
     "taxRates",
-    "typesDeDocumentALaCapture"
+    "typesDeDocument"
   ],
   "signalements": [
     "deposer"
