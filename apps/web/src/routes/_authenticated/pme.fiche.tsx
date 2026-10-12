@@ -364,7 +364,8 @@ function FicheFiscale() {
              */
             onFallback={() => {
               setScanne(false);
-              void files.takePhoto().then((pris) => {
+              void files.takePhoto().then(([pris]) => {
+                // Une carte tient sur une face : une photo, la première.
                 if (pris) lecture.mutate(pris.blob);
               });
             }}
