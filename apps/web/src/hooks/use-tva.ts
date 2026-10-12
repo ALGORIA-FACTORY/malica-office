@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useI18n } from "@/i18n";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computeTva } from "@malica/socle";
@@ -30,6 +31,7 @@ export function useTvaPeriod(period: string): {
   isPending: boolean;
 } {
   const pme = usePme();
+  const { locale } = useI18n();
   // Les décimales viennent du pack (R4) : sans elles, aucun montant n'est
   // écrivable, et mieux vaut ne rien rendre qu'un chiffre à la mauvaise
   // échelle.
@@ -45,8 +47,10 @@ export function useTvaPeriod(period: string): {
   });
 
   const rates = useQuery({
-    queryKey: ["tax-rates", pme.packId],
-    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction),
+    // La langue entre dans la cle : les libelles des taux sont traduits, et
+    // un cache commun aurait servi l arabe a un ecran francais.
+    queryKey: ["tax-rates", pme.packId, locale],
+    queryFn: () => office().referential.taxRates(pme.packId!, pme.jurisdiction, locale),
     enabled: !!pme.packId,
   });
 

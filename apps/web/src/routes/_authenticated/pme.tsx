@@ -133,21 +133,42 @@ function PmeLayout() {
    * question, il part sans type plutôt que d'être perdu. Une photo refaite
    * est le pire prix qu'on puisse lui demander.
    */
-  const [aTyper, setATyper] = useState<PickedFile | null>(null);
+  /*
+   * ====================================== PLUSIEURS DOCUMENTS D'UN SEUL COUP
+   *
+   * 11 octobre 2026 : « et l'upload plusieurs doc pdf ? »
+   *
+   * L'entrée fichier n'avait pas `multiple` : un document à la fois. Pour
+   * qui rattrape un mois de factures, c'est trente allers-retours — et trente
+   * occasions d'arrêter en route.
+   *
+   * Ce qui attend un type est donc une LISTE. Un seul document est une liste
+   * d'un élément, et rien d'autre ne change.
+   *
+   * ================================ ET LA QUESTION NE SE POSE QU'UNE FOIS
+   *
+   * Dix documents ne font pas dix questions : un lot est presque toujours
+   * d'une seule nature — un mois d'achats, un carnet de ventes. La réponse
+   * vaut pour le lot, et chaque pièce reste retypable ensuite.
+   *
+   * Dix questions d'affilée, c'est dix occasions d'abandonner, et la dixième
+   * reçoit une réponse au hasard.
+   */
+  const [aTyper, setATyper] = useState<PickedFile[]>([]);
 
   const choisir = useMutation({
     mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
-      const picked =
-        typeof input === "object"
-          ? await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true })
-          : input === "pdf"
-            ? await files.pickPdf()
-            : await files.takePhoto();
-      return picked ?? null;
+      if (typeof input === "object") {
+        // Plusieurs PAGES d'UNE pièce : à ne pas confondre avec plusieurs
+        // pièces. La distinction est dans la capacité, pas ici.
+        const une = await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true });
+        return une ? [une] : [];
+      }
+      return input === "pdf" ? files.pickPdfs() : files.takePhoto();
     },
-    onSuccess: (picked) => {
+    onSuccess: (choisis) => {
       setCaptureError(null);
-      if (picked) setATyper(picked);
+      if (choisis.length > 0) setATyper(choisis);
     },
     onError: (e: unknown) =>
       setCaptureError(
@@ -158,57 +179,31 @@ function PmeLayout() {
   });
 
   const capture = useMutation({
-    mutationFn: async (input: { picked: PickedFile; documentKind: string | null }) => {
+    /**
+     * Le lot entre pièce par pièce, et chacune a sa propre clé.
+     *
+     * ============================================= POURQUOI UNE CLÉ CHACUNE
+     *
+     * La clé d'idempotence identifie UNE pièce. Partagée, le deuxième dépôt
+     * serait pris pour un doublon du premier : neuf factures sur dix
+     * disparaîtraient sans aucun message.
+     */
+    mutationFn: async (input: { lot: readonly PickedFile[]; documentKind: string | null }) => {
       if (!org) return null;
-      const { picked } = input;
-      /*
-       * ============================================ RANGÉE AVANT DE PARTIR
-       *
-       * La pièce va dans la file, sur l'appareil, avant tout appel réseau. En
-       * ligne, elle est chez l'API dans la seconde et on l'ouvre. Hors ligne,
-       * elle attend dans « Vos documents » et part au retour du réseau — la
-       * photo n'est jamais à refaire.
-       */
-      const cle = await vidage().deposer(
-        {
-          cle: files.newIdempotencyKey(),
-          tenantId: org.id,
-          entityId,
-          source: picked.source,
-          /*
-           * ================================== ELLE NAÎT CHEZ SON DIRIGEANT
-           *
-           * Ce commentaire disait « sous mandat actif, elle part », et c'est
-           * FAUX depuis le 7 octobre 2026 : la fonction rend « personnel »,
-           * toujours.
-           *
-           * Le produit s'est trompé dans les deux sens. Le 4 octobre, rien ne
-           * partait et rien à l'écran ne disait qu'un geste manquait. On a
-           * alors transmis d'office à la photo, et le 7 une facture rejetée
-           * était déjà chez le comptable — partie avant d'être lue, donc
-           * avant que son verdict existe.
-           *
-           * La transmission est depuis une DÉCISION, prise à la fin de la
-           * lecture, en deux boutons de même poids. Et le retour d'une pièce
-           * transmise demande l'accord du cabinet.
-           */
-          vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
-          contentType: picked.blob.type || "application/pdf",
-          documentKind: input.documentKind,
-          nomFichier: picked.name,
-        },
-        picked.blob,
-      );
-      const element = await vidage().attendre(cle, 4_000);
-      return element?.pieceId ?? null;
+      const identifiants: string[] = [];
+      for (const picked of input.lot) {
+        const id = await deposerUnePiece(picked, input.documentKind);
+        if (id) identifiants.push(id);
+      }
+      // Une seule pièce : on l'ouvre, sa lecture est déjà demandée. Plusieurs :
+      // la liste, parce qu'ouvrir la première cache les neuf autres.
+      return input.lot.length === 1 ? (identifiants[0] ?? null) : null;
     },
     onSuccess: async (pieceId) => {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       await qc.invalidateQueries({ queryKey: ["pieces-lues", org.id] });
-      // Arrivée chez l'API : on ouvre la pièce, dont la lecture est déjà
-      // demandée. Sinon elle attend, visible, dans la liste.
       if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
       else await navigate({ to: "/pme/list" });
     },
@@ -219,6 +214,50 @@ function PmeLayout() {
           : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
       ),
   });
+
+  async function deposerUnePiece(picked: PickedFile, documentKind: string | null) {
+    if (!org) return null;
+    /*
+     * ============================================ RANGÉE AVANT DE PARTIR
+     *
+     * La pièce va dans la file, sur l'appareil, avant tout appel réseau. En
+     * ligne, elle est chez l'API dans la seconde et on l'ouvre. Hors ligne,
+     * elle attend dans « Vos documents » et part au retour du réseau — la
+     * photo n'est jamais à refaire.
+     */
+    const cle = await vidage().deposer(
+      {
+        cle: files.newIdempotencyKey(),
+        tenantId: org.id,
+        entityId,
+        source: picked.source,
+        /*
+         * ==================================== ELLE NAÎT CHEZ SON DIRIGEANT
+         *
+         * Ce commentaire disait « sous mandat actif, elle part », et c'est
+         * FAUX depuis le 7 octobre 2026 : la fonction rend « personnel »,
+         * toujours.
+         *
+         * Le produit s'est trompé dans les deux sens. Le 4 octobre, rien ne
+         * partait et rien à l'écran ne disait qu'un geste manquait. On a
+         * alors transmis d'office à la photo, et le 7 une facture rejetée
+         * était déjà chez le comptable — partie avant d'être lue, donc
+         * avant que son verdict existe.
+         *
+         * La transmission est depuis une DÉCISION, prise à la fin de la
+         * lecture, en deux boutons de même poids. Et le retour d'une pièce
+         * transmise demande l'accord du cabinet.
+         */
+        vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
+        contentType: picked.blob.type || "application/pdf",
+        documentKind,
+        nomFichier: picked.name,
+      },
+      picked.blob,
+    );
+    const element = await vidage().attendre(cle, 4_000);
+    return element?.pieceId ?? null;
+  }
 
   const file = useFileDAttente(org?.id ?? null);
 
@@ -306,6 +345,7 @@ function PmeLayout() {
               currency: org.currency,
               packId: packQuery.data?.id ?? null,
               orgName: org.name,
+              matricule: org.legalId,
               dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
               choisirDossier: selectOrg,
               aUnCabinet,
@@ -321,21 +361,21 @@ function PmeLayout() {
         )}
       </main>
 
-      {aTyper ? (
+      {aTyper.length > 0 ? (
         <QuestionDuType
-          nomDuFichier={aTyper.name}
+          documents={aTyper.map((p) => p.name)}
           onRepondre={(code) => {
-            const picked = aTyper;
-            setATyper(null);
-            capture.mutate({ picked, documentKind: code });
+            const lot = aTyper;
+            setATyper([]);
+            capture.mutate({ lot, documentKind: code });
           }}
           onPasser={() => {
-            // Le fichier est deja choisi : passer l'envoie sans type plutot
-            // que de le perdre. Une photo refaite est le pire prix qu'on
-            // puisse demander.
-            const picked = aTyper;
-            setATyper(null);
-            capture.mutate({ picked, documentKind: null });
+            // Les fichiers sont deja choisis : passer les envoie sans type
+            // plutot que de les perdre. Une photo refaite est le pire prix
+            // qu'on puisse demander.
+            const lot = aTyper;
+            setATyper([]);
+            capture.mutate({ lot, documentKind: null });
           }}
         />
       ) : null}

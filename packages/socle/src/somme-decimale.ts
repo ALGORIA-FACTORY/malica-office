@@ -44,3 +44,19 @@ export function estNul(valeur: string, decimales = 3): boolean {
     return false;
   }
 }
+
+/**
+ * Une unité mineure vers sa chaîne décimale : 613493 → « 613.493 ».
+ *
+ * La base garde les montants en unités mineures — un entier, jamais un
+ * flottant. Les documents, eux, portent des chaînes décimales. La conversion
+ * se fait donc ici, avec les décimales du pack, et pas par un `/ 1000` écrit
+ * dans un écran : trois décimales sont tunisiennes, et la première
+ * juridiction à deux aurait affiché mille fois le montant.
+ */
+export function depuisUniteMineure(unites: number, decimales: number): string {
+  if (!Number.isInteger(unites)) {
+    throw new Error(`unité mineure non entière : ${unites}`);
+  }
+  return depuisUnites(BigInt(unites), decimales);
+}

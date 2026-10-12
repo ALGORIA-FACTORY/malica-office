@@ -1,6 +1,6 @@
 {
   "name": "malica-office",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "private": true,
   "type": "module",
   "description": "Malica Office — racine d'espace de travail",
@@ -13,7 +13,7 @@
     "dev:api": "npm run dev --workspace @malica/api",
     "build": "npm run build --workspace @malica/web",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "npm run test --workspaces && node --test infra/caddy/Caddyfile.test.mjs db/decouper-sql.test.mjs db/reproductibilite.test.mjs db/registre.test.mjs outils/verifier.test.mjs outils/comptes-de-parcours.test.mjs",
+    "test": "npm run test --workspaces && node --test infra/porte-ssh.test.mjs infra/caddy/Caddyfile.test.mjs db/decouper-sql.test.mjs db/reproductibilite.test.mjs db/registre.test.mjs outils/verifier.test.mjs outils/comptes-de-parcours.test.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "dev:telephone": "node outils/dev-telephone.mjs",

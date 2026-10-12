@@ -3,6 +3,7 @@
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
  */
 
+import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
 export type OrgKind = "pme" | "cabinet";
@@ -275,10 +276,14 @@ export interface Juridiction {
 export interface ReferentialRepository {
   juridictions(): Promise<Juridiction[]>;
   activePack(jurisdiction: string): Promise<JurisdictionPack | null>;
-  taxRates(packId: string, jurisdiction: string): Promise<TaxRate[]>;
+  /** Les taux du pack. Le libelle est traduit : il descend a l ecran. */
+  taxRates(packId: string, jurisdiction: string, locale?: string): Promise<TaxRate[]>;
   accountMappings(packId: string): Promise<AccountMapping[]>;
+  /** Ce qu'est chaque classe du plan : le compte de résultat en a besoin. */
+  classesDeComptes(packId: string): Promise<AccountClass[]>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
-  fiscalCharges(packId: string): Promise<FiscalCharge[]>;
+  /** Les droits hors TVA du pack, libelle traduit. */
+  fiscalCharges(packId: string, locale?: string): Promise<FiscalCharge[]>;
   /** Paramètres du Socle (décimales, méthode de stock, tolérances) lus au pack. */
   /**
    * Les types de document proposés au moment de la photo, traduits.
@@ -287,15 +292,43 @@ export interface ReferentialRepository {
    * autre genre d'abandon. Le libellé vient de `ref.labels`, pas de la
    * colonne française.
    */
-  typesDeDocumentALaCapture(locale: string): Promise<
+  /**
+   * Les moyens de paiement du pack, traduits, en vigueur à une date.
+   *
+   * La date vient de l'appelant — celle de la pièce — et non de l'horloge :
+   * un cabinet peut retirer un moyen, et les pièces d'avant gardent celui
+   * qu'elles portaient.
+   */
+  moyensDePaiement(
+    packId: string,
+    locale: string,
+    au: string,
+  ): Promise<
+    Array<{
+      code: string;
+      libelle: string;
+      tresorerieAccount: string | null;
+      exigeJustificatif: boolean;
+    }>
+  >;
+  typesDeDocument(locale: string): Promise<
     Array<{
       code: string;
       famille: string;
       libelle: string;
       porteEcriture: boolean;
       transmissible: boolean;
+      /** Vrai pour les types proposés au moment de la photo — six, pas dix-sept. */
+      proposeALaCapture: boolean;
     }>
   >;
+  /**
+   * Les mentions que le pack exige, traduites.
+   *
+   * R4 : aucune mention obligatoire n'est écrite dans le code. Le reçu de
+   * paiement les porte en pied, et c'est le pack qui dit lesquelles.
+   */
+  mentionsDuPack(packId: string, locale: string): Promise<MentionDuPack[]>;
   socleParams(packId: string): Promise<SocleParams>;
 }
 
@@ -573,6 +606,33 @@ export interface AccountMapping {
   mainAccount: string;
   vatAccount: string;
   counterpartyAccount: string;
+  /**
+   * Le journal où l'écriture s'inscrit, lu au pack.
+   *
+   * Il était écrit dans le code — « achat ? ACH : VEN » — et un code de
+   * journal appartient au plan de l'organisation, pas au produit (R4). `null`
+   * quand le pack ne le dit pas : la proposition REFUSE alors, plutôt que de
+   * ranger l'écriture dans un journal inventé qu'aucun grand-livre ne
+   * retrouverait.
+   */
+  journalCode: string | null;
+}
+
+/**
+ * Ce qu'est une classe du plan comptable : charge, produit, actif ou passif.
+ *
+ * Le moteur du compte de résultat testait `code.startsWith("6")`. C'est une
+ * propriété du plan tunisien écrite dans le code du produit, et la première
+ * juridiction numérotant autrement aurait rendu un résultat VIDE — sans
+ * aucune erreur à l'écran.
+ *
+ * La reconnaissance se fait par PRÉFIXE, le plus long d'abord : c'est la règle
+ * du plan lui-même, et elle vaut aussi pour un compte qu'un cabinet a créé et
+ * qui n'est pas dans le plan livré.
+ */
+export interface AccountClass {
+  prefix: string;
+  nature: "charge" | "produit" | "actif" | "passif";
 }
 
 export interface FiscalCharge {
@@ -605,6 +665,17 @@ export interface Piece {
    */
   documentKind: string | null;
   documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
+  /** La facture dont cette pièce est issue — un reçu, un justificatif. */
+  sourcePieceId: string | null;
+  /**
+   * Quand le dirigeant a décidé de garder la pièce chez lui.
+   *
+   * `null` ne veut pas dire « non » : il veut dire « pas encore répondu », et
+   * c'est à cela que l'écran reconnaît qu'il doit poser la question. Sans
+   * cette distinction, `vis = "personnel"` disait à la fois « j'ai décidé »
+   * et « je n'ai rien dit », et la question revenait à chaque visite.
+   */
+  gardeeLe: string | null;
 }
 
 export interface Token {
@@ -628,6 +699,19 @@ export interface FaitDeDemande {
   objet: DemandeSurPiece;
   fait: "demandee" | "accordee" | "refusee";
   note: string | null;
+  createdAt: string;
+}
+
+/** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
+export interface PaiementDUnePiece {
+  id: string;
+  moyenCode: string;
+  /** En unités mineures. Nul quand rien n'a encore été payé. */
+  montantMineur: number | null;
+  devise: string;
+  payeLe: string | null;
+  /** La photo du talon, du ticket ou de l'avis — une pièce à part entière. */
+  justificatifPieceId: string | null;
   createdAt: string;
 }
 
@@ -700,6 +784,12 @@ export interface NouvellePiece {
    * Nul quand la question n'a pas été posée : un import, une reprise.
    */
   documentKind?: string | null;
+  /**
+   * La facture dont cette pièce est issue : un reçu de paiement, un
+   * justificatif. Sans ce lien, le cabinet voit un document flottant et
+   * personne ne peut dire ce qu'il atteste.
+   */
+  sourcePieceId?: string | null;
 }
 
 /**
@@ -745,6 +835,49 @@ export interface CaptureRepository {
    * un mois qui peut en compter cinquante.
    */
   listAvecLecture(tenantId: string): Promise<PieceLue[]>;
+  /**
+   * Inscrire un paiement sur une pièce. Append-only (R7).
+   *
+   * Un acompte puis un solde font DEUX lignes : une colonne sur la pièce
+   * dirait « payée par chèque » là où il y a eu des espèces le 3 et un
+   * chèque le 28. Une erreur se corrige par un paiement d'annulation, daté.
+   */
+  enregistrerPaiement(input: {
+    pieceId: string;
+    packId: string;
+    moyenCode: string;
+    montantMineur?: number | null;
+    devise: string;
+    payeLe?: string | null;
+    justificatifPieceId?: string | null;
+  }): Promise<string>;
+  /**
+   * Les pièces issues d'une pièce : son reçu, ses justificatifs.
+   *
+   * Le cabinet les télécharge avec la facture. Sans cette lecture, elles
+   * existent, sont transmises, et restent introuvables depuis la pièce
+   * qu'elles accompagnent.
+   */
+  piecesIssuesDe(pieceId: string): Promise<Piece[]>;
+  /**
+   * Donner a la main la date qu'on n'a pas su lire.
+   *
+   * La precision s'inscrit, puis les articles SE REPROJETTENT : sans la
+   * reprojection, la date serait enregistree et la piece resterait hors de
+   * tous les mois — le drapeau changerait, pas le chiffre.
+   */
+  daterLaPiece(pieceId: string, date: string): Promise<{ periode: string | null }>;
+  /**
+   * Rattacher une preuve à un paiement déjà inscrit.
+   *
+   * Le paiement ne se réécrit pas : la preuve tardive est une écriture
+   * nouvelle, et c'est la dernière qui vaut. Sans ce chemin, il faudrait soit
+   * bloquer le paiement jusqu'à la photo — donc faire cocher « espèces » pour
+   * avancer — soit inscrire un second paiement, qui doublerait le montant.
+   */
+  rattacherJustificatif(paiementId: string, pieceId: string): Promise<void>;
+  /** Les paiements d'une pièce, du plus ancien au plus récent. */
+  paiementsDUnePiece(pieceId: string): Promise<PaiementDUnePiece[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
    * Ce que la personne précise quand la lecture ne pouvait pas conclure —
@@ -824,9 +957,23 @@ export interface LigneDePeriode {
 }
 
 /** La proposition d'écriture calculée par le serveur (3B-6), ou son refus motivé. */
+/**
+ * La proposition d une piece, ou son refus.
+ *
+ * Le verdict voyage sous DEUX formes : la phrase inscrite en base, qui est
+ * l historique (R7), et le CODE, sur lequel les ecrans branchent. L ecran
+ * comparait la phrase francaise accent par accent, dans un autre paquet que
+ * celui qui la produit.
+ */
 export type PropositionDePiece =
-  | { ok: true; verdict: string; packVersionId: string; proposition: ProposalResult }
-  | { ok: false; raison: string; verdict?: string };
+  | {
+      ok: true;
+      verdict: string;
+      verdictCode: CodeVerdict | null;
+      packVersionId: string;
+      proposition: ProposalResult;
+    }
+  | { ok: false; raison: string; verdict?: string; verdictCode?: CodeVerdict | null };
 
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
@@ -1528,6 +1675,17 @@ export interface CollabRepository {
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
   /**
+   * Inscrire la décision de garder la pièce dans l'espace privé.
+   *
+   * Elle ne change pas la visibilité : elle la CONFIRME. Sans cette
+   * confirmation, « personnel » voulait dire à la fois « j'ai décidé » et
+   * « je n'ai pas répondu », et l'écran reposait la question à chaque visite.
+   *
+   * Garder ne ferme rien : la pièce part au cabinet quand son dirigeant le
+   * veut. C'est l'inverse qui demande un accord.
+   */
+  garderPiece(pieceId: string): Promise<{ changed: boolean }>;
+  /**
    * Ce que la PME demande au cabinet sur une pièce déjà transmise.
    *
    * Une pièce partie ne revient pas d'elle-même : le cabinet travaille sur ce
@@ -1768,6 +1926,14 @@ export interface ChargeQuestionRow {
   thresholdCode: string;
   answer: "exceptionnel" | "a_verifier" | null;
   answeredAt: string | null;
+  /**
+   * Qui a répondu : le dossier lui-même, ou son cabinet.
+   *
+   * « Exceptionnel » dit par le dirigeant est une déclaration ; dit par
+   * l'expert, c'est un avis professionnel. Sans ce mot, l'écran ne peut pas
+   * faire la différence, et la réponse arrive anonyme.
+   */
+  answeredSide: "pme" | "cabinet" | null;
 }
 
 /**
@@ -1793,7 +1959,8 @@ export interface ChargesEnAttenteDeDate {
 }
 
 export interface ChargesRepository {
-  familles(packId: string): Promise<ChargeFamille[]>;
+  /** Les familles de charges du pack, libelle traduit. */
+  familles(packId: string, locale?: string): Promise<ChargeFamille[]>;
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
   enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;

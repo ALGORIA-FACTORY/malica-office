@@ -39,6 +39,18 @@ export const JournalLineV1 = z.object({
   label: z.string(),
   debit: decimalString, // "0" si crédit
   credit: decimalString, // "0" si débit
+  /**
+   * Le code de taxe de la ligne, pour les lignes de TVA. Nul ailleurs.
+   *
+   * Ajouté le 11 octobre 2026 : le moteur posait une seule ligne de TVA, somme
+   * de tous les taux, et la proposition la timbrait du code de la PREMIÈRE
+   * ligne de la pièce. Une facture à 7 % et 19 % voyait donc toute sa TVA
+   * déclarée à un seul taux — écriture équilibrée, ventilation fausse.
+   *
+   * Facultatif par compatibilité : les pivots écrits avant ce jour n'en
+   * portent pas.
+   */
+  tax_code: z.string().min(1).nullable().optional(),
 });
 export type JournalLineV1 = z.infer<typeof JournalLineV1>;
 

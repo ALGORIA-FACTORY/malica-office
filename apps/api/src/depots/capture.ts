@@ -33,6 +33,54 @@ function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
 }
 
+/**
+ * Projeter les articles d'une pièce — un seul endroit.
+ *
+ * Deux chemins y mènent : la lecture, et la date donnée à la main quand la
+ * lecture n'a pas su la lire. Recopier ce corps pour le second aurait donné
+ * deux imputations possibles pour la même pièce selon le chemin emprunté, et
+ * c'est le genre d'écart qu'on ne voit qu'à la balance.
+ */
+async function projeterLesArticles(
+  db: Requete,
+  input: {
+    pieceId: string;
+    packId: string;
+    articles: unknown[];
+    documentKind: string | null;
+    documentDate: string | null;
+  },
+): Promise<void> {
+  if (input.articles.length === 0) return;
+
+  // Sans sens de facture, pas de compte : on ne suppose pas « achat ». Les
+  // articles sont gardés sans imputation ; elle viendra avec la précision de
+  // la personne, au moment de la proposition.
+  let compte: string | undefined;
+  if (input.documentKind) {
+    const { rows } = await db.query(
+      // Une ligne par code de taxe : cinq pour un achat, cinq pour une vente,
+      // et le même `main_account` sur les cinq. Sans ordre, deux bases
+      // pouvaient rendre une ligne différente — et le jour où un pack
+      // distinguerait l'imputation par code de taxe, l'imputation d'une pièce
+      // aurait dépendu du plan d'exécution (R11).
+      `select main_account from ref_account_mappings_v
+        where pack_version_id = $1 and document_kind = $2
+        order by main_account limit 1`,
+      [input.packId, input.documentKind],
+    );
+    compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+  }
+
+  await db.query(`select public.capture_articles_persist($1, $2, $3::date, $4, $5::jsonb)`, [
+    input.pieceId,
+    input.packId,
+    input.documentDate ?? null,
+    compte ?? null,
+    JSON.stringify(input.articles),
+  ]);
+}
+
 function versPiece(r: Record<string, unknown>) {
   return {
     id: r["id"] as string,
@@ -47,6 +95,9 @@ function versPiece(r: Record<string, unknown>) {
     documentKindStatut:
       (r["document_kind_statut"] as "a_determiner" | "a_confirmer" | "confirme" | undefined) ??
       "a_determiner",
+    // `null` = la question est encore ouverte, et l'écran doit la poser.
+    gardeeLe: (r["gardee_le"] as string | null) ?? null,
+    sourcePieceId: (r["source_piece_id"] as string | null) ?? null,
   };
 }
 
@@ -79,6 +130,12 @@ export const capture = {
        * preuve.
        */
       documentKind?: string | null;
+      /**
+       * La pièce dont celle-ci est issue : la facture, pour un reçu de
+       * paiement ou un justificatif. Sans elle, le cabinet voit un reçu
+       * flottant et personne ne peut dire ce qu'il atteste.
+       */
+      sourcePieceId?: string | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
@@ -86,7 +143,7 @@ export const capture = {
     // par la route de dépôt (stockage.ts, capture_sceller_empreinte).
     const { rows } = await db.query<{ id: string }>(
       `select public.capture_piece_register($1, $2, $3, $4, $5, $6::app.vis_t,
-                                            null, $7::smallint, $8) as id`,
+                                            null, $7::smallint, $8, $9) as id`,
       [
         input.tenantId,
         input.source,
@@ -98,6 +155,7 @@ export const capture = {
         input.vis,
         input.pageCount ?? null,
         input.documentKind ?? null,
+        input.sourcePieceId ?? null,
       ],
     );
     const id = rows[0]!.id;
@@ -124,7 +182,7 @@ export const capture = {
   async lister(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-                document_kind, document_kind_statut
+                document_kind, document_kind_statut, gardee_le, source_piece_id
          from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
       [tenantId],
     );
@@ -189,7 +247,7 @@ export const capture = {
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut
+              document_kind, document_kind_statut, gardee_le, source_piece_id
          from pieces_v where id = $1`,
       [pieceId],
     );
@@ -436,34 +494,81 @@ export const capture = {
       ],
     );
 
-    if (input.articles.length === 0) return;
+    await projeterLesArticles(db, input);
+  },
 
-    // Sans sens de facture, pas de compte : on ne suppose pas « achat ».
-    // Les articles sont gardés sans imputation ; elle viendra avec la
-    // précision de la personne, au moment de la proposition.
-    let compte: string | undefined;
-    if (input.documentKind) {
-      const { rows } = await db.query(
-        // Une ligne par code de taxe : cinq pour un achat, cinq pour une
-        // vente, et le même `main_account` sur les cinq. Sans ordre, deux
-        // bases pouvaient rendre une ligne différente — et le jour où un pack
-        // distinguerait l'imputation par code de taxe, l'imputation d'une
-        // pièce aurait dépendu du plan d'exécution (R11).
-        `select main_account from ref_account_mappings_v
-          where pack_version_id = $1 and document_kind = $2
-          order by main_account limit 1`,
-        [input.packId, input.documentKind],
-      );
-      compte = (rows as Record<string, unknown>[])[0]?.["main_account"] as string | undefined;
+  /**
+   * Donner à la main la date qu'on n'a pas su lire.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Depuis le 5 octobre 2026, une pièce dont la date n'a pas été lue a une
+   * période NULLE — « pas de rangement plutôt qu'un rangement faux ». C'était
+   * juste, et c'est resté incomplet : l'écran des charges annonçait « 3 pièces
+   * attendent leur date » et aucun geste ne les débloquait. Une impasse
+   * annoncée reste une impasse.
+   *
+   * Deux temps, et le second est celui qu'on oublie : la précision s'inscrit,
+   * puis les articles SE REPROJETTENT. Sans la reprojection, la date serait
+   * enregistrée et la pièce resterait hors de tous les mois — le drapeau
+   * changerait, pas le chiffre.
+   */
+  async daterLaPiece(
+    db: Requete,
+    pieceId: string,
+    date: string,
+  ): Promise<{ periode: string | null }> {
+    await db.query(`select public.capture_precision_persist($1, 'document_date', $2)`, [
+      pieceId,
+      date,
+    ]);
+
+    // Ce qu'il faut pour reprojeter : la dernière lecture, le type tranché, et
+    // le pack du dossier. Rien n'est recalculé — ce sont les mêmes valeurs qui
+    // ont servi à la lecture, avec la date en plus.
+    const { rows } = await db.query<{
+      tenant_id: string;
+      document_kind: string | null;
+      payload: { articles?: unknown[] } | null;
+      jurisdiction: string;
+    }>(
+      `select p.tenant_id, p.document_kind, e.payload, o.jurisdiction
+         from pieces_v p
+         join organizations_v o on o.id = p.tenant_id
+         left join lateral (
+           select payload from extractions_v x
+            where x.piece_id = p.id order by x.created_at desc limit 1
+         ) e on true
+        where p.id = $1`,
+      [pieceId],
+    );
+    const ligne = rows[0];
+    if (!ligne) throw new Error("piece introuvable ou non autorisee");
+
+    const articles = ligne.payload?.articles ?? [];
+    if (articles.length === 0) return { periode: date.slice(0, 7) };
+
+    const { rows: packs } = await db.query<{ id: string }>(
+      `select id from ref_packs_v
+        where jurisdiction = $1 and effective_from <= $2
+        order by effective_from desc limit 1`,
+      [ligne.jurisdiction, date],
+    );
+    const packId = packs[0]?.id;
+    if (!packId) {
+      // R4 : pas de repli. Un dossier sans pack à cette date ne se projette
+      // pas en silence sous un pack voisin.
+      throw new Error(`aucun pack en vigueur au ${date} pour ${ligne.jurisdiction}`);
     }
 
-    await db.query(`select public.capture_articles_persist($1, $2, $3::date, $4, $5::jsonb)`, [
-      input.pieceId,
-      input.packId,
-      input.documentDate ?? null,
-      compte ?? null,
-      JSON.stringify(input.articles),
-    ]);
+    await projeterLesArticles(db, {
+      pieceId,
+      packId,
+      articles,
+      documentKind: ligne.document_kind,
+      documentDate: date,
+    });
+    return { periode: date.slice(0, 7) };
   },
 
   /**
@@ -768,5 +873,130 @@ export const capture = {
     // La base a dit oui : les octets n'ont plus de raison d'exister.
     await effacerContenu(tenantId, pieceId);
     return true;
+  },
+
+  /**
+   * Inscrire un paiement sur une pièce.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Demandé le 10 octobre 2026 : après la lecture, le moyen de paiement, et
+   * la photo de son justificatif sauf en espèces.
+   *
+   * =========================================== UN PAIEMENT S'AJOUTE, IL NE SE CORRIGE PAS
+   *
+   * La table est append-only (R7). Un acompte puis un solde font DEUX lignes,
+   * et c'est la réalité : une colonne sur la pièce aurait dit « payée par
+   * chèque » là où il y a eu des espèces le 3 et un chèque le 28.
+   *
+   * Une erreur se corrige donc par un paiement d'annulation, daté, qui laisse
+   * l'histoire lisible — jamais en réécrivant celui d'avant.
+   *
+   * ============================================ CE QUE CETTE MÉTHODE VÉRIFIE
+   *
+   * Que le moyen existe AU PACK, à la date du paiement. Un code inventé
+   * passerait sinon sans bruit et l'écriture s'appuierait sur un compte de
+   * trésorerie qui n'existe pas — faute invisible jusqu'à la balance.
+   *
+   * Ce qu'elle NE vérifie PAS : la présence du justificatif. Un dirigeant qui
+   * n'a pas son talon sous la main doit pouvoir avancer, la pièce marquée
+   * comme il se doit. Un écran qui refuse se contourne en cochant
+   * « espèces », et l'information est perdue au lieu d'être gagnée.
+   */
+  async enregistrerPaiement(
+    db: Requete,
+    input: {
+      pieceId: string;
+      packId: string;
+      moyenCode: string;
+      /** En unités mineures. Nul quand rien n'a encore été payé. */
+      montantMineur?: number | null;
+      devise: string;
+      payeLe?: string | null;
+      justificatifPieceId?: string | null;
+    },
+  ): Promise<string> {
+    const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
+    const { rows: moyen } = await db.query<{ code: string }>(
+      `select code from ref_payment_means_v
+        where pack_version_id = $1 and code = $2
+          and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
+      [input.packId, input.moyenCode, au],
+    );
+    if (moyen.length === 0) {
+      throw Object.assign(
+        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
+        { code: "22023" },
+      );
+    }
+
+    const { rows } = await db.query<{ id: string }>(
+      `insert into capture.paiements
+         (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
+          montant_mineur, devise, paye_le, justificatif_piece_id)
+       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
+              $4::bigint, $5, $6::date, $7
+         from pieces_v p where p.id = $1
+       returning id`,
+      [
+        input.pieceId,
+        input.moyenCode,
+        input.packId,
+        input.montantMineur ?? null,
+        input.devise,
+        input.payeLe ?? null,
+        input.justificatifPieceId ?? null,
+      ],
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error("piece introuvable ou non autorisee");
+    return id;
+  },
+
+  /**
+   * Les pièces ISSUES d'une pièce : son reçu, ses justificatifs.
+   *
+   * Le cabinet doit pouvoir les télécharger avec la facture — « aussi du reçu
+   * de dépense ou revenu ». Sans cette lecture, les documents existent, sont
+   * transmis, et restent introuvables depuis la pièce qu'ils accompagnent.
+   */
+  async piecesIssuesDe(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
+              document_kind, document_kind_statut, gardee_le, source_piece_id
+         from pieces_v where source_piece_id = $1 order by created_at`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map(versPiece);
+  },
+
+  /**
+   * Rattacher une preuve à un paiement DÉJÀ inscrit.
+   *
+   * Le paiement est en ajout seul : il ne se réécrit pas. La preuve tardive
+   * est donc une écriture nouvelle, et c'est la dernière qui vaut — reprendre
+   * une photo floue est le cas normal.
+   */
+  async rattacherJustificatif(db: Requete, paiementId: string, pieceId: string): Promise<void> {
+    await db.query(`select public.paiement_rattacher_justificatif($1, $2)`, [paiementId, pieceId]);
+  },
+
+  /** Les paiements d'une pièce, du plus ancien au plus récent. */
+  async paiementsDUnePiece(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select id, moyen_code, montant_mineur, devise, paye_le,
+              justificatif_piece_id, created_at
+         from paiements_v where piece_id = $1 order by created_at`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r["id"] as string,
+      moyenCode: r["moyen_code"] as string,
+      montantMineur: r["montant_mineur"] === null ? null : Number(r["montant_mineur"]),
+      devise: r["devise"] as string,
+      payeLe: (r["paye_le"] as string | null) ?? null,
+      justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,
+      createdAt: (r["created_at"] as Date).toISOString(),
+    }));
   },
 };

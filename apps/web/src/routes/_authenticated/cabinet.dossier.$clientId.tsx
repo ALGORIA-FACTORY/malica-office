@@ -8,7 +8,7 @@
  * d'exercice, les pièces récentes, les feux de conformité et le journal du
  * mandat. Les moteurs tournent dans `useSyntheseClient` ; l'écran lit.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -16,13 +16,14 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { ecrireDossierCourant } from "@/components/malica/dossier-courant";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useSyntheseClient } from "@/hooks/use-synthese-client";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDeLAction } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
+import type { ChargeQuestionRow } from "@malica/socle/ports/repositories";
 
 import { QueueTable } from "./cabinet.index";
 
@@ -54,6 +55,7 @@ function CabinetClient() {
   const { clientId } = Route.useParams();
   const { t, locale } = useI18n();
   const { org } = useCabinet();
+  const qc = useQueryClient();
   const [periode, setPeriode] = useState(() => new Date().toISOString().slice(0, 7));
 
   const clients = useQuery({
@@ -78,6 +80,52 @@ function CabinetClient() {
     queryKey: ["cab-journal", clientId],
     queryFn: () => office().supervision.journalDuMandat(clientId),
   });
+  /**
+   * Ce que Malica demande sur les charges de ce dossier.
+   *
+   * La question est `partage` : le cabinet la lit sous son mandat, par la même
+   * RLS que le reste. Et depuis le 11 octobre 2026 il peut aussi la trancher.
+   */
+  const questions = useQuery({
+    queryKey: ["cab-questions", clientId],
+    queryFn: () => office().charges.questions(clientId),
+  });
+
+  /*
+   * Le pack du CLIENT, pas celui du cabinet : un cabinet tunisien peut tenir
+   * un dossier d'une autre juridiction, et la réponse se range sous le pack du
+   * dossier (R5).
+   */
+  const packQuestions = useQuery({
+    queryKey: ["ref-pack", client?.jurisdiction],
+    queryFn: () => office().referential.activePack(client!.jurisdiction),
+    enabled: !!client,
+  });
+
+  const repondreQuestion = useMutation({
+    mutationFn: ({
+      q,
+      reponse,
+    }: {
+      q: ChargeQuestionRow;
+      reponse: "exceptionnel" | "a_verifier";
+    }) =>
+      office().charges.answer({
+        tenantId: clientId,
+        period: q.period,
+        familleCode: q.familleCode,
+        // Les montants de la question, repris tels quels : le cabinet répond à
+        // l'écart qu'on lui a montré, pas à un écart recalculé entre-temps.
+        observed: q.observed,
+        baseline: q.baseline,
+        deviationRatio: q.deviationRatio,
+        thresholdCode: q.thresholdCode,
+        packVersionId: packQuestions.data?.id ?? "",
+        answer: reponse,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cab-questions", clientId] }),
+  });
+
   const synthese = useSyntheseClient(client, periode);
   const affectations = useQuery({
     queryKey: ["cab-assignments", org.id],
@@ -303,6 +351,71 @@ function CabinetClient() {
               </div>
             )}
           </section>
+
+          {/*
+           * ---- ce que Malica demande, et que l'expert peut trancher
+           *
+           * 11 octobre 2026 : « aussi la réponse du comptable aux questions
+           * envoyées par Malica ».
+           *
+           * La question — « l'électricité fait trois fois le mois ordinaire »
+           * — était visible du cabinet et la base refusait sa réponse : la
+           * porte n'autorisait que les membres du dossier. L'expert voyait
+           * donc une question qu'il ne pouvait pas trancher, alors que c'est
+           * lui qui sait si une facture de septembre est exceptionnelle.
+           *
+           * Les deux réponses ont le même poids visuel. Et une question déjà
+           * tranchée reste là, avec qui a parlé : l'avis du dirigeant et celui
+           * de l'expert peuvent différer, et aucun n'effface l'autre.
+           */}
+          {(questions.data ?? []).length > 0 ? (
+            <section className="space-y-3">
+              <SectionTitle>{t("cab.dos.questions.titre")}</SectionTitle>
+              <ul className="grid gap-px border border-border bg-border">
+                {(questions.data ?? []).map((q) => (
+                  <li key={q.id} className="bg-card p-3.5">
+                    <p className="text-[13.5px] leading-[1.5]">
+                      {t("cab.dos.questions.ligne", {
+                        famille: q.familleCode,
+                        periode: q.period,
+                        observed: montant(q.observed, locale),
+                        baseline: montant(q.baseline, locale),
+                      })}
+                    </p>
+                    {q.answer ? (
+                      <p className="mt-2 text-[12.5px] text-text-2">
+                        {t(
+                          q.answeredSide === "cabinet"
+                            ? "cab.dos.questions.repondue.cabinet"
+                            : "cab.dos.questions.repondue.pme",
+                          { reponse: t(`cab.dos.questions.${q.answer}` as MessageKey) },
+                        )}
+                      </p>
+                    ) : (
+                      <div className="mt-2.5 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={repondreQuestion.isPending}
+                          onClick={() => repondreQuestion.mutate({ q, reponse: "exceptionnel" })}
+                          className="h-9 flex-1 border border-border text-[13px] font-medium hover:bg-accent disabled:opacity-40"
+                        >
+                          {t("cab.dos.questions.exceptionnel")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={repondreQuestion.isPending}
+                          onClick={() => repondreQuestion.mutate({ q, reponse: "a_verifier" })}
+                          className="h-9 flex-1 border border-border text-[13px] font-medium hover:bg-accent disabled:opacity-40"
+                        >
+                          {t("cab.dos.questions.a_verifier")}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {/* ---- les pièces récentes */}
           <section className="space-y-3">

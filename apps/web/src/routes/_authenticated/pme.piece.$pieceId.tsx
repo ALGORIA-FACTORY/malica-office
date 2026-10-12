@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useDecimales } from "@/hooks/use-decimales";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
+import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
 import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
@@ -15,6 +17,7 @@ import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { codeDuVerdict } from "@malica/socle/verdicts";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -90,6 +93,9 @@ function PieceScreen() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
+  // Les décimales de la devise viennent du pack. `null` tant qu'on ne les a
+  // pas : on n'en suppose aucune (R4).
+  const decimales = useDecimales();
   const [zoom, setZoom] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
   /*
@@ -257,6 +263,47 @@ function PieceScreen() {
   });
 
   /**
+   * Donner la date que la lecture n'a pas su lire.
+   *
+   * La base refuse une date a venir : un doigt qui ripe sur un selecteur
+   * donne « 2027 » aussi facilement que « 2026 », et une facture rangee dans
+   * un exercice qui n'a pas commence disparait de toutes les declarations
+   * sans rien signaler.
+   */
+  const dater = useMutation({
+    mutationFn: (date: string) => office().capture.daterLaPiece(pieceId, date),
+    onSuccess: async () => {
+      setError(null);
+      // Les charges changent de mois : leur lecture est a refaire.
+      await qc.invalidateQueries({ queryKey: ["charges-sans-date", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: ["charges-articles", pme.tenantId] });
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
+   * Garder chez soi — l'autre moitié de la décision.
+   *
+   * Elle manquait. Le commentaire d'à côté affirmait « deux boutons de même
+   * poids » et il n'y en avait qu'un ; garder était ce qui arrivait quand on
+   * ne faisait rien. Pire : rien ne distinguait « j'ai décidé de la garder »
+   * de « je n'ai pas encore répondu », donc la question revenait à chaque
+   * visite — et un écran qui redemande ce qu'on vient de lui dire apprend à
+   * ne plus répondre.
+   */
+  const garder = useMutation({
+    mutationFn: () => office().collab.garderPiece(pieceId),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * Le geste inverse SE DEMANDE, il ne se prend pas.
    *
    * Le 10 octobre j'avais livré un rappel unilatéral, pour sortir d'un état
@@ -357,7 +404,7 @@ function PieceScreen() {
   const packDroits = useQuery({
     queryKey: ["droits-du-pack", pme.packId],
     enabled: !!pme.packId,
-    queryFn: () => office().referential.fiscalCharges(pme.packId!),
+    queryFn: () => office().referential.fiscalCharges(pme.packId!, locale),
   });
 
   const propositionServeur = useQuery({
@@ -368,7 +415,11 @@ function PieceScreen() {
   const proposalAttempt = propositionServeur.data
     ? propositionServeur.data.ok
       ? { ok: true as const, value: propositionServeur.data.proposition }
-      : { ok: false as const, verdict: propositionServeur.data.verdict ?? null }
+      : {
+          ok: false as const,
+          verdict: propositionServeur.data.verdict ?? null,
+          verdictCode: propositionServeur.data.verdictCode ?? null,
+        }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
@@ -519,13 +570,27 @@ function PieceScreen() {
    * Le repli n'est pas un défaut caché : un verdict inconnu donne la phrase
    * générique, et le dirigeant sait quand même qu'il doit attendre.
    */
-  const verdictBloquant = proposalAttempt && !proposalAttempt.ok ? proposalAttempt.verdict : null;
+  /*
+   * ============================== ON BRANCHE SUR UN CODE, PAS SUR UNE PHRASE
+   *
+   * Cette comparaison était `verdict === "à rejeter"` : un code écrit en
+   * français, comparé accent par accent, dans un autre paquet que celui qui le
+   * produit. Le jour où quelqu'un reformule « à rejeter », l'écran tombait
+   * silencieusement sur sa phrase générique — et aucune épreuve ne l'aurait vu,
+   * parce que la comparaison compile et que le repli est légitime.
+   *
+   * La conversion vit au Socle, en un seul endroit, avec son épreuve.
+   */
+  const verdictBloquant =
+    proposalAttempt && !proposalAttempt.ok
+      ? (proposalAttempt.verdictCode ?? codeDuVerdict(proposalAttempt.verdict ?? null))
+      : null;
   const raisonDuBlocage =
-    verdictBloquant === "à rejeter"
+    verdictBloquant === "rejet"
       ? t("pme.bloque.rejet")
-      : verdictBloquant === "anomalie à signaler"
+      : verdictBloquant === "anomalie"
         ? t("pme.bloque.anomalie")
-        : verdictBloquant === "à rapprocher"
+        : verdictBloquant === "rapprocher"
           ? t("pme.bloque.rapprocher")
           : t("pme.confirm.review");
 
@@ -977,13 +1042,36 @@ function PieceScreen() {
              * devient la date de l'écriture qu'à la confirmation.
              */
             <span className="flex flex-col items-end gap-1">
+              {/*
+               * ============================== ET LA DATE S'ENREGISTRE, ENFIN
+               *
+               * Ce champ existait et ne servait QU'À la proposition
+               * d'écriture : l'écriture était datée, et la pièce restait sans
+               * mois. Elle continuait donc de figurer dans « ces pièces
+               * attendent leur date », après que la personne ait répondu —
+               * et son montant restait hors des charges du mois.
+               *
+               * La saisie pose désormais une PRÉCISION, qui reprojette les
+               * articles. L'extraction, elle, garde sa date vide : c'est ce
+               * qui s'est réellement lu sur le document (R7).
+               */}
               <input
                 type="date"
                 value={dateRetenue}
-                onChange={(e) => setDateSaisie(e.target.value)}
-                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium"
+                max={new Date().toISOString().slice(0, 10)}
+                disabled={dater.isPending}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDateSaisie(v);
+                  // Un champ `date` rend une chaîne vide tant que la saisie
+                  // est incomplète : on n'enregistre que ce qui est une date.
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
+                }}
+                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium disabled:opacity-50"
               />
-              <span className="text-[11px] text-muted-foreground">{t("piece.date.duScan")}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
+              </span>
             </span>
           ) : (
             <span className="num text-[13.5px] font-medium">
@@ -1133,6 +1221,50 @@ function PieceScreen() {
             ) : null}
 
             {/*
+             * ============================ LE PAIEMENT, AVANT LE RANGEMENT
+             *
+             * Il descend sous les montants, sur la MÊME page : quatre écrans
+             * font quatre occasions d'abandonner. Et il vient avant « où ça
+             * va », parce qu'une pièce qui part au cabinet doit partir avec
+             * la façon dont elle a été réglée.
+             */}
+            <CommentCEstPaye
+              pieceId={pieceId}
+              visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
+              dateDeLaPiece={payload?.document_date ?? null}
+              /*
+               * Le facteur vient du PACK, pas d'un « × 1000 » écrit ici.
+               * Trois décimales sont tunisiennes ; la première juridiction à
+               * deux aurait proposé mille fois le montant payé, et l'écran
+               * n'aurait rien signalé. R4 : aucune constante réglementaire
+               * dans le code.
+               */
+              ttcMineur={
+                payload?.totals?.ttc && decimales !== null
+                  ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
+                  : null
+              }
+              devise={payload?.currency ?? pme.currency}
+              /*
+               * Le sens vient du TYPE TRANCHÉ, et de nulle part ailleurs.
+               * `null` quand il ne l'est pas, et le reçu ne se propose alors
+               * pas : un « reçu de dépense » posé sur une vente est un
+               * document faux, et un document faux remis à un tiers est pire
+               * qu'un document absent.
+               */
+              sens={
+                payload?.document_kind === "facture_achat"
+                  ? "depense"
+                  : payload?.document_kind === "facture_vente"
+                    ? "revenu"
+                    : null
+              }
+              tiers={payload?.issuer ?? null}
+              reference={reference}
+              decimales={decimales}
+            />
+
+            {/*
              * ==================================== LA TRANSMISSION EST UN GESTE
              *
              * Toute pièce photographiée partait au cabinet automatiquement —
@@ -1205,22 +1337,72 @@ function PieceScreen() {
                      * une facture chez soi est un choix légitime, l'envoyer
                      * aussi, et seul le dirigeant sait lequel.
                      */}
-                    <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
-                      {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
-                    </p>
-                    <button
-                      type="button"
-                      disabled={transmettre.isPending}
-                      onClick={() => transmettre.mutate()}
-                      className="h-[50px] w-full border border-foreground bg-foreground text-[15px] font-medium text-background disabled:opacity-50"
-                    >
-                      {transmettre.isPending
-                        ? t("common.loading")
-                        : t("pme.transmettre.action", { cabinet: cabinet.data.name })}
-                    </button>
-                    <p className="pt-2.5 text-center text-[12.5px] text-text-2">
-                      {t("pme.transmettre.chezvous")}
-                    </p>
+                    {piece.gardeeLe ? (
+                      /*
+                       * LA DÉCISION PRISE, ET SON CHEMIN DE RETOUR.
+                       *
+                       * On ne repose pas la question : elle a été tranchée, et
+                       * la date le dit. Mais « Transmettre quand même » reste
+                       * là, parce que c'est l'exemple même du commanditaire —
+                       * « j'ai classé dans mon coffre, j'aurai toujours la
+                       * possibilité de transmettre au cabinet ». Ce sens-là ne
+                       * demande rien à personne et ne doit jamais se fermer.
+                       */
+                      <div className="text-center">
+                        <p className="text-[13px] text-text-2">{t("pme.garder.faite")}</p>
+                        <button
+                          type="button"
+                          disabled={transmettre.isPending}
+                          onClick={() => transmettre.mutate()}
+                          className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
+                        >
+                          {transmettre.isPending
+                            ? t("common.loading")
+                            : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
+                          {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
+                        </p>
+                        {/*
+                         * DEUX BOUTONS DE MÊME POIDS — et cette fois ils sont
+                         * deux.
+                         *
+                         * Le 11 octobre : « et le choix entre transmettre au
+                         * cabinet ou espace privé ? » Il n'existait pas :
+                         * « Transmettre » tenait toute la largeur, et garder
+                         * se lisait dans une ligne de 12,5 px qu'on ne tape
+                         * pas. Aucun des deux n'est présenté comme le bon —
+                         * garder une facture chez soi est un choix légitime,
+                         * l'envoyer aussi, et seul le dirigeant sait lequel.
+                         */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={garder.isPending || transmettre.isPending}
+                            onClick={() => garder.mutate()}
+                            className="h-[50px] border border-foreground text-[14.5px] font-medium disabled:opacity-50"
+                          >
+                            {garder.isPending ? t("common.loading") : t("pme.garder.action")}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={transmettre.isPending || garder.isPending}
+                            onClick={() => transmettre.mutate()}
+                            className="h-[50px] border border-foreground bg-foreground text-[14.5px] font-medium text-background disabled:opacity-50"
+                          >
+                            {transmettre.isPending
+                              ? t("common.loading")
+                              : t("pme.transmettre.action")}
+                          </button>
+                        </div>
+                        <p className="pt-2.5 text-center text-[12.5px] text-text-2">
+                          {t("pme.transmettre.chezvous")}
+                        </p>
+                      </>
+                    )}
                   </>
                 )}
               </div>
