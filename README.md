@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/algoria-factory-preview-malica-office.png" width="100%" alt="Malica Office · ALGORIA Factory">
+</p>
+
 # Malica Office
 
 Suite comptable augmentée pour les PME et leurs experts-comptables. La PME
