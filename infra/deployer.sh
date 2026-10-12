@@ -69,7 +69,10 @@ deposer() {
     echo "KO : aucun paquet reçu sur l'entrée standard" >&2
     exit 2
   }
-  git bundle verify "$paquet" >/dev/null 2>&1 || {
+  # `-C` : sshd demarre dans le dossier personnel, et `git bundle verify`
+  # exige d etre DANS un depot — « need a repository to verify a bundle ».
+  # Le premier essai reel du nouveau chemin est tombe exactement la.
+  git -C "$DEPOT" bundle verify "$paquet" >/dev/null 2>&1 || {
     echo "KO : le paquet reçu n'est pas un bundle git lisible" >&2
     exit 2
   }
@@ -129,13 +132,22 @@ principal() {
   if [ -n "$jeton" ]; then
     local registre utilisateur
     registre=$(grep -E '^REGISTRE=' "$ENV" | cut -d= -f2- | cut -d/ -f1)
+    registre=${registre:-ghcr.io}
     utilisateur=$(grep -E '^REGISTRE_UTILISATEUR=' "$ENV" | cut -d= -f2-)
     printf '%s' "$jeton" |
-      docker login "${registre:-ghcr.io}" -u "${utilisateur:-x-access-token}" --password-stdin >/dev/null
+      docker login "$registre" -u "${utilisateur:-x-access-token}" --password-stdin >/dev/null
     jeton=""
-    # Le `logout` part aussi si le `pull` échoue : un jeton oublié dans
-    # ~/.docker/config.json est exactement ce qu'on vient de retirer.
-    trap 'docker logout "${registre:-ghcr.io}" >/dev/null 2>&1 || true' RETURN
+    # La déconnexion part sur EXIT, et non sur RETURN.
+    #
+    # Première écriture : `trap … RETURN`. Elle ne se déclenche QUE si la
+    # fonction rend la main — or ce script meurt par `exit 1` dès qu'une étape
+    # échoue, et un `trap RETURN` ne court pas sur un `exit`. Le jeton serait
+    # donc resté dans ~/.docker/config.json exactement dans le cas où cela
+    # compte : le déploiement raté, celui qu'on laisse en l'état pour aller
+    # voir. C'était le défaut que ce mécanisme est censé supprimer, replacé
+    # deux lignes plus bas.
+    # shellcheck disable=SC2064
+    trap "docker logout '$registre' >/dev/null 2>&1 || true" EXIT
   fi
   compose pull --quiet
 
