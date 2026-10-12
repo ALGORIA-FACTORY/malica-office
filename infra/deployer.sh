@@ -1,7 +1,27 @@
 #!/usr/bin/env bash
 # Déployer une version sur ce serveur.
 #
-#   deployer.sh <version>        une étiquette git (v0.3.1) ou une branche (main)
+#   deployer.sh --deposer <version>   l'entrée standard porte un paquet git
+#   deployer.sh <version>             l'entrée standard porte, ou non, un jeton
+#
+# ================================================== LE SERVEUR NE DÉTIENT RIEN
+#
+# 12 octobre 2026. Le dépôt est passé sous l'organisation ALGORIA-FACTORY et le
+# déploiement s'est arrêté net, pour une raison qui n'était pas celle qu'on
+# croyait : l'organisation INTERDIT les clés de déploiement. La clé du serveur
+# n'était ni expirée ni mal transférée — elle était interdite par une règle. Et
+# ses identifiants de registre, un jeton personnel posé en clair dans un
+# fichier, ne pouvaient plus lire les images devenues celles de l'organisation.
+#
+# Le déménagement fut l'occasion, pas la cause. Un serveur qui va CHERCHER son
+# code et ses images a besoin d'un accès permanent au dépôt entier et au
+# registre — exactement ce qu'une organisation raisonnable refuse, et
+# exactement ce qu'on ne veut pas laisser sur une machine exposée.
+#
+# Le sens est donc inversé : la CI, qui vient de compiler, DÉPOSE le code
+# (`--deposer`, un paquet git sur l'entrée standard) et prête un jeton de
+# registre le temps d'un `pull` (l'entrée standard de `deployer`). Le serveur
+# ne garde ni clé GitHub, ni jeton.
 #
 # Les images portent la même étiquette que le dépôt : la CI (images.yml) les
 # publie, ce script les tire. Ce qu'il fait, dans l'ordre : le dépôt sur la
@@ -25,6 +45,39 @@ compose() {
   docker compose --project-directory "$DEPOT/infra" --env-file "$ENV" "$@"
 }
 
+# Importer le code que la CI envoie sur l'entrée standard.
+#
+# Le paquet est un « bundle » git : il porte les objets et la référence HEAD du
+# commit à déployer. On l'écrit dans un fichier temporaire — git refuse de lire
+# un bundle sur un tuyau, il lui faut pouvoir revenir en arrière dedans — puis
+# on le range sous `refs/remotes/origin/<version>`, là où le déploiement va le
+# chercher. Le fichier part dans tous les cas, succès ou échec.
+deposer() {
+  local version="${1:?usage : deployer.sh --deposer <version>}"
+  [[ "$version" =~ ^[A-Za-z0-9._/-]+$ ]] || {
+    echo "version invalide : $version" >&2
+    exit 2
+  }
+
+  local paquet
+  paquet=$(mktemp "$RACINE/.depose.XXXXXX.bundle")
+  # shellcheck disable=SC2064
+  trap "rm -f '$paquet'" EXIT
+  cat >"$paquet"
+
+  [ -s "$paquet" ] || {
+    echo "KO : aucun paquet reçu sur l'entrée standard" >&2
+    exit 2
+  }
+  git bundle verify "$paquet" >/dev/null 2>&1 || {
+    echo "KO : le paquet reçu n'est pas un bundle git lisible" >&2
+    exit 2
+  }
+
+  git -C "$DEPOT" fetch --quiet "$paquet" "HEAD:refs/remotes/origin/$version"
+  echo "▶ déposé  $(git -C "$DEPOT" log -1 --format='%h %s' "refs/remotes/origin/$version")"
+}
+
 principal() {
   local version="${1:?usage : deployer.sh <version>}"
   [[ "$version" =~ ^[A-Za-z0-9._/-]+$ ]] || {
@@ -43,13 +96,17 @@ principal() {
   }
 
   echo "▶ dépôt → $version"
-  # --force : une étiquette déplacée sur GitHub (une version refaite) ne bloque pas le déploiement.
-  git -C "$DEPOT" fetch --tags --force --prune --quiet origin
-  if git -C "$DEPOT" rev-parse --verify --quiet "refs/tags/$version" >/dev/null; then
-    git -C "$DEPOT" checkout --quiet --detach "refs/tags/$version"
-  else
-    git -C "$DEPOT" checkout --quiet --detach "origin/$version"
-  fi
+  # Aucun appel à GitHub : le code a été DÉPOSÉ juste avant (`--deposer`), et
+  # le serveur n'a aucune clé pour aller le chercher. Si la référence manque,
+  # on le dit au lieu de déployer la version d'avant en silence.
+  git -C "$DEPOT" rev-parse --verify --quiet "refs/remotes/origin/$version" >/dev/null || {
+    echo "KO : « $version » n'a pas été déposée sur ce serveur." >&2
+    echo "     La CI envoie le code par « deposer $version » avant de déployer ;" >&2
+    echo "     à la main : git bundle create p.bundle HEAD puis" >&2
+    echo "     ssh malica@… \"deposer $version\" < p.bundle" >&2
+    exit 2
+  }
+  git -C "$DEPOT" checkout --quiet --detach "refs/remotes/origin/$version"
   echo "  $(git -C "$DEPOT" log -1 --format='%h %s')"
 
   # L'étiquette d'image est la version. Retenue dans .env : un `up` ultérieur,
@@ -61,6 +118,25 @@ principal() {
   fi
 
   echo "▶ images"
+  # Le jeton du registre arrive sur l'entrée standard et ne touche jamais le
+  # disque : `docker login` le lit sur un tuyau, et on se déconnecte juste
+  # après. Rien à voler sur cette machine entre deux déploiements.
+  #
+  # Son absence n'est pas une erreur : un déploiement local, sur des images
+  # déjà présentes, n'a personne à qui demander.
+  local jeton=""
+  if [ ! -t 0 ]; then read -r jeton || true; fi
+  if [ -n "$jeton" ]; then
+    local registre utilisateur
+    registre=$(grep -E '^REGISTRE=' "$ENV" | cut -d= -f2- | cut -d/ -f1)
+    utilisateur=$(grep -E '^REGISTRE_UTILISATEUR=' "$ENV" | cut -d= -f2-)
+    printf '%s' "$jeton" |
+      docker login "${registre:-ghcr.io}" -u "${utilisateur:-x-access-token}" --password-stdin >/dev/null
+    jeton=""
+    # Le `logout` part aussi si le `pull` échoue : un jeton oublié dans
+    # ~/.docker/config.json est exactement ce qu'on vient de retirer.
+    trap 'docker logout "${registre:-ghcr.io}" >/dev/null 2>&1 || true' RETURN
+  fi
   compose pull --quiet
 
   echo "▶ migrations, puis les services"
@@ -91,5 +167,10 @@ principal() {
   exit 1
 }
 
-principal "$@"
+if [ "${1:-}" = "--deposer" ]; then
+  shift
+  deposer "$@"
+else
+  principal "$@"
+fi
 exit $?

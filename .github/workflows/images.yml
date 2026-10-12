@@ -76,19 +76,54 @@ jobs:
     needs: publier
     if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
+    # Le jeton du job sert à TIRER les images : le serveur n'en a plus aucun.
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: staging
       url: https://${{ vars.DOMAINE }}
     steps:
-      - name: Déployer la branche sur le staging
+      # ============================================ LE SERVEUR NE DÉTIENT RIEN
+      #
+      # 12 octobre 2026. Le dépôt est passé sous l'organisation, et le
+      # déploiement s'est arrêté net : l'organisation INTERDIT les clés de
+      # déploiement, et le jeton personnel posé sur le serveur ne pouvait plus
+      # lire les images devenues celles de l'organisation.
+      #
+      # Le déménagement fut l'occasion, pas la cause. Un serveur qui va
+      # CHERCHER son code et ses images a besoin d'un accès permanent au dépôt
+      # entier et au registre — ce qu'une organisation refuse, et ce qu'on ne
+      # veut pas laisser sur une machine exposée.
+      #
+      # Le sens est donc inversé : ce job, qui vient de compiler, DÉPOSE le
+      # code et PRÊTE un jeton le temps d'un « pull ».
+      - uses: actions/checkout@v7
+        with:
+          # Le paquet git porte le commit déployé ; un dépôt tronqué n'en
+          # ferait pas un lisible par le serveur.
+          fetch-depth: 0
+
+      - name: Déposer le code, puis déployer
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
           HOTE: ${{ vars.DEPLOI_HOTE }}
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
           BRANCHE: ${{ github.ref_name }}
+          JETON: ${{ secrets.GITHUB_TOKEN }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"
+
+          # Le paquet ne porte que le commit déployé et ce qui le relie à
+          # l'histoire : le serveur n'a pas besoin du reste.
+          git bundle create /tmp/depot.bundle HEAD
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
+            "deposer $BRANCHE" < /tmp/depot.bundle
+
+          # Le jeton part sur l'entrée standard, jamais sur la ligne de
+          # commande : un argument se lit dans la liste des processus.
+          printf '%s' "$JETON" | ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
+            "deployer $BRANCHE"
