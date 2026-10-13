@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Download } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -128,6 +128,8 @@ function CabinetReview() {
   // `null` : on n'a pas ouvert la correction. Une fois ouverte, on tient la
   // saisie à part de l'écriture d'origine — celle-ci ne se modifie jamais.
   const [correction, setCorrection] = useState<Correction | null>(null);
+  /** La preuve dont l'apercu est ouvert. Une seule a la fois : l'ecran reste lisible. */
+  const [preuveOuverte, setPreuveOuverte] = useState<string | null>(null);
 
   const dossier = useQuery({
     queryKey: ["piece", pieceId],
@@ -677,15 +679,46 @@ function CabinetReview() {
                            * preuve.
                            */}
                           {p.justificatifPieceId ? (
-                            <button
-                              type="button"
-                              onClick={() => telechargerUnJoint.mutate(p.justificatifPieceId!)}
-                              disabled={telechargerUnJoint.isPending}
-                              className="inline-flex h-7 shrink-0 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
-                            >
-                              <Download className="h-[12px] w-[12px]" aria-hidden />
-                              {t("cab.review.paiement.preuve")}
-                            </button>
+                            <span className="flex shrink-0 items-center gap-1.5">
+                              {/*
+                               * ============================= VOIR, AVANT DE TÉLÉCHARGER
+                               *
+                               * La preuve ne se téléchargeait que. Pour lire un
+                               * numéro de chèque, l'expert enregistrait un
+                               * fichier, l'ouvrait hors de l'application, puis
+                               * revenait — pour trois chiffres.
+                               *
+                               * `DocumentView` est déjà là, deux cents lignes
+                               * plus haut, et sert à la facture. Un composant
+                               * disponible, éprouvé, et non appelé : c'est le
+                               * motif récurrent de ce dépôt.
+                               */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreuveOuverte(
+                                    preuveOuverte === p.justificatifPieceId
+                                      ? null
+                                      : p.justificatifPieceId,
+                                  )
+                                }
+                                className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent"
+                              >
+                                <Eye className="h-[12px] w-[12px]" aria-hidden />
+                                {preuveOuverte === p.justificatifPieceId
+                                  ? t("cab.review.paiement.fermer")
+                                  : t("cab.review.paiement.voir")}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => telechargerUnJoint.mutate(p.justificatifPieceId!)}
+                                disabled={telechargerUnJoint.isPending}
+                                className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+                              >
+                                <Download className="h-[12px] w-[12px]" aria-hidden />
+                                {t("cab.review.paiement.preuve")}
+                              </button>
+                            </span>
                           ) : (
                             <span className="text-[11.5px] text-signal-warn">
                               {t("cab.review.paiement.sansPreuve")}
@@ -696,6 +729,9 @@ function CabinetReview() {
                           <span className="num mt-0.5 block text-[11.5px] text-muted-foreground">
                             {t("cab.review.paiement.reference")} {p.reference}
                           </span>
+                        ) : null}
+                        {preuveOuverte === p.justificatifPieceId && p.justificatifPieceId ? (
+                          <ApercuDeLaPreuve jointId={p.justificatifPieceId} />
                         ) : null}
                         {p.eteint ? (
                           <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
@@ -1186,6 +1222,50 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
           {texteDeLErreur(inscrire.error, "routes/_authenticated/cabinet.piece", t("common.error"))}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * L'aperçu d'une preuve de paiement, dans l'écran.
+ *
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * 13 octobre 2026. La photo du talon ne se TÉLÉCHARGEAIT que. Pour lire un
+ * numéro de chèque — trois chiffres, et c'est ce qui rapproche une facture
+ * d'un extrait bancaire — l'expert enregistrait un fichier, l'ouvrait hors de
+ * l'application, puis revenait.
+ *
+ * `DocumentView` était pourtant déjà importé dans ce fichier, et servait à la
+ * facture deux cents lignes plus haut. Un composant disponible, éprouvé, et
+ * non appelé : le motif récurrent de ce dépôt.
+ *
+ * Le téléchargement reste : une preuve qu'on ne peut pas joindre à un dossier
+ * n'est pas une preuve. On ajoute, on ne remplace pas.
+ */
+function ApercuDeLaPreuve({ jointId }: { jointId: string }) {
+  const { t } = useI18n();
+  const preuve = useQuery({
+    queryKey: ["preuve", jointId],
+    queryFn: () => office().capture.dossier(jointId),
+  });
+
+  if (preuve.isPending)
+    return <p className="mt-1.5 text-[11.5px] text-muted-foreground">{t("common.loading")}</p>;
+  if (!preuve.data?.contenu)
+    return (
+      <p className="mt-1.5 text-[11.5px] text-signal-warn">
+        {t("cab.review.paiement.preuveIllisible")}
+      </p>
+    );
+
+  return (
+    <div className="mt-2">
+      <DocumentView
+        contenu={preuve.data.contenu}
+        highlight={null}
+        label={t("cab.review.paiement.preuve")}
+      />
     </div>
   );
 }

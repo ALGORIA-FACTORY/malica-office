@@ -176,6 +176,25 @@ export function CommentCEstPaye({
   /** Le paiement dont on a ouvert la correction, et son motif choisi. */
   const [aCorriger, setACorriger] = useState<string | null>(null);
 
+  /*
+   * ============================== LA DATE DU PAIEMENT SE DÉCLARE, ELLE NE SE DEVINE PAS
+   *
+   * 13 octobre 2026. La colonne `paye_le` dit, depuis le premier jour, « la
+   * date du paiement, déclarée par la personne ». L'écran y mettait
+   * l'horloge du téléphone, toujours.
+   *
+   * Une facture payée en espèces la semaine dernière et saisie aujourd'hui
+   * entrait donc à la mauvaise date — et c'est elle qui lit le pack, qui
+   * range la trésorerie, et qui date l'écriture du règlement. Un
+   * rapprochement bancaire cherche alors un mouvement au mauvais jour.
+   *
+   * Le jour même reste proposé : c'est le cas courant, et faire ressaisir
+   * une date juste à chaque paiement coûterait plus que ça ne rapporte. Mais
+   * c'est un défaut VISIBLE et modifiable, pas une valeur invisible (R10-2).
+   */
+  const aujourdHui = new Date().toISOString().slice(0, 10);
+  const [dateDuPaiement, setDateDuPaiement] = useState(aujourdHui);
+
   /**
    * La photo du justificatif — même capture, même archive, même chiffrement.
    *
@@ -247,7 +266,7 @@ export function CommentCEstPaye({
         // refuse autrement, et un paiement à moitié saisi ne se lit pas.
         montantMineur: paye ? montantAInscrire : null,
         devise,
-        payeLe: paye && montantAInscrire !== null ? new Date().toISOString().slice(0, 10) : null,
+        payeLe: paye && montantAInscrire !== null ? dateDuPaiement : null,
         justificatifPieceId,
         reference: referenceSaisie.trim() === "" ? null : referenceSaisie.trim(),
       });
@@ -689,6 +708,17 @@ export function CommentCEstPaye({
               />
             </label>
           ) : null}
+
+          <label className="mt-1.5 block">
+            <span className="text-[11.5px] text-text-2">{t("pme.paiement.quand")}</span>
+            <input
+              type="date"
+              value={dateDuPaiement}
+              max={aujourdHui}
+              onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
+              className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
+            />
+          </label>
 
           {uneReferenceEstUtile ? (
             <label className="mt-1.5 block">
