@@ -161,6 +161,30 @@ jobs:
             adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
             maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-fil.yaml || true
             maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-hors-ligne.yaml || true
+
+            # ================== CE QUE L'ÉMULATEUR DIT DE SON RÉSEAU, EN MODE AVION
+            #
+            # 13 octobre 2026. Le flux du mode avion échoue depuis le
+            # 16 septembre : le bandeau « Hors ligne » n'apparaît pas. Deux
+            # explications restaient possibles, et il fallait trancher sans
+            # deviner — soit l'application ne voit pas la coupure, soit
+            # l'émulateur ne coupe rien et c'est le flux qui demande
+            # l'impossible.
+            #
+            # Le relevé ci-dessous répond : l'état du réglage, ce que le
+            # gestionnaire de connectivité déclare, et si l'appareil joint
+            # encore l'API. Il est pris pendant que le mode avion est ENCORE
+            # actif — le `disable` vient après.
+            echo "::group::Réseau de l'émulateur en mode avion"
+            adb shell settings get global airplane_mode_on || true
+            adb shell cmd connectivity airplane-mode || true
+            adb shell dumpsys connectivity 2>/dev/null | sed -n '1,25p' || true
+            echo "--- l'appareil joint-il encore l'API de l'hôte ?"
+            adb shell 'curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://10.0.2.2:8080/sante' 2>&1 | tail -1 || true
+            echo "--- ce que le greffon réseau a dit à l'application"
+            adb logcat -d -v brief 2>/dev/null | grep -iE "Capacitor/?(Plugin)?.?Network|networkStatusChange" | tail -20 || true
+            echo "::endgroup::"
+
             adb shell cmd connectivity airplane-mode disable || true
             node android/maestro-diagnostic/lire-arbre.mjs $(find ~/.maestro/tests -path '*arbre-*/screen-hierarchy/*.json' | sort) || true
             maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" --format junit --output maestro.xml android/maestro/
