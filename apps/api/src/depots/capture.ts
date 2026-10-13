@@ -929,6 +929,8 @@ export const capture = {
       devise: string;
       payeLe?: string | null;
       justificatifPieceId?: string | null;
+      /** Le numero du cheque, de la traite, la reference du virement. */
+      reference?: string | null;
     },
   ): Promise<string> {
     const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
@@ -948,9 +950,9 @@ export const capture = {
     const { rows } = await db.query<{ id: string }>(
       `insert into capture.paiements
          (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
-          montant_mineur, devise, paye_le, justificatif_piece_id)
+          montant_mineur, devise, paye_le, justificatif_piece_id, reference)
        select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
-              $4::bigint, $5, $6::date, $7
+              $4::bigint, $5, $6::date, $7, $8
          from pieces_v p where p.id = $1
        returning id`,
       [
@@ -961,6 +963,7 @@ export const capture = {
         input.devise,
         input.payeLe ?? null,
         input.justificatifPieceId ?? null,
+        input.reference ?? null,
       ],
     );
     const id = rows[0]?.id;

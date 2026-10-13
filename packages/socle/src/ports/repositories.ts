@@ -309,6 +309,8 @@ export interface ReferentialRepository {
       libelle: string;
       tresorerieAccount: string | null;
       exigeJustificatif: boolean;
+      /** Ce moyen porte-t-il une reference que l'extrait bancaire reprendra ? */
+      exigeReference: boolean;
     }>
   >;
   typesDeDocument(locale: string): Promise<
@@ -713,6 +715,26 @@ export interface PaiementDUnePiece {
   /** La photo du talon, du ticket ou de l'avis — une pièce à part entière. */
   justificatifPieceId: string | null;
   createdAt: string;
+  /** Le numero du cheque, de la traite, la reference du virement. */
+  reference: string | null;
+  /** Le paiement que cette ligne eteint, si c'est une annulation. */
+  annulePaiementId: string | null;
+  /**
+   * Eteint : annule, ou annulation d'un autre.
+   *
+   * Les deux faces, repondues par la base. « Ce qui est paye aujourd'hui »
+   * est la somme des lignes NON eteintes — une seule definition, un seul
+   * endroit, et aucun ecran qui choisit.
+   */
+  eteint: boolean;
+}
+
+/** Un motif d'annulation du referentiel, traduit. */
+export interface MotifDAnnulation {
+  id: string;
+  code: string;
+  libelle: string;
+  exigeUneNote: boolean;
 }
 
 export interface Citation {
@@ -850,6 +872,14 @@ export interface CaptureRepository {
     devise: string;
     payeLe?: string | null;
     justificatifPieceId?: string | null;
+    /**
+     * Le numero du cheque, de la traite, la reference du virement.
+     *
+     * C'est ce que l'extrait bancaire reprendra : sans lui, le rapprochement
+     * n'est pas outille, il est photographie. Quels moyens en portent une est
+     * une donnee du pack (R4).
+     */
+    reference?: string | null;
   }): Promise<string>;
   /**
    * Les pièces issues d'une pièce : son reçu, ses justificatifs.
@@ -878,6 +908,16 @@ export interface CaptureRepository {
   rattacherJustificatif(paiementId: string, pieceId: string): Promise<void>;
   /** Les paiements d'une pièce, du plus ancien au plus récent. */
   paiementsDUnePiece(pieceId: string): Promise<PaiementDUnePiece[]>;
+  /**
+   * Annuler un paiement — par une ecriture nouvelle, motivee.
+   *
+   * La table refuse l'UPDATE (R7) : un paiement est un fait declare, date,
+   * qui a pu partir au cabinet. Une ligne l'eteint donc, et l'ancienne reste
+   * lisible. Refuse d'annuler deux fois, ou d'annuler une annulation.
+   */
+  annulerPaiement(paiementId: string, motifId: string): Promise<void>;
+  /** Les motifs d'annulation du referentiel, traduits. */
+  motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
    * Ce que la personne précise quand la lecture ne pouvait pas conclure —
