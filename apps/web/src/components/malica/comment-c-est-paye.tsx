@@ -128,6 +128,19 @@ export function CommentCEstPaye({
         vis: visDeLaPiece,
         contentType: pris.blob.type || "application/pdf",
         documentKind: "justificatif_paiement",
+        /*
+         * LA PREUVE SAIT DE QUELLE FACTURE ELLE VIENT.
+         *
+         * 13 octobre 2026 : le talon de chèque photographié apparaissait
+         * comme un document flottant — dans la liste de la PME et chez le
+         * cabinet, sous « pas encore classés », avec « Émetteur non trouvé ».
+         *
+         * La cause tenait en une absence : cette propriété manquait ici,
+         * alors que le reçu la passe cent quarante lignes plus bas, dans ce
+         * même fichier. Les deux étages de la file font `?? null`, donc
+         * l'oubli ne levait rien : la pièce naissait orpheline, en silence.
+         */
+        sourcePieceId: pieceId,
         nomFichier: pris.name,
       },
       pris.blob,
