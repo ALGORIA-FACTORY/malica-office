@@ -17,6 +17,7 @@
   ],
   "capture": [
     "analyser",
+    "annulerPaiement",
     "contexteAssistant",
     "contexteLecture",
     "daterLaPiece",
@@ -26,6 +27,7 @@
     "journaliserAgent",
     "listAvecLecture",
     "lister",
+    "motifsDAnnulation",
     "paiementsDUnePiece",
     "persisterLecture",
     "piecesIssuesDe",

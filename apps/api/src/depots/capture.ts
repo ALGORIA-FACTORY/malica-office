@@ -929,6 +929,8 @@ export const capture = {
       devise: string;
       payeLe?: string | null;
       justificatifPieceId?: string | null;
+      /** Le numero du cheque, de la traite, la reference du virement. */
+      reference?: string | null;
     },
   ): Promise<string> {
     const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
@@ -948,9 +950,9 @@ export const capture = {
     const { rows } = await db.query<{ id: string }>(
       `insert into capture.paiements
          (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
-          montant_mineur, devise, paye_le, justificatif_piece_id)
+          montant_mineur, devise, paye_le, justificatif_piece_id, reference)
        select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
-              $4::bigint, $5, $6::date, $7
+              $4::bigint, $5, $6::date, $7, $8
          from pieces_v p where p.id = $1
        returning id`,
       [
@@ -961,6 +963,7 @@ export const capture = {
         input.devise,
         input.payeLe ?? null,
         input.justificatifPieceId ?? null,
+        input.reference ?? null,
       ],
     );
     const id = rows[0]?.id;
@@ -1000,7 +1003,8 @@ export const capture = {
   async paiementsDUnePiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
       `select id, moyen_code, montant_mineur, devise, paye_le,
-              justificatif_piece_id, created_at
+              justificatif_piece_id, created_at, reference,
+              annule_paiement_id, eteint
          from paiements_v where piece_id = $1 order by created_at`,
       [pieceId],
     );
@@ -1012,6 +1016,53 @@ export const capture = {
       payeLe: (r["paye_le"] as string | null) ?? null,
       justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,
       createdAt: (r["created_at"] as Date).toISOString(),
+      /** Le numéro du chèque, de la traite, la référence du virement. */
+      reference: (r["reference"] as string | null) ?? null,
+      /** Le paiement que cette ligne éteint, s'il s'agit d'une annulation. */
+      annulePaiementId: (r["annule_paiement_id"] as string | null) ?? null,
+      /**
+       * Éteint : annulé, ou annulation d'un autre.
+       *
+       * La vue répond pour les deux faces, et aucun écran ne choisit. « Ce
+       * qui est payé aujourd'hui » est la somme des lignes NON éteintes —
+       * une seule définition, un seul endroit.
+       */
+      eteint: Boolean(r["eteint"]),
+    }));
+  },
+
+  /**
+   * Annuler un paiement — par une écriture nouvelle, motivée.
+   *
+   * Le 13 octobre 2026, une facture portait deux paiements au TTC plein :
+   * le dirigeant avait voulu changer de moyen, et l'écran n'offrait
+   * qu'« ajouter ». Le reçu qu'on en aurait tiré attestait le double.
+   *
+   * La table refuse l'UPDATE (R7) : un paiement est un fait déclaré, daté,
+   * qui a pu partir au cabinet. La fonction du Socle inscrit donc la ligne
+   * qui l'éteint, et refuse d'annuler deux fois ou d'annuler une annulation.
+   */
+  async annulerPaiement(db: Requete, paiementId: string, motifId: string): Promise<void> {
+    await db.query(`select public.paiement_annuler($1, $2)`, [paiementId, motifId]);
+  },
+
+  /** Les motifs d'annulation du référentiel, traduits. */
+  async motifsDAnnulation(db: Requete, locale: string) {
+    const { rows } = await db.query(
+      `select m.id, m.code, m.requires_note,
+              coalesce(l.value, m.code) as libelle
+         from ref.paiement_motifs_annulation m
+         left join ref.labels l
+           on l.ns = 'paiement_motif_annulation' and l.key = m.code and l.locale = $1
+        where m.valid_to is null
+        order by m.rang, m.code`,
+      [locale],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r["id"] as string,
+      code: r["code"] as string,
+      libelle: r["libelle"] as string,
+      exigeUneNote: Boolean(r["requires_note"]),
     }));
   },
 };

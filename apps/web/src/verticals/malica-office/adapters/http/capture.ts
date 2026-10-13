@@ -17,6 +17,7 @@
  */
 
 import type {
+  MotifDAnnulation,
   CaptureRepository,
   Citation,
   Extraction,
@@ -90,6 +91,12 @@ export function creerCaptureHttp(): CaptureRepository {
       await rpc<void>("capture", "rattacherJustificatif", [paiementId, pieceId]);
     },
 
+    async annulerPaiement(paiementId: string, motifId: string) {
+      await rpc<void>("capture", "annulerPaiement", [paiementId, motifId]);
+    },
+    async motifsDAnnulation(locale: string) {
+      return rpc<MotifDAnnulation[]>("capture", "motifsDAnnulation", [locale]);
+    },
     async paiementsDUnePiece(pieceId: string) {
       return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
     },

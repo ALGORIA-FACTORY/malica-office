@@ -343,7 +343,7 @@ export const referentiel = {
    */
   async moyensDePaiement(db: Requete, packId: string, locale: string, au: string) {
     const { rows } = await db.query(
-      `select m.code, m.tresorerie_account, m.exige_justificatif, m.rang,
+      `select m.code, m.tresorerie_account, m.exige_justificatif, m.exige_reference, m.rang,
               coalesce(demandee.value, francais.value, m.libelle) as libelle
          from ref_payment_means_v m
          left join ref_labels_v demandee
@@ -363,6 +363,8 @@ export const referentiel = {
       libelle: r["libelle"] as string,
       tresorerieAccount: (r["tresorerie_account"] as string | null) ?? null,
       exigeJustificatif: Boolean(r["exige_justificatif"]),
+      /** Ce moyen porte-t-il une reference que l'extrait bancaire reprendra ? */
+      exigeReference: Boolean(r["exige_reference"]),
     }));
   },
 };

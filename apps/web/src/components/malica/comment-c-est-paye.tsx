@@ -103,6 +103,30 @@ export function CommentCEstPaye({
     queryFn: () => office().capture.paiementsDUnePiece(pieceId),
   });
 
+  /** Les motifs d'annulation, du référentiel et traduits — jamais du code. */
+  const motifs = useQuery({
+    queryKey: ["motifs-annulation", locale],
+    queryFn: () => office().capture.motifsDAnnulation(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+
+  /*
+   * =============================== CE QU'ON DEMANDE AVANT D'INSCRIRE
+   *
+   * 13 octobre 2026. L'écran inscrivait TOUJOURS le TTC entier : la colonne
+   * `montant_mineur` acceptait depuis toujours un acompte — son commentaire
+   * le dit — mais rien ne permettait de le saisir. Et deux taps produisaient
+   * deux lignes au total plein, donc le double.
+   *
+   * On demande donc, et la question est celle que pose n'importe quel
+   * commerçant : la totalité, ou une partie ?
+   */
+  const [partiel, setPartiel] = useState(false);
+  const [montantSaisi, setMontantSaisi] = useState("");
+  const [referenceSaisie, setReferenceSaisie] = useState("");
+  /** Le paiement dont on a ouvert la correction, et son motif choisi. */
+  const [aCorriger, setACorriger] = useState<string | null>(null);
+
   /**
    * La photo du justificatif — même capture, même archive, même chiffrement.
    *
@@ -128,6 +152,19 @@ export function CommentCEstPaye({
         vis: visDeLaPiece,
         contentType: pris.blob.type || "application/pdf",
         documentKind: "justificatif_paiement",
+        /*
+         * LA PREUVE SAIT DE QUELLE FACTURE ELLE VIENT.
+         *
+         * 13 octobre 2026 : le talon de chèque photographié apparaissait
+         * comme un document flottant — dans la liste de la PME et chez le
+         * cabinet, sous « pas encore classés », avec « Émetteur non trouvé ».
+         *
+         * La cause tenait en une absence : cette propriété manquait ici,
+         * alors que le reçu la passe cent quarante lignes plus bas, dans ce
+         * même fichier. Les deux étages de la file font `?? null`, donc
+         * l'oubli ne levait rien : la pièce naissait orpheline, en silence.
+         */
+        sourcePieceId: pieceId,
         nomFichier: pris.name,
       },
       pris.blob,
@@ -159,14 +196,18 @@ export function CommentCEstPaye({
         moyenCode,
         // Le montant et la date vont ensemble ou pas du tout : la base le
         // refuse autrement, et un paiement à moitié saisi ne se lit pas.
-        montantMineur: paye ? ttcMineur : null,
+        montantMineur: paye ? montantAInscrire : null,
         devise,
-        payeLe: paye && ttcMineur !== null ? new Date().toISOString().slice(0, 10) : null,
+        payeLe: paye && montantAInscrire !== null ? new Date().toISOString().slice(0, 10) : null,
         justificatifPieceId,
+        reference: referenceSaisie.trim() === "" ? null : referenceSaisie.trim(),
       });
     },
     onSuccess: async () => {
       setErreur(null);
+      setPartiel(false);
+      setMontantSaisi("");
+      setReferenceSaisie("");
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
     },
     onError: (e: unknown) =>
@@ -195,10 +236,76 @@ export function CommentCEstPaye({
   });
 
   const deja = paiements.data ?? [];
+
+  /*
+   * =========================== CE QUI EST PAYÉ AUJOURD'HUI, ET CE QUI RESTE
+   *
+   * Les lignes ÉTEINTES ne comptent pas — ni dans le reste dû, ni dans le
+   * reçu. Elles restent affichées : l'histoire d'un fait comptable ne se
+   * cache pas, elle se barre (R7).
+   */
+  const vivants = deja.filter((p) => !p.eteint);
+  const payeMineur = vivants.reduce((s, p) => s + (p.montantMineur ?? 0), 0);
+  const restantMineur = ttcMineur === null ? null : Math.max(0, ttcMineur - payeMineur);
+  const solde = restantMineur !== null && restantMineur === 0 && vivants.length > 0;
+
+  /** Le montant lisible, aux décimales du pack — jamais divisé par 1000 en dur. */
+  const lisible = (mineur: number | null) =>
+    mineur === null || decimales === null
+      ? "—"
+      : montant(depuisUniteMineure(mineur, decimales), locale);
+
+  /**
+   * Le montant qu'on va inscrire.
+   *
+   * Par défaut, ce qui RESTE à payer — pas le total de la facture. Sur un
+   * solde, proposer à nouveau le total entier est l'erreur qui a produit le
+   * doublon du 13 octobre.
+   */
+  const montantAInscrire = (() => {
+    if (!partiel) return restantMineur ?? ttcMineur;
+    if (decimales === null) return null;
+    const n = Number(montantSaisi.replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.round(n * 10 ** decimales);
+  })();
+
+  /**
+   * Corriger un moyen de paiement — par une annulation, jamais par une rature.
+   *
+   * « Il faut avoir le moyen de retour si le moyen de paiement choisi est
+   * faux. » Le voici : la ligne s'éteint, motivée, et l'ancienne reste
+   * lisible. Inscrire le bon moyen est ensuite le geste ordinaire.
+   */
+  const annuler = useMutation({
+    mutationFn: ({ paiementId, motifId }: { paiementId: string; motifId: string }) =>
+      office().capture.annulerPaiement(paiementId, motifId),
+    onSuccess: async () => {
+      setErreur(null);
+      setACorriger(null);
+      await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
+    },
+    onError: (e: unknown) =>
+      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+  });
   const libelleDuMoyen = (code: string) =>
     (moyens.data ?? []).find((m) => m.code === code)?.libelle ?? code;
   const exigeUnePreuve = (code: string) =>
     (moyens.data ?? []).find((m) => m.code === code)?.exigeJustificatif ?? false;
+  /*
+   * Le numero du cheque, de la traite, la reference du virement.
+   *
+   * C'est ce que l'extrait bancaire reprendra, et donc ce qui permet de
+   * rapprocher. Il n'existait nulle part : l'expert ouvrait la photo du
+   * talon, dechiffrait le numero a l'oeil, et le recopiait.
+   *
+   * Quels moyens en portent une est une donnee du pack, pas une regle
+   * d'ecran — comme le justificatif juste au-dessus (R4, R10).
+   */
+  const exigeUneReference = (code: string) =>
+    (moyens.data ?? []).find((m) => m.code === code)?.exigeReference ?? false;
+  /** Un moyen au moins en demande une : on montre alors le champ. */
+  const uneReferenceEstUtile = (moyens.data ?? []).some((m) => m.exigeReference);
 
   /**
    * ============================================= LE REÇU DE DÉPENSE OU DE REVENU
@@ -233,7 +340,7 @@ export function CommentCEstPaye({
          * règlement : le faire figurer sur un reçu attesterait d'un versement
          * qui n'existe pas.
          */
-        paiements: deja
+        paiements: vivants
           .filter((p) => p.montantMineur !== null)
           .map((p) => ({
             moyen: libelleDuMoyen(p.moyenCode),
@@ -290,7 +397,7 @@ export function CommentCEstPaye({
   // Un reçu atteste d'un règlement : sans montant payé, il n'atteste de rien.
   // Le Socle le refuse ; l'écran ne propose donc pas le geste.
   const recuPossible =
-    sens !== null && decimales !== null && deja.some((p) => p.montantMineur !== null);
+    sens !== null && decimales !== null && vivants.some((p) => p.montantMineur !== null);
 
   return (
     <section className="mt-6 border-t border-border pt-5">
@@ -306,15 +413,34 @@ export function CommentCEstPaye({
            */}
           <ul className="mt-2.5 grid gap-px border border-border bg-border">
             {deja.map((p) => (
-              <li key={p.id} className="bg-card px-3 py-2">
+              <li key={p.id} className={`bg-card px-3 py-2 ${p.eteint ? "opacity-55" : ""}`}>
                 <span className="flex items-baseline justify-between gap-3">
-                  <span className="text-[13.5px] font-medium">{libelleDuMoyen(p.moyenCode)}</span>
-                  <span className="num shrink-0 text-[13.5px]">
-                    {p.montantMineur === null
-                      ? "—"
-                      : montant((p.montantMineur / 1000).toFixed(3), locale)}
+                  <span className={`text-[13.5px] font-medium ${p.eteint ? "line-through" : ""}`}>
+                    {libelleDuMoyen(p.moyenCode)}
+                    {p.reference ? (
+                      <span className="num ms-1.5 text-[12px] text-text-2">{p.reference}</span>
+                    ) : null}
+                  </span>
+                  {/*
+                   * Le montant aux decimales du PACK.
+                   *
+                   * Il etait divise par 1000 en dur, avec trois decimales
+                   * ecrites a la main : juste en Tunisie, faux dans la
+                   * premiere monnaie a deux decimales — et invisible, parce
+                   * que le libelle, lui, resterait juste (R4). L'ecran du
+                   * cabinet faisait deja correctement, a deux fichiers de la.
+                   */}
+                  <span className={`num shrink-0 text-[13.5px] ${p.eteint ? "line-through" : ""}`}>
+                    {lisible(p.montantMineur)}
                   </span>
                 </span>
+                {p.eteint ? (
+                  <span className="mt-0.5 block text-[11.5px] text-text-2">
+                    {p.annulePaiementId === null
+                      ? t("pme.paiement.etat.annule")
+                      : t("pme.paiement.etat.annulation")}
+                  </span>
+                ) : null}
                 {/*
                  * Le manque était dit, et rien ne permettait d'y répondre :
                  * une ligne orange sur toutes les pièces, pour toujours. Elle
@@ -334,6 +460,52 @@ export function CommentCEstPaye({
                   <span className="mt-0.5 block text-[11.5px] text-signal-ok">
                     {t("pme.paiement.preuve.jointe")}
                   </span>
+                ) : null}
+
+                {/*
+                 * ======================================= LE RETOUR EN ARRIERE
+                 *
+                 * « Il faut avoir le moyen de retour si le moyen de paiement
+                 * choisi est faux. » Le 13 octobre, la seule issue etait d'en
+                 * ajouter un second — et le total doublait.
+                 *
+                 * On n'efface pas : on eteint, avec un motif. L'ancienne
+                 * ligne reste lisible, barree.
+                 */}
+                {!p.eteint ? (
+                  aCorriger === p.id ? (
+                    <span className="mt-1.5 block">
+                      <span className="block text-[11.5px] text-text-2">
+                        {t("pme.paiement.pourquoi")}
+                      </span>
+                      {(motifs.data ?? []).map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          disabled={annuler.isPending}
+                          onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
+                          className="mt-1 block min-h-[36px] w-full border border-border px-2 text-start text-[12.5px] hover:bg-accent disabled:opacity-40"
+                        >
+                          {m.libelle}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setACorriger(null)}
+                        className="mt-1 text-[11.5px] text-text-2 underline underline-offset-2"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setACorriger(p.id)}
+                      className="mt-0.5 block text-[11.5px] text-text-2 underline underline-offset-2"
+                    >
+                      {t("pme.paiement.corriger")}
+                    </button>
+                  )
                 ) : null}
               </li>
             ))}
@@ -364,13 +536,89 @@ export function CommentCEstPaye({
         <p className="mt-1.5 text-[13px] leading-[1.5] text-text-2">{t("pme.paiement.lede")}</p>
       )}
 
+      {/*
+       * ================================ TOTALITE OU PARTIE, ET COMBIEN RESTE
+       *
+       * L'ecran inscrivait toujours le TTC entier. La colonne acceptait
+       * pourtant un acompte depuis le premier jour — personne ne pouvait le
+       * saisir. On pose donc la question, et on propose par defaut ce qui
+       * RESTE, jamais le total : c'est en reproposant le total entier qu'on
+       * fabrique un doublon.
+       */}
+      {solde ? (
+        <p className="mt-3 text-[12.5px] text-signal-ok">{t("pme.paiement.solde")}</p>
+      ) : (
+        <>
+          {restantMineur !== null && payeMineur > 0 ? (
+            <p className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px]">
+              <span className="text-text-2">{t("pme.paiement.reste")}</span>
+              <span className="num font-medium">{lisible(restantMineur)}</span>
+            </p>
+          ) : null}
+
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPartiel(false)}
+              aria-pressed={!partiel}
+              className={`min-h-[40px] border px-2 text-[12.5px] ${
+                partiel ? "border-border" : "border-foreground font-medium"
+              }`}
+            >
+              {t("pme.paiement.tout")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPartiel(true)}
+              aria-pressed={partiel}
+              className={`min-h-[40px] border px-2 text-[12.5px] ${
+                partiel ? "border-foreground font-medium" : "border-border"
+              }`}
+            >
+              {t("pme.paiement.partie")}
+            </button>
+          </div>
+
+          {partiel ? (
+            <label className="mt-1.5 block">
+              <span className="text-[11.5px] text-text-2">{t("pme.paiement.combien")}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={montantSaisi}
+                onChange={(e) => setMontantSaisi(e.target.value)}
+                className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
+              />
+            </label>
+          ) : null}
+
+          {uneReferenceEstUtile ? (
+            <label className="mt-1.5 block">
+              <span className="text-[11.5px] text-text-2">{t("pme.paiement.reference")}</span>
+              <input
+                type="text"
+                value={referenceSaisie}
+                onChange={(e) => setReferenceSaisie(e.target.value)}
+                className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
+              />
+            </label>
+          ) : null}
+        </>
+      )}
+
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">
         {(moyens.data ?? []).map((m) => (
           <button
             key={m.code}
             type="button"
             onClick={() => inscrire.mutate(m.code)}
-            disabled={inscrire.isPending}
+            disabled={
+              inscrire.isPending ||
+              // Un montant partiel illisible n'inscrit rien : le bouton le dit
+              // en restant eteint, plutot que de laisser la base refuser.
+              (m.code !== "non_paye" && montantAInscrire === null) ||
+              (exigeUneReference(m.code) && referenceSaisie.trim() === "")
+            }
             className="min-h-[46px] border border-border px-2.5 text-[13.5px] font-medium hover:bg-accent disabled:opacity-40"
           >
             {m.libelle}
