@@ -118,6 +118,16 @@ export interface ResultatNormalisation {
   conventions: string[];
   /** Nombre de combinaisons distinctes qui vérifient la facture. */
   lecturesValides: number;
+  /**
+   * Le TTC imprimé qu'aucune lecture ne rend — `null` quand il s'est lu, ou
+   * quand la pièce n'en imprime pas.
+   *
+   * Ce champ existe pour que l'écart SE VOIE. Écarter le total d'une
+   * vérification sans le dire serait un repli implicite : la facture
+   * passerait, et personne ne saurait qu'un montant imprimé a été laissé de
+   * côté. Le contrôle arithmétique le lit et pose une réserve.
+   */
+  totalNonLu: string | null;
   raison: string;
 }
 
@@ -132,6 +142,13 @@ const CONFIANCE_LECTURE_UNIQUE_VERIFIEE = 1;
 const CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE = 0.9;
 /** Lecture unique, mais rien pour la vérifier. */
 const CONFIANCE_NON_VERIFIEE = 0.5;
+/**
+ * Vérifiée, mais par la TVA seule : le total imprimé n'a pas pu être lu.
+ *
+ * Entre la lecture pleinement confirmée et celle que rien ne vérifie — la
+ * facture tient, mais une de ses deux confirmations manque.
+ */
+const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 
 const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
 const ESPACES = /[\s\u00A0\u202F]/u;
@@ -319,6 +336,14 @@ export function normaliserMontants(
     ttc: texte(entree.ttc),
   };
 
+  /**
+   * Le total imprimé qu'on n'a pas su lire, s'il y en a un.
+   *
+   * Déclaré ici parce que `vide` et `construire` doivent tous deux le rendre :
+   * un total perdu se dit, que la facture tienne ensuite ou non.
+   */
+  let totalNonLu: string | null = null;
+
   const vide = (
     etat: EtatNormalisation,
     raison: string,
@@ -335,6 +360,7 @@ export function normaliserMontants(
     confiance: 0,
     conventions: [],
     lecturesValides,
+    totalNonLu,
     raison,
   });
 
@@ -358,9 +384,36 @@ export function normaliserMontants(
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
   const brutes = champs.map((c) => candidatsMontant(c.brut, p.decimales));
+
+  /*
+   * ======================================= LE TOTAL EST UN RAPPEL, PAS UNE DONNÉE
+   *
+   * 13 octobre 2026. Sur une facture réelle, « 4 135,183 » est imprimé en
+   * blanc sur bande noire, et la reconnaissance y lit « + 135,183 » : le « 4 »
+   * devient un « + ». Rien ne peut lire ce texte.
+   *
+   * Jusqu'ici, cela mettait TOUS les montants à `null` — les deux bases, la
+   * TVA, le timbre, tous lus et cités — et la pièce finissait « anomalie à
+   * signaler », sans écriture, le cabinet lisant « rien à superviser ».
+   *
+   * Or le TTC n'ajoute rien : c'est la somme des autres, imprimée une seconde
+   * fois. Quand il manque et que la TVA reste lisible, la facture se vérifie
+   * encore — par sa TVA. On l'écarte donc de l'équation, et on le NOMME.
+   *
+   * Les autres champs ne se recomposent pas : une base, une TVA ou un droit
+   * illisible reste fatal. Les déduire serait inventer, et R2 l'interdit.
+   */
+  const iTtc = champs.findIndex((c) => c.nom === "ttc");
+  if (iTtc >= 0 && brutes[iTtc]!.length === 0) {
+    totalNonLu = champs[iTtc]!.brut;
+    champs.splice(iTtc, 1);
+    brutes.splice(iTtc, 1);
+  }
+  const suffixe = totalNonLu ? ` ; le total imprimé « ${totalNonLu} » n'a pas pu être lu` : "";
+
   const illisible = champs.findIndex((_, i) => brutes[i]!.length === 0);
   if (illisible >= 0)
-    return vide("illisible", `montant illisible : « ${champs[illisible]!.brut} »`);
+    return vide("illisible", `montant illisible : « ${champs[illisible]!.brut} »${suffixe}`);
 
   // Un droit fixé par le paramétrage ne se lit qu'à sa valeur. Imprimé
   // autrement, il n'ancre rien et garde toutes ses lectures.
@@ -376,7 +429,8 @@ export function normaliserMontants(
 
   const rats = entree.bases.map((b) => rationnel(b.taux));
   const tol = BigInt(p.toleranceMineure);
-  const aVerifier = Boolean(entree.ttc) || Boolean(entree.tva);
+  // Un total qu'on n'a pas su lire ne vérifie rien : il ne compte plus ici.
+  const aVerifier = (Boolean(entree.ttc) && totalNonLu === null) || Boolean(entree.tva);
   // L'ambiguïté se mesure sur ce qui est IMPRIMÉ : une lecture levée par
   // l'ancre n'était pas unique.
   const unique = brutes.every((l) => l.length === 1);
@@ -385,14 +439,16 @@ export function normaliserMontants(
     if (!unique)
       return vide(
         "ambigu",
-        "montant ambigu et rien pour le vérifier : aucune convention ne se devine seule",
+        `montant ambigu et rien pour le vérifier : aucune convention ne se devine seule${suffixe}`,
       );
     return construire(
       lectures.map((l) => l[0]!),
       "non_verifie",
       CONFIANCE_NON_VERIFIEE,
       1,
-      "lecture unique, non vérifiée : ni TTC ni TVA imprimés",
+      totalNonLu
+        ? `lecture unique, non vérifiée${suffixe}`
+        : "lecture unique, non vérifiée : ni TTC ni TVA imprimés",
     );
   }
 
@@ -419,7 +475,8 @@ export function normaliserMontants(
     return vide(
       "incoherent",
       "aucune lecture ne vérifie Σ HT × (1 + taux) + autres = TTC" +
-        (entree.tva ? " ni la TVA imprimée" : ""),
+        (entree.tva ? " ni la TVA imprimée" : "") +
+        suffixe,
     );
   if (distinctes.size > 1) {
     const [a, b] = [...distinctes.values()];
@@ -427,24 +484,27 @@ export function normaliserMontants(
     const echelle = Number.isInteger(Math.log10(Math.abs(facteur || 1))) && facteur !== 1;
     return vide(
       "ambigu",
-      echelle
+      (echelle
         ? "l'échelle ne se tranche pas : lus en dinars ou en millimes, les montants vérifient tous deux la facture — il faut un montant d'échelle connue (timbre, TVA)"
-        : "plusieurs lectures distinctes vérifient la facture",
+        : "plusieurs lectures distinctes vérifient la facture") + suffixe,
       distinctes.size,
     );
   }
 
   const [retenue] = [...distinctes.values()];
+  const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
   return construire(
     retenue!,
     "tranche",
-    unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE,
+    // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
+    // confirme aussi : on ne lui donne pas la note pleine.
+    totalNonLu ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL) : pleine,
     1,
-    unique
+    (unique
       ? "lecture unique, vérifiée par la facture"
       : ancre
         ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
-        : "convention tranchée par l'arithmétique de la facture",
+        : "convention tranchée par l'arithmétique de la facture") + suffixe,
   );
 
   function valeurs(pris: Candidat[]) {
@@ -490,6 +550,7 @@ export function normaliserMontants(
       confiance,
       conventions: pris.map((c, i) => `${champs[i]!.nom} : ${c.convention}`),
       lecturesValides,
+      totalNonLu,
       raison,
     };
   }

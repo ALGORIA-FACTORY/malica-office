@@ -126,6 +126,31 @@ describe("cohérence arithmétique", () => {
     assert.equal(c.statut, "anomalie");
     assert.match(c.motif, /saisi|échelle/);
   });
+
+  it("le total imprimé n'a pas pu être lu : réserve, et le motif le nomme", () => {
+    /*
+     * 13 octobre 2026. « 4 135,183 », imprimé en blanc sur bande noire, est
+     * reconnu « + 135,183 » : illisible. La facture se vérifie encore par sa
+     * TVA, et les montants sont retenus — mais l'écart doit SE VOIR.
+     *
+     * Conforme serait un repli implicite : la pièce passerait, et personne ne
+     * saurait qu'un montant imprimé a été laissé de côté. Une réserve
+     * comptabilise et signale ; c'est exactement ce qu'il faut ici.
+     */
+    const sansTotal = normaliserMontants(
+      {
+        bases: [{ ht: "1 234,560", taux: "0.19" }],
+        tva: "234,566",
+        autres: [{ brut: "1,000", attendu: 1_000 }],
+        ttc: "+ 470,126",
+      },
+      P,
+    );
+    assert.equal(sansTotal.montants.bases[0]!.ht, 1_234_560, sansTotal.raison);
+    const c = statut(facture({ montants: sansTotal }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /\+ 470,126/);
+  });
 });
 
 describe("mentions obligatoires", () => {

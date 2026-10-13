@@ -260,6 +260,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
           confiance: 0,
           conventions: [],
           lecturesValides: 0,
+          /*
+           * Aucun total n'a été écarté ici : ce court-circuit tombe AVANT
+           * qu'on tente la moindre lecture de montant. Dire le contraire
+           * ferait porter à la pièce un défaut qu'elle n'a pas.
+           */
+          totalNonLu: null,
           raison:
             lignes.length === 0
               ? "aucune base par taux n'a été lue"

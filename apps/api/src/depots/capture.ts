@@ -202,6 +202,20 @@ export const capture = {
    * — les cacher reviendrait à nier qu'elles ont été déposées.
    */
   async listAvecLecture(db: Requete, tenantId: string) {
+    /*
+     * UNE LECTURE PARTIELLE EST UNE LECTURE.
+     *
+     * 13 octobre 2026. Cinq pièces de suite affichaient « Émetteur non
+     * trouvé », sans date et sans total, alors que la lecture AVAIT trouvé
+     * « ALGORIA », « COMPTOIR », « ORBIS ». La cause tient en une ligne :
+     * read-piece.ts range sous le contrat « extract.v1.partiel » toute lecture
+     * qui ne valide pas le schéma entier, et cette liste ne demandait que
+     * « extract.v1 ». Tout ce qui avait été lu devenait invisible parce
+     * qu'il manquait autre chose.
+     *
+     * Cette liste ne promet nulle part d'être complète : elle montre ce qu'on
+     * sait. Le préfixe couvre donc les deux contrats.
+     */
     const { rows } = await db.query(
       `select p.id, p.status, p.created_at, p.vis, x.payload,
               (select valeur from precisions_v q
@@ -211,7 +225,8 @@ export const capture = {
          left join lateral (
            select e.payload
              from extractions_v e
-            where e.piece_id = p.id and e.contract = 'extract.v1'
+            -- extract.v1 ET extract.v1.partiel : voir le commentaire au-dessus.
+            where e.piece_id = p.id and e.contract like 'extract.v1%'
             order by e.created_at desc
             limit 1
          ) x on true

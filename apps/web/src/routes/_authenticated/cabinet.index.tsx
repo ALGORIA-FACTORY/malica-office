@@ -530,7 +530,21 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
               ) : null}
             </InkCell>
             <InkCell>
-              <span className="block">{row.libelle ?? t("cab.queue.unread")}</span>
+              {/*
+               * « Pas encore lue » était faux, et visiblement faux.
+               *
+               * 13 octobre 2026 : huit lignes de la file portaient le statut
+               * LUE et, dans la colonne LIBELLÉ, « Pas encore lue ». Le
+               * libellé de cette colonne est celui de l'ÉCRITURE ; son repli
+               * décrivait la pièce, et se trompait de sujet. Une pièce lue
+               * dont aucune écriture n'est comptabilisée n'est pas une pièce
+               * non lue — c'est précisément celle que le cabinet doit
+               * regarder.
+               */}
+              <span className="block">
+                {row.libelle ??
+                  t(row.status === "capturee" ? "cab.queue.unread" : "cab.queue.sansEcriture")}
+              </span>
               {row.dateEcriture ? (
                 <span className="num block text-[10.5px] text-muted-foreground">
                   {jourLisible(row.dateEcriture, locale)}

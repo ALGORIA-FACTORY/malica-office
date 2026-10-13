@@ -139,6 +139,30 @@ function CabinetReview() {
     queryFn: () => office().office.ecrituresForPiece(pieceId),
   });
 
+  /**
+   * Ce que le Socle propose pour cette pièce — ou la raison de son refus.
+   *
+   * ============================================== LE DÉFAUT QUI L'A FAIT NAÎTRE
+   *
+   * 13 octobre 2026. Sous « L'écriture du Socle », le cabinet lisait, sur six
+   * pièces réelles sur six : « Aucune écriture comptabilisée sur cette pièce :
+   * rien à superviser. » La phrase était vraie — aucune écriture n'était
+   * comptabilisée — et sans valeur : le cabinet est là POUR superviser ce qui
+   * ne passe pas tout seul.
+   *
+   * Ce que l'écran taisait existait pourtant, à portée d'un appel : la pièce
+   * portait trois motifs, dont « montant illisible : « + 135,183 » ». Rien ne
+   * les lisait.
+   *
+   * Désormais, à défaut d'écriture comptabilisée, l'écran montre celle que le
+   * Socle PROPOSE, ou dit pourquoi il n'en propose aucune.
+   */
+  const proposition = useQuery({
+    queryKey: ["proposition", pieceId, dossier.data?.extraction?.id ?? null],
+    enabled: Boolean(dossier.data?.extraction),
+    queryFn: () => office().office.propositionDePiece(pieceId),
+  });
+
   const motifs = useQuery({
     queryKey: ["rejet-motifs", locale],
     queryFn: () => office().supervision.motifs(locale),
@@ -786,7 +810,42 @@ function CabinetReview() {
         <section className="space-y-3">
           <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
           {!booked ? (
-            <EmptyState>{t("cab.review.noecriture")}</EmptyState>
+            proposition.isPending ? (
+              <EmptyState>{t("common.loading")}</EmptyState>
+            ) : proposition.data?.ok ? (
+              <>
+                <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
+                <InkTable
+                  caption={t("cab.review.proposee")}
+                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
+                >
+                  {proposition.data.proposition.lignes.map((l, i) => (
+                    <InkTableRow key={i}>
+                      <InkCell>
+                        <span className="num">{l.account_code}</span>{" "}
+                        <span className="text-muted-foreground">{l.libelle}</span>
+                      </InkCell>
+                      <InkCell numeric>{montant(l.debit, locale)}</InkCell>
+                      <InkCell numeric>{montant(l.credit, locale)}</InkCell>
+                    </InkTableRow>
+                  ))}
+                </InkTable>
+              </>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
+                {/*
+                 * La raison vient du serveur, en français, et porte les motifs
+                 * des contrôles. L'écran de la PME la rend déjà ainsi : une
+                 * seule phrase, construite là où le jugement est posé. La
+                 * traduire demanderait de faire voyager les motifs structurés,
+                 * et c'est une autre correction — celle-ci cesse de les taire.
+                 */}
+                <p className="text-[12.5px] text-muted-foreground">
+                  {proposition.data?.raison ?? ""}
+                </p>
+              </div>
+            )
           ) : (
             <>
               <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
