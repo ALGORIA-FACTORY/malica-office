@@ -1026,6 +1026,15 @@ export interface OfficeRepository {
   /** Enregistre la proposition du serveur : aucune ligne ne vient du client. */
   proposerDepuisPiece(pieceId: string, dateSaisie?: string | null): Promise<string>;
   /**
+   * Ce que le moyen de paiement engage : l'ecriture du reglement.
+   *
+   * La facture constate une dette ; le reglement l'eteint. Deux faits, deux
+   * dates — les confondre rend tout rapprochement bancaire impossible.
+   */
+  propositionDeReglement(paiementId: string): Promise<PropositionDeReglement>;
+  /** Inscrire le reglement propose. Rend l'identifiant de l'ecriture. */
+  proposerLeReglement(paiementId: string): Promise<string>;
+  /**
    * Les lignes comptabilisées entre deux dates.
    *
    * C'est la fonction `socle_periode_lignes` du Socle, pas une requête montée
@@ -2263,3 +2272,31 @@ export interface PanneConsignee {
   plateforme: string | null;
   at: string;
 }
+
+/** Une ligne de l'ecriture d'un reglement, telle que le Socle la rend. */
+export interface LigneDeReglementLue {
+  account_code: string;
+  libelle: string;
+  debit: string;
+  credit: string;
+}
+
+/**
+ * Ce que le Socle propose pour un reglement, ou la raison de son refus.
+ *
+ * Le refus est une PHRASE, pas un silence : un reglement annule, un « pas
+ * encore paye », une piece dont le sens n'est pas tranche. L'ecran la rend
+ * telle quelle.
+ */
+export type PropositionDeReglement =
+  | {
+      ok: true;
+      ecriture: {
+        journal: string;
+        dateEcriture: string;
+        devise: string;
+        libelle: string;
+        lignes: LigneDeReglementLue[];
+      };
+    }
+  | { ok: false; raison: string };
