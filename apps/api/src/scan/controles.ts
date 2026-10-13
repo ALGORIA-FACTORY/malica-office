@@ -154,6 +154,21 @@ function arithmetique(p: PieceAControler): ResultatControle {
   const preuves = { etat: m.etat, conventions: m.conventions, confiance: m.confiance };
   switch (m.etat) {
     case "tranche":
+      /*
+       * Le total imprimé n'a pas pu être lu, et la facture tient quand même —
+       * sa TVA la vérifie. On comptabilise, et on le DIT.
+       *
+       * « Conforme » serait un repli implicite : la pièce passerait, et
+       * personne ne saurait qu'un montant imprimé a été laissé de côté. Une
+       * réserve comptabilise et signale à la fois.
+       */
+      if (m.totalNonLu)
+        return {
+          code: "coherence_arithmetique",
+          statut: "reserve",
+          motif: `Le total imprimé « ${m.totalNonLu} » n'a pas pu être lu ; les montants retenus se vérifient entre eux — ${m.raison}.`,
+          preuves,
+        };
       return {
         code: "coherence_arithmetique",
         statut: "conforme",
