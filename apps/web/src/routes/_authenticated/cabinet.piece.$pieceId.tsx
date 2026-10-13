@@ -692,6 +692,18 @@ function CabinetReview() {
                             </span>
                           )}
                         </div>
+                        {p.reference ? (
+                          <span className="num mt-0.5 block text-[11.5px] text-muted-foreground">
+                            {t("cab.review.paiement.reference")} {p.reference}
+                          </span>
+                        ) : null}
+                        {p.eteint ? (
+                          <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
+                            {t("cab.review.paiement.eteint")}
+                          </span>
+                        ) : (
+                          <EcritureDuReglement paiementId={p.id} pieceId={pieceId} />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -1102,4 +1114,78 @@ function grouperLesSignalements(
     }
   }
   return [...parCause.values()];
+}
+
+/**
+ * Ce que le moyen de paiement engage : l'écriture du règlement.
+ *
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * 13 octobre 2026, le dirigeant : « l'écriture comptable et le rapprochement
+ * dépendent énormément du moyen de paiement ». Le référentiel portait depuis
+ * le 11 octobre le compte de trésorerie de chaque moyen — 54 Caisse, 532
+ * Banques, 403 Effets à payer — et rien ne le lisait.
+ *
+ * Le moteur a été écrit le 13 octobre. Ce composant est son consommateur, et
+ * il naît le même jour : un moteur sans écran est exactement le défaut que
+ * cette journée a passé à corriger.
+ *
+ * La facture constate une dette, le règlement l'éteint. L'expert voit donc
+ * les deux, séparément, et c'est lui qui inscrit.
+ */
+function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; pieceId: string }) {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const proposition = useQuery({
+    queryKey: ["reglement", paiementId],
+    queryFn: () => office().office.propositionDeReglement(paiementId),
+  });
+  const inscrire = useMutation({
+    mutationFn: () => office().office.proposerLeReglement(paiementId),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
+        qc.invalidateQueries({ queryKey: ["reglement", paiementId] }),
+      ]);
+    },
+  });
+
+  if (proposition.isPending) return null;
+  const r = proposition.data;
+  if (!r) return null;
+
+  if (!r.ok) return <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>;
+
+  return (
+    <div className="mt-2 border-s-2 border-border ps-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
+      </p>
+      <ul className="mt-1">
+        {r.ecriture.lignes.map((l, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-3 text-[12px]">
+            <span className="num">{l.account_code}</span>
+            <span className="num shrink-0">
+              {Number(l.debit) > 0
+                ? `${montant(l.debit, locale)} D`
+                : `${montant(l.credit, locale)} C`}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => inscrire.mutate()}
+        disabled={inscrire.isPending}
+        className="mt-1.5 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+      >
+        {inscrire.isPending ? t("common.loading") : t("cab.review.reglement.inscrire")}
+      </button>
+      {inscrire.isError ? (
+        <p className="mt-1 text-[11.5px] text-signal-warn">
+          {texteDeLErreur(inscrire.error, "routes/_authenticated/cabinet.piece", t("common.error"))}
+        </p>
+      ) : null}
+    </div>
+  );
 }
