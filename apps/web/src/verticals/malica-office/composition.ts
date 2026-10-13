@@ -7,6 +7,7 @@ import type { MalicaPort } from "@malica/socle/ports/malica";
 import type {
   CaptureRepository,
   ConversationsRepository,
+  JournalRepository,
   IdentityRepository,
   OfficeRepository,
   ReferentialRepository,
@@ -74,6 +75,8 @@ export interface OfficeRuntime {
   conversations: ConversationsRepository;
   /** Ce que la personne signale elle-même quand quelque chose n'a pas marché. */
   signalements: SignalementsRepository;
+  /** Et ce que l'application constate toute seule quand un geste a échoué. */
+  journal: JournalRepository;
   /** La couche agentique : tout ce qui fait parler un modèle, sur ses propres routes. */
   malica: MalicaPort;
 }
@@ -98,6 +101,7 @@ export function office(): OfficeRuntime {
       conseil: creerDepotHttp<ConseilRepository>("conseil"),
       parametrage: creerDepotHttp<ParametrageRepository>("parametrage"),
       tiers: creerDepotHttp<TiersRepository>("tiers"),
+      journal: creerDepotHttp<JournalRepository>("journal"),
       honoraires: creerDepotHttp<HonorairesRepository>("honoraires"),
       integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
       exports: creerDepotHttp<ExportsRepository>("exports"),

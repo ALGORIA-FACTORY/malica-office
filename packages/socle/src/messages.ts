@@ -275,6 +275,7 @@ const fr = {
   "pme.date.manque.action": "Enregistrer",
   "pme.paiement.moyen": "Moyen",
   "pme.recu.generer": "Générer le reçu",
+  "pme.recu.enAttente": "Le reçu est prêt. Il partira dès que le réseau reviendra.",
   "pme.recu.titre.depense": "Reçu de dépense",
   "pme.recu.titre.revenu": "Reçu de revenu",
   "pme.recu.dossier": "Dossier",
@@ -1596,6 +1597,9 @@ const fr = {
   "pme.reglages.signaler": "Quelque chose n'a pas marché ?",
   "pme.reglages.signaler.sous":
     "Dites-le en une phrase. Elle arrive telle quelle à l'équipe, avec l'écran et la version — jamais vos documents.",
+  "pme.reglages.pannes": "Ce qui n’a pas marché",
+  "pme.reglages.pannes.sous":
+    "Ce que l’application a constaté elle-même, sans que vous ayez à le signaler.",
   "pme.reglages.signaler.champ": "Ce qui s'est passé, et ce que vous attendiez",
   "pme.reglages.signaler.envoyer": "Envoyer",
   "pme.reglages.signaler.merci": "Reçu. Merci — on regarde.",
@@ -2605,6 +2609,7 @@ const en: Dict = {
   "pme.date.manque.action": "Save",
   "pme.paiement.moyen": "Method",
   "pme.recu.generer": "Generate the receipt",
+  "pme.recu.enAttente": "The receipt is ready. It will be sent as soon as the network is back.",
   "pme.recu.titre.depense": "Expense receipt",
   "pme.recu.titre.revenu": "Income receipt",
   "pme.recu.dossier": "Company",
@@ -3894,6 +3899,8 @@ const en: Dict = {
   "pme.reglages.signaler": "Something didn't work?",
   "pme.reglages.signaler.sous":
     "Say it in one sentence. It reaches the team as is, with the screen and the version — never your documents.",
+  "pme.reglages.pannes": "What did not work",
+  "pme.reglages.pannes.sous": "What the app noticed by itself, without you having to report it.",
   "pme.reglages.signaler.champ": "What happened, and what you expected",
   "pme.reglages.signaler.envoyer": "Send",
   "pme.reglages.signaler.merci": "Received. Thank you — we're looking.",
@@ -4884,6 +4891,7 @@ const ar: Dict = {
   "pme.date.manque.action": "تسجيل",
   "pme.paiement.moyen": "وسيلة الدفع",
   "pme.recu.generer": "إنشاء الوصل",
+  "pme.recu.enAttente": "الوصل جاهز. سيُرسَل عند عودة الشبكة.",
   "pme.recu.titre.depense": "وصل مصروف",
   "pme.recu.titre.revenu": "وصل مقبوض",
   "pme.recu.dossier": "المنشأة",
@@ -6151,6 +6159,8 @@ const ar: Dict = {
   "pme.reglages.signaler": "هل تعطّل شيء؟",
   "pme.reglages.signaler.sous":
     "قله في جملة واحدة. تصل إلى الفريق كما هي، مع الشاشة والإصدار — ولا تصل وثائقك أبدًا.",
+  "pme.reglages.pannes": "ما لم ينجح",
+  "pme.reglages.pannes.sous": "ما لاحظه التطبيق بنفسه، دون أن تبلّغ عنه.",
   "pme.reglages.signaler.champ": "ما الذي حدث، وما الذي كنت تتوقعه",
   "pme.reglages.signaler.envoyer": "إرسال",
   "pme.reglages.signaler.merci": "وصلت. شكرًا — سننظر فيها.",

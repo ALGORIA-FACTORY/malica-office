@@ -1,6 +1,7 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 import type { ElementDeFile } from "@/lib/hors-ligne/file";
+import { dossierDuJournal } from "@/lib/journal-atelier";
 
 export type CaptureKind = "photo" | "pdf";
 
@@ -55,6 +56,21 @@ export interface PmeContextValue {
 const PmeContext = createContext<PmeContextValue | null>(null);
 
 export function PmeProvider({ value, children }: { value: PmeContextValue; children: ReactNode }) {
+  /*
+   * ====================== LE DOSSIER, REMIS AU JOURNAL DES PANNES — UNE SEULE FOIS
+   *
+   * `audit.journal_client` est sous RLS de dossier : consigner une panne
+   * demande de dire dans quel dossier on écrit. Le journal n'a pas de contexte
+   * React — il est appelé depuis des `catch`, parfois hors de tout composant —
+   * et c'est donc ici, au seul endroit qui connaît le dossier courant, qu'il
+   * l'apprend. Il l'oublie au démontage : une panne survenue après la
+   * déconnexion n'appartient à personne.
+   */
+  useEffect(() => {
+    dossierDuJournal(value.tenantId);
+    return () => dossierDuJournal(null);
+  }, [value.tenantId]);
+
   return <PmeContext.Provider value={value}>{children}</PmeContext.Provider>;
 }
 

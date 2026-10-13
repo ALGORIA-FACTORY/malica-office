@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -185,6 +185,7 @@ function PmeReglages() {
         {t("pme.reglages.signaler")}
       </p>
       <Signalement />
+      <PannesConstatees />
 
       <p className="mb-1 mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {t("pme.reglages.version")}
@@ -239,6 +240,62 @@ function Versions() {
       {" · "}
       {t("pme.reglages.version.canal")} <span className="text-foreground">{CANAL}</span>
     </p>
+  );
+}
+
+/*
+ * ============================ CE QUE L'APPLICATION A CONSTATÉ TOUTE SEULE
+ *
+ * Le complément du signalement, et son contraire : là, c'est la personne qui
+ * raconte ; ici, c'est l'application qui dit ce qui a échoué sans qu'on le
+ * lui demande.
+ *
+ * 13 octobre 2026 : « Générer le reçu » ne faisait rien, et la raison était
+ * perdue — message hors écran, journal limité au développement. Elle est
+ * désormais en base, et elle se relit ICI : une trace que seul un accès à la
+ * base permettrait de consulter retomberait exactement dans le défaut qu'elle
+ * corrige.
+ */
+function PannesConstatees() {
+  const { t, locale } = useI18n();
+  const pme = usePme();
+  const pannes = useQuery({
+    queryKey: ["pannes", pme.tenantId],
+    queryFn: () => office().journal.dernieres(pme.tenantId, 20),
+  });
+
+  if ((pannes.data ?? []).length === 0) return null;
+
+  return (
+    <div className="border-t border-foreground pt-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {t("pme.reglages.pannes")}
+      </p>
+      <p className="mt-1 text-[12.5px] leading-[1.45] text-text-2">
+        {t("pme.reglages.pannes.sous")}
+      </p>
+      <ul className="mt-2 grid gap-px border border-border bg-border">
+        {(pannes.data ?? []).map((p) => (
+          <li key={p.id} className="bg-card px-3 py-2">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="text-[12.5px] leading-[1.4]">{p.message}</span>
+              <span className="num shrink-0 text-[11px] text-muted-foreground">
+                {new Intl.DateTimeFormat(locale, {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(p.at))}
+              </span>
+            </span>
+            <span className="num mt-0.5 block text-[11px] text-muted-foreground">
+              {p.ou}
+              {p.version ? ` · ${p.version}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -2227,3 +2227,39 @@ export interface SignalementSaisie {
 export interface SignalementsRepository {
   deposer(saisie: SignalementSaisie): Promise<{ id: string; creeLe: string }>;
 }
+
+/**
+ * Le journal des pannes survenues sur l'appareil de quelqu'un.
+ *
+ * Il existe parce qu'une panne qu'on ne peut pas relire n'existe pas : le
+ * 13 octobre 2026, « Generer le recu » ne faisait rien, et la raison etait
+ * perdue deux fois — un message affiche hors ecran, et un journal qui ne
+ * tourne qu'en developpement.
+ *
+ * On n'y verse QUE des pannes : l'endroit du code, le message, la pile, la
+ * version et la plateforme. Aucune charge utile, aucune valeur de piece.
+ */
+export interface JournalRepository {
+  /** Inscrire une panne. Rend l'identifiant de la trace. */
+  consigner(input: {
+    tenantId: string;
+    ou: string;
+    message: string;
+    pile?: string | null;
+    version?: string | null;
+    plateforme?: string | null;
+  }): Promise<string>;
+  /** Les dernieres pannes d'un dossier, de la plus recente. */
+  dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
+}
+
+/** Une panne inscrite au journal. */
+export interface PanneConsignee {
+  id: string;
+  /** L'endroit du code qui a signale, tel que l'application le nomme. */
+  ou: string;
+  message: string;
+  version: string | null;
+  plateforme: string | null;
+  at: string;
+}

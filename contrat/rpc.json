@@ -155,6 +155,10 @@
     "etat",
     "revoquerCle"
   ],
+  "journal": [
+    "consigner",
+    "dernieres"
+  ],
   "office": [
     "book",
     "bookedExtracts",
