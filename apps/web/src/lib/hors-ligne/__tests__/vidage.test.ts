@@ -65,6 +65,34 @@ describe("un dépôt en ligne", () => {
     expect(r.appels).toEqual(["enregistrer:k1", "deposer:piece-k1", "lire:piece-k1"]);
     expect(await depot.lister()).toEqual([]);
   });
+
+  it("un reçu que Malica vient de fabriquer ne repart PAS en lecture", async () => {
+    /*
+     * 13 octobre 2026. Trois reçus se sont retrouvés en base classés
+     * « facture_vente » : déposés puis envoyés au modèle comme n'importe
+     * quelle photo, ils en revenaient défigurés. Un reçu compté comme une
+     * vente double le chiffre d'affaires, et il réapparaissait dans la liste
+     * comme un document à classer — ces « Émetteur non trouvé » que
+     * personne ne comprenait.
+     *
+     * Malica sait ce qu'elle vient de dessiner. La relire coûte un appel de
+     * modèle pour en apprendre moins qu'elle n'en savait.
+     */
+    const depot = depotMemoire();
+    const r = ports();
+    const v = creerVidage({ depot, ports: r.ports, enLigne: () => true });
+
+    const cle = await v.deposer(
+      { ...ENTREE, cle: "recu", documentKind: "recu_de_paiement" },
+      octets(),
+    );
+    await v.attendre(cle, 1000);
+    await v.vider();
+
+    expect(r.appels).toEqual(["enregistrer:recu", "deposer:piece-recu"]);
+    // Et la file se vide quand même : ne pas lire n'est pas rester coincé.
+    expect(await depot.lister()).toEqual([]);
+  });
 });
 
 describe("hors ligne, puis de retour", () => {

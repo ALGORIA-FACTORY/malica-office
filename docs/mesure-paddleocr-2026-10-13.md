@@ -161,3 +161,64 @@ res = ocr.predict("page1.png")
 `enable_mkldnn=False` n'est pas un détail : avec l'accélérateur activé,
 `paddle 3.3.1` échoue sur
 `ConvertPirAttribute2RuntimeAttribute not support`.
+
+---
+
+# La mesure sur TOUTES les pièces réelles — 13 octobre 2026, le soir
+
+La première mesure portait sur une facture. Celle-ci porte sur les **treize
+pièces** du staging, prises telles quelles : factures d'achat et de vente,
+reçus produits par Malica, photos de justificatifs.
+
+Même protocole, même conteneur borné à 1,8 Go et 1,5 vCPU, mêmes modèles
+`PP-OCRv5_mobile`. Treize pièces lues, de 5 à 45 secondes chacune.
+
+## La méthode de comparaison, et sa première version fausse
+
+Pour chaque pièce, on compare l'ensemble des **montants** trouvés par la
+chaîne actuelle (le plan de jetons en base) et par PaddleOCR.
+
+Un premier comparateur cherchait les montants par une expression régulière
+qui autorisait les espaces — pour attraper les milliers coupés. Elle
+franchissait les espaces entre DEUX nombres voisins et collait « 13 » et
+« 1969.610 » en « 131969.610 », inventant des écarts des deux côtés. Elle
+annonçait 52 contre 4 ; elle mesurait surtout son propre défaut.
+
+Le comparateur retenu lit **jeton par jeton**, comme la chaîne réelle, et ne
+recolle que le motif précis qu'on cherche à mesurer : un groupe de un à trois
+chiffres suivi d'un groupe de trois avec décimales.
+
+## Le résultat
+
+| | |
+|---|---|
+| Pièces comparées | 12 (la treizième n'a pas de plan de jetons) |
+| Montants trouvés **par PaddleOCR seul** | **20** |
+| Montants trouvés **par la chaîne actuelle seule** | **4** |
+
+Le détail des quatre, parce que c'est la seule partie qui peut coûter cher :
+
+- `bfb52a45` — **deux vraies pertes**, « 3,897 » et « 12,360 », sur une
+  facture de câblerie aux montants faibles et serrés. PaddleOCR n'a pas lu
+  ces deux lignes-là ;
+- `53144e64` et `6a2d49aa` — les deux autres ne sont pas des pertes : ce sont
+  des recollages de milliers que les deux lectures écrivent différemment.
+
+Et le cas qui a tout déclenché reste tranché : sur `6a2d49aa`, la chaîne
+actuelle relève **1** montant, PaddleOCR en relève **24**.
+
+## Ce que ça décide, et ce que ça ne décide pas
+
+**Décidé** : le rôle de second lecteur en rattrapage est justifié par la
+mesure, pas par la réputation. Cinq montants gagnés pour un perdu, sur des
+pièces réelles, dont le défaut précis qui bloquait une écriture comptable.
+
+**Non décidé** : PaddleOCR n'est pas meilleur partout — `bfb52a45` le
+montre. Un remplacement reste exclu, et le déclencheur arithmétique garde
+tout son sens : on n'appelle le second lecteur que là où le premier a échoué,
+et on garde la lecture dont la facture boucle.
+
+**Toujours en attente** : la machine. Au 13 octobre au soir, la CX23 est
+revenue en stock à Nuremberg mais la **CX33 reste indisponible** dans les
+trois centres européens. Le stock se reconstitue ; rien ne presse, puisque
+la mesure est faite et qu'elle ne demandait aucune machine neuve.
