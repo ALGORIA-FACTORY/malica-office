@@ -88,6 +88,34 @@ export function CommentCEstPaye({
   const pme = usePme();
   const qc = useQueryClient();
   const [erreur, setErreur] = useState<string | null>(null);
+  /*
+   * ============================ OU S'AFFICHE UNE ERREUR : SOUS CE QUI L'A PRODUITE
+   *
+   * 13 octobre 2026. Le dirigeant appuie sur « Generer le recu », et « il ne
+   * se passe rien ». La base ne contient aucun recu — pas un seul — et son
+   * dossier porte bien son matricule : l'echec est donc reel, et anterieur au
+   * depot.
+   *
+   * Le message EXISTAIT. Il s'affichait en bas de la section, apres la grille
+   * des huit moyens : environ deux cent vingt pixels sous le bouton, donc hors
+   * de l'ecran d'un telephone. Et le journal d'atelier qui l'aurait garde ne
+   * tourne qu'en developpement (`journal-atelier.ts`, `import.meta.env.DEV`) :
+   * sur l'application installee, la raison etait perdue deux fois.
+   *
+   * Une erreur se pose donc sous le geste qui l'a produite. C'est le meme
+   * defaut que celui deja nomme dans l'ecran de la piece, et la meme correction.
+   */
+  const [erreurDe, setErreurDe] = useState<"recu" | "autre" | null>(null);
+  /** Le recu est fabrique mais attend le reseau : ce n'est ni un echec ni un silence. */
+  const [recuEnAttente, setRecuEnAttente] = useState(false);
+  const poserErreur = (ou: "recu" | "autre", e: unknown) => {
+    setErreurDe(ou);
+    setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error")));
+  };
+  const effacerErreur = () => {
+    setErreur(null);
+    setErreurDe(null);
+  };
 
   const au = dateDeLaPiece ?? new Date().toISOString().slice(0, 10);
 
@@ -102,6 +130,27 @@ export function CommentCEstPaye({
     queryKey: ["paiements", pieceId],
     queryFn: () => office().capture.paiementsDUnePiece(pieceId),
   });
+
+  /**
+   * Ce qui est NÉ de cette facture : le reçu, les talons.
+   *
+   * 13 octobre 2026 : « le reçu ne se génère pas ». Et même quand il se
+   * générait, l'écran de la PME n'en montrait RIEN — aucune liste, aucun
+   * nom, aucun geste pour l'ouvrir. Le bouton passait une seconde en
+   * « Chargement… », revenait, et c'était tout. Le cabinet, lui, lisait
+   * déjà ces pièces depuis septembre (`piecesIssuesDe`).
+   */
+  const joints = useQuery({
+    queryKey: ["joints", pieceId],
+    queryFn: () => office().capture.piecesIssuesDe(pieceId),
+  });
+  const typesDoc = useQuery({
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+  const nomDuType = (code: string | null) =>
+    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? code ?? "—";
 
   /** Les motifs d'annulation, du référentiel et traduits — jamais du code. */
   const motifs = useQuery({
@@ -204,14 +253,13 @@ export function CommentCEstPaye({
       });
     },
     onSuccess: async () => {
-      setErreur(null);
+      effacerErreur();
       setPartiel(false);
       setMontantSaisi("");
       setReferenceSaisie("");
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+    onError: (e: unknown) => poserErreur("autre", e),
   });
 
   /**
@@ -228,11 +276,10 @@ export function CommentCEstPaye({
       await office().capture.rattacherJustificatif(paiementId, preuve);
     },
     onSuccess: async () => {
-      setErreur(null);
+      effacerErreur();
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+    onError: (e: unknown) => poserErreur("autre", e),
   });
 
   const deja = paiements.data ?? [];
@@ -281,12 +328,11 @@ export function CommentCEstPaye({
     mutationFn: ({ paiementId, motifId }: { paiementId: string; motifId: string }) =>
       office().capture.annulerPaiement(paiementId, motifId),
     onSuccess: async () => {
-      setErreur(null);
+      effacerErreur();
       setACorriger(null);
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+    onError: (e: unknown) => poserErreur("autre", e),
   });
   const libelleDuMoyen = (code: string) =>
     (moyens.data ?? []).find((m) => m.code === code)?.libelle ?? code;
@@ -383,15 +429,29 @@ export function CommentCEstPaye({
         },
         rendu.blob,
       );
-      return vidage().attendre(cle, 8_000);
+      /*
+       * Ce que la file rend, et ce qu'on en fait.
+       *
+       * `null` : l'element a ete purge, donc la piece est partie — c'est
+       * arrive. Un element avec `pieceId` : enregistre. Un element en
+       * `echec_definitif` : l'API a refuse, et jusqu'ici ce refus passait par
+       * `onSuccess` sans un mot. Un element encore en file au bout de huit
+       * secondes n'est pas un echec : il partira au retour du reseau, et on
+       * le DIT plutot que de laisser croire qu'il ne s'est rien passe.
+       */
+      const element = await vidage().attendre(cle, 8_000);
+      if (element?.etat === "echec_definitif")
+        throw new Error(element.derniereErreur ?? t("common.error"));
+      return element;
     },
-    onSuccess: async () => {
-      setErreur(null);
+    onSuccess: async (element) => {
+      effacerErreur();
+      setRecuEnAttente(element !== null && element.pieceId === null);
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
       await qc.invalidateQueries({ queryKey: ["piece", pieceId] });
+      await qc.invalidateQueries({ queryKey: ["joints", pieceId] });
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "components/malica/comment-c-est-paye", t("common.error"))),
+    onError: (e: unknown) => poserErreur("recu", e),
   });
 
   // Un reçu atteste d'un règlement : sans montant payé, il n'atteste de rien.
@@ -531,6 +591,44 @@ export function CommentCEstPaye({
               {recu.isPending ? t("common.loading") : t("pme.recu.generer")}
             </button>
           ) : null}
+
+          {/*
+           * L'ERREUR SOUS LE GESTE QUI L'A PRODUITE.
+           *
+           * Elle s'affichait jusqu'ici tout en bas de la section, sous la
+           * grille des huit moyens — environ deux cent vingt pixels plus
+           * loin, donc hors de l'ecran. « Il ne se passe rien » voulait dire
+           * « le message est en bas de page ».
+           */}
+          {erreur && erreurDe === "recu" ? (
+            <p className="mt-1.5 text-[12.5px] text-signal-warn">{erreur}</p>
+          ) : null}
+          {recuEnAttente ? (
+            <p className="mt-1.5 text-[12.5px] text-text-2">{t("pme.recu.enAttente")}</p>
+          ) : null}
+
+          {/*
+           * CE QUI EST NE DE CETTE FACTURE.
+           *
+           * Sans cette liste, un recu produit, depose et lu restait
+           * invisible sur l'ecran qui venait de le creer — et le dirigeant
+           * concluait, a juste titre, que rien ne s'etait passe.
+           */}
+          {(joints.data ?? []).length > 0 ? (
+            <ul className="mt-2 grid gap-px border border-border bg-border">
+              {(joints.data ?? []).map((j) => (
+                <li
+                  key={j.id}
+                  className="flex items-baseline justify-between gap-3 bg-card px-3 py-1.5"
+                >
+                  <span className="text-[12.5px]">{nomDuType(j.documentKind)}</span>
+                  <span className="num shrink-0 text-[11.5px] text-text-2">
+                    {j.createdAt.slice(0, 10)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </>
       ) : (
         <p className="mt-1.5 text-[13px] leading-[1.5] text-text-2">{t("pme.paiement.lede")}</p>
@@ -626,7 +724,9 @@ export function CommentCEstPaye({
         ))}
       </div>
 
-      {erreur ? <p className="mt-2 text-[12.5px] text-signal-warn">{erreur}</p> : null}
+      {erreur && erreurDe !== "recu" ? (
+        <p className="mt-2 text-[12.5px] text-signal-warn">{erreur}</p>
+      ) : null}
     </section>
   );
 }

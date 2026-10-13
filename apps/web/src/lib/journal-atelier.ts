@@ -19,6 +19,7 @@
  *
  * L'utilisateur ne voit rien : c'est la règle du produit, et elle tient.
  */
+import { versionClient } from "@/capabilities/coque";
 
 /** Ce qu'on a déjà rapporté : une boucle de rendu ne doit pas noyer le journal. */
 const dejaVu = new Set<string>();
@@ -69,9 +70,58 @@ export function installerJournalAtelier(): void {
   });
 }
 
+/*
+ * ======================================= LE DOSSIER COURANT, POUR LA TRACE EN BASE
+ *
+ * 13 octobre 2026. « Il ne se passe rien » quand on génère un reçu, et la
+ * raison est perdue : ce journal-ci n'écrit QUE en développement, vers le
+ * serveur d'atelier. Sur l'application installée, rien n'est jamais consigné.
+ *
+ * Une panne qu'on ne peut pas relire n'existe pas. Elle va donc désormais en
+ * base, dans `audit.journal_client` — mais cette table est sous RLS de
+ * dossier, et il faut donc dire DANS QUEL dossier on écrit.
+ *
+ * Ce module n'a pas de contexte React : le dossier lui est remis par le
+ * fournisseur PME, en un seul endroit, et il est oublié à la déconnexion.
+ */
+let dossierCourant: string | null = null;
+
+/** Le dossier dans lequel consigner. `null` oublie, à la déconnexion. */
+export function dossierDuJournal(tenantId: string | null): void {
+  dossierCourant = tenantId;
+}
+
+/**
+ * Consigner en base, sans jamais nuire.
+ *
+ * Signaler une panne ne doit pas en créer une seconde : tout échec de
+ * l'envoi est ignoré, délibérément, et c'est le seul `catch` muet que ce
+ * dépôt s'autorise — il n'avale rien d'autre que son propre échec.
+ */
+function consignerEnBase(ou: string, message: string, pile: string): void {
+  if (dossierCourant === null) return;
+  void import("@/verticals/malica-office/composition")
+    .then(({ office }) =>
+      office().journal.consigner({
+        tenantId: dossierCourant!,
+        ou,
+        message,
+        pile: pile === "" ? null : pile,
+        // La MEME notion de version que le signalement manuel : deux facons
+        // de nommer la version produiraient deux histoires inconciliables.
+        version: versionClient(),
+        plateforme: typeof navigator === "undefined" ? null : navigator.userAgent.slice(0, 100),
+      }),
+    )
+    .catch(() => undefined);
+}
+
 /** À appeler depuis un `catch` qui, autrement, avalerait la trace. */
 export function noterAuJournal(ou: string, raison: unknown): void {
-  if (!import.meta.env.DEV || typeof window === "undefined") return;
+  if (typeof window === "undefined") return;
   const { message, pile } = texteEtPile(raison);
-  rapporter(ou, message, pile);
+  // La base, toujours : c'est elle qui se relit.
+  consignerEnBase(ou, message, pile);
+  // Le serveur d'atelier, en développement seulement.
+  if (import.meta.env.DEV) rapporter(ou, message, pile);
 }
