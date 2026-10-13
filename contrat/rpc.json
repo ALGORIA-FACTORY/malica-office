@@ -168,7 +168,9 @@
     "periodeLignes",
     "propose",
     "proposerDepuisPiece",
+    "proposerLeReglement",
     "propositionDePiece",
+    "propositionDeReglement",
     "transmisesSansDate"
   ],
   "parametrage": [

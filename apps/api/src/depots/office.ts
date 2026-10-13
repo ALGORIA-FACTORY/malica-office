@@ -9,6 +9,7 @@
 
 import type { Requete } from "../db.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
+import { propositionDeReglement } from "../scan/reglement.ts";
 
 import { dec } from "./decimal.ts";
 
@@ -99,6 +100,39 @@ export const office = {
       packVersionId: r.packVersionId,
       devise: r.proposition.pivot.currency,
       lignes: r.proposition.lignes,
+    });
+  },
+
+  /**
+   * Ce que le moyen de paiement engage : l'ecriture du reglement.
+   *
+   * La facture constate une dette ; le reglement l'eteint. Ce sont DEUX
+   * faits, a deux dates, et les confondre empeche tout rapprochement
+   * bancaire — une facture de septembre payee en octobre touche la
+   * tresorerie en octobre.
+   */
+  async propositionDeReglement(db: Requete, paiementId: string) {
+    return propositionDeReglement(db, paiementId);
+  },
+
+  /**
+   * Inscrire le reglement propose. Rend l'identifiant de l'ecriture.
+   *
+   * Aucune ligne ne transite par le client : le serveur compose depuis ce
+   * qu'il a lui-meme lu, et refuse avec le motif ce que la proposition
+   * refuse.
+   */
+  async proposerLeReglement(db: Requete, paiementId: string): Promise<string> {
+    const r = await propositionDeReglement(db, paiementId);
+    if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
+    return office.propose(db, {
+      pieceId: r.pieceId,
+      journal: r.ecriture.journal,
+      date: r.ecriture.dateEcriture,
+      libelle: r.ecriture.libelle,
+      packVersionId: r.packVersionId,
+      devise: r.ecriture.devise,
+      lignes: r.ecriture.lignes,
     });
   },
 
