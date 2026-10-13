@@ -185,3 +185,41 @@ export function lireLeSens(e: {
     "Les deux matricules lus sur la pièce sont étrangers au dossier : elle concerne peut-être une autre entreprise.",
   );
 }
+
+/**
+ * Faut-il ENCORE demander le sens de cette pièce ?
+ *
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
+ *
+ * 13 octobre 2026 : « il y a une deuxième fois où l'app demande achat ou
+ * vente ». C'était exact, et systématique sur le cas le plus courant de la
+ * facture d'achat tunisienne.
+ *
+ * À la capture, la personne déclare « une facture que j'ai reçue ». Puis la
+ * lecture ne tranche pas — le fournisseur n'imprime pas le matricule du
+ * client, ce qui est normal sur un achat — et l'écran, qui ne regardait que
+ * la lecture, reposait la question. La réponse était en base, sur la pièce, à
+ * deux champs de distance.
+ *
+ * ======================================================== POURQUOI DANS LE SOCLE
+ *
+ * Parce que trois lecteurs du sens coexistent — la lecture, la précision, le
+ * type déclaré sur la pièce — et que chacun en jugeait dans son coin. Deux
+ * questions valaient mieux que deux réponses divergentes, mais la bonne issue
+ * est une seule décision, écrite une fois, éprouvée une fois, appelée par qui
+ * en a besoin.
+ */
+export function leSensResteADemander(e: {
+  /** Ce que la lecture a tranché, ou `null` si elle n'a pas su. */
+  sensLu: string | null | undefined;
+  /** Ce que la personne a déclaré à la capture, ou corrigé depuis. */
+  typeDeclare: string | null | undefined;
+}): boolean {
+  const estUnSens = (v: string | null | undefined): v is SensDeLaPiece =>
+    v === "facture_achat" || v === "facture_vente";
+  // Un type déclaré qui n'est ni l'un ni l'autre — un relevé bancaire, un
+  // ticket — ne répond pas à la question : il dit seulement que ce n'est pas
+  // une facture, et l'écran qui demande le sens ne s'affiche pas sur ces
+  // pièces-là de toute façon.
+  return !estUnSens(e.sensLu) && !estUnSens(e.typeDeclare);
+}

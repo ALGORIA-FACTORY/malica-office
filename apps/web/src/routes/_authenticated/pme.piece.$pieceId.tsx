@@ -16,6 +16,7 @@ import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
+import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 
@@ -480,9 +481,36 @@ function PieceScreen() {
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
   const { piece, contenu, extraction, citations } = dossier.data;
+  /*
+   * ================================ LE SENS SE DEMANDE UNE FOIS, PAS DEUX
+   *
+   * 13 octobre 2026 : « il y a une deuxième fois où l'app demande achat ou
+   * vente ». C'est exact, et c'est systématique sur le cas le plus courant de
+   * la facture d'achat tunisienne. Le fil :
+   *
+   *   1. à la capture, la personne répond « une facture que j'ai reçue », et
+   *      la réponse est inscrite sur la PIÈCE ;
+   *   2. la lecture ne tranche pas — le fournisseur n'imprime pas le matricule
+   *      du client, ce qui est normal sur un achat — donc la lecture rend un
+   *      sens nul ;
+   *   3. cette condition ne regardait QUE la lecture, et reposait la question.
+   *
+   * Vérifié en base le 13 octobre : deux pièces du dirigeant portent à la fois
+   * le type déclaré « facture_achat » ET une précision enregistrée. Il a bien
+   * répondu deux fois, à quelques secondes d'intervalle.
+   *
+   * La réponse était pourtant là, dans le même objet, à deux champs de
+   * distance — ce fichier lit déjà le statut de ce type, un peu plus haut.
+   *
+   * Une déclaration qui n'est ni un achat ni une vente — un relevé bancaire,
+   * un ticket — ne répond pas à la question et ne la clôt donc pas.
+   */
   const sensIndetermine =
     extraction != null &&
-    (extraction.payload as { document_kind?: string | null } | null)?.document_kind == null;
+    leSensResteADemander({
+      sensLu: (extraction.payload as { document_kind?: string | null } | null)?.document_kind,
+      typeDeclare: piece.documentKind,
+    });
   // Une citation par champ : la dernière écrite est celle qui fait foi.
   const byField = new Map(citations.map((c) => [c.field, c]));
   const payload = extraction?.payload as ExtractPayload | undefined;
