@@ -36,7 +36,7 @@
  * ne promet donc rien de plus que ce que l'appareil sait — c'est assez pour un
  * bandeau et pour décider d'un essai d'envoi, qui réessaiera.
  */
-import { coque, estNatif } from "./coque";
+import { coque } from "./coque";
 
 /** Les auditeurs de l'application. Un seul abonnement au pont les sert tous. */
 const auditeurs = new Set<(enLigne: boolean) => void>();
@@ -44,10 +44,15 @@ const auditeurs = new Set<(enLigne: boolean) => void>();
 /**
  * Le dernier état connu.
  *
- * Il part de `navigator.onLine` — vrai côté serveur, où l'on ne sait pas — et
- * la coque le corrige dès que `preparerLeReseau` a parlé au pont.
+ * Il part de « en ligne », et la coque le corrige dès qu'elle a répondu — ce
+ * qui est immédiat.
+ *
+ * Il partait de `navigator.onLine`, et c'était le dernier résidu de l'ancienne
+ * écriture : une connaissance du réseau DANS ce module, alors que tout
+ * l'intérêt est qu'il n'en ait aucune. L'optimisme de départ, lui, n'est pas
+ * une connaissance : c'est l'aveu qu'on ne sait pas encore.
  */
-let enLigne = typeof navigator === "undefined" ? true : navigator.onLine;
+let enLigne = true;
 
 let desabonner: (() => void) | null = null;
 let preparation: Promise<void> | null = null;
@@ -68,20 +73,17 @@ function poser(valeur: boolean): void {
 function preparer(): Promise<void> {
   if (preparation) return preparation;
   preparation = (async () => {
-    if (!estNatif()) {
-      // Dans un navigateur, les événements de la fenêtre sont la seule source,
-      // et ils fonctionnent.
-      const surEnLigne = () => poser(true);
-      const surHorsLigne = () => poser(false);
-      window.addEventListener("online", surEnLigne);
-      window.addEventListener("offline", surHorsLigne);
-      desabonner = () => {
-        window.removeEventListener("online", surEnLigne);
-        window.removeEventListener("offline", surHorsLigne);
-      };
-      poser(navigator.onLine);
-      return;
-    }
+    /*
+     * UN SEUL CHEMIN, quelle que soit la coque.
+     *
+     * Première écriture : un `if (!estNatif())` qui posait ici les écouteurs
+     * `online`/`offline` de la fenêtre. C'était un doublon — `coque()` le fait
+     * déjà, dans sa branche navigateur, depuis septembre. Deux écritures du
+     * même geste, à corriger deux fois le jour où l'une se révélerait fausse.
+     *
+     * La coque est l'abstraction : c'est elle qui sait si l'on tourne dans un
+     * navigateur ou dans une WebView. Ce module ne sait que lire.
+     */
     const pont = coque().reseau;
     desabonner = pont.surChangement(poser);
     // L'état courant, et non le prochain changement.

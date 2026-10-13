@@ -14,8 +14,8 @@
  *   — dans une WebView Android, `navigator.onLine` NE BASCULE PAS en mode
  *     avion : Chromium embarqué garde sa valeur optimiste, et les événements
  *     `offline` ne sont pas délivrés ;
- *   — le pont qui sait, lui, existait : `coque().reseau.surChangement`, bâti
- *     sur `@capacitor/network`, déclaré dans les dépendances depuis septembre.
+ *   — le pont qui sait, lui, existait : `coque().reseau`, bâti sur
+ *     `@capacitor/network`, déclaré dans les dépendances depuis septembre.
  *     Personne ne l'importait.
  *
  * C'est le motif récurrent de ce dépôt — l'outil construit, le consommateur
@@ -29,20 +29,21 @@
  * peuvent diverger, et qui ont divergé — le bandeau n'apparaissait pas tandis
  * que la file, elle, tentait d'envoyer.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** Le pont de la coque, tel qu'un faux l'offre. */
 type Rappel = (enLigne: boolean) => void;
 
 const pont = {
-  natif: false,
   etatInitial: true,
   rappels: [] as Rappel[],
   desabonnements: 0,
 };
 
 vi.mock("../coque", () => ({
-  estNatif: () => pont.natif,
   coque: () => ({
     reseau: {
       surChangement(rappel: Rappel) {
@@ -63,7 +64,6 @@ async function charger() {
 }
 
 beforeEach(() => {
-  pont.natif = false;
   pont.etatInitial = true;
   pont.rappels = [];
   pont.desabonnements = 0;
@@ -75,21 +75,37 @@ afterEach(() => {
 });
 
 describe("la source de vérité du réseau", () => {
-  it("dans un navigateur, elle suit `navigator.onLine`", async () => {
-    const { estEnLigne } = await charger();
-    expect(estEnLigne()).toBe(true);
-    Object.defineProperty(window.navigator, "onLine", { value: false, configurable: true });
-    window.dispatchEvent(new Event("offline"));
-    expect(estEnLigne()).toBe(false);
+  it("ne lit QUE le pont de la coque — jamais `navigator` elle-même", () => {
+    /*
+     * Le partage des rôles. La coque sait si l'on tourne dans un navigateur ou
+     * dans une WebView, et c'est elle qui écoute ce qu'il faut : les
+     * événements de la fenêtre d'un côté, le greffon réseau de l'autre. Ce
+     * module ne sait que lire.
+     *
+     * Une première version posait ici les écouteurs de la fenêtre, derrière un
+     * test sur la nature de la coque — un doublon de ce que la coque faisait
+     * déjà depuis septembre, à corriger deux fois le jour où l'un des deux se
+     * révélerait faux.
+     */
+    // Le chemin part du dossier de travail de Vitest (`apps/web`) : sous
+    // jsdom, `import.meta.url` n'est pas une URL de fichier et
+    // `fileURLToPath` refuse.
+    const source = readFileSync(resolve(process.cwd(), "src/capabilities/reseau.ts"), "utf8");
+    const code = source
+      .split("\n")
+      .filter((ligne) => !/^\s*(\*|\/\/|\/\*)/.test(ligne))
+      .join("\n");
+    expect(code).not.toMatch(/navigator\.onLine/);
+    expect(code).not.toMatch(/addEventListener/);
+    expect(code).toMatch(/coque\(\)\.reseau/);
   });
 
-  it("dans la COQUE, elle suit le pont — et non `navigator.onLine`", async () => {
+  it("suit le pont, et non `navigator.onLine`", async () => {
     /*
      * L'épreuve du défaut. `navigator.onLine` reste à `true` en mode avion
      * dans une WebView : si la source le croyait, le bandeau ne paraîtrait
      * jamais sur un téléphone.
      */
-    pont.natif = true;
     const { estEnLigne, pretAEtreLu } = await charger();
     await pretAEtreLu();
 
@@ -107,7 +123,6 @@ describe("la source de vérité du réseau", () => {
      * croirait en ligne jusqu'au premier changement. C'est le cas d'un
      * dirigeant qui photographie dans un sous-sol.
      */
-    pont.natif = true;
     pont.etatInitial = false;
     const { estEnLigne, pretAEtreLu } = await charger();
     await pretAEtreLu();
@@ -115,7 +130,6 @@ describe("la source de vérité du réseau", () => {
   });
 
   it("prévient ses abonnés, une fois par changement", async () => {
-    pont.natif = true;
     const { surChangementDuReseau, pretAEtreLu } = await charger();
     await pretAEtreLu();
 
@@ -132,7 +146,6 @@ describe("la source de vérité du réseau", () => {
   it("ne s'abonne au pont qu'UNE fois, quel que soit le nombre de lecteurs", async () => {
     // Le bandeau, la file, et demain un troisième. Un abonnement par lecteur
     // multiplierait les auditeurs natifs pour une seule vérité.
-    pont.natif = true;
     const { surChangementDuReseau, pretAEtreLu } = await charger();
     await pretAEtreLu();
     surChangementDuReseau(() => undefined);
