@@ -7,6 +7,7 @@
  * l'appareil pour la coque, que rien n'évacue.
  */
 import { estNatif } from "@/capabilities/coque";
+import { estEnLigne } from "@/capabilities/reseau";
 import { office } from "@/verticals/malica-office/composition";
 
 import { depotMemoire } from "./depot";
@@ -40,7 +41,16 @@ export function vidage(): Vidage {
           office().capture.deposerOctets(pieceId, octets, contentType),
         demanderLaLecture: (pieceId) => office().malica.demanderLaLecture(pieceId),
       },
-      enLigne: () => (typeof navigator === "undefined" ? true : navigator.onLine),
+      /*
+       * La MÊME source que le bandeau.
+       *
+       * Elle lisait `navigator.onLine` de son côté — faux dans une WebView
+       * Android, où cette valeur ne bascule pas en mode avion. La file croyait
+       * donc avoir du réseau et tentait l'envoi, pendant que le bandeau, qui
+       * lisait la même chose ailleurs, ne s'affichait pas. Deux lectures d'une
+       * seule vérité, qui ont toutes les deux divergé d'elle.
+       */
+      enLigne: estEnLigne,
     });
   }
   return instance;

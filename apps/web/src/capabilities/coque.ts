@@ -53,6 +53,14 @@ export interface PontCoque {
   };
   reseau: {
     surChangement(rappel: (enLigne: boolean) => void): () => void;
+    /**
+     * L'état courant, et non le prochain changement.
+     *
+     * Un auditeur seul laissait l'application lancée alors que le téléphone
+     * est DÉJÀ hors ligne se croire en ligne jusqu'au premier changement : le
+     * cas du dirigeant qui photographie dans un sous-sol.
+     */
+    etat(): Promise<boolean>;
   };
   demarrage: {
     /** Le premier écran est rendu : l'écran de lancement peut tomber. */
@@ -124,6 +132,10 @@ function pontNatif(): PontCoque {
           const { Network } = await import("@capacitor/network");
           return Network.addListener("networkStatusChange", (s) => rappel(s.connected));
         }),
+      async etat() {
+        const { Network } = await import("@capacitor/network");
+        return (await Network.getStatus()).connected;
+      },
     },
     demarrage: {
       async pret() {
@@ -204,6 +216,8 @@ function pontNavigateur(): PontCoque {
           window.removeEventListener("offline", horsLigne);
         };
       },
+      // Dans un navigateur,  est la verite — et elle marche.
+      etat: async () => (typeof navigator === "undefined" ? true : navigator.onLine),
     },
     demarrage: { pret: async () => undefined },
     // Pas de mise à jour en vol dans un navigateur : il recharge la page.
