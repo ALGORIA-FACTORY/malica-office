@@ -60,6 +60,17 @@ export interface Vidage {
   surChangement(cb: (elements: ElementDeFile[]) => void): () => void;
 }
 
+/**
+ * Les documents que Malica FABRIQUE, et qu'il ne faut donc pas relire.
+ *
+ * Ce n'est pas une liste réglementaire — aucun taux, aucun compte, aucun
+ * seuil : c'est la liste de ce que ce logiciel produit lui-même, et elle ne
+ * peut venir que de lui. Un reçu qu'il vient de dessiner, il sait ce qu'il
+ * contient ; le passer au modèle lui ferait apprendre moins que ce qu'il
+ * savait, pour le prix d'un appel.
+ */
+const NE_SE_RELIT_PAS: ReadonlySet<string> = new Set(["recu_de_paiement"]);
+
 export function creerVidage(deps: {
   depot: DepotDeFile;
   ports: PortsDuVidage;
@@ -131,7 +142,25 @@ export function creerVidage(deps: {
         return true;
       }
       if (e.etat === "deposee") {
-        await deps.ports.demanderLaLecture(e.pieceId!);
+        /*
+         * ============================ ON NE RELIT PAS CE QU'ON VIENT D'ÉCRIRE
+         *
+         * 13 octobre 2026. Le dirigeant : « le reçu ne se génère pas ». Il se
+         * générait. Trois reçus sont en base, rendus, déposés, lus — et c'est
+         * la LECTURE qui les a défigurés : envoyés au modèle comme n'importe
+         * quelle photo, ils en sont revenus classés « facture de vente ».
+         *
+         * Un reçu compté comme une vente double le chiffre d'affaires. Et il
+         * revenait de surcroît dans la liste comme un document à classer, ce
+         * qui expliquait ces « Émetteur non trouvé » que personne ne
+         * comprenait.
+         *
+         * Malica sait ce qu'elle vient de fabriquer. Le relire coûte un appel
+         * de modèle pour en apprendre moins que ce qu'on savait déjà.
+         */
+        if (!NE_SE_RELIT_PAS.has(e.documentKind ?? "")) {
+          await deps.ports.demanderLaLecture(e.pieceId!);
+        }
         await appliquer(e, { type: "lecture_demandee" });
         return true;
       }

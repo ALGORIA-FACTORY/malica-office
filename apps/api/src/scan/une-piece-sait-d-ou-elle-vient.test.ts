@@ -85,6 +85,40 @@ describe("la pièce dont une autre est issue", { skip: !BASE_CONFIGUREE }, () =>
     assert.equal(dossier.piece.documentKind, "recu_de_paiement");
   });
 
+  it("ce que Malica fabrique naît CONFIRMÉ, et la lecture ne le reclasse plus", async () => {
+    /*
+     * 13 octobre 2026 : trois reçus en base, classés « facture_vente ».
+     * Ils avaient été envoyés à la lecture comme n'importe quelle photo, et
+     * en étaient revenus défigurés — un reçu compté comme une vente double
+     * le chiffre d'affaires, et il revenait dans la liste comme un document
+     * à classer.
+     *
+     * Une pièce dérivée porte un type que le logiciel CONNAÎT : il vient de
+     * la fabriquer. Il n'a rien à confirmer.
+     */
+    const facture = await deposer("facture-confirmee");
+    const recu = await deposer("recu-confirme", {
+      documentKind: "recu_de_paiement",
+      sourcePieceId: facture.id,
+    });
+    const dossier = (await rpc("capture", "dossier", recu.id)) as {
+      piece: { documentKind: string | null; documentKindStatut: string | null };
+    };
+    assert.equal(dossier.piece.documentKind, "recu_de_paiement");
+    assert.equal(dossier.piece.documentKindStatut, "confirme");
+  });
+
+  it("une pièce autonome reste à confirmer : la lecture garde le dernier mot", async () => {
+    // La règle d'origine ne bouge pas. Une personne qui déclare « une
+    // facture » devant un relevé bancaire se trompe de bonne foi, et la
+    // lecture doit pouvoir la corriger.
+    const seule = await deposer("autonome-a-confirmer", { documentKind: "facture_achat" });
+    const dossier = (await rpc("capture", "dossier", seule.id)) as {
+      piece: { documentKindStatut: string | null };
+    };
+    assert.equal(dossier.piece.documentKindStatut, "a_confirmer");
+  });
+
   it("une pièce sans parent est le cas courant, et n'est pas une anomalie", async () => {
     const seule = await deposer("seule");
     const dossier = (await rpc("capture", "dossier", seule.id)) as {
