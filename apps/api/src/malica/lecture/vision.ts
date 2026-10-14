@@ -18,6 +18,7 @@ import { z } from "zod";
 import { callDeepSeek } from "../conseil/deepseek.ts";
 import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees } from "./pdf-image.ts";
+import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
@@ -433,10 +434,71 @@ async function lireUnePage(image: { dataUrl: string; page: number }): Promise<{
   throw new Error("lecture.trop_dense");
 }
 
+/** Les octets d'une image rendue en `data:` — ce que le second lecteur attend. */
+function octetsDuDataUrl(dataUrl: string): Uint8Array {
+  const virgule = dataUrl.indexOf(",");
+  return new Uint8Array(Buffer.from(dataUrl.slice(virgule + 1), "base64"));
+}
+
+/**
+ * Relever des pages : PaddleOCR D'ABORD, le modèle de vision ensuite.
+ *
+ * ================================================================== POURQUOI
+ *
+ * 14 octobre 2026, à la demande du dirigeant. La mesure du 13 le soutient :
+ * sur les treize pièces réelles, PaddleOCR trouve 20 montants que la chaîne
+ * rate, et en rate 4 qu'elle trouve.
+ *
+ * Et ce n'est pas qu'une question de justesse. Le modèle de vision est un
+ * appel payant, par page, avec une stratégie de bandes qui peut le rappeler
+ * jusqu'à quatre fois quand il tronque. PaddleOCR ne coûte que du processeur,
+ * et il est là, sur le réseau interne. Le mettre devant, c'est AUSSI l'ôter
+ * du chemin courant.
+ *
+ * ================================================= CE QUI NE PASSE PAS DEVANT
+ *
+ * La couche de texte d'un PDF reste première, et ce n'est pas négociable : un
+ * PDF émis par un logiciel porte son texte EXACT. Aucune reconnaissance
+ * d'image, si bonne soit-elle, ne peut faire mieux que de recopier ce qui est
+ * déjà écrit — elle peut seulement faire moins bien.
+ *
+ * ================================================== ET SI PADDLEOCR N'EST PAS LÀ
+ *
+ * `OCR_URL` absente, ou service muet : on retombe exactement sur la chaîne
+ * d'avant. Ce n'est pas un repli silencieux, c'est le chemin nominal du jour
+ * où le second lecteur n'est pas déployé.
+ */
+async function releverDesPages(
+  pages: ReadonlyArray<{ dataUrl: string; page: number }>,
+  sansPaddle: boolean,
+): Promise<{
+  tokens: PageToken[];
+  source: string;
+  tokensIn: number | null;
+  tokensOut: number | null;
+} | null> {
+  if (sansPaddle || !secondLecteurDisponible()) return null;
+
+  const tokens: PageToken[] = [];
+  let modele = "paddleocr";
+  for (const image of pages) {
+    const lu = await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
+    // Une seule page muette et on renonce : un plan de jetons incomplet
+    // ferait désigner sur une pièce amputée, ce qui est pire que de la
+    // relire entièrement avec l'autre lecteur.
+    if (!lu || lu.tokens.length === 0) return null;
+    tokens.push(...lu.tokens);
+    modele = lu.modele;
+  }
+  return { tokens, source: modele, tokensIn: null, tokensOut: null };
+}
+
 export async function relever(params: {
   dataUrl: string;
   mime: string;
   bytes?: Uint8Array;
+  /** Forcer le modèle de vision : c'est le rattrapage, dans l'autre sens. */
+  sansPaddle?: boolean;
 }): Promise<{
   tokens: PageToken[];
   source: string;
@@ -462,6 +524,10 @@ export async function relever(params: {
       throw new Error("lecture.illisible");
     }
 
+    // Le second lecteur passe DEVANT, quand il est là.
+    const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false);
+    if (parPaddle) return { ...parPaddle, source: `${parPaddle.source}+pdf-scan` };
+
     const tokens: PageToken[] = [];
     let entree = 0;
     let sortie = 0;
@@ -481,6 +547,12 @@ export async function relever(params: {
       tokensOut: sortie || null,
     };
   }
+
+  const parPaddle = await releverDesPages(
+    [{ dataUrl: params.dataUrl, page: 1 }],
+    params.sansPaddle ?? false,
+  );
+  if (parPaddle) return parPaddle;
 
   const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
@@ -578,6 +650,8 @@ export async function runVisionRead(params: {
   tokens?: readonly PageToken[];
   /** Le nom du releveur, quand les jetons viennent d'ailleurs. Pour le journal. */
   releveur?: string;
+  /** Forcer le modèle de vision, en écartant PaddleOCR : c'est le rattrapage. */
+  sansPaddle?: boolean;
 }): Promise<VisionRead> {
   const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
   if (!cleDeepSeek)
@@ -599,6 +673,7 @@ export async function runVisionRead(params: {
         dataUrl: params.dataUrl,
         mime: params.mime ?? "image/jpeg",
         ...(params.bytes ? { bytes: params.bytes } : {}),
+        sansPaddle: params.sansPaddle ?? false,
       });
   const tokens = pass1.tokens;
   const finReleve = Date.now();

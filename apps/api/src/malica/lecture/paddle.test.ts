@@ -7,6 +7,8 @@
  *   node --experimental-strip-types --test src/malica/lecture/paddle.test.ts
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, it } from "node:test";
 
 import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
@@ -131,6 +133,27 @@ describe("le second lecteur", () => {
       throw new Error("ECONNREFUSED");
     }) as typeof fetch;
     assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
+  });
+
+  it("la premiere couche n'est pas la premiere pour un PDF qui porte son texte", async () => {
+    /*
+     * 14 octobre 2026 : « Paddle en premiere couche ». Oui — mais apres la
+     * couche de texte d'un PDF, qui reste intouchable.
+     *
+     * Un PDF emis par un logiciel porte son texte EXACT. Aucune
+     * reconnaissance d'image, si bonne soit-elle, ne peut faire mieux que de
+     * recopier ce qui est deja ecrit ; elle peut seulement faire moins bien.
+     * Cette epreuve lit le code pour que l'ordre ne s'inverse pas par
+     * distraction.
+     */
+    const source = readFileSync(resolve(process.cwd(), "src/malica/lecture/vision.ts"), "utf8");
+    const coucheTexte = source.indexOf("readPdfTextLayer(params.bytes)");
+    const premierPaddle = source.indexOf("releverDesPages(pages");
+    assert.ok(coucheTexte > 0 && premierPaddle > 0);
+    assert.ok(
+      coucheTexte < premierPaddle,
+      "la couche de texte du PDF doit etre tentee AVANT le second lecteur",
+    );
   });
 
   it("un service qui refuse, ou qui ne trouve rien, rend `null` aussi", async () => {
