@@ -229,7 +229,8 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     (
       [
         ["malica.lecture.releve", read.readModel, "vision", read.releve],
-        ["malica.lecture.designation", read.selectModel, "reasoner", read.designation],
+        // Le role vient de la MEME source que le modele : voir `selectRole`.
+        ["malica.lecture.designation", read.selectModel, read.selectRole, read.designation],
       ] as const
     ).map(([agent, model, role, passe]) =>
       api

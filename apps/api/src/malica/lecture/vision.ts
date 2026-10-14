@@ -177,6 +177,20 @@ export interface VisionRead {
    */
   readModel: string;
   selectModel: string;
+  /**
+   * Le ROLE sous lequel la designation a ete appelee.
+   *
+   * Il voyage avec le modele, et c'est tout l'objet : `agents.model_pricing`
+   * cherche un tarif par le COUPLE (modele, role). Le journal l'ecrivait en
+   * dur — « reasoner » — pendant que l'appel passait par `ROLE_DESIGNATION`,
+   * devenu « chat » le 5 octobre 2026. Aucun tarif pour ce couple : l'ecriture
+   * du journal etait refusee, en silence, et plus AUCUNE designation n'a ete
+   * mesuree depuis.
+   *
+   * Le deriver d'une seule source rend le desaccord impossible, plutot
+   * qu'interdit — c'est deja la raison d'etre de `MODELE_DESIGNATION`.
+   */
+  selectRole: string;
   latencyMs: number;
   tokensIn: number | null;
   tokensOut: number | null;
@@ -730,6 +744,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     model: `${pass1.source}+${MODELE_DESIGNATION}`,
     readModel: pass1.source,
     selectModel: MODELE_DESIGNATION,
+    selectRole: ROLE_DESIGNATION,
     latencyMs: Date.now() - started,
     tokensIn: (pass1.tokensIn ?? 0) + (pass2.tokensIn ?? 0) || null,
     tokensOut: (pass1.tokensOut ?? 0) + (pass2.tokensOut ?? 0) || null,
