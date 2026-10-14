@@ -42,7 +42,20 @@ DEPOT=$RACINE/depot
 ENV=$RACINE/.env
 
 compose() {
-  docker compose --project-directory "$DEPOT/infra" --env-file "$ENV" "$@"
+  # Les profils actifs, lus dans le FICHIER d'environnement du serveur.
+  #
+  # Le second lecteur (`ocr`) est derriere un profil : present dans la
+  # composition, demarre seulement si on le demande. Une ligne
+  # `COMPOSE_PROFILES=ocr` dans le .env du serveur l'allume ; la retirer
+  # l'eteint. Une seule ligne a changer le jour ou il faut rendre la main a
+  # la machine.
+  #
+  # Lu dans le fichier, et non dans l'environnement : `--env-file` sert les
+  # CONTENEURS, pas le shell qui lance compose. La premiere ecriture s'y est
+  # trompee, et le profil n'aurait jamais ete vu.
+  local profils
+  profils="$(sed -n 's/^COMPOSE_PROFILES=//p' "$ENV" 2>/dev/null | tail -1 | tr -d '"'"'"'"'"'"'"'"'")"
+  COMPOSE_PROFILES="$profils"     docker compose --project-directory "$DEPOT/infra" --env-file "$ENV" "$@"
 }
 
 # Importer le code que la CI envoie sur l'entrée standard.
