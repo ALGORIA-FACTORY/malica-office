@@ -19,7 +19,7 @@ import type { AppelApi } from "../appel-local.ts";
 import { confianceParChamp } from "../../scan/confiance.ts";
 
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
-import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
+import { secondLecteurDisponible } from "./paddle.ts";
 import { runVisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -100,58 +100,58 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
   });
 
   /*
-   * ====================================== LE SECOND LECTEUR, EN RATTRAPAGE
+   * ================================= DEUX LECTEURS, ET LE SECOND RATTRAPE LE PREMIER
    *
-   * 13 octobre 2026. « 4 135,183 », imprimé en blanc sur bande noire, est
-   * reconnu « + 135,183 » : le 4 devient un +. Le total ne se lit plus, la
-   * pièce finit « anomalie à signaler », et aucune écriture ne se propose.
+   * 14 octobre 2026, a la demande du dirigeant : « garder les deux, Paddle en
+   * premiere couche et l'OCR en seconde ».
    *
-   * Mesuré sur les treize pièces du staging : PaddleOCR trouve 20 montants
-   * que la chaîne rate, et en rate 4 qu'elle trouve. Cinq contre un — assez
-   * pour un renfort, jamais pour un remplacement.
+   * L'ordre est desormais : la couche de texte d'un PDF (exacte, gratuite,
+   * instantanee), puis PaddleOCR, puis le modele de vision. Et ce bloc-ci est
+   * le rattrapage : quand la lecture sort INCOMPLETE, on relit la piece avec
+   * l'AUTRE lecteur, et on garde celle qui remplit le contrat.
    *
-   * LE DÉCLENCHEUR N'EST PAS UN SEUIL, C'EST UNE PREUVE. On ne devine pas
-   * qu'une lecture est douteuse : quand le contrat sort `extract.v1.partiel`,
-   * c'est que le schéma n'est pas rempli — et sur « + 135,183 », l'arithmétique
-   * de la facture ne boucle pas et le dit avec ses deux nombres.
+   * LE DECLENCHEUR N'EST PAS UN SEUIL, C'EST UNE PREUVE. Le contrat sort
+   * `extract.v1.partiel` : le schema n'est pas rempli, et ce n'est pas une
+   * impression.
    *
-   * ON NE GARDE LA SECONDE QUE SI ELLE FAIT MIEUX. Elle doit rendre un contrat
-   * COMPLET là où la première était partielle. À égalité, la première gagne :
-   * on ne remplace pas un défaut connu par un défaut inconnu.
+   * ON NE GARDE LA SECONDE QUE SI ELLE FAIT MIEUX — un contrat complet la ou
+   * la premiere etait partielle. A egalite, la premiere gagne : on ne remplace
+   * pas un defaut connu par un defaut inconnu.
    *
-   * ET SANS SERVICE, RIEN NE CHANGE. `OCR_URL` absente, ce bloc ne s'exécute
-   * pas et la chaîne se comporte exactement comme avant — le jour où le
-   * service tombe, une lecture partielle reste une lecture partielle.
+   * ET ON NE RELIT PAS DEUX FOIS AVEC LE MEME. Si PaddleOCR n'est pas deploye,
+   * la premiere lecture vient deja du modele de vision, et le rattrapage
+   * n'aurait rien d'autre a proposer qu'un second appel payant a l'identique.
    */
-  if (built.contract !== "extract.v1" && secondLecteurDisponible()) {
-    const renfort = await lireAvecPaddle(bytes, 1);
-    if (renfort && renfort.tokens.length > 0) {
-      const secondeLecture = await runVisionRead({
-        dataUrl,
-        mime,
-        chargeCodes,
-        tiers: contexte.tiers,
-        dossier: contexte.dossier,
-        devise: contexte.currency,
-        taxCodes: contexte.taxCodes.map((r) => ({
-          code: r.code,
-          label: r.label,
-          rate: String(r.rate),
-        })),
-        // Le plan vient du second lecteur : la passe 1 ne se repaie pas.
-        tokens: renfort.tokens,
-        releveur: renfort.modele,
-      });
-      const secondBuilt = buildExtractFromTokenPlan({
-        tokens: secondeLecture.tokens,
-        selection: secondeLecture.selection,
-        decimals: contexte.moneyDecimals,
-        matriculeDossier: contexte.dossier.identifiantFiscal,
-      });
-      if (secondBuilt.contract === "extract.v1") {
-        read = secondeLecture;
-        built = secondBuilt;
-      }
+  const premierEtaitPaddle = premiereLecture.readModel.includes("PP-OCR");
+  const unAutreLecteurExiste = premierEtaitPaddle || secondLecteurDisponible();
+
+  if (built.contract !== "extract.v1" && unAutreLecteurExiste) {
+    const secondeLecture = await runVisionRead({
+      dataUrl,
+      mime,
+      bytes,
+      chargeCodes,
+      tiers: contexte.tiers,
+      dossier: contexte.dossier,
+      devise: contexte.currency,
+      taxCodes: contexte.taxCodes.map((r) => ({
+        code: r.code,
+        label: r.label,
+        rate: String(r.rate),
+      })),
+      // L'autre lecteur, exactement : Paddle a lu, donc le modele de vision
+      // relit ; le modele a lu, donc Paddle relit.
+      sansPaddle: premierEtaitPaddle,
+    });
+    const secondBuilt = buildExtractFromTokenPlan({
+      tokens: secondeLecture.tokens,
+      selection: secondeLecture.selection,
+      decimals: contexte.moneyDecimals,
+      matriculeDossier: contexte.dossier.identifiantFiscal,
+    });
+    if (secondBuilt.contract === "extract.v1") {
+      read = secondeLecture;
+      built = secondBuilt;
     }
   }
 

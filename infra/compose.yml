@@ -82,7 +82,11 @@ services:
     profiles: ["ocr"]
     restart: unless-stopped
     environment:
-      OMP_NUM_THREADS: "2"
+      # Le nombre de fils. C'est le reglage qui pese le plus sur la duree
+      # d'une lecture, et il depend de la machine : deux sur une CX23, qui
+      # porte deja une base de donnees ; quatre sur une CX33. Au-dela du
+      # nombre de coeurs, Paddle se gene lui-meme.
+      OMP_NUM_THREADS: ${OCR_FILS:-2}
     deploy:
       resources:
         limits:
