@@ -77,6 +77,36 @@ async def lire(requete: Request) -> dict:
     debut = time.time()
 
     image = Image.open(io.BytesIO(octets)).convert("RGB")
+
+    # ============================= ON BORNE CE QU'ON REGARDE, ET ON MESURE POURQUOI
+    #
+    # 14 octobre 2026, sur la facture reelle, machine de staging, deux fils :
+    #
+    #     300 dpi (1913x2700)  46 s   tous les montants
+    #     200 dpi (1275x1800)  34 s   tous les montants
+    #     150 dpi ( 957x1350)  28 s   tous les montants
+    #     120 dpi ( 765x1080)  27 s   tous les montants
+    #     100 dpi ( 638x 900)  26 s   tous les montants
+    #
+    # Huit secondes gagnees sans perdre un seul chiffre — y compris le
+    # « 4 135,183 » de la bande noire, qui est le cas difficile.
+    #
+    # En dessous de 150 dpi le gain s'eteint : le temps ne vient plus des
+    # pixels mais du NOMBRE de lignes a reconnaitre, quatre-vingt-six ici, et
+    # celui-la ne depend pas de la taille. On borne donc a 1600 pixels sur le
+    # grand cote — environ 140 dpi pour une A4 — et on s'arrete la.
+    #
+    # Mesure aussi, et consignee pour qu'on ne la refasse pas : ni le nombre de
+    # fils (1 : 37 s, 2 : 28 s, 4 : 30 s) ni le modele (PP-OCRv6 tiny : 31 s,
+    # small : 30 s) ne font mieux. Le plancher de cette machine est la.
+    COTE_MAX = int(os.environ.get("OCR_COTE_MAX", "1600"))
+    if max(image.size) > COTE_MAX:
+        facteur = COTE_MAX / max(image.size)
+        image = image.resize(
+            (max(1, round(image.width * facteur)), max(1, round(image.height * facteur))),
+            Image.LANCZOS,
+        )
+
     largeur, hauteur = image.size
 
     # On passe l'image EN MÉMOIRE, jamais par un fichier.
