@@ -65,6 +65,21 @@ services:
   # changerait le releve sans qu'une ligne de code bouge (R8).
   ocr:
     image: ${REGISTRE}/malica-ocr:${VERSION}
+    # DECRIT, MAIS PAS DEMARRE — et c'est le profil qui le dit.
+    #
+    # 14 octobre 2026 : ajouter ce service sans son image a fait echouer le
+    # deploiement entier, au telechargement (« malica-ocr:main: not found »).
+    # Le staging n'a rien senti — les conteneurs en place ont continue — mais
+    # le code du jour n'est pas parti, et c'est une faute de ma part.
+    #
+    # Le profil le range ou il doit etre : present dans la composition, pret a
+    # demarrer, et ignore tant qu'on ne l'appelle pas. Il attend deux choses —
+    # son image construite, et une machine qui puisse l'heberger : la CX23
+    # actuelle porte deja Postgres, l'API, le site, Caddy et la sauvegarde sur
+    # quatre gigaoctets.
+    #
+    #   docker compose --profile ocr up -d
+    profiles: ["ocr"]
     restart: unless-stopped
     environment:
       OMP_NUM_THREADS: "2"
