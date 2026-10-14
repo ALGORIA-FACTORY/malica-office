@@ -19,6 +19,7 @@
 import { modeleOcr } from "../modeles.ts";
 
 import type { PageToken } from "./token-plan.ts";
+import { decouperEnMots, type Boite } from "./mots.ts";
 
 /** Qwen situe ses boîtes dans un repère normalisé 0..999. */
 const REPERE_QWEN = 1000;
@@ -91,13 +92,6 @@ interface Segment {
   location?: unknown;
 }
 
-interface Boite {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
-
 /**
  * Le rectangle de Qwen porte un angle : une pièce photographiée de travers a
  * ses lignes inclinées. On rend la boîte alignée sur les axes qui l'englobe —
@@ -119,55 +113,6 @@ function boiteDe(rect: number[]): Boite | null {
     x1: (cx + largeur / 2) / REPERE_QWEN,
     y1: (cy + hauteur / 2) / REPERE_QWEN,
   };
-}
-
-/**
- * Les écritures qui se lisent de droite à gauche — l'arabe, ici, qui est l'une
- * des trois langues de Malica Office. Plages en échappements : écrites en
- * caractères littéraux, elles embarquent des espaces de largeur nulle.
- */
-const RTL =
-  /[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFC]/;
-
-/**
- * Un segment couvre une cellule, pas un mot : « Monture acetate » arrive d'un
- * bloc. Le plan de tokens raisonne en mots, on redécoupe donc, en répartissant
- * la largeur du segment au prorata des caractères.
- *
- * L'approximation est assumée et sans conséquence : à l'intérieur d'une cellule
- * il n'y a pas de grand blanc, et cette largeur ne sert qu'à situer le mot dans
- * sa colonne — jamais à produire une valeur. Le texte, lui, est exact.
- *
- * En écriture arabe, le premier mot logique est le plus à droite : la largeur
- * s'alloue depuis la droite, sans quoi une désignation pointerait à l'opposé.
- */
-function decouperEnMots(segment: string, boite: Boite, page: number, depuis: number): PageToken[] {
-  const texte = segment.trim();
-  if (texte.length === 0) return [];
-
-  const total = texte.length;
-  const largeur = boite.x1 - boite.x0;
-  const droiteAGauche = RTL.test(texte);
-  const sortie: PageToken[] = [];
-  let ordinal = depuis;
-
-  for (const m of texte.matchAll(/\S+/g)) {
-    const debut = m.index ?? 0;
-    const part = largeur / total;
-    const x0 = droiteAGauche ? boite.x1 - part * (debut + m[0].length) : boite.x0 + part * debut;
-
-    sortie.push({
-      page,
-      ordinal,
-      text: m[0],
-      x0: Math.max(0, Math.min(1, x0)),
-      y0: Math.max(0, Math.min(1, boite.y0)),
-      x1: Math.max(0, Math.min(1, x0 + part * m[0].length)),
-      y1: Math.max(0, Math.min(1, boite.y1)),
-    });
-    ordinal += 1;
-  }
-  return sortie;
 }
 
 /**

@@ -15,6 +15,7 @@
  */
 
 import type { PageToken } from "./token-plan.ts";
+import { decouperEnMots } from "./mots.ts";
 
 /** En deçà, la « couche de texte » n'est qu'un tampon ou un filigrane. */
 const MIN_TOKENS_POUR_UNE_COUCHE = 12;
@@ -34,15 +35,15 @@ interface TextItemLike {
 }
 
 /**
- * Un item de pdf.js couvre un fragment mis en page d'un coup — souvent une
- * ligne entière. Le plan de tokens raisonne en mots : on redécoupe, et la
- * largeur de l'item est répartie au prorata des caractères.
+ * Les mots d'un fragment de la couche texte, en coordonnées de PAGE.
  *
- * C'est une approximation de la largeur de chaque mot, assumée : elle sert à
- * situer le mot dans sa colonne, jamais à produire une valeur. Le texte, lui,
- * est exact — il sort du document, pas d'une estimation.
+ * Le découpage lui-même vit dans `mots.ts`, avec celui des deux autres
+ * lecteurs : il était écrit deux fois, sous le même nom et avec le même
+ * commentaire, et un troisième lecteur arrivait. Ici on ne fait plus que
+ * normaliser — pdf.js compte en points de page, le plan de jetons en
+ * fractions de page.
  */
-function decouperEnMots(
+function motsDuFragment(
   item: TextItemLike,
   x: number,
   yHaut: number,
@@ -53,28 +54,17 @@ function decouperEnMots(
   page: number,
   premierOrdinal: number,
 ): PageToken[] {
-  const texte = item.str ?? "";
-  if (texte.trim().length === 0) return [];
-  const total = texte.length;
-  const sortie: PageToken[] = [];
-  let ordinal = premierOrdinal;
-
-  for (const m of texte.matchAll(/\S+/g)) {
-    const debut = m.index ?? 0;
-    const motX = x + (total > 0 ? (largeur * debut) / total : 0);
-    const motLargeur = total > 0 ? (largeur * m[0].length) / total : largeur;
-    sortie.push({
-      page,
-      ordinal,
-      text: m[0],
-      x0: Math.max(0, Math.min(1, motX / pageLargeur)),
-      y0: Math.max(0, Math.min(1, yHaut / pageHauteur)),
-      x1: Math.max(0, Math.min(1, (motX + motLargeur) / pageLargeur)),
-      y1: Math.max(0, Math.min(1, yBas / pageHauteur)),
-    });
-    ordinal += 1;
-  }
-  return sortie;
+  return decouperEnMots(
+    item.str ?? "",
+    {
+      x0: x / pageLargeur,
+      y0: yHaut / pageHauteur,
+      x1: (x + largeur) / pageLargeur,
+      y1: yBas / pageHauteur,
+    },
+    page,
+    premierOrdinal,
+  );
 }
 
 export async function readPdfTextLayer(bytes: Uint8Array): Promise<PdfTextLayer> {
@@ -138,7 +128,7 @@ export async function readPdfTextLayer(bytes: Uint8Array): Promise<PdfTextLayer>
         const hauteur = Math.hypot(t[2] ?? 0, t[3] ?? 0) || (item.height ?? 0);
         const yBas = t[5] ?? 0;
 
-        const mots = decouperEnMots(
+        const mots = motsDuFragment(
           item,
           t[4] ?? 0,
           yBas - hauteur,
