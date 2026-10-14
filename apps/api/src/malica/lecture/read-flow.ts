@@ -19,6 +19,7 @@ import type { AppelApi } from "../appel-local.ts";
 import { confianceParChamp } from "../../scan/confiance.ts";
 
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
+import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 import { runVisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -64,7 +65,7 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     new Map(contexte.chargeCodes.map((c) => [c.code, { code: c.code, label: c.label }])).values(),
   );
 
-  const read = await runVisionRead({
+  const premiereLecture = await runVisionRead({
     dataUrl,
     mime,
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
@@ -86,7 +87,8 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     })),
   });
 
-  const built = buildExtractFromTokenPlan({
+  let read = premiereLecture;
+  let built = buildExtractFromTokenPlan({
     tokens: read.tokens,
     selection: read.selection,
     // Trois décimales pour le dinar — mais dites par le pack, jamais écrites
@@ -96,6 +98,62 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     // lieu de croire ce que le modèle en dit.
     matriculeDossier: contexte.dossier.identifiantFiscal,
   });
+
+  /*
+   * ====================================== LE SECOND LECTEUR, EN RATTRAPAGE
+   *
+   * 13 octobre 2026. « 4 135,183 », imprimé en blanc sur bande noire, est
+   * reconnu « + 135,183 » : le 4 devient un +. Le total ne se lit plus, la
+   * pièce finit « anomalie à signaler », et aucune écriture ne se propose.
+   *
+   * Mesuré sur les treize pièces du staging : PaddleOCR trouve 20 montants
+   * que la chaîne rate, et en rate 4 qu'elle trouve. Cinq contre un — assez
+   * pour un renfort, jamais pour un remplacement.
+   *
+   * LE DÉCLENCHEUR N'EST PAS UN SEUIL, C'EST UNE PREUVE. On ne devine pas
+   * qu'une lecture est douteuse : quand le contrat sort `extract.v1.partiel`,
+   * c'est que le schéma n'est pas rempli — et sur « + 135,183 », l'arithmétique
+   * de la facture ne boucle pas et le dit avec ses deux nombres.
+   *
+   * ON NE GARDE LA SECONDE QUE SI ELLE FAIT MIEUX. Elle doit rendre un contrat
+   * COMPLET là où la première était partielle. À égalité, la première gagne :
+   * on ne remplace pas un défaut connu par un défaut inconnu.
+   *
+   * ET SANS SERVICE, RIEN NE CHANGE. `OCR_URL` absente, ce bloc ne s'exécute
+   * pas et la chaîne se comporte exactement comme avant — le jour où le
+   * service tombe, une lecture partielle reste une lecture partielle.
+   */
+  if (built.contract !== "extract.v1" && secondLecteurDisponible()) {
+    const renfort = await lireAvecPaddle(bytes, 1);
+    if (renfort && renfort.tokens.length > 0) {
+      const secondeLecture = await runVisionRead({
+        dataUrl,
+        mime,
+        chargeCodes,
+        tiers: contexte.tiers,
+        dossier: contexte.dossier,
+        devise: contexte.currency,
+        taxCodes: contexte.taxCodes.map((r) => ({
+          code: r.code,
+          label: r.label,
+          rate: String(r.rate),
+        })),
+        // Le plan vient du second lecteur : la passe 1 ne se repaie pas.
+        tokens: renfort.tokens,
+        releveur: renfort.modele,
+      });
+      const secondBuilt = buildExtractFromTokenPlan({
+        tokens: secondeLecture.tokens,
+        selection: secondeLecture.selection,
+        decimals: contexte.moneyDecimals,
+        matriculeDossier: contexte.dossier.identifiantFiscal,
+      });
+      if (secondBuilt.contract === "extract.v1") {
+        read = secondeLecture;
+        built = secondBuilt;
+      }
+    }
+  }
 
   // Projection des articles cités pour l'analyse par famille (PME).
   // La famille est résolue par le pack (compte, puis motif de désignation) —

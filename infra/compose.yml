@@ -51,6 +51,34 @@ services:
     restart: "no"
     logging: *journal
 
+  # ====================================== LE SECOND LECTEUR, DANS SA BOITE
+  #
+  # Appele seulement quand la premiere lecture sort partielle. Mesure le
+  # 13 octobre 2026 sur treize pieces reelles : 20 montants trouves par lui
+  # seul, 4 par la chaine actuelle seule (docs/mesure-paddleocr-2026-10-13.md).
+  #
+  # La LIMITE MEMOIRE n'est pas un ornement : les modeles « medium » ont fait
+  # tuer le conteneur a 1,81 Go lors de la mesure, et c'est exactement ce
+  # qu'on veut — le conteneur meurt, la base de donnees ne bronche pas.
+  #
+  # Image EPINGLEE par sa version : un conteneur qui se met a jour tout seul
+  # changerait le releve sans qu'une ligne de code bouge (R8).
+  ocr:
+    image: ${REGISTRE}/malica-ocr:${VERSION}
+    restart: unless-stopped
+    environment:
+      OMP_NUM_THREADS: "2"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/sante"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
   api:
     image: ${REGISTRE}/malica-api:${VERSION}
     restart: unless-stopped
@@ -64,6 +92,10 @@ services:
       CLIENT_MIN_VERSION: ${CLIENT_MIN_VERSION:-}
       AUTH_ESSAIS_PAR_MINUTE: ${AUTH_ESSAIS_PAR_MINUTE:-30}
       MALICA_VERSION: ${VERSION}
+      # Le second lecteur, quand il est deploye. ABSENTE, la chaine se
+      # comporte exactement comme avant : une lecture partielle reste une
+      # lecture partielle, jamais une panne.
+      OCR_URL: ${OCR_URL:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       QWEN_API_KEY: ${QWEN_API_KEY}
       QWEN_BASE_URL: ${QWEN_BASE_URL}

@@ -567,6 +567,17 @@ export async function runVisionRead(params: {
   dossier?: { raisonSociale: string; identifiantFiscal: string | null };
   /** La devise du dossier, retenue quand la pièce n'en imprime aucune. */
   devise: string;
+  /**
+   * Un plan de jetons DEJA releve, qui remplace la passe 1.
+   *
+   * C'est par la qu'entre le second lecteur : quand la premiere lecture sort
+   * partielle, l'appelant releve a nouveau la page avec PaddleOCR et redemande
+   * une designation sur CE plan-la. La passe 2 ne change pas d'un pouce — elle
+   * ne voit toujours pas la piece, elle lit un plan et rend des page/ordinal.
+   */
+  tokens?: readonly PageToken[];
+  /** Le nom du releveur, quand les jetons viennent d'ailleurs. Pour le journal. */
+  releveur?: string;
 }): Promise<VisionRead> {
   const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
   if (!cleDeepSeek)
@@ -574,11 +585,21 @@ export async function runVisionRead(params: {
   const started = Date.now();
 
   // ---- Passe 1 : le relevé. Ce qui est écrit, rien de plus.
-  const pass1 = await relever({
-    dataUrl: params.dataUrl,
-    mime: params.mime ?? "image/jpeg",
-    ...(params.bytes ? { bytes: params.bytes } : {}),
-  });
+  //
+  // Sauf si l'appelant en apporte un : c'est le rattrapage du second lecteur,
+  // et on ne repaie pas un relevé qu'on vient de faire.
+  const pass1 = params.tokens
+    ? {
+        tokens: params.tokens as PageToken[],
+        source: params.releveur ?? "fourni",
+        tokensIn: null,
+        tokensOut: null,
+      }
+    : await relever({
+        dataUrl: params.dataUrl,
+        mime: params.mime ?? "image/jpeg",
+        ...(params.bytes ? { bytes: params.bytes } : {}),
+      });
   const tokens = pass1.tokens;
   const finReleve = Date.now();
   // L'œil a regardé, et n'a rien lu d'exploitable. Même contrat : un code.
