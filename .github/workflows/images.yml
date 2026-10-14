@@ -40,7 +40,11 @@ jobs:
       packages: write
     strategy:
       matrix:
-        image: [api, web, sauvegarde]
+        # `ocr` est le second lecteur. Son image est lourde — PaddleOCR et ses
+        # poids — et c'est pour cela qu'elle est construite ICI, une fois, et
+        # non sur le serveur : la machine de staging a deux processeurs et une
+        # base de donnees a servir.
+        image: [api, web, sauvegarde, ocr]
     steps:
       - uses: actions/checkout@v7
 
@@ -64,8 +68,8 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.image == 'sauvegarde' && 'infra/sauvegarde' || '.' }}
-          file: ${{ matrix.image == 'sauvegarde' && 'infra/sauvegarde/Dockerfile' || format('infra/{0}.Dockerfile', matrix.image) }}
+          context: ${{ (matrix.image == 'sauvegarde' || matrix.image == 'ocr') && format('infra/{0}', matrix.image) || '.' }}
+          file: ${{ (matrix.image == 'sauvegarde' || matrix.image == 'ocr') && format('infra/{0}/Dockerfile', matrix.image) || format('infra/{0}.Dockerfile', matrix.image) }}
           push: true
           tags: ${{ steps.etiquettes.outputs.tags }}
           labels: ${{ steps.etiquettes.outputs.labels }}
