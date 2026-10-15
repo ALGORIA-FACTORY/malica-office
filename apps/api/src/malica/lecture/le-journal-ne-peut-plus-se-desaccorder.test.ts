@@ -73,6 +73,20 @@ describe("le journal ne peut plus se désaccorder du modèle appelé", () => {
     assert.match(ligne, /selectRole/);
   });
 
+  it("le nom du relevé ne porte AUCUN chemin : le tarif se cherche par modèle", () => {
+    /*
+     * 15 octobre 2026. Les relevés d'un PDF scanné ne se journalisaient pas,
+     * et depuis toujours : la source portait « +pdf-scan », et
+     * `agents.model_pricing` cherche un tarif par le NOM DU MODELE. Ce nom
+     * composite n'en désigne aucun — écriture refusée, en silence.
+     *
+     * Même défaut que le rôle écrit en dur, corrigé la veille : une valeur
+     * composée là où le tarif attend une valeur simple.
+     */
+    const code = sansCommentaires("src/malica/lecture/vision.ts");
+    assert.ok(!code.includes("+pdf-scan"), "le chemin « pdf-scan » est recollé au nom du modèle");
+  });
+
   it("le relevé suit la même règle", () => {
     // Son rôle est « vision » et ne dépend d'aucun choix de modèle : il peut
     // rester littéral. Ce qu'on vérifie, c'est qu'il n'emprunte pas celui de

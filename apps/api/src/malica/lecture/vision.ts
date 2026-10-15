@@ -33,7 +33,7 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
 // Le nom vient de `../modeles.ts` : il était écrit une seconde fois ici.
-import { MODELE_DESIGNATION, ROLE_DESIGNATION } from "../modeles.ts";
+import { MODELE_DESIGNATION, ROLE_DESIGNATION, modeleOcr } from "../modeles.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
@@ -540,7 +540,20 @@ export async function relever(params: {
 
     // Le second lecteur passe DEVANT, quand il est là.
     const parPaddle = await releverDesPages(pages, params.sansPaddle ?? false);
-    if (parPaddle) return { ...parPaddle, source: `${parPaddle.source}+pdf-scan` };
+    /*
+     * LE NOM DU MODELE, SANS LE CHEMIN QUI L'A APPELE.
+     *
+     * 15 octobre 2026. Les relevés d'un PDF scanné ne se journalisaient pas —
+     * ni ceux de PaddleOCR, ni ceux du modèle de vision, et depuis toujours.
+     * La source portait un suffixe « +pdf-scan », et `agents.model_pricing`
+     * cherche un tarif par le NOM DU MODELE : ce nom composite n'en désigne
+     * aucun, l'écriture du journal était refusée, en silence.
+     *
+     * C'est le même défaut que celui du rôle écrit en dur, corrigé la veille :
+     * une valeur composée là où le tarif attend une valeur simple. Le chemin
+     * voyage donc à côté, et non dans le nom.
+     */
+    if (parPaddle) return parPaddle;
 
     const tokens: PageToken[] = [];
     let entree = 0;
@@ -556,7 +569,7 @@ export async function relever(params: {
     }
     return {
       tokens,
-      source: `${process.env["QWEN_OCR_MODEL"] ?? "qwen"}+pdf-scan`,
+      source: modeleOcr(),
       tokensIn: entree || null,
       tokensOut: sortie || null,
     };
@@ -571,7 +584,7 @@ export async function relever(params: {
   const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
     tokens: lecture.tokens,
-    source: process.env["QWEN_OCR_MODEL"] ?? "qwen",
+    source: modeleOcr(),
     tokensIn: lecture.tokensIn || null,
     tokensOut: lecture.tokensOut || null,
   };
