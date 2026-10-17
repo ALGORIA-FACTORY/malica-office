@@ -301,7 +301,16 @@ function PmeLayout() {
   ] as const;
 
   return (
-    <div className="pt-safe mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground">
+    /*
+     * `data-surface="pme"` est posé ICI et nulle part ailleurs : un seul
+     * `layout` porte le langage, donc une seule ligne décide de la surface.
+     * Le cabinet, qui ne passe jamais par ce layout, garde Edition One
+     * intact sans qu'on ait eu à l'exclure.
+     */
+    <div
+      data-surface="pme"
+      className="pt-safe mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground"
+    >
       {/*
        * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
        * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des

@@ -1,0 +1,341 @@
+/*
+ * ===================================================== LE LANGAGE DE LA PME
+ *
+ * Deux surfaces, deux langages. Edition One — monochrome, clair, rayon 0,
+ * élévation par bordures — reste le langage du CABINET et ne bouge pas d'un
+ * pixel. La PME tient un téléphone dans une main, souvent debout, souvent
+ * dans un local mal éclairé : elle reçoit un langage sombre, des angles
+ * adoucis, et un accent qui dit « c'est fait » sans crier.
+ *
+ * ================================================ POURQUOI DES JETONS, ET PAS
+ *                                                  UN SECOND JEU DE CLASSES
+ *
+ * Les treize routes `/pme/*` sont déjà écrites avec les jetons sémantiques du
+ * dépôt : `bg-background`, `text-foreground`, `border-border`, `bg-card`,
+ * `text-muted-foreground`, `outline-line-strong`. Poser le langage PME comme
+ * un jeu de classes parallèle (`.app`, `.carte`, `.chiffre`) aurait voulu dire
+ * réécrire treize fichiers de balisage — treize occasions de perdre un état,
+ * une garde de rôle, une clé d'idempotence.
+ *
+ * On REDÉFINIT donc les jetons sous la portée, et le balisage existant devient
+ * le langage PME sans qu'une ligne de JSX change. Ce qui est déjà juste le
+ * reste : les gardes, les états, la file hors ligne, les zones sûres.
+ *
+ * ======================================================== LA SEULE EXCEPTION
+ *
+ * Le rayon. `styles.css` force `--radius-*: 0px` partout, et c'est la doctrine
+ * d'Edition One. La PME a besoin de l'inverse. C'est le seul endroit où les
+ * deux langages se contredisent vraiment, et c'est pour cela que la portée
+ * existe : hors de `[data-surface="pme"]`, rien n'est touché.
+ *
+ * Importé APRÈS `styles.css`, donc hors des couches de Tailwind : une règle
+ * non-couchée l'emporte sur un utilitaire, ce qui est exactement ce qu'on
+ * veut d'un thème de surface.
+ */
+
+[data-surface="pme"] {
+  /* ---- Les fonds. Trois profondeurs, pas cinq : au-delà, l'œil ne les
+     distingue plus sur un écran de téléphone en plein soleil. --------- */
+  --background: #0a0a0a;
+  --card: #181818;
+  --card-foreground: #ffffff;
+  --popover: #0b0b0b;
+  --popover-foreground: #ffffff;
+  --muted: #242424;
+  --sidebar: #0b0b0b;
+  --sidebar-foreground: #ffffff;
+
+  /* Le quatrième lieu : l'espace privé. Jamais un fond de carte ordinaire —
+     il porte une nuance froide pour qu'on sache, sans lire, qu'on n'est
+     plus dans les papiers de la société. */
+  --prive: #0b0a0d;
+
+  /* ---- Le texte. Trois niveaux, et le troisième ne sert qu'aux mentions
+     qui ne se lisent pas, seulement se trouvent. --------------------- */
+  --foreground: #ffffff;
+  --muted-foreground: #a7a7ad;
+  --text-2: #a7a7ad;
+  --text-3: #6e6e76;
+
+  /* ---- Les traits. L'élévation passe par eux, jamais par une ombre : une
+     ombre sur un fond #0A0A0A ne se voit pas, elle salit. ------------ */
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.12);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --sidebar-border: rgb(255 255 255 / 0.08);
+
+  /* ---- L'accent. Un vert d'eau, pas un vert de validation : il dit « lu,
+     et juste », pas « bravo ». Le texte posé dessus est presque noir —
+     du blanc sur ce vert tombe sous le seuil de contraste. ----------- */
+  --primary: #8fe3b1;
+  --primary-foreground: #07210f;
+  --ring: #7ee2ae;
+  --sidebar-primary: #8fe3b1;
+  --sidebar-primary-foreground: #07210f;
+
+  /* La bulle de Malica : l'accent assourdi, pour qu'une conversation de
+     quinze tours ne fatigue pas. */
+  --accent: #1b3326;
+  --accent-foreground: #dcefe3;
+  --sidebar-accent: #1b3326;
+  --sidebar-accent-foreground: #dcefe3;
+  --secondary: #242424;
+  --secondary-foreground: #ffffff;
+
+  /* ---- Les signaux. Quatre, et chacun ne dit qu'une chose. ---------- */
+  --signal-ok: #7ee2ae; /* lu, rapproché, payé            */
+  --signal-warn: #dfc078; /* en attente d'un geste          */
+  --signal-stop: #f08d72; /* refus, retard, échec           */
+  --signal-info: #8cbce8; /* rapprochement, espace privé    */
+  --signal-soft: rgb(255 255 255 / 0.06);
+  --destructive: #f08d72;
+  --destructive-foreground: #1a0a06;
+
+  /* Le plafond de lectures, et lui seul. Une couleur qui ne sert qu'à une
+     chose ne peut pas être mal lue. */
+  --marigold: #d97757;
+  --marigold-on-ink: #ffffff;
+
+  /* ---- Le rayon. La seule contradiction assumée avec Edition One. --- */
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+
+  color-scheme: dark;
+}
+
+/*
+ * ====================================================== LES CHIFFRES D'ARGENT
+ *
+ * IBM Plex Mono, parce qu'une colonne de montants qui ne s'aligne pas se
+ * recompte à la main. Et l'espace de millier en monospace fait la largeur
+ * d'un chiffre : « 1 250,000 » devient plus large que « 11250,000 » et la
+ * colonne se tord. On lui rend une largeur de demi-chiffre.
+ */
+[data-surface="pme"] .chiffre {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+[data-surface="pme"] .chiffre .mil {
+  display: inline-block;
+  width: 0.26em;
+}
+
+/*
+ * ========================================================= L'ESPACE PRIVÉ
+ *
+ * Une pièce `personnel` n'est pas une pièce de la société mise de côté :
+ * c'est une pièce qui n'appartient pas au dossier. L'écran doit le dire
+ * avant qu'on lise l'étiquette.
+ */
+[data-surface="pme"] [data-lieu="personnel"] {
+  background-color: var(--prive);
+  /*
+   * 0.22 au premier rendu : la carte privée paraissait seulement plus SOMBRE
+   * que les autres, donc moins importante — exactement le contraire de ce
+   * qu'elle dit. Le trait doit porter la différence, pas le fond.
+   */
+  border-color: rgb(140 188 232 / 0.4);
+}
+
+/*
+ * ================================================ LE RAYON NE SUFFIT PAS
+ *
+ * Mesuré au rendu : redéfinir `--radius` ne change RIEN aux treize routes.
+ * Tailwind n'applique un rayon que si une classe `rounded-*` le demande, et
+ * les routes ont été écrites sous Edition One, où le rayon est 0 — elles n'en
+ * portent donc aucune. Les jetons étaient justes et le résultat carré.
+ *
+ * On adoucit ici ce qui est INTERACTIF et sans ambiguïté — un bouton, un
+ * champ. Les cartes, elles, demandent une classe dans le balisage : c'est le
+ * travail des treize routes, et une feuille de surface qui irait les chercher
+ * par `[class*="bg-card"]` arrondirait aussi la barre de navigation. Une règle
+ * qui attrape plus que son objet est une dette, pas un raccourci.
+ */
+[data-surface="pme"] :is(button, [role="button"], input, select, textarea) {
+  border-radius: var(--radius-sm);
+}
+
+/* L'obturateur est rond : c'est le seul geste du produit, et la seule forme
+   qui ne ressemble à rien d'autre à l'écran. */
+[data-surface="pme"] > nav[aria-label] button {
+  border-radius: 999px;
+}
+
+/*
+ * ============================================================== LA BULLE
+ *
+ * Un coin vif du côté de qui parle. C'est la seule forme asymétrique du
+ * produit, et elle suffit à dire qui parle sans étiquette ni avatar répété.
+ */
+[data-surface="pme"] [data-bulle="malica"] {
+  border-radius: 20px 20px 20px 6px;
+}
+
+[data-surface="pme"] [data-bulle="vous"] {
+  border-radius: 20px 20px 6px 20px;
+}
+
+/*
+ * ========================================================= LE MOUVEMENT
+ *
+ * .18s : assez pour qu'un changement se voie, trop court pour qu'on
+ * l'attende. Au-delà, l'application paraît lente alors qu'elle est polie.
+ */
+[data-surface="pme"] [data-anime] {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-surface="pme"] [data-anime] {
+    transition: none;
+  }
+}
+
+/*
+ * ====================================================== LE DOIGT, PAS LA SOURIS
+ *
+ * 44 px est le minimum d'Apple et de Google, et ce n'est pas une
+ * recommandation de confort : en dessous, le taux d'erreur monte assez pour
+ * qu'une personne debout dans un atelier renonce. Les cibles natives
+ * (`button`, `a`, `[role="button"]`) sont relevées dans la portée.
+ *
+ * `:not(:has(...))` épargne les cibles déjà grandes — le bouton d'obturateur
+ * fait 58 px et n'a pas besoin qu'on lui impose un plancher.
+ */
+@media (pointer: coarse) {
+  [data-surface="pme"] button,
+  [data-surface="pme"] a[href],
+  [data-surface="pme"] [role="button"],
+  [data-surface="pme"] summary {
+    min-height: 44px;
+  }
+
+  [data-surface="pme"] button:not(:has(svg)) {
+    min-width: 44px;
+  }
+}
+
+/*
+ * ================================== CE QUI N'EST PAS ICI, ET POURQUOI
+ *
+ * Un survol sur écran tactile reste COLLÉ après le toucher : la ligne touchée
+ * garde son fond éclairci jusqu'au prochain geste, et la personne croit avoir
+ * sélectionné quelque chose. La tentation est d'écrire ici un
+ * `@media (hover: none) { *:hover { background-color: revert-layer } }`.
+ *
+ * Mesuré sur le CSS compilé : la règle ne fait RIEN. `revert-layer` depuis une
+ * règle hors couche revient à la valeur des couches de Tailwind — c'est-à-dire
+ * au survol qu'on voulait annuler. Une règle inerte qu'on croit protectrice
+ * est pire qu'une règle absente : elle ferme le sujet.
+ *
+ * Le survol se garde donc LÀ OÙ IL EST ÉCRIT, par `@media (hover: hover)`,
+ * et c'est un critère de recette des treize routes — pas quelque chose que
+ * cette feuille peut rattraper après coup.
+ */
+
+/*
+ * ================================================= DU TÉLÉPHONE AU BUREAU
+ *
+ * Le dirigeant photographie sur Android et relit sur un portable de bureau.
+ * Le balisage reste le même — une colonne, une barre en bas — et ne porte
+ * aucune classe de point de rupture : la mise en page de bureau est posée
+ * ICI, par les éléments SÉMANTIQUES (`header`, `main`, `nav[aria-label]`),
+ * jamais par une classe utilitaire qu'une refonte déplacerait.
+ *
+ * 1024 px : en dessous, une tablette tenue en portrait lit mieux en colonne.
+ */
+@media (min-width: 1024px) {
+  [data-surface="pme"] {
+    max-width: 64rem;
+    padding-bottom: 0;
+  }
+
+  /*
+   * La barre du bas devient un rail à gauche : à la souris, une barre collée
+   * en bas d'un écran de 27 pouces est à trente centimètres du regard.
+   *
+   * Elle reste `fixed` — comme l'utilitaire la pose — et c'est délibéré. Le
+   * conteneur est `display: flex` : un `float` y serait IGNORÉ (les flottants
+   * ne s'appliquent pas à un élément de flex), et un `position: sticky` en
+   * ferait un troisième élément de la colonne, sous le contenu. Hors flux,
+   * la question ne se pose pas.
+   *
+   * Et c'est une GRILLE à trois colonnes, pas une boîte flex : la pile se
+   * fait en passant à une colonne, pas en changeant une direction qui
+   * n'existe pas. (Les deux fautes de la première écriture.)
+   */
+  [data-surface="pme"] > nav[aria-label] {
+    inset: 0 auto 0 0;
+    width: 5.5rem;
+    max-width: none;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 0.25rem;
+    padding-top: 1.5rem;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+    margin-inline: 0;
+  }
+
+  [data-surface="pme"] > header,
+  [data-surface="pme"] > main {
+    margin-left: 5.5rem;
+  }
+
+  [data-surface="pme"] > main {
+    padding-inline: 2rem;
+  }
+
+  /*
+   * La barre d'état peinte n'a plus d'objet : il n'y a pas d'encoche sur un
+   * écran de bureau, et large de `max-w-md` au milieu d'un conteneur de
+   * 64 rem, elle ne serait qu'une tache centrée en haut de la page.
+   */
+  [data-surface="pme"] > [aria-hidden]:first-child {
+    display: none;
+  }
+}
+
+/*
+ * ========================================================= LE PAPIER
+ *
+ * Une pièce s'imprime pour un contrôle, et un fond #0A0A0A vide une
+ * cartouche d'encre. L'impression revient au langage du papier : fond blanc,
+ * texte noir, et ce qui ne s'imprime pas disparaît.
+ */
+@media print {
+  [data-surface="pme"] {
+    --background: #ffffff;
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --foreground: #000000;
+    --muted-foreground: #444444;
+    --border: #cccccc;
+    --prive: #ffffff;
+    max-width: none;
+    color-scheme: light;
+  }
+
+  [data-surface="pme"] > nav[aria-label],
+  [data-surface="pme"] > header {
+    display: none;
+  }
+
+  [data-surface="pme"] > main {
+    margin-left: 0;
+    padding: 0;
+  }
+}
