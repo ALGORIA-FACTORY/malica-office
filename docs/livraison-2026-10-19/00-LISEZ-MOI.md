@@ -24,7 +24,7 @@ Les dépendances sont réelles : chaque étape s'appuie sur la précédente, et
 l'ordre n'est pas une préférence.
 
 ```
-  1  les 8 migrations            ──┐
+  1  les 15 migrations           ──┐
   2  le correctif de suppression   │  la base d'abord : tout le reste
   3  le compteur dans read-flow    │  s'y appuie, et c'est là que se
   4  les 7 méthodes du contrat   ──┘  trouvent les deux bogues en production
@@ -109,17 +109,27 @@ qui se passe.
 
 ## La commande, dans l'ordre
 
-### Étape 1 — Jouer les six migrations, et les éprouver
+### Étape 1 — Jouer les quinze migrations, et les éprouver
 
 ```bash
 cp <ce dossier>/migrations/*.sql db/migrations/
 node db/migrer.mjs --base "<url de ta base d'atelier>"
 ```
 
-Elles ont été jouées sur un PostgreSQL neuf, après les 139 du dépôt, et les
-huit passent. Ne les réécris pas : si tu les trouves fausses, **dis-le avant de
-changer quoi que ce soit** — elles encodent des arbitrages commerciaux, pas des
-préférences techniques.
+Elles ont été jouées sur un PostgreSQL neuf, après celles du dépôt, et elles
+passent toutes.
+
+> **Corrigé le 17 octobre.** Ce document annonçait tour à tour « 8 », « six » et
+> « huit » migrations. Il y en a **quatorze livrées**, plus une quinzième —
+> `20261019150000` — écrite ici parce que les quatorze ne passaient pas les
+> règles du dépôt : cinq violations, dont deux que la CI aurait refusées, et une
+> fuite entre clients qu'il a fallu fermer. Le décompte de la prose était périmé,
+> et la phrase « migrations jouées et vérifiées » était fausse. Les deux sont
+> dites ici plutôt que corrigées en silence.
+
+Ne les réécris pas : si tu les trouves fausses, **dis-le avant de changer quoi
+que ce soit** — elles encodent des arbitrages commerciaux, pas des préférences
+techniques.
 
 Puis écris les épreuves qui manquent, dans le style du dépôt (un fichier, un
 nom qui dit la règle, un en-tête qui dit pourquoi) :

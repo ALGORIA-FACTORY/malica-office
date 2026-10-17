@@ -10,7 +10,7 @@
 Rien ici n'est supposé. Le dépôt a été cloné, les **139 migrations jouées sur un
 PostgreSQL 16 neuf** (seule adaptation locale : `pgvector` indisponible sur la
 machine d'audit, les trois index HNSW du corpus juridique ont été neutralisés —
-aucun rapport avec le périmètre audité), puis les six migrations correctives
+aucun rapport avec le périmètre audité), puis les quatorze migrations correctives
 livrées ici jouées par-dessus. Chaque affirmation de ce document qui porte la
 mention **« mesuré »** a été exécutée contre ce schéma réel.
 
@@ -191,7 +191,7 @@ L'audit a trouvé beaucoup plus d'acquis que prévu. À ne pas réécrire :
 
 ---
 
-## Les six migrations livrées, et ce qu'elles prouvent
+## Les quatorze migrations livrées, et ce qu'elles prouvent
 
 Jouées dans cet ordre, sur le schéma réel, après les 139.
 
