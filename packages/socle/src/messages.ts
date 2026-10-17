@@ -2591,7 +2591,8 @@ const en: Dict = {
   "pme.refus.licence.autre": "Your subscription does not allow reading right now.",
   "pme.refus.organisation_sans_licence":
     "This company has no active subscription: I file the documents, I do not read them yet.",
-  "pme.refus.piece_deja_lue": "This document has already been read: reading it again costs nothing.",
+  "pme.refus.piece_deja_lue":
+    "This document has already been read: reading it again costs nothing.",
   "pme.refus.autre": "I did not read this document, and the reason is unknown to me.",
   "pme.refus.le": "Refused on {date}",
   "pme.doc.titre": "Your documents",
