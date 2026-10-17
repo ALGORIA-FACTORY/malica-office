@@ -489,3 +489,57 @@ alter policy capture_paiement_justificatifs_sel on capture.paiement_justificatif
     and exists (select 1 from capture.paiements p
                  where p.id = paiement_justificatifs.paiement_id
                    and app.piece_lisible(p.piece_id)));
+
+-- --- 6. Des vues qui contournaient l'isolation entre clients (R6) -------------
+--
+-- `postgres` est superutilisateur et `bypassrls`. Une vue qui lui appartient
+-- et n'est pas `security_invoker` lit ses tables avec SES droits : la RLS ne
+-- s'applique pas, et la vue rend les lignes de tous les clients à qui a
+-- `select` dessus. Sept vues accordées à `authenticated`
+-- par la livraison étaient dans ce cas : `droits_reels_v`, `encours_v`, `flux_mensuel_v`,
+-- `a_relancer_v`, `plateforme.clients_v`, `plateforme.reclamations_v`,
+-- `notif.envois_v` — plus `droits_v` et `consommation_v`, qu'elles emboîtent,
+-- et `public.entities_v` (voir plus bas).
+--
+-- Le défaut était invisible tant que le schéma `facturation` n'avait pas
+-- `usage` pour `authenticated` (point 1) : les vues étaient inatteignables.
+-- En ouvrant ce droit, nécessaire, la fuite est devenue réelle : n'importe
+-- quel compte authentifié lisait les factures, les soldes, le chiffre
+-- d'affaires mensuel d'ALGORIA et les impayés avec leur titulaire.
+-- `une-vue-ne-contourne-pas-l-isolation.test.ts` l'a établi par exécution
+-- avant ce correctif : A lisait les lignes de B dans chacune des sept vues.
+--
+-- `security_invoker` est la forme que portent déjà toutes les vues de `public`.
+-- La RLS des tables sous-jacentes s'applique alors à celui qui lit.
+--
+-- Une vue `security_invoker` lit les vues qu'elle emboîte avec les droits de
+-- l'appelant : `droits_v` et `consommation_v`, jusque-là réservées à leur
+-- propriétaire, reçoivent donc `select` pour `authenticated` — elles sont
+-- elles aussi `security_invoker`, sans quoi on rouvrirait la porte une marche
+-- plus bas.
+--
+-- ⚠ Conséquence assumée : `plateforme.interventions` n'est lisible que par la
+-- plateforme. Sous l'identité d'un titulaire, `droits_reels_v` ne voit donc
+-- plus les lectures supplémentaires que la plateforme lui a accordées
+-- (`lectures_supplement` = 0, `lectures_droit` sous-estimé). Les fonctions
+-- `security definer` qui décident d'une lecture, elles, continuent de lire les
+-- vraies valeurs. Seul l'affichage côté titulaire est concerné.
+
+alter view facturation.droits_v         set (security_invoker = true);
+alter view facturation.droits_reels_v   set (security_invoker = true);
+alter view facturation.consommation_v   set (security_invoker = true);
+alter view facturation.encours_v        set (security_invoker = true);
+alter view facturation.flux_mensuel_v   set (security_invoker = true);
+alter view facturation.a_relancer_v     set (security_invoker = true);
+alter view plateforme.clients_v         set (security_invoker = true);
+alter view plateforme.reclamations_v    set (security_invoker = true);
+alter view notif.envois_v               set (security_invoker = true);
+
+-- Et une vue ancienne que la livraison a fait perdre : `public.entities_v`
+-- était `security_invoker` depuis sa création (20260824131631).
+-- `20261018130000` l'a redéfinie par `create or replace view` sans la clause
+-- `with (security_invoker = true)`, et l'option a disparu avec. Le défaut est
+-- celui de la livraison, pas du dépôt : il se corrige ici.
+alter view public.entities_v            set (security_invoker = true);
+
+grant select on facturation.droits_v, facturation.consommation_v to authenticated;

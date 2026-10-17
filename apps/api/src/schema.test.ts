@@ -278,6 +278,43 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  /**
+   * (e) Aucune vue accordée à `authenticated` ne contourne la RLS.
+   *
+   * Les épreuves ci-dessus lisent les POLITIQUES. Aucune ne regardait les
+   * vues, et c'est par là que le trou est passé : `postgres` est
+   * superutilisateur et `bypassrls`, donc une vue qui lui appartient sans être
+   * `security_invoker` lit ses tables SANS les politiques. Accordée en
+   * `select`, elle rend à n'importe quel compte les lignes de tous les
+   * clients. Ni un filtre applicatif oublié, ni une politique oubliée : une
+   * politique contournée — le troisième chemin, que R6 ne nomme pas.
+   *
+   * Une vue matérialisée ne peut pas porter l'option : accordée, elle est
+   * toujours fautive.
+   *
+   * La preuve par exécution est dans
+   * `facturation/une-vue-ne-contourne-pas-l-isolation.test.ts` ; celle-ci
+   * garde la porte pour les schémas à venir.
+   */
+  it("aucune vue accordée à authenticated ne contourne la RLS", async () => {
+    const fuyantes = await interroger<{ vue: string }>(`
+      select n.nspname || '.' || c.relname as vue
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where c.relkind in ('v', 'm')
+         and n.nspname not in ('pg_catalog', 'information_schema')
+         and has_table_privilege('authenticated', c.oid, 'select')
+         and not (c.relkind = 'v'
+                  and coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true'])
+       order by 1`);
+
+    assert.deepEqual(
+      fuyantes.map((r) => r.vue),
+      [],
+      "une vue accordée à authenticated sans security_invoker lit avec les droits de son propriétaire : elle contourne la RLS",
+    );
+  });
+
   it("aucune politique de table de tenant n'est inconditionnelle", async () => {
     /*
      * Une politique sur une table de tenant doit se cadrer sur quelque chose :
