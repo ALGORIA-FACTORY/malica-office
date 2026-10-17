@@ -30,9 +30,14 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `retour-${Date.now()}`;
   let u: Utilisateur;
   let org = "";
+  // Le cabinet sous mandat actif : seul lui tranche une demande sur une pièce transmise.
+  let expert: Utilisateur;
+  let cabinet = "";
 
   const rpc = (depot: string, methode: string, ...args: unknown[]) =>
     sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
+  const rpcCab = (depot: string, methode: string, ...args: unknown[]) =>
+    sousIdentite(expert.id, (db) => executerRpc(db, { depot, methode, args }));
 
   const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
     const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -86,14 +91,31 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
       );
       return rows[0]!.id;
     });
+    const e = await creerCompte(`${marque}-cab@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(e);
+    expert = e;
+    cabinet = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
+                                           '0914563X/B/C/000', 'TN', 'TND') as id`,
+      );
+      return rows[0]!.id;
+    });
+    await admin((p) =>
+      p.query(
+        `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
+         values ($1, $2, 'actif', current_date - 1)`,
+        [cabinet, org],
+      ),
+    );
   });
 
   after(async () => {
     await admin((p) =>
       p.query(
         `update identity.organizations set archived_at = now(),
-                archived_reason = 'fixture de test automatisé' where id = $1`,
-        [org],
+                archived_reason = 'fixture de test automatisé' where id = any($1)`,
+        [[org, cabinet]],
       ),
     );
     await fermerLePool();
@@ -165,7 +187,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const id = await piece("accord");
     await rpc("collab", "setPieceVis", id, "partage");
     await rpc("collab", "demanderSurPiece", id, "rappel");
-    await rpc("collab", "repondreSurPiece", id, "rappel", true, null);
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
 
     const apres = await visDe(id);
     assert.equal(apres.vis, "personnel", "accorder un rappel rend la pièce");
@@ -186,12 +208,12 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     await rpc("collab", "demanderSurPiece", id, "rappel");
 
     await assert.rejects(
-      () => rpc("collab", "repondreSurPiece", id, "rappel", false, null),
+      () => rpcCab("collab", "repondreSurPiece", id, "rappel", false, null),
       /demandes_refus_motive/,
       "un refus sans motif n'apprend rien, et la question reviendra la semaine suivante",
     );
 
-    await rpc("collab", "repondreSurPiece", id, "rappel", false, "Déjà porté à la déclaration.");
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "Déjà porté à la déclaration.");
     assert.equal((await visDe(id)).vis, "partage", "un refus ne bouge pas la pièce");
     const h = await faits(id);
     assert.equal(h[h.length - 1]!.fait, "refusee");
@@ -223,7 +245,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const id = await piece("sans-demande");
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
-      () => rpc("collab", "repondreSurPiece", id, "rappel", true, null),
+      () => rpcCab("collab", "repondreSurPiece", id, "rappel", true, null),
       /aucune demande en attente/,
     );
   });
@@ -238,7 +260,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const id = await piece("redemande");
     await rpc("collab", "setPieceVis", id, "partage");
     await rpc("collab", "demanderSurPiece", id, "rappel");
-    await rpc("collab", "repondreSurPiece", id, "rappel", false, "Pas maintenant.");
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", false, "Pas maintenant.");
 
     const r = (await rpc("collab", "demanderSurPiece", id, "rappel")) as {
       dejaDemandee: boolean;
@@ -249,5 +271,146 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
       ["demandee", "refusee", "demandee"],
       "R7 : chaque fait s'ajoute, aucun n'est réécrit",
     );
+  });
+  /*
+   * ================================================== NUL NE TRANCHE SA DEMANDE
+   *
+   * « Le comptable sera notifié et c'est à lui d'accepter ou décliner. » Un
+   * accord que le demandeur se donne à lui-même vide le mécanisme : la
+   * dérivation de l'accord protège une porte dont il tiendrait la clé. La base
+   * refuse, par la politique d'écriture ET par la fonction.
+   */
+  for (const objet of ["rappel", "suppression"] as const) {
+    it(`le dirigeant qui tranche sa propre demande de ${objet} est refusé`, async () => {
+      const id = await piece(`auto-${objet}`);
+      await rpc("collab", "setPieceVis", id, "partage");
+      await rpc("collab", "demanderSurPiece", id, objet);
+
+      await assert.rejects(
+        () => rpc("collab", "repondreSurPiece", id, objet, true, null),
+        (e: { code?: string }) => e.code === "42501",
+        "la fonction refuse clairement",
+      );
+      await assert.rejects(
+        () => rpc("collab", "repondreSurPiece", id, objet, false, "Je me refuse."),
+        (e: { code?: string }) => e.code === "42501",
+        "et un refus n'est pas plus à lui qu'un accord",
+      );
+      assert.deepEqual(
+        (await faits(id)).map((f) => f.fait),
+        ["demandee"],
+      );
+      assert.equal((await visDe(id)).vis, "partage");
+    });
+  }
+
+  it("la politique d'écriture refuse au membre du dossier d'inscrire un fait qui tranche", async () => {
+    const id = await piece("insertion-directe");
+    await rpc("collab", "setPieceVis", id, "partage");
+    await rpc("collab", "demanderSurPiece", id, "suppression");
+    for (const fait of ["accordee", "refusee"]) {
+      await assert.rejects(
+        sousIdentite(u.id, (db) =>
+          db.query(
+            `insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur)
+             values ($1, $2, 'suppression', $3, 'forge', $4)`,
+            [org, id, fait, u.id],
+          ),
+        ),
+        (e: { code?: string }) => e.code === "42501",
+        `le fait « ${fait} » écrit en direct par le dirigeant`,
+      );
+    }
+    assert.deepEqual(
+      (await faits(id)).map((f) => f.fait),
+      ["demandee"],
+    );
+    // Et le cabinet, lui, ne peut pas se faire passer pour la PME : il ne demande pas.
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        db.query(
+          `insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, auteur)
+           values ($1, $2, 'rappel', 'demandee', $3)`,
+          [org, id, expert.id],
+        ),
+      ),
+      (e: { code?: string }) => e.code === "42501",
+    );
+  });
+
+  it("un cabinet dont le mandat n'est que proposé ne tranche pas", async () => {
+    const autre = await creerCompte(`${marque}-propose@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(autre);
+    const cabinetPropose = await sousIdentite(autre.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.create_organization('cabinet', 'CABINET EN ATTENTE', 'autonome',
+                                           '0914563X/B/C/001', 'TN', 'TND') as id`,
+      );
+      return rows[0]!.id;
+    });
+    await admin((p) =>
+      p.query(
+        `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
+         values ($1, $2, 'propose', current_date - 1)`,
+        [cabinetPropose, org],
+      ),
+    );
+    const id = await piece("mandat-propose");
+    await rpc("collab", "setPieceVis", id, "partage");
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    await assert.rejects(
+      sousIdentite(autre.id, (db) =>
+        executerRpc(db, {
+          depot: "collab",
+          methode: "repondreSurPiece",
+          args: [id, "rappel", true, null],
+        }),
+      ),
+      (e: { code?: string }) => e.code === "42501",
+    );
+    await admin((p) =>
+      p.query(
+        `update identity.organizations set archived_at = now(),
+                archived_reason = 'fixture de test automatisé' where id = $1`,
+        [cabinetPropose],
+      ),
+    );
+  });
+
+  it("le cabinet sous mandat accorde la suppression : la pièce disparaît, la trace reste", async () => {
+    const id = await piece("accord-cabinet-suppression");
+    await rpc("collab", "setPieceVis", id, "partage");
+    await rpc("collab", "demanderSurPiece", id, "suppression");
+    await rpcCab("collab", "repondreSurPiece", id, "suppression", true, null);
+    const reste = await admin(
+      async (p) => (await p.query("select 1 from capture.pieces where id = $1", [id])).rows.length,
+    );
+    assert.equal(reste, 0);
+    const trace = await admin(
+      async (p) =>
+        (
+          await p.query(
+            `select 1 from audit.event_log
+            where object_id = $1 and action = 'piece.supprimee'`,
+            [id],
+          )
+        ).rows.length,
+    );
+    assert.equal(trace, 1);
+  });
+
+  it("une pièce personnelle n'est visible d'aucun cabinet, et se supprime seule, sans accord", async () => {
+    const id = await piece("privee");
+    const vue = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query("select 1 from pieces_v where id = $1", [id]);
+      return rows.length;
+    });
+    assert.equal(vue, 0, "le cabinet ne voit pas une pièce personnelle");
+    await assert.rejects(
+      () => rpcCab("collab", "repondreSurPiece", id, "suppression", true, null),
+      (e: { code?: string }) => e.code === "42501" || e.code === "23514",
+    );
+    // Son auteur la supprime comme avant : aucun accord n'est requis ni possible.
+    assert.equal(await rpc("capture", "supprimer", id, false), true);
   });
 });

@@ -1122,7 +1122,12 @@ begin
 
   -- `security definer` court-circuite la RLS : on refait ICI le contrôle de
   -- la politique `capture_pieces_del`.
-  if v_tenant not in (select app.member_orgs()) then
+  -- Le cabinet sous mandat n'est pas membre du dossier : il n'entre que pour
+  -- exécuter un accord que la donnée établit (section 17), jamais autrement.
+  if v_tenant not in (select app.member_orgs())
+     and not (p_par_accord
+              and v_tenant in (select app.engaged_orgs())
+              and app.accord_donne(p_piece, 'suppression')) then
     raise exception 'piece introuvable' using errcode = 'no_data_found';
   end if;
 
@@ -1475,7 +1480,9 @@ begin;
 -- limite le travail d'un collaborateur — combien de pièces il peut encore faire
 -- lire — le concerne ; ce que son employeur paie, non. La fonction rend donc
 -- au titulaire sa ligne entière, et à un membre d'une organisation rattachée
--- le seul compteur de lectures de la licence : les autres champs valent `null`.
+-- le NOM de l'offre (un employé sait dans quel outil il travaille, et l'écran en a
+-- besoin pour dégrader les fonctions) et le compteur de lectures de la licence :
+-- le statut, les organisations, les places et le prix valent `null`.
 -- `security definer` pour lire les vraies valeurs (comme `lecture_autorisee`) ;
 -- elle porte sa propre porte : sans licence détenue ni organisation rattachée
 -- dont l'appelant est membre, elle ne rend rien. Un membre de cabinet n'est
@@ -1507,7 +1514,7 @@ begin
   end if;
 
   return query
-    select null::text, null::text, c.lectures_droit, c.lectures_consommees,
+    select c.offre_code, null::text, c.lectures_droit, c.lectures_consommees,
            c.lectures_restantes, null::integer, null::integer, null::integer,
            null::integer, null::numeric
       from facturation.consommation_v c
@@ -1523,7 +1530,7 @@ grant execute on function public.mon_forfait() to authenticated;
 
 comment on function public.mon_forfait() is
   'Le forfait de l''appelant. Titulaire : la ligne entière. Membre d''une '
-  'organisation rattachée : le compteur de lectures seul, le reste à null. '
+  'organisation rattachée : le nom de l''offre et le compteur de lectures, le reste à null. '
   'Un AFFICHAGE : la décision d''une lecture se prend dans `lecture_autorisee`.';
 
 create or replace view public.licence_sieges_v with (security_invoker = true) as
@@ -1735,5 +1742,103 @@ $$;
 
 revoke all on function public.siege_reprendre_sa_place(uuid, uuid) from public, anon;
 grant execute on function public.siege_reprendre_sa_place(uuid, uuid) to authenticated;
+
+commit;
+
+-- --- 19. Seul le cabinet sous mandat tranche une demande ---------------------
+--
+-- Le dirigeant l'a dit : « le comptable sera notifié et c'est à lui d'accepter
+-- ou décliner ». Jusqu'ici, rien ne l'imposait. La politique d'insertion de
+-- `collab.demandes_sur_piece` était « membre du dossier » pour TOUS les faits, et
+-- `piece_repondre` (`security invoker`) ne regardait aucun rôle : le dirigeant
+-- demandait, puis répondait « accordé » lui-même. Pire, le cabinet ne pouvait
+-- pas répondre du tout — la politique d'insertion lui était fermée, et la mise à
+-- jour de `capture.pieces` qu'un rappel exige (vis `partage` -> `personnel`)
+-- contredit la clause `with check` de `pieces_upd_cabinet`. Le seul chemin qui
+-- fonctionnait était l'auto-accord. Les sections 17 et 3 dérivent l'accord de la
+-- donnée ; encore faut-il que la donnée ne soit pas écrite par celui qu'elle lie.
+--
+-- Deux gardes, la base d'abord (R6) :
+--
+--   - la POLITIQUE d'insertion distingue inscrire une demande (`demandee`, membre
+--     du dossier) de la trancher (`accordee` / `refusee`, cabinet engagé sous
+--     mandat actif). Un insert direct du dirigeant est refusé, `piece_repondre`
+--     ou pas ;
+--   - `piece_repondre` porte sa porte : la pièce doit être lisible de l'appelant
+--     et son dossier engagé auprès de lui. Elle passe `security definer`, parce
+--     que l'effet d'un accord (rappel, suppression) écrit là où le cabinet n'a
+--     pas de droit d'écriture, et qu'on n'a pas voulu lui en accorder : AUCUN
+--     droit nouveau sur `capture.pieces`. Le droit est dans la fonction, et la
+--     fonction ne se laisse pas appeler par la PME.
+--
+-- Une pièce `personnel` ou `entite` n'est visible d'aucun cabinet : la porte la
+-- refuse, et son chemin de suppression est celui d'avant — libre, sans accord,
+-- car `capture_piece_supprimer` n'en exige un que pour `partage`.
+
+begin;
+
+alter policy collab_demandes_sur_piece_ins on collab.demandes_sur_piece
+  with check (
+    (fait = 'demandee' and tenant_id in (select app.member_orgs()))
+    or (fait in ('accordee', 'refusee') and tenant_id in (select app.engaged_orgs())));
+
+create or replace function public.piece_repondre(
+  p_piece uuid, p_objet text, p_accorde boolean, p_note text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant  uuid;
+  v_dernier text;
+begin
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  select tenant_id into v_tenant from capture.pieces where id = p_piece for update;
+  if v_tenant is null then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  if v_tenant not in (select app.engaged_orgs()) then
+    raise exception 'seul le cabinet sous mandat tranche une demande sur une piece'
+      using errcode = '42501';
+  end if;
+
+  select d.fait into v_dernier
+    from collab.demandes_sur_piece d
+   where d.piece_id = p_piece and d.objet = p_objet
+   order by d.created_at desc limit 1;
+  if v_dernier is distinct from 'demandee' then
+    raise exception 'aucune demande en attente sur cette piece'
+      using errcode = 'check_violation';
+  end if;
+
+  insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur)
+  values (v_tenant, p_piece, p_objet,
+          case when p_accorde then 'accordee' else 'refusee' end, p_note, auth.uid());
+
+  insert into collab.notifications (tenant_id, kind, payload)
+  values (v_tenant, 'piece.demande_tranchee',
+          jsonb_build_object('piece_id', p_piece, 'objet', p_objet, 'accorde', p_accorde));
+
+  if p_accorde then
+    if p_objet = 'rappel' then
+      perform public.capture_piece_set_vis(p_piece, 'personnel'::app.vis_t, true);
+    elsif p_objet = 'suppression' then
+      -- `collab.demandes_sur_piece` cascade depuis la pièce ; ce qui survit est
+      -- la ligne `piece.supprimee` de `audit.event_log` et la notification.
+      perform public.capture_piece_supprimer(p_piece, true);
+    end if;
+  end if;
+
+  return jsonb_build_object('piece_id', p_piece, 'objet', p_objet, 'accorde', p_accorde);
+end
+$$;
+
+revoke all on function public.piece_repondre(uuid, text, boolean, text) from public, anon;
+grant execute on function public.piece_repondre(uuid, text, boolean, text) to authenticated;
 
 commit;

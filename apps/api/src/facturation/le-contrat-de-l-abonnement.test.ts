@@ -153,7 +153,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(await rpc(operateur, "facturation", "monForfait"), null);
   });
 
-  it("monForfait rend à un collaborateur le compteur de lectures, ni l'offre, ni le prix, ni les places", async () => {
+  it("monForfait rend à un collaborateur le nom de l'offre et le compteur de lectures, ni le prix, ni les places", async () => {
     const duTitulaire = (await rpc(a.titulaire, "facturation", "monForfait")) as Record<
       string,
       unknown
@@ -164,13 +164,12 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
       "monForfait",
     )) as Record<string, unknown>;
 
-    // Ce qui limite son travail : les lectures, celles de la licence.
-    for (const champ of ["lectures_droit", "lectures_consommees", "lectures_restantes"]) {
+    // Ce qui limite son travail : les lectures de la licence, et le nom de l'offre.
+    for (const champ of ["offre", "lectures_droit", "lectures_consommees", "lectures_restantes"]) {
       assert.equal(duCollaborateur[champ], duTitulaire[champ], champ);
     }
     // Ce que son employeur paie : rien de cela ne sort.
     for (const champ of [
-      "offre",
       "statut",
       "organisations",
       "sieges_occupes",

@@ -34,9 +34,15 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"], max: 1 });
   let u: Utilisateur;
   let org = "";
+  // Le cabinet sous mandat : seul lui tranche une demande sur une pièce transmise.
+  let expert: Utilisateur;
+  let cabinet = "";
 
   const rpc = (depot: string, methode: string, ...args: unknown[]) =>
     sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
+
+  const rpcCab = (depot: string, methode: string, ...args: unknown[]) =>
+    sousIdentite(expert.id, (db) => executerRpc(db, { depot, methode, args }));
 
   async function piece(cle: string, vis: "personnel" | "entite" | "partage" = "personnel") {
     const p = (await rpc("capture", "enregistrer", {
@@ -65,13 +71,28 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
       );
       return rows[0]!.id;
     });
+    const e = await creerCompte(`${marque}-cab@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(e);
+    expert = e;
+    cabinet = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
+                                           '0914563X/B/C/000', 'TN', 'TND') as id`,
+      );
+      return rows[0]!.id;
+    });
+    await admin.query(
+      `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
+       values ($1, $2, 'actif', current_date - 1)`,
+      [cabinet, org],
+    );
   });
 
   after(async () => {
     await admin.query(
       `update identity.organizations set archived_at = now(),
-              archived_reason = 'fixture de test automatisé' where id = $1`,
-      [org],
+              archived_reason = 'fixture de test automatisé' where id = any($1)`,
+      [[org, cabinet]],
     );
     await admin.end();
     await fermerLePool();
@@ -177,7 +198,7 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
       (e: { code?: string }) => e.code === "23514",
       "true avec une demande seulement en cours",
     );
-    await rpc("collab", "repondreSurPiece", id, "suppression", false, "Déjà déclarée.");
+    await rpcCab("collab", "repondreSurPiece", id, "suppression", false, "Déjà déclarée.");
     await assert.rejects(
       direct("select public.capture_piece_supprimer($1, true)", id),
       (e: { code?: string }) => e.code === "23514",
@@ -189,7 +210,7 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
   it("l'accord inscrit par piece_repondre, lui, efface bien la pièce", async () => {
     const id = await piece("accord-vrai", "partage");
     await rpc("collab", "demanderSurPiece", id, "suppression");
-    await rpc("collab", "repondreSurPiece", id, "suppression", true, null);
+    await rpcCab("collab", "repondreSurPiece", id, "suppression", true, null);
     assert.equal(await existe(id), false);
   });
 
@@ -212,7 +233,7 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
   it("un accord de rappel ne vaut pas accord de suppression", async () => {
     const id = await piece("accord-croise", "partage");
     await rpc("collab", "demanderSurPiece", id, "rappel");
-    await rpc("collab", "repondreSurPiece", id, "rappel", true, null);
+    await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
     // La pièce est revenue chez le dirigeant ; on la retransmet, sans nouvelle demande.
     await rpc("collab", "setPieceVis", id, "partage");
     await assert.rejects(
