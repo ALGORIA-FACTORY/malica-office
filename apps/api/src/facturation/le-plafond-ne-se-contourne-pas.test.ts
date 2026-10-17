@@ -165,17 +165,13 @@ async function verdict(
   identite: string,
   piece: string,
 ): Promise<Record<string, unknown>> {
-  await db.query("set local role authenticated");
-  await db.query("select set_config('request.jwt.claim.sub', $1, true)", [identite]);
-  try {
+  return sous(db, identite, async () => {
     const { rows } = await db.query<{ v: Record<string, unknown> }>(
       "select public.lecture_autorisee($1) as v",
       [piece],
     );
     return rows[0]!.v;
-  } finally {
-    await db.query("reset role");
-  }
+  });
 }
 
 describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {

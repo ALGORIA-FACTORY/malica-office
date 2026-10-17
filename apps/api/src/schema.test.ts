@@ -381,10 +381,25 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
-  it("aucune fonction security definer n'écrit dans facturation sans porte de plateforme", async () => {
-    // `facturation` porte l'argent : licences, factures, lectures comptées.
-    // Une definer qui y écrit le fait sans RLS ; si son corps ne nomme pas
-    // `app.is_platform`, rien ne dit QUI avait le droit de déclencher l'écriture.
+  it("aucune fonction security definer n'écrit dans facturation sans porte nommée", async () => {
+    /*
+     * `facturation` porte l'argent : licences, factures, lectures comptées.
+     * Une definer qui y écrit le fait sans RLS — propriété de `postgres`,
+     * superutilisateur, que `force row level security` n'arrête pas. Si son
+     * corps ne nomme AUCUNE porte, rien ne dit qui avait le droit d'écrire.
+     *
+     * L'énoncé était « sans porte de plateforme » jusqu'à la ronde 6, et il
+     * est devenu faux ce jour-là : `public.lecture_consommer` est devenue la
+     * seule écrivante de `facturation.lectures`, et sa porte n'est pas
+     * `app.is_platform` — c'est `app.piece_lisible`, plus son propre verdict.
+     * Exiger la porte de plateforme aurait obligé à nommer une exception ; on
+     * nomme plutôt les portes admises, qui sont celles qui DÉCIDENT d'un droit.
+     *
+     * Ce n'est pas la liste blanche que j'ai refusé d'écrire en ronde 4 :
+     * celle-là aurait inscrit soixante FONCTIONS sans les lire. Ici on énumère
+     * des PORTES, et l'ensemble gardé est celui des definer qui écrivent dans
+     * `facturation` — une aujourd'hui, nommée par le rouge si elle change.
+     */
     const sansPorte = await interroger<{ f: string }>(`
       select n.nspname || '.' || p.proname || '(' ||
              pg_get_function_identity_arguments(p.oid) || ')' as f
@@ -393,7 +408,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
        where p.prosecdef
          and has_function_privilege('authenticated', p.oid, 'execute')
          and p.prosrc ~* '(insert into|update|delete from)\\s+facturation\\.'
-         and p.prosrc !~* 'is_platform'
+         and p.prosrc !~* 'app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)'
        order by 1`);
 
     assert.deepEqual(

@@ -769,21 +769,28 @@ alter policy plateforme_archives_ins on plateforme.archives
 -- --- 9. La politique d'écriture dit la même chose que le verdict -------------
 --
 -- La section 8 a fermé le trou ; elle a aussi figé une incohérence que la
--- relecture avait mesurée sans la trancher. Un expert de cabinet ENGAGÉ reçoit
--- de `lecture_autorisee` le verdict de la licence du CLIENT — `autorisee: true`
--- sous le plafond — puis `lecture_consommer` échouait en 42501, parce que le
--- `with check` n'admettait que `app.member_orgs()` et qu'un cabinet n'est pas
--- membre du dossier de son client.
+-- relecture avait mesurée sans la trancher. TOUT MEMBRE d'un cabinet engagé
+-- reçoit de `lecture_autorisee` le verdict de la licence du CLIENT —
+-- `autorisee: true` sous le plafond — puis `lecture_consommer` échouait en
+-- 42501, parce que le `with check` n'admettait que `app.member_orgs()` et
+-- qu'un cabinet n'est pas membre du dossier de son client.
+--
+-- « Tout membre », et non « l'expert » : `app.engaged_orgs()` ne regarde pas le
+-- rôle dans le cabinet. L'expert, le collaborateur et l'assistant y passent de
+-- la même façon, à l'écriture comme au verdict. C'est le modèle de tout le
+-- dépôt, et on l'assume ; mais un commentaire qui dirait « expert » laisserait
+-- croire à une condition qui n'existe pas, et un commentaire faux est pire que
+-- pas de commentaire.
 --
 -- Aujourd'hui aucun chemin ne passe par là. Dès l'étape 2 de la livraison,
--- CHAQUE lecture d'un expert serait payée au modèle et jamais comptée : feu
+-- CHAQUE lecture d'un cabinet serait payée au modèle et jamais comptée : feu
 -- vert, dépense, inscription qui casse. C'est le pire des trois états — pire
 -- qu'un refus franc, qui au moins ne coûte rien.
 --
--- La décision : la lecture d'un expert engagé se compte sur la licence DU
--- CLIENT. C'est déjà ce que le verdict répond, et le cabinet travaille pour le
--- client — qui paie ses propres pièces, quel que soit celui qui déclenche la
--- lecture.
+-- La décision : la lecture d'un membre de cabinet engagé se compte sur la
+-- licence DU CLIENT. C'est déjà ce que le verdict répond, et le cabinet
+-- travaille pour le client — qui paie ses propres pièces, quel que soit celui
+-- qui déclenche la lecture.
 --
 -- Élargir une politique est le geste par lequel on rouvre ce qu'on vient de
 -- fermer. La branche ajoutée est donc la plus étroite qui répond au verdict :
@@ -801,7 +808,7 @@ alter policy plateforme_archives_ins on plateforme.archives
 -- vérifient après cet élargissement.
 --
 -- Le plafond garde son mot : `lecture_consommer` consulte la porte avant
--- d'écrire, et au plafond l'expert est refusé comme le collaborateur.
+-- d'écrire, et au plafond le cabinet est refusé comme le collaborateur du client.
 
 alter policy facturation_lectures_ins on facturation.lectures
   with check (
@@ -838,3 +845,119 @@ revoke all on function facturation.rattachement_legitime() from public, anon;
 revoke all on function parametrage.verifier_compte_cabinet() from public, anon;
 revoke all on function ref.verifier_classe_role() from public, anon;
 revoke all on function tiers.verifier_compte_collectif() from public, anon;
+
+-- --- 10. Une seule porte écrit les lectures, et c'est elle qui compte --------
+--
+-- La section 9 n'a rien rouvert — la relecture l'a établi en remettant les deux
+-- conditions à l'intérieur du `or` et en voyant trois épreuves repasser au
+-- rouge. Elle a trouvé le désaccord INVERSE, et il est plus grave :
+-- **la politique d'écriture ne connaît pas le plafond.**
+--
+-- Mesuré à 65/65 : `lecture_autorisee` répond `plafond_atteint`, et l'insertion
+-- DIRECTE passait — la licence montait à 66, puis le verdict devenait
+-- `relecture_gratuite`. Une lecture comptée que personne n'avait autorisée, et
+-- un forfait dépassé aux frais du client. Le cas du membre du client existait
+-- depuis la section 8 ; la section 9 l'a étendu à tout membre d'un cabinet
+-- engagé. Aucune épreuve ne le couvrait : celle de la ronde 4 forge la licence
+-- d'un TIERS, pas la MÊME licence au plafond.
+--
+-- Deux corrections étaient possibles. Encoder le plafond dans le `with check`
+-- écrirait la règle du plafond à DEUX endroits, et deux copies d'une règle
+-- divergent toujours — c'est exactement ainsi que ce défaut est né. On prend
+-- l'autre : `authenticated` perd le droit d'écrire, et
+-- `public.lecture_consommer` devient la seule porte. Une table écrite par une
+-- seule porte, et la porte qui porte la règle : c'est R6 appliqué.
+--
+-- ⚠ CE QUE CELA DÉPLACE, et il faut le lire avant de relire la politique.
+-- `lecture_consommer` était `security invoker` pour écrire sous l'identité de
+-- l'appelant, donc sous la RLS de la table. En `definer`, propriété de
+-- `postgres` — superutilisateur —, elle NE SUBIT PLUS la politique, et
+-- `force row level security` n'y change rien : un superutilisateur passe
+-- outre. Les garanties des sections 8 et 9 ne reposent donc plus, sur ce
+-- chemin, sur le `with check` : elles reposent sur ce que la fonction écrit.
+--
+-- Elle les tient PAR CONSTRUCTION, et c'est vérifiable ligne à ligne : le
+-- tenant est lu sur la pièce, la licence est lue sur le rattachement de ce
+-- tenant, la pièce est l'argument. Le triplet qu'elle écrit est celui que la
+-- politique exige ; il n'y a aucune valeur que l'appelant choisisse.
+--
+-- Le `with check` reste en place, et pour deux raisons qui ne sont pas
+-- décoratives : il garde le jour où un droit d'insertion reviendrait, et il
+-- reste l'objet du garde d'architecture (« toute table de comptage lie son
+-- identifiant au tenant »). Les épreuves continuent de l'exercer en se rendant
+-- le droit d'insérer DANS une transaction annulée.
+--
+-- La porte, enfin : une `definer` sans porte est une sonde. `lecture_autorisee`
+-- porte `app.piece_lisible` depuis la ronde 3 ; `lecture_consommer` la porte
+-- maintenant aussi, en tête et pour elle-même, avant tout accès à la pièce.
+
+create or replace function public.lecture_consommer(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant  uuid;
+  v_licence uuid;
+  v_verdict jsonb;
+begin
+  -- La porte, nommée, et d'abord. La RLS de `capture.pieces` ne s'applique
+  -- plus ici : sans cette ligne, tout compte authentifié ferait compter la
+  -- lecture d'une pièce qu'il n'a pas le droit de voir.
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  -- La règle du plafond vit à UN seul endroit, et c'est ici qu'on l'invoque.
+  v_verdict := public.lecture_autorisee(p_piece);
+  if not (v_verdict ->> 'autorisee')::boolean then
+    raise exception 'lecture refusee : %', v_verdict ->> 'motif'
+      using errcode = 'check_violation';
+  end if;
+
+  if (v_verdict ->> 'motif') = 'relecture_gratuite' then
+    return v_verdict;
+  end if;
+
+  -- Rien de ce qui s'écrit ne vient de l'appelant : le tenant est celui de la
+  -- pièce, la licence est celle du tenant. C'est ce qui tient les sections 8
+  -- et 9 sans la politique.
+  select tenant_id into v_tenant from capture.pieces where id = p_piece;
+  select licence_id into v_licence
+    from facturation.licence_organisations where tenant_id = v_tenant;
+
+  insert into facturation.lectures (tenant_id, licence_id, piece_id, periode, consommee_par)
+  values (v_tenant, v_licence, p_piece,
+          date_trunc('month', current_date)::date, auth.uid())
+  on conflict (piece_id) do nothing;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  values (v_tenant, auth.uid(), 'lecture.consommee', 'capture', 'pieces', p_piece,
+          jsonb_build_object('licence_id', v_licence));
+
+  return public.lecture_autorisee(p_piece);
+end
+$$;
+
+revoke all on function public.lecture_consommer(uuid) from public, anon;
+grant execute on function public.lecture_consommer(uuid) to authenticated;
+
+comment on function public.lecture_consommer(uuid) is
+  'La SEULE écrivante de facturation.lectures. À appeler APRÈS une lecture '
+  'réussie : une lecture qui échoue ne se facture pas. Elle refuse si son '
+  'propre verdict n''autorise pas — le plafond est écrit là, et nulle part '
+  'ailleurs.';
+
+-- Et le droit s'en va. Les trois chemins d'écriture, pas seulement `insert` :
+-- R7 refuse déjà `update` et `delete` par déclencheur, mais un droit inutile
+-- est un droit qu'on finit par croire nécessaire. `select` reste : un cabinet
+-- lit ce qui lui a été compté.
+revoke insert, update, delete on facturation.lectures from authenticated;
+revoke insert, update, delete on facturation.lectures from public, anon;
+
+comment on table facturation.lectures is
+  'Une ligne par pièce lue, jamais deux. Append-only (R7), et sans écrivain '
+  'direct : seule public.lecture_consommer y écrit, parce qu''elle seule '
+  'connaît le plafond.';
