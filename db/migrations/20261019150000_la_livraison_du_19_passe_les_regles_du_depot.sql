@@ -765,3 +765,76 @@ alter policy plateforme_archives_ins on plateforme.archives
     and exists (select 1 from plateforme.requisitions r
                  where r.id = archives.requisition_id
                    and r.tenant_id = archives.tenant_id));
+
+-- --- 9. La politique d'écriture dit la même chose que le verdict -------------
+--
+-- La section 8 a fermé le trou ; elle a aussi figé une incohérence que la
+-- relecture avait mesurée sans la trancher. Un expert de cabinet ENGAGÉ reçoit
+-- de `lecture_autorisee` le verdict de la licence du CLIENT — `autorisee: true`
+-- sous le plafond — puis `lecture_consommer` échouait en 42501, parce que le
+-- `with check` n'admettait que `app.member_orgs()` et qu'un cabinet n'est pas
+-- membre du dossier de son client.
+--
+-- Aujourd'hui aucun chemin ne passe par là. Dès l'étape 2 de la livraison,
+-- CHAQUE lecture d'un expert serait payée au modèle et jamais comptée : feu
+-- vert, dépense, inscription qui casse. C'est le pire des trois états — pire
+-- qu'un refus franc, qui au moins ne coûte rien.
+--
+-- La décision : la lecture d'un expert engagé se compte sur la licence DU
+-- CLIENT. C'est déjà ce que le verdict répond, et le cabinet travaille pour le
+-- client — qui paie ses propres pièces, quel que soit celui qui déclenche la
+-- lecture.
+--
+-- Élargir une politique est le geste par lequel on rouvre ce qu'on vient de
+-- fermer. La branche ajoutée est donc la plus étroite qui répond au verdict :
+--
+--   - le tenant est celui d'un mandat ACTIF de l'appelant (`app.engaged_orgs`,
+--     qui exige `status = 'actif'` et des dates qui couvrent le jour) ;
+--   - et la pièce est `partage` — la seule visibilité qu'un mandat ouvre
+--     (`app.piece_lisible`). Une pièce `entite` ou `personnel` du client reste
+--     hors de portée du cabinet, à l'écriture comme à la lecture.
+--
+-- Les deux conditions de la section 8 restent EN FACTEUR COMMUN, hors de la
+-- parenthèse : la licence est celle du tenant, la pièce appartient au tenant.
+-- La ligne forgée que la ronde 4 refuse est donc toujours refusée, et les
+-- quatre épreuves de `une-lecture-s-impute-a-la-bonne-licence.test.ts` le
+-- vérifient après cet élargissement.
+--
+-- Le plafond garde son mot : `lecture_consommer` consulte la porte avant
+-- d'écrire, et au plafond l'expert est refusé comme le collaborateur.
+
+alter policy facturation_lectures_ins on facturation.lectures
+  with check (
+    (tenant_id in (select app.member_orgs())
+     or (tenant_id in (select app.engaged_orgs())
+         and exists (select 1 from capture.pieces pc
+                      where pc.id = lectures.piece_id
+                        and pc.vis = 'partage'::app.vis_t)))
+    and exists (select 1 from facturation.licence_organisations lo
+                 where lo.tenant_id = lectures.tenant_id
+                   and lo.licence_id = lectures.licence_id)
+    and exists (select 1 from capture.pieces pc
+                 where pc.id = lectures.piece_id
+                   and pc.tenant_id = lectures.tenant_id));
+
+-- L'opérateur de plateforme sous réquisition n'est PAS ajouté ici, et c'est une
+-- décision, pas un oubli : il reste arrêté par le plafond du client. C'est
+-- fermé, donc sans danger, et une réquisition est rare. Une porte fermée qu'on
+-- ouvrira le jour où on en connaîtra le prix vaut mieux qu'une porte ouverte
+-- aujourd'hui. L'épreuve qui dit cet état existe et reste.
+
+-- Et l'hygiène que la ronde 4 avait laissée en suspens : sept fonctions
+-- `security definer` gardaient `execute` pour `public` et `anon`. Toutes
+-- retournent `trigger`, et PostgreSQL refuse l'appel direct d'une telle
+-- fonction : ce n'était pas une surface d'appel. Le droit n'en est pas moins
+-- inutile, et un droit inutile est un droit qu'on finit par croire nécessaire.
+-- Le déclenchement d'un trigger ne vérifie pas `execute` ; seul `create trigger`
+-- le fait, et les déclencheurs existent déjà.
+
+revoke all on function agents.toucher_conversation() from public, anon;
+revoke all on function app.honoraires_totaux_apres_ligne() from public, anon;
+revoke all on function facturation.place_disponible() from public, anon;
+revoke all on function facturation.rattachement_legitime() from public, anon;
+revoke all on function parametrage.verifier_compte_cabinet() from public, anon;
+revoke all on function ref.verifier_classe_role() from public, anon;
+revoke all on function tiers.verifier_compte_collectif() from public, anon;

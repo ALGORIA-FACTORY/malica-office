@@ -102,6 +102,64 @@ async function monter(
   return { dirigeant, collaborateur, tenant, licence, piece };
 }
 
+/**
+ * Un cabinet, son expert, et son mandat sur la PME.
+ *
+ * `actif` ouvre `app.engaged_orgs()` ; `propose` ne l'ouvre pas — c'est le
+ * témoin, et il doit rester refusé en lecture comme en écriture.
+ */
+async function cabinetSur(
+  db: pg.PoolClient,
+  pme: string,
+  statut: "actif" | "propose",
+): Promise<string> {
+  const org = await db.query<{ id: string }>(
+    `insert into identity.organizations (kind, name, jurisdiction, currency)
+     values ('cabinet', 'Cabinet d''essai', 'TN', 'TND') returning id`,
+  );
+  const expert = randomUUID();
+  await db.query(
+    "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
+    [org.rows[0]!.id, expert],
+  );
+  await db.query(
+    `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
+     values ($1, $2, $3, current_date - 1)`,
+    [org.rows[0]!.id, pme, statut],
+  );
+  return expert;
+}
+
+/**
+ * Endosse `authenticated` sous l'identité donnée, le temps du corps.
+ *
+ * Le point de reprise n'est pas un ornement : une écriture refusée annule la
+ * transaction, et le `reset role` qui suit échoue alors sur « la transaction est
+ * annulée ». C'est CE message-là que le rouge montrerait, à la place de l'erreur
+ * qui a tout déclenché — un rouge illisible est un rouge qui ne sert à rien.
+ */
+async function sous<T>(db: pg.PoolClient, identite: string, corps: () => Promise<T>): Promise<T> {
+  await db.query("savepoint sous_role");
+  await db.query("set local role authenticated");
+  await db.query("select set_config('request.jwt.claim.sub', $1, true)", [identite]);
+  try {
+    return await corps();
+  } catch (erreur) {
+    try {
+      await db.query("rollback to savepoint sous_role");
+    } catch {
+      /* la transaction est perdue : l'erreur d'origine reste la seule à dire */
+    }
+    throw erreur;
+  } finally {
+    try {
+      await db.query("reset role");
+    } catch {
+      /* idem */
+    }
+  }
+}
+
 async function verdict(
   db: pg.PoolClient,
   identite: string,
@@ -221,32 +279,102 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
    * Le verdict mesuré est celui de la licence DU CLIENT, pour les deux. C'est
    * cohérent : la licence qui paie est celle du dossier lu, pas celle du
    * lecteur, et c'est aussi ce que dit la politique de lecture.
+   *
+   * Pour l'expert engagé, la politique d'ÉCRITURE doit dire la même chose que
+   * le verdict. Elle ne le disait pas : il recevait `autorisee: true` et
+   * `lecture_consommer` échouait en 42501, parce que le `with check` n'admettait
+   * que `app.member_orgs()`. Feu vert, appel payant du modèle, inscription qui
+   * casse — le pire des trois. La section 9 de `20261019150000` l'admet, pour
+   * une pièce `partage` et sur la licence du client.
    */
-  it("un expert de cabinet engagé reçoit le verdict de la licence du client", async () => {
+  it("un expert de cabinet engagé compte sa lecture sur la licence du client", async () => {
+    await dansUneTransaction(async (db) => {
+      const c = await monter(db, { consommees: 0 });
+      const partagee = await nouvellePiece(db, c.tenant, c.dirigeant, "partagee", "partage");
+      const expert = await cabinetSur(db, c.tenant, "actif");
+
+      await sous(db, expert, async () => {
+        const { rows } = await db.query<{ v: Record<string, unknown> }>(
+          "select public.lecture_consommer($1) as v",
+          [partagee],
+        );
+        assert.equal(rows[0]!.v["autorisee"], true, "l'expert engagé doit pouvoir faire compter");
+        assert.equal(rows[0]!.v["motif"], "relecture_gratuite", "la pièce vient d'être comptée");
+      });
+
+      const { rows } = await db.query<{ tenant_id: string; licence_id: string }>(
+        "select tenant_id, licence_id from facturation.lectures where piece_id = $1",
+        [partagee],
+      );
+      assert.equal(rows.length, 1, "une ligne, et une seule");
+      assert.equal(rows[0]!.tenant_id, c.tenant, "imputée au dossier du client");
+      assert.equal(rows[0]!.licence_id, c.licence, "et à la licence du client");
+    });
+  });
+
+  it("un expert de cabinet engagé reste refusé au plafond, et rien ne s'inscrit", async () => {
     await dansUneTransaction(async (db) => {
       const c = await monter(db, { consommees: 65 });
       const partagee = await nouvellePiece(db, c.tenant, c.dirigeant, "partagee", "partage");
-
-      const cabinet = await db.query<{ id: string }>(
-        `insert into identity.organizations (kind, name, jurisdiction, currency)
-         values ('cabinet', 'Cabinet d''essai', 'TN', 'TND') returning id`,
-      );
-      const expert = randomUUID();
-      await db.query(
-        "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
-        [cabinet.rows[0]!.id, expert],
-      );
-      await db.query(
-        `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
-         values ($1, $2, 'actif', current_date - 1)`,
-        [cabinet.rows[0]!.id, c.tenant],
-      );
+      const expert = await cabinetSur(db, c.tenant, "actif");
 
       const v = await verdict(db, expert, partagee);
       assert.equal(v["autorisee"], false, "l'expert engagé ne passe pas le plafond du client");
       assert.equal(v["motif"], "plafond_atteint");
       assert.equal(v["droit"], 65, "le droit est celui de la licence du client");
       assert.equal(v["restantes"], 0);
+
+      await sous(db, expert, async () => {
+        await db.query("savepoint avant");
+        await assert.rejects(
+          db.query("select public.lecture_consommer($1)", [partagee]),
+          /lecture refusee : plafond_atteint/,
+        );
+        await db.query("rollback to savepoint avant");
+      });
+
+      const { rows } = await db.query("select 1 from facturation.lectures where piece_id = $1", [
+        partagee,
+      ]);
+      assert.equal(rows.length, 0, "aucune lecture ne doit être comptée");
+    });
+  });
+
+  it("un expert de cabinet NON engagé est refusé en lecture comme en écriture", async () => {
+    await dansUneTransaction(async (db) => {
+      const c = await monter(db, { consommees: 0 });
+      const partagee = await nouvellePiece(db, c.tenant, c.dirigeant, "partagee", "partage");
+      // Mandat seulement PROPOSÉ : `app.engaged_orgs()` ne le rend pas.
+      const expert = await cabinetSur(db, c.tenant, "propose");
+
+      await sous(db, expert, async () => {
+        await db.query("savepoint avant_lecture");
+        await assert.rejects(
+          db.query("select public.lecture_autorisee($1)", [partagee]),
+          /piece introuvable ou non autorisee/,
+        );
+        await db.query("rollback to savepoint avant_lecture");
+
+        await db.query("savepoint avant_ecriture");
+        await assert.rejects(
+          db.query(
+            `insert into facturation.lectures (tenant_id, licence_id, piece_id, periode)
+             values ($1, $2, $3, date_trunc('month', current_date)::date)`,
+            [c.tenant, c.licence, partagee],
+          ),
+          (e: { code?: string }) => {
+            assert.equal(e.code, "42501", "le refus doit venir de la politique d'écriture");
+            return true;
+          },
+          "un cabinet sans mandat actif n'inscrit rien",
+        );
+        await db.query("rollback to savepoint avant_ecriture");
+      });
+
+      const { rows } = await db.query("select 1 from facturation.lectures where piece_id = $1", [
+        partagee,
+      ]);
+      assert.equal(rows.length, 0);
     });
   });
 
