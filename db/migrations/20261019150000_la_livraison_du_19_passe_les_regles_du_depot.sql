@@ -272,7 +272,7 @@ begin
       raise exception 'une piece comptabilisee reste partagee' using errcode = 'check_violation';
     end if;
     -- Le drapeau ne suffit pas : l'accord se DÉRIVE de la donnée (section 17).
-    if not (p_par_accord and app.accord_donne(p_piece, 'rappel')) then
+    if not app.accord_donne(p_piece, 'rappel') then
       raise exception 'une piece transmise ne revient que par accord du cabinet'
         using errcode = 'check_violation';
     end if;
@@ -1137,7 +1137,7 @@ begin
   -- fait. Seule `partage` a franchi la frontière du cabinet.
   -- Le drapeau ne suffit pas : l'accord se DÉRIVE de la donnée (section 17).
   if v_vis = 'partage'
-     and not (p_par_accord and app.accord_donne(p_piece, 'suppression')) then
+     and not app.accord_donne(p_piece, 'suppression') then
     raise exception
       'Cette pièce a été transmise à votre cabinet : sa suppression demande son accord.'
       using errcode = 'check_violation';
@@ -1648,6 +1648,10 @@ commit;
 -- intention, honorée si la donnée la fonde. `piece_repondre` inscrit le fait AVANT
 -- d'appeler les deux fonctions : son chemin légitime passe inchangé.
 --
+-- (Ajout : l'accord est aussi « acquis » quand le dossier n'a aucun mandat
+-- actif. Le drapeau `p_par_accord` ne décide alors plus rien : il reste dans la
+-- signature, pour `piece_repondre`, et la donnée tranche seule.)
+--
 -- Ce que ce contrôle ne fait PAS : dire QUI a inscrit l'accord. La politique
 -- d'insertion de `collab.demandes_sur_piece` est « membre du dossier », et
 -- `piece_repondre` ne regarde pas le rôle : le dirigeant peut demander, puis
@@ -1666,22 +1670,37 @@ security definer
 set search_path = ''
 as $$
   select app.piece_lisible(p_piece)
-     and coalesce((
-       select d.fait = 'accordee'
-              and d.created_at >= coalesce(pc.transmise_le, '-infinity'::timestamptz)
-         from collab.demandes_sur_piece d
-         join capture.pieces pc on pc.id = d.piece_id
-        where d.piece_id = p_piece and d.objet = p_objet
-        order by d.created_at desc
-        limit 1), false)
+     and (
+       -- Aucun mandat actif sur le DOSSIER : personne à qui demander, la pièce est
+       -- au client. Ce n'est pas « le mandat de ce cabinet-ci » : un dossier passé
+       -- de A à B a un mandat actif chez B, et l'accord est alors exigé de B.
+       not exists (
+         select 1
+           from capture.pieces pc
+           join identity.engagements e on e.pme_org_id = pc.tenant_id
+          where pc.id = p_piece
+            and e.status = 'actif'
+            and e.starts_on <= current_date
+            and (e.ends_on is null or e.ends_on >= current_date))
+       or coalesce((
+         select d.fait = 'accordee'
+                and d.created_at >= coalesce(pc.transmise_le, '-infinity'::timestamptz)
+           from collab.demandes_sur_piece d
+           join capture.pieces pc on pc.id = d.piece_id
+          where d.piece_id = p_piece and d.objet = p_objet
+          order by d.created_at desc
+          limit 1), false))
 $$;
 
 revoke all on function app.accord_donne(uuid, text) from public, anon;
 grant execute on function app.accord_donne(uuid, text) to authenticated;
 
 comment on function app.accord_donne(uuid, text) is
-  'Le cabinet a-t-il accordé cet objet (rappel, suppression) sur cette pièce, '
-  'depuis sa dernière transmission ? Relu dans `demandes_sur_piece`, jamais reçu.';
+  'L''accord est-il acquis pour cet objet (rappel, suppression) sur cette pièce ? '
+  'Oui si aucun mandat n''est actif sur le dossier, ou si le cabinet l''a accordé '
+  'depuis la dernière transmission. Relu dans `demandes_sur_piece` et '
+  '`engagements`, jamais reçu. Ne couvre pas une pièce comptabilisée : les '
+  'fonctions appelantes la refusent d''abord par son statut.';
 
 commit;
 
