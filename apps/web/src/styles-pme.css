@@ -584,12 +584,25 @@
  * Malica, la cloche, le filet de « ce que j'ai préparé », le compte de
  * documents et la dernière barre du graphique — quatre-vingt-dix usages.
  *
- * Les écrans conçus n'ont PAS d'or : leur accent est le vert d'eau, et
- * `#D97757` n'y est qu'une touche secondaire (`--touch`). Le pont suit donc le
- * dessin et rend ces quatre-vingt-dix usages verts, plutôt que de laisser un
- * or de surface cabinet au milieu d'un écran qui ne l'est plus.
+ * Ce n'est donc PAS une couleur libre que le pont pourrait réaffecter : c'est
+ * l'or de la marque. Il a déjà été réécrit deux fois — en terracotta, puis en
+ * accent vert — et les deux fois la marque a changé sur chaque écran sans que
+ * personne ne l'ait décidé.
  *
- * C'est une décision de marque, prise par le dessin, pas par le code.
+ * Le rendre à l'accent était la pire des deux : l'accent dit « l'interface »
+ * (ce sur quoi on appuie, ce qui est actif), et faire porter au vert la voix
+ * de Malica lui donne un second sens. Une couleur qui veut dire deux choses ne
+ * veut plus rien dire — c'est l'interdit n° 1 pris par l'autre bout.
+ *
+ * La bonne valeur est celle du mode sombre d'Edition One : l'or d'Edition One
+ * éclairci (`oklch(0.8 0.11 82)`, soit #E3B75C) pour tenir sur fond sombre.
+ * Les DEUX jetons la portent ici, et c'est voulu : sur la PME, le bloc
+ * d'encre reste sombre au lieu de s'inverser (voir plus bas), donc
+ * `marigold-on-ink` se pose lui aussi sur du sombre.
+ *
+ * Marigold, lui — `--mg: #D97757`, le signal du dessin — n'a rien à voir :
+ * c'est le plafond, et lui seul. Deux noms voisins, deux rôles, et aucun des
+ * deux ne doit déteindre sur l'autre.
  */
 
 [data-surface="pme"] {
@@ -630,9 +643,9 @@
   --destructive: #f08d72;
   --destructive-foreground: #1a0a06;
 
-  /* L'or devient l'accent du dessin. Voir ci-dessus. */
-  --marigold: var(--acc);
-  --marigold-on-ink: var(--acc);
+  /* L'or de la marque, éclairci pour le fond sombre. Voir ci-dessus. */
+  --marigold: oklch(0.8 0.11 82);
+  --marigold-on-ink: oklch(0.8 0.11 82);
 
   color-scheme: dark;
 }
@@ -722,7 +735,11 @@
 [data-surface="pme"] .top .bk svg{width:20px;height:20px;stroke-width:2}
 [data-surface="pme"] .top .per{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.1em; text-transform:uppercase;color:var(--t2);background:var(--d2);border-radius:999px; padding:.4375rem .6875rem;flex:none}
 [data-surface="pme"] button{font-family:inherit}
-[data-surface="pme"] html, [data-surface="pme"] body{margin:0;background:#000;-webkit-font-smoothing:antialiased}
+/* `[data-surface="pme"] html, body` vivait ici : l'attribut est posé sur la
+ * racine du layout PME, donc à l'INTÉRIEUR de `body`. Aucun `html` ni `body`
+ * n'en est jamais descendant, et la règle n'a jamais rien peint. R9 : rien
+ * de mort dans le dépôt, et knip ne lit pas le CSS. Le fond et le lissage
+ * sont déjà posés sur `[data-surface="pme"]` lui-même, plus haut. */
 [data-surface="pme"] svg{display:block}
 @media (prefers-reduced-motion:reduce){[data-surface="pme"] *{animation:none!important;transition:none!important}}
 
@@ -738,7 +755,6 @@
 [data-surface="pme"] [data-ecran="accueil"] h1{margin:1.3125rem 0 1.125rem;font-size:2.0625rem;font-weight:700;letter-spacing:-.042em;line-height:1.04}
 [data-surface="pme"] [data-ecran="accueil"] .tiles{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
 [data-surface="pme"] [data-ecran="accueil"] .tile{background:var(--d1);border-radius:20px;padding:.875rem .8125rem;display:flex;align-items:center; gap:.625rem;cursor:pointer;min-height:84px;border:0;font-family:inherit;text-align:left; color:var(--tx);transition:background .18s}
-[data-surface="pme"] [data-ecran="accueil"] .tile:hover{background:var(--d2)}
 [data-surface="pme"] [data-ecran="accueil"] .tile i{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 [data-surface="pme"] [data-ecran="accueil"] .tile i svg{width:24px;height:24px}
 [data-surface="pme"] [data-ecran="accueil"] .tile .tl{flex:1;min-width:0;display:grid;gap:.125rem}
@@ -750,22 +766,43 @@
 [data-surface="pme"] [data-ecran="accueil"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="accueil"] .sec a{display:flex;align-items:center;gap:.3125rem;color:var(--t2);text-decoration:none; font-size:.8125rem;font-weight:500}
 [data-surface="pme"] [data-ecran="accueil"] .sec a svg{width:16px;height:16px}
-[data-surface="pme"] [data-ecran="accueil"] .hero{position:relative;isolation:isolate;border-radius:26px;overflow:hidden; background:linear-gradient(145deg,#215039 0%,#17391F 34%,#102418 64%,#0A150E 100%); padding:1.375rem 1.375rem 1.5rem;min-height:238px;display:flex;align-items:center}
-[data-surface="pme"] [data-ecran="accueil"] .hero .amb{position:absolute;z-index:0;right:-18px;top:44%;transform:translateY(-50%); width:186px;height:186px;border-radius:50%;pointer-events:none; background:radial-gradient(closest-side,rgba(126,226,174,.17),rgba(58,143,84,.09) 58%,transparent 78%)}
+/*
+ * ------------------------------------------------- LA CARTE DE MALICA
+ *
+ * Mesuré au rendu, à 375 px : la carte était une SURFACE teinte en Evergreen
+ * — un dégradé vert plein de 238 px de haut — et le bouton « Ouvrir », vert
+ * lui aussi, ne s'en détachait plus. C'est l'interdit n° 1, et sa raison
+ * exacte : un écran vert ne laisse plus voir ce qui est actif.
+ *
+ * La carte doit pourtant rester la chose la plus importante de l'écran. Le
+ * moyen est celui que le bloc d'encre a déjà trouvé deux lignes plus haut :
+ * sur fond sombre, l'emphase se fait par ÉLÉVATION, pas par inversion ni par
+ * teinte. La carte prend donc le plan le plus avancé des quatre (`d2`, là où
+ * les tuiles d'à côté sont sur `d1`), et un filet d'accent à gauche — le même
+ * geste que `.note`, la primitive de ce que Malica dit. L'accent redevient ce
+ * que le document en dit : une encre (`.sig`) et une pilule (`.cta`).
+ *
+ * Le rayon passe de 26 à 20 px : 26 n'était dans aucune des six valeurs
+ * relevées, et 20 est celle de la grande carte.
+ */
+[data-surface="pme"] [data-ecran="accueil"] .hero{position:relative;isolation:isolate;border-radius:var(--r-xl);overflow:hidden; background:var(--d2);border-left:3px solid var(--acc); padding:1.375rem 1.375rem 1.5rem;min-height:238px;display:flex;align-items:center}
+/* L'halo : une levée de lumière, pas une teinte. Du blanc à 5 % dit
+ * « l'objet est devant » sans donner un second sens au vert. */
+[data-surface="pme"] [data-ecran="accueil"] .hero .amb{position:absolute;z-index:0;right:-18px;top:44%;transform:translateY(-50%); width:186px;height:186px;border-radius:50%;pointer-events:none; background:radial-gradient(closest-side,rgba(255,255,255,.05),rgba(255,255,255,.02) 58%,transparent 78%)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .in{position:relative;z-index:2;flex:1;min-width:0;display:grid;align-content:center;gap:0; max-width:60%}
-[data-surface="pme"] [data-ecran="accueil"] .hero .sig{display:flex;align-items:center;gap:.5625rem;font-size:.6875rem;font-weight:700; letter-spacing:.12em;text-transform:uppercase;color:#7EE2AE}
-[data-surface="pme"] [data-ecran="accueil"] .hero .sig i{width:11px;height:11px;border-radius:50%;background:#7EE2AE}
-[data-surface="pme"] [data-ecran="accueil"] .hero h3{margin:.875rem 0 0;font-size:1.5625rem;font-weight:700;letter-spacing:-.035em;line-height:1.16; color:#FFFFFF}
-[data-surface="pme"] [data-ecran="accueil"] .hero p{margin:.4375rem 0 0;font-size:.9375rem;color:#B9C4BC;font-weight:400;line-height:1.3}
+[data-surface="pme"] [data-ecran="accueil"] .hero .sig{display:flex;align-items:center;gap:.5625rem;font-size:.6875rem;font-weight:700; letter-spacing:.12em;text-transform:uppercase;color:var(--acc2)}
+[data-surface="pme"] [data-ecran="accueil"] .hero .sig i{width:11px;height:11px;border-radius:50%;background:var(--acc2)}
+[data-surface="pme"] [data-ecran="accueil"] .hero h3{margin:.875rem 0 0;font-size:1.5625rem;font-weight:700;letter-spacing:-.035em;line-height:1.16; color:var(--tx)}
+[data-surface="pme"] [data-ecran="accueil"] .hero p{margin:.4375rem 0 0;font-size:.9375rem;color:var(--t2);font-weight:400;line-height:1.3}
 [data-surface="pme"] [data-ecran="accueil"] .hero .cta{margin-top:1.1875rem;justify-self:start;display:inline-flex;align-items:center;gap:.6875rem; background:var(--acc);color:var(--on-acc);border:0;border-radius:999px;padding:.8125rem 1.3125rem; font-family:inherit;font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .2s}
 [data-surface="pme"] [data-ecran="accueil"] .hero .cta svg{width:17px;height:17px;stroke-width:2.4}
-[data-surface="pme"] [data-ecran="accueil"] .hero .cta:hover{transform:scale(1.04);filter:brightness(1.06)}
-[data-surface="pme"] [data-ecran="accueil"] .hero .cta:active{transform:scale(.97)}
-[data-surface="pme"] [data-ecran="accueil"] .hero .por{position:absolute;z-index:1;right:-8px;top:44%;transform:translateY(-50%); width:134px;height:134px;border-radius:50%;overflow:hidden; box-shadow:0 22px 48px -20px rgba(0,0,0,.9)}
+/* Le portrait se détachait par une ombre portée : c'était la troisième de
+ * l'application, et l'interdit n° 4 n'en admet que deux. Une ligne suffit. */
+[data-surface="pme"] [data-ecran="accueil"] .hero .por{position:absolute;z-index:1;right:-8px;top:44%;transform:translateY(-50%); width:134px;height:134px;border-radius:50%;overflow:hidden; border:1px solid var(--dl)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .por img{width:100%;height:100%;object-fit:cover;object-position:50% 34%}
 [data-surface="pme"] [data-ecran="accueil"] .hero .stack{position:absolute;z-index:2;right:.5rem;bottom:.4375rem;width:72px;height:72px; display:grid;place-items:center;color:rgba(214,230,220,.34)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .stack svg{width:72px;height:72px;transform:rotate(-4deg)}
-[data-surface="pme"] [data-ecran="accueil"] .hero .stack .ln{stroke:#7EE2AE;opacity:.9}
+[data-surface="pme"] [data-ecran="accueil"] .hero .stack .ln{stroke:var(--acc2);opacity:.9}
 [data-surface="pme"] [data-ecran="accueil"] .acts{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
 [data-surface="pme"] [data-ecran="accueil"] .act{background:var(--d1);border-radius:20px;padding:1.125rem 1rem;display:grid;gap:.5rem; align-content:start;min-height:124px}
 [data-surface="pme"] [data-ecran="accueil"] .act .hd{display:flex;align-items:flex-start;gap:.5rem}
@@ -783,15 +820,26 @@
 [data-surface="pme"] [data-ecran="accueil"] .ask .q span{font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="accueil"] .ask .mic{width:46px;height:46px;border-radius:50%;background:var(--d2);flex:none;display:grid; place-items:center;color:var(--tx);cursor:pointer;border:0;transition:background .18s,color .18s}
 [data-surface="pme"] [data-ecran="accueil"] .ask .mic svg{width:21px;height:21px}
-[data-surface="pme"] [data-ecran="accueil"] .ask .mic:hover{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="accueil"] .nav .cap i{width:52px;height:52px;border-radius:15px;border:1.5px solid var(--acc);color:var(--acc); display:grid;place-items:center;transition:background .18s,color .18s}
-[data-surface="pme"] [data-ecran="accueil"] .nav .cap:hover i{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="accueil"] .app{padding-top:4rem}
 [data-surface="pme"] [data-ecran="accueil"] .app[hidden]{display:none}
 [data-surface="pme"] [data-ecran="accueil"] .lock{background:var(--d1);border-radius:20px;padding:1.125rem 1rem;display:grid;gap:.375rem; align-content:start;min-height:124px;border:1px dashed rgba(255,255,255,.15)}
 [data-surface="pme"] [data-ecran="accueil"] .lock svg{width:22px;height:22px;color:var(--t3);margin-bottom:.1875rem}
 [data-surface="pme"] [data-ecran="accueil"] .lock b{font-size:.875rem;font-weight:600;color:var(--t2)}
 [data-surface="pme"] [data-ecran="accueil"] .lock em{font-style:normal;font-family:var(--mono);font-size:.625rem;font-weight:600; letter-spacing:.16em;text-transform:uppercase;color:var(--acc2)}
+
+/* Le survol n'existe pas au doigt. Sans cette garde, l'état reste collé
+ * après le relâchement sur Android et l'écran paraît figé sur le dernier
+ * élément touché. */
+@media (hover: hover) and (pointer: fine) {
+  [data-surface="pme"] [data-ecran="accueil"] .tile:hover{background:var(--d2)}
+  [data-surface="pme"] [data-ecran="accueil"] .hero .cta:hover{transform:scale(1.04);filter:brightness(1.06)}
+  [data-surface="pme"] [data-ecran="accueil"] .ask .mic:hover{background:var(--acc);color:var(--on-acc)}
+  [data-surface="pme"] [data-ecran="accueil"] .nav .cap:hover i{background:var(--acc);color:var(--on-acc)}
+}
+
+/* Le doigt appuie : la pression l'emporte sur le survol, donc elle vient après. */
+[data-surface="pme"] [data-ecran="accueil"] .hero .cta:active{transform:scale(.97)}
 
 
 /* ======================== écran · capture ======================== */
