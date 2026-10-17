@@ -37,12 +37,13 @@ async function nouvellePiece(
   tenant: string,
   auteur: string,
   cle: string,
+  vis: "entite" | "partage" = "entite",
 ): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `insert into capture.pieces
        (tenant_id, vis, source, storage_path, idempotency_key, created_by)
-     values ($1, 'entite', 'photo', $2, $2, $3) returning id`,
-    [tenant, cle, auteur],
+     values ($1, $4::app.vis_t, 'photo', $2, $2, $3) returning id`,
+    [tenant, cle, auteur, vis],
   );
   return rows[0]!.id;
 }
@@ -206,6 +207,67 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       );
       await db.query("rollback to savepoint avant");
       await db.query("reset role");
+    });
+  });
+
+  /**
+   * Les deux lecteurs qui ne sont PAS membres de l'organisation.
+   *
+   * `app.piece_lisible` leur ouvre la pièce par deux chemins nommés : le mandat
+   * actif pour une pièce `partage`, la réquisition approuvée pour la
+   * plateforme. Aucune épreuve ne disait ce que le plafond leur répond — et un
+   * plafond qui ne mord que les membres n'est pas un plafond.
+   *
+   * Le verdict mesuré est celui de la licence DU CLIENT, pour les deux. C'est
+   * cohérent : la licence qui paie est celle du dossier lu, pas celle du
+   * lecteur, et c'est aussi ce que dit la politique de lecture.
+   */
+  it("un expert de cabinet engagé reçoit le verdict de la licence du client", async () => {
+    await dansUneTransaction(async (db) => {
+      const c = await monter(db, { consommees: 65 });
+      const partagee = await nouvellePiece(db, c.tenant, c.dirigeant, "partagee", "partage");
+
+      const cabinet = await db.query<{ id: string }>(
+        `insert into identity.organizations (kind, name, jurisdiction, currency)
+         values ('cabinet', 'Cabinet d''essai', 'TN', 'TND') returning id`,
+      );
+      const expert = randomUUID();
+      await db.query(
+        "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
+        [cabinet.rows[0]!.id, expert],
+      );
+      await db.query(
+        `insert into identity.engagements (cabinet_org_id, pme_org_id, status, starts_on)
+         values ($1, $2, 'actif', current_date - 1)`,
+        [cabinet.rows[0]!.id, c.tenant],
+      );
+
+      const v = await verdict(db, expert, partagee);
+      assert.equal(v["autorisee"], false, "l'expert engagé ne passe pas le plafond du client");
+      assert.equal(v["motif"], "plafond_atteint");
+      assert.equal(v["droit"], 65, "le droit est celui de la licence du client");
+      assert.equal(v["restantes"], 0);
+    });
+  });
+
+  it("un opérateur de plateforme sous réquisition reçoit le verdict du client", async () => {
+    await dansUneTransaction(async (db) => {
+      const c = await monter(db, { consommees: 65 });
+      const operateur = randomUUID();
+      await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
+      await db.query(
+        `insert into plateforme.requisitions
+           (tenant_id, autorite, reference, portee, motif, close_le,
+            depose_par, approuve_par, approuve_le)
+         values ($1, 'justice', 'REQ-essai', 'pieces', 'instruction',
+                 now() + interval '1 day', $2, $3, now())`,
+        [c.tenant, randomUUID(), operateur],
+      );
+
+      const v = await verdict(db, operateur, c.piece);
+      assert.equal(v["autorisee"], false, "la réquisition ne lève pas le plafond du client");
+      assert.equal(v["motif"], "plafond_atteint");
+      assert.equal(v["droit"], 65);
     });
   });
 

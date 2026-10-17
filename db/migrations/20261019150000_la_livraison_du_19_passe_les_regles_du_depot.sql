@@ -673,3 +673,95 @@ $$;
 
 revoke all on function public.lecture_autorisee(uuid) from public, anon;
 grant execute on function public.lecture_autorisee(uuid) to authenticated;
+
+-- --- 8. Une lecture s'impute à la licence de SON organisation ----------------
+--
+-- Le point 7 a fait mordre le plafond. Il ne l'a pas rendu infranchissable :
+-- la quatrième relecture l'a franchi, par exécution, SANS toucher à la
+-- fonction.
+--
+-- `facturation_lectures_ins` ne vérifiait que `tenant_id in app.member_orgs()`.
+-- `licence_id` et `piece_id` restaient libres — seule une clé étrangère les
+-- tenait, et une clé étrangère dit « cette licence existe », jamais « cette
+-- licence est la vôtre ». Or `lecture_autorisee` tient l'EXISTENCE d'une ligne
+-- dans `facturation.lectures` pour une preuve de comptage : c'est la branche
+-- `relecture_gratuite`, voulue, et c'est elle qui se forge.
+--
+-- Mesuré : un collaborateur à 65/65 reçoit `plafond_atteint` ; il insère une
+-- ligne portant son tenant, la licence d'un tiers et sa propre pièce
+-- (`INSERT 0 1`) ; `lecture_autorisee` rend ensuite `relecture_gratuite` et
+-- autorise. Deux dégâts d'un seul geste : son plafond ne mord plus, et le quota
+-- du tiers est consommé à sa place.
+--
+-- Le pré-requis est de connaître l'uuid d'une autre licence. Ce n'est pas
+-- trivial, et ce n'est pas une garde : R6 dit où la garde se met. Un filtre
+-- oublié dans du code applicatif OUVRE l'accès ; une politique oubliée le
+-- REFUSE. Celle-ci va donc dans le `with check`, et non dans une fonction qu'il
+-- suffit de ne pas appeler.
+--
+-- Deux conditions, structurelles, visibles sans lire aucune fonction :
+--
+--   - la licence est celle à laquelle CE tenant est rattaché
+--     (`facturation.licence_organisations`, dont `tenant_id` est unique : une
+--     organisation n'a qu'une licence) ;
+--   - la pièce appartient à CE tenant.
+--
+-- Les deux sous-requêtes sont lues sous la RLS de l'appelant, et c'est voulu :
+-- le membre voit le rattachement de son organisation et ses propres pièces.
+-- Le chemin légitime — `lecture_consommer`, qui écrit sous l'identité de
+-- l'appelant — passe inchangé ; l'épreuve
+-- `une-lecture-s-impute-a-la-bonne-licence.test.ts` le prouve dans les deux
+-- sens, parce qu'une politique qui refuse tout est aussi fausse qu'une
+-- politique qui accepte tout.
+
+alter policy facturation_lectures_ins on facturation.lectures
+  with check (
+    tenant_id in (select app.member_orgs())
+    and exists (select 1 from facturation.licence_organisations lo
+                 where lo.tenant_id = lectures.tenant_id
+                   and lo.licence_id = lectures.licence_id)
+    and exists (select 1 from capture.pieces pc
+                 where pc.id = lectures.piece_id
+                   and pc.tenant_id = lectures.tenant_id));
+
+-- Les autres tables de `facturation` et de `plateforme` qui portent à la fois
+-- un `tenant_id` et un identifiant d'un autre dossier ont été relues une par
+-- une. Deux méritaient la même garde ; aucune n'était exploitable comme
+-- `lectures`, et c'est pourquoi elles sont corrigées ici plutôt que par une
+-- migration à elles.
+--
+-- `facturation.licence_organisations` (licence + tenant, écriture ouverte aux
+-- membres) : le lien EXISTE déjà, mais dans un déclencheur
+-- (`facturation.rattachement_legitime`, `before insert`), qui exige que le
+-- titulaire de la licence soit dirigeant de l'organisation. C'est plus strict
+-- que ce qu'une politique dirait, et c'est dans la base : on n'y touche pas.
+--
+-- `plateforme.reclamations` : `licence_id` est tenu (titulaire ou plateforme),
+-- `tenant_id` ne l'était pas. Un titulaire pouvait donc ouvrir une réclamation
+-- en l'ATTRIBUANT à l'organisation d'un autre client. La lecture est cadrée par
+-- la licence, donc rien ne fuyait ; ce qui se forgeait était l'imputation, et
+-- la plateforme décide sur cette colonne. La valeur reste facultative — toutes
+-- les réclamations ne visent pas une organisation.
+--
+-- `plateforme.archives` : `requisition_id` n'était pas tenu au `tenant_id`.
+-- L'écriture est réservée à la plateforme, donc l'acteur est déjà privilégié ;
+-- mais la lecture d'une archive est accordée aux membres du tenant qu'elle
+-- nomme, et un couple dépareillé aurait montré à un client l'empreinte et le
+-- volume d'une réquisition qui ne le concerne pas.
+
+alter policy plateforme_reclamations_ins on plateforme.reclamations
+  with check (
+    ((licence_id in (select l.id from facturation.licences l
+                      where l.titulaire = auth.uid()))
+     or (select app.is_platform()))
+    and (tenant_id is null
+         or exists (select 1 from facturation.licence_organisations lo
+                     where lo.tenant_id = reclamations.tenant_id
+                       and lo.licence_id = reclamations.licence_id)));
+
+alter policy plateforme_archives_ins on plateforme.archives
+  with check (
+    (select app.is_platform())
+    and exists (select 1 from plateforme.requisitions r
+                 where r.id = archives.requisition_id
+                   and r.tenant_id = archives.tenant_id));
