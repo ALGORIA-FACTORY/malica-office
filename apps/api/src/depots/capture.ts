@@ -28,6 +28,14 @@ import { effacerContenu } from "../stockage.ts";
 
 import { referentiel } from "./referentiel.ts";
 
+/** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
+interface VerdictDeLecture {
+  autorisee: boolean;
+  motif: string;
+  restantes: number | null;
+  droit: number | null;
+}
+
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
 function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
@@ -826,6 +834,34 @@ export const capture = {
       })),
       piece,
     };
+  },
+
+  /**
+   * Le verdict de la base sur une lecture : permise ou non, et pourquoi.
+   *
+   * Ce dépôt ne décide rien : il relaie `public.lecture_autorisee`, qui porte
+   * le plafond (R3, R6). Le motif est celui du référentiel, rendu tel quel.
+   */
+  async lectureAutorisee(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_autorisee($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
+  },
+
+  /**
+   * Compter une lecture rendue — la SEULE écriture de `facturation.lectures`.
+   *
+   * `public.lecture_consommer` refuse d'elle-même si son verdict n'autorise
+   * pas, et ne compte pas deux fois une pièce déjà comptée.
+   */
+  async consommerLecture(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_consommer($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
   },
 
   /** Journal d'un appel d'agent. Rend l'identifiant de la trace, ou null. */
