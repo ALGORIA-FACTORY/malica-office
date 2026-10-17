@@ -174,39 +174,30 @@ describe("une pièce portant un paiement se supprime", { skip: !BASE_CONFIGUREE 
     assert.equal(traces, 1);
   });
 
-  it(
-    "une pièce portant un justificatif rattaché se supprime",
-    {
-      todo:
-        "DÉFAUT DE PRODUCTION OUVERT : `app.deny_mutation_hors_effacement_de_piece` lit " +
-        "`old.justificatif_piece_id` même sur `paiement_justificatifs`, qui n'a pas cette " +
-        "colonne -> 42703 « l'enregistrement old n'a pas de champs ». Retirer ce `todo` " +
-        "quand le garde est corrigé.",
-    },
-    async () => {
-      /*
-       * `capture.paiement_justificatifs` est la deuxième table de la cascade :
-       * la preuve tardive s'ajoute dans sa propre table, et elle porte le garde
-       * qu'on avait oublié de relâcher.
-       *
-       * Supprimer la FACTURE emporte la ligne de justificatif par `paiement_id`,
-       * dont le `piece_id` est le talon, pas la facture : le premier passage du
-       * garde ne l'ouvre pas, et le second est évalué sur une table qui n'a pas
-       * la colonne qu'il lit.
-       */
-      const facture = await piece("facture-prouvee");
-      const talon = await piece("talon-tardif");
-      const paiement = await payer(facture);
-      await rpc("capture", "rattacherJustificatif", paiement, talon);
-      assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 1);
+  it("une pièce portant un justificatif rattaché se supprime", async () => {
+    /*
+     * `capture.paiement_justificatifs` est la deuxième table de la cascade :
+     * la preuve tardive s'ajoute dans sa propre table, et elle porte le garde
+     * qu'on avait oublié de relâcher.
+     *
+     * Le défaut du 19 octobre : supprimer la FACTURE emporte la ligne de
+     * justificatif par `paiement_id`, dont le `piece_id` est le talon, pas la
+     * facture. Le premier passage du garde ne l'ouvrait pas, et le second
+     * lisait `old.justificatif_piece_id` sur une table qui n'a pas cette
+     * colonne : 42703, au lieu d'un refus ou d'un succès.
+     */
+    const facture = await piece("facture-prouvee");
+    const talon = await piece("talon-tardif");
+    const paiement = await payer(facture);
+    await rpc("capture", "rattacherJustificatif", paiement, talon);
+    assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 1);
 
-      assert.equal(await rpc("capture", "supprimer", facture), true);
+    assert.equal(await rpc("capture", "supprimer", facture), true);
 
-      assert.equal(await pieceExiste(facture), 0);
-      assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 0);
-      assert.equal(await pieceExiste(talon), 1, "le talon est une autre pièce : il reste");
-    },
-  );
+    assert.equal(await pieceExiste(facture), 0);
+    assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 0);
+    assert.equal(await pieceExiste(talon), 1, "le talon est une autre pièce : il reste");
+  });
 
   it("une pièce qui sert de justificatif se supprime, et le paiement la lâche", async () => {
     /*
@@ -343,5 +334,49 @@ describe("une pièce portant un paiement se supprime", { skip: !BASE_CONFIGUREE 
         db.release();
       }
     });
+  });
+  it("un DELETE direct sur capture.paiement_justificatifs reste refusé, drapeau d'une autre pièce compris", async () => {
+    /*
+     * La porte ouverte pour les preuves des paiements qui partent avec leur
+     * facture ne doit pas devenir une porte sur la table : hors de la
+     * suppression d'une pièce, la preuve ne se réécrit pas.
+     */
+    const facture = await piece("preuve-directe-facture");
+    const talon = await piece("preuve-directe-talon");
+    const autre = await piece("preuve-directe-autre");
+    const paiement = await payer(facture);
+    await rpc("capture", "rattacherJustificatif", paiement, talon);
+
+    await admin(async (p) => {
+      const db = await p.connect();
+      try {
+        await db.query("begin");
+        await assert.rejects(
+          db.query("delete from capture.paiement_justificatifs where paiement_id = $1", [paiement]),
+          /R7 : DELETE interdit sur capture\.paiement_justificatifs/,
+        );
+        await db.query("rollback");
+
+        await db.query("begin");
+        await db.query("select set_config('malica.piece_effacable', $1, true)", [autre]);
+        await assert.rejects(
+          db.query("delete from capture.paiement_justificatifs where paiement_id = $1", [paiement]),
+          /R7 : DELETE interdit sur capture\.paiement_justificatifs/,
+        );
+        await db.query("rollback");
+
+        // Un paiement non supprimé ne légitime rien, même avec le drapeau de sa facture.
+        await db.query("begin");
+        await db.query("select set_config('malica.piece_effacable', $1, true)", [facture]);
+        await assert.rejects(
+          db.query("delete from capture.paiement_justificatifs where paiement_id = $1", [paiement]),
+          /R7 : DELETE interdit sur capture\.paiement_justificatifs/,
+        );
+      } finally {
+        await db.query("rollback");
+        db.release();
+      }
+    });
+    assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 1);
   });
 });

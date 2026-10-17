@@ -961,3 +961,104 @@ comment on table facturation.lectures is
   'Une ligne par pièce lue, jamais deux. Append-only (R7), et sans écrivain '
   'direct : seule public.lecture_consommer y écrit, parce qu''elle seule '
   'connaît le plafond.';
+
+-- --- 11. Supprimer une facture dont le paiement porte un talon rattaché ------
+--
+-- DÉFAUT RÉEL, relevé par `une-piece-avec-un-paiement-se-supprime.test.ts` :
+-- supprimer la FACTURE dont un paiement a reçu un talon par
+-- `rattacherJustificatif` levait 42703, « l'enregistrement old n'a pas de
+-- champs justificatif_piece_id ». C'est la manipulation que la migration
+-- `20261018120000` existe pour réparer, avec une pièce jointe au paiement —
+-- ce que fait le dirigeant qui photographie son chèque.
+--
+-- Deux causes, dans la même fonction :
+--
+--   a. Le second passage lisait `old.justificatif_piece_id` dans une condition
+--      PLATE. PL/pgSQL n'y court-circuite pas la résolution du champ : sur
+--      `paiement_justificatifs`, qui n'a pas cette colonne, la lecture lève
+--      avant que `tg_table_name = 'paiements'` ait pu l'écarter. Le nom de la
+--      table garde désormais la lecture, en `if` imbriqués.
+--
+--   b. Même sans l'erreur, le premier passage ne reconnaissait pas la ligne :
+--      elle porte le `piece_id` du TALON, et le drapeau est posé sur la FACTURE.
+--
+-- QUELLE LIGNE DE `paiement_justificatifs` EST EFFAÇABLE — une décision :
+--
+--   — celle dont `piece_id` (le talon) est la pièce qu'on efface ;
+--   — OU celle dont le PAIEMENT vient d'être supprimé par cette même
+--     effacement (la facture qu'on efface).
+--
+-- Donc « l'un ou l'autre », et pas davantage. Pour le second cas on ne peut pas
+-- relire le paiement : la cascade s'exécute après la suppression de sa ligne,
+-- qui n'est plus visible. Le trigger de `paiements`, lui, tourne avant, et note
+-- dans un réglage local à la transaction les identifiants de paiements qu'il
+-- laisse partir POUR LA PIÈCE EN COURS D'EFFACEMENT. Une ligne de justificatif
+-- n'est effaçable par ce second chemin que si son `paiement_id` y figure.
+--
+-- Ce qui ne s'ouvre pas : un DELETE direct sur `paiements` ou sur
+-- `paiement_justificatifs`, sans drapeau ou avec le drapeau d'une autre pièce,
+-- reste refusé par R7. Le drapeau ouvre la suppression d'une pièce, pas la
+-- table. Les autres tables du garde portent toutes `piece_id` : aucune autre
+-- lecture de colonne n'est à garder.
+
+create or replace function app.deny_mutation_hors_effacement_de_piece()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_effacable text := coalesce(current_setting('malica.piece_effacable', true), '');
+  v_paiements text;
+begin
+  -- Premier passage : la cascade d'une suppression de pièce que
+  -- `capture_piece_supprimer` a validée, et pour CETTE pièce précisément.
+  if tg_op = 'DELETE' and v_effacable = old.piece_id::text then
+    -- Un paiement qui part avec la pièce note son identifiant : ses
+    -- justificatifs, supprimés ensuite par cascade, s'y reconnaîtront.
+    if tg_table_schema = 'capture' and tg_table_name = 'paiements' then
+      perform set_config(
+        'malica.paiements_effacables',
+        coalesce(current_setting('malica.paiements_effacables', true), '')
+          || ',' || old.id::text,
+        true);
+    end if;
+    return old;
+  end if;
+
+  if tg_table_schema = 'capture' and tg_table_name = 'paiements' then
+    -- Second passage : le SET NULL d'un justificatif qui disparaît. La pièce
+    -- effacée est celle que le paiement citait, la colonne part vers NULL, et
+    -- AUCUNE autre colonne ne bouge.
+    if tg_op = 'UPDATE'
+       and old.justificatif_piece_id is not null
+       and v_effacable = old.justificatif_piece_id::text
+       and new.justificatif_piece_id is null
+       and to_jsonb(new) - 'justificatif_piece_id'
+         = to_jsonb(old) - 'justificatif_piece_id'
+    then
+      return new;
+    end if;
+  elsif tg_table_schema = 'capture' and tg_table_name = 'paiement_justificatifs' then
+    -- Troisième passage : la ligne de preuve d'un paiement qui part avec sa
+    -- facture. Son `piece_id` est le talon, pas la pièce effacée.
+    v_paiements := coalesce(current_setting('malica.paiements_effacables', true), '');
+    if tg_op = 'DELETE'
+       and v_effacable <> ''
+       and (',' || v_paiements || ',') like ('%,' || old.paiement_id::text || ',%')
+    then
+      return old;
+    end if;
+  end if;
+
+  raise exception
+    'R7 : % interdit sur %.% — une correction est une ecriture nouvelle',
+    tg_op, tg_table_schema, tg_table_name
+    using errcode = 'restrict_violation';
+end;
+$$;
+
+comment on function app.deny_mutation_hors_effacement_de_piece() is
+  'Immuabilité R7, levée pour la cascade d''une pièce non engagée, pour le '
+  'détachement du justificatif qu''elle emporte, et pour les preuves des '
+  'paiements qui partent avec elle. Rien d''autre.';
