@@ -271,7 +271,8 @@ begin
     if v_status in ('comptabilisee','supervisee') then
       raise exception 'une piece comptabilisee reste partagee' using errcode = 'check_violation';
     end if;
-    if not p_par_accord then
+    -- Le drapeau ne suffit pas : l'accord se DÉRIVE de la donnée (section 17).
+    if not (p_par_accord and app.accord_donne(p_piece, 'rappel')) then
       raise exception 'une piece transmise ne revient que par accord du cabinet'
         using errcode = 'check_violation';
     end if;
@@ -1129,7 +1130,9 @@ begin
   -- deux « chez le client » : la seconde a seulement quitté le compte de son
   -- auteur pour la société, et la société a le droit de défaire ce qu'elle a
   -- fait. Seule `partage` a franchi la frontière du cabinet.
-  if v_vis = 'partage' and not p_par_accord then
+  -- Le drapeau ne suffit pas : l'accord se DÉRIVE de la donnée (section 17).
+  if v_vis = 'partage'
+     and not (p_par_accord and app.accord_donne(p_piece, 'suppression')) then
     raise exception
       'Cette pièce a été transmise à votre cabinet : sa suppression demande son accord.'
       using errcode = 'check_violation';
@@ -1442,14 +1445,14 @@ comment on function public.lecture_refusee_inscrire(uuid) is
   'Inscrit au journal d''audit POURQUOI une lecture a été refusée (payload.motif, '
   'le code de la base). Rejoue le verdict : le client ne choisit jamais le motif.';
 
--- --- 15. Le contrat RPC lit l'abonnement : trois vues, une porte -------------
+-- --- 15. Le contrat RPC lit l'abonnement : deux vues, une fonction -------------
 --
 -- Les écrans de l'abonnement n'avaient rien à appeler. Le dépôt n'ajoute
 -- aucune logique à ce que la base rend (R3) : tout ce qu'il faut afficher —
 -- le forfait, les sièges, ce que chaque société consomme — est donc dit ici,
 -- par des vues, et le dépôt les relaie.
 --
--- Les trois naissent `security_invoker` (section 6) : la RLS des tables
+-- Les deux vues naissent `security_invoker` (section 6) : la RLS des tables
 -- lues s'applique à celui qui interroge. Et chacune est bornée à la licence
 -- dont l'appelant est TITULAIRE : sans cette borne, un opérateur de la
 -- plateforme — qui lit tout — recevrait la ligne d'un client au hasard.
@@ -1457,35 +1460,71 @@ comment on function public.lecture_refusee_inscrire(uuid) is
 -- d'application.
 --
 -- Une licence par titulaire n'est pas une contrainte du schéma
--- (`licences_titulaire_idx` n'est pas unique) : `mon_forfait_v` peut donc
--- rendre plusieurs lignes, une par licence détenue. Aucun parcours ne crée
+-- (`licences_titulaire_idx` n'est pas unique) : `mon_forfait()` peut donc
+-- avoir plusieurs licences à rendre. Aucun parcours ne crée
 -- aujourd'hui une seconde licence pour un même titulaire ; le dépôt rend la
 -- première par identifiant, de façon déterministe, et la question reste posée
 -- (voir le rapport de la tâche 3).
 
 begin;
 
-create or replace view public.mon_forfait_v with (security_invoker = true) as
-select
-  c.licence_id,
-  c.offre_code as offre,
-  c.statut,
-  c.lectures_droit,
-  c.lectures_consommees,
-  c.lectures_restantes,
-  c.organisations,
-  c.sieges_occupes,
-  c.sieges_inclus,
-  c.sieges_max,
-  c.prix_mensuel_ht
-from facturation.consommation_v c
-join facturation.licences l on l.id = c.licence_id
-where l.titulaire = auth.uid();
+-- Le forfait n'est pas une vue : un collaborateur doit en lire une PART.
+--
+-- Une vue `security_invoker` ne rend rien de `facturation.licences` à qui n'en
+-- est pas titulaire, et le layout lit le forfait pour tous les rôles. Ce qui
+-- limite le travail d'un collaborateur — combien de pièces il peut encore faire
+-- lire — le concerne ; ce que son employeur paie, non. La fonction rend donc
+-- au titulaire sa ligne entière, et à un membre d'une organisation rattachée
+-- le seul compteur de lectures de la licence : les autres champs valent `null`.
+-- `security definer` pour lire les vraies valeurs (comme `lecture_autorisee`) ;
+-- elle porte sa propre porte : sans licence détenue ni organisation rattachée
+-- dont l'appelant est membre, elle ne rend rien. Un membre de cabinet n'est
+-- membre que du cabinet : il ne lit pas le compteur du client.
 
-comment on view public.mon_forfait_v is
-  'Le forfait de la licence dont l''appelant est titulaire : offre, plafond, '
-  'consommation, sièges, prix dû. Un AFFICHAGE : la décision d''une lecture se '
-  'prend dans `lecture_autorisee`.';
+create or replace function public.mon_forfait()
+returns table (
+  offre text, statut text,
+  lectures_droit integer, lectures_consommees integer, lectures_restantes integer,
+  organisations integer, sieges_occupes integer, sieges_inclus integer, sieges_max integer,
+  prix_mensuel_ht numeric)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  return query
+    select c.offre_code, c.statut, c.lectures_droit, c.lectures_consommees,
+           c.lectures_restantes, c.organisations, c.sieges_occupes,
+           c.sieges_inclus::integer, c.sieges_max::integer, c.prix_mensuel_ht
+      from facturation.consommation_v c
+      join facturation.licences l on l.id = c.licence_id
+     where l.titulaire = auth.uid()
+     order by c.licence_id
+     limit 1;
+  if found then
+    return;
+  end if;
+
+  return query
+    select null::text, null::text, c.lectures_droit, c.lectures_consommees,
+           c.lectures_restantes, null::integer, null::integer, null::integer,
+           null::integer, null::numeric
+      from facturation.consommation_v c
+     where c.licence_id = (
+       select lo.licence_id from facturation.licence_organisations lo
+        where lo.tenant_id in (select app.member_orgs())
+        order by lo.licence_id limit 1);
+end
+$$;
+
+revoke all on function public.mon_forfait() from public, anon;
+grant execute on function public.mon_forfait() to authenticated;
+
+comment on function public.mon_forfait() is
+  'Le forfait de l''appelant. Titulaire : la ligne entière. Membre d''une '
+  'organisation rattachée : le compteur de lectures seul, le reste à null. '
+  'Un AFFICHAGE : la décision d''une lecture se prend dans `lecture_autorisee`.';
 
 create or replace view public.licence_sieges_v with (security_invoker = true) as
 select
@@ -1504,7 +1543,7 @@ where l.titulaire = auth.uid();
 comment on view public.licence_sieges_v is
   'Les membres de toutes les organisations de la licence dont l''appelant est '
   'titulaire. Le dirigeant y figure (il n''occupe pas de place) ; la place se '
-  'lit dans `mon_forfait_v.sieges_occupes`.';
+  'lit dans `mon_forfait().sieges_occupes`.';
 
 create or replace view public.licence_organisations_v with (security_invoker = true) as
 select
@@ -1525,9 +1564,9 @@ comment on view public.licence_organisations_v is
   'Les organisations de la licence dont l''appelant est titulaire, et ce que '
   'chacune a consommé ce mois-ci.';
 
-revoke all on public.mon_forfait_v, public.licence_sieges_v, public.licence_organisations_v
+revoke all on public.licence_sieges_v, public.licence_organisations_v
   from public, anon, service_role;
-grant select on public.mon_forfait_v, public.licence_sieges_v, public.licence_organisations_v
+grant select on public.licence_sieges_v, public.licence_organisations_v
   to authenticated;
 
 -- --- 16. Inviter un siège : la place se demande À L'INVITATION ---------------
@@ -1583,5 +1622,118 @@ grant execute on function public.siege_inviter(uuid, text) to authenticated;
 comment on function public.siege_inviter(uuid, text) is
   'Invite un collaborateur sur une organisation de la licence, si une place est '
   'libre. Réservé au dirigeant. Le plafond vient de `droits_v`, jamais d''un compte du client.';
+
+commit;
+
+-- --- 17. L'accord du cabinet se DÉRIVE, il ne se signale pas -----------------
+--
+-- `capture_piece_supprimer(piece, true)` et `capture_piece_set_vis(piece, vis,
+-- true)` croyaient leur dernier argument. Il vaut « le cabinet a donné son
+-- accord », et il était accordé à `authenticated` : mesuré, le propriétaire
+-- d'une pièce transmise l'effaçait ou la reprenait en écrivant `true` dans un
+-- appel direct. Un réglage de session ne serait pas plus sûr — il se pose sans
+-- privilège. Ce qu'on peut croire, c'est ce qu'on relit : `collab.demandes_sur_piece`
+-- est en ajout seul, et l'état d'une demande est son dernier fait.
+--
+-- `app.accord_donne` le relit : le dernier fait de cet objet sur cette pièce est
+-- `accordee`, et il date d'après la transmission (un accord de rappel donné avant
+-- une retransmission ne vaut pas pour la suivante). Le drapeau n'est plus qu'une
+-- intention, honorée si la donnée la fonde. `piece_repondre` inscrit le fait AVANT
+-- d'appeler les deux fonctions : son chemin légitime passe inchangé.
+--
+-- Ce que ce contrôle ne fait PAS : dire QUI a inscrit l'accord. La politique
+-- d'insertion de `collab.demandes_sur_piece` est « membre du dossier », et
+-- `piece_repondre` ne regarde pas le rôle : le dirigeant peut demander, puis
+-- répondre lui-même. Voir le rapport de la tâche 3.
+--
+-- Porte propre : `security definer`, donc `app.piece_lisible` d'abord — sans
+-- elle, tout compte apprendrait l'état d'une demande sur la pièce d'un autre.
+
+begin;
+
+create or replace function app.accord_donne(p_piece uuid, p_objet text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app.piece_lisible(p_piece)
+     and coalesce((
+       select d.fait = 'accordee'
+              and d.created_at >= coalesce(pc.transmise_le, '-infinity'::timestamptz)
+         from collab.demandes_sur_piece d
+         join capture.pieces pc on pc.id = d.piece_id
+        where d.piece_id = p_piece and d.objet = p_objet
+        order by d.created_at desc
+        limit 1), false)
+$$;
+
+revoke all on function app.accord_donne(uuid, text) from public, anon;
+grant execute on function app.accord_donne(uuid, text) to authenticated;
+
+comment on function app.accord_donne(uuid, text) is
+  'Le cabinet a-t-il accordé cet objet (rappel, suppression) sur cette pièce, '
+  'depuis sa dernière transmission ? Relu dans `demandes_sur_piece`, jamais reçu.';
+
+commit;
+
+-- --- 18. Reprendre une place compte ce qui reste, sans le montrer -------------
+--
+-- `siege_reprendre_sa_place` était `security invoker` : sous la RLS du
+-- dirigeant, les pièces `personnel` d'un collaborateur sont invisibles
+-- (`20261018103000`). Elle comptait donc toujours zéro, libérait le partant, et
+-- laissait sa pièce orpheline : le motif `pieces_personnelles_a_trancher` était
+-- inatteignable.
+--
+-- Elle passe `security definer` pour COMPTER, et ne rend que le nombre : le
+-- dirigeant apprend « n pièces restent à trancher », il n'en voit aucune, et la
+-- personne qui part garde son espace privé (comme `etablissement_archiver` :
+-- refuser et dire combien). Sa porte est écrite en tête : le dirigeant de CE
+-- tenant, rien d'autre.
+
+begin;
+
+create or replace function public.siege_reprendre_sa_place(
+  p_tenant uuid, p_membre uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_restantes integer;
+begin
+  if not app.has_org_role(p_tenant, array['dirigeant']) then
+    raise exception 'seul le dirigeant reprend une place' using errcode = '42501';
+  end if;
+
+  select count(*) into v_restantes
+    from capture.pieces
+   where tenant_id = p_tenant
+     and created_by = p_membre
+     and vis = 'personnel'::app.vis_t;
+
+  if v_restantes > 0 then
+    return jsonb_build_object(
+      'libere', false,
+      'motif', 'pieces_personnelles_a_trancher',
+      'pieces', v_restantes);
+  end if;
+
+  delete from identity.memberships
+   where tenant_id = p_tenant and user_id = p_membre and role <> 'dirigeant';
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  values (p_tenant, auth.uid(), 'siege.libere', 'identity', 'memberships',
+          p_membre, jsonb_build_object('membre', p_membre));
+
+  return jsonb_build_object('libere', true, 'pieces', 0);
+end
+$$;
+
+revoke all on function public.siege_reprendre_sa_place(uuid, uuid) from public, anon;
+grant execute on function public.siege_reprendre_sa_place(uuid, uuid) to authenticated;
 
 commit;

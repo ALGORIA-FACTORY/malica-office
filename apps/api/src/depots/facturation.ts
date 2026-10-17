@@ -19,15 +19,17 @@ import type { Requete } from "../db.ts";
 
 export const facturation = {
   /**
-   * Le forfait de l'appelant : offre, plafond, consommation, sièges, prix dû.
-   * `null` quand l'appelant ne détient aucune licence — un collaborateur n'en
-   * détient pas, et la base ne lui en montre aucune.
+   * Le forfait de l'appelant. Titulaire : la ligne entière. Membre d'une
+   * organisation de la licence (un collaborateur) : le compteur de lectures
+   * seul, offre, prix et places à `null` — c'est la base qui le décide. `null`
+   * quand l'appelant n'est rattaché à aucune licence. Plusieurs licences
+   * détenues : la base rend la première par identifiant.
    */
   async monForfait(db: Requete) {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
               organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht
-         from mon_forfait_v order by licence_id limit 1`,
+         from public.mon_forfait()`,
     );
     return rows[0] ?? null;
   },

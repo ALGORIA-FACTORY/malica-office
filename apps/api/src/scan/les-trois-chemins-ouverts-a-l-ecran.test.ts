@@ -156,4 +156,74 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
       assert.ok(await existe(id), "le dépôt refuse avant toute écriture");
     }
   });
+  /*
+   * L'ACCORD SE DÉRIVE DE LA DONNÉE. Le dépôt refuse `true`, mais la fonction de
+   * la base est accordée à `authenticated` : un appel direct la rouvrait.
+   * Ces épreuves passent donc par la base, sans le dépôt.
+   */
+  const direct = (sql: string, ...args: unknown[]) =>
+    sousIdentite(u.id, (db) => db.query(sql, args));
+
+  it("la base refuse un accord de suppression qu'aucune donnée n'établit", async () => {
+    const id = await piece("accord-forge", "partage");
+    await assert.rejects(
+      direct("select public.capture_piece_supprimer($1, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+      "true sans aucune demande",
+    );
+    await rpc("collab", "demanderSurPiece", id, "suppression");
+    await assert.rejects(
+      direct("select public.capture_piece_supprimer($1, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+      "true avec une demande seulement en cours",
+    );
+    await rpc("collab", "repondreSurPiece", id, "suppression", false, "Déjà déclarée.");
+    await assert.rejects(
+      direct("select public.capture_piece_supprimer($1, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+      "true après un refus",
+    );
+    assert.ok(await existe(id));
+  });
+
+  it("l'accord inscrit par piece_repondre, lui, efface bien la pièce", async () => {
+    const id = await piece("accord-vrai", "partage");
+    await rpc("collab", "demanderSurPiece", id, "suppression");
+    await rpc("collab", "repondreSurPiece", id, "suppression", true, null);
+    assert.equal(await existe(id), false);
+  });
+
+  it("la base refuse aussi le retrait d'une pièce transmise forgé par un `true`", async () => {
+    const id = await piece("rappel-forge", "partage");
+    await assert.rejects(
+      direct("select public.capture_piece_set_vis($1, 'personnel'::app.vis_t, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+    );
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    await assert.rejects(
+      direct("select public.capture_piece_set_vis($1, 'personnel'::app.vis_t, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+      "une demande en cours n'est pas un accord",
+    );
+    const { rows } = await admin.query("select vis from capture.pieces where id = $1", [id]);
+    assert.equal(rows[0]!.vis, "partage");
+  });
+
+  it("un accord de rappel ne vaut pas accord de suppression", async () => {
+    const id = await piece("accord-croise", "partage");
+    await rpc("collab", "demanderSurPiece", id, "rappel");
+    await rpc("collab", "repondreSurPiece", id, "rappel", true, null);
+    // La pièce est revenue chez le dirigeant ; on la retransmet, sans nouvelle demande.
+    await rpc("collab", "setPieceVis", id, "partage");
+    await assert.rejects(
+      direct("select public.capture_piece_supprimer($1, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+    );
+    await assert.rejects(
+      direct("select public.capture_piece_set_vis($1, 'personnel'::app.vis_t, true)", id),
+      (e: { code?: string }) => e.code === "23514",
+      "l'accord d'avant la retransmission est périmé",
+    );
+    assert.ok(await existe(id));
+  });
 });

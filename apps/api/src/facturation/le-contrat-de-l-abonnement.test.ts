@@ -146,12 +146,45 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     assert.notDeepEqual(vuParB, vuParA, "deux licences, deux lignes");
   });
 
-  it("monForfait ne rend rien à qui ne détient aucune licence, plateforme comprise", async () => {
+  it("monForfait ne rend rien à qui n'est rattaché à aucune licence, plateforme comprise", async () => {
     assert.equal(await rpc(etranger, "facturation", "monForfait"), null);
-    assert.equal(await rpc(a.collaborateurs[0]!, "facturation", "monForfait"), null);
     // La plateforme lit toutes les licences : sans la borne « titulaire », elle
     // recevrait la ligne d'un client au hasard.
     assert.equal(await rpc(operateur, "facturation", "monForfait"), null);
+  });
+
+  it("monForfait rend à un collaborateur le compteur de lectures, ni l'offre, ni le prix, ni les places", async () => {
+    const duTitulaire = (await rpc(a.titulaire, "facturation", "monForfait")) as Record<
+      string,
+      unknown
+    >;
+    const duCollaborateur = (await rpc(
+      a.collaborateurs[0]!,
+      "facturation",
+      "monForfait",
+    )) as Record<string, unknown>;
+
+    // Ce qui limite son travail : les lectures, celles de la licence.
+    for (const champ of ["lectures_droit", "lectures_consommees", "lectures_restantes"]) {
+      assert.equal(duCollaborateur[champ], duTitulaire[champ], champ);
+    }
+    // Ce que son employeur paie : rien de cela ne sort.
+    for (const champ of [
+      "offre",
+      "statut",
+      "organisations",
+      "sieges_occupes",
+      "sieges_inclus",
+      "sieges_max",
+      "prix_mensuel_ht",
+    ]) {
+      assert.equal(duCollaborateur[champ], null, `${champ} ne doit pas sortir`);
+    }
+    // Et il ne voit pas le compteur de l'AUTRE client.
+    const deB = (await rpc(b.titulaire, "facturation", "monForfait")) as {
+      lectures_consommees: number;
+    };
+    assert.notEqual(duCollaborateur["lectures_consommees"], deB.lectures_consommees);
   });
 
   // ------------------------------------------------------------------- sieges
@@ -259,6 +292,35 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
       [a.tenant, cible],
     );
     assert.equal(reste.rows.length, 1, "la place n'a pas été reprise");
+  });
+
+  it("libererPlace refuse tant qu'il reste des pièces personnelles, et dit COMBIEN sans rien montrer", async () => {
+    const partant = a.collaborateurs[1]!;
+    await admin.query(
+      `insert into capture.pieces
+         (tenant_id, vis, source, storage_path, idempotency_key, created_by)
+       values ($1, 'personnel'::app.vis_t, 'photo', $2, $2, $3)`,
+      [a.tenant, `${marque}-perso`, partant],
+    );
+    assert.deepEqual(await rpc(a.titulaire, "facturation", "libererPlace", a.tenant, partant), {
+      libere: false,
+      motif: "pieces_personnelles_a_trancher",
+      pieces: 1,
+    });
+    const reste = await admin.query(
+      "select 1 from identity.memberships where tenant_id = $1 and user_id = $2",
+      [a.tenant, partant],
+    );
+    assert.equal(reste.rows.length, 1, "la place n'est pas reprise");
+    // Le dirigeant ne voit toujours pas la pièce : il connaît le nombre, pas le contenu.
+    const vues = await sousIdentite(a.titulaire, async (db) => {
+      const { rows } = await db.query(
+        "select 1 from pieces_v where tenant_id = $1 and created_by = $2",
+        [a.tenant, partant],
+      );
+      return rows.length;
+    });
+    assert.equal(vues, 0);
   });
 
   it("libererPlace libère la place quand rien n'est à trancher", async () => {
