@@ -1062,3 +1062,116 @@ comment on function app.deny_mutation_hors_effacement_de_piece() is
   'Immuabilité R7, levée pour la cascade d''une pièce non engagée, pour le '
   'détachement du justificatif qu''elle emporte, et pour les preuves des '
   'paiements qui partent avec elle. Rien d''autre.';
+
+-- --- 12. La sûreté de l'effacement s'écrit, elle ne tient plus à une absence --
+--
+-- Les deux réglages `malica.piece_effacable` et `malica.paiements_effacables`
+-- sont posables par n'importe quel utilisateur, sans privilège : un réglage de
+-- session n'est pas un secret. Ce qui empêche qu'il serve de clé n'est PAS le
+-- déclencheur R7, c'est que `authenticated` n'a pas `delete` sur
+-- `capture.pieces` et que les onze tables du garde n'ont aucune politique
+-- `DELETE` ni `UPDATE` : la RLS forcée ne laisse passer aucune ligne.
+--
+-- Une sûreté qui tient à l'ABSENCE de quelque chose disparaît un jour par
+-- inadvertance — quelqu'un ajoute, pour une raison légitime, une politique
+-- `DELETE` à l'une de ces tables, et le réglage posable par tous devient une
+-- clé, sans qu'aucune épreuve rougisse. On l'écrit donc deux fois :
+--
+--   — ici, le privilège `delete` et `update` est retiré à `authenticated` sur
+--     les onze tables. Il ne servait à rien (aucune politique ne le laissait
+--     passer) ; il reste désormais refusé AVANT même la RLS, et une politique
+--     ajoutée plus tard ne l'ouvre pas sans un `grant` qui se voit dans un diff.
+--     Vérifié : aucun chemin ne l'utilise — les écritures de ces tables passent
+--     par des fonctions `security definer` ou par `insert`, la cascade et le
+--     SET NULL s'exécutent avec les droits du propriétaire, et aucune fonction
+--     n'y pose de `select … for update`, qui exigerait `update`.
+--   — `schema.test.ts` garde ce qui reste : aucune politique `DELETE`/`UPDATE`
+--     sur ces tables, aucun `delete` pour `authenticated` sur `capture.pieces`.
+--
+-- Et le réglage `malica.paiements_effacables`, posé par le garde, est remis à
+-- vide en même temps que `malica.piece_effacable` : une asymétrie sans
+-- conséquence aujourd'hui est une question sans réponse demain.
+
+revoke delete, update on
+  capture.token_plan, capture.citations, capture.extractions, capture.conformite,
+  capture.piece_versions, capture.precisions, capture.analyses, agents.agent_runs,
+  capture.paiements, capture.paiement_justificatifs, collab.demandes_sur_piece
+from authenticated, public, anon;
+
+create or replace function public.capture_piece_supprimer(
+  p_piece uuid,
+  p_par_accord boolean default false)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_vis    text;
+  v_status text;
+  v_tenant uuid;
+begin
+  select p.vis::text, p.status, p.tenant_id
+    into v_vis, v_status, v_tenant
+    from capture.pieces p where p.id = p_piece;
+
+  if v_vis is null then
+    raise exception 'piece introuvable' using errcode = 'no_data_found';
+  end if;
+
+  -- `security definer` court-circuite la RLS : on refait ICI le contrôle de
+  -- la politique `capture_pieces_del`.
+  if v_tenant not in (select app.member_orgs()) then
+    raise exception 'piece introuvable' using errcode = 'no_data_found';
+  end if;
+
+  -- Libre tant que personne ne l'a reçue. `personnel` et `entite` sont tous
+  -- deux « chez le client » : la seconde a seulement quitté le compte de son
+  -- auteur pour la société, et la société a le droit de défaire ce qu'elle a
+  -- fait. Seule `partage` a franchi la frontière du cabinet.
+  if v_vis = 'partage' and not p_par_accord then
+    raise exception
+      'Cette pièce a été transmise à votre cabinet : sa suppression demande son accord.'
+      using errcode = 'check_violation';
+  end if;
+
+  if v_status not in ('capturee', 'lue') then
+    raise exception
+      'Cette pièce est engagée dans votre comptabilité : elle ne peut plus être supprimée.'
+      using errcode = 'check_violation';
+  end if;
+
+  if exists (select 1 from socle.ecritures e where e.piece_id = p_piece)
+     or exists (select 1 from immo.assets a where a.piece_id = p_piece)
+     or exists (select 1 from stocks.mouvements m where m.piece_id = p_piece)
+     or exists (select 1 from identity.fiches_fiscales f where f.piece_id = p_piece)
+  then
+    raise exception
+      'Cette pièce sert de justificatif : elle ne peut plus être supprimée.'
+      using errcode = 'check_violation';
+  end if;
+
+  -- La trace survit à la pièce. `audit.event_log` porte `object_id` sans clé
+  -- étrangère : ce qui a existé reste dit, même quand l'objet n'est plus là.
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  values (v_tenant, auth.uid(), 'piece.supprimee', 'capture', 'pieces', p_piece,
+          jsonb_build_object('vis', v_vis, 'status', v_status,
+                             'par_accord', p_par_accord));
+
+  perform set_config('malica.piece_effacable', p_piece::text, true);
+  delete from capture.pieces where id = p_piece;
+  perform set_config('malica.piece_effacable', '', true);
+  perform set_config('malica.paiements_effacables', '', true);
+
+  return true;
+end;
+$$;
+
+revoke all on function public.capture_piece_supprimer(uuid, boolean) from public, anon;
+grant execute on function public.capture_piece_supprimer(uuid, boolean) to authenticated;
+
+comment on function public.capture_piece_supprimer(uuid, boolean) is
+  'LA SEULE porte par laquelle une pièce disparaît. Libre tant que le cabinet '
+  'ne l''a pas reçue ; sur accord inscrit ensuite, que seul `piece_repondre` '
+  'passe. Jamais sur une pièce comptabilisée, accord compris.';

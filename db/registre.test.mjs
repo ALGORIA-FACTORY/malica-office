@@ -193,7 +193,8 @@ describe(
       const client = new pg.Client({ connectionString: jetable.url });
       await client.connect();
       try {
-        await client.query("revoke delete on capture.token_plan from authenticated");
+        // `delete` n'est plus un exemple : la section 12 de 20261019150000 le retire déjà.
+        await client.query("revoke insert on capture.token_plan from authenticated");
         await client.query(`create or replace function legal.entete_de_fragment(
           p_corpus text, p_numero text, p_edition int, p_source text, p_statut text)
         returns text language sql stable as $fn$ select 'une autre époque' $fn$`);

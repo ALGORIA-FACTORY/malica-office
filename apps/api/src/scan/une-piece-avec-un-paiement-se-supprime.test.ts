@@ -335,6 +335,7 @@ describe("une pièce portant un paiement se supprime", { skip: !BASE_CONFIGUREE 
       }
     });
   });
+
   it("un DELETE direct sur capture.paiement_justificatifs reste refusé, drapeau d'une autre pièce compris", async () => {
     /*
      * La porte ouverte pour les preuves des paiements qui partent avec leur
@@ -378,5 +379,50 @@ describe("une pièce portant un paiement se supprime", { skip: !BASE_CONFIGUREE 
       }
     });
     assert.equal(await compter("capture.paiement_justificatifs", "paiement_id", paiement), 1);
+  });
+
+  it("un utilisateur qui pose lui-même les deux drapeaux n'efface rien", async () => {
+    /*
+     * Les épreuves ci-dessus tournent sous `postgres` : elles prouvent ce que
+     * le DÉCLENCHEUR refuse. Celle-ci dit ce qu'un UTILISATEUR ne peut pas
+     * faire. Les réglages `malica.piece_effacable` et
+     * `malica.paiements_effacables` se posent sans aucun privilège ; ils ne sont
+     * une clé pour personne parce que `authenticated` n'a ni `delete` ni
+     * `update` sur ces tables, et que la RLS n'y porte aucune politique. Le jour
+     * où l'une de ces deux barrières disparaît, c'est ici — et dans
+     * `schema.test.ts` — que cela doit rougir.
+     */
+    const facture = await piece("cle-facture");
+    const talon = await piece("cle-talon");
+    const paiement = await payer(facture);
+    await rpc("capture", "rattacherJustificatif", paiement, talon);
+
+    const tenter = (sql: string, params: unknown[]) =>
+      sousIdentite(u.id, async (db) => {
+        await db.query("select set_config('malica.piece_effacable', $1, true)", [facture]);
+        await db.query("select set_config('malica.paiements_effacables', $1, true)", [
+          `,${paiement}`,
+        ]);
+        return db.query(sql, params);
+      });
+    const refuse = (e: { code?: string }) => {
+      assert.equal(e.code, "42501", "le droit lui-même est refusé, avant même la RLS");
+      return true;
+    };
+
+    await assert.rejects(tenter("delete from capture.paiements where id = $1", [paiement]), refuse);
+    await assert.rejects(
+      tenter("delete from capture.paiement_justificatifs where paiement_id = $1", [paiement]),
+      refuse,
+    );
+    await assert.rejects(tenter("delete from capture.pieces where id = $1", [facture]), refuse);
+
+    assert.equal(await compter("capture.paiements", "id", paiement), 1, "le paiement est intact");
+    assert.equal(
+      await compter("capture.paiement_justificatifs", "paiement_id", paiement),
+      1,
+      "la preuve aussi",
+    );
+    assert.equal(await pieceExiste(facture), 1, "et la pièce");
   });
 });

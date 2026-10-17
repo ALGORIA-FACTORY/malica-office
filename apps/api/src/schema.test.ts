@@ -279,6 +279,64 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   /**
+   * (d bis) Ce qui garde l'effacement d'une pièce n'est pas le déclencheur.
+   *
+   * `malica.piece_effacable` est un réglage de session : n'importe quel
+   * utilisateur peut le poser. Il ne sert de clé à personne PARCE QUE
+   * `authenticated` n'a pas `delete` sur `capture.pieces` et que les tables du
+   * garde d'effacement n'ont aucune politique `DELETE` ni `UPDATE`. Cette
+   * sûreté tenait à une absence ; l'épreuve la rend visible. Le jour où une
+   * politique `DELETE` est ajoutée à l'une de ces tables, le réglage posable
+   * par tous devient une clé — et c'est ici que cela rougit.
+   *
+   * Les tables sont reconnues à leur déclencheur, pas à une liste : une table
+   * qui rejoint le garde demain est couverte sans que ce fichier bouge.
+   */
+  it("l'effacement d'une pièce n'est ouvert à authenticated par aucune politique ni aucun droit", async () => {
+    const gardees = `
+      select t.tgrelid
+        from pg_trigger t
+       where t.tgfoid = 'app.deny_mutation_hors_effacement_de_piece()'::regprocedure
+         and not t.tgisinternal`;
+
+    const politiques = await interroger<{ table_: string; cmd: string }>(`
+      select p.schemaname || '.' || p.tablename as table_, p.cmd
+        from pg_policies p
+        join pg_class c on c.relname = p.tablename
+        join pg_namespace n on n.oid = c.relnamespace and n.nspname = p.schemaname
+       where c.oid in (${gardees})
+         and p.cmd in ('DELETE', 'UPDATE', 'ALL')
+       order by 1, 2`);
+    assert.deepEqual(
+      politiques.map((r) => `${r.table_} — politique ${r.cmd}`),
+      [],
+      "une politique DELETE/UPDATE sur une table du garde fait du réglage `malica.piece_effacable` une clé posable par tous",
+    );
+
+    const droits = await interroger<{ table_: string; droit: string }>(`
+      select c.oid::regclass::text as table_, d.droit
+        from pg_class c
+        cross join (values ('DELETE'), ('UPDATE')) as d(droit)
+       where c.oid in (${gardees})
+         and has_table_privilege('authenticated', c.oid, d.droit)
+       order by 1, 2`);
+    assert.deepEqual(
+      droits.map((r) => `${r.table_} — droit ${r.droit}`),
+      [],
+      "authenticated ne doit pas détenir delete/update sur les tables du garde d'effacement",
+    );
+
+    const pieces = await interroger<{ ok: boolean }>(
+      "select has_table_privilege('authenticated', 'capture.pieces', 'DELETE') as ok",
+    );
+    assert.equal(
+      pieces[0]!.ok,
+      false,
+      "authenticated ne supprime pas une pièce : seule `capture_piece_supprimer` le fait",
+    );
+  });
+
+  /**
    * (e) Aucune vue accordée à `authenticated` ne contourne la RLS.
    *
    * Les épreuves ci-dessus lisent les POLITIQUES. Aucune ne regardait les

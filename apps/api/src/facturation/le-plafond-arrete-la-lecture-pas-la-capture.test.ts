@@ -65,6 +65,8 @@ describe(
     let derniere = "";
     /** La 66ᵉ : la première au-delà. */
     let auDela = "";
+    /** Le verdict de la 65ᵉ, pris AVANT qu'elle soit comptée : après, c'est une relecture. */
+    let avantLaDerniere: Verdict;
 
     const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
       const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -151,6 +153,12 @@ describe(
 
       derniere = await deposer("65e", "partage");
       auDela = await deposer("66e", "partage");
+
+      // Le décor est monté une fois, au plafond : 65 comptées sur 65. La 65ᵉ
+      // passe par la vraie porte, et son verdict « sous le plafond » est mesuré
+      // juste avant — chaque épreuve peut alors se lancer seule.
+      avantLaDerniere = await verdict(derniere);
+      await sousIdentite(u.id, (db) => db.query("select public.lecture_consommer($1)", [derniere]));
     });
 
     after(async () => {
@@ -164,35 +172,24 @@ describe(
       await fermerLePool();
     });
 
-    it("le décor est celui de l'audit : 64 lectures comptées sur 65", async () => {
+    it("le décor est celui de l'audit : 65 lectures comptées sur 65", async () => {
       assert.equal(
         await compter("select count(*) as n from facturation.lectures where licence_id = $1", [
           licence,
         ]),
-        FORFAIT - 1,
+        FORFAIT,
       );
     });
 
     it("sous le plafond, la lecture est autorisée : la 65ᵉ passe, il en reste une", async () => {
-      const v = await verdict(derniere);
+      const v = avantLaDerniere;
       assert.equal(v.autorisee, true);
       assert.equal(v.motif, "dans_le_forfait");
       assert.equal(v.restantes, 1);
       assert.equal(v.droit, FORFAIT);
     });
 
-    // Les trois épreuves qui suivent se tiennent dans l'ordre : la 65ᵉ est
-    // consommée ici, et c'est de cet état — plafond atteint — qu'elles parlent.
     it("au plafond, la lecture est refusée avec son motif : la 66ᵉ ne passe pas", async () => {
-      const compte = await sousIdentite(u.id, async (db) => {
-        const { rows } = await db.query<{ v: Verdict }>(
-          "select public.lecture_consommer($1) as v",
-          [derniere],
-        );
-        return rows[0]!.v;
-      });
-      assert.equal(compte.autorisee, true, "la 65ᵉ s'inscrit par la vraie porte");
-
       const v = await verdict(auDela);
       assert.equal(v.autorisee, false);
       assert.equal(v.motif, "plafond_atteint");
