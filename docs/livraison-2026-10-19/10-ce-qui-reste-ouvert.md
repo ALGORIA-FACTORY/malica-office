@@ -166,6 +166,45 @@ intact.
 
 Il se recoupe avec **D-2** : le même travail les ferme tous les deux.
 
+### A-4 · Un dépassement d'une ou deux lectures à la frontière du forfait est accepté
+
+*Trouvé le 17 octobre, tâche 2.* Trois chemins mènent au même endroit : deux
+pièces lues en parallèle à 64 lectures sur 65 passent toutes deux l'autorisation
+et paient le modèle ; deux instances du serveur sur la même pièce paient deux
+fois ; un processus qui meurt entre l'écriture du résultat et le comptage offre
+la lecture.
+
+**Tranché : la tolérance est assumée.** La seule façon de fermer ces trois-là
+serait de **réserver** la lecture avant d'en connaître le résultat — ce qui
+contredit la règle qui gouverne tout ce travail : *une lecture qui échoue ne se
+facture pas, parce que le client n'a rien reçu.*
+
+Un client peut donc consommer une ou deux lectures de plus que son forfait, à la
+frontière. Je préfère cela à un client facturé pour un échec. **C'est un
+arbitrage de prix**, et il revient à Wissem : si le dépassement doit être
+impossible, il faut accepter qu'une lecture ratée soit parfois comptée, et le
+dire aux clients.
+
+### D-8 · Une seconde lecture d'une pièce ne peut pas s'écrire, alors que R7 dit qu'elle devrait
+
+*Trouvé le 17 octobre, tâche 2.* Une pièce déjà lue obtient bien le droit d'être
+relue **gratuitement** — c'est voulu, une relecture ne doit pas coûter une
+lecture au client. Mais l'écriture du second résultat est refusée, et le modèle
+avait déjà été payé.
+
+Le refus arrive maintenant **avant** la dépense, avec son propre motif : plus
+personne ne paie pour rien. Mais ce n'est que la moitié de la réponse.
+
+**La vraie réponse, et elle est différée :** R7 dit qu'une correction est une
+écriture **nouvelle**. Une seconde lecture d'une pièce est un fait nouveau,
+daté, et devrait pouvoir s'ajouter à côté du premier — c'est donc la
+persistance qui est trop stricte, pas la relecture qui est illégitime.
+
+**Pourquoi ce n'est pas fait ici :** cela touche la chaîne de lecture, donc R2,
+et R2 ne se modifie pas dans une ronde de correction. Le jour où une pièce mal
+lue devra être relue — et ce jour viendra, c'est le cœur du produit —, c'est
+cette dette qu'il faudra payer.
+
 ---
 
 ## Les données de mise en service
