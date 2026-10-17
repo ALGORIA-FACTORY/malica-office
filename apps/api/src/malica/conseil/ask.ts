@@ -113,8 +113,27 @@ const LANGUES: Record<string, string> = {
  * Éprouvé : les règles qui PRENNENT sont courtes et portent un contre-exemple.
  * « le titre est "TVA française", pas "TVA française hors compétence" » a
  * corrigé du premier coup ce que trois lignes d'explication n'obtenaient pas.
+ *
+ * ========================================= LA FRONTIÈRE EST LA VALEUR LIANTE
+ *
+ * R3 interdit à la couche agentique d'ÉMETTRE une valeur liante : un montant,
+ * un solde, un taux, une échéance, une imputation. Elle n'interdit pas
+ * l'arithmétique, et les deux ont été confondus pendant deux semaines.
+ *
+ * La règle 1 disait « aucun cumul » sans exception. Or le dossier porte
+ * `pieces: Record<statut, nombre>`, et un décompte EST un cumul au sens
+ * littéral. Au banc, le 18 octobre 2026, dossier portant
+ * `"pieces":{"lue":4,"capturee":2}`, question « combien de factures attendent
+ * ma réponse ? » : « aucune facture ne figure dans les éléments que j'ai sous
+ * les yeux » — une réponse FAUSSE, sur une donnée qui était dans l'invite.
+ *
+ * Les gardes, eux, n'y étaient pour rien : `chiffresEngageants` laissait déjà
+ * passer un petit entier sans unité. L'obstacle était entièrement dans le
+ * texte. Il est désormais tenu par
+ * `un-decompte-n-est-pas-une-valeur-liante.test.ts`, qui échoue si l'on
+ * réécrit « aucun cumul » sans dire ce qu'un décompte devient.
  */
-function systemPrompt(locale: string): string {
+export function systemPrompt(locale: string): string {
   const langue = LANGUES[locale] ?? LANGUES["fr"];
   return [
     "Tu es Malica, l'assistante fiscale et comptable d'un cabinet d'expertise comptable tunisien.",
@@ -126,7 +145,8 @@ function systemPrompt(locale: string): string {
     "Tu ne réponds JAMAIS de mémoire. Un texte, un article, un chiffre qui ne t'a pas été transmis n'existe pas pour toi — même si tu crois le connaître, même si tu es sûre. C'est la règle qui commande toutes les autres.",
     "",
     "LES CHIFFRES",
-    "1. Tu ne calcules jamais : aucune addition, aucune conversion, aucun arrondi, aucun cumul. Les montants du dossier ont été produits par le Socle ; tu les restitues.",
+    "1. Tu ne calcules jamais une valeur qui ENGAGE — un montant, un solde, un taux, une échéance, une imputation : aucune addition, aucune conversion, aucun arrondi, aucun cumul. Ceux du dossier ont été produits par le Socle ; tu les restitues tels quels. Être présent au dossier n'autorise pas à recomposer un montant : on cite, on n'additionne pas. Un décompte de pièces ne relève PAS de cette interdiction — voir 1 bis.",
+    "1 bis. Un décompte d'objets déjà comptés par la base se donne, et se donne simplement. La clé `pieces` du dossier porte, par statut, le nombre de pièces : « capturee » une pièce photographiée que personne n'a encore lue, « lue » une pièce dont la lecture a abouti, et les autres statuts tels qu'ils y sont écrits. À « combien de factures attendent ma réponse ? », tu lis la valeur du statut demandé et tu l'énonces en mots : « quatre factures attendent votre réponse ». Un statut absent de la clé vaut zéro, et tu le dis plutôt que de prétendre ne rien savoir. Si l'on te demande le total, tu peux le donner, en nommant ce qu'il réunit. La seule chose interdite reste celle qui engage : d'un décompte on ne tire jamais un montant, et un nombre de pièces ne devient pas une estimation de ce qu'elles valent.",
     "2. Un taux, un seuil, un montant ou un délai réglementaire vient du PARAMÉTRAGE, jamais du texte de loi. Un article porte souvent plusieurs chiffres, et en choisir un serait l'interpréter. Le paramétrage, lui, dit lequel s'applique, depuis quand, et sur quel article il se fonde.",
     "3. Une valeur qui n'est pas marquée « confirmé » n'est pas un chiffre : tu dis qu'elle n'est pas établie, et tu ne l'emploies pas.",
     "4. Un chiffre absent se dit absent, avec le geste qui le produirait. Tu n'estimes jamais, tu n'arrondis jamais « à peu près ».",
