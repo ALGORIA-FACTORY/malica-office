@@ -36,6 +36,18 @@ interface VerdictDeLecture {
   droit: number | null;
 }
 
+/**
+ * Pourquoi la lecture de la pièce `p` a été refusée — le dernier refus inscrit
+ * au journal d'audit, tant que la pièce n'a pas été lue. `motif` est le CODE de
+ * la base ; l'écran le traduit, ce fichier n'écrit aucune phrase (R4).
+ */
+const REFUS_DE_LECTURE = `(
+  select jsonb_build_object('motif', e.payload ->> 'motif', 'le', e.at)
+    from event_log_v e
+   where e.object_table = 'pieces' and e.object_id = p.id and e.action = 'lecture.refusee'
+     and not exists (select 1 from extractions_v x where x.piece_id = p.id)
+   order by e.at desc limit 1)`;
+
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
 function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
@@ -228,7 +240,8 @@ export const capture = {
       `select p.id, p.status, p.created_at, p.vis, x.payload,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
-                order by decided_at desc limit 1) as precision_kind
+                order by decided_at desc limit 1) as precision_kind,
+              ${REFUS_DE_LECTURE} as lecture_refusee
          from pieces_v p
          left join lateral (
            select e.payload
@@ -263,6 +276,7 @@ export const capture = {
           null,
         total: lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
+        lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
       };
     });
   },
@@ -277,25 +291,29 @@ export const capture = {
     const brut = (pieces as Record<string, unknown>[])[0];
     if (!brut) throw new Error("piece.not_found");
 
-    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }] = await Promise.all([
-      db.query(
-        `select id, contract, payload, flags, created_at
+    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }, { rows: refus }] =
+      await Promise.all([
+        db.query(
+          `select id, contract, payload, flags, created_at
            from extractions_v where piece_id = $1 order by created_at desc limit 1`,
-        [pieceId],
-      ),
-      db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
-      db.query(
-        `select page, ordinal, text, x0, y0, x1, y1
+          [pieceId],
+        ),
+        db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
+        db.query(
+          `select page, ordinal, text, x0, y0, x1, y1
            from token_plan_v where piece_id = $1 order by ordinal`,
-        [pieceId],
-      ),
-      // La dernière précision par champ : ce que la personne a tranché.
-      db.query(
-        `select distinct on (champ) champ, valeur
+          [pieceId],
+        ),
+        // La dernière précision par champ : ce que la personne a tranché.
+        db.query(
+          `select distinct on (champ) champ, valeur
            from precisions_v where piece_id = $1 order by champ, decided_at desc`,
-        [pieceId],
-      ),
-    ]);
+          [pieceId],
+        ),
+        db.query(`select ${REFUS_DE_LECTURE} as lecture_refusee from pieces_v p where p.id = $1`, [
+          pieceId,
+        ]),
+      ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
     const precisions = Object.fromEntries(
@@ -328,6 +346,10 @@ export const capture = {
           }
         : null,
       precisions,
+      lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
+        motif: string;
+        le: string;
+      } | null,
       citations: (cit as Record<string, unknown>[]).map((c) => ({
         field: c["field"] as string,
         page: Number(c["page"]),
@@ -845,6 +867,20 @@ export const capture = {
   async lectureAutorisee(db: Requete, pieceId: string) {
     const { rows } = await db.query<{ v: VerdictDeLecture }>(
       "select public.lecture_autorisee($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
+  },
+
+  /**
+   * Inscrire POURQUOI une lecture a été refusée, pour que l'écran le dise.
+   *
+   * La base rejoue le verdict et n'inscrit que son propre motif (code, jamais
+   * une phrase). Rend le verdict.
+   */
+  async inscrireRefusDeLecture(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_refusee_inscrire($1) as v",
       [pieceId],
     );
     return rows[0]!.v;

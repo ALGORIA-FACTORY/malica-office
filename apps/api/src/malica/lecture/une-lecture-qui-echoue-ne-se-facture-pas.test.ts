@@ -371,6 +371,49 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     assert.equal(await compter(piece), 1, "toujours une seule lecture comptée");
   });
 
+  it("un refus d'arrière-plan s'inscrit : le motif de la base reste lisible, la capture intacte", async () => {
+    const piece = await deposer(orgPleine, "arriere-plan", "partage");
+    const attendu = await verdictDeLaBase(piece);
+    assert.equal(attendu.autorisee, false);
+    const jeton = emettreJeton(u);
+
+    // Ce que fait la file hors ligne : la lecture part sans qu'on l'attende.
+    const reponse = await fetch(`${base}/malica/lectures/${piece}?attendre=0`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${jeton}` },
+    });
+    assert.equal(reponse.status, 200, "la route répond avant la lecture, comme avant");
+
+    // La lecture d'arrière-plan finit seule ; on attend qu'elle ait quitté le registre.
+    for (let i = 0; i < 100; i++) {
+      const etat = await fetch(`${base}/malica/lectures/${piece}`, {
+        headers: { Authorization: `Bearer ${jeton}` },
+      });
+      if (!((await etat.json()) as { enCours: boolean }).enCours) break;
+      await new Promise((resoudre) => setTimeout(resoudre, 50));
+    }
+
+    const dossier = (await sousIdentite(u.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "dossier", args: [piece] }),
+    )) as { lectureRefusee: { motif: string } | null; extraction: unknown };
+    assert.ok(dossier.lectureRefusee, "le refus est lisible après coup, il n'est pas avalé");
+    assert.equal(dossier.lectureRefusee.motif, attendu.motif, "le code de la base, mot pour mot");
+
+    const liste = (await sousIdentite(u.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "listAvecLecture", args: [orgPleine] }),
+    )) as Array<{ id: string; status: string; lectureRefusee: { motif: string } | null }>;
+    const ligne = liste.find((p) => p.id === piece);
+    assert.ok(ligne, "la capture a réussi : la pièce existe");
+    assert.equal(ligne.status, "capturee", "… et elle est seulement non lue");
+    assert.equal(ligne.lectureRefusee?.motif, attendu.motif);
+    assert.equal(dossier.extraction, null);
+    assert.equal(await compter(piece), 0, "aucune lecture comptée");
+
+    // Une pièce non refusée n'en porte pas.
+    const autre = liste.find((p) => p.id !== piece && p.lectureRefusee === null);
+    assert.ok(autre, "les pièces non refusées restent sans motif");
+  });
+
   it("un refus de lecture est un 4xx qui porte le motif de la base", async () => {
     const lue = await deposer(orgLibre, "http-lue", "partage");
     await readPieceFlow(apiDEssai(), lue, lecteurs([() => lectureComplete("pdf-text")]));

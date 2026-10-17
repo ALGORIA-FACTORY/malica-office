@@ -158,3 +158,50 @@ reproductibilité (14), registre (8).
 ### Arbre de travail
 `AGENTS.md` et `apps/web/src/styles-pme.css` étaient modifiés hors de mon
 travail : laissés tels quels, non commités.
+
+## Ronde de correction 2 — le refus d'arrière-plan ne se tait plus
+
+- Rouge d'abord : l'épreuve « un refus d'arrière-plan s'inscrit » a échoué sur
+  `le refus est lisible après coup, il n'est pas avalé` (dossier.lectureRefusee
+  absent) — la route avait répondu 200 `{enCours:true}`, la lecture avait été
+  refusée, et rien n'en restait.
+- Où le motif est inscrit : `audit.event_log`, action `lecture.refusee`, objet
+  `capture.pieces`, `payload = {"motif": <code>}`. Pourquoi là : il porte déjà
+  `lecture.consommee` pour la même pièce, il est en ajout seul (R7), lisible par
+  les membres et le cabinet engagé, et indexé par objet. Aucune colonne nouvelle :
+  `capture.pieces.status` est une machine à huit états qui ne dit pas « refusée »
+  (une pièce refusée est `capturee`, non lue — c'est exact). `capture.precisions`
+  est ce que la PERSONNE tranche, pas ce que le système décide.
+- Écriture : `public.lecture_refusee_inscrire(piece)` (section 14 de
+  `20261019150000`, `security definer`, porte `piece_lisible` via
+  `lecture_autorisee`). Elle REJOUE le verdict et n'inscrit que le motif de la
+  base : le client ne choisit jamais le motif. Rien si autorisée ; pas de doublon
+  si le dernier refus a le même motif (un rejeu de la file ne remplit pas le
+  journal). Le motif est le code, jamais une phrase (R4).
+- Appel : `readPieceFlow` inscrit avant de lever `LectureRefusee` (donc pour les
+  chemins synchrone ET d'arrière-plan). Si l'inscription échoue : `console.error`
+  fort, le refus est maintenu. Dans la route, `lecture.catch(() => undefined)`
+  est remplacé : un refus (déjà inscrit) passe, toute autre cause est journalisée.
+- Lecture : `capture.listAvecLecture` (par pièce) et `capture.dossier` rendent
+  `lectureRefusee: {motif, le} | null`, `null` dès que la pièce a une extraction.
+  Types : `PieceLue.lectureRefusee` et `PieceDossier.lectureRefusee` (optionnels)
+  dans `packages/socle/src/ports/repositories.ts` ; l'adaptateur web du dossier
+  les fait suivre. Contrat relevé (195 méthodes : `inscrireRefusDeLecture`).
+- L'écran n'est PAS fait (étape des écrans). Il devra : dans la liste
+  (`pme.list.tsx`, `pme.coffre.tsx`), distinguer une pièce `status:'capturee'`
+  avec `lectureRefusee` non nul (« non lue, refusée : <traduction du motif> »)
+  d'une pièce `capturee` simple (« en attente de lecture ») ; dans l'écran
+  de pièce, prendre `dossier.lectureRefusee.motif`. Le motif se traduit par les
+  clés d'interface (fr/en/ar) : `plafond_atteint`, `piece_personnelle`,
+  `licence_suspendue`, `organisation_sans_licence`, `piece_deja_lue`, ainsi que
+  `licence_<statut>` pour un statut autre que suspendue (le motif est construit
+  par la base : `'licence_' || statut`).
+- La capture est intacte : l'épreuve vérifie que la pièce du plafond existe
+  (`capturee`), 0 ligne dans `facturation.lectures`, et le 403 synchrone garde
+  son motif (épreuve inchangée, verte).
+- Verts : fichier (10), plafond-ne-se-contourne (10), plafond-arrete (7),
+  s-impute (7), schema (13), `npm test` (691, 0 échec, 0 todo), typecheck, lint,
+  code-mort, reproductibilité, registre (migration rejouée `--forcer` sur la
+  base de travail). Aucun `pme-tmp.css` / `pme-compile.css` à la racine.
+- `AGENTS.md` intact, non commité. `apps/web/src/styles-pme.css` porte à nouveau
+  des modifications qui ne sont pas les miennes (autre session) : non commité.

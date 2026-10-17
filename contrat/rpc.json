@@ -25,6 +25,7 @@
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
+    "inscrireRefusDeLecture",
     "journaliserAgent",
     "lectureAutorisee",
     "listAvecLecture",

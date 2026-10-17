@@ -115,7 +115,16 @@ malica.post("/lectures/:pieceId", (req, res, next) => {
     if (req.query["attendre"] === "0") {
       // La lecture continue sans nous ; son échec est déjà relevé par le
       // registre, et l'écran l'apprendra par le dossier.
-      lecture.catch(() => undefined);
+      // Un refus est déjà inscrit en base par la lecture elle-même ; toute autre
+      // cause se crie dans le journal du serveur plutôt que de s'éteindre.
+      lecture.catch((e: unknown) => {
+        if (e instanceof LectureRefusee) return;
+        console.error(
+          `[malica] lecture d'arrière-plan échouée — pièce ${pieceId} : ${
+            e instanceof Error ? e.message : String(e)
+          }`,
+        );
+      });
       return { enCours: true };
     }
     const resultat = await lecture;

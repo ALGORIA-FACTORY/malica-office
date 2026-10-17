@@ -143,6 +143,7 @@ export function creerCaptureHttp(): CaptureRepository {
         piece: Record<string, unknown>;
         extraction: Extraction | null;
         precisions?: Record<string, string>;
+        lectureRefusee?: { motif: string; le: string } | null;
         citations: Citation[];
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
@@ -159,6 +160,7 @@ export function creerCaptureHttp(): CaptureRepository {
         contenu,
         extraction: brut.extraction,
         precisions: brut.precisions ?? {},
+        lectureRefusee: brut.lectureRefusee ?? null,
         citations: brut.citations,
         tokens: brut.tokens,
       };

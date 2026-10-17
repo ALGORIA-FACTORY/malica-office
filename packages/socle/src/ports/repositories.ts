@@ -773,6 +773,8 @@ export interface PieceDossier {
    * exposées à part pour que l'écran sache ce qui vient d'elle.
    */
   precisions: Record<string, string>;
+  /** Voir `PieceLue.lectureRefusee` : le motif, tant que la pièce n'est pas lue. */
+  lectureRefusee?: LectureRefusee | null;
   citations: Citation[];
   tokens: Token[];
 }
@@ -835,6 +837,19 @@ export interface PieceLue {
   /** Le total TTC, chaîne décimale du Socle. */
   total: string | null;
   devise: string | null;
+  /**
+   * Pourquoi Malica a refusé de lire cette pièce — `null` si elle ne l'a pas
+   * refusée, ou si elle a été lue depuis. `motif` est le CODE de la base
+   * (`plafond_atteint`, `licence_suspendue`…), jamais une phrase : l'écran le
+   * traduit. Une pièce refusée est photographiée et rangée, seulement non lue.
+   */
+  lectureRefusee?: LectureRefusee | null;
+}
+
+/** Un refus de lecture, tel que la base l'a inscrit. */
+export interface LectureRefusee {
+  motif: string;
+  le: string;
 }
 
 export interface CaptureRepository {

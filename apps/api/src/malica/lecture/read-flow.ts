@@ -96,7 +96,23 @@ export async function readPieceFlow(
     "lectureAutorisee",
     [pieceId],
   );
-  if (!verdict.autorisee) throw new LectureRefusee(verdict.motif);
+  if (!verdict.autorisee) {
+    /*
+     * Le refus s'INSCRIT : la lecture d'arrière-plan lancée par la file hors
+     * ligne n'a personne à qui répondre, et un refus qui ne s'écrit nulle part
+     * est un silence — indistinguable d'une panne. La base rejoue le verdict et
+     * inscrit son propre motif (code). Si l'inscription échoue, on le crie :
+     * la lecture reste refusée, mais l'échec ne se tait pas.
+     */
+    await api.rpc("capture", "inscrireRefusDeLecture", [pieceId]).catch((e: unknown) => {
+      console.error(
+        `refus de lecture NON inscrit — pièce ${pieceId}, motif ${verdict.motif} : ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    });
+    throw new LectureRefusee(verdict.motif);
+  }
 
   // La pièce, son organisation, le pack en vigueur, les taux et les charges :
   // un appel là où il en fallait cinq, mêmes requêtes côté base.

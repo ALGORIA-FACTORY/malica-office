@@ -1374,3 +1374,70 @@ $$;
 
 revoke all on function public.lecture_consommer(uuid) from public, anon;
 grant execute on function public.lecture_consommer(uuid) to authenticated;
+
+-- --- 14. Un refus de lecture s'inscrit, il ne se perd pas dans le silence ----
+--
+-- La file hors ligne du téléphone lance la lecture avec `?attendre=0` : la
+-- route répond avant la lecture, et le refus n'arrive que dans la promesse
+-- d'arrière-plan. Il n'était lu par personne. Le dirigeant au plafond
+-- photographiait sa facture, l'application ne disait rien, et ce silence ne
+-- se distinguait pas d'une panne.
+--
+-- Où l'inscrire : `audit.event_log`, qui porte déjà `lecture.consommee` pour la
+-- même pièce, est en ajout seul (R7), lisible par les membres et le cabinet
+-- engagé, indexé par objet. Aucune colonne nouvelle sur `capture.pieces`, dont
+-- le `status` est une machine d'états à huit valeurs qui ne dit pas « refusée »
+-- : une pièce refusée est une pièce `capturee`, non lue, et c'est vrai.
+--
+-- Le motif voyage STRUCTURÉ : le code que rend `lecture_autorisee`, tel quel,
+-- dans `payload.motif`. Jamais une phrase — elle s'afficherait en français à
+-- une personne qui lit l'anglais ou l'arabe (R4).
+--
+-- Le motif n'est pas fourni par l'appelant : la fonction REJOUE le verdict et
+-- n'inscrit que ce que la base répond. Une porte qui écrirait un motif choisi
+-- par le client serait un moyen de fabriquer des refus. Rien n'est inscrit si
+-- la lecture est autorisée, ni deux fois de suite pour le même motif (un rejeu
+-- de la file ne remplit pas le journal).
+
+create or replace function public.lecture_refusee_inscrire(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_verdict jsonb;
+  v_tenant  uuid;
+  v_motif   text;
+  v_dernier text;
+begin
+  v_verdict := public.lecture_autorisee(p_piece);   -- porte comprise
+  if (v_verdict ->> 'autorisee')::boolean then
+    return v_verdict;
+  end if;
+
+  v_motif := v_verdict ->> 'motif';
+  select tenant_id into v_tenant from capture.pieces where id = p_piece;
+
+  select payload ->> 'motif' into v_dernier
+    from audit.event_log
+   where object_table = 'pieces' and object_id = p_piece and action = 'lecture.refusee'
+   order by at desc limit 1;
+
+  if v_dernier is distinct from v_motif then
+    insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                                 object_id, payload)
+    values (v_tenant, auth.uid(), 'lecture.refusee', 'capture', 'pieces', p_piece,
+            jsonb_build_object('motif', v_motif));
+  end if;
+
+  return v_verdict;
+end
+$$;
+
+revoke all on function public.lecture_refusee_inscrire(uuid) from public, anon;
+grant execute on function public.lecture_refusee_inscrire(uuid) to authenticated;
+
+comment on function public.lecture_refusee_inscrire(uuid) is
+  'Inscrit au journal d''audit POURQUOI une lecture a été refusée (payload.motif, '
+  'le code de la base). Rejoue le verdict : le client ne choisit jamais le motif.';
