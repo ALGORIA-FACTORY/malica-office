@@ -1860,4 +1860,33 @@ $$;
 revoke all on function public.piece_repondre(uuid, text, boolean, text) from public, anon;
 grant execute on function public.piece_repondre(uuid, text, boolean, text) to authenticated;
 
+-- --- 20. Une table du referentiel oubliee dans les droits ---------------------
+--
+-- ============================================================ LE DEFAUT REEL
+--
+-- 18 octobre 2026, trouve EN REGARDANT l'accueil PME, pas en lisant le code :
+-- la console accumulait quatre « 400 Bad Request » a chaque chargement, et le
+-- corps de la reponse disait « droit refuse pour la table account_classes ».
+--
+-- La cause est un oubli, et un seul. `ref.account_classes` est nee avec la
+-- migration 20261012240000, qui a accorde `select` sur la VUE
+-- `public.ref_account_classes_v` et jamais sur la table dessous. La vue est
+-- `security_invoker` -- elle lit donc avec les droits de l'appelant, ce qui est
+-- exactement ce que le depot exige depuis la fuite entre clients du 17 octobre.
+-- Resultat : la vue est accordee, la table ne l'est pas, et tout utilisateur
+-- connecte recoit un refus.
+--
+-- Mesure du 18 octobre : sur les trente tables de `ref`, vingt-neuf sont
+-- lisibles par `authenticated`. Celle-ci etait la seule a ne pas l'etre.
+--
+-- Pourquoi cela n'a casse aucune epreuve : l'ecran encaisse le refus et se
+-- rend quand meme. La classe d'un compte ne s'affiche simplement jamais. Un
+-- echec qui ne casse rien est le plus durable de tous.
+--
+-- R10 est la raison de fond : le referentiel est LIVRE, date et surchargeable.
+-- Il se lit donc par quiconque a ouvert une session -- il ne porte aucune
+-- donnee de tenant, et c'est ce qui distingue `ref` de tout le reste.
+
+grant select on table ref.account_classes to authenticated;
+
 commit;

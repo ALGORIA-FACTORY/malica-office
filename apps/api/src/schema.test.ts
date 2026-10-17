@@ -374,6 +374,50 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   /*
+   * ================================== L'ENVERS DE LA VUE QUI LIT POUR L'APPELANT
+   *
+   * 18 octobre 2026, trouvé EN REGARDANT l'accueil PME — quatre « 400 » par
+   * chargement, et le corps disait « droit refusé pour la table
+   * account_classes ».
+   *
+   * L'épreuve ci-dessus exige qu'une vue accordée lise avec les droits de
+   * l'appelant. Elle a un envers que rien ne gardait : si la vue est accordée
+   * et que la table DESSOUS ne l'est pas, l'utilisateur reçoit un refus. La
+   * vue existe, le droit existe, et rien ne marche.
+   *
+   * `ref.account_classes` était la seule des trente tables du référentiel à
+   * avoir manqué son `grant` — posé sur la vue, jamais sur la table.
+   *
+   * Pourquoi aucune épreuve ne tombait : l'écran encaisse le refus et se rend
+   * quand même. La classe d'un compte ne s'affichait simplement jamais. Un
+   * échec qui ne casse rien est le plus durable de tous.
+   *
+   * L'invariant tenu ici est celui de R10 : le référentiel est LIVRÉ, daté et
+   * surchargeable. Il ne porte AUCUNE donnée de tenant — c'est ce qui le
+   * distingue de tout le reste du dépôt — donc il se lit par quiconque a
+   * ouvert une session. Une table de `ref` illisible est un oubli, jamais une
+   * décision : si l'une devait l'être un jour, cette épreuve obligera à
+   * l'écrire ici, nommément, au lieu de la laisser silencieuse.
+   */
+
+  it("toute table du référentiel est lisible par authenticated", async () => {
+    const muettes = await interroger<{ table: string }>(`
+      select c.relname as table
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where c.relkind = 'r'
+         and n.nspname = 'ref'
+         and not has_table_privilege('authenticated', c.oid, 'select')
+       order by 1`);
+
+    assert.deepEqual(
+      muettes.map((r) => r.table),
+      [],
+      "une table de ref sans select pour authenticated rend un refus à travers sa vue : la vue est accordée, la table ne l'est pas, et l'écran se tait",
+    );
+  });
+
+  /*
    * ====================================== LES FONCTIONS QUI PORTENT LES DROITS
    *
    * Une fonction `security definer` exécute avec les droits de son
