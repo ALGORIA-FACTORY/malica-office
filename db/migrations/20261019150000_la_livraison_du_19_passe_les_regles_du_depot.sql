@@ -521,9 +521,14 @@ alter policy capture_paiement_justificatifs_sel on capture.paiement_justificatif
 -- ⚠ Conséquence assumée : `plateforme.interventions` n'est lisible que par la
 -- plateforme. Sous l'identité d'un titulaire, `droits_reels_v` ne voit donc
 -- plus les lectures supplémentaires que la plateforme lui a accordées
--- (`lectures_supplement` = 0, `lectures_droit` sous-estimé). Les fonctions
--- `security definer` qui décident d'une lecture, elles, continuent de lire les
--- vraies valeurs. Seul l'affichage côté titulaire est concerné.
+-- (`lectures_supplement` = 0, `lectures_droit` sous-estimé), et un
+-- collaborateur ne lit rien de `facturation.licences`. Ces vues sont donc
+-- un AFFICHAGE, jamais une décision. Celle qui décide d'une lecture,
+-- `public.lecture_autorisee`, était `security invoker` et en dépendait : le
+-- point 7 la passe `security definer` pour qu'elle lise les vraies valeurs.
+-- (La phrase de la première rédaction de ce point, affirmant que les fonctions
+-- `security definer` lisaient déjà les vraies valeurs, était fausse : celle-ci
+-- n'en était pas une.)
 
 alter view facturation.droits_v         set (security_invoker = true);
 alter view facturation.droits_reels_v   set (security_invoker = true);
@@ -543,3 +548,128 @@ alter view notif.envois_v               set (security_invoker = true);
 alter view public.entities_v            set (security_invoker = true);
 
 grant select on facturation.droits_v, facturation.consommation_v to authenticated;
+
+-- --- 7. Le plafond se décide sur les vraies valeurs --------------------------
+--
+-- Le point 6 a révélé, à l'exécution, ce qu'il avait cassé. `lecture_autorisee`
+-- (`20261018093000`) était `security invoker` et lisait `consommation_v`. Tant
+-- que la vue lisait avec les droits de son propriétaire, tout le monde y voyait
+-- la licence. Devenue `security_invoker`, la vue ne rend rien de
+-- `facturation.licences` à un collaborateur : le seul à la lire est le
+-- titulaire, ou la plateforme. Deux défauts, mesurés :
+--
+--   - le collaborateur d'une organisation au plafond (65 lectures sur 65) ou
+--     d'une licence suspendue recevait `autorisee: true, dans_le_forfait` : la
+--     vue était vide, l'enregistrement NULL, et aucun `if` ne se déclenchait.
+--     L'échec était passé de FERMÉ à OUVERT — un résultat plausible et faux,
+--     la pire forme d'erreur selon R4 ;
+--   - le titulaire qui avait PAYÉ un supplément (50 lectures, droit réel 115)
+--     restait bloqué à 65 : `plateforme.interventions`, d'où vient le
+--     supplément, n'est lisible que par la plateforme.
+--
+-- La phrase du point 6, « les fonctions `security definer` qui décident d'une
+-- lecture lisent toujours les vraies valeurs », était fausse : celle-ci n'en
+-- était pas une. Ce qui est vrai après ce point : les vues restent
+-- `security_invoker`, pour l'affichage (un titulaire ne lit que ses chiffres) ;
+-- la fonction qui DÉCIDE passe `security definer` et lit, avec les droits de son
+-- propriétaire, les valeurs réelles de la licence. Elle ne rend qu'un verdict
+-- et deux compteurs : elle n'ouvre aucune table.
+--
+-- Une fonction `security definer` ne doit pas devenir une sonde. L'ancienne
+-- garde (« pièce introuvable ou non autorisée ») venait de la RLS de
+-- `capture.pieces`, que la fonction ne subit plus : elle est remplacée par
+-- `app.piece_lisible`, qui dit la même chose pour l'appelant. Sans elle, tout
+-- compte authentifié apprendrait le plafond et le droit de n'importe quelle
+-- licence en passant l'identifiant d'une pièce.
+--
+-- Enfin l'absence de licence ne vaut jamais « autorisée ». Si
+-- `consommation_v` ne rend rien pour la licence trouvée, la réponse est le
+-- refus explicite qui existe déjà, `organisation_sans_licence`.
+--
+-- `lecture_consommer` reste `security invoker` : elle écrit sous l'identité de
+-- l'appelant, donc sous la RLS de `facturation.lectures` (écriture réservée aux
+-- membres), et ne fait que suivre le verdict de la porte.
+
+create or replace function public.lecture_autorisee(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant   uuid;
+  v_vis      app.vis_t;
+  v_licence  uuid;
+  v_conso    record;
+  v_deja     boolean;
+begin
+  -- La RLS de `capture.pieces` ne s'applique plus ici : la lisibilité de la
+  -- pièce pour l'appelant se demande à la fonction qui la porte.
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  select tenant_id, vis into v_tenant, v_vis
+    from capture.pieces where id = p_piece;
+  if v_tenant is null then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  -- B6 : une pièce personnelle n'est jamais lue.
+  if v_vis = 'personnel'::app.vis_t then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'piece_personnelle',
+      'restantes', null, 'droit', null);
+  end if;
+
+  select licence_id into v_licence
+    from facturation.licence_organisations where tenant_id = v_tenant;
+  if v_licence is null then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'organisation_sans_licence',
+      'restantes', null, 'droit', null);
+  end if;
+
+  select * into v_conso from facturation.consommation_v where licence_id = v_licence;
+  if v_conso.licence_id is null then
+    -- Pas de ligne : on ne sait pas, donc on refuse. Jamais `true` par défaut.
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'organisation_sans_licence',
+      'restantes', null, 'droit', null);
+  end if;
+
+  -- Une pièce déjà comptée se relit sans rien coûter. C'est la correction
+  -- gratuite, et c'est volontaire.
+  select exists (select 1 from facturation.lectures where piece_id = p_piece)
+    into v_deja;
+  if v_deja then
+    return jsonb_build_object(
+      'autorisee', true, 'motif', 'relecture_gratuite',
+      'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  -- Une licence suspendue n'arrête pas la caméra, elle arrête l'œil.
+  if v_conso.statut <> 'active' then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'licence_' || v_conso.statut,
+      'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  if v_conso.lectures_restantes <= 0 then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'plafond_atteint',
+      'restantes', 0, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  return jsonb_build_object(
+    'autorisee', true, 'motif', 'dans_le_forfait',
+    'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+    'licence_id', v_licence);
+end
+$$;
+
+revoke all on function public.lecture_autorisee(uuid) from public, anon;
+grant execute on function public.lecture_autorisee(uuid) to authenticated;

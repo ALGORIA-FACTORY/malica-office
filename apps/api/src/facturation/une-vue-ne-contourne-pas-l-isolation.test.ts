@@ -54,10 +54,11 @@ async function abonner(db: pg.PoolClient, nom: string, ht: number): Promise<Abon
      values ($1, $2, 'solo', current_date)`,
     [licence, titulaire],
   );
-  await db.query(
-    "insert into identity.entities (tenant_id, code, name) values ($1, $2, $3)",
-    [tenant, `E-${nom}`, `Établissement ${nom}`],
-  );
+  await db.query("insert into identity.entities (tenant_id, code, name) values ($1, $2, $3)", [
+    tenant,
+    `E-${nom}`,
+    `Établissement ${nom}`,
+  ]);
   await db.query(
     "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
     [licence, tenant],
@@ -137,8 +138,7 @@ describe("les vues accordées n'ouvrent pas l'isolation entre clients", { skip: 
   for (const [vue, colonne] of PAR_LICENCE) {
     it(`${vue} : A ne voit rien de B, voit le sien ; la plateforme voit les deux`, async () => {
       await dansUneTransaction(async (db, a, b, operateur) => {
-        const requete = (licence: string) =>
-          `select 1 from ${vue} where ${colonne} = '${licence}'`;
+        const requete = (licence: string) => `select 1 from ${vue} where ${colonne} = '${licence}'`;
 
         const deB = await lire(db, a.titulaire, requete(b.licence));
         assert.equal(deB.length, 0, `${vue} rend des lignes de la licence d'un AUTRE client`);
@@ -150,19 +150,20 @@ describe("les vues accordées n'ouvrent pas l'isolation entre clients", { skip: 
           ...(await lire(db, operateur, requete(a.licence))),
           ...(await lire(db, operateur, requete(b.licence))),
         ];
-        assert.ok(parLaPlateforme.length >= 2, `${vue} : la plateforme doit voir les deux licences`);
+        assert.ok(
+          parLaPlateforme.length >= 2,
+          `${vue} : la plateforme doit voir les deux licences`,
+        );
       });
     });
   }
 
   it("public.entities_v : A ne voit pas les établissements de B, voit les siens", async () => {
-    await dansUneTransaction(async (db, a, b, operateur) => {
+    await dansUneTransaction(async (db, a, b) => {
       const requete = (tenant: string) =>
         `select 1 from public.entities_v where tenant_id = '${tenant}'`;
       assert.equal((await lire(db, a.titulaire, requete(b.tenant))).length, 0);
       assert.ok((await lire(db, a.titulaire, requete(a.tenant))).length >= 1);
-      // Hors du périmètre d'un opérateur : la plateforme ne lit pas les dossiers.
-      void operateur;
     });
   });
 
@@ -178,14 +179,23 @@ describe("les vues accordées n'ouvrent pas l'isolation entre clients", { skip: 
 
   it("facturation.flux_mensuel_v : le chiffre d'affaires de B n'entre pas dans les mois de A", async () => {
     await dansUneTransaction(async (db, a, _b, operateur) => {
-      const mois = "select facture_ht::numeric as ht from facturation.flux_mensuel_v where mois = date '2024-12-01'";
+      const mois =
+        "select facture_ht::numeric as ht from facturation.flux_mensuel_v where mois = date '2024-12-01'";
 
       const vuParA = await lire<{ ht: string }>(db, a.titulaire, mois);
       assert.equal(vuParA.length, 1);
-      assert.equal(Number(vuParA[0]!.ht), 100, "A ne doit voir que sa propre facture (100), pas celle de B");
+      assert.equal(
+        Number(vuParA[0]!.ht),
+        100,
+        "A ne doit voir que sa propre facture (100), pas celle de B",
+      );
 
       const vuParLaPlateforme = await lire<{ ht: string }>(db, operateur, mois);
-      assert.equal(Number(vuParLaPlateforme[0]!.ht), 300, "la plateforme voit les deux (100 + 200)");
+      assert.equal(
+        Number(vuParLaPlateforme[0]!.ht),
+        300,
+        "la plateforme voit les deux (100 + 200)",
+      );
     });
   });
 });

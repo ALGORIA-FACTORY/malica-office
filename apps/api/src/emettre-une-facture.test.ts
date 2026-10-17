@@ -105,7 +105,10 @@ describe("facturation.emettre", { skip: !ADMIN }, () => {
 
       assert.equal(rows.length, 1);
       assert.equal(rows[0]!.devise, "EUR", "la devise est celle de l'émetteur désigné");
-      assert.ok(Number(rows[0]!.taux_tva) > 0, "le taux vient du pack de la juridiction de l'émetteur");
+      assert.ok(
+        Number(rows[0]!.taux_tva) > 0,
+        "le taux vient du pack de la juridiction de l'émetteur",
+      );
       assert.ok(Number(rows[0]!.timbre) > 0, "le timbre aussi");
     });
   });
