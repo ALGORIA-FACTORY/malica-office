@@ -125,6 +125,47 @@ la date de début est antérieure ne trouve aucune offre en vigueur, et le messa
 parle d'une licence absente au lieu d'une offre absente. Un message faux sur la
 cause est plus coûteux qu'un message absent.
 
+### D-6 · Les fonctions privilégiées appartiennent à `postgres`, donc elles traversent les politiques
+
+*Trouvé le 17 octobre, ronde 6 de la tâche 0, et c'est la plus grosse dette de
+la journée.*
+
+Une fonction `security definer` s'exécute avec les droits de son propriétaire.
+Tant que ce propriétaire est `postgres`, qui traverse toutes les politiques
+d'isolation, **une fonction privilégiée qui écrit une table de tenant contourne
+la politique au lieu de s'y soumettre**.
+
+Ce n'est pas un trou ouvert aujourd'hui : la seule écrivante de la table des
+lectures tient ses garanties **par construction** — le tenant est lu sur la
+pièce, la licence sur le rattachement de ce tenant, la pièce est l'argument, et
+aucune valeur ne vient de l'appelant. Et la politique reste en place, exercée
+par trois épreuves qui se rendent le droit d'écrire dans une transaction
+annulée.
+
+**Ce qu'il faut faire, et pourquoi c'est structurel :** donner à ces fonctions
+un propriétaire qui n'est **pas** superutilisateur. La politique redeviendrait
+alors opposable à la fonction elle-même, et les garanties ne reposeraient plus
+sur la discipline de qui l'écrit. Cela porte sur le dépôt entier, pas sur cette
+livraison : le traiter dans une ronde de correction le ferait mal.
+
+**Ce qu'il coûte en attendant :** la prochaine fonction privilégiée naît avec le
+même défaut. C'est pour cela que c'est écrit, et daté.
+
+### D-7 · Un garde d'architecture s'est affaibli en même temps qu'il a servi
+
+*Même ronde.* Le garde refuse, pour toute fonction privilégiée exécutable par
+un utilisateur connecté, l'absence de `search_path` fixé, un droit d'exécution
+trop large, et l'écriture dans la facturation sans porte de plateforme.
+
+Ce dernier point est devenu faux le jour même : la seule écrivante légitime de
+la facturation a pour porte l'autorisation de lire la pièce, pas la plateforme.
+Le garde est donc passé de « sans porte de plateforme » à « sans porte
+**nommée** », la liste des portes étant énumérable. C'est un affaiblissement
+réel, et il est dit ici plutôt que caché derrière un garde qu'on croirait
+intact.
+
+Il se recoupe avec **D-2** : le même travail les ferme tous les deux.
+
 ---
 
 ## Les données de mise en service
