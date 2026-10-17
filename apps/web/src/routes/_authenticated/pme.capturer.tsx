@@ -4,7 +4,8 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
 import { usePme } from "@/components/malica/pme-context";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
+import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { creerDepotHttp } from "@/verticals/malica-office/adapters/http/rpc";
@@ -90,18 +91,19 @@ export const Route = createFileRoute("/_authenticated/pme/capturer")({
 });
 
 /** Les neuf étapes du câblage. La dixième case réemploie la neuvième : la fin
- *  privée est une fin, pas une étape de plus. */
+ *  privée est une fin, pas une étape de plus. Des CLÉS, pas des mots : la
+ *  barre se lit dans les trois langues. */
 const ETAPES = [
-  "CAPTURER",
-  "DESTINATION",
-  "LECTURES",
-  "LECTURE",
-  "CE QUE J'AI LU",
-  "QUESTIONS",
-  "DATES",
-  "RÈGLEMENT",
-  "FAIT",
-] as const;
+  "pme.capture.etape.capturer",
+  "pme.capture.etape.destination",
+  "pme.capture.etape.lectures",
+  "pme.capture.etape.lecture",
+  "pme.capture.etape.lu",
+  "pme.capture.etape.questions",
+  "pme.capture.etape.dates",
+  "pme.capture.etape.reglement",
+  "pme.capture.etape.fait",
+] as const satisfies readonly MessageKey[];
 
 /* Les tracés viennent du dessin, à l'identique : l'écran n'a pas de
  * bibliothèque d'icônes à lui, et `.g` porte déjà le trait. */
@@ -576,15 +578,19 @@ function PmeCapturer() {
        * pas, il se voit.
        */}
       <div className="prog">
-        <button type="button" className="x" onClick={reculer} aria-label="Revenir">
+        <button type="button" className="x" onClick={reculer} aria-label={t("pme.capture.revenir")}>
           <Icone d={etape === 0 ? G.x : G.back} />
         </button>
         <span className="tr" aria-hidden>
-          {ETAPES.map((_, i) => (
-            <i key={i} className={i < etape ? "on" : ""} />
+          {ETAPES.map((cle, i) => (
+            <i key={cle} className={i < etape ? "on" : ""} />
           ))}
         </span>
-        <span className="n">{finPrivee && etape === 8 ? "FAIT · CHEZ VOUS" : ETAPES[etape]}</span>
+        <span className="n">
+          {finPrivee && etape === 8
+            ? t("pme.capture.etape.faitPrive")
+            : t(ETAPES[etape] ?? "pme.capture.etape.capturer")}
+        </span>
       </div>
 
       <div className="pad">
@@ -611,8 +617,8 @@ function PmeCapturer() {
                 {pme.capturing
                   ? t("pme.capture.preparation")
                   : lot.length > 0
-                    ? `${lot.length} pièce${lot.length > 1 ? "s" : ""} · aucune n'est encore lue`
-                    : "Posez la pièce à plat — je redresse et je recadre"}
+                    ? t("pme.capture.lot.nonLues", { count: lot.length })
+                    : t("pme.capture.poser")}
               </div>
             </div>
 
@@ -632,7 +638,7 @@ function PmeCapturer() {
                       ]
                         .filter(Boolean)
                         .join(" ")}
-                      aria-label={p.emetteur ?? "Pièce non lue"}
+                      aria-label={p.emetteur ?? t("pme.capture.pieceNonLue")}
                       onClick={() => setChoisie(choisie === p.id ? null : p.id)}
                     >
                       <span className="pp">{lignes(4, 22, 16)}</span>
@@ -654,7 +660,9 @@ function PmeCapturer() {
                         )
                       }
                     >
-                      {exclues.includes(choisie) ? "Pour la société" : "Pour vous"}
+                      {exclues.includes(choisie)
+                        ? t("pme.capture.menu.societe")
+                        : t("pme.capture.menu.vous")}
                     </button>
                     <button
                       type="button"
@@ -662,7 +670,7 @@ function PmeCapturer() {
                         void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: choisie } })
                       }
                     >
-                      Ouvrir
+                      {t("pme.capture.menu.ouvrir")}
                     </button>
                     <button
                       type="button"
@@ -670,7 +678,7 @@ function PmeCapturer() {
                       disabled={supprimer.isPending}
                       onClick={() => supprimer.mutate(choisie)}
                     >
-                      Supprimer
+                      {t("pme.capture.menu.supprimer")}
                     </button>
                   </div>
                 ) : null}
@@ -683,12 +691,12 @@ function PmeCapturer() {
             <div className="shut">
               <button type="button" disabled={pme.capturing} onClick={() => pme.capture("photo")}>
                 <Icone d={G.gal} />
-                Galerie
+                {t("pme.capture.galerie")}
               </button>
               <button
                 type="button"
                 className="big"
-                aria-label="Photographier"
+                aria-label={t("pme.capture.photo")}
                 disabled={pme.capturing}
                 onClick={pme.ouvrirScanner}
               />
@@ -702,9 +710,9 @@ function PmeCapturer() {
               <div className="opt">
                 <Opt
                   ic={G.fat}
-                  titre="Import El Fatoora"
-                  sous="Les factures électroniques entrent lues, sans consommer de lecture"
-                  vl="À VENIR"
+                  titre={t("pme.capture.fatoora")}
+                  sous={t("pme.capture.fatoora.sous")}
+                  vl={t("pme.capture.aVenir")}
                   off
                 />
               </div>
@@ -713,18 +721,12 @@ function PmeCapturer() {
             {enFile.length > 0 ? (
               <div className="flag">
                 <i />
-                <span>
-                  {enFile.length} pièce{enFile.length > 1 ? "s" : ""} attend
-                  {enFile.length > 1 ? "ent" : ""} le réseau. Elles partiront seules : la photo
-                  n'est jamais à refaire.
-                </span>
+                <span>{t("pme.capture.file.attente", { count: enFile.length })}</span>
               </div>
             ) : null}
 
             <p className="foot">
-              {lot.length > 0
-                ? "Rien n'est lu tant que vous ne le demandez pas : votre quota ne bouge pas d'ici là."
-                : "Hors réseau, la photo part dès que le réseau revient — et la panne laisse une trace au journal."}
+              {lot.length > 0 ? t("pme.capture.foot.lot") : t("pme.capture.foot.horsReseau")}
             </p>
 
             <div className="go">
@@ -734,14 +736,16 @@ function PmeCapturer() {
                 disabled={lot.length === 0}
                 onClick={() => setEtape(1)}
               >
-                {lot.length > 0 ? `Répondre (${lot.length})` : "Rien à répondre"}
+                {lot.length > 0
+                  ? t("pme.capture.repondre", { count: lot.length })
+                  : t("pme.capture.rienARepondre")}
               </button>
               <button
                 type="button"
                 className="sc"
                 onClick={() => void navigate({ to: "/pme/list" })}
               >
-                Plus tard — les garder telles quelles
+                {t("pme.capture.plusTard")}
               </button>
             </div>
           </>
@@ -754,20 +758,13 @@ function PmeCapturer() {
         {etape === 1 ? (
           <>
             <Vignette lot={lot} />
-            <Dit
-              q={
-                lot.length > 1
-                  ? `Ces ${lot.length} pièces sont pour la société, ou pour vous ?`
-                  : "Elle est pour la société, ou pour vous ?"
-              }
-              s="Je pose la question maintenant, pas après : une pièce personnelle, je ne la lis pas, et elle ne touche jamais votre quota."
-            />
+            <Dit q={t("pme.capture.dest.q", { count: lot.length })} s={t("pme.capture.dest.s")} />
 
             {/* Le sélecteur de société n'apparaît que s'il y a plusieurs
                 dossiers — et il vient du layout, qui les a déjà. */}
             {pme.dossiers.length > 1 && dest !== "prive" ? (
               <div className="ch">
-                <span className="t">Société</span>
+                <span className="t">{t("pme.capture.dest.societeLabel")}</span>
                 {pme.dossiers.map((d) => (
                   <button
                     type="button"
@@ -784,11 +781,11 @@ function PmeCapturer() {
             <div className="opt">
               <Opt
                 ic={G.cab}
-                titre="La société"
+                titre={t("pme.capture.dest.societe")}
                 sous={
                   pme.aUnCabinet
-                    ? "Lue, rangée, et transmise au cabinet après vérification"
-                    : "Lue et rangée. Aucun cabinet n'est mandaté : rien ne part."
+                    ? t("pme.capture.dest.societe.cabinet")
+                    : t("pme.capture.dest.societe.sansCabinet")
                 }
                 on={dest === "societe"}
                 onClick={() => setDest("societe")}
@@ -802,15 +799,15 @@ function PmeCapturer() {
                */}
               <Opt
                 ic={G.bib}
-                titre="La société, sans transmettre"
-                sous="Lue et rangée dans la bibliothèque. Elle ne part pas."
-                vl="ENTITE"
+                titre={t("pme.capture.dest.entite")}
+                sous={t("pme.capture.dest.entite.sous")}
+                vl={t("pme.capture.dest.entite.vl")}
                 off
               />
               <Opt
                 ic={G.prive}
-                titre="Vous"
-                sous="Votre espace privé. Je ne la lis pas, personne d'autre ne la voit."
+                titre={t("pme.capture.dest.prive")}
+                sous={t("pme.capture.dest.prive.sous")}
                 on={dest === "prive"}
                 onClick={() => setDest("prive")}
               />
@@ -819,10 +816,7 @@ function PmeCapturer() {
             {dest === "prive" ? (
               <div className="flag">
                 <i />
-                <span>
-                  Elle est attachée à votre compte, pas à la société — elle vous suivra si vous la
-                  quittez.
-                </span>
+                <span>{t("pme.capture.dest.prive.flag")}</span>
               </div>
             ) : null}
 
@@ -842,7 +836,7 @@ function PmeCapturer() {
                   setEtape(2);
                 }}
               >
-                {dest === "prive" ? "Les ranger chez vous" : "Continuer"}
+                {dest === "prive" ? t("pme.capture.dest.ranger") : t("pme.capture.continuer")}
               </button>
             </div>
           </>
@@ -853,10 +847,7 @@ function PmeCapturer() {
             décoche reste chez soi, non lu, sans rien coûter. */}
         {etape === 2 ? (
           <>
-            <Dit
-              q="Je lis lesquelles ?"
-              s="Tout est coché. Décochez ce qui n'est pas à la société — c'est plus court que de cocher une par une, et je ne lirai que ce qui reste."
-            />
+            <Dit q={t("pme.capture.choix.q")} s={t("pme.capture.choix.s")} />
 
             {lot.map((p) => {
               const gardee = exclues.includes(p.id);
@@ -874,23 +865,20 @@ function PmeCapturer() {
                   </span>
                   <span className="bd">
                     <b>
-                      {p.emetteur ?? "Pièce non lue"}
+                      {p.emetteur ?? t("pme.capture.pieceNonLue")}
                       {p.total !== null ? ` · ${montant(p.total, locale)}` : ""}
                     </b>
                     <span className={gardee ? "az" : undefined}>
                       {gardee
-                        ? "Gardée pour vous — non lue"
-                        : (jour(p.dateDocument ?? p.createdAt) ?? "Sans date lue")}
+                        ? t("pme.capture.choix.gardee")
+                        : (jour(p.dateDocument ?? p.createdAt) ?? t("pme.capture.choix.sansDate"))}
                     </span>
                   </span>
                 </button>
               );
             })}
 
-            <p className="foot">
-              Les décochées restent dans votre espace privé. Elles ne coûtent rien et ne partiront
-              jamais.
-            </p>
+            <p className="foot">{t("pme.capture.choix.foot")}</p>
 
             {/*
              * CE QUE LE GESTE COÛTE, avant de le faire.
@@ -905,9 +893,10 @@ function PmeCapturer() {
               <div className="flag">
                 <i />
                 <span>
-                  Il reste {restantes} lecture{restantes > 1 ? "s" : ""} à votre forfait, pour{" "}
-                  {retenues.length} pièces cochées. Les premières seront lues, les autres resteront
-                  là — non lues, et rien n'est perdu.
+                  {t("pme.capture.choix.plafond", {
+                    count: restantes,
+                    cochees: retenues.length,
+                  })}
                 </span>
               </div>
             ) : null}
@@ -919,12 +908,10 @@ function PmeCapturer() {
                 disabled={retenues.length === 0 || lire.isPending}
                 onClick={() => lire.mutate()}
               >
-                {`Lire les ${retenues.length} — ${retenues.length} lecture${
-                  retenues.length > 1 ? "s" : ""
-                } sur ${resteDit}`}
+                {t("pme.capture.choix.lire", { count: retenues.length, reste: resteDit })}
               </button>
               <button type="button" className="sc" onClick={() => setEtape(0)}>
-                Pas maintenant
+                {t("pme.capture.pasMaintenant")}
               </button>
             </div>
           </>
@@ -936,8 +923,8 @@ function PmeCapturer() {
         {etape === 3 ? (
           <>
             <Dit
-              q={`Je lis ${retenues.length === 1 ? "la pièce" : `les ${retenues.length} pièces`}.`}
-              s="Je cite la zone d'où je sors chaque chiffre. Ce que je n'ai pas trouvé, je le dis — je ne le devine pas."
+              q={t("pme.capture.lire.q", { count: retenues.length })}
+              s={t("pme.capture.lire.s")}
             />
             <div className="lect">
               {retenues.map((p) => {
@@ -946,17 +933,15 @@ function PmeCapturer() {
                 return (
                   <div key={p.id} className={faite ? "ok" : ""}>
                     <i />
-                    <span>{p.emetteur ?? "Pièce non lue"}</span>
+                    <span>{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
                   </div>
                 );
               })}
             </div>
-            <p className="foot">
-              Une lecture qui échoue laisse une trace au journal et la pièce reste là, intacte.
-            </p>
+            <p className="foot">{t("pme.capture.lire.foot")}</p>
             <div className="go">
               <button type="button" className="pr" onClick={() => setEtape(4)}>
-                Voir ce que j'ai lu
+                {t("pme.capture.lire.voir")}
               </button>
             </div>
           </>
@@ -967,10 +952,7 @@ function PmeCapturer() {
             valeur absente n'est pas une valeur nulle. */}
         {etape === 4 ? (
           <>
-            <Dit
-              q="Voici ce que j'ai lu."
-              s="Chaque ligne se corrige, et la correction m'apprend le fournisseur. Rien n'est écrasé : une précision s'ajoute, elle ne remplace pas."
-            />
+            <Dit q={t("pme.capture.lu.q")} s={t("pme.capture.lu.s")} />
             {retenues.map((p) => {
               /* « Corriger » mène au dossier de la pièce, et pas ailleurs :
                  c'est là que `capture.preciser` vit, et une précision s'ajoute
@@ -979,15 +961,19 @@ function PmeCapturer() {
                 void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } });
               return (
                 <div className="lu" key={p.id}>
-                  <LigneLue k="Émetteur" v={p.emetteur} onCorriger={corriger} />
-                  <LigneLue k="Date" v={jour(p.dateDocument)} onCorriger={corriger} />
+                  <LigneLue k={t("pme.extract.issuer")} v={p.emetteur} onCorriger={corriger} />
                   <LigneLue
-                    k="Type"
-                    v={p.kind === null ? null : libelleType(p.kind)}
+                    k={t("pme.extract.date")}
+                    v={jour(p.dateDocument)}
                     onCorriger={corriger}
                   />
                   <LigneLue
-                    k="Total"
+                    k={t("pme.capture.lu.type")}
+                    v={p.kind === null ? null : t(CLE_DU_TYPE[p.kind])}
+                    onCorriger={corriger}
+                  />
+                  <LigneLue
+                    k={t("pme.capture.lu.total")}
                     v={
                       p.total === null
                         ? null
@@ -998,10 +984,24 @@ function PmeCapturer() {
                       void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
                     }
                   />
+                  {/*
+                   * ============================ LE MOTIF PASSE PAR SON TRADUCTEUR
+                   *
+                   * `lectureRefusee.motif` est un CODE de la base —
+                   * « plafond_atteint », « licence_suspendue ». Il s'affichait
+                   * ici tel quel, alors que `libelleDuRefus` existe, est testé
+                   * et sert déjà aux écrans de la bibliothèque et du coffre.
+                   * C'est le défaut « ISSUER » sous un autre nom, et R4
+                   * l'interdit.
+                   */}
                   {p.lectureRefusee ? (
                     <div className="flag">
                       <i />
-                      <span>Lecture refusée · {p.lectureRefusee.motif}</span>
+                      <span>
+                        {t("pme.capture.lu.refus", {
+                          motif: libelleDuRefus(p.lectureRefusee.motif, t),
+                        })}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -1009,7 +1009,7 @@ function PmeCapturer() {
             })}
             <div className="go">
               <button type="button" className="pr" onClick={() => setEtape(5)}>
-                Continuer
+                {t("pme.capture.continuer")}
               </button>
             </div>
           </>
@@ -1023,27 +1023,34 @@ function PmeCapturer() {
             {courante ? (
               <>
                 <Dit
-                  q={`${libelleFamille(courante.familleCode)} — ${montant(courante.observed, locale)} ${pme.currency} ce mois-ci.`}
-                  s={`La base de comparaison est ${montant(courante.baseline, locale)} ${pme.currency}. C'est exceptionnel, ou il y a quelque chose à vérifier ? Le seuil est une politique de votre entreprise, pas une règle que je peux lire.`}
+                  q={t("pme.capture.q.q", {
+                    famille: libelleFamille(courante.familleCode),
+                    montant: montant(courante.observed, locale),
+                    devise: pme.currency,
+                  })}
+                  s={t("pme.capture.q.s", {
+                    base: montant(courante.baseline, locale),
+                    devise: pme.currency,
+                  })}
                 />
                 <div className="opt">
                   <Opt
                     ic={G.ok}
-                    titre="Exceptionnel"
-                    sous="C'est normal pour ce mois-là, et je ne le redemanderai pas"
+                    titre={t("pme.capture.q.exceptionnel")}
+                    sous={t("pme.capture.q.exceptionnel.sous")}
                     onClick={() => repondre.mutate("exceptionnel")}
                     off={repondre.isPending}
                   />
                   <Opt
                     ic={G.horl}
-                    titre="À vérifier"
-                    sous="Je le garde ouvert, et le cabinet le voit aussi"
+                    titre={t("pme.capture.q.aVerifier")}
+                    sous={t("pme.capture.q.aVerifier.sous")}
                     onClick={() => repondre.mutate("a_verifier")}
                     off={repondre.isPending}
                   />
                 </div>
                 <p className="foot">
-                  Question {question + 1} sur {aRepondre.length}.
+                  {t("pme.capture.q.position", { n: question + 1, total: aRepondre.length })}
                 </p>
                 <div className="go">
                   <button
@@ -1053,26 +1060,26 @@ function PmeCapturer() {
                       question + 1 < aRepondre.length ? setQuestion(question + 1) : setEtape(6)
                     }
                   >
-                    Continuer
+                    {t("pme.capture.continuer")}
                   </button>
                   <button type="button" className="sc" onClick={() => setEtape(6)}>
-                    Plus tard
+                    {t("pme.capture.plusTardCourt")}
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <Dit
-                  q="Aucune question."
+                  q={t("pme.capture.q.aucune")}
                   s={
                     questions.isPending
-                      ? "Je regarde."
-                      : "Rien ne sort de l'ordinaire sur ce que je viens de lire."
+                      ? t("pme.capture.q.jeRegarde")
+                      : t("pme.capture.q.rienDAnormal")
                   }
                 />
                 <div className="go">
                   <button type="button" className="pr" onClick={() => setEtape(6)}>
-                    Continuer
+                    {t("pme.capture.continuer")}
                   </button>
                 </div>
               </>
@@ -1089,23 +1096,23 @@ function PmeCapturer() {
             <Dit
               q={
                 (sansDate.data?.pieces ?? 0) > 0
-                  ? `${sansDate.data!.pieces} pièce${sansDate.data!.pieces > 1 ? "s" : ""} attend${
-                      sansDate.data!.pieces > 1 ? "ent" : ""
-                    } sa date.`
-                  : "Tout est daté."
+                  ? t("pme.capture.dates.q", { count: sansDate.data!.pieces })
+                  : t("pme.capture.dates.q.toutes")
               }
               s={
                 (sansDate.data?.pieces ?? 0) > 0
-                  ? "Tant qu'elle n'a pas de date, elle n'entre dans aucun mois — pas même celui de la photo. C'est la date de la pièce qui décide de votre TVA, je ne la choisis pas à votre place."
-                  : "Chaque pièce que je viens de lire porte sa date, donc son mois, donc sa TVA."
+                  ? t("pme.capture.dates.s")
+                  : t("pme.capture.dates.s.ok")
               }
             />
             {(sansDate.data?.totalHt ?? null) !== null ? (
               <div className="flag">
                 <i />
                 <span>
-                  {montant(sansDate.data!.totalHt, locale)} {pme.currency} HT n'entrent dans aucun
-                  total du mois tant que ces dates manquent.
+                  {t("pme.capture.dates.flag", {
+                    montant: montant(sansDate.data!.totalHt, locale),
+                    devise: pme.currency,
+                  })}
                 </span>
               </div>
             ) : null}
@@ -1121,16 +1128,16 @@ function PmeCapturer() {
                         void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
                       }
                     >
-                      <span className="k">Sans date</span>
-                      <span className="v am">{p.emetteur ?? "Pièce non lue"}</span>
-                      <span className="ed">Dater</span>
+                      <span className="k">{t("pme.capture.dates.sansDate")}</span>
+                      <span className="v am">{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
+                      <span className="ed">{t("pme.capture.dates.dater")}</span>
                     </button>
                   ))}
               </div>
             ) : null}
             <div className="go">
               <button type="button" className="pr" onClick={() => setEtape(7)}>
-                Continuer
+                {t("pme.capture.continuer")}
               </button>
             </div>
           </>
@@ -1143,12 +1150,8 @@ function PmeCapturer() {
         {etape === 7 ? (
           <>
             <Dit
-              q={
-                retenues.length > 1
-                  ? `Ces ${retenues.length} pièces ont été payées comment ?`
-                  : "Elle a été payée comment ?"
-              }
-              s="Je pose la question une fois plutôt que six. Si deux ont été payées autrement, chaque pièce se reprend ensuite dans son dossier."
+              q={t("pme.capture.pay.q", { count: retenues.length })}
+              s={t("pme.capture.pay.s")}
             />
             <div className="opt">
               {(moyens.data ?? []).map((m) => (
@@ -1158,8 +1161,8 @@ function PmeCapturer() {
                   titre={m.libelle}
                   sous={
                     m.exigeJustificatif
-                      ? "Un talon est attendu — le paiement reste inscrit sans lui"
-                      : "Aucune preuve à joindre : rien à rapprocher"
+                      ? t("pme.capture.pay.talon")
+                      : t("pme.capture.pay.sansPreuve")
                   }
                   on={moyen === m.code}
                   onClick={() => {
@@ -1174,11 +1177,11 @@ function PmeCapturer() {
                 numéro de chèque se note, une espèce n'en a pas. */}
             {moyenChoisi?.exigeReference === true ? (
               <div className="ch">
-                <span className="t">Référence</span>
+                <span className="t">{t("pme.capture.pay.referenceLabel")}</span>
                 <input
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  aria-label="Référence du règlement"
+                  aria-label={t("pme.capture.pay.reference.aria")}
                 />
               </div>
             ) : null}
@@ -1186,10 +1189,7 @@ function PmeCapturer() {
             {exigeTalon ? (
               <div className="flag">
                 <i />
-                <span>
-                  Le talon se photographie depuis le dossier de la pièce. Le règlement s'inscrit
-                  sans lui : une preuve qui manque ne doit pas empêcher d'enregistrer un fait.
-                </span>
+                <span>{t("pme.capture.pay.talon.flag")}</span>
               </div>
             ) : null}
 
@@ -1200,10 +1200,10 @@ function PmeCapturer() {
                 disabled={moyen === null || payer.isPending}
                 onClick={() => payer.mutate()}
               >
-                Inscrire le règlement
+                {t("pme.capture.pay.inscrire")}
               </button>
               <button type="button" className="sc" onClick={() => setEtape(8)}>
-                Pas encore payé — plus tard
+                {t("pme.capture.pay.plusTard")}
               </button>
             </div>
           </>
@@ -1215,57 +1215,57 @@ function PmeCapturer() {
         {etape === 8 && !finPrivee ? (
           <>
             <Dit
-              q={transmis === null ? "Tout est lu. Vous en faites quoi ?" : "C'est rangé."}
+              q={transmis === null ? t("pme.capture.fin.q") : t("pme.capture.fin.q.range")}
               s={
                 transmis === null
-                  ? "Transmettre range la pièce dans la TVA du mois où elle part, pas du mois où elle est datée. Garder ne ferme rien : vous transmettrez quand vous voudrez."
+                  ? t("pme.capture.fin.s")
                   : restantes === null
                     ? undefined
-                    : `Il vous reste ${restantes} lecture${restantes > 1 ? "s" : ""} ce mois.`
+                    : t("pme.capture.fin.reste", { count: restantes })
               }
             />
+            {/*
+             * ===================================== LE GRAS PORTE LA PHRASE, PAS UN SUFFIXE
+             *
+             * Ces lignes se composaient par concaténation : « pièce » + « s »,
+             * un `<b>` autour d'un fragment de mot, un morceau ajouté après la
+             * phrase. Aucune des trois ne survit à une autre langue — l'arabe
+             * n'accorde pas par un « s », et un fragment inséré au milieu
+             * d'une phrase atterrit ailleurs quand l'ordre des mots change ou
+             * quand on écrit de droite à gauche.
+             *
+             * Chaque ligne est donc UNE phrase, accordée par `count`, et le
+             * gras porte la phrase entière quand il y en a.
+             */}
             <div className="fin">
               <Fin>
-                {retenues.length} pièce{retenues.length > 1 ? "s" : ""} <b>lue</b>
-                {retenues.length > 1 ? "s" : ""}
+                <b>{t("pme.capture.fin.lues", { count: retenues.length })}</b>
                 {exclues.length > 0
-                  ? ` · ${exclues.length} gardée${exclues.length > 1 ? "s" : ""} pour vous`
+                  ? ` · ${t("pme.capture.fin.gardees", { count: exclues.length })}`
                   : ""}
               </Fin>
               {paye && moyenChoisi ? (
                 <Fin>
-                  Payée{retenues.length > 1 ? "s" : ""} par{" "}
-                  <b>{moyenChoisi.libelle.toLowerCase()}</b>
-                  {exigeTalon ? " — talon attendu" : ""}
+                  {exigeTalon
+                    ? t("pme.capture.fin.reglePar.talon", { moyen: moyenChoisi.libelle })
+                    : t("pme.capture.fin.reglePar", { moyen: moyenChoisi.libelle })}
                 </Fin>
               ) : (
-                <Fin am>
-                  Moyen de paiement <b>à dire</b> — chaque pièce le garde ouvert
-                </Fin>
+                <Fin am>{t("pme.capture.fin.moyenADire")}</Fin>
               )}
               {aRepondre.length > 0 ? (
-                <Fin am>
-                  {aRepondre.length} question{aRepondre.length > 1 ? "s" : ""} encore ouverte
-                  {aRepondre.length > 1 ? "s" : ""}
-                </Fin>
+                <Fin am>{t("pme.capture.fin.questions", { count: aRepondre.length })}</Fin>
               ) : (
-                <Fin>Aucune question en suspens</Fin>
+                <Fin>{t("pme.capture.fin.questions.aucune")}</Fin>
               )}
               {transmis === true ? (
-                <Fin>
-                  Transmise{retenues.length > 1 ? "s" : ""} au cabinet — la date de transmission
-                  range la TVA
-                </Fin>
+                <Fin>{t("pme.capture.fin.transmises", { count: retenues.length })}</Fin>
               ) : transmis === false ? (
-                <Fin>Gardée{retenues.length > 1 ? "s" : ""} — rien n'est parti</Fin>
+                <Fin>{t("pme.capture.fin.conservees", { count: retenues.length })}</Fin>
               ) : null}
             </div>
 
-            <p className="foot">
-              Tant que vous ne transmettez pas, vous ne me demandez rien : vous corrigez, vous
-              supprimez, vous recommencez. Après, c'est le cabinet qui garde — alors la suppression
-              devient une demande, et sa réponse s'inscrit.
-            </p>
+            <p className="foot">{t("pme.capture.fin.foot")}</p>
 
             <div className="go">
               {transmis === null ? (
@@ -1276,7 +1276,9 @@ function PmeCapturer() {
                     disabled={!pme.aUnCabinet || terminer.isPending}
                     onClick={() => terminer.mutate(true)}
                   >
-                    {pme.aUnCabinet ? "Transmettre au cabinet" : "Aucun cabinet mandaté"}
+                    {pme.aUnCabinet
+                      ? t("pme.capture.fin.transmettre")
+                      : t("pme.capture.fin.sansCabinet")}
                   </button>
                   <button
                     type="button"
@@ -1284,20 +1286,20 @@ function PmeCapturer() {
                     disabled={terminer.isPending}
                     onClick={() => terminer.mutate(false)}
                   >
-                    Garder — ne pas transmettre
+                    {t("pme.capture.fin.garder")}
                   </button>
                 </>
               ) : (
                 <>
                   <button type="button" className="pr" onClick={recommencer}>
-                    Capturer la suivante
+                    {t("pme.capture.fin.suivante")}
                   </button>
                   <button
                     type="button"
                     className="sc"
                     onClick={() => void navigate({ to: "/pme/list" })}
                   >
-                    Voir mes pièces
+                    {t("pme.capture.fin.voirPieces")}
                   </button>
                 </>
               )}
@@ -1311,44 +1313,40 @@ function PmeCapturer() {
             tenir. */}
         {etape === 8 && finPrivee ? (
           <>
-            <Dit
-              q="C'est rangé chez vous."
-              s="Je ne les ai pas lues, elles n'ont rien coûté à votre quota, et rien ne les fera sortir d'ici sans votre geste."
-            />
+            <Dit q={t("pme.capture.prive.q")} s={t("pme.capture.prive.s")} />
             <div className="fin">
+              <Fin>{t("pme.capture.prive.espace")}</Fin>
               <Fin>
-                Dans votre <b>espace privé</b> · attaché à votre compte
+                <b>
+                  {restantes === null
+                    ? t("pme.capture.prive.intactes", { count: lot.length })
+                    : t("pme.capture.prive.intactes.reste", {
+                        count: lot.length,
+                        reste: restantes,
+                      })}
+                </b>
               </Fin>
-              <Fin>
-                <b>Non lue{lot.length > 1 ? "s" : ""}</b> —{" "}
-                {restantes === null
-                  ? "vos lectures du mois sont intactes"
-                  : `vos ${restantes} lectures du mois sont intactes`}
-              </Fin>
-              <Fin>Invisible pour votre cabinet, vos sièges et la vue consolidée</Fin>
+              <Fin>{t("pme.capture.prive.invisible")}</Fin>
             </div>
             <div className="opt">
               <Opt
                 ic={G.cab}
-                titre="La verser à la société"
-                sous="Elle sera lue et comptera dans le quota — depuis votre espace privé, quand vous voudrez"
+                titre={t("pme.capture.prive.verser")}
+                sous={t("pme.capture.prive.verser.sous")}
                 onClick={() => void navigate({ to: "/pme/coffre" })}
               />
             </div>
-            <p className="foot">
-              Ici, personne ne l'a reçue : vous n'avez d'accord à demander à personne. La
-              suppression se fait depuis votre espace privé.
-            </p>
+            <p className="foot">{t("pme.capture.prive.foot")}</p>
             <div className="go">
               <button type="button" className="pr" onClick={recommencer}>
-                Capturer la suivante
+                {t("pme.capture.fin.suivante")}
               </button>
               <button
                 type="button"
                 className="sc"
                 onClick={() => void navigate({ to: "/pme/coffre" })}
               >
-                Voir mes papiers
+                {t("pme.capture.prive.voirPapiers")}
               </button>
             </div>
           </>
@@ -1360,6 +1358,7 @@ function PmeCapturer() {
 
 /** L'en-tête de la pièce, ou du lot : qui, et combien de pages. */
 function Vignette({ lot }: { lot: readonly PieceLue[] }) {
+  const { t } = useI18n();
   const premiere = lot[0] ?? null;
   return (
     <div className="vig">
@@ -1368,10 +1367,8 @@ function Vignette({ lot }: { lot: readonly PieceLue[] }) {
         {lignes(6, 30, 11)}
       </span>
       <span className="bd">
-        <b>{premiere?.emetteur ?? "Pièce non lue"}</b>
-        <span>
-          {lot.length} pièce{lot.length > 1 ? "s" : ""} · aucune n'est encore lue
-        </span>
+        <b>{premiere?.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+        <span>{t("pme.capture.lot.nonLues", { count: lot.length })}</span>
       </span>
     </div>
   );
@@ -1395,20 +1392,23 @@ function LigneLue({
   mono?: boolean;
   onCorriger?: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <button type="button" onClick={onCorriger}>
       <span className="k">{k}</span>
       <span className={["v", mono ? "mono" : "", v === null ? "am" : ""].filter(Boolean).join(" ")}>
-        {v ?? "je n'ai pas lu"}
+        {v ?? t("pme.capture.lu.nonLu")}
       </span>
-      <span className="ed">Corriger</span>
+      <span className="ed">{t("pme.capture.lu.corriger")}</span>
     </button>
   );
 }
 
 /** Les deux seuls types que la lecture rend aujourd'hui. Le référentiel en
  *  porte douze, et `referentiel.typesDeDocument` les nomme ; `PieceLue.kind`,
- *  lui, n'en porte que deux. On n'affiche donc que ce qu'on reçoit. */
-function libelleType(kind: "facture_achat" | "facture_vente") {
-  return kind === "facture_achat" ? "Facture d'achat" : "Facture de vente";
-}
+ *  lui, n'en porte que deux. On n'affiche donc que ce qu'on reçoit — et par
+ *  une clé, jamais par le code de la base. */
+const CLE_DU_TYPE: Record<"facture_achat" | "facture_vente", MessageKey> = {
+  facture_achat: "pme.capture.type.achat",
+  facture_vente: "pme.capture.type.vente",
+};

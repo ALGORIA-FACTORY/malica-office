@@ -54,60 +54,17 @@ const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
 };
 
 /*
- * ================================================= LES MOTS QUI N'ONT PAS ENCORE DE CLÉ
+ * ================================ LES MOTS DE CET ÉCRAN SONT AU DICTIONNAIRE
  *
- * Le dessin apporte des libellés que `packages/socle/src/messages.ts` ne porte
- * pas encore. Ils sont rassemblés ICI, en un seul bloc, et nulle part ailleurs
- * dans le fichier : ce sont les seules chaînes en dur de l'écran, et c'est la
- * seule liste à reprendre quand les clés seront ajoutées aux trois langues.
+ * Le bloc `MOTS` qui vivait ici rassemblait trente-deux libellés en dur, en
+ * français, assumés en commentaire comme une dette nommée. Ils sont entrés au
+ * dictionnaire le 18 octobre 2026 sous `pme.piece.*`, dans les trois langues,
+ * et chaque site d'affichage appelle `t()`.
  *
- * Tant qu'ils vivent ici, l'écran n'est juste qu'en français — c'est une dette
- * nommée, pas un oubli. Rien de ce bloc n'est un CHIFFRE : aucune valeur
- * comptable, aucun montant, aucun plafond n'est écrit en dur dans cet écran.
+ * Les quatre compteurs de la page — pièces, mouvements, points, étapes —
+ * passent par la variable `count` : `Intl.PluralRules` accorde, là où un
+ * `n > 1 ? "s" : ""` n'accordait qu'en français et laissait l'arabe faux.
  */
-const MOTS = {
-  achat: "Achat · fournisseur",
-  vente: "Vente · client",
-  sensInconnu: "Sens non tranché",
-  chaine: "La chaîne",
-  pieces: "PIÈCES",
-  issueDe: "Issue de cette pièce",
-  aRattacher: "À rattacher",
-  chaineVide: "Aucun reçu ni justificatif n'est encore rattaché à cette pièce.",
-  chaineFoot:
-    "Un reçu, un talon, un avis se rattachent depuis le règlement : c'est là qu'ils sont photographiés, et c'est de là qu'ils tiennent à leur facture.",
-  reglements: "Les règlements",
-  encaissements: "Les encaissements",
-  mouvement: "MOUVEMENT",
-  mouvements: "MOUVEMENTS",
-  verifie: "Ce que j'ai vérifié",
-  points: "POINTS",
-  lectureRefusee:
-    "Je n'ai pas lu cette pièce. Elle est photographiée et rangée — la lecture reste à faire.",
-  parcours: "Le parcours",
-  etapes: "ÉTAPES",
-  etat: { faite: "faite", courante: "en cours", attente: "en attente" },
-  foot: "Je signale et j'interroge ; je ne modifie jamais une écriture.",
-  revenir: "Revenir dessus",
-  libre: "LIBRE",
-  avantValidation: "AVANT VALIDATION",
-  surAccord: "SUR ACCORD",
-  rienNestSorti: "Rien n'est sorti d'ici",
-  rienNestSortiTexte:
-    "Vous corrigez ce que vous voulez — chaque correction est datée et s'ajoute à la lecture, elle ne l'efface pas. Et vous pouvez la supprimer : personne ne l'a reçue.",
-  elleAttend: "Elle attend le dirigeant",
-  elleAttendTexte:
-    "Tant qu'il n'a pas tranché, corrigez ce que vous voulez : c'est votre saisie. La supprimer lui revient — je lui transmets la demande et je vous préviens.",
-  elleEstPartie: "Elle est partie",
-  elleEstPartieTexte:
-    "Une correction la renvoie en « à revalider » chez votre cabinet — il refait son travail, et c'est normal. Une suppression lui demande son accord, au titre de sa conservation : la décision s'inscrit au journal, quelle qu'elle soit.",
-  demanderSuppression: "Demander la suppression",
-  mettreAuPrive: "La mettre dans mon espace privé",
-  suppressionDemandee: "Suppression demandée. Votre cabinet doit l'accorder.",
-  suppressionRefusee: "Suppression refusée par votre cabinet.",
-  siege:
-    "Vous voyez ce dossier parce que vous y avez versé une pièce. C'est le dirigeant qui transmet au cabinet.",
-} as const;
 
 interface ExtractArticle {
   designation: string;
@@ -1160,7 +1117,7 @@ function PieceScreen() {
     corps?: "sens" | null;
   }> = [];
   if (dossier.data.lectureRefusee) {
-    controles.push({ cle: "refus", k: "no", p: MOTS.lectureRefusee });
+    controles.push({ cle: "refus", k: "no", p: t("pme.piece.lectureRefusee") });
   }
   if (dateAbsente) {
     // La question est posée ici ; le champ qui y répond est dans le bloc de
@@ -1227,7 +1184,11 @@ function PieceScreen() {
       <div className="tete">
         <span className={vente ? "kind rec" : "kind"}>
           <i />
-          {vente ? MOTS.vente : achat ? MOTS.achat : MOTS.sensInconnu}
+          {vente
+            ? t("pme.piece.sens.vente")
+            : achat
+              ? t("pme.piece.sens.achat")
+              : t("pme.piece.sens.inconnu")}
         </span>
         <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
         <p className="obj">
@@ -1299,16 +1260,14 @@ function PieceScreen() {
       {siege ? (
         <div className="centr calme">
           <i />
-          <p>{MOTS.siege}</p>
+          <p>{t("pme.piece.siege")}</p>
         </div>
       ) : null}
 
       {/* ── la chaîne ────────────────────────────────────────────────── */}
       <div className="sec">
-        <h2>{MOTS.chaine}</h2>
-        <span>
-          {nes.length + 1} {MOTS.pieces}
-        </span>
+        <h2>{t("pme.piece.chaine")}</h2>
+        <span>{t("pme.piece.chaine.pieces", { count: nes.length + 1 })}</span>
       </div>
       <div className="chain">
         <button type="button" className="doc" onClick={() => setPiece(true)}>
@@ -1332,7 +1291,7 @@ function PieceScreen() {
             preload="intent"
           >
             <span className="bd">
-              <span className="tp">{MOTS.issueDe}</span>
+              <span className="tp">{t("pme.piece.chaine.issueDe")}</span>
               <b>{nomDuType(p.documentKind) ?? t("pme.piece.title")}</b>
               <span className="mt">{jourLisible(p.createdAt) ?? "—"}</span>
             </span>
@@ -1341,8 +1300,8 @@ function PieceScreen() {
         {nes.length === 0 ? (
           <div className="doc miss">
             <span className="bd">
-              <span className="tp">{MOTS.aRattacher}</span>
-              <span className="ask">{MOTS.chaineVide}</span>
+              <span className="tp">{t("pme.piece.chaine.aRattacher")}</span>
+              <span className="ask">{t("pme.piece.chaine.vide")}</span>
             </span>
           </div>
         ) : null}
@@ -1354,7 +1313,7 @@ function PieceScreen() {
        * son `sourcePieceId` à la capture. Plutôt qu'un bouton qui ne mènerait
        * nulle part, l'écran dit où le geste se trouve.
        */}
-      <p className="foot">{MOTS.chaineFoot}</p>
+      <p className="foot">{t("pme.piece.chaine.foot")}</p>
 
       {/* ── ce que j'ai lu, champ par champ ──────────────────────────── */}
       <div className="sec">
@@ -1439,10 +1398,8 @@ function PieceScreen() {
           aucun second chemin vers ces écritures : deux chemins pour une même
           écriture seraient deux occasions de divergence. */}
       <div className="sec">
-        <h2>{vente ? MOTS.encaissements : MOTS.reglements}</h2>
-        <span>
-          {paiementsVivants.length} {paiementsVivants.length > 1 ? MOTS.mouvements : MOTS.mouvement}
-        </span>
+        <h2>{vente ? t("pme.piece.encaissements") : t("pme.piece.reglements")}</h2>
+        <span>{t("pme.piece.mouvements", { count: paiementsVivants.length })}</span>
       </div>
       {!booked ? (
         <CommentCEstPaye
@@ -1474,10 +1431,8 @@ function PieceScreen() {
       {controles.length > 0 ? (
         <>
           <div className="sec">
-            <h2>{MOTS.verifie}</h2>
-            <span>
-              {controles.length} {MOTS.points}
-            </span>
+            <h2>{t("pme.piece.verifie")}</h2>
+            <span>{t("pme.piece.points", { count: controles.length })}</span>
           </div>
           <div className="ctrl">
             {controles.map((c) => (
@@ -1550,10 +1505,8 @@ function PieceScreen() {
 
       {/* ── le parcours ─────────────────────────────────────────────── */}
       <div className="sec">
-        <h2>{MOTS.parcours}</h2>
-        <span>
-          {etapes.length} {MOTS.etapes}
-        </span>
+        <h2>{t("pme.piece.parcours")}</h2>
+        <span>{t("pme.piece.etapes", { count: etapes.length })}</span>
       </div>
       <div className="jr">
         {etapes.map((e) => (
@@ -1561,10 +1514,10 @@ function PieceScreen() {
             <span>{e.label}</span>
             <u>
               {e.etat === "faite"
-                ? MOTS.etat.faite
+                ? t("pme.piece.etat.faite")
                 : e.etat === "courante"
-                  ? MOTS.etat.courante
-                  : MOTS.etat.attente}
+                  ? t("pme.piece.etat.courante")
+                  : t("pme.piece.etat.attente")}
             </u>
           </div>
         ))}
@@ -1584,7 +1537,7 @@ function PieceScreen() {
               : t("pme.verifie.question.sansTotal")}
         </p>
       </div>
-      <p className="foot">{MOTS.foot}</p>
+      <p className="foot">{t("pme.piece.foot")}</p>
 
       {error ? (
         <div className="rev">
@@ -1702,22 +1655,22 @@ function PieceScreen() {
           l'écran propose là où elle a un sens — le sens de la pièce, dans
           « Ce que j'ai vérifié » juste au-dessus. */}
       <div className="sec">
-        <h2>{MOTS.revenir}</h2>
+        <h2>{t("pme.piece.revenir")}</h2>
         <span>
           {vis === "partage"
-            ? MOTS.surAccord
+            ? t("pme.piece.revenir.surAccord")
             : vis === "entite" && siege
-              ? MOTS.avantValidation
-              : MOTS.libre}
+              ? t("pme.piece.revenir.avantValidation")
+              : t("pme.piece.revenir.libre")}
         </span>
       </div>
       {vis === "partage" ? (
         <div className="rev">
           <span className="q lock">
             <i />
-            {MOTS.elleEstPartie}
+            {t("pme.piece.elleEstPartie")}
           </span>
-          <p>{MOTS.elleEstPartieTexte}</p>
+          <p>{t("pme.piece.elleEstPartie.texte")}</p>
           <div className="b">
             <button type="button" onClick={pme.ouvrirScanner}>
               {t("pme.verifie.corriger")}
@@ -1731,23 +1684,25 @@ function PieceScreen() {
                 disabled={demanderSuppression.isPending}
                 onClick={() => demanderSuppression.mutate()}
               >
-                {demanderSuppression.isPending ? t("common.loading") : MOTS.demanderSuppression}
+                {demanderSuppression.isPending
+                  ? t("common.loading")
+                  : t("pme.piece.demanderSuppression")}
               </button>
             )}
           </div>
           {demandeDeSuppression === "demandee" ? (
-            <p>{MOTS.suppressionDemandee}</p>
+            <p>{t("pme.piece.suppressionDemandee")}</p>
           ) : demandeDeSuppression === "refusee" ? (
-            <p>{MOTS.suppressionRefusee}</p>
+            <p>{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
         </div>
       ) : vis === "entite" && siege ? (
         <div className="rev">
           <span className="q lock">
             <i />
-            {MOTS.elleAttend}
+            {t("pme.piece.elleAttend")}
           </span>
-          <p>{MOTS.elleAttendTexte}</p>
+          <p>{t("pme.piece.elleAttend.texte")}</p>
           <div className="b">
             <button type="button" onClick={pme.ouvrirScanner}>
               {t("pme.verifie.corriger")}
@@ -1759,23 +1714,25 @@ function PieceScreen() {
                 disabled={demanderSuppression.isPending}
                 onClick={() => demanderSuppression.mutate()}
               >
-                {demanderSuppression.isPending ? t("common.loading") : MOTS.demanderSuppression}
+                {demanderSuppression.isPending
+                  ? t("common.loading")
+                  : t("pme.piece.demanderSuppression")}
               </button>
             )}
           </div>
           {demandeDeSuppression === "demandee" ? (
-            <p>{MOTS.suppressionDemandee}</p>
+            <p>{t("pme.piece.suppressionDemandee")}</p>
           ) : demandeDeSuppression === "refusee" ? (
-            <p>{MOTS.suppressionRefusee}</p>
+            <p>{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
         </div>
       ) : (
         <div className="rev">
           <span className="q">
             <i />
-            {MOTS.rienNestSorti}
+            {t("pme.piece.rienNestSorti")}
           </span>
-          <p>{MOTS.rienNestSortiTexte}</p>
+          <p>{t("pme.piece.rienNestSorti.texte")}</p>
           {confirmerSuppression ? (
             /* Deux temps, jamais un seul : un effacement ne se déclenche pas
                par mégarde. La base refuse de toute façon une pièce transmise,
@@ -1816,7 +1773,7 @@ function PieceScreen() {
                   disabled={remettreAuPrive.isPending}
                   onClick={() => remettreAuPrive.mutate()}
                 >
-                  {remettreAuPrive.isPending ? t("common.loading") : MOTS.mettreAuPrive}
+                  {remettreAuPrive.isPending ? t("common.loading") : t("pme.piece.mettreAuPrive")}
                 </button>
               ) : null}
             </div>

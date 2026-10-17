@@ -6,7 +6,7 @@ import { coque, versionClient } from "@/capabilities/coque";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
-import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
+import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,7 @@ function PmeReglages() {
 
   const abo = useLAbonnement();
   const f = abo.forfait;
-  const verrous = degradation(f);
+  const verrous = degradation(f, t);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
     { cle: "systeme", label: t("pme.reglages.apparence.systeme") },
@@ -106,8 +106,8 @@ function PmeReglages() {
 
       {/* ─────────────────────────────────────────────────── le compte */}
       <div className="sec">
-        <h2>Votre compte</h2>
-        <span>Une personne</span>
+        <h2>{t("pme.reglages.compte")}</h2>
+        <span>{t("pme.reglages.compte.sous")}</span>
       </div>
       <div className="card">
         <div className="moi">
@@ -121,9 +121,13 @@ function PmeReglages() {
              */}
             <b>{compte.data?.email ?? ABSENT}</b>
             <span>{pme.orgName}</span>
+            {/*
+             * Le pluriel passe par `count` : « 1 organisation(s) » n'existe
+             * dans aucune langue, et l'arabe ne s'accorde pas comme le
+             * français. `Intl.PluralRules` tranche à notre place.
+             */}
             <span className="ro">
-              Un compte,{" "}
-              {pme.dossiers.length > 1 ? `${pme.dossiers.length} organisations` : "1 organisation"}
+              {t("pme.reglages.compte.orgs", { count: pme.dossiers.length })}
             </span>
           </span>
         </div>
@@ -131,44 +135,44 @@ function PmeReglages() {
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
       <div className="sec">
-        <h2>Votre abonnement</h2>
-        <span>Licence en direct</span>
+        <h2>{t("pme.reglages.abo")}</h2>
+        <span>{t("pme.reglages.abo.sous")}</span>
       </div>
       <div className="card abo">
         <div className="nm">
           <b>{f ? nomDeLOffre(f.offre) : ABSENT}</b>
           <span className="px">{f ? `${f.prix_mensuel_ht} ${pme.currency}` : ABSENT}</span>
         </div>
-        <p className="ttc">HT par mois · le TTC est porté par la facture</p>
+        <p className="ttc">{t("pme.reglages.abo.ht")}</p>
 
         <div className="det">
           <div>
-            <u>Organisations de la licence</u>
+            <u>{t("pme.reglages.abo.organisations")}</u>
             <b>{nombre(f?.organisations, locale)}</b>
           </div>
           <div>
-            <u>Sièges occupés sur sièges inclus</u>
+            <u>{t("pme.reglages.abo.siegesOccupes")}</u>
             <b>
               {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
             </b>
           </div>
           <div>
-            <u>Sièges au maximum</u>
+            <u>{t("pme.reglages.abo.siegesMax")}</u>
             <b>{nombre(f?.sieges_max, locale)}</b>
           </div>
           <div>
-            <u>Lectures par mois</u>
+            <u>{t("pme.reglages.abo.lectures")}</u>
             <b>{nombre(f?.lectures_droit, locale)}</b>
           </div>
           <div>
-            <u>État de la licence</u>
+            <u>{t("pme.reglages.abo.statut")}</u>
             <b>{f?.statut ?? ABSENT}</b>
           </div>
         </div>
 
         <div className="q">
           <span className="hd">
-            <u>Lectures consommées</u>
+            <u>{t("pme.reglages.abo.consommees")}</u>
             <b>
               {nombre(f?.lectures_consommees, locale)} / {nombre(f?.lectures_droit, locale)}
             </b>
@@ -186,25 +190,21 @@ function PmeReglages() {
             <span className="bar" aria-hidden />
           )}
           {f && f.lectures_restantes <= 10 ? (
-            <p className="warn">
-              Il reste {nombre(f.lectures_restantes, locale)} lectures ce mois. La capture ne
-              s&apos;arrête jamais : les pièces s&apos;empilent, non lues, et la lecture reprend au
-              renouvellement.
-            </p>
+            <p className="warn">{t("pme.reglages.abo.bientot", { count: f.lectures_restantes })}</p>
           ) : null}
           {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
-          <p className="nxt">
-            La facture est émise par la licence et porte le détail du mois ; elle ne se recalcule
-            pas ici. Le prorata des jours suit un changement d&apos;offre.
-          </p>
+          <p className="nxt">{t("pme.reglages.abo.facture")}</p>
         </div>
       </div>
 
       {/* ───────────────────────────────────────────── les organisations */}
       <div className="sec">
-        <h2>Vos organisations</h2>
+        <h2>{t("pme.reglages.orgs")}</h2>
         <span>
-          {abo.organisations.length} sur {nombre(f?.organisations, locale)}
+          {t("pme.reglages.surTotal", {
+            n: abo.organisations.length,
+            total: nombre(f?.organisations, locale),
+          })}
         </span>
       </div>
       {abo.organisations.map((o) => (
@@ -212,7 +212,7 @@ function PmeReglages() {
       ))}
       {abo.organisations.length === 0 ? (
         <div className="card">
-          <p className="t-body">{abo.ennui ?? "Aucune organisation sur cette licence."}</p>
+          <p className="t-body">{abo.ennui ?? t("pme.reglages.orgs.aucune")}</p>
         </div>
       ) : null}
       {/*
@@ -227,11 +227,8 @@ function PmeReglages() {
               <IcPlus />
             </i>
             <span className="bd">
-              <b>Ajouter une société</b>
-              <span>
-                Une organisation de plus sur la licence, avec son propre mandat et ses propres
-                pièces. Le plafond est tenu par la base.
-              </span>
+              <b>{t("pme.reglages.orgs.ajouter")}</b>
+              <span>{t("pme.reglages.orgs.ajouter.sous")}</span>
             </span>
           </Link>
         ) : (
@@ -245,11 +242,8 @@ function PmeReglages() {
               <IcCadenas />
             </i>
             <span className="bd">
-              <b>Mes sociétés</b>
-              <span>
-                Plusieurs sociétés, un mandat chacune, une vue consolidée qui n&apos;appartient
-                qu&apos;à vous.
-              </span>
+              <b>{t("pme.home.societes")}</b>
+              <span>{t("pme.reglages.societes.verrou")}</span>
               <em>{verrous.societes.offre}</em>
               {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
             </span>
@@ -259,15 +253,15 @@ function PmeReglages() {
 
       {/* ───────────────────────────────────────────────────── les sièges */}
       <div className="sec">
-        <h2>Les sièges</h2>
+        <h2>{t("pme.reglages.sieges")}</h2>
         <span>
-          {nombre(f?.sieges_occupes, locale)} sur {nombre(f?.sieges_max, locale)}
+          {t("pme.reglages.surTotal", {
+            n: nombre(f?.sieges_occupes, locale),
+            total: nombre(f?.sieges_max, locale),
+          })}
         </span>
       </div>
-      <p className="t-body">
-        Un siège est une licence pour une personne dans une organisation — jamais un établissement.
-        Chaque siège ne voit que ses propres pièces ; vous voyez tout.
-      </p>
+      <p className="t-body">{t("pme.reglages.sieges.sous")}</p>
       <Sieges abo={abo} verrou={verrous.sieges} />
 
       {/*
@@ -363,30 +357,30 @@ function PmeReglages() {
 
       {/* ───────────────────────────────────────────────── vos données */}
       <div className="sec">
-        <h2>Vos données</h2>
-        <span>À vous, toujours</span>
+        <h2>{t("pme.reglages.donnees")}</h2>
+        <span>{t("pme.reglages.donnees.sous")}</span>
       </div>
       <div className="rows">
         <Link to="/pme/coffre" className="rw">
           <span className="bd">
-            <b>Mon espace personnel</b>
-            <span>Attaché à votre compte, pas à l&apos;organisation. Rien n&apos;en sort.</span>
+            <b>{t("pme.reglages.donnees.espace")}</b>
+            <span>{t("pme.reglages.donnees.espace.sous")}</span>
           </span>
           <IcChevron />
         </Link>
         <Link to="/pme/list" className="rw">
           <span className="bd">
-            <b>Ma bibliothèque</b>
-            <span>Un mois, un dossier ou l&apos;année entière, pièce par pièce.</span>
+            <b>{t("pme.reglages.donnees.biblio")}</b>
+            <span>{t("pme.reglages.donnees.biblio.sous")}</span>
           </span>
           <IcChevron />
         </Link>
         <div className="rw">
           <span className="bd">
-            <b>Conservation</b>
-            <span>Dix ans. Même si vous partez, même si vous cessez de payer.</span>
+            <b>{t("pme.reglages.donnees.conservation")}</b>
+            <span>{t("pme.reglages.donnees.conservation.sous")}</span>
           </span>
-          <span className="vl">10 ans</span>
+          <span className="vl">{t("pme.reglages.donnees.conservation.valeur")}</span>
         </div>
         {/*
          * Changer de forfait. Visible, désactivé, avec sa raison : un bouton
@@ -397,21 +391,15 @@ function PmeReglages() {
          */}
         <button type="button" className="rw" disabled aria-disabled="true">
           <span className="bd">
-            <b>Changer de forfait</b>
-            <span>
-              Effet immédiat et facturation au prorata des jours — le geste n&apos;est pas encore au
-              contrat, il passe aujourd&apos;hui par ALGORIA.
-            </span>
+            <b>{t("pme.reglages.offre.changer")}</b>
+            <span>{t("pme.reglages.offre.changer.sous")}</span>
           </span>
           <span className="vl">{ABSENT}</span>
         </button>
       </div>
 
       <div className="note">
-        <p>
-          L&apos;organisation vous appartient, toujours. Une licence se détache, un mandat se
-          révoque — les pièces, elles, ne bougent pas.
-        </p>
+        <p>{t("pme.reglages.note")}</p>
       </div>
 
       {/* ───────────────────────── signaler, les pannes, la version */}
@@ -599,8 +587,8 @@ function useLAbonnement(): LAbonnement {
       ? null
       : forfait.data === null
         ? role === "collaborateur"
-          ? "L’abonnement est détenu par le dirigeant de ce dossier : vous n’en voyez ni le prix ni les plafonds."
-          : "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là."
+          ? t("pme.reglages.abo.collaborateur")
+          : t("pme.reglages.abo.sansLicence")
         : null;
 
   /*
@@ -653,8 +641,11 @@ interface Verrou {
  * au seul code d'offre écrit en dur de tout ce fichier — `"premium"` — parce
  * que la vue ne rend pas de plafond d'organisations.
  */
-function degradation(f: MonForfait | null): { sieges: Verrou; societes: Verrou } {
-  const inconnu = "Verrouillé parce que le forfait n’est pas lu, pas parce qu’il est refusé.";
+function degradation(
+  f: MonForfait | null,
+  t: (k: MessageKey) => string,
+): { sieges: Verrou; societes: Verrou } {
+  const inconnu = t("pme.reglages.verrou.nonLu");
   if (!f) {
     return {
       sieges: { ouvert: false, offre: "Team", raison: inconnu },
@@ -690,7 +681,7 @@ function Organisation({
   org: { tenantId: string; nom: string; lectures: number | null };
   courante: boolean;
 }) {
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
   const pme = usePme();
   const cabinet = useQuery({
     queryKey: ["mon-cabinet", org.tenantId],
@@ -705,28 +696,35 @@ function Organisation({
       <div className="hd">
         <b>{org.nom}</b>
         <span className={cn("etat", courante ? "ac" : "in")}>
-          {courante ? "Ouverte" : "Sur la licence"}
+          {courante ? t("pme.reglages.org.ouverte") : t("pme.reglages.org.surLicence")}
         </span>
       </div>
       <span className="mf">
         <IcCadenas />
         {matricule ?? ABSENT}
       </span>
+      {/*
+       * Deux phrases, pas une coupée en deux : le gras portait un fragment au
+       * milieu d'une phrase, et une insertion en milieu de phrase ne se
+       * traduit pas — l'ordre des mots change d'une langue à l'autre, et de
+       * droite à gauche le fragment atterrit ailleurs. La phrase forte est
+       * donc une phrase entière.
+       */}
       <p className="mn">
-        Matricule établi par lecture de la carte d&apos;identification fiscale —{" "}
-        <b>immuable dès la première pièce reçue</b>.
+        {t("pme.reglages.org.matricule")} <b>{t("pme.reglages.org.matricule.fort")}</b>
       </p>
       <p className="mn">
-        Cabinet mandaté : <b>{cabinet.data?.name ?? "aucun cabinet"}</b>
+        {t("pme.reglages.org.cabinet")}{" "}
+        <b>{cabinet.data?.name ?? t("pme.reglages.org.cabinet.aucun")}</b>
         {cabinet.data ? (
           <>
             {" "}
-            · <em>état et date du mandat non lus</em>
+            · <em>{t("pme.reglages.org.mandat.nonLu")}</em>
           </>
         ) : null}
       </p>
       <p className="mn">
-        Lectures consommées ce mois : <b>{nombre(org.lectures ?? undefined, locale)}</b>
+        {t("pme.reglages.org.lectures")} <b>{nombre(org.lectures ?? undefined, locale)}</b>
       </p>
       {/*
        * « Voir le mandat » et « Révoquer » attendent leur méthode : `identite`
@@ -735,13 +733,13 @@ function Organisation({
        * mandat est révocable par lui seul, et qu'il ne l'est pas encore depuis
        * cet écran. Un bouton absent se lirait « impossible ».
        */}
-      <p className="mn">Le mandat se révoque depuis cet écran dès que le dépôt le portera.</p>
+      <p className="mn">{t("pme.reglages.org.revocation")}</p>
       <div className="acts">
         <button type="button" disabled aria-disabled="true">
-          Voir le mandat
+          {t("pme.reglages.org.voirMandat")}
         </button>
         <button type="button" className="cut" disabled aria-disabled="true">
-          Révoquer
+          {t("pme.reglages.org.revoquer")}
         </button>
       </div>
     </div>
@@ -779,7 +777,10 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
           <div className="t">
             <b>{g.organisation}</b>
             <span>
-              {g.lignes.length} / {nombre(abo.forfait?.sieges_max, locale)}
+              {t("pme.reglages.surTotal", {
+                n: g.lignes.length,
+                total: nombre(abo.forfait?.sieges_max, locale),
+              })}
             </span>
           </div>
           {g.lignes.map((s) => (
@@ -803,10 +804,7 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
       {groupes.length === 0 ? (
         <div className="card">
           <p className="t-body">
-            {abo.enCours
-              ? t("common.loading")
-              : (abo.ennui ??
-                "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.")}
+            {abo.enCours ? t("common.loading") : (abo.ennui ?? t("pme.reglages.sieges.aucun"))}
           </p>
         </div>
       ) : null}
@@ -828,11 +826,8 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
             <IcCadenas />
           </i>
           <span className="bd">
-            <b>Mes sièges</b>
-            <span>
-              Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la
-              transmission au cabinet.
-            </span>
+            <b>{t("pme.home.sieges")}</b>
+            <span>{t("pme.reglages.sieges.verrou")}</span>
             <em>{verrou.offre}</em>
             {verrou.raison ? <span>{verrou.raison}</span> : null}
           </span>
@@ -873,17 +868,25 @@ function Siege({
     mutationFn: () => facturation().libererPlace(siege.tenant_id, siege.user_id),
     onSuccess: async (r) => {
       if (r.libere) {
-        setRetour(
-          "Place libérée. Les pièces de la société restent ; celles de son espace privé le suivent.",
-        );
+        setRetour(t("pme.reglages.siege.liberee"));
         await qc.invalidateQueries({ queryKey: [CLE_SIEGES] });
         await qc.invalidateQueries({ queryKey: [CLE_FORFAIT] });
       } else {
-        setRetour(
-          `Place non libérée : ${r.pieces} pièce${r.pieces > 1 ? "s" : ""} personnelle${
-            r.pieces > 1 ? "s" : ""
-          } à trancher d’abord${r.motif ? ` (${r.motif})` : ""}.`,
-        );
+        /*
+         * ======================================= LE MOTIF NE S'AFFICHE PLUS
+         *
+         * `r.motif` est un CODE de la base — « pieces_personnelles » et ses
+         * voisins —, et il était recousu en fin de phrase, entre parenthèses.
+         * Deux fautes en une : un identifiant machine sous les yeux d'un
+         * dirigeant, et un morceau collé après la phrase, qui atterrit du
+         * mauvais côté de droite à gauche.
+         *
+         * Aucune table ne traduit ces codes, et on n'en invente pas une. La
+         * phrase dit donc le fait, qui EST le motif en clair : il reste des
+         * pièces personnelles à trancher, et le compte passe par `count`, qui
+         * accorde dans chaque langue.
+         */
+        setRetour(t("pme.reglages.siege.nonLiberee", { count: r.pieces }));
       }
     },
     onError: (e: unknown) =>
@@ -911,7 +914,7 @@ function Siege({
         {/* Les lectures par siège ne sont pas dans `licence_sieges_v`. */}
         <span className="n">
           <b>{ABSENT}</b>
-          <span>Lectures</span>
+          <span>{t("pme.reglages.siege.lectures")}</span>
         </span>
       </div>
       {dirigeant && !moi ? (
@@ -927,7 +930,7 @@ function Siege({
           disabled={liberer.isPending}
           onClick={() => liberer.mutate()}
         >
-          Reprendre la place
+          {t("pme.reglages.siege.reprendre")}
         </button>
       ) : null}
       {retour ? (
@@ -967,8 +970,8 @@ function InviterUnSiege({ tenantId }: { tenantId: string }) {
     onSuccess: async (r) => {
       setRetour(
         r.deja
-          ? `${r.email} avait déjà une invitation en attente : elle tient toujours.`
-          : `Invitation envoyée à ${r.email}. Elle l’attend dans son portail ; son mot de passe ne passe par personne.`,
+          ? t("pme.reglages.siege.invite.deja", { email: r.email })
+          : t("pme.reglages.siege.invite.envoyee", { email: r.email }),
       );
       setEmail("");
       await qc.invalidateQueries({ queryKey: [CLE_SIEGES] });
@@ -985,11 +988,8 @@ function InviterUnSiege({ tenantId }: { tenantId: string }) {
           <IcPlus />
         </i>
         <span className="bd">
-          <b>Inviter un collaborateur</b>
-          <span>
-            Une place sur la licence. Le plafond est tenu par la base : si elle est au complet, elle
-            le dira.
-          </span>
+          <b>{t("pme.reglages.siege.inviter")}</b>
+          <span>{t("pme.reglages.siege.inviter.sous")}</span>
         </span>
       </button>
     );
@@ -997,10 +997,7 @@ function InviterUnSiege({ tenantId }: { tenantId: string }) {
 
   return (
     <div className="card">
-      <p className="t-body">
-        Son adresse. Elle crée son compte elle-même, et l&apos;invitation l&apos;attend dans son
-        portail.
-      </p>
+      <p className="t-body">{t("pme.reglages.siege.inviter.adresse")}</p>
       <div className="mt-2 flex gap-2">
         <input
           type="email"

@@ -40,26 +40,17 @@ export const Route = createFileRoute("/_authenticated/pme/")({
 });
 
 /*
- * =========================================================== LES TROIS LIBELLÉS EN DUR
+ * ================================================= LES TROIS LIBELLÉS, AU DICTIONNAIRE
  *
- * `t()` n'accepte que des clés qui EXISTENT — `MessageKey` est une union, pas
- * un `string`. Trois libellés du dessin n'ont aucune clé dans
- * `packages/socle/src/messages.ts`, et ce fichier ne peut pas en créer :
+ * « Lectures restantes », « Mes sièges » et « Mes sociétés » vivaient ici en
+ * français, nommés comme une dette. Ils sont entrés au dictionnaire le
+ * 18 octobre 2026 — `pme.home.lectures`, `pme.home.sieges`,
+ * `pme.home.societes` — et se lisent désormais par `t()` dans les trois
+ * langues. Rien sur cet écran n'est plus en dur.
  *
- *   « Lectures restantes »  → clé à créer : pme.home.lectures
- *   « Mes sièges »          → clé à créer : pme.home.sieges
- *   « Mes sociétés »        → clé à créer : pme.home.societes
- *
- * Ils sont donc écrits ici, en français, et NOMMÉS — pour qu'ils soient
- * remplacés par `t("pme.home.…")` dès que les trois clés entrent au dictionnaire
- * (fr, en, ar). Rien d'autre sur cet écran n'est en dur.
- *
- * « Team » et « Premium » ne sont pas dans cette liste : ce sont les noms des
- * offres, et un nom d'offre ne se traduit pas.
+ * « Team » et « Premium » restent des littéraux : ce sont les noms des offres,
+ * et un nom d'offre ne se traduit pas.
  */
-const LIBELLE_LECTURES = "Lectures restantes";
-const LIBELLE_SIEGES = "Mes sièges";
-const LIBELLE_SOCIETES = "Mes sociétés";
 
 /*
  * =============================================== L'ABONNEMENT, ET UN MONTAGE À DÉPLACER
@@ -595,12 +586,35 @@ function PmeHome() {
            */}
           <div className="act">
             <div className="hd">
-              <span>{LIBELLE_LECTURES}</span>
+              <span>{t("pme.home.lectures")}</span>
               <i>
                 <IconeBarres />
               </i>
             </div>
             <b>{compte(f?.lectures_restantes)}</b>
+            {/*
+             * ====================================== LE TIRET NE SE SUFFIT PAS
+             *
+             * « — » dit « je n'ai pas le nombre ». Il ne dit pas POURQUOI, et
+             * un dirigeant qui lit un vide conclut à une panne. Les deux
+             * absences se disent donc en mots, sous le tiret, dans le même
+             * `<em>` que la tuile voisine (12 px, une ligne, aucune règle de
+             * feuille à écrire) :
+             *
+             *   — la requête a répondu `null` : il n'y a pas de licence sur ce
+             *     compte. Ce n'est pas une panne, c'est un état du produit, et
+             *     « Réglages » en porte la phrase longue.
+             *   — la requête a échoué : le compteur n'est pas lu. Les lectures
+             *     du mois, elles, n'ont pas bougé.
+             *
+             * Pendant la première lecture, rien n'est dit : une seconde
+             * d'attente n'est ni l'une ni l'autre, et la nommer serait faux.
+             */}
+            {forfait.isPending ? null : forfait.isError ? (
+              <em>{t("pme.home.lectures.illisible")}</em>
+            ) : f === null ? (
+              <em>{t("pme.home.lectures.sansForfait")}</em>
+            ) : null}
             {lecturesPart === null ? null : (
               <span className="pg">
                 <i
@@ -630,7 +644,7 @@ function PmeHome() {
           {siegesOuverts ? (
             <div className="act">
               <div className="hd">
-                <span>{LIBELLE_SIEGES}</span>
+                <span>{t("pme.home.sieges")}</span>
                 <i>
                   <IconeSieges />
                 </i>
@@ -647,7 +661,7 @@ function PmeHome() {
           ) : (
             <div className="lock">
               <IconeSieges />
-              <b>{LIBELLE_SIEGES}</b>
+              <b>{t("pme.home.sieges")}</b>
               <em>Team</em>
             </div>
           )}
@@ -655,7 +669,7 @@ function PmeHome() {
           {societesOuvertes ? (
             <div className="act">
               <div className="hd">
-                <span>{LIBELLE_SOCIETES}</span>
+                <span>{t("pme.home.societes")}</span>
                 <i>
                   <IconeSocietes />
                 </i>
@@ -665,7 +679,7 @@ function PmeHome() {
           ) : (
             <div className="lock">
               <IconeSocietes />
-              <b>{LIBELLE_SOCIETES}</b>
+              <b>{t("pme.home.societes")}</b>
               <em>Premium</em>
             </div>
           )}
