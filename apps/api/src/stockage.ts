@@ -25,7 +25,7 @@
  * garantie qu'on ne veut pas voir dépendre d'une relecture attentive.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -225,7 +225,23 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
   // On écrit à côté puis on renomme : une écriture interrompue laisse un fichier
   // partiel, et un fichier partiel servi comme une pièce comptable est pire
   // qu'une pièce absente. Le renommage, lui, est atomique.
-  const provisoire = `${destination}.${process.pid}.partiel`;
+  /*
+   * ======================================= UN PROVISOIRE PAR REQUÊTE, PAS PAR PROCESSUS
+   *
+   * Le nom ne portait que le numéro du processus. Deux dépôts de la même pièce
+   * arrivant ensemble — deux onglets, ou l'application rouverte pendant qu'un
+   * envoi lent est en vol — visaient alors le MÊME fichier provisoire : leurs
+   * octets s'intercalaient pendant que chacun hachait son propre flux, et la
+   * seconde ne trouvait plus rien à renommer (`ENOENT`, rendu en 500).
+   *
+   * Mesuré le 18 octobre 2026 : quatre dépôts simultanés des mêmes octets →
+   * trois 201 et un 500. Avec un nom par requête, chacun écrit chez lui et
+   * renomme sur la même destination ; le dernier arrivé pose des octets
+   * identiques, et la base a déjà scellé l'empreinte.
+   *
+   * Voir `depots/deux-depots-simultanes-ne-se-marchent-pas-dessus.test.ts`.
+   */
+  const provisoire = `${destination}.${randomUUID()}.partiel`;
   const hache = hacheur();
   let scelle: { sha256: string; doublonDe: string | null };
   try {
