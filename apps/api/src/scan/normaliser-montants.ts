@@ -195,7 +195,42 @@ function blocsIdentiques(texte: string): string | null {
   return blocs.every((b) => b === blocs[0]) ? blocs[0]! : null;
 }
 
-export function candidatsMontant(brut: string, decimales: number): Candidat[] {
+/**
+ * Retirer les parentheses ORPHELINES, et elles seules.
+ *
+ * ================================================= LE DEFAUT QUI L'A FAIT NAITRE
+ *
+ * 15 octobre 2026. Une facture d'achat imprime « (base 514,700) » a cote du
+ * taux de TVA. La designation a englobe la parenthese fermante, et le montant
+ * est arrive ici sous la forme « 514,700 514,700) ».
+ *
+ * Un seul caractere parasite, et un montant parfaitement lu devenait
+ * illisible : verdict « anomalie a signaler », aucune ecriture proposee. La
+ * regle des blocs identiques aurait sauve le cas — « 514,700 » deux fois —
+ * si le « ) » n'avait pas rendu les deux blocs differents.
+ *
+ * ========================================== POURQUOI PAS LES PAIRES
+ *
+ * Une parenthese EQUILIBREE a un sens en comptabilite : « (514,700) » se lit
+ * moins 514,700. Les retirer transformerait un negatif en positif, en
+ * silence — l'erreur la plus grave possible sur un montant. La chaine ne sait
+ * pas encore lire cette notation ; elle refuse, et c'est le bon refus.
+ *
+ * Une fermante sans ouvrante, elle, ne peut rien signifier de tel.
+ */
+function sansParenthesesOrphelines(texte: string): string {
+  let ouvertes = 0;
+  let fermees = 0;
+  for (const c of texte) {
+    if (c === "(") ouvertes += 1;
+    else if (c === ")") fermees += 1;
+  }
+  if (ouvertes === fermees) return texte;
+  return texte.replace(/[()]/g, "");
+}
+
+export function candidatsMontant(entree: string, decimales: number): Candidat[] {
+  const brut = sansParenthesesOrphelines(entree);
   const repete = blocsIdentiques(brut.trim());
   if (repete !== null) {
     const lectures = candidatsMontant(repete, decimales);
