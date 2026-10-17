@@ -37,6 +37,28 @@ offre, pas une migration.
 
 **Se renverse** par une politique, sans toucher aux données.
 
+**La réserve qui vient avec, et elle est juste.** Le client ne choisit ni qui
+lit, ni combien. Un cabinet qui tient trente dossiers consomme des forfaits sans
+que le titulaire le voie passer. L'arbitrage reste tenable — c'est le client qui
+tire le bénéfice de la lecture de ses propres pièces —, mais il demande une
+contrepartie : **le client doit voir qui a consommé ses lectures.** Une colonne
+« consommée par », lisible côté client. Ce n'est pas une décision à prendre,
+c'est un affichage à poser, et il conditionne l'honnêteté de A-1.
+
+La seule branche qui donne un vrai contrôle au payeur est la troisième : un
+forfait propre au cabinet. Elle demande une offre.
+
+### A-3 · Un membre d'un cabinet engagé vaut l'expert, quel que soit son rôle
+
+*Trouvé le 17 octobre, relecture de la ronde 5.* La porte d'accès du dépôt ne
+distingue pas les rôles au sein d'un cabinet : un collaborateur du cabinet lit et
+compte comme l'expert-comptable.
+
+**Tranché :** accepté. C'est le modèle de tout le dépôt, et en faire une
+exception à cet endroit serait une règle locale que personne ne retrouverait.
+Si Wissem veut que seul l'expert consomme le forfait du client, c'est une
+distinction à poser **partout**, pas ici.
+
 ### A-2 · Un opérateur de plateforme sous réquisition reste bloqué par le plafond du client
 
 *Trouvé le 17 octobre, même ronde.*
