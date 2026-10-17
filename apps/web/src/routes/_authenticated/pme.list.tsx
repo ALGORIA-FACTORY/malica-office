@@ -4,6 +4,7 @@ import { FileUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { FileLocale } from "@/components/malica/file-locale";
+import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
@@ -326,16 +327,27 @@ function VosDocuments() {
                                 ? t("pme.list.nonLue")
                                 : t("pme.list.sansEmetteur"))}
                           </span>
-                          <span
-                            className={cn(
-                              "mt-px block text-[11px]",
-                              p.status === "retournee"
-                                ? "text-signal-stop"
-                                : "text-muted-foreground",
-                            )}
-                          >
-                            {t(`pme.status.${p.status}` as never)}
-                          </span>
+                          {/*
+                           * ================= UNE PIÈCE NON LUE N'EST PAS UNE PIÈCE QUI ATTEND
+                           *
+                           * `capturee` recouvrait deux états que rien ne
+                           * séparait : « je vais la lire » et « je ne l'ai PAS
+                           * lue ». Le dirigeant au plafond de son forfait
+                           * voyait le même mot que celui dont la facture part
+                           * en lecture dans la seconde.
+                           */}
+                          {p.status === "capturee" ? (
+                            <EtatDeLecture refus={p.lectureRefusee} />
+                          ) : (
+                            <span
+                              className={cn(
+                                "t-meta mt-px block",
+                                p.status === "retournee" ? "text-signal-stop" : "",
+                              )}
+                            >
+                              {t(`pme.status.${p.status}` as never)}
+                            </span>
+                          )}
                         </span>
                         <span className="num text-[13px] font-medium">
                           {p.total === null ? "—" : montant(p.total, locale)}

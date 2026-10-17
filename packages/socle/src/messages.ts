@@ -208,6 +208,35 @@ const fr = {
   "pme.list.empty": "Aucune pièce déposée.",
   "pme.list.nonLue": "Pas encore lue",
   "pme.list.sansEmetteur": "Émetteur non trouvé",
+  /*
+   * ============================== POURQUOI UNE PIÈCE N'A PAS ÉTÉ LUE
+   *
+   * La base inscrit un CODE, jamais une phrase, et l'écran le traduit. Un code
+   * affiché tel quel — `plafond_atteint` — est un identifiant machine ; c'est
+   * le défaut « ISSUER » sous un autre nom.
+   *
+   * `licence_<statut>` est construit par concaténation côté base : tout statut
+   * autre que `suspendue` tombe donc sur `pme.refus.licence.autre`, qui dit la
+   * vérité — la licence n'ouvre pas la lecture — sans inventer de statut.
+   *
+   * Deux états à ne pas confondre dans une liste : « photographiée, j'attends
+   * de la lire » et « photographiée, je ne l'ai PAS lue, voici pourquoi ». Le
+   * second est le silence qui a ouvert la session du 17 octobre.
+   */
+  "pme.refus.titre": "Non lue",
+  "pme.refus.attente": "En attente de lecture",
+  "pme.refus.plafond_atteint":
+    "Vous avez atteint le nombre de lectures de votre forfait. La pièce est rangée ; elle sera lue dès que le forfait repart.",
+  "pme.refus.piece_personnelle":
+    "Cette pièce est dans votre espace privé : je ne la lis pas tant que vous ne la transmettez pas.",
+  "pme.refus.licence_suspendue":
+    "Votre abonnement est suspendu. La pièce est rangée, et je la lirai dès qu'il reprend.",
+  "pme.refus.licence.autre": "Votre abonnement n'ouvre pas la lecture en ce moment.",
+  "pme.refus.organisation_sans_licence":
+    "Ce dossier n'a pas d'abonnement actif : je range les pièces, je ne les lis pas encore.",
+  "pme.refus.piece_deja_lue": "Cette pièce a déjà été lue : sa relecture ne coûte rien.",
+  "pme.refus.autre": "Je n'ai pas lu cette pièce, et la raison ne m'est pas connue.",
+  "pme.refus.le": "Refusée le {date}",
   "pme.doc.titre": "Vos documents",
   "pme.doc.importer": "Importer des PDF",
   "pme.doc.lead.mois": "{count} documents lus et classés en {mois}.",
@@ -2551,6 +2580,20 @@ const en: Dict = {
   "pme.list.empty": "No document yet.",
   "pme.list.nonLue": "Not read yet",
   "pme.list.sansEmetteur": "Issuer not found",
+  "pme.refus.titre": "Not read",
+  "pme.refus.attente": "Waiting to be read",
+  "pme.refus.plafond_atteint":
+    "You have used every reading in your plan. The document is filed; I will read it as soon as the plan allows.",
+  "pme.refus.piece_personnelle":
+    "This document is in your private space: I do not read it until you share it.",
+  "pme.refus.licence_suspendue":
+    "Your subscription is suspended. The document is filed, and I will read it as soon as it resumes.",
+  "pme.refus.licence.autre": "Your subscription does not allow reading right now.",
+  "pme.refus.organisation_sans_licence":
+    "This company has no active subscription: I file the documents, I do not read them yet.",
+  "pme.refus.piece_deja_lue": "This document has already been read: reading it again costs nothing.",
+  "pme.refus.autre": "I did not read this document, and the reason is unknown to me.",
+  "pme.refus.le": "Refused on {date}",
   "pme.doc.titre": "Your documents",
   "pme.doc.importer": "Import PDFs",
   "pme.doc.lead.mois": "{count} documents read and filed in {mois}.",
@@ -4842,6 +4885,18 @@ const ar: Dict = {
   "pme.list.empty": "لا توجد وثيقة.",
   "pme.list.nonLue": "لم تُقرأ بعد",
   "pme.list.sansEmetteur": "لم يُعثر على المُصدِر",
+  "pme.refus.titre": "غير مقروءة",
+  "pme.refus.attente": "في انتظار القراءة",
+  "pme.refus.plafond_atteint":
+    "لقد استنفدتَ عدد القراءات في باقتك. الوثيقة محفوظة، وسأقرؤها حالما تسمح الباقة بذلك.",
+  "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
+  "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
+  "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
+  "pme.refus.organisation_sans_licence":
+    "هذا الملف ليس له اشتراك نشط: أحفظ الوثائق ولا أقرؤها بعد.",
+  "pme.refus.piece_deja_lue": "هذه الوثيقة قُرئت من قبل: إعادة قراءتها لا تكلّف شيئًا.",
+  "pme.refus.autre": "لم أقرأ هذه الوثيقة، والسبب غير معروف لديّ.",
+  "pme.refus.le": "رُفضت في {date}",
   "pme.doc.titre": "وثائقك",
   "pme.doc.importer": "استيراد ملفات PDF",
   "pme.doc.lead.mois": "{count} وثيقة مقروءة ومصنَّفة في {mois}.",

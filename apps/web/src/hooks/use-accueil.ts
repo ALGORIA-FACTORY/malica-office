@@ -45,7 +45,13 @@ import { monthBounds } from "./use-tva";
  */
 const FENETRE = 12;
 
-export interface MoisDeTva {
+/*
+ * Plus exporté : l'accueil ne nomme plus ce type depuis que sa trajectoire
+ * douze mois a laissé la place au dessin. Il reste employé ICI, par `Accueil`,
+ * et un type non exporté reste atteignable du dehors par `Accueil["serie"]` —
+ * rien n'est perdu, et `knip` cesse de signaler un export que personne ne lit.
+ */
+interface MoisDeTva {
   /** « 2026-04 ». */
   periode: string;
   /** La TVA déductible du mois, ou null si le mois n'a rien à dire. */

@@ -120,6 +120,48 @@ export function valeurLisible(chemin: string, valeur: string, locale: string): s
   return valeur;
 }
 
+/**
+ * Pourquoi Malica n'a pas lu cette pièce, en clair.
+ *
+ * ================================================================== POURQUOI
+ *
+ * La base inscrit un CODE dans `capture.pieces.lecture_refusee` — jamais une
+ * phrase. Affiché tel quel, `plafond_atteint` est un identifiant machine : le
+ * défaut « ISSUER » sous un autre nom, et R4 l'interdit.
+ *
+ * ============================================== LE CAS CONSTRUIT, ET SON REPLI
+ *
+ * `lecture_autorisee` compose `'licence_' || v_conso.statut` : le code n'est
+ * donc PAS une énumération fermée. `licence_suspendue` a sa phrase ; tout autre
+ * statut tombe sur `pme.refus.licence.autre`, qui dit ce qui est vrai — la
+ * licence n'ouvre pas la lecture — sans nommer un statut qu'on ne connaît pas.
+ *
+ * Un code hors de ces deux familles rend `pme.refus.autre` : « je ne l'ai pas
+ * lue, et je ne sais pas pourquoi » est une information. Le code brut n'en est
+ * pas une.
+ */
+export function libelleDuRefus(motif: string, t: T): string {
+  const MOTIFS: Record<string, MessageKey> = {
+    plafond_atteint: "pme.refus.plafond_atteint",
+    piece_personnelle: "pme.refus.piece_personnelle",
+    licence_suspendue: "pme.refus.licence_suspendue",
+    organisation_sans_licence: "pme.refus.organisation_sans_licence",
+    piece_deja_lue: "pme.refus.piece_deja_lue",
+  };
+  const connu = MOTIFS[motif];
+  if (connu) return t(connu);
+  if (motif.startsWith("licence_")) return t("pme.refus.licence.autre");
+  return t("pme.refus.autre");
+}
+
+/**
+ * Le plafond, et lui seul, porte le marigold — c'est la règle du langage
+ * visuel, et elle se décide ici plutôt que dans chaque écran qui l'affiche.
+ */
+export function refusDuPlafond(motif: string): boolean {
+  return motif === "plafond_atteint";
+}
+
 /** Ce qu'un code de signalement veut dire. */
 export function libelleDuCode(code: string, t: T): string {
   /*
