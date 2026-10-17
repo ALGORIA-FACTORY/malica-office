@@ -1441,3 +1441,147 @@ grant execute on function public.lecture_refusee_inscrire(uuid) to authenticated
 comment on function public.lecture_refusee_inscrire(uuid) is
   'Inscrit au journal d''audit POURQUOI une lecture a été refusée (payload.motif, '
   'le code de la base). Rejoue le verdict : le client ne choisit jamais le motif.';
+
+-- --- 15. Le contrat RPC lit l'abonnement : trois vues, une porte -------------
+--
+-- Les écrans de l'abonnement n'avaient rien à appeler. Le dépôt n'ajoute
+-- aucune logique à ce que la base rend (R3) : tout ce qu'il faut afficher —
+-- le forfait, les sièges, ce que chaque société consomme — est donc dit ici,
+-- par des vues, et le dépôt les relaie.
+--
+-- Les trois naissent `security_invoker` (section 6) : la RLS des tables
+-- lues s'applique à celui qui interroge. Et chacune est bornée à la licence
+-- dont l'appelant est TITULAIRE : sans cette borne, un opérateur de la
+-- plateforme — qui lit tout — recevrait la ligne d'un client au hasard.
+-- « La licence de l'appelant » est une condition de la base, pas un filtre
+-- d'application.
+--
+-- Une licence par titulaire n'est pas une contrainte du schéma
+-- (`licences_titulaire_idx` n'est pas unique) : `mon_forfait_v` peut donc
+-- rendre plusieurs lignes, une par licence détenue. Aucun parcours ne crée
+-- aujourd'hui une seconde licence pour un même titulaire ; le dépôt rend la
+-- première par identifiant, de façon déterministe, et la question reste posée
+-- (voir le rapport de la tâche 3).
+
+begin;
+
+create or replace view public.mon_forfait_v with (security_invoker = true) as
+select
+  c.licence_id,
+  c.offre_code as offre,
+  c.statut,
+  c.lectures_droit,
+  c.lectures_consommees,
+  c.lectures_restantes,
+  c.organisations,
+  c.sieges_occupes,
+  c.sieges_inclus,
+  c.sieges_max,
+  c.prix_mensuel_ht
+from facturation.consommation_v c
+join facturation.licences l on l.id = c.licence_id
+where l.titulaire = auth.uid();
+
+comment on view public.mon_forfait_v is
+  'Le forfait de la licence dont l''appelant est titulaire : offre, plafond, '
+  'consommation, sièges, prix dû. Un AFFICHAGE : la décision d''une lecture se '
+  'prend dans `lecture_autorisee`.';
+
+create or replace view public.licence_sieges_v with (security_invoker = true) as
+select
+  m.user_id,
+  p.display_name as nom,
+  m.role,
+  m.tenant_id,
+  o.name         as organisation
+from facturation.licences l
+join facturation.licence_organisations lo on lo.licence_id = l.id
+join identity.memberships m               on m.tenant_id = lo.tenant_id
+join identity.organizations o             on o.id = m.tenant_id
+left join identity.profiles p             on p.user_id = m.user_id
+where l.titulaire = auth.uid();
+
+comment on view public.licence_sieges_v is
+  'Les membres de toutes les organisations de la licence dont l''appelant est '
+  'titulaire. Le dirigeant y figure (il n''occupe pas de place) ; la place se '
+  'lit dans `mon_forfait_v.sieges_occupes`.';
+
+create or replace view public.licence_organisations_v with (security_invoker = true) as
+select
+  lo.tenant_id,
+  o.name as nom,
+  -- Même période que `consommation_v` : le mois courant.
+  (select count(*) from facturation.lectures le
+    where le.licence_id = lo.licence_id
+      and le.tenant_id = lo.tenant_id
+      and le.periode = date_trunc('month', current_date)::date)::int
+         as lectures_consommees
+from facturation.licences l
+join facturation.licence_organisations lo on lo.licence_id = l.id
+join identity.organizations o             on o.id = lo.tenant_id
+where l.titulaire = auth.uid();
+
+comment on view public.licence_organisations_v is
+  'Les organisations de la licence dont l''appelant est titulaire, et ce que '
+  'chacune a consommé ce mois-ci.';
+
+revoke all on public.mon_forfait_v, public.licence_sieges_v, public.licence_organisations_v
+  from public, anon, service_role;
+grant select on public.mon_forfait_v, public.licence_sieges_v, public.licence_organisations_v
+  to authenticated;
+
+-- --- 16. Inviter un siège : la place se demande À L'INVITATION ---------------
+--
+-- `memberships_place_disponible` (`20261018110000`) refuse la onzième place à
+-- l'ENTRÉE, c'est-à-dire quand l'invité accepte. L'invitation, elle, se créait
+-- sans regarder : le dirigeant d'une licence au complet invitait quelqu'un,
+-- recevait « invitation envoyée », et la personne butait ensuite sur un refus
+-- qu'elle n'avait aucun moyen de comprendre. Le déclencheur reste la dernière
+-- porte (une invitation ne réserve pas de place, et deux invités peuvent
+-- légitimement se disputer la dernière) ; celle-ci dit non plus tôt, avec la
+-- même règle — `places_occupees` contre `sieges_max` — et le même code.
+--
+-- Elle délègue ensuite à l'invitation qui existe (`cabinet_inviter`), au rôle
+-- `collaborateur` : le dépôt n'a pas à choisir un rôle. `security definer`
+-- parce que le dirigeant qui n'est pas le titulaire ne lit pas la licence ;
+-- l'autorité est posée ici, en tête, comme dans `siege_reprendre_sa_place`.
+
+create or replace function public.siege_inviter(p_tenant uuid, p_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_licence uuid;
+  v_max     smallint;
+begin
+  if not app.has_org_role(p_tenant, array['dirigeant']) then
+    raise exception 'seul le dirigeant invite un siege' using errcode = '42501';
+  end if;
+
+  v_licence := facturation.licence_de(p_tenant);
+
+  -- Une organisation sans licence n'a pas de plafond à opposer : le
+  -- déclencheur fait de même, pour la même raison.
+  if v_licence is not null then
+    select sieges_max into v_max from facturation.droits_v where licence_id = v_licence;
+    if facturation.places_occupees(v_licence) >= coalesce(v_max, 0) then
+      raise exception 'cette offre porte % place(s) ; elles sont prises', coalesce(v_max, 0)
+        using errcode = 'check_violation',
+              hint = 'Passer à l''offre supérieure, ou libérer une place.';
+    end if;
+  end if;
+
+  return public.cabinet_inviter(p_tenant, p_email, 'collaborateur');
+end
+$$;
+
+revoke all on function public.siege_inviter(uuid, text) from public, anon;
+grant execute on function public.siege_inviter(uuid, text) to authenticated;
+
+comment on function public.siege_inviter(uuid, text) is
+  'Invite un collaborateur sur une organisation de la licence, si une place est '
+  'libre. Réservé au dirigeant. Le plafond vient de `droits_v`, jamais d''un compte du client.';
+
+commit;

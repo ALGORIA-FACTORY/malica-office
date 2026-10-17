@@ -948,7 +948,20 @@ export const capture = {
    * L'ordre compte. On lit le tenant AVANT la suppression : après, la ligne
    * n'existe plus et l'on ne saurait plus où est le fichier.
    */
-  async supprimer(db: Requete, pieceId: string): Promise<boolean> {
+  /**
+   * ====================================================== LE SECOND ARGUMENT
+   *
+   * `capture_piece_supprimer(piece, p_par_accord)` : le second argument dit
+   * « le cabinet a donné son accord ». Seul `piece_repondre` a le droit de le
+   * poser à vrai. Depuis un écran il vaut TOUJOURS `false`, et cette méthode
+   * est ce que l'écran appelle : elle le passe, et refuse tout autre valeur.
+   * Sans ce refus, un client qui écrirait `true` dans son appel supprimerait
+   * une pièce transmise sans l'accord de personne.
+   */
+  async supprimer(db: Requete, pieceId: string, parAccord: false = false): Promise<boolean> {
+    if (parAccord !== false) {
+      throw Object.assign(new Error("suppression.accord_reserve_au_cabinet"), { code: "42501" });
+    }
     const { rows } = await db.query<{ tenant_id: string }>(
       `select tenant_id from pieces_v where id = $1`,
       [pieceId],
@@ -956,7 +969,7 @@ export const capture = {
     const tenantId = rows[0]?.tenant_id;
     if (!tenantId) return false;
 
-    await db.query(`select public.capture_piece_supprimer($1)`, [pieceId]);
+    await db.query(`select public.capture_piece_supprimer($1, $2)`, [pieceId, parAccord]);
     // La base a dit oui : les octets n'ont plus de raison d'exister.
     await effacerContenu(tenantId, pieceId);
     return true;

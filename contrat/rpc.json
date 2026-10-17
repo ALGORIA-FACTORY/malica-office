@@ -104,6 +104,13 @@
     "generer",
     "historique"
   ],
+  "facturation": [
+    "inviterSiege",
+    "libererPlace",
+    "monForfait",
+    "organisations",
+    "sieges"
+  ],
   "honoraires": [
     "avoir",
     "cloreMandat",

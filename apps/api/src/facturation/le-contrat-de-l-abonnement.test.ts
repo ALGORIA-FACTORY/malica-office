@@ -1,0 +1,282 @@
+/**
+ * Le contrat RPC de l'abonnement : le forfait, les places, les sociétés.
+ *
+ * Cinq méthodes, `facturation.*`, qui ne font que relayer des vues et des
+ * fonctions de la base (R3). L'épreuve prouve trois choses, par exécution et
+ * par le chemin de production (`sousIdentite` -> `executerRpc`, rôle
+ * `authenticated`, RLS en vigueur) :
+ *
+ *   - chaque méthode rend ce que la base porte POUR L'APPELANT, et rien d'une
+ *     autre licence : deux clients, deux titulaires, et aucun ne voit l'autre
+ *     (le défaut de la livraison : des vues qui rendaient tous les clients) ;
+ *   - un appelant sans droit est refusé, et le refus vient de la base ;
+ *   - inviter sur une licence au complet est refusé par la base, pas par un
+ *     compte fait ici.
+ *
+ * Les deux clients sont validés (commités) : `sousIdentite` ouvre sa propre
+ * connexion. Ils s'archivent à la fin, ils ne se suppriment pas (R7).
+ */
+
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { after, before, describe, it } from "node:test";
+
+import pg from "pg";
+
+import { fermerLePool, sousIdentite } from "../db.ts";
+import { executerRpc } from "../rpc.ts";
+
+const ADMIN = process.env["DATABASE_URL_ADMIN"];
+const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && ADMIN);
+
+interface Client {
+  titulaire: string;
+  collaborateurs: string[];
+  tenant: string;
+  licence: string;
+}
+
+describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
+  const admin = new pg.Pool({ connectionString: ADMIN, max: 2 });
+  const marque = `abo-${Date.now()}`;
+  let a: Client; // Team, 2 sièges occupés sur 10, 2 lectures
+  let b: Client; // Team au complet : 10 sièges sur 10, 1 lecture
+  const etranger = randomUUID(); // un compte sans aucun rattachement
+  const operateur = randomUUID(); // la plateforme : lit tout, détient rien
+
+  const rpc = (qui: string, depot: string, methode: string, ...args: unknown[]) =>
+    sousIdentite(qui, (db) => executerRpc(db, { depot, methode, args }));
+
+  /** Un client Team : organisation, titulaire, collaborateurs, lectures déjà comptées. */
+  async function abonner(nom: string, sieges: number, lectures: number): Promise<Client> {
+    const titulaire = randomUUID();
+    const licence = randomUUID();
+    const org = await admin.query<{ id: string }>(
+      `insert into identity.organizations (kind, name, jurisdiction, currency)
+       values ('pme', $1, 'TN', 'TND') returning id`,
+      [`${nom} ${marque}`],
+    );
+    const tenant = org.rows[0]!.id;
+    await admin.query(
+      "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
+      [tenant, titulaire],
+    );
+    await admin.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
+      titulaire,
+      `Dirigeant ${nom}`,
+    ]);
+    await admin.query(
+      `insert into facturation.licences (id, titulaire, offre_code, offre_depuis)
+       values ($1, $2, 'team', current_date)`,
+      [licence, titulaire],
+    );
+    await admin.query(
+      "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
+      [licence, tenant],
+    );
+    const collaborateurs: string[] = [];
+    for (let i = 0; i < sieges; i++) {
+      const c = randomUUID();
+      collaborateurs.push(c);
+      await admin.query(
+        "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+        [tenant, c],
+      );
+      await admin.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
+        c,
+        `Collaborateur ${i} ${nom}`,
+      ]);
+    }
+    for (let i = 0; i < lectures; i++) {
+      const piece = await admin.query<{ id: string }>(
+        `insert into capture.pieces
+           (tenant_id, vis, source, storage_path, idempotency_key, created_by)
+         values ($1, 'entite'::app.vis_t, 'photo', $2, $2, $3) returning id`,
+        [tenant, `${marque}-${nom}-${i}`, titulaire],
+      );
+      await admin.query(
+        `insert into facturation.lectures
+           (tenant_id, licence_id, piece_id, periode, consommee_par)
+         values ($1, $2, $3, date_trunc('month', current_date)::date, $4)`,
+        [tenant, licence, piece.rows[0]!.id, titulaire],
+      );
+    }
+    return { titulaire, collaborateurs, tenant, licence };
+  }
+
+  before(async () => {
+    a = await abonner("Alpha", 2, 2);
+    b = await abonner("Bravo", 10, 1);
+    await admin.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
+  });
+
+  after(async () => {
+    // R7 : un tenant d'essai s'archive, il ne se supprime pas.
+    await admin.query(
+      `update identity.organizations
+          set archived_at = now(), archived_reason = 'fixture de test automatisé'
+        where id = any($1::uuid[])`,
+      [[a.tenant, b.tenant]],
+    );
+    await admin.end();
+    await fermerLePool();
+  });
+
+  // ---------------------------------------------------------------- monForfait
+
+  it("monForfait rend la ligne de consommation_v de SA licence, et pas celle de l'autre", async () => {
+    const attendu = await admin.query(
+      `select offre_code as offre, statut, lectures_droit, lectures_consommees,
+              lectures_restantes, organisations, sieges_occupes, sieges_inclus, sieges_max,
+              prix_mensuel_ht
+         from facturation.consommation_v where licence_id = $1`,
+      [a.licence],
+    );
+    assert.equal(attendu.rows.length, 1);
+
+    const vuParA = await rpc(a.titulaire, "facturation", "monForfait");
+    assert.deepEqual(vuParA, attendu.rows[0]);
+
+    const vuParB = (await rpc(b.titulaire, "facturation", "monForfait")) as {
+      lectures_consommees: number;
+      sieges_occupes: number;
+    };
+    assert.equal(vuParB.lectures_consommees, 1, "B voit SA consommation");
+    assert.equal(vuParB.sieges_occupes, 10);
+    assert.notDeepEqual(vuParB, vuParA, "deux licences, deux lignes");
+  });
+
+  it("monForfait ne rend rien à qui ne détient aucune licence, plateforme comprise", async () => {
+    assert.equal(await rpc(etranger, "facturation", "monForfait"), null);
+    assert.equal(await rpc(a.collaborateurs[0]!, "facturation", "monForfait"), null);
+    // La plateforme lit toutes les licences : sans la borne « titulaire », elle
+    // recevrait la ligne d'un client au hasard.
+    assert.equal(await rpc(operateur, "facturation", "monForfait"), null);
+  });
+
+  // ------------------------------------------------------------------- sieges
+
+  it("sieges rend les membres de SA licence, et aucun membre d'un autre client", async () => {
+    const lignes = (await rpc(a.titulaire, "facturation", "sieges")) as Array<{
+      user_id: string;
+      nom: string | null;
+      role: string;
+      tenant_id: string;
+      organisation: string;
+    }>;
+    assert.deepEqual(
+      lignes.map((l) => l.user_id).sort(),
+      [a.titulaire, ...a.collaborateurs].sort(),
+    );
+    assert.ok(lignes.every((l) => l.tenant_id === a.tenant));
+    assert.ok(lignes.every((l) => l.organisation === `Alpha ${marque}`));
+    assert.equal(lignes.find((l) => l.user_id === a.titulaire)?.role, "dirigeant");
+    assert.equal(lignes.find((l) => l.user_id === a.titulaire)?.nom, "Dirigeant Alpha");
+
+    const deB = (await rpc(b.titulaire, "facturation", "sieges")) as Array<{ tenant_id: string }>;
+    assert.equal(deB.length, 11);
+    assert.ok(deB.every((l) => l.tenant_id === b.tenant));
+  });
+
+  it("sieges est vide pour qui n'a pas de licence : étranger, collaborateur, plateforme", async () => {
+    assert.deepEqual(await rpc(etranger, "facturation", "sieges"), []);
+    assert.deepEqual(await rpc(a.collaborateurs[0]!, "facturation", "sieges"), []);
+    assert.deepEqual(await rpc(operateur, "facturation", "sieges"), []);
+  });
+
+  // ------------------------------------------------------------ organisations
+
+  it("organisations rend SES sociétés et ce que chacune consomme", async () => {
+    assert.deepEqual(await rpc(a.titulaire, "facturation", "organisations"), [
+      { tenant_id: a.tenant, nom: `Alpha ${marque}`, lectures_consommees: 2 },
+    ]);
+    assert.deepEqual(await rpc(b.titulaire, "facturation", "organisations"), [
+      { tenant_id: b.tenant, nom: `Bravo ${marque}`, lectures_consommees: 1 },
+    ]);
+    assert.deepEqual(await rpc(etranger, "facturation", "organisations"), []);
+    assert.deepEqual(await rpc(operateur, "facturation", "organisations"), []);
+  });
+
+  // ------------------------------------------------------------- inviterSiege
+
+  it("inviterSiege sur une licence qui a une place libre inscrit l'invitation", async () => {
+    const email = `invite-${marque}@essai.local`;
+    const r = (await rpc(a.titulaire, "facturation", "inviterSiege", email, a.tenant)) as {
+      id: string;
+      email: string;
+      role: string;
+      deja: boolean;
+    };
+    assert.equal(r.role, "collaborateur");
+    assert.equal(r.deja, false);
+
+    const ligne = await admin.query(
+      "select tenant_id, role from identity.invitations where id = $1",
+      [r.id],
+    );
+    assert.deepEqual(ligne.rows, [{ tenant_id: a.tenant, role: "collaborateur" }]);
+  });
+
+  it("inviterSiege sur une licence AU COMPLET est refusé par la base, rien n'est inscrit", async () => {
+    const avant = await admin.query<{ n: string }>(
+      "select count(*) as n from identity.invitations where tenant_id = $1",
+      [b.tenant],
+    );
+    await assert.rejects(
+      rpc(b.titulaire, "facturation", "inviterSiege", `onzieme-${marque}@essai.local`, b.tenant),
+      (e: { code?: string }) => e.code === "23514",
+    );
+    const apres = await admin.query<{ n: string }>(
+      "select count(*) as n from identity.invitations where tenant_id = $1",
+      [b.tenant],
+    );
+    assert.equal(apres.rows[0]!.n, avant.rows[0]!.n);
+  });
+
+  it("inviterSiege est refusé à qui n'est pas le dirigeant de l'organisation", async () => {
+    const email = `refuse-${marque}@essai.local`;
+    for (const qui of [a.collaborateurs[0]!, etranger, b.titulaire, operateur]) {
+      await assert.rejects(
+        rpc(qui, "facturation", "inviterSiege", email, a.tenant),
+        (e: { code?: string }) => e.code === "42501",
+        `l'appelant ${qui} ne devait pas pouvoir inviter chez Alpha`,
+      );
+    }
+  });
+
+  // ------------------------------------------------------------- libererPlace
+
+  it("libererPlace est refusé à qui n'est pas le dirigeant, dont celui d'un autre client", async () => {
+    const cible = a.collaborateurs[0]!;
+    for (const qui of [a.collaborateurs[1]!, etranger, b.titulaire]) {
+      await assert.rejects(
+        rpc(qui, "facturation", "libererPlace", a.tenant, cible),
+        (e: { code?: string }) => e.code === "42501",
+      );
+    }
+    const reste = await admin.query(
+      "select 1 from identity.memberships where tenant_id = $1 and user_id = $2",
+      [a.tenant, cible],
+    );
+    assert.equal(reste.rows.length, 1, "la place n'a pas été reprise");
+  });
+
+  it("libererPlace libère la place quand rien n'est à trancher", async () => {
+    const partant = a.collaborateurs[0]!;
+    assert.deepEqual(await rpc(a.titulaire, "facturation", "libererPlace", a.tenant, partant), {
+      libere: true,
+      pieces: 0,
+    });
+    const reste = await admin.query(
+      "select 1 from identity.memberships where tenant_id = $1 and user_id = $2",
+      [a.tenant, partant],
+    );
+    assert.equal(reste.rows.length, 0);
+
+    // Et la base le dit : une place de moins d'occupée.
+    const forfait = (await rpc(a.titulaire, "facturation", "monForfait")) as {
+      sieges_occupes: number;
+    };
+    assert.equal(forfait.sieges_occupes, 1);
+  });
+});

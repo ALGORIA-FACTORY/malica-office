@@ -367,7 +367,11 @@ export const collab = {
     return { status };
   },
 
-  async setPieceVis(db: Requete, pieceId: string, vis: string): Promise<boolean> {
+  async setPieceVis(
+    db: Requete,
+    pieceId: string,
+    vis: "personnel" | "entite" | "partage",
+  ): Promise<boolean> {
     const { rows } = await db.query<{ changed: boolean }>(
       // La fonction rend du jsonb : on en extrait le drapeau, on ne le suppose pas.
       `select (public.capture_piece_set_vis($1, $2::app.vis_t) ->> 'changed')::boolean as changed`,
