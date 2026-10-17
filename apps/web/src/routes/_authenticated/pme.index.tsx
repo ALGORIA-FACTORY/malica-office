@@ -217,7 +217,10 @@ function PmeHome() {
       </header>
 
       {/* ------------------------------------------- le bloc d'encre, à fond perdu */}
-      <section className="rg-rise rg-regle relative overflow-hidden border-t-[3px] border-marigold-on-ink bg-foreground px-[22px] py-5 text-background">
+      <section
+        data-bloc="encre"
+        className="rg-rise rg-regle relative overflow-hidden border-t-[3px] border-marigold-on-ink bg-foreground px-[22px] py-5 text-background"
+      >
         <p className="relative font-mono text-[10px] font-medium uppercase tracking-[0.2em] opacity-65">
           {t("pme.home.recuperee", { mois: moisCourant })}
         </p>

@@ -1,341 +1,650 @@
 /*
- * ===================================================== LE LANGAGE DE LA PME
+ * Malica PME — le langage visuel de l'application du dirigeant.
  *
- * Deux surfaces, deux langages. Edition One — monochrome, clair, rayon 0,
- * élévation par bordures — reste le langage du CABINET et ne bouge pas d'un
- * pixel. La PME tient un téléphone dans une main, souvent debout, souvent
- * dans un local mal éclairé : elle reçoit un langage sombre, des angles
- * adoucis, et un accent qui dit « c'est fait » sans crier.
+ * ================================================================== POURQUOI
  *
- * ================================================ POURQUOI DES JETONS, ET PAS
- *                                                  UN SECOND JEU DE CLASSES
+ * `apps/web/src/styles.css` porte « Edition One » : monochrome, clair, coins
+ * nets (radius 0), élévation par bordures. C'est une doctrine de document, et
+ * elle est juste — pour le cabinet, sur un grand écran, devant un plan
+ * comptable.
  *
- * Les treize routes `/pme/*` sont déjà écrites avec les jetons sémantiques du
- * dépôt : `bg-background`, `text-foreground`, `border-border`, `bg-card`,
- * `text-muted-foreground`, `outline-line-strong`. Poser le langage PME comme
- * un jeu de classes parallèle (`.app`, `.carte`, `.chiffre`) aurait voulu dire
- * réécrire treize fichiers de balisage — treize occasions de perdre un état,
- * une garde de rôle, une clé d'idempotence.
+ * L'application PME n'est pas ce produit-là. Elle est tenue à une main, dans
+ * un entrepôt, sur un téléphone d'entrée de gamme, par quelqu'un qui n'est pas
+ * comptable et qui n'ouvrira pas un manuel. Elle a donc son langage : sombre
+ * (la caméra s'ouvre souvent, et un écran blanc qui bascule au noir éblouit),
+ * arrondi (ce qu'on touche avec le pouce), et une couleur d'accent unique qui
+ * dit « l'interface », jamais « le verdict ».
  *
- * On REDÉFINIT donc les jetons sous la portée, et le balisage existant devient
- * le langage PME sans qu'une ligne de JSX change. Ce qui est déjà juste le
- * reste : les gardes, les états, la file hors ligne, les zones sûres.
+ * ========================================================== CE QUI SE GARDE
  *
- * ======================================================== LA SEULE EXCEPTION
+ * D'Edition One, tout se garde sauf les coins : Inter et IBM Plex Mono, la
+ * couleur comme signal rare, et surtout **l'élévation par bordures**. Mesuré
+ * sur les neuf maquettes : 9 ombres portées en tout, dont 7 sont des `inset`.
+ * Deux vraies ombres sur neuf écrans — pour un menu flottant et une feuille
+ * modale, c'est-à-dire les deux seuls objets qui passent devant un autre.
  *
- * Le rayon. `styles.css` force `--radius-*: 0px` partout, et c'est la doctrine
- * d'Edition One. La PME a besoin de l'inverse. C'est le seul endroit où les
- * deux langages se contredisent vraiment, et c'est pour cela que la portée
- * existe : hors de `[data-surface="pme"]`, rien n'est touché.
+ * Le seul point de doctrine qui change est donc `--radius: 0`. Il change parce
+ * qu'un bouton carré de 44 px sous un pouce ne dit pas qu'on peut le toucher.
  *
- * Importé APRÈS `styles.css`, donc hors des couches de Tailwind : une règle
- * non-couchée l'emporte sur un utilitaire, ce qui est exactement ce qu'on
- * veut d'un thème de surface.
+ * ================================================================== PORTÉE
+ *
+ * Tout est sous `[data-surface="pme"]`. Le cabinet n'en voit rien, et les deux
+ * langages cohabitent sans qu'aucune règle de l'un ne fuie dans l'autre.
+ *
+ * ======================================================= QUATRE TAILLES, UN PRODUIT
+ *
+ * Le même code sert quatre situations, et elles ne se négocient pas :
+ *
+ *   < 400 px   iPhone SE, Android d'entrée de gamme à 360, et les 320 qui
+ *              traînent encore en Tunisie. La gouttière se resserre, les
+ *              grands nombres se calent sur la largeur, rien ne déborde.
+ *   400-767    le téléphone courant. C'est la mesure de référence des
+ *              maquettes : colonne de 440 px, barre du bas dans le flux.
+ *   768-1023   tablette et téléphone pivoté. La colonne reste centrée et
+ *              cesse de grandir — une ligne de texte de 900 px ne se lit pas.
+ *   >= 1024    desktop. La barre du bas devient un RAIL À GAUCHE, permanent.
+ *              Une barre d'onglets collée en bas d'un écran de 27 pouces est
+ *              un portage, pas un produit.
+ *
+ * Et deux choses qui ne sont pas des tailles :
+ *
+ *   — les encoches et la barre de gestes, par `env(safe-area-inset-*)`. La
+ *     coque Capacitor doit porter `viewport-fit=cover`, sinon ces variables
+ *     valent zéro et le bouton principal passe sous la barre de l'iPhone.
+ *   — le survol, qui n'existe pas au doigt : `@media (hover: hover)`. Sans
+ *     cette garde, un état de survol RESTE affiché après le relâchement sur
+ *     Android, et l'écran paraît figé sur le dernier élément touché.
  */
 
 [data-surface="pme"] {
-  /* ---- Les fonds. Trois profondeurs, pas cinq : au-delà, l'œil ne les
-     distingue plus sur un écran de téléphone en plein soleil. --------- */
-  --background: #0a0a0a;
-  --card: #181818;
-  --card-foreground: #ffffff;
-  --popover: #0b0b0b;
-  --popover-foreground: #ffffff;
-  --muted: #242424;
-  --sidebar: #0b0b0b;
-  --sidebar-foreground: #ffffff;
+  /* ---- les fonds : quatre plans, pas un de plus --------------------------
+   * `bg` est le vide. `d0` l'écran. `d1` ce qu'on pose dessus (une carte, une
+   * bulle). `d2` ce qu'on pose sur la carte (un champ, une puce). Au-delà de
+   * quatre, personne ne sait plus ce qui est devant quoi.                   */
+  --bg:    #0A0A0A;
+  --d0:    #0B0B0B;
+  --d1:    #181818;
+  --d2:    #242424;
+  --prive: #0B0A0D;  /* l'espace privé, un cran plus froid : on sait qu'on y est */
 
-  /* Le quatrième lieu : l'espace privé. Jamais un fond de carte ordinaire —
-     il porte une nuance froide pour qu'on sache, sans lire, qu'on n'est
-     plus dans les papiers de la société. */
-  --prive: #0b0a0d;
+  /* ---- les lignes -------------------------------------------------------
+   * C'est elles qui portent l'élévation. `dl` sépare, `hr` effleure.        */
+  --dl: rgba(255, 255, 255, .08);
+  --hr: rgba(255, 255, 255, .07);
 
-  /* ---- Le texte. Trois niveaux, et le troisième ne sert qu'aux mentions
-     qui ne se lisent pas, seulement se trouvent. --------------------- */
-  --foreground: #ffffff;
-  --muted-foreground: #a7a7ad;
-  --text-2: #a7a7ad;
-  --text-3: #6e6e76;
+  /* ---- l'encre ---------------------------------------------------------- */
+  --tx: #FFFFFF;   /* ce qu'on lit                     */
+  --t2: #A7A7AD;   /* ce qui explique                  */
+  --t3: #6E6E76;   /* ce qui situe (libellés, unités)  */
 
-  /* ---- Les traits. L'élévation passe par eux, jamais par une ombre : une
-     ombre sur un fond #0A0A0A ne se voit pas, elle salit. ------------ */
-  --border: rgb(255 255 255 / 0.08);
-  --input: rgb(255 255 255 / 0.12);
-  --line-strong: rgb(255 255 255 / 0.14);
-  --sidebar-border: rgb(255 255 255 / 0.08);
+  /* ---- l'accent : Evergreen ---------------------------------------------
+   * Il dit « l'interface » : ce sur quoi on appuie, ce qui est actif, ce qui
+   * est fait. Il ne dit JAMAIS « à comptabiliser » — un verdict comptable qui
+   * porterait la couleur des boutons ne se distinguerait plus d'un bouton.  */
+  --acc:    #8FE3B1;
+  --acc2:   #7EE2AE;  /* pressé                                    */
+  --accs:   #3A8F54;  /* sourd, pour un fond ou une barre          */
+  --on-acc: #07210F;  /* ce qui s'écrit dessus                     */
 
-  /* ---- L'accent. Un vert d'eau, pas un vert de validation : il dit « lu,
-     et juste », pas « bravo ». Le texte posé dessus est presque noir —
-     du blanc sur ce vert tombe sous le seuil de contraste. ----------- */
-  --primary: #8fe3b1;
-  --primary-foreground: #07210f;
-  --ring: #7ee2ae;
-  --sidebar-primary: #8fe3b1;
-  --sidebar-primary-foreground: #07210f;
+  /* ---- les quatre signaux, et ce qu'ils veulent dire ---------------------
+   * Un seul sens par couleur, dans toute l'application. Une couleur qui veut
+   * dire deux choses ne veut plus rien dire.                                */
+  --am: #DFC078;  /* Amber     — ce qui attend une réponse        */
+  --ve: #F08D72;  /* Vermilion — refusé, en retard                */
+  --az: #8CBCE8;  /* Azure     — à rapprocher, et l'espace privé  */
+  --mg: #D97757;  /* Marigold  — le plafond, et lui seul          */
 
-  /* La bulle de Malica : l'accent assourdi, pour qu'une conversation de
-     quinze tours ne fatigue pas. */
-  --accent: #1b3326;
-  --accent-foreground: #dcefe3;
-  --sidebar-accent: #1b3326;
-  --sidebar-accent-foreground: #dcefe3;
-  --secondary: #242424;
-  --secondary-foreground: #ffffff;
+  --am-d: #8A6510;  /* leurs fonds sourds */
+  --az-d: #2968A5;
 
-  /* ---- Les signaux. Quatre, et chacun ne dit qu'une chose. ---------- */
-  --signal-ok: #7ee2ae; /* lu, rapproché, payé            */
-  --signal-warn: #dfc078; /* en attente d'un geste          */
-  --signal-stop: #f08d72; /* refus, retard, échec           */
-  --signal-info: #8cbce8; /* rapprochement, espace privé    */
-  --signal-soft: rgb(255 255 255 / 0.06);
-  --destructive: #f08d72;
-  --destructive-foreground: #1a0a06;
+  /* ---- la conversation --------------------------------------------------
+   * La bulle de l'utilisateur est la SEULE surface teintée de l'application.
+   * Malica, elle, parle sur `d1` : celle qui parle le plus doit être celle
+   * qui se voit le moins.                                                   */
+  --me:    #1B3326;
+  --me-tx: #DCEFE3;
 
-  /* Le plafond de lectures, et lui seul. Une couleur qui ne sert qu'à une
-     chose ne peut pas être mal lue. */
-  --marigold: #d97757;
-  --marigold-on-ink: #ffffff;
+  /* ---- les rayons --------------------------------------------------------
+   * Quatre valeurs, et une pilule. 20 pour une grande carte ou une bulle,
+   * 18 pour une carte, 16 pour une carte dense, 12 pour une puce.           */
+  --r-xl:   20px;
+  --r-lg:   18px;
+  --r-md:   16px;
+  --r-sm:   12px;
+  --r-bulle: 20px 20px 20px 6px;  /* le coin qui pointe vers celui qui parle */
+  --r-pill: 999px;
 
-  /* ---- Le rayon. La seule contradiction assumée avec Edition One. --- */
-  --radius: 16px;
+  /* ---- les polices ------------------------------------------------------- */
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+
+  /* ---- le mouvement ------------------------------------------------------
+   * Une seule durée. Ce qui bouge plus vite paraît nerveux, plus lent paraît
+   * cassé.                                                                  */
+  --t: .18s;
+
+  /* ---- les deux seules ombres de l'application ---------------------------
+   * Un menu qui flotte, une feuille qui passe devant. Partout ailleurs,
+   * l'élévation se fait par une ligne.                                      */
+  --ombre-menu:   0 22px 48px -20px rgba(0, 0, 0, .9);
+  --ombre-flotte: 0 6px 18px -8px rgba(0, 0, 0, .9);
+  --cerne:        inset 0 0 0 1.5px rgba(255, 255, 255, .22);
+  --filet:        inset 0 1px 0 var(--dl);
+
+  background: var(--bg);
+  color: var(--tx);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Le `preflight` de Tailwind le pose déjà dans l'application ; cette feuille
+ * doit tenir seule — dans le témoin, dans un Storybook, dans une page
+ * d'essai. Sans lui, `padding-inline` s'ajoute à la largeur de la grille et
+ * le desktop déborde de la valeur exacte de la gouttière. */
+[data-surface="pme"],
+[data-surface="pme"] *,
+[data-surface="pme"] *::before,
+[data-surface="pme"] *::after { box-sizing: border-box }
+
+/*
+ * Tailwind 4 — les mêmes jetons en utilitaires, pour que l'écran s'écrive
+ * `bg-d1 text-t2 rounded-lg` sans jamais recopier une valeur.
+ */
+@theme inline {
+  --color-bg:     var(--bg);
+  --color-d0:     var(--d0);
+  --color-d1:     var(--d1);
+  --color-d2:     var(--d2);
+  --color-prive:  var(--prive);
+  --color-tx:     var(--tx);
+  --color-t2:     var(--t2);
+  --color-t3:     var(--t3);
+  --color-acc:    var(--acc);
+  --color-on-acc: var(--on-acc);
+  --color-am:     var(--am);
+  --color-ve:     var(--ve);
+  --color-az:     var(--az);
+  --color-mg:     var(--mg);
+  --color-me:     var(--me);
+
   --radius-sm: 12px;
   --radius-md: 16px;
   --radius-lg: 18px;
   --radius-xl: 20px;
-  --radius-2xl: 20px;
-  --radius-3xl: 24px;
-  --radius-4xl: 28px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * L'ÉCHELLE DE TEXTE
+ *
+ * Mesurée sur les neuf maquettes, par fréquence. Huit tailles suffisent, et
+ * le chiffre qui compte est toujours le plus gros de son écran.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+[data-surface="pme"] .t-label {   /* l'étiquette en capitales, au-dessus d'un bloc */
+  font-family: var(--mono);
+  font-size: .625rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+[data-surface="pme"] .t-meta  { font-size: .6875rem; color: var(--t3); letter-spacing: -.01em }
+[data-surface="pme"] .t-sub   { font-size: .75rem;   color: var(--t2); letter-spacing: -.01em }
+[data-surface="pme"] .t-body  { font-size: .8125rem; line-height: 1.5; color: var(--t2); letter-spacing: -.012em }
+[data-surface="pme"] .t-item  { font-size: .875rem;  font-weight: 600; letter-spacing: -.015em }
+[data-surface="pme"] .t-lead  { font-size: .9375rem; line-height: 1.55; letter-spacing: -.015em }
+[data-surface="pme"] .t-h2    { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.018em }
+[data-surface="pme"] .t-h1    { font-size: 1.3125rem; font-weight: 600; letter-spacing: -.018em }
+
+/* Un montant n'est pas un texte : il s'aligne, il se compare, il se lit par
+ * groupes de trois. D'où la mono, et le resserrement — un grand nombre en
+ * espacement normal paraît se disperser. */
+[data-surface="pme"] .chiffre {
+  font-family: var(--mono);
+  font-weight: 600;
+  letter-spacing: -.034em;
+  font-variant-numeric: tabular-nums;
+}
+/* `clamp` et non une taille fixe : « 1 284 300,000 » en 31 px déborde une
+ * colonne de 320 px, et un montant tronqué est pire qu'un montant petit. */
+/* Le séparateur de milliers NE PEUT PAS être une espace fine en monospace :
+ * toutes les espaces y font une chasse pleine, et « 2 400,000 » s'écarte comme
+ * si c'étaient deux nombres. On pose donc un vide de largeur choisie, et le
+ * formateur émet `<span class="mil"></span>` au lieu de U+2009. */
+[data-surface="pme"] .chiffre .mil { display: inline-block; width: .26em }
+
+[data-surface="pme"] .chiffre-xl { font-size: clamp(1.5rem, 7.2vw, 1.9375rem) }
+[data-surface="pme"] .chiffre-l  { font-size: clamp(1.125rem, 5vw, 1.3125rem) }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * LES PRIMITIVES
+ *
+ * Celles que les neuf écrans partagent. Les utilitaires Tailwind font le
+ * reste ; ces classes-là existent parce qu'elles portent une règle, pas une
+ * apparence.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* --- l'écran ------------------------------------------------------------- */
+[data-surface="pme"] {
+  /* La gouttière est une variable, parce qu'elle change avec l'écran et que
+   * tout le reste s'y accroche. 1rem sous 400 px, 1.25 au-delà. */
+  --gout: 1rem;
+  --colonne: 27.5rem;   /* 440 px — la mesure des maquettes */
+}
+
+[data-surface="pme"] .app {
+  width: 100%;
+  max-width: var(--colonne);
+  margin: 0 auto;
+  min-height: 100vh;       /* repli pour les navigateurs sans dvh */
+  min-height: 100dvh;      /* la vraie hauteur, barres d'URL comprises */
+  background: var(--d0);
+  /* Les encoches, pas une marge au jugé. La barre du bas est DANS le flux
+   * (voir `.nav`) : rien ne passe dessous, donc rien à réserver. */
+  padding-top: max(.5rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  /* Les mots longs du français — « immobilisations », « amortissements » —
+   * débordent une colonne de 320 px s'ils ne peuvent pas se couper. */
+  overflow-wrap: break-word;
+}
+[data-surface="pme"] .app[data-prive="true"] { background: var(--prive) }
+[data-surface="pme"] .pad {
+  padding-inline: max(var(--gout), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--gout), env(safe-area-inset-right, 0px));
+}
+
+/* --- le titre d'une section, et son compte à droite ---------------------- */
+[data-surface="pme"] .sec {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 1.75rem 0 .75rem;
+}
+[data-surface="pme"] .sec h2 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.018em; margin: 0 }
+[data-surface="pme"] .sec span {
+  font-family: var(--mono); font-size: .625rem; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--t3);
+}
+
+/* --- la carte ------------------------------------------------------------ */
+[data-surface="pme"] .card {
+  background: var(--d1);
+  border-radius: var(--r-lg);
+  padding: .9375rem 1rem;
+}
+/* Une carte verrouillée ne disparaît pas : elle dit ce qu'elle ferait, et
+ * sous quelle offre. Un produit qui cache ce qu'il vend ne le vend pas. */
+[data-surface="pme"] .card[data-verrou] {
+  background: none;
+  border: 1px dashed var(--dl);
+  color: var(--t3);
+}
+
+/* --- le sélecteur en pilules (plans, axes, onglets) ---------------------- */
+[data-surface="pme"] .seg {
+  display: flex; gap: .375rem; flex-wrap: wrap;
+}
+[data-surface="pme"] .seg button {
+  border: 0; border-radius: var(--r-pill);
+  background: var(--d2); color: var(--t2);
+  font: inherit; font-size: .75rem; font-weight: 500;
+  padding: .4375rem .75rem; cursor: pointer;
+  transition: background var(--t), color var(--t);
+  min-height: 34px;   /* une pilule de filtre : plus basse, mais jamais sous 34 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+[data-surface="pme"] .seg button.on {
+  background: var(--acc); color: var(--on-acc); font-weight: 600;
+}
+
+/* --- le bouton principal : une seule action par écran -------------------- */
+[data-surface="pme"] .btn {
+  border: 0; border-radius: var(--r-pill);
+  background: var(--acc); color: var(--on-acc);
+  font: inherit; font-size: .875rem; font-weight: 700;
+  padding: .875rem 1.25rem; cursor: pointer; width: 100%;
+  transition: background var(--t), border-color var(--t), color var(--t);
+  /* 44 px : le minimum d'Apple, et 48 dp chez Google une fois la densité
+   * appliquée. En dessous, on rate la cible une fois sur cinq. */
+  min-height: 44px;
+  /* Un bouton ne se sélectionne pas quand on reste appuyé dessus. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+[data-surface="pme"] .btn:active  { background: var(--acc2) }
+[data-surface="pme"] .btn[disabled]{ opacity: .4; cursor: default }
+[data-surface="pme"] .btn-sec {
+  background: none; color: var(--t2);
+  border: 1px solid var(--dl);
+}
+/* Le survol n'existe qu'à la souris. Au doigt, l'état resterait collé après
+ * le relâchement, et l'écran paraîtrait figé sur le dernier bouton touché. */
+@media (hover: hover) and (pointer: fine) {
+  [data-surface="pme"] .btn-sec:hover { border-color: var(--acc); color: var(--acc) }
+  /* Le seul bouton qui porte le vermillon est celui qui détruit, et il ne le
+   * porte qu'au survol : une page pleine de rouge apprend à ne plus le voir. */
+  [data-surface="pme"] .btn-sup:hover { border-color: var(--ve); color: var(--ve) }
+  [data-surface="pme"] .seg button:hover:not(.on) { color: var(--tx) }
+}
+
+/* --- la barre de navigation ---------------------------------------------- */
+/* Dans le flux, jamais fixée. Une barre flottante sur un écran de 440 px
+ * mange la dernière ligne de chaque liste, et la dernière ligne est souvent
+ * celle qu'on cherchait. */
+[data-surface="pme"] .nav {
+  display: grid; grid-template-columns: repeat(3, 1fr); align-items: center;
+  margin-top: 1.75rem;
+  padding: .875rem .5rem 1.375rem;
+  border-top: 1px solid var(--hr);
+}
+[data-surface="pme"] .nav a {
+  display: flex; flex-direction: column; align-items: center; gap: .3125rem;
+  font-size: .625rem; font-weight: 600; color: var(--t3); text-decoration: none;
+  min-height: 56px; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-surface="pme"] .nav a[data-on="true"] { color: var(--tx) }
+/* Capturer est au centre et porte l'accent : c'est le geste du produit. */
+[data-surface="pme"] .nav a[data-on="true"] .rond { background: var(--accs); color: var(--acc) }
+[data-surface="pme"] .nav .rond {
+  width: 42px; height: 42px; border-radius: var(--r-pill);
+  display: grid; place-items: center; background: var(--d2);
+}
+
+/* --- Malica parle --------------------------------------------------------
+ * Large et discrète : elle occupe toute la colonne et ne se teinte pas. Son
+ * portrait n'apparaît qu'UNE fois par fil — répété à chaque bulle, il devient
+ * du bruit, et la conversation ressemble à un salon de discussion. */
+[data-surface="pme"] .malica {
+  background: var(--d1);
+  border-radius: var(--r-bulle);
+  padding: .875rem .9375rem;
+  font-size: .9375rem; line-height: 1.55; letter-spacing: -.015em;
+}
+[data-surface="pme"] .moi {
+  background: var(--me); color: var(--me-tx);
+  border-radius: 20px 20px 6px 20px;
+  padding: .875rem .9375rem; margin-left: auto; max-width: 85%;
+  font-size: .875rem; line-height: 1.5;
+}
+[data-surface="pme"] .sig {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .75rem; font-weight: 600; color: var(--t2);
+}
+[data-surface="pme"] .sig img { width: 26px; height: 26px; border-radius: 50% }
+
+/* --- les états d'une pièce -----------------------------------------------
+ * La puce colorée porte le sens ; le texte le répète en toutes lettres. Une
+ * information portée par la seule couleur n'existe pas pour qui ne la
+ * distingue pas. */
+[data-surface="pme"] .etat { display: inline-flex; align-items: center; gap: .4375rem; font-size: .75rem }
+[data-surface="pme"] .etat i { width: 7px; height: 7px; border-radius: 50%; flex: none }
+[data-surface="pme"] .etat[data-k="fait"]    i { background: var(--acc) }
+[data-surface="pme"] .etat[data-k="attente"] i { background: var(--am) }
+[data-surface="pme"] .etat[data-k="refus"]   i { background: var(--ve) }
+[data-surface="pme"] .etat[data-k="rappro"]  i { background: var(--az) }
+[data-surface="pme"] .etat[data-k="attente"]   { color: var(--am) }
+[data-surface="pme"] .etat[data-k="refus"]     { color: var(--ve) }
+
+/* --- la barre de progression (charges, plafond, solde) ------------------- */
+[data-surface="pme"] .bar {
+  display: block;          /* un <span> hérite de `inline` et ignore la hauteur */
+  height: 6px; border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .08); overflow: hidden;
+}
+[data-surface="pme"] .bar > i { display: block; height: 100%; background: var(--acc) }
+/* Le plafond, et lui seul, porte le marigold. */
+[data-surface="pme"] .bar[data-k="plafond"] > i { background: var(--mg) }
+
+/* --- la ligne qui attend : pointillé + anneau ambre ---------------------- */
+[data-surface="pme"] .manque {
+  border: 1px dashed var(--dl);
+  box-shadow: inset 0 0 0 1.5px var(--am);
+  border-radius: var(--r-md);
+  background: none;
+}
+
+/* --- une note de Malica, en pied de bloc --------------------------------- */
+[data-surface="pme"] .foot {
+  font-size: .75rem; line-height: 1.5; color: var(--t3);
+  margin-top: 1rem;
+}
+
+/* --- ce qui flotte : les deux seules ombres ------------------------------ */
+[data-surface="pme"] .menu  { box-shadow: var(--ombre-menu);   border-radius: var(--r-md); background: var(--d2) }
+[data-surface="pme"] .sheet { box-shadow: var(--ombre-flotte); border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--d1) }
+
+/* --- l'icône ------------------------------------------------------------- */
+[data-surface="pme"] .g {
+  width: 19px; height: 19px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+/*
+ * ──────────────────────────────────────────────────────────────────────────
+ * CE QUE CETTE FEUILLE N'A PAS LE DROIT DE FAIRE
+ *
+ *  — teindre une surface en Evergreen. L'accent est une encre et une pilule,
+ *    jamais un fond de carte : un écran vert ne laisse plus voir ce qui est
+ *    actif.
+ *  — donner un sens au vert. « À comptabiliser » est un verdict, pas un état
+ *    d'interface ; il se dit en toutes lettres.
+ *  — faire porter une information par la seule couleur. Chaque puce a son mot.
+ *  — ajouter une troisième ombre. S'il faut distinguer deux plans de plus,
+ *    c'est l'écran qu'il faut couper, pas l'ombre qu'il faut inventer.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * LES QUATRE TAILLES
+ *
+ * Rien n'est caché selon la taille, et rien n'est ajouté : c'est la même
+ * application, posée autrement. Un écran qui perd des fonctions en
+ * s'agrandissant apprend à l'utilisateur qu'il manque quelque chose.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* --- le téléphone courant ------------------------------------------------ */
+@media (min-width: 400px) {
+  [data-surface="pme"] { --gout: 1.25rem }
+}
+
+/* --- tablette, et téléphone pivoté ---------------------------------------
+ * La colonne cesse de grandir : au-delà d'environ 75 caractères, l'œil perd
+ * le début de la ligne suivante. Le fond passe en `bg` pour que la colonne
+ * se détache au lieu de flotter. */
+@media (min-width: 768px) {
+  [data-surface="pme"] { background: var(--bg) }
+  [data-surface="pme"] .app {
+    max-width: 30rem;
+    border-inline: 1px solid var(--hr);
+    min-height: 100dvh;
+  }
+}
+
+/* --- desktop : la barre du bas devient un rail à gauche -------------------
+ * Trois colonnes de grille, dont une vide à droite : la colonne de contenu
+ * reste à sa mesure de lecture et se place sous le rail, pas au centre
+ * mathématique de l'écran. Centrée sur 2560 px, elle oblige à traverser
+ * l'écran du regard pour aller du menu au contenu. */
+@media (min-width: 1024px) {
+  [data-surface="pme"] .app {
+    max-width: none;
+    border-inline: 0;
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 32rem) 1fr;
+    align-items: start;
+    column-gap: 2.5rem;
+    padding-inline: 2rem;
+    padding-top: 2rem;
+  }
+
+  /* Tout ce qui n'est pas la navigation va dans la colonne du milieu. */
+  [data-surface="pme"] .app > :not(.nav) { grid-column: 2 }
+
+  [data-surface="pme"] .nav {
+    grid-column: 1; grid-row: 1 / 999;
+    position: sticky; top: 2rem;
+    display: flex; flex-direction: column; align-items: stretch; gap: .25rem;
+    margin-top: 0; padding: 0; border-top: 0;
+  }
+  [data-surface="pme"] .nav a {
+    flex-direction: row; justify-content: flex-start; gap: .75rem;
+    padding: .625rem .75rem; border-radius: var(--r-sm);
+    font-size: .875rem; min-height: 44px;
+    transition: background var(--t), color var(--t);
+  }
+  [data-surface="pme"] .nav .rond { width: 34px; height: 34px }
+  [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
+}
+
+/* --- grand desktop : la colonne respire, sans jamais s'étirer ------------- */
+@media (min-width: 1440px) {
+  [data-surface="pme"] .app {
+    grid-template-columns: 17rem minmax(0, 34rem) 1fr;
+    column-gap: 3.5rem;
+    padding-inline: 3rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * CE QUI NE DÉPEND PAS DE LA TAILLE
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* Le système d'exploitation a le dernier mot sur le mouvement. */
+@media (prefers-reduced-motion: reduce) {
+  [data-surface="pme"] *,
+  [data-surface="pme"] *::before,
+  [data-surface="pme"] *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Android laisse grossir le texte jusqu'à 200 %, iOS avec Dynamic Type aussi.
+ * Tout est en `rem`, donc tout suit — mais une carte à hauteur fixe se
+ * déchirerait. Rien ici n'en a, et rien ne doit en recevoir. */
+
+/* Le focus clavier existe sur desktop et sur les claviers Bluetooth des
+ * tablettes. Il est visible, et il n'est jamais retiré. */
+[data-surface="pme"] :focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* L'impression : un dirigeant imprime un dossier pour son classeur papier.
+ * Le fond noir y consommerait une cartouche et rendrait le texte illisible. */
+@media print {
+  [data-surface="pme"] { background: #fff; color: #000 }
+  [data-surface="pme"] .app { max-width: none; display: block; padding: 0 }
+  [data-surface="pme"] .card { border: 1px solid #ccc; background: none }
+  [data-surface="pme"] .nav,
+  [data-surface="pme"] .seg,
+  [data-surface="pme"] .btn { display: none }
+  [data-surface="pme"] .t2, [data-surface="pme"] .t-body { color: #333 }
+}
+
+/* ===========================================================================
+ *
+ *                    LE PONT — ET POURQUOI IL EXISTE
+ *
+ * Ce qui précède est le langage des écrans conçus : `.app`, `.card`,
+ * `.card[data-verrou]`, `.seg`, `.btn`, `.nav`, `.etat[data-k]`,
+ * `.bar[data-k="plafond"]`. C'est la cible, et chaque route y vient une par
+ * une.
+ *
+ * Mais les treize routes existantes sont écrites en jetons sémantiques de
+ * Tailwind — `bg-background`, `text-foreground`, `bg-card`, `border-border`.
+ * Tant qu'une route n'est pas convertie, elle doit rester LISIBLE : sans ce
+ * pont, une route non convertie peindrait du texte sombre sur fond sombre, et
+ * la conversion deviendrait un big bang qu'on ne pourrait ni livrer ni
+ * annuler par morceaux.
+ *
+ * Le pont n'est donc pas la destination : il tient les routes debout pendant
+ * la traversée. Il disparaîtra quand la treizième sera convertie — et
+ * `knip` ne le dira pas, c'est du CSS : la fin de la traversée se constate à
+ * la main, en cherchant `bg-card` dans `routes/_authenticated/pme*`.
+ *
+ * ------------------------------------------------------------------ L'OR
+ *
+ * `marigold` porte aujourd'hui, dans les seules routes PME, le cercle de
+ * Malica, la cloche, le filet de « ce que j'ai préparé », le compte de
+ * documents et la dernière barre du graphique — quatre-vingt-dix usages.
+ *
+ * Les écrans conçus n'ont PAS d'or : leur accent est le vert d'eau, et
+ * `#D97757` n'y est qu'une touche secondaire (`--touch`). Le pont suit donc le
+ * dessin et rend ces quatre-vingt-dix usages verts, plutôt que de laisser un
+ * or de surface cabinet au milieu d'un écran qui ne l'est plus.
+ *
+ * C'est une décision de marque, prise par le dessin, pas par le code.
+ */
+
+[data-surface="pme"] {
+  --background: var(--bg);
+  --foreground: var(--tx);
+  --card: var(--d1);
+  --card-foreground: var(--tx);
+  --popover: var(--d0);
+  --popover-foreground: var(--tx);
+  --muted: var(--d2);
+  --muted-foreground: var(--t2);
+  --secondary: var(--d2);
+  --secondary-foreground: var(--tx);
+  --text-2: var(--t2);
+
+  --border: var(--dl);
+  --input: rgb(255 255 255 / 0.12);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --sidebar: var(--d0);
+  --sidebar-foreground: var(--tx);
+  --sidebar-border: var(--dl);
+
+  --primary: var(--acc);
+  --primary-foreground: var(--on-acc);
+  --ring: var(--acc2);
+  --sidebar-primary: var(--acc);
+  --sidebar-primary-foreground: var(--on-acc);
+  --accent: #1b3326;
+  --accent-foreground: #dcefe3;
+  --sidebar-accent: #1b3326;
+  --sidebar-accent-foreground: #dcefe3;
+
+  --signal-ok: var(--acc2);
+  --signal-warn: #dfc078;
+  --signal-stop: #f08d72;
+  --signal-info: #8cbce8;
+  --signal-soft: rgb(255 255 255 / 0.06);
+  --destructive: #f08d72;
+  --destructive-foreground: #1a0a06;
+
+  /* L'or devient l'accent du dessin. Voir ci-dessus. */
+  --marigold: var(--acc);
+  --marigold-on-ink: var(--acc);
 
   color-scheme: dark;
 }
 
 /*
- * ====================================================== LES CHIFFRES D'ARGENT
+ * ------------------------------------------------------- LE BLOC D'ENCRE
  *
- * IBM Plex Mono, parce qu'une colonne de montants qui ne s'aligne pas se
- * recompte à la main. Et l'espace de millier en monospace fait la largeur
- * d'un chiffre : « 1 250,000 » devient plus large que « 11250,000 » et la
- * colonne se tord. On lui rend une largeur de demi-chiffre.
+ * `pme.index`, `pme.list` et `pme.tva` peignent le chiffre du mois en
+ * `bg-foreground text-background` — encre sur papier, à fond perdu. Cela
+ * fonctionne PARCE QUE la page est claire.
+ *
+ * Mesuré au rendu avant correction : sous ces jetons, le bloc s'inversait en
+ * **dalle blanche** au milieu d'une page noire, et la barre d'accent y
+ * disparaissait. Aucun calcul ne me l'avait montré — seul le rendu.
+ *
+ * Les trois sections portent donc `data-bloc="encre"` et restent sombres : sur
+ * fond sombre l'emphase se fait par élévation, pas par inversion. C'est une
+ * béquille de traversée — ces trois écrans deviendront des cartes du dessin.
+ *
+ * Marqué dans le balisage, et non attrapé par `[class*="bg-foreground"]` :
+ * ce sélecteur prendrait aussi les boutons principaux et l'obturateur, qui
+ * eux ont raison d'être clairs sur sombre.
  */
-[data-surface="pme"] .chiffre {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-[data-surface="pme"] .chiffre .mil {
-  display: inline-block;
-  width: 0.26em;
-}
-
-/*
- * ========================================================= L'ESPACE PRIVÉ
- *
- * Une pièce `personnel` n'est pas une pièce de la société mise de côté :
- * c'est une pièce qui n'appartient pas au dossier. L'écran doit le dire
- * avant qu'on lise l'étiquette.
- */
-[data-surface="pme"] [data-lieu="personnel"] {
-  background-color: var(--prive);
-  /*
-   * 0.22 au premier rendu : la carte privée paraissait seulement plus SOMBRE
-   * que les autres, donc moins importante — exactement le contraire de ce
-   * qu'elle dit. Le trait doit porter la différence, pas le fond.
-   */
-  border-color: rgb(140 188 232 / 0.4);
-}
-
-/*
- * ================================================ LE RAYON NE SUFFIT PAS
- *
- * Mesuré au rendu : redéfinir `--radius` ne change RIEN aux treize routes.
- * Tailwind n'applique un rayon que si une classe `rounded-*` le demande, et
- * les routes ont été écrites sous Edition One, où le rayon est 0 — elles n'en
- * portent donc aucune. Les jetons étaient justes et le résultat carré.
- *
- * On adoucit ici ce qui est INTERACTIF et sans ambiguïté — un bouton, un
- * champ. Les cartes, elles, demandent une classe dans le balisage : c'est le
- * travail des treize routes, et une feuille de surface qui irait les chercher
- * par `[class*="bg-card"]` arrondirait aussi la barre de navigation. Une règle
- * qui attrape plus que son objet est une dette, pas un raccourci.
- */
-[data-surface="pme"] :is(button, [role="button"], input, select, textarea) {
-  border-radius: var(--radius-sm);
-}
-
-/* L'obturateur est rond : c'est le seul geste du produit, et la seule forme
-   qui ne ressemble à rien d'autre à l'écran. */
-[data-surface="pme"] > nav[aria-label] button {
-  border-radius: 999px;
-}
-
-/*
- * ============================================================== LA BULLE
- *
- * Un coin vif du côté de qui parle. C'est la seule forme asymétrique du
- * produit, et elle suffit à dire qui parle sans étiquette ni avatar répété.
- */
-[data-surface="pme"] [data-bulle="malica"] {
-  border-radius: 20px 20px 20px 6px;
-}
-
-[data-surface="pme"] [data-bulle="vous"] {
-  border-radius: 20px 20px 6px 20px;
-}
-
-/*
- * ========================================================= LE MOUVEMENT
- *
- * .18s : assez pour qu'un changement se voie, trop court pour qu'on
- * l'attende. Au-delà, l'application paraît lente alors qu'elle est polie.
- */
-[data-surface="pme"] [data-anime] {
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-surface="pme"] [data-anime] {
-    transition: none;
-  }
-}
-
-/*
- * ====================================================== LE DOIGT, PAS LA SOURIS
- *
- * 44 px est le minimum d'Apple et de Google, et ce n'est pas une
- * recommandation de confort : en dessous, le taux d'erreur monte assez pour
- * qu'une personne debout dans un atelier renonce. Les cibles natives
- * (`button`, `a`, `[role="button"]`) sont relevées dans la portée.
- *
- * `:not(:has(...))` épargne les cibles déjà grandes — le bouton d'obturateur
- * fait 58 px et n'a pas besoin qu'on lui impose un plancher.
- */
-@media (pointer: coarse) {
-  [data-surface="pme"] button,
-  [data-surface="pme"] a[href],
-  [data-surface="pme"] [role="button"],
-  [data-surface="pme"] summary {
-    min-height: 44px;
-  }
-
-  [data-surface="pme"] button:not(:has(svg)) {
-    min-width: 44px;
-  }
-}
-
-/*
- * ================================== CE QUI N'EST PAS ICI, ET POURQUOI
- *
- * Un survol sur écran tactile reste COLLÉ après le toucher : la ligne touchée
- * garde son fond éclairci jusqu'au prochain geste, et la personne croit avoir
- * sélectionné quelque chose. La tentation est d'écrire ici un
- * `@media (hover: none) { *:hover { background-color: revert-layer } }`.
- *
- * Mesuré sur le CSS compilé : la règle ne fait RIEN. `revert-layer` depuis une
- * règle hors couche revient à la valeur des couches de Tailwind — c'est-à-dire
- * au survol qu'on voulait annuler. Une règle inerte qu'on croit protectrice
- * est pire qu'une règle absente : elle ferme le sujet.
- *
- * Le survol se garde donc LÀ OÙ IL EST ÉCRIT, par `@media (hover: hover)`,
- * et c'est un critère de recette des treize routes — pas quelque chose que
- * cette feuille peut rattraper après coup.
- */
-
-/*
- * ================================================= DU TÉLÉPHONE AU BUREAU
- *
- * Le dirigeant photographie sur Android et relit sur un portable de bureau.
- * Le balisage reste le même — une colonne, une barre en bas — et ne porte
- * aucune classe de point de rupture : la mise en page de bureau est posée
- * ICI, par les éléments SÉMANTIQUES (`header`, `main`, `nav[aria-label]`),
- * jamais par une classe utilitaire qu'une refonte déplacerait.
- *
- * 1024 px : en dessous, une tablette tenue en portrait lit mieux en colonne.
- */
-@media (min-width: 1024px) {
-  [data-surface="pme"] {
-    max-width: 64rem;
-    padding-bottom: 0;
-  }
-
-  /*
-   * La barre du bas devient un rail à gauche : à la souris, une barre collée
-   * en bas d'un écran de 27 pouces est à trente centimètres du regard.
-   *
-   * Elle reste `fixed` — comme l'utilitaire la pose — et c'est délibéré. Le
-   * conteneur est `display: flex` : un `float` y serait IGNORÉ (les flottants
-   * ne s'appliquent pas à un élément de flex), et un `position: sticky` en
-   * ferait un troisième élément de la colonne, sous le contenu. Hors flux,
-   * la question ne se pose pas.
-   *
-   * Et c'est une GRILLE à trois colonnes, pas une boîte flex : la pile se
-   * fait en passant à une colonne, pas en changeant une direction qui
-   * n'existe pas. (Les deux fautes de la première écriture.)
-   */
-  [data-surface="pme"] > nav[aria-label] {
-    inset: 0 auto 0 0;
-    width: 5.5rem;
-    max-width: none;
-    grid-template-columns: 1fr;
-    align-content: start;
-    gap: 0.25rem;
-    padding-top: 1.5rem;
-    border-top: 0;
-    border-right: 1px solid var(--border);
-    margin-inline: 0;
-  }
-
-  [data-surface="pme"] > header,
-  [data-surface="pme"] > main {
-    margin-left: 5.5rem;
-  }
-
-  [data-surface="pme"] > main {
-    padding-inline: 2rem;
-  }
-
-  /*
-   * La barre d'état peinte n'a plus d'objet : il n'y a pas d'encoche sur un
-   * écran de bureau, et large de `max-w-md` au milieu d'un conteneur de
-   * 64 rem, elle ne serait qu'une tache centrée en haut de la page.
-   */
-  [data-surface="pme"] > [aria-hidden]:first-child {
-    display: none;
-  }
-}
-
-/*
- * ========================================================= LE PAPIER
- *
- * Une pièce s'imprime pour un contrôle, et un fond #0A0A0A vide une
- * cartouche d'encre. L'impression revient au langage du papier : fond blanc,
- * texte noir, et ce qui ne s'imprime pas disparaît.
- */
-@media print {
-  [data-surface="pme"] {
-    --background: #ffffff;
-    --card: #ffffff;
-    --card-foreground: #000000;
-    --foreground: #000000;
-    --muted-foreground: #444444;
-    --border: #cccccc;
-    --prive: #ffffff;
-    max-width: none;
-    color-scheme: light;
-  }
-
-  [data-surface="pme"] > nav[aria-label],
-  [data-surface="pme"] > header {
-    display: none;
-  }
-
-  [data-surface="pme"] > main {
-    margin-left: 0;
-    padding: 0;
-  }
+[data-surface="pme"] [data-bloc="encre"] {
+  background-color: #141416;
+  color: var(--tx);
 }

@@ -139,7 +139,10 @@ function PmeTva() {
       </div>
 
       {/* Le bloc d'encre : un seul chiffre, et ce qu'il veut dire. */}
-      <section className="rg-regle relative mt-4 overflow-hidden bg-foreground px-[22px] py-5 text-background">
+      <section
+        data-bloc="encre"
+        className="rg-regle relative mt-4 overflow-hidden bg-foreground px-[22px] py-5 text-background"
+      >
         <p className="relative font-mono text-[10px] font-medium uppercase tracking-[0.2em] opacity-65">
           {vue === "mois"
             ? aReverser
