@@ -319,6 +319,21 @@ export async function readPieceFlow(
    * le comptage lui-même. Ni plus tôt (une lecture qui échoue ne se facture
    * pas), ni plus d'une fois (la base ne compte jamais deux fois une pièce).
    *
+   * ============================== UN DÉPASSEMENT À LA FRONTIÈRE EST ACCEPTÉ
+   *
+   * Le contrôle (en tête) et le comptage (ici) ne sont pas atomiques : deux
+   * pièces lues en parallèle à 64/65 passent toutes deux la porte ; deux
+   * instances du serveur peuvent lire la même pièce deux fois (le registre
+   * des lectures en cours est en mémoire de processus) ; un processus qui
+   * meurt entre la persistance et le comptage offre la lecture.
+   *
+   * Les fermer exigerait de RÉSERVER la lecture avant d'en connaître le
+   * résultat — donc de facturer un échec, ce que la règle de ce fichier
+   * interdit. Arbitrage : un dépassement d'une ou deux lectures à la
+   * frontière du forfait plutôt qu'un client facturé pour une lecture qu'il
+   * n'a pas reçue. C'est un arbitrage de prix, écrit au dossier de la
+   * livraison. Ne pas « corriger » ce trou en réservant en tête.
+   *
    * Si ce comptage échoue — plafond atteint entre-temps par une AUTRE pièce lue
    * en parallèle —, l'erreur remonte : on ne rend pas gratuitement ce que la
    * base a refusé de compter. Ce n'est pas silencieux, et c'est à la base de

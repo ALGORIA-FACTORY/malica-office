@@ -31,7 +31,7 @@ import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
 import { registre } from "./malica/lecture/lectures-en-cours.ts";
 import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
-import { readPieceFlow } from "./malica/lecture/read-flow.ts";
+import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
 import { refusLisible } from "./refus.ts";
 import { RpcIntrouvable } from "./rpc.ts";
@@ -72,6 +72,13 @@ function repondre(res: Response, next: NextFunction, travail: () => Promise<unkn
       }
       if (erreur instanceof PieceIntrouvable || erreur instanceof RpcIntrouvable) {
         res.status(404).json({ erreur: erreur.message });
+        return;
+      }
+      // Un refus de lecture est une décision de la base, pas une panne : 4xx,
+      // avec son motif tel quel. La file hors ligne relance sur 5xx et
+      // abandonne sur 4xx — un refus déguisé en panne se rejouerait sans fin.
+      if (erreur instanceof LectureRefusee) {
+        res.status(403).json({ erreur: erreur.motif, motif: erreur.motif });
         return;
       }
       const refus = refusLisible(erreur);

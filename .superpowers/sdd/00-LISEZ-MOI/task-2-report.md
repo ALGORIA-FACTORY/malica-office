@@ -101,3 +101,60 @@ ce qui se règle dans le prix de l'offre, pas dans le compteur.
 - A (relecture d'une pièce déjà lue) : où la refuser avant le modèle ?
 - B : réservation atomique d'une lecture à la porte, ou tolérance assumée ?
 - E : statut HTTP d'un refus de lecture et traitement par la file hors ligne.
+
+## Ronde de correction 1
+
+### A — une pièce déjà lue est refusée avant le modèle
+- Rouge d'abord : la première version de l'épreuve (avant correctif) a rendu, en
+  échouant, `R7 : cette piece a deja ete lue` APRÈS que le faux modèle eut été
+  appelé — la dépense sans résultat, mesurée.
+- Section 13 ajoutée à `20261019150000` : `lecture_autorisee` rend
+  `autorisee:false, motif:'piece_deja_lue'` quand une extraction existe (la
+  condition exacte du refus de `capture_read_persist`). Aucun référentiel de
+  motifs n'existe dans `ref` : les quatre motifs existants sont des chaînes de la
+  fonction SQL, `piece_deja_lue` en est une cinquième, au même endroit (pas dans
+  le TypeScript).
+- **Piège trouvé par les épreuves, en rougissant** : `lecture_consommer` appelle
+  la porte APRÈS la persistance, donc se refusait elle-même sur chaque lecture
+  réussie (4 épreuves rouges : « lecture refusee : piece_deja_lue »). Le verdict
+  de fond est déplacé dans `public.lecture_verdict` (ancien corps, inchangé,
+  non exposé à `authenticated`) ; `lecture_autorisee` = porte + refus « déjà lue »
+  + verdict ; `lecture_consommer` appelle le verdict nu. `relecture_gratuite`
+  est conservé pour une pièce comptée sans extraction.
+- R2 : `capture_read_persist` et la chaîne de lecture non touchés.
+- La migration étant déjà appliquée à la base de travail, le registre dérivait ;
+  rejouée avec `node db/migrer.mjs --forcer` (atelier), `registre.test.mjs` revert au vert.
+  À rejouer de même partout où la migration 20261019150000 est déjà posée.
+
+### E — un refus est un 4xx
+- `repondre` (malica.ts) : `LectureRefusee` -> HTTP 403, corps
+  `{erreur: motif, motif}`. Épreuve par la vraie application, sur trois motifs
+  (`piece_deja_lue`, `piece_personnelle`, `plafond_atteint`), motif égal au
+  verdict de la base.
+- File hors ligne (`apps/web/src/lib/hors-ligne/vidage.ts`) : 401 arrête la
+  passe ; >= 500 ou réseau relance avec recul ; tout autre 4xx = « refus »,
+  échec définitif montré, jamais rejoué. Elle ne relance donc PAS sur 4xx : OK.
+- **Défaut de plus, non corrigé** : la file appelle `?attendre=0`, la route
+  répond `{enCours:true}` avant la lecture, et un refus ne survient que dans la
+  promesse d'arrière-plan (`lecture.catch(() => undefined)`). La file ne voit
+  JAMAIS le refus ; le motif n'est visible que si l'écran appelle la lecture
+  synchrone. Aucun rejeu (donc pas de boucle payante), mais la personne dont
+  la pièce est refusée au plafond n'est pas informée du motif par ce chemin.
+
+### B, C, D — tolérance assumée
+Commentaire ajouté à l'endroit du comptage dans `read-flow.ts` : dépassement
+d'une ou deux lectures à la frontière accepté, pourquoi (réserver = facturer un
+échec), et « ne pas corriger en réservant en tête ».
+
+### Épreuves
+9 tests dans le fichier : la pièce déjà lue est refusée avec zéro appel de
+modèle (faux qui lève), motif mot pour mot, comptage toujours à 1 ; le 4xx ;
+l'invariant « lecture aboutie = exactement une ligne, rattrapage compris »
+inchangé et vert. Verts : fichier, `le-plafond-ne-se-contourne-pas` (10),
+`une-lecture-s-impute-a-la-bonne-licence` (7), `le-plafond-arrete…` (7),
+`schema` (13), `npm test` (690, 0 échec, 0 todo), typecheck, lint, code-mort,
+reproductibilité (14), registre (8).
+
+### Arbre de travail
+`AGENTS.md` et `apps/web/src/styles-pme.css` étaient modifiés hors de mon
+travail : laissés tels quels, non commités.

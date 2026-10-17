@@ -19,11 +19,12 @@
  * s'archivent, elles ne se suppriment pas.
  */
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { creerCompte, type Utilisateur } from "../../auth.ts";
+import { creerCompte, emettreJeton, type Utilisateur } from "../../auth.ts";
 import { fermerLePool, sousIdentite } from "../../db.ts";
 import { executerRpc } from "../../rpc.ts";
 import { creerAppelLocal, type AppelApi } from "../appel-local.ts";
@@ -145,6 +146,8 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
   let u: Utilisateur;
   let orgLibre = "";
   let orgPleine = "";
+  let base = "";
+  let arret: (() => Promise<void>) | null = null;
 
   const admin = new pg.Pool({
     connectionString: process.env["DATABASE_URL_ADMIN"],
@@ -238,6 +241,13 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     assert.ok(c);
     u = c;
 
+    // La vraie application : un refus se juge sur ce que le réseau en voit.
+    const { app } = await import("../../app.ts");
+    const serveur = app.listen(0);
+    await new Promise((resoudre) => serveur.once("listening", resoudre));
+    base = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
+    arret = () => new Promise<void>((resoudre) => serveur.close(() => resoudre()));
+
     orgLibre = await nouvelleOrganisation(`Compteur libre ${marque}`);
     await licencier(orgLibre);
 
@@ -266,6 +276,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
               archived_reason = 'fixture de test automatisé' where id = any($1)`,
       [[orgLibre, orgPleine]],
     );
+    if (arret) await arret();
     await admin.end();
     await fermerLePool();
   });
@@ -334,30 +345,53 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     assert.equal(await compter(piece), 1, "une pièce lue, une lecture comptée — jamais deux");
   });
 
-  it("relire une pièce déjà lue ne la compte jamais une seconde fois", async () => {
+  it("une pièce déjà lue est refusée AVANT tout modèle, et reste comptée une fois", async () => {
     const piece = await deposer(orgLibre, "relue", "partage");
     await readPieceFlow(apiDEssai(), piece, lecteurs([() => lectureComplete("pdf-text")]));
     assert.equal(await compter(piece), 1);
 
     /*
-     * CE QUE CETTE ÉPREUVE DÉCOUVRE, et qu'elle ne tranche pas. La base répond
-     * `relecture_gratuite` (donc le verdict autorise), mais la persistance
-     * d'une seconde lecture est refusée par R7 : « cette pièce a déjà été
-     * lue ». Le modèle est donc appelé — et payé — pour une lecture qui ne
-     * sera jamais rendue ni comptée. L'invariant tenu ici est celui qui compte
-     * pour la facture du client : le compteur ne bouge pas.
+     * Avant la ronde de correction 1, la base répondait `relecture_gratuite`
+     * (autorisée) ; le modèle était appelé et PAYÉ, puis la persistance
+     * refusait la seconde lecture (R7) : « cette pièce a déjà été lue ».
+     * Dépense sans résultat. La porte dit désormais non avant le modèle.
      */
-    const encore = lecteurs([() => lectureComplete("pdf-text")]);
-    const issue = await readPieceFlow(apiDEssai(), piece, encore).then(
-      () => "rendue",
-      (e: unknown) => (e instanceof Error ? e.message : String(e)),
-    );
+    const attendu = await verdictDeLaBase(piece);
+    assert.equal(attendu.autorisee, false);
+    assert.equal(attendu.motif, "piece_deja_lue");
+    const modele = lecteursInterdits();
 
-    assert.equal(
-      await compter(piece),
-      1,
-      `la correction gratuite reste gratuite (issue : ${issue})`,
-    );
+    await assert.rejects(readPieceFlow(apiDEssai(), piece, modele), (e: unknown) => {
+      assert.ok(e instanceof LectureRefusee);
+      assert.equal(e.motif, attendu.motif, "le motif de la base, mot pour mot");
+      return true;
+    });
+
+    assert.equal(modele.appels, 0, "aucun appel payant");
+    assert.equal(await compter(piece), 1, "toujours une seule lecture comptée");
+  });
+
+  it("un refus de lecture est un 4xx qui porte le motif de la base", async () => {
+    const lue = await deposer(orgLibre, "http-lue", "partage");
+    await readPieceFlow(apiDEssai(), lue, lecteurs([() => lectureComplete("pdf-text")]));
+    const privee = await deposer(orgLibre, "http-privee", "personnel");
+    const auDela = await deposer(orgPleine, "http-au-dela", "partage");
+
+    for (const piece of [lue, privee, auDela]) {
+      const attendu = await verdictDeLaBase(piece);
+      const reponse = await fetch(`${base}/malica/lectures/${piece}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${emettreJeton(u)}` },
+      });
+      const corps = (await reponse.json()) as { erreur?: string; motif?: string };
+
+      assert.ok(
+        reponse.status >= 400 && reponse.status < 500,
+        `un refus n'est pas une panne : ${reponse.status}`,
+      );
+      assert.equal(corps.motif, attendu.motif);
+      assert.equal(corps.erreur, attendu.motif, "lisible par l'écran comme par la file");
+    }
   });
 
   it("au plafond, la chaîne s'arrête avant tout appel de modèle, avec le motif de la base", async () => {

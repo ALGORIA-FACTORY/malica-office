@@ -1175,3 +1175,202 @@ comment on function public.capture_piece_supprimer(uuid, boolean) is
   'LA SEULE porte par laquelle une pièce disparaît. Libre tant que le cabinet '
   'ne l''a pas reçue ; sur accord inscrit ensuite, que seul `piece_repondre` '
   'passe. Jamais sur une pièce comptabilisée, accord compris.';
+
+-- --- 13. Une pièce déjà lue ne paie pas un modèle pour rien ------------------
+--
+-- Relevé par l'épreuve `une-lecture-qui-echoue-ne-se-facture-pas` : pour une
+-- pièce déjà comptée, `lecture_autorisee` répondait `relecture_gratuite`
+-- (autorisée), le modèle était appelé et PAYÉ, puis `capture_read_persist`
+-- refusait la seconde persistance (R7 : « cette pièce a déjà été lue »).
+-- Dépense réelle, aucun résultat, aucun comptage. Déclencheurs ordinaires :
+-- relance de la file hors ligne du téléphone, double clic.
+--
+-- La porte dit désormais non AVANT le modèle, avec un motif à elle :
+-- `piece_deja_lue`. La condition est celle, exacte, du refus de la
+-- persistance : une extraction existe pour la pièce.
+--
+-- ⚠ Le piège que l'épreuve a trouvé en rougissant : `lecture_consommer` est
+-- appelée APRÈS la persistance, donc quand l'extraction existe. Si elle
+-- interrogeait la même porte, elle se refuserait elle-même sur chaque lecture
+-- réussie. Le verdict de fond est donc DÉPLACÉ dans `lecture_verdict` (le corps
+-- de l'ancienne `lecture_autorisee`, inchangé), que la porte publique habille
+-- du refus « déjà lue » et que `lecture_consommer` appelle nue. Les deux n'ont
+-- pas la même question : l'une demande « peut-on commencer à lire ? », l'autre
+-- « cette lecture rendue se compte-t-elle ? ».
+--
+-- `lecture_verdict` n'est PAS exposée : pas d'`execute` pour `authenticated`,
+-- elle ne s'appelle que depuis les deux fonctions `security definer`, qui
+-- portent chacune `app.piece_lisible` en tête (une `definer` sans porte est une
+-- sonde).
+--
+-- Ce qui ne bouge pas : `relecture_gratuite` reste le verdict d'une pièce
+-- comptée qui n'a pas d'extraction — une relecture ne coûte pas une lecture au
+-- client. On retire l'inutilité, pas la gratuité.
+--
+-- La vraie réponse est plus riche — une seconde lecture est un fait nouveau et
+-- daté (R7), donc c'est la persistance qui est trop stricte — mais elle touche
+-- la chaîne de lecture (R2) et se décide ailleurs. Le motif disparaîtra avec
+-- elle.
+
+create or replace function public.lecture_verdict(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant   uuid;
+  v_vis      app.vis_t;
+  v_licence  uuid;
+  v_conso    record;
+  v_deja     boolean;
+begin
+  -- La RLS de `capture.pieces` ne s'applique plus ici : la lisibilité de la
+  -- pièce pour l'appelant se demande à la fonction qui la porte.
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  select tenant_id, vis into v_tenant, v_vis
+    from capture.pieces where id = p_piece;
+  if v_tenant is null then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  -- B6 : une pièce personnelle n'est jamais lue.
+  if v_vis = 'personnel'::app.vis_t then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'piece_personnelle',
+      'restantes', null, 'droit', null);
+  end if;
+
+  select licence_id into v_licence
+    from facturation.licence_organisations where tenant_id = v_tenant;
+  if v_licence is null then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'organisation_sans_licence',
+      'restantes', null, 'droit', null);
+  end if;
+
+  select * into v_conso from facturation.consommation_v where licence_id = v_licence;
+  if v_conso.licence_id is null then
+    -- Pas de ligne : on ne sait pas, donc on refuse. Jamais `true` par défaut.
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'organisation_sans_licence',
+      'restantes', null, 'droit', null);
+  end if;
+
+  -- Une pièce déjà comptée se relit sans rien coûter. C'est la correction
+  -- gratuite, et c'est volontaire.
+  select exists (select 1 from facturation.lectures where piece_id = p_piece)
+    into v_deja;
+  if v_deja then
+    return jsonb_build_object(
+      'autorisee', true, 'motif', 'relecture_gratuite',
+      'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  -- Une licence suspendue n'arrête pas la caméra, elle arrête l'œil.
+  if v_conso.statut <> 'active' then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'licence_' || v_conso.statut,
+      'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  if v_conso.lectures_restantes <= 0 then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'plafond_atteint',
+      'restantes', 0, 'droit', v_conso.lectures_droit,
+      'licence_id', v_licence);
+  end if;
+
+  return jsonb_build_object(
+    'autorisee', true, 'motif', 'dans_le_forfait',
+    'restantes', v_conso.lectures_restantes, 'droit', v_conso.lectures_droit,
+    'licence_id', v_licence);
+end
+$$;
+
+revoke all on function public.lecture_verdict(uuid) from public, anon, authenticated;
+
+create or replace function public.lecture_autorisee(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  -- Une pièce déjà lue ne reçoit pas de seconde lecture : le dire ICI, avant
+  -- le modèle, et non après l'avoir payé. Avant les licences : le refus ne
+  -- dépend ni du forfait ni du plafond.
+  if exists (select 1 from capture.extractions where piece_id = p_piece) then
+    return jsonb_build_object(
+      'autorisee', false, 'motif', 'piece_deja_lue',
+      'restantes', null, 'droit', null);
+  end if;
+
+  return public.lecture_verdict(p_piece);
+end
+$$;
+
+revoke all on function public.lecture_autorisee(uuid) from public, anon;
+grant execute on function public.lecture_autorisee(uuid) to authenticated;
+
+create or replace function public.lecture_consommer(p_piece uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tenant  uuid;
+  v_licence uuid;
+  v_verdict jsonb;
+begin
+  -- La porte, nommée, et d'abord. La RLS de `capture.pieces` ne s'applique
+  -- plus ici : sans cette ligne, tout compte authentifié ferait compter la
+  -- lecture d'une pièce qu'il n'a pas le droit de voir.
+  if not app.piece_lisible(p_piece) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
+  end if;
+
+  -- La règle du plafond vit à UN seul endroit, et c'est ici qu'on l'invoque.
+  v_verdict := public.lecture_verdict(p_piece);
+  if not (v_verdict ->> 'autorisee')::boolean then
+    raise exception 'lecture refusee : %', v_verdict ->> 'motif'
+      using errcode = 'check_violation';
+  end if;
+
+  if (v_verdict ->> 'motif') = 'relecture_gratuite' then
+    return v_verdict;
+  end if;
+
+  -- Rien de ce qui s'écrit ne vient de l'appelant : le tenant est celui de la
+  -- pièce, la licence est celle du tenant. C'est ce qui tient les sections 8
+  -- et 9 sans la politique.
+  select tenant_id into v_tenant from capture.pieces where id = p_piece;
+  select licence_id into v_licence
+    from facturation.licence_organisations where tenant_id = v_tenant;
+
+  insert into facturation.lectures (tenant_id, licence_id, piece_id, periode, consommee_par)
+  values (v_tenant, v_licence, p_piece,
+          date_trunc('month', current_date)::date, auth.uid())
+  on conflict (piece_id) do nothing;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  values (v_tenant, auth.uid(), 'lecture.consommee', 'capture', 'pieces', p_piece,
+          jsonb_build_object('licence_id', v_licence));
+
+  return public.lecture_verdict(p_piece);
+end
+$$;
+
+revoke all on function public.lecture_consommer(uuid) from public, anon;
+grant execute on function public.lecture_consommer(uuid) to authenticated;
