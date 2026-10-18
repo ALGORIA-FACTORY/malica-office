@@ -59,6 +59,28 @@ const config: CapacitorConfig = {
   },
 
   plugins: {
+    /*
+     * ============ LES ICÔNES DES BARRES SYSTÈME, EN CLAIR ET POUR TOUJOURS
+     *
+     * Relevé dans la source du greffon livré — `SystemBars.java`,
+     * `getStyleForTheme()` : sans style déclaré, il lit le MODE DU TÉLÉPHONE.
+     * Hors mode sombre, il rend `LIGHT`, ce qui appelle
+     * `setAppearanceLightStatusBars(true)` — autrement dit des icônes NOIRES.
+     *
+     * Or la coque Android est l'application du dirigeant de PME, et son socle
+     * est `#0A0A0A` en permanence : elle n'a pas de variante claire. Chez tout
+     * utilisateur dont le téléphone est en mode clair — la majorité —, l'heure,
+     * le réseau et la batterie étaient donc noirs sur presque noir. Invisibles.
+     *
+     * `DARK` ne veut pas dire « barre sombre » : dans ce greffon il veut dire
+     * « contenu sombre dessous », donc icônes CLAIRES. C'est ce qu'il faut.
+     * `bar` vide côté natif, le réglage couvre la barre d'état ET la barre
+     * gestuelle.
+     *
+     * Ce réglage est cuit dans les actifs natifs au `cap sync` : il part par le
+     * magasin, pas par la mise à jour en vol.
+     */
+    SystemBars: { style: "DARK" },
     // Le clavier pousse la page au lieu de la recouvrir : la barre basse et
     // le champ actif remontent ensemble.
     Keyboard: { resize: "body" as never },
