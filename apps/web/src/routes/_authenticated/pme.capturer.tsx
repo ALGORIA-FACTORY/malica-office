@@ -7,8 +7,9 @@ import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
-import { creerDepotHttp } from "@/verticals/malica-office/adapters/http/rpc";
+import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
@@ -87,6 +88,7 @@ export const Route = createFileRoute("/_authenticated/pme/capturer")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): LotDeCapture => lireLotDeCapture(search),
   component: PmeCapturer,
 });
 
@@ -217,63 +219,37 @@ function Fin({ am, children }: { am?: boolean; children: ReactNode }) {
   );
 }
 
-type Destination = "societe" | "entite" | "prive";
+/**
+ * Deux destinations, et pas trois.
+ *
+ * `entite` n'en est pas une : c'est le LIEU où « La société » met la pièce
+ * pour qu'elle soit lisible (voir la mutation `lire`). Ce qui se décide
+ * ensuite — transmettre ou garder — se décide à l'étape 8, quand le verdict
+ * de la lecture existe.
+ */
+type Destination = "societe" | "prive";
 
 /**
- * Le forfait, tel que `mon_forfait_v` le rend.
+ * ===================================== L'ÉCHAFAUDAGE DU FORFAIT EST PARTI
  *
- * ============================================ POURQUOI IL EST DÉCLARÉ ICI
+ * Trente lignes vivaient ici : l'interface `MonForfait`, un
+ * `DepotFacturation` local, un `creerDepotHttp("facturation")` à côté du point
+ * de composition, et `nombre()`. Les réglages et l'accueil en avaient chacun
+ * leur copie — trois interfaces pour une donnée, deux clés de cache, deux
+ * règles de dégradation qui ne jugeaient pas le même fait.
  *
- * `facturation` est au contrat RPC et son dépôt d'API existe. Ce qui n'existe
- * pas encore, c'est le côté client : ni `FacturationRepository` dans
- * `packages/socle/src/ports/repositories.ts`, ni l'entrée `facturation` dans
- * `OfficeRuntime`. `office().facturation` ne compile donc pas.
- *
- * Cette déclaration est un ÉCHAFAUDAGE, et elle se retire en trois lignes le
- * jour où le port arrive : on supprime `MonForfait`, `DepotFacturation` et
- * `facturation()`, on importe le type du port, et on lit
- * `office().facturation`. Rien d'autre dans ce fichier ne change.
- *
- * Les noms sont COPIÉS du contrat et de `mon_forfait_v` — snake_case, parce
- * que le dépôt relaie la vue telle quelle (R3) et ne renomme rien. Les
- * `numeric` de Postgres arrivent en chaînes : d'où `number | string | null`
- * partout, et `nombre()` pour les lire sans se tromper.
+ * Le port existe maintenant (`FacturationRepository`), il est monté dans
+ * `composition.ts` — donc couvert par le test qui confronte les ports au
+ * contrat — et le layout le lit UNE fois. Cet écran le reçoit par le
+ * contexte, comme la règle du câblage le demande depuis le début.
  */
-interface MonForfait {
-  offre: string;
-  statut: string;
-  lectures_droit: number | string | null;
-  lectures_consommees: number | string | null;
-  lectures_restantes: number | string | null;
-  organisations: number | string | null;
-  sieges_occupes: number | string | null;
-  sieges_inclus: number | string | null;
-  sieges_max: number | string | null;
-  prix_mensuel_ht: string | null;
-}
-
-/** `null` quand l'appelant ne détient aucune licence — un collaborateur n'en
- *  détient pas, et la base ne lui en montre aucune. Ce n'est pas une panne. */
-interface DepotFacturation {
-  monForfait(): Promise<MonForfait | null>;
-}
-
-const facturation = () => creerDepotHttp<DepotFacturation>("facturation");
-
-/** Un entier, ou `null`. Jamais `0` par défaut : zéro est un fait, l'absence
- *  n'en est pas un, et les confondre sur un compteur de quota ferait croire à
- *  un plafond atteint. */
-function nombre(v: number | string | null | undefined): number | null {
-  if (v === null || v === undefined) return null;
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
 function PmeCapturer() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const lotDemande = Route.useSearch();
 
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
@@ -306,29 +282,17 @@ function PmeCapturer() {
   });
 
   /*
-   * LE FORFAIT — lu une fois, et il devrait l'être au layout.
+   * LE FORFAIT — lu par le layout, reçu par le contexte.
    *
-   * La règle du câblage est claire : « un écran lit `facturation.monForfait`
+   * La règle du câblage est tenue : « un écran lit `facturation.monForfait`
    * une fois, au niveau du layout `pme.tsx`, et le passe par contexte. Aucun
-   * écran n'appelle deux fois. » Le contexte ne le porte pas encore ; cette
-   * requête est donc le second endroit où il faudra le retirer quand il y
-   * sera. La clé est volontairement sans dossier : le forfait est celui de la
-   * LICENCE, pas d'une société — il ne change pas quand on change de dossier.
+   * écran n'appelle deux fois. »
    *
-   * `retry: false` : une méthode qui n'est pas encore servie ne doit pas
-   * occuper le réseau trois fois avant de rendre son silence. Et aucune des
-   * branches ci-dessous ne lit `forfait.isError` pour bloquer quoi que ce
-   * soit : un compteur muet laisse capturer, un compteur qui barre la route
-   * ne laisse rien faire.
+   * Et aucune branche de cet écran ne lit `illisible` pour bloquer quoi que
+   * ce soit : un compteur muet laisse capturer, un compteur qui barre la
+   * route ne laisse rien faire.
    */
-  const forfait = useQuery({
-    queryKey: ["mon-forfait"],
-    queryFn: () => facturation().monForfait(),
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const restantes = nombre(forfait.data?.lectures_restantes);
+  const restantes = nombre(pme.forfait.ligne?.lectures_restantes);
   /** Ce qu'on écrit à l'écran : le nombre, ou l'aveu. Jamais zéro par défaut. */
   const resteDit = restantes === null ? "—" : String(restantes);
 
@@ -341,10 +305,50 @@ function PmeCapturer() {
    * posée, et un écran qui redemande ce qu'on vient de lui dire apprend à ne
    * plus répondre.
    */
-  const lot = useMemo(
-    () => (pieces.data ?? []).filter((p) => p.status === "capturee"),
-    [pieces.data],
-  );
+  /*
+   * ================================= CELLES DE CE PASSAGE, SINON CELLES QUI TRAÎNENT
+   *
+   * L'obturateur passe les identifiants qu'il vient d'obtenir : on répond
+   * alors pour la photo qu'on vient de prendre, et pour elle seule. Sans
+   * eux — on ouvre l'écran pour reprendre ce qui traîne — le lot est tout ce
+   * que le dossier n'a pas lu.
+   *
+   * Sans ce filtre, une seule photo prise sur le dossier d'atelier demandait
+   * la destination de trente et une pièces d'un coup.
+   */
+  const duPassage = useMemo(() => identifiantsDuLot(lotDemande.pieces), [lotDemande.pieces]);
+  const candidats = useMemo(() => {
+    const nonLues = (pieces.data ?? []).filter((p) => p.status === "capturee");
+    // Les pièces demandées peuvent n'être pas encore visibles de la liste (la
+    // requête est antérieure au dépôt) : on ne retombe alors pas sur tout le
+    // dossier, on attend. Un écran qui élargit tout seul la question est pire
+    // qu'un écran qui patiente.
+    return duPassage.length === 0 ? nonLues : nonLues.filter((p) => duPassage.includes(p.id));
+  }, [pieces.data, duPassage]);
+
+  /*
+   * ================================== LE LOT SE FIGE QUAND ON RÉPOND POUR LUI
+   *
+   * Il se déduisait de `status === "capturee"` à chaque rendu. Or la lecture
+   * fait passer la pièce à `lue` : à l'étape 3, le lot se vidait au fur et à
+   * mesure que les lectures aboutissaient, et les étapes 4 à 8 — ce que j'ai
+   * lu, les dates, le règlement, la transmission — n'avaient plus une seule
+   * ligne à montrer. Le défaut ne s'était jamais vu parce qu'aucune pièce
+   * n'était jamais lue.
+   *
+   * Dès qu'on quitte l'étape 0, le lot est donc une LISTE D'IDENTIFIANTS, et
+   * elle ne bouge plus jusqu'à « la suivante ».
+   */
+  const [fige, setFige] = useState<readonly string[] | null>(null);
+  const lot = useMemo(() => {
+    if (fige === null) return candidats;
+    const parId = new Map((pieces.data ?? []).map((p) => [p.id, p]));
+    return fige.flatMap((id) => {
+      const p = parId.get(id);
+      return p ? [p] : [];
+    });
+  }, [fige, candidats, pieces.data]);
+
   const retenues = useMemo(() => lot.filter((p) => !exclues.includes(p.id)), [lot, exclues]);
   const ids = useMemo(() => retenues.map((p) => p.id), [retenues]);
 
@@ -437,14 +441,36 @@ function PmeCapturer() {
     onError: echoue,
   });
 
-  /** La lecture, sur clic explicite. Jamais au dépôt, jamais à la minuterie :
-   *  le quota ne se dépense pas tout seul. */
+  /**
+   * La lecture, sur clic explicite. Jamais au dépôt, jamais à la minuterie :
+   * le quota ne se dépense pas tout seul.
+   *
+   * ============================= ET LA PIÈCE ENTRE DANS LA SOCIÉTÉ D'ABORD
+   *
+   * Une pièce naît `personnel` — c'est la décision du 7 octobre, et elle est
+   * juste : rien ne part avant d'être connu. Mais `public.lecture_autorisee`
+   * refuse toute pièce `personnel` (B6) : demander la lecture sans avoir
+   * déplacé la pièce, c'était demander un refus. Mesuré le 18 octobre :
+   * trente pièces, zéro lue, trente refus au journal.
+   *
+   * La destination répondue à l'étape 1 s'INSCRIT donc ici, avant la
+   * lecture : `entite`, la bibliothèque de la société — lue, rangée, PAS
+   * transmise. La transmission reste une décision de l'étape 8, quand le
+   * verdict de la lecture existe.
+   *
+   * Les décochées, elles, ne bougent pas : elles restent `personnel`, non
+   * lues, et ne coûtent rien. `garderPiece` inscrit la décision sans toucher
+   * à la visibilité.
+   */
   const lire = useMutation({
     mutationFn: async () => {
       // Les décochées sont gardées d'abord : elles ne doivent pas rester en
       // suspens pendant que les autres se lisent.
       for (const id of exclues) await office().collab.garderPiece(id);
-      for (const id of ids) await office().malica.demanderLaLecture(id);
+      for (const id of ids) {
+        await office().collab.setPieceVis(id, "entite");
+        await office().malica.demanderLaLecture(id);
+      }
     },
     onSuccess: async () => {
       setErreur(null);
@@ -551,6 +577,7 @@ function PmeCapturer() {
 
   function recommencer() {
     setEtape(0);
+    setFige(null);
     setDest(null);
     setExclues([]);
     setChoisie(null);
@@ -734,7 +761,10 @@ function PmeCapturer() {
                 type="button"
                 className="pr"
                 disabled={lot.length === 0}
-                onClick={() => setEtape(1)}
+                onClick={() => {
+                  setFige(lot.map((p) => p.id));
+                  setEtape(1);
+                }}
               >
                 {lot.length > 0
                   ? t("pme.capture.repondre", { count: lot.length })
@@ -791,19 +821,22 @@ function PmeCapturer() {
                 onClick={() => setDest("societe")}
               />
               {/*
-               * « La société, sans transmettre » demande une troisième
-               * visibilité, `entite`. `Visibility` n'en porte que deux —
-               * `personnel` et `partage`. L'option reste VISIBLE et dit ce
-               * qu'elle ferait : un produit qui cache ce qu'il vend ne le vend
-               * pas. Elle s'ouvre quand `setPieceVis` acceptera `'entite'`.
+               * ============================ L'OPTION « À VENIR » A DISPARU, ET C'EST UNE FIN
+               *
+               * Une troisième option vivait ici, désactivée, étiquetée
+               * « À VENIR » : « La société, sans transmettre ». Elle attendait
+               * que `Visibility` accepte `entite`.
+               *
+               * `entite` est accepté depuis aujourd'hui — et c'est désormais ce
+               * que « La société » FAIT : la pièce entre dans la bibliothèque
+               * de la société, lue et rangée, et elle n'est transmise que si on
+               * le dit à l'étape 8, en deux boutons de même poids. L'option
+               * décrivait donc exactement « La société » suivie de « Garder ».
+               *
+               * Un placeholder qui promet ce que l'écran d'à côté fait déjà est
+               * un doublon qui s'annonce comme un manque. R9 l'interdit, et il
+               * ne se remplace par rien.
                */}
-              <Opt
-                ic={G.bib}
-                titre={t("pme.capture.dest.entite")}
-                sous={t("pme.capture.dest.entite.sous")}
-                vl={t("pme.capture.dest.entite.vl")}
-                off
-              />
               <Opt
                 ic={G.prive}
                 titre={t("pme.capture.dest.prive")}

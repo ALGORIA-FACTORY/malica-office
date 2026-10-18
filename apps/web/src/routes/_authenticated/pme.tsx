@@ -13,6 +13,7 @@ import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
+import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
@@ -106,6 +107,28 @@ function PmeLayout() {
     enabled: !!org,
   });
 
+  /*
+   * ======================================= LE FORFAIT, LU UNE FOIS, ET ICI
+   *
+   * Trois écrans l'appelaient chacun pour soi — accueil, capture, réglages —
+   * en redéclarant chacun son interface et son propre dépôt `facturation`,
+   * hors du point de composition. Deux clés de cache pour la même donnée,
+   * deux allers-retours, et deux règles de dégradation qui ne jugeaient pas
+   * le même fait.
+   *
+   * La clé n'a pas de dossier : la licence appartient à la PERSONNE, et
+   * `mon_forfait()` ne rend que celle dont l'appelant est titulaire.
+   *
+   * `retry: false` : une licence absente n'est pas une panne à réessayer
+   * trois fois, et un compteur qui tarde ne doit jamais retenir la capture.
+   */
+  const forfaitQuery = useQuery({
+    queryKey: ["mon-forfait"],
+    queryFn: () => office().facturation.monForfait(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const packQuery = useQuery({
     queryKey: ["ref-pack", org?.jurisdiction],
     queryFn: () => office().referential.activePack(org!.jurisdiction),
@@ -189,23 +212,44 @@ function PmeLayout() {
      * disparaîtraient sans aucun message.
      */
     mutationFn: async (input: { lot: readonly PickedFile[]; documentKind: string | null }) => {
-      if (!org) return null;
+      if (!org) return [];
       const identifiants: string[] = [];
       for (const picked of input.lot) {
         const id = await deposerUnePiece(picked, input.documentKind);
         if (id) identifiants.push(id);
       }
-      // Une seule pièce : on l'ouvre, sa lecture est déjà demandée. Plusieurs :
-      // la liste, parce qu'ouvrir la première cache les neuf autres.
-      return input.lot.length === 1 ? (identifiants[0] ?? null) : null;
+      return identifiants;
     },
-    onSuccess: async (pieceId) => {
+    /*
+     * ======================================== OÙ L'ON ARRIVE APRÈS LA PHOTO
+     *
+     * Sur l'écran de capture, et sur les pièces QU'ON VIENT DE PRENDRE.
+     *
+     * L'obturateur menait au dossier de la pièce, et la pièce n'était jamais
+     * lue : née `personnel`, elle est refusée par B6, et l'écran du dossier
+     * n'offrait aucune sortie sans mandat de cabinet. Trente pièces, zéro
+     * lue, et une impasse fermée.
+     *
+     * `/pme/capturer` existait, enregistré, fini, et AUCUN lien du dépôt n'y
+     * menait. Il pose la question dans le bon ordre — la destination d'abord,
+     * la lecture sur clic explicite ensuite — et c'est le seul écran qui le
+     * fasse. L'obturateur y mène donc directement : le geste le plus fréquent
+     * du produit ne se paie pas d'un détour, et aucune entrée ne s'ajoute à
+     * la barre du bas, qui est dessinée à trois places.
+     *
+     * Les identifiants voyagent dans l'URL, et c'est le propos : sans eux,
+     * l'écran demanderait la destination des trente pièces du dossier pour
+     * une seule photo prise.
+     */
+    onSuccess: async (identifiants) => {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       await qc.invalidateQueries({ queryKey: ["pieces-lues", org.id] });
-      if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
-      else await navigate({ to: "/pme/list" });
+      await navigate({
+        to: "/pme/capturer",
+        search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
+      });
     },
     onError: (e: unknown) =>
       setCaptureError(
@@ -217,6 +261,7 @@ function PmeLayout() {
 
   async function deposerUnePiece(picked: PickedFile, documentKind: string | null) {
     if (!org) return null;
+    const vis = visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) });
     /*
      * ============================================ RANGÉE AVANT DE PARTIR
      *
@@ -248,7 +293,7 @@ function PmeLayout() {
          * lecture, en deux boutons de même poids. Et le retour d'une pièce
          * transmise demande l'accord du cabinet.
          */
-        vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
+        vis,
         contentType: picked.blob.type || "application/pdf",
         documentKind,
         nomFichier: picked.name,
@@ -363,6 +408,12 @@ function PmeLayout() {
               capturing: capture.isPending || choisir.isPending,
               captureError,
               file,
+              forfait: {
+                ligne: forfaitQuery.data ?? null,
+                enCours: forfaitQuery.isPending,
+                illisible: forfaitQuery.isError,
+                ouvertures: ouverturesDuForfait(forfaitQuery.data ?? null),
+              },
             }}
           >
             <Outlet />

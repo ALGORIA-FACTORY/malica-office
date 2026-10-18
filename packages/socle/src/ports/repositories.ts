@@ -794,7 +794,12 @@ export interface NouvellePiece {
   tenantId: string;
   entityId: string | null;
   source: "photo" | "pdf";
-  vis: "personnel" | "partage";
+  /**
+   * Où la pièce naît. `personnel`, toujours, depuis le 7 octobre 2026 : rien
+   * ne part avant d'être connu, et la destination se répond ensuite, sur
+   * l'écran de capture (`visibilite-a-la-capture.ts`).
+   */
+  vis: Visibility;
   /** Générée AVANT tout appel : la même clé rend la même pièce, toujours. */
   idempotencyKey: string;
   contentType: string | null;
@@ -827,8 +832,15 @@ export interface PieceLue {
   id: string;
   status: PieceStatus;
   createdAt: string;
-  /** Partagé avec le cabinet, ou gardé pour soi. */
-  vis: "personnel" | "partage";
+  /**
+   * Où la pièce est — et c'est ce qui décide si elle peut être lue.
+   *
+   * Une pièce `personnel` n'est jamais lue (B6). L'écran qui l'affiche doit
+   * donc le DIRE, plutôt que de la ranger avec celles qui attendent leur
+   * tour : trente pièces privées disaient « en attente de lecture » alors
+   * qu'elles n'attendaient rien.
+   */
+  vis: Visibility;
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
@@ -1560,7 +1572,24 @@ export interface BanqueRepository {
 }
 
 // ------------------------------------------------------------- collaboration
-export type Visibility = "personnel" | "partage";
+/**
+ * Les trois lieux où une pièce peut être.
+ *
+ * ================================================= POURQUOI TROIS, ET PAS DEUX
+ *
+ * `entite` existe en base depuis le 18 octobre 2026
+ * (`20261018100000_la_societe_est_un_troisieme_lieu.sql`) et l'API l'accepte
+ * (`apps/api/src/depots/collab.ts`). Ce type n'en portait que deux : la
+ * migration n'avait donc AUCUN effet visible, et « la société, sans
+ * transmettre » était une option morte à l'écran.
+ *
+ *   personnel  l'espace privé de la personne. Jamais transmise, jamais LUE —
+ *              c'est B6, et `public.lecture_autorisee` le refuse.
+ *   entite     la bibliothèque de la société. Lue, rangée, pas transmise.
+ *   partage    chez le cabinet. C'est la seule transmission, et le retour
+ *              demande son accord.
+ */
+export type Visibility = "personnel" | "entite" | "partage";
 
 /** Collaborateur du cabinet, seul destinataire possible d'une affectation. */
 export interface CabinetMember {
@@ -2315,3 +2344,78 @@ export type PropositionDeReglement =
       };
     }
   | { ok: false; raison: string };
+
+// ------------------------------------------------------------------ abonnement
+/**
+ * Le forfait de l'appelant, tel que `public.mon_forfait()` le rend.
+ *
+ * ==================================================== LES NOMS SONT CEUX DE LA BASE
+ *
+ * `snake_case`, et aucun renommage : le dépôt d'API relaie la fonction telle
+ * quelle (R3), et renommer ici obligerait à traduire deux fois — une fois
+ * dans un sens, une fois dans l'autre, avec un écart possible entre les deux.
+ *
+ * Les `numeric` de PostgreSQL arrivent en CHAÎNES : `prix_mensuel_ht` n'est
+ * donc pas un nombre, et ne doit jamais en devenir un ici. Les entiers, eux,
+ * peuvent arriver en chaînes selon le pilote — d'où `number | string | null`.
+ *
+ * `null` partout sauf les lectures : c'est ce que la base rend à un
+ * collaborateur, qui ne détient pas la licence. Ce n'est pas une panne, et
+ * l'écran doit le dire autrement qu'un zéro.
+ */
+export interface MonForfait {
+  /** `basic` · `solo` · `team` · `premium` — un CODE, jamais traduit. */
+  offre: string | null;
+  statut: string | null;
+  lectures_droit: number | string | null;
+  lectures_consommees: number | string | null;
+  lectures_restantes: number | string | null;
+  organisations: number | string | null;
+  sieges_occupes: number | string | null;
+  sieges_inclus: number | string | null;
+  sieges_max: number | string | null;
+  prix_mensuel_ht: string | null;
+}
+
+/** Un siège occupé — une personne, sur une organisation de la licence. */
+export interface SiegeDeLaLicence {
+  user_id: string;
+  nom: string | null;
+  role: string;
+  tenant_id: string;
+  organisation: string;
+}
+
+/** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */
+export interface OrganisationDeLaLicence {
+  tenant_id: string;
+  nom: string;
+  lectures_consommees: number | string | null;
+}
+
+/**
+ * L'abonnement — lu, jamais calculé.
+ *
+ * Ce port existait côté API depuis le 18 octobre et nulle part côté
+ * navigateur : trois écrans redéclaraient chacun son interface et son propre
+ * `creerDepotHttp("facturation")`, hors du point de composition unique — donc
+ * hors du garde-fou qui confronte les ports au contrat.
+ *
+ * Aucun plafond ne se décide ici (R3) : `inviterSiege` délègue à la base, qui
+ * refuse la place de trop, et le motif revient en CODE.
+ */
+export interface FacturationRepository {
+  /** `null` quand l'appelant n'est rattaché à aucune licence. */
+  monForfait(): Promise<MonForfait | null>;
+  sieges(): Promise<SiegeDeLaLicence[]>;
+  organisations(): Promise<OrganisationDeLaLicence[]>;
+  inviterSiege(
+    email: string,
+    tenantId: string,
+  ): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
+  /** `{ libere: false, motif }` tant qu'il reste des pièces à trancher. */
+  libererPlace(
+    tenantId: string,
+    membre: string,
+  ): Promise<{ libere: boolean; motif?: string; pieces: number }>;
+}

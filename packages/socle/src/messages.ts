@@ -242,6 +242,17 @@ const fr = {
   "pme.doc.lead.mois": "{count} documents lus et classés en {mois}.",
   "pme.doc.lead.mois#one": "{count} document lu et classé en {mois}.",
   "pme.doc.lead.mois#other": "{count} documents lus et classés en {mois}.",
+  /*
+   * ====================== « LUS ET CLASSÉS » NE COMPTE QUE CE QUI L'EST
+   *
+   * La phrase comptait les pièces du mois en affirmant qu'elles étaient lues
+   * et classées. Elle compte maintenant les lues, et la seconde phrase dit
+   * ce que sont les autres — sans prétendre qu'elles attendent, puisqu'une
+   * pièce privée n'attend rien.
+   */
+  "pme.doc.lead.nonLues": "{count} ne sont pas encore lus.",
+  "pme.doc.lead.nonLues#one": "{count} n'est pas encore lu.",
+  "pme.doc.lead.nonLues#other": "{count} ne sont pas encore lus.",
   "pme.doc.lead.annee": "{count} documents depuis le début.",
   "pme.doc.lead.annee#one": "{count} document depuis le début.",
   "pme.doc.lead.annee#other": "{count} documents depuis le début.",
@@ -278,6 +289,21 @@ const fr = {
   "pme.piece.title": "Pièce",
   "pme.piece.source": "Origine",
   "pme.read.run": "Lire la pièce",
+  /*
+   * ============================================ LA SORTIE DE L'ESPACE PRIVÉ
+   *
+   * Une pièce privée n'est jamais lue, et l'écran le disait déjà — « je ne la
+   * lis pas tant que vous ne la transmettez pas ». Mais le seul bouton qui
+   * l'en sortait était gardé par le mandat de cabinet : sans cabinet, la
+   * phrase nommait une sortie qui n'existait pas. Impasse fermée.
+   *
+   * « La dire à la société » n'est pas une transmission : la pièce entre dans
+   * la bibliothèque de la société, elle est lue, et elle ne part chez
+   * personne. C'est la sortie qui n'a besoin de personne.
+   */
+  "pme.piece.versLaSociete": "La dire à la société",
+  "pme.piece.versLaSociete.sous":
+    "Elle entre dans la bibliothèque de la société et je la lis. Elle ne part chez personne : la transmission reste une décision à part.",
   "pme.read.running": "Lecture en cours…",
   "pme.lecture.titre": "Je lis votre document.",
   "pme.lecture.sous":
@@ -2589,9 +2615,6 @@ const fr = {
   "pme.capture.dest.societe.cabinet": "Lue, rangée, et transmise au cabinet après vérification",
   "pme.capture.dest.societe.sansCabinet":
     "Lue et rangée. Aucun cabinet n’est mandaté : rien ne part.",
-  "pme.capture.dest.entite": "La société, sans transmettre",
-  "pme.capture.dest.entite.sous": "Lue et rangée dans la bibliothèque. Elle ne part pas.",
-  "pme.capture.dest.entite.vl": "À VENIR",
   "pme.capture.dest.prive": "Vous",
   "pme.capture.dest.prive.sous":
     "Votre espace privé. Je ne la lis pas, personne d’autre ne la voit.",
@@ -2934,6 +2957,9 @@ const en: Dict = {
   "pme.doc.lead.mois": "{count} documents read and filed in {mois}.",
   "pme.doc.lead.mois#one": "{count} document read and filed in {mois}.",
   "pme.doc.lead.mois#other": "{count} documents read and filed in {mois}.",
+  "pme.doc.lead.nonLues": "{count} have not been read yet.",
+  "pme.doc.lead.nonLues#one": "{count} has not been read yet.",
+  "pme.doc.lead.nonLues#other": "{count} have not been read yet.",
   "pme.doc.lead.annee": "{count} documents since the start.",
   "pme.doc.lead.annee#one": "{count} document since the start.",
   "pme.doc.lead.annee#other": "{count} documents since the start.",
@@ -2970,6 +2996,9 @@ const en: Dict = {
   "pme.piece.title": "Document",
   "pme.piece.source": "Source",
   "pme.read.run": "Read the document",
+  "pme.piece.versLaSociete": "Move it to the company",
+  "pme.piece.versLaSociete.sous":
+    "It joins the company library and I read it. It goes to no one: sending it stays a separate decision.",
   "pme.read.running": "Reading…",
   "pme.lecture.titre": "I'm reading your document.",
   "pme.lecture.sous": "I note every word before answering — I never guess an amount.",
@@ -5227,9 +5256,6 @@ const en: Dict = {
   "pme.capture.dest.societe": "The company",
   "pme.capture.dest.societe.cabinet": "Read, filed, and sent to the firm after you check it",
   "pme.capture.dest.societe.sansCabinet": "Read and filed. No firm is engaged: nothing leaves.",
-  "pme.capture.dest.entite": "The company, without sending",
-  "pme.capture.dest.entite.sous": "Read and filed in the library. It does not leave.",
-  "pme.capture.dest.entite.vl": "COMING",
   "pme.capture.dest.prive": "You",
   "pme.capture.dest.prive.sous": "Your private space. I do not read it, and no one else sees it.",
   "pme.capture.dest.prive.flag":
@@ -5565,6 +5591,9 @@ const ar: Dict = {
   "pme.doc.lead.mois": "{count} وثيقة مقروءة ومصنَّفة في {mois}.",
   "pme.doc.lead.mois#one": "وثيقة واحدة مقروءة ومصنَّفة في {mois}.",
   "pme.doc.lead.mois#other": "{count} وثيقة مقروءة ومصنَّفة في {mois}.",
+  "pme.doc.lead.nonLues": "{count} لم تُقرأ بعد.",
+  "pme.doc.lead.nonLues#one": "واحدة لم تُقرأ بعد.",
+  "pme.doc.lead.nonLues#other": "{count} لم تُقرأ بعد.",
   "pme.doc.lead.annee": "{count} وثيقة منذ البداية.",
   "pme.doc.lead.annee#one": "وثيقة واحدة منذ البداية.",
   "pme.doc.lead.annee#other": "{count} وثيقة منذ البداية.",
@@ -5601,6 +5630,9 @@ const ar: Dict = {
   "pme.piece.title": "وثيقة",
   "pme.piece.source": "المصدر",
   "pme.read.run": "قراءة الوثيقة",
+  "pme.piece.versLaSociete": "نقلها إلى الشركة",
+  "pme.piece.versLaSociete.sous":
+    "تدخل مكتبة الشركة وأقرؤها. ولا تُرسل إلى أحد: الإرسال قرار منفصل.",
   "pme.read.running": "جارٍ القراءة…",
   "pme.lecture.titre": "أقرأ وثيقتك.",
   "pme.lecture.sous": "أرصد كل كلمة قبل أن أجيبك — لا أخمّن مبلغًا أبدًا.",
@@ -7802,9 +7834,6 @@ const ar: Dict = {
   "pme.capture.dest.societe": "للشركة",
   "pme.capture.dest.societe.cabinet": "تُقرأ وتُرتّب وتُرسل إلى المكتب بعد تحقّقك",
   "pme.capture.dest.societe.sansCabinet": "تُقرأ وتُرتّب. لا مكتب مكلَّف: لا شيء يُرسل.",
-  "pme.capture.dest.entite": "للشركة، دون إرسال",
-  "pme.capture.dest.entite.sous": "تُقرأ وتُرتّب في المكتبة. وهي لا تُرسل.",
-  "pme.capture.dest.entite.vl": "قريبًا",
   "pme.capture.dest.prive": "لك",
   "pme.capture.dest.prive.sous": "فضاؤك الخاص. لا أقرأها، ولا يراها أحد غيرك.",
   "pme.capture.dest.prive.flag": "هي مرتبطة بحسابك لا بالشركة — وستتبعك إن غادرتها.",

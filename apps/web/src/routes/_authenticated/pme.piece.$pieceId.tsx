@@ -11,9 +11,9 @@ import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
-import { RefusDeLecture } from "@/components/malica/lecture-refusee";
+import { motifDeLEtat, RefusDeLecture } from "@/components/malica/lecture-refusee";
 import malicaLoin from "@/assets/malica-loin.webp";
-import { libelleDuChamp } from "@/lib/champ-lisible";
+import { libelleDuChamp, libelleDuRefus, motifDeRefusConnu } from "@/lib/champ-lisible";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
@@ -320,6 +320,28 @@ function PieceScreen() {
   });
 
   /**
+   * LA DIRE À LA SOCIÉTÉ — la sortie de l'espace privé, sans mandat.
+   *
+   * `entite` n'est pas une transmission : la base ne pose `transmise_le` que
+   * pour `partage`, et seul `partage` prévient le cabinet. La pièce entre dans
+   * la bibliothèque de la société, devient lisible (B6 ne vise que
+   * `personnel`), et la transmission reste la décision séparée qu'elle doit
+   * être.
+   *
+   * Et le retour est libre : `capture_piece_set_vis` n'exige un accord que
+   * pour quitter `partage`. On ne ferme donc rien en ouvrant ceci.
+   */
+  const versLaSociete = useMutation({
+    mutationFn: () => office().collab.setPieceVis(pieceId, "entite"),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * UNE CORRECTION EST UNE ÉCRITURE NOUVELLE (R7).
    *
    * Le sens de la pièce, quand la lecture n'a pas pu le dire : un achat ou
@@ -474,6 +496,29 @@ function PieceScreen() {
         setError(t(libelle));
         return;
       }
+      /*
+       * ======================== ET LE MOTIF DE REFUS A SON TRADUCTEUR, LUI AUSSI
+       *
+       * `MESSAGE_DU_CODE_DE_LECTURE` ne connaît que les quatre codes
+       * `lecture.*`. Un MOTIF de refus — `piece_personnelle`,
+       * `plafond_atteint`, `licence_suspendue` — tombait donc dans
+       * `texteDeLErreur`, qui affiche le message brut de l'API. Relevé au
+       * rendu le 18 octobre, textuellement, sous les yeux du dirigeant :
+       *
+       *     piece_personnelle
+       *
+       * `libelleDuRefus` existe, est testé, et traduit exactement ces motifs.
+       * C'est la quatrième fois dans ce dépôt qu'un traducteur juste n'est pas
+       * importé par l'écran qui en a besoin.
+       *
+       * `motifDeRefusConnu` garde l'appel : `libelleDuRefus` a un repli
+       * attrape-tout (« je ne sais pas pourquoi »), et l'appeler sans garde
+       * aurait avalé les pannes de réseau dans une phrase rassurante.
+       */
+      if (motifDeRefusConnu(code)) {
+        setError(libelleDuRefus(code, t));
+        return;
+      }
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error")));
     },
   });
@@ -577,6 +622,26 @@ function PieceScreen() {
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
   const { piece, contenu, extraction, citations, lectureRefusee } = dossier.data;
+
+  /**
+   * Où la pièce est — et c'est ce qui décide si elle peut être lue.
+   *
+   * Les trois valeurs existent en base depuis le 18 octobre, et le type du
+   * socle les porte depuis le 19 : plus de conversion à faire ici. `entite`
+   * est la bibliothèque de la société — lue, rangée, pas transmise.
+   */
+  const vis = piece.vis;
+
+  /**
+   * Pourquoi cette pièce n'est pas lue, ou `null` si rien ne s'y oppose.
+   *
+   * Le refus INSCRIT d'abord ; à défaut, celui que la visibilité implique.
+   * Trente pièces privées n'avaient aucun refus au journal — l'inscription
+   * est récente — et l'écran les montrait comme des pièces qui attendent leur
+   * tour. Elles n'attendent rien, et cela se DÉRIVE plutôt que de s'écrire
+   * (R7 : on ne réécrit pas un fait).
+   */
+  const motifNonLue = motifDeLEtat(lectureRefusee, vis);
 
   /*
    * ================================ LE SENS SE DEMANDE UNE FOIS, PAS DEUX
@@ -977,14 +1042,18 @@ function PieceScreen() {
          * Le bouton reste : c'est la base qui tranche, et un plafond relevé la
          * minute d'après doit pouvoir être essayé sans quitter l'écran.
          */}
-        {lectureRefusee ? (
+        {motifNonLue === null ? null : (
           <RefusDeLecture
-            refus={lectureRefusee}
-            dateLisible={new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
-              new Date(lectureRefusee.le),
-            )}
+            motif={motifNonLue}
+            dateLisible={
+              lectureRefusee === null
+                ? null
+                : new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                    new Date(lectureRefusee.le),
+                  )
+            }
           />
-        ) : null}
+        )}
         {pagesScan.length > 0 ? (
           <div className="flex flex-col gap-3">
             {pagesScan.map((url, i) => (
@@ -1005,10 +1074,47 @@ function PieceScreen() {
             {t("pme.doc.error")}
           </p>
         )}
+        {/*
+         * ================================== LA SORTIE DE L'ESPACE PRIVÉ, SANS CABINET
+         *
+         * Une pièce `personnel` n'est jamais lue (B6), et « Lire la pièce »
+         * sur une pièce privée ne pouvait donc QUE échouer. Le message disait
+         * la sortie — « tant que vous ne la transmettez pas » — mais le seul
+         * bouton qui l'offrait était gardé par `cabinet.data` : sans mandat de
+         * cabinet, il n'y avait aucun bouton, donc aucune sortie. Le dirigeant
+         * qui essaie seul était dans une impasse fermée.
+         *
+         * « La dire à la société » n'est pas une transmission : `entite` est
+         * la bibliothèque de la société — lue, rangée, et elle ne part chez
+         * personne. Elle n'a besoin d'aucun mandat, et la transmission reste
+         * la décision séparée qu'elle doit être.
+         *
+         * Le bouton de lecture ne disparaît pas pour autant : c'est la base
+         * qui tranche, et un plafond relevé la minute d'après doit pouvoir
+         * être essayé sans quitter l'écran. Il passe seulement SECOND quand
+         * on sait qu'il ne peut pas aboutir.
+         */}
+        {vis === "personnel" ? (
+          <div className="manque" data-k="attente">
+            <p className="t-body">{t("pme.piece.versLaSociete.sous")}</p>
+            <button
+              type="button"
+              disabled={versLaSociete.isPending}
+              onClick={() => versLaSociete.mutate()}
+              className="mt-3 h-[54px] w-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-50"
+            >
+              {t("pme.piece.versLaSociete")}
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => read.mutate()}
-          className="h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
+          className={
+            vis === "personnel"
+              ? "h-[48px] w-full border border-border text-[14px] font-medium"
+              : "h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
+          }
         >
           {t("pme.read.run")}
         </button>
@@ -1037,16 +1143,14 @@ function PieceScreen() {
   const achat = payload?.document_kind === "facture_achat";
   const devise = payload?.currency ?? pme.currency;
 
-  /**
-   * La visibilité, lue large.
+  /*
+   * `vis` est lue plus haut, avant la branche « pas encore lue » : c'est elle
+   * qui décide si la pièce peut être lue, et donc ce que cet écran propose.
    *
-   * Le contrat ne connaît aujourd'hui que `personnel` et `partage` ; le
-   * câblage annonce `entite` — la pièce versée à la société, pas encore
-   * transmise. L'écran sait déjà le rendre : le jour où `Visibility` l'accepte,
-   * il n'y a rien à changer ici. Tant qu'il ne l'accepte pas, aucune pièce ne
-   * porte cette valeur et la branche reste inerte.
+   * La branche `entite` n'est plus inerte : `Visibility` porte les trois
+   * valeurs depuis le 19 octobre, et l'écran de capture y met les pièces
+   * destinées à la société avant de les faire lire.
    */
-  const vis = piece.vis as "personnel" | "entite" | "partage";
   const role = acces.data?.role ?? null;
   const siege = role === "collaborateur";
 

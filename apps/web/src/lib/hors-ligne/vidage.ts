@@ -18,6 +18,7 @@
  *     l'API marque l'élément en échec définitif, montré, jamais jeté.
  */
 import { ErreurApi, ErreurReseau, ErreurVersion } from "@/lib/transport/erreurs";
+import { lectureInterdite } from "@/lib/visibilite-a-la-capture";
 
 import type { DepotDeFile } from "./depot";
 import {
@@ -158,7 +159,23 @@ export function creerVidage(deps: {
          * Malica sait ce qu'elle vient de fabriquer. Le relire coûte un appel
          * de modèle pour en apprendre moins que ce qu'on savait déjà.
          */
-        if (!NE_SE_RELIT_PAS.has(e.documentKind ?? "")) {
+        /*
+         * ============== ET ON NE DEMANDE PAS CE QU'ON SAIT REFUSÉ
+         *
+         * 18 octobre 2026. Trente pièces photographiées, zéro lue. Toute
+         * pièce née de l'obturateur naît `personnel` (c'est la décision du
+         * 7 octobre, et elle est juste : rien ne part avant d'être connu), et
+         * `public.lecture_autorisee` refuse toute pièce `personnel` — B6,
+         * l'espace privé l'est aussi du patron.
+         *
+         * La file demandait quand même, et récoltait trente refus au journal
+         * d'audit. La destination se dit maintenant sur l'écran de capture,
+         * et c'est de là que part la lecture ; ici, on se tait.
+         *
+         * La pièce est déposée, scellée, intacte : seule la LECTURE ne part
+         * pas. La capture ne s'arrête jamais.
+         */
+        if (!NE_SE_RELIT_PAS.has(e.documentKind ?? "") && !lectureInterdite(e.vis)) {
           await deps.ports.demanderLaLecture(e.pieceId!);
         }
         await appliquer(e, { type: "lecture_demandee" });

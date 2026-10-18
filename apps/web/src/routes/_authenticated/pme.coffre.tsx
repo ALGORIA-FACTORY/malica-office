@@ -197,7 +197,9 @@ function PmeCoffre() {
                    * dire : « je ne la lis pas tant que vous ne la transmettez
                    * pas ». Le bouton de transmission est juste en dessous.
                    */}
-                  {p.status === "capturee" ? <EtatDeLecture refus={p.lectureRefusee} /> : null}
+                  {p.status === "capturee" ? (
+                    <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} />
+                  ) : null}
                 </Link>
                 <span className="num flex-none text-[11px] uppercase text-muted-foreground">
                   {t("pme.prive.badge")}

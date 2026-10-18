@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 
+import type { MonForfait } from "@malica/socle/ports/repositories";
+
+import type { OuverturesDuForfait } from "@/lib/forfait";
 import type { ElementDeFile } from "@/lib/hors-ligne/file";
 import { dossierDuJournal } from "@/lib/journal-atelier";
 
@@ -10,6 +13,27 @@ export interface FileDAttente {
   elements: ReadonlyArray<ElementDeFile>;
   reessayer: (cle: string) => void;
   abandonner: (cle: string) => void;
+}
+
+/**
+ * Le forfait tel que les écrans en ont besoin : la ligne, ce qu'elle ouvre, et
+ * la RAISON de son absence.
+ *
+ * Les trois états se disent différemment, et c'est tout l'intérêt de les
+ * distinguer : on ne sait pas encore (rien à dire), l'appel a échoué (« le
+ * compteur n'est pas lu »), il n'y a pas de licence (« pas encore
+ * d'abonnement »). Un seul « — » pour les trois ferait conclure à une panne
+ * là où il n'y en a pas.
+ */
+export interface ForfaitDuContexte {
+  /** La ligne, ou `null` : pas de licence sur ce compte, ou pas encore lue. */
+  ligne: MonForfait | null;
+  /** La première lecture est en cours. Rien n'est encore vrai ni faux. */
+  enCours: boolean;
+  /** L'appel a échoué. Les lectures du mois, elles, n'ont pas bougé. */
+  illisible: boolean;
+  /** Ce que l'offre ouvre — calculé À UN SEUL ENDROIT (`lib/forfait.ts`). */
+  ouvertures: OuverturesDuForfait;
 }
 
 export interface PmeContextValue {
@@ -51,6 +75,19 @@ export interface PmeContextValue {
   captureError: string | null;
   /** La file hors ligne de ce dossier : ce que la liste et l'accueil montrent. */
   file: FileDAttente;
+  /**
+   * L'ABONNEMENT, LU UNE FOIS.
+   *
+   * La règle du câblage est explicite : « un écran lit
+   * `facturation.monForfait` une fois, au niveau du layout `pme.tsx`, et le
+   * passe par contexte. Aucun écran n'appelle deux fois. » Elle n'était pas
+   * appliquée — trois écrans l'appelaient chacun pour soi, sur deux clés de
+   * cache différentes, avec deux règles de dégradation divergentes.
+   *
+   * La licence appartient à la PERSONNE, pas au dossier : rien ici ne porte
+   * `tenantId`, et changer de société ne change pas le forfait.
+   */
+  forfait: ForfaitDuContexte;
 }
 
 const PmeContext = createContext<PmeContextValue | null>(null);

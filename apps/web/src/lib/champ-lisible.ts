@@ -140,18 +140,38 @@ export function valeurLisible(chemin: string, valeur: string, locale: string): s
  * lue, et je ne sais pas pourquoi » est une information. Le code brut n'en est
  * pas une.
  */
+const MOTIFS_DE_REFUS: Record<string, MessageKey> = {
+  plafond_atteint: "pme.refus.plafond_atteint",
+  piece_personnelle: "pme.refus.piece_personnelle",
+  licence_suspendue: "pme.refus.licence_suspendue",
+  organisation_sans_licence: "pme.refus.organisation_sans_licence",
+  piece_deja_lue: "pme.refus.piece_deja_lue",
+};
+
 export function libelleDuRefus(motif: string, t: T): string {
-  const MOTIFS: Record<string, MessageKey> = {
-    plafond_atteint: "pme.refus.plafond_atteint",
-    piece_personnelle: "pme.refus.piece_personnelle",
-    licence_suspendue: "pme.refus.licence_suspendue",
-    organisation_sans_licence: "pme.refus.organisation_sans_licence",
-    piece_deja_lue: "pme.refus.piece_deja_lue",
-  };
-  const connu = MOTIFS[motif];
+  const connu = MOTIFS_DE_REFUS[motif];
   if (connu) return t(connu);
   if (motif.startsWith("licence_")) return t("pme.refus.licence.autre");
   return t("pme.refus.autre");
+}
+
+/**
+ * Ce code EST-IL un motif de refus de lecture ?
+ *
+ * ================================================================== POURQUOI
+ *
+ * `libelleDuRefus` a un repli attrape-tout — « je ne l'ai pas lue, et je ne
+ * sais pas pourquoi ». C'est la bonne phrase pour un motif inconnu de la
+ * base, et la pire pour une panne de réseau : l'écran de la pièce reçoit les
+ * deux par le même `catch`, et traduire sans discerner aurait repeint toute
+ * panne en refus poli.
+ *
+ * Un appelant qui ne sait pas de quelle famille est son code demande donc
+ * d'abord. Ceux qui lisent `lectureRefusee` — la base l'a inscrit, c'est un
+ * motif par construction — appellent directement.
+ */
+export function motifDeRefusConnu(code: string): boolean {
+  return code in MOTIFS_DE_REFUS || code.startsWith("licence_");
 }
 
 /**

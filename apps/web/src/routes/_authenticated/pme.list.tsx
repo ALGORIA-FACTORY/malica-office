@@ -85,6 +85,22 @@ function VosDocuments() {
 
   const visibles = type === "tous" ? duMois : duMois.filter((p) => p.kind === type);
 
+  /*
+   * ================================== « LUS ET CLASSÉS » COMPTE CE QUI L'EST
+   *
+   * L'en-tête annonçait « 36 documents lus et classés en octobre » sur un
+   * dossier où quatre l'étaient. Il comptait les PIÈCES DU MOIS, et la phrase
+   * disait « lus et classés » : du texte de façade, que le dépôt interdit.
+   *
+   * Le filtre existait déjà juste à côté — `status === "capturee"` sépare la
+   * pièce non lue de la pièce lue, et il sert à choisir l'état de chaque
+   * ligne. Une pièce non lue n'est donc plus comptée dans la phrase qui
+   * affirme qu'elle l'a été : elle est comptée dans la seconde, qui dit ce
+   * qu'elle est.
+   */
+  const lues = duMois.filter((p) => p.status !== "capturee").length;
+  const nonLues = duMois.length - lues;
+
   // Groupées par type, chaque groupe avec son compte et son total.
   const groupes = useMemo(() => {
     const carte = new Map<string, PieceLue[]>();
@@ -191,9 +207,14 @@ function VosDocuments() {
           </span>
         </div>
         <p className="mt-1.5 text-[12.5px] leading-[1.5] text-text-2">
-          {vue === "mois"
-            ? t("pme.doc.lead.mois", { count: duMois.length, mois: nomDuMois(mois) })
-            : t("pme.doc.lead.annee", { count: toutes.length })}
+          {vue === "mois" ? (
+            <>
+              {t("pme.doc.lead.mois", { count: lues, mois: nomDuMois(mois) })}
+              {nonLues > 0 ? ` ${t("pme.doc.lead.nonLues", { count: nonLues })}` : ""}
+            </>
+          ) : (
+            t("pme.doc.lead.annee", { count: toutes.length })
+          )}
         </p>
 
         {/*
@@ -337,7 +358,7 @@ function VosDocuments() {
                            * en lecture dans la seconde.
                            */}
                           {p.status === "capturee" ? (
-                            <EtatDeLecture refus={p.lectureRefusee} />
+                            <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} />
                           ) : (
                             <span
                               className={cn(

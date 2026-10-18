@@ -14,9 +14,9 @@ import { useAccueil } from "@/hooks/use-accueil";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
+import { nombre } from "@/lib/forfait";
 import { montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { creerDepotHttp } from "@/verticals/malica-office/adapters/http/rpc";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
@@ -53,56 +53,29 @@ export const Route = createFileRoute("/_authenticated/pme/")({
  */
 
 /*
- * =============================================== L'ABONNEMENT, ET UN MONTAGE À DÉPLACER
+ * ========================================== L'ABONNEMENT VIENT DU CONTEXTE
  *
- * `facturation` est entré au contrat RPC (22 dépôts) et le dépôt d'API existe :
- * `facturation.monForfait()` rend la ligne de `mon_forfait_v`, ou `null` quand
- * l'appelant ne détient aucune licence — un collaborateur n'en détient pas.
+ * Trente lignes vivaient ici : une interface `Forfait`, un `DepotFacturation`
+ * local et un `creerDepotHttp("facturation")` posé à côté du point de
+ * composition — donc hors du test qui confronte chaque port au contrat. La
+ * capture et les réglages en avaient chacun leur copie, sur deux clés de
+ * cache, avec deux règles de dégradation qui ne jugeaient pas le même fait.
  *
- * Mais le côté NAVIGATEUR n'a pas encore sa place pour lui : ni
- * `FacturationRepository` dans `@malica/socle/ports/repositories`, ni ligne dans
- * `verticals/malica-office/composition.ts`. `office().facturation` ne compile
- * donc pas, et un `as` mentirait : la propriété n'existe pas non plus à
- * l'exécution.
- *
- * Ce montage local est la tenue provisoire, et il doit partir. Deux lignes
- * suffisent à le faire :
- *
- *   1. `packages/socle/src/ports/repositories.ts` — déclarer
- *      `FacturationRepository` avec ses cinq méthodes (`monForfait`, `sieges`,
- *      `organisations`, `inviterSiege`, `libererPlace`) ;
- *   2. `composition.ts` — `facturation: creerDepotHttp<FacturationRepository>("facturation")`.
- *
- * Et c'est la 2 qui compte vraiment : `verticals/__tests__/contrat.test.ts` lit
- * `composition.ts` pour confronter chaque port au contrat. Tant que le montage
- * vit ici, il échappe à ce garde-fou — une divergence de nom de méthode ne
- * serait vue qu'à l'exécution. Ce fichier appellera alors `office().facturation`
- * comme il appelle déjà `office().identity`, et ces trente lignes disparaîtront.
+ * `FacturationRepository` existe maintenant au socle, `composition.ts` le
+ * monte, et le layout `pme.tsx` le lit UNE fois — ce que la règle du câblage
+ * demandait depuis le début. Cet écran le reçoit, et ne demande rien.
  */
-interface Forfait {
-  /** `basic` · `solo` · `team` · `premium` — le code de l'offre, jamais traduit en base. */
-  offre: string | null;
-  statut: string | null;
-  lectures_droit: number | null;
-  lectures_consommees: number | null;
-  lectures_restantes: number | null;
-  organisations: number | null;
-  sieges_occupes: number | null;
-  sieges_inclus: number | null;
-  sieges_max: number | null;
-  /** Un `numeric` reste une CHAÎNE jusqu'à l'écran — formater n'est pas calculer. */
-  prix_mensuel_ht: string | null;
-}
 
-interface DepotFacturation {
-  monForfait(): Promise<Forfait | null>;
-}
-
-const depotFacturation = creerDepotHttp<DepotFacturation>("facturation");
-
-/** Un entier rendu par la base, ou l'absence — qui s'écrit « — » et jamais « 0 ». */
-function compte(valeur: number | null | undefined): string {
-  return typeof valeur === "number" && Number.isFinite(valeur) ? String(valeur) : "—";
+/**
+ * Un entier rendu par la base, ou l'absence — qui s'écrit « — » et jamais « 0 ».
+ *
+ * Il lisait `typeof valeur === "number"`, et les `integer` de PostgreSQL
+ * arrivent en chaînes selon le pilote : un compteur bien rempli aurait pu
+ * s'afficher « — ». `nombre()` lit les deux formes, et n'invente aucun zéro.
+ */
+function compte(valeur: number | string | null | undefined): string {
+  const n = nombre(valeur);
+  return n === null ? "—" : String(n);
 }
 
 /**
@@ -201,36 +174,29 @@ function PmeHome() {
   });
 
   /*
-   * ============================================== L'OFFRE, LUE UNE FOIS, SANS TENANT
+   * L'OFFRE, LUE UNE FOIS — PAR LE LAYOUT.
    *
-   * La licence appartient à la PERSONNE, pas au dossier : `mon_forfait_v` ne
-   * rend que celle dont l'appelant est titulaire, et la clé n'a donc pas à
-   * porter `tenantId`. Changer de dossier invalide tout de toute façon
-   * (`choisirDossier`), et React Query ne la demandera qu'une fois par écran
-   * qui la partage — le câblage voudra à terme un seul appel dans le layout
-   * `pme.tsx`, passé par contexte.
+   * La licence appartient à la PERSONNE, pas au dossier. Le layout la lit
+   * sans `tenantId` et la passe par contexte ; cet écran la reçoit.
    *
-   * Pas de `select` ni de repli ici : `data` vaut `undefined` pendant le
-   * chargement comme en cas d'échec, et `null` quand il n'y a pas de licence.
-   * Les trois sont la même chose à l'écran — on ne sait pas — et l'écran le dit
-   * d'une seule façon. Une valeur de secours à 0 serait une affirmation.
+   * Pas de repli : `ligne` vaut `null` pendant le chargement comme en cas
+   * d'échec, et `null` aussi quand il n'y a pas de licence. Les trois sont la
+   * même chose à l'écran — on ne sait pas — et l'écran le dit d'une seule
+   * façon. Une valeur de secours à 0 serait une affirmation.
    */
-  const forfait = useQuery({
-    queryKey: ["mon-forfait"],
-    queryFn: () => depotFacturation.monForfait(),
-    staleTime: 5 * 60 * 1000,
-  });
-  const f = forfait.data ?? null;
+  const f = pme.forfait.ligne;
 
   /*
-   * Ce que l'offre ouvre. Une offre inconnue — chargement, échec, ou licence
-   * absente — n'ouvre rien : la carte reste verrouillée, et verrouillée elle
-   * dit ce qu'elle ferait. L'inverse (ouvrir par défaut) montrerait un bloc
-   * vide en promettant une fonction que le forfait ne porte peut-être pas.
+   * Ce que l'offre ouvre — décidé dans `lib/forfait.ts`, à un seul endroit.
+   *
+   * Il y en avait deux : ici sur le nom de l'offre, aux réglages sur
+   * `sieges_max`. Deux écrans jugeaient le même fait sur deux données
+   * différentes. Une offre inconnue — chargement, échec, licence absente —
+   * n'ouvre rien : la carte reste verrouillée, et verrouillée elle dit ce
+   * qu'elle ferait.
    */
-  const offre = f?.offre ?? null;
-  const siegesOuverts = offre === "team" || offre === "premium";
-  const societesOuvertes = offre === "premium";
+  const siegesOuverts = pme.forfait.ouvertures.sieges;
+  const societesOuvertes = pme.forfait.ouvertures.societes;
 
   /*
    * La jauge du plafond : elle n'existe que si les DEUX bornes sont connues.
@@ -238,13 +204,12 @@ function PmeHome() {
    * décoratif, et ce fichier en a retiré trois le 11 octobre pour cette
    * raison exacte.
    */
-  const lecturesPart =
-    f !== null &&
-    typeof f.lectures_restantes === "number" &&
-    typeof f.lectures_droit === "number" &&
-    f.lectures_droit > 0
-      ? Math.max(0, Math.min(100, Math.round((f.lectures_restantes / f.lectures_droit) * 100)))
-      : null;
+  const lecturesPart = (() => {
+    const reste = nombre(f?.lectures_restantes);
+    const droit = nombre(f?.lectures_droit);
+    if (reste === null || droit === null || droit <= 0) return null;
+    return Math.max(0, Math.min(100, Math.round((reste / droit) * 100)));
+  })();
 
   const mois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
@@ -610,7 +575,7 @@ function PmeHome() {
              * Pendant la première lecture, rien n'est dit : une seconde
              * d'attente n'est ni l'une ni l'autre, et la nommer serait faux.
              */}
-            {forfait.isPending ? null : forfait.isError ? (
+            {pme.forfait.enCours ? null : pme.forfait.illisible ? (
               <em>{t("pme.home.lectures.illisible")}</em>
             ) : f === null ? (
               <em>{t("pme.home.lectures.sansForfait")}</em>

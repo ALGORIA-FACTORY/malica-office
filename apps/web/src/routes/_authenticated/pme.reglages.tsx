@@ -8,10 +8,15 @@ import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-doss
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
-import { creerDepotHttp } from "@/verticals/malica-office/adapters/http/rpc";
 import { office } from "@/verticals/malica-office/composition";
+import type {
+  MonForfait,
+  OrganisationDeLaLicence,
+  SiegeDeLaLicence,
+} from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
   head: () => ({
@@ -93,6 +98,7 @@ function PmeReglages() {
   const abo = useLAbonnement();
   const f = abo.forfait;
   const verrous = degradation(f, t);
+  const bientot = lecturesQuiSAchevent(f);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
     { cle: "systeme", label: t("pme.reglages.apparence.systeme") },
@@ -140,7 +146,7 @@ function PmeReglages() {
       </div>
       <div className="card abo">
         <div className="nm">
-          <b>{f ? nomDeLOffre(f.offre) : ABSENT}</b>
+          <b>{f?.offre ? nomDeLOffre(f.offre) : ABSENT}</b>
           <span className="px">{f ? `${f.prix_mensuel_ht} ${pme.currency}` : ABSENT}</span>
         </div>
         <p className="ttc">{t("pme.reglages.abo.ht")}</p>
@@ -183,14 +189,14 @@ function PmeReglages() {
            * Sans la ligne, on montre la piste nue et on dit pourquoi.
            */}
           {f ? (
-            <span className={cn("bar", f.lectures_restantes <= 10 && "hot")}>
+            <span className={cn("bar", bientot !== null && "hot")}>
               <i style={{ width: `${remplissage(f)}%` }} />
             </span>
           ) : (
             <span className="bar" aria-hidden />
           )}
-          {f && f.lectures_restantes <= 10 ? (
-            <p className="warn">{t("pme.reglages.abo.bientot", { count: f.lectures_restantes })}</p>
+          {bientot !== null ? (
+            <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
           ) : null}
           {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
           <p className="nxt">{t("pme.reglages.abo.facture")}</p>
@@ -423,95 +429,22 @@ function PmeReglages() {
  * L'ABONNEMENT — UN SEUL ENDROIT LE LIT
  * ══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * `facturation.monForfait()` — la ligne de `facturation.consommation_v`.
+/*
+ * ===================================== LES TYPES ET LE DÉPÔT SONT PARTIS AU SOCLE
  *
- * Les noms sont ceux de la vue, en `snake_case` : le transport RPC ne renomme
- * rien (vérifié — aucune conversion dans `apps/api`), et les renommer ici
- * créerait un deuxième vocabulaire pour les mêmes nombres.
+ * Quatre interfaces et un `creerDepotHttp("facturation")` vivaient ici, avec
+ * leur mode d'emploi pour le jour où le port arriverait. Il est arrivé :
+ * `FacturationRepository` est déclaré dans
+ * `packages/socle/src/ports/repositories.ts` et monté dans `composition.ts`.
  *
- * `prix_mensuel_ht` est une CHAÎNE : un `numeric` PostgreSQL ne devient jamais
- * un `number` JavaScript sans perdre des millimes.
+ * Ce que ce déplacement achète, et ce n'est pas du rangement : un dépôt monté
+ * hors de `composition.ts` échappe au test qui confronte chaque port au
+ * contrat de l'API. Une méthode mal nommée ne se voyait qu'à l'exécution, sur
+ * l'écran de quelqu'un.
+ *
+ * Et les trois écrans qui en avaient chacun leur copie — accueil, capture,
+ * réglages — lisent désormais le même objet, lu UNE fois par le layout.
  */
-export interface MonForfait {
-  /** `basic` | `solo` | `team` | `premium` — un code, que l'écran nomme. */
-  offre: string;
-  statut: string;
-  lectures_droit: number;
-  lectures_consommees: number;
-  lectures_restantes: number;
-  organisations: number;
-  sieges_occupes: number;
-  sieges_inclus: number;
-  sieges_max: number;
-  prix_mensuel_ht: string;
-}
-
-/** `facturation.sieges()` — les membres de toutes les organisations de la licence. */
-export interface SiegeDeLaLicence {
-  user_id: string;
-  nom: string | null;
-  role: string;
-  tenant_id: string;
-  organisation: string;
-}
-
-/** `facturation.organisations()` — et ce que chacune a consommé ce mois-ci. */
-export interface OrganisationDeLaLicence {
-  tenant_id: string;
-  nom: string;
-  lectures_consommees: number;
-}
-
-/** Ce que rend `siege_reprendre_sa_place` : un refus porte son motif en CODE. */
-export interface PlaceLiberee {
-  libere: boolean;
-  motif?: string;
-  pieces: number;
-}
-
-/** Ce que rend `siege_inviter`, comme `collab.inviter`. */
-export interface SiegeInvite {
-  id: string;
-  email: string;
-  role: string;
-  expiresAt: string;
-  deja: boolean;
-}
-
-/**
- * Le dépôt, tel que le contrat le nomme.
- *
- * ================================================= POURQUOI IL EST ÉCRIT ICI
- *
- * `composition.ts` est le seul endroit qui connaît les adaptateurs, et c'est
- * là que ce dépôt doit vivre. Mais au moment où cet écran s'écrit, le port
- * `FacturationRepository` n'existe pas encore dans
- * `packages/socle/src/ports/repositories.ts`, et `office()` n'a donc pas de
- * champ `facturation` : l'appeler ne compilerait pas.
- *
- * Le mandataire est donc fabriqué ici, UNE fois, avec les cinq noms copiés du
- * contrat. Dès que le port est posé, trois gestes et c'est fini :
- *
- *   1. déplacer les cinq signatures ci-dessous dans le port ;
- *   2. ajouter `facturation: creerDepotHttp<FacturationRepository>("facturation")`
- *      à `composition.ts` ;
- *   3. remplacer `facturation()` par `office().facturation` — six appels, tous
- *      dans ce fichier, et supprimer l'import de `creerDepotHttp`.
- */
-interface FacturationDepot {
-  monForfait(): Promise<MonForfait | null>;
-  sieges(): Promise<SiegeDeLaLicence[]>;
-  organisations(): Promise<OrganisationDeLaLicence[]>;
-  inviterSiege(email: string, tenantId: string): Promise<SiegeInvite>;
-  libererPlace(tenantId: string, membre: string): Promise<PlaceLiberee>;
-}
-
-let depotFacturation: FacturationDepot | null = null;
-function facturation(): FacturationDepot {
-  if (!depotFacturation) depotFacturation = creerDepotHttp<FacturationDepot>("facturation");
-  return depotFacturation;
-}
 
 /** Les clés de requête de l'abonnement, en un endroit : l'invitation les invalide. */
 const CLE_FORFAIT = "mon-forfait";
@@ -562,34 +495,39 @@ function useLAbonnement(): LAbonnement {
     queryFn: () => office().acces.monAcces(pme.tenantId),
   });
 
-  const forfait = useQuery({
-    queryKey: [CLE_FORFAIT, pme.tenantId],
-    queryFn: () => facturation().monForfait(),
-    retry: false,
-  });
+  /*
+   * Le forfait ne se redemande pas : le layout l'a lu, sans `tenantId`,
+   * puisque la licence appartient à la personne. Cet écran lisait
+   * `["mon-forfait", tenantId]` quand l'accueil lisait `["mon-forfait"]` —
+   * deux entrées de cache et un aller-retour de trop pour la même donnée.
+   */
+  const forfait = pme.forfait;
+
   const organisations = useQuery({
     queryKey: [CLE_ORGANISATIONS, pme.tenantId],
-    queryFn: () => facturation().organisations(),
+    queryFn: () => office().facturation.organisations(),
     retry: false,
   });
   const sieges = useQuery({
     queryKey: [CLE_SIEGES, pme.tenantId],
-    queryFn: () => facturation().sieges(),
+    queryFn: () => office().facturation.sieges(),
     retry: false,
   });
 
-  const panne = forfait.error ?? organisations.error ?? sieges.error ?? null;
+  const panne = organisations.error ?? sieges.error ?? null;
   const role = acces.data?.role ?? null;
 
-  const ennui = panne
-    ? texteDeLErreur(panne, "routes/_authenticated/pme.reglages", t("common.error"))
-    : forfait.isPending
-      ? null
-      : forfait.data === null
-        ? role === "collaborateur"
-          ? t("pme.reglages.abo.collaborateur")
-          : t("pme.reglages.abo.sansLicence")
-        : null;
+  const ennui = forfait.illisible
+    ? t("pme.reglages.verrou.nonLu")
+    : panne
+      ? texteDeLErreur(panne, "routes/_authenticated/pme.reglages", t("common.error"))
+      : forfait.enCours
+        ? null
+        : forfait.ligne === null
+          ? role === "collaborateur"
+            ? t("pme.reglages.abo.collaborateur")
+            : t("pme.reglages.abo.sansLicence")
+          : null;
 
   /*
    * ========================================= LE REPLI, ET CE QU'IL NE FAIT PAS
@@ -605,15 +543,15 @@ function useLAbonnement(): LAbonnement {
       ? (organisations.data ?? []).map((o) => ({
           tenantId: o.tenant_id,
           nom: o.nom,
-          lectures: o.lectures_consommees,
+          lectures: entier(o.lectures_consommees),
         }))
       : pme.dossiers.map((d) => ({ tenantId: d.id, nom: d.name, lectures: null }));
 
   return {
-    forfait: forfait.data ?? null,
+    forfait: forfait.ligne,
     organisations: listeOrgs,
     sieges: sieges.data ?? [],
-    enCours: forfait.isPending || organisations.isPending || sieges.isPending,
+    enCours: forfait.enCours || organisations.isPending || sieges.isPending,
     ennui,
   };
 }
@@ -627,7 +565,7 @@ interface Verrou {
 }
 
 /**
- * La dégradation par offre — et elle ne se négocie pas.
+ * La dégradation par offre — décidée dans `lib/forfait.ts`, et nulle part ici.
  *
  * | offre   | ce qui change sur cet écran                                    |
  * |---------|----------------------------------------------------------------|
@@ -636,25 +574,23 @@ interface Verrou {
  * | Team    | les sièges s'ouvrent — invitation et reprise de place          |
  * | Premium | les sociétés s'ouvrent, et la vue par société avec elles        |
  *
- * Les sièges se lisent sur `sieges_max` : la base dit déjà combien de places
- * l'offre vend, et il n'y a pas à le redire ici. Les sociétés, elles, tiennent
- * au seul code d'offre écrit en dur de tout ce fichier — `"premium"` — parce
- * que la vue ne rend pas de plafond d'organisations.
+ * Cette fonction décidait elle-même, et l'accueil décidait autrement : ici
+ * `sieges_max > 1`, là `offre === "team" || "premium"`. Deux écrans jugeaient
+ * le même fait sur deux données différentes, et les sièges n'étaient donc pas
+ * ouverts aux deux endroits par la même règle.
+ *
+ * Il ne reste ici que l'habillage — le nom de l'offre qui ouvre, et la raison
+ * quand ce n'est pas l'offre qui ferme mais le forfait qui n'est pas lu.
  */
 function degradation(
   f: MonForfait | null,
   t: (k: MessageKey) => string,
 ): { sieges: Verrou; societes: Verrou } {
-  const inconnu = t("pme.reglages.verrou.nonLu");
-  if (!f) {
-    return {
-      sieges: { ouvert: false, offre: "Team", raison: inconnu },
-      societes: { ouvert: false, offre: "Premium", raison: inconnu },
-    };
-  }
+  const ouvertures = ouverturesDuForfait(f);
+  const inconnu = f ? null : t("pme.reglages.verrou.nonLu");
   return {
-    sieges: { ouvert: f.sieges_max > 1, offre: "Team", raison: null },
-    societes: { ouvert: f.offre === "premium", offre: "Premium", raison: null },
+    sieges: { ouvert: ouvertures.sieges, offre: "Team", raison: inconnu },
+    societes: { ouvert: ouvertures.societes, offre: "Premium", raison: inconnu },
   };
 }
 
@@ -865,7 +801,8 @@ function Siege({
   const [retour, setRetour] = useState<string | null>(null);
 
   const liberer = useMutation({
-    mutationFn: () => facturation().libererPlace(siege.tenant_id, siege.user_id),
+    mutationFn: () =>
+      office().facturation.libererPlace(siege.tenant_id, siege.user_id),
     onSuccess: async (r) => {
       if (r.libere) {
         setRetour(t("pme.reglages.siege.liberee"));
@@ -966,7 +903,7 @@ function InviterUnSiege({ tenantId }: { tenantId: string }) {
   const [retour, setRetour] = useState<string | null>(null);
 
   const inviter = useMutation({
-    mutationFn: () => facturation().inviterSiege(email.trim(), tenantId),
+    mutationFn: () => office().facturation.inviterSiege(email.trim(), tenantId),
     onSuccess: async (r) => {
       setRetour(
         r.deja
@@ -1199,14 +1136,35 @@ function Signalement() {
 /** L'absence. Un tiret cadratin, jamais un zéro. */
 const ABSENT = "—";
 
-function nombre(n: number | null | undefined, locale: string): string {
-  return typeof n === "number" ? n.toLocaleString(locale) : ABSENT;
+function nombre(n: number | string | null | undefined, locale: string): string {
+  const v = entier(n);
+  return v === null ? ABSENT : v.toLocaleString(locale);
 }
 
-/** La part consommée du plafond, bornée : une barre à 140 % déborde la carte. */
+/**
+ * La part consommée du plafond, bornée : une barre à 140 % déborde la carte.
+ *
+ * Les entiers de PostgreSQL arrivent en chaînes selon le pilote : les lire par
+ * `entier()` plutôt que de les supposer `number` évite une barre à `NaN %`.
+ */
 function remplissage(f: MonForfait): number {
-  if (f.lectures_droit <= 0) return 0;
-  return Math.min(100, Math.round((f.lectures_consommees / f.lectures_droit) * 100));
+  const droit = entier(f.lectures_droit);
+  const consommees = entier(f.lectures_consommees);
+  if (droit === null || consommees === null || droit <= 0) return 0;
+  return Math.min(100, Math.round((consommees / droit) * 100));
+}
+
+/**
+ * Combien il en reste quand il n'en reste plus beaucoup — ou `null`.
+ *
+ * Le seuil n'est pas réglementaire : c'est le moment où l'écran passe du
+ * compte rendu à l'avertissement. Il vit dans une constante nommée plutôt
+ * qu'écrit deux fois, dans un `cn()` et dans un `t()`.
+ */
+const AVERTIR_SOUS = 10;
+function lecturesQuiSAchevent(f: MonForfait | null): number | null {
+  const reste = entier(f?.lectures_restantes);
+  return reste !== null && reste <= AVERTIR_SOUS ? reste : null;
 }
 
 /**

@@ -22,6 +22,7 @@
  *
  * Ce module est pur : la transition est une fonction, le vidage est ailleurs.
  */
+import type { Visibility } from "@malica/socle/ports/repositories";
 
 export type EtatElement =
   "a_envoyer" | "enregistree" | "deposee" | "lecture_demandee" | "echec_definitif";
@@ -32,8 +33,13 @@ export interface ElementDeFile {
   tenantId: string;
   entityId: string | null;
   source: "photo" | "pdf";
-  /** Personnel ou partagé — décidé par l'écran, jamais ici. */
-  vis: "personnel" | "partage";
+  /**
+   * Où la pièce va — décidé par l'écran, jamais ici.
+   *
+   * Et c'est elle qui décide si la lecture part : une pièce `personnel` n'est
+   * jamais lue (B6), donc la file ne la demande pas. Voir `vidage.ts`.
+   */
+  vis: Visibility;
   contentType: string;
   /**
    * Ce que la personne a déclaré à la photo, s'il lui a été demandé.
