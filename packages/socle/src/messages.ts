@@ -1283,6 +1283,10 @@ const fr = {
     "Montant à confirmer : le séparateur se lit de deux façons, et rien sur la pièce ne tranche.",
   "cab.code.arithmetique":
     "Montant tranché par l’arithmétique de la facture : c’est la seule lecture qui boucle.",
+  "cab.code.ampute":
+    "Montant non rendu : il est collé au nombre voisin sur la pièce, et une lecture amputée vaut moins que pas de lecture.",
+  "cab.code.incoherent":
+    "La pièce ne boucle pas : ce que son arithmétique donne et ce qu’elle imprime diffèrent.",
   "cab.code.autre": "Signalement de lecture.",
   "cab.notif.kind.piece.demande": "Votre client demande le retour d'une pièce",
   "cab.notif.kind.piece.demande_tranchee": "Demande tranchée",
@@ -3951,6 +3955,10 @@ const en: Dict = {
     "Amount to confirm: the separator reads two ways, and nothing on the document settles it.",
   "cab.code.arithmetique":
     "Amount settled by the invoice arithmetic: it is the only reading that balances.",
+  "cab.code.ampute":
+    "Amount not returned: it runs into the neighbouring number on the document, and a clipped reading is worth less than none.",
+  "cab.code.incoherent":
+    "The document does not balance: what its arithmetic gives and what it prints differ.",
   "cab.code.autre": "Reading flag.",
   "cab.notif.kind.piece.demande": "Your client is asking for a document back",
   "cab.notif.kind.piece.demande_tranchee": "Request settled",
@@ -6573,6 +6581,9 @@ const ar: Dict = {
   "cab.code.tronque": "قراءة مبتورة: أُعيدت قراءة الصفحة على شرائح.",
   "cab.code.separateur": "مبلغ يحتاج تأكيدًا: الفاصل يُقرأ بوجهين، ولا شيء في الوثيقة يحسم.",
   "cab.code.arithmetique": "مبلغ حسمته حسابات الفاتورة: هي القراءة الوحيدة التي تتوازن.",
+  "cab.code.ampute":
+    "مبلغ لم يُرجَع: هو ملتصق بالعدد المجاور في الوثيقة، وقراءة مبتورة أسوأ من غياب القراءة.",
+  "cab.code.incoherent": "الوثيقة لا تتوازن: ما تعطيه حساباتها يخالف ما تطبعه.",
   "cab.code.autre": "تنبيه قراءة.",
   "cab.notif.kind.piece.demande": "عميلك يطلب استرجاع وثيقة",
   "cab.notif.kind.piece.demande_tranchee": "تم البتّ في الطلب",

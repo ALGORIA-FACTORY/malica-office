@@ -241,7 +241,11 @@ function ARegler() {
      * (`malica-manquants.html`, « les écrans qui manquaient »), pas une
      * description de l'écran — la feuille le porte déjà ainsi.
      */
-    <div data-ecran="manquants" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
+    <div
+      data-ecran="manquants"
+      data-famille="papiers"
+      className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col"
+    >
       {/* ── la barre du haut ───────────────────────────────────────────── */}
       <div className="top">
         <button

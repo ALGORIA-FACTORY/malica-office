@@ -248,6 +248,25 @@ export function libelleDuCode(code: string, t: T): string {
     VALUE_NOT_A_NUMBER: "cab.code.pasUnNombre",
     DATE_UNREADABLE: "cab.code.dateIllisible",
     SENS_A_CONFIRMER: "cab.code.sensAConfirmer",
+    /*
+     * Ces deux-là protègent une comptabilite, et c'est pour cela qu'elles ne
+     * peuvent pas tomber sur « Signalement de lecture. ».
+     *
+     * `MONTANT_PEUT_ETRE_AMPUTE` : le montant imprime est colle a son voisin
+     * sur la piece, donc la lecture peut en avoir perdu un morceau. La chaine
+     * rend `null` PLUTOT qu'un nombre ampute — 650,000 pour 5 650,000 le
+     * 18 octobre — parce qu'une valeur fausse qui boucle est pire qu'une
+     * valeur absente. La phrase doit dire ce choix, sinon l'absence passe
+     * pour une panne.
+     *
+     * `ARITHMETIQUE_INCOHERENTE` : la piece elle-meme ne boucle pas. Pose le
+     * 5 octobre, apres un loyer dont tous les montants etaient nets et faux.
+     * Ce n'est PAS `DECIDE_PAR_ARITHMETIQUE`, qui dit l'inverse — que
+     * l'arithmetique a tranche. Deux codes opposes derriere une meme phrase
+     * auraient appris a se mefier des deux.
+     */
+    MONTANT_PEUT_ETRE_AMPUTE: "cab.code.ampute",
+    ARITHMETIQUE_INCOHERENTE: "cab.code.incoherent",
   };
   return t(CODES[code] ?? "cab.code.autre");
 }

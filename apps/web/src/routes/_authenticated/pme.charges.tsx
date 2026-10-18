@@ -290,8 +290,16 @@ function ChargesScreen() {
 
   const pct = (v: string) => `${Number(v) >= 0 ? "+" : ""}${(Number(v) * 100).toFixed(0)} %`;
 
-  /** Une part du total, en pour-cent entier. L'espace reste insécable. */
-  const part = (v: string) => `${Math.round(Number(v) * 100)} %`;
+  /**
+   * Une part du total, en pour-cent entier. L'espace reste insécable : en
+   * français, un nombre ne se sépare pas de son signe en fin de ligne.
+   *
+   * Écrite en échappement U+00A0, et non collée telle quelle. Une espace insécable posée
+   * dans un littéral est indiscernable d'une espace ordinaire à la relecture —
+   * c'est exactement ce que `no-irregular-whitespace` refuse, et il le
+   * refusait ici. Le rendu est identique au caractère près.
+   */
+  const part = (v: string) => `${Math.round(Number(v) * 100)}\u00a0%`;
 
   if (refs.isPending || articles.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
