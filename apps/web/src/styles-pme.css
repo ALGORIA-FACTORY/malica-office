@@ -242,33 +242,46 @@
   /* Les encoches, pas une marge au jugé. La barre du bas est DANS le flux
    * (voir `.nav`) : rien ne passe dessous, donc rien à réserver. */
   /*
-   * ================== UN PLANCHER, PARCE QUE `env()` MENT SUR CET APPAREIL
+   * ============== LES ENCOCHES : LE CONTRAT EST CELUI DE CAPACITOR
    *
-   * `viewport-fit=cover` fait dessiner l'application jusqu'aux bords. Elle
-   * compte alors sur `env(safe-area-inset-*)` pour savoir où sont la barre
-   * d'état et la barre de navigation.
+   * J'ai posé ici, le 18 octobre, un plancher de 2,25 rem en haut et 1,5 rem
+   * en bas, en écrivant que « `env()` mentait sur cet appareil ». C'était
+   * faux, et je le retire.
    *
-   * Mesuré sur un Android réel, le 18 octobre : **ces valeurs rendent zéro**.
-   * Android ne les expose au WebView que si l'activité native demande
-   * explicitement le mode bord-à-bord. Résultat à l'écran : la rangée de
-   * pastilles passait sous la barre d'état — il ne restait que les `.5rem` du
-   * `max()` — et le bas de la barre de navigation passait sous la barre
-   * gestuelle du système. Du contenu caché, des deux côtés.
+   * Relevé dans la source du greffon livré —
+   * `node_modules/@capacitor/android/.../plugin/SystemBars.java`, méthode
+   * `initWindowInsetsListener()` : sous Android 15 et plus (SDK 35+), où le
+   * bord-à-bord est imposé et ne se refuse plus, le greffon tranche seul
+   * entre DEUX régimes, et il le fait une fois, au `DOMContentLoaded` :
    *
-   * Le plancher ne corrige pas la cause, il empêche la conséquence : 2,25 rem
-   * en haut couvrent une barre d'état Android ordinaire, 1,5 rem en bas une
-   * barre gestuelle. Sur un appareil qui REND ses encoches, `max()` prend la
-   * vraie valeur et le plancher ne sert à rien — il ne coûte donc rien là où
-   * tout va bien.
+   *   shouldPassthroughInsets = (version du WebView >= 140) && viewport-fit=cover
    *
-   * LE VRAI CORRECTIF EST NATIF, et il demande une publication Play :
-   * `WindowCompat.setDecorFitsSystemWindows(window, false)` dans
-   * `MainActivity`, plus la transmission des encoches au WebView. Tant qu'il
-   * n'est pas fait, ce plancher est la seule chose qui parte par mise à jour
-   * en vol — et c'est pour cela qu'il existe.
+   *   - VRAI  : il laisse la page aller sous les barres. `env(...)` vaut alors
+   *             la vraie encoche, et la page DOIT marger.
+   *   - FAUX  : il marge lui-même le parent du WebView — `v.setPadding(...)` —
+   *             puis remet délibérément les encoches à ZÉRO, commentaire à
+   *             l'appui, « we have to explicitly set insets to 0 ». La page n'a
+   *             donc PLUS à marger, et elle ne doit pas.
+   *
+   * Autrement dit `env(safe-area-inset-*)` n'est pas une mesure défaillante :
+   * c'est exactement le signal « reste-t-il quelque chose à réserver ». Un
+   * plancher par-dessus ajoute 36 px de vide dans le régime margé. C'est ce
+   * que le dirigeant voyait sur son téléphone.
+   *
+   * La valeur rendue ci-dessous est celle du dessin, à la lettre
+   * (`malica-accueil.html`, ligne 30) : un minimum de confort de `.5rem`, et
+   * la vraie encoche dès qu'il y en a une à couvrir.
+   *
+   * CE QUI RESTE NATIF, et ce n'est pas celui-ci : dans le régime margé, la
+   * marge montre le fond de la vue de décoration, que le greffon peint avec
+   * `android:windowBackground`. Il était blanc, par héritage d'AppCompat
+   * clair — la bande blanche. Corrigé dans
+   * `android/app/src/main/res/values/styles.xml`, et celui-là passe par le
+   * magasin : `StatusBar.setBackgroundColor()` ne peut rien y faire, le
+   * greffon le déclare lui-même « Not available on Android 15+ ».
    */
-  padding-top: max(2.25rem, env(safe-area-inset-top, 0px));
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  padding-top: max(.5rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
   /* Les mots longs du français — « immobilisations », « amortissements » —
    * débordent une colonne de 320 px s'ils ne peuvent pas se couper. */
   overflow-wrap: break-word;

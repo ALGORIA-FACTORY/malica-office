@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Le fond de la fenêtre native.
+
+    Pourquoi ce fichier existe : à partir d'Android 15 (SDK 35), le bord-à-bord
+    est imposé et ne se refuse plus. Le greffon « SystemBars » de Capacitor 8
+    gère alors les encoches de deux façons, et il choisit seul :
+
+      - si le WebView est en version 140 ou plus ET que la page déclare
+        `viewport-fit=cover`, il laisse la page aller sous les barres. Les
+        `env(safe-area-inset-*)` valent alors la vraie encoche ;
+
+      - sinon, il MARGE lui-même le parent du WebView — et met délibérément
+        les `env(safe-area-inset-*)` à ZÉRO, puisque la page n'a plus à marger.
+
+    Dans ce second cas, la zone margée ne montre pas la page : elle montre le
+    fond de la vue de décoration, que le greffon peint avec
+    `android:windowBackground` du thème. Le thème héritait de
+    `Theme.AppCompat.DayNight.NoActionBar`, dont ce fond est BLANC en mode
+    clair : c'est la bande blanche vue sur l'appareil.
+
+    `StatusBar.setBackgroundColor()` ne peut pas la corriger en vol — le
+    greffon le dit lui-même, « Not available on Android 15+ », et sur SDK 36 il
+    ne fait rien. La correction est donc ici, et elle passe par le magasin.
+
+    La coque Android est l'application du dirigeant de PME : son socle est
+    sombre. Le cabinet, lui, est une surface web claire et ne passe pas par
+    cette coque.
+-->
+<resources>
+    <color name="fond_coque_pme">#0A0A0A</color>
+</resources>
