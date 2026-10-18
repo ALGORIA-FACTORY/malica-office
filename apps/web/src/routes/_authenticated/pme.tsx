@@ -18,7 +18,6 @@ import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
-import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
@@ -351,19 +350,33 @@ function PmeLayout() {
      * `layout` porte le langage, donc une seule ligne décide de la surface.
      * Le cabinet, qui ne passe jamais par ce layout, garde Edition One
      * intact sans qu'on ait eu à l'exclure.
+     *
+     * `app` est le nom que la feuille habille déjà : la colonne et sa mesure,
+     * les encoches des quatre côtés, `100dvh`, et — à partir de 1024 px — la
+     * grille `15rem / 32rem / 1fr` qui fait du bas de l'écran un rail à
+     * gauche. Tout cela était écrit et n'atteignait rien, parce qu'aucun
+     * élément ne portait le nom. On renomme l'arbre, on ne repointe pas la
+     * feuille : le dessin n'a qu'une source.
+     *
+     * Ce qui disparaît ici est ce que `.app` porte déjà — `mx-auto`,
+     * `w-full`, `max-w-md`, `min-h-screen`, `pt-safe`, `bg-background`. Et
+     * `pb-[calc(5rem+…)]` part avec la barre fixe : la barre est maintenant
+     * dans le flux, il n'y a plus rien à réserver sous elle.
      */
-    <div
-      data-surface="pme"
-      className="pt-safe mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground"
-    >
+    <div data-surface="pme" className="app flex flex-col text-foreground">
       {/*
        * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
        * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des
        * écrans pleins (z-30 et plus), qui peignent la leur avec `pt-safe`.
+       *
+       * Elle suit la colonne (`--colonne`, 440 px) au lieu d'une mesure à
+       * elle, et elle s'arrête à 768 px : au-delà, la colonne s'élargit, il
+       * n'y a plus de barre d'état à peindre, et une bande de 440 px posée au
+       * milieu d'un écran de bureau serait un trait sans objet.
        */}
       <div
         aria-hidden
-        className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-md bg-background/95 backdrop-blur"
+        className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-[var(--colonne)] bg-background/95 backdrop-blur md:hidden print:hidden"
       />
       <BandeauHorsLigne />
       {path === "/pme" ? null : (
@@ -440,10 +453,19 @@ function PmeLayout() {
         />
       ) : null}
 
-      <nav
-        aria-label={t("pme.nav.aria")}
-        className="pb-safe fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-3 items-center border-t border-border bg-card"
-      >
+      {/*
+       * `nav` : la grille à trois colonnes, le filet du haut et la réserve
+       * d'encoche viennent de la feuille. Elle est DANS LE FLUX, ce que la
+       * feuille réclamait depuis le premier jour (« une barre flottante sur
+       * un écran de 440 px mange la dernière ligne de chaque liste »), et ce
+       * que l'arbre contredisait. En paysage, fixée, elle prenait 102 px sur
+       * 390 — 26 % de l'écran debout dans un entrepôt.
+       *
+       * À partir de 1024 px, la même classe la sort du bas et en fait le rail
+       * collant de gauche : une barre d'onglets au bas d'un écran de 27
+       * pouces est un portage, pas un produit.
+       */}
+      <nav aria-label={t("pme.nav.aria")} className="nav">
         <NavItem {...navItems[0]} />
         <div className="flex justify-center py-[11px]">
           <button
@@ -504,14 +526,15 @@ function NavItem({
   label: string;
   active: boolean;
 }) {
+  /*
+   * `data-on` plutôt qu'une classe de couleur : c'est le marqueur que la
+   * feuille lit (`.nav a[data-on="true"]`), et c'est elle qui tient la
+   * couleur, la hauteur de cible (56 px) et le passage en rangée dans le
+   * rail de bureau. Deux sources de couleur pour un seul état en feraient
+   * diverger une.
+   */
   return (
-    <Link
-      to={to}
-      className={cn(
-        "flex flex-col items-center gap-1 py-3 text-[10px] font-medium uppercase tracking-wider",
-        active ? "text-foreground" : "text-muted-foreground",
-      )}
-    >
+    <Link to={to} data-on={active} className="uppercase tracking-wider">
       <Icon className="h-5 w-5" aria-hidden />
       <span>{label}</span>
     </Link>
