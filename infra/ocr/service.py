@@ -43,9 +43,17 @@ from fastapi import FastAPI, Request  # noqa: E402
 from paddleocr import PaddleOCR  # noqa: E402
 
 # Les modèles MOBILE, pas « server » : mesurés à 1,8 Go de pointe, quand les
-# modèles medium font tomber le conteneur sur une machine à 8 Go partagée avec
-# une base de données. Épinglés par leur nom, jamais « le dernier » — une mise
-# à jour silencieuse changerait le relevé sans qu'une ligne de code bouge (R8).
+# modèles medium font tomber le conteneur sur la machine de recette, partagée
+# avec une base de données.
+#
+# Ce commentaire annonçait « une machine à 8 Go ». Mesuré le 18 octobre 2026
+# sur la recette : elle en annonce 3,7 Gio, le conteneur OCR est borné à 2 Gio
+# et reposait à 232 Mio. La marge existe, mais elle est bien plus mince que ce
+# chiffre ne le laissait croire — et un commentaire qui double la mémoire
+# disponible est celui au vu duquel on choisirait les modèles « server ».
+#
+# Épinglés par leur nom, jamais « le dernier » — une mise à jour silencieuse
+# changerait le relevé sans qu'une ligne de code bouge (R8).
 DETECTION = os.environ.get("OCR_MODELE_DETECTION", "PP-OCRv5_mobile_det")
 RECONNAISSANCE = os.environ.get("OCR_MODELE_RECONNAISSANCE", "latin_PP-OCRv5_mobile_rec")
 

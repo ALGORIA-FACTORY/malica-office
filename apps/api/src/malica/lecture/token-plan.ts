@@ -1,6 +1,7 @@
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
 
 import { enDecimal, treillisMontant, type Hypothese } from "./montants.ts";
+import { plageAmputee } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
  *
@@ -68,8 +69,17 @@ function dateReelle(y: string, m: string, d: string): boolean {
  * pas une table, pas un cas particulier.
  *
  * Volontairement limité aux DATES. Les montants en chiffres arabes ne sont
- * toujours pas lus (`montants.test.ts` verrouille ce refus) : élargir la
- * lecture d'un montant demande le banc du jeu d'or, pas une ligne ici.
+ * toujours pas lus : élargir la lecture d'un montant demande le banc du jeu
+ * d'or, pas une ligne ici.
+ *
+ * Ce commentaire a longtemps renvoyé à `montants.test.ts` pour ce refus.
+ * Vérifié le 18 octobre 2026 : ce fichier ne contient aucun chiffre arabe. Le
+ * refus tenait, et rien ne le gardait — un commentaire qui invoque une épreuve
+ * inexistante est pire qu'un commentaire absent, parce qu'il arrête l'enquête.
+ * Il est désormais verrouillé par `factures.banc-amputation.test.ts`, qui
+ * exige `VALUE_NOT_A_NUMBER` et le contrat partiel sur « ٦٥٠,٠٠٠ » : le modèle
+ * de vision rend les chiffres arabes INVERSÉS (« ١٢ » lu « ٢١ », mesuré), et
+ * une lecture inversée d'un montant est pire que pas de lecture.
  */
 function enChiffresLatins(s: string): string {
   return s
@@ -364,6 +374,37 @@ export function lireMontantDuPlan(
   const plage = jetonsDeLaPlage(tokens, ref, token);
   const citation = citer(plage, field, "montant", zone, binding);
   const texte = texteDeLaPlage(plage);
+
+  /*
+   * LE MONTANT EST-IL ENTIER ? La question vient AVANT sa lecture.
+   *
+   * Un montant amputé n'est ni ambigu ni incohérent : « 650,000 » de
+   * « 5 650,000 » a une lecture unique, et l'amputation uniforme de tous les
+   * termes d'une somme laisse la somme juste. Aucun des drapeaux suivants ne
+   * pouvait donc le voir — c'est ainsi qu'une facture arabe est sortie valide
+   * à 650,000 D pour 5 650,000 D le 18 octobre 2026.
+   *
+   * Les hypothèses sont rendues VIDES, et pas seulement la valeur : sans
+   * cela, le solveur de `read-piece.ts` reprendrait la lecture amputée pour
+   * boucler ses équations et la CONFIRMERAIT.
+   */
+  const amputation = plageAmputee(tokens, plage);
+  if (amputation) {
+    return {
+      value: null,
+      citation,
+      flag: {
+        field,
+        code: "MONTANT_PEUT_ETRE_AMPUTE",
+        detail:
+          `« ${texte} » est collé à « ${amputation.voisin.text} » ` +
+          `(${amputation.cote === "gauche" ? "avant" : "après"}) : le montant imprimé ` +
+          `semble ${amputation.cote === "gauche" ? `${amputation.voisin.text} ${texte}` : `${texte} ${amputation.voisin.text}`}`,
+      },
+      hypotheses: [],
+    };
+  }
+
   const hypotheses = treillisMontant(texte, decimales);
 
   if (hypotheses.length === 0) {

@@ -197,3 +197,84 @@ export function recollerLesMilliers(tokens: readonly PageToken[]): PageToken[] {
 
   return sortie;
 }
+
+/**
+ * ================================================= LE GARDE DE L'AMPUTATION
+ *
+ * Le recollage ci-dessus ferme la forme NORMALE d'un montant tunisien, celle
+ * qui porte ses millimes. Il en laisse volontairement une ouverte — « 1 234
+ * 560 » sans décimales, qu'on ne recolle pas parce qu'un numéro de téléphone
+ * a exactement la même forme (voir `DERNIER_GROUPE`) — et il ne peut rien
+ * pour un plan dont les boîtes sont trop abîmées pour qu'il s'applique.
+ *
+ * Ce garde regarde l'autre bout de la chaîne : non plus le plan, mais la
+ * PLAGE que le désignateur a citée. Si le jeton immédiatement collé à cette
+ * plage est le morceau manquant d'un même nombre, la plage est amputée.
+ *
+ * ============================================== POURQUOI IL FAUT UN GARDE
+ *
+ * Mesuré le 18 octobre 2026 : une facture arabe lue par la chaîne réelle est
+ * sortie `extract.v1` VALIDE avec 650,000 D là où le papier porte 5 650,000 D
+ * — le désignateur ayant cité le SECOND jeton de la paire sur les trois
+ * totaux à la fois. Et 650 000 + 73 500 + 1 000 = 724 500, au millime :
+ * retrancher les milliers de chaque terme d'une somme les retranche aussi de
+ * la somme. Une amputation SYSTÉMATIQUE passe toutes les équations, et c'est
+ * le cas normal quand la cause est une consigne mal suivie.
+ *
+ * Un montant amputé n'est pas ambigu non plus — « 650,000 » a une lecture
+ * unique — donc il franchissait aussi tous les drapeaux, qui visaient
+ * l'ambiguïté. Le seul invariant qu'il viole est la contiguïté du plan.
+ *
+ * ================================================ CE QU'IL COÛTE, ET L'ARBITRAGE
+ *
+ * Il crie parfois à tort : deux colonnes anormalement serrées, un nombre de
+ * trois chiffres collé à un montant. La borne est géométrique et la même que
+ * celle du recollage — deux largeurs de caractère, là où une gouttière de
+ * colonne en vaut dix — donc le cas est rare, mais il existe.
+ *
+ * Il penche du côté du doute, délibérément : un faux positif coûte une
+ * question posée à la personne (valeur `null`, drapeau, contrat partiel, donc
+ * aucune écriture) ; un faux négatif coûte une comptabilité fausse de six
+ * mille dinars. Ce n'est pas un arbitrage serré.
+ */
+export interface Amputation {
+  /** De quel côté le morceau manque : avant la plage citée, ou après. */
+  cote: "gauche" | "droite";
+  /** Le jeton que la citation aurait dû englober. */
+  voisin: PageToken;
+}
+
+/** Un jeton qui peut CONTINUER un nombre : un groupe de milliers. */
+const CONTINUE = (texte: string): boolean => GROUPE.test(texte) || DERNIER_GROUPE.test(texte);
+
+export function plageAmputee(
+  tokens: readonly PageToken[],
+  plage: readonly PageToken[],
+): Amputation | null {
+  const premier = plage[0];
+  const dernier = plage[plage.length - 1];
+  if (!premier || !dernier) return null;
+
+  const horsPlage = (t: PageToken): boolean =>
+    !plage.some((p) => p.page === t.page && p.ordinal === t.ordinal);
+
+  // À GAUCHE : la forme mesurée le 18 octobre. On cite « 650,000 », et « 5 »
+  // est collé juste avant — le montant imprimé est « 5 650,000 ».
+  if (CONTINUE(premier.text)) {
+    const voisin = tokens.find((t) => horsPlage(t) && OUVRE.test(t.text) && colle(t, premier));
+    if (voisin) return { cote: "gauche", voisin };
+  }
+
+  // À DROITE : la forme du 4 octobre. On cite « 2 », et « 800,000 » est collé
+  // juste après. Le dernier jeton d'une plage close par ses décimales ne peut
+  // rien absorber de plus — « 1 234,560 » + « 999 » n'est pas un nombre.
+  if (
+    !DERNIER_GROUPE.test(dernier.text) &&
+    (OUVRE.test(dernier.text) || GROUPE.test(dernier.text))
+  ) {
+    const voisin = tokens.find((t) => horsPlage(t) && CONTINUE(t.text) && colle(dernier, t));
+    if (voisin) return { cote: "droite", voisin };
+  }
+
+  return null;
+}

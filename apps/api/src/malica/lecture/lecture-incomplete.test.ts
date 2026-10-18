@@ -179,11 +179,24 @@ describe("un montant coupé par l'espace des milliers", () => {
     assert.equal(r.flag, null);
   });
 
-  it("ne recolle rien de sa propre initiative", () => {
-    // Sans plage désignée, on lit le seul jeton cité. Joindre le voisin
-    // reviendrait à fabriquer un montant — ce que la règle R2 interdit.
+  it("ne recolle rien de sa propre initiative, et ne rend plus 1,000 non plus", () => {
+    /*
+     * Sans plage désignée, on ne joint pas le voisin : ce serait fabriquer un
+     * montant, et R2 l'interdit. Mais on ne rend plus « 1.000 » pour autant.
+     *
+     * Jusqu'au 18 octobre 2026, cette assertion exigeait « 1.000 » — la
+     * valeur fausse d'un facteur mille, rendue sans un mot. Elle verrouillait,
+     * sans le dire, le défaut même que ce bloc décrit en en-tête : « c'est le
+     * pire genre d'erreur pour un produit fiscal, elle a l'air d'un montant ».
+     *
+     * `plageAmputee` voit désormais que « 000,000 » est collé juste après le
+     * jeton cité. Entre une valeur fausse silencieuse et un refus qui pose une
+     * question à l'écran, le produit choisit le refus.
+     */
     const r = lireMontantDuPlan(jetons, "totals.ttc", { page: 1, ordinal: 1 }, DINAR);
-    assert.equal(r.value, "1.000");
+    assert.equal(r.value, null);
+    assert.equal(r.flag?.code, "MONTANT_PEUT_ETRE_AMPUTE");
+    assert.match(r.flag?.detail ?? "", /000,000/);
   });
 
   it("cite toujours le premier jeton de la plage, pour le surlignage", () => {

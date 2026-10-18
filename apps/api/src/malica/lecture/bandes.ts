@@ -39,8 +39,29 @@ export interface Bande {
 /** Part de la hauteur de page partagée par deux bandes voisines. */
 const CHEVAUCHEMENT = 0.06;
 
-/** Le nombre de bandes maximal : au-delà, la page n'est pas dense, elle est illisible. */
-export const BANDES_MAX = 4;
+/**
+ * Le nombre de bandes maximal : au-delà, la page n'est pas dense, elle est
+ * illisible.
+ *
+ * ============================================ POURQUOI DEUX, ET PLUS QUATRE
+ *
+ * Il valait quatre, et ce chiffre n'avait jamais rien coûté : `estTronque`
+ * étant toujours faux (`withRetry` détruisait la classe de l'erreur), la
+ * boucle de bandes ne s'exécutait jamais. Le 18 octobre 2026, la classe est
+ * propagée et le chemin s'ouvre pour de bon — il porte donc, pour la première
+ * fois, une dépense réelle.
+ *
+ * À quatre, une page dense déclenche 1 + 2 + 4 = SEPT appels de relevé payants
+ * avant d'abandonner, et une pièce de dix pages en déclencherait soixante-dix.
+ * À deux, le pire est 1 + 2 = TROIS appels par page. C'est la borne posée :
+ * un chemin de rattrapage qui n'a jamais tourné ne s'ouvre pas sans plafond.
+ *
+ * Ce que cela perd : la page si dense que deux bandes ne suffisent pas. Elle
+ * sort `lecture.trop_dense`, que l'écran traduit — un refus, pas une valeur
+ * fausse. Remonter à quatre est une ligne, le jour où une mesure montre que
+ * ce cas existe ailleurs que dans l'hypothèse.
+ */
+export const BANDES_MAX = 2;
 
 /**
  * Découpe une image de page en `nombre` bandes horizontales qui se

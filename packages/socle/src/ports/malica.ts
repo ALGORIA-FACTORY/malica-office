@@ -77,6 +77,23 @@ export interface ReadFlag {
      */
     | "ARITHMETIQUE_INCOHERENTE"
     /**
+     * Le montant cité a un voisin COLLÉ qui lui manque : il est amputé.
+     *
+     * Posé le 18 octobre 2026. Une facture arabe lue par la chaîne réelle est
+     * sortie `extract.v1` VALIDE avec 650,000 D là où le papier porte
+     * 5 650,000 D — le désignateur n'ayant cité que le second jeton de la
+     * paire, sur les trois totaux à la fois. 650 000 + 73 500 + 1 000 =
+     * 724 500 au millime : une amputation SYSTÉMATIQUE passe toutes les
+     * équations, donc `ARITHMETIQUE_INCOHERENTE` ne pouvait rien y voir. Et
+     * « 650,000 » n'est pas ambigu non plus — il a une lecture unique — donc
+     * `SEPARATEUR_AMBIGU` non plus.
+     *
+     * Ce drapeau ne juge ni la lecture ni l'équation : il juge la PLAGE
+     * citée, contre la contiguïté du plan de jetons. Il rend le montant
+     * `null`, donc la pièce est partielle et rien ne peut s'écrire.
+     */
+    | "MONTANT_PEUT_ETRE_AMPUTE"
+    /**
      * Le sens de la pièce — achat ou vente — ne se tranche pas sans risque.
      *
      * Posé le 5 octobre 2026. Un modèle avait rendu « vente » sur un achat,

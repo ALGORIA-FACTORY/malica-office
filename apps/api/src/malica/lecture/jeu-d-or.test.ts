@@ -51,10 +51,23 @@ function auChemin(extrait: Record<string, unknown>, chemin: string): unknown {
 /**
  * Un montant est-il l'amputation d'un autre ?
  *
- * « 2800.000 » amputé donne « 2.000 » : le premier jeton d'un groupe de
- * milliers, remis à l'échelle de la devise. On reconnaît donc l'amputation à
- * ce que la partie entière de la valeur lue soit un PRÉFIXE STRICT de la
- * partie entière attendue, et la partie décimale nulle.
+ * Un montant coupé par l'espace des milliers a DEUX moitiés, et le
+ * désignateur peut citer l'une ou l'autre. Les deux formes ont été mesurées,
+ * et il a fallu six semaines pour que la seconde se voie :
+ *
+ *   PRÉFIXE   « 2 800,000 » cité « 2 »       → 2.000  pour 2800.000
+ *             4 octobre 2026, facture de loyer. La partie entière lue est un
+ *             préfixe strict de l'attendue, et les décimales sont nulles —
+ *             le premier jeton, remis à l'échelle de la devise.
+ *
+ *   SUFFIXE   « 5 650,000 » cité « 650,000 » → 650.000 pour 5650.000
+ *             18 octobre 2026, facture arabe. La partie entière lue est un
+ *             suffixe strict de l'attendue, et les décimales sont INTACTES —
+ *             ce sont celles du dernier jeton, qui les porte.
+ *
+ * Le détecteur ne connaissait que la première : « 5650 ».startsWith(« 650 »)
+ * est faux, donc le défaut du 18 octobre aurait été rapporté « montant faux »
+ * et non « montant amputé ». Le banc aurait dit le quoi, pas le pourquoi.
  *
  * On ne se contente pas de « la valeur diffère » : nommer l'amputation permet
  * au banc de dire QUEL défaut il a trouvé, et c'est ce qui distingue un échec
@@ -62,14 +75,14 @@ function auChemin(extrait: Record<string, unknown>, chemin: string): unknown {
  */
 function estAmpute(lu: string, attendu: string): boolean {
   const [eLu = "", dLu = ""] = lu.split(".");
-  const [eAttendu = ""] = attendu.split(".");
-  return (
-    eLu !== eAttendu &&
-    eAttendu.startsWith(eLu) &&
-    eLu.length > 0 &&
-    /^0*$/.test(dLu) &&
-    lu !== attendu
-  );
+  const [eAttendu = "", dAttendu = ""] = attendu.split(".");
+  if (lu === attendu || eLu === eAttendu || eLu.length === 0) return false;
+  // Le premier jeton : il perd les décimales du dernier, donc les siennes
+  // sont nulles. Sans cette condition, « 2.800 » — l'autre lecture du
+  // séparateur, qui relève de l'ambiguïté — serait appelé une coupure.
+  if (eAttendu.startsWith(eLu) && /^0*$/.test(dLu)) return true;
+  // Le dernier jeton : il emporte les décimales du montant avec lui.
+  return eAttendu.endsWith(eLu) && dLu === dAttendu;
 }
 
 const estUnMontant = (chemin: string): boolean =>
@@ -178,6 +191,19 @@ describe("le banc du jeu d'or reconnaît ce qu'il cherche", () => {
     // 2 900 au lieu de 2 800 est une erreur de lecture, pas une troncature :
     // confondre les deux ferait dire au banc n'importe quoi dans son rapport.
     assert.equal(estAmpute("2900.000", "2800.000"), false);
+  });
+
+  it("« 650.000 » est l'amputation de « 5650.000 » — la forme SUFFIXE", () => {
+    // Mesuré le 18 octobre 2026 sur la facture arabe, trois totaux sur trois.
+    assert.equal(estAmpute("650.000", "5650.000"), true);
+    assert.equal(estAmpute("73.500", "1073.500"), true);
+    assert.equal(estAmpute("724.500", "6724.500"), true);
+  });
+
+  it("un suffixe dont les décimales diffèrent n'est pas une amputation", () => {
+    // Le dernier jeton emporte les décimales du montant : si elles ne sont
+    // pas celles du papier, c'est une autre faute, et il faut le dire.
+    assert.equal(estAmpute("650.100", "5650.000"), false);
   });
 
   it("une amputation qui garderait des décimales n'en est pas une", () => {

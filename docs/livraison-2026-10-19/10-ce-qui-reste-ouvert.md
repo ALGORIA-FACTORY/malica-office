@@ -224,3 +224,41 @@ une facture pourtant bien lue : le contrôle avait raison, la fiche avait tort.
 
 Deux choses à faire, et elles sont distinctes : corriger la fiche, et **refuser
 la saisie** d'un matricule qui n'a pas la forme attendue.
+
+---
+
+## La chaîne de lecture, après la correction de l'amputation (18 octobre)
+
+### L-1 · Un code de drapeau que l'écran ne sait pas encore nommer
+
+`MONTANT_PEUT_ETRE_AMPUTE` est émis par la chaîne depuis le 18 octobre.
+`apps/web/src/lib/champ-lisible.ts` porte la table des codes traduits ; il n'y
+est pas, donc l'écran le rend par le libellé générique `cab.code.autre`. Ce
+n'est pas un blocage — le montant est `null`, la pièce est partielle, rien ne
+s'écrit — mais la personne lit « autre » là où il faudrait lire « ce montant
+semble coupé en deux, confirmez-le ». `ARITHMETIQUE_INCOHERENTE` manque à la
+même table, depuis le 5 octobre.
+
+Non fait ici parce que `apps/web/` est tenu par un autre agent.
+
+### L-2 · Le TEXTE tronqué n'a toujours aucun garde
+
+« MEUBLES » pour MEUBLES EL AMEN, mesuré deux fois le 18 octobre. Le garde posé
+porte sur les montants : il se décide sur la forme d'un nombre. Un mot collé à
+un mot n'a aucune forme particulière, et un garde qui refuserait tout texte
+ayant un voisin collé refuserait tous les textes. Il faudrait un autre
+dispositif — le banc le verrouille comme trou ouvert
+(`factures.banc-amputation.test.ts`), il ne le referme pas.
+
+### L-3 · Le plafond des bandes est posé à deux, sans mesure
+
+`BANDES_MAX` passe de 4 à 2 le 18 octobre, parce que le chemin des bandes
+devient atteignable pour la première fois (voir `withRetry`) et qu'il n'avait
+donc jamais coûté un centime. Le pire par page passe de SEPT appels de relevé
+payants à TROIS. Ce que cela perd — la page si dense que deux bandes ne
+suffisent pas — n'a jamais été mesuré, puisque le chemin ne tournait pas.
+Remonter à quatre est une ligne, le jour où une pièce réelle le demande.
+
+**Arbitrage commercial non tranché** : trois appels de relevé par page est un
+plafond, pas un choix de produit. Personne n'a dit ce qu'une pièce a le droit
+de coûter.
