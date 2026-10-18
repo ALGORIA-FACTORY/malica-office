@@ -451,7 +451,7 @@ function PmeHome() {
         <div className="sec">
           <h2>{t("pme.home.prepare")}</h2>
           <Link to="/pme/list">
-            {t("pme.home.documents.titre")} <Chevron className="g" />
+            {t("pme.home.documents.titre")} <Chevron className="g fl" />
           </Link>
         </div>
 
@@ -514,7 +514,7 @@ function PmeHome() {
         <div className="sec">
           <h2>{t("pme.home.card.evolution")}</h2>
           <Link to="/pme/echeances">
-            {t("pme.home.card.echeances")} <Chevron className="g" />
+            {t("pme.home.card.echeances")} <Chevron className="g fl" />
           </Link>
         </div>
 
@@ -797,10 +797,15 @@ function Chevron({ className }: { className: string }) {
   );
 }
 
-/** La flèche du bouton de la carte à la une. */
+/**
+ * La flèche du bouton de la carte à la une.
+ *
+ * `fl` est le marqueur que la feuille miroite en arabe : gardée telle quelle,
+ * une flèche « suivante » pointe vers ce qu'on vient de lire.
+ */
 function FlecheDroite() {
   return (
-    <svg viewBox="0 0 24 24" className="g">
+    <svg viewBox="0 0 24 24" className="g fl">
       <path d="M4.5 12h14" />
       <path d="M14 7.5l4.5 4.5L14 16.5" />
     </svg>
