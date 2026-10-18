@@ -106,7 +106,9 @@ function PmeTva() {
   const solde = tva?.totals.solde ?? null;
   const aReverser = solde !== null && Number(solde) > 0;
 
-  const onglet = "flex-1 border-0 px-3 py-[7px] text-[11px] font-semibold";
+  // 31 px mesures : sous les 34 px de plancher que la feuille PME s'impose
+  // pour une pilule de filtre. La cible grandit, la police ne bouge pas.
+  const onglet = "min-h-[34px] flex-1 border-0 px-3 text-[11px] font-semibold";
 
   return (
     <div className="rg-rise -mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6">

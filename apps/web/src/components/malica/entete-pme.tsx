@@ -37,8 +37,15 @@ export interface EntetePmeProps {
 export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }: EntetePmeProps) {
   const { t, locale } = useI18n();
 
+  /*
+   * `flex-wrap` : a 320 px, les deux liens de droite et le selecteur ne
+   * tiennent pas sur une seule ligne, et c'est le selecteur qui payait —
+   * mesure 36 px de large. Plutot que de le laisser se reduire sous le
+   * pouce, la ligne se coupe en deux et il prend la premiere. A 360 px et
+   * au-dela, rien ne bouge : tout tient, la ligne reste unique.
+   */
   return (
-    <div className="relative flex items-center gap-[9px]">
+    <div className="relative flex flex-wrap items-center gap-[9px]">
       <MarqueRg aria-hidden className="h-[19px] w-[19px] flex-none" />
       <span className="rg-blink h-[5px] w-[5px] flex-none bg-marigold" />
       {/*
@@ -46,12 +53,23 @@ export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }
        * plusieurs dossiers : les deux ne tiennent pas côte à côte sous 375 px,
        * et une PME — qui n'en a qu'un — ne voit jamais le premier.
        */}
+      {/*
+       * 44 px : le plancher d'Apple, et la feuille PME s'impose deja 34 pour
+       * une simple pilule de filtre. Mesure avant : le selecteur faisait
+       * 38 x 24 px a 320 et les deux liens 25 px de haut, colles au bord haut
+       * de l'ecran — la ou le pouce arrive le plus mal. C'est par la qu'on
+       * change de societe. La cible grandit, la police ne bouge pas.
+       *
+       * Et `max-w-[110px]` part : avec `min-w-0`, il reduisait le selecteur a
+       * 38 px de large. Il prend maintenant la place disponible au lieu de la
+       * refuser.
+       */}
       {dossiers.length > 1 ? (
         <select
           aria-label={t("pme.org.switch")}
           value={dossierActif ?? ""}
           onChange={(e) => choisirDossier(e.target.value)}
-          className="min-w-0 max-w-[110px] truncate border border-border bg-transparent px-1.5 py-1 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="min-h-[44px] min-w-[4.5rem] flex-1 truncate border border-border bg-transparent px-1.5 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           {dossiers.map((d) => (
             <option key={d.id} value={d.id}>
@@ -66,7 +84,7 @@ export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }
         {aUnCabinet ? (
           <Link
             to="/office"
-            className="whitespace-nowrap border border-border px-2 py-1 text-[10px] uppercase tracking-wide text-text-2 hover:bg-accent"
+            className="inline-flex min-h-[44px] items-center whitespace-nowrap border border-border px-2 text-[10px] uppercase tracking-wide text-text-2 hover:bg-accent"
           >
             {t("portal.switch")}
           </Link>
@@ -80,7 +98,7 @@ export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }
           to="/pme/reglages"
           // Le lecteur d'écran lisait « FR point engrenage » : le lien dit où il mène.
           aria-label={t("pme.reglages.titre")}
-          className="whitespace-nowrap border border-border px-2 py-1 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
+          className="inline-flex min-h-[44px] items-center whitespace-nowrap border border-border px-2 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
         >
           {locale.toUpperCase()} · ⚙
         </Link>

@@ -257,8 +257,18 @@
 [data-surface="pme"] .sec {
   display: flex; align-items: baseline; justify-content: space-between;
   margin: 1.75rem 0 .75rem;
+  /* `space-between` ne separe que ce qui RESTE. Mesure a 320 px sur
+   * l'accueil : le titre finissait a 209 et le lien commencait a 209 — zero
+   * pixel entre les deux, et leurs coupes sur deux et trois lignes
+   * s'imbriquaient. Ce n'etait pas un chevauchement geometrique ; a la
+   * lecture, c'etait pire. */
+  gap: .75rem;
 }
-[data-surface="pme"] .sec h2 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.018em; margin: 0 }
+/* Le compte et le lien ne se coupent plus : leur place est due, le titre
+ * prend le reste et se coupe seul (l'`overflow-wrap` de `.app` le permet). */
+[data-surface="pme"] .sec > a,
+[data-surface="pme"] .sec > span { flex: none; white-space: nowrap }
+[data-surface="pme"] .sec h2 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -.018em; margin: 0; min-width: 0 }
 [data-surface="pme"] .sec span {
   font-family: var(--mono); font-size: .625rem; font-weight: 600;
   letter-spacing: .14em; text-transform: uppercase; color: var(--t3);
@@ -331,7 +341,7 @@
  * mange la dernière ligne de chaque liste, et la dernière ligne est souvent
  * celle qu'on cherchait. */
 [data-surface="pme"] .nav {
-  display: grid; grid-template-columns: repeat(3, 1fr); align-items: center;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center;
   margin-top: 1.75rem;
   padding: .875rem .5rem 1.375rem;
   border-top: 1px solid var(--hr);
@@ -415,20 +425,28 @@
 [data-surface="pme"] .manque[data-k="refus"]   { box-shadow: inset 0 0 0 1.5px var(--ve) }
 [data-surface="pme"] .manque[data-k="plafond"] { box-shadow: inset 0 0 0 1.5px var(--mg) }
 
-/* --- une note de Malica, en pied de bloc --------------------------------- */
+/* --- une note de Malica, en pied de bloc ---------------------------------
+ * `.foot` etait declaree DEUX fois — ici, puis plus bas dans le pont, qui
+ * surchargeait ses quatre proprietes. La premiere ne peignait donc rien. R9 :
+ * une seule declaration, celle du dessin, portant les valeurs qui peignaient
+ * vraiment (le `1.55` et le `1.5rem` releves sur les ecrans concus). */
 [data-surface="pme"] .foot {
-  font-size: .75rem; line-height: 1.5; color: var(--t3);
-  margin-top: 1rem;
+  font-size: .75rem; line-height: 1.55; color: var(--t3);
+  margin-top: 1.5rem;
 }
 
 /* --- ce qui flotte : les deux seules ombres ------------------------------ */
 [data-surface="pme"] .menu  { box-shadow: var(--ombre-menu);   border-radius: var(--r-md); background: var(--d2) }
 [data-surface="pme"] .sheet { box-shadow: var(--ombre-flotte); border-radius: var(--r-xl) var(--r-xl) 0 0; background: var(--d1) }
 
-/* --- l'icône ------------------------------------------------------------- */
+/* --- l'icône -------------------------------------------------------------
+ * Meme histoire que `.foot` : declaree deux fois, et le `1.7` du pont battait
+ * le `1.6` d'ici. Le `1.7` est le trait releve sur les ecrans concus — ce
+ * n'est pas un oubli, ne pas l'« aligner ». Les deux declarations sont
+ * fondues en une, et c'est le dessin qui la porte. */
 [data-surface="pme"] .g {
   width: 19px; height: 19px; flex: none;
-  fill: none; stroke: currentColor; stroke-width: 1.6;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
   stroke-linecap: round; stroke-linejoin: round;
 }
 
@@ -741,14 +759,6 @@
 
 /* ---------- ce que les écrans ont vraiment en commun (26) ---------- */
 
-/* `.foot` et `.g` étaient chacune déclarée DEUX fois de suite, la première
- * sans effet — deux maquettes ne s'accordaient pas et les deux relevés sont
- * entrés. R9 : la morte part, la vivante reste telle quelle, pour que rien
- * ne bouge à l'écran. Le `1.7` de `.g` surcharge volontairement le `1.6` de
- * la primitive plus haut : c'est le trait relevé sur les écrans conçus, pas
- * un oubli — ne pas l'« aligner ». */
-[data-surface="pme"] .foot{margin-top:1.5rem;font-size:.75rem;line-height:1.55;color:var(--t3)}
-[data-surface="pme"] .g{stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;fill:none;stroke-width:1.7}
 [data-surface="pme"] .hid{display:none}
 /* `.nav` était déclarée DEUX fois : la primitive du dessin (plus haut), et
  * ce relevé des maquettes. La seconde gagnait par l'ordre et effaçait la
@@ -790,8 +800,14 @@
 [data-surface="pme"] [data-ecran="accueil"] .chip{padding:.5625rem 1rem;border-radius:999px;background:var(--d2);color:var(--t2); font-size:.8125rem;font-weight:500;white-space:nowrap;cursor:pointer;border:0;font-family:inherit}
 [data-surface="pme"] [data-ecran="accueil"] .chip.on{background:var(--acc);color:var(--on-acc);font-weight:600}
 [data-surface="pme"] [data-ecran="accueil"] h1{margin:1.3125rem 0 1.125rem;font-size:2.0625rem;font-weight:700;letter-spacing:-.042em;line-height:1.04}
-[data-surface="pme"] [data-ecran="accueil"] .tiles{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-[data-surface="pme"] [data-ecran="accueil"] .tile{background:var(--d1);border-radius:20px;padding:.875rem .8125rem;display:flex;align-items:center; gap:.625rem;cursor:pointer;min-height:84px;border:0;font-family:inherit;text-align:left; color:var(--tx);transition:background .18s}
+/* `1fr` vaut `minmax(auto,1fr)`, et ce minimum automatique est le min-content.
+ * La tuile porte une icone de 46 px et une pastille de 27 px en `flex:none` :
+ * mesure a 320, les colonnes se resolvaient a 166,7 + 160 + 12 = 338,7 px dans
+ * un conteneur de 280, et la tuile de droite tombait de 199 a 359 — 39 px
+ * au-dela de la fenetre. Avec `html{overflow-x:clip}`, « Vos charges » et le
+ * credit de TVA n'etaient pas coupes : absents, et inatteignables. */
+[data-surface="pme"] [data-ecran="accueil"] .tiles{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.75rem}
+[data-surface="pme"] [data-ecran="accueil"] .tile{background:var(--d1);border-radius:20px;padding:.875rem .8125rem;display:flex;align-items:center; gap:.625rem;cursor:pointer;min-height:84px;border:0;font-family:inherit;text-align:start; color:var(--tx);transition:background .18s}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="accueil"] .tile:hover{background:var(--d2)}}
 [data-surface="pme"] [data-ecran="accueil"] .tile i{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 [data-surface="pme"] [data-ecran="accueil"] .tile i svg{width:24px;height:24px}
@@ -802,7 +818,10 @@
 [data-surface="pme"] [data-ecran="accueil"] .tile .ar{width:19px;height:19px;color:var(--t3);flex:none}
 [data-surface="pme"] [data-ecran="accueil"] .sec:not(button){display:flex;align-items:center;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="accueil"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
-[data-surface="pme"] [data-ecran="accueil"] .sec a{display:flex;align-items:center;gap:.3125rem;color:var(--t2);text-decoration:none; font-size:.8125rem;font-weight:500}
+/* 81x20 px mesures a 320 : c'est le lien vers les echeances, vers ce qu'on
+ * doit payer. 34 px est le plancher que la feuille s'impose deja pour une
+ * simple pilule de filtre. La cible grandit, le texte ne bouge pas. */
+[data-surface="pme"] [data-ecran="accueil"] .sec a{display:flex;align-items:center;gap:.3125rem;color:var(--t2);text-decoration:none; font-size:.8125rem;font-weight:500;min-height:34px}
 [data-surface="pme"] [data-ecran="accueil"] .sec a svg{width:16px;height:16px}
 /*
  * ------------------------------------------------- LA CARTE DE MALICA
@@ -843,7 +862,7 @@
 [data-surface="pme"] [data-ecran="accueil"] .hero .stack{position:absolute;z-index:2;right:.5rem;bottom:.4375rem;width:72px;height:72px; display:grid;place-items:center;color:rgba(214,230,220,.34)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .stack svg{width:72px;height:72px;transform:rotate(-4deg)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .stack .ln{stroke:var(--acc2);opacity:.9}
-[data-surface="pme"] [data-ecran="accueil"] .acts{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+[data-surface="pme"] [data-ecran="accueil"] .acts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.75rem}
 [data-surface="pme"] [data-ecran="accueil"] .act{background:var(--d1);border-radius:20px;padding:1.125rem 1rem;display:grid;gap:.5rem; align-content:start;min-height:124px}
 [data-surface="pme"] [data-ecran="accueil"] .act .hd{display:flex;align-items:flex-start;gap:.5rem}
 [data-surface="pme"] [data-ecran="accueil"] .act .hd span{flex:1;font-size:.8125rem;color:var(--t2);line-height:1.25}
@@ -1196,7 +1215,9 @@
 [data-surface="pme"] [data-ecran="charges"] .lede .mta{margin-top:.5rem;font-family:var(--mono);font-size:.75rem;color:var(--t3);letter-spacing:-.01em}
 [data-surface="pme"] [data-ecran="charges"] .mths{display:flex;gap:.4375rem;overflow-x:auto;scrollbar-width:none; margin:1.375rem -1.25rem 0;padding:0 1.25rem}
 [data-surface="pme"] [data-ecran="charges"] .mths::-webkit-scrollbar{display:none}
-[data-surface="pme"] [data-ecran="charges"] .mths button{flex:none;border:0;cursor:pointer;font-family:var(--mono);font-size:.6875rem; font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:.5625rem .8125rem; border-radius:999px;background:var(--d2);color:var(--t2);transition:background .18s,color .18s}
+/* Douze pastilles de mois mesurees a 25 px de haut : on vise un mois, on en
+ * ouvre un autre. 34 px est le plancher de pilule de la feuille (`.seg`). */
+[data-surface="pme"] [data-ecran="charges"] .mths button{flex:none;border:0;cursor:pointer;font-family:var(--mono);font-size:.6875rem; font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:.5625rem .8125rem; border-radius:999px;background:var(--d2);color:var(--t2);transition:background .18s,color .18s;min-height:34px}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
 [data-surface="pme"] [data-ecran="charges"] .mths button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
