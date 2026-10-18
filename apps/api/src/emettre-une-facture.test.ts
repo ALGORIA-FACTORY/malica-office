@@ -44,6 +44,13 @@ async function preparer(
   const licence = randomUUID();
   const titulaire = randomUUID();
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
+  // Une facture s'adresse a QUELQU'UN : `emettre` exige un destinataire nomme
+  // et refuse de se rabattre sur un libelle plausible. Le titulaire a donc un
+  // profil, comme toute personne que l'application connait.
+  await db.query("insert into identity.profiles (user_id, display_name) values ($1, $2)", [
+    titulaire,
+    "Selim Ben Amor",
+  ]);
   await db.query(
     `insert into facturation.licences (id, titulaire, offre_code, offre_depuis)
      values ($1, $2, 'solo', current_date)`,
