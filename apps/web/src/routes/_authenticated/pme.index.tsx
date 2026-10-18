@@ -1,17 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
-import { MalicaChat } from "@/components/malica/MalicaChat";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
-import { MalicaAvatar } from "@/components/malica/office-ui";
-import { usePanneauMalica } from "@/components/malica/panneau-malica";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
-import { useSuperposition } from "@/hooks/use-superposition";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
@@ -129,17 +125,28 @@ function compte(valeur: number | string | null | undefined): string {
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
-  const malica = usePanneauMalica("pme");
-  /*
-   * `panneauMalica` : la reference que le crochet attend pour tenir le focus
-   * DANS le panneau. Sans elle, mesure a 1280, 20 elements restaient
-   * atteignables derriere un panneau de 448 px.
-   */
-  const panneauMalica = useRef<HTMLDivElement | null>(null);
-  useSuperposition(malica.ouvert, malica.fermer, panneauMalica);
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
+
+  /*
+   * -------------------------------------- LA BARRE DE QUESTION MÈNE À L'ÉCRAN
+   *
+   * Elle ouvrait un panneau par-dessus l'accueil, en langue Edition One, et le
+   * commentaire de ce fichier l'annonçait : « c'est l'écran converser, qui aura
+   * son propre dessin avec la route `pme.malica` ». Il l'a — `pme.malica.tsx`,
+   * `data-ecran="chat"`, dessiné dans `malica-chat.html` : son en-tête, les
+   * sources citées, le composeur collant, l'escalade au cabinet.
+   *
+   * Relevé avant de brancher : AUCUN lien du dépôt ne menait à `/pme/malica`.
+   * L'écran était enregistré, fini et injoignable — et le panneau qu'il
+   * remplace restait le seul chemin vers la conversation. Les deux ensemble,
+   * c'étaient deux dessins pour une même chose, ce que R9 interdit.
+   *
+   * Le crochet `usePanneauMalica` ne disparaît pas : le cabinet continue de
+   * s'en servir (`cabinet.tsx`), et c'est sa surface à lui.
+   */
+  const allerALaConversation = () => void navigate({ to: "/pme/malica" });
 
   /*
    * La pastille du haut porte l'initiale de la PERSONNE, pas celle de Malica.
@@ -663,7 +670,7 @@ function PmeHome() {
          * contrôle : c'est lui qui porte le nom accessible et qui se tient au
          * clavier. La barre entière reste cliquable au doigt.
          */}
-        <div className="ask" onClick={malica.ouvrir}>
+        <div className="ask" onClick={allerALaConversation}>
           <img src={malicaLoin} alt="" width={620} height={620} />
           <span className="q">
             <b>{t("malica.panneau.ouvrir")}</b>
@@ -673,7 +680,7 @@ function PmeHome() {
             type="button"
             className="mic"
             aria-label={t("malica.panneau.ouvrir")}
-            onClick={malica.ouvrir}
+            onClick={allerALaConversation}
           >
             <svg viewBox="0 0 24 24" className="g">
               <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
@@ -695,43 +702,6 @@ function PmeHome() {
         >
           {pme.captureError}
         </p>
-      ) : null}
-
-      {/*
-       * Le fil de Malica passe PAR-DESSUS.
-       *
-       * Il était une section de plus dans le flux : l'ouvrir allongeait la page
-       * et forçait à faire défiler l'accueil, ce que le dessin interdit. En
-       * panneau, il recouvre l'écran le temps de la question et le rend intact.
-       * Il garde la langue Edition One : c'est l'écran « converser », qui aura
-       * son propre dessin avec la route `pme.malica`.
-       */}
-      {malica.ouvert ? (
-        <div
-          ref={panneauMalica}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("malica.chat.her")}
-          className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background"
-        >
-          <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
-            <MalicaAvatar size={34} alt="Malica" rond />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
-              {t("malica.chat.her")}
-            </p>
-            <button
-              type="button"
-              onClick={malica.fermer}
-              aria-label={t("malica.panneau.fermer")}
-              className="ms-auto border border-border px-2.5 py-1 text-[15px] leading-tight text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              ×
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-[22px] py-4">
-            <MalicaChat tenantId={pme.tenantId} />
-          </div>
-        </div>
       ) : null}
     </div>
   );

@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useState } from "react";
 
+import malicaLoin from "@/assets/malica-loin.webp";
 import { files } from "@/capabilities/files";
-import { useSuperposition } from "@/hooks/use-superposition";
-import { MalicaAvatar } from "@/components/malica/office-ui";
 import { usePme } from "@/components/malica/pme-context";
+import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
-import { cn } from "@/lib/utils";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { RegimeDisponible } from "@malica/socle/ports/repositories";
@@ -40,6 +39,56 @@ export const Route = createFileRoute("/_authenticated/pme/fiche")({
 
 const OU = "routes/_authenticated/pme.fiche";
 
+/* ===========================================================================
+ *
+ *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
+ *
+ * Même convention que `pme.regler` : la composition demande du texte que le
+ * dictionnaire ne porte pas encore — les titres de section, la phrase du
+ * panneau de lecture, le bilan. Il est ici, en un seul endroit, en français
+ * seulement, et il est à vider dans `i18n/` — clés proposées `fiche.sec.*`,
+ * `fiche.bil.*` — dès que les trois langues peuvent être écrites ensemble.
+ *
+ * Tout le reste de l'écran lit `t()` : les 20 clés `fiche.*` existent en FR,
+ * EN et AR et ne sont PAS touchées. On remplace le balisage, pas le câblage,
+ * et on ne réécrit pas un libellé déjà traduit.
+ */
+const MOTS = {
+  /** La barre du haut. Courte, comme les six `.ttl` du dessin. */
+  barre: "Votre fiche fiscale",
+  secCarte: "Votre carte",
+  /** L'annotation mono du titre de section — `arr` écrit « à confirmer ». */
+  carteAConfirmer: "à confirmer",
+  cartePasLue: "pas encore lue",
+  panCarte: "Photographiez la carte d'identification fiscale : je remplis ce que j'y lis.",
+  /**
+   * La phrase de `arr`, qui est vraie ici aussi : `etablirFiche` inscrit la
+   * source (« carte » ou « saisie »), donc la distinction a un effet réel
+   * sur ce que la base conserve. Elle n'est pas décorative.
+   */
+  regleSaisie:
+    "La saisie au clavier reste possible, mais elle est signalée : un régime tapé n'a pas la même valeur de preuve qu'un régime lu sur la carte.",
+  secRegime: "Le régime",
+  secSociete: "La société",
+  secExercice: "L'exercice",
+  secArret: "Ce que j'enregistre",
+  /**
+   * L'annotation mono des trois sections de formulaire. Elle dit d'où
+   * viennent les choix : du référentiel, et de nulle part ailleurs (R8).
+   */
+  duReferentiel: "du référentiel",
+  /** L'exercice ne vient d'aucune liste : ce sont deux dates. */
+  deuxDates: "deux dates",
+  bilSur: "sur",
+  bilChamps: "champs renseignés.",
+  bilPremiere: "Ce geste établit votre première fiche, datée d'aujourd'hui.",
+  bilRemplace:
+    "L'enregistrer clôture la fiche en place et en ouvre une autre, datée d'aujourd'hui.",
+  /** Ce que `etablirFiche` inscrira comme source — dit avant, pas après. */
+  fixeSourceCarte: "source : carte lue",
+  fixeSourceSaisie: "source : saisie au clavier",
+} as const;
+
 /**
  * La situation fiscale du dossier — lue sur la carte, arrêtée par la personne.
  *
@@ -63,6 +112,95 @@ const OU = "routes/_authenticated/pme.fiche";
  * La lecture REMPLIT le formulaire, elle ne l'enregistre pas. Tout reste
  * modifiable, et ce qu'elle n'a pas su lire reste vide au lieu d'être deviné.
  * C'est R10 : Malica propose, l'expert arrête le paramétrage.
+ *
+ * ================================================= IL N'Y A PAS DE DESSIN DE CET ÉCRAN
+ *
+ * Mesuré, et c'est le fait central de cette conversion. La maquette
+ * `malica-manquants.html` dessine SIX vues — `prive`, `rub`, `ech`, `tva`,
+ * `cab`, `arr` — et aucune n'est la fiche. `rub` est le renommage des
+ * rubriques, pas l'identité de l'entreprise : la prendre pour elle aurait été
+ * une erreur de lecture.
+ *
+ * On n'invente donc pas un dessin : on EMPLOIE les primitives de la famille,
+ * relevées une à une dans `styles-pme.css` sous
+ * `[data-surface="pme"] [data-famille="papiers"]`. La fiche est un formulaire,
+ * et cette famille en porte déjà le vocabulaire :
+ *
+ *   `.pan` + `.pan p` + `.pan .champ`      le panneau, sa question, son champ
+ *   `.pan .chx` + `button` + `button.on`   un choix parmi plusieurs
+ *   `.pan .fixe`                           la mention qui ne bouge pas
+ *   `.pan .bil` + `b`                      le bilan de ce qui va être inscrit
+ *   `.pan .b` + `button` + `button.sec`    les actions, de poids différents
+ *   `.sec:not(button)` + `h2` + `span`     le titre de section et son compteur
+ *   `.sgn` + `.dit`                        la voix de Malica
+ *   `.mur`                                 une mention d'information
+ *   `.card` + `p`                          le mur d'erreur (comme `pme.regler`)
+ *   `.go` + `.pr`                          l'engagement, en bas
+ *
+ * `rub.premium` rendu a servi d'exemple de référence de ce langage en
+ * situation ; il n'a pas servi de dessin.
+ *
+ * ========================================== LES QUATRE ARBITRAGES, FAUTE DE DESSIN
+ *
+ * 1. UN `.top`, PARCE QUE LES SIX VUES EN ONT UN. Mesure : les six vues
+ *    dessinées portent toutes `.top` avec un `.ttl` (« Rubriques », « TVA du
+ *    mois », « Votre société »…). La convention de la famille est donc qu'un
+ *    écran porte son en-tête. Conséquence assumée, et c'est la règle du dépôt
+ *    qui la produit : `.app:has([data-ecran] .top) > header{display:none}`
+ *    masque l'en-tête du layout — donc `EntetePme`, le sélecteur de dossier.
+ *    `pme.regler` a déjà arbitré ainsi, et c'est validé.
+ *
+ * 2. `.chx` PARTOUT, JAMAIS `.seg`. La famille offre les deux. `.seg button`
+ *    est en `flex:1` : il répartit à parts égales et suppose donc qu'on
+ *    connaisse le NOMBRE d'options. Or les options viennent de la base
+ *    (`regimesDisponibles`, `formesDisponibles`) : leur cardinalité n'est pas
+ *    connue à l'écriture. `.pan .chx` est en `flex-wrap:wrap` et tolère
+ *    n'importe quel nombre. Choisir `.seg` aurait été parier sur le
+ *    référentiel ; R8 l'interdit. `.seg` reste donc inemployé ici.
+ *
+ * 3. QUATRE PANNEAUX, PAS HUIT. `.pan .champ` n'a pas de `margin-top` dans la
+ *    feuille : il y est dessiné comme PREMIER enfant du panneau (`rub` renomme
+ *    une seule chose). Un panneau par champ aurait donné huit `.sec` à
+ *    1,0625 rem — un formulaire en titres. On groupe donc par décision : le
+ *    régime, la société, l'exercice, l'arrêt.
+ *
+ * 4. LE POIDS DES DEUX ACTIONS. Photographier AIDE à remplir : c'est le
+ *    bouton léger, `.pan .b button.sec`. Enregistrer ENGAGE : c'est `.go .pr`,
+ *    le bouton d'engagement de la famille — celui par lequel `arr` crée la
+ *    société. Le poids porte le sens. `.go .sc2` reste inemployé : aucune
+ *    seconde action de bas de page n'est vraie ici, et `.top .bk` fait déjà
+ *    le retour. On ne fabrique pas un bouton pour remplir une primitive.
+ *
+ * ============================================ LES TROIS TROUS, ET CE QU'ILS ÉTAIENT
+ *
+ * Cette conversion en a signalé trois. **Deux étaient des artefacts de relevé,
+ * un seul était réel** — et les trois sont tranchés dans la feuille, le
+ * 18 octobre, avec des valeurs lues et non choisies :
+ *
+ * - `.foot` n'était PAS absent. `[data-surface="pme"] .foot` est déclaré au
+ *   niveau de la surface : il peint les treize écrans. Le relevé le cherchait
+ *   sous `[data-famille="papiers"]`, où il n'a effectivement aucune règle — et
+ *   en a conclu qu'il était nu. La phrase de clôture reprend donc `.foot`.
+ *
+ * - L'état éteint n'était PAS absent non plus. La feuille écrit ses états
+ *   éteints en SÉLECTEUR D'ATTRIBUT — `.btn[disabled]{opacity:.4}` — jamais en
+ *   pseudo-classe `:disabled`. Un relevé cherchant `:disabled` trouve zéro
+ *   règle et refait en style en ligne, à la même valeur, ce qui existait.
+ *   La famille a maintenant sa propre règle `[disabled]`, au `.4` de la
+ *   surface, sur ses quatre primitives de bouton. Les deux `style={ETEINT}`
+ *   de ce fichier sont partis avec.
+ *
+ * - Le champ de saisie, lui, manquait VRAIMENT. `.pan .champ` existe, mais le
+ *   dessin ne l'emploie qu'en premier enfant et sur un `<div>` d'affichage,
+ *   jamais sur un `<input>` — qui n'hérite ni la police ni la couleur et ne
+ *   prend pas la largeur de son conteneur. La feuille porte les deux règles
+ *   qui manquaient, avec le `.75rem` de `.pan p` et `.pan .chx`.
+ *
+ * La leçon, et elle vaut au-delà de cet écran : **un grep trop étroit ressemble
+ * à une absence.** Deux fois sur trois ici, le relevé a conclu « 0 règle » là
+ * où la règle existait sous une autre forme ou à une autre portée. Chercher
+ * une classe sous le seul sélecteur attendu ne dit pas qu'elle n'est pas
+ * peinte ailleurs.
  */
 function FicheFiscale() {
   const { t, locale } = useI18n();
@@ -108,6 +246,19 @@ function FicheFiscale() {
 
   const parAxe = (axe: RegimeDisponible["axe"]) =>
     (regimes.data ?? []).filter((r) => r.axe === axe);
+
+  /**
+   * Le fondement légal du régime choisi, tel que la base le porte.
+   *
+   * `RegimeDisponible` porte un champ `fondement` que l'écran n'affichait pas.
+   * La famille a exactement la primitive pour lui : `.pan .fixe` — mono, petit,
+   * sourd, avec un cadenas. C'est la mention qui ne bouge pas. Rien n'est
+   * inventé : si la base ne donne pas de fondement, la ligne n'existe pas.
+   */
+  const fondementDe = (axe: RegimeDisponible["axe"], code: string) =>
+    code
+      ? ((regimes.data ?? []).find((r) => r.axe === axe && r.code === code)?.fondement ?? null)
+      : null;
 
   /*
    * La fiche en place remplit le formulaire.
@@ -174,7 +325,7 @@ function FicheFiscale() {
         tenantId: pme.tenantId,
         regimeImposition: regimeImposition || null,
         regimeTva: regimeTva || null,
-        prorataTva: regimeTva === "partiel" && prorata ? Number(prorata) : null,
+        prorataTva: regimeTva === PARTIEL && prorata ? Number(prorata) : null,
         secteur: secteur.trim() || null,
         debutActivite: debut || null,
         clotureExercice: cloture || null,
@@ -183,7 +334,7 @@ function FicheFiscale() {
         // La source dit d'où vient la fiche, et elle ne ment pas : « carte »
         // seulement si l'œil a réellement rempli quelque chose.
         source: luDeLaCarte.size > 0 ? ("carte" as const) : ("saisie" as const),
-        validFrom: new Date().toISOString().slice(0, 10),
+        validFrom: AUJOURDHUI(),
       }),
     onSuccess: async () => {
       setErreur(null);
@@ -193,8 +344,19 @@ function FicheFiscale() {
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
-  const rien =
-    !regimeImposition && !regimeTva && !secteur.trim() && !debut && !cloture && !forme && !mode;
+  /*
+   * Le bilan, compté — pas estimé.
+   *
+   * `.pan .bil` est la primitive du « voici ce qui va être inscrit ». Elle a
+   * besoin d'un chiffre vrai : on compte les sept champs que `etablirFiche`
+   * transporte toujours. Le prorata n'y est pas — il n'existe que pour un
+   * assujetti partiel, et un total qui bougerait selon la TVA ne se lirait
+   * pas.
+   */
+  const CHAMPS = [regimeImposition, regimeTva, secteur.trim(), debut, cloture, forme, mode];
+  const remplis = CHAMPS.filter((v) => v !== "").length;
+
+  const rien = remplis === 0;
   // Les listes et la fiche viennent de la base ; si elle ne répond pas, on le dit.
   const echecLecture = regimes.error ?? formes.error ?? courante.error ?? null;
   const dateLisible = (iso: string) =>
@@ -207,146 +369,256 @@ function FicheFiscale() {
         }).format(new Date(`${iso}T00:00:00Z`))
       : iso;
 
-  return (
-    <div className="rg-rise flex min-h-0 flex-col px-1 pt-1">
-      <p className="text-[22px] font-semibold leading-[1.15] tracking-[-0.025em]">
-        {t("fiche.titre")}
-      </p>
-      {/*
-       * Une ligne, pas trois.
-       *
-       * Quand une situation existe déjà, c'est CELA qu'il faut dire — le
-       * formulaire la modifie, il ne repart pas de zéro. Le reste du temps, on
-       * explique à quoi sert l'écran. Jamais les deux : cet écran doit tenir
-       * en une page comme tous les autres.
-       */}
-      <p className="mt-[3px] text-[12.5px] leading-[1.45] text-text-2">
-        {courante.data
-          ? t("fiche.dejaEtablie", { depuis: dateLisible(courante.data.validFrom) })
-          : t("fiche.sous")}
-      </p>
+  const marque = t("fiche.marqueLue");
 
-      {/* ------------------------------------------------- lire la carte */}
-      <div className="mt-3 flex gap-2.5">
-        <MalicaAvatar size={28} alt="Malica" rond />
-        <p className="text-[13px] leading-[1.45] text-text-2">{t("fiche.voix")}</p>
+  return (
+    /*
+     * Les deux marqueurs. `data-famille="papiers"` fait descendre les 125
+     * règles de la famille — sans lui l'écran est nu. `data-ecran="fiche"` est
+     * l'identité : c'est lui que l'audit recense, et lui que la règle
+     * d'en-tête unique interroge. `data-surface` est posé par le layout
+     * `pme.tsx` sur un ancêtre ; on ne le pose jamais ici.
+     *
+     * Les marges négatives annulent le `px-4 py-5` du `<main>` du layout :
+     * `.top` et `.pad` portent leurs propres gouttières, et le dessin ne veut
+     * pas de double gouttière.
+     */
+    <div
+      data-ecran="fiche"
+      data-famille="papiers"
+      className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col"
+    >
+      {/* ── la barre du haut ───────────────────────────────────────────── */}
+      <div className="top">
+        <button
+          type="button"
+          className="bk"
+          aria-label={t("pme.regler.retour")}
+          onClick={() => void navigate({ to: "/pme" })}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </button>
+        <span className="ttl">{MOTS.barre}</span>
+        <span className="ic" aria-hidden>
+          <IconeCarte />
+        </span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setScanne(true)}
-        disabled={lecture.isPending}
-        className="mt-2.5 h-11 w-full flex-none bg-foreground text-[14px] font-semibold text-background disabled:opacity-60"
-      >
-        {lecture.isPending ? t("fiche.lecture") : t("fiche.photographier")}
-      </button>
-
-      {luDeLaCarte.size > 0 ? (
-        <p className="mt-2 text-[12px] leading-[1.5] text-signal-ok">
-          {t("fiche.lu", { count: luDeLaCarte.size })}
+      <div className="pad">
+        <h1>{t("fiche.titre")}</h1>
+        {/*
+         * Une ligne, pas trois. Quand une situation existe déjà, c'est CELA
+         * qu'il faut dire — le formulaire la modifie, il ne repart pas de
+         * zéro. Le reste du temps, on explique à quoi sert l'écran.
+         */}
+        <p className="sub">
+          {courante.data
+            ? t("fiche.dejaEtablie", { depuis: dateLisible(courante.data.validFrom) })
+            : t("fiche.sous")}
         </p>
-      ) : null}
 
-      {erreur || echecLecture ? (
-        <p
-          role="alert"
-          className="mt-3 border border-s-2 border-border border-s-signal-stop px-3 py-2 text-[12.5px]"
-        >
-          {erreur ?? texteDeLErreur(echecLecture, OU, t("common.error"))}
-        </p>
-      ) : null}
+        {/* ── la voix de Malica ──────────────────────────────────────── */}
+        <div className="sgn">
+          <span className="ph">
+            <img src={malicaLoin} alt="" width={620} height={620} />
+          </span>
+          <b>{t("malica.chat.her")}</b>
+        </div>
+        <div className="dit">
+          {t("fiche.voix")}
+          <em>{t("fiche.promesse")}</em>
+        </div>
 
-      {/* ------------------------------------------------------ le formulaire */}
-      <div className="mt-3 space-y-2.5">
-        <Choix
-          label={t("fiche.champ.imposition")}
-          options={parAxe("imposition")}
-          valeur={regimeImposition}
-          onChange={setRegimeImposition}
-          lu={luDeLaCarte.has("regime_imposition")}
-          vide={t("fiche.nonRenseigne")}
-        />
+        {/* ── la lecture de la carte ─────────────────────────────────── */}
+        <div className="sec">
+          <h2>{MOTS.secCarte}</h2>
+          <span>{luDeLaCarte.size > 0 ? MOTS.carteAConfirmer : MOTS.cartePasLue}</span>
+        </div>
+        <div className="pan">
+          <p>{MOTS.panCarte}</p>
+          <div className="b">
+            {/*
+             * Le bouton léger : photographier AIDE à remplir, il n'engage
+             * rien. L'engagement est en bas, en `.go .pr`.
+             */}
+            <button
+              type="button"
+              className="sec"
+              disabled={lecture.isPending}
+              onClick={() => setScanne(true)}
+            >
+              {lecture.isPending ? t("fiche.lecture") : t("fiche.photographier")}
+            </button>
+          </div>
+        </div>
 
-        <Choix
-          label={t("fiche.champ.tva")}
-          options={parAxe("tva")}
-          valeur={regimeTva}
-          onChange={(v) => {
-            setRegimeTva(v);
-            if (v !== "partiel") setProrata("");
-          }}
-          lu={luDeLaCarte.has("regime_tva")}
-          vide={t("fiche.nonRenseigne")}
-        />
-
-        {/* Le prorata n'existe que pour un assujetti partiel : la base le
-            refuse ailleurs, l'écran ne le propose donc pas ailleurs. */}
-        {regimeTva === "partiel" ? (
-          <Saisie
-            label={t("fiche.champ.prorata")}
-            valeur={prorata}
-            onChange={setProrata}
-            type="number"
-            aide={t("fiche.aide.prorata")}
-          />
+        {luDeLaCarte.size > 0 ? (
+          <div className="mur">
+            <IconeInfo />
+            <p>{t("fiche.lu", { count: luDeLaCarte.size })}</p>
+          </div>
         ) : null}
 
-        <Saisie
-          label={t("fiche.champ.secteur")}
-          valeur={secteur}
-          onChange={setSecteur}
-          lu={luDeLaCarte.has("secteur")}
-        />
+        {/* Le mur d'erreur, comme `pme.regler` l'a arrêté : `.card` + `p`. */}
+        {erreur || echecLecture ? (
+          <div className="card" role="alert">
+            <p>{erreur ?? texteDeLErreur(echecLecture, OU, t("common.error"))}</p>
+          </div>
+        ) : null}
 
-        {/* La forme et le mode de dépôt décident des délais : sans les deux,
-            Malica ne dérive aucune échéance — et le dit. */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <Choix
+        {/* ── le régime ──────────────────────────────────────────────── */}
+        <div className="sec">
+          <h2>{MOTS.secRegime}</h2>
+          <span>{MOTS.duReferentiel}</span>
+        </div>
+        <div className="pan">
+          <Axe
+            label={t("fiche.champ.imposition")}
+            options={parAxe("imposition")}
+            valeur={regimeImposition}
+            onChange={setRegimeImposition}
+            vide={t("fiche.nonRenseigne")}
+            marque={luDeLaCarte.has("regime_imposition") ? marque : undefined}
+          />
+          {/* Le fondement du régime choisi, tel que la base le porte. */}
+          <Fondement texte={fondementDe("imposition", regimeImposition)} />
+
+          <Axe
+            label={t("fiche.champ.tva")}
+            options={parAxe("tva")}
+            valeur={regimeTva}
+            onChange={(v) => {
+              setRegimeTva(v);
+              if (v !== PARTIEL) setProrata("");
+            }}
+            vide={t("fiche.nonRenseigne")}
+            marque={luDeLaCarte.has("regime_tva") ? marque : undefined}
+          />
+          <Fondement texte={fondementDe("tva", regimeTva)} />
+
+          {/* Le prorata n'existe que pour un assujetti partiel : la base le
+              refuse ailleurs, l'écran ne le propose donc pas ailleurs. */}
+          {regimeTva === PARTIEL ? (
+            <Champ
+              label={t("fiche.champ.prorata")}
+              valeur={prorata}
+              onChange={setProrata}
+              type="number"
+              aide={t("fiche.aide.prorata")}
+            />
+          ) : null}
+        </div>
+
+        {/* ── la société ─────────────────────────────────────────────── */}
+        <div className="sec">
+          <h2>{MOTS.secSociete}</h2>
+          <span>{MOTS.duReferentiel}</span>
+        </div>
+        <div className="pan">
+          {/* La forme et le mode de dépôt décident des délais : sans les deux,
+              Malica ne dérive aucune échéance — et le dit. */}
+          <Axe
             label={t("fiche.champ.forme")}
             options={choixDe("forme")}
             valeur={forme}
             onChange={setForme}
             vide={t("fiche.nonRenseigne")}
           />
-          <Choix
+          <Axe
             label={t("fiche.champ.mode")}
             options={choixDe("mode")}
             valeur={mode}
             onChange={setMode}
             vide={t("fiche.nonRenseigne")}
           />
+          <p>{t("fiche.aide.forme")}</p>
+          <Champ
+            label={t("fiche.champ.secteur")}
+            valeur={secteur}
+            onChange={setSecteur}
+            marque={luDeLaCarte.has("secteur") ? marque : undefined}
+          />
         </div>
-        <p className="text-[11px] leading-[1.4] text-muted-foreground">{t("fiche.aide.forme")}</p>
 
-        {/* Deux dates courtes : elles tiennent sur une ligne, et la page y gagne. */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <Saisie
+        {/* ── l'exercice ─────────────────────────────────────────────── */}
+        <div className="sec">
+          <h2>{MOTS.secExercice}</h2>
+          <span>{MOTS.deuxDates}</span>
+        </div>
+        <div className="pan">
+          <Champ
             label={t("fiche.champ.debut")}
             valeur={debut}
             onChange={setDebut}
             type="date"
-            lu={luDeLaCarte.has("debut_activite")}
+            marque={luDeLaCarte.has("debut_activite") ? marque : undefined}
           />
-          <Saisie
+          <Champ
             label={t("fiche.champ.cloture")}
             valeur={cloture}
             onChange={setCloture}
             aide={t("fiche.aide.cloture")}
           />
         </div>
-      </div>
 
-      <button
-        type="button"
-        disabled={rien || enregistrement.isPending}
-        onClick={() => enregistrement.mutate()}
-        className="mt-3 h-11 w-full flex-none border border-line-strong text-[14px] font-semibold disabled:opacity-40"
-      >
-        {t("fiche.enregistrer")}
-      </button>
-      <p className="mt-1.5 pb-1 text-[11px] leading-[1.4] text-muted-foreground">
-        {t("fiche.promesse")}
-      </p>
+        {/* ── ce qui va être inscrit, puis l'engagement ───────────────── */}
+        <div className="sec">
+          <h2>{MOTS.secArret}</h2>
+          <span>{dateLisible(AUJOURDHUI())}</span>
+        </div>
+        <div className="pan">
+          <div className="bil">
+            <b>
+              {remplis} {MOTS.bilSur} {CHAMPS.length}
+            </b>{" "}
+            {MOTS.bilChamps} {courante.data ? MOTS.bilRemplace : MOTS.bilPremiere}
+          </div>
+          {/*
+           * La source, dite AVANT d'enregistrer. `etablirFiche` inscrit
+           * « carte » seulement si l'œil a rempli quelque chose : l'écran
+           * annonce donc ce qu'il va inscrire, il ne le découvre pas après.
+           */}
+          <div className="fixe">
+            <IconeCadenas />
+            {luDeLaCarte.size > 0 ? MOTS.fixeSourceCarte : MOTS.fixeSourceSaisie}
+          </div>
+        </div>
+
+        {/*
+         * `.go .pr` : le bouton d'engagement de la famille — celui par lequel
+         * `arr` crée la société. `.go .sc2` n'est pas rendu : aucune seconde
+         * action de bas de page n'est vraie ici, et `.top .bk` fait le retour.
+         */}
+        <div className="go">
+          <button
+            type="button"
+            className="pr"
+            disabled={rien || enregistrement.isPending}
+            onClick={() => enregistrement.mutate()}
+          >
+            {t("fiche.enregistrer")}
+          </button>
+        </div>
+
+        {/*
+         * La phrase de clôture, en `.foot` comme le dessin.
+         *
+         * Une version de ce fichier employait `.regle` à la place, en affirmant
+         * que `.foot` n'était déclaré que sous `[data-ecran="charges"]`.
+         * C'était faux : `[data-surface="pme"] .foot` est déclaré au niveau de
+         * la SURFACE et peint donc sur les treize écrans. Le relevé qui disait
+         * l'inverse cherchait `.foot` sous `[data-famille="papiers"]`
+         * seulement.
+         *
+         * Ce qu'elle dit n'est pas `fiche.promesse` — cette phrase-là est
+         * dans la voix de Malica, et la redire ici ferait deux fois la même
+         * sur un écran. Elle dit la conséquence de la source, que `.fixe`
+         * annonce juste au-dessus.
+         */}
+        <p className="foot">{MOTS.regleSaisie}</p>
+      </div>
 
       {scanne ? (
         <Suspense fallback={null}>
@@ -381,8 +653,31 @@ function FicheFiscale() {
   );
 }
 
+/**
+ * Le code du référentiel qui ouvre le prorata.
+ *
+ * Il était écrit trois fois en clair dans le corps de l'écran. C'est toujours
+ * un code du référentiel écrit dans le composant — un défaut PRÉEXISTANT au
+ * regard de R8, qui reste signalé et non corrigé ici : le réparer demande que
+ * la base dise elle-même quel axe TVA ouvre un prorata (un drapeau sur
+ * `RegimeDisponible`), et cela se décide au contrat, pas dans une route.
+ * Nommé une seule fois, au moins, pour que la correction soit un geste.
+ */
+const PARTIEL = "partiel";
+
+/** La date que `etablirFiche` inscrira — la même que le bilan annonce. */
+const AUJOURDHUI = () => new Date().toISOString().slice(0, 10);
+
 /** Le libellé d'un code du référentiel, dans la langue de la personne. */
 function libelleDuChoix(axe: "forme" | "mode", code: string, t: (k: MessageKey) => string) {
+  /*
+   * DÉFAUT PRÉEXISTANT, SIGNALÉ. La LISTE vient bien de la base
+   * (`formesDisponibles`) — R8 est tenue sur ce qui compte. Mais les libellés
+   * passent par cette table de quatre entrées écrite ici : une forme nouvelle
+   * au référentiel s'afficherait par son code brut. `FormeDisponible` ne
+   * porte pas de `libelle`, là où `RegimeDisponible` en porte un — c'est au
+   * contrat que ça se répare, pas dans cette route.
+   */
   const CLES: Record<string, MessageKey> = {
     "forme.physique": "fiche.forme.physique",
     "forme.morale": "fiche.forme.morale",
@@ -393,95 +688,160 @@ function libelleDuChoix(axe: "forme" | "mode", code: string, t: (k: MessageKey) 
   return cle ? t(cle) : code;
 }
 
-/** Un choix parmi ce que le référentiel porte — jamais une liste écrite ici. */
-function Choix({
+/**
+ * Un axe du référentiel, répondu par un choix parmi plusieurs.
+ *
+ * `.pan .chx` et non `.seg` : les options viennent de la base, leur nombre
+ * n'est pas connu à l'écriture, et `.chx` est en `flex-wrap:wrap` quand
+ * `.seg button` est en `flex:1`. Voir l'arbitrage n° 2 de l'en-tête.
+ *
+ * « Non renseigné » est la première pastille et non une absence : sans elle,
+ * une valeur posée ne se retirerait plus — le `<select>` qu'on remplace avait
+ * une option vide, le groupe de boutons doit avoir la sienne.
+ */
+function Axe({
   label,
   options,
   valeur,
   onChange,
-  lu,
   vide,
+  marque,
 }: {
   label: string;
   options: ReadonlyArray<{ code: string; libelle: string }>;
   valeur: string;
   onChange: (v: string) => void;
-  lu?: boolean;
   vide: string;
+  marque?: string | undefined;
 }) {
   return (
-    <label className="block">
-      <span className="flex items-baseline gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </span>
-        {lu ? <MarqueLue /> : null}
-      </span>
-      <select
-        value={valeur}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 h-10 w-full border border-border bg-transparent px-2 text-[14px] focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <option value="">{vide}</option>
+    <>
+      {/*
+       * `.pan p` est le seul porteur de texte du panneau : le `<b>` distingue
+       * la question de l'aide, qui est un `.pan p` elle aussi. La famille n'a
+       * pas de primitive d'étiquette — c'est le troisième trou nommé.
+       */}
+      <p>
+        <b>{label}</b>
+        {marque ? ` · ${marque}` : ""}
+      </p>
+      <div className="chx" role="group" aria-label={label}>
+        <button
+          type="button"
+          className={valeur === "" ? "on" : undefined}
+          aria-pressed={valeur === ""}
+          onClick={() => onChange("")}
+        >
+          {vide}
+        </button>
         {options.map((o) => (
-          <option key={o.code} value={o.code}>
+          <button
+            key={o.code}
+            type="button"
+            className={valeur === o.code ? "on" : undefined}
+            aria-pressed={valeur === o.code}
+            onClick={() => onChange(o.code)}
+          >
             {o.libelle}
-          </option>
+          </button>
         ))}
-      </select>
-    </label>
+      </div>
+    </>
   );
 }
 
-function Saisie({
+/** Un champ libre ou une date. `.pan .champ`, la seule primitive de champ. */
+function Champ({
   label,
   valeur,
   onChange,
   type,
   aide,
-  lu,
+  marque,
 }: {
   label: string;
   valeur: string;
   onChange: (v: string) => void;
-  type?: string;
-  aide?: string;
-  lu?: boolean;
+  type?: string | undefined;
+  aide?: string | undefined;
+  marque?: string | undefined;
 }) {
+  const id = useId();
   return (
-    <label className="block">
-      <span className="flex items-baseline gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {label}
-        </span>
-        {lu ? <MarqueLue /> : null}
-      </span>
+    <>
+      <p id={`${id}-l`}>
+        <b>{label}</b>
+        {marque ? ` · ${marque}` : ""}
+      </p>
+      {/*
+       * `aria-labelledby` et non `<label>` : `.pan p` est un paragraphe, et un
+       * `<p>` dans un `<label>` n'est pas du contenu phrasé — ce serait du
+       * balisage invalide. L'étiquette reste donc accessible sans sortir de la
+       * primitive.
+       */}
       <input
+        id={id}
+        aria-labelledby={`${id}-l`}
+        className="champ"
+        type={type ?? "text"}
         value={valeur}
         onChange={(e) => onChange(e.target.value)}
-        type={type ?? "text"}
-        className={cn(
-          "mt-1 h-10 w-full border border-border bg-transparent px-2 text-[14px]",
-          "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-        )}
       />
-      {aide ? <span className="mt-0.5 block text-[11px] text-muted-foreground">{aide}</span> : null}
-    </label>
+      {aide ? <p>{aide}</p> : null}
+    </>
   );
 }
 
 /**
- * Ce que la carte a donné.
- *
- * La marque n'est pas décorative : elle dit à l'expert ce qu'il relit et ce
- * qu'il a saisi lui-même. Sans elle, une valeur lue de travers se confondrait
- * avec une valeur qu'il a validée.
+ * Le fondement légal du régime choisi — `.pan .fixe`, la mention qui ne bouge
+ * pas. Rien si la base n'en donne pas : un fondement inventé sur un régime
+ * serait pire qu'un fondement absent.
  */
-function MarqueLue() {
-  const { t } = useI18n();
+function Fondement({ texte }: { texte: string | null }) {
+  if (!texte) return null;
   return (
-    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-marigold">
-      {t("fiche.marqueLue")}
-    </span>
+    <div className="fixe">
+      <IconeCadenas />
+      {texte}
+    </div>
+  );
+}
+
+/* ── les icônes, relevées sur les vues rendues de la maquette ──────────────
+ *
+ * Elles ne sont posées QUE là où la feuille les dimensionne : `.top .bk svg`,
+ * `.top .ic svg`, `.mur svg`, `.regle svg`, `.pan .fixe svg`. Une icône
+ * ailleurs serait une icône sans taille.
+ */
+
+/** La carte d'identification fiscale — relevée sur `arr`. */
+function IconeCarte() {
+  return (
+    <svg viewBox="0 0 24 24" className="g">
+      <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+      <circle cx="8.5" cy="11" r="2.2" />
+      <path d="M5 16a3.6 3.6 0 0 1 7 0M14.5 10h4M14.5 13.5h4" />
+    </svg>
+  );
+}
+
+/** Le cercle d'information — relevé sur `rub` et `arr`. */
+function IconeInfo() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5.5M12 7.8v.3" />
+    </svg>
+  );
+}
+
+/** Le cadenas — relevé sur `rub` (`.rb .ref`) et sur la barre du bas. */
+function IconeCadenas() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <rect x="5" y="10.5" width="14" height="10" rx="1.5" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+      <path d="M12 14.5v2.5" />
+    </svg>
   );
 }

@@ -7,6 +7,10 @@
 !apps/web/.env.coque-*
 
 # Dépendances et sorties de build
+# Le cache incrémental de TypeScript : une sortie de build, par machine. Deux
+# d'entre eux sont apparus non suivis le 18 octobre, au moment où plusieurs
+# agents typaient l'arbre en parallèle ; un « git add -A » les aurait commités.
+*.tsbuildinfo
 node_modules/
 dist/
 dist-ssr/

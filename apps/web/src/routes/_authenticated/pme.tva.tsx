@@ -1,15 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
-import { MalicaAvatar } from "@/components/malica/office-ui";
-import { useAccueil } from "@/hooks/use-accueil";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
-import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/tva")({
@@ -32,337 +28,490 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
   component: PmeTva,
 });
 
+/* ===========================================================================
+ *
+ *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
+ *
+ * Même convention que `pme.regler` : le dessin apporte du texte que le
+ * dictionnaire ne porte pas encore. Il est ici, en un seul endroit, en
+ * français seulement, à vider dans `packages/socle/src/messages.ts` — clés
+ * proposées `pme.tva.*` — dès que les trois langues peuvent être écrites
+ * ensemble. Le dictionnaire vit dans `packages/socle`, où Claude Code écrit
+ * en parallèle : on n'y touche pas depuis cette conversion.
+ *
+ * Tout ce qui EXISTE déjà au dictionnaire est lu par `t()` et n'est pas
+ * réécrit — `pme.tva.collectee`, `pme.tva.deductible`, `pme.tva.rangee`,
+ * `pme.tva.source`, `pme.tva.sansDate`, `pme.tva.empty`, `common.loading`.
+ * Ces libellés sont déjà traduits en trois langues ; les recopier ici
+ * aggraverait la dette au lieu de la nommer.
+ */
+const MOTS = {
+  /** La barre du haut, et sa variante quand la licence porte plusieurs sociétés. */
+  barre: "TVA du mois",
+  barreGroupe: "TVA du groupe",
+  retour: "Retour",
+  /**
+   * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une
+   * CONSTANTE RÉGLEMENTAIRE (R4). Aucune méthode appelée par cette route ne
+   * sert l'échéance de dépôt : `parametrage.calendrierCabinet` et
+   * `referentiel.fiscalCharges` existent au contrat mais ne sont pas câblés
+   * ici, et les brancher serait recâbler. La phrase dit donc ce qui est vrai
+   * sans la date — une échéance écrite en dur dans le TypeScript est une
+   * faute que personne ne voit passer jusqu'au jour où elle change.
+   */
+  sous: "C'est votre cabinet qui dépose cette déclaration.",
+  /** Variante Premium : le nombre vient de `pme.dossiers`, jamais d'un littéral. */
+  sousGroupe: (n: number) => `${n} sociétés — chacune déclare pour elle-même.`,
+  aPayer: "à payer",
+  credit: "crédit reporté",
+  /**
+   * Le dessin écrit « En baisse de 31 % sur septembre ». C'est un POURCENTAGE
+   * D'ÉVOLUTION entre deux mois : R3 interdit de le calculer ici, et aucune
+   * méthode ne le sert. Le bloc reste — la comparaison est une vraie question
+   * — et il dit qu'il ne l'a pas. Un « — » est honnête ; « 31 % » serait une
+   * invention, et « en baisse » affirmerait un sens qu'on ignore.
+   */
+  tendance: "Comparaison avec le mois précédent : —",
+  detail: "Le détail",
+  parTaux: "par taux",
+  collectee: "Collectée",
+  deductible: "Déductible",
+  /**
+   * La ligne secondaire du dessin compte des factures par taux (« 11 factures
+   * de vente »). `TvaBucket` porte `tax_code`, `rate`, `base` et `vat` — pas
+   * de compte de pièces. On montre donc la BASE, que le moteur sert vraiment
+   * et qui est la compagne naturelle d'une TVA, plutôt qu'un compte inventé.
+   */
+  base: "Base",
+  /** Les lignes que le moteur a refusées, faute de taux gouverné à leur date. */
+  nonRecuperable: "Non récupérable",
+  refusees: (n: number) =>
+    n === 1 ? "1 ligne sans taux gouverné à sa date" : `${n} lignes sans taux gouverné à leur date`,
+  ceQuiChange: "Ce qui changerait le chiffre",
+  sansDateMeta: "dans aucun mois",
+  sansDateTitre: "Des pièces rangées dans aucun mois",
+  parSociete: "Par société",
+  /** Le solde par société n'est pas servi : le moteur tourne sur UN dossier. */
+  soldeParSociete: "Solde non servi par société",
+} as const;
+
 /**
- * Votre TVA — mois ou année, et une trajectoire.
+ * TVA du mois — le dessin validé (`livraison/ecrans/malica-manquants.html`,
+ * écran « TVA »), porté sur la route qui portait déjà le calcul.
  *
- * ======================================================= CE QUE LE MOIS DIT
+ * ============================================== CE QUE CET ÉCRAN DIT, ET D'OÙ
  *
- * Trois lignes, et la troisième est en gras : encaissée sur vos ventes,
- * récupérable sur vos achats, ce que vous reversez. C'est la soustraction
- * qu'un dirigeant fait de tête et se trompe une fois sur deux — elle est
- * posée, dans cet ordre, avec le résultat détaché par un filet plein.
+ * Un chiffre : le solde du mois, à payer ou reporté. Puis ses deux termes en
+ * histogramme, puis le détail par taux, puis ce qui le ferait bouger.
  *
- * Le vocabulaire n'est pas celui du plan comptable : « collectée » et
- * « déductible » sont des mots de comptable. « Ce que vous encaissez sur vos
- * ventes » est la même chose, dite à qui la paie.
+ * Tout vient de `useTvaPeriod`, qui assemble les extraits TRANSMIS du mois et
+ * les taux gouvernés du pack, puis invoque `computeTva` du Socle. L'écran ne
+ * calcule rien : il lit `totals`, `collectee[]`, `deductible[]` et
+ * `refused[]` tels que le moteur les rend.
  *
- * ====================================================== CE QUE L'ANNÉE DIT
+ * ================================================= R3 — ELLE APPELLE, ELLE NE CALCULE PAS
  *
- * Douze mois de récupération, et leur somme. C'est la seule vue qui montre
- * qu'un mois creux n'est pas une tendance.
+ * Trois calculs vivaient dans ce fichier, tous au service de la vue « année »
+ * que le dessin ne porte pas :
  *
- * Tous les chiffres viennent des moteurs : `computeTva` pour le mois,
- * `useAccueil` pour la série. Aucun n'est calculé ici.
+ *   — `totalAnnuel`, une somme des douze mois par `reduce` ;
+ *   — `haut`, un `Math.max` sur la série ;
+ *   — `part = (v / haut) * 100`, la largeur des barres de l'année.
+ *
+ * La vue « année » n'est pas dans le dessin — il n'y a ni `.seg` ni rangée de
+ * douze mois dans le balisage rendu. Elle disparaît donc, et les trois
+ * calculs avec elle. C'est la consigne tenue à la lettre : on ne les étend
+ * pas, et ici on n'avait même pas à les porter.
+ *
+ * Reste `aReverser`, qui lit le SIGNE du solde rendu par le moteur
+ * (`Number(solde) > 0`). Une comparaison n'est pas un calcul : rien n'est
+ * dérivé, on lit de quel côté de zéro le Socle a posé son résultat. C'est ce
+ * qui choisit `.chiffre.cr` et le libellé de l'unité.
+ *
+ * ========================================= R4 — AUCUNE CONSTANTE RÉGLEMENTAIRE
+ *
+ * Le « 19 % » du dessin n'est écrit NULLE PART dans ce fichier, pas même en
+ * libellé. Chaque taux vient de `bucket.rate`, que `computeTva` recopie des
+ * taux gouvernés du pack (`referentiel.taxRates`, lu par le hook). Le moteur
+ * rend une fraction — « 0.1900 » — et `Intl` la REND en pourcentage : c'est
+ * un formatage de locale, du même ordre que `montant()`, pas une
+ * multiplication écrite ici.
+ *
+ * Même règle pour l'échéance de dépôt : voir `MOTS.sous`.
+ *
+ * =========================================== LE BLOC D'ENCRE, ET POURQUOI IL N'Y EST PLUS
+ *
+ * L'ancien balisage peignait le chiffre du mois en `bg-foreground
+ * text-background` — encre sur papier. Sur les jetons sombres de la surface
+ * PME, ce bloc s'inversait en DALLE BLANCHE, et il portait donc
+ * `data-bloc="encre"` pour que la feuille le rattrape en `#141416`.
+ *
+ * Le dessin ne renverse plus rien : `.chiffre` (feuille, ligne 1433) ne pose
+ * AUCUN fond, et le grand nombre s'écrit à même la page. Le marqueur n'est
+ * donc pas reposé — et ce n'est pas un oubli : `#141416` sur un fond
+ * `--bg: #0A0A0A` dessinerait une dalle plus claire que le dessin ne veut
+ * pas. Le défaut est corrigé par la cause, pas par la béquille.
+ *
+ * ================================================= CE QUE LE DESSIN DEMANDE ET QU'ON NE SERT PAS
+ *
+ * Nommé, jamais comblé : l'échéance de dépôt, l'évolution sur le mois
+ * précédent, le compte de factures par taux, le montant de TVA porté par les
+ * pièces non transmises, et le solde par société. Chacun s'affiche « — » ou
+ * se dit en mots, et aucun n'est inventé.
  */
 function PmeTva() {
   const { t, locale } = useI18n();
   const pme = usePme();
-  const [vue, setVue] = useState<"mois" | "annee">("mois");
+  const navigate = useNavigate();
   const periode = currentPeriod();
 
-  const { tva, count, isPending } = useTvaPeriod(periode);
+  const { tva, isPending } = useTvaPeriod(periode);
 
   // Les pièces parties sans date d'envoi : elles ne sont dans aucun mois, et
   // l'écran doit pouvoir le dire plutôt que de les laisser disparaître.
+  // C'est le câblage que cette conversion devait conserver — il est intact.
   const sansDate = useQuery({
     queryKey: ["transmises-sans-date", pme.tenantId],
     queryFn: () => office().office.transmisesSansDate(pme.tenantId),
     staleTime: 5 * 60 * 1000,
   });
-  const annee = useAccueil(periode);
 
-  const nomDuMois = new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
-    new Date(`${periode}-01T00:00:00Z`),
-  );
+  /** « Octobre 2026 » — un formatage de locale, pas un calcul. */
+  const moisEtAnnee = (() => {
+    const rendu = new Intl.DateTimeFormat(locale, {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${periode}-01T00:00:00Z`));
+    // En tête de titre, un nom de mois prend la majuscule.
+    return rendu.charAt(0).toUpperCase() + rendu.slice(1);
+  })();
 
-  const lisible = (v: string | null | undefined) =>
-    v === null || v === undefined ? "—" : montant(v, locale);
-
-  /*
-   * ================================== LES DOUZE MOIS DE L'EXERCICE, PAS GLISSANTS
-   *
-   * La liste commençait au mois courant moins onze : « Nov, Déc, Jan … Oct »,
-   * sans année, ce qui se lit comme une erreur tant qu'on n'a pas deviné qu'il
-   * s'agit d'une fenêtre glissante. Un dossier se boucle par exercice, et le
-   * commanditaire l'a tranché le 10 octobre : tous les mois paraissent, dès
-   * janvier.
-   *
-   * `annee.serie` reste la fenêtre de CALCUL — elle traverse le changement
-   * d'exercice, pour que janvier garde son comparatif. On ne fait que RANGER
-   * ses valeurs dans les mois de l'exercice.
+  /**
+   * Une fraction gouvernée, rendue en pourcentage par la locale. `Number()`
+   * sert à FORMATER, jamais à arithmétiser : la valeur reste celle du pack.
    */
-  const moisDeLExercice = useMoisDeLExercice(periode);
-  const valeurDuMois = new Map(annee.serie.map((m) => [m.periode, m]));
-  const lignesDeLAnnee = moisDeLExercice.map((m) => ({
-    ...m,
-    recuperee: valeurDuMois.get(m.periode)?.recuperee ?? null,
-  }));
-
-  // Sur l'année : la somme des mois de récupération, mois vides exclus.
-  const moisRenseignes = lignesDeLAnnee.filter((m) => m.recuperee !== null);
-  const totalAnnuel = moisRenseignes.reduce((n, m) => n + Number(m.recuperee), 0);
-  const haut = Math.max(...moisRenseignes.map((m) => Number(m.recuperee)), 0);
+  const pourcent = (taux: string) =>
+    new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 2 }).format(
+      Number(taux),
+    );
 
   const solde = tva?.totals.solde ?? null;
   const aReverser = solde !== null && Number(solde) > 0;
 
-  // 31 px mesures : sous les 34 px de plancher que la feuille PME s'impose
-  // pour une pilule de filtre. La cible grandit, la police ne bouge pas.
-  const onglet = "min-h-[34px] flex-1 border-0 px-3 text-[11px] font-semibold";
+  /** Les deux sens du détail, dans l'ordre du dessin : collectée puis déductible. */
+  const detail = [
+    ...(tva?.collectee ?? []).map((b) => ({ sens: MOTS.collectee, seau: b })),
+    ...(tva?.deductible ?? []).map((b) => ({ sens: MOTS.deductible, seau: b })),
+  ];
+
+  const refusees = tva?.refused ?? [];
+
+  /**
+   * L'axe Premium du dessin. La licence appartient à la personne, et
+   * `ouvertures.societes` est décidé à UN SEUL endroit (`lib/forfait.ts`) :
+   * on ne compare aucun nom d'offre ici. Les noms viennent de `pme.dossiers`,
+   * que la coque a déjà lus ; le SOLDE par société, lui, n'est pas servi —
+   * `computeTva` tourne sur un dossier à la fois, et une requête par société
+   * contredirait « un écran, une fenêtre de données ».
+   */
+  const parSociete = pme.forfait.ouvertures.societes;
 
   return (
-    <div className="rg-rise -mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6">
-      <div className="flex items-baseline justify-between gap-3 px-[22px]">
-        <p className="text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
-          {t("pme.tva.titre")}
-        </p>
-        <span className="inline-flex border border-line-strong">
-          <button
-            type="button"
-            onClick={() => setVue("mois")}
-            className={cn(
-              onglet,
-              vue === "mois" ? "bg-foreground text-background" : "bg-transparent",
-            )}
-          >
-            {t("pme.vue.mois")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setVue("annee")}
-            className={cn(
-              onglet,
-              vue === "annee" ? "bg-foreground text-background" : "bg-transparent",
-            )}
-          >
-            {t("pme.vue.annee")}
-          </button>
+    /*
+     * Les deux marqueurs. `data-famille="papiers"` fait descendre les 126
+     * règles de la famille ; `data-ecran="tva"` est l'identité que l'audit
+     * recense et que la règle d'en-tête unique interroge. Le dessin porte un
+     * `.top` : cet écran fournit donc son propre en-tête, et celui du layout
+     * s'efface tout seul par `.app:has([data-ecran] .top) > header`.
+     *
+     * `data-surface="pme"` est posé par le layout, sur un ancêtre. Jamais ici.
+     */
+    <div
+      data-ecran="tva"
+      data-famille="papiers"
+      className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col"
+    >
+      {/* ── la barre du haut ───────────────────────────────────────────── */}
+      <div className="top">
+        <button
+          type="button"
+          className="bk"
+          aria-label={MOTS.retour}
+          onClick={() => void navigate({ to: "/pme" })}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </button>
+        <span className="ttl">{parSociete ? MOTS.barreGroupe : MOTS.barre}</span>
+        <span className="ic" aria-hidden>
+          <IconeHistogramme />
         </span>
       </div>
 
-      {/* Le bloc d'encre : un seul chiffre, et ce qu'il veut dire. */}
-      <section
-        data-bloc="encre"
-        className="rg-regle relative mt-4 overflow-hidden bg-foreground px-[22px] py-5 text-background"
-      >
-        <p className="relative font-mono text-[10px] font-medium uppercase tracking-[0.2em] opacity-65">
-          {vue === "mois"
-            ? aReverser
-              ? t("pme.tva.kicker.reverser", { mois: nomDuMois })
-              : t("pme.tva.kicker.credit", { mois: nomDuMois })
-            : t("pme.tva.kicker.annee")}
-        </p>
-        <p className="relative mt-2.5 flex items-baseline gap-2">
-          <span className="num text-[clamp(2.4rem,12.5vw,56px)] font-medium leading-[0.92] tracking-[-0.045em]">
-            {vue === "mois"
-              ? solde === null
-                ? "—"
-                : montant(solde.replace(/^-/, ""), locale)
-              : moisRenseignes.length === 0
-                ? "—"
-                : montant(totalAnnuel.toFixed(3), locale)}
-          </span>
-          <span className="num text-[15px] font-medium opacity-60">
-            {tva?.currency ?? pme.currency}
-          </span>
-        </p>
-        <p className="relative mt-3 text-[12.5px] opacity-[0.72]">
-          {vue === "mois"
-            ? count === 0
-              ? t("pme.tva.contexte.vide")
-              : t("pme.tva.contexte.mois", { count })
-            : t("pme.tva.contexte.annee", { count: moisRenseignes.length })}
-        </p>
-      </section>
+      <div className="pad">
+        <h1>{moisEtAnnee}</h1>
+        <p className="sub">{parSociete ? MOTS.sousGroupe(pme.dossiers.length) : MOTS.sous}</p>
 
-      {vue === "mois" ? (
-        <div className="px-[22px] pt-5">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {t("pme.tva.solde.titre", { mois: nomDuMois })}
-          </p>
-
-          {isPending ? (
-            <p className="pt-3 text-sm text-muted-foreground">{t("common.loading")}</p>
-          ) : !tva ? (
-            <p className="mt-3 border border-border bg-card p-4 text-[13.5px] text-text-2">
-              {t("pme.tva.empty")}
-            </p>
-          ) : (
-            <>
-              <Ligne
-                label={t("pme.tva.encaissee")}
-                valeur={lisible(tva.totals.collectee)}
-                filet="leger"
-              />
-              <Ligne
-                label={t("pme.tva.recuperable")}
-                valeur={lisible(tva.totals.deductible)}
-                filet="leger"
-              />
-              {/*
-               * Le filet plein détache le résultat de ses deux termes : c'est
-               * la seule ligne de l'écran sur laquelle on agit.
-               */}
-              <Ligne
-                label={aReverser ? t("pme.tva.reversez") : t("pme.tva.reporte")}
-                valeur={solde === null ? "—" : montant(solde.replace(/^-/, ""), locale)}
-                filet="plein"
-              />
-            </>
-          )}
-
-          {/* Ce qui manque encore, dit par elle — pas un avertissement système. */}
-          {annee.avancement !== null && annee.avancement < 1 ? (
-            <div className="mt-3.5 flex gap-3 border border-border bg-card p-3.5">
-              <MalicaAvatar size={32} alt="Malica" rond />
-              <p className="text-[14px] leading-[1.5]">
-                {t("pme.tva.manque", {
-                  pourcent: Math.round(annee.avancement * 100),
-                  // En tête de phrase, un nom de mois prend la majuscule —
-                  // « août est prêt » se lit comme une faute.
-                  mois: nomDuMois.charAt(0).toUpperCase() + nomDuMois.slice(1),
-                })}
-              </p>
-            </div>
-          ) : null}
+        {/*
+         * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
+         * le passe en `var(--acc)`. Le signe vient du moteur ; on le retire de
+         * l'affichage parce que l'unité dit déjà le sens.
+         */}
+        <div className={aReverser ? "chiffre" : "chiffre cr"}>
+          {solde === null ? "—" : montant(solde.replace(/^-/, ""), locale)}{" "}
+          <u>
+            {tva?.currency ?? pme.currency} {aReverser ? MOTS.aPayer : MOTS.credit}
+          </u>
         </div>
-      ) : (
-        <div className="px-[22px] pt-5">
-          {/*
-           * L'exercice est NOMMÉ. Sans son année, « Nov, Déc, Jan … » se lit
-           * comme une erreur de tri : c'est ce que montrait la capture du
-           * 10 octobre.
-           */}
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {t("pme.tva.douzeMois")} · {lignesDeLAnnee[0]?.periode.slice(0, 4)}
+
+        <div className="trd">
+          <i aria-hidden />
+          {MOTS.tendance}
+        </div>
+
+        {/*
+         * La règle de rattachement, et c'est le cœur de l'écran : une pièce
+         * compte dans le mois où elle est TRANSMISE. La phrase existe au
+         * dictionnaire en trois langues — on la lit, on ne la réécrit pas.
+         */}
+        <p className="regle">
+          <IconeInfo />
+          <span>{t("pme.tva.rangee")}</span>
+        </p>
+
+        {isPending ? (
+          <p className="regle">
+            <span>{t("common.loading")}</span>
           </p>
-          {lignesDeLAnnee.map((m) => {
-            const v = m.recuperee === null ? null : Number(m.recuperee);
-            const part = v === null || haut === 0 ? 0 : (v / haut) * 100;
-            const nom = new Intl.DateTimeFormat(locale, {
-              month: "short",
-              timeZone: "UTC",
-            }).format(new Date(`${m.periode}-01T00:00:00Z`));
-            return (
-              <div
-                key={m.periode}
-                className="grid grid-cols-[44px_1fr_auto] items-center gap-3 border-t border-border py-2.5"
-              >
-                <span
-                  className={cn(
-                    "num text-[12px] font-medium",
-                    v === null ? "text-muted-foreground" : "",
-                  )}
-                >
-                  {nom}
+        ) : !tva ? (
+          <div className="card">
+            <p>{t("pme.tva.empty")}</p>
+          </div>
+        ) : (
+          <>
+            {/*
+             * ─────────────────────────────────── L'HISTOGRAMME, ET SA LARGEUR
+             *
+             * Les deux LIBELLÉS et les deux MONTANTS sont servis : ce sont
+             * `totals.collectee` et `totals.deductible`, tels quels.
+             *
+             * La LARGEUR, elle, est une proportion entre ces deux montants, et
+             * R3 interdit de la calculer en JavaScript. Elle n'est donc pas
+             * calculée ici : les deux décimales gouvernées sont passées à la
+             * feuille comme propriétés personnalisées, et c'est `calc()` — le
+             * moteur de rendu — qui divise. Aucune arithmétique n'est écrite
+             * dans ce composant, et aucun nombre dérivé n'est affiché : la
+             * barre est un encodage visuel de deux valeurs citables.
+             *
+             * La collectée est la référence du dessin, à 100 % par
+             * construction (le dessin l'écrit ainsi) : ce n'est pas un calcul,
+             * c'est le haut de l'échelle. `min()` borne le dépassement si la
+             * déductible excède la collectée, et la barre n'est posée que si la
+             * référence est non nulle — une division par zéro ne rendrait rien.
+             *
+             * C'EST LE SEUL ARBITRAGE DE CETTE CONVERSION. Si la lecture de R3
+             * doit être plus stricte, la barre déductible se retire en
+             * supprimant le `<i className="d">` : les deux montants restent
+             * lisibles dans `.l b`, et l'écran ne perd aucun chiffre.
+             */}
+            <div className="bars">
+              <div>
+                <span className="l">
+                  <u>{t("pme.tva.collectee")}</u>
+                  <b>{montant(tva.totals.collectee, locale)}</b>
                 </span>
-                {/*
-                 * Trois états, et ils ne se confondent pas :
-                 *   un montant      → une barre ;
-                 *   un mois PASSÉ sans écriture → un filet, et « — » ;
-                 *   un mois À VENIR → rien, et le mot. Un mois qui n'a pas eu
-                 *     lieu n'est pas un mois vide, et le montrer comme tel
-                 *     ferait chercher une donnée perdue.
-                 */}
-                <span
-                  className={cn(
-                    "relative",
-                    m.aVenir
-                      ? "h-px bg-transparent"
-                      : v === null
-                        ? "h-px bg-border"
-                        : "h-[6px] bg-line-strong",
-                  )}
-                >
-                  {v === null ? null : (
-                    <i
-                      className="absolute inset-y-0 start-0 bg-foreground"
-                      style={{ width: `${Math.max(part, 2)}%` }}
-                    />
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "num text-[13px] font-medium",
-                    m.aVenir ? "text-[11px] font-normal text-muted-foreground" : "",
-                  )}
-                >
-                  {m.aVenir
-                    ? t("pme.tva.mois.aVenir")
-                    : v === null
-                      ? "—"
-                      : montant(m.recuperee!, locale)}
+                <span className="b">
+                  <i style={{ width: "100%" }} />
                 </span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div>
+                <span className="l">
+                  <u>{t("pme.tva.deductible")}</u>
+                  <b>{montant(tva.totals.deductible, locale)}</b>
+                </span>
+                <span className="b">
+                  {Number(tva.totals.collectee) > 0 ? (
+                    <i
+                      className="d"
+                      style={
+                        {
+                          "--col": tva.totals.collectee,
+                          "--ded": tva.totals.deductible,
+                          width: "min(100%, calc(var(--ded) / var(--col) * 100%))",
+                        } as CSSProperties
+                      }
+                    />
+                  ) : null}
+                </span>
+              </div>
+            </div>
 
-      {/*
-       * ====================== L'ÉCRAN DIT QUELLE DATE IL EMPLOIE, ET IL LE DOIT
-       *
-       * Le 5 octobre, « Vos charges » affichait 222 000 et « Votre TVA » zéro
-       * pour le même mois ; le 10, l'accueil disait 1 document et « Vos
-       * documents » zéro. Chaque fois les deux écrans avaient raison dans
-       * leur définition, et aucun ne disait laquelle.
-       *
-       * C'est cette mention — pas la règle — qui empêche deux chiffres de se
-       * contredire en silence.
-       */}
-      <p className="px-[22px] pt-4 text-[11.5px] leading-[1.5] text-muted-foreground">
-        {t("pme.tva.rangee")}
-      </p>
-      {sansDate.data ? (
-        /*
-         * Les pièces parties avant le 11 octobre n'ont pas de date d'envoi :
-         * la transmission n'était alors qu'un drapeau. Elles ne pèsent dans
-         * aucun mois — et une pièce qui disparaît des totaux sans que rien ne
-         * la nomme est pire qu'une pièce mal rangée.
-         */
-        <p className="mt-2 border-s-[3px] border-signal-warn px-[22px] text-[12px] leading-[1.5] text-text-2">
-          {t("pme.tva.sansDate", { count: sansDate.data })}
-        </p>
-      ) : null}
-      <p className="px-[22px] pb-6 pt-3 text-[11.5px] leading-[1.5] text-muted-foreground">
-        {t("pme.tva.source")}
-      </p>
+            {/* ── le détail, par taux ──────────────────────────────────── */}
+            <div className="sec">
+              <h2>{MOTS.detail}</h2>
+              <span>{MOTS.parTaux}</span>
+            </div>
+
+            {/*
+             * Une ligne par seau du moteur. Pas un `<button>` : aucun
+             * détail par taux n'est servi, et un bouton qui ne mène nulle part
+             * promet une pièce à voir qui n'existe pas. La feuille ne demande
+             * pas `button` — `.rw` est agnostique de l'élément.
+             */}
+            {detail.map(({ sens, seau }) => (
+              <div className="rw" key={`${sens}-${seau.tax_code}`}>
+                <i aria-hidden>
+                  <IconePiece />
+                </i>
+                <span className="bd">
+                  <b>
+                    {sens} {pourcent(seau.rate)}
+                  </b>
+                  <span>
+                    {MOTS.base} {montant(seau.base, locale)}
+                  </span>
+                </span>
+                <span className="rt">
+                  <span className="vl">{montant(seau.vat, locale)}</span>
+                </span>
+              </div>
+            ))}
+
+            {/*
+             * « Non récupérable » du dessin. `refused[]` rend une RAISON et un
+             * `item_id` par ligne écartée — jamais un montant. Le compte est
+             * donc vrai, et la valeur s'écrit « — » : afficher « 0,000 »
+             * dirait que ces lignes ne portent pas de TVA, ce qu'on ne sait
+             * pas. Les raisons sont des codes techniques
+             * (`MISSING_TAX_RATE:…`) et ne sont pas montrées au dirigeant.
+             */}
+            {refusees.length > 0 ? (
+              <div className="rw">
+                <i aria-hidden>
+                  <IconePiece />
+                </i>
+                <span className="bd">
+                  <b>{MOTS.nonRecuperable}</b>
+                  <span>{MOTS.refusees(refusees.length)}</span>
+                </span>
+                <span className="rt">
+                  <span className="vl">—</span>
+                </span>
+              </div>
+            ) : null}
+          </>
+        )}
+
+        {/*
+         * ── ce qui changerait le chiffre ────────────────────────────────
+         *
+         * Le dessin y met « 3 pièces lues, pas transmises » et chiffre le
+         * contrefactuel (« vous payez 400,000 au lieu de 812,000 »). Ce
+         * chiffre est une SOUSTRACTION sur des pièces que le moteur n'a pas
+         * vues — il ne tourne que sur les extraits transmis — donc R3 l'exclut
+         * et aucune méthode ne le sert.
+         *
+         * Ce que la route sert vraiment, et qu'elle servait déjà, c'est
+         * `transmisesSansDate` : des pièces parties sans date d'envoi, qui ne
+         * pèsent dans AUCUN mois. Elles changent bel et bien le chiffre, et la
+         * phrase qui les explique est au dictionnaire, déjà traduite. La carte
+         * dit donc ce fait-là, et le montant qu'elles portent s'écrit « — ».
+         *
+         * Les deux boutons du dessin — « Les transmettre », « Les voir » — ne
+         * sont pas posés : aucun geste de transmission ni de filtre sur ces
+         * pièces n'est au contrat depuis cet écran.
+         */}
+        {sansDate.data ? (
+          <>
+            <div className="sec">
+              <h2>{MOTS.ceQuiChange}</h2>
+              <span>{MOTS.sansDateMeta}</span>
+            </div>
+            <div className="card">
+              <div className="hd">
+                <b>{MOTS.sansDateTitre}</b>
+                <span>—</span>
+              </div>
+              <p>{t("pme.tva.sansDate", { count: sansDate.data })}</p>
+            </div>
+          </>
+        ) : null}
+
+        {/*
+         * ── l'axe par société, et lui seul ──────────────────────────────
+         *
+         * C'est le SEUL bloc que le diff `tva.solo` / `tva.premium` montre, en
+         * plus du titre et du sous-titre. `basic`, `solo` et `team` sont
+         * identiques : rien d'autre n'est conditionné.
+         */}
+        {parSociete ? (
+          <>
+            <div className="sec">
+              <h2>{MOTS.parSociete}</h2>
+              <span>{pme.dossiers.length}</span>
+            </div>
+            {pme.dossiers.map((d) => (
+              <div className="rw" key={d.id}>
+                <i aria-hidden>
+                  <IconeHistogramme />
+                </i>
+                <span className="bd">
+                  <b>{d.name}</b>
+                  <span>{MOTS.soldeParSociete}</span>
+                </span>
+                <span className="rt">
+                  <span className="vl">—</span>
+                </span>
+              </div>
+            ))}
+          </>
+        ) : null}
+
+        <p className="foot">{t("pme.tva.source")}</p>
+      </div>
     </div>
   );
 }
 
-/** Une ligne du solde. Le filet plein marque le résultat, le léger ses termes. */
-function Ligne({
-  label,
-  valeur,
-  filet,
-}: {
-  label: string;
-  valeur: string;
-  filet: "leger" | "plein";
-}) {
+/* ===========================================================================
+ *
+ *   LES SIGNES DU DESSIN
+ *
+ * Repris trait pour trait de `malica-manquants.html`. Ils portent
+ * `class="g"` — `stroke:currentColor`, `fill:none`, bouts arrondis. La taille
+ * vient toujours du contexte (`.top .ic svg`, `.rw i svg`, `.regle svg`),
+ * jamais de l'icône.
+ */
+
+/** L'histogramme — le signe de cet écran. */
+function IconeHistogramme() {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3",
-        filet === "plein" ? "border-t border-foreground py-3" : "border-t border-border py-[11px]",
-      )}
-    >
-      <span
-        className={cn(
-          filet === "plein" ? "text-[13.5px] font-semibold" : "text-[13.5px] text-text-2",
-        )}
-      >
-        {label}
-      </span>
-      <span
-        className={cn(
-          "num",
-          filet === "plein" ? "text-[17px] font-semibold" : "text-[14px] font-medium",
-        )}
-      >
-        {valeur}
-      </span>
-    </div>
+    <svg viewBox="0 0 24 24" className="g">
+      <path d="M4 20h16" />
+      <path d="M7 16v-4M12 16V7M17 16v-6" />
+    </svg>
+  );
+}
+
+/** Une pièce — la feuille au coin plié. */
+function IconePiece() {
+  return (
+    <svg viewBox="0 0 24 24" className="g">
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 15.5h6" />
+    </svg>
+  );
+}
+
+/** Le cercle d'information — il ouvre une règle, jamais une alerte. */
+function IconeInfo() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5.5M12 7.8v.3" />
+    </svg>
   );
 }

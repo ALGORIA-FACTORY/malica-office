@@ -12,7 +12,13 @@ import { cn } from "@/lib/utils";
 
 export type Tone = "ok" | "warn" | "stop" | "neutral";
 
-export function SignalDot({ tone = "neutral" }: { tone?: Tone }) {
+/**
+ * Employé seulement ici — par `SignalLight` et par la poignée. knip l'a
+ * signalé comme export inutile, pas comme code mort : le retirer aurait
+ * cassé deux appels internes. On retire donc le mot `export`, pas la
+ * fonction.
+ */
+function SignalDot({ tone = "neutral" }: { tone?: Tone }) {
   const color =
     tone === "ok"
       ? "bg-signal-ok"
@@ -119,55 +125,6 @@ export function MarqueRg({ className, ...reste }: ComponentPropsWithoutRef<"span
         WebkitMaskRepeat: "no-repeat",
       }}
     />
-  );
-}
-
-/**
- * La parole de Malica — visage + salutation + phrase de cadrage.
- *
- * Si `onVisage` est fourni, son visage devient cliquable : c'est ainsi qu'on
- * lui adresse la parole. Sans lui, l'image reste une image, et rien ne laisse
- * croire à une porte qui n'existe pas.
- */
-export function MalicaVoice({
-  greeting,
-  sentence,
-  amount,
-  avatarAlt = "Malica",
-  onVisage,
-  visageLibelle,
-}: {
-  greeting: string;
-  sentence: string;
-  amount?: string | null;
-  avatarAlt?: string;
-  onVisage?: () => void;
-  visageLibelle?: string;
-}) {
-  return (
-    <section className="flex items-start gap-3">
-      {onVisage ? (
-        <button
-          type="button"
-          onClick={onVisage}
-          title={visageLibelle}
-          aria-label={visageLibelle}
-          className="shrink-0 transition-opacity hover:opacity-80"
-        >
-          <MalicaAvatar size={36} alt={avatarAlt} />
-        </button>
-      ) : (
-        <MalicaAvatar size={36} alt={avatarAlt} />
-      )}
-
-      <div className="min-w-0 flex-1">
-        <p className="text-[19px] font-medium leading-snug tracking-tight">{greeting}</p>
-        <p className="mt-1 text-[14px] leading-relaxed text-muted-foreground">
-          {sentence}
-          {amount ? <span className="num ms-1 font-medium text-foreground">{amount}</span> : null}
-        </p>
-      </div>
-    </section>
   );
 }
 

@@ -286,7 +286,6 @@
    * débordent une colonne de 320 px s'ils ne peuvent pas se couper. */
   overflow-wrap: break-word;
 }
-[data-surface="pme"] .app[data-prive="true"] { background: var(--prive) }
 [data-surface="pme"] .pad {
   padding-inline: max(var(--gout), env(safe-area-inset-left, 0px));
   padding-inline-end: max(var(--gout), env(safe-area-inset-right, 0px));
@@ -855,7 +854,7 @@
 [data-surface="pme"] [data-ecran="accueil"] .tile span{font-size:.6875rem;color:var(--t3);line-height:1.2}
 [data-surface="pme"] [data-ecran="accueil"] .tile .bdg{width:27px;height:27px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-family:var(--mono);font-size:.8125rem;font-weight:700}
 [data-surface="pme"] [data-ecran="accueil"] .tile .ar{width:19px;height:19px;color:var(--t3);flex:none}
-[data-surface="pme"] [data-ecran="accueil"] .sec:not(button){display:flex;align-items:center;justify-content:space-between;margin:1.875rem 0 .9375rem}
+[data-surface="pme"] [data-ecran="accueil"] .sec:not(button):not(a){display:flex;align-items:center;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="accueil"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
 /* 81x20 px mesures a 320 : c'est le lien vers les echeances, vers ce qu'on
  * doit payer. 34 px est le plancher que la feuille s'impose deja pour une
@@ -1088,7 +1087,7 @@
 [data-surface="pme"] [data-ecran="dossier"] .centr.calme p{color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .centr b{font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .centr button{margin-top:.75rem;border:0;border-radius:999px;background:var(--acc);color:var(--on-acc); padding:.5rem .875rem;font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer}
-[data-surface="pme"] [data-ecran="dossier"] .sec:not(button){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
+[data-surface="pme"] [data-ecran="dossier"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="dossier"] .sec h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="dossier"] .chain{position:relative;padding-inline-start:1.75rem}
 [data-surface="pme"] [data-ecran="dossier"] .chain:before{content:'';position:absolute;inset-inline-start:5px;top:12px;bottom:28px;width:1px; background:rgba(255,255,255,.1)}
@@ -1184,7 +1183,7 @@
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil button{flex:none;border:0;cursor:pointer;font-family:inherit;font-size:.8125rem;font-weight:500; padding:.4375rem .8125rem;border-radius:999px;background:var(--d2);color:var(--t2);white-space:nowrap; display:inline-flex;align-items:center;gap:.4375rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil button.on{background:var(--acc);color:var(--on-acc);font-weight:600}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil button em{font-style:normal;font-family:var(--mono);font-size:.6875rem;opacity:.6}
-[data-surface="pme"] [data-ecran="bibliotheque"] .sec:not(button){display:flex;align-items:baseline;justify-content:space-between;margin:1.625rem 0 .875rem}
+[data-surface="pme"] [data-ecran="bibliotheque"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.625rem 0 .875rem}
 [data-surface="pme"] [data-ecran="bibliotheque"] .sec h2{margin:0;font-size:1.25rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="bibliotheque"] .sec .ret{border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem; font-weight:600;cursor:pointer;padding:0}
 [data-surface="pme"] [data-ecran="bibliotheque"] .grp{width:100%;display:flex;align-items:center;gap:.8125rem;background:var(--d1);border:0; border-radius:18px;padding:.875rem .9375rem;margin-bottom:.5rem;cursor:pointer;font-family:inherit; text-align:start;color:var(--tx);transition:background .18s}
@@ -1260,7 +1259,7 @@
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
 [data-surface="pme"] [data-ecran="charges"] .mths button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
-[data-surface="pme"] [data-ecran="charges"] .sec:not(button){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
+[data-surface="pme"] [data-ecran="charges"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="charges"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="charges"] .cls{width:100%;display:grid;gap:.625rem;background:var(--d1);border:0;border-radius:18px; padding:.9375rem 1rem 1rem;margin-bottom:.5rem;cursor:pointer;font-family:inherit; text-align:start;color:var(--tx);transition:background .18s}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .cls:hover{background:var(--d2)}}
@@ -1430,7 +1429,20 @@
  * ================================================================= */
 
 [data-surface="pme"] [data-famille="papiers"] .app{width:100%;max-width:440px;min-height:100vh;background:var(--bg);padding-top:4.75rem; padding-bottom:1.5rem}
-[data-surface="pme"] [data-famille="papiers"] .app.prive{background:#0B0A0D}
+/* --- la teinte de l'espace prive -----------------------------------------
+ * Le dessin la pose en `.app.prive` : dans la maquette, `.app` EST la coque
+ * de la vue. Dans l'application, la coque est tenue par le layout `pme.tsx`,
+ * donc `.app` est un ANCETRE de l'ecran, jamais un descendant — et la regle
+  * portee telle quelle ne pouvait rien peindre. Mesure : un seul `.app` dans
+  * tout l'arbre, celui du layout.
+  *
+  * Elle descend donc comme la regle d'en-tete unique, par `:has()`, depuis le
+  * `.app` du layout vers l'ecran qu'il contient. La valeur n'est pas recopiee :
+  * elle vient du jeton `--prive`, declare une fois ligne 68.
+  *
+  * La variante `[data-prive="true"]` qui vivait ligne 289 est partie avec ce
+  * commit : releve, RIEN dans le depot ne posait cet attribut. R9. */
+[data-surface="pme"] .app:has([data-ecran="coffre"]) { background: var(--prive) }
 [data-surface="pme"] [data-famille="papiers"] .rev{position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(0,0,0,.9); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr); padding:.5rem .5rem .4375rem}
 [data-surface="pme"] [data-famille="papiers"] .rev .l{display:flex;gap:.375rem;justify-content:center;overflow-x:auto;scrollbar-width:none}
 [data-surface="pme"] [data-famille="papiers"] .rev .l::-webkit-scrollbar{display:none}
@@ -1452,7 +1464,7 @@
 [data-surface="pme"] [data-famille="papiers"] .trd.am i{background:var(--am)}
 [data-surface="pme"] [data-famille="papiers"] .regle{display:flex;align-items:flex-start;gap:.625rem;margin-top:1.125rem;font-size:.8125rem; line-height:1.5;color:var(--t2)}
 [data-surface="pme"] [data-famille="papiers"] .regle svg{width:15px;height:15px;flex:none;margin-top:.1875rem;color:var(--t3)}
-[data-surface="pme"] [data-famille="papiers"] .sec:not(button){display:flex;align-items:baseline;justify-content:space-between;margin:1.75rem 0 .75rem}
+[data-surface="pme"] [data-famille="papiers"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.75rem 0 .75rem}
 [data-surface="pme"] [data-famille="papiers"] .sec h2{margin:0;font-size:1.0625rem;font-weight:700;letter-spacing:-.03em}
 [data-surface="pme"] [data-famille="papiers"] .sec span{font-family:var(--mono);font-size:.625rem;color:var(--t3);letter-spacing:.14em; text-transform:uppercase}
 [data-surface="pme"] [data-famille="papiers"] .rw{width:100%;display:flex;align-items:center;gap:.8125rem;border:0;background:none; padding:.875rem 0;border-bottom:1px solid var(--hr);text-align:start;color:var(--tx);cursor:pointer}
@@ -1558,6 +1570,39 @@
 [data-surface="pme"] [data-famille="papiers"] .go{margin-top:1.75rem;display:grid;gap:.625rem}
 [data-surface="pme"] [data-famille="papiers"] .go .pr{border:0;border-radius:999px;background:var(--acc);color:var(--on-acc);padding:.875rem; font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer}
 [data-surface="pme"] [data-famille="papiers"] .go .sc2{border:0;background:none;color:var(--t2);font-size:.875rem;font-weight:600;cursor:pointer; padding:.375rem}
+
+/* --- un bouton eteint, dans cette famille --------------------------------
+ * La famille dessine quatre primitives de bouton et AUCUN etat eteint : le
+ * dessin ne montre que des boutons actifs. La fiche, premier formulaire de la
+ * famille, en a besoin — un enregistrement en cours doit se voir.
+ *
+ * La valeur n'est pas choisie : c'est le `.4` que la surface pose deja sur
+ * `.btn[disabled]` (ligne 363). Et la feuille ecrit ses etats eteints en
+ * SELECTEUR D'ATTRIBUT — `[disabled]` — jamais en pseudo-classe `:disabled` :
+ * un releve cherchant `:disabled` conclut a tort qu'il n'y en a aucun, et
+  * refait en style en ligne ce qui existait deja. */
+[data-surface="pme"] [data-famille="papiers"] .pan .b button[disabled],
+[data-surface="pme"] [data-famille="papiers"] .pan .chx button[disabled],
+[data-surface="pme"] [data-famille="papiers"] .card .b button[disabled],
+[data-surface="pme"] [data-famille="papiers"] .go .pr[disabled],
+[data-surface="pme"] [data-famille="papiers"] .go .sc2[disabled] { opacity: .4; cursor: default }
+
+/* --- un champ de saisie, dans cette famille ------------------------------
+ * `.pan .champ` existe (ligne 1498) mais le dessin ne l'emploie qu'en PREMIER
+ * enfant du panneau, et sur un `<div>` d'affichage — jamais sur un `<input>`.
+ * D'ou deux manques, tous deux combles avec des valeurs lues :
+ *   - la marge quand il suit un paragraphe ou un autre champ : `.75rem`, le
+  *     meme que `.pan p` et `.pan .chx` (lignes 1502 et 1503) ;
+  *   - un `<input>` n'herite ni la police ni la couleur de son parent, et ne
+  *     prend pas la largeur de son conteneur. La boite est deja en
+  *     `border-box` par la remise a zero ligne 144. */
+[data-surface="pme"] [data-famille="papiers"] .pan p + .champ,
+[data-surface="pme"] [data-famille="papiers"] .pan .champ + .champ { margin-top: .75rem }
+[data-surface="pme"] [data-famille="papiers"] .pan input.champ,
+[data-surface="pme"] [data-famille="papiers"] .pan select.champ,
+[data-surface="pme"] [data-famille="papiers"] .pan textarea.champ {
+  width: 100%; font-family: inherit; color: var(--tx);
+}
 [data-surface="pme"] [data-famille="papiers"] .nav{display:grid;grid-template-columns:repeat(3,1fr);align-items:center;margin-top:1.75rem; padding:.875rem .5rem .5rem;border-top:1px solid var(--hr)}
 [data-surface="pme"] [data-famille="papiers"] .nav a svg{width:25px;height:25px}
 [data-surface="pme"] [data-famille="papiers"] .nav .cap{display:grid;justify-items:center;gap:.4375rem;color:var(--t3);font-size:.75rem; font-weight:500;background:none;border:0;cursor:pointer}
@@ -1569,7 +1614,7 @@
 
 [data-surface="pme"] [data-ecran="parametres"] .top .ttl{flex:1;font-size:.9375rem;font-weight:600;letter-spacing:-.015em}
 [data-surface="pme"] [data-ecran="parametres"] h1{margin:1.0625rem 0 0;font-size:1.9375rem;font-weight:700;letter-spacing:-.042em;line-height:1.05}
-[data-surface="pme"] [data-ecran="parametres"] .sec:not(button){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .875rem}
+[data-surface="pme"] [data-ecran="parametres"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .875rem}
 [data-surface="pme"] [data-ecran="parametres"] .sec h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="parametres"] .card{background:var(--d1);border-radius:20px;padding:1rem}
 [data-surface="pme"] [data-ecran="parametres"] .card+.card{margin-top:.5rem}
