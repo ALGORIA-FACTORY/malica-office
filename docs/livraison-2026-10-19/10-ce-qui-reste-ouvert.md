@@ -262,3 +262,62 @@ Remonter à quatre est une ligne, le jour où une pièce réelle le demande.
 **Arbitrage commercial non tranché** : trois appels de relevé par page est un
 plafond, pas un choix de produit. Personne n'a dit ce qu'une pièce a le droit
 de coûter.
+
+---
+
+## La fabrique de lecteurs — socle de données (18 octobre)
+
+### F-1 · Les trois seuils de promotion sont des opinions livrées, pas un relevé
+
+`ref.socle_params` porte depuis le 18 octobre
+`fabrique.seuil.promotion.min.exactitude_champs_critiques` = 0,98,
+`…max.montants_faux_acceptes` = 0 et `…max.taux_abstention` = 0,25. Une recette
+ne devient `active` qu'en les franchissant, et le déclencheur le refuse sinon.
+
+**Aucune des trois valeurs ne vient d'une mesure.** Zéro montant faux accepté
+est une position défendable (un montant faux accepté est précisément ce que la
+fabrique existe pour éviter) ; 0,98 et 0,25 sont des points de départ. Ils se
+changent sans déploiement, par organisation, dans
+`parametrage.fabrique_seuils` — c'est R10, et c'est pour cela qu'on a pu les
+livrer sans attendre.
+
+**Arbitrage non tranché** : à partir de quel taux d'abstention une recette
+coûte plus cher qu'elle ne rapporte ? La réponse dépend du prix d'un appel de
+désignation (3 s, une fraction des 0,0035 $ mesurés) et de ce qu'une relecture
+humaine coûte au cabinet. Personne ne l'a chiffré.
+
+### F-2 · `ancre_texte_min` = 3 n'a pas été mesuré sur un corpus arabe
+
+La borne vient du spécialiste du langage de recettes, qui la donne comme valeur
+d'épreuve et non comme recommandation. Sur une facture arabe, une mention de
+deux ou trois caractères peut porter le sens là où trois caractères latins sont
+souvent du bruit. Tant qu'on n'aura pas compté les ancres réellement retenues
+sur un corpus arabe, cette borne est une opinion.
+
+Livrée à 3, visible dans `ref.socle_params`
+(`fabrique.seuil.recette.ancre_texte_min`), surchargeable par cabinet sans
+migration. Les quatre autres bornes — `selecteurs_max` 200, `champs_max` 50,
+`jetons_max` 12, `rang_max` 50 — sont des garde-fous de volume, et leur valeur
+exacte importe moins.
+
+### F-3 · Qui a le droit de promouvoir une recette
+
+La politique d'écriture de `fabrique.promotions` réserve la décision au
+`dirigeant` et à l'`expert` ; un `collaborateur` et un `assistant` ne
+promeuvent pas. Tranché par défaut pour ne pas s'arrêter : une promotion change
+la façon dont les pièces du cabinet seront lues, et c'est une responsabilité
+d'expert. Si le dirigeant veut ouvrir cela au collaborateur, c'est une ligne de
+migration.
+
+### F-4 · La mutualisation des structures entre cabinets
+
+`fabrique.recettes.portee` nomme déjà le périmètre (`organisation` ou
+`mutualisee`) et la colonne n'a **aucun défaut** : un partage ne peut pas
+naître d'une insertion distraite. Mais **aucune politique ne lit cette
+colonne** : marquer une recette `mutualisee` aujourd'hui ne la montre à
+personne, et l'épreuve le vérifie.
+
+Ce qui reste à décider n'est pas technique : qui possède une structure de
+lecture apprise sur les factures d'un client, ce qu'un cabinet accepte de
+donner à voir de ses fournisseurs, et ce que Malica a le droit de reverser au
+pot commun. Tant que cela n'est pas tranché, le partage reste éteint.
