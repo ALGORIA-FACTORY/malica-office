@@ -144,9 +144,27 @@ Hors ligne : `lib/hors-ligne/file.ts` existe déjà, plafonds 50 éléments et
 250 Mo. La capture ne s'arrête jamais, même sans réseau, **même plafond
 atteint** — les pièces s'empilent, non lues.
 
-## Chat avec Malica · `pme.malica.tsx` **(route à créer)**
+## Chat avec Malica · panneau de l'accueil **(pas de route, et c'est arrêté)**
 
-Le dépôt `conversations` existe **en entier** et n'a aucun écran PME.
+> **Tranché le 19 octobre 2026.** Ce titre annonçait `pme.malica.tsx`, « route à
+> créer », et `/pme/malica` rendait donc *Not Found*. Aucun lien de
+> l'application n'y menait — seul ce document la nommait.
+>
+> **La route ne sera pas créée, et la référence est retirée.** Le fil existe
+> déjà, en panneau par-dessus l'accueil (`components/malica/MalicaChat.tsx`,
+> ouvert par « Parler à Malica » sur `pme.index.tsx`), et il porte
+> `conversations.lister` / `ouvrir` / `renommer` / `supprimer` / `juger` et
+> `malica.demander`. Une route qui rendrait le même fil en plein écran serait
+> un **doublon d'écran**, que R9 interdit nommément — et le panneau est le bon
+> endroit : on parle à Malica *à propos de ce qu'on regarde*, pas dans une
+> pièce à part.
+>
+> Ce qui manque n'est donc pas une route, c'est le **retour du cabinet** :
+> `conseil.*` et `corpus.rechercher` ne sont appelés par aucun écran PME, et la
+> boucle « demander l'avis → en relecture → avis rendu → appliquer » n'existe
+> pas. C'est un manque de câblage dans le panneau, à sa place ci-dessous.
+
+Le dépôt `conversations` existe **en entier**, et le panneau l'appelle.
 
 `conversations.lister` / `ouvrir` / `ouvrirNouvelle` / `ajouter` / `renommer` /
 `supprimer` / `dernierMessage` / `juger`.
@@ -175,26 +193,48 @@ Forfait : **`facturation.monForfait`** et **`facturation.organisations`** —
 Rubriques : `parametrage.plan`, `parametrage.roles`. Le matricule s'affiche
 sous cadenas : immuable dès la première pièce.
 
-## Cabinet · `pme.cabinet.tsx` **(route à créer)**
+## Cabinet · `pme.notifications.tsx` et `pme.regler.tsx` **(pas de route `/pme/cabinet`)**
 
-Deux onglets.
-
-**Échanges** — `collab.demandesDUnePiece`, `collab.notifications`,
-`collab.markRead`, `conseil.file`, `conseil.lire`.
-
-**Ses documents** — **`cabinet.documents`**, **`cabinet.accuserReception`**.
-Trois règles à écrire sur l'écran : ils ne consomment aucune lecture, ils
-restent au client même après un changement de cabinet, et certains arrivent
-avec une action à faire.
+> **Tranché le 19 octobre 2026.** Ce titre annonçait `pme.cabinet.tsx`, « route
+> à créer », et `/pme/cabinet` rendait donc *Not Found*. Aucun lien de
+> l'application n'y menait — seul ce document la nommait.
+>
+> **La route ne sera pas créée tant que son second onglet n'a pas de donnée.**
+> L'onglet « Ses documents » repose entièrement sur `cabinet.documents` et
+> `cabinet.accuserReception`, qui ne sont **pas livrées, délibérément** : la
+> seule table qui pourrait les servir, `coffre.objects`, n'a ni libellé, ni
+> catégorie, ni exercice, et **rien n'y écrit jamais**. Les trois règles à
+> afficher n'ont aucune donnée à qualifier. Un écran à deux onglets dont l'un
+> est structurellement vide est un **placeholder**, que R9 interdit.
+>
+> L'onglet « Échanges », lui, est **déjà livré**, en deux écrans qui existent et
+> que la navigation atteint : `pme.notifications.tsx`
+> (`collab.notifications`, `collab.markRead`) et `pme.regler.tsx`
+> (`collab.notifications`, `supervision.motifs`, `capture.listAvecLecture`,
+> `identite.monCabinet`), plus `collab.demandesDUnePiece` sur le dossier d'une
+> pièce. Les réunir sous un onglet n'apporterait rien qu'un clic de plus.
+>
+> Il manque `conseil.file` et `conseil.lire` — au contrat, jamais appelés en
+> PME. Ils ont leur place dans le panneau Malica, avec le reste du retour
+> cabinet, et non dans une route nouvelle.
 
 ## Espace privé · `pme.coffre.tsx` *(existe)*
 
 `capture.lister` (filtré `vis='personnel'`), `collab.setPieceVis`,
 `capture.supprimer`.
 
-Fond `--prive`, bandeau azure. **Aucun bouton de transmission au cabinet.**
-Depuis `20261018103000`, la base le tient : un `personnel` n'est visible que de
-son auteur, et un siège ne peut plus sortir une pièce de la société.
+Fond `--prive`, bandeau azure.
+
+> **Corrigé le 19 octobre 2026.** Ce paragraphe disait « **Aucun bouton de
+> transmission au cabinet** ». C'est l'écran qui a raison : il en porte un sur
+> chaque ligne (`pme.coffre.tsx`, « Transmettre à … »), et le commanditaire a
+> tranché l'inverse — « j'ai classé dans mon coffre, j'aurai toujours la
+> possibilité de transmettre au cabinet ». Le sens libre reste libre ; c'est le
+> RETOUR d'une pièce transmise qui demande l'accord du cabinet.
+>
+> Ce que la base tient depuis `20261018103000` est autre chose, et reste vrai :
+> un `personnel` n'est visible que de son auteur, et un siège ne peut plus
+> sortir une pièce de la société après la capture.
 
 ## Échéances · `pme.echeances.tsx` *(existe)* · TVA · `pme.tva.tsx` *(existe)*
 
@@ -208,6 +248,20 @@ elle est datée.
 
 Un écran lit `facturation.monForfait` **une fois**, au niveau du layout
 `pme.tsx`, et le passe par contexte. Aucun écran n'appelle deux fois.
+
+> **Appliqué le 19 octobre 2026.** Cette règle était écrite et non tenue : le
+> layout ne lisait pas le forfait, et trois écrans l'appelaient chacun pour soi
+> en redéclarant chacun son interface et son propre
+> `creerDepotHttp("facturation")`. Le port existe désormais
+> (`FacturationRepository`), `composition.ts` le monte — donc
+> `contrat.test.ts` le couvre —, `pme.tsx` le lit une fois et le passe par
+> `PmeContextValue.forfait`.
+>
+> La dégradation, elle aussi, était écrite deux fois et pas de la même façon :
+> `offre === "team" || "premium"` sur l'accueil, `sieges_max > 1` aux réglages.
+> Elle vit maintenant dans `apps/web/src/lib/forfait.ts`, et les sièges se
+> décident sur le NOMBRE que la base rend (`sieges_max`), pas sur le nom de
+> l'offre.
 
 | offre | ce qui change à l'écran |
 |---|---|
