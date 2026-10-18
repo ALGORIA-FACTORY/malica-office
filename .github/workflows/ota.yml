@@ -30,7 +30,56 @@ on:
         default: staging
 
 jobs:
+  # ===================================================== LE PORTAIL, ET POURQUOI
+  #
+  # 18 octobre 2026. La version 0.2.14 est partie sur le telephone du dirigeant
+  # a 9 h 28 alors que la CI du MEME commit avait ECHOUE — une seule erreur de
+  # forme, sans consequence a l'execution, mais le principe est le defaut : ce
+  # flux se declenchait sur une etiquette et ne regardait rien.
+  #
+  # Le depot s'ouvre sur « une regle qu'aucune commande ne verifie n'est qu'un
+  # souhait ». Celle-ci en etait une.
+  #
+  # Ce travail attend donc la CI du commit etiquete, et refuse de publier si
+  # elle n'est pas verte. Il ATTEND au lieu d'echouer tout de suite, parce que
+  # l'etiquette est souvent poussee dans la foulee du commit et que la CI
+  # demarre a peine.
+  portail:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: La CI du meme commit est verte
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Trente minutes : la CI du depot tient en moins de quinze, et une
+          # file d'attente peut doubler cela. Au-dela, on refuse — un flux qui
+          # attendrait sans fin ne dit plus rien.
+          for i in $(seq 1 60); do
+            etat=$(gh api "repos/$DEPOT/actions/runs?head_sha=$SHA&per_page=100"               --jq '[.workflow_runs[] | select(.name == "CI")] | first | "\(.status):\(.conclusion // "")"'               2>/dev/null || echo "")
+            case "$etat" in
+              completed:success)
+                echo "CI verte sur $SHA — publication autorisee."
+                exit 0 ;;
+              completed:*)
+                echo "::error::La CI de $SHA s'est terminee en « ${etat#completed:} ». Rien ne part sur les telephones."
+                exit 1 ;;
+              "")
+                echo "($i/60) aucune execution de CI pour $SHA — j'attends qu'elle demarre." ;;
+              *)
+                echo "($i/60) CI « ${etat%%:*} » — j'attends." ;;
+            esac
+            sleep 30
+          done
+          echo "::error::Trente minutes sans verdict de la CI sur $SHA. Rien ne part sur les telephones."
+          exit 1
+
   publier:
+    needs: portail
     runs-on: ubuntu-latest
     env:
       CANAL: ${{ github.event.inputs.canal || 'staging' }}
