@@ -46,9 +46,30 @@ test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }
 });
 
 test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
+  /*
+   * ============================================ CE QUE CETTE ÉPREUVE GARANTIT
+   *
+   * Qu'une pièce du dossier s'atteint depuis la bibliothèque, et qu'elle
+   * s'ouvre sur sa propre adresse. C'est cela qui ne doit jamais casser.
+   *
+   * Le CHEMIN pour y arriver, lui, a changé le 18 octobre : la bibliothèque
+   * porte désormais les quatre axes de la livraison — mois, dossier, tiers,
+   * type d'opération — et les pièces vivent dans un groupe qu'on ouvre. Cette
+   * épreuve cherchait un lien dès l'arrivée et ne trouvait plus rien.
+   *
+   * Elle est donc mise à jour, et non assouplie : elle ouvre un groupe, puis
+   * exige toujours qu'une pièce s'ouvre. Constaté au rendu avant d'être écrit —
+   * l'écran a raison, c'était l'épreuve qui était périmée.
+   */
   await page.goto("/pme/list");
   await expect(page.getByText("Vos documents").first()).toBeVisible();
-  // Le jeu de données donne des pièces lues à SOTUMAG : la première s'ouvre.
+
+  // Un groupe au moins existe : le jeu de données donne des pièces à SOTUMAG.
+  const groupe = page.locator("button.grp").first();
+  await expect(groupe).toBeVisible();
+  await groupe.click();
+
+  // Et dedans, la première pièce s'ouvre.
   const piece = page.locator('a[href^="/pme/piece/"]').first();
   await expect(piece).toBeVisible();
   await piece.click();
