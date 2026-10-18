@@ -309,6 +309,24 @@ function RootComponent() {
     [router],
   );
 
+  /*
+   * Le clavier des tablettes et du bureau : `Échap` ferme ce qui est ouvert
+   * par-dessus, exactement comme le bouton retour d'Android. Même pile, deux
+   * portes.
+   *
+   * Mesuré avant : panneau de Malica ouvert, `Échap` pressé, panneau toujours
+   * là. Le cabinet avait son écouteur, la PME non — donc sur une tablette
+   * avec clavier, on entrait dans le fil de Malica et on n'en sortait plus
+   * sans souris.
+   */
+  useEffect(() => {
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && fermerLaDerniereSuperposition()) e.preventDefault();
+    };
+    window.addEventListener("keydown", surTouche);
+    return () => window.removeEventListener("keydown", surTouche);
+  }, []);
+
   // Les plantages de la coque partent chez Sentry — dans la coque seulement,
   // et jamais un document (voir `lib/telemetrie.ts`).
   useEffect(() => {

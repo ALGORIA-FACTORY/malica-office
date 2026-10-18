@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
@@ -130,7 +130,13 @@ function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const malica = usePanneauMalica("pme");
-  useSuperposition(malica.ouvert, malica.fermer);
+  /*
+   * `panneauMalica` : la reference que le crochet attend pour tenir le focus
+   * DANS le panneau. Sans elle, mesure a 1280, 20 elements restaient
+   * atteignables derriere un panneau de 448 px.
+   */
+  const panneauMalica = useRef<HTMLDivElement | null>(null);
+  useSuperposition(malica.ouvert, malica.fermer, panneauMalica);
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
@@ -701,7 +707,13 @@ function PmeHome() {
        * son propre dessin avec la route `pme.malica`.
        */}
       {malica.ouvert ? (
-        <div className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
+        <div
+          ref={panneauMalica}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("malica.chat.her")}
+          className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background"
+        >
           <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
             <MalicaAvatar size={34} alt="Malica" rond />
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">

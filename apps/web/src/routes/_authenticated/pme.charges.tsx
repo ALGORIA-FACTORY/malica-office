@@ -2,16 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { MalicaAvatar } from "@/components/malica/office-ui";
+import malicaLoin from "@/assets/malica-loin.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
-import { montant, quantite } from "@/lib/lisible";
-import { cn } from "@/lib/utils";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { nombre } from "@/lib/forfait";
+import { deMois, montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { computeChargesByFamille } from "@malica/socle/engines/charges/familles";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/charges")({
   head: () => ({
@@ -37,10 +37,129 @@ export const Route = createFileRoute("/_authenticated/pme/charges")({
 
 const THRESHOLD_CODE = "FAMILLE_CONSO";
 
+/*
+ * ===================================================== LES CHAÎNES EN DUR, NOMMÉES
+ *
+ * Le dessin dit huit choses que le dictionnaire ne dit pas encore. Elles
+ * vivent ICI, dans un seul bloc, et nulle part ailleurs dans le fichier —
+ * c'est une dette, elle est donc visible et dénombrable. Le jour où elles
+ * entrent dans `packages/socle/src/messages.ts`, ce bloc disparaît d'un seul
+ * geste et chaque appel devient un `t()`.
+ *
+ * Ce qui N'EST PAS ici, et pourquoi :
+ *
+ *   « Vos charges »        → `pme.charges.title`
+ *   « Total des charges »  → `pme.charges.total`
+ *   « Par famille »        → `pme.charges.byFamille` — le dessin écrit « Par
+ *                            classe ». Deux mots pour une seule chose : le
+ *                            dictionnaire tranche, et la divergence est
+ *                            signalée plutôt que dupliquée.
+ *   « Retour »             → `pme.regler.retour`
+ *   « {n} lignes »         → `pme.detail.compte` (avec son pluriel)
+ *   « Qté … · PU … »       → `pme.detail.qte`, `pme.detail.pu`
+ *   la phrase de pied      → `pme.charges.disclaimer`
+ *   « Team », « Premium »  → des NOMS d'offre. Un nom d'offre ne se traduit pas.
+ */
+const CHAINES = {
+  /** Le compte à droite du titre « Par famille ». */
+  classes: (n: number) => `${n} ${n > 1 ? "CLASSES" : "CLASSE"}`,
+  /** Sous le total : ce qui compose le mois. */
+  repartition: (pieces: number, classes: number) =>
+    `${pieces} ${pieces > 1 ? "pièces" : "pièce"} · ${classes} ${classes > 1 ? "classes" : "classe"}`,
+  /** Sous le montant d'une classe ouverte : son poids dans le mois. */
+  partDesCharges: (pieces: number, part: string) =>
+    `${pieces} ${pieces > 1 ? "pièces" : "pièce"} · ${part} des charges`,
+  /** Le total d'une classe ouverte. */
+  totalDe: (famille: string) => `Total ${famille}`,
+  /** Le titre de la liste des lignes d'une classe. */
+  lesPieces: "Les pièces",
+  /**
+   * Le plafond de lectures. Il dit un fait de la base — ce qui reste, sur
+   * combien — et la conséquence, qui est la seule raison de l'écrire sur CET
+   * écran : au-delà du plafond, le total affiché juste au-dessus est faux par
+   * défaut.
+   */
+  plafond: (reste: number, droit: number, mois: string) =>
+    `Il vous reste ${reste} ${reste > 1 ? "lectures" : "lecture"} sur ${droit} ce mois. Au-delà, vos charges ${mois} seront incomplètes.`,
+  /** Les deux cartes de ce que le palier suivant ouvrirait. */
+  siegesTitre: "Par siège",
+  siegesSous: "Qui a engagé quoi, dans votre équipe",
+  groupeTitre: "Le groupe",
+  groupeSous: "Les charges consolidées de vos sociétés",
+} as const;
+
 /**
- * « Vos charges » — lecture par famille. Aucun chiffre calculé ici : le total
- * et l'écart viennent du moteur du Socle, à partir d'articles cités et de
- * seuils du pack. Malica pose la question, elle ne modifie rien.
+ * « Vos charges » — le dessin validé (`livraison/ecrans/malica-charges.html`,
+ * premier bloc `.app`, `data-scr="b-classes"`, et son détail `b-four`), porté
+ * tel quel.
+ *
+ * ============================================================== CE QUI A CHANGÉ
+ *
+ * Le balisage, et lui seul. Le câblage est celui d'avant, appel pour appel :
+ * `charges.familles`, `charges.articles`, `charges.anomalyThreshold`,
+ * `referential.socleParams`, `charges.questions`, `charges.enAttenteDeDate`,
+ * `charges.answer`, `useMoisDeLExercice`, et le moteur
+ * `computeChargesByFamille` du Socle. Les mêmes données, une autre structure.
+ *
+ * Les QUESTIONS de Malica et leurs deux réponses restent le cœur de l'écran,
+ * avec leurs gardes : la dernière réponse par question, et PAR QUI.
+ *
+ * ================================================ LE CSS EXISTE, ON NE L'ÉCRIT PAS
+ *
+ * `styles-pme.css` porte déjà toutes les règles du dessin sous
+ * `[data-surface="pme"] [data-ecran="charges"]`. Cet écran pose donc
+ * `data-ecran="charges"` sur sa racine et n'emploie QUE les classes relevées
+ * dans cette feuille — `.pad .top .bk .ttl .per .lede .lbl .amt .trd .mta
+ * .ceil .mths .sec .cls .hd .nm .pc .vl .bar .att .tot .note .bd .lines .ln
+ * .qt .tag .locks .lock .foot .g`. Aucune classe utilitaire par-dessus : une
+ * seule d'entre elles contredirait le dessin.
+ *
+ * `.app` du dessin n'est PAS rendu, comme sur l'accueil : la règle portée
+ * `[data-ecran="charges"] .app{padding-top:4rem}` réservait la place de la
+ * rangée de démonstration « Basic · Solo · Team · Premium », qui n'existe pas
+ * dans l'application. Le cadre est tenu par le layout `pme.tsx`.
+ *
+ * `.nav` non plus : la barre du bas est rendue une fois par `pme.tsx`. La
+ * redessiner ici en ferait deux.
+ *
+ * Les marges négatives de la racine annulent le `px-4 py-5` du layout :
+ * `.top` et `.pad` portent les leurs, et le dessin ne veut pas de double
+ * gouttière. C'est le seul endroit du fichier où une classe utilitaire
+ * paraît, et elle ne touche aucun élément du dessin.
+ *
+ * ================================================= LA RANGÉE DES FORFAITS NE SE PORTE PAS
+ *
+ * Quatre blocs `.app` cohabitent dans le dessin — un par offre — avec un
+ * sélecteur qui les permute. C'est une affordance de maquette. Ici, l'offre
+ * se voit à deux endroits seulement : le plafond de lectures, et les cartes
+ * `.lock` — visibles, jamais masquées, parce qu'un produit qui cache ce
+ * qu'il vend ne le vend pas.
+ *
+ * ============================================ CE QUI N'EST PAS BRANCHÉ, ET POURQUOI
+ *
+ * **« Par siège » (Team) et « Par société » (Premium) ne sont pas rendus.**
+ * `charges.articles` rend des articles cités : ni `created_by`, ni
+ * `tenant_id`. Qui a engagé quoi, et quelle société a porté quoi, ne se
+ * calcule donc pas sur les données chargées — et un graphique faux
+ * désapprend. Les deux axes attendent leur donnée, pas un rendu. Quand
+ * l'offre ne les ouvre pas, les cartes `.lock` disent ce qu'ils feraient ;
+ * quand elle les ouvre, rien ne paraît : mieux vaut un axe absent qu'un axe
+ * inventé, et aucun verrou n'est montré à qui a payé.
+ *
+ * **Le rapprochement intragroupe azure (`.cls.az`, `.note.az`) non plus.** Il
+ * suppose le consolidé, qui suppose les sociétés.
+ *
+ * **Aucun appel n'est inventé.** Le dessin propose « Les classer » sur les
+ * pièces sans classe et « À immobiliser ? » sur une ligne : ni l'un ni
+ * l'autre n'a de méthode au contrat (`contrat/rpc.json`). Ils ne sont donc
+ * pas dessinés. Le compteur de lectures, lui, vient de
+ * `facturation.monForfait` — qui est au contrat, et que le layout lit DÉJÀ
+ * une fois pour tous les écrans PME : rien n'est monté ici, et aucun
+ * `creerDepotHttp` local n'a été nécessaire.
+ *
+ * **Valeur absente → « — », jamais « 0 ».** Le forfait non lu — chargement,
+ * échec, licence absente — ne montre pas de plafond plutôt qu'un plafond à
+ * zéro. Zéro est un fait comptable ; l'absence n'en est pas un.
  */
 function ChargesScreen() {
   const { t, locale } = useI18n();
@@ -164,258 +283,488 @@ function ChargesScreen() {
       new Date(`${p}-01T00:00:00Z`),
     );
 
+  const moisLong = (p: string) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(`${p}-01T00:00:00Z`),
+    );
+
   const pct = (v: string) => `${Number(v) >= 0 ? "+" : ""}${(Number(v) * 100).toFixed(0)} %`;
+
+  /** Une part du total, en pour-cent entier. L'espace reste insécable. */
+  const part = (v: string) => `${Math.round(Number(v) * 100)} %`;
 
   if (refs.isPending || articles.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   }
 
-  const maxTotal = Math.max(...(result?.familles ?? []).map((f) => Number(f.total)), 0);
+  const familles = result?.familles ?? [];
+  const maxTotal = Math.max(...familles.map((f) => Number(f.total)), 0);
+  /* Le total du mois, ou son absence. Écrit une fois, lu deux fois. */
+  const totalLisible = result ? montant(result.total, locale) : "—";
   const evolutionValue = result?.evolution ?? null;
   const evolution = evolutionValue === null ? null : Number(evolutionValue);
 
-  return (
-    <div className="rg-rise px-1 pt-2">
-      <p className="text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
-        {t("pme.charges.title")}
-      </p>
-      <p className="mt-[5px] text-[13.5px] text-text-2">
-        {period === currentPeriod() ? t("pme.charges.subtitle") : monthLabel(period)}
-      </p>
+  /*
+   * La classe « fourre-tout » du pack — « Non classée ». C'est elle qui porte
+   * l'ambre du dessin (`.cls.att`), et non une couleur choisie à la main : le
+   * pack dit laquelle est le repli (`isFallback`), le TypeScript n'en décide
+   * rien.
+   */
+  const codeFourreTout = (refs.data?.familles ?? []).find((f) => f.isFallback)?.code ?? null;
 
-      {/*
-       * La tendance en un mot, et sa couleur suit le fait : une baisse est une
-       * bonne nouvelle, une hausse une question. Le prototype n'écrit pas
-       * « écart de −6 % » — il écrit « en baisse de 6 %, beau travail ».
-       */}
-      {evolution !== null ? (
-        <span
-          className={cn(
-            "mt-3 inline-flex items-center gap-2 border px-3 py-2 text-[13px] font-medium",
-            evolution < 0
-              ? "border-signal-ok text-signal-ok"
-              : "border-signal-warn text-signal-warn",
-          )}
+  /** Une question sans réponse attend, elle aussi : le dessin n'a qu'une couleur pour cela. */
+  const attend = (code: string) =>
+    code === codeFourreTout ||
+    (result?.anomalies ?? []).some(
+      (a) => a.familleCode === code && !repondue.has(`${a.period}|${a.familleCode}`),
+    );
+
+  /** Les lignes du mois : la seule fenêtre de données de cet écran, filtrée. */
+  const lignesDuMois = (articles.data ?? []).filter((a) => a.period === period);
+  const piecesDuMois = new Set(lignesDuMois.map((a) => a.pieceId)).size;
+
+  /*
+   * ====================================================== LE PLAFOND DE LECTURES
+   *
+   * Les deux bornes, ou rien. Le dessin le montre sous le total parce que
+   * c'est là qu'il porte : au-delà du plafond, le total affiché juste
+   * au-dessus est incomplet, et c'est la seule chose qui l'explique.
+   *
+   * Aucun seuil n'est inventé : il ne paraît pas « quand il reste peu », il
+   * paraît quand le compteur est LU. Décider à partir de quel reste il doit
+   * se taire est une décision de produit, pas une liberté d'écran.
+   */
+  const lecturesRestantes = nombre(pme.forfait.ligne?.lectures_restantes);
+  const lecturesDroit = nombre(pme.forfait.ligne?.lectures_droit);
+  const plafondLisible = lecturesRestantes !== null && lecturesDroit !== null && lecturesDroit > 0;
+
+  /*
+   * ================================================== LA CLASSE OUVERTE, ET SON ÉCRAN
+   *
+   * Le dessin ouvre une classe sur un écran À ELLE — titre, mois, lignes,
+   * total — et la flèche referme. Pas de route nouvelle : un état, et deux
+   * balisages. `ouverte` peut rester `null` alors qu'une classe est demandée
+   * (la classe n'a rien ce mois-ci) : l'écran le dit avec « — » et la liste
+   * vide, plutôt que de ramener en arrière sans explication.
+   */
+  const ouverte = familles.find((f) => f.code === openFamille) ?? null;
+  const libelleOuverte =
+    ouverte?.label ??
+    (refs.data?.familles ?? []).find((f) => f.code === openFamille)?.label ??
+    openFamille ??
+    "";
+  const lignesOuvertes = lignesDuMois.filter((a) => a.familleCode === openFamille);
+
+  /** Le classeur des mois — commun aux deux écrans. */
+  const classeurDesMois = (
+    <div className="mths" role="group" aria-label={t("pme.charges.period")}>
+      {periods.map((p) => (
+        <button
+          key={p.periode}
+          type="button"
+          className={p.periode === period ? "on" : undefined}
+          onClick={() => setPeriod(p.periode)}
+          disabled={p.aVenir}
+          aria-pressed={p.periode === period}
         >
-          <span aria-hidden className="h-[5px] w-[5px] bg-current" />
-          {evolution < 0
-            ? t("pme.charges.trend.down", { value: pct(evolutionValue!) })
-            : t("pme.charges.trend.up", { value: pct(evolutionValue!) })}
-        </span>
-      ) : null}
+          {monthLabel(p.periode)}
+        </button>
+      ))}
+    </div>
+  );
 
-      {/*
-       * Les six mois d'historique. Le prototype n'en montre qu'un ; les cacher
-       * retirerait la seule façon de voir qu'une hausse dure depuis trois mois.
-       */}
-      <div
-        className="mt-3 flex flex-wrap gap-1.5"
-        role="group"
-        aria-label={t("pme.charges.period")}
-      >
-        {periods.map((p) => (
+  /* ─────────────────────────────── l'écran d'une classe ─────────────────── */
+  if (openFamille !== null) {
+    return (
+      <div data-ecran="charges" className="-mx-4 -my-5">
+        <div className="top">
           <button
-            key={p.periode}
             type="button"
-            onClick={() => setPeriod(p.periode)}
-            disabled={p.aVenir}
-            aria-pressed={p.periode === period}
-            className={cn(
-              "border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.06em]",
-              p.periode === period
-                ? "border-foreground bg-foreground text-background"
-                : "border-border bg-transparent text-text-2",
-              // Un mois à venir fait partie de l'exercice, mais il n'a pas eu
-              // lieu : visible, en pointillé, et il ne s'ouvre pas.
-              p.aVenir ? "border-dashed opacity-45" : "",
-            )}
+            className="bk"
+            aria-label={t("pme.regler.retour")}
+            onClick={() => setOpenFamille(null)}
           >
-            {monthLabel(p.periode)}
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M14.5 5.5L8 12l6.5 6.5" />
+            </svg>
           </button>
-        ))}
+          <span className="ttl">{libelleOuverte}</span>
+          <span className="per">{monthLabel(period)}</span>
+        </div>
+
+        <div className="pad">
+          <div className="lede">
+            <div className="lbl">
+              {libelleOuverte} · {moisLong(period)}
+            </div>
+            <div className="amt">
+              {ouverte ? montant(ouverte.total, locale) : "—"} <u>{pme.currency}</u>
+            </div>
+            {/*
+             * Le dessin porte ici un `.trd` — « En baisse de 18 % sur
+             * janvier ». Il n'est pas rendu : le moteur du Socle rend
+             * l'évolution du TOTAL, pas celle d'une classe, et la calculer
+             * dans l'écran ferait de lui la deuxième autorité sur une
+             * comparaison. Elle viendra du moteur ou pas du tout.
+             */}
+            <div className="mta">
+              {ouverte
+                ? CHAINES.partDesCharges(
+                    new Set(lignesOuvertes.map((a) => a.pieceId)).size,
+                    part(ouverte.share),
+                  )
+                : t("pme.charges.empty")}
+            </div>
+          </div>
+
+          {classeurDesMois}
+
+          <div className="sec">
+            <h2>{CHAINES.lesPieces}</h2>
+            <span>{t("pme.detail.compte", { count: lignesOuvertes.length })}</span>
+          </div>
+
+          {lignesOuvertes.length > 0 ? (
+            <div className="lines">
+              {lignesOuvertes.map((a) => (
+                <Link
+                  key={`${a.pieceId}-${a.ordinal}`}
+                  to="/pme/piece/$pieceId"
+                  params={{ pieceId: a.pieceId }}
+                  className="ln"
+                >
+                  <span className="hd">
+                    <span className="nm">{a.designation}</span>
+                    {/*
+                     * Un montant NON CITÉ ne s'écrit pas : le moteur le
+                     * compte pour zéro faute de mieux, l'écran ne le
+                     * présente pas comme un prix lu.
+                     */}
+                    <span className="vl">
+                      {a.citationTotalHt && a.totalHt ? montant(a.totalHt, locale) : "—"}
+                    </span>
+                  </span>
+                  <span className="qt">
+                    {t("pme.detail.qte", {
+                      q: a.citationQuantity && a.quantity ? quantite(a.quantity, locale) : "—",
+                    })}
+                    {a.citationUnitPriceHt && a.unitPriceHt
+                      ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })
+                      : ""}
+                  </span>
+                  {/*
+                   * Le dessin pose ici deux marques de plus : `.tag`
+                   * (« À immobiliser ? Je vous demande ») et `.who`
+                   * (« Saisie Sami · 12 févr. »). Aucune des deux n'a de
+                   * donnée : pas de question au niveau de la ligne au
+                   * contrat, et `charges.articles` ne rend pas qui a saisi.
+                   */}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="foot">{t("pme.charges.empty")}</p>
+          )}
+
+          {ouverte ? (
+            <div className="tot">
+              <b>{CHAINES.totalDe(libelleOuverte)}</b>
+              <span>{montant(ouverte.total, locale)}</span>
+              <u>{pme.currency}</u>
+            </div>
+          ) : null}
+
+          <p className="foot">{t("pme.charges.disclaimer")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ──────────────────────────── l'écran des classes ─────────────────────── */
+  return (
+    /*
+     * `data-ecran="charges"` : le marqueur qui fait descendre sur cet arbre
+     * les 82 règles du dessin.
+     */
+    <div data-ecran="charges" className="-mx-4 -my-5">
+      <div className="top">
+        <Link to="/pme" className="bk" aria-label={t("pme.regler.retour")}>
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </Link>
+        <span className="ttl">{t("pme.charges.title")}</span>
+        <span className="per">{monthLabel(period)}</span>
       </div>
 
-      {result && result.familles.length > 0 ? (
-        <>
-          <div className="mt-[18px] flex flex-col gap-3">
-            {result.familles.map((f) => {
-              const open = openFamille === f.code;
-              const detail = (articles.data ?? []).filter(
-                (a) => a.period === period && a.familleCode === f.code,
-              );
-              const width = maxTotal > 0 ? Math.round((Number(f.total) / maxTotal) * 100) : 0;
-              const suspecte = (result.anomalies ?? []).some((a) => a.familleCode === f.code);
-              return (
-                <div key={f.code}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenFamille(open ? null : f.code)}
-                    aria-expanded={open}
-                    className="grid w-full grid-cols-[minmax(64px,auto)_1fr_auto] items-center gap-2.5 text-start text-[14px] font-medium"
-                  >
-                    <span className="whitespace-nowrap">{f.label}</span>
-                    <span className="relative h-[7px] bg-line-strong">
-                      {/*
-                       * Le poste qui a déclenché une question porte la couleur
-                       * de l'alerte : on voit LEQUEL sans avoir à lire.
-                       */}
-                      <i
-                        className={cn(
-                          "absolute inset-y-0 start-0",
-                          suspecte ? "bg-signal-warn" : "bg-foreground",
-                        )}
-                        style={{ width: `${width}%` }}
-                      />
-                    </span>
-                    <span className="num text-[13px] font-medium">{montant(f.total, locale)}</span>
-                  </button>
-
-                  {open ? (
-                    <div className="mt-2 border border-border">
-                      {detail.map((a) => (
-                        <div
-                          key={`${a.pieceId}-${a.ordinal}`}
-                          className="border-b border-border px-3 py-2 last:border-b-0"
-                        >
-                          <div className="flex items-baseline justify-between gap-2">
-                            <Link
-                              to="/pme/piece/$pieceId"
-                              params={{ pieceId: a.pieceId }}
-                              className="text-[13px] underline underline-offset-4"
-                            >
-                              {a.designation}
-                            </Link>
-                            <span className="num text-[12.5px]">
-                              {a.citationTotalHt && a.totalHt ? montant(a.totalHt, locale) : "—"}
-                            </span>
-                          </div>
-                          <p className="num mt-1 text-[11px] text-muted-foreground">
-                            {t("pme.detail.qte", {
-                              q:
-                                a.citationQuantity && a.quantity
-                                  ? quantite(a.quantity, locale)
-                                  : "—",
-                            })}
-                            {a.citationUnitPriceHt && a.unitPriceHt
-                              ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })
-                              : ""}
-                          </p>
-                        </div>
-                      ))}
-                      {detail.length === 0 ? (
-                        <p className="px-3 py-2 text-[12px] text-muted-foreground">
-                          {t("pme.charges.empty")}
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
+      <div className="pad">
+        {/* ── le chiffre ─────────────────────────────────────────────────── */}
+        <div className="lede">
+          <div className="lbl">{t("pme.charges.total")}</div>
+          <div className="amt">
+            {totalLisible} <u>{pme.currency}</u>
           </div>
 
-          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
-            <span className="text-[13.5px] font-semibold">{t("pme.charges.total")}</span>
-            <span className="num text-[15px] font-semibold">
-              {montant(result.total, locale)} {pme.currency}
-            </span>
-          </div>
-        </>
-      ) : (
-        <p className="mt-4 border border-border bg-card p-4 text-[13.5px] text-text-2">
-          {t("pme.charges.empty")}
-        </p>
-      )}
+          {/*
+           * La tendance en un mot. Le dessin ne porte qu'UNE couleur pour
+           * `.trd` — l'Evergreen — et une hausse n'y a pas de variante : la
+           * pastille reste donc verte même quand la phrase dit « En hausse ».
+           * Rien n'est ajouté par-dessus la feuille pour corriger cela ;
+           * c'est au dessin de trancher, pas à l'écran.
+           */}
+          {evolution !== null ? (
+            <div className="trd">
+              <i />
+              {evolution < 0
+                ? t("pme.charges.trend.down", { value: pct(evolutionValue!) })
+                : t("pme.charges.trend.up", { value: pct(evolutionValue!) })}
+            </div>
+          ) : null}
 
-      {/*
-       * Ce qui attend sa date, sous le total et hors de lui.
-       *
-       * Posé le 5 octobre 2026, avec la fin du repli sur le mois du scan. Le
-       * bloc dit trois choses, et les trois sont nécessaires : COMBIEN de
-       * pièces, POURQUOI elles ne comptent pas, et le MONTANT qu'elles
-       * représentent — sans quoi l'écart avec ce que la personne attend reste
-       * inexpliqué. Il ne s'affiche pas quand il n'y a rien : une information
-       * qui apparaît toujours cesse d'être lue.
-       */}
-      {sansDate.data && sansDate.data.pieces > 0 ? (
-        <div className="mt-4 border border-signal-warn bg-card p-4">
-          <p className="text-[13.5px] font-semibold">
-            {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}
-          </p>
-          <p className="mt-1 text-[12.5px] text-text-2">
-            {t("pme.charges.sansDate.detail", {
-              amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
-            })}
-          </p>
-          <Link
-            to="/pme/list"
-            className="mt-2 inline-block text-[12.5px] underline underline-offset-2"
-          >
-            {t("pme.charges.sansDate.action")}
-          </Link>
+          <div className="mta">{CHAINES.repartition(piecesDuMois, familles.length)}</div>
         </div>
-      ) : null}
 
-      {/*
-       * Elle interroge, elle ne tranche pas. Les deux réponses ont le même
-       * poids visuel : aucune n'est présentée comme la bonne, parce qu'aucune
-       * ne l'est — seul le dirigeant sait s'il a fait un achat exceptionnel.
-       */}
-      {(result?.anomalies ?? []).map((a) => {
-        const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
-        return (
-          <div
-            key={a.familleCode}
-            className="mt-[22px] border border-border border-s-[3px] border-s-foreground bg-card p-4"
-          >
-            <div className="flex gap-3">
-              <MalicaAvatar size={32} alt="Malica" rond />
-              <p className="min-w-0 flex-1 text-[15px] leading-[1.5]">
-                {t("pme.charges.question", {
-                  famille: a.label,
-                  value: pct(a.deviationRatio),
-                  baseline: montant(a.baseline, locale) + " " + pme.currency,
-                  observed: montant(a.observed, locale) + " " + pme.currency,
+        {/* ── le plafond de lectures ─────────────────────────────────────── */}
+        {plafondLisible ? (
+          <div className="ceil">
+            <i />
+            <p>
+              {CHAINES.plafond(
+                lecturesRestantes,
+                lecturesDroit,
+                deMois(
+                  new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
+                    new Date(`${period}-01T00:00:00Z`),
+                  ),
+                  locale,
+                ),
+              )}
+            </p>
+          </div>
+        ) : null}
+
+        {classeurDesMois}
+
+        {/* ── par classe ─────────────────────────────────────────────────── */}
+        <div className="sec">
+          <h2>{t("pme.charges.byFamille")}</h2>
+          <span>{CHAINES.classes(familles.length)}</span>
+        </div>
+
+        {familles.length > 0 ? (
+          <>
+            {familles.map((f) => {
+              const largeur = maxTotal > 0 ? (Number(f.total) / maxTotal) * 100 : 0;
+              return (
+                <button
+                  key={f.code}
+                  type="button"
+                  className={attend(f.code) ? "cls att" : "cls"}
+                  onClick={() => setOpenFamille(f.code)}
+                >
+                  <span className="hd">
+                    <span className="nm">{f.label}</span>
+                    <span className="pc">{part(f.share)}</span>
+                    <span className="vl">{montant(f.total, locale)}</span>
+                  </span>
+                  <span className="bar">
+                    <i style={{ width: `${largeur}%` }} />
+                  </span>
+                </button>
+              );
+            })}
+
+            <div className="tot">
+              <b>{t("pme.charges.total")}</b>
+              <span>{totalLisible}</span>
+              <u>{pme.currency}</u>
+            </div>
+          </>
+        ) : (
+          <p className="foot">{t("pme.charges.empty")}</p>
+        )}
+
+        {/*
+         * ──────────────────────────────── les questions de Malica ─────────
+         *
+         * Elle interroge, elle ne tranche pas. Les deux réponses ont le même
+         * poids visuel : aucune n'est présentée comme la bonne, parce
+         * qu'aucune ne l'est — seul le dirigeant sait s'il a fait un achat
+         * exceptionnel.
+         *
+         * Le dessin ne met qu'UN bouton dans `.note .bd`. Deux y entrent, et
+         * c'est délibéré : l'égalité des deux réponses est une règle de
+         * produit écrite avant le dessin, et la réduire à un bouton unique
+         * ferait de l'écran un conseil déguisé. Les deux portent donc la même
+         * pastille accent.
+         */}
+        {(result?.anomalies ?? []).map((a) => {
+          const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
+          return (
+            <div key={a.familleCode} className="note">
+              <img src={malicaLoin} alt="Malica" width={620} height={620} />
+              {/*
+               * `.bd` est un `div` et non le `span` du dessin : il contient un
+               * paragraphe, et un paragraphe dans un `span` n'est pas du HTML
+               * valide. La feuille cible `.note .bd` — elle ne voit pas la
+               * différence, le validateur si.
+               */}
+              <div className="bd">
+                <p>
+                  {t("pme.charges.question", {
+                    famille: a.label,
+                    value: pct(a.deviationRatio),
+                    baseline: montant(a.baseline, locale) + " " + pme.currency,
+                    observed: montant(a.observed, locale) + " " + pme.currency,
+                  })}
+                </p>
+                {faite ? (
+                  <p>
+                    {faite.par === "cabinet"
+                      ? t("pme.charges.answered.cabinet")
+                      : t("pme.charges.answered")}
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={answer.isPending}
+                      onClick={() =>
+                        answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
+                      }
+                    >
+                      {t("pme.charges.answer.exceptionnel")}
+                    </button>{" "}
+                    <button
+                      type="button"
+                      disabled={answer.isPending}
+                      onClick={() =>
+                        answer.mutate({ familleCode: a.familleCode, reply: "a_verifier" })
+                      }
+                    >
+                      {t("pme.charges.answer.verifier")}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/*
+         * ───────────────────────────── ce qui attend sa date ──────────────
+         *
+         * Sous le total et hors de lui. Posé le 5 octobre 2026, avec la fin
+         * du repli sur le mois du scan. Le bloc dit trois choses, et les
+         * trois sont nécessaires : COMBIEN de pièces, POURQUOI elles ne
+         * comptent pas, et le MONTANT qu'elles représentent — sans quoi
+         * l'écart avec ce que la personne attend reste inexpliqué. Il ne
+         * s'affiche pas quand il n'y a rien : une information qui apparaît
+         * toujours cesse d'être lue.
+         *
+         * Le geste est un LIEN, pas un bouton : il mène ailleurs. Il ne porte
+         * donc pas la pastille de `.note .bd button`, qui ne vise que les
+         * boutons — c'est un écart assumé avec le dessin, préféré à un lien
+         * déguisé en bouton.
+         */}
+        {sansDate.data && sansDate.data.pieces > 0 ? (
+          <div className="note">
+            <img src={malicaLoin} alt="Malica" width={620} height={620} />
+            <div className="bd">
+              <p>
+                {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}
+                {" — "}
+                {t("pme.charges.sansDate.detail", {
+                  amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
                 })}
               </p>
-            </div>
-            {faite ? (
-              <p className="mt-3.5 border-t border-border pt-3 text-[13px] font-medium text-signal-ok">
-                {faite.par === "cabinet"
-                  ? t("pme.charges.answered.cabinet")
-                  : t("pme.charges.answered")}
+              <p>
+                <Link to="/pme/list">{t("pme.charges.sansDate.action")}</Link>
               </p>
-            ) : (
-              <div className="mt-3.5 flex gap-2.5">
-                <button
-                  type="button"
-                  disabled={answer.isPending}
-                  onClick={() =>
-                    answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
-                  }
-                  className="h-11 flex-1 border border-line-strong text-[14px] font-medium disabled:opacity-60"
-                >
-                  {t("pme.charges.answer.exceptionnel")}
-                </button>
-                <button
-                  type="button"
-                  disabled={answer.isPending}
-                  onClick={() => answer.mutate({ familleCode: a.familleCode, reply: "a_verifier" })}
-                  className="h-11 flex-1 border border-line-strong text-[14px] font-medium disabled:opacity-60"
-                >
-                  {t("pme.charges.answer.verifier")}
-                </button>
-              </div>
-            )}
+            </div>
           </div>
-        );
-      })}
+        ) : null}
 
-      {error ? <p className="mt-3 text-xs text-signal-warn">{error}</p> : null}
+        {/*
+         * ─────────────────────── ce que le palier suivant ouvrirait ───────
+         *
+         * Visibles, jamais masquées, et JAMAIS montrées à qui a déjà payé :
+         * `pme.forfait.ouvertures` décide, à un seul endroit du dépôt
+         * (`lib/forfait.ts`). Une offre non lue n'ouvre rien — les deux
+         * cartes restent alors verrouillées, et c'est la bonne façon de se
+         * tromper.
+         *
+         * Quand l'offre OUVRE l'axe, rien ne paraît ici : ni verrou — il
+         * serait faux — ni répartition — elle serait inventée. Les deux axes
+         * attendent leur donnée (voir l'en-tête du fichier).
+         */}
+        {!pme.forfait.ouvertures.sieges || !pme.forfait.ouvertures.societes ? (
+          <div className="locks">
+            {!pme.forfait.ouvertures.sieges ? (
+              <div className="lock">
+                <IconeSieges />
+                <b>{CHAINES.siegesTitre}</b>
+                <span>{CHAINES.siegesSous}</span>
+                <em>Team</em>
+              </div>
+            ) : null}
+            {!pme.forfait.ouvertures.societes ? (
+              <div className="lock">
+                <IconeSocietes />
+                <b>{CHAINES.groupeTitre}</b>
+                <span>{CHAINES.groupeSous}</span>
+                <em>Premium</em>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-      <p className="mt-3.5 pb-6 text-[11.5px] leading-[1.5] text-muted-foreground">
-        {t("pme.charges.disclaimer")}
-      </p>
+        {/*
+         * L'échec d'une réponse se dit là où on l'a provoqué. Le dessin n'a
+         * pas de bloc pour cela : la classe utilitaire reste donc sur un
+         * élément qui n'appartient pas au dessin, et ne touche aucune de ses
+         * règles.
+         */}
+        {error ? (
+          <p role="alert" className="mt-3 text-xs text-signal-warn">
+            {error}
+          </p>
+        ) : null}
+
+        <p className="foot">{t("pme.charges.disclaimer")}</p>
+      </div>
     </div>
+  );
+}
+
+/* ===========================================================================
+ *
+ *   LES SIGNES DU DESSIN
+ *
+ * Repris trait pour trait de `malica-charges.html`. Ils portent `class="g"`,
+ * la seule règle d'icône commune aux dix écrans : `stroke:currentColor`,
+ * `fill:none`, bouts arrondis. La taille vient du contexte (`.lock svg`),
+ * jamais de l'icône.
+ */
+
+/** Deux personnes — les sièges d'une équipe. */
+function IconeSieges() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <circle cx="9" cy="9" r="3" />
+      <circle cx="16.5" cy="10" r="2.4" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0M14.5 19.5a4.5 4.5 0 0 1 6.5-3.4" />
+    </svg>
+  );
+}
+
+/** Trois cadres emboîtés — plusieurs sociétés sous une licence. */
+function IconeSocietes() {
+  return (
+    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+      <rect x="3.5" y="9.5" width="11" height="11" rx="1.5" />
+      <path d="M7 6.5h9a1.5 1.5 0 0 1 1.5 1.5v9" />
+      <path d="M10 3.5h9A1.5 1.5 0 0 1 20.5 5v9" />
+    </svg>
   );
 }

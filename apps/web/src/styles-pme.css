@@ -241,8 +241,34 @@
   background: var(--d0);
   /* Les encoches, pas une marge au jugé. La barre du bas est DANS le flux
    * (voir `.nav`) : rien ne passe dessous, donc rien à réserver. */
-  padding-top: max(.5rem, env(safe-area-inset-top, 0px));
-  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  /*
+   * ================== UN PLANCHER, PARCE QUE `env()` MENT SUR CET APPAREIL
+   *
+   * `viewport-fit=cover` fait dessiner l'application jusqu'aux bords. Elle
+   * compte alors sur `env(safe-area-inset-*)` pour savoir où sont la barre
+   * d'état et la barre de navigation.
+   *
+   * Mesuré sur un Android réel, le 18 octobre : **ces valeurs rendent zéro**.
+   * Android ne les expose au WebView que si l'activité native demande
+   * explicitement le mode bord-à-bord. Résultat à l'écran : la rangée de
+   * pastilles passait sous la barre d'état — il ne restait que les `.5rem` du
+   * `max()` — et le bas de la barre de navigation passait sous la barre
+   * gestuelle du système. Du contenu caché, des deux côtés.
+   *
+   * Le plancher ne corrige pas la cause, il empêche la conséquence : 2,25 rem
+   * en haut couvrent une barre d'état Android ordinaire, 1,5 rem en bas une
+   * barre gestuelle. Sur un appareil qui REND ses encoches, `max()` prend la
+   * vraie valeur et le plancher ne sert à rien — il ne coûte donc rien là où
+   * tout va bien.
+   *
+   * LE VRAI CORRECTIF EST NATIF, et il demande une publication Play :
+   * `WindowCompat.setDecorFitsSystemWindows(window, false)` dans
+   * `MainActivity`, plus la transmission des encoches au WebView. Tant qu'il
+   * n'est pas fait, ce plancher est la seule chose qui parte par mise à jour
+   * en vol — et c'est pour cela qu'il existe.
+   */
+  padding-top: max(2.25rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
   /* Les mots longs du français — « immobilisations », « amortissements » —
    * débordent une colonne de 320 px s'ils ne peuvent pas se couper. */
   overflow-wrap: break-word;
@@ -1839,3 +1865,57 @@
  * latine ; c'est un agrement, pas une hierarchie. */
 [data-surface="pme"]:lang(ar),
 [data-surface="pme"]:lang(ar) * { letter-spacing: normal !important }
+
+/* ===========================================================================
+ *
+ *          TROIS DÉFAUTS VUS SUR L'APPAREIL, PAS SUR UN RENDU
+ *
+ * Relevés le 18 octobre sur un Android réel, en 0.2.13. Aucun des trois
+ * n'était visible dans mes rendus de maquettes : ils naissent de la rencontre
+ * entre le dessin et le LAYOUT de l'application, que la maquette ignore.
+ * ------------------------------------------------------------------------- */
+
+/*
+ * 1 · DEUX EN-TÊTES EMPILÉS
+ *
+ * `pme.tsx` rend l'en-tête d'Edition One (`EntetePme`) sur toute route sauf
+ * l'accueil. Quatre écrans convertis — charges, bibliothèque, dossier,
+ * cabinet — portent DÉJÀ leur propre barre `.top`, celle du dessin. Sur ces
+ * quatre, les deux s'empilaient, et le contenu défilait derrière la première.
+ *
+ * La règle ne masque l'ancienne QUE là où une neuve existe : `:has()` regarde
+ * si l'écran rend un `.top`. Les écrans non convertis, et les convertis sans
+ * barre propre (paramètres, capture, chat), gardent la leur — sinon ils
+ * n'auraient plus de retour ni de sélecteur de dossier.
+ *
+ * C'est une règle de TRAVERSÉE : elle disparaît quand les treize écrans
+ * portent leur propre barre et que `EntetePme` sort du layout.
+ */
+[data-surface="pme"] .app:has([data-ecran] .top) > header { display: none }
+
+/*
+ * 2 · UNE BANDE BLANCHE SOUS LA BARRE DU BAS
+ *
+ * `.app` peint son fond et tient `100dvh`, mais `html` et `body` restent au
+ * fond CLAIR d'Edition One. Dès que la page est plus courte que la fenêtre,
+ * ou pendant le rebond élastique du défilement, le blanc de la page se voit
+ * sous l'application. Sur un écran noir, c'est un éclair.
+ *
+ * `:has()` évite de toucher au cabinet : seule une page qui porte la surface
+ * PME voit son fond changer.
+ */
+html:has([data-surface="pme"]),
+body:has([data-surface="pme"]) { background: #0b0b0b }
+
+/*
+ * 3 · L'OBTURATEUR ÉTAIT UN CARRÉ BLANC
+ *
+ * Le bouton central de la barre est le seul geste du produit, et le dessin le
+ * veut ROND — c'est la seule forme de l'application qui ne ressemble à rien
+ * d'autre à l'écran. Le balisage du layout le rend carré depuis Edition One,
+ * où le rayon est 0 partout.
+ *
+ * La règle ne vise que le bouton de la barre : les autres boutons gardent le
+ * rayon de leur contexte.
+ */
+[data-surface="pme"] .nav button { border-radius: 999px }

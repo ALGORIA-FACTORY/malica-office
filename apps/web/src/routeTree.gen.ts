@@ -42,6 +42,7 @@ import { Route as AuthenticatedPmeCoffreRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPmeEcheancesRouteImport } from './routes/_authenticated/pme.echeances'
 import { Route as AuthenticatedPmeFicheRouteImport } from './routes/_authenticated/pme.fiche'
 import { Route as AuthenticatedPmeListRouteImport } from './routes/_authenticated/pme.list'
+import { Route as AuthenticatedPmeMalicaRouteImport } from './routes/_authenticated/pme.malica'
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
@@ -233,6 +234,11 @@ const AuthenticatedPmeListRoute = AuthenticatedPmeListRouteImport.update({
   path: '/list',
   getParentRoute: () => AuthenticatedPmeRoute,
 } as any)
+const AuthenticatedPmeMalicaRoute = AuthenticatedPmeMalicaRouteImport.update({
+  id: '/malica',
+  path: '/malica',
+  getParentRoute: () => AuthenticatedPmeRoute,
+} as any)
 const AuthenticatedPmeNotificationsRoute =
   AuthenticatedPmeNotificationsRouteImport.update({
     id: '/notifications',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
+  '/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
+  '/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -395,6 +403,7 @@ export interface FileRoutesById {
   '/_authenticated/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/_authenticated/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/_authenticated/pme/list': typeof AuthenticatedPmeListRoute
+  '/_authenticated/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/pme/echeances'
     | '/pme/fiche'
     | '/pme/list'
+    | '/pme/malica'
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/pme/echeances'
     | '/pme/fiche'
     | '/pme/list'
+    | '/pme/malica'
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/echeances'
     | '/_authenticated/pme/fiche'
     | '/_authenticated/pme/list'
+    | '/_authenticated/pme/malica'
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
     | '/_authenticated/pme/regler'
@@ -775,6 +787,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeListRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/malica': {
+      id: '/_authenticated/pme/malica'
+      path: '/malica'
+      fullPath: '/pme/malica'
+      preLoaderRoute: typeof AuthenticatedPmeMalicaRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/notifications': {
       id: '/_authenticated/pme/notifications'
       path: '/notifications'
@@ -894,6 +913,7 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeEcheancesRoute: typeof AuthenticatedPmeEcheancesRoute
   AuthenticatedPmeFicheRoute: typeof AuthenticatedPmeFicheRoute
   AuthenticatedPmeListRoute: typeof AuthenticatedPmeListRoute
+  AuthenticatedPmeMalicaRoute: typeof AuthenticatedPmeMalicaRoute
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
   AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
@@ -910,6 +930,7 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeEcheancesRoute: AuthenticatedPmeEcheancesRoute,
   AuthenticatedPmeFicheRoute: AuthenticatedPmeFicheRoute,
   AuthenticatedPmeListRoute: AuthenticatedPmeListRoute,
+  AuthenticatedPmeMalicaRoute: AuthenticatedPmeMalicaRoute,
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,
   AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,

@@ -31,6 +31,9 @@
  * gagne — une déclaration est une intention.
  */
 import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
+
+import { usePiegeDeFocus } from "@/hooks/use-superposition";
 
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
@@ -55,6 +58,14 @@ export function QuestionDuType({
   onPasser: () => void;
 }) {
   const { t, locale } = useI18n();
+  /*
+   * La feuille recouvre l'ecran : sans ce piege, on tabule dans la page qu'on
+   * ne voit plus. Elle n'est PAS sur la pile des superpositions — elle se
+   * ferme en repondant, et brancher `Echap` dessus enverrait les pieces sans
+   * type, ce qui est une decision de produit. D'ou le focus seul.
+   */
+  const feuille = useRef<HTMLDivElement | null>(null);
+  usePiegeDeFocus(true, feuille);
   const types = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),
@@ -67,7 +78,13 @@ export function QuestionDuType({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/40">
-      <div className="mx-auto w-full max-w-md border-t border-border bg-background px-[22px] pb-safe pt-5">
+      <div
+        ref={feuille}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("pme.type.titre")}
+        className="mx-auto w-full max-w-md border-t border-border bg-background px-[22px] pb-safe pt-5"
+      >
         <p className="text-[20px] font-semibold leading-[1.2] tracking-[-0.02em]">
           {t("pme.type.titre")}
         </p>
