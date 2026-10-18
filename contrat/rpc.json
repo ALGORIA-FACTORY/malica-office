@@ -106,6 +106,7 @@
   ],
   "facturation": [
     "inviterSiege",
+    "libellesDesStatuts",
     "libererPlace",
     "monForfait",
     "organisations",

@@ -1890,3 +1890,456 @@ grant execute on function public.piece_repondre(uuid, text, boolean, text) to au
 grant select on table ref.account_classes to authenticated;
 
 commit;
+
+begin;
+
+-- --- 21. Le FODEC manquait au pack, et il est sur la plupart des factures ----
+--
+-- ============================================================ LE DEFAUT REEL
+--
+-- 18 octobre 2026, mesure sur une facture reelle (MEUBLES EL AMEN) : le FODEC
+-- a 1 % figurait sur QUATRE des cinq lignes, pour 71,200 dinars, et
+-- `ref.fiscal_charges` du pack TN ne connaissait que le droit de timbre.
+--
+-- La lecture etait JUSTE -- HT, TVA, timbre et TTC au millime pres. C'est
+-- l'arithmetique qui sortait incoherente : le moteur d'equilibre retrouvait un
+-- residu de 71,200 entre le TTC imprime et HT + TVA + droits declares, ne
+-- trouvait au pack aucun droit a montant fixe de cette valeur, et bloquait
+-- l'ecriture sur `RESIDUAL_UNEXPLAINED`. Le Fonds de developpement de la
+-- competitivite est sur une grande partie des factures industrielles
+-- tunisiennes : ce n'est pas un cas rare, c'est le cas courant.
+--
+-- Un second effet, moins visible et plus grave : la liste des codes de droits
+-- offerte au modele qui DESIGNE vient de `ref_fiscal_charges_v`
+-- (`depots/capture.ts`). Un droit absent du pack n'est pas seulement mal
+-- impute : il est invisible au designateur, qui n'a aucun code ou le ranger.
+--
+-- ================================================================= LA SOURCE
+--
+-- Le taux et l'assiette ne viennent pas d'une memoire : ils sont dans le
+-- corpus du depot, verbatim, en francais et en arabe. `LF-2011` art. 15 :
+--
+--   « Sont modifiees les dispositions du paragraphe premier de l'article 37 de
+--     la loi n° 99-101 du 31 decembre 1999 portant loi de finances pour
+--     l'annee 2000 comme suit : La taxe est due au taux de 1% sur : -- le
+--     chiffre d'affaires hors taxe sur la valeur ajoutee realise par les
+--     fabricants des produits soumis a la taxe et sur la valeur en douane pour
+--     [l'importation], -- le chiffre d'affaires hors taxe sur la valeur
+--     ajoutee realise par les prestataires de services. »
+--
+-- Taux 1 %, assiette « chiffre d'affaires hors TVA », date d'effet le 1er
+-- janvier 2011 -- la loi de finances pour 2011. L'article 16 de la meme loi
+-- renomme le fonds « fonds de developpement de la competitivite dans les
+-- secteurs industriel, de services et de l'artisanat » ; le sigle FODEC reste
+-- celui qui s'imprime sur les factures, et c'est donc lui qui est le code.
+--
+-- L'assiette de la TVA, elle, vient du Code de la TVA, art. 6-I, lui aussi
+-- dans le corpus : « le chiffre d'affaires imposable comprend le prix des
+-- marchandises, des travaux ou des services, TOUS FRAIS, DROITS ET TAXES
+-- INCLUS [...] a l'exclusion de la taxe sur la valeur ajoutee ». Le FODEC est
+-- un droit : il entre dans l'assiette de la TVA. D'ou `taxable = true`.
+--
+-- ========================================= CE QUE LE SCHEMA NE SAVAIT PAS DIRE
+--
+-- `ref.fiscal_charges` ne portait qu'un `fixed_amount` : elle savait decrire un
+-- droit de timbre (un dinar par piece), pas un droit PROPORTIONNEL. Le taux et
+-- l'assiette n'avaient donc nulle part a vivre -- et R4 interdit de les ecrire
+-- en TypeScript. Deux colonnes les accueillent, et une contrainte refuse la
+-- ligne qui dirait les deux a la fois ou aucune des deux.
+--
+-- Ce que ces colonnes ne font PAS, et il faut le dire : aucun moteur ne
+-- recalcule le FODEC a partir du taux. Le montant reste celui qui est LU sur la
+-- piece et cite (R2). Un controle « base x taux ~ montant » serait faux ici :
+-- sur la facture mesuree le FODEC ne porte que quatre lignes sur cinq, et
+-- `extract.v1` ne dit pas QUELLES lignes le portent. Poser ce garde
+-- demanderait de remonter l'assiette ligne par ligne jusqu'a la lecture --
+-- c'est-a-dire de toucher a la chaine que R2 protege. Le taux est donc, pour
+-- aujourd'hui, une donnee que l'expert LIT au parametrage, pas un calcul.
+--
+-- ============================================================ LES IMPUTATIONS
+--
+-- Deux defauts livres, au sens de R10 : visibles, dates, surchargeables par le
+-- cabinet sans migration. Ce ne sont pas des verites.
+--
+--   a l'achat   6652 « Taxes sur le chiffre d'affaires non recuperables »
+--               -- compte OFFICIEL NC 01, et son libelle decrit exactement ce
+--               que le FODEC est pour l'acheteur : une taxe assise sur le
+--               chiffre d'affaires, qu'il ne recupere pas.
+--
+--   a la vente  4374 « Etat - FODEC collecte » -- subdivision OUVERTE PAR
+--               MALICA sous 437, comme 4371 (timbre), 4372 (TFP) et 4373
+--               (FOPROLOS) le sont deja. NC 01 ne subdivise pas 437 ; son
+--               commentaire dit que 437 « est credite du montant de tous les
+--               autres impots et taxes dus par l'entreprise ». Le FODEC n'est
+--               pas une taxe sur le chiffre d'affaires de la serie 436 : c'est
+--               une taxe affectee a un fonds. `is_official = false`.
+
+alter table ref.fiscal_charges
+  add column if not exists rate  numeric(9,6),
+  add column if not exists basis text;
+
+comment on column ref.fiscal_charges.rate is
+  'Le taux d''un droit PROPORTIONNEL (FODEC : 0.01). Nul pour un droit a '
+  'montant fixe. Aucun moteur ne s''en sert pour recalculer : le montant reste '
+  'celui qui est lu sur la piece (R2). Il se lit au parametrage.';
+
+comment on column ref.fiscal_charges.basis is
+  'L''assiette : « per_document » pour un droit du par piece (droit de timbre), '
+  '« base_ht » pour un droit assis sur le chiffre d''affaires hors TVA (FODEC).';
+
+-- Les deux lignes deja la sont des droits par piece : un dinar, quelle que
+-- soit la facture. On le DIT, puis la colonne devient obligatoire -- sans quoi
+-- une assiette nulle serait une assiette qu'on ne voit pas, ce que R4 refuse.
+update ref.fiscal_charges set basis = 'per_document'
+ where basis is null and fixed_amount is not null;
+
+alter table ref.fiscal_charges
+  alter column basis set not null;
+
+alter table ref.fiscal_charges
+  drop constraint if exists fiscal_charges_assiette_coherente;
+alter table ref.fiscal_charges
+  add constraint fiscal_charges_assiette_coherente check (
+    (basis = 'per_document' and fixed_amount is not null and rate is null)
+    or (basis = 'base_ht' and rate is not null and fixed_amount is null)
+  );
+
+-- Le compte de la vente : extension Malica sous 437, jamais un compte officiel.
+insert into ref.accounts
+  (pack_version_id, account_code, label, parent_code, account_class,
+   normal_side, is_collective, requires_auxiliary, is_official, source_ref)
+select p.id, '4374', 'Etat - FODEC collecte', '437', '4', 'credit', false, false, false,
+       'Extension Malica sous 437 (NC 01 ne subdivise pas 437), par symetrie avec '
+       '4371/4372/4373. Le FODEC est une taxe affectee a un fonds, pas une taxe sur '
+       'le CA de la serie 436. Taxe instituee par l''art. 36 de la loi 99-101 du '
+       '31/12/1999, taux fixe par l''art. 37, modifie par l''art. 15 de la LF 2011.'
+  from ref.jurisdiction_packs p
+ where p.jurisdiction = 'TN' and p.version = '2026.1'
+   and not exists (
+     select 1 from ref.accounts a
+      where a.pack_version_id = p.id and a.account_code = '4374');
+
+-- Le droit lui-meme. `valid_from` est ECRIT, en litteral : la colonne a pour
+-- defaut `current_date`, et l'omettre ferait entrer la date du jour dans le
+-- referentiel (R11, forme cachee). La date est celle du taux : 1er janvier
+-- 2011, la loi de finances pour 2011.
+insert into ref.fiscal_charges
+  (pack_version_id, code, label, document_kind, account_code,
+   fixed_amount, rate, basis, taxable, legal_reference, valid_from)
+select p.id, 'FODEC', c.label, c.kind, c.compte,
+       null, 0.010000, 'base_ht', true, c.ref, date '2011-01-01'
+  from ref.jurisdiction_packs p,
+  (values
+    ('Fonds de developpement de la competitivite (FODEC)', 'facture_achat', '6652',
+     'Art. 36 et 37 de la loi n° 99-101 du 31 decembre 1999 (LF 2000), art. 37 tel que '
+     'modifie par l''art. 15 de la loi de finances pour 2011 : taxe due au taux de 1 % '
+     'sur le chiffre d''affaires hors TVA. Assiette de la TVA : Code de la TVA, art. 6-I.'),
+    ('Fonds de developpement de la competitivite (FODEC)', 'facture_vente', '4374',
+     'Art. 36 et 37 de la loi n° 99-101 du 31 decembre 1999 (LF 2000), art. 37 tel que '
+     'modifie par l''art. 15 de la loi de finances pour 2011 : taxe due au taux de 1 % '
+     'sur le chiffre d''affaires hors TVA. Assiette de la TVA : Code de la TVA, art. 6-I.')
+  ) as c(label, kind, compte, ref)
+ where p.jurisdiction = 'TN' and p.version = '2026.1'
+on conflict (pack_version_id, code, document_kind, valid_from) do nothing;
+
+-- Le libelle que l'ecran montre vient de `ref.labels`, pas de la colonne
+-- `label` qui est francaise.
+insert into ref.labels (ns, key, locale, value) values
+  ('fiscal_charge','FODEC','fr','FODEC - Fonds de developpement de la competitivite'),
+  ('fiscal_charge','FODEC','en','FODEC - Competitiveness Development Fund levy'),
+  ('fiscal_charge','FODEC','ar','المعلوم لفائدة صندوق تنمية القدرة التنافسية')
+on conflict (ns, key, locale) do nothing;
+
+-- ===================================== CE QUI N'EST PAS ENTRE, ET POURQUOI
+--
+-- Trois charges ont ete examinees et ECARTEES. Aucune ne l'est faute de
+-- source : chacune l'est parce que `ref.fiscal_charges` decrit un droit
+-- IMPRIME SUR UNE PIECE, et qu'y inscrire autre chose dirait au designateur de
+-- le chercher sur la facture -- c'est-a-dire l'inviterait a inventer.
+--
+--   TCL. Taux sourcable : `CFL` art. 38, dans le corpus, « 0.2 pourcent »
+--   (0,1 % pour certains commerces a prix homologues, 25 % pour les personnes
+--   de l'art. 37 al. 2). Mais la taxe sur les etablissements ne se facture
+--   pas : l'entreprise la declare et la paie sur son propre chiffre
+--   d'affaires. Elle n'apparait sur aucune facture. Sa place est une echeance
+--   (`ref.pack_rules`), pas un droit de piece.
+--
+--   Retenue a la source. Elle ne s'AJOUTE pas au TTC, elle se RETIENT du
+--   montant a payer, et c'est le payeur qui l'opere -- pas l'emetteur de la
+--   facture. Le moteur d'equilibre traite `other_charges` comme additif et les
+--   porte du cote de la contrepartie : une retenue y entrerait avec le mauvais
+--   signe et fabriquerait une ecriture fausse. Son taux depend en outre de la
+--   nature du paiement ET de la convention applicable -- ce qui est exactement
+--   l'objet de la section 22.
+--
+--   Droit de consommation. Son taux n'existe pas au singulier : il se lit
+--   position tarifaire par position tarifaire, du simple au centuple. Une
+--   ligne de pack porterait donc un taux faux pour presque tout. Il est de
+--   plus compris dans le prix et dans l'assiette de la TVA, et ne figure
+--   qu'exceptionnellement en ligne separee.
+--
+-- Ce qui reste a faire un jour, et qui n'est pas fait ici faute d'avoir trouve
+-- le taux verbatim dans le corpus : les taxes au profit du fonds de
+-- developpement des communications, qui figurent, elles, sur les factures de
+-- telecommunications. Le `RECUEIL` en porte le chapitre XVII mais le texte
+-- ingere s'arrete avant le tarif. Rien n'est pose : un taux devine serait la
+-- faute que ce depot existe pour empecher.
+
+-- --- 22. Mille trois cent cinquante-sept articles qui n'osaient rien dire ----
+--
+-- ============================================================ LE DEFAUT REEL
+--
+-- 18 octobre 2026 : 1 357 articles du corpus PORTAIENT le droit et tous
+-- disaient `indetermine` -- les 45 conventions fiscales (1 315 articles) et les
+-- 42 normes comptables tunisiennes (42).
+--
+-- Deux regles du depot se heurtaient :
+--
+--   -- la recherche les rend, et DOIT les rendre : une convention prime sur la
+--      loi interne et plafonne la retenue a la source. C'est tout l'objet de
+--      `20260901200000_les_conventions_entrent_dans_la_recherche.sql` ;
+--   -- la consigne 12 du systeme de Malica dit « Un article dont le statut
+--      n'est pas "en vigueur" ne fonde aucune reponse actuelle », et l'en-tete
+--      transmis au modele imprime « -- STATUT : indetermine »
+--      (`malica/conseil/corpus.ts`).
+--
+-- Mesure : a une question sur la convention France-Tunisie -- en vigueur
+-- depuis le 1er avril 1975 -- Malica refusait de fonder sa reponse. Et le
+-- verdict `statut_non_en_vigueur` partait au journal des controles, ou
+-- personne ne le lit.
+--
+-- La migration du 1er septembre avait fait la moitie du chemin : elle a ouvert
+-- la RECHERCHE aux conventions. Elle n'a pas touche au STATUT, et le statut
+-- est ce que le modele lit.
+--
+-- ================================================================= LA SOURCE
+--
+-- Aucun statut n'est pose de memoire. La date de signature et la date
+-- d'entree en vigueur de chacune des 45 conventions viennent de la liste de
+-- reserves et de notifications deposee par la REPUBLIQUE TUNISIENNE au moment
+-- du depot de son instrument de ratification de la Convention multilaterale
+-- BEPS (OCDE, deposee le 24 juillet 2023), qui nomme, convention par
+-- convention, la juridiction, la date de signature et la date d'entree en
+-- vigueur. Les 45 corpus ingeres dans ce depot y figurent TOUS -- la liste en
+-- compte 56 : onze conventions couvertes n'ont pas encore ete ingerees
+-- (Cameroun, Cote d'Ivoire, Indonesie, Iran, Koweit, Maurice, Portugal,
+-- Royaume-Uni, Singapour, Soudan, Viet Nam), et cela se verra dans le rapport
+-- plutot que de se deviner ici.
+--
+-- Le texte de chaque convention porte en outre, dans le corpus et verbatim,
+-- son article d'entree en vigueur et son article de denonciation -- controle
+-- fait sur les 45 : chacune a les deux. La convention France-Tunisie art. 44
+-- dit « La Convention restera en vigueur sans limitation de duree ».
+--
+-- Pour les normes comptables : la loi n° 96-112 du 30 decembre 1996 relative
+-- au systeme comptable des entreprises, et les arretes du ministre des
+-- finances portant approbation des normes NC 01 a NC 42. Chaque norme porte
+-- deja sa propre date d'effet sur sa version (1997 pour NC 01-15, 1999 pour
+-- NC 16-25, 2001 pour NC 26-31, 2002 pour NC 32-34, 2003 pour NC 35-39, 2008
+-- pour NC 40-41, 2011 pour NC 42) et toutes ont `source_code = 'ARRETE'`.
+--
+-- ========================================================== LA REGLE RETENUE
+--
+-- Un article est `en_vigueur` quand l'instrument qui le porte est entre en
+-- vigueur a une date passee, qu'aucun instrument ulterieur du meme corpus ne
+-- le remplace, et que cette date est ECRITE avec sa source. C'est exactement
+-- la regle sous laquelle les 5 381 articles deja `en_vigueur` du depot le
+-- sont : une edition consolidee ingeree, non supplantee dans le corpus. On ne
+-- l'invente pas pour l'occasion, on l'applique au reste.
+--
+-- Ce qu'elle ne couvre pas, et qu'il faut dire : une denonciation notifiee par
+-- voie diplomatique et non publiee dans le corpus resterait invisible. Aucune
+-- source consultee n'en signale pour ces 45 conventions, et la liste BEPS de
+-- 2023 les donne toutes pour couvertes -- une convention denoncee n'y serait
+-- pas. C'est la meilleure garantie disponible, et elle n'est pas absolue.
+
+create table if not exists legal.corpus_vigueur (
+  corpus        text primary key,
+  instrument    text not null,
+  signe_le      date,
+  en_vigueur_le date not null,
+  source        text not null
+);
+
+comment on table legal.corpus_vigueur is
+  'Pourquoi un corpus est en vigueur : l''instrument, sa date, et la source qui '
+  'l''etablit. Une ligne ici est la justification d''un statut dans '
+  '`legal.articles` -- sans elle, « en vigueur » serait une affirmation nue.';
+
+comment on column legal.corpus_vigueur.en_vigueur_le is
+  'Date d''entree en vigueur, en LITTERAL (R11). Deux machines qui jouent ce '
+  'depot a deux jours d''intervalle doivent obtenir le meme referentiel.';
+
+alter table legal.corpus_vigueur enable row level security;
+alter table legal.corpus_vigueur force row level security;
+revoke all on table legal.corpus_vigueur from public, anon, service_role;
+grant select on table legal.corpus_vigueur to authenticated;
+
+drop policy if exists legal_corpus_vigueur_sel on legal.corpus_vigueur;
+create policy legal_corpus_vigueur_sel on legal.corpus_vigueur
+  for select to authenticated using (true);
+
+insert into legal.corpus_vigueur (corpus, instrument, signe_le, en_vigueur_le, source)
+select v.corpus, v.instrument, v.signe, v.vigueur, v.source
+  from (values
+    ('CONV-AFRIQUE-DU-SUD',  date '1999-02-02', date '1999-12-10'),
+    ('CONV-ALGERIE',         date '1985-02-09', date '1986-05-28'),
+    ('CONV-ALLEMAGNE',       date '2018-02-08', date '2019-12-16'),
+    ('CONV-ARABIE-SAOUDITE', date '2010-07-08', date '2013-04-01'),
+    ('CONV-AUTRICHE',        date '1977-06-23', date '1978-08-05'),
+    ('CONV-BELGIQUE',        date '2004-10-07', date '2009-06-05'),
+    ('CONV-BURKINA-FASO',    date '2003-04-15', date '2013-04-11'),
+    ('CONV-CANADA',          date '1982-02-10', date '1984-12-04'),
+    ('CONV-CHINE',           date '2002-04-16', date '2003-09-23'),
+    ('CONV-COREE-DU-SUD',    date '1988-09-27', date '1989-11-25'),
+    ('CONV-DANEMARK',        date '1981-02-05', date '1981-05-28'),
+    ('CONV-EGYPTE',          date '1989-12-08', date '1991-01-02'),
+    ('CONV-EMIRATS',         date '1996-04-10', date '1997-05-27'),
+    ('CONV-ESPAGNE',         date '1982-07-12', date '1987-02-14'),
+    ('CONV-ETATS-UNIS',      date '1985-06-17', date '1990-12-26'),
+    ('CONV-ETHIOPIE',        date '2003-01-23', date '2007-06-17'),
+    ('CONV-FRANCE',          date '1973-05-28', date '1975-04-01'),
+    ('CONV-GRECE',           date '1992-10-31', date '2010-09-29'),
+    ('CONV-HONGRIE',         date '1992-10-22', date '1997-07-19'),
+    ('CONV-ITALIE',          date '1979-05-16', date '1981-09-17'),
+    ('CONV-JORDANIE',        date '1988-02-14', date '1990-01-01'),
+    ('CONV-LIBAN',           date '1998-06-24', date '2000-06-03'),
+    ('CONV-LIBYE',           date '1978-05-15', date '1979-06-14'),
+    ('CONV-LUXEMBOURG',      date '1996-03-27', date '1999-10-18'),
+    ('CONV-MALI',            date '2000-04-28', date '2002-11-20'),
+    ('CONV-MALTE',           date '2000-05-31', date '2001-12-31'),
+    ('CONV-MAROC',           date '1974-08-28', date '1979-06-26'),
+    ('CONV-MAURITANIE',      date '1986-03-12', date '2000-01-01'),
+    ('CONV-NORVEGE',         date '1978-05-31', date '1980-01-03'),
+    ('CONV-OMAN',            date '1997-11-16', date '1998-04-22'),
+    ('CONV-PAKISTAN',        date '1996-04-18', date '1997-08-05'),
+    ('CONV-PAYS-BAS',        date '1995-05-16', date '1995-12-15'),
+    ('CONV-POLOGNE',         date '1993-03-30', date '1993-11-15'),
+    ('CONV-QATAR',           date '1997-03-08', date '1999-01-01'),
+    ('CONV-ROUMANIE',        date '1987-09-23', date '1989-01-19'),
+    ('CONV-SENEGAL',         date '1984-05-17', date '1985-05-25'),
+    ('CONV-SERBIE',          date '2012-04-11', date '2013-06-03'),
+    ('CONV-SLOVAQUIE',       date '1990-03-14', date '1991-10-25'),
+    ('CONV-SUEDE',           date '1981-05-07', date '1983-04-19'),
+    ('CONV-SUISSE',          date '1994-02-10', date '1995-04-28'),
+    ('CONV-SYRIE',           date '1998-06-22', date '2001-01-01'),
+    ('CONV-TCHEQUIE',        date '1990-03-14', date '1991-10-25'),
+    ('CONV-TURQUIE',         date '1986-10-02', date '1987-12-28'),
+    ('CONV-UMA',             date '1990-07-23', date '1993-07-14'),
+    ('CONV-YEMEN',           date '1998-03-08', date '2000-09-27')
+  ) as c(corpus, signe, vigueur)
+  cross join lateral (values (
+    c.corpus, c.signe, c.vigueur,
+    'Convention de non double imposition',
+    'Republique Tunisienne, Statut de la Liste de reserves et de notifications '
+    'au moment du depot de l''instrument de ratification de la Convention '
+    'multilaterale BEPS (OCDE), deposee le 24 juillet 2023 : conventions '
+    'fiscales couvertes, date de signature et date d''entree en vigueur. '
+    'L''article d''entree en vigueur et l''article de denonciation de la '
+    'convention figurent en outre verbatim dans le corpus du depot.'
+  )) as v(corpus, signe, vigueur, instrument, source)
+on conflict (corpus) do nothing;
+
+-- Les normes comptables. Un seul instrument fondateur, et des arretes
+-- d'approbation successifs dont chaque norme porte deja la date sur sa version.
+insert into legal.corpus_vigueur (corpus, instrument, signe_le, en_vigueur_le, source)
+values (
+  'NCT',
+  'Systeme comptable des entreprises (NC 01 a NC 42)',
+  date '1996-12-30',
+  date '1997-01-01',
+  'Loi n° 96-112 du 30 decembre 1996 relative au systeme comptable des '
+  'entreprises, et arretes du ministre des finances portant approbation des '
+  'normes comptables (NC 01-15 applicables en 1997, NC 16-25 en 1999, '
+  'NC 26-31 en 2001, NC 32-34 en 2002, NC 35-39 en 2003, NC 40-41 en 2008, '
+  'NC 42 en 2011). Chaque norme porte sa propre date d''effet sur sa version '
+  'd''article ; aucun arrete d''abrogation n''existe. NC 42 cite elle-meme '
+  '« l''article premier de la loi n° 96-112 du 30 decembre 1996 ».'
+)
+on conflict (corpus) do nothing;
+
+-- Le statut suit la source, et seulement elle : un corpus sans ligne dans
+-- `legal.corpus_vigueur` reste `indetermine`, ce qui est la reponse juste.
+update legal.articles a
+   set statut = 'en_vigueur'
+  from legal.corpus_vigueur v
+ where v.corpus = a.corpus
+   and a.statut = 'indetermine';
+
+-- ============================================ L'ANACHRONISME DE L'ALLEMAGNE
+--
+-- Trouve en comparant les dates ingerees a la liste BEPS : CONV-ALLEMAGNE
+-- portait `valid_from = 1975-01-01` alors que son texte ingere est celui de la
+-- convention du 8 fevrier 2018 -- il a 32 articles, un art. 26 « Echange de
+-- renseignements », un art. 27 « Assistance en matiere de recouvrement » et un
+-- art. 29 renvoyant a un protocole annexe, tous absents de la convention de
+-- 1975. Une question datee de 1990 recevait donc un texte entre en vigueur
+-- vingt-neuf ans plus tard, presente comme le droit de l'epoque.
+--
+-- Les 45 conventions portaient toutes une date du 1er janvier, arrondie a
+-- l'annee par l'ingestion. On leur rend leur vraie date, celle de la source,
+-- en litteral. Ce n'est pas une correction de confort : `corpus.rechercher`
+-- choisit la version par `valid_from <= le jour demande`.
+--
+-- Ce que cela ne repare pas : l'ingestion continuera de deriver la date du
+-- texte. Une reingestion ramenerait 1975. C'est pourquoi l'epreuve
+-- `le-droit-conventionnel-est-citable.test.ts` compare les deux -- elle
+-- rougira le jour ou l'ingestion repassera devant cette table au lieu de la
+-- lire.
+
+update legal.article_versions av
+   set valid_from = v.en_vigueur_le
+  from legal.articles a
+  join legal.corpus_vigueur v on v.corpus = a.corpus
+ where av.article_id = a.id
+   and a.corpus like 'CONV-%'
+   and av.valid_from <> v.en_vigueur_le;
+
+-- --- 23. L'etat d'une licence s'affichait en code brut ----------------------
+--
+-- ============================================================ LE DEFAUT REEL
+--
+-- 18 octobre 2026 : l'ecran des reglages imprimait `f.statut` tel quel sous
+-- « Etat de la licence » -- `active`, `suspendue`, `resiliee`. Le specialiste
+-- des langues a refuse de le traduire, et il avait raison :
+-- `apps/web/src/lib/champ-lisible.ts` note que ces codes ne forment pas une
+-- enumeration fermee du cote de l'ecran (`lecture_autorisee` compose
+-- `'licence_' || statut`), et inventer la table dans le code aurait ete la
+-- constante que R4 interdit.
+--
+-- Or la base, elle, SAIT : `facturation.licences` porte
+-- `check (statut in ('active','suspendue','resiliee'))`. L'enumeration est
+-- fermee la ou elle est ecrite. Il ne restait qu'a poser ses libelles dans le
+-- referentiel, comme les motifs de rejet le sont depuis le 24 aout 2026.
+--
+-- Le motif de suspension suit, parce que c'est la meme contrainte et le meme
+-- ecran : « suspendue » sans son motif ne dit pas si le client a demande la
+-- suspension ou s'il n'a pas paye.
+--
+-- L'epreuve `les-statuts-de-licence-ont-un-libelle.test.ts` releve la liste
+-- dans la contrainte `check` elle-meme, dans les deux sens : un statut sans
+-- libelle la fait rougir, et un libelle sans statut aussi (R9).
+
+insert into ref.labels (ns, key, locale, value) values
+  ('licence_statut','active','fr','Active'),
+  ('licence_statut','active','en','Active'),
+  ('licence_statut','active','ar','نشطة'),
+  ('licence_statut','suspendue','fr','Suspendue'),
+  ('licence_statut','suspendue','en','Suspended'),
+  ('licence_statut','suspendue','ar','موقوفة'),
+  ('licence_statut','resiliee','fr','Résiliée'),
+  ('licence_statut','resiliee','en','Terminated'),
+  ('licence_statut','resiliee','ar','ملغاة'),
+
+  ('licence_motif_suspension','impaye','fr','Impayé'),
+  ('licence_motif_suspension','impaye','en','Unpaid invoice'),
+  ('licence_motif_suspension','impaye','ar','عدم الدفع'),
+  ('licence_motif_suspension','detachement_cabinet','fr','Détachement du cabinet'),
+  ('licence_motif_suspension','detachement_cabinet','en','Firm detached the client'),
+  ('licence_motif_suspension','detachement_cabinet','ar','فصل المكتب للملف'),
+  ('licence_motif_suspension','demande_client','fr','Demande du client'),
+  ('licence_motif_suspension','demande_client','en','Customer request'),
+  ('licence_motif_suspension','demande_client','ar','بطلب من الحريف')
+on conflict (ns, key, locale) do nothing;
+
+commit;

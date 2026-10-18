@@ -34,6 +34,65 @@ export const facturation = {
     return rows[0] ?? null;
   },
 
+  /**
+   * Les états qu'une licence peut porter, et leurs motifs de suspension, dits
+   * dans la langue de la personne.
+   *
+   * ================================================================= POURQUOI
+   *
+   * L'écran des réglages imprimait `monForfait().statut` tel quel sous « État
+   * de la licence » : `active`, `suspendue`, `resiliee`. Il ne pouvait pas
+   * faire mieux — `champ-lisible.ts` note à juste titre que ces codes ne sont
+   * pas une énumération fermée du côté de l'écran, et une table de traduction
+   * écrite en TypeScript aurait été la constante que R4 interdit.
+   *
+   * L'énumération est fermée là où elle est écrite : la contrainte `check` de
+   * `facturation.licences`. Ses libellés vivent donc dans `ref.labels`, comme
+   * les motifs de rejet, et c'est cette liste-là que l'écran lit.
+   *
+   * Le repli sur le français est explicite : un libellé sans traduction
+   * s'affiche, il ne vide pas la ligne. Ce n'est pas un repli implicite au sens
+   * de R4 — il ne choisit pas une juridiction, il choisit une langue de
+   * secours, et on le voit.
+   */
+  async libellesDesStatuts(db: Requete, locale: string) {
+    /*
+     * Les deux espaces de noms sont écrits EN TOUTES LETTRES, deux fois, et
+     * non passés en paramètre. `scan/le-referentiel-se-traduit.test.ts` relève
+     * dans le code les `ns = '…'` littéraux pour s'assurer qu'aucun namespace
+     * de `ref.labels` n'est semé sans être lu. Une requête paramétrée lui
+     * serait invisible : le garde dirait « orphelin » sur un namespace bien
+     * joint, ou — pire s'il était assoupli — se tairait sur un vrai orphelin.
+     */
+    const { rows: statuts } = await db.query<{ code: string; libelle: string }>(
+      `select l.key as code, coalesce(demandee.value, francais.value, l.key) as libelle
+         from (select distinct key from ref_labels_v where ns = 'licence_statut') l
+         left join ref_labels_v demandee
+           on demandee.ns = 'licence_statut' and demandee.key = l.key
+          and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'licence_statut' and francais.key = l.key
+          and francais.locale = 'fr'
+        order by l.key`,
+      [locale],
+    );
+
+    const { rows: motifs } = await db.query<{ code: string; libelle: string }>(
+      `select l.key as code, coalesce(demandee.value, francais.value, l.key) as libelle
+         from (select distinct key from ref_labels_v where ns = 'licence_motif_suspension') l
+         left join ref_labels_v demandee
+           on demandee.ns = 'licence_motif_suspension' and demandee.key = l.key
+          and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'licence_motif_suspension' and francais.key = l.key
+          and francais.locale = 'fr'
+        order by l.key`,
+      [locale],
+    );
+
+    return { statuts, motifsDeSuspension: motifs };
+  },
+
   /** Les membres de toutes les organisations de la licence. */
   async sieges(db: Requete) {
     const { rows } = await db.query(

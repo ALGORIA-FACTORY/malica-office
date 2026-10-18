@@ -109,21 +109,21 @@ describe("le droit conventionnel et les normes comptables", { skip: !BASE_CONFIG
   it("chaque corpus du droit conventionnel porte sa date d'entrée en vigueur et sa source", async () => {
     const { rows } = await pool.query<{
       corpus: string;
-      en_vigueur_le: Date;
+      en_vigueur_le: string;
       source: string;
-    }>(`select corpus, en_vigueur_le, source from legal.corpus_vigueur order by corpus`);
+    }>(
+      `select corpus, en_vigueur_le::text as en_vigueur_le, source
+         from legal.corpus_vigueur order by corpus`,
+    );
 
     assert.ok(rows.length >= 46, "45 conventions et les normes comptables");
     const aujourdhui = new Date().toISOString().slice(0, 10);
     for (const r of rows) {
       assert.ok(
-        r.en_vigueur_le.toISOString().slice(0, 10) <= aujourdhui,
+        r.en_vigueur_le <= aujourdhui,
         `${r.corpus} : une entrée en vigueur future ne rend pas l'article citable`,
       );
-      assert.ok(
-        r.source.trim().length > 20,
-        `${r.corpus} : la source doit se lire, pas s'abréger`,
-      );
+      assert.ok(r.source.trim().length > 20, `${r.corpus} : la source doit se lire, pas s'abréger`);
     }
   });
 
@@ -136,11 +136,12 @@ describe("le droit conventionnel et les normes comptables", { skip: !BASE_CONFIG
       assert.deepEqual(rows, [{ statut: "en_vigueur", n: "44" }]);
     } else t.diagnostic("corpus absent : seule la date du référentiel est éprouvée ici");
 
-    const { rows: date } = await pool.query<{ signe_le: Date; en_vigueur_le: Date }>(
-      `select signe_le, en_vigueur_le from legal.corpus_vigueur where corpus = 'CONV-FRANCE'`,
+    const { rows: date } = await pool.query<{ signe_le: string; en_vigueur_le: string }>(
+      `select signe_le::text as signe_le, en_vigueur_le::text as en_vigueur_le
+         from legal.corpus_vigueur where corpus = 'CONV-FRANCE'`,
     );
-    assert.equal(date[0]!.signe_le.toISOString().slice(0, 10), "1973-05-28");
-    assert.equal(date[0]!.en_vigueur_le.toISOString().slice(0, 10), "1975-04-01");
+    assert.equal(date[0]!.signe_le, "1973-05-28");
+    assert.equal(date[0]!.en_vigueur_le, "1975-04-01");
   });
 
   /*

@@ -98,9 +98,10 @@ function factureAvecFodec(): ExtractV1 {
       ligne("Transport", "500.000"),
     ],
     articles: [],
+    // `label` vide : le libellé affiché vient du pack, jamais de la pièce.
     other_charges: [
-      { code: "FODEC", amount: "71.200" },
-      { code: "DROIT_TIMBRE", amount: "1.000" },
+      { code: "FODEC", label: "", amount: "71.200" },
+      { code: "DROIT_TIMBRE", label: "", amount: "1.000" },
     ],
     totals: { base_ht: "7620.000", vat: "1447.800", ttc: "9140.000" },
     references: { invoice_no: "F-2026-1187" },
@@ -134,10 +135,10 @@ describe("le FODEC dans le pack tunisien", { skip: !BASE_CONFIGUREE }, () => {
       fixed_amount: string | null;
       taxable: boolean;
       legal_reference: string | null;
-      valid_from: Date;
+      valid_from: string;
     }>(
       `select document_kind, account_code, rate::text as rate, basis,
-              fixed_amount::text as fixed_amount, taxable, legal_reference, valid_from
+              fixed_amount::text as fixed_amount, taxable, legal_reference, valid_from::text as valid_from
          from ref.fiscal_charges
         where pack_version_id = $1 and code = 'FODEC'
         order by document_kind`,
@@ -159,7 +160,7 @@ describe("le FODEC dans le pack tunisien", { skip: !BASE_CONFIGUREE }, () => {
         "la référence légale nomme la loi qui institue la taxe",
       );
       assert.equal(
-        r.valid_from.toISOString().slice(0, 10),
+        r.valid_from,
         "2011-01-01",
         "le taux de 1 % court depuis la loi de finances pour 2011",
       );
@@ -230,7 +231,7 @@ describe("le FODEC dans le pack tunisien", { skip: !BASE_CONFIGUREE }, () => {
       code: c.code,
       label: c.label,
       account_code: c.account_code,
-      document_kind: c.document_kind as FiscalChargeRule["document_kind"],
+      document_kind: c.document_kind as "facture_achat" | "facture_vente",
       fixed_amount: c.fixed_amount,
     }));
 
