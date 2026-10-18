@@ -1287,6 +1287,8 @@ const fr = {
     "Montant non rendu : il est collé au nombre voisin sur la pièce, et une lecture amputée vaut moins que pas de lecture.",
   "cab.code.incoherent":
     "La pièce ne boucle pas : ce que son arithmétique donne et ce qu’elle imprime diffèrent.",
+  "cab.code.designationAmbigue":
+    "Deux endroits de la pièce répondaient à la même règle : je n’ai pas choisi au hasard.",
   "cab.code.autre": "Signalement de lecture.",
   "cab.notif.kind.piece.demande": "Votre client demande le retour d'une pièce",
   "cab.notif.kind.piece.demande_tranchee": "Demande tranchée",
@@ -3959,6 +3961,8 @@ const en: Dict = {
     "Amount not returned: it runs into the neighbouring number on the document, and a clipped reading is worth less than none.",
   "cab.code.incoherent":
     "The document does not balance: what its arithmetic gives and what it prints differ.",
+  "cab.code.designationAmbigue":
+    "Two places on the document matched the same rule: I did not pick one at random.",
   "cab.code.autre": "Reading flag.",
   "cab.notif.kind.piece.demande": "Your client is asking for a document back",
   "cab.notif.kind.piece.demande_tranchee": "Request settled",
@@ -6584,6 +6588,7 @@ const ar: Dict = {
   "cab.code.ampute":
     "مبلغ لم يُرجَع: هو ملتصق بالعدد المجاور في الوثيقة، وقراءة مبتورة أسوأ من غياب القراءة.",
   "cab.code.incoherent": "الوثيقة لا تتوازن: ما تعطيه حساباتها يخالف ما تطبعه.",
+  "cab.code.designationAmbigue": "موضعان في الوثيقة استجابا لنفس القاعدة: لم أختر عشوائيًا.",
   "cab.code.autre": "تنبيه قراءة.",
   "cab.notif.kind.piece.demande": "عميلك يطلب استرجاع وثيقة",
   "cab.notif.kind.piece.demande_tranchee": "تم البتّ في الطلب",

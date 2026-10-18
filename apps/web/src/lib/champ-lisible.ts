@@ -267,6 +267,13 @@ export function libelleDuCode(code: string, t: T): string {
      */
     MONTANT_PEUT_ETRE_AMPUTE: "cab.code.ampute",
     ARITHMETIQUE_INCOHERENTE: "cab.code.incoherent",
+    /*
+     * `DESIGNATION_AMBIGUE` ne dit pas qu'une lecture a echoue : elle dit que
+     * le lecteur specialise a REFUSE de choisir entre deux candidats. La
+     * phrase doit porter ce refus, sinon il passe pour une panne -- et c'est
+     * le seul drapeau qui annonce qu'un format a peut-etre change.
+     */
+    DESIGNATION_AMBIGUE: "cab.code.designationAmbigue",
   };
   return t(CODES[code] ?? "cab.code.autre");
 }

@@ -94,6 +94,24 @@ export interface ReadFlag {
      */
     | "MONTANT_PEUT_ETRE_AMPUTE"
     /**
+     * Plusieurs jetons satisfont la règle, et rien ne les départage.
+     *
+     * Posé le 18 octobre 2026, avec la fabrique de lecteurs. Un lecteur
+     * spécialisé désigne par une règle, pas par un jugement : quand deux jetons
+     * répondent également à cette règle, il n'a aucun moyen de choisir, et
+     * choisir quand même serait un tirage au sort présenté comme une lecture.
+     *
+     * Aucun drapeau existant ne disait cela. `TOKEN_NOT_FOUND` dit le
+     * CONTRAIRE de ce qui s'est passé — il y en avait trop, pas zéro — et
+     * `SEPARATEUR_AMBIGU` juge la lecture d'un texte, pas le choix d'un jeton.
+     * Les écrire l'un pour l'autre rendait « aucun candidat » et « deux
+     * candidats » indiscernables au tableau de mesures, alors que le premier
+     * dit qu'un format a changé et le second qu'une règle est trop large.
+     *
+     * C'est le signal de DÉRIVE d'une recette : il doit pouvoir la suspendre.
+     */
+    | "DESIGNATION_AMBIGUE"
+    /**
      * Le sens de la pièce — achat ou vente — ne se tranche pas sans risque.
      *
      * Posé le 5 octobre 2026. Un modèle avait rendu « vente » sur un achat,
