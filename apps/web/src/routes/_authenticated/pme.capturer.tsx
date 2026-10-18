@@ -576,6 +576,12 @@ function PmeCapturer() {
   }
 
   function recommencer() {
+    /*
+     * Le lot de ce passage a fini sa course : on le retire de l'URL, sinon
+     * « capturer la suivante » rouvrirait l'étape 0 sur une liste de pièces
+     * désormais lues — c'est-à-dire sur rien, sans dire pourquoi.
+     */
+    void navigate({ to: "/pme/capturer", search: {}, replace: true });
     setEtape(0);
     setFige(null);
     setDest(null);

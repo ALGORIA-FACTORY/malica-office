@@ -46,7 +46,7 @@
  * plafond, et lui seul, porte le marigold — partout ailleurs un refus est
  * vermillon.
  */
-import { libelleDuRefus, refusDuPlafond } from "@/lib/champ-lisible";
+import { libelleDuRefus, motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { useI18n } from "@/i18n";
 import type { LectureRefusee, Visibility } from "@malica/socle/ports/repositories";
 
@@ -88,22 +88,6 @@ export function EtatDeLecture({
       <span className="t-meta mt-px block">{libelleDuRefus(motif, t)}</span>
     </span>
   );
-}
-
-/**
- * Le motif à dire : celui que la base a inscrit, sinon celui que la
- * visibilité implique, sinon rien.
- *
- * L'ordre compte. Un refus INSCRIT gagne toujours : si la base a dit
- * « plafond atteint » sur une pièce privée, c'est le plafond qui a tranché en
- * dernier, et c'est lui qu'il faut dire.
- */
-export function motifDeLEtat(
-  refus: LectureRefusee | null | undefined,
-  vis: Visibility,
-): string | null {
-  if (refus) return refus.motif;
-  return vis === "personnel" ? "piece_personnelle" : null;
 }
 
 /**

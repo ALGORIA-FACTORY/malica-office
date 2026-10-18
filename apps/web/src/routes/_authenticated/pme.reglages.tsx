@@ -801,8 +801,7 @@ function Siege({
   const [retour, setRetour] = useState<string | null>(null);
 
   const liberer = useMutation({
-    mutationFn: () =>
-      office().facturation.libererPlace(siege.tenant_id, siege.user_id),
+    mutationFn: () => office().facturation.libererPlace(siege.tenant_id, siege.user_id),
     onSuccess: async (r) => {
       if (r.libere) {
         setRetour(t("pme.reglages.siege.liberee"));

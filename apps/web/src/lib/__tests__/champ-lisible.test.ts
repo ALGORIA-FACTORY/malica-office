@@ -4,6 +4,9 @@ import {
   libelleDeLAction,
   libelleDuChamp,
   libelleDuCode,
+  libelleDuRefus,
+  motifDeLEtat,
+  motifDeRefusConnu,
   valeurDuChamp,
   valeurLisible,
 } from "../champ-lisible";
@@ -93,5 +96,68 @@ describe("codes et actions", () => {
     expect(libelleDeLAction("extract.v1", t as never)).toBe("cab.audit.extract");
     expect(libelleDeLAction("ecriture.booked", t as never)).toBe("cab.notif.kind.ecriture.booked");
     expect(libelleDeLAction("immo.prorata", t as never)).toBe("cab.audit.autre");
+  });
+});
+
+describe("pourquoi une pièce n'est pas lue", () => {
+  /*
+   * Deux défauts de la même famille, et ils ont le même remède.
+   *
+   * Le premier : `piece_personnelle` s'affichait TEL QUEL à l'écran de la
+   * pièce. `libelleDuRefus` existait, était testé, et n'était pas importé par
+   * l'écran qui en avait besoin — la quatrième fois dans ce dépôt.
+   *
+   * Le second : trente pièces privées disaient « En attente de lecture »
+   * parce qu'aucun refus n'avait été inscrit pour elles. Elles n'attendaient
+   * rien : une pièce personnelle n'est jamais lue. Cet état se DÉRIVE de la
+   * visibilité — on ne réécrit pas un fait pour le rattraper (R7).
+   */
+  it("traduit chaque motif que la base inscrit", () => {
+    expect(libelleDuRefus("piece_personnelle", t as never)).toBe("pme.refus.piece_personnelle");
+    expect(libelleDuRefus("plafond_atteint", t as never)).toBe("pme.refus.plafond_atteint");
+    expect(libelleDuRefus("licence_resiliee", t as never)).toBe("pme.refus.licence.autre");
+    expect(libelleDuRefus("inconnu", t as never)).toBe("pme.refus.autre");
+  });
+
+  it("reconnaît un motif de refus, et ne prend pas une panne pour un refus", () => {
+    // Sans cette garde, l'écran de la pièce aurait repeint toute panne de
+    // réseau en « je ne l'ai pas lue, et je ne sais pas pourquoi ».
+    expect(motifDeRefusConnu("piece_personnelle")).toBe(true);
+    expect(motifDeRefusConnu("licence_suspendue")).toBe(true);
+    expect(motifDeRefusConnu("licence_nimporte_quoi")).toBe(true);
+    expect(motifDeRefusConnu("Failed to fetch")).toBe(false);
+    expect(motifDeRefusConnu("lecture.illisible")).toBe(false);
+  });
+
+  it("une pièce privée sans refus inscrit n'attend rien : elle est privée", () => {
+    expect(motifDeLEtat(null, "personnel")).toBe("piece_personnelle");
+    expect(motifDeLEtat(undefined, "personnel")).toBe("piece_personnelle");
+  });
+
+  it("une pièce de la société ou du cabinet sans refus attend bien son tour", () => {
+    expect(motifDeLEtat(null, "entite")).toBeNull();
+    expect(motifDeLEtat(null, "partage")).toBeNull();
+  });
+
+  it("dans l'espace privé, un refus inscrit gagne sur celui que la visibilité implique", () => {
+    // Le forfait se recharge, la visibilité non : c'est le plafond qu'il faut
+    // dire, parce que c'est lui qui a tranché en dernier.
+    expect(motifDeLEtat({ motif: "plafond_atteint" }, "personnel")).toBe("plafond_atteint");
+  });
+
+  it("une fois la pièce entrée dans la société, le refus « pièce personnelle » se tait", () => {
+    /*
+     * Relevé à l'écran le 18 octobre 2026 : une pièce qu'on venait de faire
+     * entrer dans la société affichait encore « je ne la lis pas tant que
+     * vous ne la transmettez pas ». Le refus avait bien eu lieu, et on ne le
+     * réécrit pas (R7) — mais il ne décrit plus l'état de la pièce.
+     */
+    expect(motifDeLEtat({ motif: "piece_personnelle" }, "entite")).toBeNull();
+    expect(motifDeLEtat({ motif: "piece_personnelle" }, "partage")).toBeNull();
+  });
+
+  it("un plafond ou une licence suspendue, eux, ne se lèvent pas en déplaçant la pièce", () => {
+    expect(motifDeLEtat({ motif: "plafond_atteint" }, "entite")).toBe("plafond_atteint");
+    expect(motifDeLEtat({ motif: "licence_suspendue" }, "partage")).toBe("licence_suspendue");
   });
 });

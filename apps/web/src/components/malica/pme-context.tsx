@@ -25,7 +25,7 @@ export interface FileDAttente {
  * d'abonnement »). Un seul « — » pour les trois ferait conclure à une panne
  * là où il n'y en a pas.
  */
-export interface ForfaitDuContexte {
+interface ForfaitDuContexte {
   /** La ligne, ou `null` : pas de licence sur ce compte, ou pas encore lue. */
   ligne: MonForfait | null;
   /** La première lecture est en cours. Rien n'est encore vrai ni faux. */

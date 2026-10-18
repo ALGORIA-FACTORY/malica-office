@@ -175,6 +175,48 @@ export function motifDeRefusConnu(code: string): boolean {
 }
 
 /**
+ * Pourquoi cette pièce n'est pas lue : le motif inscrit, sinon celui que sa
+ * visibilité implique, sinon rien.
+ *
+ * ================================================================== POURQUOI
+ *
+ * 18 octobre 2026, mesuré sur le dossier d'atelier : trente pièces privées
+ * affichaient « En attente de lecture ». Elles n'attendaient rien — une pièce
+ * `personnel` n'est jamais lue (B6) — mais aucun refus n'avait été inscrit
+ * pour elles : l'inscription est récente, et le journal d'audit ne contient
+ * rien pour les pièces d'avant.
+ *
+ * La tentation était d'écrire ces trente refus par une migration. C'eût été
+ * inscrire un fait daté d'aujourd'hui pour un refus qui n'a jamais eu lieu, et
+ * R7 interdit de réécrire un fait. Cet état se DÉRIVE donc de ce qu'on sait
+ * déjà : la visibilité de la pièce.
+ *
+ * ============================================================= L'ORDRE COMPTE
+ *
+ * Dans l'espace privé, un refus inscrit gagne : si la base a dit « plafond
+ * atteint », c'est le plafond qui a tranché en dernier, et c'est lui qu'il
+ * faut dire.
+ *
+ * Hors de l'espace privé, un refus `piece_personnelle` est PÉRIMÉ et se tait.
+ * Relevé à l'écran le 18 octobre 2026 : une pièce qu'on vient de faire entrer
+ * dans la société affichait encore « je ne la lis pas tant que vous ne la
+ * transmettez pas », parce que le journal gardait le refus d'avant. Le fait
+ * inscrit reste vrai — il a bien eu lieu, et on ne le réécrit pas (R7) —
+ * mais il ne décrit plus l'état de la pièce, et c'est l'état qu'on affiche.
+ *
+ * Les autres motifs, eux, restent : un plafond ou une licence suspendue ne
+ * se lèvent pas en déplaçant la pièce.
+ */
+export function motifDeLEtat(
+  refus: { motif: string } | null | undefined,
+  vis: string,
+): string | null {
+  if (vis === "personnel") return refus?.motif ?? "piece_personnelle";
+  if (refus && refus.motif !== "piece_personnelle") return refus.motif;
+  return null;
+}
+
+/**
  * Le plafond, et lui seul, porte le marigold — c'est la règle du langage
  * visuel, et elle se décide ici plutôt que dans chaque écran qui l'affiche.
  */

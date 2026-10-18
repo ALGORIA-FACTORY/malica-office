@@ -656,7 +656,8 @@ export interface Piece {
   entityId: string | null;
   status: PieceStatus;
   source: "photo" | "pdf";
-  vis: "personnel" | "partage";
+  /** Les trois lieux : l'espace privé, la bibliothèque de la société, le cabinet. */
+  vis: Visibility;
   storagePath: string;
   createdAt: string;
   /**
@@ -785,7 +786,7 @@ export interface NewPiece {
   file: Blob;
   fileName: string;
   source: "photo" | "pdf";
-  vis: "personnel" | "partage";
+  vis: Visibility;
   idempotencyKey: string;
 }
 

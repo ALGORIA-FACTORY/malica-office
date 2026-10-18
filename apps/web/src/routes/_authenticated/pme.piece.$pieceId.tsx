@@ -11,9 +11,14 @@ import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
-import { motifDeLEtat, RefusDeLecture } from "@/components/malica/lecture-refusee";
+import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import malicaLoin from "@/assets/malica-loin.webp";
-import { libelleDuChamp, libelleDuRefus, motifDeRefusConnu } from "@/lib/champ-lisible";
+import {
+  libelleDuChamp,
+  libelleDuRefus,
+  motifDeLEtat,
+  motifDeRefusConnu,
+} from "@/lib/champ-lisible";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
@@ -1046,11 +1051,11 @@ function PieceScreen() {
           <RefusDeLecture
             motif={motifNonLue}
             dateLisible={
-              lectureRefusee === null
-                ? null
-                : new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+              lectureRefusee
+                ? new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
                     new Date(lectureRefusee.le),
                   )
+                : null
             }
           />
         )}
