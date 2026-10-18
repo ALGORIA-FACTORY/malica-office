@@ -42,3 +42,27 @@ export type Visibilite = "personnel" | "partage";
 export function visibiliteALaCapture(_contexte: { mandatActif: boolean | undefined }): Visibilite {
   return "personnel";
 }
+
+/**
+ * Cette visibilité interdit-elle la lecture ?
+ *
+ * ================================================================== POURQUOI
+ *
+ * `public.lecture_autorisee` refuse toute pièce `personnel` — c'est B6, et
+ * l'espace privé l'est aussi du patron. La file, elle, demandait la lecture
+ * d'office après chaque dépôt. Résultat mesuré le 18 octobre 2026 sur le
+ * dossier d'atelier : **30 pièces photographiées, 0 lue**, et trente refus
+ * inscrits au journal d'audit — un par pièce, pour une réponse qu'on
+ * connaissait avant de poser la question.
+ *
+ * Demander ce qu'on sait refusé n'est pas une sécurité, c'est du bruit dans
+ * le journal. La règle vit ici, à côté de celle qui décide de la visibilité à
+ * la capture : les deux sont la même phrase, lue dans les deux sens.
+ *
+ * Ce qui ne bouge pas : la capture n'est JAMAIS bloquée. On ne refuse jamais à
+ * quelqu'un de photographier sa facture. Ce qui se refuse, c'est de la LIRE,
+ * et l'écran le dit.
+ */
+export function lectureInterdite(vis: string): boolean {
+  return vis === "personnel";
+}

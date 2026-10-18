@@ -208,11 +208,51 @@ const fr = {
   "pme.list.empty": "Aucune pièce déposée.",
   "pme.list.nonLue": "Pas encore lue",
   "pme.list.sansEmetteur": "Émetteur non trouvé",
+  /*
+   * ============================== POURQUOI UNE PIÈCE N'A PAS ÉTÉ LUE
+   *
+   * La base inscrit un CODE, jamais une phrase, et l'écran le traduit. Un code
+   * affiché tel quel — `plafond_atteint` — est un identifiant machine ; c'est
+   * le défaut « ISSUER » sous un autre nom.
+   *
+   * `licence_<statut>` est construit par concaténation côté base : tout statut
+   * autre que `suspendue` tombe donc sur `pme.refus.licence.autre`, qui dit la
+   * vérité — la licence n'ouvre pas la lecture — sans inventer de statut.
+   *
+   * Deux états à ne pas confondre dans une liste : « photographiée, j'attends
+   * de la lire » et « photographiée, je ne l'ai PAS lue, voici pourquoi ». Le
+   * second est le silence qui a ouvert la session du 17 octobre.
+   */
+  "pme.refus.titre": "Non lue",
+  "pme.refus.attente": "En attente de lecture",
+  "pme.refus.plafond_atteint":
+    "Vous avez atteint le nombre de lectures de votre forfait. La pièce est rangée ; elle sera lue dès que le forfait repart.",
+  "pme.refus.piece_personnelle":
+    "Cette pièce est dans votre espace privé : je ne la lis pas tant que vous ne la transmettez pas.",
+  "pme.refus.licence_suspendue":
+    "Votre abonnement est suspendu. La pièce est rangée, et je la lirai dès qu'il reprend.",
+  "pme.refus.licence.autre": "Votre abonnement n'ouvre pas la lecture en ce moment.",
+  "pme.refus.organisation_sans_licence":
+    "Ce dossier n'a pas d'abonnement actif : je range les pièces, je ne les lis pas encore.",
+  "pme.refus.piece_deja_lue": "Cette pièce a déjà été lue : sa relecture ne coûte rien.",
+  "pme.refus.autre": "Je n'ai pas lu cette pièce, et la raison ne m'est pas connue.",
+  "pme.refus.le": "Refusée le {date}",
   "pme.doc.titre": "Vos documents",
   "pme.doc.importer": "Importer des PDF",
   "pme.doc.lead.mois": "{count} documents lus et classés en {mois}.",
   "pme.doc.lead.mois#one": "{count} document lu et classé en {mois}.",
   "pme.doc.lead.mois#other": "{count} documents lus et classés en {mois}.",
+  /*
+   * ====================== « LUS ET CLASSÉS » NE COMPTE QUE CE QUI L'EST
+   *
+   * La phrase comptait les pièces du mois en affirmant qu'elles étaient lues
+   * et classées. Elle compte maintenant les lues, et la seconde phrase dit
+   * ce que sont les autres — sans prétendre qu'elles attendent, puisqu'une
+   * pièce privée n'attend rien.
+   */
+  "pme.doc.lead.nonLues": "{count} ne sont pas encore lus.",
+  "pme.doc.lead.nonLues#one": "{count} n'est pas encore lu.",
+  "pme.doc.lead.nonLues#other": "{count} ne sont pas encore lus.",
   "pme.doc.lead.annee": "{count} documents depuis le début.",
   "pme.doc.lead.annee#one": "{count} document depuis le début.",
   "pme.doc.lead.annee#other": "{count} documents depuis le début.",
@@ -249,6 +289,21 @@ const fr = {
   "pme.piece.title": "Pièce",
   "pme.piece.source": "Origine",
   "pme.read.run": "Lire la pièce",
+  /*
+   * ============================================ LA SORTIE DE L'ESPACE PRIVÉ
+   *
+   * Une pièce privée n'est jamais lue, et l'écran le disait déjà — « je ne la
+   * lis pas tant que vous ne la transmettez pas ». Mais le seul bouton qui
+   * l'en sortait était gardé par le mandat de cabinet : sans cabinet, la
+   * phrase nommait une sortie qui n'existait pas. Impasse fermée.
+   *
+   * « La dire à la société » n'est pas une transmission : la pièce entre dans
+   * la bibliothèque de la société, elle est lue, et elle ne part chez
+   * personne. C'est la sortie qui n'a besoin de personne.
+   */
+  "pme.piece.versLaSociete": "La dire à la société",
+  "pme.piece.versLaSociete.sous":
+    "Elle entre dans la bibliothèque de la société et je la lis. Elle ne part chez personne : la transmission reste une décision à part.",
   "pme.read.running": "Lecture en cours…",
   "pme.lecture.titre": "Je lis votre document.",
   "pme.lecture.sous":
@@ -1228,6 +1283,10 @@ const fr = {
     "Montant à confirmer : le séparateur se lit de deux façons, et rien sur la pièce ne tranche.",
   "cab.code.arithmetique":
     "Montant tranché par l’arithmétique de la facture : c’est la seule lecture qui boucle.",
+  "cab.code.ampute":
+    "Montant non rendu : il est collé au nombre voisin sur la pièce, et une lecture amputée vaut moins que pas de lecture.",
+  "cab.code.incoherent":
+    "La pièce ne boucle pas : ce que son arithmétique donne et ce qu’elle imprime diffèrent.",
   "cab.code.autre": "Signalement de lecture.",
   "cab.notif.kind.piece.demande": "Votre client demande le retour d'une pièce",
   "cab.notif.kind.piece.demande_tranchee": "Demande tranchée",
@@ -2356,6 +2415,337 @@ const fr = {
   "piece.champ.lignes": "le détail des montants",
   "piece.champ.totaux": "les totaux",
   "piece.champ.type": "le type de pièce",
+
+  /* ─────────────────────────────────── l'accueil : la tuile des lectures */
+  "pme.home.lectures": "Lectures restantes",
+  "pme.home.lectures.sansForfait": "Pas encore d’abonnement",
+  "pme.home.lectures.illisible": "Compteur non lu pour l’instant",
+  "pme.home.sieges": "Mes sièges",
+  "pme.home.societes": "Mes sociétés",
+
+  /* ──────────────────────────────────────────── réglages : mon espace */
+  "pme.reglages.compte": "Votre compte",
+  "pme.reglages.compte.sous": "Une personne",
+  "pme.reglages.compte.orgs": "Un compte, {count} organisations",
+  "pme.reglages.compte.orgs#one": "Un compte, {count} organisation",
+  "pme.reglages.compte.orgs#other": "Un compte, {count} organisations",
+  "pme.reglages.abo": "Votre abonnement",
+  "pme.reglages.abo.sous": "Licence en direct",
+  "pme.reglages.abo.ht": "HT par mois · le TTC est porté par la facture",
+  "pme.reglages.abo.organisations": "Organisations de la licence",
+  "pme.reglages.abo.siegesOccupes": "Sièges occupés sur sièges inclus",
+  "pme.reglages.abo.siegesMax": "Sièges au maximum",
+  "pme.reglages.abo.lectures": "Lectures par mois",
+  "pme.reglages.abo.statut": "État de la licence",
+  "pme.reglages.abo.consommees": "Lectures consommées",
+  "pme.reglages.abo.bientot":
+    "Il reste {count} lectures ce mois. La capture ne s’arrête jamais : les pièces s’empilent, non lues, et la lecture reprend au renouvellement.",
+  "pme.reglages.abo.bientot#one":
+    "Il reste {count} lecture ce mois. La capture ne s’arrête jamais : les pièces s’empilent, non lues, et la lecture reprend au renouvellement.",
+  "pme.reglages.abo.bientot#other":
+    "Il reste {count} lectures ce mois. La capture ne s’arrête jamais : les pièces s’empilent, non lues, et la lecture reprend au renouvellement.",
+  "pme.reglages.abo.facture":
+    "La facture est émise par la licence et porte le détail du mois ; elle ne se recalcule pas ici. Le prorata des jours suit un changement d’offre.",
+  "pme.reglages.abo.collaborateur":
+    "L’abonnement est détenu par le dirigeant de ce dossier : vous n’en voyez ni le prix ni les plafonds.",
+  "pme.reglages.abo.sansLicence":
+    "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là.",
+  "pme.reglages.orgs": "Vos organisations",
+  "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
+  "pme.reglages.orgs.ajouter": "Ajouter une société",
+  "pme.reglages.orgs.ajouter.sous":
+    "Une organisation de plus sur la licence, avec son propre mandat et ses propres pièces. Le plafond est tenu par la base.",
+  "pme.reglages.societes.verrou":
+    "Plusieurs sociétés, un mandat chacune, une vue consolidée qui n’appartient qu’à vous.",
+  "pme.reglages.verrou.nonLu":
+    "Verrouillé parce que le forfait n’est pas lu, pas parce qu’il est refusé.",
+  "pme.reglages.surTotal": "{n} sur {total}",
+  "pme.reglages.sieges": "Les sièges",
+  "pme.reglages.sieges.sous":
+    "Un siège est une licence pour une personne dans une organisation — jamais un établissement. Chaque siège ne voit que ses propres pièces ; vous voyez tout.",
+  "pme.reglages.sieges.verrou":
+    "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission au cabinet.",
+  "pme.reglages.sieges.aucun":
+    "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.",
+  "pme.reglages.org.ouverte": "Ouverte",
+  "pme.reglages.org.surLicence": "Sur la licence",
+  "pme.reglages.org.matricule":
+    "Matricule établi par lecture de la carte d’identification fiscale.",
+  "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",
+  "pme.reglages.org.cabinet": "Cabinet mandaté :",
+  "pme.reglages.org.cabinet.aucun": "aucun cabinet",
+  "pme.reglages.org.mandat.nonLu": "état et date du mandat non lus",
+  "pme.reglages.org.lectures": "Lectures consommées ce mois :",
+  "pme.reglages.org.revocation":
+    "Le mandat se révoque depuis cet écran dès que le dépôt le portera.",
+  "pme.reglages.org.voirMandat": "Voir le mandat",
+  "pme.reglages.org.revoquer": "Révoquer",
+  "pme.reglages.siege.lectures": "Lectures",
+  "pme.reglages.siege.reprendre": "Reprendre la place",
+  "pme.reglages.siege.liberee":
+    "Place libérée. Les pièces de la société restent ; celles de son espace privé le suivent.",
+  "pme.reglages.siege.nonLiberee":
+    "Place non libérée : {count} pièces personnelles à trancher d’abord.",
+  "pme.reglages.siege.nonLiberee#one":
+    "Place non libérée : {count} pièce personnelle à trancher d’abord.",
+  "pme.reglages.siege.nonLiberee#other":
+    "Place non libérée : {count} pièces personnelles à trancher d’abord.",
+  "pme.reglages.siege.inviter": "Inviter un collaborateur",
+  "pme.reglages.siege.inviter.sous":
+    "Une place sur la licence. Le plafond est tenu par la base : si elle est au complet, elle le dira.",
+  "pme.reglages.siege.inviter.adresse":
+    "Son adresse. Elle crée son compte elle-même, et l’invitation l’attend dans son portail.",
+  "pme.reglages.siege.invite.deja":
+    "{email} avait déjà une invitation en attente : elle tient toujours.",
+  "pme.reglages.siege.invite.envoyee":
+    "Invitation envoyée à {email}. Elle l’attend dans son portail ; son mot de passe ne passe par personne.",
+  "pme.reglages.donnees": "Vos données",
+  "pme.reglages.donnees.sous": "À vous, toujours",
+  "pme.reglages.donnees.espace": "Mon espace personnel",
+  "pme.reglages.donnees.espace.sous":
+    "Attaché à votre compte, pas à l’organisation. Rien n’en sort.",
+  "pme.reglages.donnees.biblio": "Ma bibliothèque",
+  "pme.reglages.donnees.biblio.sous": "Un mois, un dossier ou l’année entière, pièce par pièce.",
+  "pme.reglages.donnees.conservation": "Conservation",
+  "pme.reglages.donnees.conservation.sous":
+    "Dix ans. Même si vous partez, même si vous cessez de payer.",
+  "pme.reglages.donnees.conservation.valeur": "10 ans",
+  "pme.reglages.offre.changer": "Changer de forfait",
+  "pme.reglages.offre.changer.sous":
+    "Effet immédiat et facturation au prorata des jours — le geste n’est pas encore au contrat, il passe aujourd’hui par ALGORIA.",
+  "pme.reglages.note":
+    "L’organisation vous appartient, toujours. Une licence se détache, un mandat se révoque — les pièces, elles, ne bougent pas.",
+
+  /* ───────────────────────────────────── le dossier d'une pièce, côté PME */
+  "pme.piece.sens.achat": "Achat · fournisseur",
+  "pme.piece.sens.vente": "Vente · client",
+  "pme.piece.sens.inconnu": "Sens non tranché",
+  "pme.piece.chaine": "La chaîne",
+  "pme.piece.chaine.pieces": "{count} PIÈCES",
+  "pme.piece.chaine.pieces#one": "{count} PIÈCE",
+  "pme.piece.chaine.pieces#other": "{count} PIÈCES",
+  "pme.piece.chaine.issueDe": "Issue de cette pièce",
+  "pme.piece.chaine.aRattacher": "À rattacher",
+  "pme.piece.chaine.vide": "Aucun reçu ni justificatif n’est encore rattaché à cette pièce.",
+  "pme.piece.chaine.foot":
+    "Un reçu, un talon, un avis se rattachent depuis le règlement : c’est là qu’ils sont photographiés, et c’est de là qu’ils tiennent à leur facture.",
+  "pme.piece.reglements": "Les règlements",
+  "pme.piece.encaissements": "Les encaissements",
+  "pme.piece.mouvements": "{count} MOUVEMENTS",
+  "pme.piece.mouvements#one": "{count} MOUVEMENT",
+  "pme.piece.mouvements#other": "{count} MOUVEMENTS",
+  "pme.piece.verifie": "Ce que j’ai vérifié",
+  "pme.piece.points": "{count} POINTS",
+  "pme.piece.points#one": "{count} POINT",
+  "pme.piece.points#other": "{count} POINTS",
+  "pme.piece.lectureRefusee":
+    "Je n’ai pas lu cette pièce. Elle est photographiée et rangée — la lecture reste à faire.",
+  "pme.piece.parcours": "Le parcours",
+  "pme.piece.etapes": "{count} ÉTAPES",
+  "pme.piece.etapes#one": "{count} ÉTAPE",
+  "pme.piece.etapes#other": "{count} ÉTAPES",
+  "pme.piece.etat.faite": "faite",
+  "pme.piece.etat.courante": "en cours",
+  "pme.piece.etat.attente": "en attente",
+  "pme.piece.foot": "Je signale et j’interroge ; je ne modifie jamais une écriture.",
+  "pme.piece.revenir": "Revenir dessus",
+  "pme.piece.revenir.libre": "LIBRE",
+  "pme.piece.revenir.avantValidation": "AVANT VALIDATION",
+  "pme.piece.revenir.surAccord": "SUR ACCORD",
+  "pme.piece.rienNestSorti": "Rien n’est sorti d’ici",
+  "pme.piece.rienNestSorti.texte":
+    "Vous corrigez ce que vous voulez — chaque correction est datée et s’ajoute à la lecture, elle ne l’efface pas. Et vous pouvez la supprimer : personne ne l’a reçue.",
+  "pme.piece.elleAttend": "Elle attend le dirigeant",
+  "pme.piece.elleAttend.texte":
+    "Tant qu’il n’a pas tranché, corrigez ce que vous voulez : c’est votre saisie. La supprimer lui revient — je lui transmets la demande et je vous préviens.",
+  "pme.piece.elleEstPartie": "Elle est partie",
+  "pme.piece.elleEstPartie.texte":
+    "Une correction la renvoie en « à revalider » chez votre cabinet — il refait son travail, et c’est normal. Une suppression lui demande son accord, au titre de sa conservation : la décision s’inscrit au journal, quelle qu’elle soit.",
+  "pme.piece.demanderSuppression": "Demander la suppression",
+  "pme.piece.mettreAuPrive": "La mettre dans mon espace privé",
+  "pme.piece.suppressionDemandee": "Suppression demandée. Votre cabinet doit l’accorder.",
+  "pme.piece.suppressionRefusee": "Suppression refusée par votre cabinet.",
+  "pme.piece.siege":
+    "Vous voyez ce dossier parce que vous y avez versé une pièce. C’est le dirigeant qui transmet au cabinet.",
+
+  /* ────────────────────────────────── capturer : les neuf pas, et leurs mots */
+  "pme.capture.etape.capturer": "CAPTURER",
+  "pme.capture.etape.destination": "DESTINATION",
+  "pme.capture.etape.lectures": "LECTURES",
+  "pme.capture.etape.lecture": "LECTURE",
+  "pme.capture.etape.lu": "CE QUE J’AI LU",
+  "pme.capture.etape.questions": "QUESTIONS",
+  "pme.capture.etape.dates": "DATES",
+  "pme.capture.etape.reglement": "RÈGLEMENT",
+  "pme.capture.etape.fait": "FAIT",
+  "pme.capture.etape.faitPrive": "FAIT · CHEZ VOUS",
+  "pme.capture.revenir": "Revenir",
+  "pme.capture.pieceNonLue": "Pièce non lue",
+  "pme.capture.lot.nonLues": "{count} pièces · aucune n’est encore lue",
+  "pme.capture.lot.nonLues#one": "{count} pièce · elle n’est pas encore lue",
+  "pme.capture.lot.nonLues#other": "{count} pièces · aucune n’est encore lue",
+  "pme.capture.poser": "Posez la pièce à plat — je redresse et je recadre",
+  "pme.capture.menu.societe": "Pour la société",
+  "pme.capture.menu.vous": "Pour vous",
+  "pme.capture.menu.ouvrir": "Ouvrir",
+  "pme.capture.menu.supprimer": "Supprimer",
+  "pme.capture.galerie": "Galerie",
+  "pme.capture.fatoora": "Import El Fatoora",
+  "pme.capture.fatoora.sous": "Les factures électroniques entrent lues, sans consommer de lecture",
+  "pme.capture.aVenir": "À VENIR",
+  "pme.capture.file.attente":
+    "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
+  "pme.capture.file.attente#one":
+    "{count} pièce attend le réseau. Elle partira seule : la photo n’est jamais à refaire.",
+  "pme.capture.file.attente#other":
+    "{count} pièces attendent le réseau. Elles partiront seules : la photo n’est jamais à refaire.",
+  "pme.capture.foot.lot":
+    "Rien n’est lu tant que vous ne le demandez pas : votre quota ne bouge pas d’ici là.",
+  "pme.capture.foot.horsReseau":
+    "Hors réseau, la photo part dès que le réseau revient — et la panne laisse une trace au journal.",
+  "pme.capture.repondre": "Répondre ({count})",
+  "pme.capture.rienARepondre": "Rien à répondre",
+  "pme.capture.plusTard": "Plus tard — les garder telles quelles",
+  "pme.capture.continuer": "Continuer",
+  "pme.capture.pasMaintenant": "Pas maintenant",
+  "pme.capture.plusTardCourt": "Plus tard",
+  "pme.capture.dest.q": "Ces {count} pièces sont pour la société, ou pour vous ?",
+  "pme.capture.dest.q#one": "Elle est pour la société, ou pour vous ?",
+  "pme.capture.dest.q#other": "Ces {count} pièces sont pour la société, ou pour vous ?",
+  "pme.capture.dest.s":
+    "Je pose la question maintenant, pas après : une pièce personnelle, je ne la lis pas, et elle ne touche jamais votre quota.",
+  "pme.capture.dest.societeLabel": "Société",
+  "pme.capture.dest.societe": "La société",
+  "pme.capture.dest.societe.cabinet": "Lue, rangée, et transmise au cabinet après vérification",
+  "pme.capture.dest.societe.sansCabinet":
+    "Lue et rangée. Aucun cabinet n’est mandaté : rien ne part.",
+  "pme.capture.dest.prive": "Vous",
+  "pme.capture.dest.prive.sous":
+    "Votre espace privé. Je ne la lis pas, personne d’autre ne la voit.",
+  "pme.capture.dest.prive.flag":
+    "Elle est attachée à votre compte, pas à la société — elle vous suivra si vous la quittez.",
+  "pme.capture.dest.ranger": "Les ranger chez vous",
+  "pme.capture.choix.q": "Je lis lesquelles ?",
+  "pme.capture.choix.s":
+    "Tout est coché. Décochez ce qui n’est pas à la société — c’est plus court que de cocher une par une, et je ne lirai que ce qui reste.",
+  "pme.capture.choix.gardee": "Gardée pour vous — non lue",
+  "pme.capture.choix.sansDate": "Sans date lue",
+  "pme.capture.choix.foot":
+    "Les décochées restent dans votre espace privé. Elles ne coûtent rien et ne partiront jamais.",
+  "pme.capture.choix.plafond":
+    "Il reste {count} lectures à votre forfait, pour {cochees} pièces cochées. Les premières seront lues, les autres resteront là — non lues, et rien n’est perdu.",
+  "pme.capture.choix.plafond#one":
+    "Il reste {count} lecture à votre forfait, pour {cochees} pièces cochées. Les premières seront lues, les autres resteront là — non lues, et rien n’est perdu.",
+  "pme.capture.choix.plafond#other":
+    "Il reste {count} lectures à votre forfait, pour {cochees} pièces cochées. Les premières seront lues, les autres resteront là — non lues, et rien n’est perdu.",
+  "pme.capture.choix.lire": "Lire les {count} — {count} lectures sur {reste}",
+  "pme.capture.choix.lire#one": "Lire la pièce — {count} lecture sur {reste}",
+  "pme.capture.choix.lire#other": "Lire les {count} — {count} lectures sur {reste}",
+  "pme.capture.lire.q": "Je lis les {count} pièces.",
+  "pme.capture.lire.q#one": "Je lis la pièce.",
+  "pme.capture.lire.q#other": "Je lis les {count} pièces.",
+  "pme.capture.lire.s":
+    "Je cite la zone d’où je sors chaque chiffre. Ce que je n’ai pas trouvé, je le dis — je ne le devine pas.",
+  "pme.capture.lire.foot":
+    "Une lecture qui échoue laisse une trace au journal et la pièce reste là, intacte.",
+  "pme.capture.lire.voir": "Voir ce que j’ai lu",
+  "pme.capture.lu.q": "Voici ce que j’ai lu.",
+  "pme.capture.lu.s":
+    "Chaque ligne se corrige, et la correction m’apprend le fournisseur. Rien n’est écrasé : une précision s’ajoute, elle ne remplace pas.",
+  "pme.capture.lu.type": "Type",
+  "pme.capture.lu.total": "Total",
+  "pme.capture.lu.nonLu": "je n’ai pas lu",
+  "pme.capture.lu.corriger": "Corriger",
+  "pme.capture.lu.refus": "Lecture refusée · {motif}",
+  "pme.capture.type.achat": "Facture d’achat",
+  "pme.capture.type.vente": "Facture de vente",
+  "pme.capture.q.q": "{famille} — {montant} {devise} ce mois-ci.",
+  "pme.capture.q.s":
+    "La base de comparaison est {base} {devise}. C’est exceptionnel, ou il y a quelque chose à vérifier ? Le seuil est une politique de votre entreprise, pas une règle que je peux lire.",
+  "pme.capture.q.exceptionnel": "Exceptionnel",
+  "pme.capture.q.exceptionnel.sous": "C’est normal pour ce mois-là, et je ne le redemanderai pas",
+  "pme.capture.q.aVerifier": "À vérifier",
+  "pme.capture.q.aVerifier.sous": "Je le garde ouvert, et le cabinet le voit aussi",
+  "pme.capture.q.position": "Question {n} sur {total}.",
+  "pme.capture.q.aucune": "Aucune question.",
+  "pme.capture.q.jeRegarde": "Je regarde.",
+  "pme.capture.q.rienDAnormal": "Rien ne sort de l’ordinaire sur ce que je viens de lire.",
+  "pme.capture.dates.q": "{count} pièces attendent leur date.",
+  "pme.capture.dates.q#one": "{count} pièce attend sa date.",
+  "pme.capture.dates.q#other": "{count} pièces attendent leur date.",
+  "pme.capture.dates.q.toutes": "Tout est daté.",
+  "pme.capture.dates.s":
+    "Tant qu’elle n’a pas de date, elle n’entre dans aucun mois — pas même celui de la photo. C’est la date de la pièce qui décide de votre TVA, je ne la choisis pas à votre place.",
+  "pme.capture.dates.s.ok":
+    "Chaque pièce que je viens de lire porte sa date, donc son mois, donc sa TVA.",
+  "pme.capture.dates.flag":
+    "{montant} {devise} HT n’entrent dans aucun total du mois tant que ces dates manquent.",
+  "pme.capture.dates.sansDate": "Sans date",
+  "pme.capture.dates.dater": "Dater",
+  "pme.capture.pay.q": "Ces {count} pièces ont été payées comment ?",
+  "pme.capture.pay.q#one": "Elle a été payée comment ?",
+  "pme.capture.pay.q#other": "Ces {count} pièces ont été payées comment ?",
+  "pme.capture.pay.s":
+    "Je pose la question une fois plutôt que six. Si deux ont été payées autrement, chaque pièce se reprend ensuite dans son dossier.",
+  "pme.capture.pay.talon": "Un talon est attendu — le paiement reste inscrit sans lui",
+  "pme.capture.pay.sansPreuve": "Aucune preuve à joindre : rien à rapprocher",
+  "pme.capture.pay.referenceLabel": "Référence",
+  "pme.capture.pay.reference.aria": "Référence du règlement",
+  "pme.capture.pay.talon.flag":
+    "Le talon se photographie depuis le dossier de la pièce. Le règlement s’inscrit sans lui : une preuve qui manque ne doit pas empêcher d’enregistrer un fait.",
+  "pme.capture.pay.inscrire": "Inscrire le règlement",
+  "pme.capture.pay.plusTard": "Pas encore payé — plus tard",
+  "pme.capture.fin.q": "Tout est lu. Vous en faites quoi ?",
+  "pme.capture.fin.q.range": "C’est rangé.",
+  "pme.capture.fin.s":
+    "Transmettre range la pièce dans la TVA du mois où elle part, pas du mois où elle est datée. Garder ne ferme rien : vous transmettrez quand vous voudrez.",
+  "pme.capture.fin.reste": "Il vous reste {count} lectures ce mois.",
+  "pme.capture.fin.reste#one": "Il vous reste {count} lecture ce mois.",
+  "pme.capture.fin.reste#other": "Il vous reste {count} lectures ce mois.",
+  "pme.capture.fin.lues": "{count} pièces lues",
+  "pme.capture.fin.lues#one": "{count} pièce lue",
+  "pme.capture.fin.lues#other": "{count} pièces lues",
+  "pme.capture.fin.gardees": "{count} gardées pour vous",
+  "pme.capture.fin.gardees#one": "{count} gardée pour vous",
+  "pme.capture.fin.gardees#other": "{count} gardées pour vous",
+  "pme.capture.fin.reglePar": "Règlement par {moyen}",
+  "pme.capture.fin.reglePar.talon": "Règlement par {moyen} — talon attendu",
+  "pme.capture.fin.moyenADire": "Moyen de paiement à dire — chaque pièce le garde ouvert",
+  "pme.capture.fin.questions": "{count} questions encore ouvertes",
+  "pme.capture.fin.questions#one": "{count} question encore ouverte",
+  "pme.capture.fin.questions#other": "{count} questions encore ouvertes",
+  "pme.capture.fin.questions.aucune": "Aucune question en suspens",
+  "pme.capture.fin.transmises": "Transmises au cabinet — la date de transmission range la TVA",
+  "pme.capture.fin.transmises#one": "Transmise au cabinet — la date de transmission range la TVA",
+  "pme.capture.fin.transmises#other":
+    "Transmises au cabinet — la date de transmission range la TVA",
+  "pme.capture.fin.conservees": "Gardées — rien n’est parti",
+  "pme.capture.fin.conservees#one": "Gardée — rien n’est parti",
+  "pme.capture.fin.conservees#other": "Gardées — rien n’est parti",
+  "pme.capture.fin.foot":
+    "Tant que vous ne transmettez pas, vous ne me demandez rien : vous corrigez, vous supprimez, vous recommencez. Après, c’est le cabinet qui garde — alors la suppression devient une demande, et sa réponse s’inscrit.",
+  "pme.capture.fin.transmettre": "Transmettre au cabinet",
+  "pme.capture.fin.sansCabinet": "Aucun cabinet mandaté",
+  "pme.capture.fin.garder": "Garder — ne pas transmettre",
+  "pme.capture.fin.suivante": "Capturer la suivante",
+  "pme.capture.fin.voirPieces": "Voir mes pièces",
+  "pme.capture.prive.q": "C’est rangé chez vous.",
+  "pme.capture.prive.s":
+    "Je ne les ai pas lues, elles n’ont rien coûté à votre quota, et rien ne les fera sortir d’ici sans votre geste.",
+  "pme.capture.prive.espace": "Dans votre espace privé · attaché à votre compte",
+  "pme.capture.prive.intactes": "Non lues — vos lectures du mois sont intactes",
+  "pme.capture.prive.intactes#one": "Non lue — vos lectures du mois sont intactes",
+  "pme.capture.prive.intactes#other": "Non lues — vos lectures du mois sont intactes",
+  "pme.capture.prive.intactes.reste": "Non lues — vos {reste} lectures du mois sont intactes",
+  "pme.capture.prive.intactes.reste#one": "Non lue — vos {reste} lectures du mois sont intactes",
+  "pme.capture.prive.intactes.reste#other": "Non lues — vos {reste} lectures du mois sont intactes",
+  "pme.capture.prive.invisible": "Invisible pour votre cabinet, vos sièges et la vue consolidée",
+  "pme.capture.prive.verser": "La verser à la société",
+  "pme.capture.prive.verser.sous":
+    "Elle sera lue et comptera dans le quota — depuis votre espace privé, quand vous voudrez",
+  "pme.capture.prive.foot":
+    "Ici, personne ne l’a reçue : vous n’avez d’accord à demander à personne. La suppression se fait depuis votre espace privé.",
+  "pme.capture.prive.voirPapiers": "Voir mes papiers",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -2551,11 +2941,29 @@ const en: Dict = {
   "pme.list.empty": "No document yet.",
   "pme.list.nonLue": "Not read yet",
   "pme.list.sansEmetteur": "Issuer not found",
+  "pme.refus.titre": "Not read",
+  "pme.refus.attente": "Waiting to be read",
+  "pme.refus.plafond_atteint":
+    "You have used every reading in your plan. The document is filed; I will read it as soon as the plan allows.",
+  "pme.refus.piece_personnelle":
+    "This document is in your private space: I do not read it until you share it.",
+  "pme.refus.licence_suspendue":
+    "Your subscription is suspended. The document is filed, and I will read it as soon as it resumes.",
+  "pme.refus.licence.autre": "Your subscription does not allow reading right now.",
+  "pme.refus.organisation_sans_licence":
+    "This company has no active subscription: I file the documents, I do not read them yet.",
+  "pme.refus.piece_deja_lue":
+    "This document has already been read: reading it again costs nothing.",
+  "pme.refus.autre": "I did not read this document, and the reason is unknown to me.",
+  "pme.refus.le": "Refused on {date}",
   "pme.doc.titre": "Your documents",
   "pme.doc.importer": "Import PDFs",
   "pme.doc.lead.mois": "{count} documents read and filed in {mois}.",
   "pme.doc.lead.mois#one": "{count} document read and filed in {mois}.",
   "pme.doc.lead.mois#other": "{count} documents read and filed in {mois}.",
+  "pme.doc.lead.nonLues": "{count} have not been read yet.",
+  "pme.doc.lead.nonLues#one": "{count} has not been read yet.",
+  "pme.doc.lead.nonLues#other": "{count} have not been read yet.",
   "pme.doc.lead.annee": "{count} documents since the start.",
   "pme.doc.lead.annee#one": "{count} document since the start.",
   "pme.doc.lead.annee#other": "{count} documents since the start.",
@@ -2592,6 +3000,9 @@ const en: Dict = {
   "pme.piece.title": "Document",
   "pme.piece.source": "Source",
   "pme.read.run": "Read the document",
+  "pme.piece.versLaSociete": "Move it to the company",
+  "pme.piece.versLaSociete.sous":
+    "It joins the company library and I read it. It goes to no one: sending it stays a separate decision.",
   "pme.read.running": "Reading…",
   "pme.lecture.titre": "I'm reading your document.",
   "pme.lecture.sous": "I note every word before answering — I never guess an amount.",
@@ -3544,6 +3955,10 @@ const en: Dict = {
     "Amount to confirm: the separator reads two ways, and nothing on the document settles it.",
   "cab.code.arithmetique":
     "Amount settled by the invoice arithmetic: it is the only reading that balances.",
+  "cab.code.ampute":
+    "Amount not returned: it runs into the neighbouring number on the document, and a clipped reading is worth less than none.",
+  "cab.code.incoherent":
+    "The document does not balance: what its arithmetic gives and what it prints differ.",
   "cab.code.autre": "Reading flag.",
   "cab.notif.kind.piece.demande": "Your client is asking for a document back",
   "cab.notif.kind.piece.demande_tranchee": "Request settled",
@@ -4650,6 +5065,331 @@ const en: Dict = {
   "piece.champ.lignes": "the amount breakdown",
   "piece.champ.totaux": "the totals",
   "piece.champ.type": "the document type",
+
+  /* ─────────────────────────────────── home: the remaining-reads tile */
+  "pme.home.lectures": "Reads left",
+  "pme.home.lectures.sansForfait": "No subscription yet",
+  "pme.home.lectures.illisible": "Counter not read for now",
+  "pme.home.sieges": "My seats",
+  "pme.home.societes": "My companies",
+
+  /* ──────────────────────────────────────────── settings: my space */
+  "pme.reglages.compte": "Your account",
+  "pme.reglages.compte.sous": "One person",
+  "pme.reglages.compte.orgs": "One account, {count} organisations",
+  "pme.reglages.compte.orgs#one": "One account, {count} organisation",
+  "pme.reglages.compte.orgs#other": "One account, {count} organisations",
+  "pme.reglages.abo": "Your subscription",
+  "pme.reglages.abo.sous": "Licence held directly",
+  "pme.reglages.abo.ht": "Net per month · the gross amount is on the invoice",
+  "pme.reglages.abo.organisations": "Organisations on the licence",
+  "pme.reglages.abo.siegesOccupes": "Seats taken of seats included",
+  "pme.reglages.abo.siegesMax": "Seats at most",
+  "pme.reglages.abo.lectures": "Reads per month",
+  "pme.reglages.abo.statut": "Licence status",
+  "pme.reglages.abo.consommees": "Reads used",
+  "pme.reglages.abo.bientot":
+    "{count} reads left this month. Capture never stops: documents pile up unread, and reading resumes at renewal.",
+  "pme.reglages.abo.bientot#one":
+    "{count} read left this month. Capture never stops: documents pile up unread, and reading resumes at renewal.",
+  "pme.reglages.abo.bientot#other":
+    "{count} reads left this month. Capture never stops: documents pile up unread, and reading resumes at renewal.",
+  "pme.reglages.abo.facture":
+    "The invoice is issued by the licence and carries the detail of the month; it is not recomputed here. A change of plan is prorated by the day.",
+  "pme.reglages.abo.collaborateur":
+    "The subscription is held by the owner of this file: you see neither its price nor its caps.",
+  "pme.reglages.abo.sansLicence":
+    "No licence is attached to this account. Caps and price stay empty until then.",
+  "pme.reglages.orgs": "Your organisations",
+  "pme.reglages.orgs.aucune": "No organisation on this licence.",
+  "pme.reglages.orgs.ajouter": "Add a company",
+  "pme.reglages.orgs.ajouter.sous":
+    "One more organisation on the licence, with its own engagement and its own documents. The cap is held by the database.",
+  "pme.reglages.societes.verrou":
+    "Several companies, one engagement each, and a consolidated view that belongs to you alone.",
+  "pme.reglages.verrou.nonLu": "Locked because the plan was not read, not because it was refused.",
+  "pme.reglages.surTotal": "{n} of {total}",
+  "pme.reglages.sieges": "Seats",
+  "pme.reglages.sieges.sous":
+    "A seat is a licence for one person in one organisation — never a branch. Each seat sees only its own documents; you see everything.",
+  "pme.reglages.sieges.verrou":
+    "Isolated seats — each one sees only its own documents — and you confirm before anything reaches the firm.",
+  "pme.reglages.sieges.aucun": "No seat has come back for this licence yet, not even yours.",
+  "pme.reglages.org.ouverte": "Open",
+  "pme.reglages.org.surLicence": "On the licence",
+  "pme.reglages.org.matricule": "Tax number established by reading the tax identification card.",
+  "pme.reglages.org.matricule.fort": "Immutable from the first document received.",
+  "pme.reglages.org.cabinet": "Engaged firm:",
+  "pme.reglages.org.cabinet.aucun": "no firm",
+  "pme.reglages.org.mandat.nonLu": "status and date of the engagement not read",
+  "pme.reglages.org.lectures": "Reads used this month:",
+  "pme.reglages.org.revocation":
+    "The engagement will be revocable from this screen as soon as the repository carries it.",
+  "pme.reglages.org.voirMandat": "View the engagement",
+  "pme.reglages.org.revoquer": "Revoke",
+  "pme.reglages.siege.lectures": "Reads",
+  "pme.reglages.siege.reprendre": "Take the seat back",
+  "pme.reglages.siege.liberee":
+    "Seat released. The company documents stay; the ones in that person's private space follow them.",
+  "pme.reglages.siege.nonLiberee": "Seat not released: {count} personal documents to settle first.",
+  "pme.reglages.siege.nonLiberee#one":
+    "Seat not released: {count} personal document to settle first.",
+  "pme.reglages.siege.nonLiberee#other":
+    "Seat not released: {count} personal documents to settle first.",
+  "pme.reglages.siege.inviter": "Invite a colleague",
+  "pme.reglages.siege.inviter.sous":
+    "One seat on the licence. The cap is held by the database: if it is full, it will say so.",
+  "pme.reglages.siege.inviter.adresse":
+    "Their address. They create their own account, and the invitation waits for them in their portal.",
+  "pme.reglages.siege.invite.deja": "{email} already had a pending invitation: it still stands.",
+  "pme.reglages.siege.invite.envoyee":
+    "Invitation sent to {email}. It is waiting in their portal; their password passes through no one.",
+  "pme.reglages.donnees": "Your data",
+  "pme.reglages.donnees.sous": "Yours, always",
+  "pme.reglages.donnees.espace": "My private space",
+  "pme.reglages.donnees.espace.sous":
+    "Attached to your account, not to the organisation. Nothing leaves it.",
+  "pme.reglages.donnees.biblio": "My library",
+  "pme.reglages.donnees.biblio.sous":
+    "One month, one file or the whole year, document by document.",
+  "pme.reglages.donnees.conservation": "Retention",
+  "pme.reglages.donnees.conservation.sous":
+    "Ten years. Even if you leave, even if you stop paying.",
+  "pme.reglages.donnees.conservation.valeur": "10 years",
+  "pme.reglages.offre.changer": "Change plan",
+  "pme.reglages.offre.changer.sous":
+    "Immediate effect and billing prorated by the day — the action is not in the contract yet, it goes through ALGORIA today.",
+  "pme.reglages.note":
+    "The organisation is yours, always. A licence detaches, an engagement is revoked — the documents do not move.",
+
+  /* ───────────────────────────────────── a document's file, on the SME side */
+  "pme.piece.sens.achat": "Purchase · supplier",
+  "pme.piece.sens.vente": "Sale · customer",
+  "pme.piece.sens.inconnu": "Direction not settled",
+  "pme.piece.chaine": "The chain",
+  "pme.piece.chaine.pieces": "{count} DOCUMENTS",
+  "pme.piece.chaine.pieces#one": "{count} DOCUMENT",
+  "pme.piece.chaine.pieces#other": "{count} DOCUMENTS",
+  "pme.piece.chaine.issueDe": "Arising from this document",
+  "pme.piece.chaine.aRattacher": "To be attached",
+  "pme.piece.chaine.vide": "No receipt or supporting document is attached to this one yet.",
+  "pme.piece.chaine.foot":
+    "A receipt, a stub, an advice note are attached from the payment: that is where they are photographed, and that is what ties them to their invoice.",
+  "pme.piece.reglements": "Payments made",
+  "pme.piece.encaissements": "Payments received",
+  "pme.piece.mouvements": "{count} MOVEMENTS",
+  "pme.piece.mouvements#one": "{count} MOVEMENT",
+  "pme.piece.mouvements#other": "{count} MOVEMENTS",
+  "pme.piece.verifie": "What I checked",
+  "pme.piece.points": "{count} CHECKS",
+  "pme.piece.points#one": "{count} CHECK",
+  "pme.piece.points#other": "{count} CHECKS",
+  "pme.piece.lectureRefusee":
+    "I have not read this document. It is photographed and filed — the reading is still to be done.",
+  "pme.piece.parcours": "The journey",
+  "pme.piece.etapes": "{count} STEPS",
+  "pme.piece.etapes#one": "{count} STEP",
+  "pme.piece.etapes#other": "{count} STEPS",
+  "pme.piece.etat.faite": "done",
+  "pme.piece.etat.courante": "under way",
+  "pme.piece.etat.attente": "waiting",
+  "pme.piece.foot": "I flag and I ask; I never change an entry.",
+  "pme.piece.revenir": "Go back on it",
+  "pme.piece.revenir.libre": "FREE",
+  "pme.piece.revenir.avantValidation": "BEFORE APPROVAL",
+  "pme.piece.revenir.surAccord": "BY AGREEMENT",
+  "pme.piece.rienNestSorti": "Nothing has left here",
+  "pme.piece.rienNestSorti.texte":
+    "Correct whatever you like — each correction is dated and adds to the reading, it does not erase it. And you can delete the document: no one has received it.",
+  "pme.piece.elleAttend": "It is waiting for the owner",
+  "pme.piece.elleAttend.texte":
+    "Until they decide, correct whatever you like: it is your entry. Deleting it is theirs to do — I pass the request on and I let you know.",
+  "pme.piece.elleEstPartie": "It has gone",
+  "pme.piece.elleEstPartie.texte":
+    "A correction sends it back to your firm as “to re-approve” — they do their work again, and that is normal. A deletion asks for their agreement, under their duty to retain: the decision is recorded in the log, whatever it is.",
+  "pme.piece.demanderSuppression": "Request deletion",
+  "pme.piece.mettreAuPrive": "Move it to my private space",
+  "pme.piece.suppressionDemandee": "Deletion requested. Your firm has to agree to it.",
+  "pme.piece.suppressionRefusee": "Deletion refused by your firm.",
+  "pme.piece.siege":
+    "You see this file because you put a document into it. It is the owner who sends documents to the firm.",
+
+  /* ────────────────────────────── capture: the nine steps, and their wording */
+  "pme.capture.etape.capturer": "CAPTURE",
+  "pme.capture.etape.destination": "DESTINATION",
+  "pme.capture.etape.lectures": "READS",
+  "pme.capture.etape.lecture": "READING",
+  "pme.capture.etape.lu": "WHAT I READ",
+  "pme.capture.etape.questions": "QUESTIONS",
+  "pme.capture.etape.dates": "DATES",
+  "pme.capture.etape.reglement": "PAYMENT",
+  "pme.capture.etape.fait": "DONE",
+  "pme.capture.etape.faitPrive": "DONE · KEPT BY YOU",
+  "pme.capture.revenir": "Back",
+  "pme.capture.pieceNonLue": "Unread document",
+  "pme.capture.lot.nonLues": "{count} documents · none is read yet",
+  "pme.capture.lot.nonLues#one": "{count} document · it is not read yet",
+  "pme.capture.lot.nonLues#other": "{count} documents · none is read yet",
+  "pme.capture.poser": "Lay the document flat — I straighten and crop it",
+  "pme.capture.menu.societe": "For the company",
+  "pme.capture.menu.vous": "For you",
+  "pme.capture.menu.ouvrir": "Open",
+  "pme.capture.menu.supprimer": "Delete",
+  "pme.capture.galerie": "Gallery",
+  "pme.capture.fatoora": "El Fatoora import",
+  "pme.capture.fatoora.sous": "Electronic invoices come in already read, without using a read",
+  "pme.capture.aVenir": "COMING",
+  "pme.capture.file.attente":
+    "{count} documents are waiting for the network. They will go on their own: the photo never has to be taken again.",
+  "pme.capture.file.attente#one":
+    "{count} document is waiting for the network. It will go on its own: the photo never has to be taken again.",
+  "pme.capture.file.attente#other":
+    "{count} documents are waiting for the network. They will go on their own: the photo never has to be taken again.",
+  "pme.capture.foot.lot":
+    "Nothing is read until you ask for it: your allowance does not move before then.",
+  "pme.capture.foot.horsReseau":
+    "Off the network, the photo goes as soon as the network comes back — and a failure leaves a trace in the log.",
+  "pme.capture.repondre": "Answer ({count})",
+  "pme.capture.rienARepondre": "Nothing to answer",
+  "pme.capture.plusTard": "Later — keep them as they are",
+  "pme.capture.continuer": "Continue",
+  "pme.capture.pasMaintenant": "Not now",
+  "pme.capture.plusTardCourt": "Later",
+  "pme.capture.dest.q": "Are these {count} documents for the company, or for you?",
+  "pme.capture.dest.q#one": "Is it for the company, or for you?",
+  "pme.capture.dest.q#other": "Are these {count} documents for the company, or for you?",
+  "pme.capture.dest.s":
+    "I ask now, not afterwards: a personal document is one I do not read, and it never touches your allowance.",
+  "pme.capture.dest.societeLabel": "Company",
+  "pme.capture.dest.societe": "The company",
+  "pme.capture.dest.societe.cabinet": "Read, filed, and sent to the firm after you check it",
+  "pme.capture.dest.societe.sansCabinet": "Read and filed. No firm is engaged: nothing leaves.",
+  "pme.capture.dest.prive": "You",
+  "pme.capture.dest.prive.sous": "Your private space. I do not read it, and no one else sees it.",
+  "pme.capture.dest.prive.flag":
+    "It is attached to your account, not to the company — it will follow you if you leave.",
+  "pme.capture.dest.ranger": "File them with you",
+  "pme.capture.choix.q": "Which ones do I read?",
+  "pme.capture.choix.s":
+    "Everything is ticked. Untick whatever is not the company's — that is shorter than ticking one by one, and I will read only what is left.",
+  "pme.capture.choix.gardee": "Kept for you — not read",
+  "pme.capture.choix.sansDate": "No date read",
+  "pme.capture.choix.foot":
+    "The unticked ones stay in your private space. They cost nothing and they will never leave.",
+  "pme.capture.choix.plafond":
+    "{count} reads left on your plan, for {cochees} documents ticked. The first ones will be read, the others will stay there — unread, and nothing is lost.",
+  "pme.capture.choix.plafond#one":
+    "{count} read left on your plan, for {cochees} documents ticked. The first ones will be read, the others will stay there — unread, and nothing is lost.",
+  "pme.capture.choix.plafond#other":
+    "{count} reads left on your plan, for {cochees} documents ticked. The first ones will be read, the others will stay there — unread, and nothing is lost.",
+  "pme.capture.choix.lire": "Read the {count} — {count} reads of {reste}",
+  "pme.capture.choix.lire#one": "Read the document — {count} read of {reste}",
+  "pme.capture.choix.lire#other": "Read the {count} — {count} reads of {reste}",
+  "pme.capture.lire.q": "I am reading the {count} documents.",
+  "pme.capture.lire.q#one": "I am reading the document.",
+  "pme.capture.lire.q#other": "I am reading the {count} documents.",
+  "pme.capture.lire.s":
+    "I cite the area each figure comes from. What I did not find, I say so — I do not guess it.",
+  "pme.capture.lire.foot":
+    "A reading that fails leaves a trace in the log, and the document stays there, untouched.",
+  "pme.capture.lire.voir": "See what I read",
+  "pme.capture.lu.q": "Here is what I read.",
+  "pme.capture.lu.s":
+    "Every line can be corrected, and the correction teaches me the supplier. Nothing is overwritten: a clarification is added, it does not replace.",
+  "pme.capture.lu.type": "Kind",
+  "pme.capture.lu.total": "Total",
+  "pme.capture.lu.nonLu": "I did not read it",
+  "pme.capture.lu.corriger": "Correct",
+  "pme.capture.lu.refus": "Reading refused · {motif}",
+  "pme.capture.type.achat": "Purchase invoice",
+  "pme.capture.type.vente": "Sales invoice",
+  "pme.capture.q.q": "{famille} — {montant} {devise} this month.",
+  "pme.capture.q.s":
+    "The comparison base is {base} {devise}. Is that exceptional, or is there something to check? The threshold is your company's policy, not a rule I can read.",
+  "pme.capture.q.exceptionnel": "Exceptional",
+  "pme.capture.q.exceptionnel.sous": "Normal for that month, and I will not ask again",
+  "pme.capture.q.aVerifier": "To check",
+  "pme.capture.q.aVerifier.sous": "I keep it open, and the firm sees it too",
+  "pme.capture.q.position": "Question {n} of {total}.",
+  "pme.capture.q.aucune": "No questions.",
+  "pme.capture.q.jeRegarde": "I am looking.",
+  "pme.capture.q.rienDAnormal": "Nothing out of the ordinary in what I have just read.",
+  "pme.capture.dates.q": "{count} documents are waiting for their dates.",
+  "pme.capture.dates.q#one": "{count} document is waiting for its date.",
+  "pme.capture.dates.q#other": "{count} documents are waiting for their dates.",
+  "pme.capture.dates.q.toutes": "Everything is dated.",
+  "pme.capture.dates.s":
+    "Until it has a date, it belongs to no month — not even the month of the photo. It is the document's date that decides your VAT, and I do not choose it for you.",
+  "pme.capture.dates.s.ok":
+    "Every document I have just read carries its date, so its month, so its VAT.",
+  "pme.capture.dates.flag":
+    "{montant} {devise} net belong to no monthly total while those dates are missing.",
+  "pme.capture.dates.sansDate": "No date",
+  "pme.capture.dates.dater": "Set a date",
+  "pme.capture.pay.q": "How were these {count} documents paid?",
+  "pme.capture.pay.q#one": "How was it paid?",
+  "pme.capture.pay.q#other": "How were these {count} documents paid?",
+  "pme.capture.pay.s":
+    "I ask once rather than six times. If two were paid another way, each document can be revisited in its own file.",
+  "pme.capture.pay.talon": "A stub is expected — the payment is recorded without it",
+  "pme.capture.pay.sansPreuve": "No proof to attach: nothing to reconcile",
+  "pme.capture.pay.referenceLabel": "Reference",
+  "pme.capture.pay.reference.aria": "Payment reference",
+  "pme.capture.pay.talon.flag":
+    "The stub is photographed from the document's file. The payment is recorded without it: missing proof must not stop a fact from being recorded.",
+  "pme.capture.pay.inscrire": "Record the payment",
+  "pme.capture.pay.plusTard": "Not paid yet — later",
+  "pme.capture.fin.q": "Everything is read. What do you want to do with it?",
+  "pme.capture.fin.q.range": "It is filed.",
+  "pme.capture.fin.s":
+    "Sending files the document in the VAT of the month it leaves, not the month it is dated. Keeping closes nothing: you will send it when you want to.",
+  "pme.capture.fin.reste": "You have {count} reads left this month.",
+  "pme.capture.fin.reste#one": "You have {count} read left this month.",
+  "pme.capture.fin.reste#other": "You have {count} reads left this month.",
+  "pme.capture.fin.lues": "{count} documents read",
+  "pme.capture.fin.lues#one": "{count} document read",
+  "pme.capture.fin.lues#other": "{count} documents read",
+  "pme.capture.fin.gardees": "{count} kept for you",
+  "pme.capture.fin.gardees#one": "{count} kept for you",
+  "pme.capture.fin.gardees#other": "{count} kept for you",
+  "pme.capture.fin.reglePar": "Paid by {moyen}",
+  "pme.capture.fin.reglePar.talon": "Paid by {moyen} — stub expected",
+  "pme.capture.fin.moyenADire": "Means of payment still to be told — each document keeps it open",
+  "pme.capture.fin.questions": "{count} questions still open",
+  "pme.capture.fin.questions#one": "{count} question still open",
+  "pme.capture.fin.questions#other": "{count} questions still open",
+  "pme.capture.fin.questions.aucune": "No question outstanding",
+  "pme.capture.fin.transmises": "Sent to the firm — the sending date files the VAT",
+  "pme.capture.fin.transmises#one": "Sent to the firm — the sending date files the VAT",
+  "pme.capture.fin.transmises#other": "Sent to the firm — the sending date files the VAT",
+  "pme.capture.fin.conservees": "Kept — nothing has left",
+  "pme.capture.fin.conservees#one": "Kept — nothing has left",
+  "pme.capture.fin.conservees#other": "Kept — nothing has left",
+  "pme.capture.fin.foot":
+    "As long as you do not send, you ask me for nothing: you correct, you delete, you start again. Afterwards it is the firm that holds them — then deletion becomes a request, and its answer is recorded.",
+  "pme.capture.fin.transmettre": "Send to the firm",
+  "pme.capture.fin.sansCabinet": "No firm engaged",
+  "pme.capture.fin.garder": "Keep — do not send",
+  "pme.capture.fin.suivante": "Capture the next one",
+  "pme.capture.fin.voirPieces": "See my documents",
+  "pme.capture.prive.q": "It is filed with you.",
+  "pme.capture.prive.s":
+    "I have not read them, they cost your allowance nothing, and nothing will take them out of here without you.",
+  "pme.capture.prive.espace": "In your private space · attached to your account",
+  "pme.capture.prive.intactes": "Unread — your reads for the month are untouched",
+  "pme.capture.prive.intactes#one": "Unread — your reads for the month are untouched",
+  "pme.capture.prive.intactes#other": "Unread — your reads for the month are untouched",
+  "pme.capture.prive.intactes.reste": "Unread — your {reste} reads for the month are untouched",
+  "pme.capture.prive.intactes.reste#one": "Unread — your {reste} reads for the month are untouched",
+  "pme.capture.prive.intactes.reste#other":
+    "Unread — your {reste} reads for the month are untouched",
+  "pme.capture.prive.invisible": "Invisible to your firm, your seats and the consolidated view",
+  "pme.capture.prive.verser": "Hand it over to the company",
+  "pme.capture.prive.verser.sous":
+    "It will be read and will count against the allowance — from your private space, whenever you want",
+  "pme.capture.prive.foot":
+    "Here no one has received it: you have no one's agreement to ask for. Deletion is done from your private space.",
+  "pme.capture.prive.voirPapiers": "See my papers",
 };
 
 const ar: Dict = {
@@ -4842,11 +5582,26 @@ const ar: Dict = {
   "pme.list.empty": "لا توجد وثيقة.",
   "pme.list.nonLue": "لم تُقرأ بعد",
   "pme.list.sansEmetteur": "لم يُعثر على المُصدِر",
+  "pme.refus.titre": "غير مقروءة",
+  "pme.refus.attente": "في انتظار القراءة",
+  "pme.refus.plafond_atteint":
+    "لقد استنفدتَ عدد القراءات في باقتك. الوثيقة محفوظة، وسأقرؤها حالما تسمح الباقة بذلك.",
+  "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
+  "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
+  "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
+  "pme.refus.organisation_sans_licence":
+    "هذا الملف ليس له اشتراك نشط: أحفظ الوثائق ولا أقرؤها بعد.",
+  "pme.refus.piece_deja_lue": "هذه الوثيقة قُرئت من قبل: إعادة قراءتها لا تكلّف شيئًا.",
+  "pme.refus.autre": "لم أقرأ هذه الوثيقة، والسبب غير معروف لديّ.",
+  "pme.refus.le": "رُفضت في {date}",
   "pme.doc.titre": "وثائقك",
   "pme.doc.importer": "استيراد ملفات PDF",
   "pme.doc.lead.mois": "{count} وثيقة مقروءة ومصنَّفة في {mois}.",
   "pme.doc.lead.mois#one": "وثيقة واحدة مقروءة ومصنَّفة في {mois}.",
   "pme.doc.lead.mois#other": "{count} وثيقة مقروءة ومصنَّفة في {mois}.",
+  "pme.doc.lead.nonLues": "{count} لم تُقرأ بعد.",
+  "pme.doc.lead.nonLues#one": "واحدة لم تُقرأ بعد.",
+  "pme.doc.lead.nonLues#other": "{count} لم تُقرأ بعد.",
   "pme.doc.lead.annee": "{count} وثيقة منذ البداية.",
   "pme.doc.lead.annee#one": "وثيقة واحدة منذ البداية.",
   "pme.doc.lead.annee#other": "{count} وثيقة منذ البداية.",
@@ -4883,6 +5638,9 @@ const ar: Dict = {
   "pme.piece.title": "وثيقة",
   "pme.piece.source": "المصدر",
   "pme.read.run": "قراءة الوثيقة",
+  "pme.piece.versLaSociete": "نقلها إلى الشركة",
+  "pme.piece.versLaSociete.sous":
+    "تدخل مكتبة الشركة وأقرؤها. ولا تُرسل إلى أحد: الإرسال قرار منفصل.",
   "pme.read.running": "جارٍ القراءة…",
   "pme.lecture.titre": "أقرأ وثيقتك.",
   "pme.lecture.sous": "أرصد كل كلمة قبل أن أجيبك — لا أخمّن مبلغًا أبدًا.",
@@ -5823,6 +6581,9 @@ const ar: Dict = {
   "cab.code.tronque": "قراءة مبتورة: أُعيدت قراءة الصفحة على شرائح.",
   "cab.code.separateur": "مبلغ يحتاج تأكيدًا: الفاصل يُقرأ بوجهين، ولا شيء في الوثيقة يحسم.",
   "cab.code.arithmetique": "مبلغ حسمته حسابات الفاتورة: هي القراءة الوحيدة التي تتوازن.",
+  "cab.code.ampute":
+    "مبلغ لم يُرجَع: هو ملتصق بالعدد المجاور في الوثيقة، وقراءة مبتورة أسوأ من غياب القراءة.",
+  "cab.code.incoherent": "الوثيقة لا تتوازن: ما تعطيه حساباتها يخالف ما تطبعه.",
   "cab.code.autre": "تنبيه قراءة.",
   "cab.notif.kind.piece.demande": "عميلك يطلب استرجاع وثيقة",
   "cab.notif.kind.piece.demande_tranchee": "تم البتّ في الطلب",
@@ -6899,6 +7660,309 @@ const ar: Dict = {
   "piece.champ.lignes": "تفصيل المبالغ",
   "piece.champ.totaux": "المجاميع",
   "piece.champ.type": "نوع الوثيقة",
+
+  /* ─────────────────────── الصفحة الرئيسية : بطاقة القراءات المتبقّية */
+  "pme.home.lectures": "القراءات المتبقّية",
+  "pme.home.lectures.sansForfait": "لا يوجد اشتراك بعد",
+  "pme.home.lectures.illisible": "العدّاد غير مقروء حاليًا",
+  "pme.home.sieges": "مقاعدي",
+  "pme.home.societes": "شركاتي",
+
+  /* ────────────────────────────────────────── الإعدادات : فضائي */
+  "pme.reglages.compte": "حسابك",
+  "pme.reglages.compte.sous": "شخص واحد",
+  "pme.reglages.compte.orgs": "حساب واحد، {count} مؤسسة",
+  "pme.reglages.compte.orgs#one": "حساب واحد، مؤسسة واحدة",
+  "pme.reglages.compte.orgs#other": "حساب واحد، {count} مؤسسة",
+  "pme.reglages.abo": "اشتراكك",
+  "pme.reglages.abo.sous": "رخصة مباشرة",
+  "pme.reglages.abo.ht": "دون الأداء شهريًا · المبلغ جملة تحمله الفاتورة",
+  "pme.reglages.abo.organisations": "المؤسسات المشمولة بالرخصة",
+  "pme.reglages.abo.siegesOccupes": "المقاعد المشغولة من المقاعد المضمّنة",
+  "pme.reglages.abo.siegesMax": "أقصى عدد للمقاعد",
+  "pme.reglages.abo.lectures": "القراءات في الشهر",
+  "pme.reglages.abo.statut": "حالة الرخصة",
+  "pme.reglages.abo.consommees": "القراءات المستهلكة",
+  "pme.reglages.abo.bientot":
+    "بقيت {count} قراءة هذا الشهر. التصوير لا يتوقّف أبدًا: تتراكم الوثائق دون قراءة، وتعود القراءة عند التجديد.",
+  "pme.reglages.abo.bientot#one":
+    "بقيت قراءة واحدة هذا الشهر. التصوير لا يتوقّف أبدًا: تتراكم الوثائق دون قراءة، وتعود القراءة عند التجديد.",
+  "pme.reglages.abo.bientot#other":
+    "بقيت {count} قراءة هذا الشهر. التصوير لا يتوقّف أبدًا: تتراكم الوثائق دون قراءة، وتعود القراءة عند التجديد.",
+  "pme.reglages.abo.facture":
+    "الفاتورة تصدر عن الرخصة وتحمل تفصيل الشهر، ولا تُحتسب من جديد هنا. وتغيير الصيغة يُفوتر بالتناسب مع الأيام.",
+  "pme.reglages.abo.collaborateur": "الاشتراك في حوزة مسيّر هذا الملف: لا ترى لا سعره ولا حدوده.",
+  "pme.reglages.abo.sansLicence": "لا توجد رخصة مرتبطة بهذا الحساب. تبقى الحدود والسعر فارغة.",
+  "pme.reglages.orgs": "مؤسساتك",
+  "pme.reglages.orgs.aucune": "لا توجد مؤسسة على هذه الرخصة.",
+  "pme.reglages.orgs.ajouter": "إضافة شركة",
+  "pme.reglages.orgs.ajouter.sous":
+    "مؤسسة أخرى على الرخصة، لها تكليفها الخاص ووثائقها الخاصة. الحدّ تتولّاه قاعدة البيانات.",
+  "pme.reglages.societes.verrou": "عدّة شركات، لكلّ واحدة تكليفها، ونظرة موحّدة لا تملكها غيرك.",
+  "pme.reglages.verrou.nonLu": "مقفل لأنّ الاشتراك لم يُقرأ، لا لأنّه مرفوض.",
+  "pme.reglages.surTotal": "{n} من {total}",
+  "pme.reglages.sieges": "المقاعد",
+  "pme.reglages.sieges.sous":
+    "المقعد رخصة لشخص واحد داخل مؤسسة واحدة — وليس فرعًا. كلّ مقعد لا يرى إلّا وثائقه، وأنت ترى الجميع.",
+  "pme.reglages.sieges.verrou":
+    "مقاعد معزولة — كلّ واحد لا يرى إلّا وثائقه — وأنت من يصادق قبل الإرسال إلى المكتب.",
+  "pme.reglages.sieges.aucun": "لم يَرِد بعد أيّ مقعد لهذه الرخصة، ولا حتى مقعدك.",
+  "pme.reglages.org.ouverte": "مفتوحة",
+  "pme.reglages.org.surLicence": "على الرخصة",
+  "pme.reglages.org.matricule": "المعرّف الجبائي مثبَّت بقراءة بطاقة التعريف الجبائي.",
+  "pme.reglages.org.matricule.fort": "غير قابل للتغيير من أوّل وثيقة تُستلَم.",
+  "pme.reglages.org.cabinet": "المكتب المكلَّف:",
+  "pme.reglages.org.cabinet.aucun": "لا يوجد مكتب",
+  "pme.reglages.org.mandat.nonLu": "حالة التكليف وتاريخه غير مقروءين",
+  "pme.reglages.org.lectures": "القراءات المستهلكة هذا الشهر:",
+  "pme.reglages.org.revocation": "يُسحب التكليف من هذه الشاشة بمجرّد أن يحمله المستودع.",
+  "pme.reglages.org.voirMandat": "الاطّلاع على التكليف",
+  "pme.reglages.org.revoquer": "سحب التكليف",
+  "pme.reglages.siege.lectures": "القراءات",
+  "pme.reglages.siege.reprendre": "استرجاع المقعد",
+  "pme.reglages.siege.liberee":
+    "تمّ تحرير المقعد. وثائق الشركة تبقى، أمّا وثائق فضائه الخاص فتتبعه.",
+  "pme.reglages.siege.nonLiberee": "لم يُحرَّر المقعد: {count} وثيقة شخصية يجب حلّها أوّلًا.",
+  "pme.reglages.siege.nonLiberee#one": "لم يُحرَّر المقعد: وثيقة شخصية واحدة يجب حلّها أوّلًا.",
+  "pme.reglages.siege.nonLiberee#other": "لم يُحرَّر المقعد: {count} وثيقة شخصية يجب حلّها أوّلًا.",
+  "pme.reglages.siege.inviter": "دعوة زميل",
+  "pme.reglages.siege.inviter.sous":
+    "مقعد واحد على الرخصة. الحدّ تتولّاه قاعدة البيانات: إن كانت ممتلئة فستقول ذلك.",
+  "pme.reglages.siege.inviter.adresse": "عنوانه. هو من يُنشئ حسابه، والدعوة تنتظره في بوّابته.",
+  "pme.reglages.siege.invite.deja": "كانت لـ {email} دعوة معلّقة من قبل: وهي لا تزال قائمة.",
+  "pme.reglages.siege.invite.envoyee":
+    "أُرسلت الدعوة إلى {email}. تنتظره في بوّابته، وكلمة سرّه لا تمرّ بأحد.",
+  "pme.reglages.donnees": "بياناتك",
+  "pme.reglages.donnees.sous": "لك دائمًا",
+  "pme.reglages.donnees.espace": "فضائي الخاص",
+  "pme.reglages.donnees.espace.sous": "مرتبط بحسابك، لا بالمؤسسة. لا شيء يخرج منه.",
+  "pme.reglages.donnees.biblio": "مكتبتي",
+  "pme.reglages.donnees.biblio.sous": "شهر، أو ملف، أو السنة كاملة، وثيقةً وثيقة.",
+  "pme.reglages.donnees.conservation": "مدّة الحفظ",
+  "pme.reglages.donnees.conservation.sous": "عشر سنوات. حتى إن رحلت، وحتى إن توقّفت عن الدفع.",
+  "pme.reglages.donnees.conservation.valeur": "10 سنوات",
+  "pme.reglages.offre.changer": "تغيير الاشتراك",
+  "pme.reglages.offre.changer.sous":
+    "أثر فوري وفوترة بالتناسب مع الأيام — هذه العملية ليست بعد في العقد، وتمرّ اليوم عبر ALGORIA.",
+  "pme.reglages.note":
+    "المؤسسة ملكك دائمًا. الرخصة تُفصل، والتكليف يُسحب — أمّا الوثائق فلا تتحرّك.",
+
+  /* ──────────────────────────── ملف وثيقة واحدة، من جهة المؤسسة */
+  "pme.piece.sens.achat": "شراء · مورّد",
+  "pme.piece.sens.vente": "بيع · عميل",
+  "pme.piece.sens.inconnu": "الاتّجاه غير محدَّد",
+  "pme.piece.chaine": "السلسلة",
+  "pme.piece.chaine.pieces": "{count} وثيقة",
+  "pme.piece.chaine.pieces#one": "وثيقة واحدة",
+  "pme.piece.chaine.pieces#other": "{count} وثيقة",
+  "pme.piece.chaine.issueDe": "منبثقة عن هذه الوثيقة",
+  "pme.piece.chaine.aRattacher": "في انتظار الإرفاق",
+  "pme.piece.chaine.vide": "لا وصل ولا مؤيّد مُرفق بهذه الوثيقة بعد.",
+  "pme.piece.chaine.foot":
+    "الوصل والقسيمة والإشعار تُرفق من شاشة الدفع: هناك تُصوَّر، ومن هناك تتعلّق بفاتورتها.",
+  "pme.piece.reglements": "المدفوعات",
+  "pme.piece.encaissements": "المقبوضات",
+  "pme.piece.mouvements": "{count} حركة",
+  "pme.piece.mouvements#one": "حركة واحدة",
+  "pme.piece.mouvements#other": "{count} حركة",
+  "pme.piece.verifie": "ما تحقّقتُ منه",
+  "pme.piece.points": "{count} نقطة",
+  "pme.piece.points#one": "نقطة واحدة",
+  "pme.piece.points#other": "{count} نقطة",
+  "pme.piece.lectureRefusee": "لم أقرأ هذه الوثيقة. هي مصوَّرة ومرتّبة — والقراءة لا تزال مطلوبة.",
+  "pme.piece.parcours": "المسار",
+  "pme.piece.etapes": "{count} مرحلة",
+  "pme.piece.etapes#one": "مرحلة واحدة",
+  "pme.piece.etapes#other": "{count} مرحلة",
+  "pme.piece.etat.faite": "منجزة",
+  "pme.piece.etat.courante": "جارية",
+  "pme.piece.etat.attente": "في الانتظار",
+  "pme.piece.foot": "أُنبّه وأسأل، ولا أعدّل قيدًا أبدًا.",
+  "pme.piece.revenir": "العودة إليها",
+  "pme.piece.revenir.libre": "حُرّ",
+  "pme.piece.revenir.avantValidation": "قبل المصادقة",
+  "pme.piece.revenir.surAccord": "بموافقة المكتب",
+  "pme.piece.rienNestSorti": "لم يخرج شيء من هنا",
+  "pme.piece.rienNestSorti.texte":
+    "صحّح ما تريد — كلّ تصحيح مؤرَّخ ويُضاف إلى القراءة، ولا يمحوها. ويمكنك حذف الوثيقة: لم يستلمها أحد.",
+  "pme.piece.elleAttend": "تنتظر المسيّر",
+  "pme.piece.elleAttend.texte":
+    "ما لم يحسم بعد، صحّح ما تريد: هذا إدخالك. أمّا حذفها فمن شأنه — أُبلّغه الطلب وأُعلمك بالنتيجة.",
+  "pme.piece.elleEstPartie": "لقد غادرت",
+  "pme.piece.elleEstPartie.texte":
+    "التصحيح يُعيدها إلى حالة «في انتظار مصادقة جديدة» عند مكتبك — يعيد عمله، وهذا طبيعي. والحذف يستوجب موافقته بحكم واجب الحفظ: والقرار يُسجَّل في السجلّ، أيًّا كان.",
+  "pme.piece.demanderSuppression": "طلب الحذف",
+  "pme.piece.mettreAuPrive": "نقلها إلى فضائي الخاص",
+  "pme.piece.suppressionDemandee": "تمّ طلب الحذف. على مكتبك أن يوافق عليه.",
+  "pme.piece.suppressionRefusee": "رفض مكتبك الحذف.",
+  "pme.piece.siege": "ترى هذا الملف لأنّك أدخلت إليه وثيقة. والمسيّر هو من يُرسل إلى المكتب.",
+
+  /* ──────────────────── التصوير : المراحل التسع، وكلماتها */
+  "pme.capture.etape.capturer": "التصوير",
+  "pme.capture.etape.destination": "الجهة",
+  "pme.capture.etape.lectures": "القراءات",
+  "pme.capture.etape.lecture": "القراءة",
+  "pme.capture.etape.lu": "ما قرأتُه",
+  "pme.capture.etape.questions": "الأسئلة",
+  "pme.capture.etape.dates": "التواريخ",
+  "pme.capture.etape.reglement": "الدفع",
+  "pme.capture.etape.fait": "تمّ",
+  "pme.capture.etape.faitPrive": "تمّ · محفوظة عندك",
+  "pme.capture.revenir": "رجوع",
+  "pme.capture.pieceNonLue": "وثيقة غير مقروءة",
+  "pme.capture.lot.nonLues": "{count} وثيقة · لم تُقرأ أيّ واحدة بعد",
+  "pme.capture.lot.nonLues#one": "وثيقة واحدة · لم تُقرأ بعد",
+  "pme.capture.lot.nonLues#other": "{count} وثيقة · لم تُقرأ أيّ واحدة بعد",
+  "pme.capture.poser": "ضع الوثيقة مستوية — أنا أعدّل الميل وأقتطع الإطار",
+  "pme.capture.menu.societe": "للشركة",
+  "pme.capture.menu.vous": "لك",
+  "pme.capture.menu.ouvrir": "فتح",
+  "pme.capture.menu.supprimer": "حذف",
+  "pme.capture.galerie": "معرض الصور",
+  "pme.capture.fatoora": "استيراد من الفاتورة الإلكترونية",
+  "pme.capture.fatoora.sous": "الفواتير الإلكترونية تدخل مقروءة، دون استهلاك قراءة",
+  "pme.capture.aVenir": "قريبًا",
+  "pme.capture.file.attente":
+    "{count} وثيقة تنتظر الشبكة. ستُرسل من تلقاء نفسها: لا حاجة لإعادة الصورة أبدًا.",
+  "pme.capture.file.attente#one":
+    "وثيقة واحدة تنتظر الشبكة. ستُرسل من تلقاء نفسها: لا حاجة لإعادة الصورة أبدًا.",
+  "pme.capture.file.attente#other":
+    "{count} وثيقة تنتظر الشبكة. ستُرسل من تلقاء نفسها: لا حاجة لإعادة الصورة أبدًا.",
+  "pme.capture.foot.lot": "لا شيء يُقرأ ما لم تطلبه: حصّتك لا تتحرّك قبل ذلك.",
+  "pme.capture.foot.horsReseau":
+    "خارج الشبكة، تُرسل الصورة بمجرّد عودتها — وأيّ خلل يترك أثرًا في السجلّ.",
+  "pme.capture.repondre": "الإجابة ({count})",
+  "pme.capture.rienARepondre": "لا شيء للإجابة عنه",
+  "pme.capture.plusTard": "لاحقًا — أتركها كما هي",
+  "pme.capture.continuer": "متابعة",
+  "pme.capture.pasMaintenant": "ليس الآن",
+  "pme.capture.plusTardCourt": "لاحقًا",
+  "pme.capture.dest.q": "هل هذه الوثائق الـ {count} للشركة أم لك؟",
+  "pme.capture.dest.q#one": "هل هي للشركة أم لك؟",
+  "pme.capture.dest.q#other": "هل هذه الوثائق الـ {count} للشركة أم لك؟",
+  "pme.capture.dest.s": "أسأل الآن لا بعد ذلك: الوثيقة الشخصية لا أقرأها، ولا تمسّ حصّتك أبدًا.",
+  "pme.capture.dest.societeLabel": "الشركة",
+  "pme.capture.dest.societe": "للشركة",
+  "pme.capture.dest.societe.cabinet": "تُقرأ وتُرتّب وتُرسل إلى المكتب بعد تحقّقك",
+  "pme.capture.dest.societe.sansCabinet": "تُقرأ وتُرتّب. لا مكتب مكلَّف: لا شيء يُرسل.",
+  "pme.capture.dest.prive": "لك",
+  "pme.capture.dest.prive.sous": "فضاؤك الخاص. لا أقرأها، ولا يراها أحد غيرك.",
+  "pme.capture.dest.prive.flag": "هي مرتبطة بحسابك لا بالشركة — وستتبعك إن غادرتها.",
+  "pme.capture.dest.ranger": "ترتيبها عندك",
+  "pme.capture.choix.q": "أيّها أقرأ؟",
+  "pme.capture.choix.s":
+    "الكلّ مُحدَّد. أزل التحديد عمّا ليس للشركة — هذا أقصر من تحديد واحدة واحدة، ولن أقرأ إلّا ما بقي.",
+  "pme.capture.choix.gardee": "محفوظة لك — غير مقروءة",
+  "pme.capture.choix.sansDate": "دون تاريخ مقروء",
+  "pme.capture.choix.foot": "غير المحدَّدة تبقى في فضائك الخاص. لا تكلّف شيئًا ولن تُرسل أبدًا.",
+  "pme.capture.choix.plafond":
+    "بقيت {count} قراءة في اشتراكك، مقابل {cochees} وثيقة محدَّدة. الأولى ستُقرأ، والبقية تبقى كما هي — غير مقروءة، ولا شيء يُفقد.",
+  "pme.capture.choix.plafond#one":
+    "بقيت قراءة واحدة في اشتراكك، مقابل {cochees} وثيقة محدَّدة. الأولى ستُقرأ، والبقية تبقى كما هي — غير مقروءة، ولا شيء يُفقد.",
+  "pme.capture.choix.plafond#other":
+    "بقيت {count} قراءة في اشتراكك، مقابل {cochees} وثيقة محدَّدة. الأولى ستُقرأ، والبقية تبقى كما هي — غير مقروءة، ولا شيء يُفقد.",
+  "pme.capture.choix.lire": "قراءة الـ {count} — {count} قراءة من {reste}",
+  "pme.capture.choix.lire#one": "قراءة الوثيقة — قراءة واحدة من {reste}",
+  "pme.capture.choix.lire#other": "قراءة الـ {count} — {count} قراءة من {reste}",
+  "pme.capture.lire.q": "أقرأ {count} وثيقة.",
+  "pme.capture.lire.q#one": "أقرأ الوثيقة.",
+  "pme.capture.lire.q#other": "أقرأ {count} وثيقة.",
+  "pme.capture.lire.s": "أُشير إلى الموضع الذي أخرجتُ منه كلّ رقم. وما لم أجده أقوله، ولا أخمّنه.",
+  "pme.capture.lire.foot": "القراءة الفاشلة تترك أثرًا في السجلّ، والوثيقة تبقى كما هي، سليمة.",
+  "pme.capture.lire.voir": "عرض ما قرأتُه",
+  "pme.capture.lu.q": "هذا ما قرأتُه.",
+  "pme.capture.lu.s":
+    "كلّ سطر قابل للتصحيح، والتصحيح يُعلّمني المورّد. لا شيء يُمسح: التوضيح يُضاف ولا يستبدل.",
+  "pme.capture.lu.type": "النوع",
+  "pme.capture.lu.total": "المجموع",
+  "pme.capture.lu.nonLu": "لم أقرأه",
+  "pme.capture.lu.corriger": "تصحيح",
+  "pme.capture.lu.refus": "رُفضت القراءة · {motif}",
+  "pme.capture.type.achat": "فاتورة شراء",
+  "pme.capture.type.vente": "فاتورة بيع",
+  "pme.capture.q.q": "{famille} — {montant} {devise} هذا الشهر.",
+  "pme.capture.q.s":
+    "قاعدة المقارنة هي {base} {devise}. هل هذا استثنائي، أم هناك ما يستوجب التحقّق؟ العتبة سياسة مؤسستك، لا قاعدة يمكنني قراءتها.",
+  "pme.capture.q.exceptionnel": "استثنائي",
+  "pme.capture.q.exceptionnel.sous": "هذا عادي في ذلك الشهر، ولن أسأل عنه مرّة أخرى",
+  "pme.capture.q.aVerifier": "يستوجب التحقّق",
+  "pme.capture.q.aVerifier.sous": "أُبقيه مفتوحًا، والمكتب يراه كذلك",
+  "pme.capture.q.position": "السؤال {n} من {total}.",
+  "pme.capture.q.aucune": "لا أسئلة.",
+  "pme.capture.q.jeRegarde": "أنا أنظر.",
+  "pme.capture.q.rienDAnormal": "لا شيء خارج المعتاد في ما قرأتُه الآن.",
+  "pme.capture.dates.q": "{count} وثيقة تنتظر تاريخها.",
+  "pme.capture.dates.q#one": "وثيقة واحدة تنتظر تاريخها.",
+  "pme.capture.dates.q#other": "{count} وثيقة تنتظر تاريخها.",
+  "pme.capture.dates.q.toutes": "كلّ شيء مؤرَّخ.",
+  "pme.capture.dates.s":
+    "ما لم يكن لها تاريخ، فهي لا تدخل في أيّ شهر — ولا حتى شهر الصورة. تاريخ الوثيقة هو الذي يحدّد أداءك على القيمة المضافة، ولا أختاره مكانك.",
+  "pme.capture.dates.s.ok": "كلّ وثيقة قرأتُها الآن تحمل تاريخها، فشهرها، فأداءها.",
+  "pme.capture.dates.flag":
+    "{montant} {devise} دون الأداء لا تدخل في أيّ مجموع شهري ما دامت هذه التواريخ ناقصة.",
+  "pme.capture.dates.sansDate": "دون تاريخ",
+  "pme.capture.dates.dater": "تحديد التاريخ",
+  "pme.capture.pay.q": "كيف دُفعت الوثائق الـ {count}؟",
+  "pme.capture.pay.q#one": "كيف دُفعت؟",
+  "pme.capture.pay.q#other": "كيف دُفعت الوثائق الـ {count}؟",
+  "pme.capture.pay.s":
+    "أسأل مرّة واحدة لا ستّ مرّات. وإن دُفعت اثنتان بطريقة أخرى، فكلّ وثيقة تُراجَع في ملفها.",
+  "pme.capture.pay.talon": "القسيمة مطلوبة — والدفع يُسجَّل دونها",
+  "pme.capture.pay.sansPreuve": "لا مؤيّد يُرفق: لا شيء للمقارنة",
+  "pme.capture.pay.referenceLabel": "المرجع",
+  "pme.capture.pay.reference.aria": "مرجع الدفع",
+  "pme.capture.pay.talon.flag":
+    "القسيمة تُصوَّر من ملف الوثيقة. والدفع يُسجَّل دونها: مؤيّد ناقص لا ينبغي أن يمنع تسجيل واقعة.",
+  "pme.capture.pay.inscrire": "تسجيل الدفع",
+  "pme.capture.pay.plusTard": "لم تُدفع بعد — لاحقًا",
+  "pme.capture.fin.q": "كلّ شيء مقروء. ماذا تريد أن تفعل به؟",
+  "pme.capture.fin.q.range": "تمّ الترتيب.",
+  "pme.capture.fin.s":
+    "الإرسال يُرتّب الوثيقة في أداء الشهر الذي تُرسل فيه، لا الشهر الذي هي مؤرَّخة به. والاحتفاظ لا يُغلق شيئًا: ترسلها متى شئت.",
+  "pme.capture.fin.reste": "بقيت لك {count} قراءة هذا الشهر.",
+  "pme.capture.fin.reste#one": "بقيت لك قراءة واحدة هذا الشهر.",
+  "pme.capture.fin.reste#other": "بقيت لك {count} قراءة هذا الشهر.",
+  "pme.capture.fin.lues": "{count} وثيقة مقروءة",
+  "pme.capture.fin.lues#one": "وثيقة واحدة مقروءة",
+  "pme.capture.fin.lues#other": "{count} وثيقة مقروءة",
+  "pme.capture.fin.gardees": "{count} محفوظة لك",
+  "pme.capture.fin.gardees#one": "واحدة محفوظة لك",
+  "pme.capture.fin.gardees#other": "{count} محفوظة لك",
+  "pme.capture.fin.reglePar": "الدفع بواسطة {moyen}",
+  "pme.capture.fin.reglePar.talon": "الدفع بواسطة {moyen} — القسيمة مطلوبة",
+  "pme.capture.fin.moyenADire": "طريقة الدفع لم تُذكر بعد — كلّ وثيقة تُبقيها مفتوحة",
+  "pme.capture.fin.questions": "{count} سؤالًا لا يزال مفتوحًا",
+  "pme.capture.fin.questions#one": "سؤال واحد لا يزال مفتوحًا",
+  "pme.capture.fin.questions#other": "{count} سؤالًا لا يزال مفتوحًا",
+  "pme.capture.fin.questions.aucune": "لا سؤال معلّق",
+  "pme.capture.fin.transmises": "أُرسلت إلى المكتب — وتاريخ الإرسال يُرتّب الأداء",
+  "pme.capture.fin.transmises#one": "أُرسلت إلى المكتب — وتاريخ الإرسال يُرتّب الأداء",
+  "pme.capture.fin.transmises#other": "أُرسلت إلى المكتب — وتاريخ الإرسال يُرتّب الأداء",
+  "pme.capture.fin.conservees": "محفوظة — لم يُرسل شيء",
+  "pme.capture.fin.conservees#one": "محفوظة — لم يُرسل شيء",
+  "pme.capture.fin.conservees#other": "محفوظة — لم يُرسل شيء",
+  "pme.capture.fin.foot":
+    "ما لم ترسل، فأنت لا تطلب منّي شيئًا: تصحّح، وتحذف، وتبدأ من جديد. وبعد الإرسال يصبح المكتب هو الحافظ — فيصير الحذف طلبًا، ويُسجَّل جوابه.",
+  "pme.capture.fin.transmettre": "الإرسال إلى المكتب",
+  "pme.capture.fin.sansCabinet": "لا مكتب مكلَّف",
+  "pme.capture.fin.garder": "الاحتفاظ — دون إرسال",
+  "pme.capture.fin.suivante": "تصوير التالية",
+  "pme.capture.fin.voirPieces": "عرض وثائقي",
+  "pme.capture.prive.q": "تمّ ترتيبها عندك.",
+  "pme.capture.prive.s": "لم أقرأها، ولم تكلّف حصّتك شيئًا، ولا شيء يُخرجها من هنا دون فعل منك.",
+  "pme.capture.prive.espace": "في فضائك الخاص · مرتبطة بحسابك",
+  "pme.capture.prive.intactes": "غير مقروءة — قراءات شهرك سليمة",
+  "pme.capture.prive.intactes#one": "غير مقروءة — قراءات شهرك سليمة",
+  "pme.capture.prive.intactes#other": "غير مقروءة — قراءات شهرك سليمة",
+  "pme.capture.prive.intactes.reste": "غير مقروءة — ما زالت {reste} قراءة لهذا الشهر سليمة",
+  "pme.capture.prive.intactes.reste#one": "غير مقروءة — ما زالت {reste} قراءة لهذا الشهر سليمة",
+  "pme.capture.prive.intactes.reste#other": "غير مقروءة — ما زالت {reste} قراءة لهذا الشهر سليمة",
+  "pme.capture.prive.invisible": "غير مرئية لمكتبك ولمقاعدك وللنظرة الموحّدة",
+  "pme.capture.prive.verser": "تحويلها إلى الشركة",
+  "pme.capture.prive.verser.sous": "ستُقرأ وتُحسب في الحصة — من فضائك الخاص، متى شئت",
+  "pme.capture.prive.foot":
+    "هنا لم يستلمها أحد: لا موافقة تطلبها من أحد. والحذف يتمّ من فضائك الخاص.",
+  "pme.capture.prive.voirPapiers": "عرض أوراقي",
 };
 
 export type MessageKey = keyof typeof fr;

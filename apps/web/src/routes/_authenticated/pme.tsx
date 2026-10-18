@@ -13,11 +13,11 @@ import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
+import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
-import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
@@ -106,6 +106,28 @@ function PmeLayout() {
     enabled: !!org,
   });
 
+  /*
+   * ======================================= LE FORFAIT, LU UNE FOIS, ET ICI
+   *
+   * Trois écrans l'appelaient chacun pour soi — accueil, capture, réglages —
+   * en redéclarant chacun son interface et son propre dépôt `facturation`,
+   * hors du point de composition. Deux clés de cache pour la même donnée,
+   * deux allers-retours, et deux règles de dégradation qui ne jugeaient pas
+   * le même fait.
+   *
+   * La clé n'a pas de dossier : la licence appartient à la PERSONNE, et
+   * `mon_forfait()` ne rend que celle dont l'appelant est titulaire.
+   *
+   * `retry: false` : une licence absente n'est pas une panne à réessayer
+   * trois fois, et un compteur qui tarde ne doit jamais retenir la capture.
+   */
+  const forfaitQuery = useQuery({
+    queryKey: ["mon-forfait"],
+    queryFn: () => office().facturation.monForfait(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const packQuery = useQuery({
     queryKey: ["ref-pack", org?.jurisdiction],
     queryFn: () => office().referential.activePack(org!.jurisdiction),
@@ -189,23 +211,44 @@ function PmeLayout() {
      * disparaîtraient sans aucun message.
      */
     mutationFn: async (input: { lot: readonly PickedFile[]; documentKind: string | null }) => {
-      if (!org) return null;
+      if (!org) return [];
       const identifiants: string[] = [];
       for (const picked of input.lot) {
         const id = await deposerUnePiece(picked, input.documentKind);
         if (id) identifiants.push(id);
       }
-      // Une seule pièce : on l'ouvre, sa lecture est déjà demandée. Plusieurs :
-      // la liste, parce qu'ouvrir la première cache les neuf autres.
-      return input.lot.length === 1 ? (identifiants[0] ?? null) : null;
+      return identifiants;
     },
-    onSuccess: async (pieceId) => {
+    /*
+     * ======================================== OÙ L'ON ARRIVE APRÈS LA PHOTO
+     *
+     * Sur l'écran de capture, et sur les pièces QU'ON VIENT DE PRENDRE.
+     *
+     * L'obturateur menait au dossier de la pièce, et la pièce n'était jamais
+     * lue : née `personnel`, elle est refusée par B6, et l'écran du dossier
+     * n'offrait aucune sortie sans mandat de cabinet. Trente pièces, zéro
+     * lue, et une impasse fermée.
+     *
+     * `/pme/capturer` existait, enregistré, fini, et AUCUN lien du dépôt n'y
+     * menait. Il pose la question dans le bon ordre — la destination d'abord,
+     * la lecture sur clic explicite ensuite — et c'est le seul écran qui le
+     * fasse. L'obturateur y mène donc directement : le geste le plus fréquent
+     * du produit ne se paie pas d'un détour, et aucune entrée ne s'ajoute à
+     * la barre du bas, qui est dessinée à trois places.
+     *
+     * Les identifiants voyagent dans l'URL, et c'est le propos : sans eux,
+     * l'écran demanderait la destination des trente pièces du dossier pour
+     * une seule photo prise.
+     */
+    onSuccess: async (identifiants) => {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       await qc.invalidateQueries({ queryKey: ["pieces-lues", org.id] });
-      if (pieceId) await navigate({ to: "/pme/piece/$pieceId", params: { pieceId } });
-      else await navigate({ to: "/pme/list" });
+      await navigate({
+        to: "/pme/capturer",
+        search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
+      });
     },
     onError: (e: unknown) =>
       setCaptureError(
@@ -217,6 +260,7 @@ function PmeLayout() {
 
   async function deposerUnePiece(picked: PickedFile, documentKind: string | null) {
     if (!org) return null;
+    const vis = visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) });
     /*
      * ============================================ RANGÉE AVANT DE PARTIR
      *
@@ -248,7 +292,7 @@ function PmeLayout() {
          * lecture, en deux boutons de même poids. Et le retour d'une pièce
          * transmise demande l'accord du cabinet.
          */
-        vis: visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) }),
+        vis,
         contentType: picked.blob.type || "application/pdf",
         documentKind,
         nomFichier: picked.name,
@@ -301,134 +345,183 @@ function PmeLayout() {
   ] as const;
 
   return (
-    <div className="pt-safe mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] text-foreground">
-      {/*
-       * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
-       * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des
-       * écrans pleins (z-30 et plus), qui peignent la leur avec `pt-safe`.
-       */}
-      <div
-        aria-hidden
-        className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-md bg-background/95 backdrop-blur"
-      />
-      <BandeauHorsLigne />
-      {path === "/pme" ? null : (
-        <header className="top-safe sticky z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
-          <EntetePme
-            dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
-            dossierActif={org?.id ?? null}
-            choisirDossier={selectOrg}
-            aUnCabinet={aUnCabinet}
-          />
-        </header>
-      )}
-
-      <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
-        {orgsQuery.isPending ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : !org ? (
-          <div className="border border-border bg-card p-6">
-            <p className="text-sm text-muted-foreground">{t("pme.noorg")}</p>
-            <Link
-              to="/onboarding"
-              className="mt-4 inline-block border border-foreground bg-foreground px-4 py-2 text-xs uppercase tracking-wide text-background"
-            >
-              {t("app.orgs.create")}
-            </Link>
-          </div>
-        ) : (
-          <PmeProvider
-            value={{
-              tenantId: org.id,
-              entityId,
-              jurisdiction: org.jurisdiction,
-              currency: org.currency,
-              packId: packQuery.data?.id ?? null,
-              orgName: org.name,
-              matricule: org.legalId,
-              dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
-              choisirDossier: selectOrg,
-              aUnCabinet,
-              capture: (kind) => choisir.mutate(kind),
-              ouvrirScanner: ouvrirCapture,
-              capturing: capture.isPending || choisir.isPending,
-              captureError,
-              file,
-            }}
-          >
-            <Outlet />
-          </PmeProvider>
-        )}
-      </main>
-
-      {aTyper.length > 0 ? (
-        <QuestionDuType
-          documents={aTyper.map((p) => p.name)}
-          onRepondre={(code) => {
-            const lot = aTyper;
-            setATyper([]);
-            capture.mutate({ lot, documentKind: code });
-          }}
-          onPasser={() => {
-            // Les fichiers sont deja choisis : passer les envoie sans type
-            // plutot que de les perdre. Une photo refaite est le pire prix
-            // qu'on puisse demander.
-            const lot = aTyper;
-            setATyper([]);
-            capture.mutate({ lot, documentKind: null });
-          }}
+    /*
+     * `data-surface="pme"` est posé ICI et nulle part ailleurs : un seul
+     * `layout` porte le langage, donc une seule ligne décide de la surface.
+     * Le cabinet, qui ne passe jamais par ce layout, garde Edition One
+     * intact sans qu'on ait eu à l'exclure.
+     *
+     * `app` est le nom que la feuille habille déjà : la colonne et sa mesure,
+     * les encoches des quatre côtés, `100dvh`, et — à partir de 1024 px — la
+     * grille `15rem / 32rem / 1fr` qui fait du bas de l'écran un rail à
+     * gauche. Tout cela était écrit et n'atteignait rien, parce qu'aucun
+     * élément ne portait le nom. On renomme l'arbre, on ne repointe pas la
+     * feuille : le dessin n'a qu'une source.
+     *
+     * Ce qui disparaît ici est ce que `.app` porte déjà — `mx-auto`,
+     * `w-full`, `max-w-md`, `min-h-screen`, `pt-safe`, `bg-background`. Et
+     * `pb-[calc(5rem+…)]` part avec la barre fixe : la barre est maintenant
+     * dans le flux, il n'y a plus rien à réserver sous elle.
+     *
+     * Les deux sont sur DEUX éléments, et c'est obligatoire : toute la
+     * feuille est écrite en `[data-surface="pme"] .app`, un sélecteur de
+     * DESCENDANCE. Portés par le même élément, les deux noms ne se
+     * rencontrent jamais et pas une ligne ne descend. Mesuré : avec les deux
+     * sur la racine, `display` restait `flex` à 1280 px et la grille de
+     * bureau ne s'appliquait pas. La surface enveloppe, la colonne est
+     * dedans — c'est aussi ce que font les maquettes, où l'attribut est sur
+     * `body`.
+     */
+    <div data-surface="pme">
+      <div className="app flex flex-col text-foreground">
+        {/*
+         * La barre d'état, peinte : sous Android 15 l'écran passe dessous, et ce
+         * qui défile s'y verrait. Au-dessus de l'en-tête collé, en dessous des
+         * écrans pleins (z-30 et plus), qui peignent la leur avec `pt-safe`.
+         *
+         * Elle suit la colonne (`--colonne`, 440 px) au lieu d'une mesure à
+         * elle, et elle s'arrête à 768 px : au-delà, la colonne s'élargit, il
+         * n'y a plus de barre d'état à peindre, et une bande de 440 px posée au
+         * milieu d'un écran de bureau serait un trait sans objet.
+         */}
+        <div
+          aria-hidden
+          className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-[var(--colonne)] bg-background/95 backdrop-blur md:hidden print:hidden"
         />
-      ) : null}
+        <BandeauHorsLigne />
+        {path === "/pme" ? null : (
+          <header className="top-safe sticky z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
+            <EntetePme
+              dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
+              dossierActif={org?.id ?? null}
+              choisirDossier={selectOrg}
+              aUnCabinet={aUnCabinet}
+            />
+          </header>
+        )}
 
-      <nav
-        aria-label={t("pme.nav.aria")}
-        className="pb-safe fixed inset-x-0 bottom-0 z-10 mx-auto grid w-full max-w-md grid-cols-3 items-center border-t border-border bg-card"
-      >
-        <NavItem {...navItems[0]} />
-        <div className="flex justify-center py-[11px]">
-          <button
-            type="button"
-            disabled={!org || capture.isPending}
-            onClick={ouvrirCapture}
-            aria-label={t("pme.nav.add")}
-            className="grid h-[58px] w-[58px] place-items-center bg-foreground text-background outline outline-1 outline-line-strong disabled:opacity-50"
-          >
-            <Camera className="h-[25px] w-[25px]" aria-hidden />
-          </button>
-        </div>
-        <NavItem {...navItems[1]} />
-      </nav>
+        <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
+          {orgsQuery.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : !org ? (
+            <div className="border border-border bg-card p-6">
+              <p className="text-sm text-muted-foreground">{t("pme.noorg")}</p>
+              <Link
+                to="/onboarding"
+                className="mt-4 inline-block border border-foreground bg-foreground px-4 py-2 text-xs uppercase tracking-wide text-background"
+              >
+                {t("app.orgs.create")}
+              </Link>
+            </div>
+          ) : (
+            <PmeProvider
+              value={{
+                tenantId: org.id,
+                entityId,
+                jurisdiction: org.jurisdiction,
+                currency: org.currency,
+                packId: packQuery.data?.id ?? null,
+                orgName: org.name,
+                matricule: org.legalId,
+                dossiers: pmeOrgs.map((o) => ({ id: o.id, name: o.name })),
+                choisirDossier: selectOrg,
+                aUnCabinet,
+                capture: (kind) => choisir.mutate(kind),
+                ouvrirScanner: ouvrirCapture,
+                capturing: capture.isPending || choisir.isPending,
+                captureError,
+                file,
+                forfait: {
+                  ligne: forfaitQuery.data ?? null,
+                  enCours: forfaitQuery.isPending,
+                  illisible: forfaitQuery.isError,
+                  ouvertures: ouverturesDuForfait(forfaitQuery.data ?? null),
+                },
+              }}
+            >
+              <Outlet />
+            </PmeProvider>
+          )}
+        </main>
 
-      {/*
-       * Entre l'obturateur et l'écran de la pièce, la page se réduit, s'encode,
-       * part. Sans rien à l'écran, cinq pages sur un téléphone lent
-       * ressemblent à une application figée.
-       */}
-      {capture.isPending ? (
-        <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
-          <MalicaAvatar size={66} alt="Malica" rond />
-          <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
-            {t("pme.capture.preparation")}
-          </p>
-          <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
-        </div>
-      ) : null}
-
-      {scanning ? (
-        <Suspense fallback={null}>
-          <CameraScanner
-            onCancel={() => setScanning(false)}
-            onFallback={() => {
-              setScanning(false);
-              choisir.mutate("photo");
+        {aTyper.length > 0 ? (
+          <QuestionDuType
+            documents={aTyper.map((p) => p.name)}
+            onRepondre={(code) => {
+              const lot = aTyper;
+              setATyper([]);
+              capture.mutate({ lot, documentKind: code });
             }}
-            onDone={(pages) => {
-              setScanning(false);
-              if (pages.length > 0) choisir.mutate({ pages });
+            onPasser={() => {
+              // Les fichiers sont deja choisis : passer les envoie sans type
+              // plutot que de les perdre. Une photo refaite est le pire prix
+              // qu'on puisse demander.
+              const lot = aTyper;
+              setATyper([]);
+              capture.mutate({ lot, documentKind: null });
             }}
           />
-        </Suspense>
-      ) : null}
+        ) : null}
+
+        {/*
+         * `nav` : la grille à trois colonnes, le filet du haut et la réserve
+         * d'encoche viennent de la feuille. Elle est DANS LE FLUX, ce que la
+         * feuille réclamait depuis le premier jour (« une barre flottante sur
+         * un écran de 440 px mange la dernière ligne de chaque liste »), et ce
+         * que l'arbre contredisait. En paysage, fixée, elle prenait 102 px sur
+         * 390 — 26 % de l'écran debout dans un entrepôt.
+         *
+         * À partir de 1024 px, la même classe la sort du bas et en fait le rail
+         * collant de gauche : une barre d'onglets au bas d'un écran de 27
+         * pouces est un portage, pas un produit.
+         */}
+        <nav aria-label={t("pme.nav.aria")} className="nav">
+          <NavItem {...navItems[0]} />
+          <div className="flex justify-center py-[11px]">
+            <button
+              type="button"
+              disabled={!org || capture.isPending}
+              onClick={ouvrirCapture}
+              aria-label={t("pme.nav.add")}
+              className="grid h-[58px] w-[58px] place-items-center bg-foreground text-background outline outline-1 outline-line-strong disabled:opacity-50"
+            >
+              <Camera className="h-[25px] w-[25px]" aria-hidden />
+            </button>
+          </div>
+          <NavItem {...navItems[1]} />
+        </nav>
+
+        {/*
+         * Entre l'obturateur et l'écran de la pièce, la page se réduit, s'encode,
+         * part. Sans rien à l'écran, cinq pages sur un téléphone lent
+         * ressemblent à une application figée.
+         */}
+        {capture.isPending ? (
+          <div className="rg-rise pt-safe fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-11 text-center">
+            <MalicaAvatar size={66} alt="Malica" rond />
+            <p className="mt-[26px] text-[19px] leading-[1.5] tracking-[-0.01em]">
+              {t("pme.capture.preparation")}
+            </p>
+            <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
+          </div>
+        ) : null}
+
+        {scanning ? (
+          <Suspense fallback={null}>
+            <CameraScanner
+              onCancel={() => setScanning(false)}
+              onFallback={() => {
+                setScanning(false);
+                choisir.mutate("photo");
+              }}
+              onDone={(pages) => {
+                setScanning(false);
+                if (pages.length > 0) choisir.mutate({ pages });
+              }}
+            />
+          </Suspense>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -444,14 +537,15 @@ function NavItem({
   label: string;
   active: boolean;
 }) {
+  /*
+   * `data-on` plutôt qu'une classe de couleur : c'est le marqueur que la
+   * feuille lit (`.nav a[data-on="true"]`), et c'est elle qui tient la
+   * couleur, la hauteur de cible (56 px) et le passage en rangée dans le
+   * rail de bureau. Deux sources de couleur pour un seul état en feraient
+   * diverger une.
+   */
   return (
-    <Link
-      to={to}
-      className={cn(
-        "flex flex-col items-center gap-1 py-3 text-[10px] font-medium uppercase tracking-wider",
-        active ? "text-foreground" : "text-muted-foreground",
-      )}
-    >
+    <Link to={to} data-on={active} className="uppercase tracking-wider">
       <Icon className="h-5 w-5" aria-hidden />
       <span>{label}</span>
     </Link>

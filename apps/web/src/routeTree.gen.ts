@@ -36,11 +36,13 @@ import { Route as AuthenticatedCabinetReglagesRouteImport } from './routes/_auth
 import { Route as AuthenticatedCabinetStocksRouteImport } from './routes/_authenticated/cabinet.stocks'
 import { Route as AuthenticatedPmeIndexRouteImport } from './routes/_authenticated/pme.index'
 import { Route as AuthenticatedPmeBienvenueRouteImport } from './routes/_authenticated/pme.bienvenue'
+import { Route as AuthenticatedPmeCapturerRouteImport } from './routes/_authenticated/pme.capturer'
 import { Route as AuthenticatedPmeChargesRouteImport } from './routes/_authenticated/pme.charges'
 import { Route as AuthenticatedPmeCoffreRouteImport } from './routes/_authenticated/pme.coffre'
 import { Route as AuthenticatedPmeEcheancesRouteImport } from './routes/_authenticated/pme.echeances'
 import { Route as AuthenticatedPmeFicheRouteImport } from './routes/_authenticated/pme.fiche'
 import { Route as AuthenticatedPmeListRouteImport } from './routes/_authenticated/pme.list'
+import { Route as AuthenticatedPmeMalicaRouteImport } from './routes/_authenticated/pme.malica'
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
@@ -200,6 +202,12 @@ const AuthenticatedPmeBienvenueRoute =
     path: '/bienvenue',
     getParentRoute: () => AuthenticatedPmeRoute,
   } as any)
+const AuthenticatedPmeCapturerRoute =
+  AuthenticatedPmeCapturerRouteImport.update({
+    id: '/capturer',
+    path: '/capturer',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmeChargesRoute = AuthenticatedPmeChargesRouteImport.update({
   id: '/charges',
   path: '/charges',
@@ -224,6 +232,11 @@ const AuthenticatedPmeFicheRoute = AuthenticatedPmeFicheRouteImport.update({
 const AuthenticatedPmeListRoute = AuthenticatedPmeListRouteImport.update({
   id: '/list',
   path: '/list',
+  getParentRoute: () => AuthenticatedPmeRoute,
+} as any)
+const AuthenticatedPmeMalicaRoute = AuthenticatedPmeMalicaRouteImport.update({
+  id: '/malica',
+  path: '/malica',
   getParentRoute: () => AuthenticatedPmeRoute,
 } as any)
 const AuthenticatedPmeNotificationsRoute =
@@ -298,11 +311,13 @@ export interface FileRoutesByFullPath {
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
+  '/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -337,11 +352,13 @@ export interface FileRoutesByTo {
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/pme/list': typeof AuthenticatedPmeListRoute
+  '/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -380,11 +397,13 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/_authenticated/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
   '/_authenticated/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
+  '/_authenticated/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/_authenticated/pme/charges': typeof AuthenticatedPmeChargesRoute
   '/_authenticated/pme/coffre': typeof AuthenticatedPmeCoffreRoute
   '/_authenticated/pme/echeances': typeof AuthenticatedPmeEcheancesRoute
   '/_authenticated/pme/fiche': typeof AuthenticatedPmeFicheRoute
   '/_authenticated/pme/list': typeof AuthenticatedPmeListRoute
+  '/_authenticated/pme/malica': typeof AuthenticatedPmeMalicaRoute
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
@@ -423,11 +442,13 @@ export interface FileRouteTypes {
     | '/cabinet/reglages'
     | '/cabinet/stocks'
     | '/pme/bienvenue'
+    | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
     | '/pme/echeances'
     | '/pme/fiche'
     | '/pme/list'
+    | '/pme/malica'
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
@@ -462,11 +483,13 @@ export interface FileRouteTypes {
     | '/cabinet/reglages'
     | '/cabinet/stocks'
     | '/pme/bienvenue'
+    | '/pme/capturer'
     | '/pme/charges'
     | '/pme/coffre'
     | '/pme/echeances'
     | '/pme/fiche'
     | '/pme/list'
+    | '/pme/malica'
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
@@ -504,11 +527,13 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/reglages'
     | '/_authenticated/cabinet/stocks'
     | '/_authenticated/pme/bienvenue'
+    | '/_authenticated/pme/capturer'
     | '/_authenticated/pme/charges'
     | '/_authenticated/pme/coffre'
     | '/_authenticated/pme/echeances'
     | '/_authenticated/pme/fiche'
     | '/_authenticated/pme/list'
+    | '/_authenticated/pme/malica'
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
     | '/_authenticated/pme/regler'
@@ -720,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeBienvenueRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/capturer': {
+      id: '/_authenticated/pme/capturer'
+      path: '/capturer'
+      fullPath: '/pme/capturer'
+      preLoaderRoute: typeof AuthenticatedPmeCapturerRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/charges': {
       id: '/_authenticated/pme/charges'
       path: '/charges'
@@ -753,6 +785,13 @@ declare module '@tanstack/react-router' {
       path: '/list'
       fullPath: '/pme/list'
       preLoaderRoute: typeof AuthenticatedPmeListRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
+    '/_authenticated/pme/malica': {
+      id: '/_authenticated/pme/malica'
+      path: '/malica'
+      fullPath: '/pme/malica'
+      preLoaderRoute: typeof AuthenticatedPmeMalicaRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
     '/_authenticated/pme/notifications': {
@@ -868,11 +907,13 @@ const AuthenticatedCabinetRouteWithChildren =
 
 interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeBienvenueRoute: typeof AuthenticatedPmeBienvenueRoute
+  AuthenticatedPmeCapturerRoute: typeof AuthenticatedPmeCapturerRoute
   AuthenticatedPmeChargesRoute: typeof AuthenticatedPmeChargesRoute
   AuthenticatedPmeCoffreRoute: typeof AuthenticatedPmeCoffreRoute
   AuthenticatedPmeEcheancesRoute: typeof AuthenticatedPmeEcheancesRoute
   AuthenticatedPmeFicheRoute: typeof AuthenticatedPmeFicheRoute
   AuthenticatedPmeListRoute: typeof AuthenticatedPmeListRoute
+  AuthenticatedPmeMalicaRoute: typeof AuthenticatedPmeMalicaRoute
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
   AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
@@ -883,11 +924,13 @@ interface AuthenticatedPmeRouteChildren {
 
 const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeBienvenueRoute: AuthenticatedPmeBienvenueRoute,
+  AuthenticatedPmeCapturerRoute: AuthenticatedPmeCapturerRoute,
   AuthenticatedPmeChargesRoute: AuthenticatedPmeChargesRoute,
   AuthenticatedPmeCoffreRoute: AuthenticatedPmeCoffreRoute,
   AuthenticatedPmeEcheancesRoute: AuthenticatedPmeEcheancesRoute,
   AuthenticatedPmeFicheRoute: AuthenticatedPmeFicheRoute,
   AuthenticatedPmeListRoute: AuthenticatedPmeListRoute,
+  AuthenticatedPmeMalicaRoute: AuthenticatedPmeMalicaRoute,
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,
   AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,

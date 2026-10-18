@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
@@ -182,12 +183,23 @@ function PmeCoffre() {
                     {p.emetteur ??
                       (p.status === "capturee" ? t("pme.list.nonLue") : t("pme.list.sansEmetteur"))}
                   </span>
-                  <span className="mt-0.5 block text-[12.5px] text-text-2">
-                    {jour(p)} ·{" "}
+                  <span className="t-sub mt-0.5 block">
+                    {jour(p)}
                     {p.total === null
-                      ? t(`pme.status.${p.status}` as never)
-                      : `${montant(p.total, locale)} ${p.devise ?? pme.currency}`}
+                      ? p.status === "capturee"
+                        ? ""
+                        : ` · ${t(`pme.status.${p.status}` as never)}`
+                      : ` · ${montant(p.total, locale)} ${p.devise ?? pme.currency}`}
                   </span>
+                  {/*
+                   * Au coffre, toute pièce est `personnel` — donc tout refus y
+                   * est `piece_personnelle`, et c'est exactement ce qu'il faut
+                   * dire : « je ne la lis pas tant que vous ne la transmettez
+                   * pas ». Le bouton de transmission est juste en dessous.
+                   */}
+                  {p.status === "capturee" ? (
+                    <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} />
+                  ) : null}
                 </Link>
                 <span className="num flex-none text-[11px] uppercase text-muted-foreground">
                   {t("pme.prive.badge")}

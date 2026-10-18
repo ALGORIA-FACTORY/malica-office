@@ -29,7 +29,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { visibiliteALaCapture } from "../visibilite-a-la-capture";
+import { lectureInterdite, visibiliteALaCapture } from "../visibilite-a-la-capture";
 
 describe("la visibilité d'une pièce à la capture", () => {
   /**
@@ -70,5 +70,31 @@ describe("la visibilité d'une pièce à la capture", () => {
     for (const mandatActif of [true, false, undefined]) {
       expect(visibiliteALaCapture({ mandatActif })).not.toBe("partage");
     }
+  });
+});
+
+describe("ce que la visibilité interdit", () => {
+  /*
+   * 18 octobre 2026, mesuré : 30 pièces photographiées, 0 lue. La règle de
+   * capture et celle de lecture sont la même phrase lue dans les deux sens —
+   * ce qui naît chez soi ne se lit pas chez soi —, et elles vivent donc dans
+   * le même fichier.
+   *
+   * `public.lecture_autorisee` refuse toute pièce `personnel` (B6). La file
+   * demandait quand même, et récoltait un refus par pièce au journal d'audit.
+   */
+  it("une pièce de l'espace privé ne se lit pas, et on ne le demande donc pas", () => {
+    expect(lectureInterdite("personnel")).toBe(true);
+  });
+
+  it("la bibliothèque de la société et le cabinet se lisent", () => {
+    expect(lectureInterdite("entite")).toBe(false);
+    expect(lectureInterdite("partage")).toBe(false);
+  });
+
+  it("ce que la capture produit est exactement ce que la lecture refuse", () => {
+    // Si l'une des deux change sans l'autre, ce cas tombe — et c'est le but :
+    // la boucle « né personnel, jamais lu » s'est refermée une fois déjà.
+    expect(lectureInterdite(visibiliteALaCapture({ mandatActif: true }))).toBe(true);
   });
 });

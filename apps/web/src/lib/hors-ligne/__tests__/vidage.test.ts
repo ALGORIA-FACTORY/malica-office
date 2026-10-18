@@ -14,11 +14,22 @@ import { depotMemoire } from "../depot";
 import { PLAFOND_ELEMENTS } from "../file";
 import { creerVidage, FilePleine, type PortsDuVidage } from "../vidage";
 
+/*
+ * ============================ POURQUOI L'ENTRÉE TYPE N'EST PLUS « PERSONNEL »
+ *
+ * Elle l'était, et tous ces cas attendaient une lecture derrière le dépôt.
+ * C'était justement le défaut : `public.lecture_autorisee` refuse toute pièce
+ * `personnel` (B6), et la file demandait quand même. Trente pièces
+ * photographiées, zéro lue, trente refus au journal d'audit.
+ *
+ * Le lot type est donc une pièce destinée à la société — le cas où la lecture
+ * part vraiment. Le cas `personnel` a son propre scénario, juste en dessous.
+ */
 const ENTREE = {
   tenantId: "t1",
   entityId: null,
   source: "photo" as const,
-  vis: "personnel" as const,
+  vis: "entite" as const,
   contentType: "application/pdf",
   nomFichier: "recu.pdf",
 };
@@ -91,6 +102,35 @@ describe("un dépôt en ligne", () => {
 
     expect(r.appels).toEqual(["enregistrer:recu", "deposer:piece-recu"]);
     // Et la file se vide quand même : ne pas lire n'est pas rester coincé.
+    expect(await depot.lister()).toEqual([]);
+  });
+
+  it("une pièce de l'espace privé est déposée, et PAS envoyée à la lecture", async () => {
+    /*
+     * 18 octobre 2026, mesuré sur le dossier d'atelier : 30 pièces
+     * photographiées, 0 lue. Toute pièce née de l'obturateur naît
+     * `personnel` — c'est la décision du 7 octobre, et elle est juste : rien
+     * ne part avant d'être connu. Et `public.lecture_autorisee` refuse toute
+     * pièce `personnel` : B6, l'espace privé l'est aussi du patron.
+     *
+     * La file demandait quand même, et récoltait un refus par pièce au
+     * journal d'audit. Demander ce qu'on sait refusé n'est pas une sécurité,
+     * c'est du bruit.
+     *
+     * Ce qui ne change pas, et c'est la règle absolue : la CAPTURE n'est
+     * jamais bloquée. La pièce est enregistrée, ses octets déposés, elle
+     * existe et se relit. Seule la lecture ne part pas — et c'est l'écran de
+     * capture qui la demande, une fois la destination répondue.
+     */
+    const depot = depotMemoire();
+    const r = ports();
+    const v = creerVidage({ depot, ports: r.ports, enLigne: () => true });
+
+    const cle = await v.deposer({ ...ENTREE, cle: "privee", vis: "personnel" }, octets());
+    await v.attendre(cle, 1000);
+    await v.vider();
+
+    expect(r.appels).toEqual(["enregistrer:privee", "deposer:piece-privee"]);
     expect(await depot.lister()).toEqual([]);
   });
 });

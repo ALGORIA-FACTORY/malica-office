@@ -18,6 +18,7 @@ import type {
   BanqueRepository,
   CollabRepository,
   ChargesRepository,
+  FacturationRepository,
   ConseilRepository,
   ParametrageRepository,
   TiersRepository,
@@ -65,6 +66,15 @@ export interface OfficeRuntime {
   banque: BanqueRepository;
   collab: CollabRepository;
   charges: ChargesRepository;
+  /**
+   * L'abonnement : le forfait, les places, ce que chaque société consomme.
+   *
+   * Il est entré ici le 18 octobre 2026 parce qu'il n'y était pas : trois
+   * écrans PME montaient chacun leur propre dépôt `facturation` à côté de ce
+   * fichier. Un dépôt monté ailleurs échappe au test qui confronte les ports
+   * au contrat — une méthode mal nommée ne se voyait qu'à l'exécution.
+   */
+  facturation: FacturationRepository;
   conseil: ConseilRepository;
   parametrage: ParametrageRepository;
   tiers: TiersRepository;
@@ -98,6 +108,7 @@ export function office(): OfficeRuntime {
       banque: creerDepotHttp<BanqueRepository>("banque"),
       collab: creerDepotHttp<CollabRepository>("collab"),
       charges: creerDepotHttp<ChargesRepository>("charges"),
+      facturation: creerDepotHttp<FacturationRepository>("facturation"),
       conseil: creerDepotHttp<ConseilRepository>("conseil"),
       parametrage: creerDepotHttp<ParametrageRepository>("parametrage"),
       tiers: creerDepotHttp<TiersRepository>("tiers"),

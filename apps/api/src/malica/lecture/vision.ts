@@ -22,6 +22,7 @@ import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
+import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 
 /**
@@ -303,7 +304,24 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
     }
   }
-  throw new Error(`${label} : ${last instanceof Error ? last.message : String(last)}`);
+  const message = `${label} : ${last instanceof Error ? last.message : String(last)}`;
+  /*
+   * LA CLASSE DE L'ERREUR SURVIT AU LABEL.
+   *
+   * Elle ne survivait pas : ce `throw` enveloppait tout dans un `new Error`,
+   * ce qui détruisait `QwenError`. Or `estTronque` teste
+   * `e instanceof QwenError` — il était donc TOUJOURS faux, et la boucle de
+   * relecture en bandes de `lireUnePage` ne s'est jamais exécutée. Mesuré le
+   * 18 octobre 2026 : une pièce dense a rendu « Qwen a tronqué le relevé » en
+   * un seul appel, sans la moindre tentative en bandes.
+   *
+   * `bandes.ts` et son épreuve gardaient donc un chemin que rien n'atteignait
+   * depuis sa création, et c'est l'explication de l'échec de `6ddc6804` le
+   * 15 octobre : les bandes devaient le sauver et ne le pouvaient pas.
+   */
+  if (last instanceof QwenError)
+    throw new QwenError(message, last.status, last.retryable, last.code);
+  throw new Error(message);
 }
 
 export const SYSTEM_SELECT = `Tu es un désignateur. On te donne le plan de tokens déjà lu sur une facture.
@@ -344,7 +362,11 @@ tokens : {"page":1,"ordinal":3,"ordinal_end":5}. Cela vaut pour n'importe quel c
 Les trois cas où c'est indispensable :
  — un MONTANT coupé par l'espace des milliers. « 2 800,000 » est DEUX tokens (« 2 » puis
    « 800,000 ») : désigne-les ensemble. Ne cite jamais « 2 » seul — ce serait rendre 2 dinars pour
-   2 800 dinars. Même chose pour « 3 020,000 », « 1 234,560 », « 12 500 ».
+   2 800 dinars. Même chose pour « 3 020,000 », « 1 234,560 », « 12 500 ». Ne cite jamais
+   « 800,000 » seul non plus : la moitié qui reste a l'air d'un montant juste, et elle est fausse
+   d'un facteur mille. Cette règle vaut TELLE QUELLE sur une pièce qui se lit de DROITE À GAUCHE :
+   les chiffres, eux, s'y impriment de gauche à droite, donc « 5 650,000 » y est encore le token
+   « 5 » SUIVI du token « 650,000 », et la plage va du premier au second.
  — une DATE en toutes lettres. « 1 septembre 2026 » est TROIS tokens : désigne-les ensemble.
  — un TEXTE en plusieurs mots : raison sociale, numéro en deux morceaux, désignation d'article.
 Une valeur qui tient dans un seul token n'a pas de "ordinal_end" : « 220,000 » se cite seul.
@@ -507,18 +529,50 @@ async function releverDesPages(
   return { tokens, source: modele, tokensIn: null, tokensOut: null };
 }
 
-export async function relever(params: {
+export interface Releve {
+  tokens: PageToken[];
+  source: string;
+  tokensIn: number | null;
+  tokensOut: number | null;
+}
+
+export interface ParamsDeReleve {
   dataUrl: string;
   mime: string;
   bytes?: Uint8Array;
   /** Forcer le modèle de vision : c'est le rattrapage, dans l'autre sens. */
   sansPaddle?: boolean;
-}): Promise<{
-  tokens: PageToken[];
-  source: string;
-  tokensIn: number | null;
-  tokensOut: number | null;
-}> {
+}
+
+/**
+ * Relever une pièce — et recoller ce que l'espace des milliers a coupé.
+ *
+ * ======================================== POURQUOI LE RECOLLAGE EST ICI
+ *
+ * `recollerLesMilliers` existe depuis le 5 octobre 2026, éprouvé par treize
+ * cas, et **aucun code de production ne l'importait**. Son propre en-tête
+ * annonce pourtant ce qu'il vient faire : « recoller ici rend la garantie
+ * STRUCTURELLE — le montant n'est plus jamais coupé dans le plan, donc plus
+ * jamais citable à moitié ». Il n'a jamais eu l'occasion de le faire.
+ *
+ * Le 18 octobre 2026, une facture arabe lue par la chaîne réelle est sortie
+ * `extract.v1` VALIDE avec 650,000 D là où le papier porte 5 650,000 D : le
+ * désignateur avait cité le second jeton de la paire sur les TROIS totaux à
+ * la fois, et les trois équations ont confirmé la lecture. La consigne, elle,
+ * n'interdisait plus la plage depuis le 5 octobre — c'est bien l'obéissance
+ * du modèle qui a manqué, exactement le risque que ce module nommait.
+ *
+ * Il est posé au SEUL point par où tout plan de jetons passe, quel que soit
+ * le lecteur : couche de texte d'un PDF, PaddleOCR, modèle de vision. Un
+ * recollage branché sur un seul des trois chemins serait un recollage qu'on
+ * croit avoir.
+ */
+export async function relever(params: ParamsDeReleve): Promise<Releve> {
+  const brut = await releverSansRecollage(params);
+  return { ...brut, tokens: recollerLesMilliers(brut.tokens) };
+}
+
+async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   const estPdf = params.mime.toLowerCase().includes("pdf");
 
   // Un PDF émis par un logiciel porte déjà son texte et sa géométrie : aucun

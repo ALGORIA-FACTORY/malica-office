@@ -120,6 +120,110 @@ export function valeurLisible(chemin: string, valeur: string, locale: string): s
   return valeur;
 }
 
+/**
+ * Pourquoi Malica n'a pas lu cette pièce, en clair.
+ *
+ * ================================================================== POURQUOI
+ *
+ * La base inscrit un CODE dans `capture.pieces.lecture_refusee` — jamais une
+ * phrase. Affiché tel quel, `plafond_atteint` est un identifiant machine : le
+ * défaut « ISSUER » sous un autre nom, et R4 l'interdit.
+ *
+ * ============================================== LE CAS CONSTRUIT, ET SON REPLI
+ *
+ * `lecture_autorisee` compose `'licence_' || v_conso.statut` : le code n'est
+ * donc PAS une énumération fermée. `licence_suspendue` a sa phrase ; tout autre
+ * statut tombe sur `pme.refus.licence.autre`, qui dit ce qui est vrai — la
+ * licence n'ouvre pas la lecture — sans nommer un statut qu'on ne connaît pas.
+ *
+ * Un code hors de ces deux familles rend `pme.refus.autre` : « je ne l'ai pas
+ * lue, et je ne sais pas pourquoi » est une information. Le code brut n'en est
+ * pas une.
+ */
+const MOTIFS_DE_REFUS: Record<string, MessageKey> = {
+  plafond_atteint: "pme.refus.plafond_atteint",
+  piece_personnelle: "pme.refus.piece_personnelle",
+  licence_suspendue: "pme.refus.licence_suspendue",
+  organisation_sans_licence: "pme.refus.organisation_sans_licence",
+  piece_deja_lue: "pme.refus.piece_deja_lue",
+};
+
+export function libelleDuRefus(motif: string, t: T): string {
+  const connu = MOTIFS_DE_REFUS[motif];
+  if (connu) return t(connu);
+  if (motif.startsWith("licence_")) return t("pme.refus.licence.autre");
+  return t("pme.refus.autre");
+}
+
+/**
+ * Ce code EST-IL un motif de refus de lecture ?
+ *
+ * ================================================================== POURQUOI
+ *
+ * `libelleDuRefus` a un repli attrape-tout — « je ne l'ai pas lue, et je ne
+ * sais pas pourquoi ». C'est la bonne phrase pour un motif inconnu de la
+ * base, et la pire pour une panne de réseau : l'écran de la pièce reçoit les
+ * deux par le même `catch`, et traduire sans discerner aurait repeint toute
+ * panne en refus poli.
+ *
+ * Un appelant qui ne sait pas de quelle famille est son code demande donc
+ * d'abord. Ceux qui lisent `lectureRefusee` — la base l'a inscrit, c'est un
+ * motif par construction — appellent directement.
+ */
+export function motifDeRefusConnu(code: string): boolean {
+  return code in MOTIFS_DE_REFUS || code.startsWith("licence_");
+}
+
+/**
+ * Pourquoi cette pièce n'est pas lue : le motif inscrit, sinon celui que sa
+ * visibilité implique, sinon rien.
+ *
+ * ================================================================== POURQUOI
+ *
+ * 18 octobre 2026, mesuré sur le dossier d'atelier : trente pièces privées
+ * affichaient « En attente de lecture ». Elles n'attendaient rien — une pièce
+ * `personnel` n'est jamais lue (B6) — mais aucun refus n'avait été inscrit
+ * pour elles : l'inscription est récente, et le journal d'audit ne contient
+ * rien pour les pièces d'avant.
+ *
+ * La tentation était d'écrire ces trente refus par une migration. C'eût été
+ * inscrire un fait daté d'aujourd'hui pour un refus qui n'a jamais eu lieu, et
+ * R7 interdit de réécrire un fait. Cet état se DÉRIVE donc de ce qu'on sait
+ * déjà : la visibilité de la pièce.
+ *
+ * ============================================================= L'ORDRE COMPTE
+ *
+ * Dans l'espace privé, un refus inscrit gagne : si la base a dit « plafond
+ * atteint », c'est le plafond qui a tranché en dernier, et c'est lui qu'il
+ * faut dire.
+ *
+ * Hors de l'espace privé, un refus `piece_personnelle` est PÉRIMÉ et se tait.
+ * Relevé à l'écran le 18 octobre 2026 : une pièce qu'on vient de faire entrer
+ * dans la société affichait encore « je ne la lis pas tant que vous ne la
+ * transmettez pas », parce que le journal gardait le refus d'avant. Le fait
+ * inscrit reste vrai — il a bien eu lieu, et on ne le réécrit pas (R7) —
+ * mais il ne décrit plus l'état de la pièce, et c'est l'état qu'on affiche.
+ *
+ * Les autres motifs, eux, restent : un plafond ou une licence suspendue ne
+ * se lèvent pas en déplaçant la pièce.
+ */
+export function motifDeLEtat(
+  refus: { motif: string } | null | undefined,
+  vis: string,
+): string | null {
+  if (vis === "personnel") return refus?.motif ?? "piece_personnelle";
+  if (refus && refus.motif !== "piece_personnelle") return refus.motif;
+  return null;
+}
+
+/**
+ * Le plafond, et lui seul, porte le marigold — c'est la règle du langage
+ * visuel, et elle se décide ici plutôt que dans chaque écran qui l'affiche.
+ */
+export function refusDuPlafond(motif: string): boolean {
+  return motif === "plafond_atteint";
+}
+
 /** Ce qu'un code de signalement veut dire. */
 export function libelleDuCode(code: string, t: T): string {
   /*
@@ -144,6 +248,25 @@ export function libelleDuCode(code: string, t: T): string {
     VALUE_NOT_A_NUMBER: "cab.code.pasUnNombre",
     DATE_UNREADABLE: "cab.code.dateIllisible",
     SENS_A_CONFIRMER: "cab.code.sensAConfirmer",
+    /*
+     * Ces deux-là protègent une comptabilite, et c'est pour cela qu'elles ne
+     * peuvent pas tomber sur « Signalement de lecture. ».
+     *
+     * `MONTANT_PEUT_ETRE_AMPUTE` : le montant imprime est colle a son voisin
+     * sur la piece, donc la lecture peut en avoir perdu un morceau. La chaine
+     * rend `null` PLUTOT qu'un nombre ampute — 650,000 pour 5 650,000 le
+     * 18 octobre — parce qu'une valeur fausse qui boucle est pire qu'une
+     * valeur absente. La phrase doit dire ce choix, sinon l'absence passe
+     * pour une panne.
+     *
+     * `ARITHMETIQUE_INCOHERENTE` : la piece elle-meme ne boucle pas. Pose le
+     * 5 octobre, apres un loyer dont tous les montants etaient nets et faux.
+     * Ce n'est PAS `DECIDE_PAR_ARITHMETIQUE`, qui dit l'inverse — que
+     * l'arithmetique a tranche. Deux codes opposes derriere une meme phrase
+     * auraient appris a se mefier des deux.
+     */
+    MONTANT_PEUT_ETRE_AMPUTE: "cab.code.ampute",
+    ARITHMETIQUE_INCOHERENTE: "cab.code.incoherent",
   };
   return t(CODES[code] ?? "cab.code.autre");
 }

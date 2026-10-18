@@ -278,6 +278,309 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  /**
+   * (d bis) Ce qui garde l'effacement d'une pièce n'est pas le déclencheur.
+   *
+   * `malica.piece_effacable` est un réglage de session : n'importe quel
+   * utilisateur peut le poser. Il ne sert de clé à personne PARCE QUE
+   * `authenticated` n'a pas `delete` sur `capture.pieces` et que les tables du
+   * garde d'effacement n'ont aucune politique `DELETE` ni `UPDATE`. Cette
+   * sûreté tenait à une absence ; l'épreuve la rend visible. Le jour où une
+   * politique `DELETE` est ajoutée à l'une de ces tables, le réglage posable
+   * par tous devient une clé — et c'est ici que cela rougit.
+   *
+   * Les tables sont reconnues à leur déclencheur, pas à une liste : une table
+   * qui rejoint le garde demain est couverte sans que ce fichier bouge.
+   */
+  it("l'effacement d'une pièce n'est ouvert à authenticated par aucune politique ni aucun droit", async () => {
+    const gardees = `
+      select t.tgrelid
+        from pg_trigger t
+       where t.tgfoid = 'app.deny_mutation_hors_effacement_de_piece()'::regprocedure
+         and not t.tgisinternal`;
+
+    const politiques = await interroger<{ table_: string; cmd: string }>(`
+      select p.schemaname || '.' || p.tablename as table_, p.cmd
+        from pg_policies p
+        join pg_class c on c.relname = p.tablename
+        join pg_namespace n on n.oid = c.relnamespace and n.nspname = p.schemaname
+       where c.oid in (${gardees})
+         and p.cmd in ('DELETE', 'UPDATE', 'ALL')
+       order by 1, 2`);
+    assert.deepEqual(
+      politiques.map((r) => `${r.table_} — politique ${r.cmd}`),
+      [],
+      "une politique DELETE/UPDATE sur une table du garde fait du réglage `malica.piece_effacable` une clé posable par tous",
+    );
+
+    const droits = await interroger<{ table_: string; droit: string }>(`
+      select c.oid::regclass::text as table_, d.droit
+        from pg_class c
+        cross join (values ('DELETE'), ('UPDATE')) as d(droit)
+       where c.oid in (${gardees})
+         and has_table_privilege('authenticated', c.oid, d.droit)
+       order by 1, 2`);
+    assert.deepEqual(
+      droits.map((r) => `${r.table_} — droit ${r.droit}`),
+      [],
+      "authenticated ne doit pas détenir delete/update sur les tables du garde d'effacement",
+    );
+
+    const pieces = await interroger<{ ok: boolean }>(
+      "select has_table_privilege('authenticated', 'capture.pieces', 'DELETE') as ok",
+    );
+    assert.equal(
+      pieces[0]!.ok,
+      false,
+      "authenticated ne supprime pas une pièce : seule `capture_piece_supprimer` le fait",
+    );
+  });
+
+  /**
+   * (e) Aucune vue accordée à `authenticated` ne contourne la RLS.
+   *
+   * Les épreuves ci-dessus lisent les POLITIQUES. Aucune ne regardait les
+   * vues, et c'est par là que le trou est passé : `postgres` est
+   * superutilisateur et `bypassrls`, donc une vue qui lui appartient sans être
+   * `security_invoker` lit ses tables SANS les politiques. Accordée en
+   * `select`, elle rend à n'importe quel compte les lignes de tous les
+   * clients. Ni un filtre applicatif oublié, ni une politique oubliée : une
+   * politique contournée — le troisième chemin, que R6 ne nomme pas.
+   *
+   * Une vue matérialisée ne peut pas porter l'option : accordée, elle est
+   * toujours fautive.
+   *
+   * La preuve par exécution est dans
+   * `facturation/une-vue-ne-contourne-pas-l-isolation.test.ts` ; celle-ci
+   * garde la porte pour les schémas à venir.
+   */
+  it("aucune vue accordée à authenticated ne contourne la RLS", async () => {
+    const fuyantes = await interroger<{ vue: string }>(`
+      select n.nspname || '.' || c.relname as vue
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where c.relkind in ('v', 'm')
+         and n.nspname not in ('pg_catalog', 'information_schema')
+         and has_table_privilege('authenticated', c.oid, 'select')
+         and not (c.relkind = 'v'
+                  and coalesce(c.reloptions, '{}'::text[]) @> array['security_invoker=true'])
+       order by 1`);
+
+    assert.deepEqual(
+      fuyantes.map((r) => r.vue),
+      [],
+      "une vue accordée à authenticated sans security_invoker lit avec les droits de son propriétaire : elle contourne la RLS",
+    );
+  });
+
+  /*
+   * ================================== L'ENVERS DE LA VUE QUI LIT POUR L'APPELANT
+   *
+   * 18 octobre 2026, trouvé EN REGARDANT l'accueil PME — quatre « 400 » par
+   * chargement, et le corps disait « droit refusé pour la table
+   * account_classes ».
+   *
+   * L'épreuve ci-dessus exige qu'une vue accordée lise avec les droits de
+   * l'appelant. Elle a un envers que rien ne gardait : si la vue est accordée
+   * et que la table DESSOUS ne l'est pas, l'utilisateur reçoit un refus. La
+   * vue existe, le droit existe, et rien ne marche.
+   *
+   * `ref.account_classes` était la seule des trente tables du référentiel à
+   * avoir manqué son `grant` — posé sur la vue, jamais sur la table.
+   *
+   * Pourquoi aucune épreuve ne tombait : l'écran encaisse le refus et se rend
+   * quand même. La classe d'un compte ne s'affichait simplement jamais. Un
+   * échec qui ne casse rien est le plus durable de tous.
+   *
+   * L'invariant tenu ici est celui de R10 : le référentiel est LIVRÉ, daté et
+   * surchargeable. Il ne porte AUCUNE donnée de tenant — c'est ce qui le
+   * distingue de tout le reste du dépôt — donc il se lit par quiconque a
+   * ouvert une session. Une table de `ref` illisible est un oubli, jamais une
+   * décision : si l'une devait l'être un jour, cette épreuve obligera à
+   * l'écrire ici, nommément, au lieu de la laisser silencieuse.
+   */
+
+  it("toute table du référentiel est lisible par authenticated", async () => {
+    const muettes = await interroger<{ table: string }>(`
+      select c.relname as table
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where c.relkind = 'r'
+         and n.nspname = 'ref'
+         and not has_table_privilege('authenticated', c.oid, 'select')
+       order by 1`);
+
+    assert.deepEqual(
+      muettes.map((r) => r.table),
+      [],
+      "une table de ref sans select pour authenticated rend un refus à travers sa vue : la vue est accordée, la table ne l'est pas, et l'écran se tait",
+    );
+  });
+
+  /*
+   * ====================================== LES FONCTIONS QUI PORTENT LES DROITS
+   *
+   * Une fonction `security definer` exécute avec les droits de son
+   * propriétaire : `postgres`, superutilisateur et `bypassrls`. Elle ne subit
+   * donc NI la RLS, NI les droits de table de celui qui l'appelle. Soixante
+   * d'entre elles sont exécutables par `authenticated` — c'est la surface la
+   * plus sensible du dépôt, et aucune épreuve ne la gardait.
+   *
+   * Trois points, et pas quatre. Le quatrième que la relecture proposait —
+   * « un corps sans porte nommée » — demande une liste blanche de soixante
+   * fonctions. Une liste blanche qu'on n'a pas examinée une par une est un
+   * garde qui MENT : il passe au vert sur ce qu'il a inscrit sans le lire.
+   * Il n'est donc pas écrit ici, et ce silence est délibéré.
+   *
+   * Les fonctions de déclencheur sont hors du point 2, pour une raison
+   * exécutable et non pour une commodité : PostgreSQL refuse l'appel direct
+   * d'une fonction qui retourne `trigger` (« trigger functions can only be
+   * called as triggers »), quel que soit le droit d'exécution. Les sept qui
+   * gardent `execute` pour `public` ne sont donc pas une surface d'appel.
+   */
+
+  it("toute fonction security definer exécutable par authenticated fixe son search_path", async () => {
+    // Sans `search_path` fixé, la résolution des noms du corps suit le chemin
+    // de l'APPELANT : un schéma à lui, en tête, et sa table remplace la nôtre
+    // — avec les droits du propriétaire de la fonction.
+    const sansChemin = await interroger<{ f: string }>(`
+      select n.nspname || '.' || p.proname || '(' ||
+             pg_get_function_identity_arguments(p.oid) || ')' as f
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where p.prosecdef
+         and has_function_privilege('authenticated', p.oid, 'execute')
+         and not exists (select 1 from unnest(coalesce(p.proconfig, '{}'::text[])) c
+                          where c ~ '^search_path=')
+       order by 1`);
+
+    assert.deepEqual(
+      sansChemin.map((r) => r.f),
+      [],
+      "une definer sans search_path fixé résout ses noms dans le chemin de l'appelant",
+    );
+  });
+
+  it("aucune fonction security definer appelable n'est exécutable par public ou anon", async () => {
+    const ouvertes = await interroger<{ f: string; a_qui: string }>(`
+      select n.nspname || '.' || p.proname || '(' ||
+             pg_get_function_identity_arguments(p.oid) || ')' as f,
+             concat_ws(' et ',
+               case when has_function_privilege('public', p.oid, 'execute') then 'public' end,
+               case when has_function_privilege('anon', p.oid, 'execute') then 'anon' end) as a_qui
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where p.prosecdef
+         and p.prorettype <> 'pg_catalog.trigger'::regtype
+         and (has_function_privilege('public', p.oid, 'execute')
+              or has_function_privilege('anon', p.oid, 'execute'))
+       order by 1`);
+
+    assert.deepEqual(
+      ouvertes.map((r) => `${r.f} → ${r.a_qui}`),
+      [],
+      "une definer ouverte à public ou anon prête les droits du propriétaire à un visiteur",
+    );
+  });
+
+  it("aucune fonction security definer n'écrit dans facturation sans porte nommée", async () => {
+    /*
+     * `facturation` porte l'argent : licences, factures, lectures comptées.
+     * Une definer qui y écrit le fait sans RLS — propriété de `postgres`,
+     * superutilisateur, que `force row level security` n'arrête pas. Si son
+     * corps ne nomme AUCUNE porte, rien ne dit qui avait le droit d'écrire.
+     *
+     * L'énoncé était « sans porte de plateforme » jusqu'à la ronde 6, et il
+     * est devenu faux ce jour-là : `public.lecture_consommer` est devenue la
+     * seule écrivante de `facturation.lectures`, et sa porte n'est pas
+     * `app.is_platform` — c'est `app.piece_lisible`, plus son propre verdict.
+     * Exiger la porte de plateforme aurait obligé à nommer une exception ; on
+     * nomme plutôt les portes admises, qui sont celles qui DÉCIDENT d'un droit.
+     *
+     * Ce n'est pas la liste blanche que j'ai refusé d'écrire en ronde 4 :
+     * celle-là aurait inscrit soixante FONCTIONS sans les lire. Ici on énumère
+     * des PORTES, et l'ensemble gardé est celui des definer qui écrivent dans
+     * `facturation` — une aujourd'hui, nommée par le rouge si elle change.
+     */
+    const sansPorte = await interroger<{ f: string }>(`
+      select n.nspname || '.' || p.proname || '(' ||
+             pg_get_function_identity_arguments(p.oid) || ')' as f
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+       where p.prosecdef
+         and has_function_privilege('authenticated', p.oid, 'execute')
+         and p.prosrc ~* '(insert into|update|delete from)\\s+facturation\\.'
+         and p.prosrc !~* 'app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)'
+       order by 1`);
+
+    assert.deepEqual(
+      sansPorte.map((r) => r.f),
+      [],
+      "écriture dans facturation par une definer sans porte de plateforme",
+    );
+  });
+
+  /**
+   * Le `with check` d'une table de comptage LIE l'identifiant au tenant.
+   *
+   * Aucun garde sur `pg_proc` n'aurait vu ce défaut-là, parce que la garde
+   * manquante n'était pas dans une fonction : `facturation_lectures_ins` ne
+   * vérifiait que `tenant_id in app.member_orgs()`, et un collaborateur au
+   * plafond s'inscrivait une lecture portant LA LICENCE D'UN TIERS. Une clé
+   * étrangère dit « cette licence existe », jamais « cette licence est la
+   * vôtre » — et `lecture_autorisee` tient l'existence de la ligne pour une
+   * preuve de comptage.
+   *
+   * La règle, vérifiable : toute table de `facturation` ou de `plateforme` qui
+   * porte un `tenant_id` ET l'identifiant d'un autre dossier (`licence_id`,
+   * `piece_id`, `requisition_id`) doit nommer les DEUX colonnes dans sa garde
+   * d'insertion. Le déclencheur `before insert` compte autant que la
+   * politique : `facturation.licence_organisations` y tient son lien depuis
+   * l'origine, et il est plus strict qu'une politique.
+   *
+   * La preuve par exécution est dans
+   * `facturation/une-lecture-s-impute-a-la-bonne-licence.test.ts` ; celle-ci
+   * garde la porte pour les tables à venir.
+   */
+  it("toute table de comptage lie son identifiant au tenant à l'insertion", async () => {
+    const deliees = await interroger<{ cible: string; garde: string }>(`
+      with cibles as (
+        select c.oid, n.nspname as s, c.relname as t, a.attname as lien
+          from pg_class c
+          join pg_namespace n on n.oid = c.relnamespace
+          join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+                             and a.attname in ('licence_id', 'piece_id', 'requisition_id')
+         where c.relkind = 'r'
+           and n.nspname in ('facturation', 'plateforme')
+           and exists (select 1 from pg_attribute b
+                        where b.attrelid = c.oid and b.attname = 'tenant_id'
+                          and b.attnum > 0 and not b.attisdropped)
+      ), gardes as (
+        select cb.s, cb.t, cb.lien,
+               coalesce((select string_agg(p.with_check, ' ')
+                           from pg_policies p
+                          where p.schemaname = cb.s and p.tablename = cb.t
+                            and p.cmd in ('INSERT', 'ALL')), '')
+               || ' ' ||
+               coalesce((select string_agg(pr.prosrc, ' ')
+                           from pg_trigger tg
+                           join pg_proc pr on pr.oid = tg.tgfoid
+                          where tg.tgrelid = cb.oid and not tg.tgisinternal
+                            and (tg.tgtype & 4) <> 0 and (tg.tgtype & 2) <> 0), '') as garde
+          from cibles cb
+      )
+      select s || '.' || t || ' / ' || lien as cible, garde
+        from gardes
+       where garde !~ lien or garde !~ 'tenant_id'
+       order by 1`);
+
+    assert.deepEqual(
+      deliees.map((d) => d.cible),
+      [],
+      "une garde d'insertion qui ne lie pas cet identifiant au tenant laisse imputer une ligne au dossier d'un autre",
+    );
+  });
+
   it("aucune politique de table de tenant n'est inconditionnelle", async () => {
     /*
      * Une politique sur une table de tenant doit se cadrer sur quelque chose :

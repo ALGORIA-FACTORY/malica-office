@@ -28,6 +28,26 @@ import { effacerContenu } from "../stockage.ts";
 
 import { referentiel } from "./referentiel.ts";
 
+/** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
+interface VerdictDeLecture {
+  autorisee: boolean;
+  motif: string;
+  restantes: number | null;
+  droit: number | null;
+}
+
+/**
+ * Pourquoi la lecture de la pièce `p` a été refusée — le dernier refus inscrit
+ * au journal d'audit, tant que la pièce n'a pas été lue. `motif` est le CODE de
+ * la base ; l'écran le traduit, ce fichier n'écrit aucune phrase (R4).
+ */
+const REFUS_DE_LECTURE = `(
+  select jsonb_build_object('motif', e.payload ->> 'motif', 'le', e.at)
+    from event_log_v e
+   where e.object_table = 'pieces' and e.object_id = p.id and e.action = 'lecture.refusee'
+     and not exists (select 1 from extractions_v x where x.piece_id = p.id)
+   order by e.at desc limit 1)`;
+
 /** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
 function cheminRelatif(tenantId: string, pieceId: string): string {
   return `${tenantId}/${pieceId}`;
@@ -220,7 +240,8 @@ export const capture = {
       `select p.id, p.status, p.created_at, p.vis, x.payload,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
-                order by decided_at desc limit 1) as precision_kind
+                order by decided_at desc limit 1) as precision_kind,
+              ${REFUS_DE_LECTURE} as lecture_refusee
          from pieces_v p
          left join lateral (
            select e.payload
@@ -255,6 +276,7 @@ export const capture = {
           null,
         total: lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
+        lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
       };
     });
   },
@@ -269,25 +291,29 @@ export const capture = {
     const brut = (pieces as Record<string, unknown>[])[0];
     if (!brut) throw new Error("piece.not_found");
 
-    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }] = await Promise.all([
-      db.query(
-        `select id, contract, payload, flags, created_at
+    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }, { rows: refus }] =
+      await Promise.all([
+        db.query(
+          `select id, contract, payload, flags, created_at
            from extractions_v where piece_id = $1 order by created_at desc limit 1`,
-        [pieceId],
-      ),
-      db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
-      db.query(
-        `select page, ordinal, text, x0, y0, x1, y1
+          [pieceId],
+        ),
+        db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
+        db.query(
+          `select page, ordinal, text, x0, y0, x1, y1
            from token_plan_v where piece_id = $1 order by ordinal`,
-        [pieceId],
-      ),
-      // La dernière précision par champ : ce que la personne a tranché.
-      db.query(
-        `select distinct on (champ) champ, valeur
+          [pieceId],
+        ),
+        // La dernière précision par champ : ce que la personne a tranché.
+        db.query(
+          `select distinct on (champ) champ, valeur
            from precisions_v where piece_id = $1 order by champ, decided_at desc`,
-        [pieceId],
-      ),
-    ]);
+          [pieceId],
+        ),
+        db.query(`select ${REFUS_DE_LECTURE} as lecture_refusee from pieces_v p where p.id = $1`, [
+          pieceId,
+        ]),
+      ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
     const precisions = Object.fromEntries(
@@ -320,6 +346,10 @@ export const capture = {
           }
         : null,
       precisions,
+      lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
+        motif: string;
+        le: string;
+      } | null,
       citations: (cit as Record<string, unknown>[]).map((c) => ({
         field: c["field"] as string,
         page: Number(c["page"]),
@@ -828,6 +858,48 @@ export const capture = {
     };
   },
 
+  /**
+   * Le verdict de la base sur une lecture : permise ou non, et pourquoi.
+   *
+   * Ce dépôt ne décide rien : il relaie `public.lecture_autorisee`, qui porte
+   * le plafond (R3, R6). Le motif est celui du référentiel, rendu tel quel.
+   */
+  async lectureAutorisee(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_autorisee($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
+  },
+
+  /**
+   * Inscrire POURQUOI une lecture a été refusée, pour que l'écran le dise.
+   *
+   * La base rejoue le verdict et n'inscrit que son propre motif (code, jamais
+   * une phrase). Rend le verdict.
+   */
+  async inscrireRefusDeLecture(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_refusee_inscrire($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
+  },
+
+  /**
+   * Compter une lecture rendue — la SEULE écriture de `facturation.lectures`.
+   *
+   * `public.lecture_consommer` refuse d'elle-même si son verdict n'autorise
+   * pas, et ne compte pas deux fois une pièce déjà comptée.
+   */
+  async consommerLecture(db: Requete, pieceId: string) {
+    const { rows } = await db.query<{ v: VerdictDeLecture }>(
+      "select public.lecture_consommer($1) as v",
+      [pieceId],
+    );
+    return rows[0]!.v;
+  },
+
   /** Journal d'un appel d'agent. Rend l'identifiant de la trace, ou null. */
   async journaliserAgent(
     db: Requete,
@@ -876,7 +948,20 @@ export const capture = {
    * L'ordre compte. On lit le tenant AVANT la suppression : après, la ligne
    * n'existe plus et l'on ne saurait plus où est le fichier.
    */
-  async supprimer(db: Requete, pieceId: string): Promise<boolean> {
+  /**
+   * ====================================================== LE SECOND ARGUMENT
+   *
+   * `capture_piece_supprimer(piece, p_par_accord)` : le second argument dit
+   * « le cabinet a donné son accord ». Seul `piece_repondre` a le droit de le
+   * poser à vrai. Depuis un écran il vaut TOUJOURS `false`, et cette méthode
+   * est ce que l'écran appelle : elle le passe, et refuse tout autre valeur.
+   * Sans ce refus, un client qui écrirait `true` dans son appel supprimerait
+   * une pièce transmise sans l'accord de personne.
+   */
+  async supprimer(db: Requete, pieceId: string, parAccord: false = false): Promise<boolean> {
+    if (parAccord !== false) {
+      throw Object.assign(new Error("suppression.accord_reserve_au_cabinet"), { code: "42501" });
+    }
     const { rows } = await db.query<{ tenant_id: string }>(
       `select tenant_id from pieces_v where id = $1`,
       [pieceId],
@@ -884,7 +969,7 @@ export const capture = {
     const tenantId = rows[0]?.tenant_id;
     if (!tenantId) return false;
 
-    await db.query(`select public.capture_piece_supprimer($1)`, [pieceId]);
+    await db.query(`select public.capture_piece_supprimer($1, $2)`, [pieceId, parAccord]);
     // La base a dit oui : les octets n'ont plus de raison d'exister.
     await effacerContenu(tenantId, pieceId);
     return true;

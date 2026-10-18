@@ -148,3 +148,98 @@ trouvés le 11 septembre 2026 en comparant `ref` à une base vierge
 _Vérifié par_ `db/reproductibilite.test.mjs`, dans `npm test` : il relit toutes
 les migrations dans l'ordre et échoue sur toute violation autre que ces deux
 exceptions, nommées une par une.
+
+---
+
+# Qui travaille sur ce dépôt, et qui écrit quoi
+
+**Ceci n'est pas une règle d'architecture.** Aucune commande ne la vérifie :
+c'est un protocole de travail entre deux agents, et il existe parce qu'une
+collision sur l'arbre de travail fait perdre du travail déjà fait.
+
+Deux Claude travaillent sur Malica Office, et ils ne sont pas interchangeables.
+
+**Claude Code** — toi, si tu lis ceci depuis le terminal. Tu tiens l'arbre de
+travail et tu es **le seul à y écrire**. Tu exécutes le plan de
+`.superpowers/sdd/`, tu écris les épreuves, tu valides. Rien n'entre dans ce
+dépôt sans passer par toi.
+
+**Claude de la conversation** — celui avec qui le dirigeant conçoit. Il a écrit
+la livraison du 18 et du 19 octobre (les 14 migrations, les quatre exécutions,
+la tour, le langage visuel), et c'est **son code que tu es en train
+d'éprouver**. Il lit ce dépôt en continu pendant que tu travailles.
+
+## Ce que cela change pour toi, concrètement
+
+**Il te relit, et il se trompe.** Les défauts que tu as trouvés dans la
+livraison du 19 — le `grant usage` manquant, les vues sans `security_invoker`,
+le `gardee_le` perdu par réécriture, les dix politiques sans prédicat de
+tenant, la politique d'écriture qui contredisait son propre verdict — sont tous
+de lui. Il les tient pour justes et il n'en conteste aucun. **Continue.** Une
+livraison conçue en conversation n'a pas été exécutée ; la tienne l'est. C'est
+pour cela que tu éprouves au lieu de relire.
+
+**Réciproquement, il regarde ce qu'une épreuve ne voit pas** — un rendu, une
+régression visuelle, un résidu, une incohérence entre deux documents. Il a
+corrigé trois fautes de sa propre feuille `styles-pme.css` en la **rendant** à
+cinq largeurs ; aucune des trois n'était visible à la lecture. Si tu trouves un
+résidu qui vient de lui, supprime-le et dis-le.
+
+## Qui a raison quand vous n'êtes pas d'accord
+
+**Celui qui a exécuté.** Pas le plus récent, pas le plus affirmatif, pas celui
+qui parle au dirigeant.
+
+C'est une règle et pas une politesse, parce qu'elle a un relevé. Le 17 octobre,
+sur les sept désaccords entre vous, **la conversation s'est trompée sept
+fois** : le `grant usage on schema facturation` manquant, les dix vues sans
+`security_invoker` — une fuite entre clients —, le `gardee_le` perdu par
+réécriture, l'index menant, les dix politiques sans prédicat de tenant visible,
+la politique d'écriture qui contredisait son propre verdict. Et sur le septième,
+le `(select app.plateforme_requise(tenant_id))` qu'elle réclamait, **tu as eu
+raison de ne pas la suivre** : la fonction reçoit une colonne de la ligne, elle
+est corrélée, PostgreSQL ne peut pas la hisser en InitPlan. La convention du
+dépôt ne portait pas sur ce cas.
+
+Sept sur sept, et la cause n'est pas le talent : **ses preuves tournaient en
+superutilisateur**, qui n'est arrêté par aucune politique. Elle vérifiait ce que
+la règle dit, pas ce qu'un vrai client lit.
+
+Donc :
+
+1. **Une affirmation exécutée l'emporte sur une affirmation lue**, d'où qu'elle
+   vienne. Une relecture, même minutieuse, même d'un modèle qui a conçu le code,
+   ne vaut pas une transaction qui échoue.
+2. **Tu as le droit de refuser un constat qui arrive sans reproduction.**
+   « Je n'ai pas pu le reproduire » est une réponse, pas une dérobade. Exige le
+   scénario : les rôles, les lignes, la commande.
+3. **Si personne n'a exécuté, personne n'a encore raison.** Écrivez la commande
+   qui trancherait, jouez-la, et le résultat clôt le sujet.
+4. **Si vous avez tous les deux une preuve et qu'elles se contredisent**, le
+   désaccord est réel : il ne se tranche pas entre vous. Il monte au dirigeant,
+   avec les deux preuves côte à côte.
+
+Des agents spécialistes — sécurité, base, UI/UX, QA — vont être lancés depuis la
+conversation et produire des constats. **Ils lisent, ils n'exécutent presque
+rien.** Traite-les comme des hypothèses à éprouver, pas comme des verdicts. Un
+constat non reproduit qui te fait réécrire du code éprouvé est une perte nette,
+et la règle 2 est là pour ça.
+
+**L'arbre de travail est à toi.** S'il dépose un fichier non commité — cela
+s'est produit avec `styles-pme.css` — vérifie-le (typecheck, build, lint,
+knip), puis commite-le sous ton propre message. Ne le laisse pas traîner : un
+fichier non commité dans un dépôt où deux agents travaillent est un fichier qui
+disparaît.
+
+**Ce que tu ne tranches pas seul.** Un arbitrage commercial (un prix, un
+plafond, qui paie quoi) ne se décide pas au fond d'une épreuve. Tranche par
+défaut pour ne pas t'arrêter, écris-le dans
+`docs/livraison-2026-10-19/10-ce-qui-reste-ouvert.md`, et continue. Le
+dirigeant tranche ; la conversation lui porte la question.
+
+## Le cap, qu'aucun de vous deux ne perd de vue
+
+L'application PME tourne **de bout en bout sur Android et sur poste de
+bureau**, l'application du cabinet tourne **avec elle sans régresser**, et la
+tour de contrôle d'ALGORIA Factory **les voit toutes les deux**. Tout le reste
+est un moyen.

@@ -1,24 +1,23 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 
+import malicaLoin from "@/assets/malica-loin.webp";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
-import { EntetePme } from "@/components/malica/entete-pme";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
+import { MalicaChat } from "@/components/malica/MalicaChat";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
+import { MalicaAvatar } from "@/components/malica/office-ui";
 import { usePanneauMalica } from "@/components/malica/panneau-malica";
 import { usePme } from "@/components/malica/pme-context";
-import { MalicaChat } from "@/components/malica/MalicaChat";
-import { MarqueRg, MalicaAvatar } from "@/components/malica/office-ui";
-import { useAccueil, type MoisDeTva } from "@/hooks/use-accueil";
-import { currentPeriod } from "@/hooks/use-tva";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-
+import { useAccueil } from "@/hooks/use-accueil";
 import { useSuperposition } from "@/hooks/use-superposition";
-
+import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
-import { office } from "@/verticals/malica-office/composition";
+import { nombre } from "@/lib/forfait";
 import { montant, montantSigne } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
@@ -40,41 +39,118 @@ export const Route = createFileRoute("/_authenticated/pme/")({
   component: PmeHome,
 });
 
+/*
+ * ================================================= LES TROIS LIBELLÉS, AU DICTIONNAIRE
+ *
+ * « Lectures restantes », « Mes sièges » et « Mes sociétés » vivaient ici en
+ * français, nommés comme une dette. Ils sont entrés au dictionnaire le
+ * 18 octobre 2026 — `pme.home.lectures`, `pme.home.sieges`,
+ * `pme.home.societes` — et se lisent désormais par `t()` dans les trois
+ * langues. Rien sur cet écran n'est plus en dur.
+ *
+ * « Team » et « Premium » restent des littéraux : ce sont les noms des offres,
+ * et un nom d'offre ne se traduit pas.
+ */
+
+/*
+ * ========================================== L'ABONNEMENT VIENT DU CONTEXTE
+ *
+ * Trente lignes vivaient ici : une interface `Forfait`, un `DepotFacturation`
+ * local et un `creerDepotHttp("facturation")` posé à côté du point de
+ * composition — donc hors du test qui confronte chaque port au contrat. La
+ * capture et les réglages en avaient chacun leur copie, sur deux clés de
+ * cache, avec deux règles de dégradation qui ne jugeaient pas le même fait.
+ *
+ * `FacturationRepository` existe maintenant au socle, `composition.ts` le
+ * monte, et le layout `pme.tsx` le lit UNE fois — ce que la règle du câblage
+ * demandait depuis le début. Cet écran le reçoit, et ne demande rien.
+ */
+
 /**
- * L'accueil PME — d'après la maquette « Édition One II ».
+ * Un entier rendu par la base, ou l'absence — qui s'écrit « — » et jamais « 0 ».
  *
- * ====================================================== CE QUE LA MAQUETTE DIT
+ * Il lisait `typeof valeur === "number"`, et les `integer` de PostgreSQL
+ * arrivent en chaînes selon le pilote : un compteur bien rempli aurait pu
+ * s'afficher « — ». `nombre()` lit les deux formes, et n'invente aucun zéro.
+ */
+function compte(valeur: number | string | null | undefined): string {
+  const n = nombre(valeur);
+  return n === null ? "—" : String(n);
+}
+
+/**
+ * L'accueil PME — le dessin validé (`livraison/ecrans/malica-accueil.html`,
+ * bloc `data-plan="solo"`), porté tel quel.
  *
- * Cinq déplacements, et ils tiennent tous à une idée : **le chiffre est le
- * sujet**. Pas six cartes de poids égal où la TVA du mois pèse autant qu'un
- * lien de réglages — un seul bloc d'encre à fond perdu, et le reste en
- * dessous.
+ * ============================================================== CE QUI A CHANGÉ
  *
- *   1. Le sigle porte la page — filigrane de masthead, pas vignette posée.
- *   2. Le papier réglé remplace l'ombre : de la matière sans violer
- *      l'invariant « élévation par bordures ».
- *   3. Un seul bloc inversé : l'inversion EST la hiérarchie.
- *   4. Le mono devient la voix des chiffres, à l'échelle éditoriale.
- *   5. Malica parle humain — plus un mot de vocabulaire comptable.
+ * Le balisage, et lui seul. Le câblage est celui d'avant, ligne pour ligne :
+ * `useAccueil(periode)`, `usePme()`, `usePanneauMalica`, la requête
+ * `mon-cabinet`, la redirection vers `/pme/bienvenue` pour un dossier neuf,
+ * `useSuperposition`, les clés i18n. Les mêmes données, une autre structure.
  *
- * Le cinquième est le plus exigeant, et il a coûté des clés de traduction :
- * « 3 pièce(s) attendent votre confirmation » est devenu « il me manque trois
- * factures pour boucler avril ». Un dirigeant de PME ne dit pas « pièce ».
+ * ================================================ LE CSS EXISTE, ON NE L'ÉCRIT PAS
  *
- * ===================================================== CE QUI VIENT DU SOCLE
+ * `styles-pme.css` porte déjà toutes les règles du dessin sous
+ * `[data-surface="pme"] [data-ecran="accueil"]`. Cet écran pose donc
+ * `data-ecran="accueil"` sur sa racine et n'emploie QUE les classes du dessin —
+ * `.chips .me .chip .pad .tiles .tile .tl .bdg .ar .sec .hero .amb .por .in
+ * .sig .cta .stack .acts .act .hd .pg .lock .ask .q .mic .g`. Aucune classe
+ * utilitaire par-dessus : une seule d'entre elles contredirait le dessin.
  *
- * Tous les chiffres, sans exception — `useAccueil` n'assemble que des entrées
- * et invoque les moteurs. Quand une donnée manque, l'écran écrit « — » ; il
- * n'écrit jamais « 0,000 », qui est un fait comptable et non une absence.
+ * `.app` du dessin n'est PAS rendu, et c'est délibéré : la règle portée
+ * `[data-ecran="accueil"] .app{padding-top:4rem}` réservait la place de la
+ * rangée de démonstration « Basic · Solo · Team · Premium », qui n'existe pas
+ * dans l'application. Le cadre (largeur maximale, fond, aires sûres) est déjà
+ * tenu par le layout `pme.tsx`.
+ *
+ * `.nav` non plus : la barre du bas est rendue par `pme.tsx`, une fois pour
+ * tous les écrans PME. La redessiner ici en ferait deux.
+ *
+ * ================================================== L'ABONNEMENT NE S'AFFICHE PAS
+ *
+ * La rangée des quatre forfaits est une affordance de maquette. Dans
+ * l'application, l'offre se voit à deux endroits seulement : le compteur de
+ * lectures, et les cartes `.lock` — visibles, jamais masquées, parce qu'un
+ * produit qui cache ce qu'il vend ne le vend pas.
+ *
+ * ============================================ CE QUI N'EST PAS BRANCHÉ, ET POURQUOI
+ *
+ * `cabinet.documents` et `cabinet.accuserReception` n'existent pas : le dépôt
+ * `cabinet` n'est pas au contrat. Aucun appel n'est inventé pour eux — l'écran
+ * du cabinet côté PME viendra avec sa route.
+ *
+ * `facturation.monForfait`, lui, est au contrat et branché ci-dessous. Son
+ * implémentation d'API s'écrit pendant que ceci se lit : la carte des lectures
+ * et les cartes verrouillées doivent donc tenir sans elle. Chargement, échec,
+ * licence absente — les trois rendent la même chose : « — », jamais « 0 ».
+ * Zéro est un fait comptable ; l'absence n'en est pas un.
  */
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const malica = usePanneauMalica("pme");
-  useSuperposition(malica.ouvert, malica.fermer);
+  /*
+   * `panneauMalica` : la reference que le crochet attend pour tenir le focus
+   * DANS le panneau. Sans elle, mesure a 1280, 20 elements restaient
+   * atteignables derriere un panneau de 448 px.
+   */
+  const panneauMalica = useRef<HTMLDivElement | null>(null);
+  useSuperposition(malica.ouvert, malica.fermer, panneauMalica);
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
+
+  /*
+   * La pastille du haut porte l'initiale de la PERSONNE, pas celle de Malica.
+   *
+   * Elle vient du compte ouvert — `beforeLoad` de `_authenticated` le range au
+   * contexte — et non d'un appel de plus : la garde l'a déjà en main à chaque
+   * navigation. Le compte ne porte qu'un identifiant et une adresse : c'est
+   * donc la première lettre de l'adresse, faute de nom en base.
+   */
+  const { user } = useRouteContext({ from: "/_authenticated" });
+  const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
 
   /**
    * L'arrivée, une seule fois.
@@ -103,13 +179,49 @@ function PmeHome() {
     staleTime: 10 * 60 * 1000,
   });
 
+  /*
+   * L'OFFRE, LUE UNE FOIS — PAR LE LAYOUT.
+   *
+   * La licence appartient à la PERSONNE, pas au dossier. Le layout la lit
+   * sans `tenantId` et la passe par contexte ; cet écran la reçoit.
+   *
+   * Pas de repli : `ligne` vaut `null` pendant le chargement comme en cas
+   * d'échec, et `null` aussi quand il n'y a pas de licence. Les trois sont la
+   * même chose à l'écran — on ne sait pas — et l'écran le dit d'une seule
+   * façon. Une valeur de secours à 0 serait une affirmation.
+   */
+  const f = pme.forfait.ligne;
+
+  /*
+   * Ce que l'offre ouvre — décidé dans `lib/forfait.ts`, à un seul endroit.
+   *
+   * Il y en avait deux : ici sur le nom de l'offre, aux réglages sur
+   * `sieges_max`. Deux écrans jugeaient le même fait sur deux données
+   * différentes. Une offre inconnue — chargement, échec, licence absente —
+   * n'ouvre rien : la carte reste verrouillée, et verrouillée elle dit ce
+   * qu'elle ferait.
+   */
+  const siegesOuverts = pme.forfait.ouvertures.sieges;
+  const societesOuvertes = pme.forfait.ouvertures.societes;
+
+  /*
+   * La jauge du plafond : elle n'existe que si les DEUX bornes sont connues.
+   * Sans elles, pas de barre — une jauge sans donnée est un graphique
+   * décoratif, et ce fichier en a retiré trois le 11 octobre pour cette
+   * raison exacte.
+   */
+  const lecturesPart = (() => {
+    const reste = nombre(f?.lectures_restantes);
+    const droit = nombre(f?.lectures_droit);
+    if (reste === null || droit === null || droit <= 0) return null;
+    return Math.max(0, Math.min(100, Math.round((reste / droit) * 100)));
+  })();
+
   const mois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
       new Date(`${p}-01T00:00:00Z`),
     );
   const moisCourant = mois(periode);
-  // « Déclaration de août » n'est pas du français. Chaque clé reçoit les deux
-  // formes ; chaque langue prend celle dont elle a besoin.
 
   const heure = new Date().getHours();
   const salut = t(
@@ -124,21 +236,14 @@ function PmeHome() {
    * ================================================= « PRESQUE » À 0 %, ET POURQUOI
    *
    * 10 octobre 2026. L'accueil disait « Presque. Il me manque encore quelques
-   * factures pour boucler octobre » pendant que la carte d'à côté disait
-   * « prête à 0 % ». Quatre centimètres d'écart, deux affirmations
-   * contradictoires.
+   * factures » pendant que la carte d'à côté disait « prête à 0 % ». La cause
+   * tenait en une ligne : un booléen déguisé en nombre, et « quelques
+   * factures » inventait une quantité que le produit ne peut pas connaître.
    *
-   * La cause tenait en une ligne :
-   *
-   *     const restantes = … Math.round((1 - a.avancement) * 100) === 0 ? 0 : 1;
-   *
-   * `restantes` ne comptait rien : c'était un booléen déguisé en nombre, qui
-   * valait 1 dès que l'avancement n'était pas exactement 100 % — donc aussi à
-   * 0 %. Et « quelques factures » inventait une quantité que le produit ne
-   * peut pas connaître : il ne voit que ce qu'on lui a donné.
-   *
-   * La phrase dit maintenant ce qui est VRAI et sur quoi on peut agir : ce
-   * qui attend une réponse, compté, ou rien.
+   * La phrase dit ce qui est VRAI et sur quoi on peut agir : ce qui attend une
+   * réponse, compté, ou rien. Elle porte maintenant le titre de la carte à la
+   * une, à la place de « 3 pièces. On les vérifie ? » du dessin — qui disait la
+   * même chose, avec un nombre que seul le socle connaît.
    */
   const phrase =
     a.avancement === null
@@ -147,269 +252,437 @@ function PmeHome() {
         ? t("pme.home.voix.enOrdre", { mois: moisCourant })
         : t("pme.home.voix.attendent", { count: a.enAttente, mois: moisCourant });
 
+  /*
+   * L'écart avec le mois précédent — la seule phrase de cet écran qui compare.
+   * `null` d'un côté ou de l'autre et elle l'avoue : « pas encore de quoi
+   * comparer » plutôt qu'un zéro qui passerait pour une stagnation.
+   */
+  const ecartPhrase =
+    a.ecart === null
+      ? t("pme.home.ecart.inconnu")
+      : a.moisDeSuite >= 2
+        ? t("pme.home.ecart.suite", {
+            ecart: montantSigne(a.ecart, locale),
+            mois: mois(a.serie[a.serie.length - 2]!.periode),
+            suite: a.moisDeSuite,
+          })
+        : t("pme.home.ecart.simple", {
+            ecart: montantSigne(a.ecart, locale),
+            mois: mois(a.serie[a.serie.length - 2]!.periode),
+          });
+
+  // Ce que le cabinet a retourné, dit à son nom quand on le connaît.
+  const attendCabinet = cabinet.data
+    ? t("pme.home.attend.cabinet", { cabinet: cabinet.data.name, count: a.retournees })
+    : t("pme.home.attend", { count: a.retournees });
+
+  /*
+   * ===================================================== LA CARTE À LA UNE, ET SON GESTE
+   *
+   * Trois situations, trois phrases, et un bouton qui n'est JAMAIS un
+   * cul-de-sac :
+   *
+   *   le cabinet a retourné quelque chose → ce qu'il attend   → ouvrir ce qui est à régler
+   *   des pièces attendent une réponse    → combien, comptées → ouvrir la liste
+   *   rien n'attend                       → l'état du mois    → photographier
+   *
+   * Le dernier cas couvre aussi le dossier vide : le geste proposé est celui
+   * qui fait exister le produit, pas un lien vers une liste sans lignes.
+   */
+  const aRegler = a.retournees > 0;
+  const aVerifier = a.enAttente > 0;
+  const titreHero = aRegler ? attendCabinet : phrase;
+  const sousHero = aRegler ? phrase : ecartPhrase;
+
   return (
-    <div className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col sm:-mx-6">
+    /*
+     * `data-ecran="accueil"` : le marqueur qui fait descendre sur cet arbre les
+     * 80 règles du dessin. Les marges négatives annulent le `px-4 py-5` du
+     * layout — `.chips` et `.pad` portent les leurs, et le dessin ne veut pas
+     * de double gouttière.
+     */
+    <div data-ecran="accueil" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
       {/* Un cabinet propose ? Le dirigeant répond avant tout le reste. */}
-      <div className="pt-3">
+      <div className="px-5 pt-3">
         <MandatsProposes tenantId={pme.tenantId} />
         <PastilleAEnvoyer />
       </div>
-      {/* ------------------------------------------------ présence et salutation */}
-      <header className="rg-rise relative overflow-hidden px-[22px] pb-3 pt-2">
+
+      {/* ------------------------------------------------- la rangée du haut */}
+      <div className="chips">
         {/*
-         * Le filigrane : 238 px à 2,5 % d'opacité, débordant en haut à droite.
-         * C'est la marque devenue architecture — on ne la lit pas, on la sent.
+         * La pastille est une marque de présence, pas un bouton : le dessin la
+         * veut muette. Les portes (réglages, autre espace) sont des chips —
+         * `.chip` remet `border:0`, ce que `.me` ne fait pas.
          */}
-        <MarqueRg
-          aria-hidden
-          className="pointer-events-none absolute -right-[84px] -top-[58px] h-[238px] w-[238px] opacity-[0.025]"
-        />
+        <span className="me">{initiale}</span>
 
-        <EntetePme
-          dossiers={pme.dossiers}
-          dossierActif={pme.tenantId}
-          choisirDossier={pme.choisirDossier}
-          aUnCabinet={pme.aUnCabinet}
-        />
+        {/*
+         * Les chips portent les DOSSIERS, pas des filtres inventés : c'est le
+         * sélecteur d'organisation du dessin Premium, qui se réduit tout seul à
+         * une chip quand il n'y a qu'une société. Même câblage qu'avant —
+         * `pme.dossiers` vient de `identite.listMyOrganizations`, lu une fois
+         * par le layout, et `pme.choisirDossier` invalide les requêtes.
+         */}
+        {pme.dossiers.map((d) => (
+          <button
+            key={d.id}
+            type="button"
+            className={cn("chip", d.id === pme.tenantId && "on")}
+            aria-pressed={d.id === pme.tenantId}
+            onClick={() => pme.choisirDossier(d.id)}
+          >
+            {d.name}
+          </button>
+        ))}
 
-        <div className="relative mt-4 flex items-start gap-[14px]">
+        {/*
+         * Les deux portes que l'en-tête d'avant portait, et qui n'auraient plus
+         * eu de place sur cet écran : les réglages (langue, thème, alertes,
+         * échéances) et la bascule vers le cabinet, quand il y a un cabinet où
+         * aller. Les supprimer aurait enfermé le dirigeant sur l'accueil.
+         */}
+        <button
+          type="button"
+          className="chip"
+          onClick={() => void navigate({ to: "/pme/reglages" })}
+        >
+          {t("pme.reglages.titre")}
+        </button>
+        {pme.aUnCabinet ? (
+          <button type="button" className="chip" onClick={() => void navigate({ to: "/office" })}>
+            {t("portal.switch")}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="pad">
+        {/* Le salut, sans prénom : le compte n'en porte pas en base (voir ci-dessus). */}
+        <h1>{salut}</h1>
+
+        {/* ------------------------------------------------------ les raccourcis */}
+        <div className="tiles">
           {/*
-           * Son visage ouvre le fil — le même geste qu'au cabinet. L'onde et la
-           * clochette disent qu'elle a quelque chose à dire ; elles s'arrêtent
-           * pour qui a demandé moins de mouvement.
+           * Ce qui attend une réponse. La pastille ne s'affiche que s'il y a un
+           * nombre à dire ; à zéro, la tuile porte le chevron des autres — une
+           * pastille « 0 » serait un bruit, pas une information.
+           */}
+          <button type="button" className="tile" onClick={() => void navigate({ to: "/pme/list" })}>
+            <i>
+              <IconePiece />
+            </i>
+            <span className="tl">
+              <b>{t("pme.charges.answer.verifier")}</b>
+            </span>
+            {aVerifier ? <span className="bdg">{a.enAttente}</span> : <Chevron className="g ar" />}
+          </button>
+
+          {/* Les charges, et leur sens : `null` d'un côté et la carte se tait. */}
+          <button
+            type="button"
+            className="tile"
+            onClick={() => void navigate({ to: "/pme/charges" })}
+          >
+            <i>
+              <IconeBarres />
+            </i>
+            <span className="tl">
+              <b>{t("pme.home.card.charges")}</b>
+              <span>
+                {a.chargesEcart === null
+                  ? t("pme.home.charges.sous")
+                  : a.chargesEcart < 0
+                    ? t("pme.home.charges.baisse", {
+                        pourcent: Math.abs(Math.round(a.chargesEcart)),
+                      })
+                    : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
+              </span>
+            </span>
+            <Chevron className="g ar" />
+          </button>
+
+          {/*
+           * Le cabinet, nommé. `identite.monCabinet` rend `null` quand il n'y a
+           * pas de mandat : la tuile dit alors « votre comptable », et mène quand
+           * même à l'écran de ce qui est à régler, qui sait dire qu'il n'y a rien.
            */}
           <button
             type="button"
-            onClick={malica.ouvert ? malica.fermer : malica.ouvrir}
-            aria-label={malica.ouvert ? t("malica.panneau.fermer") : t("malica.panneau.ouvrir")}
-            className="relative grid h-[52px] w-[52px] flex-none place-items-center"
+            className="tile"
+            onClick={() => void navigate({ to: "/pme/regler" })}
           >
-            <span
-              aria-hidden
-              className="rg-wave absolute h-[52px] w-[52px] rounded-full border border-marigold"
-            />
-            <MalicaAvatar size={52} alt="Malica" rond />
-            <span
-              aria-hidden
-              className="absolute -end-[7px] -bottom-[5px] grid h-[25px] w-[25px] place-items-center rounded-full border-2 border-background bg-marigold"
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0A0A0A"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                className="rg-bell"
-              >
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-              </svg>
+            <i>
+              <IconeSieges />
+            </i>
+            <span className="tl">
+              <b>{cabinet.data ? cabinet.data.name : t("pme.coffre.votreComptable")}</b>
+              {/*
+               * La tuile dit COMBIEN, pas la phrase entière : « Cabinet X attend
+               * deux précisions » est déjà le titre de la carte à la une, et une
+               * tuile de 84 px n'est pas un endroit où faire tenir une phrase.
+               */}
+              <span>
+                {aRegler
+                  ? t("pme.regler.titre", { count: a.retournees })
+                  : t("pme.regler.rien.titre")}
+              </span>
             </span>
+            <Chevron className="g ar" />
           </button>
 
-          <div className="min-w-0">
-            <p className="text-[27px] font-semibold leading-[1.05] tracking-[-0.03em]">{salut}</p>
-            <p className="mt-[7px] text-[15px] leading-[1.5] text-text-2">{phrase}</p>
-          </div>
-        </div>
-      </header>
-
-      {/* ------------------------------------------- le bloc d'encre, à fond perdu */}
-      <section className="rg-rise rg-regle relative overflow-hidden border-t-[3px] border-marigold-on-ink bg-foreground px-[22px] py-5 text-background">
-        <p className="relative font-mono text-[10px] font-medium uppercase tracking-[0.2em] opacity-65">
-          {t("pme.home.recuperee", { mois: moisCourant })}
-        </p>
-        <p className="relative mt-2.5 flex items-baseline gap-2">
-          <span className="num text-[clamp(2.5rem,13vw,58px)] font-medium leading-[0.92] tracking-[-0.045em]">
-            {a.recuperee === null ? "—" : montant(a.recuperee, locale)}
-          </span>
-          <span className="num text-[15px] font-medium opacity-60">{a.devise}</span>
-        </p>
-
-        <Trajectoire serie={a.serie} />
-
-        <p
-          className={cn(
-            "relative mt-3.5 text-[12px] font-medium",
-            a.ecart !== null && Number(a.ecart) < 0 ? "text-signal-stop" : "text-signal-ok",
-          )}
-        >
-          {a.ecart === null
-            ? t("pme.home.ecart.inconnu")
-            : a.moisDeSuite >= 2
-              ? t("pme.home.ecart.suite", {
-                  ecart: montantSigne(a.ecart, locale),
-                  mois: mois(a.serie[a.serie.length - 2]!.periode),
-                  suite: a.moisDeSuite,
-                })
-              : t("pme.home.ecart.simple", {
-                  ecart: montantSigne(a.ecart, locale),
-                  mois: mois(a.serie[a.serie.length - 2]!.periode),
-                })}
-        </p>
-      </section>
-
-      {/* ------------------------------------------------ ce qu'elle a préparé */}
-      <section className="flex min-h-0 flex-1 flex-col px-[22px] pt-3.5">
-        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
-          {t("pme.home.prepare")}
-        </p>
-
-        {/*
-         * Le signe change le mot, pas seulement le chiffre.
-         *
-         * Un solde négatif n'est pas « à reverser » : c'est un crédit qui se
-         * reporte sur le mois suivant. Afficher « TVA à reverser · −64,600 »
-         * demanderait au dirigeant de faire la traduction lui-même — c'est
-         * exactement le travail que ce produit lui retire.
-         */}
-
-        {/*
-         * La troisième ligne existe toujours, et elle change de sujet.
-         *
-         * Quand le cabinet a retourné quelque chose, elle le dit — et elle le
-         * dit à son nom. Sinon elle mène aux échéances, qui n'avaient plus
-         * aucune porte depuis que la barre basse est passée à trois.
-         */}
-        {a.retournees > 0 ? (
-          <Ligne
-            to="/pme/regler"
-            label={
-              cabinet.data
-                ? t("pme.home.attend.cabinet", {
-                    cabinet: cabinet.data.name,
-                    count: a.retournees,
-                  })
-                : t("pme.home.attend", { count: a.retournees })
-            }
-            valeur="›"
-            accent
-          />
-        ) : (
-          <Ligne to="/pme/echeances" label={t("pme.home.voirEcheances")} valeur="›" accent />
-        )}
-
-        {/*
-         * Deux cartes, et `mt-auto` les pousse au bas de l'écran : c'est ce
-         * qui tient la page en UNE page. Échéances et alertes sont parties —
-         * les alertes restent atteignables par l'engrenage du bandeau, les
-         * échéances n'ont plus de porte sur cet écran.
-         */}
-        <div className="my-auto grid grid-cols-2 gap-2.5 py-1">
           {/*
-           * Le signe change le mot, pas seulement le chiffre.
-           *
-           * Un solde négatif n'est pas « à reverser » : c'est un crédit qui se
-           * reporte sur le mois suivant. Afficher « TVA à reverser · −64,600 »
-           * demanderait au dirigeant de faire la traduction lui-même — c'est
-           * exactement le travail que ce produit lui retire.
+           * La TVA du mois. Le SIGNE change le mot, pas seulement le chiffre : un
+           * solde négatif n'est pas « à reverser », c'est un crédit qui se
+           * reporte. Et un solde absent s'écrit « — ».
            */}
-          <Carte
-            to="/pme/tva"
-            label={
-              a.aReverser === null || Number(a.aReverser) > 0
-                ? t("pme.home.reverser")
-                : t("pme.home.credit")
-            }
-            sous={
-              a.avancement === null
-                ? t("pme.home.prete.rien")
-                : t("pme.home.prete", { pourcent: Math.round(a.avancement * 100) })
-            }
-          >
+          <button type="button" className="tile" onClick={() => void navigate({ to: "/pme/tva" })}>
+            <i>
+              <IconeRecu />
+            </i>
+            <span className="tl">
+              <b>
+                {a.aReverser === null || Number(a.aReverser) > 0
+                  ? t("pme.home.reverser")
+                  : t("pme.home.credit")}
+              </b>
+              <span>
+                {a.aReverser === null ? "—" : `${montant(a.aReverser, locale)} ${a.devise}`}
+              </span>
+            </span>
+            <Chevron className="g ar" />
+          </button>
+        </div>
+
+        {/* --------------------------------------------- ce qu'elle a préparé */}
+        <div className="sec">
+          <h2>{t("pme.home.prepare")}</h2>
+          <Link to="/pme/list">
+            {t("pme.home.documents.titre")} <Chevron className="g fl" />
+          </Link>
+        </div>
+
+        <div className="hero">
+          <span className="amb" aria-hidden="true" />
+          {/*
+           * Le portrait du dessin — `malica-loin.webp`, cadré par le CSS en
+           * `50% 34%`. Ce n'est pas `MalicaAvatar` : son cadrage `center 18%` et
+           * son cercle de marigold appartiennent à l'ancien en-tête.
+           */}
+          <span className="por">
+            <img src={malicaLoin} alt="Malica" width={620} height={620} />
+          </span>
+          <span className="in">
+            <span className="sig">
+              <i />
+              {t("malica.chat.her")}
+            </span>
+            <h3>{titreHero}</h3>
+            <p>{sousHero}</p>
+            {aRegler || aVerifier ? (
+              <button
+                type="button"
+                className="cta"
+                onClick={() => void navigate({ to: aRegler ? "/pme/regler" : "/pme/list" })}
+              >
+                {t("doc.open")}
+                <FlecheDroite />
+              </button>
+            ) : (
+              /*
+               * Rien n'attend : le geste proposé est celui qui fait exister le
+               * produit. `pme.ouvrirScanner` est le même chemin que l'obturateur
+               * de la barre du bas — scanner de l'appareil s'il y en a un, le
+               * nôtre sinon.
+               */
+              <button
+                type="button"
+                className="cta"
+                disabled={pme.capturing}
+                onClick={() => pme.ouvrirScanner()}
+              >
+                {t("pme.capture.photo")}
+                <FlecheDroite />
+              </button>
+            )}
+          </span>
+          <span className="stack" aria-hidden="true">
+            <svg viewBox="0 0 48 48" className="g" style={{ strokeWidth: 2 }}>
+              <rect x="17" y="7" width="24" height="31" rx="4" transform="rotate(11 29 22.5)" />
+              <g transform="rotate(-6 20 27.5)">
+                <rect x="8" y="12" width="24" height="31" rx="4" />
+                <path className="ln" d="M14 22h12M14 27.5h12M14 33h7" />
+              </g>
+            </svg>
+          </span>
+        </div>
+
+        {/* ------------------------------------------------------- l'activité */}
+        <div className="sec">
+          <h2>{t("pme.home.card.evolution")}</h2>
+          <Link to="/pme/echeances">
+            {t("pme.home.card.echeances")} <Chevron className="g fl" />
+          </Link>
+        </div>
+
+        <div className="acts">
+          {/*
+           * Ce que l'État vous doit — la TVA déductible du mois, rangée au mois
+           * où la pièce a été TRANSMISE au cabinet (c'est lui qui la déclare).
+           * `null` s'écrit « — » : pas « 0,000 », qui serait un fait comptable.
+           */}
+          <div className="act">
+            <div className="hd">
+              <span>{t("pme.verifie.tvaRecuperee")}</span>
+              <i>
+                <IconeRecu />
+              </i>
+            </div>
+            <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
+            <em>
+              {a.devise} · {moisCourant}
+            </em>
+          </div>
+
+          {/*
+           * ===================================================== LE PLAFOND DE LECTURES
+           *
+           * `lectures_restantes` et `lectures_droit` viennent de
+           * `facturation.monForfait`. Le nombre s'écrit « — » tant qu'on ne le
+           * sait pas, et la barre n'apparaît qu'avec ses deux bornes.
+           *
+           * La touche de Marigold sous 20 % est celle du dessin — bloc `basic`,
+           * « 9 sur 65 » en `var(--touch)`. C'est la seule fois où cette couleur
+           * paraît sur l'écran, et elle ne paraît que là : le plafond qui se
+           * referme est le seul fait de cet accueil qui ne puisse pas attendre.
+           */}
+          <div className="act">
+            <div className="hd">
+              <span>{t("pme.home.lectures")}</span>
+              <i>
+                <IconeBarres />
+              </i>
+            </div>
+            <b>{compte(f?.lectures_restantes)}</b>
             {/*
-             * ================================ LA BARRE QUI NE DISAIT RIEN
+             * ====================================== LE TIRET NE SE SUFFIT PAS
              *
-             * Ici vivaient deux barres, « w-[72%] » et « w-[44%] », écrites en
-             * dur. Elles ne bougeaient jamais, quelle que soit la donnée — et
-             * sur la capture du 10 octobre l'une d'elles était à moitié pleine
-             * au-dessus de « prête à 0 % ».
+             * « — » dit « je n'ai pas le nombre ». Il ne dit pas POURQUOI, et
+             * un dirigeant qui lit un vide conclut à une panne. Les deux
+             * absences se disent donc en mots, sous le tiret, dans le même
+             * `<em>` que la tuile voisine (12 px, une ligne, aucune règle de
+             * feuille à écrire) :
              *
-             * Un chiffre faux se corrige. Un graphique décoratif apprend au
-             * dirigeant que les graphiques de ce produit ne veulent rien dire,
-             * et il contredit mot pour mot ce que le produit imprime deux
-             * écrans plus loin : « chaque montant vient d'un document que vous
-             * avez confirmé ».
+             *   — la requête a répondu `null` : il n'y a pas de licence sur ce
+             *     compte. Ce n'est pas une panne, c'est un état du produit, et
+             *     « Réglages » en porte la phrase longue.
+             *   — la requête a échoué : le compteur n'est pas lu. Les lectures
+             *     du mois, elles, n'ont pas bougé.
              *
-             * La jauge dit maintenant l'avancement, qui est la seule donnée
-             * que cette carte porte — et elle disparaît quand il n'y a rien à
-             * montrer, plutôt que de montrer un vide plein.
+             * Pendant la première lecture, rien n'est dit : une seconde
+             * d'attente n'est ni l'une ni l'autre, et la nommer serait faux.
              */}
-            {a.avancement === null ? null : (
-              <span className="flex h-[26px] w-full flex-col justify-end">
-                <i className="block h-[6px] w-full bg-line-strong">
-                  <i
-                    className="block h-full bg-foreground"
-                    style={{ width: `${Math.round(a.avancement * 100)}%` }}
-                  />
-                </i>
+            {pme.forfait.enCours ? null : pme.forfait.illisible ? (
+              <em>{t("pme.home.lectures.illisible")}</em>
+            ) : f === null ? (
+              <em>{t("pme.home.lectures.sansForfait")}</em>
+            ) : null}
+            {lecturesPart === null ? null : (
+              <span className="pg">
+                <i
+                  style={{
+                    width: `${lecturesPart}%`,
+                    ...(lecturesPart <= 20 ? { background: "var(--touch)" } : null),
+                  }}
+                />
               </span>
             )}
-          </Carte>
+          </div>
+
           {/*
-           * « Lus et classés » surmontait un compte de TOUTES les pièces du
-           * mois, états confondus — y compris une pièce jamais lue. Le libellé
-           * affirmait deux choses fausses à la fois, et il était consigné
-           * depuis le 4 octobre sans être corrigé.
+           * ====================================== CE QUE L'OFFRE OUVRE, ET CE QU'ELLE RETIENT
            *
-           * Il dit maintenant ce que le chiffre est.
+           * Les sièges s'ouvrent à Team, les sociétés à Premium — c'est `offre`
+           * qui tranche, et rien d'autre. Ouverte, la carte porte le chiffre que
+           * la base rend ; fermée, elle dit ce qu'elle ferait et sous quelle
+           * offre. Elle ne disparaît JAMAIS : un produit qui cache ce qu'il vend
+           * ne le vend pas.
+           *
+           * Les chiffres de ces cartes sont des comptes de la base, pas des
+           * noms : « Sami 42 · Nadia 18 » du dessin viendrait de
+           * `facturation.sieges`, que cet écran n'appelle pas — un accueil ne
+           * charge pas la liste des membres pour écrire deux prénoms.
            */}
-          <Carte
-            to="/pme/list"
-            label={t("pme.home.documents.titre")}
-            sous={
-              a.documentsNonLus > 0
-                ? t("pme.home.documents.dont", { count: a.documentsNonLus })
-                : t("pme.home.documents.lus")
-            }
-          >
-            {/*
-             * Le compte porte la couleur du produit. Ce n'est pas un ornement :
-             * c'est le seul chiffre de la rangée basse, et la marigold le
-             * désigne comme telle — la même encre que la jauge d'à côté.
-             */}
-            <span className="num block text-[24px] font-medium leading-none tracking-[-0.035em] text-marigold">
-              {a.documentsLus}
-            </span>
-          </Carte>
-          <Carte
-            to="/pme/charges"
-            label={t("pme.home.card.charges")}
-            sous={
-              a.chargesEcart === null
-                ? t("pme.home.charges.sous")
-                : a.chargesEcart < 0
-                  ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
-                  : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })
-            }
-          >
-            {/*
-             * Quatre barres écrites en dur — 100 %, 64 %, 44 %, 30 % — qui
-             * dessinaient une courbe de charges décroissante pour un dossier
-             * qui en portait une. Elles sont parties : une carte sans
-             * graphique se lit, un graphique faux désapprend.
-             *
-             * Elles reviendront branchées sur la série réelle des charges,
-             * quand cette série sera lue par l'accueil.
-             */}
-          </Carte>
+          {siegesOuverts ? (
+            <div className="act">
+              <div className="hd">
+                <span>{t("pme.home.sieges")}</span>
+                <i>
+                  <IconeSieges />
+                </i>
+              </div>
+              {/*
+               * « 3 / 5 » : les places prises sur les places incluses. Deux
+               * chiffres de la base, aucun mot ajouté — « 3 sièges sur 5 inclus »
+               * demanderait une clé qui n'existe pas encore.
+               */}
+              <b>
+                {compte(f?.sieges_occupes)} / {compte(f?.sieges_inclus)}
+              </b>
+            </div>
+          ) : (
+            <div className="lock">
+              <IconeSieges />
+              <b>{t("pme.home.sieges")}</b>
+              <em>Team</em>
+            </div>
+          )}
+
+          {societesOuvertes ? (
+            <div className="act">
+              <div className="hd">
+                <span>{t("pme.home.societes")}</span>
+                <i>
+                  <IconeSocietes />
+                </i>
+              </div>
+              <b>{compte(f?.organisations)}</b>
+            </div>
+          ) : (
+            <div className="lock">
+              <IconeSocietes />
+              <b>{t("pme.home.societes")}</b>
+              <em>Premium</em>
+            </div>
+          )}
+        </div>
+
+        {/*
+         * ------------------------------------------------- la barre de question
+         *
+         * Elle ouvre le fil de Malica par-dessus l'écran. Le micro est le
+         * contrôle : c'est lui qui porte le nom accessible et qui se tient au
+         * clavier. La barre entière reste cliquable au doigt.
+         */}
+        <div className="ask" onClick={malica.ouvrir}>
+          <img src={malicaLoin} alt="" width={620} height={620} />
+          <span className="q">
+            <b>{t("malica.panneau.ouvrir")}</b>
+            <span>{t("malica.chat.placeholder")}</span>
+          </span>
           <button
             type="button"
+            className="mic"
+            aria-label={t("malica.panneau.ouvrir")}
             onClick={malica.ouvrir}
-            className="flex min-h-[86px] flex-col justify-between gap-2.5 border border-border p-3 text-start hover:bg-accent"
           >
-            <MalicaAvatar size={26} alt="" rond />
-            <span>
-              <span className="block text-[14.5px] font-medium">{t("pme.home.demander")}</span>
-              <span className="mt-0.5 block text-[11.5px] text-text-2">
-                {t("pme.home.demander.sous")}
-              </span>
-            </span>
+            <svg viewBox="0 0 24 24" className="g">
+              <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
+              <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
+              <path d="M12 18v3" />
+            </svg>
           </button>
         </div>
-      </section>
+      </div>
 
       {/*
        * Un échec de capture se dit là où on l'a provoqué, sans rien pousser :
@@ -427,14 +700,20 @@ function PmeHome() {
       {/*
        * Le fil de Malica passe PAR-DESSUS.
        *
-       * Il était une section de plus dans le flux : l'ouvrir allongeait la
-       * page et forçait à faire défiler l'accueil, ce que la maquette
-       * interdit. En panneau, il recouvre l'écran le temps de la question et
-       * le rend intact — c'est l'écran « converser » de la maquette, appelé
-       * depuis son visage.
+       * Il était une section de plus dans le flux : l'ouvrir allongeait la page
+       * et forçait à faire défiler l'accueil, ce que le dessin interdit. En
+       * panneau, il recouvre l'écran le temps de la question et le rend intact.
+       * Il garde la langue Edition One : c'est l'écran « converser », qui aura
+       * son propre dessin avec la route `pme.malica`.
        */}
       {malica.ouvert ? (
-        <div className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background">
+        <div
+          ref={panneauMalica}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("malica.chat.her")}
+          className="pt-safe fixed inset-0 z-30 mx-auto flex w-full max-w-md flex-col bg-background"
+        >
           <div className="flex items-center gap-3 border-b border-border px-[22px] py-3.5">
             <MalicaAvatar size={34} alt="Malica" rond />
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em]">
@@ -458,95 +737,89 @@ function PmeHome() {
   );
 }
 
-/**
- * Douze mois de trajectoire, en douze barres.
+/* ===========================================================================
  *
- * Un mois sans écriture ne rend PAS une barre à zéro — il rend un socle d'un
- * pixel. Zéro dinar récupéré et « je n'ai rien à dire sur ce mois » sont deux
- * faits différents, et les confondre sur une courbe est un mensonge muet.
+ *   LES SIGNES DU DESSIN
+ *
+ * Repris trait pour trait de `malica-accueil.html`. Ils portent `class="g"`,
+ * la seule règle d'icône commune aux dix écrans : `stroke:currentColor`,
+ * `fill:none`, bouts arrondis. La taille vient toujours du contexte
+ * (`.tile i svg`, `.act .hd i svg`, `.lock svg`, `.ar`), jamais de l'icône.
  */
-function Trajectoire({ serie }: { serie: readonly MoisDeTva[] }) {
-  const valeurs = serie.map((m) => (m.recuperee === null ? null : Number(m.recuperee)));
-  const haut = Math.max(...valeurs.filter((v): v is number => v !== null), 0);
 
+/** Une pièce — la feuille au coin plié. */
+function IconePiece() {
   return (
-    <div className="relative mt-[18px] flex h-[38px] items-end gap-[5px]">
-      {serie.map((m, i) => {
-        const v = valeurs[i];
-        const dernier = i === serie.length - 1;
-        if (v === null || v === undefined) {
-          return <i key={m.periode} className="h-px flex-1 bg-current opacity-20" />;
-        }
-        const part = haut === 0 ? 0 : (v / haut) * 100;
-        return (
-          <i
-            key={m.periode}
-            className={cn("flex-1", dernier ? "bg-marigold-on-ink" : "bg-current opacity-[0.32]")}
-            style={{ height: `${Math.max(part, 2)}%` }}
-          />
-        );
-      })}
-    </div>
+    <svg viewBox="0 0 24 24" className="g">
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 15.5h6" />
+    </svg>
   );
 }
 
-/** Une ligne de la liste : un nom à gauche, un fait à droite, un filet au-dessus. */
-function Ligne({
-  to,
-  label,
-  valeur,
-  accent,
-}: {
-  to: string;
-  label: string;
-  valeur: string;
-  accent?: boolean;
-}) {
+/** Un reçu — ce qui porte un montant. */
+function IconeRecu() {
   return (
-    <Link
-      to={to}
-      className={cn(
-        "flex w-full items-center justify-between gap-3 border-t border-border py-[13px] text-start hover:bg-secondary",
-        accent && "border-s-2 border-s-marigold ps-[11px]",
-      )}
-    >
-      <span className="text-[15.5px] font-medium">{label}</span>
-      <span className="num flex-none text-[15px] font-medium">{valeur}</span>
-    </Link>
+    <svg viewBox="0 0 24 24" className="g">
+      <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z" />
+      <path d="M9 8h6M9 11.5h6M9 15h3.5" />
+    </svg>
   );
 }
 
-/** Une carte carrée : un signe visuel en haut, le nom en bas. */
-function Carte({
-  to,
-  label,
-  sous,
-  children,
-}: {
-  to: string;
-  // Le mois s'écrit plus petit que le sujet : « Vos documents » porte la
-  // carte, « de septembre » la précise. Un libellé balisé le permet.
-  label: React.ReactNode;
-  sous: string;
-  /**
-   * La figure de la carte, quand il y en a une À DIRE.
-   *
-   * Elle est facultative depuis le 11 octobre : trois cartes portaient des
-   * barres écrites en dur, qui ne bougeaient jamais. Une carte sans figure se
-   * lit très bien ; une figure fausse désapprend à lire toutes les autres.
-   */
-  children?: React.ReactNode;
-}) {
+/** Des barres — ce qui se compare. */
+function IconeBarres() {
   return (
-    <Link
-      to={to}
-      className="flex min-h-[86px] flex-col justify-between gap-2 border border-border p-3 hover:bg-accent"
-    >
-      {children}
-      <span>
-        <span className="block text-[13.5px] font-medium leading-[1.25]">{label}</span>
-        <span className="mt-[3px] block text-[11px] text-text-2">{sous}</span>
-      </span>
-    </Link>
+    <svg viewBox="0 0 24 24" className="g">
+      <path d="M4 20h16" />
+      <path d="M7 16v-4M12 16V7M17 16v-6" />
+    </svg>
+  );
+}
+
+/** Deux personnes — les sièges, et le cabinet. */
+function IconeSieges() {
+  return (
+    <svg viewBox="0 0 24 24" className="g">
+      <circle cx="9" cy="9" r="3" />
+      <circle cx="16.5" cy="10" r="2.4" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0M14.5 19.5a4.5 4.5 0 0 1 6.5-3.4" />
+    </svg>
+  );
+}
+
+/** Trois cadres emboîtés — plusieurs sociétés sous une licence. */
+function IconeSocietes() {
+  return (
+    <svg viewBox="0 0 24 24" className="g">
+      <rect x="3.5" y="9.5" width="11" height="11" rx="1.5" />
+      <path d="M7 6.5h9a1.5 1.5 0 0 1 1.5 1.5v9" />
+      <path d="M10 3.5h9A1.5 1.5 0 0 1 20.5 5v9" />
+    </svg>
+  );
+}
+
+/** Le chevron des tuiles et des titres de section. */
+function Chevron({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className}>
+      <path d="M9.5 5.5L16 12l-6.5 6.5" />
+    </svg>
+  );
+}
+
+/**
+ * La flèche du bouton de la carte à la une.
+ *
+ * `fl` est le marqueur que la feuille miroite en arabe : gardée telle quelle,
+ * une flèche « suivante » pointe vers ce qu'on vient de lire.
+ */
+function FlecheDroite() {
+  return (
+    <svg viewBox="0 0 24 24" className="g fl">
+      <path d="M4.5 12h14" />
+      <path d="M14 7.5l4.5 4.5L14 16.5" />
+    </svg>
   );
 }

@@ -27,6 +27,13 @@
 @import "@fontsource/noto-kufi-arabic/arabic-500.css";
 @import "@fontsource/noto-kufi-arabic/arabic-600.css";
 
+/*
+ * Le langage de la PME, porté par `[data-surface="pme"]` et par lui seul.
+ * Hors couche, donc il l'emporte sur les utilitaires : c'est ce qu'on attend
+ * d'un thème de surface. Edition One n'en sait rien et n'en est pas touché.
+ */
+@import "./styles-pme.css";
+
 @custom-variant dark (&:is(.dark *));
 
 /*

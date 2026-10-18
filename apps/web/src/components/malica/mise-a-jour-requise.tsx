@@ -44,7 +44,7 @@ function langueRangee(): keyof typeof MOTS {
 function MiseAJourRequise({ versionMinimale }: { versionMinimale: string | null }) {
   const mots = MOTS[langueRangee()];
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">{mots.titre}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{mots.corps}</p>

@@ -13,6 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!--
+            Le fond de la vue de décoration. Voir `couleurs-coque.xml` : quand
+            Capacitor marge lui-même le WebView sous Android 15+, c'est CE fond
+            qui apparaît dans la marge — et celui de `DayNight` est blanc en
+            mode clair. D'où la bande blanche relevée sur l'appareil.
+        -->
+        <item name="android:windowBackground">@color/fond_coque_pme</item>
     </style>
 
     <!--

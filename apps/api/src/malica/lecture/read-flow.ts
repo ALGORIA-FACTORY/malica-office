@@ -49,7 +49,71 @@ function toBase64(bytes: Uint8Array): string {
   return typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
 }
 
-export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<LectureDePiece> {
+/**
+ * La base a refusé la lecture. Le motif est celui de `lecture_autorisee`, tel
+ * quel : ses libellés vivent au référentiel (R4), jamais ici.
+ */
+export class LectureRefusee extends Error {
+  readonly motif: string;
+  constructor(motif: string) {
+    super(motif);
+    this.name = "LectureRefusee";
+    this.motif = motif;
+  }
+}
+
+/**
+ * Les deux organes payants. Injectables pour qu'une épreuve prouve que le
+ * refus arrête la chaîne AVANT eux ; en service, ce sont toujours les vrais.
+ */
+interface Lecteurs {
+  lire: typeof runVisionRead;
+  secondLecteurDisponible: () => boolean;
+}
+
+const LECTEURS: Lecteurs = { lire: runVisionRead, secondLecteurDisponible };
+
+export async function readPieceFlow(
+  api: AppelApi,
+  pieceId: string,
+  lecteurs: Lecteurs = LECTEURS,
+): Promise<LectureDePiece> {
+  /*
+   * ================================ LE COMPTEUR : DEUX TEMPS, ET L'ORDRE EST LA RÈGLE
+   *
+   * 1. ICI, avant tout appel payant : la base dit si cette lecture est permise.
+   *    Faux, on s'arrête avec le motif de la base. Le plafond se vérifie UNE
+   *    fois : une pièce commencée se termine, rattrapage compris.
+   * 2. TOUT EN BAS, juste avant de rendre : `lecture_consommer`. Une lecture qui
+   *    lève — modèle indisponible, citation refusée, persistance refusée — ne
+   *    se facture pas, parce que la personne n'a rien reçu.
+   *
+   * Ce fichier ne porte ni seuil, ni compteur, ni libellé : il appelle, la base
+   * décide (R3, R4). Une pièce lue compte UNE lecture, rattrapage compris.
+   */
+  const verdict = await api.rpc<{ autorisee: boolean; motif: string }>(
+    "capture",
+    "lectureAutorisee",
+    [pieceId],
+  );
+  if (!verdict.autorisee) {
+    /*
+     * Le refus s'INSCRIT : la lecture d'arrière-plan lancée par la file hors
+     * ligne n'a personne à qui répondre, et un refus qui ne s'écrit nulle part
+     * est un silence — indistinguable d'une panne. La base rejoue le verdict et
+     * inscrit son propre motif (code). Si l'inscription échoue, on le crie :
+     * la lecture reste refusée, mais l'échec ne se tait pas.
+     */
+    await api.rpc("capture", "inscrireRefusDeLecture", [pieceId]).catch((e: unknown) => {
+      console.error(
+        `refus de lecture NON inscrit — pièce ${pieceId}, motif ${verdict.motif} : ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    });
+    throw new LectureRefusee(verdict.motif);
+  }
+
   // La pièce, son organisation, le pack en vigueur, les taux et les charges :
   // un appel là où il en fallait cinq, mêmes requêtes côté base.
   const contexte = await api.rpc<ContexteLecture>("capture", "contexteLecture", [pieceId]);
@@ -65,7 +129,7 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
     new Map(contexte.chargeCodes.map((c) => [c.code, { code: c.code, label: c.label }])).values(),
   );
 
-  const premiereLecture = await runVisionRead({
+  const premiereLecture = await lecteurs.lire({
     dataUrl,
     mime,
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
@@ -123,10 +187,10 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
    * n'aurait rien d'autre a proposer qu'un second appel payant a l'identique.
    */
   const premierEtaitPaddle = premiereLecture.readModel.includes("PP-OCR");
-  const unAutreLecteurExiste = premierEtaitPaddle || secondLecteurDisponible();
+  const unAutreLecteurExiste = premierEtaitPaddle || lecteurs.secondLecteurDisponible();
 
   if (built.contract !== "extract.v1" && unAutreLecteurExiste) {
-    const secondeLecture = await runVisionRead({
+    const secondeLecture = await lecteurs.lire({
       dataUrl,
       mime,
       bytes,
@@ -264,6 +328,34 @@ export async function readPieceFlow(api: AppelApi, pieceId: string): Promise<Lec
 
   // La pièce se juge sur ce que la base porte désormais.
   const analyse = await api.rpc<{ verdict: string }>("capture", "analyser", [pieceId]);
+
+  /*
+   * Le deuxième temps du compteur, et le dernier geste avant de rendre : la
+   * base porte le résultat, l'analyse a abouti, rien ne peut plus lever que
+   * le comptage lui-même. Ni plus tôt (une lecture qui échoue ne se facture
+   * pas), ni plus d'une fois (la base ne compte jamais deux fois une pièce).
+   *
+   * ============================== UN DÉPASSEMENT À LA FRONTIÈRE EST ACCEPTÉ
+   *
+   * Le contrôle (en tête) et le comptage (ici) ne sont pas atomiques : deux
+   * pièces lues en parallèle à 64/65 passent toutes deux la porte ; deux
+   * instances du serveur peuvent lire la même pièce deux fois (le registre
+   * des lectures en cours est en mémoire de processus) ; un processus qui
+   * meurt entre la persistance et le comptage offre la lecture.
+   *
+   * Les fermer exigerait de RÉSERVER la lecture avant d'en connaître le
+   * résultat — donc de facturer un échec, ce que la règle de ce fichier
+   * interdit. Arbitrage : un dépassement d'une ou deux lectures à la
+   * frontière du forfait plutôt qu'un client facturé pour une lecture qu'il
+   * n'a pas reçue. C'est un arbitrage de prix, écrit au dossier de la
+   * livraison. Ne pas « corriger » ce trou en réservant en tête.
+   *
+   * Si ce comptage échoue — plafond atteint entre-temps par une AUTRE pièce lue
+   * en parallèle —, l'erreur remonte : on ne rend pas gratuitement ce que la
+   * base a refusé de compter. Ce n'est pas silencieux, et c'est à la base de
+   * dire non.
+   */
+  await api.rpc("capture", "consommerLecture", [pieceId]);
 
   return {
     pieceId,

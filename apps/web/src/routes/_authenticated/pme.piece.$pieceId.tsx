@@ -11,14 +11,22 @@ import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
-import { libelleDuChamp } from "@/lib/champ-lisible";
-import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
+import { RefusDeLecture } from "@/components/malica/lecture-refusee";
+import malicaLoin from "@/assets/malica-loin.webp";
+import {
+  libelleDuChamp,
+  libelleDuRefus,
+  motifDeLEtat,
+  motifDeRefusConnu,
+} from "@/lib/champ-lisible";
 import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
+import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -42,13 +50,6 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   component: PieceScreen,
 });
 
-/**
- * Du nom métier d'un champ vers son libellé d'écran.
- *
- * La correspondance vit ICI, et non dans le cas d'usage : le Socle nomme ses
- * champs, il n'a pas à connaître les clés de traduction. Et le compilateur
- * vérifie chaque clé — un libellé oublié ne passe pas.
- */
 /** Les raisons MÉTIER pour lesquelles une lecture s'arrête, et leur phrase. */
 const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
   "lecture.illisible": "pme.lire.illisible",
@@ -56,6 +57,19 @@ const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
   "lecture.trop_longue": "pme.lire.tropLongue",
   "lecture.trop_dense": "pme.lire.tropDense",
 };
+
+/*
+ * ================================ LES MOTS DE CET ÉCRAN SONT AU DICTIONNAIRE
+ *
+ * Le bloc `MOTS` qui vivait ici rassemblait trente-deux libellés en dur, en
+ * français, assumés en commentaire comme une dette nommée. Ils sont entrés au
+ * dictionnaire le 18 octobre 2026 sous `pme.piece.*`, dans les trois langues,
+ * et chaque site d'affichage appelle `t()`.
+ *
+ * Les quatre compteurs de la page — pièces, mouvements, points, étapes —
+ * passent par la variable `count` : `Intl.PluralRules` accorde, là où un
+ * `n > 1 ? "s" : ""` n'accordait qu'en français et laissait l'arabe faux.
+ */
 
 interface ExtractArticle {
   designation: string;
@@ -85,9 +99,37 @@ interface ExtractPayload {
 }
 
 /**
- * Écran PME. Le geste cœur : voir la zone source, confirmer en un tap.
- * L'écriture proposée et les signalements de lecture n'apparaissent pas ici :
- * ils appartiennent à la supervision du cabinet.
+ * Le dossier d'une pièce — l'écran du dessin `ecrans/malica-dossier.html`.
+ *
+ * ================================================================= CE QU'IL EST
+ *
+ * Une facture ne vit jamais seule : une commande l'annonce, une livraison
+ * l'atteste, des règlements la soldent, des reçus les prouvent. L'écran montre
+ * la chaîne entière, le maillon absent, et ce qu'on peut encore faire.
+ *
+ * ===================================================== CE QUI NE SE NÉGOCIE PAS
+ *
+ * Quatre comportements ont coûté cher et sont portés par le câblage, pas par le
+ * balisage. Les voici, et où ils sont dans ce fichier :
+ *
+ *   1. UNE CORRECTION EST UNE ÉCRITURE NOUVELLE (R7). `capture.preciser`
+ *      AJOUTE une précision à côté de la lecture ; jamais un UPDATE. La
+ *      lecture garde ce qu'elle a réellement lu.
+ *   2. UN RÈGLEMENT NE SE MODIFIE PAS. Il s'annule par une ligne datée et
+ *      motivée : `capture.motifsDAnnulation` puis `capture.annulerPaiement`.
+ *      Ces deux appels vivent dans `CommentCEstPaye`, monté plus bas, et
+ *      l'écran n'en propose aucun autre chemin.
+ *   3. UNE PIÈCE TRANSMISE NE REVIENT QUE SUR ACCORD DU CABINET :
+ *      `collab.demanderSurPiece(id, 'rappel' | 'suppression')`, et l'état se
+ *      lit par `collab.demandesDUnePiece`. Aucun rappel unilatéral.
+ *   4. LA CHAÎNE : `capture.piecesIssuesDe` — ce qui est né de cette pièce.
+ *
+ * ============================================================== LE STYLE VIENT DU CSS
+ *
+ * `data-ecran="dossier"` sur la racine, et les classes du dessin relevées dans
+ * `styles-pme.css` sous `[data-surface="pme"] [data-ecran="dossier"]`. Aucune
+ * classe utilitaire par-dessus : les écrans pleins (lecture, soulagement,
+ * visionneuse, détail) gardent le leur, le dessin ne les décrit pas.
  */
 function PieceScreen() {
   const { pieceId } = Route.useParams();
@@ -130,6 +172,20 @@ function PieceScreen() {
   const cabinet = useQuery({
     queryKey: ["mon-cabinet", pme.tenantId],
     queryFn: () => office().identity.monCabinet(pme.tenantId),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  /**
+   * Qui je suis dans ce dossier — `dirigeant` ou `collaborateur`.
+   *
+   * Le bloc « Revenir dessus » croise le RÔLE et la visibilité de la pièce, et
+   * rien d'autre : un siège corrige librement sa propre saisie mais ne la
+   * supprime pas, un dirigeant tranche. Sans ce rôle, l'écran offrirait à un
+   * siège un geste que la base lui refuse.
+   */
+  const acces = useQuery({
+    queryKey: ["mon-acces", pme.tenantId],
+    queryFn: () => office().acces.monAcces(pme.tenantId),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -183,6 +239,39 @@ function PieceScreen() {
     queryFn: () => office().office.ecrituresForPiece(pieceId),
   });
 
+  /**
+   * LA CHAÎNE — ce qui est né de cette pièce.
+   *
+   * Même clé que dans `CommentCEstPaye` : React Query ne fait donc qu'un seul
+   * aller-retour pour les deux blocs. « Un écran, une fenêtre de données. »
+   */
+  const joints = useQuery({
+    queryKey: ["joints", pieceId],
+    queryFn: () => office().capture.piecesIssuesDe(pieceId),
+  });
+
+  /**
+   * Les règlements, pour l'état de règlement du chapeau.
+   *
+   * LECTURE SEULE ici : aucune mutation de paiement ne part de ce bloc. Les
+   * gestes — inscrire, annuler avec motif, rattacher la preuve — appartiennent
+   * à `CommentCEstPaye`, qui les porte depuis le 13 octobre avec ses gardes.
+   * Deux chemins pour la même écriture seraient deux occasions de divergence.
+   */
+  const paiements = useQuery({
+    queryKey: ["paiements", pieceId],
+    queryFn: () => office().capture.paiementsDUnePiece(pieceId),
+  });
+
+  /** Le nom d'un type de document vient du référentiel traduit, jamais du code. */
+  const typesDoc = useQuery({
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+  const nomDuType = (code: string | null) =>
+    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
+
   const invalidate = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
@@ -194,8 +283,7 @@ function PieceScreen() {
   /*
    * ================================================ EFFACER UN BROUILLON
    *
-   * Une photo ratée, un reçu personnel, un document qui n'a rien à faire là :
-   * il n'existait aucun moyen de l'effacer, et le coffre accumulait.
+   * Une photo ratée, un reçu personnel, un document qui n'a rien à faire là.
    *
    * La base décide, pas cet écran : `capture_piece_supprimer` refuse une pièce
    * transmise, engagée dans une écriture, ou servant de justificatif. On ne
@@ -237,9 +325,33 @@ function PieceScreen() {
   });
 
   /**
+   * LA DIRE À LA SOCIÉTÉ — la sortie de l'espace privé, sans mandat.
+   *
+   * `entite` n'est pas une transmission : la base ne pose `transmise_le` que
+   * pour `partage`, et seul `partage` prévient le cabinet. La pièce entre dans
+   * la bibliothèque de la société, devient lisible (B6 ne vise que
+   * `personnel`), et la transmission reste la décision séparée qu'elle doit
+   * être.
+   *
+   * Et le retour est libre : `capture_piece_set_vis` n'exige un accord que
+   * pour quitter `partage`. On ne ferme donc rien en ouvrant ceci.
+   */
+  const versLaSociete = useMutation({
+    mutationFn: () => office().collab.setPieceVis(pieceId, "entite"),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
+   * UNE CORRECTION EST UNE ÉCRITURE NOUVELLE (R7).
+   *
    * Le sens de la pièce, quand la lecture n'a pas pu le dire : un achat ou
-   * une vente. La réponse est une entrée nouvelle (jamais une modification
-   * de la lecture) ; le dossier la rend ensuite comme si elle avait été lue.
+   * une vente. La réponse est une entrée nouvelle — jamais une modification
+   * de la lecture ; le dossier la rend ensuite comme si elle avait été lue.
    */
   const preciser = useMutation({
     mutationFn: (valeur: "facture_achat" | "facture_vente") =>
@@ -255,6 +367,22 @@ function PieceScreen() {
   /** Transmettre au cabinet — sur décision du dirigeant, jamais toute seule. */
   const transmettre = useMutation({
     mutationFn: () => office().collab.setPieceVis(pieceId, "partage"),
+    onSuccess: async () => {
+      setError(null);
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
+   * La remettre dans l'espace privé — le geste du dessin, « LIBRE » seulement.
+   *
+   * La base tient le mur (R6) : elle refuse dès que la pièce est partie ou
+   * comptabilisée. L'écran ne l'offre donc que là où il peut aboutir.
+   */
+  const remettreAuPrive = useMutation({
+    mutationFn: () => office().collab.setPieceVis(pieceId, "personnel"),
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -287,12 +415,9 @@ function PieceScreen() {
   /**
    * Garder chez soi — l'autre moitié de la décision.
    *
-   * Elle manquait. Le commentaire d'à côté affirmait « deux boutons de même
-   * poids » et il n'y en avait qu'un ; garder était ce qui arrivait quand on
-   * ne faisait rien. Pire : rien ne distinguait « j'ai décidé de la garder »
-   * de « je n'ai pas encore répondu », donc la question revenait à chaque
-   * visite — et un écran qui redemande ce qu'on vient de lui dire apprend à
-   * ne plus répondre.
+   * Rien ne distinguait « j'ai décidé de la garder » de « je n'ai pas encore
+   * répondu », donc la question revenait à chaque visite — et un écran qui
+   * redemande ce qu'on vient de lui dire apprend à ne plus répondre.
    */
   const garder = useMutation({
     mutationFn: () => office().collab.garderPiece(pieceId),
@@ -305,15 +430,14 @@ function PieceScreen() {
   });
 
   /**
-   * Le geste inverse SE DEMANDE, il ne se prend pas.
+   * LE GESTE INVERSE SE DEMANDE, IL NE SE PREND PAS.
    *
-   * Le 10 octobre j'avais livré un rappel unilatéral, pour sortir d'un état
-   * qu'on n'avait pas choisi. Le commanditaire a tranché le lendemain : « le
-   * rappel de la pièce doit être approuvé par le cabinet ».
+   * Le 10 octobre 2026 j'avais livré un rappel unilatéral, pour sortir d'un
+   * état qu'on n'avait pas choisi. Le commanditaire a tranché le lendemain :
+   * « le rappel de la pièce doit être approuvé par le cabinet ».
    *
-   * Il a raison, et j'avais corrigé un défaut par un autre : le cabinet
-   * travaille sur ce qu'il a reçu, et une pièce qui disparaît de sa file sans
-   * un mot est pire que l'état bloqué qu'on voulait défaire.
+   * Il a raison : le cabinet travaille sur ce qu'il a reçu, et une pièce qui
+   * disparaît de sa file sans un mot est pire que l'état bloqué.
    */
   const rappeler = useMutation({
     mutationFn: () => office().collab.demanderSurPiece(pieceId, "rappel"),
@@ -325,7 +449,24 @@ function PieceScreen() {
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
-  // L'état de la demande, s'il y en a une : son dernier fait.
+  /**
+   * Et la suppression d'une pièce déjà reçue se demande, elle aussi.
+   *
+   * Même mécanisme, autre objet : le cabinet la conserve, c'est son métier.
+   * La décision s'inscrit au journal, quelle qu'elle soit.
+   */
+  const demanderSuppression = useMutation({
+    mutationFn: () => office().collab.demanderSurPiece(pieceId, "suppression"),
+    onSuccess: async () => {
+      setError(null);
+      await qc.invalidateQueries({ queryKey: ["demandes-piece", pieceId] });
+      await invalidate();
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  // L'état des demandes, s'il y en a : leur dernier fait, par objet.
   const demandes = useQuery({
     queryKey: ["demandes-piece", pieceId],
     queryFn: () => office().collab.demandesDUnePiece(pieceId),
@@ -333,6 +474,8 @@ function PieceScreen() {
   const dernierFaitDuRappel = demandes.data?.find((d) => d.objet === "rappel") ?? null;
   const demandeDeRappel = dernierFaitDuRappel?.fait ?? null;
   const noteDuRappel = dernierFaitDuRappel?.note ?? null;
+  const dernierFaitDeSuppression = demandes.data?.find((d) => d.objet === "suppression") ?? null;
+  const demandeDeSuppression = dernierFaitDeSuppression?.fait ?? null;
 
   const read = useMutation({
     mutationFn: () => office().malica.lirePiece(pieceId),
@@ -344,12 +487,9 @@ function PieceScreen() {
       /*
        * La chaîne de lecture parle en CODES, jamais en prose : la fonction
        * serveur ne transmet qu'un message nu, et c'est ici qu'il devient une
-       * phrase dans la langue du dirigeant. Un message qui n'est pas un code
-       * connu est technique : il va au journal, l'écran dit seulement qu'il
-       * n'a pas pu.
+       * phrase dans la langue du dirigeant.
        */
       // Une requête morte n'est pas une lecture morte : le serveur continue.
-      // On attend, et le dossier dira quand c'est lu.
       if (e instanceof TypeError) {
         setAttente(true);
         void etat.refetch();
@@ -361,46 +501,52 @@ function PieceScreen() {
         setError(t(libelle));
         return;
       }
+      /*
+       * ======================== ET LE MOTIF DE REFUS A SON TRADUCTEUR, LUI AUSSI
+       *
+       * `MESSAGE_DU_CODE_DE_LECTURE` ne connaît que les quatre codes
+       * `lecture.*`. Un MOTIF de refus — `piece_personnelle`,
+       * `plafond_atteint`, `licence_suspendue` — tombait donc dans
+       * `texteDeLErreur`, qui affiche le message brut de l'API. Relevé au
+       * rendu le 18 octobre, textuellement, sous les yeux du dirigeant :
+       *
+       *     piece_personnelle
+       *
+       * `libelleDuRefus` existe, est testé, et traduit exactement ces motifs.
+       * C'est la quatrième fois dans ce dépôt qu'un traducteur juste n'est pas
+       * importé par l'écran qui en a besoin.
+       *
+       * `motifDeRefusConnu` garde l'appel : `libelleDuRefus` a un repli
+       * attrape-tout (« je ne sais pas pourquoi »), et l'appeler sans garde
+       * aurait avalé les pannes de réseau dans une phrase rassurante.
+       */
+      if (motifDeRefusConnu(code)) {
+        setError(libelleDuRefus(code, t));
+        return;
+      }
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error")));
     },
   });
 
   /*
-   * ================================================ LA DATE QUAND LA PIÈCE N'EN PORTE PAS
+   * ================================ LA DATE QUAND LA PIÈCE N'EN PORTE PAS
    *
-   * Certaines pièces n'affichent aucune date lisible : un ticket effacé, un
-   * bon de livraison, un coin plié. Sans date, aucun taux de TVA n'est
-   * applicable et rien ne peut être comptabilisé — la pièce restait bloquée.
-   *
-   * On propose donc le JOUR DU SCAN. Mais on ne le glisse pas en douce dans la
+   * On propose le JOUR DU SCAN. Mais on ne le glisse pas en douce dans la
    * lecture : il s'affiche, il est modifiable, et il ne devient la date de la
-   * pièce qu'au moment où l'utilisateur confirme. L'extraction, elle, garde sa
-   * date vide — c'est ce qui s'est réellement lu sur le document.
+   * pièce qu'au moment où l'utilisateur confirme. L'extraction garde sa date
+   * vide — c'est ce qui s'est réellement lu sur le document (R7).
    *
-   * La distinction n'est pas une subtilité : une facture de janvier scannée en
-   * mars et datée de mars part dans la mauvaise déclaration de TVA. C'est à
-   * l'utilisateur de dire quelle est la vraie date ; nous ne faisons que la
-   * pré-remplir avec la seule que nous connaissions.
+   * Une facture de janvier scannée en mars et datée de mars part dans la
+   * mauvaise déclaration de TVA.
    */
   const jourDuScan = (dossier.data?.piece.createdAt ?? new Date().toISOString()).slice(0, 10);
   const [dateSaisie, setDateSaisie] = useState<string | null>(null);
   const dateRetenue = dateSaisie ?? jourDuScan;
 
   /*
-   * La proposition d'écriture est calculée par le SERVEUR (3B-6) : depuis les
-   * montants imprimés et normalisés, seulement si le verdict de la pièce la
-   * déclare comptabilisable. L'écran ne compose plus rien ; il montre ce que le
-   * serveur propose, ou la raison pour laquelle il ne propose rien. La date
-   * saisie ne complète qu'une date non lue.
-   */
-  /*
-   * Les droits hors TVA, et le pack qui les nomme.
-   *
-   * Le libellé et la référence légale d'un droit vivent dans `ref.fiscal_charges`,
-   * datés et versionnés : on les lit (R4), on ne les écrit pas dans l'écran.
-   * Si le pack n'a pas encore répondu, le droit s'affiche quand même sous son
-   * code, signalé — c'est l'ABSENCE du timbre qui a coûté le 4 octobre, pas un
-   * libellé imparfait.
+   * Les droits hors TVA, et le pack qui les nomme. Le libellé et la référence
+   * légale d'un droit vivent dans `ref.fiscal_charges`, datés et versionnés :
+   * on les lit (R4), on ne les écrit pas dans l'écran.
    */
   const packDroits = useQuery({
     queryKey: ["droits-du-pack", pme.packId],
@@ -445,7 +591,7 @@ function PieceScreen() {
          * Le « Oui » vaut pour tout ce qui est à l'écran, le sens de la pièce
          * compris. Tant que le type n'a été que lu, la personne le confirme
          * ici, avant l'écriture : c'est ce que le verrou R2 attend, et la
-         * précision reste datée et signée à côté de la lecture.
+         * précision reste datée et signée à côté de la lecture (R7).
          */
         const pieceLue = dossier.data?.piece;
         const type = (payloadDeLaProposition as { document_kind?: string } | null)?.document_kind;
@@ -480,30 +626,37 @@ function PieceScreen() {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
 
-  const { piece, contenu, extraction, citations } = dossier.data;
+  const { piece, contenu, extraction, citations, lectureRefusee } = dossier.data;
+
+  /**
+   * Où la pièce est — et c'est ce qui décide si elle peut être lue.
+   *
+   * Les trois valeurs existent en base depuis le 18 octobre, et le type du
+   * socle les porte depuis le 19 : plus de conversion à faire ici. `entite`
+   * est la bibliothèque de la société — lue, rangée, pas transmise.
+   */
+  const vis = piece.vis;
+
+  /**
+   * Pourquoi cette pièce n'est pas lue, ou `null` si rien ne s'y oppose.
+   *
+   * Le refus INSCRIT d'abord ; à défaut, celui que la visibilité implique.
+   * Trente pièces privées n'avaient aucun refus au journal — l'inscription
+   * est récente — et l'écran les montrait comme des pièces qui attendent leur
+   * tour. Elles n'attendent rien, et cela se DÉRIVE plutôt que de s'écrire
+   * (R7 : on ne réécrit pas un fait).
+   */
+  const motifNonLue = motifDeLEtat(lectureRefusee, vis);
+
   /*
    * ================================ LE SENS SE DEMANDE UNE FOIS, PAS DEUX
    *
    * 13 octobre 2026 : « il y a une deuxième fois où l'app demande achat ou
-   * vente ». C'est exact, et c'est systématique sur le cas le plus courant de
-   * la facture d'achat tunisienne. Le fil :
-   *
-   *   1. à la capture, la personne répond « une facture que j'ai reçue », et
-   *      la réponse est inscrite sur la PIÈCE ;
-   *   2. la lecture ne tranche pas — le fournisseur n'imprime pas le matricule
-   *      du client, ce qui est normal sur un achat — donc la lecture rend un
-   *      sens nul ;
-   *   3. cette condition ne regardait QUE la lecture, et reposait la question.
-   *
-   * Vérifié en base le 13 octobre : deux pièces du dirigeant portent à la fois
-   * le type déclaré « facture_achat » ET une précision enregistrée. Il a bien
-   * répondu deux fois, à quelques secondes d'intervalle.
-   *
-   * La réponse était pourtant là, dans le même objet, à deux champs de
-   * distance — ce fichier lit déjà le statut de ce type, un peu plus haut.
-   *
-   * Une déclaration qui n'est ni un achat ni une vente — un relevé bancaire,
-   * un ticket — ne répond pas à la question et ne la clôt donc pas.
+   * vente ». La réponse était là, dans le même objet, à deux champs de
+   * distance : la personne avait répondu à la capture, la lecture ne tranchait
+   * pas — ce qui est normal sur un achat tunisien — et l'écran reposait la
+   * question. Une déclaration qui n'est ni un achat ni une vente — un relevé
+   * bancaire, un ticket — ne répond pas à la question et ne la clôt donc pas.
    */
   const sensIndetermine =
     extraction != null &&
@@ -528,7 +681,7 @@ function PieceScreen() {
   };
 
   /** « 2026-08-31 » se lit mal ; « 31/08/2026 » se lit. */
-  const jourLisible = (iso: string | undefined) => {
+  const jourLisible = (iso: string | undefined | null) => {
     if (!iso) return null;
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
     return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
@@ -538,8 +691,7 @@ function PieceScreen() {
    * « Classé dans … » — le libellé du compte principal que le Socle a retenu.
    *
    * Pas une catégorie d'écran : la première ligne de l'écriture proposée, donc
-   * exactement ce qui sera comptabilisé. Dire autre chose ici serait promettre
-   * un classement que le grand livre ne confirmerait pas.
+   * exactement ce qui sera comptabilisé.
    */
   const classement = proposal?.lignes[0]?.libelle ?? t("pme.regle.classe.inconnu");
 
@@ -587,27 +739,14 @@ function PieceScreen() {
   const reference = payload?.references
     ? (Object.values(payload.references).find((v) => v && v.trim().length > 0) ?? null)
     : null;
-  /**
-   * Pourquoi la confirmation est impossible, DIT À LA PERSONNE.
-   *
-   * Le serveur rend deux choses : un `verdict` — qui est un code, même s'il
-   * s'écrit en français — et une `raison` en prose, faite pour le cabinet.
-   * L'écran de la PME ne rend que le premier, traduit. La prose reste au
-   * cabinet, qui en parle la langue.
-   *
-   * Le repli n'est pas un défaut caché : un verdict inconnu donne la phrase
-   * générique, et le dirigeant sait quand même qu'il doit attendre.
-   */
+
   /*
    * ============================== ON BRANCHE SUR UN CODE, PAS SUR UNE PHRASE
    *
-   * Cette comparaison était `verdict === "à rejeter"` : un code écrit en
-   * français, comparé accent par accent, dans un autre paquet que celui qui le
-   * produit. Le jour où quelqu'un reformule « à rejeter », l'écran tombait
-   * silencieusement sur sa phrase générique — et aucune épreuve ne l'aurait vu,
-   * parce que la comparaison compile et que le repli est légitime.
-   *
-   * La conversion vit au Socle, en un seul endroit, avec son épreuve.
+   * La conversion vit au Socle, en un seul endroit, avec son épreuve : un
+   * verdict est un code, même quand il s'écrit en français, et le comparer
+   * accent par accent depuis un autre paquet tombait en silence le jour d'une
+   * reformulation.
    */
   const verdictBloquant =
     proposalAttempt && !proposalAttempt.ok
@@ -625,9 +764,8 @@ function PieceScreen() {
   /**
    * Trois lignes, chacune pointant sa source.
    *
-   * Le prototype ne montre ni base ni TTC dans le détail : l'émetteur, la
-   * date, et LA TVA — parce que c'est la seule des trois qui soit de l'argent
-   * pour le dirigeant. Le total, lui, est déjà encadré au-dessus.
+   * L'émetteur, la date, et LA TVA — parce que c'est la seule des trois qui
+   * soit de l'argent pour le dirigeant. Le total, lui, est déjà au chapeau.
    */
   const lignesCitees: Array<{ cle: string; label: string; valeur: string | null; champ: string }> =
     [
@@ -663,9 +801,9 @@ function PieceScreen() {
 
   /* ============================================================== JE LIS
    *
-   * Plein écran, sans la barre basse : le prototype la retire pendant la
-   * lecture et pendant le soulagement. Ce sont les deux seuls moments où le
-   * produit demande qu'on ne fasse rien d'autre.
+   * Plein écran, sans la barre basse : ce sont les deux seuls moments où le
+   * produit demande qu'on ne fasse rien d'autre. Le dessin du dossier ne
+   * décrit pas ces écrans ; ils gardent leur propre balisage.
    *
    * Une barre de progression mentirait — la lecture n'a pas d'étapes connues
    * d'avance. Un souffle dit la vérité : je travaille, et je ne sais pas
@@ -682,8 +820,7 @@ function PieceScreen() {
         <div className="rg-breathe mt-[30px] h-0.5 w-[130px] bg-foreground" />
         {/*
          * La lecture continue sans l'écran : le serveur la mène à son terme et
-         * le dossier le dira. Rester devant n'est pas une obligation — c'est
-         * le geste natif attendu, et une lecture dure des minutes.
+         * le dossier le dira. Rester devant n'est pas une obligation.
          */}
         <Link
           to="/pme/list"
@@ -691,12 +828,6 @@ function PieceScreen() {
         >
           {t("pme.lecture.arrierePlan")}
         </Link>
-        {/*
-         * Le prototype annonce « Relevé · 312 mots situés ». On ne l'affiche
-         * que lorsqu'un relevé existe déjà — à la relecture d'une pièce. En
-         * première lecture le compte n'existe pas encore, et l'inventer
-         * contredirait la phrase juste au-dessus.
-         */}
         {dossier.data && dossier.data.tokens.length > 0 ? (
           <p className="mt-[26px] font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
             {t("pme.lecture.releve", { mots: dossier.data.tokens.length })}
@@ -730,13 +861,9 @@ function PieceScreen() {
         <p className="mt-5 text-[27px] font-semibold tracking-[-0.03em]">{t("pme.regle.titre")}</p>
         <p className="mt-2.5 max-w-[280px] text-[15px] leading-[1.55] text-text-2">
           {/*
-           * On ne dit « transmis » que si la pièce l'est VRAIMENT.
-           *
-           * Cette phrase annonçait la transmission au cabinet dans tous les
-           * cas, parce que la capture partageait tout d'office. Maintenant que
-           * la transmission est un geste, la promettre sans qu'elle ait eu
-           * lieu serait un mensonge — et sur une pièce comptable, un mensonge
-           * qui coûte cher à découvrir.
+           * On ne dit « transmis » que si la pièce l'est VRAIMENT. Promettre la
+           * transmission sans qu'elle ait eu lieu est un mensonge — et sur une
+           * pièce comptable, un mensonge qui coûte cher à découvrir.
            */}
           {cabinet.data && piece.vis === "partage"
             ? t("pme.regle.classe.cabinet", { classe: classement, cabinet: cabinet.data.name })
@@ -763,10 +890,8 @@ function PieceScreen() {
 
   /* ============================================================ LA PIÈCE
    *
-   * La visionneuse n'occupe plus la moitié de l'écran en permanence : le
-   * prototype ne la montre nulle part dans le parcours. Elle s'ouvre par
-   * « Voir la facture », ou par une source citée — et c'est alors la zone
-   * exacte qui s'affiche, ce qui est tout l'intérêt.
+   * La visionneuse s'ouvre par « Voir la facture », ou par une source citée —
+   * et c'est alors la zone exacte qui s'affiche, ce qui est tout l'intérêt.
    */
   if (montrerPiece) {
     return (
@@ -780,19 +905,9 @@ function PieceScreen() {
             ‹ {t("pme.piece.retour")}
           </button>
           {/*
-           * Le NOM du champ, pas son chemin.
-           *
-           * Cette ligne rendait `zoom.field` — le chemin machine dans
-           * l'extraction — avec la classe `uppercase`. La personne lisait donc
-           * « ISSUER » sous la photo de sa facture, en capitales anglaises,
-           * alors que `pme.extract.issuer` existe dans les trois langues.
-           *
-           * Le traducteur de chemins était écrit, testé, et utilisé par l'écran
-           * du cabinet. Il n'était simplement pas importé ici. Et rien
-           * n'interdisait d'afficher un identifiant machine : ni test, ni règle
-           * de lint — c'est la dette D42.
-           *
-           * `num` est retiré avec le chemin : cette classe sert aux chiffres.
+           * Le NOM du champ, pas son chemin. Cette ligne rendait `zoom.field`
+           * — le chemin machine — en capitales anglaises : la personne lisait
+           * « ISSUER » sous la photo de sa facture. C'est la dette D42.
            */}
           {zoom ? (
             <span className="ms-auto text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -819,8 +934,6 @@ function PieceScreen() {
    * ramettes, pas d'un total hors taxe — et c'est en relisant les
    * désignations et les prix unitaires qu'il repère une erreur de lecture que
    * les totaux, eux, ne trahissent pas.
-   *
-   * Les articles viennent du contrat de lecture, jamais d'une saisie.
    */
   if (montrerDetail) {
     return (
@@ -867,18 +980,10 @@ function PieceScreen() {
                 </div>
               ))}
               {/*
-               * LE PIED DE FACTURE EN ENTIER, et pas seulement la base.
-               *
-               * Le 7 octobre 2026, le commanditaire signale : « la TVA n'est
-               * pas affichée ». Elle était bien lue — 2,347 sur la facture
-               * CASA-ELECT — mais ce pied ne montrait QUE la base HT. Ni TVA,
-               * ni droits, ni total.
-               *
-               * C'est le même défaut que le timbre invisible du 4 octobre : la
-               * valeur existe, le contrat la porte, et l'écran s'arrête avant.
-               * Montrer une base sans sa TVA et sans son total laisse la
-               * personne incapable de vérifier que le produit a bien lu — ce
-               * qui est la seule chose qu'on lui demande.
+               * LE PIED DE FACTURE EN ENTIER, et pas seulement la base. Montrer
+               * une base sans sa TVA et sans son total laisse la personne
+               * incapable de vérifier que le produit a bien lu — ce qui est la
+               * seule chose qu'on lui demande.
                */}
               <div className="flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
                 <span className="text-[13.5px] font-semibold">{t("pme.extract.base")}</span>
@@ -931,6 +1036,29 @@ function PieceScreen() {
           {t("pme.piece.title")}
         </p>
         <p className="text-[13.5px] leading-[1.55] text-text-2">{t("pme.scan.final")}</p>
+        {/*
+         * ============================ POURQUOI ELLE N'A PAS ÉTÉ LUE, ÉCRIT ICI
+         *
+         * La base inscrit le motif depuis le 19 octobre, et aucun écran ne le
+         * lisait : le dirigeant au plafond de son forfait voyait cet écran
+         * exactement comme celui d'une pièce qui attend son tour. Il tapait
+         * « Lire », et rien ne se passait.
+         *
+         * Le bouton reste : c'est la base qui tranche, et un plafond relevé la
+         * minute d'après doit pouvoir être essayé sans quitter l'écran.
+         */}
+        {motifNonLue === null ? null : (
+          <RefusDeLecture
+            motif={motifNonLue}
+            dateLisible={
+              lectureRefusee
+                ? new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(
+                    new Date(lectureRefusee.le),
+                  )
+                : null
+            }
+          />
+        )}
         {pagesScan.length > 0 ? (
           <div className="flex flex-col gap-3">
             {pagesScan.map((url, i) => (
@@ -951,10 +1079,47 @@ function PieceScreen() {
             {t("pme.doc.error")}
           </p>
         )}
+        {/*
+         * ================================== LA SORTIE DE L'ESPACE PRIVÉ, SANS CABINET
+         *
+         * Une pièce `personnel` n'est jamais lue (B6), et « Lire la pièce »
+         * sur une pièce privée ne pouvait donc QUE échouer. Le message disait
+         * la sortie — « tant que vous ne la transmettez pas » — mais le seul
+         * bouton qui l'offrait était gardé par `cabinet.data` : sans mandat de
+         * cabinet, il n'y avait aucun bouton, donc aucune sortie. Le dirigeant
+         * qui essaie seul était dans une impasse fermée.
+         *
+         * « La dire à la société » n'est pas une transmission : `entite` est
+         * la bibliothèque de la société — lue, rangée, et elle ne part chez
+         * personne. Elle n'a besoin d'aucun mandat, et la transmission reste
+         * la décision séparée qu'elle doit être.
+         *
+         * Le bouton de lecture ne disparaît pas pour autant : c'est la base
+         * qui tranche, et un plafond relevé la minute d'après doit pouvoir
+         * être essayé sans quitter l'écran. Il passe seulement SECOND quand
+         * on sait qu'il ne peut pas aboutir.
+         */}
+        {vis === "personnel" ? (
+          <div className="manque" data-k="attente">
+            <p className="t-body">{t("pme.piece.versLaSociete.sous")}</p>
+            <button
+              type="button"
+              disabled={versLaSociete.isPending}
+              onClick={() => versLaSociete.mutate()}
+              className="mt-3 h-[54px] w-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-50"
+            >
+              {t("pme.piece.versLaSociete")}
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={() => read.mutate()}
-          className="h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
+          className={
+            vis === "personnel"
+              ? "h-[48px] w-full border border-border text-[14px] font-medium"
+              : "h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
+          }
         >
           {t("pme.read.run")}
         </button>
@@ -971,118 +1136,314 @@ function PieceScreen() {
     );
   }
 
-  /* ============================================== JE VÉRIFIE  /  LA PIÈCE LUE
+  /* ══════════════════════════════════════════════════════════════════════════
+   * LE DOSSIER
    *
-   * Une seule colonne, comme le prototype. Avant confirmation c'est une
-   * question ; après, c'est le parcours de la pièce en une ligne.
-   */
-  return (
-    <div className="rg-rise flex flex-col gap-0 px-1 pt-2">
-      {booked ? (
-        <>
-          <button
-            type="button"
-            onClick={() => void navigateList()}
-            className="self-start text-[13px] font-medium text-text-2"
-          >
-            ‹ {t("pme.piece.retour")}
-          </button>
-          <p className="mt-3 text-[24px] font-semibold leading-[1.15] tracking-[-0.025em]">
-            {payload?.issuer ?? t("pme.piece.title")}
-          </p>
-          <p className="num mt-[5px] text-[13.5px] font-medium text-text-2">
-            {reference ? reference + " · " : ""}
-            {lisible(payload?.totals?.ttc) ?? "—"} {payload?.currency ?? pme.currency}
-          </p>
-          <Parcours etapes={etapes} />
-        </>
-      ) : (
-        <p className="text-[25px] font-semibold leading-[1.15] tracking-[-0.025em]">
-          {t("pme.verifie.titre.1")}
-          <br />
-          {t("pme.verifie.titre.2")}
-        </p>
-      )}
+   * À partir d'ici, c'est le dessin. Tout ce qui s'affiche vient d'un appel ;
+   * rien n'est fabriqué. Trois états par champ, jamais deux : la valeur, le
+   * vide, et l'absence — « — » quand on ne sait pas, jamais « 0 ».
+   * ══════════════════════════════════════════════════════════════════════════ */
 
-      {/* Ce que la lecture a relevé, brut, tel que la pièce le dit. */}
-      <div className="mt-4 border border-border bg-card">
-        <div className="border-b border-border px-4 py-3.5 font-mono text-[11px] leading-[1.85] text-text-2">
-          {payload?.issuer ?? "—"}
-          {reference ? " · " + reference : ""}
-          <br />
-          {t("pme.extract.base")} {lisible(payload?.totals?.base_ht) ?? "—"}
-          <br />
+  const vente = payload?.document_kind === "facture_vente";
+  const achat = payload?.document_kind === "facture_achat";
+  const devise = payload?.currency ?? pme.currency;
+
+  /*
+   * `vis` est lue plus haut, avant la branche « pas encore lue » : c'est elle
+   * qui décide si la pièce peut être lue, et donc ce que cet écran propose.
+   *
+   * La branche `entite` n'est plus inerte : `Visibility` porte les trois
+   * valeurs depuis le 19 octobre, et l'écran de capture y met les pièces
+   * destinées à la société avant de les faire lire.
+   */
+  const role = acces.data?.role ?? null;
+  const siege = role === "collaborateur";
+
+  /**
+   * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
+   *
+   * On ne construit la date que sur une forme VÉRIFIÉE : `new Date("")` puis
+   * `Intl.DateTimeFormat` lève, et l'écran entier tomberait pour une pastille.
+   */
+  const dateDuDoc = /^\d{4}-\d{2}-\d{2}/.test(payload?.document_date ?? "")
+    ? payload!.document_date!
+    : null;
+  const periode = dateDuDoc
+    ? new Intl.DateTimeFormat(locale, { month: "short", year: "2-digit" }).format(
+        new Date(dateDuDoc),
+      )
+    : null;
+
+  const titreDeLaPiece =
+    [nomDuType(piece.documentKind), reference].filter(Boolean).join(" ") || t("pme.piece.title");
+
+  /*
+   * ---------------------------------------------- L'ÉTAT DE RÈGLEMENT
+   *
+   * Somme des lignes NON ÉTEINTES : la base répond les deux faces d'un
+   * paiement annulé (`eteint`), et « ce qui est payé aujourd'hui » a donc une
+   * seule définition, au Socle. L'écran ne choisit rien.
+   *
+   * Sans les décimales du pack, on ne convertit pas : trois décimales sont
+   * tunisiennes, et la première juridiction à deux aurait affiché mille fois
+   * le montant payé (R4).
+   */
+  const paiementsVivants = (paiements.data ?? []).filter((p) => !p.eteint);
+  const payeMineur = paiementsVivants.reduce((s, p) => s + (p.montantMineur ?? 0), 0);
+  const ttcMineur =
+    payload?.totals?.ttc && decimales !== null
+      ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
+      : null;
+  const payeLisible =
+    decimales !== null ? lisible(depuisUniteMineure(payeMineur, decimales)) : null;
+  const resteMineur = ttcMineur !== null ? ttcMineur - payeMineur : null;
+  const resteLisible =
+    resteMineur !== null && decimales !== null
+      ? lisible(depuisUniteMineure(Math.max(resteMineur, 0), decimales))
+      : null;
+  const part =
+    ttcMineur !== null && ttcMineur > 0
+      ? Math.min(100, Math.max(0, (payeMineur / ttcMineur) * 100))
+      : 0;
+
+  /*
+   * ---------------------------------------------- CE QUE J'AI VÉRIFIÉ
+   *
+   * Uniquement des faits que le produit connaît : un refus de lecture, une
+   * date absente, un sens non tranché, un verdict qui bloque, un classement
+   * retenu. Aucun contrôle inventé — une liste de coches qui ne vient d'aucun
+   * appel apprend à ne plus lire la liste.
+   *
+   * Les signalements de lecture (`extraction.flags`) n'y sont PAS : ils
+   * appartiennent à la supervision du cabinet, qui en parle la langue.
+   */
+  const dateAbsente = !payload?.document_date;
+  const controles: Array<{
+    cle: string;
+    k: "ok" | "q" | "no" | "az";
+    p: string;
+    sous?: string | null;
+    corps?: "sens" | null;
+  }> = [];
+  if (dossier.data.lectureRefusee) {
+    controles.push({ cle: "refus", k: "no", p: t("pme.piece.lectureRefusee") });
+  }
+  if (dateAbsente) {
+    // La question est posée ici ; le champ qui y répond est dans le bloc de
+    // lecture, à la ligne « Date », là où la personne la cherche.
+    controles.push({ cle: "date", k: "q", p: t("pme.date.manque.lede") });
+  }
+  if (sensIndetermine) {
+    controles.push({
+      cle: "sens",
+      k: "q",
+      p: t("pme.sens.pourquoi"),
+      corps: "sens",
+    });
+  }
+  if (!confirmable && !sensIndetermine && proposalAttempt && !proposalAttempt.ok) {
+    /*
+     * LA RAISON PASSE DEVANT LE BOUTON MORT.
+     *
+     * 10 octobre 2026 : la phrase du serveur — un verdict collé à des motifs
+     * techniques — s'affichait en 12,5 px SOUS le bouton, donc hors de
+     * l'écran. Quand une action est impossible, la raison est l'information
+     * principale ; le bouton n'est qu'un rappel de ce qui viendra après.
+     */
+    controles.push({
+      cle: "bloque",
+      k: "no",
+      p: raisonDuBlocage,
+      sous: t("pme.bloque.geste"),
+    });
+  }
+  if (confirmable) {
+    controles.push({
+      cle: "classe",
+      k: "ok",
+      p: `${t("pme.piece.classee")} ${classement}`,
+    });
+  }
+  if (booked) {
+    controles.push({ cle: "comptee", k: "ok", p: t("pme.book.done") });
+  }
+
+  /** La chaîne : la pièce elle-même, puis ce qui en est né. */
+  const nes = joints.data ?? [];
+
+  return (
+    <div data-ecran="dossier">
+      {/* ── la barre du haut ─────────────────────────────────────────── */}
+      <div className="top">
+        <button
+          type="button"
+          className="bk"
+          aria-label={t("pme.piece.retour")}
+          onClick={() => void navigateList()}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M14.5 5.5L8 12l6.5 6.5" />
+          </svg>
+        </button>
+        <span className="ttl">{titreDeLaPiece}</span>
+        {periode ? <span className="per">{periode}</span> : null}
+      </div>
+
+      {/* ── le chapeau du dossier ────────────────────────────────────── */}
+      <div className="tete">
+        <span className={vente ? "kind rec" : "kind"}>
+          <i />
+          {vente
+            ? t("pme.piece.sens.vente")
+            : achat
+              ? t("pme.piece.sens.achat")
+              : t("pme.piece.sens.inconnu")}
+        </span>
+        <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
+        <p className="obj">
+          {nomDuType(piece.documentKind) ?? t("pme.piece.title")}
+          {reference ? ` · ${reference}` : ""}
+          {payload?.document_date ? ` · ${jourLisible(payload.document_date)}` : ""}
+        </p>
+        <div className={vente ? "amt vent" : "amt"}>
+          {lisible(payload?.totals?.ttc) ?? "—"}{" "}
+          <u>
+            {devise} {t("pme.extract.ttc")}
+          </u>
+        </div>
+        <p className="decomp">
+          {t("pme.extract.base")} {lisible(payload?.totals?.base_ht) ?? "—"} ·{" "}
           {t("pme.extract.vat")} {lisible(payload?.totals?.vat) ?? "—"}
-          {/*
-           * Les droits hors TVA — le timbre, surtout.
-           *
-           * Le 4 octobre 2026, le timbre de la facture de loyer était lu,
-           * exact, en base, et invisible : `other_charges` n'apparaissait
-           * qu'une fois dans ce fichier, dans la déclaration de type. C'est
-           * aussi lui qui fait la différence entre HT + TVA et le TTC imprimé :
-           * ne pas le montrer rendait l'écart inexplicable à l'écran.
-           *
-           * Le libellé vient du pack (R4), avec sa référence légale quand il la
-           * porte : « d'où vient ce chiffre » doit avoir une réponse ici.
-           */}
           {droits.map((d, i) => (
             <span key={`${d.code}-${i}`}>
-              <br />
+              {" · "}
               {d.libelle} {lisible(d.montant) ?? "—"}
-              {d.reference ? ` · ${d.reference}` : ""}
               {d.connu ? "" : ` · ${t("pme.extract.droitInconnu")}`}
             </span>
           ))}
-        </div>
-        <div className="flex items-center justify-between gap-3 bg-secondary px-4 py-3.5">
-          <span className="text-[13px] font-semibold">{t("pme.verifie.total")}</span>
-          <span className="num border border-foreground px-2.5 py-[3px] text-[17px] font-medium">
-            {lisible(payload?.totals?.ttc) ?? "—"}
-          </span>
-        </div>
+          <br />
+          {pme.orgName}
+        </p>
       </div>
 
-      <div className="mt-[22px] flex items-baseline justify-between gap-3 pb-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {booked ? t("pme.piece.jaiLu") : t("pme.verifie.source")}
+      {/* ── l'état de règlement ──────────────────────────────────────── */}
+      <div className="solde">
+        <span className="hd">
+          <b>
+            {resteMineur !== null && resteMineur <= 0
+              ? t("pme.paiement.solde")
+              : t("pme.paiement.reste")}
+          </b>
+          <span>
+            {payeLisible ?? "—"} / {lisible(payload?.totals?.ttc) ?? "—"}
+          </span>
+        </span>
+        <span className="bar">
+          <i style={{ width: `${part}%` }} />
+        </span>
+        {/*
+         * Trois états, pas deux. La valeur : ce qui reste dû. Le vide : rien ne
+         * reste. L'absence : sans total lu ou sans décimales du pack, on ne
+         * sait pas — et on le dit, plutôt que d'écrire « 0 ».
+         */}
+        <p className="ech">
+          {resteMineur === null ? (
+            "—"
+          ) : resteMineur > 0 ? (
+            <>
+              {t("pme.paiement.reste")}{" "}
+              <b>
+                {resteLisible ?? "—"} {devise}
+              </b>
+            </>
+          ) : (
+            t("pme.paiement.solde")
+          )}
         </p>
-        {articles.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setDetail(true)}
-            className="border-b border-dotted border-current text-[11px] font-medium text-signal-info"
+      </div>
+
+      {/* ── ce que le dirigeant centralise ──────────────────────────────
+          Le rôle vient de `acces.monAcces`, pas de l'offre : l'écran du
+          dossier ne porte aucune valeur d'abonnement, et n'appelle donc pas
+          le forfait. La règle de dégradation le lit UNE fois, au layout. */}
+      {siege ? (
+        <div className="centr calme">
+          <i />
+          <p>{t("pme.piece.siege")}</p>
+        </div>
+      ) : null}
+
+      {/* ── la chaîne ────────────────────────────────────────────────── */}
+      <div className="sec">
+        <h2>{t("pme.piece.chaine")}</h2>
+        <span>{t("pme.piece.chaine.pieces", { count: nes.length + 1 })}</span>
+      </div>
+      <div className="chain">
+        <button type="button" className="doc" onClick={() => setPiece(true)}>
+          <span className="bd">
+            <span className="tp">{nomDuType(piece.documentKind) ?? t("pme.piece.title")}</span>
+            <b>{reference ?? t("pme.piece.title")}</b>
+            <span className="mt">
+              {jourLisible(payload?.document_date) ?? jourLisible(piece.createdAt) ?? "—"}
+            </span>
+          </span>
+          {lisible(payload?.totals?.ttc) ? (
+            <span className="vl">{lisible(payload?.totals?.ttc)}</span>
+          ) : null}
+        </button>
+        {nes.map((p) => (
+          <Link
+            key={p.id}
+            className="doc"
+            to="/pme/piece/$pieceId"
+            params={{ pieceId: p.id }}
+            preload="intent"
           >
-            {t("pme.detail.voir")}
-          </button>
+            <span className="bd">
+              <span className="tp">{t("pme.piece.chaine.issueDe")}</span>
+              <b>{nomDuType(p.documentKind) ?? t("pme.piece.title")}</b>
+              <span className="mt">{jourLisible(p.createdAt) ?? "—"}</span>
+            </span>
+          </Link>
+        ))}
+        {nes.length === 0 ? (
+          <div className="doc miss">
+            <span className="bd">
+              <span className="tp">{t("pme.piece.chaine.aRattacher")}</span>
+              <span className="ask">{t("pme.piece.chaine.vide")}</span>
+            </span>
+          </div>
         ) : null}
       </div>
+      {/*
+       * Le dessin pose ici « Rattacher un document ». Aucun appel du contrat ne
+       * rattache un document quelconque à une pièce : `rattacherJustificatif`
+       * lie une PREUVE à un PAIEMENT, et une pièce née d'une autre naît avec
+       * son `sourcePieceId` à la capture. Plutôt qu'un bouton qui ne mènerait
+       * nulle part, l'écran dit où le geste se trouve.
+       */}
+      <p className="foot">{t("pme.piece.chaine.foot")}</p>
 
-      {lignesCitees.map((l) => (
-        <div
-          key={l.cle}
-          className="flex items-center justify-between gap-3 border-t border-border py-[11px]"
-        >
-          <span className="text-[13.5px] text-text-2">{l.label}</span>
-          {l.cle === "date" && l.valeur === null ? (
+      {/* ── ce que j'ai lu, champ par champ ──────────────────────────── */}
+      <div className="sec">
+        <h2>{t("pme.piece.jaiLu")}</h2>
+      </div>
+      <div className="lines">
+        {lignesCitees.map((l) =>
+          l.cle === "date" && l.valeur === null ? (
             /*
              * La pièce ne porte pas de date lisible. On propose le jour du
-             * scan — affiché, modifiable — plutôt que de bloquer. Il ne
-             * devient la date de l'écriture qu'à la confirmation.
+             * scan — affiché, modifiable — plutôt que de bloquer. La saisie
+             * pose une PRÉCISION, qui reprojette les articles ; l'extraction
+             * garde sa date vide, c'est ce qui s'est lu sur le document (R7).
              */
-            <span className="flex flex-col items-end gap-1">
-              {/*
-               * ============================== ET LA DATE S'ENREGISTRE, ENFIN
-               *
-               * Ce champ existait et ne servait QU'À la proposition
-               * d'écriture : l'écriture était datée, et la pièce restait sans
-               * mois. Elle continuait donc de figurer dans « ces pièces
-               * attendent leur date », après que la personne ait répondu —
-               * et son montant restait hors des charges du mois.
-               *
-               * La saisie pose désormais une PRÉCISION, qui reprojette les
-               * articles. L'extraction, elle, garde sa date vide : c'est ce
-               * qui s'est réellement lu sur le document (R7).
-               */}
+            <div className="rg" key={l.cle}>
+              <span className="bd">
+                <b>{l.label}</b>
+                <span className="mt">
+                  {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
+                </span>
+              </span>
               <input
                 type="date"
                 value={dateRetenue}
@@ -1095,483 +1456,464 @@ function PieceScreen() {
                   // est incomplète : on n'enregistre que ce qui est une date.
                   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
                 }}
-                className="num border border-border bg-card px-2 py-1 text-[13.5px] font-medium disabled:opacity-50"
+                className="vl"
               />
-              <span className="text-[11px] text-muted-foreground">
-                {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
-              </span>
-            </span>
-          ) : (
-            <span className="num text-[13.5px] font-medium">
-              {l.valeur ?? "—"}
-              {byField.get(l.champ) ? (
-                <button
-                  type="button"
-                  onClick={() => voirLaSource(l.champ)}
-                  className="ms-2 border-b border-dotted border-current text-[11px] font-medium text-signal-info"
-                >
+            </div>
+          ) : byField.get(l.champ) ? (
+            <button
+              type="button"
+              className="rg"
+              key={l.cle}
+              onClick={() => voirLaSource(l.champ)}
+              aria-label={`${l.label} — ${t("pme.citation.show")}`}
+            >
+              <span className="bd">
+                <b>{l.label}</b>
+                <span className="recu">
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    <path d="M4.5 12.5l4.5 4.5 10-10" />
+                  </svg>
                   {t("pme.citation.source")}
-                </button>
-              ) : null}
-            </span>
-          )}
-        </div>
-      ))}
-
-      {booked ? (
-        <div className="flex items-center justify-between gap-3 border-t border-foreground py-3">
-          <span className="text-[13.5px] font-semibold">{t("pme.piece.classee")}</span>
-          <span className="text-[13.5px]">{classement}</span>
-        </div>
+                </span>
+              </span>
+              <span className="vl">{l.valeur ?? "—"}</span>
+            </button>
+          ) : (
+            <div className="rg" key={l.cle}>
+              <span className="bd">
+                <b>{l.label}</b>
+                <span className="mt">{t("pme.citation.missing")}</span>
+              </span>
+              <span className="vl">{l.valeur ?? "—"}</span>
+            </div>
+          ),
+        )}
+      </div>
+      <p className="foot">{t("pme.verifie.source")}</p>
+      {articles.length > 0 ? (
+        <button type="button" className="add" onClick={() => setDetail(true)}>
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <path d="M12 5.5v13M5.5 12h13" />
+          </svg>
+          {t("pme.detail.voir")}
+        </button>
       ) : null}
 
-      {/* Sa question, pas un ordre : c'est le dirigeant qui tranche. */}
+      {/* ── les règlements ───────────────────────────────────────────────
+          UN RÈGLEMENT NE SE MODIFIE PAS : il s'annule par une ligne datée et
+          motivée. `capture.motifsDAnnulation` puis `capture.annulerPaiement`
+          vivent dans `CommentCEstPaye`, avec la saisie du montant partiel, la
+          date déclarée, la référence et la photo de la preuve. L'écran n'ouvre
+          aucun second chemin vers ces écritures : deux chemins pour une même
+          écriture seraient deux occasions de divergence. */}
+      <div className="sec">
+        <h2>{vente ? t("pme.piece.encaissements") : t("pme.piece.reglements")}</h2>
+        <span>{t("pme.piece.mouvements", { count: paiementsVivants.length })}</span>
+      </div>
       {!booked ? (
-        <div className="mt-5 flex gap-3">
-          <MalicaAvatar size={32} alt="Malica" rond />
-          <p className="text-[15px] leading-[1.5]">
-            {payload?.totals?.ttc
-              ? t("pme.verifie.question", {
-                  montant: lisible(payload.totals.ttc) ?? "",
-                  devise: payload.currency ?? pme.currency,
-                })
-              : t("pme.verifie.question.sansTotal")}
-          </p>
-        </div>
+        <CommentCEstPaye
+          pieceId={pieceId}
+          visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
+          dateDeLaPiece={payload?.document_date ?? null}
+          /*
+           * Le facteur vient du PACK, pas d'un « × 1000 » écrit ici. Trois
+           * décimales sont tunisiennes ; la première juridiction à deux aurait
+           * proposé mille fois le montant payé, et l'écran n'aurait rien
+           * signalé. R4 : aucune constante réglementaire dans le code.
+           */
+          ttcMineur={ttcMineur}
+          devise={devise}
+          /*
+           * Le sens vient du TYPE TRANCHÉ, et de nulle part ailleurs. `null`
+           * quand il ne l'est pas, et le reçu ne se propose alors pas : un
+           * « reçu de dépense » posé sur une vente est un document faux, et un
+           * document faux remis à un tiers est pire qu'un document absent.
+           */
+          sens={achat ? "depense" : vente ? "revenu" : null}
+          tiers={payload?.issuer ?? null}
+          reference={reference}
+          decimales={decimales}
+        />
       ) : null}
 
-      {error ? <p className="mt-3 text-xs text-signal-warn">{error}</p> : null}
-
-      <div className="mt-6 flex flex-col gap-0.5 pb-2">
-        {booked ? (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPiece(true)}
-              className="h-12 bg-foreground text-[14px] font-semibold text-background"
-            >
-              {t("pme.piece.voir")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setDetail(true)}
-              className="h-12 border border-foreground text-[14px] font-semibold"
-            >
-              {t("pme.detail.voir")}
-            </button>
+      {/* ── ce que j'ai vérifié ──────────────────────────────────────── */}
+      {controles.length > 0 ? (
+        <>
+          <div className="sec">
+            <h2>{t("pme.piece.verifie")}</h2>
+            <span>{t("pme.piece.points", { count: controles.length })}</span>
           </div>
-        ) : (
-          <>
-            {/*
-             * ============================ LA RAISON PASSE DEVANT LE BOUTON MORT
-             *
-             * 10 octobre 2026. Le commanditaire surligne ce que l'écran lui
-             * montrait sous un bouton gris :
-             *
-             *   « Aucune écriture ne se propose : la pièce est « anomalie à
-             *     signaler ». Aucun montant n'est retenu — ils sont à saisir :
-             *     montant illisible : « 514,700 514,700 ». »
-             *
-             *   « Le texte sélectionné ne doit pas apparaître aux PME. »
-             *
-             * Il a raison deux fois. Cette phrase est construite côté serveur
-             * en collant un VERDICT — qui est une chaîne française servant de
-             * code — à des motifs techniques ; elle ne se traduit pas, et elle
-             * parle le vocabulaire de l'outil, pas celui du dirigeant.
-             *
-             * Et sa place était fausse : 12,5 px, centrée, SOUS le bouton,
-             * donc hors de l'écran. Ce que le dirigeant voyait, c'était le
-             * plus gros élément de la page, gris, sans explication.
-             *
-             * Quand une action est impossible, la RAISON est l'information
-             * principale. Le bouton n'est qu'un rappel de ce qui viendra
-             * après.
-             */}
-            {!confirmable && !sensIndetermine ? (
-              <div className="mb-3 border-s-[3px] border-signal-warn bg-accent px-3.5 py-3">
-                <p className="text-[14.5px] font-medium leading-[1.45]">{raisonDuBlocage}</p>
-                <p className="mt-1.5 text-[13px] leading-[1.45] text-text-2">
-                  {t("pme.bloque.geste")}
-                </p>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              disabled={confirm.isPending || !confirmable}
-              onClick={() => confirm.mutate()}
-              className="h-[54px] w-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-50"
-            >
-              {confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui")}
-            </button>
-            {/*
-             * « Corriger » reprend la PHOTO, comme le prototype. Relancer la
-             * lecture serait de toute façon refusé : R7 interdit d'effacer un
-             * relevé, et c'est par là que commence `capture_read_persist`.
-             */}
-            <button
-              type="button"
-              onClick={pme.ouvrirScanner}
-              className="h-[50px] w-full text-[16px] font-medium"
-            >
-              {t("pme.verifie.corriger")}
-            </button>
-            {sensIndetermine ? (
-              /*
-               * La lecture n'a pas pu dire si la pièce est un achat ou une
-               * vente : ni l'émetteur ni le destinataire n'est ce dossier.
-               * Elle ne devine pas ; elle demande. La réponse est enregistrée
-               * à côté de la lecture, datée et signée.
-               */
-              <div className="mt-2 border border-border bg-card p-4">
-                <p className="text-[14px] font-medium">{t("pme.sens.question")}</p>
-                <p className="mt-1 text-[12.5px] leading-[1.5] text-text-2">
-                  {t("pme.sens.pourquoi")}
-                </p>
-                <div className="mt-3 grid gap-2">
-                  <button
-                    type="button"
-                    onClick={() => preciser.mutate("facture_achat")}
-                    disabled={preciser.isPending}
-                    className="min-h-[46px] border border-foreground px-3 text-[14px] font-medium disabled:opacity-40"
-                  >
-                    {t("pme.sens.achat")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => preciser.mutate("facture_vente")}
-                    disabled={preciser.isPending}
-                    className="min-h-[46px] border border-foreground px-3 text-[14px] font-medium disabled:opacity-40"
-                  >
-                    {t("pme.sens.vente")}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {/*
-             * ============================ LE PAIEMENT, AVANT LE RANGEMENT
-             *
-             * Il descend sous les montants, sur la MÊME page : quatre écrans
-             * font quatre occasions d'abandonner. Et il vient avant « où ça
-             * va », parce qu'une pièce qui part au cabinet doit partir avec
-             * la façon dont elle a été réglée.
-             */}
-            <CommentCEstPaye
-              pieceId={pieceId}
-              visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
-              dateDeLaPiece={payload?.document_date ?? null}
-              /*
-               * Le facteur vient du PACK, pas d'un « × 1000 » écrit ici.
-               * Trois décimales sont tunisiennes ; la première juridiction à
-               * deux aurait proposé mille fois le montant payé, et l'écran
-               * n'aurait rien signalé. R4 : aucune constante réglementaire
-               * dans le code.
-               */
-              ttcMineur={
-                payload?.totals?.ttc && decimales !== null
-                  ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
-                  : null
-              }
-              devise={payload?.currency ?? pme.currency}
-              /*
-               * Le sens vient du TYPE TRANCHÉ, et de nulle part ailleurs.
-               * `null` quand il ne l'est pas, et le reçu ne se propose alors
-               * pas : un « reçu de dépense » posé sur une vente est un
-               * document faux, et un document faux remis à un tiers est pire
-               * qu'un document absent.
-               */
-              sens={
-                payload?.document_kind === "facture_achat"
-                  ? "depense"
-                  : payload?.document_kind === "facture_vente"
-                    ? "revenu"
-                    : null
-              }
-              tiers={payload?.issuer ?? null}
-              reference={reference}
-              decimales={decimales}
-            />
-
-            {/*
-             * ==================================== LA TRANSMISSION EST UN GESTE
-             *
-             * Toute pièce photographiée partait au cabinet automatiquement —
-             * un reçu personnel, une photo ratée, un document sans rapport.
-             * Personne ne l'avait décidé.
-             *
-             * Elle reste maintenant chez le dirigeant jusqu'à ce qu'il appuie.
-             * Et l'écran dit toujours où elle en est : chez vous, ou partie.
-             */}
-            {cabinet.data ? (
-              <div className="mt-4 border-t border-border pt-4">
-                {piece.vis === "partage" ? (
-                  /*
-                   * ======================================== ET ON PEUT REVENIR
-                   *
-                   * 10 octobre 2026 : « facture transmise au comptable sans
-                   * autorisation ». La pièce avait été photographiée par une
-                   * version antérieure, qui partageait à la prise de vue — ce
-                   * qui est corrigé depuis le 7 octobre.
-                   *
-                   * Mais l'écran n'offrait RIEN. Il annonçait « Transmise à
-                   * AUDICORP » et s'arrêtait là : aucune manière de revenir,
-                   * pour une pièce que personne n'avait décidé d'envoyer.
-                   *
-                   * Un état qu'on n'a pas choisi et dont on ne peut pas sortir
-                   * est le pire des deux. Le geste inverse existait déjà au
-                   * coffre ; il manquait seulement ici, là où la question se
-                   * pose.
-                   *
-                   * Une pièce déjà comptabilisée, elle, ne se rappelle pas —
-                   * la base le refuse, et c'est juste : on ne retire pas une
-                   * pièce sur laquelle une écriture s'appuie.
-                   */
-                  <div className="text-center">
-                    <p className="text-[13px] text-signal-ok">
-                      {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
-                    </p>
-                    {demandeDeRappel === "demandee" ? (
-                      <p className="mt-2 text-[12.5px] text-text-2">
-                        {t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}
-                      </p>
-                    ) : demandeDeRappel === "refusee" ? (
-                      <p className="mt-2 text-[12.5px] text-signal-warn">
-                        {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => rappeler.mutate()}
-                        disabled={rappeler.isPending}
-                        className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
-                      >
-                        {t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    {/*
-                     * LA QUESTION, POSÉE — pas une mention qu'on peut manquer.
-                     *
-                     * Le 4 octobre, « rien ne partait » : le geste existait,
-                     * personne ne l'avait fait, et une ligne de 12,5 px disait
-                     * « chez vous ». On a alors transmis d'office à la photo, et
-                     * le 7 octobre une facture rejetée était déjà partie.
-                     *
-                     * Les deux erreurs ont la même cause : la transmission
-                     * n'était pas une DÉCISION. Elle l'est ici, en deux boutons
-                     * de même poids. Aucun n'est présenté comme le bon : garder
-                     * une facture chez soi est un choix légitime, l'envoyer
-                     * aussi, et seul le dirigeant sait lequel.
-                     */}
-                    {piece.gardeeLe ? (
-                      /*
-                       * LA DÉCISION PRISE, ET SON CHEMIN DE RETOUR.
-                       *
-                       * On ne repose pas la question : elle a été tranchée, et
-                       * la date le dit. Mais « Transmettre quand même » reste
-                       * là, parce que c'est l'exemple même du commanditaire —
-                       * « j'ai classé dans mon coffre, j'aurai toujours la
-                       * possibilité de transmettre au cabinet ». Ce sens-là ne
-                       * demande rien à personne et ne doit jamais se fermer.
-                       */
-                      <div className="text-center">
-                        <p className="text-[13px] text-text-2">{t("pme.garder.faite")}</p>
-                        <button
-                          type="button"
-                          disabled={transmettre.isPending}
-                          onClick={() => transmettre.mutate()}
-                          className="mt-2 h-[40px] px-3 text-[13.5px] font-medium underline underline-offset-4 disabled:opacity-40"
-                        >
-                          {transmettre.isPending
-                            ? t("common.loading")
-                            : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
-                        </button>
-                      </div>
+          <div className="ctrl">
+            {controles.map((c) => (
+              <div className={`ck ${c.k}`} key={c.cle}>
+                <i>
+                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                    {c.k === "ok" ? (
+                      <path d="M4.5 12.5l4.5 4.5 10-10" />
+                    ) : c.k === "q" ? (
+                      <>
+                        <circle cx="12" cy="12" r="8.5" />
+                        <path d="M9.6 9.6a2.5 2.5 0 1 1 3.2 2.6c-.6.2-.8.7-.8 1.3v.4" />
+                        <path d="M12 17.2v.3" />
+                      </>
+                    ) : c.k === "az" ? (
+                      <>
+                        <path d="M8 6.5L4 10.5l4 4" />
+                        <path d="M4 10.5h12a4 4 0 0 1 0 8h-6" />
+                      </>
                     ) : (
                       <>
-                        <p className="pb-3 text-[13.5px] font-semibold leading-[1.4]">
-                          {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
-                        </p>
-                        {/*
-                         * DEUX BOUTONS DE MÊME POIDS — et cette fois ils sont
-                         * deux.
-                         *
-                         * Le 11 octobre : « et le choix entre transmettre au
-                         * cabinet ou espace privé ? » Il n'existait pas :
-                         * « Transmettre » tenait toute la largeur, et garder
-                         * se lisait dans une ligne de 12,5 px qu'on ne tape
-                         * pas. Aucun des deux n'est présenté comme le bon —
-                         * garder une facture chez soi est un choix légitime,
-                         * l'envoyer aussi, et seul le dirigeant sait lequel.
-                         */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            disabled={garder.isPending || transmettre.isPending}
-                            onClick={() => garder.mutate()}
-                            className="h-[50px] border border-foreground text-[14.5px] font-medium disabled:opacity-50"
-                          >
-                            {garder.isPending ? t("common.loading") : t("pme.garder.action")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={transmettre.isPending || garder.isPending}
-                            onClick={() => transmettre.mutate()}
-                            className="h-[50px] border border-foreground bg-foreground text-[14.5px] font-medium text-background disabled:opacity-50"
-                          >
-                            {transmettre.isPending
-                              ? t("common.loading")
-                              : t("pme.transmettre.action")}
-                          </button>
-                        </div>
-                        <p className="pt-2.5 text-center text-[12.5px] text-text-2">
-                          {t("pme.transmettre.chezvous")}
-                        </p>
+                        <circle cx="12" cy="12" r="8.5" />
+                        <path d="M9 9l6 6M15 9l-6 6" />
                       </>
                     )}
-                  </>
-                )}
+                  </svg>
+                </i>
+                <div>
+                  <p>{c.p}</p>
+                  {c.sous ? <p>{c.sous}</p> : null}
+                  {c.corps === "sens" ? (
+                    /*
+                     * La lecture n'a pas pu dire si la pièce est un achat ou
+                     * une vente : ni l'émetteur ni le destinataire n'est ce
+                     * dossier. Elle ne devine pas ; elle demande. La réponse
+                     * s'inscrit à côté de la lecture, datée et signée (R7).
+                     */
+                    <span className="rep">
+                      <button
+                        type="button"
+                        disabled={preciser.isPending}
+                        onClick={() => preciser.mutate("facture_achat")}
+                      >
+                        {t("pme.sens.achat")}
+                      </button>
+                      {/*
+                       * Pas de `button.sec` ici, bien que le dessin le pose :
+                       * dans `styles-pme.css`, `.sec` est AUSSI le titre de
+                       * section (`display:flex; margin:1.875rem 0`), et la
+                       * règle `.ck .rep button.sec` ne remet ni la marge ni
+                       * l'affichage — le bouton descendrait de trente pixels.
+                       * Et deux boutons de même poids sont ici la bonne
+                       * réponse : ni l'achat ni la vente n'est le défaut.
+                       */}
+                      <button
+                        type="button"
+                        disabled={preciser.isPending}
+                        onClick={() => preciser.mutate("facture_vente")}
+                      >
+                        {t("pme.sens.vente")}
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
               </div>
-            ) : null}
+            ))}
+          </div>
+        </>
+      ) : null}
 
-            {/* Effacer : offert seulement tant que la pièce n'est partie nulle
-                part. La base refuse de toute façon dans les autres cas. */}
-            {piece.vis === "personnel" &&
-            (piece.status === "capturee" || piece.status === "lue") ? (
-              <div className="mt-3">
-                {confirmerSuppression ? (
-                  <div className="space-y-2 border border-signal-warn p-3">
-                    <p className="text-center text-[12.5px] text-signal-warn">
-                      {t("pme.supprimer.sur")}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={supprimer.isPending}
-                        onClick={() => supprimer.mutate()}
-                        className="h-[44px] flex-1 bg-signal-warn text-[14px] font-semibold text-background disabled:opacity-50"
-                      >
-                        {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmerSuppression(false)}
-                        className="h-[44px] flex-1 border border-border text-[14px] font-medium"
-                      >
-                        {t("common.cancel")}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmerSuppression(true)}
-                    className="w-full py-2 text-center text-[12.5px] text-muted-foreground underline underline-offset-4"
-                  >
-                    {t("pme.supprimer.action")}
-                  </button>
-                )}
+      {/* ── le parcours ─────────────────────────────────────────────── */}
+      <div className="sec">
+        <h2>{t("pme.piece.parcours")}</h2>
+        <span>{t("pme.piece.etapes", { count: etapes.length })}</span>
+      </div>
+      <div className="jr">
+        {etapes.map((e) => (
+          <div key={e.cle} className={e.etat === "courante" ? "now" : undefined}>
+            <span>{e.label}</span>
+            <u>
+              {e.etat === "faite"
+                ? t("pme.piece.etat.faite")
+                : e.etat === "courante"
+                  ? t("pme.piece.etat.courante")
+                  : t("pme.piece.etat.attente")}
+            </u>
+          </div>
+        ))}
+      </div>
+
+      {/* ── la remarque de Malica ───────────────────────────────────── */}
+      <div className="note">
+        <img src={malicaLoin} alt="Malica" width={620} height={620} />
+        <p>
+          {booked
+            ? t("pme.doc.note")
+            : payload?.totals?.ttc
+              ? t("pme.verifie.question", {
+                  montant: lisible(payload.totals.ttc) ?? "",
+                  devise,
+                })
+              : t("pme.verifie.question.sansTotal")}
+        </p>
+      </div>
+      <p className="foot">{t("pme.piece.foot")}</p>
+
+      {error ? (
+        <div className="rev">
+          <span className="q lock">
+            <i />
+            {t("common.error")}
+          </span>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
+      {/* ── où elle va : la transmission est une DÉCISION ────────────────
+          Le 4 octobre « rien ne partait » : le geste existait, personne ne
+          l'avait fait, et une ligne de 12,5 px disait « chez vous ». On a
+          alors transmis d'office à la photo, et le 7 octobre une facture
+          rejetée était déjà partie. Les deux erreurs ont la même cause : la
+          transmission n'était pas une décision. Elle l'est ici, en deux
+          boutons de même poids — garder une facture chez soi est un choix
+          légitime, l'envoyer aussi, et seul le dirigeant sait lequel. */}
+      {cabinet.data && !booked ? (
+        piece.vis === "partage" ? (
+          <div className="centr calme">
+            <i />
+            <div>
+              <p>{t("pme.transmettre.faite", { cabinet: cabinet.data.name })}</p>
+              {demandeDeRappel === "demandee" ? (
+                <p>{t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}</p>
+              ) : demandeDeRappel === "refusee" ? (
+                <p>{t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}</p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={rappeler.isPending}
+                  onClick={() => rappeler.mutate()}
+                >
+                  {rappeler.isPending
+                    ? t("common.loading")
+                    : t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : piece.gardeeLe ? (
+          /*
+           * LA DÉCISION PRISE, ET SON CHEMIN DE RETOUR. On ne repose pas la
+           * question : elle a été tranchée, et la date le dit. Mais
+           * « Transmettre quand même » reste là — « j'ai classé dans mon
+           * coffre, j'aurai toujours la possibilité de transmettre au
+           * cabinet ». Ce sens-là ne demande rien à personne et ne doit
+           * jamais se fermer.
+           */
+          <div className="rev">
+            <span className="q">
+              <i />
+              {t("pme.garder.faite")}
+            </span>
+            <div className="b">
+              <button
+                type="button"
+                disabled={transmettre.isPending}
+                onClick={() => transmettre.mutate()}
+              >
+                {transmettre.isPending
+                  ? t("common.loading")
+                  : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rev">
+            {/* `.q` est une étiquette d'état, en capitales et en mono : elle
+                porte le nom du cabinet, pas la question — une phrase entière
+                en capitales de 10 px ne se lit pas. */}
+            <span className="q">
+              <i />
+              {cabinet.data.name}
+            </span>
+            <p>
+              {t("pme.transmettre.question", { cabinet: cabinet.data.name })}{" "}
+              {t("pme.transmettre.chezvous")}
+            </p>
+            <div className="b">
+              <button
+                type="button"
+                disabled={garder.isPending || transmettre.isPending}
+                onClick={() => garder.mutate()}
+              >
+                {garder.isPending ? t("common.loading") : t("pme.garder.action")}
+              </button>
+              <button
+                type="button"
+                disabled={transmettre.isPending || garder.isPending}
+                onClick={() => transmettre.mutate()}
+              >
+                {transmettre.isPending ? t("common.loading") : t("pme.transmettre.action")}
+              </button>
+            </div>
+          </div>
+        )
+      ) : null}
+
+      {/* ── REVENIR DESSUS ──────────────────────────────────────────────
+          Ce bloc lit `vis` et le RÔLE, et rien d'autre :
+
+            personnel            → LIBRE : corriger, supprimer, mettre au privé
+            entite · siège       → AVANT VALIDATION : corriger, demander la
+                                   suppression au dirigeant
+            entite · dirigeant   → LIBRE
+            partage              → SUR ACCORD : corriger et renvoyer, demander
+                                   la suppression au cabinet
+
+          « Corriger » reprend la PHOTO, comme le prototype : R7 interdit
+          d'effacer un relevé, et relancer la lecture serait de toute façon
+          refusé. Une correction de champ s'ajoute par `capture.preciser`, que
+          l'écran propose là où elle a un sens — le sens de la pièce, dans
+          « Ce que j'ai vérifié » juste au-dessus. */}
+      <div className="sec">
+        <h2>{t("pme.piece.revenir")}</h2>
+        <span>
+          {vis === "partage"
+            ? t("pme.piece.revenir.surAccord")
+            : vis === "entite" && siege
+              ? t("pme.piece.revenir.avantValidation")
+              : t("pme.piece.revenir.libre")}
+        </span>
+      </div>
+      {vis === "partage" ? (
+        <div className="rev">
+          <span className="q lock">
+            <i />
+            {t("pme.piece.elleEstPartie")}
+          </span>
+          <p>{t("pme.piece.elleEstPartie.texte")}</p>
+          <div className="b">
+            <button type="button" onClick={pme.ouvrirScanner}>
+              {t("pme.verifie.corriger")}
+            </button>
+            {/* Une demande déjà inscrite ne se redemande pas : son dernier
+                fait est affiché juste en dessous. */}
+            {demandeDeSuppression ? null : (
+              <button
+                type="button"
+                className="sup"
+                disabled={demanderSuppression.isPending}
+                onClick={() => demanderSuppression.mutate()}
+              >
+                {demanderSuppression.isPending
+                  ? t("common.loading")
+                  : t("pme.piece.demanderSuppression")}
+              </button>
+            )}
+          </div>
+          {demandeDeSuppression === "demandee" ? (
+            <p>{t("pme.piece.suppressionDemandee")}</p>
+          ) : demandeDeSuppression === "refusee" ? (
+            <p>{t("pme.piece.suppressionRefusee")}</p>
+          ) : null}
+        </div>
+      ) : vis === "entite" && siege ? (
+        <div className="rev">
+          <span className="q lock">
+            <i />
+            {t("pme.piece.elleAttend")}
+          </span>
+          <p>{t("pme.piece.elleAttend.texte")}</p>
+          <div className="b">
+            <button type="button" onClick={pme.ouvrirScanner}>
+              {t("pme.verifie.corriger")}
+            </button>
+            {demandeDeSuppression ? null : (
+              <button
+                type="button"
+                className="sup"
+                disabled={demanderSuppression.isPending}
+                onClick={() => demanderSuppression.mutate()}
+              >
+                {demanderSuppression.isPending
+                  ? t("common.loading")
+                  : t("pme.piece.demanderSuppression")}
+              </button>
+            )}
+          </div>
+          {demandeDeSuppression === "demandee" ? (
+            <p>{t("pme.piece.suppressionDemandee")}</p>
+          ) : demandeDeSuppression === "refusee" ? (
+            <p>{t("pme.piece.suppressionRefusee")}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="rev">
+          <span className="q">
+            <i />
+            {t("pme.piece.rienNestSorti")}
+          </span>
+          <p>{t("pme.piece.rienNestSorti.texte")}</p>
+          {confirmerSuppression ? (
+            /* Deux temps, jamais un seul : un effacement ne se déclenche pas
+               par mégarde. La base refuse de toute façon une pièce transmise,
+               engagée dans une écriture, ou servant de justificatif. */
+            <>
+              <p>{t("pme.supprimer.sur")}</p>
+              <div className="b">
+                <button
+                  type="button"
+                  className="sup"
+                  disabled={supprimer.isPending}
+                  onClick={() => supprimer.mutate()}
+                >
+                  {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
+                </button>
+                <button type="button" onClick={() => setConfirmerSuppression(false)}>
+                  {t("common.cancel")}
+                </button>
               </div>
-            ) : null}
-          </>
+            </>
+          ) : (
+            <div className="b">
+              <button type="button" onClick={pme.ouvrirScanner}>
+                {t("pme.verifie.corriger")}
+              </button>
+              {/* Effacer : offert seulement tant que la pièce n'est partie
+                  nulle part, et seulement sur un brouillon. */}
+              {piece.vis === "personnel" &&
+              (piece.status === "capturee" || piece.status === "lue") ? (
+                <button type="button" className="sup" onClick={() => setConfirmerSuppression(true)}>
+                  {t("pme.supprimer.action")}
+                </button>
+              ) : null}
+              {/* La remettre au privé n'a de sens que si elle n'y est pas. */}
+              {piece.vis !== "personnel" ? (
+                <button
+                  type="button"
+                  disabled={remettreAuPrive.isPending}
+                  onClick={() => remettreAuPrive.mutate()}
+                >
+                  {remettreAuPrive.isPending ? t("common.loading") : t("pme.piece.mettreAuPrive")}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── les actions du bas ──────────────────────────────────────────
+          Une seule action principale par écran. Tant que la pièce n'est pas
+          comptabilisée, c'est le « Oui » : la raison d'un refus est déjà
+          au-dessus, dans « Ce que j'ai vérifié » — le bouton n'est qu'un
+          rappel de ce qui viendra après. */}
+      <div className="acts">
+        <button type="button" onClick={() => setPiece(true)}>
+          {t("pme.piece.voir")}
+        </button>
+        {booked ? (
+          <button type="button" className="pr" onClick={() => setDetail(true)}>
+            {t("pme.detail.voir")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="pr"
+            disabled={confirm.isPending || !confirmable}
+            onClick={() => confirm.mutate()}
+          >
+            {confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui")}
+          </button>
         )}
       </div>
     </div>
-  );
-}
-
-/**
- * Le parcours d'une pièce, en une ligne.
- *
- * Les six étapes sont celles du prototype, dans NOTRE ordre : chez nous une
- * pièce est comptabilisée avant d'être vue par le cabinet, pas l'inverse.
- * Garder l'ordre de la maquette aurait dessiné un circuit qui n'existe pas.
- *
- * « Déclarée » reste toujours en attente : rien dans le produit ne marque
- * encore qu'une pièce est partie avec une déclaration. Une étape grise qui
- * dit « pas encore » vaut mieux qu'une étape absente qui laisse croire que le
- * parcours s'arrête là.
- */
-function Parcours({ etapes }: { etapes: Array<{ cle: string; label: string; etat: string }> }) {
-  return (
-    <div className="relative mt-[22px] grid grid-cols-6 items-start">
-      <span aria-hidden className="absolute inset-x-[8%] top-[5px] h-px bg-line-strong" />
-      {etapes.map((e) => (
-        <span key={e.cle} className="relative flex flex-col items-center gap-2">
-          <span
-            aria-hidden
-            className={
-              e.etat === "courante"
-                ? "h-[13px] w-[13px] -mt-px bg-marigold"
-                : e.etat === "faite"
-                  ? "h-[11px] w-[11px] bg-foreground"
-                  : "h-[11px] w-[11px] border-[1.5px] border-line-strong bg-background"
-            }
-          />
-          <span
-            className={
-              "text-center text-[8.5px] font-semibold uppercase tracking-[0.06em] " +
-              (e.etat === "courante"
-                ? "text-marigold"
-                : e.etat === "faite"
-                  ? ""
-                  : "text-muted-foreground")
-            }
-          >
-            {e.label}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function Field(props: {
-  label: string;
-  value: string | null;
-  citation: Citation | null;
-  onZoom: (c: Citation | null) => void;
-  zoomLabel: string;
-  missingLabel: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 bg-card px-4 py-3">
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{props.label}</dt>
-      <dd className="text-end">
-        <span className={props.mono ? "num" : ""}>{props.value ?? "—"}</span>
-        <button
-          type="button"
-          onClick={() => props.onZoom(props.citation)}
-          disabled={!props.citation}
-          className="ms-3 min-h-[44px] text-[11px] uppercase tracking-wide text-muted-foreground underline disabled:no-underline"
-        >
-          {props.citation ? props.zoomLabel : props.missingLabel}
-        </button>
-      </dd>
-    </div>
-  );
-}
-
-function Amount(props: {
-  label: string;
-  value: string | null;
-  citation: Citation | null;
-  onZoom: (c: Citation | null) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => props.onZoom(props.citation)}
-      disabled={!props.citation}
-      className="min-h-[48px] min-w-0 border border-border px-3 py-2 text-start disabled:opacity-60"
-    >
-      <span className="block text-[11px] uppercase tracking-wide text-muted-foreground">
-        {props.label}
-      </span>
-      <span className="num block break-words">{props.value ?? "—"}</span>
-    </button>
   );
 }

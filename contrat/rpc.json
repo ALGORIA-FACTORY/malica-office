@@ -18,13 +18,16 @@
   "capture": [
     "analyser",
     "annulerPaiement",
+    "consommerLecture",
     "contexteAssistant",
     "contexteLecture",
     "daterLaPiece",
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
+    "inscrireRefusDeLecture",
     "journaliserAgent",
+    "lectureAutorisee",
     "listAvecLecture",
     "lister",
     "motifsDAnnulation",
@@ -100,6 +103,14 @@
     "exercices",
     "generer",
     "historique"
+  ],
+  "facturation": [
+    "inviterSiege",
+    "libellesDesStatuts",
+    "libererPlace",
+    "monForfait",
+    "organisations",
+    "sieges"
   ],
   "honoraires": [
     "avoir",

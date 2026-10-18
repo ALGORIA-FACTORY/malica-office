@@ -26,6 +26,7 @@ import { conversations } from "./depots/conversations.ts";
 import { corpus } from "./depots/corpus.ts";
 import { honoraires } from "./depots/honoraires.ts";
 import { exports } from "./depots/exports.ts";
+import { facturation } from "./depots/facturation.ts";
 import { identite } from "./depots/identite.ts";
 import { journal } from "./depots/journal.ts";
 import { immo } from "./depots/immo.ts";
@@ -54,6 +55,7 @@ const DEPOTS = {
   corpus,
   honoraires,
   exports,
+  facturation,
   identite,
   immo,
   integrations,
