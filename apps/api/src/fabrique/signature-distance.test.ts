@@ -1,0 +1,253 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import {
+  classerLesCandidats,
+  distanceEntreSignatures,
+  ossatureCommune,
+  type Composante,
+  type ParametresDeClassement,
+  type ParametresDeDistance,
+  type VerdictDeProximite,
+} from "./signature-distance.ts";
+import {
+  FACTURE_A,
+  FACTURE_A_AUTRES_VALEURS,
+  FACTURE_A_AUTRE_CLIENT,
+  FACTURE_A_DEUX_PAGES,
+  FACTURE_A_SIX_LIGNES,
+  FACTURE_B_TTC,
+  PAGE_DE_TOTAUX,
+  recadrer,
+} from "./signature-plans-synthetiques.ts";
+import { signerLePlan, type ParametresDeSignature } from "./signature.ts";
+
+/**
+ * La distance entre deux signatures, et l'aveu d'ambiguïté.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Classer, c'est facile ; refuser de classer, non. Une mesure qui rend
+ * toujours un premier candidat est une mesure qui se trompe en silence le jour
+ * où deux formats voisins sont également plausibles — et ce jour-là, la
+ * recette d'un format s'appliquera à l'autre.
+ *
+ * Ce banc exige donc les DEUX : que des formats proches soient distingués, et
+ * que l'égalité se dise « je ne sais pas » au lieu de choisir le premier.
+ *
+ * Plans SYNTHÉTIQUES. Aucun appel de modèle, aucun fournisseur payant.
+ */
+
+const PARAMETRES: ParametresDeSignature = {
+  longueurMinimaleDAncre: 2,
+  bandesParPage: 3,
+  partMinimaleDuSens: 0.6,
+  recouvrementDeLigne: 0.5,
+  recouvrementDeColonne: 0.5,
+  ancresEnRelationMax: 40,
+};
+
+/*
+ * Les poids ne sont pas un jugement du produit : ils arrivent par argument.
+ * En exécution ils viennent du paramétrage daté (R10) ; ici, ils sont ceux du
+ * banc, et deux jeux différents donnent deux verdicts différents — c'est
+ * d'ailleurs l'objet du dernier cas de ce fichier.
+ */
+const POIDS: ParametresDeDistance = {
+  poids: { ancres: 3, zones: 1, relations: 2, tableau: 3, pagination: 1 },
+};
+
+const LARGE: ParametresDeClassement = { distanceMax: 0.5, ecartMinimal: 0.02 };
+
+const signer = (tokens: ReturnType<typeof FACTURE_A>) => signerLePlan(tokens, PARAMETRES);
+
+const composante = (
+  ecart: ReturnType<typeof distanceEntreSignatures>,
+  nom: Composante["nom"],
+): number | null => ecart.composantes.find((c) => c.nom === nom)?.distance ?? null;
+
+describe("le même format, d'autres valeurs", () => {
+  it("rend une distance NULLE", () => {
+    const d = distanceEntreSignatures(
+      signer(FACTURE_A()),
+      signer(FACTURE_A_AUTRES_VALEURS()),
+      POIDS,
+    );
+    assert.equal(d.distance, 0);
+  });
+
+  /*
+   * Le piège du comptage. Une facture de six lignes d'articles a exactement
+   * la même forme qu'une facture de deux lignes : le nombre de lignes est une
+   * donnée, pas une structure. Une mesure qui pèserait les occurrences les
+   * éloignerait — et refuserait la recette au client qui commande beaucoup.
+   */
+  it("six lignes d'articles au lieu de deux : distance NULLE elle aussi", () => {
+    const d = distanceEntreSignatures(signer(FACTURE_A()), signer(FACTURE_A_SIX_LIGNES()), POIDS);
+    assert.equal(d.distance, 0);
+  });
+
+  it("recadré et mis à l'échelle, rend une distance NULLE", () => {
+    const d = distanceEntreSignatures(
+      signer(FACTURE_A()),
+      signer(recadrer(FACTURE_A(), 0.07, -0.02, 0.86)),
+      POIDS,
+    );
+    assert.equal(d.distance, 0);
+  });
+});
+
+describe("deux formats voisins mais INCOMPATIBLES", () => {
+  const a = signer(FACTURE_A());
+  const b = signer(FACTURE_B_TTC());
+
+  it("ne se confondent pas", () => {
+    assert.ok(distanceEntreSignatures(a, b, POIDS).distance > 0);
+  });
+
+  it("se séparent sur la colonne de prix", () => {
+    assert.ok((composante(distanceEntreSignatures(a, b, POIDS), "tableau") ?? 0) > 0);
+  });
+
+  it("se séparent aussi sur l'ordre du pied : la TVA n'est plus au même endroit", () => {
+    assert.ok((composante(distanceEntreSignatures(a, b, POIDS), "relations") ?? 0) > 0);
+  });
+
+  it("et le classement désigne le bon, sans hésiter", () => {
+    const verdict = classerLesCandidats(
+      a,
+      [
+        { id: "format-ht", signature: signer(FACTURE_A_AUTRES_VALEURS()) },
+        { id: "format-ttc", signature: b },
+      ],
+      POIDS,
+      LARGE,
+    );
+    assert.equal(verdict.verdict.sorte, "un");
+    assert.equal(verdict.verdict.sorte === "un" ? verdict.verdict.id : null, "format-ht");
+  });
+});
+
+describe("l'ambiguïté", () => {
+  it("deux candidats à égalité rendent « je ne sais pas », jamais le premier", () => {
+    const sujet = signer(FACTURE_A());
+    const verdict = classerLesCandidats(
+      sujet,
+      [
+        { id: "premier", signature: signer(FACTURE_A_AUTRES_VALEURS()) },
+        { id: "second", signature: signer(recadrer(FACTURE_A(), 0.07, -0.02, 0.86)) },
+      ],
+      POIDS,
+      LARGE,
+    );
+    assert.equal(verdict.verdict.sorte, "ambigu");
+    assert.deepEqual(
+      verdict.verdict.sorte === "ambigu" ? [...verdict.verdict.exAequo].sort() : null,
+      ["premier", "second"],
+    );
+  });
+
+  it("deux candidats trop proches l'un de l'autre sont ambigus, même inégaux", () => {
+    const serre: ParametresDeClassement = { distanceMax: 0.9, ecartMinimal: 0.9 };
+    const verdict = classerLesCandidats(
+      signer(FACTURE_A()),
+      [
+        { id: "format-ht", signature: signer(FACTURE_A_AUTRES_VALEURS()) },
+        { id: "format-ttc", signature: signer(FACTURE_B_TTC()) },
+      ],
+      POIDS,
+      serre,
+    );
+    assert.equal(verdict.verdict.sorte, "ambigu");
+  });
+
+  it("au-delà de la distance maximale, il n'y a AUCUN candidat", () => {
+    const strict: ParametresDeClassement = { distanceMax: 0.01, ecartMinimal: 0.001 };
+    const verdict = classerLesCandidats(
+      signer(FACTURE_A()),
+      [{ id: "format-ttc", signature: signer(FACTURE_B_TTC()) }],
+      POIDS,
+      strict,
+    );
+    assert.equal(verdict.verdict.sorte, "aucun");
+  });
+
+  it("sans aucun candidat, le verdict est « aucun » et non une erreur", () => {
+    const verdict: VerdictDeProximite = classerLesCandidats(
+      signer(FACTURE_A()),
+      [],
+      POIDS,
+      LARGE,
+    ).verdict;
+    assert.equal(verdict.sorte, "aucun");
+  });
+
+  /*
+   * LE SEUIL EST UN ARGUMENT, PAS UNE CONSTANTE.
+   *
+   * Les mêmes signatures, deux paramétrages, deux verdicts : la preuve
+   * exécutable qu'aucun seuil de distance n'est écrit dans ce code. En
+   * production ils viennent du référentiel, datés et surchargeables par le
+   * cabinet (R10) ; ici ils viennent du banc.
+   */
+  it("change de verdict quand le paramétrage change, sans toucher au code", () => {
+    const sujet = signer(FACTURE_A());
+    const candidats = [{ id: "format-ttc", signature: signer(FACTURE_B_TTC()) }];
+    assert.equal(classerLesCandidats(sujet, candidats, POIDS, LARGE).verdict.sorte, "un");
+    assert.equal(
+      classerLesCandidats(sujet, candidats, POIDS, { distanceMax: 0.01, ecartMinimal: 0.001 })
+        .verdict.sorte,
+      "aucun",
+    );
+  });
+});
+
+describe("les ancres répétées ne trompent pas la mesure", () => {
+  it("une page qui ne porte qu'un libellé répété douze fois reste LOIN d'une facture", () => {
+    const d = distanceEntreSignatures(signer(FACTURE_A()), signer(PAGE_DE_TOTAUX()), POIDS);
+    assert.ok(d.distance > 0.5, `distance ${d.distance}`);
+  });
+
+  it("et le classement la refuse", () => {
+    const verdict = classerLesCandidats(
+      signer(FACTURE_A()),
+      [{ id: "page-de-totaux", signature: signer(PAGE_DE_TOTAUX()) }],
+      POIDS,
+      LARGE,
+    );
+    assert.equal(verdict.verdict.sorte, "aucun");
+  });
+});
+
+describe("l'ossature — ce que plusieurs exemplaires ont en commun", () => {
+  const a = signer(FACTURE_A());
+  const autre = signer(FACTURE_A_AUTRE_CLIENT());
+
+  it("un client qui change écarte les deux signatures brutes", () => {
+    assert.ok(distanceEntreSignatures(a, autre, POIDS).distance > 0);
+  });
+
+  it("l'ossature ne retient ni le client ni les désignations d'articles", () => {
+    const os = ossatureCommune([a, autre]);
+    for (const partie of ["dream", "optic", "baraka", "cartouche", "papier"])
+      assert.ok(!os.includes(partie), `« ${partie} » varie : il n'est pas de l'ossature`);
+  });
+
+  it("l'ossature retient l'émetteur, les libellés et les mentions", () => {
+    const os = ossatureCommune([a, autre]);
+    for (const partie of ["sotupap", "facture", "matricule", "designation", "tva"])
+      assert.ok(os.includes(partie), `« ${partie} » ne varie pas : il est de l'ossature`);
+  });
+
+  it("mesurée SUR l'ossature, la distance redevient nulle", () => {
+    assert.equal(distanceEntreSignatures(a, autre, POIDS, ossatureCommune([a, autre])).distance, 0);
+  });
+});
+
+describe("la pagination", () => {
+  it("compte dans la distance : une page contre deux", () => {
+    const d = distanceEntreSignatures(signer(FACTURE_A()), signer(FACTURE_A_DEUX_PAGES()), POIDS);
+    assert.equal(composante(d, "pagination"), 0.5);
+    assert.ok(d.distance > 0);
+  });
+});
