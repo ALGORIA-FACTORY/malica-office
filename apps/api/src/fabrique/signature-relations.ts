@@ -36,7 +36,17 @@ export interface RelationSignature {
   h: RelationHorizontale;
 }
 
-function serecouvrent(
+/**
+ * Deux empans se recouvrent-ils assez pour etre dits « sur la meme ligne » ou
+ * « dans la meme colonne » ?
+ *
+ * Exporte le 18 octobre 2026 pour l'interprete deterministe, qui juge
+ * exactement la meme chose quand il resout « le voisin de droite » ou la
+ * contrainte « meme_ligne ». L'ecrire une seconde fois aurait donne deux
+ * notions de « meme ligne » qui divergent au premier cas limite corrige d'un
+ * seul cote — la faute meme que ce depot a payee le 18 octobre au matin.
+ */
+export function serecouvrent(
   d0: number,
   d1: number,
   e0: number,

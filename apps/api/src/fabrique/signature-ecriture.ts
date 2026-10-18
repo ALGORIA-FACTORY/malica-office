@@ -75,13 +75,22 @@ export type Sens = "ltr" | "rtl" | "mixte";
  */
 export function cleDAncre(texte: string): string | null {
   if (CHIFFRE.test(texte)) return null;
-  const cle = texte
-    .normalize("NFD")
-    .replace(MARQUES, "")
-    .replace(TATWEEL, "")
-    .replace(HORS_LETTRE, "")
-    .toLowerCase();
+  const cle = replierLesMarques(texte).replace(HORS_LETTRE, "");
   return cle.length > 0 ? cle : null;
+}
+
+/**
+ * Le repli commun : decomposition, marques, tatweel, minuscules.
+ *
+ * Il est SORTI de `cleDAncre` le 18 octobre 2026, le jour ou l'interprete
+ * deterministe a eu besoin de comparer un jeton a un texte d'ancre SANS
+ * refuser les chiffres. Les deux emplois different par ce qu'ils gardent
+ * ensuite — l'un retire tout ce qui n'est pas une lettre, l'autre garde les
+ * chiffres — mais le repli, lui, est le meme, et les plages d'ecriture qu'il
+ * emploie ne se recopient pas : recopiees, elles se corrigent d'un seul cote.
+ */
+export function replierLesMarques(texte: string): string {
+  return texte.normalize("NFD").replace(MARQUES, "").replace(TATWEEL, "").toLowerCase();
 }
 
 /** Le sens d'un texte, ou `null` quand il est neutre (chiffres, ponctuation). */

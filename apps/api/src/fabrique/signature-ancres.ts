@@ -40,14 +40,23 @@ export interface AncrePlacee {
   v1: number;
 }
 
-interface Boite {
+/** Le rectangle de ce qui est ecrit sur une page, en fractions de page. */
+export interface Boite {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
 }
 
-function boiteDeContenu(tokens: readonly PageToken[]): Boite | null {
+/**
+ * La boite de contenu d'une page.
+ *
+ * Exportee le 18 octobre 2026 : l'interprete deterministe situe ses zones
+ * dans cette boite et non dans la page, pour la raison ecrite en tete de ce
+ * fichier — deux photos de la meme facture n'ont pas les memes marges, et une
+ * zone jugee dans la page se deplacerait avec le cadrage.
+ */
+export function boiteDeContenu(tokens: readonly PageToken[]): Boite | null {
   if (tokens.length === 0) return null;
   let x0 = Infinity;
   let y0 = Infinity;

@@ -149,6 +149,17 @@ export const DESTINATIONS_DE_TABLEAU = ["lignes", "articles"] as const;
 export const CODES_D_ABSTENTION = [
   "MISSING_CITATION",
   "TOKEN_NOT_FOUND",
+  /**
+   * Ajouté le 18 octobre 2026, à l'écriture de l'interprète déterministe.
+   *
+   * Le code existait dans `ReadFlag` depuis le matin ; il manquait ICI, et son
+   * absence avait une conséquence précise : une recette ne pouvait nommer son
+   * `si_ambigu` qu'avec `TOKEN_NOT_FOUND`, qui dit le CONTRAIRE de ce qui s'est
+   * passé — il y en avait trop, pas zéro. Au tableau de mesures, « aucun
+   * candidat » et « deux candidats » devenaient indiscernables, alors que le
+   * premier dit qu'un format a changé et le second qu'une règle est trop large.
+   */
+  "DESIGNATION_AMBIGUE",
   "DATE_UNREADABLE",
 ] as const satisfies ReadonlyArray<ReadFlag["code"]>;
 
