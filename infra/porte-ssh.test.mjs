@@ -28,6 +28,34 @@ import { describe, it } from "node:test";
 // espaces, et une URL les porte encodés — « %20 » n'a jamais lancé un script.
 const PORTE = fileURLToPath(new URL("./porte-ssh.sh", import.meta.url));
 
+/*
+ * ===================================== POURQUOI CETTE SUITE PEUT SE SAUTER
+ *
+ * Elle lance le VRAI script par `bash`. Sur un poste sans bash — mesuré le
+ * 18 octobre sur celui du dirigeant, Windows sans Git Bash dans le PATH —
+ * `execFileSync("bash", …)` rend `ENOENT`, et `demander()` traduit tout échec
+ * de lancement en `code = 1`, `erreur = ""`.
+ *
+ * La conséquence n'est pas trois épreuves rouges, elle est pire : les épreuves
+ * de REFUS passent alors pour la mauvaise raison. « code 1, aucun appel au
+ * déployeur » est exactement ce qu'on observe quand la porte refuse — et
+ * exactement ce qu'on observe quand elle n'a jamais été jouée. Une porte
+ * déclarée sûre par une épreuve qui ne l'a pas ouverte ne garde rien.
+ *
+ * Elle se saute donc tout entière, et le dit — même convention que
+ * `db/registre.test.mjs`, qui se saute sans base de travail. En CI, sous
+ * Linux, bash est là et la suite tourne : c'est là que ce garde-fou compte,
+ * puisque c'est la CI qui détient la clé posée derrière `command=`.
+ */
+const BASH = (() => {
+  try {
+    execFileSync("bash", ["-c", "exit 0"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 /** Un faux déployeur : il écrit ses arguments dans un fichier, et rend 0. */
 function fauxDeployeur() {
   const dossier = mkdtempSync(join(tmpdir(), "porte-"));
@@ -61,7 +89,7 @@ function demander(demande) {
   return { code, erreur, args };
 }
 
-describe("la porte SSH du déploiement", () => {
+describe("la porte SSH du déploiement", { skip: BASH ? false : "bash absent du PATH : la porte ne peut pas être jouée, et une épreuve qui ne l'ouvre pas ne la garde pas" }, () => {
   it("laisse passer « deployer <version> », et transmet la version", () => {
     const r = demander("deployer main");
     assert.equal(r.code, 0);
