@@ -381,8 +381,27 @@
 [data-surface="pme"] .nav {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center;
   margin-top: 1.75rem;
-  padding: .875rem .5rem 1.375rem;
+  /* Epinglee, elle se pose sur la zone de gestes : le 1.375rem devient un
+   * plancher, et `env()` fait le reste. Pas d'autre plancher — une erreur de
+   * diagnostic a deja coute 36 px de vide sur cet ecran. */
+  padding: .875rem .5rem max(1.375rem, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--hr);
+  /* Collante, pas fixee : elle suit le defilement puis reprend sa place en fin
+   * de flux, donc aucune liste ne perd sa derniere ligne au repos. Elle n'avait
+   * aucun fond — epinglee, le contenu defilerait au travers. 20 : au-dessus du
+   * contenu et de l'en-tete colle (10), sous le seuil des ecrans pleins (30). */
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--bg);
+}
+
+/* En paysage sur un ecran bas — le telephone couche, debout dans un entrepot —
+ * la barre fixee prenait 102 px sur 390, 26 % de l'ecran. La elle retourne au
+ * flux. Elle perd contre le rail de bureau du pont >=1024 px, et c'est voulu :
+ * sur une fenetre large et basse, le rail reste le bon rendu. */
+@media (orientation: landscape) and (max-height: 500px) {
+  [data-surface="pme"] .nav { position: static }
 }
 [data-surface="pme"] .nav a {
   display: flex; flex-direction: column; align-items: center; gap: .3125rem;
@@ -396,6 +415,26 @@
 [data-surface="pme"] .nav .rond {
   width: 42px; height: 42px; border-radius: var(--r-pill);
   display: grid; place-items: center; background: var(--d2);
+}
+
+/* L'obturateur, releve sur le dessin (malica-accueil.html, .nav .cap i) :
+ * carre arrondi, SANS fond, dessine au trait de 1.5px en `--acc`, rempli au
+ * seul survol. Le disque blanc qu'on voyait venait de `bg-foreground`, une
+ * invention du code que le mode clair retournait en disque noir. Le dessin dit
+ * 15px de rayon ; on prend `--r-md` (16px) plutot qu'un cinquieme rayon pour un
+ * seul element — 1px d'ecart, assume. */
+[data-surface="pme"] .nav .obtur {
+  border: 1.5px solid var(--acc);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--acc);
+  transition: background var(--t), color var(--t);
+}
+[data-surface="pme"] .nav .obtur[disabled] { opacity: .4; cursor: default }
+@media (hover: hover) and (pointer: fine) {
+  [data-surface="pme"] .nav .obtur:hover:not([disabled]) {
+    background: var(--acc); color: var(--on-acc);
+  }
 }
 
 /* --- Malica parle --------------------------------------------------------
@@ -550,7 +589,7 @@
 
   [data-surface="pme"] .nav {
     grid-column: 1; grid-row: 1 / 999;
-    position: sticky; top: 2rem;
+    position: sticky; top: 2rem; bottom: auto;
     display: flex; flex-direction: column; align-items: stretch; gap: .25rem;
     margin-top: 0; padding: 0; border-top: 0;
   }
@@ -1632,7 +1671,7 @@
 [data-surface="pme"] [data-famille="papiers"] .pan textarea.champ {
   width: 100%; font-family: inherit; color: var(--tx);
 }
-[data-surface="pme"] [data-famille="papiers"] .nav{display:grid;grid-template-columns:repeat(3,1fr);align-items:center;margin-top:1.75rem; padding:.875rem .5rem .5rem;border-top:1px solid var(--hr)}
+[data-surface="pme"] [data-famille="papiers"] .nav{display:grid;grid-template-columns:repeat(3,1fr);align-items:center;margin-top:1.75rem; padding:.875rem .5rem max(.5rem, env(safe-area-inset-bottom, 0px));border-top:1px solid var(--hr)}
 [data-surface="pme"] [data-famille="papiers"] .nav a svg{width:25px;height:25px}
 [data-surface="pme"] [data-famille="papiers"] .nav .cap{display:grid;justify-items:center;gap:.4375rem;color:var(--t3);font-size:.75rem; font-weight:500;background:none;border:0;cursor:pointer}
 [data-surface="pme"] [data-famille="papiers"] .nav .cap i{width:50px;height:50px;border-radius:15px;border:1.5px solid var(--acc);color:var(--acc); display:grid;place-items:center}
@@ -1876,3 +1915,30 @@ body:has([data-surface="pme"]) { background: #FFFFFF }
  * rayon de leur contexte.
  */
 [data-surface="pme"] .nav button { border-radius: 999px }
+
+/* --- l'ecran converser : ce que le balisage reel ajoute a la maquette -----
+ * Le dessin est une maquette : son composeur est un <span> d'invite, sa barre
+ * d'appel un <div>. A l'ecran ce sont un <input> et un <button>. Ces regles ne
+ * peignent rien de neuf : elles rendent utilisable ce que le dessin montre
+ * deja. En FIN de feuille, car l'override de `.poser` doit suivre sa regle
+ * d'origine, sinon la cascade le perd. */
+[data-surface="pme"] [data-ecran="chat"] .comp input{flex:1;min-width:0;border:0;background:none;
+  font:inherit;font-size:.9375rem;letter-spacing:-.012em;color:var(--tx);outline:none;
+  min-height:36px;padding:0}
+[data-surface="pme"] [data-ecran="chat"] .comp input::placeholder{color:var(--t3)}
+[data-surface="pme"] [data-ecran="chat"] .comp button[disabled],
+[data-surface="pme"] [data-ecran="chat"] .del button[disabled]{opacity:.4;cursor:default}
+
+/* `.poser` devient un bouton : une largeur, un curseur, le texte au depart. */
+[data-surface="pme"] [data-ecran="chat"] .poser{width:100%;cursor:pointer;font:inherit;
+  text-align:start;color:var(--tx)}
+
+/* Ce que l'ecran dit quand il n'y a rien. Le dessin n'avait pas d'etat vide :
+ * il part d'un jeu de donnees toujours plein. */
+[data-surface="pme"] [data-ecran="chat"] .vide{margin:1rem 0 0;font-size:.875rem;line-height:1.55;
+  letter-spacing:-.008em;color:var(--t2)}
+
+/* Les retours simples d'une reponse (une enumeration) ne se perdent pas ; les
+ * lignes vides, elles, coupent en <p> et `.mal p+p` les espace. */
+[data-surface="pme"] [data-ecran="chat"] .mal p,
+[data-surface="pme"] [data-ecran="chat"] .moi{white-space:pre-line}

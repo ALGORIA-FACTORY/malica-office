@@ -1,10 +1,10 @@
 /**
  * Le dirigeant, sur son téléphone, en français.
  *
- * Le parcours de base : arriver sur son accueil, refermer Malica à la
- * première visite, aller à son espace et à ses pièces, en ouvrir une,
- * signaler un problème depuis les réglages. Ce que la caméra fait n'est pas
- * ici (protocole d'appareil) ; ce que la lecture par un modèle rend non plus
+ * Le parcours de base : arriver sur son accueil, aller à la conversation avec
+ * Malica et en revenir, aller à son espace et à ses pièces, en ouvrir une,
+ * signaler un problème depuis les réglages. Ce que la caméra fait n'est pas ici
+ * (protocole d'appareil) ; ce que la lecture par un modèle rend non plus
  * (épreuve réelle) ; le dépôt d'une pièce par l'API est dans
  * `outils/epreuve-bout-en-bout.mjs`.
  */
@@ -23,15 +23,50 @@ test("la session ouverte mène à l'accueil du dirigeant", async ({ page }) => {
   await expect(page.getByText("Vos documents")).toBeVisible();
 });
 
-test("à la première visite, Malica accueille, et se referme d'un geste", async ({ page }) => {
-  await preparerLAppareil(page, "fr", { premiereVisite: true });
+test("depuis l'accueil, la barre de demande mène à la conversation, et on en revient", async ({
+  page,
+}) => {
+  /*
+   * ======================================= CE QUE CETTE ÉPREUVE REMPLACE, ET POURQUOI
+   *
+   * Elle cherchait un panneau flottant — `div.fixed.inset-0` — ouvert à la
+   * toute première visite par-dessus l'accueil, et le refermait par son bouton
+   * « Fermer le fil de Malica ». Ce panneau a été retiré de la surface PME : la
+   * barre de demande de l'accueil NAVIGUE maintenant vers `/pme/malica`, qui
+   * est un écran à part entière. L'épreuve décrivait donc un comportement qui
+   * n'existe plus, et elle échouait en CI sur un localisateur qui ne trouvait
+   * rien. Le panneau, lui, vit toujours — mais sur la surface CABINET, et
+   * « Fermer le fil de Malica » ne se dit plus que là-bas.
+   *
+   * Le RECHARGEMENT est gardé, avec un autre objet. Il vérifiait que le
+   * congédiement du panneau tenait, ce qui n'a plus de sens : il n'y a plus de
+   * congédiement à ranger. Il vérifie maintenant que l'ADRESSE tient — c'est
+   * exactement ce qu'un écran apporte et qu'un panneau n'apportait pas : on
+   * peut y revenir, la partager, l'ouvrir d'un lien.
+   */
   await page.goto("/pme");
-  const panneau = page.locator("div.fixed.inset-0");
-  await expect(panneau.getByText(/conversation en cours/i)).toBeVisible();
-  await panneau.getByRole("button", { name: "Fermer le fil de Malica" }).click();
-  await expect(page.getByText("Vos documents")).toBeVisible();
-  // Et le choix tient : la page rechargée s'ouvre sur l'accueil.
+
+  // Le micro de la barre de demande porte le nom accessible ; la barre
+  // entière reste cliquable au doigt.
+  await page.getByRole("button", { name: "Parler à Malica" }).click();
+  await expect(page).toHaveURL(/\/pme\/malica$/);
+
+  // L'écran du dessin : son composeur, et le pied qui dit ce que Malica ne
+  // tranche pas à la place de l'expert-comptable.
+  await expect(page.getByLabel(/Écrivez à Malica/)).toBeVisible();
+  await expect(
+    page.getByText(/Je ne tranche pas à la place de votre expert-comptable/),
+  ).toBeVisible();
+
+  // L'adresse tient au rechargement.
   await page.reload();
+  await expect(page).toHaveURL(/\/pme\/malica$/);
+  await expect(page.getByLabel(/Écrivez à Malica/)).toBeVisible();
+
+  // Et on en revient par la barre du bas, qui reste rendue sur cet écran.
+  const nav = page.getByRole("navigation", { name: "Navigation principale" });
+  await nav.getByText("Accueil").click();
+  await expect(page).toHaveURL(/\/pme$/);
   await expect(page.getByText("Vos documents")).toBeVisible();
 });
 

@@ -464,12 +464,15 @@ function PmeLayout() {
         ) : null}
 
         {/*
-         * `nav` : la grille à trois colonnes, le filet du haut et la réserve
-         * d'encoche viennent de la feuille. Elle est DANS LE FLUX, ce que la
-         * feuille réclamait depuis le premier jour (« une barre flottante sur
-         * un écran de 440 px mange la dernière ligne de chaque liste »), et ce
-         * que l'arbre contredisait. En paysage, fixée, elle prenait 102 px sur
-         * 390 — 26 % de l'écran debout dans un entrepôt.
+         * `nav` : la grille à trois colonnes, le filet du haut, le fond, le plan
+         * et la réserve d'encoche viennent de la feuille. Elle est COLLANTE et
+         * non fixée : épinglée en bas pendant le défilement, rendue au flux en
+         * fin de page, pour qu'au repos aucune liste ne perde sa dernière ligne
+         * (« une barre flottante sur un écran de 440 px mange la dernière ligne
+         * de chaque liste »).
+         *
+         * En paysage court, la feuille la rend au flux pour de bon : fixée, elle
+         * prenait 102 px sur 390 — 26 % de l'écran debout dans un entrepôt.
          *
          * À partir de 1024 px, la même classe la sort du bas et en fait le rail
          * collant de gauche : une barre d'onglets au bas d'un écran de 27
@@ -478,12 +481,21 @@ function PmeLayout() {
         <nav aria-label={t("pme.nav.aria")} className="nav">
           <NavItem {...navItems[0]} />
           <div className="flex justify-center py-[11px]">
+            {/*
+             * L'obturateur ne porte plus que sa géométrie en utilitaires : la
+             * cible de 58 px et le centrage. Sa PEAU est dans la feuille,
+             * sous `.obtur` — le carré arrondi au trait d'accent que dit le
+             * dessin, et l'état désactivé en `[disabled]` comme partout dans
+             * ce dépôt. `bg-foreground` le peignait en disque noir dès que le
+             * thème est passé au clair : une couleur de thème écrite sur
+             * l'élément ne peut pas suivre la palette.
+             */}
             <button
               type="button"
               disabled={!org || capture.isPending}
               onClick={ouvrirCapture}
               aria-label={t("pme.nav.add")}
-              className="grid h-[58px] w-[58px] place-items-center bg-foreground text-background outline outline-1 outline-line-strong disabled:opacity-50"
+              className="obtur grid h-[58px] w-[58px] place-items-center"
             >
               <Camera className="h-[25px] w-[25px]" aria-hidden />
             </button>
