@@ -1273,7 +1273,7 @@
 [data-surface="pme"] [data-ecran="chat"] .rev::-webkit-scrollbar{display:none}
 [data-surface="pme"] [data-ecran="chat"] .rev button[disabled]{opacity:.3;cursor:default}
 [data-surface="pme"] [data-ecran="chat"] .rev s{width:1px;height:16px;background:var(--hr);flex:none}
-[data-surface="pme"] [data-ecran="chat"] .top{position:fixed;top:2.375rem;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.625rem; max-width:440px;margin:0 auto;padding:.625rem 1rem;background:rgba(10,10,10,.92); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
+[data-surface="pme"] [data-ecran="chat"] .top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.625rem; max-width:440px;margin:0 auto;padding:.625rem 1rem;background:rgba(10,10,10,.92); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
 [data-surface="pme"] [data-ecran="chat"] .top .bk{width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-left:-.375rem}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .top .bk:hover{background:var(--s2);color:var(--tx)}}
 [data-surface="pme"] [data-ecran="chat"] .top .bk svg{width:19px;height:19px;stroke-width:2}
@@ -1734,3 +1734,34 @@
  *
  * Un titre n'est jamais un bouton : la garde ne retire rien ailleurs.
  * ------------------------------------------------------------------------- */
+
+/* ===========================================================================
+ *
+ *     LES DEUX FONDS DE SURFACE QUE MON PORTAGE AVAIT PERDUS
+ *
+ * `--s1` et `--s2` sont employées **trente-six fois** par quatre écrans —
+ * `capture`, `chat`, `manquants`, `architecture` — et n'étaient définies nulle
+ * part : elles vivaient dans le `:root` local de chaque maquette, que le
+ * portage retire parce que les jetons communs vivent plus haut.
+ *
+ * À l'exécution, une variable non définie tombe en `initial` : la barre de
+ * question, les pastilles de sources, la carte du cabinet, le composeur et la
+ * moitié des fonds de la capture n'avaient **aucun fond**. Rien ne le signale —
+ * ni le compilateur, ni le navigateur, ni une épreuve. Trouvé en convertissant
+ * l'écran du chat, pas en relisant la feuille.
+ *
+ * Les valeurs sont relevées dans les maquettes, pas choisies : `architecture`
+ * n'a pas les mêmes que les trois autres, et c'est pour cela qu'elles sont
+ * posées PAR ÉCRAN et non une fois pour toutes. Les rapprocher de `--d1`/`--d2`
+ * aurait été plus simple et aurait changé quatre écrans sans que personne
+ * l'ait décidé.
+ * ------------------------------------------------------------------------- */
+[data-surface="pme"] [data-ecran="capture"] { --s1: #17171A; --s2: #212125 }
+[data-surface="pme"] [data-ecran="chat"] { --s1: #17171A; --s2: #212125 }
+[data-surface="pme"] [data-ecran="manquants"] { --s1: #17171A; --s2: #212125 }
+[data-surface="pme"] [data-ecran="architecture"] { --s1: #141417; --s2: #1E1E22 }
+
+/* `.top` du chat était calé à `top: 2.375rem` — l'épaisseur exacte de la rangée
+ * « Basic · Solo · Team · Premium » des maquettes, qui n'est pas portée. Dans
+ * l'application il flotterait 38 px sous le haut de l'écran, au-dessus du fil,
+ * avec un vide derrière. Ramené à 0. */
