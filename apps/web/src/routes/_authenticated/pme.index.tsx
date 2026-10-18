@@ -149,6 +149,13 @@ function PmeHome() {
   const allerALaConversation = () => void navigate({ to: "/pme/malica" });
 
   /*
+   * L'offre se traite à UN endroit, et cinq gestes y mènent : la chip du haut
+   * et les quatre cartes du bas. Un seul raccourci, donc — cinq `navigate`
+   * recopiés se seraient désyncé au premier renommage de route.
+   */
+  const allerAuxReglages = () => void navigate({ to: "/pme/reglages" });
+
+  /*
    * La pastille du haut porte l'initiale de la PERSONNE, pas celle de Malica.
    *
    * Elle vient du compte ouvert — `beforeLoad` de `_authenticated` le range au
@@ -349,11 +356,7 @@ function PmeHome() {
          * échéances) et la bascule vers le cabinet, quand il y a un cabinet où
          * aller. Les supprimer aurait enfermé le dirigeant sur l'accueil.
          */}
-        <button
-          type="button"
-          className="chip"
-          onClick={() => void navigate({ to: "/pme/reglages" })}
-        >
+        <button type="button" className="chip" onClick={allerAuxReglages}>
           {t("pme.reglages.titre")}
         </button>
         {pme.aUnCabinet ? (
@@ -531,24 +534,76 @@ function PmeHome() {
           </Link>
         </div>
 
+        {/*
+         * ============ « LES BOUTONS NE MARCHENT PAS EN BAS » — CE QUI MANQUE
+         *
+         * Le défaut rapporté sur l'appareil, le 18 octobre, et sa mesure. Les
+         * quatre blocs de `.acts` sont des RELEVÉS, pas des gestes. Mais le
+         * dessin leur donne exactement la peau des quatre `.tile` du haut, qui
+         * sont des boutons — relevé sur l'application vivante (Pixel 7) :
+         *
+         *   .tiles > *   button   tabIndex 0    cursor pointer   fond rgb(245,245,245)  r 20px  180×87
+         *   .acts  > *   div      tabIndex -1   cursor auto      fond rgb(245,245,245)  r 20px  180×134
+         *
+         * Même fond, même rayon, même largeur, même composition icône + libellé
+         * + valeur. Un tap sur chacun des quatre : AUCUN EFFET, les quatre.
+         * La seule propriété qui les distingue est `cursor`, et un téléphone
+         * n'a pas de curseur : sur l'appareil du dirigeant, rien ne dit qu'une
+         * carte répond et que la suivante est muette. Il tape, il n'obtient
+         * rien, et il conclut que l'écran est cassé. Il a raison.
+         *
+         * LA FEUILLE A POSÉ CE QUI MANQUAIT — LES QUATRE SONT DES BOUTONS.
+         *
+         * Mesuré avant de le demander : un `<button className="act">` ne
+         * différait d'un `<div className="act">` que par trois propriétés —
+         * `text-align: start → center` (le nombre et l'unité se centraient, et
+         * le dessin cassait), `cursor: auto → default`, `appearance: none →
+         * button` (sans effet, le fond et le filet venant de `.act`). `.tile`
+         * déclarait déjà ce qu'il fallait ; `.act` et `.lock`, rien.
+         *
+         * La feuille porte maintenant, sur les deux, `width:100%`,
+         * `cursor:pointer`, `font-family:inherit`, `text-align:start` et
+         * `color:var(--tx)` — et `border:0` sur `.act` SEULE. Le pointillé de
+         * `.lock` est du dessin : il dit « fermé », pas « vide », et il reste.
+         *
+         * OÙ CHAQUE CARTE MÈNE, et pourquoi là — lu dans l'écran d'arrivée,
+         * pas supposé :
+         *
+         *   TVA que vous récupérez → `/pme/tva`       il lit `totals.deductible`
+         *   Lectures restantes     → `/pme/reglages`  `abo.lectures`, `abo.consommees`
+         *   Mes sièges            → `/pme/reglages`  `abo.siegesOccupes`, `abo.siegesMax`
+         *   Mes sociétés          → `/pme/reglages`  `abo.organisations`, et sa section
+         *
+         * Les deux `.lock` mènent au MÊME endroit que leurs versions ouvertes :
+         * une carte qui vend Team doit ouvrir là où Team se prend, et c'est le
+         * seul écran qui traite l'offre. Aucune de ces destinations n'est une
+         * route neuve ; les quatre existaient.
+         *
+         * `.hd` passe de `<div>` à `<span>` : un `<div>` dans un `<button>`,
+         * c'est du flux dans du phrasé, ce que la spécification refuse. La
+         * règle de feuille est en `.act .hd` — une classe — donc elle descend
+         * à l'identique, et le `display:flex` qu'elle porte reblocifie le
+         * `<span>` de toute façon. Relevé après conversion : même `display`,
+         * mêmes rectangles.
+         */}
         <div className="acts">
           {/*
            * Ce que l'État vous doit — la TVA déductible du mois, rangée au mois
            * où la pièce a été TRANSMISE au cabinet (c'est lui qui la déclare).
            * `null` s'écrit « — » : pas « 0,000 », qui serait un fait comptable.
            */}
-          <div className="act">
-            <div className="hd">
+          <button type="button" className="act" onClick={() => void navigate({ to: "/pme/tva" })}>
+            <span className="hd">
               <span>{t("pme.verifie.tvaRecuperee")}</span>
               <i>
                 <IconeRecu />
               </i>
-            </div>
+            </span>
             <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
             <em>
               {a.devise} · {moisCourant}
             </em>
-          </div>
+          </button>
 
           {/*
            * ===================================================== LE PLAFOND DE LECTURES
@@ -562,13 +617,13 @@ function PmeHome() {
            * paraît sur l'écran, et elle ne paraît que là : le plafond qui se
            * referme est le seul fait de cet accueil qui ne puisse pas attendre.
            */}
-          <div className="act">
-            <div className="hd">
+          <button type="button" className="act" onClick={allerAuxReglages}>
+            <span className="hd">
               <span>{t("pme.home.lectures")}</span>
               <i>
                 <IconeBarres />
               </i>
-            </div>
+            </span>
             <b>{compte(f?.lectures_restantes)}</b>
             {/*
              * ====================================== LE TIRET NE SE SUFFIT PAS
@@ -603,7 +658,7 @@ function PmeHome() {
                 />
               </span>
             )}
-          </div>
+          </button>
 
           {/*
            * ====================================== CE QUE L'OFFRE OUVRE, ET CE QU'ELLE RETIENT
@@ -620,13 +675,13 @@ function PmeHome() {
            * charge pas la liste des membres pour écrire deux prénoms.
            */}
           {siegesOuverts ? (
-            <div className="act">
-              <div className="hd">
+            <button type="button" className="act" onClick={allerAuxReglages}>
+              <span className="hd">
                 <span>{t("pme.home.sieges")}</span>
                 <i>
                   <IconeSieges />
                 </i>
-              </div>
+              </span>
               {/*
                * « 3 / 5 » : les places prises sur les places incluses. Deux
                * chiffres de la base, aucun mot ajouté — « 3 sièges sur 5 inclus »
@@ -635,31 +690,31 @@ function PmeHome() {
               <b>
                 {compte(f?.sieges_occupes)} / {compte(f?.sieges_inclus)}
               </b>
-            </div>
+            </button>
           ) : (
-            <div className="lock">
+            <button type="button" className="lock" onClick={allerAuxReglages}>
               <IconeSieges />
               <b>{t("pme.home.sieges")}</b>
               <em>Team</em>
-            </div>
+            </button>
           )}
 
           {societesOuvertes ? (
-            <div className="act">
-              <div className="hd">
+            <button type="button" className="act" onClick={allerAuxReglages}>
+              <span className="hd">
                 <span>{t("pme.home.societes")}</span>
                 <i>
                   <IconeSocietes />
                 </i>
-              </div>
+              </span>
               <b>{compte(f?.organisations)}</b>
-            </div>
+            </button>
           ) : (
-            <div className="lock">
+            <button type="button" className="lock" onClick={allerAuxReglages}>
               <IconeSocietes />
               <b>{t("pme.home.societes")}</b>
               <em>Premium</em>
-            </div>
+            </button>
           )}
         </div>
 
@@ -689,20 +744,37 @@ function PmeHome() {
             </svg>
           </button>
         </div>
-      </div>
 
-      {/*
-       * Un échec de capture se dit là où on l'a provoqué, sans rien pousser :
-       * il flotte au-dessus de la barre basse et disparaît au geste suivant.
-       */}
-      {pme.captureError ? (
-        <p
-          role="alert"
-          className="fixed inset-x-3 bottom-[92px] z-20 border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12px]"
-        >
-          {pme.captureError}
-        </p>
-      ) : null}
+        {/*
+         * ================================= L'ÉCHEC DE CAPTURE, RENDU AU FLUX
+         *
+         * Il vivait en `fixed … bottom-[92px] z-20`, et le commentaire d'ici
+         * affirmait qu'il « flotte au-dessus de la barre basse ». Ce n'est plus
+         * vrai : la feuille a sorti `.nav` du flottement — « Dans le flux,
+         * jamais fixée » — et 92 px ne mesurent donc plus rien.
+         *
+         * Relevé sur l'application vivante, 360 × 640, le bandeau posé : son
+         * rectangle tenait y 494–548 à TOUTE position de défilement, et
+         * `elementFromPoint` au centre des gestes rendait le bandeau, pas le
+         * geste — « Photographier » (45,505,170,49 à scrollY 181) et le lien
+         * « Échéances » (251,518,89,34 à scrollY 271). Deux gestes réels qu'un
+         * `z-20` avalait sans jamais montrer pourquoi.
+         *
+         * Rendu au flux, à la fin de l'écran où le geste a été fait, il ne peut
+         * plus rien recouvrir : aucune position, aucune langue. Il garde son
+         * filet et son bord d'arrêt, et perd seulement le droit de se poser
+         * par-dessus les boutons. Les gouttières sont celles de `.pad`, pas un
+         * `inset-x-3` au jugé.
+         */}
+        {pme.captureError ? (
+          <p
+            role="alert"
+            className="mt-3 border border-s-2 border-border border-s-signal-stop bg-card px-3 py-2 text-[12px]"
+          >
+            {pme.captureError}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

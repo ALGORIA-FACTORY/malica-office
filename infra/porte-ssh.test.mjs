@@ -89,58 +89,69 @@ function demander(demande) {
   return { code, erreur, args };
 }
 
-describe("la porte SSH du déploiement", { skip: BASH ? false : "bash absent du PATH : la porte ne peut pas être jouée, et une épreuve qui ne l'ouvre pas ne la garde pas" }, () => {
-  it("laisse passer « deployer <version> », et transmet la version", () => {
-    const r = demander("deployer main");
-    assert.equal(r.code, 0);
-    assert.deepEqual(r.args, ["main"]);
-  });
+describe(
+  "la porte SSH du déploiement",
+  {
+    skip: BASH
+      ? false
+      : "bash absent du PATH : la porte ne peut pas être jouée, et une épreuve qui ne l'ouvre pas ne la garde pas",
+  },
+  () => {
+    it("laisse passer « deployer <version> », et transmet la version", () => {
+      const r = demander("deployer main");
+      assert.equal(r.code, 0);
+      assert.deepEqual(r.args, ["main"]);
+    });
 
-  it("laisse passer « deposer <version> », en le marquant comme tel", () => {
-    // Le dépôt du code et le déploiement sont deux gestes : le premier écrit
-    // dans le dépôt git, le second démarre des conteneurs. Les confondre
-    // ferait d'un envoi de code un redémarrage de production.
-    const r = demander("deposer main");
-    assert.equal(r.code, 0);
-    assert.deepEqual(r.args, ["--deposer", "main"]);
-  });
+    it("laisse passer « deposer <version> », en le marquant comme tel", () => {
+      // Le dépôt du code et le déploiement sont deux gestes : le premier écrit
+      // dans le dépôt git, le second démarre des conteneurs. Les confondre
+      // ferait d'un envoi de code un redémarrage de production.
+      const r = demander("deposer main");
+      assert.equal(r.code, 0);
+      assert.deepEqual(r.args, ["--deposer", "main"]);
+    });
 
-  it("refuse un shell", () => {
-    const r = demander("bash -i");
-    assert.equal(r.code, 1);
-    assert.match(r.erreur, /refusé/);
-    assert.equal(r.args, null, "le déployeur ne doit pas même être appelé");
-  });
+    it("refuse un shell", () => {
+      const r = demander("bash -i");
+      assert.equal(r.code, 1);
+      assert.match(r.erreur, /refusé/);
+      assert.equal(r.args, null, "le déployeur ne doit pas même être appelé");
+    });
 
-  it("refuse une demande vide — c'est ce que fait « ssh serveur » tout court", () => {
-    const r = demander("");
-    assert.equal(r.code, 1);
-    assert.equal(r.args, null);
-  });
+    it("refuse une demande vide — c'est ce que fait « ssh serveur » tout court", () => {
+      const r = demander("");
+      assert.equal(r.code, 1);
+      assert.equal(r.args, null);
+    });
 
-  it("refuse une copie de fichier", () => {
-    // `scp` et `rsync` passent par SSH comme le reste : sans ce refus, la clé
-    // de la CI pourrait lire ou écrire n'importe quel fichier du serveur.
-    for (const demande of ["scp -t /srv/malica/.env", "rsync --server -vlogDtpre.iLsfxC . /srv"]) {
-      const r = demander(demande);
-      assert.equal(r.code, 1, demande);
-      assert.equal(r.args, null, demande);
-    }
-  });
+    it("refuse une copie de fichier", () => {
+      // `scp` et `rsync` passent par SSH comme le reste : sans ce refus, la clé
+      // de la CI pourrait lire ou écrire n'importe quel fichier du serveur.
+      for (const demande of [
+        "scp -t /srv/malica/.env",
+        "rsync --server -vlogDtpre.iLsfxC . /srv",
+      ]) {
+        const r = demander(demande);
+        assert.equal(r.code, 1, demande);
+        assert.equal(r.args, null, demande);
+      }
+    });
 
-  it("refuse un mot qui COMMENCE comme une commande permise", () => {
-    /*
-     * « deployeur » et « deposerai » ne sont pas « deployer » et « deposer ».
-     * Le motif du `case` exige l'espace qui suit : sans lui, un verbe plus
-     * long passerait, et son reste serait pris pour une version.
-     */
-    for (const demande of ["deployeur main", "deposerait main", "deployer", "deposer"]) {
-      const r = demander(demande);
-      assert.equal(r.code, 1, demande);
-      assert.equal(r.args, null, demande);
-    }
-  });
-});
+    it("refuse un mot qui COMMENCE comme une commande permise", () => {
+      /*
+       * « deployeur » et « deposerai » ne sont pas « deployer » et « deposer ».
+       * Le motif du `case` exige l'espace qui suit : sans lui, un verbe plus
+       * long passerait, et son reste serait pris pour une version.
+       */
+      for (const demande of ["deployeur main", "deposerait main", "deployer", "deposer"]) {
+        const r = demander(demande);
+        assert.equal(r.code, 1, demande);
+        assert.equal(r.args, null, demande);
+      }
+    });
+  },
+);
 
 /**
  * Le dépôt du code se vérifie DANS le dépôt git.
