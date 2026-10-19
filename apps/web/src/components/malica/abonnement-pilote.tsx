@@ -30,6 +30,7 @@ const CLES = [
   ["mes-offres"],
   ["mes-recharges"],
   ["recharge-automatique"],
+  ["mes-paiements"],
 ];
 
 function useInvalider() {
@@ -155,9 +156,14 @@ export function ChangerDOffre() {
 
   const changer = useMutation({
     mutationFn: (code: string) => office().facturation.changerForfait(code, pme.tenantId),
-    onSuccess: async (_r, code) => {
+    onSuccess: async (r, code) => {
       setArmee(null);
-      setRetour(t("pme.reglages.offres.fait", { offre: nomDeLOffre(code) }));
+      // Une montée mène au paiement : le bloc « À régler » apparaît juste dessous.
+      setRetour(
+        r.paiement
+          ? t("pme.reglages.offres.aRegler", { offre: nomDeLOffre(code) })
+          : t("pme.reglages.offres.fait", { offre: nomDeLOffre(code) }),
+      );
       await invalider();
     },
     onError: (e: unknown) => {
@@ -264,8 +270,10 @@ export function MesRecharges() {
 
   const acheter = useMutation({
     mutationFn: (code: string) => office().facturation.acheterRecharge(code, pme.tenantId),
-    onSuccess: async () => {
-      setRetour(t("pme.reglages.recharges.achetee"));
+    onSuccess: async (r) => {
+      setRetour(
+        r.paiement ? t("pme.reglages.recharges.aRegler") : t("pme.reglages.recharges.achetee"),
+      );
       await invalider();
     },
     onError: (e: unknown) => setRetour(refus(e, t)),
@@ -529,5 +537,157 @@ export function MesProprietaires() {
         </p>
       ) : null}
     </>
+  );
+}
+
+/* ------------------------------------------------------------- à régler */
+
+/**
+ * Ce qui reste à payer — une montée, une recharge — et le geste qui le paie.
+ *
+ * Une montée ou une recharge s'ouvrent TOUT DE SUITE ; le paiement suit, ici,
+ * sans que la personne ait à le chercher : le bloc se place sous l'offre, et
+ * il apparaît dès que la base a préparé le montant.
+ *
+ * Au retour de la page du prestataire, l'adresse porte `?paiement=<id>` : on
+ * demande alors à l'API de demander au PRESTATAIRE où en est le paiement. En
+ * staging, `&simulateur=1` montre les deux boutons du simulateur à la place
+ * d'une vraie page de carte.
+ */
+export function ARegler() {
+  const { t } = useI18n();
+  const invalider = useInvalider();
+  const principal = useEstPrincipal();
+  const qc = useQueryClient();
+  const paiements = useQuery({
+    queryKey: ["mes-paiements"],
+    queryFn: () => office().facturation.mesPaiements(),
+    enabled: principal,
+    retry: false,
+  });
+  const [retour, setRetour] = useState<string | null>(null);
+
+  const ici = typeof window === "undefined" ? null : new URL(window.location.href);
+  const revenu = ici?.searchParams.get("paiement") ?? null;
+  const simulateur = ici?.searchParams.get("simulateur") === "1";
+
+  const verifier = useMutation({
+    mutationFn: (id: string) => office().facturation.verifierPaiement(id),
+    onSuccess: async (p) => {
+      setRetour(
+        p.etat === "paye"
+          ? t("pme.reglages.paiement.paye")
+          : p.etat === "refuse"
+            ? t("pme.reglages.paiement.refuse")
+            : t("pme.reglages.paiement.enAttente"),
+      );
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+    },
+    onError: (e: unknown) => setRetour(refus(e, t)),
+  });
+
+  const payer = useMutation({
+    mutationFn: (id: string) => office().facturation.payerEnLigne(id),
+    onSuccess: async (r) => {
+      if (r.paiement.etat === "paye") setRetour(t("pme.reglages.paiement.paye"));
+      else if (!r.ouvert) setRetour(t("pme.reglages.paiement.ferme"));
+      else if (r.lien) window.location.assign(r.lien);
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+    },
+    onError: (e: unknown) => setRetour(refus(e, t)),
+  });
+
+  const simuler = useMutation({
+    mutationFn: (p: { id: string; decision: "paye" | "refuse" }) =>
+      office().facturation.simulerPaiement(p.id, p.decision),
+    onSuccess: async (p) => {
+      setRetour(
+        p.etat === "paye" ? t("pme.reglages.paiement.paye") : t("pme.reglages.paiement.refuse"),
+      );
+      await invalider();
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+    },
+    onError: (e: unknown) => setRetour(refus(e, t)),
+  });
+
+  // Revenu du prestataire : une seule vérification, au montage.
+  const { mutate: verifierUneFois } = verifier;
+  useEffect(() => {
+    if (principal && revenu && !simulateur) verifierUneFois(revenu);
+  }, [principal, revenu, simulateur, verifierUneFois]);
+
+  if (!principal) return null;
+  const ouverts = (paiements.data ?? []).filter((p) => p.etat !== "paye");
+  if (ouverts.length === 0 && !retour) return null;
+
+  return (
+    <div className="rows" data-a-regler>
+      <div className="sec">
+        <h2>{t("pme.reglages.paiement.titre")}</h2>
+      </div>
+      {ouverts.map((p) => (
+        <div key={p.paiement_id} className="card" data-paiement={p.paiement_id}>
+          <div className="nm">
+            <b>{p.libelle}</b>
+            <span className="px">
+              {t("pme.reglages.paiement.montant", { ttc: p.montant_ttc, devise: p.devise })}
+            </span>
+          </div>
+          {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}
+          {simulateur && revenu === p.paiement_id ? (
+            <>
+              <p className="t-body">{t("pme.reglages.paiement.simulateur")}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ width: "auto" }}
+                  disabled={simuler.isPending}
+                  onClick={() => simuler.mutate({ id: p.paiement_id, decision: "paye" })}
+                >
+                  {t("pme.reglages.paiement.simuler.payer")}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ width: "auto" }}
+                  disabled={simuler.isPending}
+                  onClick={() => simuler.mutate({ id: p.paiement_id, decision: "refuse" })}
+                >
+                  {t("pme.reglages.paiement.simuler.refuser")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn"
+                disabled={payer.isPending}
+                onClick={() => payer.mutate(p.paiement_id)}
+              >
+                {t("pme.reglages.paiement.payer")}
+              </button>
+              {p.etat === "lien_cree" ? (
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ width: "auto" }}
+                  disabled={verifier.isPending}
+                  onClick={() => verifier.mutate(p.paiement_id)}
+                >
+                  {t("pme.reglages.paiement.verifier")}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ))}
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
   );
 }

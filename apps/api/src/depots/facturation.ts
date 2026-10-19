@@ -16,6 +16,65 @@
  */
 
 import type { Requete } from "../db.ts";
+import { enMillimes, prestataireDeLEnvironnement } from "../paiement/prestataires.ts";
+
+/** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
+interface PaiementLu {
+  paiement_id: string;
+  objet: "montee" | "recharge";
+  libelle: string;
+  montant_ht: string;
+  montant_tva: string;
+  montant_ttc: string;
+  devise: string;
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse";
+  prestataire: string | null;
+  reference: string | null;
+  lien: string | null;
+  impute: boolean;
+  cree_le: string;
+}
+
+const COLONNES_PAIEMENT = `paiement_id, objet, libelle, montant_ht, montant_tva, montant_ttc, devise,
+  etat, prestataire, reference, lien, impute, cree_le`;
+
+async function lirePaiement(db: Requete, paiementId: string): Promise<PaiementLu> {
+  const { rows } = await db.query<PaiementLu>(
+    `select ${COLONNES_PAIEMENT} from facturation.paiements_en_ligne_v where paiement_id = $1`,
+    [paiementId],
+  );
+  if (!rows[0]) throw new Error("paiement.introuvable");
+  return rows[0];
+}
+
+/**
+ * Inscrire ce que le prestataire a dit. Pour le simulateur, l'API le DÉCLARE à
+ * la transaction : la base ne l'admet qu'à cette condition, et l'API ne le
+ * déclare que si le simulateur est le prestataire de l'environnement — jamais
+ * en production (`prestataireDeLEnvironnement`).
+ */
+async function inscrire(
+  db: Requete,
+  paiementId: string,
+  etat: "lien_cree" | "paye" | "refuse",
+  prestataire: string,
+  reference: string | null,
+  lien: string | null,
+  detail: Record<string, unknown> = {},
+): Promise<PaiementLu> {
+  if (prestataire === "simulateur") {
+    await db.query(`select set_config('malica.paiement_simulateur', 'oui', true)`);
+  }
+  await db.query(`select public.paiement_inscrire($1, $2, $3, $4, $5, $6::jsonb)`, [
+    paiementId,
+    etat,
+    prestataire,
+    reference,
+    lien,
+    JSON.stringify(detail),
+  ]);
+  return lirePaiement(db, paiementId);
+}
 
 export const facturation = {
   /**
@@ -167,7 +226,82 @@ export const facturation = {
       offre,
       tenantId ?? null,
     ]);
-    return { change: Boolean(rows[0]?.r) };
+    // Une montée se paie aussitôt : la base prépare la différence du mois, ou
+    // rien (descente, même prix). L'offre, elle, est déjà ouverte.
+    const { rows: p } = await db.query<{ p: PaiementLu | null }>(
+      `select public.paiement_montee_preparer($1) as p`,
+      [tenantId ?? null],
+    );
+    return { change: Boolean(rows[0]?.r), paiement: p[0]?.p ?? null };
+  },
+
+  /* ----------------------------------------------------- payer en ligne */
+
+  /** Les paiements en ligne de la licence de l'appelant, et leur état déduit. */
+  async mesPaiements(db: Requete) {
+    const { rows } = await db.query<PaiementLu>(
+      `select ${COLONNES_PAIEMENT} from facturation.paiements_en_ligne_v
+        order by cree_le desc, paiement_id`,
+    );
+    return rows;
+  },
+
+  /**
+   * Le lien vers la page du prestataire. `{ ouvert: false }` quand aucun
+   * prestataire n'est ouvert dans cet environnement : l'offre reste ouverte,
+   * et la facture du mois suit.
+   */
+  async payerEnLigne(db: Requete, paiementId: string) {
+    const p = await lirePaiement(db, paiementId);
+    if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
+    const env = prestataireDeLEnvironnement();
+    if (!env) return { ouvert: false, lien: null, paiement: p };
+
+    const { reference, lien } = await env.prestataire.creerLien({
+      paiementId,
+      millimes: enMillimes(p.montant_ttc),
+      libelle: p.libelle,
+      retour: `${env.urlPublique}/pme/reglages?paiement=${paiementId}`,
+    });
+    const inscrit = await inscrire(
+      db,
+      paiementId,
+      "lien_cree",
+      env.prestataire.nom,
+      reference,
+      lien,
+    );
+    return { ouvert: true, lien, paiement: inscrit };
+  },
+
+  /**
+   * Revenu de la page du prestataire : on lui demande, à LUI, si c'est payé.
+   * Ce que dit le navigateur ne compte pas.
+   */
+  async verifierPaiement(db: Requete, paiementId: string) {
+    const p = await lirePaiement(db, paiementId);
+    if (p.etat === "paye" || !p.reference || p.prestataire !== "clictopay") return p;
+    const env = prestataireDeLEnvironnement();
+    if (!env || env.prestataire.nom !== "clictopay") return p;
+    const r = await env.prestataire.etat(p.reference);
+    if (r.etat === "en_attente") return p;
+    return inscrire(db, paiementId, r.etat, "clictopay", p.reference, null, r.detail);
+  },
+
+  /** Le simulateur du staging : « payer » ou « refuser », sans carte. */
+  async simulerPaiement(db: Requete, paiementId: string, decision: "paye" | "refuse") {
+    const env = prestataireDeLEnvironnement();
+    if (!env || env.prestataire.nom !== "simulateur") throw new Error("paiement.simulateur_ferme");
+    if (decision !== "paye" && decision !== "refuse") throw new Error("paiement.decision_inconnue");
+    const p = await lirePaiement(db, paiementId);
+    return inscrire(
+      db,
+      paiementId,
+      decision,
+      "simulateur",
+      p.reference ?? `sim-${paiementId}`,
+      null,
+    );
   },
 
   /* ------------------------------------------------------------ recharges */
@@ -200,7 +334,12 @@ export const facturation = {
     );
     const r = rows[0]?.r;
     if (!r) throw new Error("recharge.non_achetee");
-    return r;
+    // Elle se paie aussitôt ; ses lectures sont déjà là.
+    const { rows: p } = await db.query<{ p: PaiementLu | null }>(
+      `select public.paiement_recharge_preparer($1) as p`,
+      [r["recharge_id"]],
+    );
+    return { ...r, paiement: p[0]?.p ?? null };
   },
 
   /** Le dernier réglage de la recharge automatique, ou `null`. */

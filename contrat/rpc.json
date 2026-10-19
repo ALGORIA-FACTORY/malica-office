@@ -114,13 +114,17 @@
     "libererPlace",
     "maRechargeAutomatique",
     "mesOffres",
+    "mesPaiements",
     "mesRecharges",
     "monForfait",
     "organisations",
     "paliersDeRecharge",
+    "payerEnLigne",
     "reglerRechargeAutomatique",
     "sieges",
-    "transmettreLicence"
+    "simulerPaiement",
+    "transmettreLicence",
+    "verifierPaiement"
   ],
   "honoraires": [
     "avoir",

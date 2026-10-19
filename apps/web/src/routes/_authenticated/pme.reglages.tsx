@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { coque, versionClient } from "@/capabilities/coque";
 import {
+  ARegler,
   ChangerDOffre,
   MesProprietaires,
   MesRecharges,
@@ -217,6 +218,7 @@ function PmeReglages() {
         <span>{t("pme.reglages.offres.sous")}</span>
       </div>
       <ChangerDOffre />
+      <ARegler />
 
       <div className="sec">
         <h2>{t("pme.reglages.recharges")}</h2>

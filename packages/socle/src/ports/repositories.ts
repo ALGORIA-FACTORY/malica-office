@@ -2433,11 +2433,28 @@ export interface FacturationRepository {
   /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
   mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
   /** Propriétaire principal seul ; un refus revient en `forfait_refuse:<code>:…`. */
-  changerForfait(offre: string, tenantId?: string): Promise<{ change: boolean }>;
+  changerForfait(
+    offre: string,
+    tenantId?: string,
+  ): Promise<{ change: boolean; paiement: PaiementEnLigne | null }>;
 
   paliersDeRecharge(): Promise<PalierDeRecharge[]>;
   mesRecharges(): Promise<RechargeDeLaLicence[]>;
-  acheterRecharge(code: string, tenantId?: string): Promise<RechargeDeLaLicence>;
+  acheterRecharge(
+    code: string,
+    tenantId?: string,
+  ): Promise<RechargeDeLaLicence & { paiement: PaiementEnLigne | null }>;
+
+  /** Les paiements en ligne de la licence (montées, recharges), et leur état. */
+  mesPaiements(): Promise<PaiementEnLigne[]>;
+  /** `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte. */
+  payerEnLigne(
+    paiementId: string,
+  ): Promise<{ ouvert: boolean; lien: string | null; paiement: PaiementEnLigne }>;
+  /** Le prestataire est interrogé ; ce que dit le navigateur ne compte pas. */
+  verifierPaiement(paiementId: string): Promise<PaiementEnLigne>;
+  /** Le simulateur du staging seulement ; refusé partout ailleurs. */
+  simulerPaiement(paiementId: string, decision: "paye" | "refuse"): Promise<PaiementEnLigne>;
   maRechargeAutomatique(): Promise<RechargeAutomatique | null>;
   reglerRechargeAutomatique(
     active: boolean,
@@ -2497,6 +2514,24 @@ export interface RechargeDeLaLicence {
   utilisable: boolean;
   gelee: boolean;
   expiree: boolean;
+}
+
+/** Un paiement en ligne — une montée ou une recharge — tel que la base le rend. */
+export interface PaiementEnLigne {
+  paiement_id: string;
+  objet: "montee" | "recharge";
+  libelle: string;
+  montant_ht: string;
+  montant_tva: string;
+  /** TVA comprise, sans timbre : le timbre est celui de la facture du mois. */
+  montant_ttc: string;
+  devise: string;
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse";
+  prestataire: string | null;
+  reference: string | null;
+  lien: string | null;
+  impute: boolean;
+  cree_le: string;
 }
 
 export interface RechargeAutomatique {
