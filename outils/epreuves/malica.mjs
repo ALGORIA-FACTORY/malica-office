@@ -45,19 +45,39 @@ await e.connecter();
   const mal = await e.appel("/malica/lectures/pas-un-identifiant", { method: "POST" });
   e.verdict("un identifiant mal formé est refusé, sans atteindre la base", mal.status === 400);
 
-  // Sans attendre : la réponse vient tout de suite, la lecture part seule.
+  /*
+   * `?attendre=0` n'accuse PLUS réception sur du vide, et c'est un progrès.
+   *
+   * Cette épreuve attendait `{enCours:true}` sur une pièce inexistante. Depuis
+   * que la file durable tient la lecture, le travail s'inscrit D'ABORD dans
+   * `fabrique.travaux`, et `enregistrerLecture` lit le tenant sur `pieces_v`,
+   * sous la RLS : une pièce qu'on ne voit pas n'a pas de tenant, donc elle est
+   * refusée TOUT DE SUITE.
+   *
+   * Avant, la route répondait « en cours » sur une promesse en mémoire du
+   * processus — un accusé que rien ne portait, et un refus de lecture s'est
+   * déjà perdu de cette façon. La route le dit elle-même désormais : « on ne
+   * répond pas en cours sur rien ». Le téléphone y gagne : un accusé sur une
+   * pièce disparue le faisait rejouer sans fin.
+   *
+   * La promesse « répond sans attendre » n'est pas perdue pour autant — elle
+   * se garde là où il y a une VRAIE pièce, dans `hors-ligne.mjs`, section
+   * « Demander la lecture sans attendre ». Ce module-ci n'en crée aucune, et
+   * son en-tête le dit : il n'éprouve que la porte.
+   */
   const demandee = await e.appel(`/malica/lectures/${INCONNUE}?attendre=0`, { method: "POST" });
-  const d = await demandee.json();
-  e.verdict("« demander » répond sans attendre", demandee.status === 200 && d.enCours === true);
-  // Sur une pièce inconnue, elle échoue aussitôt et le registre l'oublie —
-  // sinon une pièce fantôme resterait « en cours » pour toujours.
-  let oubliee = false;
-  for (let i = 0; i < 20 && !oubliee; i += 1) {
-    await new Promise((r) => setTimeout(r, 250));
-    const s = await (await e.appel(`/malica/lectures/${INCONNUE}`)).json();
-    oubliee = s.enCours === false;
-  }
-  e.verdict("une lecture qui échoue ne reste pas en cours", oubliee);
+  e.verdict(
+    "« demander » refuse une pièce inconnue au lieu d'en accuser réception",
+    demandee.status >= 400,
+    `statut ${demandee.status}`,
+  );
+  // Et rien ne reste « en cours » : aucun travail n'a été inscrit du tout.
+  const apres = await (await e.appel(`/malica/lectures/${INCONNUE}`)).json();
+  e.verdict(
+    "aucune lecture ne reste en cours après ce refus",
+    apres.enCours === false,
+    JSON.stringify(apres),
+  );
 
   const attendue = await e.appel(`/malica/lectures/${INCONNUE}`, { method: "POST" });
   const a = await attendue.json().catch(() => ({}));
