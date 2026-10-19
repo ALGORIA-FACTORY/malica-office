@@ -15,6 +15,7 @@ import { files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
 import { MalicaAvatar } from "@/components/malica/office-ui";
+import { useTransitionDEcran } from "@/components/malica/mouvement";
 import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
@@ -62,6 +63,14 @@ export const Route = createFileRoute("/_authenticated/pme")({
 function PmeLayout() {
   const { t, locale } = useI18n();
   const navigate = useNavigate();
+  /*
+   * Le mouvement entre écrans est installé ICI, par le layout qui PORTE la
+   * surface — et retiré avec lui. `data-surface="pme"` est posé à quatre
+   * lignes d'ici pour la même raison : une seule ligne décide de la surface,
+   * et le cabinet ne peut hériter ni de son dessin ni de son mouvement.
+   * Voir `components/malica/mouvement.ts` pour les quatre gardes.
+   */
+  useTransitionDEcran();
   const qc = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [captureError, setCaptureError] = useState<string | null>(null);

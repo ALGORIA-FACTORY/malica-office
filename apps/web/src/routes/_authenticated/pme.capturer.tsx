@@ -284,6 +284,26 @@ function PmeCapturer() {
   const [exclues, setExclues] = useState<readonly string[]>([]);
   /** La vignette ouverte dans la bande, et son petit menu. */
   const [choisie, setChoisie] = useState<string | null>(null);
+  /*
+   * ================================ LAQUELLE EST PARTIE, AU FAIT ?
+   *
+   * Supprimer une vignette la faisait disparaître à l'instant où la requête
+   * revenait : trois vignettes devenaient deux, sans que rien ne dise
+   * laquelle des trois. Ici elle garde sa place pendant 220 ms, rétrécit
+   * sur elle-même en s'effaçant, et la bande se referme sur le trou — on
+   * VOIT laquelle s'en va.
+   *
+   * Un état local et non une liste : une seule pièce part à la fois, le
+   * menu de la vignette n'en ouvre qu'une.
+   *
+   * Le mouvement ne RETIENT rien : la mutation part dans le même geste, et
+   * la suppression n'attend pas la fin de l'animation. Si le serveur répond
+   * en moins de 220 ms, le mouvement est coupé court — c'est le bon sens de
+   * la priorité, pas un défaut. Et `prefers-reduced-motion` l'éteint
+   * (`styles-pme.css`) : la vignette reste alors visible jusqu'au retour de
+   * la requête, ce qui est l'ancien comportement, exactement.
+   */
+  const [partante, setPartante] = useState<string | null>(null);
   const [question, setQuestion] = useState(0);
   const [moyen, setMoyen] = useState<string | null>(null);
   const [reference, setReference] = useState("");
@@ -608,9 +628,16 @@ function PmeCapturer() {
     onSuccess: async () => {
       setErreur(null);
       setChoisie(null);
+      setPartante(null);
       await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
     },
-    onError: echoue,
+    onError: (raison: unknown) => {
+      // La pièce reste : elle n'est pas partie. Sans ce retour, elle serait
+      // figée à zéro largeur par le `both` de l'animation — invisible, et
+      // pourtant toujours là.
+      setPartante(null);
+      echoue(raison);
+    },
   });
 
   /* ── la navigation ───────────────────────────────────────────────────── */
@@ -720,6 +747,7 @@ function PmeCapturer() {
                         "vg",
                         exclues.includes(p.id) ? "pv" : "",
                         choisie === p.id ? "sel" : "",
+                        partante === p.id ? "part" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
@@ -761,7 +789,10 @@ function PmeCapturer() {
                       type="button"
                       className="sup"
                       disabled={supprimer.isPending}
-                      onClick={() => supprimer.mutate(choisie)}
+                      onClick={() => {
+                        setPartante(choisie);
+                        supprimer.mutate(choisie);
+                      }}
                     >
                       {t("pme.capture.menu.supprimer")}
                     </button>

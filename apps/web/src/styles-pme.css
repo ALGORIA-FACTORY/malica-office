@@ -119,8 +119,32 @@
   --mono: 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
 
   /* ---- le mouvement ------------------------------------------------------
-   * Une seule durée. Ce qui bouge plus vite paraît nerveux, plus lent paraît
-   * cassé.                                                                  */
+   * L'ÉCHELLE vit dans `styles.css` : `--t-touche` (120 ms), `--t-dedans`
+   * (220 ms), `--t-ecran` (320 ms), et les deux courbes `--e-entre` /
+   * `--e-sort`. Elle y est parce que les pseudo-éléments d'une transition de
+   * vue pendent de la racine du document, pas de cette surface : un jeton
+   * écrit ici ne les atteindrait pas.
+   *
+   * `--t` RESTE, et il reste à .18s. Il ne vaut aucun des trois rôles — 180
+   * n'est ni 120 ni 220 — et le repointer aurait changé le rendu de quatre
+   * règles (`.seg button`, `.btn`, `.nav .obtur`, `.nav a` en bureau) sans
+   * que personne l'ait demandé. Mesuré, pas supposé : `var(--t)` est lu
+   * quatre fois dans cette feuille, et aucune de ces quatre règles ne
+   * bénéficie d'un changement qu'on ne peut pas regarder.
+   *
+   * Les 27 transitions qui ne changent qu'une COULEUR portent leur durée en
+   * dur (.18s, .16s) et aucune courbe, donc le défaut du navigateur. Les
+   * migrer d'un coup ferait bouger 27 rendus à l'aveugle : c'est une passe à
+   * faire avec un œil devant l'écran, pas ici. Tout ce qui s'écrit DÉSORMAIS
+   * lit les jetons.
+   *
+   * Les quatre règles qui portaient `cubic-bezier(.2,.8,.2,1)` en dur lisent
+   * `--e-entre` : même valeur, même rendu — c'était la condition pour y
+   * toucher. Leur DURÉE, elle, passe à `--t-touche` : les quatre sont un
+   * enfoncement (`transform` sur un bouton), c'est le rôle du jeton, et trois
+   * des quatre n'ont aucune règle `:active` — leur déclaration ne s'est
+   * jamais déclenchée. La quatrième, `.hero .cta`, est la seule observable :
+   * voir son `:active`, plus bas, pour l'asymétrie entrée / sortie.         */
   --t: .18s;
 
   /* ---- les deux seules ombres de l'application ---------------------------
@@ -956,7 +980,7 @@
 [data-surface="pme"] [data-ecran="accueil"] .tile .tl{flex:1;min-width:0;display:grid;gap:.125rem}
 [data-surface="pme"] [data-ecran="accueil"] .tile b{font-size:.8125rem;font-weight:600;letter-spacing:-.02em;line-height:1.18}
 [data-surface="pme"] [data-ecran="accueil"] .tile span{font-size:.6875rem;color:var(--t3);line-height:1.2}
-[data-surface="pme"] [data-ecran="accueil"] .tile .bdg{width:27px;height:27px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-family:var(--mono);font-size:.8125rem;font-weight:700}
+[data-surface="pme"] [data-ecran="accueil"] .tile .bdg{width:27px;height:27px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-family:var(--mono);font-size:.8125rem;font-weight:700;overflow:hidden}
 [data-surface="pme"] [data-ecran="accueil"] .tile .ar{width:19px;height:19px;color:var(--t3);flex:none}
 [data-surface="pme"] [data-ecran="accueil"] .sec:not(button):not(a){display:flex;align-items:center;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="accueil"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
@@ -993,10 +1017,19 @@
 [data-surface="pme"] [data-ecran="accueil"] .hero .sig i{width:11px;height:11px;border-radius:50%;background:var(--acc2)}
 [data-surface="pme"] [data-ecran="accueil"] .hero h3{margin:.875rem 0 0;font-size:1.5625rem;font-weight:700;letter-spacing:-.035em;line-height:1.16; color:var(--tx)}
 [data-surface="pme"] [data-ecran="accueil"] .hero p{margin:.4375rem 0 0;font-size:.9375rem;color:var(--t2);font-weight:400;line-height:1.3}
-[data-surface="pme"] [data-ecran="accueil"] .hero .cta{margin-top:1.1875rem;justify-self:start;display:inline-flex;align-items:center;gap:.6875rem; background:var(--acc);color:var(--on-acc);border:0;border-radius:999px;padding:.8125rem 1.3125rem; font-family:inherit;font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .2s}
+[data-surface="pme"] [data-ecran="accueil"] .hero .cta{margin-top:1.1875rem;justify-self:start;display:inline-flex;align-items:center;gap:.6875rem; background:var(--acc);color:var(--on-acc);border:0;border-radius:999px;padding:.8125rem 1.3125rem; font-family:inherit;font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; transition:transform var(--t-touche) var(--e-sort),filter var(--t-touche)}
 [data-surface="pme"] [data-ecran="accueil"] .hero .cta svg{width:17px;height:17px;stroke-width:2.4}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="accueil"] .hero .cta:hover{transform:scale(1.04);filter:brightness(1.06)}}
-[data-surface="pme"] [data-ecran="accueil"] .hero .cta:active{transform:scale(.97)}
+/* L'ASYMÉTRIE, là où elle s'observe : deux transitions, pas une.
+ * Enfoncer, c'est ENTRER dans l'état pressé — la règle `:active` porte
+ * `--e-entre`, le bouton se pose sous le doigt. Relâcher, c'est en SORTIR —
+ * la règle de base porte `--e-sort`, il remonte et ne s'attarde pas. Une
+ * seule transition partagée aurait donné le même temps et la même courbe aux
+ * deux sens, c'est-à-dire aucun des deux.
+ * 120 ms (`--t-touche`) et non 200 : un retour tactile à un cinquième de
+ * seconde est en retard sur le doigt qui l'a déclenché. C'est le seul rendu
+ * EXISTANT que cette passe modifie, et c'est le rôle même du jeton. */
+[data-surface="pme"] [data-ecran="accueil"] .hero .cta:active{transform:scale(.97);transition:transform var(--t-touche) var(--e-entre)}
 /* Le portrait se détachait par une ombre portée : c'était la troisième de
  * l'application, et l'interdit n° 4 n'en admet que deux. Une ligne suffit. */
 [data-surface="pme"] [data-ecran="accueil"] .hero .por{position:absolute;z-index:1;inset-inline-end:-8px;top:44%;transform:translateY(-50%); width:134px;height:134px;border-radius:50%;overflow:hidden; border:1px solid var(--dl)}
@@ -1136,7 +1169,7 @@
 [data-surface="pme"] [data-ecran="capture"] .flag{display:flex;align-items:flex-start;gap:.625rem;margin-top:.75rem;font-size:.8125rem; line-height:1.45;color:var(--am)}
 [data-surface="pme"] [data-ecran="capture"] .flag i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;margin-top:.4375rem}
 [data-surface="pme"] [data-ecran="capture"] .go{margin-top:auto;padding-top:1.75rem;display:grid;gap:.625rem}
-[data-surface="pme"] [data-ecran="capture"] .go .pr{border:0;border-radius:999px;background:var(--acc);color:var(--on-acc);padding:.9375rem; font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+[data-surface="pme"] [data-ecran="capture"] .go .pr{border:0;border-radius:999px;background:var(--acc);color:var(--on-acc);padding:.9375rem; font-size:.9375rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; transition:transform var(--t-touche) var(--e-entre)}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="capture"] .go .pr:hover{transform:scale(1.015)}}
 [data-surface="pme"] [data-ecran="capture"] .go .pr[disabled]{background:var(--s2);color:var(--t3);cursor:default;transform:none}
 [data-surface="pme"] [data-ecran="capture"] .go .sc{border:0;background:none;color:var(--t2);font-size:.875rem;font-weight:600;cursor:pointer; padding:.375rem}
@@ -1298,7 +1331,7 @@
 [data-surface="pme"] [data-ecran="dossier"] .jr div.now span{color:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#3C4450;letter-spacing:-.012em}
 [data-surface="pme"] [data-ecran="dossier"] .acts{display:flex;gap:.625rem;margin-top:1.5rem}
-[data-surface="pme"] [data-ecran="dossier"] .acts button{flex:1;border:0;border-radius:999px;padding:.875rem .75rem;font-family:inherit; font-size:.875rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; background:var(--d2);color:var(--tx);transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+[data-surface="pme"] [data-ecran="dossier"] .acts button{flex:1;border:0;border-radius:999px;padding:.875rem .75rem;font-family:inherit; font-size:.875rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; background:var(--d2);color:var(--tx);transition:transform var(--t-touche) var(--e-entre)}
 [data-surface="pme"] [data-ecran="dossier"] .acts button.pr{background:var(--acc);color:var(--on-acc)}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .acts button:hover{transform:scale(1.02)}}
 
@@ -1420,7 +1453,7 @@
 [data-surface="pme"] [data-ecran="charges"] .tot u{text-decoration:none;font-family:var(--mono);font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="charges"] .note .bd{flex:1;min-width:0}
 [data-surface="pme"] [data-ecran="charges"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#3C4450;letter-spacing:-.012em}
-[data-surface="pme"] [data-ecran="charges"] .note .bd button{margin-top:.6875rem;border:0;background:var(--acc);color:var(--on-acc); border-radius:999px;padding:.5625rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:700; letter-spacing:-.015em;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+[data-surface="pme"] [data-ecran="charges"] .note .bd button{margin-top:.6875rem;border:0;background:var(--acc);color:var(--on-acc); border-radius:999px;padding:.5625rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:700; letter-spacing:-.015em;cursor:pointer;transition:transform var(--t-touche) var(--e-entre)}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .note .bd button:hover{transform:scale(1.04)}}
 [data-surface="pme"] [data-ecran="charges"] .lines{background:var(--d1);border-radius:20px;overflow:hidden}
 [data-surface="pme"] [data-ecran="charges"] .ln{width:100%;display:grid;gap:.1875rem;border:0;background:none;font-family:inherit;text-align:start; color:var(--tx);padding:.9375rem 1rem;cursor:pointer;transition:background .18s}
@@ -2206,3 +2239,63 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="capture"]{ --s1: #17171A; --s2: #212125 }
 .dark [data-surface="pme"] [data-ecran="chat"]{ --s1: #17171A; --s2: #212125 }
 .dark [data-surface="pme"] [data-famille="papiers"]{ --s1: #17171A; --s2: #212125 }
+
+
+/* ======================== le mouvement qui dit CE QUI A CHANGÉ ========================
+ *
+ * Deux gestes, et ils ne décorent rien : ils répondent chacun à une question
+ * qu'un dirigeant pose à voix haute devant cet écran.
+ *
+ * ------------------------------------------------- 1. « c'était 13, non ? »
+ *
+ * `.rl` — un compteur qui ROULE au lieu de se remplacer. Quand « 13 factures
+ * attendent votre réponse » devient 12, un remplacement sec ne se voit pas :
+ * l'œil ne distingue pas un 2 d'un 3 à 13 px s'il n'a rien vu bouger. Le
+ * chiffre qui part monte et s'efface (il ACCÉLÈRE), celui qui arrive vient
+ * d'en dessous et se pose (il DÉCÉLÈRE) — comme un compteur mécanique, et
+ * dans le sens de la baisse. Une hausse roule dans l'autre sens.
+ *
+ * Le sens vertical ne se retourne PAS en arabe : un compteur n'est pas une
+ * ligne de lecture, et l'arabe compte de haut en bas comme le français.
+ *
+ * `--t-dedans` : la distance est de 27 px, un temps d'écran serait du sirop.
+ *
+ * `position:relative` + le sortant en absolu : les deux chiffres occupent la
+ * même case pendant 220 ms, donc la pastille ne change pas de largeur. C'est
+ * `.bdg` qui porte `overflow:hidden` et rogne ce qui dépasse.
+ *
+ * ------------------------------------- 2. « laquelle est partie, au fait ? »
+ *
+ * `.vg.part` — une pièce quitte la bande de capture, et la bande SE REFERME
+ * sur le trou. Supprimer une vignette la faisait disparaître à l'instant où
+ * la requête revenait : trois vignettes devenaient deux, et rien ne disait
+ * laquelle des trois. Ici elle rétrécit sur place en s'effaçant, et la marge
+ * négative avale la gouttière de `.bande` (`gap:.4375rem`) pour que les
+ * voisines se rejoignent au lieu de laisser un vide.
+ *
+ * `both` tient la fin de l'animation : la vignette reste à zéro largeur
+ * jusqu'à ce que React la retire. Sans ça, elle réapparaîtrait en pleine
+ * taille le temps d'une image avant de disparaître.
+ *
+ * ------------------------------------------------------- CE QUI LES COUPE
+ *
+ * `@media (prefers-reduced-motion:reduce)` sous `[data-surface="pme"] *`
+ * (plus haut dans cette feuille) éteint les deux : les deux classes sont des
+ * descendants de la surface. Le compteur, en plus, ne reçoit même pas sa
+ * classe dans ce cas — `compteur-qui-roule.tsx` ne l'arme pas (il lit
+ * `moinsDeMouvement()` de `mouvement.ts` au moment du changement). */
+
+@keyframes mv-chiffre-entre{from{opacity:0;translate:0 calc(var(--mv-roule) * -100%)}to{opacity:1;translate:0 0}}
+@keyframes mv-chiffre-sort{from{opacity:1;translate:0 0}to{opacity:0;translate:0 calc(var(--mv-roule) * 100%)}}
+[data-surface="pme"] .rl{position:relative;display:block;line-height:1}
+[data-surface="pme"] .rl>.en{display:block}
+[data-surface="pme"] .rl>.so{position:absolute;inset:0;display:block}
+/* `--mv-roule` : +1 quand le nombre BAISSE (le chiffre arrive du haut et le
+ * précédent sort par le bas), −1 quand il monte. */
+[data-surface="pme"] .rl[data-sens="bas"]{--mv-roule:1}
+[data-surface="pme"] .rl[data-sens="haut"]{--mv-roule:-1}
+[data-surface="pme"] .rl[data-sens]>.en{animation:mv-chiffre-entre var(--t-dedans) var(--e-entre) both}
+[data-surface="pme"] .rl[data-sens]>.so{animation:mv-chiffre-sort var(--t-dedans) var(--e-sort) both}
+
+@keyframes mv-piece-part{to{opacity:0;width:0;margin-inline-end:-.4375rem;scale:.86}}
+[data-surface="pme"] [data-ecran="capture"] .vg.part{animation:mv-piece-part var(--t-dedans) var(--e-sort) both;pointer-events:none}

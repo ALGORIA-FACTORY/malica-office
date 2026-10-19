@@ -209,6 +209,67 @@
 }
 
 /*
+ * ==========================================================================
+ *   LE SYSTÈME DE MOUVEMENT — trois durées, deux courbes, un sens de lecture
+ * ==========================================================================
+ *
+ * Avant ce bloc, `styles-pme.css` portait UNE durée (`--t: .18s`) pour
+ * 35 transitions, et une seule courbe nommée sur 4 règles : les 31 autres
+ * prenaient le défaut du navigateur, c'est-à-dire aucun choix. Les trois
+ * durées ci-dessous ont chacune un métier, et c'est le métier qui décide —
+ * pas l'écran où la règle est écrite.
+ *
+ *   --t-touche   120 ms   un retour tactile : une couleur, un enfoncement.
+ *                         C'est le seuil au-dessous duquel un doigt ne voit
+ *                         plus une transition mais un changement d'état, et
+ *                         au-dessus duquel il attend.
+ *   --t-dedans   220 ms   un mouvement DANS l'écran : une ligne s'ouvre, une
+ *                         feuille monte, un chiffre roule. La distance est
+ *                         courte, le temps l'est aussi.
+ *   --t-ecran    320 ms   un écran en remplace un autre. C'est le seul
+ *                         mouvement qui a le droit d'être vu comme un
+ *                         mouvement, parce qu'il dit où l'on va.
+ *
+ * ------------------------------------------------- POURQUOI DEUX COURBES
+ *
+ * Ce qui ARRIVE décélère : il entre vite et se pose. Ce qui PART accélère :
+ * il s'en va et ne s'attarde pas. L'asymétrie est tout le propos — une
+ * courbe symétrique sur une sortie donne l'impression que l'écran hésite.
+ *
+ * `--e-entre` n'est pas une valeur nouvelle : c'est, au centième près, la
+ * `cubic-bezier(.2, .8, .2, 1)` que quatre règles de `styles-pme.css`
+ * portaient déjà. Elles la lisent maintenant au jeton, et pas un pixel ne
+ * bouge — c'était la condition pour y toucher.
+ *
+ * -------------------------------------------------- ET LE SENS DE LECTURE
+ *
+ * `--sens` vaut +1 quand on lit de gauche à droite, −1 en arabe. Aucune
+ * animation de ce dépôt n'écrit `left` ni `right` : elles écrivent
+ * `calc(var(--sens) * …)`, et le mouvement se retourne avec la langue sans
+ * qu'une seule règle soit dupliquée. CSS ne sait pas encore interpoler un
+ * `translate` sur un axe LOGIQUE ; un jeton signé est la façon mesurable de
+ * l'exprimer aujourd'hui.
+ *
+ * `dir` est posé sur `<html>` — par le script en tête avant le premier
+ * rendu, puis par `I18nProvider` — donc `:root[dir="rtl"]` est vrai dès la
+ * première image, et non après l'hydratation.
+ */
+:root {
+  --t-touche: 120ms;
+  --t-dedans: 220ms;
+  --t-ecran: 320ms;
+
+  --e-entre: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --e-sort: cubic-bezier(0.4, 0, 1, 1);
+
+  --sens: 1;
+}
+
+:root[dir="rtl"] {
+  --sens: -1;
+}
+
+/*
  * Les trois signes de vie de Malica.
  *
  * Ils sont lents et discrets par choix : sur l'écran d'accueil d'un dirigeant,
@@ -333,8 +394,16 @@
   animation: rg-bell-soft 3.6s ease-in-out infinite;
   transform-origin: 50% 15%;
 }
+/*
+ * La seule des sept animations historiques dont la durée COÏNCIDE avec un
+ * jeton : 0.32s, c'est-à-dire `--t-ecran` au millième près. Elle se rattache
+ * donc, et le rendu est identique. Sa courbe, `ease`, n'est ni `--e-entre` ni
+ * `--e-sort` : on ne la change pas pour la faire entrer dans le système — une
+ * courbe modifiée se voit, et rien ne l'a demandée. Les six autres (2.6s, 5s,
+ * 3.6s, 2.4s, 1.5s, 0.5s) ne coïncident avec rien et restent telles quelles.
+ */
 .rg-rise {
-  animation: rg-rise 0.32s ease both;
+  animation: rg-rise var(--t-ecran) ease both;
 }
 /*
  * Le balayage parcourt la HAUTEUR DU CADRE, pas une distance fixe. D'où
@@ -487,4 +556,120 @@
 /* L'arabe d'abord en Kufi : Inter n'a pas ces glyphes, et le repli système varie. */
 :lang(ar) {
   font-family: "Noto Kufi Arabic", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * ==========================================================================
+ *   UN ÉCRAN EN REMPLACE UN AUTRE
+ * ==========================================================================
+ *
+ * ------------------------------------------------------------- LA TECHNIQUE
+ *
+ * L'API View Transitions du navigateur, et rien d'autre : zéro octet ajouté
+ * au bundle (budget mesuré : 350 Ko de JavaScript initial, voir
+ * `apps/web/scripts/budget-bundle.mjs`). Une bibliothèque de mouvement en
+ * coûterait 15 à 40 Ko gzippés pour un résultat que le navigateur sait
+ * produire tout seul, sur le compositeur, sans une ligne de JavaScript par
+ * image. `apps/web/src/components/malica/mouvement.ts` ne fait qu'une
+ * chose : dire au routeur QUAND ouvrir une transition et DANS QUEL SENS.
+ *
+ * Si le navigateur ne connaît pas l'API, TanStack Router appelle la mise à
+ * jour directement : l'écran change sans transition, comme avant. Rien à
+ * détecter, rien à charger en secours.
+ *
+ * ------------------------------------------------- JAMAIS AU PREMIER ÉCRAN
+ *
+ * Une transition de vue n'existe que si quelqu'un appelle
+ * `document.startViewTransition()`. Le routeur ne l'appelle que sur une
+ * NAVIGATION. L'ouverture de l'application n'en est pas une : aucune de ces
+ * règles ne peut jouer au premier chargement. Une application qui s'ouvre ne
+ * fait pas un numéro.
+ *
+ * ------------------------------------------------------- LE SENS DE LECTURE
+ *
+ * Aller plus loin fait entrer l'écran par la FIN de la ligne de lecture ;
+ * revenir le fait entrer par le DÉBUT. En arabe, tout se retourne — et c'est
+ * `--sens` qui le fait, pas une copie des règles sous `[dir="rtl"]`.
+ *
+ *   --pas       la distance, signée par le TYPE de la transition
+ *   --sens      le signe du sens de lecture (+1 ltr, −1 rtl)
+ *
+ * ------------------------------------------- POURQUOI 30 px ET NON TOUT L'ÉCRAN
+ *
+ * Un balayage pleine largeur sur un téléphone tenu à bout de bras est ce qui
+ * donne le mal de mer, et sur un écran de bureau à 1440 px c'est un
+ * déménagement. 30 px plus un fondu : l'œil lit un sens sans qu'une surface
+ * traverse son champ. C'est aussi la règle de Material pour un axe partagé.
+ */
+@keyframes mv-ecran-entre {
+  from {
+    opacity: 0;
+    translate: calc(var(--sens) * var(--pas)) 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes mv-ecran-sort {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: calc(var(--sens) * var(--pas) * -1) 0;
+  }
+}
+
+/*
+ * Les deux types que `mouvement.ts` passe à `startViewTransition`. Le type
+ * ne décide que du SIGNE : une seule paire d'animations sert les deux sens,
+ * donc une seule chose à relire quand la durée change.
+ */
+:root:active-view-transition-type(pme-avant) {
+  --pas: 30px;
+}
+
+:root:active-view-transition-type(pme-arriere) {
+  --pas: -30px;
+}
+
+:root:active-view-transition-type(pme-avant)::view-transition-old(root),
+:root:active-view-transition-type(pme-arriere)::view-transition-old(root) {
+  /* Ce qui part ACCÉLÈRE. */
+  animation: mv-ecran-sort var(--t-ecran) var(--e-sort) both;
+}
+
+:root:active-view-transition-type(pme-avant)::view-transition-new(root),
+:root:active-view-transition-type(pme-arriere)::view-transition-new(root) {
+  /* Ce qui arrive DÉCÉLÈRE : il entre vite et se pose. */
+  animation: mv-ecran-entre var(--t-ecran) var(--e-entre) both;
+}
+
+/*
+ * ======================================== LE SYSTÈME A LE DERNIER MOT
+ *
+ * `styles-pme.css` coupe déjà tout sous `[data-surface="pme"] *`. Les
+ * pseudo-éléments d'une transition de vue ne sont PAS dessous : leur arbre
+ * pend de l'élément racine du document. Sans ce bloc, la coupure générale ne
+ * les aurait pas atteints — c'est exactement le trou qu'on ne voit qu'en
+ * mesurant le sélecteur.
+ *
+ * Deux filets, et c'est voulu :
+ *   1. `mouvement.ts` n'ouvre AUCUNE transition quand le système demande
+ *      moins de mouvement — il n'y a alors rien à éteindre ;
+ *   2. ces règles, pour le cas où un navigateur ne connaît pas les TYPES de
+ *      transition : le routeur ouvre alors une transition sans type, le
+ *      navigateur y met son fondu par défaut, et le filet n° 1 n'a pas été
+ *      consulté. Ici, il l'est.
+ */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
 }

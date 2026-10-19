@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
+import { CompteurQuiRoule } from "@/components/malica/compteur-qui-roule";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
@@ -372,7 +373,19 @@ function PmeHome() {
             <span className="tl">
               <b>{t("pme.charges.answer.verifier")}</b>
             </span>
-            {aVerifier ? <span className="bdg">{a.enAttente}</span> : <Chevron className="g ar" />}
+            {aVerifier ? (
+              /*
+               * Le nombre ROULE, il ne se remplace pas : 13 qui devient 12
+               * dans un disque de 27 px ne se voit pas autrement, et c'est
+               * le seul accusé de réception du geste qu'on vient de faire.
+               * Voir `components/malica/compteur-qui-roule.tsx`.
+               */
+              <span className="bdg">
+                <CompteurQuiRoule valeur={a.enAttente} />
+              </span>
+            ) : (
+              <Chevron className="g ar" />
+            )}
           </button>
 
           {/* Les charges, et leur sens : `null` d'un côté et la carte se tait. */}
