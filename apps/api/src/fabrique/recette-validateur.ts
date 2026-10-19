@@ -22,6 +22,15 @@
  * réseau. Il juge une donnée, et il termine toujours : le langage n'est pas
  * récursif, donc le parcours est fini par construction.
  *
+ * Il ne juge donc pas non plus un CODE DE DROIT hors TVA : savoir si
+ * `DROIT_TIMBRE` existe demande de lire `ref.fiscal_charges` au pack de
+ * l'organisation et à la date de la pièce, c'est-à-dire tout ce que ce module
+ * n'a pas. La chaîne le fait déjà, et au bon endroit : `computePivot` cherche
+ * la règle du pack et bloque l'écriture par `MISSING_ACCOUNT_MAPPING` faute de
+ * compte — pour un code venu d'une recette comme pour un code venu du modèle.
+ * Un second juge ici serait une règle écrite deux fois, et c'est de là que
+ * viennent les huit appariements muets de ce dépôt.
+ *
  * ============================================== R4 — LES BORNES SONT PASSÉES
  *
  * Aucun seuil n'est écrit ici. `ExigencesDeValidation` vient de l'appelant,
@@ -297,6 +306,8 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     verifierSelecteur(c.designation, "champs." + nom + ".designation");
   for (const [nom, c] of Object.entries(r.references))
     verifierSelecteur(c.designation, "references." + nom + ".designation");
+  for (const [nom, d] of Object.entries(r.droits))
+    verifierSelecteur(d.designation, "droits." + nom + ".designation");
   for (const [nomT, t] of Object.entries(r.tableaux)) {
     for (const nom of [t.entete, ...(t.fin === undefined ? [] : [t.fin])]) {
       ancresVues.add(nom);
@@ -397,6 +408,14 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
   for (const [nom, c] of Object.entries(r.champs)) jugerChamp(c, "champs." + nom + ".designation");
   for (const [nom, c] of Object.entries(r.references))
     jugerChamp(c, "references." + nom + ".designation");
+  /*
+   * Un DROIT s'ancre comme un champ, et il n'y a aucune raison qu'il s'en
+   * dispense : un montant de timbre calé sur une seule zone — « en bas à
+   * droite » — se déplace avec le cadrage, et ce qui se désignerait alors
+   * serait le TTC. La même règle, le même refus.
+   */
+  for (const [nom, d] of Object.entries(r.droits))
+    jugerAncrage(d.designation, "droits." + nom + ".designation");
   for (const [nomT, t] of Object.entries(r.tableaux)) {
     const ancre = r.ancres[t.entete];
     if (ancre) jugerAncrage(ancre, "tableaux." + nomT + ".entete");
@@ -421,11 +440,13 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     Object.keys(r.ancres).length +
     Object.keys(r.champs).length +
     Object.keys(r.references).length +
+    Object.keys(r.droits).length +
     Object.values(r.tableaux).reduce((n, t) => n + Object.keys(t.colonnes).length, 0);
   if (selecteurs > exigences.selecteurs_max) {
     ajouter("TAILLE_EXCESSIVE", "", "trop de sélecteurs : " + String(selecteurs));
   }
-  const champs = Object.keys(r.champs).length + Object.keys(r.references).length;
+  const champs =
+    Object.keys(r.champs).length + Object.keys(r.references).length + Object.keys(r.droits).length;
   if (champs > exigences.champs_max) {
     ajouter("TAILLE_EXCESSIVE", "champs", "trop de champs : " + String(champs));
   }

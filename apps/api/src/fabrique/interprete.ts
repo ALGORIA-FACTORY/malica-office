@@ -50,6 +50,7 @@ import {
   sAbstenir,
   type Champ,
   type CodeDAbstention,
+  type DroitDesigne,
   type Recette,
   type ResultatDeChamp,
   type ResultatDeRecette,
@@ -625,6 +626,24 @@ export function interpreter(
     );
   }
 
+  /*
+   * LES DROITS HORS TVA — un code recopié, un montant désigné.
+   *
+   * `versResultat` est celui des champs, sans variante : un droit attendu qui
+   * manque s'abstient sous son `si_absent`, un droit ambigu sous son
+   * `si_ambigu`, un droit facultatif absent ne produit rien. Le CODE, lui, est
+   * recopié de la recette et ne passe par aucune lecture — il ne vient pas de
+   * la pièce, et aucune facture n'imprime « DROIT_TIMBRE ».
+   *
+   * L'ordre est celui de la déclaration, et il porte : la chaîne cite un droit
+   * par son RANG (`other_charges[0].amount`).
+   */
+  const droits: DroitDesigne[] = Object.entries(recette.droits).map(([nom, droit]) => ({
+    nom,
+    code: droit.code,
+    resultat: versResultat(resoudre(ctx, droit.designation), droit, `droit ${nom}`),
+  }));
+
   let lignes: Array<Record<string, ResultatDeChamp>> = [];
   let articles: Array<Record<string, ResultatDeChamp>> = [];
   for (const tableau of Object.values(recette.tableaux)) {
@@ -633,5 +652,5 @@ export function interpreter(
     else articles = [...articles, ...produites];
   }
 
-  return { version: recette.version, champs, lignes, articles };
+  return { version: recette.version, champs, lignes, articles, droits };
 }

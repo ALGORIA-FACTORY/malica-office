@@ -31,10 +31,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { RECETTE_FACTURE_A } from "../../fabrique/interprete-recettes-synthetiques.ts";
+import {
+  RECETTE_FACTURE_A,
+  RECETTE_FACTURE_A_TIMBRE,
+} from "../../fabrique/interprete-recettes-synthetiques.ts";
 import {
   FACTURE_A,
   FACTURE_A_AUTRES_VALEURS,
+  FACTURE_A_TIMBRE,
+  FACTURE_A_TIMBRE_AUTRES_VALEURS,
   FACTURE_B_TTC,
   PAGE_DE_TOTAUX,
 } from "../../fabrique/signature-plans-synthetiques.ts";
@@ -439,5 +444,128 @@ describe("la reconnaissance est en DEUX temps", () => {
     const r = designerParRecette(FACTURE_A(), contexte(unSeul), DOSSIER);
     assert.equal(r.applique, false);
     assert.equal(r.applique === false && r.pourquoi.motif, "aucun_candidat");
+  });
+});
+
+/* ===================================================================== (6) */
+
+/**
+ * LA FACTURE À TIMBRE — la mesure qui dit si la limite n° 1 est levée.
+ *
+ * Le 19 octobre 2026, `other_charges` sortait VIDE par recette : « sur une
+ * facture à timbre — c'est-à-dire la plupart en Tunisie — le contrat sortira
+ * PARTIEL et la chaîne reprendra la main ». Autrement dit la fabrique
+ * n'économisait presque rien sur les factures réelles du marché.
+ *
+ * Ce banc le mesure là où cela se voit : pas sur la désignation, mais sur le
+ * VERDICT du contrat, après la relecture partagée du plan et les équations de
+ * pied. 1 180,000 + 224,200 + 1,000 = 1 405,200 ; sans le droit, l'équation
+ * tombe à 1 404,200 d'un millime pour mille, et `valid` passe à faux.
+ */
+describe("la facture à timbre : le contrat sort-il COMPLET ?", () => {
+  const plan = FACTURE_A_TIMBRE();
+
+  /** Le format à timbre, nourri de DEUX exemples — le minimum d'une ossature. */
+  function formatTimbre(): ContexteDeFabrique["versions"] {
+    return [
+      {
+        versionId: "33333333-3333-4333-8333-333333333333",
+        recetteId: "44444444-4444-4444-8444-444444444444",
+        rang: 1,
+        libelle: "facture SOTUPAP à timbre",
+        etat: "active",
+        definition: RECETTE_FACTURE_A_TIMBRE,
+        plansDApprentissage: [FACTURE_A_TIMBRE(), FACTURE_A_TIMBRE_AUTRES_VALEURS()],
+      },
+    ];
+  }
+
+  /** Le jeton que le papier porte : « 1,000 », sur la ligne du droit de timbre. */
+  function ordinalDuTimbre(): number {
+    const jeton = plan.find((t) => t.text === "1,000");
+    assert.ok(jeton, "le plan de ce cas doit porter le montant du timbre");
+    return jeton.ordinal;
+  }
+
+  const parRecette = designerParRecette(plan, contexte(formatTimbre()), DOSSIER);
+
+  it("la recette s'applique, et elle ne s'abstient pas", () => {
+    assert.equal(
+      parRecette.applique,
+      true,
+      parRecette.applique === false ? JSON.stringify(parRecette.pourquoi) : "",
+    );
+  });
+
+  it("le droit est DÉSIGNÉ — son code nommé, son montant pointé dans le plan", () => {
+    assert.ok(parRecette.applique);
+    const droits = parRecette.par.selection.other_charges;
+    assert.equal(droits.length, 1, "un droit, et un seul");
+    assert.equal(droits[0]!.code, "DROIT_TIMBRE", "le code vient de la recette, pas de la pièce");
+    assert.deepEqual(droits[0]!.amount, { page: 1, ordinal: ordinalDuTimbre() });
+  });
+
+  it("et le contrat PARSE : `extract.v1` sort valide, droit compris", () => {
+    assert.ok(parRecette.applique);
+    const lu = construire(plan, parRecette.par.selection);
+    assert.equal(lu.valid, true, JSON.stringify(lu.flags));
+    assert.deepEqual(
+      (lu.extract["other_charges"] as Array<Record<string, string>>).map((c) => [
+        c["code"],
+        c["amount"],
+      ]),
+      [["DROIT_TIMBRE", "1.000"]],
+      "le montant est RELU dans le plan par la chaîne partagée, jamais écrit par la recette",
+    );
+  });
+
+  it("le droit porte sa CITATION, au nom que la chaîne attend", () => {
+    assert.ok(parRecette.applique);
+    const lu = construire(plan, parRecette.par.selection);
+    const citation = lu.citations.find((c) => c.field === "other_charges[0].amount");
+    assert.ok(citation, "sans citation, un montant de droit ne se vérifie pas");
+    assert.equal(citation.page, 1);
+  });
+
+  it("un droit SANS citation ne passe pas : la recette rend la main", () => {
+    /*
+     * On retire la ligne du timbre d'une pièce dont la recette l'attend. Le
+     * droit ne trouve plus de jeton ; rien n'est inscrit à zéro, aucune
+     * désignation partielle ne sort, et le motif nomme le champ sous le nom
+     * que la chaîne cite. C'est le seul comportement acceptable : un droit
+     * inscrit sans citation est un montant sans preuve d'origine dans une
+     * écriture.
+     */
+    const sansTimbre = FACTURE_A_TIMBRE()
+      .filter((t) => !(t.text === "timbre" || t.text === "1,000"))
+      .map((t, i) => ({ ...t, ordinal: i }));
+    const r = designerParRecette(sansTimbre, contexte(formatTimbre()), DOSSIER);
+    assert.equal(r.applique, false);
+    assert.equal(r.applique === false && r.pourquoi.motif, "abstention");
+    assert.match(
+      r.applique === false && "detail" in r.pourquoi ? r.pourquoi.detail : "",
+      /other_charges\[0\]\.amount/,
+    );
+  });
+
+  it("sans le droit, le même contrat parse et il MENT d'un millime par mille", () => {
+    /*
+     * ============================ POURQUOI « valid » NE MESURE PAS LA LIMITE
+     *
+     * `valid` est le verdict de `extract.v1`, c'est-à-dire une FORME : il dit
+     * que les champs sont là et typés. Le pied, lui, n'y est pas vérifié —
+     * l'équation « TTC = HT + TVA + droits » vit dans le moteur d'équilibre,
+     * en aval, et c'est là que le timbre manquant bloque l'écriture.
+     *
+     * Ce cas le montre, et c'est la raison pour laquelle le banc de bout en
+     * bout est ailleurs (`fabrique/une-recette-lit-une-facture-a-timbre.test.ts`,
+     * sur le pack réel) : sans le droit, le contrat sort VALIDE et faux, et
+     * c'est précisément la forme d'erreur que ce dépôt refuse.
+     */
+    assert.ok(parRecette.applique);
+    const sansDroit = { ...parRecette.par.selection, other_charges: [] };
+    const lu = construire(plan, sansDroit);
+    assert.equal(lu.valid, true, "la forme tient encore : c'est bien le danger");
+    assert.deepEqual(lu.extract["other_charges"], [], "et le timbre a disparu sans un mot");
   });
 });

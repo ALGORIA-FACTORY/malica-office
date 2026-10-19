@@ -101,7 +101,10 @@ describe("les réglages de la fabrique", { skip: BASE_CONFIGUREE ? false : "sans
   it("les cinq bornes du validateur sortent par le même chemin", async () => {
     const bornes = await sousIdentite(utilisateur.id, (db) => lireLesBornesDeRecette(db, tenant));
     assert.deepEqual(bornes, {
-      ancre_texte_min: 3,
+      // 2 depuis la migration `20261020200000` : la borne à 3 refusait quatre
+      // ancres qui ne désignent qu'un jeton et aucune des deux qui en
+      // désignent plusieurs. Le relevé est dans `fabrique/interprete.test.ts`.
+      ancre_texte_min: 2,
       selecteurs_max: 200,
       champs_max: 50,
       jetons_max: 12,

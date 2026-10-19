@@ -736,7 +736,11 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     assert.deepEqual(
       bornes.map((b) => [b.borne, Number(b.valeur), b.arrete_par_le_cabinet]),
       [
-        ["ancre_texte_min", 3, false],
+        // Le défaut livré est passé de 3 à 2 le 19 octobre 2026, après mesure :
+        // à 3, la borne refusait quatre ancres qui ne désignent qu'un jeton et
+        // aucune des deux qui en désignent plusieurs (migration
+        // 20261020200000, et le relevé dans `fabrique/interprete.test.ts`).
+        ["ancre_texte_min", 2, false],
         ["champs_max", 50, false],
         ["jetons_max", 12, false],
         ["rang_max", 50, false],
@@ -748,7 +752,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     const surchargee = await sousIdentite(a.id, async (db) => {
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 2, 'factures arabes : mentions courtes')`,
+         values ($1, 'fabrique.seuil.recette.ancre_texte_min', 1, 'factures arabes : mentions d''une lettre')`,
         [orgA],
       );
       const { rows } = await db.query<{ valeur: string; arrete_par_le_cabinet: boolean }>(
@@ -758,7 +762,12 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       );
       return rows[0]!;
     });
-    assert.equal(Number(surchargee.valeur), 2, "le cabinet ne peut pas abaisser la borne d'ancre");
+    /*
+     * Un caractère : « ت » pour la date sur une facture arabe. Le défaut livré
+     * le refuse, et c'est délibéré — un caractère seul est un symbole, pas une
+     * étiquette. Un cabinet qui lit ce format l'abaisse, sans déploiement.
+     */
+    assert.equal(Number(surchargee.valeur), 1, "le cabinet ne peut pas abaisser la borne d'ancre");
     assert.equal(
       surchargee.arrete_par_le_cabinet,
       true,

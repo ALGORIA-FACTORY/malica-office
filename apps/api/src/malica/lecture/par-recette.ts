@@ -259,7 +259,11 @@ export function exigerUnPlanRecolle(plan: readonly PageToken[]): void {
 function compterLesDesignations(sortie: SortieDeRecette): number {
   const d = sortie.designation;
   const racines = [d.issuer, d.document_date, d.totals.base_ht, d.totals.vat, d.totals.ttc];
-  const refs = [...racines, ...Object.values(d.references)];
+  const refs = [
+    ...racines,
+    ...Object.values(d.references),
+    ...d.other_charges.map((c) => c.amount),
+  ];
   const dansLesLignes = d.lines.flatMap((l) => Object.values(l));
   const dansLesArticles = d.articles.flatMap((a) => Object.values(a));
   return [...refs, ...dansLesLignes, ...dansLesArticles].filter((r) => r !== null).length;
@@ -289,13 +293,13 @@ function texteDuPlan(plan: readonly PageToken[], ref: TokenRef | null): string {
  * n'est pas lire une valeur : aucun montant, aucune date, aucun nombre ne
  * passe par ce chemin — seulement ce qui est, dans le contrat, une chaîne.
  *
- * `other_charges` reste VIDE : le langage des recettes ne sait pas encore
- * désigner un droit hors TVA (`recette.ts` n'a ni champ ni colonne pour lui).
- * Un tableau vide est ce que le modèle rend lui aussi quand la pièce n'en
- * porte pas ; sur une pièce qui en porte un, l'équation du pied ne bouclera
- * pas et le contrat sortira PARTIEL — donc la chaîne reprendra la main par
- * son propre rattrapage, au lieu d'inscrire un TTC amputé du timbre. C'est
- * une limite NOMMÉE, pas un silence.
+ * `other_charges` est désormais DÉSIGNÉ, et c'est la levée de la limite n° 1
+ * du 19 octobre 2026 : le langage sait nommer un droit hors TVA — son code
+ * vient du référentiel, son montant est un jeton pointé — et le pied
+ * « TTC = HT + TVA + droits » boucle sur une facture à timbre, c'est-à-dire
+ * sur la plupart des factures tunisiennes. Rien n'est relu ici : la liste
+ * passe telle quelle, et `read-piece.ts` en tire le montant par le même geste
+ * qu'il applique à un droit venu du modèle.
  */
 function selectionDepuisRecette(
   sortie: SortieDeRecette,
@@ -340,7 +344,10 @@ function selectionDepuisRecette(
     // Les colonnes manquantes se complètent par la géométrie, jamais par un
     // modèle : exactement le geste que la désignation du modèle subit déjà.
     articles: repairArticles(plan, articles),
-    other_charges: [],
+    // La forme est celle de `VisionCharge` : un code nommé, un jeton pointé.
+    // La copie est explicite parce que le type de la sortie de recette est en
+    // lecture seule et que celui de la chaîne ne l'est pas.
+    other_charges: d.other_charges.map((c) => ({ code: c.code, amount: c.amount })),
     totals: d.totals,
     references: { ...d.references },
     overall_confidence: valeurs.neutreDeConfiance,

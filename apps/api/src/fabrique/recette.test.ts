@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import type { VisionArticle, VisionSelection } from "../malica/lecture/vision.ts";
@@ -565,6 +566,159 @@ describe("un nom de référence ne casse plus le sens de la pièce", () => {
   });
 });
 
+/* ------------- ⑤ bis  un DROIT hors TVA : un code nommé, un montant désigné */
+
+/**
+ * Le droit de timbre, le FODEC et leurs semblables.
+ *
+ * ================================================================== POURQUOI ICI
+ *
+ * C'était la limite n° 1 du 19 octobre 2026 : le langage n'exprimait pas un
+ * droit hors TVA, donc `other_charges` sortait vide, donc l'équation du pied ne
+ * bouclait pas sur la plupart des factures tunisiennes. Ces cas tiennent les
+ * DEUX moitiés de la correction, et la seconde est celle qui peut se perdre :
+ *
+ *   le CODE se nomme   — il vient du référentiel, il n'est pas lu sur la pièce ;
+ *   le MONTANT se désigne — R2 ne plie pas, et un droit calé sur une zone seule
+ *                           est refusé comme n'importe quel autre champ.
+ */
+describe("un droit hors TVA se désigne, et il s'ancre comme tout le reste", () => {
+  /** La recette honnête, plus un droit de timbre désigné sous son étiquette. */
+  function avecUnDroit(droit: Record<string, unknown>): Record<string, unknown> {
+    const r = recetteHonnete();
+    const ancres = r["ancres"] as Record<string, unknown>;
+    return {
+      ...r,
+      ancres: {
+        ...ancres,
+        libelle_timbre: {
+          depuis: { genre: "ancre", motif: { genre: "contient", texte: "timbre" } },
+          ou: [],
+          prendre: { genre: "unique" },
+        },
+      },
+      droits: { timbre: droit },
+    };
+  }
+
+  const droitHonnete = {
+    code: "DROIT_TIMBRE",
+    designation: {
+      depuis: { genre: "voisin", de: "libelle_timbre", direction: "apres" },
+      ou: [{ genre: "forme", forme: "nombre" }],
+      prendre: { genre: "unique" },
+    },
+    facultatif: false,
+    si_absent: "TOKEN_NOT_FOUND",
+    si_ambigu: "DESIGNATION_AMBIGUE",
+  };
+
+  it("un droit désigné sous une ancre textuelle est ACCEPTÉ", () => {
+    const v = validerRecette(avecUnDroit(droitHonnete), EXIGENCES);
+    assert.ok(v.ok, v.ok ? "" : JSON.stringify(v.refus));
+    assert.equal(v.ok && v.recette.droits["timbre"]?.code, "DROIT_TIMBRE");
+  });
+
+  it("un droit SANS code ne passe pas : il n'y aurait rien à imputer", () => {
+    const { code: _ignore, ...sansCode } = droitHonnete;
+    assert.deepEqual(refus(avecUnDroit(sansCode)), ["FORME_INVALIDE"]);
+  });
+
+  it("un code VIDE ne passe pas non plus", () => {
+    assert.deepEqual(refus(avecUnDroit({ ...droitHonnete, code: "" })), ["FORME_INVALIDE"]);
+  });
+
+  it("un droit sans DÉSIGNATION ne passe pas : un montant sans jeton est une valeur inventée", () => {
+    const { designation: _ignore, ...sansDesignation } = droitHonnete;
+    assert.deepEqual(refus(avecUnDroit(sansDesignation)), ["FORME_INVALIDE"]);
+  });
+
+  it("un droit calé sur une ZONE SEULE est refusé, comme n'importe quel champ", () => {
+    /*
+     * Le cas n'est pas théorique : « le nombre en bas à droite » est la façon
+     * naturelle de décrire un timbre, et c'est le TTC qu'elle désigne dès que
+     * la photo est cadrée autrement.
+     */
+    const brut = avecUnDroit({
+      ...droitHonnete,
+      designation: {
+        depuis: { genre: "ancre", motif: { genre: "forme", forme: "nombre" } },
+        ou: [{ genre: "zone", zone: "pied" }],
+        prendre: { genre: "dernier" },
+      },
+    });
+    brut["zones"] = { pied: { role: "pied", x0: 0.5, y0: 0.7, x1: 1, y1: 1 } };
+    // L'ancre textuelle du timbre n'est alors plus atteinte par personne : R9
+    // dans la donnée, et le refus le dit en même temps que l'autre.
+    assert.deepEqual(refus(brut).sort(), ["COORDONNEES_SEULES", "DECLARATION_MORTE"]);
+  });
+
+  it("un droit dont l'ancre est trop courte tombe sous la borne du paramétrage", () => {
+    const brut = avecUnDroit(droitHonnete);
+    (brut["ancres"] as Record<string, unknown>)["libelle_timbre"] = {
+      depuis: { genre: "ancre", motif: { genre: "exact", texte: "T" } },
+      ou: [],
+      prendre: { genre: "unique" },
+    };
+    assert.deepEqual(refus(brut), ["ANCRE_TROP_COURTE"]);
+  });
+
+  it("un droit qui nomme une ancre inexistante est refusé", () => {
+    const brut = avecUnDroit({
+      ...droitHonnete,
+      designation: {
+        depuis: { genre: "voisin", de: "libelle_absent", direction: "apres" },
+        ou: [],
+        prendre: { genre: "unique" },
+      },
+    });
+    // Trois refus, et les trois sont justes : l'ancre nommée n'existe pas,
+    // celle qui était déclarée n'est plus atteinte, et le droit n'a donc plus
+    // aucun texte imprimé pour l'ancrer.
+    assert.deepEqual(refus(brut).sort(), [
+      "DECLARATION_MORTE",
+      "REFERENCE_INTROUVABLE",
+      "SANS_ANCRE_TEXTUELLE",
+    ]);
+  });
+
+  it("les droits COMPTENT dans les bornes de taille — un droit est un sélecteur", () => {
+    /*
+     * Sans ce comptage, une recette pourrait passer la borne de champs en
+     * déclarant ses sélecteurs sous `droits` : la borne ne bornerait plus rien.
+     */
+    const brut = avecUnDroit(droitHonnete);
+    const v = validerRecette(brut, { ...EXIGENCES, champs_max: 1 });
+    assert.equal(v.ok, false);
+    assert.deepEqual(
+      v.ok ? [] : v.refus.map((r) => r.code),
+      ["TAILLE_EXCESSIVE"],
+      "un champ plus un droit font deux, et la borne vaut un",
+    );
+  });
+
+  it("le langage ne connaît AUCUN code de droit — R4", () => {
+    /*
+     * La liste des codes vit dans `ref.fiscal_charges`, datée et versionnée par
+     * pack. Un code écrit ici demanderait un déploiement pour qu'un pack UEMOA
+     * ajoute un droit, et le validateur refuserait un code pourtant livré.
+     * L'épreuve lit le fichier du langage : c'est le seul moyen de tenir une
+     * absence.
+     */
+    const source = readFileSync(new URL("./recette.ts", import.meta.url), "utf8");
+    for (const code of ["DROIT_TIMBRE", "FODEC"]) {
+      const lignes = source
+        .split(/\r?\n/)
+        .filter((l) => l.includes(code) && !l.trimStart().startsWith("*"));
+      assert.deepEqual(
+        lignes,
+        [],
+        `« ${code} » ne doit apparaître dans le langage que dans un commentaire`,
+      );
+    }
+  });
+});
+
 /* ------------------- ⑥ le contrat public se tient tout seul */
 
 describe("le contrat public — ce que l'interprète recevra", () => {
@@ -575,10 +729,29 @@ describe("le contrat public — ce que l'interprète recevra", () => {
       document_date: absent(),
     };
     const version: VersionDuLangage = VERSION_DU_LANGAGE;
-    const resultat: ResultatDeRecette = { version, champs, lignes: [], articles: [] };
+    /*
+     * Le droit hors TVA porte un CODE, et c'est la seule chaîne de caractères
+     * d'un résultat de recette. Elle ne vient pas de la pièce : elle vient de
+     * la recette, qui la tient de `ref.fiscal_charges`. Le MONTANT, lui, reste
+     * dans `resultat`, donc dans les trois mêmes branches que tout le reste —
+     * ce que le relevé de clés ci-dessous vérifie en inspectant AUSSI les
+     * droits.
+     */
+    const droits = [
+      { nom: "timbre", code: "DROIT_TIMBRE", resultat: designer({ page: 1, ordinal: 41 }) },
+    ];
+    const resultat: ResultatDeRecette = { version, champs, lignes: [], articles: [], droits };
     assert.equal(resultat.version, VERSION_DU_LANGAGE);
-    const clefs = new Set(Object.values(resultat.champs).flatMap((c) => Object.keys(c)));
+    const clefs = new Set([
+      ...Object.values(resultat.champs).flatMap((c) => Object.keys(c)),
+      ...resultat.droits.flatMap((d) => Object.keys(d.resultat)),
+    ]);
     assert.deepEqual([...clefs].sort(), ["absent", "abstention", "designe", "detail"]);
+    assert.deepEqual(
+      resultat.droits.map((d) => Object.keys(d).sort()),
+      [["code", "nom", "resultat"]],
+      "un droit ne porte qu'un nom, un code et une désignation — aucun montant",
+    );
   });
 
   it("les types publics décrivent bien la forme sérialisée", () => {

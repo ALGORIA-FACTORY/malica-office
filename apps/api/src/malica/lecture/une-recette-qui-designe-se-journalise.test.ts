@@ -140,15 +140,19 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
       /*
        * ============================== R10, DE BOUT EN BOUT, ET CE N'EST PAS DÉCORATIF
        *
-       * Le pack livre `ancre_texte_min = 3`, et sa migration le dit en toutes
-       * lettres : « un POINT DE DÉPART À MESURER, pas un relevé ». La recette
+       * Le pack a livré `ancre_texte_min = 3` le 18 octobre 2026, en disant
+       * lui-même « un POINT DE DÉPART À MESURER, pas un relevé ». La recette
        * de banc s'appuie sur « HT » et « Qte » — deux caractères, les
-       * libellés que la pièce IMPRIME — et le validateur la refuse donc avec
+       * libellés que la pièce IMPRIME — et le validateur la refusait donc avec
        * `ANCRE_TROP_COURTE`. Constaté ici, en base, au premier passage.
        *
-       * Ce n'est pas un défaut du branchement : c'est exactement le cas que
-       * R10 prévoit. Le cabinet ARRÊTE sa borne au-dessus du défaut livré,
-       * sans migration ni déploiement, et la ligne suivante est ce geste.
+       * Le défaut livré est passé à 2 le 19 octobre, après mesure (migration
+       * `20261020200000`) : la surcharge ci-dessous est donc désormais ÉGALE au
+       * défaut, et elle reste écrite parce que ce cas n'éprouve pas la valeur
+       * de la borne — il éprouve le GESTE de R10, celui d'un cabinet qui
+       * arrête sa borne sans migration ni déploiement. Le même geste tient
+       * aujourd'hui pour une facture arabe, où une mention d'UN caractère
+       * (« ت ») reste refusée par le défaut.
        */
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)

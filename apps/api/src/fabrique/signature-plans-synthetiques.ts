@@ -110,9 +110,74 @@ interface ValeursDeFacture {
   ttc: string;
   /** Faux : le total TTC est imprimé AVANT la TVA — un format voisin, et autre. */
   ttcAvantTva?: boolean;
+  /**
+   * Le droit de timbre, imprimé entre la TVA et le TTC.
+   *
+   * C'est le pied de la facture tunisienne ORDINAIRE : « presque toute facture
+   * tunisienne porte un droit de timbre » (`read-piece.ts`, 5 octobre 2026), et
+   * l'équation du pied ne boucle que s'il y entre. Tant qu'aucun plan de banc
+   * n'en portait, la fabrique se mesurait sur une facture que le marché
+   * n'imprime presque jamais.
+   */
+  timbre?: string;
+  /**
+   * Le RÉCAPITULATIF PAR TAUX, imprimé entre le tableau d'articles et le pied.
+   *
+   * Une facture tunisienne le porte, et le contrat l'exige : `extract.v1`
+   * demande au moins une ligne de taux (`lines` min 1). Sans lui, un extrait
+   * tiré d'une recette ne PARSE pas, et « le contrat sort complet » ne se
+   * mesure pas.
+   *
+   * Le code imprimé est celui du pack — « TVA19 » — et c'est une facilité de
+   * banc qui dit une vraie asymétrie du langage : le code de TAUX d'une ligne
+   * reste une DÉSIGNATION (`CHAMPS_DE_LIGNE.tax_code`), donc une recette ne
+   * peut produire que le code que la pièce imprime littéralement. Un droit
+   * hors TVA, lui, se NOMME. L'écart est relevé dans
+   * `.superpowers/sdd/fabrique/limites-langage-report.md`.
+   */
+  recapitulatifDeTva?: { code: string; ht: string; tva: string; ttc: string };
 }
 
 function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
+  const ligneDeTimbre: LigneSynthetique[] =
+    v.timbre === undefined
+      ? []
+      : [
+          {
+            y: 0.795,
+            mots: [
+              mot("Droit", 0.6, 0.66),
+              mot("de", 0.665, 0.69),
+              mot("timbre", 0.695, 0.75),
+              mot(v.timbre, 0.8, 0.92),
+            ],
+          },
+        ];
+
+  const recapitulatif: LigneSynthetique[] =
+    v.recapitulatifDeTva === undefined
+      ? []
+      : [
+          {
+            y: 0.62,
+            mots: [
+              mot("Code", 0.05, 0.12),
+              mot("BaseHT", 0.3, 0.42),
+              mot("Taxe", 0.5, 0.58),
+              mot("TotalTTC", 0.68, 0.8),
+            ],
+          },
+          {
+            y: 0.66,
+            mots: [
+              mot(v.recapitulatifDeTva.code, 0.05, 0.14),
+              mot(v.recapitulatifDeTva.ht, 0.3, 0.42),
+              mot(v.recapitulatifDeTva.tva, 0.5, 0.6),
+              mot(v.recapitulatifDeTva.ttc, 0.68, 0.8),
+            ],
+          },
+        ];
+
   const pied: LigneSynthetique[] = v.ttcAvantTva
     ? [
         { y: 0.72, mots: [mot("Total", 0.6, 0.68), mot("TTC", 0.69, 0.74), mot(v.ttc, 0.8, 0.92)] },
@@ -122,6 +187,7 @@ function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
     : [
         { y: 0.72, mots: [mot("Total", 0.6, 0.68), mot("HT", 0.69, 0.73), mot(v.ht, 0.8, 0.92)] },
         { y: 0.77, mots: [mot("TVA", 0.6, 0.66), mot(v.tva, 0.8, 0.92)] },
+        ...ligneDeTimbre,
         { y: 0.82, mots: [mot("Total", 0.6, 0.68), mot("TTC", 0.69, 0.74), mot(v.ttc, 0.8, 0.92)] },
       ];
 
@@ -152,6 +218,7 @@ function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
       y: 0.44 + i * Math.min(0.06, 0.18 / v.articles.length),
       mots: [mot(a[0], 0.05, 0.18), mot(a[1], 0.46, 0.5), mot(a[2], 0.6, 0.7), mot(a[3], 0.8, 0.9)],
     })),
+    ...recapitulatif,
     ...pied,
     {
       y: 0.9,
@@ -247,6 +314,81 @@ export const FACTURE_A_AUTRE_CLIENT = (): PageToken[] =>
       ht: "708,000",
       tva: "134,520",
       ttc: "842,520",
+    }),
+  ]);
+
+/**
+ * LA FACTURE TUNISIENNE ORDINAIRE : le même format, plus le droit de timbre.
+ *
+ * Elle existe pour une raison mesurable. Le pied de ce plan boucle
+ * 1 180,000 + 224,200 + 1,000 = 1 405,200 : sans le timbre, l'équation
+ * « TTC = HT + TVA + droits » tombe à 1 404,200 et le contrat sort PARTIEL.
+ * C'est exactement la limite n° 1 de `docs/fabrique-de-lecteurs/02-ce-qui-est-livre.md`,
+ * et c'est ce plan qui dit si elle est levée.
+ */
+export const FACTURE_A_TIMBRE = (): PageToken[] =>
+  planSynthetique([
+    lignesDeFacture({
+      client: ["DREAM", "OPTIC"],
+      numero: "FA-2026-118",
+      date: "04/10/2026",
+      entetePrixUnitaire: "P.U.HT",
+      articles: ARTICLES_A,
+      ht: "1180,000",
+      tva: "224,200",
+      timbre: "1,000",
+      ttc: "1405,200",
+      recapitulatifDeTva: { code: "TVA19", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
+    }),
+  ]);
+
+/** Le MÊME format à timbre, un autre mois : le second exemple d'une ossature. */
+export const FACTURE_A_TIMBRE_AUTRES_VALEURS = (): PageToken[] =>
+  planSynthetique([
+    lignesDeFacture({
+      client: ["DREAM", "OPTIC"],
+      numero: "FA-2026-240",
+      date: "12/11/2026",
+      entetePrixUnitaire: "P.U.HT",
+      articles: [
+        ["Papier", "7", "400,000", "2800,000"],
+        ["Encre", "3", "380,000", "1140,000"],
+      ],
+      ht: "3940,000",
+      tva: "748,600",
+      timbre: "1,000",
+      ttc: "4689,600",
+      recapitulatifDeTva: { code: "TVA19", ht: "3940,000", tva: "748,600", ttc: "4688,600" },
+    }),
+  ]);
+
+/**
+ * LE MÊME FORMAT, UN TIMBRE QUI N'EST PAS CELUI DU BARÈME.
+ *
+ * Deux dinars de timbre, là où `ref.fiscal_charges.fixed_amount` en porte un.
+ * Cela arrive — deux exemplaires timbrés, ou un barème qui a changé entre la
+ * date de la pièce et celle du pack lu — et c'est le cas qui SÉPARE les deux
+ * états de la fabrique :
+ *
+ *   sans droit désigné  le moteur d'équilibre retrouve un résidu de 2,000, ne
+ *                       trouve au pack aucun droit à montant fixe de cette
+ *                       valeur, et BLOQUE sur `RESIDUAL_UNEXPLAINED` ;
+ *   droit désigné       le résidu n'existe pas, et le montant inscrit est celui
+ *                       que la pièce imprime, cité au jeton.
+ */
+export const FACTURE_A_TIMBRE_HORS_BAREME = (): PageToken[] =>
+  planSynthetique([
+    lignesDeFacture({
+      client: ["DREAM", "OPTIC"],
+      numero: "FA-2026-119",
+      date: "05/10/2026",
+      entetePrixUnitaire: "P.U.HT",
+      articles: ARTICLES_A,
+      ht: "1180,000",
+      tva: "224,200",
+      timbre: "2,000",
+      ttc: "1406,200",
+      recapitulatifDeTva: { code: "TVA19", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
     }),
   ]);
 

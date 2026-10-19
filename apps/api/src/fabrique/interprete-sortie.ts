@@ -44,6 +44,20 @@ type LigneDesignee = Readonly<Record<(typeof CHAMPS_DE_LIGNE)[number], TokenRef 
 type ArticleDesigne = Readonly<Record<(typeof CHAMPS_D_ARTICLE)[number], TokenRef | null>>;
 
 /**
+ * Un droit hors TVA désigné, à la forme que `VisionSelection.other_charges`
+ * attend : un code, et une référence de jeton.
+ *
+ * Le code est la SEULE chaîne de caractères que ce module laisse passer, et
+ * elle ne vient pas de la pièce : elle vient de la recette, qui la tient du
+ * référentiel. Le montant n'est pas là — il est pointé, et la chaîne partagée
+ * le relira dans le plan.
+ */
+interface ChargeDesignee {
+  readonly code: string;
+  readonly amount: TokenRef | null;
+}
+
+/**
  * Ce qu'une recette désigne d'une pièce.
  *
  * Les noms sont ceux de `VisionSelection`, à la lettre. Ce qui n'y figure pas
@@ -59,6 +73,7 @@ export interface DesignationDeRecette {
   };
   readonly lines: readonly LigneDesignee[];
   readonly articles: readonly ArticleDesigne[];
+  readonly other_charges: readonly ChargeDesignee[];
   readonly references: Readonly<Record<string, TokenRef | null>>;
 }
 
@@ -130,6 +145,32 @@ export function sortieDeRecette(resultat: ResultatDeRecette): SortieDeRecette {
     references[nom.slice(PREFIXE_DE_REFERENCE.length)] = refDe(valeur);
   }
 
+  /*
+   * LES DROITS HORS TVA.
+   *
+   * Un droit ABSENT — facultatif, et la pièce ne le porte pas — ne produit
+   * aucune entrée : `other_charges` vide est ce que le modèle rend lui aussi
+   * sur une pièce sans timbre, et une entrée à montant nul entrerait dans
+   * l'équation du pied comme un zéro qu'aucun jeton ne porte.
+   *
+   * Un droit ABSTENU produit un drapeau et aucune entrée. Le nom du drapeau
+   * est celui de la chaîne — `other_charges[<rang>].amount`, la clé sous
+   * laquelle `read-piece.ts` relève, cite et contrôle un droit —, pour que le
+   * motif se lise à l'écran au lieu de nommer une recette que personne ne
+   * regarde. C'est le même geste que pour `lines[i].*` juste en dessous.
+   *
+   * Le rang est celui de la DÉCLARATION, pas celui de la sortie : un droit
+   * abstenu en deuxième position ne renumérote pas le premier, et le drapeau
+   * désigne bien le droit qui a manqué.
+   */
+  const other_charges: ChargeDesignee[] = [];
+  resultat.droits.forEach((droit, rang) => {
+    const f = drapeau(`other_charges[${String(rang)}].amount`, droit.resultat);
+    if (f) flags.push(f);
+    const amount = refDe(droit.resultat);
+    if (amount) other_charges.push({ code: droit.code, amount });
+  });
+
   const lines = resultat.lignes.map(
     (l, i) => ligneDesignee(CHAMPS_DE_LIGNE, l, i, "lines", flags) as unknown as LigneDesignee,
   );
@@ -148,6 +189,7 @@ export function sortieDeRecette(resultat: ResultatDeRecette): SortieDeRecette {
       },
       lines,
       articles,
+      other_charges,
       references,
     },
     flags,

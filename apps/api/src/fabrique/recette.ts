@@ -240,6 +240,30 @@ export const CHAMPS_DE_PIECE = [
   "references.matricule_fiscal_client",
 ] as const;
 
+/**
+ * La longueur maximale d'un code de droit hors TVA porté par une recette.
+ *
+ * ================================ POURQUOI UNE LONGUEUR ET PAS UNE LISTE (R4)
+ *
+ * Les codes de droits vivent dans `ref.fiscal_charges`, datés, versionnés par
+ * pack, avec leur compte et leur référence légale : `DROIT_TIMBRE` depuis le
+ * 26 août 2026, le FODEC depuis le 18 octobre. Les ÉNUMÉRER ici en ferait des
+ * constantes réglementaires dans du TypeScript, et un pack UEMOA qui ajoute un
+ * droit demanderait un déploiement. Le langage ne connaît donc aucun code : il
+ * sait seulement qu'une recette en NOMME un, et il en borne la forme.
+ *
+ * ================================= QUI REFUSE UN CODE QUE LE PACK NE CONNAÎT PAS
+ *
+ * La chaîne, et elle le fait déjà — pour le code que le MODÈLE nomme comme
+ * pour celui qu'une recette nomme, par le même chemin et au même endroit :
+ * `computePivot` cherche la règle du pack à la date de la pièce et, faute de
+ * règle, bloque l'écriture par `MISSING_ACCOUNT_MAPPING` — « aucun compte au
+ * pack pour le droit ». Le redire ici en ferait une seconde règle, qui
+ * dériverait ; ce dépôt a trouvé huit appariements muets en deux jours, tous
+ * nés d'une règle écrite deux fois.
+ */
+const LONGUEUR_MAX_DE_CODE_DE_DROIT = 64;
+
 /** Les colonnes admises d'un tableau de lignes de TVA. */
 export const CHAMPS_DE_LIGNE = ["label", "tax_code", "base_ht", "vat_amount", "ttc"] as const;
 
@@ -388,6 +412,58 @@ const ColonneSchema = z
   })
   .strict();
 
+/**
+ * Un DROIT HORS TVA désigné — le droit de timbre, le FODEC, leurs semblables.
+ *
+ * ========================================================== CE QU'IL CORRIGE
+ *
+ * Jusqu'ici le langage n'exprimait pas un droit hors TVA, et `other_charges`
+ * sortait vide par recette. Conséquence mesurée : sur une facture à timbre —
+ * « c'est-à-dire la plupart en Tunisie » —, l'équation du pied
+ * « TTC = HT + TVA + droits » ne bouclait pas, le contrat sortait PARTIEL et la
+ * chaîne reprenait la main. Une recette parfaite sur tout le reste rendait
+ * quand même la main au modèle.
+ *
+ * ================================================ UN CODE NOMMÉ, UN MONTANT DÉSIGNÉ
+ *
+ * Les deux moitiés d'un droit ne viennent pas du même endroit, et c'est le
+ * point de cette forme :
+ *
+ *   `code`         vient du RÉFÉRENTIEL, et la recette le NOMME. Il n'est pas
+ *                  lu sur la pièce — une facture tunisienne n'imprime nulle
+ *                  part « DROIT_TIMBRE » — exactement comme le modèle
+ *                  désignateur, à qui l'invite donne la liste des codes
+ *                  autorisés et qui en choisit un sans le lire ;
+ *   `designation`  pointe le JETON qui porte le montant, et rien d'autre. R2
+ *                  ne plie pas : la valeur se relit dans le plan, par la
+ *                  chaîne partagée, après `recollerLesMilliers`.
+ *
+ * ======================== POURQUOI PAS LE MONTANT FIXE DU PACK, QUI EXISTE
+ *
+ * `ref.fiscal_charges.fixed_amount` porte bien le montant du timbre, et il
+ * serait tentant de laisser une recette nommer le code SEUL. Ce serait une
+ * valeur sans citation — très exactement ce que R2 interdit — et le produit
+ * ferait pire que le modèle sur le cas qui compte : un timbre dont le barème a
+ * changé entre la date de la pièce et celle du pack lu, ou une facture qui
+ * imprime un autre montant que le barème, sortiraient JUSTES et faux.
+ *
+ * La chaîne fait déjà mieux, et sans rien inventer : `analyse.ts` lit le
+ * montant IMPRIMÉ et se sert de `fixed_amount` comme ANCRE D'ÉCHELLE quand
+ * l'égalité laisse « 1.000 » ambigu entre un dinar et mille. Le barème sert à
+ * lever un doute de lecture, jamais à remplacer une lecture. Un droit désigné
+ * par une recette emprunte ce chemin-là, intact.
+ */
+const DroitSchema = z
+  .object({
+    /** Le code du pack (`ref.fiscal_charges.code`), nommé et non lu. */
+    code: z.string().min(1).max(LONGUEUR_MAX_DE_CODE_DE_DROIT),
+    designation: SelecteurSchema,
+    facultatif: z.boolean().default(false),
+    si_absent: z.enum(CODES_D_ABSTENTION),
+    si_ambigu: z.enum(CODES_D_ABSTENTION),
+  })
+  .strict();
+
 const TableauSchema = z
   .object({
     destination: z.enum(DESTINATIONS_DE_TABLEAU),
@@ -430,6 +506,15 @@ export const RecetteSchema = z
     champs: z.record(z.string(), ChampSchema).default({}),
     /** Les références libres de la pièce (bon de commande, marché…), par nom. */
     references: z.record(NomSchema, ChampSchema).default({}),
+    /**
+     * Les droits hors TVA, par nom de déclaration.
+     *
+     * Le nom est celui de la recette (« timbre », « fodec ») ; le CODE, lui,
+     * est une donnée portée par la déclaration et vient du référentiel. Les
+     * deux sont séparés exprès : deux lignes de timbre sur une même facture
+     * portent deux noms et un seul code.
+     */
+    droits: z.record(NomSchema, DroitSchema).default({}),
   })
   .strict();
 
@@ -439,6 +524,7 @@ export type Motif = z.infer<typeof MotifSchema>;
 export type Selecteur = z.infer<typeof SelecteurSchema>;
 export type Zone = z.infer<typeof ZoneSchema>;
 export type Champ = z.infer<typeof ChampSchema>;
+export type Droit = z.infer<typeof DroitSchema>;
 export type Tableau = z.infer<typeof TableauSchema>;
 
 /**
@@ -464,12 +550,35 @@ export type ResultatDeChamp =
   | { readonly abstention: CodeDAbstention; readonly detail: string | undefined }
   | { readonly absent: true };
 
+/**
+ * Un droit hors TVA tel qu'une recette le rend.
+ *
+ * Le code est RECOPIÉ de la recette, pas lu : c'est la seule chaîne de
+ * caractères qu'un résultat de recette porte, et elle ne vient pas de la
+ * pièce. Le montant, lui, n'est pas là — il est désigné, et `resultat` ne
+ * porte qu'une référence de jeton, une abstention ou une absence.
+ */
+export interface DroitDesigne {
+  /** Le nom de la déclaration dans la recette, pour que le motif se lise. */
+  readonly nom: string;
+  readonly code: string;
+  readonly resultat: ResultatDeChamp;
+}
+
 /** Ce qu'un interprète rend pour une pièce entière. */
 export interface ResultatDeRecette {
   readonly version: VersionDuLangage;
   readonly champs: Readonly<Record<string, ResultatDeChamp>>;
   readonly lignes: ReadonlyArray<Readonly<Record<string, ResultatDeChamp>>>;
   readonly articles: ReadonlyArray<Readonly<Record<string, ResultatDeChamp>>>;
+  /**
+   * Les droits hors TVA, dans l'ordre où ils entreront dans `other_charges`.
+   *
+   * Une liste et non un dictionnaire, parce que la chaîne les cite par RANG —
+   * `other_charges[0].amount` — et qu'un ordre de clés d'objet n'est pas un
+   * rang.
+   */
+  readonly droits: readonly DroitDesigne[];
 }
 
 /** Désigner : la seule façon de rendre quelque chose de positif. */

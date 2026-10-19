@@ -29,17 +29,22 @@ import { recollerLesMilliers } from "../malica/lecture/recoller-les-milliers.ts"
 import type { VisionSelection } from "../malica/lecture/vision.ts";
 
 import { interpreter } from "./interprete.ts";
-import { RECETTE_FACTURE_A, RECETTE_FACTURE_ARABE } from "./interprete-recettes-synthetiques.ts";
+import {
+  RECETTE_FACTURE_A,
+  RECETTE_FACTURE_ARABE,
+  RECETTE_FACTURE_A_TIMBRE,
+} from "./interprete-recettes-synthetiques.ts";
 import { sortieDeRecette, type DesignationDeRecette } from "./interprete-sortie.ts";
-import { formeDuJeton } from "./interprete-texte.ts";
+import { correspond, formeDuJeton } from "./interprete-texte.ts";
 import { validerRecette, type ExigencesDeValidation } from "./recette-validateur.ts";
-import type { Recette, ResultatDeChamp } from "./recette.ts";
+import type { Motif, Recette, ResultatDeChamp } from "./recette.ts";
 import {
   FACTURE_A,
   FACTURE_ARABE,
   FACTURE_A_AUTRES_VALEURS,
   FACTURE_A_DEUX_PAGES,
   FACTURE_A_SIX_LIGNES,
+  FACTURE_A_TIMBRE,
   FACTURE_B_TTC,
   FACTURE_MIXTE,
   incliner,
@@ -84,6 +89,7 @@ function valider(brut: unknown): Recette {
 }
 
 const RECETTE_A = valider(RECETTE_FACTURE_A);
+const RECETTE_A_TIMBRE = valider(RECETTE_FACTURE_A_TIMBRE);
 const RECETTE_AR = valider(RECETTE_FACTURE_ARABE);
 
 /** Le texte que porte le jeton désigné — relu DANS LE PLAN, jamais rendu par l'interprète. */
@@ -134,6 +140,10 @@ describe("la règle ① : l'interprète ne lit aucune valeur", () => {
       ...Object.values(resultat.champs),
       ...resultat.lignes.flatMap((l) => Object.values(l)),
       ...resultat.articles.flatMap((a) => Object.values(a)),
+      // Les droits hors TVA aussi : c'est la partie du langage qui a le plus
+      // de raisons de porter une valeur, puisqu'elle NOMME un code. Le code
+      // vit sur le droit, pas sur son résultat, et ce relevé le vérifie.
+      ...resultat.droits.map((d) => d.resultat),
     ];
     assert.ok(tous.length > 0, "la recette n'a rien produit : le cas ne prouve rien");
 
@@ -166,6 +176,91 @@ describe("la règle ① : l'interprète ne lit aucune valeur", () => {
         `la sortie porte une clé « ${interdit} » : c'est un second lecteur de valeurs qui commence`,
       );
     }
+  });
+
+  it("un DROIT hors TVA ne fait pas exception : son montant reste une désignation", () => {
+    /*
+     * La sortie d'un droit porte bien une clé `amount` — c'est le nom que
+     * `VisionSelection.other_charges` exige — mais ce qu'elle porte est un
+     * `page`/`ordinal`, jamais un nombre ni un texte. Le relevé de clés
+     * ci-dessus ne suffit donc pas ici, et ce cas inspecte la VALEUR.
+     */
+    const { designation } = sortieDeRecette(
+      interpreter(RECETTE_A_TIMBRE, FACTURE_A_TIMBRE(), PARAMETRES),
+    );
+    assert.equal(designation.other_charges.length, 1);
+    const droit = designation.other_charges[0]!;
+    assert.deepEqual(
+      Object.keys(droit.amount ?? {}).sort(),
+      ["ordinal", "page"],
+      "un montant de droit porte une place, et rien de plus",
+    );
+    assert.equal(
+      typeof droit.code,
+      "string",
+      "le code, lui, est bien un texte — il vient du référentiel, pas de la pièce",
+    );
+  });
+});
+
+/* ====================================================================== */
+
+describe("un droit hors TVA : désigné, abstenu, ou absent", () => {
+  it("le droit de timbre est désigné là où la pièce l'imprime", () => {
+    const plan = FACTURE_A_TIMBRE();
+    const r = interpreter(RECETTE_A_TIMBRE, plan, PARAMETRES);
+    assert.equal(r.droits.length, 1);
+    assert.equal(r.droits[0]!.code, "DROIT_TIMBRE");
+    assert.equal(texteDesigne(plan, r.droits[0]!.resultat), "1,000");
+  });
+
+  it("un droit ATTENDU que la pièce ne porte pas s'ABSTIENT — il ne vaut pas zéro", () => {
+    /*
+     * C'est le cas qui compte le plus : un droit absent inscrit à zéro ferait
+     * boucler l'équation du pied en inventant un fait. Retirer la ligne du
+     * timbre d'une facture qui le déclare doit rendre la main, avec le motif.
+     */
+    const plan = FACTURE_A_TIMBRE()
+      .filter((t) => !(t.text === "timbre" || t.text === "1,000"))
+      .map((t, i) => ({ ...t, ordinal: i }));
+    const r = interpreter(RECETTE_A_TIMBRE, plan, PARAMETRES);
+    assert.equal(abstentionDe(r.droits[0]?.resultat), "TOKEN_NOT_FOUND");
+
+    const { designation, flags, sAbstient } = sortieDeRecette(r);
+    assert.deepEqual(designation.other_charges, [], "aucune entrée inventée");
+    assert.equal(sAbstient, true);
+    assert.ok(
+      flags.some((f) => f.field === "other_charges[0].amount"),
+      "le drapeau porte le nom sous lequel la chaîne cite un droit",
+    );
+  });
+
+  it("un droit FACULTATIF absent ne produit ni entrée ni drapeau", () => {
+    /*
+     * Une facture sans timbre existe — un avoir, une facture export —, et le
+     * format est le même. Déclarer le droit facultatif doit alors rendre
+     * exactement ce que le modèle rend : un tableau vide, et aucun reproche.
+     */
+    const facultatif = valider({
+      ...(RECETTE_FACTURE_A_TIMBRE as Record<string, unknown>),
+      droits: {
+        timbre: {
+          ...(RECETTE_FACTURE_A_TIMBRE as { droits: { timbre: Record<string, unknown> } }).droits
+            .timbre,
+          facultatif: true,
+        },
+      },
+    });
+    const plan = FACTURE_A()
+      .concat()
+      .map((t, i) => ({ ...t, ordinal: i }));
+    const r = interpreter(facultatif, plan, PARAMETRES);
+    const { designation, flags } = sortieDeRecette(r);
+    assert.deepEqual(designation.other_charges, []);
+    assert.deepEqual(
+      flags.filter((f) => f.field.startsWith("other_charges")),
+      [],
+    );
   });
 });
 
@@ -672,5 +767,155 @@ describe("ce que l'interprète NE garde pas", () => {
      * garde est en amont.
      */
     assert.ok(flags.some((f) => f.field.includes("unit_price_ht")));
+  });
+});
+
+/* ====================================================================== */
+
+/**
+ * LA BORNE `ancre_texte_min` : CONTRE QUOI PROTÈGE-T-ELLE RÉELLEMENT ?
+ *
+ * ================================================================== LA QUESTION
+ *
+ * Le pack livre `ancre_texte_min = 3`, et sa migration le dit lui-même : « un
+ * POINT DE DÉPART À MESURER, pas un relevé ». Son refus s'énonce « texte
+ * d'ancre trop court pour discriminer » — autrement dit la borne suppose
+ * qu'une ancre COURTE désigne trop de choses.
+ *
+ * Ce banc mesure cette supposition, sur les plans qu'il porte déjà. Il ne
+ * mesure pas un taux de production : il mesure une CORRÉLATION, et il suffit de
+ * la mesurer une fois pour savoir si la longueur est la bonne borne.
+ *
+ * ======================================================== CE QUE LA MESURE DONNE
+ *
+ * Sur le pied de facture française ordinaire, la longueur n'est pas corrélée au
+ * nombre de jetons qu'une ancre attrape — elle l'est À L'ENVERS. L'ancre la
+ * plus longue de la recette de banc (« Total », 5 caractères) est la SEULE qui
+ * en attrape plusieurs ; les plus courtes (« HT », « TVA », « TTC », « Qte »)
+ * en attrapent exactement un.
+ *
+ * Ce qui discrimine n'est donc pas la longueur, c'est le GENRE du motif : une
+ * égalité avec un jeton imprimé est une borne forte, une inclusion ne l'est
+ * pas. « HT » en `exact` attrape un jeton ; le même « HT » en `contient` en
+ * attrape trois — « HT », « P.U.HT », « BaseHT ».
+ *
+ * La conclusion et ce qu'elle ouvre sont écrites dans
+ * `.superpowers/sdd/fabrique/limites-langage-report.md`, et le défaut livré
+ * passe de 3 à 2 par migration. Ce qu'une borne de longueur ne peut PAS tenir
+ * — « combien de jetons cette ancre attrape-t-elle vraiment » — ne se tient
+ * qu'au contact des exemples, donc à la génération et à l'évaluation, jamais
+ * dans un validateur pur qui ne voit aucune pièce.
+ */
+describe("la borne d'ancre : ce que la longueur prédit, et ce qu'elle ne prédit pas", () => {
+  /** Combien de jetons du plan un motif attrape — la vraie mesure de l'ancre. */
+  function attrapes(plan: readonly PageToken[], motif: Motif): number {
+    return plan.filter((t) => correspond(motif, t.text, "latins")).length;
+  }
+
+  it("l'ancre la plus LONGUE de la recette de banc est la seule qui attrape plusieurs jetons", () => {
+    const plan = FACTURE_A();
+    const releve = Object.values(RECETTE_A.ancres)
+      .map((s) => (s.depuis.genre === "ancre" ? s.depuis.motif : null))
+      .filter((m): m is Motif => m !== null && m.genre !== "forme")
+      .map((m) => ({
+        texte: m.genre === "forme" ? "" : m.texte,
+        longueur: m.genre === "forme" ? 0 : [...m.texte].length,
+        attrapes: attrapes(plan, m),
+      }));
+    assert.ok(releve.length >= 8, "le relevé doit porter sur toutes les ancres de la recette");
+
+    const ambigues = releve.filter((r) => r.attrapes > 1);
+    assert.deepEqual(
+      ambigues.map((r) => [r.texte, r.longueur, r.attrapes]),
+      [
+        // « FACTURE » en haut, « facture » dans « Arretee la presente
+        // facture » : la normalisation est insensible à la casse, et le mot
+        // revient en toutes lettres au bas de la pièce.
+        ["FACTURE", 7, 2],
+        // « Total HT », « Total TTC », et l'en-tête de colonne « Total ».
+        ["Total", 5, 3],
+      ],
+      "si la longueur protégeait, les DEUX plus longues ne seraient pas les seules ambiguës",
+    );
+    /*
+     * ======================== LE CHIFFRE QUI TRANCHE LA QUESTION DE LA BORNE
+     *
+     * Le défaut livré était 3. Sur cette recette, il refuse QUATRE ancres qui
+     * attrapent chacune un seul jeton, et AUCUNE des deux qui en attrapent
+     * plusieurs. Une borne qui ne refuse rien de ce qu'elle visait et tout ce
+     * qu'elle ne visait pas n'est pas une borne trop basse ou trop haute :
+     * c'est la mauvaise grandeur.
+     */
+    const refuseesParTrois = releve.filter((r) => r.longueur < 3);
+    assert.ok(refuseesParTrois.length >= 1, "le pied porte bien des étiquettes de 2 caractères");
+    for (const r of refuseesParTrois) {
+      assert.equal(r.attrapes, 1, `« ${r.texte} » serait refusée, et elle ne désigne qu'un jeton`);
+    }
+    for (const r of ambigues) {
+      assert.ok(
+        r.longueur >= 3,
+        `« ${r.texte} » attrape ${String(r.attrapes)} jetons et la borne à 3 la laisse passer`,
+      );
+    }
+
+    const courtes = releve.filter((r) => r.longueur <= 3);
+    assert.ok(courtes.length >= 4, "le pied porte bien des étiquettes de deux ou trois lettres");
+    for (const c of courtes) {
+      assert.equal(c.attrapes, 1, `« ${c.texte} » attrape ${String(c.attrapes)} jetons`);
+    }
+  });
+
+  it("ce qui discrimine est le GENRE du motif, pas la longueur du texte", () => {
+    /*
+     * Le même texte, la même longueur, deux pouvoirs opposés. Une borne de
+     * longueur refuse les deux ou accepte les deux ; elle ne peut pas les
+     * distinguer, et c'est pour cela qu'elle n'est pas la bonne borne.
+     */
+    const plan = FACTURE_A_TIMBRE();
+    assert.equal(attrapes(plan, { genre: "exact", texte: "HT" }), 1);
+    assert.equal(
+      attrapes(plan, { genre: "contient", texte: "HT" }),
+      3,
+      "« HT », « P.U.HT », « BaseHT » : l'inclusion attrape tout le pied",
+    );
+  });
+
+  it("et une ancre ambiguë ne passe pas en silence : elle s'abstient, à toute longueur", () => {
+    /*
+     * La garde qui tient réellement n'est pas la longueur : c'est
+     * `prendre: unique`, qui refuse de choisir. Mesurée ici sur l'ancre la
+     * PLUS LONGUE, celle que la borne n'a jamais inquiétée.
+     */
+    const ambigue = valider({
+      version: RECETTE_FACTURE_A_TIMBRE,
+      ...(RECETTE_FACTURE_A_TIMBRE as Record<string, unknown>),
+      ancres: {
+        trois_fois: {
+          depuis: { genre: "ancre", motif: { genre: "exact", texte: "Total" } },
+          ou: [],
+          prendre: { genre: "unique" },
+        },
+      },
+      tableaux: {},
+      droits: {},
+      references: {},
+      champs: {
+        "totals.ttc": {
+          designation: {
+            depuis: { genre: "voisin", de: "trois_fois", direction: "apres" },
+            ou: [{ genre: "forme", forme: "nombre" }],
+            prendre: { genre: "unique" },
+          },
+          si_absent: "TOKEN_NOT_FOUND",
+          si_ambigu: "DESIGNATION_AMBIGUE",
+        },
+      },
+    });
+    const r = interpreter(ambigue, FACTURE_A_TIMBRE(), PARAMETRES);
+    assert.equal(
+      abstentionDe(r.champs["totals.ttc"]),
+      "DESIGNATION_AMBIGUE",
+      "cinq caractères, trois jetons, et c'est le CHOIX qui sauve la lecture",
+    );
   });
 });
