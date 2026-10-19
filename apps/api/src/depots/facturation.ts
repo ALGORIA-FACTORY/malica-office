@@ -149,7 +149,7 @@ export const facturation = {
    */
   async mesOffres(db: Requete, tenantId?: string) {
     const { rows } = await db.query(
-      `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation,
+      `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation, lectures_incluses,
               sieges_inclus, sieges_max, organisations_incluses, organisations_max,
               courant, empechement, chiffres
          from public.mes_offres($1)`,

@@ -2462,6 +2462,8 @@ export interface OffreDeLaGrille {
   rang: number;
   prix_mensuel_ht: string;
   lectures_par_organisation: number;
+  /** Les lectures que l'offre garantit, sociétés incluses comprises. */
+  lectures_incluses: number;
   sieges_inclus: number;
   /** `null` : sans plafond. */
   sieges_max: number | null;
