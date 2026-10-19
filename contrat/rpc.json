@@ -105,6 +105,7 @@
     "historique"
   ],
   "fabrique": [
+    "codesDuReferentiel",
     "contexteDeDesignation",
     "decisions",
     "derives",

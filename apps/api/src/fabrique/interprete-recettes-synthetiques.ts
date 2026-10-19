@@ -180,8 +180,8 @@ export const RECETTE_FACTURE_A_TIMBRE: unknown = {
       depuis: { genre: "ancre", motif: { genre: "exact", texte: "Matricule" } },
       prendre: { genre: "unique" },
     },
-    entete_code: {
-      depuis: { genre: "ancre", motif: { genre: "exact", texte: "Code" } },
+    entete_taux: {
+      depuis: { genre: "ancre", motif: { genre: "exact", texte: "Taux" } },
       prendre: { genre: "unique" },
     },
     entete_base: {
@@ -210,22 +210,27 @@ export const RECETTE_FACTURE_A_TIMBRE: unknown = {
      */
     articles: {
       ...(BASE_A["tableaux"] as { articles: Record<string, unknown> }).articles,
-      fin: "entete_code",
+      fin: "entete_taux",
     },
     /*
      * LES LIGNES PAR TAUX — ce que `extract.v1` exige (`lines` min 1).
      *
      * `label` n'est pas désigné : le récapitulatif n'imprime pas de libellé,
-     * et la chaîne pose « Ligne » plutôt qu'un texte inventé. `tax_code`, lui,
-     * est désigné — c'est une colonne du contrat de ligne — et c'est pour cela
-     * que le plan de banc imprime littéralement « TVA19 ».
+     * et la chaîne pose « Ligne » plutôt qu'un texte inventé.
+     *
+     * Le CODE DE TAUX, lui, est NOMMÉ — `code_de_taux` — et il ne figure plus
+     * parmi les colonnes. C'était le dernier endroit où le banc était plus
+     * facile que le réel : il imprimait « TVA19 » pour que la désignation
+     * rende un code valide, et son commentaire le disait. Le plan imprime
+     * maintenant « 19% », ce qu'imprime une facture, et le code vient du
+     * référentiel.
      */
     lignes_par_taux: {
       destination: "lignes",
-      entete: "entete_code",
+      entete: "entete_taux",
       fin: "etiquette_ht",
+      code_de_taux: "TVA19",
       colonnes: {
-        tax_code: { entete: "entete_code", si_absent: "TOKEN_NOT_FOUND" },
         base_ht: { entete: "entete_base", si_absent: "TOKEN_NOT_FOUND" },
         vat_amount: { entete: "entete_taxe", si_absent: "TOKEN_NOT_FOUND" },
         ttc: { entete: "entete_total_ttc", si_absent: "TOKEN_NOT_FOUND" },

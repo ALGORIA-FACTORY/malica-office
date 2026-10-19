@@ -106,6 +106,59 @@ export interface ExempleDApprentissage {
   readonly plan: readonly PageToken[];
   /** Les champs du contrat de désignation, vers la référence attendue. */
   readonly attendu: Readonly<Record<string, TokenRef>>;
+  /**
+   * Les DROITS hors TVA attendus, par code du référentiel.
+   *
+   * Sans cela, le générateur ne proposait JAMAIS de section `droits`, et une
+   * recette à timbre devait s'écrire à la main. Or la quasi-totalité des
+   * factures tunisiennes en portent un : la fabrique ne fabriquait donc rien
+   * d'utilisable sur son marché.
+   *
+   * Un droit a DEUX moitiés, et elles ne viennent pas du même endroit — c'est
+   * tout le point de la forme. Le CODE est nommé : il vient de
+   * `ref.fiscal_charges` et aucune facture n'imprime « DROIT_TIMBRE ». Le
+   * MONTANT est désigné : la clé de ce dictionnaire est le code, sa valeur est
+   * le jeton qui porte le montant, et R2 ne plie pas.
+   *
+   * Absent veut dire « cet exemple n'affirme rien sur les droits », pas
+   * « cette pièce n'en porte pas ». La conséquence est juste : rien ne l'ayant
+   * dit, aucune section `droits` ne sera proposée.
+   */
+  readonly droitsAttendus?: Readonly<Record<string, TokenRef>> | undefined;
+  /**
+   * Les CODES DE TAUX que les lignes de ce format portent, nommés.
+   *
+   * Ils n'ont pas de désignation, et c'est la différence avec un droit : une
+   * facture n'imprime pas un code de taux, elle imprime un TAUX — « 19 % » —,
+   * et le montant qui compte n'est pas le taux mais la base et la TVA, qui
+   * sont déjà des colonnes. Il n'y a donc rien à pointer, seulement un code à
+   * nommer.
+   *
+   * Ils sont ici parce que le modèle NE PEUT PAS les deviner, et qu'on ne veut
+   * pas qu'il essaie. Il ne voit pas la pièce ; le vocabulaire qu'on lui donne
+   * exclut par construction tout mot portant un chiffre, donc « 19% » n'y est
+   * pas. Un code de taux choisi par le modèle serait un taux deviné, c'est-à-
+   * dire exactement la valeur liante que R3 lui interdit d'émettre.
+   */
+  readonly codesDeTaux?: readonly string[] | undefined;
+}
+
+/**
+ * Les codes du RÉFÉRENTIEL qu'une recette a le droit de nommer.
+ *
+ * Ils sont PASSÉS, jamais écrits (R4) : ils viennent de `ref.fiscal_charges`
+ * et de `ref.tva_rates`, au pack de l'organisation. Le générateur les donne au
+ * modèle, exactement comme l'invite du désignateur le fait déjà — `vision.ts`
+ * écrit `"tax_code":"<un code de la liste fournie>"`.
+ *
+ * Ce n'est pas eux qui bornent la proposition : ce sont les EXEMPLES. Un code
+ * nommé par le modèle doit figurer dans ce qu'un exemple a déclaré, sans quoi
+ * c'est un code deviné. La liste du pack dit au modèle quel ensemble fermé il
+ * regarde ; elle ne l'autorise pas à y puiser librement.
+ */
+export interface CodesDuReferentiel {
+  readonly droits: readonly string[];
+  readonly taux: readonly string[];
 }
 
 /** Ce que le modèle reçoit. Du texte et des noms de clés : aucune valeur lue. */
@@ -151,6 +204,22 @@ type MotifDeRefusDeGeneration =
   | "REPONSE_ILLISIBLE"
   /** Un texte d'ancre hors du vocabulaire commun : une valeur a glissé. */
   | "ANCRE_HORS_VOCABULAIRE"
+  /**
+   * Un code du référentiel qu'aucun exemple n'a déclaré : un code deviné.
+   *
+   * C'est la MÊME barrière que `ANCRE_HORS_VOCABULAIRE`, appliquée à l'autre
+   * chose que le modèle écrit sans la lire. Un code de droit et un code de
+   * taux ne sont imprimés nulle part : le modèle ne peut pas les lire, donc
+   * s'il en écrit un que les exemples n'ont pas déclaré, il l'a choisi — et un
+   * code choisi décide d'un compte et d'un taux. R3 le lui interdit.
+   *
+   * Ce n'est PAS un second juge de la validité du code au pack. Celui-là
+   * existe, il est en aval et il connaît la date de la pièce :
+   * `computePivot` bloque sur `MISSING_ACCOUNT_MAPPING` pour un droit, sur
+   * `MISSING_TAX_RATE` et `TAX_RATE_MISMATCH` pour un taux. Ici l'autorité
+   * n'est pas le référentiel, ce sont les exemples.
+   */
+  | "CODE_HORS_DES_EXEMPLES"
   /** Le validateur strict a refusé — ses refus sont rendus tels quels. */
   | "RECETTE_INVALIDE"
   /** La recette ne redonne pas, sur ses propres exemples, ce qui est attendu. */
@@ -179,6 +248,13 @@ interface ProvenanceDeGeneration {
   readonly ossature: readonly string[];
   /** Le vocabulaire qui a borné les ancres — voir `vocabulaireCommun`. */
   readonly vocabulaire: readonly string[];
+  /**
+   * Les codes du référentiel que les exemples ont déclarés, et qui ont donc
+   * borné les codes nommables. Le pendant de `vocabulaire`, pour les codes :
+   * sans lui, « pourquoi cette recette nomme-t-elle DROIT_TIMBRE » n'a pas de
+   * réponse auditable.
+   */
+  readonly codes: { readonly droits: readonly string[]; readonly taux: readonly string[] };
 }
 
 export type Generation =
@@ -338,7 +414,7 @@ function observer(
  * constantes de `recette.ts`. Un opérateur ajouté là-bas arrive ici tout
  * seul, et un opérateur retiré disparaît de l'invite au lieu d'y survivre.
  */
-function consigne(): string {
+function consigne(codes: CodesDuReferentiel): string {
   return [
     "Tu proposes une RECETTE DE LECTURE : une description déclarative qui DÉSIGNE",
     "des jetons sur une facture, et n'en lit jamais la valeur. Tu rends un seul",
@@ -346,8 +422,8 @@ function consigne(): string {
     "",
     `La clé « version » vaut exactement « ${VERSION_DU_LANGAGE} ».`,
     "Les clés de premier niveau sont : version, sens_de_lecture, chiffres, zones,",
-    "ancres, tableaux, champs, references. Aucune autre clé n'est acceptée, à",
-    "aucun niveau.",
+    "ancres, tableaux, champs, references, droits. Aucune autre clé n'est",
+    "acceptée, à aucun niveau.",
     "",
     `Motifs d'ancre : ${MOTIFS.join(", ")}. Formes : ${FORMES.join(", ")}.`,
     `Sources d'un sélecteur : ${SOURCES.join(", ")}. Directions : ${DIRECTIONS.join(", ")}.`,
@@ -357,7 +433,26 @@ function consigne(): string {
     `Colonnes de lignes : ${CHAMPS_DE_LIGNE.join(", ")}.`,
     `Colonnes d'articles : ${CHAMPS_D_ARTICLE.join(", ")}.`,
     "",
-    "CINQ RÈGLES, ET AUCUNE NE SE NÉGOCIE :",
+    "LES DROITS HORS TVA — le droit de timbre et ses semblables.",
+    "La clé « droits » porte, par nom de ton choix, un objet",
+    "{ code, designation, facultatif, si_absent, si_ambigu }. Un droit a deux",
+    "moitiés et elles ne viennent pas du même endroit :",
+    "  « code »        est NOMMÉ. Il n'est écrit nulle part sur la facture — on",
+    "                  n'imprime pas « DROIT_TIMBRE » —, il vient du",
+    "                  référentiel, et tu le reprends tel quel de l'observation",
+    "                  du droit correspondant.",
+    "  « designation » POINTE le jeton qui porte le montant, comme pour un",
+    "                  champ. Tu n'écris jamais le montant.",
+    `Codes de droit du référentiel : ${codes.droits.join(", ") || "aucun à ce pack"}.`,
+    "",
+    "LE CODE DE TAUX D'UN TABLEAU DE LIGNES.",
+    "Une facture imprime un taux — « 19 % » — et jamais un code. Un tableau de",
+    "destination « lignes » porte donc « code_de_taux », un code NOMMÉ qui",
+    "s'applique à ses lignes ; « tax_code » n'est pas une colonne. Tu reprends",
+    "le code tel quel de l'observation « codes_de_taux ».",
+    `Codes de taux du référentiel : ${codes.taux.join(", ") || "aucun à ce pack"}.`,
+    "",
+    "SEPT RÈGLES, ET AUCUNE NE SE NÉGOCIE :",
     "1. Tout texte que tu écris dans un motif doit figurer MOT POUR MOT dans la",
     "   liste « vocabulaire » ci-dessous. C'est le seul vocabulaire autorisé, et",
     "   il ne contient aucune valeur : ni montant, ni date, ni numéro, ni nom de",
@@ -369,23 +464,46 @@ function consigne(): string {
     "   une photo prise de biais déplace toute coordonnée.",
     "5. « avant » et « après » sont LOGIQUES, le long de l'axe de lecture. En",
     "   écriture de droite à gauche, « avant » est à droite.",
+    "6. Tout code que tu écris — dans « droits ».code ou dans",
+    "   « code_de_taux » — doit figurer dans l'observation correspondante",
+    "   (« droits », « codes_de_taux »). Les listes du référentiel ci-dessus",
+    "   disent dans quel ensemble ces codes vivent ; elles ne t'autorisent pas",
+    "   à en choisir un. Un code que les exemples n'ont pas déclaré est un code",
+    "   deviné, et il fait refuser ta proposition.",
+    "7. N'invente aucun droit que l'observation ne porte pas. Un droit de plus",
+    "   ajoute un montant à l'équation du pied, et le pied cesse de boucler.",
   ].join("\n");
 }
 
 /* ================================================== LE GÉNÉRATEUR ======== */
 
-/** Les textes de motif d'une recette proposée, tous emplacements confondus. */
-function textesDeMotif(valeur: unknown, chemin: string, sortie: Array<[string, string]>): void {
+/**
+ * Les chaînes d'une recette proposée qui portent sous une clé donnée, à
+ * n'importe quelle profondeur.
+ *
+ * Deux clés nous intéressent, et pas pour la même raison : `texte`, qui est un
+ * motif à chercher sur la pièce et qui doit appartenir au vocabulaire ; `code`
+ * et `code_de_taux`, qui ne sont PAS sur la pièce et doivent appartenir à ce
+ * qu'un exemple a déclaré. Le parcours est le même, et il ne se limite pas au
+ * premier niveau : la faute du 19 octobre qui a motivé ce parcours récursif
+ * était un montant recopié dans une ÉTENDUE, pas dans une ancre.
+ */
+function chainesSousLaCle(
+  cles: readonly string[],
+  valeur: unknown,
+  chemin: string,
+  sortie: Array<[string, string]>,
+): void {
   if (Array.isArray(valeur)) {
-    valeur.forEach((v, i) => textesDeMotif(v, `${chemin}[${String(i)}]`, sortie));
+    valeur.forEach((v, i) => chainesSousLaCle(cles, v, `${chemin}[${String(i)}]`, sortie));
     return;
   }
   if (typeof valeur !== "object" || valeur === null) return;
   const o = valeur as Record<string, unknown>;
   for (const [cle, v] of Object.entries(o)) {
     const ou = chemin === "" ? cle : `${chemin}.${cle}`;
-    if (cle === "texte" && typeof v === "string") sortie.push([ou, v]);
-    else textesDeMotif(v, ou, sortie);
+    if (cles.includes(cle) && typeof v === "string") sortie.push([ou, v]);
+    else chainesSousLaCle(cles, v, ou, sortie);
   }
 }
 
@@ -395,14 +513,17 @@ function textesDeMotif(valeur: unknown, chemin: string, sortie: Array<[string, s
  * Quatre portes, dans cet ordre, et aucune ne se saute :
  *
  *   ① assez d'exemples DISTINCTS, et une ossature non vide ;
- *   ② tout texte d'ancre appartient à l'ossature — la barrière R3 ;
+ *   ② tout texte d'ancre appartient au vocabulaire commun, et tout CODE nommé
+ *      à ce que les exemples déclarent — la barrière R3, ses deux moitiés ;
  *   ③ le validateur strict, appelé et non recopié ;
- *   ④ la recette redonne, sur ses propres exemples, ce qui y est attendu.
+ *   ④ la recette redonne, sur ses propres exemples, ce qui y est attendu —
+ *      champs ET droits.
  */
 export async function proposerUneRecette(
   exemples: readonly ExempleDApprentissage[],
   exigences: ExigencesDeValidation,
   parametres: ParametresDeSignature,
+  codes: CodesDuReferentiel,
   appeler: AppelDeGenerateur,
 ): Promise<Generation> {
   const refuser = (
@@ -483,9 +604,21 @@ export async function proposerUneRecette(
   const sensDeLecture = sens === "rtl" ? "rtl" : "ltr";
   const chiffres = sens === "ltr" ? "latins" : "les_deux";
   const champs: Record<string, ObservationDUnChamp[]> = {};
+  /*
+   * LES DROITS, OBSERVÉS COMME DES CHAMPS — et la clé est leur CODE.
+   *
+   * C'est `observer` qui travaille, sans variante : un droit se désigne comme
+   * un champ se désigne, et ce qui sort est de la structure — une classe de
+   * forme, des clés d'ancre de l'ossature, un rang de page, un nombre de
+   * jetons. Le montant du timbre n'y figure pas.
+   *
+   * La clé est le code parce que c'est elle que le modèle doit RECOPIER : il
+   * ne peut pas la lire sur la pièce, et il n'a pas le droit de la choisir.
+   */
+  const droits: Record<string, ObservationDUnChamp[]> = {};
   distincts.forEach((s, rang) => {
-    for (const [champ, ref] of Object.entries(s.exemple.attendu)) {
-      const vu = observer(
+    const voir = (ref: TokenRef) =>
+      observer(
         s.exemple,
         rang + 1,
         ref,
@@ -494,14 +627,46 @@ export async function proposerUneRecette(
         sensDeLecture === "rtl",
         chiffres,
       );
+    for (const [champ, ref] of Object.entries(s.exemple.attendu)) {
+      const vu = voir(ref);
       if (vu) (champs[champ] ??= []).push(vu);
+    }
+    for (const [code, ref] of Object.entries(s.exemple.droitsAttendus ?? {})) {
+      const vu = voir(ref);
+      if (vu) (droits[code] ??= []).push(vu);
     }
   });
 
+  /*
+   * LES CODES QUE LES EXEMPLES DÉCLARENT, et qui borneront ceux de la recette.
+   *
+   * L'UNION, et pas l'intersection — à la différence du vocabulaire. Un
+   * vocabulaire sert à écarter ce qui VARIE d'un exemplaire à l'autre, parce
+   * qu'un nom de client qui change ne décrit pas la forme du papier. Un code
+   * de droit, lui, n'est pas lu sur la pièce : il ne peut pas varier par
+   * accident. Et un exemplaire sans timbre est une information ordinaire —
+   * exiger que tous les exemples portent le droit ferait tomber la section
+   * dès qu'une facture du lot n'en porte pas, alors que `facultatif` existe
+   * précisément pour ce cas.
+   */
+  const codesDeDroitDesExemples = [
+    ...new Set(distincts.flatMap((s) => Object.keys(s.exemple.droitsAttendus ?? {}))),
+  ].sort();
+  const codesDeTauxDesExemples = [
+    ...new Set(distincts.flatMap((s) => s.exemple.codesDeTaux ?? [])),
+  ].sort();
+
   const invite: InviteDeGeneration = {
-    consigne: consigne(),
+    consigne: consigne(codes),
     observation: JSON.stringify(
-      { sens_de_lecture: sensDeLecture, chiffres, vocabulaire: mots, champs },
+      {
+        sens_de_lecture: sensDeLecture,
+        chiffres,
+        vocabulaire: mots,
+        champs,
+        droits,
+        codes_de_taux: codesDeTauxDesExemples,
+      },
       null,
       1,
     ),
@@ -528,7 +693,7 @@ export async function proposerUneRecette(
      l'ossature. Et un nom qui varie d'un exemplaire à l'autre n'est pas dans
      l'ossature, par construction. */
   const textes: Array<[string, string]> = [];
-  textesDeMotif(propose, "", textes);
+  chainesSousLaCle(["texte"], propose, "", textes);
   const intrus = textes.filter(([, texte]) => {
     const cle = cleDAncre(texte);
     return cle === null || !vocabulaire.has(cle);
@@ -539,6 +704,37 @@ export async function proposerUneRecette(
       "texte(s) d'ancre hors du vocabulaire commun aux exemples — une valeur lue a " +
         "glissé dans la recette : " +
         intrus.map(([ou, texte]) => `${ou} = « ${texte} »`).join(" ; "),
+      journal,
+    );
+  }
+
+  /* ②bis LA MÊME BARRIÈRE, SUR LES CODES.
+
+     Un code de droit et un code de taux ne sont imprimés nulle part : le
+     modèle ne peut pas les lire. S'il en écrit un que les exemples n'ont pas
+     déclaré, il l'a CHOISI — et un code décide d'un compte et d'un taux, donc
+     c'est une valeur liante, donc R3 le lui interdit.
+
+     L'autorité ici est l'exemple, pas le référentiel : la liste du pack est
+     dans l'invite pour dire au modèle dans quel ensemble fermé ces codes
+     vivent, et le juge du code AU PACK est en aval, là où la date de la pièce
+     existe (`MISSING_ACCOUNT_MAPPING`, `MISSING_TAX_RATE`). */
+  const codesNommes: Array<[string, string]> = [];
+  chainesSousLaCle(["code", "code_de_taux"], propose, "", codesNommes);
+  const devines = codesNommes.filter(([ou, code]) => {
+    const admis = ou.endsWith("code_de_taux") ? codesDeTauxDesExemples : codesDeDroitDesExemples;
+    return !admis.includes(code);
+  });
+  if (devines.length > 0) {
+    return refuser(
+      "CODE_HORS_DES_EXEMPLES",
+      "code(s) que les exemples n'ont pas déclaré — un code de droit ou de taux n'est " +
+        "imprimé nulle part, donc celui-là a été choisi : " +
+        devines.map(([ou, code]) => `${ou} = « ${code} »`).join(" ; ") +
+        " ; déclarés par les exemples — droits : " +
+        (codesDeDroitDesExemples.join(", ") || "aucun") +
+        " ; taux : " +
+        (codesDeTauxDesExemples.join(", ") || "aucun"),
       journal,
     );
   }
@@ -572,6 +768,34 @@ export async function proposerUneRecette(
         );
       }
     }
+
+    /*
+     * LES DROITS, À LA MÊME PORTE, ET PAR LE MÊME INTERPRÈTE.
+     *
+     * Ce qu'on vérifie n'est pas « la recette porte une section droits » mais
+     * « elle redonne, sur ses propres exemples, le jeton que l'exemple
+     * attend sous ce code ». Un code manquant et un montant désigné ailleurs
+     * tombent donc tous les deux ici, et avec le même refus : une recette qui
+     * échoue n'a rien appris, et la faire évaluer coûterait une évaluation
+     * pour rien.
+     */
+    for (const [code, ref] of Object.entries(s.exemple.droitsAttendus ?? {})) {
+      const droit = obtenu.droits.find((d) => d.code === code);
+      if (!droit) {
+        ecarts.push(`${s.exemple.pieceId} / droit ${code} : aucune déclaration ne porte ce code`);
+        continue;
+      }
+      if (!("designe" in droit.resultat)) {
+        ecarts.push(`${s.exemple.pieceId} / droit ${code} : rien de désigné`);
+        continue;
+      }
+      if (!memeReference(droit.resultat.designe, ref)) {
+        ecarts.push(
+          `${s.exemple.pieceId} / droit ${code} : désigné ${reference(droit.resultat.designe)}, ` +
+            `attendu ${reference(ref)}`,
+        );
+      }
+    }
   }
   if (ecarts.length > 0) {
     return refuser("NE_REPRODUIT_PAS_SES_EXEMPLES", ecarts.join(" ; "), journal);
@@ -594,6 +818,7 @@ export async function proposerUneRecette(
       pieces: distincts.map((s) => s.exemple.pieceId),
       ossature,
       vocabulaire: mots,
+      codes: { droits: codesDeDroitDesExemples, taux: codesDeTauxDesExemples },
     },
   };
 }

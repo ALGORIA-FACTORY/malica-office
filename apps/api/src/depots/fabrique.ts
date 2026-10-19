@@ -39,6 +39,8 @@ import { lireLesBornesDeRecette, lireLesReglages } from "../fabrique/interprete-
 import { enregistrerTravail, etatDuTravail, proposerUneGeneration } from "../fabrique/travaux.ts";
 import type { PageToken } from "../malica/lecture/token-plan.ts";
 
+import { referentiel } from "./referentiel.ts";
+
 /**
  * Les états sous lesquels une version DÉSIGNE pour de bon.
  *
@@ -106,6 +108,26 @@ const ExempleQualifie = z.object({
   ]),
   usage: z.enum(["apprentissage", "evaluation"]),
   attendu: Attendu,
+  /**
+   * Les droits hors TVA attendus, par code du référentiel.
+   *
+   * Même schéma, donc même `.strict()`, donc la même dernière porte de R2 :
+   * un exemple ne porte pas plus le MONTANT d'un timbre qu'il ne porte celui
+   * d'un total. Le code, lui, est une clé — il vient de `ref.fiscal_charges`
+   * et aucun code n'est écrit ici (R4).
+   *
+   * Défaut vide, et ce n'est pas un repli : un exemple qui n'affirme rien sur
+   * les droits n'en fait rien réussir. Voir `ExempleAQualifier.droits`.
+   */
+  droits: Attendu.default({}),
+  /**
+   * Les codes de taux de cette pièce, nommés et sans désignation.
+   *
+   * Une facture imprime « 19 % », pas un code : il n'y a aucun jeton à
+   * pointer. La longueur est bornée comme celle d'un code du langage ; aucun
+   * code n'est écrit ici (R4).
+   */
+  codesDeTaux: z.array(z.string().min(1).max(64)).default([]),
   note: z.string().max(2000).optional(),
 });
 
@@ -621,6 +643,68 @@ export const fabrique = {
      */
     const generationProposee = await proposerUneGeneration(db, e.tenantId, e.signatureCle);
     return { exempleId, generationProposee };
+  },
+
+  /**
+   * Les CODES que le pack de l'organisation autorise à nommer dans une recette.
+   *
+   * ================================================================= POURQUOI
+   *
+   * Le générateur les donne au modèle, exactement comme l'invite du
+   * désignateur le fait déjà : `vision.ts` écrit `"tax_code":"<un code de la
+   * liste fournie>"`. Sans cette lecture, le générateur ne pouvait pas
+   * proposer de section `droits`, donc une recette à timbre devait s'écrire à
+   * la main — et la quasi-totalité des factures tunisiennes portent un timbre.
+   *
+   * ============================================================= R4, COROLLAIRE
+   *
+   * Aucun code n'est écrit ici, et aucune juridiction par défaut. Une
+   * organisation dont la juridiction manque, ou dont aucun pack n'est en
+   * vigueur, LÈVE. Un `?? 'TN'` aurait choisi le pack tunisien pour un dossier
+   * qui n'en relève pas, et le produit aurait proposé des codes plausibles et
+   * faux — la pire forme d'erreur de ce dépôt.
+   *
+   * ================================================= CE QUE CETTE LISTE N'EST PAS
+   *
+   * Elle n'autorise rien. Le générateur borne les codes d'une proposition par
+   * ce que les EXEMPLES déclarent, pas par ce que le pack porte ; et le juge
+   * du code au pack est en aval, là où la date de la pièce existe
+   * (`MISSING_ACCOUNT_MAPPING`, `MISSING_TAX_RATE`). Elle dit seulement au
+   * modèle dans quel ensemble fermé ces codes vivent.
+   */
+  async codesDuReferentiel(
+    db: Requete,
+    tenantId: string,
+  ): Promise<{ droits: string[]; taux: string[] }> {
+    const { rows: orgs } = await db.query<{ jurisdiction: string | null }>(
+      `select jurisdiction from organizations_v where id = $1`,
+      [tenantId],
+    );
+    const juridiction = orgs[0]?.jurisdiction;
+    if (!juridiction) {
+      throw new Error(
+        `fabrique : organisation sans juridiction (${tenantId}) — aucun pack ne s'en déduit, ` +
+          "et un pack choisi par défaut proposerait des codes plausibles et faux",
+      );
+    }
+    const pack = await referentiel.activePack(db, juridiction);
+    if (!pack) {
+      throw new Error(
+        `fabrique : aucun pack en vigueur pour « ${juridiction} » — ` +
+          "les codes de droit et de taux n'ont pas de source",
+      );
+    }
+    const [{ rows: droits }, { rows: taux }] = await Promise.all([
+      db.query<{ code: string }>(
+        `select distinct code from ref_fiscal_charges_v where pack_version_id = $1 order by code`,
+        [pack.id],
+      ),
+      db.query<{ code: string }>(
+        `select distinct code from ref_tva_rates_v where pack_version_id = $1 order by code`,
+        [pack.id],
+      ),
+    ]);
+    return { droits: droits.map((r) => r.code), taux: taux.map((r) => r.code) };
   },
 
   /**

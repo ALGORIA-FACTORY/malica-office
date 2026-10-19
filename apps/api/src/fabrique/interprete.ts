@@ -644,13 +644,41 @@ export function interpreter(
     resultat: versResultat(resoudre(ctx, droit.designation), droit, `droit ${nom}`),
   }));
 
-  let lignes: Array<Record<string, ResultatDeChamp>> = [];
-  let articles: Array<Record<string, ResultatDeChamp>> = [];
+  /*
+   * LES TABLEAUX, ET LE CODE DE TAUX QUI VOYAGE À CÔTÉ D'EUX.
+   *
+   * Le code de taux est NOMMÉ par le tableau et recopié pour chacune des
+   * lignes qu'il produit — il ne passe par aucune lecture, et aucune facture
+   * n'imprime « TVA19 ». Il ne peut pas voyager DANS la ligne : une ligne est
+   * un dictionnaire de `ResultatDeChamp`, et ce type n'a aucune branche où
+   * écrire une chaîne. La liste parallèle est donc la conséquence de la
+   * barrière, pas une commodité.
+   */
+  const lignes: Array<Record<string, ResultatDeChamp>> = [];
+  const articles: Array<Record<string, ResultatDeChamp>> = [];
+  const codesDesLignes: Array<string | null> = [];
+  const codesDesArticles: Array<string | null> = [];
   for (const tableau of Object.values(recette.tableaux)) {
     const produites = interpreterLeTableau(ctx, tableau);
-    if (tableau.destination === "lignes") lignes = [...lignes, ...produites];
-    else articles = [...articles, ...produites];
+    const code = tableau.code_de_taux ?? null;
+    const versLesLignes = tableau.destination === "lignes";
+    for (const produite of produites) {
+      if (versLesLignes) {
+        lignes.push(produite);
+        codesDesLignes.push(code);
+      } else {
+        articles.push(produite);
+        codesDesArticles.push(code);
+      }
+    }
   }
 
-  return { version: recette.version, champs, lignes, articles, droits };
+  return {
+    version: recette.version,
+    champs,
+    lignes,
+    articles,
+    codesDeTaux: { lignes: codesDesLignes, articles: codesDesArticles },
+    droits,
+  };
 }

@@ -241,31 +241,51 @@ export const CHAMPS_DE_PIECE = [
 ] as const;
 
 /**
- * La longueur maximale d'un code de droit hors TVA porté par une recette.
+ * La longueur maximale d'un code du RÉFÉRENTIEL porté par une recette — le
+ * code d'un droit hors TVA, le code de taux d'un tableau de lignes.
  *
  * ================================ POURQUOI UNE LONGUEUR ET PAS UNE LISTE (R4)
  *
- * Les codes de droits vivent dans `ref.fiscal_charges`, datés, versionnés par
- * pack, avec leur compte et leur référence légale : `DROIT_TIMBRE` depuis le
- * 26 août 2026, le FODEC depuis le 18 octobre. Les ÉNUMÉRER ici en ferait des
- * constantes réglementaires dans du TypeScript, et un pack UEMOA qui ajoute un
- * droit demanderait un déploiement. Le langage ne connaît donc aucun code : il
- * sait seulement qu'une recette en NOMME un, et il en borne la forme.
+ * Les codes de droits vivent dans `ref.fiscal_charges` et les codes de taux
+ * dans `ref.tva_rates`, datés, versionnés par pack, avec leur compte et leur
+ * référence légale : `DROIT_TIMBRE` depuis le 26 août 2026, le FODEC depuis le
+ * 18 octobre. Les ÉNUMÉRER ici en ferait des constantes réglementaires dans du
+ * TypeScript, et un pack UEMOA qui ajoute un droit ou un taux demanderait un
+ * déploiement. Le langage ne connaît donc aucun code : il sait seulement
+ * qu'une recette en NOMME un, et il en borne la forme.
  *
  * ================================= QUI REFUSE UN CODE QUE LE PACK NE CONNAÎT PAS
  *
  * La chaîne, et elle le fait déjà — pour le code que le MODÈLE nomme comme
  * pour celui qu'une recette nomme, par le même chemin et au même endroit :
  * `computePivot` cherche la règle du pack à la date de la pièce et, faute de
- * règle, bloque l'écriture par `MISSING_ACCOUNT_MAPPING` — « aucun compte au
- * pack pour le droit ». Le redire ici en ferait une seconde règle, qui
- * dériverait ; ce dépôt a trouvé huit appariements muets en deux jours, tous
- * nés d'une règle écrite deux fois.
+ * règle, bloque l'écriture par `MISSING_ACCOUNT_MAPPING` pour un droit, par
+ * `MISSING_TAX_RATE` pour un taux. Le redire ici en ferait une seconde règle,
+ * qui dériverait ; ce dépôt a trouvé huit appariements muets en deux jours,
+ * tous nés d'une règle écrite deux fois.
  */
-const LONGUEUR_MAX_DE_CODE_DE_DROIT = 64;
+const LONGUEUR_MAX_DE_CODE_DU_REFERENTIEL = 64;
 
-/** Les colonnes admises d'un tableau de lignes de TVA. */
-export const CHAMPS_DE_LIGNE = ["label", "tax_code", "base_ht", "vat_amount", "ttc"] as const;
+/**
+ * Les colonnes admises d'un tableau de lignes de TVA.
+ *
+ * ================================= `tax_code` N'Y EST PLUS, ET C'EST LA LEVÉE
+ *
+ * Il y était, et il était une DÉSIGNATION : une recette ne pouvait produire
+ * que le code que la pièce imprime LITTÉRALEMENT. Or une facture imprime
+ * « 19 % » ; aucune n'imprime « TVA19 ». Mesuré
+ * (`une-recette-nomme-le-code-de-taux.test.ts`) : le taux imprimé, désigné tel
+ * quel, est inconnu du pack et BLOQUE l'écriture sur `MISSING_TAX_RATE`.
+ *
+ * Le code de taux se NOMME donc, au niveau du tableau — voir
+ * `TableauSchema.code_de_taux`. Ce n'est pas une exception inventée pour les
+ * recettes : dans le chemin du MODÈLE, `tax_code` n'est déjà pas une
+ * désignation. L'invite de `vision.ts` écrit `"tax_code":"<un code de la liste
+ * fournie>"` : le modèle nomme un code du référentiel sans le lire, exactement
+ * comme il nomme un code de droit. C'était le chemin de la recette qui était
+ * l'anomalie.
+ */
+export const CHAMPS_DE_LIGNE = ["label", "base_ht", "vat_amount", "ttc"] as const;
 
 /** Les colonnes admises d'un tableau d'articles. */
 export const CHAMPS_D_ARTICLE = [
@@ -274,7 +294,6 @@ export const CHAMPS_D_ARTICLE = [
   "unit_price_ht",
   "unit_price_ttc",
   "total_ht",
-  "tax_code",
 ] as const;
 
 /* ============================================ LA FORME SÉRIALISÉE ======== */
@@ -456,7 +475,7 @@ const ColonneSchema = z
 const DroitSchema = z
   .object({
     /** Le code du pack (`ref.fiscal_charges.code`), nommé et non lu. */
-    code: z.string().min(1).max(LONGUEUR_MAX_DE_CODE_DE_DROIT),
+    code: z.string().min(1).max(LONGUEUR_MAX_DE_CODE_DU_REFERENTIEL),
     designation: SelecteurSchema,
     facultatif: z.boolean().default(false),
     si_absent: z.enum(CODES_D_ABSTENTION),
@@ -476,6 +495,34 @@ const TableauSchema = z
     entete_repete: z.boolean().default(false),
     /** Le tableau reprend page suivante sans que la première se close. */
     continue_sur_pages_suivantes: z.boolean().default(false),
+    /**
+     * LE CODE DE TAUX DES LIGNES DE CE TABLEAU — nommé, jamais lu.
+     *
+     * Il vient de `ref.tva_rates.code` et s'applique à toutes les lignes que
+     * ce tableau produit. Deux raisons, et la seconde est la seule qui compte.
+     *
+     * ① Une facture imprime un TAUX (« 19 % »), pas un code. Le désigner
+     *    rendait un code inconnu du pack, donc une écriture bloquée
+     *    (`MISSING_TAX_RATE`) sur chaque facture réelle — c'est-à-dire
+     *    toujours.
+     *
+     * ② Un code nommé qui serait faux ne passe pas en silence. C'est la
+     *    question qu'il fallait trancher avant de poser cette clé : une
+     *    déclaration unique pour N lignes ne sait pas exprimer un
+     *    récapitulatif à plusieurs taux — 7 % sur les plats, 19 % sur les
+     *    boissons —, et un code uniforme serait alors FAUX sur une partie des
+     *    lignes. Il ne l'est pas en silence : `computePivot` vérifie
+     *    `base × taux ≈ TVA` ligne par ligne et bloque sur
+     *    `TAX_RATE_MISMATCH`. Un format à plusieurs taux lu par une recette
+     *    rend donc la main, visiblement, au lieu de ventiler de travers — et
+     *    c'est le seul comportement acceptable, parce que la ventilation par
+     *    taux est très exactement l'erreur que le 11 octobre 2026 a trouvée
+     *    chez un expert, un mois plus tard et sans trace de son origine.
+     *
+     * Facultatif, parce qu'un tableau d'articles n'en porte pas toujours : une
+     * ligne sans code de taux est écartée par le branchement, jamais complétée.
+     */
+    code_de_taux: z.string().min(1).max(LONGUEUR_MAX_DE_CODE_DU_REFERENTIEL).optional(),
     colonnes: z.record(z.string(), ColonneSchema),
   })
   .strict();
@@ -565,12 +612,31 @@ export interface DroitDesigne {
   readonly resultat: ResultatDeChamp;
 }
 
+/**
+ * Les codes de taux NOMMÉS, au rang de la ligne qu'ils qualifient.
+ *
+ * Deux listes parallèles à `lignes` et `articles`, de même longueur, et c'est
+ * la seule forme que le reste du type laisse : une ligne est un
+ * `Record<string, ResultatDeChamp>`, et `ResultatDeChamp` n'a AUCUNE branche
+ * où écrire une chaîne de caractères. C'est voulu — c'est la barrière qui
+ * empêche un interprète de rendre une valeur lue — et un code nommé n'est pas
+ * une valeur lue : il ne vient pas de la pièce, il vient du tableau qui l'a
+ * déclaré, qui le tient du référentiel. Il voyage donc À CÔTÉ des lignes,
+ * jamais dedans.
+ */
+export interface CodesDeTauxNommes {
+  readonly lignes: ReadonlyArray<string | null>;
+  readonly articles: ReadonlyArray<string | null>;
+}
+
 /** Ce qu'un interprète rend pour une pièce entière. */
 export interface ResultatDeRecette {
   readonly version: VersionDuLangage;
   readonly champs: Readonly<Record<string, ResultatDeChamp>>;
   readonly lignes: ReadonlyArray<Readonly<Record<string, ResultatDeChamp>>>;
   readonly articles: ReadonlyArray<Readonly<Record<string, ResultatDeChamp>>>;
+  /** Le code de taux de chaque ligne et de chaque article, par rang. */
+  readonly codesDeTaux: CodesDeTauxNommes;
   /**
    * Les droits hors TVA, dans l'ordre où ils entreront dans `other_charges`.
    *

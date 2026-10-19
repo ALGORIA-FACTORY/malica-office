@@ -87,26 +87,32 @@ inscrit).
 **Migration du 19 octobre, après mesure** : `20261020200000` (le défaut
 `ancre_texte_min` passe de 3 à 2 — voir la limite n° 4).
 
-**Contrat** : 23 dépôts, 218 méthodes. Chaque ajout délibéré, relevé par
-`npm run contrat`.
+**Contrat** : 23 dépôts, **219** méthodes. La 219ᵉ est
+`fabrique.codesDuReferentiel`, ajoutée le 20 octobre : le générateur donne au
+modèle la liste des codes de droit et de taux du pack de l'organisation, comme
+l'invite du désignateur le fait déjà. Une organisation sans juridiction **lève**
+au lieu de se voir attribuer un pack par défaut (R4, corollaire). Chaque ajout
+délibéré, relevé par `npm run contrat`.
 
 ---
 
 ## Les commandes de vérification, et leurs résultats
 
 ```bash
-npm test            # api 994 (986 passées, 8 sautées) · web 538 · socle 260 · racine 53
+npm test            # api 1 059 (1 051 passées, 8 sautées) · web 540 · socle 260 · racine 53
                     # 0 échec, 0 todo
 npm run typecheck   # muet
 npm run code-mort   # muet
-npm run contrat     # 23 dépôts, 218 méthodes
+npm run contrat     # 23 dépôts, 219 méthodes
 node --test db/reproductibilite.test.mjs   # 14/14
-node --test db/registre.test.mjs           # 0 écart / 5 108 objets
+node --test db/registre.test.mjs           # 8/8
 ```
 
-`npm run lint` échoue sur **cinq scripts d'atelier non commités** d'une autre
-session (`.entetes/*.mjs`, `db/sauvegardes/diag-lignes-2026-10-19/*`). Ils ne
-sont pas du code livré ; ils doivent partir ou être formatés avant livraison.
+`npm run lint` échoue sur des **scripts d'atelier non commités** d'autres
+sessions (`.entetes/*`, `.tmp-reparation/*`,
+`db/sauvegardes/diag-lignes-2026-10-19/*`). Ils ne sont pas du code livré ; ils
+doivent partir ou être formatés avant livraison. Les fichiers de la fabrique
+sont vérifiés isolément, et propres.
 
 ---
 
@@ -123,7 +129,16 @@ historique conservé.
 `jeu-d-or.ts` porte **une seule** facture réelle avec vérité terrain, et le
 générateur refuse — **doit** refuser — un exemple unique.
 
-> **Il manque deux pièces réelles du même format.** C'est le seul ingrédient.
+> **Il manque deux pièces réelles du même format, et d'au moins deux clients
+> différents.** C'est le seul ingrédient, et la précision n'est pas cosmétique :
+> le générateur déduplique les exemples sur l'empreinte de **signature**, et
+> deux factures du même client qui ne diffèrent que par leurs montants ont la
+> **même** empreinte — les clés d'ancre écartent tout jeton portant un chiffre.
+> Trois exemplaires d'un même client comptent donc pour **un**, et le refus est
+> juste : l'intersection ne fait rien tomber, et l'ossature garderait le nom du
+> client comme si c'était la forme du papier (mesuré : 0,0000 → 0,0960 chez un
+> autre client). Mesuré le 20 octobre sur les plans de banc eux-mêmes, qui
+> portaient le même client.
 
 Une fois obtenues, la comparaison côté lecture est **gratuite** (plan et
 désignation attendue déjà en place) ; seule la génération coûte un appel :
@@ -201,13 +216,84 @@ plus zéro »**.
    le pack ne fixe pas, comme le FODEC — **bloquait** sur
    `RESIDUAL_UNEXPLAINED`. Les deux cas sont au banc.
 
-   **Ce qui reste ouvert, et n'est pas de ce travail** : le code de **taux**
-   d'une ligne (`CHAMPS_DE_LIGNE.tax_code`) reste une **désignation**, donc une
-   recette ne peut produire que le code que la pièce imprime littéralement — là
-   où un droit hors TVA se nomme désormais. Et `cycle-mesures.ts` parcourt
-   `champs`, pas `droits` : une désignation de droit fausse **n'entre pas** dans
-   l'exactitude mesurée à l'évaluation. Les deux vivent dans
-   `fabrique/generateur*` et `fabrique/cycle*`.
+   ~~**Ce qui reste ouvert**~~ — **les quatre points nommés le 19 octobre sont
+   levés le 20, et mesurés.**
+
+   - ~~Le **générateur** ne proposait jamais de section `droits`.~~ **LEVÉE.**
+     Sa consigne énumérait les clés de premier niveau et terminait par « Aucune
+     autre clé n'est acceptée » : la section était **interdite par l'invite même
+     qui devait l'apprendre**, donc une recette à timbre s'écrivait à la main —
+     sur un marché où la quasi-totalité des factures en portent un. L'invite
+     porte désormais la section, l'observation du droit sous son **code**, et la
+     liste des codes du pack (`fabrique.codesDuReferentiel`, R4 : aucun code
+     en TypeScript). **Mesuré** dans
+     `fabrique/le-generateur-propose-une-recette-a-timbre.test.ts` : une
+     recette **proposée par le générateur**, passée au branchement puis au
+     moteur d'équilibre sur le pack tunisien réel, rend une écriture
+     **proposable**, droit **cité**, pied qui boucle, débit égal au crédit.
+
+   - ~~`cycle-mesures.ts` ne mesurait pas les droits.~~ **LEVÉE.** Une recette
+     pouvait être **promue** en désignant mal son timbre : `mesurer()`
+     parcourait `obtenu.champs`, et les droits vivent dans `obtenu.droits`. Un
+     droit attendu compte maintenant **comme un champ critique ET comme un
+     montant** — un montant de timbre faux entre dans une écriture au même
+     titre qu'un total, et la distinction `champs` / `droits` est une commodité
+     de structure du langage, pas une hiérarchie d'importance. Le compte est
+     écrit **une seule fois** et appelé deux, pour qu'aucune copie ne dérive.
+     L'écart porte le nom que la **chaîne** cite — `other_charges[<rang>].amount`.
+
+   - ~~Le code de **taux** d'une ligne restait une désignation.~~ **LEVÉE**, et
+     c'était bien le même cas — pour une raison qui ne se lisait pas dans le
+     langage : **dans le chemin du modèle, `tax_code` n'est déjà pas une
+     désignation.** L'invite de `vision.ts` écrit `"tax_code":"<un code de la
+     liste fournie>"` ; le modèle **nomme** un code du référentiel sans le lire,
+     comme il nomme un code de droit. C'était le chemin de la **recette** qui
+     était l'anomalie. `tax_code` sort donc des colonnes et un tableau porte
+     `code_de_taux`, nommé depuis `ref.tva_rates`. **Et le plan de banc a perdu
+     son contournement** : il imprimait « TVA19 » et son commentaire le disait ;
+     il imprime « 19% ». **Mesuré** dans
+     `fabrique/une-recette-nomme-le-code-de-taux.test.ts` : désigné, le taux
+     imprimé est inconnu du pack et **bloque** l'écriture sur
+     `MISSING_TAX_RATE`.
+
+     **Ce qu'un code nommé coûte quand il est faux, et c'est la question qu'il
+     fallait trancher avant de nommer** : une déclaration unique pour N lignes
+     ne sait pas exprimer un récapitulatif à **plusieurs taux**. Elle ne se tait
+     pas pour autant — `computePivot` vérifie `base × taux ≈ TVA` **ligne par
+     ligne** et bloque sur `TAX_RATE_MISMATCH`. Un format à plusieurs taux lu
+     par une recette rend donc la main, **visiblement**, au lieu de ventiler de
+     travers : c'est exactement l'erreur trouvée chez un expert le 11 octobre,
+     équilibrée au millime et sans trace de son origine.
+
+   - ~~Deux commentaires affirmaient `ancre_texte_min` livré à 3.~~ **Corrigés**
+     (`fabrique/generateur.test.ts`, `fabrique/cycle.test.ts`). Leurs
+     assertions passaient — elles passent 3 explicitement — et leur prose
+     mentait depuis la migration `20261020200000`.
+
+   **Ce qui reste ouvert après ce travail, et c'est plus étroit** : rien ne
+   **dérive** les droits ni les codes de taux d'un exemple. Celui qui qualifie
+   un exemple les déclare, dans l'enveloppe `attendu` (sections `droits` et
+   `codes_de_taux`, entrées sans migration — un `jsonb` accepte une clé de
+   plus). Un exemple muet n'apprend rien, et c'est juste : rien ne l'ayant dit,
+   aucune section ne sera proposée. Un code de taux **deviné** par un modèle
+   serait un taux deviné, donc une valeur liante — R3 le refuse nommément
+   (`CODE_HORS_DES_EXEMPLES`), et l'autorité de ce refus est l'**exemple**, pas
+   le référentiel : le juge du code au pack reste en aval, là où la date de la
+   pièce existe.
+
+   **Et un défaut de la livraison du 19, trouvé en écrivant ce banc** : ses deux
+   plans à timbre portent le **même client** et ne diffèrent que par leurs
+   chiffres. Ils suffisent à la reconnaissance, qui compte des exemples ; ils ne
+   suffisent **pas** à la génération, qui les déduplique sur l'empreinte de
+   signature — les clés d'ancre écartent tout jeton portant un chiffre, donc
+   deux factures qui ne diffèrent que par leurs montants ont la **même**
+   empreinte. Le générateur a raison de les compter pour une : l'intersection
+   ne fait rien tomber, et l'ossature garderait le nom du client comme si
+   c'était la forme du papier. **Le format livré le 19 n'était donc générable
+   depuis aucun de ses propres exemples** ; un troisième plan, chez un autre
+   client, a été ajouté (`FACTURE_A_TIMBRE_AUTRE_CLIENT`). Le commentaire de
+   `generateur.test.ts` qui affirmait « deux pièces différentes de même forme
+   restent deux » est vrai de la forme, et faux dès que seule la valeur change.
 
 2. **La marge de 0,0742 est mesurée sur des plans fabriqués.** Elle quadruple,
    elle ne devient pas confortable. Il faudrait un corpus réel de **couples** de

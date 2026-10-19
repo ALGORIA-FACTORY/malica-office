@@ -147,14 +147,18 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       await deposer(db, "six_lignes", FACTURE_A_SIX_LIGNES());
 
       /*
-       * Le cabinet arrête SA borne d'ancre, au-dessus du défaut livré (R10).
+       * Le cabinet INSCRIT SA borne d'ancre, et la décision se lit (R10).
        *
-       * Le pack livre `ancre_texte_min = 3`, et il le dit lui-même « un point
-       * de départ à mesurer, pas un relevé ». Or trois lignes du pied portent
-       * le mot « Total », et ce qui les sépare — « HT », « TTC » — fait deux
-       * caractères : avec le défaut livré, aucune recette ne peut désigner le
-       * total hors taxe de ce format. C'est exactement l'usage prévu : un
-       * défaut se change sans migration, et la décision se lit.
+       * Attention à ce que cette ligne prouve, et à ce qu'elle ne prouve plus.
+       * Le pack a livré `ancre_texte_min = 3` — « un point de départ à
+       * mesurer, pas un relevé », disait-il — et il livre **2** depuis
+       * `20261020200000`, parce que la longueur ne prédit pas ce qu'une ancre
+       * attrape (limite n° 4 de `02-ce-qui-est-livre.md`). La surcharge
+       * ci-dessous vaut donc aujourd'hui le défaut : elle n'est plus ce qui
+       * rend ce format lisible, elle est ce qui le rend lisible SANS DÉPENDRE
+       * du défaut. C'est ce qu'on veut d'un banc de cycle — la raison reste
+       * vraie : trois lignes du pied portent le mot « Total », et ce qui les
+       * sépare, « HT » et « TTC », fait deux caractères.
        */
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
@@ -258,6 +262,10 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         lireLesBornesDeRecette(db, orgA),
       ]);
       assert.equal(bornes.ancre_texte_min, 2, "la surcharge du cabinet n'est pas lue");
+      // Les codes du pack de l'organisation, lus en base : aucun code n'est
+      // écrit ici (R4), et une organisation sans juridiction lèverait.
+      const codes = await fabrique.codesDuReferentiel(db, orgA);
+      assert.ok(codes.taux.length > 0, "le pack ne rend aucun code de taux");
       return proposerUneRecette(
         exemples.map((e) => ({
           pieceId: e.pieceId,
@@ -266,6 +274,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         })),
         bornes,
         reglages.signature,
+        codes,
         modeleSimule,
       );
     });

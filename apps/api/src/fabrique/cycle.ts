@@ -172,6 +172,38 @@ export interface ExempleAQualifier {
   readonly usage: "apprentissage" | "evaluation";
   /** Des désignations, jamais des valeurs : la relecture reste à la chaîne. */
   readonly attendu: Readonly<Record<string, DesignationAttendue>>;
+  /**
+   * Les DROITS hors TVA attendus, par code du référentiel.
+   *
+   * Un exemple de facture à timbre dit ici où le timbre est imprimé. Sans
+   * cela, deux choses deviennent impossibles, et ce sont les deux moitiés de
+   * la fabrique : le générateur ne peut pas PROPOSER de section `droits` — il
+   * n'a rien à apprendre —, et l'évaluation ne peut pas MESURER celle qu'une
+   * recette porte, donc une recette qui désigne mal son timbre passerait la
+   * promotion.
+   *
+   * Facultatif, et il faut savoir ce que l'absence veut dire : « cet exemple
+   * n'affirme rien sur les droits », pas « cette pièce n'en porte pas ». Une
+   * attente absente n'est jamais comptée comme satisfaite — `cycle-mesures.ts`
+   * ne compte que ce qu'un exemple affirme —, mais elle n'apprend rien non
+   * plus. Un format à timbre dont aucun exemple ne déclare le timbre n'aura
+   * pas de recette à timbre, et c'est juste : rien ne l'a dit.
+   */
+  readonly droits?: Readonly<Record<string, DesignationAttendue>> | undefined;
+  /**
+   * Les CODES DE TAUX que les lignes de cette pièce portent, nommés.
+   *
+   * Pas de désignation, et c'est la différence avec un droit : une facture
+   * n'imprime pas un code de taux, elle imprime un TAUX — « 19 % ». Il n'y a
+   * donc aucun jeton à pointer, seulement un code à nommer, et il vient de
+   * `ref.tva_rates`.
+   *
+   * Ils sont ici parce que le générateur ne peut pas les deviner et qu'on ne
+   * veut pas qu'il essaie : il ne voit pas la pièce, et le vocabulaire qu'on
+   * lui donne exclut tout mot portant un chiffre. Un code de taux choisi par
+   * un modèle serait un taux deviné, c'est-à-dire une valeur liante — R3.
+   */
+  readonly codesDeTaux?: readonly string[] | undefined;
   readonly note?: string | undefined;
 }
 
@@ -196,7 +228,16 @@ export async function qualifierUnExemple(db: Requete, e: ExempleAQualifier): Pro
       e.provenance,
       e.qualification,
       e.usage,
-      JSON.stringify({ champs: e.attendu }),
+      // L'enveloppe porte TROIS sections, et les deux nouvelles s'écrivent
+      // même vides : un lecteur qui trouve `droits: {}` sait que l'exemple a
+      // été écrit par ce chemin et n'affirme rien ; un lecteur qui ne trouve
+      // pas la clé lit un exemple d'avant le 20 octobre. Les deux se lisent
+      // pareil, et c'est mieux que de ne pas pouvoir les distinguer.
+      JSON.stringify({
+        champs: e.attendu,
+        droits: e.droits ?? {},
+        codes_de_taux: e.codesDeTaux ?? [],
+      }),
       e.note ?? null,
     ],
   );
@@ -231,10 +272,23 @@ interface LigneDeJeton {
   y1: string | number;
 }
 
-/** Les désignations attendues d'un `attendu` stocké. Rien d'autre n'en sort. */
-function attenduDe(brut: unknown): Record<string, TokenRef> {
+/**
+ * Les désignations attendues d'un `attendu` stocké, sous une de ses clés.
+ *
+ * L'enveloppe porte deux sections depuis le 20 octobre 2026 : `champs`, et
+ * `droits` par code du référentiel. Elle en portait déjà une seule — c'est
+ * `qualifierUnExemple` qui l'écrit —, et c'est pour cela que la seconde entre
+ * sans migration : un `jsonb` accepte une clé de plus, et un exemple écrit
+ * hier n'en porte pas, ce qui se lit comme « cet exemple n'affirme rien sur
+ * les droits ». Ce n'est pas un défaut implicite : une attente absente n'est
+ * pas une attente satisfaite, et `mesurer` ne compte que ce qu'un exemple
+ * affirme.
+ *
+ * Rien d'autre n'en sort qu'une `page` / un `ordinal` : ni texte, ni montant.
+ */
+function designationsDe(brut: unknown, section: "champs" | "droits"): Record<string, TokenRef> {
   if (typeof brut !== "object" || brut === null) return {};
-  const champs = (brut as { champs?: unknown }).champs;
+  const champs = (brut as Record<string, unknown>)[section];
   if (typeof champs !== "object" || champs === null) return {};
   const sortie: Record<string, TokenRef> = {};
   for (const [nom, v] of Object.entries(champs as Record<string, unknown>)) {
@@ -329,7 +383,8 @@ export async function evaluerUneVersion(
 
   const comparaisons: ComparaisonDUnExemple[] = [...parExemple.values()].map((e) => ({
     pieceId: e.pieceId,
-    attendu: attenduDe(e.attendu),
+    attendu: designationsDe(e.attendu, "champs"),
+    droitsAttendus: designationsDe(e.attendu, "droits"),
     obtenu: interpreter(validee.recette, e.plan, reglages.signature),
   }));
 

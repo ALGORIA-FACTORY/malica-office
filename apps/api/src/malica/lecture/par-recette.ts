@@ -286,12 +286,18 @@ function texteDuPlan(plan: readonly PageToken[], ref: TokenRef | null): string {
 /**
  * La désignation d'une recette, au format que la chaîne attend.
  *
- * `lines[].label` et `lines[].tax_code` sont des TEXTES dans
- * `VisionSelection`, et la recette n'en rend que des désignations : ils sont
- * donc RELUS ICI, dans le plan, par le même geste que `labelText` applique
- * déjà au libellé que le modèle désigne. Relire une désignation dans le plan
- * n'est pas lire une valeur : aucun montant, aucune date, aucun nombre ne
- * passe par ce chemin — seulement ce qui est, dans le contrat, une chaîne.
+ * `lines[].label` est un TEXTE dans `VisionSelection`, et la recette n'en rend
+ * qu'une désignation : il est donc RELU ICI, dans le plan, par le même geste
+ * que `labelText` applique déjà au libellé que le modèle désigne. Relire une
+ * désignation dans le plan n'est pas lire une valeur : aucun montant, aucune
+ * date, aucun nombre ne passe par ce chemin — seulement ce qui est, dans le
+ * contrat, une chaîne.
+ *
+ * `lines[].tax_code` ne passe plus par là, et c'est la levée de la limite
+ * restée ouverte le 19 octobre : il est NOMMÉ par le tableau de la recette,
+ * depuis `ref.tva_rates`. Une facture imprime « 19 % » et jamais « TVA19 » ;
+ * relire la cellule rendait donc un code inconnu du pack, et l'écriture
+ * bloquait sur `MISSING_TAX_RATE` — sur toute facture réelle.
  *
  * `other_charges` est désormais DÉSIGNÉ, et c'est la levée de la limite n° 1
  * du 19 octobre 2026 : le langage sait nommer un droit hors TVA — son code
@@ -314,10 +320,10 @@ function selectionDepuisRecette(
     unit_price_ht: a.unit_price_ht,
     unit_price_ttc: a.unit_price_ttc,
     total_ht: a.total_ht,
-    // Le code de taux est une DÉSIGNATION dans la recette ; relu dans le plan,
-    // il redevient le code que le contrat attend. Vide, il vaut `null` : une
-    // ligne sans taux n'est pas une ligne à taux inventé.
-    tax_code: texteDuPlan(plan, a.tax_code) || null,
+    // Le code de taux est NOMMÉ par le tableau, depuis `ref.tva_rates` : rien
+    // n'est relu ici, parce qu'il n'est pas sur la pièce. Absent, il vaut
+    // `null` : un article sans taux n'est pas un article à taux inventé.
+    tax_code: a.tax_code,
   }));
 
   return {
@@ -330,15 +336,17 @@ function selectionDepuisRecette(
     lines: d.lines
       .map((l) => ({
         label: texteDuPlan(plan, l.label),
-        tax_code: texteDuPlan(plan, l.tax_code),
+        // NOMMÉ, pas relu. Voir l'en-tête de `interprete-sortie.ts` : le taux
+        // qu'une facture imprime n'est pas le code que le pack porte.
+        tax_code: l.tax_code ?? "",
         base_ht: l.base_ht,
         vat_amount: l.vat_amount,
         ttc: l.ttc,
       }))
-      // Un taux non désigné rend la ligne inexploitable : elle est écartée,
-      // jamais complétée par défaut. C'est le filtre de `selectionDepuisReponse`,
-      // à la lettre — deux chemins qui écarteraient différemment seraient deux
-      // produits.
+      // Un tableau qui ne nomme aucun code rend ses lignes inexploitables :
+      // elles sont écartées, jamais complétées par défaut. C'est le filtre de
+      // `selectionDepuisReponse`, à la lettre — deux chemins qui écarteraient
+      // différemment seraient deux produits.
       .filter((l) => l.tax_code.length > 0)
       .map((l) => ({ ...l, label: l.label || "Ligne" })),
     // Les colonnes manquantes se complètent par la géométrie, jamais par un

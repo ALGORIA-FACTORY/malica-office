@@ -70,6 +70,20 @@ const EXIGENCES: ExigencesDeValidation = {
   rang_max: 50,
 };
 
+/**
+ * Les codes que le pack rendrait, posés à la main.
+ *
+ * En exécution ils viennent de `ref.fiscal_charges` et `ref.tva_rates`, au
+ * pack de l'organisation (`fabrique.codesDuReferentiel`). Les écrire ici ne
+ * les met pas dans le code de production, et ce banc est pur — c'est la même
+ * tenue que `PARAMETRES` et `EXIGENCES` juste au-dessus.
+ *
+ * Ils n'autorisent RIEN : ce sont les exemples qui bornent les codes d'une
+ * proposition. Cette liste dit seulement au modèle dans quel ensemble fermé
+ * ces codes vivent.
+ */
+const CODES_DU_PACK = { droits: ["DROIT_TIMBRE", "FODEC"], taux: ["TVA19", "TVA07"] };
+
 /** Le jeton qui porte ce texte, dans ce plan — pour écrire un `attendu`. */
 function ou(plan: readonly PageToken[], texte: string): TokenRef {
   const t = plan.find((x) => x.text === texte);
@@ -164,7 +178,13 @@ async function generer(
   exemples: readonly ExempleDApprentissage[],
   proposition: unknown,
 ): Promise<Generation> {
-  return proposerUneRecette(exemples, EXIGENCES, PARAMETRES, modeleQuiRend(proposition));
+  return proposerUneRecette(
+    exemples,
+    EXIGENCES,
+    PARAMETRES,
+    CODES_DU_PACK,
+    modeleQuiRend(proposition),
+  );
 }
 
 describe("le générateur de recettes", () => {
@@ -183,7 +203,18 @@ describe("le générateur de recettes", () => {
      * lui-même ne fait RIEN tomber. Deux copies d'une facture donnent une
      * « ossature » qui porte le nom du client, et le comptage naïf les
      * accepte. La déduplication se fait sur l'empreinte de signature, donc
-     * sur la FORME — deux pièces différentes de même forme restent deux.
+     * sur la FORME.
+     *
+     * Et il faut savoir jusqu'où cela porte, parce qu'une version antérieure
+     * de ce commentaire affirmait « deux pièces différentes de même forme
+     * restent deux » : c'est FAUX dès que seule la valeur change. Les clés
+     * d'ancre d'une signature écartent tout jeton portant un chiffre, donc
+     * deux factures du même client qui ne diffèrent que par leurs montants ont
+     * la même empreinte — et sont comptées pour une. À juste titre :
+     * l'intersection ne fait rien tomber, et l'ossature garderait le nom du
+     * client. Il faut un autre CLIENT, pas d'autres chiffres. Mesuré le
+     * 20 octobre 2026 sur les deux plans à timbre livrés la veille, qui
+     * portaient le même client.
      */
     const plan = FACTURE_A();
     const attendu = { "totals.base_ht": ou(plan, "1180,000") };
@@ -292,25 +323,29 @@ describe("le générateur de recettes", () => {
     );
   });
 
-  it("la borne d'ancre LIVRÉE refuse « Total HT », et c'est au cabinet de la changer", async () => {
+  it("une borne d'ancre À 3 refuse « Total HT », et c'est pourquoi le défaut n'est plus 3", async () => {
     /*
-     * Un constat, pas un défaut du générateur. `ancre_texte_min` est livré à 3
-     * par le pack (`20261020090000`, qui le dit lui-même « un point de départ à
-     * mesurer, pas un relevé »). Or trois lignes du pied portent le mot
-     * « Total », et ce qui les sépare — « HT », « TTC » — fait deux
-     * caractères. Avec le défaut livré, aucune recette ne peut désigner le
-     * total hors taxe de ce format.
+     * Un constat, pas un défaut du générateur — et la borne passée ici est un
+     * LITTÉRAL de banc, pas le défaut livré.
      *
-     * Ce n'est pas à corriger dans le code : c'est exactement ce que R10
-     * prévoit, une valeur de départ qu'un cabinet arrête autrement sans
-     * déploiement. Le socle montre déjà la surcharge à 2 pour les factures
-     * arabes. L'épreuve existe pour que le jour où quelqu'un change le défaut,
-     * il sache ce qu'il déplaçait.
+     * `ancre_texte_min` était livré à 3 par `20261020090000`, qui le disait
+     * lui-même « un point de départ à mesurer, pas un relevé ». Il a été
+     * mesuré, et il est livré à **2** depuis `20261020200000` : la longueur ne
+     * prédit pas ce qu'une ancre attrape — « HT » en `exact` attrape un jeton,
+     * « Total » en attrape trois pour cinq caractères. La limite n° 4 de
+     * `docs/fabrique-de-lecteurs/02-ce-qui-est-livre.md` porte le relevé.
+     *
+     * Ce que cette épreuve fige n'a pas changé : À 3, aucune recette ne peut
+     * désigner le total hors taxe de ce format, parce que ce qui sépare les
+     * trois lignes du pied — « HT », « TTC » — fait deux caractères. Elle dit
+     * donc ce que le défaut déplaçait, et un cabinet qui remonterait sa borne
+     * à 3 (R10) sait ce qu'il perdrait.
      */
     const g = await proposerUneRecette(
       exemplesDuFormatA(),
       { ...EXIGENCES, ancre_texte_min: 3 },
       PARAMETRES,
+      CODES_DU_PACK,
       modeleQuiRend(RECETTE_HT),
     );
     assert.equal(g.ok, false);
@@ -393,7 +428,7 @@ describe("le générateur de recettes", () => {
      * n'apparaissent nulle part dans ce qu'on lui envoie.
      */
     const { appel, vues } = modeleQuiNote(RECETTE_HT);
-    await proposerUneRecette(exemplesDuFormatA(), EXIGENCES, PARAMETRES, appel);
+    await proposerUneRecette(exemplesDuFormatA(), EXIGENCES, PARAMETRES, CODES_DU_PACK, appel);
     const envoye = vues.map((v) => `${v.consigne}\n${v.observation}`).join("\n");
     for (const valeur of [
       "1180,000",

@@ -697,16 +697,22 @@ describe("un droit hors TVA se désigne, et il s'ancre comme tout le reste", () 
     );
   });
 
-  it("le langage ne connaît AUCUN code de droit — R4", () => {
+  it("le langage ne connaît AUCUN code de droit NI de taux — R4", () => {
     /*
-     * La liste des codes vit dans `ref.fiscal_charges`, datée et versionnée par
-     * pack. Un code écrit ici demanderait un déploiement pour qu'un pack UEMOA
-     * ajoute un droit, et le validateur refuserait un code pourtant livré.
-     * L'épreuve lit le fichier du langage : c'est le seul moyen de tenir une
-     * absence.
+     * La liste des codes de droit vit dans `ref.fiscal_charges`, celle des
+     * codes de taux dans `ref.tva_rates`, toutes deux datées et versionnées
+     * par pack. Un code écrit ici demanderait un déploiement pour qu'un pack
+     * UEMOA ajoute un droit ou un taux, et le validateur refuserait un code
+     * pourtant livré. L'épreuve lit le fichier du langage : c'est le seul
+     * moyen de tenir une absence.
+     *
+     * « TVA19 » y est entré le 20 octobre, avec `Tableau.code_de_taux` : le
+     * code de taux d'une ligne se NOMME désormais au lieu de se désigner, donc
+     * le langage a une seconde place où un code réglementaire pourrait
+     * s'écrire. Elle est tenue par la même épreuve, et pas par une seconde.
      */
     const source = readFileSync(new URL("./recette.ts", import.meta.url), "utf8");
-    for (const code of ["DROIT_TIMBRE", "FODEC"]) {
+    for (const code of ["DROIT_TIMBRE", "FODEC", "TVA19"]) {
       const lignes = source
         .split(/\r?\n/)
         .filter((l) => l.includes(code) && !l.trimStart().startsWith("*"));
@@ -740,7 +746,17 @@ describe("le contrat public — ce que l'interprète recevra", () => {
     const droits = [
       { nom: "timbre", code: "DROIT_TIMBRE", resultat: designer({ page: 1, ordinal: 41 }) },
     ];
-    const resultat: ResultatDeRecette = { version, champs, lignes: [], articles: [], droits };
+    const resultat: ResultatDeRecette = {
+      version,
+      champs,
+      lignes: [],
+      articles: [],
+      // Le code de taux voyage À CÔTÉ des lignes, parce qu'une ligne est un
+      // dictionnaire de `ResultatDeChamp` et qu'aucune de ses branches ne
+      // porte de chaîne. Nommé depuis `ref.tva_rates`, jamais lu sur la pièce.
+      codesDeTaux: { lignes: [], articles: [] },
+      droits,
+    };
     assert.equal(resultat.version, VERSION_DU_LANGAGE);
     const clefs = new Set([
       ...Object.values(resultat.champs).flatMap((c) => Object.keys(c)),

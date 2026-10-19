@@ -35,7 +35,12 @@
 import type { TokenRef } from "@malica/socle/ports/malica";
 
 import { memeReference } from "./generateur.ts";
-import { CHAMPS_DE_PIECE, CHAMPS_DE_TOTAUX, type ResultatDeRecette } from "./recette.ts";
+import {
+  CHAMPS_DE_PIECE,
+  CHAMPS_DE_TOTAUX,
+  type ResultatDeChamp,
+  type ResultatDeRecette,
+} from "./recette.ts";
 
 /**
  * Les mesures que ce module sait produire.
@@ -58,6 +63,12 @@ export const MESURES_CONNUES = [
  * contrat de désignation (`CHAMPS_DE_PIECE`). En choisir une partie
  * reviendrait à écrire dans le code qu'un montant compte plus qu'une date,
  * ce qui est une décision de cabinet et non d'architecture.
+ *
+ * Les DROITS hors TVA ne sont pas dans cette liste et sont pourtant critiques,
+ * tous : ils ne sont pas des champs du contrat de désignation, ils ont leur
+ * propre section dans le langage. Ils sont comptés comme critiques au point
+ * d'appel, sans exception à choisir — un droit qu'un exemple attend est un
+ * montant qui entre dans une écriture.
  */
 const CHAMPS_CRITIQUES: readonly string[] = CHAMPS_DE_PIECE;
 
@@ -65,6 +76,23 @@ const CHAMPS_CRITIQUES: readonly string[] = CHAMPS_DE_PIECE;
 export interface ComparaisonDUnExemple {
   readonly pieceId: string;
   readonly attendu: Readonly<Record<string, TokenRef>>;
+  /**
+   * Les DROITS hors TVA attendus, par code du référentiel.
+   *
+   * ================================================ POURQUOI PAR CODE, PAS PAR RANG
+   *
+   * La chaîne cite un droit par son rang — `other_charges[0].amount` — mais le
+   * rang appartient à la RECETTE : c'est l'ordre de ses déclarations. Un
+   * exemple, lui, ne connaît pas la recette qu'on lui comparera ; il sait
+   * qu'un droit de timbre est imprimé à tel jeton. Indexer l'attente par rang
+   * rendrait la mesure dépendante de l'ordre d'écriture de la recette, donc
+   * fausse dès qu'on en réécrit une.
+   *
+   * Le rang réapparaît à la SORTIE, dans l'écart : il est cherché dans la
+   * recette, pour que le motif se lise à l'écran sous le nom que la chaîne
+   * cite.
+   */
+  readonly droitsAttendus: Readonly<Record<string, TokenRef>>;
   readonly obtenu: ResultatDeRecette;
 }
 
@@ -101,47 +129,103 @@ export function mesurer(comparaisons: readonly ComparaisonDUnExemple[]): Mesures
   let montantsFaux = 0;
   const ecarts: EcartMesure[] = [];
 
+  /**
+   * Compter UNE attente, et une seule façon de le faire.
+   *
+   * Les droits passaient par ici le 19 octobre 2026 : ils n'y passaient pas.
+   * `mesurer` parcourait `attendu` et cherchait dans `obtenu.champs`, et les
+   * droits vivent dans `obtenu.droits` — une désignation de droit fausse
+   * n'entrait donc pas dans l'exactitude, et une recette pouvait être activée
+   * en désignant mal son timbre.
+   *
+   * Le compte est maintenant écrit UNE fois et appelé deux. Ce n'est pas une
+   * élégance : c'était la seule façon de garantir qu'un droit pèse
+   * exactement ce que pèse un champ, sans qu'une deuxième copie dérive. Un
+   * montant de timbre faux entre dans une écriture au même titre qu'un total ;
+   * la distinction `champs` / `droits` est une commodité de structure du
+   * langage, pas une hiérarchie d'importance.
+   */
+  const compter = (
+    pieceId: string,
+    champ: string,
+    attendu: TokenRef,
+    obtenu: ResultatDeChamp | undefined,
+    critique: boolean,
+    montant: boolean,
+  ): void => {
+    if (critique) critiquesAttendus += 1;
+    if (montant) montantsObserves += 1;
+
+    if (obtenu && "designe" in obtenu) {
+      if (memeReference(obtenu.designe, attendu)) {
+        if (critique) critiquesJustes += 1;
+        return;
+      }
+      if (montant) montantsFaux += 1;
+      ecarts.push({
+        pieceId,
+        champ,
+        quoi: "faux",
+        detail: "désigné ailleurs que là où l'exemple l'attend",
+      });
+      return;
+    }
+    if (obtenu && "abstention" in obtenu) {
+      abstentions += 1;
+      ecarts.push({ pieceId, champ, quoi: "abstention", detail: obtenu.abstention });
+      return;
+    }
+    // `absent` ou rien du tout : la recette ne porte pas ce champ, et
+    // l'exemple l'attendait. Ce n'est pas une abstention — personne ne s'est
+    // abstenu — mais ce n'est pas juste non plus.
+    ecarts.push({
+      pieceId,
+      champ,
+      quoi: "absent",
+      detail: "la recette ne désigne pas ce champ",
+    });
+  };
+
   for (const c of comparaisons) {
     for (const [champ, attendu] of Object.entries(c.attendu)) {
-      const critique = CHAMPS_CRITIQUES.includes(champ);
-      const montant = (CHAMPS_DE_TOTAUX as readonly string[]).some((t) => champ === `totals.${t}`);
-      if (critique) critiquesAttendus += 1;
-      if (montant) montantsObserves += 1;
-
-      const obtenu = c.obtenu.champs[champ];
-      if (obtenu && "designe" in obtenu) {
-        if (memeReference(obtenu.designe, attendu)) {
-          if (critique) critiquesJustes += 1;
-          continue;
-        }
-        if (montant) montantsFaux += 1;
-        ecarts.push({
-          pieceId: c.pieceId,
-          champ,
-          quoi: "faux",
-          detail: "désigné ailleurs que là où l'exemple l'attend",
-        });
-        continue;
-      }
-      if (obtenu && "abstention" in obtenu) {
-        abstentions += 1;
-        ecarts.push({
-          pieceId: c.pieceId,
-          champ,
-          quoi: "abstention",
-          detail: obtenu.abstention,
-        });
-        continue;
-      }
-      // `absent` ou rien du tout : la recette ne porte pas ce champ, et
-      // l'exemple l'attendait. Ce n'est pas une abstention — personne ne s'est
-      // abstenu — mais ce n'est pas juste non plus.
-      ecarts.push({
-        pieceId: c.pieceId,
+      compter(
+        c.pieceId,
         champ,
-        quoi: "absent",
-        detail: "la recette ne désigne pas ce champ",
-      });
+        attendu,
+        c.obtenu.champs[champ],
+        CHAMPS_CRITIQUES.includes(champ),
+        (CHAMPS_DE_TOTAUX as readonly string[]).some((t) => champ === `totals.${t}`),
+      );
+    }
+
+    /*
+     * LES DROITS HORS TVA — critiques, et comptés comme des MONTANTS.
+     *
+     * Le rang est cherché dans la recette pour que l'écart porte le nom que la
+     * chaîne cite : `other_charges[<rang>].amount`, la clé sous laquelle
+     * `read-piece.ts` relève, cite et contrôle un droit. Quand la recette ne
+     * déclare pas ce code du tout, il n'y a pas de rang — le nom porte alors
+     * le CODE, parce qu'un rang inventé renverrait l'expert vers un autre
+     * droit, ou vers aucun.
+     *
+     * Ce qui n'est pas mesuré ici : le code lui-même. Un droit désigné au bon
+     * jeton sous un code que le pack ignore bloque l'écriture par
+     * `MISSING_ACCOUNT_MAPPING`, pour un code venu du modèle comme d'une
+     * recette. Ce qui ne se voit nulle part ailleurs, c'est un montant
+     * plausible pris au mauvais jeton : l'écriture boucle, aucun motif ne
+     * parle. C'est celui-là qu'on compte.
+     */
+    for (const [code, attendu] of Object.entries(c.droitsAttendus)) {
+      const rang = c.obtenu.droits.findIndex((d) => d.code === code);
+      const ou = rang === -1 ? code : String(rang);
+      compter(
+        c.pieceId,
+        `other_charges[${ou}].amount`,
+        attendu,
+        rang === -1 ? undefined : c.obtenu.droits[rang]!.resultat,
+        true,
+        true,
+      );
     }
   }
 
@@ -162,8 +246,8 @@ export function mesurer(comparaisons: readonly ComparaisonDUnExemple[]): Mesures
     mesures["montants_faux_acceptes"] = montantsFaux;
   } else {
     absentes.push(
-      "montants_faux_acceptes : aucun exemple d'évaluation n'attend de montant — " +
-        "zéro faux sur zéro observé n'est pas une réussite",
+      "montants_faux_acceptes : aucun exemple d'évaluation n'attend de montant " +
+        "ni de droit hors TVA — zéro faux sur zéro observé n'est pas une réussite",
     );
   }
 

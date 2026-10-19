@@ -128,14 +128,21 @@ interface ValeursDeFacture {
    * tiré d'une recette ne PARSE pas, et « le contrat sort complet » ne se
    * mesure pas.
    *
-   * Le code imprimé est celui du pack — « TVA19 » — et c'est une facilité de
-   * banc qui dit une vraie asymétrie du langage : le code de TAUX d'une ligne
-   * reste une DÉSIGNATION (`CHAMPS_DE_LIGNE.tax_code`), donc une recette ne
-   * peut produire que le code que la pièce imprime littéralement. Un droit
-   * hors TVA, lui, se NOMME. L'écart est relevé dans
-   * `.superpowers/sdd/fabrique/limites-langage-report.md`.
+   * ====================================== CE QUE CETTE LIGNE A CESSÉ DE CONTOURNER
+   *
+   * Elle imprimait le code du pack — « TVA19 » — et son commentaire disait que
+   * c'était « une facilité de banc ». Le banc était donc plus facile que le
+   * réel à l'endroit précis où la limite se mesurait : aucune facture
+   * n'imprime « TVA19 », elles impriment un TAUX.
+   *
+   * Elle imprime désormais le taux, et c'est le langage qui a bougé : le code
+   * de taux d'une ligne se NOMME depuis le référentiel
+   * (`Tableau.code_de_taux`), comme un droit hors TVA, et comme le modèle le
+   * nomme déjà dans `vision.ts`. Mesuré dans
+   * `fabrique/une-recette-nomme-le-code-de-taux.test.ts` : désigné, le taux
+   * imprimé BLOQUE l'écriture sur `MISSING_TAX_RATE`.
    */
-  recapitulatifDeTva?: { code: string; ht: string; tva: string; ttc: string };
+  recapitulatifDeTva?: { taux: string; ht: string; tva: string; ttc: string };
 }
 
 function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
@@ -161,7 +168,7 @@ function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
           {
             y: 0.62,
             mots: [
-              mot("Code", 0.05, 0.12),
+              mot("Taux", 0.05, 0.12),
               mot("BaseHT", 0.3, 0.42),
               mot("Taxe", 0.5, 0.58),
               mot("TotalTTC", 0.68, 0.8),
@@ -170,7 +177,7 @@ function lignesDeFacture(v: ValeursDeFacture): LigneSynthetique[] {
           {
             y: 0.66,
             mots: [
-              mot(v.recapitulatifDeTva.code, 0.05, 0.14),
+              mot(v.recapitulatifDeTva.taux, 0.05, 0.14),
               mot(v.recapitulatifDeTva.ht, 0.3, 0.42),
               mot(v.recapitulatifDeTva.tva, 0.5, 0.6),
               mot(v.recapitulatifDeTva.ttc, 0.68, 0.8),
@@ -338,7 +345,7 @@ export const FACTURE_A_TIMBRE = (): PageToken[] =>
       tva: "224,200",
       timbre: "1,000",
       ttc: "1405,200",
-      recapitulatifDeTva: { code: "TVA19", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
+      recapitulatifDeTva: { taux: "19%", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
     }),
   ]);
 
@@ -358,7 +365,44 @@ export const FACTURE_A_TIMBRE_AUTRES_VALEURS = (): PageToken[] =>
       tva: "748,600",
       timbre: "1,000",
       ttc: "4689,600",
-      recapitulatifDeTva: { code: "TVA19", ht: "3940,000", tva: "748,600", ttc: "4688,600" },
+      recapitulatifDeTva: { taux: "19%", ht: "3940,000", tva: "748,600", ttc: "4688,600" },
+    }),
+  ]);
+
+/**
+ * LE MÊME FORMAT À TIMBRE, CHEZ UN AUTRE CLIENT — et pourquoi il a fallu l'écrire.
+ *
+ * `FACTURE_A_TIMBRE` et `FACTURE_A_TIMBRE_AUTRES_VALEURS` portent le MÊME
+ * client, et seuls leurs chiffres diffèrent. Elles suffisent à la
+ * RECONNAISSANCE, qui compte des exemples, et elles ne suffisent pas à la
+ * GÉNÉRATION, qui les déduplique sur l'empreinte de signature : les clés
+ * d'ancre d'une signature écartent tout jeton portant un chiffre, donc deux
+ * factures qui ne diffèrent que par leurs montants ont la MÊME empreinte.
+ *
+ * Et le générateur a raison de les compter pour une. « À un seul exemple,
+ * l'ossature porte le nom du client comme si c'était la forme du papier » —
+ * deux factures du même client ne font rien tomber de plus, mesuré 0,0000 qui
+ * devient 0,0960 ailleurs. Il faut un autre CLIENT, pas d'autres chiffres.
+ *
+ * Trouvé le 20 octobre en écrivant le banc du générateur à timbre : le format
+ * livré le 19 n'était générable depuis aucun de ses propres exemples.
+ */
+export const FACTURE_A_TIMBRE_AUTRE_CLIENT = (): PageToken[] =>
+  planSynthetique([
+    lignesDeFacture({
+      client: ["SOCIETE", "BARAKA"],
+      numero: "FA-2026-302",
+      date: "03/12/2026",
+      entetePrixUnitaire: "P.U.HT",
+      articles: [
+        ["Cartouche", "4", "150,000", "600,000"],
+        ["Classeur", "9", "12,000", "108,000"],
+      ],
+      ht: "708,000",
+      tva: "134,520",
+      timbre: "1,000",
+      ttc: "843,520",
+      recapitulatifDeTva: { taux: "19%", ht: "708,000", tva: "134,520", ttc: "842,520" },
     }),
   ]);
 
@@ -388,7 +432,7 @@ export const FACTURE_A_TIMBRE_HORS_BAREME = (): PageToken[] =>
       tva: "224,200",
       timbre: "2,000",
       ttc: "1406,200",
-      recapitulatifDeTva: { code: "TVA19", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
+      recapitulatifDeTva: { taux: "19%", ht: "1180,000", tva: "224,200", ttc: "1404,200" },
     }),
   ]);
 

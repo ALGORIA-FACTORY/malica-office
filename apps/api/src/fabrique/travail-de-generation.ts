@@ -76,7 +76,16 @@ export async function executerUneGeneration(
       travail.tenantId,
       travail.signatureCle,
     );
-    return { signature: contexte.signature, bornes: contexte.bornes, exemples };
+    /*
+     * Les codes du pack, dans la MÊME transaction que le reste de l'amont.
+     *
+     * Ils entrent dans l'invite comme la liste des codes de droit et de taux
+     * autorisés, exactement comme l'invite du désignateur le fait déjà. Rien
+     * n'y est écrit en TypeScript (R4), et une organisation sans juridiction
+     * LÈVE au lieu de se voir attribuer un pack par défaut.
+     */
+    const codes = await fabrique.codesDuReferentiel(db, travail.tenantId);
+    return { signature: contexte.signature, bornes: contexte.bornes, exemples, codes };
   });
 
   /*
@@ -87,13 +96,31 @@ export async function executerUneGeneration(
    * refus est le bon, avec son propre code.
    */
   const generation = await proposerUneRecette(
-    amont.exemples.map((e) => ({
-      pieceId: e.pieceId,
-      plan: e.plan,
-      attendu: (e.attendu as { champs?: Record<string, never> }).champs ?? {},
-    })),
+    amont.exemples.map((e) => {
+      /*
+       * L'enveloppe d'un `attendu` stocké porte trois sections, et une
+       * seulement est obligatoire. `champs` existait ; `droits` et
+       * `codes_de_taux` sont entrés le 20 octobre, sans migration — un `jsonb`
+       * accepte une clé de plus, et un exemple écrit avant n'en porte pas, ce
+       * qui se lit « cet exemple n'affirme rien là-dessus ». Ce n'est pas un
+       * défaut implicite : rien ne l'ayant dit, rien ne sera proposé.
+       */
+      const enveloppe = e.attendu as {
+        champs?: Record<string, never>;
+        droits?: Record<string, never>;
+        codes_de_taux?: string[];
+      };
+      return {
+        pieceId: e.pieceId,
+        plan: e.plan,
+        attendu: enveloppe.champs ?? {},
+        droitsAttendus: enveloppe.droits ?? {},
+        codesDeTaux: enveloppe.codes_de_taux ?? [],
+      };
+    }),
     amont.bornes,
     amont.signature,
+    amont.codes,
     async (invite) => {
       try {
         return await appeler(invite);

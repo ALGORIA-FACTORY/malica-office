@@ -19,10 +19,16 @@
  *   `overall_confidence` est un score, et un score non calibré ne s'affiche
  *                        jamais comme une probabilité de justesse.
  *
- * Et `lines[].label` / `lines[].tax_code` sont des TEXTES dans
- * `VisionSelection` : les remplir ici voudrait dire LIRE, ce que l'interprète
- * ne fait pas. Ils sortent donc désignés, et c'est la relecture partagée du
- * plan — celle qui passe par `recollerLesMilliers` — qui en tire le texte.
+ * Et `lines[].label` est un TEXTE dans `VisionSelection` : le remplir ici
+ * voudrait dire LIRE, ce que l'interprète ne fait pas. Il sort donc désigné, et
+ * c'est la relecture partagée du plan — celle qui passe par
+ * `recollerLesMilliers` — qui en tire le texte.
+ *
+ * `lines[].tax_code` est un texte lui aussi, et il ne sort PAS désigné : il
+ * sort nommé. La pièce n'imprime pas un code, elle imprime un taux, et un taux
+ * relu est un code que le pack ne connaît pas — l'écriture bloquait sur
+ * `MISSING_TAX_RATE`. Le tableau le NOMME depuis `ref.tva_rates`, comme le
+ * modèle le nomme déjà dans `vision.ts`.
  *
  * Ce module rend donc le SOUS-ENSEMBLE désignable, et le type est vérifié
  * contre `VisionSelection` par le compilateur dans le banc : le jour où la
@@ -37,11 +43,24 @@ import {
   type ResultatDeRecette,
 } from "./recette.ts";
 
-/** Une ligne de TVA désignée : chaque colonne est une référence ou rien. */
-type LigneDesignee = Readonly<Record<(typeof CHAMPS_DE_LIGNE)[number], TokenRef | null>>;
+/**
+ * Une ligne de TVA désignée : chaque colonne est une référence ou rien, et le
+ * code de taux est une CHAÎNE NOMMÉE.
+ *
+ * C'est la seule place de ce module où une chaîne apparaît à côté de
+ * références, et elle ne vient pas de la pièce : le tableau l'a déclarée, et
+ * il la tient de `ref.tva_rates`. La désigner — l'état d'avant — revenait à
+ * produire le code que la pièce imprime, c'est-à-dire « 19 % », inconnu du
+ * pack et bloquant à l'écriture.
+ */
+type LigneDesignee = Readonly<Record<(typeof CHAMPS_DE_LIGNE)[number], TokenRef | null>> & {
+  readonly tax_code: string | null;
+};
 
-/** Un article désigné. `tax_code` reste une désignation, jamais un code lu. */
-type ArticleDesigne = Readonly<Record<(typeof CHAMPS_D_ARTICLE)[number], TokenRef | null>>;
+/** Un article désigné. Son code de taux est nommé, lui aussi. */
+type ArticleDesigne = Readonly<Record<(typeof CHAMPS_D_ARTICLE)[number], TokenRef | null>> & {
+  readonly tax_code: string | null;
+};
 
 /**
  * Un droit hors TVA désigné, à la forme que `VisionSelection.other_charges`
@@ -172,10 +191,18 @@ export function sortieDeRecette(resultat: ResultatDeRecette): SortieDeRecette {
   });
 
   const lines = resultat.lignes.map(
-    (l, i) => ligneDesignee(CHAMPS_DE_LIGNE, l, i, "lines", flags) as unknown as LigneDesignee,
+    (l, i) =>
+      ({
+        ...ligneDesignee(CHAMPS_DE_LIGNE, l, i, "lines", flags),
+        tax_code: resultat.codesDeTaux.lignes[i] ?? null,
+      }) as unknown as LigneDesignee,
   );
   const articles = resultat.articles.map(
-    (a, i) => ligneDesignee(CHAMPS_D_ARTICLE, a, i, "articles", flags) as unknown as ArticleDesigne,
+    (a, i) =>
+      ({
+        ...ligneDesignee(CHAMPS_D_ARTICLE, a, i, "articles", flags),
+        tax_code: resultat.codesDeTaux.articles[i] ?? null,
+      }) as unknown as ArticleDesigne,
   );
 
   return {

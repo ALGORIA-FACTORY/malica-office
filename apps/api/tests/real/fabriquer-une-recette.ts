@@ -42,7 +42,13 @@ function exiger(nom: string): string {
 interface ExempleLu {
   exempleId: string;
   pieceId: string;
-  attendu: { champs?: Record<string, TokenRef> };
+  attendu: {
+    champs?: Record<string, TokenRef>;
+    /** Les droits hors TVA attendus, par code du référentiel (20 octobre). */
+    droits?: Record<string, TokenRef>;
+    /** Les codes de taux de la pièce, nommés et sans désignation. */
+    codes_de_taux?: string[];
+  };
   plan: PageToken[];
 }
 
@@ -59,6 +65,17 @@ const exemples = await api.rpc<ExempleLu[]>("fabrique", "exemplesDApprentissage"
   tenantId,
   signatureCle,
 ]);
+
+/*
+ * Les codes du pack de l'organisation, lus par le dépôt. Ils entrent dans
+ * l'invite comme la liste des codes de droit et de taux autorisés, exactement
+ * comme l'invite du désignateur le fait déjà. Aucun code n'est écrit ici (R4).
+ */
+const codes = await api.rpc<{ droits: string[]; taux: string[] }>(
+  "fabrique",
+  "codesDuReferentiel",
+  [tenantId],
+);
 console.log(`${String(exemples.length)} exemple(s) d'apprentissage pour « ${signatureCle} »`);
 
 const generation = await proposerUneRecette(
@@ -66,9 +83,12 @@ const generation = await proposerUneRecette(
     pieceId: e.pieceId,
     plan: e.plan,
     attendu: e.attendu.champs ?? {},
+    droitsAttendus: e.attendu.droits ?? {},
+    codesDeTaux: e.attendu.codes_de_taux ?? [],
   })),
   contexte.bornes,
   contexte.signature,
+  codes,
   generateurDeepSeek(exiger("DEEPSEEK_API_KEY")),
 );
 
