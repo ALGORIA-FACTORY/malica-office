@@ -345,9 +345,33 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       await pool.end();
     }
 
-    // Et toutes les tables de `fabrique`, y compris celles qu'on vient
-    // d'éprouver à vide, portent bien le garde. Reconnues au schéma, pas à une
-    // liste : une table ajoutée demain sans garde fait rougir ici.
+    /*
+     * Et toutes les tables de `fabrique`, y compris celles qu'on vient
+     * d'éprouver à vide, portent bien un garde R7. Reconnues au schéma, pas à
+     * une liste : une table ajoutée demain sans garde fait rougir ici.
+     *
+     * Il y a DEUX gardes, et les deux refusent la réécriture — c'est le seul
+     * point commun qui compte ici :
+     *
+     *   `app.deny_mutation()` — le strict. Il refuse tout, toujours.
+     *   `app.deny_mutation_hors_effacement_de_travail()` — le permissif de la
+     *      fabrique. Il refuse tout aussi, sauf la cascade d'un travail dont
+     *      la pièce s'efface sous `capture_piece_supprimer`, qui a vérifié que
+     *      la pièce n'est engagée nulle part. `fabrique.travaux` porte le
+     *      permissif de `capture`, qui lit son `piece_id` directement.
+     *
+     * Sans eux, une photo ratée lue par erreur restait à vie dans le coffre :
+     * le défaut que `20261020160000` et `20261020200000` corrigent, et que le
+     * 18 octobre avait déjà corrigé pour trois tables de `capture`.
+     *
+     * La liste est CLOSE, et c'est ce qui fait tenir l'épreuve : une table sans
+     * aucun déclencheur, ou qui n'en porte qu'un sans rapport, rougit toujours.
+     * Ce que ces deux gardes ouvrent est éprouvé ailleurs, et étroitement :
+     * `schema.test.ts (d bis)` interdit toute politique et tout droit
+     * DELETE/UPDATE sur les tables du garde permissif — sans quoi
+     * `malica.piece_effacable`, qu'un utilisateur quelconque peut poser,
+     * deviendrait une clé.
+     */
     const nues = await sousIdentite(a.id, async (db) => {
       const { rows } = await db.query<{ table_: string }>(
         `select c.relname as table_
@@ -357,7 +381,10 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
             and not exists (
               select 1 from pg_trigger t
                where t.tgrelid = c.oid and not t.tgisinternal
-                 and t.tgfoid = 'app.deny_mutation()'::regprocedure)
+                 and t.tgfoid in (
+                   'app.deny_mutation()'::regprocedure,
+                   'app.deny_mutation_hors_effacement_de_piece()'::regprocedure,
+                   'app.deny_mutation_hors_effacement_de_travail()'::regprocedure))
           order by 1`,
       );
       return rows.map((r) => r.table_);

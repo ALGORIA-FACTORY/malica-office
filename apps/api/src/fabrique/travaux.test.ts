@@ -288,17 +288,38 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       ["fabrique.travaux", `update fabrique.travaux set priorite = 9`],
       ["fabrique.travail_faits", `update fabrique.travail_faits set motif = 'reecrit'`],
     ];
+    /*
+     * Le refus d'`authenticated` était MUET — zéro ligne, aucune erreur, faute
+     * de politique `update`. Depuis `20261020200000` il est EXPLICITE : 42501,
+     * droit refusé. C'est plus fort, pas plus faible, et ce n'est pas un choix
+     * de style.
+     *
+     * Ces deux tables portent le garde permissif, qui laisse passer la cascade
+     * d'une pièce que `capture_piece_supprimer` a validée. Ce garde lit
+     * `malica.piece_effacable`, un réglage de session que N'IMPORTE QUEL
+     * utilisateur peut poser. Il ne sert de clé à personne tant que
+     * `authenticated` n'a ni politique NI DROIT `delete`/`update` ici — la
+     * règle que `schema.test.ts (d bis)` énonce et garde. Le droit accordé par
+     * `enable_tenant_rls` était la moitié manquante ; elle est révoquée.
+     *
+     * Une table en ajout seul n'a besoin d'aucun des deux.
+     */
     for (const [table, mutation] of mutations) {
-      const touchees = await sousIdentite(a.id, async (db) => {
-        const u = await db.query(mutation);
-        const d = await db.query(mutation.replace(/^update (\S+) set .*/, "delete from $1"));
-        return (u.rowCount ?? 0) + (d.rowCount ?? 0);
-      });
-      assert.equal(touchees, 0, `${table} laisse « authenticated » réécrire un fait`);
+      for (const sql of [mutation, mutation.replace(/^update (\S+) set .*/, "delete from $1")]) {
+        const code = await sousIdentite(a.id, async (db) => {
+          try {
+            await db.query(sql);
+            return null;
+          } catch (erreur) {
+            return codeDe(erreur);
+          }
+        });
+        assert.equal(code, "42501", `${table} laisse « authenticated » tenter : ${sql}`);
+      }
     }
 
-    // Le refus d'`authenticated` est MUET — zéro ligne, aucune erreur. Le
-    // déclencheur, lui, garde l'autre chemin : le propriétaire des tables.
+    // Le déclencheur, lui, garde l'autre chemin : le propriétaire des tables,
+    // que `force row level security` n'arrête pas.
     for (const [table, mutation] of mutations) {
       let code: string | null = null;
       try {
@@ -663,7 +684,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const avecBase = <T>(travailDb: (db: Requete) => Promise<T>): Promise<T> =>
       sousIdentite(a.id, travailDb);
 
-    const panne = await executerUnTravail(avecBase, orgA, async () => {
+    const panne = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => {
       throw new PanneFournisseur("le modèle n'a pas répondu");
     });
     assert.deepEqual(
@@ -672,7 +693,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       "le coureur confond une panne avec autre chose",
     );
 
-    const refus = await executerUnTravail(avecBase, orgA, async () => {
+    const refus = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => {
       throw new RefusMetier("piece_personnelle");
     });
     assert.deepEqual([refus?.travailId, refus?.issue], [travail, "refus_metier"]);
@@ -680,7 +701,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "refuse");
 
-    const rien = await executerUnTravail(avecBase, orgA, async () => undefined);
+    const rien = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => undefined);
     assert.equal(rien, null, "le coureur invente un travail là où il n'y en a pas");
   });
 
