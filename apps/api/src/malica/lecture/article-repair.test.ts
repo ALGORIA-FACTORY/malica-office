@@ -28,6 +28,85 @@ function fixture(): PageToken[] {
   ];
 }
 
+/**
+ * Le plan tel qu'un œil le rend VRAIMENT.
+ *
+ * Le plan ci-dessus pose « P.U. HT » et « Total HT » en un jeton chacun, et une
+ * désignation d'un seul mot. Aucun relevé ne produit cela : le plan est découpé
+ * sur les espaces, et une désignation de facture court sur plusieurs lignes
+ * imprimées, les chiffres étant centrés sur le bloc entier. C'est ce qui a
+ * laissé ce module inerte pendant qu'il passait au vert — voir son en-tête.
+ */
+function fixtureReelle(): PageToken[] {
+  ordinal = 0;
+  return [
+    // entêtes, découpés sur les espaces comme dans un vrai plan
+    tok("Désignation", 0.08, 0.3, 0.1),
+    tok("Qté", 0.42, 0.3, 0.04),
+    tok("Prix", 0.52, 0.3, 0.04),
+    tok("unitaire", 0.57, 0.3, 0.06),
+    tok("HT", 0.64, 0.3, 0.02),
+    tok("(DT)", 0.67, 0.3, 0.03),
+    tok("Montant", 0.71, 0.3, 0.07),
+    tok("HT", 0.79, 0.3, 0.02),
+    tok("(DT)", 0.82, 0.3, 0.03),
+    // une désignation sur trois lignes imprimées
+    tok("Loyer", 0.08, 0.34, 0.05),
+    tok("mensuel", 0.14, 0.34, 0.06),
+    tok("local", 0.21, 0.34, 0.04),
+    tok("Immeuble", 0.08, 0.36, 0.07),
+    tok("Le", 0.16, 0.36, 0.02),
+    tok("Prestige", 0.19, 0.36, 0.06),
+    tok("3e", 0.08, 0.38, 0.02),
+    tok("étage", 0.11, 0.38, 0.04),
+    // les cellules, centrées sur le bloc
+    tok("1", 0.44, 0.36, 0.01),
+    tok("2 800,000", 0.62, 0.36, 0.07),
+    tok("2 800,000", 0.78, 0.36, 0.07),
+  ];
+}
+
+describe("réparation géométrique des articles, sur un plan tel qu'un œil le rend", () => {
+  it("reconnaît un entête que l'espace a découpé en plusieurs jetons", () => {
+    const bands = detectColumnBands(fixtureReelle());
+    assert.deepEqual(bands.map((b) => b.column).sort(), ["quantity", "total_ht", "unit_price_ht"]);
+  });
+
+  it("retrouve les cellules d'une désignation qui court sur plusieurs lignes", () => {
+    const tokens = fixtureReelle();
+    const [repaired] = repairArticles(tokens, [
+      {
+        // « Loyer … étage » : les jetons 10 à 17 de ce plan.
+        designation: { page: 1, ordinal: 10, ordinalEnd: 17 },
+        quantity: null,
+        unit_price_ht: null,
+        unit_price_ttc: null,
+        total_ht: null,
+        tax_code: null,
+      },
+    ]);
+    assert.deepEqual(repaired!.quantity, { page: 1, ordinal: 18 });
+    assert.deepEqual(repaired!.unit_price_ht, { page: 1, ordinal: 19 });
+    assert.deepEqual(repaired!.total_ht, { page: 1, ordinal: 20 });
+    assert.equal(repaired!.unit_price_ttc, null);
+  });
+
+  it("une ligne qui ne porte qu'un entête n'est pas une ligne d'entêtes", () => {
+    /*
+     * « Total HT » au pied de facture, dans la colonne des libellés. Le prendre
+     * pour l'entête de la colonne des montants plaçait la bande à gauche du
+     * tableau, donc sur les désignations.
+     */
+    ordinal = 0;
+    const pied = [
+      tok("Total", 0.42, 0.7, 0.05),
+      tok("HT", 0.48, 0.7, 0.02),
+      tok("3 020,000", 0.78, 0.7, 0.07),
+    ];
+    assert.deepEqual(detectColumnBands(pied), []);
+  });
+});
+
 describe("réparation géométrique des articles", () => {
   it("détecte les bandes de colonnes imprimées", () => {
     const bands = detectColumnBands(fixture());

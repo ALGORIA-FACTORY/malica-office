@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { repairArticles } from "./article-repair.ts";
 import { JEU_D_OR, type CasDOr } from "./jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
+import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 
 /**
  * Le banc du jeu d'or — la relecture, sur de vraies pièces.
@@ -165,6 +167,75 @@ for (const cas of JEU_D_OR) {
 
     it("la lecture est retenue : une pièce d'or ne sort pas invalide", () => {
       assert.equal(lu.valid, true, `drapeaux : ${JSON.stringify(lu.flags)}`);
+    });
+  });
+}
+
+/**
+ * ============== LE DÉSIGNATEUR N'A CITÉ QUE LES DÉSIGNATIONS, ET APRÈS ?
+ *
+ * 19 octobre 2026. Sur une facture de quatre lignes photographiée par le
+ * dirigeant, l'écran « ce que j'ai lu, ligne par ligne » rendait les quatre
+ * désignations et rien d'autre : ni quantité, ni prix unitaire, ni montant de
+ * ligne — le pied de facture, lui, était juste.
+ *
+ * La cause est mesurée, et elle n'est pas dans l'écran. Les pièces réelles de
+ * la base portent, pour chacune de ces colonnes, le drapeau
+ * `MISSING_CITATION` : le désignateur a rendu `null`. La consigne les demande
+ * pourtant, et impose même la méthode (« repère d'abord la ligne d'ENTÊTES »).
+ * C'est donc une désobéissance du modèle — et c'est exactement le cas que
+ * `article-repair.ts` existe pour rattraper, à partir du plan de jetons et de
+ * la géométrie du tableau imprimé.
+ *
+ * Il ne rattrapait rien. Ce banc le tient désormais sur une pièce RÉELLE.
+ *
+ * L'ordre joué est celui de la production : `relever()` recolle les milliers
+ * AVANT de désigner, donc le plan que la réparation voit porte « 2 800,000 »
+ * d'un seul jeton. Jouer le plan brut ferait mesurer une chaîne qui n'existe
+ * pas.
+ */
+for (const cas of JEU_D_OR) {
+  describe(`jeu d'or — ${cas.nom} — colonnes d'articles non citées`, () => {
+    const plan = recollerLesMilliers(cas.tokens);
+    const sansColonnes = cas.designation.articles.map((a) => ({
+      designation: a.designation,
+      quantity: null,
+      unit_price_ht: null,
+      unit_price_ttc: null,
+      total_ht: null,
+      tax_code: a.tax_code,
+    }));
+    const lu = buildExtractFromTokenPlan({
+      tokens: plan,
+      selection: { ...cas.designation, articles: repairArticles(plan, sansColonnes) },
+      decimals: cas.decimales,
+      matriculeDossier: cas.matriculeDossier,
+    });
+
+    it("les colonnes du tableau reviennent du plan de jetons, et sont justes", () => {
+      const cherches = Object.keys(cas.attendu).filter((c) => c.startsWith("articles["));
+      assert.ok(cherches.length > 0, "le cas doit attendre au moins une colonne d'article");
+      const faux = cherches
+        .map((chemin) => ({
+          chemin,
+          lu: auChemin(lu.extract, chemin),
+          attendu: cas.attendu[chemin],
+        }))
+        .filter((m) => m.lu !== m.attendu)
+        .map(
+          (m) =>
+            `${m.chemin} : lu ${JSON.stringify(m.lu)}, imprimé « ${cas.imprime[m.chemin] ?? m.attendu} »`,
+        );
+      assert.deepEqual(faux, [], `colonnes perdues ou fausses :\n  ${faux.join("\n  ")}`);
+    });
+
+    it("et aucune colonne que la pièce n'imprime pas n'est inventée (R2)", () => {
+      // La facture de loyer ne porte pas de colonne « P.U. TTC » : elle doit
+      // rester vide. Une réparation qui remplirait tout serait pire que rien.
+      const articles = (lu.extract as { articles: Array<Record<string, string | null>> }).articles;
+      for (const [i, a] of articles.entries()) {
+        assert.equal(a["unit_price_ttc"], null, `articles[${i}].unit_price_ttc inventé`);
+      }
     });
   });
 }

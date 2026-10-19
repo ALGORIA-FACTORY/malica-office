@@ -82,3 +82,4 @@ apps/web/e2e/sortie-rapport/
 # Les pièces mises de côté par la remise à zéro du métier (11 septembre 2026) :
 # des documents de clients, comme .stockage, jamais dans git.
 .stockage.avant-remise-a-zero-*/
+.entetes/
