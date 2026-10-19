@@ -1,11 +1,14 @@
 /**
- * La tour, dans l'application — pour les opérateurs d'ALGORIA seulement.
+ * La tour, dans le SaaS — pour les opérateurs d'ALGORIA seulement.
+ *
+ * Pas dans l'application du client (décidé le 19 octobre 2026) : la tour est
+ * un poste de travail d'ALGORIA, sur grand écran, dans la doctrine Edition One.
  *
  * Demandé le 19 octobre 2026 : « tout doit être paramétrable ». Le paiement,
  * l'émetteur des factures et la grille se règlent ICI, plus sur le serveur.
  * L'écran ne décide rien (R3) : il montre ce que la base rend, transmet le
  * geste, et dit le refus de la base. La base refuse tout à qui n'est pas
- * opérateur ; l'écran, lui, ne s'affiche même pas.
+ * opérateur ; l'écran le dit et ne montre rien.
  *
  * Seuls les secrets du compte marchand restent sur le serveur : la tour dit
  * s'ils sont posés, jamais ce qu'ils valent.
@@ -24,7 +27,13 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 const OU = "components/malica/la-tour";
-const CHAMP = "h-[42px] min-w-0 flex-1 border border-line-strong bg-transparent px-2 text-[13px]";
+const CHAMP = "h-[38px] min-w-0 flex-1 border border-border bg-background px-2 text-[13px]";
+const CARTE = "space-y-2 border border-border bg-card p-5";
+const TITRE = "text-[15px] font-semibold";
+const TEXTE = "text-[13px] leading-[1.5] text-muted-foreground";
+const ALERTE = "text-[12.5px] text-signal-warn";
+const BOUTON =
+  "h-[38px] bg-foreground px-4 text-[13px] font-medium text-background disabled:opacity-40";
 
 /** Les colonnes d'une offre qu'on règle, dans l'ordre de lecture, et leur libellé. */
 const CHAMPS_OFFRE: Array<[string, MessageKey, "nombre" | "nombre_vide" | "case"]> = [
@@ -78,13 +87,10 @@ export function LaTour() {
     queryFn: () => office().tour.suisJePlateforme(),
     retry: false,
   });
-  if (!plateforme.data) return null;
+  if (plateforme.isPending) return <p className={TEXTE}>{t("common.loading")}</p>;
+  if (!plateforme.data) return <p className={TEXTE}>{t("tour.reserve")}</p>;
   return (
-    <div data-tour>
-      <div className="sec">
-        <h2>{t("tour.titre")}</h2>
-      </div>
-      <p className="t-body">{t("tour.sous")}</p>
+    <div data-tour className="grid gap-6">
       <ReglerLePaiement />
       <DesignerLEmetteur />
       <LaGrille />
@@ -141,10 +147,10 @@ function ReglerLePaiement() {
   };
 
   return (
-    <div className="card">
-      <b>{t("tour.paiement")}</b>
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.paiement")}</h2>
       {reglage.data ? (
-        <p className="t-body">
+        <p className={TEXTE}>
           {t("tour.paiement.actuel", { prestataire: t(libelle[reglage.data.prestataire]!) })}
           {" — "}
           {reglage.data.secrets_clictopay
@@ -192,7 +198,7 @@ function ReglerLePaiement() {
         />
         <button
           type="button"
-          className="btn"
+          className={BOUTON}
           disabled={regler.isPending || motif.trim() === ""}
           onClick={() => regler.mutate()}
         >
@@ -200,7 +206,7 @@ function ReglerLePaiement() {
         </button>
       </div>
       {retour ? (
-        <p className="t-body" aria-live="polite">
+        <p className={TEXTE} aria-live="polite">
           {retour}
         </p>
       ) : null}
@@ -238,9 +244,9 @@ function DesignerLEmetteur() {
 
   const e = emetteur.data;
   return (
-    <div className="card">
-      <b>{t("tour.emetteur")}</b>
-      <p className="t-body">
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.emetteur")}</h2>
+      <p className={TEXTE}>
         {e
           ? t("tour.emetteur.actuel", {
               nom: e.nom,
@@ -261,7 +267,7 @@ function DesignerLEmetteur() {
           aria-label={t("tour.emetteur.chercher")}
           className={CHAMP}
         />
-        <label className="t-body">
+        <label className={TEXTE}>
           {t("tour.emetteur.depuis")}{" "}
           <input
             type="date"
@@ -274,7 +280,7 @@ function DesignerLEmetteur() {
           <button
             key={o.organisation_id}
             type="button"
-            className="btn"
+            className={BOUTON}
             disabled={designer.isPending}
             onClick={() => designer.mutate(o)}
           >
@@ -283,7 +289,7 @@ function DesignerLEmetteur() {
         ))}
       </div>
       {retour ? (
-        <p className="t-body" aria-live="polite">
+        <p className={TEXTE} aria-live="polite">
           {retour}
         </p>
       ) : null}
@@ -345,9 +351,9 @@ function LaGrille() {
   };
 
   return (
-    <div className="card">
-      <b>{t("tour.grille")}</b>
-      <label className="t-body mt-2 block">
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.grille")}</h2>
+      <label className={`${TEXTE} block`}>
         {t("tour.grille.date")}{" "}
         <input
           type="date"
@@ -357,7 +363,7 @@ function LaGrille() {
         />
       </label>
 
-      <p className="t-body mt-2">
+      <p className={TEXTE}>
         <b>{t("tour.grille.offres")}</b> — {t("tour.grille.vide")}
       </p>
       {grille.offres.map((o, i) => (
@@ -368,7 +374,7 @@ function LaGrille() {
           <div className="grid grid-cols-2 gap-2">
             {CHAMPS_OFFRE.map(([cle, libelle, forme]) =>
               forme === "case" ? (
-                <label key={cle} className="t-body">
+                <label key={cle} className={TEXTE}>
                   <input
                     type="checkbox"
                     checked={Boolean(o[cle])}
@@ -377,7 +383,7 @@ function LaGrille() {
                   {t(libelle)}
                 </label>
               ) : (
-                <label key={cle} className="t-body flex flex-col">
+                <label key={cle} className={`${TEXTE} flex flex-col gap-1`}>
                   {t(libelle)}
                   <input
                     inputMode="decimal"
@@ -400,7 +406,7 @@ function LaGrille() {
         </fieldset>
       ))}
 
-      <p className="t-body mt-2">
+      <p className={TEXTE}>
         <b>{t("tour.grille.recharges")}</b>
       </p>
       {grille.recharges.map((r, i) => (
@@ -410,7 +416,7 @@ function LaGrille() {
           </legend>
           <div className="grid grid-cols-3 gap-2">
             {CHAMPS_RECHARGE.map(([cle, libelle]) => (
-              <label key={cle} className="t-body flex flex-col">
+              <label key={cle} className={`${TEXTE} flex flex-col gap-1`}>
                 {t(libelle)}
                 <input
                   inputMode="decimal"
@@ -427,14 +433,14 @@ function LaGrille() {
       <div className="mt-3 flex flex-col gap-2">
         <button
           type="button"
-          className="btn"
+          className={BOUTON}
           disabled={verifier.isPending}
           onClick={() => verifier.mutate()}
         >
           {t("tour.grille.verifier")}
         </button>
         {(trous ?? []).map((x, k) => (
-          <p key={`${x.code}-${k}`} className="warn">
+          <p key={`${x.code}-${k}`} className={ALERTE}>
             {TROUS[x.code] ? t(TROUS[x.code]!, { detail: x.detail }) : `${x.code} ${x.detail}`}
           </p>
         ))}
@@ -447,7 +453,7 @@ function LaGrille() {
         />
         <button
           type="button"
-          className="btn"
+          className={BOUTON}
           disabled={publier.isPending || motif.trim() === "" || trous === null || trous.length > 0}
           onClick={() => publier.mutate()}
         >
@@ -455,7 +461,7 @@ function LaGrille() {
         </button>
       </div>
       {retour ? (
-        <p className="t-body" aria-live="polite">
+        <p className={TEXTE} aria-live="polite">
           {retour}
         </p>
       ) : null}
@@ -472,10 +478,10 @@ function LesLicences() {
     queryFn: () => office().tour.licences(),
   });
   return (
-    <div className="card">
-      <b>{t("tour.licences")}</b>
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.licences")}</h2>
       {(licences.data ?? []).map((l) => (
-        <p key={l.licence_id} className="t-body" data-licence={l.licence_id}>
+        <p key={l.licence_id} className={TEXTE} data-licence={l.licence_id}>
           <b>{l.societes ?? "—"}</b>
           <br />
           {t("tour.licences.ligne", {

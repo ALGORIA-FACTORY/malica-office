@@ -12,7 +12,6 @@ import {
 } from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
-import { LaTour } from "@/components/malica/la-tour";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -146,8 +145,8 @@ function PmeReglages() {
             </span>
           </span>
         </div>
+        <MonNom />
       </div>
-      <MonNom />
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
       <div className="sec">
@@ -300,33 +299,22 @@ function PmeReglages() {
       <Sieges abo={abo} verrou={verrous.sieges} />
 
       {/*
-       * ====================================== DONNER UN RÔLE, C'EST AUTRE CHOSE
+       * ============================================= UNE SEULE INVITATION
        *
-       * `facturation.inviterSiege` ouvre une PLACE sur la licence ; il ne porte
-       * pas de rôle. Ce composant-là, lui, invite avec un rôle — dirigeant ou
-       * collaborateur — et c'est ce qui a été demandé le 11 octobre 2026 pour
-       * associer un expert au dossier. Les deux gestes passent par
-       * `inviter_contact` en base, avec le même plafond ; ils ne disent pas la
-       * même chose au dirigeant, donc ils restent deux. À fondre en un seul le
-       * jour où `inviterSiege` prendra un rôle.
-       *
-       * Il garde son balisage et ses clés i18n : c'est du câblage qui tourne.
+       * L'écran en portait trois le 19 octobre — « Qui entre dans ce
+       * dossier », « Inviter un siège » sous chaque société, « Inviter un
+       * propriétaire ». Il n'en reste qu'une, qui choisit le rôle
+       * (`inviter-dans-mon-dossier.tsx`), et elle n'apparaît que si l'offre
+       * porte des places : sinon c'est la carte verrouillée, plus haut, qui
+       * parle. La transmission de la licence suit, seulement quand il y a un
+       * autre propriétaire à qui la transmettre.
        */}
-      <InviterDansMonDossier />
-
-      {/* ──────────────── les propriétaires, quand l'offre porte des places */}
       {verrous.sieges.ouvert ? (
         <>
-          <div className="sec">
-            <h2>{t("pme.reglages.proprietaires")}</h2>
-          </div>
-          <p className="t-body">{t("pme.reglages.proprietaires.sous")}</p>
+          <InviterDansMonDossier />
           <MesProprietaires />
         </>
       ) : null}
-
-      {/* ─────────── la tour : ne s'affiche qu'aux opérateurs d'ALGORIA */}
-      <LaTour />
 
       {/* ──────────────────────── la fiche, les alertes, les échéances */}
       <div className="sec">
@@ -432,19 +420,10 @@ function PmeReglages() {
           <span className="vl">{t("pme.reglages.donnees.conservation.valeur")}</span>
         </div>
         {/*
-         * Changer de forfait. Visible, désactivé, avec sa raison : un bouton
-         * absent se lit « ce n'est pas possible », un bouton éteint se lit
-         * « pas encore », et c'est la vérité. Le contrat ne porte aucune
-         * méthode de changement d'offre — ni `facturation.changerDOffre`, ni
-         * équivalent — et on n'en invente pas le nom.
+         * Le bouton éteint « Changer de forfait » est parti le 19 octobre :
+         * l'offre se change pour de bon dans « Changer d'offre », plus haut.
+         * Un second geste, mort, au même écran, se lisait « pas encore ».
          */}
-        <button type="button" className="rw" disabled aria-disabled="true">
-          <span className="bd">
-            <b>{t("pme.reglages.offre.changer")}</b>
-            <span>{t("pme.reglages.offre.changer.sous")}</span>
-          </span>
-          <span className="vl">{ABSENT}</span>
-        </button>
       </div>
 
       <div className="note">
@@ -770,13 +749,6 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
               dirigeant={dirigeant}
             />
           ))}
-          {/*
-           * L'invitation est DANS le groupe : une place s'ouvre sur une
-           * organisation, pas sur la licence en général — c'est tout le sens
-           * du mot « siège », et sur Premium les trois sociétés ont chacune
-           * les leurs.
-           */}
-          {verrou.ouvert ? <InviterUnSiege tenantId={g.tenantId} /> : null}
         </div>
       ))}
 
@@ -789,17 +761,12 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
       ) : null}
 
       {/*
-       * Ouverte et sans groupe, l'invitation vise le dossier courant : c'est
-       * le seul qu'on connaisse à coup sûr. Fermée, c'est la carte
-       * verrouillée, qui nomme l'offre et ne disparaît pas — « Mes sièges ·
-       * Team » est la seule chose qui apprenne à un dirigeant en Basic que
-       * l'offre existe.
+       * Fermée, c'est la carte verrouillée, qui nomme l'offre et ne disparaît
+       * pas — « Mes sièges · Team » est la seule chose qui apprenne à un
+       * dirigeant en Basic que l'offre existe. Ouverte, l'invitation unique
+       * suit, sous ce bloc.
        */}
-      {verrou.ouvert ? (
-        groupes.length === 0 ? (
-          <InviterUnSiege tenantId={pme.tenantId} />
-        ) : null
-      ) : (
+      {verrou.ouvert ? null : (
         <div className="inv off" data-verrou={verrou.offre}>
           <i>
             <IcCadenas />
@@ -918,92 +885,6 @@ function Siege({
         </p>
       ) : null}
     </>
-  );
-}
-
-/**
- * Ouvrir une place à quelqu'un.
- *
- * ======================================== LE PLAFOND NE SE VÉRIFIE PAS ICI
- *
- * Aucun comptage avant l'appel. Le déclencheur `memberships_place_disponible`
- * refuse la place de trop, et ce refus-là est LA vérité ; une vérification
- * côté écran en serait une seconde, qui se tromperait le jour où deux
- * invitations partent en même temps. On invite, et on montre ce que la base
- * répond — `texteDeLErreur` affiche la phrase de l'API telle quelle, parce
- * qu'elle est écrite pour être lue par un client.
- *
- * Le champ garde des utilitaires Tailwind : la feuille d'écran ne style aucun
- * champ de saisie, et les jetons de `styles-pme.css` (`--input`,
- * `--line-strong`) sont faits pour ça.
- */
-function InviterUnSiege({ tenantId }: { tenantId: string }) {
-  const { t } = useI18n();
-  const qc = useQueryClient();
-  const [ouvert, setOuvert] = useState(false);
-  const [email, setEmail] = useState("");
-  const [retour, setRetour] = useState<string | null>(null);
-
-  const inviter = useMutation({
-    mutationFn: () => office().facturation.inviterSiege(email.trim(), tenantId),
-    onSuccess: async (r) => {
-      setRetour(
-        r.deja
-          ? t("pme.reglages.siege.invite.deja", { email: r.email })
-          : t("pme.reglages.siege.invite.envoyee", { email: r.email }),
-      );
-      setEmail("");
-      await qc.invalidateQueries({ queryKey: [CLE_SIEGES] });
-      await qc.invalidateQueries({ queryKey: [CLE_FORFAIT] });
-    },
-    onError: (e: unknown) =>
-      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
-  });
-
-  if (!ouvert) {
-    return (
-      <button type="button" className="inv" onClick={() => setOuvert(true)}>
-        <i>
-          <IcPlus />
-        </i>
-        <span className="bd">
-          <b>{t("pme.reglages.siege.inviter")}</b>
-          <span>{t("pme.reglages.siege.inviter.sous")}</span>
-        </span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="card">
-      <p className="t-body">{t("pme.reglages.siege.inviter.adresse")}</p>
-      <div className="mt-2 flex gap-2">
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="off"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("pme.membres.adresse")}
-          aria-label={t("pme.membres.adresse")}
-          className="h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]"
-        />
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "auto" }}
-          disabled={inviter.isPending || email.trim() === ""}
-          onClick={() => inviter.mutate()}
-        >
-          {t("pme.membres.inviter")}
-        </button>
-      </div>
-      {retour ? (
-        <p className="t-body" aria-live="polite">
-          {retour}
-        </p>
-      ) : null}
-    </div>
   );
 }
 

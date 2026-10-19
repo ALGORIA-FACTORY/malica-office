@@ -1,37 +1,29 @@
 /**
- * Inviter quelqu'un dans son dossier — le pendant PME de l'écran du cabinet.
+ * Inviter quelqu'un dans son dossier — UN seul geste, depuis le 19 octobre 2026.
  *
  * ================================================================= POURQUOI
  *
- * 11 octobre 2026 : « je veux donner les accès à Mondher Chaouech dans
- * l'application PME et cabinet avec tous les accès ».
+ * L'écran des réglages portait TROIS invitations pour la même chose : « Qui
+ * entre dans ce dossier » (dirigeant ou collaborateur), « Inviter un siège »
+ * sous chaque société, et « Inviter un propriétaire ». Relevé sur l'appareil :
+ * trois champs d'adresse, deux vocabulaires (« dirigeant », « propriétaire »),
+ * et des chemins qui ne disaient pas la même chose sur le prix.
  *
- * Le cabinet savait inviter quelqu'un depuis sa mise en route. La PME, non :
- * un dossier n'avait qu'un seul membre, celui qui l'avait créé, et aucun
- * écran n'en ajoutait un second. Un dirigeant ne pouvait donc ni associer
- * son comptable à son propre espace, ni préparer sa succession, ni même
- * donner accès à son associé.
+ * Il n'en reste qu'un, dans les mots des trois rôles décidés le 19 octobre :
  *
- * La fonction du Socle, elle, n'a jamais été réservée aux cabinets : elle
- * invite dans N'IMPORTE QUEL dossier, et la politique de la base exige déjà
- * d'en être dirigeant ou expert. Encore un outil juste que personne
- * n'appelait — c'est le motif récurrent de ce dépôt.
+ *   `proprietaire` — dirige la société avec le propriétaire principal, sur une
+ *                    place payée, sans toucher l'abonnement ;
+ *   `utilisateur`  — le quotidien, sur une place.
+ *
+ * Les deux passent par la porte qui compte les places et ne s'ouvre qu'au
+ * propriétaire principal (`proprietaire_inviter`, `siege_inviter`) : la base
+ * refuse la place de trop, l'écran montre le refus.
  *
  * ======================================================= PAS DE MOT DE PASSE
  *
  * On n'ouvre pas un compte pour quelqu'un d'autre. L'invitation nomme une
  * ADRESSE ; la personne crée son compte elle-même, et l'invitation
  * l'attend dans son portail. Son mot de passe ne passe par personne.
- *
- * ================================================ CE QUE CHAQUE RÔLE DONNE
- *
- * `dirigeant` — tout, y compris accepter ou refuser un mandat de cabinet.
- * `collaborateur` — le quotidien, sans les décisions d'engagement.
- *
- * Les deux autres rôles du référentiel, `expert` et `assistant`, décrivent
- * un cabinet et ne sont pas proposés ici : les offrir dans un dossier de PME
- * ferait choisir entre quatre mots dont deux ne veulent rien dire à cet
- * endroit.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -46,7 +38,7 @@ export function InviterDansMonDossier() {
   const pme = usePme();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"dirigeant" | "collaborateur">("dirigeant");
+  const [role, setRole] = useState<"proprietaire" | "utilisateur">("utilisateur");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoyee, setEnvoyee] = useState<string | null>(null);
 
@@ -57,12 +49,16 @@ export function InviterDansMonDossier() {
 
   const inviter = useMutation({
     mutationFn: () =>
-      office().collab.inviter({ tenantId: pme.tenantId, email: email.trim(), role }),
+      role === "proprietaire"
+        ? office().facturation.inviterProprietaire(email.trim(), pme.tenantId)
+        : office().facturation.inviterSiege(email.trim(), pme.tenantId),
     onSuccess: async (r) => {
       setErreur(null);
       setEnvoyee(r.email);
       setEmail("");
       await qc.invalidateQueries({ queryKey: ["invitations-du-dossier", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: ["forfait-sieges"] });
+      await qc.invalidateQueries({ queryKey: ["mon-forfait"] });
     },
     onError: (e: unknown) => {
       setEnvoyee(null);
@@ -73,27 +69,33 @@ export function InviterDansMonDossier() {
   const enAttente = (invitations.data ?? []).filter((i) => !i.acceptedAt);
 
   return (
-    <>
-      <p className="mb-2 mt-7 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        {t("pme.membres.titre")}
-      </p>
-      <p className="mb-2.5 text-[12.5px] leading-[1.5] text-text-2">{t("pme.membres.lede")}</p>
+    <div className="card">
+      <p className="t-body">{t("pme.membres.lede")}</p>
 
-      <div className="flex border border-line-strong">
-        {(["dirigeant", "collaborateur"] as const).map((r) => (
+      <div className="mt-2 flex border border-line-strong">
+        {(["utilisateur", "proprietaire"] as const).map((r) => (
           <button
             key={r}
             type="button"
             onClick={() => setRole(r)}
             aria-pressed={r === role}
             className={
-              "flex-1 py-[9px] text-[12.5px] font-medium " +
+              "flex-1 px-2 py-[9px] text-[12.5px] font-medium " +
               (r === role
                 ? "bg-foreground text-background"
                 : "bg-transparent text-muted-foreground")
             }
           >
-            {t(r === "dirigeant" ? "pme.membres.role.dirigeant" : "pme.membres.role.collaborateur")}
+            {/*
+             * Les clés gardent leur nom d'origine (`dirigeant`,
+             * `collaborateur`) ; leurs textes disent désormais les rôles du
+             * 19 octobre — propriétaire, utilisateur.
+             */}
+            {t(
+              r === "proprietaire"
+                ? "pme.membres.role.dirigeant"
+                : "pme.membres.role.collaborateur",
+            )}
           </button>
         ))}
       </div>
@@ -106,13 +108,15 @@ export function InviterDansMonDossier() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={t("pme.membres.adresse")}
-          className="h-[46px] min-w-0 flex-1 border border-border bg-background px-3 text-[14px]"
+          aria-label={t("pme.membres.adresse")}
+          className="h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]"
         />
         <button
           type="button"
+          className="btn"
+          style={{ width: "auto" }}
           onClick={() => inviter.mutate()}
           disabled={inviter.isPending || email.trim().length === 0}
-          className="h-[46px] bg-foreground px-4 text-[14px] font-medium text-background disabled:opacity-40"
         >
           {t("pme.membres.inviter")}
         </button>
@@ -122,9 +126,9 @@ export function InviterDansMonDossier() {
        * Ce qui s'est passé, dit tout de suite. Une invitation qui part sans
        * un mot laisse croire qu'on a mal cliqué, et on la renvoie trois fois.
        */}
-      {erreur ? <p className="mt-2 text-[12.5px] text-signal-warn">{erreur}</p> : null}
+      {erreur ? <p className="warn">{erreur}</p> : null}
       {envoyee ? (
-        <p className="mt-2 text-[12.5px] text-signal-ok">
+        <p className="t-body" aria-live="polite">
           {t("pme.membres.envoyee", { email: envoyee })}
         </p>
       ) : null}
@@ -141,6 +145,6 @@ export function InviterDansMonDossier() {
           ))}
         </ul>
       ) : null}
-    </>
+    </div>
   );
 }

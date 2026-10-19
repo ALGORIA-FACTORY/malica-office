@@ -35,6 +35,7 @@ import { Route as AuthenticatedCabinetPvRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCabinetRapprochementRouteImport } from './routes/_authenticated/cabinet.rapprochement'
 import { Route as AuthenticatedCabinetReglagesRouteImport } from './routes/_authenticated/cabinet.reglages'
 import { Route as AuthenticatedCabinetStocksRouteImport } from './routes/_authenticated/cabinet.stocks'
+import { Route as AuthenticatedCabinetTourRouteImport } from './routes/_authenticated/cabinet.tour'
 import { Route as AuthenticatedPmeIndexRouteImport } from './routes/_authenticated/pme.index'
 import { Route as AuthenticatedPmeBienvenueRouteImport } from './routes/_authenticated/pme.bienvenue'
 import { Route as AuthenticatedPmeCapturerRouteImport } from './routes/_authenticated/pme.capturer'
@@ -198,6 +199,12 @@ const AuthenticatedCabinetStocksRoute =
     path: '/stocks',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
+const AuthenticatedCabinetTourRoute =
+  AuthenticatedCabinetTourRouteImport.update({
+    id: '/tour',
+    path: '/tour',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
 const AuthenticatedPmeIndexRoute = AuthenticatedPmeIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -318,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
+  '/cabinet/tour': typeof AuthenticatedCabinetTourRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
@@ -360,6 +368,7 @@ export interface FileRoutesByTo {
   '/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
+  '/cabinet/tour': typeof AuthenticatedCabinetTourRoute
   '/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/pme/charges': typeof AuthenticatedPmeChargesRoute
@@ -406,6 +415,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/rapprochement': typeof AuthenticatedCabinetRapprochementRoute
   '/_authenticated/cabinet/reglages': typeof AuthenticatedCabinetReglagesRoute
   '/_authenticated/cabinet/stocks': typeof AuthenticatedCabinetStocksRoute
+  '/_authenticated/cabinet/tour': typeof AuthenticatedCabinetTourRoute
   '/_authenticated/pme/bienvenue': typeof AuthenticatedPmeBienvenueRoute
   '/_authenticated/pme/capturer': typeof AuthenticatedPmeCapturerRoute
   '/_authenticated/pme/charges': typeof AuthenticatedPmeChargesRoute
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/cabinet/rapprochement'
     | '/cabinet/reglages'
     | '/cabinet/stocks'
+    | '/cabinet/tour'
     | '/pme/bienvenue'
     | '/pme/capturer'
     | '/pme/charges'
@@ -494,6 +505,7 @@ export interface FileRouteTypes {
     | '/cabinet/rapprochement'
     | '/cabinet/reglages'
     | '/cabinet/stocks'
+    | '/cabinet/tour'
     | '/pme/bienvenue'
     | '/pme/capturer'
     | '/pme/charges'
@@ -539,6 +551,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/rapprochement'
     | '/_authenticated/cabinet/reglages'
     | '/_authenticated/cabinet/stocks'
+    | '/_authenticated/cabinet/tour'
     | '/_authenticated/pme/bienvenue'
     | '/_authenticated/pme/capturer'
     | '/_authenticated/pme/charges'
@@ -751,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetStocksRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
+    '/_authenticated/cabinet/tour': {
+      id: '/_authenticated/cabinet/tour'
+      path: '/tour'
+      fullPath: '/cabinet/tour'
+      preLoaderRoute: typeof AuthenticatedCabinetTourRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
     '/_authenticated/pme/': {
       id: '/_authenticated/pme/'
       path: '/'
@@ -890,6 +910,7 @@ interface AuthenticatedCabinetRouteChildren {
   AuthenticatedCabinetRapprochementRoute: typeof AuthenticatedCabinetRapprochementRoute
   AuthenticatedCabinetReglagesRoute: typeof AuthenticatedCabinetReglagesRoute
   AuthenticatedCabinetStocksRoute: typeof AuthenticatedCabinetStocksRoute
+  AuthenticatedCabinetTourRoute: typeof AuthenticatedCabinetTourRoute
   AuthenticatedCabinetIndexRoute: typeof AuthenticatedCabinetIndexRoute
   AuthenticatedCabinetDossierClientIdRoute: typeof AuthenticatedCabinetDossierClientIdRoute
   AuthenticatedCabinetFactureFactureIdRoute: typeof AuthenticatedCabinetFactureFactureIdRoute
@@ -916,6 +937,7 @@ const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
     AuthenticatedCabinetRapprochementRoute,
   AuthenticatedCabinetReglagesRoute: AuthenticatedCabinetReglagesRoute,
   AuthenticatedCabinetStocksRoute: AuthenticatedCabinetStocksRoute,
+  AuthenticatedCabinetTourRoute: AuthenticatedCabinetTourRoute,
   AuthenticatedCabinetIndexRoute: AuthenticatedCabinetIndexRoute,
   AuthenticatedCabinetDossierClientIdRoute:
     AuthenticatedCabinetDossierClientIdRoute,

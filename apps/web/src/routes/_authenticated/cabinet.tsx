@@ -39,6 +39,7 @@ import {
   ScanSearch,
   Search,
   Settings2,
+  TowerControl,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -332,6 +333,10 @@ function Coquille({
         { to: "/cabinet/lecteurs", label: t("cab.nav.lecteurs"), icon: ScanSearch, exact: false },
         { to: "/cabinet/export", label: t("cab.nav.export"), icon: Download, exact: false },
         { to: "/cabinet/reglages", label: t("cab.nav.settings"), icon: Settings2, exact: false },
+        // La tour : aux seuls opérateurs d'ALGORIA. La base refuse tout aux autres.
+        ...(acces.data?.plateforme
+          ? [{ to: "/cabinet/tour", label: t("tour.titre"), icon: TowerControl, exact: false }]
+          : []),
       ],
     },
   ];

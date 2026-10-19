@@ -99,8 +99,12 @@ export function MonNom() {
   });
 
   const champ = "h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]";
+  /*
+   * Posé DANS la carte du compte, pas à côté : le nom et l'adresse sont la
+   * même personne, et deux cartes pour elle se lisaient comme deux comptes.
+   */
   return (
-    <div className="card">
+    <div className="mt-3">
       <p className="t-body">{t("pme.reglages.profil.aide")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <input
@@ -193,36 +197,43 @@ export function ChangerDOffre() {
 
   return (
     <div className="rows">
-      {(offres.data ?? []).map((o) => {
-        const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
-        return (
-          <div key={o.code} className="card abo" data-offre={o.code} data-courant={o.courant}>
-            <div className="nm">
-              <b>{o.libelle}</b>
-              <span className="px">
-                {t("pme.reglages.offres.incluses", { n: entier(o.lectures_incluses) })}
-              </span>
+      {/*
+       * L'offre en cours ne se répète pas ici : la carte « L'abonnement »,
+       * juste au-dessus, la porte déjà avec son prix. La relister faisait deux
+       * fois la même carte sur le même écran (relevé le 19 octobre).
+       */}
+      {(offres.data ?? [])
+        .filter((o) => !o.courant)
+        .map((o) => {
+          const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
+          return (
+            <div key={o.code} className="card abo" data-offre={o.code} data-courant={o.courant}>
+              <div className="nm">
+                <b>{o.libelle}</b>
+                <span className="px">
+                  {t("pme.reglages.offres.incluses", { n: entier(o.lectures_incluses) })}
+                </span>
+              </div>
+              <p className="t-body">{ligne(o)}</p>
+              {o.empechement ? (
+                <p className="t-body">{bloque ? t(bloque) : null}</p>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={changer.isPending}
+                  onClick={() =>
+                    armee === o.code ? changer.mutate(o.code) : (setArmee(o.code), setRetour(null))
+                  }
+                >
+                  {armee === o.code
+                    ? t("pme.reglages.offres.confirmer", { offre: o.libelle })
+                    : t("pme.reglages.offres.passer", { offre: o.libelle })}
+                </button>
+              )}
             </div>
-            <p className="t-body">{ligne(o)}</p>
-            {o.empechement ? (
-              <p className="t-body">{bloque ? t(bloque) : null}</p>
-            ) : (
-              <button
-                type="button"
-                className="btn"
-                disabled={changer.isPending}
-                onClick={() =>
-                  armee === o.code ? changer.mutate(o.code) : (setArmee(o.code), setRetour(null))
-                }
-              >
-                {armee === o.code
-                  ? t("pme.reglages.offres.confirmer", { offre: o.libelle })
-                  : t("pme.reglages.offres.passer", { offre: o.libelle })}
-              </button>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
       {offres.error ? <p className="warn">{refus(offres.error, t)}</p> : null}
       {retour ? (
         <p className="t-body" aria-live="polite">
@@ -442,20 +453,16 @@ export function MesProprietaires() {
     enabled: principal,
     retry: false,
   });
-  const [email, setEmail] = useState("");
   const [armee, setArmee] = useState<string | null>(null);
   const [retour, setRetour] = useState<string | null>(null);
 
-  const inviter = useMutation({
-    mutationFn: () => office().facturation.inviterProprietaire(email.trim(), pme.tenantId),
-    onSuccess: async (r) => {
-      setRetour(t("pme.reglages.proprietaires.invite", { email: r.email }));
-      setEmail("");
-      await invalider();
-    },
-    onError: (e: unknown) => setRetour(refus(e, t)),
-  });
-
+  /*
+   * L'invitation d'un propriétaire est partie dans « Inviter dans mon
+   * dossier » (`inviter-dans-mon-dossier.tsx`), le 19 octobre : l'écran en
+   * portait trois. Il ne reste ici que ce qui n'existe nulle part ailleurs —
+   * transmettre la licence —, et seulement quand il y a quelqu'un à qui la
+   * transmettre.
+   */
   const transmettre = useMutation({
     mutationFn: (p: { id: string; nom: string }) =>
       office().facturation.transmettreLicence(pme.tenantId, p.id),
@@ -477,59 +484,33 @@ export function MesProprietaires() {
     (s) => s.role === "dirigeant" && s.tenant_id === pme.tenantId && s.user_id !== moi,
   );
 
+  if (autres.length === 0 && !retour) return null;
+
   return (
     <>
       <div className="card">
-        <p className="t-body">{t("pme.reglages.proprietaires.email")}</p>
-        <div className="mt-2 flex gap-2">
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="off"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            aria-label={t("pme.reglages.proprietaires.email")}
-            className="h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]"
-          />
-          <button
-            type="button"
-            className="btn"
-            style={{ width: "auto" }}
-            disabled={inviter.isPending || email.trim() === ""}
-            onClick={() => inviter.mutate()}
-          >
-            {t("pme.reglages.proprietaires.inviter")}
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
         <b>{t("pme.reglages.proprietaires.transmettre")}</b>
         <p className="t-body">{t("pme.reglages.proprietaires.transmettre.sous")}</p>
-        {autres.length === 0 ? (
-          <p className="t-body">{t("pme.reglages.proprietaires.aucun")}</p>
-        ) : (
-          autres.map((s) => {
-            const nom = s.nom ?? s.user_id;
-            return (
-              <button
-                key={s.user_id}
-                type="button"
-                className="btn mt-2"
-                disabled={transmettre.isPending}
-                onClick={() =>
-                  armee === s.user_id
-                    ? transmettre.mutate({ id: s.user_id, nom })
-                    : (setArmee(s.user_id), setRetour(null))
-                }
-              >
-                {armee === s.user_id
-                  ? t("pme.reglages.proprietaires.transmettre.confirmer", { nom })
-                  : t("pme.reglages.proprietaires.transmettre.a", { nom })}
-              </button>
-            );
-          })
-        )}
+        {autres.map((s) => {
+          const nom = s.nom ?? s.user_id;
+          return (
+            <button
+              key={s.user_id}
+              type="button"
+              className="btn mt-2"
+              disabled={transmettre.isPending}
+              onClick={() =>
+                armee === s.user_id
+                  ? transmettre.mutate({ id: s.user_id, nom })
+                  : (setArmee(s.user_id), setRetour(null))
+              }
+            >
+              {armee === s.user_id
+                ? t("pme.reglages.proprietaires.transmettre.confirmer", { nom })
+                : t("pme.reglages.proprietaires.transmettre.a", { nom })}
+            </button>
+          );
+        })}
       </div>
       {retour ? (
         <p className="t-body" aria-live="polite">
