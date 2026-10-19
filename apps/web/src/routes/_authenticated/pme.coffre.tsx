@@ -276,7 +276,13 @@ function PmeCoffre() {
            * Le libellé générique du retour n'existe qu'une fois, dans l'espace
            * de `pme.regler`. Emprunté plutôt que recopié en français seul :
            * une étiquette d'accessibilité dans la mauvaise langue est pire
-           * qu'un nom de clé mal rangé. À remonter en `common.retour`.
+           * qu'un nom de clé mal rangé.
+           *
+           * DETTE, et elle est nommée : `common.retour` n'existe pas dans
+           * `packages/socle/src/messages.ts`. Les dix retours du produit
+           * lisent donc une clé rangée sous l'écran « à régler », qui n'a
+           * rien à voir avec eux. Le renommage appartient au socle, pas à
+           * cet écran.
            */
           aria-label={t("pme.regler.retour")}
           onClick={() => void navigate({ to: "/pme" })}

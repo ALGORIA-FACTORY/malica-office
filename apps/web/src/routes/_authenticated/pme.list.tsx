@@ -536,10 +536,22 @@ function VosDocuments() {
        * la fiche du dossier, pas de l'horloge.
        */}
       <div className="top">
+        {/*
+         * `t("pme.regler.retour")` et non `TEXTES.retour`.
+         *
+         * Le retour de cet ecran portait « Retour » en dur, en francais
+         * seulement : en arabe et en anglais, un lecteur d'ecran annoncait
+         * « Retour ». C'est la cle que portent deja les neuf autres `.bk` du
+         * produit, et elle est traduite dans les trois langues.
+         *
+         * `TEXTES.retour` reste employe plus bas, sur le bouton qui replie un
+         * GROUPE — un autre geste, dans le corps de l'ecran, et une autre
+         * dette ; celle-ci n'est pas aggravee ici.
+         */}
         <button
           type="button"
           className="bk"
-          aria-label={TEXTES.retour}
+          aria-label={t("pme.regler.retour")}
           onClick={() => void navigate({ to: "/pme" })}
         >
           <Chevron gauche />

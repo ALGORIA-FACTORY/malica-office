@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useNavigate,
+  useRouteContext,
+  useRouterState,
+} from "@tanstack/react-router";
 import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
@@ -53,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/pme")({
 });
 
 function PmeLayout() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -82,7 +89,13 @@ function PmeLayout() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // La bascule n'a de sens que si l'on a un cabinet où aller.
+  /*
+   * Y a-t-il un cabinet mandaté ? La BASCULE vers son espace est partie de la
+   * barre le 19 octobre 2026 — décision du dirigeant — mais le fait, lui,
+   * sert encore : l'écran de capture s'en sert pour savoir si la pièce peut
+   * être transmise, et il le lit au contexte. Le retirer aurait cassé la
+   * dernière étape de la capture, pas seulement un lien.
+   */
   const aUnCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
 
@@ -334,6 +347,17 @@ function PmeLayout() {
     useCallback(() => setScanning(false), []),
   );
 
+  /*
+   * L'initiale de la barre vient du compte ouvert — `beforeLoad` de
+   * `_authenticated` le range au contexte — et non d'un appel de plus. Le
+   * compte ne porte qu'un identifiant et une adresse : c'est donc la première
+   * lettre de l'adresse, faute de nom en base. L'accueil la calculait pour sa
+   * propre rangée de pastilles ; elle se calcule maintenant ICI, une fois,
+   * pour les quinze écrans.
+   */
+  const { user } = useRouteContext({ from: "/_authenticated" });
+  const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
+
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
     {
@@ -389,16 +413,26 @@ function PmeLayout() {
           className="h-safe-top fixed inset-x-0 top-0 z-20 mx-auto w-full max-w-[var(--colonne)] bg-background/95 backdrop-blur md:hidden print:hidden"
         />
         <BandeauHorsLigne />
-        {path === "/pme" ? null : (
-          <header className="top-safe sticky z-10 border-b border-border bg-background/95 px-[22px] py-2.5 backdrop-blur">
-            <EntetePme
-              dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
-              dossierActif={org?.id ?? null}
-              choisirDossier={selectOrg}
-              aUnCabinet={aUnCabinet}
-            />
-          </header>
-        )}
+        {/*
+         * LA barre d'application, et elle est rendue PARTOUT.
+         *
+         * `path === "/pme" ? null :` vivait ici : l'accueil supprimait
+         * l'en-tête par une condition explicite et se peignait sa propre
+         * rangée de pastilles. C'était la deuxième des cinq formes. La
+         * condition part avec elle — quinze écrans, une barre, sans exception
+         * à lire dans un ternaire.
+         *
+         * Elle ne porte aucune classe utilitaire : `EntetePme` rend le
+         * `header` et la feuille porte `.appbar` — le collage, l'encoche, le
+         * filet, le fond.
+         */}
+        <EntetePme
+          orgNom={org?.name ?? null}
+          dossiers={pmeOrgs.map((o) => ({ id: o.id, name: o.name }))}
+          dossierActif={org?.id ?? null}
+          choisirDossier={selectOrg}
+          initiale={initiale}
+        />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
           {orgsQuery.isPending ? (

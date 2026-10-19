@@ -1,75 +1,79 @@
 /**
- * La ligne du haut, commune à tous les écrans PME.
+ * La barre d'application — UNE, sur les quinze écrans PME.
  *
- * =========================================================== POURQUOI ICI
+ * =========================================================== CE QU'ELLE PORTE
  *
- * Elle vivait en deux exemplaires : celui de l'accueil — le sigle, la pastille
- * qui bat, le dossier, « changer d'espace », « FR · ⚙ » — et celui de la mise
- * en page, qui servait tous les autres écrans avec un sélecteur de langue
- * complet, sans sigle et sans pastille. Deux en-têtes veut dire deux
- * évolutions : celle qu'on retouche et celle qu'on oublie.
+ *   [ logo ALGORIA ]   nom de l'organisation            [ W ]
  *
- * L'accueil est la référence. Cet objet EST l'en-tête de l'accueil, extrait
- * tel quel ; l'accueil l'appelle comme les autres. Il n'en existe plus de
- * second à faire diverger.
+ * Et rien d'autre. Le logo à gauche, le dossier ouvert au centre, l'initiale
+ * de la personne à droite. Le retour et le titre d'un écran vivent SOUS elle,
+ * dans `.top` — jamais dedans.
+ *
+ * ===================================================== CE QUI EST PARTI D'ICI
+ *
+ * Le sigle RG de 19 px, la pastille marigold qui battait, « je veille », le
+ * sélecteur de langue « FR · ⚙ » et le lien « Changer d'espace ».
+ *
+ * « Changer d'espace » est une décision du dirigeant, prise le 19 octobre
+ * 2026 : il part, et avec lui la prop `aUnCabinet` de cet objet. Conséquence
+ * assumée : depuis le téléphone, on n'atteint plus l'espace cabinet. La prop
+ * de MÊME NOM du contexte PME reste — l'écran de capture en dépend pour
+ * savoir si la pièce peut être transmise — et la clé `portal.switch` reste
+ * elle aussi : `cabinet.tsx` la lit encore, dans l'autre sens.
+ *
+ * Le point qui bat et « je veille » n'ont PAS été tranchés. Ils occupaient le
+ * centre sans rien dire ; le centre dit maintenant le nom du dossier, qui est
+ * une information. Les remettre est une ligne — voir le rapport.
+ *
+ * « FR · ⚙ » menait aux réglages. C'est l'initiale qui y mène désormais : une
+ * porte, pas deux, et la langue se change là où le thème se change.
  *
  * ==================================================== POURQUOI DES PROPRIÉTÉS
  *
- * La mise en page dessine l'en-tête AVANT d'entrer dans `PmeProvider` — le
- * contexte n'est pas encore posé à cet endroit de l'arbre. L'en-tête reçoit
- * donc ce qu'il affiche, il ne va pas le chercher.
+ * La mise en page dessine la barre AVANT d'entrer dans `PmeProvider` — le
+ * contexte n'est pas encore posé à cet endroit de l'arbre. La barre reçoit
+ * donc ce qu'elle affiche, elle ne va pas le chercher.
+ *
+ * ========================================================= ET AUCUNE CLASSE
+ *
+ * Pas une utilitaire sur ces éléments : `.appbar`, `.mk`, `.org`, `.me` sont
+ * dans `styles-pme.css`. Le dessin a une seule source.
  */
 import { Link } from "@tanstack/react-router";
 
 import { useI18n } from "@/i18n";
 
-import { MarqueRg } from "./office-ui";
+import { MarqueAlgoria } from "./office-ui";
 
 export interface EntetePmeProps {
-  /** Les dossiers PME de la personne. Un seul : le sélecteur laisse la place. */
+  /** Le nom du dossier ouvert. `null` tant qu'aucun dossier n'est lu. */
+  orgNom: string | null;
+  /** Les dossiers PME de la personne. Un seul : le nom se lit, il ne se choisit pas. */
   dossiers: ReadonlyArray<{ id: string; name: string }>;
   dossierActif: string | null;
   choisirDossier: (id: string) => void;
-  /** La bascule vers le cabinet n'existe que s'il y a un cabinet où aller. */
-  aUnCabinet: boolean;
+  /** L'initiale du compte ouvert — la PERSONNE, jamais Malica. */
+  initiale: string;
 }
 
-export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }: EntetePmeProps) {
-  const { t, locale } = useI18n();
+export function EntetePme({
+  orgNom,
+  dossiers,
+  dossierActif,
+  choisirDossier,
+  initiale,
+}: EntetePmeProps) {
+  const { t } = useI18n();
 
-  /*
-   * `flex-wrap` : a 320 px, les deux liens de droite et le selecteur ne
-   * tiennent pas sur une seule ligne, et c'est le selecteur qui payait —
-   * mesure 36 px de large. Plutot que de le laisser se reduire sous le
-   * pouce, la ligne se coupe en deux et il prend la premiere. A 360 px et
-   * au-dela, rien ne bouge : tout tient, la ligne reste unique.
-   */
   return (
-    <div className="relative flex flex-wrap items-center gap-[9px]">
-      <MarqueRg aria-hidden className="h-[19px] w-[19px] flex-none" />
-      <span className="rg-blink h-[5px] w-[5px] flex-none bg-marigold" />
-      {/*
-       * Le sélecteur de dossier prend la place de « je veille » quand il y a
-       * plusieurs dossiers : les deux ne tiennent pas côte à côte sous 375 px,
-       * et une PME — qui n'en a qu'un — ne voit jamais le premier.
-       */}
-      {/*
-       * 44 px : le plancher d'Apple, et la feuille PME s'impose deja 34 pour
-       * une simple pilule de filtre. Mesure avant : le selecteur faisait
-       * 38 x 24 px a 320 et les deux liens 25 px de haut, colles au bord haut
-       * de l'ecran — la ou le pouce arrive le plus mal. C'est par la qu'on
-       * change de societe. La cible grandit, la police ne bouge pas.
-       *
-       * Et `max-w-[110px]` part : avec `min-w-0`, il reduisait le selecteur a
-       * 38 px de large. Il prend maintenant la place disponible au lieu de la
-       * refuser.
-       */}
+    <header className="appbar">
+      <MarqueAlgoria aria-hidden className="mk" />
       {dossiers.length > 1 ? (
         <select
           aria-label={t("pme.org.switch")}
           value={dossierActif ?? ""}
           onChange={(e) => choisirDossier(e.target.value)}
-          className="min-h-[44px] min-w-[4.5rem] flex-1 truncate border border-border bg-transparent px-1.5 text-[10px] uppercase tracking-wide focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="org"
         >
           {dossiers.map((d) => (
             <option key={d.id} value={d.id}>
@@ -78,31 +82,16 @@ export function EntetePme({ dossiers, dossierActif, choisirDossier, aUnCabinet }
           ))}
         </select>
       ) : (
-        <span className="truncate text-[11px] text-muted-foreground">{t("pme.home.veille")}</span>
+        <span className="org">{orgNom ?? ""}</span>
       )}
-      <span className="ms-auto flex items-center gap-1.5">
-        {aUnCabinet ? (
-          <Link
-            to="/office"
-            className="inline-flex min-h-[44px] items-center whitespace-nowrap border border-border px-2 text-[10px] uppercase tracking-wide text-text-2 hover:bg-accent"
-          >
-            {t("portal.switch")}
-          </Link>
-        ) : null}
-        {/*
-         * « FR · ⚙ » mène aux réglages, où la langue ET le thème se changent.
-         * Le sélecteur de langue complet qui vivait ici doublait ce que les
-         * réglages font mieux, et il ne tenait pas dans la ligne du sigle.
-         */}
-        <Link
-          to="/pme/reglages"
-          // Le lecteur d'écran lisait « FR point engrenage » : le lien dit où il mène.
-          aria-label={t("pme.reglages.titre")}
-          className="inline-flex min-h-[44px] items-center whitespace-nowrap border border-border px-2 font-mono text-[10px] tracking-[0.06em] text-text-2 hover:bg-accent"
-        >
-          {locale.toUpperCase()} · ⚙
-        </Link>
-      </span>
-    </div>
+      {/*
+       * L'initiale mène aux réglages. Le lecteur d'écran annonçait « W » seul :
+       * le lien dit où il mène, et la lettre reste `aria-hidden` de fait
+       * puisque l'étiquette la remplace.
+       */}
+      <Link to="/pme/reglages" aria-label={t("pme.reglages.titre")} className="me">
+        {initiale}
+      </Link>
+    </header>
   );
 }

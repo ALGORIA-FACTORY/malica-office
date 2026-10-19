@@ -1275,10 +1275,19 @@ function PieceScreen() {
     <div data-ecran="dossier">
       {/* ── la barre du haut ─────────────────────────────────────────── */}
       <div className="top">
+        {/*
+         * Le retour de la barre dit « Retour », comme les neuf autres.
+         *
+         * Il disait « Vos documents » — exact, et c'etait la quatrieme
+         * etiquette differente pour un meme geste. Une seule forme veut une
+         * seule etiquette. `pme.piece.retour` reste employe deux fois plus
+         * haut, sur les liens VISIBLES « < Vos documents » du corps de
+         * l'ecran, ou le texte nomme la destination : la cle ne meurt pas.
+         */}
         <button
           type="button"
           className="bk"
-          aria-label={t("pme.piece.retour")}
+          aria-label={t("pme.regler.retour")}
           onClick={() => void navigateList()}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>

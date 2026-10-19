@@ -49,7 +49,6 @@ const MOTS = {
   /** La barre du haut, et sa variante quand la licence porte plusieurs sociétés. */
   barre: "TVA du mois",
   barreGroupe: "TVA du groupe",
-  retour: "Retour",
   /**
    * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une
    * CONSTANTE RÉGLEMENTAIRE (R4). Aucune méthode appelée par cette route ne
@@ -237,7 +236,14 @@ function PmeTva() {
         <button
           type="button"
           className="bk"
-          aria-label={MOTS.retour}
+          /*
+           * `MOTS.retour` disait « Retour » en dur, en francais seulement : en
+           * arabe et en anglais, le lecteur d'ecran annoncait « Retour ».
+           * `pme.regler.retour` est la meme etiquette, traduite, et c'est
+           * celle que portent les neuf autres retours du produit. Le mot en
+           * dur est parti du dictionnaire local avec son dernier appel. R9.
+           */
+          aria-label={t("pme.regler.retour")}
           onClick={() => void navigate({ to: "/pme" })}
         >
           <svg viewBox="0 0 24 24" className="g" aria-hidden>

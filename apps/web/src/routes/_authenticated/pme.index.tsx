@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
@@ -156,15 +156,11 @@ function PmeHome() {
   const allerAuxReglages = () => void navigate({ to: "/pme/reglages" });
 
   /*
-   * La pastille du haut porte l'initiale de la PERSONNE, pas celle de Malica.
-   *
-   * Elle vient du compte ouvert — `beforeLoad` de `_authenticated` le range au
-   * contexte — et non d'un appel de plus : la garde l'a déjà en main à chaque
-   * navigation. Le compte ne porte qu'un identifiant et une adresse : c'est
-   * donc la première lettre de l'adresse, faute de nom en base.
+   * La pastille à l'initiale de la personne a quitté cet écran : elle est dans
+   * la barre d'application du layout, donc sur les quinze écrans et plus
+   * seulement ici. Le calcul de l'initiale est monté avec elle, dans
+   * `pme.tsx`. Cet écran ne lit plus le compte du tout.
    */
-  const { user } = useRouteContext({ from: "/_authenticated" });
-  const initiale = (user.email.trim().charAt(0) || "·").toLocaleUpperCase(locale);
 
   /**
    * L'arrivée, une seule fois.
@@ -323,14 +319,21 @@ function PmeHome() {
       </div>
 
       {/* ------------------------------------------------- la rangée du haut */}
+      {/*
+       * Ce qui reste de la deuxième des cinq formes d'en-tête : LES DOSSIERS,
+       * et rien d'autre.
+       *
+       * En sont partis, le 19 octobre 2026, la pastille à l'initiale et les
+       * deux chips de porte — « Réglages » et « Changer d'espace ». Les deux
+       * premières vivent maintenant dans la barre d'application, qui est
+       * rendue ici comme ailleurs ; les redire sur cet écran aurait fait deux
+       * fois la même porte à 70 px d'écart. « Changer d'espace » est supprimé.
+       *
+       * Les chips de dossier restent : à partir de deux sociétés, la barre
+       * porte le sélecteur, mais sur l'accueil le choix est le GESTE de
+       * l'écran, pas un réglage. Rien ne les redit ailleurs.
+       */}
       <div className="chips">
-        {/*
-         * La pastille est une marque de présence, pas un bouton : le dessin la
-         * veut muette. Les portes (réglages, autre espace) sont des chips —
-         * `.chip` remet `border:0`, ce que `.me` ne fait pas.
-         */}
-        <span className="me">{initiale}</span>
-
         {/*
          * Les chips portent les DOSSIERS, pas des filtres inventés : c'est le
          * sélecteur d'organisation du dessin Premium, qui se réduit tout seul à
@@ -349,21 +352,6 @@ function PmeHome() {
             {d.name}
           </button>
         ))}
-
-        {/*
-         * Les deux portes que l'en-tête d'avant portait, et qui n'auraient plus
-         * eu de place sur cet écran : les réglages (langue, thème, alertes,
-         * échéances) et la bascule vers le cabinet, quand il y a un cabinet où
-         * aller. Les supprimer aurait enfermé le dirigeant sur l'accueil.
-         */}
-        <button type="button" className="chip" onClick={allerAuxReglages}>
-          {t("pme.reglages.titre")}
-        </button>
-        {pme.aUnCabinet ? (
-          <button type="button" className="chip" onClick={() => void navigate({ to: "/office" })}>
-            {t("portal.switch")}
-          </button>
-        ) : null}
       </div>
 
       <div className="pad">

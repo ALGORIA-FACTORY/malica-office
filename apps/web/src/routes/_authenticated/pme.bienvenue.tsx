@@ -186,7 +186,9 @@ function Bienvenue() {
       {/* ── la barre du haut ───────────────────────────────────────────── */}
       <div className="top">
         {/* `pme.regler.retour` est « Retour » dans les trois langues, et c'est
-            la clé que portent déjà les cinq autres `.bk` du produit. */}
+            la clé que portent maintenant les DIX `.bk` du produit — la
+            bibliothèque, la TVA et le dossier l'ont rejointe le 19 octobre
+            2026, quand le retour est passé à une seule forme. */}
         <button type="button" className="bk" aria-label={t("pme.regler.retour")} onClick={plusTard}>
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
             <path d="M14.5 5.5L8 12l6.5 6.5" />

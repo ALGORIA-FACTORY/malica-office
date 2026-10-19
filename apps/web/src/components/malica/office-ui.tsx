@@ -6,6 +6,7 @@
 import type { ReactNode, ComponentPropsWithoutRef } from "react";
 import { Link } from "@tanstack/react-router";
 
+import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
 import malica from "@/assets/malica.jpeg";
 import { cn } from "@/lib/utils";
@@ -119,6 +120,34 @@ export function MarqueRg({ className, ...reste }: ComponentPropsWithoutRef<"span
       style={{
         maskImage: `url(${marqueRg})`,
         WebkitMaskImage: `url(${marqueRg})`,
+        maskSize: "100% 100%",
+        WebkitMaskSize: "100% 100%",
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+      }}
+    />
+  );
+}
+
+/**
+ * La marque ALGORIA.
+ *
+ * Même mécanique que `MarqueRg`, et pour la même raison : un masque CSS sur
+ * `bg-current`, donc un seul fichier teinté par `currentColor`, qui sert le
+ * thème clair et le thème sombre. Une balise `img` ne saurait pas s'inverser.
+ *
+ * Elle est posée à UN endroit — la barre d'application du layout PME, à
+ * gauche. La taille vient de la feuille (`.appbar .mk`), pas d'ici : c'est la
+ * feuille qui tient le dessin de cette barre, en entier.
+ */
+export function MarqueAlgoria({ className, ...reste }: ComponentPropsWithoutRef<"span">) {
+  return (
+    <span
+      {...reste}
+      className={cn("inline-block bg-current", className)}
+      style={{
+        maskImage: `url(${marqueAlgoria})`,
+        WebkitMaskImage: `url(${marqueAlgoria})`,
         maskSize: "100% 100%",
         WebkitMaskSize: "100% 100%",
         maskRepeat: "no-repeat",

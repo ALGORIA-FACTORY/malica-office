@@ -856,10 +856,68 @@
 [data-surface="pme"] .rev button{border:0;border-radius:999px;background:rgba(0,0,0,.06);color:var(--t2); font-size:.6875rem;font-weight:600;padding:.375rem .6875rem;cursor:pointer;white-space:nowrap}
 [data-surface="pme"] .rev button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] .sec span{font-family:var(--mono);font-size:.6875rem;color:var(--t3);letter-spacing:.04em}
-[data-surface="pme"] .top{display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem .25rem}
-[data-surface="pme"] .top .bk{width:40px;height:40px;border-radius:50%;background:var(--d2);border:0;color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none}
+
+/* ---------- LA BARRE D'APPLICATION : UNE, SUR LES QUINZE ECRANS ----------
+ *
+ * Le logo ALGORIA, le nom du dossier ouvert, l'initiale de la personne.
+ *
+ * Cinq formes vivaient dans ce produit : l'en-tete du layout (65 px, sigle RG
+ * et pastille qui bat), la rangee de pastilles de l'accueil (66 px), deux
+ * geometries de `.top` (60 px et 36 px) et la barre de progression de la
+ * capture, fixee par-dessus la premiere. Le dirigeant en voulait UNE.
+ *
+ * COLLANTE et non fixee, comme la barre du bas : rien ne passe derriere elle,
+ * et aucune liste ne perd sa derniere ligne. `top` suit l'encoche — la bande
+ * qui peint la barre d'etat est au-dessus (z-20), elle en dessous (z-10).
+ *
+ * Elle ne porte AUCUNE classe utilitaire : le `header` de `pme.tsx` porte le
+ * nom, la feuille porte le dessin. C'est la regle de ce depot. */
+[data-surface="pme"] .appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:flex;align-items:center; gap:.75rem;min-height:56px;padding:.375rem 1.25rem;background:var(--bg);border-bottom:1px solid var(--hr)}
+[data-surface="pme"] .appbar .mk{width:26px;height:26px;flex:none;color:var(--tx)}
+/* Le centre dit le dossier OUVERT. Plusieurs dossiers : le meme texte devient
+ * le selecteur — c'est la seule porte qui restait pour changer de societe
+ * depuis que « changer d'espace » est parti, et elle ne prend pas une ligne de
+ * plus. Un seul dossier : c'est un nom, et on ne choisit rien. */
+[data-surface="pme"] .appbar .org{flex:1;min-width:0;padding:0;border:0;background:none;color:var(--tx); font-family:inherit;font-size:.9375rem;font-weight:600;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] .appbar select.org{cursor:pointer}
+/* L'initiale, a droite. C'est la primitive `.me` de l'accueil — rond, fond
+ * d'accent, texte sur accent — sortie de `[data-ecran="accueil"]`.
+ *
+ * Elle est scopee a `.appbar` et non a la surface entiere, et c'est mesure :
+ * les reglages portent un `.av.me` (l'avatar du membre qui est MOI, 40 px
+ * dans une liste de sieges). Une declaration `[data-surface="pme"] .me`
+ * l'aurait gonfle a 44 px au milieu de sa rangee. La barre etant rendue par
+ * le layout, `.appbar .me` sert quand meme les quinze ecrans.
+ *
+ * 44 px et non 42 : la pastille EST la cible, et 42 ne tient pas le plancher
+ * d'Apple. C'est un lien vers les reglages — langue, theme, offre — donc
+ * `text-decoration:none`. */
+[data-surface="pme"] .appbar .me{width:44px;height:44px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-size:1rem;font-weight:700;letter-spacing:-.02em;text-decoration:none}
+
+/* ---------- LE RETOUR ET LE TITRE : SOUS LA BARRE, UNE SEULE GEOMETRIE ----
+ *
+ * Deux vivaient ici : celle-ci (bouton rond PLEIN de 40 px, titre de 15 px,
+ * pour charges, bibliotheque et dossier) et celle de la famille « papiers »
+ * (32 px transparent, titre de 14 px, sept ecrans). Ni l'une ni l'autre ne
+ * tenait les 44 px — que l'en-tete du layout respectait, lui, deliberement
+ * (« 44 px : le plancher d'Apple »).
+ *
+ * La retenue est la plus lisible des deux, portee a 44 px de cible. Le disque
+ * reste rempli : a 44 px, un bouton sans fond devient une tache de vide.
+ * `.ic` monte ici depuis la famille « papiers » et prend `--d2` au lieu de
+ * `--s2`, qui n'existe que sous trois familles d'ecran — meme valeur en clair
+ * (#ECEEEE), le ton voisin en sombre.
+ *
+ * Le survol des charges est parti sans etre remplace : il peignait #ECEEEE
+ * sur #ECEEEE en clair, donc rien, et ce produit se touche au doigt. */
+[data-surface="pme"] .top{display:flex;align-items:center;gap:.6875rem;padding:.5rem 1.25rem .25rem}
+[data-surface="pme"] .top .bk{width:44px;height:44px;border-radius:50%;background:var(--d2);border:0;color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.3125rem}
 [data-surface="pme"] .top .bk svg{width:20px;height:20px;stroke-width:2}
+[data-surface="pme"] .top .ttl{flex:1;min-width:0;font-size:.9375rem;font-weight:600;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] .top .per{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.1em; text-transform:uppercase;color:var(--t2);background:var(--d2);border-radius:999px; padding:.4375rem .6875rem;flex:none}
+[data-surface="pme"] .top .ic{width:30px;height:30px;border-radius:50%;background:var(--d2);color:var(--t2);flex:none; display:grid;place-items:center}
+[data-surface="pme"] .top .ic svg{width:16px;height:16px}
+
 [data-surface="pme"] button{font-family:inherit}
 /* `[data-surface="pme"] html, body` vivait ici : l'attribut est posé sur la
  * racine du layout PME, donc à l'INTÉRIEUR de `body`. Aucun `html` ni `body`
@@ -879,7 +937,8 @@
  * l'obturateur est le bouton central de la barre. R9. */
 [data-surface="pme"] [data-ecran="accueil"] .chips{display:flex;align-items:center;gap:.5625rem;padding:1rem 1.25rem .5rem;overflow-x:auto; scrollbar-width:none}
 [data-surface="pme"] [data-ecran="accueil"] .chips::-webkit-scrollbar{display:none}
-[data-surface="pme"] [data-ecran="accueil"] .me{width:42px;height:42px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-size:1rem;font-weight:700;letter-spacing:-.02em}
+/* `.me` vivait ici, pour l'accueil seul. Elle a monte dans la barre
+ * d'application (`.appbar .me`), donc elle sert les quinze ecrans. */
 [data-surface="pme"] [data-ecran="accueil"] .chip{padding:.5625rem 1rem;border-radius:999px;background:var(--d2);color:var(--t2); font-size:.8125rem;font-weight:500;white-space:nowrap;cursor:pointer;border:0;font-family:inherit}
 [data-surface="pme"] [data-ecran="accueil"] .chip.on{background:var(--acc);color:var(--on-acc);font-weight:600}
 [data-surface="pme"] [data-ecran="accueil"] h1{margin:1.3125rem 0 1.125rem;font-size:2.0625rem;font-weight:700;letter-spacing:-.042em;line-height:1.04}
@@ -999,8 +1058,26 @@
 [data-surface="pme"] [data-ecran="capture"] .rev::-webkit-scrollbar{display:none}
 [data-surface="pme"] [data-ecran="capture"] .rev button[disabled]{opacity:.3;cursor:default}
 [data-surface="pme"] [data-ecran="capture"] .rev s{width:1px;height:16px;background:var(--hr);flex:none}
-[data-surface="pme"] [data-ecran="capture"] .prog{position:fixed;top:2.375rem;left:0;right:0;z-index:50;max-width:440px;margin:0 auto; display:flex;align-items:center;gap:.75rem;padding:.6875rem 1rem;background:rgba(255,255,255,.94); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
-[data-surface="pme"] [data-ecran="capture"] .prog .x{width:30px;height:30px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.3125rem}
+/* La barre de progression, RENDUE AU FLUX.
+ *
+ * Elle etait `position:fixed; top:2.375rem; z-index:50` — calee sous une
+ * rangee de maquette que l'application ne porte pas. Elle se superposait a la
+ * barre d'application entre y~38 et y~65, et rien ne reservait sa place : le
+ * haut du contenu de la capture defilait DEJA derriere elle. Posee dans le
+ * flux, sous la barre, les deux ne se rencontrent plus et la place est tenue
+ * par le document. C'est la seule facon de regler la superposition sans
+ * inventer une hauteur a soustraire.
+ *
+ * `.x` passe de 30 a 44 px : meme plancher que le retour de `.top`. Le
+ * disque reste transparent — il vit dans une bande de progression, pas dans
+ * la barre du titre.
+ *
+ * Son filet du bas part aussi : la barre d'application en porte un, dix
+ * pixels plus haut, et deux filets si pres l'un de l'autre se lisent comme un
+ * defaut. Le fond et le flou partent pour la meme raison — rien ne passe plus
+ * derriere elle, donc il n'y a plus rien a masquer. */
+[data-surface="pme"] [data-ecran="capture"] .prog{display:flex;align-items:center;gap:.75rem;padding:.5rem 1.25rem .6875rem}
+[data-surface="pme"] [data-ecran="capture"] .prog .x{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.6875rem}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="capture"] .prog .x:hover{background:var(--s2);color:var(--tx)}}
 [data-surface="pme"] [data-ecran="capture"] .prog .x svg{width:18px;height:18px;stroke-width:2}
 [data-surface="pme"] [data-ecran="capture"] .prog .tr{flex:1;display:flex;gap:4px}
@@ -1127,7 +1204,6 @@
 [data-surface="pme"] [data-ecran="dossier"] .exs button span{font-family:var(--mono);font-size:.5625rem;letter-spacing:.06em;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(255,255,255,.74)}
-[data-surface="pme"] [data-ecran="dossier"] .top .ttl{flex:1;min-width:0;font-size:.9375rem;font-weight:600;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] [data-ecran="dossier"] .tete{margin-top:1.0625rem}
 [data-surface="pme"] [data-ecran="dossier"] .tete .kind{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.625rem; font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .tete .kind i{width:7px;height:7px;border-radius:50%;background:var(--t3)}
@@ -1230,7 +1306,6 @@
 /* ======================== écran · bibliotheque ======================== */
 
 [data-surface="pme"] [data-ecran="bibliotheque"] .app{width:100%;max-width:440px;min-height:100vh;background:var(--d0);padding-top:4rem; padding-bottom:max(0px,env(safe-area-inset-bottom,0px))}
-[data-surface="pme"] [data-ecran="bibliotheque"] .top .ttl{flex:1;min-width:0;font-size:.9375rem;font-weight:600;letter-spacing:-.015em}
 [data-surface="pme"] [data-ecran="bibliotheque"] h1{margin:1.0625rem 0 0;font-size:1.9375rem;font-weight:700;letter-spacing:-.042em;line-height:1.05}
 [data-surface="pme"] [data-ecran="bibliotheque"] .sub{margin:.4375rem 0 0;font-family:var(--mono);font-size:.75rem;color:var(--t3);line-height:1.5}
 [data-surface="pme"] [data-ecran="bibliotheque"] .srch{display:flex;align-items:center;gap:.6875rem;background:var(--d1);border-radius:16px; padding:.8125rem .9375rem;margin-top:1.125rem;cursor:text}
@@ -1309,9 +1384,9 @@
 
 [data-surface="pme"] [data-ecran="charges"] .app{width:100%;max-width:440px;min-height:100vh;background:var(--d0); padding-top:max(.5rem,env(safe-area-inset-top,0px)); padding-bottom:max(0px,env(safe-area-inset-bottom,0px))}
 [data-surface="pme"] [data-ecran="charges"] .app[hidden]{display:none}
-[data-surface="pme"] [data-ecran="charges"] .top .bk{width:40px;height:40px;border-radius:50%;background:var(--d2);border:0;color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none;transition:background .18s}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .top .bk:hover{background:#ECEEEE}}
-[data-surface="pme"] [data-ecran="charges"] .top .ttl{flex:1;min-width:0;font-size:.9375rem;font-weight:600;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Les trois regles de `.top` propres aux charges — un `.bk` et un `.ttl`
+ * recopies de la primitive, et un survol qui peignait #ECEEEE sur #ECEEEE,
+ * donc rien — sont parties avec la geometrie unique. */
 [data-surface="pme"] [data-ecran="charges"] .lede{padding:1.125rem 0 0}
 [data-surface="pme"] [data-ecran="charges"] .lede .lbl{font-size:.8125rem;color:var(--t2);letter-spacing:-.01em}
 [data-surface="pme"] [data-ecran="charges"] .lede .amt{margin:.4375rem 0 0;display:flex;align-items:baseline;gap:.5rem; font-family:var(--mono);font-size:2.5rem;font-weight:600;letter-spacing:-.055em;line-height:1}
@@ -1400,13 +1475,9 @@
 [data-surface="pme"] [data-ecran="chat"] .rev::-webkit-scrollbar{display:none}
 [data-surface="pme"] [data-ecran="chat"] .rev button[disabled]{opacity:.3;cursor:default}
 [data-surface="pme"] [data-ecran="chat"] .rev s{width:1px;height:16px;background:var(--hr);flex:none}
-[data-surface="pme"] [data-ecran="chat"] .top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.625rem; max-width:440px;margin:0 auto;padding:.625rem 1rem;background:rgba(255,255,255,.92); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
-[data-surface="pme"] [data-ecran="chat"] .top .bk{width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.375rem}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .top .bk:hover{background:var(--s2);color:var(--tx)}}
-[data-surface="pme"] [data-ecran="chat"] .top .bk svg{width:19px;height:19px;stroke-width:2}
-[data-surface="pme"] [data-ecran="chat"] .top .bd{flex:1;min-width:0}
-[data-surface="pme"] [data-ecran="chat"] .top .ttl{font-size:.875rem;font-weight:600;letter-spacing:-.015em;white-space:nowrap; overflow:hidden;text-overflow:ellipsis;display:block}
-[data-surface="pme"] [data-ecran="chat"] .top .sb{font-size:.6875rem;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; display:block;margin-top:.0625rem}
+/* Les sept regles de l'en-tete du chat sont parties. Elles n'ont JAMAIS ete
+ * rendues : `pme.malica.tsx` ne peint pas de `.top`, il ouvre sur `.pad`. Ni
+ * le compilateur ni knip ne lisent le CSS, donc rien ne l'avait dit. R9. */
 [data-surface="pme"] [data-ecran="chat"] .poser{display:flex;align-items:center;gap:.6875rem;background:var(--s1);border-radius:999px; padding:.625rem 1rem .625rem .625rem;margin-top:1.25rem;cursor:text;border:1px solid transparent; transition:border-color .18s}
 @media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="chat"] .poser:hover{border-color:rgba(35,83,64,.4)}}
 [data-surface="pme"] [data-ecran="chat"] .poser span{flex:1;font-size:.9375rem;color:var(--t3);letter-spacing:-.012em}
@@ -1515,12 +1586,9 @@
 [data-surface="pme"] [data-famille="papiers"] .rev .l{display:flex;gap:.375rem;justify-content:center;overflow-x:auto;scrollbar-width:none}
 [data-surface="pme"] [data-famille="papiers"] .rev .l::-webkit-scrollbar{display:none}
 [data-surface="pme"] [data-famille="papiers"] .rev .l+.l{margin-top:.375rem}
-[data-surface="pme"] [data-famille="papiers"] .top{display:flex;align-items:center;gap:.6875rem;padding:.25rem 1.25rem 0}
-[data-surface="pme"] [data-famille="papiers"] .top .bk{width:32px;height:32px;border-radius:50%;border:0;background:none;color:var(--t2); display:grid;place-items:center;cursor:pointer;flex:none;margin-inline-start:-.4375rem}
-[data-surface="pme"] [data-famille="papiers"] .top .bk svg{width:19px;height:19px;stroke-width:2}
-[data-surface="pme"] [data-famille="papiers"] .top .ttl{flex:1;font-size:.875rem;font-weight:600;letter-spacing:-.015em}
-[data-surface="pme"] [data-famille="papiers"] .top .ic{width:30px;height:30px;border-radius:50%;background:var(--s2);color:var(--t2);flex:none; display:grid;place-items:center}
-[data-surface="pme"] [data-famille="papiers"] .top .ic svg{width:16px;height:16px}
+/* Les six regles de `.top` de la famille « papiers » — 32 px transparent,
+ * titre de 14 px, pastille d'icone de 30 px — sont parties. La geometrie du
+ * retour et du titre est UNE, declaree une fois au niveau de la surface. */
 [data-surface="pme"] [data-famille="papiers"] h1{margin:1.0625rem 0 0;font-size:1.875rem;font-weight:700;letter-spacing:-.042em;line-height:1.06}
 [data-surface="pme"] [data-famille="papiers"] .sub{margin:.4375rem 0 0;font-size:.8125rem;color:var(--t3);line-height:1.5}
 [data-surface="pme"] [data-famille="papiers"] .chiffre{margin:1.125rem 0 0;display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono); font-size:2.375rem;font-weight:600;letter-spacing:-.055em;line-height:1}
@@ -1680,7 +1748,8 @@
 
 /* ======================== écran · parametres ======================== */
 
-[data-surface="pme"] [data-ecran="parametres"] .top .ttl{flex:1;font-size:.9375rem;font-weight:600;letter-spacing:-.015em}
+/* Le `.ttl` des parametres n'a jamais ete rendu : cet ecran n'a pas de `.top`,
+ * il ouvre sur un `h1`. Un dessin mort de plus. R9. */
 [data-surface="pme"] [data-ecran="parametres"] h1{margin:1.0625rem 0 0;font-size:1.9375rem;font-weight:700;letter-spacing:-.042em;line-height:1.05}
 [data-surface="pme"] [data-ecran="parametres"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .875rem}
 [data-surface="pme"] [data-ecran="parametres"] .sec h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.034em}
@@ -1804,10 +1873,6 @@
 [data-surface="pme"] [data-ecran="chat"] { --s1: #F5F5F5; --s2: #ECEEEE }
 [data-surface="pme"] [data-famille="papiers"] { --s1: #F5F5F5; --s2: #ECEEEE }
 
-/* `.top` du chat était calé à `top: 2.375rem` — l'épaisseur exacte de la rangée
- * « Basic · Solo · Team · Premium » des maquettes, qui n'est pas portée. Dans
- * l'application il flotterait 38 px sous le haut de l'écran, au-dessus du fil,
- * avec un vide derrière. Ramené à 0. */
 
 
 /* ===========================================================================
@@ -1881,13 +1946,14 @@
  *
  * La règle ne masque l'ancienne QUE là où une neuve existe : `:has()` regarde
  * si l'écran rend un `.top`. Les écrans non convertis, et les convertis sans
- * barre propre (paramètres, capture, chat), gardent la leur — sinon ils
- * n'auraient plus de retour ni de sélecteur de dossier.
+ * barre propre (parametres, capture, chat), gardent la leur.
  *
- * C'est une règle de TRAVERSÉE : elle disparaît quand les treize écrans
- * portent leur propre barre et que `EntetePme` sort du layout.
+ * LA TRAVERSEE EST FINIE, et la regle est partie avec elle (19 octobre
+ * 2026). Il n'y a plus qu'UNE barre d'application, `.appbar`, rendue par le
+ * layout sur les quinze ecrans ; `.top` ne porte plus que le retour et le
+ * titre, SOUS elle, et les deux ne se recouvrent plus. Masquer l'une pour
+ * l'autre n'a plus d'objet. R9 : rien de mort.
  */
-[data-surface="pme"] .app:has([data-ecran] .top) > header { display: none }
 
 /*
  * 2 · UNE BANDE BLANCHE SOUS LA BARRE DU BAS
@@ -2070,7 +2136,8 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="accueil"] .act .hd i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 .dark [data-surface="pme"] [data-ecran="accueil"] .act .pg{height:7px;border-radius:999px;background:rgba(255,255,255,.1);margin-top:.25rem}
 .dark [data-surface="pme"] [data-ecran="accueil"] .lock{background:var(--d1);border-radius:20px;padding:1.125rem 1rem;display:grid;gap:.375rem; align-content:start;min-height:124px;border:1px dashed rgba(255,255,255,.15)}
-.dark [data-surface="pme"] [data-ecran="capture"] .prog{position:fixed;top:2.375rem;left:0;right:0;z-index:50;max-width:440px;margin:0 auto; display:flex;align-items:center;gap:.75rem;padding:.6875rem 1rem;background:rgba(10,10,10,.94); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
+/* `.prog` n'a plus de jumeau sombre : rendue au flux, elle ne porte plus ni
+ * fond ni flou a elle, et prend celui de la page. Seul `.tr i` reste. */
 .dark [data-surface="pme"] [data-ecran="capture"] .prog .tr i{flex:1;height:3px;border-radius:999px;background:rgba(255,255,255,.12)}
 .dark [data-surface="pme"] [data-ecran="capture"] .dit{background:#131316;border-radius:20px 20px 20px 6px;padding:.9375rem 1rem;margin-top:.5rem; font-size:1rem;line-height:1.5;letter-spacing:-.016em}
 .dark [data-surface="pme"] [data-ecran="capture"] .opt i{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center;color:var(--t2)}
@@ -2100,7 +2167,6 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil{display:flex;align-items:flex-start;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil p{margin:0;font-size:.8125rem;line-height:1.45;color:#E8C9BC}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
-@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .top .bk:hover{background:#2e2e2e}}
 @media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
 .dark [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 .dark [data-surface="pme"] [data-ecran="charges"] .cls .bar{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
@@ -2110,7 +2176,7 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="charges"] .ceil p{margin:0;font-size:.8125rem;line-height:1.4;color:#E8C9BC}
 .dark [data-surface="pme"] [data-ecran="charges"] .lock{background:var(--d1);border-radius:18px;padding:1rem .9375rem;display:grid;gap:.3125rem; align-content:start;border:1px dashed rgba(255,255,255,.15)}
 @media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .sgs button:hover{background:#2e2e2e}}
-.dark [data-surface="pme"] [data-ecran="chat"] .top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.625rem; max-width:440px;margin:0 auto;padding:.625rem 1rem;background:rgba(10,10,10,.92); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
+/* Le jumeau sombre de l'en-tete mort du chat est parti avec lui. R9. */
 @media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="chat"] .poser:hover{border-color:rgba(143,227,177,.4)}}
 .dark [data-surface="pme"] [data-ecran="chat"] .th .dots{width:26px;height:26px;border-radius:50%;border:0;background:none;color:#4A4A50; display:grid;place-items:center;cursor:pointer;flex:none;margin-top:.0625rem}
 .dark [data-surface="pme"] [data-ecran="chat"] .del button.go{background:rgba(217,119,87,.16);color:var(--mg)}
