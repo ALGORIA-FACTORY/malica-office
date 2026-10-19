@@ -220,11 +220,60 @@ export const facturation = {
     const { rows } = await db.query(
       `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation, lectures_incluses,
               sieges_inclus, sieges_max, organisations_incluses, organisations_max,
-              courant, empechement, chiffres
+              courant, empechement, chiffres, prix_ttc
          from public.mes_offres($1)`,
       [tenantId ?? null],
     );
     return rows;
+  },
+
+  /**
+   * Le TTC d'un montant HT, par la fiscalité de la facture : TVA en vigueur et
+   * droit de timbre. `null` tant qu'aucun émetteur n'est désigné (R4).
+   */
+  async prixTtc(db: Requete, ht: string | number) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select public.prix_ttc($1::numeric) as r`,
+      [String(ht)],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * L'année : l'engagement en cours, ou ce que l'année coûterait et ce qui la
+   * ferme. `null` pour qui n'est pas propriétaire principal — c'est lui qui paie.
+   */
+  async monAnnuel(db: Requete, tenantId?: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select public.mon_annuel($1) as r`,
+      [tenantId ?? null],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Passer à l'année, à partir du premier du mois suivant. Rend l'engagement,
+   * et le paiement en ligne à régler quand un émetteur est désigné. Un refus
+   * revient en `annuel_refuse:<code>`.
+   */
+  async souscrireAnnuel(db: Requete, tenantId?: string) {
+    const { rows } = await db.query<{ r: { engagement: string; paiement: unknown } }>(
+      `select public.annuel_souscrire($1) as r`,
+      [tenantId ?? null],
+    );
+    return rows[0]!.r;
+  },
+
+  /**
+   * Les lectures reportées du mois dernier sur ce mois, et si la tour a
+   * allumé le report. Elles sont déjà comprises dans `lectures_droit`.
+   */
+  async monReport(db: Requete, tenantId?: string) {
+    const { rows } = await db.query<{ r: { report: number; actif: boolean } | null }>(
+      `select public.mon_report($1) as r`,
+      [tenantId ?? null],
+    );
+    return rows[0]?.r ?? null;
   },
 
   /**

@@ -2540,6 +2540,21 @@ const fr = {
   "tour.trou.paliers_non_croissants": "Les paliers ne montent pas : {detail}",
   "tour.trou.gros_palier_moins_avantageux":
     "Le plus gros palier n'est pas le plus avantageux : {detail}",
+  "tour.abonnement": "L'abonnement",
+  "tour.abonnement.report": "Report des lectures",
+  "tour.abonnement.report.aide":
+    "Les lectures du forfait non consommées passent sur le mois suivant, et pas plus loin. Les recharges gardent leur propre échéance.",
+  "tour.abonnement.report.oui": "En vigueur : report d'un mois, décidé le {date}.",
+  "tour.abonnement.report.non": "En vigueur : aucun report, décidé le {date}.",
+  "tour.abonnement.report.un": "Report d'un mois",
+  "tour.abonnement.report.aucun": "Aucun report",
+  "tour.abonnement.annuel": "Abonnement à l'année",
+  "tour.abonnement.annuel.aide":
+    "Douze mois payés d'avance, à partir du premier du mois suivant. Les mois offerts ne touchent que l'offre ; places et sociétés en plus restent au mois. Un nouveau réglage ne change pas les engagements déjà pris.",
+  "tour.abonnement.annuel.ouvert": "Ouvert aux clients en direct",
+  "tour.abonnement.annuel.ferme": "Fermé",
+  "tour.abonnement.annuel.offerts": "Mois offerts sur douze",
+  "tour.abonnement.annuel.offerts.borne": "Entre 0 et 11.",
   "tour.licences": "Les licences",
   "tour.licences.ligne":
     "{offre} · {statut} · {lectures}/{droit} lectures · places occupées : {sieges} · recharges {recharges}",
@@ -2660,6 +2675,35 @@ const fr = {
   "pme.reglages.org.mandat.confirmer": "Confirmer : mettre fin au mandat de {nom}",
   "pme.reglages.org.mandat.revoque":
     "Mandat révoqué. Vous pouvez en accepter un autre dès qu'une comptabilité vous le propose.",
+  "pme.reglages.offres.ttc": "Soit {prix} {devise} TTC par mois, TVA et timbre compris.",
+  "pme.reglages.abo.ttc":
+    "Soit {ttc} {devise} TTC pour un mois plein (TVA {tva}, timbre {timbre}).",
+  "pme.reglages.abo.report": "Dont {n} lectures reportées du mois dernier.",
+  "pme.reglages.abo.report#one": "Dont {n} lecture reportée du mois dernier.",
+  "pme.reglages.abo.report#other": "Dont {n} lectures reportées du mois dernier.",
+  "pme.reglages.offres.empechement.engagement_annuel":
+    "Votre abonnement est à l'année : l'offre ne change pas avant la fin de l'engagement.",
+  "pme.reglages.annuel.titre": "Payer à l'année — {offerts} mois offerts",
+  "pme.reglages.annuel.detail":
+    "{offre} à {prix} {devise} HT par mois : vous payez {payes} mois, {offerts} sont offerts. Les places et sociétés en plus restent facturées au mois.",
+  "pme.reglages.annuel.ttc": "Soit {ttc} {devise} TTC pour l'année.",
+  "pme.reglages.annuel.dates": "Du {du} au {au}. Le mois en cours reste facturé au mois.",
+  "pme.reglages.annuel.passer": "Passer à l'année",
+  "pme.reglages.annuel.confirmer": "Confirmer : payer {montant} {devise} HT pour l'année",
+  "pme.reglages.annuel.fait": "C'est fait : votre année commence le premier du mois prochain.",
+  "pme.reglages.annuel.fait.aRegler":
+    "C'est fait : votre année commence le premier du mois prochain. Le paiement est dans « À régler ».",
+  "pme.reglages.annuel.enCours": "Abonnement à l'année",
+  "pme.reglages.annuel.enCours.sous":
+    "{offre}, du {du} au {au}, dont {offerts} mois offerts. Les lectures restent mensuelles.",
+  "pme.reglages.annuel.ferme.annuel_ferme":
+    "L'abonnement à l'année n'est pas ouvert pour le moment.",
+  "pme.reglages.annuel.ferme.offre_sans_prix":
+    "Votre offre n'a pas de prix mensuel : rien à payer à l'année.",
+  "pme.reglages.annuel.ferme.paye_par_un_cabinet":
+    "Une comptabilité paie une part de votre licence : l'année se règle avec elle.",
+  "pme.reglages.annuel.ferme.licence_inactive": "Votre licence n'est pas active.",
+  "pme.reglages.annuel.ferme.deja_engage": "Vous êtes déjà engagé à l'année.",
   "pme.reglages.org.voirMandat": "Voir le mandat",
   "pme.reglages.org.revoquer": "Révoquer",
   "pme.reglages.siege.lectures": "Lectures",
@@ -5552,6 +5596,21 @@ const en: Dict = {
     "This top-up is cheaper than moving up a plan: {detail}",
   "tour.trou.paliers_non_croissants": "Top-up tiers do not increase: {detail}",
   "tour.trou.gros_palier_moins_avantageux": "The bigger tier is not the better deal: {detail}",
+  "tour.abonnement": "Subscription",
+  "tour.abonnement.report": "Carry-over of reads",
+  "tour.abonnement.report.aide":
+    "Unused reads of the plan move to the next month, and no further. Top-ups keep their own expiry.",
+  "tour.abonnement.report.oui": "Current: one-month carry-over, decided on {date}.",
+  "tour.abonnement.report.non": "Current: no carry-over, decided on {date}.",
+  "tour.abonnement.report.un": "One-month carry-over",
+  "tour.abonnement.report.aucun": "No carry-over",
+  "tour.abonnement.annuel": "Yearly subscription",
+  "tour.abonnement.annuel.aide":
+    "Twelve months paid upfront, from the first of the next month. Free months apply to the plan only; extra seats and companies stay monthly. A new setting does not change commitments already made.",
+  "tour.abonnement.annuel.ouvert": "Open to direct customers",
+  "tour.abonnement.annuel.ferme": "Closed",
+  "tour.abonnement.annuel.offerts": "Free months out of twelve",
+  "tour.abonnement.annuel.offerts.borne": "Between 0 and 11.",
   "tour.licences": "Licences",
   "tour.licences.ligne":
     "{offre} · {statut} · {lectures}/{droit} reads · seats taken: {sieges} · top-ups {recharges}",
@@ -5665,6 +5724,34 @@ const en: Dict = {
   "pme.reglages.org.mandat.confirmer": "Confirm: end the engagement with {nom}",
   "pme.reglages.org.mandat.revoque":
     "Engagement ended. You can accept another one as soon as an accountant proposes it.",
+  "pme.reglages.offres.ttc": "That is {prix} {devise} incl. VAT per month, stamp duty included.",
+  "pme.reglages.abo.ttc":
+    "That is {ttc} {devise} incl. tax for a full month (VAT {tva}, stamp {timbre}).",
+  "pme.reglages.abo.report": "Including {n} reads carried over from last month.",
+  "pme.reglages.abo.report#one": "Including {n} read carried over from last month.",
+  "pme.reglages.abo.report#other": "Including {n} reads carried over from last month.",
+  "pme.reglages.offres.empechement.engagement_annuel":
+    "Your subscription is yearly: the plan stays the same until the commitment ends.",
+  "pme.reglages.annuel.titre": "Pay yearly — free months: {offerts}",
+  "pme.reglages.annuel.detail":
+    "{offre} at {prix} {devise} excl. VAT a month: months paid {payes}, months free {offerts}. Extra seats and companies stay billed monthly.",
+  "pme.reglages.annuel.ttc": "That is {ttc} {devise} incl. tax for the year.",
+  "pme.reglages.annuel.dates": "From {du} to {au}. The current month stays billed monthly.",
+  "pme.reglages.annuel.passer": "Switch to yearly",
+  "pme.reglages.annuel.confirmer": "Confirm: pay {montant} {devise} excl. VAT for the year",
+  "pme.reglages.annuel.fait": "Done: your year starts on the first of next month.",
+  "pme.reglages.annuel.fait.aRegler":
+    "Done: your year starts on the first of next month. The payment is under “To pay”.",
+  "pme.reglages.annuel.enCours": "Yearly subscription",
+  "pme.reglages.annuel.enCours.sous":
+    "{offre}, from {du} to {au}, free months: {offerts}. Reads stay monthly.",
+  "pme.reglages.annuel.ferme.annuel_ferme": "Yearly subscription is not open for now.",
+  "pme.reglages.annuel.ferme.offre_sans_prix":
+    "Your plan has no monthly price: nothing to pay yearly.",
+  "pme.reglages.annuel.ferme.paye_par_un_cabinet":
+    "An accountant pays part of your licence: the year is settled with them.",
+  "pme.reglages.annuel.ferme.licence_inactive": "Your licence is not active.",
+  "pme.reglages.annuel.ferme.deja_engage": "You are already committed yearly.",
   "pme.reglages.org.voirMandat": "View the engagement",
   "pme.reglages.org.revoquer": "Revoke",
   "pme.reglages.siege.lectures": "Reads",
@@ -8491,6 +8578,21 @@ const ar: Dict = {
   "tour.trou.recharge_brule_l_offre_suivante": "هذا الرصيد أرخص من الترقية: {detail}",
   "tour.trou.paliers_non_croissants": "مستويات الرصيد لا تتصاعد: {detail}",
   "tour.trou.gros_palier_moins_avantageux": "المستوى الأكبر ليس الأفضل: {detail}",
+  "tour.abonnement": "الاشتراك",
+  "tour.abonnement.report": "ترحيل القراءات",
+  "tour.abonnement.report.aide":
+    "تنتقل قراءات الباقة غير المستهلكة إلى الشهر الموالي، ولا أبعد من ذلك. تحتفظ الأرصدة بأجلها الخاص.",
+  "tour.abonnement.report.oui": "الساري: ترحيل شهر واحد، تقرّر في {date}.",
+  "tour.abonnement.report.non": "الساري: دون ترحيل، تقرّر في {date}.",
+  "tour.abonnement.report.un": "ترحيل شهر واحد",
+  "tour.abonnement.report.aucun": "دون ترحيل",
+  "tour.abonnement.annuel": "الاشتراك السنوي",
+  "tour.abonnement.annuel.aide":
+    "اثنا عشر شهرًا مدفوعة مسبقًا، ابتداءً من أول الشهر الموالي. الأشهر المجانية تخص الباقة فقط؛ تبقى المقاعد والشركات الإضافية شهرية. لا يغيّر إعداد جديد الالتزامات السابقة.",
+  "tour.abonnement.annuel.ouvert": "مفتوح للحرفاء المباشرين",
+  "tour.abonnement.annuel.ferme": "مغلق",
+  "tour.abonnement.annuel.offerts": "الأشهر المجانية من اثني عشر",
+  "tour.abonnement.annuel.offerts.borne": "بين 0 و11.",
   "tour.licences": "التراخيص",
   "tour.licences.ligne":
     "{offre} · {statut} · {lectures}/{droit} قراءة · {sieges} مقعد · رصيد {recharges}",
@@ -8599,6 +8701,31 @@ const ar: Dict = {
     "سيقرأ {nom} هذا السبب في سجلّه. تبقى الوثائق المرسلة سابقًا في أرشيفه، ولن تصله الوثائق اللاحقة.",
   "pme.reglages.org.mandat.confirmer": "تأكيد: إنهاء الوكالة مع {nom}",
   "pme.reglages.org.mandat.revoque": "أُنهيت الوكالة. يمكنك قبول وكالة أخرى حالما تُقترح عليك.",
+  "pme.reglages.offres.ttc":
+    "أي {prix} {devise} شاملة الأداءات شهريًا، مع الأداء على القيمة المضافة والطابع.",
+  "pme.reglages.abo.ttc": "أي {ttc} {devise} شاملة الأداءات لشهر كامل (أداء {tva}، طابع {timbre}).",
+  "pme.reglages.abo.report": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
+  "pme.reglages.abo.report#one": "منها قراءة واحدة مُرحَّلة من الشهر الماضي.",
+  "pme.reglages.abo.report#other": "منها {n} قراءة مُرحَّلة من الشهر الماضي.",
+  "pme.reglages.offres.empechement.engagement_annuel":
+    "اشتراكك سنوي: لا تتغيّر الباقة قبل نهاية الالتزام.",
+  "pme.reglages.annuel.titre": "الدفع سنويًا — أشهر مجانية: {offerts}",
+  "pme.reglages.annuel.detail":
+    "{offre} بـ {prix} {devise} دون أداء شهريًا: أشهر مدفوعة {payes}، أشهر مجانية {offerts}. تبقى المقاعد والشركات الإضافية مفوترة شهريًا.",
+  "pme.reglages.annuel.ttc": "أي {ttc} {devise} شاملة الأداءات للسنة.",
+  "pme.reglages.annuel.dates": "من {du} إلى {au}. يبقى الشهر الجاري مفوترًا شهريًا.",
+  "pme.reglages.annuel.passer": "الانتقال إلى الدفع السنوي",
+  "pme.reglages.annuel.confirmer": "تأكيد: دفع {montant} {devise} دون أداء للسنة",
+  "pme.reglages.annuel.fait": "تم: تبدأ سنتك في أول الشهر القادم.",
+  "pme.reglages.annuel.fait.aRegler": "تم: تبدأ سنتك في أول الشهر القادم. الدفع في «للخلاص».",
+  "pme.reglages.annuel.enCours": "اشتراك سنوي",
+  "pme.reglages.annuel.enCours.sous":
+    "{offre}، من {du} إلى {au}، أشهر مجانية: {offerts}. تبقى القراءات شهرية.",
+  "pme.reglages.annuel.ferme.annuel_ferme": "الاشتراك السنوي غير مفتوح حاليًا.",
+  "pme.reglages.annuel.ferme.offre_sans_prix": "باقتك بلا سعر شهري: لا شيء للدفع سنويًا.",
+  "pme.reglages.annuel.ferme.paye_par_un_cabinet": "محاسب يدفع جزءًا من ترخيصك: تُسوّى السنة معه.",
+  "pme.reglages.annuel.ferme.licence_inactive": "ترخيصك غير نشط.",
+  "pme.reglages.annuel.ferme.deja_engage": "أنت ملتزم سنويًا بالفعل.",
   "pme.reglages.org.voirMandat": "الاطّلاع على التكليف",
   "pme.reglages.org.revoquer": "سحب التكليف",
   "pme.reglages.siege.lectures": "القراءات",

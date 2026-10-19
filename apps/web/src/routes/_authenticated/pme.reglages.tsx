@@ -9,6 +9,7 @@ import {
   MesProprietaires,
   MesRecharges,
   MonNom,
+  PayerALAnnee,
 } from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
@@ -64,9 +65,10 @@ export const Route = createFileRoute("/_authenticated/pme/reglages")({
  *     empêcherait d'y passer. Pas dans un onglet de démonstration.
  *   — `.app`, `.top` et `.nav`. Le layout les tient déjà : deux cadres
  *     concentriques feraient deux barres de navigation.
- *   — le TTC calculé (« HT × 1,19 + 1 DT de timbre »). Un taux de TVA et un
- *     droit de timbre sont des faits fiscaux : ils viennent du pack et de la
- *     facture, jamais d'une multiplication dans un composant React (R3, R4).
+ *   — le TTC calculé dans l'écran (« HT × 1,19 + 1 DT de timbre »). Un taux
+ *     de TVA et un droit de timbre sont des faits fiscaux : depuis le
+ *     19 octobre 2026, le TTC s'affiche, mais c'est la base qui le calcule
+ *     (`public.prix_ttc`), par la fiscalité de la facture (R3, R4).
  *
  * ======================================================== L'ABONNEMENT, LU
  *
@@ -159,6 +161,7 @@ function PmeReglages() {
           <span className="px">{f ? `${f.prix_mensuel_ht} ${pme.currency}` : ABSENT}</span>
         </div>
         <p className="ttc">{t("pme.reglages.abo.ht")}</p>
+        <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
 
         <div className="det">
           <div>
@@ -223,6 +226,7 @@ function PmeReglages() {
       </div>
       <p className="t-body">{t("pme.reglages.offres.sous")}</p>
       <ChangerDOffre />
+      <PayerALAnnee />
       <ARegler />
 
       <div className="sec">
@@ -680,6 +684,49 @@ function Organisation({
       </p>
       {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
     </div>
+  );
+}
+
+/**
+ * Le TTC du mois et le report du mois dernier, sous le prix HT.
+ *
+ * Les deux viennent de la base : `prix_ttc` par la fiscalité de la facture
+ * (TVA en vigueur, droit de timbre), `mon_report` par le calcul mois par mois
+ * de `facturation.report_de`. Sans émetteur désigné, pas de TTC — l'écran se
+ * tait plutôt que de supposer un taux (R4).
+ */
+function TtcEtReport({ ht }: { ht: string | null }) {
+  const { t, locale } = useI18n();
+  const pme = usePme();
+  const ttc = useQuery({
+    queryKey: ["prix-ttc", ht],
+    queryFn: () => office().facturation.prixTtc(ht!),
+    enabled: ht !== null,
+    staleTime: 10 * 60 * 1000,
+  });
+  const report = useQuery({
+    queryKey: ["mon-report", pme.tenantId],
+    queryFn: () => office().facturation.monReport(pme.tenantId),
+  });
+  const n = report.data?.report ?? 0;
+  return (
+    <>
+      {ttc.data ? (
+        <p className="ttc">
+          {t("pme.reglages.abo.ttc", {
+            ttc: ttc.data.ttc,
+            devise: pme.currency,
+            tva: ttc.data.tva,
+            timbre: ttc.data.timbre,
+          })}
+        </p>
+      ) : null}
+      {n > 0 ? (
+        <p className="ttc">
+          {t("pme.reglages.abo.report", { count: n, n: new Intl.NumberFormat(locale).format(n) })}
+        </p>
+      ) : null}
+    </>
   );
 }
 

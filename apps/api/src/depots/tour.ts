@@ -90,6 +90,32 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Le réglage de l'abonnement en vigueur : le report d'un mois (0 ou 1). */
+  async reglageAbonnement(db: Requete) {
+    const { rows } = await db.query<{ r: Record<string, unknown> }>(
+      `select public.abonnement_reglage() as r`,
+    );
+    return rows[0]?.r ?? { report_mois: 0 };
+  },
+
+  /**
+   * La tour règle l'abonnement : le report d'un mois, l'année ouverte ou non,
+   * et ses mois offerts. Daté et motivé ; rien ne se réécrit.
+   */
+  async reglerAbonnement(
+    db: Requete,
+    reportMois: number,
+    annuelOuvert: boolean,
+    annuelMoisOfferts: number,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4) as r`,
+      [reportMois, annuelOuvert, annuelMoisOfferts, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** L'émetteur des factures en vigueur, ou `null` tant qu'aucun n'est désigné. */
   async emetteur(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(`select plateforme.emetteur_en_vigueur() as r`);

@@ -2464,6 +2464,16 @@ export interface FacturationRepository {
 
   /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
   mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
+  /** Le TTC d'un HT, par la fiscalité de la facture ; `null` sans émetteur. */
+  prixTtc(ht: string): Promise<PrixTtc | null>;
+  /** Les lectures du mois dernier reportées sur celui-ci (déjà dans le droit). */
+  monReport(tenantId?: string): Promise<{ report: number; actif: boolean } | null>;
+  /** L'année : en cours, ou proposée avec ce qui la ferme ; `null` hors propriétaire principal. */
+  monAnnuel(tenantId?: string): Promise<MonAnnuel | null>;
+  /** Passer à l'année ; un refus revient en `annuel_refuse:<code>`. */
+  souscrireAnnuel(
+    tenantId?: string,
+  ): Promise<{ engagement: string; paiement: PaiementEnLigne | null }>;
   /** Propriétaire principal seul ; un refus revient en `forfait_refuse:<code>:…`. */
   changerForfait(
     offre: string,
@@ -2523,6 +2533,49 @@ export interface OffreDeLaGrille {
   /** `null` quand rien n'empêche d'y passer ; sinon un CODE. */
   empechement: string | null;
   chiffres: Record<string, unknown> | null;
+  /** HT + TVA + timbre, calculé par la base ; `null` sans émetteur désigné. */
+  prix_ttc: string | null;
+}
+
+/** Ce que la tour règle de l'abonnement, tel que `public.abonnement_reglage()` le rend. */
+export interface ReglageAbonnement {
+  report_mois: number;
+  annuel_ouvert: boolean;
+  annuel_mois_offerts: number;
+  motif: string | null;
+  decide_le: string | null;
+}
+
+/** L'année, telle que `public.mon_annuel()` la rend. */
+export interface MonAnnuel {
+  en_cours: {
+    du: string;
+    au: string;
+    offre: string;
+    montant_ht: string;
+    mois_offerts: number;
+  } | null;
+  /** Ce qui ferme l'année (un CODE), ou `null` quand elle est ouverte. */
+  ferme?: string | null;
+  proposition?: {
+    offre: string;
+    du: string;
+    au: string;
+    prix_mensuel_ht: string;
+    mois_offerts: number;
+    montant_ht: string;
+    ttc: string | null;
+  } | null;
+}
+
+/** Le TTC d'un montant HT, tel que `public.prix_ttc()` le rend. */
+export interface PrixTtc {
+  ht: string;
+  taux: string;
+  tva: string;
+  timbre: string;
+  ttc: string;
+  devise: string;
 }
 
 export interface PalierDeRecharge {
@@ -2551,7 +2604,7 @@ export interface RechargeDeLaLicence {
 /** Un paiement en ligne — une montée ou une recharge — tel que la base le rend. */
 export interface PaiementEnLigne {
   paiement_id: string;
-  objet: "montee" | "recharge";
+  objet: "montee" | "recharge" | "annuel";
   libelle: string;
   montant_ht: string;
   montant_tva: string;
@@ -2646,6 +2699,14 @@ export interface TourRepository {
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
   designerEmetteur(organisationId: string, valideDes: string): Promise<unknown>;
+  /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
+  reglageAbonnement(): Promise<ReglageAbonnement>;
+  reglerAbonnement(
+    reportMois: 0 | 1,
+    annuelOuvert: boolean,
+    annuelMoisOfferts: number,
+    motif: string,
+  ): Promise<unknown>;
 }
 
 export interface RechargeAutomatique {

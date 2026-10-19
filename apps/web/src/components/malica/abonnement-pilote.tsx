@@ -31,6 +31,7 @@ const CLES = [
   ["mes-recharges"],
   ["recharge-automatique"],
   ["mes-paiements"],
+  ["mon-annuel"],
 ];
 
 function useInvalider() {
@@ -48,6 +49,16 @@ const EMPECHEMENTS: Record<string, MessageKey> = {
   organisations: "pme.reglages.offres.empechement.organisations",
   offre_inconnue: "pme.reglages.offres.empechement.offre_inconnue",
   pas_de_licence: "pme.reglages.offres.empechement.pas_de_licence",
+  engagement_annuel: "pme.reglages.offres.empechement.engagement_annuel",
+};
+
+/** Ce qui ferme l'année, nommé par la base, et sa phrase. */
+const FERMETURES: Record<string, MessageKey> = {
+  annuel_ferme: "pme.reglages.annuel.ferme.annuel_ferme",
+  offre_sans_prix: "pme.reglages.annuel.ferme.offre_sans_prix",
+  paye_par_un_cabinet: "pme.reglages.annuel.ferme.paye_par_un_cabinet",
+  licence_inactive: "pme.reglages.annuel.ferme.licence_inactive",
+  deja_engage: "pme.reglages.annuel.ferme.deja_engage",
 };
 
 /** Un refus de la base dit en clair ; sinon le texte d'erreur commun. */
@@ -55,6 +66,8 @@ function refus(e: unknown, t: (k: MessageKey) => string): string {
   const message = e instanceof Error ? e.message : String(e ?? "");
   const forfait = /forfait_refuse:([a-z_]+)/.exec(message);
   if (forfait && EMPECHEMENTS[forfait[1]!]) return t(EMPECHEMENTS[forfait[1]!]!);
+  const annuel = /annuel_refuse:([a-z_]+)/.exec(message);
+  if (annuel && FERMETURES[annuel[1]!]) return t(FERMETURES[annuel[1]!]!);
   if (/offre_sans_recharge/.test(message)) return t("pme.reglages.recharges.verrou");
   return texteDeLErreur(e, OU, t("common.error"));
 }
@@ -215,6 +228,12 @@ export function ChangerDOffre() {
                 </span>
               </div>
               <p className="t-body">{ligne(o)}</p>
+              {/* Le TTC vient de la base, par la fiscalité de la facture (R4). */}
+              {o.prix_ttc !== null ? (
+                <p className="t-body">
+                  {t("pme.reglages.offres.ttc", { prix: o.prix_ttc, devise: pme.currency })}
+                </p>
+              ) : null}
               {o.empechement ? (
                 <p className="t-body">{bloque ? t(bloque) : null}</p>
               ) : (
@@ -235,6 +254,116 @@ export function ChangerDOffre() {
           );
         })}
       {offres.error ? <p className="warn">{refus(offres.error, t)}</p> : null}
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- l'année */
+
+/**
+ * Payer à l'année (19 octobre 2026) : douze mois, dont des mois offerts que
+ * la tour règle. L'engagement commence le premier du mois suivant ; le mois
+ * en cours reste facturé au mois. Tout chiffre vient de `mon_annuel` — prix,
+ * mois offerts, TTC, dates. L'écran n'en calcule aucun (R3, R4).
+ *
+ * Deux touches : la première arme, la seconde engage. Le paiement à régler,
+ * s'il y en a un, apparaît dans « À régler », juste dessous.
+ */
+export function PayerALAnnee() {
+  const { t, locale } = useI18n();
+  const pme = usePme();
+  const invalider = useInvalider();
+  const principal = useEstPrincipal();
+  const [armee, setArmee] = useState(false);
+  const [retour, setRetour] = useState<string | null>(null);
+  const annuel = useQuery({
+    queryKey: ["mon-annuel", pme.tenantId],
+    queryFn: () => office().facturation.monAnnuel(pme.tenantId),
+    enabled: principal,
+  });
+  const souscrire = useMutation({
+    mutationFn: () => office().facturation.souscrireAnnuel(pme.tenantId),
+    onSuccess: async (r) => {
+      setArmee(false);
+      setRetour(t(r.paiement ? "pme.reglages.annuel.fait.aRegler" : "pme.reglages.annuel.fait"));
+      await invalider();
+    },
+    onError: (e: unknown) => {
+      setArmee(false);
+      setRetour(refus(e, t));
+    },
+  });
+
+  if (!principal || !annuel.data) return null;
+  const a = annuel.data;
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
+      new Date(`${iso}T12:00:00`),
+    );
+
+  if (a.en_cours) {
+    return (
+      <div className="card abo">
+        <div className="nm">
+          <b>{t("pme.reglages.annuel.enCours")}</b>
+          <span className="px">{`${a.en_cours.montant_ht} ${pme.currency}`}</span>
+        </div>
+        <p className="t-body">
+          {t("pme.reglages.annuel.enCours.sous", {
+            offre: nomDeLOffre(a.en_cours.offre),
+            du: date(a.en_cours.du),
+            au: date(a.en_cours.au),
+            offerts: a.en_cours.mois_offerts,
+          })}
+        </p>
+      </div>
+    );
+  }
+
+  const p = a.proposition;
+  if (!p) return null;
+  const ferme = a.ferme ? FERMETURES[a.ferme] : undefined;
+
+  return (
+    <div className="card abo" data-annuel>
+      <div className="nm">
+        <b>{t("pme.reglages.annuel.titre", { offerts: p.mois_offerts })}</b>
+        <span className="px">{`${p.montant_ht} ${pme.currency}`}</span>
+      </div>
+      <p className="t-body">
+        {t("pme.reglages.annuel.detail", {
+          offre: nomDeLOffre(p.offre),
+          prix: p.prix_mensuel_ht,
+          payes: 12 - p.mois_offerts,
+          offerts: p.mois_offerts,
+          devise: pme.currency,
+        })}
+      </p>
+      {p.ttc !== null ? (
+        <p className="t-body">
+          {t("pme.reglages.annuel.ttc", { ttc: p.ttc, devise: pme.currency })}
+        </p>
+      ) : null}
+      <p className="t-body">{t("pme.reglages.annuel.dates", { du: date(p.du), au: date(p.au) })}</p>
+      {a.ferme ? (
+        <p className="t-body">{ferme ? t(ferme) : null}</p>
+      ) : (
+        <button
+          type="button"
+          className="btn"
+          disabled={souscrire.isPending}
+          onClick={() => (armee ? souscrire.mutate() : (setArmee(true), setRetour(null)))}
+        >
+          {armee
+            ? t("pme.reglages.annuel.confirmer", { montant: p.montant_ht, devise: pme.currency })
+            : t("pme.reglages.annuel.passer")}
+        </button>
+      )}
       {retour ? (
         <p className="t-body" aria-live="polite">
           {retour}
