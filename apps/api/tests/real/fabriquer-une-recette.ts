@@ -93,7 +93,9 @@ const journal = generation.ok
         latenceMs: generation.journal.latenceMs,
         tokensIn: generation.journal.tokensIn,
         tokensOut: generation.journal.tokensOut,
-        statut: "refus",
+        // `agents.agent_runs` n'admet que ok / degraded / error : « refus »
+        // faisait refuser la ligne, et la depense disparaissait.
+        statut: "error",
       };
 
 let runId: string | null = null;

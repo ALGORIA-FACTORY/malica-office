@@ -31,8 +31,14 @@
 
 import type { Requete } from "../db.ts";
 
-/** Ce qu'un travail fait. Le type est celui de l'énumération en base. */
-export type NatureDeTravail = "lecture_piece";
+/**
+ * Ce qu'un travail fait. Le type est celui de l'énumération en base.
+ *
+ * `generation_recette` ne vise pas une pièce mais un FORMAT : sa cible est la
+ * clé de signature portée par `fabrique.travaux.signature_cle`, et la base
+ * refuse un travail de cette nature qui n'en porte pas.
+ */
+export type NatureDeTravail = "lecture_piece" | "generation_recette";
 
 /** Les issues qu'une tentative peut inscrire. « pris » n'en est pas une. */
 export type IssueDeTentative =
@@ -48,6 +54,8 @@ export interface TravailPris {
   travailId: string;
   pieceId: string;
   nature: NatureDeTravail;
+  /** Le format visé, pour une génération. Nul pour une lecture. */
+  signatureCle: string | null;
   tentative: number;
   faitId: string;
 }
@@ -136,21 +144,33 @@ export async function enregistrerTravail(
  * réelle touche zéro ligne EN SILENCE, parce qu'une politique absente
  * n'arrête pas — elle ignore. Ici, ou la base rend une ligne, ou il n'y avait
  * rien à prendre.
+ *
+ * `natures` dit ce que l'appelant SAIT exécuter, et il ne prend rien d'autre.
+ * Sans ce filtre, un travail de génération serait pris puis exécuté comme une
+ * lecture — et un coureur sans générateur configuré épuiserait les trois
+ * tentatives d'une génération contre une clé absente au lieu de la laisser
+ * attendre.
  */
-export async function prendreUnTravail(db: Requete, tenantId: string): Promise<TravailPris | null> {
+export async function prendreUnTravail(
+  db: Requete,
+  tenantId: string,
+  natures?: readonly NatureDeTravail[],
+): Promise<TravailPris | null> {
   const { rows } = await db.query<{
     travail_id: string;
     piece_id: string;
     nature: NatureDeTravail;
+    signature_cle: string | null;
     tentative: number;
     fait_id: string;
-  }>(`select * from fabrique.travail_prendre($1)`, [tenantId]);
+  }>(`select * from fabrique.travail_prendre($1, $2)`, [tenantId, natures ?? null]);
   const r = rows[0];
   if (!r) return null;
   return {
     travailId: r.travail_id,
     pieceId: r.piece_id,
     nature: r.nature,
+    signatureCle: r.signature_cle,
     tentative: r.tentative,
     faitId: r.fait_id,
   };
@@ -243,4 +263,28 @@ export async function bornesDeTravail(
       { valeur: Number(r.valeur), arreteParLeCabinet: r.arrete_par_le_cabinet },
     ]),
   );
+}
+
+/**
+ * Propose une génération pour ce format, SI la base l'autorise.
+ *
+ * Aucune règle ici — ni le nombre d'exemples, ni « pas deux fois », ni « pas
+ * si un lecteur existe déjà » : les trois vivent dans
+ * `fabrique.generation_proposer`, avec le seuil qui vient du référentiel et
+ * se surcharge par cabinet. C'est R3 appliqué à l'orchestration : on appelle,
+ * et on rend ce que la base répond.
+ *
+ * `null` n'est pas une erreur. C'est la réponse la plus fréquente : le seuil
+ * n'est pas atteint, ou la génération est déjà en file.
+ */
+export async function proposerUneGeneration(
+  db: Requete,
+  tenantId: string,
+  signatureCle: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ travail: string | null }>(
+    `select fabrique.generation_proposer($1, $2) as travail`,
+    [tenantId, signatureCle],
+  );
+  return rows[0]?.travail ?? null;
 }

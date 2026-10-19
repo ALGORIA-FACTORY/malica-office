@@ -37,6 +37,7 @@ import {
   inscrireIssue,
   prendreUnTravail,
   type IssueDeTentative,
+  type NatureDeTravail,
   type TravailPris,
 } from "./travaux.ts";
 
@@ -110,6 +111,10 @@ export type AvecBase = <T>(travail: (db: Requete) => Promise<T>) => Promise<T>;
  * Prend un travail, l'exécute, inscrit son issue. Rend `null` s'il n'y avait
  * rien à prendre.
  *
+ * `natures` est la liste de ce que cet appelant SAIT exécuter, et elle n'est
+ * pas facultative : la file porte deux natures depuis le 20 octobre, et un
+ * exécuteur qui ne le dit pas prendrait une génération pour la faire lire.
+ *
  * TROIS TRANSACTIONS, ET C'EST LE POINT. La prise est COMMISE avant que
  * l'exécution commence : une lecture dure de dix secondes à quelques minutes,
  * et la base coupe une transaction inactive après dix. Tenir la transaction
@@ -122,9 +127,10 @@ export type AvecBase = <T>(travail: (db: Requete) => Promise<T>) => Promise<T>;
 export async function executerUnTravail(
   avecBase: AvecBase,
   tenantId: string,
+  natures: readonly NatureDeTravail[],
   executer: (travail: TravailPris) => Promise<void>,
 ): Promise<ResultatDExecution | null> {
-  const pris = await avecBase(async (db) => prendreUnTravail(db, tenantId));
+  const pris = await avecBase(async (db) => prendreUnTravail(db, tenantId, natures));
   if (!pris) return null;
 
   let issue: IssueDeTentative = "termine";

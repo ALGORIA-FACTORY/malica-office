@@ -684,7 +684,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const avecBase = <T>(travailDb: (db: Requete) => Promise<T>): Promise<T> =>
       sousIdentite(a.id, travailDb);
 
-    const panne = await executerUnTravail(avecBase, orgA, async () => {
+    const panne = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => {
       throw new PanneFournisseur("le modèle n'a pas répondu");
     });
     assert.deepEqual(
@@ -693,7 +693,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       "le coureur confond une panne avec autre chose",
     );
 
-    const refus = await executerUnTravail(avecBase, orgA, async () => {
+    const refus = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => {
       throw new RefusMetier("piece_personnelle");
     });
     assert.deepEqual([refus?.travailId, refus?.issue], [travail, "refus_metier"]);
@@ -701,7 +701,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "refuse");
 
-    const rien = await executerUnTravail(avecBase, orgA, async () => undefined);
+    const rien = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => undefined);
     assert.equal(rien, null, "le coureur invente un travail là où il n'y en a pas");
   });
 

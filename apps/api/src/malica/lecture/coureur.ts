@@ -9,6 +9,12 @@
  * mémoire du processus. Ce fichier est le seul consommateur réel des deux,
  * et il tient en une boucle.
  *
+ * Depuis le 20 octobre, il en fait tourner DEUX natures : la lecture d'une
+ * pièce, et la GÉNÉRATION d'une recette. C'est ce qui met la fabrique de
+ * lecteurs en marche — elle était inerte, faute de quoi que ce soit qui
+ * déclenche une génération en production. La nature décide, dans le corps de
+ * la boucle, et nulle part ailleurs.
+ *
  * ========================================================= CE QU'IL N'EST PAS
  *
  * Ce n'est pas un démon. Il ne balaie pas les organisations, et il ne tourne
@@ -36,7 +42,10 @@
 
 import { creerAppelLocal } from "../appel-local.ts";
 import { sousIdentite } from "../../db.ts";
+import { generateurDeepSeek } from "../../fabrique/generateur-modele.ts";
+import { executerUneGeneration } from "../../fabrique/travail-de-generation.ts";
 import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
+import type { NatureDeTravail } from "../../fabrique/travaux.ts";
 
 import { registre } from "./lectures-en-cours.ts";
 import { readPieceFlow } from "./read-flow.ts";
@@ -52,6 +61,21 @@ const TOURS_MAX = 20;
 
 /** Un coureur par organisation à la fois, dans ce processus. */
 const enCours = new Set<string>();
+
+/**
+ * Ce que ce coureur SAIT exécuter, ici et maintenant.
+ *
+ * La génération n'y entre que si un générateur est configuré. Ce n'est pas
+ * une précaution de style : sans clé, une génération prise échouerait trois
+ * fois — la borne du référentiel — puis passerait « épuisée », et son format
+ * n'en aurait plus jamais. Ne pas la prendre la laisse « à faire », et elle
+ * partira au premier appel qui suivra la configuration de la clé.
+ */
+function cequejepeuxfaire(): NatureDeTravail[] {
+  const natures: NatureDeTravail[] = ["lecture_piece"];
+  if (process.env["DEEPSEEK_API_KEY"]) natures.push("generation_recette");
+  return natures;
+}
 
 /**
  * Fait tourner la file de l'organisation à laquelle appartient cette pièce.
@@ -87,24 +111,48 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
   enCours.add(tenantId);
   try {
     const api = creerAppelLocal(utilisateurId);
+    const avecBase = <T>(travail: Parameters<typeof sousIdentite<T>>[1]): Promise<T> =>
+      sousIdentite(utilisateurId, travail);
     for (let tour = 0; tour < TOURS_MAX; tour += 1) {
-      const fait = await executerUnTravail(
-        (travail) => sousIdentite(utilisateurId, travail),
-        tenantId,
-        async (t) => {
-          /*
-           * Le registre en mémoire reste le garde-fou du MÊME processus :
-           * si quelqu'un lit la même pièce en attendant la réponse, les deux
-           * rejoignent la même lecture au lieu de payer deux fois l'œil. La
-           * file, elle, tient le cas que le registre ne peut pas tenir : la
-           * mort du processus.
-           */
-          await registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(
-            t.pieceId,
-            () => readPieceFlow(api, t.pieceId),
+      const fait = await executerUnTravail(avecBase, tenantId, cequejepeuxfaire(), async (t) => {
+        /*
+         * LA NATURE DÉCIDE, et elle décide ici seulement. Sans ce
+         * branchement, un travail de génération pris par la file serait
+         * exécuté comme une lecture — la file portait une seule nature
+         * jusqu'au 20 octobre, et `executerUnTravail` n'avait rien à
+         * départager.
+         */
+        if (t.nature === "generation_recette") {
+          if (t.signatureCle === null) {
+            // La base l'interdit par un `check` : si on arrive ici, c'est un
+            // défaut de notre code, et on ne le rejoue pas.
+            throw new Error(`travail de génération sans format — travail ${t.travailId}`);
+          }
+          const cle = process.env["DEEPSEEK_API_KEY"];
+          if (!cle) throw new Error("DEEPSEEK_API_KEY absente : aucune recette ne se fabrique");
+          const inscrite = await executerUneGeneration(
+            avecBase,
+            { tenantId, signatureCle: t.signatureCle },
+            generateurDeepSeek(cle),
           );
-        },
-      );
+          console.info(
+            `[coureur] recette candidate ${inscrite.versionId} (rang ${String(inscrite.rang)}) ` +
+              `pour « ${t.signatureCle} »`,
+          );
+          return;
+        }
+
+        /*
+         * Le registre en mémoire reste le garde-fou du MÊME processus :
+         * si quelqu'un lit la même pièce en attendant la réponse, les deux
+         * rejoignent la même lecture au lieu de payer deux fois l'œil. La
+         * file, elle, tient le cas que le registre ne peut pas tenir : la
+         * mort du processus.
+         */
+        await registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(t.pieceId, () =>
+          readPieceFlow(api, t.pieceId),
+        );
+      });
       if (!fait) return;
       if (fait.issue !== "termine") {
         console.error(

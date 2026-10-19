@@ -36,7 +36,7 @@ import {
 } from "../fabrique/cycle.ts";
 import { EXEMPLES_MINIMUM_POUR_UNE_OSSATURE } from "../fabrique/interprete-reconnaissance.ts";
 import { lireLesBornesDeRecette, lireLesReglages } from "../fabrique/interprete-reglages.ts";
-import { enregistrerTravail, etatDuTravail } from "../fabrique/travaux.ts";
+import { enregistrerTravail, etatDuTravail, proposerUneGeneration } from "../fabrique/travaux.ts";
 import type { PageToken } from "../malica/lecture/token-plan.ts";
 
 /**
@@ -598,9 +598,29 @@ export const fabrique = {
    * ils le restent ici : cette méthode n'écrit jamais dans
    * `fabrique.promotions`.
    */
-  async qualifierUnExemple(db: Requete, saisie: unknown): Promise<string> {
+  async qualifierUnExemple(
+    db: Requete,
+    saisie: unknown,
+  ): Promise<{ exempleId: string; generationProposee: string | null }> {
     const e = ExempleQualifie.parse(saisie);
-    return qualifierUnExemple(db, e);
+    const exempleId = await qualifierUnExemple(db, e);
+    /*
+     * ET C'EST ICI QUE LA FABRIQUE SE MET EN MARCHE.
+     *
+     * Rien ne déclenchait une génération en production : le générateur ne
+     * s'appelait qu'à la main. L'exemple qualifié est le seul fait qui change
+     * le compte d'un format, donc le seul moment où la question « assez
+     * d'exemples ? » a une réponse nouvelle. On la POSE à la base, qui porte
+     * le seuil, l'unicité et le reste ; elle rend l'identifiant du travail
+     * mis en file, ou `null`.
+     *
+     * `null` est la réponse ordinaire, et ce n'est pas une erreur : le seuil
+     * n'est pas atteint, la génération est déjà en file, ou ce format a déjà
+     * son lecteur. Aucun appel payant n'a lieu ici — la génération est un
+     * travail de la file, et elle dure des dizaines de secondes.
+     */
+    const generationProposee = await proposerUneGeneration(db, e.tenantId, e.signatureCle);
+    return { exempleId, generationProposee };
   },
 
   /**

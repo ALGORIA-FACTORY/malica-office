@@ -221,17 +221,16 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         ["a", "1180,000"],
         ["autre_client", "708,000"],
       ] as const) {
-        apprentissage.push(
-          await fabrique.qualifierUnExemple(db, {
-            tenantId: orgA,
-            pieceId: pieces.get(nom),
-            signatureCle,
-            provenance: "validation_humaine",
-            qualification: "designation_champ",
-            usage: "apprentissage",
-            attendu: { "totals.base_ht": ou(plans.get(nom)!, total) },
-          }),
-        );
+        const qualifie = await fabrique.qualifierUnExemple(db, {
+          tenantId: orgA,
+          pieceId: pieces.get(nom),
+          signatureCle,
+          provenance: "validation_humaine",
+          qualification: "designation_champ",
+          usage: "apprentissage",
+          attendu: { "totals.base_ht": ou(plans.get(nom)!, total) },
+        });
+        apprentissage.push(qualifie.exempleId);
       }
       for (const [nom, total] of [
         ["autres_valeurs", "3940,000"],
@@ -586,7 +585,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         definition: RECETTE_HT,
         empreinte: "c".repeat(64),
         provenance: { generateur: "generateur/1" },
-        exemples: [exemple],
+        exemples: [exemple.exempleId],
         motif: "pour éprouver la surveillance d'une version qui ne tourne pas",
       });
       await fabrique.inscrireExecution(db, {
@@ -640,7 +639,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         definition: RECETTE_HT,
         empreinte: "b".repeat(64),
         provenance: { generateur: "generateur/1" },
-        exemples: [exemple],
+        exemples: [exemple.exempleId],
         motif: "pour éprouver l'absence de jeu d'évaluation",
       });
       const mesure = await fabrique.evaluerUneVersion(db, orgA, version.versionId);
