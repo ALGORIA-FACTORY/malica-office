@@ -3,6 +3,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { coque, versionClient } from "@/capabilities/coque";
+import {
+  ChangerDOffre,
+  MesProprietaires,
+  MesRecharges,
+  MonNom,
+} from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
@@ -50,10 +56,11 @@ export const Route = createFileRoute("/_authenticated/pme/reglages")({
  *
  * Trois choses de la maquette ne sont PAS portées, et c'est délibéré :
  *
- *   — la rangée « Basic · Solo · Team · Premium » en tête. C'est une
- *     affordance de démonstration, qui laisse changer d'offre au doigt.
- *     L'abonnement ne s'affiche pas comme ça : il se lit, il ne se choisit pas
- *     dans un onglet.
+ *   — la rangée « Basic · Solo · Team · Premium » en tête, en onglets. Depuis
+ *     le 19 octobre 2026, l'offre SE CHOISIT bien depuis l'application — par
+ *     le propriétaire principal, dans « Changer d'offre » plus bas
+ *     (`abonnement-pilote.tsx`), sur la grille que la base rend, avec ce qui
+ *     empêcherait d'y passer. Pas dans un onglet de démonstration.
  *   — `.app`, `.top` et `.nav`. Le layout les tient déjà : deux cadres
  *     concentriques feraient deux barres de navigation.
  *   — le TTC calculé (« HT × 1,19 + 1 DT de timbre »). Un taux de TVA et un
@@ -138,6 +145,7 @@ function PmeReglages() {
           </span>
         </div>
       </div>
+      <MonNom />
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
       <div className="sec">
@@ -164,7 +172,7 @@ function PmeReglages() {
           </div>
           <div>
             <u>{t("pme.reglages.abo.siegesMax")}</u>
-            <b>{nombre(f?.sieges_max, locale)}</b>
+            <b>{plafond(f, locale, t)}</b>
           </div>
           <div>
             <u>{t("pme.reglages.abo.lectures")}</u>
@@ -202,6 +210,19 @@ function PmeReglages() {
           <p className="nxt">{t("pme.reglages.abo.facture")}</p>
         </div>
       </div>
+
+      {/* ──────────────────────────── changer d'offre, et les recharges */}
+      <div className="sec">
+        <h2>{t("pme.reglages.offres")}</h2>
+        <span>{t("pme.reglages.offres.sous")}</span>
+      </div>
+      <ChangerDOffre />
+
+      <div className="sec">
+        <h2>{t("pme.reglages.recharges")}</h2>
+        <span>{t("pme.reglages.recharges.sous")}</span>
+      </div>
+      <MesRecharges />
 
       {/* ───────────────────────────────────────────── les organisations */}
       <div className="sec">
@@ -263,7 +284,7 @@ function PmeReglages() {
         <span>
           {t("pme.reglages.surTotal", {
             n: nombre(f?.sieges_occupes, locale),
-            total: nombre(f?.sieges_max, locale),
+            total: plafond(f, locale, t),
           })}
         </span>
       </div>
@@ -284,6 +305,17 @@ function PmeReglages() {
        * Il garde son balisage et ses clés i18n : c'est du câblage qui tourne.
        */}
       <InviterDansMonDossier />
+
+      {/* ──────────────── les propriétaires, quand l'offre porte des places */}
+      {verrous.sieges.ouvert ? (
+        <>
+          <div className="sec">
+            <h2>{t("pme.reglages.proprietaires")}</h2>
+          </div>
+          <p className="t-body">{t("pme.reglages.proprietaires.sous")}</p>
+          <MesProprietaires />
+        </>
+      ) : null}
 
       {/* ──────────────────────── la fiche, les alertes, les échéances */}
       <div className="sec">
@@ -1138,6 +1170,15 @@ const ABSENT = "—";
 function nombre(n: number | string | null | undefined, locale: string): string {
   const v = entier(n);
   return v === null ? ABSENT : v.toLocaleString(locale);
+}
+
+/**
+ * Le plafond de places. Vide quand la ligne est lue (`sieges_inclus` connu) :
+ * l'offre n'en a pas (grille du 19 octobre) — on le dit, on n'écrit pas « — ».
+ */
+function plafond(f: MonForfait | null, locale: string, t: (k: MessageKey) => string): string {
+  if (f && f.sieges_max === null && f.sieges_inclus !== null) return t("pme.reglages.sansPlafond");
+  return nombre(f?.sieges_max, locale);
 }
 
 /**

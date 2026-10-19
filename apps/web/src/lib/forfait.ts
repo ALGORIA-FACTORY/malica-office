@@ -57,8 +57,16 @@ export interface OuverturesDuForfait {
 export function ouverturesDuForfait(f: MonForfait | null | undefined): OuverturesDuForfait {
   if (!f) return { sieges: false, societes: false };
   const places = nombre(f.sieges_max);
+  /*
+   * Depuis la grille du 19 octobre, Team et Premium n'ont plus de plafond de
+   * places : la base rend `sieges_max` VIDE. Vide ne veut pas dire « non lu »
+   * quand le reste de la ligne l'est : `sieges_inclus` connu, c'est un
+   * titulaire qui lit une offre sans plafond. Un collaborateur, lui, reçoit
+   * les deux vides — et ne donne pas de place.
+   */
+  const sansPlafond = f.sieges_max === null && nombre(f.sieges_inclus) !== null;
   return {
-    sieges: places !== null && places > 0,
+    sieges: sansPlafond || (places !== null && places > 0),
     societes: f.offre === "premium",
   };
 }

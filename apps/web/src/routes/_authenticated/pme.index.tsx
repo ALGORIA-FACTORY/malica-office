@@ -180,6 +180,13 @@ function PmeHome() {
     if (dossierNeuf && !bienvenueDejaVue()) void navigate({ to: "/pme/bienvenue", replace: true });
   }, [dossierNeuf, navigate]);
 
+  // Le prénom de la personne, pour le salut ; écrit dans les réglages.
+  const profil = useQuery({
+    queryKey: ["mon-profil"],
+    queryFn: () => office().identity.monProfil(),
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Qui attend, exactement. « Votre comptable » est une périphrase : le
   // dirigeant connaît son cabinet par son nom, et c'est ce nom qui doit
   // apparaître quand quelque chose lui est retourné.
@@ -234,13 +241,28 @@ function PmeHome() {
   const moisCourant = mois(periode);
 
   const heure = new Date().getHours();
-  const salut = t(
-    heure < 12
-      ? "pme.home.greet.morning"
-      : heure < 18
-        ? "pme.home.greet.afternoon"
-        : "pme.home.greet.evening",
-  );
+  /*
+   * Le salut porte le prénom quand la personne l'a écrit (Réglages, depuis le
+   * 19 octobre 2026 : `identity.profiles.prenom`). Sans prénom, le salut nu —
+   * jamais un prénom deviné depuis l'adresse.
+   */
+  const prenom = profil.data?.prenom ?? null;
+  const salut = prenom
+    ? t(
+        heure < 12
+          ? "pme.home.greet.morning.prenom"
+          : heure < 18
+            ? "pme.home.greet.afternoon.prenom"
+            : "pme.home.greet.evening.prenom",
+        { prenom },
+      )
+    : t(
+        heure < 12
+          ? "pme.home.greet.morning"
+          : heure < 18
+            ? "pme.home.greet.afternoon"
+            : "pme.home.greet.evening",
+      );
 
   /*
    * ================================================= « PRESQUE » À 0 %, ET POURQUOI
@@ -340,7 +362,7 @@ function PmeHome() {
        */}
 
       <div className="pad">
-        {/* Le salut, sans prénom : le compte n'en porte pas en base (voir ci-dessus). */}
+        {/* Le salut, avec le prénom quand la personne l'a écrit. */}
         <h1>{salut}</h1>
 
         {/* ------------------------------------------------------ les raccourcis */}

@@ -60,6 +60,17 @@ describe("ce que l'offre ouvre", () => {
     expect(ouverturesDuForfait(undefined)).toEqual({ sieges: false, societes: false });
   });
 
+  it("sans plafond (grille du 19 octobre), les sièges s'ouvrent au titulaire seul", () => {
+    // Team et Premium : `sieges_max` vide, `sieges_inclus` lu — c'est ouvert.
+    expect(
+      ouverturesDuForfait({ ...forfait("team", 0), sieges_max: null, sieges_inclus: 2 }).sieges,
+    ).toBe(true);
+    // Un collaborateur reçoit les deux vides : il ne donne pas de place.
+    expect(
+      ouverturesDuForfait({ ...forfait("team", 0), sieges_max: null, sieges_inclus: null }).sieges,
+    ).toBe(false);
+  });
+
   it("un compteur rendu en chaîne reste un compteur", () => {
     // Les entiers de PostgreSQL arrivent en chaînes selon le pilote.
     expect(ouverturesDuForfait({ ...forfait("team", 10), sieges_max: "10" }).sieges).toBe(true);
