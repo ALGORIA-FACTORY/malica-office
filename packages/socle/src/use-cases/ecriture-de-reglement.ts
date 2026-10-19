@@ -69,6 +69,13 @@ export interface EntreeReglement {
   reference: string | null;
   /** La référence de la pièce réglée, pour relier les deux écritures. */
   referencePiece: string | null;
+  /**
+   * La retenue à la source CONSTATÉE (`constaterLaRetenue`), quand il y en a
+   * une. Le montant réglé reste le net ; la dette du tiers s'éteint pour net
+   * plus retenue, et la retenue va au compte que le pack lie au rôle — opérée
+   * à l'achat (432 au paramétrage tunisien), subie à la vente.
+   */
+  retenue?: { montant: string; compte: string; libelle: string } | null;
 }
 
 export interface LigneDeReglement {
@@ -127,9 +134,11 @@ function composerLibelle(e: EntreeReglement): string {
 /**
  * L'écriture du règlement, ou un refus motivé.
  *
- * Deux lignes, jamais plus : un règlement éteint une dette, il ne la ventile
- * pas. La TVA a été traitée par l'écriture de la facture, et la reprendre ici
- * la compterait deux fois.
+ * Deux lignes, trois quand une retenue à la source a été CONSTATÉE : un
+ * règlement éteint une dette, il ne la ventile pas. La TVA a été traitée par
+ * l'écriture de la facture, et la reprendre ici la compterait deux fois. La
+ * retenue n'est pas une ventilation : c'est la part du prix payée à l'État au
+ * lieu du tiers (19 octobre 2026).
  */
 export function construireReglement(e: EntreeReglement): EcritureDeReglement {
   if (e.montant.trim() === "" || ZERO.test(e.montant.trim()))
@@ -148,6 +157,12 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
   const montant = sommeDecimale([e.montant]);
   const libelle = composerLibelle(e);
 
+  const r = e.retenue ?? null;
+  if (r !== null && r.compte.trim() === "")
+    throw new ReglementIncomplet("le compte de la retenue à la source n'est pas au paramétrage");
+  // La dette éteinte : le net réglé, plus la retenue s'il y en a une.
+  const eteint = r === null ? montant : sommeDecimale([e.montant, r.montant]);
+
   const tresorerie: LigneDeReglement = {
     account_code: e.tresorerieAccount,
     libelle: e.moyenLibelle,
@@ -157,9 +172,28 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
   const tiers: LigneDeReglement = {
     account_code: e.counterpartyAccount,
     libelle: e.tiers ?? e.moyenLibelle,
-    debit: e.sens === "facture_achat" ? montant : "0.000",
-    credit: e.sens === "facture_achat" ? "0.000" : montant,
+    debit: e.sens === "facture_achat" ? eteint : "0.000",
+    credit: e.sens === "facture_achat" ? "0.000" : eteint,
   };
+
+  if (r !== null) {
+    const retenue: LigneDeReglement = {
+      account_code: r.compte,
+      libelle: r.libelle,
+      // À l'achat, on la doit à l'État : crédit. À la vente, le client l'a
+      // versée pour nous : c'est une créance sur l'État, au débit.
+      debit: e.sens === "facture_vente" ? sommeDecimale([r.montant]) : "0.000",
+      credit: e.sens === "facture_vente" ? "0.000" : sommeDecimale([r.montant]),
+    };
+    return {
+      journal: e.journalCode,
+      dateEcriture: e.payeLe,
+      devise: e.devise,
+      libelle,
+      lignes:
+        e.sens === "facture_achat" ? [tiers, tresorerie, retenue] : [tresorerie, retenue, tiers],
+    };
+  }
 
   return {
     journal: e.journalCode,

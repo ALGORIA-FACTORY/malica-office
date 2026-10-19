@@ -184,6 +184,84 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     assert.match(r.ok ? "" : r.raison, /annulé/);
   });
 
+  /**
+   * Une pièce LUE : l'émetteur, son numéro et le TTC tranché par l'analyse.
+   * Posés par l'administrateur, comme la lecture les aurait posés.
+   */
+  const lue = async (pieceId: string, ttcMineur: number) =>
+    admin(async (p) => {
+      const { rows } = await p.query<{ id: string }>(
+        `insert into capture.extractions (tenant_id, piece_id, contract, payload)
+         values ($1, $2, 'extract.v1', $3::jsonb) returning id`,
+        [
+          org,
+          pieceId,
+          JSON.stringify({
+            issuer: "COMPTOIR DU CENTRE SUARL",
+            references: { invoice_no: "GS-2026-77120" },
+          }),
+        ],
+      );
+      await p.query(
+        `insert into capture.analyses
+           (tenant_id, piece_id, extraction_id, pack_version_id, normalisation, controles, verdict, motifs)
+         values ($1, $2, $3, $4, $5::jsonb, '[{"controle":"essai","ok":true}]'::jsonb,
+                 'à comptabiliser', '[{"motif":"essai"}]'::jsonb)`,
+        [
+          org,
+          pieceId,
+          rows[0]!.id,
+          pack,
+          JSON.stringify({ etat: "tranche", montants: { ttc: ttcMineur } }),
+        ],
+      );
+    });
+
+  it("le dossier : le règlement porte le fournisseur et le numéro de la facture", async () => {
+    const f = await piece("dossier", "facture_achat");
+    await lue(f, 500_000);
+    const p = await payer(f, "cheque", 500_000, "4512872");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.match(r.ecriture.libelle, /COMPTOIR DU CENTRE SUARL/);
+    assert.match(r.ecriture.libelle, /GS-2026-77120/);
+  });
+
+  it("au-dessus du seuil, le chèque au net : la retenue à la source a sa ligne", async () => {
+    // 1 969,610 TTC × 1,5 % = 29,544 ; le chèque porte 1 940,066.
+    const f = await piece("retenue", "facture_achat");
+    await lue(f, 1_969_610);
+    const p = await payer(f, "cheque", 1_940_066, "4512873");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+      retenue?: { cas: string; montant?: string };
+    };
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.retenue?.cas, "operee");
+    const l = r.ecriture.lignes;
+    assert.equal(l.length, 3);
+    assert.deepEqual(
+      l.map((x) => [x.account_code, x.debit, x.credit]),
+      [
+        ["401", "1969.610", "0.000"],
+        ["532", "0.000", "1940.066"],
+        [l[2]!.account_code, "0.000", "29.544"],
+      ],
+    );
+    assert.ok(l[2]!.account_code.startsWith("43"), "la retenue va à l'État, classe 43");
+  });
+
+  it("au-dessus du seuil, payé pour le TTC entier : rien n'est retenu, et c'est dit", async () => {
+    const f = await piece("sans-retenue", "facture_achat");
+    await lue(f, 1_969_610);
+    const p = await payer(f, "cheque", 1_969_610, "4512874");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+      retenue?: { cas: string };
+    };
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.retenue?.cas, "non_operee");
+    assert.equal(r.ecriture.lignes.length, 2);
+  });
+
   it("l'écriture s'inscrit, équilibrée, et porte sa pièce", async () => {
     const f = await piece("inscrire", "facture_achat");
     const p = await payer(f, "virement", 750_000, "VIR-2026-991");

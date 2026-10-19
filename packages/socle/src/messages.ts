@@ -41,23 +41,23 @@ const fr = {
     "Taux, comptes, mentions, seuils et échéances vivent en base, versionnés par date d'effet. Aucune constante fiscale dans le code.",
   "landing.pillar.4.title": "La confidentialité est un mur",
   "landing.pillar.4.body":
-    "L'espace personnel de la PME est invisible au cabinet par isolation base de données, jamais par filtre d'affichage.",
+    "L'espace personnel de la PME est invisible pour la comptabilité par isolation base de données, jamais par filtre d'affichage.",
 
   "landing.surfaces.title": "Deux surfaces, un seul cerveau",
   "landing.surfaces.pme.title": "PME — mobile",
   "landing.surfaces.pme.body":
     "Un tap, moins de dix secondes. Capture hors-ligne, file d'attente, confirmation en un geste. La classification est un sous-produit.",
-  "landing.surfaces.cabinet.title": "Cabinet — web",
+  "landing.surfaces.cabinet.title": "Comptabilité — web",
   "landing.surfaces.cabinet.body":
     "File priorisée, écran côte-à-côte pièce/écriture, retour motivé par référentiel gouverné, contre-passation datée.",
 
   "landing.cycle.title": "Le cycle d'une pièce",
   "landing.cycle.steps":
-    "capturée · lue avec citations · proposée par le Socle · confirmée par la PME · comptabilisée · supervisée par le cabinet · conforme ou retournée avec motif",
+    "capturée · lue avec citations · proposée par le Socle · confirmée par la PME · comptabilisée · supervisée par la comptabilité · conforme ou retournée avec motif",
   "landing.footer": "Algoria Factory · Système Comptable Tunisien · extensible UEMOA / OHADA",
 
   "auth.title": "Espace Malica Office",
-  "auth.subtitle": "Accès réservé aux organisations et à leurs cabinets mandatés.",
+  "auth.subtitle": "Accès réservé aux organisations et à leur comptabilité mandatée.",
   "auth.tab.signin": "Connexion",
   "auth.tab.signup": "Créer un accès",
   "auth.email": "Adresse e-mail",
@@ -81,7 +81,7 @@ const fr = {
     "Une organisation est un tenant : ses données sont isolées de toutes les autres. Vous en serez le premier membre.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "PME — je tiens ma comptabilité",
-  "onboarding.kind.cabinet": "Cabinet — je supervise des PME",
+  "onboarding.kind.cabinet": "Comptabilité — je tiens les dossiers de PME",
   "onboarding.name": "Raison sociale",
   "plan.nct.empty": "Aucun compte pour cette recherche.",
   "plan.classe.1": "1 · Capitaux",
@@ -165,7 +165,7 @@ const fr = {
   "onboarding.jurisdiction.required": "Choisissez une juridiction avant de continuer.",
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
   "onboarding.mode": "Mode de validation",
-  "onboarding.mode.mandate": "Sous mandat — le cabinet supervise (quatre-yeux)",
+  "onboarding.mode.mandate": "Sous mandat — la comptabilité supervise (quatre-yeux)",
   "onboarding.mode.autonome": "Autonome — auto-validation, tracée à l'audit",
   "onboarding.entity": "Établissement principal",
   "onboarding.submit": "Créer l'organisation",
@@ -181,7 +181,7 @@ const fr = {
   "portal.switch": "Changer d'espace",
   "app.role": "Rôle",
   "app.kind.pme": "PME",
-  "app.kind.cabinet": "Cabinet",
+  "app.kind.cabinet": "Comptabilité",
   "app.mode": "Validation",
   "app.currency": "Devise",
   "app.jurisdiction": "Juridiction",
@@ -366,7 +366,7 @@ const fr = {
   "pme.transmettre.rappeler": "Demander le rappel à {cabinet}",
   "pme.transmettre.rappel.enAttente":
     "Rappel demandé. {cabinet} doit l'accorder — la pièce reste chez lui en attendant.",
-  "pme.transmettre.rappel.refuse": "Rappel refusé par votre cabinet. {note}",
+  "pme.transmettre.rappel.refuse": "Rappel refusé par votre comptabilité. {note}",
   "pme.transmettre.rappelee": "Rappelée. Elle est de nouveau chez vous seul.",
   "pme.verifie.titre.1": "Voici ce que",
   "pme.verifie.titre.2": "j'ai lu.",
@@ -535,7 +535,7 @@ const fr = {
   "pme.charges.answer.exceptionnel": "Oui, exceptionnel",
   "pme.charges.answer.verifier": "À vérifier",
   "pme.charges.answered": "Votre réponse est enregistrée et reste au journal.",
-  "pme.charges.answered.cabinet": "Votre cabinet a répondu. Sa réponse reste au journal.",
+  "pme.charges.answered.cabinet": "Votre comptabilité a répondu. Sa réponse reste au journal.",
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
   "pme.home.card.charges": "Vos charges",
   "pme.nav.home": "Accueil",
@@ -620,8 +620,8 @@ const fr = {
   "pme.home.demander.sous": "Une question, en clair",
   "pme.home.import": "Importer un fichier",
   "pme.home.disclaimer":
-    "Chaque montant affiché porte sa citation. Les propositions restent soumises à la supervision du cabinet.",
-  "cab.brand": "Cabinet",
+    "Chaque montant affiché porte sa citation. Les propositions restent soumises à la supervision de la comptabilité.",
+  "cab.brand": "Comptabilité",
   "cab.nav.today": "Aujourd'hui",
   "cab.nav.clients": "Clients",
   "cab.nav.echeances": "Échéances",
@@ -885,7 +885,7 @@ const fr = {
   "cab.noorg": "Aucune organisation cabinet. Créez-en une pour superviser vos clients.",
   "cab.today.title": "Aujourd'hui",
   "cab.nav.group.work": "Mon travail",
-  "cab.nav.group.cabinet": "Le cabinet",
+  "cab.nav.group.cabinet": "La comptabilité",
   "cab.search": "Tout chercher",
   "cab.today.greeting": "Bonjour.",
   "cab.today.summary":
@@ -1096,7 +1096,7 @@ const fr = {
   "pme.conseil.relecture":
     "Votre comptable relit ma réponse : je vous la transmets dès qu’il l’a validée.",
   "pme.conseil.sansCabinet":
-    "Aucun cabinet ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
+    "Aucune comptabilité ne suit encore ce dossier : cette réponse n’a pas été relue par un expert-comptable.",
   "pme.conseil.relu": "Relu et validé par votre comptable.",
   "pme.conseil.sources": "Sources : {liste}",
   "pme.conseil.duCabinet": "La réponse de votre comptable :",
@@ -1116,7 +1116,7 @@ const fr = {
   "cab.today.charge.pieces": "{count} pièces en attente",
   "cab.today.charge.pieces#one": "{count} pièce en attente",
   "cab.today.charge.pieces#other": "{count} pièces en attente",
-  "cab.rail.role": "Cabinet",
+  "cab.rail.role": "Comptabilité",
   "cab.rail.role.expert": "Chef de cabinet",
   "cab.rail.role.dirigeant": "Dirigeant",
   "cab.rail.role.collaborateur": "Collaborateur",
@@ -1259,6 +1259,7 @@ const fr = {
   "cab.notif.kind.autre": "Un événement du dossier.",
   "cab.notif.kind.mandat.propose": "Un mandat a été proposé au dossier.",
   "cab.notif.kind.mandat.accepte": "Le dossier a accepté le mandat du cabinet.",
+  "cab.notif.kind.mandat.revoque": "Le dossier a mis fin au mandat.",
   "cab.notif.kind.mandat.refuse": "Le dossier a décliné le mandat du cabinet.",
   "cab.notif.kind.pv.envoye": "Un procès-verbal a été envoyé au client.",
   "cab.review.rank": "{n} sur {total}",
@@ -1340,7 +1341,7 @@ const fr = {
   "invitation.kicker": "Invitation",
   "invitation.titre": "Votre espace est prêt.",
   "invitation.anonyme":
-    "Pour rejoindre votre dossier, créez votre accès — ou connectez-vous — avec l'adresse à laquelle votre cabinet vous a invité.",
+    "Pour rejoindre votre dossier, créez votre accès — ou connectez-vous — avec l'adresse à laquelle votre comptabilité vous a invité.",
   "invitation.creer": "Créer mon accès",
   "invitation.connecter": "J'ai déjà un accès",
   "invitation.dossier": "{cabinet} a ouvert le dossier de {pme}, et vous invite à le rejoindre.",
@@ -1348,9 +1349,10 @@ const fr = {
   "invitation.mauvaiseAdresse":
     "Vous êtes connecté avec une autre adresse. Déconnectez-vous, puis entrez avec {email}.",
   "invitation.rejoindre": "Rejoindre mon espace",
-  "invitation.plusValable": "Ce lien n'est plus valable. Demandez-en un nouveau à votre cabinet.",
+  "invitation.plusValable":
+    "Ce lien n'est plus valable. Demandez-en un nouveau à votre comptabilité.",
   "invitation.introuvable":
-    "Ce lien n'ouvre aucun dossier. Vérifiez-le, ou demandez-en un nouveau à votre cabinet.",
+    "Ce lien n'ouvre aucun dossier. Vérifiez-le, ou demandez-en un nouveau à votre comptabilité.",
   "cab.clients.count#one": "{count} mandat",
   "cab.clients.count#other": "{count} mandats",
   "cab.clients.col.regime": "Régime",
@@ -1359,7 +1361,7 @@ const fr = {
   "cab.clients.regime.inconnu": "Non renseigné",
   "cab.clients.collab.aucun": "Personne",
   "cab.mode.autonome": "Auto",
-  "cab.mode.mandate": "Cabinet",
+  "cab.mode.mandate": "Comptabilité",
   "cab.engagement.propose": "Proposé",
   "cab.engagement.actif": "Actif",
   "cab.engagement.suspendu": "Suspendu",
@@ -1384,6 +1386,11 @@ const fr = {
   "cab.review.paiement.fermer": "Fermer",
   "cab.review.paiement.preuveIllisible": "Cette preuve ne peut pas s’afficher ici.",
   "cab.review.reglement": "Écriture du règlement",
+  "cab.review.dossier": "Dossier : facture et règlement",
+  "cab.review.reglement.retenue":
+    "Retenue à la source constatée : {libelle}, {montant} sur un TTC de {ttc}. Le chèque ne porte que le net.",
+  "cab.review.reglement.retenueNonOperee":
+    "Réglé pour le TTC entier ({ttc}) au-dessus du seuil de retenue : aucune retenue à la source n'a été opérée. Le payeur en reste redevable.",
   "cab.review.reglement.inscrire": "Inscrire",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
@@ -1490,7 +1497,7 @@ const fr = {
   "cab.integ.app.nom": "Application PME",
   "cab.integ.app.nature": "Entrée · Android et iOS",
   "cab.integ.app.note":
-    "La PME photographie sa pièce ; elle arrive dans la file du cabinet avec sa lecture et ses citations.",
+    "La PME photographie sa pièce ; elle arrive dans la file de la comptabilité avec sa lecture et ses citations.",
   "cab.integ.app.action": "Voir la file",
   "cab.integ.releves.nom": "Relevés bancaires",
   "cab.integ.releves.nature": "Entrée · import manuel (CSV)",
@@ -1647,7 +1654,7 @@ const fr = {
   "cab.journal.cabinet.obligation_reglee": "Obligation du calendrier réglée",
   "cab.journal.cabinet.obligation_propre": "Obligation propre ajoutée",
   "cab.settings.mode": "Mode de validation du client",
-  "pme.retour.banner": "Une pièce a été retournée par le cabinet. Corrigez-la et resoumettez.",
+  "pme.retour.banner": "Une pièce a été retournée par la comptabilité. Corrigez-la et resoumettez.",
   "pme.nav.coffre": "Mon espace",
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
@@ -1678,7 +1685,7 @@ const fr = {
   "pme.reglages.version.canal": "canal",
   "pme.coffre.title": "Coffre",
   "pme.coffre.voice":
-    "{shared} pièces partagées avec votre cabinet, {personal} restées personnelles.",
+    "{shared} pièces partagées avec votre comptabilité, {personal} restées personnelles.",
   "pme.coffre.scellee":
     "Votre comptable a bâti une écriture sur cette pièce : elle reste ici, c'est sa preuve.",
   "pme.coffre.votreComptable": "votre comptable",
@@ -1693,7 +1700,7 @@ const fr = {
   "pme.coffre.action.share": "Partager",
   "pme.coffre.action.keep": "Garder pour moi",
   "pme.coffre.wall":
-    "La cloison est tenue par la base : votre espace personnel est invisible au cabinet, pas seulement masqué.",
+    "La cloison est tenue par la base : votre espace personnel est invisible pour la comptabilité, pas seulement masqué.",
   "pme.echeances.title": "Échéances",
   "pme.echeances.voice.empty": "Aucune échéance dérivée du pack pour l'instant.",
   "pme.echeances.voice.late": "{count} échéances dépassées.",
@@ -1765,9 +1772,9 @@ const fr = {
   "pme.notifs.empty": "Aucune alerte pour l'instant.",
   "pme.notifs.open": "Ouvrir la pièce",
   "pme.notifs.markRead": "Lu",
-  "notif.kind.piece.retournee": "Pièce retournée par le cabinet",
-  "notif.kind.piece.validee": "Pièce validée par le cabinet",
-  "notif.kind.piece.partagee": "Pièce partagée avec le cabinet",
+  "notif.kind.piece.retournee": "Pièce retournée par la comptabilité",
+  "notif.kind.piece.validee": "Pièce validée par la comptabilité",
+  "notif.kind.piece.partagee": "Pièce partagée avec la comptabilité",
   "cab.nav.propositions": "Propositions",
   "cab.nav.pv": "PV",
   "cab.pv.kicker": "Restitution du {date}",
@@ -1839,17 +1846,18 @@ const fr = {
   "cab.journal.membre.invite": "Collaborateur invité",
   "cab.journal.organization.updated": "Organisation mise à jour",
   "cab.journal.cabinet.mise_en_route": "Mise en route terminée",
-  "notif.kind.pv.envoye": "Procès-verbal de restitution reçu de votre cabinet",
-  "notif.kind.mandat.propose": "Un cabinet vous propose un mandat",
+  "notif.kind.pv.envoye": "Procès-verbal de restitution reçu de votre comptabilité",
+  "notif.kind.mandat.propose": "Un mandat de comptabilité vous est proposé",
   "notif.kind.mandat.accepte": "Le mandat a été accepté",
+  "notif.kind.mandat.revoque": "Le mandat a été révoqué",
   "notif.kind.mandat.refuse": "Le mandat a été refusé",
-  "pme.mandat.kicker": "Un cabinet vous propose un mandat",
+  "pme.mandat.kicker": "Un mandat de comptabilité vous est proposé",
   "pme.mandat.texte":
     "{cabinet} propose de tenir votre comptabilité. En acceptant, vos pièces transmises lui seront visibles, et lui seul.",
   "pme.mandat.accepter": "Accepter le mandat",
   "pme.mandat.refuser": "Refuser",
   "pme.mandat.accepte": "Mandat accepté : {cabinet} suit maintenant votre dossier.",
-  "pme.mandat.refuse": "Mandat refusé. Le cabinet en est informé.",
+  "pme.mandat.refuse": "Mandat refusé. La comptabilité en est informée.",
   "pme.mandat.erreur": "Je n’ai pas pu enregistrer votre réponse.",
   "portal.invitations.titre": "On vous attend",
   "portal.invitations.texte": "{cabinet} vous invite à le rejoindre comme {role}.",
@@ -2407,7 +2415,7 @@ const fr = {
    * était déjà partie. La transmission est une DÉCISION, donc une question.
    */
   "pme.transmettre.question": "Envoyer cette pièce à {cabinet} ?",
-  "pme.transmettre.chezvous": "Sinon elle reste chez vous, et votre cabinet ne la voit pas.",
+  "pme.transmettre.chezvous": "Sinon elle reste chez vous, et votre comptabilité ne la voit pas.",
   // Court, parce que le bouton ne tient plus que la moitié de la largeur :
   // « garder chez moi » occupe l'autre, et la question au-dessus nomme déjà
   // le cabinet.
@@ -2629,7 +2637,7 @@ const fr = {
   "pme.reglages.sieges.sous":
     "Un siège est une licence pour une personne dans une organisation — jamais un établissement. Chaque siège ne voit que ses propres pièces ; vous voyez tout.",
   "pme.reglages.sieges.verrou":
-    "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission au cabinet.",
+    "Des sièges isolés — chacun ne voit que ses pièces — et vous validez avant la transmission à la comptabilité.",
   "pme.reglages.sieges.aucun":
     "Aucun siège n’est encore remonté pour cette licence, pas même le vôtre.",
   "pme.reglages.org.ouverte": "Ouverte",
@@ -2637,12 +2645,21 @@ const fr = {
   "pme.reglages.org.matricule":
     "Matricule établi par lecture de la carte d’identification fiscale.",
   "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",
-  "pme.reglages.org.cabinet": "Cabinet mandaté :",
-  "pme.reglages.org.cabinet.aucun": "aucun cabinet",
+  "pme.reglages.org.cabinet": "Comptabilité mandatée :",
+  "pme.reglages.org.cabinet.aucun": "aucune",
   "pme.reglages.org.mandat.nonLu": "état et date du mandat non lus",
   "pme.reglages.org.lectures": "Lectures consommées ce mois :",
   "pme.reglages.org.revocation":
-    "Le mandat se révoque depuis cet écran dès que le dépôt le portera.",
+    "Vous seul pouvez révoquer ce mandat. Il prend fin le jour même, et la comptabilité en est informée.",
+  "pme.reglages.org.mandat.actif": "{nom} tient votre comptabilité depuis le {date}.",
+  "pme.reglages.org.mandat.propose":
+    "{nom} vous a proposé un mandat le {date}. Il attend votre réponse.",
+  "pme.reglages.org.mandat.motif": "Pourquoi vous arrêtez",
+  "pme.reglages.org.mandat.motif.aide":
+    "{nom} lira ce motif dans son journal. Vos pièces déjà transmises restent dans son archive ; les suivantes ne lui parviendront plus.",
+  "pme.reglages.org.mandat.confirmer": "Confirmer : mettre fin au mandat de {nom}",
+  "pme.reglages.org.mandat.revoque":
+    "Mandat révoqué. Vous pouvez en accepter un autre dès qu'une comptabilité vous le propose.",
   "pme.reglages.org.voirMandat": "Voir le mandat",
   "pme.reglages.org.revoquer": "Révoquer",
   "pme.reglages.siege.lectures": "Lectures",
@@ -2725,13 +2742,13 @@ const fr = {
     "Tant qu’il n’a pas tranché, corrigez ce que vous voulez : c’est votre saisie. La supprimer lui revient — je lui transmets la demande et je vous préviens.",
   "pme.piece.elleEstPartie": "Elle est partie",
   "pme.piece.elleEstPartie.texte":
-    "Une correction la renvoie en « à revalider » chez votre cabinet — il refait son travail, et c’est normal. Une suppression lui demande son accord, au titre de sa conservation : la décision s’inscrit au journal, quelle qu’elle soit.",
+    "Une correction la renvoie en « à revalider » chez votre comptabilité — elle refait son travail, et c’est normal. Une suppression lui demande son accord, au titre de sa conservation : la décision s’inscrit au journal, quelle qu’elle soit.",
   "pme.piece.demanderSuppression": "Demander la suppression",
   "pme.piece.mettreAuPrive": "La mettre dans mon espace privé",
-  "pme.piece.suppressionDemandee": "Suppression demandée. Votre cabinet doit l’accorder.",
-  "pme.piece.suppressionRefusee": "Suppression refusée par votre cabinet.",
+  "pme.piece.suppressionDemandee": "Suppression demandée. Votre comptabilité doit l’accorder.",
+  "pme.piece.suppressionRefusee": "Suppression refusée par votre comptabilité.",
   "pme.piece.siege":
-    "Vous voyez ce dossier parce que vous y avez versé une pièce. C’est le dirigeant qui transmet au cabinet.",
+    "Vous voyez ce dossier parce que vous y avez versé une pièce. C’est le dirigeant qui transmet à la comptabilité.",
 
   /* ────────────────────────────────── capturer : les neuf pas, et leurs mots */
   "pme.capture.etape.capturer": "CAPTURER",
@@ -2781,9 +2798,10 @@ const fr = {
     "Je pose la question maintenant, pas après : une pièce personnelle, je ne la lis pas, et elle ne touche jamais votre quota.",
   "pme.capture.dest.societeLabel": "Société",
   "pme.capture.dest.societe": "La société",
-  "pme.capture.dest.societe.cabinet": "Lue, rangée, et transmise au cabinet après vérification",
+  "pme.capture.dest.societe.cabinet":
+    "Lue, rangée, et transmise à la comptabilité après vérification",
   "pme.capture.dest.societe.sansCabinet":
-    "Lue et rangée. Aucun cabinet n’est mandaté : rien ne part.",
+    "Lue et rangée. Aucune comptabilité n’est mandatée : rien ne part.",
   "pme.capture.dest.prive": "Vous",
   "pme.capture.dest.prive.sous":
     "Votre espace privé. Je ne la lis pas, personne d’autre ne la voit.",
@@ -2830,7 +2848,7 @@ const fr = {
   "pme.capture.q.exceptionnel": "Exceptionnel",
   "pme.capture.q.exceptionnel.sous": "C’est normal pour ce mois-là, et je ne le redemanderai pas",
   "pme.capture.q.aVerifier": "À vérifier",
-  "pme.capture.q.aVerifier.sous": "Je le garde ouvert, et le cabinet le voit aussi",
+  "pme.capture.q.aVerifier.sous": "Je le garde ouvert, et la comptabilité le voit aussi",
   "pme.capture.q.position": "Question {n} sur {total}.",
   "pme.capture.q.aucune": "Aucune question.",
   "pme.capture.q.jeRegarde": "Je regarde.",
@@ -2880,17 +2898,19 @@ const fr = {
   "pme.capture.fin.questions#one": "{count} question encore ouverte",
   "pme.capture.fin.questions#other": "{count} questions encore ouvertes",
   "pme.capture.fin.questions.aucune": "Aucune question en suspens",
-  "pme.capture.fin.transmises": "Transmises au cabinet — la date de transmission range la TVA",
-  "pme.capture.fin.transmises#one": "Transmise au cabinet — la date de transmission range la TVA",
+  "pme.capture.fin.transmises":
+    "Transmises à la comptabilité — la date de transmission range la TVA",
+  "pme.capture.fin.transmises#one":
+    "Transmise à la comptabilité — la date de transmission range la TVA",
   "pme.capture.fin.transmises#other":
-    "Transmises au cabinet — la date de transmission range la TVA",
+    "Transmises à la comptabilité — la date de transmission range la TVA",
   "pme.capture.fin.conservees": "Gardées — rien n’est parti",
   "pme.capture.fin.conservees#one": "Gardée — rien n’est parti",
   "pme.capture.fin.conservees#other": "Gardées — rien n’est parti",
   "pme.capture.fin.foot":
-    "Tant que vous ne transmettez pas, vous ne me demandez rien : vous corrigez, vous supprimez, vous recommencez. Après, c’est le cabinet qui garde — alors la suppression devient une demande, et sa réponse s’inscrit.",
-  "pme.capture.fin.transmettre": "Transmettre au cabinet",
-  "pme.capture.fin.sansCabinet": "Aucun cabinet mandaté",
+    "Tant que vous ne transmettez pas, vous ne me demandez rien : vous corrigez, vous supprimez, vous recommencez. Après, c’est la comptabilité qui garde — alors la suppression devient une demande, et sa réponse s’inscrit.",
+  "pme.capture.fin.transmettre": "Transmettre à la comptabilité",
+  "pme.capture.fin.sansCabinet": "Aucune comptabilité mandatée",
   "pme.capture.fin.garder": "Garder — ne pas transmettre",
   "pme.capture.fin.suivante": "Capturer la suivante",
   "pme.capture.fin.voirPieces": "Voir mes pièces",
@@ -2904,7 +2924,8 @@ const fr = {
   "pme.capture.prive.intactes.reste": "Non lues — vos {reste} lectures du mois sont intactes",
   "pme.capture.prive.intactes.reste#one": "Non lue — vos {reste} lectures du mois sont intactes",
   "pme.capture.prive.intactes.reste#other": "Non lues — vos {reste} lectures du mois sont intactes",
-  "pme.capture.prive.invisible": "Invisible pour votre cabinet, vos sièges et la vue consolidée",
+  "pme.capture.prive.invisible":
+    "Invisible pour votre comptabilité, vos sièges et la vue consolidée",
   "pme.capture.prive.verser": "La verser à la société",
   "pme.capture.prive.verser.sous":
     "Elle sera lue et comptera dans le quota — depuis votre espace privé, quand vous voudrez",
@@ -3127,7 +3148,7 @@ const en: Dict = {
   "landing.surfaces.pme.title": "Company — mobile",
   "landing.surfaces.pme.body":
     "One tap, under ten seconds. Offline capture, queue, one-gesture confirmation. Classification is a by-product.",
-  "landing.surfaces.cabinet.title": "Firm — web",
+  "landing.surfaces.cabinet.title": "Accounting — web",
   "landing.surfaces.cabinet.body":
     "Prioritised queue, side-by-side document and entry, governed rejection reasons, dated reversal.",
 
@@ -3161,7 +3182,7 @@ const en: Dict = {
     "An organisation is a tenant: its data is isolated from every other one. You will be its first member.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "Company — I keep my books",
-  "onboarding.kind.cabinet": "Firm — I supervise companies",
+  "onboarding.kind.cabinet": "Accounting — I keep companies' books",
   "onboarding.name": "Legal name",
   "plan.nct.empty": "No account for this search.",
   "plan.classe.1": "1 · Equity",
@@ -3260,7 +3281,7 @@ const en: Dict = {
   "portal.switch": "Switch workspace",
   "app.role": "Role",
   "app.kind.pme": "Company",
-  "app.kind.cabinet": "Firm",
+  "app.kind.cabinet": "Accounting",
   "app.mode": "Validation",
   "app.currency": "Currency",
   "app.jurisdiction": "Jurisdiction",
@@ -3647,7 +3668,7 @@ const en: Dict = {
   "pme.home.import": "Upload a file",
   "pme.home.disclaimer":
     "Every figure shown carries its citation. Proposals remain subject to accountant review.",
-  "cab.brand": "Practice",
+  "cab.brand": "Accounting",
   "cab.nav.today": "Today",
   "cab.nav.clients": "Clients",
   "cab.nav.echeances": "Deadlines",
@@ -3909,7 +3930,7 @@ const en: Dict = {
   "cab.noorg": "No practice organization yet. Create one to supervise your clients.",
   "cab.today.title": "Today",
   "cab.nav.group.work": "My work",
-  "cab.nav.group.cabinet": "The practice",
+  "cab.nav.group.cabinet": "Accounting",
   "cab.search": "Search everything",
   "cab.today.greeting": "Hello.",
   "cab.today.summary":
@@ -4137,7 +4158,7 @@ const en: Dict = {
   "cab.today.charge.pieces": "{count} documents waiting",
   "cab.today.charge.pieces#one": "{count} document waiting",
   "cab.today.charge.pieces#other": "{count} documents waiting",
-  "cab.rail.role": "Practice",
+  "cab.rail.role": "Accounting",
   "cab.rail.role.expert": "Head of practice",
   "cab.rail.role.dirigeant": "Owner",
   "cab.rail.role.collaborateur": "Staff member",
@@ -4278,6 +4299,7 @@ const en: Dict = {
   "cab.notif.kind.autre": "An event on the file.",
   "cab.notif.kind.mandat.propose": "A mandate was proposed to the file.",
   "cab.notif.kind.mandat.accepte": "The file accepted the practice’s mandate.",
+  "cab.notif.kind.mandat.revoque": "The file ended the engagement.",
   "cab.notif.kind.mandat.refuse": "The file declined the practice’s mandate.",
   "cab.notif.kind.pv.envoye": "Minutes were sent to the client.",
   "cab.review.rank": "{n} of {total}",
@@ -4376,7 +4398,7 @@ const en: Dict = {
   "cab.clients.regime.inconnu": "Not set",
   "cab.clients.collab.aucun": "Nobody",
   "cab.mode.autonome": "Auto",
-  "cab.mode.mandate": "Practice",
+  "cab.mode.mandate": "Accounting",
   "cab.engagement.propose": "Proposed",
   "cab.engagement.actif": "Active",
   "cab.engagement.suspendu": "Suspended",
@@ -4401,6 +4423,11 @@ const en: Dict = {
   "cab.review.paiement.fermer": "Close",
   "cab.review.paiement.preuveIllisible": "This proof cannot be displayed here.",
   "cab.review.reglement": "Settlement entry",
+  "cab.review.dossier": "File: invoice and settlement",
+  "cab.review.reglement.retenue":
+    "Withholding tax found: {libelle}, {montant} on a gross of {ttc}. The payment carries only the net.",
+  "cab.review.reglement.retenueNonOperee":
+    "Paid for the full gross ({ttc}) above the withholding threshold: no tax was withheld. The payer remains liable.",
   "cab.review.reglement.inscrire": "Post",
   "cab.review.paiement.reference": "Reference",
   "cab.review.paiement.eteint": "Settlement cancelled — no accounting effect",
@@ -4850,6 +4877,7 @@ const en: Dict = {
   "notif.kind.pv.envoye": "Review minutes received from your firm",
   "notif.kind.mandat.propose": "A firm proposes an engagement",
   "notif.kind.mandat.accepte": "The engagement was accepted",
+  "notif.kind.mandat.revoque": "The engagement was ended",
   "notif.kind.mandat.refuse": "The engagement was declined",
   "pme.mandat.kicker": "A firm proposes an engagement",
   "pme.mandat.texte":
@@ -5627,7 +5655,16 @@ const en: Dict = {
   "pme.reglages.org.mandat.nonLu": "status and date of the engagement not read",
   "pme.reglages.org.lectures": "Reads used this month:",
   "pme.reglages.org.revocation":
-    "The engagement will be revocable from this screen as soon as the repository carries it.",
+    "Only you can end this engagement. It ends the same day, and the accountant is informed.",
+  "pme.reglages.org.mandat.actif": "{nom} has kept your books since {date}.",
+  "pme.reglages.org.mandat.propose":
+    "{nom} proposed an engagement on {date}. It awaits your answer.",
+  "pme.reglages.org.mandat.motif": "Why you are stopping",
+  "pme.reglages.org.mandat.motif.aide":
+    "{nom} will read this reason in its log. Documents already sent stay in its archive; new ones will no longer reach it.",
+  "pme.reglages.org.mandat.confirmer": "Confirm: end the engagement with {nom}",
+  "pme.reglages.org.mandat.revoque":
+    "Engagement ended. You can accept another one as soon as an accountant proposes it.",
   "pme.reglages.org.voirMandat": "View the engagement",
   "pme.reglages.org.revoquer": "Revoke",
   "pme.reglages.siege.lectures": "Reads",
@@ -6104,7 +6141,7 @@ const ar: Dict = {
   "landing.surfaces.pme.title": "المؤسسة — الهاتف",
   "landing.surfaces.pme.body":
     "لمسة واحدة في أقل من عشر ثوان. تصوير دون شبكة، طابور انتظار، تأكيد بحركة واحدة.",
-  "landing.surfaces.cabinet.title": "المكتب — الويب",
+  "landing.surfaces.cabinet.title": "المحاسبة — الويب",
   "landing.surfaces.cabinet.body":
     "قائمة مرتّبة بالأولوية، عرض متجاور للوثيقة والقيد، أسباب إرجاع محكومة، قيد معاكس بتاريخه.",
 
@@ -6138,7 +6175,7 @@ const ar: Dict = {
     "المؤسسة وحدة معزولة: بياناتها منفصلة تمامًا عن غيرها. ستكون أول عضو فيها.",
   "onboarding.kind": "الصنف",
   "onboarding.kind.pme": "مؤسسة — أتولى محاسبتي",
-  "onboarding.kind.cabinet": "مكتب — أراقب مؤسسات",
+  "onboarding.kind.cabinet": "المحاسبة — أمسك حسابات مؤسسات",
   "onboarding.name": "التسمية الاجتماعية",
   "plan.nct.empty": "لا حساب لهذا البحث.",
   "plan.classe.1": "1 · رؤوس الأموال",
@@ -6236,7 +6273,7 @@ const ar: Dict = {
   "portal.switch": "تغيير الفضاء",
   "app.role": "الدور",
   "app.kind.pme": "مؤسسة",
-  "app.kind.cabinet": "مكتب",
+  "app.kind.cabinet": "المحاسبة",
   "app.mode": "المصادقة",
   "app.currency": "العملة",
   "app.jurisdiction": "الولاية",
@@ -6608,7 +6645,7 @@ const ar: Dict = {
   "pme.home.demander.sous": "سؤال، بكلام واضح",
   "pme.home.import": "استيراد ملف",
   "pme.home.disclaimer": "كل مبلغ معروض يحمل استشهاده. تبقى المقترحات خاضعة لإشراف المكتب.",
-  "cab.brand": "المكتب",
+  "cab.brand": "المحاسبة",
   "cab.nav.today": "اليوم",
   "cab.nav.clients": "الحرفاء",
   "cab.nav.echeances": "الآجال",
@@ -6891,7 +6928,7 @@ const ar: Dict = {
   "cab.noorg": "لا يوجد مكتب. أنشئ مكتبًا للإشراف على حرفائك.",
   "cab.today.title": "اليوم",
   "cab.nav.group.work": "\u0639\u0645\u0644\u064a",
-  "cab.nav.group.cabinet": "\u0627\u0644\u0645\u0643\u062a\u0628",
+  "cab.nav.group.cabinet": "المحاسبة",
   "cab.search": "\u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0627\u0644\u0643\u0644",
   "cab.today.greeting": "\u0645\u0631\u062d\u0628\u0627\u064b.",
   "cab.today.summary":
@@ -7110,7 +7147,7 @@ const ar: Dict = {
   "cab.today.charge.pieces": "{count} وثيقة في الانتظار",
   "cab.today.charge.pieces#one": "وثيقة واحدة في الانتظار",
   "cab.today.charge.pieces#other": "{count} وثيقة في الانتظار",
-  "cab.rail.role": "المكتب",
+  "cab.rail.role": "المحاسبة",
   "cab.rail.role.expert": "رئيس المكتب",
   "cab.rail.role.dirigeant": "مسيّر",
   "cab.rail.role.collaborateur": "متعاون",
@@ -7241,6 +7278,7 @@ const ar: Dict = {
   "cab.notif.kind.autre": "حدث في الملف.",
   "cab.notif.kind.mandat.propose": "اقتُرحت وكالة على الملف.",
   "cab.notif.kind.mandat.accepte": "قبِل الملف وكالة المكتب.",
+  "cab.notif.kind.mandat.revoque": "أنهى الملف الوكالة.",
   "cab.notif.kind.mandat.refuse": "رفض الملف وكالة المكتب.",
   "cab.notif.kind.pv.envoye": "أُرسل محضر إلى الحريف.",
   "cab.review.rank": "{n} من {total}",
@@ -7333,7 +7371,7 @@ const ar: Dict = {
   "cab.clients.regime.inconnu": "غير محدد",
   "cab.clients.collab.aucun": "لا أحد",
   "cab.mode.autonome": "تلقائي",
-  "cab.mode.mandate": "المكتب",
+  "cab.mode.mandate": "المحاسبة",
   "cab.engagement.propose": "مقترح",
   "cab.engagement.actif": "نشط",
   "cab.engagement.suspendu": "معلّق",
@@ -7358,6 +7396,11 @@ const ar: Dict = {
   "cab.review.paiement.fermer": "إغلاق",
   "cab.review.paiement.preuveIllisible": "لا يمكن عرض هذا المؤيّد هنا.",
   "cab.review.reglement": "قيد التسديد",
+  "cab.review.dossier": "ملف: فاتورة وخلاص",
+  "cab.review.reglement.retenue":
+    "خصم من المورد ثابت: {libelle}، {montant} من مبلغ جملي {ttc}. الصك لا يحمل إلا الصافي.",
+  "cab.review.reglement.retenueNonOperee":
+    "خُلص كامل المبلغ ({ttc}) فوق عتبة الخصم من المورد: لم يُخصم شيء. يبقى الدافع مدينًا به.",
   "cab.review.reglement.inscrire": "تسجيل",
   "cab.review.paiement.reference": "المرجع",
   "cab.review.paiement.eteint": "تمّ إلغاء التسديد — دون أثر محاسبي",
@@ -7793,6 +7836,7 @@ const ar: Dict = {
   "notif.kind.pv.envoye": "وصلكم محضر عرض الحصيلة من مكتبكم",
   "notif.kind.mandat.propose": "مكتب يقترح عليكم تكليفًا",
   "notif.kind.mandat.accepte": "قُبلت الوكالة",
+  "notif.kind.mandat.revoque": "أُنهيت الوكالة",
   "notif.kind.mandat.refuse": "رُفضت الوكالة",
   "pme.mandat.kicker": "مكتب يقترح عليك وكالة",
   "pme.mandat.texte":
@@ -8546,7 +8590,15 @@ const ar: Dict = {
   "pme.reglages.org.cabinet.aucun": "لا يوجد مكتب",
   "pme.reglages.org.mandat.nonLu": "حالة التكليف وتاريخه غير مقروءين",
   "pme.reglages.org.lectures": "القراءات المستهلكة هذا الشهر:",
-  "pme.reglages.org.revocation": "يُسحب التكليف من هذه الشاشة بمجرّد أن يحمله المستودع.",
+  "pme.reglages.org.revocation":
+    "أنت وحدك من يمكنه إنهاء هذه الوكالة. تنتهي في اليوم نفسه، ويُعلَم المحاسب بذلك.",
+  "pme.reglages.org.mandat.actif": "{nom} يمسك محاسبتك منذ {date}.",
+  "pme.reglages.org.mandat.propose": "اقترح {nom} عليك وكالة بتاريخ {date}. وهي تنتظر ردّك.",
+  "pme.reglages.org.mandat.motif": "سبب التوقف",
+  "pme.reglages.org.mandat.motif.aide":
+    "سيقرأ {nom} هذا السبب في سجلّه. تبقى الوثائق المرسلة سابقًا في أرشيفه، ولن تصله الوثائق اللاحقة.",
+  "pme.reglages.org.mandat.confirmer": "تأكيد: إنهاء الوكالة مع {nom}",
+  "pme.reglages.org.mandat.revoque": "أُنهيت الوكالة. يمكنك قبول وكالة أخرى حالما تُقترح عليك.",
   "pme.reglages.org.voirMandat": "الاطّلاع على التكليف",
   "pme.reglages.org.revoquer": "سحب التكليف",
   "pme.reglages.siege.lectures": "القراءات",

@@ -58,6 +58,16 @@ export interface MandatPropose {
   proposeLe: string;
 }
 
+/** Le mandat en cours, vu depuis la PME : qui tient sa comptabilité, depuis quand. */
+export interface MonMandat {
+  id: string;
+  comptabilite: string;
+  statut: "actif" | "propose";
+  depuis: string;
+  /** Vrai pour le dirigeant, sur un mandat actif. */
+  revocable: boolean;
+}
+
 /** Une invitation reçue, vue par la personne qui peut la rejoindre. */
 export interface InvitationRecue {
   id: string;
@@ -79,6 +89,13 @@ export interface IdentityRepository {
   /** Les mandats proposés à cette PME, qui attendent sa réponse. */
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
   repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
+  /** Le mandat en cours du dossier, lu depuis la PME ; `null` sans mandat. */
+  monMandat(pmeTenantId: string): Promise<MonMandat | null>;
+  /** Le dirigeant met fin au mandat actif, avec un motif que la comptabilité lira. */
+  revoquerMandat(
+    pmeTenantId: string,
+    motif: string,
+  ): Promise<{ id: string; statut: "termine"; le: string }>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
   /**
@@ -2353,6 +2370,21 @@ export type PropositionDeReglement =
         libelle: string;
         lignes: LigneDeReglementLue[];
       };
+      /**
+       * Ce que le règlement dit de la retenue à la source (19 octobre 2026) :
+       * opérée (à quel taux, combien), due mais non opérée, ou sans objet.
+       */
+      retenue:
+        | {
+            cas: "operee";
+            code: string;
+            taux: string;
+            libelle: string;
+            montant: string;
+            ttc: string;
+          }
+        | { cas: "non_operee"; ttc: string }
+        | { cas: "sans_objet" };
     }
   | { ok: false; raison: string };
 

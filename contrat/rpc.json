@@ -157,12 +157,14 @@
     "listMyOrganizations",
     "mandatsProposes",
     "monCabinet",
+    "monMandat",
     "monProfil",
     "ouvrirDossier",
     "proposerMandat",
     "regimesDisponibles",
     "repondreAuMandat",
-    "revoquerInvitation"
+    "revoquerInvitation",
+    "revoquerMandat"
   ],
   "immo": [
     "categories",

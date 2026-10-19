@@ -20,12 +20,31 @@
  *
  * Et il refuse franchement ce qui ne s'écrit pas : un paiement éteint par une
  * annulation, un « pas encore payé », une pièce dont le sens n'est pas tranché.
+ *
+ * ================================================ LE DOSSIER, PAS LA PIÈCE SEULE
+ *
+ * 19 octobre 2026, le dirigeant : « pas une pièce, c'est un dossier si on
+ * rattache le paiement ». La facture, son règlement et la preuve du règlement
+ * vont ensemble à la comptabilité, et les deux écritures doivent se
+ * retrouver l'une l'autre. Le règlement portait `tiers: null` et
+ * `referencePiece: null` : deux règlements du même mois à deux fournisseurs
+ * donnaient le même libellé, et rien ne reliait l'écriture du règlement à celle
+ * de la facture. Il porte désormais l'émetteur et le numéro LUS sur la pièce.
+ *
+ * Et la retenue à la source se CONSTATE (`constaterLaRetenue`) : le TTC lu sur
+ * la pièce, le payé déclaré, et les taux du référentiel disent si elle a été
+ * opérée, à quel taux — ou si elle ne l'a pas été alors qu'elle était due.
  */
 import {
   construireReglement,
   ReglementIncomplet,
   type EcritureDeReglement,
 } from "@malica/socle/use-cases/ecriture-de-reglement";
+import { referenceDuDocument } from "@malica/socle/use-cases/libelle-de-piece";
+import {
+  constaterLaRetenue,
+  type ConstatDeRetenue,
+} from "@malica/socle/use-cases/retenue-au-reglement";
 
 import type { Requete } from "../db.ts";
 import { enDecimal } from "../malica/lecture/montants.ts";
@@ -33,10 +52,23 @@ import { enDecimal } from "../malica/lecture/montants.ts";
 import { lireParametres } from "./analyse.ts";
 
 export type PropositionDeReglement =
-  | { ok: true; ecriture: EcritureDeReglement; packVersionId: string; pieceId: string }
+  | {
+      ok: true;
+      ecriture: EcritureDeReglement;
+      packVersionId: string;
+      pieceId: string;
+      /** Ce que le règlement dit de la retenue à la source. */
+      retenue: ConstatDeRetenue;
+    }
   | { ok: false; raison: string };
 
 const SENS_CONNU = new Set(["facture_achat", "facture_vente"]);
+
+/** Le rôle du compte de retenue, selon le sens : opérée à l'achat, subie à la vente. */
+const ROLE_DE_LA_RETENUE = {
+  facture_achat: "RETENUE_SOURCE_OPEREE",
+  facture_vente: "RETENUE_SOURCE_SUBIE",
+} as const;
 
 export async function propositionDeReglement(
   db: Requete,
@@ -44,6 +76,7 @@ export async function propositionDeReglement(
 ): Promise<PropositionDeReglement> {
   const { rows } = await db.query<{
     piece_id: string;
+    tenant_id: string;
     moyen_code: string;
     montant_mineur: string | null;
     devise: string;
@@ -56,8 +89,8 @@ export async function propositionDeReglement(
     journal_code: string | null;
     moyen_libelle: string;
   }>(
-    `select p.piece_id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le::text as paye_le,
-            p.reference, p.eteint, p.pack_version_id,
+    `select p.piece_id, pi.tenant_id, p.moyen_code, p.montant_mineur, p.devise,
+            p.paye_le::text as paye_le, p.reference, p.eteint, p.pack_version_id,
             pi.document_kind,
             m.tresorerie_account, m.journal_code, m.libelle as moyen_libelle
        from paiements_v p
@@ -81,6 +114,7 @@ export async function propositionDeReglement(
       ok: false,
       raison: "Le sens de la pièce n'est pas tranché : achat ou vente reste à confirmer.",
     };
+  const sens = l.document_kind as "facture_achat" | "facture_vente";
 
   // Le compte du tiers vient du pack, par le sens de la pièce. Toutes les
   // lignes d'un même sens le partagent — on lit donc la première venue.
@@ -92,25 +126,101 @@ export async function propositionDeReglement(
   );
   const counterparty = mapping[0]?.counterparty_account ?? "";
 
+  // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
+  // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici.
+  const { rows: lue } = await db.query<{
+    payload: { issuer?: string; references?: Record<string, string> } | null;
+    ttc_mineur: number | null;
+    jurisdiction: string;
+  }>(
+    `select e.payload,
+            (a.normalisation -> 'montants' ->> 'ttc')::bigint as ttc_mineur,
+            o.jurisdiction
+       from capture.pieces p
+       join identity.organizations o on o.id = p.tenant_id
+       left join lateral (select payload from capture.extractions x
+                           where x.piece_id = p.id order by created_at desc limit 1) e on true
+       left join lateral (select normalisation from capture.analyses y
+                           where y.piece_id = p.id order by created_at desc limit 1) a on true
+      where p.id = $1`,
+    [l.piece_id],
+  );
+  const piece = lue[0];
+  const tiers = piece?.payload?.issuer?.trim() || null;
+  const referencePiece = referenceDuDocument(piece?.payload?.references);
+
   // Les décimales viennent du paramétrage daté, par la MÊME lecture que
   // l'analyse — deux définitions de la devise finiraient par diverger.
   const parametres = await lireParametres(db, l.pack_version_id, l.paye_le);
   const decimales = parametres["money.decimals"]!;
+  const paye = enDecimal(Number(l.montant_mineur), decimales);
+
+  let retenue: ConstatDeRetenue = { cas: "sans_objet" };
+  let ligneDeRetenue: { montant: string; compte: string; libelle: string } | null = null;
+  if (piece && piece.ttc_mineur !== null) {
+    const { rows: taux } = await db.query<{
+      code: string;
+      taux: string;
+      libelle: string;
+      seuil: string | null;
+    }>(
+      `select code, taux::text, libelle, seuil::text from ref.retenues_au_reglement($1, $2::date)`,
+      [piece.jurisdiction, l.paye_le],
+    );
+    retenue = constaterLaRetenue({
+      ttc: enDecimal(Number(piece.ttc_mineur), decimales),
+      paye,
+      seuil: taux[0]?.seuil ?? null,
+      taux: taux.map((t) => ({ code: t.code, taux: t.taux, libelle: t.libelle })),
+      decimales,
+    });
+    if (retenue.cas === "operee") {
+      // Le compte, à trois niveaux comme partout : le dossier, la
+      // comptabilité qui le mandate, le pack.
+      const { rows: compte } = await db.query<{ compte: string | null }>(
+        `select coalesce(d.account_code, c.account_code, p.account_code) as compte
+           from ref.account_roles r
+           left join ref.role_bindings p
+             on p.role_code = r.code and p.pack_version_id = $2
+           left join parametrage_role_bindings_v d
+             on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
+           left join parametrage_role_bindings_v c
+             on c.role_code = r.code and c.portee = 'cabinet'
+            and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)
+          where r.code = $3
+          limit 1`,
+        [l.tenant_id, l.pack_version_id, ROLE_DE_LA_RETENUE[sens]],
+      );
+      ligneDeRetenue = {
+        montant: retenue.montant,
+        compte: compte[0]?.compte ?? "",
+        libelle: retenue.libelle,
+      };
+    }
+  }
+
   try {
     const ecriture = construireReglement({
-      sens: l.document_kind as "facture_achat" | "facture_vente",
-      montant: enDecimal(Number(l.montant_mineur), decimales),
+      sens,
+      montant: paye,
       devise: l.devise,
       payeLe: l.paye_le,
       moyenLibelle: l.moyen_libelle ?? l.moyen_code,
       tresorerieAccount: l.tresorerie_account ?? "",
       journalCode: l.journal_code ?? "",
       counterpartyAccount: counterparty,
-      tiers: null,
+      tiers,
       reference: l.reference,
-      referencePiece: null,
+      referencePiece,
+      retenue: ligneDeRetenue,
     });
-    return { ok: true, ecriture, packVersionId: l.pack_version_id, pieceId: l.piece_id };
+    return {
+      ok: true,
+      ecriture,
+      packVersionId: l.pack_version_id,
+      pieceId: l.piece_id,
+      retenue,
+    };
   } catch (e) {
     if (e instanceof ReglementIncomplet) return { ok: false, raison: e.message };
     throw e;

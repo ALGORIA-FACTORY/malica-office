@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Une photo, une écriture, une preuve. Moteur déterministe, citations obligatoires, supervision cabinet.",
+          "Une photo, une écriture, une preuve. Moteur déterministe, citations obligatoires, supervision par la comptabilité.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

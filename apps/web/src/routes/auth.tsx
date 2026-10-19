@@ -14,12 +14,12 @@ export const Route = createFileRoute("/auth")({
       {
         name: "description",
         content:
-          "Accédez à votre espace Malica Office : capture de pièces, écritures proposées par le Socle, supervision par votre cabinet.",
+          "Accédez à votre espace Malica Office : capture de pièces, écritures proposées par le Socle, supervision par votre comptabilité.",
       },
       { property: "og:title", content: "Connexion — Malica Office" },
       {
         property: "og:description",
-        content: "Espace réservé aux organisations et à leurs cabinets mandatés.",
+        content: "Espace réservé aux organisations et à leur comptabilité mandatée.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

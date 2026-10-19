@@ -511,6 +511,15 @@ function CabinetReview() {
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             {t("cab.review.ref")}
+            {/*
+             * « Pas une pièce, c'est un dossier si on rattache le paiement »
+             * (le dirigeant, 19 octobre 2026). La facture et son règlement
+             * arrivent ensemble ; l'en-tête le dit, et les deux écritures
+             * se lisent plus bas, l'une sous l'autre.
+             */}
+            {(paiements.data ?? []).some((p) => !p.eteint) ? (
+              <> · {t("cab.review.dossier")}</>
+            ) : null}
             {rangDansLaFile >= 0 ? (
               <>
                 {" · "}
@@ -1197,6 +1206,25 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
       </p>
+      <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
+      {/*
+       * La retenue à la source, CONSTATÉE sur le payé (19 octobre 2026) : le
+       * Socle ne la suppose jamais. Opérée, elle a sa ligne ; due et non
+       * opérée, l'expert le lit ici — le payeur en reste redevable.
+       */}
+      {r.retenue.cas === "operee" ? (
+        <p className="mt-0.5 text-[11.5px]">
+          {t("cab.review.reglement.retenue", {
+            libelle: r.retenue.libelle,
+            montant: montant(r.retenue.montant, locale),
+            ttc: montant(r.retenue.ttc, locale),
+          })}
+        </p>
+      ) : r.retenue.cas === "non_operee" ? (
+        <p className="mt-0.5 text-[11.5px] text-signal-warn">
+          {t("cab.review.reglement.retenueNonOperee", { ttc: montant(r.retenue.ttc, locale) })}
+        </p>
+      ) : null}
       <ul className="mt-1">
         {r.ecriture.lignes.map((l, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3 text-[12px]">

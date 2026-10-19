@@ -674,33 +674,128 @@ function Organisation({
       <p className="mn">
         {t("pme.reglages.org.cabinet")}{" "}
         <b>{cabinet.data?.name ?? t("pme.reglages.org.cabinet.aucun")}</b>
-        {cabinet.data ? (
-          <>
-            {" "}
-            · <em>{t("pme.reglages.org.mandat.nonLu")}</em>
-          </>
-        ) : null}
       </p>
       <p className="mn">
         {t("pme.reglages.org.lectures")} <b>{nombre(org.lectures ?? undefined, locale)}</b>
       </p>
-      {/*
-       * « Voir le mandat » et « Révoquer » attendent leur méthode : `identite`
-       * sait proposer un mandat et y répondre, pas le lire ni le révoquer
-       * depuis la PME. Désactivés et VISIBLES — le dirigeant apprend que le
-       * mandat est révocable par lui seul, et qu'il ne l'est pas encore depuis
-       * cet écran. Un bouton absent se lirait « impossible ».
-       */}
-      <p className="mn">{t("pme.reglages.org.revocation")}</p>
+      {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Le mandat : se lit, et se révoque.
+ *
+ * Les deux boutons étaient éteints jusqu'au 19 octobre 2026 — `identite` ne
+ * savait ni lire ni révoquer un mandat depuis la PME. `mon_mandat` et
+ * `mandat_revoquer` existent désormais.
+ *
+ * La révocation est irréversible pour cette comptabilité : elle demande un
+ * motif (la comptabilité le lira à son journal) et une seconde touche. Elle ne
+ * touche pas la licence — c'est la règle des scénarios D.
+ */
+function LeMandat({ tenantId }: { tenantId: string }) {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const [ouvert, setOuvert] = useState(false);
+  const [revoquer, setRevoquer] = useState(false);
+  const [motif, setMotif] = useState("");
+  const [armee, setArmee] = useState(false);
+  const [retour, setRetour] = useState<string | null>(null);
+
+  const mandat = useQuery({
+    queryKey: ["mon-mandat", tenantId],
+    queryFn: () => office().identity.monMandat(tenantId),
+  });
+  const fin = useMutation({
+    mutationFn: () => office().identity.revoquerMandat(tenantId, motif.trim()),
+    onSuccess: async () => {
+      setRetour(t("pme.reglages.org.mandat.revoque"));
+      setRevoquer(false);
+      setArmee(false);
+      await qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] });
+      await qc.invalidateQueries({ queryKey: ["mon-cabinet", tenantId] });
+    },
+    onError: (e: unknown) => {
+      setArmee(false);
+      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error")));
+    },
+  });
+
+  const m = mandat.data;
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
+      new Date(`${iso}T12:00:00`),
+    );
+
+  return (
+    <>
+      {m?.revocable ? <p className="mn">{t("pme.reglages.org.revocation")}</p> : null}
       <div className="acts">
-        <button type="button" disabled aria-disabled="true">
+        <button type="button" onClick={() => setOuvert((v) => !v)} aria-expanded={ouvert}>
           {t("pme.reglages.org.voirMandat")}
         </button>
-        <button type="button" className="cut" disabled aria-disabled="true">
-          {t("pme.reglages.org.revoquer")}
-        </button>
+        {m?.revocable ? (
+          <button
+            type="button"
+            className="cut"
+            onClick={() => (setRevoquer((v) => !v), setArmee(false), setRetour(null))}
+            aria-expanded={revoquer}
+          >
+            {t("pme.reglages.org.revoquer")}
+          </button>
+        ) : null}
       </div>
-    </div>
+
+      {ouvert ? (
+        <p className="mn" aria-live="polite">
+          {mandat.isPending
+            ? t("common.loading")
+            : m
+              ? t(
+                  m.statut === "actif"
+                    ? "pme.reglages.org.mandat.actif"
+                    : "pme.reglages.org.mandat.propose",
+                  {
+                    nom: m.comptabilite,
+                    date: date(m.depuis),
+                  },
+                )
+              : t("pme.reglages.org.cabinet.aucun")}
+        </p>
+      ) : null}
+
+      {revoquer && m?.revocable ? (
+        <div className="mt-2">
+          <p className="t-body">
+            {t("pme.reglages.org.mandat.motif.aide", { nom: m.comptabilite })}
+          </p>
+          <input
+            value={motif}
+            onChange={(e) => (setMotif(e.target.value), setArmee(false))}
+            placeholder={t("pme.reglages.org.mandat.motif")}
+            aria-label={t("pme.reglages.org.mandat.motif")}
+            className="mt-2 h-[46px] w-full border border-line-strong bg-transparent px-3 text-[14px]"
+          />
+          <button
+            type="button"
+            className="btn btn-sec btn-sup mt-2"
+            disabled={fin.isPending || motif.trim() === ""}
+            onClick={() => (armee ? fin.mutate() : setArmee(true))}
+          >
+            {armee
+              ? t("pme.reglages.org.mandat.confirmer", { nom: m.comptabilite })
+              : t("pme.reglages.org.revoquer")}
+          </button>
+        </div>
+      ) : null}
+
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </>
   );
 }
 

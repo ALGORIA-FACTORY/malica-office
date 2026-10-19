@@ -18,6 +18,15 @@ export interface MandatPropose {
   cabinet: string;
   proposeLe: string;
 }
+
+/** Le mandat en cours, vu depuis la PME. */
+export interface MonMandat {
+  id: string;
+  comptabilite: string;
+  statut: "actif" | "propose";
+  depuis: string;
+  revocable: boolean;
+}
 import { enDate } from "./dates.ts";
 
 /** Une fiche fiscale, telle que l'écran et Malica la lisent. */
@@ -264,6 +273,36 @@ export const identite = {
       [pmeTenantId],
     );
     return rows[0]?.r ?? [];
+  },
+
+  /**
+   * Le mandat en cours du dossier, lu depuis la PME : la comptabilité, le
+   * statut, la date de départ, et si l'appelant peut le révoquer. `null` sans
+   * mandat. Les deux boutons éteints des réglages attendaient cette lecture.
+   */
+  async monMandat(db: Requete, pmeTenantId: string): Promise<MonMandat | null> {
+    const { rows } = await db.query<{ r: MonMandat | null }>(`select public.mon_mandat($1) as r`, [
+      pmeTenantId,
+    ]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Le dirigeant met fin au mandat, seul, avec un motif. La comptabilité le
+   * lit dans son journal ; la licence n'est pas touchée (scénarios D).
+   */
+  async revoquerMandat(
+    db: Requete,
+    pmeTenantId: string,
+    motif: string,
+  ): Promise<{ id: string; statut: "termine"; le: string }> {
+    const { rows } = await db.query<{ r: { id: string; statut: "termine"; le: string } }>(
+      `select public.mandat_revoquer($1, $2) as r`,
+      [pmeTenantId, motif],
+    );
+    const r = rows[0]?.r;
+    if (!r) throw new Error("mandat.non_revoque");
+    return r;
   },
 
   /** La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le termine. */
