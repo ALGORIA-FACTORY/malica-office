@@ -6,7 +6,22 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi", "android", ".stockage", "**/.tanstack"] },
+  // Les dossiers que git ignore deja : du brouillon, des sondes, des sauvegardes.
+  // Les linter faisait crier 165 fautes de forme sur du code hors production, et un
+  // lint bruyant est un lint dans lequel un vrai defaut passe inapercu.
+  {
+    ignores: [
+      "dist",
+      ".output",
+      ".vinxi",
+      "android",
+      ".stockage",
+      ".entetes",
+      ".tmp-reparation",
+      "db/sauvegardes",
+      "**/.tanstack",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
