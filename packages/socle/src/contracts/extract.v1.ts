@@ -69,6 +69,35 @@ export const ExtractV1 = z.object({
   document_kind: z.enum(["facture_achat", "facture_vente"]),
 });
 
+/**
+ * La clé qui porte la confiance GLOBALE dans `field_confidence`.
+ *
+ * ============================================ LA HUITIÈME OCCURRENCE, ET POURQUOI
+ *
+ * `field_confidence` est un `Record<string, number>` : **aucun type ne tient sa
+ * clé**, d'aucun côté. Elle était écrite à la main en trois endroits — deux qui
+ * l'écrivent en TypeScript, un qui la relit en SQL (`payload ->
+ * 'field_confidence' ->> 'overall'`, dans la file du cabinet).
+ *
+ * Un renommage faisait donc passer la colonne « confiance » de la supervision à
+ * `null`, **sans erreur ni drapeau** — la file se triait encore, simplement sans
+ * sa confiance.
+ *
+ * C'est la huitième fois dans ce dépôt qu'un nom composé à la main casse un
+ * appariement muet, après le rôle écrit en dur dans le journal (dix jours de
+ * mesures perdues), le suffixe `+pdf-scan`, un couple de tarif introuvable, un
+ * tarif daté du lendemain, un champ de relations renommé, un nom de référence
+ * libre qui cassait le sens de la pièce, et l'invite qui demandait des noms
+ * qu'elle écrivait séparément.
+ *
+ * Les sept premières ont été trouvées par accident. **Celle-ci a été trouvée en
+ * la cherchant**, et c'est la seule raison pour laquelle elle est ici.
+ *
+ * Elle vit dans le contrat parce que c'est le contrat qui déclare le champ : la
+ * clé n'appartient ni à qui l'écrit ni à qui la relit.
+ */
+export const CLE_CONFIANCE_GLOBALE = "overall";
+
 export type ExtractV1 = z.infer<typeof ExtractV1>;
 export type ExtractLineV1 = z.infer<typeof ExtractLineV1>;
 export type ExtractArticleV1 = z.infer<typeof ExtractArticleV1>;

@@ -23,6 +23,7 @@
  */
 
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
 
@@ -453,7 +454,7 @@ export function buildExtractFromTokenPlan(params: {
     references,
     // La confiance globale du désignateur, sous une clé stable : c'est
     // elle qui groupe les propositions du cabinet par confiance.
-    field_confidence: { overall: selection.overall_confidence },
+    field_confidence: { [CLE_CONFIANCE_GLOBALE]: selection.overall_confidence },
     /*
      * LE SENS EST DÉDUIT, PAS CRU.
      *

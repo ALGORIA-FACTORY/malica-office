@@ -11,6 +11,7 @@
  */
 
 import type { Requete } from "../db.ts";
+import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -128,7 +129,10 @@ export const supervision = {
          -- La confiance de la dernière lecture, telle que le désignateur l'a
          -- rendue. Absente pour une pièce lue avant qu'on la persiste.
          left join lateral (
-           select (x2.payload -> 'field_confidence' ->> 'overall')::numeric as confiance
+           -- La clé vient du contrat, en paramètre : la relire ici en littéral
+           -- était la huitième occurrence du même défaut muet. Un renommage
+           -- faisait passer cette colonne a NULL sans erreur ni drapeau.
+           select (x2.payload -> 'field_confidence' ->> $3)::numeric as confiance
              from extractions_v x2 where x2.piece_id = p.id
             order by x2.created_at desc limit 1
          ) cf on true
@@ -167,7 +171,7 @@ export const supervision = {
           and ($2::uuid is null or p.tenant_id = $2)
         order by p.created_at desc
         limit 200`,
-      [cabinetTenantId, tenantId ?? null],
+      [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );
 
     return (rows as Record<string, unknown>[])
