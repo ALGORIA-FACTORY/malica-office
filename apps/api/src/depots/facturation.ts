@@ -16,7 +16,11 @@
  */
 
 import type { Requete } from "../db.ts";
-import { enMillimes, prestataireDeLEnvironnement } from "../paiement/prestataires.ts";
+import {
+  enMillimes,
+  prestataireDuReglage,
+  type ReglagePaiement,
+} from "../paiement/prestataires.ts";
 
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
 interface PaiementLu {
@@ -38,6 +42,12 @@ interface PaiementLu {
 const COLONNES_PAIEMENT = `paiement_id, objet, libelle, montant_ht, montant_tva, montant_ttc, devise,
   etat, prestataire, reference, lien, impute, cree_le`;
 
+/** Le prestataire que la tour a ouvert (`public.paiement_reglage()`), ou `null`. */
+async function prestataireOuvert(db: Requete) {
+  const { rows } = await db.query<{ r: ReglagePaiement }>(`select public.paiement_reglage() as r`);
+  return rows[0] ? prestataireDuReglage(rows[0].r) : null;
+}
+
 async function lirePaiement(db: Requete, paiementId: string): Promise<PaiementLu> {
   const { rows } = await db.query<PaiementLu>(
     `select ${COLONNES_PAIEMENT} from facturation.paiements_en_ligne_v where paiement_id = $1`,
@@ -50,8 +60,8 @@ async function lirePaiement(db: Requete, paiementId: string): Promise<PaiementLu
 /**
  * Inscrire ce que le prestataire a dit. Pour le simulateur, l'API le DÉCLARE à
  * la transaction : la base ne l'admet qu'à cette condition, et l'API ne le
- * déclare que si le simulateur est le prestataire de l'environnement — jamais
- * en production (`prestataireDeLEnvironnement`).
+ * déclare que si la tour a ouvert le simulateur — dont les « payés » ne
+ * s'imputent jamais sur une facture.
  */
 async function inscrire(
   db: Requete,
@@ -254,7 +264,7 @@ export const facturation = {
   async payerEnLigne(db: Requete, paiementId: string) {
     const p = await lirePaiement(db, paiementId);
     if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
-    const env = prestataireDeLEnvironnement();
+    const env = await prestataireOuvert(db);
     if (!env) return { ouvert: false, lien: null, paiement: p };
 
     const { reference, lien } = await env.prestataire.creerLien({
@@ -281,7 +291,7 @@ export const facturation = {
   async verifierPaiement(db: Requete, paiementId: string) {
     const p = await lirePaiement(db, paiementId);
     if (p.etat === "paye" || !p.reference || p.prestataire !== "clictopay") return p;
-    const env = prestataireDeLEnvironnement();
+    const env = await prestataireOuvert(db);
     if (!env || env.prestataire.nom !== "clictopay") return p;
     const r = await env.prestataire.etat(p.reference);
     if (r.etat === "en_attente") return p;
@@ -290,7 +300,7 @@ export const facturation = {
 
   /** Le simulateur du staging : « payer » ou « refuser », sans carte. */
   async simulerPaiement(db: Requete, paiementId: string, decision: "paye" | "refuse") {
-    const env = prestataireDeLEnvironnement();
+    const env = await prestataireOuvert(db);
     if (!env || env.prestataire.nom !== "simulateur") throw new Error("paiement.simulateur_ferme");
     if (decision !== "paye" && decision !== "refuse") throw new Error("paiement.decision_inconnue");
     const p = await lirePaiement(db, paiementId);

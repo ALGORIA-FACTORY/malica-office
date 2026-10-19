@@ -243,5 +243,17 @@
     "review",
     "statistiques"
   ],
-  "tiers": ["comptesCollectifs", "creer", "desactiver", "lister", "modifier"]
+  "tiers": ["comptesCollectifs", "creer", "desactiver", "lister", "modifier"],
+  "tour": [
+    "chercherOrganisations",
+    "designerEmetteur",
+    "emetteur",
+    "grilleEnVigueur",
+    "licences",
+    "publierGrille",
+    "reglagePaiement",
+    "reglerPaiement",
+    "suisJePlateforme",
+    "trousDeLaGrille"
+  ]
 }

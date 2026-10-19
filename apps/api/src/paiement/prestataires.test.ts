@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { clictopay, enMillimes, prestataireDeLEnvironnement } from "./prestataires.ts";
+import { clictopay, enMillimes, prestataireDuReglage } from "./prestataires.ts";
 
 function fauxFetch(reponse: Record<string, unknown>, vus: Array<{ url: string; corps: string }>) {
   return (async (url: string | URL | Request, init?: RequestInit) => {
@@ -57,29 +57,28 @@ describe("les prestataires de paiement", () => {
     }
   });
 
-  it("sans prestataire, rien n'est ouvert ; le simulateur ne s'ouvre jamais en production", () => {
-    assert.equal(prestataireDeLEnvironnement({}), null);
+  it("la tour choisit ; ClicToPay sans ses secrets reste fermé, et les secrets ne viennent que du serveur", () => {
+    const retour = "https://staging.exemple.tn/";
     assert.equal(
-      prestataireDeLEnvironnement({
-        MALICA_PAIEMENT_PRESTATAIRE: "simulateur",
-        MALICA_URL_PUBLIQUE: "https://staging.exemple.tn/",
-      })?.prestataire.nom,
-      "simulateur",
+      prestataireDuReglage({ prestataire: "aucun", url_api: null, url_retour: retour }),
+      null,
     );
-    assert.throws(() =>
-      prestataireDeLEnvironnement({
-        MALICA_PAIEMENT_PRESTATAIRE: "simulateur",
-        MALICA_URL_PUBLIQUE: "https://app.exemple.tn",
-        NODE_ENV: "production",
-      }),
+    const sim = prestataireDuReglage(
+      { prestataire: "simulateur", url_api: null, url_retour: retour },
+      {},
     );
-    assert.throws(
-      () =>
-        prestataireDeLEnvironnement({
-          MALICA_PAIEMENT_PRESTATAIRE: "clictopay",
-          MALICA_URL_PUBLIQUE: "https://app.exemple.tn",
-        }),
-      /CLICTOPAY_URL/,
+    assert.equal(sim?.prestataire.nom, "simulateur");
+    assert.equal(sim?.urlPublique, "https://staging.exemple.tn");
+    const reglage = {
+      prestataire: "clictopay" as const,
+      url_api: "https://test.clictopay.com/payment/rest/",
+      url_retour: retour,
+    };
+    assert.equal(prestataireDuReglage(reglage, {}), null, "sans secrets, pas de ClicToPay");
+    assert.equal(
+      prestataireDuReglage(reglage, { CLICTOPAY_UTILISATEUR: "u", CLICTOPAY_MOT_DE_PASSE: "m" })
+        ?.prestataire.nom,
+      "clictopay",
     );
   });
 });

@@ -39,6 +39,7 @@ import { signalements } from "./depots/signalements.ts";
 import { stocks } from "./depots/stocks.ts";
 import { supervision } from "./depots/supervision.ts";
 import { tiers } from "./depots/tiers.ts";
+import { tour } from "./depots/tour.ts";
 
 /**
  * Le registre. Chaque méthode reçoit la connexion déjà placée sous l'identité
@@ -69,6 +70,7 @@ const DEPOTS = {
   stocks,
   supervision,
   tiers,
+  tour,
 } as const;
 
 type NomDepot = keyof typeof DEPOTS;

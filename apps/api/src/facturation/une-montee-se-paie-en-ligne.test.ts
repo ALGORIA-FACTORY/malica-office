@@ -212,6 +212,33 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
     });
   });
 
+  it("un « payé » du simulateur ne fait entrer aucun argent : rien ne s'impute", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db);
+      const p = (await monter(db, d))!;
+      await sous(db, d.principal, async () => {
+        await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
+        await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [
+          p.paiement_id,
+        ]);
+      });
+      const periode = await db.query<{ p: string }>(
+        "select to_char(date_trunc('month', current_date), 'YYYY-MM-DD') as p",
+      );
+      const f = await sous(db, d.operateur, async () => {
+        const { rows } = await db.query<{ r: { factures: Array<{ facture_id: string }> } }>(
+          "select facturation.emettre($1, $2::date) as r",
+          [d.licence, periode.rows[0]!.p],
+        );
+        return rows[0]!.r;
+      });
+      const enc = await db.query("select 1 from facturation.encaissements where facture_id = $1", [
+        f.factures[0]!.facture_id,
+      ]);
+      assert.equal(enc.rows.length, 0, "la facture reste due en entier");
+    });
+  });
+
   it("payé, il s'impute sur la facture du mois comme encaissement par carte, une fois", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db);

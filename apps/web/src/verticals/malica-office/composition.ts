@@ -27,6 +27,7 @@ import type {
   FabriqueRepository,
   IntegrationsRepository,
   SignalementsRepository,
+  TourRepository,
 } from "@malica/socle/ports/repositories";
 
 /**
@@ -97,6 +98,8 @@ export interface OfficeRuntime {
   fabrique: FabriqueRepository;
   /** Et ce que l'application constate toute seule quand un geste a échoué. */
   journal: JournalRepository;
+  /** La tour : grille, paiement, émetteur, licences — refusée par la base à qui n'est pas opérateur. */
+  tour: TourRepository;
   /** La couche agentique : tout ce qui fait parler un modèle, sur ses propres routes. */
   malica: MalicaPort;
 }
@@ -129,6 +132,7 @@ export function office(): OfficeRuntime {
       conversations: creerDepotHttp<ConversationsRepository>("conversations"),
       signalements: creerDepotHttp<SignalementsRepository>("signalements"),
       fabrique: creerDepotHttp<FabriqueRepository>("fabrique"),
+      tour: creerDepotHttp<TourRepository>("tour"),
       malica: creerMalicaHttp(),
     };
   }

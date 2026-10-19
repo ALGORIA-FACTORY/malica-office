@@ -2534,6 +2534,88 @@ export interface PaiementEnLigne {
   cree_le: string;
 }
 
+/* ============================================================================
+ * La tour — ce qu'un opérateur d'ALGORIA règle sans passer par le serveur.
+ * Chaque méthode est refusée par la base à qui n'est pas opérateur.
+ * ========================================================================== */
+
+/** Une ligne de grille proposée ou en vigueur : les colonnes de `ref.offres`. */
+export type LigneDOffre = Record<string, string | number | boolean | null> & {
+  code: string;
+  rang: number;
+};
+/** Un palier de recharge proposé ou en vigueur : les colonnes de `ref.recharges`. */
+export type LigneDeRecharge = Record<string, string | number | boolean | null> & {
+  code: string;
+  rang: number;
+};
+
+export interface GrilleProposee {
+  effective_from: string;
+  offres: LigneDOffre[];
+  recharges: LigneDeRecharge[];
+}
+
+export interface ReglagePaiementDeLaTour {
+  prestataire: "aucun" | "simulateur" | "clictopay";
+  url_api: string | null;
+  url_retour: string | null;
+  decide_le: string | null;
+  /** Les secrets du compte marchand sont-ils posés sur le serveur ? Jamais leur valeur. */
+  secrets_clictopay: boolean;
+}
+
+export interface OrganisationEmettrice {
+  organisation_id: string;
+  nom: string;
+  matricule: string | null;
+  juridiction: string;
+  devise: string;
+  valide_des?: string;
+}
+
+export interface LicenceVueDeLaTour {
+  licence_id: string;
+  offre_code: string;
+  statut: string;
+  organisations: number;
+  sieges_occupes: number;
+  lectures_droit: number;
+  lectures_consommees: number;
+  recharges_disponibles: number;
+  recharges_gelees: number;
+  recharge_automatique: boolean | null;
+  prix_mensuel_ht: string;
+  societes: string | null;
+}
+
+export interface TourRepository {
+  suisJePlateforme(): Promise<boolean>;
+  grilleEnVigueur(): Promise<GrilleProposee | null>;
+  trousDeLaGrille(
+    effectiveFrom: string,
+    offres: LigneDOffre[],
+    recharges: LigneDeRecharge[],
+  ): Promise<Array<{ code: string; detail: string }>>;
+  publierGrille(
+    effectiveFrom: string,
+    offres: LigneDOffre[],
+    recharges: LigneDeRecharge[],
+    motif: string,
+  ): Promise<unknown>;
+  licences(): Promise<LicenceVueDeLaTour[]>;
+  reglagePaiement(): Promise<ReglagePaiementDeLaTour>;
+  reglerPaiement(
+    prestataire: "aucun" | "simulateur" | "clictopay",
+    urlApi: string | null,
+    urlRetour: string | null,
+    motif: string,
+  ): Promise<unknown>;
+  emetteur(): Promise<OrganisationEmettrice | null>;
+  chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
+  designerEmetteur(organisationId: string, valideDes: string): Promise<unknown>;
+}
+
 export interface RechargeAutomatique {
   active: boolean;
   recharge_code: string | null;

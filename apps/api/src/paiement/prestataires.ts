@@ -8,19 +8,18 @@
  * réponse du PRESTATAIRE, jamais celle du navigateur, qui fait inscrire
  * « payé ».
  *
- * Le prestataire se choisit dans l'environnement de l'API, posé par
- * l'exploitant — jamais commité :
+ * Le prestataire se choisit dans LA TOUR (`plateforme.paiement_regler`,
+ * 20261022160000) : aucun, simulateur ou ClicToPay, avec l'adresse de l'API du
+ * prestataire et l'adresse de retour. Seuls les SECRETS du compte marchand
+ * restent dans l'environnement du serveur, et n'en sortent jamais :
  *
- *   MALICA_PAIEMENT_PRESTATAIRE   « clictopay » ou « simulateur »
- *   MALICA_URL_PUBLIQUE           l'adresse où l'on revient après le paiement
- *   CLICTOPAY_URL                 la base REST (test : …/payment/rest/)
  *   CLICTOPAY_UTILISATEUR         l'identifiant marchand de l'API
  *   CLICTOPAY_MOT_DE_PASSE        son mot de passe
  *
- * Sans prestataire, le paiement en ligne n'est pas ouvert, et on le dit
- * (`null`) : l'offre reste ouverte, la facture du mois suit. Le simulateur
- * n'existe que hors production : `NODE_ENV=production` le refuse ici, et la
- * base le refuse aussi (elle ne l'admet que si l'API le déclare).
+ * « Aucun » — ou ClicToPay sans ses secrets — ferme le paiement en ligne, et on
+ * le dit (`null`) : l'offre reste ouverte, la facture du mois suit. Le
+ * simulateur peut s'ouvrir partout, parce qu'il ne fait entrer aucun argent :
+ * ses « payés » ne s'imputent jamais sur une facture (la base y veille).
  */
 
 type EtatChezLePrestataire = "paye" | "refuse" | "en_attente";
@@ -127,31 +126,43 @@ function simulateur(urlPublique: string): Prestataire {
   };
 }
 
-/** Le prestataire de cet environnement, ou `null` quand aucun n'est ouvert. */
-export function prestataireDeLEnvironnement(
+/** Le réglage de la tour, tel que `public.paiement_reglage()` le rend. */
+export interface ReglagePaiement {
+  prestataire: "aucun" | "simulateur" | "clictopay";
+  url_api: string | null;
+  url_retour: string | null;
+}
+
+/** Les secrets du compte marchand sont-ils posés sur ce serveur ? (Rien d'autre n'en sort.) */
+export function secretsClictopayPoses(env: Record<string, string | undefined> = process.env) {
+  return Boolean(env["CLICTOPAY_UTILISATEUR"]?.trim() && env["CLICTOPAY_MOT_DE_PASSE"]?.trim());
+}
+
+/** Le prestataire que la tour a ouvert, ou `null` quand le paiement en ligne est fermé. */
+export function prestataireDuReglage(
+  reglage: ReglagePaiement,
   env: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch,
 ): { prestataire: Prestataire; urlPublique: string } | null {
-  const nom = env["MALICA_PAIEMENT_PRESTATAIRE"]?.trim();
-  if (!nom) return null;
-  const urlPublique = env["MALICA_URL_PUBLIQUE"]?.trim().replace(/\/+$/, "");
-  if (!urlPublique)
-    throw new Error("MALICA_PAIEMENT_PRESTATAIRE est posé sans MALICA_URL_PUBLIQUE");
-
-  if (nom === "simulateur") {
-    if (env["NODE_ENV"] === "production") {
-      throw new Error("le simulateur de paiement ne s'ouvre pas en production");
-    }
+  const urlPublique = reglage.url_retour?.trim().replace(/\/+$/, "");
+  if (reglage.prestataire === "aucun" || !urlPublique) return null;
+  if (reglage.prestataire === "simulateur") {
     return { prestataire: simulateur(urlPublique), urlPublique };
   }
-  if (nom === "clictopay") {
-    const url = env["CLICTOPAY_URL"]?.trim();
-    const utilisateur = env["CLICTOPAY_UTILISATEUR"]?.trim();
-    const motDePasse = env["CLICTOPAY_MOT_DE_PASSE"]?.trim();
-    if (!url || !utilisateur || !motDePasse) {
-      throw new Error("ClicToPay est choisi sans CLICTOPAY_URL, _UTILISATEUR et _MOT_DE_PASSE");
-    }
-    return { prestataire: clictopay({ url, utilisateur, motDePasse }, fetchImpl), urlPublique };
+  if (reglage.prestataire === "clictopay") {
+    const url = reglage.url_api?.trim();
+    if (!url || !secretsClictopayPoses(env)) return null;
+    return {
+      prestataire: clictopay(
+        {
+          url,
+          utilisateur: env["CLICTOPAY_UTILISATEUR"]!.trim(),
+          motDePasse: env["CLICTOPAY_MOT_DE_PASSE"]!.trim(),
+        },
+        fetchImpl,
+      ),
+      urlPublique,
+    };
   }
-  throw new Error(`prestataire de paiement inconnu : ${nom}`);
+  return null;
 }

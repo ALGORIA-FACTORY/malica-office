@@ -12,6 +12,7 @@ import {
 } from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
+import { LaTour } from "@/components/malica/la-tour";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -323,6 +324,9 @@ function PmeReglages() {
           <MesProprietaires />
         </>
       ) : null}
+
+      {/* ─────────── la tour : ne s'affiche qu'aux opérateurs d'ALGORIA */}
+      <LaTour />
 
       {/* ──────────────────────── la fiche, les alertes, les échéances */}
       <div className="sec">
