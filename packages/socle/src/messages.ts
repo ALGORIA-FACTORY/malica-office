@@ -2748,6 +2748,103 @@ const fr = {
   "pme.capture.prive.foot":
     "Ici, personne ne l’a reçue : vous n’avez d’accord à demander à personne. La suppression se fait depuis votre espace privé.",
   "pme.capture.prive.voirPapiers": "Voir mes papiers",
+
+  /* ---------------------------------------- la fabrique de lecteurs · cabinet */
+
+  "cab.nav.lecteurs": "Lecteurs",
+  "cab.lecteurs.kicker": "Fabrique de lecteurs",
+  "cab.lecteurs.title": "Lecteurs spécialisés",
+  "cab.lecteurs.lede":
+    "Un lecteur spécialisé désigne les champs d’un format qu’il connaît, au lieu d’appeler un modèle. Il ne lit aucun montant lui-même : il désigne, et la valeur se relit dans le plan de jetons, comme toujours.",
+  "cab.lecteurs.panel.kicker": "Ce que je sais d’eux",
+  "cab.lecteurs.panel":
+    "Je ne vous montre ici que les recettes qui tournent. Une recette en observation s’exécute et se compare — je ne la crois pas encore. Les mesures que je n’ai pas pu calculer sont nommées une par une : elles sont absentes, elles ne valent pas zéro.",
+  "cab.lecteurs.section.quiLit": "Ce qui lit ce dossier",
+  "cab.lecteurs.vide":
+    "Aucune recette ne lit ce dossier : chaque pièce part vers la chaîne de lecture complète.",
+  "cab.lecteurs.section.naissance": "Ce qu’il faut pour qu’une recette naisse",
+  "cab.lecteurs.naissance.corps":
+    "Deux exemples DISTINCTS au moins, qualifiés sur le même format. À un seul exemple, l’ossature commune n’est pas plus permissive : elle n’existe pas, et la proposition est refusée pour ossature insuffisante. Deux exemplaires du même document ne comptent que pour un. Une décision comptable — imputer un droit de timbre ailleurs — n’enseigne rien sur la forme du papier et ne nourrit aucune recette.",
+
+  "cab.lecteurs.etat.candidate": "Candidate",
+  "cab.lecteurs.etat.evaluee": "Évaluée",
+  "cab.lecteurs.etat.observation": "En observation",
+  "cab.lecteurs.etat.active": "En service",
+  "cab.lecteurs.etat.suspendue": "Suspendue",
+  "cab.lecteurs.etat.retiree": "Retirée",
+  "cab.lecteurs.etat.observation.note":
+    "Elle s’exécute et on compare. Rien n’est tenu pour acquis tant qu’elle n’est pas mise en service.",
+  "cab.lecteurs.etat.active.note":
+    "Elle désigne, et sa désignation est relue dans le plan de jetons.",
+
+  "cab.lecteurs.version": "Version {rang}",
+  "cab.lecteurs.exemples": "{count} exemples d’apprentissage",
+  "cab.lecteurs.exemples#one": "{count} exemple d’apprentissage",
+  "cab.lecteurs.exemples#other": "{count} exemples d’apprentissage",
+  "cab.lecteurs.champs": "{count} champs désignés",
+  "cab.lecteurs.champs#one": "{count} champ désigné",
+  "cab.lecteurs.champs#other": "{count} champs désignés",
+
+  "cab.lecteurs.decision": "Dernière décision",
+  "cab.lecteurs.decision.aucune": "Aucune décision inscrite",
+
+  "cab.lecteurs.evaluer": "Évaluer",
+  "cab.lecteurs.evaluer.encours": "Évaluation…",
+  "cab.lecteurs.surveiller": "Surveiller",
+  "cab.lecteurs.surveiller.encours": "Surveillance…",
+
+  "cab.lecteurs.eval.titre": "Évaluation sur {count} exemples",
+  "cab.lecteurs.eval.titre#one": "Évaluation sur {count} exemple",
+  "cab.lecteurs.eval.titre#other": "Évaluation sur {count} exemples",
+  "cab.lecteurs.eval.mesure": "Mesure",
+  "cab.lecteurs.eval.valeur": "Valeur",
+  "cab.lecteurs.eval.mesurees": "Les mesures calculées sur le jeu d’évaluation",
+  "cab.lecteurs.eval.absentes": "Mesures absentes",
+  "cab.lecteurs.eval.absente": "absente",
+  "cab.lecteurs.eval.absente.aide":
+    "Une mesure sans observation n’est pas une bonne mesure : elle est absente. Zéro faux sur zéro observé n’est pas une réussite, et la base refuse la mise en service tant qu’une mesure exigée manque.",
+  "cab.lecteurs.ecarts": "Les écarts relevés, champ par champ",
+  "cab.lecteurs.ecart.champ": "Champ",
+  "cab.lecteurs.ecart.quoi": "Écart",
+  "cab.lecteurs.ecart.detail": "Détail",
+  "cab.lecteurs.mesure.exactitude": "Exactitude des champs critiques",
+  "cab.lecteurs.mesure.fauxMontants": "Montants faux acceptés",
+  "cab.lecteurs.mesure.abstention": "Taux d’abstention",
+
+  "cab.lecteurs.surv.titre": "Depuis la dernière décision",
+  "cab.lecteurs.surv.executions": "Exécutions",
+  "cab.lecteurs.surv.abstentions": "Rendues à la chaîne",
+  "cab.lecteurs.surv.taux": "Taux d’abstention",
+  "cab.lecteurs.surv.tolere": "Toléré",
+  "cab.lecteurs.surv.rien": "Aucune dérive constatée.",
+  "cab.lecteurs.surv.derive.abstention":
+    "Dérive : les abstentions dépassent ce que le référentiel tolère.",
+  "cab.lecteurs.surv.derive.signature":
+    "Dérive : plusieurs candidats là où la recette en attendait un — le format a changé.",
+  "cab.lecteurs.surv.suspendue": "suspendue, la pièce suivante repart vers la chaîne de lecture",
+  "cab.lecteurs.surv.comparaison":
+    "Une abstention n’est pas une panne : la recette rend la main à la chaîne de lecture avec son motif, et la pièce est lue par le modèle.",
+
+  "cab.lecteurs.motif": "Motif de la décision",
+  "cab.lecteurs.motif.exemple": "Pourquoi cette décision, en une phrase",
+  "cab.lecteurs.motif.pourquoi":
+    "Obligatoire : « qui a décidé, et pourquoi » doit se lire sans enquête. Une décision est une écriture nouvelle — rien ne se réécrit.",
+  "cab.lecteurs.activer": "Mettre en service",
+  "cab.lecteurs.suspendre": "Suspendre",
+  "cab.lecteurs.retirer": "Retirer",
+  "cab.lecteurs.droit":
+    "Le droit de décider est tenu par la base : dirigeant ou expert, et une mise en service exige une évaluation qui franchit les seuils du référentiel.",
+
+  /* ---------------------------------- la file durable, côté dirigeant */
+
+  "pme.capture.travail.a_faire": "en attente",
+  "pme.capture.travail.en_cours": "en cours",
+  "pme.capture.travail.abandonne": "reprise prévue",
+  "pme.capture.travail.en_panne": "service indisponible, reprise prévue",
+  "pme.capture.travail.epuise": "pas lue, tentatives épuisées",
+  "pme.capture.travail.termine": "lue",
+  "pme.capture.travail.refuse": "pas lue, refusée",
+  "pme.capture.travail.en_erreur": "pas lue, erreur",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -5394,6 +5491,103 @@ const en: Dict = {
   "pme.capture.prive.foot":
     "Here no one has received it: you have no one's agreement to ask for. Deletion is done from your private space.",
   "pme.capture.prive.voirPapiers": "See my papers",
+
+  /* ---------------------------------------- la fabrique de lecteurs · cabinet */
+
+  "cab.nav.lecteurs": "Readers",
+  "cab.lecteurs.kicker": "Reader factory",
+  "cab.lecteurs.title": "Specialised readers",
+  "cab.lecteurs.lede":
+    "A specialised reader points at the fields of a layout it knows, instead of calling a model. It never reads an amount itself: it points, and the value is read back from the token plan, as always.",
+  "cab.lecteurs.panel.kicker": "What I know about them",
+  "cab.lecteurs.panel":
+    "I only show you the recipes that run. A recipe under observation runs and is compared — I do not believe it yet. The measures I could not compute are named one by one: they are absent, they are not zero.",
+  "cab.lecteurs.section.quiLit": "What reads this file",
+  "cab.lecteurs.vide":
+    "No recipe reads this file: every document goes through the full reading chain.",
+  "cab.lecteurs.section.naissance": "What a recipe needs to be born",
+  "cab.lecteurs.naissance.corps":
+    "At least two DISTINCT examples, qualified on the same layout. With a single example the shared frame is not more permissive: it does not exist, and the proposal is refused for insufficient frame. Two copies of the same document count as one. An accounting decision — posting a stamp duty elsewhere — teaches nothing about the shape of the paper and feeds no recipe.",
+
+  "cab.lecteurs.etat.candidate": "Candidate",
+  "cab.lecteurs.etat.evaluee": "Evaluated",
+  "cab.lecteurs.etat.observation": "Under observation",
+  "cab.lecteurs.etat.active": "In service",
+  "cab.lecteurs.etat.suspendue": "Suspended",
+  "cab.lecteurs.etat.retiree": "Withdrawn",
+  "cab.lecteurs.etat.observation.note":
+    "It runs and is compared. Nothing is taken for granted until it is put into service.",
+  "cab.lecteurs.etat.active.note":
+    "It points, and what it points at is read back from the token plan.",
+
+  "cab.lecteurs.version": "Version {rang}",
+  "cab.lecteurs.exemples": "{count} training examples",
+  "cab.lecteurs.exemples#one": "{count} training example",
+  "cab.lecteurs.exemples#other": "{count} training examples",
+  "cab.lecteurs.champs": "{count} fields pointed at",
+  "cab.lecteurs.champs#one": "{count} field pointed at",
+  "cab.lecteurs.champs#other": "{count} fields pointed at",
+
+  "cab.lecteurs.decision": "Last decision",
+  "cab.lecteurs.decision.aucune": "No decision recorded",
+
+  "cab.lecteurs.evaluer": "Evaluate",
+  "cab.lecteurs.evaluer.encours": "Evaluating…",
+  "cab.lecteurs.surveiller": "Monitor",
+  "cab.lecteurs.surveiller.encours": "Monitoring…",
+
+  "cab.lecteurs.eval.titre": "Evaluation on {count} examples",
+  "cab.lecteurs.eval.titre#one": "Evaluation on {count} example",
+  "cab.lecteurs.eval.titre#other": "Evaluation on {count} examples",
+  "cab.lecteurs.eval.mesure": "Measure",
+  "cab.lecteurs.eval.valeur": "Value",
+  "cab.lecteurs.eval.mesurees": "The measures computed on the evaluation set",
+  "cab.lecteurs.eval.absentes": "Absent measures",
+  "cab.lecteurs.eval.absente": "absent",
+  "cab.lecteurs.eval.absente.aide":
+    "A measure without an observation is not a good measure: it is absent. Zero wrong out of zero observed is not a success, and the database refuses to put the recipe into service while a required measure is missing.",
+  "cab.lecteurs.ecarts": "The gaps found, field by field",
+  "cab.lecteurs.ecart.champ": "Field",
+  "cab.lecteurs.ecart.quoi": "Gap",
+  "cab.lecteurs.ecart.detail": "Detail",
+  "cab.lecteurs.mesure.exactitude": "Accuracy on critical fields",
+  "cab.lecteurs.mesure.fauxMontants": "Wrong amounts accepted",
+  "cab.lecteurs.mesure.abstention": "Abstention rate",
+
+  "cab.lecteurs.surv.titre": "Since the last decision",
+  "cab.lecteurs.surv.executions": "Runs",
+  "cab.lecteurs.surv.abstentions": "Handed back to the chain",
+  "cab.lecteurs.surv.taux": "Abstention rate",
+  "cab.lecteurs.surv.tolere": "Tolerated",
+  "cab.lecteurs.surv.rien": "No drift found.",
+  "cab.lecteurs.surv.derive.abstention":
+    "Drift: abstentions exceed what the reference data tolerates.",
+  "cab.lecteurs.surv.derive.signature":
+    "Drift: several candidates where the recipe expected one — the layout has changed.",
+  "cab.lecteurs.surv.suspendue": "suspended, the next document goes back to the reading chain",
+  "cab.lecteurs.surv.comparaison":
+    "An abstention is not a failure: the recipe hands back to the reading chain with its reason, and the document is read by the model.",
+
+  "cab.lecteurs.motif": "Reason for the decision",
+  "cab.lecteurs.motif.exemple": "Why this decision, in one sentence",
+  "cab.lecteurs.motif.pourquoi":
+    "Required: “who decided, and why” must read without an investigation. A decision is a new entry — nothing is rewritten.",
+  "cab.lecteurs.activer": "Put into service",
+  "cab.lecteurs.suspendre": "Suspend",
+  "cab.lecteurs.retirer": "Withdraw",
+  "cab.lecteurs.droit":
+    "The right to decide is held by the database: owner or chartered accountant, and putting a recipe into service requires an evaluation that clears the reference thresholds.",
+
+  /* ---------------------------------- la file durable, côté dirigeant */
+
+  "pme.capture.travail.a_faire": "waiting",
+  "pme.capture.travail.en_cours": "in progress",
+  "pme.capture.travail.abandonne": "will be retried",
+  "pme.capture.travail.en_panne": "service unavailable, will be retried",
+  "pme.capture.travail.epuise": "not read, attempts exhausted",
+  "pme.capture.travail.termine": "read",
+  "pme.capture.travail.refuse": "not read, refused",
+  "pme.capture.travail.en_erreur": "not read, error",
 };
 
 const ar: Dict = {
@@ -7968,6 +8162,100 @@ const ar: Dict = {
   "pme.capture.prive.foot":
     "هنا لم يستلمها أحد: لا موافقة تطلبها من أحد. والحذف يتمّ من فضائك الخاص.",
   "pme.capture.prive.voirPapiers": "عرض أوراقي",
+
+  /* ---------------------------------------- la fabrique de lecteurs · cabinet */
+
+  "cab.nav.lecteurs": "القارئات",
+  "cab.lecteurs.kicker": "مصنع القارئات",
+  "cab.lecteurs.title": "قارئات متخصّصة",
+  "cab.lecteurs.lede":
+    "القارئة المتخصّصة تُشير إلى حقول نموذج تعرفه، بدل استدعاء نموذج لغوي. وهي لا تقرأ أي مبلغ بنفسها: تُشير فقط، والقيمة تُقرأ من خطة الرموز كما هي العادة.",
+  "cab.lecteurs.panel.kicker": "ما أعرفه عنها",
+  "cab.lecteurs.panel":
+    "لا أعرض هنا إلا الوصفات العاملة. الوصفة تحت الملاحظة تُنفَّذ وتُقارَن — ولا أصدّقها بعد. والقياسات التي تعذّر حسابها تُسمّى واحدًا واحدًا: هي غائبة، وليست صفرًا.",
+  "cab.lecteurs.section.quiLit": "ما يقرأ هذا الملف",
+  "cab.lecteurs.vide": "لا وصفة تقرأ هذا الملف: كل وثيقة تمرّ عبر سلسلة القراءة الكاملة.",
+  "cab.lecteurs.section.naissance": "ما تحتاجه الوصفة كي تُولد",
+  "cab.lecteurs.naissance.corps":
+    "مثالان مختلفان على الأقل، مؤهّلان على النموذج نفسه. بمثال واحد لا يصير الهيكل المشترك أوسع: بل لا يوجد أصلًا، ويُرفض الاقتراح لعدم كفاية الهيكل. ونسختان من الوثيقة نفسها تُحسبان واحدة. أمّا القرار المحاسبي — تحميل رسم الطابع في حساب آخر — فلا يعلّم شيئًا عن شكل الورقة ولا يغذّي أي وصفة.",
+
+  "cab.lecteurs.etat.candidate": "مرشّحة",
+  "cab.lecteurs.etat.evaluee": "مُقيَّمة",
+  "cab.lecteurs.etat.observation": "تحت الملاحظة",
+  "cab.lecteurs.etat.active": "في الخدمة",
+  "cab.lecteurs.etat.suspendue": "موقوفة",
+  "cab.lecteurs.etat.retiree": "مسحوبة",
+  "cab.lecteurs.etat.observation.note":
+    "تُنفَّذ وتُقارَن. ولا شيء يُعدّ مسلّمًا به قبل وضعها في الخدمة.",
+  "cab.lecteurs.etat.active.note": "تُشير، وما تشير إليه يُقرأ من خطة الرموز.",
+
+  "cab.lecteurs.version": "الإصدار {rang}",
+  "cab.lecteurs.exemples": "{count} أمثلة تعلّم",
+  "cab.lecteurs.exemples#one": "{count} مثال تعلّم",
+  "cab.lecteurs.exemples#other": "{count} أمثلة تعلّم",
+  "cab.lecteurs.champs": "{count} حقول مُشار إليها",
+  "cab.lecteurs.champs#one": "{count} حقل مُشار إليه",
+  "cab.lecteurs.champs#other": "{count} حقول مُشار إليها",
+
+  "cab.lecteurs.decision": "آخر قرار",
+  "cab.lecteurs.decision.aucune": "لا قرار مُسجَّل",
+
+  "cab.lecteurs.evaluer": "تقييم",
+  "cab.lecteurs.evaluer.encours": "جارٍ التقييم…",
+  "cab.lecteurs.surveiller": "مراقبة",
+  "cab.lecteurs.surveiller.encours": "جارٍ الرصد…",
+
+  "cab.lecteurs.eval.titre": "تقييم على {count} أمثلة",
+  "cab.lecteurs.eval.titre#one": "تقييم على {count} مثال",
+  "cab.lecteurs.eval.titre#other": "تقييم على {count} أمثلة",
+  "cab.lecteurs.eval.mesure": "القياس",
+  "cab.lecteurs.eval.valeur": "القيمة",
+  "cab.lecteurs.eval.mesurees": "القياسات المحسوبة على مجموعة التقييم",
+  "cab.lecteurs.eval.absentes": "قياسات غائبة",
+  "cab.lecteurs.eval.absente": "غائب",
+  "cab.lecteurs.eval.absente.aide":
+    "القياس دون ملاحظة ليس قياسًا جيّدًا: إنه غائب. وصفر خطأ من صفر ملاحظة ليس نجاحًا، وقاعدة البيانات ترفض وضع الوصفة في الخدمة ما دام قياس مطلوب غائبًا.",
+  "cab.lecteurs.ecarts": "الفوارق المرصودة، حقلًا حقلًا",
+  "cab.lecteurs.ecart.champ": "الحقل",
+  "cab.lecteurs.ecart.quoi": "الفارق",
+  "cab.lecteurs.ecart.detail": "التفصيل",
+  "cab.lecteurs.mesure.exactitude": "دقّة الحقول الحسّاسة",
+  "cab.lecteurs.mesure.fauxMontants": "مبالغ خاطئة مقبولة",
+  "cab.lecteurs.mesure.abstention": "نسبة الامتناع",
+
+  "cab.lecteurs.surv.titre": "منذ آخر قرار",
+  "cab.lecteurs.surv.executions": "عمليات التنفيذ",
+  "cab.lecteurs.surv.abstentions": "أُعيدت إلى السلسلة",
+  "cab.lecteurs.surv.taux": "نسبة الامتناع",
+  "cab.lecteurs.surv.tolere": "المسموح به",
+  "cab.lecteurs.surv.rien": "لا انحراف مرصود.",
+  "cab.lecteurs.surv.derive.abstention": "انحراف: الامتناعات تتجاوز ما يسمح به المرجع.",
+  "cab.lecteurs.surv.derive.signature":
+    "انحراف: عدّة مرشّحين حيث تتوقّع الوصفة واحدًا — تغيّر شكل النموذج.",
+  "cab.lecteurs.surv.suspendue": "أُوقفت، والوثيقة التالية تعود إلى سلسلة القراءة",
+  "cab.lecteurs.surv.comparaison":
+    "الامتناع ليس عطلًا: الوصفة تعيد الأمر إلى سلسلة القراءة مع سببها، وتُقرأ الوثيقة بالنموذج.",
+
+  "cab.lecteurs.motif": "سبب القرار",
+  "cab.lecteurs.motif.exemple": "لماذا هذا القرار، في جملة واحدة",
+  "cab.lecteurs.motif.pourquoi":
+    "إلزامي: «من قرّر، ولماذا» يجب أن يُقرأ دون تحقيق. القرار قيد جديد — ولا شيء يُعاد كتابته.",
+  "cab.lecteurs.activer": "الوضع في الخدمة",
+  "cab.lecteurs.suspendre": "إيقاف",
+  "cab.lecteurs.retirer": "سحب",
+  "cab.lecteurs.droit":
+    "حقّ القرار تحفظه قاعدة البيانات: صاحب المؤسسة أو الخبير المحاسب، ووضع الوصفة في الخدمة يتطلّب تقييمًا يتجاوز عتبات المرجع.",
+
+  /* ---------------------------------- la file durable, côté dirigeant */
+
+  "pme.capture.travail.a_faire": "في الانتظار",
+  "pme.capture.travail.en_cours": "جارية",
+  "pme.capture.travail.abandonne": "ستُعاد المحاولة",
+  "pme.capture.travail.en_panne": "الخدمة غير متاحة، ستُعاد المحاولة",
+  "pme.capture.travail.epuise": "لم تُقرأ، نفدت المحاولات",
+  "pme.capture.travail.termine": "مقروءة",
+  "pme.capture.travail.refuse": "لم تُقرأ، مرفوضة",
+  "pme.capture.travail.en_erreur": "لم تُقرأ، خطأ",
 };
 
 export type MessageKey = keyof typeof fr;

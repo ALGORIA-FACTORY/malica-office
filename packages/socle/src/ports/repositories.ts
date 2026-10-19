@@ -2420,3 +2420,135 @@ export interface FacturationRepository {
     membre: string,
   ): Promise<{ libere: boolean; motif?: string; pieces: number }>;
 }
+
+/* ============================================================================
+ * La fabrique de lecteurs — ce que les écrans lisent d'elle, et rien de plus.
+ *
+ * ============================================================== POURQUOI
+ *
+ * La fabrique tourne de bout en bout côté serveur depuis le 20 octobre 2026,
+ * et aucun écran ne la montrait. Ce port est la frontière de ce que les
+ * écrans en voient, et il se limite STRICTEMENT aux méthodes que
+ * `contrat/rpc.json` sert sous le dépôt « fabrique » : une méthode de plus
+ * ici, et `verticals/malica-office/__tests__/contrat.test.ts` échoue avant
+ * l'usage.
+ *
+ * ======================================================= CE QU'IL N'EXPOSE PAS
+ *
+ * Aucun réglage de signature, aucune borne, aucun seuil. Ils voyagent dans la
+ * réponse de `contexteDeDesignation`, et un écran qui les afficherait ferait
+ * croire qu'il les arrête — or c'est le référentiel qui les arrête (R4, R10).
+ * Seules les versions sont déclarées, donc seules les versions se lisent.
+ * ========================================================================= */
+
+/** Les états du cycle de vie d'une recette. Ce sont ceux de `fabrique.etat_t`. */
+export type EtatDUneRecette =
+  "candidate" | "evaluee" | "observation" | "active" | "suspendue" | "retiree";
+
+/**
+ * Une version de recette qui DÉSIGNE pour de bon.
+ *
+ * `contexteDeDesignation` ne rend que `observation` et `active` : ce ne sont
+ * pas deux nuances d'un même état de service. Une recette en observation
+ * s'exécute, on compare, ON NE LA CROIT PAS — et un écran qui les montrerait
+ * pareil ferait passer une mise à l'épreuve pour un service.
+ */
+export interface VersionQuiDesigne {
+  versionId: string;
+  recetteId: string;
+  /** Le numéro de version. Corriger une recette, c'est en inscrire une autre. */
+  rang: number;
+  libelle: string;
+  etat: EtatDUneRecette;
+  /** Le JSON déclaratif. Il ne porte AUCUNE valeur : la base le refuserait. */
+  definition: unknown;
+  /** Les plans de jetons des exemples d'apprentissage, un tableau par pièce. */
+  plansDApprentissage: unknown[][];
+}
+
+/**
+ * Ce qu'une évaluation a mesuré.
+ *
+ * `mesures` ne porte QUE ce qui a pu être calculé ; `absentes` nomme une par
+ * une celles dont le dénominateur était nul, avec la raison en clair. Les
+ * deux ensembles sont disjoints, et c'est la seule façon de ne pas confondre
+ * « zéro montant faux » avec « aucun montant observé ».
+ */
+export interface EvaluationDUneVersion {
+  evaluationId: string;
+  mesures: Record<string, number>;
+  absentes: string[];
+  exemplesComptes: number;
+  ecarts: Array<{ pieceId: string; champ: string; quoi: string; detail: string }>;
+  /** Pourquoi cette évaluation ne suffit pas à activer — ou `null`. */
+  reserve: string | null;
+}
+
+/** Ce qu'une surveillance a constaté depuis la dernière décision. */
+export interface SurveillanceDUneVersion {
+  etatAvant: EtatDUneRecette | null;
+  executions: number;
+  abstentions: number;
+  /** `null` quand rien ne s'est exécuté : un taux sur zéro n'est pas un taux. */
+  tauxAbstention: number | null;
+  tolere: number | null;
+  derive: "abstention_en_hausse" | "signature_changee" | null;
+  suspendue: boolean;
+}
+
+/** La dernière décision inscrite sur une version. */
+export interface DecisionSurUneVersion {
+  etat: EtatDUneRecette;
+  motif: string;
+  evaluationId: string | null;
+}
+
+/** Une décision à inscrire. La base tient la transition, le seuil et le droit. */
+export interface DecisionAInscrire {
+  tenantId: string;
+  recetteVersionId: string;
+  etat: EtatDUneRecette;
+  evaluationId?: string;
+  motif: string;
+}
+
+/** Les états que la file durable DÉRIVE du dernier fait inscrit sur un travail. */
+export type EtatDUnTravail =
+  "a_faire" | "en_cours" | "abandonne" | "en_panne" | "epuise" | "termine" | "refuse" | "en_erreur";
+
+/**
+ * Où en est la lecture d'une pièce — DANS LA BASE, pas dans la mémoire d'un
+ * processus.
+ *
+ * C'est ce qui sépare « le serveur ne lit plus cette pièce » de « cette pièce
+ * est lue ». Les deux se ressemblent quand on interroge la mémoire d'un
+ * processus qui a redémarré, et l'écran de capture cochait la seconde en
+ * ayant constaté la première.
+ */
+export interface TravailDeLecture {
+  travailId: string;
+  pieceId: string;
+  nature: string;
+  etat: EtatDUnTravail;
+  tentatives: number;
+  dernierFait: string | null;
+  dernierMotif: string | null;
+  dernierLe: string | null;
+  prenable: boolean;
+  prenableA: string | null;
+}
+
+export interface FabriqueRepository {
+  /** Les versions qui désignent — `observation` et `active`, jamais d'autres. */
+  contexteDeDesignation(tenantId: string): Promise<{ versions: VersionQuiDesigne[] }>;
+  /** `null` quand le travail n'existe pas, ou que la RLS ne le montre pas. */
+  etatDeLaLecture(travailId: string): Promise<TravailDeLecture | null>;
+  etatDUneVersion(recetteVersionId: string): Promise<DecisionSurUneVersion | null>;
+  evaluerUneVersion(tenantId: string, recetteVersionId: string): Promise<EvaluationDUneVersion>;
+  /** Le droit de décider est tenu par la base : l'écran propose, elle refuse. */
+  promouvoir(decision: DecisionAInscrire): Promise<void>;
+  surveillerUneVersion(
+    tenantId: string,
+    recetteVersionId: string,
+  ): Promise<SurveillanceDUneVersion>;
+}

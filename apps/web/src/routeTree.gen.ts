@@ -25,6 +25,7 @@ import { Route as AuthenticatedCabinetEcheancesRouteImport } from './routes/_aut
 import { Route as AuthenticatedCabinetExportRouteImport } from './routes/_authenticated/cabinet.export'
 import { Route as AuthenticatedCabinetHonorairesRouteImport } from './routes/_authenticated/cabinet.honoraires'
 import { Route as AuthenticatedCabinetImmobilisationsRouteImport } from './routes/_authenticated/cabinet.immobilisations'
+import { Route as AuthenticatedCabinetLecteursRouteImport } from './routes/_authenticated/cabinet.lecteurs'
 import { Route as AuthenticatedCabinetMiseEnRouteRouteImport } from './routes/_authenticated/cabinet.mise-en-route'
 import { Route as AuthenticatedCabinetNotificationsRouteImport } from './routes/_authenticated/cabinet.notifications'
 import { Route as AuthenticatedCabinetPilotageRouteImport } from './routes/_authenticated/cabinet.pilotage'
@@ -136,6 +137,12 @@ const AuthenticatedCabinetImmobilisationsRoute =
   AuthenticatedCabinetImmobilisationsRouteImport.update({
     id: '/immobilisations',
     path: '/immobilisations',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetLecteursRoute =
+  AuthenticatedCabinetLecteursRouteImport.update({
+    id: '/lecteurs',
+    path: '/lecteurs',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetMiseEnRouteRoute =
@@ -301,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/lecteurs': typeof AuthenticatedCabinetLecteursRoute
   '/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
   '/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
   '/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
@@ -342,6 +350,7 @@ export interface FileRoutesByTo {
   '/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/cabinet/lecteurs': typeof AuthenticatedCabinetLecteursRoute
   '/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
   '/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
   '/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
@@ -387,6 +396,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/_authenticated/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
   '/_authenticated/cabinet/immobilisations': typeof AuthenticatedCabinetImmobilisationsRoute
+  '/_authenticated/cabinet/lecteurs': typeof AuthenticatedCabinetLecteursRoute
   '/_authenticated/cabinet/mise-en-route': typeof AuthenticatedCabinetMiseEnRouteRoute
   '/_authenticated/cabinet/notifications': typeof AuthenticatedCabinetNotificationsRoute
   '/_authenticated/cabinet/pilotage': typeof AuthenticatedCabinetPilotageRoute
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/cabinet/export'
     | '/cabinet/honoraires'
     | '/cabinet/immobilisations'
+    | '/cabinet/lecteurs'
     | '/cabinet/mise-en-route'
     | '/cabinet/notifications'
     | '/cabinet/pilotage'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/cabinet/export'
     | '/cabinet/honoraires'
     | '/cabinet/immobilisations'
+    | '/cabinet/lecteurs'
     | '/cabinet/mise-en-route'
     | '/cabinet/notifications'
     | '/cabinet/pilotage'
@@ -517,6 +529,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/export'
     | '/_authenticated/cabinet/honoraires'
     | '/_authenticated/cabinet/immobilisations'
+    | '/_authenticated/cabinet/lecteurs'
     | '/_authenticated/cabinet/mise-en-route'
     | '/_authenticated/cabinet/notifications'
     | '/_authenticated/cabinet/pilotage'
@@ -666,6 +679,13 @@ declare module '@tanstack/react-router' {
       path: '/immobilisations'
       fullPath: '/cabinet/immobilisations'
       preLoaderRoute: typeof AuthenticatedCabinetImmobilisationsRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/lecteurs': {
+      id: '/_authenticated/cabinet/lecteurs'
+      path: '/lecteurs'
+      fullPath: '/cabinet/lecteurs'
+      preLoaderRoute: typeof AuthenticatedCabinetLecteursRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/mise-en-route': {
@@ -860,6 +880,7 @@ interface AuthenticatedCabinetRouteChildren {
   AuthenticatedCabinetExportRoute: typeof AuthenticatedCabinetExportRoute
   AuthenticatedCabinetHonorairesRoute: typeof AuthenticatedCabinetHonorairesRoute
   AuthenticatedCabinetImmobilisationsRoute: typeof AuthenticatedCabinetImmobilisationsRoute
+  AuthenticatedCabinetLecteursRoute: typeof AuthenticatedCabinetLecteursRoute
   AuthenticatedCabinetMiseEnRouteRoute: typeof AuthenticatedCabinetMiseEnRouteRoute
   AuthenticatedCabinetNotificationsRoute: typeof AuthenticatedCabinetNotificationsRoute
   AuthenticatedCabinetPilotageRoute: typeof AuthenticatedCabinetPilotageRoute
@@ -883,6 +904,7 @@ const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
   AuthenticatedCabinetHonorairesRoute: AuthenticatedCabinetHonorairesRoute,
   AuthenticatedCabinetImmobilisationsRoute:
     AuthenticatedCabinetImmobilisationsRoute,
+  AuthenticatedCabinetLecteursRoute: AuthenticatedCabinetLecteursRoute,
   AuthenticatedCabinetMiseEnRouteRoute: AuthenticatedCabinetMiseEnRouteRoute,
   AuthenticatedCabinetNotificationsRoute:
     AuthenticatedCabinetNotificationsRoute,

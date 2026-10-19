@@ -24,6 +24,7 @@ import type {
   TiersRepository,
   HonorairesRepository,
   ExportsRepository,
+  FabriqueRepository,
   IntegrationsRepository,
   SignalementsRepository,
 } from "@malica/socle/ports/repositories";
@@ -85,6 +86,15 @@ export interface OfficeRuntime {
   conversations: ConversationsRepository;
   /** Ce que la personne signale elle-même quand quelque chose n'a pas marché. */
   signalements: SignalementsRepository;
+  /**
+   * La fabrique de lecteurs : les recettes qui désignent, leur cycle, et la
+   * file durable qui dit où en est la lecture d'une pièce.
+   *
+   * Elle est montée ici, et pas à côté d'un écran, pour la raison écrite plus
+   * haut à propos de `facturation` : un dépôt monté hors de ce fichier
+   * échappe au test qui confronte les ports au contrat.
+   */
+  fabrique: FabriqueRepository;
   /** Et ce que l'application constate toute seule quand un geste a échoué. */
   journal: JournalRepository;
   /** La couche agentique : tout ce qui fait parler un modèle, sur ses propres routes. */
@@ -118,6 +128,7 @@ export function office(): OfficeRuntime {
       exports: creerDepotHttp<ExportsRepository>("exports"),
       conversations: creerDepotHttp<ConversationsRepository>("conversations"),
       signalements: creerDepotHttp<SignalementsRepository>("signalements"),
+      fabrique: creerDepotHttp<FabriqueRepository>("fabrique"),
       malica: creerMalicaHttp(),
     };
   }

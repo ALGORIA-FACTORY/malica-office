@@ -36,6 +36,7 @@ import {
   Landmark,
   ListChecks,
   Menu,
+  ScanSearch,
   Search,
   Settings2,
   Users,
@@ -328,6 +329,7 @@ function Coquille({
       items: [
         { to: "/cabinet/pilotage", label: t("cab.nav.pilotage"), icon: Gauge, exact: false },
         { to: "/cabinet/plan", label: t("cab.nav.plan"), icon: BookOpen, exact: false },
+        { to: "/cabinet/lecteurs", label: t("cab.nav.lecteurs"), icon: ScanSearch, exact: false },
         { to: "/cabinet/export", label: t("cab.nav.export"), icon: Download, exact: false },
         { to: "/cabinet/reglages", label: t("cab.nav.settings"), icon: Settings2, exact: false },
       ],
