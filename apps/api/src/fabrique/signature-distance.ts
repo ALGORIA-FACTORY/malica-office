@@ -136,49 +136,84 @@ function ecartDesZones(
   return communes === 0 ? null : discordantes / communes;
 }
 
-/**
- * Les relations, réunies sur tout le document.
- *
- * Un couple dont les deux pages ne disent pas la même chose est ÉCARTÉ plutôt
- * qu'arbitré : il n'y a pas de raison de croire l'une plus que l'autre, et un
- * arbitrage inventé ici se propagerait dans la distance.
- */
-function relationsDuDocument(
-  signature: SignatureDeDocument,
-  ossature: ReadonlySet<string> | null,
-): Map<string, string> {
-  const sortie = new Map<string, string>();
-  const ecartees = new Set<string>();
-  for (const page of signature.pages) {
-    for (const r of page.relations) {
-      if (!retenu(r.a, ossature) || !retenu(r.b, ossature)) continue;
-      const couple = `${r.a}|${r.b}`;
-      const dit = `${r.v}|${r.h}`;
-      const vu = sortie.get(couple);
-      if (vu === undefined) sortie.set(couple, dit);
-      else if (vu !== dit) ecartees.add(couple);
-    }
-  }
-  for (const couple of ecartees) sortie.delete(couple);
-  return sortie;
+/** Une ancre de la suite d'un document : sa ligne et sa colonne, page comprise. */
+interface EnSuite {
+  cle: string;
+  ligne: string;
+  colonne: string;
 }
 
+/**
+ * La suite de lecture d'un document entier.
+ *
+ * Les pages s'enchaînent dans l'ordre de leur rang — c'est l'ordre de
+ * lecture. Une ancre qui revient sur DEUX pages est écartée : unique dans sa
+ * page, elle ne l'est pas dans le document, et dire ce qui la suit reviendrait
+ * à choisir laquelle des deux. Les index de ligne et de colonne sont
+ * préfixés du rang, sans quoi la ligne 0 de la page 2 serait confondue avec
+ * la ligne 0 de la page 1.
+ */
+function suiteDuDocument(
+  signature: SignatureDeDocument,
+  ossature: ReadonlySet<string> | null,
+): { suite: EnSuite[]; tronquee: boolean } {
+  const vues = new Map<string, number>();
+  const brute: EnSuite[] = [];
+  let tronquee = false;
+  for (const page of signature.pages) {
+    if (page.lectureTronquee) tronquee = true;
+    for (const a of page.lecture) {
+      if (!retenu(a.cle, ossature)) continue;
+      vues.set(a.cle, (vues.get(a.cle) ?? 0) + 1);
+      brute.push({
+        cle: a.cle,
+        ligne: `${String(page.rang)}:${String(a.ligne)}`,
+        colonne: `${String(page.rang)}:${String(a.colonne)}`,
+      });
+    }
+  }
+  return { suite: brute.filter((e) => vues.get(e.cle) === 1), tronquee };
+}
+
+const lienDe = (x: EnSuite, y: EnSuite) =>
+  `${x.cle}>${y.cle}|${String(x.ligne === y.ligne)}|${String(x.colonne === y.colonne)}`;
+
+/**
+ * La discordance des suites de lecture, projetées sur les ancres COMMUNES.
+ *
+ * La projection est ce qui rend la mesure utilisable : une ancre que l'un
+ * porte et l'autre pas — un champ facultatif, un mot mal relevé par l'OCR —
+ * sort des DEUX suites, et l'ordre des autres n'en est pas dérangé. Sans
+ * elle, un mot manquant décalerait toute la chaîne et un exemplaire du même
+ * format passerait pour un autre.
+ *
+ * Une suite tronquée par le plafond rend 1 et non `null` : elle est
+ * partielle, on ne sait pas ce qu'elle cache, et une composante absente
+ * RAPPROCHE les signatures. Entre se tromper vers la reconnaissance et se
+ * tromper vers le refus, le produit a déjà choisi — un refus rend la main au
+ * modèle, une reconnaissance fautive rend une lecture prouvée et fausse.
+ */
 function ecartDesRelations(
   a: SignatureDeDocument,
   b: SignatureDeDocument,
   ossature: ReadonlySet<string> | null,
 ): number | null {
-  const gauche = relationsDuDocument(a, ossature);
-  const droite = relationsDuDocument(b, ossature);
-  let communes = 0;
-  let discordantes = 0;
-  for (const [couple, dit] of gauche) {
-    const autre = droite.get(couple);
-    if (autre === undefined) continue;
-    communes += 1;
-    if (autre !== dit) discordantes += 1;
-  }
-  return communes === 0 ? null : discordantes / communes;
+  const gauche = suiteDuDocument(a, ossature);
+  const droite = suiteDuDocument(b, ossature);
+  const communes = new Set(
+    gauche.suite.map((e) => e.cle).filter((c) => droite.suite.some((e) => e.cle === c)),
+  );
+  const sg = gauche.suite.filter((e) => communes.has(e.cle));
+  const sd = droite.suite.filter((e) => communes.has(e.cle));
+  if (sg.length < 2) return null;
+  if (gauche.tronquee || droite.tronquee) return 1;
+
+  const liensDroite = new Set<string>();
+  for (let i = 0; i + 1 < sd.length; i += 1) liensDroite.add(lienDe(sd[i]!, sd[i + 1]!));
+  let contredits = 0;
+  for (let i = 0; i + 1 < sg.length; i += 1)
+    if (!liensDroite.has(lienDe(sg[i]!, sg[i + 1]!))) contredits += 1;
+  return contredits / (sg.length - 1);
 }
 
 /** Les colonnes du document, dans l'ordre de leur première apparition. */

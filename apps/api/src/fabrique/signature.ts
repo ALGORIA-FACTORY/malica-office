@@ -15,8 +15,10 @@
  *
  *   des ANCRES      les mots qui ne varient pas : libellés, mentions,
  *                   ossature de l'entête. Comptées, et situées en bandes.
- *   des RELATIONS   l'ordre spatial entre ancres uniques, dans le sens de
- *                   lecture de la page.
+ *   une SUITE       les ancres uniques dans l'ordre de lecture, avec leur
+ *                   ligne et leur colonne. Ce qui suit quoi, et rien d'autre :
+ *                   les couples lointains s'accordent gratuitement et ne
+ *                   séparent rien (voir `signature-relations.ts`).
  *   des COLONNES    la structure du tableau imprimé, dans l'ordre de lecture.
  *   des PAGES       leur nombre et leur rang, pour qu'un tableau réparti sur
  *                   plusieurs pages se voie.
@@ -52,7 +54,7 @@ import type { PageToken } from "@malica/socle/ports/malica";
 
 import { ancresDeLaPage, type AncreSignature } from "./signature-ancres.ts";
 import { sensDominant, type Sens } from "./signature-ecriture.ts";
-import { relationsEntreAncres, type RelationSignature } from "./signature-relations.ts";
+import { lectureDesAncres, type AncreEnLecture } from "./signature-relations.ts";
 import { colonnesDeLaPage, type ColonneSignature } from "./signature-tableau.ts";
 
 /** Les réglages de la signature. Aucun défaut : ils viennent du référentiel. */
@@ -76,7 +78,10 @@ export interface SignatureDePage {
   rang: number;
   sens: Sens;
   ancres: AncreSignature[];
-  relations: RelationSignature[];
+  /** Les ancres UNIQUES de la page, dans l'ordre où un lecteur les rencontre. */
+  lecture: AncreEnLecture[];
+  /** La suite a été coupée par le plafond : partielle, donc incomparable. */
+  lectureTronquee: boolean;
   colonnes: ColonneSignature[];
 }
 
@@ -147,18 +152,20 @@ export function signerLePlan(
       parametres.longueurMinimaleDAncre,
       parametres.bandesParPage,
     );
+    const lecture = lectureDesAncres(
+      placees,
+      ancres,
+      sens === "rtl",
+      parametres.recouvrementDeLigne,
+      parametres.recouvrementDeColonne,
+      parametres.ancresEnRelationMax,
+    );
     return {
       rang: index + 1,
       sens,
       ancres,
-      relations: relationsEntreAncres(
-        placees,
-        ancres,
-        sens === "rtl",
-        parametres.recouvrementDeLigne,
-        parametres.recouvrementDeColonne,
-        parametres.ancresEnRelationMax,
-      ),
+      lecture: lecture.ancres,
+      lectureTronquee: lecture.tronquee,
       colonnes: colonnesDeLaPage(deLaPage, sens),
     };
   });

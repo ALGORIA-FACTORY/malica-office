@@ -12,11 +12,7 @@ import {
   incliner,
   recadrer,
 } from "./signature-plans-synthetiques.ts";
-import type {
-  RelationHorizontale,
-  RelationSignature,
-  RelationVerticale,
-} from "./signature-relations.ts";
+import type { AncreEnLecture } from "./signature-relations.ts";
 import { signerLePlan, type ParametresDeSignature, type SignatureDePage } from "./signature.ts";
 
 /**
@@ -54,21 +50,9 @@ const PARAMETRES: ParametresDeSignature = {
 const cles = (tokens: ReturnType<typeof FACTURE_A>) =>
   signerLePlan(tokens, PARAMETRES).ancres.map((a) => a.cle);
 
-/** La relation d'un couple, orientée depuis `x` quel que soit son rangement. */
-function relationOrientee(
-  relations: readonly RelationSignature[],
-  x: string,
-  y: string,
-): RelationSignature | null {
-  const r = relations.find((v) => (v.a === x && v.b === y) || (v.a === y && v.b === x));
-  if (!r) return null;
-  if (r.a === x) return r;
-  const v: RelationVerticale =
-    r.v === "dessus" ? "dessous" : r.v === "dessous" ? "dessus" : ("meme_ligne" as const);
-  const h: RelationHorizontale =
-    r.h === "avant" ? "apres" : r.h === "apres" ? "avant" : ("meme_colonne" as const);
-  return { a: x, b: y, v, h };
-}
+/** Le rang d'une ancre dans la suite de lecture, ou -1 si elle n'y est pas. */
+const rangDansLaLecture = (lecture: readonly AncreEnLecture[], cle: string) =>
+  lecture.findIndex((a) => a.cle === cle);
 
 describe("ce qu'une signature contient", () => {
   it("porte les libellés, les mentions et l'ossature de l'entête", () => {
@@ -148,15 +132,63 @@ describe("les ancres répétées", () => {
     assert.equal(total?.occurrences, 3, "« Total » : l'entête de colonne et deux lignes de pied");
   });
 
-  it("n'entrent dans AUCUNE relation : un libellé répété ne désigne rien seul", () => {
+  /*
+   * LA RÈGLE N'A PAS BOUGÉ, L'ÉPREUVE OUI. Jusqu'au 19 octobre 2026, elle
+   * lisait `page.relations` — tous les couples d'ancres. La suite de lecture a
+   * remplacé ces couples, et le refus est le même : une ancre répétée n'entre
+   * pas dans ce qui dit « ce qui suit quoi », parce que dire ce qui suit
+   * « Total » reviendrait à choisir laquelle des trois occurrences.
+   */
+  it("n'entrent pas dans la SUITE DE LECTURE : un libellé répété ne désigne rien seul", () => {
     const page = signerLePlan(FACTURE_A(), PARAMETRES).pages[0]!;
-    for (const r of page.relations) assert.ok(r.a !== "total" && r.b !== "total");
+    assert.equal(page.ancres.find((a) => a.cle === "total")?.occurrences, 3);
+    assert.equal(rangDansLaLecture(page.lecture, "total"), -1);
+    for (const a of page.lecture)
+      assert.equal(
+        page.ancres.find((x) => x.cle === a.cle)?.occurrences,
+        1,
+        `« ${a.cle} » entre dans la suite sans être unique`,
+      );
   });
 
   it("sont vues dans plusieurs bandes de la page — entête ET pied", () => {
     const signature = signerLePlan(FACTURE_A(), PARAMETRES);
     const total = signature.ancres.find((a) => a.cle === "total");
     assert.deepEqual(total?.bandes, [1, 2]);
+  });
+});
+
+describe("la suite de lecture", () => {
+  it("suit les lignes de haut en bas, puis l'ordre de lecture dans la ligne", () => {
+    const page = signerLePlan(FACTURE_A(), PARAMETRES).pages[0]!;
+    const rang = (cle: string) => rangDansLaLecture(page.lecture, cle);
+    assert.ok(rang("sotupap") < rang("matricule"), "l'entete avant le bloc du matricule");
+    assert.ok(rang("matricule") < rang("date"), "le matricule avant la date");
+    assert.ok(rang("date") < rang("designation"), "l'entete avant le tableau");
+    assert.ok(rang("designation") < rang("ht"), "le tableau avant le pied");
+    assert.ok(rang("ht") < rang("tva") && rang("tva") < rang("ttc"), "HT, puis TVA, puis TTC");
+  });
+
+  /*
+   * LE PLAFOND NE SE TAIT PAS.
+   *
+   * `ancresEnRelationMax` bornait un cout quadratique ; la suite est
+   * lineaire, et il borne desormais la taille de ce qu'on stocke. Mais une
+   * suite coupee comparee comme si elle etait entiere rendrait une distance
+   * trop PETITE — donc une reconnaissance trop facile, dans la direction qui
+   * fait mal. Elle se declare donc partielle, et la composante vaut 1.
+   */
+  it("se declare TRONQUEE quand le plafond la coupe, au lieu de se taire", () => {
+    const serre: ParametresDeSignature = { ...PARAMETRES, ancresEnRelationMax: 4 };
+    const page = signerLePlan(FACTURE_A(), serre).pages[0]!;
+    assert.equal(page.lecture.length, 4);
+    assert.equal(page.lectureTronquee, true);
+  });
+
+  it("et ne se declare pas tronquee quand le plafond ne la coupe pas", () => {
+    const page = signerLePlan(FACTURE_A(), PARAMETRES).pages[0]!;
+    assert.equal(page.lectureTronquee, false);
+    assert.ok(page.lecture.length > 4);
   });
 });
 
@@ -176,8 +208,8 @@ describe("le sens de lecture", () => {
   /*
    * « À gauche de » n'a pas le même sens dans les deux écritures. En arabe,
    * « الكمية » (quantité) précède « سعرالوحدة » (prix unitaire) À LA
-   * LECTURE, tout en étant plus à DROITE sur le papier. Une relation calculée
-   * sur l'abscisse seule rendrait l'inverse, et deux formats miroirs se
+   * LECTURE, tout en étant plus à DROITE sur le papier. Une suite calculée
+   * sur l'abscisse croissante rendrait l'inverse, et deux formats miroirs se
    * confondraient.
    */
   it("en arabe, l'ancre qui précède est celle de DROITE", () => {
@@ -195,8 +227,29 @@ describe("le sens de lecture", () => {
       "sur le papier, la quantité est à droite du prix unitaire",
     );
 
-    const r = relationOrientee(page.relations, quantite, prixUnitaire);
-    assert.equal(r?.h, "avant", "à la lecture, elle le précède");
+    const rangQuantite = rangDansLaLecture(page.lecture, quantite);
+    const rangPrix = rangDansLaLecture(page.lecture, prixUnitaire);
+    assert.ok(rangQuantite >= 0 && rangPrix >= 0, "les deux ancres sont dans la suite");
+    assert.ok(rangQuantite < rangPrix, "à la lecture, la quantité précède le prix unitaire");
+    assert.equal(
+      page.lecture[rangQuantite]!.ligne,
+      page.lecture[rangPrix]!.ligne,
+      "et les deux sont sur la même ligne : c'est bien l'abscisse qui les ordonne",
+    );
+  });
+
+  /*
+   * Le miroir, pour que la règle ne soit pas vraie par accident : la MÊME
+   * géométrie lue de gauche à droite rend l'ordre INVERSE. Sans le sens de
+   * lecture, les deux pages se signeraient pareil.
+   */
+  it("et la même page lue de gauche à droite rend l'ordre inverse", () => {
+    const page = signerLePlan(FACTURE_A(), PARAMETRES).pages[0]!;
+    assert.equal(signerLePlan(FACTURE_A(), PARAMETRES).sens, "ltr");
+    assert.ok(
+      rangDansLaLecture(page.lecture, "matricule") < rangDansLaLecture(page.lecture, "fiscal"),
+      "en français, l'ancre qui précède est celle de GAUCHE",
+    );
   });
 
   it("l'entête d'une page arabe se lit de droite à gauche", () => {

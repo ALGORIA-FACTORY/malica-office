@@ -109,8 +109,22 @@ describe("deux formats voisins mais INCOMPATIBLES", () => {
     assert.ok((composante(distanceEntreSignatures(a, b, POIDS), "tableau") ?? 0) > 0);
   });
 
-  it("se séparent aussi sur l'ordre du pied : la TVA n'est plus au même endroit", () => {
-    assert.ok((composante(distanceEntreSignatures(a, b, POIDS), "relations") ?? 0) > 0);
+  /*
+   * CE QUE CE CAS GARDE, ET POURQUOI IL EST CHIFFRÉ.
+   *
+   * Le 20 octobre 2026, cette composante valait 0,0330 alors que le pied de
+   * la facture est INVERSÉ : trois couples contredits noyés dans
+   * quatre-vingt-onze, parce que tous les couples lointains d'une page
+   * s'accordent gratuitement. La suite de lecture ne garde que « ce qui suit
+   * quoi », et la même discordance vaut 0,2353 ici — quatre liens sur
+   * dix-sept — et 0,3077 sur l'ossature, où la chaîne réelle juge.
+   *
+   * Le seuil est écrit ici pour qu'un retour en arrière se voie : une borne
+   * à 0 serait restée verte avec la mesure diluée.
+   */
+  it("se séparent sur l'ordre du pied, et la discordance se VOIT", () => {
+    const mesure = composante(distanceEntreSignatures(a, b, POIDS), "relations") ?? 0;
+    assert.ok(mesure > 0.2, `la discordance du pied est retombée à ${mesure.toFixed(4)}`);
   });
 
   it("et le classement désigne le bon, sans hésiter", () => {
@@ -249,5 +263,62 @@ describe("la pagination", () => {
     const d = distanceEntreSignatures(signer(FACTURE_A()), signer(FACTURE_A_DEUX_PAGES()), POIDS);
     assert.equal(composante(d, "pagination"), 0.5);
     assert.ok(d.distance > 0);
+  });
+});
+
+/*
+ * ===================================================== LE BANC DE SEPARATION
+ *
+ * Les trois nombres qui decident si la reconnaissance est sure, et la marge
+ * qu'ils laissent au seuil livre. Ils sont ECRITS ici, pas resumes dans un
+ * rapport : un rapport ne devient pas rouge quand la mesure bouge.
+ *
+ * Le dispositif est celui de l'interprete : une reference, l'ossature de
+ * TROIS exemplaires du meme format, et le seuil `distance_max` du
+ * referentiel. C'est a cette distance-la que la chaine reelle juge.
+ */
+describe("la separation, mesuree", () => {
+  const exemples = [FACTURE_A(), FACTURE_A_AUTRES_VALEURS(), FACTURE_A_AUTRE_CLIENT()].map(signer);
+  const ossature = ossatureCommune(exemples);
+  const reference = exemples[0]!;
+  const vers = (plan: ReturnType<typeof FACTURE_A>) =>
+    distanceEntreSignatures(reference, signer(plan), POIDS, ossature).distance;
+
+  /** Le seuil livre par `fabrique.seuil.signature.distance_max`. */
+  const DISTANCE_MAX_LIVREE = 0.08;
+
+  it("le meme format, quelles que soient ses valeurs, est a 0,0000", () => {
+    for (const [nom, plan] of [
+      ["autres valeurs", FACTURE_A_AUTRES_VALEURS()],
+      ["six lignes d'articles", FACTURE_A_SIX_LIGNES()],
+      ["un autre client", FACTURE_A_AUTRE_CLIENT()],
+      ["un autre cadrage", recadrer(FACTURE_A(), 0.07, -0.02, 0.86)],
+    ] as const)
+      assert.equal(vers(plan), 0, `${nom} : ${vers(plan).toFixed(4)}`);
+  });
+
+  it("le voisin incompatible est a 0,1542, et les deux pages a 0,1529", () => {
+    assert.equal(vers(FACTURE_B_TTC()).toFixed(4), "0.1542");
+    assert.equal(vers(FACTURE_A_DEUX_PAGES()).toFixed(4), "0.1529");
+  });
+
+  /*
+   * LA MARGE, ET CE QU'ELLE VALAIT AVANT.
+   *
+   * Le voisin incompatible etait a 0,0992 pour un seuil livre de 0,08 : une
+   * marge de 0,019. Un scan plus clair, une colonne de plus, et elle
+   * disparaissait. Elle vaut desormais 0,0742, et le plus proche des
+   * non-appariements est a 0,1529 — le seuil peut etre pose n'importe ou
+   * dans cet intervalle.
+   */
+  it("et la marge au seuil livre est de 0,0742, contre 0,019 avant", () => {
+    const marge = vers(FACTURE_B_TTC()) - DISTANCE_MAX_LIVREE;
+    assert.equal(marge.toFixed(4), "0.0742");
+    assert.ok(marge > 0.019 * 3, "la marge n'a pas au moins triple");
+  });
+
+  it("aucun non-appariement ne descend sous le seuil livre", () => {
+    for (const plan of [FACTURE_B_TTC(), FACTURE_A_DEUX_PAGES(), PAGE_DE_TOTAUX()])
+      assert.ok(vers(plan) > DISTANCE_MAX_LIVREE, `${vers(plan).toFixed(4)} passe le seuil`);
   });
 });
