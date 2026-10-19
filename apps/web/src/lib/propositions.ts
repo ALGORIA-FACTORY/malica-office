@@ -10,10 +10,38 @@ import type { Ecriture, EcritureLine } from "@malica/socle/ports/repositories";
 
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
-export type Lot = "haut" | "moyen" | "bas" | "sans";
+export type Lot = "recette" | "haut" | "moyen" | "bas" | "sans";
 
-/** Le lot d'une pièce, d'après les seuils du cabinet. Sans mesure : à part, jamais deviné. */
-export function lotDe(confiance: number | null, seuilLot: number, seuilRevue: number): Lot {
+/**
+ * Le lot d'une pièce, d'après les seuils du cabinet.
+ *
+ * ================================= UNE LECTURE PAR RECETTE PASSE AVANT TOUT
+ *
+ * Elle est testée la PREMIÈRE, et avant toute comparaison de seuil, parce que
+ * la pièce qu'une recette a lue porte `overall_confidence = 1` : une recette
+ * ne produit aucun score, et le neutre du minimum — « la désignation n'abaisse
+ * rien » — est passé explicitement au point d'appel. Comparé à un seuil, ce
+ * neutre franchit tout : la pièce s'affichait « 100 % » sous « Confiance
+ * min. » et tombait dans les validables d'un geste. Un expert validait en
+ * masse des pièces présentées comme certaines à cent pour cent, alors que le
+ * chiffre ne signifiait rien — c'était une absence de score, pas une
+ * certitude.
+ *
+ * Son lot n'est donc pas un lot de confiance basse : c'est un lot d'une autre
+ * nature, et il ne se valide pas d'un geste au titre d'une confiance qui
+ * n'existe pas. Ce qu'on en sait est plus fort qu'un score — chaque champ
+ * désigné est relu dans le plan de jetons —, mais ce n'est pas une
+ * probabilité, et rien à l'écran ne doit le laisser croire.
+ *
+ * Sans mesure : à part aussi, et pour une autre raison — jamais deviné.
+ */
+export function lotDe(
+  confiance: number | null,
+  seuilLot: number,
+  seuilRevue: number,
+  lueParRecette = false,
+): Lot {
+  if (lueParRecette) return "recette";
   if (confiance === null) return "sans";
   if (confiance >= seuilLot) return "haut";
   if (confiance >= seuilRevue) return "moyen";

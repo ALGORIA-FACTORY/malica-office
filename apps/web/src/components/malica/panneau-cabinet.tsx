@@ -153,10 +153,34 @@ export function PanneauCabinet() {
 
   /* ---- le lot prêt, le doublon possible */
   const seuil = reglages.data?.seuilConfianceLot ?? null;
+
+  /*
+   * Les pièces qu'une RECETTE a lues ne comptent pas dans « le lot est prêt ».
+   *
+   * Elles portent `overall_confidence = 1` — le neutre du minimum, parce qu'une
+   * recette ne produit aucun score — et ce neutre franchit tous les seuils.
+   * Malica aurait donc annoncé un lot « au-dessus du seuil de confiance,
+   * validable d'un geste » sur des pièces dont la confiance n'existe pas. Sa
+   * phrase serait restée vraie sur le mot et fausse sur le fait, et c'est
+   * exactement ce qu'un panneau ne doit jamais faire.
+   */
+  const idsPieces = useMemo(() => aSuperviser.map((r) => r.pieceId).sort(), [aSuperviser]);
+  const parRecette = useQuery({
+    queryKey: ["cab-par-recette", idsPieces],
+    queryFn: () => office().fabrique.piecesLuesParRecette(idsPieces),
+    enabled: idsPieces.length > 0,
+  });
+  const luesParRecette = useMemo(
+    () => new Set((parRecette.data ?? []).map((p) => p.pieceId)),
+    [parRecette.data],
+  );
   const lot =
     seuil === null
       ? []
-      : aSuperviser.filter((r) => r.confiance !== null && Number(r.confiance) >= seuil);
+      : aSuperviser.filter(
+          (r) =>
+            !luesParRecette.has(r.pieceId) && r.confiance !== null && Number(r.confiance) >= seuil,
+        );
   const doublon = useMemo(() => {
     const groupes = new Map<string, QueueItem[]>();
     for (const r of rows) {

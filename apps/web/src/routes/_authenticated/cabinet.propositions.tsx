@@ -13,6 +13,25 @@
  * l'écran), la confiance est celle que le désignateur a rendue et que la
  * base a gardée, l'écriture en masse est l'agrégat exact des écritures du
  * Socle, et chaque geste passe par les méthodes que la revue emploie déjà.
+ *
+ * ========================= CE QU'UNE PIÈCE LUE PAR UNE RECETTE N'AFFICHE PAS
+ *
+ * Aucun pourcentage. Une pièce lue par une recette porte
+ * `overall_confidence = 1`, parce qu'une recette ne produit AUCUN score : le
+ * neutre du minimum est passé explicitement au point d'appel, et il signifie
+ * « la désignation n'abaisse rien », jamais « sûr à cent pour cent ». Cet
+ * écran l'affichait pourtant « 100 % » sous « Confiance min. » et rangeait la
+ * pièce dans les validables d'un geste — un expert aurait validé en masse des
+ * pièces présentées comme certaines, sur un chiffre qui ne signifiait rien.
+ *
+ * Elle dit donc ce qu'elle est : lue par un lecteur spécialisé, dont chaque
+ * champ désigné est relu dans le plan de jetons. C'est une information plus
+ * forte qu'un score, et elle a son propre lot — qui ne se valide pas d'un
+ * geste, parce qu'aucune confiance ne l'y autorise.
+ *
+ * `fabrique.piecesLuesParRecette` est la seule source de ce fait :
+ * `fabrique.executions`, issue `designation`. Une abstention rend la main à la
+ * chaîne, la pièce est lue par le modèle, et elle est mesurée comme avant.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -96,6 +115,20 @@ function CabinetPropositions() {
     [ecritures.data],
   );
 
+  /* ---- lesquelles une RECETTE a lues. Sans ce fait, leur neutre de confiance
+          se lirait « 100 % » et le lot se validerait d'un geste. */
+  const idsPieces = useMemo(() => rows.map((r) => r.pieceId).sort(), [rows]);
+  const parRecette = useQuery({
+    queryKey: ["cab-par-recette", idsPieces],
+    queryFn: () => office().fabrique.piecesLuesParRecette(idsPieces),
+    enabled: idsPieces.length > 0,
+  });
+  const lecteurDe = useMemo(
+    () => new Map((parRecette.data ?? []).map((p) => [p.pieceId, p])),
+    [parRecette.data],
+  );
+  const lueParRecette = (pieceId: string) => lecteurDe.has(pieceId);
+
   useMalicaPanel(
     <MalicaNote kicker={t("cab.prop.panel.kicker")}>
       {t("cab.prop.panel", { count: rows.length })}
@@ -118,11 +151,18 @@ function CabinetPropositions() {
   const seuilLot = reglages.data?.seuilConfianceLot ?? null;
   const seuilRevue = reglages.data?.seuilConfianceRevue ?? null;
   const lots = useMemo(() => {
-    const carte: Record<Lot, QueueItem[]> = { haut: [], moyen: [], bas: [], sans: [] };
+    const carte: Record<Lot, QueueItem[]> = {
+      recette: [],
+      haut: [],
+      moyen: [],
+      bas: [],
+      sans: [],
+    };
     if (seuilLot === null || seuilRevue === null) return carte;
-    for (const r of rows) carte[lotDe(r.confiance, seuilLot, seuilRevue)].push(r);
+    for (const r of rows)
+      carte[lotDe(r.confiance, seuilLot, seuilRevue, lecteurDe.has(r.pieceId))].push(r);
     return carte;
-  }, [rows, seuilLot, seuilRevue]);
+  }, [rows, seuilLot, seuilRevue, lecteurDe]);
 
   /* ---- les groupes par client */
   const collabDe = useMemo(() => {
@@ -235,6 +275,18 @@ function CabinetPropositions() {
   const cartesDeLot: Array<{ lot: Lot; label: string; note: string; action: string }> =
     seuilLot !== null && seuilRevue !== null
       ? [
+          /*
+           * Le lot des lectures par recette vient en TÊTE, et son action est
+           * d'ouvrir, jamais de retenir : ce qu'on sait d'elles est plus fort
+           * qu'un score, mais ce n'est pas une confiance, et rien ne permet de
+           * les valider en masse à ce titre.
+           */
+          {
+            lot: "recette",
+            label: t("cab.prop.lot.recette"),
+            note: t("cab.prop.lot.recette.note"),
+            action: t("cab.prop.lot.ouvrir"),
+          },
           {
             lot: "haut",
             label: t("cab.prop.lot.haut", { seuil: pourcent(seuilLot) }),
@@ -338,6 +390,15 @@ function CabinetPropositions() {
         })}
       </div>
 
+      {/* La phrase qui remplace le pourcentage, en toutes lettres. Elle ne
+          paraît que s'il y a de telles pièces : une doctrine affichée dans le
+          vide est du texte de façade. */}
+      {lots.recette.length > 0 ? (
+        <p className="max-w-[70ch] border border-s-2 border-border border-s-marigold bg-card px-4 py-3 text-[12.5px] leading-[1.55] text-text-2">
+          {t("cab.prop.confiance.parRecette.pourquoi")}
+        </p>
+      ) : null}
+
       {/* ---- les groupes par client */}
       <section className="space-y-3">
         <SectionTitle
@@ -368,6 +429,7 @@ function CabinetPropositions() {
                 estRetenue={estRetenue}
                 retenir={retenir}
                 ecritureDe={ecritureDe}
+                lueParRecette={lueParRecette}
                 motifs={motifs.data ?? []}
                 occupe={occupe}
                 valider={(pieces) => valider.mutate(pieces)}
@@ -423,6 +485,7 @@ function GroupeClient({
   estRetenue,
   retenir,
   ecritureDe,
+  lueParRecette,
   motifs,
   occupe,
   valider,
@@ -442,6 +505,8 @@ function GroupeClient({
   estRetenue: (id: string) => boolean;
   retenir: (ids: string[], valeur: boolean) => void;
   ecritureDe: Map<string, Ecriture>;
+  /** Vrai quand une RECETTE a lu cette pièce : alors aucun pourcentage ne s'affiche. */
+  lueParRecette: (pieceId: string) => boolean;
   motifs: Array<{ id: string; label: string; requiresNote: boolean }>;
   occupe: boolean;
   valider: (pieces: QueueItem[]) => void;
@@ -464,8 +529,16 @@ function GroupeClient({
     .filter((e): e is Ecriture => e !== undefined);
   const masse = useMemo(() => ecritureEnMasse(ecritures), [ecritures]);
   const totalDebit = sommeDecimale(masse.map((m) => m.debit));
-  const confiances = groupe.pieces.map((p) => p.confiance).filter((c): c is number => c !== null);
+  /*
+   * La confiance minimale du lot ne se calcule que sur les pièces qui en ont
+   * une. Une pièce lue par une recette porte le NEUTRE du minimum — elle ne
+   * mesure rien, et la faire entrer dans ce minimum le relèverait à 1 dès
+   * qu'elle est seule, ou le laisserait croire mesuré alors qu'il ne l'est pas.
+   */
+  const mesurees = groupe.pieces.filter((p) => !lueParRecette(p.pieceId));
+  const confiances = mesurees.map((p) => p.confiance).filter((c): c is number => c !== null);
   const confianceMin = confiances.length > 0 ? Math.min(...confiances) : null;
+  const toutesParRecette = mesurees.length === 0 && groupe.pieces.length > 0;
 
   // Le plan de charge du CLIENT, pour le compte de destination — chargé quand
   // le lot s'ouvre, jamais avant.
@@ -516,9 +589,11 @@ function GroupeClient({
           <Chiffre
             label={t("cab.prop.groupe.confiance")}
             valeur={
-              confianceMin === null
-                ? t("cab.prop.confiance.absente")
-                : `${Math.round(confianceMin * 100)} %`
+              confianceMin !== null
+                ? `${Math.round(confianceMin * 100)} %`
+                : toutesParRecette
+                  ? t("cab.prop.confiance.parRecette.lot")
+                  : t("cab.prop.confiance.absente")
             }
           />
         </div>
@@ -617,10 +692,19 @@ function GroupeClient({
                       <span className="num text-[12.5px]">
                         {p.montant ? montant(p.montant, locale) : "—"}
                       </span>
-                      <span className="num w-16 text-end text-[10.5px] text-muted-foreground">
-                        {p.confiance === null
-                          ? t("cab.prop.confiance.absente")
-                          : `${Math.round(p.confiance * 100)} %`}
+                      {/* Aucun pourcentage sur une lecture par recette : le
+                          chiffre existerait, et il ne signifierait rien. */}
+                      <span
+                        className={cn(
+                          "w-24 text-end text-[10.5px] text-muted-foreground",
+                          lueParRecette(p.pieceId) ? "" : "num",
+                        )}
+                      >
+                        {lueParRecette(p.pieceId)
+                          ? t("cab.prop.confiance.parRecette")
+                          : p.confiance === null
+                            ? t("cab.prop.confiance.absente")
+                            : `${Math.round(p.confiance * 100)} %`}
                       </span>
                       <Link
                         to="/cabinet/piece/$pieceId"

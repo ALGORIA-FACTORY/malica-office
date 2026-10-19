@@ -17,7 +17,7 @@
  * qu'une devinette d'écran et un verdict de base finissent toujours par
  * diverger, et c'est l'écran qu'on croit.
  *
- * ========================================== LES DEUX CHOSES À NE PAS LISSER
+ * ========================================= LES QUATRE CHOSES À NE PAS LISSER
  *
  * ① UNE MESURE ABSENTE RESTE ABSENTE. Quand le jeu d'évaluation ne porte
  *   aucun montant, `montants_faux_acceptes` n'est pas zéro : elle n'existe
@@ -28,6 +28,19 @@
  * ② UNE RECETTE EN OBSERVATION N'EST PAS CRUE. Elle s'exécute, on compare.
  *   L'état porte son mot ET sa phrase, et les deux disent la même chose :
  *   la couleur seule ne porte rien (langage visuel, interdit ③).
+ *
+ * ③ UNE RECETTE SUSPENDUE NE DISPARAÎT PAS. Cet écran lisait
+ *   `contexteDeDesignation`, qui ne rend que `observation` et `active` : la
+ *   recette que la surveillance venait de suspendre s'en allait de l'écran.
+ *   L'expert voyait le verdict une fois, puis plus rien — au pire moment.
+ *   Il lit donc `recettes`, qui rend TOUS les états, et l'historique des
+ *   décisions, qui dit par QUI et pour QUEL motif une recette s'est arrêtée.
+ *
+ * ④ CE QUI MANQUE SE DIT EN NOMBRE, PAS EN RÈGLE. Énoncer « deux exemples
+ *   distincts au moins » laisse l'expert compter lui-même. La section des
+ *   formats dit « il vous manque un exemple », et le nombre vient du serveur :
+ *   le minimum est une borne de forme, et le recopier ici en ferait une
+ *   seconde vérité.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -52,10 +65,13 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { MessageKey } from "@malica/socle/messages";
 import type {
+  DeriveConstatee,
   EtatDUneRecette,
   EvaluationDUneVersion,
+  ExempleQualifieLu,
+  FormatConnuDuDossier,
+  RecetteDeLaFabrique,
   SurveillanceDUneVersion,
-  VersionQuiDesigne,
 } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/lecteurs")({
@@ -82,6 +98,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/lecteurs")({
 
 const OU = "routes/_authenticated/cabinet.lecteurs";
 const LABEL = "block text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground";
+const LABEL_EN_LIGNE = "text-[9px] font-semibold uppercase tracking-[0.18em]";
 const FIELD = "w-full border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none";
 
 /** Le mot de chaque état du cycle. Un état sans mot ne s'affiche pas. */
@@ -109,6 +126,57 @@ const SIGNAL_DE_L_ETAT: Record<EtatDUneRecette, Tone> = {
   active: "ok",
   suspendue: "stop",
   retiree: "neutral",
+};
+
+/**
+ * La phrase de chaque état — à côté du mot, jamais à sa place.
+ *
+ * Les six états paraissent désormais à l'écran, et chacun porte sa phrase.
+ * Avant, l'écran n'en montrait que deux et toute autre valeur recevait la
+ * phrase de l'observation : une recette suspendue aurait lu « elle s'exécute
+ * et on compare », c'est-à-dire l'inverse de ce qu'elle fait.
+ */
+const NOTE_DE_L_ETAT: Record<EtatDUneRecette, MessageKey> = {
+  candidate: "cab.lecteurs.etat.candidate.note",
+  evaluee: "cab.lecteurs.etat.evaluee.note",
+  observation: "cab.lecteurs.etat.observation.note",
+  active: "cab.lecteurs.etat.active.note",
+  suspendue: "cab.lecteurs.etat.suspendue.note",
+  retiree: "cab.lecteurs.etat.retiree.note",
+};
+
+/** La portée d'une recette. Un partage ne naît pas d'un oubli : il se lit. */
+const MOT_DE_LA_PORTEE: Record<"organisation" | "mutualisee", MessageKey> = {
+  organisation: "cab.lecteurs.portee.organisation",
+  mutualisee: "cab.lecteurs.portee.mutualisee",
+};
+
+const MOT_DE_L_USAGE: Record<ExempleQualifieLu["usage"], MessageKey> = {
+  apprentissage: "cab.lecteurs.usage.apprentissage",
+  evaluation: "cab.lecteurs.usage.evaluation",
+};
+
+const MOT_DE_LA_PROVENANCE: Record<ExempleQualifieLu["provenance"], MessageKey> = {
+  validation_humaine: "cab.lecteurs.provenance.validation_humaine",
+  correction_humaine: "cab.lecteurs.provenance.correction_humaine",
+  import_expert: "cab.lecteurs.provenance.import_expert",
+  observation: "cab.lecteurs.provenance.observation",
+};
+
+const MOT_DE_LA_QUALIFICATION: Record<ExempleQualifieLu["qualification"], MessageKey> = {
+  reconnaissance_ocr: "cab.lecteurs.qualification.reconnaissance_ocr",
+  designation_champ: "cab.lecteurs.qualification.designation_champ",
+  normalisation: "cab.lecteurs.qualification.normalisation",
+  document_incomplet: "cab.lecteurs.qualification.document_incomplet",
+  decision_comptable: "cab.lecteurs.qualification.decision_comptable",
+};
+
+/** La phrase de chaque dérive. Les quatre natures de `fabrique.derive_t`. */
+const MOT_DE_LA_DERIVE: Record<DeriveConstatee["nature"], MessageKey> = {
+  abstention_en_hausse: "cab.lecteurs.derive.abstention_en_hausse",
+  montant_faux_accepte: "cab.lecteurs.derive.montant_faux_accepte",
+  correction_humaine: "cab.lecteurs.derive.correction_humaine",
+  signature_changee: "cab.lecteurs.derive.signature_changee",
 };
 
 /**
@@ -163,12 +231,30 @@ function CabinetLecteurs() {
     rows[0] ??
     null;
 
-  const contexte = useQuery({
-    queryKey: ["fabrique-versions", client?.tenantId],
-    queryFn: () => office().fabrique.contexteDeDesignation(client!.tenantId),
+  /*
+   * `recettes`, et non `contexteDeDesignation` : celle-là est sur le chemin de
+   * la désignation et ne rend que les deux états qui tournent. L'écran bâti
+   * dessus perdait la recette au moment précis où elle venait d'être
+   * suspendue.
+   */
+  const recettes = useQuery({
+    queryKey: ["fabrique-recettes", client?.tenantId],
+    queryFn: () => office().fabrique.recettes(client!.tenantId),
     enabled: !!client,
   });
-  const versions = contexte.data?.versions ?? [];
+  const versions = recettes.data ?? [];
+
+  const formats = useQuery({
+    queryKey: ["fabrique-signatures", client?.tenantId],
+    queryFn: () => office().fabrique.signatures(client!.tenantId),
+    enabled: !!client,
+  });
+
+  const derives = useQuery({
+    queryKey: ["fabrique-derives", client?.tenantId],
+    queryFn: () => office().fabrique.derives(client!.tenantId),
+    enabled: !!client,
+  });
 
   useMalicaPanel(
     <MalicaNote kicker={t("cab.lecteurs.panel.kicker")}>{t("cab.lecteurs.panel")}</MalicaNote>,
@@ -205,7 +291,7 @@ function CabinetLecteurs() {
 
       <section className="space-y-3">
         <SectionTitle>{t("cab.lecteurs.section.quiLit")}</SectionTitle>
-        {client && contexte.isPending ? (
+        {client && recettes.isPending ? (
           <EmptyState>{t("common.loading")}</EmptyState>
         ) : versions.length === 0 ? (
           <EmptyState>{t("cab.lecteurs.vide")}</EmptyState>
@@ -217,6 +303,61 @@ function CabinetLecteurs() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* ---- les formats, leurs exemples un par un, et ce qui manque */}
+      <section className="space-y-3">
+        <SectionTitle>{t("cab.lecteurs.section.formats")}</SectionTitle>
+        <p className="max-w-[46rem] text-[12.5px] leading-[1.55] text-text-2">
+          {t("cab.lecteurs.formats.doctrine")}
+        </p>
+        {client && formats.isPending ? (
+          <EmptyState>{t("common.loading")}</EmptyState>
+        ) : (formats.data?.formats.length ?? 0) === 0 ? (
+          <EmptyState>{t("cab.lecteurs.formats.vide")}</EmptyState>
+        ) : (
+          <ul className="space-y-4">
+            {(formats.data?.formats ?? []).map((f) => (
+              <li key={f.signatureCle}>
+                <CarteDeFormat format={f} locale={locale} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ---- les dérives : elles survivent à la suspension qu'elles ont causée */}
+      <section className="space-y-3">
+        <SectionTitle>{t("cab.lecteurs.section.derives")}</SectionTitle>
+        <p className="max-w-[46rem] text-[12.5px] leading-[1.55] text-text-2">
+          {t("cab.lecteurs.derives.doctrine")}
+        </p>
+        {client && derives.isPending ? (
+          <EmptyState>{t("common.loading")}</EmptyState>
+        ) : (derives.data ?? []).length === 0 ? (
+          <EmptyState>{t("cab.lecteurs.derives.vide")}</EmptyState>
+        ) : (
+          <InkTable
+            head={[
+              t("cab.lecteurs.derive.quand"),
+              t("cab.lecteurs.derive.lecteur"),
+              t("cab.lecteurs.derive.nature"),
+            ]}
+            caption={t("cab.lecteurs.derive.caption")}
+          >
+            {(derives.data ?? []).map((d) => (
+              <InkTableRow key={`${d.versionId}-${d.constateeLe}-${d.nature}`}>
+                <InkCell numeric>{jourLisible(d.constateeLe, locale)}</InkCell>
+                <InkCell>
+                  {d.libelle}
+                  {" · "}
+                  {t("cab.lecteurs.version", { rang: String(d.rang) })}
+                </InkCell>
+                <InkCell>{t(MOT_DE_LA_DERIVE[d.nature])}</InkCell>
+              </InkTableRow>
+            ))}
+          </InkTable>
         )}
       </section>
 
@@ -232,20 +373,107 @@ function CabinetLecteurs() {
   );
 }
 
+/** Un jour lisible, dans la langue de l'écran. Rien d'autre n'est inventé. */
+function jourLisible(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(iso));
+}
+
+/* ----------------------------------------- un format, ses exemples, son manque */
+
+function CarteDeFormat({ format, locale }: { format: FormatConnuDuDossier; locale: string }) {
+  const { t } = useI18n();
+  return (
+    <article className="border border-border bg-card">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <p className="num text-[13px] font-semibold">{format.signatureCle}</p>
+          <p className="mt-1 text-[11.5px] text-muted-foreground">
+            {format.libelle
+              ? t("cab.lecteurs.format.lecteur", { libelle: format.libelle })
+              : t("cab.lecteurs.format.sansLecteur")}
+            {format.portee ? ` · ${t(MOT_DE_LA_PORTEE[format.portee])}` : ""}
+          </p>
+        </div>
+        {/* Pas de `shrink-0` : à 375 px, les deux comptes débordaient de trois
+            pixels et le dernier chiffre se coupait. Ils reviennent à la ligne. */}
+        <p className="num text-[11.5px] text-muted-foreground">
+          {t("cab.lecteurs.format.apprentissage", { count: format.apprentissage })}
+          {" · "}
+          {t("cab.lecteurs.format.evaluation", { count: format.evaluation })}
+        </p>
+      </header>
+
+      <div className="space-y-4 px-4 py-4">
+        {/*
+         * CE QUI MANQUE, EN NOMBRE. Le compte vient du serveur : le minimum
+         * d'exemples est une borne de forme, pas un seuil de paramétrage, et
+         * un second exemplaire ici serait une seconde vérité.
+         */}
+        {format.manque > 0 ? (
+          <p className="border border-s-2 border-border border-s-signal-warn px-3 py-2 text-[12.5px] leading-[1.5]">
+            {t("cab.lecteurs.format.manque", { count: format.manque })}
+          </p>
+        ) : (
+          <p className="text-[12.5px] leading-[1.5] text-muted-foreground">
+            {t("cab.lecteurs.format.assez")}
+          </p>
+        )}
+
+        {format.exemples.length > 0 ? (
+          <InkTable
+            head={[
+              t("cab.lecteurs.exemple.quand"),
+              t("cab.lecteurs.exemple.quoi"),
+              t("cab.lecteurs.exemple.provenance"),
+              t("cab.lecteurs.exemple.usage"),
+              t("cab.lecteurs.exemple.champs"),
+            ]}
+            caption={t("cab.lecteurs.exemple.caption")}
+          >
+            {format.exemples.map((e) => (
+              <InkTableRow key={e.exempleId}>
+                <InkCell numeric>{jourLisible(e.qualifieLe, locale)}</InkCell>
+                <InkCell>
+                  {t(MOT_DE_LA_QUALIFICATION[e.qualification])}
+                  {/* Une décision comptable n'enseigne rien sur la forme du
+                      papier, et la colonne calculée en base le dit. */}
+                  {e.nourritUneRecette ? "" : ` — ${t("cab.lecteurs.exemple.nenourritpas")}`}
+                </InkCell>
+                <InkCell>{t(MOT_DE_LA_PROVENANCE[e.provenance])}</InkCell>
+                <InkCell>{t(MOT_DE_L_USAGE[e.usage])}</InkCell>
+                <InkCell numeric>
+                  {e.champs === null ? t("cab.lecteurs.eval.absente") : String(e.champs)}
+                </InkCell>
+              </InkTableRow>
+            ))}
+          </InkTable>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
 /* ------------------------------------------------------ une recette, et sa vie */
 
-function CarteDeRecette({ tenantId, version }: { tenantId: string; version: VersionQuiDesigne }) {
+function CarteDeRecette({ tenantId, version }: { tenantId: string; version: RecetteDeLaFabrique }) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const [erreur, setErreur] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
+  const [historique, setHistorique] = useState(false);
   const [evaluation, setEvaluation] = useState<EvaluationDUneVersion | null>(null);
   const [surveillance, setSurveillance] = useState<SurveillanceDUneVersion | null>(null);
 
-  const decision = useQuery({
-    queryKey: ["fabrique-decision", version.versionId],
-    queryFn: () => office().fabrique.etatDUneVersion(version.versionId),
+  /*
+   * TOUTES les décisions, pas la dernière. Une suspension est une écriture
+   * nouvelle : sans la suite, l'écran dirait « suspendue » sans jamais dire
+   * ce que la recette faisait la veille ni qui l'a arrêtée.
+   */
+  const decisions = useQuery({
+    queryKey: ["fabrique-decisions", version.versionId],
+    queryFn: () => office().fabrique.decisions(version.versionId),
   });
+  const derniere = decisions.data?.[0] ?? null;
 
   const evaluer = useMutation({
     mutationFn: () => office().fabrique.evaluerUneVersion(tenantId, version.versionId),
@@ -262,8 +490,8 @@ function CarteDeRecette({ tenantId, version }: { tenantId: string; version: Vers
       setErreur(null);
       setSurveillance(r);
       // Une surveillance peut SUSPENDRE : l'état affiché doit suivre le fait.
-      await qc.invalidateQueries({ queryKey: ["fabrique-versions", tenantId] });
-      await qc.invalidateQueries({ queryKey: ["fabrique-decision", version.versionId] });
+      await qc.invalidateQueries({ queryKey: ["fabrique-recettes", tenantId] });
+      await qc.invalidateQueries({ queryKey: ["fabrique-decisions", version.versionId] });
     },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
@@ -282,19 +510,13 @@ function CarteDeRecette({ tenantId, version }: { tenantId: string; version: Vers
     onSuccess: async () => {
       setErreur(null);
       setMotif("");
-      await qc.invalidateQueries({ queryKey: ["fabrique-versions", tenantId] });
-      await qc.invalidateQueries({ queryKey: ["fabrique-decision", version.versionId] });
+      await qc.invalidateQueries({ queryKey: ["fabrique-recettes", tenantId] });
+      await qc.invalidateQueries({ queryKey: ["fabrique-decisions", version.versionId] });
     },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
   const nombre = (n: number) => new Intl.NumberFormat(locale).format(n);
-  const champs = (() => {
-    const d = version.definition;
-    if (typeof d !== "object" || d === null) return null;
-    const c = (d as { champs?: unknown }).champs;
-    return typeof c === "object" && c !== null ? Object.keys(c).length : null;
-  })();
   const pret = motif.trim().length > 0 && !promouvoir.isPending;
 
   return (
@@ -305,19 +527,35 @@ function CarteDeRecette({ tenantId, version }: { tenantId: string; version: Vers
           <p className="num mt-1 text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground">
             {t("cab.lecteurs.version", { rang: nombre(version.rang) })}
             {" · "}
-            {t("cab.lecteurs.exemples", { count: version.plansDApprentissage.length })}
-            {champs === null ? "" : ` · ${t("cab.lecteurs.champs", { count: champs })}`}
+            {t("cab.lecteurs.exemples", { count: version.exemples })}
+            {version.champs === null
+              ? ""
+              : ` · ${t("cab.lecteurs.champs", { count: version.champs })}`}
+          </p>
+          {/* Le format lu et la portée : « qui partage quoi » se lit sans enquête. */}
+          <p className="mt-1.5 text-[11.5px] leading-[1.45] text-muted-foreground">
+            <span className={LABEL_EN_LIGNE}>{t("cab.lecteurs.signature")}</span>{" "}
+            <span className="num">{version.signatureCle}</span>
+            {" · "}
+            <span className={LABEL_EN_LIGNE}>{t("cab.lecteurs.portee")}</span>{" "}
+            {t(MOT_DE_LA_PORTEE[version.portee])}
           </p>
         </div>
         <div className="shrink-0 text-end">
+          {/* Six états paraissent ici, et chacun porte SON mot et SA phrase.
+              Une version sans décision n'en a pas : elle le dit. */}
           <SignalLight
-            tone={SIGNAL_DE_L_ETAT[version.etat]}
-            label={t(MOT_DE_L_ETAT[version.etat])}
+            tone={version.etat === null ? "neutral" : SIGNAL_DE_L_ETAT[version.etat]}
+            label={
+              version.etat === null
+                ? t("cab.lecteurs.etat.inconnu")
+                : t(MOT_DE_L_ETAT[version.etat])
+            }
           />
           <p className="mt-1 max-w-[20rem] text-[11.5px] leading-[1.45] text-muted-foreground">
-            {version.etat === "active"
-              ? t("cab.lecteurs.etat.active.note")
-              : t("cab.lecteurs.etat.observation.note")}
+            {version.etat === null
+              ? t("cab.lecteurs.etat.inconnu.note")
+              : t(NOTE_DE_L_ETAT[version.etat])}
           </p>
         </div>
       </header>
@@ -327,12 +565,49 @@ function CarteDeRecette({ tenantId, version }: { tenantId: string; version: Vers
         <div>
           <p className={LABEL}>{t("cab.lecteurs.decision")}</p>
           <p className="mt-1 text-[12.5px] leading-[1.5]">
-            {decision.isPending
+            {decisions.isPending
               ? t("common.loading")
-              : decision.data
-                ? `${t(MOT_DE_L_ETAT[decision.data.etat])} — ${decision.data.motif}`
+              : derniere
+                ? `${t(MOT_DE_L_ETAT[derniere.etat])} — ${derniere.motif}`
                 : t("cab.lecteurs.decision.aucune")}
           </p>
+          {(decisions.data ?? []).length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setHistorique((v) => !v)}
+                aria-expanded={historique}
+                className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] underline"
+              >
+                {historique
+                  ? t("cab.lecteurs.historique.cacher")
+                  : t("cab.lecteurs.historique.voir")}
+              </button>
+              {historique ? (
+                <div className="mt-2">
+                  <p className={LABEL}>{t("cab.lecteurs.historique")}</p>
+                  <div className="mt-1.5">
+                    <InkTable
+                      head={[
+                        t("cab.lecteurs.hist.quand"),
+                        t("cab.lecteurs.hist.etat"),
+                        t("cab.lecteurs.hist.motif"),
+                      ]}
+                      caption={t("cab.lecteurs.hist.caption")}
+                    >
+                      {(decisions.data ?? []).map((d) => (
+                        <InkTableRow key={`${d.decideLe}-${d.etat}-${d.motif}`}>
+                          <InkCell numeric>{jourLisible(d.decideLe, locale)}</InkCell>
+                          <InkCell>{t(MOT_DE_L_ETAT[d.etat])}</InkCell>
+                          <InkCell>{d.motif}</InkCell>
+                        </InkTableRow>
+                      ))}
+                    </InkTable>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
 
         <div className="space-y-3">
@@ -501,6 +776,18 @@ function CarteDeRecette({ tenantId, version }: { tenantId: string; version: Vers
                 onClick={() => promouvoir.mutate("active")}
               >
                 {t("cab.lecteurs.activer")}
+              </ActionButton>
+            ) : null}
+            {/* La reprise d'une recette suspendue. Elle n'existait pas tant que
+                l'écran ne voyait pas les suspendues — la base, elle, la permet,
+                et elle exige son évaluation comme pour toute mise à l'épreuve. */}
+            {version.etat === "suspendue" ? (
+              <ActionButton
+                variant="ink"
+                disabled={!pret}
+                onClick={() => promouvoir.mutate("observation")}
+              >
+                {t("cab.lecteurs.reprendre")}
               </ActionButton>
             ) : null}
             <ActionButton disabled={!pret} onClick={() => promouvoir.mutate("suspendue")}>

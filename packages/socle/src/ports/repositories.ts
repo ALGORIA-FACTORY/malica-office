@@ -2435,10 +2435,14 @@ export interface FacturationRepository {
  *
  * ======================================================= CE QU'IL N'EXPOSE PAS
  *
- * Aucun réglage de signature, aucune borne, aucun seuil. Ils voyagent dans la
- * réponse de `contexteDeDesignation`, et un écran qui les afficherait ferait
- * croire qu'il les arrête — or c'est le référentiel qui les arrête (R4, R10).
- * Seules les versions sont déclarées, donc seules les versions se lisent.
+ * Aucun réglage de signature, aucune borne, aucun seuil de promotion. Un écran
+ * qui les afficherait ferait croire qu'il les arrête — or c'est le référentiel
+ * qui les arrête (R4, R10).
+ *
+ * Et pas `contexteDeDesignation` : cette méthode-là est sur le chemin de la
+ * désignation, elle ne rend que les deux états qui tournent, et un écran bâti
+ * dessus perd une recette au moment précis où elle vient d'être suspendue.
+ * `recettes` est la lecture du REGARD, et les deux ne se confondent pas.
  * ========================================================================= */
 
 /** Les états du cycle de vie d'une recette. Ce sont ceux de `fabrique.etat_t`. */
@@ -2446,24 +2450,106 @@ export type EtatDUneRecette =
   "candidate" | "evaluee" | "observation" | "active" | "suspendue" | "retiree";
 
 /**
- * Une version de recette qui DÉSIGNE pour de bon.
+ * Une version de recette, dans l'état où elle est.
  *
- * `contexteDeDesignation` ne rend que `observation` et `active` : ce ne sont
- * pas deux nuances d'un même état de service. Une recette en observation
- * s'exécute, on compare, ON NE LA CROIT PAS — et un écran qui les montrerait
- * pareil ferait passer une mise à l'épreuve pour un service.
+ * ========================================== POURQUOI PAS `contexteDeDesignation`
+ *
+ * Celle-là est sur le chemin de la DÉSIGNATION et ne rend que `observation` et
+ * `active` — c'est ce qui fait qu'une suspension suffit à renvoyer la pièce
+ * suivante vers le modèle. Un écran qui s'en servirait pour montrer la
+ * fabrique PERDRAIT la recette au moment où elle vient d'être suspendue :
+ * l'expert voit le verdict une fois, puis la carte s'en va.
+ *
+ * `etat` peut être `null` : une version sans décision inscrite n'a pas d'état,
+ * et cela ne se lit pas « candidate ». Une recette en observation s'exécute,
+ * on compare, ON NE LA CROIT PAS — l'écran ne la montre donc pas comme une
+ * recette en service.
  */
-export interface VersionQuiDesigne {
+export interface RecetteDeLaFabrique {
   versionId: string;
   recetteId: string;
   /** Le numéro de version. Corriger une recette, c'est en inscrire une autre. */
   rang: number;
   libelle: string;
+  /** La signature structurelle du format que cette recette lit. */
+  signatureCle: string;
+  portee: "organisation" | "mutualisee";
+  etat: EtatDUneRecette | null;
+  /** Le motif de la dernière décision, tel que celui qui l'a prise l'a écrit. */
+  motif: string | null;
+  decideLe: string | null;
+  /** Combien d'exemples d'apprentissage cette version porte. */
+  exemples: number;
+  /** Combien de champs elle désigne. `null` si la définition n'en déclare pas. */
+  champs: number | null;
+}
+
+/** Une décision inscrite sur une version. Elles se lisent toutes, jamais la seule dernière. */
+export interface DecisionInscrite {
   etat: EtatDUneRecette;
-  /** Le JSON déclaratif. Il ne porte AUCUNE valeur : la base le refuserait. */
-  definition: unknown;
-  /** Les plans de jetons des exemples d'apprentissage, un tableau par pièce. */
-  plansDApprentissage: unknown[][];
+  motif: string;
+  evaluationId: string | null;
+  decideLe: string;
+}
+
+/** Une dérive constatée. Elle SURVIT à la suspension qu'elle a provoquée. */
+export interface DeriveConstatee {
+  versionId: string;
+  libelle: string;
+  rang: number;
+  pieceId: string | null;
+  nature:
+    "abstention_en_hausse" | "montant_faux_accepte" | "correction_humaine" | "signature_changee";
+  mesure: unknown;
+  constateeLe: string;
+}
+
+/** Un exemple qualifié, tel qu'il se lit un par un. Il ne porte AUCUNE valeur (R2). */
+export interface ExempleQualifieLu {
+  exempleId: string;
+  pieceId: string;
+  provenance: "validation_humaine" | "correction_humaine" | "import_expert" | "observation";
+  qualification:
+    | "reconnaissance_ocr"
+    | "designation_champ"
+    | "normalisation"
+    | "document_incomplet"
+    | "decision_comptable";
+  usage: "apprentissage" | "evaluation";
+  /** Calculée en base : une décision comptable ne nourrit aucune recette. */
+  nourritUneRecette: boolean;
+  /** Combien de champs cet exemple désigne — des `page`/`ordinal`, jamais un montant. */
+  champs: number | null;
+  note: string | null;
+  qualifieLe: string;
+}
+
+/**
+ * Un format connu du dossier, et ce qui lui manque.
+ *
+ * `manque` vient du SERVEUR, et c'est voulu : le minimum d'exemples est une
+ * borne de forme — à un seul exemple l'ossature commune n'existe pas — et la
+ * recopier à l'écran en ferait une seconde vérité. L'écran restitue un compte,
+ * il ne le calcule pas.
+ */
+export interface FormatConnuDuDossier {
+  signatureCle: string;
+  recetteId: string | null;
+  libelle: string | null;
+  portee: "organisation" | "mutualisee" | null;
+  apprentissage: number;
+  evaluation: number;
+  manque: number;
+  exemples: ExempleQualifieLu[];
+}
+
+/** Une pièce qu'une RECETTE a lue — donc sans score, et sans pourcentage à lire. */
+export interface PieceLueParRecette {
+  pieceId: string;
+  versionId: string;
+  libelle: string;
+  rang: number;
+  executeeLe: string;
 }
 
 /**
@@ -2494,13 +2580,6 @@ export interface SurveillanceDUneVersion {
   tolere: number | null;
   derive: "abstention_en_hausse" | "signature_changee" | null;
   suspendue: boolean;
-}
-
-/** La dernière décision inscrite sur une version. */
-export interface DecisionSurUneVersion {
-  etat: EtatDUneRecette;
-  motif: string;
-  evaluationId: string | null;
 }
 
 /** Une décision à inscrire. La base tient la transition, le seuil et le droit. */
@@ -2539,11 +2618,20 @@ export interface TravailDeLecture {
 }
 
 export interface FabriqueRepository {
-  /** Les versions qui désignent — `observation` et `active`, jamais d'autres. */
-  contexteDeDesignation(tenantId: string): Promise<{ versions: VersionQuiDesigne[] }>;
+  /** TOUTES les recettes du dossier, dans tous leurs états — une suspendue reste visible. */
+  recettes(tenantId: string): Promise<RecetteDeLaFabrique[]>;
+  /** Toutes les décisions prises sur une version, la dernière en tête. */
+  decisions(recetteVersionId: string): Promise<DecisionInscrite[]>;
+  /** Les dérives constatées sur le dossier, la plus récente en tête. */
+  derives(tenantId: string): Promise<DeriveConstatee[]>;
+  /** Les formats du dossier, leurs exemples un par un, et ce qui leur manque. */
+  signatures(
+    tenantId: string,
+  ): Promise<{ minimumPourUneOssature: number; formats: FormatConnuDuDossier[] }>;
+  /** Parmi ces pièces, celles qu'une recette a lues. Les autres ont été lues par le modèle. */
+  piecesLuesParRecette(pieceIds: string[]): Promise<PieceLueParRecette[]>;
   /** `null` quand le travail n'existe pas, ou que la RLS ne le montre pas. */
   etatDeLaLecture(travailId: string): Promise<TravailDeLecture | null>;
-  etatDUneVersion(recetteVersionId: string): Promise<DecisionSurUneVersion | null>;
   evaluerUneVersion(tenantId: string, recetteVersionId: string): Promise<EvaluationDUneVersion>;
   /** Le droit de décider est tenu par la base : l'écran propose, elle refuse. */
   promouvoir(decision: DecisionAInscrire): Promise<void>;

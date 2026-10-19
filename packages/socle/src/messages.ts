@@ -1964,7 +1964,7 @@ const fr = {
   "cab.prop.kicker": "Génération en masse",
   "cab.prop.titre": "Propositions du Socle",
   "cab.prop.doctrine":
-    "Les écritures comptabilisées sur les pièces lues, groupées par confiance de lecture. Au-dessus du seuil du cabinet, le lot se valide d’un geste ; en dessous, chaque pièce se revoit une à une. Le seuil est le vôtre : il se règle, il ne se devine pas.",
+    "Les écritures comptabilisées sur les pièces lues, groupées par confiance de lecture. Au-dessus du seuil du cabinet, le lot se valide d’un geste ; en dessous, chaque pièce se revoit une à une. Le seuil est le vôtre : il se règle, il ne se devine pas. Les pièces lues par un lecteur spécialisé ont leur lot à part : une recette ne produit aucun score, et il n’y a donc aucun pourcentage à lire.",
   "cab.prop.lot.haut": "Confiance ≥ {seuil} %",
   "cab.prop.lot.moyen": "Confiance {bas} – {haut} %",
   "cab.prop.lot.bas": "Confiance < {seuil} %",
@@ -1973,6 +1973,9 @@ const fr = {
   "cab.prop.lot.moyen.note": "À revoir une à une.",
   "cab.prop.lot.bas.note": "Aucune valeur retenue sans lecture.",
   "cab.prop.lot.sans.note": "Lues avant que la confiance ne soit mesurée.",
+  "cab.prop.lot.recette": "Lues par un lecteur spécialisé",
+  "cab.prop.lot.recette.note":
+    "Aucun pourcentage : chaque champ désigné est relu dans le plan de jetons.",
   "cab.prop.lot.retenir": "Retenir le lot",
   "cab.prop.lot.revoir": "Revoir une à une",
   "cab.prop.lot.ouvrir": "Ouvrir la première",
@@ -2015,6 +2018,10 @@ const fr = {
   "cab.prop.pied.deselectionner": "Tout désélectionner",
   "cab.prop.pied.comptabiliser": "Comptabiliser tous les lots",
   "cab.prop.confiance.absente": "non mesurée",
+  "cab.prop.confiance.parRecette": "lue par un lecteur",
+  "cab.prop.confiance.parRecette.lot": "lues par un lecteur",
+  "cab.prop.confiance.parRecette.pourquoi":
+    "Lue par un lecteur spécialisé : chaque champ désigné a été relu dans le plan de jetons de la pièce, et la désignation vient d’une recette éprouvée sur des exemples de ce format. Une recette ne produit aucun score — il n’y a donc aucun pourcentage à lire, et ces pièces ne se valident pas d’un geste au titre d’une confiance qui n’existe pas.",
   "cab.prop.forces": "{count} pièces réimputées.",
   "cab.prop.forces#one": "{count} pièce réimputée.",
   "cab.prop.forces#other": "{count} pièces réimputées.",
@@ -2758,10 +2765,10 @@ const fr = {
     "Un lecteur spécialisé désigne les champs d’un format qu’il connaît, au lieu d’appeler un modèle. Il ne lit aucun montant lui-même : il désigne, et la valeur se relit dans le plan de jetons, comme toujours.",
   "cab.lecteurs.panel.kicker": "Ce que je sais d’eux",
   "cab.lecteurs.panel":
-    "Je ne vous montre ici que les recettes qui tournent. Une recette en observation s’exécute et se compare — je ne la crois pas encore. Les mesures que je n’ai pas pu calculer sont nommées une par une : elles sont absentes, elles ne valent pas zéro.",
-  "cab.lecteurs.section.quiLit": "Ce qui lit ce dossier",
+    "Je vous montre toutes les recettes de ce dossier, y compris celles que j’ai suspendues : c’est le pire moment pour en perdre une de vue. Une recette en observation s’exécute et se compare — je ne la crois pas encore. Les mesures que je n’ai pas pu calculer sont nommées une par une : elles sont absentes, elles ne valent pas zéro.",
+  "cab.lecteurs.section.quiLit": "Les recettes de ce dossier",
   "cab.lecteurs.vide":
-    "Aucune recette ne lit ce dossier : chaque pièce part vers la chaîne de lecture complète.",
+    "Aucune recette n’existe sur ce dossier : chaque pièce part vers la chaîne de lecture complète.",
   "cab.lecteurs.section.naissance": "Ce qu’il faut pour qu’une recette naisse",
   "cab.lecteurs.naissance.corps":
     "Deux exemples DISTINCTS au moins, qualifiés sur le même format. À un seul exemple, l’ossature commune n’est pas plus permissive : elle n’existe pas, et la proposition est refusée pour ossature insuffisante. Deux exemplaires du même document ne comptent que pour un. Une décision comptable — imputer un droit de timbre ailleurs — n’enseigne rien sur la forme du papier et ne nourrit aucune recette.",
@@ -2830,10 +2837,94 @@ const fr = {
   "cab.lecteurs.motif.pourquoi":
     "Obligatoire : « qui a décidé, et pourquoi » doit se lire sans enquête. Une décision est une écriture nouvelle — rien ne se réécrit.",
   "cab.lecteurs.activer": "Mettre en service",
+  "cab.lecteurs.reprendre": "Remettre en observation",
   "cab.lecteurs.suspendre": "Suspendre",
   "cab.lecteurs.retirer": "Retirer",
   "cab.lecteurs.droit":
     "Le droit de décider est tenu par la base : dirigeant ou expert, et une mise en service exige une évaluation qui franchit les seuils du référentiel.",
+
+  "cab.lecteurs.signature": "Format lu",
+  "cab.lecteurs.portee": "Portée",
+  "cab.lecteurs.portee.organisation": "Ce dossier seulement",
+  "cab.lecteurs.portee.mutualisee": "Mutualisée entre dossiers",
+  "cab.lecteurs.etat.inconnu": "Sans décision",
+  "cab.lecteurs.etat.candidate.note":
+    "Elle ne lit rien : une candidate attend son évaluation avant toute mise à l’épreuve.",
+  "cab.lecteurs.etat.evaluee.note":
+    "Évaluée, elle ne lit encore rien : la mise en observation est une décision à part.",
+  "cab.lecteurs.etat.suspendue.note":
+    "Elle ne lit plus rien. Les pièces suivantes repartent vers la chaîne de lecture complète.",
+  "cab.lecteurs.etat.retiree.note":
+    "Retirée du service. Ses exemples, ses exécutions et ses décisions restent lisibles.",
+  "cab.lecteurs.etat.inconnu.note":
+    "Aucune décision n’a été inscrite sur cette version : elle ne lit rien.",
+
+  "cab.lecteurs.historique": "Toutes les décisions",
+  "cab.lecteurs.historique.voir": "Voir l’historique",
+  "cab.lecteurs.historique.cacher": "Replier l’historique",
+  "cab.lecteurs.historique.vide": "Aucune décision inscrite sur cette version.",
+  "cab.lecteurs.hist.quand": "Quand",
+  "cab.lecteurs.hist.etat": "Décision",
+  "cab.lecteurs.hist.motif": "Motif",
+  "cab.lecteurs.hist.caption":
+    "Le cycle de cette version, de la plus récente à la plus ancienne. Une suspension est une écriture nouvelle : rien n’a été réécrit, et la décision précédente se lit encore.",
+
+  "cab.lecteurs.section.formats": "Les formats de ce dossier, et leurs exemples",
+  "cab.lecteurs.formats.doctrine":
+    "Un format est une signature structurelle de document. Les exemples qualifiés dessus sont ce dont un lecteur peut naître, et c’est ici que se lit ce qui manque — pièce par pièce, sans compter soi-même.",
+  "cab.lecteurs.formats.vide":
+    "Aucun exemple n’a été qualifié sur ce dossier. Aucun lecteur ne peut encore en naître.",
+  "cab.lecteurs.format.lecteur": "Lecteur : {libelle}",
+  "cab.lecteurs.format.sansLecteur": "Aucun lecteur sur ce format",
+  "cab.lecteurs.format.apprentissage": "{count} exemples d’apprentissage",
+  "cab.lecteurs.format.apprentissage#one": "{count} exemple d’apprentissage",
+  "cab.lecteurs.format.apprentissage#other": "{count} exemples d’apprentissage",
+  "cab.lecteurs.format.evaluation": "{count} exemples d’évaluation",
+  "cab.lecteurs.format.evaluation#one": "{count} exemple d’évaluation",
+  "cab.lecteurs.format.evaluation#other": "{count} exemples d’évaluation",
+  "cab.lecteurs.format.manque": "Il vous manque {count} exemples pour qu’un lecteur puisse naître.",
+  "cab.lecteurs.format.manque#one":
+    "Il vous manque {count} exemple pour qu’un lecteur puisse naître.",
+  "cab.lecteurs.format.manque#other":
+    "Il vous manque {count} exemples pour qu’un lecteur puisse naître.",
+  "cab.lecteurs.format.assez": "Assez d’exemples : un lecteur peut naître de ce format.",
+
+  "cab.lecteurs.exemple.piece": "Pièce",
+  "cab.lecteurs.exemple.quoi": "Ce qu’il enseigne",
+  "cab.lecteurs.exemple.provenance": "Provenance",
+  "cab.lecteurs.exemple.usage": "Jeu",
+  "cab.lecteurs.exemple.champs": "Champs désignés",
+  "cab.lecteurs.exemple.quand": "Qualifié le",
+  "cab.lecteurs.exemple.caption":
+    "Les exemples de ce format, un par un. Un exemple ne porte aucune valeur : il désigne une page et un rang de jeton, et le montant se relit dans le plan.",
+  "cab.lecteurs.exemple.nenourritpas": "ne nourrit aucune recette",
+  "cab.lecteurs.usage.apprentissage": "Apprentissage",
+  "cab.lecteurs.usage.evaluation": "Évaluation",
+  "cab.lecteurs.provenance.validation_humaine": "Validation humaine",
+  "cab.lecteurs.provenance.correction_humaine": "Correction humaine",
+  "cab.lecteurs.provenance.import_expert": "Import de l’expert",
+  "cab.lecteurs.provenance.observation": "Observation",
+  "cab.lecteurs.qualification.reconnaissance_ocr": "Reconnaissance du texte",
+  "cab.lecteurs.qualification.designation_champ": "Désignation d’un champ",
+  "cab.lecteurs.qualification.normalisation": "Normalisation",
+  "cab.lecteurs.qualification.document_incomplet": "Document incomplet",
+  "cab.lecteurs.qualification.decision_comptable": "Décision comptable",
+
+  "cab.lecteurs.section.derives": "Les dérives constatées",
+  "cab.lecteurs.derives.doctrine":
+    "Une dérive est un fait daté, et elle survit à la suspension qu’elle a provoquée. Sans elle, « suspendue » ne dirait jamais par quoi.",
+  "cab.lecteurs.derives.vide": "Aucune dérive constatée sur ce dossier.",
+  "cab.lecteurs.derive.quand": "Constatée le",
+  "cab.lecteurs.derive.lecteur": "Lecteur",
+  "cab.lecteurs.derive.nature": "Dérive",
+  "cab.lecteurs.derive.caption":
+    "Les dérives de ce dossier, de la plus récente à la plus ancienne. Une dérive ne s’efface pas quand la recette reprend du service.",
+  "cab.lecteurs.derive.abstention_en_hausse":
+    "Les abstentions dépassent ce que le référentiel tolère",
+  "cab.lecteurs.derive.montant_faux_accepte": "Un montant faux a été accepté",
+  "cab.lecteurs.derive.correction_humaine": "Une correction humaine a contredit la désignation",
+  "cab.lecteurs.derive.signature_changee":
+    "Plusieurs candidats là où la recette en attendait un — le format a changé",
 
   /* ---------------------------------- la file durable, côté dirigeant */
 
@@ -4724,7 +4815,7 @@ const en: Dict = {
   "cab.prop.kicker": "Bulk generation",
   "cab.prop.titre": "Socle proposals",
   "cab.prop.doctrine":
-    "Entries booked on read documents, grouped by reading confidence. Above the practice’s threshold, a lot is approved in one move; below, each document is reviewed one by one. The threshold is yours: it is set, never guessed.",
+    "Entries booked on read documents, grouped by reading confidence. Above the practice’s threshold, a lot is approved in one move; below, each document is reviewed one by one. The threshold is yours: it is set, never guessed. Documents read by a specialised reader have a lot of their own: a recipe produces no score, so there is no percentage to read.",
   "cab.prop.lot.haut": "Confidence ≥ {seuil} %",
   "cab.prop.lot.moyen": "Confidence {bas} – {haut} %",
   "cab.prop.lot.bas": "Confidence < {seuil} %",
@@ -4733,6 +4824,9 @@ const en: Dict = {
   "cab.prop.lot.moyen.note": "To review one by one.",
   "cab.prop.lot.bas.note": "No value kept without a reading.",
   "cab.prop.lot.sans.note": "Read before confidence was measured.",
+  "cab.prop.lot.recette": "Read by a specialised reader",
+  "cab.prop.lot.recette.note":
+    "No percentage: every field it points at is read back from the token plan.",
   "cab.prop.lot.retenir": "Select the lot",
   "cab.prop.lot.revoir": "Review one by one",
   "cab.prop.lot.ouvrir": "Open the first",
@@ -4775,6 +4869,10 @@ const en: Dict = {
   "cab.prop.pied.deselectionner": "Clear selection",
   "cab.prop.pied.comptabiliser": "Book all lots",
   "cab.prop.confiance.absente": "not measured",
+  "cab.prop.confiance.parRecette": "read by a reader",
+  "cab.prop.confiance.parRecette.lot": "read by a reader",
+  "cab.prop.confiance.parRecette.pourquoi":
+    "Read by a specialised reader: every field it pointed at was read back from the document’s token plan, and the pointing comes from a recipe tested against examples of that layout. A recipe produces no score — so there is no percentage to read, and these documents are not approved in one move on the strength of a confidence that does not exist.",
   "cab.prop.forces": "{count} documents re-posted.",
   "cab.prop.forces#one": "{count} document re-posted.",
   "cab.prop.forces#other": "{count} documents re-posted.",
@@ -5501,10 +5599,10 @@ const en: Dict = {
     "A specialised reader points at the fields of a layout it knows, instead of calling a model. It never reads an amount itself: it points, and the value is read back from the token plan, as always.",
   "cab.lecteurs.panel.kicker": "What I know about them",
   "cab.lecteurs.panel":
-    "I only show you the recipes that run. A recipe under observation runs and is compared — I do not believe it yet. The measures I could not compute are named one by one: they are absent, they are not zero.",
-  "cab.lecteurs.section.quiLit": "What reads this file",
+    "I show you every recipe on this file, including the ones I suspended: that is the worst moment to lose sight of one. A recipe under observation runs and is compared — I do not believe it yet. The measures I could not compute are named one by one: they are absent, they are not zero.",
+  "cab.lecteurs.section.quiLit": "The recipes on this file",
   "cab.lecteurs.vide":
-    "No recipe reads this file: every document goes through the full reading chain.",
+    "No recipe exists on this file: every document goes through the full reading chain.",
   "cab.lecteurs.section.naissance": "What a recipe needs to be born",
   "cab.lecteurs.naissance.corps":
     "At least two DISTINCT examples, qualified on the same layout. With a single example the shared frame is not more permissive: it does not exist, and the proposal is refused for insufficient frame. Two copies of the same document count as one. An accounting decision — posting a stamp duty elsewhere — teaches nothing about the shape of the paper and feeds no recipe.",
@@ -5573,10 +5671,91 @@ const en: Dict = {
   "cab.lecteurs.motif.pourquoi":
     "Required: “who decided, and why” must read without an investigation. A decision is a new entry — nothing is rewritten.",
   "cab.lecteurs.activer": "Put into service",
+  "cab.lecteurs.reprendre": "Put back under observation",
   "cab.lecteurs.suspendre": "Suspend",
   "cab.lecteurs.retirer": "Withdraw",
   "cab.lecteurs.droit":
     "The right to decide is held by the database: owner or chartered accountant, and putting a recipe into service requires an evaluation that clears the reference thresholds.",
+
+  "cab.lecteurs.signature": "Layout read",
+  "cab.lecteurs.portee": "Scope",
+  "cab.lecteurs.portee.organisation": "This file only",
+  "cab.lecteurs.portee.mutualisee": "Shared across files",
+  "cab.lecteurs.etat.inconnu": "No decision",
+  "cab.lecteurs.etat.candidate.note":
+    "It reads nothing: a candidate waits for its evaluation before any trial.",
+  "cab.lecteurs.etat.evaluee.note":
+    "Evaluated, it still reads nothing: putting it under observation is a decision of its own.",
+  "cab.lecteurs.etat.suspendue.note":
+    "It reads nothing any more. The next documents go back to the full reading chain.",
+  "cab.lecteurs.etat.retiree.note":
+    "Withdrawn from service. Its examples, its runs and its decisions remain readable.",
+  "cab.lecteurs.etat.inconnu.note":
+    "No decision has been recorded on this version: it reads nothing.",
+
+  "cab.lecteurs.historique": "Every decision",
+  "cab.lecteurs.historique.voir": "Show the history",
+  "cab.lecteurs.historique.cacher": "Hide the history",
+  "cab.lecteurs.historique.vide": "No decision recorded on this version.",
+  "cab.lecteurs.hist.quand": "When",
+  "cab.lecteurs.hist.etat": "Decision",
+  "cab.lecteurs.hist.motif": "Reason",
+  "cab.lecteurs.hist.caption":
+    "The cycle of this version, newest first. A suspension is a new record: nothing was rewritten, and the previous decision can still be read.",
+
+  "cab.lecteurs.section.formats": "The layouts on this file, and their examples",
+  "cab.lecteurs.formats.doctrine":
+    "A layout is a structural signature of a document. The examples qualified on it are what a reader can be born from, and this is where what is missing can be read — document by document, without counting for yourself.",
+  "cab.lecteurs.formats.vide":
+    "No example has been qualified on this file. No reader can be born yet.",
+  "cab.lecteurs.format.lecteur": "Reader: {libelle}",
+  "cab.lecteurs.format.sansLecteur": "No reader on this layout",
+  "cab.lecteurs.format.apprentissage": "{count} training examples",
+  "cab.lecteurs.format.apprentissage#one": "{count} training example",
+  "cab.lecteurs.format.apprentissage#other": "{count} training examples",
+  "cab.lecteurs.format.evaluation": "{count} evaluation examples",
+  "cab.lecteurs.format.evaluation#one": "{count} evaluation example",
+  "cab.lecteurs.format.evaluation#other": "{count} evaluation examples",
+  "cab.lecteurs.format.manque": "You are {count} examples short of a reader being born.",
+  "cab.lecteurs.format.manque#one": "You are {count} example short of a reader being born.",
+  "cab.lecteurs.format.manque#other": "You are {count} examples short of a reader being born.",
+  "cab.lecteurs.format.assez": "Enough examples: a reader can be born from this layout.",
+
+  "cab.lecteurs.exemple.piece": "Document",
+  "cab.lecteurs.exemple.quoi": "What it teaches",
+  "cab.lecteurs.exemple.provenance": "Origin",
+  "cab.lecteurs.exemple.usage": "Set",
+  "cab.lecteurs.exemple.champs": "Fields pointed at",
+  "cab.lecteurs.exemple.quand": "Qualified on",
+  "cab.lecteurs.exemple.caption":
+    "The examples of this layout, one by one. An example carries no value: it points at a page and a token rank, and the amount is read back from the plan.",
+  "cab.lecteurs.exemple.nenourritpas": "feeds no recipe",
+  "cab.lecteurs.usage.apprentissage": "Training",
+  "cab.lecteurs.usage.evaluation": "Evaluation",
+  "cab.lecteurs.provenance.validation_humaine": "Human approval",
+  "cab.lecteurs.provenance.correction_humaine": "Human correction",
+  "cab.lecteurs.provenance.import_expert": "Imported by the accountant",
+  "cab.lecteurs.provenance.observation": "Observation",
+  "cab.lecteurs.qualification.reconnaissance_ocr": "Text recognition",
+  "cab.lecteurs.qualification.designation_champ": "Pointing at a field",
+  "cab.lecteurs.qualification.normalisation": "Normalisation",
+  "cab.lecteurs.qualification.document_incomplet": "Incomplete document",
+  "cab.lecteurs.qualification.decision_comptable": "Accounting decision",
+
+  "cab.lecteurs.section.derives": "The drifts observed",
+  "cab.lecteurs.derives.doctrine":
+    "A drift is a dated fact, and it outlives the suspension it caused. Without it, “suspended” would never say by what.",
+  "cab.lecteurs.derives.vide": "No drift observed on this file.",
+  "cab.lecteurs.derive.quand": "Observed on",
+  "cab.lecteurs.derive.lecteur": "Reader",
+  "cab.lecteurs.derive.nature": "Drift",
+  "cab.lecteurs.derive.caption":
+    "The drifts on this file, newest first. A drift is not erased when the recipe goes back into service.",
+  "cab.lecteurs.derive.abstention_en_hausse": "Abstentions exceed what the reference tolerates",
+  "cab.lecteurs.derive.montant_faux_accepte": "A wrong amount was accepted",
+  "cab.lecteurs.derive.correction_humaine": "A human correction contradicted the pointing",
+  "cab.lecteurs.derive.signature_changee":
+    "Several candidates where the recipe expected one — the layout has changed",
 
   /* ---------------------------------- la file durable, côté dirigeant */
 
@@ -7425,7 +7604,7 @@ const ar: Dict = {
   "cab.prop.kicker": "توليد جماعي",
   "cab.prop.titre": "مقترحات السوكل",
   "cab.prop.doctrine":
-    "القيود المحاسَبة على الوثائق المقروءة، مجمّعة حسب ثقة القراءة. فوق عتبة المكتب يصادَق على الدفعة بحركة واحدة؛ ودونها تُراجع كل وثيقة على حدة. العتبة عتبتك: تُضبط ولا تُخمَّن.",
+    "القيود المحاسَبة على الوثائق المقروءة، مجمّعة حسب ثقة القراءة. فوق عتبة المكتب يصادَق على الدفعة بحركة واحدة؛ ودونها تُراجع كل وثيقة على حدة. العتبة عتبتك: تُضبط ولا تُخمَّن. والوثائق التي قرأتها قارئة متخصّصة لها دفعتها الخاصة: الوصفة لا تُنتج أي درجة، فلا نسبة مئوية تُقرأ.",
   "cab.prop.lot.haut": "ثقة ≥ {seuil} %",
   "cab.prop.lot.moyen": "ثقة {bas} – {haut} %",
   "cab.prop.lot.bas": "ثقة < {seuil} %",
@@ -7434,6 +7613,8 @@ const ar: Dict = {
   "cab.prop.lot.moyen.note": "تُراجع واحدة واحدة.",
   "cab.prop.lot.bas.note": "لا قيمة تُعتمد دون قراءة.",
   "cab.prop.lot.sans.note": "قُرئت قبل قياس الثقة.",
+  "cab.prop.lot.recette": "قرأتها قارئة متخصّصة",
+  "cab.prop.lot.recette.note": "لا نسبة مئوية: كل حقل مُشار إليه يُقرأ من خطة الرموز.",
   "cab.prop.lot.retenir": "اختيار الدفعة",
   "cab.prop.lot.revoir": "مراجعة واحدة واحدة",
   "cab.prop.lot.ouvrir": "فتح الأولى",
@@ -7476,6 +7657,10 @@ const ar: Dict = {
   "cab.prop.pied.deselectionner": "إلغاء التحديد",
   "cab.prop.pied.comptabiliser": "محاسبة كل الدفعات",
   "cab.prop.confiance.absente": "غير مقيسة",
+  "cab.prop.confiance.parRecette": "قرأتها قارئة",
+  "cab.prop.confiance.parRecette.lot": "قرأتها قارئة",
+  "cab.prop.confiance.parRecette.pourquoi":
+    "قرأتها قارئة متخصّصة: كل حقل أشارت إليه أُعيدت قراءته من خطة رموز الوثيقة، والإشارة تأتي من وصفة جُرِّبت على أمثلة من هذا النموذج. والوصفة لا تُنتج أي درجة — فلا نسبة مئوية تُقرأ، وهذه الوثائق لا تُصادَق بحركة واحدة استنادًا إلى ثقة غير موجودة.",
   "cab.prop.forces": "أُعيد ترحيل {count} وثيقة.",
   "cab.prop.forces#one": "أُعيد ترحيل وثيقة واحدة.",
   "cab.prop.forces#other": "أُعيد ترحيل {count} وثيقة.",
@@ -8172,9 +8357,9 @@ const ar: Dict = {
     "القارئة المتخصّصة تُشير إلى حقول نموذج تعرفه، بدل استدعاء نموذج لغوي. وهي لا تقرأ أي مبلغ بنفسها: تُشير فقط، والقيمة تُقرأ من خطة الرموز كما هي العادة.",
   "cab.lecteurs.panel.kicker": "ما أعرفه عنها",
   "cab.lecteurs.panel":
-    "لا أعرض هنا إلا الوصفات العاملة. الوصفة تحت الملاحظة تُنفَّذ وتُقارَن — ولا أصدّقها بعد. والقياسات التي تعذّر حسابها تُسمّى واحدًا واحدًا: هي غائبة، وليست صفرًا.",
-  "cab.lecteurs.section.quiLit": "ما يقرأ هذا الملف",
-  "cab.lecteurs.vide": "لا وصفة تقرأ هذا الملف: كل وثيقة تمرّ عبر سلسلة القراءة الكاملة.",
+    "أعرض هنا كل وصفات هذا الملف، بما فيها ما أوقفته: فذلك أسوأ وقت لتغيب عنك وصفة. الوصفة تحت الملاحظة تُنفَّذ وتُقارَن — ولا أصدّقها بعد. والقياسات التي تعذّر حسابها تُسمّى واحدًا واحدًا: هي غائبة، وليست صفرًا.",
+  "cab.lecteurs.section.quiLit": "وصفات هذا الملف",
+  "cab.lecteurs.vide": "لا توجد أي وصفة على هذا الملف: كل وثيقة تمرّ عبر سلسلة القراءة الكاملة.",
   "cab.lecteurs.section.naissance": "ما تحتاجه الوصفة كي تُولد",
   "cab.lecteurs.naissance.corps":
     "مثالان مختلفان على الأقل، مؤهّلان على النموذج نفسه. بمثال واحد لا يصير الهيكل المشترك أوسع: بل لا يوجد أصلًا، ويُرفض الاقتراح لعدم كفاية الهيكل. ونسختان من الوثيقة نفسها تُحسبان واحدة. أمّا القرار المحاسبي — تحميل رسم الطابع في حساب آخر — فلا يعلّم شيئًا عن شكل الورقة ولا يغذّي أي وصفة.",
@@ -8241,10 +8426,85 @@ const ar: Dict = {
   "cab.lecteurs.motif.pourquoi":
     "إلزامي: «من قرّر، ولماذا» يجب أن يُقرأ دون تحقيق. القرار قيد جديد — ولا شيء يُعاد كتابته.",
   "cab.lecteurs.activer": "الوضع في الخدمة",
+  "cab.lecteurs.reprendre": "إعادتها تحت الملاحظة",
   "cab.lecteurs.suspendre": "إيقاف",
   "cab.lecteurs.retirer": "سحب",
   "cab.lecteurs.droit":
     "حقّ القرار تحفظه قاعدة البيانات: صاحب المؤسسة أو الخبير المحاسب، ووضع الوصفة في الخدمة يتطلّب تقييمًا يتجاوز عتبات المرجع.",
+
+  "cab.lecteurs.signature": "النموذج المقروء",
+  "cab.lecteurs.portee": "النطاق",
+  "cab.lecteurs.portee.organisation": "هذا الملف فقط",
+  "cab.lecteurs.portee.mutualisee": "مشتركة بين الملفات",
+  "cab.lecteurs.etat.inconnu": "دون قرار",
+  "cab.lecteurs.etat.candidate.note": "لا تقرأ شيئًا: المرشّحة تنتظر تقييمها قبل أي تجربة.",
+  "cab.lecteurs.etat.evaluee.note": "مقيَّمة، ومع ذلك لا تقرأ بعد: وضعها تحت الملاحظة قرار مستقلّ.",
+  "cab.lecteurs.etat.suspendue.note":
+    "لم تعد تقرأ شيئًا. الوثائق التالية تعود إلى سلسلة القراءة الكاملة.",
+  "cab.lecteurs.etat.retiree.note": "سُحبت من الخدمة. أمثلتها وتنفيذاتها وقراراتها تبقى مقروءة.",
+  "cab.lecteurs.etat.inconnu.note": "لم يُسجَّل أي قرار على هذه النسخة: فهي لا تقرأ شيئًا.",
+
+  "cab.lecteurs.historique": "كل القرارات",
+  "cab.lecteurs.historique.voir": "عرض السجل",
+  "cab.lecteurs.historique.cacher": "طيّ السجل",
+  "cab.lecteurs.historique.vide": "لا قرار مسجَّل على هذه النسخة.",
+  "cab.lecteurs.hist.quand": "التاريخ",
+  "cab.lecteurs.hist.etat": "القرار",
+  "cab.lecteurs.hist.motif": "السبب",
+  "cab.lecteurs.hist.caption":
+    "دورة هذه النسخة، من الأحدث إلى الأقدم. الإيقاف كتابة جديدة: لم يُعَد كتابة أي شيء، والقرار السابق ما زال مقروءًا.",
+
+  "cab.lecteurs.section.formats": "نماذج هذا الملف وأمثلتها",
+  "cab.lecteurs.formats.doctrine":
+    "النموذج بصمة بنيوية لوثيقة. والأمثلة المصنَّفة عليه هي ما يمكن أن تُولد منه قارئة، وهنا يُقرأ ما ينقص — وثيقة وثيقة، دون أن تَعُدّ بنفسك.",
+  "cab.lecteurs.formats.vide": "لم يُصنَّف أي مثال على هذا الملف. لا يمكن أن تُولد قارئة بعد.",
+  "cab.lecteurs.format.lecteur": "القارئة: {libelle}",
+  "cab.lecteurs.format.sansLecteur": "لا قارئة على هذا النموذج",
+  "cab.lecteurs.format.apprentissage": "{count} أمثلة تعلّم",
+  "cab.lecteurs.format.apprentissage#one": "{count} مثال تعلّم",
+  "cab.lecteurs.format.apprentissage#other": "{count} أمثلة تعلّم",
+  "cab.lecteurs.format.evaluation": "{count} أمثلة تقييم",
+  "cab.lecteurs.format.evaluation#one": "{count} مثال تقييم",
+  "cab.lecteurs.format.evaluation#other": "{count} أمثلة تقييم",
+  "cab.lecteurs.format.manque": "ينقصك {count} أمثلة كي تُولد قارئة.",
+  "cab.lecteurs.format.manque#one": "ينقصك {count} مثال كي تُولد قارئة.",
+  "cab.lecteurs.format.manque#other": "ينقصك {count} أمثلة كي تُولد قارئة.",
+  "cab.lecteurs.format.assez": "الأمثلة كافية: يمكن أن تُولد قارئة من هذا النموذج.",
+
+  "cab.lecteurs.exemple.piece": "الوثيقة",
+  "cab.lecteurs.exemple.quoi": "ما يُعلّمه",
+  "cab.lecteurs.exemple.provenance": "المصدر",
+  "cab.lecteurs.exemple.usage": "المجموعة",
+  "cab.lecteurs.exemple.champs": "الحقول المُشار إليها",
+  "cab.lecteurs.exemple.quand": "صُنِّف في",
+  "cab.lecteurs.exemple.caption":
+    "أمثلة هذا النموذج، واحدًا واحدًا. المثال لا يحمل أي قيمة: يُشير إلى صفحة ورتبة رمز، والمبلغ يُقرأ من الخطة.",
+  "cab.lecteurs.exemple.nenourritpas": "لا يغذّي أي وصفة",
+  "cab.lecteurs.usage.apprentissage": "تعلّم",
+  "cab.lecteurs.usage.evaluation": "تقييم",
+  "cab.lecteurs.provenance.validation_humaine": "مصادقة بشرية",
+  "cab.lecteurs.provenance.correction_humaine": "تصحيح بشري",
+  "cab.lecteurs.provenance.import_expert": "إدراج من الخبير",
+  "cab.lecteurs.provenance.observation": "ملاحظة",
+  "cab.lecteurs.qualification.reconnaissance_ocr": "التعرّف على النصّ",
+  "cab.lecteurs.qualification.designation_champ": "الإشارة إلى حقل",
+  "cab.lecteurs.qualification.normalisation": "التوحيد",
+  "cab.lecteurs.qualification.document_incomplet": "وثيقة ناقصة",
+  "cab.lecteurs.qualification.decision_comptable": "قرار محاسبي",
+
+  "cab.lecteurs.section.derives": "الانحرافات المُلاحَظة",
+  "cab.lecteurs.derives.doctrine":
+    "الانحراف واقعة مؤرّخة، وتبقى بعد الإيقاف الذي سبّبته. ولولاها لما قال «موقوفة» بسبب أيّ شيء.",
+  "cab.lecteurs.derives.vide": "لا انحراف مُلاحَظ على هذا الملف.",
+  "cab.lecteurs.derive.quand": "لوحظ في",
+  "cab.lecteurs.derive.lecteur": "القارئة",
+  "cab.lecteurs.derive.nature": "الانحراف",
+  "cab.lecteurs.derive.caption":
+    "انحرافات هذا الملف، من الأحدث إلى الأقدم. الانحراف لا يُمحى عند عودة الوصفة إلى الخدمة.",
+  "cab.lecteurs.derive.abstention_en_hausse": "الامتناعات تتجاوز ما يتسامح به المرجع",
+  "cab.lecteurs.derive.montant_faux_accepte": "قُبِل مبلغ خاطئ",
+  "cab.lecteurs.derive.correction_humaine": "تصحيح بشري خالف الإشارة",
+  "cab.lecteurs.derive.signature_changee": "مرشّحون عدّة حيث انتظرت الوصفة واحدًا — تغيّر النموذج",
 
   /* ---------------------------------- la file durable, côté dirigeant */
 

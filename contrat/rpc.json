@@ -106,6 +106,8 @@
   ],
   "fabrique": [
     "contexteDeDesignation",
+    "decisions",
+    "derives",
     "enregistrerLecture",
     "etatDUneVersion",
     "etatDeLaLecture",
@@ -114,8 +116,11 @@
     "inscrireExecution",
     "inscrireUneCandidate",
     "journaliserUneGeneration",
+    "piecesLuesParRecette",
     "promouvoir",
     "qualifierUnExemple",
+    "recettes",
+    "signatures",
     "surveillerUneVersion"
   ],
   "facturation": [

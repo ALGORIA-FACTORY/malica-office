@@ -34,6 +34,7 @@ import {
   surveiller,
   type EtatDeRecette,
 } from "../fabrique/cycle.ts";
+import { EXEMPLES_MINIMUM_POUR_UNE_OSSATURE } from "../fabrique/interprete-reconnaissance.ts";
 import { lireLesBornesDeRecette, lireLesReglages } from "../fabrique/interprete-reglages.ts";
 import { enregistrerTravail, etatDuTravail } from "../fabrique/travaux.ts";
 import type { PageToken } from "../malica/lecture/token-plan.ts";
@@ -139,6 +140,12 @@ const Generation = z.object({
   erreur: z.string().max(2000).nullish(),
 });
 
+/**
+ * Un lot de pièces à qualifier. Borné : la file du cabinet en rend deux cents,
+ * et une liste non bornée est une lecture qu'un appelant peut faire exploser.
+ */
+const Pieces = z.array(z.string().uuid()).max(500);
+
 const Execution = z.object({
   tenantId: z.string().uuid(),
   recetteVersionId: z.string().uuid(),
@@ -236,6 +243,275 @@ export const fabrique = {
         plansDApprentissage: [...(parVersion.get(v.recette_version_id)?.values() ?? [])],
       })),
     };
+  },
+
+  /* ============================ CE QUE L'ÉCRAN DE L'EXPERT LIT ============ */
+
+  /**
+   * TOUTES les recettes d'un dossier, dans tous leurs états.
+   *
+   * Ce n'est pas `contexteDeDesignation` élargi, et ce ne doit pas le
+   * devenir : celle-là est sur le chemin de la DÉSIGNATION, elle ne rend que
+   * `observation` et `active`, et c'est ce qui fait qu'une suspension suffit
+   * à rétablir le chemin du modèle. Y ajouter un état la casserait.
+   *
+   * Celle-ci est sur le chemin du REGARD. Une recette suspendue par la
+   * surveillance doit rester visible — c'est le pire moment pour la perdre de
+   * vue : l'expert voit le verdict une fois, et sans cette lecture la carte
+   * s'en va. `retiree` et `candidate` paraissent pour la même raison.
+   *
+   * Rien n'est décidé ici : l'état est celui de `fabrique.etat_des_recettes_v`
+   * (le dernier fait inscrit), la portée et la clé de signature sont celles de
+   * `fabrique.recettes`, et les deux comptes sont des dénombrements.
+   */
+  async recettes(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{
+      version_id: string;
+      recette_id: string;
+      rang: number;
+      libelle: string;
+      signature_cle: string;
+      portee: string;
+      etat: string | null;
+      motif: string | null;
+      decide_le: string | null;
+      exemples: number;
+      champs: number | null;
+    }>(
+      `select v.id as version_id, v.recette_id, v.rang,
+              r.libelle, r.signature_cle, r.portee::text as portee,
+              e.etat::text as etat, e.motif, e.decide_le,
+              (select count(*)
+                 from fabrique.recette_version_exemples rve
+                where rve.recette_version_id = v.id)::int as exemples,
+              case when jsonb_typeof(v.definition -> 'champs') = 'object'
+                   then (select count(*) from jsonb_object_keys(v.definition -> 'champs'))::int
+              end as champs
+         from fabrique.recette_versions v
+         join fabrique.recettes r on r.id = v.recette_id
+         left join fabrique.etat_des_recettes_v e on e.recette_version_id = v.id
+        where v.tenant_id = $1
+        order by r.libelle, v.rang desc`,
+      [tenantId],
+    );
+
+    return rows.map((r) => ({
+      versionId: r.version_id,
+      recetteId: r.recette_id,
+      rang: Number(r.rang),
+      libelle: r.libelle,
+      signatureCle: r.signature_cle,
+      portee: r.portee,
+      etat: r.etat,
+      motif: r.motif,
+      decideLe: r.decide_le,
+      exemples: Number(r.exemples),
+      champs: r.champs === null ? null : Number(r.champs),
+    }));
+  },
+
+  /**
+   * TOUTES les décisions prises sur une version, la dernière en tête.
+   *
+   * `etatDUneVersion` rend le dernier fait ; celle-ci rend la suite. Une
+   * correction est une écriture nouvelle (R7) : la seule façon de répondre à
+   * « qui a suspendu cette recette, quand, et pourquoi » est de les lire
+   * toutes. L'ordre est celui de `ordre`, monotone — deux décisions prises
+   * dans la même transaction partagent `decide_le`, et une date les
+   * départagerait au hasard.
+   */
+  async decisions(db: Requete, recetteVersionId: string) {
+    const { rows } = await db.query<{
+      etat: string;
+      motif: string;
+      evaluation_id: string | null;
+      decide_le: string;
+    }>(
+      `select p.etat::text as etat, p.motif, p.evaluation_id, p.decide_le
+         from fabrique.promotions p
+        where p.recette_version_id = $1
+        order by p.ordre desc`,
+      [recetteVersionId],
+    );
+    return rows.map((r) => ({
+      etat: r.etat,
+      motif: r.motif,
+      evaluationId: r.evaluation_id,
+      decideLe: r.decide_le,
+    }));
+  },
+
+  /**
+   * Les dérives constatées sur les recettes d'un dossier.
+   *
+   * Une dérive est un FAIT daté, et il survit à la suspension qu'il a
+   * provoquée. L'écran qui ne montrerait que l'état courant dirait
+   * « suspendue » sans jamais dire par quoi.
+   */
+  async derives(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{
+      recette_version_id: string;
+      libelle: string;
+      rang: number;
+      piece_id: string | null;
+      nature: string;
+      mesure: unknown;
+      constatee_le: string;
+    }>(
+      `select d.recette_version_id, r.libelle, v.rang, d.piece_id,
+              d.nature::text as nature, d.mesure, d.constatee_le
+         from fabrique.derives d
+         join fabrique.recette_versions v on v.id = d.recette_version_id
+         join fabrique.recettes r on r.id = v.recette_id
+        where d.tenant_id = $1
+        order by d.constatee_le desc`,
+      [tenantId],
+    );
+    return rows.map((r) => ({
+      versionId: r.recette_version_id,
+      libelle: r.libelle,
+      rang: Number(r.rang),
+      pieceId: r.piece_id,
+      nature: r.nature,
+      mesure: r.mesure,
+      constateeLe: r.constatee_le,
+    }));
+  },
+
+  /**
+   * Les formats d'un dossier, leurs exemples un par un, et ce qui manque.
+   *
+   * ============================================= POURQUOI « CE QUI MANQUE »
+   *
+   * Sans cette lecture, un écran ne peut qu'ÉNONCER la règle — « deux exemples
+   * distincts au moins » — et laisser l'expert compter lui-même. Il peut
+   * désormais dire « il vous manque un exemple », et le compte est celui de la
+   * base.
+   *
+   * `manque` est calculé ICI, pas à l'écran, et ce n'est pas un seuil de
+   * référentiel : `EXEMPLES_MINIMUM_POUR_UNE_OSSATURE` est une borne de forme
+   * — à un seul exemple l'ossature commune n'existe pas —, et c'est le même
+   * nombre que celui dont `interprete-reconnaissance` se sert pour refuser.
+   * Un second exemplaire du même nombre à l'écran serait une seconde vérité.
+   *
+   * Seuls les exemples qui NOURRISSENT une recette entrent dans ce compte :
+   * la colonne est calculée en base, une décision comptable n'y est pas.
+   */
+  async signatures(db: Requete, tenantId: string) {
+    const [{ rows: exemples }, { rows: recettes }] = await Promise.all([
+      db.query<{
+        id: string;
+        signature_cle: string;
+        piece_id: string;
+        provenance: string;
+        qualification: string;
+        usage: string;
+        nourrit_une_recette: boolean;
+        champs: number | null;
+        note: string | null;
+        qualifie_le: string;
+      }>(
+        `select e.id, e.signature_cle, e.piece_id,
+                e.provenance::text as provenance,
+                e.qualification::text as qualification,
+                e.usage::text as usage,
+                e.nourrit_une_recette,
+                (select count(*) from jsonb_object_keys(e.attendu))::int as champs,
+                e.note, e.qualifie_le
+           from fabrique.exemples e
+          where e.tenant_id = $1
+          order by e.signature_cle, e.qualifie_le desc`,
+        [tenantId],
+      ),
+      db.query<{ signature_cle: string; id: string; libelle: string; portee: string }>(
+        `select r.signature_cle, r.id, r.libelle, r.portee::text as portee
+           from fabrique.recettes r
+          where r.tenant_id = $1`,
+        [tenantId],
+      ),
+    ]);
+
+    const recetteDe = new Map(recettes.map((r) => [r.signature_cle, r]));
+    const cles = [...new Set([...exemples.map((e) => e.signature_cle), ...recetteDe.keys()])].sort(
+      (a, b) => a.localeCompare(b),
+    );
+
+    return {
+      minimumPourUneOssature: EXEMPLES_MINIMUM_POUR_UNE_OSSATURE,
+      formats: cles.map((cle) => {
+        const siens = exemples.filter((e) => e.signature_cle === cle);
+        const nourrissants = siens.filter(
+          (e) => e.nourrit_une_recette && e.usage === "apprentissage",
+        );
+        const recette = recetteDe.get(cle) ?? null;
+        return {
+          signatureCle: cle,
+          recetteId: recette?.id ?? null,
+          libelle: recette?.libelle ?? null,
+          portee: recette?.portee ?? null,
+          apprentissage: nourrissants.length,
+          evaluation: siens.filter((e) => e.usage === "evaluation").length,
+          manque: Math.max(0, EXEMPLES_MINIMUM_POUR_UNE_OSSATURE - nourrissants.length),
+          exemples: siens.map((e) => ({
+            exempleId: e.id,
+            pieceId: e.piece_id,
+            provenance: e.provenance,
+            qualification: e.qualification,
+            usage: e.usage,
+            nourritUneRecette: e.nourrit_une_recette,
+            champs: e.champs === null ? null : Number(e.champs),
+            note: e.note,
+            qualifieLe: e.qualifie_le,
+          })),
+        };
+      }),
+    };
+  },
+
+  /**
+   * Parmi ces pièces, lesquelles une RECETTE a-t-elle lues — et laquelle.
+   *
+   * ================================================= LE DÉFAUT QUE CECI FERME
+   *
+   * Une pièce lue par une recette porte `overall_confidence = 1`, parce qu'une
+   * recette ne produit AUCUN score : le neutre du minimum est passé
+   * explicitement au point d'appel, par honnêteté. Sans cette lecture, la file
+   * du cabinet ne distingue pas ce neutre d'une mesure, et l'écran affichait
+   * « 100 % » sous « Confiance min. » puis rangeait la pièce dans les
+   * validables d'un geste. Un score non calibré ne s'affiche jamais comme une
+   * probabilité de justesse ; une absence de score encore moins.
+   *
+   * Le plus étroit qui réponde : l'issue `designation` — une abstention ou un
+   * échec rendent la main à la chaîne, et la pièce est alors lue par le
+   * modèle, donc mesurée comme avant. La dernière exécution décide, parce
+   * qu'une pièce corrigée se relit.
+   */
+  async piecesLuesParRecette(db: Requete, saisie: unknown) {
+    const ids = Pieces.parse(saisie);
+    if (ids.length === 0) return [];
+    const { rows } = await db.query<{
+      piece_id: string;
+      recette_version_id: string;
+      libelle: string;
+      rang: number;
+      executee_le: string;
+    }>(
+      `select distinct on (x.piece_id)
+              x.piece_id, x.recette_version_id, r.libelle, v.rang, x.executee_le
+         from fabrique.executions x
+         join fabrique.recette_versions v on v.id = x.recette_version_id
+         join fabrique.recettes r on r.id = v.recette_id
+        where x.piece_id = any($1) and x.issue = 'designation'
+        order by x.piece_id, x.executee_le desc`,
+      [ids],
+    );
+    return rows.map((r) => ({
+      pieceId: r.piece_id,
+      versionId: r.recette_version_id,
+      libelle: r.libelle,
+      rang: Number(r.rang),
+      executeeLe: r.executee_le,
+    }));
   },
 
   /**

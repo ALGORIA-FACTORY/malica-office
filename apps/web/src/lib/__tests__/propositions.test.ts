@@ -38,6 +38,25 @@ describe("lotDe", () => {
     expect(lotDe(0.8, 0.75, 0.5)).toBe("haut");
     expect(lotDe(0.55, 0.75, 0.5)).toBe("moyen");
   });
+
+  /**
+   * ============================================ LE DÉFAUT QUE CECI VERROUILLE
+   *
+   * Une pièce lue par une recette porte `overall_confidence = 1` : le neutre
+   * du minimum, passé explicitement parce qu'une recette ne produit AUCUN
+   * score. Comparé à un seuil, ce neutre les franchit tous — la pièce
+   * s'affichait « 100 % » et tombait dans les validables d'un geste.
+   *
+   * Le neutre est donc éprouvé ici tel qu'il arrive, `1`, et non une valeur
+   * inventée pour la circonstance : c'est la valeur réelle du chemin.
+   */
+  it("une pièce lue par une recette n'entre dans aucun lot de confiance", () => {
+    expect(lotDe(1, 0.9, 0.7, true)).toBe("recette");
+    expect(lotDe(1, 0.9, 0.7, false)).toBe("haut");
+    // Et le lot ne dépend pas du score : une recette n'en produit pas.
+    expect(lotDe(0.1, 0.9, 0.7, true)).toBe("recette");
+    expect(lotDe(null, 0.9, 0.7, true)).toBe("recette");
+  });
 });
 
 describe("ecritureEnMasse", () => {
