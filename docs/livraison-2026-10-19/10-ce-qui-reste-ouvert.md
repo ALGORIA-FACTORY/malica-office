@@ -19,7 +19,7 @@ Trois familles, et elles ne se traitent pas de la même façon :
 
 ### A-1 · La lecture d'un expert-comptable se compte sur la licence du client
 
-*Trouvé le 17 octobre, ronde 4 de la tâche 0.*
+_Trouvé le 17 octobre, ronde 4 de la tâche 0._
 
 Un expert de cabinet engagé qui lit une pièce `partage` recevait le feu vert,
 puis l'inscription de sa lecture échouait. Dès que le compteur sera branché sur
@@ -50,7 +50,7 @@ forfait propre au cabinet. Elle demande une offre.
 
 ### A-3 · Un membre d'un cabinet engagé vaut l'expert, quel que soit son rôle
 
-*Trouvé le 17 octobre, relecture de la ronde 5.* La porte d'accès du dépôt ne
+_Trouvé le 17 octobre, relecture de la ronde 5._ La porte d'accès du dépôt ne
 distingue pas les rôles au sein d'un cabinet : un collaborateur du cabinet lit et
 compte comme l'expert-comptable.
 
@@ -61,7 +61,7 @@ distinction à poser **partout**, pas ici.
 
 ### A-2 · Un opérateur de plateforme sous réquisition reste bloqué par le plafond du client
 
-*Trouvé le 17 octobre, même ronde.*
+_Trouvé le 17 octobre, même ronde._
 
 **Tranché :** on n'y touche pas. C'est fermé, donc sans danger, et une
 réquisition est rare. Une porte fermée qu'on ouvrira le jour où l'on connaîtra
@@ -77,7 +77,7 @@ question technique.
 
 ### D-1 · Onze tables de `capture` acceptent une imputation forgée
 
-*Trouvé le 17 octobre, ronde 4.* Elles portent un `tenant_id` et un `piece_id`
+_Trouvé le 17 octobre, ronde 4._ Elles portent un `tenant_id` et un `piece_id`
 que nulle politique ne lie entre eux. Une ligne peut donc désigner la pièce d'un
 autre dossier.
 
@@ -89,7 +89,7 @@ effet. À refermer avant la première facture adressée à un tiers.
 
 ### D-2 · Aucun garde ne refuse une fonction privilégiée sans porte nommée
 
-*Trouvé le 17 octobre, relecture de la ronde 3.* Le dépôt refuse désormais
+_Trouvé le 17 octobre, relecture de la ronde 3._ Le dépôt refuse désormais
 toute **vue** accordée à `authenticated` qui contourne l'isolation, et toute
 fonction privilégiée sans `search_path` fixé, avec un droit d'exécution trop
 large, ou qui écrit dans la facturation sans porte de plateforme.
@@ -106,7 +106,7 @@ PROCHAINE élévation de droits, pas d'une existante.
 
 ### D-3 · Les trois reçus déjà en base gardent leur classement en vente
 
-*Trouvé le 13 octobre.* Déposés puis envoyés à la lecture comme n'importe quelle
+_Trouvé le 13 octobre._ Déposés puis envoyés à la lecture comme n'importe quelle
 photo, ils en revenaient classés `facture_vente` — et un reçu compté comme une
 vente **double le chiffre d'affaires**. La cause est corrigée à deux étages. Les
 trois lignes déjà écrites, elles, ne se réécrivent pas (R7) : il faut une
@@ -114,21 +114,21 @@ précision, pas une correction.
 
 ### D-4 · `facturation.emettre` refuse une licence sans organisation rattachée
 
-*Trouvé le 17 octobre, à l'entrée de la livraison.* La contrainte de la table
+_Trouvé le 17 octobre, à l'entrée de la livraison._ La contrainte de la table
 exige le rattachement ; l'émission ne le vérifie pas avant d'essayer. Le message
 rendu n'aide pas à comprendre.
 
 ### D-5 · Une offre antérieure au 17 octobre rend « licence introuvable »
 
-*Même jour.* Le référentiel des offres est daté du 17 octobre. Une licence dont
+_Même jour._ Le référentiel des offres est daté du 17 octobre. Une licence dont
 la date de début est antérieure ne trouve aucune offre en vigueur, et le message
 parle d'une licence absente au lieu d'une offre absente. Un message faux sur la
 cause est plus coûteux qu'un message absent.
 
 ### D-6 · Les fonctions privilégiées appartiennent à `postgres`, donc elles traversent les politiques
 
-*Trouvé le 17 octobre, ronde 6 de la tâche 0, et c'est la plus grosse dette de
-la journée.*
+_Trouvé le 17 octobre, ronde 6 de la tâche 0, et c'est la plus grosse dette de
+la journée._
 
 Une fonction `security definer` s'exécute avec les droits de son propriétaire.
 Tant que ce propriétaire est `postgres`, qui traverse toutes les politiques
@@ -153,7 +153,7 @@ même défaut. C'est pour cela que c'est écrit, et daté.
 
 ### D-7 · Un garde d'architecture s'est affaibli en même temps qu'il a servi
 
-*Même ronde.* Le garde refuse, pour toute fonction privilégiée exécutable par
+_Même ronde._ Le garde refuse, pour toute fonction privilégiée exécutable par
 un utilisateur connecté, l'absence de `search_path` fixé, un droit d'exécution
 trop large, et l'écriture dans la facturation sans porte de plateforme.
 
@@ -168,7 +168,7 @@ Il se recoupe avec **D-2** : le même travail les ferme tous les deux.
 
 ### A-4 · Un dépassement d'une ou deux lectures à la frontière du forfait est accepté
 
-*Trouvé le 17 octobre, tâche 2.* Trois chemins mènent au même endroit : deux
+_Trouvé le 17 octobre, tâche 2._ Trois chemins mènent au même endroit : deux
 pièces lues en parallèle à 64 lectures sur 65 passent toutes deux l'autorisation
 et paient le modèle ; deux instances du serveur sur la même pièce paient deux
 fois ; un processus qui meurt entre l'écriture du résultat et le comptage offre
@@ -176,8 +176,8 @@ la lecture.
 
 **Tranché : la tolérance est assumée.** La seule façon de fermer ces trois-là
 serait de **réserver** la lecture avant d'en connaître le résultat — ce qui
-contredit la règle qui gouverne tout ce travail : *une lecture qui échoue ne se
-facture pas, parce que le client n'a rien reçu.*
+contredit la règle qui gouverne tout ce travail : _une lecture qui échoue ne se
+facture pas, parce que le client n'a rien reçu._
 
 Un client peut donc consommer une ou deux lectures de plus que son forfait, à la
 frontière. Je préfère cela à un client facturé pour un échec. **C'est un
@@ -187,7 +187,7 @@ dire aux clients.
 
 ### D-8 · Une seconde lecture d'une pièce ne peut pas s'écrire, alors que R7 dit qu'elle devrait
 
-*Trouvé le 17 octobre, tâche 2.* Une pièce déjà lue obtient bien le droit d'être
+_Trouvé le 17 octobre, tâche 2._ Une pièce déjà lue obtient bien le droit d'être
 relue **gratuitement** — c'est voulu, une relecture ne doit pas coûter une
 lecture au client. Mais l'écriture du second résultat est refusée, et le modèle
 avait déjà été payé.
@@ -211,13 +211,13 @@ cette dette qu'il faudra payer.
 
 ### M-1 · Une ligne d'émetteur doit exister avant la première facture
 
-*Trouvé le 17 octobre.* Sans une ligne dans `facturation.emetteurs`, aucune
+_Trouvé le 17 octobre._ Sans une ligne dans `facturation.emetteurs`, aucune
 facture ne peut être émise. Ce n'est pas un défaut de code : c'est une saisie à
 faire le jour de la mise en service, et elle n'est écrite nulle part ailleurs.
 
 ### M-2 · La fiche de l'organisation d'essai porte un matricule invalide
 
-*Trouvé le 5 octobre, toujours vrai.* La fiche du staging porte sept chiffres
+_Trouvé le 5 octobre, toujours vrai._ La fiche du staging porte sept chiffres
 **sans la lettre de clé** — ce n'est pas un matricule tunisien valide, et la
 saisie l'a accepté. C'est ce qui a produit le rejet « matricule différent » sur
 une facture pourtant bien lue : le contrôle avait raison, la fiche avait tort.
@@ -359,3 +359,30 @@ recette d'elle-même. Au bout de combien de pièces d'un même format ? Sur
 décision de l'expert seulement ? Un déclenchement automatique dépense sans
 qu'on le lui demande ; un déclenchement manuel suppose que l'expert sache
 qu'un format revient.
+
+#### F-6 · tranché le 19 octobre 2026 — sauf un point, plus étroit
+
+Le déclenchement existe, et il a la forme annoncée ci-dessus : une nature de
+travail de plus (`generation_recette`), une proposition en base
+(`fabrique.generation_proposer`), l'exécution par le coureur. Le nombre est
+tranché par R10 : **trois pièces distinctes d'un même format**, défaut livré
+sous `fabrique.seuil.generation.pieces_min`, daté et surchargeable par cabinet
+sans déploiement. Le raisonnement est dans l'en-tête de
+`20261020180000_malica_propose_un_lecteur_au_troisieme_exemple.sql` et dans la
+limite 6 de `docs/fabrique-de-lecteurs/02-ce-qui-est-livre.md`.
+
+Ce qui reste ouvert, et qui n'est pas un arbitrage de code :
+
+**Rien ne qualifie un exemple tout seul.** La proposition part d'un exemple
+d'apprentissage inscrit, et aujourd'hui c'est un humain qui l'inscrit — par
+`fabrique.qualifierUnExemple`, qu'un écran devra appeler à la validation d'une
+pièce. Faire d'une désignation du modèle une vérité terrain **sans qu'un
+humain l'ait validée** entraînerait le remplaçant sur la sortie de celui qu'il
+remplace : c'est défendable, c'est bon marché, et c'est une décision de
+qualité, pas d'orchestration. Elle n'est pas prise.
+
+**Et un format qui a déjà un lecteur ne redemande rien.** Une recette suspendue
+pour dérive ne redéclenche donc pas une génération d'elle-même : la
+surveillance suspend, l'expert décide. C'est un défaut prudent — il évite de
+payer en boucle sur un format qui dérive — mais il veut dire qu'une version
+nouvelle reste un geste humain.
