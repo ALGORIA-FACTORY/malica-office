@@ -6,6 +6,7 @@ import {
   CHAMPS_DE_LIGNE,
   CHAMPS_DE_PIECE,
   CHAMPS_DE_TOTAUX,
+  REFERENCES_QUI_TRANCHENT_LE_SENS,
   CHAMPS_D_ARTICLE,
   CHAMPS_RACINE,
   CHOIX,
@@ -467,11 +468,100 @@ describe("les champs désignables sont ceux de la chaîne, et tsc le vérifie", 
     assert.equal(article, true);
   });
 
-  it("CHAMPS_DE_PIECE est exactement racine ∪ totaux préfixés", () => {
+  it("CHAMPS_DE_PIECE est racine ∪ totaux ∪ les références qui tranchent le sens", () => {
     assert.deepEqual(
       [...CHAMPS_DE_PIECE],
-      [...CHAMPS_RACINE, ...CHAMPS_DE_TOTAUX.map((c) => "totals." + c)],
+      [
+        ...CHAMPS_RACINE,
+        ...CHAMPS_DE_TOTAUX.map((c) => "totals." + c),
+        ...REFERENCES_QUI_TRANCHENT_LE_SENS.map((c) => "references." + c),
+      ],
     );
+  });
+});
+
+/* ------- ⑦ un nom de référence ne casse plus le SENS de la pièce */
+
+/**
+ * Le défaut trouvé en branchant la recette dans la chaîne, le 19 octobre 2026.
+ *
+ * `read-piece.ts` déduit le sens de la pièce — achat ou vente — de
+ * `references["matricule_fiscal"]` et `references["matricule_fiscal_client"]`.
+ * Ces deux noms sont IMPOSÉS au modèle par l'invite du désignateur, et ils
+ * n'étaient imposés à personne du côté recette : le langage acceptait
+ * n'importe quel nom sous `references`.
+ *
+ * Une recette qui écrivait « mf » désignait le BON jeton, le citait
+ * correctement, et la pièce sortait « sens à confirmer » — une lecture juste,
+ * et un achat qui ne sait pas qu'il en est un, sans qu'aucun drapeau
+ * n'explique pourquoi. C'est la cinquième fois dans ce dépôt qu'un nom
+ * composé librement casse un appariement muet, et le symptôme est toujours le
+ * même : ça marche, et une mesure disparaît.
+ */
+describe("un nom de référence ne casse plus le sens de la pièce", () => {
+  /** Pose une référence libre portant ce nom, sur une recette par ailleurs juste. */
+  function sousLeNom(nom: string): Record<string, unknown> {
+    const r = recetteHonnete();
+    (r["references"] as Record<string, unknown>)[nom] = {
+      designation: {
+        depuis: { genre: "voisin", de: "libelle_total", direction: "apres" },
+        ou: [{ genre: "meme_ligne", que: "libelle_total" }],
+        prendre: { genre: "premier" },
+      },
+      facultatif: false,
+      si_absent: "TOKEN_NOT_FOUND",
+      si_ambigu: "TOKEN_NOT_FOUND",
+    };
+    return r;
+  }
+
+  it("le nom réservé lui-même ne peut plus être une référence libre", () => {
+    for (const nom of REFERENCES_QUI_TRANCHENT_LE_SENS) {
+      assert.ok(refus(sousLeNom(nom)).includes("REFERENCE_RESERVEE"), nom);
+    }
+  });
+
+  it("le sigle et les variantes sont refusés — c'est le cas mesuré par le branchement", () => {
+    for (const nom of [
+      "mf",
+      "mfc",
+      "matricule",
+      "fiscal",
+      "matricule_client",
+      "mf_client",
+      "matricule_fiscal_du_client",
+    ]) {
+      assert.ok(refus(sousLeNom(nom)).includes("REFERENCE_RESERVEE"), nom);
+    }
+  });
+
+  it("sous le nom du CONTRAT, la même désignation passe", () => {
+    const r = recetteHonnete();
+    (r["champs"] as Record<string, unknown>)["references.matricule_fiscal"] = {
+      designation: {
+        depuis: { genre: "voisin", de: "libelle_total", direction: "apres" },
+        ou: [{ genre: "meme_ligne", que: "libelle_total" }],
+        prendre: { genre: "premier" },
+      },
+      facultatif: false,
+      si_absent: "TOKEN_NOT_FOUND",
+      si_ambigu: "TOKEN_NOT_FOUND",
+    };
+    const v = validerRecette(r, EXIGENCES);
+    assert.ok(v.ok, v.ok ? "" : JSON.stringify(v.refus));
+  });
+
+  it("et il reste des références libres — sinon la fermeture serait un mur", () => {
+    for (const nom of [
+      "bon_de_commande",
+      "numero_de_marche",
+      "numero_de_piece",
+      "numero_client",
+      "code_chantier",
+    ]) {
+      const v = validerRecette(sousLeNom(nom), EXIGENCES);
+      assert.ok(v.ok, nom + " : " + (v.ok ? "" : JSON.stringify(v.refus)));
+    }
   });
 });
 

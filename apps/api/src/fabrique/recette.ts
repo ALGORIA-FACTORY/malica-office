@@ -182,12 +182,53 @@ export type CodeDAbstention = (typeof CODES_D_ABSTENTION)[number];
  */
 export const CHAMPS_RACINE = ["issuer", "document_date"] as const;
 export const CHAMPS_DE_TOTAUX = ["base_ht", "vat", "ttc"] as const;
+
+/**
+ * Les deux références qui ne sont PAS libres, et pourquoi elles ont cessé
+ * de l'être.
+ *
+ * ==================================== LE DÉFAUT, TROUVÉ EN BRANCHANT (19/10)
+ *
+ * `read-piece.ts` déduit le sens de la pièce — achat ou vente — en lisant
+ * `references["matricule_fiscal"]` et `references["matricule_fiscal_client"]`.
+ * Ces deux noms sont imposés au modèle par l'invite du désignateur ; ils
+ * n'étaient imposés à PERSONNE du côté recette, où `references` acceptait
+ * n'importe quel nom.
+ *
+ * Une recette qui écrivait « mf » désignait le bon jeton, le citait
+ * correctement, et la pièce sortait « sens à confirmer ». Une lecture juste,
+ * un achat qui ne sait pas qu'il en est un, et aucun drapeau pour le dire.
+ *
+ * Cette déduction n'est pas un détail : elle a REMPLACÉ une confiance au
+ * modèle qui s'était trompée — « vente » sur un achat, les deux matricules
+ * inversés, faux et cohérent dans son inversion, donc invisible au contrôle
+ * du destinataire (`SENS_A_CONFIRMER`, 5 octobre 2026).
+ *
+ * Ces deux noms sortent donc des références libres et deviennent des champs
+ * du contrat, sous la clé pointée que l'interprète route déjà vers
+ * `selection.references`. Et le validateur interdit à une référence libre
+ * d'emprunter leur vocabulaire : voir `REFERENCE_RESERVEE`.
+ *
+ * ============================================ CE QUI MANQUE ENCORE, ET OÙ
+ *
+ * Rien ne lie ces deux chaînes à celles de `read-piece.ts`, qui les écrit en
+ * littéral. Le lien se ferait en une ligne — que `read-piece.ts` importe
+ * cette liste au lieu de ses deux littéraux — mais ce fichier est sous R2 et
+ * hors de cette zone d'écriture. C'est décrit, et laissé.
+ */
+export const REFERENCES_QUI_TRANCHENT_LE_SENS = [
+  "matricule_fiscal",
+  "matricule_fiscal_client",
+] as const;
+
 export const CHAMPS_DE_PIECE = [
   "issuer",
   "document_date",
   "totals.base_ht",
   "totals.vat",
   "totals.ttc",
+  "references.matricule_fiscal",
+  "references.matricule_fiscal_client",
 ] as const;
 
 /** Les colonnes admises d'un tableau de lignes de TVA. */

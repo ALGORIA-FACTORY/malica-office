@@ -35,6 +35,7 @@ import {
   CHAMPS_DE_PIECE,
   CHAMPS_D_ARTICLE,
   RecetteSchema,
+  REFERENCES_QUI_TRANCHENT_LE_SENS,
   VERSIONS_LUES,
   type Champ,
   type Recette,
@@ -82,7 +83,8 @@ export type MotifDeRefus =
   | "ZONE_IMPOSSIBLE"
   | "BORNE_DEPASSEE"
   | "TAILLE_EXCESSIVE"
-  | "DECLARATION_MORTE";
+  | "DECLARATION_MORTE"
+  | "REFERENCE_RESERVEE";
 
 export interface Refus {
   readonly code: MotifDeRefus;
@@ -94,6 +96,57 @@ export interface Refus {
 export type Validation =
   | { readonly ok: true; readonly recette: Recette }
   | { readonly ok: false; readonly refus: readonly Refus[] };
+
+/* ============================ LE VOCABULAIRE QUE LES LIBRES N'ONT PAS ==== */
+
+/**
+ * Les mots et les sigles que les references libres n'ont pas le droit
+ * d'emprunter, DERIVES des noms reserves eux-memes.
+ *
+ * Il n'y a pas de liste d'alias ecrite a la main : une liste d'alias est un
+ * jugement, et quatre des cinq appariements muets de ce depot viennent d'un
+ * jugement de ce genre. Les mots sont ceux des noms reserves, et le sigle est
+ * la suite de leurs initiales -- « mf », « mfc ».
+ */
+const MOTS_RESERVES: ReadonlyArray<ReadonlySet<string>> = REFERENCES_QUI_TRANCHENT_LE_SENS.map(
+  (n) => new Set(n.split("_")),
+);
+
+const SIGLES_RESERVES = new Map<string, ReadonlySet<string>>(
+  REFERENCES_QUI_TRANCHENT_LE_SENS.map((n) => [
+    n
+      .split("_")
+      .map((m) => m[0])
+      .join(""),
+    new Set(n.split("_")),
+  ]),
+);
+
+/**
+ * Un nom libre emprunte-t-il au vocabulaire reserve ?
+ *
+ * La regle est symetrique, et c'est ce qui la rend sure : on refuse si
+ * l'ensemble des mots du nom libre est INCLUS dans celui d'un nom reserve
+ * (« matricule », « fiscal », « matricule_client »), ou s'il l'INCLUT
+ * (« matricule_fiscal_du_client »). Un sigle compte pour les mots qu'il
+ * abrege, donc « mf » et « mf_client » tombent aussi.
+ *
+ * Elle refuse large, et c'est voulu. Un faux refus coute une phrase a qui
+ * ecrit la recette, au moment ou il l'ecrit, avec le bon nom dans le message.
+ * Un faux passage coute une piece correctement lue dont le sens est perdu, et
+ * cela ne se voit nulle part. L'asymetrie decide.
+ */
+function empruntAuVocabulaireReserve(nom: string): boolean {
+  const mots = new Set(
+    nom.split("_").flatMap((m) => {
+      const abrege = SIGLES_RESERVES.get(m);
+      return abrege ? [...abrege] : [m];
+    }),
+  );
+  return MOTS_RESERVES.some(
+    (reserve) => [...mots].every((m) => reserve.has(m)) || [...reserve].every((m) => mots.has(m)),
+  );
+}
 
 /* ================================================== LE PARCOURS ========= */
 
@@ -199,7 +252,22 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     }
   }
 
-  /* ⑤ Les colonnes d'un tableau sont des colonnes de sa destination. */
+  /* ⑤ Les références libres n'empruntent pas au vocabulaire réservé : un nom
+     mal écrit désignerait juste et casserait le sens de la pièce en silence. */
+  for (const nom of Object.keys(r.references)) {
+    if (empruntAuVocabulaireReserve(nom)) {
+      ajouter(
+        "REFERENCE_RESERVEE",
+        "references." + nom,
+        "ce nom emprunte au vocabulaire qui tranche le sens de la pièce ; " +
+          "désigne-le sous champs.references." +
+          REFERENCES_QUI_TRANCHENT_LE_SENS.join(" / champs.references.") +
+          ", ou choisis un nom étranger à ce vocabulaire",
+      );
+    }
+  }
+
+  /* ⑥ Les colonnes d'un tableau sont des colonnes de sa destination. */
   for (const [nomT, t] of Object.entries(r.tableaux)) {
     const admises: readonly string[] =
       t.destination === "lignes" ? CHAMPS_DE_LIGNE : CHAMPS_D_ARTICLE;
@@ -217,7 +285,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     }
   }
 
-  /* ⑥ Les références : chaque nom cité est déclaré. On collecte en même temps
+  /* ⑦ Les références : chaque nom cité est déclaré. On collecte en même temps
      ce qui est ATTEINT, pour repérer plus bas ce qui est mort. */
   const ancresVues = new Set<string>();
   const zonesVues = new Set<string>();
@@ -288,7 +356,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     }
   }
 
-  /* ⑦ Le graphe des ancres est acyclique. Le langage n'est pas récursif, et
+  /* ⑧ Le graphe des ancres est acyclique. Le langage n'est pas récursif, et
      cela se VÉRIFIE au lieu de se supposer : sans ce parcours, deux ancres qui
      se citent l'une l'autre feraient tourner l'interprète sans fin. */
   const etat = new Map<string, "en_cours" | "fini">();
@@ -310,7 +378,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
   };
   for (const nom of Object.keys(r.ancres)) descendre(nom, []);
 
-  /* ⑧ L'ancrage textuel — la règle qui empêche une recette de désigner
+  /* ⑨ L'ancrage textuel — la règle qui empêche une recette de désigner
      n'importe quoi. Tout champ doit, par sa chaîne d'ancres, remonter à un
      texte IMPRIMÉ sur la pièce. Une forme (« un nombre ») et une zone
      (« en haut à droite ») n'en sont pas : la première reconnaît une classe,
@@ -367,7 +435,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     if (ancre) jugerAncrage(ancre, "tableaux." + nomT + ".entete");
   }
 
-  /* ⑨ R9 dans la donnée : une ancre, une zone ou un tableau que rien n'atteint
+  /* ⑩ R9 dans la donnée : une ancre, une zone ou un tableau que rien n'atteint
      est du code mort, et il se supprime comme tel. */
   for (const nom of Object.keys(r.ancres)) {
     if (!ancresVues.has(nom)) {
@@ -380,7 +448,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
     }
   }
 
-  /* ⑩ La taille. Une recette est une description ; passé un certain volume,
+  /* ⑪ La taille. Une recette est une description ; passé un certain volume,
      c'est un programme déguisé, et il faut un autre outil pour le relire. */
   const selecteurs =
     Object.keys(r.ancres).length +
