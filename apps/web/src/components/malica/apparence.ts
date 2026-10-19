@@ -7,10 +7,26 @@ import { coque } from "@/capabilities/coque";
  *
  * =========================================================== TROIS ÉTATS
  *
- * Pas deux. « Suivre le système » est le troisième, et c'est le défaut : un
- * téléphone qui bascule en sombre le soir doit emmener l'application avec lui
- * sans qu'on ait rien à régler. Ne proposer que clair et sombre force un
- * choix que la plupart des gens ne veulent pas faire.
+ * Pas deux. « Automatique » est le troisième : un téléphone qui bascule en
+ * sombre le soir emmène l'application avec lui sans qu'on ait rien à régler.
+ * Ne proposer que clair et sombre force un choix que la plupart des gens ne
+ * veulent pas faire.
+ *
+ * ==================================================== LE DÉFAUT EST LE SOMBRE
+ *
+ * Décision du dirigeant. Ce n'est donc PAS « Automatique » qui est servi quand
+ * rien n'a été choisi — c'est Sombre, franchement.
+ *
+ * Deux conséquences, et elles tiennent ensemble :
+ *
+ *   — `DEFAUT` ci-dessous est la seule écriture de cette valeur dans ce
+ *     fichier, et le script d'avant-rendu de `__root.tsx` doit dire la MÊME
+ *     chose. S'ils divergent, la page s'ouvre en clair puis bascule.
+ *   — « Automatique » doit désormais pouvoir être STOCKÉ. Avant, il était le
+ *     défaut, donc « rien de valide en mémoire » et « suivre le système »
+ *     étaient le même état et l'un pouvait servir de repli à l'autre. Ce n'est
+ *     plus vrai : quelqu'un qui choisit Automatique doit le retrouver, et non
+ *     se voir rendre le sombre du défaut.
  *
  * ==================================================== POURQUOI PAS EN BASE
  *
@@ -24,14 +40,18 @@ export type Apparence = "systeme" | "paper" | "ink";
 
 const CLE = "malica.apparence";
 
+/** Servi quand rien n'a été choisi. Le script d'avant-rendu dit la même chose. */
+const DEFAUT: Apparence = "ink";
+
 function lue(): Apparence {
-  if (typeof window === "undefined") return "systeme";
+  if (typeof window === "undefined") return DEFAUT;
   try {
     const v = window.localStorage.getItem(CLE);
-    return v === "paper" || v === "ink" ? v : "systeme";
+    // « systeme » est lu comme les deux autres : c'est un choix, plus un repli.
+    return v === "paper" || v === "ink" || v === "systeme" ? v : DEFAUT;
   } catch {
-    // Navigation privée, stockage refusé : on suit le système.
-    return "systeme";
+    // Navigation privée, stockage refusé : le défaut, comme un premier lancement.
+    return DEFAUT;
   }
 }
 
@@ -50,7 +70,7 @@ export function useApparence(): {
   choisir: (a: Apparence) => void;
 } {
   // Le premier rendu doit être identique au serveur : on lit après le montage.
-  const [apparence, setApparence] = useState<Apparence>("systeme");
+  const [apparence, setApparence] = useState<Apparence>(DEFAUT);
 
   useEffect(() => {
     const a = lue();

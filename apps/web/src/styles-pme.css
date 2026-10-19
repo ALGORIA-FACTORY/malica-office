@@ -1942,3 +1942,201 @@ body:has([data-surface="pme"]) { background: #FFFFFF }
  * lignes vides, elles, coupent en <p> et `.mal p+p` les espace. */
 [data-surface="pme"] [data-ecran="chat"] .mal p,
 [data-surface="pme"] [data-ecran="chat"] .moi{white-space:pre-line}
+
+/* ===========================================================================
+ *
+ *                    LA SECONDE PALETTE : LE SOMBRE
+ *
+ * Le clair reste la BASE : il est écrit plus haut, ses contrastes sont
+ * vérifiés, et c'est lui qui porte le dessin. Le sombre SURCHARGE, sous la
+ * classe `dark` que `apparence.ts` pose déjà sur `<html>`.
+ *
+ * `.dark [data-surface="pme"]` fait (0,2,0) contre (0,1,0) : il gagne sans un
+ * seul `!important`. Les valeurs ne sont pas inventées — ce sont celles de la
+ * feuille d'avant la réécriture en clair (81283a1), reprises telles quelles.
+ *
+ * Trois choses que les jetons seuls ne couvrent PAS, et qui sont donc reprises
+ * règle par règle plus bas :
+ *
+ *   — les couleurs écrites en dur dans une règle d'écran (un `rgba()` de
+ *     séparateur, un `#131316` de bulle, un gris de survol). Soixante-dix-huit
+ *     règles, relevées par diff et non à la main.
+ *   — le BLOC D'ENCRE. Sous le clair, `pme.index`, `pme.list` et `pme.tva`
+ *     peignent le chiffre du mois en encre à fond perdu sur du papier, et
+ *     `data-bloc="encre"` ne fait que le DÉCLARER. Sous le sombre, le même
+ *     bloc s'inversait en dalle blanche au milieu d'une page noire, la barre
+ *     d'accent y disparaissant : le marqueur redevient une correction, et le
+ *     bloc remonte à #141416 — l'emphase par élévation, pas par inversion.
+ *   — le fond de `body`/`html`, qui est posé par un `:has()` hors de la
+ *     surface PME et ne suit donc aucun jeton.
+ *
+ * Ce qui n'a PAS eu besoin d'être touché, et c'est mesuré :
+ *
+ *   — `--ombre-menu` et `--ombre-flotte` : identiques dans les deux versions
+ *     (`rgba(0,0,0,.9)`). Seul `--cerne` s'inverse.
+ *   — les représentations de PAPIER et de CARTE — `.vig .pg`, `.cam .pap`,
+ *     `.vg`, `.carte`, et le fond `#131316` de `.cam` : octet pour octet
+ *     identiques dans les deux feuilles. Elles figurent un objet, pas une
+ *     surface d'interface ; elles n'ont jamais dépendu du thème.
+ *   — `[data-surface="pme"] .nav`, épinglée hier avec `background: var(--bg)` :
+ *     elle suit le jeton, donc elle suit le thème. Rien à ajouter.
+ *
+ * =========================================================================== */
+
+.dark [data-surface="pme"] {
+  /* les fonds */
+  --bg:    #0A0A0A;
+  --d0:    #0B0B0B;
+  --d1:    #181818;
+  --d2:    #242424;
+  --prive: #0B0A0D;
+
+  /* les lignes */
+  --dl: rgba(255, 255, 255, .08);
+  --hr: rgba(255, 255, 255, .07);
+
+  /* l'encre */
+  --tx: #FFFFFF;
+  --t2: #A7A7AD;
+  --t3: #6E6E76;
+
+  /* l'accent : Evergreen, éclairci pour tenir sur du noir */
+  --acc:    #8FE3B1;
+  --acc2:   #7EE2AE;
+  --accs:   #3A8F54;
+  --on-acc: #07210F;
+
+  /* les quatre signaux : mêmes sens, luminosité retournée */
+  --am: #DFC078;
+  --ve: #F08D72;
+  --az: #8CBCE8;
+  --mg: #D97757;
+
+  --am-d: #8A6510;
+  --az-d: #2968A5;
+
+  /* la conversation */
+  --me:    #1B3326;
+  --me-tx: #DCEFE3;
+
+  /* Une ombre noire sur du noir ne porte plus l'élévation : c'est le CERNE qui
+   * la porte, et lui seul s'inverse. Les deux ombres restent identiques — leur
+   * `rgba(0,0,0,.9)` était déjà celui du sombre. */
+  --cerne: inset 0 0 0 1.5px rgba(255, 255, 255, .22);
+
+  /* le pont vers les jetons du cadre (shadcn / Tailwind) */
+  --input: rgb(255 255 255 / 0.12);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --accent: #1b3326;
+  --accent-foreground: #dcefe3;
+  --sidebar-accent: #1b3326;
+  --sidebar-accent-foreground: #dcefe3;
+
+  --signal-warn: #dfc078;
+  --signal-stop: #f08d72;
+  --signal-info: #8cbce8;
+  --signal-soft: rgb(255 255 255 / 0.06);
+  --destructive: #f08d72;
+  --destructive-foreground: #1a0a06;
+
+  /* L'or de la marque rejoint `--marigold-on-ink` : toute la page étant sombre,
+   * les deux jetons portent de nouveau la même valeur, et c'est le SENS de
+   * leurs deux noms qui le veut, pas une coïncidence. */
+  --marigold: oklch(0.8 0.11 82);
+
+  color-scheme: dark;
+}
+
+/* Le bloc d'encre : ici le marqueur CORRIGE au lieu de déclarer. #0A0A0A sur
+ * une page #0A0A0A serait un bloc invisible, et son inverse une dalle blanche :
+ * il monte d'un cran et reprend `--tx`, qui vaut de nouveau du blanc. */
+.dark [data-surface="pme"] [data-bloc="encre"] {
+  background-color: #141416;
+  color: var(--tx);
+}
+
+/* Le fond de la page, posé hors de la surface PME par un `:has()`. */
+html.dark:has([data-surface="pme"]),
+.dark body:has([data-surface="pme"]) { background: #0B0B0B }
+
+/* La barre de progression partagée (charges, plafond, solde). */
+.dark [data-surface="pme"] .bar { background: rgba(255, 255, 255, .08) }
+
+/* --- les couleurs écrites en dur, écran par écran ------------------------- */
+.dark [data-surface="pme"] .rev button{border:0;border-radius:999px;background:rgba(255,255,255,.06);color:var(--t2); font-size:.6875rem;font-weight:600;padding:.375rem .6875rem;cursor:pointer;white-space:nowrap}
+.dark [data-surface="pme"] [data-ecran="accueil"] .tile i{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
+.dark [data-surface="pme"] [data-ecran="accueil"] .hero .amb{position:absolute;z-index:0;inset-inline-end:-18px;top:44%;transform:translateY(-50%); width:186px;height:186px;border-radius:50%;pointer-events:none; background:radial-gradient(closest-side,rgba(255,255,255,.05),rgba(255,255,255,.02) 58%,transparent 78%)}
+.dark [data-surface="pme"] [data-ecran="accueil"] .hero .stack{position:absolute;z-index:2;inset-inline-end:.5rem;bottom:.4375rem;width:72px;height:72px; display:grid;place-items:center;color:rgba(214,230,220,.34)}
+.dark [data-surface="pme"] [data-ecran="accueil"] .act .hd i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
+.dark [data-surface="pme"] [data-ecran="accueil"] .act .pg{height:7px;border-radius:999px;background:rgba(255,255,255,.1);margin-top:.25rem}
+.dark [data-surface="pme"] [data-ecran="accueil"] .lock{background:var(--d1);border-radius:20px;padding:1.125rem 1rem;display:grid;gap:.375rem; align-content:start;min-height:124px;border:1px dashed rgba(255,255,255,.15)}
+.dark [data-surface="pme"] [data-ecran="capture"] .prog{position:fixed;top:2.375rem;left:0;right:0;z-index:50;max-width:440px;margin:0 auto; display:flex;align-items:center;gap:.75rem;padding:.6875rem 1rem;background:rgba(10,10,10,.94); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
+.dark [data-surface="pme"] [data-ecran="capture"] .prog .tr i{flex:1;height:3px;border-radius:999px;background:rgba(255,255,255,.12)}
+.dark [data-surface="pme"] [data-ecran="capture"] .dit{background:#131316;border-radius:20px 20px 20px 6px;padding:.9375rem 1rem;margin-top:.5rem; font-size:1rem;line-height:1.5;letter-spacing:-.016em}
+.dark [data-surface="pme"] [data-ecran="capture"] .opt i{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center;color:var(--t2)}
+.dark [data-surface="pme"] [data-ecran="capture"] .opt button.on i{background:rgba(143,227,177,.18);color:var(--acc)}
+.dark [data-surface="pme"] [data-ecran="capture"] .shut .big{width:66px;height:66px;border-radius:50%;background:var(--acc); box-shadow:0 0 0 4px rgba(143,227,177,.18);cursor:pointer;border:0}
+.dark [data-surface="pme"] [data-ecran="capture"] .pick{width:100%;display:flex;align-items:flex-start;gap:.75rem;border:0;background:none; padding:.75rem 0;border-bottom:1px solid rgba(255,255,255,.07);text-align:start;color:var(--tx); cursor:pointer;font-family:inherit}
+.dark [data-surface="pme"] [data-ecran="capture"] .pick .box{width:21px;height:21px;border-radius:6px;flex:none;margin-top:.0625rem; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22);display:grid;place-items:center;color:transparent}
+.dark [data-surface="pme"] [data-ecran="capture"] .menu button{border:0;border-radius:999px;background:var(--s2,#212125);color:var(--t2); font-family:inherit;font-size:.75rem;font-weight:600;padding:.4375rem .8125rem;cursor:pointer}
+.dark [data-surface="pme"] [data-ecran="capture"] .lect div i{width:16px;height:16px;border-radius:50%;flex:none; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18)}
+.dark [data-surface="pme"] [data-ecran="dossier"] .exs{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:.375rem;justify-content:center; padding:.5rem;background:rgba(0,0,0,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
+.dark [data-surface="pme"] [data-ecran="dossier"] .exs button{display:grid;gap:.0625rem;justify-items:center;padding:.4375rem .75rem;border:0; border-radius:999px;background:rgba(255,255,255,.07);color:var(--t2);cursor:pointer; font-family:inherit;white-space:nowrap}
+.dark [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(7,33,15,.62)}
+.dark [data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.09); margin-top:.75rem;overflow:hidden}
+.dark [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(232,199,106,.08);border:1px solid rgba(232,199,106,.24)}
+.dark [data-surface="pme"] [data-ecran="dossier"] .centr p{margin:0;font-size:.8125rem;line-height:1.5;color:#EBD9A8}
+.dark [data-surface="pme"] [data-ecran="dossier"] .chain:before{content:'';position:absolute;inset-inline-start:5px;top:12px;bottom:28px;width:1px; background:rgba(255,255,255,.1)}
+.dark [data-surface="pme"] [data-ecran="dossier"] .doc.miss{background:none;border:1px dashed rgba(232,199,106,.4)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="dossier"] .doc.miss:hover{background:rgba(232,199,106,.06)}}
+.dark [data-surface="pme"] [data-ecran="dossier"] .rg i{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
+.dark [data-surface="pme"] [data-ecran="dossier"] .ck.q p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.no p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#E4E4E7}
+.dark [data-surface="pme"] [data-ecran="dossier"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .grp i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .grp i.cli{background:rgba(143,227,177,.13);color:var(--acc)}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2F2F34;vertical-align:middle}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d.none{background:#242428;width:4px;height:4px}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .d.fut{background:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);width:7px;height:7px}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil{display:flex;align-items:flex-start;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil p{margin:0;font-size:.8125rem;line-height:1.45;color:#E8C9BC}
+.dark [data-surface="pme"] [data-ecran="bibliotheque"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .top .bk:hover{background:#2e2e2e}}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
+.dark [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.dark [data-surface="pme"] [data-ecran="charges"] .cls .bar{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.dark [data-surface="pme"] [data-ecran="charges"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
+.dark [data-surface="pme"] [data-ecran="charges"] .ceil{display:flex;align-items:center;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.8125rem .9375rem;margin-top:1.125rem}
+.dark [data-surface="pme"] [data-ecran="charges"] .ceil i{width:9px;height:9px;border-radius:50%;background:#D97757;flex:none}
+.dark [data-surface="pme"] [data-ecran="charges"] .ceil p{margin:0;font-size:.8125rem;line-height:1.4;color:#E8C9BC}
+.dark [data-surface="pme"] [data-ecran="charges"] .lock{background:var(--d1);border-radius:18px;padding:1rem .9375rem;display:grid;gap:.3125rem; align-content:start;border:1px dashed rgba(255,255,255,.15)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .sgs button:hover{background:#2e2e2e}}
+.dark [data-surface="pme"] [data-ecran="chat"] .top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.625rem; max-width:440px;margin:0 auto;padding:.625rem 1rem;background:rgba(10,10,10,.92); -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-bottom:1px solid var(--hr)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="chat"] .poser:hover{border-color:rgba(143,227,177,.4)}}
+.dark [data-surface="pme"] [data-ecran="chat"] .th .dots{width:26px;height:26px;border-radius:50%;border:0;background:none;color:#4A4A50; display:grid;place-items:center;cursor:pointer;flex:none;margin-top:.0625rem}
+.dark [data-surface="pme"] [data-ecran="chat"] .del button.go{background:rgba(217,119,87,.16);color:var(--mg)}
+.dark [data-surface="pme"] [data-ecran="chat"] .mal{background:#131316;border-radius:20px 20px 20px 6px;padding:.9375rem 1rem; font-size:.9375rem;line-height:1.6;letter-spacing:-.012em;color:var(--tx)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-famille="papiers"] .rw:hover{background:rgba(255,255,255,.015)}}
+.dark [data-surface="pme"] [data-famille="papiers"] .rw i.am{background:rgba(223,192,120,.13);color:var(--am)}
+.dark [data-surface="pme"] [data-famille="papiers"] .rw i.ve{background:rgba(240,141,114,.13);color:var(--ve)}
+.dark [data-surface="pme"] [data-famille="papiers"] .rw i.az{background:rgba(140,188,232,.13);color:var(--az)}
+.dark [data-surface="pme"] [data-famille="papiers"] .mur{display:flex;align-items:flex-start;gap:.75rem;background:rgba(140,188,232,.07); border:1px solid rgba(140,188,232,.22);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
+.dark [data-surface="pme"] [data-famille="papiers"] .mur p{margin:0;font-size:.8125rem;line-height:1.5;color:#C9DCEE}
+.dark [data-surface="pme"] [data-famille="papiers"] .pan .champ{background:var(--bg);border:1px solid rgba(143,227,177,.45);border-radius:12px; padding:.6875rem .8125rem;font-size:.9375rem;font-weight:600;letter-spacing:-.018em}
+.dark [data-surface="pme"] [data-famille="papiers"] .pan .cible .box{width:20px;height:20px;border-radius:6px;flex:none;margin-top:.0625rem; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.22);display:grid;place-items:center;color:transparent}
+.dark [data-surface="pme"] [data-famille="papiers"] .add{width:100%;display:flex;align-items:center;gap:.8125rem;background:none; border:1px dashed rgba(255,255,255,.17);border-radius:16px;padding:.875rem .9375rem;margin-top:.875rem; font-family:inherit;text-align:start;color:var(--tx);cursor:pointer}
+.dark [data-surface="pme"] [data-famille="papiers"] .add i{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.05);flex:none; display:grid;place-items:center;color:var(--t2)}
+.dark [data-surface="pme"] [data-famille="papiers"] .bars .b{height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.dark [data-surface="pme"] [data-famille="papiers"] .bars .b i.d{background:#4E7F62}
+.dark [data-surface="pme"] [data-famille="papiers"] .dit{background:#131316;border-radius:20px 20px 20px 6px;padding:.9375rem 1rem;margin-top:.5rem; font-size:.9375rem;line-height:1.55;letter-spacing:-.014em}
+.dark [data-surface="pme"] [data-ecran="parametres"] .bar{display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.09); margin-top:.625rem;overflow:hidden}
+.dark [data-surface="pme"] [data-ecran="parametres"] .bar.hot i{background:linear-gradient(90deg,#8A4A32,var(--mg))}
+.dark [data-surface="pme"] [data-ecran="parametres"] .etat.ac{background:rgba(143,227,177,.14);color:var(--acc)}
+.dark [data-surface="pme"] [data-ecran="parametres"] .etat.br{background:rgba(232,199,106,.14);color:var(--am)}
+.dark [data-surface="pme"] [data-ecran="parametres"] .etat.in{background:rgba(255,255,255,.07);color:var(--t3)}
+.dark [data-surface="pme"] [data-ecran="parametres"] .inv{width:100%;display:flex;align-items:center;gap:.8125rem;background:none; border:1px dashed rgba(255,255,255,.17);border-radius:18px;padding:.875rem .9375rem; font-family:inherit;text-align:start;color:var(--tx);cursor:pointer;transition:border-color .18s}
+.dark [data-surface="pme"] [data-ecran="parametres"] .inv i{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.05);flex:none; display:grid;place-items:center;color:var(--t2)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="parametres"] .inv.off:hover{border-color:rgba(255,255,255,.17)}}
+.dark [data-surface="pme"] [data-ecran="parametres"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
+.dark [data-surface="pme"] [data-ecran="capture"]{ --s1: #17171A; --s2: #212125 }
+.dark [data-surface="pme"] [data-ecran="chat"]{ --s1: #17171A; --s2: #212125 }
+.dark [data-surface="pme"] [data-famille="papiers"]{ --s1: #17171A; --s2: #212125 }

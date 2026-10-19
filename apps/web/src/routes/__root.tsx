@@ -32,6 +32,28 @@ const LANGUE_AVANT_RENDU =
   'if(l==="ar"){d.lang="ar";d.dir="rtl"}else if(l==="en"){d.lang="en"}}catch(e){}})();';
 
 /*
+ * L'apparence, AVANT le premier rendu, et pour la même raison que la langue.
+ *
+ * Le défaut est le SOMBRE (voir `apparence.ts`), et `useApparence` ne pose la
+ * classe `dark` qu'après le montage de React : sans ce script, chaque
+ * ouverture montrerait une page blanche le temps de l'hydratation puis
+ * basculerait en noir. Un flash blanc sur un téléphone tenu en main le soir,
+ * c'est exactement ce que le mode sombre existe pour éviter.
+ *
+ * Il reproduit `lue()` puis `appliquer()`, et rien d'autre : le même défaut, la
+ * même tolérance pour « systeme », la même lecture de `prefers-color-scheme`.
+ * Les deux doivent dire la même chose — sinon le flash revient, inversé.
+ * `catch` retombe sur le défaut : stockage refusé n'est pas une raison de
+ * servir du blanc.
+ */
+const APPARENCE_AVANT_RENDU =
+  "(function(){var d=document.documentElement;try{" +
+  'var a=localStorage.getItem("malica.apparence");' +
+  'if(a!=="paper"&&a!=="ink"&&a!=="systeme")a="ink";' +
+  'if(a==="ink"||(a==="systeme"&&window.matchMedia("(prefers-color-scheme: dark)").matches))' +
+  'd.classList.add("dark")}catch(e){d.classList.add("dark")}})();';
+
+/*
  * Comme la frontière d'erreur : ce composant se rend HORS du fournisseur de
  * traductions — il porte ses phrases lui-même, dans les trois langues.
  */
@@ -240,7 +262,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
-    scripts: [{ children: LANGUE_AVANT_RENDU }],
+    scripts: [{ children: LANGUE_AVANT_RENDU }, { children: APPARENCE_AVANT_RENDU }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -250,8 +272,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    // Le script en tête a pu changer la langue avant l'hydratation : l'écart
-    // sur ces deux attributs est voulu.
+    // Les scripts en tête ont pu changer la langue et poser `dark` avant
+    // l'hydratation : l'écart sur ces attributs et sur `class` est voulu.
     <html lang="fr" dir="ltr" suppressHydrationWarning>
       <head>
         <HeadContent />
