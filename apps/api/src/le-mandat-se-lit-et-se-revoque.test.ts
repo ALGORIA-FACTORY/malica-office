@@ -155,7 +155,16 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
     });
     assert.ok(taux.length >= 1, "au moins le taux de l'article 52-I-g");
     assert.equal(taux[0]!.code, "RAS_MARCHES_ACQUISITIONS");
-    assert.ok(taux.every((t) => Number(t.seuil) > 0));
+    assert.ok(
+      taux.filter((t) => t.code.startsWith("RAS_MARCHES")).every((t) => Number(t.seuil) > 0),
+      "les acquisitions ont leur seuil",
+    );
+    assert.ok(
+      taux.some(
+        (t) => t.code === "RAS_HONORAIRES_COMMISSIONS_COURTAGES_LOYERS" && t.seuil === null,
+      ),
+      "les honoraires n'en ont pas",
+    );
     // Avant la constatation du référentiel, rien : la résolution échoue plutôt
     // qu'elle n'approxime.
     const avant = await sousIdentite(dirigeant.id, async (db) => {

@@ -1212,15 +1212,21 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
        * Socle ne la suppose jamais. Opérée, elle a sa ligne ; due et non
        * opérée, l'expert le lit ici — le payeur en reste redevable.
        */}
-      {r.retenue.cas === "operee" ? (
-        <p className="mt-0.5 text-[11.5px]">
-          {t("cab.review.reglement.retenue", {
-            libelle: r.retenue.libelle,
-            montant: montant(r.retenue.montant, locale),
-            ttc: montant(r.retenue.ttc, locale),
-          })}
-        </p>
-      ) : r.retenue.cas === "non_operee" ? (
+      {r.retenue.cas === "operee"
+        ? (() => {
+            const ttc = montant(r.retenue.ttc, locale);
+            return r.retenue.retenues.map((x) => (
+              <p key={x.code} className="mt-0.5 text-[11.5px]">
+                {t("cab.review.reglement.retenue", {
+                  libelle: x.libelle,
+                  montant: montant(x.montant, locale),
+                  ttc,
+                })}
+              </p>
+            ));
+          })()
+        : null}
+      {r.retenue.cas === "non_operee" ? (
         <p className="mt-0.5 text-[11.5px] text-signal-warn">
           {t("cab.review.reglement.retenueNonOperee", { ttc: montant(r.retenue.ttc, locale) })}
         </p>

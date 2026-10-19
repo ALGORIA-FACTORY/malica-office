@@ -76,6 +76,12 @@ export interface EntreeReglement {
    * à l'achat (432 au paramétrage tunisien), subie à la vente.
    */
   retenue?: { montant: string; compte: string; libelle: string } | null;
+  /**
+   * Les retenues constatées, quand il y en a plusieurs : un payeur public
+   * retient l'impôt ET une part de la TVA (20 octobre 2026). Prime sur
+   * `retenue` quand les deux sont donnés.
+   */
+  retenues?: Array<{ montant: string; compte: string; libelle: string }>;
 }
 
 export interface LigneDeReglement {
@@ -157,11 +163,16 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
   const montant = sommeDecimale([e.montant]);
   const libelle = composerLibelle(e);
 
-  const r = e.retenue ?? null;
-  if (r !== null && r.compte.trim() === "")
-    throw new ReglementIncomplet("le compte de la retenue à la source n'est pas au paramétrage");
-  // La dette éteinte : le net réglé, plus la retenue s'il y en a une.
-  const eteint = r === null ? montant : sommeDecimale([e.montant, r.montant]);
+  // Une retenue (19 octobre) ou plusieurs (20 octobre : impôt ET TVA retenus
+  // par un payeur public).
+  const rs = e.retenues ?? (e.retenue ? [e.retenue] : []);
+  for (const r of rs)
+    if (r.compte.trim() === "")
+      throw new ReglementIncomplet(
+        `le compte de la retenue « ${r.libelle} » n'est pas au paramétrage`,
+      );
+  // La dette éteinte : le net réglé, plus les retenues.
+  const eteint = sommeDecimale([e.montant, ...rs.map((r) => r.montant)]);
 
   const tresorerie: LigneDeReglement = {
     account_code: e.tresorerieAccount,
@@ -176,22 +187,24 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
     credit: e.sens === "facture_achat" ? "0.000" : eteint,
   };
 
-  if (r !== null) {
-    const retenue: LigneDeReglement = {
+  if (rs.length > 0) {
+    const retenues: LigneDeReglement[] = rs.map((r) => ({
       account_code: r.compte,
       libelle: r.libelle,
       // À l'achat, on la doit à l'État : crédit. À la vente, le client l'a
       // versée pour nous : c'est une créance sur l'État, au débit.
       debit: e.sens === "facture_vente" ? sommeDecimale([r.montant]) : "0.000",
       credit: e.sens === "facture_vente" ? "0.000" : sommeDecimale([r.montant]),
-    };
+    }));
     return {
       journal: e.journalCode,
       dateEcriture: e.payeLe,
       devise: e.devise,
       libelle,
       lignes:
-        e.sens === "facture_achat" ? [tiers, tresorerie, retenue] : [tresorerie, retenue, tiers],
+        e.sens === "facture_achat"
+          ? [tiers, tresorerie, ...retenues]
+          : [tresorerie, ...retenues, tiers],
     };
   }
 

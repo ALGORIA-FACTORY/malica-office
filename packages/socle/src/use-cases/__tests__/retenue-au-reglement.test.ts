@@ -81,6 +81,88 @@ describe("constater la retenue d'un règlement", () => {
   });
 });
 
+/** Le catalogue complet du 20 octobre, tel que la base le rendrait. */
+const TOUS: TauxDeRetenue[] = [
+  { code: "RAS_MARCHES_ACQUISITIONS", taux: "0.015", libelle: "RAS 1,5 %", seuil: "1000" },
+  { code: "RAS_MARCHES_TAUX_REDUIT_1", taux: "0.01", libelle: "RAS 1 %", seuil: "1000" },
+  { code: "RAS_HONORAIRES", taux: "0.1", libelle: "RAS 10 % honoraires", seuil: null },
+  { code: "RAS_HONORAIRES_REEL", taux: "0.03", libelle: "RAS 3 % honoraires", seuil: null },
+  { code: "RAS_HOTELS", taux: "0.05", libelle: "RAS 5 % — à qualifier", seuil: null },
+  {
+    code: "rs_tva_publique",
+    taux: "0.25",
+    libelle: "TVA retenue 25 %",
+    base: "tva",
+    famille: "tva",
+    seuil: "1000",
+  },
+];
+
+describe("toutes les retenues à la source (20 octobre 2026)", () => {
+  const base = { seuil: null, taux: TOUS, decimales: 3 };
+
+  it("des honoraires payés à 90 % : la retenue de 10 %, sans seuil", () => {
+    const c = constaterLaRetenue({ ...base, ttc: "595.000", tva: "95.000", paye: "535.500" });
+    expect(c).toMatchObject({ cas: "operee", code: "RAS_HONORAIRES", montant: "59.500" });
+  });
+
+  it("des honoraires au régime réel : 3 %", () => {
+    const c = constaterLaRetenue({ ...base, ttc: "1190.000", tva: "190.000", paye: "1154.300" });
+    expect(c).toMatchObject({ cas: "operee", code: "RAS_HONORAIRES_REEL", montant: "35.700" });
+  });
+
+  it("un ministère retient l'impôt ET 25 % de la TVA : deux retenues, une seule écriture", () => {
+    // 2 380 TTC dont 380 de TVA : 1,5 % × 2 380 = 35,700 ; 25 % × 380 = 95,000.
+    const c = constaterLaRetenue({ ...base, ttc: "2380.000", tva: "380.000", paye: "2249.300" });
+    expect(c.cas).toBe("operee");
+    if (c.cas !== "operee") return;
+    expect(c.retenues.map((r) => [r.code, r.famille, r.montant])).toEqual([
+      ["RAS_MARCHES_ACQUISITIONS", "ir", "35.700"],
+      ["rs_tva_publique", "tva", "95.000"],
+    ]);
+    expect(c.montant).toBe("130.700");
+  });
+
+  it("des honoraires payés en entier ne se signalent pas : la nature ne se lit pas sur le chèque", () => {
+    expect(constaterLaRetenue({ ...base, ttc: "595.000", tva: "95.000", paye: "595.000" })).toEqual(
+      {
+        cas: "sans_objet",
+      },
+    );
+  });
+
+  it("au-dessus du seuil des acquisitions, payé en entier : signalé", () => {
+    expect(
+      constaterLaRetenue({ ...base, ttc: "2380.000", tva: "380.000", paye: "2380.000" }).cas,
+    ).toBe("non_operee");
+  });
+
+  it("sans TVA lue, la retenue de TVA n'est pas essayée", () => {
+    const c = constaterLaRetenue({ ...base, ttc: "2380.000", tva: null, paye: "2249.300" });
+    expect(c.cas).toBe("sans_objet");
+  });
+
+  it("deux retenues s'écrivent sur leurs deux comptes, et l'écriture s'équilibre", () => {
+    const e = construireReglement({
+      ...ACHAT,
+      sens: "facture_vente",
+      counterpartyAccount: "411",
+      montant: "2249.300",
+      retenue: null,
+      retenues: [
+        { montant: "35.700", compte: "4341", libelle: "RAS 1,5 %" },
+        { montant: "95.000", compte: "43668", libelle: "TVA retenue 25 %" },
+      ],
+    });
+    expect(e.lignes.map((l) => [l.account_code, l.debit, l.credit])).toEqual([
+      ["532", "2249.300", "0.000"],
+      ["4341", "35.700", "0.000"],
+      ["43668", "95.000", "0.000"],
+      ["411", "0.000", "2380.000"],
+    ]);
+  });
+});
+
 const ACHAT: EntreeReglement = {
   sens: "facture_achat",
   montant: "1940.066",

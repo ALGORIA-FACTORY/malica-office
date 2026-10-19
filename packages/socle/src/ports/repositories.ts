@@ -1098,6 +1098,11 @@ export interface OfficeRepository {
    * balance ne confirmerait pas.
    */
   periodeLignes(tenantId: string, from: string, to: string): Promise<LigneDePeriode[]>;
+  /**
+   * Les retenues à la source d'un mois (`periode` : un jour du mois), lues
+   * dans les écritures : opérées (à reverser) et subies (créances sur l'État).
+   */
+  retenuesDuMois(tenantId: string, periode: string): Promise<RetenueDuMois[]>;
   book(ecritureId: string): Promise<void>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;
@@ -2382,6 +2387,14 @@ export type PropositionDeReglement =
             libelle: string;
             montant: string;
             ttc: string;
+            /** Une ou deux : un payeur public retient l'impôt ET une part de la TVA. */
+            retenues: Array<{
+              code: string;
+              taux: string;
+              libelle: string;
+              famille: "ir" | "tva";
+              montant: string;
+            }>;
           }
         | { cas: "non_operee"; ttc: string }
         | { cas: "sans_objet" };
@@ -2535,6 +2548,21 @@ export interface OffreDeLaGrille {
   chiffres: Record<string, unknown> | null;
   /** HT + TVA + timbre, calculé par la base ; `null` sans émetteur désigné. */
   prix_ttc: string | null;
+}
+
+/** Une retenue à la source d'un mois, telle que `public.retenues_du_mois()` la rend. */
+export interface RetenueDuMois {
+  ecritureId: string;
+  dateEcriture: string;
+  /** Le libellé de l'écriture : fournisseur ou client, facture, moyen. */
+  ecriture: string;
+  /** Le libellé de la ligne : le taux et sa base légale. */
+  ligne: string;
+  compte: string;
+  /** `operee` : retenue sur un tiers, à reverser ; `subie` : retenue par un client. */
+  sens: "operee" | "subie";
+  montant: string;
+  statut: string;
 }
 
 /** Ce que la tour règle de l'abonnement, tel que `public.abonnement_reglage()` le rend. */

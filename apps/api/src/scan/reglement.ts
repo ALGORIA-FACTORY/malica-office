@@ -131,10 +131,12 @@ export async function propositionDeReglement(
   const { rows: lue } = await db.query<{
     payload: { issuer?: string; references?: Record<string, string> } | null;
     ttc_mineur: number | null;
+    tva_mineur: number | null;
     jurisdiction: string;
   }>(
     `select e.payload,
             (a.normalisation -> 'montants' ->> 'ttc')::bigint as ttc_mineur,
+            (a.normalisation -> 'montants' ->> 'tva')::bigint as tva_mineur,
             o.jurisdiction
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
@@ -156,46 +158,66 @@ export async function propositionDeReglement(
   const paye = enDecimal(Number(l.montant_mineur), decimales);
 
   let retenue: ConstatDeRetenue = { cas: "sans_objet" };
-  let ligneDeRetenue: { montant: string; compte: string; libelle: string } | null = null;
+  const lignesDeRetenue: Array<{ montant: string; compte: string; libelle: string }> = [];
   if (piece && piece.ttc_mineur !== null) {
+    // Tous les taux qu'un règlement peut porter, dans le sens de la pièce :
+    // la TVA retenue par un payeur public ne joue qu'à la vente.
     const { rows: taux } = await db.query<{
       code: string;
       taux: string;
       libelle: string;
       seuil: string | null;
+      base: "ttc" | "tva";
+      famille: "ir" | "tva";
+      sens: "tous" | "achat" | "vente";
     }>(
-      `select code, taux::text, libelle, seuil::text from ref.retenues_au_reglement($1, $2::date)`,
+      `select code, taux::text, libelle, seuil::text, base, famille, sens
+         from ref.retenues_au_reglement($1, $2::date) order by rang`,
       [piece.jurisdiction, l.paye_le],
     );
+    const sensCourt = sens === "facture_achat" ? "achat" : "vente";
     retenue = constaterLaRetenue({
       ttc: enDecimal(Number(piece.ttc_mineur), decimales),
+      tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
       paye,
-      seuil: taux[0]?.seuil ?? null,
-      taux: taux.map((t) => ({ code: t.code, taux: t.taux, libelle: t.libelle })),
+      seuil: null,
+      taux: taux
+        .filter((t) => t.sens === "tous" || t.sens === sensCourt)
+        .map((t) => ({
+          code: t.code,
+          taux: t.taux,
+          libelle: t.libelle,
+          base: t.base,
+          famille: t.famille,
+          seuil: t.seuil,
+        })),
       decimales,
     });
     if (retenue.cas === "operee") {
-      // Le compte, à trois niveaux comme partout : le dossier, la
-      // comptabilité qui le mandate, le pack.
-      const { rows: compte } = await db.query<{ compte: string | null }>(
-        `select coalesce(d.account_code, c.account_code, p.account_code) as compte
-           from ref.account_roles r
-           left join ref.role_bindings p
-             on p.role_code = r.code and p.pack_version_id = $2
-           left join parametrage_role_bindings_v d
-             on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
-           left join parametrage_role_bindings_v c
-             on c.role_code = r.code and c.portee = 'cabinet'
-            and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)
-          where r.code = $3
-          limit 1`,
-        [l.tenant_id, l.pack_version_id, ROLE_DE_LA_RETENUE[sens]],
-      );
-      ligneDeRetenue = {
-        montant: retenue.montant,
-        compte: compte[0]?.compte ?? "",
-        libelle: retenue.libelle,
-      };
+      for (const r of retenue.retenues) {
+        // Le compte, à trois niveaux comme partout : le dossier, la
+        // comptabilité qui le mandate, le pack.
+        const role = r.famille === "tva" ? "TVA_RETENUE_SUBIE" : ROLE_DE_LA_RETENUE[sens];
+        const { rows: compte } = await db.query<{ compte: string | null }>(
+          `select coalesce(d.account_code, c.account_code, p.account_code) as compte
+             from ref.account_roles r
+             left join ref.role_bindings p
+               on p.role_code = r.code and p.pack_version_id = $2
+             left join parametrage_role_bindings_v d
+               on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
+             left join parametrage_role_bindings_v c
+               on c.role_code = r.code and c.portee = 'cabinet'
+              and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)
+            where r.code = $3
+            limit 1`,
+          [l.tenant_id, l.pack_version_id, role],
+        );
+        lignesDeRetenue.push({
+          montant: r.montant,
+          compte: compte[0]?.compte ?? "",
+          libelle: r.libelle,
+        });
+      }
     }
   }
 
@@ -212,7 +234,7 @@ export async function propositionDeReglement(
       tiers,
       reference: l.reference,
       referencePiece,
-      retenue: ligneDeRetenue,
+      retenues: lignesDeRetenue,
     });
     return {
       ok: true,

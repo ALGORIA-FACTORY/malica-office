@@ -20,6 +20,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDeLAction } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { finDuMois } from "@malica/socle/exercice";
+import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -352,6 +353,8 @@ function CabinetClient() {
             )}
           </section>
 
+          <RetenuesDuMois tenantId={clientId} periode={periode} devise={devise} />
+
           {/*
            * ---- ce que Malica demande, et que l'expert peut trancher
            *
@@ -553,5 +556,88 @@ function CabinetClient() {
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * Les retenues à la source du mois (20 octobre 2026).
+ *
+ * Ce que le dossier a retenu sur ses fournisseurs — à reverser à l'État le mois
+ * suivant — et ce que ses clients lui ont retenu — des créances sur l'État,
+ * imputables. Tout est lu dans les écritures (`public.retenues_du_mois`) : une
+ * retenue qui n'est pas écrite n'existe pas encore, et l'écran le dit en
+ * marquant ce qui n'est que proposé.
+ */
+function RetenuesDuMois({
+  tenantId,
+  periode,
+  devise,
+}: {
+  tenantId: string;
+  periode: string;
+  devise: string;
+}) {
+  const { t, locale } = useI18n();
+  const retenues = useQuery({
+    queryKey: ["cab-retenues", tenantId, periode],
+    queryFn: () => office().office.retenuesDuMois(tenantId, `${periode}-01`),
+  });
+  const lignes = retenues.data ?? [];
+  const groupes = (["operee", "subie"] as const).map((sens) => ({
+    sens,
+    lignes: lignes.filter((l) => l.sens === sens),
+  }));
+
+  return (
+    <section className="space-y-3">
+      <SectionTitle>{t("cab.dos.retenues.titre")}</SectionTitle>
+      {retenues.isPending ? (
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : retenues.isError ? (
+        <p role="alert" className="text-[12.5px] text-signal-stop">
+          {texteDeLErreur(retenues.error, OU, t("common.error"))}
+        </p>
+      ) : lignes.length === 0 ? (
+        <EmptyState>{t("cab.dos.retenues.vide")}</EmptyState>
+      ) : (
+        groupes
+          .filter((g) => g.lignes.length > 0)
+          .map((g) => (
+            <div key={g.sens} className="border border-border bg-card">
+              <p className="border-b border-border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {t(g.sens === "operee" ? "cab.dos.retenues.operees" : "cab.dos.retenues.subies")}
+              </p>
+              <ul className="divide-y divide-border">
+                {g.lignes.map((l) => (
+                  <li key={`${l.ecritureId}-${l.compte}-${l.ligne}`} className="px-4 py-2.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 text-[12.5px]">
+                        <span className="block truncate">{l.ecriture}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          <span className="num">{l.compte}</span> · {l.ligne}
+                          {l.statut !== "booked" ? ` · ${t("cab.dos.retenues.proposee")}` : ""}
+                        </span>
+                      </span>
+                      <span className="num shrink-0 text-[13px]">{montant(l.montant, locale)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-baseline justify-between gap-3 border-t border-foreground px-4 py-3">
+                <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t(
+                    g.sens === "operee"
+                      ? "cab.dos.retenues.aReverser"
+                      : "cab.dos.retenues.aImputer",
+                  )}
+                </span>
+                <span className="num text-[15px] font-semibold">
+                  {montant(sommeDecimale(g.lignes.map((l) => l.montant)), locale)} {devise}
+                </span>
+              </div>
+            </div>
+          ))
+      )}
+    </section>
   );
 }

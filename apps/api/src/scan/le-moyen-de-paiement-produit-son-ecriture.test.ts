@@ -188,7 +188,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
    * Une pièce LUE : l'émetteur, son numéro et le TTC tranché par l'analyse.
    * Posés par l'administrateur, comme la lecture les aurait posés.
    */
-  const lue = async (pieceId: string, ttcMineur: number) =>
+  const lue = async (pieceId: string, ttcMineur: number, tvaMineur: number | null = null) =>
     admin(async (p) => {
       const { rows } = await p.query<{ id: string }>(
         `insert into capture.extractions (tenant_id, piece_id, contract, payload)
@@ -212,7 +212,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
           pieceId,
           rows[0]!.id,
           pack,
-          JSON.stringify({ etat: "tranche", montants: { ttc: ttcMineur } }),
+          JSON.stringify({ etat: "tranche", montants: { ttc: ttcMineur, tva: tvaMineur } }),
         ],
       );
     });
@@ -260,6 +260,71 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     assert.ok(r.ok, r.ok ? "" : r.raison);
     assert.equal(r.retenue?.cas, "non_operee");
     assert.equal(r.ecriture.lignes.length, 2);
+  });
+
+  it("des honoraires payés au net de 10 % : la retenue d'honoraires, sans seuil", async () => {
+    const f = await piece("honoraires", "facture_achat");
+    await lue(f, 595_000, 95_000);
+    const p = await payer(f, "virement", 535_500, "VIR-HON-1");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+      retenue?: { cas: string; code?: string };
+    };
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.retenue?.code, "RAS_HONORAIRES_COMMISSIONS_COURTAGES_LOYERS");
+    assert.deepEqual(
+      r.ecriture.lignes.map((x) => [x.debit, x.credit]),
+      [
+        ["595.000", "0.000"],
+        ["0.000", "535.500"],
+        ["0.000", "59.500"],
+      ],
+    );
+  });
+
+  it("un client public retient l'impôt ET 25 % de la TVA : quatre lignes, deux créances sur l'État", async () => {
+    // 2 380 TTC dont 380 de TVA ; 1,5 % du TTC = 35,700 ; 25 % de la TVA = 95,000.
+    const f = await piece("ministere", "facture_vente");
+    await lue(f, 2_380_000, 380_000);
+    const p = await payer(f, "virement", 2_249_300, "VIR-TRESOR-1");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    const l = r.ecriture.lignes;
+    assert.equal(l.length, 4);
+    assert.deepEqual(
+      l.map((x) => [x.debit, x.credit]),
+      [
+        ["2249.300", "0.000"],
+        ["35.700", "0.000"],
+        ["95.000", "0.000"],
+        ["0.000", "2380.000"],
+      ],
+    );
+    assert.equal(l[3]!.account_code, "411");
+    assert.notEqual(
+      l[1]!.account_code,
+      l[2]!.account_code,
+      "l'impôt et la TVA ont chacun leur compte",
+    );
+  });
+
+  it("inscrite, la retenue se retrouve dans les retenues du mois, à reverser", async () => {
+    const f = await piece("retenue-inscrite", "facture_achat");
+    await lue(f, 1_969_610);
+    const p = await payer(f, "cheque", 1_940_066, "4512875");
+    await rpc("office", "proposerLeReglement", p);
+    const mois = (await rpc("office", "retenuesDuMois", org, "2026-10-01")) as Array<{
+      sens: string;
+      montant: string;
+      ligne: string;
+    }>;
+    const operees = mois.filter((m) => m.sens === "operee");
+    assert.ok(
+      operees.some((m) => Number(m.montant) === 29.544),
+      "la retenue de 29,544 est à reverser",
+    );
+    // Un autre mois n'en sait rien.
+    const autre = (await rpc("office", "retenuesDuMois", org, "2026-11-01")) as unknown[];
+    assert.equal(autre.length, 0);
   });
 
   it("l'écriture s'inscrit, équilibrée, et porte sa pièce", async () => {

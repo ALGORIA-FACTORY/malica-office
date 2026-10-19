@@ -191,6 +191,29 @@ export const office = {
   },
 
   /**
+   * Les retenues à la source d'un dossier pour un mois, lues dans ses
+   * écritures : opérées (à reverser à l'État) et subies (créances sur l'État).
+   */
+  async retenuesDuMois(db: Requete, tenantId: string, periode: string) {
+    const { rows } = await db.query(
+      `select ecriture_id, date_ecriture::text as date_ecriture, ecriture, ligne, compte, sens,
+              montant::text as montant, statut
+         from public.retenues_du_mois($1, $2::date)`,
+      [tenantId, periode],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      ecritureId: r["ecriture_id"] as string,
+      dateEcriture: r["date_ecriture"] as string,
+      ecriture: r["ecriture"] as string,
+      ligne: r["ligne"] as string,
+      compte: r["compte"] as string,
+      sens: r["sens"] as "operee" | "subie",
+      montant: dec(r["montant"]),
+      statut: r["statut"] as string,
+    }));
+  },
+
+  /**
    * Les lignes comptabilisées d'une période, par la fonction du Socle.
    *
    * On n'écrit pas la requête équivalente ici : `socle_periode_lignes` porte
