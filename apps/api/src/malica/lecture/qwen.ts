@@ -41,12 +41,32 @@ export class QwenError extends Error {
   readonly retryable: boolean;
   /** Ce que l'appelant peut faire : « tronque » se relit en bandes. */
   readonly code: "tronque" | null;
+  /**
+   * ============================ CE QUE LA FILE DURABLE LIT SUR CETTE ERREUR
+   *
+   * `fabrique/travaux-execution.ts` qualifie un échec en trois classes, et
+   * son défaut est « erreur technique » — qu'on ne rejoue PAS, délibérément :
+   * « rejouer par optimisme est la faute coûteuse ; c'est elle qui transforme
+   * un bogue en facture ». Un organe qui sait qu'il est tombé pour une cause
+   * passagère doit donc le DIRE, et c'est tout ce que ce champ fait.
+   *
+   * Il est porté par la classe plutôt que par un `instanceof` : le
+   * qualificateur lit `natureEchec` en canard, exprès, pour qu'un organe
+   * n'ait pas à importer la file — « importer la classe tirerait toute la
+   * chaîne de lecture dans la file ». Ici c'est l'inverse, et le même
+   * raisonnement vaut : l'œil n'a rien à connaître de la file.
+   *
+   * 401 sans clé, 400 de requête, relevé tronqué : NON passagers. Un rejeu
+   * les reproduirait à l'identique, en payant.
+   */
+  readonly natureEchec: "panne_fournisseur" | "erreur_technique";
   constructor(message: string, status: number, retryable: boolean, code: "tronque" | null = null) {
     super(message);
     this.name = "QwenError";
     this.status = status;
     this.retryable = retryable;
     this.code = code;
+    this.natureEchec = retryable ? "panne_fournisseur" : "erreur_technique";
   }
 }
 

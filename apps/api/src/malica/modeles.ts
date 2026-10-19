@@ -34,6 +34,8 @@
  * et le repli de la configuration Qwen. Trois copies d'une même décision.
  */
 
+import { VERSION_DU_LANGAGE } from "../fabrique/recette.ts";
+
 /** Les modèles de la voix et du raisonnement, par rôle tarifé. */
 export const DEEPSEEK_MODELS = {
   reasoner: "deepseek-reasoner",
@@ -96,3 +98,41 @@ export const ROLE_DESIGNATION: DeepSeekRole = "chat";
  * Dériver rend la désynchronisation impossible, plutôt qu'interdite.
  */
 export const MODELE_DESIGNATION = DEEPSEEK_MODELS[ROLE_DESIGNATION];
+
+/* ------------------------------------------- L'ORGANE QUI NE COÛTE RIEN -- */
+
+/**
+ * La recette déterministe — un organe de désignation comme un autre.
+ *
+ * ====================================================== POURQUOI UN « MODÈLE »
+ *
+ * Parce que `agents.model_pricing` cherche un tarif par le COUPLE
+ * (modèle, rôle), et qu'un organe sans ligne de tarif NE SE JOURNALISE PAS,
+ * en silence. Ce défaut a déjà coûté dix jours de mesures sur l'œil, puis est
+ * revenu sous la forme du suffixe « +pdf-scan », puis une troisième fois sur
+ * le rôle écrit en dur. Une recette qui désigne sans ligne de tarif referait
+ * exactement cela — et c'est précisément le RECOURS AU MODÈLE que le plan de
+ * la fabrique demande de mesurer : sans ces lignes, on ne saurait pas combien
+ * de pièces ont cessé d'appeler DeepSeek.
+ *
+ * Le nom est la VERSION DU LANGAGE, et pas « recette » tout court : le jour
+ * où `recette/2` interprétera autrement, les deux se distingueront au journal
+ * au lieu de se mélanger. C'est le même raisonnement que le millésime figé de
+ * l'œil.
+ *
+ * Le rôle lui est propre : une recette ne raisonne pas, ne discute pas et ne
+ * voit pas la pièce. Le réutiliser l'un des trois autres ferait un couple
+ * (modèle, rôle) qui mentirait sur ce qui a désigné.
+ *
+ * Le tarif est à ZÉRO et SOUVERAIN, comme PaddleOCR et `pdf-text` : une
+ * interprétation déterministe ne consomme aucun jeton de modèle et ne sort
+ * d'aucune machine. Ce que la ligne rend mesurable est le NOMBRE d'appels,
+ * et c'est le chiffre qui dira si la fabrique tient sa promesse.
+ */
+/*
+ * DÉRIVÉ, jamais recopié : `VERSION_DU_LANGAGE` est la seule déclaration de
+ * ce nom, et `modeles.ts` existe précisément parce que trois copies d'une même
+ * décision avaient fini par diverger.
+ */
+export const MODELE_RECETTE: string = VERSION_DU_LANGAGE;
+export const ROLE_RECETTE = "recette";

@@ -27,6 +27,23 @@
  * couvre un serveur ; deux instances ne se verraient pas. C'est le cas de
  * l'atelier et du premier service ; le jour où il y en a deux, ce module
  * devient une table — son contrat ne change pas.
+ *
+ * ============================== CE QU'IL EST DEVENU LE 19 OCTOBRE 2026
+ *
+ * La table existe : `fabrique.travaux`, et le coureur
+ * (`malica/lecture/coureur.ts`) la fait tourner. Ce module n'est donc PLUS
+ * ce qui porte une lecture d'arrière-plan — c'était sa fonction la plus
+ * risquée, et c'est celle qui a perdu un refus.
+ *
+ * Il garde la seule chose qu'une file durable ne fait pas, et qu'elle ne
+ * fera jamais : REJOINDRE, dans le même processus, une lecture qui tourne
+ * déjà. Deux requêtes pour la même pièce dans la même seconde ne paient
+ * l'œil qu'une fois — la file, elle, ne les verrait qu'une fois chacune
+ * prise, donc trop tard. Les deux se complètent : le registre couvre la
+ * simultanéité, la file couvre la mort du processus.
+ *
+ * Il ne se supprime donc pas, et ce n'est pas un sursis : c'est un rôle plus
+ * petit et mieux borné.
  */
 
 interface LectureEnCours {

@@ -18,6 +18,9 @@ import type { AppelApi } from "../appel-local.ts";
 
 import { confianceParChamp } from "../../scan/confiance.ts";
 
+import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
+
+import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { runVisionRead } from "./vision.ts";
@@ -129,7 +132,27 @@ export async function readPieceFlow(
     new Map(contexte.chargeCodes.map((c) => [c.code, { code: c.code, label: c.label }])).values(),
   );
 
+  /*
+   * ======================================= LA FABRIQUE DE LECTEURS, BRANCHÉE
+   *
+   * Un seul point d'insertion, et il est dans `vision.ts` : entre le plan de
+   * jetons et la désignation. Ce fichier ne fournit que ce que la fabrique ne
+   * peut pas deviner — la pièce, son organisation, la devise du dossier — et
+   * ce qu'elle rend est un `VisionSelection`. Tout ce qui suit, ici, est donc
+   * inchangé à l'instruction près.
+   *
+   * Sans recette applicable, le désignateur rend `null` et la passe 2 part
+   * comme avant. La non-régression est structurelle : il n'y a rien à
+   * désactiver.
+   */
+  const parRecette = creerDesignateurDeRecette(api, {
+    pieceId,
+    tenantId: contexte.piece.tenantId,
+    devise: contexte.currency,
+  });
+
   const premiereLecture = await lecteurs.lire({
+    parRecette,
     dataUrl,
     mime,
     // Les octets bruts servent au PDF : sa couche de texte se lit sans modèle.
@@ -189,33 +212,55 @@ export async function readPieceFlow(
   const premierEtaitPaddle = premiereLecture.readModel.includes("PP-OCR");
   const unAutreLecteurExiste = premierEtaitPaddle || lecteurs.secondLecteurDisponible();
 
+  /*
+   * ============== UNE PANNE AU RATTRAPAGE NE DÉTRUIT PAS CE QU'ON TIENT DÉJÀ
+   *
+   * Depuis le 19 octobre, les organes NOMMENT leurs pannes
+   * (`PanneFournisseur`), pour que la file durable les rejoue au lieu de
+   * fermer le travail. Au rattrapage, cette panne ne doit pourtant pas
+   * remonter : la première lecture existe, elle est seulement partielle, et
+   * la règle de ce bloc est déjà « à égalité, la première gagne ». La perdre
+   * parce que le second lecteur est tombé transformerait une lecture
+   * partielle en échec — ce que ce bloc existe précisément pour éviter.
+   *
+   * La panne de la PREMIÈRE lecture, elle, remonte : c'est là qu'un rejeu a
+   * un sens, puisqu'on ne tient rien.
+   */
   if (built.contract !== "extract.v1" && unAutreLecteurExiste) {
-    const secondeLecture = await lecteurs.lire({
-      dataUrl,
-      mime,
-      bytes,
-      chargeCodes,
-      tiers: contexte.tiers,
-      dossier: contexte.dossier,
-      devise: contexte.currency,
-      taxCodes: contexte.taxCodes.map((r) => ({
-        code: r.code,
-        label: r.label,
-        rate: String(r.rate),
-      })),
-      // L'autre lecteur, exactement : Paddle a lu, donc le modele de vision
-      // relit ; le modele a lu, donc Paddle relit.
-      sansPaddle: premierEtaitPaddle,
-    });
-    const secondBuilt = buildExtractFromTokenPlan({
-      tokens: secondeLecture.tokens,
-      selection: secondeLecture.selection,
-      decimals: contexte.moneyDecimals,
-      matriculeDossier: contexte.dossier.identifiantFiscal,
-    });
-    if (secondBuilt.contract === "extract.v1") {
-      read = secondeLecture;
-      built = secondBuilt;
+    try {
+      const secondeLecture = await lecteurs.lire({
+        parRecette,
+        dataUrl,
+        mime,
+        bytes,
+        chargeCodes,
+        tiers: contexte.tiers,
+        dossier: contexte.dossier,
+        devise: contexte.currency,
+        taxCodes: contexte.taxCodes.map((r) => ({
+          code: r.code,
+          label: r.label,
+          rate: String(r.rate),
+        })),
+        // L'autre lecteur, exactement : Paddle a lu, donc le modele de vision
+        // relit ; le modele a lu, donc Paddle relit.
+        sansPaddle: premierEtaitPaddle,
+      });
+      const secondBuilt = buildExtractFromTokenPlan({
+        tokens: secondeLecture.tokens,
+        selection: secondeLecture.selection,
+        decimals: contexte.moneyDecimals,
+        matriculeDossier: contexte.dossier.identifiantFiscal,
+      });
+      if (secondBuilt.contract === "extract.v1") {
+        read = secondeLecture;
+        built = secondBuilt;
+      }
+    } catch (e: unknown) {
+      if (!(e instanceof PanneFournisseur)) throw e;
+      console.error(
+        `rattrapage impossible — pièce ${pieceId} : ${e.message} ; la première lecture est conservée`,
+      );
     }
   }
 

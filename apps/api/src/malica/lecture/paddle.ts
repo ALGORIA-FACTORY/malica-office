@@ -37,6 +37,8 @@
  */
 import type { PageToken } from "@malica/socle/ports/malica";
 
+import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
+
 import { decouperEnMots } from "./mots.ts";
 
 /** Ce que le service rend. Le contrat tient en trois champs. */
@@ -64,9 +66,26 @@ export function secondLecteurDisponible(): boolean {
 /**
  * Relever une page avec PaddleOCR.
  *
- * Rend `null` quand le service est absent, injoignable ou muet — jamais une
- * exception : on appelle ce lecteur parce que le premier a échoué, et un
- * second échec ne doit pas transformer une lecture partielle en erreur.
+ * ================================== ABSENT ET TOMBÉ NE SONT PAS LA MÊME CHOSE
+ *
+ * `OCR_URL` absente : le second lecteur n'existe pas, on rend `null`, et la
+ * chaîne se comporte exactement comme avant. Service présent et MUET (aucune
+ * ligne reconnue) : `null` aussi — la pièce est illisible pour lui, pas en
+ * panne.
+ *
+ * Service CONFIGURÉ mais injoignable, en erreur, ou trop lent : c'est une
+ * PANNE DE FOURNISSEUR, et depuis le 14 octobre ce lecteur est passé DEVANT.
+ * Rendre `null` y avait deux conséquences, mesurables toutes les deux :
+ *
+ *   — la lecture repartait sur le modèle de vision, donc une panne de notre
+ *     propre machine se payait en appels distants, sans que rien ne le dise ;
+ *   — au rattrapage, la chaîne rappelait le modèle de vision une SECONDE
+ *     fois, alors que son commentaire promet « on ne relit pas deux fois avec
+ *     le même ».
+ *
+ * La classe est celle que la file durable sait rejouer. Elle ne change rien
+ * quand le service est absent : c'est le cas nominal du jour où il n'est pas
+ * déployé, et il reste nominal.
  */
 export async function lireAvecPaddle(
   image: Uint8Array,
@@ -88,12 +107,16 @@ export async function lireAvecPaddle(
       body: image,
       signal: arret,
     });
-  } catch {
-    // Service éteint, réseau coupé, délai dépassé : on renonce, et la lecture
-    // partielle du premier lecteur reste ce qu'elle était.
-    return null;
+  } catch (e) {
+    // Service éteint, réseau coupé, délai dépassé — et `OCR_URL` est bien
+    // posée : quelqu'un a déployé ce lecteur et il ne répond pas.
+    throw new PanneFournisseur(
+      `second lecteur injoignable : ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
-  if (!reponse.ok) return null;
+  if (!reponse.ok) {
+    throw new PanneFournisseur(`second lecteur : ${String(reponse.status)}`);
+  }
 
   const corps = (await reponse.json()) as {
     lignes?: LignePaddle[];

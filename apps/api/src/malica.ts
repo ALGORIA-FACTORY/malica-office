@@ -29,6 +29,7 @@ import { z } from "zod";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
+import { coureurDeLectures } from "./malica/lecture/coureur.ts";
 import { registre } from "./malica/lecture/lectures-en-cours.ts";
 import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
 import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
@@ -103,30 +104,54 @@ function repondre(res: Response, next: NextFunction, travail: () => Promise<unkn
  * `?attendre=0` lance sans attendre : c'est ce que demande la file hors
  * ligne du téléphone, qui n'a pas à tenir une requête ouverte pendant des
  * minutes. Sans ce paramètre, la réponse est le résultat, comme avant.
+ *
+ * ===================================== L'ACCUSÉ PART APRÈS L'ÉCRITURE, PAS AVANT
+ *
+ * Cette route répondait `{enCours:true}` sur une promesse en MÉMOIRE DU
+ * PROCESSUS. Le téléphone tenait donc un accusé de prise en charge que rien
+ * ne portait : le processus meurt, la lecture meurt, et le refus d'une
+ * lecture d'arrière-plan s'est déjà perdu de cette façon.
+ *
+ * Le travail s'enregistre maintenant D'ABORD, dans `fabrique.travaux`, et
+ * l'accusé ne part qu'après ce retour. C'est la règle qui justifie toute la
+ * file durable, et c'est l'ordre des deux instructions qui la tient.
  */
 malica.post("/lectures/:pieceId", (req, res, next) => {
   repondre(res, next, async () => {
     const pieceId = Uuid.parse(req.params["pieceId"]);
     const depart = Date.now();
+
+    if (req.query["attendre"] === "0") {
+      // D'ABORD la trace durable. Si elle échoue, l'appelant le sait : on ne
+      // répond pas « en cours » sur rien.
+      const travail = await api(req).rpc<{ travailId: string; deja: boolean }>(
+        "fabrique",
+        "enregistrerLecture",
+        [pieceId],
+      );
+      /*
+       * ENSUITE le coureur, et c'est lui qui PREND le travail en base.
+       *
+       * La prise est un fait inscrit : si ce processus meurt pendant la
+       * lecture, le travail redevient prenable tout seul passé son âge
+       * d'abandon — sans balayeur, et sans que personne ait à redemander.
+       *
+       * Il tourne sous l'identité de l'appelant, parce que `travail_prendre`
+       * et `lecture_consommer` répondent à la RLS et qu'aucun chemin
+       * utilisateur n'emprunte un rôle privilégié (R6). La conséquence est
+       * nommée : une reprise après redémarrage attend le prochain appel d'un
+       * membre de cette organisation. Un démon qui balaierait toutes les
+       * organisations exige une identité de service, qui n'existe pas — c'est
+       * dit au rapport, ce n'est pas supposé.
+       */
+      coureurDeLectures(req.utilisateur!.id, pieceId);
+      return { enCours: true, travailId: travail.travailId, deja: travail.deja };
+    }
+
     const lecture = registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(
       pieceId,
       () => readPieceFlow(api(req), pieceId),
     );
-    if (req.query["attendre"] === "0") {
-      // La lecture continue sans nous ; son échec est déjà relevé par le
-      // registre, et l'écran l'apprendra par le dossier.
-      // Un refus est déjà inscrit en base par la lecture elle-même ; toute autre
-      // cause se crie dans le journal du serveur plutôt que de s'éteindre.
-      lecture.catch((e: unknown) => {
-        if (e instanceof LectureRefusee) return;
-        console.error(
-          `[malica] lecture d'arrière-plan échouée — pièce ${pieceId} : ${
-            e instanceof Error ? e.message : String(e)
-          }`,
-        );
-      });
-      return { enCours: true };
-    }
     const resultat = await lecture;
     // La durée réelle d'une lecture, mesurée côté serveur : c'est elle qui
     // dit si la personne attend dix secondes ou quatre minutes. Atelier

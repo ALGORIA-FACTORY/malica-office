@@ -104,6 +104,12 @@
     "generer",
     "historique"
   ],
+  "fabrique": [
+    "contexteDeDesignation",
+    "enregistrerLecture",
+    "etatDeLaLecture",
+    "inscrireExecution"
+  ],
   "facturation": [
     "inviterSiege",
     "libellesDesStatuts",

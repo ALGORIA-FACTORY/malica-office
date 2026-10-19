@@ -384,12 +384,29 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     });
     assert.equal(reponse.status, 200, "la route répond avant la lecture, comme avant");
 
-    // La lecture d'arrière-plan finit seule ; on attend qu'elle ait quitté le registre.
-    for (let i = 0; i < 100; i++) {
-      const etat = await fetch(`${base}/malica/lectures/${piece}`, {
-        headers: { Authorization: `Bearer ${jeton}` },
-      });
-      if (!((await etat.json()) as { enCours: boolean }).enCours) break;
+    /*
+     * ============================ CE QU'ON ATTEND A CHANGÉ, ET C'EST LE POINT
+     *
+     * On attendait que la pièce quitte le REGISTRE EN MÉMOIRE. C'était le
+     * seul signal qui existait, et il valait ce que vaut une promesse dans un
+     * processus : rien si le processus meurt, et rien non plus tant que la
+     * promesse n'a pas commencé — ce qui rendait l'attente fausse dès que la
+     * lecture ne démarrait plus dans le tour de boucle de la réponse.
+     *
+     * Depuis le 19 octobre, l'accusé porte un `travailId` INSCRIT en base
+     * avant d'être rendu, et son état se demande. C'est ce que l'écran fera,
+     * et c'est donc ce que cette épreuve attend : le dernier fait du travail,
+     * pas une promesse.
+     */
+    const { travailId } = (await reponse.json()) as { travailId: string };
+    assert.ok(travailId, "l'accusé porte le travail inscrit, pas une promesse");
+
+    const TERMINAUX = ["termine", "refuse", "en_erreur", "en_panne", "epuise", "abandonne"];
+    for (let i = 0; i < 200; i++) {
+      const etat = (await sousIdentite(u.id, (db) =>
+        executerRpc(db, { depot: "fabrique", methode: "etatDeLaLecture", args: [travailId] }),
+      )) as { etat: string } | null;
+      if (etat && TERMINAUX.includes(etat.etat)) break;
       await new Promise((resoudre) => setTimeout(resoudre, 50));
     }
 

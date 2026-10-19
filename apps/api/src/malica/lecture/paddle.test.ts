@@ -11,6 +11,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, it } from "node:test";
 
+import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-execution.ts";
+
 import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 
 const vraiFetch = globalThis.fetch;
@@ -127,12 +129,39 @@ describe("le second lecteur", () => {
     );
   });
 
-  it("un service en panne rend `null`, jamais une exception", async () => {
+  /*
+   * ======================= CE QUE CETTE ÉPREUVE DISAIT, ET POURQUOI ELLE A CHANGÉ
+   *
+   * Elle exigeait « un service en panne rend `null`, jamais une exception ».
+   * C'était juste tant que PaddleOCR était un RATTRAPAGE : un second échec
+   * n'avait pas à transformer une lecture partielle en erreur.
+   *
+   * Depuis le 14 octobre 2026 il passe DEVANT, et la même réponse a changé de
+   * sens. Mesurable, et dans cet ordre : une panne de notre propre machine
+   * repartait en appels payants au modèle de vision, puis le rattrapage
+   * rappelait ce modèle une SECONDE fois — alors que `read-flow.ts` promet en
+   * toutes lettres « on ne relit pas deux fois avec le même ». Et la file
+   * durable, qui ne rejoue QUE ce qui se nomme panne de fournisseur, fermait
+   * le travail sans jamais le reprendre.
+   *
+   * Un service ABSENT reste `null` : c'est le chemin nominal du jour où il
+   * n'est pas déployé, et il n'a pas bougé d'un pouce.
+   */
+  it("un service configuré qui ne répond pas est une PANNE, pas un silence", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
     globalThis.fetch = (async () => {
       throw new Error("ECONNREFUSED");
     }) as typeof fetch;
-    assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
+    const echec = await lireAvecPaddle(new Uint8Array([1]), 1).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    assert.ok(echec instanceof PanneFournisseur, "la classe doit être PanneFournisseur");
+    assert.equal(
+      qualifierEchec(echec),
+      "panne_fournisseur",
+      "la file doit la rejouer, pas la fermer",
+    );
   });
 
   it("la premiere couche n'est pas la premiere pour un PDF qui porte son texte", async () => {
@@ -156,10 +185,13 @@ describe("le second lecteur", () => {
     );
   });
 
-  it("un service qui refuse, ou qui ne trouve rien, rend `null` aussi", async () => {
+  it("un service qui refuse est une panne ; un service MUET ne l'est pas", async () => {
     process.env["OCR_URL"] = "http://ocr:8000";
     serviceQuiRend({ lignes: [] }, false);
-    assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
+    await assert.rejects(() => lireAvecPaddle(new Uint8Array([1]), 1), PanneFournisseur);
+    // Aucune ligne reconnue : la pièce est illisible POUR LUI, et la chaîne
+    // la relit avec l'autre lecteur. Ce n'est pas une panne, et le rejouer
+    // rendrait exactement la même chose.
     serviceQuiRend({ lignes: [] });
     assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
   });

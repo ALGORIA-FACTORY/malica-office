@@ -21,6 +21,7 @@ import { extrairePagesScannees } from "./pdf-image.ts";
 import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
+import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
 import { lireAvecQwen, QwenError } from "./qwen.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
@@ -34,7 +35,13 @@ import type { PageToken, TokenRef } from "./token-plan.ts";
  * C'est la garantie R2 rendue structurelle, et non plus seulement demandée.
  */
 // Le nom vient de `../modeles.ts` : il était écrit une seconde fois ici.
-import { MODELE_DESIGNATION, ROLE_DESIGNATION, modeleOcr } from "../modeles.ts";
+import {
+  MODELE_DESIGNATION,
+  MODELE_RECETTE,
+  ROLE_DESIGNATION,
+  ROLE_RECETTE,
+  modeleOcr,
+} from "../modeles.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
@@ -289,17 +296,25 @@ function toRef(v: unknown): TokenRef | null {
 /** Une passerelle qui répond 429/5xx ou du HTML est réessayée : jamais devinée. */
 async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
   let last: unknown;
+  let passagere = false;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       return await fn();
     } catch (e) {
       last = e;
-      // Un délai dépassé n'est pas passager : le rejouer ferait attendre
-      // deux fois. On le nomme, et l'écran le traduit.
-      if (delaiDepasse(e)) throw new Error("lecture.trop_longue");
+      /*
+       * Un délai dépassé n'est pas passager DANS CET APPEL : le rejouer tout
+       * de suite ferait attendre deux fois. On le nomme — l'écran traduit le
+       * code — et c'est une PANNE DE FOURNISSEUR : le modèle n'a pas répondu.
+       * La file durable, elle, a le droit de le rejouer plus tard, après son
+       * délai de repli ; sans cette classe, elle le prendrait pour un défaut
+       * de NOTRE code et fermerait le travail sans jamais le reprendre.
+       */
+      if (delaiDepasse(e)) throw new PanneFournisseur("lecture.trop_longue");
       const msg = e instanceof Error ? e.message : String(e);
       const transient =
         /\b(429|5\d\d)\b/.test(msg) || /Unrecognized token|illisible|JSON/i.test(msg);
+      passagere = transient;
       if (!transient || attempt === 2) break;
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
     }
@@ -321,6 +336,17 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
    */
   if (last instanceof QwenError)
     throw new QwenError(message, last.status, last.retryable, last.code);
+  /*
+   * ========================= TROIS ÉCHECS, ET ILS NE SE TRAITENT PAS PAREIL
+   *
+   * Trois tentatives sur un 429 ou un 5xx, et la passerelle n'a toujours pas
+   * répondu : c'est le FOURNISSEUR qui est tombé, pas notre code. La file
+   * durable le rejoue après son délai de repli. Tant que l'erreur ne le DIT
+   * pas, `qualifierEchec` la prend pour une erreur technique — « une erreur
+   * qu'on ne sait pas nommer n'est PAS rejouée » — et le travail se ferme sur
+   * une panne passagère, définitivement.
+   */
+  if (passagere) throw new PanneFournisseur(message);
   throw new Error(message);
 }
 
@@ -733,10 +759,23 @@ export async function runVisionRead(params: {
   releveur?: string;
   /** Forcer le modèle de vision, en écartant PaddleOCR : c'est le rattrapage. */
   sansPaddle?: boolean;
+  /*
+   * ====================================== LE SEUL POINT D'INSERTION (tâche 5)
+   *
+   * Appelé ENTRE la passe 1 et la passe 2, avec le plan de jetons déjà
+   * recollé — celui-là même que le modèle recevrait. S'il rend une
+   * désignation, la passe 2 ne part pas ; s'il rend `null`, rien n'a changé.
+   *
+   * Il est INJECTÉ, et non importé ici, pour deux raisons : `vision.ts` ne
+   * doit connaître ni la base ni la fabrique (il ne sait relever et désigner
+   * que ce qu'on lui donne), et une épreuve doit pouvoir brancher une recette
+   * sans base ni fournisseur payant.
+   */
+  parRecette?: (plan: readonly PageToken[]) => Promise<{
+    selection: VisionSelection;
+    dureeMs: number;
+  } | null>;
 }): Promise<VisionRead> {
-  const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
-  if (!cleDeepSeek)
-    throw new Error("DEEPSEEK_API_KEY absente : la pièce ne peut pas être désignée");
   const started = Date.now();
 
   // ---- Passe 1 : le relevé. Ce qui est écrit, rien de plus.
@@ -760,6 +799,56 @@ export async function runVisionRead(params: {
   const finReleve = Date.now();
   // L'œil a regardé, et n'a rien lu d'exploitable. Même contrat : un code.
   if (tokens.length === 0) throw new Error("lecture.vide");
+
+  /*
+   * ====================================== LE SEUL POINT D'INSERTION (tâche 5)
+   *
+   * Entre le plan de jetons et la désignation, et nulle part ailleurs. Ce que
+   * la recette rend est un `VisionSelection` — LA MÊME CHOSE que ce que rend
+   * le modèle —, donc tout l'aval est celui d'avant, à l'instruction près :
+   * `buildExtractFromTokenPlan`, `recollerLesMilliers`, les citations, les
+   * contrôles, la persistance. Aucun second chemin n'est possible, et la
+   * non-régression est structurelle plutôt que surveillée.
+   *
+   * Le plan passé est celui de la passe 1, donc DÉJÀ recollé par `relever()`
+   * (ou fourni recollé par l'appelant du rattrapage). Sur le plan brut, une
+   * recette désignerait « 5 » là où le papier porte « 5 650,000 » :
+   * « l'amputation change de côté, elle ne disparaît pas ». Le désignateur le
+   * vérifie lui-même et refuse — il ne le suppose pas.
+   */
+  if (params.parRecette) {
+    const parRecette = await params.parRecette(tokens);
+    if (parRecette) {
+      return {
+        tokens,
+        selection: parRecette.selection,
+        model: `${pass1.source}+${MODELE_RECETTE}`,
+        readModel: pass1.source,
+        // Le couple (modèle, rôle) de l'organe qui a RÉELLEMENT désigné. Il a
+        // sa ligne de tarif, à zéro et souveraine : sans elle,
+        // `agents_run_log` refuserait d'écrire, en silence, et le recours au
+        // modèle — ce que le plan demande de mesurer — resterait invisible.
+        selectModel: MODELE_RECETTE,
+        selectRole: ROLE_RECETTE,
+        latencyMs: Date.now() - started,
+        tokensIn: pass1.tokensIn,
+        tokensOut: pass1.tokensOut,
+        releve: {
+          latencyMs: finReleve - started,
+          tokensIn: pass1.tokensIn ?? null,
+          tokensOut: pass1.tokensOut ?? null,
+        },
+        // Une interprétation déterministe ne consomme aucun jeton : `null`,
+        // et non zéro. Zéro dirait « mesuré à zéro » là où il n'y a rien à
+        // mesurer, et la moyenne du journal s'en trouverait fausse.
+        designation: { latencyMs: parRecette.dureeMs, tokensIn: null, tokensOut: null },
+      };
+    }
+  }
+
+  const cleDeepSeek = process.env["DEEPSEEK_API_KEY"];
+  if (!cleDeepSeek)
+    throw new Error("DEEPSEEK_API_KEY absente : la pièce ne peut pas être désignée");
 
   // ---- Passe 2 : désignation, sans aucune valeur.
   // Le désignateur ne voit pas la pièce : la géométrie voyage donc dans le plan.

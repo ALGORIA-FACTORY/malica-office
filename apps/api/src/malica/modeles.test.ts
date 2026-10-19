@@ -18,7 +18,7 @@ import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 
 import { fermerLePool, horsRlsAuthentificationSeule } from "../db.ts";
-import { DEEPSEEK_MODELS, modeleOcr } from "./modeles.ts";
+import { DEEPSEEK_MODELS, MODELE_RECETTE, ROLE_RECETTE, modeleOcr } from "./modeles.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -27,6 +27,15 @@ const ATTENDUS: Array<{ modele: string; role: string; quoi: string }> = [
   { modele: DEEPSEEK_MODELS.reasoner, role: "reasoner", quoi: "le raisonneur qui désigne" },
   { modele: DEEPSEEK_MODELS.chat, role: "chat", quoi: "la voix de Malica" },
   { modele: modeleOcr(), role: "vision", quoi: "l'œil qui relève" },
+  /*
+   * L'interprète déterministe de la fabrique de lecteurs. Il ne coûte rien,
+   * et c'est justement pour cela qu'il lui faut une ligne : sans tarif,
+   * `agents_run_log` refuse d'écrire — en silence —, et le RECOURS AU MODÈLE
+   * que le plan demande de mesurer deviendrait incomptable. Le nom est dérivé
+   * de la version du langage : `recette/2` rendra ce test rouge tant qu'il
+   * n'aura pas sa ligne, et c'est le service rendu.
+   */
+  { modele: MODELE_RECETTE, role: ROLE_RECETTE, quoi: "la recette qui désigne" },
 ];
 
 /**
