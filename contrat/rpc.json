@@ -107,8 +107,16 @@
   "fabrique": [
     "contexteDeDesignation",
     "enregistrerLecture",
+    "etatDUneVersion",
     "etatDeLaLecture",
-    "inscrireExecution"
+    "evaluerUneVersion",
+    "exemplesDApprentissage",
+    "inscrireExecution",
+    "inscrireUneCandidate",
+    "journaliserUneGeneration",
+    "promouvoir",
+    "qualifierUnExemple",
+    "surveillerUneVersion"
   ],
   "facturation": [
     "inviterSiege",

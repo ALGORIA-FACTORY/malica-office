@@ -321,3 +321,41 @@ Ce qui reste à décider n'est pas technique : qui possède une structure de
 lecture apprise sur les factures d'un client, ce qu'un cabinet accepte de
 donner à voir de ses fournisseurs, et ce que Malica a le droit de reverser au
 pot commun. Tant que cela n'est pas tranché, le partage reste éteint.
+
+### F-5 · Le corpus réel manque pour répondre à la question qui compte
+
+« Une recette générée puis évaluée lit-elle une vraie facture aussi bien que
+le modèle ? » reste **sans réponse**, et le blocage n'est pas le coût d'un
+appel : c'est le **corpus**.
+
+`src/malica/lecture/jeu-d-or.ts` porte **une seule** facture réelle avec sa
+vérité terrain. Or le générateur refuse — et doit refuser — de travailler sur
+un exemple unique : à un, l'ossature porte le nom du client. Il faut donc
+**deux pièces réelles du même format**, avec leur plan de jetons et leur
+désignation attendue, pour que la question soit seulement posable.
+
+Une fois le deuxième cas réel inscrit au jeu d'or, la mesure est gratuite du
+côté lecture — le plan de jetons et la désignation attendue sont déjà là, et
+l'interprétation n'appelle personne. Seule la génération coûte, et elle se
+joue par `tests/real/fabriquer-une-recette.ts`.
+
+Ce qui reste à trancher est d'exploitation, pas de code : qui fournit ces
+pièces, et lesquelles.
+
+### F-6 · Qui déclenche une génération, en production
+
+Le parcours existe de bout en bout et s'éprouve, mais il est aujourd'hui
+déclenché **à la main** (`tests/real/fabriquer-une-recette.ts`) ou par les
+méthodes du dépôt, qu'aucun écran n'appelle encore.
+
+Une génération dure des dizaines de secondes — c'est le raisonneur — et n'a
+donc pas sa place dans une transaction ni dans l'attente de quelqu'un. La
+forme juste est un **travail de la file durable** (`fabrique.travaux`), sur le
+modèle de `lecture_piece` : une nature de travail de plus, et l'exécution qui
+va avec. Ce n'est pas écrit, et c'est dit plutôt que deviné.
+
+Reste à trancher, et ce n'est pas technique : **quand** Malica propose une
+recette d'elle-même. Au bout de combien de pièces d'un même format ? Sur
+décision de l'expert seulement ? Un déclenchement automatique dépense sans
+qu'on le lui demande ; un déclenchement manuel suppose que l'expert sache
+qu'un format revient.

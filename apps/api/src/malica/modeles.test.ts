@@ -18,7 +18,14 @@ import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 
 import { fermerLePool, horsRlsAuthentificationSeule } from "../db.ts";
-import { DEEPSEEK_MODELS, MODELE_RECETTE, ROLE_RECETTE, modeleOcr } from "./modeles.ts";
+import {
+  DEEPSEEK_MODELS,
+  MODELE_GENERATION,
+  MODELE_RECETTE,
+  ROLE_GENERATION,
+  ROLE_RECETTE,
+  modeleOcr,
+} from "./modeles.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -36,6 +43,14 @@ const ATTENDUS: Array<{ modele: string; role: string; quoi: string }> = [
    * n'aura pas sa ligne, et c'est le service rendu.
    */
   { modele: MODELE_RECETTE, role: ROLE_RECETTE, quoi: "la recette qui désigne" },
+  /*
+   * Le générateur de recettes. Il coûte, lui — c'est le raisonneur —, et son
+   * rôle propre existe pour que la génération ne se confonde pas avec la
+   * désignation au journal : le plan de la fabrique demande le coût TOTAL par
+   * document, « génération, observation, évaluation et secours compris », et
+   * deux dépenses logées dans la même case ne s'attribuent plus.
+   */
+  { modele: MODELE_GENERATION, role: ROLE_GENERATION, quoi: "le générateur de recettes" },
 ];
 
 /**

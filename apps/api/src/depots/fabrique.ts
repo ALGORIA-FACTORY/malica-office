@@ -8,10 +8,11 @@
  * de `AppelApi` — comme tout le reste de la chaîne de lecture, qui s'exécute
  * HORS transaction parce qu'un appel de modèle dure des minutes.
  *
- * Ce dépôt est donc la frontière de ce seul usage. Il n'est PAS le dépôt
- * complet de la fabrique (tâche 8 du plan : écrire une recette, qualifier un
- * exemple, promouvoir une version, lire les dérives) : ces méthodes-là
- * s'ajouteront ici, et aucune n'est devinée d'avance.
+ * Ce dépôt est la frontière de cet usage, et depuis le 20 octobre 2026 de
+ * celui du CYCLE DE VIE : qualifier un exemple, proposer une recette à partir
+ * de plusieurs exemples, l'évaluer, la promouvoir, la surveiller, la
+ * suspendre. Les écrans (tâche 9) et les droits fins (tâche 8) s'ajouteront
+ * par-dessus ; rien ici n'est deviné d'avance.
  *
  * ========================================================== CE QU'IL NE FAIT PAS
  *
@@ -24,6 +25,15 @@
 import { z } from "zod";
 
 import type { Requete } from "../db.ts";
+import {
+  etatCourant,
+  evaluerUneVersion,
+  inscrireUneCandidate,
+  promouvoir,
+  qualifierUnExemple,
+  surveiller,
+  type EtatDeRecette,
+} from "../fabrique/cycle.ts";
 import { lireLesBornesDeRecette, lireLesReglages } from "../fabrique/interprete-reglages.ts";
 import { enregistrerTravail, etatDuTravail } from "../fabrique/travaux.ts";
 import type { PageToken } from "../malica/lecture/token-plan.ts";
@@ -59,6 +69,75 @@ interface LigneDeJeton {
   x1: string | number;
   y1: string | number;
 }
+
+/**
+ * Une désignation attendue : `page` / `ordinal`, et rien d'autre.
+ *
+ * `.strict()` n'est pas décoratif. C'est la dernière porte de R2 sur le
+ * chemin des exemples : un `attendu` est un `jsonb`, et un `jsonb` accepte
+ * n'importe quelle clé — y compris « valeur », qu'aucun type n'interdit une
+ * fois la donnée écrite. Une facture arabe est sortie à 650 000 D là où le
+ * papier portait 5 650 000 D parce qu'une valeur avait été recopiée au lieu
+ * d'être relue ; un exemple qui PORTERAIT le montant attendu rouvrirait ce
+ * chemin, et c'est la recette tout entière qui l'apprendrait.
+ */
+const Designation = z
+  .object({
+    page: z.number().int().min(1),
+    ordinal: z.number().int().min(0),
+    ordinalEnd: z.number().int().min(0).optional(),
+  })
+  .strict();
+
+const Attendu = z.record(z.string().min(1).max(64), Designation);
+
+const ExempleQualifie = z.object({
+  tenantId: z.string().uuid(),
+  pieceId: z.string().uuid(),
+  signatureCle: z.string().min(1).max(200),
+  provenance: z.enum(["validation_humaine", "correction_humaine", "import_expert", "observation"]),
+  qualification: z.enum([
+    "reconnaissance_ocr",
+    "designation_champ",
+    "normalisation",
+    "document_incomplet",
+    "decision_comptable",
+  ]),
+  usage: z.enum(["apprentissage", "evaluation"]),
+  attendu: Attendu,
+  note: z.string().max(2000).optional(),
+});
+
+const Candidate = z.object({
+  tenantId: z.string().uuid(),
+  libelle: z.string().min(1).max(200),
+  signatureCle: z.string().min(1).max(200),
+  portee: z.enum(["organisation", "mutualisee"]),
+  definition: z.record(z.string(), z.unknown()),
+  empreinte: z.string().regex(/^[0-9a-f]{64}$/),
+  provenance: z.record(z.string(), z.unknown()),
+  exemples: z.array(z.string().uuid()).min(1),
+  motif: z.string().min(1).max(2000),
+});
+
+const Decision = z.object({
+  tenantId: z.string().uuid(),
+  recetteVersionId: z.string().uuid(),
+  etat: z.enum(["candidate", "evaluee", "observation", "active", "suspendue", "retiree"]),
+  evaluationId: z.string().uuid().optional(),
+  motif: z.string().min(1).max(2000),
+});
+
+const Generation = z.object({
+  tenantId: z.string().uuid(),
+  modele: z.string().min(1).max(200),
+  role: z.string().min(1).max(50),
+  statut: z.string().min(1).max(50),
+  latenceMs: z.number().int().min(0),
+  tokensIn: z.number().int().min(0).nullish(),
+  tokensOut: z.number().int().min(0).nullish(),
+  erreur: z.string().max(2000).nullish(),
+});
 
 const Execution = z.object({
   tenantId: z.string().uuid(),
@@ -230,5 +309,151 @@ export const fabrique = {
    */
   async etatDeLaLecture(db: Requete, travailId: string) {
     return etatDuTravail(db, travailId);
+  },
+
+  /* ================================================ LE CYCLE DE VIE ====== */
+
+  /**
+   * Qualifier un exemple. Ce fait N'AUTORISE AUCUNE PROMOTION.
+   *
+   * Une validation humaine FOURNIT un exemple ; elle ne prouve rien de la
+   * qualité d'une recette. Les deux faits sont distincts en base — tout
+   * passage à `evaluee`, `observation` ou `active` exige une évaluation — et
+   * ils le restent ici : cette méthode n'écrit jamais dans
+   * `fabrique.promotions`.
+   */
+  async qualifierUnExemple(db: Requete, saisie: unknown): Promise<string> {
+    const e = ExempleQualifie.parse(saisie);
+    return qualifierUnExemple(db, e);
+  },
+
+  /**
+   * Les exemples d'APPRENTISSAGE d'une signature, avec leur plan de jetons.
+   *
+   * C'est ce que le générateur reçoit. La clause `usage = 'apprentissage'`
+   * n'est pas une précaution d'écriture : c'est la séparation que la base
+   * tient par clé étrangère, et la respecter ici évite d'avoir à la
+   * découvrir par un refus.
+   */
+  async exemplesDApprentissage(db: Requete, tenantId: string, signatureCle: string) {
+    const { rows } = await db.query<LigneDeJeton & { exemple_id: string; attendu: unknown }>(
+      `select e.id as exemple_id, e.piece_id, e.attendu,
+              t.page, t.ordinal, t.text, t.x0, t.y0, t.x1, t.y1
+         from fabrique.exemples e
+         join token_plan_v t on t.piece_id = e.piece_id
+        where e.tenant_id = $1
+          and e.signature_cle = $2
+          and e.usage = 'apprentissage'
+          and e.nourrit_une_recette
+        order by e.id, t.page, t.ordinal`,
+      [tenantId, signatureCle],
+    );
+
+    const par = new Map<
+      string,
+      { exempleId: string; pieceId: string; attendu: unknown; plan: PageToken[] }
+    >();
+    for (const j of rows) {
+      let vu = par.get(j.exemple_id);
+      if (!vu) {
+        vu = { exempleId: j.exemple_id, pieceId: j.piece_id, attendu: j.attendu, plan: [] };
+        par.set(j.exemple_id, vu);
+      }
+      vu.plan.push({
+        page: Number(j.page),
+        ordinal: Number(j.ordinal),
+        text: j.text,
+        x0: Number(j.x0),
+        y0: Number(j.y0),
+        x1: Number(j.x1),
+        y1: Number(j.y1),
+      });
+    }
+    return [...par.values()];
+  },
+
+  /**
+   * Journaliser un appel du GÉNÉRATEUR — R8, et sans échappatoire.
+   *
+   * `public.agents_run_log` cherche un tarif par le COUPLE (modèle, rôle) et
+   * LÈVE quand il n'en trouve pas. On ne rattrape pas cette levée : une
+   * génération qui ne se journalise pas est une dépense qui disparaît, et
+   * c'est exactement ce qui est arrivé quatre fois dans ce dépôt — dix jours
+   * de désignations non mesurées la première.
+   *
+   * Elle s'appelle AUSSI quand la proposition est refusée : un appel refusé a
+   * coûté autant qu'un appel retenu, et le plan demande le coût total par
+   * document, génération comprise.
+   */
+  async journaliserUneGeneration(db: Requete, saisie: unknown): Promise<string | null> {
+    const g = Generation.parse(saisie);
+    const { rows } = await db.query<{ id: string | null }>(
+      `select public.agents_run_log($1, $2, $3, $4, $5, $6::integer,
+                                    $7::integer, $8::integer, null, $9) as id`,
+      [
+        g.tenantId,
+        "fabrique.generateur",
+        g.modele,
+        g.role,
+        g.statut,
+        g.latenceMs,
+        g.tokensIn ?? null,
+        g.tokensOut ?? null,
+        g.erreur ?? null,
+      ],
+    );
+    return rows[0]?.id ?? null;
+  },
+
+  /** Inscrire une recette candidate : version, exemples, décision de naissance. */
+  async inscrireUneCandidate(db: Requete, saisie: unknown) {
+    const c = Candidate.parse(saisie);
+    return inscrireUneCandidate(db, c);
+  },
+
+  /**
+   * Évaluer une version contre son jeu d'ÉVALUATION, et inscrire la mesure.
+   *
+   * Quand les données manquent, l'évaluation s'écrit quand même, sans la
+   * mesure qu'on n'a pas pu calculer : la recette peut alors passer en
+   * observation — elle s'exécute, on compare, on ne la croit pas — et la base
+   * refuse l'activation, parce qu'une mesure absente reste absente.
+   */
+  async evaluerUneVersion(db: Requete, tenantId: string, recetteVersionId: string) {
+    return evaluerUneVersion(db, tenantId, recetteVersionId);
+  },
+
+  /**
+   * Inscrire une décision de cycle.
+   *
+   * Sans `if` : la transition permise, l'évaluation exigée, les seuils du
+   * référentiel et le droit de décider (dirigeant ou expert) sont tenus par
+   * `fabrique.verifier_promotion()` et par la politique d'écriture. Une règle
+   * recopiée ici serait une seconde vérité, et c'est celle de l'application
+   * qui se contourne.
+   */
+  async promouvoir(db: Requete, saisie: unknown): Promise<void> {
+    const d = Decision.parse(saisie);
+    await promouvoir(db, d);
+  },
+
+  /** L'état COURANT d'une version : le dernier fait inscrit, jamais un stock. */
+  async etatDUneVersion(
+    db: Requete,
+    recetteVersionId: string,
+  ): Promise<{ etat: EtatDeRecette; motif: string; evaluationId: string | null } | null> {
+    return etatCourant(db, recetteVersionId);
+  },
+
+  /**
+   * Surveiller une version qui tourne, et la SUSPENDRE si elle dérive.
+   *
+   * Suspendre suffit à rétablir le chemin existant : `contexteDeDesignation`
+   * ne rend que les versions `observation` et `active`. Rien n'est perdu — ni
+   * les pièces, ni les exécutions, ni les décisions — et la reprise
+   * (`suspendue → observation`) est une transition que la base permet.
+   */
+  async surveillerUneVersion(db: Requete, tenantId: string, recetteVersionId: string) {
+    return surveiller(db, tenantId, recetteVersionId);
   },
 };

@@ -136,3 +136,36 @@ export const MODELE_DESIGNATION = DEEPSEEK_MODELS[ROLE_DESIGNATION];
  */
 export const MODELE_RECETTE: string = VERSION_DU_LANGAGE;
 export const ROLE_RECETTE = "recette";
+
+/* ------------------------------------------- CELUI QUI FABRIQUE LA RECETTE -- */
+
+/**
+ * Le générateur de recettes — celui qui PROPOSE une structure.
+ *
+ * ================================================ POURQUOI LE RAISONNEUR, ICI
+ *
+ * La bascule du 5 octobre a fait passer la DÉSIGNATION du raisonneur au chat,
+ * et pour une bonne raison : trente-six secondes d'attente pour quelqu'un qui
+ * tient son téléphone. La génération n'a pas cette contrainte — elle arrive
+ * une fois par format, hors de toute attente, et ce qu'elle produit sera
+ * ensuite rejoué sur des milliers de pièces. On paie le raisonneur une fois
+ * pour ne plus payer le chat ensuite, et c'est le seul endroit du produit où
+ * ce calcul penche de ce côté.
+ *
+ * =========================================== POURQUOI UN RÔLE DE PLUS, ENCORE
+ *
+ * `agents.model_pricing` cherche un tarif par le COUPLE (modèle, rôle). Le
+ * raisonneur a déjà sa ligne sous le rôle `reasoner` ; s'en servir ferait
+ * tenir la génération et la désignation dans la même case du journal, alors
+ * que le plan de la fabrique demande de mesurer le COÛT TOTAL par document
+ * « génération, observation, évaluation et secours compris ». Deux dépenses
+ * qu'on ne peut pas séparer sont deux dépenses qu'on ne sait pas attribuer.
+ *
+ * Les deux noms sortent d'UNE déclaration : `ROLE_DEEPSEEK_DE_GENERATION` dit
+ * quel modèle appeler, `MODELE_GENERATION` en est DÉRIVÉ. Il n'y a donc pas
+ * deux endroits où le couple pourrait se désaccorder, et c'est précisément
+ * par un désaccord de ce genre que le coût de l'œil a disparu du journal.
+ */
+export const ROLE_DEEPSEEK_DE_GENERATION: DeepSeekRole = "reasoner";
+export const MODELE_GENERATION = DEEPSEEK_MODELS[ROLE_DEEPSEEK_DE_GENERATION];
+export const ROLE_GENERATION = "generateur";
