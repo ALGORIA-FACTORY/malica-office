@@ -42,8 +42,10 @@ import { executerRpc } from "../rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
-/** Le forfait Basic, tel que l'audit l'a mesuré : 65 lectures par mois. */
-const FORFAIT = 65;
+/** Le forfait Basic : 65 lectures par mois quand l'audit l'a mesuré. */
+// Depuis la grille du 19 octobre, le droit n'est plus écrit ici : la base le
+// donne (licence née avec la société, Basic d'office), l'épreuve le lit.
+let FORFAIT = 0;
 
 type Verdict = {
   autorisee: boolean;
@@ -124,18 +126,19 @@ describe(
         return rows[0]!.id;
       });
 
-      // 64 pièces transmises et déjà comptées, sur les 65 du forfait Basic.
+      // Toutes les pièces du forfait déjà comptées, moins une.
       licence = await admin(async (p) => {
-        const { rows } = await p.query<{ id: string }>(
-          `insert into facturation.licences (titulaire, offre_code, offre_depuis)
-         values ($1, 'basic', date '2026-10-17') returning id`,
-          [u.id],
+        const { rows } = await p.query<{ id: string; droit: number }>(
+          `select lo.licence_id as id, c.lectures_droit as droit
+             from facturation.licence_organisations lo
+             join facturation.consommation_v c on c.licence_id = lo.licence_id
+            where lo.tenant_id = $1`,
+          [org],
         );
+        assert.ok(rows[0], "la société est née sans licence");
         const id = rows[0]!.id;
-        await p.query(
-          "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
-          [id, org],
-        );
+        FORFAIT = Number(rows[0]!.droit);
+        assert.ok(FORFAIT > 1, "le forfait de naissance donne des lectures");
         await p.query(
           `with neuves as (
            insert into capture.pieces

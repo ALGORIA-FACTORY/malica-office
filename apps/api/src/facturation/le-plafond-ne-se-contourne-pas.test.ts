@@ -16,12 +16,15 @@
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
+
+/** Les lectures du Basic, lues dans la grille en vigueur. */
+let FORFAIT = 0;
 
 interface Cabinet {
   dirigeant: string;
@@ -49,7 +52,7 @@ async function nouvellePiece(
 }
 
 /**
- * Une organisation `basic` (65 lectures) avec son dirigeant et un collaborateur.
+ * Une organisation `basic` (FORFAIT lectures, lu dans la grille) avec son dirigeant et un collaborateur.
  * `consommees` lectures sont déjà comptées ; `avecLicence` false la laisse sans licence.
  */
 async function monter(
@@ -175,6 +178,15 @@ async function verdict(
 }
 
 describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
+  // Le droit du Basic n'est pas écrit ici : la grille en vigueur le donne.
+  before(async () => {
+    const { rows } = await pool!.query<{ n: number }>(
+      "select lectures_par_organisation as n from ref.offre_a('basic', current_date)",
+    );
+    FORFAIT = Number(rows[0]!.n);
+    assert.ok(FORFAIT > 1);
+  });
+
   after(async () => {
     await pool?.end();
   });
@@ -192,7 +204,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
 
   it("un collaborateur d'une organisation au plafond est refusé comme son dirigeant", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       const dirigeant = await verdict(db, c.dirigeant, c.piece);
       const collaborateur = await verdict(db, c.collaborateur, c.piece);
 
@@ -200,7 +212,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       assert.equal(dirigeant["motif"], "plafond_atteint");
       assert.equal(collaborateur["autorisee"], false, "le collaborateur ne doit pas être autorisé");
       assert.equal(collaborateur["motif"], dirigeant["motif"]);
-      assert.equal(collaborateur["droit"], 65);
+      assert.equal(collaborateur["droit"], FORFAIT);
     });
   });
 
@@ -217,9 +229,9 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
     });
   });
 
-  it("un supplément accordé est compté : 50 de plus, droit réel 115, 65 consommées", async () => {
+  it("un supplément accordé est compté : 50 de plus, le droit réel monte de 50, le forfait consommé", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       await db.query(
         `insert into plateforme.interventions (licence_id, acte, motif, valeur, operateur)
          values ($1, 'supplement_lectures', 'supplément payé', 50, $2)`,
@@ -232,7 +244,11 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       ] as const) {
         const v = await verdict(db, identite, c.piece);
         assert.equal(v["autorisee"], true, `${qui} : le supplément payé doit débloquer`);
-        assert.equal(v["droit"], 115, `${qui} : le droit réel est 115, pas 65`);
+        assert.equal(
+          v["droit"],
+          FORFAIT + 50,
+          `${qui} : le droit réel est le forfait plus le supplément`,
+        );
         assert.equal(v["restantes"], 50);
       }
     });
@@ -251,7 +267,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
 
   it("la fonction n'est pas une sonde : un étranger à l'organisation n'apprend rien", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       await db.query("set local role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, true)", [randomUUID()]);
       await db.query("savepoint avant");
@@ -310,14 +326,14 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
 
   it("un expert de cabinet engagé reste refusé au plafond, et rien ne s'inscrit", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       const partagee = await nouvellePiece(db, c.tenant, c.dirigeant, "partagee", "partage");
       const expert = await cabinetSur(db, c.tenant, "actif");
 
       const v = await verdict(db, expert, partagee);
       assert.equal(v["autorisee"], false, "l'expert engagé ne passe pas le plafond du client");
       assert.equal(v["motif"], "plafond_atteint");
-      assert.equal(v["droit"], 65, "le droit est celui de la licence du client");
+      assert.equal(v["droit"], FORFAIT, "le droit est celui de la licence du client");
       assert.equal(v["restantes"], 0);
 
       await sous(db, expert, async () => {
@@ -376,7 +392,7 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
 
   it("un opérateur de plateforme sous réquisition reçoit le verdict du client", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       const operateur = randomUUID();
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
       await db.query(
@@ -391,13 +407,13 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       const v = await verdict(db, operateur, c.piece);
       assert.equal(v["autorisee"], false, "la réquisition ne lève pas le plafond du client");
       assert.equal(v["motif"], "plafond_atteint");
-      assert.equal(v["droit"], 65);
+      assert.equal(v["droit"], FORFAIT);
     });
   });
 
   it("lecture_consommer refuse le collaborateur au plafond et ne compte rien", async () => {
     await dansUneTransaction(async (db) => {
-      const c = await monter(db, { consommees: 65 });
+      const c = await monter(db, { consommees: FORFAIT });
       await db.query("set local role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, true)", [c.collaborateur]);
       await db.query("savepoint avant");

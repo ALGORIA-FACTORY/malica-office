@@ -719,15 +719,12 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
   /* ------------------------------------ 8. L'ARGENT NE SE COMPTE QU'UNE FOIS */
 
   it("deux exécutions de la même pièce ne comptent qu'une lecture", async () => {
-    const { rows } = await admin.query<{ id: string }>(
-      `insert into facturation.licences (titulaire, offre_code, offre_depuis)
-       values ($1, 'basic', date '2026-10-17') returning id`,
-      [a.id],
-    );
-    await admin.query(
-      `insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)`,
-      [rows[0]!.id, orgA],
-    );
+    // La société a sa licence : née avec elle, ou née ici si le décor l'a posée
+    // sans passer par `create_organization`. La fonction rend celle qui existe.
+    await admin.query("select facturation.licence_naitre($1, $2, null, current_date)", [
+      orgA,
+      a.id,
+    ]);
 
     const piece = await pieceDeplus("argent");
     const comptees = async (): Promise<number> => {

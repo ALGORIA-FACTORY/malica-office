@@ -10,8 +10,9 @@
  *     autre licence : deux clients, deux titulaires, et aucun ne voit l'autre
  *     (le défaut de la livraison : des vues qui rendaient tous les clients) ;
  *   - un appelant sans droit est refusé, et le refus vient de la base ;
- *   - inviter sur une licence au complet est refusé par la base, pas par un
- *     compte fait ici.
+ *   - inviter sur une licence sans place est refusé par la base, pas par un
+ *     compte fait ici. Depuis la grille du 19 octobre, Team et Premium n'ont
+ *     plus de plafond de sièges : la licence sans place est un Solo.
  *
  * Les deux clients sont validés (commités) : `sousIdentite` ouvre sa propre
  * connexion. Ils s'archivent à la fin, ils ne se suppriment pas (R7).
@@ -40,15 +41,21 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
   const admin = new pg.Pool({ connectionString: ADMIN, max: 2 });
   const marque = `abo-${Date.now()}`;
   let a: Client; // Team, 2 sièges occupés sur 10, 2 lectures
-  let b: Client; // Team au complet : 10 sièges sur 10, 1 lecture
+  let b: Client; // Team, 10 sièges occupés (sans plafond), 1 lecture
+  let s: Client; // Solo : aucune place à offrir
   const etranger = randomUUID(); // un compte sans aucun rattachement
   const operateur = randomUUID(); // la plateforme : lit tout, détient rien
 
   const rpc = (qui: string, depot: string, methode: string, ...args: unknown[]) =>
     sousIdentite(qui, (db) => executerRpc(db, { depot, methode, args }));
 
-  /** Un client Team : organisation, titulaire, collaborateurs, lectures déjà comptées. */
-  async function abonner(nom: string, sieges: number, lectures: number): Promise<Client> {
+  /** Un client : organisation, titulaire, collaborateurs, lectures déjà comptées. */
+  async function abonner(
+    nom: string,
+    sieges: number,
+    lectures: number,
+    offre: "team" | "solo" = "team",
+  ): Promise<Client> {
     const titulaire = randomUUID();
     const licence = randomUUID();
     const org = await admin.query<{ id: string }>(
@@ -67,8 +74,8 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     ]);
     await admin.query(
       `insert into facturation.licences (id, titulaire, offre_code, offre_depuis)
-       values ($1, $2, 'team', current_date)`,
-      [licence, titulaire],
+       values ($1, $2, $3, current_date)`,
+      [licence, titulaire, offre],
     );
     await admin.query(
       "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
@@ -107,6 +114,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
   before(async () => {
     a = await abonner("Alpha", 2, 2);
     b = await abonner("Bravo", 10, 1);
+    s = await abonner("Solo", 0, 0, "solo");
     await admin.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   });
 
@@ -116,7 +124,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
       `update identity.organizations
           set archived_at = now(), archived_reason = 'fixture de test automatisé'
         where id = any($1::uuid[])`,
-      [[a.tenant, b.tenant]],
+      [[a.tenant, b.tenant, s.tenant]],
     );
     await admin.end();
     await fermerLePool();
@@ -249,18 +257,18 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     assert.deepEqual(ligne.rows, [{ tenant_id: a.tenant, role: "collaborateur" }]);
   });
 
-  it("inviterSiege sur une licence AU COMPLET est refusé par la base, rien n'est inscrit", async () => {
+  it("inviterSiege sur une licence SANS PLACE est refusé par la base, rien n'est inscrit", async () => {
     const avant = await admin.query<{ n: string }>(
       "select count(*) as n from identity.invitations where tenant_id = $1",
-      [b.tenant],
+      [s.tenant],
     );
     await assert.rejects(
-      rpc(b.titulaire, "facturation", "inviterSiege", `onzieme-${marque}@essai.local`, b.tenant),
+      rpc(s.titulaire, "facturation", "inviterSiege", `premier-${marque}@essai.local`, s.tenant),
       (e: { code?: string }) => e.code === "23514",
     );
     const apres = await admin.query<{ n: string }>(
       "select count(*) as n from identity.invitations where tenant_id = $1",
-      [b.tenant],
+      [s.tenant],
     );
     assert.equal(apres.rows[0]!.n, avant.rows[0]!.n);
   });

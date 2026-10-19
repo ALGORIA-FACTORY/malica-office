@@ -222,18 +222,15 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     });
   }
 
+  // Une société naît avec sa licence (Basic d'office) : on la retrouve, on ne
+  // l'invente pas.
   async function licencier(tenantId: string): Promise<string> {
     const { rows } = await admin.query<{ id: string }>(
-      `insert into facturation.licences (titulaire, offre_code, offre_depuis)
-       values ($1, 'basic', date '2026-10-17') returning id`,
-      [u.id],
+      "select licence_id as id from facturation.licence_organisations where tenant_id = $1",
+      [tenantId],
     );
-    const id = rows[0]!.id;
-    await admin.query(
-      "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
-      [id, tenantId],
-    );
-    return id;
+    assert.ok(rows[0], "la société est née sans licence");
+    return rows[0]!.id;
   }
 
   before(async () => {

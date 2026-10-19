@@ -127,18 +127,14 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
       return rows[0]!.id;
     });
 
+    // Une licence Team : elle ouvre les sièges, et elle fixe le décor commercial
+    // de l'audit (un dirigeant et un collaborateur sur la même organisation).
+    // La société est née en Basic ; le dirigeant passe en Team par la vraie porte.
+    await sousIdentite(dirigeant.id, (db) =>
+      db.query("select public.forfait_changer('team', $1, current_date)", [pme]),
+    );
+
     await admin(async (p) => {
-      // Une licence Team : elle ouvre les sièges, et elle fixe le décor commercial
-      // de l'audit (un dirigeant et un collaborateur sur la même organisation).
-      const { rows: licence } = await p.query<{ id: string }>(
-        `insert into facturation.licences (titulaire, offre_code, offre_depuis)
-         values ($1, 'team', date '2026-10-17') returning id`,
-        [dirigeant.id],
-      );
-      await p.query(
-        "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",
-        [licence[0]!.id, pme],
-      );
       await p.query(
         "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
         [pme, collaborateur.id],
