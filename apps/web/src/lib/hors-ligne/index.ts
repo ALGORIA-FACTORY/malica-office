@@ -38,7 +38,11 @@ export function vidage(): Vidage {
           }),
         deposerOctets: (pieceId, octets, contentType) =>
           office().capture.deposerOctets(pieceId, octets, contentType),
-        demanderLaLecture: (pieceId) => office().malica.demanderLaLecture(pieceId),
+        // Le numéro du travail durable n'est pas repris ici : la file hors
+        // ligne lance et s'en va, et c'est l'écran qui suit la lecture.
+        demanderLaLecture: async (pieceId) => {
+          await office().malica.demanderLaLecture(pieceId);
+        },
       },
       enLigne: () => (typeof navigator === "undefined" ? true : navigator.onLine),
     });

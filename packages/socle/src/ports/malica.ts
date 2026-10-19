@@ -310,8 +310,19 @@ export interface MalicaPort {
   /**
    * Lancer la lecture sans l'attendre : ce que la file hors ligne demande
    * après avoir déposé les octets. Le dossier dira quand c'est lu.
+   *
+   * ================================== POURQUOI ELLE REND LE NUMÉRO DU TRAVAIL
+   *
+   * L'accusé que la route renvoie part APRÈS l'écriture dans la file durable
+   * (`fabrique.travaux`), et il porte ce numéro. Sans lui, l'appelant ne peut
+   * demander où en est la lecture qu'à la MÉMOIRE DU PROCESSUS — qui répond
+   * « plus rien ne tourne » aussi bien pour une lecture terminée que pour une
+   * lecture morte avec son processus. L'écran de capture cochait la seconde.
+   *
+   * `deja` dit si le travail existait : la file hors ligne rejoue, et un
+   * rejeu ne doit pas se lire comme une seconde lecture.
    */
-  demanderLaLecture(pieceId: string): Promise<void>;
+  demanderLaLecture(pieceId: string): Promise<{ travailId: string; deja: boolean }>;
   /** L'œil lit la carte d'identification fiscale ; l'écran propose, l'expert arrête (R10). */
   lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte>;
   demander(question: QuestionAMalica): Promise<ReponseDeMalica>;

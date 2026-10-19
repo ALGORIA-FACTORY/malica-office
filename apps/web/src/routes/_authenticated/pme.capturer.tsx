@@ -11,7 +11,7 @@ import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
 import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
 import { office } from "@/verticals/malica-office/composition";
-import type { PieceLue } from "@malica/socle/ports/repositories";
+import type { EtatDUnTravail, PieceLue } from "@malica/socle/ports/repositories";
 
 /**
  * Capturer — de la photo à la pièce, une question par écran.
@@ -106,6 +106,24 @@ const ETAPES = [
   "pme.capture.etape.reglement",
   "pme.capture.etape.fait",
 ] as const satisfies readonly MessageKey[];
+
+/**
+ * Le mot de chaque état de la file durable de lecture.
+ *
+ * Il est écrit à côté de la pastille, et pas porté par elle : aucune
+ * information ne se dit par la seule couleur. Et chaque mot dit la vérité sur
+ * le fait qu'il surmonte — « pas lue » n'est pas « en attente ».
+ */
+const MOT_DU_TRAVAIL: Record<EtatDUnTravail, MessageKey> = {
+  a_faire: "pme.capture.travail.a_faire",
+  en_cours: "pme.capture.travail.en_cours",
+  abandonne: "pme.capture.travail.abandonne",
+  en_panne: "pme.capture.travail.en_panne",
+  epuise: "pme.capture.travail.epuise",
+  termine: "pme.capture.travail.termine",
+  refuse: "pme.capture.travail.refuse",
+  en_erreur: "pme.capture.travail.en_erreur",
+};
 
 /* Les tracés viennent du dessin, à l'identique : l'écran n'a pas de
  * bibliothèque d'icônes à lui, et `.g` porte déjà le trait. */
@@ -253,6 +271,15 @@ function PmeCapturer() {
 
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
+  /**
+   * Le numéro du travail DURABLE de chaque pièce qu'on a fait lire.
+   *
+   * Sans lui, « où en est cette lecture ? » se demande à la mémoire du
+   * processus, qui répond « plus rien ne tourne » aussi bien pour une lecture
+   * terminée que pour une lecture morte avec son processus. L'écran cochait
+   * la seconde : une pastille verte sur une pièce jamais lue.
+   */
+  const [travaux, setTravaux] = useState<Readonly<Record<string, string>>>({});
   /** Les pièces décochées à l'étape 2 : gardées pour soi, non lues. */
   const [exclues, setExclues] = useState<readonly string[]>([]);
   /** La vignette ouverte dans la bande, et son petit menu. */
@@ -362,11 +389,30 @@ function PmeCapturer() {
    * résultat arrive par la liste, pas par la requête qui l'a lancée.
    */
   const lectures = useQuery({
-    queryKey: ["lectures-en-cours", pme.tenantId, ids.join(",")],
+    queryKey: ["lectures-en-cours", pme.tenantId, ids.join(","), Object.values(travaux).join(",")],
     enabled: etape === 3 && ids.length > 0,
     queryFn: async () => {
       const etats = await Promise.all(
-        ids.map(async (id) => ({ id, ...(await office().malica.etatDeLecture(id)) })),
+        ids.map(async (id) => {
+          const travailId = travaux[id];
+          /*
+           * La file durable quand on tient le numéro du travail : elle survit
+           * au redémarrage du serveur, et elle distingue « terminée » de
+           * « plus rien ne tourne ». Sans numéro — une pièce lue par la file
+           * hors ligne, un retour sur l'écran — on retombe sur la question au
+           * processus, qui ne sait dire que « en cours ou pas ».
+           */
+          if (travailId) {
+            const t = await office().fabrique.etatDeLaLecture(travailId);
+            return {
+              id,
+              etat: t?.etat ?? null,
+              enCours: t?.etat === "a_faire" || t?.etat === "en_cours",
+            };
+          }
+          const m = await office().malica.etatDeLecture(id);
+          return { id, etat: null, enCours: m.enCours };
+        }),
       );
       return etats;
     },
@@ -467,12 +513,18 @@ function PmeCapturer() {
       // Les décochées sont gardées d'abord : elles ne doivent pas rester en
       // suspens pendant que les autres se lisent.
       for (const id of exclues) await office().collab.garderPiece(id);
+      // L'accusé porte le numéro du travail inscrit en base. On le garde :
+      // c'est la seule façon de redemander où en est CETTE lecture-là.
+      const pris: Record<string, string> = {};
       for (const id of ids) {
         await office().collab.setPieceVis(id, "entite");
-        await office().malica.demanderLaLecture(id);
+        const travail = await office().malica.demanderLaLecture(id);
+        pris[id] = travail.travailId;
       }
+      return pris;
     },
-    onSuccess: async () => {
+    onSuccess: async (pris) => {
+      setTravaux(pris);
       setErreur(null);
       setEtape(3);
       await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
@@ -968,11 +1020,18 @@ function PmeCapturer() {
             <div className="lect">
               {retenues.map((p) => {
                 const etat = (lectures.data ?? []).find((e) => e.id === p.id);
-                const faite = !pasEncore(p) || (etat && !etat.enCours);
+                /*
+                 * « Faite » veut dire LUE, pas « plus rien ne tourne ». Le
+                 * dossier porte déjà un émetteur, ou la file durable dit
+                 * « termine » : rien d'autre ne coche cette pastille.
+                 */
+                const faite = !pasEncore(p) || etat?.etat === "termine";
+                const mot = etat?.etat ? t(MOT_DU_TRAVAIL[etat.etat]) : null;
                 return (
                   <div key={p.id} className={faite ? "ok" : ""}>
                     <i />
                     <span>{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
+                    {mot ? <span>· {mot}</span> : null}
                   </div>
                 );
               })}

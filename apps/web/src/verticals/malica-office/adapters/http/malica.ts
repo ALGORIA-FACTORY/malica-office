@@ -62,8 +62,13 @@ export function creerMalicaHttp(): MalicaPort {
       return appelerRoute(`/lectures/${pieceId}`, { method: "GET" });
     },
 
-    async demanderLaLecture(pieceId: string): Promise<void> {
-      await appelerRoute<{ enCours: boolean }>(`/lectures/${pieceId}?attendre=0`);
+    async demanderLaLecture(pieceId: string): Promise<{ travailId: string; deja: boolean }> {
+      const { travailId, deja } = await appelerRoute<{
+        enCours: boolean;
+        travailId: string;
+        deja: boolean;
+      }>(`/lectures/${pieceId}?attendre=0`);
+      return { travailId, deja };
     },
 
     lireCarte(input: { jurisdiction: string; fichier: Blob }): Promise<LectureDeCarte> {
