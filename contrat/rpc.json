@@ -1,7 +1,5 @@
 {
-  "acces": [
-    "monAcces"
-  ],
+  "acces": ["monAcces"],
   "banque": [
     "audit",
     "bookLines",
@@ -38,14 +36,7 @@
     "rattacherJustificatif",
     "supprimer"
   ],
-  "charges": [
-    "anomalyThreshold",
-    "answer",
-    "articles",
-    "enAttenteDeDate",
-    "familles",
-    "questions"
-  ],
+  "charges": ["anomalyThreshold", "answer", "articles", "enAttenteDeDate", "familles", "questions"],
   "collab": [
     "addPv",
     "assign",
@@ -92,18 +83,8 @@
     "renommer",
     "supprimer"
   ],
-  "corpus": [
-    "editionsPlusRecentes",
-    "modeleEmpreinte",
-    "parametresPour",
-    "rechercher"
-  ],
-  "exports": [
-    "estimer",
-    "exercices",
-    "generer",
-    "historique"
-  ],
+  "corpus": ["editionsPlusRecentes", "modeleEmpreinte", "parametresPour", "rechercher"],
+  "exports": ["estimer", "exercices", "generer", "historique"],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -125,12 +106,21 @@
     "surveillerUneVersion"
   ],
   "facturation": [
+    "acheterRecharge",
+    "changerForfait",
+    "inviterProprietaire",
     "inviterSiege",
     "libellesDesStatuts",
     "libererPlace",
+    "maRechargeAutomatique",
+    "mesOffres",
+    "mesRecharges",
     "monForfait",
     "organisations",
-    "sieges"
+    "paliersDeRecharge",
+    "reglerRechargeAutomatique",
+    "sieges",
+    "transmettreLicence"
   ],
   "honoraires": [
     "avoir",
@@ -152,6 +142,7 @@
     "createOrganization",
     "creerMandat",
     "definirOrganisation",
+    "ecrireMonProfil",
     "etablirFiche",
     "ficheCourante",
     "formesDisponibles",
@@ -162,6 +153,7 @@
     "listMyOrganizations",
     "mandatsProposes",
     "monCabinet",
+    "monProfil",
     "ouvrirDossier",
     "proposerMandat",
     "regimesDisponibles",
@@ -180,16 +172,8 @@
     "recordCession",
     "updateAsset"
   ],
-  "integrations": [
-    "cles",
-    "creerCle",
-    "etat",
-    "revoquerCle"
-  ],
-  "journal": [
-    "consigner",
-    "dernieres"
-  ],
+  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
+  "journal": ["consigner", "dernieres"],
   "office": [
     "book",
     "bookedExtracts",
@@ -232,9 +216,7 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": [
-    "deposer"
-  ],
+  "signalements": ["deposer"],
   "stocks": [
     "addMouvement",
     "categories",
@@ -257,11 +239,5 @@
     "review",
     "statistiques"
   ],
-  "tiers": [
-    "comptesCollectifs",
-    "creer",
-    "desactiver",
-    "lister",
-    "modifier"
-  ]
+  "tiers": ["comptesCollectifs", "creer", "desactiver", "lister", "modifier"]
 }

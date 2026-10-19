@@ -517,4 +517,34 @@ export const identite = {
 
     return orgId;
   },
+
+  /**
+   * Le prénom et le nom de l'appelant. Le prénom salue, le nom complet
+   * facture : la base compose `display_name` (« Prénom Nom ») dès que l'un
+   * des deux est posé (`20261021090000`). `null` tant que rien n'est écrit.
+   */
+  async monProfil(db: Requete) {
+    const { rows } = await db.query<{
+      prenom: string | null;
+      nom: string | null;
+      display_name: string | null;
+    }>(`select prenom, nom, display_name from identity.profiles where user_id = auth.uid()`);
+    return rows[0] ?? null;
+  },
+
+  /** Écrire son prénom et son nom. Un champ vide s'efface. */
+  async ecrireMonProfil(db: Requete, prenom: string | null, nom: string | null) {
+    const { rows } = await db.query<{
+      prenom: string | null;
+      nom: string | null;
+      display_name: string | null;
+    }>(
+      `insert into identity.profiles (user_id, prenom, nom)
+       values (auth.uid(), nullif(btrim($1), ''), nullif(btrim($2), ''))
+       on conflict (user_id) do update set prenom = excluded.prenom, nom = excluded.nom
+       returning prenom, nom, display_name`,
+      [prenom, nom],
+    );
+    return rows[0] ?? null;
+  },
 };

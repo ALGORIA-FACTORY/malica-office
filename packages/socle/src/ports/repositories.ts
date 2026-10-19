@@ -155,6 +155,16 @@ export interface IdentityRepository {
    * carte n'établit rien — c'est ce geste-ci, et lui seul, qui fait foi.
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
+  /** Le prénom salue, le nom complet facture. `null` tant que rien n'est écrit. */
+  monProfil(): Promise<MonProfil | null>;
+  /** Un champ vide s'efface ; la base compose « Prénom Nom ». */
+  ecrireMonProfil(prenom: string | null, nom: string | null): Promise<MonProfil | null>;
+}
+
+export interface MonProfil {
+  prenom: string | null;
+  nom: string | null;
+  display_name: string | null;
 }
 
 export type StatutInvitation = "en_attente" | "acceptee" | "expiree" | "revoquee";
@@ -2419,6 +2429,79 @@ export interface FacturationRepository {
     tenantId: string,
     membre: string,
   ): Promise<{ libere: boolean; motif?: string; pieces: number }>;
+
+  /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
+  mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
+  /** Propriétaire principal seul ; un refus revient en `forfait_refuse:<code>:…`. */
+  changerForfait(offre: string, tenantId?: string): Promise<{ change: boolean }>;
+
+  paliersDeRecharge(): Promise<PalierDeRecharge[]>;
+  mesRecharges(): Promise<RechargeDeLaLicence[]>;
+  acheterRecharge(code: string, tenantId?: string): Promise<RechargeDeLaLicence>;
+  maRechargeAutomatique(): Promise<RechargeAutomatique | null>;
+  reglerRechargeAutomatique(
+    active: boolean,
+    code: string | null,
+    plafondMoisHt: string | null,
+    tenantId?: string,
+  ): Promise<{ active: boolean; palier: string | null; plafond_mois_ht: string | null } | null>;
+
+  /** Un propriétaire : un dirigeant de plus, sur une place payée. */
+  inviterProprietaire(
+    email: string,
+    tenantId: string,
+  ): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
+  /** Le rôle de propriétaire principal passe à un propriétaire de la société. */
+  transmettreLicence(tenantId: string, nouveau: string): Promise<{ licence: string | null }>;
+}
+
+/** Une offre de la grille, telle que `public.mes_offres()` la rend. */
+export interface OffreDeLaGrille {
+  code: string;
+  libelle: string;
+  rang: number;
+  prix_mensuel_ht: string;
+  lectures_par_organisation: number;
+  sieges_inclus: number;
+  /** `null` : sans plafond. */
+  sieges_max: number | null;
+  organisations_incluses: number;
+  /** `null` : sans plafond. */
+  organisations_max: number | null;
+  courant: boolean;
+  /** `null` quand rien n'empêche d'y passer ; sinon un CODE. */
+  empechement: string | null;
+  chiffres: Record<string, unknown> | null;
+}
+
+export interface PalierDeRecharge {
+  code: string;
+  libelle: string;
+  prix_ht: string;
+  lectures: number;
+  validite_mois: number;
+  rang: number;
+}
+
+export interface RechargeDeLaLicence {
+  recharge_id: string;
+  recharge_code: string;
+  lectures: number;
+  prix_ht: string;
+  achetee_le: string;
+  expire_le: string;
+  origine: "achat" | "automatique" | "plateforme";
+  restantes: number;
+  utilisable: boolean;
+  gelee: boolean;
+  expiree: boolean;
+}
+
+export interface RechargeAutomatique {
+  active: boolean;
+  recharge_code: string | null;
+  plafond_mois_ht: string | null;
+  decide_le: string;
 }
 
 /* ============================================================================

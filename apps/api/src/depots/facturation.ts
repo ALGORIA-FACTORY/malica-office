@@ -139,4 +139,112 @@ export const facturation = {
     if (!r) throw new Error("siege.non_libere");
     return r;
   },
+
+  /* ----------------------------------------------- l'abonnement se choisit */
+
+  /**
+   * La grille en vigueur, offre par offre, avec ce qui empêcherait d'y passer
+   * (`empechement`, un CODE, et ses `chiffres`) et l'offre courante. La base
+   * décide ; l'écran montre.
+   */
+  async mesOffres(db: Requete, tenantId?: string) {
+    const { rows } = await db.query(
+      `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation,
+              sieges_inclus, sieges_max, organisations_incluses, organisations_max,
+              courant, empechement, chiffres
+         from public.mes_offres($1)`,
+      [tenantId ?? null],
+    );
+    return rows;
+  },
+
+  /**
+   * Passer à une offre, à la date du jour. Seul le propriétaire principal le
+   * peut ; un refus revient en `forfait_refuse:<code>:<chiffres>`.
+   */
+  async changerForfait(db: Requete, offre: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: boolean }>(`select public.forfait_changer($1, $2) as r`, [
+      offre,
+      tenantId ?? null,
+    ]);
+    return { change: Boolean(rows[0]?.r) };
+  },
+
+  /* ------------------------------------------------------------ recharges */
+
+  /** Les paliers en vigueur aujourd'hui. */
+  async paliersDeRecharge(db: Requete) {
+    const { rows } = await db.query(
+      `select distinct on (code) code, libelle, prix_ht, lectures, validite_mois, rang
+         from ref.recharges where effective_from <= current_date
+        order by code, effective_from desc`,
+    );
+    return rows;
+  },
+
+  /** Les recharges de la licence de l'appelant, et ce qu'il en reste. */
+  async mesRecharges(db: Requete) {
+    const { rows } = await db.query(
+      `select recharge_id, recharge_code, lectures, prix_ht, achetee_le, expire_le,
+              origine, restantes, utilisable, gelee, expiree
+         from facturation.recharges_v order by expire_le, achetee_le, recharge_id`,
+    );
+    return rows;
+  },
+
+  /** Acheter une recharge. Propriétaire principal seul ; jamais sur le Basic. */
+  async acheterRecharge(db: Requete, code: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> }>(
+      `select public.recharge_acheter($1, $2) as r`,
+      [code, tenantId ?? null],
+    );
+    const r = rows[0]?.r;
+    if (!r) throw new Error("recharge.non_achetee");
+    return r;
+  },
+
+  /** Le dernier réglage de la recharge automatique, ou `null`. */
+  async maRechargeAutomatique(db: Requete) {
+    const { rows } = await db.query(
+      `select active, recharge_code, plafond_mois_ht, decide_le
+         from facturation.recharge_automatique order by decide_le desc, id desc limit 1`,
+    );
+    return rows[0] ?? null;
+  },
+
+  /** Régler la recharge automatique : un palier et un plafond du mois, ou l'arrêt. */
+  async reglerRechargeAutomatique(
+    db: Requete,
+    active: boolean,
+    code: string | null,
+    plafondMoisHt: string | null,
+    tenantId?: string,
+  ) {
+    const { rows } = await db.query<{ r: Record<string, unknown> }>(
+      `select public.recharge_automatique_regler($1, $2, $3::numeric, $4) as r`,
+      [active, code, plafondMoisHt, tenantId ?? null],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /* --------------------------------------------- propriétaires, et le principal */
+
+  /** Inviter un propriétaire : un dirigeant de plus, sur une place payée. */
+  async inviterProprietaire(db: Requete, email: string, tenantId: string) {
+    const { rows } = await db.query<{
+      r: { id: string; email: string; role: string; expiresAt: string; deja: boolean };
+    }>(`select public.proprietaire_inviter($1, $2) as r`, [tenantId, email]);
+    const r = rows[0]?.r;
+    if (!r) throw new Error("invitation.non_creee");
+    return { ...r, deja: Boolean(r.deja) };
+  },
+
+  /** Transmettre le rôle de propriétaire principal à un propriétaire de la société. */
+  async transmettreLicence(db: Requete, tenantId: string, nouveau: string) {
+    const { rows } = await db.query<{ r: string }>(
+      `select public.licence_transmettre($1, $2) as r`,
+      [tenantId, nouveau],
+    );
+    return { licence: rows[0]?.r ?? null };
+  },
 };
