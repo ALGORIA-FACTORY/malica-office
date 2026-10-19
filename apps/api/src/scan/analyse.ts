@@ -26,6 +26,15 @@
 
 import type { Requete } from "../db.ts";
 
+/*
+ * Les deux noms des matricules ne sont plus écrits ici : ils viennent de la
+ * liste unique que l'invite de désignation impose au modèle. Une clé relue à
+ * la main et un renommage ailleurs, et la lecture devenait muette — le sens de
+ * la pièce et la détection de doublon tombaient à `null` sans que rien ne le
+ * dise. C'est le motif récurrent de ce dépôt, et il se ferme par le lien.
+ */
+import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
+
 import {
   controlerPiece,
   rendreVerdict,
@@ -34,6 +43,8 @@ import {
   type ResultatControle,
 } from "./controles.ts";
 import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
+
+const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
 
 /** Une règle métier qui refuse : son message va jusqu'à l'appelant. */
 const refus = (message: string) => Object.assign(new Error(message), { code: "22023" });
@@ -298,8 +309,11 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   const aControler: PieceAControler = {
     documentKind: payload.document_kind ?? null,
     titre,
-    emetteur: { nom: payload.issuer || null, identifiantFiscal: refs["matricule_fiscal"] ?? null },
-    destinataire: { nom: null, identifiantFiscal: refs["matricule_fiscal_client"] ?? null },
+    emetteur: {
+      nom: payload.issuer || null,
+      identifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
+    },
+    destinataire: { nom: null, identifiantFiscal: refs[NOM_MATRICULE_CLIENT] ?? null },
     numero: refs["numero"] ?? null,
     date: datePiece,
     montants: normalisation,
@@ -316,13 +330,15 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       [pack],
     ),
     db.query<{ id: string; mf: string | null; numero: string | null }>(
-      `select p.id, e.payload->'references'->>'matricule_fiscal' as mf,
+      // Le nom de la clé est LIÉ, pas écrit dans la requête : la recherche de
+      // doublon lit la même clé que l'invite impose au modèle.
+      `select p.id, e.payload->'references'->>$3 as mf,
               e.payload->'references'->>'numero' as numero
          from capture.pieces p
          join lateral (select payload from capture.extractions x
                         where x.piece_id = p.id order by created_at desc limit 1) e on true
         where p.tenant_id = $1 and p.id <> $2`,
-      [piece.tenant_id, pieceId],
+      [piece.tenant_id, pieceId, NOM_MATRICULE_EMETTEUR],
     ),
   ]);
 

@@ -209,12 +209,21 @@ export const CHAMPS_DE_TOTAUX = ["base_ht", "vat", "ttc"] as const;
  * `selection.references`. Et le validateur interdit à une référence libre
  * d'emprunter leur vocabulaire : voir `REFERENCE_RESERVEE`.
  *
- * ============================================ CE QUI MANQUE ENCORE, ET OÙ
+ * ================================================ QUI LIT CETTE LISTE, ET OÙ
  *
- * Rien ne lie ces deux chaînes à celles de `read-piece.ts`, qui les écrit en
- * littéral. Le lien se ferait en une ligne — que `read-piece.ts` importe
- * cette liste au lieu de ses deux littéraux — mais ce fichier est sous R2 et
- * hors de cette zone d'écriture. C'est décrit, et laissé.
+ * Elle est désormais la SOURCE des quatre endroits où ces deux noms vivaient
+ * chacun de son côté, et le cycle est fermé de l'invite jusqu'à la base :
+ *
+ *   `malica/lecture/vision.ts`      l'invite les IMPOSE au modèle ;
+ *   `malica/lecture/read-piece.ts`  la relecture les ATTEND dans sa réponse ;
+ *   `scan/analyse.ts`               le contrôle et la recherche de doublon
+ *                                   les relisent dans le `payload` stocké ;
+ *   `recette-validateur.ts`         une référence libre ne peut pas les
+ *                                   emprunter (`REFERENCE_RESERVEE`).
+ *
+ * Aucun de ces quatre ne les écrit plus en littéral. Un renommage ici les
+ * déplace tous ensemble, et l'épreuve de `consigne-de-designation.test.ts`
+ * fige le texte que le modèle voit aujourd'hui : s'il change, elle le dit.
  */
 export const REFERENCES_QUI_TRANCHENT_LE_SENS = [
   "matricule_fiscal",

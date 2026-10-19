@@ -30,6 +30,8 @@
  * produirait un validateur silencieusement permissif, et c'est la pire forme
  * d'erreur.
  */
+import { empruntAuVocabulaireReserve } from "@malica/socle/sens-de-la-piece";
+
 import {
   CHAMPS_DE_LIGNE,
   CHAMPS_DE_PIECE,
@@ -99,54 +101,19 @@ export type Validation =
 
 /* ============================ LE VOCABULAIRE QUE LES LIBRES N'ONT PAS ==== */
 
-/**
- * Les mots et les sigles que les references libres n'ont pas le droit
- * d'emprunter, DERIVES des noms reserves eux-memes.
+/*
+ * La règle qui refuse un nom libre empruntant au vocabulaire réservé vit dans
+ * le Socle — `empruntAuVocabulaireReserve`, importée ci-dessus. Elle y est
+ * pure et PARAMÉTRÉE (R1) : c'est l'appelant qui lui passe la liste réservée,
+ * et c'est ce qui lui permet de servir ici ET à la relecture d'une réponse de
+ * modèle, sans que le Socle sache quoi que ce soit du contrat d'extraction.
  *
- * Il n'y a pas de liste d'alias ecrite a la main : une liste d'alias est un
- * jugement, et quatre des cinq appariements muets de ce depot viennent d'un
- * jugement de ce genre. Les mots sont ceux des noms reserves, et le sigle est
- * la suite de leurs initiales -- « mf », « mfc ».
+ * Elle a vécu quelques heures en DEUX exemplaires — une copie privée ici, avec
+ * ses propres `MOTS_RESERVES` et `SIGLES_RESERVES` — parce que deux agents
+ * écrivaient en parallèle et qu'aucun n'avait le droit d'écrire chez l'autre.
+ * Les deux corps étaient équivalents ; c'est précisément ce qui rend un
+ * doublon dangereux, puisque rien n'aurait signalé qu'ils cessent de l'être.
  */
-const MOTS_RESERVES: ReadonlyArray<ReadonlySet<string>> = REFERENCES_QUI_TRANCHENT_LE_SENS.map(
-  (n) => new Set(n.split("_")),
-);
-
-const SIGLES_RESERVES = new Map<string, ReadonlySet<string>>(
-  REFERENCES_QUI_TRANCHENT_LE_SENS.map((n) => [
-    n
-      .split("_")
-      .map((m) => m[0])
-      .join(""),
-    new Set(n.split("_")),
-  ]),
-);
-
-/**
- * Un nom libre emprunte-t-il au vocabulaire reserve ?
- *
- * La regle est symetrique, et c'est ce qui la rend sure : on refuse si
- * l'ensemble des mots du nom libre est INCLUS dans celui d'un nom reserve
- * (« matricule », « fiscal », « matricule_client »), ou s'il l'INCLUT
- * (« matricule_fiscal_du_client »). Un sigle compte pour les mots qu'il
- * abrege, donc « mf » et « mf_client » tombent aussi.
- *
- * Elle refuse large, et c'est voulu. Un faux refus coute une phrase a qui
- * ecrit la recette, au moment ou il l'ecrit, avec le bon nom dans le message.
- * Un faux passage coute une piece correctement lue dont le sens est perdu, et
- * cela ne se voit nulle part. L'asymetrie decide.
- */
-function empruntAuVocabulaireReserve(nom: string): boolean {
-  const mots = new Set(
-    nom.split("_").flatMap((m) => {
-      const abrege = SIGLES_RESERVES.get(m);
-      return abrege ? [...abrege] : [m];
-    }),
-  );
-  return MOTS_RESERVES.some(
-    (reserve) => [...mots].every((m) => reserve.has(m)) || [...reserve].every((m) => mots.has(m)),
-  );
-}
 
 /* ================================================== LE PARCOURS ========= */
 
@@ -255,7 +222,7 @@ export function validerRecette(brut: unknown, exigences: ExigencesDeValidation):
   /* ⑤ Les références libres n'empruntent pas au vocabulaire réservé : un nom
      mal écrit désignerait juste et casserait le sens de la pièce en silence. */
   for (const nom of Object.keys(r.references)) {
-    if (empruntAuVocabulaireReserve(nom)) {
+    if (empruntAuVocabulaireReserve(nom, REFERENCES_QUI_TRANCHENT_LE_SENS)) {
       ajouter(
         "REFERENCE_RESERVEE",
         "references." + nom,

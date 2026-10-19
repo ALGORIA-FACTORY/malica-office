@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 
+import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
 import { SYSTEM_CARTE } from "./lire-carte.ts";
 import { SYSTEM_SELECT } from "./vision.ts";
 
@@ -90,6 +93,98 @@ describe("la consigne de désignation d'une facture", () => {
     // `\s+` et non une espace : l'invite est écrite à la main, et ses retours
     // à la ligne tombent où ils tombent.
     assert.match(SYSTEM_SELECT, /ne\s+devine jamais/);
+  });
+});
+
+/**
+ * Les deux noms que l'invite impose — dérivés, et pourtant inchangés.
+ *
+ * ================================================================= POURQUOI
+ *
+ * L'invite est le seul endroit qui IMPOSE une clé au modèle, et la relecture
+ * est le seul endroit qui l'ATTEND. Tant que les deux les écrivaient chacune
+ * de son côté, un renommage d'un seul côté passait en silence : le modèle
+ * obéissait à l'invite, la clé rendue ne correspondait plus à rien, la
+ * déduction du sens recevait `null` des deux côtés, et AUCUNE compilation ne
+ * protestait. Septième appariement muet de ce dépôt, et le pire des sept,
+ * parce qu'il traverse un modèle : aucun type ne tient une chaîne de caractères
+ * qui fait l'aller-retour par une réponse JSON.
+ *
+ * ============================================================= CE QU'IL TIENT
+ *
+ * Deux garanties, et la première est la plus importante aujourd'hui :
+ *
+ * ① NON-RÉGRESSION, mot pour mot. Les six lignes de l'invite qui portent ces
+ *    noms sont écrites ICI en littéral, telles qu'un modèle les a lues jusqu'à
+ *    aujourd'hui. Faire DÉRIVER un texte, c'est risquer de le changer ; cette
+ *    épreuve refuse le moindre caractère de différence, espace compris.
+ *
+ * ② DÉRIVATION. Le fichier source de l'invite ne contient plus aucun de ces
+ *    deux noms en littéral — ni celui de la relecture côté contrôle. S'ils y
+ *    revenaient, l'épreuve tomberait avant que le silence ne reprenne.
+ *
+ * Les deux ensemble disent la seule chose qui compte : le texte n'a pas bougé,
+ * ET il ne peut plus bouger d'un seul côté.
+ */
+describe("les deux noms qui tranchent le sens, dans l'invite", () => {
+  /*
+   * Les lignes figées. Elles ne se régénèrent pas depuis la constante : ce
+   * serait écrire l'épreuve avec le code qu'elle éprouve, et elle passerait
+   * encore après un renommage que personne n'aurait voulu.
+   */
+  const LIGNES_FIGEES = [
+    ' "references":{"matricule_fiscal":{...},"matricule_fiscal_client":{...},"numero":{...}},',
+    '"references.matricule_fiscal" est celui de l\'ÉMETTEUR de la pièce ;',
+    '"references.matricule_fiscal_client" est celui du CLIENT, s\'il est imprimé — sinon null.',
+    'Donc, pour une "facture_achat", le matricule du DOSSIER va dans "matricule_fiscal_client", et',
+    'JAMAIS dans "matricule_fiscal" : celui-là porte le matricule du fournisseur.',
+    '"matricule_fiscal" porte le matricule du DOSSIER, tu t\'es trompé — intervertis-les.',
+  ];
+
+  it("demande au modèle EXACTEMENT les mêmes noms qu'avant la dérivation", () => {
+    const portantes = SYSTEM_SELECT.split("\n").filter((l) => l.includes("matricule_fiscal"));
+    assert.deepEqual(
+      portantes,
+      LIGNES_FIGEES,
+      "le texte que le modèle voit a changé : ni une ligne de plus, ni un caractère de moins",
+    );
+  });
+
+  it("n'impose que les noms de la liste, et les deux", () => {
+    // Si la liste gagnait un troisième nom sans que l'invite le demande, le
+    // modèle ne le rendrait jamais et la relecture l'attendrait pour rien.
+    for (const nom of REFERENCES_QUI_TRANCHENT_LE_SENS) {
+      assert.ok(SYSTEM_SELECT.includes(`"${nom}"`), `l'invite n'impose pas « ${nom} »`);
+    }
+    assert.equal(REFERENCES_QUI_TRANCHENT_LE_SENS.length, 2);
+  });
+
+  /*
+   * La preuve de la dérivation se lit dans le SOURCE, pas dans la chaîne
+   * rendue : une chaîne rendue est identique qu'elle vienne d'un littéral ou
+   * d'une interpolation, et c'est justement la question posée.
+   */
+  const sansLitteral = (chemin: string, quoi: string) => {
+    const source = readFileSync(join(import.meta.dirname, chemin), "utf8");
+    // Le commentaire d'en-tête a le droit de les nommer ; le code, non. On
+    // retire donc ce que `//` et `/* */` couvrent avant de chercher.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    for (const nom of REFERENCES_QUI_TRANCHENT_LE_SENS) {
+      assert.ok(
+        !code.includes(nom),
+        `${quoi} écrit « ${nom} » en littéral : un renommage de la liste le laisserait sur place`,
+      );
+    }
+  };
+
+  it("ne les écrit plus en littéral dans le fichier de l'invite", () => {
+    sansLitteral("./vision.ts", "l'invite de désignation");
+  });
+
+  it("ne les écrit plus en littéral là où le contrôle les relit", () => {
+    // `scan/analyse.ts` est l'autre bout de la même chaîne : il relit la clé
+    // dans le `payload` stocké, et jusqu'au SQL de recherche de doublon.
+    sansLitteral("../../scan/analyse.ts", "l'analyse d'une pièce lue");
   });
 });
 

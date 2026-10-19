@@ -42,6 +42,9 @@ import {
   ROLE_RECETTE,
   modeleOcr,
 } from "../modeles.ts";
+// Les deux noms que l'invite IMPOSE au modèle : ils viennent de la liste que
+// la relecture attend, et non plus d'une saisie à la main. Voir SYSTEM_SELECT.
+import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
 
 /*
  * Les délais au-delà desquels un appel est tenu pour perdu. Sans eux, une
@@ -350,6 +353,23 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
   throw new Error(message);
 }
 
+/*
+ * ================================ LES DEUX NOMS QUE L'INVITE N'ÉCRIT PLUS
+ *
+ * L'invite est ce qui IMPOSE les clés au modèle ; la relecture est ce qui les
+ * attend. Tant que les deux les écrivaient chacune de son côté, un renommage
+ * d'un seul côté passait : le modèle obéissait à l'invite, la clé rendue ne
+ * correspondait plus à rien, et AUCUNE compilation ne protestait. C'était le
+ * septième appariement muet de ce dépôt, et le cran au-dessus des six autres,
+ * parce qu'il traverse un modèle — donc aucun type ne le tient.
+ *
+ * Les deux noms sont donc interpolés depuis `REFERENCES_QUI_TRANCHENT_LE_SENS`,
+ * la liste unique que `read-piece.ts` relit et que le validateur de recettes
+ * réserve. Rien d'autre de l'invite n'est touché : elle est éprouvée, et R2 la
+ * protège. Le texte rendu est mot pour mot celui d'avant — une épreuve le fige.
+ */
+const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
+
 export const SYSTEM_SELECT = `Tu es un désignateur. On te donne le plan de tokens déjà lu sur une facture.
 Tu ne transcris JAMAIS une valeur : tu renvoies uniquement l'emplacement du token qui la porte,
 sous la forme {"page":n,"ordinal":n}. Si un élément est absent de la pièce, renvoie null — ne
@@ -363,7 +383,7 @@ Réponds STRICTEMENT en JSON :
              "unit_price_ht":{...},"unit_price_ttc":{...},"total_ht":{...},"tax_code":"<code ou null>"}],
  "other_charges":[{"code":"<un code de droits fournis>","amount":{...}}],
  "totals":{"base_ht":{...},"vat":{...},"ttc":{...}},
- "references":{"matricule_fiscal":{...},"matricule_fiscal_client":{...},"numero":{...}},
+ "references":{"${NOM_MATRICULE_EMETTEUR}":{...},"${NOM_MATRICULE_CLIENT}":{...},"numero":{...}},
  "overall_confidence":0.0}
 LE SENS DE LA PIÈCE, À TRANCHER EN PREMIER : tout le reste en dépend.
 On te donne le DOSSIER (raison sociale, matricule fiscal). Il est l'UNE des deux parties, jamais
@@ -373,15 +393,15 @@ elle qui facture. Le CLIENT est l'autre, nommée ensuite, souvent introduite par
  — le DOSSIER est le CLIENT   → "document_kind" vaut "facture_achat"
  — le DOSSIER est l'ÉMETTEUR  → "document_kind" vaut "facture_vente"
 MATRICULES : ils DÉCOULENT du sens, ils ne se devinent pas séparément.
-"references.matricule_fiscal" est celui de l'ÉMETTEUR de la pièce ;
-"references.matricule_fiscal_client" est celui du CLIENT, s'il est imprimé — sinon null.
-Donc, pour une "facture_achat", le matricule du DOSSIER va dans "matricule_fiscal_client", et
-JAMAIS dans "matricule_fiscal" : celui-là porte le matricule du fournisseur.
+"references.${NOM_MATRICULE_EMETTEUR}" est celui de l'ÉMETTEUR de la pièce ;
+"references.${NOM_MATRICULE_CLIENT}" est celui du CLIENT, s'il est imprimé — sinon null.
+Donc, pour une "facture_achat", le matricule du DOSSIER va dans "${NOM_MATRICULE_CLIENT}", et
+JAMAIS dans "${NOM_MATRICULE_EMETTEUR}" : celui-là porte le matricule du fournisseur.
 Si NI l'émetteur NI le client n'est le dossier, ou si tu ne peux pas l'établir, renvoie null pour
 "document_kind" : la personne tranchera. Ne déduis jamais le sens du seul vocabulaire
 (« facture », « bon de livraison ») ni de la présence d'un tiers connu.
 VÉRIFIE CECI AVANT DE RÉPONDRE : si "document_kind" vaut "facture_achat" et que
-"matricule_fiscal" porte le matricule du DOSSIER, tu t'es trompé — intervertis-les.
+"${NOM_MATRICULE_EMETTEUR}" porte le matricule du DOSSIER, tu t'es trompé — intervertis-les.
 PLAGES DE TOKENS. Le plan est découpé sur les ESPACES : une valeur peut donc occuper plusieurs
 tokens contigus. Dans ce cas, et dans ce cas seulement, ajoute "ordinal_end" pour couvrir TOUS ses
 tokens : {"page":1,"ordinal":3,"ordinal_end":5}. Cela vaut pour n'importe quel champ.
