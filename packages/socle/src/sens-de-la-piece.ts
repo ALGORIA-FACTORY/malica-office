@@ -223,3 +223,74 @@ export function leSensResteADemander(e: {
   // pièces-là de toute façon.
   return !estUnSens(e.sensLu) && !estUnSens(e.typeDeclare);
 }
+
+/* ======================= LE VOCABULAIRE QUI TRANCHE LE SENS ============= */
+
+/**
+ * Un nom de référence emprunte-t-il au vocabulaire qui tranche le sens ?
+ *
+ * ================================================================= POURQUOI
+ *
+ * `lireLeSens` ci-dessus reçoit deux matricules. Ils arrivent de la réponse
+ * d'un modèle, sous deux noms que l'invite IMPOSE et ne VÉRIFIE pas. Un
+ * modèle qui rend « mf » au lieu de « matricule_fiscal » désigne le bon
+ * jeton, la lecture est juste, la citation pointe le bon endroit — et
+ * `lireLeSens` reçoit `null` des deux côtés. La pièce sort « sens à
+ * confirmer » sans que rien n'explique pourquoi.
+ *
+ * C'est la sixième fois dans ce dépôt qu'un nom composé librement casse un
+ * appariement muet. Le symptôme est toujours le même : ça marche, et une
+ * mesure disparaît.
+ *
+ * =================================================== LA RÈGLE, ET SA FORME
+ *
+ * Elle est SYMÉTRIQUE, et c'est ce qui la rend sûre : on refuse si l'ensemble
+ * des mots du nom est INCLUS dans celui d'un nom réservé (« matricule »,
+ * « fiscal », « matricule_client »), ou s'il l'INCLUT
+ * (« matricule_fiscal_du_client »). Un sigle compte pour les mots qu'il
+ * abrège, donc « mf » et « mf_client » tombent aussi.
+ *
+ * Les mots et les sigles sont DÉRIVÉS des noms réservés eux-mêmes. Il n'y a
+ * aucune liste d'alias écrite à la main : une liste d'alias est un jugement,
+ * et quatre des cinq appariements muets de ce dépôt viennent d'un jugement de
+ * ce genre.
+ *
+ * Elle refuse large, et c'est voulu. Un faux refus coûte un drapeau, que
+ * l'écran traite déjà. Un faux passage coûte une pièce correctement lue dont
+ * le sens est perdu, et cela ne se voit nulle part. L'asymétrie décide.
+ *
+ * ================================================ CE QU'ELLE NE JUGE PAS
+ *
+ * Les noms réservés EUX-MÊMES la déclenchent — ils sont inclus dans
+ * eux-mêmes. C'est à l'appelant de les écarter d'abord : ce sont les noms
+ * attendus, pas des emprunts.
+ *
+ * @param nom      le nom de référence tel qu'il est rendu, en mots séparés
+ *                 par des `_`.
+ * @param reserves les noms réservés, source unique, passée par l'appelant.
+ */
+export function empruntAuVocabulaireReserve(nom: string, reserves: readonly string[]): boolean {
+  const motsDe = (n: string): string[] => n.split("_");
+
+  const sigles = new Map<string, ReadonlySet<string>>(
+    reserves.map((n) => [
+      motsDe(n)
+        .map((m) => m[0])
+        .join(""),
+      new Set(motsDe(n)),
+    ]),
+  );
+
+  const mots = new Set(
+    motsDe(nom).flatMap((m) => {
+      const abrege = sigles.get(m);
+      return abrege ? [...abrege] : [m];
+    }),
+  );
+
+  return reserves
+    .map((n) => new Set(motsDe(n)))
+    .some(
+      (reserve) => [...mots].every((m) => reserve.has(m)) || [...reserve].every((m) => mots.has(m)),
+    );
+}

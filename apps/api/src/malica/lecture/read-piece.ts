@@ -23,8 +23,10 @@
  */
 
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
-import { lireLeSens } from "@malica/socle/sens-de-la-piece";
+import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
+
+import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
 
 import { enDecimal, resoudreFacture, type Contrainte } from "./montants.ts";
 import {
@@ -335,8 +337,52 @@ export function buildExtractFromTokenPlan(params: {
     otherCharges.push({ code: c.code, label: "", amount });
   });
 
+  /*
+   * ================================ LES RÉFÉRENCES, ET LES DEUX QUI TRANCHENT
+   *
+   * Deux de ces noms ne sont pas des références comme les autres : ce sont
+   * eux que `lireLeSens` lit juste en dessous pour décider si la pièce est un
+   * achat ou une vente. Ils ne sont plus écrits ici en littéral — ils
+   * viennent de `REFERENCES_QUI_TRANCHENT_LE_SENS`, la liste que le
+   * validateur de recettes réserve déjà. Un renommage d'un seul côté n'est
+   * plus possible : il n'y a plus qu'un côté.
+   *
+   * Et un nom qui RESSEMBLE à l'un d'eux sans en être un ne passe plus en
+   * silence. L'invite impose « matricule_fiscal » au modèle et ne le vérifie
+   * pas : un modèle qui rendait « mf » désignait le bon jeton, la lecture
+   * était juste, la citation pointait le bon endroit — et la déduction du
+   * sens recevait `null` des deux côtés. Pire que « à confirmer » : elle
+   * retombait alors sur le sens que le MODÈLE avait proposé, celui-là même
+   * qu'elle a été écrite pour cesser de croire (5 octobre 2026, « vente »
+   * sur un achat, les deux matricules inversés).
+   *
+   * Ce qu'on ne fait PAS ici, et c'est délibéré : renommer la clé à la place
+   * du modèle, deviner ce qu'il voulait dire, ou retenir la désignation
+   * « puisqu'elle pointe le bon jeton ». Le produit a un langage pour le
+   * doute, et un drapeau qui dit « ce nom ressemble à celui qui tranche le
+   * sens, je ne l'ai pas pris » vaut mieux qu'une déduction au jugé.
+   */
+  const [NOM_MATRICULE_EMETTEUR, NOM_MATRICULE_CLIENT] = REFERENCES_QUI_TRANCHENT_LE_SENS;
+  const nomsQuiTranchent = new Set<string>(REFERENCES_QUI_TRANCHENT_LE_SENS);
+
   const references: Record<string, string> = {};
+  const referencesEmpruntees: string[] = [];
   for (const [key, ref] of Object.entries(selection.references)) {
+    if (
+      !nomsQuiTranchent.has(key) &&
+      empruntAuVocabulaireReserve(key, REFERENCES_QUI_TRANCHENT_LE_SENS)
+    ) {
+      flags.push({
+        field: `references.${key}`,
+        code: "SENS_A_CONFIRMER",
+        detail:
+          `La référence « ${key} » emprunte au vocabulaire qui tranche le sens de la pièce ` +
+          `sans être l'un des deux noms attendus (${REFERENCES_QUI_TRANCHENT_LE_SENS.join(", ")}) : ` +
+          `elle n'a pas été retenue, et le sens n'a pas pu en être déduit.`,
+      });
+      referencesEmpruntees.push(key);
+      continue;
+    }
     const v = take(`references.${key}`, ref, "text", "entete", `piece.reference.${key}`);
     if (v !== null) references[key] = v;
   }
@@ -351,8 +397,8 @@ export function buildExtractFromTokenPlan(params: {
    */
   const sens = lireLeSens({
     matriculeDossier: params.matriculeDossier,
-    matriculeEmetteur: references["matricule_fiscal"] ?? null,
-    matriculeClient: references["matricule_fiscal_client"] ?? null,
+    matriculeEmetteur: references[NOM_MATRICULE_EMETTEUR] ?? null,
+    matriculeClient: references[NOM_MATRICULE_CLIENT] ?? null,
     sensDuModele: selection.document_kind,
   });
   if (sens.signalement) {
@@ -360,6 +406,32 @@ export function buildExtractFromTokenPlan(params: {
       field: "document_kind",
       code: "SENS_A_CONFIRMER",
       detail: sens.signalement,
+    });
+  }
+
+  /*
+   * UN NOM EMPRUNTÉ NE LAISSE PAS LE MODÈLE DÉCIDER À SA PLACE.
+   *
+   * C'est la moitié silencieuse du défaut, et la plus mauvaise. Quand les deux
+   * matricules arrivent sous des noms refusés, `lireLeSens` n'en voit AUCUN —
+   * et son dernier recours, prévu pour la pièce qui n'en imprime pas, est de
+   * suivre le modèle. La pièce sortait donc avec le sens que le modèle avait
+   * proposé, sans drapeau, alors qu'un matricule était sur le papier, désigné,
+   * et lisible : exactement la confiance que cette déduction a remplacée.
+   *
+   * Un seul nom emprunté suffit à retirer la décision, y compris quand l'autre
+   * côté se compare : le matricule perdu est peut-être celui qui aurait dit
+   * « des deux côtés ». On refuse large, comme la règle de vocabulaire.
+   */
+  if (referencesEmpruntees.length > 0) {
+    flags.push({
+      field: "document_kind",
+      code: "SENS_A_CONFIRMER",
+      detail:
+        `Le sens de la pièce n'a pas été déduit : ` +
+        `${referencesEmpruntees.map((k) => `« ${k} »`).join(", ")} ` +
+        `${referencesEmpruntees.length > 1 ? "désignent" : "désigne"} peut-être un matricule, ` +
+        `sous un nom que la lecture ne peut pas reconnaître. Indiquez s'il s'agit d'un achat ou d'une vente.`,
     });
   }
 
@@ -396,7 +468,7 @@ export function buildExtractFromTokenPlan(params: {
      * la question. C'est exactement ce qu'on veut : pas de choix silencieux sur
      * le sens d'une pièce.
      */
-    document_kind: sens.sens,
+    document_kind: referencesEmpruntees.length > 0 ? null : sens.sens,
   };
 
   /*
