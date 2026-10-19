@@ -902,7 +902,12 @@
  * le selecteur — c'est la seule porte qui restait pour changer de societe
  * depuis que « changer d'espace » est parti, et elle ne prend pas une ligne de
  * plus. Un seul dossier : c'est un nom, et on ne choisit rien. */
-[data-surface="pme"] .appbar .org{flex:1;min-width:0;padding:0;border:0;background:none;color:var(--tx); font-family:inherit;font-size:.9375rem;font-weight:600;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* La societe est en ACCENT, pas en encre. C'est la couleur qu'elle portait sur
+ * l'accueil, en pastille pleine, et la pastille est partie : « je veux le vert
+ * en haut », 19 octobre 2026. En TEXTE et non en pastille pleine, parce qu'a
+ * 40 px de la, `.me` est deja un disque d'accent plein : deux aplats verts dans
+ * une barre de 56 px se disputent l'oeil, et c'est le NOM qu'on doit lire. */
+[data-surface="pme"] .appbar .org{flex:1;min-width:0;padding:0;border:0;background:none;color:var(--acc); font-family:inherit;font-size:.9375rem;font-weight:700;letter-spacing:-.015em; white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] .appbar select.org{cursor:pointer}
 /* L'initiale, a droite. C'est la primitive `.me` de l'accueil — rond, fond
  * d'accent, texte sur accent — sortie de `[data-ecran="accueil"]`.
@@ -959,12 +964,13 @@
  * `[data-ecran]` et jamais son descendant — le sélecteur ne pouvait pas
  * l'atteindre. Et `.cap` est un nom de maquette que l'arbre ne porte pas :
  * l'obturateur est le bouton central de la barre. R9. */
-[data-surface="pme"] [data-ecran="accueil"] .chips{display:flex;align-items:center;gap:.5625rem;padding:1rem 1.25rem .5rem;overflow-x:auto; scrollbar-width:none}
-[data-surface="pme"] [data-ecran="accueil"] .chips::-webkit-scrollbar{display:none}
 /* `.me` vivait ici, pour l'accueil seul. Elle a monte dans la barre
  * d'application (`.appbar .me`), donc elle sert les quinze ecrans. */
-[data-surface="pme"] [data-ecran="accueil"] .chip{padding:.5625rem 1rem;border-radius:999px;background:var(--d2);color:var(--t2); font-size:.8125rem;font-weight:500;white-space:nowrap;cursor:pointer;border:0;font-family:inherit}
-[data-surface="pme"] [data-ecran="accueil"] .chip.on{background:var(--acc);color:var(--on-acc);font-weight:600}
+/* L'air sous la barre etait porte par `.chips` (1rem en haut, .5rem en bas) ;
+ * la rangee est partie, l'espace lui survit et passe au conteneur. Sans cette
+ * ligne le salut remonte de 60 px et se tasse contre la barre : `.pad` n'a
+ * aucun padding haut, c'est la rangee qui le donnait. */
+[data-surface="pme"] [data-ecran="accueil"] .pad{padding-top:1.5rem}
 [data-surface="pme"] [data-ecran="accueil"] h1{margin:1.3125rem 0 1.125rem;font-size:2.0625rem;font-weight:700;letter-spacing:-.042em;line-height:1.04}
 /* `1fr` vaut `minmax(auto,1fr)`, et ce minimum automatique est le min-content.
  * La tuile porte une icone de 46 px et une pastille de 27 px en `flex:none` :

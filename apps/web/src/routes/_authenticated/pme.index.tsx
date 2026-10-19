@@ -13,7 +13,6 @@ import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { montant, montantSigne } from "@/lib/lisible";
-import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
@@ -319,10 +318,8 @@ function PmeHome() {
         <PastilleAEnvoyer />
       </div>
 
-      {/* ------------------------------------------------- la rangée du haut */}
       {/*
-       * Ce qui reste de la deuxième des cinq formes d'en-tête : LES DOSSIERS,
-       * et rien d'autre.
+       * Ce qui reste de la deuxième des cinq formes d'en-tête : RIEN.
        *
        * En sont partis, le 19 octobre 2026, la pastille à l'initiale et les
        * deux chips de porte — « Réglages » et « Changer d'espace ». Les deux
@@ -330,30 +327,17 @@ function PmeHome() {
        * rendue ici comme ailleurs ; les redire sur cet écran aurait fait deux
        * fois la même porte à 70 px d'écart. « Changer d'espace » est supprimé.
        *
-       * Les chips de dossier restent : à partir de deux sociétés, la barre
-       * porte le sélecteur, mais sur l'accueil le choix est le GESTE de
-       * l'écran, pas un réglage. Rien ne les redit ailleurs.
+       * Les chips de dossier sont parties le même soir, et pour la MÊME
+       * raison — je les avais gardées en écrivant « sur l'accueil le choix est
+       * le geste de l'écran ». Sur un téléphone à une seule société, cela
+       * donnait le nom de la société DEUX FOIS, à 120 px d'écart : une fois
+       * dans la barre, une fois en pastille verte. Relevé en service, sur
+       * « ALGORIA FACTORY SUARL ».
+       *
+       * La barre d'application porte la société, et elle seule : un nom quand
+       * il n'y en a qu'une, un sélecteur dès qu'il y en a deux. Le geste
+       * existe toujours, il n'est écrit qu'une fois.
        */}
-      <div className="chips">
-        {/*
-         * Les chips portent les DOSSIERS, pas des filtres inventés : c'est le
-         * sélecteur d'organisation du dessin Premium, qui se réduit tout seul à
-         * une chip quand il n'y a qu'une société. Même câblage qu'avant —
-         * `pme.dossiers` vient de `identite.listMyOrganizations`, lu une fois
-         * par le layout, et `pme.choisirDossier` invalide les requêtes.
-         */}
-        {pme.dossiers.map((d) => (
-          <button
-            key={d.id}
-            type="button"
-            className={cn("chip", d.id === pme.tenantId && "on")}
-            aria-pressed={d.id === pme.tenantId}
-            onClick={() => pme.choisirDossier(d.id)}
-          >
-            {d.name}
-          </button>
-        ))}
-      </div>
 
       <div className="pad">
         {/* Le salut, sans prénom : le compte n'en porte pas en base (voir ci-dessus). */}
