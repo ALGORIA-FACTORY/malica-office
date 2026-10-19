@@ -213,17 +213,22 @@ function PmeReglages() {
       </div>
 
       {/* ──────────────────────────── changer d'offre, et les recharges */}
+      {/*
+       * Le `<span>` d'un `.sec` est une ÉTIQUETTE courte (« Licence en
+       * direct ») : une phrase y écrasait le titre en colonne d'une lettre,
+       * relevé sur l'appareil le 19 octobre. La phrase va dessous.
+       */}
       <div className="sec">
         <h2>{t("pme.reglages.offres")}</h2>
-        <span>{t("pme.reglages.offres.sous")}</span>
       </div>
+      <p className="t-body">{t("pme.reglages.offres.sous")}</p>
       <ChangerDOffre />
       <ARegler />
 
       <div className="sec">
         <h2>{t("pme.reglages.recharges")}</h2>
-        <span>{t("pme.reglages.recharges.sous")}</span>
       </div>
+      <p className="t-body">{t("pme.reglages.recharges.sous")}</p>
       <MesRecharges />
 
       {/* ───────────────────────────────────────────── les organisations */}

@@ -196,7 +196,7 @@ export function ChangerDOffre() {
       {(offres.data ?? []).map((o) => {
         const bloque = o.empechement ? EMPECHEMENTS[o.empechement] : undefined;
         return (
-          <div key={o.code} className="card" data-offre={o.code} data-courant={o.courant}>
+          <div key={o.code} className="card abo" data-offre={o.code} data-courant={o.courant}>
             <div className="nm">
               <b>{o.libelle}</b>
               <span className="px">
@@ -324,7 +324,7 @@ export function MesRecharges() {
     <>
       <div className="rows">
         {liste.map((p) => (
-          <div key={p.code} className="card" data-palier={p.code}>
+          <div key={p.code} className="card abo" data-palier={p.code}>
             <div className="nm">
               <b>{t("pme.reglages.recharges.palier", { n: p.lectures })}</b>
               <span className="px">
@@ -626,7 +626,7 @@ export function ARegler() {
         <h2>{t("pme.reglages.paiement.titre")}</h2>
       </div>
       {ouverts.map((p) => (
-        <div key={p.paiement_id} className="card" data-paiement={p.paiement_id}>
+        <div key={p.paiement_id} className="card abo" data-paiement={p.paiement_id}>
           <div className="nm">
             <b>{p.libelle}</b>
             <span className="px">
