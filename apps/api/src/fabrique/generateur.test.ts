@@ -202,19 +202,23 @@ describe("le générateur de recettes", () => {
      * Le piège vaut d'être nommé : l'intersection de quelque chose avec
      * lui-même ne fait RIEN tomber. Deux copies d'une facture donnent une
      * « ossature » qui porte le nom du client, et le comptage naïf les
-     * accepte. La déduplication se fait sur l'empreinte de signature, donc
-     * sur la FORME.
+     * accepte.
      *
-     * Et il faut savoir jusqu'où cela porte, parce qu'une version antérieure
-     * de ce commentaire affirmait « deux pièces différentes de même forme
-     * restent deux » : c'est FAUX dès que seule la valeur change. Les clés
-     * d'ancre d'une signature écartent tout jeton portant un chiffre, donc
-     * deux factures du même client qui ne diffèrent que par leurs montants ont
-     * la même empreinte — et sont comptées pour une. À juste titre :
-     * l'intersection ne fait rien tomber, et l'ossature garderait le nom du
-     * client. Il faut un autre CLIENT, pas d'autres chiffres. Mesuré le
-     * 20 octobre 2026 sur les deux plans à timbre livrés la veille, qui
-     * portaient le même client.
+     * La déduplication porte sur l'empreinte de L'EXEMPLAIRE — le plan de
+     * jetons, texte compris — et deux pièces différentes restent donc deux,
+     * même quand elles ne diffèrent que par leurs montants.
+     *
+     * Ce commentaire a affirmé deux choses fausses en deux jours, et les deux
+     * valent d'être nommées. Il a d'abord dit que la déduplication portait sur
+     * l'empreinte de SIGNATURE et que « deux pièces différentes de même forme
+     * restent deux » : c'était contradictoire, puisqu'une signature écarte tout
+     * jeton portant un chiffre. Il a ensuite dit que le refus était juste et
+     * qu'« il faut un autre client » : c'était pire, parce que sur une facture
+     * d'ACHAT le client est toujours la même PME — aucun format d'achat
+     * n'aurait jamais été généré. Le critère est le CONTENU du plan depuis le
+     * 20 octobre 2026, et `une-facture-d-achat-se-genere.test.ts` mesure les
+     * deux moitiés : la paire à client unique passe, les deux exemplaires du
+     * même document ne passent pas.
      */
     const plan = FACTURE_A();
     const attendu = { "totals.base_ht": ou(plan, "1180,000") };

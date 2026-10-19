@@ -340,6 +340,57 @@ function vocabulaireCommun(plans: ReadonlyArray<readonly PageToken[]>): string[]
   return [...garde].sort();
 }
 
+/**
+ * L'empreinte d'un EXEMPLAIRE — son plan de jetons, texte compris.
+ *
+ * ============================== POURQUOI PAS L'EMPREINTE DE SIGNATURE (CORRIGÉ)
+ *
+ * Elle l'a été, et c'était faux. L'empreinte de signature dit un **format** et
+ * rien d'autre : ses clés d'ancre écartent délibérément tout jeton portant un
+ * chiffre, parce qu'un montant ne décrit pas la forme du papier. S'en servir
+ * pour REJETER un exemple lui fait dire autre chose — deux documents de même
+ * empreinte sont le même format, jamais le même exemplaire.
+ *
+ * Et la conséquence n'était pas théorique. Ce que Malica lit, c'est une facture
+ * d'ACHAT : le modèle de facture d'un fournisseur, reçu tous les mois, où **le
+ * client est toujours la même PME**. Son nom est du texte, sans chiffre, donc
+ * il entre dans l'empreinte ; deux factures du même fournisseur à la même PME
+ * avaient donc la **même** empreinte et comptaient pour **une**. Aucun format
+ * d'achat ne pouvait être généré — le seul cas pour lequel ce produit existe.
+ * Mesuré dans `une-facture-d-achat-se-genere.test.ts`.
+ *
+ * ================================================= POURQUOI PAS `pieceId`
+ *
+ * Parce qu'il ne voit pas ce qu'on veut voir. Deux dépôts du même papier sont
+ * deux pièces, avec deux identifiants : l'identifiant les compterait pour deux,
+ * et l'ossature garderait tout ce qu'un document partage avec lui-même. Le
+ * critère doit porter sur le CONTENU, pas sur l'enregistrement.
+ *
+ * ===================================================== CE QUE CECI N'EST PAS
+ *
+ * Ce n'est pas lire une valeur. Rien n'en sort qu'un condensé ; aucun montant
+ * n'entre dans l'invite, dans la recette ni dans la provenance. Et le module
+ * lit déjà le texte de tous les jetons pour en tirer le vocabulaire commun —
+ * `vocabulaireCommun`, juste au-dessus.
+ *
+ * ============================================================= SA BORNE, DITE
+ *
+ * La comparaison est mot pour mot. Deux relevés du même papier qui
+ * différeraient d'un seul jeton — un accident d'OCR — compteraient pour deux,
+ * et l'ossature garderait alors ce que ce document partage avec lui-même, dont
+ * le nom du client. C'est le prix, il est assumé, et il est bien moins cher que
+ * l'inverse : ce nom est sans conséquence tant que la recette reste privée à
+ * l'organisation, puisque ce client y est toujours le même — tandis que ne
+ * jamais générer un format d'achat coûte le produit.
+ */
+function empreinteDeLExemplaire(plan: readonly PageToken[]): string {
+  const condense = createHash("sha256");
+  for (const t of [...plan].sort(ordreDeLecture)) {
+    condense.update(`${String(t.page)}\u0000${String(t.ordinal)}\u0000${t.text}\u0000`);
+  }
+  return condense.digest("hex");
+}
+
 /** Le jeton visé par une référence, ou `null` si le plan ne le porte pas. */
 function jetonVise(plan: readonly PageToken[], ref: TokenRef): PageToken | null {
   return plan.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null;
@@ -537,14 +588,19 @@ export async function proposerUneRecette(
     journal,
   });
 
-  /* ① Les exemples. Deux exemplaires du MÊME document ne font pas deux
+  /* ① Les exemples. Deux EXEMPLAIRES du même document ne font pas deux
      exemples : l'intersection de quelque chose avec lui-même ne fait rien
-     tomber, et c'est tout ce qu'on demande à l'ossature. */
+     tomber, et c'est tout ce qu'on demande à l'ossature.
+
+     Ce qui le dit est l'empreinte de L'EXEMPLAIRE, pas celle du format. Voir
+     `empreinteDeLExemplaire` : s'être trompé là-dessus interdisait la
+     génération de tout format d'ACHAT. */
   const signes = exemples.map((e) => ({ exemple: e, signature: signerLePlan(e.plan, parametres) }));
   const vues = new Set<string>();
   const distincts = signes.filter((s) => {
-    if (vues.has(s.signature.empreinte)) return false;
-    vues.add(s.signature.empreinte);
+    const exemplaire = empreinteDeLExemplaire(s.exemple.plan);
+    if (vues.has(exemplaire)) return false;
+    vues.add(exemplaire);
     return true;
   });
 
@@ -553,7 +609,8 @@ export async function proposerUneRecette(
       "EXEMPLES_INSUFFISANTS",
       `${String(distincts.length)} exemple(s) distinct(s) sur ${String(exemples.length)} fourni(s) : ` +
         `il en faut ${String(EXEMPLES_MINIMUM_POUR_UNE_OSSATURE)} pour qu'une ancre variable tombe. ` +
-        "À un seul exemple, l'ossature porte le nom du client comme si c'était la forme du papier.",
+        "Les exemplaires fournis portent les mêmes jetons : c'est le même document, et " +
+        "l'intersection de quelque chose avec lui-même ne fait rien tomber.",
     );
   }
 

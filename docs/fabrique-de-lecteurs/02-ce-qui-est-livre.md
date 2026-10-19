@@ -129,16 +129,18 @@ historique conservé.
 `jeu-d-or.ts` porte **une seule** facture réelle avec vérité terrain, et le
 générateur refuse — **doit** refuser — un exemple unique.
 
-> **Il manque deux pièces réelles du même format, et d'au moins deux clients
-> différents.** C'est le seul ingrédient, et la précision n'est pas cosmétique :
-> le générateur déduplique les exemples sur l'empreinte de **signature**, et
-> deux factures du même client qui ne diffèrent que par leurs montants ont la
-> **même** empreinte — les clés d'ancre écartent tout jeton portant un chiffre.
-> Trois exemplaires d'un même client comptent donc pour **un**, et le refus est
-> juste : l'intersection ne fait rien tomber, et l'ossature garderait le nom du
-> client comme si c'était la forme du papier (mesuré : 0,0000 → 0,0960 chez un
-> autre client). Mesuré le 20 octobre sur les plans de banc eux-mêmes, qui
-> portaient le même client.
+> **Il manque deux pièces réelles distinctes du même format.** C'est le seul
+> ingrédient. Deux factures du même fournisseur à la même PME, où seuls les
+> montants, les dates et les numéros changent, suffisent — c'est le cas
+> ordinaire d'une facture d'achat, et c'est mesuré
+> (`fabrique/une-facture-d-achat-se-genere.test.ts`). Ce qui ne suffit pas, et
+> ne suffira jamais, ce sont **deux dépôts du même papier** : leur plan de
+> jetons est le même, et l'intersection de quelque chose avec lui-même ne fait
+> rien tomber.
+>
+> Une version de cette ligne, écrite le 20 octobre au matin, exigeait « au moins
+> deux clients différents ». C'était la trace d'un défaut, pas une exigence :
+> voir la limite n° 9.
 
 Une fois obtenues, la comparaison côté lecture est **gratuite** (plan et
 désignation attendue déjà en place) ; seule la génération coûte un appel :
@@ -281,19 +283,8 @@ plus zéro »**.
    le référentiel : le juge du code au pack reste en aval, là où la date de la
    pièce existe.
 
-   **Et un défaut de la livraison du 19, trouvé en écrivant ce banc** : ses deux
-   plans à timbre portent le **même client** et ne diffèrent que par leurs
-   chiffres. Ils suffisent à la reconnaissance, qui compte des exemples ; ils ne
-   suffisent **pas** à la génération, qui les déduplique sur l'empreinte de
-   signature — les clés d'ancre écartent tout jeton portant un chiffre, donc
-   deux factures qui ne diffèrent que par leurs montants ont la **même**
-   empreinte. Le générateur a raison de les compter pour une : l'intersection
-   ne fait rien tomber, et l'ossature garderait le nom du client comme si
-   c'était la forme du papier. **Le format livré le 19 n'était donc générable
-   depuis aucun de ses propres exemples** ; un troisième plan, chez un autre
-   client, a été ajouté (`FACTURE_A_TIMBRE_AUTRE_CLIENT`). Le commentaire de
-   `generateur.test.ts` qui affirmait « deux pièces différentes de même forme
-   restent deux » est vrai de la forme, et faux dès que seule la valeur change.
+   **Et le défaut le plus grave de la livraison, trouvé en écrivant ce banc, et
+   corrigé le même jour** — voir la limite n° 9, qui le porte en entier.
 
 2. **La marge de 0,0742 est mesurée sur des plans fabriqués.** Elle quadruple,
    elle ne devient pas confortable. Il faudrait un corpus réel de **couples** de
@@ -415,6 +406,55 @@ generation.pieces_min = 3`, daté en littéral dans `ref.socle_params`,
    rompue. Leur suppression exige de désactiver **tous** les déclencheurs, clés
    étrangères comprises : le garde-fou de l'atelier l'a refusée, et **elle n'a pas
    été contournée**.
+
+9. ~~**Aucun format de facture d'ACHAT ne pouvait être généré.**~~ **LEVÉE le
+   20 octobre 2026**, et c'était le défaut le plus grave de la livraison — il
+   n'avait rien à voir avec un corpus manquant.
+
+   Le générateur dédupliquait ses exemples sur l'**empreinte de signature**. Or
+   cette empreinte dit un **format**, et rien d'autre : ses clés d'ancre
+   écartent délibérément tout jeton portant un chiffre, parce qu'un montant ne
+   décrit pas la forme du papier. S'en servir pour **rejeter** un exemple lui
+   faisait dire autre chose — deux documents de même empreinte sont le même
+   **format**, jamais le même **exemplaire**.
+
+   **Ce que cela coûtait, mesuré** (`fabrique/une-facture-d-achat-se-genere.test.ts`) :
+   ce que Malica lit est une facture d'achat, le modèle du fournisseur reçu tous
+   les mois, et sur toutes ces factures **le client est la même PME**. Son nom
+   est du texte, sans chiffre, donc il entrait dans l'empreinte. Deux factures
+   du même fournisseur à la même PME portaient donc la **même** empreinte et
+   comptaient pour **une** — le générateur refusait sur
+   `EXEMPLES_INSUFFISANTS`. Les trois réponses étaient oui : même empreinte,
+   dédupliquées, refus. Et un dirigeant ne reçoit pas la même mise en page de
+   deux fournisseurs différents.
+
+   **Le critère juste est l'empreinte de l'EXEMPLAIRE** : le plan de jetons
+   lui-même, texte compris. Deux dépôts du même papier portent les mêmes mots
+   dans le même ordre ; deux factures distinctes n'en portent pas. Ce n'est pas
+   lire une valeur — rien n'en sort qu'un condensé, et le module lit déjà le
+   texte de tous les jetons pour en tirer le vocabulaire commun.
+
+   **Ce n'est pas `pieceId`** : deux dépôts du même papier sont deux pièces,
+   donc l'identifiant les compterait pour deux. Mesuré : sous ce critère, les
+   deux épreuves qui tiennent « un même document ne fait pas deux exemples »
+   tombent.
+
+   **Ce que la déduplication fermait reste fermé**, et c'était la condition :
+   deux exemplaires du même document font toujours **un** exemple, dans ce banc
+   et dans celui du générateur.
+
+   **La borne du nouveau critère, dite** : la comparaison est mot pour mot, donc
+   deux relevés du même papier qui différeraient d'un seul jeton — un accident
+   d'OCR — compteraient pour deux, et l'ossature garderait alors le nom du
+   client. Ce prix est assumé, **et il repose sur une condition vérifiée** : ce
+   nom est sans conséquence tant qu'une recette reste privée à l'organisation,
+   puisque le client y est toujours le même. La **mutualisation est éteinte**,
+   et pas par discipline : `fabrique.recettes.portee` existe, et **aucune
+   politique ne lit cette valeur** — marquer une recette `mutualisee` ne la
+   partage pas. C'est éprouvé sous identité réelle dans
+   `fabrique/socle-de-donnees.test.ts`. Le jour où la mutualisation s'allume,
+   **ce compromis doit être rouvert** : une recette partagée dont l'ossature
+   porte le nom d'un client ne reconnaîtrait rien chez un autre cabinet.
 
 ---
 

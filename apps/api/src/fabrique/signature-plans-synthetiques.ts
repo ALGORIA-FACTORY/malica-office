@@ -370,22 +370,29 @@ export const FACTURE_A_TIMBRE_AUTRES_VALEURS = (): PageToken[] =>
   ]);
 
 /**
- * LE MÊME FORMAT À TIMBRE, CHEZ UN AUTRE CLIENT — et pourquoi il a fallu l'écrire.
+ * LE MÊME FORMAT À TIMBRE, CHEZ UN AUTRE CLIENT.
  *
- * `FACTURE_A_TIMBRE` et `FACTURE_A_TIMBRE_AUTRES_VALEURS` portent le MÊME
- * client, et seuls leurs chiffres diffèrent. Elles suffisent à la
- * RECONNAISSANCE, qui compte des exemples, et elles ne suffisent pas à la
- * GÉNÉRATION, qui les déduplique sur l'empreinte de signature : les clés
- * d'ancre d'une signature écartent tout jeton portant un chiffre, donc deux
- * factures qui ne diffèrent que par leurs montants ont la MÊME empreinte.
+ * Elle existe pour le cas le plus EXIGEANT de l'ossature : deux clients
+ * différents font tomber le nom du client de l'intersection, donc la recette
+ * qu'on en tire ne reconnaît pas une facture par son destinataire. Un format
+ * qui passe cette épreuve-là passe l'autre.
  *
- * Et le générateur a raison de les compter pour une. « À un seul exemple,
- * l'ossature porte le nom du client comme si c'était la forme du papier » —
- * deux factures du même client ne font rien tomber de plus, mesuré 0,0000 qui
- * devient 0,0960 ailleurs. Il faut un autre CLIENT, pas d'autres chiffres.
+ * ================================== CE QU'ELLE N'EST PLUS, ET C'EST IMPORTANT
  *
- * Trouvé le 20 octobre en écrivant le banc du générateur à timbre : le format
- * livré le 19 n'était générable depuis aucun de ses propres exemples.
+ * Elle a été écrite le 20 octobre 2026 parce que le générateur REFUSAIT
+ * `FACTURE_A_TIMBRE` + `FACTURE_A_TIMBRE_AUTRES_VALEURS` : même client, seuls
+ * les chiffres diffèrent, et il dédupliquait sur l'empreinte de SIGNATURE, qui
+ * écarte tout jeton portant un chiffre — donc même empreinte, donc un seul
+ * exemple. J'ai d'abord écrit qu'il avait raison. **Il avait tort**, et la
+ * conséquence était qu'aucun format d'ACHAT ne pouvait être généré : sur les
+ * factures qu'une PME reçoit de son fournisseur, le client est toujours cette
+ * PME. La déduplication porte désormais sur l'empreinte de L'EXEMPLAIRE
+ * (`generateur.ts`), et la paire à client unique passe —
+ * `une-facture-d-achat-se-genere.test.ts` la mesure.
+ *
+ * Les deux paires sont donc au banc, et elles ne mesurent pas la même chose :
+ * celle-ci que l'ossature survit à un changement de client, l'autre qu'une
+ * facture d'achat ordinaire se génère.
  */
 export const FACTURE_A_TIMBRE_AUTRE_CLIENT = (): PageToken[] =>
   planSynthetique([

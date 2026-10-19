@@ -255,12 +255,17 @@ describe("le générateur propose une recette à timbre", { skip: !BASE_CONFIGUR
    * code, et où son montant est imprimé), et les CODES DE TAUX (quel code,
    * sans désignation — une facture n'imprime pas un code de taux).
    *
-   * LE SECOND EXEMPLE EST CHEZ UN AUTRE CLIENT, et ce n'est pas un détail de
-   * banc. Deux factures du même client qui ne diffèrent que par leurs montants
-   * ont la MÊME empreinte de signature — les clés d'ancre écartent tout jeton
-   * portant un chiffre — et le générateur les déduplique, à juste titre :
-   * l'intersection ne fait rien tomber, donc l'ossature garderait le nom du
-   * client comme si c'était la forme du papier.
+   * LE SECOND EXEMPLE EST CHEZ UN AUTRE CLIENT, et c'est le cas le plus
+   * EXIGEANT pour l'ossature : deux clients différents font tomber le nom du
+   * client de l'intersection, donc la recette ne reconnaît pas une facture par
+   * son destinataire.
+   *
+   * Ce n'est plus une nécessité, et il faut le dire parce que ce banc a cru le
+   * contraire : le générateur dédupliquait sur l'empreinte de SIGNATURE, donc
+   * il refusait deux factures du même client qui ne diffèrent que par leurs
+   * montants — c'est-à-dire toute facture d'ACHAT. Le critère est le contenu du
+   * plan depuis le 20 octobre, et `une-facture-d-achat-se-genere.test.ts`
+   * mesure la paire à client unique.
    */
   function exemples(): ExempleDApprentissage[] {
     const lots = [
