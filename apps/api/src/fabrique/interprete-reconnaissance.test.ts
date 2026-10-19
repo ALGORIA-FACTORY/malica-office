@@ -143,13 +143,28 @@ describe("une ossature tirée d'un seul exemple", () => {
 describe("deux formats proches mais incompatibles", () => {
   it("le voisin seul n'est PAS reconnu comme la référence", () => {
     /*
-     * MESURÉ : `FACTURE_B_TTC` est à 0,0992 de `FACTURE_A` sur l'ossature de
-     * A. Le seuil livré vaut 0,08, donc B n'entre pas — et la main revient au
-     * modèle, ce que le produit sait déjà faire.
+     * MESURÉ : `FACTURE_B_TTC` est à **0,1542** de `FACTURE_A` sur l'ossature
+     * de A. Le seuil livré vaut 0,08, donc B n'entre pas — et la main revient
+     * au modèle, ce que le produit sait déjà faire.
      *
-     * La marge est MINCE, et ce cas est là pour que sa disparition se voie :
-     * si la distance change, ou si un cabinet relève `distance_max`, c'est ici
-     * que cela doit casser, pas en production sur une facture.
+     * ================================================ CE CHIFFRE A CHANGÉ, ET
+     *                                                  C'EST UNE BONNE NOUVELLE
+     *
+     * Il valait 0,0992 quand ce banc a été écrit, pour une marge de 0,019 au
+     * seuil livré. La composante des relations ne pesait alors que 0,0330 entre
+     * deux formats dont le PIED EST INVERSÉ : trois couples contredits sur
+     * quatre-vingt-onze, parce que la quasi-totalité des couples d'une page
+     * s'accordent gratuitement — que l'en-tête soit au-dessus du pied est vrai
+     * de toute facture du monde, et ce couple-là ne sépare jamais rien.
+     *
+     * Le dénominateur était donc le défaut, pas les poids. Les relations sont
+     * devenues une SUITE DE LECTURE : seuls les liens de succession, ceux qui
+     * peuvent être contredits. La composante passe à 0,3077, la distance à
+     * 0,1542, et la marge quadruple — 0,0742.
+     *
+     * Ce cas reste là pour que sa disparition se voie : si la distance change,
+     * ou si un cabinet relève `distance_max`, c'est ici que cela doit casser,
+     * pas en production sur une facture.
      */
     const r = juger(FACTURE_B_TTC(), [FORMAT_A]);
     assert.equal(r.classement.verdict.sorte, "aucun");
@@ -158,17 +173,21 @@ describe("deux formats proches mais incompatibles", () => {
       mesure > LIVRE.distanceMax,
       `le format voisin est à ${mesure.toFixed(4)}, en deçà du seuil livré ${String(LIVRE.distanceMax)}`,
     );
-    assert.ok(mesure < 0.12, "la distance au format voisin a bougé : les poids ont changé");
+    assert.ok(mesure < 0.16, "la distance au format voisin a bougé : les poids ont changé");
   });
 
   it("et un seuil relâché le ferait passer pour la référence — le relevé, pas une opinion", () => {
     /*
      * La contre-épreuve. Elle n'éprouve pas une protection : elle montre ce
      * qui tombe quand on relâche le seul réglage qui protège. Un cabinet qui
-     * remonte `distance_max` à 0,15 applique la recette des prix HT à une
+     * remonte `distance_max` assez haut applique la recette des prix HT à une
      * facture en prix TTC, et rien ne le lui dit.
+     *
+     * Le seuil dangereux était 0,15 ; il est maintenant 0,16, parce que la
+     * distance au voisin est passée de 0,0992 à 0,1542. **Le danger a reculé
+     * d'un cran** — mais il n'a pas disparu, et c'est pourquoi ce cas reste.
      */
-    const relache: ParametresDeClassement = { distanceMax: 0.15, ecartMinimal: 0.05 };
+    const relache: ParametresDeClassement = { distanceMax: 0.16, ecartMinimal: 0.05 };
     const r = reconnaitre(FACTURE_B_TTC(), [FORMAT_A], PARAMETRES, POIDS, relache);
     assert.equal(r.classement.verdict.sorte, "un");
   });
