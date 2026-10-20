@@ -353,17 +353,29 @@ function DesignerLEmetteur() {
     enabled: texte.trim().length >= 2,
   });
 
+  /*
+   * Recette du 20 octobre 2026 : un clic désignait l'émetteur des factures de
+   * la plateforme, sans motif. Désormais : choisir, motiver, confirmer — et
+   * l'émetteur en vigueur ne se propose pas à lui-même.
+   */
+  const [choisie, setChoisie] = useState<OrganisationEmettrice | null>(null);
+  const [motif, setMotif] = useState("");
   const designer = useMutation({
     mutationFn: (o: OrganisationEmettrice) =>
-      office().tour.designerEmetteur(o.organisation_id, depuis),
+      office().tour.designerEmetteur(o.organisation_id, depuis, motif.trim()),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
+      setChoisie(null);
+      setMotif("");
       await qc.invalidateQueries({ queryKey: ["tour-emetteur"] });
     },
     onError: echec,
   });
 
   const e = emetteur.data;
+  const candidates = (trouvees.data ?? []).filter(
+    (o) => !e || o.organisation_id !== e.organisation_id,
+  );
   return (
     <div className={CARTE}>
       <h2 className={TITRE}>{t("tour.emetteur")}</h2>
@@ -397,17 +409,53 @@ function DesignerLEmetteur() {
             className={CHAMP}
           />
         </label>
-        {(trouvees.data ?? []).map((o) => (
-          <button
-            key={o.organisation_id}
-            type="button"
-            className={BOUTON}
-            disabled={designer.isPending}
-            onClick={() => designer.mutate(o)}
-          >
-            {t("tour.emetteur.designer", { nom: `${o.nom} · ${o.matricule ?? "—"}` })}
-          </button>
-        ))}
+        {choisie === null
+          ? candidates.map((o) => (
+              <button
+                key={o.organisation_id}
+                type="button"
+                className={BOUTON}
+                onClick={() => setChoisie(o)}
+              >
+                {t("tour.emetteur.designer", { nom: `${o.nom} · ${o.matricule ?? "—"}` })}
+              </button>
+            ))
+          : null}
+        {choisie ? (
+          <>
+            <p className={TEXTE}>
+              {t("tour.emetteur.confirmer", {
+                nom: `${choisie.nom} · ${choisie.matricule ?? "—"}`,
+              })}
+            </p>
+            <input
+              value={motif}
+              onChange={(ev) => setMotif(ev.target.value)}
+              placeholder={t("tour.motif")}
+              aria-label={t("tour.motif")}
+              className={CHAMP}
+            />
+            <button
+              type="button"
+              className={BOUTON}
+              disabled={designer.isPending || motif.trim() === ""}
+              onClick={() => designer.mutate(choisie)}
+            >
+              {t("tour.enregistrer")}
+            </button>
+            <button
+              type="button"
+              className={BOUTON}
+              disabled={designer.isPending}
+              onClick={() => {
+                setChoisie(null);
+                setMotif("");
+              }}
+            >
+              {t("common.cancel")}
+            </button>
+          </>
+        ) : null}
       </div>
       {retour ? (
         <p className={TEXTE} aria-live="polite">

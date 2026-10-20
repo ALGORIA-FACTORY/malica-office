@@ -99,6 +99,31 @@ describe("le FEC", () => {
       .split("|");
     assert.equal(sansNom[10], "Ligne d'essai");
   });
+
+  it("porte le tiers sur la ligne de contrepartie, et rien quand il n'est pas lu", () => {
+    // Recette du 20 octobre 2026 : CompAuxNum et CompAuxLib vides sur les 401.
+    const fournisseur = formaterFec(
+      [ligne({ compte: "401", tiersNum: "0914089J/A/M/000", tiersLib: "PAPETERIE NOUR" })],
+      3,
+      DEVISE_DU_PACK,
+    )
+      .split("\r\n")[1]!
+      .split("|");
+    assert.equal(fournisseur[6], "0914089J/A/M/000");
+    assert.equal(fournisseur[7], "PAPETERIE NOUR");
+    // Un client lu sans nom : le libellé reprend le matricule plutôt que de rester vide.
+    const client = formaterFec(
+      [ligne({ compte: "411", tiersNum: "1234567A/A/M/000" })],
+      3,
+      DEVISE_DU_PACK,
+    )
+      .split("\r\n")[1]!
+      .split("|");
+    assert.equal(client[7], "1234567A/A/M/000");
+    const charge = formaterFec([ligne()], 3, DEVISE_DU_PACK).split("\r\n")[1]!.split("|");
+    assert.equal(charge[6], "");
+    assert.equal(charge[7], "");
+  });
 });
 
 describe("le CSV des écritures", () => {

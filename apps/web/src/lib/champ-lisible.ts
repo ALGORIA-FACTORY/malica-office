@@ -143,6 +143,8 @@ export function valeurLisible(chemin: string, valeur: string, locale: string): s
 const MOTIFS_DE_REFUS: Record<string, MessageKey> = {
   plafond_atteint: "pme.refus.plafond_atteint",
   piece_personnelle: "pme.refus.piece_personnelle",
+  piece_accompagnante: "pme.refus.piece_accompagnante",
+  piece_en_double: "pme.refus.piece_en_double",
   licence_suspendue: "pme.refus.licence_suspendue",
   organisation_sans_licence: "pme.refus.organisation_sans_licence",
   piece_deja_lue: "pme.refus.piece_deja_lue",

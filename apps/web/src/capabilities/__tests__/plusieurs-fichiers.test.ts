@@ -78,6 +78,20 @@ describe("choisir des fichiers", () => {
     expect(await promesse).toHaveLength(1);
   });
 
+  it("un fichier qui n'est pas un PDF est refusé, et nommé", async () => {
+    // Recette du 20 octobre 2026 : un .txt renommé entrait comme une facture.
+    const promesse = files.pickPdfs();
+    Object.defineProperty(derniere!, "files", {
+      value: [
+        new File([new Uint8Array([37, 80, 68, 70])], "vraie.pdf", { type: "application/pdf" }),
+        new File(["Bonjour, ceci est un texte"], "faux.pdf", { type: "application/pdf" }),
+      ],
+      configurable: true,
+    });
+    derniere!.onchange?.(new Event("change"));
+    await expect(promesse).rejects.toMatchObject({ name: "FichierNonPdf", noms: ["faux.pdf"] });
+  });
+
   it("une annulation ne rend rien, et ce n'est pas une panne", async () => {
     const promesse = files.pickPdfs();
     derniere!.oncancel?.(new Event("cancel"));

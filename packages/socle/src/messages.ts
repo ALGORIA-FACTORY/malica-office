@@ -241,6 +241,10 @@ const fr = {
   "pme.refus.attente": "En attente de lecture",
   "pme.refus.plafond_atteint":
     "Vous avez atteint le nombre de lectures de votre forfait. La pièce est rangée ; elle sera lue dès que le forfait repart.",
+  "pme.refus.piece_accompagnante":
+    "Cette pièce accompagne une autre (reçu ou justificatif) : elle se range avec elle, sans lecture.",
+  "pme.refus.piece_en_double":
+    "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
     "Cette pièce est dans votre espace privé : je ne la lis pas tant que vous ne la transmettez pas.",
   "pme.refus.licence_suspendue":
@@ -2425,6 +2429,8 @@ const fr = {
   "pme.file.reessayer": "Réessayer",
   "pme.file.abandonner": "Abandonner",
   "pme.file.pleine": "Trop de photos en attente : envoyez d'abord ce qui attend.",
+  "pme.file.pasUnPdf":
+    "Ce fichier n'est pas un PDF : {noms}. Choisissez le PDF de la facture, ou prenez-la en photo.",
   "pme.capture.preparation": "Je prépare votre pièce…",
   "pme.lecture.arrierePlan": "Continuer en arrière-plan",
   "piece.incomplete":
@@ -2523,6 +2529,8 @@ const fr = {
   "tour.emetteur.chercher": "Chercher une société (nom ou matricule)",
   "tour.emetteur.depuis": "À partir du",
   "tour.emetteur.designer": "Désigner {nom}",
+  "tour.emetteur.confirmer":
+    "{nom} deviendra l'émetteur des factures de la plateforme. Dites pourquoi, puis enregistrez.",
   "tour.grille": "La grille",
   "tour.grille.date": "Date d'effet (demain au plus tôt)",
   "tour.grille.offres": "Offres",
@@ -3392,6 +3400,10 @@ const en: Dict = {
   "pme.refus.attente": "Waiting to be read",
   "pme.refus.plafond_atteint":
     "You have used every reading in your plan. The document is filed; I will read it as soon as the plan allows.",
+  "pme.refus.piece_accompagnante":
+    "This document goes with another one (receipt or proof): it is filed with it, without a reading.",
+  "pme.refus.piece_en_double":
+    "This document duplicates one already read: I am not reading it again.",
   "pme.refus.piece_personnelle":
     "This document is in your private space: I do not read it until you share it.",
   "pme.refus.licence_suspendue":
@@ -5515,6 +5527,8 @@ const en: Dict = {
   "pme.file.reessayer": "Retry",
   "pme.file.abandonner": "Discard",
   "pme.file.pleine": "Too many photos waiting: send what is waiting first.",
+  "pme.file.pasUnPdf":
+    "This file is not a PDF: {noms}. Choose the invoice PDF, or take a photo of it.",
   "pme.capture.preparation": "Preparing your document…",
   "pme.lecture.arrierePlan": "Continue in the background",
   "piece.incomplete":
@@ -5603,6 +5617,8 @@ const en: Dict = {
   "tour.emetteur.chercher": "Search a company (name or tax ID)",
   "tour.emetteur.depuis": "From",
   "tour.emetteur.designer": "Designate {nom}",
+  "tour.emetteur.confirmer":
+    "{nom} will become the issuer of the platform's invoices. Say why, then save.",
   "tour.grille": "The price grid",
   "tour.grille.date": "Effective date (tomorrow at the earliest)",
   "tour.grille.offres": "Plans",
@@ -6448,6 +6464,9 @@ const ar: Dict = {
   "pme.refus.attente": "في انتظار القراءة",
   "pme.refus.plafond_atteint":
     "لقد استنفدتَ عدد القراءات في باقتك. الوثيقة محفوظة، وسأقرؤها حالما تسمح الباقة بذلك.",
+  "pme.refus.piece_accompagnante":
+    "هذه الوثيقة مرفقة بوثيقة أخرى (وصل أو مؤيّد): تُحفظ معها دون قراءة.",
+  "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
   "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
   "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
   "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
@@ -8523,6 +8542,7 @@ const ar: Dict = {
   "pme.file.reessayer": "أعد المحاولة",
   "pme.file.abandonner": "تجاهل",
   "pme.file.pleine": "صور كثيرة في الانتظار: أرسل ما ينتظر أولًا.",
+  "pme.file.pasUnPdf": "هذا الملف ليس ملف PDF: {noms}. اختر ملف PDF للفاتورة، أو التقط لها صورة.",
   "pme.capture.preparation": "أُحضّر مستندك…",
   "pme.lecture.arrierePlan": "المتابعة في الخلفية",
   "piece.incomplete": "قرأت الوثيقة، لكن ينقصني: {champs}. أكملها وسأحضّر القيد.",
@@ -8606,6 +8626,7 @@ const ar: Dict = {
   "tour.emetteur.chercher": "البحث عن شركة (الاسم أو المعرف الجبائي)",
   "tour.emetteur.depuis": "ابتداء من",
   "tour.emetteur.designer": "تعيين {nom}",
+  "tour.emetteur.confirmer": "ستصبح {nom} الجهة المُصدِرة لفواتير المنصّة. اذكر السبب ثم احفظ.",
   "tour.grille": "جدول الأسعار",
   "tour.grille.date": "تاريخ السريان (غدا على الأقل)",
   "tour.grille.offres": "الباقات",

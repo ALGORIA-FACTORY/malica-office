@@ -226,4 +226,45 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     );
     assert.equal(await compter(), avant);
   });
+
+  it("le FEC du cabinet nomme le fournisseur sur la ligne 401, et seulement là", async () => {
+    // Recette du 20 octobre 2026 : CompAuxNum / CompAuxLib vides.
+    await admin.query(
+      `insert into capture.extractions (tenant_id, piece_id, contract, payload)
+       values ($1, $2, 'extract.v1', $3::jsonb)`,
+      [
+        pme,
+        piece,
+        JSON.stringify({
+          issuer: "PAPETERIE NOUR",
+          document_date: "2026-10-20",
+          references: { numero: "PN-1", matricule_fiscal: "0914089j/a/m/000" },
+        }),
+      ],
+    );
+    const lignesFec = await sousIdentite(expert.id, async (db) => {
+      // Seules les écritures de CETTE pièce : les épreuves précédentes en ont
+      // inscrit d'autres, sans lecture, donc sans tiers.
+      const { rows } = await db.query<{
+        compte: string;
+        tiers_num: string | null;
+        tiers_lib: string | null;
+      }>(
+        `select compte, tiers_num, tiers_lib
+           from public.export_lignes_lire($1, $2, '2026-01-01', '2026-12-31')
+          where piece_ref = 'PN-1'`,
+        [cabinet, pme],
+      );
+      return rows;
+    });
+    assert.ok(lignesFec.length > 0, "le dossier a des écritures");
+    for (const l of lignesFec) {
+      if (l.compte === "401") {
+        assert.equal(l.tiers_num, "0914089J/A/M/000");
+        assert.equal(l.tiers_lib, "PAPETERIE NOUR");
+      } else {
+        assert.equal(l.tiers_num, null, `pas de tiers sur ${l.compte}`);
+      }
+    }
+  });
 });

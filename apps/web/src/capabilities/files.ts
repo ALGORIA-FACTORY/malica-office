@@ -19,6 +19,47 @@ const IMAGE_ACCEPT = "image/*";
 const PDF_ACCEPT = "application/pdf";
 
 /**
+ * Des fichiers choisis comme PDF qui n'en sont pas.
+ *
+ * Recette du 20 octobre 2026 : un `.txt`, ou un fichier renommé en `.pdf`,
+ * entrait comme une facture et consommait une lecture. `accept` n'est qu'un
+ * conseil au sélecteur ; ce qui fait foi, ce sont les premiers octets — un
+ * PDF commence par `%PDF-`.
+ */
+export class FichierNonPdf extends Error {
+  readonly noms: readonly string[];
+  constructor(noms: readonly string[]) {
+    super(`pas un PDF : ${noms.join(", ")}`);
+    this.name = "FichierNonPdf";
+    this.noms = noms;
+  }
+}
+
+/** Le fichier commence-t-il par la signature d'un PDF ? */
+async function estUnPdf(blob: Blob): Promise<boolean> {
+  const morceau = blob.slice(0, 1024);
+  const octets =
+    typeof morceau.arrayBuffer === "function"
+      ? await morceau.arrayBuffer()
+      : await new Promise<ArrayBuffer>((ok, ko) => {
+          const r = new FileReader();
+          r.onload = () => ok(r.result as ArrayBuffer);
+          r.onerror = () => ko(r.error);
+          r.readAsArrayBuffer(morceau);
+        });
+  // La norme tolère quelques octets avant l'en-tête : on le cherche dans le premier kilo.
+  return String.fromCharCode(...new Uint8Array(octets)).includes("%PDF");
+}
+
+async function pickPdfs(): Promise<PickedFile[]> {
+  const choisis = await pick(PDF_ACCEPT, false, true);
+  const refuses: string[] = [];
+  for (const f of choisis) if (!(await estUnPdf(f.blob))) refuses.push(f.name);
+  if (refuses.length > 0) throw new FichierNonPdf(refuses);
+  return choisis;
+}
+
+/**
  * Choisir des fichiers.
  *
  * ================================================= POURQUOI « PLUSIEURS »
@@ -114,7 +155,7 @@ export const files = {
   /** Plusieurs images d'un coup — autant de pièces, chacune cadrée. */
   pickImages: () => scan(IMAGE_ACCEPT, false, true),
   /** Plusieurs PDF d'un coup : c'est le cas du rattrapage d'un mois. */
-  pickPdfs: () => pick(PDF_ACCEPT, false, true),
+  pickPdfs,
   /** Plusieurs PAGES d'UNE pièce — à ne pas confondre avec ce qui précède. */
   scanPages,
   newIdempotencyKey: () => crypto.randomUUID(),

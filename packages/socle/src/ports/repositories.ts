@@ -2748,7 +2748,7 @@ export interface TourRepository {
   ): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
-  designerEmetteur(organisationId: string, valideDes: string): Promise<unknown>;
+  designerEmetteur(organisationId: string, valideDes: string, motif: string): Promise<unknown>;
   /** Le réglage de l'abonnement en vigueur : le report d'un mois, l'année et ses mois offerts. */
   reglageAbonnement(): Promise<ReglageAbonnement>;
   reglerAbonnement(

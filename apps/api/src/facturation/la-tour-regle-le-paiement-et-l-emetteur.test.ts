@@ -120,18 +120,22 @@ describe("la tour règle le paiement et l'émetteur", { skip: !ADMIN }, () => {
 
       await assert.rejects(
         sous(db, randomUUID(), () =>
-          db.query("select plateforme.emetteur_designer($1, current_date)", [o.rows[0]!.id]),
+          db.query("select plateforme.emetteur_designer($1, current_date, 'essai')", [
+            o.rows[0]!.id,
+          ]),
         ),
         refuse,
       );
       await assert.rejects(
         sous(db, op, () =>
-          db.query("select plateforme.emetteur_designer($1, current_date - 1)", [o.rows[0]!.id]),
+          db.query("select plateforme.emetteur_designer($1, current_date - 1, 'essai')", [
+            o.rows[0]!.id,
+          ]),
         ),
         /aujourd'hui ou plus tard/,
       );
       await sous(db, op, () =>
-        db.query("select plateforme.emetteur_designer($1, current_date)", [o.rows[0]!.id]),
+        db.query("select plateforme.emetteur_designer($1, current_date, 'essai')", [o.rows[0]!.id]),
       );
       const e = await sous(db, op, () =>
         db.query<{ r: { nom: string } }>("select plateforme.emetteur_en_vigueur() as r"),

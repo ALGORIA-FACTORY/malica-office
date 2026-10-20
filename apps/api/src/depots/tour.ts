@@ -131,10 +131,10 @@ export const tour = {
     return rows;
   },
 
-  async designerEmetteur(db: Requete, organisationId: string, valideDes: string) {
+  async designerEmetteur(db: Requete, organisationId: string, valideDes: string, motif: string) {
     const { rows } = await db.query<{ r: unknown }>(
-      `select plateforme.emetteur_designer($1, $2::date) as r`,
-      [organisationId, valideDes],
+      `select plateforme.emetteur_designer($1, $2::date, $3) as r`,
+      [organisationId, valideDes, motif],
     );
     return rows[0]?.r ?? null;
   },

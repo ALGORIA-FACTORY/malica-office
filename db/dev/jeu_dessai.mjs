@@ -398,7 +398,9 @@ async function main() {
   if (!pack) throw new Error("aucun pack tunisien en vigueur : chargez les migrations d'abord");
 
   // Le matricule de DREAM OPTIC est celui qui figure sur ses vraies factures.
-  const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234567A/A/M/000");
+  // Un matricule, une société (20 octobre 2026) : le jeu de données de
+  // l'intégration continue sème déjà un cabinet en 1234567A — celui-ci a le sien.
+  const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234561A/A/M/000");
   const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882F/P/C/000");
   const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543B/B/N/000");
   console.log(`  cabinet          CABINET MALICA`);

@@ -94,6 +94,13 @@ export interface LigneExport {
   taxCode: string | null;
   valideLe: string;
   devise: string;
+  /**
+   * Le compte auxiliaire du tiers — son matricule — et son nom, sur la seule
+   * ligne de contrepartie (401, 411…). Lus sur la pièce : `null` quand la
+   * lecture n'a pas de matricule, et la colonne reste vide.
+   */
+  tiersNum?: string | null;
+  tiersLib?: string | null;
 }
 
 /** Un compte du plan, tel qu'il sort : le pack livré, puis ce que le cabinet a ouvert. */
@@ -135,9 +142,11 @@ function champCsv(v: string | null | undefined): string {
  *
  * Le montant en devise et son code ne sont renseignés que si l'écriture est
  * tenue dans une autre devise que celle du pack : sinon les deux colonnes
- * restent vides, comme le format le demande. Les colonnes de tiers et de
- * lettrage restent vides : le Socle ne porte pas encore ces deux notions
- * sur la ligne, et un fichier légal n'invente pas ce qu'il n'a pas.
+ * restent vides, comme le format le demande. Le tiers (`CompAuxNum`,
+ * `CompAuxLib`) est porté sur la ligne de contrepartie depuis le 20 octobre
+ * 2026, lu sur la pièce ; sans matricule lu, il reste vide. Le lettrage reste
+ * vide : le Socle ne le porte pas encore, et un fichier légal n'invente pas
+ * ce qu'il n'a pas.
  *
  * `EcritureLib` nomme l'ÉCRITURE — « Facture VERRES DE TUNISIE 2026-114 » —,
  * pas la ligne : le libellé d'une ligne est, dans ce produit, celui du
@@ -164,8 +173,8 @@ export function formaterFec(
         dateFec(l.dateEcriture),
         champFec(l.compte),
         champFec(l.compteLibelle),
-        "",
-        "",
+        champFec(l.tiersNum),
+        champFec(l.tiersNum ? l.tiersLib || l.tiersNum : ""),
         champFec(l.pieceRef),
         dateFec(l.pieceDate),
         champFec(libelleDEcriture(l)),
@@ -271,6 +280,8 @@ function versLigne(r: Record<string, unknown>): LigneExport {
     taxCode: (r["tax_code"] as string | null) ?? null,
     valideLe: r["valide_le"] as string,
     devise: r["devise"] as string,
+    tiersNum: (r["tiers_num"] as string | null) ?? null,
+    tiersLib: (r["tiers_lib"] as string | null) ?? null,
   };
 }
 
@@ -294,7 +305,7 @@ async function lignesDe(
     `select client_tenant_id, client_nom, client_legal_id, ecriture_id, numero, journal,
             journal_libelle, date_ecriture, ordinal, compte, compte_libelle, piece_ref,
             piece_date, ecriture_libelle, ligne_libelle, debit, credit, tax_code, valide_le,
-            devise
+            devise, tiers_num, tiers_lib
        from public.export_lignes_lire($1, $2, $3, $4)`,
     [cabinetTenantId, clientTenantId, du, au],
   );

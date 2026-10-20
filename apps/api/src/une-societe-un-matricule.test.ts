@@ -30,11 +30,11 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
   let b: Utilisateur;
   const creees: Array<{ user: string; id: string }> = [];
 
-  async function creer(u: Utilisateur, legalId: string): Promise<string> {
+  async function creer(u: Utilisateur, legalId: string, nom?: string): Promise<string> {
     const id = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-        [`${marque} ${u.email}`, legalId],
+        [nom ?? `${marque} ${u.email}`, legalId],
       );
       return rows[0]!.id;
     });
@@ -83,10 +83,15 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
     await assert.rejects(creer(b, `  ${mf.toLowerCase()}  `), /porte déjà ce matricule/);
   });
 
-  it("le même compte non plus ne crée pas deux fois la même société", async () => {
+  it("le même compte qui reprend son inscription retrouve SA société, sans doublon", async () => {
+    // Recette : quitter l'inscription puis la reprendre créait une seconde société.
     const mf = matriculeDEssai();
-    await creer(a, mf);
-    await assert.rejects(creer(a, mf), /porte déjà ce matricule/);
+    const premiere = await creer(a, mf);
+    assert.equal(await creer(a, ` ${mf.toLowerCase()} `), premiere);
+  });
+
+  it("un nom de société fait d'espaces est refusé avec un motif, pas une erreur interne", async () => {
+    await assert.rejects(creer(a, matriculeDEssai(), "  \t  "), /nom de la société est requis/);
   });
 
   it("une société archivée libère son matricule", async () => {

@@ -11,13 +11,12 @@ export const Route = createFileRoute("/_authenticated/pme/bienvenue")({
       { title: "Votre société — Malica Office" },
       {
         name: "description",
-        content:
-          "Le matricule fiscal lu sur votre carte d'identification, à confirmer avant qu'il ne bouge plus.",
+        content: "Votre matricule fiscal, à confirmer avant qu'il ne bouge plus.",
       },
       { property: "og:title", content: "Votre société — Malica Office" },
       {
         property: "og:description",
-        content: "J'ai lu votre matricule fiscal. Vérifiez-le maintenant.",
+        content: "Votre matricule fiscal. Vérifiez-le maintenant.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -49,10 +48,12 @@ const MOTS = {
   barre: "Votre société",
   /** Ce que la carte imprime sur son bandeau — un libellé, pas une donnée. */
   carteBandeau: "République Tunisienne · Carte d'identification fiscale",
-  ditTitre: "J'ai lu votre matricule fiscal.",
+  // Recette du 20 octobre 2026 : « J'ai lu » s'affichait aussi pour un
+  // matricule TAPÉ. L'écran ne connaît pas la provenance : il ne la dit pas.
+  ditTitre: "Voici votre matricule fiscal.",
   ditSous:
     "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre cabinet. Vérifiez-le maintenant.",
-  secTitre: "Ce que j'ai lu",
+  secTitre: "Votre société",
   secEtat: "à confirmer",
   /**
    * Le dessin écrit « Matricule fiscal · lu sur la carte ». La provenance est
@@ -68,7 +69,8 @@ const MOTS = {
   champAdresse: "Adresse du siège",
   regle:
     "La saisie au clavier reste possible, mais elle est signalée : un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu sur la carte.",
-  exact: "C'est exact — créer la société",
+  // La société est déjà ouverte avant cet écran : le bouton ne promet pas de la créer.
+  exact: "C'est exact — commencer",
   corriger: "Corriger · saisie au clavier",
   pied: "Ensuite : choisir votre forfait, puis inviter votre cabinet — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
 } as const;

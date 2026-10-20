@@ -11,7 +11,7 @@ import { Camera, Home as HomeIcon, Lock } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
-import { files, type PickedFile } from "@/capabilities/files";
+import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
 import { MalicaAvatar } from "@/components/malica/office-ui";
@@ -231,7 +231,9 @@ function PmeLayout() {
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
-          : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
+          : e instanceof FichierNonPdf
+            ? t("pme.file.pasUnPdf", { noms: e.noms.join(", ") })
+            : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
       ),
   });
 
