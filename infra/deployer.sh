@@ -174,6 +174,33 @@ principal() {
   if [ ! -t 0 ]; then
     read -r utilisateur || true
     read -r jeton || true
+    # ========================================= LES SECRETS D'APPLICATION
+    #
+    # 20 octobre 2026. Les lignes suivantes, s'il y en a, portent des secrets
+    # que l'API attend dans .env et que personne ne pouvait poser à la main
+    # sans accès au serveur — la clé Brevo d'abord. Ils viennent des secrets
+    # GitHub de l'environnement, voyagent sur l'entrée standard comme le jeton,
+    # et seuls les noms de la liste passent. Une valeur vide ne touche à rien.
+    local ligne nom valeur
+    while IFS= read -r ligne || [ -n "$ligne" ]; do
+      nom="${ligne%%=*}"
+      valeur="${ligne#*=}"
+      case "$nom" in
+      BREVO_API_KEY) ;;
+      *) continue ;;
+      esac
+      [ -n "$valeur" ] || continue
+      [[ "$valeur" =~ ^[A-Za-z0-9._-]+$ ]] || {
+        echo "KO : $nom porte des caractères inattendus, ignoré" >&2
+        continue
+      }
+      if grep -q "^$nom=" "$ENV"; then
+        sed -i -E "s|^$nom=.*|$nom=$valeur|" "$ENV"
+      else
+        printf '%s=%s\n' "$nom" "$valeur" >>"$ENV"
+      fi
+      echo "  secret $nom posé dans .env"
+    done
   fi
   if [ -n "$jeton" ]; then
     local registre

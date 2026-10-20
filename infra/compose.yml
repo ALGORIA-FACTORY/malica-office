@@ -119,6 +119,13 @@ services:
       QWEN_API_KEY: ${QWEN_API_KEY}
       QWEN_BASE_URL: ${QWEN_BASE_URL}
       QWEN_OCR_MODEL: ${QWEN_OCR_MODEL}
+      # Le courriel (invitations, mot de passe oublié). Sans clé, rien ne
+      # part et l'API le dit ; la clé arrive de la CI (secret GitHub de
+      # l'environnement), jamais du dépôt.
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MALICA_COURRIEL_EXPEDITEUR: ${MALICA_COURRIEL_EXPEDITEUR:-no-reply@algoria-factory.com}
+      MALICA_COURRIEL_NOM: ${MALICA_COURRIEL_NOM:-Malica Office}
+      MALICA_URL_PUBLIQUE: https://${DOMAINE}
     volumes:
       - ${PIECES_DIR}:/pieces
     depends_on:

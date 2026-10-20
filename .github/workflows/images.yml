@@ -115,6 +115,11 @@ jobs:
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
           BRANCHE: ${{ github.ref_name }}
           JETON: ${{ secrets.GITHUB_TOKEN }}
+          # Les secrets d'application, posés dans l'environnement « staging »
+          # de GitHub. Absents, ils partent vides et le serveur n'y touche pas.
+          # Le secret prime ; à défaut, la variable du même nom (posée ainsi
+          # le 20 octobre 2026 — à convertir en secret, puis retirer ce repli).
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY || vars.BREVO_API_KEY }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
@@ -135,5 +140,8 @@ jobs:
           # le « login » réussit, le « pull » répond « unauthorized », et aucun des
           # deux ne dit pourquoi. C'est exactement ce qui est arrivé au premier
           # essai réel de ce chemin.
-          printf '%s\n%s' "$GITHUB_ACTOR" "$JETON" |
+          #
+          # Après eux, les secrets d'application, une ligne NOM=valeur chacun :
+          # deployer.sh ne retient que ceux de sa liste.
+          printf '%s\n%s\nBREVO_API_KEY=%s\n' "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" |
             ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"
