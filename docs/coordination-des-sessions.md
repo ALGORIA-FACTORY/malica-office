@@ -227,3 +227,5 @@ une base jetable.
 - 2026-10-20 — conversation — **Repli provisoire** : `images.yml` lit `secrets.BREVO_API_KEY || vars.BREVO_API_KEY` (la clé a été posée en variable de l'environnement staging). À convertir en secret puis retirer le repli.
 
 - 2026-10-20 — conversation — **Correction** : 0.2.34 et 0.2.35 ne portaient PAS `infra/` ni `.github/` (l'outil de publication local ne les ajoutait pas). 0.2.36 les porte réellement : `infra/compose.yml`, `infra/deployer.sh`, `infra/env.exemple`, `.github/workflows/images.yml`.
+
+- 2026-10-20 — conversation — **Faille fermée.** Migration `20261022250000` : retire le déclencheur `operateur_attendu` sur `auth.users` (le produit ne vérifie pas les adresses : le premier inscrit avec une adresse attendue devenait opérateur) et clôt les attentes non honorées. Épreuve `l-operateur-attendu-devient-operateur.test.ts` réécrite. Migration appliquée à `malica_local`.
