@@ -211,6 +211,80 @@ export async function rafraichir(
   });
 }
 
+/* ------------------------------------------------ le mot de passe oublié
+ *
+ * Une demande rend un secret à envoyer par courriel — jamais à l'écran : la
+ * réponse de l'API est la même que l'adresse existe ou non. Le secret vaut une
+ * heure, une seule fois ; seule son empreinte est gardée. L'utiliser change le
+ * mot de passe et révoque toutes les sessions longues du compte : un téléphone
+ * perdu ne survit pas à un changement de mot de passe.
+ */
+
+const DUREE_REINITIALISATION_MS = 60 * 60 * 1000;
+
+/** `null` si l'adresse est inconnue — l'appelant n'en dira rien. */
+export async function demanderReinitialisation(
+  email: string,
+): Promise<{ email: string; secret: string; expireLe: Date } | null> {
+  const secret = nouveauSecret();
+  const expireLe = new Date(Date.now() + DUREE_REINITIALISATION_MS);
+  return horsRlsAuthentificationSeule(async (db) => {
+    const { rows } = await db.query<{ email: string }>(
+      `insert into auth.reinitialisations (user_id, empreinte, expire_le)
+       select u.id, $2, $3 from auth.users u where u.email = $1
+       returning $1::text as email`,
+      [email.toLowerCase(), empreinteDe(secret), expireLe],
+    );
+    const ligne = rows[0];
+    return ligne ? { email: ligne.email, secret, expireLe } : null;
+  });
+}
+
+/**
+ * Change le mot de passe contre un secret valide. `null` si le secret est
+ * inconnu, expiré ou déjà utilisé — sans dire lequel.
+ */
+export async function reinitialiser(
+  secret: string,
+  motDePasse: string,
+): Promise<Utilisateur | null> {
+  const empreinte = await bcrypt.hash(motDePasse, COUT_BCRYPT);
+  return horsRlsAuthentificationSeule(async (db) => {
+    const { rows } = await db.query<{
+      id: string;
+      user_id: string;
+      email: string;
+      expire_le: Date;
+      utilise_le: Date | null;
+    }>(
+      `select r.id, r.user_id, u.email, r.expire_le, r.utilise_le
+         from auth.reinitialisations r
+         join auth.users u on u.id = r.user_id
+        where r.empreinte = $1
+        for update of r`,
+      [empreinteDe(secret)],
+    );
+    const demande = rows[0];
+    if (!demande || demande.utilise_le || demande.expire_le.getTime() < Date.now()) return null;
+    await db.query(`update auth.users set encrypted_password = $2 where id = $1`, [
+      demande.user_id,
+      empreinte,
+    ]);
+    // Toutes les demandes du compte tombent avec celle-ci, et toutes ses sessions longues.
+    await db.query(
+      `update auth.reinitialisations set utilise_le = now()
+        where user_id = $1 and utilise_le is null`,
+      [demande.user_id],
+    );
+    await db.query(
+      `update auth.refresh_tokens set revoque_le = now()
+        where user_id = $1 and revoque_le is null`,
+      [demande.user_id],
+    );
+    return { id: demande.user_id, email: demande.email };
+  });
+}
+
 /** Révoque un jeton — la déconnexion. Un jeton inconnu ou déjà révoqué ne dit rien. */
 export async function revoquerJetonDeRafraichissement(secret: string): Promise<void> {
   await horsRlsAuthentificationSeule((db) =>

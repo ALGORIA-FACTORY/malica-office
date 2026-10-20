@@ -70,11 +70,25 @@ const fr = {
   "auth.error.unreachable":
     "Le service ne répond pas. Vos identifiants ne sont pas en cause — réessayez dans un instant.",
   "auth.error.weakPassword":
-    "Ce mot de passe est trop courant. Choisissez-en un d'au moins 10 caractères, non réutilisé ailleurs.",
+    "Ce mot de passe est trop courant. Choisissez-en un d'au moins 12 caractères, non réutilisé ailleurs.",
   "auth.error.invalidCredentials": "E-mail ou mot de passe incorrect.",
   "auth.error.userExists": "Un accès existe déjà pour cet e-mail. Utilisez l'onglet Entrer.",
-  "auth.password.hint": "Au moins 10 caractères, non réutilisé ailleurs.",
+  "auth.password.hint": "Au moins 12 caractères, non réutilisé ailleurs.",
   "auth.back": "Retour à l'accueil",
+  "auth.forgot.link": "Mot de passe oublié ?",
+  "auth.forgot.hint":
+    "Saisissez l'adresse de votre accès : un lien pour choisir un nouveau mot de passe vous sera envoyé.",
+  "auth.forgot.submit": "Recevoir le lien",
+  "auth.forgot.sent":
+    "Si un accès existe pour cette adresse, un lien vient de lui être envoyé. Il vaut une heure.",
+  "auth.reset.title": "Nouveau mot de passe",
+  "auth.reset.new": "Nouveau mot de passe",
+  "auth.reset.confirm": "Confirmer le mot de passe",
+  "auth.reset.submit": "Enregistrer et entrer",
+  "auth.reset.mismatch": "Les deux mots de passe ne sont pas identiques.",
+  "auth.reset.expired":
+    "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau depuis la page de connexion.",
+  "auth.reset.back": "Retour à la connexion",
 
   "onboarding.title": "Votre organisation",
   "onboarding.subtitle":
@@ -3223,11 +3237,25 @@ const en: Dict = {
   "auth.error.unreachable":
     "The service is not responding. Your credentials are not the problem — try again in a moment.",
   "auth.error.weakPassword":
-    "This password is too common. Pick one with at least 10 characters, not reused elsewhere.",
+    "This password is too common. Pick one with at least 12 characters, not reused elsewhere.",
   "auth.error.invalidCredentials": "Wrong email or password.",
   "auth.error.userExists": "An access already exists for this email. Use the Sign in tab.",
-  "auth.password.hint": "At least 10 characters, not reused elsewhere.",
+  "auth.password.hint": "At least 12 characters, not reused elsewhere.",
   "auth.back": "Back to home",
+  "auth.forgot.link": "Forgot your password?",
+  "auth.forgot.hint":
+    "Enter the address of your account: we will send you a link to choose a new password.",
+  "auth.forgot.submit": "Send me the link",
+  "auth.forgot.sent":
+    "If an account exists for this address, a link has just been sent to it. It is valid for one hour.",
+  "auth.reset.title": "New password",
+  "auth.reset.new": "New password",
+  "auth.reset.confirm": "Confirm password",
+  "auth.reset.submit": "Save and sign in",
+  "auth.reset.mismatch": "The two passwords do not match.",
+  "auth.reset.expired":
+    "This link has expired or has already been used. Request a new one from the sign-in page.",
+  "auth.reset.back": "Back to sign in",
 
   "onboarding.title": "Your organisation",
   "onboarding.subtitle":
@@ -6267,11 +6295,24 @@ const ar: Dict = {
   "auth.error.unreachable":
     "الخدمة لا تستجيب. ليست بيانات الدخول هي السبب — أعد المحاولة بعد لحظات.",
   "auth.error.weakPassword":
-    "كلمة السر شائعة جدًا. اختر كلمة من 10 أحرف على الأقل وغير مستعملة في مكان آخر.",
+    "كلمة السر شائعة جدًا. اختر كلمة من 12 حرفًا على الأقل وغير مستعملة في مكان آخر.",
   "auth.error.invalidCredentials": "البريد أو كلمة السر غير صحيحة.",
   "auth.error.userExists": "يوجد حساب بهذا البريد. استعمل تبويب الدخول.",
-  "auth.password.hint": "10 أحرف على الأقل، وغير مستعملة في مكان آخر.",
+  "auth.password.hint": "12 حرفًا على الأقل، وغير مستعملة في مكان آخر.",
   "auth.back": "العودة إلى الصفحة الرئيسية",
+  "auth.forgot.link": "نسيت كلمة المرور؟",
+  "auth.forgot.hint": "أدخل عنوان حسابك: سنرسل إليك رابطًا لاختيار كلمة مرور جديدة.",
+  "auth.forgot.submit": "أرسل لي الرابط",
+  "auth.forgot.sent":
+    "إذا كان هناك حساب بهذا العنوان، فقد أُرسل إليه رابط الآن. الرابط صالح لمدة ساعة.",
+  "auth.reset.title": "كلمة مرور جديدة",
+  "auth.reset.new": "كلمة المرور الجديدة",
+  "auth.reset.confirm": "تأكيد كلمة المرور",
+  "auth.reset.submit": "حفظ والدخول",
+  "auth.reset.mismatch": "كلمتا المرور غير متطابقتين.",
+  "auth.reset.expired":
+    "انتهت صلاحية هذا الرابط أو سبق استعماله. اطلب رابطًا جديدًا من صفحة الدخول.",
+  "auth.reset.back": "العودة إلى الدخول",
 
   "onboarding.title": "مؤسستك",
   "onboarding.subtitle":

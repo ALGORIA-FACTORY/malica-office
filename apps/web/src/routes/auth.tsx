@@ -29,7 +29,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot";
 
 function AuthPage() {
   const { t } = useI18n();
@@ -42,6 +42,7 @@ function AuthPage() {
   const [displayName, setDisplayName] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lienDemande, setLienDemande] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -63,6 +64,13 @@ function AuthPage() {
     setPending(true);
     setError(null);
     try {
+      if (mode === "forgot") {
+        // La réponse est la même que l'adresse existe ou non : on ne navigue
+        // nulle part, on dit seulement où regarder.
+        await office().auth.motDePasseOublie(email);
+        setLienDemande(true);
+        return;
+      }
       if (mode === "signup") {
         // L'inscription ouvre la session dans le même geste : il n'existe pas
         // de vérification par courriel, et faire attendre une confirmation qui
@@ -102,6 +110,7 @@ function AuthPage() {
               onClick={() => {
                 setMode(m);
                 setError(null);
+                setLienDemande(false);
               }}
               aria-pressed={mode === m}
               className={`flex-1 px-4 py-2 text-xs font-medium uppercase tracking-wide transition-colors ${
@@ -131,16 +140,39 @@ function AuthPage() {
             autoComplete="email"
             required
           />
-          <Field
-            label={t("auth.password")}
-            value={password}
-            onChange={setPassword}
-            type="password"
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            required
-          />
+          {mode !== "forgot" && (
+            <Field
+              label={t("auth.password")}
+              value={password}
+              onChange={setPassword}
+              type="password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              required
+            />
+          )}
           {mode === "signup" && (
             <p className="text-xs text-muted-foreground">{t("auth.password.hint")}</p>
+          )}
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("forgot");
+                setError(null);
+                setLienDemande(false);
+              }}
+              className="text-xs text-muted-foreground underline"
+            >
+              {t("auth.forgot.link")}
+            </button>
+          )}
+          {mode === "forgot" && (
+            <p className="text-xs text-muted-foreground">{t("auth.forgot.hint")}</p>
+          )}
+          {lienDemande && (
+            <p role="status" className="border border-foreground px-3 py-2 text-xs">
+              {t("auth.forgot.sent")}
+            </p>
           )}
 
           {error && (
@@ -156,7 +188,9 @@ function AuthPage() {
               ? t("auth.pending")
               : mode === "signin"
                 ? t("auth.submit.signin")
-                : t("auth.submit.signup")}
+                : mode === "forgot"
+                  ? t("auth.forgot.submit")
+                  : t("auth.submit.signup")}
           </button>
         </form>
 
@@ -198,6 +232,8 @@ function explain(err: unknown, t: ReturnType<typeof useI18n>["t"]): string {
       return t("auth.error.weakPassword");
     case "reseau":
       return t("auth.error.unreachable");
+    case "lien_expire":
+      return t("auth.reset.expired");
   }
 }
 

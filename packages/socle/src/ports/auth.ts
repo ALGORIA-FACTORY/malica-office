@@ -24,6 +24,12 @@ export interface AuthPort {
   connexion(email: string, motDePasse: string): Promise<Compte>;
 
   deconnexion(): Promise<void>;
+
+  /** Demande un lien de nouveau mot de passe par courriel. Ne dit jamais si l'adresse existe. */
+  motDePasseOublie(email: string): Promise<void>;
+
+  /** Pose un nouveau mot de passe contre le secret du lien, et ouvre la session. */
+  reinitialiser(secret: string, motDePasse: string): Promise<Compte>;
 }
 
 /**
@@ -32,7 +38,7 @@ export interface AuthPort {
  * `identifiants` couvre aussi bien un mot de passe faux qu'une adresse
  * inconnue : les séparer dirait à un attaquant lesquelles existent.
  */
-export type MotifEchecAuth = "identifiants" | "adresse_prise" | "saisie" | "reseau";
+export type MotifEchecAuth = "identifiants" | "adresse_prise" | "saisie" | "reseau" | "lien_expire";
 
 export class EchecAuth extends Error {
   // Champ déclaré puis affecté : Node décape les types sans compiler, et une

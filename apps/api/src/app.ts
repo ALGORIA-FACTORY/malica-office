@@ -23,14 +23,18 @@ import { z } from "zod";
 
 import {
   creerCompte,
+  demanderReinitialisation,
   emettreJeton,
   emettreJetonDeRafraichissement,
   organisations,
   rafraichir,
+  reinitialiser,
   revoquerJetonDeRafraichissement,
   verifierCompte,
   type Utilisateur,
 } from "./auth.ts";
+import { configurationCourriel } from "./courriel/brevo.ts";
+import { envoyerReinitialisation } from "./courriel/reinitialisation.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sonderLaBase, sousIdentite } from "./db.ts";
 import { refusLisible } from "./refus.ts";
@@ -228,6 +232,60 @@ app.post("/auth/rafraichir", limiteAuth, async (req, res, next) => {
       jeton,
       jetonRafraichissement: tourne.jetonRafraichissement,
     });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/**
+ * Le mot de passe oublié. La demande répond toujours 202, que l'adresse existe
+ * ou non : le dire livrerait la liste des comptes. Le lien part par courriel,
+ * jamais dans la réponse.
+ */
+app.post("/auth/mot-de-passe-oublie", limiteAuth, async (req, res, next) => {
+  try {
+    const saisie = z.object({ email: z.string().email() }).safeParse(req.body);
+    if (!saisie.success) {
+      res.status(400).json({ erreur: "saisie invalide" });
+      return;
+    }
+    const demande = await demanderReinitialisation(saisie.data.email);
+    if (demande) {
+      let config: ReturnType<typeof configurationCourriel> = null;
+      try {
+        config = configurationCourriel(process.env);
+      } catch (e) {
+        console.error(`[reinitialisation] ${(e as Error).message}`);
+      }
+      await envoyerReinitialisation(demande, config);
+    }
+    res.status(202).json({ demande: "reçue" });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/** Le nouveau mot de passe, contre le secret du lien. Ouvre la session dans le même geste. */
+app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
+  try {
+    const saisie = z
+      .object({
+        secret: z.string().min(16).max(200),
+        motDePasse: z.string().min(12, "12 caractères minimum"),
+      })
+      .safeParse(req.body);
+    if (!saisie.success) {
+      res.status(400).json({ erreur: saisie.error.issues[0]?.message ?? "saisie invalide" });
+      return;
+    }
+    const utilisateur = await reinitialiser(saisie.data.secret, saisie.data.motDePasse);
+    if (!utilisateur) {
+      res.status(410).json({ erreur: "lien expiré ou déjà utilisé" });
+      return;
+    }
+    const jeton = emettreJeton(utilisateur);
+    poserCookie(res, jeton);
+    res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
     next(erreur);
   }

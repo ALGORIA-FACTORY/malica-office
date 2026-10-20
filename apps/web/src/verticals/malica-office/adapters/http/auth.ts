@@ -96,5 +96,25 @@ export function creerAuthHttp(): AuthPort {
       });
       await transport().oublierLaSession();
     },
+
+    async motDePasseOublie(email: string): Promise<void> {
+      const reponse = await appeler("/auth/mot-de-passe-oublie", {
+        methode: "POST",
+        corps: { email },
+      });
+      if (reponse.status === 400) throw new EchecAuth("saisie", "saisie invalide");
+      if (!reponse.ok) throw new EchecAuth("reseau", "demande impossible");
+    },
+
+    async reinitialiser(secret: string, motDePasse: string): Promise<Compte> {
+      const reponse = await appeler("/auth/reinitialiser", {
+        methode: "POST",
+        corps: { secret, motDePasse },
+      });
+      if (reponse.status === 410) throw new EchecAuth("lien_expire", "lien expiré");
+      if (reponse.status === 400) throw new EchecAuth("saisie", "saisie invalide");
+      if (!reponse.ok) throw new EchecAuth("reseau", "réinitialisation impossible");
+      return retenir(reponse);
+    },
   };
 }
