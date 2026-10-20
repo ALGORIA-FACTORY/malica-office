@@ -223,3 +223,5 @@ une base jetable.
 - 2026-10-20 — conversation — **lab@algoria-factory.com opère la tour.** Migration `20261022240000` : l'adresse est ajoutée à `app.operateurs_attendus`. Migration appliquée à `malica_local`.
 
 - 2026-10-20 — conversation — **La clé Brevo arrive par la CI.** `infra/compose.yml` passe enfin à l'API `BREVO_API_KEY`, `MALICA_COURRIEL_EXPEDITEUR`, `MALICA_COURRIEL_NOM` et `MALICA_URL_PUBLIQUE` (aucune variable de courriel n'y figurait). `infra/deployer.sh` lit, après le nom et le jeton du registre, des lignes `NOM=valeur` sur l'entrée standard et n'écrit dans `.env` que celles de sa liste (`BREVO_API_KEY`). `images.yml` envoie le secret `BREVO_API_KEY` de l'environnement GitHub « staging ». Effet au SECOND déploiement : le script exécuté est celui déjà en place sur le serveur.
+
+- 2026-10-20 — conversation — **Repli provisoire** : `images.yml` lit `secrets.BREVO_API_KEY || vars.BREVO_API_KEY` (la clé a été posée en variable de l'environnement staging). À convertir en secret puis retirer le repli.
