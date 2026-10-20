@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { refusLisible } from "./refus.ts";
+import { introuvableLisible, refusLisible } from "./refus.ts";
 
 describe("refus lisible", () => {
   it("rend le message d'un refus écrit par un déclencheur", () => {
@@ -25,9 +25,10 @@ describe("refus lisible", () => {
     assert.match(refusLisible(erreur) ?? "", /compte collectif/);
   });
 
-  it("tait le message d'une contrainte détectée par PostgreSQL", () => {
+  it("tait le message d'une contrainte détectée par PostgreSQL — sans taire le refus", () => {
     // Même code d'erreur, mais les champs de localisation sont peuplés : c'est
-    // le moteur qui parle, et son message nomme un index.
+    // le moteur qui parle, et son message nomme un index. Depuis le 20 octobre
+    // 2026, le doublon reste un refus lisible : notre phrase, pas la sienne.
     const erreur = {
       code: "23505",
       message:
@@ -35,7 +36,23 @@ describe("refus lisible", () => {
       constraint: "auxiliaires_tenant_id_nature_code_key",
       table: "auxiliaires",
     };
-    assert.equal(refusLisible(erreur), null);
+    assert.equal(refusLisible(erreur), "cet élément existe déjà");
+    // Une autre violation détectée par le moteur reste tue.
+    assert.equal(refusLisible({ ...erreur, code: "23503" }), null);
+  });
+
+  it("dit un refus de RLS sans nommer la table", () => {
+    const rendu = refusLisible({
+      code: "42501",
+      message: 'new row violates row-level security policy for table "invitations"',
+    });
+    assert.equal(rendu, "ce geste ne vous est pas permis sur ce dossier");
+  });
+
+  it("un code « introuvable » d'un dépôt devient un 404 lisible, pas une panne", () => {
+    assert.match(introuvableLisible(new Error("piece.not_found")) ?? "", /introuvable/);
+    assert.match(introuvableLisible(new Error("organisation.introuvable")) ?? "", /introuvable/);
+    assert.equal(introuvableLisible(new Error("réseau coupé")), null);
   });
 
   it("tait tout ce qui n'est pas un code de refus", () => {

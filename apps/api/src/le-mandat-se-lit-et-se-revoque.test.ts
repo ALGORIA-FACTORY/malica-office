@@ -137,6 +137,21 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
     } finally {
       await pool.end();
     }
+
+    // Recette du 20 octobre 2026 : le cabinet n'en recevait aucune nouvelle.
+    // Il la lit chez lui, sous sa propre identité, après la fin du mandat.
+    const vues = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query<{ motif: string }>(
+        `select payload ->> 'motif' as motif from collab.notifications
+          where tenant_id = $1 and kind = 'mandat.revoque'`,
+        [cabinet],
+      );
+      return rows;
+    });
+    assert.deepEqual(
+      vues.map((v) => v.motif),
+      ["Je change de comptable"],
+    );
   });
 
   it("une seconde révocation dit qu'il n'y a plus rien à révoquer", async () => {

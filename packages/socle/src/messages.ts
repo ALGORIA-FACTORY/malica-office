@@ -2591,6 +2591,8 @@ const fr = {
   "pme.reglages.paiement.titre": "À régler",
   "pme.reglages.paiement.montant": "{ttc} {devise} TTC à régler maintenant",
   "pme.reglages.paiement.payer": "Payer par carte",
+  "pme.reglages.paiement.parLeNavigateur":
+    "Le paiement se fait depuis le navigateur : ouvrez Malica Office sur le web pour régler.",
   "pme.reglages.paiement.ferme":
     "Le paiement en ligne n'est pas encore ouvert. Votre offre est active ; ce montant figurera sur la facture du mois.",
   "pme.reglages.paiement.paye": "Payé, merci. Il figurera sur la facture du mois.",
@@ -5677,6 +5679,8 @@ const en: Dict = {
   "pme.reglages.paiement.titre": "To pay",
   "pme.reglages.paiement.montant": "{ttc} {devise} incl. VAT to pay now",
   "pme.reglages.paiement.payer": "Pay by card",
+  "pme.reglages.paiement.parLeNavigateur":
+    "Payment is made from the browser: open Malica Office on the web to pay.",
   "pme.reglages.paiement.ferme":
     "Online payment is not open yet. Your plan is active; this amount will appear on the month's invoice.",
   "pme.reglages.paiement.paye": "Paid, thank you. It will appear on the month's invoice.",
@@ -8684,6 +8688,8 @@ const ar: Dict = {
   "pme.reglages.paiement.titre": "للدفع",
   "pme.reglages.paiement.montant": "{ttc} {devise} شامل الأداء للدفع الآن",
   "pme.reglages.paiement.payer": "الدفع بالبطاقة",
+  "pme.reglages.paiement.parLeNavigateur":
+    "يتمّ الدفع من المتصفّح: افتح Malica Office على الويب للتسديد.",
   "pme.reglages.paiement.ferme":
     "الدفع الإلكتروني غير متاح بعد. باقتك مفعّلة، وسيظهر هذا المبلغ في فاتورة الشهر.",
   "pme.reglages.paiement.paye": "تم الدفع، شكرا. سيظهر في فاتورة الشهر.",

@@ -1681,7 +1681,11 @@ function PieceScreen() {
           transmission n'était pas une décision. Elle l'est ici, en deux
           boutons de même poids — garder une facture chez soi est un choix
           légitime, l'envoyer aussi, et seul le dirigeant sait lequel. */}
-      {cabinet.data && !booked ? (
+      {/* Recette du 20 octobre 2026 : « Oui, c'est le bon montant » AVANT
+          « Transmettre » faisait disparaître la transmission — la pièce était
+          comptabilisée et ne partait jamais au cabinet. Comptabilisée ou
+          non, une pièce qui n'est pas partie garde le geste. */}
+      {cabinet.data && (!booked || piece.vis !== "partage") ? (
         piece.vis === "partage" ? (
           <div className="centr calme">
             <i />

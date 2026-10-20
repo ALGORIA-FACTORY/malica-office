@@ -14,6 +14,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { estNatif } from "@/capabilities/coque";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -770,14 +771,20 @@ export function ARegler() {
             </>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn"
-                disabled={payer.isPending}
-                onClick={() => payer.mutate(p.paiement_id)}
-              >
-                {t("pme.reglages.paiement.payer")}
-              </button>
+              {/* Le paiement en ligne se fait sur le web et la PWA, jamais dans
+                  l'application installée depuis un store (20 octobre 2026). */}
+              {estNatif() ? (
+                <p className="t-body">{t("pme.reglages.paiement.parLeNavigateur")}</p>
+              ) : (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={payer.isPending}
+                  onClick={() => payer.mutate(p.paiement_id)}
+                >
+                  {t("pme.reglages.paiement.payer")}
+                </button>
+              )}
               {p.etat === "lien_cree" ? (
                 <button
                   type="button"

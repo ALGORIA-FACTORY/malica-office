@@ -92,10 +92,40 @@ export function refusLisible(erreur: unknown): string | null {
 
   if (!CODES_DE_REFUS.has(e.code)) return null;
 
+  /*
+   * Recette du 20 octobre 2026 : « new row violates row-level security policy
+   * for table … » s'affichait tel quel (invitations, écritures). C'est un
+   * refus — la personne n'a pas ce droit sur ce dossier —, mais la phrase est
+   * celle du moteur et nomme une table. On dit le refus, pas la table.
+   */
+  if (e.code === "42501" && /row-level security|sécurité au niveau ligne/i.test(e.message ?? ""))
+    return "ce geste ne vous est pas permis sur ce dossier";
+
   // Peuplés par PostgreSQL, jamais par un `raise` : c'est la signature d'une
   // violation détectée par le moteur, dont le message porte des noms internes.
-  if (e.constraint || e.table || e.column) return null;
+  if (e.constraint || e.table || e.column) {
+    // Un doublon détecté par un index unique reste un refus lisible — sans
+    // le nom de l'index (recette : « ce compte existe déjà » rendait un 500).
+    if (e.code === "23505") return "cet élément existe déjà";
+    return null;
+  }
 
   const message = e.message?.trim();
   return message ? message : null;
+}
+
+/**
+ * L'objet demandé n'existe pas — ou n'est pas visible pour l'appelant.
+ *
+ * Les dépôts lèvent `piece.not_found`, `organisation.introuvable`… : des
+ * codes, pas des phrases. Ils sortaient en 500 « erreur interne » (recette du
+ * 20 octobre 2026, pièce d'un autre dossier ou inexistante). Ce n'est pas
+ * une panne : c'est un 404, et l'on ne distingue pas « n'existe pas » de
+ * « pas pour vous » — distinguer les deux renseignerait un curieux.
+ */
+export function introuvableLisible(erreur: unknown): string | null {
+  if (!(erreur instanceof Error)) return null;
+  return /^[a-z_]+\.(not_found|introuvable)$/.test(erreur.message)
+    ? "introuvable, ou vous n'y avez pas accès"
+    : null;
 }

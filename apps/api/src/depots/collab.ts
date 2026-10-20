@@ -345,13 +345,32 @@ export const collab = {
    */
   async deriverEcheances(db: Requete, tenantIds: string[]) {
     const resultats: Array<{ tenantId: string; generees: number; raison: string | null }> = [];
+    /*
+     * Un dossier qui refuse ne fait pas échouer les autres.
+     *
+     * Recette du 20 octobre 2026 : après la révocation d'un mandat, chaque
+     * page du cabinet rendait un 400 — la liste portait encore le client
+     * révoqué, et son refus annulait toute la transaction. Chaque dossier
+     * passe donc sous son point de sauvegarde ; un dossier qui n'est plus
+     * le sien est écarté — il n'a plus d'échéance à montrer ici —, et les
+     * autres dossiers sont dérivés quand même.
+     */
     for (const tenantId of tenantIds) {
-      const { rows } = await db.query<{ r: { generees: number; raison: string | null } }>(
-        `select public.echeances_deriver($1) as r`,
-        [tenantId],
-      );
-      const r = rows[0]?.r;
-      resultats.push({ tenantId, generees: r?.generees ?? 0, raison: r?.raison ?? null });
+      await db.query("savepoint deriver_un_dossier");
+      try {
+        const { rows } = await db.query<{ r: { generees: number; raison: string | null } }>(
+          `select public.echeances_deriver($1) as r`,
+          [tenantId],
+        );
+        await db.query("release savepoint deriver_un_dossier");
+        const r = rows[0]?.r;
+        resultats.push({ tenantId, generees: r?.generees ?? 0, raison: r?.raison ?? null });
+      } catch (e) {
+        await db.query("rollback to savepoint deriver_un_dossier");
+        const code = (e as { code?: string }).code;
+        // Seul un REFUS de la base écarte le dossier ; une panne remonte.
+        if (code !== "42501" && code !== "23514" && code !== "22023" && code !== "P0002") throw e;
+      }
     }
     return resultats;
   },

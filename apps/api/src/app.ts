@@ -37,7 +37,7 @@ import { configurationCourriel } from "./courriel/brevo.ts";
 import { envoyerReinitialisation } from "./courriel/reinitialisation.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sonderLaBase, sousIdentite } from "./db.ts";
-import { refusLisible } from "./refus.ts";
+import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { executerRpc, RpcIntrouvable } from "./rpc.ts";
@@ -366,6 +366,20 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(400).json({ erreur: "appel invalide" });
       return;
     }
+    /*
+     * Le paiement en ligne se fait sur le web et la PWA, jamais dans
+     * l'application installée depuis un store (décision du 20 octobre 2026).
+     * L'écran le dit déjà ; le serveur le tient, pour une coque qui
+     * l'oublierait.
+     */
+    if (
+      saisie.data.depot === "facturation" &&
+      saisie.data.methode === "payerEnLigne" &&
+      estUneCoque(req)
+    ) {
+      res.status(403).json({ erreur: "le paiement se fait depuis le navigateur" });
+      return;
+    }
     const resultat = req.cleApi
       ? await executerSousCle(req.cleApi, saisie.data)
       : await sousIdentite(req.utilisateur!.id, (db) => executerRpc(db, saisie.data));
@@ -379,6 +393,11 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
     }
     if (erreur instanceof RpcIntrouvable) {
       res.status(404).json({ erreur: erreur.message });
+      return;
+    }
+    const absent = introuvableLisible(erreur);
+    if (absent) {
+      res.status(404).json({ erreur: absent });
       return;
     }
     // Une règle métier qui refuse a écrit son message pour l'''appelant : le

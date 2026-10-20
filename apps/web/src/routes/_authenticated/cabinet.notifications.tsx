@@ -65,6 +65,8 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "mandat.propose": "cab.notif.kind.mandat.propose",
   "mandat.accepte": "cab.notif.kind.mandat.accepte",
   "mandat.refuse": "cab.notif.kind.mandat.refuse",
+  // Recette du 20 octobre 2026 : la révocation n'arrivait pas chez le cabinet.
+  "mandat.revoque": "cab.notif.kind.mandat.revoque",
   "pv.envoye": "cab.notif.kind.pv.envoye",
   // Le client demande le retour ou l'effacement d'une pièce transmise. Sans
   // ces deux entrées, la demande arrivait sous une phrase générique et
@@ -87,7 +89,12 @@ const ATTEND_LE_CABINET = new Set([
 
 /** Les genres qui mènent ailleurs qu'à une pièce : la file d'arbitrage, les mandats, les PV. */
 const MENE_AU_CONSEIL = new Set(["conseil.arbitrage", "conseil.repondu", "conseil.decide"]);
-const MENE_AUX_CLIENTS = new Set(["mandat.propose", "mandat.accepte", "mandat.refuse"]);
+const MENE_AUX_CLIENTS = new Set([
+  "mandat.propose",
+  "mandat.accepte",
+  "mandat.refuse",
+  "mandat.revoque",
+]);
 const MENE_AUX_PV = new Set(["pv.envoye"]);
 
 function pieceDe(n: Notification): string | null {
