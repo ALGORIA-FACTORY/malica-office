@@ -14,6 +14,7 @@
 
 import type { Requete } from "../db.ts";
 import { secretsClictopayPoses } from "../paiement/prestataires.ts";
+import { versReport } from "./report-d-echeance.ts";
 
 export const tour = {
   /** Vrai pour un opérateur de la plateforme : l'écran de la tour ne s'affiche qu'à lui. */
@@ -137,5 +138,100 @@ export const tour = {
       [organisationId, valideDes, motif],
     );
     return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Le calendrier d'une juridiction : les jours de repos et la règle de
+   * report, les jours fériés, et les reports qu'ALGORIA a publiés pour tous.
+   */
+  async calendrier(db: Requete, juridiction: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> }>(
+      `select plateforme.calendrier_lire($1) as r`,
+      [juridiction],
+    );
+    const r = rows[0]?.r ?? {};
+    const regle = r["regle"] as
+      { joursRepos: number[]; reportJourOuvrable: boolean; source: string } | null | undefined;
+    return {
+      regle: regle
+        ? {
+            joursRepos: (regle.joursRepos ?? []).map(Number),
+            reportJourOuvrable: Boolean(regle.reportJourOuvrable),
+            source: String(regle.source),
+          }
+        : null,
+      joursFeries: ((r["joursFeries"] as Array<Record<string, unknown>> | undefined) ?? []).map(
+        (f) => ({
+          id: String(f["id"]),
+          mois: f["mois"] == null ? null : Number(f["mois"]),
+          jour: f["jour"] == null ? null : Number(f["jour"]),
+          le: (f["le"] as string | null) ?? null,
+          libelle: String(f["libelle"]),
+          source: String(f["source"]),
+        }),
+      ),
+      reports: ((r["reports"] as Array<Record<string, unknown>> | undefined) ?? []).map((x) =>
+        versReport({ ...x, origine: "report_algoria" }),
+      ),
+      obligations: ((r["obligations"] as Array<Record<string, unknown>> | undefined) ?? [])
+        .map((o) => ({
+          code: String(o["code"]),
+          libelle: String(o["libelle"]),
+          periodicite: String(o["periodicite"]),
+        }))
+        .sort((a, b) => a.libelle.localeCompare(b.libelle)),
+    };
+  },
+
+  /** Un jour férié : fixe (mois et jour) ou daté (`le`). Sourcé, toujours. */
+  async poserJourFerie(
+    db: Requete,
+    input: {
+      juridiction: string;
+      mois: number | null;
+      jour: number | null;
+      le: string | null;
+      libelle: string;
+      source: string;
+    },
+  ): Promise<{ id: string }> {
+    const { rows } = await db.query<{ r: { id: string } }>(
+      `select plateforme.jour_ferie_poser($1, $2::smallint, $3::smallint, $4::date, $5, $6) as r`,
+      [input.juridiction, input.mois, input.jour, input.le, input.libelle, input.source],
+    );
+    const id = rows[0]?.r.id;
+    if (!id) throw new Error("jour_ferie.non_pose");
+    return { id };
+  },
+
+  async retirerJourFerie(db: Requete, id: string, motif: string): Promise<{ id: string }> {
+    await db.query(`select plateforme.jour_ferie_retirer($1, $2) as r`, [id, motif]);
+    return { id };
+  },
+
+  /** Un report qui vaut pour toute la juridiction : un communiqué, une prorogation. */
+  async publierReport(
+    db: Requete,
+    input: {
+      juridiction: string;
+      code: string;
+      periode: string;
+      nouvelleDate: string;
+      motif: string;
+      source: string;
+    },
+  ): Promise<{ id: string }> {
+    const { rows } = await db.query<{ r: { id: string } }>(
+      `select plateforme.report_publier($1, $2, $3, $4::date, $5, $6) as r`,
+      [input.juridiction, input.code, input.periode, input.nouvelleDate, input.motif, input.source],
+    );
+    const id = rows[0]?.r.id;
+    if (!id) throw new Error("report.non_publie");
+    return { id };
+  },
+
+  async retirerReportPublie(db: Requete, id: string, motif: string): Promise<{ id: string }> {
+    await db.query(`select plateforme.report_retirer($1, $2) as r`, [id, motif]);
+    return { id };
   },
 };

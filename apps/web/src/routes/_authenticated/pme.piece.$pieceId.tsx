@@ -354,8 +354,12 @@ function PieceScreen() {
    * de la lecture ; le dossier la rend ensuite comme si elle avait été lue.
    */
   const preciser = useMutation({
-    mutationFn: (valeur: "facture_achat" | "facture_vente") =>
-      office().capture.preciser(pieceId, "document_kind", valeur),
+    mutationFn: async (valeur: "facture_achat" | "facture_vente") => {
+      await office().capture.preciser(pieceId, "document_kind", valeur);
+      // Le jugement suit la réponse : sans nouvelle analyse, le verdict
+      // d'avant (« sens à confirmer ») resterait affiché.
+      await office().capture.analyser(pieceId);
+    },
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -566,6 +570,7 @@ function PieceScreen() {
           ok: false as const,
           verdict: propositionServeur.data.verdict ?? null,
           verdictCode: propositionServeur.data.verdictCode ?? null,
+          controlesEnDefaut: propositionServeur.data.controlesEnDefaut ?? [],
         }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
@@ -1223,7 +1228,7 @@ function PieceScreen() {
     k: "ok" | "q" | "no" | "az";
     p: string;
     sous?: string | null;
-    corps?: "sens" | null;
+    corps?: "sens" | "sensContredit" | null;
   }> = [];
   if (dossier.data.lectureRefusee) {
     controles.push({ cle: "refus", k: "no", p: t("pme.piece.lectureRefusee") });
@@ -1241,7 +1246,34 @@ function PieceScreen() {
       corps: "sens",
     });
   }
-  if (!confirmable && !sensIndetermine && proposalAttempt && !proposalAttempt.ok) {
+  /*
+   * Recette du 20 octobre 2026 : une vente dont l'émetteur est mal lu (« PME »
+   * au lieu du nom de la société) restait en « sens à confirmer » sans aucun
+   * geste pour le confirmer. La lecture a un sens ; la personne le confirme,
+   * et le contrôle suit sa décision.
+   */
+  const sensLu = (extraction?.payload as { document_kind?: string | null } | null)?.document_kind;
+  const sensContredit =
+    !sensIndetermine &&
+    proposalAttempt != null &&
+    !proposalAttempt.ok &&
+    proposalAttempt.controlesEnDefaut.includes("sens_de_la_piece") &&
+    (sensLu === "facture_achat" || sensLu === "facture_vente");
+  if (sensContredit) {
+    controles.push({
+      cle: "sensContredit",
+      k: "q",
+      p: t("pme.sens.contredit"),
+      corps: "sensContredit",
+    });
+  }
+  if (
+    !confirmable &&
+    !sensIndetermine &&
+    !sensContredit &&
+    proposalAttempt &&
+    !proposalAttempt.ok
+  ) {
     /*
      * LA RAISON PASSE DEVANT LE BOUTON MORT.
      *
@@ -1587,6 +1619,23 @@ function PieceScreen() {
                 <div>
                   <p>{c.p}</p>
                   {c.sous ? <p>{c.sous}</p> : null}
+                  {c.corps === "sensContredit" ? (
+                    <span className="rep">
+                      <button
+                        type="button"
+                        disabled={preciser.isPending}
+                        onClick={() =>
+                          preciser.mutate(
+                            sensLu === "facture_vente" ? "facture_vente" : "facture_achat",
+                          )
+                        }
+                      >
+                        {sensLu === "facture_vente"
+                          ? t("pme.sens.confirmerVente")
+                          : t("pme.sens.confirmerAchat")}
+                      </button>
+                    </span>
+                  ) : null}
                   {c.corps === "sens" ? (
                     /*
                      * La lecture n'a pas pu dire si la pièce est un achat ou

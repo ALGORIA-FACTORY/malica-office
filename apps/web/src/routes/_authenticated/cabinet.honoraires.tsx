@@ -18,7 +18,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { Chip, EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import {
+  Chip,
+  EmptyState,
+  MalicaNote,
+  SectionTitle,
+  EnTeteCabinet,
+} from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -177,33 +183,27 @@ function CabinetHonoraires() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="border-b border-foreground pb-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              {t("cab.hono.kicker", { cabinet: org.name, exercice: mois.slice(0, 4) })}
-            </p>
-            <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-              {t("cab.hono.title")}
-            </h1>
-            <p className="mt-3 max-w-[62ch] text-[13.5px] leading-[1.55] text-text-2">
-              {t("cab.hono.lede")}
-            </p>
-          </div>
-          <label className="flex items-center gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {t("cab.dos.mois")}
-            </span>
-            <input
-              type="month"
-              value={mois}
-              onChange={(e) => e.target.value && setMois(e.target.value)}
-              aria-label={t("cab.dos.mois")}
-              className={cn(CHAMP, "num")}
-            />
-          </label>
-        </div>
-      </header>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.hono.kicker", { cabinet: org.name, exercice: mois.slice(0, 4) })}</>}
+        titre={<>{t("cab.hono.title")}</>}
+        chapeau={<>{t("cab.hono.lede")}</>}
+        actions={
+          <>
+            <label className="flex items-center gap-2">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {t("cab.dos.mois")}
+              </span>
+              <input
+                type="month"
+                value={mois}
+                onChange={(e) => e.target.value && setMois(e.target.value)}
+                aria-label={t("cab.dos.mois")}
+                className={cn(CHAMP, "num")}
+              />
+            </label>
+          </>
+        }
+      />
 
       {/* ---- les chiffres du mois */}
       <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">

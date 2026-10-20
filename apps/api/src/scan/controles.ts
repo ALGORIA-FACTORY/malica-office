@@ -59,6 +59,11 @@ export interface PieceAControler {
   montants: ResultatNormalisation;
   confianceParChamp: Record<string, number>;
   reception: { doublonDe: string | null; recueLe: string };
+  /**
+   * La personne a confirmé le sens de la pièce (achat ou vente), le même que
+   * celui de la lecture. Facultatif : absent vaut « non confirmé ».
+   */
+  sensConfirme?: boolean;
 }
 
 export interface ContexteControle {
@@ -430,6 +435,23 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
         ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}.`
         : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom}.`,
       preuves: { documentKind: p.documentKind, emetteur: p.emetteur.nom },
+    };
+
+  /*
+   * Recette du 20 octobre 2026 : une vente à un payeur public, l'émetteur lu
+   * « PME » au lieu du nom de la société. La contradiction est réelle — c'est
+   * la lecture qui se trompe —, et rien ne permettait de la lever. La
+   * personne qui CONFIRME le sens tranche : c'est une décision humaine,
+   * datée et signée (`precisions`), et le contrôle la suit en le disant.
+   */
+  if (p.sensConfirme)
+    return {
+      code: "sens_de_la_piece",
+      statut: "conforme",
+      motif: vente
+        ? `Vente confirmée par la personne, bien que l'émetteur lu soit « ${p.emetteur.nom} ».`
+        : `Achat confirmé par la personne, bien que l'émetteur lu soit « ${p.emetteur.nom} ».`,
+      preuves: { documentKind: p.documentKind, emetteur: p.emetteur.nom, confirme: true },
     };
 
   return {

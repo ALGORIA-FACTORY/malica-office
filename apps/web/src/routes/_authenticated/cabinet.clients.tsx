@@ -26,6 +26,7 @@ import {
   InkTableRow,
   MalicaNote,
   SectionTitle,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
@@ -168,17 +169,11 @@ function CabinetClients() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {t("cab.clients.kicker")}
-        </p>
-        <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.025em]">
-          {t("cab.clients.title")}
-        </h1>
-        <p className="mt-1 max-w-[62ch] text-[13.5px] leading-[1.5] text-text-2">
-          {t("cab.clients.lede")}
-        </p>
-      </header>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.clients.kicker")}</>}
+        titre={<>{t("cab.clients.title")}</>}
+        chapeau={<>{t("cab.clients.lede")}</>}
+      />
 
       {/* Seul un expert ouvre un dossier au nom du cabinet — la base le refuse à tout autre. */}
       {acces.data?.role === "expert" ? <OuvrirDossier cabinetId={org.id} /> : null}

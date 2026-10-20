@@ -59,6 +59,7 @@ import {
   SectionTitle,
   SignalLight,
   type Tone,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -263,31 +264,27 @@ function CabinetLecteurs() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-foreground pb-6">
-        <div className="min-w-0">
-          <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-            {t("cab.lecteurs.kicker")}
-          </p>
-          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-            {t("cab.lecteurs.title")}
-          </h1>
-          <p className="mt-3 max-w-[46rem] text-[13.5px] leading-[1.55] text-text-2">
-            {t("cab.lecteurs.lede")}
-          </p>
-        </div>
-        {rows.length > 0 ? (
-          <ClientPicker
-            label={t("cab.queue.client")}
-            clients={rows}
-            value={client?.tenantId ?? null}
-            onChange={(id) => {
-              setTenantId(id);
-              const choisi = rows.find((c) => c.tenantId === id);
-              if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
-            }}
-          />
-        ) : null}
-      </header>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.lecteurs.kicker")}</>}
+        titre={<>{t("cab.lecteurs.title")}</>}
+        chapeau={<>{t("cab.lecteurs.lede")}</>}
+        actions={
+          <>
+            {rows.length > 0 ? (
+              <ClientPicker
+                label={t("cab.queue.client")}
+                clients={rows}
+                value={client?.tenantId ?? null}
+                onChange={(id) => {
+                  setTenantId(id);
+                  const choisi = rows.find((c) => c.tenantId === id);
+                  if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
+                }}
+              />
+            ) : null}
+          </>
+        }
+      />
 
       <section className="space-y-3">
         <SectionTitle>{t("cab.lecteurs.section.quiLit")}</SectionTitle>

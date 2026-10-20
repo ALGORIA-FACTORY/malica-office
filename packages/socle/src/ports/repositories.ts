@@ -495,6 +495,18 @@ export interface ParametrageRepository {
     secteur: string;
   }): Promise<{ id: string }>;
   secteursDuCabinet(tenantId: string): Promise<string[]>;
+  /** Les reports qui touchent les dossiers du cabinet : les siens et ceux d'ALGORIA. */
+  reportsDuCabinet(tenantId: string): Promise<ReportDEcheance[]>;
+  /** Reporter une échéance d'une période, avec un motif. La date légale ne change pas. */
+  poserReport(input: {
+    tenantId: string;
+    code: string;
+    periode: string;
+    nouvelleDate: string;
+    motif: string;
+    source: string | null;
+  }): Promise<{ id: string }>;
+  retirerReport(tenantId: string, id: string): Promise<{ id: string }>;
   roles(tenantId: string, dossierId: string | null): Promise<RoleComptable[]>;
   plan(tenantId: string, classes: number[] | null): Promise<CompteDuPlan[]>;
   ouvrirCompte(input: {
@@ -986,6 +998,11 @@ export interface CaptureRepository {
     valeur: "facture_achat" | "facture_vente",
   ): Promise<{ id: string; champ: string; valeur: string }>;
   /**
+   * Rejuger la pièce après une précision : le verdict suit la réponse de la
+   * personne. Sans ce geste, l'écran garderait le verdict d'avant.
+   */
+  analyser(pieceId: string): Promise<unknown>;
+  /**
    * Efface une pièce qui n'est encore partie nulle part.
    *
    * La base refuse si elle a été transmise au cabinet, si elle est engagée
@@ -1068,7 +1085,14 @@ export type PropositionDePiece =
       packVersionId: string;
       proposition: ProposalResult;
     }
-  | { ok: false; raison: string; verdict?: string; verdictCode?: CodeVerdict | null };
+  | {
+      ok: false;
+      raison: string;
+      verdict?: string;
+      verdictCode?: CodeVerdict | null;
+      /** Les codes des contrôles en défaut (`sens_de_la_piece`…), quand le verdict bloque. */
+      controlesEnDefaut?: string[];
+    };
 
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
@@ -1753,6 +1777,47 @@ export interface Echeance {
   texteSource: string | null;
   article: string | null;
   periodicite: string | null;
+  /** La date que la loi fixe ; `dueDate` est celle qu'on retient. */
+  dateLegale: string;
+  /** D'où vient la date retenue : loi | jour_ouvrable | report_algoria | report_cabinet. */
+  dateOrigine: OrigineDeLEcheance;
+  reportMotif: string | null;
+  reportSource: string | null;
+}
+
+/** D'où vient la date retenue d'une échéance (`ref.echeance_origines`). */
+export type OrigineDeLEcheance = "loi" | "jour_ouvrable" | "report_algoria" | "report_cabinet";
+
+/** Un report exceptionnel d'échéance, saisi par le cabinet ou publié par ALGORIA. */
+export interface ReportDEcheance {
+  id: string;
+  origine: "report_cabinet" | "report_algoria";
+  code: string;
+  libelle: string | null;
+  /** AAAA-MM, AAAA-Tn ou AAAA. */
+  periode: string;
+  nouvelleDate: string;
+  motif: string;
+  source: string | null;
+  creeLe: string;
+}
+
+/** Un jour férié : fixe (mois, jour, chaque année) ou daté (une seule fois). */
+export interface JourFerie {
+  id: string;
+  mois: number | null;
+  jour: number | null;
+  le: string | null;
+  libelle: string;
+  source: string;
+}
+
+/** Ce que la tour règle du calendrier d'une juridiction. */
+export interface CalendrierDeLaJuridiction {
+  regle: { joursRepos: number[]; reportJourOuvrable: boolean; source: string } | null;
+  joursFeries: JourFerie[];
+  reports: ReportDEcheance[];
+  obligations: Array<{ code: string; libelle: string; periodicite: string }>;
 }
 
 /** Ce que la dérivation a produit pour un dossier — ou pourquoi rien. */
@@ -2547,6 +2612,80 @@ export interface FacturationRepository {
   ): Promise<{ id: string; email: string; role: string; expiresAt: string; deja: boolean }>;
   /** Le rôle de propriétaire principal passe à un propriétaire de la société. */
   transmettreLicence(tenantId: string, nouveau: string): Promise<{ licence: string | null }>;
+
+  /** La comptabilité revendeur (20 octobre 2026). */
+  offresDuCabinet(): Promise<OffreDuCabinet[]>;
+  proposerAbonnement(cabinetId: string, clientId: string, offre: string): Promise<{ id: string }>;
+  repondreAbonnement(
+    accesId: string,
+    accepte: boolean,
+  ): Promise<{ acces_id: string; statut: string }>;
+  abonnementsDuCabinet(cabinetId: string): Promise<AbonnementAttribue[]>;
+  abonnementsPourMoi(tenantId: string): Promise<AbonnementPropose[]>;
+  facturesDuCabinet(cabinetId: string): Promise<FactureDuCabinet[]>;
+  lignesDeFacture(factureId: string): Promise<LigneDeFacture[]>;
+}
+
+/** Une offre qu'un cabinet peut attribuer, au prix public du jour. */
+export interface OffreDuCabinet {
+  code: string;
+  libelle: string;
+  rang: number;
+  prix_mensuel_ht: string;
+  lectures_par_organisation: number;
+  sieges_inclus: number;
+}
+
+/** Un abonnement qu'un cabinet propose ou couvre, vu de sa console. */
+export interface AbonnementAttribue {
+  acces_id: string;
+  client_tenant_id: string;
+  client_nom: string;
+  client_legal_id: string | null;
+  offre_code: string;
+  /** propose | actif | suspendu | termine */
+  statut: string;
+  reference: string | null;
+  propose_le: string;
+  effet_du: string | null;
+  effet_au: string | null;
+  motif_fin: string | null;
+}
+
+/** Ce qu'un cabinet propose ou couvre pour une société, vu de la PME. */
+export interface AbonnementPropose {
+  acces_id: string;
+  cabinet_tenant_id: string;
+  cabinet_nom: string;
+  offre_code: string;
+  statut: string;
+  propose_le: string;
+  effet_du: string | null;
+  effet_au: string | null;
+}
+
+/** Une facture mensuelle adressée au cabinet. */
+export interface FactureDuCabinet {
+  id: string;
+  numero: string;
+  periode: string;
+  emise_le: string;
+  echeance_le: string;
+  montant_ht: string;
+  montant_tva: string;
+  timbre: string;
+  montant_ttc: string;
+  devise: string;
+  statut: string;
+  organisations: number;
+}
+
+export interface LigneDeFacture {
+  ordinal: number;
+  libelle: string;
+  quantite: string;
+  prix_unitaire: string;
+  montant_ht: string;
 }
 
 /** Une offre de la grille, telle que `public.mes_offres()` la rend. */
@@ -2757,6 +2896,26 @@ export interface TourRepository {
     annuelMoisOfferts: number,
     motif: string,
   ): Promise<unknown>;
+  /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
+  calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
+  poserJourFerie(input: {
+    juridiction: string;
+    mois: number | null;
+    jour: number | null;
+    le: string | null;
+    libelle: string;
+    source: string;
+  }): Promise<{ id: string }>;
+  retirerJourFerie(id: string, motif: string): Promise<{ id: string }>;
+  publierReport(input: {
+    juridiction: string;
+    code: string;
+    periode: string;
+    nouvelleDate: string;
+    motif: string;
+    source: string;
+  }): Promise<{ id: string }>;
+  retirerReportPublie(id: string, motif: string): Promise<{ id: string }>;
 }
 
 export interface RechargeAutomatique {

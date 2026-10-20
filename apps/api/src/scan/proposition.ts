@@ -51,7 +51,13 @@ export type PropositionDePiece =
       packVersionId: string;
       proposition: ProposalResult;
     }
-  | { ok: false; raison: string; verdict?: string; verdictCode?: CodeVerdict | null };
+  | {
+      ok: false;
+      raison: string;
+      verdict?: string;
+      verdictCode?: CodeVerdict | null;
+      controlesEnDefaut?: string[];
+    };
 
 /*
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
@@ -159,6 +165,11 @@ export async function propositionDePiece(
       raison: `Aucune écriture ne se propose : la pièce est « ${verdict} ». ${(ligne.motifs ?? [])
         .map((m) => m.motif)
         .join(" ")}`,
+      // Les CODES des contrôles en défaut : l'écran branche dessus (le geste
+      // « confirmer le sens », 20 octobre 2026), jamais sur la phrase.
+      controlesEnDefaut: (ligne.motifs ?? [])
+        .map((m) => (m as { code?: string }).code)
+        .filter((c): c is string => typeof c === "string"),
     };
   if (n.etat !== "tranche" && n.etat !== "non_verifie")
     return {

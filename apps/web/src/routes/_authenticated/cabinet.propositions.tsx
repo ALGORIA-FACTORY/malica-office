@@ -38,7 +38,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
@@ -309,17 +309,11 @@ function CabinetPropositions() {
 
   return (
     <div className="space-y-8 pb-24">
-      <header>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-marigold">
-          {t("cab.prop.kicker")}
-        </p>
-        <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.025em]">
-          {t("cab.prop.titre")}
-        </h1>
-        <p className="mt-1 max-w-[62ch] text-[13.5px] leading-[1.5] text-text-2">
-          {t("cab.prop.doctrine")}
-        </p>
-      </header>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.prop.kicker")}</>}
+        titre={<>{t("cab.prop.titre")}</>}
+        chapeau={<>{t("cab.prop.doctrine")}</>}
+      />
 
       {fait ? (
         <p className="border border-border bg-card px-4 py-3 text-[13px]">

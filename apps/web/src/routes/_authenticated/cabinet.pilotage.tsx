@@ -27,6 +27,7 @@ import {
   InkTableRow,
   MalicaNote,
   SectionTitle,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -208,44 +209,44 @@ function CabinetPilotage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="num text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+      <EnTeteCabinet
+        surtitre={
+          <>
             {t("cab.pil.kicker", {
               count: (membres.data ?? []).length,
               collabs: (membres.data ?? []).length,
               mandats: (clients.data ?? []).length,
             })}
-          </p>
-          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.025em]">
-            {t("cab.nav.pilotage")}
-          </h1>
-          <p className="mt-1 max-w-[62ch] text-[13.5px] leading-[1.5] text-text-2">
-            {t("cab.pil.doctrine")}
-          </p>
-        </div>
-        <div className="flex border border-border">
-          {(
-            [
-              ["charge", "cab.pil.vue.charge"],
-              ["stats", "cab.pil.vue.stats"],
-            ] as Array<[Vue, MessageKey]>
-          ).map(([v, cle]) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVue(v)}
-              aria-pressed={vue === v}
-              className={cn(
-                "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em]",
-                vue === v ? "bg-foreground text-background" : "bg-card hover:bg-accent",
-              )}
-            >
-              {t(cle)}
-            </button>
-          ))}
-        </div>
-      </header>
+          </>
+        }
+        titre={<>{t("cab.nav.pilotage")}</>}
+        chapeau={<>{t("cab.pil.doctrine")}</>}
+        actions={
+          <>
+            <div className="flex border border-border">
+              {(
+                [
+                  ["charge", "cab.pil.vue.charge"],
+                  ["stats", "cab.pil.vue.stats"],
+                ] as Array<[Vue, MessageKey]>
+              ).map(([v, cle]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVue(v)}
+                  aria-pressed={vue === v}
+                  className={cn(
+                    "px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em]",
+                    vue === v ? "bg-foreground text-background" : "bg-card hover:bg-accent",
+                  )}
+                >
+                  {t(cle)}
+                </button>
+              ))}
+            </div>
+          </>
+        }
+      />
 
       {/* ---- les chiffres */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -17,7 +17,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaAvatar, MalicaNote } from "@/components/malica/office-ui";
+import { EmptyState, MalicaAvatar, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -118,23 +118,18 @@ function MiseEnRoute() {
   return (
     <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
       <section className="min-w-0 space-y-5">
-        <header>
-          <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-            {t("cab.onb.kicker", { n: etape })}
-          </p>
-          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.06] tracking-[-0.03em] sm:text-[38px]">
-            {t(titre[etape])}
-          </h1>
-          <p className="mt-3 max-w-[56ch] text-[15px] leading-[1.65] text-text-2">
-            {t(lede[etape])}
-          </p>
+        <EnTeteCabinet
+          surtitre={<>{t("cab.onb.kicker", { n: etape })}</>}
+          titre={<>{t(titre[etape])}</>}
+          chapeau={<>{t(lede[etape])}</>}
+        >
           {termineeLe ? (
             <p className="mt-3 border border-s-2 border-border border-s-signal-ok bg-card px-3 py-2 text-[12px]">
               {t("cab.onb.terminee", { date: dateLongue(termineeLe) })}
             </p>
           ) : null}
           <Panne erreur={avancement.error} />
-        </header>
+        </EnTeteCabinet>
 
         <div className="flex gap-0.5" aria-hidden>
           {ETAPES.map((e) => (

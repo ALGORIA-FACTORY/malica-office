@@ -167,6 +167,85 @@ export function SignalLight({ tone, label }: { tone: Tone; label: string }) {
   );
 }
 
+/**
+ * L'en-tête d'un écran du cabinet — un seul, pour tous.
+ *
+ * Audit du 20 octobre 2026 : vingt-deux en-têtes écrits à la main, en cinq
+ * variantes (filet ou non, 30 ou 38 px, surtitre gras ou mono, marigold ou
+ * gris). Celui-ci fixe la forme : surtitre, titre, chapeau, actions à droite,
+ * contenu dessous (indicateurs, onglets). `ton="encre"` est réservé à
+ * l'accueil du cabinet, qui ouvre la journée.
+ */
+export function EnTeteCabinet({
+  surtitre,
+  titre,
+  chapeau,
+  actions,
+  retour,
+  ton = "papier",
+  children,
+}: {
+  surtitre?: ReactNode;
+  titre: ReactNode;
+  chapeau?: ReactNode;
+  actions?: ReactNode;
+  /** Un lien de retour (écran de détail) : rendu à gauche du titre. */
+  retour?: ReactNode;
+  ton?: "papier" | "encre";
+  children?: ReactNode;
+}) {
+  const encre = ton === "encre";
+  return (
+    <header
+      className={cn(
+        encre
+          ? "-mx-4 -mt-6 bg-foreground px-4 py-8 text-background sm:-mx-6 sm:px-6 lg:-mx-9 lg:-mt-7 lg:px-10 lg:py-9"
+          : "border-b border-foreground pb-6",
+      )}
+    >
+      <div className="flex flex-wrap items-end justify-between gap-5">
+        <div className="flex min-w-0 items-start gap-3">
+          {retour}
+          <div className="min-w-0">
+            {surtitre ? (
+              <p
+                className={cn(
+                  "text-[10px] font-semibold uppercase tracking-[0.22em]",
+                  encre ? "text-marigold-on-ink" : "text-muted-foreground",
+                )}
+              >
+                {surtitre}
+              </p>
+            ) : null}
+            <h1
+              className={cn(
+                "mt-2.5 font-semibold tracking-[-0.025em]",
+                encre
+                  ? "text-[32px] leading-[1.02] sm:text-[42px] lg:text-[54px]"
+                  : "text-[30px] leading-[1.05] sm:text-[38px]",
+              )}
+            >
+              {titre}
+            </h1>
+            {chapeau ? (
+              <div
+                className={cn(
+                  "mt-3 max-w-[62ch] text-[13.5px] leading-[1.55]",
+                  encre ? "text-background/80" : "text-text-2",
+                )}
+              >
+                {chapeau}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        {actions ? <div className="flex flex-wrap items-end gap-3">{actions}</div> : null}
+      </div>
+      {children ? <div className="mt-6">{children}</div> : null}
+    </header>
+  );
+}
+
 /** Titre de section — filet supérieur, jamais d'ombre. */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (

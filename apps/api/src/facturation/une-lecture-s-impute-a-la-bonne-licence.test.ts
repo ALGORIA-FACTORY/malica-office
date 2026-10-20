@@ -111,9 +111,9 @@ async function monter(db: pg.PoolClient, consommees: number): Promise<Cabinet> {
 /**
  * Un cabinet, son membre, et son mandat ACTIF sur la PME.
  *
- * Le rôle est `collaborateur`, et c'est volontaire : `app.engaged_orgs()` ne
- * distingue pas les rôles du cabinet, et l'épreuve doit dire ce que la base
- * fait, non ce que le mot « expert » laisse croire.
+ * Le rôle est `expert` : depuis le 20 octobre 2026, `app.engaged_orgs()`
+ * distingue les rôles du cabinet — l'expert voit tous les dossiers engagés,
+ * un collaborateur seulement ceux qu'on lui attribue.
  */
 async function cabinetEngageSur(db: pg.PoolClient, pme: string): Promise<string> {
   const org = await db.query<{ id: string }>(
@@ -121,8 +121,10 @@ async function cabinetEngageSur(db: pg.PoolClient, pme: string): Promise<string>
      values ('cabinet', 'Cabinet d''essai', 'TN', 'TND') returning id`,
   );
   const membre = randomUUID();
+  // L'expert du cabinet : il voit tous les dossiers engagés. Un collaborateur
+  // ne voit que ceux qu'on lui attribue (20 octobre 2026).
   await db.query(
-    "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+    "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')",
     [org.rows[0]!.id, membre],
   );
   await db.query(

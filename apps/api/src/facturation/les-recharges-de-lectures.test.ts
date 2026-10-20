@@ -161,7 +161,7 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
     }
   }
 
-  it("le Basic n'achète pas de recharge ; le Solo, si, pour douze mois", async () => {
+  it("le Basic n'achète pas de recharge ; le Solo, si, et elle n'expire pas", async () => {
     await dansUneTransaction(async (db) => {
       const basic = await societe(db, "basic");
       await assert.rejects(acheter(db, basic), /recharge_refusee:offre_sans_recharge/);
@@ -171,12 +171,26 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
       assert.equal(r["restantes"], PALIER.lectures);
       assert.equal(r["utilisable"], true);
       assert.equal(r["origine"], "achat");
+      // Depuis le 20 octobre 2026 : cumulables et sans expiration (le palier
+      // en vigueur n'a plus de validité, `ref.recharges.validite_mois` nul).
       const e = await db.query<{ ok: boolean }>(
-        `select expire_le = (achetee_le + interval '12 months')::date as ok
-           from facturation.recharges where id = $1`,
+        `select expire_le = 'infinity'::date as ok from facturation.recharges where id = $1`,
         [r["recharge_id"]],
       );
       assert.equal(e.rows[0]!.ok, true);
+      // Une recharge achetée sous l'ancienne règle, échéance passée, reste valable.
+      const ancienne = await db.query<{ id: string }>(
+        `insert into facturation.recharges
+           (licence_id, recharge_code, lectures, prix_ht, achetee_le, expire_le, origine, achetee_par)
+         values ($1, $2, 5, 0, current_date - 400, current_date - 35, 'plateforme', $3)
+         returning id`,
+        [solo.licence, PALIER.code, solo.principal],
+      );
+      const v = await db.query<{ utilisable: boolean; expiree: boolean }>(
+        "select utilisable, expiree from facturation.recharges_v where recharge_id = $1",
+        [ancienne.rows[0]!.id],
+      );
+      assert.deepEqual(v.rows[0], { utilisable: true, expiree: false });
     });
   });
 

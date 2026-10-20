@@ -99,8 +99,11 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     tenant_id: string;
     doublon_de: string | null;
     recue_le: string;
+    document_kind: string | null;
+    document_kind_statut: string;
   }>(
-    `select tenant_id, doublon_de, to_char(created_at, 'YYYY-MM-DD') as recue_le
+    `select tenant_id, doublon_de, to_char(created_at, 'YYYY-MM-DD') as recue_le,
+            document_kind, document_kind_statut
        from capture.pieces where id = $1`,
     [pieceId],
   );
@@ -319,6 +322,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     montants: normalisation,
     confianceParChamp: extraction.confiance_par_champ ?? {},
     reception: { doublonDe: piece.doublon_de, recueLe: piece.recue_le },
+    // Le sens CONFIRMÉ par la personne (20 octobre 2026) : seulement s'il
+    // porte sur le même sens que la lecture.
+    sensConfirme:
+      piece.document_kind_statut === "confirme" &&
+      piece.document_kind !== null &&
+      piece.document_kind === (payload.document_kind ?? null),
   };
 
   const [{ rows: types }, { rows: mentions }, { rows: autres }] = await Promise.all([

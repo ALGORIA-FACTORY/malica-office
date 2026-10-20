@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
-import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import {
   definirPanneauParDefaut,
   panneauOuvertParDefaut,
@@ -24,7 +24,7 @@ import {
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { dateEnChiffres, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ObligationDuCalendrier, ReglagesCabinet } from "@malica/socle/ports/repositories";
@@ -105,13 +105,10 @@ function CabinetReglages() {
 
   return (
     <div className="space-y-8">
-      <header className="border-b border-foreground">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {t("cab.settings.kicker", { cabinet: org.name })}
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {t("cab.settings.title")}
-        </h1>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.settings.kicker", { cabinet: org.name })}</>}
+        titre={<>{t("cab.settings.title")}</>}
+      >
         <nav className="mt-6 flex gap-5 overflow-x-auto" aria-label={t("cab.settings.title")}>
           <button
             type="button"
@@ -138,7 +135,7 @@ function CabinetReglages() {
             {t("cab.settings.tab.integrations")}
           </button>
         </nav>
-      </header>
+      </EnTeteCabinet>
 
       {onglet === "cabinet" ? (
         <CabinetEtEquipe />
@@ -778,7 +775,197 @@ function CalendrierDesEcheances() {
       </section>
 
       <ObligationPropre secteur={secteur} onAjoutee={rafraichir} />
+
+      <ReportsExceptionnels obligations={rows} onChange={rafraichir} />
     </div>
+  );
+}
+
+/**
+ * Les reports exceptionnels : une prorogation de l'administration, un report
+ * accordé pour une période. La date légale ne change pas ; le calendrier des
+ * dossiers suit la date reportée, et la date légale reste affichée à côté.
+ */
+function ReportsExceptionnels({
+  obligations,
+  onChange,
+}: {
+  obligations: ObligationDuCalendrier[];
+  onChange: () => Promise<unknown>;
+}) {
+  const { t, locale } = useI18n();
+  const { org } = useCabinet();
+  const qc = useQueryClient();
+  const [code, setCode] = useState("");
+  const [periode, setPeriode] = useState("");
+  const [date, setDate] = useState("");
+  const [motif, setMotif] = useState("");
+  const [source, setSource] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const reports = useQuery({
+    queryKey: ["cab-reports", org.id],
+    queryFn: () => office().parametrage.reportsDuCabinet(org.id),
+  });
+  // Une obligation ne paraît qu'une fois, même déclinée par forme ou par mode.
+  const choix = useMemo(() => {
+    const vus = new Map<string, string>();
+    for (const o of obligations) if (!vus.has(o.code)) vus.set(o.code, o.libelle);
+    return [...vus.entries()].sort((a, b) => a[1].localeCompare(b[1], locale));
+  }, [obligations, locale]);
+
+  const apres = async () => {
+    await qc.invalidateQueries({ queryKey: ["cab-reports", org.id] });
+    await onChange();
+  };
+  const poser = useMutation({
+    mutationFn: () =>
+      office().parametrage.poserReport({
+        tenantId: org.id,
+        code,
+        periode: periode.trim(),
+        nouvelleDate: date,
+        motif: motif.trim(),
+        source: source.trim() || null,
+      }),
+    onSuccess: async () => {
+      setErreur(null);
+      setMessage(t("cab.settings.cal.reports.pose"));
+      setPeriode("");
+      setDate("");
+      setMotif("");
+      setSource("");
+      await apres();
+    },
+    onError: (e: unknown) => {
+      setMessage(null);
+      setErreur(texteDeLErreur(e, OU, t("common.error")));
+    },
+  });
+  const retirer = useMutation({
+    mutationFn: (id: string) => office().parametrage.retirerReport(org.id, id),
+    onSuccess: apres,
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+  });
+
+  const pret = code !== "" && periode.trim() !== "" && date !== "" && motif.trim() !== "";
+  const champ =
+    "border border-border bg-card px-2.5 py-1.5 text-[12.5px] focus:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  const etiquette = "text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground";
+  const lignes = reports.data ?? [];
+
+  return (
+    <section className="space-y-3">
+      <SectionTitle>{t("cab.settings.cal.reports.titre")}</SectionTitle>
+      <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-text-2">
+        {t("cab.settings.cal.reports.lede")}
+      </p>
+
+      {reports.isError ? (
+        <p role="alert" className="text-[12.5px] text-signal-stop">
+          {texteDeLErreur(reports.error, OU, t("common.error"))}
+        </p>
+      ) : null}
+      {lignes.length === 0 ? (
+        <EmptyState>{t("cab.settings.cal.reports.vide")}</EmptyState>
+      ) : (
+        <ul className="divide-y divide-border border border-border bg-card">
+          {lignes.map((r) => (
+            <li
+              key={r.id}
+              className="flex flex-wrap items-baseline justify-between gap-3 px-3 py-2.5"
+            >
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium">
+                  {r.libelle ?? r.code}{" "}
+                  <span className="num text-[11px] font-normal text-muted-foreground">
+                    {r.periode} → {dateEnChiffres(r.nouvelleDate, locale)}
+                  </span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {t(`cab.settings.cal.reports.origine.${r.origine}`)} · {r.motif}
+                  {r.source ? ` · ${r.source}` : ""}
+                </p>
+              </div>
+              {r.origine === "report_cabinet" ? (
+                <button
+                  type="button"
+                  disabled={retirer.isPending}
+                  onClick={() => retirer.mutate(r.id)}
+                  className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground disabled:opacity-40"
+                >
+                  {t("common.retirer")}
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="border border-s-2 border-border border-s-marigold bg-card p-4">
+        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
+          <label className="flex flex-col gap-1">
+            <span className={etiquette}>{t("cab.settings.cal.reports.obligation")}</span>
+            <select value={code} onChange={(e) => setCode(e.target.value)} className={champ}>
+              <option value="" />
+              {choix.map(([c, l]) => (
+                <option key={c} value={c}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={etiquette}>{t("common.periode")}</span>
+            <input
+              value={periode}
+              onChange={(e) => setPeriode(e.target.value)}
+              placeholder={t("cab.settings.cal.reports.periode.aide")}
+              className={cn(champ, "num")}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={etiquette}>{t("cab.settings.cal.reports.date")}</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={cn(champ, "num")}
+            />
+          </label>
+          <label className="flex flex-col gap-1 sm:col-span-2 xl:col-span-2">
+            <span className={etiquette}>{t("common.motif")}</span>
+            <input value={motif} onChange={(e) => setMotif(e.target.value)} className={champ} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={etiquette}>{t("common.source")}</span>
+            <input
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              placeholder={t("cab.settings.cal.reports.source.aide")}
+              className={champ}
+            />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={!pret || poser.isPending}
+            onClick={() => poser.mutate()}
+            className="border border-foreground px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-foreground hover:text-background disabled:opacity-40"
+          >
+            {t("cab.settings.cal.reports.poser")}
+          </button>
+          {message ? <span className="text-[12.5px] text-signal-ok">{message}</span> : null}
+          {erreur ? (
+            <span role="alert" className="text-[12.5px] text-signal-stop">
+              {erreur}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
 

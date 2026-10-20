@@ -318,7 +318,8 @@ export const collab = {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
       `select id, tenant_id, kind, label, period, due_date, status, fait_le,
-              echeance_regle, texte_source, article, periodicite
+              echeance_regle, texte_source, article, periodicite,
+              date_legale, date_origine, report_motif, report_source
          from echeances_v where tenant_id = any($1::uuid[]) order by due_date, label`,
       [tenantIds],
     );
@@ -335,6 +336,11 @@ export const collab = {
       texteSource: (e["texte_source"] as string | null) ?? null,
       article: (e["article"] as string | null) ?? null,
       periodicite: (e["periodicite"] as string | null) ?? null,
+      dateLegale: (e["date_legale"] as string | null) ?? (e["due_date"] as string),
+      dateOrigine: ((e["date_origine"] as string | null) ?? "loi") as
+        "loi" | "jour_ouvrable" | "report_algoria" | "report_cabinet",
+      reportMotif: (e["report_motif"] as string | null) ?? null,
+      reportSource: (e["report_source"] as string | null) ?? null,
     }));
   },
 

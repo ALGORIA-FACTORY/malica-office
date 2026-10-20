@@ -23,6 +23,7 @@ import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dos
 import {
   ActionButton,
   EmptyState,
+  EnTeteCabinet,
   InkCell,
   InkTable,
   InkTableRow,
@@ -471,66 +472,64 @@ function CabinetStocks() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="flex flex-wrap items-end justify-between gap-5 border-b border-foreground pb-6">
-        <div className="min-w-0">
-          <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-            {kicker}
-          </p>
-          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-            {t("cab.stocks.title")}
-          </h1>
-          {item ? (
-            <p className="mt-3 text-[13.5px] leading-[1.55] text-text-2">
+      <EnTeteCabinet
+        surtitre={kicker}
+        titre={t("cab.stocks.title")}
+        chapeau={
+          item ? (
+            <>
               <span className="num">{item.reference}</span> · {item.designation} · {item.unite}
-            </p>
-          ) : null}
-        </div>
-        {rows.length > 0 ? (
-          <div className="flex flex-wrap items-end gap-2">
-            <ClientPicker
-              label={t("cab.queue.client")}
-              clients={rows}
-              value={client?.tenantId ?? null}
-              onChange={(id) => {
-                setTenantId(id);
-                const choisi = rows.find((c) => c.tenantId === id);
-                if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
-                setItemId(null);
-              }}
-            />
-            {itemRows.length > 0 ? (
-              <label className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide">
-                <span className="text-muted-foreground">{t("cab.stocks.article")}</span>
-                <select
-                  value={item?.id ?? ""}
-                  onChange={(e) => setItemId(e.target.value)}
-                  className="max-w-[260px] border border-border bg-card px-3 py-2 text-[13px] font-normal normal-case tracking-normal"
+            </>
+          ) : null
+        }
+        actions={
+          rows.length > 0 ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <ClientPicker
+                label={t("cab.queue.client")}
+                clients={rows}
+                value={client?.tenantId ?? null}
+                onChange={(id) => {
+                  setTenantId(id);
+                  const choisi = rows.find((c) => c.tenantId === id);
+                  if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
+                  setItemId(null);
+                }}
+              />
+              {itemRows.length > 0 ? (
+                <label className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide">
+                  <span className="text-muted-foreground">{t("cab.stocks.article")}</span>
+                  <select
+                    value={item?.id ?? ""}
+                    onChange={(e) => setItemId(e.target.value)}
+                    className="max-w-[260px] border border-border bg-card px-3 py-2 text-[13px] font-normal normal-case tracking-normal"
+                  >
+                    {itemRows.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.reference} · {i.designation}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {/* La méthode proposée au nouvel article est celle du pack : sans pack lu, pas de proposition. */}
+              {params.data ? (
+                <ActionButton onClick={() => setForm(emptyItemForm(params.data.stockMethode))}>
+                  {t("cab.stocks.new")}
+                </ActionButton>
+              ) : null}
+              {item ? (
+                <ActionButton
+                  variant={mouvOuvert ? "ink" : "stone"}
+                  onClick={() => setMouvOuvert((o) => !o)}
                 >
-                  {itemRows.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.reference} · {i.designation}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            {/* La méthode proposée au nouvel article est celle du pack : sans pack lu, pas de proposition. */}
-            {params.data ? (
-              <ActionButton onClick={() => setForm(emptyItemForm(params.data.stockMethode))}>
-                {t("cab.stocks.new")}
-              </ActionButton>
-            ) : null}
-            {item ? (
-              <ActionButton
-                variant={mouvOuvert ? "ink" : "stone"}
-                onClick={() => setMouvOuvert((o) => !o)}
-              >
-                {t("cab.stocks.mouvement.nouveau")}
-              </ActionButton>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
+                  {t("cab.stocks.mouvement.nouveau")}
+                </ActionButton>
+              ) : null}
+            </div>
+          ) : null
+        }
+      />
 
       {[lecture?.erreur, error]
         .filter((m): m is string => !!m)

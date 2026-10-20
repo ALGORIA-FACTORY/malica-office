@@ -17,7 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -215,17 +215,11 @@ function CabinetPv() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header>
-        <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-          {t("cab.pv.kicker", { date: dateCourte(jour) })}
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {t("cab.pv.title")}
-        </h1>
-        <p className="mt-3 max-w-[62ch] text-[13.5px] leading-[1.55] text-text-2">
-          {t("cab.pv.rediger.lede")}
-        </p>
-      </header>
+      <EnTeteCabinet
+        surtitre={<>{t("cab.pv.kicker", { date: dateCourte(jour) })}</>}
+        titre={<>{t("cab.pv.title")}</>}
+        chapeau={<>{t("cab.pv.rediger.lede")}</>}
+      />
 
       {message ? (
         <p className="border border-s-2 border-border border-s-marigold bg-card px-3 py-2 text-[12.5px]">

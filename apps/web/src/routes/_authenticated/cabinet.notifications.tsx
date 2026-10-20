@@ -18,7 +18,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
@@ -162,31 +162,31 @@ function CabinetNotifications() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-marigold">
+      <EnTeteCabinet
+        surtitre={
+          <>
             {nonLues.length > 0
               ? t("cab.notif.kicker.attente", { n: nonLues.length })
               : t("cab.notif.kicker.rien")}
-          </p>
-          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.025em]">
-            {t("cab.nav.notifications")}
-          </h1>
-          <p className="mt-1 max-w-[62ch] text-[13.5px] leading-[1.5] text-text-2">
-            {t("cab.notif.lede")}
-          </p>
-        </div>
-        {nonLues.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => toutMarquer.mutate(nonLues.map((n) => n.id))}
-            disabled={toutMarquer.isPending}
-            className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
-          >
-            {t("cab.notif.toutLu")}
-          </button>
-        ) : null}
-      </header>
+          </>
+        }
+        titre={<>{t("cab.nav.notifications")}</>}
+        chapeau={<>{t("cab.notif.lede")}</>}
+        actions={
+          <>
+            {nonLues.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => toutMarquer.mutate(nonLues.map((n) => n.id))}
+                disabled={toutMarquer.isPending}
+                className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
+              >
+                {t("cab.notif.toutLu")}
+              </button>
+            ) : null}
+          </>
+        }
+      />
 
       {erreur ? (
         <p className="text-[12.5px] text-signal-warn">

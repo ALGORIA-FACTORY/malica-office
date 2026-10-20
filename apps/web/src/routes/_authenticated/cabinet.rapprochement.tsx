@@ -28,6 +28,7 @@ import {
   MalicaNote,
   SectionRepliable,
   SectionTitle,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { currentPeriod, monthBounds } from "@/hooks/use-tva";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -635,78 +636,76 @@ function CabinetRapprochement() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-foreground pb-6">
-        <div className="min-w-0">
-          <p className="num text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-            {kicker}
-          </p>
-          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-            {t("cab.banque.title")}
-          </h1>
-        </div>
-        {rows.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <ClientPicker
-              label={t("cab.queue.client")}
-              clients={rows}
-              value={client?.tenantId ?? null}
-              onChange={(id) => {
-                setTenantId(id);
-                const choisi = rows.find((c) => c.tenantId === id);
-                if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
-                setCompteId(null);
-                setImportInfo(null);
-                setError(null);
-                setUnmatch(null);
-              }}
-            />
-            {compteRows.length > 0 ? (
-              <label className={etiquette}>
-                <span className="text-muted-foreground">{t("cab.banque.account")}</span>
-                <select
-                  value={compte?.id ?? ""}
-                  onChange={(e) => setCompteId(e.target.value)}
-                  className={champ}
-                >
-                  {compteRows.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+      <EnTeteCabinet
+        surtitre={<>{kicker}</>}
+        titre={<>{t("cab.banque.title")}</>}
+        actions={
+          <>
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <ClientPicker
+                  label={t("cab.queue.client")}
+                  clients={rows}
+                  value={client?.tenantId ?? null}
+                  onChange={(id) => {
+                    setTenantId(id);
+                    const choisi = rows.find((c) => c.tenantId === id);
+                    if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
+                    setCompteId(null);
+                    setImportInfo(null);
+                    setError(null);
+                    setUnmatch(null);
+                  }}
+                />
+                {compteRows.length > 0 ? (
+                  <label className={etiquette}>
+                    <span className="text-muted-foreground">{t("cab.banque.account")}</span>
+                    <select
+                      value={compte?.id ?? ""}
+                      onChange={(e) => setCompteId(e.target.value)}
+                      className={champ}
+                    >
+                      {compteRows.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <label className={etiquette}>
+                  <span className="text-muted-foreground">{t("pme.tva.period")}</span>
+                  <input
+                    type="month"
+                    value={period}
+                    onChange={(e) => e.target.value && setPeriod(e.target.value)}
+                    className={cn("num", champ)}
+                  />
+                </label>
+                {compteRows.length > 0 && !ouvrirCompte ? (
+                  <button
+                    type="button"
+                    onClick={() => setOuvrirCompte(true)}
+                    className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
+                  >
+                    {t("cab.banque.newaccount")}
+                  </button>
+                ) : null}
+                {compte ? (
+                  <button
+                    type="button"
+                    onClick={() => setImportOuvert((v) => !v)}
+                    aria-expanded={importOuvert}
+                    className={boutonPierre}
+                  >
+                    {t("cab.banque.import")}
+                  </button>
+                ) : null}
+              </div>
             ) : null}
-            <label className={etiquette}>
-              <span className="text-muted-foreground">{t("pme.tva.period")}</span>
-              <input
-                type="month"
-                value={period}
-                onChange={(e) => e.target.value && setPeriod(e.target.value)}
-                className={cn("num", champ)}
-              />
-            </label>
-            {compteRows.length > 0 && !ouvrirCompte ? (
-              <button
-                type="button"
-                onClick={() => setOuvrirCompte(true)}
-                className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground"
-              >
-                {t("cab.banque.newaccount")}
-              </button>
-            ) : null}
-            {compte ? (
-              <button
-                type="button"
-                onClick={() => setImportOuvert((v) => !v)}
-                aria-expanded={importOuvert}
-                className={boutonPierre}
-              >
-                {t("cab.banque.import")}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
+          </>
+        }
+      />
 
       {rows.length === 0 ? (
         <EmptyState>{t("cab.clients.empty")}</EmptyState>

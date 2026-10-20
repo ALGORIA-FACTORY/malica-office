@@ -18,10 +18,12 @@ import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dossier-courant";
-import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
+import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { dateEnChiffres } from "@/lib/lisible";
 import { finDuMois } from "@malica/socle/exercice";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -112,13 +114,6 @@ function CabinetEcheances() {
     new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
       new Date(`${iso}T00:00:00Z`),
     );
-  const dateLongue = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(new Date(`${iso}T00:00:00Z`));
   const moisLong = (iso: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
       new Date(`${iso}T00:00:00Z`),
@@ -206,18 +201,17 @@ function CabinetEcheances() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="border-b border-foreground pb-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {pack.data
-            ? t("cab.echeances.kicker", { pack: `${org.jurisdiction} ${pack.data.version}` })
-            : t("cab.echeances.kicker.sansPack")}
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {t("cab.echeances.title")}
-        </h1>
-        <p className="mt-3 max-w-[62ch] text-[13.5px] leading-[1.55] text-text-2">
-          {t("cab.echeances.principe")}
-        </p>
+      <EnTeteCabinet
+        surtitre={
+          <>
+            {pack.data
+              ? t("cab.echeances.kicker", { pack: `${org.jurisdiction} ${pack.data.version}` })
+              : t("cab.echeances.kicker.sansPack")}
+          </>
+        }
+        titre={<>{t("cab.echeances.title")}</>}
+        chapeau={<>{t("cab.echeances.principe")}</>}
+      >
         <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
           {[
             { key: "total", label: t("cab.echeances.kpi.total"), value: rows.length },
@@ -245,7 +239,7 @@ function CabinetEcheances() {
             </div>
           ))}
         </div>
-      </header>
+      </EnTeteCabinet>
 
       {/* ---- la frise */}
       <section className="border border-border bg-card p-4">
@@ -407,7 +401,13 @@ function CabinetEcheances() {
                       ) : null}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-end">
-                      <span className="num block text-[12px]">{dateLongue(e.dueDate)}</span>
+                      <span className="num block text-[12px]">
+                        {dateEnChiffres(e.dueDate, locale)}
+                      </span>
+                      <OrigineDEcheance
+                        echeance={e}
+                        className="ms-auto max-w-[30ch] whitespace-normal"
+                      />
                       <span
                         className={cn(
                           "mt-0.5 block text-[10px] font-semibold tracking-[0.06em]",

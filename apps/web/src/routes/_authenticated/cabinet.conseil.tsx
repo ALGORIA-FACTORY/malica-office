@@ -19,7 +19,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaAvatar, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
+import {
+  EmptyState,
+  MalicaAvatar,
+  MalicaNote,
+  SectionTitle,
+  EnTeteCabinet,
+} from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { certitudeEnPourcent, messagePourLeClient, nomDeLaSource } from "@malica/socle/conseil";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -150,16 +156,13 @@ function CabinetConseil() {
 
   return (
     <div className="space-y-8">
-      <header className="border-b border-foreground">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {onglet === "questions" ? t("cab.conseil.kicker") : kickerCorpus}
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {onglet === "questions" ? t("cab.conseil.h1") : t("cab.conseil.corpus.h1")}
-        </h1>
-        <p className="mt-3 max-w-[64ch] text-[13.5px] leading-[1.55] text-text-2">
-          {onglet === "questions" ? t("cab.conseil.lede") : t("cab.conseil.corpus.lede")}
-        </p>
+      <EnTeteCabinet
+        surtitre={<>{onglet === "questions" ? t("cab.conseil.kicker") : kickerCorpus}</>}
+        titre={<>{onglet === "questions" ? t("cab.conseil.h1") : t("cab.conseil.corpus.h1")}</>}
+        chapeau={
+          <>{onglet === "questions" ? t("cab.conseil.lede") : t("cab.conseil.corpus.lede")}</>
+        }
+      >
         <nav className="mt-6 flex gap-5 overflow-x-auto" aria-label={t("cab.conseil.title")}>
           <button
             type="button"
@@ -178,7 +181,7 @@ function CabinetConseil() {
             {t("cab.conseil.tab.corpus")}
           </button>
         </nav>
-      </header>
+      </EnTeteCabinet>
 
       {onglet === "questions" ? <QuestionsDesClients /> : <CorpusReglementaire />}
     </div>

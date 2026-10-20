@@ -82,6 +82,21 @@ export function quantite(valeur: string | null | undefined, locale: string): str
 }
 
 /**
+ * Une date du Socle (« 2026-11-30 »), en chiffres, dans la langue du lecteur.
+ *
+ * Lue en UTC : une date de calendrier n'a pas d'heure, et la lire à minuit
+ * local la ferait reculer d'un jour à l'ouest de Greenwich.
+ */
+export function dateEnChiffres(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
+}
+
+/**
  * « de » ou « d' » devant un nom de mois.
  *
  * « Déclaration de août » n'est pas du français. La règle : on élide devant

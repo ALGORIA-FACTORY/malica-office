@@ -10,7 +10,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useMalicaPanel } from "@/components/malica/cabinet-context";
 import { LaTour } from "@/components/malica/la-tour";
-import { MalicaNote } from "@/components/malica/office-ui";
+import { MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/cabinet/tour")({
@@ -33,15 +33,11 @@ function CabinetTour() {
 
   return (
     <div className="space-y-8">
-      <header className="border-b border-foreground pb-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          ALGORIA Factory
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {t("tour.titre")}
-        </h1>
-        <p className="mt-3 max-w-[60ch] text-[13px] text-muted-foreground">{t("tour.sous")}</p>
-      </header>
+      <EnTeteCabinet
+        surtitre={<>ALGORIA Factory</>}
+        titre={<>{t("tour.titre")}</>}
+        chapeau={<>{t("tour.sous")}</>}
+      />
       <LaTour />
     </div>
   );

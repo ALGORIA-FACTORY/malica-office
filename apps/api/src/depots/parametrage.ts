@@ -14,6 +14,7 @@
  */
 
 import type { Requete } from "../db.ts";
+import { versReport } from "./report-d-echeance.ts";
 
 /** Les réglages d'un cabinet, tels que la base les rend (défauts compris). */
 interface ReglagesCabinetBruts {
@@ -221,6 +222,44 @@ export const parametrage = {
       [tenantId],
     );
     return rows.map((r) => r.secteur);
+  },
+
+  /**
+   * Les reports exceptionnels qui touchent les dossiers du cabinet : ceux
+   * qu'il a saisis, et ceux qu'ALGORIA a publiés pour sa juridiction. La date
+   * légale ne change jamais ; le report dit la date retenue, et pourquoi.
+   */
+  async reportsDuCabinet(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{ r: Array<Record<string, unknown>> }>(
+      `select public.cabinet_reports_lire($1) as r`,
+      [tenantId],
+    );
+    return (rows[0]?.r ?? []).map(versReport);
+  },
+
+  async poserReport(
+    db: Requete,
+    input: {
+      tenantId: string;
+      code: string;
+      periode: string;
+      nouvelleDate: string;
+      motif: string;
+      source: string | null;
+    },
+  ): Promise<{ id: string }> {
+    const { rows } = await db.query<{ r: { id: string } }>(
+      `select public.cabinet_report_poser($1, $2, $3, $4::date, $5, $6) as r`,
+      [input.tenantId, input.code, input.periode, input.nouvelleDate, input.motif, input.source],
+    );
+    const id = rows[0]?.r.id;
+    if (!id) throw new Error("report.non_pose");
+    return { id };
+  },
+
+  async retirerReport(db: Requete, tenantId: string, id: string): Promise<{ id: string }> {
+    await db.query(`select public.cabinet_report_retirer($1, $2) as r`, [tenantId, id]);
+    return { id };
   },
 
   /**

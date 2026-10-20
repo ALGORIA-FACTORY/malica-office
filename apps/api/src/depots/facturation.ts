@@ -451,4 +451,133 @@ export const facturation = {
     );
     return { licence: rows[0]?.r ?? null };
   },
+
+  /*
+   * ================================== LA COMPTABILITÉ REVENDEUR (20 octobre)
+   *
+   * Le cabinet attribue un abonnement au prix public ; la PME accepte ou
+   * refuse ; le cabinet reçoit une facture mensuelle détaillée. Les règles
+   * sont en base (`acces_proposer`, `acces_repondre`, `emettre_cabinet`) :
+   * ce dépôt ne fait que les appeler.
+   */
+
+  /** Les offres qu'un cabinet peut attribuer, au prix public du jour (`ref.offres_par_canal`). */
+  async offresDuCabinet(db: Requete) {
+    const { rows } = await db.query(
+      `select code, libelle, rang, prix_mensuel_ht::text, lectures_par_organisation, sieges_inclus
+         from public.offres_du_cabinet()`,
+    );
+    return rows as Array<{
+      code: string;
+      libelle: string;
+      rang: number;
+      prix_mensuel_ht: string;
+      lectures_par_organisation: number;
+      sieges_inclus: number;
+    }>;
+  },
+
+  /** L'expert du cabinet propose une offre à un dossier qu'il a sous mandat. */
+  async proposerAbonnement(db: Requete, cabinetId: string, clientId: string, offre: string) {
+    const { rows } = await db.query<{ id: string }>(
+      `select public.acces_proposer($1, $2, $3) as id`,
+      [cabinetId, clientId, offre],
+    );
+    return { id: rows[0]!.id };
+  },
+
+  /** Le dirigeant de la PME accepte ou refuse la proposition du cabinet. */
+  async repondreAbonnement(db: Requete, accesId: string, accepte: boolean) {
+    const { rows } = await db.query<{ r: { acces_id: string; statut: string } }>(
+      `select public.acces_repondre($1, $2) as r`,
+      [accesId, accepte],
+    );
+    return rows[0]!.r;
+  },
+
+  /** La console du cabinet : les abonnements qu'il propose ou couvre. */
+  async abonnementsDuCabinet(db: Requete, cabinetId: string) {
+    const { rows } = await db.query(
+      `select acces_id, client_tenant_id, client_nom, client_legal_id, offre_code, statut,
+              reference, propose_le::text, effet_du::text, effet_au::text, motif_fin
+         from public.acces_du_cabinet($1)`,
+      [cabinetId],
+    );
+    return rows as Array<{
+      acces_id: string;
+      client_tenant_id: string;
+      client_nom: string;
+      client_legal_id: string | null;
+      offre_code: string;
+      statut: string;
+      reference: string | null;
+      propose_le: string;
+      effet_du: string | null;
+      effet_au: string | null;
+      motif_fin: string | null;
+    }>;
+  },
+
+  /** Ce qu'un cabinet propose ou couvre pour la société ouverte. */
+  async abonnementsPourMoi(db: Requete, tenantId: string) {
+    const { rows } = await db.query(
+      `select acces_id, cabinet_tenant_id, cabinet_nom, offre_code, statut,
+              propose_le::text, effet_du::text, effet_au::text
+         from public.acces_pour_moi($1)`,
+      [tenantId],
+    );
+    return rows as Array<{
+      acces_id: string;
+      cabinet_tenant_id: string;
+      cabinet_nom: string;
+      offre_code: string;
+      statut: string;
+      propose_le: string;
+      effet_du: string | null;
+      effet_au: string | null;
+    }>;
+  },
+
+  /** Les factures adressées au cabinet (la RLS les réserve à ses membres). */
+  async facturesDuCabinet(db: Requete, cabinetId: string) {
+    const { rows } = await db.query(
+      `select f.id, f.numero, f.periode::text, f.emise_le::text, f.echeance_le::text,
+              f.montant_ht::text, f.montant_tva::text, f.timbre::text, f.montant_ttc::text,
+              f.devise, f.statut, f.organisations
+         from facturation.factures f
+        where f.payeur_type = 'cabinet' and f.payeur_tenant_id = $1
+        order by f.periode desc, f.numero desc`,
+      [cabinetId],
+    );
+    return rows as Array<{
+      id: string;
+      numero: string;
+      periode: string;
+      emise_le: string;
+      echeance_le: string;
+      montant_ht: string;
+      montant_tva: string;
+      timbre: string;
+      montant_ttc: string;
+      devise: string;
+      statut: string;
+      organisations: number;
+    }>;
+  },
+
+  /** Les lignes d'une facture du cabinet : une par société cliente. */
+  async lignesDeFacture(db: Requete, factureId: string) {
+    const { rows } = await db.query(
+      `select ordinal, libelle, quantite::text, prix_unitaire::text, montant_ht::text
+         from facturation.facture_lignes where facture_id = $1 order by ordinal`,
+      [factureId],
+    );
+    return rows as Array<{
+      ordinal: number;
+      libelle: string;
+      quantite: string;
+      prix_unitaire: string;
+      montant_ht: string;
+    }>;
+  },
 };

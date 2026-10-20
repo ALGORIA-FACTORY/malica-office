@@ -34,6 +34,7 @@ import {
   MalicaNote,
   SectionRepliable,
   SignalLight,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -160,16 +161,11 @@ function PlanComptable() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="border-b border-foreground pb-6">
-        <p className="num text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {kicker}
-        </p>
-        <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-          {t("plan.title")}
-        </h1>
-        <p className="mt-3 max-w-[62ch] text-[13.5px] leading-[1.55] text-text-2">
-          {t("cab.plan.principe")}
-        </p>
+      <EnTeteCabinet
+        surtitre={<>{kicker}</>}
+        titre={<>{t("plan.title")}</>}
+        chapeau={<>{t("cab.plan.principe")}</>}
+      >
         <div className="mt-5 flex flex-wrap gap-2">
           <button
             type="button"
@@ -188,7 +184,7 @@ function PlanComptable() {
             {t("plan.tiers.title")}
           </button>
         </div>
-      </header>
+      </EnTeteCabinet>
 
       <PlanDuCabinet comptes={comptes} classes={classes} chargement={plan.isPending} />
 

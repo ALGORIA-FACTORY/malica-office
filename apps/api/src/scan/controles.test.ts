@@ -385,6 +385,19 @@ describe("le sens de la pièce, confronté à ce qu'elle porte", () => {
     assert.equal(statut(facture(), "sens_de_la_piece").statut, "conforme");
   });
 
+  it("la contradiction se lève quand la personne a confirmé le sens", () => {
+    // Recette du 20 octobre 2026 : vente à un payeur public, émetteur lu « PME ».
+    const lue = facture({
+      documentKind: "facture_vente",
+      emetteur: { nom: "PME", identifiantFiscal: "1856324K/A/M/000" },
+      destinataire: { nom: null, identifiantFiscal: "1234567B/B/M/000" },
+    });
+    assert.equal(statut(lue, "sens_de_la_piece").statut, "anomalie");
+    const c = statut({ ...lue, sensConfirme: true }, "sens_de_la_piece");
+    assert.equal(c.statut, "conforme");
+    assert.match(c.motif, /confirmée par la personne/);
+  });
+
   it("sans nom d'émetteur lu, le contrôle ne se prononce pas", () => {
     // Ne rien pouvoir vérifier n'est pas une anomalie. Une pièce dont le nom de
     // l'émetteur est illisible a déjà sa réserve au contrôle des mentions.

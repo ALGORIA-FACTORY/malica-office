@@ -18,7 +18,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaNote } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -209,17 +209,11 @@ function CabinetExport() {
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
       <section className="min-w-0 space-y-5">
         {/* ---- masthead */}
-        <header className="border-b border-foreground pb-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-            {t("cab.export.kicker")}
-          </p>
-          <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-            {t("cab.export.title")}
-          </h1>
-          <p className="mt-3 max-w-[60ch] text-[13.5px] leading-[1.6] text-text-2">
-            {t("cab.export.lede")}
-          </p>
-        </header>
+        <EnTeteCabinet
+          surtitre={<>{t("cab.export.kicker")}</>}
+          titre={<>{t("cab.export.title")}</>}
+          chapeau={<>{t("cab.export.lede")}</>}
+        />
 
         {/* ---- le formulaire */}
         <div className="space-y-5 border border-border bg-card p-5">

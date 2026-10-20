@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
+import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -350,6 +351,7 @@ function PmeEcheances() {
                             ? t("pme.echeances.sous.retard", { count: Math.abs(reste) })
                             : t("pme.echeances.sous.avenir", { count: reste })}
                       </span>
+                      <OrigineDEcheance echeance={e} />
                     </span>
                     <span className="rt">
                       {/*

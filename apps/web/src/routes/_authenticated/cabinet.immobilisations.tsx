@@ -29,6 +29,7 @@ import {
   MalicaNote,
   SectionRepliable,
   SectionTitle,
+  EnTeteCabinet,
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -681,62 +682,56 @@ function CabinetImmobilisations() {
   return (
     <div className="space-y-8">
       {/* ---- masthead */}
-      <header className="border-b border-foreground pb-6">
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="min-w-0">
-            <p className="num text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              {kicker}
-            </p>
-            <h1 className="mt-2.5 text-[30px] font-semibold leading-[1.05] tracking-[-0.025em] sm:text-[38px]">
-              {t("cab.immo.title")}
-            </h1>
-            <p className="mt-3 max-w-[60ch] text-[14px] leading-[1.6] text-text-2">
-              {t("cab.immo.lede")}
-            </p>
-          </div>
-          {rows.length > 0 ? (
-            <div className="flex flex-wrap items-end gap-3">
-              <ClientPicker
-                label={t("cab.queue.client")}
-                clients={rows}
-                value={client?.tenantId ?? null}
-                onChange={(id) => {
-                  setTenantId(id);
-                  const choisi = rows.find((c) => c.tenantId === id);
-                  if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
-                  setAssetId(null);
-                }}
-              />
-              <label className="flex flex-col gap-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t("cab.immo.exercice")}
-                </span>
-                <select
-                  value={exercice}
-                  onChange={(e) => setExerciceChoisi(Number(e.target.value))}
-                  className="num border border-border bg-card px-2.5 py-2 text-[13px]"
+      <EnTeteCabinet
+        surtitre={<>{kicker}</>}
+        titre={<>{t("cab.immo.title")}</>}
+        chapeau={<>{t("cab.immo.lede")}</>}
+        actions={
+          <>
+            {rows.length > 0 ? (
+              <div className="flex flex-wrap items-end gap-3">
+                <ClientPicker
+                  label={t("cab.queue.client")}
+                  clients={rows}
+                  value={client?.tenantId ?? null}
+                  onChange={(id) => {
+                    setTenantId(id);
+                    const choisi = rows.find((c) => c.tenantId === id);
+                    if (choisi) ecrireDossierCourant({ id: choisi.tenantId, name: choisi.name });
+                    setAssetId(null);
+                  }}
+                />
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {t("cab.immo.exercice")}
+                  </span>
+                  <select
+                    value={exercice}
+                    onChange={(e) => setExerciceChoisi(Number(e.target.value))}
+                    className="num border border-border bg-card px-2.5 py-2 text-[13px]"
+                  >
+                    {exercices.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <ActionButton
+                  variant="ink"
+                  disabled={!pack.data}
+                  onClick={() => {
+                    setAssetId(null);
+                    setForm(emptyForm());
+                  }}
                 >
-                  {exercices.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <ActionButton
-                variant="ink"
-                disabled={!pack.data}
-                onClick={() => {
-                  setAssetId(null);
-                  setForm(emptyForm());
-                }}
-              >
-                {t("cab.immo.new")}
-              </ActionButton>
-            </div>
-          ) : null}
-        </div>
-      </header>
+                  {t("cab.immo.new")}
+                </ActionButton>
+              </div>
+            ) : null}
+          </>
+        }
+      />
 
       {rows.length === 0 ? (
         <EmptyState>{t("cab.clients.empty")}</EmptyState>

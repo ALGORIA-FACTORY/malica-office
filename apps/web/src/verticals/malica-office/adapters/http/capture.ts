@@ -178,6 +178,10 @@ export function creerCaptureHttp(): CaptureRepository {
       };
     },
 
+    async analyser(pieceId: string): Promise<unknown> {
+      return appeler("capture", "analyser", [pieceId]);
+    },
+
     async supprimer(pieceId: string): Promise<boolean> {
       return (await appeler("capture", "supprimer", [pieceId])) as boolean;
     },

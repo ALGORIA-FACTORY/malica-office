@@ -80,4 +80,30 @@ describe("une pièce comptabilisée reste dans la société", { skip: !BASE_CONF
     );
     assert.equal(rows[0]?.vis, "personnel");
   });
+
+  it("en défaut de paiement, rien de nouveau ne part au cabinet", async () => {
+    // Règle du 20 octobre 2026 : impayé → la lecture ET la transmission s'arrêtent.
+    const id = await piece("impaye");
+    await admin.query(
+      `update facturation.licences l set statut = 'suspendue', suspendue_le = now()
+         from facturation.licence_organisations lo
+        where lo.licence_id = l.id and lo.tenant_id = $1`,
+      [pme],
+    );
+    try {
+      await assert.rejects(
+        sousIdentite(dirigeant.id, (db) =>
+          db.query(`select public.capture_piece_set_vis($1, 'partage')`, [id]),
+        ),
+        /Transmission suspendue/,
+      );
+    } finally {
+      await admin.query(
+        `update facturation.licences l set statut = 'active', suspendue_le = null
+           from facturation.licence_organisations lo
+          where lo.licence_id = l.id and lo.tenant_id = $1`,
+        [pme],
+      );
+    }
+  });
 });
