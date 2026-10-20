@@ -1514,12 +1514,18 @@ function PieceScreen() {
           vivent dans `CommentCEstPaye`, avec la saisie du montant partiel, la
           date déclarée, la référence et la photo de la preuve. L'écran n'ouvre
           aucun second chemin vers ces écritures : deux chemins pour une même
-          écriture seraient deux occasions de divergence. */}
+          écriture seraient deux occasions de divergence.
+
+          20 octobre 2026, recette : le bloc était caché dès la facture
+          comptabilisée, et une facture confirmée avec 756,650 TND à payer ne
+          pouvait plus jamais être soldée. La facture constate la dette, le
+          règlement l'éteint — souvent des semaines plus tard. Le bloc reste
+          donc, comptabilisée ou non ; il dit lui-même quand tout est payé. */}
       <div className="sec">
         <h2>{vente ? t("pme.piece.encaissements") : t("pme.piece.reglements")}</h2>
         <span>{t("pme.piece.mouvements", { count: paiementsVivants.length })}</span>
       </div>
-      {!booked ? (
+      {piece ? (
         <CommentCEstPaye
           pieceId={pieceId}
           visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}

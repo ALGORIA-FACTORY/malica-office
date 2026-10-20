@@ -226,12 +226,6 @@ function CabinetPropositions() {
       for (const p of input.pieces) {
         const e = p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined;
         if (!e) continue;
-        await office().supervision.review({
-          ecritureId: e.id,
-          outcome: "retourne",
-          motifId: input.motifId,
-          note: input.note,
-        });
         const lignes = e.lines.map((l) => ({
           account_code: l.accountCode.startsWith("6") ? input.compte.code : l.accountCode,
           libelle: l.accountCode.startsWith("6") ? input.compte.libelle : l.libelle,
@@ -239,16 +233,15 @@ function CabinetPropositions() {
           credit: l.credit,
           tax_code: l.taxCode,
         }));
-        const id = await office().office.propose({
-          pieceId: p.pieceId,
-          journal: e.journal,
-          date: e.dateEcriture,
+        // Une pièce = une transaction : contre-passation et réimputation
+        // passent ensemble, ou rien n'est écrit pour cette pièce.
+        await office().office.corrigerLImputation({
+          ecritureId: e.id,
+          motifId: input.motifId,
+          note: input.note,
           libelle: e.libelle,
-          packVersionId: e.packVersionId,
-          devise: e.devise,
           lignes,
         });
-        await office().office.book(id);
         n += 1;
       }
       return n;

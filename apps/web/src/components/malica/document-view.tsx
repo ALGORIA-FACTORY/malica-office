@@ -138,7 +138,17 @@ export function DocumentView({ contenu, highlight, label }: Props) {
           return;
         }
 
-        const pdfjs = await import("pdfjs-dist");
+        /*
+         * =========================================== LA CONSTRUCTION « LEGACY »
+         *
+         * 20 octobre 2026, recette : l'aperçu était VIDE sur des navigateurs à
+         * jour de quelques mois (Chromium 141). pdf.js 6 appelle
+         * `Map.prototype.getOrInsertComputed`, une méthode que ces moteurs
+         * n'ont pas encore. La construction `legacy` de pdf.js embarque ses
+         * compléments de compatibilité, pour la bibliothèque ET pour le worker :
+         * on prend les deux, sinon le worker plante seul et en silence.
+         */
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         /*
          * ============================ « Cannot transfer object of unsupported type »
          *
@@ -159,7 +169,8 @@ export function DocumentView({ contenu, highlight, label }: Props) {
          *
          * `workerPort` prime sur `workerSrc` : il n'en reste qu'un chemin.
          */
-        const { default: PdfWorker } = await import("pdfjs-dist/build/pdf.worker.min.mjs?worker");
+        const { default: PdfWorker } =
+          await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker");
         pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
 
         // La copie, et la raison d'être du commentaire d'en-tête : `contenu`

@@ -41,9 +41,22 @@ export function useTvaPeriod(period: string): {
   // La TVA du mois est celle des pièces TRANSMISES ce mois-là : le cabinet
   // ne déclare que ce qu'il a reçu, et une pièce gardée au coffre n'entre
   // dans aucune déclaration. Décision du commanditaire du 10 octobre 2026.
+  //
+  // SANS comptabilité mandatée (20 octobre 2026, recette) : rien n'est
+  // jamais transmis, et la TVA restait à zéro malgré des factures confirmées
+  // et comptabilisées. Le dirigeant qui tient lui-même ses comptes déclare ce
+  // qu'il a comptabilisé : ce sont alors les pièces comptabilisées du mois.
   const extracts = useQuery({
-    queryKey: ["extraits-transmis", pme.tenantId, from, to],
-    queryFn: () => office().office.extraitsTransmis(pme.tenantId, from, to),
+    queryKey: [
+      pme.aUnCabinet ? "extraits-transmis" : "extraits-comptabilises",
+      pme.tenantId,
+      from,
+      to,
+    ],
+    queryFn: () =>
+      pme.aUnCabinet
+        ? office().office.extraitsTransmis(pme.tenantId, from, to)
+        : office().office.bookedExtracts(pme.tenantId, from, to),
   });
 
   const rates = useQuery({

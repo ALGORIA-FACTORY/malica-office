@@ -1,5 +1,7 @@
 {
-  "acces": ["monAcces"],
+  "acces": [
+    "monAcces"
+  ],
   "banque": [
     "audit",
     "bookLines",
@@ -36,7 +38,14 @@
     "rattacherJustificatif",
     "supprimer"
   ],
-  "charges": ["anomalyThreshold", "answer", "articles", "enAttenteDeDate", "familles", "questions"],
+  "charges": [
+    "anomalyThreshold",
+    "answer",
+    "articles",
+    "enAttenteDeDate",
+    "familles",
+    "questions"
+  ],
   "collab": [
     "addPv",
     "assign",
@@ -83,8 +92,18 @@
     "renommer",
     "supprimer"
   ],
-  "corpus": ["editionsPlusRecentes", "modeleEmpreinte", "parametresPour", "rechercher"],
-  "exports": ["estimer", "exercices", "generer", "historique"],
+  "corpus": [
+    "editionsPlusRecentes",
+    "modeleEmpreinte",
+    "parametresPour",
+    "rechercher"
+  ],
+  "exports": [
+    "estimer",
+    "exercices",
+    "generer",
+    "historique"
+  ],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -182,11 +201,20 @@
     "recordCession",
     "updateAsset"
   ],
-  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
-  "journal": ["consigner", "dernieres"],
+  "integrations": [
+    "cles",
+    "creerCle",
+    "etat",
+    "revoquerCle"
+  ],
+  "journal": [
+    "consigner",
+    "dernieres"
+  ],
   "office": [
     "book",
     "bookedExtracts",
+    "corrigerLImputation",
     "ecrituresByIds",
     "ecrituresForPiece",
     "extraitsTransmis",
@@ -227,7 +255,9 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": ["deposer"],
+  "signalements": [
+    "deposer"
+  ],
   "stocks": [
     "addMouvement",
     "categories",
@@ -250,7 +280,13 @@
     "review",
     "statistiques"
   ],
-  "tiers": ["comptesCollectifs", "creer", "desactiver", "lister", "modifier"],
+  "tiers": [
+    "comptesCollectifs",
+    "creer",
+    "desactiver",
+    "lister",
+    "modifier"
+  ],
   "tour": [
     "chercherOrganisations",
     "designerEmetteur",

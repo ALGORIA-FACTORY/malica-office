@@ -1148,6 +1148,55 @@ export interface PreparedPage extends PdfPageImage {
   cadrage: Cadrage;
 }
 
+/** Part minimale de l'image que doit couvrir une feuille détectée. */
+const PART_MINIMALE_DE_LA_FEUILLE = 0.35;
+
+/** Aire d'un quadrilatère (formule du lacet), dans les unités des sommets. */
+function aireDuQuad(q: readonly Point[]): number {
+  let s = 0;
+  for (let i = 0; i < q.length; i++) {
+    const a = q[i]!;
+    const b = q[(i + 1) % q.length]!;
+    s += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(s) / 2;
+}
+
+/**
+ * Un quadrilatère détecté est-il une feuille plausible ? Il doit couvrir une
+ * part suffisante de l'image : un cadre de tableau, un logo ou un tampon ne
+ * sont pas la page.
+ */
+export function quadPlausible(q: readonly Point[], w: number, h: number): boolean {
+  if (q.length !== 4 || w <= 0 || h <= 0) return false;
+  return aireDuQuad(q) / (w * h) >= PART_MINIMALE_DE_LA_FEUILLE;
+}
+
+/**
+ * Les bords de l'image sont-ils déjà du papier ? Une bande de 2 % sur les
+ * quatre côtés, presque uniformément claire : l'image est un scan ou une
+ * capture où la page occupe tout le cadre — il n'y a rien à recadrer.
+ */
+export function bordsDejaPapier(img: ImageData): boolean {
+  const { width: w, height: h, data } = img;
+  if (w < 8 || h < 8) return false;
+  const bande = Math.max(1, Math.round(Math.min(w, h) * 0.02));
+  let total = 0;
+  let clairs = 0;
+  const lire = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    const l = 0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!;
+    total += 1;
+    if (l >= 200) clairs += 1;
+  };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (x < bande || x >= w - bande || y < bande || y >= h - bande) lire(x, y);
+    }
+  }
+  return total > 0 && clairs / total >= 0.92;
+}
+
 /**
  * Photo → page redressée, normalisée et encodée sous budget.
  * L'image d'origine ne quitte jamais cette frontière.
@@ -1207,7 +1256,23 @@ export async function preparePage(
 
   let out = full;
   let cropped = cadrage.origine === "appareil";
-  const quadSmall = cadrage.coins;
+  /*
+   * ================================== UNE FACTURE COUPÉE EN DEUX, TOTAUX PERDUS
+   *
+   * 20 octobre 2026, recette : une facture A4 envoyée en IMAGE (scan, capture
+   * d'écran) a été recadrée sur sa moitié haute — le détecteur avait pris un
+   * cadre du tableau pour les bords de la feuille. TVA, timbre et TTC
+   * disparaissaient, la lecture échouait, et elle était décomptée.
+   *
+   * Règle : on ne recadre JAMAIS au prix du contenu. Un quadrilatère est
+   * écarté quand il couvre trop peu de l'image, ou quand les bords de l'image
+   * sont déjà du papier — l'image EST la page. Garder une marge de trop ne
+   * coûte rien ; perdre le bas d'une facture coûte la pièce.
+   */
+  const quadSmall =
+    cadrage.coins && quadPlausible(cadrage.coins, aw, ah) && !bordsDejaPapier(petite)
+      ? cadrage.coins
+      : null;
   if (quadSmall && quadSmall.length === 4) {
     const quad = quadSmall.map((p) => ({
       x: Math.min(fullW - 1, Math.max(0, p.x * (fullW / aw))),

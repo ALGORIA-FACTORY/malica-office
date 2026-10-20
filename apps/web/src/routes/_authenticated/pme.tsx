@@ -105,7 +105,17 @@ function PmeLayout() {
    * être transmise, et il le lit au contexte. Le retirer aurait cassé la
    * dernière étape de la capture, pas seulement un lien.
    */
-  const aUnCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
+  /*
+   * « Cette société a-t-elle une comptabilité mandatée ? » — le MANDAT ACTIF
+   * de la société ouverte, pas l'appartenance de la personne à un cabinet.
+   *
+   * 20 octobre 2026, recette : la valeur venait de « la personne est membre
+   * d'une organisation de type cabinet ». Un dirigeant dont la société avait
+   * un mandat actif lisait « Aucune comptabilité n'est mandatée », et la
+   * pièce confirmée ne partait jamais au cabinet ; un dirigeant qui était
+   * aussi expert ailleurs croyait l'inverse.
+   */
+  const aUnCabinet = Boolean(monCabinet.data?.id);
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
 
   // Garde de rôle : sans appartenance PME, on renvoie au portail plutôt qu'un écran muet.
@@ -137,15 +147,18 @@ function PmeLayout() {
    * deux allers-retours, et deux règles de dégradation qui ne jugeaient pas
    * le même fait.
    *
-   * La clé n'a pas de dossier : la licence appartient à la PERSONNE, et
-   * `mon_forfait()` ne rend que celle dont l'appelant est titulaire.
+   * La clé PORTE la société (20 octobre 2026) : un propriétaire peut en
+   * détenir plusieurs, chacune avec sa licence. Sans elle, la base refusait
+   * de choisir et toutes ses pages tombaient en erreur ; avec une clé sans
+   * société, la seconde aurait affiché les compteurs de la première.
    *
    * `retry: false` : une licence absente n'est pas une panne à réessayer
    * trois fois, et un compteur qui tarde ne doit jamais retenir la capture.
    */
   const forfaitQuery = useQuery({
-    queryKey: ["mon-forfait"],
-    queryFn: () => office().facturation.monForfait(),
+    queryKey: ["mon-forfait", org?.id],
+    queryFn: () => office().facturation.monForfait(org!.id),
+    enabled: !!org,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });

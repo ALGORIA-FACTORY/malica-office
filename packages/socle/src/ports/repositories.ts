@@ -1104,6 +1104,24 @@ export interface OfficeRepository {
    */
   retenuesDuMois(tenantId: string, periode: string): Promise<RetenueDuMois[]>;
   book(ecritureId: string): Promise<void>;
+  /**
+   * Forcer l'imputation d'une écriture comptabilisée : contre-passation
+   * motivée, écriture corrigée, comptabilisation — en une transaction.
+   * Rend l'identifiant de l'écriture corrigée.
+   */
+  corrigerLImputation(input: {
+    ecritureId: string;
+    motifId: string;
+    note: string | null;
+    libelle: string;
+    lignes: Array<{
+      account_code: string;
+      libelle: string;
+      debit: string;
+      credit: string;
+      tax_code: string | null;
+    }>;
+  }): Promise<string>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;
   bookedExtracts(
@@ -2461,8 +2479,12 @@ export interface OrganisationDeLaLicence {
  * refuse la place de trop, et le motif revient en CODE.
  */
 export interface FacturationRepository {
-  /** `null` quand l'appelant n'est rattaché à aucune licence. */
-  monForfait(): Promise<MonForfait | null>;
+  /**
+   * Le forfait de l'organisation ouverte. `null` quand l'appelant n'est
+   * rattaché à aucune licence. Sans organisation, la base ne répond que s'il
+   * n'y a qu'une licence possible.
+   */
+  monForfait(tenantId?: string): Promise<MonForfait | null>;
   sieges(): Promise<SiegeDeLaLicence[]>;
   organisations(): Promise<OrganisationDeLaLicence[]>;
   inviterSiege(

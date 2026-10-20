@@ -411,25 +411,16 @@ function CabinetReview() {
         tax_code: l.taxCode,
       }));
 
-      // 1. La contre-passation, gouvernée. Elle porte le motif et la note.
-      await office().supervision.review({
+      // Contre-passation motivée, écriture corrigée sous le même pack, et
+      // comptabilisation : UN appel, une transaction. Trois appels laissaient
+      // la facture contre-passée sans réimputation quand le deuxième échouait.
+      await office().office.corrigerLImputation({
         ecritureId: booked.id,
-        outcome: "retourne",
         motifId,
         note: note.trim() ? note.trim() : null,
-      });
-
-      // 2. L'écriture corrigée, sous LE MÊME pack que celle qu'elle remplace.
-      const id = await office().office.propose({
-        pieceId,
-        journal: booked.journal,
-        date: booked.dateEcriture,
         libelle: correction.libelle.trim(),
-        packVersionId: booked.packVersionId,
-        devise: booked.devise,
         lignes,
       });
-      await office().office.book(id);
     },
     onSuccess: async () => {
       setError(null);

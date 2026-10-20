@@ -91,14 +91,20 @@ export const facturation = {
    * Le forfait de l'appelant. Titulaire : la ligne entière. Membre d'une
    * organisation de la licence (un collaborateur) : le compteur de lectures
    * seul, offre, prix et places à `null` — c'est la base qui le décide. `null`
-   * quand l'appelant n'est rattaché à aucune licence. Plusieurs licences
-   * détenues : la base rend la première par identifiant.
+   * quand l'appelant n'est rattaché à aucune licence.
+   *
+   * POUR UNE ORGANISATION (20 octobre 2026). Un propriétaire peut détenir
+   * plusieurs sociétés, chacune avec sa licence : sans l'organisation, la base
+   * refuse de choisir (« plusieurs licences ») et toutes les pages du
+   * propriétaire tombaient en erreur. L'écran passe désormais l'organisation
+   * ouverte ; sans elle, la base ne répond que s'il n'y a qu'une réponse.
    */
-  async monForfait(db: Requete) {
+  async monForfait(db: Requete, tenantId?: string | null) {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
               organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht
-         from public.mon_forfait()`,
+         from public.mon_forfait($1::uuid)`,
+      [tenantId ?? null],
     );
     return rows[0] ?? null;
   },

@@ -163,6 +163,57 @@ export const office = {
     return rows[0]!.id;
   },
 
+  /**
+   * Forcer l'imputation : contre-passer, réimputer, comptabiliser — EN UNE
+   * transaction (20 octobre 2026).
+   *
+   * L'écran enchaînait trois appels. Le premier passait, le deuxième était
+   * refusé, et la facture restait contre-passée sans réimputation : sortie des
+   * livres. Une seule requête, donc une seule transaction : tout passe, ou
+   * rien n'est écrit. Le journal, la date, le pack et la devise viennent de
+   * l'écriture remplacée, lue ici — pas de ce que l'écran affirme.
+   */
+  async corrigerLImputation(
+    db: Requete,
+    input: {
+      ecritureId: string;
+      motifId: string;
+      note: string | null;
+      libelle: string;
+      lignes: unknown;
+    },
+  ): Promise<string> {
+    const { rows } = await db.query<{
+      piece_id: string;
+      journal: string;
+      date_ecriture: string;
+      devise: string;
+      pack_version_id: string;
+    }>(
+      `select piece_id, journal, date_ecriture::text as date_ecriture, devise, pack_version_id
+         from ecritures_v where id = $1`,
+      [input.ecritureId],
+    );
+    const remplacee = rows[0];
+    if (!remplacee) throw Object.assign(new Error("écriture introuvable"), { code: "22023" });
+    await db.query(`select public.socle_ecriture_review($1, 'retourne', $2, $3)`, [
+      input.ecritureId,
+      input.motifId,
+      input.note,
+    ]);
+    const id = await office.propose(db, {
+      pieceId: remplacee.piece_id,
+      journal: remplacee.journal,
+      date: remplacee.date_ecriture,
+      libelle: input.libelle,
+      packVersionId: remplacee.pack_version_id,
+      devise: remplacee.devise,
+      lignes: input.lignes,
+    });
+    await office.book(db, id);
+    return id;
+  },
+
   async book(db: Requete, ecritureId: string): Promise<void> {
     await db.query(`select public.socle_ecriture_book($1)`, [ecritureId]);
   },
