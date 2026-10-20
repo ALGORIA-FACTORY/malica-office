@@ -138,6 +138,61 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     );
   });
 
+  it("une facture contre-passée sans réimputation sort de la TVA du mois", async () => {
+    const autre = await sousIdentite(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
+                                     document_kind, document_kind_statut, transmise_le)
+         values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,
+        [pme, `essai/${marque}-b.pdf`, `${marque}-b`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    await admin.query(
+      `insert into capture.extractions (tenant_id, piece_id, contract, payload)
+       values ($1, $2, 'extract.v1', '{}'::jsonb)`,
+      [pme, autre],
+    );
+    const ecr = await sousIdentite(expert.id, async (db) => {
+      const n = await office.propose(db, {
+        pieceId: autre,
+        journal: "ACH",
+        date: "2026-10-20",
+        libelle: "Facture à retourner",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignes("601"),
+      });
+      await office.book(db, n);
+      return n;
+    });
+    const avant = await sousIdentite(dirigeant.id, (db) =>
+      office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
+    );
+    assert.ok(
+      avant.some((x) => x.pieceId === autre),
+      "comptabilisée : elle compte",
+    );
+
+    const { rows: motifs } = await admin.query<{ id: string }>(
+      `select id from ref.rejet_motifs order by requires_note limit 1`,
+    );
+    await sousIdentite(expert.id, (db) =>
+      db.query(`select public.socle_ecriture_review($1, 'retourne', $2, 'à reprendre')`, [
+        ecr,
+        motifs[0]!.id,
+      ]),
+    );
+    const apres = await sousIdentite(dirigeant.id, (db) =>
+      office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
+    );
+    assert.ok(!apres.some((x) => x.pieceId === autre), "contre-passée : elle ne compte plus");
+    const transmises = await sousIdentite(dirigeant.id, (db) =>
+      office.extraitsTransmis(db, pme, "2026-01-01", "2099-12-31"),
+    );
+    assert.ok(!transmises.some((x) => x.pieceId === autre), "retournée : hors déclaration");
+  });
+
   it("une réimputation refusée n'écrit rien : pas de contre-passation orpheline", async () => {
     const { rows: courante } = await admin.query<{ id: string }>(
       `select id from socle.ecritures where piece_id = $1 and status = 'booked'

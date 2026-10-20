@@ -290,12 +290,22 @@ export const office = {
     // Une seule requête là où l'adaptateur en faisait deux puis dédoublonnait
     // en JavaScript : `distinct on` rend la dernière extraction de chaque pièce,
     // ce que la boucle précédente reconstituait à la main.
+    //
+    // 20 octobre 2026, recette : une facture CONTRE-PASSÉE restait comptée
+    // dans la TVA du mois — son écriture d'origine est toujours « booked ».
+    // On ne retient que les écritures vivantes : ni contre-passation, ni
+    // écriture qu'une contre-passation comptabilisée annule.
     const { rows } = await db.query(
       `select distinct on (x.piece_id) x.piece_id, x.payload
          from extractions_v x
          join ecritures_v e on e.piece_id = x.piece_id
         where e.tenant_id = $1
           and e.status = 'booked'
+          and e.reverses_id is null
+          and not exists (
+            select 1 from ecritures_v r
+             where r.reverses_id = e.id and r.status = 'booked'
+          )
           and e.date_ecriture between $2 and $3
           and x.contract = 'extract.v1'
         order by x.piece_id, x.created_at desc`,
@@ -355,6 +365,9 @@ export const office = {
          from extractions_v x
          join pieces_v p on p.id = x.piece_id
         where p.tenant_id = $1
+          -- Retournée par le cabinet (contre-passée, pas encore réimputée) :
+          -- elle n'entre dans aucune déclaration tant qu'elle n'est pas reprise.
+          and p.status <> 'retournee'
           and p.transmise_le >= $2::date
           and p.transmise_le < ($3::date + interval '1 day')
           and x.contract = 'extract.v1'

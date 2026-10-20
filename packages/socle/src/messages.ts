@@ -70,7 +70,7 @@ const fr = {
   "auth.error.unreachable":
     "Le service ne répond pas. Vos identifiants ne sont pas en cause — réessayez dans un instant.",
   "auth.error.weakPassword":
-    "Ce mot de passe est trop courant. Choisissez-en un d'au moins 12 caractères, non réutilisé ailleurs.",
+    "Vérifiez votre adresse e-mail, et choisissez un mot de passe d'au moins 12 caractères, non réutilisé ailleurs.",
   "auth.error.invalidCredentials": "E-mail ou mot de passe incorrect.",
   "auth.error.userExists": "Un accès existe déjà pour cet e-mail. Utilisez l'onglet Entrer.",
   "auth.password.hint": "Au moins 12 caractères, non réutilisé ailleurs.",
@@ -3237,7 +3237,7 @@ const en: Dict = {
   "auth.error.unreachable":
     "The service is not responding. Your credentials are not the problem — try again in a moment.",
   "auth.error.weakPassword":
-    "This password is too common. Pick one with at least 12 characters, not reused elsewhere.",
+    "Check your e-mail address, and choose a password of at least 12 characters, not reused elsewhere.",
   "auth.error.invalidCredentials": "Wrong email or password.",
   "auth.error.userExists": "An access already exists for this email. Use the Sign in tab.",
   "auth.password.hint": "At least 12 characters, not reused elsewhere.",
@@ -6295,7 +6295,7 @@ const ar: Dict = {
   "auth.error.unreachable":
     "الخدمة لا تستجيب. ليست بيانات الدخول هي السبب — أعد المحاولة بعد لحظات.",
   "auth.error.weakPassword":
-    "كلمة السر شائعة جدًا. اختر كلمة من 12 حرفًا على الأقل وغير مستعملة في مكان آخر.",
+    "تحقق من عنوان بريدك الإلكتروني، واختر كلمة مرور من 12 حرفًا على الأقل، غير مستعملة في مكان آخر.",
   "auth.error.invalidCredentials": "البريد أو كلمة السر غير صحيحة.",
   "auth.error.userExists": "يوجد حساب بهذا البريد. استعمل تبويب الدخول.",
   "auth.password.hint": "12 حرفًا على الأقل، وغير مستعملة في مكان آخر.",
