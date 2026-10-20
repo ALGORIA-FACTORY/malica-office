@@ -210,12 +210,30 @@ e.verdict(
     [...attendus.keys()].every((k) => kindsA.has(k)),
   `${[...kindsA].sort().join(" ")}`,
 );
+/*
+ * Depuis la 0.2.43, la date LÉGALE porte le quantième de l'obligation ; la
+ * date retenue peut glisser au premier jour ouvrable (le 15 octobre 2026 est
+ * la fête de l'Évacuation). L'épreuve juge les deux, et leur lien.
+ */
 e.verdict(
-  "le jour limite de chaque échéance est le quantième de son obligation",
-  echeancesA.every((x) => Number(x.dueDate.slice(8, 10)) === attendus.get(x.kind)?.echeanceJour),
+  "la date légale de chaque échéance est le quantième de son obligation",
+  echeancesA.every((x) => Number(x.dateLegale.slice(8, 10)) === attendus.get(x.kind)?.echeanceJour),
   echeancesA
     .slice(0, 3)
-    .map((x) => `${x.kind} ${x.dueDate}`)
+    .map((x) => `${x.kind} ${x.dateLegale}`)
+    .join(" · "),
+);
+e.verdict(
+  "la date retenue est la date légale, ou le jour ouvrable qui la suit",
+  echeancesA.every((x) =>
+    x.dateOrigine === "loi"
+      ? x.dueDate === x.dateLegale
+      : x.dateOrigine === "jour_ouvrable" && x.dueDate > x.dateLegale,
+  ),
+  echeancesA
+    .filter((x) => x.dateOrigine !== "loi")
+    .slice(0, 3)
+    .map((x) => `${x.kind} ${x.dateLegale} → ${x.dueDate}`)
     .join(" · "),
 );
 e.verdict(
@@ -389,7 +407,7 @@ e.verdict(
   "elle apparaît dans les échéances du dossier, au jour qu'elle dit",
   avecPropre.length > 0 &&
     avecPropre.every(
-      (x) => Number(x.dueDate.slice(8, 10)) === propre.echeanceJour && x.regle === propre.regle,
+      (x) => Number(x.dateLegale.slice(8, 10)) === propre.echeanceJour && x.regle === propre.regle,
     ),
   `${avecPropre.length} échéance(s)`,
 );
