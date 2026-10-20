@@ -19,8 +19,18 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
-import { lecture } from "./lecture-d-essai.ts";
+import { lecture as lectureDEssai } from "./lecture-d-essai.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
+
+/**
+ * Le dossier porte un matricule à lui (un matricule, une société — 20 octobre
+ * 2026), et les lectures d'essai lui sont adressées : le contrôle du
+ * destinataire compare les deux.
+ */
+const MF_DOSSIER = matriculeDEssai();
+const lecture = (opts: Parameters<typeof lectureDEssai>[0] = {}) =>
+  lectureDEssai({ clientMf: MF_DOSSIER, ...opts });
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
 describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFIGUREE }, () => {
@@ -75,7 +85,7 @@ describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFI
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SARL', 'autonome',
-                                           '1856324K/A/M/000', 'TN', 'TND') as id`,
+                                           '${MF_DOSSIER}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });

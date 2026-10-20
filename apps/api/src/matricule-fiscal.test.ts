@@ -43,6 +43,10 @@ describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
 
   /** Tente de créer une PME avec ce matricule ; rend l'erreur, ou null. */
   async function creer(legalId: string | null): Promise<string | null> {
+    // Un matricule n'appartient qu'à une société active (20 octobre 2026) :
+    // cette épreuve juge la FORME, elle range donc ses sociétés précédentes
+    // avant d'en créer une autre, pour pouvoir rejouer un même matricule.
+    await archiver();
     try {
       const id = await sousIdentite(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
@@ -64,16 +68,20 @@ describe("le format du matricule fiscal", { skip: !BASE_CONFIGUREE }, () => {
     u = c;
   });
 
+  async function archiver(): Promise<void> {
+    if (creees.length === 0) return;
+    await sousIdentite(u.id, (db) =>
+      db.query(
+        `update identity.organizations set archived_at = now(),
+                archived_reason = 'fixture de test automatisé'
+          where id = any($1::uuid[]) and archived_at is null`,
+        [creees],
+      ),
+    );
+  }
+
   after(async () => {
-    if (creees.length > 0) {
-      await sousIdentite(u.id, (db) =>
-        db.query(
-          `update identity.organizations set archived_at = now(),
-                  archived_reason = 'fixture de test automatisé' where id = any($1::uuid[])`,
-          [creees],
-        ),
-      );
-    }
+    await archiver();
     await fermerLePool();
   });
 

@@ -129,6 +129,13 @@ export function buildProposal(params: {
    * apercevoir à l'appel qu'à la balance.
    */
   parametres: { decimals: number; confianceReserve: number; confianceBloquante: number };
+  /**
+   * Le compte de la NATURE de la charge, quand tous les articles de la pièce
+   * en partagent une (20 octobre 2026). Il remplace le compte générique du
+   * paramétrage — 601 pour tout achat, honoraires et loyers compris. Absent,
+   * on garde le paramétrage : une pièce mêlée ne se devine pas.
+   */
+  compteDeNature?: string | null;
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -178,7 +185,7 @@ export function buildProposal(params: {
     })),
     mapping: {
       document_kind: extract.document_kind,
-      charge_or_product_account: mapping.mainAccount,
+      charge_or_product_account: params.compteDeNature || mapping.mainAccount,
       vat_account: mapping.vatAccount,
       counterparty_account: mapping.counterpartyAccount,
     },

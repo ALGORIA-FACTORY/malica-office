@@ -24,6 +24,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
 describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
@@ -87,7 +88,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
-                                           '1876543W/A/M/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
@@ -97,7 +98,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     cabinet = await sousIdentite(expert.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
-                                           '0914563X/B/C/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("B", "C")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
@@ -344,7 +345,7 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     const cabinetPropose = await sousIdentite(autre.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('cabinet', 'CABINET EN ATTENTE', 'autonome',
-                                           '0914563X/B/C/001', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("B", "C")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });

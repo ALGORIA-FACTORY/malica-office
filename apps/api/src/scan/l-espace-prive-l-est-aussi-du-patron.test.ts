@@ -46,6 +46,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
 describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE }, () => {
@@ -115,14 +116,14 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
     pme = await sousIdentite(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
-                                           '1876543W/A/M/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
     cabinet = await sousIdentite(expert.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
-                                           '0914563X/B/C/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("B", "C")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });

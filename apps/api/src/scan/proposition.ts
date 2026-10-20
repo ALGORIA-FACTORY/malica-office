@@ -60,6 +60,49 @@ export type PropositionDePiece =
  * Elle vient désormais de la lecture, où elle est éprouvée.
  */
 
+/**
+ * Le compte de la nature de la charge, ou rien.
+ *
+ * Recette du 20 octobre 2026 : honoraires, loyer, électricité partaient tous
+ * au 601, parce que l'imputation venait du seul SENS de la pièce. La nature,
+ * elle, se lit sur le libellé de chaque article (`piece_articles_v`), et
+ * `ref.charge_familles` porte son compte depuis le 7 octobre.
+ *
+ * Trois conditions, sinon on garde le paramétrage :
+ *   • tous les articles tombent dans la MÊME nature — une pièce mêlée ne se
+ *     range pas d'un seul compte ;
+ *   • aucun n'est au repli (« non classé ») : ne pas savoir n'est pas savoir ;
+ *   • le compte de la nature est de la même CLASSE que celui du paramétrage —
+ *     une nature de charge ne s'applique pas à une vente.
+ */
+async function compteDeLaNature(db: Requete, pieceId: string): Promise<string | null> {
+  const { rows } = await db.query<{ compte: string | null }>(
+    `with a as (
+       select a.famille_code, a.pack_version_id, p.document_kind
+         from piece_articles_v a
+         join pieces_v p on p.id = a.piece_id
+        where a.piece_id = $1)
+     select case
+              when count(*) > 0
+               and count(distinct a.famille_code) = 1
+               and bool_and(not coalesce(f.is_fallback, true))
+               and bool_and(f.main_account is not null)
+               and bool_and(left(f.main_account, 1) = left(m.main_account, 1))
+              then min(f.main_account)
+            end as compte
+       from a
+       left join ref_charge_familles_v f
+              on f.pack_version_id = a.pack_version_id and f.code = a.famille_code
+             and f.valid_to is null
+       left join lateral (
+              select mm.main_account from ref_account_mappings_v mm
+               where mm.pack_version_id = a.pack_version_id and mm.document_kind = a.document_kind
+               order by mm.main_account limit 1) m on true`,
+    [pieceId],
+  );
+  return rows[0]?.compte ?? null;
+}
+
 export async function propositionDePiece(
   db: Requete,
   pieceId: string,
@@ -193,6 +236,8 @@ export async function propositionDePiece(
     sensConnu(c.documentKind),
   );
 
+  const compteDeNature = await compteDeLaNature(db, pieceId);
+
   try {
     const proposition = buildProposal({
       pieceId,
@@ -200,6 +245,7 @@ export async function propositionDePiece(
       taxRates,
       mappings,
       fiscalCharges,
+      compteDeNature,
       currency: String((ligne.payload as { currency?: string }).currency ?? ""),
       parametres: {
         decimals: dec,

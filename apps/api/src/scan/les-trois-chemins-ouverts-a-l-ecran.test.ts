@@ -25,6 +25,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
@@ -67,7 +68,7 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ECRAN SUARL', 'autonome',
-                                           '1876543W/A/M/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
@@ -77,7 +78,7 @@ describe("les trois chemins ouverts à l'écran", { skip: !BASE_CONFIGUREE }, ()
     cabinet = await sousIdentite(expert.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
-                                           '0914563X/B/C/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("B", "C")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });

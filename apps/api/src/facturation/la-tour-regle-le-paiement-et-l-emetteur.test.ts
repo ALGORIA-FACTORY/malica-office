@@ -13,6 +13,7 @@ import { after, describe, it } from "node:test";
 
 import pg from "pg";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 
@@ -108,7 +109,7 @@ describe("la tour règle le paiement et l'émetteur", { skip: !ADMIN }, () => {
       const op = await operateur(db);
       const o = await db.query<{ id: string }>(
         `insert into identity.organizations (kind, name, legal_id, jurisdiction, currency)
-         values ('pme', 'ALGORIA FACTORY d''essai', '1876543W/A/M/000', 'TN', 'TND') returning id`,
+         values ('pme', 'ALGORIA FACTORY d''essai', '${matriculeDEssai("A", "M")}', 'TN', 'TND') returning id`,
       );
       const trouvee = await sous(db, op, () =>
         db.query<{ nom: string }>(

@@ -24,6 +24,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
@@ -106,8 +107,8 @@ describe("sans mandat actif, la pièce est au client", { skip: !BASE_CONFIGUREE 
         );
         return rows[0]!.id;
       });
-    cabinetA = await cabinet(expertA, "CABINET A", "0914563X/B/C/000");
-    cabinetB = await cabinet(expertB, "CABINET B", "0914563X/B/C/001");
+    cabinetA = await cabinet(expertA, "CABINET A", matriculeDEssai("B", "C"));
+    cabinetB = await cabinet(expertB, "CABINET B", matriculeDEssai("B", "C"));
   });
 
   after(async () => {

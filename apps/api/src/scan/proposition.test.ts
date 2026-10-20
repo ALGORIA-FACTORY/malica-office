@@ -18,8 +18,18 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
-import { lecture } from "./lecture-d-essai.ts";
+import { lecture as lectureDEssai } from "./lecture-d-essai.ts";
 
+import { matriculeDEssai } from "../matricule-d-essai.ts";
+
+/**
+ * Le dossier porte un matricule à lui (un matricule, une société — 20 octobre
+ * 2026), et les lectures d'essai lui sont adressées : le contrôle du
+ * destinataire compare les deux.
+ */
+const MF_DOSSIER = matriculeDEssai();
+const lecture = (opts: Parameters<typeof lectureDEssai>[0] = {}) =>
+  lectureDEssai({ clientMf: MF_DOSSIER, ...opts });
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
 type Proposition =
@@ -58,7 +68,11 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     }
   };
 
-  async function pieceLue(cle: string, l: ReturnType<typeof lecture>) {
+  async function pieceLue(
+    cle: string,
+    l: ReturnType<typeof lecture>,
+    articles: Array<{ designation: string; total_ht: string }> = [],
+  ) {
     const p = (await rpc("capture", "enregistrer", {
       tenantId: org,
       source: "pdf",
@@ -75,7 +89,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
       extract: l.extract,
       citations: l.citations,
       flags: [],
-      articles: [],
+      articles,
       documentKind: "facture_achat",
       documentDate: l.extract.document_date,
       mode: "pdf-text",
@@ -95,7 +109,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SARL', 'autonome',
-                                           '1856324K/A/M/000', 'TN', 'TND') as id`,
+                                           '${MF_DOSSIER}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
@@ -184,6 +198,47 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     assert.match(id, /^[0-9a-f-]{36}$/);
     const ecritures = (await rpc("office", "ecrituresForPiece", piece)) as Array<{ id: string }>;
     assert.ok(ecritures.some((e) => e.id === id));
+  });
+
+  /*
+   * Recette du 20 octobre 2026 : honoraires et loyers partaient au 601. La
+   * nature lue sur le libellé propose désormais son compte — mais seulement
+   * quand toute la pièce est de la même nature.
+   */
+  const compteDeCharge = (r: Proposition) => {
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    return r.proposition.lignes.find((l) => l.account_code.startsWith("6"))?.account_code;
+  };
+
+  it("une facture d'honoraires s'impute aux honoraires (622), pas au 601", async () => {
+    const piece = await pieceLue("honoraires", lecture({ numero: "P-HONORAIRES" }), [
+      { designation: "Honoraires de tenue de comptabilité", total_ht: "1234.560" },
+    ]);
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.equal(compteDeCharge(r), "622");
+    // Et le compte existe au plan : l'écriture s'enregistre.
+    assert.match((await rpc("office", "proposerDepuisPiece", piece)) as string, /^[0-9a-f-]{36}$/);
+  });
+
+  it("un loyer s'impute aux locations (613)", async () => {
+    const piece = await pieceLue("loyer", lecture({ numero: "P-LOYER" }), [
+      { designation: "Loyer du local commercial — octobre 2026", total_ht: "1234.560" },
+    ]);
+    assert.equal(
+      compteDeCharge((await rpc("office", "propositionDePiece", piece)) as Proposition),
+      "613",
+    );
+  });
+
+  it("une pièce mêlée ne se devine pas : elle garde le compte du paramétrage", async () => {
+    const piece = await pieceLue("melee", lecture({ numero: "P-MELEE" }), [
+      { designation: "Honoraires de conseil", total_ht: "600.000" },
+      { designation: "Loyer du bureau", total_ht: "634.560" },
+    ]);
+    assert.equal(
+      compteDeCharge((await rpc("office", "propositionDePiece", piece)) as Proposition),
+      "601",
+    );
   });
 
   it("proposerDepuisPiece refuse ce que propositionDePiece refuse", async () => {

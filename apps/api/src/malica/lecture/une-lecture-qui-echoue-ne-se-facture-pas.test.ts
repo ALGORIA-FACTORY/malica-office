@@ -33,6 +33,7 @@ import { LectureRefusee, readPieceFlow } from "./read-flow.ts";
 import type { PageToken } from "./token-plan.ts";
 import type { VisionRead, VisionSelection } from "./vision.ts";
 
+import { matriculeDEssai } from "../../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
@@ -215,7 +216,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     return sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome',
-                                           '1876543W/A/M/000', 'TN', 'TND') as id`,
+                                           '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
         [nom],
       );
       return rows[0]!.id;
