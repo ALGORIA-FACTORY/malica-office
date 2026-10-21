@@ -1,18 +1,35 @@
 # Le bouton retour d'Android : il recule d'un écran, jamais hors de
 # l'application depuis un écran intérieur ; depuis l'accueil, il quitte.
 appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
 - tapOn: "Mon espace"
-- assertVisible: "Visible par vous seul"
+# Le titre de « Mon espace » depuis le 21 octobre 2026 (« Visible par vous
+# seul » a disparu de l'écran).
+- assertVisible: "Vos papiers"
 - back
 - assertVisible: "Vos documents"
-# Le fil de Malica, ouvert par-dessus l'accueil, se ferme d'un retour.
+# Malica, ouverte de l'accueil, se referme d'un retour. Depuis le 21 octobre
+# 2026, c'est un écran (/pme/malica) et non plus un fil par-dessus l'accueil ;
+# sa barre « Parler à Malica » est sous la carte de Malica, hors de l'écran.
+# Centrée : la lecture par les outils de développement donne la barre pour
+# visible alors qu'elle est encore sous la barre basse épinglée (exécution
+# 39627240476 : le tap tombait sur la barre basse).
+- scrollUntilVisible:
+    element: "Parler à Malica"
+    direction: DOWN
+    timeout: 60000
+    centerElement: true
 - tapOn: "Parler à Malica"
-- assertVisible: "Conversation en cours"
+- extendedWaitUntil:
+    visible: "Je cite l'article.*"
+    timeout: 20000
+# L'accueil revient à l'endroit où on l'avait laissé, défilé jusqu'à la barre
+# de Malica : c'est elle qui le prouve, pas « Vos documents », plus haut.
 - back
-- assertVisible: "Vos documents"
+- assertVisible: "Parler à Malica"
 # Depuis l'accueil, le retour quitte : l'application n'est plus au premier plan.
 - back
-- assertNotVisible: "Vos documents"
+- assertNotVisible: "Parler à Malica"

@@ -7,6 +7,7 @@
 #
 #   maestro test -e MALICA_EMAIL=… -e MALICA_MOT_DE_PASSE=… android/maestro/connexion.yaml
 appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
 ---
 # Chaque flux part d'un appareil en ligne. Un flux qui échoue en mode avion
 # (mode-avion.yaml) laissait l'émulateur hors ligne, et le flux suivant
