@@ -18,7 +18,9 @@
       "entry": ["src/**/*.test.ts", "tests/real/*.ts"],
     },
     "apps/web": {
-      "entry": ["src/routes/**/*.tsx", "scripts/*.mjs", "e2e/**/*.ts"],
+      // public/sw.js est servi tel quel et enregistré par son URL
+      // (navigator.serviceWorker.register("/sw.js")) : aucun import n'y mène.
+      "entry": ["src/routes/**/*.tsx", "scripts/*.mjs", "e2e/**/*.ts", "public/sw.js"],
       // @capacitor/android est le projet Gradle (android/capacitor.settings.gradle
       // le désigne) ; @capacitor/keyboard est un greffon natif enregistré par
       // cap sync et configuré dans capacitor.config.ts, sans import JavaScript.
