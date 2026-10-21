@@ -13,6 +13,7 @@ import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { banque } from "./depots/banque.ts";
 import { identite } from "./depots/identite.ts";
+import { tiers } from "./depots/tiers.ts";
 import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -105,6 +106,27 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
           devise: "TND",
           accountCode: "532",
         }),
+      ),
+    );
+  });
+
+  it("ANO-CAB-014 : l'expert mandaté crée un fournisseur du dossier ; un expert sans mandat, non", async () => {
+    const fournisseur = {
+      tenantId: pme,
+      nature: "fournisseur",
+      code: `F-${marque.slice(-6)}`,
+      raisonSociale: "Fournisseur essai",
+      compteCollectif: "401",
+    };
+    const id = await sousIdentite(expert.id, (db) => tiers.creer(db, fournisseur));
+    const vus = await sousIdentite(dirigeant.id, (db) => tiers.lister(db, pme, "fournisseur"));
+    assert.ok(
+      vus.some((t: { id: string }) => t.id === id),
+      "la société voit le fournisseur",
+    );
+    await assert.rejects(
+      sousIdentite(autreExpert.id, (db) =>
+        tiers.creer(db, { ...fournisseur, code: `X-${marque.slice(-6)}` }),
       ),
     );
   });

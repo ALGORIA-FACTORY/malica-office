@@ -57,7 +57,9 @@ import {
 } from "@/components/malica/office-ui";
 import { PanneauCabinet } from "@/components/malica/panneau-cabinet";
 import { usePanneauMalica } from "@/components/malica/panneau-malica";
+import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { MalicaChat } from "@/components/malica/MalicaChat";
+import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
@@ -254,12 +256,7 @@ function Coquille({
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
   });
-  const clientIds = useMemo(() => (clients.data ?? []).map((c) => c.tenantId), [clients.data]);
-  const notifications = useQuery({
-    queryKey: ["cab-notifications", org.id, clientIds],
-    queryFn: () => office().collab.notifications(clientIds),
-    enabled: clientIds.length > 0,
-  });
+  const notifications = useNotificationsDuCabinet(org.id, clients.data);
   // Les badges du conseil et des honoraires : des comptes réels, comme les autres.
   const conseil = useQuery({
     queryKey: ["cab-conseil-stats", org.id],
@@ -702,6 +699,9 @@ function Rail({
           >
             {t("portal.switch")}
           </Link>
+        ) : null}
+        {!replie ? (
+          <SeDeconnecter className="border border-border px-2.5 py-2 text-center text-[10px] font-semibold uppercase tracking-wide hover:bg-accent disabled:opacity-60" />
         ) : null}
       </div>
     </>

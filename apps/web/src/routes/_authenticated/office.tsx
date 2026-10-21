@@ -9,6 +9,7 @@ import { useEffect, type ReactNode } from "react";
 import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { PackBanner } from "@/components/malica/PackBanner";
+import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -75,16 +76,7 @@ function OfficeHome() {
           </Link>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
-            <button
-              type="button"
-              onClick={async () => {
-                await office().auth.deconnexion();
-                await navigate({ to: "/auth" });
-              }}
-              className="border border-border px-3 py-2 text-xs uppercase tracking-wide transition-colors hover:bg-accent"
-            >
-              {t("app.signout")}
-            </button>
+            <SeDeconnecter className="border border-border px-3 py-2 text-xs uppercase tracking-wide transition-colors hover:bg-accent" />
           </div>
         </div>
       </header>

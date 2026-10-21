@@ -1195,6 +1195,8 @@ export interface ClientSummary {
   engagementStatus: string;
   /** Le premier jour du mandat, ou rien si l'engagement ne le dit pas. */
   mandatDepuis: string | null;
+  /** Le dernier jour d'un mandat terminé ; rien tant qu'il court. */
+  mandatJusquau: string | null;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
 }
@@ -2530,6 +2532,8 @@ export interface SiegeDeLaLicence {
   role: string;
   tenant_id: string;
   organisation: string;
+  /** L'adresse du membre ; c'est elle qui le désigne quand il n'a pas de nom. */
+  email: string | null;
 }
 
 /** Une organisation de la licence, et ce qu'elle a consommé ce mois-ci. */

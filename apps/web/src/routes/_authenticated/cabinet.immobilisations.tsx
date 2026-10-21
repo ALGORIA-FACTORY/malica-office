@@ -868,6 +868,10 @@ function CabinetImmobilisations() {
                                 <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-signal-ok">
                                   {t("cab.immo.recorded")}
                                 </span>
+                              ) : exercice > anneeCourante ? (
+                                <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                  {t("cab.immo.aVenir")}
+                                </span>
                               ) : (
                                 <button
                                   type="button"
@@ -964,6 +968,11 @@ function CabinetImmobilisations() {
                               {constatees.has(`${asset.id}:${l.exercice}`) ? (
                                 <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-signal-ok">
                                   {t("cab.immo.recorded")}
+                                </span>
+                              ) : l.exercice > anneeCourante ? (
+                                // Un exercice qui n'est pas ouvert ne se constate pas (ANO-CAB-002).
+                                <span className="text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                  {t("cab.immo.aVenir")}
                                 </span>
                               ) : asset.status === "en_service" ? (
                                 <button

@@ -99,6 +99,14 @@ function CabinetPropositions() {
     queryKey: ["cab-motifs", locale],
     queryFn: () => office().supervision.motifs(locale),
   });
+  // La même clé que le rail du cabinet : une seule lecture du rôle.
+  const acces = useQuery({
+    queryKey: ["cab-acces", org.id],
+    queryFn: () => office().acces.monAcces(org.id),
+  });
+  // Superviser — valider, forcer — revient à l'expert ou au collaborateur ;
+  // l'assistant prépare (ANO-CAB-006). La base tient la même règle.
+  const superviseur = acces.data?.role === "expert" || acces.data?.role === "collaborateur";
 
   const rows = useMemo(
     () => (queue.data ?? []).filter((r) => r.status === "comptabilisee" && r.ecritureId),
@@ -226,9 +234,13 @@ function CabinetPropositions() {
       for (const p of input.pieces) {
         const e = p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined;
         if (!e) continue;
+        // La ligne réimputée est celle de la charge OU du produit : une vente
+        // se corrige comme un achat (ANO-CAB-005). Tiers, TVA et trésorerie
+        // ne bougent pas.
+        const aReimputer = (code: string) => code.startsWith("6") || code.startsWith("7");
         const lignes = e.lines.map((l) => ({
-          account_code: l.accountCode.startsWith("6") ? input.compte.code : l.accountCode,
-          libelle: l.accountCode.startsWith("6") ? input.compte.libelle : l.libelle,
+          account_code: aReimputer(l.accountCode) ? input.compte.code : l.accountCode,
+          libelle: aReimputer(l.accountCode) ? input.compte.libelle : l.libelle,
           debit: l.debit,
           credit: l.credit,
           tax_code: l.taxCode,
@@ -400,6 +412,11 @@ function CabinetPropositions() {
         <p className="max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
           {t("cab.prop.groupes.doctrine")}
         </p>
+        {acces.isSuccess && !superviseur ? (
+          <p className="max-w-[70ch] border border-border bg-card px-3 py-2 text-[12.5px] leading-[1.5]">
+            {t("cab.prop.preparer")}
+          </p>
+        ) : null}
 
         {queue.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
@@ -418,7 +435,7 @@ function CabinetPropositions() {
                 ecritureDe={ecritureDe}
                 lueParRecette={lueParRecette}
                 motifs={motifs.data ?? []}
-                occupe={occupe}
+                occupe={occupe || !superviseur}
                 valider={(pieces) => valider.mutate(pieces)}
                 forcer={(input) => forcer.mutate(input)}
                 totalDe={totalDe}
@@ -452,7 +469,7 @@ function CabinetPropositions() {
             </button>
             <button
               type="button"
-              disabled={occupe}
+              disabled={occupe || !superviseur}
               onClick={() => valider.mutate(selection)}
               className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
             >

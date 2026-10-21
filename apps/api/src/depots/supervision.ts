@@ -59,8 +59,10 @@ export const supervision = {
     // Trois requêtes et un croisement manuel deviennent une jointure avec
     // agrégat : les compteurs sont calculés là où sont les lignes.
     const { rows } = await db.query(
-      `select e.pme_org_id, e.status, e.starts_on,
-              o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode,
+      `select e.pme_org_id, e.status, e.starts_on, e.ends_on,
+              -- Un mandat terminé garde le nom du client (ANO-013).
+              coalesce(o.name, app.nom_d_un_client_du_cabinet(e.pme_org_id)) as name,
+              o.legal_id, o.jurisdiction, o.currency, o.validation_mode,
               coalesce(
                 jsonb_object_agg(p.status, p.n) filter (where p.status is not null),
                 '{}'::jsonb) as comptes
@@ -73,7 +75,7 @@ export const supervision = {
         where e.cabinet_org_id = $1
           -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
           and e.pme_org_id in (select app.mandats_visibles($1))
-        group by e.pme_org_id, e.status, e.starts_on, o.name, o.legal_id, o.jurisdiction,
+        group by e.pme_org_id, e.status, e.starts_on, e.ends_on, o.name, o.legal_id, o.jurisdiction,
                  o.currency, o.validation_mode`,
       [cabinetTenantId],
     );
@@ -95,6 +97,7 @@ export const supervision = {
           validationMode: (r["validation_mode"] as string) ?? "mandate",
           engagementStatus: r["status"] as string,
           mandatDepuis: (r["starts_on"] as string | null) ?? null,
+          mandatJusquau: (r["ends_on"] as string | null) ?? null,
           counts: comptes,
         };
       })

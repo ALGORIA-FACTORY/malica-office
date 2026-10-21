@@ -68,6 +68,8 @@ const ENGAGEMENT: Record<string, MessageKey> = {
   suspendu: "cab.engagement.suspendu",
   termine: "cab.engagement.termine",
 };
+/** Les états d'un mandat qui ne donnent plus accès au dossier. */
+const MANDAT_CLOS = new Set(["termine", "refuse"]);
 
 function CabinetClients() {
   const { t, locale } = useI18n();
@@ -99,7 +101,19 @@ function CabinetClients() {
     queryKey: ["fiche-regimes", org.jurisdiction],
     queryFn: () => office().identity.regimesDisponibles(org.jurisdiction),
   });
-  const rows = useMemo(() => clients.data ?? [], [clients.data]);
+  /*
+   * Un mandat terminé ne se range plus parmi les dossiers tenus : il n'ouvre
+   * plus rien, ne compte nulle part, et se lit à part, avec son nom et ses
+   * dates (ANO-013). Le portefeuille, ce sont les autres.
+   */
+  const rows = useMemo(
+    () => (clients.data ?? []).filter((c) => !MANDAT_CLOS.has(c.engagementStatus)),
+    [clients.data],
+  );
+  const termines = useMemo(
+    () => (clients.data ?? []).filter((c) => MANDAT_CLOS.has(c.engagementStatus)),
+    [clients.data],
+  );
   // La fiche de chaque client, pour son régime : une requête par mandat,
   // mise en cache par client — un cabinet en a des dizaines, pas des milliers.
   const fiches = useQueries({
@@ -280,8 +294,51 @@ function CabinetClients() {
           </InkTable>
         )}
       </section>
+
+      {termines.length > 0 ? (
+        <section className="space-y-3">
+          <SectionTitle
+            action={
+              <span className="num text-[11px] text-muted-foreground">
+                {t("cab.clients.count", { count: termines.length })}
+              </span>
+            }
+          >
+            {t("cab.clients.termines.titre")}
+          </SectionTitle>
+          <p className="text-[12.5px] text-muted-foreground">{t("cab.clients.termines.sous")}</p>
+          <ul className="divide-y divide-border border border-border bg-card">
+            {termines.map((c) => (
+              <li
+                key={`${c.tenantId}:${c.mandatDepuis ?? ""}`}
+                className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3"
+              >
+                <span className="text-[13px] font-medium">{c.name}</span>
+                <span className="num text-[11px] text-muted-foreground">
+                  {c.engagementStatus === "refuse"
+                    ? t("cab.clients.termines.refuse")
+                    : t("cab.clients.termines.periode", {
+                        debut: dateCourte(c.mandatDepuis, locale),
+                        fin: dateCourte(c.mandatJusquau, locale),
+                      })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
+}
+
+/** Une date du mandat, dans la langue de la personne ; un tiret si la base n'en dit rien. */
+function dateCourte(iso: string | null, locale: string): string {
+  if (!iso) return "—";
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
 }
 
 function LigneClient({

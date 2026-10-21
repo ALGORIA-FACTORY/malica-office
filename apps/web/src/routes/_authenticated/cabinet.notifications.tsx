@@ -19,6 +19,7 @@ import { useMemo } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
+import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
@@ -105,6 +106,14 @@ function pieceDe(n: Notification): string | null {
   return typeof id === "string" ? id : null;
 }
 
+/** Un champ texte du payload, ou `null`. */
+function texteDuPayload(n: Notification, cle: string): string | null {
+  const p = n.payload;
+  if (!p || typeof p !== "object") return null;
+  const v = (p as Record<string, unknown>)[cle];
+  return typeof v === "string" && v.trim() !== "" ? v : null;
+}
+
 function CabinetNotifications() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
@@ -114,12 +123,7 @@ function CabinetNotifications() {
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
-  const clientIds = useMemo(() => (clients.data ?? []).map((c) => c.tenantId), [clients.data]);
-  const notifications = useQuery({
-    queryKey: ["cab-notifications", org.id, clientIds],
-    queryFn: () => office().collab.notifications(clientIds),
-    enabled: clientIds.length > 0,
-  });
+  const notifications = useNotificationsDuCabinet(org.id, clients.data);
 
   useMalicaPanel(<MalicaNote>{t("cab.notif.malica")}</MalicaNote>, [locale]);
 
@@ -138,8 +142,11 @@ function CabinetNotifications() {
 
   const liste = useMemo(() => notifications.data ?? [], [notifications.data]);
   const nonLues = liste.filter((n) => !n.readAt);
-  const nomDuClient = (tenantId: string) =>
-    (clients.data ?? []).find((c) => c.tenantId === tenantId)?.name ?? "—";
+  // Une notification inscrite chez le cabinet nomme le client dans sa charge.
+  const nomDuClient = (n: Notification) =>
+    (clients.data ?? []).find((c) => c.tenantId === n.tenantId)?.name ??
+    texteDuPayload(n, "client") ??
+    "—";
 
   // Groupées par jour, les plus récentes d'abord.
   const parJour = useMemo(() => {
@@ -194,7 +201,7 @@ function CabinetNotifications() {
         </p>
       ) : null}
 
-      {notifications.isPending && clientIds.length > 0 ? (
+      {notifications.isPending ? (
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       ) : liste.length === 0 ? (
         <EmptyState>{t("cab.notif.vide")}</EmptyState>
@@ -234,9 +241,13 @@ function CabinetNotifications() {
                         {t(PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre")}
                       </span>
                       <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
-                        {nomDuClient(n.tenantId)} ·{" "}
-                        <span className="num">{heureLisible(n.createdAt)}</span>
+                        {nomDuClient(n)} · <span className="num">{heureLisible(n.createdAt)}</span>
                       </span>
+                      {texteDuPayload(n, "motif") ? (
+                        <span className="mt-1 block text-[12px] text-text-2">
+                          {t("cab.notif.motif", { motif: texteDuPayload(n, "motif") ?? "" })}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="flex shrink-0 gap-1.5">
                       {piece ? (

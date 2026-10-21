@@ -703,6 +703,24 @@ const deuxiemeDotation = await e.rpcAttenduEnEchec("immo", "constaterDotation", 
   },
 ]);
 e.verdict("le même exercice ne se constate pas deux fois", deuxiemeDotation !== null);
+// ANO-CAB-002 : un exercice qui n'est pas ouvert ne se constate pas d'avance.
+const exerciceFutur = new Date().getUTCFullYear() + 1;
+const dotationDAvance = await e.rpcAttenduEnEchec("immo", "constaterDotation", [
+  {
+    assetId: bien.id,
+    exercice: exerciceFutur,
+    months: 12,
+    dotation: dotationAttendue,
+    cumul: dotationAttendue,
+    vnc: vncAttendue,
+    packVersionId: pack.id,
+  },
+]);
+e.verdict(
+  "un exercice futur ne se constate pas d'avance",
+  dotationDAvance !== null && /pas encore ouvert/.test(String(dotationDAvance)),
+  String(dotationDAvance ?? ""),
+);
 const modification = await e.rpcAttenduEnEchec("immo", "updateAsset", [
   {
     id: bien.id,

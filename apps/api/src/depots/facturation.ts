@@ -171,7 +171,7 @@ export const facturation = {
   /** Les membres de toutes les organisations de la licence. */
   async sieges(db: Requete) {
     const { rows } = await db.query(
-      `select user_id, nom, role, tenant_id, organisation
+      `select user_id, nom, role, tenant_id, organisation, email
          from licence_sieges_v order by organisation, role, nom, user_id`,
     );
     return rows;

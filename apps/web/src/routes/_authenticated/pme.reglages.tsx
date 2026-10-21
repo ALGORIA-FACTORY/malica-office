@@ -14,6 +14,7 @@ import {
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
+import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
@@ -148,6 +149,7 @@ function PmeReglages() {
           </span>
         </div>
         <MonNom />
+        <SeDeconnecter className="btn btn-sec mt-2" />
       </div>
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
@@ -1072,16 +1074,16 @@ function Siege({
   return (
     <>
       <div className="sg">
-        <span className={cn("av", moi && "me")}>{initiale(siege.nom ?? siege.user_id)}</span>
+        <span className={cn("av", moi && "me")}>{initiale(siege.nom ?? siege.email)}</span>
         <span className="bd">
-          <b>{siege.nom ?? ABSENT}</b>
           {/*
-           * `licence_sieges_v` ne rend pas d'adresse. Sans nom, l'identifiant
-           * est le seul repère qui reste, et il vaut mieux qu'un vide : c'est
-           * ce que le dirigeant citera en signalant « qui est celui-là ? ».
-           * Avec un nom, il ne sert plus à rien et ne s'affiche pas.
+           * Le nom d'usage d'abord ; sans lui, l'adresse — c'est elle que le
+           * dirigeant reconnaît. L'identifiant technique ne s'affiche jamais
+           * (recette du 21 octobre 2026). Avec un nom, l'adresse se lit
+           * dessous.
            */}
-          {siege.nom ? null : <span className="ml">{siege.user_id}</span>}
+          <b>{siege.nom ?? siege.email ?? ABSENT}</b>
+          {siege.nom && siege.email ? <span className="ml">{siege.email}</span> : null}
           <span className={cn("ro", siege.role === "dirigeant" && "pr")}>
             <i />
             {roleLisible(siege.role, t)}

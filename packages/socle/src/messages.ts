@@ -671,6 +671,7 @@ const fr = {
   "cab.immo.vnc": "VNC",
   "cab.immo.record": "Constater",
   "cab.immo.recorded": "Constat\u00e9e",
+  "cab.immo.aVenir": "Exercice à venir",
   "cab.immo.totals": "Total dotations {dotations} \u2014 VNC finale {vnc} {currency}",
   "cab.immo.new": "Nouvelle immobilisation",
   "cab.immo.edit": "Modifier",
@@ -1448,6 +1449,12 @@ const fr = {
   "cab.engagement.suspendu": "Suspendu",
   "cab.engagement.termine": "Terminé",
   "cab.clients.title": "Clients",
+  "cab.clients.termines.titre": "Mandats terminés",
+  "cab.clients.termines.sous":
+    "Le client a repris son dossier : il ne s'ouvre plus d'ici et ne compte plus dans le portefeuille.",
+  "cab.clients.termines.periode": "Du {debut} au {fin}",
+  "cab.clients.termines.refuse": "Proposition refusée",
+  "cab.notif.motif": "Motif : {motif}",
   "cab.clients.empty": "Aucun mandat actif.",
   "cab.clients.mandate": "Mandat",
   "cab.clients.mode": "Validation",
@@ -2090,6 +2097,8 @@ const fr = {
   "cab.prop.groupes.compte": "{clients} clients · {pieces} pièces",
   "cab.prop.groupes.doctrine":
     "Un lot par client : c’est le périmètre d’un mandat, et celui d’une piste d’audit lisible. Ouvrez l’écriture en masse pour voir ce qui sera comptabilisé — et sur quel compte.",
+  "cab.prop.preparer":
+    "Votre rôle prépare les écritures. Les valider ou les forcer revient à l'expert ou au collaborateur du cabinet.",
   "cab.prop.groupe.tout": "Retenir tout le lot {client}",
   "cab.prop.groupe.pieces": "Pièces",
   "cab.prop.groupe.total": "Total",
@@ -3895,6 +3904,7 @@ const en: Dict = {
   "cab.immo.vnc": "Net book value",
   "cab.immo.record": "Record",
   "cab.immo.recorded": "Recorded",
+  "cab.immo.aVenir": "Future year",
   "cab.immo.totals": "Total charges {dotations} \u2014 closing NBV {vnc} {currency}",
   "cab.immo.new": "New asset",
   "cab.immo.edit": "Edit",
@@ -4662,6 +4672,12 @@ const en: Dict = {
   "cab.engagement.suspendu": "Suspended",
   "cab.engagement.termine": "Ended",
   "cab.clients.title": "Clients",
+  "cab.clients.termines.titre": "Ended engagements",
+  "cab.clients.termines.sous":
+    "The client has taken back their file: it no longer opens from here and no longer counts in the portfolio.",
+  "cab.clients.termines.periode": "From {debut} to {fin}",
+  "cab.clients.termines.refuse": "Proposal declined",
+  "cab.notif.motif": "Reason: {motif}",
   "cab.clients.empty": "No active mandate.",
   "cab.clients.mandate": "Mandate",
   "cab.clients.mode": "Validation",
@@ -5294,6 +5310,8 @@ const en: Dict = {
   "cab.prop.groupes.compte": "{clients} clients · {pieces} documents",
   "cab.prop.groupes.doctrine":
     "One lot per client: the scope of a mandate, and of a readable audit trail. Open the bulk entry to see what will be booked — and on which account.",
+  "cab.prop.preparer":
+    "Your role prepares entries. Validating or overriding them is for the firm's expert or associate.",
   "cab.prop.groupe.tout": "Select the whole lot {client}",
   "cab.prop.groupe.pieces": "Documents",
   "cab.prop.groupe.total": "Total",
@@ -7051,6 +7069,7 @@ const ar: Dict = {
     "\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u064a\u0629",
   "cab.immo.record": "\u0625\u062b\u0628\u0627\u062a",
   "cab.immo.recorded": "\u0645\u062b\u0628\u064e\u0651\u062a",
+  "cab.immo.aVenir": "سنة مالية قادمة",
   "cab.immo.totals":
     "\u0645\u062c\u0645\u0648\u0639 \u0627\u0644\u0623\u0642\u0633\u0627\u0637 {dotations} \u2014 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629 {vnc} {currency}",
   "cab.immo.new": "أصل جديد",
@@ -7805,6 +7824,12 @@ const ar: Dict = {
   "cab.engagement.suspendu": "معلّق",
   "cab.engagement.termine": "منتهٍ",
   "cab.clients.title": "الحرفاء",
+  "cab.clients.termines.titre": "الوكالات المنتهية",
+  "cab.clients.termines.sous":
+    "استعاد الحريف ملفه: لم يعد يُفتح من هنا ولم يعد يُحتسب ضمن المحفظة.",
+  "cab.clients.termines.periode": "من {debut} إلى {fin}",
+  "cab.clients.termines.refuse": "عرض مرفوض",
+  "cab.notif.motif": "السبب: {motif}",
   "cab.clients.empty": "لا توجد وكالة نشطة.",
   "cab.clients.mandate": "الوكالة",
   "cab.clients.mode": "المصادقة",
@@ -8416,6 +8441,8 @@ const ar: Dict = {
   "cab.prop.groupes.compte": "{clients} حريف · {pieces} وثيقة",
   "cab.prop.groupes.doctrine":
     "دفعة لكل حريف: هذا نطاق الوكالة ونطاق مسار تدقيق مقروء. افتح القيد الجماعي لترى ما سيُحاسَب — وعلى أي حساب.",
+  "cab.prop.preparer":
+    "دورك إعداد القيود. أما المصادقة عليها أو فرضها فمن صلاحية الخبير أو المعاون في المكتب.",
   "cab.prop.groupe.tout": "اختيار دفعة {client} كاملة",
   "cab.prop.groupe.pieces": "وثائق",
   "cab.prop.groupe.total": "المجموع",
