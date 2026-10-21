@@ -49,12 +49,18 @@ export function useDecimales(): number | null {
  * 2026 : les offres s'affichaient « 23.610000 TND », « 11.71 », « 108.1 ».
  * Tant que les décimales ne sont pas lues, rien ne s'écrit (voir plus haut).
  */
-export function usePrix(): (valeur: string | null | undefined) => string {
+export function usePrix(): (valeur: string | number | null | undefined) => string {
   const decimales = useDecimales();
   const { locale } = useI18n();
   return (valeur) => {
-    if (valeur === null || valeur === undefined || valeur.trim() === "" || decimales === null)
-      return "";
-    return montant(toFixedStr(D(valeur), decimales), locale);
+    // `mon_annuel` rend ses montants en nombre JSON, les grilles en chaîne :
+    // les deux se lisent, aucun ne fait tomber l'écran (CI du 21 octobre).
+    const brut = valeur === null || valeur === undefined ? "" : String(valeur).trim();
+    if (brut === "" || decimales === null) return "";
+    try {
+      return montant(toFixedStr(D(brut), decimales), locale);
+    } catch {
+      return montant(brut, locale);
+    }
   };
 }

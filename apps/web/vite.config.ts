@@ -132,6 +132,13 @@ export default defineConfig(({ mode }) => {
       port: Number(process.env["MALICA_PORT"] ?? process.env["PORT"] ?? 8080),
       strictPort: true,
       host: true,
+      /*
+       * Playwright écrit ses traces et captures sous `e2e/sortie` PENDANT les
+       * parcours ; Vite y voyait des fichiers qui changent et rechargeait la
+       * page en plein test (« element was detached from the DOM »). Les
+       * sorties ne sont pas du code : on ne les regarde pas.
+       */
+      watch: { ignored: ["**/e2e/sortie/**", "**/e2e/sortie-rapport/**"] },
       ...(https ? { https } : {}),
     },
   };
