@@ -462,7 +462,9 @@ function CabinetReview() {
         | undefined
     )?.articles ?? [];
   const all = ecritures.data ?? [];
-  const booked = all.find((e) => e.status === "booked") ?? null;
+  // L'écriture qu'on lit et qu'on corrige : la vivante, jamais une
+  // contre-passation ni un règlement (ANO-CAB-005, ANO-FC-012).
+  const booked = all.find((e) => e.vivante) ?? null;
   const reversal = all.find((e) => e.libelle.startsWith("Contre-passation")) ?? null;
 
   const noteMissing = Boolean(selectedMotif?.requiresNote) && note.trim().length === 0;

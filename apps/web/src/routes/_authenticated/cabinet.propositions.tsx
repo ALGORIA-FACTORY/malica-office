@@ -43,7 +43,13 @@ import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
-import { compteDeCharge, ecritureEnMasse, lotDe, type Lot } from "@/lib/propositions";
+import {
+  compteDeCharge,
+  ecritureEnMasse,
+  estChargeOuProduit,
+  lotDe,
+  type Lot,
+} from "@/lib/propositions";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -234,13 +240,9 @@ function CabinetPropositions() {
       for (const p of input.pieces) {
         const e = p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined;
         if (!e) continue;
-        // La ligne réimputée est celle de la charge OU du produit : une vente
-        // se corrige comme un achat (ANO-CAB-005). Tiers, TVA et trésorerie
-        // ne bougent pas.
-        const aReimputer = (code: string) => code.startsWith("6") || code.startsWith("7");
         const lignes = e.lines.map((l) => ({
-          account_code: aReimputer(l.accountCode) ? input.compte.code : l.accountCode,
-          libelle: aReimputer(l.accountCode) ? input.compte.libelle : l.libelle,
+          account_code: estChargeOuProduit(l.accountCode) ? input.compte.code : l.accountCode,
+          libelle: estChargeOuProduit(l.accountCode) ? input.compte.libelle : l.libelle,
           debit: l.debit,
           credit: l.credit,
           tax_code: l.taxCode,

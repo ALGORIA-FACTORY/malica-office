@@ -88,10 +88,19 @@ export function ecritureEnMasse(ecritures: readonly Ecriture[]): LigneDeMasse[] 
     }));
 }
 
-/** Le compte de charge d'une écriture : la première ligne de classe 6, sinon le premier débit non nul. */
+/**
+ * Une ligne de charge (classe 6) ou de produit (classe 7) : celle que l'on
+ * réimpute. Une vente se corrige comme un achat (ANO-CAB-005) ; tiers, TVA
+ * et trésorerie ne bougent pas.
+ */
+export function estChargeOuProduit(compte: string): boolean {
+  return compte.startsWith("6") || compte.startsWith("7");
+}
+
+/** Le compte de charge ou de produit d'une écriture, sinon le premier débit non nul. */
 export function compteDeCharge(e: Ecriture): EcritureLine | null {
   return (
-    e.lines.find((l) => l.accountCode.startsWith("6")) ??
+    e.lines.find((l) => estChargeOuProduit(l.accountCode)) ??
     e.lines.find((l) => !/^0(\.0+)?$/.test(l.debit)) ??
     null
   );

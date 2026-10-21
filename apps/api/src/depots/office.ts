@@ -56,8 +56,21 @@ async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]
   return parEcriture(rows as Record<string, unknown>[]);
 }
 
+/**
+ * Les colonnes d'une écriture lue, et le fait qui manquait à l'écran : est-ce
+ * l'écriture VIVANTE de sa pièce — inscrite, ni contre-passation ni
+ * contre-passée, pas un règlement ? Deux écritures passées dans la même
+ * transaction (contre-passation et réimputation) ont le même `created_at` :
+ * l'ordre ne disait pas laquelle vit (ANO-CAB-005, ANO-FC-012).
+ */
+const COLONNES_ECRITURE = `e.id, e.piece_id, e.journal, e.date_ecriture, e.devise, e.libelle,
+       e.status, e.pack_version_id,
+       (e.status = 'booked' and e.nature = 'piece' and e.reverses_id is null
+        and not exists (select 1 from ecritures_v r where r.reverses_id = e.id)) as vivante`;
+
 function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) {
   return {
+    vivante: r["vivante"] === true,
     id: r["id"] as string,
     pieceId: (r["piece_id"] as string | null) ?? null,
     journal: r["journal"] as string,
@@ -263,8 +276,8 @@ export const office = {
   async ecrituresByIds(db: Requete, ids: string[]) {
     if (ids.length === 0) return [];
     const { rows } = await db.query(
-      `select id, piece_id, journal, date_ecriture, devise, libelle, status, pack_version_id
-         from ecritures_v where id = any($1::uuid[]) order by date_ecriture desc`,
+      `select ${COLONNES_ECRITURE}
+         from ecritures_v e where id = any($1::uuid[]) order by date_ecriture desc`,
       [ids],
     );
     const lignes = await lignesDe(db, ids);
@@ -273,8 +286,8 @@ export const office = {
 
   async ecrituresForPiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select id, piece_id, journal, date_ecriture, devise, libelle, status, pack_version_id
-         from ecritures_v where piece_id = $1 order by created_at desc`,
+      `select ${COLONNES_ECRITURE}
+         from ecritures_v e where piece_id = $1 order by created_at desc`,
       [pieceId],
     );
     const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);

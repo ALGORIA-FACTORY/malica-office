@@ -1032,6 +1032,11 @@ export interface Ecriture {
   libelle: string;
   status: string;
   /**
+   * L'écriture vivante de sa pièce : inscrite, ni contre-passation ni
+   * contre-passée, pas un règlement. C'est elle qu'on corrige.
+   */
+  vivante: boolean;
+  /**
    * Le pack sous lequel cette écriture a été arrêtée.
    *
    * Une correction doit rester sous LE MÊME pack, pas sous celui du jour :

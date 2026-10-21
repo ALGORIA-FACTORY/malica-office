@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Ecriture } from "@malica/socle/ports/repositories";
 
-import { compteDeCharge, ecritureEnMasse, lotDe } from "../propositions";
+import { compteDeCharge, ecritureEnMasse, estChargeOuProduit, lotDe } from "../propositions";
 
 function ecriture(id: string, lignes: Array<[string, string, string, string]>): Ecriture {
   return {
@@ -13,6 +13,7 @@ function ecriture(id: string, lignes: Array<[string, string, string, string]>): 
     devise: "TND",
     libelle: `Écriture ${id}`,
     status: "booked",
+    vivante: true,
     packVersionId: "pack",
     lines: lignes.map(([accountCode, libelle, debit, credit], ordinal) => ({
       ordinal,
@@ -102,5 +103,17 @@ describe("compteDeCharge", () => {
     ]);
     expect(compteDeCharge(sans6)?.accountCode).toBe("2183");
     expect(compteDeCharge(ecriture("e", []))).toBeNull();
+  });
+
+  it("prend aussi la classe 7 : une vente se réimpute comme un achat (ANO-CAB-005)", () => {
+    const vente = ecriture("v", [
+      ["411", "Clients", "119.000", "0.000"],
+      ["706", "Prestations", "0.000", "100.000"],
+      ["4366", "TVA collectée", "0.000", "19.000"],
+    ]);
+    expect(compteDeCharge(vente)?.accountCode).toBe("706");
+    expect(estChargeOuProduit("706")).toBe(true);
+    expect(estChargeOuProduit("411")).toBe(false);
+    expect(estChargeOuProduit("4366")).toBe(false);
   });
 });

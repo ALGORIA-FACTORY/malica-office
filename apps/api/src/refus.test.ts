@@ -51,6 +51,16 @@ describe("refus lisible", () => {
     assert.equal(refusLisible({ ...erreur, code: "23P02" }), null);
   });
 
+  it("dit le quatre-yeux par sa phrase, pas par le nom de sa règle (ANO-CAB-005)", () => {
+    const phrase = refusLisible({
+      code: "23514",
+      message:
+        "chk_ecr_4eyes : en mode mandat, le superviseur ne peut pas etre celui qui a comptabilise",
+    });
+    assert.ok(phrase && !phrase.includes("chk_"), phrase ?? "");
+    assert.match(phrase, /second regard/);
+  });
+
   it("dit un refus de RLS sans nommer la table", () => {
     const rendu = refusLisible({
       code: "42501",

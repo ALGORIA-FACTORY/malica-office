@@ -29,6 +29,12 @@ const CODES_DE_REFUS = new Set([
   "42501", // insufficient_privilege  — « ce compte est officiel »
 ]);
 
+/** Les règles de la base qui se nomment dans leur message, et ce qu'elles disent. */
+const REGLES_NOMMEES: Readonly<Record<string, string>> = {
+  chk_ecr_4eyes:
+    "la supervision exige un second regard : celui qui a inscrit l'écriture ne la valide pas lui-même",
+};
+
 interface ErreurPostgres {
   code?: string;
   message?: string;
@@ -130,7 +136,11 @@ export function refusLisible(erreur: unknown): string | null {
   }
 
   const message = e.message?.trim();
-  return message ? message : null;
+  if (!message) return null;
+  // Une règle de la base qui se nomme en tête de son message (« chk_… : »)
+  // se dit par sa phrase, jamais par son nom (recette du cabinet, ANO-CAB-005).
+  const regle = /^(\w+) :/.exec(message)?.[1];
+  return (regle && REGLES_NOMMEES[regle]) ?? message;
 }
 
 /**
