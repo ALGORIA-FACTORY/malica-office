@@ -75,6 +75,13 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   // muet des deux côtés.
   "piece.demande": "cab.notif.kind.piece.demande",
   "piece.demande_tranchee": "cab.notif.kind.piece.demande_tranchee",
+  // ANO-037 : les genres que la base pose et qu'aucune phrase ne disait.
+  "piece.a_valider": "cab.notif.kind.piece.a_valider",
+  "piece.a_revalider": "cab.notif.kind.piece.a_revalider",
+  "acces.propose": "cab.notif.kind.acces.propose",
+  "acces.accepte": "cab.notif.kind.acces.accepte",
+  "acces.repris": "cab.notif.kind.acces.repris",
+  "facture.emise": "cab.notif.kind.facture.emise",
 };
 
 /** Un genre qui attend un geste du cabinet se lit en or. */

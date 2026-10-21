@@ -135,6 +135,15 @@ const GENRES: Record<string, MessageKey> = {
   "mandat.propose": "notif.kind.mandat.propose",
   "mandat.accepte": "notif.kind.mandat.accepte",
   "mandat.refuse": "notif.kind.mandat.refuse",
+  // ANO-037 : ces genres arrivent aussi sur le dossier de la PME, et
+  // tombaient sous « Un événement du dossier. ».
+  "mandat.revoque": "notif.kind.mandat.revoque",
+  "piece.a_valider": "notif.kind.piece.a_valider",
+  "piece.a_revalider": "notif.kind.piece.a_revalider",
+  "piece.demande_tranchee": "notif.kind.piece.demande_tranchee",
+  "acces.propose": "notif.kind.acces.propose",
+  "acces.accepte": "notif.kind.acces.accepte",
+  "acces.repris": "notif.kind.acces.repris",
   "conseil.arbitrage": "notif.kind.conseil.arbitrage",
   "conseil.repondu": "notif.kind.conseil.repondu",
   "conseil.decide": "notif.kind.conseil.decide",

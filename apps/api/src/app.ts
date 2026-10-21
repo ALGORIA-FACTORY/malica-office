@@ -12,7 +12,7 @@
  * gestionnaires à la main ne prouverait rien sur ce qui tourne en production.
  */
 
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -46,6 +46,26 @@ import { deposerContenu, servirContenu, sonderLeStockage } from "./stockage.ts";
 
 /** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
 const JOURNAL_ATELIER = new URL("../journal-atelier.log", import.meta.url);
+
+/**
+ * La version LIVRÉE, au format x.y.z. Le staging suit `main` : son image est
+ * étiquetée « main », et `MALICA_VERSION` le répétait - la sonde ne disait
+ * plus quel code tournait (ANO-037). L'étiquette reste quand elle est un
+ * numéro ; sinon le `package.json` de la racine, copié dans l'image, le dit.
+ */
+const VERSION_LIVREE = ((): string => {
+  const etiquette = process.env["MALICA_VERSION"];
+  if (etiquette && /^v?\d+\.\d+\.\d+/.test(etiquette)) return etiquette.replace(/^v/, "");
+  try {
+    const racine = JSON.parse(
+      readFileSync(new URL("../../../package.json", import.meta.url), "utf8"),
+    ) as { version?: unknown };
+    if (typeof racine.version === "string") return racine.version;
+  } catch {
+    /* hors d'un dépôt complet : l'étiquette, ou l'atelier */
+  }
+  return etiquette ?? "atelier";
+})();
 
 export const app = express();
 // Derrière Caddy, l'adresse et le protocole vus par Express sont ceux du
@@ -428,7 +448,7 @@ app.get("/sante", (_req, res) => {
 app.get("/sante/profonde", async (_req, res) => {
   const verdict = {
     etat: "ok",
-    version: process.env["MALICA_VERSION"] ?? "atelier",
+    version: VERSION_LIVREE,
     base: "ok",
     stockage: "ok",
   };

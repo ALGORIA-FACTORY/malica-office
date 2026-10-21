@@ -32,6 +32,13 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    /*
+     * Une adresse inconnue SOUS un espace (/pme/…, /cabinet/…) tombait sur
+     * le « Not Found » anglais du routeur, faute de page à ce niveau
+     * (ANO-037). La page introuvable de la racine, en trois langues, sert
+     * toutes les adresses.
+     */
+    notFoundMode: "root",
   });
 
   return router;

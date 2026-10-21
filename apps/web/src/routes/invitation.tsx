@@ -97,10 +97,16 @@ function Invitation() {
   const adresseDifferente =
     inv && compte.data && inv.email.toLowerCase() !== compte.data.email.toLowerCase();
 
+  // Un lien qui n'ouvre rien ne s'annonce pas « Votre espace est prêt »
+  // (ANO-037) : le titre dit ce que le corps dit.
+  const introuvable =
+    jeton === null || Boolean(compte.data && (lue.isError || (lue.isSuccess && !inv)));
+  const lienMort = introuvable || Boolean(inv && !inv.valable);
+
   let corps: React.ReactNode;
   if (jeton === undefined) {
     corps = <p className="text-[14px] text-[#9A9AA0]">{t("common.loading")}</p>;
-  } else if (jeton === null || (compte.data && lue.isSuccess && !inv)) {
+  } else if (introuvable) {
     corps = (
       <p className="text-[16px] leading-[1.6] text-[#C7C7CC]">{t("invitation.introuvable")}</p>
     );
@@ -192,7 +198,7 @@ function Invitation() {
           {t("invitation.kicker")}
         </p>
         <h1 className="mt-3 text-[34px] font-semibold leading-[1.08] tracking-[-0.035em]">
-          {t("invitation.titre")}
+          {t(lienMort ? "invitation.titreLienMort" : "invitation.titre")}
         </h1>
         <div className="mt-5">{corps}</div>
       </main>
