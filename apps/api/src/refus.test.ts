@@ -37,8 +37,18 @@ describe("refus lisible", () => {
       table: "auxiliaires",
     };
     assert.equal(refusLisible(erreur), "cet élément existe déjà");
-    // Une autre violation détectée par le moteur reste tue.
-    assert.equal(refusLisible({ ...erreur, code: "23503" }), null);
+    // Depuis le 21 octobre 2026 (ANO-036), un rattachement inconnu et une
+    // valeur hors liste sont dits, eux aussi, par notre phrase — jamais par
+    // celle du moteur, qui nomme la contrainte.
+    const fk = refusLisible({ ...erreur, code: "23503" });
+    assert.equal(fk, "ce rattachement n'existe pas, ou n'est plus disponible");
+    assert.ok(!fk?.includes("auxiliaires"));
+    assert.equal(
+      refusLisible({ ...erreur, code: "23514" }),
+      "une des valeurs envoyées n'est pas admise",
+    );
+    // Une violation que nous ne traduisons pas reste tue.
+    assert.equal(refusLisible({ ...erreur, code: "23P02" }), null);
   });
 
   it("dit un refus de RLS sans nommer la table", () => {

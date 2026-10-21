@@ -70,6 +70,19 @@ const TRADUCTIONS: Record<string, (e: ErreurPostgres) => string> = {
   // fiscale réécrite à la date où commence déjà la précédente, par exemple.
   "23P01": () =>
     "une version couvre déjà cette période : faites commencer la nouvelle à une autre date",
+  // Campagne du 21 octobre 2026 (ANO-036) : ces refus du moteur sortaient en 500.
+  // not_null_violation — un champ requis manque.
+  "23502": () => "une valeur obligatoire manque",
+  // string_data_right_truncation — un texte plus long que la colonne.
+  "22001": () => "un des textes envoyés est trop long",
+  // numeric_value_out_of_range — un montant ou une quantité hors limites.
+  "22003": () => "un des nombres envoyés est hors limites",
+  // invalid_datetime_format, datetime_field_overflow — une date illisible.
+  "22007": () => "une des dates envoyées n'est pas lisible",
+  "22008": () => "une des dates envoyées n'existe pas",
+  // character_not_in_repertoire, untranslatable_character — un octet nul.
+  "22021": () => "un des textes envoyés contient un caractère illisible",
+  "22P05": () => "un des textes envoyés contient un caractère illisible",
 };
 
 /**
@@ -107,6 +120,12 @@ export function refusLisible(erreur: unknown): string | null {
     // Un doublon détecté par un index unique reste un refus lisible — sans
     // le nom de l'index (recette : « ce compte existe déjà » rendait un 500).
     if (e.code === "23505") return "cet élément existe déjà";
+    // Campagne du 21 octobre 2026 (ANO-036) : une famille, une catégorie ou
+    // un compte inconnus, une valeur hors de la liste admise, une valeur
+    // obligatoire absente sortaient en 500. Ce sont des fautes de saisie :
+    // notre phrase, jamais le nom de la contrainte.
+    if (e.code === "23503") return "ce rattachement n'existe pas, ou n'est plus disponible";
+    if (e.code === "23514") return "une des valeurs envoyées n'est pas admise";
     return null;
   }
 
