@@ -91,7 +91,8 @@ function CabinetToday() {
   const toReview = rows.filter((r) => r.status === "comptabilisee").length;
   const returned = rows.filter((r) => r.status === "retournee").length;
   const supervised = rows.filter((r) => r.status === "supervisee").length;
-  const clientCount = (clients.data ?? []).length;
+  // Les clients mandatés : ni le mandat révoqué, ni le refusé (ANO-013).
+  const clientCount = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
 
   /* ---- filtres : statut, collaborateur, texte */
   const [filtre, setFiltre] = useState<Filtre>("tout");

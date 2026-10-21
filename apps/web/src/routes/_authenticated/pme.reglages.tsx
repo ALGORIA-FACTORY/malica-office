@@ -683,6 +683,94 @@ function Organisation({
         {t("pme.reglages.org.lectures")} <b>{nombre(org.lectures ?? undefined, locale)}</b>
       </p>
       {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
+      <AbonnementDeLaComptabilite tenantId={org.tenantId} />
+    </div>
+  );
+}
+
+/**
+ * L'abonnement que la comptabilité propose ou couvre (ANO-011, 21 octobre
+ * 2026 ; règles du 20 octobre). La comptabilité propose ; le dirigeant accepte
+ * ou refuse. Accepter arrête l'abonnement que la société payait elle-même, le
+ * jour même : c'est la comptabilité qui est facturée, au prix public. Rien ne
+ * s'affiche quand il n'y a rien à dire.
+ */
+function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const [retour, setRetour] = useState<string | null>(null);
+  const propositions = useQuery({
+    queryKey: ["abonnements-pour-moi", tenantId],
+    queryFn: () => office().facturation.abonnementsPourMoi(tenantId),
+  });
+  const repondre = useMutation({
+    mutationFn: (v: { accesId: string; accepte: boolean }) =>
+      office().facturation.repondreAbonnement(v.accesId, v.accepte),
+    onSuccess: async (_r, v) => {
+      setRetour(t(v.accepte ? "pme.abo.cabinet.accepte" : "pme.abo.cabinet.refuse"));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
+        qc.invalidateQueries({ queryKey: ["mon-forfait"] }),
+      ]);
+    },
+    onError: (e: unknown) =>
+      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
+  });
+  const date = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
+          new Date(`${iso}T12:00:00`),
+        )
+      : "";
+  const lignes = (propositions.data ?? []).filter(
+    (a) => a.statut === "propose" || a.statut === "actif",
+  );
+  if (lignes.length === 0 && !retour) return null;
+  return (
+    <div className="mt-3">
+      {lignes.map((a) =>
+        a.statut === "actif" ? (
+          <p key={a.acces_id} className="mn">
+            {t("pme.abo.cabinet.couvert", {
+              cabinet: a.cabinet_nom,
+              offre: nomDeLOffre(a.offre_code),
+              date: date(a.effet_du),
+            })}
+          </p>
+        ) : (
+          <div key={a.acces_id}>
+            <p className="mn">
+              {t("pme.abo.cabinet.propose", {
+                cabinet: a.cabinet_nom,
+                offre: nomDeLOffre(a.offre_code),
+              })}
+            </p>
+            <p className="mn">{t("pme.abo.cabinet.effet")}</p>
+            <div className="acts">
+              <button
+                type="button"
+                disabled={repondre.isPending}
+                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: true })}
+              >
+                {t("pme.abo.cabinet.accepter")}
+              </button>
+              <button
+                type="button"
+                className="cut"
+                disabled={repondre.isPending}
+                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: false })}
+              >
+                {t("pme.abo.cabinet.refuser")}
+              </button>
+            </div>
+          </div>
+        ),
+      )}
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
     </div>
   );
 }

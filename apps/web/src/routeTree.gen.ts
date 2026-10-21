@@ -20,6 +20,7 @@ import { Route as AuthenticatedOfficeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedPmeRouteImport } from './routes/_authenticated/pme'
 import { Route as AuthenticatedCabinetIndexRouteImport } from './routes/_authenticated/cabinet.index'
+import { Route as AuthenticatedCabinetAbonnementsRouteImport } from './routes/_authenticated/cabinet.abonnements'
 import { Route as AuthenticatedCabinetClientsRouteImport } from './routes/_authenticated/cabinet.clients'
 import { Route as AuthenticatedCabinetConseilRouteImport } from './routes/_authenticated/cabinet.conseil'
 import { Route as AuthenticatedCabinetEcheancesRouteImport } from './routes/_authenticated/cabinet.echeances'
@@ -108,6 +109,12 @@ const AuthenticatedCabinetIndexRoute =
   AuthenticatedCabinetIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetAbonnementsRoute =
+  AuthenticatedCabinetAbonnementsRouteImport.update({
+    id: '/abonnements',
+    path: '/abonnements',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetClientsRoute =
@@ -316,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/pme': typeof AuthenticatedPmeRouteWithChildren
+  '/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
@@ -360,6 +368,7 @@ export interface FileRoutesByTo {
   '/reinitialiser': typeof ReinitialiserRoute
   '/office': typeof AuthenticatedOfficeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
@@ -408,6 +417,7 @@ export interface FileRoutesById {
   '/_authenticated/office': typeof AuthenticatedOfficeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/pme': typeof AuthenticatedPmeRouteWithChildren
+  '/_authenticated/cabinet/abonnements': typeof AuthenticatedCabinetAbonnementsRoute
   '/_authenticated/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/_authenticated/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
   '/_authenticated/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/office'
     | '/onboarding'
     | '/pme'
+    | '/cabinet/abonnements'
     | '/cabinet/clients'
     | '/cabinet/conseil'
     | '/cabinet/echeances'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/reinitialiser'
     | '/office'
     | '/onboarding'
+    | '/cabinet/abonnements'
     | '/cabinet/clients'
     | '/cabinet/conseil'
     | '/cabinet/echeances'
@@ -547,6 +559,7 @@ export interface FileRouteTypes {
     | '/_authenticated/office'
     | '/_authenticated/onboarding'
     | '/_authenticated/pme'
+    | '/_authenticated/cabinet/abonnements'
     | '/_authenticated/cabinet/clients'
     | '/_authenticated/cabinet/conseil'
     | '/_authenticated/cabinet/echeances'
@@ -670,6 +683,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/cabinet/'
       preLoaderRoute: typeof AuthenticatedCabinetIndexRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/abonnements': {
+      id: '/_authenticated/cabinet/abonnements'
+      path: '/abonnements'
+      fullPath: '/cabinet/abonnements'
+      preLoaderRoute: typeof AuthenticatedCabinetAbonnementsRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/clients': {
@@ -914,6 +934,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedCabinetRouteChildren {
+  AuthenticatedCabinetAbonnementsRoute: typeof AuthenticatedCabinetAbonnementsRoute
   AuthenticatedCabinetClientsRoute: typeof AuthenticatedCabinetClientsRoute
   AuthenticatedCabinetConseilRoute: typeof AuthenticatedCabinetConseilRoute
   AuthenticatedCabinetEcheancesRoute: typeof AuthenticatedCabinetEcheancesRoute
@@ -938,6 +959,7 @@ interface AuthenticatedCabinetRouteChildren {
 }
 
 const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
+  AuthenticatedCabinetAbonnementsRoute: AuthenticatedCabinetAbonnementsRoute,
   AuthenticatedCabinetClientsRoute: AuthenticatedCabinetClientsRoute,
   AuthenticatedCabinetConseilRoute: AuthenticatedCabinetConseilRoute,
   AuthenticatedCabinetEcheancesRoute: AuthenticatedCabinetEcheancesRoute,
