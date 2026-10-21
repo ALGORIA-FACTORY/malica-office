@@ -1492,51 +1492,25 @@ if (PMES.sotumag.id) {
         const existantes = await rpc("office", "ecrituresForPiece", [facturee.pieceId]);
         const gravee = existantes.find((x) => x.status === "booked" && x.journal === "BQ");
         if (gravee) return { id: gravee.id, detail: "déjà comptabilisé" };
-        const lignesBq = achat
-          ? [
-              {
-                account_code: p.mapping.counterpartyAccount,
-                libelle: `Fournisseur ${piece.issuer}`,
-                debit: montant,
-                credit: "0",
-                tax_code: null,
-              },
-              {
-                account_code: compteBanque,
-                libelle: banque.libelle,
-                debit: "0",
-                credit: montant,
-                tax_code: null,
-              },
-            ]
-          : [
-              {
-                account_code: compteBanque,
-                libelle: banque.libelle,
-                debit: montant,
-                credit: "0",
-                tax_code: null,
-              },
-              {
-                account_code: p.mapping.counterpartyAccount,
-                libelle: `Client ${piece.issuer}`,
-                debit: "0",
-                credit: montant,
-                tax_code: null,
-              },
-            ];
-        const id = await rpc("office", "propose", [
+        /*
+         * Le règlement est un FAIT de la société : elle le déclare (moyen,
+         * montant, date, référence), puis l'écriture se compose et s'inscrit
+         * depuis ce fait, une fois (0.2.46, ANO-006). Une écriture BQ posée à
+         * la main sur la facture déjà inscrite est refusée : ce serait une
+         * seconde écriture de la même pièce.
+         */
+        const paiementId = await rpc("capture", "enregistrerPaiement", [
           {
             pieceId: facturee.pieceId,
-            journal: "BQ",
-            date: dateReglement,
-            libelle: `${achat ? "Règlement fournisseur" : "Encaissement client"} — ${piece.issuer} — Réf. ${piece.reference} du ${enJour(dateReglement)}`,
-            packVersionId: ref.pack.id,
-            lignes: lignesBq,
+            packId: ref.pack.id,
+            moyenCode: "virement",
+            montantMineur: Math.abs(Number(enMillimes(montant))),
             devise: ref.pack.currency,
+            payeLe: dateReglement,
+            reference: piece.reference,
           },
         ]);
-        await rpc("office", "book", [id]);
+        const id = await rpc("office", "inscrireLeReglement", [paiementId]);
         return { id, detail: `BQ · ${compteBanque}` };
       });
       if (!reglement) continue;

@@ -115,6 +115,33 @@ function reserveeAuServeur(depot: string, methode: string): boolean {
   return RESERVEES_AU_SERVEUR[depot as NomDepot]?.has(methode) ?? false;
 }
 
+/**
+ * Les jeux d'essai jouent le serveur, sur une base LOCALE seulement.
+ *
+ * `outils/jeu-de-donnees.mjs`, `db/dev/jeu_dessai.mjs` et l'épreuve des
+ * exports déposent des lectures toutes faites par HTTP : sans modèle, c'est
+ * le seul moyen de peupler un dossier. Deux conditions, toutes deux
+ * nécessaires : `MALICA_PORTES_D_ESSAI=1` dans l'environnement de l'API, et
+ * une base sur cette machine (`localhost`). Une API de staging ou de
+ * production parle à une base distante : la porte y reste fermée, même si la
+ * variable y était posée par erreur. Seules les méthodes réservées en
+ * profitent ; tout le reste garde l'origine `client`.
+ */
+function portesDEssaiOuvertes(): boolean {
+  if (process.env["MALICA_PORTES_D_ESSAI"] !== "1") return false;
+  try {
+    const hote = new URL(process.env["DATABASE_URL"] ?? "").hostname;
+    return hote === "localhost" || hote === "127.0.0.1" || hote === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
+/** L'origine d'un appel venu de `/rpc` : `client`, sauf jeu d'essai sur base locale. */
+export function origineDEssai(depot: string, methode: string): OrigineAppel {
+  return reserveeAuServeur(depot, methode) && portesDEssaiOuvertes() ? "serveur" : "client";
+}
+
 /** D'où vient l'appel : le navigateur ou une clé (`client`), ou le serveur lui-même. */
 export type OrigineAppel = "client" | "serveur";
 

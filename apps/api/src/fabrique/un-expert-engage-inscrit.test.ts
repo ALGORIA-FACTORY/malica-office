@@ -251,6 +251,9 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     await sousIdentiteDuServeur(patron.id, async (db) => {
       const [propose] = await identite.mandatsProposes(db, pme);
       assert.ok(propose, "le second mandat proposé a disparu");
+      // Une société, une comptabilité à la fois (ANO-014) : elle quitte la
+      // première avant d'accepter la seconde.
+      await db.query(`select public.mandat_revoquer($1, $2)`, [pme, "Changement de comptabilité"]);
       await identite.repondreAuMandat(db, propose.id, true);
       await db.query(
         `update identity.engagements set ends_on = current_date - 1
@@ -266,6 +269,17 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
       ),
     );
     assert.equal(refus, "42501", "un mandat échu ouvre encore l'écriture");
+
+    // Le dossier revient au premier cabinet pour les épreuves suivantes : la
+    // seconde comptabilité s'achève, la première reprend.
+    await sousIdentiteDuServeur(patron.id, (db) =>
+      db.query(`select public.mandat_revoquer($1, $2)`, [pme, "Retour au premier cabinet"]),
+    );
+    await admin.query(
+      `update identity.engagements set status = 'actif', ends_on = null
+        where cabinet_org_id = $1 and pme_org_id = $2`,
+      [cabinet, pme],
+    );
   });
 
   it("un collaborateur du cabinet engagé n'inscrit pas : le rôle compte", async () => {

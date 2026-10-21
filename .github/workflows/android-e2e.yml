@@ -42,6 +42,8 @@ jobs:
 
     env:
       DATABASE_URL: postgres://malica_api:ci@localhost:5432/malica
+      # Les jeux d'essai déposent des lectures toutes faites (base locale seulement).
+      MALICA_PORTES_D_ESSAI: "1"
       DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
       JWT_SECRET: integration_continue_seulement_32_caracteres
       # Le jeu de données ouvre une session par compte, à la file, depuis une

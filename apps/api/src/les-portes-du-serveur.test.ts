@@ -211,7 +211,11 @@ describe("les portes du serveur", { skip: !BASE_CONFIGUREE }, () => {
       assert.equal(parLeProprietaire.status, 200);
       assert.equal(((await parLeProprietaire.json()) as { enCours: boolean }).enCours, true);
 
-      assert.equal((await vue(etranger)).status, 404, "l'étranger ne voit pas l'état");
+      // Pour l'étranger, la pièce n'existe pas : aucune lecture en cours, la
+      // réponse même d'une pièce inconnue.
+      const vueEtrangere = await vue(etranger);
+      assert.equal(vueEtrangere.status, 200);
+      assert.deepEqual(await vueEtrangere.json(), { enCours: false, depuisMs: null });
       const rejoindre = await vue(etranger, {
         method: "POST",
         headers: { "content-type": "application/json" },

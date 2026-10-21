@@ -40,7 +40,7 @@ import { sonderLaBase, sousIdentite } from "./db.ts";
 import { introuvableLisible, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
-import { executerRpc, RpcIntrouvable } from "./rpc.ts";
+import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
 import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
 import { deposerContenu, servirContenu, sonderLeStockage } from "./stockage.ts";
 
@@ -382,7 +382,9 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
     }
     const resultat = req.cleApi
       ? await executerSousCle(req.cleApi, saisie.data)
-      : await sousIdentite(req.utilisateur!.id, (db) => executerRpc(db, saisie.data));
+      : await sousIdentite(req.utilisateur!.id, (db) =>
+          executerRpc(db, saisie.data, origineDEssai(saisie.data.depot, saisie.data.methode)),
+        );
     res.json({ resultat });
   } catch (erreur) {
     if (erreur instanceof PorteeInsuffisante) {

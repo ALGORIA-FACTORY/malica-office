@@ -63,12 +63,17 @@ function api(req: Request) {
  * qui voient la pièce (deux onglets, un collègue) ; la RLS de `pieces_v` dit
  * qui la voit, et ce contrôle passe AVANT le registre.
  */
-async function exigerPieceVisible(req: Request, pieceId: string): Promise<void> {
-  const visible = await sousIdentite(req.utilisateur!.id, async (db) => {
+async function pieceVisible(req: Request, pieceId: string): Promise<boolean> {
+  return sousIdentite(req.utilisateur!.id, async (db) => {
     const { rows } = await db.query("select 1 from pieces_v where id = $1", [pieceId]);
     return rows.length > 0;
   });
-  if (!visible) throw new PieceIntrouvable(`pièce introuvable : ${pieceId}`);
+}
+
+async function exigerPieceVisible(req: Request, pieceId: string): Promise<void> {
+  if (!(await pieceVisible(req, pieceId))) {
+    throw new PieceIntrouvable(`pièce introuvable : ${pieceId}`);
+  }
 }
 
 /**
@@ -193,7 +198,10 @@ malica.post("/lectures/:pieceId", (req, res, next) => {
 malica.get("/lectures/:pieceId", (req, res, next) => {
   repondre(res, next, async () => {
     const pieceId = Uuid.parse(req.params["pieceId"]);
-    await exigerPieceVisible(req, pieceId);
+    // Une pièce qu'on ne voit pas n'a, pour soi, aucune lecture en cours : la
+    // même réponse que pour une pièce qui n'existe pas, et rien n'apprend
+    // qu'elle existe ailleurs (ANO-003).
+    if (!(await pieceVisible(req, pieceId))) return { enCours: false, depuisMs: null };
     const l = registre().etat(pieceId);
     return { enCours: l !== null, depuisMs: l ? Date.now() - l.depuis : null };
   });

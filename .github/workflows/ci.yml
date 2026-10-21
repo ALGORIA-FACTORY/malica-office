@@ -155,6 +155,10 @@ jobs:
       # freiner une devinette de mot de passe — le refusait (429).
       AUTH_ESSAIS_PAR_MINUTE: "1000"
       CORS_ORIGINS: http://localhost:8080
+      # Les jeux d'essai déposent des lectures toutes faites : sur une base
+      # locale seulement, l'API leur ouvre les méthodes réservées au serveur
+      # (`rpc.ts`, `origineDEssai`). Jamais posée ailleurs que dans ce job.
+      MALICA_PORTES_D_ESSAI: "1"
 
     steps:
       - uses: actions/checkout@v7
