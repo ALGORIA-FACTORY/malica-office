@@ -13,6 +13,7 @@ import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { banque } from "./depots/banque.ts";
 import { identite } from "./depots/identite.ts";
+import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -170,6 +171,33 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
       );
     await assert.rejects(regler(collaborateur), /Seul l'expert/);
     await regler(expert);
+  });
+
+  it("ANO-035 : un collaborateur ne crée ni ne révoque une clé d'API", async () => {
+    const creer = (u: Utilisateur) =>
+      sousIdentite(u.id, (db) =>
+        db.query<{ r: { id: string } }>(
+          `select public.api_key_creer($1, 'Essai', array['ecritures.lire']) as r`,
+          [cabinet],
+        ),
+      );
+    await assert.rejects(creer(collaborateur));
+    const { rows } = await creer(expert);
+    const id = rows[0]!.r.id;
+    await assert.rejects(
+      sousIdentite(collaborateur.id, (db) => db.query(`select public.api_key_revoquer($1)`, [id])),
+    );
+    await sousIdentite(expert.id, (db) => db.query(`select public.api_key_revoquer($1)`, [id]));
+  });
+
+  it("ANO-028 : la tour ne se lit pas hors des opérateurs d'ALGORIA", async () => {
+    for (const methode of ["licences", "reglagePaiement", "reglageAbonnement"]) {
+      await assert.rejects(
+        sousIdentite(expert.id, (db) => executerRpc(db, { depot: "tour", methode, args: [] })),
+        /réservée aux opérateurs/,
+        `tour.${methode}`,
+      );
+    }
   });
 
   it("ANO-014 : une société n'a qu'une comptabilité mandatée à la fois", async () => {

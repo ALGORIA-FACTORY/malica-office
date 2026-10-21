@@ -211,6 +211,11 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       office.propositionDeReglement(db, paiement),
     );
     assert.equal(apres.ok && apres.inscrite?.ecritureId, ids[0]);
+    // `proposerLeReglement` est idempotent : il rend l'écriture déjà inscrite.
+    const parLAnciennePorte = await sousIdentite(expert.id, (db) =>
+      office.proposerLeReglement(db, paiement),
+    );
+    assert.equal(parLAnciennePorte, ids[0]);
   });
 
   it("ANO-009 : transmettre une pièce transmet son écriture au cabinet", async () => {
@@ -227,6 +232,26 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     );
     assert.equal(await voit(), true, "transmise, son écriture l'est aussi");
     await sousIdentite(expert.id, (db) => office.book(db, ecr));
+  });
+
+  it("une proposition déséquilibrée n'est pas enregistrée", async () => {
+    const piece = await nouvellePiece("partage");
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        office.propose(db, {
+          ...facture(piece),
+          lignes: [
+            { account_code: "601", libelle: "x", debit: "100.000", credit: "0", tax_code: null },
+            { account_code: "401", libelle: "y", debit: "0", credit: "90.000", tax_code: null },
+          ],
+        }),
+      ),
+      /déséquilibrée/,
+    );
+    const { rows } = await admin.query(`select 1 from socle.ecritures where piece_id = $1`, [
+      piece,
+    ]);
+    assert.equal(rows.length, 0);
   });
 
   it("R7 : une écriture comptabilisée ne se supprime pas, même par la société", async () => {

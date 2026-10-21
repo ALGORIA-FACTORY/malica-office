@@ -2745,7 +2745,7 @@ const fr = {
   "pme.reglages.offres.empechement.pas_de_licence": "Réservé au propriétaire principal.",
   "pme.reglages.recharges": "Recharges de lectures",
   "pme.reglages.recharges.sous":
-    "Valables 12 mois. Le forfait du mois passe d'abord, puis la recharge qui expire la première. Elles figurent sur la facture du mois.",
+    "Elles s'ajoutent les unes aux autres et n'expirent pas. Le forfait du mois passe d'abord, puis les recharges, de la plus ancienne à la plus récente. Elles figurent sur la facture du mois.",
   "pme.reglages.recharges.palier": "{n} lectures",
   "pme.reglages.recharges.prix": "{prix} {devise} HT",
   "pme.reglages.recharges.acheter": "Acheter",
@@ -5931,7 +5931,7 @@ const en: Dict = {
   "pme.reglages.offres.empechement.pas_de_licence": "Reserved for the main owner.",
   "pme.reglages.recharges": "Read top-ups",
   "pme.reglages.recharges.sous":
-    "Valid for 12 months. The monthly allowance goes first, then the top-up that expires first. They appear on the month's invoice.",
+    "They add up and never expire. The monthly allowance is used first, then top-ups, oldest first. They appear on the month's invoice.",
   "pme.reglages.recharges.palier": "{n} reads",
   "pme.reglages.recharges.prix": "{prix} {devise} excl. VAT",
   "pme.reglages.recharges.acheter": "Buy",
@@ -9034,7 +9034,7 @@ const ar: Dict = {
   "pme.reglages.offres.empechement.pas_de_licence": "مخصص للمالك الرئيسي.",
   "pme.reglages.recharges": "رصيد قراءات إضافي",
   "pme.reglages.recharges.sous":
-    "صالحة 12 شهرا. تُستهلك قراءات الباقة الشهرية أولا، ثم الرصيد الذي ينتهي أولا. وتظهر في فاتورة الشهر.",
+    "تتراكم ولا تنتهي صلاحيتها. يُستهلك رصيد الشهر أوّلًا، ثمّ الشحنات من الأقدم إلى الأحدث. تظهر في فاتورة الشهر.",
   "pme.reglages.recharges.palier": "{n} قراءة",
   "pme.reglages.recharges.prix": "{prix} {devise} دون احتساب الأداء",
   "pme.reglages.recharges.acheter": "شراء",

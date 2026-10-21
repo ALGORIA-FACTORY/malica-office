@@ -133,6 +133,18 @@ export const office = {
    * refuse.
    */
   async proposerLeReglement(db: Requete, paiementId: string): Promise<string> {
+    // Idempotent (ANO-006, re-test du 21 octobre 2026 : deux appels rendaient
+    // deux propositions) : un règlement déjà proposé ou inscrit rend son
+    // écriture, sans en recomposer une.
+    const { rows: deja } = await db.query<{ id: string }>(
+      `select id from ecritures_v
+        where paiement_id = $1 and nature = 'reglement'
+          and ((status = 'proposee' and reverses_id is null) or app.ecriture_vivante(id))
+        order by status = 'booked' desc
+        limit 1`,
+      [paiementId],
+    );
+    if (deja[0]) return deja[0].id;
     const r = await propositionDeReglement(db, paiementId);
     if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
     return office.propose(db, {

@@ -111,6 +111,9 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
   ]),
 };
 
+/** Les dépôts de la plateforme : un appel n'y entre que pour un opérateur d'ALGORIA. */
+const DEPOTS_DE_LA_PLATEFORME: ReadonlySet<string> = new Set<NomDepot>(["tour"]);
+
 function reserveeAuServeur(depot: string, methode: string): boolean {
   return RESERVEES_AU_SERVEUR[depot as NomDepot]?.has(methode) ?? false;
 }
@@ -197,6 +200,19 @@ export async function executerRpc(
     throw new RpcIntrouvable(`méthode inconnue : ${appel.depot}.${appel.methode}`);
   }
   const methode = depot[appel.methode] as (db: Requete, ...args: unknown[]) => Promise<unknown>;
+
+  if (DEPOTS_DE_LA_PLATEFORME.has(appel.depot)) {
+    // La tour est aux opérateurs d'ALGORIA, en LECTURE aussi (ANO-028,
+    // 21 octobre 2026) : `tour.licences`, `tour.reglagePaiement` et
+    // `tour.reglageAbonnement` répondaient à tout compte connecté. Les
+    // écritures de la tour étaient gardées par la base ; ses lectures, non.
+    const { rows } = await db.query<{ ok: boolean }>("select app.is_platform() as ok");
+    if (!rows[0]?.ok) {
+      throw Object.assign(new Error("La tour est réservée aux opérateurs d'ALGORIA."), {
+        code: "42501",
+      });
+    }
+  }
 
   if (origine === "serveur") {
     // La marque que la base lit pour écrire une lecture : locale à la

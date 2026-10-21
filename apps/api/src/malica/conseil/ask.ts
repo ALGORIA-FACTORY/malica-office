@@ -626,7 +626,11 @@ export async function askMalica(
 
   return {
     answer: reponseRendue,
-    reasoning: result.reasoning,
+    // Le raisonnement du modèle ne part pas au navigateur (ANO-023, 21 octobre
+    // 2026) : il est au journal des agents, lisible de la tour. Montré au
+    // client, il exposait la mécanique interne — et parfois des doutes que la
+    // réponse avait justement écartés.
+    reasoning: null,
     model: result.model,
     latencyMs: result.latencyMs,
     tokensIn: result.tokensIn,

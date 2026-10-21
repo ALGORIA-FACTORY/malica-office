@@ -69,7 +69,7 @@ export const conversations = {
   /** Le fil complet, dans l'ordre où il a été dit. */
   async ouvrir(db: Requete, conversationId: string): Promise<MessageDuFil[]> {
     const { rows } = await db.query<Record<string, unknown>>(
-      `select id, role, contenu, raisonnement, model, tokens_in, tokens_out,
+      `select id, role, contenu, model, tokens_in, tokens_out,
               latency_ms, created_at
          from agents.conversation_messages
         where conversation_id = $1
@@ -80,7 +80,8 @@ export const conversations = {
       id: r["id"] as string,
       role: r["role"] as "user" | "assistant",
       contenu: r["contenu"] as string,
-      raisonnement: (r["raisonnement"] as string | null) ?? null,
+      // Gardé au journal, jamais rendu au client (ANO-023, 21 octobre 2026).
+      raisonnement: null,
       model: (r["model"] as string | null) ?? null,
       tokensIn: r["tokens_in"] === null ? null : Number(r["tokens_in"]),
       tokensOut: r["tokens_out"] === null ? null : Number(r["tokens_out"]),
