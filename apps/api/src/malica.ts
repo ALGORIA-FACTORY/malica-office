@@ -35,7 +35,7 @@ import { registre } from "./malica/lecture/lectures-en-cours.ts";
 import { lireCarteFiscale } from "./malica/lecture/lire-carte.ts";
 import { LectureRefusee, readPieceFlow } from "./malica/lecture/read-flow.ts";
 import { redigerLePv } from "./malica/pv/rediger.ts";
-import { refusLisible } from "./refus.ts";
+import { introuvableLisible, refusLisible } from "./refus.ts";
 import { RpcIntrouvable } from "./rpc.ts";
 import { exigerIdentite } from "./session.ts";
 
@@ -44,6 +44,9 @@ malica.use(exigerIdentite);
 
 /** Une saisie que la route refuse avant tout travail — un refus, pas une panne. */
 class SaisieInvalide extends Error {}
+
+/** Les noms que pdf.js donne à un fichier qu'il ne peut pas ouvrir. */
+const PDF_ILLISIBLE = new Set(["InvalidPDFException", "PasswordException"]);
 
 const Uuid = z.string().uuid();
 const Locale = z.enum(["fr", "en", "ar"]).default("fr");
@@ -104,6 +107,17 @@ function repondre(res: Response, next: NextFunction, travail: () => Promise<unkn
       // abandonne sur 4xx — un refus déguisé en panne se rejouerait sans fin.
       if (erreur instanceof LectureRefusee) {
         res.status(403).json({ erreur: erreur.motif, motif: erreur.motif });
+        return;
+      }
+      const absent = introuvableLisible(erreur);
+      if (absent) {
+        res.status(404).json({ erreur: absent });
+        return;
+      }
+      // Un fichier déposé qui n'est pas un PDF lisible est une faute du
+      // fichier, pas une panne : pdf.js le nomme (ANO-036, PDF tronqué).
+      if (erreur instanceof Error && PDF_ILLISIBLE.has(erreur.name)) {
+        res.status(422).json({ erreur: "le fichier déposé n'est pas un PDF lisible" });
         return;
       }
       const refus = refusLisible(erreur);

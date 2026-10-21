@@ -77,6 +77,13 @@ describe("refus lisible", () => {
   it("un code « introuvable » d'un dépôt devient un 404 lisible, pas une panne", () => {
     assert.match(introuvableLisible(new Error("piece.not_found")) ?? "", /introuvable/);
     assert.match(introuvableLisible(new Error("organisation.introuvable")) ?? "", /introuvable/);
+    // ANO-036 : le paiement d'une pièce d'autrui, le conseil sur un dossier étranger.
+    for (const phrase of [
+      "piece introuvable ou non autorisee",
+      "cabinet introuvable ou non autorisé",
+    ]) {
+      assert.match(introuvableLisible(new Error(phrase)) ?? "", /introuvable/, phrase);
+    }
     assert.equal(introuvableLisible(new Error("réseau coupé")), null);
   });
 

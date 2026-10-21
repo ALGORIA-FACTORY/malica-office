@@ -11,7 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { coque, versionClient } from "@/capabilities/coque";
+import { coque, estNatif, versionClient } from "@/capabilities/coque";
 import { useApparence } from "@/components/malica/apparence";
 import { GardeDeVersion } from "@/components/malica/mise-a-jour-requise";
 import { I18nProvider } from "@/i18n";
@@ -232,6 +232,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Suite comptable augmentée : lecture citée des pièces, écritures déterministes, supervision par expert-comptable.",
       },
       { name: "author", content: "Algoria Factory" },
+      { name: "theme-color", content: "#FFFFFF" },
       { property: "og:title", content: "Malica Office" },
       {
         property: "og:description",
@@ -261,6 +262,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
        */
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      // L'application s'installe depuis le navigateur (ANO-033) : le manifeste
+      // dit son nom, ses icônes et qu'elle s'ouvre en plein écran.
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
     scripts: [{ children: LANGUE_AVANT_RENDU }, { children: APPARENCE_AVANT_RENDU }],
   }),
@@ -298,6 +302,16 @@ function RootComponent() {
   // l atelier. Sans elle, un defaut propre a un appareil ne livre que son
   // texte, et l on corrige a l aveugle.
   useEffect(() => installerJournalAtelier(), []);
+
+  // Le service worker de l'application installable (ANO-033) : en production,
+  // dans le navigateur seulement. La coque Android a ses propres mises à
+  // jour (« en vol ») et n'en veut pas.
+  useEffect(() => {
+    if (!import.meta.env.PROD || estNatif() || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js").catch((e: unknown) => {
+      console.warn("service worker non enregistré", e);
+    });
+  }, []);
 
   // Le transport a vu la session finir — un jeton long refusé, deux 401 de
   // suite. Ce qui était affiché appartenait à cette session : on l'oublie,

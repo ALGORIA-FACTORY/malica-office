@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Malica Office — hors ligne</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --tx: #0a0a0a;
+        --t2: #3c4450;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0a0a;
+          --tx: #ffffff;
+          --t2: #a7a7ad;
+        }
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--tx);
+        font:
+          16px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      main {
+        max-width: 34ch;
+        text-align: center;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      p {
+        color: var(--t2);
+        margin: 0 0 6px;
+      }
+      [dir="rtl"] {
+        font-family: "Noto Kufi Arabic", system-ui, sans-serif;
+      }
+      button {
+        margin-top: 18px;
+        font: inherit;
+        padding: 10px 18px;
+        border: 1px solid currentColor;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Pas de réseau pour l'instant</h1>
+      <p>
+        Vos photos déjà prises attendent sur l'appareil ; elles partiront dès le retour du réseau.
+      </p>
+      <p lang="en">
+        No network right now. Your photos wait on the device and will be sent when you are back
+        online.
+      </p>
+      <p lang="ar" dir="rtl">
+        لا توجد شبكة حاليًا. صورك تنتظر على الجهاز وستُرسل عند عودة الاتصال.
+      </p>
+      <button type="button" onclick="location.reload()">Réessayer · Retry · إعادة المحاولة</button>
+    </main>
+  </body>
+</html>

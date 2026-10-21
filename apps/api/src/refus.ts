@@ -157,7 +157,10 @@ export function refusLisible(erreur: unknown): string | null {
  */
 export function introuvableLisible(erreur: unknown): string | null {
   if (!(erreur instanceof Error)) return null;
-  return /^[a-z_]+\.(not_found|introuvable)$/.test(erreur.message)
+  // Les dépôts écrivent aussi « … introuvable ou non autorisé(e) » : une pièce
+  // d'autrui ou le conseil sur un dossier étranger sortaient en 500 (ANO-036).
+  return /^[a-z_]+\.(not_found|introuvable)$/.test(erreur.message) ||
+    /\bintrouvable ou non autoris/.test(erreur.message)
     ? "introuvable, ou vous n'y avez pas accès"
     : null;
 }
