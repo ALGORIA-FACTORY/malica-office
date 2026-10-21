@@ -1794,11 +1794,14 @@
 [data-surface="pme"] [data-ecran="parametres"] .sec h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="parametres"] .card{background:var(--d1);border-radius:20px;padding:1rem}
 [data-surface="pme"] [data-ecran="parametres"] .card+.card{margin-top:.5rem}
-[data-surface="pme"] [data-ecran="parametres"] .moi{display:flex;align-items:center;gap:.875rem}
+/* `.moi` est aussi la bulle du fil (fond --me, marge, rayon) : ici, la carte du
+   compte n'en garde rien. Le fond vert de la bulle mettait --t3 à 4,17:1 en
+   sombre (ANO-032) ; la carte reste sur --d1, son texte sur --tx et --t2. */
+[data-surface="pme"] [data-ecran="parametres"] .moi{display:flex;align-items:center;gap:.875rem;background:none;color:var(--tx);border-radius:0;padding:0;margin:0;max-width:none}
 [data-surface="pme"] [data-ecran="parametres"] .moi .av{width:52px;height:52px;border-radius:50%;background:var(--acc);color:var(--on-acc);flex:none; display:grid;place-items:center;font-size:1.1875rem;font-weight:700;letter-spacing:-.03em}
 [data-surface="pme"] [data-ecran="parametres"] .moi .bd{flex:1;min-width:0;display:grid;gap:.1875rem}
-[data-surface="pme"] [data-ecran="parametres"] .moi b{font-size:1rem;font-weight:600;letter-spacing:-.022em}
-[data-surface="pme"] [data-ecran="parametres"] .moi span{font-family:var(--mono);font-size:.6875rem;color:var(--t3);white-space:nowrap; overflow:hidden;text-overflow:ellipsis}
+[data-surface="pme"] [data-ecran="parametres"] .moi b{font-size:1rem;font-weight:600;letter-spacing:-.022em;color:var(--tx)}
+[data-surface="pme"] [data-ecran="parametres"] .moi .bd span{font-family:var(--mono);font-size:.6875rem;color:var(--t2);white-space:nowrap; overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] [data-ecran="parametres"] .abo .nm{display:flex;align-items:baseline;gap:.625rem}
 [data-surface="pme"] [data-ecran="parametres"] .abo .nm b{flex:1;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="parametres"] .abo .nm .px{font-family:var(--mono);font-size:1.0625rem;font-weight:600;letter-spacing:-.04em}
