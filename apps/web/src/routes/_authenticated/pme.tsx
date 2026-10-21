@@ -359,7 +359,19 @@ function PmeLayout() {
       return;
     }
     void (async () => {
-      const pages = await natif.capturer();
+      let pages: Blob[];
+      try {
+        pages = await natif.capturer();
+      } catch {
+        /*
+         * Un téléphone sans scanner (pas de services Google, un émulateur)
+         * rejette ici « Document scanner is not supported ». L'erreur filait
+         * sans être prise, et le bouton ne faisait rien. Notre cadrage prend
+         * le relais : la personne photographie quand même.
+         */
+        setScanning(true);
+        return;
+      }
       // Déjà cadrées par l'appareil : on ne refait pas le travail.
       if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
     })();
