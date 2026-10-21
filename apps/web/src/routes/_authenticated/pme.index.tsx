@@ -9,6 +9,7 @@ import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
+import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
@@ -125,6 +126,7 @@ function compte(valeur: number | string | null | undefined): string {
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const nonAssujetti = useNonAssujetti();
   const periode = currentPeriod();
   const a = useAccueil(periode);
   const navigate = useNavigate();
@@ -457,13 +459,20 @@ function PmeHome() {
               <IconeRecu />
             </i>
             <span className="tl">
+              {/* Un non-assujetti n'a ni TVA à reverser ni crédit (ANO-LIVE-001). */}
               <b>
-                {a.aReverser === null || Number(a.aReverser) > 0
-                  ? t("pme.home.reverser")
-                  : t("pme.home.credit")}
+                {nonAssujetti
+                  ? t("pme.home.tva.nonAssujetti")
+                  : a.aReverser === null || Number(a.aReverser) > 0
+                    ? t("pme.home.reverser")
+                    : t("pme.home.credit")}
               </b>
               <span>
-                {a.aReverser === null ? "—" : `${montant(a.aReverser, locale)} ${a.devise}`}
+                {nonAssujetti
+                  ? t("pme.home.tva.rien")
+                  : a.aReverser === null
+                    ? "—"
+                    : `${montant(a.aReverser, locale)} ${a.devise}`}
               </span>
             </span>
             <Chevron className="g ar" />

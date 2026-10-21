@@ -249,6 +249,12 @@ principal() {
       echo "OK  $version sert https://$domaine"
       curl -sS --max-time 5 "https://$domaine/sante/profonde"
       echo
+      # Les en-têtes du Caddyfile sont-ils servis ? Le dire, sans bloquer.
+      if curl -sSI --max-time 5 "https://$domaine/" | grep -qi '^content-security-policy:'; then
+        echo "OK  en-têtes de sécurité servis"
+      else
+        echo "ATTENTION : Content-Security-Policy absente — Caddy sert-il le Caddyfile du dépôt ?" >&2
+      fi
       docker image prune -f >/dev/null
       return 0
     fi

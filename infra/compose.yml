@@ -25,7 +25,12 @@ services:
       DOMAINE: ${DOMAINE}
       DOMAINE_ALIAS: ${DOMAINE_ALIAS:-}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Le DOSSIER, pas le fichier : `git checkout` remplace le Caddyfile par un
+      # nouveau fichier (un nouvel inode), et un montage de fichier seul reste
+      # attaché à l'ancien. Caddy relisait donc l'ancien Caddyfile à chaque
+      # rechargement : la CSP et X-Frame-Options du 21 octobre n'étaient jamais
+      # servies (ANO-027). Un montage de dossier suit le fichier remplacé.
+      - ./caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
