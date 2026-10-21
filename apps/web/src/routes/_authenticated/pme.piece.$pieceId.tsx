@@ -1639,6 +1639,25 @@ function PieceScreen() {
                           ? t("pme.sens.confirmerVente")
                           : t("pme.sens.confirmerAchat")}
                       </button>
+                      {/*
+                       * L'autre réponse, de même poids (ANO-LIVE-002) : un
+                       * ticket payé au magasin lu « vente » n'avait que « Oui,
+                       * c'est bien une vente ». La personne corrige la lecture,
+                       * et sa réponse l'emporte (`scan/analyse.ts`).
+                       */}
+                      <button
+                        type="button"
+                        disabled={preciser.isPending}
+                        onClick={() =>
+                          preciser.mutate(
+                            sensLu === "facture_vente" ? "facture_achat" : "facture_vente",
+                          )
+                        }
+                      >
+                        {sensLu === "facture_vente"
+                          ? t("pme.sens.plutotAchat")
+                          : t("pme.sens.plutotVente")}
+                      </button>
                     </span>
                   ) : null}
                   {c.corps === "sens" ? (

@@ -457,6 +457,8 @@ const fr = {
   "pme.sens.contredit":
     "Ce que j'ai lu se contredit : le nom de l'émetteur ne correspond pas au sens de la pièce. Confirmez-le, je le note.",
   "pme.sens.confirmerVente": "Oui, c'est bien une vente de ma société",
+  "pme.sens.plutotAchat": "Non, c'est un achat — j'ai payé",
+  "pme.sens.plutotVente": "Non, c'est une vente — j'ai encaissé",
   "pme.sens.confirmerAchat": "Oui, c'est bien un achat de ma société",
   "pme.sens.vente": "Une vente — je facture un client",
   "pme.read.flags": "Signalements de lecture",
@@ -3731,6 +3733,8 @@ const en: Dict = {
   "pme.sens.contredit":
     "What I read contradicts itself: the issuer's name does not match the document's direction. Confirm it and I will note it.",
   "pme.sens.confirmerVente": "Yes, this is a sale by my company",
+  "pme.sens.plutotAchat": "No, it's a purchase — I paid",
+  "pme.sens.plutotVente": "No, it's a sale — I was paid",
   "pme.sens.confirmerAchat": "Yes, this is a purchase by my company",
   "pme.sens.vente": "A sale — I am invoicing a customer",
   "pme.read.flags": "Reading flags",
@@ -6918,6 +6922,8 @@ const ar: Dict = {
   "pme.sens.achat": "شراء — مورّد يفوترني",
   "pme.sens.contredit": "ما قرأته متناقض: اسم المُصدِر لا يوافق اتّجاه الوثيقة. أكّد ذلك وسأسجّله.",
   "pme.sens.confirmerVente": "نعم، هذه عملية بيع لشركتي",
+  "pme.sens.plutotAchat": "لا، إنها شراء — أنا من دفع",
+  "pme.sens.plutotVente": "لا، إنها بيع — أنا من قبض",
   "pme.sens.confirmerAchat": "نعم، هذه عملية شراء لشركتي",
   "pme.sens.vente": "بيع — أنا أفوتر عميلًا",
   "pme.read.flags": "تنبيهات القراءة",

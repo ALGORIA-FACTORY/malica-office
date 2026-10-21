@@ -129,6 +129,19 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     other_charges?: unknown[];
     references?: Record<string, string>;
   };
+  /*
+   * LE SENS DIT PAR LA PERSONNE L'EMPORTE SUR LE SENS LU (21 octobre 2026).
+   *
+   * Recette « vie réelle », ANO-LIVE-002/004 : un ticket d'achat lu « vente »,
+   * ou lu sans sens, restait bloqué même après que le dirigeant eut répondu
+   * « Un achat » — sa réponse ne comptait que si elle redisait la lecture.
+   * Le dirigeant sait s'il a payé ou encaissé ; la lecture le devine.
+   */
+  const sensDit =
+    piece.document_kind_statut === "confirme" && piece.document_kind !== null
+      ? piece.document_kind
+      : null;
+  const sensRetenu = sensDit ?? payload.document_kind ?? null;
 
   const { rows: orgs } = await db.query<{
     name: string;
@@ -226,7 +239,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
         and (document_kind = $3 or document_kind is null)
         and valid_from <= $4::date and (valid_to is null or valid_to >= $4::date)
       order by code, document_kind nulls last, valid_from desc`,
-    [pack, codesDroits, payload.document_kind ?? null, dateRef],
+    [pack, codesDroits, sensRetenu, dateRef],
   );
   const echelleMineure = 10 ** p["money.decimals"]!;
   const fixeDe = new Map(
@@ -310,7 +323,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
 
   const refs = payload.references ?? {};
   const aControler: PieceAControler = {
-    documentKind: payload.document_kind ?? null,
+    documentKind: sensRetenu,
     titre,
     emetteur: {
       nom: payload.issuer || null,
@@ -322,12 +335,9 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     montants: normalisation,
     confianceParChamp: extraction.confiance_par_champ ?? {},
     reception: { doublonDe: piece.doublon_de, recueLe: piece.recue_le },
-    // Le sens CONFIRMÉ par la personne (20 octobre 2026) : seulement s'il
-    // porte sur le même sens que la lecture.
-    sensConfirme:
-      piece.document_kind_statut === "confirme" &&
-      piece.document_kind !== null &&
-      piece.document_kind === (payload.document_kind ?? null),
+    // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
+    // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
+    sensConfirme: sensDit !== null,
   };
 
   const [{ rows: types }, { rows: mentions }, { rows: autres }] = await Promise.all([

@@ -124,10 +124,12 @@ export async function propositionDePiece(
     normalisation: ResultatNormalisation | null;
     pack_version_id: string | null;
     jurisdiction: string;
+    sens_dit: string | null;
   }>(
     `select e.id as extraction, e.payload,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
-            a.pack_version_id, o.jurisdiction
+            a.pack_version_id, o.jurisdiction,
+            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
        join lateral (select id, payload from capture.extractions x
@@ -219,6 +221,9 @@ export async function propositionDePiece(
 
   const normalise = {
     ...ligne.payload,
+    // Le sens dit par la personne l'emporte sur le sens lu (ANO-LIVE-002/004),
+    // comme dans l'analyse : le dirigeant sait s'il a payé ou encaissé.
+    ...(ligne.sens_dit ? { document_kind: ligne.sens_dit } : {}),
     document_date: date,
     lines: lignesLues.map((l, i) => ({
       ...l,
