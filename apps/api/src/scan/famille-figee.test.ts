@@ -42,7 +42,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { lecture } from "./lecture-d-essai.ts";
@@ -64,7 +64,7 @@ describe("la famille d'une pièce déjà lue", { skip: !BASE_CONFIGUREE }, () =>
   let packId = "";
 
   const rpc = (depot: string, methode: string, ...args: unknown[]) =>
-    sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
+    sousIdentiteDuServeur(u.id, (db) => executerRpc(db, { depot, methode, args }, "serveur"));
 
   const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
     const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -111,7 +111,7 @@ describe("la famille d'une pièce déjà lue", { skip: !BASE_CONFIGUREE }, () =>
 
   /** Ce que les ÉCRANS lisent : la vue, et elle seule. */
   const parLaVue = (piece: string) =>
-    sousIdentite(u.id, async (db) => {
+    sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{
         designation: string;
         famille_code: string;
@@ -144,7 +144,7 @@ describe("la famille d'une pièce déjà lue", { skip: !BASE_CONFIGUREE }, () =>
     const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(c);
     u = c;
-    org = await sousIdentite(u.id, async (db) => {
+    org = await sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
                                            '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
@@ -199,7 +199,7 @@ describe("la famille d'une pièce déjà lue", { skip: !BASE_CONFIGUREE }, () =>
     const piece = await pieceCasaElect("memoire");
     await figerAvantLaCorrection(piece);
 
-    const { rows } = await sousIdentite(u.id, (db) =>
+    const { rows } = await sousIdentiteDuServeur(u.id, (db) =>
       db.query<{ famille_code_projete: string; famille_source_projete: string }>(
         `select famille_code_projete, famille_source_projete
            from piece_articles_v where piece_id = $1 order by ordinal limit 1`,

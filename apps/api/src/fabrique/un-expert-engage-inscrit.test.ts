@@ -39,7 +39,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 import { fabrique } from "../depots/fabrique.ts";
 import { identite } from "../depots/identite.ts";
 
@@ -58,7 +58,7 @@ async function refusDe<T>(
   travail: (db: Requete) => Promise<T>,
 ): Promise<string | null> {
   try {
-    await sousIdentite(utilisateur, travail);
+    await sousIdentiteDuServeur(utilisateur, travail);
     return null;
   } catch (erreur) {
     return codeDe(erreur);
@@ -109,7 +109,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
 
     // La PME et sa pièce PARTAGÉE : le cabinet ne voit que ce qui lui est
     // transmis, et la pièce est ce que l'expert lit.
-    await sousIdentite(patron.id, async (db) => {
+    await sousIdentiteDuServeur(patron.id, async (db) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, $4, $5, $6) as org`,
         ["pme", `ESSAI ${marque} PME`, "mandate", legalId, "TN", "TND"],
@@ -129,7 +129,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
      * experts sont experts. Seul le MANDAT les sépare.
      */
     const creerCabinet = (u: Utilisateur, nom: string): Promise<string> =>
-      sousIdentite(u.id, async (db) => {
+      sousIdentiteDuServeur(u.id, async (db) => {
         const { rows } = await db.query<{ org: string }>(
           `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
           ["cabinet", nom, "mandate", "TN", "TND"],
@@ -145,10 +145,10 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
      * base ne sait pas produire.
      */
     cabinet = await creerCabinet(expert, `ESSAI ${marque} CAB`);
-    await sousIdentite(expert.id, async (db) => {
+    await sousIdentiteDuServeur(expert.id, async (db) => {
       await identite.proposerMandat(db, cabinet, legalId);
     });
-    await sousIdentite(patron.id, async (db) => {
+    await sousIdentiteDuServeur(patron.id, async (db) => {
       const [propose] = await identite.mandatsProposes(db, pme);
       assert.ok(propose, "la PME ne voit pas le mandat proposé");
       await identite.repondreAuMandat(db, propose.id, true);
@@ -156,7 +156,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
 
     // Le témoin : proposé, jamais accepté. Ni lecture élargie, ni écriture.
     cabinetSansMandat = await creerCabinet(autreExpert, `ESSAI ${marque} CAB2`);
-    await sousIdentite(autreExpert.id, async (db) => {
+    await sousIdentiteDuServeur(autreExpert.id, async (db) => {
       await identite.proposerMandat(db, cabinetSansMandat, legalId);
     });
 
@@ -187,7 +187,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   /* ------------------------------------- 1. LE MANDAT ACTIF OUVRE L'INSCRIPTION */
 
   it("l'expert d'un mandat ACTIF qualifie un exemple et inscrit une candidate", async () => {
-    const exempleId = await sousIdentite(expert.id, async (db) => {
+    const exempleId = await sousIdentiteDuServeur(expert.id, async (db) => {
       const fait = await fabrique.qualifierUnExemple(db, {
         tenantId: pme,
         pieceId: piece,
@@ -201,7 +201,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     });
     assert.ok(exempleId, "l'expert engagé ne peut pas qualifier un exemple chez son client");
 
-    const inscrite = await sousIdentite(expert.id, async (db) =>
+    const inscrite = await sousIdentiteDuServeur(expert.id, async (db) =>
       fabrique.inscrireUneCandidate(db, {
         tenantId: pme,
         libelle: `format-${marque}`,
@@ -217,7 +217,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     assert.ok(inscrite.versionId, "l'expert engagé ne peut pas inscrire de recette");
 
     // Et le client la voit : c'est SA recette, pas celle du cabinet.
-    const vues = await sousIdentite(patron.id, async (db) => fabrique.recettes(db, pme));
+    const vues = await sousIdentiteDuServeur(patron.id, async (db) => fabrique.recettes(db, pme));
     assert.equal(vues.length, 1);
     assert.equal(vues[0]!.etat, "candidate");
   });
@@ -235,7 +235,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
     assert.equal(refus, "42501", "un mandat « proposé » ouvre l'écriture : il ne doit pas");
 
     // Et il ne voit rien non plus : la lecture élargie exige le même mandat.
-    const vu = await sousIdentite(autreExpert.id, async (db) => {
+    const vu = await sousIdentiteDuServeur(autreExpert.id, async (db) => {
       const { rows } = await db.query(`select id from fabrique.recettes`);
       return rows.length;
     });
@@ -248,7 +248,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
      * le mandat est arrivé à son terme. Seule la fenêtre de validité change,
      * et c'est la PME qui la pose : `engagements_upd` est à elle.
      */
-    await sousIdentite(patron.id, async (db) => {
+    await sousIdentiteDuServeur(patron.id, async (db) => {
       const [propose] = await identite.mandatsProposes(db, pme);
       assert.ok(propose, "le second mandat proposé a disparu");
       await identite.repondreAuMandat(db, propose.id, true);
@@ -271,7 +271,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   it("un collaborateur du cabinet engagé n'inscrit pas : le rôle compte", async () => {
     const collaborateur = await creerCompte(`col-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(collaborateur);
-    await sousIdentite(expert.id, async (db) => {
+    await sousIdentiteDuServeur(expert.id, async (db) => {
       await db.query(
         `insert into identity.memberships (tenant_id, user_id, role)
          values ($1, $2, 'collaborateur')`,
@@ -291,7 +291,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   /* -------------------------------- 3. INSCRIRE N'EST PAS PROMOUVOIR */
 
   it("l'expert engagé inscrit, et ne promeut pas", async () => {
-    const versionId = await sousIdentite(patron.id, async (db) => {
+    const versionId = await sousIdentiteDuServeur(patron.id, async (db) => {
       const { rows } = await db.query<{ recette_version_id: string }>(
         `select recette_version_id from fabrique.etat_des_recettes_v where tenant_id = $1`,
         [pme],
@@ -327,7 +327,7 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   /* ------------------------------------------- 4. L'INTRUS, À ZÉRO LIGNE */
 
   it("un intrus ne lit rien et n'écrit rien, même en nommant les identifiants", async () => {
-    const lu = await sousIdentite(intrus.id, async (db) => {
+    const lu = await sousIdentiteDuServeur(intrus.id, async (db) => {
       const r = await db.query(`select id from fabrique.recettes`);
       const v = await db.query(`select id from fabrique.recette_versions`);
       const e = await db.query(`select id from fabrique.exemples`);
@@ -350,11 +350,11 @@ describe("un expert engagé inscrit une recette pour son mandat", { skip: !BASE_
   /* ----------------- 5. LE COUREUR : POURQUOI LA PLATEFORME NE REPREND PAS */
 
   it("un opérateur de plateforme ne voit pas la pièce et ne prend pas un travail", async () => {
-    const { travailId } = await sousIdentite(patron.id, async (db) =>
+    const { travailId } = await sousIdentiteDuServeur(patron.id, async (db) =>
       fabrique.enregistrerLecture(db, piece),
     );
 
-    const vu = await sousIdentite(operateur.id, async (db) => {
+    const vu = await sousIdentiteDuServeur(operateur.id, async (db) => {
       const p = await db.query(`select id from capture.pieces where id = $1`, [piece]);
       const t = await db.query(`select id from fabrique.travaux where id = $1`, [travailId]);
       return { pieces: p.rows.length, travaux: t.rows.length };

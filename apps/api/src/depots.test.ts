@@ -20,7 +20,7 @@ import pg from "pg";
 import { after, before, describe, it } from "node:test";
 
 import { creerCompte } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -42,7 +42,7 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
 
     // Les deux organisations passent par la RPC gouvernée, sous l'identité du
     // compte : la mise en place emprunte le chemin de production.
-    await sousIdentite(identite, async (db) => {
+    await sousIdentiteDuServeur(identite, async (db) => {
       const org = async (kind: string, nom: string, mode: string) => {
         const { rows } = await db.query<{ id: string }>(
           `select public.create_organization($1, $2, $3, null, $4, $5) as id`,
@@ -62,7 +62,9 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   async function appeler(depot: string, methode: string, args: unknown[]): Promise<unknown> {
-    return sousIdentite(identite, (db) => executerRpc(db, { depot, methode, args }));
+    return sousIdentiteDuServeur(identite, (db) =>
+      executerRpc(db, { depot, methode, args }, "serveur"),
+    );
   }
 
   after(async () => {

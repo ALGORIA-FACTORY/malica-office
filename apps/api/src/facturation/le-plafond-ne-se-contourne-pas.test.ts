@@ -145,6 +145,8 @@ async function sous<T>(db: pg.PoolClient, identite: string, corps: () => Promise
   await db.query("savepoint sous_role");
   await db.query("set local role authenticated");
   await db.query("select set_config('request.jwt.claim.sub', $1, true)", [identite]);
+  // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+  await db.query("select set_config('malica.origine', 'serveur', true)");
   try {
     return await corps();
   } catch (erreur) {
@@ -270,6 +272,8 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       const c = await monter(db, { consommees: FORFAIT });
       await db.query("set local role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, true)", [randomUUID()]);
+      // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+      await db.query("select set_config('malica.origine', 'serveur', true)");
       await db.query("savepoint avant");
       await assert.rejects(
         db.query("select public.lecture_autorisee($1)", [c.piece]),
@@ -416,6 +420,8 @@ describe("le plafond de lectures ne se contourne pas", { skip: !ADMIN }, () => {
       const c = await monter(db, { consommees: FORFAIT });
       await db.query("set local role authenticated");
       await db.query("select set_config('request.jwt.claim.sub', $1, true)", [c.collaborateur]);
+      // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+      await db.query("select set_config('malica.origine', 'serveur', true)");
       await db.query("savepoint avant");
       await assert.rejects(
         db.query("select public.lecture_consommer($1)", [c.piece]),

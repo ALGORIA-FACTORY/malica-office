@@ -12,7 +12,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -29,14 +29,14 @@ describe("une pièce lue se supprime, et sa lecture reste", { skip: !BASE_CONFIG
     const d = await creerCompte(`dirigeant-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(d);
     dirigeant = d;
-    pme = await sousIdentite(dirigeant.id, async (db) => {
+    pme = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
         [`PME ${marque}`, `${String(Date.now()).slice(-7)}R/A/M/000`],
       );
       return rows[0]!.id;
     });
-    piece = await sousIdentite(dirigeant.id, async (db) => {
+    piece = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
          values ($1, 'pdf', 'personnel', $2, $3, $4) returning id`,
@@ -69,7 +69,7 @@ describe("une pièce lue se supprime, et sa lecture reste", { skip: !BASE_CONFIG
   it("la pièce part, la lecture comptée reste", async () => {
     // La porte de la base, celle qu'appelle `capture.supprimer` (le dépôt
     // efface ensuite les octets du disque, sans objet ici).
-    await sousIdentite(dirigeant.id, (db) =>
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
       db.query(`select public.capture_piece_supprimer($1, false)`, [piece]),
     );
     const { rows: pieces } = await admin.query(`select 1 from capture.pieces where id = $1`, [

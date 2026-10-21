@@ -1,7 +1,7 @@
 /**
  * Le socle de la fabrique de lecteurs, éprouvé — pas relu.
  *
- * Tout ce qui suit passe par `sousIdentite`, donc par le rôle `authenticated`
+ * Tout ce qui suit passe par `sousIdentiteDuServeur`, donc par le rôle `authenticated`
  * avec le claim `sub` posé dans la transaction, exactement comme une requête
  * réelle. C'est la quatrième règle du plan
  * (`docs/fabrique-de-lecteurs/00-plan.md`) : une preuve obtenue en
@@ -29,7 +29,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -46,7 +46,7 @@ async function refusDe(
   args: unknown[] = [],
 ): Promise<string | null> {
   try {
-    await sousIdentite(utilisateur, async (db) => db.query(sql, args));
+    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
     return null;
   } catch (erreur) {
     return codeDe(erreur);
@@ -67,7 +67,7 @@ async function motifDuRefus(
   args: unknown[] = [],
 ): Promise<string> {
   try {
-    await sousIdentite(utilisateur, async (db) => db.query(sql, args));
+    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
     return "";
   } catch (erreur) {
     return (erreur as { message?: string }).message ?? String(erreur);
@@ -86,7 +86,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
   /** Monte une organisation et une pièce sous l'identité donnée, par le vrai chemin. */
   async function monter(u: Utilisateur, suffixe: string): Promise<[string, string]> {
-    return sousIdentite(u.id, async (db: Requete) => {
+    return sousIdentiteDuServeur(u.id, async (db: Requete) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
         ["pme", `ESSAI ${marque} ${suffixe}`, "autonome", "TN", "TND"],
@@ -103,7 +103,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
   /** Une recette neuve avec sa première version, chez A. */
   async function recetteNeuve(cle: string, empreinte: string): Promise<[string, string]> {
-    return sousIdentite(a.id, async (db) => {
+    return sousIdentiteDuServeur(a.id, async (db) => {
       const r = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, $2, $3, 'organisation') returning id`,
@@ -152,13 +152,13 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   /* ------------------------------------------------------------------- R6 */
 
   it("une organisation ne lit pas les recettes d'une autre", async () => {
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from fabrique.recettes`);
       return rows;
     });
     assert.deepEqual(vues, [], "B lit une recette de A : la RLS de fabrique.recettes ne tient pas");
 
-    const siennes = await sousIdentite(a.id, async (db) => {
+    const siennes = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(`select id from fabrique.recettes`);
       return rows.map((r) => r.id);
     });
@@ -176,7 +176,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une organisation ne lit pas les exemples ni les exécutions d'une autre", async () => {
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -190,7 +190,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       );
     });
 
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const e = await db.query(`select id from fabrique.exemples`);
       const x = await db.query(`select id from fabrique.executions`);
       return [e.rows.length, x.rows.length];
@@ -199,7 +199,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une exécution ne se rattache pas à la pièce d'une autre organisation", async () => {
-    const [, versionB] = await sousIdentite(b.id, async (db) => {
+    const [, versionB] = await sousIdentiteDuServeur(b.id, async (db) => {
       const r = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'chez B', $2, 'organisation') returning id`,
@@ -244,14 +244,14 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   it("une recette mutualisée ne se lit toujours pas d'une autre organisation", async () => {
     // La colonne existe ; le partage, lui, n'est PAS activé. Le jour où il le
     // sera, ce sera par une politique écrite, pas par une valeur posée.
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'future mutualisée', $2, 'mutualisee')`,
         [orgA, `mutu-${marque}`],
       );
     });
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(
         `select id from fabrique.recettes where portee = 'mutualisee'`,
       );
@@ -267,7 +267,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   /* ------------------------------------------------------------------- R7 */
 
   it("un fait de la fabrique ne se réécrit pas", async () => {
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'première inscription')`,
@@ -311,7 +311,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     ];
 
     for (const [table, mutation] of mutations) {
-      const touchees = await sousIdentite(a.id, async (db) => {
+      const touchees = await sousIdentiteDuServeur(a.id, async (db) => {
         const r = await db.query(mutation);
         const d = await db.query(mutation.replace(/^update (\S+) set .*/, "delete from $1"));
         return (r.rowCount ?? 0) + (d.rowCount ?? 0);
@@ -319,7 +319,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       assert.equal(touchees, 0, `${table} laisse « authenticated » réécrire ou effacer un fait`);
     }
 
-    const motifIntact = await sousIdentite(a.id, async (db) => {
+    const motifIntact = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ motif: string }>(
         `select motif from fabrique.promotions where recette_version_id = $1 order by ordre`,
         [versionA],
@@ -372,7 +372,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
      * `malica.piece_effacable`, qu'un utilisateur quelconque peut poser,
      * deviendrait une clé.
      */
-    const nues = await sousIdentite(a.id, async (db) => {
+    const nues = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ table_: string }>(
         `select c.relname as table_
            from pg_class c
@@ -393,7 +393,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une suspension est une écriture nouvelle, et l'état se lit au dernier fait", async () => {
-    const etat = await sousIdentite(a.id, async (db) => {
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'retiree', 'retrait de la version d''essai')`,
@@ -411,7 +411,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   /* -------------------------------- LA FRONTIÈRE QUI PORTE TOUT LE MODÈLE */
 
   it("une décision comptable ne nourrit aucune recette", async () => {
-    const exemple = await sousIdentite(a.id, async (db) => {
+    const exemple = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -451,7 +451,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("une correction de lecture, elle, nourrit une recette", async () => {
-    const exemple = await sousIdentite(a.id, async (db) => {
+    const exemple = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -472,7 +472,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("l'apprentissage et l'évaluation ne se mélangent pas", async () => {
-    const [apprentissage, evalue] = await sousIdentite(a.id, async (db) => {
+    const [apprentissage, evalue] = await sousIdentiteDuServeur(a.id, async (db) => {
       const ins = async (usage: string) => {
         const { rows } = await db.query<{ id: string }>(
           `insert into fabrique.exemples
@@ -486,7 +486,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       return [await ins("apprentissage"), await ins("evaluation")];
     });
 
-    const evaluationId = await sousIdentite(a.id, async (db) => {
+    const evaluationId = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.evaluations
            (tenant_id, recette_version_id, mesures, exemples_comptes)
@@ -517,7 +517,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     // Deux faits distincts. Une promotion exige une ÉVALUATION ; aucun exemple,
     // fût-il validé par un expert, ne tient lieu de preuve de qualité.
     const [, version] = await recetteNeuve("validation", "3");
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.exemples
            (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
@@ -557,7 +557,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     );
     assert.equal(saut, "23514", "une recette devient active sans passer par l'observation");
 
-    const insuffisante = await sousIdentite(a.id, async (db) => {
+    const insuffisante = await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'née')`,
@@ -601,7 +601,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       `le refus ne nomme pas le seuil franchi — donc il ne vient peut-être pas de lui : « ${sousLeSeuil} »`,
     );
 
-    const bonne = await sousIdentite(a.id, async (db) => {
+    const bonne = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.evaluations (tenant_id, recette_version_id, mesures, exemples_comptes)
          values ($1, $2, $3, 40) returning id`,
@@ -646,7 +646,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
   it("une évaluation sans la mesure attendue n'active rien", async () => {
     const [, version] = await recetteNeuve("mesure-absente", "2");
-    const evaluation = await sousIdentite(a.id, async (db) => {
+    const evaluation = await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
          values ($1, $2, 'candidate', 'née')`,
@@ -682,7 +682,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("un cabinet arrête son propre seuil, au-dessus du défaut livré", async () => {
-    const livres = await sousIdentite(a.id, async (db) => {
+    const livres = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ mesure: string; sens: string; exigence: string }>(
         `select mesure, sens, exigence from fabrique.seuils_exiges($1) order by mesure`,
         [orgA],
@@ -692,7 +692,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     assert.ok(livres.length > 0, "aucun seuil livré : le référentiel ne porte rien");
 
     const premier = livres[0]!;
-    const apres = await sousIdentite(a.id, async (db) => {
+    const apres = await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
          values ($1, $2, 0.123456, 'arrêté par le cabinet')`,
@@ -710,7 +710,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       "la surcharge du cabinet ne l'emporte pas sur le défaut du pack",
     );
 
-    const chezB = await sousIdentite(b.id, async (db) => {
+    const chezB = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query<{ exigence: string }>(
         `select exigence from fabrique.seuils_exiges($1) where mesure = $2`,
         [orgB, premier.mesure],
@@ -724,7 +724,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
     // Le validateur de recette les exige sans défaut : « tant qu'elles n'y
     // sont pas, il ne s'appelle pas plutôt que de s'appeler faux ». Si la base
     // n'en rendait que quatre, la cinquième serait inventée par quelqu'un.
-    const bornes = await sousIdentite(a.id, async (db) => {
+    const bornes = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{
         borne: string;
         valeur: string;
@@ -749,7 +749,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       "les bornes livrées ne sont pas celles du référentiel",
     );
 
-    const surchargee = await sousIdentite(a.id, async (db) => {
+    const surchargee = await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
          values ($1, 'fabrique.seuil.recette.ancre_texte_min', 1, 'factures arabes : mentions d''une lettre')`,
@@ -776,7 +776,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
 
     // Les seuils de promotion et les bornes de recette ne se mélangent pas :
     // une borne n'est pas une mesure d'évaluation.
-    const mesures = await sousIdentite(a.id, async (db) => {
+    const mesures = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ mesure: string }>(
         `select mesure from fabrique.seuils_exiges($1)`,
         [orgA],
@@ -798,7 +798,7 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
      * un `jsonb` accepte toutes les clés, y compris celles que le type
      * interdit. C'est la dernière porte, et elle se ferme ici.
      */
-    const [recette] = await sousIdentite(a.id, async (db) => {
+    const [recette] = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
          values ($1, 'porteuse de valeur', $2, 'organisation') returning id`,

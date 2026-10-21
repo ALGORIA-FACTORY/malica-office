@@ -6,7 +6,7 @@
  * organisations, et que c'est la base — non le code de l'API — qui le décide.
  *
  * Aucun `set_config` posé à la main dans le test, aucun rôle emprunté : tout
- * passe par `sousIdentite`, exactement comme une requête réelle. Un test qui
+ * passe par `sousIdentiteDuServeur`, exactement comme une requête réelle. Un test qui
  * tricherait sur ce point ne prouverait rien.
  *
  *   node --experimental-strip-types --test src/isolation.test.ts
@@ -17,7 +17,7 @@ import pg from "pg";
 import { after, before, describe, it } from "node:test";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, horsRlsAuthentificationSeule, sousIdentite } from "./db.ts";
+import { fermerLePool, horsRlsAuthentificationSeule, sousIdentiteDuServeur } from "./db.ts";
 
 /** Sans base, la suite s'ignore au lieu d'échouer : un rouge permanent ne se lit plus. */
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -40,7 +40,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
     // propre identité. Aucun droit administratif n'est requis — et ce que le
     // test vérifie ensuite porte donc sur des données créées comme en
     // production, pas injectées par-dessous.
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ create_organization: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as create_organization`,
         // La juridiction et la devise ne sont plus devinées par la base :
@@ -94,7 +94,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("le propriétaire voit son organisation", async () => {
-    const vues = await sousIdentite(a.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query(`select id from identity.organizations`);
       return rows;
     });
@@ -105,7 +105,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("le propriétaire voit sa pièce", async () => {
-    const vues = await sousIdentite(a.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query(`select id from capture.pieces`);
       return rows;
     });
@@ -113,7 +113,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("un tiers ne voit aucune organisation", async () => {
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from identity.organizations`);
       return rows;
     });
@@ -121,7 +121,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("un tiers ne voit aucune pièce", async () => {
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from capture.pieces`);
       return rows;
     });
@@ -130,7 +130,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
 
   it("un tiers ne peut pas écrire dans le tenant d'un autre", async () => {
     await assert.rejects(
-      sousIdentite(b.id, async (db) => {
+      sousIdentiteDuServeur(b.id, async (db) => {
         await db.query(
           `insert into capture.pieces
              (tenant_id, source, vis, storage_path, idempotency_key, created_by)
@@ -152,7 +152,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
    * ne prouverait que ce que les autres tests prouvent déjà.
    */
   it("une conversation n'appartient qu'à son auteur", async () => {
-    const filA = await sousIdentite(a.id, async (db) => {
+    const filA = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into agents.conversations (tenant_id, titre)
          values ($1, 'essai isolation') returning id`,
@@ -167,19 +167,19 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
       return id;
     });
 
-    const sienne = await sousIdentite(a.id, async (db) => {
+    const sienne = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query(`select id from agents.conversations`);
       return rows;
     });
     assert.equal(sienne.length, 1, "l'auteur relit son fil");
 
-    const vuesParB = await sousIdentite(b.id, async (db) => {
+    const vuesParB = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from agents.conversations`);
       return rows;
     });
     assert.equal(vuesParB.length, 0, "un tiers ne voit aucun fil");
 
-    const messagesVusParB = await sousIdentite(b.id, async (db) => {
+    const messagesVusParB = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from agents.conversation_messages`);
       return rows;
     });
@@ -187,14 +187,14 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
 
     // Ni en connaissant l'identifiant : le fil est protégé par la politique,
     // pas par l'ignorance de son adresse.
-    const cible = await sousIdentite(b.id, async (db) => {
+    const cible = await sousIdentiteDuServeur(b.id, async (db) => {
       const { rows } = await db.query(`select id from agents.conversations where id = $1`, [filA]);
       return rows;
     });
     assert.equal(cible.length, 0, "connaître l'identifiant ne suffit pas");
 
     // Et il ne se supprime pas non plus : `delete` ne trouve rien à effacer.
-    const efface = await sousIdentite(b.id, async (db) => {
+    const efface = await sousIdentiteDuServeur(b.id, async (db) => {
       const r = await db.query(`delete from agents.conversations where id = $1`, [filA]);
       return r.rowCount;
     });
@@ -202,7 +202,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("une conversation ne change ni d'auteur ni de dossier", async () => {
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into agents.conversations (tenant_id) values ($1) returning id`,
         [orgA],

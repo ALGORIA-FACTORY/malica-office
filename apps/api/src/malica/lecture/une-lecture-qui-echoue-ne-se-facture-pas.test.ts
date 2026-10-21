@@ -25,7 +25,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, emettreJeton, type Utilisateur } from "../../auth.ts";
-import { fermerLePool, sousIdentite } from "../../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../../db.ts";
 import { executerRpc } from "../../rpc.ts";
 import { creerAppelLocal, type AppelApi } from "../appel-local.ts";
 
@@ -175,21 +175,25 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
   }
 
   async function deposer(tenantId: string, cle: string, vis: "personnel" | "partage") {
-    const p = (await sousIdentite(u.id, (db) =>
-      executerRpc(db, {
-        depot: "capture",
-        methode: "enregistrer",
-        args: [
-          {
-            tenantId,
-            source: "photo",
-            vis,
-            idempotencyKey: `${marque}-${cle}`,
-            contentType: "image/jpeg",
-            pageCount: 1,
-          },
-        ],
-      }),
+    const p = (await sousIdentiteDuServeur(u.id, (db) =>
+      executerRpc(
+        db,
+        {
+          depot: "capture",
+          methode: "enregistrer",
+          args: [
+            {
+              tenantId,
+              source: "photo",
+              vis,
+              idempotencyKey: `${marque}-${cle}`,
+              contentType: "image/jpeg",
+              pageCount: 1,
+            },
+          ],
+        },
+        "serveur",
+      ),
     )) as { id: string };
     return p.id;
   }
@@ -203,7 +207,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
   }
 
   async function verdictDeLaBase(pieceId: string) {
-    return sousIdentite(u.id, async (db) => {
+    return sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{ v: { autorisee: boolean; motif: string } }>(
         "select public.lecture_autorisee($1) as v",
         [pieceId],
@@ -213,7 +217,7 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
   }
 
   async function nouvelleOrganisation(nom: string): Promise<string> {
-    return sousIdentite(u.id, async (db) => {
+    return sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome',
                                            '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
@@ -401,21 +405,29 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
 
     const TERMINAUX = ["termine", "refuse", "en_erreur", "en_panne", "epuise", "abandonne"];
     for (let i = 0; i < 200; i++) {
-      const etat = (await sousIdentite(u.id, (db) =>
-        executerRpc(db, { depot: "fabrique", methode: "etatDeLaLecture", args: [travailId] }),
+      const etat = (await sousIdentiteDuServeur(u.id, (db) =>
+        executerRpc(
+          db,
+          { depot: "fabrique", methode: "etatDeLaLecture", args: [travailId] },
+          "serveur",
+        ),
       )) as { etat: string } | null;
       if (etat && TERMINAUX.includes(etat.etat)) break;
       await new Promise((resoudre) => setTimeout(resoudre, 50));
     }
 
-    const dossier = (await sousIdentite(u.id, (db) =>
-      executerRpc(db, { depot: "capture", methode: "dossier", args: [piece] }),
+    const dossier = (await sousIdentiteDuServeur(u.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "dossier", args: [piece] }, "serveur"),
     )) as { lectureRefusee: { motif: string } | null; extraction: unknown };
     assert.ok(dossier.lectureRefusee, "le refus est lisible après coup, il n'est pas avalé");
     assert.equal(dossier.lectureRefusee.motif, attendu.motif, "le code de la base, mot pour mot");
 
-    const liste = (await sousIdentite(u.id, (db) =>
-      executerRpc(db, { depot: "capture", methode: "listAvecLecture", args: [orgPleine] }),
+    const liste = (await sousIdentiteDuServeur(u.id, (db) =>
+      executerRpc(
+        db,
+        { depot: "capture", methode: "listAvecLecture", args: [orgPleine] },
+        "serveur",
+      ),
     )) as Array<{ id: string; status: string; lectureRefusee: { motif: string } | null }>;
     const ligne = liste.find((p) => p.id === piece);
     assert.ok(ligne, "la capture a réussi : la pièce existe");

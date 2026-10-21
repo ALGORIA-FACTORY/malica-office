@@ -18,7 +18,7 @@
  *               réciproquement. Sans ce filtre, la file ferait lire une
  *               génération.
  *
- * Tout passe par `sousIdentite` — rôle `authenticated`, claim `sub` posé dans
+ * Tout passe par `sousIdentiteDuServeur` — rôle `authenticated`, claim `sub` posé dans
  * la transaction — et par le DÉPÔT, jamais par les fonctions nues : ce que
  * personne n'appelle n'est pas éprouvé.
  *
@@ -37,7 +37,7 @@ import pg from "pg";
 import type { PageToken, TokenRef } from "@malica/socle/ports/malica";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 import { fabrique } from "../depots/fabrique.ts";
 import { MODELE_GENERATION, ROLE_GENERATION } from "../malica/modeles.ts";
 
@@ -145,7 +145,7 @@ describe(
 
     /** Qualifie un exemple d'APPRENTISSAGE par le vrai chemin : le dépôt. */
     async function qualifier(nom: string, total: string): Promise<string | null> {
-      return sousIdentite(a.id, async (db) => {
+      return sousIdentiteDuServeur(a.id, async (db) => {
         const fait = await fabrique.qualifierUnExemple(db, {
           tenantId: orgA,
           pieceId: pieces.get(nom),
@@ -161,7 +161,7 @@ describe(
 
     /** Les travaux de génération de ce format, vus par A. */
     async function travauxDeGeneration(): Promise<string[]> {
-      return sousIdentite(a.id, async (db) => {
+      return sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
           `select id from fabrique.travaux
           where tenant_id = $1 and nature = 'generation_recette' and signature_cle = $2`,
@@ -178,7 +178,7 @@ describe(
       a = ca;
       b = cb;
 
-      await sousIdentite(a.id, async (db) => {
+      await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ org: string }>(
           `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
           ["pme", `ESSAI ${marque} A`, "autonome", "TN", "TND"],
@@ -202,7 +202,7 @@ describe(
         );
       });
 
-      await sousIdentite(b.id, async (db) => {
+      await sousIdentiteDuServeur(b.id, async (db) => {
         const { rows } = await db.query<{ org: string }>(
           `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
           ["pme", `ESSAI ${marque} B`, "autonome", "TN", "TND"],
@@ -232,7 +232,7 @@ describe(
     /* ------------------------------------------------- 1. LE SEUIL, ET PAS AVANT */
 
     it("le seuil livré est dans le référentiel, et son absence refuse", async () => {
-      const bornes = await sousIdentite(a.id, async (db) => {
+      const bornes = await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{
           borne: string;
           valeur: string;
@@ -261,6 +261,8 @@ describe(
         );
         await client.query("set local role authenticated");
         await client.query("select set_config('request.jwt.claim.sub', $1, true)", [a.id]);
+        // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+        await client.query("select set_config('malica.origine', 'serveur', true)");
         let message = "";
         try {
           await client.query(`select fabrique.generation_proposer($1, $2)`, [orgA, signatureCle]);
@@ -285,7 +287,9 @@ describe(
       assert.ok(travail, "le seuil est atteint et rien n'est en file : la fabrique reste inerte");
       assert.deepEqual(await travauxDeGeneration(), [travail]);
 
-      const etat = await sousIdentite(a.id, async (db) => fabrique.etatDeLaLecture(db, travail));
+      const etat = await sousIdentiteDuServeur(a.id, async (db) =>
+        fabrique.etatDeLaLecture(db, travail),
+      );
       assert.equal(etat?.etat, "a_faire", "le travail de génération n'est pas prenable");
       assert.equal(etat?.nature, "generation_recette");
     });
@@ -293,7 +297,7 @@ describe(
     /* ------------------------------------------------------- 2. JAMAIS DEUX FOIS */
 
     it("deux propositions pour le même format ne font qu'un travail", async () => {
-      const encore = await sousIdentite(a.id, async (db) =>
+      const encore = await sousIdentiteDuServeur(a.id, async (db) =>
         proposerUneGeneration(db, orgA, signatureCle),
       );
       assert.equal(encore, null, "une seconde proposition a mis une seconde génération en file");
@@ -307,11 +311,11 @@ describe(
     /* ------------------------------------------------------------------ 3. R6 */
 
     it("une organisation ne propose pas une génération chez une autre", async () => {
-      const vu = await sousIdentite(b.id, async (db) =>
+      const vu = await sousIdentiteDuServeur(b.id, async (db) =>
         proposerUneGeneration(db, orgA, signatureCle),
       );
       assert.equal(vu, null, "B a proposé une génération chez A");
-      const chezB = await sousIdentite(b.id, async (db) => {
+      const chezB = await sousIdentiteDuServeur(b.id, async (db) => {
         const { rows } = await db.query(`select id from fabrique.travaux`);
         return rows.length;
       });
@@ -321,7 +325,7 @@ describe(
     /* ------------------------------------- 4. LA NATURE DÉCIDE CE QU'ON PREND */
 
     it("un exécuteur de lectures ne prend pas une génération", async () => {
-      const pris = await sousIdentite(a.id, async (db) =>
+      const pris = await sousIdentiteDuServeur(a.id, async (db) =>
         prendreUnTravail(db, orgA, ["lecture_piece"]),
       );
       assert.equal(pris, null, "une génération a été prise par un exécuteur de lectures");
@@ -331,7 +335,7 @@ describe(
 
     it("la file exécute la génération, la journalise en base, et inscrit une candidate", async () => {
       const avecBase = <T>(travail: (db: Requete) => Promise<T>): Promise<T> =>
-        sousIdentite(a.id, travail);
+        sousIdentiteDuServeur(a.id, travail);
 
       const avant = appels;
       const fait = await executerUnTravail(avecBase, orgA, ["generation_recette"], async (t) => {
@@ -351,7 +355,7 @@ describe(
        * refuser l'écriture du journal en silence », et ce défaut a coûté dix
        * jours de mesures à ce dépôt. On ne se contente pas d'avoir appelé.
        */
-      const journal = await sousIdentite(a.id, async (db) => {
+      const journal = await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{
           agent: string;
           model: string;
@@ -373,7 +377,7 @@ describe(
       assert.ok(Number(journal.cost) > 0, "la génération a coûté zéro : le tarif n'a pas été lu");
 
       /* Et la candidate est là, née du générateur, dans l'état « candidate ». */
-      const recettes = await sousIdentite(a.id, async (db) => fabrique.recettes(db, orgA));
+      const recettes = await sousIdentiteDuServeur(a.id, async (db) => fabrique.recettes(db, orgA));
       const sienne = recettes.filter((r) => r.signatureCle === signatureCle);
       assert.equal(sienne.length, 1, "la génération n'a pas inscrit de candidate");
       assert.equal(
@@ -390,7 +394,7 @@ describe(
        * le plus net : le modèle rend autre chose qu'un objet.
        */
       const piece = pieces.get("a")!;
-      const travail = await sousIdentite(a.id, async (db) =>
+      const travail = await sousIdentiteDuServeur(a.id, async (db) =>
         db
           .query<{ id: string }>(
             `insert into fabrique.travaux
@@ -403,7 +407,8 @@ describe(
           .then((r) => r.rows[0]!.id),
       );
 
-      const avecBase = <T>(t: (db: Requete) => Promise<T>): Promise<T> => sousIdentite(a.id, t);
+      const avecBase = <T>(t: (db: Requete) => Promise<T>): Promise<T> =>
+        sousIdentiteDuServeur(a.id, t);
       const avant = await compterLesLignes(orgA);
       const fait = await executerUnTravail(avecBase, orgA, ["generation_recette"], async (t) => {
         await executerUneGeneration(
@@ -433,14 +438,16 @@ describe(
         "un appel refusé ne se journalise pas : la dépense disparaît",
       );
 
-      const etat = await sousIdentite(a.id, async (db) => fabrique.etatDeLaLecture(db, travail));
+      const etat = await sousIdentiteDuServeur(a.id, async (db) =>
+        fabrique.etatDeLaLecture(db, travail),
+      );
       assert.equal(etat?.etat, "refuse");
     });
 
     it("un travail de lecture reste pris par un exécuteur de lectures", async () => {
       // Le filtre de nature n'a pas fermé la porte d'origine.
       const piece = pieces.get("autre_client")!;
-      const { travailId } = await sousIdentite(a.id, async (db) =>
+      const { travailId } = await sousIdentiteDuServeur(a.id, async (db) =>
         enregistrerTravail(db, {
           tenantId: orgA,
           pieceId: piece,
@@ -448,12 +455,12 @@ describe(
           cleIdempotence: `${marque}-lecture`,
         }),
       );
-      const pris = await sousIdentite(a.id, async (db) =>
+      const pris = await sousIdentiteDuServeur(a.id, async (db) =>
         prendreUnTravail(db, orgA, ["lecture_piece"]),
       );
       assert.equal(pris?.travailId, travailId);
       assert.equal(pris?.signatureCle, null, "une lecture porte un format : elle vise une pièce");
-      await sousIdentite(a.id, async (db) =>
+      await sousIdentiteDuServeur(a.id, async (db) =>
         inscrireIssue(db, {
           tenantId: orgA,
           travailId,
@@ -468,7 +475,7 @@ describe(
 
     it("le cabinet change le seuil sans déploiement", async () => {
       const cle = `facture-deux-${marque}`;
-      await sousIdentite(a.id, async (db) => {
+      await sousIdentiteDuServeur(a.id, async (db) => {
         await db.query(
           `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
          values ($1, 'fabrique.seuil.generation.pieces_min', 2, 'ce cabinet propose plus tôt')
@@ -477,7 +484,7 @@ describe(
         );
       });
 
-      const arrete = await sousIdentite(a.id, async (db) => {
+      const arrete = await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ valeur: string; arrete_par_le_cabinet: boolean }>(
           `select valeur, arrete_par_le_cabinet from fabrique.bornes_de_generation($1)`,
           [orgA],
@@ -492,7 +499,7 @@ describe(
         ["a", "1180,000"],
         ["autre_client", "708,000"],
       ] as const) {
-        await sousIdentite(a.id, async (db) => {
+        await sousIdentiteDuServeur(a.id, async (db) => {
           await fabrique.qualifierUnExemple(db, {
             tenantId: orgA,
             pieceId: pieces.get(nom),
@@ -504,7 +511,7 @@ describe(
           });
         });
       }
-      const mis = await sousIdentite(a.id, async (db) => {
+      const mis = await sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
           `select id from fabrique.travaux
           where tenant_id = $1 and nature = 'generation_recette' and signature_cle = $2`,
@@ -517,7 +524,7 @@ describe(
 
     /** Les lignes de journal du générateur, pour cette organisation. */
     async function compterLesLignes(org: string): Promise<number> {
-      return sousIdentite(a.id, async (db) => {
+      return sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ n: string }>(
           `select count(*) as n from public.agent_runs_v
           where tenant_id = $1 and agent = 'fabrique.generateur'`,

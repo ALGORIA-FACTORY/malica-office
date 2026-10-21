@@ -37,7 +37,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -81,27 +81,31 @@ describe(
     };
 
     async function deposer(cle: string, vis: "personnel" | "partage"): Promise<string> {
-      const p = (await sousIdentite(u.id, (db) =>
-        executerRpc(db, {
-          depot: "capture",
-          methode: "enregistrer",
-          args: [
-            {
-              tenantId: org,
-              source: "photo",
-              vis,
-              idempotencyKey: `${marque}-${cle}`,
-              contentType: "image/jpeg",
-              pageCount: 1,
-            },
-          ],
-        }),
+      const p = (await sousIdentiteDuServeur(u.id, (db) =>
+        executerRpc(
+          db,
+          {
+            depot: "capture",
+            methode: "enregistrer",
+            args: [
+              {
+                tenantId: org,
+                source: "photo",
+                vis,
+                idempotencyKey: `${marque}-${cle}`,
+                contentType: "image/jpeg",
+                pageCount: 1,
+              },
+            ],
+          },
+          "serveur",
+        ),
       )) as { id: string };
       return p.id;
     }
 
     const verdict = (piece: string) =>
-      sousIdentite(u.id, async (db) => {
+      sousIdentiteDuServeur(u.id, async (db) => {
         const { rows } = await db.query<{ v: Verdict }>(
           "select public.lecture_autorisee($1) as v",
           [piece],
@@ -119,7 +123,7 @@ describe(
       const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
       assert.ok(c);
       u = c;
-      org = await sousIdentite(u.id, async (db) => {
+      org = await sousIdentiteDuServeur(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
           `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
                                            '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
@@ -162,7 +166,9 @@ describe(
       // passe par la vraie porte, et son verdict « sous le plafond » est mesuré
       // juste avant — chaque épreuve peut alors se lancer seule.
       avantLaDerniere = await verdict(derniere);
-      await sousIdentite(u.id, (db) => db.query("select public.lecture_consommer($1)", [derniere]));
+      await sousIdentiteDuServeur(u.id, (db) =>
+        db.query("select public.lecture_consommer($1)", [derniere]),
+      );
     });
 
     after(async () => {
@@ -205,7 +211,9 @@ describe(
       // `lecture_consommer` porte la règle ; un refus qui inscrirait quand même
       // la lecture ferait payer ce qu'on vient de refuser.
       await assert.rejects(
-        sousIdentite(u.id, (db) => db.query("select public.lecture_consommer($1)", [auDela])),
+        sousIdentiteDuServeur(u.id, (db) =>
+          db.query("select public.lecture_consommer($1)", [auDela]),
+        ),
         /lecture refusee : plafond_atteint/,
       );
       assert.equal(

@@ -69,6 +69,24 @@ export async function sousIdentite<T>(
 }
 
 /**
+ * Le même travail, mais conduit PAR LE SERVEUR pour cet utilisateur : la file
+ * de lectures, la fabrique de recettes, le journal des agents. La RLS reste
+ * celle de l'utilisateur ; seule change la marque `malica.origine`, que les
+ * déclencheurs `app.exiger_origine_serveur()` exigent pour écrire les
+ * lectures, extractions, journaux et exécutions. Un appel venu du navigateur
+ * ne passe jamais par ici : `app.ts` et `cles-api.ts` appellent `sousIdentite`.
+ */
+export async function sousIdentiteDuServeur<T>(
+  utilisateur: string,
+  travail: (db: Requete) => Promise<T>,
+): Promise<T> {
+  return sousClaims({ sub: utilisateur }, async (db) => {
+    await db.query("select set_config('malica.origine', 'serveur', true)");
+    return travail(db);
+  });
+}
+
+/**
  * Exécute un travail sous une clé d'API du cabinet.
  *
  * Deux claims au lieu d'un. `sub` reste la personne qui a créé la clé : c'est

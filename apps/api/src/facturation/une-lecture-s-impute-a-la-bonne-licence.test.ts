@@ -147,6 +147,8 @@ async function sous<T>(db: pg.PoolClient, identite: string, corps: () => Promise
   await db.query("savepoint sous_role");
   await db.query("set local role authenticated");
   await db.query("select set_config('request.jwt.claim.sub', $1, true)", [identite]);
+  // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+  await db.query("select set_config('malica.origine', 'serveur', true)");
   try {
     return await corps();
   } catch (erreur) {

@@ -41,7 +41,7 @@
  */
 
 import { creerAppelLocal } from "../appel-local.ts";
-import { sousIdentite } from "../../db.ts";
+import { sousIdentite, sousIdentiteDuServeur } from "../../db.ts";
 import { generateurDeepSeek } from "../../fabrique/generateur-modele.ts";
 import { executerUneGeneration } from "../../fabrique/travail-de-generation.ts";
 import { executerUnTravail } from "../../fabrique/travaux-execution.ts";
@@ -111,8 +111,10 @@ async function courir(utilisateurId: string, pieceId: string): Promise<void> {
   enCours.add(tenantId);
   try {
     const api = creerAppelLocal(utilisateurId);
+    // La file écrit lectures, exécutions et journaux : elle le fait en tant
+    // que serveur, sous la RLS de l'utilisateur (`sousIdentiteDuServeur`).
     const avecBase = <T>(travail: Parameters<typeof sousIdentite<T>>[1]): Promise<T> =>
-      sousIdentite(utilisateurId, travail);
+      sousIdentiteDuServeur(utilisateurId, travail);
     for (let tour = 0; tour < TOURS_MAX; tour += 1) {
       const fait = await executerUnTravail(avecBase, tenantId, cequejepeuxfaire(), async (t) => {
         /*

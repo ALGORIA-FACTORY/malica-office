@@ -1,7 +1,7 @@
 /**
  * Le cycle de vie d'une recette, éprouvé de bout en bout — et EN BASE.
  *
- * Tout passe par `sousIdentite`, donc par le rôle `authenticated` avec le
+ * Tout passe par `sousIdentiteDuServeur`, donc par le rôle `authenticated` avec le
  * claim `sub` posé dans la transaction, exactement comme une requête réelle.
  * C'est la quatrième règle du plan : une preuve obtenue en superutilisateur
  * ne prouve rien, parce qu'un superutilisateur n'est arrêté par aucune
@@ -31,7 +31,7 @@ import pg from "pg";
 import type { PageToken, TokenRef } from "@malica/socle/ports/malica";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 import { fabrique } from "../depots/fabrique.ts";
 import { MODELE_GENERATION, ROLE_GENERATION } from "../malica/modeles.ts";
 
@@ -134,7 +134,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     assert.ok(compte, "le compte doit être créé");
     a = compte;
 
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
         ["pme", `ESSAI ${marque}`, "autonome", "TN", "TND"],
@@ -199,7 +199,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
      * refuserait donc TOUTE activation — et le refus parlerait d'une mesure
      * manquante, pas d'un seuil orphelin. La relation se vérifie ici.
      */
-    const exigees = await sousIdentite(a.id, async (db) => {
+    const exigees = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ mesure: string }>(
         `select mesure from fabrique.seuils_exiges($1)`,
         [orgA],
@@ -219,7 +219,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
 
   it("exemples → candidate → évaluation → observation → active → suspension → reprise → retrait", async () => {
     /* --- ① Les exemples qualifiés. Deux pour apprendre, deux pour mesurer. */
-    const ids = await sousIdentite(a.id, async (db) => {
+    const ids = await sousIdentiteDuServeur(a.id, async (db) => {
       const apprentissage: string[] = [];
       for (const [nom, total] of [
         ["a", "1180,000"],
@@ -254,7 +254,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     });
 
     /* --- ② La proposition. Le générateur lit les exemples par le dépôt. */
-    const propose = await sousIdentite(a.id, async (db) => {
+    const propose = await sousIdentiteDuServeur(a.id, async (db) => {
       const exemples = await fabrique.exemplesDApprentissage(db, orgA, signatureCle);
       assert.equal(exemples.length, 2, "les exemples d'évaluation ont fui dans l'apprentissage");
       const [reglages, bornes] = await Promise.all([
@@ -282,7 +282,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     if (!propose.ok) return;
 
     /* --- ③ R8 : la génération se journalise, AVEC son modèle et son rôle. */
-    const runId = await sousIdentite(a.id, async (db) =>
+    const runId = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.journaliserUneGeneration(db, {
         tenantId: orgA,
         modele: propose.provenance.modele,
@@ -295,7 +295,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.ok(runId, "la génération n'a pas laissé de ligne : la dépense disparaît en silence");
 
-    const journal = await sousIdentite(a.id, async (db) => {
+    const journal = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{
         agent: string;
         model: string;
@@ -317,7 +317,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
 
     /* --- ④ La candidate, avec sa provenance. */
-    const version = await sousIdentite(a.id, async (db) =>
+    const version = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.inscrireUneCandidate(db, {
         tenantId: orgA,
         libelle: `Facture A ${marque}`,
@@ -332,12 +332,12 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(version.rang, 1);
 
-    const etatNe = await sousIdentite(a.id, async (db) =>
+    const etatNe = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, version.versionId),
     );
     assert.equal(etatNe?.etat, "candidate");
 
-    const provenanceLue = await sousIdentite(a.id, async (db) => {
+    const provenanceLue = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ provenance: { generateur?: string; pieces?: string[] } }>(
         `select provenance from fabrique.recette_versions where id = $1`,
         [version.versionId],
@@ -348,7 +348,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(provenanceLue.pieces?.length, 2, "la provenance ne dit pas sur quoi on a appris");
 
     /* --- ⑤ Une validation humaine ne promeut pas. */
-    const sansEvaluation = await sousIdentite(a.id, async (db) => {
+    const sansEvaluation = await sousIdentiteDuServeur(a.id, async (db) => {
       try {
         await fabrique.promouvoir(db, {
           tenantId: orgA,
@@ -368,7 +368,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
 
     /* --- ⑥ L'évaluation, sur le jeu d'évaluation SEUL. */
-    const mesure = await sousIdentite(a.id, async (db) =>
+    const mesure = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.evaluerUneVersion(db, orgA, version.versionId),
     );
     assert.equal(mesure.exemplesComptes, 2, "l'évaluation n'a pas vu ses deux exemples");
@@ -379,7 +379,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(mesure.reserve, null);
 
     /* --- ⑦ Observation, puis activation contre les seuils du référentiel. */
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       for (const etat of ["evaluee", "observation", "active"] as const) {
         await fabrique.promouvoir(db, {
           tenantId: orgA,
@@ -390,19 +390,19 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         });
       }
     });
-    const active = await sousIdentite(a.id, async (db) =>
+    const active = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, version.versionId),
     );
     assert.equal(active?.etat, "active");
 
     /* --- ⑧ La dérive suspend, et rend la main au chemin existant. */
-    const calme = await sousIdentite(a.id, async (db) =>
+    const calme = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.surveillerUneVersion(db, orgA, version.versionId),
     );
     assert.equal(calme.derive, null, "une version sans exécution dérive déjà");
     assert.equal(calme.tauxAbstention, null, "un taux sur zéro exécution n'est pas un taux");
 
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await fabrique.inscrireExecution(db, {
         tenantId: orgA,
         recetteVersionId: version.versionId,
@@ -422,7 +422,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       }
     });
 
-    const derive = await sousIdentite(a.id, async (db) =>
+    const derive = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.surveillerUneVersion(db, orgA, version.versionId),
     );
     assert.equal(derive.executions, 3);
@@ -434,12 +434,12 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(derive.suspendue, true);
 
-    const apres = await sousIdentite(a.id, async (db) =>
+    const apres = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, version.versionId),
     );
     assert.equal(apres?.etat, "suspendue");
 
-    const nePlusDesigner = await sousIdentite(a.id, async (db) =>
+    const nePlusDesigner = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.contexteDeDesignation(db, orgA),
     );
     assert.deepEqual(
@@ -450,7 +450,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
 
     /* --- ⑨ Rien n'est perdu : les pièces, les exécutions, l'historique. */
-    const reste = await sousIdentite(a.id, async (db) => {
+    const reste = await sousIdentiteDuServeur(a.id, async (db) => {
       const p = await db.query(`select id from capture.pieces where tenant_id = $1`, [orgA]);
       const x = await db.query(`select id from fabrique.executions where recette_version_id = $1`, [
         version.versionId,
@@ -481,7 +481,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
 
     /* --- ⑩ Le retour arrière, puis le retrait. */
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await fabrique.promouvoir(db, {
         tenantId: orgA,
         recetteVersionId: version.versionId,
@@ -490,12 +490,12 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         motif: "reprise après examen de la dérive",
       });
     });
-    const reprise = await sousIdentite(a.id, async (db) =>
+    const reprise = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, version.versionId),
     );
     assert.equal(reprise?.etat, "observation");
 
-    const redesigne = await sousIdentite(a.id, async (db) =>
+    const redesigne = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.contexteDeDesignation(db, orgA),
     );
     assert.deepEqual(
@@ -504,7 +504,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       "une version reprise en observation ne redésigne pas",
     );
 
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await fabrique.promouvoir(db, {
         tenantId: orgA,
         recetteVersionId: version.versionId,
@@ -512,12 +512,12 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
         motif: "remplacée par une version nouvelle",
       });
     });
-    const retiree = await sousIdentite(a.id, async (db) =>
+    const retiree = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, version.versionId),
     );
     assert.equal(retiree?.etat, "retiree");
 
-    const apresRetrait = await sousIdentite(a.id, async (db) => {
+    const apresRetrait = await sousIdentiteDuServeur(a.id, async (db) => {
       try {
         await fabrique.promouvoir(db, {
           tenantId: orgA,
@@ -544,7 +544,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
      * L'épreuve est écrite sur un rôle qui n'existe pas plutôt que sur le
      * vrai : elle vérifie que la porte est fermée, pas qu'elle grince.
      */
-    const refus = await sousIdentite(a.id, async (db) => {
+    const refus = await sousIdentiteDuServeur(a.id, async (db) => {
       try {
         await fabrique.journaliserUneGeneration(db, {
           tenantId: orgA,
@@ -576,7 +576,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
      * rendre son constat. Le constat, lui, ne se perd pas : il s'inscrit.
      */
     const cle = `dormante-${marque}`;
-    const vu = await sousIdentite(a.id, async (db) => {
+    const vu = await sousIdentiteDuServeur(a.id, async (db) => {
       const exemple = await fabrique.qualifierUnExemple(db, {
         tenantId: orgA,
         pieceId: pieces.get("a"),
@@ -630,7 +630,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
      * s'écrit SANS la mesure qu'elle n'a pas pu calculer.
      */
     const cle = `orphelin-${marque}`;
-    const sortie = await sousIdentite(a.id, async (db) => {
+    const sortie = await sousIdentiteDuServeur(a.id, async (db) => {
       const exemple = await fabrique.qualifierUnExemple(db, {
         tenantId: orgA,
         pieceId: pieces.get("a"),
@@ -668,7 +668,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
     );
 
     /* L'observation, elle, reste possible : c'est le sens même du mot. */
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       for (const etat of ["evaluee", "observation"] as const) {
         await fabrique.promouvoir(db, {
           tenantId: orgA,
@@ -680,7 +680,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       }
     });
 
-    const refus = await sousIdentite(a.id, async (db) => {
+    const refus = await sousIdentiteDuServeur(a.id, async (db) => {
       try {
         await fabrique.promouvoir(db, {
           tenantId: orgA,
@@ -700,7 +700,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
       `l'activation est passée sans mesure, ou pour une autre raison : « ${refus} »`,
     );
 
-    const etat = await sousIdentite(a.id, async (db) =>
+    const etat = await sousIdentiteDuServeur(a.id, async (db) =>
       fabrique.etatDUneVersion(db, sortie.version.versionId),
     );
     assert.equal(etat?.etat, "observation");
@@ -718,7 +718,7 @@ describe("le cycle de vie d'une recette", { skip: !BASE_CONFIGUREE }, () => {
      * forme du papier.
      */
     const cle = `comptable-${marque}`;
-    const vus = await sousIdentite(a.id, async (db) => {
+    const vus = await sousIdentiteDuServeur(a.id, async (db) => {
       await fabrique.qualifierUnExemple(db, {
         tenantId: orgA,
         pieceId: pieces.get("a"),

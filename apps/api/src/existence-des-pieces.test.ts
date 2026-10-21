@@ -25,7 +25,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, emettreJeton } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -56,28 +56,32 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
     assert.ok(a && b);
     proprietaire = a.id;
     jetonEtranger = emettreJeton(b);
-    orgA = await sousIdentite(a.id, async (db) => {
+    orgA = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
         [`EXISTENCE ${marque}`],
       );
       return rows[0]!.id;
     });
-    const piece = (await sousIdentite(a.id, (db) =>
-      executerRpc(db, {
-        depot: "capture",
-        methode: "enregistrer",
-        args: [
-          {
-            tenantId: orgA,
-            source: "pdf",
-            vis: "partage",
-            idempotencyKey: marque,
-            contentType: "application/pdf",
-            pageCount: 1,
-          },
-        ],
-      }),
+    const piece = (await sousIdentiteDuServeur(a.id, (db) =>
+      executerRpc(
+        db,
+        {
+          depot: "capture",
+          methode: "enregistrer",
+          args: [
+            {
+              tenantId: orgA,
+              source: "pdf",
+              vis: "partage",
+              idempotencyKey: marque,
+              contentType: "application/pdf",
+              pageCount: 1,
+            },
+          ],
+        },
+        "serveur",
+      ),
     )) as { id: string };
     pieceA = piece.id;
   });
@@ -158,8 +162,8 @@ describe("D29 — l'existence d'une pièce ne se confirme pas", { skip: !BASE_CO
   it("et la pièce existe bien : son propriétaire la lit", async () => {
     // Sans ce témoin, deux réponses identiques pourraient venir de ce que la
     // pièce n'a jamais été créée.
-    const lue = (await sousIdentite(proprietaire, (db) =>
-      executerRpc(db, { depot: "capture", methode: "dossier", args: [pieceA] }),
+    const lue = (await sousIdentiteDuServeur(proprietaire, (db) =>
+      executerRpc(db, { depot: "capture", methode: "dossier", args: [pieceA] }, "serveur"),
     )) as { piece: { id: string } } | { id: string };
     assert.equal("piece" in lue ? lue.piece.id : lue.id, pieceA);
   });

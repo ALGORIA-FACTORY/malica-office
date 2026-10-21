@@ -31,7 +31,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../../db.ts";
 import { RECETTE_FACTURE_A } from "../../fabrique/interprete-recettes-synthetiques.ts";
 import { executerRpc } from "../../rpc.ts";
 import {
@@ -54,8 +54,8 @@ const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_
  * C'est aussi le chemin que la production emprunte, ce qui vaut mieux.
  */
 function appeler<T>(utilisateur: string, depot: string, methode: string, args: unknown[]) {
-  return sousIdentite(utilisateur, async (db) =>
-    executerRpc(db, { depot, methode, args }),
+  return sousIdentiteDuServeur(utilisateur, async (db) =>
+    executerRpc(db, { depot, methode, args }, "serveur"),
   ) as Promise<T>;
 }
 
@@ -91,7 +91,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
     assert.ok(compte);
     moi = compte;
 
-    await sousIdentite(moi.id, async (db) => {
+    await sousIdentiteDuServeur(moi.id, async (db) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
         ["pme", `RECETTE ${marque}`, "autonome", "TN", "TND"],
@@ -244,7 +244,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
       },
     ]);
 
-    const lignes = await sousIdentite(moi.id, async (db) => {
+    const lignes = await sousIdentiteDuServeur(moi.id, async (db) => {
       const { rows } = await db.query<{
         issue: string;
         champs_designes: number;
@@ -275,7 +275,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
         motif: "totals.vat:TOKEN_NOT_FOUND",
       },
     ]);
-    const motif = await sousIdentite(moi.id, async (db) => {
+    const motif = await sousIdentiteDuServeur(moi.id, async (db) => {
       const { rows } = await db.query<{ motif: string }>(
         `select motif from fabrique.executions where piece_id = $1 and issue = 'abstention'`,
         [exemples[0]!],
@@ -321,7 +321,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
     ]);
     assert.ok(id, "l'écriture du journal doit rendre un identifiant, pas null");
 
-    const ligne = await sousIdentite(moi.id, async (db) => {
+    const ligne = await sousIdentiteDuServeur(moi.id, async (db) => {
       const { rows } = await db.query<{ model: string; cost: string; sovereign: boolean }>(
         `select model, cost::text as cost, sovereign
            from public.agent_runs_v where id = $1`,

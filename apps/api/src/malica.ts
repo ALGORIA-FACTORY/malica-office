@@ -26,6 +26,7 @@
 import { raw, Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 
+import { sousIdentite } from "./db.ts";
 import { creerAppelLocal, PieceIntrouvable } from "./malica/appel-local.ts";
 import { redigerLeBriefing } from "./malica/briefing.ts";
 import { askMalica, repondreAuCabinet } from "./malica/conseil/ask.ts";
@@ -50,6 +51,24 @@ const Locale = z.enum(["fr", "en", "ar"]).default("fr");
 /** L'API vue de l'intérieur, sous l'identité de la requête. */
 function api(req: Request) {
   return creerAppelLocal(req.utilisateur!.id);
+}
+
+/**
+ * La pièce est-elle visible de l'appelant ? Sinon : introuvable.
+ *
+ * Campagne du 21 octobre 2026 (ANO-003, critique) : le registre des lectures
+ * en cours est indexé par la pièce, et la route rendait la lecture qui
+ * tournait à quiconque connaissait son identifiant — une autre organisation
+ * recevait verdict, drapeaux et modèle. Rejoindre est légitime entre membres
+ * qui voient la pièce (deux onglets, un collègue) ; la RLS de `pieces_v` dit
+ * qui la voit, et ce contrôle passe AVANT le registre.
+ */
+async function exigerPieceVisible(req: Request, pieceId: string): Promise<void> {
+  const visible = await sousIdentite(req.utilisateur!.id, async (db) => {
+    const { rows } = await db.query("select 1 from pieces_v where id = $1", [pieceId]);
+    return rows.length > 0;
+  });
+  if (!visible) throw new PieceIntrouvable(`pièce introuvable : ${pieceId}`);
 }
 
 /**
@@ -148,6 +167,7 @@ malica.post("/lectures/:pieceId", (req, res, next) => {
       return { enCours: true, travailId: travail.travailId, deja: travail.deja };
     }
 
+    await exigerPieceVisible(req, pieceId);
     const lecture = registre<Awaited<ReturnType<typeof readPieceFlow>>>().lireOuRejoindre(
       pieceId,
       () => readPieceFlow(api(req), pieceId),
@@ -173,6 +193,7 @@ malica.post("/lectures/:pieceId", (req, res, next) => {
 malica.get("/lectures/:pieceId", (req, res, next) => {
   repondre(res, next, async () => {
     const pieceId = Uuid.parse(req.params["pieceId"]);
+    await exigerPieceVisible(req, pieceId);
     const l = registre().etat(pieceId);
     return { enCours: l !== null, depuisMs: l ? Date.now() - l.depuis : null };
   });

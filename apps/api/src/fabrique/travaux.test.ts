@@ -1,7 +1,7 @@
 /**
  * La file durable des travaux de lecture, éprouvée — pas relue.
  *
- * Tout passe par `sousIdentite`, donc par le rôle `authenticated` avec le
+ * Tout passe par `sousIdentiteDuServeur`, donc par le rôle `authenticated` avec le
  * claim `sub` posé dans la transaction. C'est la quatrième règle du plan
  * (`docs/fabrique-de-lecteurs/00-plan.md`) : une preuve obtenue en
  * superutilisateur ne prouve rien.
@@ -34,7 +34,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite, type Requete } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 
 import {
   executerUnTravail,
@@ -63,7 +63,7 @@ async function refusDe(
   args: unknown[] = [],
 ): Promise<{ code: string | null; message: string }> {
   try {
-    await sousIdentite(utilisateur, async (db) => db.query(sql, args));
+    await sousIdentiteDuServeur(utilisateur, async (db) => db.query(sql, args));
     return { code: null, message: "" };
   } catch (erreur) {
     return {
@@ -85,7 +85,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
 
   /** Une organisation et sa première pièce, par le vrai chemin, sous l'identité. */
   async function monter(u: Utilisateur, suffixe: string): Promise<[string, string]> {
-    return sousIdentite(u.id, async (db: Requete) => {
+    return sousIdentiteDuServeur(u.id, async (db: Requete) => {
       const { rows } = await db.query<{ org: string }>(
         `select public.create_organization($1, $2, $3, null, $4, $5) as org`,
         ["pme", `ESSAI ${marque} ${suffixe}`, "autonome", "TN", "TND"],
@@ -102,7 +102,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
 
   /** Une pièce de plus chez A — chaque épreuve a la sienne. */
   async function pieceDeplus(suffixe: string): Promise<string> {
-    return sousIdentite(a.id, async (db) => {
+    return sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
          values ($1, 'pdf', 'partage', $2, $3) returning id`,
@@ -114,7 +114,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
 
   /** Le cabinet ARRÊTE une borne, au-dessus du défaut du pack (R10). */
   async function arreter(borne: string, valeur: number): Promise<void> {
-    await sousIdentite(a.id, async (db) => {
+    await sousIdentiteDuServeur(a.id, async (db) => {
       await db.query(
         `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
          values ($1, $2, $3, 'épreuve automatisée')
@@ -136,9 +136,9 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
    */
   async function vider(): Promise<void> {
     for (;;) {
-      const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+      const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
       if (!pris) return;
-      await sousIdentite(a.id, async (db) =>
+      await sousIdentiteDuServeur(a.id, async (db) =>
         inscrireIssue(db, {
           tenantId: orgA,
           travailId: pris.travailId,
@@ -151,7 +151,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
   }
 
   async function nouveau(piece: string, cle: string): Promise<string> {
-    const r = await sousIdentite(a.id, async (db) =>
+    const r = await sousIdentiteDuServeur(a.id, async (db) =>
       enregistrerTravail(db, {
         tenantId: orgA,
         pieceId: piece,
@@ -191,7 +191,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
   /* ------------------------------------------ 1. L'ACCUSÉ VIENT APRÈS L'ÉCRITURE */
 
   it("un travail enregistré deux fois sous la même clé n'en fait qu'un", async () => {
-    const un = await sousIdentite(a.id, async (db) =>
+    const un = await sousIdentiteDuServeur(a.id, async (db) =>
       enregistrerTravail(db, {
         tenantId: orgA,
         pieceId: pieceA,
@@ -199,7 +199,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
         cleIdempotence: `${marque}-idem`,
       }),
     );
-    const deux = await sousIdentite(a.id, async (db) =>
+    const deux = await sousIdentiteDuServeur(a.id, async (db) =>
       enregistrerTravail(db, {
         tenantId: orgA,
         pieceId: pieceA,
@@ -212,7 +212,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     assert.equal(deux.travailId, un.travailId);
 
     // Et il est DURABLE : une autre transaction, plus tard, le lit.
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, un.travailId));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, un.travailId));
     assert.equal(etat?.etat, "a_faire", "le travail n'est pas en base après son accusé");
     assert.equal(etat?.tentatives, 0);
   });
@@ -221,7 +221,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
 
   it("une organisation ne voit ni les travaux ni l'état d'une autre", async () => {
     const travailA = await nouveau(pieceA, "r6");
-    const vues = await sousIdentite(b.id, async (db) => {
+    const vues = await sousIdentiteDuServeur(b.id, async (db) => {
       const t = await db.query(`select id from fabrique.travaux`);
       const e = await db.query(`select travail_id from fabrique.etat_des_travaux_v`);
       const f = await db.query(`select id from fabrique.travail_faits`);
@@ -229,7 +229,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     });
     assert.deepEqual(vues, [0, 0, 0], "B lit les travaux de A");
 
-    const sien = await sousIdentite(a.id, async (db) => etatDuTravail(db, travailA));
+    const sien = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travailA));
     assert.ok(sien, "A ne lit plus son propre travail");
   });
 
@@ -260,9 +260,9 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     // La fonction de prise est `security invoker` : B lui passe le tenant de
     // A, et c'est la RLS de la VUE qui répond — zéro candidat. Rien n'est
     // pris, et rien n'est inscrit.
-    const pris = await sousIdentite(b.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(b.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(pris, null, "B prend un travail de A");
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "a_faire", "le travail de A a bougé sous l'identité de B");
 
     // Et s'il forçait l'inscription directement, la politique d'écriture le
@@ -282,7 +282,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await arreter("abandon_s", 900);
     await vider();
     const travail = await nouveau(await pieceDeplus("r7"), "r7");
-    await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
 
     const mutations: [string, string][] = [
       ["fabrique.travaux", `update fabrique.travaux set priorite = 9`],
@@ -306,7 +306,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
      */
     for (const [table, mutation] of mutations) {
       for (const sql of [mutation, mutation.replace(/^update (\S+) set .*/, "delete from $1")]) {
-        const code = await sousIdentite(a.id, async (db) => {
+        const code = await sousIdentiteDuServeur(a.id, async (db) => {
           try {
             await db.query(sql);
             return null;
@@ -330,7 +330,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       assert.equal(code, "23001", `${table} accepte un update du propriétaire : R7 ne tient pas`);
     }
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "en_cours", "l'état a bougé malgré le refus muet");
   });
 
@@ -342,18 +342,18 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const piece = await pieceDeplus("prise");
     const travail = await nouveau(piece, "prise");
 
-    const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.ok(pris, "aucun travail pris alors qu'un travail est à faire");
     assert.equal(pris.travailId, travail);
     assert.equal(pris.tentative, 1);
     assert.equal(pris.pieceId, piece);
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "en_cours");
     assert.equal(etat?.tentatives, 1);
     assert.equal(etat?.prenable, false);
 
-    const rien = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const rien = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(rien, null, "un travail en cours se reprend immédiatement");
   });
 
@@ -364,13 +364,13 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const travail = await nouveau(piece, "course");
 
     const [un, deux] = await Promise.all([
-      sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA)),
-      sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA)),
+      sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA)),
+      sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA)),
     ]);
     const gagnants = [un, deux].filter((p) => p?.travailId === travail);
     assert.equal(gagnants.length, 1, "deux preneurs ont pris le même travail");
 
-    const faits = await sousIdentite(a.id, async (db) => {
+    const faits = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ n: string }>(
         `select count(*) as n from fabrique.travail_faits
           where travail_id = $1 and nature = 'pris'`,
@@ -393,7 +393,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
      * juste en dessous. Un index absent rendrait la course gagnable par les
      * deux sans que rien ne le dise.
      */
-    const index = await sousIdentite(a.id, async (db) => {
+    const index = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ def: string }>(
         `select indexdef as def from pg_indexes
           where schemaname = 'fabrique' and indexname = 'fabrique_travail_faits_prise_ux'`,
@@ -423,7 +423,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await nouveau(piece, "une-seule-1");
     const second = await nouveau(piece, "une-seule-2");
 
-    await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
 
     const refus = await refusDe(
       a.id,
@@ -448,10 +448,10 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const piece = await pieceDeplus("reprise");
     const travail = await nouveau(piece, "reprise");
 
-    const premier = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const premier = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(premier?.tentative, 1);
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(
       etat?.etat,
       "abandonne",
@@ -459,12 +459,12 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     );
     assert.equal(etat?.prenable, true);
 
-    const second = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const second = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(second?.travailId, travail);
     assert.equal(second?.tentative, 2, "la reprise n'ouvre pas une tentative nouvelle");
 
     // Et la première tentative est TOUJOURS là : rien n'a été effacé.
-    const faits = await sousIdentite(a.id, async (db) => {
+    const faits = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ tentative: number }>(
         `select tentative from fabrique.travail_faits
           where travail_id = $1 and nature = 'pris' order by tentative`,
@@ -482,14 +482,14 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const piece = await pieceDeplus("bornes");
     const travail = await nouveau(piece, "bornes");
 
-    await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
-    await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
+    await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "epuise");
     assert.equal(etat?.prenable, false);
 
-    const rien = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const rien = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(rien, null, "un travail épuisé se reprend sans fin");
 
     const refus = await refusDe(
@@ -505,7 +505,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
 
   it("les bornes viennent du référentiel, se surchargent, et leur absence refuse", async () => {
     await arreter("repli_s", 7);
-    const bornes = await sousIdentite(a.id, async (db) => bornesDeTravail(db, orgA));
+    const bornes = await sousIdentiteDuServeur(a.id, async (db) => bornesDeTravail(db, orgA));
     assert.deepEqual(
       Object.keys(bornes).sort(),
       ["abandon_s", "repli_s", "tentatives_max"],
@@ -524,6 +524,8 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       );
       await client.query("set local role authenticated");
       await client.query("select set_config('request.jwt.claim.sub', $1, true)", [a.id]);
+      // Ce test joue le serveur : la marque d'origine que les déclencheurs exigent.
+      await client.query("select set_config('malica.origine', 'serveur', true)");
       let message = "";
       try {
         await client.query(`select * from fabrique.bornes_de_travail($1)`, [orgA]);
@@ -544,10 +546,10 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await vider();
     const piece = await pieceDeplus("refus");
     const travail = await nouveau(piece, "refus");
-    const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.ok(pris);
 
-    await sousIdentite(a.id, async (db) =>
+    await sousIdentiteDuServeur(a.id, async (db) =>
       inscrireIssue(db, {
         tenantId: orgA,
         travailId: travail,
@@ -557,7 +559,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       }),
     );
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "refuse");
     assert.equal(
       etat?.prenable,
@@ -573,9 +575,9 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await vider();
     const piece = await pieceDeplus("panne");
     const travail = await nouveau(piece, "panne");
-    const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.ok(pris);
-    await sousIdentite(a.id, async (db) =>
+    await sousIdentiteDuServeur(a.id, async (db) =>
       inscrireIssue(db, {
         tenantId: orgA,
         travailId: travail,
@@ -585,11 +587,11 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       }),
     );
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "en_panne");
     assert.equal(etat?.prenable, true);
 
-    const repris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const repris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.equal(repris?.travailId, travail);
     assert.equal(repris?.tentative, 2);
   });
@@ -600,9 +602,9 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await vider();
     const piece = await pieceDeplus("technique");
     const travail = await nouveau(piece, "technique");
-    const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.ok(pris);
-    await sousIdentite(a.id, async (db) =>
+    await sousIdentiteDuServeur(a.id, async (db) =>
       inscrireIssue(db, {
         tenantId: orgA,
         travailId: travail,
@@ -612,7 +614,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       }),
     );
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "en_erreur");
     assert.equal(etat?.prenable, false, "un défaut de notre code se rejoue en boucle");
   });
@@ -644,9 +646,9 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     await vider();
     const piece = await pieceDeplus("garde");
     const travail = await nouveau(piece, "garde");
-    const pris = await sousIdentite(a.id, async (db) => prendreUnTravail(db, orgA));
+    const pris = await sousIdentiteDuServeur(a.id, async (db) => prendreUnTravail(db, orgA));
     assert.ok(pris);
-    await sousIdentite(a.id, async (db) =>
+    await sousIdentiteDuServeur(a.id, async (db) =>
       inscrireIssue(db, {
         tenantId: orgA,
         travailId: travail,
@@ -655,7 +657,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       }),
     );
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "termine");
     assert.equal(etat?.prenable, false);
 
@@ -682,7 +684,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     const travail = await nouveau(piece, "coureur");
 
     const avecBase = <T>(travailDb: (db: Requete) => Promise<T>): Promise<T> =>
-      sousIdentite(a.id, travailDb);
+      sousIdentiteDuServeur(a.id, travailDb);
 
     const panne = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => {
       throw new PanneFournisseur("le modèle n'a pas répondu");
@@ -698,7 +700,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     });
     assert.deepEqual([refus?.travailId, refus?.issue], [travail, "refus_metier"]);
 
-    const etat = await sousIdentite(a.id, async (db) => etatDuTravail(db, travail));
+    const etat = await sousIdentiteDuServeur(a.id, async (db) => etatDuTravail(db, travail));
     assert.equal(etat?.etat, "refuse");
 
     const rien = await executerUnTravail(avecBase, orgA, ["lecture_piece"], async () => undefined);
@@ -735,7 +737,7 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
       return Number(r.rows[0]!.n);
     };
     const consommer = async (): Promise<string> =>
-      sousIdentite(a.id, async (db) => {
+      sousIdentiteDuServeur(a.id, async (db) => {
         const { rows } = await db.query<{ v: { motif: string; autorisee: boolean } }>(
           `select public.lecture_consommer($1) as v`,
           [piece],

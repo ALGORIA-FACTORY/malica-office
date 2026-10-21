@@ -76,6 +76,49 @@ const DEPOTS = {
 type NomDepot = keyof typeof DEPOTS;
 
 /**
+ * Les méthodes que seul le serveur appelle — jamais un navigateur, ni une clé.
+ *
+ * Campagne de validation du 21 octobre 2026 (ANO-002, critique) : le dépôt
+ * `capture` était servi tel quel sur `/rpc`. Une PME appelait elle-même
+ * `persisterLecture` avec des montants inventés : la pièce arrivait « à
+ * comptabiliser », feu vert, sans IA et sans lecture décomptée ; et
+ * `consommerLecture` décomptait son quota hors de toute lecture. Ces
+ * méthodes sont les étapes INTERNES de la lecture, du conseil et de la
+ * fabrique : le serveur les enchaîne après un modèle, un contrôle d'accès et
+ * un quota. Exposées, elles en sautaient les trois.
+ *
+ * Une méthode réservée répond comme une méthode inconnue (404) : le refus
+ * n'apprend rien de la surface interne. La base double la garde : les
+ * fonctions qui écrivent la lecture exigent `malica.origine = 'serveur'`,
+ * que seul `executerRpc` côté serveur pose dans la transaction.
+ */
+const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string>>>> = {
+  capture: new Set([
+    "contexteLecture",
+    "contexteAssistant",
+    "persisterLecture",
+    "lectureAutorisee",
+    "inscrireRefusDeLecture",
+    "consommerLecture",
+    "journaliserAgent",
+  ]),
+  conversations: new Set(["ajouter", "journaliserControles"]),
+  fabrique: new Set([
+    "enregistrerLecture",
+    "inscrireExecution",
+    "inscrireUneCandidate",
+    "journaliserUneGeneration",
+  ]),
+};
+
+function reserveeAuServeur(depot: string, methode: string): boolean {
+  return RESERVEES_AU_SERVEUR[depot as NomDepot]?.has(methode) ?? false;
+}
+
+/** D'où vient l'appel : le navigateur ou une clé (`client`), ou le serveur lui-même. */
+export type OrigineAppel = "client" | "serveur";
+
+/**
  * Le contrat tel qu'il est servi : chaque dépôt et ses méthodes, triés.
  * `contrat/rpc.json` en est la copie figée ; `contrat.test.ts` échoue si
  * l'un bouge sans l'autre, et le test web vérifie que chaque port de
@@ -86,7 +129,7 @@ export function contratRpc(): Record<string, string[]> {
   for (const nom of Object.keys(DEPOTS).sort()) {
     const depot = DEPOTS[nom as NomDepot] as Record<string, unknown>;
     contrat[nom] = Object.keys(depot)
-      .filter((m) => typeof depot[m] === "function")
+      .filter((m) => typeof depot[m] === "function" && !reserveeAuServeur(nom, m))
       .sort();
   }
   return contrat;
@@ -105,17 +148,33 @@ export class RpcIntrouvable extends Error {}
  *
  * La résolution passe par `Object.hasOwn` sur des objets littéraux : un appel
  * nommé `constructor` ou `__proto__` ne peut donc rien atteindre.
+ *
+ * L'origine vaut `client` par défaut : un appel qu'on oublie de qualifier
+ * reste du côté prudent. Seul le serveur (`appel-local.ts`) se déclare.
  */
-export async function executerRpc(db: Requete, appel: AppelRpc): Promise<unknown> {
+export async function executerRpc(
+  db: Requete,
+  appel: AppelRpc,
+  origine: OrigineAppel = "client",
+): Promise<unknown> {
   if (!Object.hasOwn(DEPOTS, appel.depot)) {
     throw new RpcIntrouvable(`dépôt inconnu : ${appel.depot}`);
   }
   const depot = DEPOTS[appel.depot as NomDepot] as Record<string, unknown>;
 
-  if (!Object.hasOwn(depot, appel.methode) || typeof depot[appel.methode] !== "function") {
+  if (
+    !Object.hasOwn(depot, appel.methode) ||
+    typeof depot[appel.methode] !== "function" ||
+    (origine === "client" && reserveeAuServeur(appel.depot, appel.methode))
+  ) {
     throw new RpcIntrouvable(`méthode inconnue : ${appel.depot}.${appel.methode}`);
   }
   const methode = depot[appel.methode] as (db: Requete, ...args: unknown[]) => Promise<unknown>;
 
+  if (origine === "serveur") {
+    // La marque que la base lit pour écrire une lecture : locale à la
+    // transaction, elle ne survit pas à l'appel et un client ne la pose pas.
+    await db.query("select set_config('malica.origine', 'serveur', true)");
+  }
   return methode(db, ...appel.args);
 }

@@ -41,7 +41,7 @@ export function creerAppelLocal(utilisateurId: string): AppelApi {
   return {
     async rpc<T>(depot: string, methode: string, args: unknown[] = []): Promise<T> {
       const resultat = await sousIdentite(utilisateurId, (db) =>
-        executerRpc(db, { depot, methode, args }),
+        executerRpc(db, { depot, methode, args }, "serveur"),
       );
       return (resultat === undefined ? undefined : JSON.parse(JSON.stringify(resultat))) as T;
     },

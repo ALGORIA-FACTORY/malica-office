@@ -3,7 +3,7 @@
  *
  * Cinq méthodes, `facturation.*`, qui ne font que relayer des vues et des
  * fonctions de la base (R3). L'épreuve prouve trois choses, par exécution et
- * par le chemin de production (`sousIdentite` -> `executerRpc`, rôle
+ * par le chemin de production (`sousIdentiteDuServeur` -> `executerRpc`, rôle
  * `authenticated`, RLS en vigueur) :
  *
  *   - chaque méthode rend ce que la base porte POUR L'APPELANT, et rien d'une
@@ -14,7 +14,7 @@
  *     compte fait ici. Depuis la grille du 19 octobre, Team et Premium n'ont
  *     plus de plafond de sièges : la licence sans place est un Solo.
  *
- * Les deux clients sont validés (commités) : `sousIdentite` ouvre sa propre
+ * Les deux clients sont validés (commités) : `sousIdentiteDuServeur` ouvre sa propre
  * connexion. Ils s'archivent à la fin, ils ne se suppriment pas (R7).
  */
 
@@ -24,7 +24,7 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
@@ -47,7 +47,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
   const operateur = randomUUID(); // la plateforme : lit tout, détient rien
 
   const rpc = (qui: string, depot: string, methode: string, ...args: unknown[]) =>
-    sousIdentite(qui, (db) => executerRpc(db, { depot, methode, args }));
+    sousIdentiteDuServeur(qui, (db) => executerRpc(db, { depot, methode, args }, "serveur"));
 
   /** Un client : organisation, titulaire, collaborateurs, lectures déjà comptées. */
   async function abonner(
@@ -320,7 +320,7 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(reste.rows.length, 1, "la place n'est pas reprise");
     // Le dirigeant ne voit toujours pas la pièce : il connaît le nombre, pas le contenu.
-    const vues = await sousIdentite(a.titulaire, async (db) => {
+    const vues = await sousIdentiteDuServeur(a.titulaire, async (db) => {
       const { rows } = await db.query(
         "select 1 from pieces_v where tenant_id = $1 and created_by = $2",
         [a.tenant, partant],

@@ -131,7 +131,9 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       assert.ok(Number(p.montant_tva) > 0, "la TVA vient du pack de l'émetteur");
       assert.equal(
         Number(p.montant_ttc),
-        Number(p.montant_ht) + Number(p.montant_tva),
+        // Au millime : la somme de deux flottants n'est pas un montant
+        // (le 21 octobre, 6,334 donnait 6,3340000000000005).
+        Math.round((Number(p.montant_ht) + Number(p.montant_tva)) * 1000) / 1000,
         "pas de timbre : il est sur la facture",
       );
       assert.equal(p.etat, "a_payer");

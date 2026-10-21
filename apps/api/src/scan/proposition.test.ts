@@ -15,7 +15,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { lecture as lectureDEssai } from "./lecture-d-essai.ts";
@@ -57,7 +57,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
   let packId = "";
 
   const rpc = (depot: string, methode: string, ...args: unknown[]) =>
-    sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
+    sousIdentiteDuServeur(u.id, (db) => executerRpc(db, { depot, methode, args }, "serveur"));
 
   const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
     const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -106,7 +106,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(c);
     u = c;
-    org = await sousIdentite(u.id, async (db) => {
+    org = await sousIdentiteDuServeur(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SARL', 'autonome',
                                            '${MF_DOSSIER}', 'TN', 'TND') as id`,

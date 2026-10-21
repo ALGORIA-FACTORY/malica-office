@@ -43,7 +43,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
-import { fermerLePool, sousIdentite } from "../db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "../db.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
@@ -74,7 +74,7 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
 
   /** Ce que `qui` lit, sous la RLS de la base : l'API ne filtre rien. */
   const nombre = (qui: Utilisateur, table: string, colonne: string, valeur: string) =>
-    sousIdentite(qui.id, async (db) => {
+    sousIdentiteDuServeur(qui.id, async (db) => {
       const { rows } = await db.query<{ n: string }>(
         `select count(*) as n from ${table} where ${colonne} = $1`,
         [valeur],
@@ -85,21 +85,25 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
   const pieceVue = (qui: Utilisateur, id: string) => nombre(qui, "capture.pieces", "id", id);
 
   async function deposer(cle: string, vis: "personnel" | "entite" | "partage") {
-    const p = (await sousIdentite(collaborateur.id, (db) =>
-      executerRpc(db, {
-        depot: "capture",
-        methode: "enregistrer",
-        args: [
-          {
-            tenantId: pme,
-            source: "photo",
-            vis,
-            idempotencyKey: `${marque}-${cle}`,
-            contentType: "image/jpeg",
-            pageCount: 1,
-          },
-        ],
-      }),
+    const p = (await sousIdentiteDuServeur(collaborateur.id, (db) =>
+      executerRpc(
+        db,
+        {
+          depot: "capture",
+          methode: "enregistrer",
+          args: [
+            {
+              tenantId: pme,
+              source: "photo",
+              vis,
+              idempotencyKey: `${marque}-${cle}`,
+              contentType: "image/jpeg",
+              pageCount: 1,
+            },
+          ],
+        },
+        "serveur",
+      ),
     )) as { id: string };
     return p.id;
   }
@@ -113,14 +117,14 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
     collaborateur = s;
     expert = e;
 
-    pme = await sousIdentite(dirigeant.id, async (db) => {
+    pme = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
                                            '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
       );
       return rows[0]!.id;
     });
-    cabinet = await sousIdentite(expert.id, async (db) => {
+    cabinet = await sousIdentiteDuServeur(expert.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('cabinet', 'AUDICORP', 'autonome',
                                            '${matriculeDEssai("B", "C")}', 'TN', 'TND') as id`,
@@ -131,7 +135,7 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
     // Une licence Team : elle ouvre les sièges, et elle fixe le décor commercial
     // de l'audit (un dirigeant et un collaborateur sur la même organisation).
     // La société est née en Basic ; le dirigeant passe en Team par la vraie porte.
-    await sousIdentite(dirigeant.id, (db) =>
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
       db.query("select public.forfait_changer('team', $1, current_date)", [pme]),
     );
 
@@ -248,7 +252,7 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
      * — à quelqu'un qui n'a pas le droit de savoir.
      */
     await assert.rejects(
-      sousIdentite(dirigeant.id, (db) =>
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
         db.query("select public.lecture_autorisee($1)", [ordonnance]),
       ),
       /piece introuvable ou non autorisee/,

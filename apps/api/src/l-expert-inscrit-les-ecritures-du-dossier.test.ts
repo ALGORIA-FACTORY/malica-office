@@ -14,7 +14,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { office } from "./depots/office.ts";
 
@@ -45,7 +45,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     dirigeant = d;
     expert = e;
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
-      sousIdentite(u.id, async (db) => {
+      sousIdentiteDuServeur(u.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(
           `select public.create_organization($1, $2, $3, $4, $5, $6) as id`,
           [kind, nom, "autonome", mf, "TN", "TND"],
@@ -54,7 +54,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       });
     pme = await creer(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creer(expert, "cabinet", `COMPTA ${marque}`, null);
-    piece = await sousIdentite(dirigeant.id, async (db) => {
+    piece = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
@@ -63,9 +63,13 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       );
       return rows[0]!.id;
     });
-    await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
-    const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
-    await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    await sousIdentiteDuServeur(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
+    const [propose] = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      identite.mandatsProposes(db, pme),
+    );
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      identite.repondreAuMandat(db, propose!.id, true),
+    );
     const { rows } = await admin.query<{ id: string }>(
       `select id from ref.jurisdiction_packs where jurisdiction = 'TN'
         order by effective_from desc limit 1`,
@@ -88,7 +92,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("l'expert propose et comptabilise une écriture dans le dossier de son client", async () => {
-    const id = await sousIdentite(expert.id, async (db) => {
+    const id = await sousIdentiteDuServeur(expert.id, async (db) => {
       const n = await office.propose(db, {
         pieceId: piece,
         journal: "ACH",
@@ -114,7 +118,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     const { rows: motifs } = await admin.query<{ id: string }>(
       `select id from ref.rejet_motifs order by requires_note limit 1`,
     );
-    const nouvelle = await sousIdentite(expert.id, (db) =>
+    const nouvelle = await sousIdentiteDuServeur(expert.id, (db) =>
       office.corrigerLImputation(db, {
         ecritureId: avant[0]!.id,
         motifId: motifs[0]!.id,
@@ -139,7 +143,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("une facture contre-passée sans réimputation sort de la TVA du mois", async () => {
-    const autre = await sousIdentite(dirigeant.id, async (db) => {
+    const autre = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
@@ -153,7 +157,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
        values ($1, $2, 'extract.v1', '{}'::jsonb)`,
       [pme, autre],
     );
-    const ecr = await sousIdentite(expert.id, async (db) => {
+    const ecr = await sousIdentiteDuServeur(expert.id, async (db) => {
       const n = await office.propose(db, {
         pieceId: autre,
         journal: "ACH",
@@ -166,7 +170,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       await office.book(db, n);
       return n;
     });
-    const avant = await sousIdentite(dirigeant.id, (db) =>
+    const avant = await sousIdentiteDuServeur(dirigeant.id, (db) =>
       office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
     );
     assert.ok(
@@ -177,17 +181,17 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     const { rows: motifs } = await admin.query<{ id: string }>(
       `select id from ref.rejet_motifs order by requires_note limit 1`,
     );
-    await sousIdentite(expert.id, (db) =>
+    await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.socle_ecriture_review($1, 'retourne', $2, 'à reprendre')`, [
         ecr,
         motifs[0]!.id,
       ]),
     );
-    const apres = await sousIdentite(dirigeant.id, (db) =>
+    const apres = await sousIdentiteDuServeur(dirigeant.id, (db) =>
       office.bookedExtracts(db, pme, "2026-10-01", "2026-10-31"),
     );
     assert.ok(!apres.some((x) => x.pieceId === autre), "contre-passée : elle ne compte plus");
-    const transmises = await sousIdentite(dirigeant.id, (db) =>
+    const transmises = await sousIdentiteDuServeur(dirigeant.id, (db) =>
       office.extraitsTransmis(db, pme, "2026-01-01", "2099-12-31"),
     );
     assert.ok(!transmises.some((x) => x.pieceId === autre), "retournée : hors déclaration");
@@ -211,7 +215,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       ).rows[0]!.n;
     const avant = await compter();
     await assert.rejects(
-      sousIdentite(expert.id, (db) =>
+      sousIdentiteDuServeur(expert.id, (db) =>
         office.corrigerLImputation(db, {
           ecritureId: courante[0]!.id,
           motifId: motifs[0]!.id,
@@ -242,7 +246,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
         }),
       ],
     );
-    const lignesFec = await sousIdentite(expert.id, async (db) => {
+    const lignesFec = await sousIdentiteDuServeur(expert.id, async (db) => {
       // Seules les écritures de CETTE pièce : les épreuves précédentes en ont
       // inscrit d'autres, sans lecture, donc sans tiers.
       const { rows } = await db.query<{
