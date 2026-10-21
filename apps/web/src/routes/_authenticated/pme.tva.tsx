@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
@@ -161,6 +162,7 @@ const MOTS = {
 function PmeTva() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const nonAssujetti = useNonAssujetti();
   const navigate = useNavigate();
   const periode = currentPeriod();
 
@@ -199,10 +201,12 @@ function PmeTva() {
   const aReverser = solde !== null && Number(solde) > 0;
 
   /** Les deux sens du détail, dans l'ordre du dessin : collectée puis déductible. */
-  const detail = [
-    ...(tva?.collectee ?? []).map((b) => ({ sens: MOTS.collectee, seau: b })),
-    ...(tva?.deductible ?? []).map((b) => ({ sens: MOTS.deductible, seau: b })),
-  ];
+  const detail = nonAssujetti
+    ? []
+    : [
+        ...(tva?.collectee ?? []).map((b) => ({ sens: MOTS.collectee, seau: b })),
+        ...(tva?.deductible ?? []).map((b) => ({ sens: MOTS.deductible, seau: b })),
+      ];
 
   const refusees = tva?.refused ?? [];
 
@@ -265,12 +269,24 @@ function PmeTva() {
          * le passe en `var(--acc)`. Le signe vient du moteur ; on le retire de
          * l'affichage parce que l'unité dit déjà le sens.
          */}
-        <div className={aReverser ? "chiffre" : "chiffre cr"}>
-          {solde === null ? "—" : montant(solde.replace(/^-/, ""), locale)}{" "}
-          <u>
-            {tva?.currency ?? pme.currency} {aReverser ? MOTS.aPayer : MOTS.credit}
-          </u>
-        </div>
+        {/*
+         * Un dossier NON assujetti n'a ni TVA à reverser ni crédit à reporter
+         * (ANO-LIVE-001) : la TVA de ses achats est un coût, comprise dans ses
+         * charges. On le dit, au lieu d'un chiffre qu'il n'a pas.
+         */}
+        {nonAssujetti ? (
+          <p className="regle">
+            <IconeInfo />
+            <span>{t("pme.tva.nonAssujetti")}</span>
+          </p>
+        ) : (
+          <div className={aReverser ? "chiffre" : "chiffre cr"}>
+            {solde === null ? "—" : montant(solde.replace(/^-/, ""), locale)}{" "}
+            <u>
+              {tva?.currency ?? pme.currency} {aReverser ? MOTS.aPayer : MOTS.credit}
+            </u>
+          </div>
+        )}
 
         <div className="trd">
           <i aria-hidden />

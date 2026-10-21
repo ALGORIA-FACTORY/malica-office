@@ -51,6 +51,11 @@ describe("refus lisible", () => {
     assert.equal(refusLisible({ ...erreur, code: "23P02" }), null);
   });
 
+  it("un forfait demandé sans organisation, par qui en tient plusieurs, est un refus (ANO-036)", () => {
+    const phrase = refusLisible({ code: "21000", message: "plusieurs licences pour ce titulaire" });
+    assert.match(phrase ?? "", /précisez l'organisation/);
+  });
+
   it("dit le quatre-yeux par sa phrase, pas par le nom de sa règle (ANO-CAB-005)", () => {
     const phrase = refusLisible({
       code: "23514",

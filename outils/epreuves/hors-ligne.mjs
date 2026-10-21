@@ -120,6 +120,32 @@ const demande2 = await e.appel(`/malica/lectures/${premiere.id}?attendre=0`, { m
 const d2 = await demande2.json();
 e.verdict("la redemander rejoint la même lecture", demande2.status === 200 && d2.enCours === true);
 
+e.section("Un corps de requête lourd ou illisible est un refus, pas une panne (ANO-036)");
+const lourd = await e.appel("/rpc", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    depot: "identite",
+    methode: "listMyOrganizations",
+    args: ["x".repeat(1_100_000)],
+  }),
+});
+e.verdict(
+  "un corps de plus d'un mégaoctet est refusé en 413",
+  lourd.status === 413,
+  `${lourd.status}`,
+);
+const illisible = await e.appel("/rpc", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: "{ceci n'est pas du JSON",
+});
+e.verdict(
+  "un corps qui n'est pas du JSON est refusé en 400",
+  illisible.status === 400,
+  `${illisible.status}`,
+);
+
 e.section("Rien ne reste");
 // La lecture, réelle ou non, doit se terminer avant qu'on supprime la pièce.
 for (let i = 0; i < 120; i += 1) {

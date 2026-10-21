@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useDecimales } from "@/hooks/use-decimales";
+import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
@@ -135,6 +136,7 @@ function PieceScreen() {
   const { pieceId } = Route.useParams();
   const { t, locale } = useI18n();
   const pme = usePme();
+  const nonAssujetti = useNonAssujetti();
   const qc = useQueryClient();
   // Les décimales de la devise viennent du pack. `null` tant qu'on ne les a
   // pas : on n'en suppose aucune (R4).
@@ -879,7 +881,10 @@ function PieceScreen() {
             <span aria-hidden className="h-[5px] w-[5px] bg-current" />
             {payload?.document_kind === "facture_vente"
               ? t("pme.regle.tva.collectee", { montant: tvaDuDoc, devise: pme.currency })
-              : t("pme.regle.tva.recuperable", { montant: tvaDuDoc, devise: pme.currency })}
+              : nonAssujetti
+                ? // Non assujetti : la TVA payée est un coût, elle rejoint la charge.
+                  t("pme.regle.tva.nonRecuperable", { montant: tvaDuDoc, devise: pme.currency })
+                : t("pme.regle.tva.recuperable", { montant: tvaDuDoc, devise: pme.currency })}
           </span>
         ) : null}
         <button

@@ -427,6 +427,9 @@ const fr = {
     "Classé dans {classe}, transmis à {cabinet}. Vous n'avez plus rien à faire.",
   "pme.regle.classe.inconnu": "votre plan comptable",
   "pme.regle.tva.recuperable": "+{montant} {devise} de TVA récupérable",
+  "pme.regle.tva.nonRecuperable": "{montant} {devise} de TVA comprise dans la charge",
+  "pme.tva.nonAssujetti":
+    "Votre dossier n'est pas assujetti à la TVA : vous n'avez ni TVA à reverser ni crédit à reporter. La TVA payée sur vos achats est comprise dans vos charges.",
   "pme.regle.tva.collectee": "{montant} {devise} de TVA collectée",
   "pme.regle.voir": "Voir où elle en est",
   "pme.read.none": "Pièce non encore lue.",
@@ -2681,6 +2684,12 @@ const fr = {
   "tour.trou.gros_palier_moins_avantageux":
     "Le plus gros palier n'est pas le plus avantageux : {detail}",
   "tour.abonnement": "L'abonnement",
+  "tour.ia": "Plafond des modèles",
+  "tour.ia.aide":
+    "Ce qu'une organisation peut dépenser en appels aux modèles chaque mois. Au-delà, le conseil de Malica attend le mois suivant ; le plafond propre d'une organisation peut l'abaisser, jamais le relever.",
+  "tour.ia.enVigueur": "En vigueur : {plafond} $ par organisation et par mois, depuis le {date}.",
+  "tour.ia.plafond": "Plafond mensuel (dollars)",
+  "tour.ia.plafond.borne": "Un nombre positif, quatre décimales au plus.",
   "tour.abonnement.report": "Report des lectures",
   "tour.abonnement.report.aide":
     "Les lectures du forfait non consommées passent sur le mois suivant, et pas plus loin. Les recharges gardent leur propre échéance.",
@@ -3677,6 +3686,9 @@ const en: Dict = {
     "Filed under {classe}, sent to {cabinet}. Nothing left for you to do.",
   "pme.regle.classe.inconnu": "your chart of accounts",
   "pme.regle.tva.recuperable": "+{montant} {devise} of recoverable VAT",
+  "pme.regle.tva.nonRecuperable": "{montant} {devise} of VAT included in the expense",
+  "pme.tva.nonAssujetti":
+    "Your business is not registered for VAT: there is no VAT to pay back and no credit to carry over. The VAT you pay on purchases is part of your expenses.",
   "pme.regle.tva.collectee": "{montant} {devise} of VAT collected",
   "pme.regle.voir": "See where it stands",
   "pme.read.none": "Document not read yet.",
@@ -5879,6 +5891,12 @@ const en: Dict = {
   "tour.trou.paliers_non_croissants": "Top-up tiers do not increase: {detail}",
   "tour.trou.gros_palier_moins_avantageux": "The bigger tier is not the better deal: {detail}",
   "tour.abonnement": "Subscription",
+  "tour.ia": "Model spending cap",
+  "tour.ia.aide":
+    "What an organisation may spend on model calls each month. Beyond it, Malica's advice waits for the next month; an organisation's own cap can lower it, never raise it.",
+  "tour.ia.enVigueur": "In force: ${plafond} per organisation per month, since {date}.",
+  "tour.ia.plafond": "Monthly cap (dollars)",
+  "tour.ia.plafond.borne": "A positive number, at most four decimals.",
   "tour.abonnement.report": "Carry-over of reads",
   "tour.abonnement.report.aide":
     "Unused reads of the plan move to the next month, and no further. Top-ups keep their own expiry.",
@@ -6845,6 +6863,10 @@ const ar: Dict = {
   "pme.regle.classe.cabinet": "صُنِّفت في {classe}، وأُرسلت إلى {cabinet}. لم يبقَ عليك شيء.",
   "pme.regle.classe.inconnu": "دليلك المحاسبي",
   "pme.regle.tva.recuperable": "+{montant} {devise} أداء قابل للاسترجاع",
+  "pme.regle.tva.nonRecuperable":
+    "{montant} {devise} من الأداء على القيمة المضافة مدرجة في الأعباء",
+  "pme.tva.nonAssujetti":
+    "ملفك غير خاضع للأداء على القيمة المضافة: لا أداء عليك لتسديده ولا فائض لترحيله. الأداء المدفوع على مشترياتك مدرج في أعبائك.",
   "pme.regle.tva.collectee": "{montant} {devise} أداء محصَّل",
   "pme.regle.voir": "تابع مسارها",
   "pme.read.none": "لم تُقرأ الوثيقة بعد.",
@@ -8993,6 +9015,12 @@ const ar: Dict = {
   "tour.trou.paliers_non_croissants": "مستويات الرصيد لا تتصاعد: {detail}",
   "tour.trou.gros_palier_moins_avantageux": "المستوى الأكبر ليس الأفضل: {detail}",
   "tour.abonnement": "الاشتراك",
+  "tour.ia": "سقف إنفاق النماذج",
+  "tour.ia.aide":
+    "ما يمكن لمؤسسة أن تنفقه شهريًا على استدعاء النماذج. بعده، تنتظر استشارة مليكة الشهر الموالي؛ ويمكن لسقف المؤسسة أن يخفّضه ولا يرفعه.",
+  "tour.ia.enVigueur": "الساري: {plafond} $ لكل مؤسسة شهريًا، منذ {date}.",
+  "tour.ia.plafond": "السقف الشهري (دولار)",
+  "tour.ia.plafond.borne": "عدد موجب، بأربعة أرقام عشرية على الأكثر.",
   "tour.abonnement.report": "ترحيل القراءات",
   "tour.abonnement.report.aide":
     "تنتقل قراءات الباقة غير المستهلكة إلى الشهر الموالي، ولا أبعد من ذلك. تحتفظ الأرصدة بأجلها الخاص.",

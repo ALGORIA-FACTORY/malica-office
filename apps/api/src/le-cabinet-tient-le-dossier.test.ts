@@ -12,6 +12,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { banque } from "./depots/banque.ts";
+import { conseil } from "./depots/conseil.ts";
 import { identite } from "./depots/identite.ts";
 import { tiers } from "./depots/tiers.ts";
 import { executerRpc } from "./rpc.ts";
@@ -220,6 +221,37 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
         `tour.${methode}`,
       );
     }
+  });
+
+  it("ANO-029 : le conseil s'arrête au plafond de dépense du mois", async () => {
+    const budget = (u: Utilisateur) => sousIdentite(u.id, (db) => conseil.exigerBudget(db, pme));
+    const avant = await budget(dirigeant);
+    assert.ok(Number(avant.plafond) > 0, "un plafond est en vigueur");
+    // Le plafond propre de l'organisation abaisse celui de la tour.
+    await admin.query(
+      `insert into agents.budgets (tenant_id, monthly_cost_cap) values ($1, 0.01)
+       on conflict (tenant_id) do update set monthly_cost_cap = excluded.monthly_cost_cap`,
+      [pme],
+    );
+    assert.equal(Number((await budget(dirigeant)).plafond), 0.01);
+    // Une dépense journalisée au-delà : refus lisible, pour la PME comme pour l'expert.
+    const c = await admin.connect();
+    try {
+      await c.query("begin");
+      await c.query(`select set_config('malica.origine', 'serveur', true)`);
+      await c.query(
+        `insert into agents.agent_runs (tenant_id, agent, model, sovereign, cost, status, created_by)
+         values ($1, 'malica.conseil', 'essai', false, 0.02, 'ok', $2)`,
+        [pme, dirigeant.id],
+      );
+      await c.query("commit");
+    } finally {
+      c.release();
+    }
+    await assert.rejects(budget(dirigeant), /plafond du mois/);
+    await assert.rejects(budget(expert), /plafond du mois/);
+    // Un tiers n'apprend rien du dossier, pas même son plafond.
+    await assert.rejects(budget(autreExpert), /non autorisee/);
   });
 
   it("ANO-014 : une société n'a qu'une comptabilité mandatée à la fois", async () => {

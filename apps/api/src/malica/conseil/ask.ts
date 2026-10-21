@@ -346,6 +346,10 @@ export async function askMalica(
   const apiKey = process.env["DEEPSEEK_API_KEY"];
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY absente : Malica ne peut pas répondre");
 
+  // Avant tout appel payant : la base dit si le plafond du mois le permet
+  // (ANO-029). Un refus sort en 400, avec sa phrase ; rien n'est ouvert.
+  await api.rpc("conseil", "exigerBudget", [input.tenantId]);
+
   // Le fil d'abord : sans lui, on ne saurait pas quoi relire ni où ranger.
   const conversationId =
     input.conversationId ??
@@ -675,6 +679,8 @@ export async function repondreAuCabinet(
   );
   const cabinet = organisations.find((o) => o.id === input.tenantId);
   if (!cabinet) throw new Error("cabinet introuvable ou non autorisé");
+  // Le plafond du mois, avant la recherche et le modèle (ANO-029).
+  await api.rpc("conseil", "exigerBudget", [input.tenantId]);
 
   // Ici, l'échec de la recherche REMONTE : sans dossier, une réponse sans
   // droit n'aurait rien à dire, et « je n'ai pas pu chercher » vaut mieux

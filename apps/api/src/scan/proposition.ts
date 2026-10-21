@@ -248,6 +248,17 @@ export async function propositionDePiece(
   );
 
   const compteDeNature = await compteDeLaNature(db, pieceId);
+  // Le régime de TVA du dossier, tel que sa fiche fiscale en vigueur le dit :
+  // un non-assujetti ne déduit pas la TVA qu'il paie (ANO-LIVE-001).
+  const { rows: regimes } = await db.query<{ regime_tva: string | null }>(
+    `select f.regime_tva
+       from capture.pieces p
+       join identity.fiches_fiscales f on f.tenant_id = p.tenant_id and f.valid_to is null
+      where p.id = $1
+      order by f.valid_from desc limit 1`,
+    [pieceId],
+  );
+  const tvaNonDeductible = regimes[0]?.regime_tva === "non_assujetti";
 
   try {
     const proposition = buildProposal({
@@ -257,6 +268,7 @@ export async function propositionDePiece(
       mappings,
       fiscalCharges,
       compteDeNature,
+      tvaNonDeductible,
       currency: String((ligne.payload as { currency?: string }).currency ?? ""),
       parametres: {
         decimals: dec,

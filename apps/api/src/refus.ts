@@ -63,6 +63,9 @@ interface ErreurPostgres {
  * inventer une.
  */
 const TRADUCTIONS: Record<string, (e: ErreurPostgres) => string> = {
+  // cardinality_violation - `mon_forfait` sans organisation, pour quelqu'un qui
+  // en tient plusieurs (sentinelle du 21 octobre 2026 : 500).
+  "21000": () => "précisez l'organisation : plusieurs vous concernent",
   // invalid_text_representation — un mode de validation qui n'existe pas, une
   // date illisible, un identifiant tronqué.
   "22P02": (e) => {

@@ -229,6 +229,17 @@ principal() {
     exit 1
   fi
 
+  # Le Caddyfile est MONTÉ, pas copié dans une image : `up -d` ne recrée pas
+  # Caddy quand seul son contenu change, et Caddy garde l'ancien en mémoire.
+  # Campagne du 21 octobre 2026 (ANO-027) : la CSP et X-Frame-Options étaient
+  # au dépôt depuis 0.2.50, et absentes du staging. On recharge, sans coupure ;
+  # un Caddyfile invalide est refusé par Caddy, qui garde l'ancien.
+  echo "▶ Caddy relit son Caddyfile"
+  if ! compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile; then
+    echo "KO : Caddy refuse le Caddyfile du dépôt — l'ancien reste servi." >&2
+    exit 1
+  fi
+
   echo "▶ sonde"
   local domaine
   domaine=$(grep -E '^DOMAINE=' "$ENV" | cut -d= -f2-)

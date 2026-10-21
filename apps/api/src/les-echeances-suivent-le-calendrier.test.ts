@@ -223,4 +223,27 @@ describe("les échéances suivent le calendrier", { skip: !BASE_CONFIGUREE }, ()
     const reste = await admin.query(`select valid_to from ref.jours_feries where id = $1`, [id]);
     assert.equal(reste.rowCount, 1);
   });
+
+  it("ANO-LIVE-007 : un dossier non assujetti n'a pas d'échéance de TVA", async () => {
+    const tva = (liste: Array<{ kind: string }>) => liste.filter((e) => e.kind.startsWith("TVA_"));
+    assert.ok(tva(await echeances()).length > 0, "l'assujetti par défaut reçoit sa TVA");
+    // Une fiche ne se réécrit pas (R7) : on en ouvre une nouvelle, dès aujourd'hui.
+    await sousIdentite(dirigeant.id, (db) =>
+      identite.etablirFiche(db, {
+        tenantId: pme,
+        regimeImposition: "forfaitaire",
+        regimeTva: "non_assujetti",
+        formeJuridique: "morale",
+        modeDepot: "papier",
+        source: "saisie",
+        validFrom: new Date().toISOString().slice(0, 10),
+      }),
+    );
+    const apres = await echeances();
+    assert.deepEqual(tva(apres), [], "plus aucune échéance de TVA à faire");
+    assert.ok(
+      apres.some((e) => e.kind === "RS_PM"),
+      "les autres obligations restent",
+    );
+  });
 });

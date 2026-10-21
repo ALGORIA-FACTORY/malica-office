@@ -117,6 +117,24 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur. */
+  async reglageIa(db: Requete) {
+    const { rows } = await db.query<{ r: Record<string, unknown> }>(
+      `select (select to_jsonb(r) - 'decide_par' from plateforme.reglages_ia r
+                order by r.decide_le desc, r.id desc limit 1) as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
+  async reglerIa(db: Requete, plafondUsd: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.ia_regler($1::numeric, $2) as r`,
+      [plafondUsd, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** L'émetteur des factures en vigueur, ou `null` tant qu'aucun n'est désigné. */
   async emetteur(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(`select plateforme.emetteur_en_vigueur() as r`);

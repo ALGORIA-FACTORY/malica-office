@@ -6,6 +6,7 @@
  */
 
 import { computePivot } from "../index.ts";
+import { D, toFixedStr } from "../domain/decimal.ts";
 import { composerLibelle } from "../engines/libelle.ts";
 import { faitsDuLibelle } from "./libelle-de-piece.ts";
 import type { ExtractV1 as ExtractV1Type } from "../contracts/extract.v1.ts";
@@ -136,6 +137,13 @@ export function buildProposal(params: {
    * on garde le paramétrage : une pièce mêlée ne se devine pas.
    */
   compteDeNature?: string | null;
+  /**
+   * L'acheteur ne déduit pas la TVA : il n'est pas assujetti (21 octobre 2026,
+   * ANO-LIVE-001). La TVA payée est alors un COÛT — elle rejoint la charge, et
+   * aucun compte de TVA déductible n'est débité. Le pivot, lui, reste celui de
+   * la facture : il dit ce que la pièce porte.
+   */
+  tvaNonDeductible?: boolean;
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -217,6 +225,32 @@ export function buildProposal(params: {
     },
   });
 
+  /*
+   * La TVA non déductible rejoint la charge : chaque débit d'un compte de TVA
+   * passe sur la première ligne de charge, au millime près, et la ligne de TVA
+   * disparaît. Seulement à l'achat : une vente ne déduit rien.
+   */
+  const comptesDeTva = new Set<string>([
+    mapping.vatAccount,
+    ...params.mappings
+      .filter((m) => m.documentKind === extract.document_kind)
+      .map((m) => m.vatAccount),
+  ]);
+  const compteDeCharge = params.compteDeNature || mapping.mainAccount;
+  const lignesDuPivot = (() => {
+    if (!params.tvaNonDeductible || extract.document_kind === "facture_vente") return pivot.lines;
+    const tva = pivot.lines.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);
+    if (tva.length === 0) return pivot.lines;
+    const iCharge = pivot.lines.findIndex((l) => l.account_code === compteDeCharge);
+    if (iCharge < 0) return pivot.lines;
+    const ajout = tva.reduce((s, l) => s.plus(D(l.debit)), D(0));
+    return pivot.lines
+      .map((l, i) =>
+        i === iCharge ? { ...l, debit: toFixedStr(D(l.debit).plus(ajout), decimals) } : l,
+      )
+      .filter((l) => !tva.includes(l));
+  })();
+
   return {
     pivot,
     extract,
@@ -225,7 +259,7 @@ export function buildProposal(params: {
     // Une ligne nulle (TVA à zéro sur pièce exonérée) ne porte aucun fait
     // comptable : la base l'interdit, on ne la persiste pas. Le pivot du Socle
     // reste intact — c'est la seule vue persistée qui est filtrée.
-    lignes: pivot.lines
+    lignes: lignesDuPivot
       .filter((l) => Number(l.debit) !== 0 || Number(l.credit) !== 0)
       .map((l) => ({
         account_code: l.account_code,

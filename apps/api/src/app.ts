@@ -494,6 +494,21 @@ if (process.env["NODE_ENV"] !== "production") {
 }
 
 app.use((erreur: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  /*
+   * Un corps trop lourd ou illisible est une faute de la requête, pas une
+   * panne (campagne du 21 octobre 2026, ANO-036 : un corps de 2 Mo sortait
+   * en 500). `express.json` nomme ces cas par `type` ; on les dit en 413/400,
+   * sans un mot du moteur.
+   */
+  const type = (erreur as { type?: string } | null)?.type;
+  if (type === "entity.too.large") {
+    res.status(413).json({ erreur: "la requête est trop volumineuse (1 Mo au plus)" });
+    return;
+  }
+  if (type === "entity.parse.failed" || type === "encoding.unsupported") {
+    res.status(400).json({ erreur: "le corps de la requête n'est pas un JSON lisible" });
+    return;
+  }
   // Le détail va au journal, jamais au client : un message de Postgres révèle
   // des noms de tables et de colonnes.
   console.error("[api]", erreur);

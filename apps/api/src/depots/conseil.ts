@@ -150,6 +150,19 @@ const COLONNES = `id, tenant_id, client, cabinet_tenant_id, conversation_id, mes
        reponse_cabinet, article_cabinet, decide_le, created_at`;
 
 export const conseil = {
+  /**
+   * Avant un appel payant : la base dit si la dépense du mois le permet
+   * (plafond de la tour, abaissé par celui de l'organisation — ANO-029).
+   * Sinon elle refuse, et son refus sort en 400 lisible.
+   */
+  async exigerBudget(db: Requete, tenantId: string): Promise<{ depense: string; plafond: string }> {
+    const { rows } = await db.query<{ r: { depense: string; plafond: string } }>(
+      `select public.conseil_budget_exiger($1) as r`,
+      [tenantId],
+    );
+    return rows[0]!.r;
+  },
+
   /** La file du cabinet : ce qui attend d'abord, puis le reste, le plus récent en tête. */
   async file(db: Requete, cabinetTenantId: string, statut?: string | null): Promise<Arbitrage[]> {
     const { rows } = await db.query<Record<string, unknown>>(

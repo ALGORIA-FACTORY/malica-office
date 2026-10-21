@@ -2912,6 +2912,14 @@ export interface TourRepository {
     annuelMoisOfferts: number,
     motif: string,
   ): Promise<unknown>;
+  /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur ; `null` sans réglage. */
+  reglageIa(): Promise<{
+    plafond_usd_par_org_mois: string;
+    motif: string;
+    decide_le: string;
+  } | null>;
+  /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
+  reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {

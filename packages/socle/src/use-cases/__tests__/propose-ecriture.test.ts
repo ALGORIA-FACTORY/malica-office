@@ -77,6 +77,40 @@ describe("l'écriture proposée", () => {
   });
 });
 
+describe("un acheteur non assujetti ne déduit pas la TVA (ANO-LIVE-001)", () => {
+  const nonDeductible = (payload: unknown) =>
+    buildProposal({
+      pieceId: "11111111-1111-1111-1111-111111111111",
+      payload,
+      taxRates,
+      mappings,
+      currency: "TND",
+      parametres: { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 },
+      tvaNonDeductible: true,
+    });
+
+  it("la TVA payée rejoint la charge, et aucun compte de TVA n'est débité", () => {
+    const deductible = proposer(factureAchatSimple());
+    const charge = (l: { account_code: string }) => l.account_code === "6071";
+    const tva = (l: { account_code: string }) => l.account_code === "43661";
+    const ht = deductible.lignes.find(charge)!.debit;
+    const montantTva = deductible.lignes.find(tva)!.debit;
+
+    const r = nonDeductible(factureAchatSimple());
+    expect(r.lignes.some(tva)).toBe(false);
+    expect(Number(r.lignes.find(charge)!.debit)).toBeCloseTo(Number(ht) + Number(montantTva), 3);
+    // Toujours équilibrée : même total au débit et au crédit.
+    const somme = (k: "debit" | "credit") => r.lignes.reduce((s, l) => s + Number(l[k]), 0);
+    expect(somme("debit")).toBeCloseTo(somme("credit"), 3);
+  });
+
+  it("une vente ne bouge pas : il n'y a rien à déduire", () => {
+    expect(nonDeductible(factureVenteSimple()).lignes).toEqual(
+      proposer(factureVenteSimple()).lignes,
+    );
+  });
+});
+
 describe("les paramètres viennent du paramétrage daté, quand l'appelant les donne (3B-6)", () => {
   const parametres = { decimals: 3, confianceReserve: 0.7, confianceBloquante: 0.4 };
 
