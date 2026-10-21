@@ -568,6 +568,13 @@ function CalendrierDesEcheances() {
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
+  // Qui règle le calendrier : l'expert seul. Les autres le consultent.
+  const acces = useQuery({
+    queryKey: ["cab-acces", org.id],
+    queryFn: () => office().acces.monAcces(org.id),
+  });
+  const lectureSeule = acces.data?.role !== "expert";
+
   const rows = calendrier.data ?? [];
   const actives = rows.filter((o) => o.active).length;
   // Une lecture qui échoue se dit ; sinon l'écran ressemblerait à un calendrier vide.
@@ -587,6 +594,11 @@ function CalendrierDesEcheances() {
       <p className="max-w-[70ch] text-[13.5px] leading-[1.55] text-text-2">
         {t("cab.settings.cal.lede")}
       </p>
+      {lectureSeule && acces.data ? (
+        <p className="max-w-[70ch] border-s-2 border-marigold ps-3 text-[12.5px] text-muted-foreground">
+          {t("cab.settings.cal.lectureSeule")}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-4">
         <label className="flex flex-col gap-1">
@@ -661,122 +673,129 @@ function CalendrierDesEcheances() {
         ) : rows.length === 0 ? (
           <EmptyState>{t("cab.settings.cal.vide")}</EmptyState>
         ) : (
-          <div className="overflow-x-auto border border-border bg-card">
-            <table className="min-w-full border-collapse text-[12.5px]">
-              <caption className="sr-only">{t("cab.settings.cal.titre")}</caption>
-              <thead>
-                <tr className="border-b border-foreground">
-                  {[
-                    t("cab.settings.cal.col.active"),
-                    t("cab.settings.cal.col.obligation"),
-                    t("cab.settings.cal.col.legal"),
-                    t("cab.settings.cal.col.periodicite"),
-                    t("cab.settings.cal.col.jour"),
-                    t("cab.settings.cal.col.rappel"),
-                    t("cab.settings.cal.col.mandats"),
-                  ].map((h, i) => (
-                    <th
-                      key={h}
-                      scope="col"
-                      className={cn(
-                        "px-3 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
-                        i >= 4 ? "text-end" : "text-start",
-                      )}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((o) => (
-                  <tr
-                    key={o.code}
-                    className={cn(
-                      "border-b border-border",
-                      o.active ? "" : "text-muted-foreground",
-                    )}
-                  >
-                    <td className="px-3 py-2">
-                      <Interrupteur
-                        actif={o.active}
-                        label={o.libelle}
-                        onChange={(v) =>
-                          regler.mutate({ code: o.code, active: v, rappelJours: o.rappelJours })
-                        }
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="block font-medium">{o.libelle}</span>
-                      <span
+          <fieldset disabled={lectureSeule} className="contents">
+            <div className="overflow-x-auto border border-border bg-card">
+              <table className="min-w-full border-collapse text-[12.5px]">
+                <caption className="sr-only">{t("cab.settings.cal.titre")}</caption>
+                <thead>
+                  <tr className="border-b border-foreground">
+                    {[
+                      t("cab.settings.cal.col.active"),
+                      t("cab.settings.cal.col.obligation"),
+                      t("cab.settings.cal.col.legal"),
+                      t("cab.settings.cal.col.periodicite"),
+                      t("cab.settings.cal.col.jour"),
+                      t("cab.settings.cal.col.rappel"),
+                      t("cab.settings.cal.col.mandats"),
+                    ].map((h, i) => (
+                      <th
+                        key={h}
+                        scope="col"
                         className={cn(
-                          "block text-[10.5px]",
-                          o.propre ? "text-marigold-on-paper" : "text-muted-foreground",
+                          "px-3 py-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                          i >= 4 ? "text-end" : "text-start",
                         )}
                       >
-                        {o.propre
-                          ? t("cab.settings.cal.scope.propre")
-                          : o.secteur === TOUTES
-                            ? t("cab.settings.cal.scope.toutes")
-                            : t("cab.settings.cal.scope.secteur")}
-                      </span>
-                      {/* Trois « Déclaration mensuelle TVA » ne se distinguent que
-                          par qui elles visent : la forme, le mode de dépôt, le régime. */}
-                      {o.propre ? null : (
-                        <span className="block text-[10.5px] text-muted-foreground">
-                          {viseeDe(o, t)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2" title={o.regle}>
-                      <span className="num block text-[11px] text-signal-info">
-                        {baseLegale(o)}
-                      </span>
-                      <span className="block max-w-[34ch] text-[10.5px] leading-[1.35] text-muted-foreground">
-                        {o.regle}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      {PERIODICITES[o.periodicite]
-                        ? t(PERIODICITES[o.periodicite]!)
-                        : o.periodicite}
-                    </td>
-                    <td className="num whitespace-nowrap px-3 py-2 text-end">{jourLimite(o)}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-end">
-                      <select
-                        value={o.rappelJours}
-                        disabled={!o.active}
-                        aria-label={t("cab.settings.cal.col.rappel")}
-                        onChange={(e) =>
-                          regler.mutate({
-                            code: o.code,
-                            active: o.active,
-                            rappelJours: Number(e.target.value),
-                          })
-                        }
-                        className="num border border-border bg-card px-1.5 py-1 text-[11px] disabled:opacity-50"
-                      >
-                        {[...new Set([...RAPPELS, o.rappelJours])]
-                          .sort((a, b) => b - a)
-                          .map((j) => (
-                            <option key={j} value={j}>
-                              {t("cab.settings.cal.rappel.j", { days: j })}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    <td className="num whitespace-nowrap px-3 py-2 text-end">{o.mandats}</td>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((o) => (
+                    <tr
+                      key={o.code}
+                      className={cn(
+                        "border-b border-border",
+                        o.active ? "" : "text-muted-foreground",
+                      )}
+                    >
+                      <td className="px-3 py-2">
+                        <Interrupteur
+                          actif={o.active}
+                          label={o.libelle}
+                          onChange={(v) =>
+                            regler.mutate({ code: o.code, active: v, rappelJours: o.rappelJours })
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="block font-medium">{o.libelle}</span>
+                        <span
+                          className={cn(
+                            "block text-[10.5px]",
+                            o.propre ? "text-marigold-on-paper" : "text-muted-foreground",
+                          )}
+                        >
+                          {o.propre
+                            ? t("cab.settings.cal.scope.propre")
+                            : o.secteur === TOUTES
+                              ? t("cab.settings.cal.scope.toutes")
+                              : t("cab.settings.cal.scope.secteur")}
+                        </span>
+                        {/* Trois « Déclaration mensuelle TVA » ne se distinguent que
+                          par qui elles visent : la forme, le mode de dépôt, le régime. */}
+                        {o.propre ? null : (
+                          <span className="block text-[10.5px] text-muted-foreground">
+                            {viseeDe(o, t)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2" title={o.regle}>
+                        <span className="num block text-[11px] text-signal-info">
+                          {baseLegale(o)}
+                        </span>
+                        <span className="block max-w-[34ch] text-[10.5px] leading-[1.35] text-muted-foreground">
+                          {o.regle}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        {PERIODICITES[o.periodicite]
+                          ? t(PERIODICITES[o.periodicite]!)
+                          : o.periodicite}
+                      </td>
+                      <td className="num whitespace-nowrap px-3 py-2 text-end">{jourLimite(o)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-end">
+                        <select
+                          value={o.rappelJours}
+                          disabled={!o.active}
+                          aria-label={t("cab.settings.cal.col.rappel")}
+                          onChange={(e) =>
+                            regler.mutate({
+                              code: o.code,
+                              active: o.active,
+                              rappelJours: Number(e.target.value),
+                            })
+                          }
+                          className="num border border-border bg-card px-1.5 py-1 text-[11px] disabled:opacity-50"
+                        >
+                          {[...new Set([...RAPPELS, o.rappelJours])]
+                            .sort((a, b) => b - a)
+                            .map((j) => (
+                              <option key={j} value={j}>
+                                {t("cab.settings.cal.rappel.j", { days: j })}
+                              </option>
+                            ))}
+                        </select>
+                      </td>
+                      <td className="num whitespace-nowrap px-3 py-2 text-end">{o.mandats}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </fieldset>
         )}
       </section>
 
-      <ObligationPropre secteur={secteur} onAjoutee={rafraichir} />
-
-      <ReportsExceptionnels obligations={rows} onChange={rafraichir} />
+      {/* Le calendrier du cabinet est une décision de l'expert : la base le
+          refuse à tout autre rôle (ANO-012), l'écran ne le propose pas. */}
+      {lectureSeule ? null : (
+        <>
+          <ObligationPropre secteur={secteur} onAjoutee={rafraichir} />
+          <ReportsExceptionnels obligations={rows} onChange={rafraichir} />
+        </>
+      )}
     </div>
   );
 }

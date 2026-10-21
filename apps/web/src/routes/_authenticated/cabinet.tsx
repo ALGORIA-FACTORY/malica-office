@@ -270,7 +270,9 @@ function Coquille({
   });
   const aSuperviser = (queue.data ?? []).filter((r) => r.status === "comptabilisee").length;
   const nonLues = (notifications.data ?? []).filter((n) => !n.readAt).length;
-  const nbClients = (clients.data ?? []).length;
+  // Un mandat révoqué ou refusé reste lisible dans la liste, mais il ne compte
+  // plus parmi les dossiers tenus (ANO-013, 21 octobre 2026).
+  const nbClients = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   // Qui je suis ici : le pied du rail le dit, et les lectures filtrent sur la même règle.

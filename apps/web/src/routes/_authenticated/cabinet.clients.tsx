@@ -180,7 +180,13 @@ function CabinetClients() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { key: "mandats", label: t("cab.clients.kpi.mandats"), value: rows.length, tone: "" },
+          {
+            key: "mandats",
+            label: t("cab.clients.kpi.mandats"),
+            // « Mandats actifs » : ni le révoqué, ni le refusé (ANO-013).
+            value: rows.filter((c) => c.engagementStatus === "actif").length,
+            tone: "",
+          },
           {
             key: "attente",
             label: t("cab.clients.kpi.attente"),

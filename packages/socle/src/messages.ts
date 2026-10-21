@@ -1630,6 +1630,8 @@ const fr = {
   "cab.settings.defauts": "Ce sont les défauts du Socle : le cabinet n’a encore rien réglé.",
   "cab.settings.cal.lede":
     "Les dates viennent du pack de juridiction. Ce tableau dit lesquelles s’appliquent à quel secteur, et pour quelle année — c’est ce qui alimente l’onglet Échéances de chaque dossier.",
+  "cab.settings.cal.lectureSeule":
+    "Le calendrier du cabinet est réglé par l'expert. Vous le consultez ; pour un changement ou un report, adressez-vous à lui.",
   "cab.settings.cal.exercice": "Exercice",
   "cab.settings.cal.secteur": "Secteur d’activité",
   "cab.settings.cal.general": "Toutes activités",
@@ -4780,6 +4782,8 @@ const en: Dict = {
   "cab.settings.defauts": "These are the Socle defaults: the practice has not set anything yet.",
   "cab.settings.cal.lede":
     "Dates come from the jurisdiction pack. This table says which apply to which sector, and for which year — it feeds the Deadlines tab of every file.",
+  "cab.settings.cal.lectureSeule":
+    "The firm's calendar is set by the chartered accountant. You can consult it; for a change or an extension, ask them.",
   "cab.settings.cal.exercice": "Year",
   "cab.settings.cal.secteur": "Business sector",
   "cab.settings.cal.general": "All activities",
@@ -7859,6 +7863,8 @@ const ar: Dict = {
   "cab.settings.defauts": "هذه إعدادات السوكل الافتراضية: لم يضبط المكتب شيئًا بعد.",
   "cab.settings.cal.lede":
     "التواريخ تأتي من حزمة الاختصاص. يقول هذا الجدول أيّها ينطبق على أي قطاع ولأي سنة — وهو ما يغذّي تبويب الآجال في كل ملف.",
+  "cab.settings.cal.lectureSeule":
+    "يضبط الخبير رزنامة المكتب. يمكنك الاطّلاع عليها؛ لأيّ تغيير أو تأجيل، توجّه إليه.",
   "cab.settings.cal.exercice": "السنة",
   "cab.settings.cal.secteur": "قطاع النشاط",
   "cab.settings.cal.general": "كل الأنشطة",

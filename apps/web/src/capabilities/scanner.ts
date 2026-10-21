@@ -1100,7 +1100,13 @@ export function etirerEnGardantLaCouleur(data: ImageData): void {
       break;
     }
   }
-  const span = Math.max(24, hi - lo);
+  // Une page déjà propre — un PDF rendu, un scan sur fond blanc — a plus de
+  // 98 % de pixels blancs : les deux percentiles tombent sur 255, et
+  // l'étirement d'une plage vide envoyait TOUT au noir (campagne du 21
+  // octobre 2026, ANO-024 : page noire, illisible). Sans dynamique à étirer,
+  // on ne touche à rien.
+  if (hi - lo < 24) return;
+  const span = hi - lo;
   const lut = new Uint8ClampedArray(256);
   for (let v = 0; v < 256; v += 1) {
     lut[v] = Math.min(255, Math.max(0, ((v - lo) / span) * 255));

@@ -107,6 +107,24 @@ describe("la préparation de la page archivée", () => {
     expect(img.data[1 * 4]).toBeGreaterThan(235);
   });
 
+  it("ne noircit pas une page déjà propre : fond blanc, quelques lignes d'encre", () => {
+    // ANO-024 (21 octobre 2026) : 98 % de blanc, les deux percentiles sur 255,
+    // et la page entière sortait noire.
+    const pixels: Array<[number, number, number]> = Array.from(
+      { length: 200 },
+      () => [255, 255, 255] as [number, number, number],
+    );
+    pixels[10] = [20, 20, 22];
+    pixels[11] = [40, 70, 180];
+    const img = image(pixels);
+    etirerEnGardantLaCouleur(img);
+
+    expect(img.data[0]).toBe(255);
+    expect(img.data[50 * 4]).toBe(255);
+    expect(img.data[10 * 4]).toBeLessThan(40);
+    expect(saturation(img.data, 11)).toBeGreaterThan(60);
+  });
+
   it("garde l'opacité pleine : un PDF n'a pas de transparence à inventer", () => {
     const img = image([
       [120, 130, 140],

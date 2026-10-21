@@ -215,7 +215,8 @@ function CabinetPilotage() {
             {t("cab.pil.kicker", {
               count: (membres.data ?? []).length,
               collabs: (membres.data ?? []).length,
-              mandats: (clients.data ?? []).length,
+              // Les dossiers tenus : un mandat terminé ne pèse plus sur la charge (ANO-013).
+              mandats: (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length,
             })}
           </>
         }

@@ -156,6 +156,22 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  it("ANO-012 : le calendrier du cabinet se règle par l'expert seul", async () => {
+    const { rows } = await admin.query<{ code: string }>(
+      `select code from ref.fiscal_obligations where jurisdiction = 'TN' order by code limit 1`,
+    );
+    const code = rows[0]!.code;
+    const regler = (u: Utilisateur) =>
+      sousIdentite(u.id, (db) =>
+        db.query(`select public.cabinet_obligation_definir($1, $2, 2026, '*', false, 7)`, [
+          cabinet,
+          code,
+        ]),
+      );
+    await assert.rejects(regler(collaborateur), /Seul l'expert/);
+    await regler(expert);
+  });
+
   it("ANO-014 : une société n'a qu'une comptabilité mandatée à la fois", async () => {
     await sousIdentite(autreExpert.id, (db) => identite.proposerMandat(db, autreCabinet, legalId));
     const proposes = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
