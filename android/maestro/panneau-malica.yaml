@@ -5,13 +5,14 @@
 # l'accueil retrouvé juste après la navigation — c'est là qu'un fil qui
 # s'ouvrirait le temps de relire la préférence se verrait, sur un appareil lent.
 appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
 - takeScreenshot: panneau-1-accueil-fil-ferme
 - tapOn: "Mon espace"
 - extendedWaitUntil:
-    visible: "Visible par vous seul"
+    visible: "Vos papiers"
     timeout: 20000
 - takeScreenshot: panneau-2-mon-espace
 - tapOn: "Accueil"

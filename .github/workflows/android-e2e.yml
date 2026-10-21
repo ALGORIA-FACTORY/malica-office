@@ -1,6 +1,6 @@
 # La coque sur un émulateur — Maestro, avec l'API et le site de la machine
-# hôte derrière (10.0.2.2), le jeu de données, et une image « Google APIs »
-# pour que ML Kit existe.
+# hôte derrière (10.0.2.2), le jeu de données, et une image Android sans
+# services Google (voir « target » plus bas).
 #
 # Chaque nuit et à la demande : un émulateur met dix minutes à se lever, ce
 # n'est pas le prix d'une fusion. Ce qu'il éprouve, aucun navigateur ne le
@@ -12,6 +12,12 @@
 # le fil de Malica ouvert d'un tap — n'entre pas dans l'arbre que lit Maestro.
 # Ces flux ne prouvent donc que ce qui est présent au chargement d'une page ; une
 # assertion d'absence n'y prouve rien, et le hors ligne n'est pas vérifié ici.
+#
+# LEVÉE (21 octobre 2026) : chaque flux déclare `androidWebViewHierarchy:
+# devtools` ; Maestro lit alors la page par les outils de développement de la
+# WebView (ouverts dans une construction de débogage), et non plus par l'arbre
+# d'accessibilité figé. Le bandeau et le fil, bien à l'écran sur les captures
+# de l'exécution 39107586977, y sont lus.
 #
 # La saveur `emulateur` parle en clair à la machine hôte ; elle n'est jamais
 # signée ni envoyée (voir android/app/build.gradle).
@@ -25,7 +31,11 @@ on:
 
 jobs:
   maestro:
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04, pas ubuntu-latest : l'étiquette passe à Ubuntu 26 depuis le
+    # 19 octobre 2026 (actions/runner-images#14748). L'émulateur tombait aussi
+    # sur 24.04 (la cause était l'image google_apis, voir « target ») ; on
+    # épingle tout de même l'image éprouvée plutôt qu'une image qui bouge.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     services:
@@ -97,6 +107,16 @@ jobs:
           done
           curl -fsS http://localhost:8080/sante
 
+      # Les comptes de parcours vivent dans un seul fichier, lu aussi par
+      # Playwright et captures.mjs ; Maestro les reçoit en variables (-e).
+      # Avant le jeu de données, qui imprime le mot de passe : il est masqué.
+      - name: Les comptes de parcours
+        run: |
+          mot_de_passe="$(node -p "require('./outils/comptes-de-parcours.json').motDePasse")"
+          echo "::add-mask::$mot_de_passe"
+          echo "MALICA_EMAIL=$(node -p "require('./outils/comptes-de-parcours.json').dirigeant.email")" >> "$GITHUB_ENV"
+          echo "MALICA_MOT_DE_PASSE=$mot_de_passe" >> "$GITHUB_ENV"
+
       - name: Peupler le jeu de données
         run: node outils/jeu-de-donnees.mjs http://localhost:8080
 
@@ -105,13 +125,10 @@ jobs:
           npm run build:coque:emulateur -w @malica/web
           MALICA_COQUE_EMULATEUR=1 npm run coque:sync -w @malica/web
           cd android && ./gradlew assembleEmulateurDebug -PversionName=0.0.0 --no-daemon
-
-      # Les comptes de parcours vivent dans un seul fichier, lu aussi par
-      # Playwright et captures.mjs ; Maestro les reçoit en variables (-e).
-      - name: Les comptes de parcours
-        run: |
-          echo "MALICA_EMAIL=$(node -p "require('./outils/comptes-de-parcours.json').dirigeant.email")" >> "$GITHUB_ENV"
-          echo "MALICA_MOT_DE_PASSE=$(node -p "require('./outils/comptes-de-parcours.json').motDePasse")" >> "$GITHUB_ENV"
+          # --no-daemon ne couvre pas le démon Kotlin : il survit à la
+          # construction et garde sa mémoire pendant tout l'émulateur.
+          ./gradlew --stop || true
+          pkill -f KotlinCompileDaemon || true
 
       - name: Installer Maestro
         run: |
@@ -133,17 +150,59 @@ jobs:
           sudo docker image prune --all --force > /dev/null
           df -h /
 
+      # L'émulateur disparaissait en plein flux, sans un mot dans son journal
+      # (« device 'emulator-5554' not found », puis « could not connect to TCP
+      # port 5554 » : exécutions 39220279148 et 39565902966, 19 et 21 octobre
+      # 2026) — la signature d'un processus tué par le noyau à court de mémoire.
+      # La machine porte à la fois Postgres, l'API, le site, Maestro et
+      # l'émulateur. On lui donne de l'échange, et l'on relève la mémoire toutes
+      # les dix secondes pour que la prochaine panne, s'il y en a une, se lise.
+      - name: Mémoire d'échange et relevé de la mémoire
+        run: |
+          nproc; free -m; df -h / /mnt
+          # Sur /mnt, le disque de travail : / garde sa place pour l'émulateur.
+          sudo fallocate -l 6G /mnt/swapfile-emulateur
+          sudo chmod 600 /mnt/swapfile-emulateur
+          sudo mkswap /mnt/swapfile-emulateur > /dev/null
+          sudo swapon /mnt/swapfile-emulateur
+          free -m
+          # systemd-oomd tue, sans trace dans le noyau, le plus gros groupe d'une
+          # machine sous pression mémoire : l'émulateur. La machine est jetable.
+          sudo systemctl stop systemd-oomd systemd-oomd.socket 2>/dev/null || true
+          (vmstat -t 10 > vmstat.log 2>&1 &)
+          (while true; do date -u +%T; ps -eo pid,rss,comm --sort=-rss | head -8; sleep 10; done > processus.log 2>&1 &)
+
       - name: Lancer l'émulateur et les flux
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          # Image AOSP, sans services Google. La machine de GitHub (dépôt privé)
+          # n'a que 2 processeurs et 8 Go : avec l'image google_apis, les
+          # services Google saturaient l'émulateur (« bg anr » de
+          # com.google.android.gms.persistent), Android tuait l'application
+          # qui dépendait de leur fournisseur de polices, puis qemu lui-même
+          # tombait (cœur vidé, exécution 39583495404). ML Kit n'y servait à
+          # rien : le greffon refuse le scanner sur tout émulateur.
+          target: default
           arch: x86_64
           profile: pixel_6
-          ram-size: 4096M
+          # 3 Go plutôt que 4 : la machine partage sa mémoire avec Postgres,
+          # l'API, le site et Maestro (voir l'étape d'échange ci-dessus).
+          ram-size: 3072M
           disk-size: 6000M
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          # Pas de caméra émulée : le scanner ML Kit refuse de toute façon les
+          # émulateurs (voir annuler-le-scanner.yaml), et la caméra virtuelle
+          # coûte du processeur à une machine qui en manque.
+          #
+          # Rendu par ANGLE sur SwiftShader (swangle_indirect), plus
+          # swiftshader_indirect : qemu tombait en SEGV dans son rendu GLES
+          # cinq secondes après « Entrer », quand l'accueil se dessine
+          # (coredumpctl, exécution 39587645730) — trois nuits de suite, au
+          # même pas. (La WebView en --disable-gpu, essayée ensuite, plantait
+          # son moteur de rendu : exécution 39591622354. On ne touche qu'au GPU
+          # de l'émulateur.)
+          emulator-options: -no-snapshot -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           # Deux processeurs, rendu logiciel : l'interface système de l'émulateur
           # tarde, et Android pose « System UI isn't responding » par-dessus
           # l'application — les assertions ne voient plus l'écran, qui est
@@ -151,34 +210,41 @@ jobs:
           # fenêtres d'erreur système sont masquées ; une vraie panne de
           # l'application reste visible, puisque son écran n'apparaît pas.
           #
-          # Diagnostic D25 (17 septembre 2026), avant les flux : l'arbre
-          # d'accessibilité relevé fil fermé, fil ouvert, hors ligne — la preuve
-          # de ce que lit un lecteur d'écran, qu'une capture ne donne pas. Le
-          # relevé est pris DANS le flux (une sonde optionnelle garde l'arbre) :
-          # `maestro hierarchy`, lancé après, rendait un écran périmé
-          # (exécution 35225328747 : l'écran de connexion, clavier ouvert).
+          # Les sondes du diagnostic D25 (android/maestro-diagnostic) ne tournent
+          # plus chaque nuit : elles ont rendu leur verdict (D27), coûtaient deux
+          # connexions et un passage en mode avion avant les vrais flux, et
+          # tombaient avec l'émulateur. Elles restent lançables à la main.
+          #
+          # Chaque ligne de `script` est un shell à part : la boucle des flux
+          # (un flux à la fois, un seul rejeu sur déconnexion de l'émulateur,
+          # jamais sur une assertion) vit dans android/maestro-ci.
           script: |
+            adb wait-for-device
             adb shell settings put global hide_error_dialogs 1
             adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
             adb install -r android/app/build/outputs/apk/emulateur/debug/app-emulateur-debug.apk
-            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-fil.yaml || true
-            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" android/maestro-diagnostic/arbre-hors-ligne.yaml || true
-            adb shell cmd connectivity airplane-mode disable || true
-            node android/maestro-diagnostic/lire-arbre.mjs $(find ~/.maestro/tests -path '*arbre-*/screen-hierarchy/*.json' | sort) || true
-            maestro test -e MALICA_EMAIL="$MALICA_EMAIL" -e MALICA_MOT_DE_PASSE="$MALICA_MOT_DE_PASSE" --format junit --output maestro.xml android/maestro/
+            bash android/maestro-ci/lancer-les-flux.sh
 
       - name: Journaux
         if: failure()
         run: |
-          echo "::group::api"; tail -100 api.log; echo "::endgroup::"
-          echo "::group::web"; tail -100 web.log; echo "::endgroup::"
+          echo "::group::api"; tail -100 api.log || true; echo "::endgroup::"
+          echo "::group::web"; tail -100 web.log || true; echo "::endgroup::"
+          echo "::group::mémoire"; free -m; tail -60 vmstat.log || true; echo "::endgroup::"
+          echo "::group::noyau"; (sudo dmesg -T | grep -iE "out of memory|oom|killed process" | tail -20) || true; echo "::endgroup::"
+          echo "::group::journal"; (sudo journalctl --no-pager -b | grep -iE "oom|killed|qemu|emulator" | tail -30) || true; echo "::endgroup::"
+          echo "::group::processus"; tail -120 processus.log || true; echo "::endgroup::"
+          echo "::group::cœurs vidés"; (sudo coredumpctl info --no-pager 2>&1 | head -80) || true; echo "::endgroup::"
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: maestro
           path: |
-            maestro.xml
+            maestro-*.xml
+            maestro-*.log
+            vmstat.log
+            processus.log
             ~/.maestro/tests
             panneau-*.png
           retention-days: 7

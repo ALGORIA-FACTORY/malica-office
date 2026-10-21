@@ -4,14 +4,32 @@
 # « FR · ⚙ » de l'en-tête, nommé « Réglages » pour le lecteur d'écran (et donc
 # pour Maestro) depuis le 17 septembre 2026.
 appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
 - tapOn: "Réglages"
-- assertVisible: "Langue"
+# Depuis le 21 octobre 2026, « Votre compte » et « Votre abonnement » ouvrent
+# la page : la langue est plus bas, hors de l'écran du pixel_6.
+# Le bouton lui-même, centré : la page se rallonge pendant qu'elle charge,
+# et « Langue » atteint pouvait laisser le bouton sous la barre basse
+# (exécution 39629579141).
+- scrollUntilVisible:
+    element: "العربية"
+    direction: DOWN
+    timeout: 60000
+    centerElement: true
 - tapOn: "العربية"
-- assertVisible: "الإعدادات"
 - assertVisible: "اللغة"
+- scrollUntilVisible:
+    element: "الإعدادات"
+    direction: UP
+    timeout: 60000
 # Retour au français, pour les flux suivants.
+- scrollUntilVisible:
+    element: "Français"
+    direction: DOWN
+    timeout: 60000
+    centerElement: true
 - tapOn: "Français"
-- assertVisible: "Réglages"
+- assertVisible: "Langue"

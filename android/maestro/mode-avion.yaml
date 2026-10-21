@@ -3,6 +3,7 @@
 # scanner, la file qui se vide) se joue sur appareil réel — protocole
 # d'appareil, points 7 et 8.
 appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
@@ -11,8 +12,11 @@ appId: com.algoriafactory.malica.emulateur
 - extendedWaitUntil:
     visible: "Hors ligne — vos photos partiront au retour du réseau."
     timeout: 10000
+# « Mon espace » se lit au serveur depuis le 21 octobre 2026 : hors ligne, il
+# le dit, sans erreur, et propose de réessayer.
 - tapOn: "Mon espace"
-- assertVisible: "Visible par vous seul"
+- assertVisible: "Pas de connexion.*"
+- assertNotVisible: "Une erreur est survenue."
 - setAirplaneMode: disabled
 - extendedWaitUntil:
     notVisible: "Hors ligne — vos photos partiront au retour du réseau."
