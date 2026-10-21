@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -10,6 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
@@ -192,7 +193,68 @@ interface Groupe {
  * que `PieceLue` ne porte pas : `capture.pieces.created_by` (le siège qui a
  * saisi) n'est pas exposé par `listAvecLecture`. Elles ne sont pas rendues
  * plutôt que rendues fausses.
+ *
+ * (Ce qui précède décrit `VosDocuments`, plus bas ; le lot de transmission
+ * qu'il affiche vit juste ici.)
  */
+/**
+ * Transmettre d'un geste ce qui est resté chez la société (ANO-LIVE-003).
+ *
+ * Seules partent les pièces de la société qui n'ont pas été transmises et
+ * dont le dirigeant n'a pas DÉCIDÉ de les garder : l'espace privé ne part
+ * jamais en lot, et une décision de garder n'est pas défaite par un bouton
+ * de masse. Deux touches : la première arme, la seconde engage.
+ */
+function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
+  const { t } = useI18n();
+  const pme = usePme();
+  const qc = useQueryClient();
+  const [armee, setArmee] = useState(false);
+  const [retour, setRetour] = useState<string | null>(null);
+  const restantes = pieces.filter(
+    (p) => p.vis === "entite" && !p.gardeeLe && p.status !== "retournee",
+  );
+  const transmettre = useMutation({
+    mutationFn: () => office().collab.transmettreLesPieces(restantes.map((p) => p.id)),
+    onSuccess: async (r) => {
+      setArmee(false);
+      setRetour(t("pme.list.transmettre.fait", { count: r.transmises }));
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+    },
+    onError: (e: unknown) => {
+      setArmee(false);
+      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.list", t("common.error")));
+    },
+  });
+  if (!pme.aUnCabinet || (restantes.length === 0 && !retour)) return null;
+  return (
+    <div className="card">
+      {restantes.length > 0 ? (
+        <>
+          <p className="t-body">{t("pme.list.transmettre.reste", { count: restantes.length })}</p>
+          <button
+            type="button"
+            className="btn"
+            disabled={transmettre.isPending}
+            onClick={() => (armee ? transmettre.mutate() : (setArmee(true), setRetour(null)))}
+          >
+            {transmettre.isPending
+              ? t("common.loading")
+              : armee
+                ? t("pme.list.transmettre.confirmer", { count: restantes.length })
+                : t("pme.list.transmettre.action")}
+          </button>
+        </>
+      ) : null}
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function VosDocuments() {
   const { t, locale } = useI18n();
   const pme = usePme();
@@ -575,6 +637,8 @@ function VosDocuments() {
           <br />
           {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
         </p>
+
+        <TransmettreCeQuiReste pieces={toutes} />
 
         {/* --------------------------------------------- l'axe et les deux formes */}
         <p className="lab">{TEXTES.regrouperPar}</p>

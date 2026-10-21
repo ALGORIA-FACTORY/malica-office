@@ -406,6 +406,21 @@ export const collab = {
   },
 
   /**
+   * Transmettre d'un geste les pièces restées chez la société (recette « vie
+   * réelle », ANO-LIVE-003 : 32 à 41 gestes pour seize pièces). Chacune passe
+   * par la même porte que la transmission à l'unité — la base en garde les
+   * règles (impayé, pièce privée) —, dans UNE transaction : tout part, ou
+   * rien, et le refus dit pourquoi.
+   */
+  async transmettreLesPieces(db: Requete, pieceIds: string[]): Promise<{ transmises: number }> {
+    let transmises = 0;
+    for (const id of pieceIds) {
+      if (await collab.setPieceVis(db, id, "partage")) transmises += 1;
+    }
+    return { transmises };
+  },
+
+  /**
    * Garder la pièce chez soi, et le DIRE.
    *
    * La base refuse le geste sur une pièce déjà transmise : ce retour-là passe

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import malicaLoin from "@/assets/malica-loin.webp";
 import { usePme } from "@/components/malica/pme-context";
@@ -438,6 +438,25 @@ function PmeCapturer() {
     },
     refetchInterval: (q) => (q.state.data?.some((e) => e.enCours) ? 3_000 : false),
   });
+
+  /*
+   * ============================== CE QUI A ÉTÉ LU SE RELIT QUAND LA LECTURE FINIT
+   *
+   * Recette « vie réelle » du 21 octobre 2026 (ANO-LIVE-008) : « Voici ce que
+   * j'ai lu » disait « je n'ai pas lu » sur les quatre lignes, 30 fois sur 30,
+   * alors que la fiche de chaque pièce affichait tout. Le résultat arrive par
+   * la LISTE ; or la liste n'était redemandée par personne quand la dernière
+   * lecture s'achevait — l'étape 4 montrait l'état d'avant la lecture.
+   *
+   * On la redemande donc dès que plus rien ne tourne, et à l'entrée de
+   * l'étape 4 : ce que l'écran dit avoir lu est ce que la base a enregistré.
+   */
+  const plusRienNeTourne =
+    lectures.isSuccess && (lectures.data ?? []).length > 0 && !lectures.data.some((e) => e.enCours);
+  useEffect(() => {
+    if (plusRienNeTourne || etape === 4)
+      void qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+  }, [plusRienNeTourne, etape, qc, pme.tenantId]);
 
   const questions = useQuery({
     queryKey: ["charge-questions", pme.tenantId],

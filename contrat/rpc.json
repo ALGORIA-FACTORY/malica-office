@@ -62,7 +62,8 @@
     "repondreAInvitation",
     "repondreSurPiece",
     "setPieceVis",
-    "stats"
+    "stats",
+    "transmettreLesPieces"
   ],
   "conseil": [
     "contexte",

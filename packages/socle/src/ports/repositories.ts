@@ -881,6 +881,8 @@ export interface PieceLue {
    * qu'elles n'attendaient rien.
    */
   vis: Visibility;
+  /** Le jour où le dirigeant a DÉCIDÉ de la garder chez lui ; `null` s'il n'a rien décidé. */
+  gardeeLe?: string | null;
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
@@ -1895,6 +1897,8 @@ export interface CollabRepository {
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
+  /** Transmettre d'un geste plusieurs pièces au cabinet ; tout part, ou rien. */
+  transmettreLesPieces(pieceIds: string[]): Promise<{ transmises: number }>;
   /**
    * Inscrire la décision de garder la pièce dans l'espace privé.
    *
