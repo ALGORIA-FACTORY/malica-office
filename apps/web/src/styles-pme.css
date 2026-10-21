@@ -75,7 +75,7 @@
   /* ---- l'encre ---------------------------------------------------------- */
   --tx: #0A0A0A;   /* ce qu'on lit                     */
   --t2: #3C4450;   /* ce qui explique                  */
-  --t3: #6B7280;   /* ce qui situe (libellés, unités)  */
+  --t3: #5F6673;   /* ce qui situe (libellés, unités) — AA jusque sur --d2 (ANO-032) */
 
   /* ---- l'accent : Evergreen ---------------------------------------------
    * Il dit « l'interface » : ce sur quoi on appuie, ce qui est actif, ce qui
@@ -2103,7 +2103,8 @@ body:has([data-surface="pme"]) { background: #FFFFFF }
   /* l'encre */
   --tx: #FFFFFF;
   --t2: #A7A7AD;
-  --t3: #6E6E76;
+  /* AA (4,5:1) jusque sur --d2 : #6E6E76 n'y tenait que 3,1:1 (ANO-032). */
+  --t3: #8E8E97;
 
   /* l'accent : Evergreen, éclairci pour tenir sur du noir */
   --acc:    #8FE3B1;

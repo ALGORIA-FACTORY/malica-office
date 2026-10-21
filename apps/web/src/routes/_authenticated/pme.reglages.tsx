@@ -15,6 +15,7 @@ import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
+import { usePrix } from "@/hooks/use-decimales";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
@@ -103,6 +104,7 @@ function PmeReglages() {
   const { t, locale, setLocale } = useI18n();
   const { apparence, choisir } = useApparence();
   const pme = usePme();
+  const aLEchelle = usePrix();
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
 
@@ -160,7 +162,9 @@ function PmeReglages() {
       <div className="card abo">
         <div className="nm">
           <b>{f?.offre ? nomDeLOffre(f.offre) : ABSENT}</b>
-          <span className="px">{f ? `${f.prix_mensuel_ht} ${pme.currency}` : ABSENT}</span>
+          <span className="px">
+            {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
+          </span>
         </div>
         <p className="ttc">{t("pme.reglages.abo.ht")}</p>
         <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
@@ -788,6 +792,7 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
 function TtcEtReport({ ht }: { ht: string | null }) {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const aLEchelle = usePrix();
   const ttc = useQuery({
     queryKey: ["prix-ttc", ht],
     queryFn: () => office().facturation.prixTtc(ht!),
@@ -804,10 +809,10 @@ function TtcEtReport({ ht }: { ht: string | null }) {
       {ttc.data ? (
         <p className="ttc">
           {t("pme.reglages.abo.ttc", {
-            ttc: ttc.data.ttc,
+            ttc: aLEchelle(ttc.data.ttc),
             devise: pme.currency,
-            tva: ttc.data.tva,
-            timbre: ttc.data.timbre,
+            tva: aLEchelle(ttc.data.tva),
+            timbre: aLEchelle(ttc.data.timbre),
           })}
         </p>
       ) : null}

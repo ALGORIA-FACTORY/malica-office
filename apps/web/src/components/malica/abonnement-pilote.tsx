@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 
 import { estNatif } from "@/capabilities/coque";
 import { usePme } from "@/components/malica/pme-context";
+import { usePrix } from "@/hooks/use-decimales";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -161,6 +162,7 @@ export function MonNom() {
 export function ChangerDOffre() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const aLEchelle = usePrix();
   const invalider = useInvalider();
   const principal = useEstPrincipal();
   const offres = useQuery({
@@ -201,7 +203,7 @@ export function ChangerDOffre() {
   const entier = (n: number) => new Intl.NumberFormat(locale).format(n);
   const ligne = (o: OffreDeLaGrille) =>
     [
-      t("pme.reglages.offres.prix", { prix: o.prix_mensuel_ht, devise: pme.currency }),
+      t("pme.reglages.offres.prix", { prix: aLEchelle(o.prix_mensuel_ht), devise: pme.currency }),
       t("pme.reglages.offres.lectures", { n: entier(o.lectures_par_organisation) }),
       o.sieges_inclus > 0
         ? t("pme.reglages.offres.places", { count: o.sieges_inclus })
@@ -232,7 +234,10 @@ export function ChangerDOffre() {
               {/* Le TTC vient de la base, par la fiscalité de la facture (R4). */}
               {o.prix_ttc !== null ? (
                 <p className="t-body">
-                  {t("pme.reglages.offres.ttc", { prix: o.prix_ttc, devise: pme.currency })}
+                  {t("pme.reglages.offres.ttc", {
+                    prix: aLEchelle(o.prix_ttc),
+                    devise: pme.currency,
+                  })}
                 </p>
               ) : null}
               {o.empechement ? (
@@ -278,6 +283,7 @@ export function ChangerDOffre() {
 export function PayerALAnnee() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const aLEchelle = usePrix();
   const invalider = useInvalider();
   const principal = useEstPrincipal();
   const [armee, setArmee] = useState(false);
@@ -312,7 +318,7 @@ export function PayerALAnnee() {
       <div className="card abo">
         <div className="nm">
           <b>{t("pme.reglages.annuel.enCours")}</b>
-          <span className="px">{`${a.en_cours.montant_ht} ${pme.currency}`}</span>
+          <span className="px">{`${aLEchelle(a.en_cours.montant_ht)} ${pme.currency}`}</span>
         </div>
         <p className="t-body">
           {t("pme.reglages.annuel.enCours.sous", {
@@ -334,7 +340,7 @@ export function PayerALAnnee() {
     <div className="card abo" data-annuel>
       <div className="nm">
         <b>{t("pme.reglages.annuel.titre", { offerts: p.mois_offerts })}</b>
-        <span className="px">{`${p.montant_ht} ${pme.currency}`}</span>
+        <span className="px">{`${aLEchelle(p.montant_ht)} ${pme.currency}`}</span>
       </div>
       <p className="t-body">
         {t("pme.reglages.annuel.detail", {
@@ -347,7 +353,7 @@ export function PayerALAnnee() {
       </p>
       {p.ttc !== null ? (
         <p className="t-body">
-          {t("pme.reglages.annuel.ttc", { ttc: p.ttc, devise: pme.currency })}
+          {t("pme.reglages.annuel.ttc", { ttc: aLEchelle(p.ttc), devise: pme.currency })}
         </p>
       ) : null}
       <p className="t-body">{t("pme.reglages.annuel.dates", { du: date(p.du), au: date(p.au) })}</p>
@@ -361,7 +367,10 @@ export function PayerALAnnee() {
           onClick={() => (armee ? souscrire.mutate() : (setArmee(true), setRetour(null)))}
         >
           {armee
-            ? t("pme.reglages.annuel.confirmer", { montant: p.montant_ht, devise: pme.currency })
+            ? t("pme.reglages.annuel.confirmer", {
+                montant: aLEchelle(p.montant_ht),
+                devise: pme.currency,
+              })
             : t("pme.reglages.annuel.passer")}
         </button>
       )}
@@ -379,6 +388,7 @@ export function PayerALAnnee() {
 export function MesRecharges() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const aLEchelle = usePrix();
   const invalider = useInvalider();
   const principal = useEstPrincipal();
   const paliers = useQuery({
@@ -469,7 +479,10 @@ export function MesRecharges() {
             <div className="nm">
               <b>{t("pme.reglages.recharges.palier", { n: p.lectures })}</b>
               <span className="px">
-                {t("pme.reglages.recharges.prix", { prix: p.prix_ht, devise: pme.currency })}
+                {t("pme.reglages.recharges.prix", {
+                  prix: aLEchelle(p.prix_ht),
+                  devise: pme.currency,
+                })}
               </span>
             </div>
             <button
@@ -526,7 +539,10 @@ export function MesRecharges() {
             {liste.map((p) => (
               <option key={p.code} value={p.code}>
                 {t("pme.reglages.recharges.palier", { n: p.lectures })} —{" "}
-                {t("pme.reglages.recharges.prix", { prix: p.prix_ht, devise: pme.currency })}
+                {t("pme.reglages.recharges.prix", {
+                  prix: aLEchelle(p.prix_ht),
+                  devise: pme.currency,
+                })}
               </option>
             ))}
           </select>
