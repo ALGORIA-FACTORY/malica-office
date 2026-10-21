@@ -101,6 +101,25 @@ export const conversations = {
   },
 
   /**
+   * Une question du client, seule (21 octobre 2026, ANO-002).
+   *
+   * Le client écrit SES questions ; la réponse de Malica, elle, n'est écrite
+   * que par le serveur (`ajouter`, réservée). Une question sans réponse est
+   * un fil en attente — celui d'une question relue par le cabinet —, pas un
+   * fil abîmé.
+   */
+  async poser(db: Requete, input: { conversationId: string; question: string }): Promise<void> {
+    const question = input.question.trim();
+    if (!question)
+      throw Object.assign(new Error("une question ne peut pas être vide"), { code: "22023" });
+    await db.query(
+      `insert into agents.conversation_messages (conversation_id, role, contenu)
+       values ($1, 'user', $2)`,
+      [input.conversationId, question],
+    );
+  },
+
+  /**
    * Un message au bout du fil.
    *
    * La question et la réponse arrivent ensemble : une question enregistrée

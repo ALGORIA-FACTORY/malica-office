@@ -1177,7 +1177,9 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
     queryFn: () => office().office.propositionDeReglement(paiementId),
   });
   const inscrire = useMutation({
-    mutationFn: () => office().office.proposerLeReglement(paiementId),
+    // Proposer ET comptabiliser, une fois : l'écriture du règlement entre au
+    // journal et au FEC, et redemander rend la même (ANO-006).
+    mutationFn: () => office().office.inscrireLeReglement(paiementId),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
@@ -1234,14 +1236,20 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => inscrire.mutate()}
-        disabled={inscrire.isPending}
-        className="mt-1.5 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
-      >
-        {inscrire.isPending ? t("common.loading") : t("cab.review.reglement.inscrire")}
-      </button>
+      {r.inscrite ? (
+        <p className="mt-1.5 text-[11.5px] font-medium text-signal-ok">
+          {t("cab.review.reglement.inscrit")}
+        </p>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inscrire.mutate()}
+          disabled={inscrire.isPending || inscrire.isSuccess}
+          className="mt-1.5 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+        >
+          {inscrire.isPending ? t("common.loading") : t("cab.review.reglement.inscrire")}
+        </button>
+      )}
       {inscrire.isError ? (
         <p className="mt-1 text-[11.5px] text-signal-warn">
           {texteDeLErreur(inscrire.error, "routes/_authenticated/cabinet.piece", t("common.error"))}

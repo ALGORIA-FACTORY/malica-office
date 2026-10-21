@@ -80,6 +80,15 @@ async function rpc(depot, methode, args = []) {
   return (await r.json()).resultat;
 }
 
+/** L'appel tel quel, pour juger un refus. */
+async function rpcBrut(depot, methode, args = []) {
+  return appel("/rpc", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ depot, methode, args }),
+  });
+}
+
 console.log(`\nÉpreuve de bout en bout — ${BASE}\n`);
 
 /* ------------------------------------------------- 1. les pages de l'app */
@@ -222,11 +231,19 @@ const filsAvant = await rpc("conversations", "lister", [dossier.id]);
 const fil = await rpc("conversations", "ouvrirNouvelle", [dossier.id]);
 verdict("un fil s'ouvre", Boolean(fil?.id), fil?.id ?? "");
 
-await rpc("conversations", "ajouter", [
-  { conversationId: fil.id, question: "épreuve", reponse: "réponse d'épreuve" },
-]);
+// Le client pose sa question ; la réponse de Malica n'est écrite que par le
+// serveur (`conversations.ajouter` est réservée depuis la 0.2.45).
+await rpc("conversations", "poser", [{ conversationId: fil.id, question: "épreuve" }]);
 const messages = await rpc("conversations", "ouvrir", [fil.id]);
-verdict("le fil garde les deux tours", messages.length === 2, `${messages.length} messages`);
+verdict("le fil garde la question", messages.length === 1, `${messages.length} messages`);
+const forge = await rpcBrut("conversations", "ajouter", [
+  { conversationId: fil.id, question: "x", reponse: "réponse inventée" },
+]);
+verdict(
+  "une réponse de Malica ne s'écrit pas depuis le client",
+  forge.status === 404,
+  String(forge.status),
+);
 
 await rpc("conversations", "renommer", [{ conversationId: fil.id, titre: "Épreuve" }]);
 const filsApres = await rpc("conversations", "lister", [dossier.id]);

@@ -112,7 +112,17 @@ export const office = {
    * tresorerie en octobre.
    */
   async propositionDeReglement(db: Requete, paiementId: string) {
-    return propositionDeReglement(db, paiementId);
+    const r = await propositionDeReglement(db, paiementId);
+    if (!r.ok) return r;
+    // Déjà inscrit ? L'écran le dit et retire le bouton (ANO-006) : la base,
+    // elle, rend la même écriture si on redemande.
+    const { rows } = await db.query<{ id: string }>(
+      `select id from ecritures_v
+        where paiement_id = $1 and nature = 'reglement' and app.ecriture_vivante(id)
+        limit 1`,
+      [paiementId],
+    );
+    return { ...r, inscrite: rows[0] ? { ecritureId: rows[0].id } : null };
   },
 
   /**
@@ -133,7 +143,24 @@ export const office = {
       packVersionId: r.packVersionId,
       devise: r.ecriture.devise,
       lignes: r.ecriture.lignes,
+      paiementId,
     });
+  },
+
+  /**
+   * Inscrire le règlement : proposer PUIS comptabiliser, en une transaction
+   * (ANO-006, 21 octobre 2026). L'écran n'appelait que la proposition :
+   * l'écriture restait « proposée », n'atteignait jamais le FEC, et chaque
+   * clic en ajoutait une. Redemander rend l'écriture déjà inscrite.
+   */
+  async inscrireLeReglement(db: Requete, paiementId: string): Promise<string> {
+    const id = await office.proposerLeReglement(db, paiementId);
+    const { rows } = await db.query<{ status: string }>(
+      `select status from ecritures_v where id = $1`,
+      [id],
+    );
+    if (rows[0]?.status === "proposee") await office.book(db, id);
+    return id;
   },
 
   async propose(
@@ -146,10 +173,12 @@ export const office = {
       packVersionId: string;
       lignes: unknown;
       devise: string;
+      /** Le paiement qu'un règlement inscrit ; absent pour la facture. */
+      paiementId?: string | null;
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `select public.socle_ecriture_propose($1, $2, $3, $4, $5, $6::jsonb, $7) as id`,
+      `select public.socle_ecriture_propose($1, $2, $3, $4, $5, $6::jsonb, $7, $8) as id`,
       [
         input.pieceId,
         input.journal,
@@ -158,6 +187,7 @@ export const office = {
         input.packVersionId,
         JSON.stringify(input.lignes),
         input.devise,
+        input.paiementId ?? null,
       ],
     );
     return rows[0]!.id;
@@ -300,6 +330,9 @@ export const office = {
          from extractions_v x
          join ecritures_v e on e.piece_id = x.piece_id
         where e.tenant_id = $1
+          -- L'écriture de la FACTURE : un règlement inscrit ne fait pas compter
+          -- une facture contre-passée (ANO-006, 21 octobre 2026).
+          and e.nature = 'piece'
           and e.status = 'booked'
           and e.reverses_id is null
           and not exists (
@@ -363,11 +396,12 @@ export const office = {
       `select distinct on (x.piece_id)
               x.piece_id, x.payload, p.transmise_le
          from extractions_v x
-         join pieces_v p on p.id = x.piece_id
+         -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
+         -- doublon, d'un type qui porte écriture. Retournée par le cabinet,
+         -- elle n'y est pas tant qu'elle n'est pas reprise ; transmise sans
+         -- avoir été confirmée, non plus.
+         join pieces_qui_comptent_v p on p.id = x.piece_id
         where p.tenant_id = $1
-          -- Retournée par le cabinet (contre-passée, pas encore réimputée) :
-          -- elle n'entre dans aucune déclaration tant qu'elle n'est pas reprise.
-          and p.status <> 'retournee'
           and p.transmise_le >= $2::date
           and p.transmise_le < ($3::date + interval '1 day')
           and x.contract = 'extract.v1'

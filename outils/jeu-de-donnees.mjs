@@ -1786,13 +1786,8 @@ for (const a of ARBITRAGES) {
     let fil = (await rpc("conversations", "lister", [pme.id])).find((f) => f.titre === titre);
     if (!fil) {
       fil = await rpc("conversations", "ouvrirNouvelle", [pme.id]);
-      await rpc("conversations", "ajouter", [
-        {
-          conversationId: fil.id,
-          question: a.question,
-          reponse: "Votre question est relue par votre cabinet avant réponse.",
-        },
-      ]);
+      // La question seule : la réponse est celle que le cabinet arbitre.
+      await rpc("conversations", "poser", [{ conversationId: fil.id, question: a.question }]);
       await rpc("conversations", "renommer", [{ conversationId: fil.id, titre }]);
     }
     const cree = await etape(`arbitrage de ${pme.name}`, () =>

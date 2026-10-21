@@ -80,6 +80,7 @@
     "lister",
     "ouvrir",
     "ouvrirNouvelle",
+    "poser",
     "renommer",
     "supprimer"
   ],
@@ -212,6 +213,7 @@
     "ecrituresByIds",
     "ecrituresForPiece",
     "extraitsTransmis",
+    "inscrireLeReglement",
     "periodeLignes",
     "propose",
     "proposerDepuisPiece",

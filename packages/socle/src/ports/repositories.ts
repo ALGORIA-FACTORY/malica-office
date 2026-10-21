@@ -1114,6 +1114,11 @@ export interface OfficeRepository {
   /** Inscrire le reglement propose. Rend l'identifiant de l'ecriture. */
   proposerLeReglement(paiementId: string): Promise<string>;
   /**
+   * Proposer puis comptabiliser le règlement, en une transaction. Idempotent :
+   * un règlement déjà inscrit rend son écriture.
+   */
+  inscrireLeReglement(paiementId: string): Promise<string>;
+  /**
    * Les lignes comptabilisées entre deux dates.
    *
    * C'est la fonction `socle_periode_lignes` du Socle, pas une requête montée
@@ -2451,6 +2456,8 @@ export interface LigneDeReglementLue {
 export type PropositionDeReglement =
   | {
       ok: true;
+      /** L'écriture vivante qui inscrit déjà ce règlement, s'il y en a une. */
+      inscrite: { ecritureId: string } | null;
       ecriture: {
         journal: string;
         dateEcriture: string;

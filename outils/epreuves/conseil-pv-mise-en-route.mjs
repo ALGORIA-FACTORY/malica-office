@@ -250,14 +250,8 @@ async function leConseil() {
   /** Un fil du client, avec sa question rangée, puis l'arbitrage qui s'y rattache. */
   async function poserUnArbitrage({ question, reponse, theme, doute, certitude, statut }) {
     const { id: conversationId } = await e.rpc("conversations", "ouvrirNouvelle", [pme.id]);
-    await e.rpc("conversations", "ajouter", [
-      {
-        conversationId,
-        question,
-        reponse: "Votre comptable relit ma réponse avant qu'elle ne vous parvienne.",
-        model: null,
-      },
-    ]);
+    // La question seule : la réponse de Malica n'est écrite que par le serveur.
+    await e.rpc("conversations", "poser", [{ conversationId, question }]);
     const cree = await e.rpc("conseil", "creer", [
       {
         tenantId: pme.id,

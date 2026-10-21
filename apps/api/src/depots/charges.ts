@@ -71,10 +71,12 @@ export const charges = {
    */
   async enAttenteDeDate(db: Requete, tenantId: string) {
     const { rows } = await db.query(
-      `select count(*) as articles, count(distinct piece_id) as pieces,
-              sum(total_ht) as total_ht
-         from piece_articles_v
-        where tenant_id = $1 and period is null`,
+      `select count(*) as articles, count(distinct a.piece_id) as pieces,
+              sum(a.total_ht) as total_ht
+         from piece_articles_v a
+         join pieces_qui_comptent_v q on q.id = a.piece_id
+        where a.tenant_id = $1 and a.period is null
+          and q.document_kind <> 'facture_vente'`,
       [tenantId],
     );
     const r = (rows as Record<string, unknown>[])[0] ?? {};
@@ -85,15 +87,26 @@ export const charges = {
     };
   },
 
+  /**
+   * Les articles des ACHATS du mois qui comptent (ANO-005, 21 octobre 2026).
+   *
+   * L'écran additionnait toutes les pièces lues : la vente, le doublon, la
+   * pièce de l'espace personnel, l'avoir, la pièce pas encore confirmée —
+   * « Vos charges » montrait 16 189,550 pour 8 944,600 de charges. La pièce
+   * qui compte est définie une fois, en base (`pieces_qui_comptent_v`) ; une
+   * charge est une pièce qui compte et qui n'est pas une vente.
+   */
   async articles(db: Requete, tenantId: string, fromPeriod: string, toPeriod: string) {
     const { rows } = await db.query(
-      `select piece_id, ordinal, designation, quantity, unit_price_ht, unit_price_ttc,
-              total_ht, famille_code, famille_source, period, document_date,
-              citation_field, citation_quantity, citation_unit_price_ht,
-              citation_unit_price_ttc, citation_total_ht
-         from piece_articles_v
-        where tenant_id = $1 and period >= $2 and period <= $3
-        order by period desc, ordinal asc`,
+      `select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht,
+              a.unit_price_ttc, a.total_ht, a.famille_code, a.famille_source, a.period,
+              a.document_date, a.citation_field, a.citation_quantity,
+              a.citation_unit_price_ht, a.citation_unit_price_ttc, a.citation_total_ht
+         from piece_articles_v a
+         join pieces_qui_comptent_v q on q.id = a.piece_id
+        where a.tenant_id = $1 and a.period >= $2 and a.period <= $3
+          and q.document_kind <> 'facture_vente'
+        order by a.period desc, a.ordinal asc`,
       [tenantId, fromPeriod, toPeriod],
     );
     return rows.map((r) => {

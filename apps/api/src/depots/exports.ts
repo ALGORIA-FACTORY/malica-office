@@ -92,7 +92,8 @@ export interface LigneExport {
   debit: string;
   credit: string;
   taxCode: string | null;
-  valideLe: string;
+  /** La date de SUPERVISION ; `null` tant que le cabinet n'a pas validé (ANO-007). */
+  valideLe: string | null;
   devise: string;
   /**
    * Le compte auxiliaire du tiers — son matricule — et son nom, sur la seule
@@ -182,7 +183,7 @@ export function formaterFec(
         dec(l.credit, decimales),
         "",
         "",
-        dateFec(l.valideLe),
+        l.valideLe ? dateFec(l.valideLe) : "",
         autreDevise ? dec(montant, decimales) : "",
         autreDevise ? champFec(l.devise) : "",
       ].join(SEPARATEUR_FEC),
@@ -216,7 +217,7 @@ export function formaterCsvEcritures(lignes: LigneExport[], decimales: number): 
       l.devise,
       l.pieceRef ?? "",
       l.pieceDate,
-      l.valideLe,
+      l.valideLe ?? "",
     ]),
   );
 }
@@ -278,7 +279,7 @@ function versLigne(r: Record<string, unknown>): LigneExport {
     debit: String(r["debit"] ?? "0"),
     credit: String(r["credit"] ?? "0"),
     taxCode: (r["tax_code"] as string | null) ?? null,
-    valideLe: r["valide_le"] as string,
+    valideLe: (r["valide_le"] as string | null) ?? null,
     devise: r["devise"] as string,
     tiersNum: (r["tiers_num"] as string | null) ?? null,
     tiersLib: (r["tiers_lib"] as string | null) ?? null,
