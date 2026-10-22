@@ -59,10 +59,11 @@ function Ligne({ e }: { e: ElementDeFile }) {
 }
 
 /** La section, en tête de la liste. Rien si rien n'attend. */
-export function FileLocale() {
+export function FileLocale({ vis }: { vis?: ElementDeFile["vis"] }) {
   const { t } = useI18n();
   const { file } = usePme();
-  if (file.elements.length === 0) return null;
+  const elements = vis ? file.elements.filter((e) => e.vis === vis) : file.elements;
+  if (elements.length === 0) return null;
   return (
     <div>
       <div className="mt-1.5 flex items-baseline justify-between gap-2.5 border-t border-foreground pb-[5px] pt-2.5">
@@ -70,10 +71,10 @@ export function FileLocale() {
           {t("pme.file.titre")}
         </span>
         <span className="text-[10px] text-muted-foreground">
-          {t("pme.file.pastille", { count: file.elements.length })}
+          {t("pme.file.pastille", { count: elements.length })}
         </span>
       </div>
-      {file.elements.map((e) => (
+      {elements.map((e) => (
         <Ligne key={e.cle} e={e} />
       ))}
     </div>

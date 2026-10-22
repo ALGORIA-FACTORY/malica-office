@@ -7,7 +7,7 @@ import {
   useRouteContext,
   useRouterState,
 } from "@tanstack/react-router";
-import { Camera, Home as HomeIcon, Lock } from "lucide-react";
+import { CalendarClock, Camera, FileText, Home as HomeIcon, Lock, Settings } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
@@ -550,6 +550,20 @@ function PmeLayout() {
          */}
         <nav aria-label={t("pme.nav.aria")} className="nav">
           <NavItem {...navItems[0]} />
+          <div className="nav-desktop">
+            <NavItem
+              to="/pme/list"
+              icon={FileText}
+              label={t("pme.list.title")}
+              active={path.startsWith("/pme/list")}
+            />
+            <NavItem
+              to="/pme/echeances"
+              icon={CalendarClock}
+              label={t("pme.echeances.title")}
+              active={path === "/pme/echeances"}
+            />
+          </div>
           <div className="flex justify-center py-[11px]">
             {/*
              * L'obturateur ne porte plus que sa géométrie en utilitaires : la
@@ -568,9 +582,18 @@ function PmeLayout() {
               className="obtur grid h-[58px] w-[58px] place-items-center"
             >
               <Camera className="h-[25px] w-[25px]" aria-hidden />
+              <span className="nav-desktop">{t("pme.nav.add")}</span>
             </button>
           </div>
           <NavItem {...navItems[1]} />
+          <div className="nav-desktop">
+            <NavItem
+              to="/pme/reglages"
+              icon={Settings}
+              label={t("pme.reglages.titre")}
+              active={path === "/pme/reglages"}
+            />
+          </div>
         </nav>
 
         {/*
@@ -627,7 +650,12 @@ function NavItem({
    * diverger une.
    */
   return (
-    <Link to={to} data-on={active} className="uppercase tracking-wider">
+    <Link
+      to={to}
+      data-on={active}
+      aria-current={active ? "page" : undefined}
+      className="uppercase tracking-wider"
+    >
       <Icon className="h-5 w-5" aria-hidden />
       <span>{label}</span>
     </Link>

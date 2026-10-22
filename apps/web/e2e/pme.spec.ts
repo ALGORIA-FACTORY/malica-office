@@ -120,3 +120,28 @@ test("un signalement part depuis les réglages", async ({ page }) => {
   await page.getByRole("button", { name: "Envoyer" }).click();
   await expect(page.getByText("Reçu. Merci — on regarde.")).toBeVisible();
 });
+
+test("le même accueil utilise le desktop et conserve la navigation du téléphone", async ({
+  page,
+}) => {
+  for (const largeur of [390, 768, 1280, 1920]) {
+    await page.setViewportSize({ width: largeur, height: 900 });
+    await page.goto("/pme");
+    const nav = page.getByRole("navigation", { name: "Navigation principale" });
+    await expect(page.getByText("Vos documents")).toBeVisible();
+    await expect(nav.getByRole("button", { name: "Photographier" })).toBeEnabled();
+    const dimensions = await page.locator("main").evaluate((element) => ({
+      contenu: element.getBoundingClientRect().width,
+      page: document.documentElement.scrollWidth,
+      fenetre: window.innerWidth,
+    }));
+    expect(dimensions.page).toBeLessThanOrEqual(dimensions.fenetre + 1);
+    if (largeur >= 1024) {
+      expect(dimensions.contenu).toBeGreaterThan(largeur * 0.65);
+      await expect(nav.getByRole("link", { name: "Mes pièces", exact: true })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "Échéances", exact: true })).toBeVisible();
+    } else {
+      await expect(nav.getByRole("link", { name: "Mes pièces", exact: true })).toBeHidden();
+    }
+  }
+});

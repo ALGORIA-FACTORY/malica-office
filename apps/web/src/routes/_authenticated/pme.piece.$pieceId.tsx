@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { totalDesPaiements } from "@/lib/total-des-paiements";
+
+import { SoldeDePiece } from "@/components/malica/solde-de-piece";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -1199,22 +1202,24 @@ function PieceScreen() {
    * le montant payé (R4).
    */
   const paiementsVivants = (paiements.data ?? []).filter((p) => !p.eteint);
-  const payeMineur = paiementsVivants.reduce((s, p) => s + (p.montantMineur ?? 0), 0);
+  const payeMineur = paiements.isSuccess ? totalDesPaiements(paiements.data) : null;
   const ttcMineur =
     payload?.totals?.ttc && decimales !== null
       ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
       : null;
   const payeLisible =
-    decimales !== null ? lisible(depuisUniteMineure(payeMineur, decimales)) : null;
-  const resteMineur = ttcMineur !== null ? ttcMineur - payeMineur : null;
+    decimales !== null && payeMineur !== null
+      ? lisible(depuisUniteMineure(payeMineur, decimales))
+      : null;
+  const resteMineur = ttcMineur !== null && payeMineur !== null ? ttcMineur - payeMineur : null;
   const resteLisible =
     resteMineur !== null && decimales !== null
       ? lisible(depuisUniteMineure(Math.max(resteMineur, 0), decimales))
       : null;
   const part =
-    ttcMineur !== null && ttcMineur > 0
+    ttcMineur !== null && payeMineur !== null && ttcMineur > 0
       ? Math.min(100, Math.max(0, (payeMineur / ttcMineur) * 100))
-      : 0;
+      : null;
 
   /*
    * ---------------------------------------------- CE QUE J'AI VÉRIFIÉ
@@ -1373,40 +1378,14 @@ function PieceScreen() {
       </div>
 
       {/* ── l'état de règlement ──────────────────────────────────────── */}
-      <div className="solde">
-        <span className="hd">
-          <b>
-            {resteMineur !== null && resteMineur <= 0
-              ? t("pme.paiement.solde")
-              : t("pme.paiement.reste")}
-          </b>
-          <span>
-            {payeLisible ?? "—"} / {lisible(payload?.totals?.ttc) ?? "—"}
-          </span>
-        </span>
-        <span className="bar">
-          <i style={{ width: `${part}%` }} />
-        </span>
-        {/*
-         * Trois états, pas deux. La valeur : ce qui reste dû. Le vide : rien ne
-         * reste. L'absence : sans total lu ou sans décimales du pack, on ne
-         * sait pas — et on le dit, plutôt que d'écrire « 0 ».
-         */}
-        <p className="ech">
-          {resteMineur === null ? (
-            "—"
-          ) : resteMineur > 0 ? (
-            <>
-              {t("pme.paiement.reste")}{" "}
-              <b>
-                {resteLisible ?? "—"} {devise}
-              </b>
-            </>
-          ) : (
-            t("pme.paiement.solde")
-          )}
-        </p>
-      </div>
+      <SoldeDePiece
+        paye={payeLisible}
+        total={lisible(payload?.totals?.ttc)}
+        reste={resteLisible}
+        soldee={resteMineur === null ? null : resteMineur <= 0}
+        progression={part}
+        devise={devise}
+      />
 
       {/* ── ce que le dirigeant centralise ──────────────────────────────
           Le rôle vient de `acces.monAcces`, pas de l'offre : l'écran du

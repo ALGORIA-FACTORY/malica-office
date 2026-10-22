@@ -578,61 +578,76 @@
   [data-surface="pme"] { --gout: 1.25rem }
 }
 
-/* --- tablette, et téléphone pivoté ---------------------------------------
- * La colonne cesse de grandir : au-delà d'environ 75 caractères, l'œil perd
- * le début de la ligne suivante. Le fond passe en `bg` pour que la colonne
- * se détache au lieu de flotter. */
-@media (min-width: 768px) {
-  [data-surface="pme"] { background: var(--bg) }
-  [data-surface="pme"] .app {
-    max-width: 30rem;
-    border-inline: 1px solid var(--hr);
-    min-height: 100dvh;
-  }
-}
+/* Les mêmes routes occupent l'espace disponible. Seule la disposition change. */
+[data-surface="pme"] .nav-desktop { display: none }
 
-/* --- desktop : la barre du bas devient un rail à gauche -------------------
- * Trois colonnes de grille, dont une vide à droite : la colonne de contenu
- * reste à sa mesure de lecture et se place sous le rail, pas au centre
- * mathématique de l'écran. Centrée sur 2560 px, elle oblige à traverser
- * l'écran du regard pour aller du menu au contenu. */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   [data-surface="pme"] .app {
     max-width: none;
     border-inline: 0;
-    display: grid;
-    grid-template-columns: 15rem minmax(0, 32rem) 1fr;
-    align-items: start;
-    column-gap: 2.5rem;
-    padding-inline: 2rem;
-    padding-top: 2rem;
   }
-
-  /* Tout ce qui n'est pas la navigation va dans la colonne du milieu. */
-  [data-surface="pme"] .app > :not(.nav) { grid-column: 2 }
-
-  [data-surface="pme"] .nav {
-    grid-column: 1; grid-row: 1 / 999;
-    position: sticky; top: 2rem; bottom: auto;
-    display: flex; flex-direction: column; align-items: stretch; gap: .25rem;
-    margin-top: 0; padding: 0; border-top: 0;
-  }
-  [data-surface="pme"] .nav a {
-    flex-direction: row; justify-content: flex-start; gap: .75rem;
-    padding: .625rem .75rem; border-radius: var(--r-sm);
-    font-size: .875rem; min-height: 44px;
-    transition: background var(--t), color var(--t);
-  }
-  [data-surface="pme"] .nav .rond { width: 34px; height: 34px }
-  [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
+  [data-surface="pme"] .app > main { min-width: 0 }
 }
 
-/* --- grand desktop : la colonne respire, sans jamais s'étirer ------------- */
-@media (min-width: 1440px) {
+@media (min-width: 1024px) {
   [data-surface="pme"] .app {
-    grid-template-columns: 17rem minmax(0, 34rem) 1fr;
-    column-gap: 3.5rem;
-    padding-inline: 3rem;
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    column-gap: clamp(1rem, 2vw, 2.5rem);
+    padding: 1.5rem clamp(1rem, 2vw, 3rem);
+  }
+  [data-surface="pme"] .app > :not(.nav) { grid-column: 2; min-width: 0 }
+  [data-surface="pme"] .nav {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    position: sticky;
+    top: 1.5rem;
+    bottom: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  [data-surface="pme"] .nav .nav-desktop { display: flex; flex-direction: column }
+  [data-surface="pme"] .nav a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: .75rem;
+    padding: .75rem;
+    border-radius: var(--r-sm);
+    font-size: .875rem;
+    min-height: 44px;
+  }
+  [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
+  [data-surface="pme"] .nav .obtur {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    display: flex;
+    justify-content: flex-start;
+    gap: .75rem;
+    padding: .75rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .tiles,
+  [data-surface="pme"] [data-ecran="accueil"] .acts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-surface="pme"] [data-ecran="parametres"] .det {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-surface="pme"] [data-ecran="accueil"] .tiles,
+  [data-surface="pme"] [data-ecran="accueil"] .acts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -1053,7 +1068,7 @@
 [data-surface="pme"] [data-ecran="accueil"] .act em{font-style:normal;font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="accueil"] .act .pg{height:7px;border-radius:999px;background:rgba(0,0,0,.1);margin-top:.25rem}
 [data-surface="pme"] [data-ecran="accueil"] .act .pg i{display:block;height:100%;border-radius:999px;background:var(--acc)}
-[data-surface="pme"] [data-ecran="accueil"] .ask{display:flex;align-items:center;gap:.875rem;background:var(--d1);border-radius:22px; padding:.875rem .9375rem;margin-top:1.125rem;cursor:text}
+[data-surface="pme"] [data-ecran="accueil"] .ask{width:100%;text-align:start;font:inherit;cursor:pointer;display:flex;align-items:center;gap:.875rem;background:var(--d1);border-radius:22px; padding:.875rem .9375rem;margin-top:1.125rem;cursor:text}
 [data-surface="pme"] [data-ecran="accueil"] .ask img{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 34%;flex:none}
 [data-surface="pme"] [data-ecran="accueil"] .ask .q{flex:1;min-width:0;display:grid;gap:.0625rem}
 [data-surface="pme"] [data-ecran="accueil"] .ask .q b{font-size:.875rem;font-weight:600;letter-spacing:-.015em}

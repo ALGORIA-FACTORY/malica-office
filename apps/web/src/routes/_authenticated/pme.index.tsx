@@ -441,9 +441,15 @@ function PmeHome() {
                * tuile de 84 px n'est pas un endroit où faire tenir une phrase.
                */}
               <span>
-                {aRegler
-                  ? t("pme.regler.titre", { count: a.retournees })
-                  : t("pme.regler.rien.titre")}
+                {cabinet.isPending
+                  ? t("common.loading")
+                  : cabinet.isError
+                    ? t("common.error")
+                    : !cabinet.data
+                      ? t("pme.home.cabinet.absent")
+                      : aRegler
+                        ? t("pme.regler.titre", { count: a.retournees })
+                        : t("pme.regler.rien.titre")}
               </span>
             </span>
             <Chevron className="g ar" />
@@ -741,25 +747,25 @@ function PmeHome() {
          * contrôle : c'est lui qui porte le nom accessible et qui se tient au
          * clavier. La barre entière reste cliquable au doigt.
          */}
-        <div className="ask" onClick={allerALaConversation}>
+        <button
+          type="button"
+          className="ask"
+          aria-label={t("malica.panneau.ouvrir")}
+          onClick={allerALaConversation}
+        >
           <img src={malicaLoin} alt="" width={620} height={620} />
           <span className="q">
             <b>{t("malica.panneau.ouvrir")}</b>
             <span>{t("malica.chat.placeholder")}</span>
           </span>
-          <button
-            type="button"
-            className="mic"
-            aria-label={t("malica.panneau.ouvrir")}
-            onClick={allerALaConversation}
-          >
+          <span className="mic" aria-hidden>
             <svg viewBox="0 0 24 24" className="g">
               <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
               <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
               <path d="M12 18v3" />
             </svg>
-          </button>
-        </div>
+          </span>
+        </button>
 
         {/*
          * ================================= L'ÉCHEC DE CAPTURE, RENDU AU FLUX
