@@ -35,6 +35,8 @@ arbitrée explicitement ; on ne l'efface pas de la couverture pour obtenir un GO
 
 - Le bouton central « Ajouter une pièce » ouvre le parcours `/pme/capturer`,
   où les trois sources sont disponibles avant toute demande de caméra.
+- Les trois choix sont placés AVANT l'aperçu ; leur présence dans le premier
+  écran visible est vérifiée. Des captures de preuve sont jointes aux tests.
 - L'import d'images utilise `files.pickImages()` (plusieurs images, sans
   capture caméra imposée). Le bouton Galerie appelait `takePhoto()`.
 - Un nouvel ajout depuis une étape déjà ouverte réinitialise les seuls états

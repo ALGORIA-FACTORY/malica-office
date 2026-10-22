@@ -736,6 +736,27 @@ function PmeCapturer() {
             on ne lit pas. Le geste appartient au layout ; cet écran l'appelle. */}
         {etape === 0 ? (
           <>
+            {/* L'obturateur. « Galerie » prend des images, le troisième bouton
+                prend des PDF — c'est le rattrapage d'un mois. Le flash du
+                dessin n'a pas de geste : la capacité ne l'expose pas. */}
+            <div className="shut">
+              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("images")}>
+                <Icone d={G.gal} />
+                {t("pme.capture.galerie")}
+              </button>
+              <button
+                type="button"
+                className="big"
+                aria-label={t("pme.capture.photo")}
+                disabled={pme.capturing}
+                onClick={pme.ouvrirScanner}
+              />
+              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
+                <Icone d={G.fat} />
+                {t("pme.doc.importer")}
+              </button>
+            </div>
+
             <div className="cam">
               <div className="pap">{lignes(7, 16, 10)}</div>
               <div className="fr">
@@ -819,27 +840,6 @@ function PmeCapturer() {
                 ) : null}
               </>
             ) : null}
-
-            {/* L'obturateur. « Galerie » prend des images, le troisième bouton
-                prend des PDF — c'est le rattrapage d'un mois. Le flash du
-                dessin n'a pas de geste : la capacité ne l'expose pas. */}
-            <div className="shut">
-              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("images")}>
-                <Icone d={G.gal} />
-                {t("pme.capture.galerie")}
-              </button>
-              <button
-                type="button"
-                className="big"
-                aria-label={t("pme.capture.photo")}
-                disabled={pme.capturing}
-                onClick={pme.ouvrirScanner}
-              />
-              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
-                <Icone d={G.fat} />
-                {t("pme.doc.importer")}
-              </button>
-            </div>
 
             {lot.length === 0 ? (
               <div className="opt">

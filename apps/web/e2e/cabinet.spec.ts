@@ -44,7 +44,7 @@ for (const largeur of [390, 1440]) {
     "pv",
     "lecteurs",
   ]) {
-    test(`comptabilité ${chemin} reste accessible à ${largeur} px`, async ({ page }) => {
+    test(`comptabilité ${chemin} reste accessible à ${largeur} px`, async ({ page }, testInfo) => {
       const plantages: string[] = [];
       page.on("pageerror", (e) => plantages.push(e.message));
       await page.setViewportSize({ width: largeur, height: 900 });
@@ -52,10 +52,14 @@ for (const largeur of [390, 1440]) {
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/cabinet/${chemin}$`));
       const debordement = await page.evaluate(
-        () => document.documentElement.scrollWidth - window.innerWidth,
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(debordement).toBeLessThanOrEqual(1);
       expect(plantages).toEqual([]);
+      await testInfo.attach(`comptabilite-${chemin}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
     });
   }
 }

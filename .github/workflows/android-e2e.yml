@@ -33,9 +33,14 @@ on:
       - "apps/web/src/routes/_authenticated/pme*.tsx"
       - "apps/web/src/components/malica/pme-context.tsx"
       - "apps/web/src/capabilities/**"
+      - "apps/web/src/styles*.css"
       - "packages/socle/src/messages.ts"
       - "android/maestro/**"
       - ".github/workflows/android-e2e.yml"
+
+concurrency:
+  group: android-recette-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   maestro:

@@ -223,10 +223,12 @@ jobs:
           echo "::group::web"; tail -100 web.log; echo "::endgroup::"
 
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: always()
         with:
           name: playwright
           path: |
             apps/web/e2e/sortie
             apps/web/e2e/sortie-rapport
+            !apps/web/e2e/sortie/session-*.json
           retention-days: 7
+

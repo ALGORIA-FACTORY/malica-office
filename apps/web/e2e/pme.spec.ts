@@ -81,11 +81,19 @@ test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }
   await expect(page).toHaveURL(/\/pme$/);
 });
 
-test("ajouter une pièce donne accès aux trois sources sans ouvrir la caméra", async ({ page }) => {
+test("ajouter une pièce donne accès aux trois sources sans ouvrir la caméra", async ({
+  page,
+}, testInfo) => {
   await page.goto("/pme");
   await page.getByRole("button", { name: "Ajouter une pièce", exact: true }).click();
   await expect(page).toHaveURL(/\/pme\/capturer$/);
   await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeEnabled();
+  for (const nom of ["Photographier", "Importer des images", "Importer des PDF"])
+    await expect(page.getByRole("button", { name: nom, exact: true })).toBeInViewport();
+  await testInfo.attach("ajout-trois-sources", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
   const images = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Importer des images", exact: true }).click();
   const galerie = await images;
@@ -191,7 +199,7 @@ for (const largeur of [390, 1440]) {
     ["regler", "manquants"],
     ["malica", "chat"],
   ]) {
-    test(`PME ${chemin} reste utilisable à ${largeur} px`, async ({ page }) => {
+    test(`PME ${chemin} reste utilisable à ${largeur} px`, async ({ page }, testInfo) => {
       const plantages: string[] = [];
       page.on("pageerror", (e) => plantages.push(e.message));
       await page.setViewportSize({ width: largeur, height: 900 });
@@ -200,10 +208,14 @@ for (const largeur of [390, 1440]) {
       await expect(page).toHaveURL(new RegExp(`/pme/${chemin}$`));
       await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
       const debordement = await page.evaluate(
-        () => document.documentElement.scrollWidth - window.innerWidth,
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
       expect(debordement).toBeLessThanOrEqual(1);
       expect(plantages).toEqual([]);
+      await testInfo.attach(`pme-${chemin}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
     });
   }
 }
