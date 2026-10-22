@@ -48,43 +48,6 @@ const OU = "routes/_authenticated/pme.echeances";
 const BORNE_SEMAINE = 7;
 const BORNE_MOIS = 30;
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Même convention que `pme.regler` : ce que le dessin apporte et que le
- * dictionnaire ne porte pas encore est ici, en français seulement, en un seul
- * endroit — à vider dans `i18n/` sous les clés `pme.echeances.*` dès que les
- * trois langues peuvent être écrites ensemble.
- *
- * Tout le reste de l'écran lit `t()`. Les clés `pme.echeances.title`,
- * `.voice.*`, `.sous.*`, `.reglee`, `.empty`, `.source`, `.fiche.*`,
- * `.pack.absent` existent dans les trois langues et ne sont pas touchées : on
- * remplace le balisage, pas le câblage, et on ne réécrit pas un libellé déjà
- * traduit.
- */
-const MOTS = {
-  /** Le titre du dessin. La barre, elle, garde `pme.echeances.title`. */
-  titre: "Ce qui tombe",
-  /**
-   * Le `<u>` sous le grand chiffre. Le dessin y écrit « TND · 30 jours »
-   * parce qu'il somme des dinars ; `Echeance` n'en porte aucun (voir le bloc
-   * « CE QUI N'EST PAS SERVI »). Le sous-titre dit donc l'absence au
-   * dirigeant, dans ses mots, au lieu de donner une unité à un `—`.
-   */
-  sansMontant: "Les montants ne me sont pas encore remontés",
-  semaine: "Cette semaine",
-  mois: "Ce mois",
-  aVenir: "À venir",
-  /** La carte du bas, quand une ligne est dépassée. */
-  retardTitre: "Une échéance est dépassée.",
-  retardTexte:
-    "Je ne l'ai pas vue passer parce que personne ne me l'a dit : aucune pièce de paiement n'est arrivée. Si vous l'avez réglée, photographiez l'avis et je rapprocherai la ligne.",
-  retardGeste: "Photographier l'avis",
-  /** Le geste de la carte « fiche » — la route existe, le lien ne change pas. */
-  ficheGeste: "Compléter la fiche",
-} as const;
-
 /**
  * Vos échéances — le dessin validé (`livraison/ecrans/malica-manquants.html`,
  * écran « Échéances »), porté sur la route qui portait déjà le calendrier.
@@ -224,17 +187,17 @@ function PmeEcheances() {
    */
   const tranches = [
     {
-      titre: MOTS.semaine,
+      titre: t("pme.echeances.semaine"),
       lignes: rows.filter((e) => jours(e.dueDate) <= BORNE_SEMAINE),
     },
     {
-      titre: MOTS.mois,
+      titre: t("cab.clients.col.mois"),
       lignes: rows.filter(
         (e) => jours(e.dueDate) > BORNE_SEMAINE && jours(e.dueDate) <= BORNE_MOIS,
       ),
     },
     {
-      titre: MOTS.aVenir,
+      titre: t("pme.echeances.aVenir"),
       lignes: rows.filter((e) => jours(e.dueDate) > BORNE_MOIS),
     },
   ].filter((tr) => tr.lignes.length > 0);
@@ -264,14 +227,14 @@ function PmeEcheances() {
       </div>
 
       <div className="pad">
-        <h1>{MOTS.titre}</h1>
+        <h1>{t("pme.echeances.titre")}</h1>
 
         {/*
          * Le grand chiffre du dessin somme des dinars. Aucun montant n'est au
          * contrat : le chiffre est un `—` assumé, et le `<u>` le nomme.
          */}
         <div className="chiffre">
-          —<u>{MOTS.sansMontant}</u>
+          —<u>{t("pme.echeances.sansMontant")}</u>
         </div>
 
         {/* Sa parole, dans la tranche. `.am` seulement si c'est vraiment dépassé. */}
@@ -306,7 +269,7 @@ function PmeEcheances() {
             </p>
             <div className="b">
               <button type="button" onClick={() => void navigate({ to: "/pme/fiche" })}>
-                {MOTS.ficheGeste}
+                {t("pme.echeances.fiche.lien")}
               </button>
             </div>
           </div>
@@ -377,11 +340,12 @@ function PmeEcheances() {
         {enRetard.length > 0 ? (
           <div className="card" style={{ marginTop: "1.25rem" }}>
             <p>
-              <b style={{ color: "var(--tx)" }}>{MOTS.retardTitre}</b> {MOTS.retardTexte}
+              <b style={{ color: "var(--tx)" }}>{t("pme.echeances.retardTitre")}</b>{" "}
+              {t("pme.echeances.retardTexte")}
             </p>
             <div className="b">
               <button type="button" onClick={() => void navigate({ to: "/pme/capturer" })}>
-                {MOTS.retardGeste}
+                {t("pme.echeances.retardGeste")}
               </button>
             </div>
           </div>

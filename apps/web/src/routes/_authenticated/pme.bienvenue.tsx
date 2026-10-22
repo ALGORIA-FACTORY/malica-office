@@ -25,56 +25,6 @@ export const Route = createFileRoute("/_authenticated/pme/bienvenue")({
   component: Bienvenue,
 });
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Le dessin apporte du texte que le dictionnaire ne porte pas encore. Il est
- * ici, en un seul endroit, en français seulement : la convention de l'accueil
- * est que RIEN ne reste en dur, et ce bloc est donc à vider dans `i18n/` —
- * clés proposées `pme.societe.*` — dès que les trois langues peuvent être
- * écrites ensemble.
- *
- * En sens inverse, les huit clés `pme.bienvenue.*` de `packages/socle/
- * src/messages.ts` (`titre.1`, `titre.2`, `lede`, `p1`, `p2`, `p3`,
- * `commencer`, `plusTard`) étaient les mots de la présentation en pleine
- * encre que ce dessin remplace. Elles n'ont plus aucun appelant, dans les
- * trois langues. Elles ne sont PAS supprimées ici : `packages/socle` est
- * tenu ailleurs, et un dictionnaire se vide d'un seul geste, pas en six
- * fichiers à la fois. C'est une dette, et elle est nommée.
- */
-const MOTS = {
-  /** La barre du haut. */
-  barre: "Votre société",
-  /** Ce que la carte imprime sur son bandeau — un libellé, pas une donnée. */
-  carteBandeau: "République Tunisienne · Carte d'identification fiscale",
-  // Recette du 20 octobre 2026 : « J'ai lu » s'affichait aussi pour un
-  // matricule TAPÉ. L'écran ne connaît pas la provenance : il ne la dit pas.
-  ditTitre: "Voici votre matricule fiscal.",
-  ditSous:
-    "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre cabinet. Vérifiez-le maintenant.",
-  secTitre: "Votre société",
-  secEtat: "à confirmer",
-  /**
-   * Le dessin écrit « Matricule fiscal · lu sur la carte ». La provenance est
-   * retirée : rien ne la porte. Le shell descend `matricule: string | null`
-   * et pas sa source, et `identite.ficheCourante` — la seule méthode qui
-   * saurait — n'est pas appelée sur cet écran. Or la règle juste dessous dit
-   * qu'un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu.
-   * Afficher « lu sur la carte » sans le savoir serait fabriquer précisément
-   * la preuve dont cette phrase parle.
-   */
-  champMatricule: "Matricule fiscal",
-  champRaison: "Raison sociale",
-  champAdresse: "Adresse du siège",
-  regle:
-    "La saisie au clavier reste possible, mais elle est signalée : un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu sur la carte.",
-  // La société est déjà ouverte avant cet écran : le bouton ne promet pas de la créer.
-  exact: "C'est exact — commencer",
-  corriger: "Corriger · saisie au clavier",
-  pied: "Ensuite : choisir votre forfait, puis inviter votre cabinet — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
-} as const;
-
 /**
  * L'absence, dite d'un signe.
  *
@@ -196,7 +146,7 @@ function Bienvenue() {
             <path d="M14.5 5.5L8 12l6.5 6.5" />
           </svg>
         </button>
-        <span className="ttl">{MOTS.barre}</span>
+        <span className="ttl">{t("pme.bienvenue.barre")}</span>
       </div>
 
       <div className="pad">
@@ -208,7 +158,7 @@ function Bienvenue() {
          */}
         <div className="carte" aria-hidden>
           <span className="ban" />
-          <span className="t">{MOTS.carteBandeau}</span>
+          <span className="t">{t("pme.bienvenue.carteBandeau")}</span>
           <span className="mf">{matricule}</span>
           <span className="nm">{raison}</span>
           <span className="ln" style={{ top: "74%", width: "44%" }} />
@@ -224,14 +174,14 @@ function Bienvenue() {
           <b>{t("malica.chat.her")}</b>
         </div>
         <div className="dit">
-          {MOTS.ditTitre}
-          <em>{MOTS.ditSous}</em>
+          {t("pme.bienvenue.ditTitre")}
+          <em>{t("pme.bienvenue.ditSous")}</em>
         </div>
 
         {/* ── les trois champs lus, chacun corrigeable ────────────────── */}
         <div className="sec">
-          <h2>{MOTS.secTitre}</h2>
-          <span>{MOTS.secEtat}</span>
+          <h2>{t("pme.bienvenue.barre")}</h2>
+          <span>{t("pme.bienvenue.secEtat")}</span>
         </div>
 
         <button type="button" className="rw" onClick={corriger}>
@@ -240,7 +190,7 @@ function Bienvenue() {
           </i>
           <span className="bd">
             <b>{matricule}</b>
-            <span>{MOTS.champMatricule}</span>
+            <span>{t("pme.recu.matricule")}</span>
           </span>
         </button>
 
@@ -250,7 +200,7 @@ function Bienvenue() {
           </i>
           <span className="bd">
             <b>{raison}</b>
-            <span>{MOTS.champRaison}</span>
+            <span>{t("onboarding.name")}</span>
           </span>
         </button>
 
@@ -261,26 +211,26 @@ function Bienvenue() {
           </i>
           <span className="bd">
             <b>{ABSENT}</b>
-            <span>{MOTS.champAdresse}</span>
+            <span>{t("pme.bienvenue.champAdresse")}</span>
           </span>
         </button>
 
         <div className="regle">
           <IconeInfo />
-          <span>{MOTS.regle}</span>
+          <span>{t("pme.bienvenue.regle")}</span>
         </div>
 
         {/* ── les deux départs ───────────────────────────────────────── */}
         <div className="go">
           <button type="button" className="pr" onClick={commencer}>
-            {MOTS.exact}
+            {t("pme.bienvenue.exact")}
           </button>
           <button type="button" className="sc2" onClick={corriger}>
-            {MOTS.corriger}
+            {t("pme.bienvenue.corriger")}
           </button>
         </div>
 
-        <p className="foot">{MOTS.pied}</p>
+        <p className="foot">{t("pme.bienvenue.pied")}</p>
       </div>
     </div>
   );

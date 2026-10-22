@@ -31,52 +31,6 @@ export const Route = createFileRoute("/_authenticated/pme/regler")({
 
 const OU = "routes/_authenticated/pme.regler";
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Le dessin apporte du texte que le dictionnaire ne porte pas encore. Il est
- * ici, en un seul endroit, en français seulement : la convention de l'accueil
- * est que RIEN ne reste en dur (« les trois libellés, au dictionnaire »), et
- * ce bloc est donc à vider dans `i18n/` — clés proposées `pme.cabinet.*` —
- * dès que les trois langues peuvent être écrites ensemble.
- *
- * Tout le reste de l'écran lit `t()` : les clés `pme.regler.*`,
- * `pme.coffre.votreComptable`, `pme.list.sansEmetteur` et `notif.kind.*`
- * existent et ne sont pas touchées. On remplace le balisage, pas le câblage.
- */
-const MOTS = {
-  /** La barre du haut. */
-  barre: "Mon cabinet",
-  /** Le titre quand `identite.monCabinet` rend `null` : personne ne mandate. */
-  sansCabinet: "Aucun cabinet",
-  /**
-   * Le dessin écrit « Mandat actif depuis le 4 janvier 2026. Révocable par
-   * vous seul, effet le jour même. » Ni la date ni la révocation ne sont
-   * lisibles : `monCabinet` rend `{id, name}`, et aucune méthode du contrat
-   * ne révoque un mandat actif. La phrase dit donc ce qui est vrai, et rien
-   * de plus — une date inventée sur un mandat est pire qu'une date absente.
-   */
-  sousMandat: "Il suit ce dossier. Ce qui lui parvient, c'est vous qui le transmettez.",
-  sousSansMandat:
-    "Personne ne suit ce dossier pour l'instant. Vous capturez, vous lisez, vous exportez.",
-  ongletEchanges: "Échanges",
-  ongletDocuments: "Ses documents",
-  ilVousAttend: "Il vous attend",
-  sesAvis: "Ses avis",
-  /** Les trois règles que le câblage demande d'écrire sur l'onglet. */
-  documentsRegle:
-    "Ce qu'il dépose ne consomme aucune lecture — ces documents arrivent finis. Ils restent à vous, même si vous changez de cabinet. Et certains arrivent avec une action à faire.",
-  /**
-   * L'onglet est vide, et il le dit sans promettre. Le dépôt cabinet → PME
-   * n'existe pas : ni `cabinet.documents` ni `cabinet.accuserReception` ne
-   * sont au contrat, et le dépôt `cabinet` n'est pas monté.
-   */
-  documentsRien:
-    "Votre cabinet ne dépose encore rien ici : le produit ne porte pas ce geste. Rien n'est caché — il n'y a rien.",
-  pied: "Les retours sur pièces et les avis arrivent du même cabinet, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
-} as const;
-
 /** Les genres de conseil, tels que la base les pose — leur phrase est au dictionnaire. */
 const CONSEIL: Record<string, MessageKey> = {
   "conseil.arbitrage": "notif.kind.conseil.arbitrage",
@@ -258,7 +212,7 @@ function ARegler() {
             <path d="M14.5 5.5L8 12l6.5 6.5" />
           </svg>
         </button>
-        <span className="ttl">{MOTS.barre}</span>
+        <span className="ttl">{t("pme.regler.barre")}</span>
         <span className="ic" aria-hidden>
           <IconeCabinet />
         </span>
@@ -266,8 +220,10 @@ function ARegler() {
 
       <div className="pad">
         {/* Le cabinet, nommé. `null` → on ne lui invente pas un nom. */}
-        <h1>{cabinet.data ? cabinet.data.name : MOTS.sansCabinet}</h1>
-        <p className="sub">{cabinet.data ? MOTS.sousMandat : MOTS.sousSansMandat}</p>
+        <h1>{cabinet.data ? cabinet.data.name : t("pme.regler.sansCabinet")}</h1>
+        <p className="sub">
+          {cabinet.data ? t("pme.regler.sousMandat") : t("pme.regler.sousSansMandat")}
+        </p>
 
         {/* ── les deux onglets ───────────────────────────────────────── */}
         <div className="seg">
@@ -277,7 +233,7 @@ function ARegler() {
             aria-pressed={onglet === "echanges"}
             onClick={() => setOnglet("echanges")}
           >
-            {MOTS.ongletEchanges}
+            {t("pme.regler.ongletEchanges")}
           </button>
           <button
             type="button"
@@ -285,7 +241,7 @@ function ARegler() {
             aria-pressed={onglet === "docs"}
             onClick={() => setOnglet("docs")}
           >
-            {MOTS.ongletDocuments}
+            {t("pme.regler.ongletDocuments")}
           </button>
         </div>
 
@@ -298,10 +254,10 @@ function ARegler() {
              */}
             <p className="regle">
               <IconeInfo />
-              <span>{MOTS.documentsRegle}</span>
+              <span>{t("pme.regler.documentsRegle")}</span>
             </p>
             <div className="card">
-              <p>{MOTS.documentsRien}</p>
+              <p>{t("pme.regler.documentsRien")}</p>
             </div>
           </>
         ) : (
@@ -336,7 +292,7 @@ function ARegler() {
             ) : (
               <>
                 <div className="sec">
-                  <h2>{MOTS.ilVousAttend}</h2>
+                  <h2>{t("pme.regler.ilVousAttend")}</h2>
                   <span>{retours.length}</span>
                 </div>
 
@@ -404,7 +360,7 @@ function ARegler() {
             {avis.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{MOTS.sesAvis}</h2>
+                  <h2>{t("pme.regler.sesAvis")}</h2>
                   <span>{avis.length}</span>
                 </div>
 
@@ -449,7 +405,7 @@ function ARegler() {
               </>
             ) : null}
 
-            <p className="foot">{MOTS.pied}</p>
+            <p className="foot">{t("pme.regler.pied")}</p>
           </>
         )}
       </div>
