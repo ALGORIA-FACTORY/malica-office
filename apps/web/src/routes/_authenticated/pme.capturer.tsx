@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.jpeg";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
@@ -180,7 +180,7 @@ function Dit({ q, s }: { q: string; s?: string | undefined }) {
     <>
       <div className="sig">
         <span className="ph">
-          <img src={malicaLoin} alt="Malica" width={620} height={620} />
+          <img src={portraitMalica} alt="Malica" width={620} height={620} />
         </span>
         <b>Malica</b>
       </div>
