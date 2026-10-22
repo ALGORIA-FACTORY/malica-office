@@ -104,6 +104,25 @@ describe("un impayé suspend la transmission et l'export", { skip: !BASE_CONFIGU
     }
   });
 
+  it("l'état d'une licence ne se lit que par qui voit le dossier", async () => {
+    const lire = (u: Utilisateur) =>
+      sousIdentiteDuServeur(u.id, (db) =>
+        db.query<{ a: boolean }>("select app.licence_active($1) as a", [pme]),
+      );
+    assert.equal((await lire(dirigeant)).rows[0]!.a, true, "la société elle-même");
+    assert.equal((await lire(expert)).rows[0]!.a, true, "le cabinet sous mandat actif");
+    const etranger = await creerCompte(`etranger-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(etranger);
+    await statut("suspendue");
+    try {
+      // Refusé quel que soit l'état : la réponse ne dit rien d'un dossier étranger.
+      await assert.rejects(lire(etranger), (e: { code?: string }) => e.code === "42501");
+    } finally {
+      await statut("active");
+    }
+    await assert.rejects(lire(etranger), (e: { code?: string }) => e.code === "42501");
+  });
+
   it("licence active : la pièce part, et le dossier s'exporte", async () => {
     await deposerTransmise(`${marque}-actif`);
     await exporter(pme);

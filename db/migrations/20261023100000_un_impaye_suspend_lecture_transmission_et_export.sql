@@ -29,6 +29,18 @@ begin;
 -- `security definer` : un cabinet doit pouvoir savoir si le dossier d'un
 -- client est suspendu sans lire la licence elle-même. Rien d'autre ne sort
 -- qu'un booléen.
+create or replace function app.refuser_lecture_de_licence()
+returns boolean
+language plpgsql
+set search_path = ''
+as $$
+begin
+  raise exception 'dossier introuvable ou non autorise' using errcode = '42501';
+end $$;
+
+revoke all on function app.refuser_lecture_de_licence() from public, anon, service_role;
+grant execute on function app.refuser_lecture_de_licence() to authenticated;
+
 create or replace function app.licence_active(p_tenant uuid)
 returns boolean
 language sql
@@ -36,11 +48,26 @@ stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(
-    (select c.statut from facturation.licence_organisations lo
-       join facturation.consommation_v c on c.licence_id = lo.licence_id
-      where lo.tenant_id = p_tenant),
-    'active') = 'active';
+  select case
+    -- Seuls ceux qui voient le dossier apprennent s'il est suspendu : un
+    -- membre de la société, un membre d'un cabinet qui la tient sous mandat
+    -- actif, un opérateur de la plateforme. Les autres sont refusés, quel que
+    -- soit l'état — la réponse ne dit donc rien d'un dossier étranger (R6).
+    -- Sans personne derrière l'appel (une tâche du serveur, une migration),
+    -- il n'y a rien à cacher à qui que ce soit.
+    when not (auth.uid() is null and app.api_tenant() is null
+              or app.is_platform()
+              or p_tenant in (select app.member_orgs())
+              or exists (select 1 from identity.engagements e
+                          where e.pme_org_id = p_tenant and e.status = 'actif'
+                            and e.cabinet_org_id in (select app.member_orgs())))
+      then app.refuser_lecture_de_licence()
+    else coalesce(
+      (select c.statut from facturation.licence_organisations lo
+         join facturation.consommation_v c on c.licence_id = lo.licence_id
+        where lo.tenant_id = p_tenant),
+      'active') = 'active'
+  end;
 $$;
 
 revoke all on function app.licence_active(uuid) from public, anon, service_role;
