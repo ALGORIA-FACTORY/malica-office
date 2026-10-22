@@ -3420,14 +3420,36 @@ const fr = {
   "pme.bienvenue.pied":
     "Ensuite : choisir votre forfait, puis inviter votre cabinet — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
   "pme.tva.barreGroupe": "TVA du groupe",
+  /**
+   * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une
+   * CONSTANTE RÉGLEMENTAIRE (R4). Aucune méthode appelée par l'écran TVA ne sert
+   * l'échéance de dépôt (`parametrage.calendrierCabinet` et
+   * `referentiel.fiscalCharges` ne sont pas câblés ici). La phrase dit ce qui est
+   * vrai, sans la date.
+   */
   "pme.tva.sous": "C'est votre cabinet qui dépose cette déclaration.",
+  /**
+   * Le nombre vient de `pme.dossiers`, jamais d'un littéral. En arabe, la
+   * formulation « عدد الشركات: {count} » évite l'accord du nom (duel, 3-10,
+   * 11+), que `#one`/`#other` ne savent pas porter.
+   */
   "pme.tva.sousGroupe": "{count} sociétés — chacune déclare pour elle-même.",
   "pme.tva.sousGroupe#one": "{count} société — elle déclare pour elle-même.",
   "pme.tva.sousGroupe#other": "{count} sociétés — chacune déclare pour elle-même.",
   "pme.tva.aPayer": "à payer",
   "pme.tva.credit": "crédit reporté",
+  /**
+   * Le dessin écrit « En baisse de 31 % sur septembre » : un pourcentage
+   * d'évolution que R3 interdit de calculer ici et qu'aucune méthode ne sert.
+   * Un « — » est honnête ; « 31 % » serait une invention.
+   */
   "pme.tva.tendance": "Comparaison avec le mois précédent : —",
   "pme.tva.detail": "Le détail",
+  /**
+   * Le dessin compte des factures par taux (« 11 factures de vente »).
+   * `TvaBucket` porte `tax_code`, `rate`, `base` et `vat`, pas de compte de pièces :
+   * l'écran montre la BASE, que le moteur sert vraiment.
+   */
   "pme.tva.parTaux": "par taux",
   "pme.tva.col.collectee": "Collectée",
   "pme.tva.col.deductible": "Déductible",
@@ -3439,18 +3461,28 @@ const fr = {
   "pme.tva.sansDateMeta": "dans aucun mois",
   "pme.tva.sansDateTitre": "Des pièces rangées dans aucun mois",
   "pme.tva.parSociete": "Par société",
+  /**
+   * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
+   */
   "pme.tva.soldeParSociete": "Solde non servi par société",
   "pme.fiche.barre": "Votre fiche fiscale",
   "pme.fiche.secCarte": "Votre carte",
   "pme.fiche.cartePasLue": "pas encore lue",
   "pme.fiche.panCarte":
     "Photographiez la carte d'identification fiscale : je remplis ce que j'y lis.",
+  /**
+   * Vraie ici aussi : `etablirFiche` inscrit la source (« carte » ou
+   * « saisie »), la distinction a donc un effet réel sur ce que la base conserve.
+   */
   "pme.fiche.regleSaisie":
     "La saisie au clavier reste possible, mais elle est signalée : un régime tapé n'a pas la même valeur de preuve qu'un régime lu sur la carte.",
   "pme.fiche.secRegime": "Le régime",
   "pme.fiche.secSociete": "La société",
   "pme.fiche.secExercice": "L'exercice",
   "pme.fiche.secArret": "Ce que j'enregistre",
+  /**
+   * Les choix viennent du référentiel, et de nulle part ailleurs (R8).
+   */
   "pme.fiche.duReferentiel": "du référentiel",
   "pme.fiche.deuxDates": "deux dates",
   "pme.fiche.bilSur": "sur",
@@ -6738,7 +6770,7 @@ const en: Dict = {
   "pme.tva.sousGroupe": "{count} companies — each files for itself.",
   "pme.tva.sousGroupe#one": "{count} company — it files for itself.",
   "pme.tva.sousGroupe#other": "{count} companies — each files for itself.",
-  "pme.tva.aPayer": "to pay",
+  "pme.tva.aPayer": "payable",
   "pme.tva.credit": "credit carried forward",
   "pme.tva.tendance": "Comparison with the previous month: —",
   "pme.tva.detail": "The details",
@@ -6753,7 +6785,7 @@ const en: Dict = {
   "pme.tva.sansDateMeta": "in no month",
   "pme.tva.sansDateTitre": "Documents filed under no month",
   "pme.tva.parSociete": "By company",
-  "pme.tva.soldeParSociete": "Balance not served by company",
+  "pme.tva.soldeParSociete": "Balance per company not available",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -9942,31 +9974,31 @@ const ar: Dict = {
     "بعد ذلك: اختاروا باقتكم، ثم ادعوا مكتبكم — أو لا. تعمل الشركة دون وكالة: أنتم تلتقطون وتقرؤون وتصدّرون.",
   "pme.tva.barreGroupe": "الأداء على القيمة المضافة للمجموعة",
   "pme.tva.sous": "مكتبكم هو من يودع هذا التصريح.",
-  "pme.tva.sousGroupe": "{count} شركات — كل واحدة تصرّح عن نفسها.",
+  "pme.tva.sousGroupe": "عدد الشركات: {count} — كل واحدة تصرّح عن نفسها.",
   "pme.tva.sousGroupe#one": "شركة واحدة — تصرّح عن نفسها.",
-  "pme.tva.sousGroupe#other": "{count} شركات — كل واحدة تصرّح عن نفسها.",
+  "pme.tva.sousGroupe#other": "عدد الشركات: {count} — كل واحدة تصرّح عن نفسها.",
   "pme.tva.aPayer": "للدفع",
   "pme.tva.credit": "رصيد دائن مُرحَّل",
   "pme.tva.tendance": "المقارنة مع الشهر السابق: —",
   "pme.tva.detail": "التفاصيل",
   "pme.tva.parTaux": "حسب النسبة",
-  "pme.tva.col.collectee": "المحصّلة",
-  "pme.tva.col.deductible": "القابلة للخصم",
+  "pme.tva.col.collectee": "المحصَّل",
+  "pme.tva.col.deductible": "القابل للطرح",
   "pme.tva.nonRecuperable": "غير قابلة للاسترجاع",
-  "pme.tva.refusees": "{count} أسطر دون نسبة معتمدة في تاريخها",
+  "pme.tva.refusees": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.refusees#one": "سطر واحد دون نسبة معتمدة في تاريخه",
-  "pme.tva.refusees#other": "{count} أسطر دون نسبة معتمدة في تاريخها",
+  "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.ceQuiChange": "ما قد يغيّر الرقم",
   "pme.tva.sansDateMeta": "خارج أي شهر",
   "pme.tva.sansDateTitre": "وثائق غير مصنّفة في أي شهر",
   "pme.tva.parSociete": "حسب الشركة",
-  "pme.tva.soldeParSociete": "الرصيد غير الموزّع حسب الشركة",
-  "pme.fiche.barre": "بطاقتكم الجبائية",
+  "pme.tva.soldeParSociete": "الرصيد حسب الشركة غير متاح",
+  "pme.fiche.barre": "وضعيتكم الجبائية",
   "pme.fiche.secCarte": "بطاقتكم",
   "pme.fiche.cartePasLue": "لم تُقرأ بعد",
   "pme.fiche.panCarte": "صوّروا بطاقة التعريف الجبائي: أملأ ما أقرؤه فيها.",
   "pme.fiche.regleSaisie":
-    "يبقى الإدخال اليدوي ممكنًا، لكنه يُعلَّم: النظام المكتوب يدويًا لا يملك قيمة الإثبات نفسها كالنظام المقروء من البطاقة.",
+    "يبقى الإدخال اليدوي ممكنًا، لكن يُشار إليه: النظام المكتوب يدويًا لا يملك قيمة الإثبات نفسها كالنظام المقروء من البطاقة.",
   "pme.fiche.secRegime": "النظام",
   "pme.fiche.secSociete": "الشركة",
   "pme.fiche.secExercice": "السنة المحاسبية",
@@ -9975,8 +10007,8 @@ const ar: Dict = {
   "pme.fiche.deuxDates": "تاريخان",
   "pme.fiche.bilSur": "من",
   "pme.fiche.bilChamps": "حقول معبّأة.",
-  "pme.fiche.bilPremiere": "تُنشئ هذه العملية بطاقتكم الأولى بتاريخ اليوم.",
-  "pme.fiche.bilRemplace": "حفظها يُغلق البطاقة الحالية ويفتح أخرى بتاريخ اليوم.",
+  "pme.fiche.bilPremiere": "تُنشئ هذه العملية وضعيتكم الجبائية الأولى بتاريخ اليوم.",
+  "pme.fiche.bilRemplace": "حفظها يختم الوضعية الحالية ويفتح أخرى بتاريخ اليوم.",
   "pme.fiche.fixeSourceCarte": "المصدر: بطاقة مقروءة",
   "pme.fiche.fixeSourceSaisie": "المصدر: إدخال يدوي",
   "pme.notifications.sous": "كل ما يقوله لكم مكتبكم يصل إلى هنا. ما يتطلب إجراءً يظهر في الأعلى.",

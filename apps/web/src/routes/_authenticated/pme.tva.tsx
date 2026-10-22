@@ -72,7 +72,8 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
  * un formatage de locale, du même ordre que `montant()`, pas une
  * multiplication écrite ici.
  *
- * Même règle pour l'échéance de dépôt : voir `t("pme.tva.sous")`.
+ * Même règle pour l'échéance de dépôt : voir le commentaire de `pme.tva.sous`
+ * dans `packages/socle/src/messages.ts`.
  *
  * =========================================== LE BLOC D'ENCRE, ET POURQUOI IL N'Y EST PLUS
  *
@@ -176,7 +177,7 @@ function PmeTva() {
           type="button"
           className="bk"
           /*
-           * `MOTS.retour` disait « Retour » en dur, en francais seulement : en
+           * L'ancien `MOTS.retour` disait « Retour » en dur, en francais seulement : en
            * arabe et en anglais, le lecteur d'ecran annoncait « Retour ».
            * `pme.regler.retour` est la meme etiquette, traduite, et c'est
            * celle que portent les neuf autres retours du produit. Le mot en
