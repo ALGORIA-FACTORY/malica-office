@@ -90,6 +90,11 @@ jobs:
           npm run build:coque:staging --workspace @malica/web
           npm run budget --workspace @malica/web
 
+      # Règles de Google Play : la coque ne vend rien. Aucune méthode de
+      # `@malica/socle/commerce` ne doit rester dans son JavaScript.
+      - name: La coque ne vend rien
+        run: node --experimental-strip-types outils/coque-sans-commerce.mjs
+
   # L'API est vérifiée contre un PostgreSQL réel : la preuve d'isolation ne veut
   # rien dire sans RLS, et la RLS n'existe pas dans un bouchon.
   api:

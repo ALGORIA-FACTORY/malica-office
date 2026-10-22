@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { coque, estNatif, versionClient } from "@/capabilities/coque";
+import { coque, COMMERCE, versionClient } from "@/capabilities/coque";
 import {
   ARegler,
   ChangerDOffre,
@@ -16,6 +16,7 @@ import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-doss
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { usePrix } from "@/hooks/use-decimales";
+import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
@@ -105,13 +106,13 @@ function PmeReglages() {
   const { apparence, choisir } = useApparence();
   const pme = usePme();
   const aLEchelle = usePrix();
-  const commerceVisible = !estNatif();
+  const catalogue = useCatalogueDesOffres().data;
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
 
   const abo = useLAbonnement();
   const f = abo.forfait;
-  const verrous = degradation(f, t);
+  const verrous = degradation(f, t, offresQuiOuvrent(catalogue));
   const bientot = lecturesQuiSAchevent(f);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
@@ -162,14 +163,14 @@ function PmeReglages() {
       </div>
       <div className="card abo">
         <div className="nm">
-          <b>{f?.offre ? nomDeLOffre(f.offre) : ABSENT}</b>
-          {commerceVisible ? (
+          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
+          {COMMERCE ? (
             <span className="px">
               {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
             </span>
           ) : null}
         </div>
-        {commerceVisible ? (
+        {COMMERCE ? (
           <>
             <p className="ttc">{t("pme.reglages.abo.ht")}</p>
             <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
@@ -224,7 +225,7 @@ function PmeReglages() {
             <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
           ) : null}
           {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
-          {commerceVisible ? <p className="nxt">{t("pme.reglages.abo.facture")}</p> : null}
+          {COMMERCE ? <p className="nxt">{t("pme.reglages.abo.facture")}</p> : null}
         </div>
       </div>
 
@@ -234,7 +235,7 @@ function PmeReglages() {
        * direct ») : une phrase y écrasait le titre en colonne d'une lettre,
        * relevé sur l'appareil le 19 octobre. La phrase va dessous.
        */}
-      {commerceVisible ? (
+      {COMMERCE ? (
         <>
           <div className="sec">
             <h2>{t("pme.reglages.offres")}</h2>
@@ -286,7 +287,7 @@ function PmeReglages() {
               <span>{t("pme.reglages.orgs.ajouter.sous")}</span>
             </span>
           </Link>
-        ) : (
+        ) : COMMERCE ? (
           /*
            * `data-verrou` est la marque commune des cartes verrouillées : elle
            * les rend repérables d'un écran à l'autre, et c'est elle qu'une
@@ -303,7 +304,7 @@ function PmeReglages() {
               {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
             </span>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* ───────────────────────────────────────────────────── les sièges */}
@@ -332,7 +333,9 @@ function PmeReglages() {
        */}
       {verrous.sieges.ouvert ? (
         <>
-          <InviterDansMonDossier />
+          {/* Inviter peut ajouter une place payée au-delà des places incluses :
+              c'est un achat, donc sur le web et la PWA seulement (`COMMERCE`). */}
+          {COMMERCE ? <InviterDansMonDossier /> : null}
           <MesProprietaires />
         </>
       ) : null}
@@ -628,12 +631,17 @@ interface Verrou {
 function degradation(
   f: MonForfait | null,
   t: (k: MessageKey) => string,
+  ouvrent: ReturnType<typeof offresQuiOuvrent>,
 ): { sieges: Verrou; societes: Verrou } {
   const ouvertures = ouverturesDuForfait(f);
   const inconnu = f ? null : t("pme.reglages.verrou.nonLu");
   return {
-    sieges: { ouvert: ouvertures.sieges, offre: "Team", raison: inconnu },
-    societes: { ouvert: ouvertures.societes, offre: "Premium", raison: inconnu },
+    sieges: { ouvert: ouvertures.sieges, offre: ouvrent.sieges?.libelle ?? "", raison: inconnu },
+    societes: {
+      ouvert: ouvertures.societes,
+      offre: ouvrent.societes?.libelle ?? "",
+      raison: inconnu,
+    },
   };
 }
 
@@ -700,7 +708,8 @@ function Organisation({
         {t("pme.reglages.org.lectures")} <b>{nombre(org.lectures ?? undefined, locale)}</b>
       </p>
       {cabinet.data ? <LeMandat tenantId={org.tenantId} /> : null}
-      <AbonnementDeLaComptabilite tenantId={org.tenantId} />
+      {/* Accepter un abonnement est un geste d'achat : jamais dans la coque. */}
+      {COMMERCE ? <AbonnementDeLaComptabilite tenantId={org.tenantId} /> : null}
     </div>
   );
 }
@@ -714,6 +723,7 @@ function Organisation({
  */
 function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
   const { t, locale } = useI18n();
+  const catalogue = useCatalogueDesOffres().data;
   const qc = useQueryClient();
   const [retour, setRetour] = useState<string | null>(null);
   const propositions = useQuery({
@@ -750,7 +760,7 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
           <p key={a.acces_id} className="mn">
             {t("pme.abo.cabinet.couvert", {
               cabinet: a.cabinet_nom,
-              offre: nomDeLOffre(a.offre_code),
+              offre: libelleDOffre(catalogue, a.offre_code),
               date: date(a.effet_du),
             })}
           </p>
@@ -759,7 +769,7 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
             <p className="mn">
               {t("pme.abo.cabinet.propose", {
                 cabinet: a.cabinet_nom,
-                offre: nomDeLOffre(a.offre_code),
+                offre: libelleDOffre(catalogue, a.offre_code),
               })}
             </p>
             <p className="mn">{t("pme.abo.cabinet.effet")}</p>
@@ -1014,7 +1024,7 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
        * dirigeant en Basic que l'offre existe. Ouverte, l'invitation unique
        * suit, sous ce bloc.
        */}
-      {verrou.ouvert ? null : (
+      {verrou.ouvert || !COMMERCE ? null : (
         <div className="inv off" data-verrou={verrou.offre}>
           <i>
             <IcCadenas />
@@ -1345,21 +1355,6 @@ const AVERTIR_SOUS = 10;
 function lecturesQuiSAchevent(f: MonForfait | null): number | null {
   const reste = entier(f?.lectures_restantes);
   return reste !== null && reste <= AVERTIR_SOUS ? reste : null;
-}
-
-/**
- * Le nom de l'offre, à partir de son code.
- *
- * Quatre codes, quatre noms commerciaux — et rien d'autre : un code inconnu
- * s'affiche tel quel plutôt que traduit de travers. Ces noms ne sont pas des
- * clés i18n : ils ne se traduisent pas, c'est la grille tarifaire.
- */
-function nomDeLOffre(code: string): string {
-  if (code === "basic") return "Basic";
-  if (code === "solo") return "Solo";
-  if (code === "team") return "Team";
-  if (code === "premium") return "Premium";
-  return code;
 }
 
 /** L'initiale de l'avatar — dérivée du nom ou de l'adresse, faute de mieux. */

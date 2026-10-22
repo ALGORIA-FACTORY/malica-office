@@ -54,7 +54,13 @@ export function vientDeNous(raison: unknown): raison is Error {
  * ce qui permet, en lisant le journal, de savoir quel geste l'a produite.
  */
 export function texteDeLErreur(raison: unknown, ou: string, defaut: string): string {
-  if (vientDeNous(raison)) return raison.message;
+  if (vientDeNous(raison)) {
+    // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
+    // transmission ») plutôt qu'une phrase française : on la dit dans la
+    // langue de la personne.
+    const dict = MESSAGES[localeRangee()] as Record<string, string>;
+    return dict[raison.message] ?? raison.message;
+  }
   // Pas de réseau n'est pas une panne : on le dit, sans l'inscrire au journal —
   // le journal ne dirait rien qu'on ne sache déjà.
   if (raison instanceof ErreurReseau) return MESSAGES[localeRangee()]["common.horsLigne"];

@@ -20,7 +20,21 @@
  * import différé, au moment où l'on en a besoin, et jamais dans un navigateur.
  */
 
-export const CIBLE_COQUE = import.meta.env["VITE_CIBLE"] === "coque";
+// Forme pointée : Vite la remplace à la compilation (`src/env.d.ts`).
+export const CIBLE_COQUE = import.meta.env.VITE_CIBLE === "coque";
+
+/**
+ * LE COMMERCE — le seul interrupteur de tout ce qui vend.
+ *
+ * Prix, offres, recharges, paiement, acceptation d'un abonnement proposé :
+ * rien de cela n'entre dans le bundle de la coque (règles de Google Play sur
+ * les biens numériques — décision du 22 octobre 2026). C'est une constante de
+ * COMPILATION, pas un test d'exécution : le tree-shaking retire la branche du
+ * paquet, et la CI vérifie que le bundle de la coque n'en garde aucune trace
+ * (`outils/coque-sans-commerce.mjs`). Le serveur tient la même règle pour une
+ * coque qui l'oublierait (`METHODES_COMMERCIALES`, `@malica/socle/commerce`).
+ */
+export const COMMERCE = !CIBLE_COQUE;
 
 /** Vrai dans la coque iOS ou Android ; faux dans un navigateur. */
 export function estNatif(): boolean {

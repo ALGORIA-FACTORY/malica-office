@@ -14,9 +14,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { estNatif } from "@/capabilities/coque";
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
+import {
+  libelleDOffre,
+  offreQuiPermetDeRecharger,
+  useCatalogueDesOffres,
+} from "@/hooks/use-offres";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -73,10 +77,6 @@ function refus(e: unknown, t: (k: MessageKey) => string): string {
   if (annuel && FERMETURES[annuel[1]!]) return t(FERMETURES[annuel[1]!]!);
   if (/offre_sans_recharge/.test(message)) return t("pme.reglages.recharges.verrou");
   return texteDeLErreur(e, OU, t("common.error"));
-}
-
-function nomDeLOffre(code: string): string {
-  return code.charAt(0).toUpperCase() + code.slice(1);
 }
 
 /** Le propriétaire principal : celui à qui la base rend le prix de la licence. */
@@ -161,6 +161,7 @@ export function MonNom() {
 /* --------------------------------------------------------------- l'offre */
 
 export function ChangerDOffre() {
+  const catalogue = useCatalogueDesOffres().data;
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
@@ -182,8 +183,8 @@ export function ChangerDOffre() {
       // Une montée mène au paiement : le bloc « À régler » apparaît juste dessous.
       setRetour(
         r.paiement
-          ? t("pme.reglages.offres.aRegler", { offre: nomDeLOffre(code) })
-          : t("pme.reglages.offres.fait", { offre: nomDeLOffre(code) }),
+          ? t("pme.reglages.offres.aRegler", { offre: libelleDOffre(catalogue, code) })
+          : t("pme.reglages.offres.fait", { offre: libelleDOffre(catalogue, code) }),
       );
       await invalider();
     },
@@ -282,6 +283,7 @@ export function ChangerDOffre() {
  * s'il y en a un, apparaît dans « À régler », juste dessous.
  */
 export function PayerALAnnee() {
+  const catalogue = useCatalogueDesOffres().data;
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
@@ -323,7 +325,7 @@ export function PayerALAnnee() {
         </div>
         <p className="t-body">
           {t("pme.reglages.annuel.enCours.sous", {
-            offre: nomDeLOffre(a.en_cours.offre),
+            offre: libelleDOffre(catalogue, a.en_cours.offre),
             du: date(a.en_cours.du),
             au: date(a.en_cours.au),
             offerts: a.en_cours.mois_offerts,
@@ -345,7 +347,7 @@ export function PayerALAnnee() {
       </div>
       <p className="t-body">
         {t("pme.reglages.annuel.detail", {
-          offre: nomDeLOffre(p.offre),
+          offre: libelleDOffre(catalogue, p.offre),
           prix: p.prix_mensuel_ht,
           payes: 12 - p.mois_offerts,
           offerts: p.mois_offerts,
@@ -387,6 +389,7 @@ export function PayerALAnnee() {
 /* ----------------------------------------------------------- les recharges */
 
 export function MesRecharges() {
+  const catalogue = useCatalogueDesOffres().data;
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
@@ -460,10 +463,11 @@ export function MesRecharges() {
       : (code ?? "");
   const champ = "h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]";
 
-  // Le Basic n'en prend pas : la carte reste visible, verrouillée, et dit dès quand.
-  if (offre === "basic") {
+  // Une offre sans recharge (`ref.offres.recharges_permises`) : la carte reste
+  // visible, verrouillée, et nomme l'offre qui les ouvre.
+  if (catalogue && offre && catalogue.find((o) => o.code === offre)?.recharges_permises === false) {
     return (
-      <div className="inv off" data-verrou="Solo">
+      <div className="inv off" data-verrou={offreQuiPermetDeRecharger(catalogue, offre)?.libelle}>
         <span className="bd">
           <b>{t("pme.reglages.recharges")}</b>
           <span>{t("pme.reglages.recharges.verrou")}</span>
@@ -791,20 +795,15 @@ export function ARegler() {
             </>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
-              {/* Le paiement en ligne se fait sur le web et la PWA, jamais dans
-                  l'application installée depuis un store (20 octobre 2026). */}
-              {estNatif() ? (
-                <p className="t-body">{t("pme.reglages.paiement.parLeNavigateur")}</p>
-              ) : (
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={payer.isPending}
-                  onClick={() => payer.mutate(p.paiement_id)}
-                >
-                  {t("pme.reglages.paiement.payer")}
-                </button>
-              )}
+              {/* Ce bloc n'existe que sur le web et la PWA (`COMMERCE`). */}
+              <button
+                type="button"
+                className="btn"
+                disabled={payer.isPending}
+                onClick={() => payer.mutate(p.paiement_id)}
+              >
+                {t("pme.reglages.paiement.payer")}
+              </button>
               {p.etat === "lien_cree" ? (
                 <button
                   type="button"
