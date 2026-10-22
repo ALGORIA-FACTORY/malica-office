@@ -8,7 +8,7 @@ import { Link } from "@tanstack/react-router";
 
 import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
-import malica from "@/assets/malica.jpeg";
+import malica from "@/assets/malica.webp";
 import { cn } from "@/lib/utils";
 
 export type Tone = "ok" | "warn" | "stop" | "neutral";

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import portraitMalica from "@/assets/malica.jpeg";
+import portraitMalica from "@/assets/malica.webp";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { CompteurQuiRoule } from "@/components/malica/compteur-qui-roule";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
@@ -501,8 +501,8 @@ function PmeHome() {
         <div className="hero">
           <span className="amb" aria-hidden="true" />
           {/*
-           * Le portrait du dessin — `malica.jpeg`, cadré par le CSS en
-           * `50% 34%`. Ce n'est pas `MalicaAvatar` : son cadrage `center 18%` et
+           * Le portrait du dessin — `malica.webp`, cadré par le CSS en
+           * `50% 18%`. Ce n'est pas `MalicaAvatar` : son cadrage `center 18%` et
            * son cercle de marigold appartiennent à l'ancien en-tête.
            */}
           <span className="por">
