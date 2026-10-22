@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useId, useState } from "react";
 
-import portraitMalica from "@/assets/malica.jpeg";
+import portraitMalica from "@/assets/malica.webp";
 import { files } from "@/capabilities/files";
 import { usePme } from "@/components/malica/pme-context";
 import { useSuperposition } from "@/hooks/use-superposition";

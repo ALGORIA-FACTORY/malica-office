@@ -16,7 +16,7 @@ import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
-import portraitMalica from "@/assets/malica.jpeg";
+import portraitMalica from "@/assets/malica.webp";
 import {
   libelleDuChamp,
   libelleDuRefus,

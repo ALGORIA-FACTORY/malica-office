@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import portraitMalica from "@/assets/malica.jpeg";
+import portraitMalica from "@/assets/malica.webp";
 import { marquerBienvenueVue } from "@/components/malica/bienvenue";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
