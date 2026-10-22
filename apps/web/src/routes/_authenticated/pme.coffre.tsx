@@ -33,60 +33,6 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
 
 const OU = "routes/_authenticated/pme.coffre";
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Le dessin apporte du texte que le dictionnaire ne porte pas. Il est ici, en
- * un seul endroit, en français seulement — à vider dans `packages/socle/src/
- * messages.ts`, clés proposées `pme.prive.*`, dès que les trois langues
- * peuvent être écrites ensemble.
- *
- * Tout le reste de l'écran lit `t()`. Les clés `pme.prive.sous`,
- * `pme.prive.vide`, `pme.prive.transmettre`, `pme.coffre.wall`,
- * `pme.coffre.votreComptable`, `pme.nav.coffre`, `pme.list.*` et
- * `pme.status.*` existent en FR/EN/AR et ne sont PAS réécrites : une phrase
- * du dessin qui dit la même chose qu'une clé traduite ne vaut pas la perte
- * de deux langues.
- *
- * ================================= TROIS PHRASES DU DESSIN NE SONT PAS ÉCRITES
- *
- * Elles ne sont pas vraies de ce produit, et le dessin ne fait pas foi contre
- * le câblage :
- *
- * - `.sub` « Attaché à votre compte, pas à la société. Il vous suit si vous
- *   la quittez. » — faux : la liste est lue par `listAvecLecture(tenantId)`,
- *   donc attachée au DOSSIER. `t("pme.prive.sous")` dit ce qui est vrai.
- * - `.mur` « …et il n'y a aucun bouton pour transmettre. » — faux : le bouton
- *   de transmission est le seul geste de cet écran, et il reste.
- *   `t("pme.coffre.wall")` dit la cloison telle que la base la tient.
- * - `.sec` « dans les deux sens » — faux depuis le 11 octobre 2026 : le geste
- *   ne va QUE de `personnel` vers `partage`. Le compte des cartes prend la
- *   place de la note.
- */
-const MOTS = {
-  /** Le grand titre du dessin. La barre du haut garde `pme.nav.coffre`. */
-  titre: "Vos papiers",
-  /** Les deux sections du dessin. */
-  vosDocuments: "Vos documents",
-  bouger: "Ce qui peut encore bouger",
-  /**
-   * Le dessin écrit « …ou la supprimer sans demander à personne ».
-   * `capture.supprimer` est au contrat mais cet écran ne l'appelle pas :
-   * ajouter un geste est du recâblage, pas de l'habillage. La phrase s'arrête
-   * donc à ce que l'écran fait.
-   */
-  libre:
-    "Vous l'avez mise ici après l'avoir capturée. Elle n'est jamais partie au cabinet : vous pouvez encore la remettre dans la bibliothèque.",
-  /**
-   * Le dessin écrit « sa sortie passe par une demande ». Aucune méthode ne
-   * porte cette demande — `collab.demanderSurPiece` est une question sur une
-   * pièce, pas une demande de retrait. La phrase garde ce qui est tenu :
-   * l'accord du cabinet, et le journal.
-   */
-  pied: "Une pièce transmise ne revient pas en silence : son retour demande l'accord de votre cabinet, et chaque passage s'inscrit au journal.",
-} as const;
-
 /**
  * Mon espace — ce que vous gardez pour vous.
  *
@@ -299,7 +245,7 @@ function PmeCoffre() {
       </div>
 
       <div className="pad">
-        <h1>{MOTS.titre}</h1>
+        <h1>{t("pme.coffre.titre")}</h1>
         <p className="sub">{t("pme.prive.sous")}</p>
 
         {/* Le mur. Il n'est pas décoratif : c'est la seule chose que le
@@ -348,7 +294,7 @@ function PmeCoffre() {
             {posees.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{MOTS.vosDocuments}</h2>
+                  <h2>{t("pme.doc.titre")}</h2>
                   <span>{posees.length}</span>
                 </div>
 
@@ -392,7 +338,7 @@ function PmeCoffre() {
             {bougent.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{MOTS.bouger}</h2>
+                  <h2>{t("pme.coffre.bouger")}</h2>
                   <span>{bougent.length}</span>
                 </div>
 
@@ -403,7 +349,7 @@ function PmeCoffre() {
                       {somme(p) === "" ? null : <span>{somme(p)}</span>}
                     </div>
 
-                    <p>{MOTS.libre}</p>
+                    <p>{t("pme.coffre.libre")}</p>
 
                     {/*
                      * Au coffre, toute pièce est `personnel` — donc tout refus
@@ -435,7 +381,7 @@ function PmeCoffre() {
               </>
             ) : null}
 
-            <p className="foot">{MOTS.pied}</p>
+            <p className="foot">{t("pme.coffre.pied")}</p>
           </>
         )}
       </div>
