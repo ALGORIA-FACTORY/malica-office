@@ -64,3 +64,17 @@ Pour la suite : recetter la 0.2.65 déployée, puis traiter les points restants 
 l'audit par parcours, avec reproduction et conservation des preuves. Les
 écritures libres envoyées par le client nécessitent une décision de droits et
 une recette API ; elles ne sont pas fermées par une modification d'affichage.
+
+## Reprise après revue — 22 octobre 2026
+
+Deux régressions P2 de la PR #53 corrigées avant fusion :
+
+- Le constat explicite `non_paye` avec montant nul vaut zéro payé, conformément
+  au contrat existant. Un autre règlement sans montant reste indéterminé ; les
+  lignes éteintes sont exclues et les sommes hors précision entière sont refusées.
+- Une capture privée dans la file locale empêche l'annonce contradictoire
+  d'un coffre vide, même si la liste serveur est vide.
+
+Preuves locales : cinq cas sur le total des règlements et deux rendus du coffre,
+avec reproduction du message vide avant correction. Suite web complète réussie
+(576 tests). La CI complète doit confirmer cette nouvelle révision avant fusion.

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { totalDesPaiements } from "@/lib/total-des-paiements";
+
 import { SoldeDePiece } from "@/components/malica/solde-de-piece";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
@@ -1200,11 +1202,7 @@ function PieceScreen() {
    * le montant payé (R4).
    */
   const paiementsVivants = (paiements.data ?? []).filter((p) => !p.eteint);
-  const reglementsConnus =
-    paiements.isSuccess && paiementsVivants.every((p) => Number.isSafeInteger(p.montantMineur));
-  const payeMineur = reglementsConnus
-    ? paiementsVivants.reduce((s, p) => s + p.montantMineur!, 0)
-    : null;
+  const payeMineur = paiements.isSuccess ? totalDesPaiements(paiements.data) : null;
   const ttcMineur =
     payload?.totals?.ttc && decimales !== null
       ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)

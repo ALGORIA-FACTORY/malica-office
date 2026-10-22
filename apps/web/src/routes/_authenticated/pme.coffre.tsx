@@ -337,7 +337,8 @@ function PmeCoffre() {
 
         {pieces.isPending && pieces.fetchStatus !== "paused" ? (
           <p className="foot">{t("common.loading")}</p>
-        ) : !pieces.isSuccess && pieces.data === undefined ? null : visibles.length === 0 ? (
+        ) : !pieces.isSuccess && pieces.data === undefined ? null : visibles.length === 0 &&
+          !pme.file.elements.some((e) => e.vis === "personnel") ? (
           <div className="card">
             <p>{t("pme.prive.vide")}</p>
           </div>
