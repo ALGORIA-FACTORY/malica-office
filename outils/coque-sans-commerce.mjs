@@ -13,7 +13,7 @@
  * bundle de la coque : une branche que le tree-shaking n'aurait pas retirée
  * se voit ici, avant Play.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { METHODES_COMMERCIALES } from "../packages/socle/src/commerce.ts";
@@ -50,6 +50,11 @@ for (const f of fichiers) {
   for (const [m, motif] of motifs) {
     if (motif.test(code)) fautes.push(`${relative(PUBLIC, f)} : ${m}`);
   }
+}
+
+// Les logos des moyens de paiement ne servent que la page de choix du web.
+if (existsSync(join(PUBLIC, "paiement"))) {
+  fautes.push("paiement/ : les logos des moyens de paiement (vite.config.ts les retire)");
 }
 
 if (fautes.length > 0) {

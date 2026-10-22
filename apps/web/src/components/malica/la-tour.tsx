@@ -624,14 +624,19 @@ function useRetour() {
 /* ------------------------------------------------------------- le paiement */
 
 function ReglerLePaiement() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const qc = useQueryClient();
   const { retour, setRetour, echec } = useRetour();
   const reglage = useQuery({
     queryKey: ["tour-paiement"],
     queryFn: () => office().tour.reglagePaiement(),
   });
-  const [prestataire, setPrestataire] = useState<"aucun" | "simulateur" | "clictopay">("aucun");
+  // Les prestataires, leur nom et ce qu'ils demandent : la table, pas l'écran.
+  const prestataires = useQuery({
+    queryKey: ["tour-prestataires", locale],
+    queryFn: () => office().tour.prestatairesDePaiement(locale),
+  });
+  const [prestataire, setPrestataire] = useState("");
   const [urlApi, setUrlApi] = useState("");
   const [urlRetour, setUrlRetour] = useState("");
   const [motif, setMotif] = useState("");
@@ -655,38 +660,39 @@ function ReglerLePaiement() {
     onError: echec,
   });
 
-  const libelle: Record<string, MessageKey> = {
-    aucun: "tour.paiement.aucun",
-    simulateur: "tour.paiement.simulateur",
-    clictopay: "tour.paiement.clictopay",
-  };
+  const choisi = prestataires.data?.find((p) => p.code === prestataire) ?? null;
+  const libelleDe = (code: string) =>
+    prestataires.data?.find((p) => p.code === code)?.libelle ?? code;
 
   return (
     <div className={CARTE}>
       <h2 className={TITRE}>{t("tour.paiement")}</h2>
       {reglage.data ? (
         <p className={TEXTE}>
-          {t("tour.paiement.actuel", { prestataire: t(libelle[reglage.data.prestataire]!) })}
-          {" — "}
-          {reglage.data.secrets_clictopay
-            ? t("tour.paiement.secretsOui")
-            : t("tour.paiement.secretsNon")}
+          {t("tour.paiement.actuel", { prestataire: libelleDe(reglage.data.prestataire) })}
+          {reglage.data.secrets_poses === null
+            ? null
+            : ` — ${
+                reglage.data.secrets_poses
+                  ? t("tour.paiement.secretsOui")
+                  : t("tour.paiement.secretsNon")
+              }`}
         </p>
       ) : null}
       <div className="mt-2 flex flex-col gap-2">
         <select
           value={prestataire}
-          onChange={(e) => setPrestataire(e.target.value as typeof prestataire)}
+          onChange={(e) => setPrestataire(e.target.value)}
           aria-label={t("tour.paiement.prestataire")}
           className={CHAMP}
         >
-          {(["aucun", "simulateur", "clictopay"] as const).map((p) => (
-            <option key={p} value={p}>
-              {t(libelle[p]!)}
+          {(prestataires.data ?? []).map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.libelle}
             </option>
           ))}
         </select>
-        {prestataire === "clictopay" ? (
+        {choisi?.exige_url_api ? (
           <input
             value={urlApi}
             onChange={(e) => setUrlApi(e.target.value)}
@@ -695,7 +701,7 @@ function ReglerLePaiement() {
             className={CHAMP}
           />
         ) : null}
-        {prestataire !== "aucun" ? (
+        {choisi?.ouvre_le_paiement ? (
           <input
             value={urlRetour}
             onChange={(e) => setUrlRetour(e.target.value)}

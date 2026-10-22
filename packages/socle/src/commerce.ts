@@ -17,6 +17,7 @@ export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "changerForfait",
   "mesPaiements",
   "payerEnLigne",
+  "moyensDePaiementEnLigne",
   "verifierPaiement",
   "simulerPaiement",
   "paliersDeRecharge",

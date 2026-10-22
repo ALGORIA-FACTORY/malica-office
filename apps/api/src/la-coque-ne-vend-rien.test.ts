@@ -26,6 +26,15 @@ describe("la liste des méthodes commerciales", () => {
     assert.deepEqual(inconnues, []);
   });
 
+  it("ne nomme rien qu'un autre dépôt porte aussi : la garde du bundle cherche ces noms seuls", () => {
+    const ailleurs = Object.entries(contrat)
+      .filter(([depot]) => depot !== "facturation")
+      .flatMap(([depot, methodes]) =>
+        methodes.filter((m) => METHODES_COMMERCIALES.has(m)).map((m) => `${depot}.${m}`),
+      );
+    assert.deepEqual(ailleurs, []);
+  });
+
   it("laisse à la coque ce qui ne vend rien : le forfait et le nom des offres", () => {
     for (const m of ["monForfait", "catalogueDesOffres", "libellesDesStatuts", "sieges"]) {
       assert.equal(METHODES_COMMERCIALES.has(m), false, m);

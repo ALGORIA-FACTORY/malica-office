@@ -2626,7 +2626,10 @@ export interface FacturationRepository {
   /** `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte. */
   payerEnLigne(
     paiementId: string,
+    moyen: string,
   ): Promise<{ ouvert: boolean; lien: string | null; paiement: PaiementEnLigne }>;
+  /** La page de choix : les moyens, leur logo, et s'ils sont payables ici. */
+  moyensDePaiementEnLigne(locale: string): Promise<MoyensDePaiement>;
   /** Le prestataire est interrogé ; ce que dit le navigateur ne compte pas. */
   verifierPaiement(paiementId: string): Promise<PaiementEnLigne>;
   /** Le simulateur du staging seulement ; refusé partout ailleurs. */
@@ -2854,6 +2857,32 @@ export interface PaiementEnLigne {
   cree_le: string;
 }
 
+/** Un moyen de paiement en ligne (`facturation.moyens_paiement_v`), nommé dans la langue demandée. */
+export interface MoyenDePaiement {
+  code: string;
+  libelle: string;
+  /** Chemin d'une image servie par le site (`/paiement/…`). */
+  logo: string;
+  rang: number;
+  actif: boolean;
+  /** Accepté par le prestataire en service : payable ici s'il est aussi actif. */
+  accepte: boolean;
+}
+
+export interface MoyensDePaiement {
+  /** `null` : le paiement en ligne est fermé dans cet environnement. */
+  prestataire: { code: string; libelle: string; logo: string | null } | null;
+  moyens: MoyenDePaiement[];
+}
+
+/** Un prestataire parmi lesquels la tour choisit (`facturation.prestataires_paiement`). */
+export interface PrestataireDePaiement {
+  code: string;
+  libelle: string;
+  ouvre_le_paiement: boolean;
+  exige_url_api: boolean;
+}
+
 /* ============================================================================
  * La tour — ce qu'un opérateur d'ALGORIA règle sans passer par le serveur.
  * Chaque méthode est refusée par la base à qui n'est pas opérateur.
@@ -2877,12 +2906,15 @@ export interface GrilleProposee {
 }
 
 export interface ReglagePaiementDeLaTour {
-  prestataire: "aucun" | "simulateur" | "clictopay";
+  prestataire: string;
   url_api: string | null;
   url_retour: string | null;
   decide_le: string | null;
-  /** Les secrets du compte marchand sont-ils posés sur le serveur ? Jamais leur valeur. */
-  secrets_clictopay: boolean;
+  /**
+   * Les secrets du compte marchand de ce prestataire sont-ils posés sur le
+   * serveur ? Jamais leur valeur. `null` : ce prestataire n'en demande pas.
+   */
+  secrets_poses: boolean | null;
 }
 
 export interface OrganisationEmettrice {
@@ -2925,8 +2957,9 @@ export interface TourRepository {
   ): Promise<unknown>;
   licences(): Promise<LicenceVueDeLaTour[]>;
   reglagePaiement(): Promise<ReglagePaiementDeLaTour>;
+  prestatairesDePaiement(locale: string): Promise<PrestataireDePaiement[]>;
   reglerPaiement(
-    prestataire: "aucun" | "simulateur" | "clictopay",
+    prestataire: string,
     urlApi: string | null,
     urlRetour: string | null,
     motif: string,
