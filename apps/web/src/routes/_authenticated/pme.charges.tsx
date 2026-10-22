@@ -37,57 +37,6 @@ export const Route = createFileRoute("/_authenticated/pme/charges")({
 
 const THRESHOLD_CODE = "FAMILLE_CONSO";
 
-/*
- * ===================================================== LES CHAÎNES EN DUR, NOMMÉES
- *
- * Le dessin dit huit choses que le dictionnaire ne dit pas encore. Elles
- * vivent ICI, dans un seul bloc, et nulle part ailleurs dans le fichier —
- * c'est une dette, elle est donc visible et dénombrable. Le jour où elles
- * entrent dans `packages/socle/src/messages.ts`, ce bloc disparaît d'un seul
- * geste et chaque appel devient un `t()`.
- *
- * Ce qui N'EST PAS ici, et pourquoi :
- *
- *   « Vos charges »        → `pme.charges.title`
- *   « Total des charges »  → `pme.charges.total`
- *   « Par famille »        → `pme.charges.byFamille` — le dessin écrit « Par
- *                            classe ». Deux mots pour une seule chose : le
- *                            dictionnaire tranche, et la divergence est
- *                            signalée plutôt que dupliquée.
- *   « Retour »             → `pme.regler.retour`
- *   « {n} lignes »         → `pme.detail.compte` (avec son pluriel)
- *   « Qté … · PU … »       → `pme.detail.qte`, `pme.detail.pu`
- *   la phrase de pied      → `pme.charges.disclaimer`
- *   « Team », « Premium »  → des NOMS d'offre. Un nom d'offre ne se traduit pas.
- */
-const CHAINES = {
-  /** Le compte à droite du titre « Par famille ». */
-  classes: (n: number) => `${n} ${n > 1 ? "CLASSES" : "CLASSE"}`,
-  /** Sous le total : ce qui compose le mois. */
-  repartition: (pieces: number, classes: number) =>
-    `${pieces} ${pieces > 1 ? "pièces" : "pièce"} · ${classes} ${classes > 1 ? "classes" : "classe"}`,
-  /** Sous le montant d'une classe ouverte : son poids dans le mois. */
-  partDesCharges: (pieces: number, part: string) =>
-    `${pieces} ${pieces > 1 ? "pièces" : "pièce"} · ${part} des charges`,
-  /** Le total d'une classe ouverte. */
-  totalDe: (famille: string) => `Total ${famille}`,
-  /** Le titre de la liste des lignes d'une classe. */
-  lesPieces: "Les pièces",
-  /**
-   * Le plafond de lectures. Il dit un fait de la base — ce qui reste, sur
-   * combien — et la conséquence, qui est la seule raison de l'écrire sur CET
-   * écran : au-delà du plafond, le total affiché juste au-dessus est faux par
-   * défaut.
-   */
-  plafond: (reste: number, droit: number, mois: string) =>
-    `Il vous reste ${reste} ${reste > 1 ? "lectures" : "lecture"} sur ${droit} ce mois. Au-delà, vos charges ${mois} seront incomplètes.`,
-  /** Les deux cartes de ce que le palier suivant ouvrirait. */
-  siegesTitre: "Par siège",
-  siegesSous: "Qui a engagé quoi, dans votre équipe",
-  groupeTitre: "Le groupe",
-  groupeSous: "Les charges consolidées de vos sociétés",
-} as const;
-
 /**
  * « Vos charges » — le dessin validé (`livraison/ecrans/malica-charges.html`,
  * premier bloc `.app`, `data-scr="b-classes"`, et son détail `b-four`), porté
@@ -417,10 +366,10 @@ function ChargesScreen() {
              */}
             <div className="mta">
               {ouverte
-                ? CHAINES.partDesCharges(
-                    new Set(lignesOuvertes.map((a) => a.pieceId)).size,
-                    part(ouverte.share),
-                  )
+                ? t("pme.charges.partDesCharges", {
+                    count: new Set(lignesOuvertes.map((a) => a.pieceId)).size,
+                    part: part(ouverte.share),
+                  })
                 : t("pme.charges.empty")}
             </div>
           </div>
@@ -428,7 +377,7 @@ function ChargesScreen() {
           {classeurDesMois}
 
           <div className="sec">
-            <h2>{CHAINES.lesPieces}</h2>
+            <h2>{t("pme.charges.lesPieces")}</h2>
             <span>{t("pme.detail.compte", { count: lignesOuvertes.length })}</span>
           </div>
 
@@ -476,7 +425,7 @@ function ChargesScreen() {
 
           {ouverte ? (
             <div className="tot">
-              <b>{CHAINES.totalDe(libelleOuverte)}</b>
+              <b>{t("pme.charges.totalDe", { famille: libelleOuverte })}</b>
               <span>{montant(ouverte.total, locale)}</span>
               <u>{pme.currency}</u>
             </div>
@@ -529,7 +478,7 @@ function ChargesScreen() {
             </div>
           ) : null}
 
-          <div className="mta">{CHAINES.repartition(piecesDuMois, familles.length)}</div>
+          <div className="mta">{`${t("pme.doc.compte", { count: piecesDuMois })} · ${t("pme.charges.nbClasses", { count: familles.length })}`}</div>
         </div>
 
         {/* ── le plafond de lectures ─────────────────────────────────────── */}
@@ -537,16 +486,16 @@ function ChargesScreen() {
           <div className="ceil">
             <i />
             <p>
-              {CHAINES.plafond(
-                lecturesRestantes,
-                lecturesDroit,
-                deMois(
+              {t("pme.charges.plafond", {
+                count: lecturesRestantes,
+                droit: lecturesDroit,
+                mois: deMois(
                   new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
                     new Date(`${period}-01T00:00:00Z`),
                   ),
                   locale,
                 ),
-              )}
+              })}
             </p>
           </div>
         ) : null}
@@ -556,7 +505,7 @@ function ChargesScreen() {
         {/* ── par classe ─────────────────────────────────────────────────── */}
         <div className="sec">
           <h2>{t("pme.charges.byFamille")}</h2>
-          <span>{CHAINES.classes(familles.length)}</span>
+          <span>{t("pme.charges.classes", { count: familles.length })}</span>
         </div>
 
         {familles.length > 0 ? (
@@ -711,16 +660,17 @@ function ChargesScreen() {
             {!pme.forfait.ouvertures.sieges ? (
               <div className="lock">
                 <IconeSieges />
-                <b>{CHAINES.siegesTitre}</b>
-                <span>{CHAINES.siegesSous}</span>
+                <b>{t("pme.charges.siegesTitre")}</b>
+                <span>{t("pme.charges.siegesSous")}</span>
                 <em>Team</em>
+                {/* nom d'offre : ne se traduit pas */}
               </div>
             ) : null}
             {!pme.forfait.ouvertures.societes ? (
               <div className="lock">
                 <IconeSocietes />
-                <b>{CHAINES.groupeTitre}</b>
-                <span>{CHAINES.groupeSous}</span>
+                <b>{t("pme.charges.groupeTitre")}</b>
+                <span>{t("pme.charges.groupeSous")}</span>
                 <em>Premium</em>
               </div>
             ) : null}
