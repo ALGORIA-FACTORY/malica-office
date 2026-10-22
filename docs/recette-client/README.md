@@ -44,6 +44,9 @@ arbitrée explicitement ; on ne l'efface pas de la couverture pour obtenir un GO
 - Tests navigateur : sélecteurs de fichiers réels (types, multi-sélection,
   annulation), faux PDF refusé, retour à l'accueil, ouverture des routes
   PME/comptabilité à 390 et 1440 px et absence de débordement de page.
+- La TVA nulle et la TVA inconnue sont distinguées d'un crédit, sur l'accueil
+  et le détail ; une TVA collectée nulle ne remplit plus sa barre. Aucun
+  montant du moteur n'est recalculé.
 - Le flux Android d'abandon du scanner suit désormais les deux étapes
   Ajouter une pièce puis Photographier. La CI Android est aussi déclenchée
   sur les PR qui modifient ce parcours, au lieu d'attendre la nuit.

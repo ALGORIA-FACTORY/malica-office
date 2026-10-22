@@ -726,7 +726,7 @@ function PmeCapturer() {
 
       <div className="pad">
         {(erreur ?? pme.captureError) ? (
-          <div className="flag">
+          <div className="flag" role="alert">
             <i />
             <span>{erreur ?? pme.captureError}</span>
           </div>
