@@ -3551,6 +3551,11 @@ const fr = {
   "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
   "pme.malica.pied":
     "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
+  "maj.titre": "Une mise à jour est nécessaire.",
+  "maj.corps":
+    "Cette version de l'application ne peut plus parler au service. Mettez-la à jour pour continuer.",
+  "maj.version": "Version minimale : {version}",
+  "maj.bouton": "Mettre à jour",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -6911,6 +6916,10 @@ const en: Dict = {
   "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
   "pme.malica.pied":
     "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
+  "maj.titre": "An update is required.",
+  "maj.corps": "This version of the app can no longer talk to the service. Update it to continue.",
+  "maj.version": "Minimum version: {version}",
+  "maj.bouton": "Update",
 };
 
 const ar: Dict = {
@@ -10164,6 +10173,10 @@ const ar: Dict = {
   "pme.malica.retenue": "أُرسلت للمراجعة — هذا الرأي له أثر على ملفكم",
   "pme.malica.pied":
     "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
+  "maj.titre": "يلزم تحديث التطبيق.",
+  "maj.corps": "لم يعد هذا الإصدار من التطبيق قادرًا على التواصل مع الخدمة. حدّثه للمتابعة.",
+  "maj.version": "الإصدار الأدنى: {version}",
+  "maj.bouton": "تحديث",
 };
 
 export type MessageKey = keyof typeof fr;

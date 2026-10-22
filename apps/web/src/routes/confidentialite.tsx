@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
  * et que la convention de pilote cite.
  *
  * Elle dit ce que l'application collecte, pourquoi, chez qui cela passe et
- * combien de temps cela reste. En français et en arabe sur la même page :
+ * combien de temps cela reste. En français, en arabe et en anglais sur la même page :
  * une adresse unique, lisible par tous ceux à qui elle s'adresse. Elle ne
  * promet rien que le code ne tienne : les sous-traitants nommés sont ceux de
  * `infra/`, les durées celles de R7 et de la loi.
@@ -300,6 +300,140 @@ function Confidentialite() {
               <strong>ما يُحتفظ به</strong>: الوثائق المحاسبية وقيود المؤسسة، التي يُلزم القانون
               بأرشفتها عشر سنوات؛ تبقى باسم المؤسسة دون ارتباط بحسابك. يمكنك أيضًا طلب حذف جزء من
               بياناتك فقط: اذكر ذلك في رسالتك.
+            </p>
+          </Section>
+        </article>
+        <hr className="my-12 border-border" />
+
+        {/*
+         * La version anglaise suit le texte français, qui fait foi. Traduction
+         * à faire valider avant de la citer dans un contrat.
+         */}
+        <article lang="en" className="space-y-6 text-[15px] leading-relaxed">
+          <h1 className="text-3xl font-semibold tracking-tight">Privacy policy</h1>
+          <p>
+            Malica Office is an accounting application for small and medium-sized businesses, kept
+            together with their accounting firm. It is published by <strong>Algoria Factory</strong>{" "}
+            (Tunisia). This page states what the application collects, why, who processes the data,
+            and how long it is kept. The French version above prevails.
+          </p>
+
+          <Section titre="What we collect">
+            <ul className="list-disc space-y-2 ps-6">
+              <li>
+                <strong>Your account</strong>: email address, display name, password (hashed, never
+                readable), and the organisations you belong to.
+              </li>
+              <li>
+                <strong>Your documents</strong>: the invoices, tickets, receipts and documents you
+                photograph or upload, with what the application reads from them (amounts, dates,
+                issuer, lines) and the accounting entries that follow from them.
+              </li>
+              <li>
+                <strong>Your conversations</strong>: the questions you ask Malica about your file,
+                the answers, and your messages with your firm.
+              </li>
+              <li>
+                <strong>Operation</strong>: the reports you send from the settings (screen, version,
+                device) and, when telemetry is enabled, crash reports — with no document content and
+                no IP address.
+              </li>
+            </ul>
+            <p>
+              The application uses the <strong>camera</strong> to photograph your documents, and the{" "}
+              <strong>device storage</strong> to keep your pending photos when the network is
+              unavailable. It does not access your contacts, your location or your other files.
+            </p>
+          </Section>
+
+          <Section titre="Why">
+            <p>
+              To keep your accounts: read your documents, propose the entries, compute VAT and
+              deadlines, and submit them to your firm, which supervises and decides. The amounts
+              that bind you always come from a deterministic calculation, never from a language
+              model; each amount cites the area of the document it comes from.
+            </p>
+          </Section>
+
+          <Section titre="Who processes the data">
+            <p>
+              Your data is hosted by <strong>Hetzner</strong> (Germany), encrypted in transit and
+              backed up encrypted off-site (Hetzner Storage Box, Germany). To read a document, its
+              image is sent to a text-recognition service (
+              <strong>Alibaba Cloud Model Studio</strong>, Singapore) and then to a language model (
+              <strong>DeepSeek</strong>) that structures its content; these services do not keep
+              your documents beyond processing, under their terms. When telemetry is enabled, crash
+              reports go to <strong>Sentry</strong> (European Union); application updates go through{" "}
+              <strong>Capgo</strong> (European Union) and <strong>Google Play</strong>. No data is
+              sold or transferred for advertising purposes.
+            </p>
+          </Section>
+
+          <Section titre="Who has access">
+            <p>
+              You, and the people at your firm to whom you have entrusted your file. Every access is
+              partitioned in the database: one company never sees another&apos;s data. The Algoria
+              Factory team accesses data only in the event of a technical incident, on request, and
+              records it.
+            </p>
+          </Section>
+
+          <Section titre="How long">
+            <p>
+              Accounting documents and entries are kept for <strong>ten years</strong>, the legal
+              retention period for accounting records. Pending photos on the device are erased as
+              soon as they are sent. Reports and crash reports are kept for twelve months. A closed
+              account is deleted with its personal data; accounting documents remain archived on
+              behalf of the company until the legal term.
+            </p>
+          </Section>
+
+          <Section titre="Your rights">
+            <p>
+              Under Organic Law No. 2004-63 on the protection of personal data, you may access your
+              data, have it corrected, object to processing, or request the deletion of anything not
+              subject to a legal retention obligation. Write to{" "}
+              <a className="underline" href={`mailto:${CONTACT}`}>
+                {CONTACT}
+              </a>
+              . We reply within thirty days.
+            </p>
+          </Section>
+
+          <Section titre="In case of an incident">
+            <p>
+              If an incident affected your data, you and your firm would be informed within
+              seventy-two hours, with what happened and what was done.
+            </p>
+          </Section>
+
+          <Section id="deletion" titre="Request the deletion of your data">
+            <p>
+              To request the deletion of your data in Malica Office, published by Algoria Factory:
+            </p>
+            <ol className="list-decimal space-y-2 ps-6">
+              <li>
+                Write to{" "}
+                <a className="underline" href={`mailto:${CONTACT}?subject=Delete%20my%20data`}>
+                  {CONTACT}
+                </a>{" "}
+                from your account&apos;s email address, with the subject “Delete my data”.
+              </li>
+              <li>
+                We check that the request comes from the account holder, then confirm the deletion
+                by email, within thirty days at most.
+              </li>
+            </ol>
+            <p>
+              <strong>What is deleted</strong>: your account, your email address, your display name,
+              your conversations with Malica and your firm, your reports and the crash reports that
+              concern you, as well as the pending photos on your device (erased on uninstall).
+            </p>
+            <p>
+              <strong>What is kept</strong>: the company&apos;s accounting documents and entries,
+              which the law requires to be archived for ten years; they remain in the company&apos;s
+              name, with no link to your account. You may also request the deletion of only part of
+              your data: say so in your message.
             </p>
           </Section>
         </article>
