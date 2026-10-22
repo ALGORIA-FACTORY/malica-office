@@ -7,7 +7,7 @@ import {
   useRouteContext,
   useRouterState,
 } from "@tanstack/react-router";
-import { CalendarClock, Camera, FileText, Home as HomeIcon, Lock, Settings } from "lucide-react";
+import { CalendarClock, FileText, Home as HomeIcon, Lock, Plus, Settings } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
@@ -221,7 +221,9 @@ function PmeLayout() {
         const une = await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true });
         return une ? [une] : [];
       }
-      return input === "pdf" ? files.pickPdfs() : files.takePhoto();
+      if (input === "pdf") return files.pickPdfs();
+      if (input === "images") return files.pickImages();
+      return files.takePhoto();
     },
     onSuccess: (choisis) => {
       setCaptureError(null);
@@ -577,11 +579,11 @@ function PmeLayout() {
             <button
               type="button"
               disabled={!org || capture.isPending}
-              onClick={ouvrirCapture}
+              onClick={() => void navigate({ to: "/pme/capturer", search: {} })}
               aria-label={t("pme.nav.add")}
               className="obtur grid h-[58px] w-[58px] place-items-center"
             >
-              <Camera className="h-[25px] w-[25px]" aria-hidden />
+              <Plus className="h-[25px] w-[25px]" aria-hidden />
               <span className="nav-desktop">{t("pme.nav.add")}</span>
             </button>
           </div>

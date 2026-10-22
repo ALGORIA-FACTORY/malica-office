@@ -6,7 +6,11 @@ androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
+- tapOn: "Ajouter une pièce"
+- assertVisible: "Importer des images"
+- assertVisible: "Importer des PDF"
 - tapOn: "Photographier"
+# Le choix d\u0027ajout ne demande pas la caméra ; seule la photographie la demande.
 # La permission caméra, la première fois.
 - tapOn:
     text: "Lors de l'utilisation de l'application|While using the app|Autoriser|Allow"
@@ -23,5 +27,8 @@ androidWebViewHierarchy: devtools
       notVisible: "Vos documents"
     commands:
       - back
+- assertVisible: "Importer des PDF"
+- back
 - assertVisible: "Vos documents"
 - assertNotVisible: "Une erreur est survenue."
+

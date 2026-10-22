@@ -824,7 +824,7 @@ function PmeCapturer() {
                 prend des PDF — c'est le rattrapage d'un mois. Le flash du
                 dessin n'a pas de geste : la capacité ne l'expose pas. */}
             <div className="shut">
-              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("photo")}>
+              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("images")}>
                 <Icone d={G.gal} />
                 {t("pme.capture.galerie")}
               </button>
@@ -837,7 +837,7 @@ function PmeCapturer() {
               />
               <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
                 <Icone d={G.fat} />
-                PDF
+                {t("pme.doc.importer")}
               </button>
             </div>
 

@@ -28,6 +28,14 @@ on:
   schedule:
     - cron: "47 2 * * *" # 02:47 UTC
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/web/src/routes/_authenticated/pme*.tsx"
+      - "apps/web/src/components/malica/pme-context.tsx"
+      - "apps/web/src/capabilities/**"
+      - "packages/socle/src/messages.ts"
+      - "android/maestro/**"
+      - ".github/workflows/android-e2e.yml"
 
 jobs:
   maestro:
@@ -248,3 +256,4 @@ jobs:
             ~/.maestro/tests
             panneau-*.png
           retention-days: 7
+

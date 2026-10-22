@@ -6,7 +6,7 @@ import type { OuverturesDuForfait } from "@/lib/forfait";
 import type { ElementDeFile } from "@/lib/hors-ligne/file";
 import { dossierDuJournal } from "@/lib/journal-atelier";
 
-export type CaptureKind = "photo" | "pdf";
+export type CaptureKind = "photo" | "images" | "pdf";
 
 /** Ce qui attend de partir pour ce dossier, et les deux gestes sur un échec. */
 export interface FileDAttente {

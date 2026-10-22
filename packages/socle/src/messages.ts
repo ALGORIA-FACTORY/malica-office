@@ -44,10 +44,10 @@ const fr = {
     "L'espace personnel de la PME est invisible pour la comptabilité par isolation base de données, jamais par filtre d'affichage.",
 
   "landing.surfaces.title": "Deux surfaces, un seul cerveau",
-  "landing.surfaces.pme.title": "PME — mobile",
+  "landing.surfaces.pme.title": "Espace PME",
   "landing.surfaces.pme.body":
     "Un tap, moins de dix secondes. Capture hors-ligne, file d'attente, confirmation en un geste. La classification est un sous-produit.",
-  "landing.surfaces.cabinet.title": "Comptabilité — web",
+  "landing.surfaces.cabinet.title": "Espace comptabilité",
   "landing.surfaces.cabinet.body":
     "File priorisée, écran côte-à-côte pièce/écriture, retour motivé par référentiel gouverné, contre-passation datée.",
 
@@ -583,7 +583,7 @@ const fr = {
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
   "pme.home.card.charges": "Vos charges",
   "pme.nav.home": "Accueil",
-  "pme.nav.add": "Photographier",
+  "pme.nav.add": "Ajouter une pièce",
   "pme.nav.list": "Pièces",
   "pme.nav.office": "Espace",
   "pme.org.switch": "Société active",
@@ -3000,7 +3000,7 @@ const fr = {
   "pme.capture.menu.vous": "Pour vous",
   "pme.capture.menu.ouvrir": "Ouvrir",
   "pme.capture.menu.supprimer": "Supprimer",
-  "pme.capture.galerie": "Galerie",
+  "pme.capture.galerie": "Importer des images",
   "pme.capture.fatoora": "Import El Fatoora",
   "pme.capture.fatoora.sous": "Les factures électroniques entrent lues, sans consommer de lecture",
   "pme.capture.aVenir": "À VENIR",
@@ -3374,10 +3374,10 @@ const en: Dict = {
     "The company's personal space is invisible to the firm through database isolation, never through a display filter.",
 
   "landing.surfaces.title": "Two surfaces, one brain",
-  "landing.surfaces.pme.title": "Company — mobile",
+  "landing.surfaces.pme.title": "Company workspace",
   "landing.surfaces.pme.body":
     "One tap, under ten seconds. Offline capture, queue, one-gesture confirmation. Classification is a by-product.",
-  "landing.surfaces.cabinet.title": "Accounting — web",
+  "landing.surfaces.cabinet.title": "Accounting workspace",
   "landing.surfaces.cabinet.body":
     "Prioritised queue, side-by-side document and entry, governed rejection reasons, dated reversal.",
 
@@ -3860,7 +3860,7 @@ const en: Dict = {
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
   "pme.home.card.charges": "Your expenses",
   "pme.nav.home": "Home",
-  "pme.nav.add": "Take a photo",
+  "pme.nav.add": "Add a document",
   "pme.nav.list": "Documents",
   "pme.nav.office": "Workspace",
   "pme.org.switch": "Active company",
@@ -6231,7 +6231,7 @@ const en: Dict = {
   "pme.capture.menu.vous": "For you",
   "pme.capture.menu.ouvrir": "Open",
   "pme.capture.menu.supprimer": "Delete",
-  "pme.capture.galerie": "Gallery",
+  "pme.capture.galerie": "Import images",
   "pme.capture.fatoora": "El Fatoora import",
   "pme.capture.fatoora.sous": "Electronic invoices come in already read, without using a read",
   "pme.capture.aVenir": "COMING",
@@ -6594,10 +6594,10 @@ const ar: Dict = {
     "الفضاء الشخصي للمؤسسة غير مرئي للمكتب بفضل العزل في قاعدة البيانات، لا بفلترة العرض.",
 
   "landing.surfaces.title": "واجهتان، عقل واحد",
-  "landing.surfaces.pme.title": "المؤسسة — الهاتف",
+  "landing.surfaces.pme.title": "فضاء المؤسسة",
   "landing.surfaces.pme.body":
     "لمسة واحدة في أقل من عشر ثوان. تصوير دون شبكة، طابور انتظار، تأكيد بحركة واحدة.",
-  "landing.surfaces.cabinet.title": "المحاسبة — الويب",
+  "landing.surfaces.cabinet.title": "فضاء المحاسبة",
   "landing.surfaces.cabinet.body":
     "قائمة مرتّبة بالأولوية، عرض متجاور للوثيقة والقيد، أسباب إرجاع محكومة، قيد معاكس بتاريخه.",
 
@@ -7063,7 +7063,7 @@ const ar: Dict = {
   "pme.charges.disclaimer": "أُنبّه وأسأل، ولا أُغيّر أي قيد أبدًا.",
   "pme.home.card.charges": "مصاريفي",
   "pme.nav.home": "الرئيسية",
-  "pme.nav.add": "التقاط صورة",
+  "pme.nav.add": "إضافة وثيقة",
   "pme.nav.list": "الوثائق",
   "pme.nav.office": "الفضاء",
   "pme.org.switch": "الشركة النشطة",
@@ -9369,7 +9369,7 @@ const ar: Dict = {
   "pme.capture.menu.vous": "لك",
   "pme.capture.menu.ouvrir": "فتح",
   "pme.capture.menu.supprimer": "حذف",
-  "pme.capture.galerie": "معرض الصور",
+  "pme.capture.galerie": "استيراد صور",
   "pme.capture.fatoora": "استيراد من الفاتورة الإلكترونية",
   "pme.capture.fatoora.sous": "الفواتير الإلكترونية تدخل مقروءة، دون استهلاك قراءة",
   "pme.capture.aVenir": "قريبًا",

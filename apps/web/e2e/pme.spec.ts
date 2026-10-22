@@ -73,12 +73,82 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
 test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }) => {
   await page.goto("/pme");
   const nav = page.getByRole("navigation", { name: "Navigation principale" });
-  await expect(nav.getByRole("button", { name: "Photographier" })).toBeEnabled();
+  await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
   await nav.getByText("Mon espace").click();
   await expect(page).toHaveURL(/\/pme\/coffre$/);
   await nav.getByText("Accueil").click();
   await expect(page).toHaveURL(/\/pme$/);
 });
+
+test("ajouter une pièce donne accès aux trois sources sans ouvrir la caméra", async ({ page }) => {
+  await page.goto("/pme");
+  await page.getByRole("button", { name: "Ajouter une pièce", exact: true }).click();
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeEnabled();
+  const images = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des images", exact: true }).click();
+  const galerie = await images;
+  expect(galerie.isMultiple()).toBe(true);
+  expect(await galerie.element().getAttribute("accept")).toBe("image/*");
+  expect(await galerie.element().getAttribute("capture")).toBeNull();
+  await galerie.setFiles([]);
+
+  const pdfs = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const pdf = await pdfs;
+  expect(pdf.isMultiple()).toBe(true);
+  expect(await pdf.element().getAttribute("accept")).toBe("application/pdf");
+  await pdf.setFiles([]);
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Revenir", exact: true }).click();
+  await expect(page).toHaveURL(/\/pme$/);
+});
+
+test("un faux PDF est refusé depuis le parcours d'ajout avant tout dépôt", async ({ page }) => {
+  await page.goto("/pme");
+  await page.getByRole("button", { name: "Ajouter une pièce", exact: true }).click();
+  const attente = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const selecteur = await attente;
+  await selecteur.setFiles({
+    name: "document-invalide.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("Ceci n'est pas un PDF."),
+  });
+  await expect(page.getByRole("alert")).toContainText("Ce fichier n'est pas un PDF");
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeEnabled();
+});
+
+for (const largeur of [390, 1440]) {
+  for (const [chemin, ecran] of [
+    ["list", "bibliotheque"],
+    ["charges", "charges"],
+    ["tva", "tva"],
+    ["echeances", "echeances"],
+    ["coffre", "coffre"],
+    ["fiche", "fiche"],
+    ["notifications", "notifications"],
+    ["reglages", "parametres"],
+    ["regler", "manquants"],
+    ["malica", "chat"],
+  ]) {
+    test(`PME ${chemin} reste utilisable à ${largeur} px`, async ({ page }) => {
+      const plantages: string[] = [];
+      page.on("pageerror", (e) => plantages.push(e.message));
+      await page.setViewportSize({ width: largeur, height: 900 });
+      await page.goto(`/pme/${chemin}`);
+      await expect(page.locator(`[data-ecran="${ecran}"]`)).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/pme/${chemin}$`));
+      await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
+      const debordement = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(debordement).toBeLessThanOrEqual(1);
+      expect(plantages).toEqual([]);
+    });
+  }
+}
 
 test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
   /*
@@ -129,7 +199,7 @@ test("le même accueil utilise le desktop et conserve la navigation du télépho
     await page.goto("/pme");
     const nav = page.getByRole("navigation", { name: "Navigation principale" });
     await expect(page.getByText("Vos documents")).toBeVisible();
-    await expect(nav.getByRole("button", { name: "Photographier" })).toBeEnabled();
+    await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
     const dimensions = await page.locator("main").evaluate((element) => ({
       contenu: element.getBoundingClientRect().width,
       page: document.documentElement.scrollWidth,
