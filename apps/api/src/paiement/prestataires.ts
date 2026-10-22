@@ -48,17 +48,6 @@ export interface Prestataire {
   ): Promise<{ etat: EtatChezLePrestataire; detail: Record<string, unknown> }>;
 }
 
-/**
- * Un montant `numeric` de la base, en unités mineures, sans flottant :
- * `enUnitesMineures("17.850", 3)` vaut 17 850 millimes.
- */
-export function enUnitesMineures(montant: string, exposant: number): number {
-  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(montant.trim());
-  if (!m || (m[3] ?? "").length > exposant) throw new Error(`montant illisible : ${montant}`);
-  const unites = Number(m[2]) * 10 ** exposant + Number((m[3] ?? "").padEnd(exposant, "0") || 0);
-  return m[1] === "-" ? -unites : unites;
-}
-
 /** ClicToPay (SMT) : `register.do` crée la commande, `getOrderStatusExtended.do` la lit. */
 export function clictopay(
   config: { code: string; url: string; langue: string; utilisateur: string; motDePasse: string },

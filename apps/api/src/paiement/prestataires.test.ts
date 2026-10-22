@@ -11,7 +11,6 @@ import { describe, it } from "node:test";
 import {
   adresseDeRetour,
   clictopay,
-  enUnitesMineures,
   prestataireDuReglage,
   type ReglagePaiement,
 } from "./prestataires.ts";
@@ -26,16 +25,6 @@ function fauxFetch(reponse: Record<string, unknown>, vus: Array<{ url: string; c
 const CTP = { code: "clictopay", langue: "fr", utilisateur: "u", motDePasse: "m" };
 
 describe("les prestataires de paiement", () => {
-  it("un montant de la base se lit en unités mineures, selon l'exposant de la devise", () => {
-    assert.equal(enUnitesMineures("17.850", 3), 17850);
-    assert.equal(enUnitesMineures("5.95", 3), 5950);
-    assert.equal(enUnitesMineures("20", 3), 20000);
-    assert.equal(enUnitesMineures("1500", 0), 1500);
-    assert.equal(enUnitesMineures("12.5", 2), 1250);
-    assert.throws(() => enUnitesMineures("vingt", 3));
-    assert.throws(() => enUnitesMineures("1.2345", 3), "plus de décimales que la devise");
-  });
-
   it("ClicToPay reçoit les unités, la devise et la langue que la table donne, et rend son lien", async () => {
     const vus: Array<{ url: string; corps: string }> = [];
     const p = clictopay(

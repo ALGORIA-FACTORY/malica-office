@@ -213,6 +213,43 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
     });
   });
 
+  it("« payé » ne se constate que chez le prestataire qui a créé le lien", async () => {
+    await aBlanc(async (db) => {
+      const d = await unPaiement(db);
+      const paye = (prestataire: string) =>
+        db.query("select public.paiement_inscrire($1, 'paye', $2, 'REF-1')", [
+          d.paiement,
+          prestataire,
+        ]);
+      await assert.rejects(
+        sous(db, d.principal, () => paye("clictopay")),
+        /paiement\.prestataire_du_lien/,
+        "sans lien, rien à constater",
+      );
+      await sous(db, d.principal, () => lien(db, d.paiement, "clictopay", "visa"));
+      await assert.rejects(
+        sous(db, d.principal, async () => {
+          await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
+          await paye("simulateur");
+        }),
+        /paiement\.prestataire_du_lien/,
+        "le simulateur ne solde pas un paiement parti chez ClicToPay",
+      );
+      await sous(db, d.principal, () => paye("clictopay"));
+    });
+  });
+
+  it("un moyen d'encaissement inconnu est refusé au référentiel, pas à la facture", async () => {
+    await aBlanc(async (db) => {
+      await assert.rejects(
+        db.query(
+          "update facturation.moyens_paiement set moyen_encaissement = 'mobile' where code = 'd17'",
+        ),
+        (e: { code?: string }) => e.code === "23503",
+      );
+    });
+  });
+
   it("un moyen ne s'active pas sans dire comment il s'encaisse", async () => {
     await aBlanc(async (db) => {
       await assert.rejects(
@@ -251,7 +288,9 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
       await sous(db, d.operateur, () =>
         db.query("select plateforme.paiement_regler('aucun', null, null, 'fermé')"),
       );
-      const ferme = await sous(db, d.principal, () => facturation.moyensDePaiementEnLigne(db, "fr"));
+      const ferme = await sous(db, d.principal, () =>
+        facturation.moyensDePaiementEnLigne(db, "fr"),
+      );
       assert.equal(ferme.prestataire, null, "paiement fermé : aucun prestataire");
       assert.ok(ferme.moyens.every((m) => m["accepte"] === false));
     });

@@ -109,6 +109,10 @@ jobs:
       - name: Construire le bundle de la coque
         run: npm run build:coque:${{ env.CANAL == 'production' && 'prod' || env.CANAL }} -w @malica/web
 
+      # Règles de Google Play : le paquet publié ne vend rien (même garde que ci.yml).
+      - name: La coque ne vend rien
+        run: node --experimental-strip-types outils/coque-sans-commerce.mjs
+
       # La CLI lit l'identifiant de l'app dans apps/web/capacitor.config.ts :
       # elle tourne donc de là.
       - name: Envoyer sur le canal

@@ -97,6 +97,10 @@ jobs:
       - name: Construire le bundle de la coque
         run: npm run build:coque:$CIBLE -w @malica/web
 
+      # Règles de Google Play : le paquet publié ne vend rien (même garde que ci.yml).
+      - name: La coque ne vend rien
+        run: node --experimental-strip-types outils/coque-sans-commerce.mjs
+
       - name: Synchroniser le projet Android
         run: npm run coque:sync -w @malica/web
 

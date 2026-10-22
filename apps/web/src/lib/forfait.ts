@@ -17,12 +17,11 @@
  * n'est comparé, aucun seuil n'est écrit : « cette offre porte-t-elle au
  * moins une place ? » se lit dans la donnée.
  *
- * Les sociétés, elles, se décident encore sur le nom de l'offre, et c'est une
- * dette NOMMÉE : `ref.offres.organisations_max` existe (1 partout sauf
- * Premium, à 10) mais ni `facturation.consommation_v` ni `public.mon_forfait()`
- * ne le rendent. Le jour où la base le rend, cette ligne devient
- * `nombre(f.organisations_max) > 1` et plus un seul nom d'offre ne subsiste
- * dans le TypeScript.
+ * Les sociétés se décident sur `ref.offres.organisations_max`, que le
+ * catalogue des offres rend (`facturation.catalogueDesOffres`, 22 octobre
+ * 2026) : sans plafond ou au-delà d'une, l'offre ouvre plusieurs sociétés.
+ * Elles se jugeaient jusque-là sur le nom « premium » — c'était la dette
+ * nommée ici ; plus un seul nom d'offre ne subsiste dans ce jugement.
  *
  * ====================================================== L'ABSENCE N'OUVRE RIEN
  *
@@ -33,7 +32,7 @@
  * montrerait un bloc vide en promettant une fonction que le forfait ne porte
  * peut-être pas.
  */
-import type { MonForfait } from "@malica/socle/ports/repositories";
+import type { MonForfait, OffreAuCatalogue } from "@malica/socle/ports/repositories";
 
 /**
  * Un entier rendu par la base, ou `null`. Jamais `0` par défaut : zéro est un
@@ -54,8 +53,18 @@ export interface OuverturesDuForfait {
   societes: boolean;
 }
 
-export function ouverturesDuForfait(f: MonForfait | null | undefined): OuverturesDuForfait {
+/** L'offre ouvre-t-elle plusieurs sociétés ? Sans plafond, ou au-delà d'une. */
+export function ouvreLesSocietes(o: OffreAuCatalogue): boolean {
+  return o.organisations_max === null || Number(o.organisations_max) > 1;
+}
+
+export function ouverturesDuForfait(
+  f: MonForfait | null | undefined,
+  catalogue: readonly OffreAuCatalogue[] | undefined,
+): OuverturesDuForfait {
   if (!f) return { sieges: false, societes: false };
+  // Le catalogue non lu ferme les sociétés, comme le forfait non lu.
+  const offre = catalogue?.find((o) => o.code === f.offre);
   const places = nombre(f.sieges_max);
   /*
    * Depuis la grille du 19 octobre, Team et Premium n'ont plus de plafond de
@@ -67,6 +76,6 @@ export function ouverturesDuForfait(f: MonForfait | null | undefined): Ouverture
   const sansPlafond = f.sieges_max === null && nombre(f.sieges_inclus) !== null;
   return {
     sieges: sansPlafond || (places !== null && places > 0),
-    societes: f.offre === "premium",
+    societes: offre ? ouvreLesSocietes(offre) : false,
   };
 }

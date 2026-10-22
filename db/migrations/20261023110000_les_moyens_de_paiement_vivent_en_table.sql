@@ -11,6 +11,7 @@
 -- d'encaissement « carte » dans l'émission. Tout cela devient des LIGNES :
 --
 --   ref.devises                       code ISO 4217, code numérique, exposant
+--   facturation.moyens_encaissement   ce que la facture inscrit (était un CHECK)
 --   facturation.prestataires_paiement ce que chaque prestataire ouvre et fait
 --   facturation.moyens_paiement       Visa, Mastercard, D17 — logo et rang
 --   facturation.moyens_paiement_etats actif ou non, daté et motivé (R7)
@@ -48,7 +49,27 @@ revoke all on table ref.devises from public, anon;
 grant select on table ref.devises to authenticated;
 create policy ref_devises_sel on ref.devises for select to authenticated using (true);
 
--- --- 2. Les prestataires ------------------------------------------------------
+-- --- 2. Les moyens d'encaissement ------------------------------------------
+--
+-- Ce que la facture inscrit à l'encaissement vivait dans un CHECK de
+-- `facturation.encaissements` (20261019110000). Les moyens de paiement en
+-- ligne le désignent désormais : une table, et des clés étrangères, pour
+-- qu'une valeur inconnue soit refusée à l'écriture du référentiel et non à
+-- l'émission de la facture du mois.
+
+create table facturation.moyens_encaissement (
+  code text primary key check (code ~ '^[a-z_]+$')
+);
+
+insert into facturation.moyens_encaissement (code) values
+  ('virement'), ('cheque'), ('especes'), ('carte'), ('prelevement'), ('compensation');
+
+alter table facturation.encaissements
+  drop constraint encaissements_moyen_check,
+  add constraint encaissements_moyen_fk
+    foreign key (moyen) references facturation.moyens_encaissement (code);
+
+-- --- 3. Les prestataires ------------------------------------------------------
 
 create table facturation.prestataires_paiement (
   code                     text primary key check (code ~ '^[a-z0-9_]+$'),
@@ -64,7 +85,7 @@ create table facturation.prestataires_paiement (
   logo                     text check (logo ~ '^/[a-z0-9/_.-]+$'),
   -- Le moyen d'encaissement inscrit sur la facture quand le paiement ne dit
   -- pas le sien (paiements d'avant le choix du moyen).
-  moyen_encaissement_defaut text,
+  moyen_encaissement_defaut text references facturation.moyens_encaissement (code),
   rang                     smallint not null unique,
   constraint prestataire_ouvert_a_un_adaptateur check (not ouvre_le_paiement or adaptateur is not null),
   constraint prestataire_qui_encaisse_dit_comment
@@ -82,13 +103,13 @@ insert into facturation.prestataires_paiement
   ('simulateur', 'simulateur', true,  false, false, null, null,                       null,    1),
   ('clictopay',  'clictopay',  true,  true,  true,  'fr', '/paiement/clictopay.webp', 'carte', 2);
 
--- --- 3. Les moyens ------------------------------------------------------------
+-- --- 4. Les moyens ------------------------------------------------------------
 
 create table facturation.moyens_paiement (
   code               text primary key check (code ~ '^[a-z0-9_]+$'),
   logo               text not null check (logo ~ '^/[a-z0-9/_.-]+$'),
   -- Ce que la facture inscrit à l'encaissement (`facturation.encaissements.moyen`).
-  moyen_encaissement text,
+  moyen_encaissement text references facturation.moyens_encaissement (code),
   rang               smallint not null unique
 );
 
@@ -164,8 +185,8 @@ select m.code, m.logo, m.rang, m.moyen_encaissement,
 do $$
 declare t text;
 begin
-  foreach t in array array['prestataires_paiement', 'moyens_paiement', 'moyens_paiement_etats',
-                           'moyens_par_prestataire'] loop
+  foreach t in array array['moyens_encaissement', 'prestataires_paiement', 'moyens_paiement',
+                           'moyens_paiement_etats', 'moyens_par_prestataire'] loop
     execute format('alter table facturation.%I enable row level security', t);
     execute format('revoke all on table facturation.%I from public, anon', t);
     execute format('grant select on table facturation.%I to authenticated', t);
@@ -181,7 +202,7 @@ create trigger moyens_paiement_etats_ne_se_reecrivent_pas
 
 grant select on facturation.moyens_paiement_v to authenticated;
 
--- --- 4. Les noms, traduits ----------------------------------------------------
+-- --- 5. Les noms, traduits ----------------------------------------------------
 
 insert into ref.labels (ns, key, locale, value) values
   ('moyen_en_ligne', 'visa', 'fr', 'Visa'),
@@ -203,7 +224,7 @@ insert into ref.labels (ns, key, locale, value) values
   ('prestataire_paiement', 'clictopay', 'en', 'ClicToPay'),
   ('prestataire_paiement', 'clictopay', 'ar', 'ClicToPay');
 
--- --- 5. Les CHECK en dur deviennent des clés étrangères -----------------------
+-- --- 6. Les CHECK en dur deviennent des clés étrangères -----------------------
 
 alter table facturation.paiement_evenements
   drop constraint paiement_evenements_prestataire_check,
@@ -267,7 +288,7 @@ $$;
 revoke all on function public.paiement_reglage() from public, anon;
 grant execute on function public.paiement_reglage() to authenticated;
 
--- --- 6. Inscrire un paiement : le moyen choisi, et le simulateur lu en table --
+-- --- 7. Inscrire un paiement : le moyen choisi, et le simulateur lu en table --
 
 -- Un moyen est admis s'il est actif et que ce prestataire l'accepte. Une seule
 -- règle, lue par l'API avant de demander un lien et redite à l'inscription.
@@ -348,6 +369,16 @@ begin
   if p_etat = 'lien_cree' and not facturation.moyen_admis(p_moyen, p_prestataire) then
     raise exception 'paiement.moyen_indisponible' using errcode = 'check_violation';
   end if;
+  -- « Payé » ou « refusé » se constate chez le prestataire qui a créé le lien,
+  -- et chez lui seul : un simulateur ouvert après coup ne solde pas un
+  -- paiement parti chez un prestataire réel (dont le vrai « payé » serait
+  -- ensuite refusé par l'index « payé une fois »).
+  if p_etat in ('paye', 'refuse') and p_prestataire is distinct from (
+       select e.prestataire from facturation.paiement_evenements e
+        where e.paiement_id = p_paiement and e.etat = 'lien_cree'
+        order by e.le desc, e.id desc limit 1) then
+    raise exception 'paiement.prestataire_du_lien' using errcode = 'check_violation';
+  end if;
   if p_etat = 'paye' and exists (select 1 from facturation.paiement_evenements e
                                   where e.paiement_id = p_paiement and e.etat = 'paye') then
     -- Déjà constaté : on ne le compte pas deux fois, on le rend.
@@ -375,7 +406,7 @@ $$;
 revoke all on function public.paiement_inscrire(uuid, text, text, text, text, jsonb, text) from public, anon;
 grant execute on function public.paiement_inscrire(uuid, text, text, text, text, jsonb, text) to authenticated;
 
--- --- 7. La facture du mois : le prestataire et le moyen lus en table ----------
+-- --- 8. La facture du mois : le prestataire et le moyen lus en table ----------
 --
 -- Corps repris de 20261022400000 ; deux changements : l'acompte s'impute si son
 -- prestataire fait entrer de l'argent (au lieu de « <> 'simulateur' »), et

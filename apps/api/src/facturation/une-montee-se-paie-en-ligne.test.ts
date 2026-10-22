@@ -87,6 +87,16 @@ type Paiement = {
   impute: boolean;
 };
 
+/**
+ * Le lien vers le prestataire, pour un moyen admis : « payé » ne se constate
+ * que chez le prestataire qui l'a créé (20261023110000).
+ */
+const lien = (db: pg.PoolClient, paiement: string, prestataire: string) =>
+  db.query(
+    "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-0', 'https://x.tn', '{}', 'visa')",
+    [paiement, prestataire],
+  );
+
 const monter = (db: pg.PoolClient, d: Decor) =>
   sous(db, d.principal, async () => {
     await db.query("select public.forfait_changer('team', $1)", [d.tenant]);
@@ -177,6 +187,7 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       );
       await sous(db, d.principal, async () => {
         await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
+        await lien(db, p.paiement_id, "simulateur");
         await inscrire();
         await inscrire();
       });
@@ -220,6 +231,7 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       const p = (await monter(db, d))!;
       await sous(db, d.principal, async () => {
         await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
+        await lien(db, p.paiement_id, "simulateur");
         await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [
           p.paiement_id,
         ]);
@@ -245,11 +257,12 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
     await aBlanc(async (db) => {
       const d = await decor(db);
       const p = (await monter(db, d))!;
-      await sous(db, d.principal, () =>
-        db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-42')", [
+      await sous(db, d.principal, async () => {
+        await lien(db, p.paiement_id, "clictopay");
+        await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-42')", [
           p.paiement_id,
-        ]),
-      );
+        ]);
+      });
 
       const periode = await db.query<{ p: string }>(
         "select to_char(date_trunc('month', current_date), 'YYYY-MM-DD') as p",

@@ -2764,6 +2764,8 @@ const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "paiement.prestataire_du_lien":
+    "Ce paiement a été ouvert chez un autre prestataire : il se vérifie chez lui.",
   "pme.reglages.offres.aRegler":
     "C'est fait : vous êtes en {offre}. Réglez la différence du mois ci-dessous.",
   "pme.reglages.recharges.aRegler":
@@ -6214,6 +6216,8 @@ const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "paiement.moyen_indisponible": "This payment method is not available.",
+  "paiement.prestataire_du_lien":
+    "This payment was opened with another provider: it is checked there.",
   "pme.reglages.offres.aRegler": "Done: you are now on {offre}. Pay the month's difference below.",
   "pme.reglages.recharges.aRegler": "Top-up added: its reads are already there. Pay for it below.",
   "pme.reglages.offres.incluses": "{n} reads per month",
@@ -9506,6 +9510,7 @@ const ar: Dict = {
   "pme.payer.securise": "دفع آمن عبر {prestataire}",
   "pme.payer.rienARegler": "لم يعد هذا الدفع مستحقًا.",
   "paiement.moyen_indisponible": "وسيلة الدفع هذه غير متاحة.",
+  "paiement.prestataire_du_lien": "فُتح هذا الدفع لدى مزوّد آخر: يُتحقَّق منه لديه.",
   "pme.reglages.offres.aRegler": "تم: أنت الآن على باقة {offre}. ادفع فرق الشهر أدناه.",
   "pme.reglages.recharges.aRegler": "أضيف الرصيد وقراءاته متاحة. ادفع ثمنه أدناه.",
   "pme.reglages.offres.incluses": "{n} قراءة شهريا",

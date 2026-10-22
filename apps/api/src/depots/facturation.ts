@@ -16,9 +16,10 @@
  */
 
 import type { Requete } from "../db.ts";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
+
 import {
   adresseDeRetour,
-  enUnitesMineures,
   prestataireDuReglage,
   type ReglagePaiement,
 } from "../paiement/prestataires.ts";
@@ -351,6 +352,26 @@ export const facturation = {
     const env = await prestataireOuvert(db);
     if (!env) return { ouvert: false, lien: null, paiement: p };
 
+    // Un lien encore ouvert chez CE prestataire sert encore : on ne crée pas une
+    // seconde commande pour le même paiement (revenir en arrière et choisir
+    // Mastercard après Visa mène à la même page de carte). On demande d'abord
+    // au prestataire s'il n'est pas déjà payé.
+    if (p.etat === "lien_cree" && p.prestataire === env.prestataire.code && p.lien) {
+      const r =
+        env.prestataire.simule || !p.reference ? null : await env.prestataire.etat(p.reference);
+      if (!r || r.etat === "en_attente") return { ouvert: true, lien: p.lien, paiement: p };
+      const constate = await inscrire(
+        db,
+        paiementId,
+        r.etat,
+        env.prestataire,
+        p.reference,
+        null,
+        r.detail,
+      );
+      if (constate.etat === "paye") return { ouvert: true, lien: null, paiement: constate };
+    }
+
     // Le moyen choisi doit être actif et accepté par ce prestataire : la base le
     // refuse par une clé, et le redit à l'inscription. On ne demande pas un
     // lien pour rien.
@@ -362,7 +383,7 @@ export const facturation = {
 
     const { reference, lien } = await env.prestataire.creerLien({
       paiementId,
-      unites: enUnitesMineures(p.montant_ttc, devise.exposant),
+      unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
       devise: devise.iso_numerique,
       libelle: p.libelle,
       retour: adresseDeRetour(env.urlPublique, paiementId),
