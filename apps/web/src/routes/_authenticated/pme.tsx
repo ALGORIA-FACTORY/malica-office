@@ -19,6 +19,7 @@ import { useTransitionDEcran } from "@/components/malica/mouvement";
 import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
+import { useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { ouverturesDuForfait } from "@/lib/forfait";
@@ -165,6 +166,8 @@ function PmeLayout() {
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
+  // Ce que chaque offre ouvre se lit dans le catalogue, pas dans son nom.
+  const catalogue = useCatalogueDesOffres().data;
 
   const packQuery = useQuery({
     queryKey: ["ref-pack", org?.jurisdiction],
@@ -510,7 +513,7 @@ function PmeLayout() {
                   ligne: forfaitQuery.data ?? null,
                   enCours: forfaitQuery.isPending,
                   illisible: forfaitQuery.isError,
-                  ouvertures: ouverturesDuForfait(forfaitQuery.data ?? null),
+                  ouvertures: ouverturesDuForfait(forfaitQuery.data ?? null, catalogue),
                 },
               }}
             >

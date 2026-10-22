@@ -12,6 +12,7 @@
  * alors la règle, pas les boutons.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
@@ -718,17 +719,6 @@ export function ARegler() {
     onError: (e: unknown) => setRetour(refus(e, t)),
   });
 
-  const payer = useMutation({
-    mutationFn: (id: string) => office().facturation.payerEnLigne(id),
-    onSuccess: async (r) => {
-      if (r.paiement.etat === "paye") setRetour(t("pme.reglages.paiement.paye"));
-      else if (!r.ouvert) setRetour(t("pme.reglages.paiement.ferme"));
-      else if (r.lien) window.location.assign(r.lien);
-      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
-    },
-    onError: (e: unknown) => setRetour(refus(e, t)),
-  });
-
   const simuler = useMutation({
     mutationFn: (p: { id: string; decision: "paye" | "refuse" }) =>
       office().facturation.simulerPaiement(p.id, p.decision),
@@ -795,15 +785,15 @@ export function ARegler() {
             </>
           ) : (
             <div className="mt-2 flex flex-wrap gap-2">
-              {/* Ce bloc n'existe que sur le web et la PWA (`COMMERCE`). */}
-              <button
-                type="button"
+              {/* Ce bloc n'existe que sur le web et la PWA (`COMMERCE`). Le moyen
+                  se choisit sur sa page : logos et noms viennent des tables. */}
+              <Link
+                to="/pme/payer/$paiementId"
+                params={{ paiementId: p.paiement_id }}
                 className="btn"
-                disabled={payer.isPending}
-                onClick={() => payer.mutate(p.paiement_id)}
               >
                 {t("pme.reglages.paiement.payer")}
-              </button>
+              </Link>
               {p.etat === "lien_cree" ? (
                 <button
                   type="button"

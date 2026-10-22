@@ -13,7 +13,7 @@
  */
 
 import type { Requete } from "../db.ts";
-import { secretsClictopayPoses } from "../paiement/prestataires.ts";
+import { secretsPoses } from "../paiement/prestataires.ts";
 import { versReport } from "./report-d-echeance.ts";
 
 export const tour = {
@@ -69,12 +69,35 @@ export const tour = {
     return rows;
   },
 
-  /** Le réglage du paiement en vigueur, et si les secrets du compte marchand sont posés. */
+  /**
+   * Le réglage du paiement en vigueur, et si les secrets de son adaptateur sont
+   * posés (`null` : ce prestataire n'en a pas).
+   */
   async reglagePaiement(db: Requete) {
-    const { rows } = await db.query<{ r: Record<string, unknown> }>(
-      `select public.paiement_reglage() as r`,
+    const { rows } = await db.query<{ r: Record<string, unknown>; adaptateur: string | null }>(
+      `select r, p.adaptateur
+         from public.paiement_reglage() r
+         join facturation.prestataires_paiement p on p.code = r ->> 'prestataire'`,
     );
-    return { ...(rows[0]?.r ?? {}), secrets_clictopay: secretsClictopayPoses() };
+    return { ...(rows[0]?.r ?? {}), secrets_poses: secretsPoses(rows[0]?.adaptateur ?? null) };
+  },
+
+  /** Les prestataires parmi lesquels la tour choisit, nommés dans la langue de l'opérateur. */
+  async prestatairesDePaiement(db: Requete, locale: string) {
+    const { rows } = await db.query(
+      `select p.code, p.ouvre_le_paiement, p.exige_url_api,
+              coalesce(demandee.value, francais.value, p.code) as libelle
+         from facturation.prestataires_paiement p
+         left join ref_labels_v demandee
+           on demandee.ns = 'prestataire_paiement' and demandee.key = p.code
+          and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'prestataire_paiement' and francais.key = p.code
+          and francais.locale = 'fr'
+        order by p.rang`,
+      [locale],
+    );
+    return rows;
   },
 
   async reglerPaiement(

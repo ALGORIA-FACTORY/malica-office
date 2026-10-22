@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { OffreAuCatalogue } from "@malica/socle/ports/repositories";
 
+import { ouvreLesSocietes } from "@/lib/forfait";
 import { office } from "@/verticals/malica-office/composition";
 
 export function useCatalogueDesOffres() {
@@ -43,8 +44,7 @@ export function offresQuiOuvrent(catalogue: readonly OffreAuCatalogue[] | undefi
   const tri = [...(catalogue ?? [])].sort((a, b) => a.rang - b.rang);
   return {
     sieges: tri.find((o) => Number(o.sieges_inclus) > 0) ?? null,
-    societes:
-      tri.find((o) => o.organisations_max === null || Number(o.organisations_max) > 1) ?? null,
+    societes: tri.find(ouvreLesSocietes) ?? null,
   };
 }
 

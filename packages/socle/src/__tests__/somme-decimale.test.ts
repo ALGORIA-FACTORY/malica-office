@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { depuisUniteMineure, estNul, sommeDecimale } from "../somme-decimale.ts";
+import { depuisUniteMineure, enUnitesExactes, estNul, sommeDecimale } from "../somme-decimale.ts";
 
 describe("sommeDecimale", () => {
   it("additionne sans perdre un millime", () => {
@@ -49,5 +49,21 @@ describe("depuisUniteMineure — de l'entier de la base à la chaîne du documen
 
   it("et refuse ce qui n'est pas un entier : une unité mineure fractionnaire n'existe pas", () => {
     expect(() => depuisUniteMineure(1.5, 3)).toThrow(/non entière/);
+  });
+});
+
+describe("un montant à payer, dans la plus petite unité de sa devise", () => {
+  it("lit le millime, le centime et le franc CFA, zéros de la base compris", () => {
+    expect(enUnitesExactes("17.850", 3)).toBe(17850n);
+    expect(enUnitesExactes("20", 3)).toBe(20000n);
+    // La base rend toujours trois décimales (`app.money_t`).
+    expect(enUnitesExactes("1500.000", 0)).toBe(1500n);
+    expect(enUnitesExactes("12.500", 2)).toBe(1250n);
+  });
+
+  it("refuse d'arrondir en silence et refuse ce qui n'est pas un nombre", () => {
+    expect(() => enUnitesExactes("12.505", 2)).toThrow(/plus précis/);
+    expect(() => enUnitesExactes("1500.5", 0)).toThrow(/plus précis/);
+    expect(() => enUnitesExactes("vingt", 3)).toThrow(/illisible/);
   });
 });

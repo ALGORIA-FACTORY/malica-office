@@ -10,15 +10,32 @@
  * taux. C'est l'arithmétique d'un total affiché, exacte.
  */
 
-/** « 404.600 » → 404600 pour trois décimales ; « 12 » → 12000. Rejette ce qui n'est pas un nombre. */
-function enUnites(valeur: string, decimales: number): bigint {
+/** Le signe, la partie entière et les décimales d'un montant écrit. Rejette ce qui n'est pas un nombre. */
+function lire(valeur: string): { signe: bigint; entier: string; fraction: string } {
   const propre = valeur.trim().replace(",", ".");
   const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(propre);
   if (!m) throw new Error(`montant illisible : ${valeur}`);
-  const signe = m[1] === "-" ? -1n : 1n;
-  const entier = m[2]!;
-  const fraction = (m[3] ?? "").padEnd(decimales, "0").slice(0, decimales);
-  return signe * BigInt(entier + fraction);
+  return { signe: m[1] === "-" ? -1n : 1n, entier: m[2]!, fraction: m[3] ?? "" };
+}
+
+/** « 404.600 » → 404600 pour trois décimales ; « 12 » → 12000. */
+function enUnites(valeur: string, decimales: number): bigint {
+  const { signe, entier, fraction } = lire(valeur);
+  return signe * BigInt(entier + fraction.padEnd(decimales, "0").slice(0, decimales));
+}
+
+/**
+ * Un montant dans la plus petite unité d'une devise, SANS rien arrondir : les
+ * zéros au-delà de l'exposant passent (« 1500.000 » vaut 1500 francs CFA), une
+ * décimale non nulle au-delà est refusée. Un montant à payer ne se tronque pas
+ * en silence.
+ */
+export function enUnitesExactes(valeur: string, exposant: number): bigint {
+  const { fraction } = lire(valeur);
+  if (/[1-9]/.test(fraction.slice(exposant))) {
+    throw new Error(`montant plus précis que la devise : ${valeur}`);
+  }
+  return enUnites(valeur, exposant);
 }
 
 function depuisUnites(unites: bigint, decimales: number): string {

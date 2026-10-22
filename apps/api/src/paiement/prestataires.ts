@@ -8,49 +8,49 @@
  * réponse du PRESTATAIRE, jamais celle du navigateur, qui fait inscrire
  * « payé ».
  *
- * Le prestataire se choisit dans LA TOUR (`plateforme.paiement_regler`,
- * 20261022160000) : aucun, simulateur ou ClicToPay, avec l'adresse de l'API du
- * prestataire et l'adresse de retour. Seuls les SECRETS du compte marchand
- * restent dans l'environnement du serveur, et n'en sortent jamais :
+ * CE QUI VIT EN TABLE (20261023110000) : les prestataires et ce qu'ils font
+ * (`facturation.prestataires_paiement` : ouvre le paiement, fait entrer de
+ * l'argent, exige l'adresse de son API, langue de sa page), les moyens qu'ils
+ * acceptent, la devise ISO 4217 et son exposant (`ref.devises`). Le prestataire
+ * en service se choisit dans LA TOUR (`plateforme.paiement_regler`). Ce module
+ * ne garde que les ADAPTATEURS — le code qui parle à une API — désignés par la
+ * colonne `adaptateur`. Seuls les SECRETS du compte marchand restent dans
+ * l'environnement du serveur, et n'en sortent jamais :
  *
  *   CLICTOPAY_UTILISATEUR         l'identifiant marchand de l'API
  *   CLICTOPAY_MOT_DE_PASSE        son mot de passe
  *
- * « Aucun » — ou ClicToPay sans ses secrets — ferme le paiement en ligne, et on
- * le dit (`null`) : l'offre reste ouverte, la facture du mois suit. Le
- * simulateur peut s'ouvrir partout, parce qu'il ne fait entrer aucun argent :
- * ses « payés » ne s'imputent jamais sur une facture (la base y veille).
+ * Un prestataire qui n'ouvre rien — ou un adaptateur sans ses secrets — ferme
+ * le paiement en ligne, et on le dit (`null`) : l'offre reste ouverte, la
+ * facture du mois suit.
  */
 
 type EtatChezLePrestataire = "paye" | "refuse" | "en_attente";
 
 interface DemandeDeLien {
   paiementId: string;
-  /** Le montant TTC en millimes : la plus petite unité du dinar. */
-  millimes: number;
+  /** Le montant TTC dans la plus petite unité de la devise (le millime du dinar). */
+  unites: number;
+  /** Le code numérique ISO 4217 de la devise (`ref.devises`). */
+  devise: string;
   libelle: string;
   retour: string;
 }
 
 export interface Prestataire {
-  nom: "clictopay" | "simulateur";
+  /** Le code du prestataire (`facturation.prestataires_paiement.code`). */
+  code: string;
+  /** Vrai pour un adaptateur dont l'écran de l'application tient lieu de page de carte. */
+  simule: boolean;
   creerLien(d: DemandeDeLien): Promise<{ reference: string; lien: string }>;
   etat(
     reference: string,
   ): Promise<{ etat: EtatChezLePrestataire; detail: Record<string, unknown> }>;
 }
 
-/** Les montants de la base sont des chaînes `numeric` : on les lit en millimes, sans flottant. */
-export function enMillimes(montant: string): number {
-  const m = /^(-?)(\d+)(?:\.(\d{1,3}))?$/.exec(montant.trim());
-  if (!m) throw new Error(`montant illisible : ${montant}`);
-  const millimes = Number(m[2]) * 1000 + Number((m[3] ?? "").padEnd(3, "0"));
-  return m[1] === "-" ? -millimes : millimes;
-}
-
 /** ClicToPay (SMT) : `register.do` crée la commande, `getOrderStatusExtended.do` la lit. */
 export function clictopay(
-  config: { url: string; utilisateur: string; motDePasse: string },
+  config: { code: string; url: string; langue: string; utilisateur: string; motDePasse: string },
   fetchImpl: typeof fetch = fetch,
 ): Prestataire {
   const base = config.url.endsWith("/") ? config.url : `${config.url}/`;
@@ -71,15 +71,16 @@ export function clictopay(
   };
 
   return {
-    nom: "clictopay",
+    code: config.code,
+    simule: false,
     async creerLien(d) {
       const r = await appel("register.do", {
         // Le numéro de commande est l'identifiant du paiement : unique par
         // construction, et relisible des deux côtés.
         orderNumber: d.paiementId.replace(/-/g, "").slice(0, 32),
-        amount: String(d.millimes),
-        currency: "788",
-        language: "fr",
+        amount: String(d.unites),
+        currency: d.devise,
+        language: config.langue,
         returnUrl: d.retour,
         failUrl: d.retour,
         description: d.libelle.slice(0, 99),
@@ -92,7 +93,10 @@ export function clictopay(
       return { reference, lien };
     },
     async etat(reference) {
-      const r = await appel("getOrderStatusExtended.do", { orderId: reference, language: "fr" });
+      const r = await appel("getOrderStatusExtended.do", {
+        orderId: reference,
+        language: config.langue,
+      });
       const statut = Number(r["orderStatus"] ?? r["OrderStatus"]);
       // 2 : commande payée. 3, 4, 6 : annulée ou remboursée. Le reste attend.
       const etat: EtatChezLePrestataire =
@@ -107,18 +111,19 @@ export function clictopay(
 }
 
 /**
- * Le simulateur du staging : un lien vers l'écran de l'application qui
- * propose « Payer » ou « Refuser ». La décision y est inscrite directement
- * (`simulerPaiement`), donc `etat` n'a rien à demander à personne.
+ * Le simulateur du staging : il renvoie à l'adresse de retour, marquée
+ * `simulateur=1`, où l'écran propose « Payer » ou « Refuser ». La décision y
+ * est inscrite directement (`simulerPaiement`), donc `etat` n'a rien à
+ * demander à personne.
  */
-function simulateur(urlPublique: string): Prestataire {
+function simulateur(code: string): Prestataire {
   return {
-    nom: "simulateur",
+    code,
+    simule: true,
     async creerLien(d) {
-      return {
-        reference: `sim-${d.paiementId}`,
-        lien: `${urlPublique}/pme/reglages?paiement=${d.paiementId}&simulateur=1`,
-      };
+      const lien = new URL(d.retour);
+      lien.searchParams.set("simulateur", "1");
+      return { reference: `sim-${d.paiementId}`, lien: lien.toString() };
     },
     async etat() {
       return { etat: "en_attente", detail: {} };
@@ -126,43 +131,75 @@ function simulateur(urlPublique: string): Prestataire {
   };
 }
 
-/** Le réglage de la tour, tel que `public.paiement_reglage()` le rend. */
+/** Le réglage en vigueur, joint à ce que la table dit du prestataire. */
 export interface ReglagePaiement {
-  prestataire: "aucun" | "simulateur" | "clictopay";
+  prestataire: string;
   url_api: string | null;
   url_retour: string | null;
+  adaptateur: string | null;
+  ouvre_le_paiement: boolean;
+  langue: string | null;
 }
 
-/** Les secrets du compte marchand sont-ils posés sur ce serveur ? (Rien d'autre n'en sort.) */
-export function secretsClictopayPoses(env: Record<string, string | undefined> = process.env) {
-  return Boolean(env["CLICTOPAY_UTILISATEUR"]?.trim() && env["CLICTOPAY_MOT_DE_PASSE"]?.trim());
+type Env = Record<string, string | undefined>;
+
+/**
+ * Les adaptateurs que ce serveur sait faire parler : une entrée par valeur de
+ * `facturation.prestataires_paiement.adaptateur` (une épreuve sur base le
+ * vérifie). `pret` dit si ses secrets sont posés — rien d'autre n'en sort.
+ */
+export const ADAPTATEURS: Readonly<
+  Record<
+    string,
+    {
+      pret(env: Env): boolean;
+      creer(r: ReglagePaiement, env: Env, fetchImpl: typeof fetch): Prestataire | null;
+    }
+  >
+> = {
+  simulateur: {
+    pret: () => true,
+    creer: (r) => simulateur(r.prestataire),
+  },
+  clictopay: {
+    pret: (env) =>
+      Boolean(env["CLICTOPAY_UTILISATEUR"]?.trim() && env["CLICTOPAY_MOT_DE_PASSE"]?.trim()),
+    creer(r, env, fetchImpl) {
+      const url = r.url_api?.trim();
+      if (!url || !r.langue || !this.pret(env)) return null;
+      return clictopay(
+        {
+          code: r.prestataire,
+          url,
+          langue: r.langue,
+          utilisateur: env["CLICTOPAY_UTILISATEUR"]!.trim(),
+          motDePasse: env["CLICTOPAY_MOT_DE_PASSE"]!.trim(),
+        },
+        fetchImpl,
+      );
+    },
+  },
+};
+
+/** Les secrets de l'adaptateur de ce prestataire sont-ils posés ? `null` : aucun adaptateur. */
+export function secretsPoses(adaptateur: string | null, env: Env = process.env): boolean | null {
+  if (!adaptateur) return null;
+  return ADAPTATEURS[adaptateur]?.pret(env) ?? false;
+}
+
+/** L'adresse où le client revient de la page du prestataire — une seule, pour tous. */
+export function adresseDeRetour(urlPublique: string, paiementId: string): string {
+  return `${urlPublique}/pme/reglages?${new URLSearchParams({ paiement: paiementId })}`;
 }
 
 /** Le prestataire que la tour a ouvert, ou `null` quand le paiement en ligne est fermé. */
 export function prestataireDuReglage(
   reglage: ReglagePaiement,
-  env: Record<string, string | undefined> = process.env,
+  env: Env = process.env,
   fetchImpl: typeof fetch = fetch,
 ): { prestataire: Prestataire; urlPublique: string } | null {
   const urlPublique = reglage.url_retour?.trim().replace(/\/+$/, "");
-  if (reglage.prestataire === "aucun" || !urlPublique) return null;
-  if (reglage.prestataire === "simulateur") {
-    return { prestataire: simulateur(urlPublique), urlPublique };
-  }
-  if (reglage.prestataire === "clictopay") {
-    const url = reglage.url_api?.trim();
-    if (!url || !secretsClictopayPoses(env)) return null;
-    return {
-      prestataire: clictopay(
-        {
-          url,
-          utilisateur: env["CLICTOPAY_UTILISATEUR"]!.trim(),
-          motDePasse: env["CLICTOPAY_MOT_DE_PASSE"]!.trim(),
-        },
-        fetchImpl,
-      ),
-      urlPublique,
-    };
-  }
-  return null;
+  if (!reglage.ouvre_le_paiement || !reglage.adaptateur || !urlPublique) return null;
+  const prestataire = ADAPTATEURS[reglage.adaptateur]?.creer(reglage, env, fetchImpl) ?? null;
+  return prestataire ? { prestataire, urlPublique } : null;
 }

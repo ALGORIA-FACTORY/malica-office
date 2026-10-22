@@ -16,8 +16,10 @@
  */
 
 import type { Requete } from "../db.ts";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
+
 import {
-  enMillimes,
+  adresseDeRetour,
   prestataireDuReglage,
   type ReglagePaiement,
 } from "../paiement/prestataires.ts";
@@ -42,10 +44,24 @@ interface PaiementLu {
 const COLONNES_PAIEMENT = `paiement_id, objet, libelle, montant_ht, montant_tva, montant_ttc, devise,
   etat, prestataire, reference, lien, impute, cree_le`;
 
-/** Le prestataire que la tour a ouvert (`public.paiement_reglage()`), ou `null`. */
+/**
+ * Le réglage de la tour (`public.paiement_reglage()`), joint à ce que la table
+ * dit de son prestataire.
+ */
+async function reglageEnVigueur(db: Requete): Promise<ReglagePaiement | null> {
+  const { rows } = await db.query<ReglagePaiement>(
+    `select r ->> 'prestataire' as prestataire, r ->> 'url_api' as url_api,
+            r ->> 'url_retour' as url_retour, p.adaptateur, p.ouvre_le_paiement, p.langue
+       from public.paiement_reglage() r
+       join facturation.prestataires_paiement p on p.code = r ->> 'prestataire'`,
+  );
+  return rows[0] ?? null;
+}
+
+/** Le prestataire que la tour a ouvert, ou `null`. */
 async function prestataireOuvert(db: Requete) {
-  const { rows } = await db.query<{ r: ReglagePaiement }>(`select public.paiement_reglage() as r`);
-  return rows[0] ? prestataireDuReglage(rows[0].r) : null;
+  const r = await reglageEnVigueur(db);
+  return r ? prestataireDuReglage(r) : null;
 }
 
 async function lirePaiement(db: Requete, paiementId: string): Promise<PaiementLu> {
@@ -67,21 +83,23 @@ async function inscrire(
   db: Requete,
   paiementId: string,
   etat: "lien_cree" | "paye" | "refuse",
-  prestataire: string,
+  prestataire: { code: string; simule: boolean },
   reference: string | null,
   lien: string | null,
   detail: Record<string, unknown> = {},
+  moyen: string | null = null,
 ): Promise<PaiementLu> {
-  if (prestataire === "simulateur") {
+  if (prestataire.simule) {
     await db.query(`select set_config('malica.paiement_simulateur', 'oui', true)`);
   }
-  await db.query(`select public.paiement_inscrire($1, $2, $3, $4, $5, $6::jsonb)`, [
+  await db.query(`select public.paiement_inscrire($1, $2, $3, $4, $5, $6::jsonb, $7)`, [
     paiementId,
     etat,
-    prestataire,
+    prestataire.code,
     reference,
     lien,
     JSON.stringify(detail),
+    moyen,
   ]);
   return lirePaiement(db, paiementId);
 }
@@ -328,27 +346,98 @@ export const facturation = {
    * prestataire n'est ouvert dans cet environnement : l'offre reste ouverte,
    * et la facture du mois suit.
    */
-  async payerEnLigne(db: Requete, paiementId: string) {
+  async payerEnLigne(db: Requete, paiementId: string, moyen: string) {
     const p = await lirePaiement(db, paiementId);
     if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
     const env = await prestataireOuvert(db);
     if (!env) return { ouvert: false, lien: null, paiement: p };
 
+    // Un lien encore ouvert chez CE prestataire sert encore : on ne crée pas une
+    // seconde commande pour le même paiement (revenir en arrière et choisir
+    // Mastercard après Visa mène à la même page de carte). On demande d'abord
+    // au prestataire s'il n'est pas déjà payé.
+    if (p.etat === "lien_cree" && p.prestataire === env.prestataire.code && p.lien) {
+      const r =
+        env.prestataire.simule || !p.reference ? null : await env.prestataire.etat(p.reference);
+      if (!r || r.etat === "en_attente") return { ouvert: true, lien: p.lien, paiement: p };
+      const constate = await inscrire(
+        db,
+        paiementId,
+        r.etat,
+        env.prestataire,
+        p.reference,
+        null,
+        r.detail,
+      );
+      if (constate.etat === "paye") return { ouvert: true, lien: null, paiement: constate };
+    }
+
+    // Le moyen choisi doit être actif et accepté par ce prestataire : la base le
+    // refuse par une clé, et le redit à l'inscription. On ne demande pas un
+    // lien pour rien.
+    const { rows } = await db.query<{ d: { iso_numerique: string; exposant: number } }>(
+      `select public.paiement_moyen_admis($1, $2, $3) as d`,
+      [moyen, env.prestataire.code, p.devise],
+    );
+    const devise = rows[0]!.d;
+
     const { reference, lien } = await env.prestataire.creerLien({
       paiementId,
-      millimes: enMillimes(p.montant_ttc),
+      unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
+      devise: devise.iso_numerique,
       libelle: p.libelle,
-      retour: `${env.urlPublique}/pme/reglages?paiement=${paiementId}`,
+      retour: adresseDeRetour(env.urlPublique, paiementId),
     });
     const inscrit = await inscrire(
       db,
       paiementId,
       "lien_cree",
-      env.prestataire.nom,
+      env.prestataire,
       reference,
       lien,
+      {},
+      moyen,
     );
     return { ouvert: true, lien, paiement: inscrit };
+  },
+
+  /**
+   * La page de choix : les moyens de paiement, leur logo et leur nom dans la
+   * langue de la personne, et s'ils sont payables ICI — actifs et acceptés par
+   * le prestataire que la tour a ouvert. `prestataire` est `null` quand le
+   * paiement en ligne est fermé.
+   */
+  async moyensDePaiementEnLigne(db: Requete, locale: string) {
+    const reglage = await reglageEnVigueur(db);
+    const ouvert = reglage ? prestataireDuReglage(reglage) : null;
+    const code = ouvert?.prestataire.code ?? null;
+    const { rows: moyens } = await db.query(
+      `select m.code, m.logo, m.rang, m.actif,
+              coalesce(demandee.value, francais.value, m.code) as libelle,
+              exists (select 1 from facturation.moyens_par_prestataire mp
+                       where mp.moyen = m.code and mp.prestataire = $2) as accepte
+         from facturation.moyens_paiement_v m
+         left join ref_labels_v demandee
+           on demandee.ns = 'moyen_en_ligne' and demandee.key = m.code and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'moyen_en_ligne' and francais.key = m.code and francais.locale = 'fr'
+        order by m.rang`,
+      [locale, code],
+    );
+    if (!code) return { prestataire: null, moyens };
+    const { rows: p } = await db.query(
+      `select p.code, p.logo, coalesce(demandee.value, francais.value, p.code) as libelle
+         from facturation.prestataires_paiement p
+         left join ref_labels_v demandee
+           on demandee.ns = 'prestataire_paiement' and demandee.key = p.code
+          and demandee.locale = $2
+         left join ref_labels_v francais
+           on francais.ns = 'prestataire_paiement' and francais.key = p.code
+          and francais.locale = 'fr'
+        where p.code = $1`,
+      [code, locale],
+    );
+    return { prestataire: p[0] ?? null, moyens };
   },
 
   /**
@@ -357,28 +446,22 @@ export const facturation = {
    */
   async verifierPaiement(db: Requete, paiementId: string) {
     const p = await lirePaiement(db, paiementId);
-    if (p.etat === "paye" || !p.reference || p.prestataire !== "clictopay") return p;
+    if (p.etat === "paye" || !p.reference) return p;
+    // On ne demande qu'au prestataire qui a créé le lien, s'il est toujours ouvert.
     const env = await prestataireOuvert(db);
-    if (!env || env.prestataire.nom !== "clictopay") return p;
+    if (!env || env.prestataire.simule || env.prestataire.code !== p.prestataire) return p;
     const r = await env.prestataire.etat(p.reference);
     if (r.etat === "en_attente") return p;
-    return inscrire(db, paiementId, r.etat, "clictopay", p.reference, null, r.detail);
+    return inscrire(db, paiementId, r.etat, env.prestataire, p.reference, null, r.detail);
   },
 
   /** Le simulateur du staging : « payer » ou « refuser », sans carte. */
   async simulerPaiement(db: Requete, paiementId: string, decision: "paye" | "refuse") {
     const env = await prestataireOuvert(db);
-    if (!env || env.prestataire.nom !== "simulateur") throw new Error("paiement.simulateur_ferme");
+    if (!env || !env.prestataire.simule) throw new Error("paiement.simulateur_ferme");
     if (decision !== "paye" && decision !== "refuse") throw new Error("paiement.decision_inconnue");
     const p = await lirePaiement(db, paiementId);
-    return inscrire(
-      db,
-      paiementId,
-      decision,
-      "simulateur",
-      p.reference ?? `sim-${paiementId}`,
-      null,
-    );
+    return inscrire(db, paiementId, decision, env.prestataire, p.reference, null);
   },
 
   /* ------------------------------------------------------------ recharges */

@@ -2325,3 +2325,28 @@ html.dark:has([data-surface="pme"]),
 
 @keyframes mv-piece-part{to{opacity:0;width:0;margin-inline-end:-.4375rem;scale:.86}}
 [data-surface="pme"] [data-ecran="capture"] .vg.part{animation:mv-piece-part var(--t-dedans) var(--e-sort) both;pointer-events:none}
+
+/* ======================== écran · paiement ========================
+ * Le choix du moyen de paiement (`pme.payer.$paiementId.tsx`), web et PWA
+ * seulement. Les logos des réseaux de cartes et des prestataires se posent sur
+ * une pastille BLANCHE dans les deux thèmes : c'est la règle d'usage de leurs
+ * marques (aucun logo sur fond sombre ou coloré) — le seul blanc littéral de
+ * l'écran, et il n'est pas décoratif. Un moyen inactif ou refusé ici reste
+ * visible, désactivé, avec sa raison. */
+[data-surface="pme"] [data-ecran="paiement"] .corps{padding:.5rem 1.25rem 1.5rem;display:grid;gap:.75rem}
+[data-surface="pme"] [data-ecran="paiement"] .du{background:var(--d1);border-radius:20px;padding:1rem;display:grid;gap:.25rem}
+[data-surface="pme"] [data-ecran="paiement"] .du b{font-size:1.0625rem;font-weight:600;letter-spacing:-.02em;color:var(--tx)}
+[data-surface="pme"] [data-ecran="paiement"] .du .px{font-family:var(--mono);font-size:.9375rem;font-weight:600;letter-spacing:-.03em;color:var(--t2)}
+[data-surface="pme"] [data-ecran="paiement"] .moyens{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
+[data-surface="pme"] [data-ecran="paiement"] .moyen{display:flex;align-items:center;gap:.875rem;width:100%;min-height:64px;padding:.75rem 1rem;background:var(--d1);border:1px solid transparent;border-radius:16px;color:var(--tx);font:inherit;text-align:start;cursor:pointer}
+[data-surface="pme"] [data-ecran="paiement"] .moyen:hover:not([disabled]){border-color:var(--acc)}
+[data-surface="pme"] [data-ecran="paiement"] .moyen:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+[data-surface="pme"] [data-ecran="paiement"] .moyen[disabled]{cursor:default}
+[data-surface="pme"] [data-ecran="paiement"] .moyen[disabled] .logo{opacity:.5}
+[data-surface="pme"] [data-ecran="paiement"] .logo{flex:none;display:grid;place-items:center;width:64px;height:40px;padding:4px 6px;border-radius:8px;background:#fff}
+[data-surface="pme"] [data-ecran="paiement"] .logo img{max-width:100%;max-height:100%;object-fit:contain}
+[data-surface="pme"] [data-ecran="paiement"] .moyen .nm{flex:1;min-width:0;font-size:.9375rem;font-weight:600;letter-spacing:-.015em}
+[data-surface="pme"] [data-ecran="paiement"] .et{font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="paiement"] .warn{font-size:.8125rem;color:var(--mg)}
+[data-surface="pme"] [data-ecran="paiement"] .securise{display:flex;align-items:center;gap:.625rem;margin:.25rem 0 0;font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="paiement"] .securise .logo{width:auto;height:28px;padding:3px 6px}

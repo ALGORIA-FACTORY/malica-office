@@ -10,7 +10,7 @@
  * Ici, chaque greffon est nommé, son ordre est visible, et la cible n'est plus
  * décidée par un tiers.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -102,6 +102,30 @@ export default defineConfig(({ mode }) => {
        * et 3000 est le port de l'API. Le relancement de l'aperçu ne transmet
        * pas le mode, donc ce greffon vaut pour tous les modes, après nitro.
        */
+      /*
+       * La coque ne vend rien (règles de Google Play, 22 octobre 2026) : les
+       * logos des moyens de paiement (`public/paiement/`) servent la page de
+       * choix du web et de la PWA, et n'ont rien à faire dans le paquet
+       * Android. `outils/coque-sans-commerce.mjs` vérifie qu'ils n'y sont pas.
+       */
+      ...(coque
+        ? [
+            {
+              name: "malica:coque-sans-logos-de-paiement",
+              apply: "build" as const,
+              closeBundle: {
+                order: "post" as const,
+                sequential: true,
+                handler() {
+                  rmSync(new URL("./.output/public/paiement", import.meta.url), {
+                    recursive: true,
+                    force: true,
+                  });
+                },
+              },
+            },
+          ]
+        : []),
       {
         name: "malica:port-de-l-apercu",
         enforce: "post" as const,

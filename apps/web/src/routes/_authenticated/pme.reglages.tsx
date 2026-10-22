@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
   MonForfait,
+  OffreAuCatalogue,
   OrganisationDeLaLicence,
   SiegeDeLaLicence,
 } from "@malica/socle/ports/repositories";
@@ -112,7 +113,7 @@ function PmeReglages() {
 
   const abo = useLAbonnement();
   const f = abo.forfait;
-  const verrous = degradation(f, t, offresQuiOuvrent(catalogue));
+  const verrous = degradation(f, t, catalogue);
   const bientot = lecturesQuiSAchevent(f);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
@@ -631,9 +632,10 @@ interface Verrou {
 function degradation(
   f: MonForfait | null,
   t: (k: MessageKey) => string,
-  ouvrent: ReturnType<typeof offresQuiOuvrent>,
+  catalogue: readonly OffreAuCatalogue[] | undefined,
 ): { sieges: Verrou; societes: Verrou } {
-  const ouvertures = ouverturesDuForfait(f);
+  const ouvertures = ouverturesDuForfait(f, catalogue);
+  const ouvrent = offresQuiOuvrent(catalogue);
   const inconnu = f ? null : t("pme.reglages.verrou.nonLu");
   return {
     sieges: { ouvert: ouvertures.sieges, offre: ouvrent.sieges?.libelle ?? "", raison: inconnu },
