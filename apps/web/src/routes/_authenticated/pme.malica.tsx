@@ -8,46 +8,6 @@ import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import type { SourceCitee } from "@malica/socle/ports/repositories";
 
-/* ═══════════════════════════════════════════════════════════════════════════
- *
- *   LES CHAÎNES PROPRES À CET ÉCRAN — UN SEUL BLOC, ET IL EST ICI
- *
- * Tout ce que le DICTIONNAIRE porte déjà passe par `t()` et n'est pas recopié
- * ici : le composeur, l'envoi, « Malica réfléchit… », l'erreur, l'intro, et
- * tout le vocabulaire des fils (`malica.fils.*`). Ces clés sont traduites en
- * FR, EN et AR ; les réécrire en dur aurait perdu l'arabe.
- *
- * Ne restent donc ci-dessous que les phrases que le DESSIN ajoute et que le
- * dictionnaire n'a pas encore — la suite du fil et le pied. Elles sont en
- * français, en dur, nommées, et visibles d'un coup d'œil : c'est exactement
- * ce qu'il y a à verser au dictionnaire, et rien d'autre.
- * ═══════════════════════════════════════════════════════════════════════ */
-const TEXTES = {
-  /** Le nom qu'on lit en tête du fil, à côté de son visage. */
-  malica: "Malica",
-  /** Ce que le composeur propose, dans la voix du dessin. */
-  composer: "Écrivez à Malica…",
-  /** Ce que la barre d'appel du dessin propose, en tête de la liste. */
-  poser: "Posez votre question…",
-  /** La suite du fil, quand un cabinet est mandaté et porte un nom. */
-  suiteAvis: (cabinet: string) => `Demander l'avis de ${cabinet}`,
-  /** La même, quand le cabinet existe mais n'a pas rendu son nom. */
-  suiteAvisSansNom: "Demander l'avis de votre cabinet",
-  /** La suite d'un siège : lui ne transmet pas, il demande. */
-  suiteTransmission: "Demander la transmission au propriétaire du dossier",
-  /** Et pourquoi le geste n'est pas encore offert ici. Voir R-CÂBLAGE ci-dessous. */
-  suitePasEncore: "La demande n'est pas encore ouverte depuis cet écran",
-  /** Aucun mandat : le geste n'a nulle part où aller, et l'écran le dit. */
-  suiteSansCabinet: "Demander l'avis d'un cabinet",
-  suiteSansCabinetDetail: "Aucun cabinet n'est mandaté sur ce dossier",
-  /** L'état du dessin quand Malica remet sa réponse au cabinet. */
-  retenue: "Envoyée en relecture — cet avis engage votre dossier",
-  /** Le pied du fil — repris mot pour mot du dessin. */
-  pied:
-    "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la " +
-    "place de votre expert-comptable sur ce qui engage votre dossier.",
-} as const;
-
 export const Route = createFileRoute("/_authenticated/pme/malica")({
   head: () => ({
     meta: [
@@ -334,7 +294,7 @@ function PmeMalica() {
               <span className="ph">
                 <img src={portraitMalica} alt="" width={620} height={620} />
               </span>
-              <span>{TEXTES.poser}</span>
+              <span>{t("pme.malica.poser")}</span>
               <svg viewBox="0 0 24 24" className="g" aria-hidden>
                 <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
                 <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
@@ -446,7 +406,7 @@ function PmeMalica() {
                         <span className="ph">
                           <img src={portraitMalica} alt="" width={620} height={620} />
                         </span>
-                        <b>{TEXTES.malica}</b>
+                        <b>{t("malica.chat.her")}</b>
                       </div>
                     ) : null}
                     <div className="mal">
@@ -481,7 +441,7 @@ function PmeMalica() {
                       {tour.retenue ? (
                         <div className="et1">
                           <i />
-                          {TEXTES.retenue}
+                          {t("pme.malica.retenue")}
                         </div>
                       ) : null}
                     </div>
@@ -525,15 +485,17 @@ function PmeMalica() {
                 <span className="bd">
                   <b>
                     {siege
-                      ? TEXTES.suiteTransmission
+                      ? t("pme.malica.suiteTransmission")
                       : aUnCabinet
                         ? cabinetNom
-                          ? TEXTES.suiteAvis(cabinetNom)
-                          : TEXTES.suiteAvisSansNom
-                        : TEXTES.suiteSansCabinet}
+                          ? t("pme.malica.suiteAvis", { cabinet: cabinetNom })
+                          : t("pme.malica.suiteAvisSansNom")
+                        : t("pme.malica.suiteSansCabinet")}
                   </b>
                   <span>
-                    {siege || aUnCabinet ? TEXTES.suitePasEncore : TEXTES.suiteSansCabinetDetail}
+                    {siege || aUnCabinet
+                      ? t("pme.malica.suitePasEncore")
+                      : t("pme.malica.suiteSansCabinetDetail")}
                   </span>
                 </span>
               </div>
@@ -556,8 +518,8 @@ function PmeMalica() {
                 ref={champ}
                 value={brouillon}
                 onChange={(e) => setBrouillon(e.target.value)}
-                placeholder={TEXTES.composer}
-                aria-label={TEXTES.composer}
+                placeholder={t("pme.malica.composer")}
+                aria-label={t("pme.malica.composer")}
               />
               <button
                 type="submit"
@@ -578,7 +540,7 @@ function PmeMalica() {
              * question. Le rôle ne la change pas — elle vaut pour le dirigeant
              * comme pour le siège.
              */}
-            <p className="foot">{TEXTES.pied}</p>
+            <p className="foot">{t("pme.malica.pied")}</p>
           </>
         )}
       </div>
