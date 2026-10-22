@@ -27,6 +27,12 @@ on:
     # Le staging suit main, et main seule (voir l'en-tête).
     branches: [main]
     tags: ["v*"]
+    # Un commit de main qui ne touche que la documentation ne change aucune
+    # image : on ne les reconstruit pas et le staging ne se redéploie pas.
+    # (Le filtre ne s'applique pas aux étiquettes `v*`, toujours publiées.)
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
