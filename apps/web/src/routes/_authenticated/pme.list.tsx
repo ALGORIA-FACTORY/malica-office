@@ -38,50 +38,6 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
   component: VosDocuments,
 });
 
-/*
- * ===========================================================================
- *
- *   LES CHAÎNES QUI N'ONT PAS ENCORE DE CLÉ — ET QUI EN ATTENDENT UNE
- *
- * Le dessin de la bibliothèque introduit un vocabulaire que
- * `packages/socle/src/messages.ts` ne porte pas encore : le nom des trois
- * nouveaux axes, le mot « pièces » seul (sans son nombre — `pme.doc.compte`
- * les porte ensemble et ne se coupe pas), la légende des trois états du
- * calendrier, et la remarque de Malica sur ce qui manque.
- *
- * Elles sont rassemblées ICI, en un seul bloc nommé, et nulle part ailleurs
- * dans le fichier. C'est une dette VISIBLE, pas une dispersion : le jour où
- * les clés entrent au dictionnaire dans les trois langues, ce bloc disparaît
- * d'un coup et chaque usage devient un `t(...)`. Tant qu'il est là, l'écran
- * est en français pour ces huit libellés — et il le dit.
- *
- * Tout le reste de l'écran passe par `t()` : « Mois » est `pme.vue.mois`,
- * « Année » est `pme.vue.annee`, « Achats » et « Ventes » sont
- * `pme.doc.type.*`, « Client » et « Fournisseur » sont `plan.nature.*`, le
- * compte de pièces est `pme.doc.compte`, ce qui n'est pas lu est
- * `pme.doc.lead.nonLues`, le plafond est `pme.refus.plafond_atteint`.
- */
-const TEXTES = {
-  regrouperPar: "Regrouper par",
-  axeDossier: "Dossier",
-  axeTiers: "Tiers",
-  axeOperation: "Type d'opération",
-  pieces: "pièces",
-  tiers: "tiers",
-  retour: "Retour",
-  vueListe: "Liste",
-  voirTout: (n: number) => `Voir les ${n}`,
-  replier: "Replier",
-  pasEncoreRecu: (mois: string) => `${mois} pas encore reçu`,
-  legendeRecue: "Reçue",
-  legendeAttendue: "Attendue, pas encore là",
-  legendeRien: "Rien attendu",
-  manquants: (n: number, mois: string, liste: string) =>
-    n === 1
-      ? `Un ensemble récurrent n'a rien reçu en ${mois} : ${liste}. Les mois précédents en portent une chaque fois.`
-      : `${n} ensembles récurrents n'ont rien reçu en ${mois} : ${liste}. Les mois précédents en portent une chaque fois.`,
-} as const;
-
 type Axe = "mois" | "dossier" | "tiers" | "op";
 type Vue = "liste" | "annee";
 /**
@@ -578,9 +534,9 @@ function VosDocuments() {
 
   const axes: Array<{ cle: Axe; nom: string }> = [
     { cle: "mois", nom: t("pme.vue.mois") },
-    { cle: "dossier", nom: TEXTES.axeDossier },
-    { cle: "tiers", nom: TEXTES.axeTiers },
-    { cle: "op", nom: TEXTES.axeOperation },
+    { cle: "dossier", nom: t("pme.recu.dossier") },
+    { cle: "tiers", nom: t("pme.recu.tiers") },
+    { cle: "op", nom: t("pme.list.axeOperation") },
   ];
 
   return (
@@ -599,16 +555,14 @@ function VosDocuments() {
        */}
       <div className="top">
         {/*
-         * `t("pme.regler.retour")` et non `TEXTES.retour`.
+         * `t("pme.regler.retour")`.
          *
          * Le retour de cet ecran portait « Retour » en dur, en francais
          * seulement : en arabe et en anglais, un lecteur d'ecran annoncait
          * « Retour ». C'est la cle que portent deja les neuf autres `.bk` du
          * produit, et elle est traduite dans les trois langues.
          *
-         * `TEXTES.retour` reste employe plus bas, sur le bouton qui replie un
-         * GROUPE — un autre geste, dans le corps de l'ecran, et une autre
-         * dette ; celle-ci n'est pas aggravee ici.
+         * Le bouton qui replie un GROUPE, plus bas, lit la meme cle.
          */}
         <button
           type="button"
@@ -633,7 +587,7 @@ function VosDocuments() {
          */}
         <p className="sub">
           {t("pme.doc.compte", { count: visibles.length })}
-          {nombreDeTiers > 0 ? ` · ${nombreDeTiers} ${TEXTES.tiers}` : ""}
+          {nombreDeTiers > 0 ? ` · ${t("pme.list.nbTiers", { count: nombreDeTiers })}` : ""}
           <br />
           {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
         </p>
@@ -641,7 +595,7 @@ function VosDocuments() {
         <TransmettreCeQuiReste pieces={toutes} />
 
         {/* --------------------------------------------- l'axe et les deux formes */}
-        <p className="lab">{TEXTES.regrouperPar}</p>
+        <p className="lab">{t("pme.list.regrouperPar")}</p>
         <div className="axe">
           <span className="ch">
             {axes
@@ -662,7 +616,7 @@ function VosDocuments() {
             <button
               type="button"
               className={cn(vue === "liste" && "on")}
-              aria-label={TEXTES.vueListe}
+              aria-label={t("pme.list.vueListe")}
               aria-pressed={vue === "liste"}
               onClick={() => choisirVue("liste")}
             >
@@ -748,7 +702,7 @@ function VosDocuments() {
             <div className="sec">
               <h2>{titreDuGroupe(groupeOuvert.cle)}</h2>
               <button type="button" className="ret" onClick={() => setOuvert(null)}>
-                {TEXTES.retour}
+                {t("pme.regler.retour")}
               </button>
             </div>
             <p className="sub">
@@ -844,7 +798,9 @@ function VosDocuments() {
                 <span className="bd">
                   <b>{titreDuGroupe(g.cle)}</b>
                   {manquant(g) ? (
-                    <span className="miss">{TEXTES.pasEncoreRecu(moisCourantLisible)}</span>
+                    <span className="miss">
+                      {t("pme.list.pasEncoreRecu", { mois: moisCourantLisible })}
+                    </span>
                   ) : (
                     <span className="k">{sousTitre(g)}</span>
                   )}
@@ -863,13 +819,13 @@ function VosDocuments() {
                 </span>
                 <span className="n">
                   <b>{g.pieces.length}</b>
-                  <span>{TEXTES.pieces}</span>
+                  <span>{t("pme.list.pieces")}</span>
                 </span>
               </button>
             ))}
             {groupes.length > PREMIERS ? (
               <button type="button" className="more" onClick={() => setTout(!tout)}>
-                {tout ? TEXTES.replier : TEXTES.voirTout(groupes.length)}
+                {tout ? t("pme.list.replier") : t("pme.list.voirTout", { n: groupes.length })}
               </button>
             ) : null}
           </>
@@ -932,13 +888,13 @@ function VosDocuments() {
             {/* Aucune information n'est portée par la seule couleur : la légende. */}
             <div className="lgd">
               <span>
-                <i className="d ok" aria-hidden /> {TEXTES.legendeRecue}
+                <i className="d ok" aria-hidden /> {t("pme.parcours.recue")}
               </span>
               <span>
-                <i className="d miss" aria-hidden /> {TEXTES.legendeAttendue}
+                <i className="d miss" aria-hidden /> {t("pme.list.legendeAttendue")}
               </span>
               <span>
-                <i className="d none" aria-hidden /> {TEXTES.legendeRien}
+                <i className="d none" aria-hidden /> {t("pme.list.legendeRien")}
               </span>
             </div>
           </>
@@ -962,11 +918,11 @@ function VosDocuments() {
             <img src={portraitMalica} alt="Malica" width={620} height={620} />
             <span className="bd">
               <p>
-                {TEXTES.manquants(
-                  manquent.length,
-                  moisCourantLisible,
-                  manquent.map((g) => titreDuGroupe(g.cle)).join(", "),
-                )}
+                {t("pme.list.manquants", {
+                  count: manquent.length,
+                  mois: moisCourantLisible,
+                  liste: manquent.map((g) => titreDuGroupe(g.cle)).join(", "),
+                })}
               </p>
             </span>
           </div>

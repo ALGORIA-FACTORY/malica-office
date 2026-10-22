@@ -3496,6 +3496,60 @@ const fr = {
   "pme.notifications.ongletAttente": "À traiter",
   "pme.notifications.videSous":
     "Rien n'est caché : quand votre cabinet vous écrit, c'est ici que ça arrive.",
+  /**
+   * Le dessin écrit « Par classe » ; le titre lit `pme.charges.byFamille`
+   * (« Par famille ») : deux mots pour une seule chose, le dictionnaire tranche.
+   * « Team » et « Premium » restent en dur sur l'écran : un nom d'offre ne se
+   * traduit pas.
+   */
+  "pme.charges.classes": "{count} CLASSES",
+  "pme.charges.classes#one": "{count} CLASSE",
+  "pme.charges.classes#other": "{count} CLASSES",
+  "pme.charges.partDesCharges": "{count} pièces · {part} des charges",
+  "pme.charges.partDesCharges#one": "{count} pièce · {part} des charges",
+  "pme.charges.partDesCharges#other": "{count} pièces · {part} des charges",
+  "pme.charges.totalDe": "Total {famille}",
+  "pme.charges.lesPieces": "Les pièces",
+  "pme.charges.plafond":
+    "Il vous reste {count} lectures sur {droit} ce mois. Au-delà, vos charges {mois} seront incomplètes.",
+  "pme.charges.plafond#one":
+    "Il vous reste {count} lecture sur {droit} ce mois. Au-delà, vos charges {mois} seront incomplètes.",
+  "pme.charges.plafond#other":
+    "Il vous reste {count} lectures sur {droit} ce mois. Au-delà, vos charges {mois} seront incomplètes.",
+  "pme.charges.siegesTitre": "Par siège",
+  "pme.charges.siegesSous": "Qui a engagé quoi, dans votre équipe",
+  "pme.charges.groupeTitre": "Le groupe",
+  "pme.charges.groupeSous": "Les charges consolidées de vos sociétés",
+  "pme.charges.nbClasses": "{count} classes",
+  "pme.charges.nbClasses#one": "{count} classe",
+  "pme.charges.nbClasses#other": "{count} classes",
+  "pme.list.regrouperPar": "Regrouper par",
+  "pme.list.axeOperation": "Type d'opération",
+  "pme.list.pieces": "pièces",
+  "pme.list.vueListe": "Liste",
+  "pme.list.voirTout": "Voir les {n}",
+  "pme.list.replier": "Replier",
+  "pme.list.pasEncoreRecu": "{mois} pas encore reçu",
+  "pme.list.legendeAttendue": "Attendue, pas encore là",
+  "pme.list.legendeRien": "Rien attendu",
+  "pme.list.manquants":
+    "{count} ensembles récurrents n'ont rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
+  "pme.list.manquants#one":
+    "Un ensemble récurrent n'a rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
+  "pme.list.manquants#other":
+    "{count} ensembles récurrents n'ont rien reçu en {mois} : {liste}. Les mois précédents en portent une chaque fois.",
+  "pme.list.nbTiers": "{count} tiers",
+  "pme.malica.composer": "Écrivez à Malica…",
+  "pme.malica.poser": "Posez votre question…",
+  "pme.malica.suiteAvis": "Demander l'avis de {cabinet}",
+  "pme.malica.suiteAvisSansNom": "Demander l'avis de votre cabinet",
+  "pme.malica.suiteTransmission": "Demander la transmission au propriétaire du dossier",
+  "pme.malica.suitePasEncore": "La demande n'est pas encore ouverte depuis cet écran",
+  "pme.malica.suiteSansCabinet": "Demander l'avis d'un cabinet",
+  "pme.malica.suiteSansCabinetDetail": "Aucun cabinet n'est mandaté sur ce dossier",
+  "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
+  "pme.malica.pied":
+    "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -6806,6 +6860,54 @@ const en: Dict = {
   "pme.notifications.ongletAttente": "To handle",
   "pme.notifications.videSous":
     "Nothing is hidden: when your firm writes to you, this is where it arrives.",
+  "pme.charges.classes": "{count} CLASSES",
+  "pme.charges.classes#one": "{count} CLASS",
+  "pme.charges.classes#other": "{count} CLASSES",
+  "pme.charges.partDesCharges": "{count} documents · {part} of expenses",
+  "pme.charges.partDesCharges#one": "{count} document · {part} of expenses",
+  "pme.charges.partDesCharges#other": "{count} documents · {part} of expenses",
+  "pme.charges.totalDe": "Total {famille}",
+  "pme.charges.lesPieces": "The documents",
+  "pme.charges.plafond":
+    "You have {count} reads left out of {droit} this month. Beyond that, your {mois} expenses will be incomplete.",
+  "pme.charges.plafond#one":
+    "You have {count} read left out of {droit} this month. Beyond that, your {mois} expenses will be incomplete.",
+  "pme.charges.plafond#other":
+    "You have {count} reads left out of {droit} this month. Beyond that, your {mois} expenses will be incomplete.",
+  "pme.charges.siegesTitre": "By seat",
+  "pme.charges.siegesSous": "Who spent what in your team",
+  "pme.charges.groupeTitre": "The group",
+  "pme.charges.groupeSous": "The consolidated expenses of your companies",
+  "pme.charges.nbClasses": "{count} classes",
+  "pme.charges.nbClasses#one": "{count} class",
+  "pme.charges.nbClasses#other": "{count} classes",
+  "pme.list.regrouperPar": "Group by",
+  "pme.list.axeOperation": "Operation type",
+  "pme.list.pieces": "documents",
+  "pme.list.vueListe": "List",
+  "pme.list.voirTout": "See all {n}",
+  "pme.list.replier": "Collapse",
+  "pme.list.pasEncoreRecu": "{mois} not received yet",
+  "pme.list.legendeAttendue": "Expected, not here yet",
+  "pme.list.legendeRien": "Nothing expected",
+  "pme.list.manquants":
+    "{count} recurring groups received nothing in {mois}: {liste}. Previous months always had one.",
+  "pme.list.manquants#one":
+    "One recurring group received nothing in {mois}: {liste}. Previous months always had one.",
+  "pme.list.manquants#other":
+    "{count} recurring groups received nothing in {mois}: {liste}. Previous months always had one.",
+  "pme.list.nbTiers": "counterparties: {count}",
+  "pme.malica.composer": "Write to Malica…",
+  "pme.malica.poser": "Ask your question…",
+  "pme.malica.suiteAvis": "Ask {cabinet} for advice",
+  "pme.malica.suiteAvisSansNom": "Ask your firm for advice",
+  "pme.malica.suiteTransmission": "Ask the file owner to send it",
+  "pme.malica.suitePasEncore": "This request cannot be made from this screen yet",
+  "pme.malica.suiteSansCabinet": "Ask a firm for advice",
+  "pme.malica.suiteSansCabinetDetail": "No firm is engaged on this file",
+  "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
+  "pme.malica.pied":
+    "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
 };
 
 const ar: Dict = {
@@ -10009,6 +10111,54 @@ const ar: Dict = {
   "pme.notifications.sous": "كل ما يقوله لكم مكتبكم يصل إلى هنا. ما يتطلب إجراءً يظهر في الأعلى.",
   "pme.notifications.ongletAttente": "للمعالجة",
   "pme.notifications.videSous": "لا شيء مخفي: عندما يراسلكم مكتبكم، فهنا يصل.",
+  "pme.charges.classes": "عدد الأصناف: {count}",
+  "pme.charges.classes#one": "صنف واحد",
+  "pme.charges.classes#other": "عدد الأصناف: {count}",
+  "pme.charges.partDesCharges": "عدد الوثائق: {count} · {part} من المصاريف",
+  "pme.charges.partDesCharges#one": "وثيقة واحدة · {part} من المصاريف",
+  "pme.charges.partDesCharges#other": "عدد الوثائق: {count} · {part} من المصاريف",
+  "pme.charges.totalDe": "مجموع {famille}",
+  "pme.charges.lesPieces": "الوثائق",
+  "pme.charges.plafond":
+    "القراءات المتبقية لكم هذا الشهر: {count} من {droit}. بعد ذلك، ستكون مصاريف {mois} غير مكتملة.",
+  "pme.charges.plafond#one":
+    "تبقّت لكم قراءة واحدة من {droit} هذا الشهر. بعد ذلك، ستكون مصاريف {mois} غير مكتملة.",
+  "pme.charges.plafond#other":
+    "القراءات المتبقية لكم هذا الشهر: {count} من {droit}. بعد ذلك، ستكون مصاريف {mois} غير مكتملة.",
+  "pme.charges.siegesTitre": "حسب المقعد",
+  "pme.charges.siegesSous": "من أنفق ماذا في فريقكم",
+  "pme.charges.groupeTitre": "المجموعة",
+  "pme.charges.groupeSous": "المصاريف المجمّعة لشركاتكم",
+  "pme.charges.nbClasses": "عدد الأصناف: {count}",
+  "pme.charges.nbClasses#one": "صنف واحد",
+  "pme.charges.nbClasses#other": "عدد الأصناف: {count}",
+  "pme.list.regrouperPar": "التجميع حسب",
+  "pme.list.axeOperation": "نوع العملية",
+  "pme.list.pieces": "وثائق",
+  "pme.list.vueListe": "قائمة",
+  "pme.list.voirTout": "عرض الكل ({n})",
+  "pme.list.replier": "طيّ",
+  "pme.list.pasEncoreRecu": "{mois}: لم يصل بعد",
+  "pme.list.legendeAttendue": "منتظرة، لم تصل بعد",
+  "pme.list.legendeRien": "لا شيء منتظر",
+  "pme.list.manquants":
+    "مجموعات متكرّرة لم تتلقَّ شيئًا في {mois} ({count}): {liste}. كانت الأشهر السابقة تحمل وثيقة في كل مرة.",
+  "pme.list.manquants#one":
+    "مجموعة متكرّرة لم تتلقَّ شيئًا في {mois}: {liste}. كانت الأشهر السابقة تحمل وثيقة في كل مرة.",
+  "pme.list.manquants#other":
+    "مجموعات متكرّرة لم تتلقَّ شيئًا في {mois} ({count}): {liste}. كانت الأشهر السابقة تحمل وثيقة في كل مرة.",
+  "pme.list.nbTiers": "عدد الأطراف الأخرى: {count}",
+  "pme.malica.composer": "اكتبوا إلى ماليكا…",
+  "pme.malica.poser": "اطرحوا سؤالكم…",
+  "pme.malica.suiteAvis": "طلب رأي {cabinet}",
+  "pme.malica.suiteAvisSansNom": "طلب رأي مكتبكم",
+  "pme.malica.suiteTransmission": "طلب الإرسال من صاحب الملف",
+  "pme.malica.suitePasEncore": "لا يمكن تقديم هذا الطلب من هذه الشاشة بعد",
+  "pme.malica.suiteSansCabinet": "طلب رأي مكتب محاسبة",
+  "pme.malica.suiteSansCabinetDetail": "لا يوجد مكتب موكَّل على هذا الملف",
+  "pme.malica.retenue": "أُرسلت للمراجعة — هذا الرأي له أثر على ملفكم",
+  "pme.malica.pied":
+    "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
 };
 
 export type MessageKey = keyof typeof fr;
