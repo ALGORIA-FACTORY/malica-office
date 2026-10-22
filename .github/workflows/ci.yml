@@ -8,8 +8,19 @@
 name: CI
 
 on:
+  # Main seule à la poussée : une branche de travail est vérifiée par SA PR.
+  # Jusqu'au 22 octobre 2026, chaque commit d'une PR passait la CI DEUX fois
+  # (poussée de la branche, puis PR), et les étiquettes la relançaient une
+  # troisième fois sur un commit déjà vérifié : 48 % des minutes du mois. Rien
+  # n'est moins vérifié — toute PR passe la CI entière, et main aussi.
   push:
+    branches: [main]
   pull_request:
+    # Une PR qui ne touche que la documentation ne change aucun comportement.
+    # Le moindre fichier hors de ces chemins relance toute la CI.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 # Une nouvelle poussée annule la vérification en cours de la même branche :
 # seul le dernier état compte, et la file ne s'allonge pas pour rien.
