@@ -347,16 +347,23 @@ console.log("\nLa transmission et la suppression");
   // n'est pas une épreuve : quelqu'un les verra, « Pas encore lue », et
   // tentera de les lire. Tout ce qui a été créé ici est repris, puis effacé.
   console.log("\nRien ne reste");
-  await rpc("collab", "setPieceVis", [transmise.id, "personnel"]);
+  // Une pièce transmise ne revient que par accord du cabinet (migration
+  // 20261011160000, gardée par `capture_piece_set_vis`) : la PME demande le
+  // rappel, le cabinet l'accorde, et c'est l'accord qui la remet chez elle.
+  // Forcer `setPieceVis(…, "personnel")` est refusé par la base depuis le
+  // 22 octobre 2026 — l'épreuve passe donc par le chemin réel.
+  await rpc("collab", "demanderSurPiece", [transmise.id, "rappel"]);
+  await rpc("collab", "repondreSurPiece", [transmise.id, "rappel", true, null]);
   const fileApres = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
   verdict(
     "une pièce reprise quitte la file du cabinet",
     !fileApres.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
   );
-  for (const id of [transmise.id, piece.id]) {
-    await rpc("collab", "setPieceVis", [id, "personnel"]);
-    await rpc("capture", "supprimer", [id]);
-  }
+  // La première pièce a aussi été capturée « partage » (section 5) : elle revient
+  // par le même rappel accordé, puis les deux s'effacent.
+  await rpc("collab", "demanderSurPiece", [piece.id, "rappel"]);
+  await rpc("collab", "repondreSurPiece", [piece.id, "rappel", true, null]);
+  for (const id of [transmise.id, piece.id]) await rpc("capture", "supprimer", [id]);
   const restant = await rpc("capture", "listAvecLecture", [dossier.id]);
   const traces = restant.filter((p) => p.id === transmise.id || p.id === piece.id);
   verdict(
