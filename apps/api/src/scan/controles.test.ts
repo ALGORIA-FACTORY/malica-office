@@ -472,6 +472,15 @@ describe("confiance de lecture — seuils du paramétrage", () => {
     assert.equal(c.statut, "reserve");
     assert.deepEqual(c.preuves["champs"], ["total_ttc"]);
   });
+  it("une anomalie nomme aussi, dans `aRelire`, les champs seulement en réserve", () => {
+    const c = statut(
+      facture({ confianceParChamp: { total_ttc: 0.3, issuer: 0.6, numero: 0.9 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "anomalie");
+    assert.deepEqual(c.preuves["champs"], ["total_ttc"]);
+    assert.deepEqual(c.preuves["aRelire"], ["total_ttc", "issuer"]);
+  });
   it("sous le seuil bloquant : anomalie", () => {
     assert.equal(
       statut(facture({ confianceParChamp: { total_ttc: 0.3 } }), "confiance_lecture").statut,

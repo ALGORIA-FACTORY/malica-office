@@ -579,6 +579,15 @@ function PieceScreen() {
         }
     : null;
   const proposal = proposalAttempt?.ok ? proposalAttempt.value : null;
+  /*
+   * ANO-025 : un champ lu sous le seuil de réserve n'affiche pas la coche
+   * « source », qui dirait une certitude. Le jugement déterministe le nomme ;
+   * l'écran le dit « à vérifier », et la zone source reste à un toucher.
+   */
+  const aVerifier = new Set(propositionServeur.data?.champsAVerifier ?? []);
+  // Tant que le jugement n'est pas arrivé (chargement, échec), la confiance est
+  // INCONNUE : ni coche « source », ni « à vérifier » — on ne dit rien de faux.
+  const confianceConnue = propositionServeur.isSuccess;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
   // précision de la personne si la lecture n'avait pas su.
   const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
@@ -1494,12 +1503,23 @@ function PieceScreen() {
             >
               <span className="bd">
                 <b>{l.label}</b>
-                <span className="recu">
-                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                    <path d="M4.5 12.5l4.5 4.5 10-10" />
-                  </svg>
-                  {t("pme.citation.source")}
-                </span>
+                {!confianceConnue ? (
+                  <span className="mt">{t("pme.citation.show")}</span>
+                ) : aVerifier.has(l.champ) ? (
+                  <span className="recu am">
+                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                      <path d="M12 4.5l8.5 15h-17zM12 10v4.2M12 16.6v.4" />
+                    </svg>
+                    {t("pme.citation.aVerifier")}
+                  </span>
+                ) : (
+                  <span className="recu">
+                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                      <path d="M4.5 12.5l4.5 4.5 10-10" />
+                    </svg>
+                    {t("pme.citation.source")}
+                  </span>
+                )}
               </span>
               <span className="vl">{l.valeur ?? "—"}</span>
             </button>
