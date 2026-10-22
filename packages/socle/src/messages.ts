@@ -3346,6 +3346,80 @@ const fr = {
   "pme.capture.travail.termine": "lue",
   "pme.capture.travail.refuse": "pas lue, refusée",
   "pme.capture.travail.en_erreur": "pas lue, erreur",
+  "pme.regler.barre": "Mon cabinet",
+  "pme.regler.sansCabinet": "Aucun cabinet",
+  /**
+   * Le dessin écrit « Mandat actif depuis le 4 janvier 2026. Révocable par
+   * vous seul, effet le jour même. » Ni la date ni la révocation ne sont
+   * lisibles : `monCabinet` rend `{id, name}`, et aucune méthode du contrat
+   * ne révoque un mandat actif. La phrase dit ce qui est vrai, et rien de plus.
+   */
+  "pme.regler.sousMandat":
+    "Il suit ce dossier. Ce qui lui parvient, c'est vous qui le transmettez.",
+  "pme.regler.sousSansMandat":
+    "Personne ne suit ce dossier pour l'instant. Vous capturez, vous lisez, vous exportez.",
+  "pme.regler.ongletEchanges": "Échanges",
+  "pme.regler.ongletDocuments": "Ses documents",
+  "pme.regler.ilVousAttend": "Il vous attend",
+  "pme.regler.sesAvis": "Ses avis",
+  "pme.regler.documentsRegle":
+    "Ce qu'il dépose ne consomme aucune lecture — ces documents arrivent finis. Ils restent à vous, même si vous changez de cabinet. Et certains arrivent avec une action à faire.",
+  /**
+   * L'onglet est vide et le dit sans promettre : le dépôt cabinet → PME
+   * n'existe pas (ni `cabinet.documents` ni `cabinet.accuserReception` au contrat).
+   */
+  "pme.regler.documentsRien":
+    "Votre cabinet ne dépose encore rien ici : le produit ne porte pas ce geste. Rien n'est caché — il n'y a rien.",
+  "pme.regler.pied":
+    "Les retours sur pièces et les avis arrivent du même cabinet, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
+  /**
+   * Trois phrases du dessin de « Mon espace » ne sont PAS écrites, car fausses
+   * ici : « attaché à votre compte » (la liste est attachée au DOSSIER),
+   * « aucun bouton pour transmettre » (c'est le seul geste de l'écran),
+   * « dans les deux sens » (le geste ne va que de `personnel` vers `partage`).
+   */
+  "pme.coffre.titre": "Vos papiers",
+  "pme.coffre.bouger": "Ce qui peut encore bouger",
+  /**
+   * Le dessin ajoute « …ou la supprimer sans demander à personne » :
+   * `capture.supprimer` n'est pas appelé par cet écran. La phrase s'arrête à ce
+   * que l'écran fait.
+   */
+  "pme.coffre.libre":
+    "Vous l'avez mise ici après l'avoir capturée. Elle n'est jamais partie au cabinet : vous pouvez encore la remettre dans la bibliothèque.",
+  /**
+   * Le dessin écrit « sa sortie passe par une demande » : aucune méthode ne
+   * porte cette demande. La phrase garde ce qui est tenu : l'accord du cabinet et
+   * le journal.
+   */
+  "pme.coffre.pied":
+    "Une pièce transmise ne revient pas en silence : son retour demande l'accord de votre cabinet, et chaque passage s'inscrit au journal.",
+  "pme.echeances.titre": "Ce qui tombe",
+  "pme.echeances.sansMontant": "Les montants ne me sont pas encore remontés",
+  "pme.echeances.semaine": "Cette semaine",
+  "pme.echeances.aVenir": "À venir",
+  "pme.echeances.retardTitre": "Une échéance est dépassée.",
+  "pme.echeances.retardTexte":
+    "Je ne l'ai pas vue passer parce que personne ne me l'a dit : aucune pièce de paiement n'est arrivée. Si vous l'avez réglée, photographiez l'avis et je rapprocherai la ligne.",
+  "pme.echeances.retardGeste": "Photographier l'avis",
+  "pme.bienvenue.barre": "Votre société",
+  "pme.bienvenue.carteBandeau": "République Tunisienne · Carte d'identification fiscale",
+  "pme.bienvenue.ditTitre": "Voici votre matricule fiscal.",
+  "pme.bienvenue.ditSous":
+    "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre cabinet. Vérifiez-le maintenant.",
+  "pme.bienvenue.secEtat": "à confirmer",
+  "pme.bienvenue.champAdresse": "Adresse du siège",
+  /**
+   * Le dessin écrit « Matricule fiscal · lu sur la carte ». La provenance est
+   * retirée : l'écran ne reçoit que `matricule`, pas sa source. Afficher « lu sur
+   * la carte » sans le savoir fabriquerait la preuve dont cette phrase parle.
+   */
+  "pme.bienvenue.regle":
+    "La saisie au clavier reste possible, mais elle est signalée : un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu sur la carte.",
+  "pme.bienvenue.exact": "C'est exact — commencer",
+  "pme.bienvenue.corriger": "Corriger · saisie au clavier",
+  "pme.bienvenue.pied":
+    "Ensuite : choisir votre forfait, puis inviter votre cabinet — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -6573,6 +6647,48 @@ const en: Dict = {
   "pme.capture.travail.termine": "read",
   "pme.capture.travail.refuse": "not read, refused",
   "pme.capture.travail.en_erreur": "not read, error",
+  "pme.regler.barre": "My firm",
+  "pme.regler.sansCabinet": "No firm",
+  "pme.regler.sousMandat": "They follow this file. What reaches them is what you send.",
+  "pme.regler.sousSansMandat":
+    "No one follows this file for now. You capture, you read, you export.",
+  "pme.regler.ongletEchanges": "Messages",
+  "pme.regler.ongletDocuments": "Their documents",
+  "pme.regler.ilVousAttend": "Waiting on you",
+  "pme.regler.sesAvis": "Their advice",
+  "pme.regler.documentsRegle":
+    "What they file does not use any reads — these documents arrive finished. They stay yours, even if you change firms. And some arrive with an action to take.",
+  "pme.regler.documentsRien":
+    "Your firm does not file anything here yet: the product does not support this action. Nothing is hidden — there is nothing.",
+  "pme.regler.pied":
+    "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
+  "pme.coffre.titre": "Your papers",
+  "pme.coffre.bouger": "What can still change",
+  "pme.coffre.libre":
+    "You put it here after capturing it. It never went to the firm: you can still move it back to the library.",
+  "pme.coffre.pied":
+    "A document already sent does not come back silently: its return needs your firm's approval, and every move is logged.",
+  "pme.echeances.titre": "What's due",
+  "pme.echeances.sansMontant": "The amounts have not reached me yet",
+  "pme.echeances.semaine": "This week",
+  "pme.echeances.aVenir": "Upcoming",
+  "pme.echeances.retardTitre": "A deadline has passed.",
+  "pme.echeances.retardTexte":
+    "I did not see it go by because no one told me: no payment document has arrived. If you paid it, photograph the notice and I will match the line.",
+  "pme.echeances.retardGeste": "Photograph the notice",
+  "pme.bienvenue.barre": "Your company",
+  "pme.bienvenue.carteBandeau": "Republic of Tunisia · Tax identification card",
+  "pme.bienvenue.ditTitre": "Here is your tax ID.",
+  "pme.bienvenue.ditSous":
+    "I record it only once. As soon as your first document is received, it will no longer change — not by you, not by me, not by your firm. Check it now.",
+  "pme.bienvenue.secEtat": "to confirm",
+  "pme.bienvenue.champAdresse": "Registered address",
+  "pme.bienvenue.regle":
+    "Typing it in remains possible, but it is flagged: a typed tax ID does not carry the same proof as one read from the card.",
+  "pme.bienvenue.exact": "That's right — get started",
+  "pme.bienvenue.corriger": "Edit · type it in",
+  "pme.bienvenue.pied":
+    "Next: choose your plan, then invite your firm — or not. A company without an engagement works: you capture, you read, you export.",
 };
 
 const ar: Dict = {
@@ -9696,6 +9812,47 @@ const ar: Dict = {
   "pme.capture.travail.termine": "مقروءة",
   "pme.capture.travail.refuse": "لم تُقرأ، مرفوضة",
   "pme.capture.travail.en_erreur": "لم تُقرأ، خطأ",
+  "pme.regler.barre": "مكتبي المحاسبي",
+  "pme.regler.sansCabinet": "لا يوجد مكتب",
+  "pme.regler.sousMandat": "يتابع هذا الملف. ما يصله هو ما ترسلونه أنتم.",
+  "pme.regler.sousSansMandat": "لا أحد يتابع هذا الملف حاليًا. أنتم تلتقطون وتقرؤون وتصدّرون.",
+  "pme.regler.ongletEchanges": "المراسلات",
+  "pme.regler.ongletDocuments": "وثائقه",
+  "pme.regler.ilVousAttend": "بانتظاركم",
+  "pme.regler.sesAvis": "ملاحظاته",
+  "pme.regler.documentsRegle":
+    "ما يودعه لا يستهلك أي قراءة — تصل هذه الوثائق جاهزة. تبقى ملكًا لكم حتى إن غيّرتم المكتب. وبعضها يصل مع إجراء مطلوب.",
+  "pme.regler.documentsRien":
+    "لا يودع مكتبكم أي شيء هنا بعد: المنتج لا يدعم هذه العملية. لا شيء مخفي — لا يوجد شيء.",
+  "pme.regler.pied":
+    "الملاحظات على الوثائق والآراء تأتي من المكتب نفسه، أي من صندوق الوارد نفسه. ما يميّزها ليس الشاشة، بل ما تطلبه منكم.",
+  "pme.coffre.titre": "أوراقكم",
+  "pme.coffre.bouger": "ما لا يزال قابلًا للتغيير",
+  "pme.coffre.libre":
+    "وضعتموها هنا بعد التقاطها. لم تُرسل قط إلى المكتب: لا يزال بإمكانكم إعادتها إلى المكتبة.",
+  "pme.coffre.pied":
+    "الوثيقة المرسلة لا تعود في صمت: إرجاعها يتطلب موافقة مكتبكم، وكل انتقال يُسجَّل في السجل.",
+  "pme.echeances.titre": "ما يحلّ أجله",
+  "pme.echeances.sansMontant": "لم تصلني المبالغ بعد",
+  "pme.echeances.semaine": "هذا الأسبوع",
+  "pme.echeances.aVenir": "قادمة",
+  "pme.echeances.retardTitre": "فات أجل أحد الاستحقاقات.",
+  "pme.echeances.retardTexte":
+    "لم ألاحظ مروره لأن أحدًا لم يخبرني: لم تصل أي وثيقة دفع. إن كنتم قد سدّدتموه، صوّروا الإشعار وسأطابق السطر.",
+  "pme.echeances.retardGeste": "تصوير الإشعار",
+  "pme.bienvenue.barre": "شركتكم",
+  "pme.bienvenue.carteBandeau": "الجمهورية التونسية · بطاقة التعريف الجبائي",
+  "pme.bienvenue.ditTitre": "هذا معرّفكم الجبائي.",
+  "pme.bienvenue.ditSous":
+    "أسجّله مرة واحدة فقط. بمجرد استلام أول وثيقة لكم، لن يتغيّر بعد ذلك — لا من قبلكم ولا من قبلي ولا من قبل مكتبكم. تحقّقوا منه الآن.",
+  "pme.bienvenue.secEtat": "للتأكيد",
+  "pme.bienvenue.champAdresse": "عنوان المقر",
+  "pme.bienvenue.regle":
+    "يبقى الإدخال اليدوي ممكنًا، لكن يُشار إليه: المعرّف المكتوب يدويًا لا يملك قيمة الإثبات نفسها كالمعرّف المقروء من البطاقة.",
+  "pme.bienvenue.exact": "صحيح — لنبدأ",
+  "pme.bienvenue.corriger": "تصحيح · إدخال يدوي",
+  "pme.bienvenue.pied":
+    "بعد ذلك: اختاروا باقتكم، ثم ادعوا مكتبكم — أو لا. تعمل الشركة دون وكالة: أنتم تلتقطون وتقرؤون وتصدّرون.",
 };
 
 export type MessageKey = keyof typeof fr;
