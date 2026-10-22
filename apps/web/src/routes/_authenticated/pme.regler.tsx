@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
@@ -324,7 +324,7 @@ function ARegler() {
               <>
                 <div className="sgn">
                   <span className="ph">
-                    <img src={malicaLoin} alt="Malica" width={620} height={620} />
+                    <img src={portraitMalica} alt="Malica" width={620} height={620} />
                   </span>
                   <b>{t("malica.chat.her")}</b>
                 </div>

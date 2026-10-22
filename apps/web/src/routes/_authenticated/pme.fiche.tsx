@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useId, useState } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import { files } from "@/capabilities/files";
 import { usePme } from "@/components/malica/pme-context";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -422,7 +422,7 @@ function FicheFiscale() {
         {/* ── la voix de Malica ──────────────────────────────────────── */}
         <div className="sgn">
           <span className="ph">
-            <img src={malicaLoin} alt="" width={620} height={620} />
+            <img src={portraitMalica} alt="" width={620} height={620} />
           </span>
           <b>{t("malica.chat.her")}</b>
         </div>

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
@@ -959,7 +959,7 @@ function VosDocuments() {
          */}
         {manquent.length > 0 ? (
           <div className="note">
-            <img src={malicaLoin} alt="Malica" width={620} height={620} />
+            <img src={portraitMalica} alt="Malica" width={620} height={620} />
             <span className="bd">
               <p>
                 {TEXTES.manquants(

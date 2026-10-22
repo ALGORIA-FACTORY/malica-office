@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useEffect, useRef, useState } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
@@ -332,7 +332,7 @@ function PmeMalica() {
              */}
             <button type="button" className="poser" onClick={nouveauFil}>
               <span className="ph">
-                <img src={malicaLoin} alt="" width={620} height={620} />
+                <img src={portraitMalica} alt="" width={620} height={620} />
               </span>
               <span>{TEXTES.poser}</span>
               <svg viewBox="0 0 24 24" className="g" aria-hidden>
@@ -444,7 +444,7 @@ function PmeMalica() {
                     {i === premiereDeMalica(tours) ? (
                       <div className="sig">
                         <span className="ph">
-                          <img src={malicaLoin} alt="" width={620} height={620} />
+                          <img src={portraitMalica} alt="" width={620} height={620} />
                         </span>
                         <b>{TEXTES.malica}</b>
                       </div>

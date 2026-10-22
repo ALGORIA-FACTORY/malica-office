@@ -16,7 +16,7 @@ import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import {
   libelleDuChamp,
   libelleDuRefus,
@@ -1701,7 +1701,7 @@ function PieceScreen() {
 
       {/* ── la remarque de Malica ───────────────────────────────────── */}
       <div className="note">
-        <img src={malicaLoin} alt="Malica" width={620} height={620} />
+        <img src={portraitMalica} alt="Malica" width={620} height={620} />
         <p>
           {booked
             ? t("pme.doc.note")

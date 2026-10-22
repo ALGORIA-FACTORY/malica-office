@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import malicaLoin from "@/assets/malica-loin.webp";
+import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
@@ -610,7 +610,7 @@ function ChargesScreen() {
           const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
           return (
             <div key={a.familleCode} className="note">
-              <img src={malicaLoin} alt="Malica" width={620} height={620} />
+              <img src={portraitMalica} alt="Malica" width={620} height={620} />
               {/*
                * `.bd` est un `div` et non le `span` du dessin : il contient un
                * paragraphe, et un paragraphe dans un `span` n'est pas du HTML
@@ -677,7 +677,7 @@ function ChargesScreen() {
          */}
         {sansDate.data && sansDate.data.pieces > 0 ? (
           <div className="note">
-            <img src={malicaLoin} alt="Malica" width={620} height={620} />
+            <img src={portraitMalica} alt="Malica" width={620} height={620} />
             <div className="bd">
               <p>
                 {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}

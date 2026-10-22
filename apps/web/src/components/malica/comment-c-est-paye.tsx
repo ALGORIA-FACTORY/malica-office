@@ -37,6 +37,7 @@ import { files } from "@/capabilities/files";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
+import { totalDesPaiements } from "@/lib/total-des-paiements";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { vidage } from "@/lib/hors-ligne";
 import { office } from "@/verticals/malica-office/composition";
@@ -170,7 +171,7 @@ export function CommentCEstPaye({
    * On demande donc, et la question est celle que pose n'importe quel
    * commerçant : la totalité, ou une partie ?
    */
-  const [partiel, setPartiel] = useState(false);
+  const [partiel, setPartiel] = useState<boolean | null>(null);
   const [montantSaisi, setMontantSaisi] = useState("");
   const [referenceSaisie, setReferenceSaisie] = useState("");
   /** Le paiement dont on a ouvert la correction, et son motif choisi. */
@@ -257,6 +258,8 @@ export function CommentCEstPaye({
      */
     mutationFn: async (moyenCode: string) => {
       const paye = moyenCode !== "non_paye";
+      if (!historiquePret || (paye && montantAInscrire === null))
+        throw new Error(t("pme.paiement.incomplet"));
       const justificatifPieceId = exigeUnePreuve(moyenCode) ? await photographierLaPreuve() : null;
       return office().capture.enregistrerPaiement({
         pieceId,
@@ -273,7 +276,7 @@ export function CommentCEstPaye({
     },
     onSuccess: async () => {
       effacerErreur();
-      setPartiel(false);
+      setPartiel(null);
       setMontantSaisi("");
       setReferenceSaisie("");
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
@@ -311,8 +314,10 @@ export function CommentCEstPaye({
    * cache pas, elle se barre (R7).
    */
   const vivants = deja.filter((p) => !p.eteint);
-  const payeMineur = vivants.reduce((s, p) => s + (p.montantMineur ?? 0), 0);
-  const restantMineur = ttcMineur === null ? null : Math.max(0, ttcMineur - payeMineur);
+  const historiquePret = paiements.isSuccess && !paiements.isFetching;
+  const payeMineur = paiements.isSuccess ? totalDesPaiements(deja) : null;
+  const restantMineur =
+    ttcMineur === null || payeMineur === null ? null : Math.max(0, ttcMineur - payeMineur);
   const solde = restantMineur !== null && restantMineur === 0 && vivants.length > 0;
 
   /** Le montant lisible, aux décimales du pack — jamais divisé par 1000 en dur. */
@@ -324,16 +329,21 @@ export function CommentCEstPaye({
   /**
    * Le montant qu'on va inscrire.
    *
-   * Par défaut, ce qui RESTE à payer — pas le total de la facture. Sur un
+   * Après choix explicite de la totalité, ce qui RESTE à payer. Sur un
    * solde, proposer à nouveau le total entier est l'erreur qui a produit le
    * doublon du 13 octobre.
    */
   const montantAInscrire = (() => {
-    if (!partiel) return restantMineur ?? ttcMineur;
+    if (!historiquePret || payeMineur === null || partiel === null) return null;
+    if (!partiel)
+      return restantMineur !== null && Number.isSafeInteger(restantMineur) && restantMineur > 0
+        ? restantMineur
+        : null;
     if (decimales === null) return null;
     const n = Number(montantSaisi.replace(",", "."));
     if (!Number.isFinite(n) || n <= 0) return null;
-    return Math.round(n * 10 ** decimales);
+    const mineur = Math.round(n * 10 ** decimales);
+    return Number.isSafeInteger(mineur) && mineur > 0 ? mineur : null;
   })();
 
   /**
@@ -476,13 +486,45 @@ export function CommentCEstPaye({
   // Un reçu atteste d'un règlement : sans montant payé, il n'atteste de rien.
   // Le Socle le refuse ; l'écran ne propose donc pas le geste.
   const recuPossible =
-    sens !== null && decimales !== null && vivants.some((p) => p.montantMineur !== null);
+    historiquePret &&
+    payeMineur !== null &&
+    sens !== null &&
+    decimales !== null &&
+    vivants.some((p) => p.montantMineur !== null);
 
   return (
     <section className="mt-6 border-t border-border pt-5">
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
         {t("pme.paiement.titre")}
       </p>
+
+      {paiements.isPending ? <p role="status">{t("common.loading")}</p> : null}
+      {paiements.error || moyens.error ? (
+        <div role="alert" className="mt-2 text-[13px] text-signal-warn">
+          <p>
+            {texteDeLErreur(
+              paiements.error ?? moyens.error,
+              "components/malica/comment-c-est-paye",
+              t("common.error"),
+            )}
+          </p>
+          <button
+            type="button"
+            className="min-h-[44px] underline"
+            onClick={() => {
+              void paiements.refetch();
+              void moyens.refetch();
+            }}
+          >
+            {t("doc.retry")}
+          </button>
+        </div>
+      ) : null}
+      {paiements.isSuccess && payeMineur === null ? (
+        <p role="status" className="mt-2 text-[13px] text-signal-warn">
+          {t("pme.paiement.incomplet")}
+        </p>
+      ) : null}
 
       {deja.length > 0 ? (
         <>
@@ -666,20 +708,23 @@ export function CommentCEstPaye({
         <p className="mt-3 text-[12.5px] text-signal-ok">{t("pme.paiement.solde")}</p>
       ) : (
         <>
-          {restantMineur !== null && payeMineur > 0 ? (
+          {restantMineur !== null && payeMineur !== null && payeMineur > 0 ? (
             <p className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px]">
               <span className="text-text-2">{t("pme.paiement.reste")}</span>
               <span className="num font-medium">{lisible(restantMineur)}</span>
             </p>
           ) : null}
 
+          {partiel === null ? (
+            <p className="mt-2 text-[13px] text-text-2">{t("pme.paiement.choisirMontant")}</p>
+          ) : null}
           <div className="mt-2.5 grid grid-cols-2 gap-1.5">
             <button
               type="button"
               onClick={() => setPartiel(false)}
-              aria-pressed={!partiel}
+              aria-pressed={partiel === false}
               className={`min-h-[40px] border px-2 text-[12.5px] ${
-                partiel ? "border-border" : "border-foreground font-medium"
+                partiel === false ? "border-foreground font-medium" : "border-border"
               }`}
             >
               {t("pme.paiement.tout")}
@@ -687,7 +732,7 @@ export function CommentCEstPaye({
             <button
               type="button"
               onClick={() => setPartiel(true)}
-              aria-pressed={partiel}
+              aria-pressed={partiel === true}
               className={`min-h-[40px] border px-2 text-[12.5px] ${
                 partiel ? "border-foreground font-medium" : "border-border"
               }`}
@@ -742,6 +787,7 @@ export function CommentCEstPaye({
             onClick={() => inscrire.mutate(m.code)}
             disabled={
               inscrire.isPending ||
+              !historiquePret ||
               // Un montant partiel illisible n'inscrit rien : le bouton le dit
               // en restant eteint, plutot que de laisser la base refuser.
               (m.code !== "non_paye" && montantAInscrire === null) ||
@@ -755,7 +801,9 @@ export function CommentCEstPaye({
       </div>
 
       {erreur && erreurDe !== "recu" ? (
-        <p className="mt-2 text-[12.5px] text-signal-warn">{erreur}</p>
+        <p role="alert" className="mt-2 text-[12.5px] text-signal-warn">
+          {erreur}
+        </p>
       ) : null}
     </section>
   );

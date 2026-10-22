@@ -8,7 +8,7 @@ import { Link } from "@tanstack/react-router";
 
 import marqueAlgoria from "@/assets/algoria-mark.svg";
 import marqueRg from "@/assets/rg-mark.svg";
-import malica from "@/assets/malica.jpeg";
+import malica from "@/assets/malica.webp";
 import { cn } from "@/lib/utils";
 
 export type Tone = "ok" | "warn" | "stop" | "neutral";
@@ -57,7 +57,7 @@ export function Chip({
   );
 }
 
-/** Le visage de Malica — image en niveaux de gris, coins nets, bordure seule. */
+/** Le visage de Malica — le même portrait local dans tous les espaces. */
 /**
  * Le visage de Malica.
  *
@@ -94,7 +94,7 @@ export function MalicaAvatar({
       width={size}
       height={size}
       loading="lazy"
-      style={{ width: size, height: size, ...(rond ? { objectPosition: "center 18%" } : null) }}
+      style={{ width: size, height: size, objectPosition: "center 18%" }}
       className={cn(
         "shrink-0 object-cover",
         rond ? "rounded-full border-2 border-marigold" : "border border-border",
