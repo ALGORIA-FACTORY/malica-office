@@ -222,6 +222,18 @@ export const facturation = {
    * (`empechement`, un CODE, et ses `chiffres`) et l'offre courante. La base
    * décide ; l'écran montre.
    */
+  /** Le nom et ce qu'ouvre chaque offre en vigueur — aucun prix ne sort d'ici. */
+  async catalogueDesOffres(db: Requete) {
+    const { rows } = await db.query(
+      `select distinct on (code) code, libelle, rang, sieges_inclus, organisations_incluses,
+              organisations_max, recharges_permises
+         from ref.offres
+        where effective_from <= current_date
+        order by code, effective_from desc`,
+    );
+    return [...rows].sort((a, b) => Number(a["rang"]) - Number(b["rang"]));
+  },
+
   async mesOffres(db: Requete, tenantId?: string) {
     const { rows } = await db.query(
       `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation, lectures_incluses,

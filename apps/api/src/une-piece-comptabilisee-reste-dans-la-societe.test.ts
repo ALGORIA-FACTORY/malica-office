@@ -95,7 +95,7 @@ describe("une pièce comptabilisée reste dans la société", { skip: !BASE_CONF
         sousIdentite(dirigeant.id, (db) =>
           db.query(`select public.capture_piece_set_vis($1, 'partage')`, [id]),
         ),
-        /Transmission suspendue/,
+        /refus\.licence\.transmission/,
       );
     } finally {
       await admin.query(

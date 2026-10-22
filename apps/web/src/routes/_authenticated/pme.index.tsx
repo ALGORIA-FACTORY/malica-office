@@ -9,7 +9,9 @@ import { CompteurQuiRoule } from "@/components/malica/compteur-qui-roule";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
+import { COMMERCE } from "@/capabilities/coque";
 import { useAccueil } from "@/hooks/use-accueil";
+import { offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
@@ -46,8 +48,8 @@ export const Route = createFileRoute("/_authenticated/pme/")({
  * `pme.home.societes` — et se lisent désormais par `t()` dans les trois
  * langues. Rien sur cet écran n'est plus en dur.
  *
- * « Team » et « Premium » restent des littéraux : ce sont les noms des offres,
- * et un nom d'offre ne se traduit pas.
+ * Les noms des offres (« Team », « Premium ») ne se traduisent pas, mais ne
+ * s'écrivent pas ici non plus : ils viennent du catalogue (`ref.offres`).
  */
 
 /*
@@ -223,6 +225,7 @@ function PmeHome() {
    */
   const siegesOuverts = pme.forfait.ouvertures.sieges;
   const societesOuvertes = pme.forfait.ouvertures.societes;
+  const ouvrent = offresQuiOuvrent(useCatalogueDesOffres().data);
 
   /*
    * La jauge du plafond : elle n'existe que si les DEUX bornes sont connues.
@@ -690,11 +693,12 @@ function PmeHome() {
           {/*
            * ====================================== CE QUE L'OFFRE OUVRE, ET CE QU'ELLE RETIENT
            *
-           * Les sièges s'ouvrent à Team, les sociétés à Premium — c'est `offre`
-           * qui tranche, et rien d'autre. Ouverte, la carte porte le chiffre que
-           * la base rend ; fermée, elle dit ce qu'elle ferait et sous quelle
-           * offre. Elle ne disparaît JAMAIS : un produit qui cache ce qu'il vend
-           * ne le vend pas.
+           * Les sièges et les sociétés s'ouvrent selon l'offre — c'est `offre`
+           * qui tranche, et le NOM de l'offre qui ouvre vient du catalogue
+           * (`ref.offres`), jamais du code. Ouverte, la carte porte le chiffre
+           * que la base rend ; fermée, elle dit sous quelle offre — sur le web
+           * et la PWA seulement : dans la coque, rien ne vend (décision du
+           * 22 octobre 2026), la carte fermée n'y paraît pas.
            *
            * Les chiffres de ces cartes sont des comptes de la base, pas des
            * noms : « Sami 42 · Nadia 18 » du dessin viendrait de
@@ -718,13 +722,13 @@ function PmeHome() {
                 {compte(f?.sieges_occupes)} / {compte(f?.sieges_inclus)}
               </b>
             </button>
-          ) : (
+          ) : COMMERCE ? (
             <button type="button" className="lock" onClick={allerAuxReglages}>
               <IconeSieges />
               <b>{t("pme.home.sieges")}</b>
-              <em>Team</em>
+              <em>{ouvrent.sieges?.libelle}</em>
             </button>
-          )}
+          ) : null}
 
           {societesOuvertes ? (
             <button type="button" className="act" onClick={allerAuxReglages}>
@@ -736,13 +740,13 @@ function PmeHome() {
               </span>
               <b>{compte(f?.organisations)}</b>
             </button>
-          ) : (
+          ) : COMMERCE ? (
             <button type="button" className="lock" onClick={allerAuxReglages}>
               <IconeSocietes />
               <b>{t("pme.home.societes")}</b>
-              <em>Premium</em>
+              <em>{ouvrent.societes?.libelle}</em>
             </button>
-          )}
+          ) : null}
         </div>
 
         {/*

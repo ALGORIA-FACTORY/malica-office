@@ -260,6 +260,9 @@ const fr = {
     "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
     "Cette pièce est dans votre espace privé : je ne la lis pas tant que vous ne la transmettez pas.",
+  "refus.licence.transmission":
+    "Transmission suspendue : un paiement de votre abonnement est en retard.",
+  "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
   "pme.refus.licence_suspendue":
     "Votre abonnement est suspendu. La pièce est rangée, et je la lirai dès qu'il reprend.",
   "pme.refus.licence.autre": "Votre abonnement n'ouvre pas la lecture en ce moment.",
@@ -2748,8 +2751,6 @@ const fr = {
   "pme.reglages.paiement.titre": "À régler",
   "pme.reglages.paiement.montant": "{ttc} {devise} TTC à régler maintenant",
   "pme.reglages.paiement.payer": "Payer par carte",
-  "pme.reglages.paiement.parLeNavigateur":
-    "Le paiement se fait depuis le navigateur : ouvrez Malica Office sur le web pour régler.",
   "pme.reglages.paiement.ferme":
     "Le paiement en ligne n'est pas encore ouvert. Votre offre est active ; ce montant figurera sur la facture du mois.",
   "pme.reglages.paiement.paye": "Payé, merci. Il figurera sur la facture du mois.",
@@ -2925,9 +2926,6 @@ const fr = {
   "pme.reglages.donnees.conservation.sous":
     "Dix ans. Même si vous partez, même si vous cessez de payer.",
   "pme.reglages.donnees.conservation.valeur": "10 ans",
-  "pme.reglages.offre.changer": "Changer de forfait",
-  "pme.reglages.offre.changer.sous":
-    "Effet immédiat et facturation au prorata des jours — le geste n’est pas encore au contrat, il passe aujourd’hui par ALGORIA.",
   "pme.reglages.note":
     "L’organisation vous appartient, toujours. Une licence se détache, un mandat se révoque — les pièces, elles, ne bougent pas.",
 
@@ -3730,6 +3728,8 @@ const en: Dict = {
     "This document duplicates one already read: I am not reading it again.",
   "pme.refus.piece_personnelle":
     "This document is in your private space: I do not read it until you share it.",
+  "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
+  "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
   "pme.refus.licence_suspendue":
     "Your subscription is suspended. The document is filed, and I will read it as soon as it resumes.",
   "pme.refus.licence.autre": "Your subscription does not allow reading right now.",
@@ -6145,8 +6145,6 @@ const en: Dict = {
   "pme.reglages.paiement.titre": "To pay",
   "pme.reglages.paiement.montant": "{ttc} {devise} incl. VAT to pay now",
   "pme.reglages.paiement.payer": "Pay by card",
-  "pme.reglages.paiement.parLeNavigateur":
-    "Payment is made from the browser: open Malica Office on the web to pay.",
   "pme.reglages.paiement.ferme":
     "Online payment is not open yet. Your plan is active; this amount will appear on the month's invoice.",
   "pme.reglages.paiement.paye": "Paid, thank you. It will appear on the month's invoice.",
@@ -6313,9 +6311,6 @@ const en: Dict = {
   "pme.reglages.donnees.conservation.sous":
     "Ten years. Even if you leave, even if you stop paying.",
   "pme.reglages.donnees.conservation.valeur": "10 years",
-  "pme.reglages.offre.changer": "Change plan",
-  "pme.reglages.offre.changer.sous":
-    "Immediate effect and billing prorated by the day — the action is not in the contract yet, it goes through ALGORIA today.",
   "pme.reglages.note":
     "The organisation is yours, always. A licence detaches, an engagement is revoked — the documents do not move.",
 
@@ -7034,6 +7029,8 @@ const ar: Dict = {
     "هذه الوثيقة مرفقة بوثيقة أخرى (وصل أو مؤيّد): تُحفظ معها دون قراءة.",
   "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
   "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
+  "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
+  "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
   "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
   "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
   "pme.refus.organisation_sans_licence":
@@ -9389,8 +9386,6 @@ const ar: Dict = {
   "pme.reglages.paiement.titre": "للدفع",
   "pme.reglages.paiement.montant": "{ttc} {devise} شامل الأداء للدفع الآن",
   "pme.reglages.paiement.payer": "الدفع بالبطاقة",
-  "pme.reglages.paiement.parLeNavigateur":
-    "يتمّ الدفع من المتصفّح: افتح Malica Office على الويب للتسديد.",
   "pme.reglages.paiement.ferme":
     "الدفع الإلكتروني غير متاح بعد. باقتك مفعّلة، وسيظهر هذا المبلغ في فاتورة الشهر.",
   "pme.reglages.paiement.paye": "تم الدفع، شكرا. سيظهر في فاتورة الشهر.",
@@ -9543,9 +9538,6 @@ const ar: Dict = {
   "pme.reglages.donnees.conservation": "مدّة الحفظ",
   "pme.reglages.donnees.conservation.sous": "عشر سنوات. حتى إن رحلت، وحتى إن توقّفت عن الدفع.",
   "pme.reglages.donnees.conservation.valeur": "10 سنوات",
-  "pme.reglages.offre.changer": "تغيير الاشتراك",
-  "pme.reglages.offre.changer.sous":
-    "أثر فوري وفوترة بالتناسب مع الأيام — هذه العملية ليست بعد في العقد، وتمرّ اليوم عبر ALGORIA.",
   "pme.reglages.note":
     "المؤسسة ملكك دائمًا. الرخصة تُفصل، والتكليف يُسحب — أمّا الوثائق فلا تتحرّك.",
 

@@ -18,9 +18,10 @@
  * depuis la facture (web et PWA seulement), pas d'ici.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
@@ -50,7 +51,13 @@ export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CabinetAbonnements,
+  // Proposer un abonnement, c'est vendre : pas dans l'application Android
+  // (`COMMERCE`). La page n'entre pas dans son paquet, et une adresse tapée
+  // ramène au cabinet.
+  beforeLoad: () => {
+    if (!COMMERCE) throw redirect({ to: "/cabinet" });
+  },
+  component: COMMERCE ? CabinetAbonnements : () => null,
 });
 
 const OU = "routes/_authenticated/cabinet.abonnements";

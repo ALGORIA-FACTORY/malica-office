@@ -1,3 +1,4 @@
+import { METHODES_COMMERCIALES } from "@malica/socle/commerce";
 /**
  * L'API Malica Office — les routes, sans l'écoute.
  *
@@ -387,17 +388,18 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       return;
     }
     /*
-     * Le paiement en ligne se fait sur le web et la PWA, jamais dans
-     * l'application installée depuis un store (décision du 20 octobre 2026).
-     * L'écran le dit déjà ; le serveur le tient, pour une coque qui
-     * l'oublierait.
+     * Rien ne se vend dans l'application installée depuis un store : le
+     * paiement, les prix, les offres et l'acceptation d'un abonnement se font
+     * sur le web et la PWA (décisions des 20 et 22 octobre 2026). L'écran de
+     * la coque n'en porte rien ; le serveur le tient, pour une coque qui
+     * l'oublierait. Le refus ne dit pas où payer : il n'invite à rien.
      */
     if (
       saisie.data.depot === "facturation" &&
-      saisie.data.methode === "payerEnLigne" &&
+      METHODES_COMMERCIALES.has(saisie.data.methode) &&
       estUneCoque(req)
     ) {
-      res.status(403).json({ erreur: "le paiement se fait depuis le navigateur" });
+      res.status(403).json({ erreur: "indisponible dans l'application" });
       return;
     }
     const resultat = req.cleApi

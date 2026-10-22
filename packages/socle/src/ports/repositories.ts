@@ -2590,6 +2590,12 @@ export interface FacturationRepository {
     membre: string,
   ): Promise<{ libere: boolean; motif?: string; pieces: number }>;
 
+  /**
+   * Le nom de chaque offre en vigueur et ce qu'elle ouvre — SANS AUCUN PRIX.
+   * C'est ce qu'un écran lit pour nommer une offre (« Team ») au lieu de
+   * l'écrire en dur ; lisible partout, y compris dans la coque.
+   */
+  catalogueDesOffres(): Promise<OffreAuCatalogue[]>;
   /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
   mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
   /** Le TTC d'un HT, par la fiscalité de la facture ; `null` sans émetteur. */
@@ -2717,6 +2723,18 @@ export interface LigneDeFacture {
 }
 
 /** Une offre de la grille, telle que `public.mes_offres()` la rend. */
+/** Une offre en vigueur, sans prix : son nom, son rang et ce qu'elle ouvre. */
+export interface OffreAuCatalogue {
+  code: string;
+  libelle: string;
+  rang: number;
+  sieges_inclus: number;
+  organisations_incluses: number;
+  /** `null` : sans plafond. */
+  organisations_max: number | null;
+  recharges_permises: boolean;
+}
+
 export interface OffreDeLaGrille {
   code: string;
   libelle: string;

@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { COMMERCE } from "@/capabilities/coque";
 import { CabinetProvider } from "@/components/malica/cabinet-context";
 import { useDossierCourant } from "@/components/malica/dossier-courant";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
@@ -322,12 +323,17 @@ function Coquille({
           badge: honoraires.data?.nbRetard ?? 0,
           attente: true,
         },
-        {
-          to: "/cabinet/abonnements",
-          label: t("cab.nav.abonnements"),
-          icon: CreditCard,
-          exact: false,
-        },
+        // Les abonnements des clients se vendent sur le web, pas dans l'application Android.
+        ...(COMMERCE
+          ? [
+              {
+                to: "/cabinet/abonnements" as const,
+                label: t("cab.nav.abonnements"),
+                icon: CreditCard,
+                exact: false,
+              },
+            ]
+          : []),
       ],
     },
     {
