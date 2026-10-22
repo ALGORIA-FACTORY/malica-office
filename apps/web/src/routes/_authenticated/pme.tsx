@@ -75,6 +75,9 @@ function PmeLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  // Un nouvel ajout réinitialise aussi les étapes d'un parcours déjà ouvert.
+  // Les pièces déposées et la file durable ne vivent pas dans cet état de vue.
+  const [numeroAjout, setNumeroAjout] = useState(0);
 
   const orgsQuery = useQuery({
     queryKey: ["my-organizations"],
@@ -511,7 +514,7 @@ function PmeLayout() {
                 },
               }}
             >
-              <Outlet />
+              <Outlet key={numeroAjout} />
             </PmeProvider>
           )}
         </main>
@@ -579,7 +582,10 @@ function PmeLayout() {
             <button
               type="button"
               disabled={!org || capture.isPending}
-              onClick={() => void navigate({ to: "/pme/capturer", search: {} })}
+              onClick={() => {
+                setNumeroAjout((n) => n + 1);
+                void navigate({ to: "/pme/capturer", search: {} });
+              }}
               aria-label={t("pme.nav.add")}
               className="obtur grid h-[58px] w-[58px] place-items-center"
             >

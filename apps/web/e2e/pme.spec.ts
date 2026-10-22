@@ -9,6 +9,7 @@
  * `outils/epreuve-bout-en-bout.mjs`.
  */
 import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 
 import { preparerLAppareil } from "./comptes";
 
@@ -118,6 +119,63 @@ test("un faux PDF est refusé depuis le parcours d'ajout avant tout dépôt", as
   await expect(page.getByRole("alert")).toContainText("Ce fichier n'est pas un PDF");
   await expect(page).toHaveURL(/\/pme\/capturer$/);
   await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeEnabled();
+});
+
+/** Un vrai PDF texte, sans appel modèle ni interception de l'application. */
+function pdfDeRecette(texte: string): Buffer {
+  const flux = `BT /F1 12 Tf 40 780 Td (${texte}) Tj ET`;
+  const objets = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(flux)} >>\nstream\n${flux}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const positions = [0];
+  objets.forEach((objet, i) => {
+    positions.push(Buffer.byteLength(pdf));
+    pdf += `${i + 1} 0 obj\n${objet}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${positions.length}\n0000000000 65535 f \n`;
+  for (const position of positions.slice(1))
+    pdf += `${String(position).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${positions.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+
+test("deux PDF se déposent réellement et un nouvel ajout quitte l'étape précédente", async ({
+  page,
+}) => {
+  await page.goto("/pme");
+  const ajouter = page.getByRole("button", { name: "Ajouter une pièce", exact: true });
+  await ajouter.click();
+  const attente = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const selecteur = await attente;
+  const passage = randomUUID();
+  await selecteur.setFiles(
+    [1, 2].map((n) => ({
+      name: `recette-import-${n}.pdf`,
+      mimeType: "application/pdf",
+      buffer: pdfDeRecette(`Recette import ${passage} document ${n}`),
+    })),
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Je ne sais pas — lis-le quand même" })
+    .click();
+  await expect(page).toHaveURL(/\/pme\/capturer\?pieces=/);
+  const ids = new URL(page.url()).searchParams.get("pieces")!.split(",");
+  expect(new Set(ids).size).toBe(2);
+  await expect(page.locator(".bande .vg")).toHaveCount(2);
+  await page.locator('[data-ecran="capture"] .go .pr').click();
+  await expect(page.getByText("Ces 2 pièces sont pour la société, ou pour vous ?")).toBeVisible();
+  await ajouter.click();
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeVisible();
 });
 
 for (const largeur of [390, 1440]) {

@@ -37,6 +37,9 @@ arbitrée explicitement ; on ne l'efface pas de la couverture pour obtenir un GO
   où les trois sources sont disponibles avant toute demande de caméra.
 - L'import d'images utilise `files.pickImages()` (plusieurs images, sans
   capture caméra imposée). Le bouton Galerie appelait `takePhoto()`.
+- Un nouvel ajout depuis une étape déjà ouverte réinitialise les seuls états
+  de vue. Les pièces déposées et la file durable sont conservées. Un test
+  importe deux PDF réels via le site et l'API puis vérifie ce nouveau départ.
 - Les services de préparation, de file locale, de dépôt, de quota et de lecture
   restent les services existants ; aucun second circuit de dépôt n'est ajouté.
 - Les noms des espaces du portail ne les limitent plus artificiellement au
@@ -51,8 +54,8 @@ arbitrée explicitement ; on ne l'efface pas de la couverture pour obtenir un GO
   Ajouter une pièce puis Photographier. La CI Android est aussi déclenchée
   sur les PR qui modifient ce parcours, au lieu d'attendre la nuit.
 
-Ces tests de sélecteur ne constituent pas une preuve de lecture OCR réelle,
-ni de dépôt/transmission intégral d'une facture. Les parcours d'ouverture ne
+Le dépôt des deux PDF teste l'import réel, mais pas la lecture OCR réelle ni
+la transmission et la comptabilisation intégrales d'une facture. Les parcours d'ouverture ne
 prouvent pas les écritures, calculs ou permissions de tous les rôles.
 
 ## Conditions de GO pour remettre la candidate au client
