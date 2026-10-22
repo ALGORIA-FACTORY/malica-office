@@ -151,34 +151,6 @@ const GENRES: Record<string, MessageKey> = {
 
 const OU = "routes/_authenticated/pme.notifications";
 
-/* ===========================================================================
- *
- *   LES CHAINES NOUVELLES - UN SEUL BLOC, ET C'EST UNE DETTE NOMMEE
- *
- * Le dessin apporte du texte que le dictionnaire ne porte pas encore. Il est
- * ici, en un seul endroit, en francais seulement, comme sur `pme.regler.tsx` :
- * ce bloc est a vider dans `packages/socle/src/messages.ts` - cles proposees
- * `pme.cabinet.*` - des que les trois langues peuvent etre ecrites ensemble.
- * `MOTS.pied` est le MEME pied que celui de `pme.regler.tsx` : les deux
- * ecrans rendent le meme dessin, et la chaine est a mutualiser au meme
- * moment.
- *
- * Tout le reste de l'ecran lit `t()` : `pme.notifs.*`, `pme.mandat.accepter`,
- * `pme.regler.retour`, `malica.chat.her`, `notif.kind.*` et `common.*`
- * existent et ne sont pas touchees. On remplace le balisage, pas le cablage.
- */
-const MOTS = {
-  /** Ce que la boite est, sous le titre. */
-  sous: "Tout ce que votre cabinet vous dit arrive ici. Ce qui attend un geste est en haut.",
-  ongletAttente: "À traiter",
-  ongletTout: "Tout",
-  ilVousAttend: "Il vous attend",
-  sesAvis: "Ses avis",
-  /** La seconde ligne de la bulle, quand la boite est vide. */
-  videSous: "Rien n'est caché : quand votre cabinet vous écrit, c'est ici que ça arrive.",
-  pied: "Les retours sur pièces et les avis arrivent du même cabinet, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
-} as const;
-
 function chaine(payload: Record<string, unknown>, cle: string): string | null {
   const v = payload[cle];
   return typeof v === "string" && v.trim().length > 0 ? v : null;
@@ -306,7 +278,7 @@ function PmeNotifications() {
               ? t("pme.notifs.voice.clear")
               : t("pme.notifs.voice.unread", { count: attente.length })}
         </h1>
-        <p className="sub">{MOTS.sous}</p>
+        <p className="sub">{t("pme.notifications.sous")}</p>
 
         {/* ── les deux faces ─────────────────────────────────────────── */}
         <div className="seg">
@@ -316,7 +288,7 @@ function PmeNotifications() {
             aria-pressed={onglet === "attente"}
             onClick={() => setOnglet("attente")}
           >
-            {MOTS.ongletAttente}
+            {t("pme.notifications.ongletAttente")}
           </button>
           <button
             type="button"
@@ -324,7 +296,7 @@ function PmeNotifications() {
             aria-pressed={onglet === "tout"}
             onClick={() => setOnglet("tout")}
           >
-            {MOTS.ongletTout}
+            {t("cab.plan.filter.tout")}
           </button>
         </div>
 
@@ -347,7 +319,7 @@ function PmeNotifications() {
             </div>
             <div className="dit">
               {t("pme.notifs.empty")}
-              <em>{MOTS.videSous}</em>
+              <em>{t("pme.notifications.videSous")}</em>
             </div>
           </>
         ) : (
@@ -356,7 +328,7 @@ function PmeNotifications() {
             {attente.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{MOTS.ilVousAttend}</h2>
+                  <h2>{t("pme.regler.ilVousAttend")}</h2>
                   <span>{attente.length}</span>
                 </div>
 
@@ -415,7 +387,7 @@ function PmeNotifications() {
                 {avis.length > 0 ? (
                   <>
                     <div className="sec">
-                      <h2>{MOTS.sesAvis}</h2>
+                      <h2>{t("pme.regler.sesAvis")}</h2>
                       <span>{avis.length}</span>
                     </div>
                     {avis.map((n) => {
@@ -495,7 +467,7 @@ function PmeNotifications() {
               </>
             ) : null}
 
-            <p className="foot">{MOTS.pied}</p>
+            <p className="foot">{t("pme.regler.pied")}</p>
           </>
         )}
       </div>

@@ -39,56 +39,6 @@ export const Route = createFileRoute("/_authenticated/pme/fiche")({
 
 const OU = "routes/_authenticated/pme.fiche";
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Même convention que `pme.regler` : la composition demande du texte que le
- * dictionnaire ne porte pas encore — les titres de section, la phrase du
- * panneau de lecture, le bilan. Il est ici, en un seul endroit, en français
- * seulement, et il est à vider dans `i18n/` — clés proposées `fiche.sec.*`,
- * `fiche.bil.*` — dès que les trois langues peuvent être écrites ensemble.
- *
- * Tout le reste de l'écran lit `t()` : les 20 clés `fiche.*` existent en FR,
- * EN et AR et ne sont PAS touchées. On remplace le balisage, pas le câblage,
- * et on ne réécrit pas un libellé déjà traduit.
- */
-const MOTS = {
-  /** La barre du haut. Courte, comme les six `.ttl` du dessin. */
-  barre: "Votre fiche fiscale",
-  secCarte: "Votre carte",
-  /** L'annotation mono du titre de section — `arr` écrit « à confirmer ». */
-  carteAConfirmer: "à confirmer",
-  cartePasLue: "pas encore lue",
-  panCarte: "Photographiez la carte d'identification fiscale : je remplis ce que j'y lis.",
-  /**
-   * La phrase de `arr`, qui est vraie ici aussi : `etablirFiche` inscrit la
-   * source (« carte » ou « saisie »), donc la distinction a un effet réel
-   * sur ce que la base conserve. Elle n'est pas décorative.
-   */
-  regleSaisie:
-    "La saisie au clavier reste possible, mais elle est signalée : un régime tapé n'a pas la même valeur de preuve qu'un régime lu sur la carte.",
-  secRegime: "Le régime",
-  secSociete: "La société",
-  secExercice: "L'exercice",
-  secArret: "Ce que j'enregistre",
-  /**
-   * L'annotation mono des trois sections de formulaire. Elle dit d'où
-   * viennent les choix : du référentiel, et de nulle part ailleurs (R8).
-   */
-  duReferentiel: "du référentiel",
-  /** L'exercice ne vient d'aucune liste : ce sont deux dates. */
-  deuxDates: "deux dates",
-  bilSur: "sur",
-  bilChamps: "champs renseignés.",
-  bilPremiere: "Ce geste établit votre première fiche, datée d'aujourd'hui.",
-  bilRemplace:
-    "L'enregistrer clôture la fiche en place et en ouvre une autre, datée d'aujourd'hui.",
-  /** Ce que `etablirFiche` inscrira comme source — dit avant, pas après. */
-  fixeSourceCarte: "source : carte lue",
-  fixeSourceSaisie: "source : saisie au clavier",
-} as const;
-
 /**
  * La situation fiscale du dossier — lue sur la carte, arrêtée par la personne.
  *
@@ -400,7 +350,7 @@ function FicheFiscale() {
             <path d="M14.5 5.5L8 12l6.5 6.5" />
           </svg>
         </button>
-        <span className="ttl">{MOTS.barre}</span>
+        <span className="ttl">{t("pme.fiche.barre")}</span>
         <span className="ic" aria-hidden>
           <IconeCarte />
         </span>
@@ -433,11 +383,13 @@ function FicheFiscale() {
 
         {/* ── la lecture de la carte ─────────────────────────────────── */}
         <div className="sec">
-          <h2>{MOTS.secCarte}</h2>
-          <span>{luDeLaCarte.size > 0 ? MOTS.carteAConfirmer : MOTS.cartePasLue}</span>
+          <h2>{t("pme.fiche.secCarte")}</h2>
+          <span>
+            {luDeLaCarte.size > 0 ? t("pme.bienvenue.secEtat") : t("pme.fiche.cartePasLue")}
+          </span>
         </div>
         <div className="pan">
-          <p>{MOTS.panCarte}</p>
+          <p>{t("pme.fiche.panCarte")}</p>
           <div className="b">
             {/*
              * Le bouton léger : photographier AIDE à remplir, il n'engage
@@ -470,8 +422,8 @@ function FicheFiscale() {
 
         {/* ── le régime ──────────────────────────────────────────────── */}
         <div className="sec">
-          <h2>{MOTS.secRegime}</h2>
-          <span>{MOTS.duReferentiel}</span>
+          <h2>{t("pme.fiche.secRegime")}</h2>
+          <span>{t("pme.fiche.duReferentiel")}</span>
         </div>
         <div className="pan">
           <Axe
@@ -513,8 +465,8 @@ function FicheFiscale() {
 
         {/* ── la société ─────────────────────────────────────────────── */}
         <div className="sec">
-          <h2>{MOTS.secSociete}</h2>
-          <span>{MOTS.duReferentiel}</span>
+          <h2>{t("pme.fiche.secSociete")}</h2>
+          <span>{t("pme.fiche.duReferentiel")}</span>
         </div>
         <div className="pan">
           {/* La forme et le mode de dépôt décident des délais : sans les deux,
@@ -544,8 +496,8 @@ function FicheFiscale() {
 
         {/* ── l'exercice ─────────────────────────────────────────────── */}
         <div className="sec">
-          <h2>{MOTS.secExercice}</h2>
-          <span>{MOTS.deuxDates}</span>
+          <h2>{t("pme.fiche.secExercice")}</h2>
+          <span>{t("pme.fiche.deuxDates")}</span>
         </div>
         <div className="pan">
           <Champ
@@ -565,15 +517,16 @@ function FicheFiscale() {
 
         {/* ── ce qui va être inscrit, puis l'engagement ───────────────── */}
         <div className="sec">
-          <h2>{MOTS.secArret}</h2>
+          <h2>{t("pme.fiche.secArret")}</h2>
           <span>{dateLisible(AUJOURDHUI())}</span>
         </div>
         <div className="pan">
           <div className="bil">
             <b>
-              {remplis} {MOTS.bilSur} {CHAMPS.length}
+              {remplis} {t("pme.fiche.bilSur")} {CHAMPS.length}
             </b>{" "}
-            {MOTS.bilChamps} {courante.data ? MOTS.bilRemplace : MOTS.bilPremiere}
+            {t("pme.fiche.bilChamps")}{" "}
+            {courante.data ? t("pme.fiche.bilRemplace") : t("pme.fiche.bilPremiere")}
           </div>
           {/*
            * La source, dite AVANT d'enregistrer. `etablirFiche` inscrit
@@ -582,7 +535,9 @@ function FicheFiscale() {
            */}
           <div className="fixe">
             <IconeCadenas />
-            {luDeLaCarte.size > 0 ? MOTS.fixeSourceCarte : MOTS.fixeSourceSaisie}
+            {luDeLaCarte.size > 0
+              ? t("pme.fiche.fixeSourceCarte")
+              : t("pme.fiche.fixeSourceSaisie")}
           </div>
         </div>
 
@@ -617,7 +572,7 @@ function FicheFiscale() {
          * sur un écran. Elle dit la conséquence de la source, que `.fixe`
          * annonce juste au-dessus.
          */}
-        <p className="foot">{MOTS.regleSaisie}</p>
+        <p className="foot">{t("pme.fiche.regleSaisie")}</p>
       </div>
 
       {scanne ? (
