@@ -30,72 +30,6 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
   component: PmeTva,
 });
 
-/* ===========================================================================
- *
- *   LES CHAÎNES NOUVELLES — UN SEUL BLOC, ET C'EST UNE DETTE NOMMÉE
- *
- * Même convention que `pme.regler` : le dessin apporte du texte que le
- * dictionnaire ne porte pas encore. Il est ici, en un seul endroit, en
- * français seulement, à vider dans `packages/socle/src/messages.ts` — clés
- * proposées `pme.tva.*` — dès que les trois langues peuvent être écrites
- * ensemble. Le dictionnaire vit dans `packages/socle`, où Claude Code écrit
- * en parallèle : on n'y touche pas depuis cette conversion.
- *
- * Tout ce qui EXISTE déjà au dictionnaire est lu par `t()` et n'est pas
- * réécrit — `pme.tva.collectee`, `pme.tva.deductible`, `pme.tva.rangee`,
- * `pme.tva.source`, `pme.tva.sansDate`, `pme.tva.empty`, `common.loading`.
- * Ces libellés sont déjà traduits en trois langues ; les recopier ici
- * aggraverait la dette au lieu de la nommer.
- */
-const MOTS = {
-  /** La barre du haut, et sa variante quand la licence porte plusieurs sociétés. */
-  barre: "TVA du mois",
-  barreGroupe: "TVA du groupe",
-  /**
-   * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une
-   * CONSTANTE RÉGLEMENTAIRE (R4). Aucune méthode appelée par cette route ne
-   * sert l'échéance de dépôt : `parametrage.calendrierCabinet` et
-   * `referentiel.fiscalCharges` existent au contrat mais ne sont pas câblés
-   * ici, et les brancher serait recâbler. La phrase dit donc ce qui est vrai
-   * sans la date — une échéance écrite en dur dans le TypeScript est une
-   * faute que personne ne voit passer jusqu'au jour où elle change.
-   */
-  sous: "C'est votre cabinet qui dépose cette déclaration.",
-  /** Variante Premium : le nombre vient de `pme.dossiers`, jamais d'un littéral. */
-  sousGroupe: (n: number) => `${n} sociétés — chacune déclare pour elle-même.`,
-  aPayer: "à payer",
-  credit: "crédit reporté",
-  /**
-   * Le dessin écrit « En baisse de 31 % sur septembre ». C'est un POURCENTAGE
-   * D'ÉVOLUTION entre deux mois : R3 interdit de le calculer ici, et aucune
-   * méthode ne le sert. Le bloc reste — la comparaison est une vraie question
-   * — et il dit qu'il ne l'a pas. Un « — » est honnête ; « 31 % » serait une
-   * invention, et « en baisse » affirmerait un sens qu'on ignore.
-   */
-  tendance: "Comparaison avec le mois précédent : —",
-  detail: "Le détail",
-  parTaux: "par taux",
-  collectee: "Collectée",
-  deductible: "Déductible",
-  /**
-   * La ligne secondaire du dessin compte des factures par taux (« 11 factures
-   * de vente »). `TvaBucket` porte `tax_code`, `rate`, `base` et `vat` — pas
-   * de compte de pièces. On montre donc la BASE, que le moteur sert vraiment
-   * et qui est la compagne naturelle d'une TVA, plutôt qu'un compte inventé.
-   */
-  base: "Base",
-  /** Les lignes que le moteur a refusées, faute de taux gouverné à leur date. */
-  nonRecuperable: "Non récupérable",
-  refusees: (n: number) =>
-    n === 1 ? "1 ligne sans taux gouverné à sa date" : `${n} lignes sans taux gouverné à leur date`,
-  ceQuiChange: "Ce qui changerait le chiffre",
-  sansDateMeta: "dans aucun mois",
-  sansDateTitre: "Des pièces rangées dans aucun mois",
-  parSociete: "Par société",
-  /** Le solde par société n'est pas servi : le moteur tourne sur UN dossier. */
-  soldeParSociete: "Solde non servi par société",
-} as const;
-
 /**
  * TVA du mois — le dessin validé (`livraison/ecrans/malica-manquants.html`,
  * écran « TVA »), porté sur la route qui portait déjà le calcul.
@@ -138,7 +72,8 @@ const MOTS = {
  * un formatage de locale, du même ordre que `montant()`, pas une
  * multiplication écrite ici.
  *
- * Même règle pour l'échéance de dépôt : voir `MOTS.sous`.
+ * Même règle pour l'échéance de dépôt : voir le commentaire de `pme.tva.sous`
+ * dans `packages/socle/src/messages.ts`.
  *
  * =========================================== LE BLOC D'ENCRE, ET POURQUOI IL N'Y EST PLUS
  *
@@ -205,8 +140,8 @@ function PmeTva() {
   const detail = nonAssujetti
     ? []
     : [
-        ...(tva?.collectee ?? []).map((b) => ({ sens: MOTS.collectee, seau: b })),
-        ...(tva?.deductible ?? []).map((b) => ({ sens: MOTS.deductible, seau: b })),
+        ...(tva?.collectee ?? []).map((b) => ({ sens: t("pme.tva.col.collectee"), seau: b })),
+        ...(tva?.deductible ?? []).map((b) => ({ sens: t("pme.tva.col.deductible"), seau: b })),
       ];
 
   const refusees = tva?.refused ?? [];
@@ -242,7 +177,7 @@ function PmeTva() {
           type="button"
           className="bk"
           /*
-           * `MOTS.retour` disait « Retour » en dur, en francais seulement : en
+           * L'ancien `MOTS.retour` disait « Retour » en dur, en francais seulement : en
            * arabe et en anglais, le lecteur d'ecran annoncait « Retour ».
            * `pme.regler.retour` est la meme etiquette, traduite, et c'est
            * celle que portent les neuf autres retours du produit. Le mot en
@@ -255,7 +190,7 @@ function PmeTva() {
             <path d="M14.5 5.5L8 12l6.5 6.5" />
           </svg>
         </button>
-        <span className="ttl">{parSociete ? MOTS.barreGroupe : MOTS.barre}</span>
+        <span className="ttl">{parSociete ? t("pme.tva.barreGroupe") : t("cab.dos.kpi.tva")}</span>
         <span className="ic" aria-hidden>
           <IconeHistogramme />
         </span>
@@ -263,7 +198,9 @@ function PmeTva() {
 
       <div className="pad">
         <h1>{moisEtAnnee}</h1>
-        <p className="sub">{parSociete ? MOTS.sousGroupe(pme.dossiers.length) : MOTS.sous}</p>
+        <p className="sub">
+          {parSociete ? t("pme.tva.sousGroupe", { count: pme.dossiers.length }) : t("pme.tva.sous")}
+        </p>
 
         {/*
          * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
@@ -290,15 +227,15 @@ function PmeTva() {
                 : sens === "nul"
                   ? t("pme.tva.soldeNul")
                   : sens === "du"
-                    ? MOTS.aPayer
-                    : MOTS.credit}
+                    ? t("pme.tva.aPayer")
+                    : t("pme.tva.credit")}
             </u>
           </div>
         )}
 
         <div className="trd">
           <i aria-hidden />
-          {MOTS.tendance}
+          {t("pme.tva.tendance")}
         </div>
 
         {/*
@@ -380,8 +317,8 @@ function PmeTva() {
 
             {/* ── le détail, par taux ──────────────────────────────────── */}
             <div className="sec">
-              <h2>{MOTS.detail}</h2>
-              <span>{MOTS.parTaux}</span>
+              <h2>{t("pme.tva.detail")}</h2>
+              <span>{t("pme.tva.parTaux")}</span>
             </div>
 
             {/*
@@ -400,7 +337,7 @@ function PmeTva() {
                     {sens} {pourcent(seau.rate)}
                   </b>
                   <span>
-                    {MOTS.base} {montant(seau.base, locale)}
+                    {t("cab.immo.base")} {montant(seau.base, locale)}
                   </span>
                 </span>
                 <span className="rt">
@@ -423,8 +360,8 @@ function PmeTva() {
                   <IconePiece />
                 </i>
                 <span className="bd">
-                  <b>{MOTS.nonRecuperable}</b>
-                  <span>{MOTS.refusees(refusees.length)}</span>
+                  <b>{t("pme.tva.nonRecuperable")}</b>
+                  <span>{t("pme.tva.refusees", { count: refusees.length })}</span>
                 </span>
                 <span className="rt">
                   <span className="vl">—</span>
@@ -456,12 +393,12 @@ function PmeTva() {
         {sansDate.data ? (
           <>
             <div className="sec">
-              <h2>{MOTS.ceQuiChange}</h2>
-              <span>{MOTS.sansDateMeta}</span>
+              <h2>{t("pme.tva.ceQuiChange")}</h2>
+              <span>{t("pme.tva.sansDateMeta")}</span>
             </div>
             <div className="card">
               <div className="hd">
-                <b>{MOTS.sansDateTitre}</b>
+                <b>{t("pme.tva.sansDateTitre")}</b>
                 <span>—</span>
               </div>
               <p>{t("pme.tva.sansDate", { count: sansDate.data })}</p>
@@ -479,7 +416,7 @@ function PmeTva() {
         {parSociete ? (
           <>
             <div className="sec">
-              <h2>{MOTS.parSociete}</h2>
+              <h2>{t("pme.tva.parSociete")}</h2>
               <span>{pme.dossiers.length}</span>
             </div>
             {pme.dossiers.map((d) => (
@@ -489,7 +426,7 @@ function PmeTva() {
                 </i>
                 <span className="bd">
                   <b>{d.name}</b>
-                  <span>{MOTS.soldeParSociete}</span>
+                  <span>{t("pme.tva.soldeParSociete")}</span>
                 </span>
                 <span className="rt">
                   <span className="vl">—</span>
