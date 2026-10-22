@@ -386,3 +386,17 @@ pour dérive ne redéclenche donc pas une génération d'elle-même : la
 surveillance suspend, l'expert décide. C'est un défaut prudent — il évite de
 payer en boucle sur un format qui dérive — mais il veut dire qu'une version
 nouvelle reste un geste humain.
+
+## Inviter dans son dossier depuis l'application Android (tranché par défaut le 22 octobre 2026)
+
+**Défaut retenu : l'invitation (`inviterSiege`, `inviterProprietaire`) se fait
+sur le web et la PWA, pas dans l'application Android.** Relevé par la revue
+Codex de la PR #64 : une invitation acceptée au-delà des places incluses
+ajoute une place payée (`facturation.droits_v`, `prix_siege_sup`), ce qui est
+un achat au sens des règles de Google Play. Le défaut le plus sûr ferme le geste
+entier dans la coque, même quand la place est incluse.
+
+**À trancher par le dirigeant** : rouvrir l'invitation dans l'application pour
+les seules places incluses (le serveur refuserait alors à une coque la place
+qui serait facturée). C'est un arbitrage commercial et produit, pas un défaut
+de code.

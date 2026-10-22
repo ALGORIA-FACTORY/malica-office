@@ -334,7 +334,9 @@ function PmeReglages() {
        */}
       {verrous.sieges.ouvert ? (
         <>
-          <InviterDansMonDossier />
+          {/* Inviter peut ajouter une place payée au-delà des places incluses :
+              c'est un achat, donc sur le web et la PWA seulement (`COMMERCE`). */}
+          {COMMERCE ? <InviterDansMonDossier /> : null}
           <MesProprietaires />
         </>
       ) : null}
