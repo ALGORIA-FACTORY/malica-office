@@ -118,11 +118,13 @@ export async function champsAVerifier(db: Requete, pieceId: string): Promise<str
   const controles = rows[0]?.controles;
   if (!Array.isArray(controles)) return [];
   const confiance = controles.find(
-    (c): c is { statut: string; preuves?: { champs?: unknown } } =>
+    (c): c is { statut: string; preuves?: { champs?: unknown; aRelire?: unknown } } =>
       typeof c === "object" && c !== null && (c as { code?: unknown }).code === "confiance_lecture",
   );
   if (!confiance || confiance.statut === "conforme") return [];
-  const champs = confiance.preuves?.champs;
+  // Une anomalie nomme ses champs bloquants dans `champs`, et TOUS les champs
+  // sous la réserve dans `aRelire` (jugements posés depuis le 22 octobre 2026).
+  const champs = confiance.preuves?.aRelire ?? confiance.preuves?.champs;
   return Array.isArray(champs) ? champs.filter((x): x is string => typeof x === "string") : [];
 }
 

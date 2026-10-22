@@ -45,6 +45,20 @@ describe("ANO-025 — les champs à vérifier", () => {
     assert.deepEqual(champs, ["issuer", "totals.ttc"]);
   });
 
+  it("une anomalie rend aussi les champs seulement en réserve (`aRelire`)", async () => {
+    const champs = await champsAVerifier(
+      base([
+        {
+          code: "confiance_lecture",
+          statut: "anomalie",
+          preuves: { champs: ["totals.ttc"], aRelire: ["totals.ttc", "issuer"] },
+        },
+      ]),
+      "p",
+    );
+    assert.deepEqual(champs, ["totals.ttc", "issuer"]);
+  });
+
   it("une lecture conforme ne signale rien", async () => {
     assert.deepEqual(await champsAVerifier(base([confiance("conforme", [])]), "p"), []);
   });

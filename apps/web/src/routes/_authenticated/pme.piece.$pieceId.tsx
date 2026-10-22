@@ -585,6 +585,9 @@ function PieceScreen() {
    * l'écran le dit « à vérifier », et la zone source reste à un toucher.
    */
   const aVerifier = new Set(propositionServeur.data?.champsAVerifier ?? []);
+  // Tant que le jugement n'est pas arrivé (chargement, échec), la confiance est
+  // INCONNUE : ni coche « source », ni « à vérifier » — on ne dit rien de faux.
+  const confianceConnue = propositionServeur.isSuccess;
   // Le payload dont la proposition est tirée : la lecture, complétée de la
   // précision de la personne si la lecture n'avait pas su.
   const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
@@ -1500,7 +1503,9 @@ function PieceScreen() {
             >
               <span className="bd">
                 <b>{l.label}</b>
-                {aVerifier.has(l.champ) ? (
+                {!confianceConnue ? (
+                  <span className="mt">{t("pme.citation.show")}</span>
+                ) : aVerifier.has(l.champ) ? (
                   <span className="recu am">
                     <svg viewBox="0 0 24 24" className="g" aria-hidden>
                       <path d="M12 4.5l8.5 15h-17zM12 10v4.2M12 16.6v.4" />
