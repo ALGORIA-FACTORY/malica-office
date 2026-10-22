@@ -1,3 +1,4 @@
+import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -469,9 +470,13 @@ function PmeHome() {
               <b>
                 {nonAssujetti
                   ? t("pme.home.tva.nonAssujetti")
-                  : a.aReverser === null || Number(a.aReverser) > 0
-                    ? t("pme.home.reverser")
-                    : t("pme.home.credit")}
+                  : sensDuSolde(a.aReverser) === "inconnu"
+                    ? t("pme.tva.soldeInconnu")
+                    : sensDuSolde(a.aReverser) === "nul"
+                      ? t("pme.tva.soldeNul")
+                      : sensDuSolde(a.aReverser) === "du"
+                        ? t("pme.home.reverser")
+                        : t("pme.home.credit")}
               </b>
               <span>
                 {nonAssujetti

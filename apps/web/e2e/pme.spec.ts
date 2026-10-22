@@ -9,6 +9,7 @@
  * `outils/epreuve-bout-en-bout.mjs`.
  */
 import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 
 import { preparerLAppareil } from "./comptes";
 
@@ -73,12 +74,151 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
 test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }) => {
   await page.goto("/pme");
   const nav = page.getByRole("navigation", { name: "Navigation principale" });
-  await expect(nav.getByRole("button", { name: "Photographier" })).toBeEnabled();
+  await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
   await nav.getByText("Mon espace").click();
   await expect(page).toHaveURL(/\/pme\/coffre$/);
   await nav.getByText("Accueil").click();
   await expect(page).toHaveURL(/\/pme$/);
 });
+
+test("ajouter une pièce donne accès aux trois sources sans ouvrir la caméra", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/pme");
+  await page.getByRole("button", { name: "Ajouter une pièce", exact: true }).click();
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeEnabled();
+  for (const nom of ["Photographier", "Importer des images", "Importer des PDF"])
+    await expect(page.getByRole("button", { name: nom, exact: true })).toBeInViewport();
+  await testInfo.attach("ajout-trois-sources", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  const images = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des images", exact: true }).click();
+  const galerie = await images;
+  expect(galerie.isMultiple()).toBe(true);
+  expect(await galerie.element().getAttribute("accept")).toBe("image/*");
+  expect(await galerie.element().getAttribute("capture")).toBeNull();
+  await galerie.setFiles([]);
+
+  const pdfs = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const pdf = await pdfs;
+  expect(pdf.isMultiple()).toBe(true);
+  expect(await pdf.element().getAttribute("accept")).toBe("application/pdf");
+  await pdf.setFiles([]);
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Revenir", exact: true }).click();
+  await expect(page).toHaveURL(/\/pme$/);
+});
+
+test("un faux PDF est refusé depuis le parcours d'ajout avant tout dépôt", async ({ page }) => {
+  await page.goto("/pme");
+  await page.getByRole("button", { name: "Ajouter une pièce", exact: true }).click();
+  const attente = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const selecteur = await attente;
+  await selecteur.setFiles({
+    name: "document-invalide.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("Ceci n'est pas un PDF."),
+  });
+  await expect(page.getByRole("alert")).toContainText("Ce fichier n'est pas un PDF");
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeEnabled();
+});
+
+/** Un vrai PDF texte, sans appel modèle ni interception de l'application. */
+function pdfDeRecette(texte: string): Buffer {
+  const flux = `BT /F1 12 Tf 40 780 Td (${texte}) Tj ET`;
+  const objets = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(flux)} >>\nstream\n${flux}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const positions = [0];
+  objets.forEach((objet, i) => {
+    positions.push(Buffer.byteLength(pdf));
+    pdf += `${i + 1} 0 obj\n${objet}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${positions.length}\n0000000000 65535 f \n`;
+  for (const position of positions.slice(1))
+    pdf += `${String(position).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${positions.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+
+test("deux PDF se déposent réellement et un nouvel ajout quitte l'étape précédente", async ({
+  page,
+}) => {
+  await page.goto("/pme");
+  const ajouter = page.getByRole("button", { name: "Ajouter une pièce", exact: true });
+  await ajouter.click();
+  const attente = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Importer des PDF", exact: true }).click();
+  const selecteur = await attente;
+  const passage = randomUUID();
+  await selecteur.setFiles(
+    [1, 2].map((n) => ({
+      name: `recette-import-${n}.pdf`,
+      mimeType: "application/pdf",
+      buffer: pdfDeRecette(`Recette import ${passage} document ${n}`),
+    })),
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Je ne sais pas — lis-le quand même" })
+    .click();
+  await expect(page).toHaveURL(/\/pme\/capturer\?pieces=/);
+  const ids = new URL(page.url()).searchParams.get("pieces")!.split(",");
+  expect(new Set(ids).size).toBe(2);
+  await expect(page.locator(".bande .vg")).toHaveCount(2);
+  await page.locator('[data-ecran="capture"] .go .pr').click();
+  await expect(page.getByText("Ces 2 pièces sont pour la société, ou pour vous ?")).toBeVisible();
+  await ajouter.click();
+  await expect(page).toHaveURL(/\/pme\/capturer$/);
+  await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Photographier", exact: true })).toBeVisible();
+});
+
+for (const largeur of [390, 1440]) {
+  for (const [chemin, ecran] of [
+    ["list", "bibliotheque"],
+    ["charges", "charges"],
+    ["tva", "tva"],
+    ["echeances", "echeances"],
+    ["coffre", "coffre"],
+    ["fiche", "fiche"],
+    ["notifications", "notifications"],
+    ["reglages", "parametres"],
+    ["regler", "manquants"],
+    ["malica", "chat"],
+  ]) {
+    test(`PME ${chemin} reste utilisable à ${largeur} px`, async ({ page }, testInfo) => {
+      const plantages: string[] = [];
+      page.on("pageerror", (e) => plantages.push(e.message));
+      await page.setViewportSize({ width: largeur, height: 900 });
+      await page.goto(`/pme/${chemin}`);
+      await expect(page.locator(`[data-ecran="${ecran}"]`)).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/pme/${chemin}$`));
+      await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
+      const debordement = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(debordement).toBeLessThanOrEqual(1);
+      expect(plantages).toEqual([]);
+      await testInfo.attach(`pme-${chemin}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    });
+  }
+}
 
 test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
   /*
@@ -129,7 +269,7 @@ test("le même accueil utilise le desktop et conserve la navigation du télépho
     await page.goto("/pme");
     const nav = page.getByRole("navigation", { name: "Navigation principale" });
     await expect(page.getByText("Vos documents")).toBeVisible();
-    await expect(nav.getByRole("button", { name: "Photographier" })).toBeEnabled();
+    await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
     const dimensions = await page.locator("main").evaluate((element) => ({
       contenu: element.getBoundingClientRect().width,
       page: document.documentElement.scrollWidth,

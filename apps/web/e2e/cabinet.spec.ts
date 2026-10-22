@@ -24,3 +24,42 @@ test("le cabinet liste ses dossiers et en ouvre un", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/\/cabinet\/(dossier|clients)\//);
 });
+
+for (const largeur of [390, 1440]) {
+  for (const chemin of [
+    "clients",
+    "propositions",
+    "echeances",
+    "notifications",
+    "conseil",
+    "pilotage",
+    "honoraires",
+    "abonnements",
+    "export",
+    "reglages",
+    "plan",
+    "rapprochement",
+    "immobilisations",
+    "stocks",
+    "pv",
+    "lecteurs",
+  ]) {
+    test(`comptabilité ${chemin} reste accessible à ${largeur} px`, async ({ page }, testInfo) => {
+      const plantages: string[] = [];
+      page.on("pageerror", (e) => plantages.push(e.message));
+      await page.setViewportSize({ width: largeur, height: 900 });
+      await page.goto(`/cabinet/${chemin}`);
+      await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/cabinet/${chemin}$`));
+      const debordement = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(debordement).toBeLessThanOrEqual(1);
+      expect(plantages).toEqual([]);
+      await testInfo.attach(`comptabilite-${chemin}-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+    });
+  }
+}

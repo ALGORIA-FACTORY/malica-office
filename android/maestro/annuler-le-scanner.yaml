@@ -1,27 +1,32 @@
-# Ouvrir le scanner de l'appareil et l'abandonner : aucune erreur, l'écran
-# d'avant intact. C'est le cas que le navigateur ne sait pas jouer — ML Kit
-# est une activité des services Google, hors de la page.
+# L'émulateur AOSP n'a ni ML Kit ni caméra. Le scanner natif refuse ;
+# notre cadrage s'ouvre et explique l'absence de caméra. Son abandon doit
+# rendre le choix d'import intact, puis Retour doit rendre l'accueil.
+# Ce flux ne constitue pas une validation du scanner ML Kit sur téléphone.
 appId: com.algoriafactory.malica.emulateur
 androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
+- tapOn: "Ajouter une pièce"
+- assertVisible: "Importer des images"
+- assertVisible: "Importer des PDF"
+- takeScreenshot: ajout-trois-sources
+- scrollUntilVisible:
+    element: "Photographier"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
 - tapOn: "Photographier"
-# La permission caméra, la première fois.
 - tapOn:
     text: "Lors de l'utilisation de l'application|While using the app|Autoriser|Allow"
     optional: true
-# L'activité ML Kit est ouverte : le retour matériel l'abandonne.
-#
-# Sur un émulateur, le greffon refuse d'ouvrir le scanner (« Document scanner
-# is not supported on Android emulators », journal de l'appareil, exécution
-# 39107586977) : l'accueil reste à l'écran, et un retour depuis l'accueil
-# quitte l'application. On ne recule donc que si le scanner a pris l'écran ;
-# sur la CI, ce flux prouve qu'un scanner indisponible ne casse pas l'accueil.
-- runFlow:
-    when:
-      notVisible: "Vos documents"
-    commands:
-      - back
+- extendedWaitUntil:
+    visible: "Annuler"
+    timeout: 20000
+- takeScreenshot: scanner-repli-sans-camera
+- back
+- assertVisible: "Importer des PDF"
+- back
 - assertVisible: "Vos documents"
 - assertNotVisible: "Une erreur est survenue."
+

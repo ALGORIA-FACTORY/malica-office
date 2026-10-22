@@ -1,3 +1,4 @@
+import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
@@ -198,7 +199,7 @@ function PmeTva() {
     );
 
   const solde = tva?.totals.solde ?? null;
-  const aReverser = solde !== null && Number(solde) > 0;
+  const sens = sensDuSolde(solde);
 
   /** Les deux sens du détail, dans l'ordre du dessin : collectée puis déductible. */
   const detail = nonAssujetti
@@ -280,10 +281,17 @@ function PmeTva() {
             <span>{t("pme.tva.nonAssujetti")}</span>
           </p>
         ) : (
-          <div className={aReverser ? "chiffre" : "chiffre cr"}>
-            {solde === null ? "—" : montant(solde.replace(/^-/, ""), locale)}{" "}
+          <div className={sens === "credit" ? "chiffre cr" : "chiffre"}>
+            {sens === "inconnu" ? "—" : montant(solde!.replace(/^-/, ""), locale)}{" "}
             <u>
-              {tva?.currency ?? pme.currency} {aReverser ? MOTS.aPayer : MOTS.credit}
+              {tva?.currency ?? pme.currency}{" "}
+              {sens === "inconnu"
+                ? t("pme.tva.soldeInconnu")
+                : sens === "nul"
+                  ? t("pme.tva.soldeNul")
+                  : sens === "du"
+                    ? MOTS.aPayer
+                    : MOTS.credit}
             </u>
           </div>
         )}
@@ -345,7 +353,7 @@ function PmeTva() {
                   <b>{montant(tva.totals.collectee, locale)}</b>
                 </span>
                 <span className="b">
-                  <i style={{ width: "100%" }} />
+                  {Number(tva.totals.collectee) > 0 ? <i style={{ width: "100%" }} /> : null}
                 </span>
               </div>
               <div>
