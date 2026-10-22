@@ -18,6 +18,7 @@ import { estNatif } from "@/capabilities/coque";
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
 import { useI18n, type MessageKey } from "@/i18n";
+import { montant } from "@/lib/lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
@@ -682,7 +683,7 @@ export function MesProprietaires() {
  * d'une vraie page de carte.
  */
 export function ARegler() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const invalider = useInvalider();
   const principal = useEstPrincipal();
   const qc = useQueryClient();
@@ -757,7 +758,10 @@ export function ARegler() {
           <div className="nm">
             <b>{p.libelle}</b>
             <span className="px">
-              {t("pme.reglages.paiement.montant", { ttc: p.montant_ttc, devise: p.devise })}
+              {t("pme.reglages.paiement.montant", {
+                ttc: montant(p.montant_ttc, locale),
+                devise: p.devise,
+              })}
             </span>
           </div>
           {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}

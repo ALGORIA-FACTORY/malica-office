@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { coque, versionClient } from "@/capabilities/coque";
+import { coque, estNatif, versionClient } from "@/capabilities/coque";
 import {
   ARegler,
   ChangerDOffre,
@@ -105,6 +105,7 @@ function PmeReglages() {
   const { apparence, choisir } = useApparence();
   const pme = usePme();
   const aLEchelle = usePrix();
+  const commerceVisible = !estNatif();
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
 
@@ -162,12 +163,18 @@ function PmeReglages() {
       <div className="card abo">
         <div className="nm">
           <b>{f?.offre ? nomDeLOffre(f.offre) : ABSENT}</b>
-          <span className="px">
-            {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
-          </span>
+          {commerceVisible ? (
+            <span className="px">
+              {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
+            </span>
+          ) : null}
         </div>
-        <p className="ttc">{t("pme.reglages.abo.ht")}</p>
-        <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
+        {commerceVisible ? (
+          <>
+            <p className="ttc">{t("pme.reglages.abo.ht")}</p>
+            <TtcEtReport ht={f?.prix_mensuel_ht ?? null} />
+          </>
+        ) : null}
 
         <div className="det">
           <div>
@@ -217,7 +224,7 @@ function PmeReglages() {
             <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
           ) : null}
           {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
-          <p className="nxt">{t("pme.reglages.abo.facture")}</p>
+          {commerceVisible ? <p className="nxt">{t("pme.reglages.abo.facture")}</p> : null}
         </div>
       </div>
 
@@ -227,19 +234,23 @@ function PmeReglages() {
        * direct ») : une phrase y écrasait le titre en colonne d'une lettre,
        * relevé sur l'appareil le 19 octobre. La phrase va dessous.
        */}
-      <div className="sec">
-        <h2>{t("pme.reglages.offres")}</h2>
-      </div>
-      <p className="t-body">{t("pme.reglages.offres.sous")}</p>
-      <ChangerDOffre />
-      <PayerALAnnee />
-      <ARegler />
+      {commerceVisible ? (
+        <>
+          <div className="sec">
+            <h2>{t("pme.reglages.offres")}</h2>
+          </div>
+          <p className="t-body">{t("pme.reglages.offres.sous")}</p>
+          <ChangerDOffre />
+          <PayerALAnnee />
+          <ARegler />
 
-      <div className="sec">
-        <h2>{t("pme.reglages.recharges")}</h2>
-      </div>
-      <p className="t-body">{t("pme.reglages.recharges.sous")}</p>
-      <MesRecharges />
+          <div className="sec">
+            <h2>{t("pme.reglages.recharges")}</h2>
+          </div>
+          <p className="t-body">{t("pme.reglages.recharges.sous")}</p>
+          <MesRecharges />
+        </>
+      ) : null}
 
       {/* ───────────────────────────────────────────── les organisations */}
       <div className="sec">

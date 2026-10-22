@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
@@ -308,9 +309,23 @@ function PmeCoffre() {
           <p>{t("pme.coffre.wall")}</p>
         </div>
 
-        {panne ? (
-          <div className="card" role="alert">
-            <p>{texteDeLErreur(panne, OU, t("common.error"))}</p>
+        <FileLocale vis="personnel" />
+
+        {panne || pieces.fetchStatus === "paused" ? (
+          <div className="card" role="status">
+            <p>
+              {pieces.fetchStatus === "paused"
+                ? t("common.horsLigne")
+                : texteDeLErreur(panne, OU, t("common.error"))}
+            </p>
+            <button
+              type="button"
+              className="btn"
+              disabled={pieces.fetchStatus === "paused"}
+              onClick={() => void pieces.refetch()}
+            >
+              {t("common.reessayer")}
+            </button>
           </div>
         ) : null}
 
@@ -320,9 +335,9 @@ function PmeCoffre() {
           </div>
         ) : null}
 
-        {pieces.isPending ? (
+        {pieces.isPending && pieces.fetchStatus !== "paused" ? (
           <p className="foot">{t("common.loading")}</p>
-        ) : visibles.length === 0 ? (
+        ) : !pieces.isSuccess && pieces.data === undefined ? null : visibles.length === 0 ? (
           <div className="card">
             <p>{t("pme.prive.vide")}</p>
           </div>
