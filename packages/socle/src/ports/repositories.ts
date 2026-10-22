@@ -1084,7 +1084,7 @@ export interface LigneDePeriode {
  * comparait la phrase francaise accent par accent, dans un autre paquet que
  * celui qui la produit.
  */
-export type PropositionDePiece =
+export type PropositionDePiece = (
   | {
       ok: true;
       verdict: string;
@@ -1099,7 +1099,15 @@ export type PropositionDePiece =
       verdictCode?: CodeVerdict | null;
       /** Les codes des contrôles en défaut (`sens_de_la_piece`…), quand le verdict bloque. */
       controlesEnDefaut?: string[];
-    };
+    }
+) & {
+  /**
+   * Les champs lus sous le seuil de réserve (`issuer`, `document_date`…),
+   * nommés par le contrôle `confiance_lecture` du dernier jugement de la
+   * dernière lecture. L'écran les dit « à vérifier » au lieu de « source ».
+   */
+  champsAVerifier?: string[];
+};
 
 export interface OfficeRepository {
   propose(input: ProposedEcriture): Promise<string>;
