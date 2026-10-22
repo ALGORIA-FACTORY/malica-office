@@ -586,7 +586,9 @@ function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle 
       code: "confiance_lecture",
       statut: "anomalie",
       motif: `Lecture trop incertaine pour ${bloquants.join(", ")} (sous ${ctx.seuilConfianceBloquant}).`,
-      preuves: { champs: bloquants, seuil: ctx.seuilConfianceBloquant },
+      // `aRelire` : TOUS les champs sous le seuil de réserve, bloquants
+      // compris — l'écran les dit « à vérifier », pas seulement les pires.
+      preuves: { champs: bloquants, seuil: ctx.seuilConfianceBloquant, aRelire: reserves },
     };
   if (reserves.length > 0)
     return {

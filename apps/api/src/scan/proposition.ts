@@ -19,13 +19,9 @@
  * enregistre sans qu'aucune ligne ne transite par le client.
  */
 
-import {
-  buildProposal,
-  LectureIncomplete,
-  type ProposalResult,
-} from "@malica/socle/use-cases/propose-ecriture";
-
-import { autoriseUneEcriture, codeDuVerdict, type CodeVerdict } from "@malica/socle/verdicts";
+import type { PropositionDePiece } from "@malica/socle/ports/repositories";
+import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
+import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 
 import type { Requete } from "../db.ts";
 import { enDecimal } from "../malica/lecture/montants.ts";
@@ -42,22 +38,10 @@ const sensConnu = (k: string): k is SensConnu["documentKind"] =>
 // epreuve, parce que les deux rives en ont besoin — celle qui inscrit et
 // celle qui affiche. Un verdict inconnu n autorise rien.
 
-export type PropositionDePiece =
-  | {
-      ok: true;
-      verdict: string;
-      /** Le verdict sous forme de CODE : c est la-dessus que les ecrans branchent. */
-      verdictCode: CodeVerdict | null;
-      packVersionId: string;
-      proposition: ProposalResult;
-    }
-  | {
-      ok: false;
-      raison: string;
-      verdict?: string;
-      verdictCode?: CodeVerdict | null;
-      controlesEnDefaut?: string[];
-    };
+// Le type de la réponse vit au Socle, avec le port qui la sert : il était
+// recopié ici à l'identique, et la copie aurait dérivé au premier champ ajouté
+// (ANO-025 : `champsAVerifier`).
+export type { PropositionDePiece };
 
 /*
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
@@ -109,10 +93,54 @@ async function compteDeLaNature(db: Requete, pieceId: string): Promise<string | 
   return rows[0]?.compte ?? null;
 }
 
+/**
+ * Les champs dont la lecture est sous le seuil de réserve, tels que le DERNIER
+ * jugement de la DERNIÈRE lecture les a nommés (contrôle `confiance_lecture`).
+ *
+ * ANO-025 : un émetteur mal lu s'affichait avec la coche « source », sans
+ * aucun signal. Le moteur savait — le contrôle le nommait dans ses preuves —
+ * mais l'écran ne le recevait pas. Rien n'est recalculé ici : on rend ce que
+ * le jugement déterministe a posé, seuils de la base compris. Un jugement
+ * d'une lecture plus ancienne ne dit rien de la lecture courante : il est
+ * ignoré.
+ */
+export async function champsAVerifier(db: Requete, pieceId: string): Promise<string[]> {
+  const { rows } = await db.query<{ controles: unknown }>(
+    `select a.controles
+       from capture.analyses a
+       join lateral (select id from capture.extractions x
+                      where x.piece_id = a.piece_id order by created_at desc limit 1) e
+         on e.id = a.extraction_id
+      where a.piece_id = $1
+      order by a.created_at desc limit 1`,
+    [pieceId],
+  );
+  const controles = rows[0]?.controles;
+  if (!Array.isArray(controles)) return [];
+  const confiance = controles.find(
+    (c): c is { statut: string; preuves?: { champs?: unknown; aRelire?: unknown } } =>
+      typeof c === "object" && c !== null && (c as { code?: unknown }).code === "confiance_lecture",
+  );
+  if (!confiance || confiance.statut === "conforme") return [];
+  // Une anomalie nomme ses champs bloquants dans `champs`, et TOUS les champs
+  // sous la réserve dans `aRelire` (jugements posés depuis le 22 octobre 2026).
+  const champs = confiance.preuves?.aRelire ?? confiance.preuves?.champs;
+  return Array.isArray(champs) ? champs.filter((x): x is string => typeof x === "string") : [];
+}
+
 export async function propositionDePiece(
   db: Requete,
   pieceId: string,
   dateSaisie: string | null = null,
+): Promise<PropositionDePiece> {
+  const resultat = await proposerDepuisLeJugement(db, pieceId, dateSaisie);
+  return { ...resultat, champsAVerifier: await champsAVerifier(db, pieceId) };
+}
+
+async function proposerDepuisLeJugement(
+  db: Requete,
+  pieceId: string,
+  dateSaisie: string | null,
 ): Promise<PropositionDePiece> {
   // Le jugement de la DERNIÈRE lecture ; s'il manque, on juge maintenant.
   const { rows: derniers } = await db.query<{
