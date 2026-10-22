@@ -359,10 +359,10 @@ console.log("\nLa transmission et la suppression");
     "une pièce reprise quitte la file du cabinet",
     !fileApres.some((p) => p.pieceId === transmise.id || p.piece_id === transmise.id),
   );
-  for (const id of [transmise.id, piece.id]) {
-    await rpc("collab", "setPieceVis", [id, "personnel"]);
-    await rpc("capture", "supprimer", [id]);
-  }
+  // La pièce rappelée est déjà revenue par l'accord ; seule l'autre, jamais
+  // transmise, se range encore à la main avant d'être effacée.
+  await rpc("collab", "setPieceVis", [piece.id, "personnel"]);
+  for (const id of [transmise.id, piece.id]) await rpc("capture", "supprimer", [id]);
   const restant = await rpc("capture", "listAvecLecture", [dossier.id]);
   const traces = restant.filter((p) => p.id === transmise.id || p.id === piece.id);
   verdict(
