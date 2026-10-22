@@ -25,6 +25,33 @@ test("le cabinet liste ses dossiers et en ouvre un", async ({ page }) => {
   await expect(page).toHaveURL(/\/cabinet\/(dossier|clients)\//);
 });
 
+test("une panne du portefeuille ne devient pas un mandat vide et la relance retrouve les dossiers", async ({
+  page,
+}) => {
+  let panne = true;
+  await page.route("**/rpc", async (route) => {
+    const appel = route.request().postDataJSON() as { depot?: string; methode?: string };
+    if (panne && appel.depot === "supervision" && appel.methode === "listClients") {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ erreur: "Portefeuille temporairement indisponible" }),
+      });
+    } else await route.continue();
+  });
+  await page.goto("/cabinet/clients");
+  const alerte = page
+    .getByRole("alert")
+    .filter({ hasText: "Portefeuille temporairement indisponible" });
+  await expect(alerte).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Aucun mandat actif.", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Mandats actifs", { exact: true })).toHaveCount(0);
+  panne = false;
+  await alerte.getByRole("button", { name: "Réessayer", exact: true }).click();
+  await expect(page.getByText(/SOTUMAG/).first()).toBeVisible();
+  await expect(alerte).toHaveCount(0);
+});
+
 for (const largeur of [390, 1440]) {
   for (const chemin of [
     "clients",

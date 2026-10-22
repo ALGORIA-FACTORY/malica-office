@@ -30,6 +30,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
@@ -181,6 +182,38 @@ function CabinetClients() {
           ? sans
           : rows.filter((c) => moi !== null && collabDe.get(c.tenantId) === moi).length;
 
+  // Une lecture manquante n'est ni un portefeuille vide, ni zéro dossier
+  // affecté. Les cinq sources alimentent les compteurs ou leurs filtres.
+  const sources = [clients, queue, membres, affectations, compte];
+  const panne = sources.find((source) => source.error)?.error;
+  if (panne || sources.some((source) => source.isPending)) {
+    return (
+      <div className="space-y-8">
+        <EnTeteCabinet
+          surtitre={<>{t("cab.clients.kicker")}</>}
+          titre={<>{t("cab.clients.title")}</>}
+          chapeau={<>{t("cab.clients.lede")}</>}
+        />
+        {panne ? (
+          <div role="alert" className="border border-border bg-card p-4">
+            <p>{texteDeLErreur(panne, "cabinet.clients", t("common.error"))}</p>
+            <button
+              type="button"
+              className="mt-2 min-h-[44px] underline"
+              onClick={() => {
+                for (const source of sources) void source.refetch();
+              }}
+            >
+              {t("doc.retry")}
+            </button>
+          </div>
+        ) : (
+          <p role="status">{t("common.loading")}</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <EnTeteCabinet
@@ -264,9 +297,7 @@ function CabinetClients() {
           ))}
         </div>
 
-        {clients.isPending ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : visibles.length === 0 ? (
+        {visibles.length === 0 ? (
           <EmptyState>{t("cab.clients.empty")}</EmptyState>
         ) : (
           <InkTable
