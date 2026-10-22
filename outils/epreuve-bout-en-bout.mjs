@@ -347,7 +347,13 @@ console.log("\nLa transmission et la suppression");
   // n'est pas une épreuve : quelqu'un les verra, « Pas encore lue », et
   // tentera de les lire. Tout ce qui a été créé ici est repris, puis effacé.
   console.log("\nRien ne reste");
-  await rpc("collab", "setPieceVis", [transmise.id, "personnel"]);
+  // Une pièce transmise ne revient que par accord du cabinet (migration
+  // 20261011160000, gardée par `capture_piece_set_vis`) : la PME demande le
+  // rappel, le cabinet l'accorde, et c'est l'accord qui la remet chez elle.
+  // Forcer `setPieceVis(…, "personnel")` est refusé par la base depuis le
+  // 22 octobre 2026 — l'épreuve passe donc par le chemin réel.
+  await rpc("collab", "demanderSurPiece", [transmise.id, "rappel"]);
+  await rpc("collab", "repondreSurPiece", [transmise.id, "rappel", true, null]);
   const fileApres = cabinet ? await rpc("supervision", "queue", [cabinet.id]) : [];
   verdict(
     "une pièce reprise quitte la file du cabinet",
