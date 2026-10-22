@@ -31,8 +31,8 @@ test("la police arabe est celle de l'application, et les chiffres restent latins
 
 test("les réglages disent la langue, et permettent d'en changer", async ({ page }) => {
   await page.goto("/pme/reglages");
-  await expect(page.getByText("الإعدادات", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "الإعدادات", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Français" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByText("Réglages", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Réglages", exact: true })).toBeVisible();
 });
