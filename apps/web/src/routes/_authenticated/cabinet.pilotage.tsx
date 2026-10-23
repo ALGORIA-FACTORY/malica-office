@@ -223,12 +223,7 @@ function CabinetPilotage() {
       </p>
     );
   }
-  if (
-    clients.isPending ||
-    membres.isPending ||
-    affectations.isPending ||
-    reglages.isPending
-  ) {
+  if (clients.isPending || membres.isPending || affectations.isPending || reglages.isPending) {
     return (
       <p role="status" className="cab-surface">
         {t("common.loading")}
@@ -458,7 +453,10 @@ function CabinetPilotage() {
                     traitees={statsDisponibles ? (s?.supervisees ?? 0) : null}
                     delai={heures(s && s.heuresMoyennes > 0 ? s.heuresMoyennes : null)}
                     sante={statsDisponibles ? t(santeDuMandat(taux, tauxCabinet)) : "—"}
-                    aSuivre={statsDisponibles && santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"}
+                    aSuivre={
+                      statsDisponibles &&
+                      santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"
+                    }
                   />
                 );
               })}
