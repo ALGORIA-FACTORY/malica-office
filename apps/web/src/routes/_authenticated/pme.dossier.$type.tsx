@@ -24,10 +24,10 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
  * des filtres par état — seulement ceux qui ont des pièces — et la liste, chaque
  * ligne avec la vraie page en aperçu.
  *
- * Les pièces viennent des deux lectures que l'accueil a déjà faites
- * (`capture.list` pour le type, `capture.listAvecLecture` pour l'émetteur, la
- * date et le total), sous les mêmes clés : ouvrir un dossier ne coûte aucune
- * requête de plus. Une pièce privée n'est pas dans la bibliothèque, donc pas ici.
+ * Les pièces viennent de la lecture que l'accueil a déjà faite
+ * (`capture.listAvecLecture` : type, émetteur, date, total — toutes les
+ * pièces, pas les cent dernières), sous la même clé : ouvrir un dossier ne
+ * coûte aucune requête de plus. Une pièce privée n'est pas dans la bibliothèque, donc pas ici.
  */
 
 /** Les états qu'une personne distingue, et la clé de leur nom. */
@@ -55,10 +55,6 @@ function Dossier() {
   const navigate = useNavigate();
   const [filtre, setFiltre] = useState<Etat | "toutes">("toutes");
 
-  const pieces = useQuery({
-    queryKey: ["pieces", pme.tenantId],
-    queryFn: () => office().capture.list(pme.tenantId),
-  });
   const lues = useQuery({
     queryKey: ["pieces-lues", pme.tenantId],
     queryFn: () => office().capture.listAvecLecture(pme.tenantId),
@@ -70,13 +66,8 @@ function Dossier() {
   });
 
   const libelle = (typesDoc.data ?? []).find((x) => x.code === type)?.libelle ?? type;
-  const ici = new Set(
-    (pieces.data ?? [])
-      .filter((p) => p.documentKind === type && p.vis !== "personnel")
-      .map((p) => p.id),
-  );
   const toutes = (lues.data ?? [])
-    .filter((p) => ici.has(p.id))
+    .filter((p) => p.typeDeDocument === type && p.vis !== "personnel")
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
   const faites = toutes.filter((p) => etatDe(p) === "comptabilisee").length;
   const aVerifier = toutes.filter((p) => etatDe(p) === "verifier");
@@ -165,7 +156,7 @@ function Dossier() {
           </div>
         ) : null}
 
-        {pieces.isPending || lues.isPending ? (
+        {lues.isPending ? (
           <p className="vide">{t("common.loading")}</p>
         ) : visibles.length === 0 ? (
           <p className="vide">{t("pme.dossier.vide")}</p>

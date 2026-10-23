@@ -324,9 +324,10 @@ function PmeHome() {
   /*
    * ============================================== LES RANGÉES, LUES DANS LA BASE
    *
-   * Deux lectures déjà faites ailleurs, rien de plus : `capture.list` (par
-   * `useAccueil`, pour le type de chaque pièce) et `capture.listAvecLecture`
-   * (sous la clé de la bibliothèque, pour l'émetteur, la date et le total).
+   * Une lecture déjà faite ailleurs : `capture.listAvecLecture`, sous la clé
+   * de la bibliothèque — toutes les pièces, avec leur type, l'émetteur, la
+   * date et le total. Pas `capture.list` : elle s'arrête aux cent dernières,
+   * et un dossier perdrait ses pièces les plus anciennes (revue de #80).
    * Les noms des types viennent du référentiel traduit, jamais du code.
    */
   const lues = useQuery({
@@ -338,13 +339,22 @@ function PmeHome() {
     queryFn: () => office().referential.typesDeDocument(locale),
     staleTime: 60 * 60 * 1000,
   });
+  // Comme l'écran des échéances : le calendrier se dérive d'abord
+  // (idempotent), puis se lit — sinon un compte dont personne n'a encore
+  // ouvert ses échéances n'en verrait aucune ici (revue de #80).
+  const derivation = useQuery({
+    queryKey: ["echeances-derivation", pme.tenantId],
+    queryFn: () => office().collab.deriverEcheances([pme.tenantId]),
+    staleTime: 60_000,
+  });
   const echeances = useQuery({
     queryKey: ["echeances", pme.tenantId],
     queryFn: () => office().collab.echeances([pme.tenantId]),
+    enabled: derivation.isFetched,
   });
   const catalogue = useCatalogueDesOffres().data;
 
-  const typeParPiece = new Map(a.pieces.map((p) => [p.id, p.documentKind]));
+  const typeParPiece = new Map((lues.data ?? []).map((p) => [p.id, p.typeDeDocument]));
   const libelleDuType = (code: string | null | undefined) =>
     (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
   const nomDuType = (pieceId: string) => libelleDuType(typeParPiece.get(pieceId));
@@ -369,12 +379,12 @@ function PmeHome() {
   // Une pochette par type présent dans la bibliothèque, la plus fournie d'abord.
   const dossiers = (() => {
     const parType = new Map<string, { total: number; faites: number }>();
-    for (const p of a.pieces) {
-      if (!p.documentKind || p.vis === "personnel") continue;
-      const g = parType.get(p.documentKind) ?? { total: 0, faites: 0 };
+    for (const p of lesLues) {
+      if (!p.typeDeDocument) continue;
+      const g = parType.get(p.typeDeDocument) ?? { total: 0, faites: 0 };
       g.total += 1;
       if (p.status === "comptabilisee" || p.status === "supervisee") g.faites += 1;
-      parType.set(p.documentKind, g);
+      parType.set(p.typeDeDocument, g);
     }
     return [...parType.entries()]
       .map(([code, g]) => ({

@@ -888,6 +888,12 @@ export interface PieceLue {
   /** La date portée par le DOCUMENT, qui décide de son mois. */
   dateDocument: string | null;
   kind: "facture_achat" | "facture_vente" | null;
+  /**
+   * Le type de document retenu par la base (`pieces.document_kind`), tous
+   * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
+   * ne dit que le sens lu (achat ou vente).
+   */
+  typeDeDocument: string | null;
   /** Le total TTC, chaîne décimale du Socle. */
   total: string | null;
   devise: string | null;

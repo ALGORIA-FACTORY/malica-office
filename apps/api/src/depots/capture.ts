@@ -237,7 +237,7 @@ export const capture = {
      * sait. Le préfixe couvre donc les deux contrats.
      */
     const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, p.vis, p.gardee_le, x.payload,
+      `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.document_kind, x.payload,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
@@ -277,6 +277,7 @@ export const capture = {
           null,
         total: lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
+        typeDeDocument: (r["document_kind"] as string | null) ?? null,
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
       };
     });

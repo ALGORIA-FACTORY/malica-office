@@ -31,7 +31,6 @@ import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
-import type { Piece } from "@malica/socle/ports/repositories";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
 
@@ -69,11 +68,6 @@ export interface Accueil {
   recuperee: string | null;
   /** La TVA collectée du mois courant. `null` : rien de comptabilisé. */
   collectee: string | null;
-  /**
-   * Les pièces du dossier, telles que `capture.list` les rend — lues une fois
-   * ici, et l'accueil en tire ses dossiers sans seconde requête.
-   */
-  pieces: Piece[];
   /** L'écart avec le mois précédent, signé. `null` si l'un des deux manque. */
   ecart: string | null;
   /** Douze mois, du plus ancien au mois courant. */
@@ -339,7 +333,6 @@ export function useAccueil(periode: string): Accueil {
     devise,
     recuperee: courant,
     collectee: serie[serie.length - 1]?.collectee ?? null,
-    pieces: pieces.data ?? [],
     ecart,
     serie,
     moisDeSuite,
