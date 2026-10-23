@@ -322,15 +322,17 @@ export const capture = {
     );
     /*
      * L'extraction est immuable (R7) ; la précision la complète sans la
-     * toucher. Le payload RENDU porte la réponse de la personne là où la
-     * lecture avait laissé un vide — l'écran, la proposition d'écriture et la
-     * liste voient une lecture complète, et la base garde les deux entrées.
+     * toucher. Le payload RENDU porte la réponse de la personne — là où la
+     * lecture avait laissé un vide, et aussi là où la personne a corrigé le
+     * type après lecture (23 octobre 2026) : ce qu'elle a confirmé l'emporte,
+     * comme dans le jugement (`scan/analyse.ts`). L'écran, la proposition
+     * d'écriture et la liste voient le même type ; la base garde les deux.
      */
     const payloadRendu = (() => {
       const brutPayload = extraction?.["payload"];
       if (!brutPayload || typeof brutPayload !== "object") return brutPayload;
       const p = { ...(brutPayload as Record<string, unknown>) };
-      if (p["document_kind"] == null && precisions["document_kind"]) {
+      if (precisions["document_kind"]) {
         p["document_kind"] = precisions["document_kind"];
       }
       return p;

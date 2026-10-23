@@ -525,6 +525,7 @@ function PmeLayout() {
         {aTyper.length > 0 ? (
           <QuestionDuType
             documents={aTyper.map((p) => p.name)}
+            mode="capture"
             onRepondre={(code) => {
               const lot = aTyper;
               setATyper([]);
