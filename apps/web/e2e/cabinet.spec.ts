@@ -78,6 +78,10 @@ for (const largeur of [390, 1440]) {
       await page.goto(`/cabinet/${chemin}`);
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
       await expect(page).toHaveURL(new RegExp(`/cabinet/${chemin}$`));
+      if (chemin === "pilotage") {
+        await expect(page.locator('.cab-rail a[aria-current="page"]')).toHaveCount(1);
+        await expect(page.locator('.cab-rail a[aria-current="page"]')).toHaveText("Pilotage");
+      }
       const debordement = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );

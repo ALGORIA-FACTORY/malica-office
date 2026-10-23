@@ -553,8 +553,16 @@ function Rail({
           replie ? "flex-col" : "",
         )}
       >
-        <span aria-hidden className="cab-brand-mark">
-          <Building2 size={20} strokeWidth={1.7} />
+        <span
+          aria-hidden
+          className="cab-brand-mark"
+          data-logo={org.name.trim().toUpperCase() === "AUDICORP" ? "" : undefined}
+        >
+          {org.name.trim().toUpperCase() === "AUDICORP" ? (
+            <img src="/cabinet/audicorp.jpg" alt="" width={44} height={44} />
+          ) : (
+            <Building2 size={20} strokeWidth={1.7} />
+          )}
         </span>
         {!replie ? (
           <span className="min-w-0 flex-1">
@@ -643,6 +651,7 @@ function Rail({
                   <li key={e.to}>
                     <Link
                       to={e.to}
+                      activeOptions={{ exact: e.exact ?? false }}
                       title={e.label}
                       aria-current={actif ? "page" : undefined}
                       className={cn(
