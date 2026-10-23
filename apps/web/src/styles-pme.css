@@ -1265,6 +1265,8 @@
 [data-surface="pme"] [data-ecran="dossier"] .tete .kind.rec i{background:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .tete h1{margin:.5rem 0 0;font-size:1.75rem;font-weight:700;letter-spacing:-.042em;line-height:1.08}
 [data-surface="pme"] [data-ecran="dossier"] .tete .obj{margin:.375rem 0 0;font-size:.875rem;color:var(--t2);line-height:1.35}
+[data-surface="pme"] [data-ecran="dossier"] .tete .obj .mod{margin-inline-start:.625rem;padding:0;border:0;background:none;font:inherit;color:var(--tx);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .tete .obj .mod:disabled{color:var(--t3);cursor:default}
 [data-surface="pme"] [data-ecran="dossier"] .tete .amt{margin:1rem 0 0;display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono); font-size:2.125rem;font-weight:600;letter-spacing:-.055em;line-height:1}
 [data-surface="pme"] [data-ecran="dossier"] .tete .amt u{text-decoration:none;font-size:.9375rem;font-weight:500;letter-spacing:.02em;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .tete .vent{color:var(--acc)}

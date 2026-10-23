@@ -172,7 +172,7 @@ test("deux PDF se déposent réellement et un nouvel ajout quitte l'étape préc
   );
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Je ne sais pas — lis-le quand même" })
+    .getByRole("button", { name: "Je ne sais pas", exact: true })
     .click();
   await expect(page).toHaveURL(/\/pme\/capturer\?pieces=/);
   const ids = new URL(page.url()).searchParams.get("pieces")!.split(",");

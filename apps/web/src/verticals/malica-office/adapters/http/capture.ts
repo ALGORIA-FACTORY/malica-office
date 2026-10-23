@@ -166,11 +166,7 @@ export function creerCaptureHttp(): CaptureRepository {
       };
     },
 
-    async preciser(
-      pieceId: string,
-      champ: "document_kind",
-      valeur: "facture_achat" | "facture_vente",
-    ) {
+    async preciser(pieceId: string, champ: "document_kind", valeur: string) {
       return (await appeler("capture", "preciser", [pieceId, champ, valeur])) as {
         id: string;
         champ: string;

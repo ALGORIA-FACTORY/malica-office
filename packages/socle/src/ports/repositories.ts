@@ -989,15 +989,15 @@ export interface CaptureRepository {
   motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
-   * Ce que la personne précise quand la lecture ne pouvait pas conclure —
-   * aujourd'hui le sens de la pièce, achat ou vente. Une entrée nouvelle,
-   * jamais une modification de la lecture (R7) ; la base contraint le champ,
-   * la valeur et l'état de la pièce.
+   * Ce que la personne précise ou corrige : le type de la pièce, un code que
+   * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
+   * nouvelle, jamais une modification de la lecture (R7) ; la base contraint
+   * le champ, la valeur et l'état de la pièce.
    */
   preciser(
     pieceId: string,
     champ: "document_kind",
-    valeur: "facture_achat" | "facture_vente",
+    valeur: string,
   ): Promise<{ id: string; champ: string; valeur: string }>;
   /**
    * Rejuger la pièce après une précision : le verdict suit la réponse de la

@@ -48,15 +48,25 @@ import { office } from "@/verticals/malica-office/composition";
  *
  * Chaque pièce reste retypable ensuite, sur son écran.
  */
+/**
+ * La même feuille sert APRÈS la lecture, pour corriger le type (23 octobre
+ * 2026) : une seule liste, un seul dessin. `actuel` marque le type de la
+ * pièce ; le bouton du bas devient « Annuler » — corriger n'a pas de « je ne
+ * sais pas ».
+ */
+type Sortie =
+  { mode: "capture"; onPasser: () => void } | { mode: "correction"; onAnnuler: () => void };
+
 export function QuestionDuType({
   documents,
   onRepondre,
-  onPasser,
+  actuel = null,
+  ...sortie
 }: {
   documents: readonly string[];
   onRepondre: (code: string) => void;
-  onPasser: () => void;
-}) {
+  actuel?: string | null;
+} & Sortie) {
   const { t, locale } = useI18n();
   /*
    * La feuille recouvre l'ecran : sans ce piege, on tabule dans la page qu'on
@@ -102,8 +112,11 @@ export function QuestionDuType({
             <button
               key={ty.code}
               type="button"
+              aria-pressed={sortie.mode === "correction" ? ty.code === actuel : undefined}
               onClick={() => onRepondre(ty.code)}
-              className="min-h-[52px] border border-border px-3.5 text-start text-[15px] font-medium hover:bg-accent"
+              className={`min-h-[52px] border px-3.5 text-start text-[15px] font-medium hover:bg-accent ${
+                ty.code === actuel ? "border-foreground" : "border-border"
+              }`}
             >
               {ty.libelle}
             </button>
@@ -119,10 +132,10 @@ export function QuestionDuType({
          */}
         <button
           type="button"
-          onClick={onPasser}
+          onClick={sortie.mode === "capture" ? sortie.onPasser : sortie.onAnnuler}
           className="mt-3 h-[46px] w-full text-[14px] font-medium text-text-2 underline underline-offset-4"
         >
-          {t("pme.type.passer")}
+          {sortie.mode === "capture" ? t("pme.type.passer") : t("common.cancel")}
         </button>
       </div>
     </div>
