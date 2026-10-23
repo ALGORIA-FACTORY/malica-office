@@ -110,6 +110,7 @@ declare
   v_postes   integer := 0;
   v_retenues integer := 0;
   v_suspendues integer := 0;
+  v_erreurs  integer := 0;
 begin
   if not (v_reglage ->> 'actives')::boolean then
     return jsonb_build_object('actives', false);
@@ -130,6 +131,38 @@ begin
       join facturation.factures f on f.id = a.facture_id
      where a.palier is not null
   loop
+    -- Une fois par facture et par palier, pour toujours : ce qui est décidé
+    -- ne se redit pas, et un passage horaire n'inscrit rien de plus.
+    if exists (select 1 from notif.envois e
+                where e.destinataire = r.titulaire
+                  and e.code = 'impaye.' || r.palier
+                  and e.sujet_cle = r.facture_id::text || ':' || r.palier
+                  and e.decision = 'a_remettre') then
+      continue;
+    end if;
+
+    -- Au dernier palier, l'annonce dit que la licence EST suspendue : elle ne
+    -- part que si c'est vrai — suspendue ici par la machine, ou déjà par la
+    -- tour. Sinon la suspension reste le geste de la tour, et l'avis déjà
+    -- envoyé suffit.
+    if r.palier = 'suspension' then
+      if r.statut_licence = 'active' and (v_reglage ->> 'suspension_automatique')::boolean then
+        update facturation.licences
+           set statut = 'suspendue', suspendue_le = now(), motif_suspension = 'impaye',
+               updated_at = now()
+         where id = r.licence_id and statut = 'active';
+        insert into plateforme.interventions (licence_id, acte, motif, avant, operateur)
+        values (r.licence_id, 'suspension',
+                'Suspension automatique : facture ' || r.numero || ' due depuis '
+                  || r.jours_de_retard || ' jours',
+                'active', null);
+        v_suspendues := v_suspendues + 1;
+      elsif r.statut_licence <> 'suspendue' then
+        v_retenues := v_retenues + 1;
+        continue;
+      end if;
+    end if;
+
     select lo.tenant_id into v_tenant
       from facturation.licence_organisations lo
       join identity.memberships m on m.tenant_id = lo.tenant_id and m.user_id = r.titulaire
@@ -141,48 +174,38 @@ begin
                                     where p.user_id = r.titulaire), true)
                     then 'email' else 'app' end;
 
-    v_res := notif.poster(
-      r.titulaire,
-      'impaye.' || r.palier,
-      r.facture_id::text || ':' || r.palier,
-      jsonb_build_object(
-        'numero', r.numero,
-        'echeance', to_char(r.echeance_le, 'DD/MM/YYYY'),
-        'reste', to_char(r.reste_du, 'FM999G999G990D000'),
-        'devise', r.devise,
-        'jours', r.jours_de_retard,
-        'date_suspension', to_char(r.echeance_le + coalesce(v_susp, 0)::int, 'DD/MM/YYYY'),
-        'en_attente', (select count(*) from capture.pieces p
-                         join facturation.licence_organisations lo on lo.tenant_id = p.tenant_id
-                        where lo.licence_id = r.licence_id and p.status = 'capturee'
-                          and p.vis <> 'personnel'::app.vis_t)),
-      v_tenant,
-      v_canal,
-      -- Chaque palier ne se dit qu'une fois pour cette facture.
-      interval '400 days');
-    if (v_res ->> 'poste')::boolean then
-      v_postes := v_postes + 1;
-    else
-      v_retenues := v_retenues + 1;
-    end if;
-
-    if r.palier = 'suspension' and (v_reglage ->> 'suspension_automatique')::boolean
-       and r.statut_licence = 'active' then
-      update facturation.licences
-         set statut = 'suspendue', suspendue_le = now(), motif_suspension = 'impaye',
-             updated_at = now()
-       where id = r.licence_id and statut = 'active';
-      insert into plateforme.interventions (licence_id, acte, motif, avant, operateur)
-      values (r.licence_id, 'suspension',
-              'Suspension automatique : facture ' || r.numero || ' due depuis '
-                || r.jours_de_retard || ' jours',
-              'active', null);
-      v_suspendues := v_suspendues + 1;
-    end if;
+    -- Une facture qui échoue n'arrête pas les autres ; l'échec se compte.
+    begin
+      v_res := notif.poster(
+        r.titulaire,
+        'impaye.' || r.palier,
+        r.facture_id::text || ':' || r.palier,
+        jsonb_build_object(
+          'numero', r.numero,
+          'echeance', to_char(r.echeance_le, 'DD/MM/YYYY'),
+          'reste', to_char(r.reste_du, 'FM999G999G990D000'),
+          'devise', r.devise,
+          'jours', r.jours_de_retard,
+          'date_suspension', to_char(r.echeance_le + coalesce(v_susp, 0)::int, 'DD/MM/YYYY'),
+          'en_attente', (select count(*) from capture.pieces p
+                           join facturation.licence_organisations lo on lo.tenant_id = p.tenant_id
+                          where lo.licence_id = r.licence_id and p.status = 'capturee'
+                            and p.vis <> 'personnel'::app.vis_t)),
+        v_tenant,
+        v_canal,
+        interval '400 days');
+      if (v_res ->> 'poste')::boolean then
+        v_postes := v_postes + 1;
+      else
+        v_retenues := v_retenues + 1;
+      end if;
+    exception when others then
+      v_erreurs := v_erreurs + 1;
+    end;
   end loop;
 
   return jsonb_build_object('actives', true, 'postes', v_postes, 'retenues', v_retenues,
-                            'suspendues', v_suspendues);
+                            'suspendues', v_suspendues, 'erreurs', v_erreurs);
 end
 $$;
 
@@ -195,27 +218,61 @@ create or replace function notif.courriels_a_remettre(p_limite integer)
 returns table (envoi_id uuid, email text, locale text, titre text, corps text,
                action_libelle text, action_route text)
 language sql
-stable
+volatile
 security definer
 set search_path = ''
 as $$
   -- Le sujet du courriel sera le titre rendu par `notif.poster` (ses jetons
   -- remplacés) : `notif.envois` ne garde pas les jetons qui rendraient
   -- `gabarits.sujet`.
-  select e.id, u.email::text, g.locale, e.titre_rendu, e.corps_rendu,
+  --
+  -- Les lignes rendues sont VERROUILLÉES jusqu'à la fin de la transaction de
+  -- l'appelant, qui envoie et inscrit dans la même transaction : deux API
+  -- qui tournent ne remettent jamais le même courriel (`skip locked`).
+  --
+  -- Les relances fermées par la tour ne partent plus, même décidées avant.
+  with reglage as (select plateforme.relances_reglage() as r),
+  dus as (
+    select e.id
+      from notif.envois_v e, reglage
+     where e.canal = 'email'
+       and e.etat in ('a_remettre', 'a_reessayer')
+       and (e.code not like 'impaye.%' or (reglage.r ->> 'actives')::boolean)
+       and e.tentatives < coalesce((reglage.r ->> 'tentatives_max')::int, 0)
+  ),
+  pris as (
+    select n.id, n.destinataire, n.gabarit_id, n.titre_rendu, n.corps_rendu, n.cree_le
+      from notif.envois n
+     where n.id in (select id from dus)
+     order by n.cree_le
+     limit p_limite
+       for update of n skip locked
+  )
+  select p.id, u.email::text, g.locale, p.titre_rendu, p.corps_rendu,
          g.action_libelle, g.action_route
-    from notif.envois_v e
-    join notif.gabarits g on g.id = e.gabarit_id
-    join auth.users u on u.id = e.destinataire
-   where e.canal = 'email'
-     and e.etat in ('a_remettre', 'a_reessayer')
-     and e.tentatives < coalesce((plateforme.relances_reglage() ->> 'tentatives_max')::int, 0)
-   order by e.cree_le
-   limit p_limite
+    from pris p
+    join notif.gabarits g on g.id = p.gabarit_id
+    join auth.users u on u.id = p.destinataire
+   order by p.cree_le
 $$;
 
 revoke all on function notif.courriels_a_remettre(integer) from public, anon, authenticated;
 grant execute on function notif.courriels_a_remettre(integer) to malica_api;
 grant usage on schema notif to malica_api;
-revoke all on function notif.remettre(uuid, text, text) from public, anon;
+revoke all on function notif.remettre(uuid, text, text) from public, anon, authenticated;
 grant execute on function notif.remettre(uuid, text, text) to malica_api;
+
+-- --- 4. Les relances dans l'application seule ---------------------------------
+--
+-- Qui a refusé les courriels reçoit la relance dans l'application : le canal
+-- `app` prend le texte en vigueur du courriel, langue par langue (R11 : date
+-- écrite). Un gabarit qui changera s'écrira pour les deux canaux.
+
+insert into notif.gabarits
+  (code, canal, locale, titre, corps, action_libelle, action_route, effective_from)
+select distinct on (g.code, g.locale)
+       g.code, 'app', g.locale, g.titre, g.corps, g.action_libelle, g.action_route,
+       date '2026-10-23'
+  from notif.gabarits g
+ where g.code like 'impaye.%' and g.canal = 'email' and g.effective_from <= date '2026-10-23'
+ order by g.code, g.locale, g.effective_from desc;

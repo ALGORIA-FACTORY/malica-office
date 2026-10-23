@@ -49,42 +49,47 @@ export async function tourDeRelances(d: Dependances) {
   const config = configurationCourriel(d.env);
   if (!config) return { decision, remis: 0, echecs: 0, sansCle: true };
 
-  const courriels = await d.executer(async (db) => {
-    const { rows } = await db.query<CourrielARemettre>(
-      "select * from notif.courriels_a_remettre($1)",
-      [PAR_TOUR],
-    );
-    return rows;
-  });
-
   let remis = 0;
   let echecs = 0;
-  for (const c of courriels) {
-    const message = courrielDeNotification({
-      locale: c.locale,
-      titre: c.titre,
-      corps: c.corps,
-      action:
-        c.action_libelle && c.action_route
-          ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
-          : null,
-    });
-    let resultat: "remis" | "echoue" = "remis";
-    let erreur: string | null = null;
-    try {
-      await envoyerParBrevo(
-        { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message },
-        d.fetchImpl,
+  // Un courriel par transaction : la base le verrouille en le rendant, le
+  // travailleur l'envoie et inscrit la tentative avant de le relâcher. Deux
+  // API qui tournent ne remettent donc jamais le même, et un incident sur
+  // l'un n'efface pas ce qui est déjà inscrit pour les autres.
+  for (let i = 0; i < PAR_TOUR; i += 1) {
+    const traite = await d.executer(async (db) => {
+      const { rows } = await db.query<CourrielARemettre>(
+        "select * from notif.courriels_a_remettre(1)",
       );
-      remis += 1;
-    } catch (e) {
-      resultat = "echoue";
-      erreur = e instanceof Error ? e.message.slice(0, 500) : "échec";
-      echecs += 1;
-    }
-    await d.executer((db) =>
-      db.query("select notif.remettre($1, $2, $3)", [c.envoi_id, resultat, erreur]),
-    );
+      const c = rows[0];
+      if (!c) return null;
+      const message = courrielDeNotification({
+        locale: c.locale,
+        titre: c.titre,
+        corps: c.corps,
+        action:
+          c.action_libelle && c.action_route
+            ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
+            : null,
+      });
+      let erreur: string | null = null;
+      try {
+        await envoyerParBrevo(
+          { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message },
+          d.fetchImpl,
+        );
+      } catch (e) {
+        erreur = e instanceof Error ? e.message.slice(0, 500) : "échec";
+      }
+      await db.query("select notif.remettre($1, $2, $3)", [
+        c.envoi_id,
+        erreur === null ? "remis" : "echoue",
+        erreur,
+      ]);
+      return erreur === null ? "remis" : "echoue";
+    });
+    if (traite === null) break;
+    if (traite === "remis") remis += 1;
+    else echecs += 1;
   }
   return { decision, remis, echecs, sansCle: false };
 }

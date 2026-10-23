@@ -28,7 +28,11 @@ function fausseBase() {
       appels.push({ sql, params });
       if (sql.includes("relancer_les_impayes"))
         return { rows: [{ r: { actives: true, postes: 1 } }] };
-      if (sql.includes("courriels_a_remettre")) return { rows: [COURRIEL] };
+      // La file rend le courriel une fois, puis se vide (il est inscrit).
+      if (sql.includes("courriels_a_remettre")) {
+        const servi = appels.filter((a) => a.sql.includes("courriels_a_remettre")).length;
+        return { rows: servi === 1 ? [COURRIEL] : [] };
+      }
       return { rows: [] };
     },
   } as unknown as Requete;

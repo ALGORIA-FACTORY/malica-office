@@ -151,28 +151,58 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
     });
   });
 
-  it("ouvertes : une relance par facture et par palier, jamais deux ; licence intacte", async () => {
+  it("ouvertes : une relance par facture et par palier, jamais deux, sans rien inscrire de plus", async () => {
+    await aBlanc(async (db) => {
+      const d = await unImpaye(db, "rappel");
+      await regler(db, d.operateur, true, false);
+      await relancer(db);
+      const envois = await envoisDe(db, d.titulaire);
+      assert.deepEqual(
+        envois.map((e) => [e.code, e.canal]),
+        [["impaye.rappel", "email"]],
+      );
+      await relancer(db);
+      const tout = await db.query("select 1 from notif.envois where destinataire = $1", [
+        d.titulaire,
+      ]);
+      assert.equal(tout.rows.length, 1, "le second passage se tait et n'inscrit rien");
+    });
+  });
+
+  it("sans suspension automatique, le dernier palier n'annonce pas une suspension qui n'a pas eu lieu", async () => {
     await aBlanc(async (db) => {
       const d = await unImpaye(db, "suspension");
       const a = await db.query<{ palier: string }>(
         "select palier from facturation.a_relancer_v where facture_id = $1",
         [d.facture],
       );
-      assert.equal(a.rows[0]?.palier, "suspension", "la facture est au dernier palier");
+      assert.equal(a.rows[0]?.palier, "suspension");
       await regler(db, d.operateur, true, false);
       await relancer(db);
-      const envois = await envoisDe(db, d.titulaire);
-      assert.deepEqual(
-        envois.map((e) => [e.code, e.canal]),
-        [["impaye.suspension", "email"]],
-      );
-      await relancer(db);
-      assert.equal((await envoisDe(db, d.titulaire)).length, 1, "le second passage se tait");
+      assert.equal((await envoisDe(db, d.titulaire)).length, 0);
       const l = await db.query<{ statut: string }>(
         "select statut from facturation.licences where id = $1",
         [d.licence],
       );
-      assert.equal(l.rows[0]!.statut, "active", "sans suspension automatique, la tour décide");
+      assert.equal(l.rows[0]!.statut, "active", "la tour décide");
+    });
+  });
+
+  it("qui a refusé les courriels reçoit la relance dans l'application", async () => {
+    await aBlanc(async (db) => {
+      const d = await unImpaye(db, "rappel");
+      await db.query(
+        `insert into notif.preferences (user_id, email_actif) values ($1, false)
+         on conflict (user_id) do update set email_actif = false`,
+        [d.titulaire],
+      );
+      await regler(db, d.operateur, true, false);
+      const r = await relancer(db);
+      assert.equal(r["erreurs"], 0);
+      assert.deepEqual(
+        (await envoisDe(db, d.titulaire)).map((e) => e.canal),
+        ["app"],
+      );
     });
   });
 
@@ -193,6 +223,11 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       );
       assert.equal(i.rows.length, 1);
       assert.equal(i.rows[0]!.operateur, null);
+      assert.deepEqual(
+        (await envoisDe(db, d.titulaire)).map((e) => e.code),
+        ["impaye.suspension"],
+        "l'annonce part, puisque la suspension a eu lieu",
+      );
     });
   });
 
@@ -205,7 +240,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
 
   it("le travailleur lit le courriel à remettre, rendu, puis ne le relit plus", async () => {
     await aBlanc(async (db) => {
-      const d = await unImpaye(db, "suspension");
+      const d = await unImpaye(db, "rappel");
       await regler(db, d.operateur, true, false);
       await relancer(db);
       const lire = () =>
@@ -229,7 +264,23 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
     });
   });
 
-  it("aucun compte n'appelle l'ordonnanceur ni la file des courriels", async () => {
+  it("fermées après coup, les relances déjà décidées ne partent plus", async () => {
+    await aBlanc(async (db) => {
+      const d = await unImpaye(db, "rappel");
+      await regler(db, d.operateur, true, false);
+      await relancer(db);
+      await regler(db, d.operateur, false, false);
+      const file = await sous(db, "malica_api", null, async () => {
+        const { rows } = await db.query<{ email: string }>(
+          "select email from notif.courriels_a_remettre(500)",
+        );
+        return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
+      });
+      assert.equal(file.length, 0);
+    });
+  });
+
+  it("aucun compte n'appelle l'ordonnanceur, la file ni l'inscription d'une remise", async () => {
     await aBlanc(async (db) => {
       const d = await unImpaye(db, "rappel");
       await assert.rejects(
@@ -241,6 +292,12 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       await assert.rejects(
         sous(db, "authenticated", d.titulaire, () =>
           db.query("select * from notif.courriels_a_remettre(1)"),
+        ),
+        /permission denied/,
+      );
+      await assert.rejects(
+        sous(db, "authenticated", d.titulaire, () =>
+          db.query("select notif.remettre(gen_random_uuid(), 'remis')"),
         ),
         /permission denied/,
       );

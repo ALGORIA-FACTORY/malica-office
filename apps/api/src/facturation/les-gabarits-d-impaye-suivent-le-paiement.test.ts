@@ -50,10 +50,10 @@ describe("les gabarits en vigueur", { skip: !ADMIN }, () => {
     );
   });
 
-  it("chaque gabarit d'impayé existe en français, en anglais et en arabe", async () => {
+  it("chaque gabarit d'impayé existe en français, en anglais et en arabe, sur chaque canal", async () => {
     const { rows } = await pool!.query<{ code: string; locales: string }>(
-      `select code, string_agg(locale, ',' order by locale) as locales
-         from (${EN_VIGUEUR}) g where code like 'impaye.%' group by code`,
+      `select code || '/' || canal as code, string_agg(locale, ',' order by locale) as locales
+         from (${EN_VIGUEUR}) g where code like 'impaye.%' group by code, canal`,
     );
     assert.ok(rows.length > 0);
     for (const g of rows) assert.equal(g.locales, "ar,en,fr", g.code);
