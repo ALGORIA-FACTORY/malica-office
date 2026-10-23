@@ -117,6 +117,36 @@ describe("la coque n'invite que sur une place incluse", { skip: !BASE_CONFIGUREE
     assert.doesNotMatch(erreur, /pay|navigateur|web/i, "le refus n'invite pas à payer ailleurs");
   });
 
+  it("une adresse déjà assise sur la licence n'engage pas une place de plus", async () => {
+    const c = await admin.connect();
+    try {
+      await c.query("begin");
+      const { rows: l } = await c.query<{ licence: string; titulaire: string }>(
+        `select l.id as licence, l.titulaire from facturation.licences l
+           join facturation.licence_organisations lo on lo.licence_id = l.id
+          where lo.tenant_id = $1`,
+        [tenant],
+      );
+      const avant = await c.query<{ n: number }>("select facturation.places_engagees($1) as n", [
+        l[0]!.licence,
+      ]);
+      // Une invitation en attente pour l'adresse du titulaire lui-même.
+      await c.query(
+        `insert into identity.invitations (tenant_id, email, role, token_hash, invited_by, expires_at)
+         select $1, u.email, 'collaborateur', md5(random()::text), u.id, now() + interval '1 day'
+           from auth.users u where u.id = $2`,
+        [tenant, l[0]!.titulaire],
+      );
+      const apres = await c.query<{ n: number }>("select facturation.places_engagees($1) as n", [
+        l[0]!.licence,
+      ]);
+      assert.equal(apres.rows[0]!.n, avant.rows[0]!.n);
+    } finally {
+      await c.query("rollback");
+      c.release();
+    }
+  });
+
   it("le web garde la place facturée", async () => {
     assert.equal((await inviter("de-trop", {})).status, 200);
   });

@@ -25,7 +25,21 @@ as $$
       join facturation.licence_organisations lo on lo.tenant_id = i.tenant_id
      where lo.licence_id = p_licence
        and i.role in ('dirigeant', 'collaborateur', 'assistant')
-       and i.accepted_at is null and i.revoked_at is null and i.expires_at > now())
+       and i.accepted_at is null and i.revoked_at is null and i.expires_at > now()
+       -- Une adresse déjà assise sur la licence (dans une autre de ses
+       -- sociétés) ou celle du titulaire n'occupera pas une place de plus.
+       -- (Lu dans `auth.users` par la fonction elle-même : l'adresse ne sort pas.)
+       and lower(i.email) not in (
+         select lower(u.email::text)
+           from facturation.licence_organisations lo2
+           join identity.memberships m on m.tenant_id = lo2.tenant_id
+           join auth.users u on u.id = m.user_id
+          where lo2.licence_id = p_licence
+            and m.role in ('dirigeant', 'collaborateur', 'assistant')
+         union all
+         select lower(u.email::text)
+           from facturation.licences l join auth.users u on u.id = l.titulaire
+          where l.id = p_licence))
 $$;
 
 revoke all on function facturation.places_engagees(uuid) from public, anon, authenticated;
@@ -50,6 +64,9 @@ begin
   v_licence := facturation.licence_de(p_tenant);
 
   if v_licence is not null then
+    -- Une place à la fois : deux invitations simultanées liraient le même
+    -- compte de places et passeraient toutes les deux.
+    perform 1 from facturation.licences l where l.id = v_licence for update;
     if not exists (select 1 from facturation.licences l
                     where l.id = v_licence and l.titulaire = auth.uid()) then
       raise exception 'seul le proprietaire principal donne une place' using errcode = '42501';
