@@ -203,7 +203,15 @@ function CabinetExport() {
           au: dateCourte(today),
         });
 
-  const pret = du !== null && au !== null && Boolean(pack.data) && !generer.isPending;
+  const pret =
+    du !== null &&
+    au !== null &&
+    Boolean(pack.data) &&
+    !generer.isPending &&
+    estimation.isSuccess &&
+    !estimation.isFetching &&
+    estimation.data.lignes > 0 &&
+    mandats.length > 0;
 
   return (
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -1,0 +1,576 @@
+/* La comptabilité : une surface de travail claire, indépendante du thème PME. */
+.cabinet-workspace {
+  --background: #f6f7f9;
+  --foreground: #182230;
+  --card: #ffffff;
+  --card-foreground: #182230;
+  --popover: #ffffff;
+  --popover-foreground: #182230;
+  --primary: #182230;
+  --primary-foreground: #ffffff;
+  --secondary: #edf0f3;
+  --secondary-foreground: #344054;
+  --muted: #edf0f3;
+  --muted-foreground: #667085;
+  --accent: #f0f2f5;
+  --accent-foreground: #182230;
+  --border: #e5e8ed;
+  --input: #d4dae3;
+  --ring: #996b08;
+  --sidebar: #ffffff;
+  --text-2: #475467;
+  --line-strong: #d4dae3;
+  --marigold: #936600;
+  --marigold-on-ink: #f4c75b;
+  --signal-ok: #14745b;
+  --signal-warn: #99620c;
+  --signal-stop: #bb3b40;
+  --signal-soft: #fff7e7;
+  color-scheme: light;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.cabinet-workspace :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+.cabinet-workspace .uppercase {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+.cabinet-workspace :is(button, a, input, select, textarea) {
+  border-radius: 8px;
+}
+.cabinet-workspace :is(input, select, textarea) {
+  font-size: 14px;
+}
+.cabinet-workspace input:not([type="checkbox"]):not([type="radio"]),
+.cabinet-workspace select {
+  min-height: 38px;
+}
+.cabinet-workspace .cab-content {
+  width: 100%;
+  max-width: 1660px;
+  margin-inline: auto;
+}
+.cabinet-workspace .cab-topbar {
+  min-height: 68px;
+  background: rgb(255 255 255 / 95%);
+}
+.cabinet-workspace .cab-topbar > p {
+  font-size: 13px;
+}
+.cabinet-workspace .cab-topbar button {
+  min-height: 36px;
+}
+.cabinet-workspace .cab-rail {
+  padding: 12px 8px;
+  border-color: #e8ebef;
+}
+.cabinet-workspace .cab-identity {
+  min-height: 68px;
+  border: 0;
+  padding: 8px 6px 24px;
+}
+.cab-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  background: #f5cc6b;
+  color: #293342;
+}
+.cabinet-workspace .cab-identity > span:nth-child(2) > span {
+  font-size: 10px;
+  letter-spacing: 0;
+}
+.cabinet-workspace .cab-rail ul a {
+  min-height: 42px;
+  margin-block: 2px;
+  font-size: 13px;
+  gap: 11px;
+  padding-inline: 12px;
+}
+.cabinet-workspace .cab-rail a[aria-current="page"] {
+  background: #fff4d7;
+  color: #694c13;
+  font-weight: 600;
+}
+.cabinet-workspace .cab-rail a[aria-current="page"] > span:first-child {
+  background: #d49b25;
+  inset-block: 11px;
+  border-radius: 4px;
+  width: 3px;
+}
+.cabinet-workspace .cab-rail ul a:hover {
+  background: #f4f5f7;
+}
+.cabinet-workspace .cab-rail .mb-4 > p {
+  color: #7b8492;
+  font-size: 11px;
+  font-weight: 500;
+  padding-block: 6px;
+}
+.cab-tools-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #667085;
+}
+.cab-tools-toggle:hover {
+  background: #f4f5f7;
+}
+.cabinet-workspace .cab-rail-footer {
+  gap: 7px;
+  padding-top: 15px;
+}
+.cabinet-workspace .cab-rail-footer > div {
+  border: 0;
+  background: transparent;
+}
+.cabinet-workspace .cab-rail-footer > :is(a, button) {
+  border: 0;
+  min-height: 32px;
+  font-weight: 500;
+  color: #667085;
+}
+.cabinet-workspace .cab-rail-footer .bg-foreground {
+  border-radius: 50%;
+  background: #edf0f3;
+  color: #344054;
+}
+.cabinet-workspace [data-cab-header] {
+  border-color: var(--border);
+  padding-bottom: 24px;
+}
+.cabinet-workspace [data-cab-header] h1 {
+  font-size: clamp(26px, 2.6vw, 36px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.cabinet-workspace [data-cab-header="encre"] {
+  margin: 0;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #182230;
+  border: 1px solid var(--border);
+}
+.cabinet-workspace [data-cab-header="encre"] .text-background\/80 {
+  color: #667085;
+}
+.cabinet-workspace .cab-section-title {
+  border: 0;
+  padding-bottom: 10px;
+  align-items: center;
+}
+.cabinet-workspace .cab-section-title h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.cabinet-workspace .cab-section-title a {
+  font-size: 12px;
+  text-decoration: none;
+}
+.cabinet-workspace .cab-table {
+  border-radius: 12px;
+}
+.cabinet-workspace .cab-table th {
+  background: #f9fafb;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.cabinet-workspace .cab-table td {
+  padding: 16px;
+  vertical-align: middle;
+  font-size: 13px;
+}
+.cabinet-workspace .cab-table tbody tr:hover {
+  background: #fafbfd;
+}
+.cabinet-workspace .cab-table td a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cabinet-workspace .cab-signal {
+  border-radius: 6px;
+  padding: 5px 8px;
+  white-space: nowrap;
+  background: #f0f2f5;
+  color: #475467;
+}
+.cabinet-workspace .cab-signal > span {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cabinet-workspace .cab-signal > span:first-child {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.cabinet-workspace .cab-signal[data-tone="ok"] {
+  background: #ecf7f1;
+  color: #14745b;
+}
+.cabinet-workspace .cab-signal[data-tone="warn"] {
+  background: #fff4dc;
+  color: #89590b;
+}
+.cabinet-workspace .cab-signal[data-tone="stop"] {
+  background: #fff0f0;
+  color: #b43740;
+}
+.cabinet-workspace .cab-empty {
+  border-radius: 12px;
+  border-style: dashed;
+  line-height: 1.7;
+}
+.cabinet-workspace .cab-assistant {
+  background: #ffffff;
+}
+.cab-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 8px 0 0;
+}
+.cab-eyebrow {
+  font-size: 12px;
+  color: #667085;
+  text-transform: capitalize;
+}
+.cab-day-header h1 {
+  margin-top: 7px;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+.cab-day-summary {
+  color: #667085;
+  margin-top: 10px;
+  font-size: 14px;
+  max-width: 65ch;
+}
+.cab-day-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.cab-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.cab-button-primary {
+  background: #f4c75b;
+  color: #31291a;
+  border-color: #edbf50;
+}
+.cab-button-primary:hover {
+  background: #edbd45;
+}
+.cab-button-secondary {
+  background: #ffffff;
+  color: #344054;
+  border-color: #dfe3e9;
+}
+.cab-button-secondary:hover {
+  background: #f7f8fa;
+  border-color: #bac3cf;
+}
+.cab-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.cabinet-workspace .cab-metric {
+  text-align: start;
+  border: 1px solid #e5e8ed;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.cabinet-workspace .cab-metric:hover {
+  border-color: #c6cdd6;
+  box-shadow: 0 3px 12px rgb(24 34 48 / 4%);
+}
+.cabinet-workspace .cab-metric[aria-pressed="true"] {
+  border-color: #d0a040;
+  box-shadow: 0 0 0 1px #d0a040;
+}
+.cab-metric-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #667085;
+  font-size: 12px;
+}
+.cab-metric-top svg {
+  color: #98a2b3;
+}
+.cab-metric-value {
+  display: block;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.3;
+  margin: 12px 0 10px;
+}
+.cab-metric-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #667085;
+}
+.cab-metric[data-tone="review"] .cab-metric-top svg {
+  color: #a27213;
+}
+.cab-metric[data-tone="done"] .cab-metric-top svg {
+  color: #14745b;
+}
+.cab-day-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+.cab-worklist {
+  scroll-margin-top: 90px;
+}
+.cab-list-toolbar {
+  justify-content: space-between;
+  gap: 16px;
+}
+.cabinet-workspace .cab-tabs {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e5e8ed;
+  gap: 16px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.cabinet-workspace .cab-tabs button {
+  min-height: 42px;
+  padding: 8px 0 11px;
+  border-radius: 0;
+  color: #667085;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.cabinet-workspace .cab-tabs button[aria-pressed="true"] {
+  background: transparent;
+  border-bottom-color: #344054;
+  color: #182230;
+}
+.cabinet-workspace .cab-tabs button span {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #edf0f3;
+  color: #475467;
+  font-size: 10px;
+}
+.cabinet-workspace .cab-list-search {
+  min-width: 180px;
+  max-width: 260px;
+  border-radius: 8px;
+  background: #ffffff;
+  padding-block: 0;
+}
+.cab-list-search input {
+  min-height: 38px;
+}
+.cabinet-workspace .cab-assignees {
+  gap: 6px;
+  padding-block: 5px;
+}
+.cab-assignees button {
+  min-height: 32px;
+  padding-inline: 10px;
+  font-size: 11px;
+}
+.cab-assignees button[aria-pressed="true"] {
+  background: #edf0f3;
+  border-color: #d4dae3;
+  color: #344054;
+}
+.cabinet-workspace .cab-assignees .bg-foreground {
+  border-radius: 50%;
+  background: #edf0f3;
+  color: #475467;
+}
+.cab-worklist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid #e5e8ed;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 52px 24px;
+  min-height: 310px;
+}
+.cab-empty-icon {
+  display: flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #f3f5f7;
+  color: #667085;
+  margin-bottom: 18px;
+}
+.cab-worklist-empty h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.cab-worklist-empty p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #667085;
+  max-width: 38ch;
+  margin: 8px 0 20px;
+}
+.cab-batch-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #846017;
+  min-height: 36px;
+}
+.cab-day-aside > section {
+  background: #ffffff;
+  border: 1px solid #e5e8ed;
+  border-radius: 12px;
+  padding: 20px;
+}
+.cabinet-workspace .cab-day-aside .cab-empty {
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+}
+.cabinet-workspace .cab-day-aside ul {
+  border: 0;
+}
+.cabinet-workspace .cab-day-aside ul li {
+  padding-inline: 0;
+}
+@media (min-width: 1280px) {
+  .cab-day-columns {
+    grid-template-columns: minmax(0, 1fr) 290px;
+  }
+}
+@media (max-width: 1279px) {
+  .cab-day-aside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .cab-day-aside > section {
+    margin: 0;
+  }
+  .cab-day-aside > section:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 767px) {
+  .cabinet-workspace :is(input, select, textarea) {
+    font-size: 16px;
+  }
+  .cab-day-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .cab-day-actions {
+    width: 100%;
+  }
+  .cab-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .cabinet-workspace .cab-metric {
+    padding: 16px;
+  }
+  .cab-metric-value {
+    font-size: 30px;
+  }
+  .cab-metric-detail {
+    font-size: 10px;
+  }
+  .cab-metric-detail svg {
+    display: none;
+  }
+  .cab-day-aside {
+    display: flex;
+    flex-direction: column;
+  }
+  .cab-list-toolbar {
+    align-items: stretch;
+  }
+  .cabinet-workspace .cab-list-search {
+    width: 100%;
+    max-width: none;
+    order: -1;
+  }
+  .cabinet-workspace .cab-assignees > span {
+    width: 100%;
+  }
+  .cabinet-workspace .cab-topbar {
+    min-height: 60px;
+  }
+  .cabinet-workspace .cab-table td {
+    padding: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cabinet-workspace * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

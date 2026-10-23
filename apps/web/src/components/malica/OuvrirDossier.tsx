@@ -103,7 +103,7 @@ export function OuvrirDossier({ cabinetId }: { cabinetId: string }) {
           className="grid gap-3 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
-            ouvrir.mutate();
+            if (!ouvrir.isPending) ouvrir.mutate();
           }}
         >
           <Champ label={t("cab.dossier.nom")} value={nom} onChange={setNom} required />
@@ -112,13 +112,24 @@ export function OuvrirDossier({ cabinetId }: { cabinetId: string }) {
             <Champ label={t("cab.dossier.adresse")} value={adresse} onChange={setAdresse} />
           </div>
           {ouvrir.isError ? <Erreur>{erreur(ouvrir.error)}</Erreur> : null}
-          <div className="sm:col-span-2">
+          <div className="flex gap-3 sm:col-span-2">
             <button
               type="submit"
               disabled={ouvrir.isPending}
               className="bg-foreground px-4 py-2.5 text-[13px] font-semibold text-background disabled:opacity-50"
             >
               {t("cab.dossier.valider")}
+            </button>
+            <button
+              type="button"
+              disabled={ouvrir.isPending}
+              onClick={() => {
+                setOuvert(false);
+                ouvrir.reset();
+              }}
+              className="border border-border px-4 py-2.5 text-[13px]"
+            >
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -228,6 +239,7 @@ function Champ({
     <label className="block">
       <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         {label}
+        {required ? <span aria-hidden> *</span> : null}
       </span>
       <input
         type={type}

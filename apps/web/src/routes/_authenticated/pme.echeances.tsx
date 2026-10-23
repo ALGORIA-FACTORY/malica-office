@@ -5,6 +5,7 @@ import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { trancheDEcheance } from "@/lib/portefeuille-actif";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/echeances")({
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authenticated/pme/echeances")({
 });
 
 const JOUR_MS = 86_400_000;
+const BORNE_SEMAINE = 7;
 const OU = "routes/_authenticated/pme.echeances";
 
 /* ===========================================================================
@@ -45,8 +47,6 @@ const OU = "routes/_authenticated/pme.echeances";
  * sous le chiffre, et c'est vérifiable. Les dates de la maquette
  * (« 20 oct », « 28 oct », « 15 novembre ») ne sont pas recopiées.
  */
-const BORNE_SEMAINE = 7;
-const BORNE_MOIS = 30;
 
 /**
  * Vos échéances — le dessin validé (`livraison/ecrans/malica-manquants.html`,
@@ -187,18 +187,20 @@ function PmeEcheances() {
    */
   const tranches = [
     {
-      titre: t("pme.echeances.semaine"),
-      lignes: rows.filter((e) => jours(e.dueDate) <= BORNE_SEMAINE),
+      titre: t("relation.echeances.retard"),
+      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "retard"),
     },
     {
-      titre: t("cab.clients.col.mois"),
-      lignes: rows.filter(
-        (e) => jours(e.dueDate) > BORNE_SEMAINE && jours(e.dueDate) <= BORNE_MOIS,
-      ),
+      titre: t("relation.echeances.semaine"),
+      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "semaine"),
+    },
+    {
+      titre: t("relation.echeances.mois"),
+      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "mois"),
     },
     {
       titre: t("pme.echeances.aVenir"),
-      lignes: rows.filter((e) => jours(e.dueDate) > BORNE_MOIS),
+      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "suite"),
     },
   ].filter((tr) => tr.lignes.length > 0);
 

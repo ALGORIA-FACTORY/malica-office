@@ -23,6 +23,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { finDuMois } from "@malica/socle/exercice";
 import { montant } from "@/lib/lisible";
+import { CHIFFRES_PV as CHIFFRES, SOURCES_PV as SOURCES } from "@/lib/pv-chiffres";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { CollabRepository, PvChiffre, PvReunion } from "@malica/socle/ports/repositories";
@@ -48,24 +49,6 @@ export const Route = createFileRoute("/_authenticated/cabinet/pv")({
   component: CabinetPv,
 });
 
-const CHIFFRES: Record<string, MessageKey> = {
-  ca: "cab.pv.chiffre.ca",
-  charges: "cab.pv.chiffre.charges",
-  resultat: "cab.pv.chiffre.resultat",
-  tvaCollectee: "cab.pv.chiffre.tvaCollectee",
-  tvaDeductible: "cab.pv.chiffre.tvaDeductible",
-  tva: "cab.pv.chiffre.tva",
-  pieces: "cab.pv.chiffre.pieces",
-  aSuperviser: "cab.pv.chiffre.aSuperviser",
-  retournees: "cab.pv.chiffre.retournees",
-  echeances: "cab.pv.chiffre.echeances",
-};
-const SOURCES: Record<string, MessageKey> = {
-  pnl: "cab.pv.source.pnl",
-  tva: "cab.pv.source.tva",
-  file: "cab.pv.source.file",
-  calendrier: "cab.pv.source.calendrier",
-};
 const RAISONS: Record<string, MessageKey> = {
   sans_client: "cab.pv.rediger.sansClient",
   introuvable: "cab.pv.empty",
@@ -391,6 +374,27 @@ function CabinetPv() {
 
 /* ================================================================ document */
 
+function ReceptionPv({ id }: { id: string }) {
+  const { t } = useI18n();
+  const receptions = useQuery({
+    queryKey: ["pv-receptions", id],
+    queryFn: () => office().collab.pvReceptions(id),
+  });
+  return (
+    <p role="status" className="text-sm text-muted-foreground">
+      {receptions.isPending
+        ? t("common.loading")
+        : receptions.isError
+          ? t("relation.indisponible")
+          : t(
+              receptions.data.length
+                ? "relation.documents.confirmeCoteClient"
+                : "relation.documents.attenteClient",
+            )}
+    </p>
+  );
+}
+
 function DocumentPv({
   pv,
   client,
@@ -592,9 +596,12 @@ function DocumentPv({
               {t("cab.pv.envoyer")}
             </button>
           ) : (
-            <p className="num border border-signal-ok px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-signal-ok">
-              {t("cab.pv.envoye", { date: dateCourte(pv.envoyeLe ?? pv.at) })}
-            </p>
+            <>
+              <p className="num border border-signal-ok px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-signal-ok">
+                {t("cab.pv.envoye", { date: dateCourte(pv.envoyeLe ?? pv.at) })}
+              </p>
+              <ReceptionPv id={pv.id} />
+            </>
           )}
           <button
             type="button"

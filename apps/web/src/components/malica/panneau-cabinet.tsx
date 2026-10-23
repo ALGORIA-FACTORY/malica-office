@@ -80,7 +80,10 @@ export function PanneauCabinet() {
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
-  const ids = useMemo(() => (clients.data ?? []).map((c) => c.tenantId), [clients.data]);
+  const ids = useMemo(
+    () => (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),
+    [clients.data],
+  );
   const queue = useQuery({
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
@@ -123,7 +126,10 @@ export function PanneauCabinet() {
         JOUR_MS,
     );
 
-  const rows = useMemo(() => queue.data ?? [], [queue.data]);
+  const rows = useMemo(
+    () => (queue.data ?? []).filter((r) => ids.includes(r.tenantId)),
+    [queue.data, ids],
+  );
   const aSuperviser = rows.filter((r) => r.status === "comptabilisee");
   const plusAncienne = aSuperviser.reduce((max, r) => Math.max(max, -jours(r.createdAt)), 0);
 

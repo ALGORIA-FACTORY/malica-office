@@ -1861,6 +1861,13 @@ export interface CollabRepository {
     briefing?: string | null;
   }): Promise<string>;
   pvList(cabinetTenantId: string): Promise<PvReunion[]>;
+  /** Seulement les PV publiés de ce client ; les brouillons ne franchissent pas la RLS. */
+  pvDuClient(
+    clientTenantId: string,
+  ): Promise<Array<{ document: PvReunion; recuLe: string | null; comptabilite: string | null }>>;
+  /** Un accusé explicite, idempotent, qui ne vaut ni approbation ni paiement. */
+  pvAccuserReception(id: string): Promise<string>;
+  pvReceptions(id: string): Promise<Array<{ id: string; recuLe: string }>>;
   addPv(input: {
     cabinetTenantId: string;
     clientTenantId?: string | null;

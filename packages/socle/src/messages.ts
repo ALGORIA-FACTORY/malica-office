@@ -17,6 +17,57 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 export const RTL_LOCALES: readonly Locale[] = ["ar"];
 
 const fr = {
+  "cab.design.journee": "Votre journée, en clair.",
+  "cab.design.commencer": "Commencer la revue",
+  "cab.design.situation": "Situation de votre comptabilité",
+  "cab.design.revueDetail": "Prêtes pour votre revue",
+  "cab.design.retoursDetail": "À compléter avec le client",
+  "cab.design.superviseesDetail": "Revue terminée",
+  "cab.design.mandats": "Mandats actifs",
+  "cab.design.portefeuille": "Voir les dossiers",
+  "cab.design.aucunResultat": "Aucune pièce ne correspond",
+  "cab.design.pasDeMandat": "Votre prochain dossier commence ici",
+  "cab.design.fileAjour": "Votre file est à jour",
+  "cab.design.ajusterFiltres": "Essayez un autre filtre ou affichez toute la file.",
+  "cab.design.commencerMandat":
+    "Retrouvez vos clients et vos demandes de mandat dans votre portefeuille.",
+  "cab.design.effacerFiltres": "Afficher toute la file",
+  "relation.documents.confirmeCoteClient": "Réception confirmée par le client.",
+  "relation.documents.attenteClient": "Envoyé — réception non encore confirmée.",
+
+  "relation.documents.regle":
+    "Les comptes rendus publiés par votre comptabilité restent accessibles ici. Les brouillons ne sont jamais partagés.",
+  "relation.documents.vide": "Aucun compte rendu publié pour ce dossier.",
+  "relation.documents.ouvrir": "Consulter le document",
+  "relation.documents.auteur": "Publié par {cabinet}",
+  "relation.documents.receptionNote":
+    "Accuser réception confirme que vous avez reçu ce document. Cela ne vaut ni approbation de son contenu ni paiement.",
+  "relation.documents.recu": "Réception confirmée le {date}",
+  "relation.documents.recevoir": "Confirmer la réception",
+
+  "pme.reglages.profil.editer": "Modifier",
+  // Relation entreprise et comptabilité : états et actions partagés.
+  "relation.echeances.retard": "En retard",
+  "relation.echeances.semaine": "Dans les 7 prochains jours",
+  "relation.echeances.mois": "Dans 8 à 30 jours",
+  "relation.sansDestinataire":
+    "Aucune comptabilité mandatée. Aucun envoi ne peut être effectué tant qu’un mandat n’est pas actif.",
+  "relation.indisponible": "Relation indisponible",
+  "relation.historique":
+    "Les échanges ci-dessous sont conservés dans votre historique. Sans mandat actif, ils ne constituent pas un suivi en cours.",
+  "relation.sansMandat": "Aucune comptabilité ne prend actuellement en charge ce dossier.",
+  "relation.avisHistorique": "Historique des avis",
+  "relation.avisSansSuivi": "Demande historique — aucun suivi actif",
+  "relation.avisArchive": "Réponse conservée dans votre historique",
+  "relation.modifier": "Modifier",
+  "relation.edition": "Modification en cours — enregistrez ou annulez.",
+  "relation.consultation":
+    "Consultation — vos réglages sont protégés des modifications involontaires.",
+  "relation.seuilsInvalides":
+    "Le seuil de revue doit être inférieur ou égal au seuil de lot ; les deux doivent être compris entre 0 et 100 %.",
+  "relation.lotsVides":
+    "Aucune écriture prête à superviser dans les mandats actifs. Consultez la file pour identifier les pièces à compléter.",
+
   "brand.name": "Malica Office",
   "brand.tagline": "Comptabilité augmentée, chiffre gouverné",
 
@@ -259,7 +310,7 @@ const fr = {
   "pme.refus.piece_en_double":
     "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
-    "Cette pièce est dans votre espace privé : je ne la lis pas tant que vous ne la transmettez pas.",
+    "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
@@ -667,7 +718,7 @@ const fr = {
   "pme.regler.voir": "Revoir la pièce",
   "pme.regler.rassure":
     "Aucune urgence. Dès que c'est repris, je la renvoie et je vous tiens au courant.",
-  "pme.regler.rien.titre": "Rien à régler.",
+  "pme.regler.rien.titre": "Aucune demande en attente.",
   "pme.regler.rien.sous": "{cabinet} n'attend rien de vous. Je vous préviendrai si ça change.",
   "pme.home.charges.sous": "Où part votre argent",
   "pme.home.demander": "Me demander",
@@ -940,11 +991,10 @@ const fr = {
   "cab.noorg": "Aucune organisation cabinet. Créez-en une pour superviser vos clients.",
   "cab.today.title": "Aujourd'hui",
   "cab.nav.group.work": "Mon travail",
-  "cab.nav.group.cabinet": "La comptabilité",
+  "cab.nav.group.cabinet": "Outils et réglages",
   "cab.search": "Tout chercher",
   "cab.today.greeting": "Bonjour.",
-  "cab.today.summary":
-    "{pieces} pi\u00e8ces sur {clients} clients. Tout est propos\u00e9 \u2014 il reste \u00e0 valider.",
+  "cab.today.summary": "{pieces} pièces dans la file · {clients} mandats actifs.",
   "cab.today.start": "Commencer",
   "cab.today.bulk": "Valider en masse",
   "cab.queue.byclient": "Votre file \u2014 par client",
@@ -1016,8 +1066,8 @@ const fr = {
   "cab.queue.status": "Statut",
   "cab.queue.date": "Déposée",
   "cab.queue.open": "Ouvrir",
-  "cab.nav.group.file": "La file du cabinet",
-  "cab.nav.group.portefeuille": "Portefeuille",
+  "cab.nav.group.file": "Au quotidien",
+  "cab.nav.group.portefeuille": "Relation clients",
   "cab.nav.notifications": "Notifications",
   "cab.nav.dossier": "Dossier courant",
   "cab.nav.pilotage": "Pilotage",
@@ -1037,11 +1087,11 @@ const fr = {
   "cab.conseil.kpi.pouce.ctx": "réponses validées telles quelles",
   "cab.conseil.kpi.corrigees": "Corrigées par le cabinet",
   "cab.conseil.kpi.corrigees.ctx": "formulations retenues par Malica",
-  "cab.conseil.kpi.justesse": "Justesse de Malica",
+  "cab.conseil.kpi.justesse": "Approuvées sans modification",
   "cab.conseil.kpi.justesse.ctx": "sur {count} questions arbitrées",
   "cab.conseil.kpi.justesse.ctx#one": "sur {count} question arbitrée",
   "cab.conseil.kpi.justesse.ctx#other": "sur {count} questions arbitrées",
-  "cab.conseil.kpi.justesse.sans": "aucune question arbitrée encore",
+  "cab.conseil.kpi.justesse.sans": "aucune réponse évaluée par le cabinet",
   "cab.conseil.file.titre": "File d’arbitrage",
   "cab.conseil.file.compte": "{n} / {total}",
   "cab.conseil.file.vide":
@@ -1437,12 +1487,12 @@ const fr = {
   "cab.clients.filter.sans": "Sans collaborateur",
   "cab.clients.filter.miens": "Mes mandats",
   "cab.clients.count": "{count} mandats",
-  "cab.dossier.ouvrir": "Ouvrir un dossier",
-  "cab.dossier.titre": "Ouvrir le dossier d'une PME",
+  "cab.dossier.ouvrir": "Créer un dossier client",
+  "cab.dossier.titre": "Créer un dossier client",
   "cab.dossier.nom": "Raison sociale",
   "cab.dossier.mf": "Matricule fiscal",
   "cab.dossier.adresse": "Adresse",
-  "cab.dossier.valider": "Ouvrir le dossier",
+  "cab.dossier.valider": "Créer le dossier",
   "cab.dossier.ouvert":
     "Le dossier est ouvert. Invitez maintenant la personne qui le tiendra côté entreprise.",
   "cab.dossier.contact": "Adresse e-mail du contact",
@@ -1573,7 +1623,7 @@ const fr = {
   "cab.export.kicker": "Sortie de données · aucun verrou",
   "cab.export.title": "Export FEC et CSV",
   "cab.export.lede":
-    "Vos écritures sortent au format légal, horodatées, avec leur pack de rattachement. Un cabinet qui ne peut pas partir n’est pas un client, c’est un otage.",
+    "Exportez les écritures comptabilisées de la période sélectionnée. Vérifiez le dossier, le format et le nombre de lignes avant de générer le fichier.",
   "cab.export.client": "Client",
   "cab.export.tous": "Tous les mandats ({n})",
   "cab.export.exercice": "Exercice",
@@ -2124,7 +2174,7 @@ const fr = {
   "cab.prop.kicker": "Génération en masse",
   "cab.prop.titre": "Propositions du Socle",
   "cab.prop.doctrine":
-    "Les écritures comptabilisées sur les pièces lues, groupées par confiance de lecture. Au-dessus du seuil du cabinet, le lot se valide d’un geste ; en dessous, chaque pièce se revoit une à une. Le seuil est le vôtre : il se règle, il ne se devine pas. Les pièces lues par un lecteur spécialisé ont leur lot à part : une recette ne produit aucun score, et il n’y a donc aucun pourcentage à lire.",
+    "Les écritures comptabilisées des mandats actifs sont regroupées par client et par mode de lecture. Vérifiez les pièces et les contrôles avant de valider. La confiance de lecture ne constitue pas une preuve de conformité comptable.",
   "cab.prop.lot.haut": "Confiance ≥ {seuil} %",
   "cab.prop.lot.moyen": "Confiance {bas} – {haut} %",
   "cab.prop.lot.bas": "Confiance < {seuil} %",
@@ -3362,8 +3412,8 @@ const fr = {
   "pme.capture.travail.termine": "lue",
   "pme.capture.travail.refuse": "pas lue, refusée",
   "pme.capture.travail.en_erreur": "pas lue, erreur",
-  "pme.regler.barre": "Mon cabinet",
-  "pme.regler.sansCabinet": "Aucun cabinet",
+  "pme.regler.barre": "Ma comptabilité",
+  "pme.regler.sansCabinet": "Aucune comptabilité mandatée",
   /**
    * Le dessin écrit « Mandat actif depuis le 4 janvier 2026. Révocable par
    * vous seul, effet le jour même. » Ni la date ni la révocation ne sont
@@ -3573,6 +3623,55 @@ const fr = {
 type Dict = Record<keyof typeof fr, string>;
 
 const en: Dict = {
+  "cab.design.journee": "Your day, at a glance.",
+  "cab.design.commencer": "Start reviewing",
+  "cab.design.situation": "Your accounting overview",
+  "cab.design.revueDetail": "Ready for your review",
+  "cab.design.retoursDetail": "To complete with the client",
+  "cab.design.superviseesDetail": "Review completed",
+  "cab.design.mandats": "Active engagements",
+  "cab.design.portefeuille": "View client files",
+  "cab.design.aucunResultat": "No matching documents",
+  "cab.design.pasDeMandat": "Your next client starts here",
+  "cab.design.fileAjour": "Your queue is up to date",
+  "cab.design.ajusterFiltres": "Try another filter or show the entire queue.",
+  "cab.design.commencerMandat": "Find your clients and engagement requests in your portfolio.",
+  "cab.design.effacerFiltres": "Show the entire queue",
+  "relation.documents.confirmeCoteClient": "Receipt confirmed by the client.",
+  "relation.documents.attenteClient": "Sent — receipt not yet confirmed.",
+
+  "relation.documents.regle":
+    "Reports published by your accounting provider remain available here. Drafts are never shared.",
+  "relation.documents.vide": "No published report for this file.",
+  "relation.documents.ouvrir": "View document",
+  "relation.documents.auteur": "Published by {cabinet}",
+  "relation.documents.receptionNote":
+    "Acknowledging receipt confirms you received this document. It does not approve its content or confirm payment.",
+  "relation.documents.recu": "Receipt confirmed on {date}",
+  "relation.documents.recevoir": "Confirm receipt",
+
+  "pme.reglages.profil.editer": "Edit",
+  // Relation entreprise et comptabilité : états et actions partagés.
+  "relation.echeances.retard": "Overdue",
+  "relation.echeances.semaine": "In the next 7 days",
+  "relation.echeances.mois": "In 8 to 30 days",
+  "relation.sansDestinataire":
+    "No active accounting engagement. Documents cannot be sent until an engagement is active.",
+  "relation.indisponible": "Relationship unavailable",
+  "relation.historique":
+    "The exchanges below are kept in your history. Without an active engagement, they do not represent ongoing support.",
+  "relation.sansMandat": "No accounting provider is currently responsible for this file.",
+  "relation.avisHistorique": "Advice history",
+  "relation.avisSansSuivi": "Historical request — no active follow-up",
+  "relation.avisArchive": "Response kept in your history",
+  "relation.modifier": "Edit",
+  "relation.edition": "Editing — save or cancel.",
+  "relation.consultation": "View mode — your settings are protected against accidental edits.",
+  "relation.seuilsInvalides":
+    "The review threshold must not exceed the batch threshold; both must be between 0 and 100%.",
+  "relation.lotsVides":
+    "No entries ready for review in active engagements. Open the queue to identify documents that need completing.",
+
   "brand.name": "Malica Office",
   "brand.tagline": "Augmented accounting, governed figures",
 
@@ -3799,7 +3898,7 @@ const en: Dict = {
   "pme.refus.piece_en_double":
     "This document duplicates one already read: I am not reading it again.",
   "pme.refus.piece_personnelle":
-    "This document is in your private space: I do not read it until you share it.",
+    "This document is private. Add it to the company to allow reading; sending it to the accountant is a separate action.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
   "refus.place.incluses_prises": "All the places included in the subscription are taken.",
@@ -4169,7 +4268,7 @@ const en: Dict = {
   "pme.regler.reprendre": "Retake the photo",
   "pme.regler.voir": "Look at the document",
   "pme.regler.rassure": "No rush. As soon as it's retaken, I send it back and keep you posted.",
-  "pme.regler.rien.titre": "Nothing to sort out.",
+  "pme.regler.rien.titre": "No requests pending.",
   "pme.regler.rien.sous": "{cabinet} needs nothing from you. I'll tell you if that changes.",
   "pme.home.charges.sous": "Where your money goes",
   "pme.home.demander": "Ask me",
@@ -4440,11 +4539,10 @@ const en: Dict = {
   "cab.noorg": "No practice organization yet. Create one to supervise your clients.",
   "cab.today.title": "Today",
   "cab.nav.group.work": "My work",
-  "cab.nav.group.cabinet": "Accounting",
+  "cab.nav.group.cabinet": "Tools and settings",
   "cab.search": "Search everything",
   "cab.today.greeting": "Hello.",
-  "cab.today.summary":
-    "{pieces} documents across {clients} clients. All proposed \u2014 review remains.",
+  "cab.today.summary": "{pieces} documents in the queue · {clients} active engagements.",
   "cab.today.start": "Start",
   "cab.today.bulk": "Approve in bulk",
   "cab.queue.byclient": "Your queue \u2014 by client",
@@ -4515,8 +4613,8 @@ const en: Dict = {
   "cab.queue.status": "Status",
   "cab.queue.date": "Filed",
   "cab.queue.open": "Open",
-  "cab.nav.group.file": "The practice queue",
-  "cab.nav.group.portefeuille": "Portfolio",
+  "cab.nav.group.file": "Daily work",
+  "cab.nav.group.portefeuille": "Client relationships",
   "cab.nav.notifications": "Notifications",
   "cab.nav.dossier": "Current file",
   "cab.nav.pilotage": "Steering",
@@ -4536,11 +4634,11 @@ const en: Dict = {
   "cab.conseil.kpi.pouce.ctx": "answers validated as they were",
   "cab.conseil.kpi.corrigees": "Corrected by the practice",
   "cab.conseil.kpi.corrigees.ctx": "wordings Malica keeps",
-  "cab.conseil.kpi.justesse": "Malica’s accuracy",
+  "cab.conseil.kpi.justesse": "Approved without changes",
   "cab.conseil.kpi.justesse.ctx": "over {count} arbitrated questions",
   "cab.conseil.kpi.justesse.ctx#one": "over {count} arbitrated question",
   "cab.conseil.kpi.justesse.ctx#other": "over {count} arbitrated questions",
-  "cab.conseil.kpi.justesse.sans": "no arbitrated question yet",
+  "cab.conseil.kpi.justesse.sans": "no response assessed by the firm",
   "cab.conseil.file.titre": "Arbitration queue",
   "cab.conseil.file.compte": "{n} / {total}",
   "cab.conseil.file.vide":
@@ -4931,12 +5029,12 @@ const en: Dict = {
   "cab.clients.filter.sans": "Unassigned",
   "cab.clients.filter.miens": "My mandates",
   "cab.clients.count": "{count} mandates",
-  "cab.dossier.ouvrir": "Open a file",
-  "cab.dossier.titre": "Open a company's file",
+  "cab.dossier.ouvrir": "Create a client file",
+  "cab.dossier.titre": "Create a client file",
   "cab.dossier.nom": "Company name",
   "cab.dossier.mf": "Tax ID",
   "cab.dossier.adresse": "Address",
-  "cab.dossier.valider": "Open the file",
+  "cab.dossier.valider": "Create the file",
   "cab.dossier.ouvert":
     "The file is open. Now invite the person who will keep it on the company's side.",
   "cab.dossier.contact": "Contact's e-mail address",
@@ -5065,7 +5163,7 @@ const en: Dict = {
   "cab.export.kicker": "Data out · no lock-in",
   "cab.export.title": "FEC and CSV export",
   "cab.export.lede":
-    "Your entries leave in the legal format, timestamped, with the pack they were booked under. A practice that cannot leave is not a client, it is a hostage.",
+    "Export the posted entries for the selected period. Check the client, format and row count before generating the file.",
   "cab.export.client": "Client",
   "cab.export.tous": "All mandates ({n})",
   "cab.export.exercice": "Financial year",
@@ -5605,7 +5703,7 @@ const en: Dict = {
   "cab.prop.kicker": "Bulk generation",
   "cab.prop.titre": "Socle proposals",
   "cab.prop.doctrine":
-    "Entries booked on read documents, grouped by reading confidence. Above the practice’s threshold, a lot is approved in one move; below, each document is reviewed one by one. The threshold is yours: it is set, never guessed. Documents read by a specialised reader have a lot of their own: a recipe produces no score, so there is no percentage to read.",
+    "Posted entries for active engagements are grouped by client and reading method. Review documents and checks before approval. Reading confidence is not evidence of accounting compliance.",
   "cab.prop.lot.haut": "Confidence ≥ {seuil} %",
   "cab.prop.lot.moyen": "Confidence {bas} – {haut} %",
   "cab.prop.lot.bas": "Confidence < {seuil} %",
@@ -6810,8 +6908,8 @@ const en: Dict = {
   "pme.capture.travail.termine": "read",
   "pme.capture.travail.refuse": "not read, refused",
   "pme.capture.travail.en_erreur": "not read, error",
-  "pme.regler.barre": "My firm",
-  "pme.regler.sansCabinet": "No firm",
+  "pme.regler.barre": "My accounting",
+  "pme.regler.sansCabinet": "No accounting provider appointed",
   "pme.regler.sousMandat": "They follow this file. What reaches them is what you send.",
   "pme.regler.sousSansMandat":
     "No one follows this file for now. You capture, you read, you export.",
@@ -6947,6 +7045,53 @@ const en: Dict = {
 };
 
 const ar: Dict = {
+  "cab.design.journee": "يومكم، بكل وضوح.",
+  "cab.design.commencer": "بدء المراجعة",
+  "cab.design.situation": "نظرة على المحاسبة",
+  "cab.design.revueDetail": "جاهزة للمراجعة",
+  "cab.design.retoursDetail": "لاستكمالها مع العميل",
+  "cab.design.superviseesDetail": "اكتملت المراجعة",
+  "cab.design.mandats": "التكليفات النشطة",
+  "cab.design.portefeuille": "عرض ملفات العملاء",
+  "cab.design.aucunResultat": "لا توجد وثائق مطابقة",
+  "cab.design.pasDeMandat": "ملفكم القادم يبدأ هنا",
+  "cab.design.fileAjour": "قائمة العمل محدَّثة",
+  "cab.design.ajusterFiltres": "جرّبوا مرشّحًا آخر أو اعرضوا القائمة كاملة.",
+  "cab.design.commencerMandat": "تجدون عملاءكم وطلبات التكليف في محفظة العملاء.",
+  "cab.design.effacerFiltres": "عرض القائمة كاملة",
+  "relation.documents.confirmeCoteClient": "أكّد العميل الاستلام.",
+  "relation.documents.attenteClient": "أُرسل — لم يُؤكّد الاستلام بعد.",
+
+  "relation.documents.regle":
+    "تبقى المحاضر المنشورة من جهة المحاسبة متاحة هنا. لا تُشارك المسودات.",
+  "relation.documents.vide": "لا يوجد محضر منشور لهذا الملف.",
+  "relation.documents.ouvrir": "عرض الوثيقة",
+  "relation.documents.auteur": "نشرته {cabinet}",
+  "relation.documents.receptionNote":
+    "تأكيد الاستلام يثبت وصول الوثيقة، ولا يعني الموافقة على محتواها أو الدفع.",
+  "relation.documents.recu": "تم تأكيد الاستلام بتاريخ {date}",
+  "relation.documents.recevoir": "تأكيد الاستلام",
+
+  "pme.reglages.profil.editer": "تعديل",
+  // Relation entreprise et comptabilité : états et actions partagés.
+  "relation.echeances.retard": "متأخرة",
+  "relation.echeances.semaine": "خلال الأيام السبعة القادمة",
+  "relation.echeances.mois": "خلال 8 إلى 30 يومًا",
+  "relation.sansDestinataire": "لا توجد محاسبة مكلّفة حاليًا. لا يمكن الإرسال قبل تفعيل التكليف.",
+  "relation.indisponible": "تعذّر عرض العلاقة",
+  "relation.historique":
+    "المراسلات أدناه محفوظة في السجل. دون تكليف نشط، لا تعني وجود متابعة جارية.",
+  "relation.sansMandat": "لا توجد جهة محاسبية تتولى هذا الملف حاليًا.",
+  "relation.avisHistorique": "سجل الآراء",
+  "relation.avisSansSuivi": "طلب سابق — لا توجد متابعة نشطة",
+  "relation.avisArchive": "إجابة محفوظة في السجل",
+  "relation.modifier": "تعديل",
+  "relation.edition": "التعديل جارٍ — احفظ أو ألغِ.",
+  "relation.consultation": "وضع العرض — الإعدادات محمية من التعديل غير المقصود.",
+  "relation.seuilsInvalides": "يجب ألا تتجاوز عتبة المراجعة عتبة الدفعة، وأن تكونا بين 0 و100٪.",
+  "relation.lotsVides":
+    "لا توجد قيود جاهزة للمراجعة ضمن التكليفات النشطة. افتح قائمة العمل للاطلاع على الوثائق الناقصة.",
+
   "brand.name": "ماليكا أوفيس",
   "brand.tagline": "محاسبة معززة، أرقام محكومة",
 
@@ -7166,7 +7311,8 @@ const ar: Dict = {
   "pme.refus.piece_accompagnante":
     "هذه الوثيقة مرفقة بوثيقة أخرى (وصل أو مؤيّد): تُحفظ معها دون قراءة.",
   "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
-  "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
+  "pme.refus.piece_personnelle":
+    "هذه الوثيقة خاصة. أضفها إلى المؤسسة لقراءتها؛ إرسالها للمحاسبة عملية مستقلة.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
   "refus.place.incluses_prises": "كل المقاعد المشمولة في الاشتراك مشغولة.",
@@ -7522,7 +7668,7 @@ const ar: Dict = {
   "pme.regler.reprendre": "أعد التقاط الصورة",
   "pme.regler.voir": "معاينة الوثيقة",
   "pme.regler.rassure": "لا عجلة. حالما تُعاد، أرسلها وأبقيك على اطّلاع.",
-  "pme.regler.rien.titre": "لا شيء لتسويته.",
+  "pme.regler.rien.titre": "لا توجد طلبات معلّقة.",
   "pme.regler.rien.sous": "{cabinet} لا ينتظر منك شيئًا. سأخبرك إن تغيّر ذلك.",
   "pme.home.charges.sous": "أين تذهب أموالك",
   "pme.home.demander": "اسألني",
@@ -7813,11 +7959,10 @@ const ar: Dict = {
   "cab.noorg": "لا يوجد مكتب. أنشئ مكتبًا للإشراف على حرفائك.",
   "cab.today.title": "اليوم",
   "cab.nav.group.work": "\u0639\u0645\u0644\u064a",
-  "cab.nav.group.cabinet": "المحاسبة",
+  "cab.nav.group.cabinet": "الأدوات والإعدادات",
   "cab.search": "\u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0627\u0644\u0643\u0644",
   "cab.today.greeting": "\u0645\u0631\u062d\u0628\u0627\u064b.",
-  "cab.today.summary":
-    "{pieces} \u0648\u0631\u0642\u0629 \u0644\u062f\u0649 {clients} \u062d\u0631\u0641\u0627\u0621. \u0627\u0644\u0643\u0644 \u0645\u0642\u062a\u0631\u062d \u2014 \u064a\u0628\u0642\u0649 \u0627\u0644\u062a\u0623\u0643\u064a\u062f.",
+  "cab.today.summary": "{pieces} وثيقة في قائمة العمل · {clients} تكليف نشط.",
   "cab.today.start": "\u0627\u0644\u0628\u062f\u0621",
   "cab.today.bulk": "\u062a\u0623\u0643\u064a\u062f \u062c\u0645\u0627\u0639\u064a",
   "cab.queue.byclient":
@@ -7888,8 +8033,8 @@ const ar: Dict = {
   "cab.queue.status": "الحالة",
   "cab.queue.date": "تاريخ الإيداع",
   "cab.queue.open": "فتح",
-  "cab.nav.group.file": "قائمة المكتب",
-  "cab.nav.group.portefeuille": "المحفظة",
+  "cab.nav.group.file": "العمل اليومي",
+  "cab.nav.group.portefeuille": "العلاقة مع العملاء",
   "cab.nav.notifications": "التنبيهات",
   "cab.nav.dossier": "الملف الحالي",
   "cab.nav.pilotage": "القيادة",
@@ -7909,11 +8054,11 @@ const ar: Dict = {
   "cab.conseil.kpi.pouce.ctx": "إجابات صودق عليها كما هي",
   "cab.conseil.kpi.corrigees": "صحّحها المكتب",
   "cab.conseil.kpi.corrigees.ctx": "صياغات تحتفظ بها ماليكا",
-  "cab.conseil.kpi.justesse": "دقّة ماليكا",
+  "cab.conseil.kpi.justesse": "معتمدة دون تعديل",
   "cab.conseil.kpi.justesse.ctx": "على {count} سؤالًا محكَّمًا",
   "cab.conseil.kpi.justesse.ctx#one": "على سؤال محكَّم واحد",
   "cab.conseil.kpi.justesse.ctx#other": "على {count} سؤالًا محكَّمًا",
-  "cab.conseil.kpi.justesse.sans": "لا سؤال محكَّمًا بعد",
+  "cab.conseil.kpi.justesse.sans": "لم تُقيّم أي إجابة بعد",
   "cab.conseil.file.titre": "قائمة التحكيم",
   "cab.conseil.file.compte": "{n} / {total}",
   "cab.conseil.file.vide":
@@ -8278,12 +8423,12 @@ const ar: Dict = {
   "cab.clients.filter.sans": "بدون متعاون",
   "cab.clients.filter.miens": "وكالاتي",
   "cab.clients.count": "{count} وكالة",
-  "cab.dossier.ouvrir": "فتح ملف",
-  "cab.dossier.titre": "فتح ملف مؤسسة",
+  "cab.dossier.ouvrir": "إنشاء ملف عميل",
+  "cab.dossier.titre": "إنشاء ملف عميل",
   "cab.dossier.nom": "الاسم التجاري",
   "cab.dossier.mf": "المعرف الجبائي",
   "cab.dossier.adresse": "العنوان",
-  "cab.dossier.valider": "فتح الملف",
+  "cab.dossier.valider": "إنشاء الملف",
   "cab.dossier.ouvert": "تم فتح الملف. ادعُ الآن الشخص الذي سيتولاه من جهة المؤسسة.",
   "cab.dossier.contact": "البريد الإلكتروني لجهة الاتصال",
   "cab.dossier.inviter": "دعوة",
@@ -8408,7 +8553,7 @@ const ar: Dict = {
   "cab.export.kicker": "إخراج البيانات · دون قفل",
   "cab.export.title": "تصدير FEC وCSV",
   "cab.export.lede":
-    "تخرج قيودكم بالصيغة القانونية، موقّتة، مع حزمة الإسناد. المكتب الذي لا يستطيع المغادرة ليس حريفًا، بل رهينة.",
+    "صدّر القيود المثبتة للفترة المختارة. تحقق من الملف والصيغة وعدد الأسطر قبل إنشاء الملف.",
   "cab.export.client": "الحريف",
   "cab.export.tous": "كل الوكالات ({n})",
   "cab.export.exercice": "السنة المحاسبية",
@@ -8930,7 +9075,7 @@ const ar: Dict = {
   "cab.prop.kicker": "توليد جماعي",
   "cab.prop.titre": "مقترحات السوكل",
   "cab.prop.doctrine":
-    "القيود المحاسَبة على الوثائق المقروءة، مجمّعة حسب ثقة القراءة. فوق عتبة المكتب يصادَق على الدفعة بحركة واحدة؛ ودونها تُراجع كل وثيقة على حدة. العتبة عتبتك: تُضبط ولا تُخمَّن. والوثائق التي قرأتها قارئة متخصّصة لها دفعتها الخاصة: الوصفة لا تُنتج أي درجة، فلا نسبة مئوية تُقرأ.",
+    "تُجمع القيود المثبتة للتكليفات النشطة حسب العميل وطريقة القراءة. راجع الوثائق والضوابط قبل الاعتماد. ثقة القراءة ليست دليلًا على المطابقة المحاسبية.",
   "cab.prop.lot.haut": "ثقة ≥ {seuil} %",
   "cab.prop.lot.moyen": "ثقة {bas} – {haut} %",
   "cab.prop.lot.bas": "ثقة < {seuil} %",
@@ -10079,8 +10224,8 @@ const ar: Dict = {
   "pme.capture.travail.termine": "مقروءة",
   "pme.capture.travail.refuse": "لم تُقرأ، مرفوضة",
   "pme.capture.travail.en_erreur": "لم تُقرأ، خطأ",
-  "pme.regler.barre": "مكتبي المحاسبي",
-  "pme.regler.sansCabinet": "لا يوجد مكتب",
+  "pme.regler.barre": "محاسبتي",
+  "pme.regler.sansCabinet": "لا توجد جهة محاسبية مكلّفة",
   "pme.regler.sousMandat": "يتابع هذا الملف. ما يصله هو ما ترسلونه أنتم.",
   "pme.regler.sousSansMandat": "لا أحد يتابع هذا الملف حاليًا. أنتم تلتقطون وتقرؤون وتصدّرون.",
   "pme.regler.ongletEchanges": "المراسلات",

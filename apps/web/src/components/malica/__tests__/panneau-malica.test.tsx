@@ -24,9 +24,30 @@ function Temoin({ releves }: { releves: boolean[] }) {
   return null;
 }
 
+function TemoinCabinet({ releves }: { releves: boolean[] }) {
+  const { ouvert } = usePanneauMalica("cabinet");
+  useLayoutEffect(() => {
+    releves.push(ouvert);
+  });
+  return null;
+}
+
 describe("le fil de Malica au montage", () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => cleanup());
+
+  it("le cabinet garde la largeur de travail sans préférence enregistrée", () => {
+    const releves: boolean[] = [];
+    render(<TemoinCabinet releves={releves} />);
+    expect(releves).not.toContain(true);
+  });
+
+  it("le cabinet respecte un panneau explicitement ouvert", () => {
+    window.localStorage.setItem("malica.panneau.ouvert.cabinet", "1");
+    const releves: boolean[] = [];
+    render(<TemoinCabinet releves={releves} />);
+    expect(releves.at(-1)).toBe(true);
+  });
 
   it("refermé, il n'est jamais posé ouvert dans le DOM", () => {
     window.localStorage.setItem("malica.panneau.ouvert.pme", "0");

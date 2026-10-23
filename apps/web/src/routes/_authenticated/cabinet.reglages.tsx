@@ -188,6 +188,7 @@ function CabinetEtEquipe() {
   const [ton, setTon] = useState("");
   const [panneau, setPanneau] = useState(true);
   const [seme, setSeme] = useState(false);
+  const [edition, setEdition] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -222,7 +223,10 @@ function CabinetEtEquipe() {
     onSuccess: async () => {
       setErreur(null);
       setMessage(t("cab.settings.enregistre"));
+      definirPanneauParDefaut("cabinet", panneau);
       await qc.invalidateQueries({ queryKey: ["cab-reglages", org.id] });
+      setEdition(false);
+      setSeme(false);
     },
     onError: (e: unknown) => {
       setMessage(null);
@@ -244,16 +248,43 @@ function CabinetEtEquipe() {
     );
   }
   const courant = reglages.data;
+  const seuilsValides =
+    Number.isFinite(Number(seuilLot)) &&
+    Number.isFinite(Number(seuilRevue)) &&
+    Number(seuilRevue) >= 0 &&
+    Number(seuilLot) <= 100 &&
+    Number(seuilRevue) <= Number(seuilLot);
 
   return (
     <div className="space-y-8">
+      <div className="flex items-center justify-between gap-3">
+        <p role="status" className="text-sm text-muted-foreground">
+          {t(edition ? "relation.edition" : "relation.consultation")}
+        </p>
+        {!edition ? (
+          <button
+            type="button"
+            className="border border-foreground px-4 py-2 text-sm font-semibold"
+            onClick={() => {
+              setErreur(null);
+              setMessage(null);
+              setEdition(true);
+            }}
+          >
+            {t("relation.modifier")}
+          </button>
+        ) : null}
+      </div>
       {!courant.regle ? (
         <p className="border border-s-2 border-border border-s-marigold bg-card px-3 py-2 text-[12.5px]">
           {t("cab.settings.defauts")}
         </p>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <fieldset
+        disabled={!edition || enregistrer.isPending}
+        className="grid min-w-0 gap-6 disabled:cursor-default xl:grid-cols-2"
+      >
         {/* ---- supervision */}
         <Groupe titre={t("cab.settings.g.supervision")} lede={t("cab.settings.g.supervision.lede")}>
           <Ligne label={t("cab.settings.seuilLot")} hint={t("cab.settings.seuilLot.hint")}>
@@ -294,7 +325,6 @@ function CabinetEtEquipe() {
               label={t("cab.settings.panneau")}
               onChange={(v) => {
                 setPanneau(v);
-                definirPanneauParDefaut("cabinet", v);
               }}
             />
           </Ligne>
@@ -375,17 +405,48 @@ function CabinetEtEquipe() {
             />
           </Ligne>
         </Groupe>
-      </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={enregistrer.isPending || !seuilLot || !seuilRevue || !capacite || !ton}
-          onClick={() => enregistrer.mutate(courant)}
-          className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background hover:bg-marigold hover:text-foreground disabled:opacity-40"
-        >
-          {t("cab.settings.enregistrer")}
-        </button>
+        {edition ? (
+          <>
+            <button
+              type="button"
+              disabled={
+                enregistrer.isPending ||
+                !seuilLot ||
+                !seuilRevue ||
+                !capacite ||
+                !ton ||
+                !seuilsValides ||
+                !Number.isInteger(Number(capacite)) ||
+                Number(capacite) < 1
+              }
+              onClick={() => enregistrer.mutate(courant)}
+              className="border border-foreground bg-foreground px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background hover:bg-marigold hover:text-foreground disabled:opacity-40"
+            >
+              {t("cab.settings.enregistrer")}
+            </button>
+            <button
+              type="button"
+              className="border border-border px-4 py-2.5 text-sm"
+              disabled={enregistrer.isPending}
+              onClick={() => {
+                setEdition(false);
+                setSeme(false);
+                setErreur(null);
+                setMessage(null);
+              }}
+            >
+              {t("common.cancel")}
+            </button>
+          </>
+        ) : null}
+        {edition && !seuilsValides ? (
+          <span role="alert" className="text-sm text-signal-stop">
+            {t("relation.seuilsInvalides")}
+          </span>
+        ) : null}
         {message ? <span className="text-[12.5px] text-signal-ok">{message}</span> : null}
         {erreur ? (
           <span role="alert" className="text-[12.5px] text-signal-stop">

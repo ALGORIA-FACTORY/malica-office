@@ -127,6 +127,7 @@ export function DocumentView({ contenu, highlight, label }: Props) {
 
     void (async () => {
       setEtat("chargement");
+      setRendus(0);
       try {
         const entete = new Uint8Array(contenu.slice(0, 5));
         if (entete.length === 0) {
@@ -548,7 +549,12 @@ export function DocumentView({ contenu, highlight, label }: Props) {
         ) : (
           <div className="relative inline-block min-w-full">
             {etat === "image" ? (
-              <img src={urlLocale} alt={label} className="block w-full" />
+              <img
+                src={urlLocale}
+                alt={label}
+                className="block w-full"
+                onError={() => setEtat("erreur")}
+              />
             ) : (
               <canvas ref={canvasRef} className="block" />
             )}
@@ -559,8 +565,8 @@ export function DocumentView({ contenu, highlight, label }: Props) {
                 style={cadreCite}
               />
             ) : null}
-            {etat === "chargement" ? (
-              <p className="p-6 text-center text-[12px] text-muted-foreground">
+            {etat === "chargement" || (etat === "pdf" && rendus === 0) ? (
+              <p role="status" className="p-6 text-center text-[12px] text-muted-foreground">
                 {t("pme.doc.loading")}
               </p>
             ) : null}

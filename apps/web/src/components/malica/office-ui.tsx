@@ -160,7 +160,7 @@ export function MarqueAlgoria({ className, ...reste }: ComponentPropsWithoutRef<
 /** Feu de conformité — le verdict porte la justification, le feu la signale. */
 export function SignalLight({ tone, label }: { tone: Tone; label: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="cab-signal inline-flex items-center gap-2" data-tone={tone}>
       <SignalDot tone={tone} />
       <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
     </span>
@@ -197,6 +197,7 @@ export function EnTeteCabinet({
   const encre = ton === "encre";
   return (
     <header
+      data-cab-header={encre ? "encre" : "papier"}
       className={cn(
         encre
           ? "-mx-4 -mt-6 bg-foreground px-4 py-8 text-background sm:-mx-6 sm:px-6 lg:-mx-9 lg:-mt-7 lg:px-10 lg:py-9"
@@ -249,7 +250,7 @@ export function EnTeteCabinet({
 /** Titre de section — filet supérieur, jamais d'ombre. */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-border pb-2">
+    <div className="cab-section-title flex items-baseline justify-between gap-3 border-b border-border pb-2">
       <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em]">{children}</h2>
       {action}
     </div>
@@ -311,7 +312,7 @@ export function InkTable({
   caption?: string;
 }) {
   return (
-    <div className="overflow-x-auto border border-border bg-card">
+    <div className="cab-table overflow-x-auto border border-border bg-card">
       <table className="min-w-full border-collapse text-[13px]">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
@@ -362,7 +363,7 @@ export function InkCell({
 /** Vide assumé : une phrase, pas une illustration. */
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <p className="border border-border bg-card px-4 py-6 text-[13px] text-muted-foreground">
+    <p className="cab-empty border border-border bg-card px-4 py-6 text-[13px] text-muted-foreground">
       {children}
     </p>
   );
