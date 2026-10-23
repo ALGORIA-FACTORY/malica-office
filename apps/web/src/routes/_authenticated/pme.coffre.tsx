@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
+import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
@@ -250,8 +251,18 @@ function PmeCoffre() {
       </div>
 
       <div className="pad">
-        <h1>{t("pme.coffre.titre")}</h1>
-        <p className="sub">{t("pme.prive.sous")}</p>
+        {/*
+         * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
+         * le sous-titre et le pied passent derrière le ⓘ du titre ; la phrase
+         * répétée sur chaque carte, derrière celui de « À transmettre ».
+         */}
+        <h1>
+          {t("pme.coffre.titre")}
+          <Aide
+            titre={t("pme.coffre.titre")}
+            paragraphes={[{ texte: t("pme.prive.sous") }, { texte: t("pme.coffre.pied") }]}
+          />
+        </h1>
 
         {/* Le mur. Il n'est pas décoratif : c'est la seule chose que le
             dirigeant veut savoir avant de déposer. */}
@@ -343,18 +354,31 @@ function PmeCoffre() {
             {bougent.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{t("pme.coffre.bouger")}</h2>
+                  <h2>
+                    {t("pme.coffre.bouger")}
+                    <Aide
+                      titre={t("pme.coffre.bouger")}
+                      paragraphes={[
+                        { texte: t("pme.coffre.libre") },
+                        { texte: t("pme.refus.piece_personnelle") },
+                      ]}
+                    />
+                  </h2>
                   <span>{bougent.length}</span>
                 </div>
 
+                {/* Sans cabinet, la raison du bouton éteint se dit une fois, pas sur chaque carte. */}
+                {!cabinet.data && cabinet.isSuccess ? (
+                  <p className="t-body" role="status">
+                    {t("relation.sansDestinataire")}
+                  </p>
+                ) : null}
                 {bougent.map((p) => (
                   <div key={p.id} className="card">
                     <div className="hd">
                       <b>{titreDe(p)}</b>
                       {somme(p) === "" ? null : <span>{somme(p)}</span>}
                     </div>
-
-                    <p>{t("pme.coffre.libre")}</p>
 
                     {/*
                      * Au coffre, toute pièce est `personnel` — donc tout refus
@@ -363,7 +387,7 @@ function PmeCoffre() {
                      * transmettez pas ». Le bouton est juste en dessous.
                      */}
                     {p.status === "capturee" ? (
-                      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} />
+                      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} sansMotif />
                     ) : null}
 
                     <div className="b">
@@ -380,9 +404,6 @@ function PmeCoffre() {
                       >
                         {t("pme.prive.transmettre", { cabinet: nomDuCabinet })}
                       </button>
-                      {!cabinet.data && cabinet.isSuccess ? (
-                        <p role="status">{t("relation.sansDestinataire")}</p>
-                      ) : null}
                       {cabinet.isError ? (
                         <button
                           type="button"
@@ -397,8 +418,6 @@ function PmeCoffre() {
                 ))}
               </>
             ) : null}
-
-            <p className="foot">{t("pme.coffre.pied")}</p>
           </>
         )}
       </div>
