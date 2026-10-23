@@ -49,8 +49,11 @@ create index paiements_en_ligne_facture_idx on facturation.paiements_en_ligne (f
 
 -- --- 2. Ce qu'une facture laisse à payer --------------------------------------
 
--- Le reste dû d'une facture que son titulaire paie lui-même. Refuse, par une
--- clé, ce qui ne se paie pas en ligne ici.
+-- Le reste dû d'une facture que le titulaire paie lui-même. Refuse, par une
+-- clé, ce qui ne se paie pas en ligne ici. Le droit suit le titulaire ACTUEL
+-- de la licence : une licence transmise après l'émission reste payable par
+-- celui qui la tient (c'est lui que l'impayé suspend), et `paiement_inscrire`
+-- exige le même.
 create or replace function facturation.reste_du_payable(p_facture uuid)
 returns numeric
 language plpgsql
@@ -61,11 +64,12 @@ as $$
 declare
   v record;
 begin
-  select f.payeur_type, f.payeur_personne, e.etat, e.reste_du into v
+  select f.payeur_type, f.licence_id, e.etat, e.reste_du into v
     from facturation.factures f
     join facturation.encours_v e on e.facture_id = f.id
    where f.id = p_facture;
-  if not found or v.payeur_type <> 'titulaire' or v.payeur_personne is distinct from auth.uid() then
+  if not found or v.payeur_type <> 'titulaire' or v.licence_id is null
+     or not facturation.titulaire_de(v.licence_id) then
     raise exception 'facture introuvable' using errcode = '42501';
   end if;
   if v.etat not in ('a_echoir', 'en_retard', 'partielle') or v.reste_du <= 0 then
@@ -90,6 +94,9 @@ declare
   v_du   numeric;
   v_id   uuid;
 begin
+  -- Une préparation à la fois par facture : deux onglets liraient le même
+  -- « aucun paiement ouvert » et en créeraient deux, payables tous les deux.
+  perform 1 from facturation.factures where id = p_facture for update;
   v_du := facturation.reste_du_payable(p_facture);
   select * into f from facturation.factures where id = p_facture;
   if f.licence_id is null
@@ -258,7 +265,8 @@ create trigger une_facture_payee_s_encaisse
 
 -- --- 5. Mes factures ----------------------------------------------------------
 
--- Les factures que l'appelant paie lui-même, et ce qu'il en reste à payer.
+-- Les factures des licences dont l'appelant est le titulaire, et ce qu'il en
+-- reste à payer (le même droit que `facturation.reste_du_payable`).
 create or replace function public.mes_factures()
 returns table (facture_id uuid, numero text, periode date, emise_le date, echeance_le date,
                montant_ttc numeric, reste_du numeric, devise text, etat text)
@@ -271,7 +279,8 @@ as $$
          f.montant_ttc, e.reste_du, f.devise, e.etat
     from facturation.factures f
     join facturation.encours_v e on e.facture_id = f.id
-   where f.payeur_type = 'titulaire' and f.payeur_personne = auth.uid()
+   where f.payeur_type = 'titulaire'
+     and f.licence_id in (select l.id from facturation.licences l where l.titulaire = auth.uid())
    order by f.periode desc, f.numero desc
 $$;
 

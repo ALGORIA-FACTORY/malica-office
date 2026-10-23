@@ -201,6 +201,31 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
     });
   });
 
+  it("une licence transmise après l'émission reste payable par son nouveau titulaire", async () => {
+    await aBlanc(async (db) => {
+      const d = await uneFacture(db);
+      const repreneur = randomUUID();
+      // La transmission, comme `public.licence_transmettre` la déclare : le
+      // repreneur tient la licence et la place de dirigeant.
+      await db.query("select set_config('facturation.transmission', $1, true)", [d.licence]);
+      await db.query("update facturation.licences set titulaire = $2 where id = $1", [
+        d.licence,
+        repreneur,
+      ]);
+      await db.query("update identity.memberships set user_id = $2 where user_id = $1", [
+        d.principal,
+        repreneur,
+      ]);
+      const p = await preparer(db, repreneur, d.facture);
+      assert.equal(p.objet, "facture");
+      await assert.rejects(
+        preparer(db, d.principal, d.facture),
+        (e: { code?: string }) => e.code === "42501",
+        "l'ancien titulaire ne tient plus la licence",
+      );
+    });
+  });
+
   it("un autre que le payeur ne prépare rien", async () => {
     await aBlanc(async (db) => {
       const d = await uneFacture(db);

@@ -844,6 +844,7 @@ const ETAT_DE_FACTURE: Record<FactureDuTitulaire["etat"], MessageKey> = {
 export function MesFactures() {
   const { t, locale } = useI18n();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const principal = useEstPrincipal();
   const [erreur, setErreur] = useState<string | null>(null);
   const factures = useQuery({
@@ -854,8 +855,12 @@ export function MesFactures() {
   });
   const payer = useMutation({
     mutationFn: (factureId: string) => office().facturation.payerFacture(factureId),
-    onSuccess: (p) =>
-      void navigate({ to: "/pme/payer/$paiementId", params: { paiementId: p.paiement_id } }),
+    onSuccess: async (p) => {
+      // La page de choix lit `mes-paiements` : le paiement neuf doit y être
+      // avant d'y arriver, sinon elle dirait « rien à régler ».
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+      await navigate({ to: "/pme/payer/$paiementId", params: { paiementId: p.paiement_id } });
+    },
     onError: (e: unknown) => setErreur(refus(e, t)),
   });
 
