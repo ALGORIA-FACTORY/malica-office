@@ -213,12 +213,33 @@ function CabinetPilotage() {
       new Date(iso),
     );
 
-  const panne = clients.error ?? membres.error ?? affectations.error ?? reglages.error ?? statistiques.error ?? stats.error;
+  const panne =
+    clients.error ??
+    membres.error ??
+    affectations.error ??
+    reglages.error ??
+    statistiques.error ??
+    stats.error;
   if (panne) {
-    return <p role="alert" className="cab-surface text-signal-stop">{texteDeLErreur(panne, "routes/_authenticated/cabinet.pilotage", t("common.error"))}</p>;
+    return (
+      <p role="alert" className="cab-surface text-signal-stop">
+        {texteDeLErreur(panne, "routes/_authenticated/cabinet.pilotage", t("common.error"))}
+      </p>
+    );
   }
-  if (clients.isPending || membres.isPending || affectations.isPending || reglages.isPending || statistiques.isPending || (clientIds.length > 0 && stats.isPending)) {
-    return <p role="status" className="cab-surface">{t("common.loading")}</p>;
+  if (
+    clients.isPending ||
+    membres.isPending ||
+    affectations.isPending ||
+    reglages.isPending ||
+    statistiques.isPending ||
+    (clientIds.length > 0 && stats.isPending)
+  ) {
+    return (
+      <p role="status" className="cab-surface">
+        {t("common.loading")}
+      </p>
+    );
   }
 
   return (
@@ -290,7 +311,11 @@ function CabinetPilotage() {
             ctx: t("cab.pil.kpi.supervisees.ctx"),
           },
         ].map((k) => (
-          <div key={k.key} className="cab-summary-card" data-color={k.key === "sup" ? "green" : k.key === "sans" ? "peach" : "violet"}>
+          <div
+            key={k.key}
+            className="cab-summary-card"
+            data-color={k.key === "sup" ? "green" : k.key === "sans" ? "peach" : "violet"}
+          >
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {k.label}
             </p>
@@ -699,8 +724,17 @@ function Statistiques({
                   const y = 236 - tick * 50;
                   return (
                     <g key={tick}>
-                      <line x1="52" x2={Math.max(580, mois.length * 80 + 52)} y1={y} y2={y} stroke="currentColor" className="cab-chart-grid" />
-                      <text x="42" y={y + 4} textAnchor="end" className="cab-chart-axis">{Math.round((tick * max) / 4)}</text>
+                      <line
+                        x1="52"
+                        x2={Math.max(580, mois.length * 80 + 52)}
+                        y1={y}
+                        y2={y}
+                        stroke="currentColor"
+                        className="cab-chart-grid"
+                      />
+                      <text x="42" y={y + 4} textAnchor="end" className="cab-chart-axis">
+                        {Math.round((tick * max) / 4)}
+                      </text>
                     </g>
                   );
                 })}
@@ -711,18 +745,40 @@ function Statistiques({
                   return (
                     <g key={m}>
                       {collabs.map((c, i) => {
-                        const part = parMois.filter((p) => p.mois === m && (p.collaborateur ?? "") === c).reduce((n, p) => n + p.supervisees, 0);
+                        const part = parMois
+                          .filter((p) => p.mois === m && (p.collaborateur ?? "") === c)
+                          .reduce((n, p) => n + p.supervisees, 0);
                         const hauteur = (part / max) * 200;
                         base -= hauteur;
                         return (
-                          <rect key={c || "—"} x={x} y={base} width={Math.min(44, slot - 16)} height={hauteur}
-                            className={`cab-chart-series cab-chart-series-${i % 5}`}>
+                          <rect
+                            key={c || "—"}
+                            x={x}
+                            y={base}
+                            width={Math.min(44, slot - 16)}
+                            height={hauteur}
+                            className={`cab-chart-series cab-chart-series-${i % 5}`}
+                          >
                             <title>{`${m} · ${c || "—"} : ${part}`}</title>
                           </rect>
                         );
                       })}
-                      <text x={x + Math.min(44, slot - 16) / 2} y={236 - (totalDuMois(m) / max) * 200 - 10} textAnchor="middle" className="cab-chart-value">{totalDuMois(m)}</text>
-                      <text x={x + Math.min(44, slot - 16) / 2} y="262" textAnchor="middle" className="cab-chart-axis">{nomDuMois(m)}</text>
+                      <text
+                        x={x + Math.min(44, slot - 16) / 2}
+                        y={236 - (totalDuMois(m) / max) * 200 - 10}
+                        textAnchor="middle"
+                        className="cab-chart-value"
+                      >
+                        {totalDuMois(m)}
+                      </text>
+                      <text
+                        x={x + Math.min(44, slot - 16) / 2}
+                        y="262"
+                        textAnchor="middle"
+                        className="cab-chart-axis"
+                      >
+                        {nomDuMois(m)}
+                      </text>
                     </g>
                   );
                 })}
@@ -730,13 +786,18 @@ function Statistiques({
             </div>
             <details className="cab-chart-data">
               <summary>{t("cab.pil.stats.mois")}</summary>
-              <InkTable caption={t("cab.pil.stats.mois")} head={[t("cab.abo.fac.periode"), ...collabs.map((c) => c || "—")]}>
+              <InkTable
+                caption={t("cab.pil.stats.mois")}
+                head={[t("cab.abo.fac.periode"), ...collabs.map((c) => c || "—")]}
+              >
                 {mois.map((m) => (
                   <InkTableRow key={m}>
                     <InkCell>{m}</InkCell>
                     {collabs.map((c) => (
                       <InkCell key={c || "—"} numeric>
-                        {parMois.filter((p) => p.mois === m && (p.collaborateur ?? "") === c).reduce((n, p) => n + p.supervisees, 0)}
+                        {parMois
+                          .filter((p) => p.mois === m && (p.collaborateur ?? "") === c)
+                          .reduce((n, p) => n + p.supervisees, 0)}
                       </InkCell>
                     ))}
                   </InkTableRow>
@@ -760,7 +821,10 @@ function Statistiques({
                     <span className="text-[13px]">{m.label}</span>
                     <span className="num text-[12px]">{m.retours}</span>
                   </div>
-                  <span aria-hidden className="mt-2 block h-3 w-full overflow-hidden rounded-full bg-secondary">
+                  <span
+                    aria-hidden
+                    className="mt-2 block h-3 w-full overflow-hidden rounded-full bg-secondary"
+                  >
                     <span
                       className="block h-full rounded-full bg-[#8470d5]"
                       style={{ width: `${Math.round((m.retours / maxMotif) * 100)}%` }}
@@ -788,7 +852,6 @@ function Statistiques({
               </div>
             ))}
           </div>
-
         </section>
       </div>
     </>

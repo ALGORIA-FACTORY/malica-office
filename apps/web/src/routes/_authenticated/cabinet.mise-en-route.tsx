@@ -191,7 +191,6 @@ function MiseEnRoute() {
                     >
                       {t(titre[e])}
                     </span>
-
                   </button>
                 </li>
               );
@@ -342,7 +341,12 @@ function LEquipe() {
         <ul className="cab-team-list mt-2">
           {(membres.data ?? []).map((m) => (
             <li key={m.userId} className="flex items-baseline justify-between gap-3 px-3 py-2">
-              <span className="cab-team-person"><span className="cab-team-avatar" aria-hidden>{m.email.slice(0, 2).toLocaleUpperCase(locale)}</span><span className="min-w-0 truncate text-[13px]">{m.email}</span></span>
+              <span className="cab-team-person">
+                <span className="cab-team-avatar" aria-hidden>
+                  {m.email.slice(0, 2).toLocaleUpperCase(locale)}
+                </span>
+                <span className="min-w-0 truncate text-[13px]">{m.email}</span>
+              </span>
               <span className="shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {roleDe(m.role)}
               </span>
@@ -351,7 +355,14 @@ function LEquipe() {
         </ul>
       </div>
 
-      <form id="cab-inviter-equipe" onSubmit={(e) => { e.preventDefault(); if (!inviter.isPending) inviter.mutate(); }} className="grid gap-4 sm:grid-cols-[1.6fr_1fr]">
+      <form
+        id="cab-inviter-equipe"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!inviter.isPending) inviter.mutate();
+        }}
+        className="grid gap-4 sm:grid-cols-[1.6fr_1fr]"
+      >
         <label className="block">
           <span className={ETIQUETTE}>{t("cab.onb.2.email")}</span>
           <input
