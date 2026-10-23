@@ -10,3 +10,6 @@ interface ImportMetaEnv {
   /** `coque` dans le bundle embarqué par l'application Android ; absent sur le web. */
   readonly VITE_CIBLE?: string;
 }
+
+/** Vrai hors de l'application Android : remplacé par Vite à la compilation (`vite.config.ts`). */
+declare const __COMMERCE__: boolean;
