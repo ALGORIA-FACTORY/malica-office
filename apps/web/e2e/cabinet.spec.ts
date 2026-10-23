@@ -173,10 +173,9 @@ test("une panne des statistiques laisse les affectations accessibles", async ({ 
   });
   await page.goto("/cabinet/pilotage");
   await expect(page.locator("#affecter form")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(
-    "Statistiques temporairement indisponibles",
-    { timeout: 20_000 },
-  );
+  await expect(page.getByRole("alert")).toContainText("Statistiques temporairement indisponibles", {
+    timeout: 20_000,
+  });
   await expect(page.locator("#affecter select").first()).toBeEnabled();
   await expect(page.locator(".cab-summary-value").last()).toHaveText("—");
 });
