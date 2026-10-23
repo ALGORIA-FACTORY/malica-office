@@ -59,15 +59,16 @@ import type { LectureRefusee, Visibility } from "@malica/socle/ports/repositorie
 export function EtatDeLecture({
   refus,
   vis,
-  sansMotif = false,
+  motifDitAilleurs,
 }: {
   refus: LectureRefusee | null | undefined;
   /**
-   * L'étiquette seule, sans la phrase du motif : pour une liste où toutes les
-   * pièces portent le même motif, dit une fois dans le ⓘ de la section
-   * (23 octobre 2026, « simplifier sans rien perdre »).
+   * Le motif que l'écran dit déjà une fois, dans le ⓘ de sa section
+   * (23 octobre 2026, « simplifier sans rien perdre »). Pour ce motif-là,
+   * l'étiquette suffit ; tout AUTRE motif garde sa phrase — un refus de
+   * plafond resté sur une pièce rendue privée ne doit pas devenir muet.
    */
-  sansMotif?: boolean;
+  motifDitAilleurs?: string;
   /**
    * Où la pièce est. Sans elle, une pièce privée jamais lue se rangeait avec
    * celles qui attendent leur tour — et disait donc le contraire de ce qui
@@ -92,7 +93,9 @@ export function EtatDeLecture({
         <i aria-hidden />
         {t("pme.refus.titre")}
       </span>
-      {sansMotif ? null : <span className="t-meta mt-px block">{libelleDuRefus(motif, t)}</span>}
+      {motif === motifDitAilleurs ? null : (
+        <span className="t-meta mt-px block">{libelleDuRefus(motif, t)}</span>
+      )}
     </span>
   );
 }

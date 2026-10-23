@@ -387,7 +387,11 @@ function PmeCoffre() {
                      * transmettez pas ». Le bouton est juste en dessous.
                      */}
                     {p.status === "capturee" ? (
-                      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} sansMotif />
+                      <EtatDeLecture
+                        refus={p.lectureRefusee}
+                        vis={p.vis}
+                        motifDitAilleurs="piece_personnelle"
+                      />
                     ) : null}
 
                     <div className="b">
