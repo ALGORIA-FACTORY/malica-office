@@ -10,6 +10,7 @@ import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 
 import { app } from "./app.ts";
 import { fermerLePool } from "./db.ts";
+import { demarrerLesRelances } from "./relances/demarrer.ts";
 import { racine } from "./stockage.ts";
 
 /*
@@ -36,6 +37,9 @@ setDefaultAutoSelectFamilyAttemptTimeout(Number(process.env["RESEAU_DELAI_FAMILL
 // racine de stockage absente est une panne d'installation : elle doit empêcher
 // l'API de démarrer, comme le fait un secret de jetons manquant.
 racine();
+
+// Les relances d'impayé : rien ne part tant que la tour ne les a pas ouvertes.
+demarrerLesRelances();
 
 const port = Number(process.env["PORT"] ?? 3000);
 const serveur = app.listen(port, () => {

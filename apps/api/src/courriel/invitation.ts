@@ -14,30 +14,13 @@
  */
 
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
+import { ENCRE, FILET, GRIS, PAPIER, POLICE, SOUCI, SOUCI_SUR_ENCRE, echapper } from "./charte.ts";
 
 export interface InvitationCourriel {
   cabinet: string;
   pme: string;
   lien: string;
   expireLe: Date;
-}
-
-const ENCRE = "#0A0A0A";
-const PAPIER = "#FAFAFA";
-const SOUCI = "#C8901F";
-const SOUCI_SUR_ENCRE = "#E3B75C";
-const GRIS = "#6E6E73";
-const FILET = "#E5E5EA";
-const POLICE =
-  "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-
-function echapper(texte: string): string {
-  return texte
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function dateLisible(d: Date): string {

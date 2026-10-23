@@ -158,6 +158,29 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Les relances d'impayé : la dernière décision de la tour, ou `null` (fermées). */
+  async reglageRelances(db: Requete) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select (select to_jsonb(r) - 'decide_par' from plateforme.reglages_relances r
+                order by r.decide_le desc, r.id desc limit 1) as r`,
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** La tour ouvre ou ferme les relances, et la suspension automatique : daté et motivé. */
+  async reglerRelances(
+    db: Requete,
+    actives: boolean,
+    suspensionAutomatique: boolean,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.relances_regler($1, $2, $3) as r`,
+      [actives, suspensionAutomatique, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** L'émetteur des factures en vigueur, ou `null` tant qu'aucun n'est désigné. */
   async emetteur(db: Requete) {
     const { rows } = await db.query<{ r: unknown }>(`select plateforme.emetteur_en_vigueur() as r`);

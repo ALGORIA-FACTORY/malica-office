@@ -2780,6 +2780,16 @@ const fr = {
   "tour.ia.enVigueur": "En vigueur : {plafond} $ par organisation et par mois, depuis le {date}.",
   "tour.ia.plafond": "Plafond mensuel (dollars)",
   "tour.ia.plafond.borne": "Un nombre positif, quatre décimales au plus.",
+  "tour.relances": "Relances d'impayé",
+  "tour.relances.aide":
+    "Quand elles sont ouvertes, Malica écrit au titulaire d'une facture en retard : un rappel, une relance, un avis, puis l'annonce de la suspension. Un seul courriel par facture et par palier. Fermées, rien ne part.",
+  "tour.relances.actives": "Envoyer les relances",
+  "tour.relances.suspension": "Suspendre d'office la licence au dernier palier",
+  "tour.relances.suspension.aide":
+    "Sinon, la suspension reste votre geste, dans la liste des licences.",
+  "tour.relances.etat.fermees": "Fermées : aucune relance ne part.",
+  "tour.relances.etat.ouvertes": "Ouvertes depuis le {date}.",
+  "tour.relances.etat.suspension": "Ouvertes depuis le {date}, avec suspension automatique.",
   "tour.abonnement.report": "Report des lectures",
   "tour.abonnement.report.aide":
     "Les lectures du forfait non consommées passent sur le mois suivant, et pas plus loin. Les recharges gardent leur propre échéance.",
@@ -2819,6 +2829,9 @@ const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "courriel.notif.pied":
+    "Vous recevez ce message parce que vous tenez cet abonnement Malica Office. Vous pouvez régler vos notifications dans vos réglages.",
+  "courriel.notif.lienSecours": "Le bouton ne s'ouvre pas ? Copiez ce lien dans votre navigateur :",
   "pme.reglages.paiement.facture": "Facture {numero}",
   "pme.reglages.factures.titre": "Vos factures",
   "pme.reglages.factures.reste": "Reste à payer : {montant} {devise} TTC",
@@ -6294,6 +6307,15 @@ const en: Dict = {
   "tour.ia.enVigueur": "In force: ${plafond} per organisation per month, since {date}.",
   "tour.ia.plafond": "Monthly cap (dollars)",
   "tour.ia.plafond.borne": "A positive number, at most four decimals.",
+  "tour.relances": "Overdue reminders",
+  "tour.relances.aide":
+    "When enabled, Malica writes to the holder of an overdue invoice: a reminder, a follow-up, a notice, then the suspension notice. One email per invoice and per step. Disabled, nothing is sent.",
+  "tour.relances.actives": "Send reminders",
+  "tour.relances.suspension": "Suspend the licence automatically at the last step",
+  "tour.relances.suspension.aide": "Otherwise, suspension stays your action, in the licence list.",
+  "tour.relances.etat.fermees": "Disabled: no reminder is sent.",
+  "tour.relances.etat.ouvertes": "Enabled since {date}.",
+  "tour.relances.etat.suspension": "Enabled since {date}, with automatic suspension.",
   "tour.abonnement.report": "Carry-over of reads",
   "tour.abonnement.report.aide":
     "Unused reads of the plan move to the next month, and no further. Top-ups keep their own expiry.",
@@ -6332,6 +6354,9 @@ const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "paiement.moyen_indisponible": "This payment method is not available.",
+  "courriel.notif.pied":
+    "You receive this message because you hold this Malica Office subscription. You can adjust your notifications in your settings.",
+  "courriel.notif.lienSecours": "The button does not open? Copy this link into your browser:",
   "pme.reglages.paiement.facture": "Invoice {numero}",
   "pme.reglages.factures.titre": "Your invoices",
   "pme.reglages.factures.reste": "Left to pay: {montant} {devise} incl. VAT",
@@ -9648,6 +9673,15 @@ const ar: Dict = {
   "tour.ia.enVigueur": "الساري: {plafond} $ لكل مؤسسة شهريًا، منذ {date}.",
   "tour.ia.plafond": "السقف الشهري (دولار)",
   "tour.ia.plafond.borne": "عدد موجب، بأربعة أرقام عشرية على الأكثر.",
+  "tour.relances": "تذكيرات الفواتير غير المسددة",
+  "tour.relances.aide":
+    "عند تفعيلها، تراسل Malica صاحب الفاتورة المتأخرة: تذكير، ثم متابعة، ثم إشعار، ثم إعلان التعليق. رسالة واحدة لكل فاتورة ولكل مرحلة. عند إيقافها، لا يُرسل شيء.",
+  "tour.relances.actives": "إرسال التذكيرات",
+  "tour.relances.suspension": "تعليق الترخيص تلقائيًا في المرحلة الأخيرة",
+  "tour.relances.suspension.aide": "وإلا يبقى التعليق قرارك، من قائمة التراخيص.",
+  "tour.relances.etat.fermees": "موقوفة: لا يُرسل أي تذكير.",
+  "tour.relances.etat.ouvertes": "مفعّلة منذ {date}.",
+  "tour.relances.etat.suspension": "مفعّلة منذ {date}، مع التعليق التلقائي.",
   "tour.abonnement.report": "ترحيل القراءات",
   "tour.abonnement.report.aide":
     "تنتقل قراءات الباقة غير المستهلكة إلى الشهر الموالي، ولا أبعد من ذلك. تحتفظ الأرصدة بأجلها الخاص.",
@@ -9685,6 +9719,9 @@ const ar: Dict = {
   "pme.payer.securise": "دفع آمن عبر {prestataire}",
   "pme.payer.rienARegler": "لم يعد هذا الدفع مستحقًا.",
   "paiement.moyen_indisponible": "وسيلة الدفع هذه غير متاحة.",
+  "courriel.notif.pied":
+    "تتلقون هذه الرسالة لأنكم أصحاب اشتراك Malica Office هذا. يمكنكم ضبط إشعاراتكم من إعداداتكم.",
+  "courriel.notif.lienSecours": "الزر لا يفتح؟ انسخوا هذا الرابط في متصفحكم:",
   "pme.reglages.paiement.facture": "الفاتورة {numero}",
   "pme.reglages.factures.titre": "فواتيركم",
   "pme.reglages.factures.reste": "المتبقي للدفع: {montant} {devise} شامل الأداء",
