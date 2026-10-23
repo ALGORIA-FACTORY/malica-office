@@ -213,13 +213,9 @@ function CabinetPilotage() {
       new Date(iso),
     );
 
-  const panne =
-    clients.error ??
-    membres.error ??
-    affectations.error ??
-    reglages.error ??
-    statistiques.error ??
-    stats.error;
+  const panne = clients.error ?? membres.error ?? affectations.error ?? reglages.error;
+  const panneStats = statistiques.error ?? stats.error;
+  const statsDisponibles = clientIds.length === 0 || stats.isSuccess;
   if (panne) {
     return (
       <p role="alert" className="cab-surface text-signal-stop">
@@ -231,9 +227,7 @@ function CabinetPilotage() {
     clients.isPending ||
     membres.isPending ||
     affectations.isPending ||
-    reglages.isPending ||
-    statistiques.isPending ||
-    (clientIds.length > 0 && stats.isPending)
+    reglages.isPending
   ) {
     return (
       <p role="status" className="cab-surface">
@@ -274,6 +268,12 @@ function CabinetPilotage() {
         }
       />
 
+      {panneStats ? (
+        <p role="alert" className="cab-surface text-signal-stop">
+          {texteDeLErreur(panneStats, "routes/_authenticated/cabinet.pilotage", t("common.error"))}
+        </p>
+      ) : null}
+
       {/* ---- les chiffres */}
       <div className="cab-summary-grid cab-summary-grid-four">
         {[
@@ -298,7 +298,7 @@ function CabinetPilotage() {
           {
             key: "sup",
             label: t("cab.pil.kpi.supervisees"),
-            value: String(statistiques.data?.socle.comptabilisees ?? 0),
+            value: statistiques.isSuccess ? String(statistiques.data.socle.comptabilisees) : "—",
             ctx: t("cab.pil.kpi.supervisees.ctx"),
           },
         ].map((k) => (
@@ -381,7 +381,7 @@ function CabinetPilotage() {
                         {[
                           [t("cab.pil.m.dossiers"), String(c.mandats.length)],
                           [t("cab.pil.m.attente"), String(c.attente)],
-                          [t("cab.pil.m.traitees"), String(c.traitees)],
+                          [t("cab.pil.m.traitees"), statsDisponibles ? String(c.traitees) : "—"],
                           [t("cab.pil.m.delai"), heures(c.delai)],
                           [t("cab.pil.m.retour"), c.retour === null ? "—" : pourcent(c.retour)],
                         ].map(([label, valeur]) => (
@@ -455,10 +455,10 @@ function CabinetPilotage() {
                     premier={premier}
                     client={m}
                     attente={m.counts.comptabilisee}
-                    traitees={s?.supervisees ?? 0}
+                    traitees={statsDisponibles ? (s?.supervisees ?? 0) : null}
                     delai={heures(s && s.heuresMoyennes > 0 ? s.heuresMoyennes : null)}
-                    sante={t(santeDuMandat(taux, tauxCabinet))}
-                    aSuivre={santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"}
+                    sante={statsDisponibles ? t(santeDuMandat(taux, tauxCabinet)) : "—"}
+                    aSuivre={statsDisponibles && santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"}
                   />
                 );
               })}
@@ -582,7 +582,9 @@ function CabinetPilotage() {
             )}
           </section>
         </>
-      ) : (
+      ) : statistiques.isPending ? (
+        <p role="status">{t("common.loading")}</p>
+      ) : statistiques.isError ? null : (
         <Statistiques
           parMois={statistiques.data?.parMois ?? []}
           motifs={statistiques.data?.motifsDeRetour ?? []}
@@ -609,7 +611,7 @@ function LigneMatrice({
   premier: boolean;
   client: ClientSummary;
   attente: number;
-  traitees: number;
+  traitees: number | null;
   delai: string;
   sante: string;
   aSuivre: boolean;
@@ -641,7 +643,7 @@ function LigneMatrice({
         </Link>
       </InkCell>
       <InkCell numeric>{attente}</InkCell>
-      <InkCell numeric>{traitees}</InkCell>
+      <InkCell numeric>{traitees ?? "—"}</InkCell>
       <InkCell numeric>{delai}</InkCell>
       <InkCell>
         <span className={cn("text-[12px]", aSuivre ? "text-signal-warn" : "text-muted-foreground")}>
@@ -710,6 +712,7 @@ function Statistiques({
                 role="img"
                 aria-label={t("cab.pil.stats.mois")}
                 className="cab-production-chart"
+                style={{ minWidth: Math.max(600, mois.length * 80 + 72) }}
               >
                 {[0, 1, 2, 3, 4].map((tick) => {
                   const y = 236 - tick * 50;

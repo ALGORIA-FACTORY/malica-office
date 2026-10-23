@@ -156,3 +156,27 @@ test("invitation : accès direct et adresse invalide refusée sans envoi", async
   expect(await adresse.evaluate((el: HTMLInputElement) => el.validity.valid)).toBe(false);
   expect(envois).toEqual([]);
 });
+
+test("une panne des statistiques laisse les affectations accessibles", async ({ page }) => {
+  await page.route("**/rpc", async (route) => {
+    const appel = route.request().postDataJSON() as { depot?: string; methode?: string };
+    if (
+      (appel.depot === "supervision" && appel.methode === "statistiques") ||
+      (appel.depot === "collab" && appel.methode === "stats")
+    ) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ erreur: "Statistiques temporairement indisponibles" }),
+      });
+    } else await route.continue();
+  });
+  await page.goto("/cabinet/pilotage");
+  await expect(page.locator("#affecter form")).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(
+    "Statistiques temporairement indisponibles",
+    { timeout: 20_000 },
+  );
+  await expect(page.locator("#affecter select").first()).toBeEnabled();
+  await expect(page.locator(".cab-summary-value").last()).toHaveText("—");
+});
