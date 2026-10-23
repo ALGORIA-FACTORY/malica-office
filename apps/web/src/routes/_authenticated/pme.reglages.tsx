@@ -13,6 +13,7 @@ import {
   PayerALAnnee,
 } from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
+import { Aide } from "@/components/malica/aide";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
@@ -128,9 +129,19 @@ function PmeReglages() {
       <h1>{t("pme.reglages.titre")}</h1>
 
       {/* ─────────────────────────────────────────────────── le compte */}
+      {/*
+       * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
+       * chaque phrase d'explication de cet écran est passée derrière le ⓘ de
+       * son titre (`components/malica/aide.tsx`). Rien n'est supprimé.
+       */}
       <div className="sec">
-        <h2>{t("pme.reglages.compte")}</h2>
-        <span>{t("pme.reglages.compte.sous")}</span>
+        <h2>
+          {t("pme.reglages.compte")}
+          <Aide
+            titre={t("pme.reglages.compte")}
+            paragraphes={[{ texte: t("pme.reglages.profil.aide") }]}
+          />
+        </h2>
       </div>
       <div className="card">
         <div className="moi">
@@ -160,12 +171,23 @@ function PmeReglages() {
 
       {/* ─────────────────────────────────────────────── l'abonnement */}
       <div className="sec">
-        <h2>{t("pme.reglages.abo")}</h2>
-        <span>{t("pme.reglages.abo.sous")}</span>
+        <h2>
+          {t("pme.reglages.abo")}
+          <Aide
+            titre={t("pme.reglages.abo")}
+            paragraphes={[
+              { texte: t("pme.reglages.abo.sous") },
+              ...(COMMERCE ? [{ texte: t("pme.reglages.abo.facture") }] : []),
+            ]}
+          />
+        </h2>
       </div>
       <div className="card abo">
         <div className="nm">
-          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}</b>
+          <b>
+            {f?.offre ? libelleDOffre(catalogue, f.offre) : ABSENT}
+            {f?.statut ? <span className="etat-lic"> · {etatDeLicence(f.statut, t)}</span> : null}
+          </b>
           {COMMERCE ? (
             <span className="px">
               {f?.prix_mensuel_ht ? `${aLEchelle(f.prix_mensuel_ht)} ${pme.currency}` : ABSENT}
@@ -198,10 +220,6 @@ function PmeReglages() {
             <u>{t("pme.reglages.abo.lectures")}</u>
             <b>{nombre(f?.lectures_droit, locale)}</b>
           </div>
-          <div>
-            <u>{t("pme.reglages.abo.statut")}</u>
-            <b>{f?.statut ?? ABSENT}</b>
-          </div>
         </div>
 
         <div className="q">
@@ -227,7 +245,6 @@ function PmeReglages() {
             <p className="warn">{t("pme.reglages.abo.bientot", { count: bientot })}</p>
           ) : null}
           {abo.ennui ? <p className="warn">{abo.ennui}</p> : null}
-          {COMMERCE ? <p className="nxt">{t("pme.reglages.abo.facture")}</p> : null}
         </div>
       </div>
 
@@ -240,25 +257,46 @@ function PmeReglages() {
       {COMMERCE ? (
         <>
           <div className="sec">
-            <h2>{t("pme.reglages.offres")}</h2>
+            <h2>
+              {t("pme.reglages.offres")}
+              <Aide
+                titre={t("pme.reglages.offres")}
+                paragraphes={[{ texte: t("pme.reglages.offres.sous") }]}
+              />
+            </h2>
           </div>
-          <p className="t-body">{t("pme.reglages.offres.sous")}</p>
           <ChangerDOffre />
           <PayerALAnnee />
           <ARegler />
           <MesFactures />
 
           <div className="sec">
-            <h2>{t("pme.reglages.recharges")}</h2>
+            <h2>
+              {t("pme.reglages.recharges")}
+              <Aide
+                titre={t("pme.reglages.recharges")}
+                paragraphes={[{ texte: t("pme.reglages.recharges.sous") }]}
+              />
+            </h2>
           </div>
-          <p className="t-body">{t("pme.reglages.recharges.sous")}</p>
           <MesRecharges />
         </>
       ) : null}
 
       {/* ───────────────────────────────────────────── les organisations */}
       <div className="sec">
-        <h2>{t("pme.reglages.orgs")}</h2>
+        <h2>
+          {t("pme.reglages.orgs")}
+          <Aide
+            titre={t("pme.reglages.orgs")}
+            paragraphes={[
+              {
+                texte: `${t("pme.reglages.org.matricule")} ${t("pme.reglages.org.matricule.fort")}`,
+              },
+              { texte: t("pme.reglages.orgs.ajouter.sous") },
+            ]}
+          />
+        </h2>
         <span>
           {t("pme.reglages.surTotal", {
             n: abo.organisations.length,
@@ -287,7 +325,6 @@ function PmeReglages() {
             </i>
             <span className="bd">
               <b>{t("pme.reglages.orgs.ajouter")}</b>
-              <span>{t("pme.reglages.orgs.ajouter.sous")}</span>
             </span>
           </Link>
         ) : COMMERCE ? (
@@ -312,15 +349,22 @@ function PmeReglages() {
 
       {/* ───────────────────────────────────────────────────── les sièges */}
       <div className="sec">
-        <h2>{t("pme.reglages.sieges")}</h2>
+        <h2>
+          {t("pme.reglages.sieges")}
+          <Aide
+            titre={t("pme.reglages.sieges")}
+            paragraphes={[
+              { texte: t("pme.reglages.sieges.sous") },
+              { texte: t("pme.membres.roles.aide") },
+              { texte: t("pme.membres.lede") },
+            ]}
+          />
+        </h2>
+        {/* Le même compte que la ligne de l'abonnement : occupés sur inclus. */}
         <span>
-          {t("pme.reglages.surTotal", {
-            n: nombre(f?.sieges_occupes, locale),
-            total: plafond(f, locale, t),
-          })}
+          {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
         </span>
       </div>
-      <p className="t-body">{t("pme.reglages.sieges.sous")}</p>
       <Sieges abo={abo} verrou={verrous.sieges} />
 
       {/*
@@ -346,7 +390,17 @@ function PmeReglages() {
 
       {/* ──────────────────────── la fiche, les alertes, les échéances */}
       <div className="sec">
-        <h2>{t("fiche.titre")}</h2>
+        <h2>
+          {t("fiche.titre")}
+          <Aide
+            titre={t("fiche.titre")}
+            paragraphes={[
+              { titre: t("fiche.champ.imposition"), texte: t("fiche.sous") },
+              { titre: t("pme.nav.notifs"), texte: t("pme.reglages.alertes.sous") },
+              { titre: t("pme.nav.echeances"), texte: t("pme.reglages.echeances.sous") },
+            ]}
+          />
+        </h2>
       </div>
       <div className="rows">
         {/*
@@ -359,7 +413,6 @@ function PmeReglages() {
         <Link to="/pme/fiche" className="rw">
           <span className="bd">
             <b>{t("fiche.champ.imposition")}</b>
-            <span>{t("fiche.sous")}</span>
           </span>
           <IcChevron />
         </Link>
@@ -371,14 +424,12 @@ function PmeReglages() {
         <Link to="/pme/notifications" className="rw">
           <span className="bd">
             <b>{t("pme.nav.notifs")}</b>
-            <span>{t("pme.reglages.alertes.sous")}</span>
           </span>
           <IcChevron />
         </Link>
         <Link to="/pme/echeances" className="rw">
           <span className="bd">
             <b>{t("pme.nav.echeances")}</b>
-            <span>{t("pme.reglages.echeances.sous")}</span>
           </span>
           <IcChevron />
         </Link>
@@ -403,7 +454,13 @@ function PmeReglages() {
       </div>
 
       <div className="sec">
-        <h2>{t("pme.reglages.apparence")}</h2>
+        <h2>
+          {t("pme.reglages.apparence")}
+          <Aide
+            titre={t("pme.reglages.apparence")}
+            paragraphes={[{ texte: t("pme.reglages.apparence.note") }]}
+          />
+        </h2>
       </div>
       <div className="seg">
         {apparences.map((a) => (
@@ -418,32 +475,47 @@ function PmeReglages() {
           </button>
         ))}
       </div>
-      <p className="foot">{t("pme.reglages.apparence.note")}</p>
 
       {/* ───────────────────────────────────────────────── vos données */}
       <div className="sec">
-        <h2>{t("pme.reglages.donnees")}</h2>
-        <span>{t("pme.reglages.donnees.sous")}</span>
+        <h2>
+          {t("pme.reglages.donnees")}
+          <Aide
+            titre={t("pme.reglages.donnees")}
+            paragraphes={[
+              { texte: t("pme.reglages.note") },
+              {
+                titre: t("pme.reglages.donnees.espace"),
+                texte: t("pme.reglages.donnees.espace.sous"),
+              },
+              {
+                titre: t("pme.reglages.donnees.biblio"),
+                texte: t("pme.reglages.donnees.biblio.sous"),
+              },
+              {
+                titre: t("pme.reglages.donnees.conservation"),
+                texte: t("pme.reglages.donnees.conservation.sous"),
+              },
+            ]}
+          />
+        </h2>
       </div>
       <div className="rows">
         <Link to="/pme/coffre" className="rw">
           <span className="bd">
             <b>{t("pme.reglages.donnees.espace")}</b>
-            <span>{t("pme.reglages.donnees.espace.sous")}</span>
           </span>
           <IcChevron />
         </Link>
         <Link to="/pme/list" className="rw">
           <span className="bd">
             <b>{t("pme.reglages.donnees.biblio")}</b>
-            <span>{t("pme.reglages.donnees.biblio.sous")}</span>
           </span>
           <IcChevron />
         </Link>
         <div className="rw">
           <span className="bd">
             <b>{t("pme.reglages.donnees.conservation")}</b>
-            <span>{t("pme.reglages.donnees.conservation.sous")}</span>
           </span>
           <span className="vl">{t("pme.reglages.donnees.conservation.valeur")}</span>
         </div>
@@ -454,13 +526,15 @@ function PmeReglages() {
          */}
       </div>
 
-      <div className="note">
-        <p>{t("pme.reglages.note")}</p>
-      </div>
-
       {/* ───────────────────────── signaler, les pannes, la version */}
       <div className="sec">
-        <h2>{t("pme.reglages.signaler")}</h2>
+        <h2>
+          {t("pme.reglages.signaler")}
+          <Aide
+            titre={t("pme.reglages.signaler")}
+            paragraphes={[{ texte: t("pme.reglages.signaler.sous") }]}
+          />
+        </h2>
       </div>
       <Signalement />
       <PannesConstatees />
@@ -695,16 +769,7 @@ function Organisation({
         <IcCadenas />
         {matricule ?? ABSENT}
       </span>
-      {/*
-       * Deux phrases, pas une coupée en deux : le gras portait un fragment au
-       * milieu d'une phrase, et une insertion en milieu de phrase ne se
-       * traduit pas — l'ordre des mots change d'une langue à l'autre, et de
-       * droite à gauche le fragment atterrit ailleurs. La phrase forte est
-       * donc une phrase entière.
-       */}
-      <p className="mn">
-        {t("pme.reglages.org.matricule")} <b>{t("pme.reglages.org.matricule.fort")}</b>
-      </p>
+      {/* L'origine du matricule et son immuabilité : dans le ⓘ de « Sociétés ». */}
       <p className="mn">
         {t("pme.reglages.org.cabinet")}{" "}
         <b>{cabinet.data?.name ?? t("pme.reglages.org.cabinet.aucun")}</b>
@@ -898,7 +963,6 @@ function LeMandat({ tenantId }: { tenantId: string }) {
 
   return (
     <>
-      {m?.revocable ? <p className="mn">{t("pme.reglages.org.revocation")}</p> : null}
       <div className="acts">
         <button type="button" onClick={() => setOuvert((v) => !v)} aria-expanded={ouvert}>
           {t("pme.reglages.org.voirMandat")}
@@ -935,6 +999,8 @@ function LeMandat({ tenantId }: { tenantId: string }) {
 
       {revoquer && m?.revocable ? (
         <div className="mt-2">
+          {/* Ce que la révocation fait se dit au moment du geste, pas en permanence. */}
+          <p className="t-body">{t("pme.reglages.org.revocation")}</p>
           <p className="t-body">
             {t("pme.reglages.org.mandat.motif.aide", { nom: m.comptabilite })}
           </p>
@@ -997,12 +1063,8 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
         <div className="grp" key={g.tenantId}>
           <div className="t">
             <b>{g.organisation}</b>
-            <span>
-              {t("pme.reglages.surTotal", {
-                n: g.lignes.length,
-                total: nombre(abo.forfait?.sieges_max, locale),
-              })}
-            </span>
+            {/* Le plafond se lit en tête de section ; ici, qui est là. */}
+            <span>{nombre(g.lignes.length, locale)}</span>
           </div>
           {g.lignes.map((s) => (
             <Siege
@@ -1120,11 +1182,8 @@ function Siege({
             {roleLisible(siege.role, t)}
           </span>
         </span>
-        {/* Les lectures par siège ne sont pas dans `licence_sieges_v`. */}
-        <span className="n">
-          <b>{ABSENT}</b>
-          <span>{t("pme.reglages.siege.lectures")}</span>
-        </span>
+        {/* Pas de colonne « Lectures » : `licence_sieges_v` ne les porte pas,
+            et un « — » permanent n'informait de rien. */}
       </div>
       {dirigeant && !moi ? (
         /*
@@ -1220,9 +1279,14 @@ function PannesConstatees() {
   return (
     <>
       <div className="sec">
-        <h2>{t("pme.reglages.pannes")}</h2>
+        <h2>
+          {t("pme.reglages.pannes")}
+          <Aide
+            titre={t("pme.reglages.pannes")}
+            paragraphes={[{ texte: t("pme.reglages.pannes.sous") }]}
+          />
+        </h2>
       </div>
-      <p className="t-body">{t("pme.reglages.pannes.sous")}</p>
       <div className="rows">
         {(pannes.data ?? []).map((p) => (
           <div key={p.id} className="rw">
@@ -1284,12 +1348,11 @@ function Signalement() {
 
   return (
     <div className="card">
-      <p className="t-body">{t("pme.reglages.signaler.sous")}</p>
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         maxLength={2000}
-        rows={3}
+        rows={2}
         placeholder={t("pme.reglages.signaler.champ")}
         aria-label={t("pme.reglages.signaler")}
         className="mt-2 w-full border border-line-strong bg-transparent px-3 py-2 text-[14px] leading-[1.45] placeholder:text-muted-foreground"
@@ -1366,6 +1429,14 @@ function lecturesQuiSAchevent(f: MonForfait | null): number | null {
 function initiale(valeur: string | null): string {
   const c = (valeur ?? "").trim().charAt(0);
   return c === "" ? "·" : c.toUpperCase();
+}
+
+/** L'état de la licence, dit en mots ; un état inconnu garde son code. */
+function etatDeLicence(code: string, t: (k: MessageKey) => string): string {
+  if (code === "active") return t("pme.reglages.abo.etat.active");
+  if (code === "suspendue") return t("pme.reglages.abo.etat.suspendue");
+  if (code === "resiliee") return t("pme.reglages.abo.etat.resiliee");
+  return code;
 }
 
 /** Les deux rôles qu'un dossier de PME connaît ; les autres gardent leur code. */

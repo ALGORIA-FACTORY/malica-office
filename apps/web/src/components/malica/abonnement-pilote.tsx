@@ -127,7 +127,7 @@ export function MonNom() {
    */
   return (
     <div className="mt-3">
-      <p className="t-body">{t("pme.reglages.profil.aide")}</p>
+      {/* L'explication (« votre prénom vous salue… ») est dans le ⓘ de « Compte ». */}
       {profil.isPending ? (
         <p role="status">{t("common.loading")}</p>
       ) : profil.isError ? (

@@ -260,6 +260,13 @@ const fr = {
   "pack.none": "Aucun référentiel chargé pour cette juridiction.",
 
   "common.loading": "Chargement…",
+  "common.aide": "En savoir plus",
+  "common.fermer": "Fermer",
+  "pme.membres.roles.aide":
+    "Utilisateur : le quotidien — il dépose et suit les pièces. Propriétaire : il dirige la société, et sa place est payée.",
+  "pme.reglages.abo.etat.active": "Active",
+  "pme.reglages.abo.etat.suspendue": "Suspendue",
+  "pme.reglages.abo.etat.resiliee": "Résiliée",
   "common.cancel": "Annuler",
 
   "pme.nav.capture": "Capture",
@@ -404,8 +411,8 @@ const fr = {
   "pme.membres.titre": "Qui entre dans ce dossier",
   "pme.membres.lede":
     "Invitez quelqu'un par son adresse. Il crée son compte lui-même, et votre invitation l'attend — son mot de passe ne passe par personne.",
-  "pme.membres.role.dirigeant": "Propriétaire — dirige, place payée",
-  "pme.membres.role.collaborateur": "Utilisateur — le quotidien",
+  "pme.membres.role.dirigeant": "Propriétaire",
+  "pme.membres.role.collaborateur": "Utilisateur",
   "pme.membres.adresse": "adresse e-mail",
   "pme.membres.inviter": "Inviter",
   "pme.membres.envoyee": "Invitation envoyée à {email}.",
@@ -1864,7 +1871,7 @@ const fr = {
   "pme.reglages.alertes.sous": "Ce que j'ai signalé, et ce que votre comptable a répondu",
   "pme.reglages.echeances.sous": "Les dates qui viennent, annoncées à l'avance",
   "pme.reglages.pied": "Malica — Édition One · Algoria Factory",
-  "pme.reglages.signaler": "Quelque chose n'a pas marché ?",
+  "pme.reglages.signaler": "Signaler un problème",
   "pme.reglages.signaler.sous":
     "Dites-le en une phrase. Elle arrive telle quelle à l'équipe, avec l'écran et la version — jamais vos documents.",
   "pme.reglages.pannes": "Ce qui n’a pas marché",
@@ -2659,20 +2666,18 @@ const fr = {
   "pme.home.societes": "Mes sociétés",
 
   /* ──────────────────────────────────────────── réglages : mon espace */
-  "pme.reglages.compte": "Votre compte",
-  "pme.reglages.compte.sous": "Une personne",
+  "pme.reglages.compte": "Compte",
   "pme.reglages.compte.orgs": "Un compte, {count} organisations",
   "pme.reglages.compte.orgs#one": "Un compte, {count} organisation",
   "pme.reglages.compte.orgs#other": "Un compte, {count} organisations",
-  "pme.reglages.abo": "Votre abonnement",
+  "pme.reglages.abo": "Abonnement",
   "pme.reglages.abo.sous": "Licence en direct",
   "pme.reglages.abo.ht": "HT par mois · le TTC est porté par la facture",
-  "pme.reglages.abo.organisations": "Organisations de la licence",
-  "pme.reglages.abo.siegesOccupes": "Sièges occupés sur sièges inclus",
-  "pme.reglages.abo.siegesMax": "Sièges au maximum",
+  "pme.reglages.abo.organisations": "Sociétés",
+  "pme.reglages.abo.siegesOccupes": "Utilisateurs inclus",
+  "pme.reglages.abo.siegesMax": "Utilisateurs au maximum",
   "pme.reglages.abo.lectures": "Lectures par mois",
-  "pme.reglages.abo.statut": "État de la licence",
-  "pme.reglages.abo.consommees": "Lectures consommées",
+  "pme.reglages.abo.consommees": "Lectures ce mois",
   "pme.reglages.abo.bientot":
     "Il reste {count} lectures ce mois. La capture ne s’arrête jamais : les pièces s’empilent, non lues, et la lecture reprend au renouvellement.",
   "pme.reglages.abo.bientot#one":
@@ -2685,7 +2690,7 @@ const fr = {
     "L’abonnement est détenu par le dirigeant de ce dossier : vous n’en voyez ni le prix ni les plafonds.",
   "pme.reglages.abo.sansLicence":
     "Aucune licence n’est rattachée à ce compte. Les plafonds et le prix restent vides jusque-là.",
-  "pme.reglages.orgs": "Vos organisations",
+  "pme.reglages.orgs": "Sociétés",
   "pme.reglages.orgs.aucune": "Aucune organisation sur cette licence.",
   "pme.reglages.orgs.ajouter": "Ajouter une société",
   "pme.reglages.orgs.ajouter.sous":
@@ -2918,7 +2923,7 @@ const fr = {
   "pme.reglages.proprietaires.transmis": "C'est fait : {nom} est propriétaire principal.",
   "pme.reglages.proprietaires.aucun":
     "Aucun autre propriétaire pour l'instant : invitez-en un d'abord.",
-  "pme.reglages.sieges": "Les sièges",
+  "pme.reglages.sieges": "Utilisateurs",
   "pme.reglages.sieges.sous":
     "Un siège est une licence pour une personne dans une organisation — jamais un établissement. Chaque siège ne voit que ses propres pièces ; vous voyez tout.",
   "pme.reglages.sieges.verrou":
@@ -2930,10 +2935,10 @@ const fr = {
   "pme.reglages.org.matricule":
     "Matricule établi par lecture de la carte d’identification fiscale.",
   "pme.reglages.org.matricule.fort": "Immuable dès la première pièce reçue.",
-  "pme.reglages.org.cabinet": "Comptabilité mandatée :",
-  "pme.reglages.org.cabinet.aucun": "aucune",
+  "pme.reglages.org.cabinet": "Cabinet :",
+  "pme.reglages.org.cabinet.aucun": "aucun",
   "pme.reglages.org.mandat.nonLu": "état et date du mandat non lus",
-  "pme.reglages.org.lectures": "Lectures consommées ce mois :",
+  "pme.reglages.org.lectures": "Lectures ce mois :",
   "pme.reglages.org.revocation":
     "Vous seul pouvez révoquer ce mandat. Il prend fin le jour même, et la comptabilité en est informée.",
   "pme.reglages.org.mandat.actif": "{nom} tient votre comptabilité depuis le {date}.",
@@ -2976,7 +2981,6 @@ const fr = {
   "pme.reglages.annuel.ferme.deja_engage": "Vous êtes déjà engagé à l'année.",
   "pme.reglages.org.voirMandat": "Voir le mandat",
   "pme.reglages.org.revoquer": "Révoquer",
-  "pme.reglages.siege.lectures": "Lectures",
   "pme.reglages.siege.reprendre": "Reprendre la place",
   "pme.reglages.siege.liberee":
     "Place libérée. Les pièces de la société restent ; celles de son espace privé le suivent.",
@@ -2995,8 +2999,7 @@ const fr = {
     "{email} avait déjà une invitation en attente : elle tient toujours.",
   "pme.reglages.siege.invite.envoyee":
     "Invitation envoyée à {email}. Elle l’attend dans son portail ; son mot de passe ne passe par personne.",
-  "pme.reglages.donnees": "Vos données",
-  "pme.reglages.donnees.sous": "À vous, toujours",
+  "pme.reglages.donnees": "Données",
   "pme.reglages.donnees.espace": "Mon espace personnel",
   "pme.reglages.donnees.espace.sous":
     "Attaché à votre compte, pas à l’organisation. Rien n’en sort.",
@@ -3875,6 +3878,13 @@ const en: Dict = {
   "pack.none": "No reference set loaded for this jurisdiction.",
 
   "common.loading": "Loading…",
+  "common.aide": "Learn more",
+  "common.fermer": "Close",
+  "pme.membres.roles.aide":
+    "User: day-to-day work — submits and follows documents. Owner: runs the company, and their seat is paid.",
+  "pme.reglages.abo.etat.active": "Active",
+  "pme.reglages.abo.etat.suspendue": "Suspended",
+  "pme.reglages.abo.etat.resiliee": "Cancelled",
   "common.cancel": "Cancel",
 
   "pme.nav.capture": "Capture",
@@ -3983,8 +3993,8 @@ const en: Dict = {
   "pme.membres.titre": "Who gets into this file",
   "pme.membres.lede":
     "Invite someone by their address. They create their own account, and your invitation is waiting for them — their password goes through no one.",
-  "pme.membres.role.dirigeant": "Owner — runs it, paid seat",
-  "pme.membres.role.collaborateur": "User — day to day",
+  "pme.membres.role.dirigeant": "Owner",
+  "pme.membres.role.collaborateur": "User",
   "pme.membres.adresse": "email address",
   "pme.membres.inviter": "Invite",
   "pme.membres.envoyee": "Invitation sent to {email}.",
@@ -5411,7 +5421,7 @@ const en: Dict = {
   "pme.reglages.alertes.sous": "What I flagged, and what your accountant answered",
   "pme.reglages.echeances.sous": "The dates coming up, announced ahead of time",
   "pme.reglages.pied": "Malica — Edition One · Algoria Factory",
-  "pme.reglages.signaler": "Something didn't work?",
+  "pme.reglages.signaler": "Report a problem",
   "pme.reglages.signaler.sous":
     "Say it in one sentence. It reaches the team as is, with the screen and the version — never your documents.",
   "pme.reglages.pannes": "What did not work",
@@ -6189,20 +6199,18 @@ const en: Dict = {
   "pme.home.societes": "My companies",
 
   /* ──────────────────────────────────────────── settings: my space */
-  "pme.reglages.compte": "Your account",
-  "pme.reglages.compte.sous": "One person",
+  "pme.reglages.compte": "Account",
   "pme.reglages.compte.orgs": "One account, {count} organisations",
   "pme.reglages.compte.orgs#one": "One account, {count} organisation",
   "pme.reglages.compte.orgs#other": "One account, {count} organisations",
-  "pme.reglages.abo": "Your subscription",
+  "pme.reglages.abo": "Subscription",
   "pme.reglages.abo.sous": "Licence held directly",
   "pme.reglages.abo.ht": "Net per month · the gross amount is on the invoice",
-  "pme.reglages.abo.organisations": "Organisations on the licence",
-  "pme.reglages.abo.siegesOccupes": "Seats taken of seats included",
-  "pme.reglages.abo.siegesMax": "Seats at most",
+  "pme.reglages.abo.organisations": "Companies",
+  "pme.reglages.abo.siegesOccupes": "Users included",
+  "pme.reglages.abo.siegesMax": "Users at most",
   "pme.reglages.abo.lectures": "Reads per month",
-  "pme.reglages.abo.statut": "Licence status",
-  "pme.reglages.abo.consommees": "Reads used",
+  "pme.reglages.abo.consommees": "Reads this month",
   "pme.reglages.abo.bientot":
     "{count} reads left this month. Capture never stops: documents pile up unread, and reading resumes at renewal.",
   "pme.reglages.abo.bientot#one":
@@ -6215,7 +6223,7 @@ const en: Dict = {
     "The subscription is held by the owner of this file: you see neither its price nor its caps.",
   "pme.reglages.abo.sansLicence":
     "No licence is attached to this account. Caps and price stay empty until then.",
-  "pme.reglages.orgs": "Your organisations",
+  "pme.reglages.orgs": "Companies",
   "pme.reglages.orgs.aucune": "No organisation on this licence.",
   "pme.reglages.orgs.ajouter": "Add a company",
   "pme.reglages.orgs.ajouter.sous":
@@ -6438,7 +6446,7 @@ const en: Dict = {
   "pme.reglages.proprietaires.transmettre.confirmer": "Confirm: {nom} becomes main owner",
   "pme.reglages.proprietaires.transmis": "Done: {nom} is now the main owner.",
   "pme.reglages.proprietaires.aucun": "No other owner yet: invite one first.",
-  "pme.reglages.sieges": "Seats",
+  "pme.reglages.sieges": "Users",
   "pme.reglages.sieges.sous":
     "A seat is a licence for one person in one organisation — never a branch. Each seat sees only its own documents; you see everything.",
   "pme.reglages.sieges.verrou":
@@ -6448,10 +6456,10 @@ const en: Dict = {
   "pme.reglages.org.surLicence": "On the licence",
   "pme.reglages.org.matricule": "Tax number established by reading the tax identification card.",
   "pme.reglages.org.matricule.fort": "Immutable from the first document received.",
-  "pme.reglages.org.cabinet": "Engaged firm:",
+  "pme.reglages.org.cabinet": "Firm:",
   "pme.reglages.org.cabinet.aucun": "no firm",
   "pme.reglages.org.mandat.nonLu": "status and date of the engagement not read",
-  "pme.reglages.org.lectures": "Reads used this month:",
+  "pme.reglages.org.lectures": "Reads this month:",
   "pme.reglages.org.revocation":
     "Only you can end this engagement. It ends the same day, and the accountant is informed.",
   "pme.reglages.org.mandat.actif": "{nom} has kept your books since {date}.",
@@ -6493,7 +6501,6 @@ const en: Dict = {
   "pme.reglages.annuel.ferme.deja_engage": "You are already committed yearly.",
   "pme.reglages.org.voirMandat": "View the engagement",
   "pme.reglages.org.revoquer": "Revoke",
-  "pme.reglages.siege.lectures": "Reads",
   "pme.reglages.siege.reprendre": "Take the seat back",
   "pme.reglages.siege.liberee":
     "Seat released. The company documents stay; the ones in that person's private space follow them.",
@@ -6510,8 +6517,7 @@ const en: Dict = {
   "pme.reglages.siege.invite.deja": "{email} already had a pending invitation: it still stands.",
   "pme.reglages.siege.invite.envoyee":
     "Invitation sent to {email}. It is waiting in their portal; their password passes through no one.",
-  "pme.reglages.donnees": "Your data",
-  "pme.reglages.donnees.sous": "Yours, always",
+  "pme.reglages.donnees": "Data",
   "pme.reglages.donnees.espace": "My private space",
   "pme.reglages.donnees.espace.sous":
     "Attached to your account, not to the organisation. Nothing leaves it.",
@@ -7304,6 +7310,13 @@ const ar: Dict = {
   "pack.none": "لا يوجد مرجع محمّل لهذه الولاية.",
 
   "common.loading": "جارٍ التحميل…",
+  "common.aide": "اعرف المزيد",
+  "common.fermer": "إغلاق",
+  "pme.membres.roles.aide":
+    "المستخدم: العمل اليومي — يودع الوثائق ويتابعها. المالك: يسيّر الشركة، ومقعده مدفوع.",
+  "pme.reglages.abo.etat.active": "نشطة",
+  "pme.reglages.abo.etat.suspendue": "معلّقة",
+  "pme.reglages.abo.etat.resiliee": "منتهية",
   "common.cancel": "إلغاء",
 
   "pme.nav.capture": "التقاط",
@@ -7405,8 +7418,8 @@ const ar: Dict = {
   "pme.membres.titre": "من يدخل هذا الملف",
   "pme.membres.lede":
     "ادعُ شخصًا بعنوانه. ينشئ حسابه بنفسه، ودعوتك في انتظاره — كلمة سرّه لا تمرّ بأحد.",
-  "pme.membres.role.dirigeant": "مالك — يسيّر، مقعد مدفوع",
-  "pme.membres.role.collaborateur": "مستخدم — اليومي",
+  "pme.membres.role.dirigeant": "مالك",
+  "pme.membres.role.collaborateur": "مستخدم",
   "pme.membres.adresse": "عنوان البريد الإلكتروني",
   "pme.membres.inviter": "دعوة",
   "pme.membres.envoyee": "أُرسلت الدعوة إلى {email}.",
@@ -8805,7 +8818,7 @@ const ar: Dict = {
   "pme.reglages.alertes.sous": "ما نبّهتُ إليه، وما أجاب عنه محاسبك",
   "pme.reglages.echeances.sous": "المواعيد القادمة، مُعلَنة مسبقًا",
   "pme.reglages.pied": "ماليكا — إصدار One · Algoria Factory",
-  "pme.reglages.signaler": "هل تعطّل شيء؟",
+  "pme.reglages.signaler": "الإبلاغ عن مشكلة",
   "pme.reglages.signaler.sous":
     "قله في جملة واحدة. تصل إلى الفريق كما هي، مع الشاشة والإصدار — ولا تصل وثائقك أبدًا.",
   "pme.reglages.pannes": "ما لم ينجح",
@@ -9561,20 +9574,18 @@ const ar: Dict = {
   "pme.home.societes": "شركاتي",
 
   /* ────────────────────────────────────────── الإعدادات : فضائي */
-  "pme.reglages.compte": "حسابك",
-  "pme.reglages.compte.sous": "شخص واحد",
+  "pme.reglages.compte": "الحساب",
   "pme.reglages.compte.orgs": "حساب واحد، {count} مؤسسة",
   "pme.reglages.compte.orgs#one": "حساب واحد، مؤسسة واحدة",
   "pme.reglages.compte.orgs#other": "حساب واحد، {count} مؤسسة",
-  "pme.reglages.abo": "اشتراكك",
+  "pme.reglages.abo": "الاشتراك",
   "pme.reglages.abo.sous": "رخصة مباشرة",
   "pme.reglages.abo.ht": "دون الأداء شهريًا · المبلغ جملة تحمله الفاتورة",
-  "pme.reglages.abo.organisations": "المؤسسات المشمولة بالرخصة",
-  "pme.reglages.abo.siegesOccupes": "المقاعد المشغولة من المقاعد المضمّنة",
-  "pme.reglages.abo.siegesMax": "أقصى عدد للمقاعد",
+  "pme.reglages.abo.organisations": "الشركات",
+  "pme.reglages.abo.siegesOccupes": "المستخدمون المضمّنون",
+  "pme.reglages.abo.siegesMax": "أقصى عدد للمستخدمين",
   "pme.reglages.abo.lectures": "القراءات في الشهر",
-  "pme.reglages.abo.statut": "حالة الرخصة",
-  "pme.reglages.abo.consommees": "القراءات المستهلكة",
+  "pme.reglages.abo.consommees": "قراءات هذا الشهر",
   "pme.reglages.abo.bientot":
     "بقيت {count} قراءة هذا الشهر. التصوير لا يتوقّف أبدًا: تتراكم الوثائق دون قراءة، وتعود القراءة عند التجديد.",
   "pme.reglages.abo.bientot#one":
@@ -9585,7 +9596,7 @@ const ar: Dict = {
     "الفاتورة تصدر عن الرخصة وتحمل تفصيل الشهر، ولا تُحتسب من جديد هنا. وتغيير الصيغة يُفوتر بالتناسب مع الأيام.",
   "pme.reglages.abo.collaborateur": "الاشتراك في حوزة مسيّر هذا الملف: لا ترى لا سعره ولا حدوده.",
   "pme.reglages.abo.sansLicence": "لا توجد رخصة مرتبطة بهذا الحساب. تبقى الحدود والسعر فارغة.",
-  "pme.reglages.orgs": "مؤسساتك",
+  "pme.reglages.orgs": "الشركات",
   "pme.reglages.orgs.aucune": "لا توجد مؤسسة على هذه الرخصة.",
   "pme.reglages.orgs.ajouter": "إضافة شركة",
   "pme.reglages.orgs.ajouter.sous":
@@ -9797,7 +9808,7 @@ const ar: Dict = {
   "pme.reglages.proprietaires.transmettre.confirmer": "تأكيد: يصبح {nom} المالك الرئيسي",
   "pme.reglages.proprietaires.transmis": "تم: أصبح {nom} المالك الرئيسي.",
   "pme.reglages.proprietaires.aucun": "لا يوجد مالك آخر حاليا: ادعُ واحدا أولا.",
-  "pme.reglages.sieges": "المقاعد",
+  "pme.reglages.sieges": "المستخدمون",
   "pme.reglages.sieges.sous":
     "المقعد رخصة لشخص واحد داخل مؤسسة واحدة — وليس فرعًا. كلّ مقعد لا يرى إلّا وثائقه، وأنت ترى الجميع.",
   "pme.reglages.sieges.verrou":
@@ -9807,10 +9818,10 @@ const ar: Dict = {
   "pme.reglages.org.surLicence": "على الرخصة",
   "pme.reglages.org.matricule": "المعرّف الجبائي مثبَّت بقراءة بطاقة التعريف الجبائي.",
   "pme.reglages.org.matricule.fort": "غير قابل للتغيير من أوّل وثيقة تُستلَم.",
-  "pme.reglages.org.cabinet": "المكتب المكلَّف:",
+  "pme.reglages.org.cabinet": "المكتب:",
   "pme.reglages.org.cabinet.aucun": "لا يوجد مكتب",
   "pme.reglages.org.mandat.nonLu": "حالة التكليف وتاريخه غير مقروءين",
-  "pme.reglages.org.lectures": "القراءات المستهلكة هذا الشهر:",
+  "pme.reglages.org.lectures": "قراءات هذا الشهر:",
   "pme.reglages.org.revocation":
     "أنت وحدك من يمكنه إنهاء هذه الوكالة. تنتهي في اليوم نفسه، ويُعلَم المحاسب بذلك.",
   "pme.reglages.org.mandat.actif": "{nom} يمسك محاسبتك منذ {date}.",
@@ -9847,7 +9858,6 @@ const ar: Dict = {
   "pme.reglages.annuel.ferme.deja_engage": "أنت ملتزم سنويًا بالفعل.",
   "pme.reglages.org.voirMandat": "الاطّلاع على التكليف",
   "pme.reglages.org.revoquer": "سحب التكليف",
-  "pme.reglages.siege.lectures": "القراءات",
   "pme.reglages.siege.reprendre": "استرجاع المقعد",
   "pme.reglages.siege.liberee":
     "تمّ تحرير المقعد. وثائق الشركة تبقى، أمّا وثائق فضائه الخاص فتتبعه.",
@@ -9861,8 +9871,7 @@ const ar: Dict = {
   "pme.reglages.siege.invite.deja": "كانت لـ {email} دعوة معلّقة من قبل: وهي لا تزال قائمة.",
   "pme.reglages.siege.invite.envoyee":
     "أُرسلت الدعوة إلى {email}. تنتظره في بوّابته، وكلمة سرّه لا تمرّ بأحد.",
-  "pme.reglages.donnees": "بياناتك",
-  "pme.reglages.donnees.sous": "لك دائمًا",
+  "pme.reglages.donnees": "البيانات",
   "pme.reglages.donnees.espace": "فضائي الخاص",
   "pme.reglages.donnees.espace.sous": "مرتبط بحسابك، لا بالمؤسسة. لا شيء يخرج منه.",
   "pme.reglages.donnees.biblio": "مكتبتي",
