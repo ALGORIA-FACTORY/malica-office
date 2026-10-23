@@ -396,7 +396,7 @@ ajoute une place payée (`facturation.droits_v`, `prix_siege_sup`), ce qui est
 un achat au sens des règles de Google Play. Le défaut le plus sûr ferme le geste
 entier dans la coque, même quand la place est incluse.
 
-**À trancher par le dirigeant** : rouvrir l'invitation dans l'application pour
-les seules places incluses (le serveur refuserait alors à une coque la place
-qui serait facturée). C'est un arbitrage commercial et produit, pas un défaut
-de code.
+**Tranché par le dirigeant le 23 octobre 2026 : oui.** L'invitation est rouverte
+dans l'application pour les places incluses ; la base refuse à une coque la
+place qui serait facturée, en comptant les places occupées et les invitations
+en attente (`20261023120000`).
