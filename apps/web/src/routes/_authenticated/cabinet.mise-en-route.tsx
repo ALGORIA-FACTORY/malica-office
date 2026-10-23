@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/mise-en-route")({
     ],
   }),
   validateSearch: (search: Record<string, unknown>): { etape?: 2 } =>
-    search.etape === 2 || search.etape === "2" ? { etape: 2 } : {},
+    search["etape"] === 2 || search["etape"] === "2" ? { etape: 2 } : {},
   component: MiseEnRoute,
 });
 
