@@ -253,9 +253,9 @@ test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
 
 test("un signalement part depuis les réglages", async ({ page }) => {
   await page.goto("/pme/reglages");
-  await expect(page.getByText("Quelque chose n'a pas marché ?")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Signaler un problème/ })).toBeVisible();
   await page
-    .getByLabel("Quelque chose n'a pas marché ?")
+    .getByLabel("Signaler un problème", { exact: true })
     .fill("Épreuve Playwright : rien à signaler.");
   await page.getByRole("button", { name: "Envoyer" }).click();
   await expect(page.getByText("Reçu. Merci — on regarde.")).toBeVisible();
