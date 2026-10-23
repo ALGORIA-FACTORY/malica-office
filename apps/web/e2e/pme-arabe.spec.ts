@@ -14,14 +14,14 @@ test("l'application se tient de droite à gauche, en arabe", async ({ page }) =>
   await page.goto("/pme");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
-  await expect(page.getByText("وثائقك")).toBeVisible();
+  await expect(page.getByText(/^الأداء · /)).toBeVisible();
 });
 
 test("la police arabe est celle de l'application, et les chiffres restent latins", async ({
   page,
 }) => {
   await page.goto("/pme");
-  await expect(page.getByText("وثائقك")).toBeVisible();
+  await expect(page.getByText(/^الأداء · /)).toBeVisible();
   const police = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   expect(police).toMatch(/Noto Kufi Arabic/);
   // Aucun chiffre arabe-indien (٠–٩) sur l'accueil : les montants s'alignent avec le cabinet.
