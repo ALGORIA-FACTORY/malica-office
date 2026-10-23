@@ -56,6 +56,8 @@ interface MoisDeTva {
   periode: string;
   /** La TVA déductible du mois, ou null si le mois n'a rien à dire. */
   recuperee: string | null;
+  /** La TVA collectée du mois, ou null si le mois n'a rien à dire. */
+  collectee: string | null;
   /** Collectée moins déductible. Positif : à reverser. */
   solde: string | null;
 }
@@ -64,6 +66,8 @@ export interface Accueil {
   devise: string;
   /** La TVA récupérée du mois courant. `null` : rien de comptabilisé. */
   recuperee: string | null;
+  /** La TVA collectée du mois courant. `null` : rien de comptabilisé. */
+  collectee: string | null;
   /** L'écart avec le mois précédent, signé. `null` si l'un des deux manque. */
   ecart: string | null;
   /** Douze mois, du plus ancien au mois courant. */
@@ -174,6 +178,7 @@ export function useAccueil(periode: string): Accueil {
     const mois: MoisDeTva[] = moisGlissants(periode, FENETRE).map((p) => ({
       periode: p,
       recuperee: null,
+      collectee: null,
       solde: null,
     }));
     if (!extraits.data || !taux.data || decimalesDuPack === null) return mois;
@@ -227,6 +232,7 @@ export function useAccueil(periode: string): Accueil {
       return {
         periode: m.periode,
         recuperee: calcul.totals.deductible,
+        collectee: calcul.totals.collectee,
         solde: calcul.totals.solde,
       };
     });
@@ -326,6 +332,7 @@ export function useAccueil(periode: string): Accueil {
   return {
     devise,
     recuperee: courant,
+    collectee: serie[serie.length - 1]?.collectee ?? null,
     ecart,
     serie,
     moisDeSuite,

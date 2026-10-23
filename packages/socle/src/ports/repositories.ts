@@ -888,6 +888,12 @@ export interface PieceLue {
   /** La date portée par le DOCUMENT, qui décide de son mois. */
   dateDocument: string | null;
   kind: "facture_achat" | "facture_vente" | null;
+  /**
+   * Le type de document retenu par la base (`pieces.document_kind`), tous
+   * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
+   * ne dit que le sens lu (achat ou vente).
+   */
+  typeDeDocument: string | null;
   /** Le total TTC, chaîne décimale du Socle. */
   total: string | null;
   devise: string | null;
@@ -988,6 +994,12 @@ export interface CaptureRepository {
   /** Les motifs d'annulation du referentiel, traduits. */
   motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
+  /**
+   * Les octets d'une pièce seuls, pour son aperçu dans une liste — sans sa
+   * lecture, ses citations ni ses jetons. `null` quand la ligne existe mais
+   * pas son contenu (un dépôt interrompu).
+   */
+  apercu(pieceId: string): Promise<Blob | null>;
   /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
    * le référentiel propose au choix (`propose_a_la_capture`). Une entrée

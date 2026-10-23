@@ -10,26 +10,27 @@ androidWebViewHierarchy: devtools
 # seul » a disparu de l'écran).
 - assertVisible: "Vos papiers"
 - back
-- assertVisible: "Vos documents"
+# L'accueil du 23 octobre 2026 s'ouvre sur le chiffre du mois (« TVA · <mois> »).
+- assertVisible: "TVA · .*"
 # Malica, ouverte de l'accueil, se referme d'un retour. Depuis le 21 octobre
 # 2026, c'est un écran (/pme/malica) et non plus un fil par-dessus l'accueil ;
-# sa barre « Parler à Malica » est sous la carte de Malica, hors de l'écran.
+# depuis le 23 octobre, on l'ouvre par « Me demander », sur sa carte, plus bas.
 # Centrée : la lecture par les outils de développement donne la barre pour
 # visible alors qu'elle est encore sous la barre basse épinglée (exécution
 # 39627240476 : le tap tombait sur la barre basse).
 - scrollUntilVisible:
-    element: "Parler à Malica"
+    element: "Me demander"
     direction: DOWN
     timeout: 60000
     centerElement: true
-- tapOn: "Parler à Malica"
+- tapOn: "Me demander"
 - extendedWaitUntil:
     visible: "Je cite l'article.*"
     timeout: 20000
-# L'accueil revient à l'endroit où on l'avait laissé, défilé jusqu'à la barre
-# de Malica : c'est elle qui le prouve, pas « Vos documents », plus haut.
+# L'accueil revient à l'endroit où on l'avait laissé, défilé jusqu'à la carte
+# de Malica : c'est elle qui le prouve, pas le chiffre du mois, plus haut.
 - back
-- assertVisible: "Parler à Malica"
+- assertVisible: "Me demander"
 # Depuis l'accueil, le retour quitte : l'application n'est plus au premier plan.
 - back
-- assertNotVisible: "Parler à Malica"
+- assertNotVisible: "Me demander"

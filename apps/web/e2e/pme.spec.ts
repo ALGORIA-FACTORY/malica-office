@@ -21,7 +21,7 @@ test("la session ouverte mène à l'accueil du dirigeant", async ({ page }) => {
   await page.goto("/office");
   await expect(page).toHaveURL(/\/pme$/);
   await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
-  await expect(page.getByText("Vos documents")).toBeVisible();
+  await expect(page.getByText(/^TVA · /)).toBeVisible();
 });
 
 test("depuis l'accueil, la barre de demande mène à la conversation, et on en revient", async ({
@@ -47,9 +47,9 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
    */
   await page.goto("/pme");
 
-  // Le micro de la barre de demande porte le nom accessible ; la barre
-  // entière reste cliquable au doigt.
-  await page.getByRole("button", { name: "Parler à Malica" }).click();
+  // Depuis le 23 octobre 2026, la conversation s'ouvre par « Me demander »,
+  // sur la carte de Malica.
+  await page.getByRole("button", { name: "Me demander", exact: true }).click();
   await expect(page).toHaveURL(/\/pme\/malica$/);
 
   // L'écran du dessin : son composeur, et le pied qui dit ce que Malica ne
@@ -68,7 +68,7 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
   const nav = page.getByRole("navigation", { name: "Navigation principale" });
   await nav.getByText("Accueil").click();
   await expect(page).toHaveURL(/\/pme$/);
-  await expect(page.getByText("Vos documents")).toBeVisible();
+  await expect(page.getByText(/^TVA · /)).toBeVisible();
 });
 
 test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }) => {
@@ -268,7 +268,7 @@ test("le même accueil utilise le desktop et conserve la navigation du télépho
     await page.setViewportSize({ width: largeur, height: 900 });
     await page.goto("/pme");
     const nav = page.getByRole("navigation", { name: "Navigation principale" });
-    await expect(page.getByText("Vos documents")).toBeVisible();
+    await expect(page.getByText(/^TVA · /)).toBeVisible();
     await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
     const dimensions = await page.locator("main").evaluate((element) => ({
       contenu: element.getBoundingClientRect().width,

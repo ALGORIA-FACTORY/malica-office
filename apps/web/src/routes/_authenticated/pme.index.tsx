@@ -4,14 +4,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
-import { CompteurQuiRoule } from "@/components/malica/compteur-qui-roule";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
 import { usePme } from "@/components/malica/pme-context";
-import { COMMERCE } from "@/capabilities/coque";
 import { useAccueil } from "@/hooks/use-accueil";
-import { offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
+import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
@@ -77,6 +76,13 @@ function compte(valeur: number | string | null | undefined): string {
   const n = nombre(valeur);
   return n === null ? "—" : String(n);
 }
+
+/** Combien de cartes une rangée montre : au-delà, « Tout voir ». */
+const RANGEE = 8;
+/** Combien de pièces récentes, en grille de deux. */
+const RECENTES = 4;
+/** Les teintes des pochettes (`.poch.p0` à `.p4`, `styles-pme.css`). */
+const TEINTES = 5;
 
 /**
  * L'accueil PME — le dessin validé (`livraison/ecrans/malica-accueil.html`,
@@ -158,7 +164,6 @@ function PmeHome() {
    * et les quatre cartes du bas. Un seul raccourci, donc — cinq `navigate`
    * recopiés se seraient désyncé au premier renommage de route.
    */
-  const allerAuxReglages = () => void navigate({ to: "/pme/reglages" });
 
   /*
    * La pastille à l'initiale de la personne a quitté cet écran : elle est dans
@@ -223,22 +228,6 @@ function PmeHome() {
    * n'ouvre rien : la carte reste verrouillée, et verrouillée elle dit ce
    * qu'elle ferait.
    */
-  const siegesOuverts = pme.forfait.ouvertures.sieges;
-  const societesOuvertes = pme.forfait.ouvertures.societes;
-  const ouvrent = offresQuiOuvrent(useCatalogueDesOffres().data);
-
-  /*
-   * La jauge du plafond : elle n'existe que si les DEUX bornes sont connues.
-   * Sans elles, pas de barre — une jauge sans donnée est un graphique
-   * décoratif, et ce fichier en a retiré trois le 11 octobre pour cette
-   * raison exacte.
-   */
-  const lecturesPart = (() => {
-    const reste = nombre(f?.lectures_restantes);
-    const droit = nombre(f?.lectures_droit);
-    if (reste === null || droit === null || droit <= 0) return null;
-    return Math.max(0, Math.min(100, Math.round((reste / droit) * 100)));
-  })();
 
   const mois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
@@ -332,6 +321,93 @@ function PmeHome() {
   const titreHero = aRegler ? attendCabinet : phrase;
   const sousHero = aRegler ? phrase : ecartPhrase;
 
+  /*
+   * ============================================== LES RANGÉES, LUES DANS LA BASE
+   *
+   * Une lecture déjà faite ailleurs : `capture.listAvecLecture`, sous la clé
+   * de la bibliothèque — toutes les pièces, avec leur type, l'émetteur, la
+   * date et le total. Pas `capture.list` : elle s'arrête aux cent dernières,
+   * et un dossier perdrait ses pièces les plus anciennes (revue de #80).
+   * Les noms des types viennent du référentiel traduit, jamais du code.
+   */
+  const lues = useQuery({
+    queryKey: ["pieces-lues", pme.tenantId],
+    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
+  });
+  const typesDoc = useQuery({
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+  // Comme l'écran des échéances : le calendrier se dérive d'abord
+  // (idempotent), puis se lit — sinon un compte dont personne n'a encore
+  // ouvert ses échéances n'en verrait aucune ici (revue de #80).
+  const derivation = useQuery({
+    queryKey: ["echeances-derivation", pme.tenantId],
+    queryFn: () => office().collab.deriverEcheances([pme.tenantId]),
+    staleTime: 60_000,
+  });
+  const echeances = useQuery({
+    queryKey: ["echeances", pme.tenantId],
+    queryFn: () => office().collab.echeances([pme.tenantId]),
+    enabled: derivation.isFetched,
+  });
+  const catalogue = useCatalogueDesOffres().data;
+
+  const typeParPiece = new Map((lues.data ?? []).map((p) => [p.id, p.typeDeDocument]));
+  const libelleDuType = (code: string | null | undefined) =>
+    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
+  const nomDuType = (pieceId: string) => libelleDuType(typeParPiece.get(pieceId));
+  const jour = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
+      new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
+    );
+
+  // Ce qui attend la personne : ce que Malica a lu (à vérifier) et ce que le
+  // cabinet a renvoyé — les deux comptes de la carte de Malica, en pages.
+  const lesLues = (lues.data ?? []).filter((p) => p.vis !== "personnel");
+  const aTraiter = lesLues
+    .filter((p) => p.status === "lue" || p.status === "proposee" || p.status === "retournee")
+    .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
+    .slice(0, RANGEE);
+  const dejaVues = new Set(aTraiter.map((p) => p.id));
+  const recentes = lesLues
+    .filter((p) => p.status !== "capturee" && !dejaVues.has(p.id))
+    .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
+    .slice(0, RECENTES);
+
+  // Une pochette par type présent dans la bibliothèque, la plus fournie d'abord.
+  const dossiers = (() => {
+    const parType = new Map<string, { total: number; faites: number }>();
+    for (const p of lesLues) {
+      if (!p.typeDeDocument) continue;
+      const g = parType.get(p.typeDeDocument) ?? { total: 0, faites: 0 };
+      g.total += 1;
+      if (p.status === "comptabilisee" || p.status === "supervisee") g.faites += 1;
+      parType.set(p.typeDeDocument, g);
+    }
+    return [...parType.entries()]
+      .map(([code, g]) => ({
+        code,
+        libelle: libelleDuType(code) ?? code,
+        total: g.total,
+        faites: g.faites,
+        part: Math.round((g.faites / g.total) * 100),
+      }))
+      .sort((x, y) => y.total - x.total);
+  })();
+
+  // Les prochaines échéances non faites, la plus proche d'abord.
+  const aujourdhui = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+  const prochaines = (echeances.data ?? [])
+    .filter((e) => e.status !== "fait")
+    .map((e) => ({
+      ...e,
+      jours: Math.round((Date.parse(`${e.dueDate}T00:00:00Z`) - aujourdhui) / 86_400_000),
+    }))
+    .sort((x, y) => x.dueDate.localeCompare(y.dueDate))
+    .slice(0, RANGEE);
+
   return (
     /*
      * `data-ecran="accueil"` : le marqueur qui fait descendre sur cet arbre les
@@ -371,142 +447,111 @@ function PmeHome() {
         {/* Le salut, avec le prénom quand la personne l'a écrit. */}
         <h1>{salut}</h1>
 
-        {/* ------------------------------------------------------ les raccourcis */}
-        <div className="tiles">
-          {/*
-           * Ce qui attend une réponse. La pastille ne s'affiche que s'il y a un
-           * nombre à dire ; à zéro, la tuile porte le chevron des autres — une
-           * pastille « 0 » serait un bruit, pas une information.
-           */}
-          <button type="button" className="tile" onClick={() => void navigate({ to: "/pme/list" })}>
-            <i>
-              <IconePiece />
-            </i>
-            <span className="tl">
-              <b>{t("pme.charges.answer.verifier")}</b>
-            </span>
-            {aVerifier ? (
-              /*
-               * Le nombre ROULE, il ne se remplace pas : 13 qui devient 12
-               * dans un disque de 27 px ne se voit pas autrement, et c'est
-               * le seul accusé de réception du geste qu'on vient de faire.
-               * Voir `components/malica/compteur-qui-roule.tsx`.
-               */
-              <span className="bdg">
-                <CompteurQuiRoule valeur={a.enAttente} />
-              </span>
-            ) : (
-              <Chevron className="g ar" />
-            )}
-          </button>
+        {/*
+         * ========================================= L'ACCUEIL « PRINCIPE SPOTIFY »
+         *
+         * 23 octobre 2026, maquette validée par Wissem (« Go ») : une porte par
+         * destination. Onze blocs menaient à six endroits, dont trois à la
+         * bibliothèque, trois aux réglages et deux à la TVA. L'ordre validé :
+         * le chiffre du mois, ce que Malica a préparé, Malica, les dossiers,
+         * les pièces récentes, les échéances, l'abonnement. Les aperçus sont
+         * les vraies pages, lues dans la base (`ApercuDePiece`).
+         */}
 
-          {/* Les charges, et leur sens : `null` d'un côté et la carte se tait. */}
-          <button
-            type="button"
-            className="tile"
-            onClick={() => void navigate({ to: "/pme/charges" })}
-          >
-            <i>
-              <IconeBarres />
-            </i>
-            <span className="tl">
-              <b>{t("pme.home.card.charges")}</b>
-              <span>
-                {a.chargesEcart === null
-                  ? t("pme.home.charges.sous")
-                  : a.chargesEcart < 0
-                    ? t("pme.home.charges.baisse", {
-                        pourcent: Math.abs(Math.round(a.chargesEcart)),
-                      })
-                    : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
-              </span>
+        {/* ── 1. le chiffre du mois ─────────────────────────────────────── */}
+        <Link to="/pme/tva" className="mois">
+          <span className="k">{t("pme.home.tva.kicker", { month: moisCourant })}</span>
+          {nonAssujetti ? (
+            <span className="v">
+              <b className="t">{t("pme.home.tva.nonAssujetti")}</b>
             </span>
-            <Chevron className="g ar" />
-          </button>
-
-          {/*
-           * Le cabinet, nommé. `identite.monCabinet` rend `null` quand il n'y a
-           * pas de mandat : la tuile dit alors « votre comptable », et mène quand
-           * même à l'écran de ce qui est à régler, qui sait dire qu'il n'y a rien.
-           */}
-          <button
-            type="button"
-            className="tile"
-            onClick={() => void navigate({ to: "/pme/regler" })}
-          >
-            <i>
-              <IconeSieges />
-            </i>
-            <span className="tl">
-              <b>{cabinet.data ? cabinet.data.name : t("pme.coffre.votreComptable")}</b>
-              {/*
-               * La tuile dit COMBIEN, pas la phrase entière : « Cabinet X attend
-               * deux précisions » est déjà le titre de la carte à la une, et une
-               * tuile de 84 px n'est pas un endroit où faire tenir une phrase.
-               */}
-              <span>
-                {cabinet.isPending
-                  ? t("common.loading")
-                  : cabinet.isError
-                    ? t("common.error")
-                    : !cabinet.data
-                      ? t("pme.home.cabinet.absent")
-                      : aRegler
-                        ? t("pme.regler.titre", { count: a.retournees })
-                        : t("pme.regler.rien.titre")}
-              </span>
-            </span>
-            <Chevron className="g ar" />
-          </button>
-
-          {/*
-           * La TVA du mois. Le SIGNE change le mot, pas seulement le chiffre : un
-           * solde négatif n'est pas « à reverser », c'est un crédit qui se
-           * reporte. Et un solde absent s'écrit « — ».
-           */}
-          <button type="button" className="tile" onClick={() => void navigate({ to: "/pme/tva" })}>
-            <i>
-              <IconeRecu />
-            </i>
-            <span className="tl">
-              {/* Un non-assujetti n'a ni TVA à reverser ni crédit (ANO-LIVE-001). */}
-              <b>
-                {nonAssujetti
-                  ? t("pme.home.tva.nonAssujetti")
-                  : sensDuSolde(a.aReverser) === "inconnu"
+          ) : (
+            <>
+              <span className="v">
+                <b>{a.aReverser === null ? "—" : montant(a.aReverser.replace(/^-/, ""), locale)}</b>
+                <u>
+                  {a.devise}{" "}
+                  {sensDuSolde(a.aReverser) === "inconnu"
                     ? t("pme.tva.soldeInconnu")
                     : sensDuSolde(a.aReverser) === "nul"
                       ? t("pme.tva.soldeNul")
                       : sensDuSolde(a.aReverser) === "du"
                         ? t("pme.home.reverser")
                         : t("pme.home.credit")}
-              </b>
-              <span>
-                {nonAssujetti
-                  ? t("pme.home.tva.rien")
-                  : a.aReverser === null
-                    ? "—"
-                    : `${montant(a.aReverser, locale)} ${a.devise}`}
+                </u>
               </span>
-            </span>
-            <Chevron className="g ar" />
-          </button>
-        </div>
+              <span className="dt">
+                <span>
+                  {t("pme.tva.col.collectee")}{" "}
+                  <b>{a.collectee === null ? "—" : montant(a.collectee, locale)}</b>
+                </span>
+                <span>
+                  {t("pme.tva.col.deductible")}{" "}
+                  <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
+                </span>
+              </span>
+            </>
+          )}
+        </Link>
+        {/* Les charges, et leur sens : la tuile d'hier, en une ligne sous le chiffre. */}
+        <Link to="/pme/charges" className="ligne">
+          <b>{t("pme.home.card.charges")}</b>
+          <span>
+            {a.chargesEcart === null
+              ? t("pme.home.charges.sous")
+              : a.chargesEcart < 0
+                ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
+                : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
+          </span>
+          <Chevron className="g ar" />
+        </Link>
 
-        {/* --------------------------------------------- ce qu'elle a préparé */}
-        <div className="sec">
-          <h2>{t("pme.home.prepare")}</h2>
-          <Link to="/pme/list">
-            {t("pme.home.documents.titre")} <Chevron className="g fl" />
-          </Link>
-        </div>
+        {/* ── 2. ce qu'elle a préparé : les vraies pages, qui défilent ──── */}
+        {aTraiter.length > 0 ? (
+          <>
+            <div className="sec">
+              <h2>{t("pme.home.prepare")}</h2>
+              <Link to="/pme/list">
+                {t("common.toutVoir")} <Chevron className="g fl" />
+              </Link>
+            </div>
+            <div className="rail">
+              {aTraiter.map((p) => (
+                <Link
+                  key={p.id}
+                  to="/pme/piece/$pieceId"
+                  params={{ pieceId: p.id }}
+                  className="doc"
+                >
+                  <span className="pg">
+                    <ApercuDePiece pieceId={p.id} />
+                    <span className={p.status === "retournee" ? "etq cab" : "etq"}>
+                      <i />
+                      {p.status === "retournee"
+                        ? t("pme.home.etat.retour")
+                        : t("pme.charges.answer.verifier")}
+                    </span>
+                  </span>
+                  <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                  <span>
+                    {[nomDuType(p.id), jour(p.dateDocument ?? p.createdAt)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  {p.total ? <em>{montant(p.total, locale)}</em> : null}
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
 
+        {/* ── 3. Malica, au cœur de l'écran ─────────────────────────────── */}
         <div className="hero">
           <span className="amb" aria-hidden="true" />
           {/*
-           * Le portrait du dessin — `malica.webp`, cadré par le CSS en
-           * `50% 18%`. Ce n'est pas `MalicaAvatar` : son cadrage `center 18%` et
-           * son cercle de marigold appartiennent à l'ancien en-tête.
+           * Le portrait de Malica, 620 px de côté : le dessin le peint à 134 px,
+           * soit 268 px sur un écran à densité 2. La cible tient à moins de
+           * 40 Ko en WebP.
            */}
           <span className="por">
             <img src={portraitMalica} alt="Malica" width={620} height={620} />
@@ -518,32 +563,32 @@ function PmeHome() {
             </span>
             <h3>{titreHero}</h3>
             <p>{sousHero}</p>
-            {aRegler || aVerifier ? (
-              <button
-                type="button"
-                className="cta"
-                onClick={() => void navigate({ to: aRegler ? "/pme/regler" : "/pme/list" })}
-              >
-                {t("doc.open")}
-                <FlecheDroite />
+            <span className="gestes">
+              {aRegler || aVerifier ? (
+                <button
+                  type="button"
+                  className="cta"
+                  onClick={() => void navigate({ to: aRegler ? "/pme/regler" : "/pme/list" })}
+                >
+                  {t("doc.open")}
+                  <FlecheDroite />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="cta"
+                  disabled={pme.capturing}
+                  onClick={() => pme.ouvrirScanner()}
+                >
+                  {t("pme.capture.photo")}
+                  <FlecheDroite />
+                </button>
+              )}
+              {/* La barre « Me demander » d'hier, devenue le second geste de Malica. */}
+              <button type="button" className="cta sec2" onClick={allerALaConversation}>
+                {t("pme.home.demander")}
               </button>
-            ) : (
-              /*
-               * Rien n'attend : le geste proposé est celui qui fait exister le
-               * produit. `pme.ouvrirScanner` est le même chemin que l'obturateur
-               * de la barre du bas — scanner de l'appareil s'il y en a un, le
-               * nôtre sinon.
-               */
-              <button
-                type="button"
-                className="cta"
-                disabled={pme.capturing}
-                onClick={() => pme.ouvrirScanner()}
-              >
-                {t("pme.capture.photo")}
-                <FlecheDroite />
-              </button>
-            )}
+            </span>
           </span>
           <span className="stack" aria-hidden="true">
             <svg viewBox="0 0 48 48" className="g" style={{ strokeWidth: 2 }}>
@@ -556,247 +601,110 @@ function PmeHome() {
           </span>
         </div>
 
-        {/* ------------------------------------------------------- l'activité */}
-        <div className="sec">
-          <h2>{t("pme.home.card.evolution")}</h2>
-          <Link to="/pme/echeances">
-            {t("pme.home.card.echeances")} <Chevron className="g fl" />
-          </Link>
-        </div>
+        {/* ── 4. vos dossiers : une pochette par type de pièce ─────────── */}
+        {dossiers.length > 0 ? (
+          <>
+            <div className="sec">
+              <h2>{t("pme.home.dossiers")}</h2>
+              <Link to="/pme/list">
+                {t("pme.home.bibliotheque")} <Chevron className="g fl" />
+              </Link>
+            </div>
+            <div className="rail">
+              {dossiers.map((d, i) => (
+                <Link
+                  key={d.code}
+                  to="/pme/dossier/$type"
+                  params={{ type: d.code }}
+                  className={`poch p${i % TEINTES}`}
+                >
+                  <span className="cv">
+                    <span className="mo">{moisCourant}</span>
+                    <span className="ini" aria-hidden="true">
+                      {d.libelle.slice(0, 1)}
+                    </span>
+                    <b>{d.libelle}</b>
+                    <span className="av">
+                      <i style={{ width: `${d.part}%` }} />
+                    </span>
+                  </span>
+                  <b>{t("pme.home.dossier.pieces", { count: d.total })}</b>
+                  <span>{t("pme.home.dossier.faites", { count: d.faites })}</span>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-        {/*
-         * ============ « LES BOUTONS NE MARCHENT PAS EN BAS » — CE QUI MANQUE
-         *
-         * Le défaut rapporté sur l'appareil, le 18 octobre, et sa mesure. Les
-         * quatre blocs de `.acts` sont des RELEVÉS, pas des gestes. Mais le
-         * dessin leur donne exactement la peau des quatre `.tile` du haut, qui
-         * sont des boutons — relevé sur l'application vivante (Pixel 7) :
-         *
-         *   .tiles > *   button   tabIndex 0    cursor pointer   fond rgb(245,245,245)  r 20px  180×87
-         *   .acts  > *   div      tabIndex -1   cursor auto      fond rgb(245,245,245)  r 20px  180×134
-         *
-         * Même fond, même rayon, même largeur, même composition icône + libellé
-         * + valeur. Un tap sur chacun des quatre : AUCUN EFFET, les quatre.
-         * La seule propriété qui les distingue est `cursor`, et un téléphone
-         * n'a pas de curseur : sur l'appareil du dirigeant, rien ne dit qu'une
-         * carte répond et que la suivante est muette. Il tape, il n'obtient
-         * rien, et il conclut que l'écran est cassé. Il a raison.
-         *
-         * LA FEUILLE A POSÉ CE QUI MANQUAIT — LES QUATRE SONT DES BOUTONS.
-         *
-         * Mesuré avant de le demander : un `<button className="act">` ne
-         * différait d'un `<div className="act">` que par trois propriétés —
-         * `text-align: start → center` (le nombre et l'unité se centraient, et
-         * le dessin cassait), `cursor: auto → default`, `appearance: none →
-         * button` (sans effet, le fond et le filet venant de `.act`). `.tile`
-         * déclarait déjà ce qu'il fallait ; `.act` et `.lock`, rien.
-         *
-         * La feuille porte maintenant, sur les deux, `width:100%`,
-         * `cursor:pointer`, `font-family:inherit`, `text-align:start` et
-         * `color:var(--tx)` — et `border:0` sur `.act` SEULE. Le pointillé de
-         * `.lock` est du dessin : il dit « fermé », pas « vide », et il reste.
-         *
-         * OÙ CHAQUE CARTE MÈNE, et pourquoi là — lu dans l'écran d'arrivée,
-         * pas supposé :
-         *
-         *   TVA que vous récupérez → `/pme/tva`       il lit `totals.deductible`
-         *   Lectures restantes     → `/pme/reglages`  `abo.lectures`, `abo.consommees`
-         *   Mes sièges            → `/pme/reglages`  `abo.siegesOccupes`, `abo.siegesMax`
-         *   Mes sociétés          → `/pme/reglages`  `abo.organisations`, et sa section
-         *
-         * Les deux `.lock` mènent au MÊME endroit que leurs versions ouvertes :
-         * une carte qui vend Team doit ouvrir là où Team se prend, et c'est le
-         * seul écran qui traite l'offre. Aucune de ces destinations n'est une
-         * route neuve ; les quatre existaient.
-         *
-         * `.hd` passe de `<div>` à `<span>` : un `<div>` dans un `<button>`,
-         * c'est du flux dans du phrasé, ce que la spécification refuse. La
-         * règle de feuille est en `.act .hd` — une classe — donc elle descend
-         * à l'identique, et le `display:flex` qu'elle porte reblocifie le
-         * `<span>` de toute façon. Relevé après conversion : même `display`,
-         * mêmes rectangles.
-         */}
-        <div className="acts">
-          {/*
-           * Ce que l'État vous doit — la TVA déductible du mois, rangée au mois
-           * où la pièce a été TRANSMISE au cabinet (c'est lui qui la déclare).
-           * `null` s'écrit « — » : pas « 0,000 », qui serait un fait comptable.
-           */}
-          <button type="button" className="act" onClick={() => void navigate({ to: "/pme/tva" })}>
-            <span className="hd">
-              <span>{t("pme.verifie.tvaRecuperee")}</span>
-              <i>
-                <IconeRecu />
-              </i>
-            </span>
-            <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
-            <em>
-              {a.devise} · {moisCourant}
-            </em>
-          </button>
+        {/* ── 5. récemment lues ─────────────────────────────────────────── */}
+        {recentes.length > 0 ? (
+          <>
+            <div className="sec">
+              <h2>{t("pme.home.recentes")}</h2>
+              <Link to="/pme/list">
+                {t("common.toutVoir")} <Chevron className="g fl" />
+              </Link>
+            </div>
+            <div className="recentes">
+              {recentes.map((p) => (
+                <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
+                  <ApercuDePiece pieceId={p.id} className="mini" />
+                  <span className="bd">
+                    <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                    <span>
+                      {p.total ? `${montant(p.total, locale)} ${p.devise ?? a.devise}` : "—"}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-          {/*
-           * ===================================================== LE PLAFOND DE LECTURES
-           *
-           * `lectures_restantes` et `lectures_droit` viennent de
-           * `facturation.monForfait`. Le nombre s'écrit « — » tant qu'on ne le
-           * sait pas, et la barre n'apparaît qu'avec ses deux bornes.
-           *
-           * La touche de Marigold sous 20 % est celle du dessin — bloc `basic`,
-           * « 9 sur 65 » en `var(--touch)`. C'est la seule fois où cette couleur
-           * paraît sur l'écran, et elle ne paraît que là : le plafond qui se
-           * referme est le seul fait de cet accueil qui ne puisse pas attendre.
-           */}
-          <button type="button" className="act" onClick={allerAuxReglages}>
-            <span className="hd">
-              <span>{t("pme.home.lectures")}</span>
-              <i>
-                <IconeBarres />
-              </i>
-            </span>
-            <b>{compte(f?.lectures_restantes)}</b>
-            {/*
-             * ====================================== LE TIRET NE SE SUFFIT PAS
-             *
-             * « — » dit « je n'ai pas le nombre ». Il ne dit pas POURQUOI, et
-             * un dirigeant qui lit un vide conclut à une panne. Les deux
-             * absences se disent donc en mots, sous le tiret, dans le même
-             * `<em>` que la tuile voisine (12 px, une ligne, aucune règle de
-             * feuille à écrire) :
-             *
-             *   — la requête a répondu `null` : il n'y a pas de licence sur ce
-             *     compte. Ce n'est pas une panne, c'est un état du produit, et
-             *     « Réglages » en porte la phrase longue.
-             *   — la requête a échoué : le compteur n'est pas lu. Les lectures
-             *     du mois, elles, n'ont pas bougé.
-             *
-             * Pendant la première lecture, rien n'est dit : une seconde
-             * d'attente n'est ni l'une ni l'autre, et la nommer serait faux.
-             */}
-            {pme.forfait.enCours ? null : pme.forfait.illisible ? (
-              <em>{t("pme.home.lectures.illisible")}</em>
-            ) : f === null ? (
-              <em>{t("pme.home.lectures.sansForfait")}</em>
-            ) : null}
-            {lecturesPart === null ? null : (
-              <span className="pg">
-                <i
-                  style={{
-                    width: `${lecturesPart}%`,
-                    ...(lecturesPart <= 20 ? { background: "var(--touch)" } : null),
-                  }}
-                />
-              </span>
-            )}
-          </button>
+        {/* ── 6. les échéances ──────────────────────────────────────────── */}
+        {prochaines.length > 0 ? (
+          <>
+            <div className="sec">
+              <h2>{t("pme.home.card.echeances")}</h2>
+              <Link to="/pme/echeances">
+                {t("common.toutVoir")} <Chevron className="g fl" />
+              </Link>
+            </div>
+            <div className="rail">
+              {prochaines.map((e) => (
+                <Link
+                  key={e.id}
+                  to="/pme/echeances"
+                  className={e.jours < 0 ? "ech ret" : e.jours <= 7 ? "ech pro" : "ech"}
+                >
+                  <span className="j">{jour(e.dueDate)}</span>
+                  <b>{e.label}</b>
+                  <span>
+                    {e.jours < 0
+                      ? t("pme.home.ech.retard")
+                      : e.jours === 0
+                        ? t("pme.home.ech.aujourdhui")
+                        : t("pme.home.ech.dans", { count: e.jours })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-          {/*
-           * ====================================== CE QUE L'OFFRE OUVRE, ET CE QU'ELLE RETIENT
-           *
-           * Les sièges et les sociétés s'ouvrent selon l'offre — c'est `offre`
-           * qui tranche, et le NOM de l'offre qui ouvre vient du catalogue
-           * (`ref.offres`), jamais du code. Ouverte, la carte porte le chiffre
-           * que la base rend ; fermée, elle dit sous quelle offre — sur le web
-           * et la PWA seulement : dans la coque, rien ne vend (décision du
-           * 22 octobre 2026), la carte fermée n'y paraît pas.
-           *
-           * Les chiffres de ces cartes sont des comptes de la base, pas des
-           * noms : « Sami 42 · Nadia 18 » du dessin viendrait de
-           * `facturation.sieges`, que cet écran n'appelle pas — un accueil ne
-           * charge pas la liste des membres pour écrire deux prénoms.
-           */}
-          {siegesOuverts ? (
-            <button type="button" className="act" onClick={allerAuxReglages}>
-              <span className="hd">
-                <span>{t("pme.home.sieges")}</span>
-                <i>
-                  <IconeSieges />
-                </i>
-              </span>
-              {/*
-               * « 3 / 5 » : les places prises sur les places incluses. Deux
-               * chiffres de la base, aucun mot ajouté — « 3 sièges sur 5 inclus »
-               * demanderait une clé qui n'existe pas encore.
-               */}
-              <b>
-                {compte(f?.sieges_occupes)} / {compte(f?.sieges_inclus)}
-              </b>
-            </button>
-          ) : COMMERCE ? (
-            <button type="button" className="lock" onClick={allerAuxReglages}>
-              <IconeSieges />
-              <b>{t("pme.home.sieges")}</b>
-              <em>{ouvrent.sieges?.libelle}</em>
-            </button>
-          ) : null}
-
-          {societesOuvertes ? (
-            <button type="button" className="act" onClick={allerAuxReglages}>
-              <span className="hd">
-                <span>{t("pme.home.societes")}</span>
-                <i>
-                  <IconeSocietes />
-                </i>
-              </span>
-              <b>{compte(f?.organisations)}</b>
-            </button>
-          ) : COMMERCE ? (
-            <button type="button" className="lock" onClick={allerAuxReglages}>
-              <IconeSocietes />
-              <b>{t("pme.home.societes")}</b>
-              <em>{ouvrent.societes?.libelle}</em>
-            </button>
-          ) : null}
-        </div>
-
-        {/*
-         * ------------------------------------------------- la barre de question
-         *
-         * Elle ouvre le fil de Malica par-dessus l'écran. Le micro est le
-         * contrôle : c'est lui qui porte le nom accessible et qui se tient au
-         * clavier. La barre entière reste cliquable au doigt.
-         */}
-        <button
-          type="button"
-          className="ask"
-          aria-label={t("malica.panneau.ouvrir")}
-          onClick={allerALaConversation}
-        >
-          <img src={portraitMalica} alt="" width={620} height={620} />
-          <span className="q">
-            <b>{t("malica.panneau.ouvrir")}</b>
-            <span>{t("malica.chat.placeholder")}</span>
+        {/* ── 7. l'abonnement, en une ligne : les trois cartes d'hier ───── */}
+        <Link to="/pme/reglages" className="ligne abo">
+          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
+          <span>
+            {t("pme.home.abo.ligne", {
+              lues: compte(f?.lectures_consommees),
+              droit: compte(f?.lectures_droit),
+              occupes: compte(f?.sieges_occupes),
+              inclus: compte(f?.sieges_inclus),
+            })}
           </span>
-          <span className="mic" aria-hidden>
-            <svg viewBox="0 0 24 24" className="g">
-              <rect x="9.2" y="3" width="5.6" height="11" rx="2.8" />
-              <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
-              <path d="M12 18v3" />
-            </svg>
-          </span>
-        </button>
-
-        {/*
-         * ================================= L'ÉCHEC DE CAPTURE, RENDU AU FLUX
-         *
-         * Il vivait en `fixed … bottom-[92px] z-20`, et le commentaire d'ici
-         * affirmait qu'il « flotte au-dessus de la barre basse ». Ce n'est plus
-         * vrai : la feuille a sorti `.nav` du flottement — « Dans le flux,
-         * jamais fixée » — et 92 px ne mesurent donc plus rien.
-         *
-         * Relevé sur l'application vivante, 360 × 640, le bandeau posé : son
-         * rectangle tenait y 494–548 à TOUTE position de défilement, et
-         * `elementFromPoint` au centre des gestes rendait le bandeau, pas le
-         * geste — « Photographier » (45,505,170,49 à scrollY 181) et le lien
-         * « Échéances » (251,518,89,34 à scrollY 271). Deux gestes réels qu'un
-         * `z-20` avalait sans jamais montrer pourquoi.
-         *
-         * Rendu au flux, à la fin de l'écran où le geste a été fait, il ne peut
-         * plus rien recouvrir : aucune position, aucune langue. Il garde son
-         * filet et son bord d'arrêt, et perd seulement le droit de se poser
-         * par-dessus les boutons. Les gouttières sont celles de `.pad`, pas un
-         * `inset-x-3` au jugé.
-         */}
+          <Chevron className="g ar" />
+        </Link>
         {pme.captureError ? (
           <p
             role="alert"
@@ -819,59 +727,6 @@ function PmeHome() {
  * `fill:none`, bouts arrondis. La taille vient toujours du contexte
  * (`.tile i svg`, `.act .hd i svg`, `.lock svg`, `.ar`), jamais de l'icône.
  */
-
-/** Une pièce — la feuille au coin plié. */
-function IconePiece() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <path d="M6 3h8l4 4v14H6z" />
-      <path d="M14 3v4h4" />
-      <path d="M9 12h6M9 15.5h6" />
-    </svg>
-  );
-}
-
-/** Un reçu — ce qui porte un montant. */
-function IconeRecu() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21z" />
-      <path d="M9 8h6M9 11.5h6M9 15h3.5" />
-    </svg>
-  );
-}
-
-/** Des barres — ce qui se compare. */
-function IconeBarres() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <path d="M4 20h16" />
-      <path d="M7 16v-4M12 16V7M17 16v-6" />
-    </svg>
-  );
-}
-
-/** Deux personnes — les sièges, et le cabinet. */
-function IconeSieges() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <circle cx="9" cy="9" r="3" />
-      <circle cx="16.5" cy="10" r="2.4" />
-      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0M14.5 19.5a4.5 4.5 0 0 1 6.5-3.4" />
-    </svg>
-  );
-}
-
-/** Trois cadres emboîtés — plusieurs sociétés sous une licence. */
-function IconeSocietes() {
-  return (
-    <svg viewBox="0 0 24 24" className="g">
-      <rect x="3.5" y="9.5" width="11" height="11" rx="1.5" />
-      <path d="M7 6.5h9a1.5 1.5 0 0 1 1.5 1.5v9" />
-      <path d="M10 3.5h9A1.5 1.5 0 0 1 20.5 5v9" />
-    </svg>
-  );
-}
 
 /** Le chevron des tuiles et des titres de section. */
 function Chevron({ className }: { className: string }) {

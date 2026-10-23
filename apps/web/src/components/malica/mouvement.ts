@@ -59,7 +59,7 @@ import { useEffect } from "react";
  * Faux en l'absence de `matchMedia` — rendu serveur, moteur ancien. Rien ne
  * s'y animant, le défaut n'y change rien.
  */
-export function moinsDeMouvement(): boolean {
+function moinsDeMouvement(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
   try {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;

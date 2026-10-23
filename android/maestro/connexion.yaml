@@ -48,7 +48,7 @@ androidWebViewHierarchy: devtools
 # Le vrai défaut est dans l'application : le contenu recouvert par le fil reste
 # exposé à l'accessibilité (voir le compte rendu du 17 septembre).
 - extendedWaitUntil:
-    visible: "Vos documents"
+    visible: "TVA · .*"
     timeout: 20000
 - extendedWaitUntil:
     visible: "Mes conversations"
