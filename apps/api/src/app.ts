@@ -402,11 +402,19 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
       res.status(403).json({ erreur: "indisponible dans l'application" });
       return;
     }
+    // La base doit savoir qu'une coque appelle : elle n'y offre que les places
+    // incluses dans l'abonnement (`facturation.place_offrir`).
+    const coque = estUneCoque(req);
     const resultat = req.cleApi
       ? await executerSousCle(req.cleApi, saisie.data)
-      : await sousIdentite(req.utilisateur!.id, (db) =>
-          executerRpc(db, saisie.data, origineDEssai(saisie.data.depot, saisie.data.methode)),
-        );
+      : await sousIdentite(req.utilisateur!.id, async (db) => {
+          if (coque) await db.query("select set_config('malica.client_coque', 'oui', true)");
+          return executerRpc(
+            db,
+            saisie.data,
+            origineDEssai(saisie.data.depot, saisie.data.methode),
+          );
+        });
     res.json({ resultat });
   } catch (erreur) {
     if (erreur instanceof PorteeInsuffisante) {

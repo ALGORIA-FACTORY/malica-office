@@ -32,8 +32,4 @@ export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "abonnementsDuCabinet",
   "facturesDuCabinet",
   "lignesDeFacture",
-  // Une invitation acceptée au-delà des places incluses ajoute une place payée
-  // (`facturation.droits_v`, `prix_siege_sup`) : c'est un achat.
-  "inviterSiege",
-  "inviterProprietaire",
 ]);
