@@ -2717,8 +2717,10 @@ export interface FactureDuCabinet {
   timbre: string;
   montant_ttc: string;
   devise: string;
-  statut: string;
   organisations: number;
+  /** Le reste dû et l'état, déduits des encaissements (`facturation.encours_v`). */
+  reste_du: string;
+  etat: EtatDeFacture;
 }
 
 export interface LigneDeFacture {
@@ -2854,8 +2856,12 @@ export interface FactureDuTitulaire {
   reste_du: string;
   devise: string;
   /** L'état déduit des encaissements (`facturation.encours_v`). */
-  etat: "a_echoir" | "en_retard" | "partielle" | "payee" | "annulee" | "irrecouvrable";
+  etat: EtatDeFacture;
 }
+
+/** L'état d'une facture, déduit de ses encaissements (`facturation.encours_v`). */
+export type EtatDeFacture =
+  "a_echoir" | "en_retard" | "partielle" | "payee" | "annulee" | "irrecouvrable";
 
 /** Un paiement en ligne — une montée, une recharge, l'année, une facture — tel que la base le rend. */
 export interface PaiementEnLigne {
@@ -2873,6 +2879,8 @@ export interface PaiementEnLigne {
   lien: string | null;
   impute: boolean;
   cree_le: string;
+  /** Le cabinet qui paie (une facture de cabinet) ; `null` pour une société. */
+  payeur_tenant_id: string | null;
 }
 
 /** Un moyen de paiement en ligne (`facturation.moyens_paiement_v`), nommé dans la langue demandée. */

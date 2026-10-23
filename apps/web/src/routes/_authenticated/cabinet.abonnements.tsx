@@ -18,7 +18,7 @@
  * depuis la facture (web et PWA seulement), pas d'ici.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { COMMERCE } from "@/capabilities/coque";
@@ -34,6 +34,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { ETAT_DE_FACTURE } from "@/lib/paiement";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -74,14 +75,6 @@ const TON: Record<string, string> = {
   suspendu: "text-signal-warn",
   termine: "text-muted-foreground",
 };
-/** Les états d'une facture d'abonnement (`facturation.factures.statut`). */
-const STATUT_FACTURE: Record<string, MessageKey> = {
-  emise: "cab.abo.fac.statut.emise",
-  payee: "cab.abo.fac.statut.payee",
-  partielle: "cab.abo.fac.statut.partielle",
-  annulee: "cab.abo.fac.statut.annulee",
-  irrecouvrable: "cab.abo.fac.statut.irrecouvrable",
-};
 
 function CabinetAbonnements() {
   const { t, locale } = useI18n();
@@ -112,6 +105,18 @@ function CabinetAbonnements() {
   });
 
   const expert = acces.data?.role === "expert";
+  const navigate = useNavigate();
+  // La facture du cabinet se paie en ligne (23 octobre 2026) : le reste dû, en
+  // entier, depuis la page de choix du moyen, qui vérifie aussi le retour.
+  const payerFacture = useMutation({
+    mutationFn: (factureId: string) => office().facturation.payerFacture(factureId),
+    onSuccess: async (p) => {
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+      await navigate({ to: "/cabinet/payer/$paiementId", params: { paiementId: p.paiement_id } });
+    },
+    onError: (e: unknown) =>
+      setRetour({ ok: false, texte: texteDeLErreur(e, OU, t("common.error")) }),
+  });
   const actifs = (clients.data ?? []).filter((c) => c.engagementStatus === "actif");
   const [client, setClient] = useState("");
   const [offre, setOffre] = useState("");
@@ -350,6 +355,7 @@ function CabinetAbonnements() {
               t("cab.abo.fac.ttc"),
               t("cab.abo.fac.echeance"),
               t("cab.abo.fac.statut"),
+              t("cab.abo.fac.reste"),
             ]}
           >
             {(factures.data ?? []).map((f) => (
@@ -366,9 +372,33 @@ function CabinetAbonnements() {
                   <span className="num">{date(f.echeance_le)}</span>
                 </InkCell>
                 <InkCell>
-                  <span className="text-[12px]">
-                    {STATUT_FACTURE[f.statut] ? t(STATUT_FACTURE[f.statut]!) : f.statut}
+                  <span
+                    className={cn(
+                      "text-[12px]",
+                      f.etat === "en_retard" && "text-signal-warn",
+                      f.etat === "payee" && "text-signal-ok",
+                    )}
+                  >
+                    {t(ETAT_DE_FACTURE[f.etat])}
                   </span>
+                </InkCell>
+                <InkCell numeric>
+                  {Number(f.reste_du) > 0 &&
+                  (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="num">{montant(f.reste_du, f.devise)}</span>
+                      <button
+                        type="button"
+                        className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
+                        disabled={payerFacture.isPending}
+                        onClick={() => payerFacture.mutate(f.id)}
+                      >
+                        {t("pme.reglages.paiement.payer")}
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="num text-muted-foreground">—</span>
+                  )}
                 </InkCell>
               </InkTableRow>
             ))}

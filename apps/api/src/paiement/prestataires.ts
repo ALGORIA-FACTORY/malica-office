@@ -187,9 +187,23 @@ export function secretsPoses(adaptateur: string | null, env: Env = process.env):
   return ADAPTATEURS[adaptateur]?.pret(env) ?? false;
 }
 
-/** L'adresse où le client revient de la page du prestataire — une seule, pour tous. */
-export function adresseDeRetour(urlPublique: string, paiementId: string): string {
-  return `${urlPublique}/pme/reglages?${new URLSearchParams({ paiement: paiementId })}`;
+/**
+ * Les écrans où l'on revient de la page du prestataire, et où le retour se
+ * vérifie auprès de lui : la société, ses réglages ; le cabinet, la page de
+ * choix du paiement lui-même.
+ */
+export const ECRANS_DE_RETOUR = {
+  societe: () => "/pme/reglages",
+  cabinet: (paiementId: string) => `/cabinet/payer/${encodeURIComponent(paiementId)}`,
+} as const;
+
+/** L'adresse où le client revient de la page du prestataire — une règle, pour tous. */
+export function adresseDeRetour(
+  urlPublique: string,
+  ecran: keyof typeof ECRANS_DE_RETOUR,
+  paiementId: string,
+): string {
+  return `${urlPublique}${ECRANS_DE_RETOUR[ecran](paiementId)}?${new URLSearchParams({ paiement: paiementId })}`;
 }
 
 /** Le prestataire que la tour a ouvert, ou `null` quand le paiement en ligne est fermé. */

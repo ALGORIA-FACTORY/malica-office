@@ -63,8 +63,12 @@ describe("les prestataires de paiement", () => {
 
   it("une seule adresse de retour, et le simulateur y revient marqué", async () => {
     assert.equal(
-      adresseDeRetour("https://staging.exemple.tn", "p-1"),
+      adresseDeRetour("https://staging.exemple.tn", "societe", "p-1"),
       "https://staging.exemple.tn/pme/reglages?paiement=p-1",
+    );
+    assert.equal(
+      adresseDeRetour("https://staging.exemple.tn", "cabinet", "p-1"),
+      "https://staging.exemple.tn/cabinet/payer/p-1?paiement=p-1",
     );
     const sim = prestataireDuReglage(
       {
@@ -82,7 +86,7 @@ describe("les prestataires de paiement", () => {
       unites: 1,
       devise: "788",
       libelle: "x",
-      retour: adresseDeRetour(sim!.urlPublique, "p-1"),
+      retour: adresseDeRetour(sim!.urlPublique, "societe", "p-1"),
     });
     assert.equal(lien, "https://staging.exemple.tn/pme/reglages?paiement=p-1&simulateur=1");
   });
