@@ -70,7 +70,7 @@ export function InviterDansMonDossier() {
 
   return (
     <div className="card">
-      <p className="t-body">{t("pme.membres.lede")}</p>
+      {/* L'explication de l'invitation et des rôles est dans le ⓘ d'« Utilisateurs ». */}
 
       <div className="mt-2 flex border border-line-strong">
         {(["utilisateur", "proprietaire"] as const).map((r) => (
