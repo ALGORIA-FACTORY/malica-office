@@ -25,7 +25,6 @@ import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
-  EnTeteCabinet,
   InkCell,
   InkTable,
   InkTableRow,
@@ -36,6 +35,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { ETAT_DE_FACTURE } from "@/lib/paiement";
 import { cn } from "@/lib/utils";
+import { initialesDe } from "@/lib/initiales";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/cabinet/abonnements")({
@@ -120,6 +120,10 @@ function CabinetAbonnements() {
     onError: (e: unknown) => setRefusDePaiement(texteDeLErreur(e, OU, t("common.error"))),
   });
   const actifs = (clients.data ?? []).filter((c) => c.engagementStatus === "actif");
+  const [vue, setVue] = useState<"clients" | "factures">("clients");
+  const [formulaire, setFormulaire] = useState(false);
+  const [recherche, setRecherche] = useState("");
+  const [statut, setStatut] = useState<string | null>(null);
   const [client, setClient] = useState("");
   const [offre, setOffre] = useState("");
   const [retour, setRetour] = useState<{ ok: boolean; texte: string } | null>(null);
@@ -155,265 +159,358 @@ function CabinetAbonnements() {
   const lignes = attribues.data ?? [];
   const couverts = lignes.filter((a) => a.statut === "actif").length;
   const enAttente = lignes.filter((a) => a.statut === "propose").length;
-  const derniere = (factures.data ?? [])[0] ?? null;
+  const derniere =
+    [...(factures.data ?? [])].sort((a, b) => b.periode.localeCompare(a.periode))[0] ?? null;
+  const visibles = lignes.filter(
+    (a) =>
+      (!statut || a.statut === statut) &&
+      a.client_nom.toLocaleLowerCase(locale).includes(recherche.toLocaleLowerCase(locale)),
+  );
 
   return (
-    <div className="space-y-8">
-      <EnTeteCabinet
-        surtitre={<>{t("cab.abo.kicker")}</>}
-        titre={<>{t("cab.abo.title")}</>}
-        chapeau={<>{t("cab.abo.lede")}</>}
-      />
+    <div className="cab-library space-y-6">
+      <header className="cab-library-header">
+        <div>
+          <p className="cab-eyebrow">{org.name}</p>
+          <h1>{t("cab.abo.title")}</h1>
+        </div>
+        {expert ? (
+          <button
+            type="button"
+            className="cab-button cab-button-primary"
+            aria-expanded={formulaire}
+            aria-controls="cab-abonnement-formulaire"
+            onClick={() => setFormulaire(!formulaire)}
+          >
+            <span aria-hidden>{formulaire ? "−" : "+"}</span>
+            {t("cab.abo.propose.titre")}
+          </button>
+        ) : null}
+      </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="cab-summary-grid">
         {[
-          { key: "couverts", label: t("cab.abo.kpi.couverts"), value: String(couverts), tone: "" },
           {
-            key: "attente",
-            label: t("cab.abo.kpi.attente"),
-            value: String(enAttente),
-            tone: enAttente ? "text-marigold" : "",
+            key: "actif",
+            label: t("cab.abo.kpi.couverts"),
+            value: attribues.isPending || attribues.isError ? "—" : String(couverts),
+            tone: "green",
+            symbol: "↗",
           },
           {
-            key: "facture",
+            key: "propose",
+            label: t("cab.abo.kpi.attente"),
+            value: attribues.isPending || attribues.isError ? "—" : String(enAttente),
+            tone: "violet",
+            symbol: "◷",
+          },
+          {
+            key: "factures",
             label: t("cab.abo.kpi.derniere"),
             value: derniere ? montant(derniere.montant_ttc, derniere.devise) : "—",
-            tone: "",
+            tone: "peach",
+            symbol: "↗",
           },
         ].map((k) => (
-          <div key={k.key} className="border border-border bg-card px-4 py-4">
-            <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {k.label}
-            </p>
-            <p className={cn("num mt-1.5 text-[28px] leading-none", k.tone)}>{k.value}</p>
-          </div>
+          <button
+            key={k.key}
+            type="button"
+            className="cab-summary-card"
+            data-color={k.tone}
+            aria-pressed={
+              k.key === "factures" ? vue === "factures" : vue === "clients" && statut === k.key
+            }
+            onClick={() => {
+              setVue(k.key === "factures" ? "factures" : "clients");
+              setStatut(statut === k.key ? null : k.key);
+            }}
+          >
+            <span className="cab-summary-label">{k.label}</span>
+            <strong className="cab-summary-value num">{k.value}</strong>
+            <span className="cab-summary-symbol" aria-hidden>
+              {k.symbol}
+            </span>
+          </button>
         ))}
       </div>
 
       {/* 1. Proposer — à l'expert seul */}
-      {expert ? (
-        <section className="space-y-3">
-          <SectionTitle>{t("cab.abo.propose.titre")}</SectionTitle>
-          <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-muted-foreground">
-            {t("cab.abo.propose.regle")}
-          </p>
-          {actifs.length === 0 ? (
-            <EmptyState>{t("cab.abo.propose.aucunClient")}</EmptyState>
-          ) : (
-            <form
-              className="flex flex-wrap items-end gap-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setRetour(null);
-                proposer.mutate();
-              }}
-            >
-              <label className="flex flex-col gap-1">
-                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t("cab.abo.propose.client")}
-                </span>
-                <select
-                  value={client}
-                  onChange={(e) => setClient(e.target.value)}
-                  required
-                  className="min-w-[16rem] border border-border bg-card px-2.5 py-1.5 text-[12.5px]"
-                >
-                  <option value="">{t("cab.abo.propose.choisir")}</option>
-                  {actifs.map((c) => (
-                    <option key={c.tenantId} value={c.tenantId}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <fieldset className="flex flex-wrap gap-2">
-                <legend className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {t("cab.abo.propose.offre")}
-                </legend>
-                {(offres.data ?? []).map((o) => (
-                  <label
-                    key={o.code}
-                    className={cn(
-                      "cursor-pointer border px-3 py-2 text-[12px]",
-                      offre === o.code
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-card hover:bg-accent",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="offre"
-                      value={o.code}
-                      checked={offre === o.code}
-                      onChange={() => setOffre(o.code)}
-                      className="sr-only"
-                    />
-                    <span className="block font-semibold">{o.libelle}</span>
-                    <span className="num block text-[10.5px] opacity-80">
-                      {t("cab.abo.propose.prix", { prix: montant(o.prix_mensuel_ht) })}
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-              <button
-                type="submit"
-                disabled={!client || !offre || proposer.isPending}
-                className="h-9 bg-foreground px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
-              >
-                {proposer.isPending ? t("common.loading") : t("cab.abo.propose.bouton")}
-              </button>
-            </form>
-          )}
-          {retour ? (
-            <p
-              role={retour.ok ? "status" : "alert"}
-              className={cn("text-[12.5px]", retour.ok ? "text-signal-ok" : "text-signal-stop")}
-            >
-              {retour.texte}
+      {expert && formulaire ? (
+        <section id="cab-abonnement-formulaire" className="cab-surface space-y-3">
+          <h2 className="sr-only">{t("cab.abo.propose.titre")}</h2>
+          <div className="space-y-3">
+            <SectionTitle>{t("cab.abo.propose.titre")}</SectionTitle>
+            <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-muted-foreground">
+              {t("cab.abo.propose.regle")}
             </p>
-          ) : null}
+            {clients.isPending ? (
+              <p role="status">{t("common.loading")}</p>
+            ) : clients.isError || offres.isError ? (
+              <p role="alert" className="text-signal-stop">
+                {texteDeLErreur(clients.error ?? offres.error, OU, t("common.error"))}
+              </p>
+            ) : actifs.length === 0 ? (
+              <EmptyState>{t("cab.abo.propose.aucunClient")}</EmptyState>
+            ) : (
+              <form
+                className="flex flex-wrap items-end gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setRetour(null);
+                  proposer.mutate();
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {t("cab.abo.propose.client")}
+                  </span>
+                  <select
+                    value={client}
+                    onChange={(e) => setClient(e.target.value)}
+                    required
+                    className="min-w-[16rem] border border-border bg-card px-2.5 py-1.5 text-[12.5px]"
+                  >
+                    <option value="">{t("cab.abo.propose.choisir")}</option>
+                    {actifs.map((c) => (
+                      <option key={c.tenantId} value={c.tenantId}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <fieldset className="flex flex-wrap gap-2">
+                  <legend className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {t("cab.abo.propose.offre")}
+                  </legend>
+                  {(offres.data ?? []).map((o) => (
+                    <label
+                      key={o.code}
+                      className={cn(
+                        "cursor-pointer border px-3 py-2 text-[12px]",
+                        offre === o.code
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-card hover:bg-accent",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="offre"
+                        value={o.code}
+                        checked={offre === o.code}
+                        onChange={() => setOffre(o.code)}
+                        className="sr-only"
+                      />
+                      <span className="block font-semibold">{o.libelle}</span>
+                      <span className="num block text-[10.5px] opacity-80">
+                        {t("cab.abo.propose.prix", { prix: montant(o.prix_mensuel_ht) })}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                <button
+                  type="submit"
+                  disabled={!client || !offre || proposer.isPending}
+                  className="h-9 bg-foreground px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
+                >
+                  {proposer.isPending ? t("common.loading") : t("cab.abo.propose.bouton")}
+                </button>
+              </form>
+            )}
+            {retour ? (
+              <p
+                role={retour.ok ? "status" : "alert"}
+                className={cn("text-[12.5px]", retour.ok ? "text-signal-ok" : "text-signal-stop")}
+              >
+                {retour.texte}
+              </p>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
-      {/* 2. Ce que le cabinet propose ou couvre */}
-      <section className="space-y-3">
-        <SectionTitle
-          action={
-            <span className="num text-[11px] text-muted-foreground">
-              {t("cab.abo.liste.count", { count: lignes.length })}
-            </span>
-          }
-        >
-          {t("cab.abo.liste.titre")}
-        </SectionTitle>
-        {attribues.isPending ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : attribues.error ? (
-          <p role="alert" className="text-[12.5px] text-signal-stop">
-            {texteDeLErreur(attribues.error, OU, t("common.error"))}
-          </p>
-        ) : lignes.length === 0 ? (
-          <EmptyState>{t("cab.abo.liste.vide")}</EmptyState>
-        ) : (
-          <InkTable
-            caption={t("cab.abo.liste.titre")}
-            head={[
-              t("cab.abo.col.client"),
-              t("cab.abo.col.offre"),
-              t("cab.abo.col.statut"),
-              t("cab.abo.col.propose"),
-              t("cab.abo.col.effet"),
-            ]}
+      <div className="cab-library-toolbar">
+        <nav className="cab-view-switch" aria-label={t("cab.abo.title")}>
+          <button
+            type="button"
+            aria-pressed={vue === "clients"}
+            onClick={() => {
+              setVue("clients");
+              setStatut(null);
+            }}
           >
-            {lignes.map((a) => (
-              <InkTableRow key={a.acces_id}>
-                <InkCell>
-                  <Link
-                    to="/cabinet/dossier/$clientId"
-                    params={{ clientId: a.client_tenant_id }}
-                    className="block font-medium hover:underline"
-                  >
-                    {a.client_nom}
-                  </Link>
-                  <span className="num block text-[10.5px] text-muted-foreground">
-                    {a.client_legal_id ?? "—"}
-                  </span>
-                </InkCell>
-                <InkCell>{libelleOffre(a.offre_code)}</InkCell>
-                <InkCell>
-                  <span className={cn("text-[12px] font-medium", TON[a.statut] ?? "")}>
-                    {STATUT[a.statut] ? t(STATUT[a.statut]!) : a.statut}
-                  </span>
-                </InkCell>
-                <InkCell>
-                  <span className="num">{date(a.propose_le)}</span>
-                </InkCell>
-                <InkCell>
-                  <span className="num">
-                    {a.effet_du ? date(a.effet_du) : "—"}
-                    {a.effet_au ? ` → ${date(a.effet_au)}` : ""}
-                  </span>
-                </InkCell>
-              </InkTableRow>
-            ))}
-          </InkTable>
-        )}
-      </section>
-
-      {/* 3. Les factures du cabinet */}
-      <section className="space-y-3">
-        <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
-        {refusDePaiement ? (
-          <p role="alert" className="text-[12.5px] text-signal-stop">
-            {refusDePaiement}
-          </p>
+            {t("cab.abo.liste.titre")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={vue === "factures"}
+            onClick={() => setVue("factures")}
+          >
+            {t("cab.abo.factures.titre")}
+          </button>
+        </nav>
+        {vue === "clients" ? (
+          <input
+            type="search"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            aria-label={t("cab.abo.col.client")}
+            placeholder={t("cab.abo.col.client")}
+            className="cab-library-search"
+          />
         ) : null}
-        {factures.isPending ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : (factures.data ?? []).length === 0 ? (
-          <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
-        ) : (
-          <InkTable
-            caption={t("cab.abo.factures.titre")}
-            head={[
-              t("cab.abo.fac.numero"),
-              t("cab.abo.fac.periode"),
-              t("cab.abo.fac.societes"),
-              t("cab.abo.fac.ttc"),
-              t("cab.abo.fac.echeance"),
-              t("cab.abo.fac.statut"),
-              t("cab.abo.fac.reste"),
-            ]}
+      </div>
+
+      {/* 2. Ce que le cabinet propose ou couvre */}
+      {vue === "clients" ? (
+        <section className="space-y-3">
+          <SectionTitle
+            action={
+              <span className="num text-[11px] text-muted-foreground">
+                {t("cab.abo.liste.count", { count: lignes.length })}
+              </span>
+            }
           >
-            {(factures.data ?? []).map((f) => (
-              <InkTableRow key={f.id}>
-                <InkCell>
-                  <span className="num font-medium">{f.numero}</span>
-                </InkCell>
-                <InkCell>
-                  <span className="num">{f.periode.slice(0, 7)}</span>
-                </InkCell>
-                <InkCell numeric>{f.organisations}</InkCell>
-                <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
-                <InkCell>
-                  <span className="num">{date(f.echeance_le)}</span>
-                </InkCell>
-                <InkCell>
-                  <span
-                    className={cn(
-                      "text-[12px]",
-                      f.etat === "en_retard" && "text-signal-warn",
-                      f.etat === "payee" && "text-signal-ok",
-                    )}
-                  >
-                    {t(ETAT_DE_FACTURE[f.etat])}
-                  </span>
-                </InkCell>
-                <InkCell numeric>
-                  {Number(f.reste_du) > 0 &&
-                  (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="num">{montant(f.reste_du, f.devise)}</span>
-                      {peutPayer ? (
-                        <button
-                          type="button"
-                          className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
-                          disabled={payerFacture.isPending}
-                          onClick={() => payerFacture.mutate(f.id)}
-                        >
-                          {t("pme.reglages.paiement.payer")}
-                        </button>
-                      ) : null}
+            {t("cab.abo.liste.titre")}
+          </SectionTitle>
+          {attribues.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : attribues.error ? (
+            <p role="alert" className="text-[12.5px] text-signal-stop">
+              {texteDeLErreur(attribues.error, OU, t("common.error"))}
+            </p>
+          ) : lignes.length === 0 ? (
+            <EmptyState>{t("cab.abo.liste.vide")}</EmptyState>
+          ) : (
+            <>
+              {statut ? (
+                <button type="button" className="cab-filter-chip" onClick={() => setStatut(null)}>
+                  {STATUT[statut] ? t(STATUT[statut]!) : statut} <span aria-hidden>×</span>
+                </button>
+              ) : null}
+              <ul className="cab-client-grid">
+                {visibles.map((a) => (
+                  <li key={a.acces_id} className="cab-client-tile">
+                    <div className="cab-client-cover" data-status={a.statut}>
+                      <span className="cab-client-monogram" aria-hidden>
+                        {initialesDe(a.client_nom)}
+                      </span>
+                      <span className={cn("cab-plan-badge", TON[a.statut] ?? "")}>
+                        {STATUT[a.statut] ? t(STATUT[a.statut]!) : a.statut}
+                      </span>
+                    </div>
+                    <Link
+                      to="/cabinet/dossier/$clientId"
+                      params={{ clientId: a.client_tenant_id }}
+                      className="cab-client-title"
+                    >
+                      {a.client_nom}
+                    </Link>
+                    <p className="cab-client-plan">{libelleOffre(a.offre_code)}</p>
+                    <dl className="cab-client-dates">
+                      <div>
+                        <dt>{t("cab.abo.col.propose")}</dt>
+                        <dd>{date(a.propose_le)}</dd>
+                      </div>
+                      <div>
+                        <dt>{t("cab.abo.col.effet")}</dt>
+                        <dd>
+                          {date(a.effet_du)}
+                          {a.effet_au ? ` → ${date(a.effet_au)}` : ""}
+                        </dd>
+                      </div>
+                    </dl>
+                    {a.client_legal_id ? (
+                      <p className="cab-client-legal num">{a.client_legal_id}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {visibles.length === 0 ? (
+                <EmptyState>{t("cab.abo.liste.count", { count: 0 })}</EmptyState>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : (
+        /* Les factures restent dans une vue dédiée. */
+        <section className="space-y-3">
+          <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
+          {refusDePaiement ? (
+            <p role="alert" className="text-[12.5px] text-signal-stop">
+              {refusDePaiement}
+            </p>
+          ) : null}
+          {factures.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : factures.isError ? (
+            <p role="alert" className="text-signal-stop">
+              {texteDeLErreur(factures.error, OU, t("common.error"))}
+            </p>
+          ) : (factures.data ?? []).length === 0 ? (
+            <EmptyState>{t("cab.abo.factures.vide")}</EmptyState>
+          ) : (
+            <InkTable
+              caption={t("cab.abo.factures.titre")}
+              head={[
+                t("cab.abo.fac.numero"),
+                t("cab.abo.fac.periode"),
+                t("cab.abo.fac.societes"),
+                t("cab.abo.fac.ttc"),
+                t("cab.abo.fac.echeance"),
+                t("cab.abo.fac.statut"),
+                t("cab.abo.fac.reste"),
+              ]}
+            >
+              {(factures.data ?? []).map((f) => (
+                <InkTableRow key={f.id}>
+                  <InkCell>
+                    <span className="num font-medium">{f.numero}</span>
+                  </InkCell>
+                  <InkCell>
+                    <span className="num">{f.periode.slice(0, 7)}</span>
+                  </InkCell>
+                  <InkCell numeric>{f.organisations}</InkCell>
+                  <InkCell numeric>{montant(f.montant_ttc, f.devise)}</InkCell>
+                  <InkCell>
+                    <span className="num">{date(f.echeance_le)}</span>
+                  </InkCell>
+                  <InkCell>
+                    <span
+                      className={cn(
+                        "text-[12px]",
+                        f.etat === "en_retard" && "text-signal-warn",
+                        f.etat === "payee" && "text-signal-ok",
+                      )}
+                    >
+                      {t(ETAT_DE_FACTURE[f.etat])}
                     </span>
-                  ) : (
-                    <span className="num text-muted-foreground">—</span>
-                  )}
-                </InkCell>
-              </InkTableRow>
-            ))}
-          </InkTable>
-        )}
-      </section>
+                  </InkCell>
+                  <InkCell numeric>
+                    {Number(f.reste_du) > 0 &&
+                    (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="num">{montant(f.reste_du, f.devise)}</span>
+                        {peutPayer ? (
+                          <button
+                            type="button"
+                            className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
+                            disabled={payerFacture.isPending}
+                            onClick={() => payerFacture.mutate(f.id)}
+                          >
+                            {t("pme.reglages.paiement.payer")}
+                          </button>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="num text-muted-foreground">—</span>
+                    )}
+                  </InkCell>
+                </InkTableRow>
+              ))}
+            </InkTable>
+          )}
+        </section>
+      )}
     </div>
   );
 }

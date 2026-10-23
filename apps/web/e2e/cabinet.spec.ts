@@ -90,3 +90,92 @@ for (const largeur of [390, 1440]) {
     });
   }
 }
+
+for (const largeur of [390, 1440]) {
+  test(`abonnements : vues séparées et formulaire à la demande à ${largeur} px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: largeur, height: 900 });
+    await page.goto("/cabinet/abonnements");
+    await expect(page.locator("#cab-abonnement-formulaire")).toHaveCount(0);
+    await page.locator(".cab-library-header > button").click();
+    await expect(page.locator("#cab-abonnement-formulaire")).toBeVisible();
+    await page.locator(".cab-library-header > button").click();
+    await expect(page.locator("#cab-abonnement-formulaire")).toHaveCount(0);
+    const vues = page.locator(".cab-view-switch button");
+    await vues.nth(1).click();
+    await expect(vues.nth(1)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".cab-library-search")).toHaveCount(0);
+    await vues.nth(0).click();
+    await expect(page.locator(".cab-library-search")).toBeVisible();
+    await page.addStyleTag({
+      content:
+        "[data-repere] { outline: 2px solid #7754c4; position: relative; } [data-repere]::after { content: attr(data-repere); position: absolute; top: -10px; right: 8px; background: #7754c4; color: white; padding: 2px 8px; border-radius: 20px; font: 12px sans-serif; z-index: 5; }",
+    });
+    await page.locator(".cab-summary-grid").evaluate((el) => {
+      el.setAttribute("data-repere", "1 · Vue rapide");
+    });
+    await page.locator(".cab-library-toolbar").evaluate((el) => {
+      el.setAttribute("data-repere", "2 · Clients / factures / recherche");
+    });
+    await testInfo.attach(`abonnements-annote-${largeur}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
+  });
+
+  test(`statistiques : vue accessible à ${largeur} px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: largeur, height: 900 });
+    await page.goto("/cabinet/pilotage");
+    const statistiques = page.locator(".cab-view-switch button").last();
+    await statistiques.click();
+    await expect(statistiques).toHaveAttribute("aria-pressed", "true");
+    await testInfo.attach(`statistiques-${largeur}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
+    const debordement = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(debordement).toBeLessThanOrEqual(1);
+  });
+}
+
+test("invitation : accès direct et adresse invalide refusée sans envoi", async ({ page }) => {
+  const envois: string[] = [];
+  page.on("request", (requete) => {
+    if (!requete.url().endsWith("/rpc") || requete.method() !== "POST") return;
+    const appel = requete.postDataJSON() as { depot?: string; methode?: string };
+    if (appel.depot === "collab" && appel.methode === "inviter") envois.push(requete.url());
+  });
+  await page.goto("/cabinet/mise-en-route?etape=2");
+  const adresse = page.locator("#cab-inviter-equipe input[type=email]");
+  await expect(adresse).toBeVisible();
+  await adresse.fill("adresse-invalide");
+  await page.locator('button[form="cab-inviter-equipe"]').click();
+  expect(await adresse.evaluate((el: HTMLInputElement) => el.validity.valid)).toBe(false);
+  expect(envois).toEqual([]);
+});
+
+test("une panne des statistiques laisse les affectations accessibles", async ({ page }) => {
+  await page.route("**/rpc", async (route) => {
+    const appel = route.request().postDataJSON() as { depot?: string; methode?: string };
+    if (
+      (appel.depot === "supervision" && appel.methode === "statistiques") ||
+      (appel.depot === "collab" && appel.methode === "stats")
+    ) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ erreur: "Statistiques temporairement indisponibles" }),
+      });
+    } else await route.continue();
+  });
+  await page.goto("/cabinet/pilotage");
+  await expect(page.locator("#affecter form")).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Statistiques temporairement indisponibles", {
+    timeout: 20_000,
+  });
+  await expect(page.locator("#affecter select").first()).toBeEnabled();
+  await expect(page.locator(".cab-summary-value").last()).toHaveText("—");
+});

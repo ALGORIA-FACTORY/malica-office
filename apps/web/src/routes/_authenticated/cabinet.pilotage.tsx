@@ -213,24 +213,32 @@ function CabinetPilotage() {
       new Date(iso),
     );
 
+  const panne = clients.error ?? membres.error ?? affectations.error ?? reglages.error;
+  const panneStats = statistiques.error ?? stats.error;
+  const statsDisponibles = clientIds.length === 0 || stats.isSuccess;
+  if (panne) {
+    return (
+      <p role="alert" className="cab-surface text-signal-stop">
+        {texteDeLErreur(panne, "routes/_authenticated/cabinet.pilotage", t("common.error"))}
+      </p>
+    );
+  }
+  if (clients.isPending || membres.isPending || affectations.isPending || reglages.isPending) {
+    return (
+      <p role="status" className="cab-surface">
+        {t("common.loading")}
+      </p>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="cab-library cab-pilotage space-y-6">
       <EnTeteCabinet
-        surtitre={
-          <>
-            {t("cab.pil.kicker", {
-              count: (membres.data ?? []).length,
-              collabs: (membres.data ?? []).length,
-              // Les dossiers tenus : un mandat terminé ne pèse plus sur la charge (ANO-013).
-              mandats: (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length,
-            })}
-          </>
-        }
+        surtitre={<>{org.name}</>}
         titre={<>{t("cab.nav.pilotage")}</>}
-        chapeau={<>{t("cab.pil.doctrine")}</>}
         actions={
           <>
-            <div className="flex border border-border">
+            <div className="cab-view-switch">
               {(
                 [
                   ["charge", "cab.pil.vue.charge"],
@@ -255,8 +263,14 @@ function CabinetPilotage() {
         }
       />
 
+      {panneStats ? (
+        <p role="alert" className="cab-surface text-signal-stop">
+          {texteDeLErreur(panneStats, "routes/_authenticated/cabinet.pilotage", t("common.error"))}
+        </p>
+      ) : null}
+
       {/* ---- les chiffres */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="cab-summary-grid cab-summary-grid-four">
         {[
           {
             key: "ecart",
@@ -279,16 +293,20 @@ function CabinetPilotage() {
           {
             key: "sup",
             label: t("cab.pil.kpi.supervisees"),
-            value: String(statistiques.data?.socle.comptabilisees ?? 0),
+            value: statistiques.isSuccess ? String(statistiques.data.socle.comptabilisees) : "—",
             ctx: t("cab.pil.kpi.supervisees.ctx"),
           },
         ].map((k) => (
-          <div key={k.key} className="border border-border bg-card px-4 py-4">
+          <div
+            key={k.key}
+            className="cab-summary-card"
+            data-color={k.key === "sup" ? "green" : k.key === "sans" ? "peach" : "violet"}
+          >
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               {k.label}
             </p>
-            <p className="num mt-1.5 text-[28px] leading-none">{k.value}</p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">{k.ctx}</p>
+            <p className="cab-summary-value num">{k.value}</p>
+            <p className="sr-only">{k.ctx}</p>
           </div>
         ))}
       </div>
@@ -316,7 +334,7 @@ function CabinetPilotage() {
                   const etat = capacite !== null ? etatDeCharge(c.mandats.length, capacite) : null;
                   const part = capacite ? Math.min(1, c.mandats.length / capacite) : 0;
                   return (
-                    <li key={c.userId} className="border border-border bg-card p-4">
+                    <li key={c.userId} className="cab-surface">
                       <div className="flex flex-wrap items-start gap-3">
                         <span className="num flex h-8 w-8 shrink-0 items-center justify-center bg-foreground text-[11px] font-semibold text-background">
                           {initialesDe(c.email)}
@@ -358,7 +376,7 @@ function CabinetPilotage() {
                         {[
                           [t("cab.pil.m.dossiers"), String(c.mandats.length)],
                           [t("cab.pil.m.attente"), String(c.attente)],
-                          [t("cab.pil.m.traitees"), String(c.traitees)],
+                          [t("cab.pil.m.traitees"), statsDisponibles ? String(c.traitees) : "—"],
                           [t("cab.pil.m.delai"), heures(c.delai)],
                           [t("cab.pil.m.retour"), c.retour === null ? "—" : pourcent(c.retour)],
                         ].map(([label, valeur]) => (
@@ -432,10 +450,13 @@ function CabinetPilotage() {
                     premier={premier}
                     client={m}
                     attente={m.counts.comptabilisee}
-                    traitees={s?.supervisees ?? 0}
+                    traitees={statsDisponibles ? (s?.supervisees ?? 0) : null}
                     delai={heures(s && s.heuresMoyennes > 0 ? s.heuresMoyennes : null)}
-                    sante={t(santeDuMandat(taux, tauxCabinet))}
-                    aSuivre={santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"}
+                    sante={statsDisponibles ? t(santeDuMandat(taux, tauxCabinet)) : "—"}
+                    aSuivre={
+                      statsDisponibles &&
+                      santeDuMandat(taux, tauxCabinet) === "cab.pil.sante.suivre"
+                    }
                   />
                 );
               })}
@@ -559,7 +580,9 @@ function CabinetPilotage() {
             )}
           </section>
         </>
-      ) : (
+      ) : statistiques.isPending ? (
+        <p role="status">{t("common.loading")}</p>
+      ) : statistiques.isError ? null : (
         <Statistiques
           parMois={statistiques.data?.parMois ?? []}
           motifs={statistiques.data?.motifsDeRetour ?? []}
@@ -586,7 +609,7 @@ function LigneMatrice({
   premier: boolean;
   client: ClientSummary;
   attente: number;
-  traitees: number;
+  traitees: number | null;
   delai: string;
   sante: string;
   aSuivre: boolean;
@@ -618,7 +641,7 @@ function LigneMatrice({
         </Link>
       </InkCell>
       <InkCell numeric>{attente}</InkCell>
-      <InkCell numeric>{traitees}</InkCell>
+      <InkCell numeric>{traitees ?? "—"}</InkCell>
       <InkCell numeric>{delai}</InkCell>
       <InkCell>
         <span className={cn("text-[12px]", aSuivre ? "text-signal-warn" : "text-muted-foreground")}>
@@ -652,13 +675,13 @@ function Statistiques({
   const collabs = [...new Set(parMois.map((p) => p.collaborateur ?? ""))].sort();
   const totalDuMois = (m: string) =>
     parMois.filter((p) => p.mois === m).reduce((n, p) => n + p.supervisees, 0);
-  const max = Math.max(1, ...mois.map(totalDuMois));
+  const max = Math.max(4, Math.ceil(Math.max(0, ...mois.map(totalDuMois)) / 4) * 4);
   const nomDuMois = (m: string) =>
-    new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(
+    new Intl.DateTimeFormat(locale, { month: "short", year: "2-digit", timeZone: "UTC" }).format(
       new Date(`${m}-01T00:00:00Z`),
     );
   const maxMotif = Math.max(1, ...motifs.map((m) => m.retours));
-  const nuances = ["bg-foreground", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
+  const nuances = ["bg-[#168b50]", "bg-[#8470d5]", "bg-[#d98745]", "bg-[#4a8ea8]", "bg-[#bb5272]"];
 
   return (
     <>
@@ -680,43 +703,99 @@ function Statistiques({
         {mois.length === 0 ? (
           <EmptyState>{t("cab.pil.stats.mois.vide")}</EmptyState>
         ) : (
-          <div className="border border-border bg-card p-4">
-            <div className="flex h-40 items-end gap-2">
-              {mois.map((m) => (
-                <span key={m} className="flex flex-1 flex-col items-center justify-end gap-1">
-                  <span className="num text-[10.5px]">{totalDuMois(m)}</span>
-                  <span
-                    aria-hidden
-                    className="flex w-full flex-col-reverse"
-                    style={{ height: `${(totalDuMois(m) / max) * 120}px` }}
-                  >
-                    {collabs.map((c, i) => {
-                      const part =
-                        parMois.find((p) => p.mois === m && (p.collaborateur ?? "") === c)
-                          ?.supervisees ?? 0;
-                      const total = totalDuMois(m) || 1;
-                      return (
-                        <span
-                          key={c || "—"}
-                          className={cn("block w-full", nuances[i % nuances.length])}
-                          style={{ height: `${(part / total) * 100}%` }}
-                        />
-                      );
-                    })}
-                  </span>
-                </span>
-              ))}
+          <div className="cab-chart-card">
+            <div className="cab-chart-scroll">
+              <svg
+                viewBox={`0 0 ${Math.max(600, mois.length * 80 + 72)} 288`}
+                role="img"
+                aria-label={t("cab.pil.stats.mois")}
+                className="cab-production-chart"
+                style={{ minWidth: Math.max(600, mois.length * 80 + 72) }}
+              >
+                {[0, 1, 2, 3, 4].map((tick) => {
+                  const y = 236 - tick * 50;
+                  return (
+                    <g key={tick}>
+                      <line
+                        x1="52"
+                        x2={Math.max(580, mois.length * 80 + 52)}
+                        y1={y}
+                        y2={y}
+                        stroke="currentColor"
+                        className="cab-chart-grid"
+                      />
+                      <text x="42" y={y + 4} textAnchor="end" className="cab-chart-axis">
+                        {Math.round((tick * max) / 4)}
+                      </text>
+                    </g>
+                  );
+                })}
+                {mois.map((m, index) => {
+                  const slot = (Math.max(600, mois.length * 80 + 72) - 72) / mois.length;
+                  const x = 60 + index * slot;
+                  let base = 236;
+                  return (
+                    <g key={m}>
+                      {collabs.map((c, i) => {
+                        const part = parMois
+                          .filter((p) => p.mois === m && (p.collaborateur ?? "") === c)
+                          .reduce((n, p) => n + p.supervisees, 0);
+                        const hauteur = (part / max) * 200;
+                        base -= hauteur;
+                        return (
+                          <rect
+                            key={c || "—"}
+                            x={x}
+                            y={base}
+                            width={Math.min(44, slot - 16)}
+                            height={hauteur}
+                            className={`cab-chart-series cab-chart-series-${i % 5}`}
+                          >
+                            <title>{`${m} · ${c || "—"} : ${part}`}</title>
+                          </rect>
+                        );
+                      })}
+                      <text
+                        x={x + Math.min(44, slot - 16) / 2}
+                        y={236 - (totalDuMois(m) / max) * 200 - 10}
+                        textAnchor="middle"
+                        className="cab-chart-value"
+                      >
+                        {totalDuMois(m)}
+                      </text>
+                      <text
+                        x={x + Math.min(44, slot - 16) / 2}
+                        y="262"
+                        textAnchor="middle"
+                        className="cab-chart-axis"
+                      >
+                        {nomDuMois(m)}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
-            <div className="mt-2 flex gap-2">
-              {mois.map((m) => (
-                <span
-                  key={m}
-                  className="flex-1 text-center text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
-                >
-                  {nomDuMois(m)}
-                </span>
-              ))}
-            </div>
+            <details className="cab-chart-data">
+              <summary>{t("cab.pil.stats.mois")}</summary>
+              <InkTable
+                caption={t("cab.pil.stats.mois")}
+                head={[t("cab.abo.fac.periode"), ...collabs.map((c) => c || "—")]}
+              >
+                {mois.map((m) => (
+                  <InkTableRow key={m}>
+                    <InkCell>{m}</InkCell>
+                    {collabs.map((c) => (
+                      <InkCell key={c || "—"} numeric>
+                        {parMois
+                          .filter((p) => p.mois === m && (p.collaborateur ?? "") === c)
+                          .reduce((n, p) => n + p.supervisees, 0)}
+                      </InkCell>
+                    ))}
+                  </InkTableRow>
+                ))}
+              </InkTable>
+            </details>
           </div>
         )}
       </section>
@@ -727,16 +806,19 @@ function Statistiques({
           {motifs.length === 0 ? (
             <EmptyState>{t("cab.pil.stats.motifs.vide")}</EmptyState>
           ) : (
-            <ul className="space-y-3">
+            <ul className="cab-return-chart space-y-5">
               {motifs.map((m) => (
                 <li key={m.label}>
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-[13px]">{m.label}</span>
                     <span className="num text-[12px]">{m.retours}</span>
                   </div>
-                  <span aria-hidden className="mt-1 block h-[3px] w-full bg-secondary">
+                  <span
+                    aria-hidden
+                    className="mt-2 block h-3 w-full overflow-hidden rounded-full bg-secondary"
+                  >
                     <span
-                      className="block h-full bg-foreground"
+                      className="block h-full rounded-full bg-[#8470d5]"
                       style={{ width: `${Math.round((m.retours / maxMotif) * 100)}%` }}
                     />
                   </span>
@@ -754,7 +836,7 @@ function Statistiques({
               [t("cab.pil.stats.comptabilisees"), String(socle?.comptabilisees ?? 0)],
               [t("cab.pil.stats.delai"), heures(socle?.delaiMedianHeures ?? null)],
             ].map(([label, valeur]) => (
-              <div key={label} className="border border-border bg-card px-4 py-4">
+              <div key={label} className="cab-surface">
                 <p className="num text-[26px] leading-none">{valeur}</p>
                 <p className="mt-1.5 text-[10.5px] uppercase tracking-[0.14em] text-muted-foreground">
                   {label}
@@ -762,9 +844,6 @@ function Statistiques({
               </div>
             ))}
           </div>
-          <p className="text-[11px] leading-[1.5] text-muted-foreground">
-            {t("cab.today.socle.doctrine")}
-          </p>
         </section>
       </div>
     </>
