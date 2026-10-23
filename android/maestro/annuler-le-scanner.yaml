@@ -27,6 +27,6 @@ androidWebViewHierarchy: devtools
 - back
 - assertVisible: "Importer des PDF"
 - back
-- assertVisible: "Vos documents"
+- assertVisible: "TVA · .*"
 - assertNotVisible: "Une erreur est survenue."
 
