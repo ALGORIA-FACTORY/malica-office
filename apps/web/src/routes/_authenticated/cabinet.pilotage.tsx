@@ -245,16 +245,7 @@ function CabinetPilotage() {
   return (
     <div className="cab-library cab-pilotage space-y-6">
       <EnTeteCabinet
-        surtitre={
-          <>
-            {t("cab.pil.kicker", {
-              count: (membres.data ?? []).length,
-              collabs: (membres.data ?? []).length,
-              // Les dossiers tenus : un mandat terminé ne pèse plus sur la charge (ANO-013).
-              mandats: (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length,
-            })}
-          </>
-        }
+        surtitre={<>{org.name}</>}
         titre={<>{t("cab.nav.pilotage")}</>}
         actions={
           <>
@@ -684,7 +675,7 @@ function Statistiques({
   const collabs = [...new Set(parMois.map((p) => p.collaborateur ?? ""))].sort();
   const totalDuMois = (m: string) =>
     parMois.filter((p) => p.mois === m).reduce((n, p) => n + p.supervisees, 0);
-  const max = Math.max(1, ...mois.map(totalDuMois));
+  const max = Math.max(4, Math.ceil(Math.max(0, ...mois.map(totalDuMois)) / 4) * 4);
   const nomDuMois = (m: string) =>
     new Intl.DateTimeFormat(locale, { month: "short", year: "2-digit", timeZone: "UTC" }).format(
       new Date(`${m}-01T00:00:00Z`),
