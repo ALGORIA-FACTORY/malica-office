@@ -1356,14 +1356,20 @@ function PieceScreen() {
 
       {/* ── le chapeau du dossier ────────────────────────────────────── */}
       <div className="tete">
-        <span className={vente ? "kind rec" : "kind"}>
-          <i />
-          {vente
-            ? t("pme.piece.sens.vente")
-            : achat
-              ? t("pme.piece.sens.achat")
-              : t("pme.piece.sens.inconnu")}
-        </span>
+        {/*
+         * Le sens ne se dit que d'une facture, ou d'une pièce sans type : un
+         * reçu ou un relevé n'est ni « achat » ni « sens non tranché ».
+         */}
+        {vente || achat || !payload?.document_kind ? (
+          <span className={vente ? "kind rec" : "kind"}>
+            <i />
+            {vente
+              ? t("pme.piece.sens.vente")
+              : achat
+                ? t("pme.piece.sens.achat")
+                : t("pme.piece.sens.inconnu")}
+          </span>
+        ) : null}
         <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
         <p className="obj">
           {nomDuType(piece.documentKind) ?? t("pme.piece.title")}

@@ -14,6 +14,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
+import { executerRpc } from "../rpc.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -87,6 +88,28 @@ describe("le type d'une pièce se corrige après la lecture", { skip: !BASE_CONF
       [id],
     );
     assert.equal(trace.rows[0]?.avant, "facture_achat");
+  });
+
+  it("le dossier rend le type corrigé, même quand la lecture en avait lu un autre", async () => {
+    const id = await piece("rendu", "lue");
+    await admin.query(
+      `insert into capture.extractions (tenant_id, piece_id, contract, payload)
+       values ($1, $2, 'extract.v1', '{"document_kind": "facture_vente"}'::jsonb)`,
+      [pme, id],
+    );
+    await preciser(id, "ticket_caisse");
+    // Par le transport, comme en production : `depots/capture.ts` et
+    // `rpc.ts` se citent en cercle, un import direct ne s'initialise pas.
+    const d = (await sousIdentite(dirigeant.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "dossier", args: [id] }),
+    )) as { extraction?: { payload?: unknown } };
+    const payload = d.extraction?.payload as { document_kind?: string } | undefined;
+    assert.equal(payload?.document_kind, "ticket_caisse");
+    const brut = await admin.query<{ k: string }>(
+      "select payload ->> 'document_kind' as k from capture.extractions where piece_id = $1",
+      [id],
+    );
+    assert.equal(brut.rows[0]!.k, "facture_vente", "la lecture reste immuable");
   });
 
   it("un type que le référentiel ne propose pas au choix est refusé", async () => {
