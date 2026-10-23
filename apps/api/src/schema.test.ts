@@ -497,6 +497,11 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
      * Exiger la porte de plateforme aurait obligé à nommer une exception ; on
      * nomme plutôt les portes admises, qui sont celles qui DÉCIDENT d'un droit.
      *
+     * Le 23 octobre, le paiement en ligne (société ou cabinet) nomme sa porte
+     * une fois : `facturation.peut_payer` — `app.has_org_role` d'un cabinet, ou
+     * le titulaire dirigeant d'une licence —, que `facturation.reste_du_payable`
+     * applique à une facture. Ce sont des portes qui DÉCIDENT d'un droit.
+     *
      * Ce n'est pas la liste blanche que j'ai refusé d'écrire en ronde 4 :
      * celle-là aurait inscrit soixante FONCTIONS sans les lire. Ici on énumère
      * des PORTES, et l'ensemble gardé est celui des definer qui écrivent dans
@@ -510,7 +515,7 @@ describe("le schéma tient ses promesses", { skip: !BASE_CONFIGUREE }, () => {
        where p.prosecdef
          and has_function_privilege('authenticated', p.oid, 'execute')
          and p.prosrc ~* '(insert into|update|delete from)\\s+facturation\\.'
-         and p.prosrc !~* 'app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)'
+         and p.prosrc !~* '(app\\.(is_platform|piece_lisible|member_orgs|engaged_orgs|has_org_role)|facturation\\.(peut_payer|reste_du_payable))'
        order by 1`);
 
     assert.deepEqual(

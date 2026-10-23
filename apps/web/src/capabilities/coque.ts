@@ -34,7 +34,14 @@ export const CIBLE_COQUE = import.meta.env.VITE_CIBLE === "coque";
  * (`outils/coque-sans-commerce.mjs`). Le serveur tient la même règle pour une
  * coque qui l'oublierait (`METHODES_COMMERCIALES`, `@malica/socle/commerce`).
  */
-export const COMMERCE = !CIBLE_COQUE;
+//
+// La valeur vient de Vite (`__COMMERCE__`, `vite.config.ts`), remplacée dans
+// le texte de chaque module AVANT le graphe : une route qui charge une page
+// commerciale en différé écrit `__COMMERCE__ ? lazyRouteComponent(…) : …`
+// directement, pour que l'import différé disparaisse du paquet de la coque —
+// une constante importée n'est pliée qu'après le découpage en morceaux, et le
+// morceau resterait (relevé le 23 octobre par `coque-sans-commerce.mjs`).
+export const COMMERCE: boolean = __COMMERCE__;
 
 /** Vrai dans la coque iOS ou Android ; faux dans un navigateur. */
 export function estNatif(): boolean {

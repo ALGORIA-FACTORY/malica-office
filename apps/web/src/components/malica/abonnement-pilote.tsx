@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
+import { useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
 import {
   libelleDOffre,
   offreQuiPermetDeRecharger,
@@ -24,10 +25,10 @@ import {
 } from "@/hooks/use-offres";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { libelleDuPaiement } from "@/lib/paiement";
+import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
-import type { FactureDuTitulaire, OffreDeLaGrille } from "@malica/socle/ports/repositories";
+import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
 
 const OU = "components/malica/abonnement-pilote";
 
@@ -739,55 +740,23 @@ export function ARegler() {
   const { t, locale } = useI18n();
   const invalider = useInvalider();
   const principal = useEstPrincipal();
-  const qc = useQueryClient();
   const paiements = useQuery({
     queryKey: ["mes-paiements"],
     queryFn: () => office().facturation.mesPaiements(),
     enabled: principal,
     retry: false,
   });
-  const [retour, setRetour] = useState<string | null>(null);
-
-  const ici = typeof window === "undefined" ? null : new URL(window.location.href);
-  const revenu = ici?.searchParams.get("paiement") ?? null;
-  const simulateur = ici?.searchParams.get("simulateur") === "1";
-
-  const verifier = useMutation({
-    mutationFn: (id: string) => office().facturation.verifierPaiement(id),
-    onSuccess: async (p) => {
-      setRetour(
-        p.etat === "paye"
-          ? t("pme.reglages.paiement.paye")
-          : p.etat === "refuse"
-            ? t("pme.reglages.paiement.refuse")
-            : t("pme.reglages.paiement.enAttente"),
-      );
-      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
-    },
-    onError: (e: unknown) => setRetour(refus(e, t)),
-  });
-
-  const simuler = useMutation({
-    mutationFn: (p: { id: string; decision: "paye" | "refuse" }) =>
-      office().facturation.simulerPaiement(p.id, p.decision),
-    onSuccess: async (p) => {
-      setRetour(
-        p.etat === "paye" ? t("pme.reglages.paiement.paye") : t("pme.reglages.paiement.refuse"),
-      );
-      await invalider();
-      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
-    },
-    onError: (e: unknown) => setRetour(refus(e, t)),
-  });
-
-  // Revenu du prestataire : une seule vérification, au montage.
-  const { mutate: verifierUneFois } = verifier;
-  useEffect(() => {
-    if (principal && revenu && !simulateur) verifierUneFois(revenu);
-  }, [principal, revenu, simulateur, verifierUneFois]);
+  const { revenu, simulateur, verifier, simuler, retour } = useRetourDuPrestataire(
+    principal,
+    OU,
+    invalider,
+  );
 
   if (!principal) return null;
-  const ouverts = (paiements.data ?? []).filter((p) => p.etat !== "paye");
+  // Ceux de la société : une facture de cabinet se paie depuis la console du cabinet.
+  const ouverts = (paiements.data ?? []).filter(
+    (p) => p.etat !== "paye" && p.payeur_tenant_id === null,
+  );
   if (ouverts.length === 0 && !retour) return null;
 
   return (
@@ -865,16 +834,6 @@ export function ARegler() {
     </div>
   );
 }
-
-/** L'état d'une facture (`facturation.encours_v`), dit dans la langue de la personne. */
-const ETAT_DE_FACTURE: Record<FactureDuTitulaire["etat"], MessageKey> = {
-  a_echoir: "pme.reglages.factures.etat.a_echoir",
-  en_retard: "pme.reglages.factures.etat.en_retard",
-  partielle: "cab.abo.fac.statut.partielle",
-  payee: "cab.abo.fac.statut.payee",
-  annulee: "cab.abo.fac.statut.annulee",
-  irrecouvrable: "cab.abo.fac.statut.irrecouvrable",
-};
 
 /**
  * Vos factures — et le paiement en ligne de ce qui reste dû (23 octobre 2026).

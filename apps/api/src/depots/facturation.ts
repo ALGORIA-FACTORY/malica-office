@@ -15,6 +15,8 @@
  * `public.siege_inviter`, qui refuse la place de trop.
  */
 
+import type { EtatDeFacture } from "@malica/socle/ports/repositories";
+
 import type { Requete } from "../db.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
 
@@ -39,10 +41,12 @@ interface PaiementLu {
   lien: string | null;
   impute: boolean;
   cree_le: string;
+  /** Le cabinet qui paie (une facture de cabinet) ; `null` pour une société. */
+  payeur_tenant_id: string | null;
 }
 
 const COLONNES_PAIEMENT = `paiement_id, objet, libelle, montant_ht, montant_tva, montant_ttc, devise,
-  etat, prestataire, reference, lien, impute, cree_le`;
+  etat, prestataire, reference, lien, impute, cree_le, payeur_tenant_id`;
 
 /**
  * Le réglage de la tour (`public.paiement_reglage()`), joint à ce que la table
@@ -415,7 +419,11 @@ export const facturation = {
       unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
       devise: devise.iso_numerique,
       libelle: p.libelle,
-      retour: adresseDeRetour(env.urlPublique, paiementId),
+      retour: adresseDeRetour(
+        env.urlPublique,
+        p.payeur_tenant_id ? "cabinet" : "societe",
+        paiementId,
+      ),
     });
     const inscrit = await inscrire(
       db,
@@ -667,8 +675,9 @@ export const facturation = {
     const { rows } = await db.query(
       `select f.id, f.numero, f.periode::text, f.emise_le::text, f.echeance_le::text,
               f.montant_ht::text, f.montant_tva::text, f.timbre::text, f.montant_ttc::text,
-              f.devise, f.statut, f.organisations
+              f.devise, f.organisations, e.reste_du::text, e.etat
          from facturation.factures f
+         join facturation.encours_v e on e.facture_id = f.id
         where f.payeur_type = 'cabinet' and f.payeur_tenant_id = $1
         order by f.periode desc, f.numero desc`,
       [cabinetId],
@@ -684,8 +693,9 @@ export const facturation = {
       timbre: string;
       montant_ttc: string;
       devise: string;
-      statut: string;
       organisations: number;
+      reste_du: string;
+      etat: EtatDeFacture;
     }>;
   },
 

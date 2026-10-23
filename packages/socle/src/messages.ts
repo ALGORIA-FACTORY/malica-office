@@ -1276,7 +1276,8 @@ const fr = {
   "cab.abo.fac.ttc": "TTC",
   "cab.abo.fac.echeance": "Échéance",
   "cab.abo.fac.statut": "État",
-  "cab.abo.fac.statut.emise": "À payer",
+  "cab.abo.fac.reste": "Reste à payer",
+  "cab.payer.kicker": "Régler une facture",
   "cab.abo.fac.statut.payee": "Payée",
   "cab.abo.fac.statut.partielle": "Payée en partie",
   "cab.abo.fac.statut.annulee": "Annulée",
@@ -2802,6 +2803,9 @@ const fr = {
   "pme.reglages.paiement.ferme":
     "Le paiement en ligne n'est pas encore ouvert. Votre offre est active ; ce montant figurera sur la facture du mois.",
   "pme.reglages.paiement.paye": "Payé, merci. Il figurera sur la facture du mois.",
+  "pme.reglages.paiement.factureReglee": "Payé, merci : la facture est réglée.",
+  "pme.reglages.paiement.simuleSansEffet":
+    "Paiement simulé : aucun argent n'est entré, la facture reste due.",
   "pme.reglages.paiement.refuse": "Paiement refusé. Vous pouvez réessayer.",
   "pme.reglages.paiement.enAttente": "Paiement en cours de confirmation.",
   "pme.reglages.paiement.verifier": "Vérifier le paiement",
@@ -4817,7 +4821,8 @@ const en: Dict = {
   "cab.abo.fac.ttc": "Incl. tax",
   "cab.abo.fac.echeance": "Due",
   "cab.abo.fac.statut": "Status",
-  "cab.abo.fac.statut.emise": "To pay",
+  "cab.abo.fac.reste": "Left to pay",
+  "cab.payer.kicker": "Pay an invoice",
   "cab.abo.fac.statut.payee": "Paid",
   "cab.abo.fac.statut.partielle": "Partly paid",
   "cab.abo.fac.statut.annulee": "Cancelled",
@@ -6312,6 +6317,9 @@ const en: Dict = {
   "pme.reglages.paiement.ferme":
     "Online payment is not open yet. Your plan is active; this amount will appear on the month's invoice.",
   "pme.reglages.paiement.paye": "Paid, thank you. It will appear on the month's invoice.",
+  "pme.reglages.paiement.factureReglee": "Paid, thank you: the invoice is settled.",
+  "pme.reglages.paiement.simuleSansEffet":
+    "Simulated payment: no money came in, the invoice is still due.",
   "pme.reglages.paiement.refuse": "Payment declined. You can try again.",
   "pme.reglages.paiement.enAttente": "Payment being confirmed.",
   "pme.reglages.paiement.verifier": "Check the payment",
@@ -8221,7 +8229,8 @@ const ar: Dict = {
   "cab.abo.fac.ttc": "بكامل الأداءات",
   "cab.abo.fac.echeance": "الأجل",
   "cab.abo.fac.statut": "الحالة",
-  "cab.abo.fac.statut.emise": "للدفع",
+  "cab.abo.fac.reste": "المتبقي للدفع",
+  "cab.payer.kicker": "دفع فاتورة",
   "cab.abo.fac.statut.payee": "مدفوعة",
   "cab.abo.fac.statut.partielle": "مدفوعة جزئيًّا",
   "cab.abo.fac.statut.annulee": "ملغاة",
@@ -9662,6 +9671,8 @@ const ar: Dict = {
   "pme.reglages.paiement.ferme":
     "الدفع الإلكتروني غير متاح بعد. باقتك مفعّلة، وسيظهر هذا المبلغ في فاتورة الشهر.",
   "pme.reglages.paiement.paye": "تم الدفع، شكرا. سيظهر في فاتورة الشهر.",
+  "pme.reglages.paiement.factureReglee": "تم الدفع، شكرًا: سُدّدت الفاتورة.",
+  "pme.reglages.paiement.simuleSansEffet": "دفع مُحاكى: لم يدخل أي مال، والفاتورة ما زالت مستحقة.",
   "pme.reglages.paiement.refuse": "رُفض الدفع. يمكنك المحاولة مجددا.",
   "pme.reglages.paiement.enAttente": "الدفع قيد التأكيد.",
   "pme.reglages.paiement.verifier": "التحقق من الدفع",

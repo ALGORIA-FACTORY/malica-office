@@ -77,7 +77,11 @@ const https =
 export default defineConfig(({ mode }) => {
   const coque = mode.startsWith("coque-");
   return {
-    define: { "import.meta.env.VITE_VERSION_CLIENT": JSON.stringify(VERSION) },
+    define: {
+      "import.meta.env.VITE_VERSION_CLIENT": JSON.stringify(VERSION),
+      // Le commerce, plié AVANT le graphe des modules : `capabilities/coque.ts`.
+      __COMMERCE__: JSON.stringify(!coque),
+    },
 
     // L'ordre compte : Tailwind avant le compilateur de routes, nitro après lui.
     plugins: [

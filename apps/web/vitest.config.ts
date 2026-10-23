@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },
   },
+  // Les épreuves tournent comme le web et la PWA : le commerce y est ouvert
+  // (`__COMMERCE__`, posé par `vite.config.ts` selon la cible).
+  define: { __COMMERCE__: "true" },
   test: {
     environment: "node",
     /*
