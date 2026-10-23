@@ -105,6 +105,9 @@ function CabinetAbonnements() {
   });
 
   const expert = acces.data?.role === "expert";
+  // Les rôles qui engagent le cabinet, ceux que `facturation.peut_payer` admet.
+  const peutPayer = expert || acces.data?.role === "dirigeant";
+  const [refusDePaiement, setRefusDePaiement] = useState<string | null>(null);
   const navigate = useNavigate();
   // La facture du cabinet se paie en ligne (23 octobre 2026) : le reste dû, en
   // entier, depuis la page de choix du moyen, qui vérifie aussi le retour.
@@ -114,8 +117,7 @@ function CabinetAbonnements() {
       await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
       await navigate({ to: "/cabinet/payer/$paiementId", params: { paiementId: p.paiement_id } });
     },
-    onError: (e: unknown) =>
-      setRetour({ ok: false, texte: texteDeLErreur(e, OU, t("common.error")) }),
+    onError: (e: unknown) => setRefusDePaiement(texteDeLErreur(e, OU, t("common.error"))),
   });
   const actifs = (clients.data ?? []).filter((c) => c.engagementStatus === "actif");
   const [client, setClient] = useState("");
@@ -341,6 +343,11 @@ function CabinetAbonnements() {
       {/* 3. Les factures du cabinet */}
       <section className="space-y-3">
         <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
+        {refusDePaiement ? (
+          <p role="alert" className="text-[12.5px] text-signal-stop">
+            {refusDePaiement}
+          </p>
+        ) : null}
         {factures.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : (factures.data ?? []).length === 0 ? (
@@ -387,14 +394,16 @@ function CabinetAbonnements() {
                   (f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle") ? (
                     <span className="inline-flex items-center gap-2">
                       <span className="num">{montant(f.reste_du, f.devise)}</span>
-                      <button
-                        type="button"
-                        className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
-                        disabled={payerFacture.isPending}
-                        onClick={() => payerFacture.mutate(f.id)}
-                      >
-                        {t("pme.reglages.paiement.payer")}
-                      </button>
+                      {peutPayer ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-foreground px-2.5 py-1 text-[12px] font-medium hover:bg-foreground hover:text-background disabled:opacity-40"
+                          disabled={payerFacture.isPending}
+                          onClick={() => payerFacture.mutate(f.id)}
+                        >
+                          {t("pme.reglages.paiement.payer")}
+                        </button>
+                      ) : null}
                     </span>
                   ) : (
                     <span className="num text-muted-foreground">—</span>
