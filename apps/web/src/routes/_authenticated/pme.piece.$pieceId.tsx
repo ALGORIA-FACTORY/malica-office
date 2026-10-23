@@ -11,6 +11,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
+import { QuestionDuType } from "@/components/malica/question-du-type";
 import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
@@ -27,6 +28,7 @@ import { montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
+import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
@@ -359,7 +361,7 @@ function PieceScreen() {
    * de la lecture ; le dossier la rend ensuite comme si elle avait été lue.
    */
   const preciser = useMutation({
-    mutationFn: async (valeur: "facture_achat" | "facture_vente") => {
+    mutationFn: async (valeur: string) => {
       await office().capture.preciser(pieceId, "document_kind", valeur);
       // Le jugement suit la réponse : sans nouvelle analyse, le verdict
       // d'avant (« sens à confirmer ») resterait affiché.
@@ -367,11 +369,14 @@ function PieceScreen() {
     },
     onSuccess: async () => {
       setError(null);
+      setCorrigerType(false);
       await invalidate();
     },
     onError: (e: unknown) =>
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
+  /** La feuille « Qu'est-ce que c'est ? », rouverte pour corriger le type. */
+  const [corrigerType, setCorrigerType] = useState(false);
 
   /** Transmettre au cabinet — sur décision du dirigeant, jamais toute seule. */
   const transmettre = useMutation({
@@ -1364,7 +1369,32 @@ function PieceScreen() {
           {nomDuType(piece.documentKind) ?? t("pme.piece.title")}
           {reference ? ` · ${reference}` : ""}
           {payload?.document_date ? ` · ${jourLisible(payload.document_date)}` : ""}
+          {/*
+           * Le type se corrige après la lecture (23 octobre 2026), tant que la
+           * pièce n'est pas engagée — la base le redit (`capture_precision_persist`).
+           */}
+          {STATUTS_PRECISABLES.has(piece.status) ? (
+            <button
+              type="button"
+              className="mod"
+              disabled={preciser.isPending}
+              onClick={() => setCorrigerType(true)}
+            >
+              {t("pme.piece.type.modifier")}
+            </button>
+          ) : null}
         </p>
+        {corrigerType ? (
+          <QuestionDuType
+            documents={[nomDuType(piece.documentKind) ?? t("pme.piece.title")]}
+            actuel={piece.documentKind}
+            mode="correction"
+            onRepondre={(code) =>
+              code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)
+            }
+            onAnnuler={() => setCorrigerType(false)}
+          />
+        ) : null}
         <div className={vente ? "amt vent" : "amt"}>
           {lisible(payload?.totals?.ttc) ?? "—"}{" "}
           <u>
@@ -1672,7 +1702,7 @@ function PieceScreen() {
                         disabled={preciser.isPending}
                         onClick={() => preciser.mutate("facture_achat")}
                       >
-                        {t("pme.sens.achat")}
+                        {nomDuType("facture_achat")}
                       </button>
                       {/*
                        * Pas de `button.sec` ici, bien que le dessin le pose :
@@ -1688,7 +1718,7 @@ function PieceScreen() {
                         disabled={preciser.isPending}
                         onClick={() => preciser.mutate("facture_vente")}
                       >
-                        {t("pme.sens.vente")}
+                        {nomDuType("facture_vente")}
                       </button>
                     </span>
                   ) : null}
