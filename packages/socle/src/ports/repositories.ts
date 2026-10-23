@@ -3016,6 +3016,16 @@ export interface TourRepository {
   } | null>;
   /** La tour règle le plafond IA : daté et motivé ; rien ne se réécrit (ANO-029). */
   reglerIa(plafondUsd: string, motif: string): Promise<unknown>;
+  /** Les relances d'impayé en vigueur ; `null` tant que la tour n'a rien décidé (fermées). */
+  reglageRelances(): Promise<{
+    actives: boolean;
+    suspension_automatique: boolean;
+    tentatives_max: number;
+    motif: string;
+    decide_le: string;
+  } | null>;
+  /** La tour ouvre ou ferme les relances d'impayé et la suspension automatique. */
+  reglerRelances(actives: boolean, suspensionAutomatique: boolean, motif: string): Promise<unknown>;
   /** Le calendrier d'une juridiction : règle de report, jours fériés, reports publiés. */
   calendrier(juridiction: string): Promise<CalendrierDeLaJuridiction>;
   poserJourFerie(input: {
