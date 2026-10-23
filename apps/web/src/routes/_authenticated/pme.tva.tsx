@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { usePme } from "@/components/malica/pme-context";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
+import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -197,7 +198,18 @@ function PmeTva() {
       </div>
 
       <div className="pad">
-        <h1>{moisEtAnnee}</h1>
+        {/*
+         * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
+         * la règle de rattachement et la source des montants, qui
+         * s'affichaient en permanence, sont derrière le ⓘ du mois.
+         */}
+        <h1>
+          {moisEtAnnee}
+          <Aide
+            titre={moisEtAnnee}
+            paragraphes={[{ texte: t("pme.tva.rangee") }, { texte: t("pme.tva.source") }]}
+          />
+        </h1>
         <p className="sub">
           {parSociete ? t("pme.tva.sousGroupe", { count: pme.dossiers.length }) : t("pme.tva.sous")}
         </p>
@@ -233,20 +245,10 @@ function PmeTva() {
           </div>
         )}
 
-        <div className="trd">
-          <i aria-hidden />
-          {t("pme.tva.tendance")}
-        </div>
-
         {/*
-         * La règle de rattachement, et c'est le cœur de l'écran : une pièce
-         * compte dans le mois où elle est TRANSMISE. La phrase existe au
-         * dictionnaire en trois langues — on la lit, on ne la réécrit pas.
+         * La comparaison avec le mois précédent n'est pas servie : la ligne
+         * disait « — » en permanence. Elle reviendra avec sa donnée.
          */}
-        <p className="regle">
-          <IconeInfo />
-          <span>{t("pme.tva.rangee")}</span>
-        </p>
 
         {isPending ? (
           <p className="regle">
@@ -315,11 +317,13 @@ function PmeTva() {
               </div>
             </div>
 
-            {/* ── le détail, par taux ──────────────────────────────────── */}
-            <div className="sec">
-              <h2>{t("pme.tva.detail")}</h2>
-              <span>{t("pme.tva.parTaux")}</span>
-            </div>
+            {/* ── le détail, par taux — un titre sans ligne ne dit rien ──── */}
+            {detail.length > 0 || refusees.length > 0 ? (
+              <div className="sec">
+                <h2>{t("pme.tva.detail")}</h2>
+                <span>{t("pme.tva.parTaux")}</span>
+              </div>
+            ) : null}
 
             {/*
              * Une ligne par seau du moteur. Pas un `<button>` : aucun
@@ -394,14 +398,17 @@ function PmeTva() {
           <>
             <div className="sec">
               <h2>{t("pme.tva.ceQuiChange")}</h2>
-              <span>{t("pme.tva.sansDateMeta")}</span>
             </div>
             <div className="card">
               <div className="hd">
-                <b>{t("pme.tva.sansDateTitre")}</b>
-                <span>—</span>
+                <b>
+                  {t("pme.tva.sansDateCompte", { count: sansDate.data })}
+                  <Aide
+                    titre={t("pme.tva.ceQuiChange")}
+                    paragraphes={[{ texte: t("pme.tva.sansDate", { count: sansDate.data }) }]}
+                  />
+                </b>
               </div>
-              <p>{t("pme.tva.sansDate", { count: sansDate.data })}</p>
             </div>
           </>
         ) : null}
@@ -424,19 +431,14 @@ function PmeTva() {
                 <i aria-hidden>
                   <IconeHistogramme />
                 </i>
+                {/* Le solde par société n'est pas servi : le nom seul, sans « — » muet. */}
                 <span className="bd">
                   <b>{d.name}</b>
-                  <span>{t("pme.tva.soldeParSociete")}</span>
-                </span>
-                <span className="rt">
-                  <span className="vl">—</span>
                 </span>
               </div>
             ))}
           </>
         ) : null}
-
-        <p className="foot">{t("pme.tva.source")}</p>
       </div>
     </div>
   );

@@ -267,6 +267,9 @@ const fr = {
   "pme.reglages.abo.etat.active": "Active",
   "pme.reglages.abo.etat.suspendue": "Suspendue",
   "pme.reglages.abo.etat.resiliee": "Résiliée",
+  "pme.tva.sansDateCompte": "{count} pièces sans mois",
+  "pme.tva.sansDateCompte#one": "{count} pièce sans mois",
+  "pme.tva.sansDateCompte#other": "{count} pièces sans mois",
   "common.cancel": "Annuler",
 
   "pme.nav.capture": "Capture",
@@ -3525,7 +3528,6 @@ const fr = {
    * d'évolution que R3 interdit de calculer ici et qu'aucune méthode ne sert.
    * Un « — » est honnête ; « 31 % » serait une invention.
    */
-  "pme.tva.tendance": "Comparaison avec le mois précédent : —",
   "pme.tva.detail": "Le détail",
   /**
    * Le dessin compte des factures par taux (« 11 factures de vente »).
@@ -3539,14 +3541,11 @@ const fr = {
   "pme.tva.refusees": "{count} lignes sans taux gouverné à leur date",
   "pme.tva.refusees#one": "{count} ligne sans taux gouverné à sa date",
   "pme.tva.refusees#other": "{count} lignes sans taux gouverné à leur date",
-  "pme.tva.ceQuiChange": "Ce qui changerait le chiffre",
-  "pme.tva.sansDateMeta": "dans aucun mois",
-  "pme.tva.sansDateTitre": "Des pièces rangées dans aucun mois",
+  "pme.tva.ceQuiChange": "À vérifier",
   "pme.tva.parSociete": "Par société",
   /**
    * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
    */
-  "pme.tva.soldeParSociete": "Solde non servi par société",
   "pme.fiche.barre": "Votre fiche fiscale",
   "pme.fiche.secCarte": "Votre carte",
   "pme.fiche.cartePasLue": "pas encore lue",
@@ -3885,6 +3884,9 @@ const en: Dict = {
   "pme.reglages.abo.etat.active": "Active",
   "pme.reglages.abo.etat.suspendue": "Suspended",
   "pme.reglages.abo.etat.resiliee": "Cancelled",
+  "pme.tva.sansDateCompte": "{count} documents with no month",
+  "pme.tva.sansDateCompte#one": "{count} document with no month",
+  "pme.tva.sansDateCompte#other": "{count} documents with no month",
   "common.cancel": "Cancel",
 
   "pme.nav.capture": "Capture",
@@ -6986,7 +6988,6 @@ const en: Dict = {
   "pme.tva.sousGroupe#other": "{count} companies — each files for itself.",
   "pme.tva.aPayer": "payable",
   "pme.tva.credit": "credit carried forward",
-  "pme.tva.tendance": "Comparison with the previous month: —",
   "pme.tva.detail": "The details",
   "pme.tva.parTaux": "by rate",
   "pme.tva.col.collectee": "Collected",
@@ -6995,11 +6996,8 @@ const en: Dict = {
   "pme.tva.refusees": "{count} lines with no governed rate at their date",
   "pme.tva.refusees#one": "{count} line with no governed rate at its date",
   "pme.tva.refusees#other": "{count} lines with no governed rate at their date",
-  "pme.tva.ceQuiChange": "What would change the figure",
-  "pme.tva.sansDateMeta": "in no month",
-  "pme.tva.sansDateTitre": "Documents filed under no month",
+  "pme.tva.ceQuiChange": "To check",
   "pme.tva.parSociete": "By company",
-  "pme.tva.soldeParSociete": "Balance per company not available",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -7317,6 +7315,9 @@ const ar: Dict = {
   "pme.reglages.abo.etat.active": "نشطة",
   "pme.reglages.abo.etat.suspendue": "معلّقة",
   "pme.reglages.abo.etat.resiliee": "منتهية",
+  "pme.tva.sansDateCompte": "{count} وثائق دون شهر",
+  "pme.tva.sansDateCompte#one": "وثيقة واحدة دون شهر",
+  "pme.tva.sansDateCompte#other": "{count} وثائق دون شهر",
   "common.cancel": "إلغاء",
 
   "pme.nav.capture": "التقاط",
@@ -10315,7 +10316,6 @@ const ar: Dict = {
   "pme.tva.sousGroupe#other": "عدد الشركات: {count} — كل واحدة تصرّح عن نفسها.",
   "pme.tva.aPayer": "للدفع",
   "pme.tva.credit": "رصيد دائن مُرحَّل",
-  "pme.tva.tendance": "المقارنة مع الشهر السابق: —",
   "pme.tva.detail": "التفاصيل",
   "pme.tva.parTaux": "حسب النسبة",
   "pme.tva.col.collectee": "المحصَّل",
@@ -10324,11 +10324,8 @@ const ar: Dict = {
   "pme.tva.refusees": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.refusees#one": "سطر واحد دون نسبة معتمدة في تاريخه",
   "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
-  "pme.tva.ceQuiChange": "ما قد يغيّر الرقم",
-  "pme.tva.sansDateMeta": "خارج أي شهر",
-  "pme.tva.sansDateTitre": "وثائق غير مصنّفة في أي شهر",
+  "pme.tva.ceQuiChange": "للتحقق",
   "pme.tva.parSociete": "حسب الشركة",
-  "pme.tva.soldeParSociete": "الرصيد حسب الشركة غير متاح",
   "pme.fiche.barre": "وضعيتكم الجبائية",
   "pme.fiche.secCarte": "بطاقتكم",
   "pme.fiche.cartePasLue": "لم تُقرأ بعد",
