@@ -6,6 +6,7 @@ import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
+import { libelleDuPaiement } from "@/lib/paiement";
 import { office } from "@/verticals/malica-office/composition";
 import type { MoyenDePaiement } from "@malica/socle/ports/repositories";
 
@@ -107,7 +108,7 @@ function ChoisirLeMoyen() {
         ) : (
           <>
             <div className="du">
-              <b>{paiement.libelle}</b>
+              <b>{libelleDuPaiement(paiement, t)}</b>
               <span className="px">
                 {t("pme.reglages.paiement.montant", {
                   ttc: montant(paiement.montant_ttc, locale),

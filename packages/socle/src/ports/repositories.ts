@@ -2623,6 +2623,10 @@ export interface FacturationRepository {
 
   /** Les paiements en ligne de la licence (montées, recharges), et leur état. */
   mesPaiements(): Promise<PaiementEnLigne[]>;
+  /** Les factures que l'appelant paie lui-même, et ce qu'il en reste à payer. */
+  mesFactures(): Promise<FactureDuTitulaire[]>;
+  /** Préparer le paiement en ligne du reste dû d'une facture (en entier). */
+  payerFacture(factureId: string): Promise<PaiementEnLigne>;
   /** `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte. */
   payerEnLigne(
     paiementId: string,
@@ -2839,10 +2843,24 @@ export interface RechargeDeLaLicence {
   expiree: boolean;
 }
 
-/** Un paiement en ligne — une montée ou une recharge — tel que la base le rend. */
+/** Une facture que son titulaire paie lui-même (`public.mes_factures()`). */
+export interface FactureDuTitulaire {
+  facture_id: string;
+  numero: string;
+  periode: string;
+  emise_le: string;
+  echeance_le: string;
+  montant_ttc: string;
+  reste_du: string;
+  devise: string;
+  /** L'état déduit des encaissements (`facturation.encours_v`). */
+  etat: "a_echoir" | "en_retard" | "partielle" | "payee" | "annulee" | "irrecouvrable";
+}
+
+/** Un paiement en ligne — une montée, une recharge, l'année, une facture — tel que la base le rend. */
 export interface PaiementEnLigne {
   paiement_id: string;
-  objet: "montee" | "recharge" | "annuel";
+  objet: "montee" | "recharge" | "annuel" | "facture";
   libelle: string;
   montant_ht: string;
   montant_tva: string;

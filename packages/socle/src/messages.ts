@@ -2765,6 +2765,14 @@ const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "pme.reglages.paiement.facture": "Facture {numero}",
+  "pme.reglages.factures.titre": "Vos factures",
+  "pme.reglages.factures.reste": "Reste à payer : {montant} {devise} TTC",
+  "pme.reglages.factures.etat.a_echoir": "À échoir",
+  "pme.reglages.factures.etat.en_retard": "En retard",
+  "paiement.facture_rien_a_regler": "Cette facture n'a plus rien à régler.",
+  "paiement.montant_perime":
+    "Le montant dû a changé depuis : reprenez le paiement depuis vos factures.",
   "paiement.prestataire_du_lien":
     "Ce paiement a été ouvert chez un autre prestataire : il se vérifie chez lui.",
   "pme.reglages.offres.aRegler":
@@ -6218,6 +6226,14 @@ const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "paiement.moyen_indisponible": "This payment method is not available.",
+  "pme.reglages.paiement.facture": "Invoice {numero}",
+  "pme.reglages.factures.titre": "Your invoices",
+  "pme.reglages.factures.reste": "Left to pay: {montant} {devise} incl. VAT",
+  "pme.reglages.factures.etat.a_echoir": "Not yet due",
+  "pme.reglages.factures.etat.en_retard": "Overdue",
+  "paiement.facture_rien_a_regler": "Nothing is left to pay on this invoice.",
+  "paiement.montant_perime":
+    "The amount due has changed since: start the payment again from your invoices.",
   "paiement.prestataire_du_lien":
     "This payment was opened with another provider: it is checked there.",
   "pme.reglages.offres.aRegler": "Done: you are now on {offre}. Pay the month's difference below.",
@@ -9513,6 +9529,13 @@ const ar: Dict = {
   "pme.payer.securise": "دفع آمن عبر {prestataire}",
   "pme.payer.rienARegler": "لم يعد هذا الدفع مستحقًا.",
   "paiement.moyen_indisponible": "وسيلة الدفع هذه غير متاحة.",
+  "pme.reglages.paiement.facture": "الفاتورة {numero}",
+  "pme.reglages.factures.titre": "فواتيركم",
+  "pme.reglages.factures.reste": "المتبقي للدفع: {montant} {devise} شامل الأداء",
+  "pme.reglages.factures.etat.a_echoir": "لم يحن أجلها",
+  "pme.reglages.factures.etat.en_retard": "متأخرة",
+  "paiement.facture_rien_a_regler": "لم يعد على هذه الفاتورة شيء للدفع.",
+  "paiement.montant_perime": "تغيّر المبلغ المستحق منذ ذلك الحين: أعيدوا الدفع من فواتيركم.",
   "paiement.prestataire_du_lien": "فُتح هذا الدفع لدى مزوّد آخر: يُتحقَّق منه لديه.",
   "pme.reglages.offres.aRegler": "تم: أنت الآن على باقة {offre}. ادفع فرق الشهر أدناه.",
   "pme.reglages.recharges.aRegler": "أضيف الرصيد وقراءاته متاحة. ادفع ثمنه أدناه.",

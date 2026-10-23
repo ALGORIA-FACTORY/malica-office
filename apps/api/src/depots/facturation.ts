@@ -27,7 +27,7 @@ import {
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
 interface PaiementLu {
   paiement_id: string;
-  objet: "montee" | "recharge";
+  objet: "montee" | "recharge" | "annuel" | "facture";
   libelle: string;
   montant_ht: string;
   montant_tva: string;
@@ -333,6 +333,32 @@ export const facturation = {
   /* ----------------------------------------------------- payer en ligne */
 
   /** Les paiements en ligne de la licence de l'appelant, et leur état déduit. */
+  /**
+   * Les factures que l'appelant paie lui-même, leur reste dû et leur état
+   * (`facturation.encours_v`), sans rien recalculer.
+   */
+  async mesFactures(db: Requete) {
+    const { rows } = await db.query(
+      `select facture_id, numero, periode::text, emise_le::text, echeance_le::text,
+              montant_ttc::text, reste_du::text, devise, etat
+         from public.mes_factures()`,
+    );
+    return rows;
+  },
+
+  /**
+   * Payer une facture en ligne : la base prépare le paiement de son reste dû,
+   * en entier, et rend un paiement déjà ouvert pour ce montant. Le moyen se
+   * choisit ensuite sur la page de choix.
+   */
+  async payerFacture(db: Requete, factureId: string) {
+    const { rows } = await db.query<{ p: PaiementLu }>(
+      `select public.paiement_facture_preparer($1) as p`,
+      [factureId],
+    );
+    return rows[0]!.p;
+  },
+
   async mesPaiements(db: Requete) {
     const { rows } = await db.query<PaiementLu>(
       `select ${COLONNES_PAIEMENT} from facturation.paiements_en_ligne_v
@@ -380,6 +406,9 @@ export const facturation = {
       [moyen, env.prestataire.code, p.devise],
     );
     const devise = rows[0]!.d;
+    // Le paiement d'une facture porte son reste dû : s'il a changé depuis (un
+    // encaissement saisi entre-temps), la base refuse par une clé.
+    await db.query(`select public.paiement_encore_du($1)`, [paiementId]);
 
     const { reference, lien } = await env.prestataire.creerLien({
       paiementId,
