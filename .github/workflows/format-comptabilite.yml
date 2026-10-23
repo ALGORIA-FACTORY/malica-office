@@ -1,0 +1,30 @@
+name: Mettre en forme la refonte comptabilité
+on:
+  pull_request:
+    types: [opened]
+permissions:
+  contents: write
+jobs:
+  format:
+    if: github.head_ref == 'codex/comptabilite-spotify-clair' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Appliquer le format du dépôt
+        run: npx prettier --write apps/web/src/routes/_authenticated/cabinet.abonnements.tsx apps/web/src/routes/_authenticated/cabinet.pilotage.tsx apps/web/src/routes/_authenticated/cabinet.reglages.tsx apps/web/src/routes/_authenticated/cabinet.mise-en-route.tsx apps/web/src/styles-comptabilite.css
+      - name: Enregistrer la mise en forme sur la branche de revue
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/src/routes/_authenticated/cabinet.abonnements.tsx apps/web/src/routes/_authenticated/cabinet.pilotage.tsx apps/web/src/routes/_authenticated/cabinet.reglages.tsx apps/web/src/routes/_authenticated/cabinet.mise-en-route.tsx apps/web/src/styles-comptabilite.css
+          if ! git diff --cached --quiet; then
+            git commit -m "style: mettre en forme la refonte comptabilité"
+            git push
+          fi

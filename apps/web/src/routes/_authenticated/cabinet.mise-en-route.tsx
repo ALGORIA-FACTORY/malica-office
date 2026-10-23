@@ -17,7 +17,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
-import { EmptyState, MalicaAvatar, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
+import { EmptyState, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -42,6 +42,8 @@ export const Route = createFileRoute("/_authenticated/cabinet/mise-en-route")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { etape?: 2 } =>
+    search.etape === 2 || search.etape === "2" ? { etape: 2 } : {},
   component: MiseEnRoute,
 });
 
@@ -74,7 +76,8 @@ const INDICE = "mt-1.5 block text-[11px] leading-[1.5] text-muted-foreground";
 function MiseEnRoute() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
-  const [etape, setEtape] = useState<Etape>(1);
+  const recherche = Route.useSearch();
+  const [etape, setEtape] = useState<Etape>(recherche.etape ?? 1);
 
   const avancement = useQuery({
     queryKey: ["cab-mise-en-route", org.id],
@@ -93,35 +96,15 @@ function MiseEnRoute() {
     3: "cab.onb.3.titre",
     4: "cab.onb.4.titre",
   };
-  const lede: Record<Etape, MessageKey> = {
-    1: "cab.onb.1.lede",
-    2: "cab.onb.2.lede",
-    3: "cab.onb.3.lede",
-    4: "cab.onb.4.lede",
-  };
-  const voix: Record<Etape, MessageKey> = {
-    1: "cab.onb.1.voice",
-    2: "cab.onb.2.voice",
-    3: "cab.onb.3.voice",
-    4: "cab.onb.4.voice",
-  };
-  const indice: Record<Etape, MessageKey> = {
-    1: "cab.onb.1.hint",
-    2: "cab.onb.2.hint",
-    3: "cab.onb.3.hint",
-    4: "cab.onb.4.hint",
-  };
-
   const suivante = () => setEtape((e) => (e < 4 ? ((e + 1) as Etape) : e));
   const precedente = () => setEtape((e) => (e > 1 ? ((e - 1) as Etape) : e));
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
+    <div className="cab-library cab-onboarding grid gap-6 xl:grid-cols-[1fr_260px]">
       <section className="min-w-0 space-y-5">
         <EnTeteCabinet
           surtitre={<>{t("cab.onb.kicker", { n: etape })}</>}
           titre={<>{t(titre[etape])}</>}
-          chapeau={<>{t(lede[etape])}</>}
         >
           {termineeLe ? (
             <p className="mt-3 border border-s-2 border-border border-s-signal-ok bg-card px-3 py-2 text-[12px]">
@@ -140,7 +123,7 @@ function MiseEnRoute() {
           ))}
         </div>
 
-        <div className="border border-border bg-card p-4 sm:p-5">
+        <div className="cab-surface">
           {etape === 1 ? <LeCabinet /> : null}
           {etape === 2 ? <LEquipe /> : null}
           {etape === 3 ? <LesMandats /> : null}
@@ -167,17 +150,7 @@ function MiseEnRoute() {
       </section>
 
       <aside className="flex min-w-0 flex-col gap-3.5">
-        <div className="flex items-start gap-3 border border-s-2 border-border border-s-marigold bg-card p-4">
-          <MalicaAvatar size={40} alt={t("brand.name")} rond />
-          <span className="min-w-0">
-            <span className="block text-[9.5px] font-semibold uppercase tracking-[0.2em] text-marigold-on-paper">
-              {t("cab.onb.accompagne")}
-            </span>
-            <span className="mt-2 block text-[13px] leading-[1.6]">{t(voix[etape])}</span>
-          </span>
-        </div>
-
-        <div className="border border-border bg-card p-4">
+        <div className="cab-surface">
           <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {t("cab.onb.etapes")}
           </p>
@@ -218,15 +191,7 @@ function MiseEnRoute() {
                     >
                       {t(titre[e])}
                     </span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {t(indice[e])}
-                      {" · "}
-                      {etat === "fait"
-                        ? t("cab.onb.fait")
-                        : etat === "encours"
-                          ? t("cab.onb.encours")
-                          : t("cab.onb.avenir")}
-                    </span>
+
                   </button>
                 </li>
               );
@@ -365,17 +330,19 @@ function LEquipe() {
       new Date(iso),
     );
   const roleDe = (r: string) => (ROLES[r] ? t(ROLES[r]!) : r);
-  const enAttente = (invitations.data ?? []).filter((i) => !i.acceptedAt);
+  const enAttente = (invitations.data ?? []).filter(
+    (i) => !i.acceptedAt && i.expiresAt > new Date().toISOString(),
+  );
 
   return (
-    <div className="space-y-5">
+    <div className="cab-team space-y-5">
       <Panne erreur={membres.error ?? invitations.error} />
       <div>
         <p className={ETIQUETTE}>{t("cab.onb.2.membres")}</p>
-        <ul className="mt-2 divide-y divide-border border border-border">
+        <ul className="cab-team-list mt-2">
           {(membres.data ?? []).map((m) => (
             <li key={m.userId} className="flex items-baseline justify-between gap-3 px-3 py-2">
-              <span className="min-w-0 truncate text-[13px]">{m.email}</span>
+              <span className="cab-team-person"><span className="cab-team-avatar" aria-hidden>{m.email.slice(0, 2).toLocaleUpperCase(locale)}</span><span className="min-w-0 truncate text-[13px]">{m.email}</span></span>
               <span className="shrink-0 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {roleDe(m.role)}
               </span>
@@ -384,11 +351,14 @@ function LEquipe() {
         </ul>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[1.6fr_1fr]">
+      <form id="cab-inviter-equipe" onSubmit={(e) => { e.preventDefault(); if (!inviter.isPending) inviter.mutate(); }} className="grid gap-4 sm:grid-cols-[1.6fr_1fr]">
         <label className="block">
           <span className={ETIQUETTE}>{t("cab.onb.2.email")}</span>
           <input
             type="email"
+            required
+            autoComplete="email"
+            disabled={inviter.isPending}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={CHAMP}
@@ -405,13 +375,13 @@ function LEquipe() {
             ))}
           </select>
         </label>
-      </div>
+      </form>
       <Retour message={message} erreur={erreur}>
         <button
-          type="button"
-          className={BOUTON_PIERRE}
+          type="submit"
+          form="cab-inviter-equipe"
+          className="cab-button cab-button-primary"
           disabled={inviter.isPending || !email.trim()}
-          onClick={() => inviter.mutate()}
         >
           {t("cab.onb.2.inviter")}
         </button>

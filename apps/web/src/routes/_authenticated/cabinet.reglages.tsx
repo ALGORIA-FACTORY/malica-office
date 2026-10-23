@@ -370,6 +370,7 @@ function CabinetEtEquipe() {
               </span>
               <Link
                 to="/cabinet/mise-en-route"
+                search={{ etape: 2 }}
                 className="border border-border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-foreground"
               >
                 {t("cab.settings.inviter")}
