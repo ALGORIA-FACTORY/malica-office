@@ -263,6 +263,7 @@ const fr = {
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
+  "refus.place.incluses_prises": "Toutes les places incluses dans l'abonnement sont prises.",
   "pme.refus.licence_suspendue":
     "Votre abonnement est suspendu. La pièce est rangée, et je la lirai dès qu'il reprend.",
   "pme.refus.licence.autre": "Votre abonnement n'ouvre pas la lecture en ce moment.",
@@ -3797,6 +3798,7 @@ const en: Dict = {
     "This document is in your private space: I do not read it until you share it.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
+  "refus.place.incluses_prises": "All the places included in the subscription are taken.",
   "pme.refus.licence_suspendue":
     "Your subscription is suspended. The document is filed, and I will read it as soon as it resumes.",
   "pme.refus.licence.autre": "Your subscription does not allow reading right now.",
@@ -7159,6 +7161,7 @@ const ar: Dict = {
   "pme.refus.piece_personnelle": "هذه الوثيقة في مساحتك الخاصة: لا أقرؤها ما لم تُرسلها.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
+  "refus.place.incluses_prises": "كل المقاعد المشمولة في الاشتراك مشغولة.",
   "pme.refus.licence_suspendue": "اشتراكك موقوف. الوثيقة محفوظة، وسأقرؤها حالما يُستأنف.",
   "pme.refus.licence.autre": "اشتراكك لا يسمح بالقراءة في الوقت الحالي.",
   "pme.refus.organisation_sans_licence":

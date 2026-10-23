@@ -336,9 +336,10 @@ function PmeReglages() {
        */}
       {verrous.sieges.ouvert ? (
         <>
-          {/* Inviter peut ajouter une place payée au-delà des places incluses :
-              c'est un achat, donc sur le web et la PWA seulement (`COMMERCE`). */}
-          {COMMERCE ? <InviterDansMonDossier /> : null}
+          {/* Dans l'application Android, la base n'offre que les places
+              incluses (`facturation.place_offrir`, 20261023120000) : une place
+              qui serait facturée est un achat, et reste au web et à la PWA. */}
+          <InviterDansMonDossier />
           <MesProprietaires />
         </>
       ) : null}
