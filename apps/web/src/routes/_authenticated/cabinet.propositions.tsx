@@ -42,6 +42,7 @@ import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/component
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { initialesDe } from "@/lib/initiales";
+import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
 import { montant } from "@/lib/lisible";
 import {
   compteDeCharge,
@@ -80,6 +81,11 @@ function CabinetPropositions() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
+  const clients = useQuery({
+    queryKey: ["cab-clients", org.id],
+    queryFn: () => office().supervision.listClients(org.id),
+  });
+  const actifs = useMemo(() => idsDesMandatsActifs(clients.data ?? []), [clients.data]);
 
   const queue = useQuery({
     queryKey: ["cab-queue", org.id],
@@ -88,10 +94,6 @@ function CabinetPropositions() {
   const reglages = useQuery({
     queryKey: ["cab-reglages", org.id],
     queryFn: () => office().parametrage.reglagesCabinet(org.id),
-  });
-  const clients = useQuery({
-    queryKey: ["cab-clients", org.id],
-    queryFn: () => office().supervision.listClients(org.id),
   });
   const membres = useQuery({
     queryKey: ["cab-members", org.id],
@@ -115,8 +117,11 @@ function CabinetPropositions() {
   const superviseur = acces.data?.role === "expert" || acces.data?.role === "collaborateur";
 
   const rows = useMemo(
-    () => (queue.data ?? []).filter((r) => r.status === "comptabilisee" && r.ecritureId),
-    [queue.data],
+    () =>
+      (queue.data ?? []).filter(
+        (r) => actifs.has(r.tenantId) && r.status === "comptabilisee" && r.ecritureId,
+      ),
+    [queue.data, actifs],
   );
   const idsEcritures = useMemo(() => rows.map((r) => r.ecritureId!).sort(), [rows]);
   const ecritures = useQuery({
@@ -321,6 +326,32 @@ function CabinetPropositions() {
         ]
       : [];
 
+  const sources = [clients, queue, reglages, acces];
+  const panne = sources.find((source) => source.error)?.error;
+  if (panne || sources.some((source) => source.isPending)) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-semibold">{t("cab.prop.titre")}</h1>
+        {panne ? (
+          <div role="alert">
+            <p>{texteDeLErreur(panne, "cabinet.propositions", t("common.error"))}</p>
+            <button
+              type="button"
+              className="min-h-[44px] underline"
+              onClick={() => {
+                for (const source of sources) void source.refetch();
+              }}
+            >
+              {t("doc.retry")}
+            </button>
+          </div>
+        ) : (
+          <p role="status">{t("common.loading")}</p>
+        )}
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-24">
       <EnTeteCabinet
@@ -328,6 +359,15 @@ function CabinetPropositions() {
         titre={<>{t("cab.prop.titre")}</>}
         chapeau={<>{t("cab.prop.doctrine")}</>}
       />
+
+      {rows.length === 0 ? (
+        <div role="status" className="border border-border bg-card p-5">
+          <p>{t("relation.lotsVides")}</p>
+          <Link to="/cabinet" className="mt-3 inline-block min-h-[44px] underline">
+            {t("cab.today.queue")}
+          </Link>
+        </div>
+      ) : null}
 
       {fait ? (
         <p className="border border-border bg-card px-4 py-3 text-[13px]">

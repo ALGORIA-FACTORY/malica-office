@@ -14,7 +14,16 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  CheckCheck,
+  CircleCheck,
+  FileCheck2,
+  MessageSquare,
+  Search,
+  Users,
+} from "lucide-react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
@@ -30,6 +39,8 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { joursDAttente, toneForStatus } from "@/lib/file-cabinet";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
+import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { QueueItem } from "@malica/socle/ports/repositories";
@@ -78,7 +89,8 @@ function CabinetToday() {
     queryKey: ["cab-assignments", org.id],
     queryFn: () => office().collab.assignments(org.id),
   });
-  const clientIds = useMemo(() => (clients.data ?? []).map((c) => c.tenantId), [clients.data]);
+  const actifs = useMemo(() => idsDesMandatsActifs(clients.data ?? []), [clients.data]);
+  const clientIds = useMemo(() => [...actifs], [actifs]);
   const echeances = useQuery({
     queryKey: ["cab-echeances", org.id, clientIds],
     queryFn: () => office().collab.echeances(clientIds),
@@ -87,7 +99,10 @@ function CabinetToday() {
 
   useMalicaPanel(<MalicaNote>{t("cab.malica.queue")}</MalicaNote>, [locale]);
 
-  const rows = useMemo(() => queue.data ?? [], [queue.data]);
+  const rows = useMemo(
+    () => (queue.data ?? []).filter((r) => actifs.has(r.tenantId)),
+    [queue.data, actifs],
+  );
   const toReview = rows.filter((r) => r.status === "comptabilisee").length;
   const returned = rows.filter((r) => r.status === "retournee").length;
   const supervised = rows.filter((r) => r.status === "supervisee").length;
@@ -98,6 +113,7 @@ function CabinetToday() {
   const [filtre, setFiltre] = useState<Filtre>("tout");
   const [collab, setCollab] = useState<string | null>(null); // null = tout le cabinet ; "" = sans
   const [texte, setTexte] = useState("");
+  const file = useRef<HTMLElement | null>(null);
 
   const collaborateurs = useMemo(() => {
     const emails = new Set<string>();
@@ -124,7 +140,9 @@ function CabinetToday() {
   const charge = useMemo(() => {
     const parCollab = new Map<string, { mandats: number; attente: number }>();
     for (const email of collaborateurs) parCollab.set(email, { mandats: 0, attente: 0 });
-    const actives = (affectations.data ?? []).filter((a) => a.active);
+    const actives = (affectations.data ?? []).filter(
+      (a) => a.active && actifs.has(a.clientTenantId),
+    );
     const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.email]));
     for (const a of actives) {
       const email = parUser.get(a.collaboratorId);
@@ -141,7 +159,7 @@ function CabinetToday() {
     }
     const max = Math.max(1, ...[...parCollab.values()].map((c) => c.attente));
     return [...parCollab.entries()].map(([email, c]) => ({ email, ...c, part: c.attente / max }));
-  }, [collaborateurs, affectations.data, membres.data, rows]);
+  }, [collaborateurs, affectations.data, membres.data, rows, actifs]);
 
   /* ---- les échéances des trente prochains jours */
   const proches = useMemo(() => {
@@ -181,86 +199,126 @@ function CabinetToday() {
   }).format(new Date());
   const premiere = rows.find((r) => r.status === "comptabilisee") ?? rows[0] ?? null;
 
-  return (
-    <div className="space-y-8">
-      {/* ---- masthead */}
-      <header className="-mx-4 -mt-6 bg-foreground px-4 py-8 text-background sm:-mx-6 sm:px-6 lg:-mx-9 lg:-mt-7 lg:px-10 lg:py-9">
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-marigold-on-ink">
-              {t("cab.today.title")} · {today}
-            </p>
-            <h1 className="mt-2 text-[32px] font-semibold leading-[1.02] tracking-[-0.03em] sm:text-[42px] lg:text-[54px]">
-              {t("cab.today.greeting")}
-            </h1>
-            <p className="mt-3 max-w-[62ch] text-[14.5px] leading-[1.5] text-background/80">
-              {t("cab.today.summary", { pieces: rows.length, clients: clientCount })}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/cabinet/propositions"
-              className="border border-background px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] hover:bg-background hover:text-foreground"
+  const sources = [clients, queue, membres, affectations];
+  const panne = sources.find((source) => source.error)?.error;
+  if (panne || sources.some((source) => source.isPending)) {
+    return (
+      <section className="space-y-4">
+        <h1 className="text-2xl font-semibold">{t("cab.today.title")}</h1>
+        {panne ? (
+          <div role="alert">
+            <p>{texteDeLErreur(panne, "cabinet.index", t("common.error"))}</p>
+            <button
+              type="button"
+              className="min-h-[44px] underline"
+              onClick={() => {
+                for (const source of sources) void source.refetch();
+              }}
             >
-              {t("cab.today.bulk")}
-            </Link>
-            {premiere ? (
-              <Link
-                to="/cabinet/piece/$pieceId"
-                params={{ pieceId: premiere.pieceId }}
-                className="border border-background bg-background px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground hover:bg-marigold-on-ink"
-              >
-                {t("cab.today.openFirst")} <span className="num">↵</span>
-              </Link>
-            ) : null}
+              {t("doc.retry")}
+            </button>
           </div>
+        ) : (
+          <p role="status">{t("common.loading")}</p>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <div className="cab-dashboard space-y-8">
+      <header className="cab-day-header">
+        <div>
+          <p className="cab-eyebrow">{today}</p>
+          <h1>{t("cab.design.journee")}</h1>
+          <p className="cab-day-summary">
+            {t("cab.today.summary", { pieces: rows.length, clients: clientCount })}
+          </p>
         </div>
-        <div className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-4">
-          {[
-            { key: "review", label: t("cab.kpi.review"), value: toReview, tone: "warn" as const },
-            {
-              key: "supervised",
-              label: t("cab.kpi.supervised"),
-              value: supervised,
-              tone: "ok" as const,
-            },
-            {
-              key: "returned",
-              label: t("cab.kpi.returned"),
-              value: returned,
-              tone: "stop" as const,
-            },
-            {
-              key: "clients",
-              label: t("cab.kpi.clients"),
-              value: clientCount,
-              tone: "neutral" as const,
-            },
-          ].map((k) => (
-            <div key={k.key}>
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-background/60">
-                {k.label}
-              </p>
-              <p
-                className={cn(
-                  "num mt-1.5 text-[30px] leading-none lg:text-[38px]",
-                  k.value === 0
-                    ? "text-background/50"
-                    : k.tone === "warn"
-                      ? "text-marigold-on-ink"
-                      : "text-background",
-                )}
-              >
-                {k.value}
-              </p>
-            </div>
-          ))}
+        <div className="cab-day-actions">
+          <Link to="/cabinet/clients" className="cab-button cab-button-secondary">
+            <Users size={16} />
+            {t("cab.nav.clients")}
+          </Link>
+          {premiere ? (
+            <Link
+              to="/cabinet/piece/$pieceId"
+              params={{ pieceId: premiere.pieceId }}
+              className="cab-button cab-button-primary"
+            >
+              {t("cab.design.commencer")}
+              <ArrowRight size={16} />
+            </Link>
+          ) : null}
         </div>
       </header>
-
-      <div className="grid gap-8 xl:grid-cols-[1.85fr_1fr]">
+      <div className="cab-metrics" aria-label={t("cab.design.situation")}>
+        {[
+          {
+            key: "review",
+            label: "cab.kpi.review",
+            detail: "cab.design.revueDetail",
+            value: toReview,
+            icon: FileCheck2,
+            filter: "comptabilisee",
+            tone: "review",
+          },
+          {
+            key: "returned",
+            label: "cab.kpi.returned",
+            detail: "cab.design.retoursDetail",
+            value: returned,
+            icon: MessageSquare,
+            filter: "retournee",
+            tone: "returned",
+          },
+          {
+            key: "supervised",
+            label: "cab.kpi.supervised",
+            detail: "cab.design.superviseesDetail",
+            value: supervised,
+            icon: CheckCheck,
+            filter: "supervisee",
+            tone: "done",
+          },
+        ].map((k) => (
+          <button
+            key={k.key}
+            type="button"
+            className="cab-metric"
+            data-tone={k.tone}
+            aria-pressed={filtre === k.filter}
+            onClick={() => {
+              setFiltre(k.filter as Filtre);
+              file.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+            }}
+          >
+            <span className="cab-metric-top">
+              <span>{t(k.label as MessageKey)}</span>
+              <k.icon size={19} strokeWidth={1.7} />
+            </span>
+            <span className="cab-metric-value num">{k.value}</span>
+            <span className="cab-metric-detail">
+              {t(k.detail as MessageKey)}
+              <ArrowRight size={14} />
+            </span>
+          </button>
+        ))}
+        <Link to="/cabinet/clients" className="cab-metric" data-tone="clients">
+          <span className="cab-metric-top">
+            <span>{t("cab.design.mandats")}</span>
+            <Users size={19} strokeWidth={1.7} />
+          </span>
+          <span className="cab-metric-value num">{clientCount}</span>
+          <span className="cab-metric-detail">
+            {t("cab.design.portefeuille")}
+            <ArrowRight size={14} />
+          </span>
+        </Link>
+      </div>
+      <div className="cab-day-columns">
         {/* ---- la file */}
-        <section className="min-w-0 space-y-3">
+        <section ref={file} className="cab-worklist min-w-0 space-y-3">
           <SectionTitle
             action={
               <span className="num text-[11px] text-muted-foreground">
@@ -271,8 +329,8 @@ function CabinetToday() {
             {t("cab.today.queue")}
           </SectionTitle>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex border border-border">
+          <div className="cab-list-toolbar flex flex-wrap items-center gap-2">
+            <div className="cab-tabs flex border border-border">
               {(
                 [
                   ["tout", "cab.today.filter.all"],
@@ -296,21 +354,20 @@ function CabinetToday() {
                 </button>
               ))}
             </div>
-            <label className="flex min-w-[200px] flex-1 items-center gap-2 border border-border bg-card px-2.5 py-1.5 text-muted-foreground focus-within:border-foreground">
-              <span aria-hidden className="num text-[11px]">
-                /
-              </span>
+            <label className="cab-list-search flex min-w-[200px] flex-1 items-center gap-2 border border-border bg-card px-2.5 py-1.5 text-muted-foreground focus-within:border-foreground">
+              <Search size={16} aria-hidden />
               <input
                 value={texte}
                 onChange={(e) => setTexte(e.target.value)}
                 placeholder={t("cab.today.search")}
+                aria-label={t("cab.today.search")}
                 className="min-w-0 flex-1 bg-transparent text-[12.5px] text-foreground outline-none placeholder:text-muted-foreground"
               />
             </label>
           </div>
 
           {collaborateurs.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="cab-assignees flex flex-wrap items-center gap-1.5">
               <span className="me-1 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {t("cab.today.affectation")}
               </span>
@@ -337,17 +394,65 @@ function CabinetToday() {
             </div>
           ) : null}
 
+          {toReview > 0 ? (
+            <div className="cab-batch-link">
+              <Link to="/cabinet/propositions">
+                {t("cab.today.bulk")}
+                <ArrowRight size={15} />
+              </Link>
+            </div>
+          ) : null}
           {queue.isPending ? (
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : visibles.length === 0 ? (
-            <EmptyState>{t("cab.queue.empty")}</EmptyState>
+            <div className="cab-worklist-empty" role="status">
+              <span className="cab-empty-icon">
+                <CircleCheck size={26} strokeWidth={1.5} />
+              </span>
+              <h3>
+                {t(
+                  texte || collab !== null || filtre !== "tout"
+                    ? "cab.design.aucunResultat"
+                    : clientCount === 0
+                      ? "cab.design.pasDeMandat"
+                      : "cab.design.fileAjour",
+                )}
+              </h3>
+              <p>
+                {t(
+                  texte || collab !== null || filtre !== "tout"
+                    ? "cab.design.ajusterFiltres"
+                    : clientCount === 0
+                      ? "cab.design.commencerMandat"
+                      : "cab.queue.empty",
+                )}
+              </p>
+              {texte || collab !== null || filtre !== "tout" ? (
+                <button
+                  type="button"
+                  className="cab-button cab-button-secondary"
+                  onClick={() => {
+                    setFiltre("tout");
+                    setCollab(null);
+                    setTexte("");
+                  }}
+                >
+                  {t("cab.design.effacerFiltres")}
+                </button>
+              ) : (
+                <Link to="/cabinet/clients" className="cab-button cab-button-secondary">
+                  {t("cab.nav.clients")}
+                  <ArrowRight size={15} />
+                </Link>
+              )}
+            </div>
           ) : (
             <QueueTable rows={visibles} />
           )}
         </section>
 
         {/* ---- la colonne de droite */}
-        <aside className="space-y-8">
+        <aside className="cab-day-aside space-y-8">
           <section className="space-y-3">
             <SectionTitle
               action={

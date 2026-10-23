@@ -99,19 +99,22 @@ export function MonNom() {
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [retour, setRetour] = useState<string | null>(null);
+  const [edition, setEdition] = useState(false);
 
   useEffect(() => {
-    if (profil.data) {
+    if (profil.data && !edition) {
       setPrenom(profil.data.prenom ?? "");
       setNom(profil.data.nom ?? "");
     }
-  }, [profil.data]);
+  }, [profil.data, edition]);
 
   const ecrire = useMutation({
     mutationFn: () => office().identity.ecrireMonProfil(prenom, nom),
-    onSuccess: async () => {
+    onSuccess: async (enregistre) => {
       setRetour(t("pme.reglages.profil.enregistre"));
-      await qc.invalidateQueries({ queryKey: ["mon-profil"] });
+      qc.setQueryData(["mon-profil"], enregistre);
+      setEdition(false);
+      await qc.invalidateQueries({ queryKey: ["compte"] });
     },
     onError: (e: unknown) => setRetour(refus(e, t)),
   });
@@ -124,35 +127,79 @@ export function MonNom() {
   return (
     <div className="mt-3">
       <p className="t-body">{t("pme.reglages.profil.aide")}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <input
-          value={prenom}
-          onChange={(e) => setPrenom(e.target.value)}
-          placeholder={t("pme.reglages.profil.prenom")}
-          aria-label={t("pme.reglages.profil.prenom")}
-          autoComplete="given-name"
-          className={champ}
-        />
-        <input
-          value={nom}
-          onChange={(e) => setNom(e.target.value)}
-          placeholder={t("pme.reglages.profil.nom")}
-          aria-label={t("pme.reglages.profil.nom")}
-          autoComplete="family-name"
-          className={champ}
-        />
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "auto" }}
-          disabled={ecrire.isPending}
-          onClick={() => ecrire.mutate()}
-        >
-          {t("pme.reglages.profil.enregistrer")}
-        </button>
-      </div>
+      {profil.isPending ? (
+        <p role="status">{t("common.loading")}</p>
+      ) : profil.isError ? (
+        <p role="alert">{refus(profil.error, t)}</p>
+      ) : !edition ? (
+        <div className="mt-3 flex items-start justify-between gap-4">
+          <dl className="grid flex-1 gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="t-body">{t("pme.reglages.profil.prenom")}</dt>
+              <dd>{profil.data?.prenom || "—"}</dd>
+            </div>
+            <div>
+              <dt className="t-body">{t("pme.reglages.profil.nom")}</dt>
+              <dd>{profil.data?.nom || "—"}</dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            className="btn"
+            style={{ width: "auto" }}
+            onClick={() => {
+              setRetour(null);
+              setEdition(true);
+            }}
+          >
+            {t("pme.reglages.profil.editer")}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <input
+            disabled={ecrire.isPending}
+            value={prenom}
+            onChange={(e) => setPrenom(e.target.value)}
+            placeholder={t("pme.reglages.profil.prenom")}
+            aria-label={t("pme.reglages.profil.prenom")}
+            autoComplete="given-name"
+            className={champ}
+          />
+          <input
+            disabled={ecrire.isPending}
+            value={nom}
+            onChange={(e) => setNom(e.target.value)}
+            placeholder={t("pme.reglages.profil.nom")}
+            aria-label={t("pme.reglages.profil.nom")}
+            autoComplete="family-name"
+            className={champ}
+          />
+          <button
+            type="button"
+            className="btn"
+            style={{ width: "auto" }}
+            disabled={ecrire.isPending}
+            onClick={() => ecrire.mutate()}
+          >
+            {t("pme.reglages.profil.enregistrer")}
+          </button>
+          <button
+            type="button"
+            className="btn sec"
+            style={{ width: "auto" }}
+            disabled={ecrire.isPending}
+            onClick={() => {
+              setEdition(false);
+              setRetour(null);
+            }}
+          >
+            {t("common.cancel")}
+          </button>
+        </div>
+      )}
       {retour ? (
-        <p className="t-body" aria-live="polite">
+        <p className="t-body" role={ecrire.isError ? "alert" : "status"} aria-live="polite">
           {retour}
         </p>
       ) : null}

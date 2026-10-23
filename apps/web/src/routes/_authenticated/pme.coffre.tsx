@@ -154,7 +154,12 @@ function PmeCoffre() {
   });
 
   const basculer = useMutation({
-    mutationFn: (p: PieceLue) => office().collab.setPieceVis(p.id, "partage"),
+    mutationFn: async (p: PieceLue) => {
+      // La décision est relue au dernier instant ; aucun destinataire n'est inventé.
+      const destinataire = await office().identity.monCabinet(pme.tenantId);
+      if (!destinataire) throw new Error(t("relation.sansDestinataire"));
+      return office().collab.setPieceVis(p.id, "partage");
+    },
     onSuccess: async () => {
       setErreur(null);
       await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
@@ -370,11 +375,23 @@ function PmeCoffre() {
                        */}
                       <button
                         type="button"
-                        disabled={basculer.isPending}
+                        disabled={basculer.isPending || !cabinet.isSuccess || !cabinet.data}
                         onClick={() => basculer.mutate(p)}
                       >
                         {t("pme.prive.transmettre", { cabinet: nomDuCabinet })}
                       </button>
+                      {!cabinet.data && cabinet.isSuccess ? (
+                        <p role="status">{t("relation.sansDestinataire")}</p>
+                      ) : null}
+                      {cabinet.isError ? (
+                        <button
+                          type="button"
+                          className="sec"
+                          onClick={() => void cabinet.refetch()}
+                        >
+                          {t("doc.retry")}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))}

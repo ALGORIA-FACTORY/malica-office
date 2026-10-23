@@ -114,6 +114,41 @@ export const collab = {
     return (rows as Record<string, unknown>[]).map(versPv);
   },
 
+  async pvDuClient(db: Requete, clientTenantId: string) {
+    const { rows } = await db.query(
+      `select p.*, (select r.recu_le from public.pv_receptions_v r
+                    where r.pv_id = p.id and r.membre_id = auth.uid()) as recu_le,
+             (select n.payload->>'cabinet' from public.notifications_v n
+               where n.tenant_id = p.client_tenant_id and n.kind = 'pv.envoye'
+                 and n.payload->>'pv_id' = p.id::text order by n.created_at desc limit 1) as comptabilite
+         from public.collab_pv_v p
+        where p.client_tenant_id = $1 and p.statut = 'envoye'
+        order by p.envoye_le desc, p.created_at desc`,
+      [clientTenantId],
+    );
+    return (rows as Record<string, unknown>[]).map((p) => ({
+      document: versPv(p),
+      recuLe: (p["recu_le"] as string | null) ?? null,
+      comptabilite: (p["comptabilite"] as string | null) ?? null,
+    }));
+  },
+
+  async pvAccuserReception(db: Requete, id: string): Promise<string> {
+    const { rows } = await db.query<{ recu: string }>(
+      `select public.pv_accuser_reception($1) as recu`,
+      [id],
+    );
+    return rows[0]!.recu;
+  },
+
+  async pvReceptions(db: Requete, id: string) {
+    const { rows } = await db.query<{ id: string; recu_le: string }>(
+      `select id, recu_le from public.pv_receptions_v where pv_id = $1 order by recu_le`,
+      [id],
+    );
+    return rows.map((r) => ({ id: r.id, recuLe: r.recu_le }));
+  },
+
   async pvOuvrir(db: Requete, id: string) {
     const { rows } = await db.query(`select ${COLONNES_PV} from collab_pv_v where id = $1`, [id]);
     const p = (rows as Record<string, unknown>[])[0];

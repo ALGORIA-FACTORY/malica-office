@@ -116,15 +116,12 @@ function duree(iso: string, locale: string, maintenant: number): string {
     1,
     Math.round(abs / (unite === "minute" ? MINUTE_MS : unite === "hour" ? HEURE_MS : JOUR_MS)),
   );
-  const parties = new Intl.RelativeTimeFormat(locale, { numeric: "always" }).formatToParts(
-    n,
-    unite,
-  );
-  return parties
-    .filter((p) => p.type === "integer" || (p.type === "literal" && p.value.trim().length > 0))
-    .map((p) => p.value)
-    .join("")
-    .trim();
+  const uniteNombre = unite === "minute" ? "minute" : unite === "hour" ? "hour" : "day";
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit: uniteNombre,
+    unitDisplay: "long",
+  }).format(n);
 }
 
 function CabinetConseil() {

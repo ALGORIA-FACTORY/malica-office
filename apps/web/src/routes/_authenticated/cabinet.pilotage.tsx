@@ -82,7 +82,11 @@ function CabinetPilotage() {
     queryKey: ["cab-reglages", org.id],
     queryFn: () => office().parametrage.reglagesCabinet(org.id),
   });
-  const clientIds = useMemo(() => (clients.data ?? []).map((c) => c.tenantId), [clients.data]);
+  const clientsActifs = useMemo(
+    () => (clients.data ?? []).filter((c) => c.engagementStatus === "actif"),
+    [clients.data],
+  );
+  const clientIds = useMemo(() => clientsActifs.map((c) => c.tenantId), [clientsActifs]);
   const stats = useQuery({
     queryKey: ["cab-stats", org.id, clientIds],
     queryFn: () => office().collab.stats(clientIds),
@@ -106,17 +110,19 @@ function CabinetPilotage() {
   /* ---- l'affectation active de chaque client */
   const collabDe = useMemo(() => {
     const carte = new Map<string, string>();
-    for (const a of (affectations.data ?? []).filter((x) => x.active)) {
+    for (const a of (affectations.data ?? []).filter(
+      (x) => x.active && clientIds.includes(x.clientTenantId),
+    )) {
       if (!carte.has(a.clientTenantId)) carte.set(a.clientTenantId, a.collaboratorId);
     }
     return carte;
-  }, [affectations.data]);
+  }, [affectations.data, clientIds]);
 
   /* ---- la charge par collaborateur */
   const capacite = reglages.data?.capaciteDossiers ?? null;
   const parCollab = useMemo(() => {
     return (membres.data ?? []).map((m) => {
-      const mandats = (clients.data ?? []).filter((c) => collabDe.get(c.tenantId) === m.userId);
+      const mandats = clientsActifs.filter((c) => collabDe.get(c.tenantId) === m.userId);
       const s = mandats
         .map((c) => statsDe.get(c.tenantId))
         .filter((x): x is ClientStats => Boolean(x));
@@ -135,8 +141,8 @@ function CabinetPilotage() {
         retour: pieces > 0 ? retournees / pieces : null,
       };
     });
-  }, [membres.data, clients.data, collabDe, statsDe]);
-  const sansCollab = (clients.data ?? []).filter((c) => !collabDe.has(c.tenantId));
+  }, [membres.data, clientsActifs, collabDe, statsDe]);
+  const sansCollab = clientsActifs.filter((c) => !collabDe.has(c.tenantId));
   const charges = parCollab.map((c) => c.mandats.length);
   const ecart = charges.length ? Math.max(...charges) - Math.min(...charges) : 0;
   const totalPieces = (stats.data ?? []).reduce((n, s) => n + s.pieces, 0);
@@ -460,7 +466,7 @@ function CabinetPilotage() {
                   className="mt-1 w-full border border-border bg-background px-2 py-1.5 text-[12.5px]"
                 >
                   <option value="">—</option>
-                  {(clients.data ?? []).map((c) => (
+                  {clientsActifs.map((c) => (
                     <option key={c.tenantId} value={c.tenantId}>
                       {c.name}
                     </option>

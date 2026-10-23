@@ -8,8 +8,8 @@ import { useCallback, useEffect, useState } from "react";
  * retient par navigateur, pas en base — c'est une préférence d'écran, pas une
  * donnée du dossier.
  *
- * Elle est ouverte au départ. Un assistant qu'il faut découvrir n'assiste
- * personne ; celui qui gêne se ferme d'un clic, et se rappelle d'un autre.
+ * Au cabinet, le travail garde toute la largeur au départ. Le bouton Malica
+ * ouvre le fil à la demande ; un choix mémorisé reste prioritaire.
  *
  * Le choix est retenu PAR ESPACE. Les deux surfaces ne se ressemblent pas :
  * au cabinet, Malica est une colonne de trois cents pixels en travers d'une
@@ -23,12 +23,13 @@ type Espace = "cabinet" | "pme";
 const cle = (espace: Espace) => `malica.panneau.ouvert.${espace}`;
 
 function auDepart(espace: Espace): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return espace !== "cabinet";
   try {
-    return window.localStorage.getItem(cle(espace)) !== "0";
+    const choix = window.localStorage.getItem(cle(espace));
+    return choix === null ? espace !== "cabinet" : choix === "1";
   } catch {
-    // Navigation privée, stockage refusé : on ouvre, sans rien casser.
-    return true;
+    // Sans stockage, chaque surface conserve son défaut d'affichage.
+    return espace !== "cabinet";
   }
 }
 
@@ -68,7 +69,7 @@ export function usePanneauMalica(espace: Espace): {
   };
 }
 
-/** La préférence telle qu'elle est mémorisée sur ce poste — vraie par défaut. */
+/** La préférence de ce poste, ou le défaut propre à chaque espace. */
 export function panneauOuvertParDefaut(espace: Espace): boolean {
   return auDepart(espace);
 }

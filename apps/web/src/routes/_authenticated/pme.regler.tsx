@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
+import { LivrablesRecus } from "@/components/malica/livrables-recus";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -115,10 +116,8 @@ function chaine(payload: Record<string, unknown>, cle: string): string | null {
  *
  * ============================================ CE QUI N'EST PAS BRANCHÉ, ET POURQUOI
  *
- * - L'onglet « Ses documents » n'a aucune source : `cabinet.documents` et
- *   `cabinet.accuserReception` ne sont pas au contrat et le dépôt `cabinet`
- *   n'est pas monté. L'onglet existe parce que le dessin le veut, et il dit
- *   qu'il est vide — il ne montre aucune rubrique en attendant.
+ * - « Ses documents » reçoit les PV publiés du dépôt `collab`, avec une
+ *   réception explicite. Les autres dépôts de fichiers restent hors de ce lot.
  * - « Il vous réclame un relevé » : aucun genre de notification ne porte une
  *   demande de document du cabinet vers la PME. La carte n'est pas inventée.
  * - « Vos demandes » : `collab.demandesDUnePiece` est par pièce. Une liste
@@ -185,8 +184,8 @@ function ARegler() {
       new Date(iso),
     );
 
-  const panne = notifs.error ?? pieces.error ?? null;
-  const chargement = notifs.isPending || pieces.isPending;
+  const panne = notifs.error ?? pieces.error ?? cabinet.error ?? null;
+  const chargement = notifs.isPending || pieces.isPending || cabinet.isPending;
 
   return (
     /*
@@ -220,10 +219,27 @@ function ARegler() {
 
       <div className="pad">
         {/* Le cabinet, nommé. `null` → on ne lui invente pas un nom. */}
-        <h1>{cabinet.data ? cabinet.data.name : t("pme.regler.sansCabinet")}</h1>
+        <h1>
+          {cabinet.isPending
+            ? t("common.loading")
+            : cabinet.isError
+              ? t("relation.indisponible")
+              : cabinet.data
+                ? cabinet.data.name
+                : t("pme.regler.sansCabinet")}
+        </h1>
         <p className="sub">
-          {cabinet.data ? t("pme.regler.sousMandat") : t("pme.regler.sousSansMandat")}
+          {cabinet.isSuccess
+            ? cabinet.data
+              ? t("pme.regler.sousMandat")
+              : t("pme.regler.sousSansMandat")
+            : null}
         </p>
+        {cabinet.isSuccess && !cabinet.data ? (
+          <p className="regle" role="status">
+            {t("relation.historique")}
+          </p>
+        ) : null}
 
         {/* ── les deux onglets ───────────────────────────────────────── */}
         <div className="seg">
@@ -246,20 +262,7 @@ function ARegler() {
         </div>
 
         {onglet === "docs" ? (
-          <>
-            {/*
-             * Les trois règles du câblage, écrites sur l'écran — elles disent
-             * ce que ces documents SERONT. Et juste après, ce qu'ils sont :
-             * rien, parce que le dépôt n'existe pas.
-             */}
-            <p className="regle">
-              <IconeInfo />
-              <span>{t("pme.regler.documentsRegle")}</span>
-            </p>
-            <div className="card">
-              <p>{t("pme.regler.documentsRien")}</p>
-            </div>
-          </>
+          <LivrablesRecus tenantId={pme.tenantId} />
         ) : (
           <>
             {panne ? (
@@ -286,7 +289,11 @@ function ARegler() {
                 </div>
                 <div className="dit">
                   {t("pme.regler.rien.titre")}
-                  <em>{t("pme.regler.rien.sous", { cabinet: nomDuCabinet })}</em>
+                  <em>
+                    {cabinet.data
+                      ? t("pme.regler.rien.sous", { cabinet: nomDuCabinet })
+                      : t("relation.sansMandat")}
+                  </em>
                 </div>
               </>
             ) : (
@@ -360,7 +367,7 @@ function ARegler() {
             {avis.length > 0 ? (
               <>
                 <div className="sec">
-                  <h2>{t("pme.regler.sesAvis")}</h2>
+                  <h2>{t(cabinet.data ? "pme.regler.sesAvis" : "relation.avisHistorique")}</h2>
                   <span>{avis.length}</span>
                 </div>
 
@@ -378,7 +385,13 @@ function ARegler() {
                    * quand la charge ne porte pas de thème — sans quoi la ligne
                    * dirait deux fois la même chose, en gras puis en petit.
                    */
-                  const etat = t(CONSEIL[n.kind] ?? "cab.notif.kind.autre");
+                  const etat = !cabinet.data
+                    ? t(
+                        n.kind === "conseil.arbitrage"
+                          ? "relation.avisSansSuivi"
+                          : "relation.avisArchive",
+                      )
+                    : t(CONSEIL[n.kind] ?? "cab.notif.kind.autre");
                   return (
                     /*
                      * Une `<div>`, pas un `<button>` : le dessin fait de cette
@@ -405,7 +418,7 @@ function ARegler() {
               </>
             ) : null}
 
-            <p className="foot">{t("pme.regler.pied")}</p>
+            <p className="foot">{t(cabinet.data ? "pme.regler.pied" : "relation.historique")}</p>
           </>
         )}
       </div>
@@ -466,16 +479,6 @@ function IconePiece() {
       <path d="M6 3h8l4 4v14H6z" />
       <path d="M14 3v4h4" />
       <path d="M9 12h6M9 15.5h6" />
-    </svg>
-  );
-}
-
-/** Le cercle d'information — il ouvre une règle, jamais une alerte. */
-function IconeInfo() {
-  return (
-    <svg viewBox="0 0 24 24" className="g" aria-hidden>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 11v5.5M12 7.8v.3" />
     </svg>
   );
 }

@@ -45,6 +45,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "@/styles-comptabilite.css";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { CabinetProvider } from "@/components/malica/cabinet-context";
@@ -267,7 +268,12 @@ function Coquille({
     queryKey: ["cab-honoraires-synthese", org.id, new Date().toISOString().slice(0, 7)],
     queryFn: () => office().honoraires.synthese(org.id, new Date().toISOString().slice(0, 7)),
   });
-  const aSuperviser = (queue.data ?? []).filter((r) => r.status === "comptabilisee").length;
+  const mandatsActifs = new Set(
+    (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),
+  );
+  const aSuperviser = (queue.data ?? []).filter(
+    (r) => mandatsActifs.has(r.tenantId) && r.status === "comptabilisee",
+  ).length;
   const nonLues = (notifications.data ?? []).filter((n) => !n.readAt).length;
   // Un mandat révoqué ou refusé reste lisible dans la liste, mais il ne compte
   // plus parmi les dossiers tenus (ANO-013, 21 octobre 2026).
@@ -286,6 +292,12 @@ function Coquille({
       label: t("cab.nav.group.file"),
       items: [
         { to: "/cabinet", label: t("cab.nav.today"), icon: Inbox, exact: true, badge: aSuperviser },
+        {
+          to: "/cabinet/echeances",
+          label: t("cab.nav.echeances"),
+          icon: CalendarClock,
+          exact: false,
+        },
         {
           to: "/cabinet/conseil",
           label: t("cab.nav.conseil"),
@@ -393,14 +405,15 @@ function Coquille({
 
   // Tailwind ne génère pas une classe composée à l'exécution : la grille
   // lit une variable CSS, posée ici selon le rail et le panneau.
-  const largeurRail = replie ? "64px" : "254px";
+  const largeurRail = replie ? "72px" : "240px";
   const colonnes = panneauOuvert
     ? `${largeurRail} minmax(0,1fr) 320px`
     : `${largeurRail} minmax(0,1fr)`;
 
   return (
     <div
-      className="min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[var(--cabinet-colonnes)]"
+      data-surface="comptabilite"
+      className="cabinet-workspace min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[var(--cabinet-colonnes)]"
       style={{ "--cabinet-colonnes": colonnes } as React.CSSProperties}
     >
       <Rail
@@ -418,7 +431,7 @@ function Coquille({
         fermerTiroir={() => setTiroir(false)}
       />
 
-      <main className="min-w-0 lg:h-screen lg:overflow-y-auto">
+      <main id="travail-comptabilite" className="cab-main min-w-0 lg:h-screen lg:overflow-y-auto">
         <BarreDuHaut
           section={fil.section}
           detail={fil.detail}
@@ -438,7 +451,7 @@ function Coquille({
             }
           />
         ) : null}
-        <div className="px-4 py-6 sm:px-6 lg:px-9 lg:py-7">
+        <div className="cab-content px-4 py-6 sm:px-6 lg:px-9 lg:py-7">
           <Outlet />
           {panneauOuvert ? (
             <section className="mt-8 border border-border bg-card lg:hidden">
@@ -466,7 +479,7 @@ function Coquille({
       </main>
 
       {panneauOuvert ? (
-        <div className="hidden border-s border-border lg:block lg:h-screen lg:overflow-y-auto">
+        <div className="cab-assistant hidden border-s border-border lg:block lg:h-screen lg:overflow-y-auto">
           <MalicaPanel
             title={t("cab.malica.title")}
             status={t("cab.malica.status")}
@@ -525,17 +538,24 @@ function Rail({
     queryFn: () => office().referential.activePack(org.jurisdiction),
   });
   const [recherche, setRecherche] = useState("");
+  const outilsActifs = groupes.some((g) => g.key === "cabinet" && g.items.some(estActive));
+  const [outilsOuverts, setOutilsOuverts] = useState(outilsActifs);
+  useEffect(() => {
+    if (outilsActifs) setOutilsOuverts(true);
+  }, [outilsActifs]);
 
   const contenu = (
     <>
       {/* En-tête : la marque, le cabinet, le nombre de mandats, le repli. */}
       <div
         className={cn(
-          "flex items-center gap-2 border-b border-border px-3 py-3",
+          "cab-identity flex items-center gap-2 border-b border-border px-3 py-3",
           replie ? "flex-col" : "",
         )}
       >
-        <span aria-hidden className="h-5 w-5 shrink-0 bg-foreground" />
+        <span aria-hidden className="cab-brand-mark">
+          <Building2 size={20} strokeWidth={1.7} />
+        </span>
         {!replie ? (
           <span className="min-w-0 flex-1">
             <Link
@@ -563,7 +583,7 @@ function Rail({
 
       {/* Tout chercher : une recherche dans le rail, sur les écrans et les clients. */}
       {!replie ? (
-        <div className="px-3 pt-3">
+        <div className="px-3 pt-3 lg:hidden">
           <label className="flex items-center gap-2 border border-border bg-card px-2.5 py-2 text-muted-foreground focus-within:border-foreground">
             <Search size={14} className="shrink-0" />
             <input
@@ -593,14 +613,29 @@ function Rail({
       <div className={cn("flex-1 overflow-y-auto py-3", replie ? "px-2" : "px-3")}>
         {groupes.map((g) => (
           <div key={g.key} className="mb-4">
-            {!replie ? (
+            {!replie && g.key === "cabinet" ? (
+              <button
+                type="button"
+                className="cab-tools-toggle"
+                aria-expanded={outilsOuverts}
+                onClick={() => setOutilsOuverts((v) => !v)}
+              >
+                {g.label}
+                <ChevronRight size={14} className={outilsOuverts ? "rotate-90" : ""} />
+              </button>
+            ) : !replie ? (
               <p className="mb-1.5 px-2.5 text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 {g.label}
               </p>
             ) : (
               <span aria-hidden className="mx-2 mb-2 block h-px bg-border" />
             )}
-            <ul className="flex flex-col gap-0.5">
+            <ul
+              className={cn(
+                "flex flex-col gap-0.5",
+                g.key === "cabinet" && !replie && !outilsOuverts && "hidden",
+              )}
+            >
               {g.items.map((e) => {
                 const actif = estActive(e);
                 const Icone = e.icon;
@@ -657,7 +692,10 @@ function Rail({
 
       {/* Pied : le pack, la langue, le compte. */}
       <div
-        className={cn("flex flex-col gap-2 border-t border-border py-3", replie ? "px-2" : "px-3")}
+        className={cn(
+          "cab-rail-footer flex flex-col gap-2 border-t border-border py-3",
+          replie ? "px-2" : "px-3",
+        )}
       >
         {!replie ? (
           <>
@@ -718,7 +756,7 @@ function Rail({
       {/* Large : le rail, collant. */}
       <nav
         aria-label={t("cab.brand")}
-        className="hidden flex-col border-e border-border bg-sidebar lg:sticky lg:top-0 lg:flex lg:h-screen"
+        className="cab-rail hidden flex-col border-e border-border bg-sidebar lg:sticky lg:top-0 lg:flex lg:h-screen"
       >
         {contenu}
       </nav>
@@ -733,7 +771,7 @@ function Rail({
           />
           <nav
             aria-label={t("cab.brand")}
-            className="flex w-[280px] flex-col overflow-y-auto bg-sidebar"
+            className="cab-rail flex w-[280px] flex-col overflow-y-auto bg-sidebar"
           >
             {contenu}
           </nav>
@@ -848,7 +886,7 @@ function BarreDuHaut({
   }, []);
 
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2.5 backdrop-blur sm:px-6 lg:px-9">
+    <div className="cab-topbar sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2.5 backdrop-blur sm:px-6 lg:px-9">
       <button
         type="button"
         onClick={ouvrirTiroir}
