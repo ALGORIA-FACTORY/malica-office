@@ -3463,7 +3463,7 @@ const fr = {
    * « dans les deux sens » (le geste ne va que de `personnel` vers `partage`).
    */
   "pme.coffre.titre": "Vos papiers",
-  "pme.coffre.bouger": "Ce qui peut encore bouger",
+  "pme.coffre.bouger": "À transmettre",
   /**
    * Le dessin ajoute « …ou la supprimer sans demander à personne » :
    * `capture.supprimer` n'est pas appelé par cet écran. La phrase s'arrête à ce
@@ -6955,7 +6955,7 @@ const en: Dict = {
   "pme.regler.pied":
     "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
   "pme.coffre.titre": "Your papers",
-  "pme.coffre.bouger": "What can still change",
+  "pme.coffre.bouger": "To send",
   "pme.coffre.libre":
     "You put it here after capturing it. It never went to the firm: you can still move it back to the library.",
   "pme.coffre.pied":
@@ -10283,7 +10283,7 @@ const ar: Dict = {
   "pme.regler.pied":
     "الملاحظات على الوثائق والآراء تأتي من المكتب نفسه، أي من صندوق الوارد نفسه. ما يميّزها ليس الشاشة، بل ما تطلبه منكم.",
   "pme.coffre.titre": "أوراقكم",
-  "pme.coffre.bouger": "ما لا يزال قابلًا للتغيير",
+  "pme.coffre.bouger": "للإرسال",
   "pme.coffre.libre":
     "وضعتموها هنا بعد التقاطها. لم تُرسل قط إلى المكتب: لا يزال بإمكانكم إعادتها إلى المكتبة.",
   "pme.coffre.pied":
