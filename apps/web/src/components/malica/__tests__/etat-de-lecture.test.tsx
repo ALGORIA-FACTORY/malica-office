@@ -18,7 +18,7 @@ describe("l'état de lecture d'une pièce, dans une liste", () => {
   it("garde la phrase d'un AUTRE motif, même sur une pièce rendue privée", () => {
     render(
       <EtatDeLecture
-        refus={{ motif: "plafond_atteint" }}
+        refus={{ motif: "plafond_atteint", le: "2026-10-23T10:00:00Z" }}
         vis="personnel"
         motifDitAilleurs="piece_personnelle"
       />,
