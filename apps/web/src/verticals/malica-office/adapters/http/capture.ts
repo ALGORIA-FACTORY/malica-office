@@ -166,6 +166,13 @@ export function creerCaptureHttp(): CaptureRepository {
       };
     },
 
+    async apercu(pieceId: string) {
+      // La même route que la visionneuse, avec la session : les pièces ne
+      // sont pas publiques, et une URL nue n'emporterait ni cookie ni jeton.
+      const reponse = await transport().appeler(`/pieces/${pieceId}/contenu`);
+      return reponse.ok ? await reponse.blob() : null;
+    },
+
     async preciser(pieceId: string, champ: "document_kind", valeur: string) {
       return (await appeler("capture", "preciser", [pieceId, champ, valeur])) as {
         id: string;

@@ -989,6 +989,12 @@ export interface CaptureRepository {
   motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
+   * Les octets d'une pièce seuls, pour son aperçu dans une liste — sans sa
+   * lecture, ses citations ni ses jetons. `null` quand la ligne existe mais
+   * pas son contenu (un dépôt interrompu).
+   */
+  apercu(pieceId: string): Promise<Blob | null>;
+  /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
    * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint

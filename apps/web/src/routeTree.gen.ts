@@ -55,6 +55,7 @@ import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './route
 import { Route as AuthenticatedCabinetFactureFactureIdRouteImport } from './routes/_authenticated/cabinet.facture.$factureId'
 import { Route as AuthenticatedCabinetPayerPaiementIdRouteImport } from './routes/_authenticated/cabinet.payer.$paiementId'
 import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_authenticated/cabinet.piece.$pieceId'
+import { Route as AuthenticatedPmeDossierTypeRouteImport } from './routes/_authenticated/pme.dossier.$type'
 import { Route as AuthenticatedPmePayerPaiementIdRouteImport } from './routes/_authenticated/pme.payer.$paiementId'
 import { Route as AuthenticatedPmePiecePieceIdRouteImport } from './routes/_authenticated/pme.piece.$pieceId'
 
@@ -314,6 +315,12 @@ const AuthenticatedCabinetPiecePieceIdRoute =
     path: '/piece/$pieceId',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
+const AuthenticatedPmeDossierTypeRoute =
+  AuthenticatedPmeDossierTypeRouteImport.update({
+    id: '/dossier/$type',
+    path: '/dossier/$type',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmePayerPaiementIdRoute =
   AuthenticatedPmePayerPaiementIdRouteImport.update({
     id: '/payer/$paiementId',
@@ -373,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -420,6 +428,7 @@ export interface FileRoutesByTo {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -471,6 +480,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/_authenticated/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/_authenticated/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/_authenticated/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/_authenticated/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
   '/_authenticated/pme/piece/$pieceId': typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
   fileRoutesByTo: FileRoutesByTo
@@ -569,6 +580,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
     | '/pme/piece/$pieceId'
   id:
@@ -619,6 +631,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/facture/$factureId'
     | '/_authenticated/cabinet/payer/$paiementId'
     | '/_authenticated/cabinet/piece/$pieceId'
+    | '/_authenticated/pme/dossier/$type'
     | '/_authenticated/pme/payer/$paiementId'
     | '/_authenticated/pme/piece/$pieceId'
   fileRoutesById: FileRoutesById
@@ -956,6 +969,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetPiecePieceIdRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
+    '/_authenticated/pme/dossier/$type': {
+      id: '/_authenticated/pme/dossier/$type'
+      path: '/dossier/$type'
+      fullPath: '/pme/dossier/$type'
+      preLoaderRoute: typeof AuthenticatedPmeDossierTypeRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/payer/$paiementId': {
       id: '/_authenticated/pme/payer/$paiementId'
       path: '/payer/$paiementId'
@@ -1048,6 +1068,7 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
   AuthenticatedPmeTvaRoute: typeof AuthenticatedPmeTvaRoute
   AuthenticatedPmeIndexRoute: typeof AuthenticatedPmeIndexRoute
+  AuthenticatedPmeDossierTypeRoute: typeof AuthenticatedPmeDossierTypeRoute
   AuthenticatedPmePayerPaiementIdRoute: typeof AuthenticatedPmePayerPaiementIdRoute
   AuthenticatedPmePiecePieceIdRoute: typeof AuthenticatedPmePiecePieceIdRoute
 }
@@ -1066,6 +1087,7 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,
   AuthenticatedPmeTvaRoute: AuthenticatedPmeTvaRoute,
   AuthenticatedPmeIndexRoute: AuthenticatedPmeIndexRoute,
+  AuthenticatedPmeDossierTypeRoute: AuthenticatedPmeDossierTypeRoute,
   AuthenticatedPmePayerPaiementIdRoute: AuthenticatedPmePayerPaiementIdRoute,
   AuthenticatedPmePiecePieceIdRoute: AuthenticatedPmePiecePieceIdRoute,
 }

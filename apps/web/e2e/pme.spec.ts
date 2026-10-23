@@ -47,9 +47,9 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
    */
   await page.goto("/pme");
 
-  // Le micro de la barre de demande porte le nom accessible ; la barre
-  // entière reste cliquable au doigt.
-  await page.getByRole("button", { name: "Parler à Malica" }).click();
+  // Depuis le 23 octobre 2026, la conversation s'ouvre par « Me demander »,
+  // sur la carte de Malica.
+  await page.getByRole("button", { name: "Me demander", exact: true }).click();
   await expect(page).toHaveURL(/\/pme\/malica$/);
 
   // L'écran du dessin : son composeur, et le pied qui dit ce que Malica ne
