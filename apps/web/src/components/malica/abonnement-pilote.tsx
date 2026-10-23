@@ -12,7 +12,7 @@
  * alors la règle, pas les boutons.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
@@ -24,9 +24,10 @@ import {
 } from "@/hooks/use-offres";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
+import { libelleDuPaiement } from "@/lib/paiement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
-import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
+import type { FactureDuTitulaire, OffreDeLaGrille } from "@malica/socle/ports/repositories";
 
 const OU = "components/malica/abonnement-pilote";
 
@@ -750,7 +751,7 @@ export function ARegler() {
       {ouverts.map((p) => (
         <div key={p.paiement_id} className="card abo" data-paiement={p.paiement_id}>
           <div className="nm">
-            <b>{p.libelle}</b>
+            <b>{libelleDuPaiement(p, t)}</b>
             <span className="px">
               {t("pme.reglages.paiement.montant", {
                 ttc: montant(p.montant_ttc, locale),
@@ -812,6 +813,96 @@ export function ARegler() {
       {retour ? (
         <p className="t-body" aria-live="polite">
           {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** L'état d'une facture (`facturation.encours_v`), dit dans la langue de la personne. */
+const ETAT_DE_FACTURE: Record<FactureDuTitulaire["etat"], MessageKey> = {
+  a_echoir: "pme.reglages.factures.etat.a_echoir",
+  en_retard: "pme.reglages.factures.etat.en_retard",
+  partielle: "cab.abo.fac.statut.partielle",
+  payee: "cab.abo.fac.statut.payee",
+  annulee: "cab.abo.fac.statut.annulee",
+  irrecouvrable: "cab.abo.fac.statut.irrecouvrable",
+};
+
+/**
+ * Vos factures — et le paiement en ligne de ce qui reste dû (23 octobre 2026).
+ *
+ * Décisions de Wissem : on paie le RESTE DÛ, en entier ; le paiement s'inscrit
+ * sur la facture dès que le prestataire le confirme ; une licence suspendue
+ * pour impayé reprend d'elle-même quand plus aucune facture n'est en retard.
+ * L'écran ne calcule rien : l'état et le reste dû viennent de
+ * `facturation.encours_v`, le montant du paiement de la base. « Payer » mène à
+ * la page de choix du moyen, comme tout paiement en ligne.
+ *
+ * Web et PWA seulement : ce bloc est rendu sous `COMMERCE`.
+ */
+export function MesFactures() {
+  const { t, locale } = useI18n();
+  const navigate = useNavigate();
+  const principal = useEstPrincipal();
+  const [erreur, setErreur] = useState<string | null>(null);
+  const factures = useQuery({
+    queryKey: ["mes-factures"],
+    queryFn: () => office().facturation.mesFactures(),
+    enabled: principal,
+    retry: false,
+  });
+  const payer = useMutation({
+    mutationFn: (factureId: string) => office().facturation.payerFacture(factureId),
+    onSuccess: (p) =>
+      void navigate({ to: "/pme/payer/$paiementId", params: { paiementId: p.paiement_id } }),
+    onError: (e: unknown) => setErreur(refus(e, t)),
+  });
+
+  if (!principal || !factures.data || factures.data.length === 0) return null;
+
+  return (
+    <div className="rows" data-mes-factures>
+      <div className="sec">
+        <h2>{t("pme.reglages.factures.titre")}</h2>
+      </div>
+      {factures.data.map((f) => {
+        const due = f.etat === "a_echoir" || f.etat === "en_retard" || f.etat === "partielle";
+        return (
+          <div key={f.facture_id} className="card abo" data-facture={f.facture_id}>
+            <div className="nm">
+              <b>{f.numero}</b>
+              <span className="px">{montant(f.montant_ttc, locale)}</span>
+            </div>
+            <p className="ttc">
+              {f.periode.slice(0, 7)} · {t(ETAT_DE_FACTURE[f.etat])}
+            </p>
+            {due ? (
+              <>
+                <p className={f.etat === "en_retard" ? "warn" : "t-body"}>
+                  {t("pme.reglages.factures.reste", {
+                    montant: montant(f.reste_du, locale),
+                    devise: f.devise,
+                  })}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={payer.isPending}
+                    onClick={() => payer.mutate(f.facture_id)}
+                  >
+                    {t("pme.reglages.paiement.payer")}
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        );
+      })}
+      {erreur ? (
+        <p className="warn" role="alert">
+          {erreur}
         </p>
       ) : null}
     </div>

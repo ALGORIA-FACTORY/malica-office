@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { coque, COMMERCE, versionClient } from "@/capabilities/coque";
 import {
   ARegler,
+  MesFactures,
   ChangerDOffre,
   MesProprietaires,
   MesRecharges,
@@ -245,6 +246,7 @@ function PmeReglages() {
           <ChangerDOffre />
           <PayerALAnnee />
           <ARegler />
+          <MesFactures />
 
           <div className="sec">
             <h2>{t("pme.reglages.recharges")}</h2>
