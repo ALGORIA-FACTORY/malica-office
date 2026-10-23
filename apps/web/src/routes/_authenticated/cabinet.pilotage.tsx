@@ -292,14 +292,15 @@ function CabinetPilotage() {
           },
           {
             key: "sup",
-            label: t("cab.pil.kpi.supervisees"),
+            label: t("cab.pil.stats.comptabilisees"),
             value: statistiques.isSuccess ? String(statistiques.data.socle.comptabilisees) : "—",
-            ctx: t("cab.pil.kpi.supervisees.ctx"),
+            ctx: t("cab.pil.stats.socle"),
           },
         ].map((k) => (
           <div
             key={k.key}
             className="cab-summary-card"
+            data-metric={k.key}
             data-color={k.key === "sup" ? "green" : k.key === "sans" ? "peach" : "violet"}
           >
             <p className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">

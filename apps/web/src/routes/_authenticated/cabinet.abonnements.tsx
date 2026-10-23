@@ -20,6 +20,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Users } from "lucide-react";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -188,7 +189,12 @@ function CabinetAbonnements() {
         ) : null}
       </header>
 
-      <div className="cab-summary-grid">
+      <div
+        className="cab-summary-grid"
+        data-empty={
+          attribues.isSuccess && lignes.length === 0 && factures.data?.length === 0 ? "" : undefined
+        }
+      >
         {[
           {
             key: "actif",
@@ -237,13 +243,12 @@ function CabinetAbonnements() {
       {/* 1. Proposer — à l'expert seul */}
       {expert && formulaire ? (
         <section id="cab-abonnement-formulaire" className="cab-surface space-y-3">
-          <h2 className="sr-only">{t("cab.abo.propose.titre")}</h2>
           <div className="space-y-3">
             <SectionTitle>{t("cab.abo.propose.titre")}</SectionTitle>
             <p className="max-w-[70ch] text-[12.5px] leading-[1.55] text-muted-foreground">
               {t("cab.abo.propose.regle")}
             </p>
-            {clients.isPending ? (
+            {clients.isPending || offres.isPending ? (
               <p role="status">{t("common.loading")}</p>
             ) : clients.isError || offres.isError ? (
               <p role="alert" className="text-signal-stop">
@@ -379,7 +384,32 @@ function CabinetAbonnements() {
               {texteDeLErreur(attribues.error, OU, t("common.error"))}
             </p>
           ) : lignes.length === 0 ? (
-            <EmptyState>{t("cab.abo.liste.vide")}</EmptyState>
+            <div className="cab-start-panel">
+              <span className="cab-start-icon" aria-hidden>
+                <Users size={30} strokeWidth={1.6} />
+              </span>
+              <h3>{t("cab.abo.liste.vide")}</h3>
+              {clients.isPending ? (
+                <p role="status">{t("common.loading")}</p>
+              ) : clients.isError ? (
+                <p role="alert">{texteDeLErreur(clients.error, OU, t("common.error"))}</p>
+              ) : actifs.length === 0 ? (
+                <>
+                  <p>{t("cab.abo.propose.aucunClient")}</p>
+                  <Link to="/cabinet/clients" className="cab-button cab-button-primary">
+                    {t("cab.nav.clients")}
+                  </Link>
+                </>
+              ) : expert ? (
+                <button
+                  type="button"
+                  className="cab-button cab-button-primary"
+                  onClick={() => setFormulaire(true)}
+                >
+                  {t("cab.abo.propose.titre")}
+                </button>
+              ) : null}
+            </div>
           ) : (
             <>
               {statut ? (

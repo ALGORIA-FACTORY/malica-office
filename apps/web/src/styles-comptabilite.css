@@ -961,3 +961,82 @@
     order: -1;
   }
 }
+
+/* Ajustements confirmés par la revue du staging : lisibilité et démarrage. */
+.cabinet-workspace .cab-rail a > .min-w-0 {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.35;
+}
+.cabinet-workspace .cab-summary-card > p:first-child {
+  font-size: 13px;
+  font-weight: 550;
+  color: inherit;
+}
+.cabinet-workspace .cab-summary-value {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.cabinet-workspace .cab-summary-card[data-metric="delai"] .cab-summary-value {
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+.cabinet-workspace .cab-summary-grid[data-empty] .cab-summary-card {
+  min-height: 104px;
+  padding-block: 16px;
+}
+.cabinet-workspace .cab-summary-grid[data-empty] .cab-summary-value {
+  margin-top: 8px;
+  font-size: 26px;
+}
+.cabinet-workspace .cab-start-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 24px;
+  border: 1px solid #e5eae6;
+  border-radius: 20px;
+  background: #ffffff;
+  text-align: center;
+}
+.cabinet-workspace .cab-start-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: #e4f3ea;
+  color: #24603e;
+}
+.cabinet-workspace .cab-start-panel h3 {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+.cabinet-workspace .cab-start-panel > p {
+  max-width: 46ch;
+  color: #667369;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.cabinet-workspace .cab-start-panel .cab-button {
+  margin-top: 6px;
+}
+
+.cabinet-workspace .cab-brand-mark[data-logo] {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+}
+.cabinet-workspace .cab-brand-mark[data-logo] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
