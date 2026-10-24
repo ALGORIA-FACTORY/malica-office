@@ -164,6 +164,15 @@ function PieceScreen() {
   const [regle, setRegle] = useState(false);
   const [montrerPiece, setPiece] = useState(false);
   const [montrerDetail, setDetail] = useState(false);
+  /**
+   * L'onglet ouvert, et la feuille « Ajouter un règlement ».
+   *
+   * 24 octobre 2026, maquette validée par Wissem (« encore trop d'écriture,
+   * il faut une séparation de section ») : une carte de décision, puis trois
+   * onglets — Lecture, Règlement, Suivi — au lieu de quinze blocs empilés.
+   */
+  const [onglet, setOnglet] = useState<"lecture" | "reglement" | "suivi">("lecture");
+  const [ajoutOuvert, setAjoutOuvert] = useState(false);
   // Le bouton retour ferme d'abord ce qui est ouvert par-dessus la pièce.
   useSuperposition(
     montrerPiece,
