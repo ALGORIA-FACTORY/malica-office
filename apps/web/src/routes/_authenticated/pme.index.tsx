@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { piecesALire } from "@/lib/a-lire";
-import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
@@ -375,8 +374,6 @@ function PmeHome() {
    * (B6), d'où le filtre sur le statut et non sur la visibilité.
    */
   const aLire = piecesALire(lues.data ?? []);
-  /** Un lot porte PLAFOND_ELEMENTS pièces au plus : « Lire les N » s'y tient. */
-  const aLireDuLot = aLire.slice(0, PLAFOND_ELEMENTS);
   const aTraiter = lesLues
     .filter((p) => p.status === "lue" || p.status === "proposee" || p.status === "retournee")
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
@@ -517,32 +514,6 @@ function PmeHome() {
           <Chevron className="g ar" />
         </Link>
 
-        {/* ── À lire : les pièces prises qui attendent, et les deux gestes ── */}
-        {aLire.length > 0 ? (
-          <div className="alire">
-            <div className="tete">
-              <i />
-              <b>{t("pme.home.aLire.titre")}</b>
-              <span>{aLire.length}</span>
-            </div>
-            <div className="pages">
-              {aLire.slice(0, RECENTES).map((p) => (
-                <ApercuDePiece key={p.id} pieceId={p.id} className="mini" />
-              ))}
-            </div>
-            <div className="gestes">
-              <Link to="/pme/a-lire">{t("pme.home.aLire.choisir")}</Link>
-              <Link
-                to="/pme/capturer"
-                search={{ pieces: aLireDuLot.map((p) => p.id).join(","), depart: "destination" }}
-                className="pr"
-              >
-                {t("pme.capture.choix.lireCourt", { count: aLireDuLot.length })}
-              </Link>
-            </div>
-          </div>
-        ) : null}
-
         {/* ── 2. ce qu'elle a préparé : les vraies pages, qui défilent ──── */}
         {aTraiter.length > 0 ? (
           <>
@@ -621,7 +592,12 @@ function PmeHome() {
                   <FlecheDroite />
                 </button>
               )}
-              {/* La barre « Me demander » d'hier, devenue le second geste de Malica. */}
+              {aLire.length > 0 ? (
+                <Link to="/pme/a-lire" className="cta sec2 a-lire">
+                  {t("pme.home.aLire.titre")} · {aLire.length}
+                </Link>
+              ) : null}
+              {/* La conversation reste accessible depuis la carte Malica. */}
               <button type="button" className="cta sec2" onClick={allerALaConversation}>
                 {t("pme.home.demander")}
               </button>
