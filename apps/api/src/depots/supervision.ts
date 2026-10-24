@@ -12,6 +12,7 @@
 
 import type { Requete } from "../db.ts";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
+import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -34,6 +35,9 @@ const PRIORITE: Record<string, number> = {
 };
 
 export const supervision = {
+  documents,
+  documentsLies,
+  controlesPiece,
   async listMyCabinets(db: Requete) {
     // `auth.uid()` est déjà posé : l'appartenance se joint en base, là où
     // l'adaptateur faisait deux requêtes et croisait les identifiants.

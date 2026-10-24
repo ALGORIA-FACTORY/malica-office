@@ -5,6 +5,8 @@
  * ce fichier ne porte que le châssis d'interface.
  */
 
+import { frBibliotheque, enBibliotheque, arBibliotheque } from "./messages-bibliotheque.ts";
+
 export const LOCALES = ["fr", "en", "ar"] as const;
 export type Locale = (typeof LOCALES)[number];
 
@@ -17,6 +19,7 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 export const RTL_LOCALES: readonly Locale[] = ["ar"];
 
 const fr = {
+  ...frBibliotheque,
   "cab.design.journee": "Votre journée, en clair.",
   "cab.design.commencer": "Commencer la revue",
   "cab.design.situation": "Situation de votre comptabilité",
@@ -3647,6 +3650,7 @@ const fr = {
 type Dict = Record<keyof typeof fr, string>;
 
 const en: Dict = {
+  ...enBibliotheque,
   "cab.design.journee": "Your day, at a glance.",
   "cab.design.commencer": "Start reviewing",
   "cab.design.situation": "Your accounting overview",
@@ -7095,6 +7099,7 @@ const en: Dict = {
 };
 
 const ar: Dict = {
+  ...arBibliotheque,
   "cab.design.journee": "يومكم، بكل وضوح.",
   "cab.design.commencer": "بدء المراجعة",
   "cab.design.situation": "نظرة على المحاسبة",

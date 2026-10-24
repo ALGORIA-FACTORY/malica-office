@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
+import { ControlesComptables } from "@/components/malica/controles-comptables";
+import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
+import { extensionDuContenu } from "@/lib/archive-comptable";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import {
   ActionButton,
@@ -85,7 +88,8 @@ interface Correction {
 function libelleDuCompte(plan: readonly CompteDuPlan[], code: string): string | null {
   const propre = code.trim();
   if (!propre) return null;
-  return plan.find((c) => c.code === propre)?.libelle ?? null;
+  const comptes = plan.filter((c) => c.code === propre);
+  return comptes.find((c) => c.origine === "cabinet")?.libelle ?? comptes[0]?.libelle ?? null;
 }
 
 /**
@@ -113,6 +117,11 @@ function CabinetReview() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
+  const [vue, setVue] = useState<"ecritures" | "controles">("ecritures");
+  const clients = useQuery({
+    queryKey: ["cab-clients", org.id],
+    queryFn: () => office().supervision.listClients(org.id),
+  });
 
   const [motifId, setMotifId] = useState<string>("");
   const [note, setNote] = useState<string>("");
@@ -308,15 +317,18 @@ function CabinetReview() {
    */
   const telecharger = useMutation({
     mutationFn: async () => {
-      const octets = dossier.data?.contenu;
-      if (!octets) return null;
+      const octets = await office().capture.apercu(pieceId);
+      if (!octets) throw new Error(t("cab.biblio.missing"));
       const payload = dossier.data?.extraction?.payload as
         { references?: Record<string, string> } | undefined;
       const ref = payload?.references
         ? Object.values(payload.references).find((v) => v && v.trim().length > 0)
         : null;
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
-      const { chemin } = await enregistrerUnFichier(octets, `${ref ?? pieceId}.pdf`);
+      const { chemin } = await enregistrerUnFichier(
+        octets,
+        `${ref ?? pieceId}.${extensionDuContenu(octets.type)}`,
+      );
       return chemin;
     },
     onSuccess: (chemin) => setCheminEnregistre(chemin),
@@ -336,10 +348,14 @@ function CabinetReview() {
   const telechargerUnJoint = useMutation({
     mutationFn: async (jointId: string) => {
       const d = await office().capture.dossier(jointId);
-      if (!d.contenu) return null;
+      const octets = await office().capture.apercu(jointId);
+      if (!octets) throw new Error(t("cab.biblio.missing"));
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
       const nom = nomDuType(d.piece.documentKind) ?? jointId;
-      const { chemin } = await enregistrerUnFichier(d.contenu, `${nom}.pdf`);
+      const { chemin } = await enregistrerUnFichier(
+        octets,
+        `${nom}_${jointId}.${extensionDuContenu(octets.type)}`,
+      );
       return chemin;
     },
     onSuccess: (chemin) => setCheminEnregistre(chemin),
@@ -494,7 +510,8 @@ function CabinetReview() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
         <Link
-          to="/cabinet"
+          to="/cabinet/bibliotheque"
+          search={{ client: piece.tenantId }}
           aria-label={t("cab.review.back")}
           title={t("cab.review.back")}
           className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
@@ -606,7 +623,18 @@ function CabinetReview() {
         </div>
       ) : null}
 
-      <div className="grid gap-8 xl:grid-cols-[1.15fr_1fr]">
+      <div className="flex flex-wrap justify-end gap-3">
+        <TelechargerDossierComptable
+          cabinetId={org.id}
+          clientId={piece.tenantId}
+          nomClient={
+            clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? piece.tenantId
+          }
+          pieces={[pieceId]}
+          libelle={t("cab.biblio.operation")}
+        />
+      </div>
+      <div className="cab-operation-layout grid gap-8 xl:grid-cols-[1.15fr_1fr]">
         <section className="min-w-0 space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
@@ -740,7 +768,11 @@ function CabinetReview() {
                             {t("cab.review.paiement.eteint")}
                           </span>
                         ) : (
-                          <EcritureDuReglement paiementId={p.id} pieceId={pieceId} />
+                          <EcritureDuReglement
+                            paiementId={p.id}
+                            pieceId={pieceId}
+                            plan={plan.data ?? []}
+                          />
                         )}
                       </li>
                     ))}
@@ -858,264 +890,302 @@ function CabinetReview() {
         </section>
 
         <section className="space-y-3">
-          <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
-          {!booked ? (
-            proposition.isPending ? (
-              <EmptyState>{t("common.loading")}</EmptyState>
-            ) : proposition.data?.ok ? (
-              <>
-                <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
-                <InkTable
-                  caption={t("cab.review.proposee")}
-                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
-                >
-                  {proposition.data.proposition.lignes.map((l, i) => (
-                    <InkTableRow key={i}>
-                      <InkCell>
-                        <span className="num">{l.account_code}</span>{" "}
-                        <span className="text-muted-foreground">{l.libelle}</span>
-                      </InkCell>
-                      <InkCell numeric>{montant(l.debit, locale)}</InkCell>
-                      <InkCell numeric>{montant(l.credit, locale)}</InkCell>
-                    </InkTableRow>
-                  ))}
-                </InkTable>
-              </>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
-                {/*
-                 * La raison vient du serveur, en français, et porte les motifs
-                 * des contrôles. L'écran de la PME la rend déjà ainsi : une
-                 * seule phrase, construite là où le jugement est posé. La
-                 * traduire demanderait de faire voyager les motifs structurés,
-                 * et c'est une autre correction — celle-ci cesse de les taire.
-                 */}
-                <p className="text-[12.5px] text-muted-foreground">
-                  {proposition.data?.raison ?? ""}
-                </p>
-              </div>
-            )
-          ) : (
-            <>
-              <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
-                {t("cab.review.ecriture.meta", {
-                  journal: booked.journal,
-                  date: jour(booked.dateEcriture),
-                  devise: booked.devise,
-                })}
-              </p>
-              <InkTable
-                caption={t("cab.review.ecriture")}
-                head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
-              >
-                {booked.lines.map((line) => (
-                  <InkTableRow key={line.ordinal}>
-                    <InkCell>
-                      <span className="num">{line.accountCode}</span>{" "}
-                      <span className="text-muted-foreground">{line.libelle}</span>
-                    </InkCell>
-                    <InkCell numeric>{montant(line.debit, locale)}</InkCell>
-                    <InkCell numeric>{montant(line.credit, locale)}</InkCell>
-                  </InkTableRow>
-                ))}
-              </InkTable>
-
-              {!done && correction ? (
-                <div className="space-y-3 border border-s-2 border-border border-s-signal-warn bg-card p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal-warn">
-                    {t("cab.review.correct.title")}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground">
-                    {t("cab.review.correct.lede")}
-                  </p>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.correct.libelle")}
-                    </span>
-                    <input
-                      type="text"
-                      value={correction.libelle}
-                      onChange={(e) =>
-                        setCorrection((c) => (c ? { ...c, libelle: e.target.value } : c))
-                      }
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    />
-                  </label>
-                  {remarques.length > 0 ? (
-                    <ul className="space-y-0.5 text-[11px] text-signal-warn">
-                      {remarques.map((r) => (
-                        <li key={r}>{r}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-
-                  <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan.data ?? []} />
+          <div className="cab-library-tabs" role="tablist" aria-label={t("cab.biblio.entries")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={vue === "ecritures"}
+              onClick={() => setVue("ecritures")}
+            >
+              {t("cab.biblio.entries")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={vue === "controles"}
+              onClick={() => setVue("controles")}
+            >
+              {t("cab.biblio.fiscal")}
+            </button>
+          </div>
+          {vue === "controles" ? (
+            <ControlesComptables cabinetId={org.id} pieceId={pieceId} />
+          ) : null}
+          <div hidden={vue !== "ecritures"} className="space-y-3">
+            <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
+            {!booked ? (
+              proposition.isPending ? (
+                <EmptyState>{t("common.loading")}</EmptyState>
+              ) : proposition.data?.ok ? (
+                <>
+                  <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
                   <InkTable
-                    caption={t("cab.review.correct.title")}
+                    caption={t("cab.review.proposee")}
                     head={[
                       t("pme.journal.account"),
                       t("pme.journal.debit"),
                       t("pme.journal.credit"),
                     ]}
                   >
-                    {correction.lignes.map((ligne, index) => (
-                      <InkTableRow key={ligne.ordinal}>
+                    {proposition.data.proposition.lignes.map((l, i) => (
+                      <InkTableRow key={i}>
                         <InkCell>
-                          <SaisieDeCompte
-                            valeur={ligne.compte}
-                            onChange={(code) =>
-                              setCorrection((c) =>
-                                c
-                                  ? {
-                                      ...c,
-                                      lignes: c.lignes.map((l, i) =>
-                                        i === index ? { ...l, compte: code } : l,
-                                      ),
-                                    }
-                                  : c,
-                              )
-                            }
-                            plan={plan.data ?? []}
-                            label={t("pme.journal.account")}
-                            inconnuLabel={t("cab.review.correct.unknown")}
-                            listeId={LISTE_DES_COMPTES}
-                            collectifLabel={t("plan.collectif.court")}
-                            originesLabels={{
-                              officiel: t("plan.origin.officiel"),
-                              extension: t("plan.origin.extension"),
-                              cabinet: t("plan.origin.cabinet"),
-                            }}
-                          />
+                          <span className="num">{l.account_code}</span>{" "}
+                          <span className="text-muted-foreground">
+                            {libelleDuCompte(plan.data ?? [], l.account_code) ??
+                              t("cab.biblio.accountUnknown")}
+                          </span>
                         </InkCell>
-                        <InkCell numeric>{ligne.debit}</InkCell>
-                        <InkCell numeric>{ligne.credit}</InkCell>
+                        <InkCell numeric>{montant(l.debit, locale)}</InkCell>
+                        <InkCell numeric>{montant(l.credit, locale)}</InkCell>
                       </InkTableRow>
                     ))}
                   </InkTable>
-
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("cab.review.correct.motif.needed")}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    <ActionButton
-                      variant="ink"
-                      disabled={!correctionPrete || corriger.isPending}
-                      onClick={() => corriger.mutate()}
-                    >
-                      {corriger.isPending ? t("common.loading") : t("cab.review.correct.apply")}
-                    </ActionButton>
-                    <ActionButton disabled={corriger.isPending} onClick={() => setCorrection(null)}>
-                      {t("cab.review.correct.cancel")}
-                    </ActionButton>
-                  </div>
-                </div>
-              ) : null}
-
-              {reversal ? (
-                <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
-                  <p className="font-medium">{reversal.libelle}</p>
-                  <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
-                </div>
-              ) : null}
-
-              {done ? (
-                <p className="border border-border bg-card px-3 py-3 text-[13px]">
-                  {done === "valide"
-                    ? t("cab.review.done.valide")
-                    : done === "corrige"
-                      ? t("cab.review.done.corrige")
-                      : t("cab.review.done.retourne")}
-                </p>
+                </>
               ) : (
-                <div className="space-y-3 border border-border bg-card p-3">
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.motif")}
-                    </span>
-                    <select
-                      value={motifId}
-                      onChange={(e) => setMotifId(e.target.value)}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    >
-                      <option value="">{t("cab.review.motif.choose")}</option>
-                      {(motifs.data ?? []).map((motif) => (
-                        <option key={motif.id} value={motif.id}>
-                          {motif.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.note")}
-                    </span>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={3}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    />
-                  </label>
-
-                  {noteMissing ? (
-                    <p className="text-[11px] text-signal-warn">{t("cab.review.note.required")}</p>
-                  ) : null}
-
-                  <StickyActions>
-                    <ActionButton
-                      variant="ink"
-                      disabled={review.isPending}
-                      onClick={() => review.mutate("valide")}
-                    >
-                      {t("cab.review.validate")}
-                    </ActionButton>
-                    <ActionButton
-                      disabled={review.isPending || !motifId || noteMissing}
-                      onClick={() => review.mutate("retourne")}
-                    >
-                      {t("cab.review.return")}
-                    </ActionButton>
-                    {correction ? null : (
-                      <ActionButton
-                        disabled={review.isPending}
-                        onClick={() => setCorrection(correctionDepuis(booked, libellePropose))}
-                      >
-                        {t("cab.review.correct.open")}
-                      </ActionButton>
-                    )}
-                  </StickyActions>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
+                  {/*
+                   * La raison vient du serveur, en français, et porte les motifs
+                   * des contrôles. L'écran de la PME la rend déjà ainsi : une
+                   * seule phrase, construite là où le jugement est posé. La
+                   * traduire demanderait de faire voyager les motifs structurés,
+                   * et c'est une autre correction — celle-ci cesse de les taire.
+                   */}
+                  <p className="text-[12.5px] text-muted-foreground">
+                    {proposition.data?.raison ?? ""}
+                  </p>
                 </div>
-              )}
-            </>
-          )}
-
-          <SectionTitle>{t("cab.review.audit")}</SectionTitle>
-          {(audit.data ?? []).length === 0 ? (
-            <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
-          ) : (
-            <ul className="grid gap-px border border-border bg-border text-[12px]">
-              {(audit.data ?? []).map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+              )
+            ) : (
+              <>
+                <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {t("cab.review.ecriture.meta", {
+                    journal: booked.journal,
+                    date: jour(booked.dateEcriture),
+                    devise: booked.devise,
+                  })}
+                </p>
+                <InkTable
+                  caption={t("cab.review.ecriture")}
+                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
                 >
-                  <span>{libelleDeLAction(entry.action, t)}</span>
-                  <span className="num shrink-0 text-muted-foreground">
-                    {new Intl.DateTimeFormat(locale, {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }).format(new Date(entry.at))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+                  {booked.lines.map((line) => (
+                    <InkTableRow key={line.ordinal}>
+                      <InkCell>
+                        <span className="num">{line.accountCode}</span>{" "}
+                        <span className="text-muted-foreground">
+                          {libelleDuCompte(plan.data ?? [], line.accountCode) ??
+                            t("cab.biblio.accountUnknown")}
+                        </span>
+                      </InkCell>
+                      <InkCell numeric>{montant(line.debit, locale)}</InkCell>
+                      <InkCell numeric>{montant(line.credit, locale)}</InkCell>
+                    </InkTableRow>
+                  ))}
+                </InkTable>
+
+                {!done && correction ? (
+                  <div className="space-y-3 border border-s-2 border-border border-s-signal-warn bg-card p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal-warn">
+                      {t("cab.review.correct.title")}
+                    </p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {t("cab.review.correct.lede")}
+                    </p>
+
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.correct.libelle")}
+                      </span>
+                      <input
+                        type="text"
+                        value={correction.libelle}
+                        onChange={(e) =>
+                          setCorrection((c) => (c ? { ...c, libelle: e.target.value } : c))
+                        }
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      />
+                    </label>
+                    {remarques.length > 0 ? (
+                      <ul className="space-y-0.5 text-[11px] text-signal-warn">
+                        {remarques.map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan.data ?? []} />
+                    <InkTable
+                      caption={t("cab.review.correct.title")}
+                      head={[
+                        t("pme.journal.account"),
+                        t("pme.journal.debit"),
+                        t("pme.journal.credit"),
+                      ]}
+                    >
+                      {correction.lignes.map((ligne, index) => (
+                        <InkTableRow key={ligne.ordinal}>
+                          <InkCell>
+                            <SaisieDeCompte
+                              valeur={ligne.compte}
+                              onChange={(code) =>
+                                setCorrection((c) =>
+                                  c
+                                    ? {
+                                        ...c,
+                                        lignes: c.lignes.map((l, i) =>
+                                          i === index ? { ...l, compte: code } : l,
+                                        ),
+                                      }
+                                    : c,
+                                )
+                              }
+                              plan={plan.data ?? []}
+                              label={t("pme.journal.account")}
+                              inconnuLabel={t("cab.review.correct.unknown")}
+                              listeId={LISTE_DES_COMPTES}
+                              collectifLabel={t("plan.collectif.court")}
+                              originesLabels={{
+                                officiel: t("plan.origin.officiel"),
+                                extension: t("plan.origin.extension"),
+                                cabinet: t("plan.origin.cabinet"),
+                              }}
+                            />
+                          </InkCell>
+                          <InkCell numeric>{ligne.debit}</InkCell>
+                          <InkCell numeric>{ligne.credit}</InkCell>
+                        </InkTableRow>
+                      ))}
+                    </InkTable>
+
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("cab.review.correct.motif.needed")}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      <ActionButton
+                        variant="ink"
+                        disabled={!correctionPrete || corriger.isPending}
+                        onClick={() => corriger.mutate()}
+                      >
+                        {corriger.isPending ? t("common.loading") : t("cab.review.correct.apply")}
+                      </ActionButton>
+                      <ActionButton
+                        disabled={corriger.isPending}
+                        onClick={() => setCorrection(null)}
+                      >
+                        {t("cab.review.correct.cancel")}
+                      </ActionButton>
+                    </div>
+                  </div>
+                ) : null}
+
+                {reversal ? (
+                  <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
+                    <p className="font-medium">{reversal.libelle}</p>
+                    <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
+                  </div>
+                ) : null}
+
+                {done ? (
+                  <p className="border border-border bg-card px-3 py-3 text-[13px]">
+                    {done === "valide"
+                      ? t("cab.review.done.valide")
+                      : done === "corrige"
+                        ? t("cab.review.done.corrige")
+                        : t("cab.review.done.retourne")}
+                  </p>
+                ) : (
+                  <div className="space-y-3 border border-border bg-card p-3">
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.motif")}
+                      </span>
+                      <select
+                        value={motifId}
+                        onChange={(e) => setMotifId(e.target.value)}
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      >
+                        <option value="">{t("cab.review.motif.choose")}</option>
+                        {(motifs.data ?? []).map((motif) => (
+                          <option key={motif.id} value={motif.id}>
+                            {motif.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.note")}
+                      </span>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        rows={3}
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      />
+                    </label>
+
+                    {noteMissing ? (
+                      <p className="text-[11px] text-signal-warn">
+                        {t("cab.review.note.required")}
+                      </p>
+                    ) : null}
+
+                    <StickyActions>
+                      <ActionButton
+                        variant="ink"
+                        disabled={review.isPending}
+                        onClick={() => review.mutate("valide")}
+                      >
+                        {t("cab.review.validate")}
+                      </ActionButton>
+                      <ActionButton
+                        disabled={review.isPending || !motifId || noteMissing}
+                        onClick={() => review.mutate("retourne")}
+                      >
+                        {t("cab.review.return")}
+                      </ActionButton>
+                      {correction ? null : (
+                        <ActionButton
+                          disabled={review.isPending}
+                          onClick={() => setCorrection(correctionDepuis(booked, libellePropose))}
+                        >
+                          {t("cab.review.correct.open")}
+                        </ActionButton>
+                      )}
+                    </StickyActions>
+                  </div>
+                )}
+              </>
+            )}
+
+            <SectionTitle>{t("cab.review.audit")}</SectionTitle>
+            {(audit.data ?? []).length === 0 ? (
+              <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
+            ) : (
+              <ul className="grid gap-px border border-border bg-border text-[12px]">
+                {(audit.data ?? []).map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+                  >
+                    <span>{libelleDeLAction(entry.action, t)}</span>
+                    <span className="num shrink-0 text-muted-foreground">
+                      {new Intl.DateTimeFormat(locale, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).format(new Date(entry.at))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       </div>
 
@@ -1171,7 +1241,15 @@ function grouperLesSignalements(
  * La facture constate une dette, le règlement l'éteint. L'expert voit donc
  * les deux, séparément, et c'est lui qui inscrit.
  */
-function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; pieceId: string }) {
+function EcritureDuReglement({
+  paiementId,
+  pieceId,
+  plan,
+}: {
+  paiementId: string;
+  pieceId: string;
+  plan: readonly CompteDuPlan[];
+}) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const proposition = useQuery({
@@ -1202,6 +1280,11 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
         {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
+      {r.retenue.cas === "operee" ? (
+        <p className="my-2 rounded-lg bg-signal-soft p-3 text-[12px] text-signal-warn">
+          {t("cab.biblio.unconfirmedRetention")}
+        </p>
+      ) : null}
       {/*
        * La retenue à la source, CONSTATÉE sur le payé (19 octobre 2026) : le
        * Socle ne la suppose jamais. Opérée, elle a sa ligne ; due et non
@@ -1229,7 +1312,12 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
       <ul className="mt-1">
         {r.ecriture.lignes.map((l, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3 text-[12px]">
-            <span className="num">{l.account_code}</span>
+            <span>
+              <span className="num">{l.account_code}</span>
+              <span className="ms-2 text-muted-foreground">
+                {libelleDuCompte(plan, l.account_code) ?? t("cab.biblio.accountUnknown")}
+              </span>
+            </span>
             <span className="num shrink-0">
               {Number(l.debit) > 0
                 ? `${montant(l.debit, locale)} D`

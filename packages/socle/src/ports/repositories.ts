@@ -1284,6 +1284,15 @@ export interface StatistiquesCabinet {
 }
 
 export interface SupervisionRepository {
+  /** Bibliothèque des seules pièces transmises d'un mandat actif et affecté. */
+  documents(
+    cabinetId: string,
+    clientId: string,
+    periode: string | null,
+  ): Promise<DocumentComptable[]>;
+  /** Ferme les liens documentaires sous la même autorisation, sans inclure de pièce privée. */
+  documentsLies(cabinetId: string, clientId: string, pieces: string[]): Promise<DossierComptable>;
+  controlesPiece(cabinetId: string, pieceId: string): Promise<ControlesComptables | null>;
   statistiques(cabinetTenantId: string, locale: string): Promise<StatistiquesCabinet>;
   /** Les derniers événements d'un dossier mandaté, du plus récent au plus ancien. */
   journalDuMandat(
@@ -1305,6 +1314,60 @@ export interface SupervisionRepository {
     note?: string | null;
   }): Promise<string | null>;
   auditForPiece(pieceId: string): Promise<AuditEntry[]>;
+}
+
+export interface DocumentComptable {
+  id: string;
+  tenantId: string;
+  type: string | null;
+  status: PieceStatus;
+  reference: string | null;
+  tiers: string | null;
+  dateDocument: string | null;
+  recuLe: string;
+  montant: string | null;
+  devise: string;
+  sourcePieceId: string | null;
+}
+
+export interface ControlesComptables {
+  pieceId: string;
+  analyseId: string;
+  aJour: boolean;
+  controles: Array<{ code: string; statut: string; motif: string }>;
+}
+
+export interface DossierComptable {
+  documents: DocumentComptable[];
+  paiements?: Array<{
+    id: string;
+    pieceId: string;
+    moyen: string;
+    montantMineur: string | null;
+    devise: string;
+    date: string | null;
+    reference: string | null;
+    justificatifId: string | null;
+    annule: boolean;
+  }>;
+  /** Journal technique de restitution : aucun certificat fiscal n'est inventé. */
+  ecritures: Array<{
+    id: string;
+    pieceId: string;
+    paiementId: string | null;
+    nature: string;
+    journal: string;
+    date: string;
+    libelle: string;
+    statut: string;
+    compte: string;
+    compteLibelle?: string;
+    devise?: string;
+    revue?: string | null;
+    debit: string;
+    credit: string;
+  }>;
+  controles?: ControlesComptables[];
 }
 
 // ------------------------------------------------------- paramètres du Socle
