@@ -136,7 +136,7 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
     await admin.query(
       `insert into capture.analyses
       (tenant_id,piece_id,extraction_id,pack_version_id,normalisation,controles,verdict,motifs)
-      values ($1,$2,$3,$4,$5::jsonb,$6::jsonb,'à comptabiliser','[]')`,
+      values ($1,$2,$3,$4,$5::jsonb,$6::jsonb,'à comptabiliser','[{"motif":"Contrôle de la fixture"}]')`,
       [
         client,
         facture,
