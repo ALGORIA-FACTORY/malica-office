@@ -18,7 +18,7 @@ import { z } from "zod";
 import { callDeepSeek } from "../conseil/deepseek.ts";
 import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees } from "./pdf-image.ts";
-import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
+import { lireAvecPaddle, ouvrirLeCoupeCircuit, secondLecteurDisponible } from "./paddle.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
@@ -174,9 +174,21 @@ export type VisionSelection = Omit<
   other_charges: VisionCharge[];
 };
 
+/**
+ * Le lecteur qui a RÉELLEMENT relevé le plan de jetons.
+ *
+ * Il se déduisait du nom du modèle (`readModel.includes("PP-OCR")`) : un
+ * renommage du modèle aurait suffi à faire relire une pièce par le lecteur
+ * qui venait de la lire. Le chemin le dit désormais lui-même.
+ */
+type Lecteur = "pdf-text" | "paddle" | "vision" | "fourni";
+
 export interface VisionRead {
   tokens: PageToken[];
   selection: VisionSelection;
+  lecteur: Lecteur;
+  /** PaddleOCR a-t-il été essayé sur cette pièce (même sans rien rendre) ? */
+  paddleTente: boolean;
   /** Les deux organes réunis, pour l'affichage et le diagnostic. */
   model: string;
   /**
@@ -553,31 +565,61 @@ function octetsDuDataUrl(dataUrl: string): Uint8Array {
 async function releverDesPages(
   pages: ReadonlyArray<{ dataUrl: string; page: number }>,
   sansPaddle: boolean,
-): Promise<{
-  tokens: PageToken[];
-  source: string;
-  tokensIn: number | null;
-  tokensOut: number | null;
-} | null> {
-  if (sansPaddle || !secondLecteurDisponible()) return null;
+): Promise<{ releve: Releve | null; tente: boolean }> {
+  if (sansPaddle || !secondLecteurDisponible()) return { releve: null, tente: false };
 
   const tokens: PageToken[] = [];
   let modele = "paddleocr";
   for (const image of pages) {
-    const lu = await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
+    let lu: Awaited<ReturnType<typeof lireAvecPaddle>>;
+    try {
+      lu = await lireAvecPaddle(octetsDuDataUrl(image.dataUrl), image.page);
+    } catch (e) {
+      /*
+       * PADDLEOCR TOMBÉ NE REND PLUS LA PIÈCE ILLISIBLE.
+       *
+       * Quand le modèle de vision est là, la pièce bascule sur lui, et le
+       * coupe-circuit écarte PaddleOCR des pièces suivantes. Sans modèle de
+       * vision, la panne remonte telle quelle : la file durable la rejouera,
+       * et c'est le seul recours qui reste.
+       */
+      if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
+      ouvrirLeCoupeCircuit();
+      console.error(
+        `[lecture] PaddleOCR en panne (${e.message}) : bascule sur le modèle de vision`,
+      );
+      return { releve: null, tente: true };
+    }
     // Une seule page muette et on renonce : un plan de jetons incomplet
     // ferait désigner sur une pièce amputée, ce qui est pire que de la
     // relire entièrement avec l'autre lecteur.
-    if (!lu || lu.tokens.length === 0) return null;
+    if (!lu || lu.tokens.length === 0) return { releve: null, tente: true };
     tokens.push(...lu.tokens);
     modele = lu.modele;
   }
-  return { tokens, source: modele, tokensIn: null, tokensOut: null };
+  return {
+    releve: {
+      tokens,
+      source: modele,
+      lecteur: "paddle",
+      paddleTente: true,
+      tokensIn: null,
+      tokensOut: null,
+    },
+    tente: true,
+  };
+}
+
+/** Le modèle de vision peut-il prendre le relais ? Sa clé le dit. */
+function visionDisponible(): boolean {
+  return Boolean(process.env["QWEN_API_KEY"]?.trim());
 }
 
 export interface Releve {
   tokens: PageToken[];
   source: string;
+  lecteur: Lecteur;
+  paddleTente: boolean;
   tokensIn: number | null;
   tokensOut: number | null;
 }
@@ -588,6 +630,13 @@ export interface ParamsDeReleve {
   bytes?: Uint8Array;
   /** Forcer le modèle de vision : c'est le rattrapage, dans l'autre sens. */
   sansPaddle?: boolean;
+  /**
+   * Relire un PDF par ses IMAGES, en ignorant sa couche de texte : c'est le
+   * rattrapage d'un PDF hybride, dont l'en-tête est du texte et le corps une
+   * image. Sans lui, le rattrapage relisait la même couche de texte et ne
+   * faisait que repayer la désignation.
+   */
+  sansCoucheTexte?: boolean;
 }
 
 /**
@@ -625,8 +674,15 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
   // modèle n'a à le relire, donc aucun modèle ne peut s'y tromper.
   if (estPdf && params.bytes) {
     const couche = await readPdfTextLayer(params.bytes);
-    if (couche.exploitable) {
-      return { tokens: couche.tokens, source: "pdf-text", tokensIn: null, tokensOut: null };
+    if (couche.exploitable && !params.sansCoucheTexte) {
+      return {
+        tokens: couche.tokens,
+        source: "pdf-text",
+        lecteur: "pdf-text",
+        paddleTente: false,
+        tokensIn: null,
+        tokensOut: null,
+      };
     }
     // Sinon la pièce est un scan déguisé en PDF : pas de texte, des pixels.
     // On extrait l'image de chaque page — sans canvas — et l'œil la lit.
@@ -653,7 +709,7 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
      * une valeur composée là où le tarif attend une valeur simple. Le chemin
      * voyage donc à côté, et non dans le nom.
      */
-    if (parPaddle) return parPaddle;
+    if (parPaddle.releve) return parPaddle.releve;
 
     const tokens: PageToken[] = [];
     let entree = 0;
@@ -670,6 +726,8 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     return {
       tokens,
       source: modeleOcr(),
+      lecteur: "vision",
+      paddleTente: parPaddle.tente,
       tokensIn: entree || null,
       tokensOut: sortie || null,
     };
@@ -679,12 +737,14 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
     [{ dataUrl: params.dataUrl, page: 1 }],
     params.sansPaddle ?? false,
   );
-  if (parPaddle) return parPaddle;
+  if (parPaddle.releve) return parPaddle.releve;
 
   const lecture = await lireUnePage({ dataUrl: params.dataUrl, page: 1 });
   return {
     tokens: lecture.tokens,
     source: modeleOcr(),
+    lecteur: "vision",
+    paddleTente: parPaddle.tente,
     tokensIn: lecture.tokensIn || null,
     tokensOut: lecture.tokensOut || null,
   };
@@ -742,6 +802,43 @@ export function selectionDepuisReponse(
   };
 }
 
+/*
+ * ============================================ UN PLAN TROP LONG GARDE SA FIN
+ *
+ * Le plan était coupé à 60 000 caractères PAR LA FIN : sur une pièce de
+ * plusieurs pages, les totaux — imprimés en bas de la dernière — sortaient
+ * du plan, et la désignation ne pouvait plus les citer (audit du 24 octobre
+ * 2026). L'en-tête (émetteur, date, références) et le pied (totaux, timbre)
+ * sont les deux bouts qui portent les champs ; le milieu est fait d'articles.
+ * On garde donc les deux bouts, entiers, ligne par ligne — jamais un mot
+ * coupé —, et une ligne dit au désignateur ce qui manque.
+ *
+ * Plafond technique de l'invite, pas une règle métier (R4).
+ */
+const PLAN_MAX_CARACTERES = 60_000;
+const PART_DE_L_EN_TETE = 0.4;
+
+export function planBorne(lignes: readonly string[]): string {
+  const total = lignes.reduce((n, l) => n + l.length + 1, 0);
+  if (total <= PLAN_MAX_CARACTERES) return lignes.join("\n");
+  const tete: string[] = [];
+  let pris = 0;
+  for (const l of lignes) {
+    if (pris + l.length + 1 > PLAN_MAX_CARACTERES * PART_DE_L_EN_TETE) break;
+    tete.push(l);
+    pris += l.length + 1;
+  }
+  const pied: string[] = [];
+  for (let i = lignes.length - 1; i >= tete.length; i -= 1) {
+    const l = lignes.at(i) ?? "";
+    if (pris + l.length + 1 > PLAN_MAX_CARACTERES) break;
+    pied.unshift(l);
+    pris += l.length + 1;
+  }
+  const omis = lignes.length - tete.length - pied.length;
+  return [...tete, `(${omis} mots du milieu omis)`, ...pied].join("\n");
+}
+
 export async function runVisionRead(params: {
   dataUrl: string;
   mime?: string;
@@ -779,6 +876,8 @@ export async function runVisionRead(params: {
   releveur?: string;
   /** Forcer le modèle de vision, en écartant PaddleOCR : c'est le rattrapage. */
   sansPaddle?: boolean;
+  /** Relire un PDF par ses images : le rattrapage d'un PDF hybride. */
+  sansCoucheTexte?: boolean;
   /*
    * ====================================== LE SEUL POINT D'INSERTION (tâche 5)
    *
@@ -802,10 +901,12 @@ export async function runVisionRead(params: {
   //
   // Sauf si l'appelant en apporte un : c'est le rattrapage du second lecteur,
   // et on ne repaie pas un relevé qu'on vient de faire.
-  const pass1 = params.tokens
+  const pass1: Releve = params.tokens
     ? {
         tokens: params.tokens as PageToken[],
         source: params.releveur ?? "fourni",
+        lecteur: "fourni",
+        paddleTente: false,
         tokensIn: null,
         tokensOut: null,
       }
@@ -814,6 +915,7 @@ export async function runVisionRead(params: {
         mime: params.mime ?? "image/jpeg",
         ...(params.bytes ? { bytes: params.bytes } : {}),
         sansPaddle: params.sansPaddle ?? false,
+        sansCoucheTexte: params.sansCoucheTexte ?? false,
       });
   const tokens = pass1.tokens;
   const finReleve = Date.now();
@@ -844,6 +946,8 @@ export async function runVisionRead(params: {
         selection: parRecette.selection,
         model: `${pass1.source}+${MODELE_RECETTE}`,
         readModel: pass1.source,
+        lecteur: pass1.lecteur,
+        paddleTente: pass1.paddleTente,
         // Le couple (modèle, rôle) de l'organe qui a RÉELLEMENT désigné. Il a
         // sa ligne de tarif, à zéro et souveraine : sans elle,
         // `agents_run_log` refuserait d'écrire, en silence, et le recours au
@@ -874,13 +978,12 @@ export async function runVisionRead(params: {
   // Le désignateur ne voit pas la pièce : la géométrie voyage donc dans le plan.
   // Sans elle, « la même bande horizontale » ne veut plus rien dire et les
   // colonnes du tableau d'articles deviennent indevinables.
-  const planText = tokens
-    .map(
+  const planText = planBorne(
+    tokens.map(
       (t) =>
         `${t.page}.${t.ordinal}\t${t.x0.toFixed(3)},${t.y0.toFixed(3)},${t.x1.toFixed(3)},${t.y1.toFixed(3)}\t${t.text}`,
-    )
-    .join("\n")
-    .slice(0, 60_000);
+    ),
+  );
   const ratesText = params.taxCodes.map((r) => `${r.code} — ${r.label} (${r.rate})`).join("\n");
   const chargesText =
     (params.chargeCodes ?? []).map((c) => `${c.code} — ${c.label}`).join("\n") || "(aucun)";
@@ -919,6 +1022,8 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     // coût ou une régression de qualité devient impossible à imputer.
     model: `${pass1.source}+${MODELE_DESIGNATION}`,
     readModel: pass1.source,
+    lecteur: pass1.lecteur,
+    paddleTente: pass1.paddleTente,
     selectModel: MODELE_DESIGNATION,
     selectRole: ROLE_DESIGNATION,
     latencyMs: Date.now() - started,

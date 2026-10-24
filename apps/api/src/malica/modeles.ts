@@ -50,7 +50,14 @@ export type DeepSeekRole = keyof typeof DEEPSEEK_MODELS;
  */
 const MODELE_OCR_PAR_DEFAUT = "qwen-vl-ocr-2025-11-20";
 export function modeleOcr(): string {
-  return process.env["QWEN_OCR_MODEL"] ?? MODELE_OCR_PAR_DEFAUT;
+  /*
+   * Une variable POSÉE MAIS VIDE vaut une variable absente. `compose.yml`
+   * transmet `QWEN_OCR_MODEL: ${QWEN_OCR_MODEL}` : non renseignée sur le
+   * serveur, elle arrivait en chaîne vide, et `??` la gardait — chaque relevé
+   * partait avec un modèle vide, recevait un 400, et la lecture échouait sans
+   * jamais être rejouée (audit du 24 octobre 2026).
+   */
+  return process.env["QWEN_OCR_MODEL"]?.trim() || MODELE_OCR_PAR_DEFAUT;
 }
 
 /**

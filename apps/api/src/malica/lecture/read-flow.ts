@@ -18,12 +18,10 @@ import type { AppelApi } from "../appel-local.ts";
 
 import { confianceParChamp } from "../../scan/confiance.ts";
 
-import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
-
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
-import { runVisionRead } from "./vision.ts";
+import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
 interface ContexteLecture {
@@ -75,6 +73,40 @@ interface Lecteurs {
 }
 
 const LECTEURS: Lecteurs = { lire: runVisionRead, secondLecteurDisponible };
+
+/*
+ * La qualite d'une lecture, en preuves et non en impression : le contrat
+ * rempli vaut 2, des montants qui tiennent valent 1. Trois, c'est une
+ * lecture qu'aucun rattrapage ne peut ameliorer.
+ */
+const QUALITE_PARFAITE = 3;
+export function qualiteDeLecture(b: {
+  contract: string;
+  flags: ReadonlyArray<{ code: string }>;
+}): number {
+  const complet = b.contract === "extract.v1" ? 2 : 0;
+  const coherent = b.flags.some((f) => f.code === "ARITHMETIQUE_INCOHERENTE") ? 0 : 1;
+  return complet + coherent;
+}
+
+/**
+ * Le lecteur du rattrapage : toujours un AUTRE que celui qui vient de lire.
+ *
+ * - la couche de texte d'un PDF → ses images (PDF hybride) ;
+ * - PaddleOCR → le modele de vision ;
+ * - le modele de vision → PaddleOCR, seulement s'il n'a pas deja ete essaye
+ *   sur cette piece (absent, coupe-circuit) et qu'il est la : sinon on
+ *   repaierait un appel pour la meme reponse.
+ */
+export function autreLecteur(
+  premiere: Pick<VisionRead, "lecteur" | "paddleTente">,
+  paddleDisponible: boolean,
+): { sansPaddle?: boolean; sansCoucheTexte?: boolean } | null {
+  if (premiere.lecteur === "pdf-text") return { sansCoucheTexte: true };
+  if (premiere.lecteur === "paddle") return { sansPaddle: true };
+  if (premiere.lecteur === "vision" && !premiere.paddleTente && paddleDisponible) return {};
+  return null;
+}
 
 export async function readPieceFlow(
   api: AppelApi,
@@ -151,7 +183,9 @@ export async function readPieceFlow(
     devise: contexte.currency,
   });
 
-  const premiereLecture = await lecteurs.lire({
+  // Les paramètres de lecture ne s'écrivent qu'une fois : la première lecture
+  // et le rattrapage lisent la même pièce, dans le même dossier.
+  const parametres = {
     parRecette,
     dataUrl,
     mime,
@@ -172,94 +206,64 @@ export async function readPieceFlow(
       // valeur JSON rendue par PostgREST.
       rate: String(r.rate),
     })),
-  });
+  };
+  const construire = (lecture: VisionRead) =>
+    buildExtractFromTokenPlan({
+      tokens: lecture.tokens,
+      selection: lecture.selection,
+      // Trois décimales pour le dinar — mais dites par le pack, jamais écrites
+      // ici : le solveur des montants s'en sert pour décider de l'ambiguïté.
+      decimals: contexte.moneyDecimals,
+      // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
+      // lieu de croire ce que le modèle en dit.
+      matriculeDossier: contexte.dossier.identifiantFiscal,
+    });
 
+  const premiereLecture = await lecteurs.lire(parametres);
   let read = premiereLecture;
-  let built = buildExtractFromTokenPlan({
-    tokens: read.tokens,
-    selection: read.selection,
-    // Trois décimales pour le dinar — mais dites par le pack, jamais écrites
-    // ici : le solveur des montants s'en sert pour décider de l'ambiguïté.
-    decimals: contexte.moneyDecimals,
-    // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
-    // lieu de croire ce que le modèle en dit.
-    matriculeDossier: contexte.dossier.identifiantFiscal,
-  });
+  let built = construire(read);
 
   /*
    * ================================= DEUX LECTEURS, ET LE SECOND RATTRAPE LE PREMIER
    *
    * 14 octobre 2026, a la demande du dirigeant : « garder les deux, Paddle en
-   * premiere couche et l'OCR en seconde ».
+   * premiere couche et l'OCR en seconde ». L'ordre : la couche de texte d'un
+   * PDF (exacte, gratuite), puis PaddleOCR, puis le modele de vision.
    *
-   * L'ordre est desormais : la couche de texte d'un PDF (exacte, gratuite,
-   * instantanee), puis PaddleOCR, puis le modele de vision. Et ce bloc-ci est
-   * le rattrapage : quand la lecture sort INCOMPLETE, on relit la piece avec
-   * l'AUTRE lecteur, et on garde celle qui remplit le contrat.
+   * LE DECLENCHEUR EST UNE PREUVE, PAS UN SEUIL. Deux preuves, depuis le
+   * 24 octobre 2026 : le contrat sort partiel (le schema n'est pas rempli),
+   * OU les montants ne tiennent pas (`ARITHMETIQUE_INCOHERENTE` : HT + TVA +
+   * droits ne donnent pas le TTC imprime). La seconde n'en declenchait aucun :
+   * une lecture complete mais fausse restait telle quelle, avec un drapeau.
    *
-   * LE DECLENCHEUR N'EST PAS UN SEUIL, C'EST UNE PREUVE. Le contrat sort
-   * `extract.v1.partiel` : le schema n'est pas rempli, et ce n'est pas une
-   * impression.
+   * ON NE GARDE LA SECONDE QUE SI ELLE FAIT STRICTEMENT MIEUX. A egalite, la
+   * premiere gagne : on ne remplace pas un defaut connu par un defaut inconnu.
    *
-   * ON NE GARDE LA SECONDE QUE SI ELLE FAIT MIEUX — un contrat complet la ou
-   * la premiere etait partielle. A egalite, la premiere gagne : on ne remplace
-   * pas un defaut connu par un defaut inconnu.
-   *
-   * ET ON NE RELIT PAS DEUX FOIS AVEC LE MEME. Si PaddleOCR n'est pas deploye,
-   * la premiere lecture vient deja du modele de vision, et le rattrapage
-   * n'aurait rien d'autre a proposer qu'un second appel payant a l'identique.
+   * ON NE RELIT JAMAIS AVEC LE LECTEUR QUI VIENT DE LIRE (`autreLecteur`).
    */
-  const premierEtaitPaddle = premiereLecture.readModel.includes("PP-OCR");
-  const unAutreLecteurExiste = premierEtaitPaddle || lecteurs.secondLecteurDisponible();
-
-  /*
-   * ============== UNE PANNE AU RATTRAPAGE NE DÉTRUIT PAS CE QU'ON TIENT DÉJÀ
-   *
-   * Depuis le 19 octobre, les organes NOMMENT leurs pannes
-   * (`PanneFournisseur`), pour que la file durable les rejoue au lieu de
-   * fermer le travail. Au rattrapage, cette panne ne doit pourtant pas
-   * remonter : la première lecture existe, elle est seulement partielle, et
-   * la règle de ce bloc est déjà « à égalité, la première gagne ». La perdre
-   * parce que le second lecteur est tombé transformerait une lecture
-   * partielle en échec — ce que ce bloc existe précisément pour éviter.
-   *
-   * La panne de la PREMIÈRE lecture, elle, remonte : c'est là qu'un rejeu a
-   * un sens, puisqu'on ne tient rien.
-   */
-  if (built.contract !== "extract.v1" && unAutreLecteurExiste) {
+  const autre = autreLecteur(premiereLecture, lecteurs.secondLecteurDisponible());
+  if (qualiteDeLecture(built) < QUALITE_PARFAITE && autre) {
+    /*
+     * ============== UN ECHEC AU RATTRAPAGE NE DETRUIT PAS CE QU'ON TIENT DEJA
+     *
+     * Quelle que soit l'erreur : cle absente, quota, reponse tronquee, PDF
+     * sans image. Seules les pannes de fournisseur etaient epargnees ; une
+     * erreur du modele de vision au rattrapage faisait donc echouer TOUTE la
+     * lecture, et la premiere — partielle mais reelle — etait perdue (audit
+     * du 24 octobre 2026). La premiere lecture existe : c'est elle qui sort.
+     */
     try {
-      const secondeLecture = await lecteurs.lire({
-        parRecette,
-        dataUrl,
-        mime,
-        bytes,
-        chargeCodes,
-        tiers: contexte.tiers,
-        dossier: contexte.dossier,
-        devise: contexte.currency,
-        taxCodes: contexte.taxCodes.map((r) => ({
-          code: r.code,
-          label: r.label,
-          rate: String(r.rate),
-        })),
-        // L'autre lecteur, exactement : Paddle a lu, donc le modele de vision
-        // relit ; le modele a lu, donc Paddle relit.
-        sansPaddle: premierEtaitPaddle,
-      });
-      const secondBuilt = buildExtractFromTokenPlan({
-        tokens: secondeLecture.tokens,
-        selection: secondeLecture.selection,
-        decimals: contexte.moneyDecimals,
-        matriculeDossier: contexte.dossier.identifiantFiscal,
-      });
-      if (secondBuilt.contract === "extract.v1") {
+      const secondeLecture = await lecteurs.lire({ ...parametres, ...autre });
+      const secondBuilt = construire(secondeLecture);
+      if (qualiteDeLecture(secondBuilt) > qualiteDeLecture(built)) {
         read = secondeLecture;
         built = secondBuilt;
       }
     } catch (e: unknown) {
-      if (!(e instanceof PanneFournisseur)) throw e;
       console.error(
-        `rattrapage impossible — pièce ${pieceId} : ${e.message} ; la première lecture est conservée`,
+        `[lecture] rattrapage impossible — pièce ${pieceId} : ${
+          e instanceof Error ? e.message : String(e)
+        } ; la première lecture est conservée`,
       );
     }
   }

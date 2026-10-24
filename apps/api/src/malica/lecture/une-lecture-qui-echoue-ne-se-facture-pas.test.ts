@@ -96,6 +96,9 @@ function lecture(readModel: string, selection: VisionSelection): VisionRead {
   return {
     tokens: TOKENS,
     selection,
+    lecteur:
+      readModel === "pdf-text" ? "pdf-text" : readModel.includes("PP-OCR") ? "paddle" : "vision",
+    paddleTente: false,
     model: readModel,
     readModel,
     selectModel: readModel,
@@ -345,6 +348,35 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     assert.equal(modele.appels, 2, "la pièce a bien été relue par l'autre lecteur");
     assert.equal(rendu.contract, "extract.v1", "et c'est la seconde lecture qui a été retenue");
     assert.equal(await compter(piece), 1, "une pièce lue, une lecture comptée — jamais deux");
+  });
+
+  it("un rattrapage qui échoue garde la première lecture, et la compte une fois", async () => {
+    // Audit du 24 octobre 2026 : seule une `PanneFournisseur` était épargnée.
+    // Une erreur ordinaire du second lecteur (clé absente, réponse tronquée)
+    // faisait échouer TOUTE la lecture, la première comprise.
+    const piece = await deposer(orgLibre, "rattrapage-en-echec", "partage");
+    const modele = lecteurs([
+      () => lecturePartielle("PP-OCR"),
+      () => {
+        throw new Error("QWEN_API_KEY absente : la pièce ne peut pas être lue");
+      },
+    ]);
+
+    const rendu = await readPieceFlow(apiDEssai(), piece, modele);
+
+    assert.equal(modele.appels, 2, "le rattrapage a bien été tenté");
+    assert.equal(rendu.contract, "extract.v1.partiel", "la première lecture est rendue");
+    assert.equal(await compter(piece), 1, "et elle est comptée, puisqu'elle a été rendue");
+  });
+
+  it("le lecteur qui vient de lire ne relit jamais : le modèle de vision seul ne se rattrape pas", async () => {
+    const piece = await deposer(orgLibre, "vision-seule", "partage");
+    const modele = lecteurs([() => lecturePartielle("qwen-vl-ocr")], false);
+
+    const rendu = await readPieceFlow(apiDEssai(), piece, modele);
+
+    assert.equal(modele.appels, 1, "aucun second appel payant pour la même réponse");
+    assert.equal(rendu.contract, "extract.v1.partiel");
   });
 
   it("une pièce déjà lue est refusée AVANT tout modèle, et reste comptée une fois", async () => {

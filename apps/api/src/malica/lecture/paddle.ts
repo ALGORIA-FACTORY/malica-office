@@ -60,7 +60,37 @@ const DELAI_MS = 120_000;
 
 /** Le second lecteur est-il branché ? Son absence n'est pas une panne. */
 export function secondLecteurDisponible(): boolean {
-  return Boolean(process.env["OCR_URL"]);
+  return Boolean(process.env["OCR_URL"]) && Date.now() >= enPanneJusqua;
+}
+
+/*
+ * ===================================================== LE COUPE-CIRCUIT
+ *
+ * Audit du 24 octobre 2026 : PaddleOCR tombé (mémoire épuisée, conteneur
+ * arrêté) rendait TOUTES les photos illisibles — chaque lecture levait sa
+ * panne, la file la rejouait trois fois, puis abandonnait au bout de quinze
+ * minutes. Le modèle de vision était là, et personne ne lui passait la main.
+ *
+ * Désormais une panne de PaddleOCR fait basculer la pièce sur le modèle de
+ * vision (voir `releverDesPages`), et ouvre ce coupe-circuit : pendant
+ * `COUPE_CIRCUIT_MS`, PaddleOCR n'est plus essayé du tout. Sans lui, chaque
+ * pièce suivante attendrait d'abord le délai de PaddleOCR avant de basculer —
+ * deux minutes par page, pour rien. Passé ce délai, il est réessayé : un
+ * service redémarré reprend sa place sans que personne n'ait à intervenir.
+ *
+ * C'est un réglage technique d'exploitation, pas une règle métier (R4).
+ */
+const COUPE_CIRCUIT_MS = 60_000;
+let enPanneJusqua = 0;
+
+/** Écarter PaddleOCR un moment : il vient de tomber. */
+export function ouvrirLeCoupeCircuit(maintenant: number = Date.now()): void {
+  enPanneJusqua = maintenant + COUPE_CIRCUIT_MS;
+}
+
+/** Pour les épreuves : le service est réputé revenu. */
+export function refermerLeCoupeCircuit(): void {
+  enPanneJusqua = 0;
 }
 
 /**
