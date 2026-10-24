@@ -40,8 +40,9 @@ from PIL import Image, ImageOps
 
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
+import cv2  # noqa: E402
 from fastapi import FastAPI, Request  # noqa: E402
-from paddleocr import PaddleOCR  # noqa: E402
+from paddleocr import PaddleOCR, TextRecognition  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 
 # Les modèles MOBILE, pas « server » : mesurés à 1,8 Go de pointe, quand les
@@ -69,6 +70,7 @@ APPAREIL = os.environ.get("OCR_APPAREIL", "cpu")
 # 180 degres — « 2 687,888 » relu « 888'L89 Z » — et fait tomber le taux de
 # champs trouves de 86 % a 36 %. La photo est deja redressee par l'ecran de
 # capture ; son orientation EXIF est appliquee ci-dessous.
+#
 # `enable_mkldnn=False` n'est pas un réglage de confort : avec l'accélérateur
 # activé, paddle 3.3.1 échoue sur « ConvertPirAttribute2RuntimeAttribute not
 # support ». Vérifié identique sur Linux et sur Windows, le 13 octobre 2026.
@@ -82,6 +84,58 @@ _ocr = PaddleOCR(
     use_textline_orientation=False,
     enable_mkldnn=False,
 )
+
+# ======================================================== LE SECOND ALPHABET
+#
+# Mesure du 24 octobre 2026 (banc de 48 pieces fictives, scan et photo) : le
+# modele latin lit les montants a 100 %, y compris sur les factures arabes,
+# mais ne lit JAMAIS un mot arabe (raison sociale : 0 % de ressemblance). Le
+# modele arabe lit la raison sociale (100 % imprimee, 85 % manuscrite), et lit
+# moins bien les chiffres. Aucun des deux ne suffit seul.
+#
+# Quand `OCR_MODELE_RECONNAISSANCE_ARABE` est posee, chaque ligne detectee est
+# relue par le modele arabe, et la ligne garde la lecture qui contient de
+# l'arabe ET dont la confiance tient : un chiffre reste latin, un mot arabe
+# devient arabe. Une seule detection, deux reconnaissances : le cout est celui
+# de la seconde reconnaissance, pas d'une seconde lecture.
+RECONNAISSANCE_ARABE = os.environ.get("OCR_MODELE_RECONNAISSANCE_ARABE", "")
+_arabe = (
+    TextRecognition(model_name=RECONNAISSANCE_ARABE, device=APPAREIL, enable_mkldnn=False)
+    if RECONNAISSANCE_ARABE
+    else None
+)
+
+
+def _a_de_l_arabe(texte: str) -> bool:
+    return any("\u0600" <= c <= "\u06ff" or "\ufb50" <= c <= "\ufeff" for c in texte)
+
+
+def _decouper(tableau: numpy.ndarray, polygone) -> numpy.ndarray:
+    """La ligne, redressee : la meme decoupe que celle du pipeline PaddleOCR."""
+    pts = numpy.array(polygone, dtype=numpy.float32).reshape(-1, 2)[:4]
+    largeur = int(max(numpy.linalg.norm(pts[0] - pts[1]), numpy.linalg.norm(pts[2] - pts[3])))
+    hauteur = int(max(numpy.linalg.norm(pts[0] - pts[3]), numpy.linalg.norm(pts[1] - pts[2])))
+    cible = numpy.float32([[0, 0], [largeur, 0], [largeur, hauteur], [0, hauteur]])
+    m = cv2.getPerspectiveTransform(pts, cible)
+    return cv2.warpPerspective(
+        tableau, m, (max(1, largeur), max(1, hauteur)), borderMode=cv2.BORDER_REPLICATE
+    )
+
+
+def _relire_en_arabe(tableau, polygones, textes, scores):
+    """Relire chaque ligne en arabe ; garder l'arabe la ou il en a."""
+    if _arabe is None or not polygones:
+        return textes, scores
+    decoupes = [_decouper(tableau, p) for p in polygones]
+    relus = [r.json["res"] for r in _arabe.predict(decoupes)]
+    sortie_t, sortie_s = list(textes), list(scores)
+    for i, r in enumerate(relus):
+        texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
+        score_lat = float(scores[i]) if i < len(scores) else 0.0
+        if _a_de_l_arabe(texte_ar) and score_ar >= score_lat * 0.8:
+            sortie_t[i], sortie_s[i] = texte_ar, score_ar
+    return sortie_t, sortie_s
+
 
 # Le predicteur n'est pas sur a plusieurs fils : une seule lecture a la fois,
 # mais HORS de la boucle d'evenements. Avant, `predict` tournait dans la
@@ -99,6 +153,7 @@ def sante() -> dict:
         "ok": True,
         "detection": DETECTION,
         "reconnaissance": RECONNAISSANCE,
+        "reconnaissance_arabe": RECONNAISSANCE_ARABE or None,
         "appareil": APPAREIL,
     }
 
@@ -168,6 +223,7 @@ def _lire_seul(octets: bytes) -> dict:
         textes = donnees.get("rec_texts", [])
         polygones = donnees.get("rec_polys", []) or donnees.get("dt_polys", [])
         scores = donnees.get("rec_scores", [])
+        textes, scores = _relire_en_arabe(tableau, polygones, textes, scores)
         for i, texte in enumerate(textes):
             if not texte or not texte.strip():
                 continue
@@ -195,5 +251,5 @@ def _lire_seul(octets: bytes) -> dict:
     return {
         "lignes": lignes,
         "millisecondes": int((time.time() - debut) * 1000),
-        "modele": f"{DETECTION}+{RECONNAISSANCE}",
+        "modele": "+".join(m for m in (DETECTION, RECONNAISSANCE, RECONNAISSANCE_ARABE) if m),
     }
