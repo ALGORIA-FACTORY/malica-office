@@ -1,3 +1,7 @@
+import type {
+  ConstatDeRetenue,
+  QualificationDeRetenue,
+} from "@malica/socle/use-cases/retenue-au-reglement";
 /**
  * Le bureau — proposition, comptabilisation, lecture des écritures.
  *
@@ -124,18 +128,52 @@ export const office = {
    * bancaire — une facture de septembre payee en octobre touche la
    * tresorerie en octobre.
    */
-  async propositionDeReglement(db: Requete, paiementId: string) {
-    const r = await propositionDeReglement(db, paiementId);
+  async propositionDeReglement(
+    db: Requete,
+    paiementId: string,
+    qualification?: QualificationDeRetenue,
+  ) {
+    const r = await propositionDeReglement(db, paiementId, qualification);
     if (!r.ok) return r;
     // Déjà inscrit ? L'écran le dit et retire le bouton (ANO-006) : la base,
     // elle, rend la même écriture si on redemande.
-    const { rows } = await db.query<{ id: string }>(
-      `select id from ecritures_v
-        where paiement_id = $1 and nature = 'reglement' and app.ecriture_vivante(id)
+    const { rows } = await db.query<{
+      id: string;
+      journal: string;
+      date_ecriture: string;
+      libelle: string;
+      devise: string;
+      retenue: ConstatDeRetenue | null;
+    }>(
+      `select e.id, e.journal, e.date_ecriture::text, e.libelle, e.devise,
+              (select a.payload -> 'retenue' from audit.event_log a
+                where a.object_id = e.id and a.action = 'reglement.qualifie'
+                order by a.created_at desc limit 1) as retenue
+         from ecritures_v e
+        where e.paiement_id = $1 and e.nature = 'reglement' and app.ecriture_vivante(e.id)
         limit 1`,
       [paiementId],
     );
-    return { ...r, inscrite: rows[0] ? { ecritureId: rows[0].id } : null };
+    const inscrite = rows[0];
+    if (!inscrite) return { ...r, inscrite: null };
+    const lignes = (await lignesDe(db, [inscrite.id])).get(inscrite.id) ?? [];
+    return {
+      ...r,
+      inscrite: { ecritureId: inscrite.id },
+      retenue: inscrite.retenue ?? { cas: "a_confirmer" as const },
+      ecriture: {
+        journal: inscrite.journal,
+        dateEcriture: inscrite.date_ecriture,
+        libelle: inscrite.libelle,
+        devise: inscrite.devise,
+        lignes: lignes.map((l) => ({
+          account_code: l.accountCode,
+          libelle: l.libelle,
+          debit: l.debit,
+          credit: l.credit,
+        })),
+      },
+    };
   },
 
   /**
@@ -145,22 +183,35 @@ export const office = {
    * qu'il a lui-meme lu, et refuse avec le motif ce que la proposition
    * refuse.
    */
-  async proposerLeReglement(db: Requete, paiementId: string): Promise<string> {
-    // Idempotent (ANO-006, re-test du 21 octobre 2026 : deux appels rendaient
-    // deux propositions) : un règlement déjà proposé ou inscrit rend son
-    // écriture, sans en recomposer une.
+  async proposerLeReglement(
+    db: Requete,
+    paiementId: string,
+    qualification?: QualificationDeRetenue,
+  ): Promise<string> {
+    // Même verrou que la comptabilisation et l'annulation : aucune course entre les trois.
+    await db.query(
+      `select pi.id from capture.pieces pi join paiements_v p on p.piece_id = pi.id
+                     where p.id = $1 for update of pi`,
+      [paiementId],
+    );
+    const r = await propositionDeReglement(db, paiementId, qualification);
+    if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
+    // Une écriture inscrite est immuable. Une proposition se recompose depuis
+    // les faits courants, sans réutiliser une ancienne inférence fiscale.
     const { rows: deja } = await db.query<{ id: string }>(
       `select id from ecritures_v
         where paiement_id = $1 and nature = 'reglement'
-          and ((status = 'proposee' and reverses_id is null) or app.ecriture_vivante(id))
+          and app.ecriture_vivante(id)
         order by status = 'booked' desc
         limit 1`,
       [paiementId],
     );
     if (deja[0]) return deja[0].id;
-    const r = await propositionDeReglement(db, paiementId);
-    if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
-    return office.propose(db, {
+    if (r.retenue.cas === "a_confirmer")
+      throw Object.assign(new Error("Confirmez le traitement de la retenue avant inscription."), {
+        code: "22023",
+      });
+    const id = await office.propose(db, {
       pieceId: r.pieceId,
       journal: r.ecriture.journal,
       date: r.ecriture.dateEcriture,
@@ -170,6 +221,14 @@ export const office = {
       lignes: r.ecriture.lignes,
       paiementId,
     });
+    if (qualification)
+      await db.query(
+        `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+       select tenant_id, auth.uid(), 'reglement.qualifie', 'socle', 'ecritures', id, $2::jsonb
+         from ecritures_v where id = $1`,
+        [id, JSON.stringify({ paiementId, qualification, retenue: r.retenue })],
+      );
+    return id;
   },
 
   /**
@@ -178,8 +237,12 @@ export const office = {
    * l'écriture restait « proposée », n'atteignait jamais le FEC, et chaque
    * clic en ajoutait une. Redemander rend l'écriture déjà inscrite.
    */
-  async inscrireLeReglement(db: Requete, paiementId: string): Promise<string> {
-    const id = await office.proposerLeReglement(db, paiementId);
+  async inscrireLeReglement(
+    db: Requete,
+    paiementId: string,
+    qualification?: QualificationDeRetenue,
+  ): Promise<string> {
+    const id = await office.proposerLeReglement(db, paiementId, qualification);
     const { rows } = await db.query<{ status: string }>(
       `select status from ecritures_v where id = $1`,
       [id],

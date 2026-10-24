@@ -1,3 +1,4 @@
+import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue-au-reglement.ts";
 /**
  * Ports du domaine. Les écrans ne connaissent que ce vocabulaire :
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
@@ -746,6 +747,8 @@ export interface FaitDeDemande {
 
 /** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
 export interface PaiementDUnePiece {
+  /** Dette éteinte comptabilisée, net + retenues qualifiées ; jamais le montant du reçu. */
+  detteEteinteMineur?: number | null;
   id: string;
   moyenCode: string;
   /** En unités mineures. Nul quand rien n'a encore été payé. */
@@ -1143,14 +1146,17 @@ export interface OfficeRepository {
    * La facture constate une dette ; le reglement l'eteint. Deux faits, deux
    * dates — les confondre rend tout rapprochement bancaire impossible.
    */
-  propositionDeReglement(paiementId: string): Promise<PropositionDeReglement>;
+  propositionDeReglement(
+    paiementId: string,
+    qualification?: QualificationDeRetenue,
+  ): Promise<PropositionDeReglement>;
   /** Inscrire le reglement propose. Rend l'identifiant de l'ecriture. */
-  proposerLeReglement(paiementId: string): Promise<string>;
+  proposerLeReglement(paiementId: string, qualification?: QualificationDeRetenue): Promise<string>;
   /**
    * Proposer puis comptabiliser le règlement, en une transaction. Idempotent :
    * un règlement déjà inscrit rend son écriture.
    */
-  inscrireLeReglement(paiementId: string): Promise<string>;
+  inscrireLeReglement(paiementId: string, qualification?: QualificationDeRetenue): Promise<string>;
   /**
    * Les lignes comptabilisées entre deux dates.
    *
@@ -2576,7 +2582,11 @@ export type PropositionDeReglement =
        * Ce que le règlement dit de la retenue à la source (19 octobre 2026) :
        * opérée (à quel taux, combien), due mais non opérée, ou sans objet.
        */
+      tauxDisponibles: TauxDeRetenue[];
+      ttc: string | null;
+      paye: string;
       retenue:
+        | { cas: "a_confirmer" }
         | {
             cas: "operee";
             code: string;

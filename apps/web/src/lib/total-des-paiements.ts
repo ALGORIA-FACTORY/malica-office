@@ -7,7 +7,9 @@ export function totalDesPaiements(paiements: ReadonlyArray<PaiementDUnePiece>): 
     if (paiement.eteint) continue;
     if (paiement.moyenCode === "non_paye" && paiement.montantMineur === null) continue;
     if (!Number.isSafeInteger(paiement.montantMineur)) return null;
-    total += paiement.montantMineur!;
+    const eteint = paiement.detteEteinteMineur ?? paiement.montantMineur;
+    if (!Number.isSafeInteger(eteint) || eteint! < paiement.montantMineur!) return null;
+    total += eteint!;
     if (!Number.isSafeInteger(total)) return null;
   }
   return total;

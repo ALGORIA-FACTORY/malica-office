@@ -1,3 +1,4 @@
+import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
@@ -1252,18 +1253,25 @@ function EcritureDuReglement({
 }) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
+  const [qualification, setQualification] = useState<QualificationDeRetenue>();
+  const [codes, setCodes] = useState<string[]>([]);
+  const [base, setBase] = useState("");
+  const [tva, setTva] = useState("");
+  const [assietteIR, setAssietteIR] = useState("");
+  const [justification, setJustification] = useState("");
   const proposition = useQuery({
-    queryKey: ["reglement", paiementId],
-    queryFn: () => office().office.propositionDeReglement(paiementId),
+    queryKey: ["reglement", paiementId, qualification],
+    queryFn: () => office().office.propositionDeReglement(paiementId, qualification),
   });
   const inscrire = useMutation({
     // Proposer ET comptabiliser, une fois : l'écriture du règlement entre au
     // journal et au FEC, et redemander rend la même (ANO-006).
-    mutationFn: () => office().office.inscrireLeReglement(paiementId),
+    mutationFn: () => office().office.inscrireLeReglement(paiementId, qualification),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
         qc.invalidateQueries({ queryKey: ["reglement", paiementId] }),
+        qc.invalidateQueries({ queryKey: ["paiements", pieceId] }),
       ]);
     },
   });
@@ -1272,7 +1280,17 @@ function EcritureDuReglement({
   const r = proposition.data;
   if (!r) return null;
 
-  if (!r.ok) return <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>;
+  if (!r.ok)
+    return (
+      <div>
+        <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>
+        {qualification ? (
+          <button type="button" onClick={() => setQualification(undefined)}>
+            {t("cab.biblio.qualifyEdit")}
+          </button>
+        ) : null}
+      </div>
+    );
 
   return (
     <div className="mt-2 border-s-2 border-border ps-2.5">
@@ -1280,16 +1298,123 @@ function EcritureDuReglement({
         {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
-      {r.retenue.cas === "operee" ? (
-        <p className="my-2 rounded-lg bg-signal-soft p-3 text-[12px] text-signal-warn">
-          {t("cab.biblio.unconfirmedRetention")}
-        </p>
+      {!r.inscrite && r.retenue.cas === "a_confirmer" ? (
+        <fieldset className="my-3 space-y-2 rounded-lg border border-border p-3">
+          <legend className="px-1 text-[12px] font-medium">{t("cab.biblio.qualify")}</legend>
+          <select
+            aria-label={t("cab.biblio.withholding")}
+            className="w-full border border-border bg-background p-2 text-[12px]"
+            value={
+              codes.find((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ??
+              ""
+            }
+            onChange={(e) =>
+              setCodes([
+                ...codes.filter(
+                  (c) => r.tauxDisponibles.find((x) => x.code === c)?.famille === "tva",
+                ),
+                ...(e.target.value ? [e.target.value] : []),
+              ])
+            }
+          >
+            <option value="">{t("cab.biblio.noWithholding")}</option>
+            {r.tauxDisponibles
+              .filter((x) => x.famille !== "tva")
+              .map((x) => (
+                <option key={x.code} value={x.code}>
+                  {x.libelle}
+                </option>
+              ))}
+          </select>
+          {r.tauxDisponibles
+            .filter((x) => x.famille === "tva")
+            .map((x) => (
+              <label key={x.code} className="flex items-center gap-2 text-[12px]">
+                <input
+                  type="checkbox"
+                  checked={codes.includes(x.code)}
+                  onChange={(e) =>
+                    setCodes(
+                      e.target.checked ? [...codes, x.code] : codes.filter((c) => c !== x.code),
+                    )
+                  }
+                />
+                {x.libelle}
+              </label>
+            ))}
+          {codes.length ? (
+            <>
+              <label className="block text-[12px]">
+                {t("cab.biblio.grossSettled")}
+                <input
+                  inputMode="decimal"
+                  className="mt-1 w-full border border-border bg-background p-2"
+                  value={base || r.ttc || ""}
+                  onChange={(e) => setBase(e.target.value)}
+                />
+              </label>
+              {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ? (
+                <label className="block text-[12px]">
+                  {t("cab.biblio.irBase")}
+                  <input
+                    inputMode="decimal"
+                    className="mt-1 w-full border border-border bg-background p-2"
+                    value={assietteIR || base || r.ttc || ""}
+                    onChange={(e) => setAssietteIR(e.target.value)}
+                  />
+                </label>
+              ) : null}
+              {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.base === "tva") ? (
+                <label className="block text-[12px]">
+                  {t("cab.biblio.vatSettled")}
+                  <input
+                    inputMode="decimal"
+                    className="mt-1 w-full border border-border bg-background p-2"
+                    value={tva}
+                    onChange={(e) => setTva(e.target.value)}
+                  />
+                </label>
+              ) : null}
+            </>
+          ) : null}
+          <label className="block text-[12px]">
+            {t("cab.biblio.taxEvidence")}
+            <input
+              className="mt-1 w-full border border-border bg-background p-2"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={!justification.trim()}
+            className="h-8 border border-border px-3 text-[12px] disabled:opacity-40"
+            onClick={() =>
+              setQualification({
+                codes,
+                baseReglee: codes.length ? (base || r.ttc || "").replace(",", ".") : r.paye,
+                tvaReglee: tva.replace(",", "."),
+                assietteIR: assietteIR.replace(",", "."),
+                justification,
+              })
+            }
+          >
+            {t("cab.biblio.previewTax")}
+          </button>
+        </fieldset>
       ) : null}
-      {/*
-       * La retenue à la source, CONSTATÉE sur le payé (19 octobre 2026) : le
-       * Socle ne la suppose jamais. Opérée, elle a sa ligne ; due et non
-       * opérée, l'expert le lit ici — le payeur en reste redevable.
-       */}
+      {r.inscrite && r.retenue.cas === "a_confirmer" ? (
+        <p className="my-2 text-[12px] text-signal-warn">{t("cab.biblio.unconfirmedRetention")}</p>
+      ) : null}
+      {qualification && !r.inscrite ? (
+        <button
+          type="button"
+          className="my-2 text-[12px] underline"
+          onClick={() => setQualification(undefined)}
+        >
+          {t("cab.biblio.qualifyEdit")}
+        </button>
+      ) : null}
       {r.retenue.cas === "operee"
         ? (() => {
             const ttc = montant(r.retenue.ttc, locale);
@@ -1334,7 +1459,7 @@ function EcritureDuReglement({
         <button
           type="button"
           onClick={() => inscrire.mutate()}
-          disabled={inscrire.isPending || inscrire.isSuccess}
+          disabled={inscrire.isPending || inscrire.isSuccess || r.retenue.cas === "a_confirmer"}
           className="mt-1.5 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
         >
           {inscrire.isPending ? t("common.loading") : t("cab.review.reglement.inscrire")}

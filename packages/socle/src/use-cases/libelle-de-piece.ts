@@ -9,13 +9,7 @@
 import type { ExtractV1 } from "../contracts/extract.v1.ts";
 import { nomDeLaNature, type FaitsDuLibelle } from "../engines/libelle.ts";
 
-/**
- * Les clés où un numéro de document se trouve, par ordre de préférence.
- *
- * Ce n'est pas un référentiel réglementaire : c'est le vocabulaire de nos
- * propres lectures. Une clé inconnue n'est pas perdue pour autant — à défaut,
- * on prend la première référence rendue, ce qui vaut mieux que rien.
- */
+/** Seules les clés désignant explicitement le numéro du document sont retenues. */
 const CLES_DE_REFERENCE = ["invoice_no", "document_no", "numero", "reference"];
 
 export function referenceDuDocument(
@@ -26,18 +20,25 @@ export function referenceDuDocument(
     const valeur = references[cle]?.trim();
     if (valeur) return valeur;
   }
-  const premiere = Object.values(references)
-    .map((v) => v.trim())
-    .find((v) => v.length > 0);
-  return premiere ?? null;
+  return null;
 }
 
 /** Les faits du libellé d'une pièce lue. */
 export function faitsDuLibelle(extract: ExtractV1): FaitsDuLibelle {
   return {
     nature: nomDeLaNature(extract.document_kind),
-    contrepartie: extract.issuer,
+    contrepartie: contrepartieDuDocument(extract),
     reference: referenceDuDocument(extract.references),
     date: extract.document_date,
   };
+}
+
+/** Sur une vente, l'émetteur est le dossier lui-même, jamais le client. */
+export function contrepartieDuDocument(extract: {
+  document_kind?: string | null;
+  issuer?: string;
+  references?: Readonly<Record<string, string>>;
+}): string | null {
+  if (extract.document_kind === "facture_achat") return extract.issuer?.trim() || null;
+  return extract.references?.["customer_name"]?.trim() || null;
 }

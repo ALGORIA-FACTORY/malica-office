@@ -1,48 +1,18 @@
-/**
- * Le règlement d'une pièce, composé côté serveur.
- *
- * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
- *
- * 13 octobre 2026, le dirigeant : « l'écriture comptable et le rapprochement
- * dépendent énormément du moyen de paiement ». Il a raison, et le produit ne
- * tenait rien de cette promesse.
- *
- * Le référentiel portait depuis le 11 octobre le compte de trésorerie de
- * chaque moyen — 54 Caisse, 532 Banques, 403 Effets à payer. Vérifié le
- * 13 octobre : `tresorerie_account` n'était lu par AUCUN code de production.
- * L'expert lisait le moyen à l'écran et choisissait le compte à la main.
- *
- * ========================================================= CE QUE CE MODULE FAIT
- *
- * Il LIT — le paiement, la pièce, le pack — et il APPELLE le moteur du Socle.
- * Il n'émet aucune valeur liante : les comptes viennent du pack, le montant du
- * paiement déclaré, la date du règlement. R3 tient.
- *
- * Et il refuse franchement ce qui ne s'écrit pas : un paiement éteint par une
- * annulation, un « pas encore payé », une pièce dont le sens n'est pas tranché.
- *
- * ================================================ LE DOSSIER, PAS LA PIÈCE SEULE
- *
- * 19 octobre 2026, le dirigeant : « pas une pièce, c'est un dossier si on
- * rattache le paiement ». La facture, son règlement et la preuve du règlement
- * vont ensemble à la comptabilité, et les deux écritures doivent se
- * retrouver l'une l'autre. Le règlement portait `tiers: null` et
- * `referencePiece: null` : deux règlements du même mois à deux fournisseurs
- * donnaient le même libellé, et rien ne reliait l'écriture du règlement à celle
- * de la facture. Il porte désormais l'émetteur et le numéro LUS sur la pièce.
- *
- * Et la retenue à la source se CONSTATE (`constaterLaRetenue`) : le TTC lu sur
- * la pièce, le payé déclaré, et les taux du référentiel disent si elle a été
- * opérée, à quel taux — ou si elle ne l'a pas été alors qu'elle était due.
- */
+/** Règlement composé à partir des faits et d'une qualification fiscale explicite. */
 import {
   construireReglement,
   ReglementIncomplet,
   type EcritureDeReglement,
 } from "@malica/socle/use-cases/ecriture-de-reglement";
-import { referenceDuDocument } from "@malica/socle/use-cases/libelle-de-piece";
+import {
+  contrepartieDuDocument,
+  referenceDuDocument,
+} from "@malica/socle/use-cases/libelle-de-piece";
 import {
   constaterLaRetenue,
+  RetenueNonQualifiee,
+  type QualificationDeRetenue,
+  type TauxDeRetenue,
   type ConstatDeRetenue,
 } from "@malica/socle/use-cases/retenue-au-reglement";
 
@@ -59,6 +29,9 @@ export type PropositionDeReglement =
       pieceId: string;
       /** Ce que le règlement dit de la retenue à la source. */
       retenue: ConstatDeRetenue;
+      tauxDisponibles: TauxDeRetenue[];
+      ttc: string | null;
+      paye: string;
     }
   | { ok: false; raison: string };
 
@@ -73,6 +46,7 @@ const ROLE_DE_LA_RETENUE = {
 export async function propositionDeReglement(
   db: Requete,
   paiementId: string,
+  qualification?: QualificationDeRetenue,
 ): Promise<PropositionDeReglement> {
   const { rows } = await db.query<{
     piece_id: string;
@@ -92,7 +66,9 @@ export async function propositionDeReglement(
     `select p.piece_id, pi.tenant_id, p.moyen_code, p.montant_mineur, p.devise,
             p.paye_le::text as paye_le, p.reference, p.eteint, p.pack_version_id,
             pi.document_kind,
-            m.tresorerie_account, m.journal_code, m.libelle as moyen_libelle
+            case when pi.document_kind = 'facture_vente' then m.tresorerie_account_vente
+                 else m.tresorerie_account end as tresorerie_account,
+            m.journal_code, m.libelle as moyen_libelle
        from paiements_v p
        join pieces_v pi on pi.id = p.piece_id
        left join ref_payment_means_v m
@@ -116,16 +92,6 @@ export async function propositionDeReglement(
     };
   const sens = l.document_kind as "facture_achat" | "facture_vente";
 
-  // Le compte du tiers vient du pack, par le sens de la pièce. Toutes les
-  // lignes d'un même sens le partagent — on lit donc la première venue.
-  const { rows: mapping } = await db.query<{ counterparty_account: string }>(
-    `select counterparty_account from ref_account_mappings_v
-      where pack_version_id = $1 and document_kind = $2
-      limit 1`,
-    [l.pack_version_id, l.document_kind],
-  );
-  const counterparty = mapping[0]?.counterparty_account ?? "";
-
   // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
   // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici.
   const { rows: lue } = await db.query<{
@@ -148,14 +114,59 @@ export async function propositionDeReglement(
     [l.piece_id],
   );
   const piece = lue[0];
-  const tiers = piece?.payload?.issuer?.trim() || null;
+  const tiers = piece?.payload
+    ? contrepartieDuDocument({ ...piece.payload, document_kind: sens })
+    : null;
   const referencePiece = referenceDuDocument(piece?.payload?.references);
 
   // Les décimales viennent du paramétrage daté, par la MÊME lecture que
   // l'analyse — deux définitions de la devise finiraient par diverger.
   const parametres = await lireParametres(db, l.pack_version_id, l.paye_le);
   const decimales = parametres["money.decimals"]!;
+  // Une unité mineure hors entier sûr n'est jamais arrondie silencieusement.
+  const mineurs = [l.montant_mineur, piece?.ttc_mineur, piece?.tva_mineur].filter((v) => v != null);
+  if (mineurs.some((v) => !Number.isSafeInteger(Number(v))))
+    return { ok: false, raison: "Le montant dépasse la précision prise en charge." };
   const paye = enDecimal(Number(l.montant_mineur), decimales);
+  let ttc = piece?.ttc_mineur != null ? enDecimal(Number(piece.ttc_mineur), decimales) : null;
+
+  if (ttc === null) {
+    const { rows: totaux } = await db.query<{ total: string }>(
+      `select sum(ll.debit)::text as total from ecritures_v e
+         join ecriture_lignes_v ll on ll.ecriture_id = e.id
+        where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
+        group by e.id`,
+      [l.piece_id],
+    );
+    if (totaux.length === 1) ttc = totaux[0]!.total;
+  }
+
+  // Retrouver le tiers réellement comptabilisé, y compris un compte personnalisé.
+  // Un résultat ambigu bloque : aucun « premier compte » arbitraire.
+  const { rows: comptes } = await db.query<{ compte: string }>(
+    `select distinct ll.account_code as compte
+       from ecritures_v e join ecriture_lignes_v ll on ll.ecriture_id = e.id
+      where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
+        and (($2 = 'facture_achat' and ll.credit = $3::numeric and ll.debit = 0)
+          or ($2 = 'facture_vente' and ll.debit = $3::numeric and ll.credit = 0))`,
+    [l.piece_id, sens, ttc],
+  );
+  let counterparty = comptes.length === 1 ? comptes[0]!.compte : "";
+  if (!comptes.length) {
+    const { rows: inscrite } = await db.query(
+      `select id from ecritures_v where piece_id = $1 and nature = 'piece' and app.ecriture_vivante(id)`,
+      [l.piece_id],
+    );
+    if (inscrite.length)
+      return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
+    const { rows: mapping } = await db.query<{ counterparty_account: string }>(
+      `select distinct counterparty_account from ref_account_mappings_v
+        where pack_version_id = $1 and document_kind = $2`,
+      [l.pack_version_id, sens],
+    );
+    counterparty = mapping.length === 1 ? mapping[0]!.counterparty_account : "";
+  }
+  let tauxDisponibles: TauxDeRetenue[] = [];
 
   let retenue: ConstatDeRetenue = { cas: "sans_objet" };
   const lignesDeRetenue: Array<{ montant: string; compte: string; libelle: string }> = [];
@@ -176,23 +187,21 @@ export async function propositionDeReglement(
       [piece.jurisdiction, l.paye_le],
     );
     const sensCourt = sens === "facture_achat" ? "achat" : "vente";
-    retenue = constaterLaRetenue({
-      ttc: enDecimal(Number(piece.ttc_mineur), decimales),
-      tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
-      paye,
-      seuil: null,
-      taux: taux
-        .filter((t) => t.sens === "tous" || t.sens === sensCourt)
-        .map((t) => ({
-          code: t.code,
-          taux: t.taux,
-          libelle: t.libelle,
-          base: t.base,
-          famille: t.famille,
-          seuil: t.seuil,
-        })),
-      decimales,
-    });
+    tauxDisponibles = taux.filter((t) => t.sens === "tous" || t.sens === sensCourt);
+    try {
+      retenue = constaterLaRetenue({
+        ttc: enDecimal(Number(piece.ttc_mineur), decimales),
+        tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
+        paye,
+        seuil: null,
+        taux: tauxDisponibles,
+        decimales,
+        ...(qualification ? { qualification } : {}),
+      });
+    } catch (e) {
+      if (e instanceof RetenueNonQualifiee) return { ok: false, raison: e.message };
+      throw e;
+    }
     if (retenue.cas === "operee") {
       for (const r of retenue.retenues) {
         // Le compte, à trois niveaux comme partout : le dossier, la
@@ -226,6 +235,7 @@ export async function propositionDeReglement(
       sens,
       montant: paye,
       devise: l.devise,
+      decimales,
       payeLe: l.paye_le,
       moyenLibelle: l.moyen_libelle ?? l.moyen_code,
       tresorerieAccount: l.tresorerie_account ?? "",
@@ -242,6 +252,9 @@ export async function propositionDeReglement(
       packVersionId: l.pack_version_id,
       pieceId: l.piece_id,
       retenue,
+      tauxDisponibles,
+      ttc,
+      paye,
     };
   } catch (e) {
     if (e instanceof ReglementIncomplet) return { ok: false, raison: e.message };

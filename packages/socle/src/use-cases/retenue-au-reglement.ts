@@ -1,43 +1,4 @@
-/**
- * Les retenues à la source d'un règlement : déduites des faits, jamais supposées.
- *
- * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
- *
- * 19 octobre 2026. Le dirigeant : « la comptabilité lit les documents envoyés
- * et propose les écritures correctement ». L'épreuve du règlement prenait pour
- * exemple un achat de 1 969,610 DT payé par chèque, et proposait 401 / 532
- * pour le montant entier. Au-dessus du seuil de l'article 52-I-g du CIRPPIS,
- * l'acheteur RETIENT une part du prix et la reverse à l'État : le chèque ne
- * porte que le net, et la dette s'éteint pour le TTC.
- *
- * 20 octobre 2026 : « termine toutes les retenues à la source ». Le moteur ne
- * connaissait que les trois taux de l'article 52-I-g. Il connaît désormais
- * tout ce qu'un règlement de facture peut porter :
- *
- *   — l'impôt sur le revenu retenu (art. 52 CIRPPIS) : marchés 1,5 · 1 · 0,5 %
- *     au-dessus de 1 000 DT TTC ; honoraires, commissions, courtages, loyers
- *     10 % ou 3 % ; loyers d'hôtels, artistes 5 % ; non-résidents 15 % ;
- *   — la TVA retenue par l'État et les établissements publics (art. 19 bis
- *     CTVA) : 25 % de la TVA, au-dessus de 1 000 DT TTC — et elle se CUMULE
- *     avec la retenue d'impôt : un ministère qui paie une facture de 2 380 DT
- *     retient 1,5 % du TTC ET 25 % de la TVA.
- *
- * ======================================================== CE QUE CE MODULE FAIT
- *
- * Il ne SUPPOSE pas qu'une retenue a été opérée : il le CONSTATE. Le
- * référentiel donne les taux possibles, leur base (TTC ou TVA), leur seuil et
- * le sens où ils jouent ; le montant réglé dit lesquels ont servi. On essaie
- * chaque taux seul, puis chaque couple « impôt + TVA » : le premier qui
- * explique le payé au millime l'emporte. Si le payé égale le TTC alors qu'une
- * retenue à seuil était due, on le DIT. Sinon (acompte, paiement partiel), on
- * ne conclut rien.
- *
- * Deux taux de même valeur (5 % : loyers d'hôtels ou artistes) ne se
- * distinguent pas sur un chèque : le constat nomme le taux et laisse la
- * qualification à l'expert — c'est la seule chose que le payé ne dit pas.
- *
- * R4 : aucun taux, aucun seuil n'est écrit ici. R1 : ni base, ni réseau.
- */
+/** Une retenue exige une qualification explicite ; le net seul ne prouve aucun impôt. */
 import { D, toFixedStr } from "../domain/decimal.ts";
 
 /** Un taux de retenue possible, tel que le référentiel le rend. */
@@ -69,7 +30,23 @@ export interface EntreeRetenue {
   seuil: string | null;
   taux: readonly TauxDeRetenue[];
   decimales: number;
+  /** Qualification du comptable, conservée avec la proposition. Aucun code implicite. */
+  qualification?: QualificationDeRetenue;
 }
+
+export interface QualificationDeRetenue {
+  codes: string[];
+  /** Part brute de dette réglée, avant retenues ; peut être partielle. */
+  baseReglee: string;
+  /** TVA comprise dans cette part, nécessaire seulement pour une retenue de TVA. */
+  tvaReglee?: string | null;
+  /** Assiette IR qualifiée si elle diffère du brut éteint (hors sommes exclues). */
+  assietteIR?: string | null;
+  /** Référence du certificat ou justification du traitement fiscal. */
+  justification: string;
+}
+
+export class RetenueNonQualifiee extends Error {}
 
 /** Une retenue constatée, une ligne de l'écriture. */
 export interface RetenueConstatee {
@@ -81,6 +58,7 @@ export interface RetenueConstatee {
 }
 
 export type ConstatDeRetenue =
+  | { cas: "a_confirmer" }
   /** Le payé est le net : la ou les retenues ont été opérées. */
   | {
       cas: "operee";
@@ -99,74 +77,64 @@ export type ConstatDeRetenue =
   | { cas: "sans_objet" };
 
 export function constaterLaRetenue(e: EntreeRetenue): ConstatDeRetenue {
-  if (e.taux.length === 0) return { cas: "sans_objet" };
-  const ttc = D(e.ttc);
-  const paye = D(e.paye);
-  if (ttc.lte(0) || paye.lte(0)) return { cas: "sans_objet" };
-  const tva = e.tva !== null && e.tva !== undefined && e.tva.trim() !== "" ? D(e.tva) : null;
-
-  // Une unité de la dernière décimale par retenue : l'arrondi se joue au
-  // millime, et deux arrondis honnêtes peuvent différer d'autant.
-  const unite = D(1).div(D(10).pow(e.decimales));
-
-  const seuilDe = (t: TauxDeRetenue) => (t.seuil !== undefined ? t.seuil : e.seuil);
-  const applicable = (t: TauxDeRetenue) => {
-    const s = seuilDe(t);
-    if (s !== null && ttc.lt(D(s))) return false;
-    if ((t.base ?? "ttc") === "tva" && (tva === null || tva.lte(0))) return false;
-    return true;
+  const q = e.qualification;
+  if (!q) return e.taux.length ? { cas: "a_confirmer" } : { cas: "sans_objet" };
+  const refuse = (message: string): never => {
+    throw new RetenueNonQualifiee(message);
   };
-  const montantDe = (t: TauxDeRetenue) => {
-    const base = (t.base ?? "ttc") === "tva" ? tva! : ttc;
-    return D(toFixedStr(base.times(D(t.taux)), e.decimales));
+  const decimal = (v: string) => {
+    if (typeof v !== "string" || !/^\d+(\.\d+)?$/.test(v))
+      return refuse("Montant fiscal invalide.");
+    const d = D(v);
+    if (!d.isFinite() || !d.eq(D(toFixedStr(d, e.decimales))))
+      return refuse("La précision du montant dépasse celle de la devise.");
+    return d;
   };
-  const candidats = e.taux.filter(applicable);
-
-  // Une retenue seule, puis un couple impôt + TVA.
-  const essais: TauxDeRetenue[][] = [
-    ...candidats.map((t) => [t]),
-    ...candidats
-      .filter((t) => (t.famille ?? "ir") === "ir")
-      .flatMap((ir) => candidats.filter((t) => t.famille === "tva").map((v) => [ir, v])),
-  ];
-
-  for (const essai of essais) {
-    const montants = essai.map(montantDe);
-    if (montants.some((m) => m.lte(0))) continue;
-    const total = montants.reduce((a, m) => a.plus(m), D(0));
-    if (ttc.minus(total).minus(paye).abs().lte(unite.times(essai.length))) {
-      // La dernière retenue absorbe l'écart d'arrondi : l'écriture s'équilibre
-      // au millime par construction, sur ce qui sépare le payé du TTC.
-      const ecart = ttc.minus(paye).minus(total);
-      const retenues: RetenueConstatee[] = essai.map((t, i) => ({
-        code: t.code,
-        taux: t.taux,
-        libelle: t.libelle,
-        famille: t.famille ?? "ir",
-        montant: toFixedStr(
-          i === essai.length - 1 ? montants[i]!.plus(ecart) : montants[i]!,
-          e.decimales,
-        ),
-      }));
-      const premiere = retenues[0]!;
-      return {
-        cas: "operee",
-        code: premiere.code,
-        taux: premiere.taux,
-        libelle: premiere.libelle,
-        montant: toFixedStr(ttc.minus(paye), e.decimales),
-        ttc: toFixedStr(ttc, e.decimales),
-        retenues,
-      };
+  if (!Array.isArray(q.codes) || typeof q.justification !== "string" || !q.justification.trim())
+    return refuse("La qualification fiscale exige une justification.");
+  const ttc = decimal(e.ttc);
+  const paye = decimal(e.paye);
+  const brut = decimal(q.baseReglee);
+  if (brut.lte(0) || brut.gt(ttc) || paye.lte(0))
+    return refuse("La part brute réglée doit être positive et ne pas dépasser la facture.");
+  if (new Set(q.codes).size !== q.codes.length)
+    return refuse("Une retenue ne peut pas être comptée deux fois.");
+  const familles = new Set<string>();
+  const retenues: RetenueConstatee[] = q.codes.map((code) => {
+    const t = e.taux.find((t) => t.code === code);
+    if (!t) return refuse("Retenue absente du référentiel applicable à la date du paiement.");
+    const famille = t.famille ?? "ir";
+    if (familles.has(famille))
+      return refuse("Deux retenues de même famille ne se cumulent pas ici.");
+    familles.add(famille);
+    const seuil = t.seuil !== undefined ? t.seuil : e.seuil;
+    if (seuil !== null && ttc.lt(D(seuil)))
+      return refuse("Le seuil de cette retenue n'est pas atteint.");
+    let base = q.assietteIR ? decimal(q.assietteIR) : brut;
+    if (base.lte(0) || base.gt(brut)) return refuse("L'assiette IR dépasse la part brute réglée.");
+    if (t.base === "tva") {
+      if (!q.tvaReglee || !e.tva) return refuse("La TVA de la part réglée est nécessaire.");
+      base = decimal(q.tvaReglee);
+      if (base.lte(0) || base.gt(decimal(e.tva)) || base.gt(brut))
+        return refuse("La TVA réglée dépasse la TVA de la facture ou la part brute.");
     }
-  }
-
-  // Payé pour le TTC entier alors qu'une retenue À SEUIL était due : on le
-  // dit. Un taux sans seuil (honoraires, loyers) dépend de la nature de la
-  // prestation, que le payé ne dit pas : on ne conclut rien.
-  const dueParSeuil = candidats.some((t) => seuilDe(t) !== null && (t.famille ?? "ir") === "ir");
-  if (dueParSeuil && ttc.minus(paye).abs().lte(unite)) {
-    return { cas: "non_operee", ttc: toFixedStr(ttc, e.decimales) };
-  }
-  return { cas: "sans_objet" };
+    const montant = toFixedStr(base.times(D(t.taux)), e.decimales);
+    if (D(montant).lte(0)) return refuse("Le montant de retenue doit être positif.");
+    return { code, taux: t.taux, libelle: t.libelle, famille, montant };
+  });
+  const total = retenues.reduce((a, r) => a.plus(r.montant), D(0));
+  // Aucun ajustement de taxe pour absorber un écart : cash + taxes = brut strictement.
+  if (!paye.plus(total).eq(brut))
+    return refuse("Le net payé et les retenues ne correspondent pas à la part brute réglée.");
+  const premiere = retenues[0];
+  if (!premiere) return { cas: "sans_objet" };
+  return {
+    cas: "operee",
+    code: premiere.code,
+    taux: premiere.taux,
+    libelle: premiere.libelle,
+    montant: toFixedStr(total, e.decimales),
+    ttc: toFixedStr(brut, e.decimales),
+    retenues,
+  };
 }

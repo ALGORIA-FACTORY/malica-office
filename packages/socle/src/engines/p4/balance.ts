@@ -2,6 +2,7 @@
  * P4 — moteur d'équilibre : construit l'écriture depuis un extract.v1 et vérifie
  * Σdébit = Σcrédit STRICTEMENT (aucune conversion Number, aucun taux en dur).
  */
+import { contrepartieDuDocument } from "../../use-cases/libelle-de-piece.ts";
 import { D, toFixedStr, sum } from "../../domain/decimal.ts";
 import { resolveTaxRate } from "../../domain/tax-rates.ts";
 import type {
@@ -146,44 +147,22 @@ export function computePivot(input: PivotInput): PivotV1 {
     });
   }
 
-  // Résidu de pied de facture : TTC imprimé − (HT + TVA + droits déjà déclarés).
-  // Les deux termes sont des montants cités ; l'attribution du résidu vient du
-  // pack (droit à montant fixe), jamais d'une constante ni d'un modèle. Sans
-  // correspondance au pack, l'écriture est bloquée : on n'invente aucun compte.
+  // Un écart de total ne prouve ni timbre ni taxe. Seule une charge identifiée
+  // sur la pièce peut être imputée ; le résidu non expliqué reste bloquant.
   const declared = sum(charges.map((c) => c.amount));
   const residual = D(extract.totals.ttc).minus(totalHT).minus(totalVAT).minus(declared);
   if (residual.abs().greaterThan(tolerances.rounding_tolerance)) {
-    const match = fiscalCharges.find(
-      (r) =>
-        (!r.document_kind || r.document_kind === extract.document_kind) &&
-        r.fixed_amount != null &&
-        D(r.fixed_amount).equals(residual),
-    );
-    if (match) {
-      charges.push({
-        label: match.label,
-        account_code: match.account_code,
-        amount: round(residual.toString()),
-      });
-      motifs.push({
-        code: "RESIDUAL_MATCHED_PACK_CHARGE",
-        severity: "info",
-        message: `Résidu ${toFixedStr(residual, decimals)} attribué au droit « ${match.code} » du pack`,
-        detail: { charge_code: match.code, account_code: match.account_code },
-      });
-    } else {
-      motifs.push({
-        code: "RESIDUAL_UNEXPLAINED",
-        severity: "block",
-        message: `Résidu inexpliqué ${toFixedStr(residual, decimals)} entre le TTC imprimé et HT + TVA`,
-        detail: {
-          residual: toFixedStr(residual, decimals),
-          printed_ttc: extract.totals.ttc,
-          base_ht: toFixedStr(totalHT, decimals),
-          vat: toFixedStr(totalVAT, decimals),
-        },
-      });
-    }
+    motifs.push({
+      code: "RESIDUAL_UNEXPLAINED",
+      severity: "block",
+      message: `Résidu inexpliqué ${toFixedStr(residual, decimals)} entre le TTC imprimé et HT + TVA`,
+      detail: {
+        residual: toFixedStr(residual, decimals),
+        printed_ttc: extract.totals.ttc,
+        base_ht: toFixedStr(totalHT, decimals),
+        vat: toFixedStr(totalVAT, decimals),
+      },
+    });
   }
 
   const totalCharges = sum(charges.map((c) => c.amount));
@@ -220,7 +199,7 @@ export function computePivot(input: PivotInput): PivotV1 {
   } else {
     lines.push({
       account_code: mapping.counterparty_account,
-      label: `Client ${extract.issuer}`,
+      label: contrepartieDuDocument(extract) ?? "Client",
       debit: round(counterparty.toString()),
       credit: "0",
     });

@@ -1,3 +1,4 @@
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /**
  * La capture — pièces, plan de tokens, citations, lecture citée.
  *
@@ -1128,16 +1129,34 @@ export const capture = {
   /** Les paiements d'une pièce, du plus ancien au plus récent. */
   async paiementsDUnePiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select id, moyen_code, montant_mineur, devise, paye_le,
-              justificatif_piece_id, created_at, reference,
-              annule_paiement_id, eteint
-         from paiements_v where piece_id = $1 order by created_at`,
+      `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
+              p.justificatif_piece_id, p.created_at, p.reference,
+              p.annule_paiement_id, p.eteint, dette.brut, prm.value_num as decimales
+         from paiements_v p
+         left join lateral (
+           select sum(l.debit)::text as brut
+             from ecritures_v e join ecriture_lignes_v l on l.ecriture_id = e.id
+            where e.paiement_id = p.id and e.nature = 'reglement' and app.ecriture_vivante(e.id)
+         ) dette on true
+         left join lateral (
+           select value_num from ref.socle_params
+            where pack_version_id = p.pack_version_id and code = 'money.decimals'
+              and valid_from <= p.paye_le and (valid_to is null or valid_to >= p.paye_le)
+            order by valid_from desc limit 1
+         ) prm on true
+        where p.piece_id = $1 order by p.created_at`,
       [pieceId],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as string,
       moyenCode: r["moyen_code"] as string,
       montantMineur: r["montant_mineur"] === null ? null : Number(r["montant_mineur"]),
+      detteEteinteMineur:
+        r["brut"] == null
+          ? null
+          : r["decimales"] == null
+            ? null
+            : Number(enUnitesExactes(String(r["brut"]), Number(r["decimales"]))),
       devise: r["devise"] as string,
       payeLe: (r["paye_le"] as string | null) ?? null,
       justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,

@@ -50,4 +50,11 @@ describe("les paiements connus d'une pièce", () => {
   it("conserve le zéro d'une liste lue sans règlement", () => {
     expect(totalDesPaiements([])).toBe(0);
   });
+  it("une retenue qualifiée solde la dette sans gonfler le paiement bancaire", () => {
+    const net = paiement({ montantMineur: 1_970_000, detteEteinteMineur: 2_000_000 });
+    expect(totalDesPaiements([net])).toBe(2_000_000);
+    expect(net.montantMineur).toBe(1_970_000);
+    expect(totalDesPaiements([{ ...net, eteint: true }])).toBe(0);
+    expect(totalDesPaiements([paiement({ montantMineur: 1_970_000 })])).toBe(1_970_000);
+  });
 });

@@ -18,6 +18,7 @@ const ACHAT: EntreeReglement = {
   sens: "facture_achat",
   montant: "1969.610",
   devise: "TND",
+  decimales: 3,
   payeLe: "2026-10-13",
   moyenLibelle: "Chèque",
   tresorerieAccount: "532",
@@ -120,5 +121,29 @@ describe("l'écriture d'un règlement", () => {
     } catch (e) {
       expect((e as ReglementIncomplet).manque).toMatch(/date/);
     }
+  });
+  it.each(["-1", "NaN", "Infinity", "1e3", "0", "1,25"])(
+    "refuse un montant non positif ou non décimal : %s",
+    (montant) => {
+      expect(() => construireReglement({ ...ACHAT, montant })).toThrow(ReglementIncomplet);
+      expect(() =>
+        construireReglement({
+          ...ACHAT,
+          retenues: [{ montant, compte: "432", libelle: "Retenue" }],
+        }),
+      ).toThrow(ReglementIncomplet);
+    },
+  );
+  it("respecte la précision du pack, y compris deux et zéro décimales", () => {
+    expect(
+      construireReglement({ ...ACHAT, montant: "12.34", decimales: 2 }).lignes[0],
+    ).toMatchObject({ debit: "12.34", credit: "0.00" });
+    expect(construireReglement({ ...ACHAT, montant: "12", decimales: 0 }).lignes[0]).toMatchObject({
+      debit: "12",
+      credit: "0",
+    });
+    expect(() => construireReglement({ ...ACHAT, montant: "12.345", decimales: 2 })).toThrow(
+      ReglementIncomplet,
+    );
   });
 });

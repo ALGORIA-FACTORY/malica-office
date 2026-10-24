@@ -233,7 +233,11 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const f = await piece("retenue", "facture_achat");
     await lue(f, 1_969_610);
     const p = await payer(f, "cheque", 1_940_066, "4512873");
-    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+    const r = (await rpc("office", "propositionDeReglement", p, {
+      codes: ["RAS_MARCHES_ACQUISITIONS"],
+      baseReglee: "1969.610",
+      justification: "Certificat RS-1, acquisition qualifiée",
+    })) as Proposition & {
       retenue?: { cas: string; montant?: string };
     };
     assert.ok(r.ok, r.ok ? "" : r.raison);
@@ -259,7 +263,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
       retenue?: { cas: string };
     };
     assert.ok(r.ok, r.ok ? "" : r.raison);
-    assert.equal(r.retenue?.cas, "non_operee");
+    assert.equal(r.retenue?.cas, "a_confirmer");
     assert.equal(r.ecriture.lignes.length, 2);
   });
 
@@ -267,7 +271,11 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const f = await piece("honoraires", "facture_achat");
     await lue(f, 595_000, 95_000);
     const p = await payer(f, "virement", 535_500, "VIR-HON-1");
-    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+    const r = (await rpc("office", "propositionDeReglement", p, {
+      codes: ["RAS_HONORAIRES_COMMISSIONS_COURTAGES_LOYERS"],
+      baseReglee: "595.000",
+      justification: "Certificat honoraires, bénéficiaire qualifié",
+    })) as Proposition & {
       retenue?: { cas: string; code?: string };
     };
     assert.ok(r.ok, r.ok ? "" : r.raison);
@@ -287,7 +295,12 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const f = await piece("ministere", "facture_vente");
     await lue(f, 2_380_000, 380_000);
     const p = await payer(f, "virement", 2_249_300, "VIR-TRESOR-1");
-    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    const r = (await rpc("office", "propositionDeReglement", p, {
+      codes: ["RAS_MARCHES_ACQUISITIONS", "rs_tva_publique"],
+      baseReglee: "2380.000",
+      tvaReglee: "380.000",
+      justification: "Certificat payeur public RS-TVA-1",
+    })) as Proposition;
     assert.ok(r.ok, r.ok ? "" : r.raison);
     const l = r.ecriture.lignes;
     assert.equal(l.length, 4);
@@ -312,7 +325,11 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const f = await piece("retenue-inscrite", "facture_achat");
     await lue(f, 1_969_610);
     const p = await payer(f, "cheque", 1_940_066, "4512875");
-    await rpc("office", "proposerLeReglement", p);
+    await rpc("office", "inscrireLeReglement", p, {
+      codes: ["RAS_MARCHES_ACQUISITIONS"],
+      baseReglee: "1969.610",
+      justification: "Certificat RS-2",
+    });
     const mois = (await rpc("office", "retenuesDuMois", org, "2026-10-01")) as Array<{
       sens: string;
       montant: string;
@@ -344,5 +361,70 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const somme = (cle: "debit" | "credit") =>
       ecr.lines.reduce((s, l) => s + Number(l[cle]), 0).toFixed(3);
     assert.equal(somme("debit"), somme("credit"));
+  });
+  it("un paiement partiel de 1970 sur 2000 n'invente pas 30 de retenue", async () => {
+    const f = await piece("partiel-pas-ras", "facture_achat");
+    await lue(f, 2_000_000);
+    const p = await payer(f, "virement", 1_970_000, "PARTIEL-1");
+    const avant = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(avant.ok);
+    assert.equal(avant.ecriture.lignes.length, 2);
+    assert.equal(avant.ecriture.lignes[0]!.debit, "1970.000");
+    await assert.rejects(rpc("office", "inscrireLeReglement", p), /Confirmez/);
+    const id = await rpc("office", "inscrireLeReglement", p, {
+      codes: [],
+      baseReglee: "1970.000",
+      justification: "Paiement partiel, opération hors champ de retenue",
+    });
+    assert.ok(id);
+    const { rows } = await admin((db) =>
+      db.query(
+        `select count(*)::int as n from audit.event_log where object_id = $1 and action = 'reglement.qualifie'`,
+        [id],
+      ),
+    );
+    assert.equal(rows[0]!.n, 1);
+  });
+
+  it("une traite client passe en effets à recevoir, jamais en effets à payer", async () => {
+    const f = await piece("traite-client", "facture_vente");
+    const p = await payer(f, "traite", 100_000, "EFFET-1");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(r.ok);
+    assert.equal(r.ecriture.journal, "OD");
+    assert.equal(r.ecriture.lignes[0]!.account_code, "413");
+    assert.equal(r.ecriture.lignes[1]!.account_code, "411");
+    assert.doesNotMatch(r.ecriture.libelle, /COMPTOIR/);
+  });
+
+  it("annuler un paiement inscrit contre-passe exactement ses lignes, puis refuse sa réinscription", async () => {
+    const f = await piece("annule-inscrit", "facture_achat");
+    const p = await payer(f, "virement", 100_000, "VIR-ANNULATION");
+    const id = await rpc("office", "inscrireLeReglement", p);
+    await rpc("capture", "annulerPaiement", p, motif);
+    const { rows } = await admin((db) =>
+      db.query(
+        `select e.status, e.reverses_id, e.paiement_id,
+      (select sum(debit) from socle.ecriture_lignes where ecriture_id = e.id)::text as debit,
+      (select sum(credit) from socle.ecriture_lignes where ecriture_id = e.id)::text as credit
+      from socle.ecritures e where e.reverses_id = $1`,
+        [id],
+      ),
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.status, "booked");
+    assert.equal(rows[0]!.paiement_id, p);
+    assert.equal(Number(rows[0]!.debit), 100);
+    assert.equal(rows[0]!.credit, rows[0]!.debit);
+    await assert.rejects(rpc("office", "inscrireLeReglement", p), /annulé/);
+    await assert.rejects(rpc("capture", "annulerPaiement", p, motif), /deja annule/);
+  });
+
+  it("une proposition ancienne ne peut pas comptabiliser un paiement annulé", async () => {
+    const f = await piece("annule-propose", "facture_achat");
+    const p = await payer(f, "virement", 100_000, "VIR-PROPOSITION");
+    const id = await rpc("office", "proposerLeReglement", p);
+    await rpc("capture", "annulerPaiement", p, motif);
+    await assert.rejects(rpc("office", "book", id), /annulé/);
   });
 });

@@ -1,4 +1,14 @@
 export const frBibliotheque = {
+  "cab.biblio.irBase": "Assiette de la retenue IR",
+  "cab.biblio.qualify": "Traitement du règlement",
+  "cab.biblio.withholding": "Retenue à la source",
+  "cab.biblio.noWithholding": "Sans retenue — paiement total ou partiel",
+  "cab.biblio.grossSettled": "Part brute réglée",
+  "cab.biblio.vatSettled": "TVA de cette part",
+  "cab.biblio.taxEvidence": "Certificat ou justification fiscale",
+  "cab.biblio.previewTax": "Vérifier l’écriture",
+  "cab.biblio.qualifyEdit": "Modifier le traitement",
+
   "cab.biblio.title": "Bibliothèque",
   "cab.biblio.subtitle": "Les documents et les écritures de chaque client, réunis.",
   "cab.biblio.client": "Client",
@@ -48,6 +58,16 @@ export const frBibliotheque = {
 
 type Messages = Record<keyof typeof frBibliotheque, string>;
 export const enBibliotheque: Messages = {
+  "cab.biblio.irBase": "Income tax withholding base",
+  "cab.biblio.qualify": "Payment treatment",
+  "cab.biblio.withholding": "Withholding tax",
+  "cab.biblio.noWithholding": "No withholding — full or partial payment",
+  "cab.biblio.grossSettled": "Gross amount settled",
+  "cab.biblio.vatSettled": "VAT in this amount",
+  "cab.biblio.taxEvidence": "Certificate or tax justification",
+  "cab.biblio.previewTax": "Check entry",
+  "cab.biblio.qualifyEdit": "Edit treatment",
+
   "cab.biblio.title": "Library",
   "cab.biblio.subtitle": "Each client's documents and entries, together.",
   "cab.biblio.client": "Client",
@@ -94,6 +114,16 @@ export const enBibliotheque: Messages = {
   "cab.biblio.received": "Received on",
 };
 export const arBibliotheque: Messages = {
+  "cab.biblio.irBase": "أساس الخصم على الدخل",
+  "cab.biblio.qualify": "معالجة الدفع",
+  "cab.biblio.withholding": "الخصم من المورد",
+  "cab.biblio.noWithholding": "دون خصم — دفع كلي أو جزئي",
+  "cab.biblio.grossSettled": "المبلغ الإجمالي المسدد",
+  "cab.biblio.vatSettled": "الأداء ضمن هذا المبلغ",
+  "cab.biblio.taxEvidence": "شهادة الخصم أو التبرير الجبائي",
+  "cab.biblio.previewTax": "التحقق من القيد",
+  "cab.biblio.qualifyEdit": "تعديل المعالجة",
+
   "cab.biblio.title": "المكتبة",
   "cab.biblio.subtitle": "مستندات كل عميل وقيوده في مكان واحد.",
   "cab.biblio.client": "العميل",
