@@ -148,7 +148,7 @@ export const office = {
       `select e.id, e.journal, e.date_ecriture::text, e.libelle, e.devise,
               (select a.payload -> 'retenue' from audit.event_log a
                 where a.object_id = e.id and a.action = 'reglement.qualifie'
-                order by a.created_at desc limit 1) as retenue
+                order by a.at desc limit 1) as retenue
          from ecritures_v e
         where e.paiement_id = $1 and e.nature = 'reglement' and app.ecriture_vivante(e.id)
         limit 1`,
@@ -207,6 +207,11 @@ export const office = {
       [paiementId],
     );
     if (deja[0]) return deja[0].id;
+    if (r.ttc === null)
+      throw Object.assign(
+        new Error("Le montant de la facture doit être confirmé avant inscription du règlement."),
+        { code: "22023" },
+      );
     if (r.retenue.cas === "a_confirmer")
       throw Object.assign(new Error("Confirmez le traitement de la retenue avant inscription."), {
         code: "22023",

@@ -58,8 +58,8 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
   };
 
   /** Une pièce dont le sens est déclaré — comme à la capture. */
-  const piece = async (cle: string, kind: string) =>
-    (
+  const piece = async (cle: string, kind: string) => {
+    const id = (
       (await rpc("capture", "enregistrer", {
         tenantId: org,
         source: "pdf",
@@ -70,9 +70,22 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
         documentKind: kind,
       })) as { id: string }
     ).id;
+    if (["facture_achat", "facture_vente"].includes(kind))
+      await rpc("capture", "preciser", id, "document_kind", kind);
+    return id;
+  };
 
-  const payer = (pieceId: string, moyenCode: string, montantMineur: number, reference?: string) =>
-    rpc("capture", "enregistrerPaiement", {
+  const payer = async (
+    pieceId: string,
+    moyenCode: string,
+    montantMineur: number,
+    reference?: string,
+  ) => {
+    const { rows } = await admin((db) =>
+      db.query(`select id from capture.extractions where piece_id = $1`, [pieceId]),
+    );
+    if (!rows.length) await lue(pieceId, montantMineur);
+    return rpc("capture", "enregistrerPaiement", {
       pieceId,
       packId: pack,
       moyenCode,
@@ -82,6 +95,12 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
       justificatifPieceId: null,
       reference: reference ?? null,
     }) as Promise<string>;
+  };
+  const sansRetenue = (baseReglee = "100.000") => ({
+    codes: [],
+    baseReglee,
+    justification: "Opération du jeu de test qualifiée sans retenue",
+  });
 
   before(async () => {
     const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
@@ -348,7 +367,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
   it("l'écriture s'inscrit, équilibrée, et porte sa pièce", async () => {
     const f = await piece("inscrire", "facture_achat");
     const p = await payer(f, "virement", 750_000, "VIR-2026-991");
-    const id = (await rpc("office", "proposerLeReglement", p)) as string;
+    const id = (await rpc("office", "proposerLeReglement", p, sansRetenue("750.000"))) as string;
     assert.ok(id);
     const ecritures = (await rpc("office", "ecrituresForPiece", f)) as Array<{
       id: string;
@@ -400,7 +419,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
   it("annuler un paiement inscrit contre-passe exactement ses lignes, puis refuse sa réinscription", async () => {
     const f = await piece("annule-inscrit", "facture_achat");
     const p = await payer(f, "virement", 100_000, "VIR-ANNULATION");
-    const id = await rpc("office", "inscrireLeReglement", p);
+    const id = await rpc("office", "inscrireLeReglement", p, sansRetenue());
     await rpc("capture", "annulerPaiement", p, motif);
     const { rows } = await admin((db) =>
       db.query(
@@ -423,8 +442,56 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
   it("une proposition ancienne ne peut pas comptabiliser un paiement annulé", async () => {
     const f = await piece("annule-propose", "facture_achat");
     const p = await payer(f, "virement", 100_000, "VIR-PROPOSITION");
-    const id = await rpc("office", "proposerLeReglement", p);
+    const id = await rpc("office", "proposerLeReglement", p, sansRetenue());
     await rpc("capture", "annulerPaiement", p, motif);
     await assert.rejects(rpc("office", "book", id), /annulé/);
+  });
+  it("une retenue qualifiée solde la dette, conserve le net et bloque un second solde erroné", async () => {
+    const f = await piece("solde-avec-ras", "facture_achat");
+    await lue(f, 2_000_000);
+    const p = await payer(f, "virement", 1_970_000, "NET-IR");
+    await rpc("office", "inscrireLeReglement", p, {
+      codes: ["RAS_MARCHES_ACQUISITIONS"],
+      baseReglee: "2000.000",
+      justification: "Certificat IR-SOLDE",
+    });
+    const historique = (await rpc("capture", "paiementsDUnePiece", f)) as Array<{
+      id: string;
+      montantMineur: number;
+      detteEteinteMineur: number;
+    }>;
+    assert.equal(historique.find((x) => x.id === p)!.montantMineur, 1_970_000);
+    assert.equal(historique.find((x) => x.id === p)!.detteEteinteMineur, 2_000_000);
+    const enTrop = await payer(f, "virement", 30_000, "FAUX-SOLDE");
+    await assert.rejects(
+      rpc("office", "inscrireLeReglement", enTrop, sansRetenue("30.000")),
+      /dépasse la dette/,
+    );
+  });
+  it("reprend le compte du tiers effectivement inscrit sur la facture", async () => {
+    const f = await piece("tiers-inscrit", "facture_achat");
+    await lue(f, 100_000);
+    const id = await rpc("office", "propose", {
+      pieceId: f,
+      packVersionId: pack,
+      devise: "TND",
+      journal: "ACH",
+      date: "2026-10-13",
+      libelle: "Acquisition avec fournisseur immobilisation",
+      lignes: [
+        { account_code: "2182", libelle: "Immobilisation", debit: "100.000", credit: "0.000" },
+        {
+          account_code: "404",
+          libelle: "Fournisseur immobilisation",
+          debit: "0.000",
+          credit: "100.000",
+        },
+      ],
+    });
+    await rpc("office", "book", id);
+    const p = await payer(f, "virement", 100_000, "TIERS-INSCRIT");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(r.ok);
+    assert.equal(r.ecriture.lignes[0]!.account_code, "404");
   });
 });

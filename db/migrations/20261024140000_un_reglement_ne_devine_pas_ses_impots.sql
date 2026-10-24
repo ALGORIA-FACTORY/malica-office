@@ -5,6 +5,11 @@ begin;
 insert into ref.rejet_motifs (id, code, severity, requires_note, valid_from)
 values ('826d3a95-562d-44e9-a186-4e3e44147124', 'reglement_annule', 'bloquant', false, '2026-10-24')
 on conflict (code) do nothing;
+insert into ref.labels (ns, key, locale, value) values
+ ('rejet_motif', 'reglement_annule', 'fr', 'Règlement annulé'),
+ ('rejet_motif', 'reglement_annule', 'en', 'Cancelled payment'),
+ ('rejet_motif', 'reglement_annule', 'ar', 'دفع ملغى')
+on conflict (ns, key, locale) do nothing;
 alter table ref.payment_means add column if not exists tresorerie_account_vente text;
 update ref.payment_means set tresorerie_account_vente = tresorerie_account
  where tresorerie_account_vente is null;
@@ -26,6 +31,12 @@ declare
  v_reversal uuid;
 begin
  if new.annule_paiement_id is null then return new; end if;
+ if not exists (select 1 from capture.paiements p where p.id = new.annule_paiement_id
+                  and p.tenant_id = new.tenant_id and p.piece_id = new.piece_id
+                  and p.devise = new.devise and p.montant_mineur is not distinct from new.montant_mineur
+                  and p.annule_paiement_id is null) then
+   raise exception 'Une annulation doit recopier le paiement de la même pièce.' using errcode = '22023';
+ end if;
  perform 1 from capture.pieces where id = new.piece_id for update;
  for v_original in
    select e.* from socle.ecritures e

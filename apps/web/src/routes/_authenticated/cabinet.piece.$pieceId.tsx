@@ -1299,7 +1299,7 @@ function EcritureDuReglement({
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
       {!r.inscrite && r.retenue.cas === "a_confirmer" ? (
-        <fieldset className="my-3 space-y-2 rounded-lg border border-border p-3">
+        <fieldset className="my-3 min-w-0 space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 text-[12px] font-medium">{t("cab.biblio.qualify")}</legend>
           <select
             aria-label={t("cab.biblio.withholding")}

@@ -238,6 +238,25 @@ describe("balance / droits hors TVA", () => {
     expect(p.approvable).toBe(true);
   });
 
+  it("un droit imprimé hors barème conserve sa valeur mais bloque l'inscription", () => {
+    const base = factureAchatSimple();
+    const p = computePivot({
+      extract: {
+        ...base,
+        other_charges: [{ code: "DROIT_TIMBRE", label: "Timbre", amount: "2.000" }],
+        totals: { ...base.totals, ttc: "1192.000" },
+      },
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
+    });
+    expect(p.approvable).toBe(false);
+    expect(p.motifs.some((m) => m.code === "FISCAL_CHARGE_MISMATCH")).toBe(true);
+    expect(p.lines.find((l) => l.account_code === "6654")?.debit).toBe("2.000");
+  });
   it("un résidu égal au timbre ne prouve pas un droit : il reste bloquant", () => {
     const base = factureAchatSimple();
     // TTC imprimé = HT + TVA + 1.000 sans ligne de droit lue.

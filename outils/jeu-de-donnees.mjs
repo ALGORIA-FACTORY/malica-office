@@ -1510,7 +1510,14 @@ if (PMES.sotumag.id) {
             reference: piece.reference,
           },
         ]);
-        const id = await rpc("office", "inscrireLeReglement", [paiementId]);
+        const id = await rpc("office", "inscrireLeReglement", [
+          paiementId,
+          {
+            codes: [],
+            baseReglee: montant,
+            justification: "Jeu de données : opération qualifiée sans retenue",
+          },
+        ]);
         return { id, detail: `BQ · ${compteBanque}` };
       });
       if (!reglement) continue;

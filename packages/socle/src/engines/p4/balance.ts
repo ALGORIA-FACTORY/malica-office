@@ -140,6 +140,14 @@ export function computePivot(input: PivotInput): PivotV1 {
       });
       continue;
     }
+    if (rule.fixed_amount != null && !D(c.amount).eq(D(rule.fixed_amount))) {
+      motifs.push({
+        code: "FISCAL_CHARGE_MISMATCH",
+        severity: "block",
+        message: `Droit « ${c.code} » différent du barème applicable : lu ${c.amount}, attendu ${rule.fixed_amount}`,
+        detail: { charge_code: c.code, actual: c.amount, expected: rule.fixed_amount },
+      });
+    }
     charges.push({
       label: c.label || rule.label,
       account_code: rule.account_code,

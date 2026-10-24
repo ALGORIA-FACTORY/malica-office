@@ -1,3 +1,4 @@
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /** Règlement composé à partir des faits et d'une qualification fiscale explicite. */
 import {
   construireReglement,
@@ -95,25 +96,35 @@ export async function propositionDeReglement(
   // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
   // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici.
   const { rows: lue } = await db.query<{
-    payload: { issuer?: string; references?: Record<string, string> } | null;
+    payload: { issuer?: string; currency?: string; references?: Record<string, string> } | null;
     ttc_mineur: number | null;
     tva_mineur: number | null;
     jurisdiction: string;
+    devise_comptable: string;
   }>(
     `select e.payload,
             (a.normalisation -> 'montants' ->> 'ttc')::bigint as ttc_mineur,
             (a.normalisation -> 'montants' ->> 'tva')::bigint as tva_mineur,
-            o.jurisdiction
+            o.jurisdiction, o.currency as devise_comptable
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
-       left join lateral (select payload from capture.extractions x
+       left join lateral (select id, payload from capture.extractions x
                            where x.piece_id = p.id order by created_at desc limit 1) e on true
        left join lateral (select normalisation from capture.analyses y
-                           where y.piece_id = p.id order by created_at desc limit 1) a on true
+                           where y.piece_id = p.id and y.extraction_id = e.id order by created_at desc limit 1) a on true
       where p.id = $1`,
     [l.piece_id],
   );
   const piece = lue[0];
+  if (
+    piece &&
+    (piece.devise_comptable !== l.devise ||
+      (piece.payload?.currency && piece.payload.currency !== l.devise))
+  )
+    return {
+      ok: false,
+      raison: "Ce règlement nécessite une conversion de devise avant inscription.",
+    };
   const tiers = piece?.payload
     ? contrepartieDuDocument({ ...piece.payload, document_kind: sens })
     : null;
@@ -170,7 +181,7 @@ export async function propositionDeReglement(
 
   let retenue: ConstatDeRetenue = { cas: "sans_objet" };
   const lignesDeRetenue: Array<{ montant: string; compte: string; libelle: string }> = [];
-  if (piece && piece.ttc_mineur !== null) {
+  if (piece && ttc !== null) {
     // Tous les taux qu'un règlement peut porter, dans le sens de la pièce :
     // la TVA retenue par un payeur public ne joue qu'à la vente.
     const { rows: taux } = await db.query<{
@@ -190,7 +201,7 @@ export async function propositionDeReglement(
     tauxDisponibles = taux.filter((t) => t.sens === "tous" || t.sens === sensCourt);
     try {
       retenue = constaterLaRetenue({
-        ttc: enDecimal(Number(piece.ttc_mineur), decimales),
+        ttc,
         tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
         paye,
         seuil: null,
@@ -228,6 +239,41 @@ export async function propositionDeReglement(
         });
       }
     }
+  }
+
+  // Le cumul éteint une seule dette : ni le prochain solde ni une retenue
+  // n'ont le droit de faire dépasser le TTC. Un trop-perçu exige une autre imputation.
+  if (ttc !== null) {
+    const { rows: autres } = await db.query<{
+      montant_mineur: string | null;
+      devise: string;
+      brut: string | null;
+    }>(
+      `select p.montant_mineur::text, p.devise,
+              (select sum(ll.debit)::text from ecritures_v e
+                join ecriture_lignes_v ll on ll.ecriture_id = e.id
+               where e.paiement_id = p.id and e.nature = 'reglement' and app.ecriture_vivante(e.id)) as brut
+         from paiements_v p where p.piece_id = $1 and p.id <> $2 and not p.eteint
+           and p.montant_mineur is not null`,
+      [l.piece_id, paiementId],
+    );
+    if (autres.some((p) => p.devise !== l.devise))
+      return {
+        ok: false,
+        raison: "Les règlements en devises différentes nécessitent un rapprochement de change.",
+      };
+    const total = autres.reduce(
+      (a, p) =>
+        a + (p.brut !== null ? enUnitesExactes(p.brut, decimales) : BigInt(p.montant_mineur!)),
+      enUnitesExactes(paye, decimales) +
+        lignesDeRetenue.reduce((a, r) => a + enUnitesExactes(r.montant, decimales), 0n),
+    );
+    if (total > enUnitesExactes(ttc, decimales))
+      return {
+        ok: false,
+        raison:
+          "Le cumul des paiements et retenues dépasse la dette de la facture : vérifiez le trop-perçu.",
+      };
   }
 
   try {
