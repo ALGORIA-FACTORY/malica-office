@@ -70,14 +70,14 @@ export function TelechargerDossierComptable({
     <>
       <button
         type="button"
-        className="cab-library-button"
+        className="cab-doclib-button"
         onClick={ouvrir}
         disabled={pieces.length === 0}
       >
         <Download className="h-4 w-4" aria-hidden />
         {libelle ?? t("cab.biblio.download")}
       </button>
-      <dialog ref={dialogue} className="cab-library-dialog" onCancel={fermer}>
+      <dialog ref={dialogue} className="cab-doclib-dialog" onCancel={fermer}>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2>{t("cab.biblio.prepare")}</h2>
@@ -110,12 +110,12 @@ export function TelechargerDossierComptable({
           </p>
         ) : null}
         <div className="flex flex-wrap justify-end gap-3">
-          <button type="button" className="cab-library-button" onClick={fermer}>
+          <button type="button" className="cab-doclib-button" onClick={fermer}>
             {t("cab.biblio.cancel")}
           </button>
           <button
             type="button"
-            className="cab-library-button cab-library-primary"
+            className="cab-doclib-button cab-doclib-primary"
             onClick={() => telecharger.mutate()}
             disabled={telecharger.isPending || sauve !== null}
           >

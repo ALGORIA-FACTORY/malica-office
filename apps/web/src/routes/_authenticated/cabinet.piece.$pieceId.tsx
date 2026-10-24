@@ -890,7 +890,7 @@ function CabinetReview() {
         </section>
 
         <section className="space-y-3">
-          <div className="cab-library-tabs" role="tablist" aria-label={t("cab.biblio.entries")}>
+          <div className="cab-doclib-tabs" role="tablist" aria-label={t("cab.biblio.entries")}>
             <button
               type="button"
               role="tab"

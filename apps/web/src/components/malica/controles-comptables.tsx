@@ -17,7 +17,7 @@ export function ControlesComptables({
     queryFn: () => office().supervision.controlesPiece(cabinetId, pieceId),
   });
   return (
-    <section className="cab-library-controls">
+    <section className="cab-doclib-controls">
       <p className="rounded-lg bg-signal-soft p-4 text-[12px] text-signal-warn">
         {t("cab.biblio.checksHint")}
       </p>

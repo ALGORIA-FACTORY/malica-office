@@ -55,6 +55,7 @@ test("une panne du portefeuille ne devient pas un mandat vide et la relance retr
 for (const largeur of [390, 1440]) {
   for (const chemin of [
     "clients",
+    "bibliotheque",
     "propositions",
     "echeances",
     "notifications",
@@ -94,6 +95,35 @@ for (const largeur of [390, 1440]) {
     });
   }
 }
+
+test("la bibliothèque ouvre les documents réels et prépare une sélection", async ({ page }) => {
+  await page.goto("/cabinet/bibliotheque");
+  await expect(page.getByRole("heading", { name: "Bibliothèque", exact: true })).toBeVisible();
+  const clients = page.getByRole("combobox", { name: "Client", exact: true });
+  const option = clients
+    .locator("option")
+    .filter({ hasText: /SOTUMAG/ })
+    .first();
+  await expect(option).toBeAttached();
+  const id = await option.getAttribute("value");
+  expect(id).toBeTruthy();
+  await clients.selectOption(id!);
+  const ligne = page.locator(".cab-doclib-documents li").first();
+  await expect(ligne).toBeVisible();
+  await ligne.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Télécharger la sélection (1)", exact: true }).click();
+  const dialogue = page.getByRole("dialog");
+  await expect(dialogue).toBeVisible();
+  await expect(dialogue.getByText(/Les justificatifs et documents liés/)).toBeVisible();
+  await dialogue.getByRole("button", { name: "Annuler", exact: true }).last().click();
+  await expect(dialogue).not.toBeVisible();
+  await ligne.locator("a").first().click();
+  await expect(page).toHaveURL(/\/cabinet\/piece\//);
+  await page.getByRole("tab", { name: "Contrôles", exact: true }).click();
+  await expect(
+    page.getByText(/ne constituent pas une validation fiscale exhaustive/),
+  ).toBeVisible();
+});
 
 for (const largeur of [390, 1440]) {
   test(`abonnements : vues séparées et formulaire à la demande à ${largeur} px`, async ({

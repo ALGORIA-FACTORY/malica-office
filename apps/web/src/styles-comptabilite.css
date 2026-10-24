@@ -1,5 +1,5 @@
 /* La comptabilité : une surface de travail claire, indépendante du thème PME. */
-.cabinet-workspace .cab-library {
+.cabinet-workspace .cab-doclib {
   --library-ink: #20322f;
   --library-green: #22634d;
   --library-wash: #f5faf5;
@@ -8,25 +8,25 @@
   max-width: 1200px;
   margin-inline: auto;
 }
-.cabinet-workspace .cab-library h1 {
+.cabinet-workspace .cab-doclib h1 {
   margin-top: 10px;
   font-size: 30px;
   font-weight: 500;
   letter-spacing: -0.04em;
 }
-.cabinet-workspace .cab-library-kicker {
+.cabinet-workspace .cab-doclib-kicker {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text-2);
   font-size: 12px;
 }
-.cabinet-workspace .cab-library-clients {
+.cabinet-workspace .cab-doclib-clients {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
-.cabinet-workspace .cab-library-client {
+.cabinet-workspace .cab-doclib-client {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -37,19 +37,19 @@
   text-align: start;
   overflow-wrap: anywhere;
 }
-.cabinet-workspace .cab-library-client strong {
+.cabinet-workspace .cab-doclib-client strong {
   font-size: 14px;
   font-weight: 500;
 }
-.cabinet-workspace .cab-library-client span {
+.cabinet-workspace .cab-doclib-client span {
   font-size: 12px;
   color: var(--muted-foreground);
 }
-.cabinet-workspace .cab-library-client[aria-pressed="true"] {
+.cabinet-workspace .cab-doclib-client[aria-pressed="true"] {
   border-color: var(--library-green);
   background: var(--library-wash);
 }
-.cabinet-workspace .cab-library-button {
+.cabinet-workspace .cab-doclib-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -60,16 +60,16 @@
   font-size: 12px;
   font-weight: 500;
 }
-.cabinet-workspace .cab-library-button:disabled {
+.cabinet-workspace .cab-doclib-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.cabinet-workspace .cab-library-primary {
+.cabinet-workspace .cab-doclib-primary {
   background: #22634d;
   color: #fff;
   border-color: #22634d;
 }
-.cabinet-workspace .cab-library-search {
+.cabinet-workspace .cab-doclib-search {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -80,7 +80,7 @@
   padding-inline: 12px;
   color: var(--muted-foreground);
 }
-.cabinet-workspace .cab-library-search input {
+.cabinet-workspace .cab-doclib-search input {
   min-width: 0;
   width: 100%;
   border: 0;
@@ -88,24 +88,24 @@
   padding-block: 9px;
   color: var(--foreground);
 }
-.cabinet-workspace .cab-library-tabs {
+.cabinet-workspace .cab-doclib-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
   border-bottom: 1px solid var(--border);
 }
-.cabinet-workspace .cab-library-tabs button {
+.cabinet-workspace .cab-doclib-tabs button {
   padding-block: 12px;
   border-bottom: 2px solid transparent;
   border-radius: 0;
   color: var(--muted-foreground);
   font-size: 13px;
 }
-.cabinet-workspace .cab-library-tabs button[aria-selected="true"] {
+.cabinet-workspace .cab-doclib-tabs button[aria-selected="true"] {
   border-bottom-color: #22634d;
   color: #22634d;
 }
-.cabinet-workspace .cab-library-documents > li {
+.cabinet-workspace .cab-doclib-documents > li {
   display: grid;
   grid-template-columns: 18px 22px minmax(0, 1fr) auto 115px 20px;
   align-items: center;
@@ -113,23 +113,23 @@
   padding-block: 20px;
   border-bottom: 1px solid var(--border);
 }
-.cabinet-workspace .cab-library-documents input {
+.cabinet-workspace .cab-doclib-documents input {
   accent-color: #22634d;
 }
-.cabinet-workspace .cab-library-documents strong {
+.cabinet-workspace .cab-doclib-documents strong {
   display: block;
   font-size: 13px;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
-.cabinet-workspace .cab-library-documents a > span {
+.cabinet-workspace .cab-doclib-documents a > span {
   display: block;
   margin-top: 4px;
   color: var(--muted-foreground);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
-.cabinet-workspace .cab-library-dialog {
+.cabinet-workspace .cab-doclib-dialog {
   max-width: min(480px, calc(100% - 32px));
   width: 100%;
   margin: auto;
@@ -140,68 +140,68 @@
   color: var(--foreground);
   box-shadow: 0 20px 80px rgb(20 40 30 / 20%);
 }
-.cabinet-workspace .cab-library-dialog::backdrop {
+.cabinet-workspace .cab-doclib-dialog::backdrop {
   background: rgb(20 40 30 / 35%);
 }
-.cabinet-workspace .cab-library-dialog h2 {
+.cabinet-workspace .cab-doclib-dialog h2 {
   font-size: 20px;
   font-weight: 500;
 }
-.cabinet-workspace .cab-library-dialog h2 + p {
+.cabinet-workspace .cab-doclib-dialog h2 + p {
   margin-top: 5px;
   font-size: 12px;
   color: var(--muted-foreground);
 }
-.cabinet-workspace .cab-library-controls {
+.cabinet-workspace .cab-doclib-controls {
   display: grid;
   gap: 18px;
   padding-block: 12px;
 }
-.cabinet-workspace .cab-library-controls li {
+.cabinet-workspace .cab-doclib-controls li {
   display: flex;
   gap: 10px;
   align-items: start;
   padding-block: 14px;
   border-bottom: 1px solid var(--border);
 }
-.cabinet-workspace .cab-library-controls li > svg {
+.cabinet-workspace .cab-doclib-controls li > svg {
   flex-shrink: 0;
   margin-top: 3px;
 }
-.cabinet-workspace .cab-library-controls strong {
+.cabinet-workspace .cab-doclib-controls strong {
   font-size: 13px;
   font-weight: 500;
 }
-.cabinet-workspace .cab-library-controls li p {
+.cabinet-workspace .cab-doclib-controls li p {
   margin-top: 5px;
   font-size: 12px;
   color: var(--muted-foreground);
 }
 @media (max-width: 640px) {
-  .cabinet-workspace .cab-library-clients {
+  .cabinet-workspace .cab-doclib-clients {
     grid-template-columns: 1fr;
   }
-  .cabinet-workspace .cab-library-client {
+  .cabinet-workspace .cab-doclib-client {
     padding: 14px;
   }
-  .cabinet-workspace .cab-library-documents > li {
+  .cabinet-workspace .cab-doclib-documents > li {
     grid-template-columns: 18px minmax(0, 1fr) auto;
     gap: 10px;
   }
-  .cabinet-workspace .cab-library-documents > li > svg,
-  .cabinet-workspace .cab-library-arrow {
+  .cabinet-workspace .cab-doclib-documents > li > svg,
+  .cabinet-workspace .cab-doclib-arrow {
     display: none;
   }
-  .cabinet-workspace .cab-library-doc-status {
+  .cabinet-workspace .cab-doclib-doc-status {
     grid-column: 2 / -1;
   }
-  .cabinet-workspace .cab-library-dialog {
+  .cabinet-workspace .cab-doclib-dialog {
     padding: 20px;
   }
 }
 @media (pointer: coarse) {
-  .cabinet-workspace .cab-library :is(button, select),
-  .cabinet-workspace .cab-library-dialog button {
+  .cabinet-workspace .cab-doclib :is(button, select),
+  .cabinet-workspace .cab-doclib-dialog button {
     min-height: 44px;
   }
 }

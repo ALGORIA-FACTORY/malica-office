@@ -26,11 +26,10 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
 
   before(async () => {
     const e = await creerCompte(`expert-${marque}@essai.local`, "MotDePasseTresLong2026!");
-    const d = await creerCompte(`client-${marque}@essai.local`, "MotDePasseTresLong2026!");
     const i = await creerCompte(`intrus-${marque}@essai.local`, "MotDePasseTresLong2026!");
-    assert.ok(e && d && i);
+    assert.ok(e && i);
     expert = e;
-    dirigeant = d;
+    dirigeant = e;
     intrus = i;
     const mf = matriculeDEssai();
     const creer = (u: Utilisateur, kind: string, nom: string, legal: string | null) =>
@@ -48,10 +47,6 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, mandat!.id, true));
     // Le cas trompeur : l'expert est aussi membre de la société et peut lire
     // des pièces privées. La bibliothèque du cabinet ne doit pas les sortir.
-    await admin.query(
-      `insert into identity.memberships (tenant_id,user_id,role) values ($1,$2,'collaborateur')`,
-      [client, expert.id],
-    );
     const ajouter = (vis: string, type: string, parent: string | null = null) =>
       sousIdentite(expert.id, async (db) => {
         const { rows } = await db.query<{ id: string }>(

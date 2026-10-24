@@ -42,21 +42,21 @@ function Bibliotheque() {
       </p>
     );
   return (
-    <div className="cab-library space-y-6">
+    <div className="cab-doclib space-y-6">
       <header>
-        <p className="cab-library-kicker">
+        <p className="cab-doclib-kicker">
           <Library className="h-4 w-4" aria-hidden />
           {org.name}
         </p>
         <h1>{t("cab.biblio.title")}</h1>
         <p className="mt-2 text-[13px] text-muted-foreground">{t("cab.biblio.subtitle")}</p>
       </header>
-      <div className="cab-library-clients">
+      <div className="cab-doclib-clients">
         {actifs.slice(0, 3).map((c) => (
           <button
             type="button"
             key={c.tenantId}
-            className="cab-library-client"
+            className="cab-doclib-client"
             aria-pressed={c.tenantId === client?.tenantId}
             onClick={() => choisir(c.tenantId)}
           >
@@ -93,7 +93,7 @@ function Bibliotheque() {
           />
         </label>
         {periode ? (
-          <button type="button" className="cab-library-button" onClick={() => setPeriode("")}>
+          <button type="button" className="cab-doclib-button" onClick={() => setPeriode("")}>
             {t("cab.biblio.allPeriods")}
           </button>
         ) : null}
@@ -177,7 +177,7 @@ function DocumentsClient({
         />
       </div>
       <div className="my-5 flex flex-wrap items-center justify-between gap-3">
-        <label className="cab-library-search">
+        <label className="cab-doclib-search">
           <Search className="h-4 w-4" aria-hidden />
           <input
             value={recherche}
@@ -196,7 +196,7 @@ function DocumentsClient({
           />
         ) : null}
       </div>
-      <div className="cab-library-tabs" role="tablist" aria-label={t("cab.biblio.document")}>
+      <div className="cab-doclib-tabs" role="tablist" aria-label={t("cab.biblio.document")}>
         {FILTRES.map((f) => (
           <button
             type="button"
@@ -212,7 +212,7 @@ function DocumentsClient({
       {lignes.length === 0 ? (
         <EmptyState>{t("cab.biblio.empty")}</EmptyState>
       ) : (
-        <ul className="cab-library-documents">
+        <ul className="cab-doclib-documents">
           {lignes.map((d) => (
             <li key={d.id}>
               <input
@@ -239,7 +239,7 @@ function DocumentsClient({
               <span className="num text-end text-[12px]">
                 {d.montant !== null ? `${montant(d.montant, locale)} ${d.devise}` : "—"}
               </span>
-              <span className="cab-library-doc-status">
+              <span className="cab-doclib-doc-status">
                 <SignalLight
                   tone={toneForStatus(d.status)}
                   label={t(`pme.status.${d.status}` as MessageKey)}
@@ -249,7 +249,7 @@ function DocumentsClient({
                 to="/cabinet/piece/$pieceId"
                 params={{ pieceId: d.id }}
                 aria-label={t("cab.biblio.open")}
-                className="cab-library-arrow"
+                className="cab-doclib-arrow"
               >
                 <ChevronRight className="h-4 w-4" />
               </Link>
