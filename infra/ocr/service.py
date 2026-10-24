@@ -110,6 +110,18 @@ def _a_de_l_arabe(texte: str) -> bool:
     return any("\u0600" <= c <= "\u06ff" or "\ufb50" <= c <= "\ufeff" for c in texte)
 
 
+def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: float) -> bool:
+    """Une ligne de CHIFFRES reste au modele latin, qui les lit mieux ; une
+    ligne de mots arabes passe au modele arabe, si sa confiance tient."""
+    if not _a_de_l_arabe(arabe):
+        return False
+    visibles = [c for c in latin if not c.isspace()]
+    chiffres = sum(1 for c in visibles if c.isdigit() or c in ",./:-")
+    if visibles and chiffres / len(visibles) >= 0.6:
+        return False
+    return score_arabe >= score_latin * 0.8
+
+
 def _decouper(tableau: numpy.ndarray, polygone) -> numpy.ndarray:
     """La ligne, redressee : la meme decoupe que celle du pipeline PaddleOCR."""
     pts = numpy.array(polygone, dtype=numpy.float32).reshape(-1, 2)[:4]
@@ -132,7 +144,7 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
     for i, r in enumerate(relus):
         texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
         score_lat = float(scores[i]) if i < len(scores) else 0.0
-        if _a_de_l_arabe(texte_ar) and score_ar >= score_lat * 0.8:
+        if _garder_l_arabe(textes[i] if i < len(textes) else "", texte_ar, score_lat, score_ar):
             sortie_t[i], sortie_s[i] = texte_ar, score_ar
     return sortie_t, sortie_s
 
