@@ -19,6 +19,7 @@
     "analyser",
     "annulerPaiement",
     "daterLaPiece",
+    "detacher",
     "dossier",
     "enregistrer",
     "enregistrerPaiement",
@@ -27,7 +28,9 @@
     "motifsDAnnulation",
     "paiementsDUnePiece",
     "piecesIssuesDe",
+    "piecesRattachees",
     "preciser",
+    "rattacher",
     "rattacherJustificatif",
     "supprimer"
   ],

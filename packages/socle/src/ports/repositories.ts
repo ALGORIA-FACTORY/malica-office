@@ -964,6 +964,12 @@ export interface CaptureRepository {
    * qu'elles accompagnent.
    */
   piecesIssuesDe(pieceId: string): Promise<Piece[]>;
+  /** Les documents rattachés à cette pièce après la lecture, dans un sens ou dans l'autre. */
+  piecesRattachees(pieceId: string): Promise<Piece[]>;
+  /** Rattacher `autreId` à `pieceId` ; `deja` si la paire l'était. */
+  rattacher(pieceId: string, autreId: string): Promise<{ deja: boolean }>;
+  /** Détacher : un fait nouveau, motivé (R7). */
+  detacher(pieceId: string, autreId: string, motif: string): Promise<void>;
   /**
    * Donner a la main la date qu'on n'a pas su lire.
    *

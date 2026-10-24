@@ -18,6 +18,7 @@ import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { Aide } from "@/components/malica/aide";
+import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import {
   libelleDuChamp,
@@ -257,14 +258,44 @@ function PieceScreen() {
   });
 
   /**
-   * LA CHAÎNE — ce qui est né de cette pièce.
+   * LA CHAÎNE — ce qui est né de cette pièce (reçu, talons), puis ce qui lui a
+   * été RATTACHÉ après la lecture (bon de livraison, avoir, devis).
    *
-   * Même clé que dans `CommentCEstPaye` : React Query ne fait donc qu'un seul
-   * aller-retour pour les deux blocs. « Un écran, une fenêtre de données. »
+   * `CommentCEstPaye` invalide `joints` quand il produit un reçu : la liste de
+   * l'onglet Suivi le montre aussitôt.
    */
   const joints = useQuery({
     queryKey: ["joints", pieceId],
     queryFn: () => office().capture.piecesIssuesDe(pieceId),
+  });
+  const rattachees = useQuery({
+    queryKey: ["rattachees", pieceId],
+    queryFn: () => office().capture.piecesRattachees(pieceId),
+  });
+  /*
+   * Le nom de l'émetteur des documents rattachés : la lecture que la
+   * bibliothèque a déjà faite, sous sa clé. « Facture achat » seul ne dit pas
+   * QUEL bon de livraison est là.
+   */
+  const luesDuDossier = useQuery({
+    queryKey: ["pieces-lues", pme.tenantId],
+    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
+    enabled: (rattachees.data ?? []).length > 0,
+  });
+  const [rattacherOuvert, setRattacherOuvert] = useState(false);
+  /** Le document dont on a ouvert le détachement, et le motif saisi. */
+  const [aDetacher, setADetacher] = useState<string | null>(null);
+  const [motifDetache, setMotifDetache] = useState("");
+  const detacher = useMutation({
+    mutationFn: (autreId: string) => office().capture.detacher(pieceId, autreId, motifDetache),
+    onSuccess: async () => {
+      setADetacher(null);
+      setMotifDetache("");
+      setError(null);
+      await qc.invalidateQueries({ queryKey: ["rattachees", pieceId] });
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
   /**
@@ -1336,6 +1367,7 @@ function PieceScreen() {
 
   /** La chaîne : la pièce elle-même, puis ce qui en est né. */
   const nes = joints.data ?? [];
+  const lesRattachees = rattachees.data ?? [];
 
   /*
    * ══════════════════════════════════════════ UNE DÉCISION, TROIS ONGLETS
@@ -1986,7 +2018,10 @@ function PieceScreen() {
             </div>
           ) : null}
 
-          {/* Documents liés : ce qui est né de cette pièce (reçus, talons). */}
+          {/*
+           * Documents liés : ce qui est né de cette pièce (reçus, talons), puis
+           * ce qui lui a été rattaché — et le geste pour en rattacher un.
+           */}
           <div className="f-tit">
             <h2>
               {t("pme.piece.liees")}
@@ -1995,7 +2030,9 @@ function PieceScreen() {
                 paragraphes={[{ texte: t("pme.piece.chaine.foot") }]}
               />
             </h2>
-            <span>{t("pme.piece.chaine.pieces", { count: nes.length + 1 })}</span>
+            <span>
+              {t("pme.piece.chaine.pieces", { count: nes.length + lesRattachees.length + 1 })}
+            </span>
           </div>
           <div className="f-carte">
             {nes.map((p) => (
@@ -2016,12 +2053,91 @@ function PieceScreen() {
                 </svg>
               </Link>
             ))}
-            {nes.length === 0 ? (
+            {lesRattachees.map((p) =>
+              aDetacher === p.id ? (
+                <div key={p.id} className="f-ligne f-detache">
+                  <label className="bd">
+                    <span className="lb">{t("pme.rattacher.pourquoi")}</span>
+                    <input
+                      type="text"
+                      value={motifDetache}
+                      onChange={(e) => setMotifDetache(e.target.value)}
+                    />
+                  </label>
+                  <span className="f-detache-gestes">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setADetacher(null);
+                        setMotifDetache("");
+                      }}
+                    >
+                      {t("common.cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      className="sup"
+                      disabled={detacher.isPending || motifDetache.trim() === ""}
+                      onClick={() => detacher.mutate(p.id)}
+                    >
+                      {detacher.isPending ? t("common.loading") : t("pme.rattacher.detacher")}
+                    </button>
+                  </span>
+                </div>
+              ) : (
+                <div key={p.id} className="f-ligne f-liee">
+                  <Link
+                    className="bd"
+                    to="/pme/piece/$pieceId"
+                    params={{ pieceId: p.id }}
+                    preload="intent"
+                  >
+                    <span className="lb">
+                      {[t("pme.rattacher.rattachee"), nomDuType(p.documentKind)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                    <span className="vl-g">
+                      {(luesDuDossier.data ?? []).find((x) => x.id === p.id)?.emetteur ??
+                        nomDuType(p.documentKind) ??
+                        t("pme.piece.title")}
+                    </span>
+                  </Link>
+                  {piece.vis !== "personnel" ? (
+                    <button
+                      type="button"
+                      className="f-mini"
+                      onClick={() => {
+                        setADetacher(p.id);
+                        setMotifDetache("");
+                      }}
+                    >
+                      {t("pme.rattacher.detacher")}
+                    </button>
+                  ) : null}
+                </div>
+              ),
+            )}
+            {nes.length === 0 && lesRattachees.length === 0 ? (
               <div className="f-ligne">
                 <span className="bd">
                   <span className="et">{t("pme.piece.chaine.vide")}</span>
                 </span>
               </div>
+            ) : null}
+            {/*
+             * Rattacher : seulement une pièce de la société — la base refuse
+             * l'espace privé, et l'écran ne propose pas ce qu'elle refuserait.
+             */}
+            {piece.vis !== "personnel" ? (
+              <button type="button" className="f-ligne" onClick={() => setRattacherOuvert(true)}>
+                <span className="bd">
+                  <span className="lb-a">{t("pme.rattacher.action")}</span>
+                </span>
+                <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                  <path d="M12 5.5v13M5.5 12h13" />
+                </svg>
+              </button>
             ) : null}
             <button type="button" className="f-ligne" onClick={() => allerA("reglement")}>
               <span className="bd">
@@ -2032,6 +2148,13 @@ function PieceScreen() {
               </svg>
             </button>
           </div>
+
+          <RattacherUnDocument
+            pieceId={pieceId}
+            dejaLiees={new Set([...nes, ...lesRattachees].map((p) => p.id))}
+            ouvert={rattacherOuvert}
+            onFermer={() => setRattacherOuvert(false)}
+          />
 
           {/* ── REVENIR DESSUS ────────────────────────────────────────────
               Ce bloc lit `vis` et le RÔLE, et rien d'autre :

@@ -1078,6 +1078,43 @@ export const capture = {
   },
 
   /**
+   * Les documents RATTACHÉS à une pièce après sa lecture, dans un sens ou dans
+   * l'autre : un bon de livraison, un avoir, un devis (24 octobre 2026).
+   *
+   * L'état courant d'une paire est son dernier fait (`rattachements_v`) ; une
+   * paire détachée n'est plus rendue. `pieces_v` fait le reste : une pièce que
+   * ce lecteur ne voit pas n'apparaît pas, même rattachée.
+   */
+  async piecesRattachees(db: Requete, pieceId: string) {
+    const { rows } = await db.query(
+      `select p.id, p.tenant_id, p.entity_id, p.vis, p.source, p.storage_path, p.status,
+              p.created_at, p.document_kind, p.document_kind_statut, p.gardee_le,
+              p.source_piece_id
+         from rattachements_v r
+         join pieces_v p
+           on p.id = case when r.piece_id = $1 then r.piece_liee_id else r.piece_id end
+        where (r.piece_id = $1 or r.piece_liee_id = $1) and r.fait = 'rattache'
+        order by r.created_at`,
+      [pieceId],
+    );
+    return (rows as Record<string, unknown>[]).map(versPiece);
+  },
+
+  /** Rattacher un document à une pièce. La base garde les règles (voir la migration). */
+  async rattacher(db: Requete, pieceId: string, autreId: string): Promise<{ deja: boolean }> {
+    const { rows } = await db.query<{ deja: boolean }>(
+      `select (public.piece_rattacher($1, $2) ->> 'deja')::boolean as deja`,
+      [pieceId, autreId],
+    );
+    return { deja: Boolean(rows[0]?.deja) };
+  },
+
+  /** Détacher un document — un fait nouveau, motivé ; le rattachement reste au registre. */
+  async detacher(db: Requete, pieceId: string, autreId: string, motif: string): Promise<void> {
+    await db.query(`select public.piece_detacher($1, $2, $3)`, [pieceId, autreId, motif]);
+  },
+
+  /**
    * Rattacher une preuve à un paiement DÉJÀ inscrit.
    *
    * Le paiement est en ajout seul : il ne se réécrit pas. La preuve tardive
