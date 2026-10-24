@@ -65,11 +65,12 @@ RECONNAISSANCE = os.environ.get("OCR_MODELE_RECONNAISSANCE", "latin_PP-OCRv5_mob
 # lieu de 9 s sur processeur, au meme taux de champs trouves.
 APPAREIL = os.environ.get("OCR_APPAREIL", "cpu")
 
-# Le redressement de page reste COUPE, et c'est mesure : le 24 octobre 2026,
-# sur des factures arabes, le classifieur d'orientation a retourne la page a
-# 180 degres — « 2 687,888 » relu « 888'L89 Z » — et fait tomber le taux de
-# champs trouves de 86 % a 36 %. La photo est deja redressee par l'ecran de
-# capture ; son orientation EXIF est appliquee ci-dessous.
+# Le redressement de page reste COUPE, et c'est mesure le 24 octobre 2026
+# (banc de 48 pieces fictives) : avec orientation et redressement actives,
+# les factures arabes MANUSCRITES tombent de 77 % a 48 % de champs trouves
+# (PP-OCRv6 medium), sans gain ailleurs, pour un temps triple. La photo est
+# deja redressee par l'ecran de capture ; son orientation EXIF est appliquee
+# ci-dessous.
 #
 # `enable_mkldnn=False` n'est pas un réglage de confort : avec l'accélérateur
 # activé, paddle 3.3.1 échoue sur « ConvertPirAttribute2RuntimeAttribute not
@@ -91,7 +92,10 @@ _ocr = PaddleOCR(
 # modele latin lit les montants a 100 %, y compris sur les factures arabes,
 # mais ne lit JAMAIS un mot arabe (raison sociale : 0 % de ressemblance). Le
 # modele arabe lit la raison sociale (100 % imprimee, 85 % manuscrite), et lit
-# moins bien les chiffres. Aucun des deux ne suffit seul.
+# moins bien les chiffres. Aucun des deux ne suffit seul. Combines ligne par
+# ligne : 91 % des champs trouves au lieu de 88 %, raison sociale arabe lue a
+# 100 % (imprimee) et 94 % (manuscrite) — pour un temps double (1,1 s au lieu
+# de 0,56 s par page sur carte graphique).
 #
 # Quand `OCR_MODELE_RECONNAISSANCE_ARABE` est posee, chaque ligne detectee est
 # relue par le modele arabe, et la ligne garde la lecture qui contient de

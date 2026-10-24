@@ -96,6 +96,10 @@ services:
       # (image construite avec paddlepaddle-gpu). Mesure du 24 octobre 2026 :
       # 0,2 s par page au lieu de 9 s.
       OCR_APPAREIL: ${OCR_APPAREIL:-cpu}
+      # Relire chaque ligne en arabe : « arabic_PP-OCRv5_mobile_rec » pour
+      # l'allumer. Le temps de lecture double : a garder coupe sur une machine
+      # sans carte graphique tant que le delai de 120 s cote API tient a peine.
+      OCR_MODELE_RECONNAISSANCE_ARABE: ${OCR_MODELE_RECONNAISSANCE_ARABE:-}
     deploy:
       resources:
         limits:
