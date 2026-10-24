@@ -1411,9 +1411,9 @@ function PmeCapturer() {
                   </span>
                 </div>
               ) : null}
-              {retenues.filter((p) => p.dateDocument === null).length > 0 ? (
+              {lues.filter((p) => p.dateDocument === null).length > 0 ? (
                 <div className="lu">
-                  {retenues
+                  {lues
                     .filter((p) => p.dateDocument === null)
                     .map((p) => (
                       <button

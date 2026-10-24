@@ -92,7 +92,10 @@ export function EtatDeLecture({
     lectureRefusee: refus ?? null,
     lecture: lecture ?? null,
   });
-  const motif = issue.kind === "refusee" || !lecture ? motifDeLEtat(refus, vis) : null;
+  // L'espace privé prime : une pièce gardée pour soi n'est pas lue, quelle
+  // qu'ait été sa dernière tentative.
+  const motif =
+    vis === "personnel" || issue.kind === "refusee" || !lecture ? motifDeLEtat(refus, vis) : null;
   if (motif === null) {
     const vue = presentation(issue);
     if (vue.ton === "ko" || vue.ton === "att") {

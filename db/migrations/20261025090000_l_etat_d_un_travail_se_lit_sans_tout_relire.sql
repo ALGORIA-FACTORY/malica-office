@@ -20,8 +20,9 @@
 -- travail, servies par `fabrique_travail_faits_travail_idx`
 -- (travail_id, ordre desc). Un `count(*)` sans fait rend 0, ce que faisait le
 -- `coalesce` de la jointure externe ; il reste en place.
-
-begin;
+--
+-- Pas de `begin`/`commit` ici : `db/migrer.mjs` tient deja la transaction,
+-- et un `commit` interne validerait la vue avant l'inscription de la migration.
 
 create or replace view fabrique.etat_des_travaux_v with (security_invoker = true) as
 with livres as (
@@ -113,5 +114,3 @@ comment on view fabrique.etat_des_travaux_v is
   'devine pas ; la fonction de prise, elle, leve et le dit. Le dernier fait '
   'et les prises se lisent par travail (jointures laterales, index '
   'travail_id/ordre) : filtrer par piece ou organisation ne relit pas tout.';
-
-commit;
