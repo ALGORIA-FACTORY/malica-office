@@ -61,6 +61,7 @@ export async function propositionDeReglement(
     pack_version_id: string;
     document_kind: string | null;
     tresorerie_account: string | null;
+    role_tresorerie: string | null;
     journal_code: string | null;
     moyen_libelle: string;
   }>(
@@ -69,11 +70,13 @@ export async function propositionDeReglement(
             pi.document_kind,
             case when pi.document_kind = 'facture_vente' then m.tresorerie_account_vente
                  else m.tresorerie_account end as tresorerie_account,
+            case when pi.document_kind = 'facture_vente' then m.role_vente else m.role_achat end as role_tresorerie,
             m.journal_code, m.libelle as moyen_libelle
        from paiements_v p
        join pieces_v pi on pi.id = p.piece_id
        left join ref_payment_means_v m
          on m.pack_version_id = p.pack_version_id and m.code = p.moyen_code
+        and m.valid_from <= p.paye_le and (m.valid_to is null or m.valid_to >= p.paye_le)
       where p.id = $1`,
     [paiementId],
   );
@@ -92,6 +95,25 @@ export async function propositionDeReglement(
       raison: "Le sens de la pièce n'est pas tranché : achat ou vente reste à confirmer.",
     };
   const sens = l.document_kind as "facture_achat" | "facture_vente";
+
+  let compteTresorerie = l.tresorerie_account;
+  if (l.role_tresorerie) {
+    const { rows: regles } = await db.query<{ compte: string | null }>(
+      `select distinct coalesce(d.account_code, c.account_code, $3) as compte
+         from (select 1) source
+         left join parametrage_role_bindings_v d on d.role_code = $2
+           and d.portee = 'dossier' and d.portee_id = $1
+         left join parametrage_role_bindings_v c on c.role_code = $2 and c.portee = 'cabinet'
+           and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1 and status = 'actif')`,
+      [l.tenant_id, l.role_tresorerie, compteTresorerie],
+    );
+    if (regles.length !== 1)
+      return {
+        ok: false,
+        raison: "Plusieurs comptes de trésorerie sont configurés : précisez le compte du dossier.",
+      };
+    compteTresorerie = regles[0]!.compte;
+  }
 
   // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
   // tranché par l'analyse (en unités mineures). Rien n'est recalculé ici.
@@ -124,6 +146,11 @@ export async function propositionDeReglement(
     return {
       ok: false,
       raison: "Ce règlement nécessite une conversion de devise avant inscription.",
+    };
+  if (piece?.payload && piece.ttc_mineur === null)
+    return {
+      ok: false,
+      raison: "La lecture courante doit être analysée avant de proposer le règlement.",
     };
   const tiers = piece?.payload
     ? contrepartieDuDocument({ ...piece.payload, document_kind: sens })
@@ -227,7 +254,7 @@ export async function propositionDeReglement(
                on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
              left join parametrage_role_bindings_v c
                on c.role_code = r.code and c.portee = 'cabinet'
-              and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1)
+              and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1 and status = 'actif')
             where r.code = $3
             limit 1`,
           [l.tenant_id, l.pack_version_id, role],
@@ -284,7 +311,7 @@ export async function propositionDeReglement(
       decimales,
       payeLe: l.paye_le,
       moyenLibelle: l.moyen_libelle ?? l.moyen_code,
-      tresorerieAccount: l.tresorerie_account ?? "",
+      tresorerieAccount: compteTresorerie ?? "",
       journalCode: l.journal_code ?? "",
       counterpartyAccount: counterparty,
       tiers,

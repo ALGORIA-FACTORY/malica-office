@@ -479,7 +479,7 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
       date: "2026-10-13",
       libelle: "Acquisition avec fournisseur immobilisation",
       lignes: [
-        { account_code: "2182", libelle: "Immobilisation", debit: "100.000", credit: "0.000" },
+        { account_code: "2282", libelle: "Immobilisation", debit: "100.000", credit: "0.000" },
         {
           account_code: "404",
           libelle: "Fournisseur immobilisation",
@@ -493,5 +493,65 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
     assert.ok(r.ok);
     assert.equal(r.ecriture.lignes[0]!.account_code, "404");
+  });
+  it("une écriture équilibrée avec un compte absent du plan reste refusée", async () => {
+    const f = await piece("compte-invente", "facture_achat");
+    await lue(f, 100_000);
+    const id = await rpc("office", "propose", {
+      pieceId: f,
+      packVersionId: pack,
+      devise: "TND",
+      journal: "ACH",
+      date: "2026-10-13",
+      libelle: "Compte inexistant",
+      lignes: [
+        {
+          account_code: "COMPTE_ABSENT",
+          libelle: "Compte absent",
+          debit: "100.000",
+          credit: "0.000",
+        },
+        { account_code: "401", libelle: "Fournisseur", debit: "0.000", credit: "100.000" },
+      ],
+    });
+    await assert.rejects(rpc("office", "book", id), /Compte absent du plan/);
+  });
+
+  it("ne réutilise pas l'analyse d'une extraction précédente", async () => {
+    const f = await piece("analyse-perimee", "facture_achat");
+    await lue(f, 100_000);
+    const p = await payer(f, "virement", 100_000, "ANALYSE-PERIMEE");
+    await admin((db) =>
+      db.query(
+        `insert into capture.extractions (tenant_id, piece_id, contract, payload) values ($1, $2, 'extract.v1', '{"issuer":"Nouvelle lecture"}')`,
+        [org, f],
+      ),
+    );
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.equal(r.ok, false);
+    assert.match(r.ok ? "" : r.raison, /lecture courante/);
+  });
+  it("respecte le compte bancaire choisi pour le dossier", async () => {
+    const f = await piece("banque-du-dossier", "facture_achat");
+    await lue(f, 100_000);
+    const p = await payer(f, "virement", 100_000, "BANQUE-CONFIGUREE");
+    await admin((db) =>
+      db.query(
+        `insert into parametrage.role_bindings (tenant_id, portee, portee_id, role_code, account_code, decide_par) values ($1, 'dossier', $1, 'BANQUE', '5321', $2)`,
+        [org, u.id],
+      ),
+    );
+    try {
+      const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+      assert.ok(r.ok);
+      assert.equal(r.ecriture.lignes[1]!.account_code, "5321");
+    } finally {
+      await admin((db) =>
+        db.query(
+          `delete from parametrage.role_bindings where portee = 'dossier' and portee_id = $1 and role_code = 'BANQUE'`,
+          [org],
+        ),
+      );
+    }
   });
 });

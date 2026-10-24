@@ -47,8 +47,7 @@ export const frBibliotheque = {
     "La pièce a été relue depuis cette analyse. Ces résultats doivent être actualisés avant validation.",
   "cab.biblio.checksError": "Les contrôles sont indisponibles. Réessayez avant de valider.",
   "cab.biblio.accountUnknown": "Intitulé du compte indisponible",
-  "cab.biblio.unconfirmedRetention":
-    "Retenue suggérée à partir du montant payé : vérifiez la qualification et le justificatif avant inscription.",
+  "cab.biblio.unconfirmedRetention": "Traitement fiscal non tracé sur cette écriture : à vérifier.",
   "cab.biblio.open": "Ouvrir l’opération",
   "cab.biblio.document": "Document",
   "cab.biblio.reference": "Référence",
@@ -106,7 +105,7 @@ export const enBibliotheque: Messages = {
   "cab.biblio.checksError": "Checks are unavailable. Retry before validating.",
   "cab.biblio.accountUnknown": "Account name unavailable",
   "cab.biblio.unconfirmedRetention":
-    "Withholding inferred from the paid amount: verify the classification and supporting evidence before posting.",
+    "Tax treatment is not recorded for this entry: review required.",
   "cab.biblio.open": "Open operation",
   "cab.biblio.document": "Document",
   "cab.biblio.reference": "Reference",
@@ -160,8 +159,7 @@ export const arBibliotheque: Messages = {
   "cab.biblio.staleChecks": "أعيدت قراءة المستند بعد هذا التحليل. يجب تحديث النتائج قبل المصادقة.",
   "cab.biblio.checksError": "نتائج التحقق غير متاحة. أعد المحاولة قبل المصادقة.",
   "cab.biblio.accountUnknown": "تسمية الحساب غير متاحة",
-  "cab.biblio.unconfirmedRetention":
-    "الخصم مقترح بناء على المبلغ المدفوع. تحقق من التصنيف والمؤيد قبل التسجيل.",
+  "cab.biblio.unconfirmedRetention": "المعالجة الجبائية لهذا القيد غير موثقة: يلزم التحقق.",
   "cab.biblio.open": "فتح العملية",
   "cab.biblio.document": "المستند",
   "cab.biblio.reference": "المرجع",

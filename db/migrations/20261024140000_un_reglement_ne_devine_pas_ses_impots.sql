@@ -10,16 +10,27 @@ insert into ref.labels (ns, key, locale, value) values
  ('rejet_motif', 'reglement_annule', 'en', 'Cancelled payment'),
  ('rejet_motif', 'reglement_annule', 'ar', 'دفع ملغى')
 on conflict (ns, key, locale) do nothing;
-alter table ref.payment_means add column if not exists tresorerie_account_vente text;
+alter table ref.payment_means add column if not exists tresorerie_account_vente text,
+ add column if not exists role_achat text references ref.account_roles(code),
+ add column if not exists role_vente text references ref.account_roles(code);
 update ref.payment_means set tresorerie_account_vente = tresorerie_account
  where tresorerie_account_vente is null;
 update ref.payment_means m set tresorerie_account_vente = '413'
  from ref.jurisdiction_packs p
  where p.id = m.pack_version_id and p.jurisdiction = 'TN' and m.code = 'traite';
+-- Les surcharges dossier / cabinet utilisent le rôle du moyen, jamais un
+-- numéro de compte deviné par le serveur. Le défaut du moyen reste visible.
+update ref.payment_means m set role_achat = case
+ when m.code = 'traite' then 'FOURNISSEUR_EFFETS_A_PAYER'
+ when m.code = 'especes' then 'CAISSE' else 'BANQUE' end,
+ role_vente = case when m.code = 'traite' then 'CLIENT_EFFETS_A_RECEVOIR'
+ when m.code = 'especes' then 'CAISSE' else 'BANQUE' end
+ from ref.jurisdiction_packs p where p.id = m.pack_version_id
+ and p.jurisdiction = 'TN' and m.tresorerie_account is not null;
 create or replace view public.ref_payment_means_v with (security_invoker = true) as
  select id, pack_version_id, code, libelle, tresorerie_account, exige_justificatif,
         rang, legal_reference, valid_from, valid_to, exige_reference, journal_code,
-        tresorerie_account_vente
+        tresorerie_account_vente, role_achat, role_vente
  from ref.payment_means;
 
 -- R7 : l'annulation d'un règlement inscrit contre-passe ses lignes, atomiquement.
