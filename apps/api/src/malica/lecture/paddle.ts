@@ -117,6 +117,20 @@ export function refermerLeCoupeCircuit(): void {
  * quand le service est absent : c'est le cas nominal du jour où il n'est pas
  * déployé, et il reste nominal.
  */
+/**
+ * Le service répond 503 quand il lit déjà une pièce et que l'attente dépasse
+ * `OCR_ATTENTE_MAX_S` (`infra/ocr/service.py`). Il est VIVANT : seule CETTE
+ * pièce bascule sur l'autre lecteur ; le coupe-circuit, lui, reste fermé —
+ * sinon une rafale de captures enverrait toutes les suivantes, pendant une
+ * minute, sur le modèle payant. Sans autre lecteur, c'est une panne comme une
+ * autre : la file durable la rejoue.
+ */
+export class SecondLecteurOccupe extends PanneFournisseur {
+  constructor() {
+    super("second lecteur occupé : 503");
+  }
+}
+
 export async function lireAvecPaddle(
   image: Uint8Array,
   page: number,
@@ -144,6 +158,7 @@ export async function lireAvecPaddle(
       `second lecteur injoignable : ${e instanceof Error ? e.message : String(e)}`,
     );
   }
+  if (reponse.status === 503) throw new SecondLecteurOccupe();
   if (!reponse.ok) {
     throw new PanneFournisseur(`second lecteur : ${String(reponse.status)}`);
   }

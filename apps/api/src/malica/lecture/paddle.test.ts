@@ -13,16 +13,17 @@ import { afterEach, describe, it } from "node:test";
 
 import { PanneFournisseur, qualifierEchec } from "../../fabrique/travaux-execution.ts";
 
-import { lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
+import { SecondLecteurOccupe, lireAvecPaddle, secondLecteurDisponible } from "./paddle.ts";
 
 const vraiFetch = globalThis.fetch;
 const ancienneUrl = process.env["OCR_URL"];
 
 /** Un service qui répond ce qu'on lui dit, sans réseau. */
-function serviceQuiRend(corps: unknown, ok = true) {
+function serviceQuiRend(corps: unknown, ok = true, status = ok ? 200 : 500) {
   globalThis.fetch = (async () =>
     ({
       ok,
+      status,
       json: async () => corps,
     }) as unknown as Response) as typeof fetch;
 }
@@ -194,5 +195,14 @@ describe("le second lecteur", () => {
     // rendrait exactement la même chose.
     serviceQuiRend({ lignes: [] });
     assert.equal(await lireAvecPaddle(new Uint8Array([1]), 1), null);
+  });
+
+  it("un service OCCUPÉ (503) est une panne d'un instant, nommée à part", async () => {
+    process.env["OCR_URL"] = "http://ocr:8000";
+    serviceQuiRend({}, false, 503);
+    const echec = await lireAvecPaddle(new Uint8Array([1]), 1).catch((e: unknown) => e);
+    assert.ok(echec instanceof SecondLecteurOccupe);
+    // Sans autre lecteur, la file durable doit pouvoir la rejouer.
+    assert.ok(echec instanceof PanneFournisseur);
   });
 });
