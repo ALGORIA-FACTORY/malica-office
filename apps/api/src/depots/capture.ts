@@ -24,7 +24,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  */
 
 import type { Requete } from "../db.ts";
-import { analyserPiece } from "../scan/analyse.ts";
+import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { referentiel } from "./referentiel.ts";
@@ -1131,32 +1131,44 @@ export const capture = {
     const { rows } = await db.query(
       `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
               p.justificatif_piece_id, p.created_at, p.reference,
-              p.annule_paiement_id, p.eteint, dette.brut, prm.value_num as decimales
+              p.annule_paiement_id, p.eteint, p.pack_version_id,
+              app.dette_eteinte(p.id)::text as brut
          from paiements_v p
-         left join lateral (
-           select sum(l.debit)::text as brut
-             from ecritures_v e join ecriture_lignes_v l on l.ecriture_id = e.id
-            where e.paiement_id = p.id and e.nature = 'reglement' and app.ecriture_vivante(e.id)
-         ) dette on true
-         left join lateral (
-           select value_num from ref.socle_params
-            where pack_version_id = p.pack_version_id and code = 'money.decimals'
-              and valid_from <= p.paye_le and (valid_to is null or valid_to >= p.paye_le)
-            order by valid_from desc limit 1
-         ) prm on true
         where p.piece_id = $1 order by p.created_at`,
       [pieceId],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
+    /*
+     * La dette éteinte se lit par `app.dette_eteinte`, la même fonction que la
+     * proposition de règlement ; ses décimales par `lireParametres`, au
+     * paramétrage daté du jour du paiement, comme la proposition. Ces deux
+     * lectures étaient recopiées ici, et la copie des décimales relisait
+     * `ref.socle_params` à la main (24 octobre 2026).
+     */
+    const decimalesAu = new Map<string, Promise<number>>();
+    const decimales = (pack: string, jour: string) => {
+      const cle = `${pack}|${jour}`;
+      let d = decimalesAu.get(cle);
+      if (!d) {
+        d = lireParametres(db, pack, jour).then((p) => p["money.decimals"]);
+        decimalesAu.set(cle, d);
+      }
+      return d;
+    };
+    const lignes = rows as Record<string, unknown>[];
+    const dettes = await Promise.all(
+      lignes.map(async (r) => {
+        const brut = r["brut"] as string | null;
+        const jour = r["paye_le"] as string | null;
+        if (brut == null || jour == null) return null;
+        const d = await decimales(r["pack_version_id"] as string, jour);
+        return Number(enUnitesExactes(brut, d));
+      }),
+    );
+    return lignes.map((r, i) => ({
       id: r["id"] as string,
       moyenCode: r["moyen_code"] as string,
       montantMineur: r["montant_mineur"] === null ? null : Number(r["montant_mineur"]),
-      detteEteinteMineur:
-        r["brut"] == null
-          ? null
-          : r["decimales"] == null
-            ? null
-            : Number(enUnitesExactes(String(r["brut"]), Number(r["decimales"]))),
+      detteEteinteMineur: dettes[i] ?? null,
       devise: r["devise"] as string,
       payeLe: (r["paye_le"] as string | null) ?? null,
       justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,

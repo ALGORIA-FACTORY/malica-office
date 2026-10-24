@@ -7,7 +7,12 @@
  */
 
 import type { ExtractV1 } from "../contracts/extract.v1.ts";
+import { contrepartieDuDocument } from "../domain/contrepartie.ts";
 import { nomDeLaNature, type FaitsDuLibelle } from "../engines/libelle.ts";
+
+// La contrepartie vit au domaine : le moteur d'équilibre la lit aussi, et un
+// moteur ne dépend pas d'un cas d'usage. Elle reste offerte ici à l'API.
+export { contrepartieDuDocument };
 
 /** Seules les clés désignant explicitement le numéro du document sont retenues. */
 const CLES_DE_REFERENCE = ["invoice_no", "document_no", "numero", "reference"];
@@ -31,14 +36,4 @@ export function faitsDuLibelle(extract: ExtractV1): FaitsDuLibelle {
     reference: referenceDuDocument(extract.references),
     date: extract.document_date,
   };
-}
-
-/** Sur une vente, l'émetteur est le dossier lui-même, jamais le client. */
-export function contrepartieDuDocument(extract: {
-  document_kind?: string | null;
-  issuer?: string;
-  references?: Readonly<Record<string, string>>;
-}): string | null {
-  if (extract.document_kind === "facture_achat") return extract.issuer?.trim() || null;
-  return extract.references?.["customer_name"]?.trim() || null;
 }

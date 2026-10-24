@@ -2,7 +2,7 @@
  * P4 — moteur d'équilibre : construit l'écriture depuis un extract.v1 et vérifie
  * Σdébit = Σcrédit STRICTEMENT (aucune conversion Number, aucun taux en dur).
  */
-import { contrepartieDuDocument } from "../../use-cases/libelle-de-piece.ts";
+import { contrepartieDuDocument } from "../../domain/contrepartie.ts";
 import { D, toFixedStr, sum } from "../../domain/decimal.ts";
 import { resolveTaxRate } from "../../domain/tax-rates.ts";
 import type {
