@@ -126,6 +126,10 @@ export function constaterLaRetenue(e: EntreeRetenue): ConstatDeRetenue {
     return refuse("Qualification fiscale illisible.");
   if (q.codes.length > 0 && !q.justification.trim())
     return refuse("Une retenue déclarée exige la référence du certificat ou une justification.");
+  // Au-dessus d'un seuil, ne rien retenir est une décision : elle se motive
+  // (exonération, attestation, nature de l'opération). Sous le seuil, rien.
+  if (q.codes.length === 0 && !q.justification.trim() && unSeuilEstAtteint(e, e.ttc))
+    return refuse("Au-dessus du seuil, dites pourquoi aucune retenue n'est opérée.");
   const ttc = decimal(e.ttc);
   const paye = decimal(e.paye);
   const brut = decimal(q.baseReglee);

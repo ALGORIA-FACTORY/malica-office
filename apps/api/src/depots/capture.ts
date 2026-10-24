@@ -1132,7 +1132,11 @@ export const capture = {
       `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
               p.justificatif_piece_id, p.created_at, p.reference,
               p.annule_paiement_id, p.eteint, p.pack_version_id,
-              app.dette_eteinte(p.id)::text as brut
+              app.dette_eteinte(p.id)::text as brut,
+              (select e.id from ecritures_v e
+                where e.paiement_id = p.id and e.nature = 'reglement'
+                  and e.reverses_id is not null and e.status = 'proposee'
+                order by e.created_at desc limit 1) as annulation_a_inscrire
          from paiements_v p
         where p.piece_id = $1 order by p.created_at`,
       [pieceId],
@@ -1185,6 +1189,8 @@ export const capture = {
        * une seule définition, un seul endroit.
        */
       eteint: Boolean(r["eteint"]),
+      /** La contre-passation proposée qui attend l'expert du dossier. */
+      annulationAInscrire: (r["annulation_a_inscrire"] as string | null) ?? null,
     }));
   },
 

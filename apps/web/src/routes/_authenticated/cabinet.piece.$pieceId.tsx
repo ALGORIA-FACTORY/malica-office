@@ -788,7 +788,12 @@ function CabinetReview() {
                         {preuveOuverte === p.justificatifPieceId && p.justificatifPieceId ? (
                           <ApercuDeLaPreuve jointId={p.justificatifPieceId} />
                         ) : null}
-                        {p.eteint ? (
+                        {p.eteint && p.annulationAInscrire ? (
+                          <AnnulationAInscrire
+                            ecritureId={p.annulationAInscrire}
+                            pieceId={pieceId}
+                          />
+                        ) : p.eteint ? (
                           <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
                             {t("cab.review.paiement.eteint")}
                           </span>
@@ -1266,6 +1271,46 @@ function grouperLesSignalements(
  * La facture constate une dette, le règlement l'éteint. L'expert voit donc
  * les deux, séparément, et c'est lui qui inscrit.
  */
+/**
+ * L'annulation d'un règlement que la PME a demandée, dans un dossier confié :
+ * la contre-passation est proposée, l'expert l'inscrit (24 octobre 2026).
+ * Tant qu'elle ne l'est pas, le règlement d'origine compte encore : l'écran
+ * ne dit donc pas « sans effet comptable ».
+ */
+function AnnulationAInscrire({ ecritureId, pieceId }: { ecritureId: string; pieceId: string }) {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const inscrire = useMutation({
+    mutationFn: () => office().office.book(ecritureId),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
+        qc.invalidateQueries({ queryKey: ["paiements", pieceId] }),
+      ]);
+    },
+  });
+  return (
+    <div className="mt-1.5">
+      <p className="text-[11.5px] text-signal-warn">
+        {t("cab.review.paiement.annulationAInscrire")}
+      </p>
+      <button
+        type="button"
+        onClick={() => inscrire.mutate()}
+        disabled={inscrire.isPending || inscrire.isSuccess}
+        className="mt-1 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+      >
+        {inscrire.isPending ? t("common.loading") : t("cab.review.paiement.inscrireAnnulation")}
+      </button>
+      {inscrire.error ? (
+        <p role="alert" className="mt-1 text-[11.5px] text-signal-stop">
+          {inscrire.error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function EcritureDuReglement({
   paiementId,
   pieceId,
@@ -1283,6 +1328,9 @@ function EcritureDuReglement({
   const [tva, setTva] = useState("");
   const [assietteIR, setAssietteIR] = useState("");
   const [justification, setJustification] = useState("");
+  // Sous le seuil, rien n'est demandé ; le comptable peut quand même déclarer
+  // une retenue sans seuil (honoraires, loyers, non-résidents).
+  const [declarer, setDeclarer] = useState(false);
   const proposition = useQuery({
     queryKey: ["reglement", paiementId, qualification],
     queryFn: () => office().office.propositionDeReglement(paiementId, qualification),
@@ -1323,6 +1371,7 @@ function EcritureDuReglement({
     assietteIR,
     justification,
     paye: r.paye,
+    motifExige: r.retenue.cas === "a_confirmer",
   });
 
   return (
@@ -1331,7 +1380,20 @@ function EcritureDuReglement({
         {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
-      {!r.inscrite && r.retenue.cas === "a_confirmer" ? (
+      {!r.inscrite &&
+      !qualification &&
+      r.retenue.cas === "sans_objet" &&
+      !declarer &&
+      r.tauxDisponibles.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setDeclarer(true)}
+          className="mt-1 text-[11.5px] font-medium underline underline-offset-2"
+        >
+          {t("cab.retenue.declarer")}
+        </button>
+      ) : null}
+      {!r.inscrite && (r.retenue.cas === "a_confirmer" || (declarer && !qualification)) ? (
         <fieldset className="my-3 min-w-0 space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 text-[12px] font-medium">{t("cab.retenue.qualify")}</legend>
           <select
@@ -1412,15 +1474,16 @@ function EcritureDuReglement({
           ) : null}
           {/*
            * Le certificat se justifie quand une retenue est OPÉRÉE. « Sans
-           * retenue » n'en a pas : exiger un texte n'obtiendrait qu'un « RAS »
-           * tapé pour passer, et cette trace-là ne prouve rien.
+           * retenue » sous le seuil n'a rien à justifier ; au-dessus du seuil,
+           * ne rien retenir est une décision et se motive (exonération,
+           * attestation, nature de l'opération).
            */}
           <label className="block text-[12px]">
             {t("cab.retenue.taxEvidence")}
             <input
               className="mt-1 w-full border border-border bg-background p-2"
               value={justification}
-              required={saisie.avecRetenue}
+              required={saisie.avecRetenue || r.retenue.cas === "a_confirmer"}
               onChange={(e) => setJustification(e.target.value)}
             />
           </label>
@@ -1523,6 +1586,8 @@ function qualificationSaisie(s: {
   assietteIR: string;
   justification: string;
   paye: string;
+  /** Au-dessus d'un seuil, ne rien retenir se motive aussi. */
+  motifExige: boolean;
 }): { avecRetenue: boolean; illisible: boolean; qualification: QualificationDeRetenue | null } {
   const avecRetenue = s.codes.length > 0;
   const facultatif = (v: string) => (v.trim() ? saisieDecimale(v) : null);
@@ -1535,7 +1600,8 @@ function qualificationSaisie(s: {
       (s.tva.trim() !== "" && tvaReglee === null) ||
       (s.assietteIR.trim() !== "" && assietteIR === null));
   const justification = s.justification.trim();
-  const pret = !illisible && baseReglee !== null && (!avecRetenue || justification !== "");
+  const pret =
+    !illisible && baseReglee !== null && ((!avecRetenue && !s.motifExige) || justification !== "");
   return {
     avecRetenue,
     illisible,

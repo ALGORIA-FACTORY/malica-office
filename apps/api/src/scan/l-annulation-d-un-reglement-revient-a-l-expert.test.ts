@@ -144,6 +144,30 @@ describe("l'annulation d'un règlement revient à l'expert", { skip: !BASE_CONFI
         .rows[0]!.v;
     assert.equal(await vivante(), true, "l'original vit tant que l'expert n'a pas inscrit");
 
+    // La file du cabinet l'apprend, et l'écran de la pièce montre le geste.
+    const { rows: notes } = await admin.query<{ n: number }>(
+      `select count(*)::int as n from collab.notifications
+        where tenant_id = $1 and kind = 'ecriture.proposed'
+          and payload ->> 'ecriture_id' = $2`,
+      [pme, contre[0]!.id],
+    );
+    assert.equal(notes[0]!.n, 1, "le cabinet est averti");
+    const paiements = (await rpc(expert, "capture", "paiementsDUnePiece", piece)) as Array<{
+      id: string;
+      annulationAInscrire: string | null;
+    }>;
+    assert.equal(
+      paiements.find((x) => x.id === paiement)!.annulationAInscrire,
+      contre[0]!.id,
+      "l'expert voit l'annulation à inscrire",
+    );
+
+    // La PME ne l'inscrit pas elle-même, même par l'API.
+    await assert.rejects(
+      rpc(dirigeant, "office", "book", contre[0]!.id),
+      /expert mandaté|42501|autoris/,
+    );
+
     await rpc(expert, "office", "book", contre[0]!.id);
 
     const { rows: apres } = await admin.query<{ status: string; booked_by: string }>(

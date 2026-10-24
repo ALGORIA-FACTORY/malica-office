@@ -250,16 +250,46 @@ export const office = {
       throw Object.assign(new Error("Confirmez le traitement de la retenue avant inscription."), {
         code: "22023",
       });
-    const id = await office.propose(db, {
-      pieceId: r.pieceId,
-      journal: r.ecriture.journal,
-      date: r.ecriture.dateEcriture,
-      libelle: r.ecriture.libelle,
-      packVersionId: r.packVersionId,
-      devise: r.ecriture.devise,
-      lignes: r.ecriture.lignes,
-      paiementId,
-    });
+    // Redemander rend la même proposition (ANO-006) : une proposition encore
+    // ouverte dont les lignes sont exactement celles d'aujourd'hui est reprise,
+    // au lieu d'en empiler une seconde dans la file.
+    const { rows: ouvertes } = await db.query<{ id: string }>(
+      `select id from ecritures_v
+        where paiement_id = $1 and nature = 'reglement' and reverses_id is null
+          and status = 'proposee'
+        order by created_at desc`,
+      [paiementId],
+    );
+    let reprise: string | undefined;
+    if (ouvertes.length > 0) {
+      const lignes = await lignesDe(
+        db,
+        ouvertes.map((o) => o.id),
+      );
+      reprise = ouvertes.find((o) =>
+        memesLignes(
+          (lignes.get(o.id) ?? []).map((l) => ({
+            account_code: l.accountCode,
+            debit: l.debit,
+            credit: l.credit,
+          })),
+          r.ecriture.lignes,
+        ),
+      )?.id;
+    }
+    const id =
+      reprise ??
+      (await office.propose(db, {
+        pieceId: r.pieceId,
+        journal: r.ecriture.journal,
+        date: r.ecriture.dateEcriture,
+        libelle: r.ecriture.libelle,
+        packVersionId: r.packVersionId,
+        devise: r.ecriture.devise,
+        lignes: r.ecriture.lignes,
+        paiementId,
+      }));
+    // La qualification du jour est celle que l'inscription relira.
     if (qualifiee)
       await db.query(
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)

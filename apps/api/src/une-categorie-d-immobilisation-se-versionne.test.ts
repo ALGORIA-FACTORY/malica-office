@@ -78,6 +78,36 @@ describe("une catégorie d'immobilisation se versionne", { skip: !BASE_CONFIGURE
     );
   });
 
+  it("un bien nouveau ne peut pas prendre une catégorie close", async () => {
+    const pack = await packTN();
+    const { rows } = await admin.query<{ id: string }>(
+      `select id from ref.immo_categories
+        where pack_version_id = $1 and code = 'constructions' and valid_to is not null`,
+      [pack],
+    );
+    const u = await creerCompte(`immo-close-${Date.now()}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(u);
+    await assert.rejects(
+      sousIdentiteDuServeur(u.id, (db) =>
+        immo.createAsset(db, {
+          tenantId: "00000000-0000-0000-0000-000000000000",
+          entityId: null,
+          categoryId: rows[0]!.id,
+          label: "Bâtiment",
+          miseEnService: "2026-10-24",
+          valeurBrute: "100000.000",
+          valeurResiduelle: "0",
+          method: "lineaire",
+          dureeAnnees: 20,
+          coefficient: "1",
+          devise: "TND",
+          packVersionId: pack,
+        }),
+      ),
+      /plus en vigueur/,
+    );
+  });
+
   it("un compte de catégorie nouvelle doit exister au plan de son pack", async () => {
     const pack = await packTN();
     const client = await admin.connect();

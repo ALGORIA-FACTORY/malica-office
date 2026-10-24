@@ -1675,6 +1675,9 @@ const fr = {
   "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
+  "cab.review.paiement.annulationAInscrire":
+    "Annulation demandée par le client : l’écriture d’annulation attend votre inscription.",
+  "cab.review.paiement.inscrireAnnulation": "Inscrire l’annulation",
   "cab.review.enregistre": "Enregistré : {chemin}",
   "cab.review.joints": "Documents joints",
   "cab.review.joints.vide": "Aucun document joint à cette pièce.",
@@ -5237,6 +5240,9 @@ const en: Dict = {
   "cab.review.reglement.inscrit": "Posted to the journal — it appears in the FEC.",
   "cab.review.paiement.reference": "Reference",
   "cab.review.paiement.eteint": "Settlement cancelled — no accounting effect",
+  "cab.review.paiement.annulationAInscrire":
+    "Cancellation requested by the client: the reversing entry awaits your posting.",
+  "cab.review.paiement.inscrireAnnulation": "Post the cancellation",
   "cab.review.enregistre": "Saved: {chemin}",
   "cab.review.joints": "Attached documents",
   "cab.review.joints.vide": "No document attached to this one.",
@@ -8656,6 +8662,9 @@ const ar: Dict = {
   "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في ملف FEC.",
   "cab.review.paiement.reference": "المرجع",
   "cab.review.paiement.eteint": "تمّ إلغاء التسديد — دون أثر محاسبي",
+  "cab.review.paiement.annulationAInscrire":
+    "طلب الحريف إلغاء التسديد: قيد الإلغاء في انتظار تسجيلك.",
+  "cab.review.paiement.inscrireAnnulation": "تسجيل الإلغاء",
   "cab.review.enregistre": "حُفظ في: {chemin}",
   "cab.review.joints": "الوثائق المرفقة",
   "cab.review.joints.vide": "لا توجد وثيقة مرفقة بهذه الوثيقة.",

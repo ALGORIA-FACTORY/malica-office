@@ -76,6 +76,12 @@ begin
    if not exists (select 1 from identity.engagements g
                    where g.pme_org_id = new.tenant_id and g.status = 'actif') then
      perform public.socle_ecriture_book(v_reversal);
+   else
+     -- La file du cabinet l'apprend : l'annulation attend son geste.
+     insert into collab.notifications (tenant_id, kind, payload)
+     values (new.tenant_id, 'ecriture.proposed',
+             jsonb_build_object('piece_id', new.piece_id, 'ecriture_id', v_reversal,
+                                'motif', 'reglement_annule'));
    end if;
    insert into audit.event_log
      (tenant_id, actor, action, object_schema, object_table, object_id, payload)
@@ -150,8 +156,9 @@ $$;
 
 -- Une contre-passation proposée s'inscrit par le chemin commun (revue du 24
 -- octobre 2026) : la garde « une seule écriture vivante par pièce » ne la
--- confond plus avec un second règlement. Corps repris de la base
--- (20261022450000), seule cette condition change.
+-- confond plus avec un second règlement ; dans un dossier mandaté, seule
+-- l'expert l'inscrit. Corps repris de la base (20261022450000) ; ces deux
+-- conditions seules changent.
 CREATE OR REPLACE FUNCTION public.socle_ecriture_book(p_ecriture uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -163,14 +170,27 @@ declare
   v_nature  text;
   v_paiement uuid;
   v_reverses uuid;
+  v_dossier uuid;
 begin
   select piece_id into v_piece from socle.ecritures where id = p_ecriture;
   if v_piece is not null then
     perform 1 from capture.pieces where id = v_piece for update;
   end if;
 
-  select e.nature, e.paiement_id, e.reverses_id into v_nature, v_paiement, v_reverses
+  select e.nature, e.paiement_id, e.reverses_id, e.tenant_id
+    into v_nature, v_paiement, v_reverses, v_dossier
     from socle.ecritures e where e.id = p_ecriture and e.status = 'proposee';
+
+  -- L'annulation d'un règlement, dans un dossier confié à une comptabilité,
+  -- est inscrite par l'expert mandaté, et par lui seul (revue du 24 octobre
+  -- 2026) : la PME ne touche pas au grand livre qu'elle a confié.
+  if v_nature = 'reglement' and v_reverses is not null
+     and exists (select 1 from identity.engagements g
+                  where g.pme_org_id = v_dossier and g.status = 'actif')
+     and v_dossier not in (select app.engaged_orgs_as_expert()) then
+    raise exception 'L''annulation d''un règlement est inscrite par l''expert mandaté.'
+      using errcode = '42501', hint = 'reglement.annulation_expert';
+  end if;
   -- Une contre-passation éteint l'écriture vivante : elle ne la double pas.
   if v_nature is not null and v_piece is not null and v_reverses is null and exists (
        select 1 from socle.ecritures o

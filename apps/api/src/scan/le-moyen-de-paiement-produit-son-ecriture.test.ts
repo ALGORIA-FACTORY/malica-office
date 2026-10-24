@@ -493,6 +493,14 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     assert.equal(rows[0]!.status, "proposee");
   });
 
+  it("redemander la proposition rend la même, sans en empiler une seconde", async () => {
+    const f = await piece("idempotence", "facture_achat");
+    const p = await payer(f, "virement", 100_000, "VIR-IDEM");
+    const a = await rpc("office", "proposerLeReglement", p);
+    const b = await rpc("office", "proposerLeReglement", p);
+    assert.equal(a, b);
+  });
+
   it("une qualification qui porte un champ étranger est refusée avant l'audit", async () => {
     const f = await piece("qualification-etrangere", "facture_achat");
     const p = await payer(f, "virement", 100_000, "VIR-ETRANGER");

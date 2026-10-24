@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   ecritures: vi.fn(),
   reglement: vi.fn(),
   paiements: vi.fn(),
+  book: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -82,6 +83,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       ecrituresForPiece: api.ecritures,
       propositionDeReglement: api.reglement,
       inscrireLeReglement: vi.fn(),
+      book: api.book,
     },
     supervision: {
       listClients: async () => [],
@@ -202,12 +204,18 @@ describe("revue d'une pièce", () => {
       ]);
     });
 
-    it("« sans retenue » n'exige aucune justification écrite", async () => {
+    it("au-dessus du seuil, « sans retenue » se motive avant d'être envoyé", async () => {
+      // Décision du 24 octobre 2026 : sous le seuil rien n'est demandé ;
+      // au-dessus, ne rien retenir est une décision qui se motive.
       api.reglement.mockImplementation(async (_id: string, q?: unknown) =>
         reglement(q ? { cas: "sans_objet" } : { cas: "a_confirmer" }),
       );
       monter();
       const verifier = await screen.findByRole("button", { name: "cab.retenue.preview" });
+      expect((verifier as HTMLButtonElement).disabled).toBe(true);
+      fireEvent.change(screen.getByLabelText("cab.retenue.taxEvidence"), {
+        target: { value: "Attestation d'exonération 118" },
+      });
       expect((verifier as HTMLButtonElement).disabled).toBe(false);
       fireEvent.click(verifier);
       await waitFor(() =>
@@ -216,9 +224,17 @@ describe("revue d'une pièce", () => {
           baseReglee: "1215.988",
           tvaReglee: null,
           assietteIR: null,
-          justification: "",
+          justification: "Attestation d'exonération 118",
         }),
       );
+    });
+
+    it("sous le seuil, le comptable peut quand même déclarer une retenue", async () => {
+      api.reglement.mockResolvedValue(reglement({ cas: "sans_objet" }));
+      monter();
+      expect(screen.queryByRole("combobox", { name: "cab.retenue.withholding" })).toBeNull();
+      fireEvent.click(await screen.findByRole("button", { name: "cab.retenue.declarer" }));
+      expect(await screen.findByRole("combobox", { name: "cab.retenue.withholding" })).toBeTruthy();
     });
 
     it("relit « 1 234,500 » comme l'écran l'affiche, et exige le certificat d'une retenue", async () => {
@@ -274,5 +290,27 @@ describe("revue d'une pièce", () => {
       // Le libellé de la ligne du règlement reste lisible à côté de l'intitulé.
       expect(screen.getAllByText("Retenue 1,5 % / tiers").length).toBeGreaterThan(0);
     });
+  });
+
+  it("une annulation demandée par le client attend l'inscription de l'expert", async () => {
+    api.paiements.mockResolvedValue([
+      {
+        id: "paiement",
+        moyenCode: "virement",
+        montantMineur: 100000,
+        devise: "TND",
+        payeLe: "2026-10-20",
+        reference: null,
+        justificatifPieceId: null,
+        eteint: true,
+        annulationAInscrire: "contre-passation",
+      },
+    ]);
+    api.book.mockResolvedValue(undefined);
+    monter();
+    expect(await screen.findByText("cab.review.paiement.annulationAInscrire")).toBeTruthy();
+    expect(screen.queryByText("cab.review.paiement.eteint")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "cab.review.paiement.inscrireAnnulation" }));
+    await waitFor(() => expect(api.book).toHaveBeenCalledWith("contre-passation"));
   });
 });

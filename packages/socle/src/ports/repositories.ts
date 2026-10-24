@@ -770,6 +770,11 @@ export interface PaiementDUnePiece {
    * endroit, et aucun ecran qui choisit.
    */
   eteint: boolean;
+  /**
+   * L'écriture d'annulation proposée qui attend l'expert, s'il y en a une :
+   * dans un dossier confié, la PME annule, l'expert inscrit (24 octobre 2026).
+   */
+  annulationAInscrire?: string | null;
 }
 
 /** Un motif d'annulation du referentiel, traduit. */

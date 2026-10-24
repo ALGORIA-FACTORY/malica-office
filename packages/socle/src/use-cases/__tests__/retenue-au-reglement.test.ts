@@ -194,12 +194,33 @@ describe("sous le seuil, aucune question", () => {
       }),
     ).toMatchObject({ cas: "operee", montant: "50.000" });
   });
-  it("« sans retenue » n'exige aucun texte", () => {
+  it("sous le seuil, « sans retenue » n'exige aucun texte", () => {
     expect(
+      constaterLaRetenue({
+        ...BASE,
+        ttc: "500.000",
+        paye: "500.000",
+        qualification: { codes: [], baseReglee: "500.000", justification: "" },
+      }),
+    ).toEqual({ cas: "sans_objet" });
+  });
+  it("au-dessus du seuil, « sans retenue » se motive", () => {
+    expect(() =>
       constaterLaRetenue({
         ...BASE,
         paye: BASE.ttc,
         qualification: { codes: [], baseReglee: BASE.ttc, justification: "" },
+      }),
+    ).toThrow(/pourquoi aucune retenue/);
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        paye: BASE.ttc,
+        qualification: {
+          codes: [],
+          baseReglee: BASE.ttc,
+          justification: "Attestation d'exonération n° 2026-118",
+        },
       }),
     ).toEqual({ cas: "sans_objet" });
   });
