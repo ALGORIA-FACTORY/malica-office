@@ -6,6 +6,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { piecesALire } from "@/lib/a-lire";
+import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/a-lire")({
@@ -34,8 +35,14 @@ function ALire() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
-  /** Les pièces DÉCOCHÉES : tout est coché tant qu'on n'a rien retiré. */
-  const [retirees, setRetirees] = useState<ReadonlySet<string>>(new Set());
+  /*
+   * Les pièces dont on a INVERSÉ la case. D'office, les PLAFOND_ELEMENTS plus
+   * récentes sont cochées — un lot n'en porte pas davantage (revue Codex de
+   * #85 : 51 cochées en ouvraient 50, la 51e restait non lue sans un mot).
+   * Au-delà, cocher est refusé, et l'écran le dit.
+   */
+  const [inversees, setInversees] = useState<ReadonlySet<string>>(new Set());
+  const [auPlafond, setAuPlafond] = useState(false);
 
   const lues = useQuery({
     queryKey: ["pieces-lues", pme.tenantId],
@@ -43,19 +50,27 @@ function ALire() {
   });
 
   const aLire = piecesALire(lues.data ?? []);
-  const choisies = aLire.filter((p) => !retirees.has(p.id));
-  const toutes = choisies.length === aLire.length;
+  const cochee = (id: string, i: number) => i < PLAFOND_ELEMENTS !== inversees.has(id);
+  const choisies = aLire.filter((p, i) => cochee(p.id, i));
+  const toutes = choisies.length === Math.min(aLire.length, PLAFOND_ELEMENTS);
   const jour = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
       new Date(iso),
     );
-  const basculer = (id: string) =>
-    setRetirees((r) => {
+  const basculer = (id: string, i: number) => {
+    const ajout = !cochee(id, i);
+    if (ajout && choisies.length >= PLAFOND_ELEMENTS) {
+      setAuPlafond(true);
+      return;
+    }
+    setAuPlafond(false);
+    setInversees((r) => {
       const n = new Set(r);
       if (n.has(id)) n.delete(id);
       else n.add(id);
       return n;
     });
+  };
 
   return (
     <div data-ecran="alire" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
@@ -79,7 +94,12 @@ function ALire() {
           <button
             type="button"
             className="tout"
-            onClick={() => setRetirees(toutes ? new Set(aLire.map((p) => p.id)) : new Set())}
+            onClick={() => {
+              setAuPlafond(false);
+              setInversees(
+                toutes ? new Set(aLire.slice(0, PLAFOND_ELEMENTS).map((p) => p.id)) : new Set(),
+              );
+            }}
           >
             {toutes ? t("pme.aLire.aucune") : t("pme.aLire.toutes")}
           </button>
@@ -93,15 +113,15 @@ function ALire() {
           <p className="vide">{t("pme.aLire.vide")}</p>
         ) : (
           <div className="liste">
-            {aLire.map((p) => {
-              const cochee = !retirees.has(p.id);
+            {aLire.map((p, i) => {
+              const on = cochee(p.id, i);
               return (
                 <button
                   type="button"
                   key={p.id}
-                  aria-pressed={cochee}
-                  className={cochee ? "on" : undefined}
-                  onClick={() => basculer(p.id)}
+                  aria-pressed={on}
+                  className={on ? "on" : undefined}
+                  onClick={() => basculer(p.id, i)}
                 >
                   <span className="case" aria-hidden>
                     <svg viewBox="0 0 24 24" className="g">
@@ -122,6 +142,11 @@ function ALire() {
 
       {aLire.length > 0 ? (
         <div className="bas">
+          {auPlafond || aLire.length > PLAFOND_ELEMENTS ? (
+            <p className="plafond" role="status">
+              {t("pme.aLire.plafond", { max: PLAFOND_ELEMENTS })}
+            </p>
+          ) : null}
           <button
             type="button"
             className="pr"

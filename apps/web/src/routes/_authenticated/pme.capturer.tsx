@@ -294,6 +294,14 @@ function PmeCapturer() {
   const [question, setQuestion] = useState(0);
   /** La pièce montrée à « Vérifier » : on les passe une à une. */
   const [verifiee, setVerifiee] = useState(0);
+  /**
+   * « Reprendre la photo » à la vérification : la pièce que la nouvelle photo
+   * remplace. Revue Codex de #85 : le scanner déposait une pièce NEUVE, hors
+   * du lot figé — la vérification montrait toujours l'ancienne, et le
+   * règlement comme l'envoi la visaient encore. La neuve prend donc sa place
+   * dans le lot, l'ancienne est supprimée, et la neuve se lit.
+   */
+  const [aRemplacer, setARemplacer] = useState<string | null>(null);
   /** « Oui, déjà payées » : ouvre le choix du moyen. */
   const [payeOui, setPayeOui] = useState(false);
   /** « Plus tard » : un écran de fin, les pièces restent non lues. */
@@ -490,7 +498,14 @@ function PmeCapturer() {
   });
 
   const aRepondre = (questions.data ?? []).filter((q) => q.answer === null);
-  const courante = aRepondre[question] ?? null;
+  /*
+   * L'index suit la liste, qui RÉTRÉCIT après chaque réponse (revue Codex de
+   * #85) : « Continuer » sur la première, réponse à la seconde — la liste n'a
+   * plus qu'une question, l'index vaut 1, et l'écran restait sans question ni
+   * bouton. On le ramène dans la liste.
+   */
+  const rang = Math.min(question, Math.max(aRepondre.length - 1, 0));
+  const courante = aRepondre[rang] ?? null;
   const libelleFamille = (code: string) =>
     (familles.data ?? []).find((f) => f.code === code)?.label ?? code;
 
@@ -652,6 +667,38 @@ function PmeCapturer() {
     },
   });
 
+  /*
+   * La photo reprise : dès que le scanner rend la pièce neuve (elle arrive par
+   * l'URL, comme toute capture), elle remplace l'ancienne dans le lot figé, à
+   * la même place ; l'ancienne est supprimée, et la neuve part en lecture.
+   */
+  const remplacer = useMutation({
+    mutationFn: async ({ ancienne, neuves }: { ancienne: string; neuves: readonly string[] }) => {
+      await office().capture.supprimer(ancienne);
+      const pris: Record<string, string> = {};
+      for (const id of neuves) {
+        await office().collab.setPieceVis(id, "entite");
+        pris[id] = (await office().malica.demanderLaLecture(id)).travailId;
+      }
+      return pris;
+    },
+    onSuccess: async (pris) => {
+      setTravaux((t) => ({ ...t, ...pris }));
+      setErreur(null);
+      setEtape(3);
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+    },
+    onError: echoue,
+  });
+  useEffect(() => {
+    if (aRemplacer === null || fige === null || remplacer.isPending) return;
+    const neuves = duPassage.filter((id) => !fige.includes(id));
+    if (neuves.length === 0) return;
+    setFige(fige.flatMap((id) => (id === aRemplacer ? neuves : [id])));
+    setARemplacer(null);
+    remplacer.mutate({ ancienne: aRemplacer, neuves });
+  }, [aRemplacer, fige, duPassage, remplacer]);
+
   /* ── la navigation ───────────────────────────────────────────────────── */
 
   /** 8bis : l'espace privé a sa propre fin, et il n'y a rien à lire. */
@@ -693,6 +740,7 @@ function PmeCapturer() {
   }, [lotDemande.depart, etape, fige, candidats]);
 
   function reculer() {
+    setARemplacer(null);
     if (plusTard) {
       setPlusTard(false);
       return;
@@ -729,6 +777,7 @@ function PmeCapturer() {
     setChoisie(null);
     setQuestion(0);
     setVerifiee(0);
+    setARemplacer(null);
     setMoyen(null);
     setReference("");
     setPaye(false);
@@ -1202,7 +1251,15 @@ function PmeCapturer() {
                   ? t("pme.capture.verif.suivante")
                   : t("pme.capture.verif.bon")}
               </button>
-              <button type="button" className="sc" onClick={pme.ouvrirScanner}>
+              <button
+                type="button"
+                className="sc"
+                disabled={pme.capturing || remplacer.isPending}
+                onClick={() => {
+                  setARemplacer(enVerification.id);
+                  pme.ouvrirScanner();
+                }}
+              >
                 {t("pme.verifie.corriger")}
               </button>
             </div>
@@ -1244,14 +1301,14 @@ function PmeCapturer() {
                 />
               </div>
               <p className="foot">
-                {t("pme.capture.q.position", { n: question + 1, total: aRepondre.length })}
+                {t("pme.capture.q.position", { n: rang + 1, total: aRepondre.length })}
               </p>
               <div className="go">
                 <button
                   type="button"
                   className="pr"
                   onClick={() =>
-                    question + 1 < aRepondre.length ? setQuestion(question + 1) : setEtape(6)
+                    rang + 1 < aRepondre.length ? setQuestion(rang + 1) : setEtape(6)
                   }
                 >
                   {t("pme.capture.continuer")}
