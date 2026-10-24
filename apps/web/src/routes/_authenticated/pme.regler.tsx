@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/regler")({
   head: () => ({
@@ -152,10 +153,7 @@ function ARegler() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const pieces = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const pieces = usePiecesLues();
 
   const nomDuCabinet = cabinet.data?.name ?? t("pme.coffre.votreComptable");
 

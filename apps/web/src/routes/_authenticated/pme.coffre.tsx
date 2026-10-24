@@ -11,6 +11,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
+import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -143,10 +144,7 @@ function PmeCoffre() {
   const navigate = useNavigate();
   const [erreur, setErreur] = useState<string | null>(null);
 
-  const pieces = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const pieces = usePiecesLues();
 
   const cabinet = useQuery({
     queryKey: ["mon-cabinet", pme.tenantId],
@@ -163,7 +161,7 @@ function PmeCoffre() {
     },
     onSuccess: async () => {
       setErreur(null);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
@@ -390,6 +388,7 @@ function PmeCoffre() {
                       <EtatDeLecture
                         refus={p.lectureRefusee}
                         vis={p.vis}
+                        lecture={p.lecture}
                         motifDitAilleurs="piece_personnelle"
                       />
                     ) : null}

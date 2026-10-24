@@ -5,7 +5,8 @@ import { useEffect } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import { piecesALire } from "@/lib/a-lire";
+import { piecesALire, piecesEnEchec, raisonCourte } from "@/lib/lecture";
+import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
@@ -18,6 +19,7 @@ import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { montant, montantSigne } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
@@ -331,10 +333,7 @@ function PmeHome() {
    * et un dossier perdrait ses pièces les plus anciennes (revue de #80).
    * Les noms des types viennent du référentiel traduit, jamais du code.
    */
-  const lues = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const lues = usePiecesLues();
   const typesDoc = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),
@@ -374,6 +373,14 @@ function PmeHome() {
    * (B6), d'où le filtre sur le statut et non sur la visibilité.
    */
   const aLire = piecesALire(lues.data ?? []);
+  /*
+   * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ». Une pièce
+   * dont la lecture a échoué se voit ici, en rouge, avec sa raison ; la carte
+   * mène à la plus récente, dont la fiche porte les gestes.
+   */
+  const enEchec = piecesEnEchec(lues.data ?? []);
+  const premierEchec = enEchec.at(0) ?? null;
+  const raisonDuPremier = premierEchec ? raisonCourte(issueDeLecture(premierEchec)) : null;
   const aTraiter = lesLues
     .filter((p) => p.status === "lue" || p.status === "proposee" || p.status === "retournee")
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
@@ -454,6 +461,24 @@ function PmeHome() {
       <div className="pad">
         {/* Le salut, avec le prénom quand la personne l'a écrit. */}
         <h1>{salut}</h1>
+
+        {/* Juste sous le salut : un échec de lecture se voit avant tout le reste. */}
+        {premierEchec ? (
+          <div role="status">
+            <Link to="/pme/piece/$pieceId" params={{ pieceId: premierEchec.id }} className="echec">
+              <span className="ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="g">
+                  <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17M12 7.5v5.5M12 16.5v.5" />
+                </svg>
+              </span>
+              <span className="bd">
+                <b>{t("pme.home.echecs.titre", { count: enEchec.length })}</b>
+                {raisonDuPremier ? <span>{t(raisonDuPremier)}</span> : null}
+              </span>
+              <span className="voir">{t("pme.home.echecs.voir")}</span>
+            </Link>
+          </div>
+        ) : null}
 
         {/*
          * ========================================= L'ACCUEIL « PRINCIPE SPOTIFY »

@@ -47,7 +47,9 @@
  * vermillon.
  */
 import { libelleDuRefus, motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
+import { presentation } from "@/lib/lecture";
 import { useI18n } from "@/i18n";
+import { issueDeLecture, type DerniereLecture } from "@malica/socle/issue-de-lecture";
 import type { LectureRefusee, Visibility } from "@malica/socle/ports/repositories";
 
 /**
@@ -59,9 +61,16 @@ import type { LectureRefusee, Visibility } from "@malica/socle/ports/repositorie
 export function EtatDeLecture({
   refus,
   vis,
+  lecture,
   motifDitAilleurs,
 }: {
   refus: LectureRefusee | null | undefined;
+  /**
+   * Le dernier travail de lecture (24 octobre 2026). Sans lui, une pièce
+   * dont la lecture avait ÉCHOUÉ s'affichait « En attente de lecture » —
+   * exactement la plainte de Wissem : « rien ne dit que la lecture casse ».
+   */
+  lecture?: DerniereLecture | null | undefined;
   /**
    * Le motif que l'écran dit déjà une fois, dans le ⓘ de sa section
    * (23 octobre 2026, « simplifier sans rien perdre »). Pour ce motif-là,
@@ -77,8 +86,29 @@ export function EtatDeLecture({
   vis: Visibility;
 }) {
   const { t } = useI18n();
-  const motif = motifDeLEtat(refus, vis);
+  // Une lecture demandée APRÈS le refus l'emporte sur lui (`issueDeLecture`).
+  const issue = issueDeLecture({
+    status: "capturee",
+    lectureRefusee: refus ?? null,
+    lecture: lecture ?? null,
+  });
+  // L'espace privé prime : une pièce gardée pour soi n'est pas lue, quelle
+  // qu'ait été sa dernière tentative.
+  const motif =
+    vis === "personnel" || issue.kind === "refusee" || !lecture ? motifDeLEtat(refus, vis) : null;
   if (motif === null) {
+    const vue = presentation(issue);
+    if (vue.ton === "ko" || vue.ton === "att") {
+      return (
+        <span className="mt-px block">
+          <span className="etat t-meta" data-k={vue.ton === "ko" ? "refus" : "attente"}>
+            <i aria-hidden />
+            {t(vue.mot)}
+          </span>
+          {vue.raison ? <span className="t-meta mt-px block">{t(vue.raison)}</span> : null}
+        </span>
+      );
+    }
     return (
       <span className="etat t-meta mt-px block" data-k="attente">
         <i aria-hidden />

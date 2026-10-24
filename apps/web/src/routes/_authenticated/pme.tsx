@@ -30,6 +30,7 @@ import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
+import { clePiecesLues } from "@/hooks/use-pieces-lues";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -289,7 +290,7 @@ function PmeLayout() {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", org.id] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(org.id) });
       await navigate({
         to: "/pme/capturer",
         search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
