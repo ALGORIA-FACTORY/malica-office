@@ -4,6 +4,7 @@ import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
  */
 
+import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
@@ -912,6 +913,12 @@ export interface PieceLue {
    * traduit. Une pièce refusée est photographiée et rangée, seulement non lue.
    */
   lectureRefusee?: LectureRefusee | null;
+  /**
+   * Le dernier travail de lecture de la pièce, tel que la file durable le
+   * dérive — `null` si aucune lecture n'a été demandée. C'est ce qui permet
+   * à TOUS les écrans de dire qu'une lecture a échoué (`issueDeLecture`).
+   */
+  lecture?: DerniereLecture | null;
 }
 
 /** Un refus de lecture, tel que la base l'a inscrit. */

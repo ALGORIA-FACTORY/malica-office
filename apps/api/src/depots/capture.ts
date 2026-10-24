@@ -23,6 +23,9 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  * les données et persiste le résultat ; elle ne pense pas à leur place.
  */
 
+import { codeDeLecture } from "@malica/socle/issue-de-lecture";
+import type { EtatDUnTravail } from "@malica/socle/ports/repositories";
+
 import type { Requete } from "../db.ts";
 import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
@@ -242,7 +245,9 @@ export const capture = {
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
-              ${REFUS_DE_LECTURE} as lecture_refusee
+              ${REFUS_DE_LECTURE} as lecture_refusee,
+              w.etat as lecture_etat, w.dernier_motif as lecture_motif,
+              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le
          from pieces_v p
          left join lateral (
            select e.payload
@@ -252,6 +257,20 @@ export const capture = {
             order by e.created_at desc
             limit 1
          ) x on true
+         /*
+          * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
+          *
+          * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ».
+          * L'état est DÉRIVÉ par la vue (rien n'est stocké), une fois pour
+          * tout le dossier — pas une sous-requête par pièce.
+          */
+         left join (
+           select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif, t.prenable_a,
+                  t.demande_le
+             from fabrique.etat_des_travaux_v t
+            where t.tenant_id = $1 and t.nature = 'lecture_piece'
+            order by t.piece_id, t.demande_le desc
+         ) w on w.piece_id = p.id
         where p.tenant_id = $1
         order by p.created_at desc`,
       [tenantId],
@@ -280,6 +299,19 @@ export const capture = {
         devise: lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
+        // Le motif brut ne quitte jamais le serveur : il peut porter un message
+        // technique. Seul son code `lecture.*` reconnu voyage.
+        lecture: r["lecture_etat"]
+          ? {
+              etat: r["lecture_etat"] as EtatDUnTravail,
+              demandeLe: new Date(r["lecture_demande_le"] as string | Date).toISOString(),
+              code: codeDeLecture(r["lecture_motif"] as string | null),
+              reessaieLe:
+                r["lecture_reessaie_le"] == null
+                  ? null
+                  : new Date(r["lecture_reessaie_le"] as string | Date).toISOString(),
+            }
+          : null,
       };
     });
   },

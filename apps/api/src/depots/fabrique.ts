@@ -588,11 +588,32 @@ export const fabrique = {
     const tenantId = rows[0]?.tenant_id;
     if (!tenantId) throw new Error("piece.not_found");
 
+    /*
+     * ============================== RELIRE APRÈS UN ÉCHEC CRÉE UN NOUVEAU TRAVAIL
+     *
+     * La clé était `lecture_piece:<pièce>`, une fois pour toutes : après un
+     * échec définitif (essais épuisés, erreur, refus), « Relire » retombait
+     * par idempotence sur le travail mort, que personne ne reprend jamais.
+     * Le bouton ne pouvait rien faire (audit du 24 octobre 2026).
+     *
+     * La clé compte donc les travaux finis en échec : tant qu'un travail vit,
+     * la même clé le retrouve (le rejeu de la file hors ligne ne double rien) ;
+     * après un échec, la demande suivante en ouvre un nouveau. Une relecture
+     * ne coûte rien de plus : seule une lecture rendue se décompte.
+     */
+    const { rows: echecs } = await db.query<{ n: string }>(
+      `select count(*) as n
+         from fabrique.etat_des_travaux_v
+        where tenant_id = $1 and piece_id = $2 and nature = 'lecture_piece'
+          and etat in ('epuise', 'en_erreur', 'refuse')`,
+      [tenantId, pieceId],
+    );
+    const n = Number(echecs[0]?.n ?? 0);
     return enregistrerTravail(db, {
       tenantId,
       pieceId,
       nature: "lecture_piece",
-      cleIdempotence: `lecture_piece:${pieceId}`,
+      cleIdempotence: n === 0 ? `lecture_piece:${pieceId}` : `lecture_piece:${pieceId}:${n}`,
     });
   },
 
