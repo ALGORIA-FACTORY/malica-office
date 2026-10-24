@@ -35,7 +35,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
-import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
@@ -280,7 +280,9 @@ function PieceScreen() {
   const luesDuDossier = usePiecesLues({ enabled: !lue || (rattachees.data ?? []).length > 0 });
   const cettePiece = (luesDuDossier.data ?? []).find((x) => x.id === pieceId) ?? null;
   const issue = cettePiece ? issueDeLecture(cettePiece) : null;
-  const echecDeLecture = issue && demandeUnGeste(issue) ? issue : null;
+  // Une pièce lue n'est jamais en échec, même si la liste en cache le croit
+  // encore : la relecture vient de réussir sur cet écran.
+  const echecDeLecture = !lue && issue && demandeUnGeste(issue) ? issue : null;
   const [rattacherOuvert, setRattacherOuvert] = useState(false);
   /** Le document dont on a ouvert le détachement, et le motif saisi. */
   const [aDetacher, setADetacher] = useState<string | null>(null);
@@ -324,6 +326,8 @@ function PieceScreen() {
       qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
       qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
       qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] }),
+      // La liste dit l'issue de la lecture à l'accueil, à la capture et ici.
+      qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) }),
     ]);
   };
 
@@ -364,6 +368,7 @@ function PieceScreen() {
     mutationFn: () => office().capture.supprimer(pieceId),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await navigate({ to: "/pme" });
       pme.ouvrirScanner();
     },

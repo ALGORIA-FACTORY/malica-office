@@ -464,23 +464,20 @@ function PmeHome() {
 
         {/* Juste sous le salut : un échec de lecture se voit avant tout le reste. */}
         {premierEchec ? (
-          <Link
-            to="/pme/piece/$pieceId"
-            params={{ pieceId: premierEchec.id }}
-            className="echec"
-            role="alert"
-          >
-            <span className="ic" aria-hidden="true">
-              <svg viewBox="0 0 24 24" className="g">
-                <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17M12 7.5v5.5M12 16.5v.5" />
-              </svg>
-            </span>
-            <span className="bd">
-              <b>{t("pme.home.echecs.titre", { count: enEchec.length })}</b>
-              {raisonDuPremier ? <span>{t(raisonDuPremier)}</span> : null}
-            </span>
-            <span className="voir">{t("pme.home.echecs.voir")}</span>
-          </Link>
+          <div role="status">
+            <Link to="/pme/piece/$pieceId" params={{ pieceId: premierEchec.id }} className="echec">
+              <span className="ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="g">
+                  <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17M12 7.5v5.5M12 16.5v.5" />
+                </svg>
+              </span>
+              <span className="bd">
+                <b>{t("pme.home.echecs.titre", { count: enEchec.length })}</b>
+                {raisonDuPremier ? <span>{t(raisonDuPremier)}</span> : null}
+              </span>
+              <span className="voir">{t("pme.home.echecs.voir")}</span>
+            </Link>
+          </div>
         ) : null}
 
         {/*

@@ -771,7 +771,7 @@ function VosDocuments() {
                    * la facture part en lecture dans la seconde.
                    */}
                   {p.status === "capturee" ? (
-                    <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} />
+                    <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
                   ) : (
                     <span className={cn("tag", p.status === "retournee" && "ve")}>
                       <i aria-hidden />

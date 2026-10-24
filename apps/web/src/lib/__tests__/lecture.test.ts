@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
-import { lectureEnSuspens, piecesALire, piecesEnEchec, raisonCourte } from "@/lib/lecture";
+import {
+  lectureEnSuspens,
+  piecesALire,
+  piecesEnEchec,
+  presentation,
+  raisonCourte,
+} from "@/lib/lecture";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 
 const piece = (id: string, autre: Partial<PieceLue> = {}): PieceLue => ({
@@ -22,7 +28,7 @@ const piece = (id: string, autre: Partial<PieceLue> = {}): PieceLue => ({
 });
 
 const echec = (code: "lecture.illisible" | null, etat: "epuise" | "en_erreur" = "en_erreur") => ({
-  lecture: { etat, code, reessaieLe: null },
+  lecture: { demandeLe: "2026-10-24T09:00:00Z", etat, code, reessaieLe: null },
 });
 
 describe("les pièces à lire", () => {
@@ -46,7 +52,14 @@ describe("les pièces à lire", () => {
   it("une lecture qui tourne ou qui a échoué n'est plus « à lire »", () => {
     const r = piecesALire([
       piece("libre"),
-      piece("en-cours", { lecture: { etat: "en_cours", code: null, reessaieLe: null } }),
+      piece("en-cours", {
+        lecture: {
+          demandeLe: "2026-10-24T09:00:00Z",
+          etat: "en_cours",
+          code: null,
+          reessaieLe: null,
+        },
+      }),
       piece("ratee", echec("lecture.illisible")),
     ]);
     expect(r.map((p) => p.id)).toEqual(["libre"]);
@@ -61,9 +74,14 @@ describe("les lectures qui ont échoué se voient", () => {
 
   it("une panne attend sa reprise sans demander de geste", () => {
     const p = piece("p", {
-      lecture: { etat: "en_panne", code: null, reessaieLe: "2026-10-24T12:00:00Z" },
+      lecture: {
+        demandeLe: "2026-10-24T09:00:00Z",
+        etat: "en_panne",
+        code: null,
+        reessaieLe: "2099-01-01T00:00:00Z",
+      },
     });
-    expect(issueDeLecture(p)).toEqual({ kind: "attente", reessaieLe: "2026-10-24T12:00:00Z" });
+    expect(issueDeLecture(p)).toEqual({ kind: "attente", reessaieLe: "2099-01-01T00:00:00Z" });
     expect(lectureEnSuspens(p)).toBe(true);
     expect(piecesEnEchec([p])).toEqual([]);
   });
@@ -83,5 +101,17 @@ describe("les lectures qui ont échoué se voient", () => {
     );
     expect(raisonCourte(issueDeLecture(piece("b", echec(null))))).toBe("pme.lecture.court.echec");
     expect(raisonCourte({ kind: "lue" })).toBeNull();
+  });
+});
+
+describe("chaque issue a sa présentation", () => {
+  it("un refus n'est jamais « en cours », une pièce jamais demandée se lit", () => {
+    expect(presentation({ kind: "refusee", motif: "plafond_atteint" })).toMatchObject({
+      ton: "ko",
+      mot: "pme.refus.titre",
+    });
+    expect(presentation({ kind: "a_lire" }).geste).toBe("lire");
+    expect(presentation({ kind: "echec", code: null }).geste).toBe("relire");
+    expect(presentation({ kind: "attente", reessaieLe: null }).geste).toBeNull();
   });
 });

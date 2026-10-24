@@ -388,6 +388,7 @@ function PmeCoffre() {
                       <EtatDeLecture
                         refus={p.lectureRefusee}
                         vis={p.vis}
+                        lecture={p.lecture}
                         motifDitAilleurs="piece_personnelle"
                       />
                     ) : null}

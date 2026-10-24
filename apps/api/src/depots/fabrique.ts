@@ -604,9 +604,9 @@ export const fabrique = {
     const { rows: echecs } = await db.query<{ n: string }>(
       `select count(*) as n
          from fabrique.etat_des_travaux_v
-        where piece_id = $1 and nature = 'lecture_piece'
+        where tenant_id = $1 and piece_id = $2 and nature = 'lecture_piece'
           and etat in ('epuise', 'en_erreur', 'refuse')`,
-      [pieceId],
+      [tenantId, pieceId],
     );
     const n = Number(echecs[0]?.n ?? 0);
     return enregistrerTravail(db, {

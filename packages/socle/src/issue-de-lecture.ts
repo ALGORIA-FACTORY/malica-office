@@ -41,8 +41,10 @@ export function codeDeLecture(motif: string | null | undefined): CodeDeLecture |
 }
 
 /** Ce que la base dit du DERNIER travail de lecture d'une pièce. */
-export interface EtatDeLecture {
+export interface DerniereLecture {
   etat: EtatDUnTravail;
+  /** Quand cette lecture a été demandée : un refus plus ancien ne la cache pas. */
+  demandeLe: string;
   /** Le code reconnu dans le motif du dernier échec — jamais le motif brut. */
   code: CodeDeLecture | null;
   /** Quand la file réessaiera d'elle-même, pour une panne. */
@@ -58,14 +60,25 @@ export type IssueDeLecture =
   | { kind: "refusee"; motif: string }
   | { kind: "a_lire" };
 
-export function issueDeLecture(p: {
-  status: string;
-  lectureRefusee?: LectureRefusee | null;
-  lecture?: EtatDeLecture | null;
-}): IssueDeLecture {
+export function issueDeLecture(
+  p: {
+    status: string;
+    lectureRefusee?: LectureRefusee | null;
+    lecture?: DerniereLecture | null;
+  },
+  maintenant: number = Date.now(),
+): IssueDeLecture {
   if (p.status !== "capturee") return { kind: "lue" };
-  if (p.lectureRefusee) return { kind: "refusee", motif: p.lectureRefusee.motif };
   const l = p.lecture;
+  /*
+   * Le refus l'emporte — sauf sur une lecture demandée APRÈS lui : un forfait
+   * relevé, puis « Relire », ne doit pas rester affiché « refusée » pendant
+   * que la nouvelle lecture tourne.
+   */
+  const refus = p.lectureRefusee;
+  if (refus && (!l || Date.parse(refus.le) >= Date.parse(l.demandeLe))) {
+    return { kind: "refusee", motif: refus.motif };
+  }
   if (!l) return { kind: "a_lire" };
   switch (l.etat) {
     // « termine » alors que la pièce est encore « capturée » : la liste qui
@@ -74,9 +87,19 @@ export function issueDeLecture(p: {
     case "en_cours":
     case "termine":
       return { kind: "en_cours" };
+    /*
+     * ATTENTE N'EST VRAI QUE JUSQU'À L'HEURE DE REPRISE. Aucun démon ne
+     * reprend un travail tout seul : la file reprend au prochain appel d'un
+     * membre de l'organisation (`coureur.ts`). Passé `reessaieLe`, « je
+     * réessaie seule » mentirait, et la pièce disparaîtrait de tous les écrans
+     * (ni à lire, ni en échec). On propose donc « Relire » : la même clé
+     * retrouve le travail, et l'appel relance la file (revue du 24 octobre).
+     */
     case "abandonne":
     case "en_panne":
-      return { kind: "attente", reessaieLe: l.reessaieLe };
+      return l.reessaieLe && Date.parse(l.reessaieLe) > maintenant
+        ? { kind: "attente", reessaieLe: l.reessaieLe }
+        : { kind: "echec", code: l.code };
     case "refuse":
       // Le refus d'une lecture d'arrière-plan s'inscrit aussi sur la pièce ;
       // tant qu'il n'y est pas, on ne l'invente pas.

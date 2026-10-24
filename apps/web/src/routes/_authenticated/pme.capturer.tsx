@@ -11,10 +11,10 @@ import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
-import { lectureEnSuspens, raisonCourte, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
+import { lectureEnSuspens, presentation, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
 import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
 import { office } from "@/verticals/malica-office/composition";
-import { demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
+import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 
@@ -439,9 +439,19 @@ function PmeCapturer() {
    */
   const suivre = etape === 3 && retenues.some(lectureEnSuspens);
   const relirePieces = pieces.refetch;
+  /*
+   * L'heure fait partie de l'état : une attente dont l'heure de reprise est
+   * passée devient un échec qu'on peut relire (`issueDeLecture`). La liste
+   * peut revenir identique — sans ce battement, l'écran ne se redessinerait
+   * pas, et le suivi ne s'arrêterait jamais.
+   */
+  const [, battre] = useState(0);
   useEffect(() => {
     if (!suivre) return;
-    const h = setInterval(() => void relirePieces(), SUIVI_DE_LECTURE_MS);
+    const h = setInterval(() => {
+      void relirePieces();
+      battre(Date.now());
+    }, SUIVI_DE_LECTURE_MS);
     return () => clearInterval(h);
   }, [suivre, relirePieces]);
   useEffect(() => {
@@ -724,7 +734,7 @@ function PmeCapturer() {
   const vide6 =
     sansDate.isSuccess &&
     (sansDate.data?.pieces ?? 0) === 0 &&
-    retenues.every((p) => p.dateDocument !== null);
+    lues.every((p) => p.dateDocument !== null);
   useEffect(() => {
     if (etape === 5 && vide5) setEtape(6);
     else if (etape === 6 && vide6) setEtape(7);
@@ -1147,54 +1157,45 @@ function PmeCapturer() {
                  * est toujours écrit.
                  */
                 const issue = issueDeLecture(p);
-                const raison = raisonCourte(issue);
-                const geste = demandeUnGeste(issue);
-                const classe =
-                  issue.kind === "lue"
-                    ? "ok"
-                    : geste
-                      ? "ko"
-                      : issue.kind === "attente"
-                        ? "att"
-                        : "";
-                const mot =
-                  issue.kind === "lue"
-                    ? t("pme.capture.lire.lue")
-                    : geste
-                      ? t("pme.lecture.pasLue")
-                      : issue.kind === "attente"
-                        ? t("pme.lecture.enAttente")
-                        : t("pme.capture.travail.en_cours");
+                const vue = presentation(issue);
+                const raison =
+                  issue.kind === "refusee"
+                    ? libelleDuRefus(issue.motif, t)
+                    : vue.raison
+                      ? t(vue.raison)
+                      : null;
                 return (
-                  <div key={p.id} className={classe}>
+                  <div key={p.id} className={vue.ton}>
                     <div className="ligne">
                       <ApercuDePiece pieceId={p.id} className="mini" />
                       <span className="nom">
                         <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
-                        {raison ? <small>{t(raison)}</small> : null}
+                        {raison ? <small>{raison}</small> : null}
                       </span>
-                      <span className="et">{mot}</span>
+                      <span className="et">{t(vue.mot)}</span>
                     </div>
-                    {geste ? (
+                    {vue.geste ? (
                       <div className="gestes">
+                        {vue.geste === "relire" ? (
+                          <button
+                            type="button"
+                            className="pr"
+                            disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
+                            onClick={() => {
+                              setARemplacer(p.id);
+                              pme.ouvrirScanner();
+                            }}
+                          >
+                            {t("pme.verifie.corriger")}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          className="pr"
-                          disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
-                          onClick={() => {
-                            setARemplacer(p.id);
-                            pme.ouvrirScanner();
-                          }}
-                        >
-                          {t("pme.verifie.corriger")}
-                        </button>
-                        <button
-                          type="button"
-                          className="sc"
+                          className={vue.geste === "relire" ? "sc" : "pr"}
                           disabled={lireNeuves.isPending}
                           onClick={() => lireNeuves.mutate([p.id])}
                         >
-                          {t("pme.lecture.relire")}
+                          {t(vue.geste === "relire" ? "pme.lecture.relire" : "pme.read.run")}
                         </button>
                       </div>
                     ) : null}
@@ -1281,17 +1282,6 @@ function PmeCapturer() {
                     mono
                     onCorriger={corriger}
                   />
-                  {/* Le motif passe par son traducteur : c'est un CODE de la base. */}
-                  {p.lectureRefusee ? (
-                    <div className="flag">
-                      <i />
-                      <span>
-                        {t("pme.capture.lu.refus", {
-                          motif: libelleDuRefus(p.lectureRefusee.motif, t),
-                        })}
-                      </span>
-                    </div>
-                  ) : null}
                 </div>
               );
             })()}

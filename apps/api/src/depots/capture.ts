@@ -246,7 +246,7 @@ export const capture = {
                 order by decided_at desc limit 1) as precision_kind,
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
-              w.prenable_a as lecture_reessaie_le
+              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le
          from pieces_v p
          left join lateral (
            select e.payload
@@ -264,7 +264,8 @@ export const capture = {
           * tout le dossier — pas une sous-requête par pièce.
           */
          left join (
-           select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif, t.prenable_a
+           select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif, t.prenable_a,
+                  t.demande_le
              from fabrique.etat_des_travaux_v t
             where t.tenant_id = $1 and t.nature = 'lecture_piece'
             order by t.piece_id, t.demande_le desc
@@ -302,6 +303,7 @@ export const capture = {
         lecture: r["lecture_etat"]
           ? {
               etat: r["lecture_etat"] as EtatDUnTravail,
+              demandeLe: new Date(r["lecture_demande_le"] as string | Date).toISOString(),
               code: codeDeLecture(r["lecture_motif"] as string | null),
               reessaieLe:
                 r["lecture_reessaie_le"] == null

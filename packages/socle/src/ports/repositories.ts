@@ -3,7 +3,7 @@
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
  */
 
-import type { EtatDeLecture } from "../issue-de-lecture.ts";
+import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
@@ -910,7 +910,7 @@ export interface PieceLue {
    * dérive — `null` si aucune lecture n'a été demandée. C'est ce qui permet
    * à TOUS les écrans de dire qu'une lecture a échoué (`issueDeLecture`).
    */
-  lecture?: EtatDeLecture | null;
+  lecture?: DerniereLecture | null;
 }
 
 /** Un refus de lecture, tel que la base l'a inscrit. */

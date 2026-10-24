@@ -66,6 +66,44 @@ export const RAISON_LONGUE: Record<CodeDeLecture, MessageKey> = {
   "lecture.trop_longue": "pme.lire.tropLongue",
 };
 
+/**
+ * Comment une issue se montre dans une ligne : son ton (la couleur, toujours
+ * doublée d'un mot), son mot, sa raison courte, et le geste proposé.
+ *
+ * Le `switch` est exhaustif : un état ajouté au Socle sans présentation ne
+ * compile pas — c'est ainsi qu'un refus s'affichait « en cours » (revue du
+ * 24 octobre 2026). Le refus porte sa raison par `libelleDuRefus`, à part :
+ * ce n'est pas une clé, c'est une phrase qui dépend du motif.
+ */
+export interface PresentationDeLecture {
+  ton: "ok" | "ko" | "att" | "neutre";
+  mot: MessageKey;
+  raison: MessageKey | null;
+  geste: "relire" | "lire" | null;
+}
+
+export function presentation(i: IssueDeLecture): PresentationDeLecture {
+  switch (i.kind) {
+    case "lue":
+      return { ton: "ok", mot: "pme.capture.lire.lue", raison: null, geste: null };
+    case "en_cours":
+      return { ton: "neutre", mot: "pme.capture.travail.en_cours", raison: null, geste: null };
+    case "attente":
+      return { ton: "att", mot: "pme.lecture.enAttente", raison: raisonCourte(i), geste: null };
+    case "a_reprendre":
+    case "echec":
+      return { ton: "ko", mot: "pme.lecture.pasLue", raison: raisonCourte(i), geste: "relire" };
+    case "refusee":
+      return { ton: "ko", mot: "pme.refus.titre", raison: null, geste: null };
+    case "a_lire":
+      return { ton: "neutre", mot: "pme.refus.attente", raison: null, geste: "lire" };
+    default: {
+      const jamais: never = i;
+      return jamais;
+    }
+  }
+}
+
 /** La ligne d'état d'une pièce non lue : sa raison courte, ou `null`. */
 export function raisonCourte(i: IssueDeLecture): MessageKey | null {
   switch (i.kind) {
