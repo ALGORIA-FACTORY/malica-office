@@ -16,8 +16,9 @@ import { usePme } from "@/components/malica/pme-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { Aide } from "@/components/malica/aide";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
-import portraitMalica from "@/assets/malica.webp";
 import {
   libelleDuChamp,
   libelleDuRefus,
@@ -1336,19 +1337,202 @@ function PieceScreen() {
   /** La chaîne : la pièce elle-même, puis ce qui en est né. */
   const nes = joints.data ?? [];
 
+  /*
+   * ══════════════════════════════════════════ UNE DÉCISION, TROIS ONGLETS
+   *
+   * 24 octobre 2026, Wissem, sur les captures de la fiche : « encore trop
+   * d'écriture, il faut une séparation de section, ultra intuitif, avec des
+   * boutons et des actions ». Maquette validée (« C bon ») : la pièce en tête,
+   * UNE carte de décision, l'avancement, puis Lecture · Règlement · Suivi.
+   *
+   * La carte pose une seule question à la fois, dans cet ordre : le sens si
+   * la lecture ne l'a pas tranché, la date si elle manque, le montant, l'envoi
+   * au cabinet, le reste à payer — puis elle devient une ligne calme. Aucun
+   * geste n'est perdu : chacun a aussi sa place dans un onglet.
+   */
+  /*
+   * Comptée : par l'écriture lue, OU par le statut de la pièce — l'écriture
+   * peut tarder d'une requête, et une pièce comptée ne doit jamais reposer la
+   * question du montant.
+   */
+  const comptee =
+    Boolean(booked) || piece.status === "comptabilisee" || piece.status === "supervisee";
+  const pastille: { cle: MessageKey; ton: "ok" | "am" | "az" | "neutre" } = comptee
+    ? { cle: "pme.dossier.etat.comptabilisee", ton: "ok" }
+    : piece.status === "retournee"
+      ? { cle: "pme.home.etat.retour", ton: "az" }
+      : piece.status === "lue" || piece.status === "proposee"
+        ? { cle: "pme.charges.answer.verifier", ton: "am" }
+        : { cle: "pme.refus.titre", ton: "neutre" };
+  const indexCourant = Math.max(
+    0,
+    etapes.findIndex((e) => e.etat === "courante"),
+  );
+  const courante = etapes[indexCourant];
+  const suivante = etapes[indexCourant + 1] ?? null;
+  const aTransmettre =
+    Boolean(cabinet.data) && piece.vis !== "partage" && !piece.gardeeLe && !siege;
+  const resteAPayer = comptee && resteMineur !== null && resteMineur > 0;
+  const bloquee = !confirmable && proposalAttempt != null && !proposalAttempt.ok;
+
+  const constats = controles.filter((c) => c.k === "ok" || c.cle === "refus");
+
+  const ouvrirLeReglement = () => {
+    setOnglet("reglement");
+    setAjoutOuvert(true);
+  };
+  const allerA = (o: "lecture" | "reglement" | "suivi") => {
+    setOnglet(o);
+    document.getElementById("onglets-de-la-piece")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  type Geste = { libelle: string; action: () => void; principal?: boolean; eteint?: boolean };
+  const decision: {
+    ton: "am" | "ve" | "ok" | "az";
+    titre: string;
+    sous?: string;
+    gestes: Geste[];
+  } = sensIndetermine
+    ? {
+        ton: "am",
+        titre: t("pme.sens.pourquoi"),
+        gestes: [
+          {
+            libelle: nomDuType("facture_achat") ?? "",
+            action: () => preciser.mutate("facture_achat"),
+            eteint: preciser.isPending,
+          },
+          {
+            libelle: nomDuType("facture_vente") ?? "",
+            action: () => preciser.mutate("facture_vente"),
+            eteint: preciser.isPending,
+          },
+        ],
+      }
+    : sensContredit
+      ? {
+          ton: "am",
+          titre: t("pme.sens.contredit"),
+          gestes: [
+            {
+              // L'autre réponse, de même poids (ANO-LIVE-002) : la personne
+              // corrige la lecture, et sa réponse l'emporte.
+              libelle:
+                sensLu === "facture_vente" ? t("pme.sens.plutotAchat") : t("pme.sens.plutotVente"),
+              action: () =>
+                preciser.mutate(sensLu === "facture_vente" ? "facture_achat" : "facture_vente"),
+              eteint: preciser.isPending,
+            },
+            {
+              libelle:
+                sensLu === "facture_vente"
+                  ? t("pme.sens.confirmerVente")
+                  : t("pme.sens.confirmerAchat"),
+              action: () =>
+                preciser.mutate(sensLu === "facture_vente" ? "facture_vente" : "facture_achat"),
+              eteint: preciser.isPending,
+              principal: true,
+            },
+          ],
+        }
+      : !comptee && dateAbsente
+        ? {
+            ton: "am",
+            titre: t("pme.date.manque.lede"),
+            gestes: [
+              {
+                libelle: t("pme.piece.decision.date"),
+                action: () => allerA("lecture"),
+                principal: true,
+              },
+            ],
+          }
+        : !comptee && bloquee
+          ? {
+              // La raison passe devant le bouton mort (10 octobre 2026).
+              ton: "ve",
+              titre: raisonDuBlocage,
+              sous: t("pme.bloque.geste"),
+              gestes: [
+                { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
+                ...(aTransmettre && cabinet.data
+                  ? [
+                      {
+                        libelle: t("pme.transmettre.action"),
+                        action: () => transmettre.mutate(),
+                        eteint: transmettre.isPending || garder.isPending,
+                        principal: true,
+                      },
+                    ]
+                  : []),
+              ],
+            }
+          : !comptee
+            ? {
+                ton: "am",
+                titre: payload?.totals?.ttc
+                  ? t("pme.verifie.question", {
+                      montant: lisible(payload.totals.ttc) ?? "",
+                      devise,
+                    })
+                  : t("pme.verifie.question.sansTotal"),
+                gestes: [
+                  { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
+                  {
+                    libelle: confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui"),
+                    action: () => confirm.mutate(),
+                    eteint: confirm.isPending || !confirmable,
+                    principal: true,
+                  },
+                ],
+              }
+            : aTransmettre && cabinet.data
+              ? {
+                  /*
+                   * La transmission est une DÉCISION (4 et 7 octobre) : deux
+                   * boutons de même poids — garder chez soi est légitime.
+                   */
+                  ton: "az",
+                  titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
+                  sous: t("pme.transmettre.chezvous"),
+                  gestes: [
+                    {
+                      libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
+                      action: () => garder.mutate(),
+                      eteint: garder.isPending || transmettre.isPending,
+                    },
+                    {
+                      libelle: transmettre.isPending
+                        ? t("common.loading")
+                        : t("pme.transmettre.action"),
+                      action: () => transmettre.mutate(),
+                      eteint: transmettre.isPending || garder.isPending,
+                      principal: true,
+                    },
+                  ],
+                }
+              : resteAPayer
+                ? {
+                    ton: "az",
+                    titre: t("pme.piece.decision.reste", {
+                      montant: resteLisible ?? "",
+                      devise,
+                    }),
+                    gestes: [
+                      {
+                        libelle: t("pme.paiement.ajouterUn"),
+                        action: ouvrirLeReglement,
+                        principal: true,
+                      },
+                    ],
+                  }
+                : { ton: "ok", titre: t("pme.book.done"), sous: classement, gestes: [] };
+
   return (
     <div data-ecran="dossier">
       {/* ── la barre du haut ─────────────────────────────────────────── */}
       <div className="top">
-        {/*
-         * Le retour de la barre dit « Retour », comme les neuf autres.
-         *
-         * Il disait « Vos documents » — exact, et c'etait la quatrieme
-         * etiquette differente pour un meme geste. Une seule forme veut une
-         * seule etiquette. `pme.piece.retour` reste employe deux fois plus
-         * haut, sur les liens VISIBLES « < Vos documents » du corps de
-         * l'ecran, ou le texte nomme la destination : la cle ne meurt pas.
-         */}
+        {/* Le retour dit « Retour », comme les neuf autres écrans. */}
         <button
           type="button"
           className="bk"
@@ -1361,424 +1545,136 @@ function PieceScreen() {
         </button>
         <span className="ttl">{titreDeLaPiece}</span>
         {periode ? <span className="per">{periode}</span> : null}
+        <button
+          type="button"
+          className="bk"
+          aria-label={t("pme.piece.plusDActions")}
+          onClick={() => allerA("suivi")}
+        >
+          <svg viewBox="0 0 24 24" className="g" aria-hidden>
+            <circle cx="5" cy="12" r="1.2" />
+            <circle cx="12" cy="12" r="1.2" />
+            <circle cx="19" cy="12" r="1.2" />
+          </svg>
+        </button>
       </div>
 
-      {/* ── le chapeau du dossier ────────────────────────────────────── */}
-      <div className="tete">
-        {/*
-         * Le sens ne se dit que d'une facture, ou d'une pièce sans type : un
-         * reçu ou un relevé n'est ni « achat » ni « sens non tranché ».
-         */}
-        {vente || achat || !payload?.document_kind ? (
-          <span className={vente ? "kind rec" : "kind"}>
+      {/* ── 1 · la pièce : la vraie page, qui, combien ─────────────────── */}
+      <div className="f-id">
+        <button
+          type="button"
+          className="f-vign"
+          aria-label={t("pme.piece.voir")}
+          onClick={() => setPiece(true)}
+        >
+          <ApercuDePiece pieceId={pieceId} />
+        </button>
+        <div className="f-qui">
+          <span className={`f-etat ${pastille.ton}`}>
             <i />
-            {vente
-              ? t("pme.piece.sens.vente")
-              : achat
-                ? t("pme.piece.sens.achat")
-                : t("pme.piece.sens.inconnu")}
+            {t(pastille.cle)}
           </span>
-        ) : null}
-        <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
-        <p className="obj">
-          {nomDuType(piece.documentKind) ?? t("pme.piece.title")}
-          {reference ? ` · ${reference}` : ""}
-          {payload?.document_date ? ` · ${jourLisible(payload.document_date)}` : ""}
-          {/*
-           * Le type se corrige après la lecture (23 octobre 2026), tant que la
-           * pièce n'est pas engagée — la base le redit (`capture_precision_persist`).
-           */}
-          {STATUTS_PRECISABLES.has(piece.status) ? (
-            <button
-              type="button"
-              className="mod"
-              disabled={preciser.isPending}
-              onClick={() => setCorrigerType(true)}
-            >
-              {t("pme.piece.type.modifier")}
-            </button>
-          ) : null}
-        </p>
-        {corrigerType ? (
-          <QuestionDuType
-            documents={[nomDuType(piece.documentKind) ?? t("pme.piece.title")]}
-            actuel={piece.documentKind}
-            mode="correction"
-            onRepondre={(code) =>
-              code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)
-            }
-            onAnnuler={() => setCorrigerType(false)}
-          />
-        ) : null}
+          <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
+          <div className="f-typ">
+            {/*
+             * Le type se corrige après la lecture (23 octobre 2026), tant que
+             * la pièce n'est pas engagée — la base le redit.
+             */}
+            {STATUTS_PRECISABLES.has(piece.status) ? (
+              <button
+                type="button"
+                className={vente ? "puce vent" : "puce"}
+                disabled={preciser.isPending}
+                onClick={() => setCorrigerType(true)}
+                aria-label={`${nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")} — ${t("pme.piece.type.modifier")}`}
+              >
+                {nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")}
+                <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                  <path d="M4 20h4L19 9l-4-4L4 16z" />
+                </svg>
+              </button>
+            ) : (
+              <span className={vente ? "puce vent" : "puce"}>
+                {nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")}
+              </span>
+            )}
+            {payload?.document_date ? (
+              <span className="dt">{jourLisible(payload.document_date)}</span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      {corrigerType ? (
+        <QuestionDuType
+          documents={[nomDuType(piece.documentKind) ?? t("pme.piece.title")]}
+          actuel={piece.documentKind}
+          mode="correction"
+          onRepondre={(code) =>
+            code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)
+          }
+          onAnnuler={() => setCorrigerType(false)}
+        />
+      ) : null}
+
+      <div className="f-mt">
         <div className={vente ? "amt vent" : "amt"}>
           {lisible(payload?.totals?.ttc) ?? "—"}{" "}
           <u>
             {devise} {t("pme.extract.ttc")}
           </u>
         </div>
-        <p className="decomp">
-          {t("pme.extract.base")} {lisible(payload?.totals?.base_ht) ?? "—"} ·{" "}
-          {t("pme.extract.vat")} {lisible(payload?.totals?.vat) ?? "—"}
+        <div className="f-puces">
+          <span>
+            {t("pme.extract.base")} <b>{lisible(payload?.totals?.base_ht) ?? "—"}</b>
+          </span>
+          <span>
+            {t("pme.extract.vat")} <b>{lisible(payload?.totals?.vat) ?? "—"}</b>
+          </span>
           {droits.map((d, i) => (
             <span key={`${d.code}-${i}`}>
-              {" · "}
-              {d.libelle} {lisible(d.montant) ?? "—"}
-              {d.connu ? "" : ` · ${t("pme.extract.droitInconnu")}`}
+              {d.libelle} <b>{lisible(d.montant) ?? "—"}</b>
+              {d.connu ? null : <em> · {t("pme.extract.droitInconnu")}</em>}
             </span>
           ))}
-          <br />
-          {pme.orgName}
-        </p>
-      </div>
-
-      {/* ── l'état de règlement ──────────────────────────────────────── */}
-      <SoldeDePiece
-        paye={payeLisible}
-        total={lisible(payload?.totals?.ttc)}
-        reste={resteLisible}
-        soldee={resteMineur === null ? null : resteMineur <= 0}
-        progression={part}
-        devise={devise}
-      />
-
-      {/* ── ce que le dirigeant centralise ──────────────────────────────
-          Le rôle vient de `acces.monAcces`, pas de l'offre : l'écran du
-          dossier ne porte aucune valeur d'abonnement, et n'appelle donc pas
-          le forfait. La règle de dégradation le lit UNE fois, au layout. */}
-      {siege ? (
-        <div className="centr calme">
-          <i />
-          <p>{t("pme.piece.siege")}</p>
         </div>
-      ) : null}
-
-      {/* ── la chaîne ────────────────────────────────────────────────── */}
-      <div className="sec">
-        <h2>{t("pme.piece.chaine")}</h2>
-        <span>{t("pme.piece.chaine.pieces", { count: nes.length + 1 })}</span>
       </div>
-      <div className="chain">
-        <button type="button" className="doc" onClick={() => setPiece(true)}>
-          <span className="bd">
-            <span className="tp">{nomDuType(piece.documentKind) ?? t("pme.piece.title")}</span>
-            <b>{reference ?? t("pme.piece.title")}</b>
-            <span className="mt">
-              {jourLisible(payload?.document_date) ?? jourLisible(piece.createdAt) ?? "—"}
-            </span>
-          </span>
-          {lisible(payload?.totals?.ttc) ? (
-            <span className="vl">{lisible(payload?.totals?.ttc)}</span>
-          ) : null}
-        </button>
-        {nes.map((p) => (
-          <Link
-            key={p.id}
-            className="doc"
-            to="/pme/piece/$pieceId"
-            params={{ pieceId: p.id }}
-            preload="intent"
-          >
-            <span className="bd">
-              <span className="tp">{t("pme.piece.chaine.issueDe")}</span>
-              <b>{nomDuType(p.documentKind) ?? t("pme.piece.title")}</b>
-              <span className="mt">{jourLisible(p.createdAt) ?? "—"}</span>
-            </span>
-          </Link>
-        ))}
-        {nes.length === 0 ? (
-          <div className="doc miss">
-            <span className="bd">
-              <span className="tp">{t("pme.piece.chaine.aRattacher")}</span>
-              <span className="ask">{t("pme.piece.chaine.vide")}</span>
-            </span>
+
+      {/* ── 2 · LA décision du moment ─────────────────────────────────── */}
+      <div className={`f-dec ${decision.ton}`}>
+        <div className="f-dec-tete">
+          <MalicaAvatar size={44} alt="Malica" rond />
+          <div>
+            <p className="f-dec-titre">
+              {decision.titre}
+              <Aide
+                titre={t("pme.piece.revenir")}
+                paragraphes={[
+                  ...(decision.sous ? [{ texte: decision.sous }] : []),
+                  { texte: t("pme.piece.foot") },
+                ]}
+              />
+            </p>
+            {decision.sous && decision.gestes.length === 0 ? (
+              <p className="f-dec-sous">{decision.sous}</p>
+            ) : null}
+          </div>
+        </div>
+        {decision.gestes.length > 0 ? (
+          <div className={decision.gestes.length > 1 ? "f-dec-gestes deux" : "f-dec-gestes"}>
+            {decision.gestes.map((g) => (
+              <button
+                key={g.libelle}
+                type="button"
+                className={g.principal ? "pr" : undefined}
+                disabled={g.eteint}
+                onClick={g.action}
+              >
+                {g.libelle}
+              </button>
+            ))}
           </div>
         ) : null}
       </div>
-      {/*
-       * Le dessin pose ici « Rattacher un document ». Aucun appel du contrat ne
-       * rattache un document quelconque à une pièce : `rattacherJustificatif`
-       * lie une PREUVE à un PAIEMENT, et une pièce née d'une autre naît avec
-       * son `sourcePieceId` à la capture. Plutôt qu'un bouton qui ne mènerait
-       * nulle part, l'écran dit où le geste se trouve.
-       */}
-      <p className="foot">{t("pme.piece.chaine.foot")}</p>
-
-      {/* ── ce que j'ai lu, champ par champ ──────────────────────────── */}
-      <div className="sec">
-        <h2>{t("pme.piece.jaiLu")}</h2>
-      </div>
-      <div className="lines">
-        {lignesCitees.map((l) =>
-          l.cle === "date" && l.valeur === null ? (
-            /*
-             * La pièce ne porte pas de date lisible. On propose le jour du
-             * scan — affiché, modifiable — plutôt que de bloquer. La saisie
-             * pose une PRÉCISION, qui reprojette les articles ; l'extraction
-             * garde sa date vide, c'est ce qui s'est lu sur le document (R7).
-             */
-            <div className="rg" key={l.cle}>
-              <span className="bd">
-                <b>{l.label}</b>
-                <span className="mt">
-                  {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
-                </span>
-              </span>
-              <input
-                type="date"
-                value={dateRetenue}
-                max={new Date().toISOString().slice(0, 10)}
-                disabled={dater.isPending}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setDateSaisie(v);
-                  // Un champ `date` rend une chaîne vide tant que la saisie
-                  // est incomplète : on n'enregistre que ce qui est une date.
-                  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
-                }}
-                className="vl"
-              />
-            </div>
-          ) : byField.get(l.champ) ? (
-            <button
-              type="button"
-              className="rg"
-              key={l.cle}
-              onClick={() => voirLaSource(l.champ)}
-              aria-label={`${l.label} — ${t("pme.citation.show")}`}
-            >
-              <span className="bd">
-                <b>{l.label}</b>
-                {!confianceConnue ? (
-                  <span className="mt">{t("pme.citation.show")}</span>
-                ) : aVerifier.has(l.champ) ? (
-                  <span className="recu am">
-                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                      <path d="M12 4.5l8.5 15h-17zM12 10v4.2M12 16.6v.4" />
-                    </svg>
-                    {t("pme.citation.aVerifier")}
-                  </span>
-                ) : (
-                  <span className="recu">
-                    <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                      <path d="M4.5 12.5l4.5 4.5 10-10" />
-                    </svg>
-                    {t("pme.citation.source")}
-                  </span>
-                )}
-              </span>
-              <span className="vl">{l.valeur ?? "—"}</span>
-            </button>
-          ) : (
-            <div className="rg" key={l.cle}>
-              <span className="bd">
-                <b>{l.label}</b>
-                <span className="mt">{t("pme.citation.missing")}</span>
-              </span>
-              <span className="vl">{l.valeur ?? "—"}</span>
-            </div>
-          ),
-        )}
-      </div>
-      <p className="foot">{t("pme.verifie.source")}</p>
-      {articles.length > 0 ? (
-        <button type="button" className="add" onClick={() => setDetail(true)}>
-          <svg viewBox="0 0 24 24" className="g" aria-hidden>
-            <path d="M12 5.5v13M5.5 12h13" />
-          </svg>
-          {t("pme.detail.voir")}
-        </button>
-      ) : null}
-
-      {/* ── les règlements ───────────────────────────────────────────────
-          UN RÈGLEMENT NE SE MODIFIE PAS : il s'annule par une ligne datée et
-          motivée. `capture.motifsDAnnulation` puis `capture.annulerPaiement`
-          vivent dans `CommentCEstPaye`, avec la saisie du montant partiel, la
-          date déclarée, la référence et la photo de la preuve. L'écran n'ouvre
-          aucun second chemin vers ces écritures : deux chemins pour une même
-          écriture seraient deux occasions de divergence.
-
-          20 octobre 2026, recette : le bloc était caché dès la facture
-          comptabilisée, et une facture confirmée avec 756,650 TND à payer ne
-          pouvait plus jamais être soldée. La facture constate la dette, le
-          règlement l'éteint — souvent des semaines plus tard. Le bloc reste
-          donc, comptabilisée ou non ; il dit lui-même quand tout est payé. */}
-      <div className="sec">
-        <h2>{vente ? t("pme.piece.encaissements") : t("pme.piece.reglements")}</h2>
-        <span>{t("pme.piece.mouvements", { count: paiementsVivants.length })}</span>
-      </div>
-      {piece ? (
-        <CommentCEstPaye
-          pieceId={pieceId}
-          visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
-          dateDeLaPiece={payload?.document_date ?? null}
-          /*
-           * Le facteur vient du PACK, pas d'un « × 1000 » écrit ici. Trois
-           * décimales sont tunisiennes ; la première juridiction à deux aurait
-           * proposé mille fois le montant payé, et l'écran n'aurait rien
-           * signalé. R4 : aucune constante réglementaire dans le code.
-           */
-          ttcMineur={ttcMineur}
-          devise={devise}
-          /*
-           * Le sens vient du TYPE TRANCHÉ, et de nulle part ailleurs. `null`
-           * quand il ne l'est pas, et le reçu ne se propose alors pas : un
-           * « reçu de dépense » posé sur une vente est un document faux, et un
-           * document faux remis à un tiers est pire qu'un document absent.
-           */
-          sens={achat ? "depense" : vente ? "revenu" : null}
-          tiers={payload?.issuer ?? null}
-          reference={reference}
-          decimales={decimales}
-        />
-      ) : null}
-
-      {/* ── ce que j'ai vérifié ──────────────────────────────────────── */}
-      {controles.length > 0 ? (
-        <>
-          <div className="sec">
-            <h2>{t("pme.piece.verifie")}</h2>
-            <span>{t("pme.piece.points", { count: controles.length })}</span>
-          </div>
-          <div className="ctrl">
-            {controles.map((c) => (
-              <div className={`ck ${c.k}`} key={c.cle}>
-                <i>
-                  <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                    {c.k === "ok" ? (
-                      <path d="M4.5 12.5l4.5 4.5 10-10" />
-                    ) : c.k === "q" ? (
-                      <>
-                        <circle cx="12" cy="12" r="8.5" />
-                        <path d="M9.6 9.6a2.5 2.5 0 1 1 3.2 2.6c-.6.2-.8.7-.8 1.3v.4" />
-                        <path d="M12 17.2v.3" />
-                      </>
-                    ) : c.k === "az" ? (
-                      <>
-                        <path d="M8 6.5L4 10.5l4 4" />
-                        <path d="M4 10.5h12a4 4 0 0 1 0 8h-6" />
-                      </>
-                    ) : (
-                      <>
-                        <circle cx="12" cy="12" r="8.5" />
-                        <path d="M9 9l6 6M15 9l-6 6" />
-                      </>
-                    )}
-                  </svg>
-                </i>
-                <div>
-                  <p>{c.p}</p>
-                  {c.sous ? <p>{c.sous}</p> : null}
-                  {c.corps === "sensContredit" ? (
-                    <span className="rep">
-                      <button
-                        type="button"
-                        disabled={preciser.isPending}
-                        onClick={() =>
-                          preciser.mutate(
-                            sensLu === "facture_vente" ? "facture_vente" : "facture_achat",
-                          )
-                        }
-                      >
-                        {sensLu === "facture_vente"
-                          ? t("pme.sens.confirmerVente")
-                          : t("pme.sens.confirmerAchat")}
-                      </button>
-                      {/*
-                       * L'autre réponse, de même poids (ANO-LIVE-002) : un
-                       * ticket payé au magasin lu « vente » n'avait que « Oui,
-                       * c'est bien une vente ». La personne corrige la lecture,
-                       * et sa réponse l'emporte (`scan/analyse.ts`).
-                       */}
-                      <button
-                        type="button"
-                        disabled={preciser.isPending}
-                        onClick={() =>
-                          preciser.mutate(
-                            sensLu === "facture_vente" ? "facture_achat" : "facture_vente",
-                          )
-                        }
-                      >
-                        {sensLu === "facture_vente"
-                          ? t("pme.sens.plutotAchat")
-                          : t("pme.sens.plutotVente")}
-                      </button>
-                    </span>
-                  ) : null}
-                  {c.corps === "sens" ? (
-                    /*
-                     * La lecture n'a pas pu dire si la pièce est un achat ou
-                     * une vente : ni l'émetteur ni le destinataire n'est ce
-                     * dossier. Elle ne devine pas ; elle demande. La réponse
-                     * s'inscrit à côté de la lecture, datée et signée (R7).
-                     */
-                    <span className="rep">
-                      <button
-                        type="button"
-                        disabled={preciser.isPending}
-                        onClick={() => preciser.mutate("facture_achat")}
-                      >
-                        {nomDuType("facture_achat")}
-                      </button>
-                      {/*
-                       * Pas de `button.sec` ici, bien que le dessin le pose :
-                       * dans `styles-pme.css`, `.sec` est AUSSI le titre de
-                       * section (`display:flex; margin:1.875rem 0`), et la
-                       * règle `.ck .rep button.sec` ne remet ni la marge ni
-                       * l'affichage — le bouton descendrait de trente pixels.
-                       * Et deux boutons de même poids sont ici la bonne
-                       * réponse : ni l'achat ni la vente n'est le défaut.
-                       */}
-                      <button
-                        type="button"
-                        disabled={preciser.isPending}
-                        onClick={() => preciser.mutate("facture_vente")}
-                      >
-                        {nomDuType("facture_vente")}
-                      </button>
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {/* ── le parcours ─────────────────────────────────────────────── */}
-      <div className="sec">
-        <h2>{t("pme.piece.parcours")}</h2>
-        <span>{t("pme.piece.etapes", { count: etapes.length })}</span>
-      </div>
-      <div className="jr">
-        {etapes.map((e) => (
-          <div key={e.cle} className={e.etat === "courante" ? "now" : undefined}>
-            <span>{e.label}</span>
-            <u>
-              {e.etat === "faite"
-                ? t("pme.piece.etat.faite")
-                : e.etat === "courante"
-                  ? t("pme.piece.etat.courante")
-                  : t("pme.piece.etat.attente")}
-            </u>
-          </div>
-        ))}
-      </div>
-
-      {/* ── la remarque de Malica ───────────────────────────────────── */}
-      <div className="note">
-        <img src={portraitMalica} alt="Malica" width={620} height={620} />
-        <p>
-          {booked
-            ? t("pme.doc.note")
-            : payload?.totals?.ttc
-              ? t("pme.verifie.question", {
-                  montant: lisible(payload.totals.ttc) ?? "",
-                  devise,
-                })
-              : t("pme.verifie.question.sansTotal")}
-        </p>
-      </div>
-      <p className="foot">{t("pme.piece.foot")}</p>
 
       {error ? (
         <div className="rev">
@@ -1790,201 +1686,399 @@ function PieceScreen() {
         </div>
       ) : null}
 
-      {/* ── où elle va : la transmission est une DÉCISION ────────────────
-          Le 4 octobre « rien ne partait » : le geste existait, personne ne
-          l'avait fait, et une ligne de 12,5 px disait « chez vous ». On a
-          alors transmis d'office à la photo, et le 7 octobre une facture
-          rejetée était déjà partie. Les deux erreurs ont la même cause : la
-          transmission n'était pas une décision. Elle l'est ici, en deux
-          boutons de même poids — garder une facture chez soi est un choix
-          légitime, l'envoyer aussi, et seul le dirigeant sait lequel. */}
-      {/* Recette du 20 octobre 2026 : « Oui, c'est le bon montant » AVANT
-          « Transmettre » faisait disparaître la transmission — la pièce était
-          comptabilisée et ne partait jamais au cabinet. Comptabilisée ou
-          non, une pièce qui n'est pas partie garde le geste. */}
-      {cabinet.data && (!booked || piece.vis !== "partage") ? (
-        piece.vis === "partage" ? (
-          <div className="centr calme">
-            <i />
-            <div>
-              <p>{t("pme.transmettre.faite", { cabinet: cabinet.data.name })}</p>
-              {demandeDeRappel === "demandee" ? (
-                <p>{t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}</p>
-              ) : demandeDeRappel === "refusee" ? (
-                <p>{t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}</p>
-              ) : (
+      {/* ── 3 · où elle en est ────────────────────────────────────────── */}
+      <div className="f-av">
+        <div className="barres" aria-hidden>
+          {etapes.map((e) => (
+            <i key={e.cle} className={e.etat} />
+          ))}
+        </div>
+        <p>
+          <span>
+            {t("pme.piece.etape", { n: indexCourant + 1, total: etapes.length })} ·{" "}
+            <b>{courante?.label}</b>
+          </span>
+          {suivante ? <span>{t("pme.piece.ensuite", { etape: suivante.label })}</span> : null}
+        </p>
+      </div>
+
+      {/* ── 4 · les onglets ───────────────────────────────────────────── */}
+      <div
+        id="onglets-de-la-piece"
+        className="f-ong"
+        role="tablist"
+        aria-label={t("pme.piece.onglets")}
+      >
+        {(
+          [
+            ["lecture", t("pme.piece.onglet.lecture")],
+            [
+              "reglement",
+              vente ? t("pme.piece.onglet.encaissement") : t("pme.piece.onglet.reglement"),
+            ],
+            ["suivi", t("pme.piece.onglet.suivi")],
+          ] as const
+        ).map(([cle, libelle]) => (
+          <button
+            key={cle}
+            type="button"
+            role="tab"
+            id={`onglet-${cle}`}
+            aria-controls={`panneau-${cle}`}
+            aria-selected={onglet === cle}
+            onClick={() => setOnglet(cle)}
+          >
+            {libelle}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 4a · Lecture ──────────────────────────────────────────────── */}
+      {onglet === "lecture" ? (
+        <div
+          className="f-pan"
+          role="tabpanel"
+          id="panneau-lecture"
+          aria-labelledby="onglet-lecture"
+        >
+          <div className="f-carte">
+            {lignesCitees.map((l) =>
+              l.cle === "date" && l.valeur === null ? (
+                /*
+                 * La pièce ne porte pas de date lisible : le jour du scan est
+                 * proposé, modifiable, et la saisie pose une PRÉCISION (R7).
+                 */
+                <div className="f-ligne" key={l.cle}>
+                  <span className="bd">
+                    <span className="lb">{l.label}</span>
+                    <span className="et am">
+                      {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
+                    </span>
+                  </span>
+                  <input
+                    type="date"
+                    aria-label={l.label}
+                    value={dateRetenue}
+                    max={new Date().toISOString().slice(0, 10)}
+                    disabled={dater.isPending}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDateSaisie(v);
+                      // Un champ `date` rend une chaîne vide tant que la saisie
+                      // est incomplète : on n'enregistre que ce qui est une date.
+                      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
+                    }}
+                  />
+                </div>
+              ) : byField.get(l.champ) ? (
                 <button
                   type="button"
-                  disabled={rappeler.isPending}
-                  onClick={() => rappeler.mutate()}
+                  className="f-ligne"
+                  key={l.cle}
+                  onClick={() => voirLaSource(l.champ)}
+                  aria-label={`${l.label} — ${t("pme.citation.show")}`}
                 >
-                  {rappeler.isPending
-                    ? t("common.loading")
-                    : t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
+                  <span className="bd">
+                    <span className="lb">{l.label}</span>
+                    {!confianceConnue ? (
+                      <span className="et">{t("pme.citation.show")}</span>
+                    ) : aVerifier.has(l.champ) ? (
+                      <span className="et am">{t("pme.citation.aVerifier")}</span>
+                    ) : (
+                      <span className="et ok">{t("pme.citation.source")}</span>
+                    )}
+                  </span>
+                  <span className="vl">{l.valeur ?? "—"}</span>
+                  <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                    <path d="M9.5 5.5L16 12l-6.5 6.5" />
+                  </svg>
                 </button>
-              )}
-            </div>
+              ) : (
+                <div className="f-ligne" key={l.cle}>
+                  <span className="bd">
+                    <span className="lb">{l.label}</span>
+                    <span className="et">{t("pme.citation.missing")}</span>
+                  </span>
+                  <span className="vl">{l.valeur ?? "—"}</span>
+                </div>
+              ),
+            )}
           </div>
-        ) : piece.gardeeLe ? (
-          /*
-           * LA DÉCISION PRISE, ET SON CHEMIN DE RETOUR. On ne repose pas la
-           * question : elle a été tranchée, et la date le dit. Mais
-           * « Transmettre quand même » reste là — « j'ai classé dans mon
-           * coffre, j'aurai toujours la possibilité de transmettre au
-           * cabinet ». Ce sens-là ne demande rien à personne et ne doit
-           * jamais se fermer.
-           */
-          <div className="rev">
-            <span className="q">
-              <i />
-              {t("pme.garder.faite")}
-            </span>
-            <div className="b">
-              <button
-                type="button"
-                disabled={transmettre.isPending}
-                onClick={() => transmettre.mutate()}
-              >
-                {transmettre.isPending
-                  ? t("common.loading")
-                  : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="rev">
-            {/* `.q` est une étiquette d'état, en capitales et en mono : elle
-                porte le nom du cabinet, pas la question — une phrase entière
-                en capitales de 10 px ne se lit pas. */}
-            <span className="q">
-              <i />
-              {cabinet.data.name}
-            </span>
-            <p>
-              {t("pme.transmettre.question", { cabinet: cabinet.data.name })}{" "}
-              {t("pme.transmettre.chezvous")}
-            </p>
-            <div className="b">
-              <button
-                type="button"
-                disabled={garder.isPending || transmettre.isPending}
-                onClick={() => garder.mutate()}
-              >
-                {garder.isPending ? t("common.loading") : t("pme.garder.action")}
-              </button>
-              <button
-                type="button"
-                disabled={transmettre.isPending || garder.isPending}
-                onClick={() => transmettre.mutate()}
-              >
-                {transmettre.isPending ? t("common.loading") : t("pme.transmettre.action")}
-              </button>
-            </div>
-          </div>
-        )
+          <p className="f-note">{t("pme.verifie.source")}</p>
+          {articles.length > 0 ? (
+            <button type="button" className="f-bouton" onClick={() => setDetail(true)}>
+              {t("pme.detail.voir")}
+            </button>
+          ) : null}
+
+          {/*
+           * Les constats que la carte de décision pose déjà (le sens, la date,
+           * le blocage) n'y sont pas redits : une phrase, un seul endroit.
+           */}
+          {constats.length > 0 ? (
+            <>
+              <div className="f-tit">
+                <h2>{t("pme.piece.verifie")}</h2>
+                <span>{t("pme.piece.points", { count: constats.length })}</span>
+              </div>
+              <div className="ctrl">
+                {constats.map((c) => (
+                  <div className={`ck ${c.k}`} key={c.cle}>
+                    <i>
+                      <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                        {c.k === "ok" ? (
+                          <path d="M4.5 12.5l4.5 4.5 10-10" />
+                        ) : c.k === "q" ? (
+                          <>
+                            <circle cx="12" cy="12" r="8.5" />
+                            <path d="M9.6 9.6a2.5 2.5 0 1 1 3.2 2.6c-.6.2-.8.7-.8 1.3v.4" />
+                            <path d="M12 17.2v.3" />
+                          </>
+                        ) : c.k === "az" ? (
+                          <>
+                            <path d="M8 6.5L4 10.5l4 4" />
+                            <path d="M4 10.5h12a4 4 0 0 1 0 8h-6" />
+                          </>
+                        ) : (
+                          <>
+                            <circle cx="12" cy="12" r="8.5" />
+                            <path d="M9 9l6 6M15 9l-6 6" />
+                          </>
+                        )}
+                      </svg>
+                    </i>
+                    <div>
+                      <p>{c.p}</p>
+                      {c.sous ? <p>{c.sous}</p> : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
       ) : null}
 
-      {/* ── REVENIR DESSUS ──────────────────────────────────────────────
-          Ce bloc lit `vis` et le RÔLE, et rien d'autre :
-
-            personnel            → LIBRE : corriger, supprimer, mettre au privé
-            entite · siège       → AVANT VALIDATION : corriger, demander la
-                                   suppression au dirigeant
-            entite · dirigeant   → LIBRE
-            partage              → SUR ACCORD : corriger et renvoyer, demander
-                                   la suppression au cabinet
-
-          « Corriger » reprend la PHOTO, comme le prototype : R7 interdit
-          d'effacer un relevé, et relancer la lecture serait de toute façon
-          refusé. Une correction de champ s'ajoute par `capture.preciser`, que
-          l'écran propose là où elle a un sens — le sens de la pièce, dans
-          « Ce que j'ai vérifié » juste au-dessus. */}
-      <div className="sec">
-        <h2>{t("pme.piece.revenir")}</h2>
-        <span>
-          {vis === "partage"
-            ? t("pme.piece.revenir.surAccord")
-            : vis === "entite" && siege
-              ? t("pme.piece.revenir.avantValidation")
-              : t("pme.piece.revenir.libre")}
-        </span>
-      </div>
-      {vis === "partage" ? (
-        <div className="rev">
-          <span className="q lock">
-            <i />
-            {t("pme.piece.elleEstPartie")}
-          </span>
-          <p>{t("pme.piece.elleEstPartie.texte")}</p>
-          <div className="b">
-            <button type="button" onClick={pme.ouvrirScanner}>
-              {t("pme.verifie.corriger")}
-            </button>
-            {/* Une demande déjà inscrite ne se redemande pas : son dernier
-                fait est affiché juste en dessous. */}
-            {demandeDeSuppression ? null : (
-              <button
-                type="button"
-                className="sup"
-                disabled={demanderSuppression.isPending}
-                onClick={() => demanderSuppression.mutate()}
-              >
-                {demanderSuppression.isPending
-                  ? t("common.loading")
-                  : t("pme.piece.demanderSuppression")}
-              </button>
-            )}
-          </div>
-          {demandeDeSuppression === "demandee" ? (
-            <p>{t("pme.piece.suppressionDemandee")}</p>
-          ) : demandeDeSuppression === "refusee" ? (
-            <p>{t("pme.piece.suppressionRefusee")}</p>
-          ) : null}
+      {/* ── 4b · Règlement ─────────────────────────────────────────────
+          UN RÈGLEMENT NE SE MODIFIE PAS : il s'annule par une ligne datée et
+          motivée, dans `CommentCEstPaye`. Le bloc reste, comptabilisée ou
+          non (recette du 20 octobre) : la facture constate la dette, le
+          règlement l'éteint, souvent des semaines plus tard. */}
+      {onglet === "reglement" ? (
+        <div
+          className="f-pan"
+          role="tabpanel"
+          id="panneau-reglement"
+          aria-labelledby="onglet-reglement"
+        >
+          <SoldeDePiece
+            paye={payeLisible}
+            total={lisible(payload?.totals?.ttc)}
+            reste={resteLisible}
+            soldee={resteMineur === null ? null : resteMineur <= 0}
+            progression={part}
+            devise={devise}
+          />
+          <CommentCEstPaye
+            pieceId={pieceId}
+            visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
+            dateDeLaPiece={payload?.document_date ?? null}
+            /* Le facteur vient du PACK, jamais d'un « × 1000 » (R4). */
+            ttcMineur={ttcMineur}
+            devise={devise}
+            /*
+             * Le sens vient du TYPE TRANCHÉ : `null` sinon, et le reçu ne se
+             * propose pas — un reçu de dépense posé sur une vente est faux.
+             */
+            sens={achat ? "depense" : vente ? "revenu" : null}
+            tiers={payload?.issuer ?? null}
+            reference={reference}
+            decimales={decimales}
+            ajoutOuvert={ajoutOuvert}
+            onAjout={setAjoutOuvert}
+          />
         </div>
-      ) : vis === "entite" && siege ? (
-        <div className="rev">
-          <span className="q lock">
-            <i />
-            {t("pme.piece.elleAttend")}
-          </span>
-          <p>{t("pme.piece.elleAttend.texte")}</p>
-          <div className="b">
-            <button type="button" onClick={pme.ouvrirScanner}>
-              {t("pme.verifie.corriger")}
-            </button>
-            {demandeDeSuppression ? null : (
-              <button
-                type="button"
-                className="sup"
-                disabled={demanderSuppression.isPending}
-                onClick={() => demanderSuppression.mutate()}
-              >
-                {demanderSuppression.isPending
-                  ? t("common.loading")
-                  : t("pme.piece.demanderSuppression")}
-              </button>
-            )}
-          </div>
-          {demandeDeSuppression === "demandee" ? (
-            <p>{t("pme.piece.suppressionDemandee")}</p>
-          ) : demandeDeSuppression === "refusee" ? (
-            <p>{t("pme.piece.suppressionRefusee")}</p>
+      ) : null}
+
+      {/* ── 4c · Suivi ─────────────────────────────────────────────────── */}
+      {onglet === "suivi" ? (
+        <div className="f-pan" role="tabpanel" id="panneau-suivi" aria-labelledby="onglet-suivi">
+          {/* Le rôle vient de `acces.monAcces`, pas de l'offre. */}
+          {siege ? (
+            <div className="centr calme">
+              <i />
+              <p>{t("pme.piece.siege")}</p>
+            </div>
           ) : null}
-        </div>
-      ) : (
-        <div className="rev">
-          <span className="q">
-            <i />
-            {t("pme.piece.rienNestSorti")}
-          </span>
-          <p>{t("pme.piece.rienNestSorti.texte")}</p>
+
+          {/* Le cabinet : transmise, gardée, ou à décider. */}
+          {cabinet.data && (!booked || piece.vis !== "partage") ? (
+            <div className="f-carte f-cab">
+              {piece.vis === "partage" ? (
+                <>
+                  <p className="f-cab-etat">
+                    {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
+                  </p>
+                  {demandeDeRappel === "demandee" ? (
+                    <p className="f-note">
+                      {t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}
+                    </p>
+                  ) : demandeDeRappel === "refusee" ? (
+                    <p className="f-note">
+                      {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="f-bouton"
+                      disabled={rappeler.isPending}
+                      onClick={() => rappeler.mutate()}
+                    >
+                      {rappeler.isPending
+                        ? t("common.loading")
+                        : t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
+                    </button>
+                  )}
+                </>
+              ) : piece.gardeeLe ? (
+                /*
+                 * La décision prise, et son chemin de retour : « Transmettre
+                 * quand même » ne doit jamais se fermer.
+                 */
+                <>
+                  <p className="f-cab-etat">{t("pme.garder.faite")}</p>
+                  <button
+                    type="button"
+                    className="f-bouton"
+                    disabled={transmettre.isPending}
+                    onClick={() => transmettre.mutate()}
+                  >
+                    {transmettre.isPending
+                      ? t("common.loading")
+                      : t("pme.garder.quandmeme", { cabinet: cabinet.data.name })}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="f-cab-etat">
+                    {t("pme.transmettre.question", { cabinet: cabinet.data.name })}
+                  </p>
+                  <p className="f-note">{t("pme.transmettre.chezvous")}</p>
+                  <div className="f-dec-gestes deux">
+                    <button
+                      type="button"
+                      disabled={garder.isPending || transmettre.isPending}
+                      onClick={() => garder.mutate()}
+                    >
+                      {garder.isPending ? t("common.loading") : t("pme.garder.action")}
+                    </button>
+                    <button
+                      type="button"
+                      className="pr"
+                      disabled={transmettre.isPending || garder.isPending}
+                      onClick={() => transmettre.mutate()}
+                    >
+                      {transmettre.isPending ? t("common.loading") : t("pme.transmettre.action")}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+
+          {/* Documents liés : ce qui est né de cette pièce (reçus, talons). */}
+          <div className="f-tit">
+            <h2>
+              {t("pme.piece.liees")}
+              <Aide
+                titre={t("pme.piece.liees")}
+                paragraphes={[{ texte: t("pme.piece.chaine.foot") }]}
+              />
+            </h2>
+            <span>{t("pme.piece.chaine.pieces", { count: nes.length + 1 })}</span>
+          </div>
+          <div className="f-carte">
+            {nes.map((p) => (
+              <Link
+                key={p.id}
+                className="f-ligne"
+                to="/pme/piece/$pieceId"
+                params={{ pieceId: p.id }}
+                preload="intent"
+              >
+                <span className="bd">
+                  <span className="lb">{t("pme.piece.chaine.issueDe")}</span>
+                  <span className="vl-g">{nomDuType(p.documentKind) ?? t("pme.piece.title")}</span>
+                </span>
+                <span className="dt">{jourLisible(p.createdAt) ?? "—"}</span>
+                <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                  <path d="M9.5 5.5L16 12l-6.5 6.5" />
+                </svg>
+              </Link>
+            ))}
+            {nes.length === 0 ? (
+              <div className="f-ligne">
+                <span className="bd">
+                  <span className="et">{t("pme.piece.chaine.vide")}</span>
+                </span>
+              </div>
+            ) : null}
+            <button type="button" className="f-ligne" onClick={() => allerA("reglement")}>
+              <span className="bd">
+                <span className="lb-a">{t("pme.piece.joindreAuReglement")}</span>
+              </span>
+              <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                <path d="M9.5 5.5L16 12l-6.5 6.5" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ── REVENIR DESSUS ────────────────────────────────────────────
+              Ce bloc lit `vis` et le RÔLE, et rien d'autre :
+                personnel            → libre : corriger, supprimer
+                entite · siège       → avant validation : corriger, demander
+                entite · dirigeant   → libre : corriger, mettre au privé
+                partage              → sur accord : corriger, demander
+              « Corriger » reprend la PHOTO : R7 interdit d'effacer un relevé. */}
+          <div className="f-tit">
+            <h2>
+              {t("pme.piece.revenir")}
+              <Aide
+                titre={t("pme.piece.revenir")}
+                paragraphes={[
+                  {
+                    titre:
+                      vis === "partage"
+                        ? t("pme.piece.elleEstPartie")
+                        : vis === "entite" && siege
+                          ? t("pme.piece.elleAttend")
+                          : t("pme.piece.rienNestSorti"),
+                    texte:
+                      vis === "partage"
+                        ? t("pme.piece.elleEstPartie.texte")
+                        : vis === "entite" && siege
+                          ? t("pme.piece.elleAttend.texte")
+                          : t("pme.piece.rienNestSorti.texte"),
+                  },
+                ]}
+              />
+            </h2>
+            <span>
+              {vis === "partage"
+                ? t("pme.piece.revenir.surAccord")
+                : vis === "entite" && siege
+                  ? t("pme.piece.revenir.avantValidation")
+                  : t("pme.piece.revenir.libre")}
+            </span>
+          </div>
           {confirmerSuppression ? (
-            /* Deux temps, jamais un seul : un effacement ne se déclenche pas
-               par mégarde. La base refuse de toute façon une pièce transmise,
-               engagée dans une écriture, ou servant de justificatif. */
-            <>
-              <p>{t("pme.supprimer.sur")}</p>
-              <div className="b">
+            /* Deux temps, jamais un seul : un effacement ne part pas par mégarde. */
+            <div className="f-carte f-cab">
+              <p className="f-cab-etat">{t("pme.supprimer.sur")}</p>
+              <div className="f-dec-gestes deux">
+                <button type="button" onClick={() => setConfirmerSuppression(false)}>
+                  {t("common.cancel")}
+                </button>
                 <button
                   type="button"
                   className="sup"
@@ -1993,63 +2087,110 @@ function PieceScreen() {
                 >
                   {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
                 </button>
-                <button type="button" onClick={() => setConfirmerSuppression(false)}>
-                  {t("common.cancel")}
-                </button>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="b">
-              <button type="button" onClick={pme.ouvrirScanner}>
-                {t("pme.verifie.corriger")}
+            <div className="f-carte">
+              <button type="button" className="f-ligne" onClick={pme.ouvrirScanner}>
+                <span className="bd">
+                  <span className="lb-a">{t("pme.verifie.corriger")}</span>
+                </span>
+                <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                  <path d="M9.5 5.5L16 12l-6.5 6.5" />
+                </svg>
               </button>
-              {/* Effacer : offert seulement tant que la pièce n'est partie
-                  nulle part, et seulement sur un brouillon. */}
-              {piece.vis === "personnel" &&
-              (piece.status === "capturee" || piece.status === "lue") ? (
-                <button type="button" className="sup" onClick={() => setConfirmerSuppression(true)}>
-                  {t("pme.supprimer.action")}
+              {STATUTS_PRECISABLES.has(piece.status) ? (
+                <button
+                  type="button"
+                  className="f-ligne"
+                  disabled={preciser.isPending}
+                  onClick={() => setCorrigerType(true)}
+                >
+                  <span className="bd">
+                    <span className="lb-a">{t("pme.piece.type.modifier")}</span>
+                  </span>
+                  <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                    <path d="M9.5 5.5L16 12l-6.5 6.5" />
+                  </svg>
                 </button>
               ) : null}
               {/* La remettre au privé n'a de sens que si elle n'y est pas. */}
-              {piece.vis !== "personnel" ? (
+              {vis === "entite" && !siege ? (
                 <button
                   type="button"
+                  className="f-ligne"
                   disabled={remettreAuPrive.isPending}
                   onClick={() => remettreAuPrive.mutate()}
                 >
-                  {remettreAuPrive.isPending ? t("common.loading") : t("pme.piece.mettreAuPrive")}
+                  <span className="bd">
+                    <span className="lb-a">
+                      {remettreAuPrive.isPending
+                        ? t("common.loading")
+                        : t("pme.piece.mettreAuPrive")}
+                    </span>
+                  </span>
+                </button>
+              ) : null}
+              {(vis === "partage" || (vis === "entite" && siege)) && !demandeDeSuppression ? (
+                /* Une demande déjà inscrite ne se redemande pas. */
+                <button
+                  type="button"
+                  className="f-ligne sup"
+                  disabled={demanderSuppression.isPending}
+                  onClick={() => demanderSuppression.mutate()}
+                >
+                  <span className="bd">
+                    <span className="lb-a">
+                      {demanderSuppression.isPending
+                        ? t("common.loading")
+                        : t("pme.piece.demanderSuppression")}
+                    </span>
+                  </span>
+                </button>
+              ) : null}
+              {/* Effacer : seulement un brouillon resté privé. */}
+              {piece.vis === "personnel" &&
+              (piece.status === "capturee" || piece.status === "lue") ? (
+                <button
+                  type="button"
+                  className="f-ligne sup"
+                  onClick={() => setConfirmerSuppression(true)}
+                >
+                  <span className="bd">
+                    <span className="lb-a">{t("pme.supprimer.action")}</span>
+                  </span>
                 </button>
               ) : null}
             </div>
           )}
-        </div>
-      )}
+          {demandeDeSuppression === "demandee" ? (
+            <p className="f-note">{t("pme.piece.suppressionDemandee")}</p>
+          ) : demandeDeSuppression === "refusee" ? (
+            <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
+          ) : null}
 
-      {/* ── les actions du bas ──────────────────────────────────────────
-          Une seule action principale par écran. Tant que la pièce n'est pas
-          comptabilisée, c'est le « Oui » : la raison d'un refus est déjà
-          au-dessus, dans « Ce que j'ai vérifié » — le bouton n'est qu'un
-          rappel de ce qui viendra après. */}
-      <div className="acts">
-        <button type="button" onClick={() => setPiece(true)}>
-          {t("pme.piece.voir")}
-        </button>
-        {booked ? (
-          <button type="button" className="pr" onClick={() => setDetail(true)}>
-            {t("pme.detail.voir")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="pr"
-            disabled={confirm.isPending || !confirmable}
-            onClick={() => confirm.mutate()}
-          >
-            {confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui")}
-          </button>
-        )}
-      </div>
+          {/* ── le parcours, en détail ──────────────────────────────────── */}
+          <div className="f-tit">
+            <h2>{t("pme.piece.parcours")}</h2>
+            <span>{t("pme.piece.etapes", { count: etapes.length })}</span>
+          </div>
+          <div className="f-carte f-jr">
+            {etapes.map((e) => (
+              <div key={e.cle} className={e.etat}>
+                <i />
+                <span>{e.label}</span>
+                <u>
+                  {e.etat === "faite"
+                    ? t("pme.piece.etat.faite")
+                    : e.etat === "courante"
+                      ? t("pme.piece.etat.courante")
+                      : t("pme.piece.etat.attente")}
+                </u>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

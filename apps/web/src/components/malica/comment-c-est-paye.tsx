@@ -587,7 +587,7 @@ export function CommentCEstPaye({
             {deja.map((p) => (
               <li
                 key={p.id}
-                className={`rounded-2xl border border-border bg-card px-4 py-3 ${p.eteint ? "opacity-55" : ""}`}
+                className={`rounded-[18px] border border-border bg-card px-4 py-3 ${p.eteint ? "opacity-55" : ""}`}
               >
                 <span className="flex items-baseline justify-between gap-3">
                   <span className={`text-[14px] font-semibold ${p.eteint ? "line-through" : ""}`}>
@@ -647,7 +647,7 @@ export function CommentCEstPaye({
                           type="button"
                           disabled={annuler.isPending}
                           onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
-                          className="min-h-[40px] rounded-xl border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
+                          className="min-h-[40px] rounded-[12px] border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
                         >
                           {m.libelle}
                         </button>
@@ -737,10 +737,7 @@ export function CommentCEstPaye({
                 aria-label={t("pme.paiement.titre")}
                 className="mx-auto grid max-h-[88vh] w-full max-w-md gap-5 overflow-y-auto rounded-t-[28px] border-t border-border bg-background px-[20px] pb-safe pt-3 text-start"
               >
-                <span
-                  aria-hidden
-                  className="mx-auto h-1 w-10 rounded-full bg-border"
-                />
+                <span aria-hidden className="mx-auto h-1 w-10 rounded-full bg-border" />
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[21px] font-semibold leading-[1.2] tracking-[-0.02em]">
                     {t("pme.paiement.titre")}
@@ -766,13 +763,15 @@ export function CommentCEstPaye({
                       <span className="num font-medium">{lisible(restantMineur)}</span>
                     </p>
                   ) : null}
-                  <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
+                  <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
                     <button
                       type="button"
                       onClick={() => setPartiel(false)}
                       aria-pressed={partiel === false}
-                      className={`min-h-[44px] rounded-xl px-2 text-[13.5px] font-medium ${
-                        partiel === false ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                        partiel === false
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-text-2"
                       }`}
                     >
                       {t("pme.paiement.tout")}
@@ -781,7 +780,7 @@ export function CommentCEstPaye({
                       type="button"
                       onClick={() => setPartiel(true)}
                       aria-pressed={partiel === true}
-                      className={`min-h-[44px] rounded-xl px-2 text-[13.5px] font-medium ${
+                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
                         partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
                       }`}
                     >
@@ -796,7 +795,7 @@ export function CommentCEstPaye({
                         inputMode="decimal"
                         value={montantSaisi}
                         onChange={(e) => setMontantSaisi(e.target.value)}
-                        className="num min-h-[50px] w-full rounded-xl border border-border bg-card px-3 text-[17px]"
+                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
                       />
                     </label>
                   ) : null}
@@ -844,17 +843,19 @@ export function CommentCEstPaye({
                       value={dateDuPaiement}
                       max={aujourdHui}
                       onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
-                      className="num min-h-[50px] w-full rounded-xl border border-border bg-card px-3 text-[15px]"
+                      className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
                     />
                   </label>
                   {referenceExigee ? (
                     <label className="grid gap-1">
-                      <span className="text-[12.5px] text-text-2">{t("pme.paiement.reference")}</span>
+                      <span className="text-[12.5px] text-text-2">
+                        {t("pme.paiement.reference")}
+                      </span>
                       <input
                         type="text"
                         value={referenceSaisie}
                         onChange={(e) => setReferenceSaisie(e.target.value)}
-                        className="num min-h-[50px] w-full rounded-xl border border-border bg-card px-3 text-[15px]"
+                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
                       />
                     </label>
                   ) : null}
