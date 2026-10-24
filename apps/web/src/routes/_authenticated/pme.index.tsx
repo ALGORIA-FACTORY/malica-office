@@ -5,6 +5,7 @@ import { useEffect } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { piecesALire } from "@/lib/a-lire";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { MandatsProposes } from "@/components/malica/MandatsProposes";
@@ -366,6 +367,13 @@ function PmeHome() {
   // Ce qui attend la personne : ce que Malica a lu (à vérifier) et ce que le
   // cabinet a renvoyé — les deux comptes de la carte de Malica, en pages.
   const lesLues = (lues.data ?? []).filter((p) => p.vis !== "personnel");
+  /*
+   * À LIRE — ce qui a été pris et attend encore une décision : ni lu, ni gardé
+   * pour soi. 24 octobre 2026 : « plus tard » existait, mais rien ne
+   * retrouvait ces pièces. Elles restent `personnel` jusqu'à « Pour qui ? »
+   * (B6), d'où le filtre sur le statut et non sur la visibilité.
+   */
+  const aLire = piecesALire(lues.data ?? []);
   const aTraiter = lesLues
     .filter((p) => p.status === "lue" || p.status === "proposee" || p.status === "retournee")
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
@@ -505,6 +513,32 @@ function PmeHome() {
           </span>
           <Chevron className="g ar" />
         </Link>
+
+        {/* ── À lire : les pièces prises qui attendent, et les deux gestes ── */}
+        {aLire.length > 0 ? (
+          <div className="alire">
+            <div className="tete">
+              <i />
+              <b>{t("pme.home.aLire.titre")}</b>
+              <span>{aLire.length}</span>
+            </div>
+            <div className="pages">
+              {aLire.slice(0, RECENTES).map((p) => (
+                <ApercuDePiece key={p.id} pieceId={p.id} className="mini" />
+              ))}
+            </div>
+            <div className="gestes">
+              <Link to="/pme/a-lire">{t("pme.home.aLire.choisir")}</Link>
+              <Link
+                to="/pme/capturer"
+                search={{ pieces: aLire.map((p) => p.id).join(","), depart: "destination" }}
+                className="pr"
+              >
+                {t("pme.capture.choix.lireCourt", { count: aLire.length })}
+              </Link>
+            </div>
+          </div>
+        ) : null}
 
         {/* ── 2. ce qu'elle a préparé : les vraies pages, qui défilent ──── */}
         {aTraiter.length > 0 ? (

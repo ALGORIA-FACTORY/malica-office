@@ -10,6 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
+import { piecesALire } from "@/lib/a-lire";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
@@ -232,6 +233,7 @@ function VosDocuments() {
   });
 
   const toutes = useMemo(() => pieces.data ?? [], [pieces.data]);
+  const aLire = useMemo(() => piecesALire(toutes), [toutes]);
 
   /*
    * ---------------------------------------------------------- les bornes de l'exercice
@@ -647,6 +649,12 @@ function VosDocuments() {
          * filtres, à sa place, sans une classe utilitaire par-dessus.
          */}
         <div className="fil">
+          {/* Les pièces remises « à plus tard » : on les retrouve d'ici aussi. */}
+          {aLire.length > 0 ? (
+            <Link to="/pme/a-lire" className="alire">
+              {t("pme.list.aLire", { count: aLire.length })}
+            </Link>
+          ) : null}
           <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
             {t("pme.doc.importer")}
           </button>
