@@ -11,9 +11,12 @@ import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
+import { lectureEnSuspens, raisonCourte, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
 import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
 import { office } from "@/verticals/malica-office/composition";
-import type { EtatDUnTravail, PieceLue } from "@malica/socle/ports/repositories";
+import { demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
+import type { PieceLue } from "@malica/socle/ports/repositories";
+import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 
 /**
  * Capturer — de la photo à la pièce, une question par écran.
@@ -108,24 +111,6 @@ const ETAPES = [
   "pme.capture.etape.reglement",
   "pme.capture.etape.fait",
 ] as const satisfies readonly MessageKey[];
-
-/**
- * Le mot de chaque état de la file durable de lecture.
- *
- * Il est écrit à côté de la pastille, et pas porté par elle : aucune
- * information ne se dit par la seule couleur. Et chaque mot dit la vérité sur
- * le fait qu'il surmonte — « pas lue » n'est pas « en attente ».
- */
-const MOT_DU_TRAVAIL: Record<EtatDUnTravail, MessageKey> = {
-  a_faire: "pme.capture.travail.a_faire",
-  en_cours: "pme.capture.travail.en_cours",
-  abandonne: "pme.capture.travail.abandonne",
-  en_panne: "pme.capture.travail.en_panne",
-  epuise: "pme.capture.travail.epuise",
-  termine: "pme.capture.travail.termine",
-  refuse: "pme.capture.travail.refuse",
-  en_erreur: "pme.capture.travail.en_erreur",
-};
 
 /* Les tracés viennent du dessin, à l'identique : l'écran n'a pas de
  * bibliothèque d'icônes à lui, et `.g` porte déjà le trait. */
@@ -298,15 +283,6 @@ function PmeCapturer() {
 
   const [etape, setEtape] = useState(0);
   const [dest, setDest] = useState<Destination | null>(null);
-  /**
-   * Le numéro du travail DURABLE de chaque pièce qu'on a fait lire.
-   *
-   * Sans lui, « où en est cette lecture ? » se demande à la mémoire du
-   * processus, qui répond « plus rien ne tourne » aussi bien pour une lecture
-   * terminée que pour une lecture morte avec son processus. L'écran cochait
-   * la seconde : une pastille verte sur une pièce jamais lue.
-   */
-  const [travaux, setTravaux] = useState<Readonly<Record<string, string>>>({});
   /** Les pièces décochées à l'étape 2 : gardées pour soi, non lues. */
   const [exclues, setExclues] = useState<readonly string[]>([]);
   /** La vignette ouverte dans la bande, et son petit menu. */
@@ -364,10 +340,7 @@ function PmeCapturer() {
    * pièces, six fichiers, sur un téléphone d'entrée de gamme, pour quatre
    * lignes de texte.
    */
-  const pieces = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const pieces = usePiecesLues();
 
   /*
    * LE FORFAIT — lu par le layout, reçu par le contexte.
@@ -439,65 +412,41 @@ function PmeCapturer() {
 
   const retenues = useMemo(() => lot.filter((p) => !exclues.includes(p.id)), [lot, exclues]);
   const ids = useMemo(() => retenues.map((p) => p.id), [retenues]);
+  /**
+   * Les pièces du lot que la base a LUES. Vérifier, régler et envoyer ne
+   * portent que sur elles : une pièce dont la lecture a échoué reste à
+   * l'étape 3, avec sa raison et son geste, et ne se règle pas à l'aveugle.
+   */
+  const lues = useMemo(() => retenues.filter((p) => issueDeLecture(p).kind === "lue"), [retenues]);
 
   /** Ce qui attend encore de partir, sur l'appareil. La capture ne s'arrête
    *  jamais, même sans réseau : ces pièces existent avant toute API. */
   const enFile = pme.file.elements;
 
   /*
-   * L'état de la lecture, pour les pièces qu'on a demandées. Une seule
-   * requête pour tout le lot, redemandée tant qu'au moins une tourne : le
-   * résultat arrive par la liste, pas par la requête qui l'a lancée.
-   */
-  const lectures = useQuery({
-    queryKey: ["lectures-en-cours", pme.tenantId, ids.join(","), Object.values(travaux).join(",")],
-    enabled: etape === 3 && ids.length > 0,
-    queryFn: async () => {
-      const etats = await Promise.all(
-        ids.map(async (id) => {
-          const travailId = travaux[id];
-          /*
-           * La file durable quand on tient le numéro du travail : elle survit
-           * au redémarrage du serveur, et elle distingue « terminée » de
-           * « plus rien ne tourne ». Sans numéro — une pièce lue par la file
-           * hors ligne, un retour sur l'écran — on retombe sur la question au
-           * processus, qui ne sait dire que « en cours ou pas ».
-           */
-          if (travailId) {
-            const t = await office().fabrique.etatDeLaLecture(travailId);
-            return {
-              id,
-              etat: t?.etat ?? null,
-              enCours: t?.etat === "a_faire" || t?.etat === "en_cours",
-            };
-          }
-          const m = await office().malica.etatDeLecture(id);
-          return { id, etat: null, enCours: m.enCours };
-        }),
-      );
-      return etats;
-    },
-    refetchInterval: (q) => (q.state.data?.some((e) => e.enCours) ? 3_000 : false),
-  });
-
-  /*
-   * ============================== CE QUI A ÉTÉ LU SE RELIT QUAND LA LECTURE FINIT
+   * ======================================= L'ÉTAT DE LA LECTURE VIENT DE LA LISTE
    *
-   * Recette « vie réelle » du 21 octobre 2026 (ANO-LIVE-008) : « Voici ce que
-   * j'ai lu » disait « je n'ai pas lu » sur les quatre lignes, 30 fois sur 30,
-   * alors que la fiche de chaque pièce affichait tout. Le résultat arrive par
-   * la LISTE ; or la liste n'était redemandée par personne quand la dernière
-   * lecture s'achevait — l'étape 4 montrait l'état d'avant la lecture.
+   * Il venait d'une requête à part, pièce par pièce, qui demandait l'état du
+   * travail durable quand l'écran en tenait le numéro — et la mémoire du
+   * processus sinon, qui ne sait dire que « en cours ou pas ». Depuis le
+   * 24 octobre 2026, `listAvecLecture` porte le dernier travail de chaque
+   * pièce : une seule source, la même que l'accueil et la fiche, et un échec
+   * qui se voit (`issueDeLecture`).
    *
-   * On la redemande donc dès que plus rien ne tourne, et à l'entrée de
-   * l'étape 4 : ce que l'écran dit avoir lu est ce que la base a enregistré.
+   * Tant qu'une pièce du lot se lit ou attend sa reprise, l'étape 3 redemande
+   * la liste ; à l'entrée de l'étape 4, elle la redemande une fois — ce que
+   * l'écran dit avoir lu est ce que la base a enregistré (ANO-LIVE-008).
    */
-  const plusRienNeTourne =
-    lectures.isSuccess && (lectures.data ?? []).length > 0 && !lectures.data.some((e) => e.enCours);
+  const suivre = etape === 3 && retenues.some(lectureEnSuspens);
+  const relirePieces = pieces.refetch;
   useEffect(() => {
-    if (plusRienNeTourne || etape === 4)
-      void qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
-  }, [plusRienNeTourne, etape, qc, pme.tenantId]);
+    if (!suivre) return;
+    const h = setInterval(() => void relirePieces(), SUIVI_DE_LECTURE_MS);
+    return () => clearInterval(h);
+  }, [suivre, relirePieces]);
+  useEffect(() => {
+    if (etape === 4) void qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
+  }, [etape, qc, pme.tenantId]);
 
   const questions = useQuery({
     queryKey: ["charge-questions", pme.tenantId],
@@ -568,7 +517,7 @@ function PmeCapturer() {
     },
     onSuccess: async () => {
       setErreur(null);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     },
     onError: echoue,
@@ -600,21 +549,15 @@ function PmeCapturer() {
       // Les décochées sont gardées d'abord : elles ne doivent pas rester en
       // suspens pendant que les autres se lisent.
       for (const id of exclues) await office().collab.garderPiece(id);
-      // L'accusé porte le numéro du travail inscrit en base. On le garde :
-      // c'est la seule façon de redemander où en est CETTE lecture-là.
-      const pris: Record<string, string> = {};
       for (const id of ids) {
         await office().collab.setPieceVis(id, "entite");
-        const travail = await office().malica.demanderLaLecture(id);
-        pris[id] = travail.travailId;
+        await office().malica.demanderLaLecture(id);
       }
-      return pris;
     },
-    onSuccess: async (pris) => {
-      setTravaux(pris);
+    onSuccess: async () => {
       setErreur(null);
       setEtape(3);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
     },
     onError: echoue,
   });
@@ -652,7 +595,7 @@ function PmeCapturer() {
   const payer = useMutation({
     mutationFn: async () => {
       if (!pme.packId || !moyen) throw new Error(t("common.error"));
-      for (const p of retenues) {
+      for (const p of lues) {
         await office().capture.enregistrerPaiement({
           pieceId: p.id,
           packId: pme.packId,
@@ -665,7 +608,7 @@ function PmeCapturer() {
     onSuccess: async () => {
       setErreur(null);
       setPaye(true);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       setEtape(8);
     },
     onError: echoue,
@@ -675,7 +618,7 @@ function PmeCapturer() {
    *  prend ici — à la fin de la lecture, quand le verdict existe. */
   const terminer = useMutation({
     mutationFn: async (partager: boolean) => {
-      for (const p of retenues) {
+      for (const p of lues) {
         if (partager) await office().collab.setPieceVis(p.id, "partage");
         else await office().collab.garderPiece(p.id);
       }
@@ -684,7 +627,7 @@ function PmeCapturer() {
     onSuccess: async (partager) => {
       setErreur(null);
       setTransmis(partager);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     },
     onError: echoue,
@@ -696,7 +639,7 @@ function PmeCapturer() {
       setErreur(null);
       setChoisie(null);
       setPartante(null);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
     },
     onError: (raison: unknown) => {
       // La pièce reste : elle n'est pas partie. Sans ce retour, elle serait
@@ -722,21 +665,23 @@ function PmeCapturer() {
    *      et « Réessayer » relance cette seule lecture.
    */
   const [aRelire, setARelire] = useState<readonly string[]>([]);
+  /*
+   * Demander la lecture de quelques pièces du lot : la photo reprise, et
+   * aussi « Relire » sur une pièce dont la lecture a échoué — la base ouvre
+   * alors un nouveau travail (`fabrique.enregistrerLecture`).
+   */
   const lireNeuves = useMutation({
     mutationFn: async (neuves: readonly string[]) => {
-      const pris: Record<string, string> = {};
       for (const id of neuves) {
         await office().collab.setPieceVis(id, "entite");
-        pris[id] = (await office().malica.demanderLaLecture(id)).travailId;
+        await office().malica.demanderLaLecture(id);
       }
-      return pris;
     },
-    onSuccess: async (pris) => {
-      setTravaux((t) => ({ ...t, ...pris }));
+    onSuccess: async () => {
       setARelire([]);
       setErreur(null);
       setEtape(3);
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
     },
     onError: (raison: unknown, neuves) => {
       setARelire(neuves);
@@ -748,7 +693,7 @@ function PmeCapturer() {
       office().capture.supprimer(ancienne),
     onSuccess: async (_, { ancienne, neuves }) => {
       setFige((f) => (f ?? []).flatMap((id) => (id === ancienne ? neuves : [id])));
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       lireNeuves.mutate(neuves);
     },
     onError: echoue,
@@ -849,7 +794,6 @@ function PmeCapturer() {
     setPlusTard(false);
   }
 
-  const pasEncore = (p: PieceLue) => p.emetteur === null;
   const jour = (iso: string | null) =>
     iso === null
       ? null
@@ -858,7 +802,7 @@ function PmeCapturer() {
         );
 
   /** La pièce montrée à « Vérifier » : une à la fois. */
-  const enVerification = retenues[Math.min(verifiee, Math.max(0, retenues.length - 1))] ?? null;
+  const enVerification = lues[Math.min(verifiee, Math.max(0, lues.length - 1))] ?? null;
   const moyensPayes = (moyens.data ?? []).filter((m) => m.code !== "non_paye");
   /** « Plus tard » se propose tant que rien n'a été lu ni décidé. */
   const plusTardPossible =
@@ -1187,34 +1131,83 @@ function PmeCapturer() {
           <>
             <div className="c-malica">
               <img src={portraitMalica} alt="Malica" width={620} height={620} />
-              <h1>{t("pme.capture.lire.q", { count: retenues.length })}</h1>
+              <h1>
+                {retenues.some(lectureEnSuspens)
+                  ? t("pme.capture.lire.q", { count: retenues.length })
+                  : t("pme.lecture.bilan", { lues: lues.length, total: retenues.length })}
+              </h1>
             </div>
             <div className="c-liste">
               {retenues.map((p) => {
-                const etat = (lectures.data ?? []).find((e) => e.id === p.id);
                 /*
-                 * « Faite » veut dire LUE, pas « plus rien ne tourne » : le
-                 * dossier porte un émetteur, ou la file durable dit « termine ».
+                 * L'issue de chaque pièce vient de la base, par la règle du
+                 * Socle : lue, en cours, en attente de reprise (ambre, rien à
+                 * faire), ou en échec (rouge, avec la raison et le geste).
+                 * Aucune information ne se dit par la seule couleur : le mot
+                 * est toujours écrit.
                  */
-                const faite = !pasEncore(p) || etat?.etat === "termine";
-                const mot = faite
-                  ? t("pme.capture.lire.lue")
-                  : etat?.etat
-                    ? t(MOT_DU_TRAVAIL[etat.etat])
-                    : t("pme.capture.travail.a_faire");
+                const issue = issueDeLecture(p);
+                const raison = raisonCourte(issue);
+                const geste = demandeUnGeste(issue);
+                const classe =
+                  issue.kind === "lue"
+                    ? "ok"
+                    : geste
+                      ? "ko"
+                      : issue.kind === "attente"
+                        ? "att"
+                        : "";
+                const mot =
+                  issue.kind === "lue"
+                    ? t("pme.capture.lire.lue")
+                    : geste
+                      ? t("pme.lecture.pasLue")
+                      : issue.kind === "attente"
+                        ? t("pme.lecture.enAttente")
+                        : t("pme.capture.travail.en_cours");
                 return (
-                  <div key={p.id} className={faite ? "ok" : ""}>
-                    <ApercuDePiece pieceId={p.id} className="mini" />
-                    <span className="nom">{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
-                    <span className="et">{mot}</span>
+                  <div key={p.id} className={classe}>
+                    <div className="ligne">
+                      <ApercuDePiece pieceId={p.id} className="mini" />
+                      <span className="nom">
+                        <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                        {raison ? <small>{t(raison)}</small> : null}
+                      </span>
+                      <span className="et">{mot}</span>
+                    </div>
+                    {geste ? (
+                      <div className="gestes">
+                        <button
+                          type="button"
+                          className="pr"
+                          disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
+                          onClick={() => {
+                            setARemplacer(p.id);
+                            pme.ouvrirScanner();
+                          }}
+                        >
+                          {t("pme.verifie.corriger")}
+                        </button>
+                        <button
+                          type="button"
+                          className="sc"
+                          disabled={lireNeuves.isPending}
+                          onClick={() => lireNeuves.mutate([p.id])}
+                        >
+                          {t("pme.lecture.relire")}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
             <div className="go">
-              <button type="button" className="pr" onClick={() => setEtape(4)}>
-                {t("pme.capture.lire.verifier")}
-              </button>
+              {lues.length > 0 ? (
+                <button type="button" className="pr" onClick={() => setEtape(4)}>
+                  {t("pme.capture.lire.verifier")}
+                </button>
+              ) : null}
               <button type="button" className="sc" onClick={() => void navigate({ to: "/pme" })}>
                 {t("pme.capture.lire.accueil")}
               </button>
@@ -1230,8 +1223,8 @@ function PmeCapturer() {
           <>
             <p className="c-rang">
               {t("pme.capture.verif.rang", {
-                n: Math.min(verifiee, retenues.length - 1) + 1,
-                total: retenues.length,
+                n: Math.min(verifiee, lues.length - 1) + 1,
+                total: lues.length,
               })}
             </p>
             <div className="c-piece">
@@ -1307,10 +1300,10 @@ function PmeCapturer() {
                 type="button"
                 className="pr"
                 onClick={() =>
-                  verifiee + 1 < retenues.length ? setVerifiee(verifiee + 1) : setEtape(5)
+                  verifiee + 1 < lues.length ? setVerifiee(verifiee + 1) : setEtape(5)
                 }
               >
-                {verifiee + 1 < retenues.length
+                {verifiee + 1 < lues.length
                   ? t("pme.capture.verif.suivante")
                   : t("pme.capture.verif.bon")}
               </button>
@@ -1463,8 +1456,8 @@ function PmeCapturer() {
             chaque pièce garde son règlement ouvert, sur sa fiche. */}
         {!plusTard && etape === 7 ? (
           <>
-            <h1 className="c-titre">{t("pme.capture.pay.titre", { count: retenues.length })}</h1>
-            <p className="c-sous">{t("pme.capture.fin.lues", { count: retenues.length })}</p>
+            <h1 className="c-titre">{t("pme.capture.pay.titre", { count: lues.length })}</h1>
+            <p className="c-sous">{t("pme.capture.fin.lues", { count: lues.length })}</p>
             <div className="c-seg">
               <button
                 type="button"
@@ -1533,7 +1526,7 @@ function PmeCapturer() {
               <span className="rond">
                 <Icone d={G.ok} />
               </span>
-              <h1>{t("pme.capture.fin.lues", { count: retenues.length })}</h1>
+              <h1>{t("pme.capture.fin.lues", { count: lues.length })}</h1>
               {restantes !== null ? (
                 <p>{t("pme.capture.fin.reste", { count: restantes })}</p>
               ) : null}
@@ -1555,16 +1548,16 @@ function PmeCapturer() {
                 <Fin am>{t("pme.capture.fin.questions", { count: aRepondre.length })}</Fin>
               ) : null}
               {transmis === true ? (
-                <Fin>{t("pme.capture.fin.transmises", { count: retenues.length })}</Fin>
+                <Fin>{t("pme.capture.fin.transmises", { count: lues.length })}</Fin>
               ) : transmis === false ? (
-                <Fin>{t("pme.capture.fin.conservees", { count: retenues.length })}</Fin>
+                <Fin>{t("pme.capture.fin.conservees", { count: lues.length })}</Fin>
               ) : null}
             </div>
 
             {transmis === null ? (
               pme.aUnCabinet ? (
                 <div className="c-envoi">
-                  <b>{t("pme.capture.fin.envoyer.q", { count: retenues.length })}</b>
+                  <b>{t("pme.capture.fin.envoyer.q", { count: lues.length })}</b>
                   <div className="deux">
                     <button
                       type="button"

@@ -2001,12 +2001,25 @@
 [data-surface="pme"] [data-ecran="capture"] .c-malica img{width:96px;height:96px;border-radius:50%;object-fit:cover;object-position:50% 34%; border:3px solid var(--am)}
 [data-surface="pme"] [data-ecran="capture"] .c-malica h1{margin:0;font-size:1.75rem;line-height:1.15;font-weight:800;letter-spacing:-.03em}
 [data-surface="pme"] [data-ecran="capture"] .c-liste{margin-top:1.25rem;border-radius:20px;background:var(--s1);overflow:hidden}
-[data-surface="pme"] [data-ecran="capture"] .c-liste div{display:flex;align-items:center;gap:.875rem;padding:.75rem 1rem}
-[data-surface="pme"] [data-ecran="capture"] .c-liste div+div{box-shadow:inset 0 1px 0 var(--hr)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste > div{display:grid;gap:.75rem;padding:.75rem 1rem}
+[data-surface="pme"] [data-ecran="capture"] .c-liste > div + div{box-shadow:inset 0 1px 0 var(--hr)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .ligne{display:flex;align-items:center;gap:.875rem}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .apercu{width:36px;height:48px;border-radius:6px;overflow:hidden;flex:none}
-[data-surface="pme"] [data-ecran="capture"] .c-liste .nom{flex:1;min-width:0;font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .nom{flex:1;min-width:0;display:grid;gap:.1875rem}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .nom b{font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .nom small{font-size:.8125rem;color:var(--t2)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .et{flex:none;font-size:.875rem;font-weight:600;color:var(--am)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .ok .et{color:var(--acc)}
+/* 24 octobre 2026 : l'échec se voit. Vermillon = à vous d'agir (la photo),
+ * ambre = Malica réessaie seule. Le mot est toujours écrit à côté. */
+[data-surface="pme"] [data-ecran="capture"] .c-liste .ko{background:color-mix(in srgb, var(--ve) 12%, transparent)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .ko .et,[data-surface="pme"] [data-ecran="capture"] .c-liste .ko small{color:var(--ve)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .att .et{color:var(--am)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .gestes{display:flex;flex-wrap:wrap;gap:.5rem}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .gestes button{flex:none;width:auto;margin:0;min-height:40px;padding:0 1rem;border-radius:999px;font:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .pr{border:0;background:var(--tx);color:var(--bg)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .sc{border:1px solid var(--hr);background:transparent;color:var(--tx)}
+[data-surface="pme"] [data-ecran="capture"] .c-liste .gestes button:disabled{opacity:.5;cursor:default}
 [data-surface="pme"] [data-ecran="capture"] .c-rang{margin:.5rem 0 0;font-family:var(--mono);font-size:.8125rem;font-weight:600;color:var(--t3)}
 [data-surface="pme"] [data-ecran="capture"] .c-piece{margin-top:.75rem;display:flex;gap:.875rem;align-items:center}
 [data-surface="pme"] [data-ecran="capture"] .c-grande{flex:none;width:84px;height:112px;border:0;border-radius:10px;padding:0;overflow:hidden; background:var(--s2);cursor:pointer}
@@ -2040,6 +2053,22 @@
  * Les pièces remises « à plus tard » : un accès avec compteur dans la carte
  * Malica, une pastille dans la bibliothèque, un écran dédié pour choisir. */
 [data-surface="pme"] [data-ecran="accueil"] .hero .cta.a-lire{color:var(--am);border-color:var(--am);text-decoration:none}
+/* La fiche d'une pièce dont la lecture a échoué : la raison et ses deux gestes. */
+[data-surface="pme"] .echec-lecture{display:grid;gap:.75rem;padding:1.125rem;border-radius:20px;border:1px solid color-mix(in srgb, var(--ve) 45%, transparent);background:color-mix(in srgb, var(--ve) 12%, transparent);color:var(--tx)}
+[data-surface="pme"] .echec-lecture p{margin:0;font-size:.9375rem;line-height:1.5;color:var(--ve)}
+[data-surface="pme"] .echec-lecture .tt{font-size:1.125rem;font-weight:700;color:var(--tx)}
+[data-surface="pme"] .echec-lecture .nd{font-size:.875rem;color:var(--t2)}
+[data-surface="pme"] .echec-lecture button{min-height:52px;border-radius:999px;font:inherit;font-size:1rem;font-weight:700;cursor:pointer}
+[data-surface="pme"] .echec-lecture .pr{border:0;background:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] .echec-lecture .sc{border:1px solid var(--hr);background:transparent;color:var(--tx);font-weight:600}
+[data-surface="pme"] .echec-lecture button:disabled{opacity:.5;cursor:default}
+/* Une lecture échouée se voit sur l'accueil : vermillon = à vous d'agir. */
+[data-surface="pme"] [data-ecran="accueil"] .echec{display:flex;align-items:center;gap:.875rem;margin:1rem 0 0;padding:1rem;border-radius:22px;border:1px solid color-mix(in srgb, var(--ve) 45%, transparent);background:color-mix(in srgb, var(--ve) 12%, transparent);color:var(--tx);text-decoration:none}
+[data-surface="pme"] [data-ecran="accueil"] .echec .ic{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:color-mix(in srgb, var(--ve) 20%, transparent);color:var(--ve)}
+[data-surface="pme"] [data-ecran="accueil"] .echec .bd{flex:1;min-width:0;display:grid;gap:.1875rem}
+[data-surface="pme"] [data-ecran="accueil"] .echec b{font-size:1.0625rem;font-weight:700}
+[data-surface="pme"] [data-ecran="accueil"] .echec .bd span{font-size:.875rem;color:var(--ve)}
+[data-surface="pme"] [data-ecran="accueil"] .echec .voir{flex:none;min-height:40px;padding:0 1rem;display:grid;place-items:center;border-radius:999px;background:var(--tx);color:var(--bg);font-size:.875rem;font-weight:600}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil .alire{flex:none;white-space:nowrap;display:inline-flex;align-items:center;min-height:34px;padding:0 .875rem;border-radius:999px; background:var(--am-d);color:var(--am);font-size:.8125rem;font-weight:700;text-decoration:none}
 [data-surface="pme"] [data-ecran="alire"] .tete{display:flex;align-items:center;gap:.75rem;padding:1rem var(--gout) .5rem}
 [data-surface="pme"] [data-ecran="alire"] .tete .bk{width:44px;height:44px;border-radius:50%;border:0;background:var(--d2);color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none}

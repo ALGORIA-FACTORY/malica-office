@@ -8,6 +8,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -55,10 +56,7 @@ function Dossier() {
   const navigate = useNavigate();
   const [filtre, setFiltre] = useState<Etat | "toutes">("toutes");
 
-  const lues = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const lues = usePiecesLues();
   const typesDoc = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),

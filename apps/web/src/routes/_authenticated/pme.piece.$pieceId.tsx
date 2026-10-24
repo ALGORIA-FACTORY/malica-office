@@ -35,6 +35,9 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { RAISON_LONGUE } from "@/lib/lecture";
+import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   head: () => ({
@@ -57,14 +60,6 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
   }),
   component: PieceScreen,
 });
-
-/** Les raisons MÉTIER pour lesquelles une lecture s'arrête, et leur phrase. */
-const MESSAGE_DU_CODE_DE_LECTURE: Record<string, MessageKey> = {
-  "lecture.illisible": "pme.lire.illisible",
-  "lecture.vide": "pme.lire.vide",
-  "lecture.trop_longue": "pme.lire.tropLongue",
-  "lecture.trop_dense": "pme.lire.tropDense",
-};
 
 /*
  * ================================ LES MOTS DE CET ÉCRAN SONT AU DICTIONNAIRE
@@ -277,11 +272,15 @@ function PieceScreen() {
    * bibliothèque a déjà faite, sous sa clé. « Facture achat » seul ne dit pas
    * QUEL bon de livraison est là.
    */
-  const luesDuDossier = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-    enabled: (rattachees.data ?? []).length > 0,
-  });
+  /*
+   * La même liste dit aussi où en est la LECTURE de cette pièce
+   * (`issueDeLecture`) : un échec se voit ici comme sur l'accueil et à la
+   * capture, par la même règle et la même source.
+   */
+  const luesDuDossier = usePiecesLues({ enabled: !lue || (rattachees.data ?? []).length > 0 });
+  const cettePiece = (luesDuDossier.data ?? []).find((x) => x.id === pieceId) ?? null;
+  const issue = cettePiece ? issueDeLecture(cettePiece) : null;
+  const echecDeLecture = issue && demandeUnGeste(issue) ? issue : null;
   const [rattacherOuvert, setRattacherOuvert] = useState(false);
   /** Le document dont on a ouvert le détachement, et le motif saisi. */
   const [aDetacher, setADetacher] = useState<string | null>(null);
@@ -551,15 +550,15 @@ function PieceScreen() {
         return;
       }
       const code = e instanceof Error ? e.message : "";
-      const libelle = MESSAGE_DU_CODE_DE_LECTURE[code];
-      if (libelle) {
-        setError(t(libelle));
+      const codeConnu = codeDeLecture(code);
+      if (codeConnu) {
+        setError(t(RAISON_LONGUE[codeConnu]));
         return;
       }
       /*
        * ======================== ET LE MOTIF DE REFUS A SON TRADUCTEUR, LUI AUSSI
        *
-       * `MESSAGE_DU_CODE_DE_LECTURE` ne connaît que les quatre codes
+       * `RAISON_LONGUE` ne connaît que les quatre codes
        * `lecture.*`. Un MOTIF de refus — `piece_personnelle`,
        * `plafond_atteint`, `licence_suspendue` — tombait donc dans
        * `texteDeLErreur`, qui affiche le message brut de l'API. Relevé au
@@ -1127,6 +1126,35 @@ function PieceScreen() {
             }
           />
         )}
+        {echecDeLecture ? (
+          <div className="echec-lecture" role="alert">
+            <p className="tt">{t("pme.lecture.echec.titre")}</p>
+            <p>
+              {t(
+                echecDeLecture.code
+                  ? RAISON_LONGUE[echecDeLecture.code]
+                  : "pme.lecture.court.echec",
+              )}
+            </p>
+            <p className="nd">{t("pme.lecture.echec.nonDecomptee")}</p>
+            <button
+              type="button"
+              className="pr"
+              onClick={() => reprendre.mutate()}
+              disabled={reprendre.isPending}
+            >
+              {t("pme.scan.reprendre")}
+            </button>
+            <button
+              type="button"
+              className="sc"
+              onClick={() => read.mutate()}
+              disabled={read.isPending}
+            >
+              {t("pme.lecture.relireMeme")}
+            </button>
+          </div>
+        ) : null}
         {pagesScan.length > 0 ? (
           <div className="flex flex-col gap-3">
             {pagesScan.map((url, i) => (
@@ -1180,25 +1208,30 @@ function PieceScreen() {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          onClick={() => read.mutate()}
-          className={
-            vis === "personnel"
-              ? "h-[48px] w-full border border-border text-[14px] font-medium"
-              : "h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
-          }
-        >
-          {t("pme.read.run")}
-        </button>
-        <button
-          type="button"
-          onClick={() => reprendre.mutate()}
-          disabled={reprendre.isPending}
-          className="h-[48px] w-full border border-border text-[14px] font-medium disabled:opacity-40"
-        >
-          {t("pme.scan.reprendre")}
-        </button>
+        {/* Après un échec, ses deux gestes sont dans la carte d'échec, au-dessus. */}
+        {echecDeLecture ? null : (
+          <>
+            <button
+              type="button"
+              onClick={() => read.mutate()}
+              className={
+                vis === "personnel"
+                  ? "h-[48px] w-full border border-border text-[14px] font-medium"
+                  : "h-[54px] w-full bg-foreground text-[16px] font-semibold text-background"
+              }
+            >
+              {t("pme.read.run")}
+            </button>
+            <button
+              type="button"
+              onClick={() => reprendre.mutate()}
+              disabled={reprendre.isPending}
+              className="h-[48px] w-full border border-border text-[14px] font-medium disabled:opacity-40"
+            >
+              {t("pme.scan.reprendre")}
+            </button>
+          </>
+        )}
         {error ? <p className="text-xs text-signal-warn">{error}</p> : null}
       </div>
     );

@@ -28,6 +28,7 @@ import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export function RattacherUnDocument({
   pieceId,
@@ -49,11 +50,7 @@ export function RattacherUnDocument({
   const feuille = useRef<HTMLDivElement | null>(null);
   useSuperposition(ouvert, onFermer, feuille);
 
-  const lues = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-    enabled: ouvert,
-  });
+  const lues = usePiecesLues({ enabled: ouvert });
   const typesDoc = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),

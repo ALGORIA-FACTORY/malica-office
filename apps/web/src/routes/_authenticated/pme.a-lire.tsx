@@ -5,9 +5,10 @@ import { useState } from "react";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import { piecesALire } from "@/lib/a-lire";
+import { piecesALire } from "@/lib/lecture";
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { office } from "@/verticals/malica-office/composition";
+import { usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/a-lire")({
   head: () => ({
@@ -44,10 +45,7 @@ function ALire() {
   const [inversees, setInversees] = useState<ReadonlySet<string>>(new Set());
   const [auPlafond, setAuPlafond] = useState(false);
 
-  const lues = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const lues = usePiecesLues();
 
   const aLire = piecesALire(lues.data ?? []);
   const cochee = (id: string, i: number) => i < PLAFOND_ELEMENTS !== inversees.has(id);

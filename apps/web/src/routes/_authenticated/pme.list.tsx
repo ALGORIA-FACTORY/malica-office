@@ -10,7 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
-import { piecesALire } from "@/lib/a-lire";
+import { piecesALire } from "@/lib/lecture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
+import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -176,7 +177,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
     onSuccess: async (r) => {
       setArmee(false);
       setRetour(t("pme.list.transmettre.fait", { count: r.transmises }));
-      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
     },
     onError: (e: unknown) => {
       setArmee(false);
@@ -227,10 +228,7 @@ function VosDocuments() {
   const periode = currentPeriod();
   const moisDeLExercice = useMoisDeLExercice(periode);
 
-  const pieces = useQuery({
-    queryKey: ["pieces-lues", pme.tenantId],
-    queryFn: () => office().capture.listAvecLecture(pme.tenantId),
-  });
+  const pieces = usePiecesLues();
 
   const toutes = useMemo(() => pieces.data ?? [], [pieces.data]);
   const aLire = useMemo(() => piecesALire(toutes), [toutes]);
