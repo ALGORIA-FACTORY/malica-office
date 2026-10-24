@@ -1296,19 +1296,6 @@
 [data-surface="pme"] [data-ecran="dossier"] .exs button span{font-family:var(--mono);font-size:.5625rem;letter-spacing:.06em;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(255,255,255,.74)}
-[data-surface="pme"] [data-ecran="dossier"] .tete{margin-top:1.0625rem}
-[data-surface="pme"] [data-ecran="dossier"] .tete .kind{display:inline-flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.625rem; font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .tete .kind i{width:7px;height:7px;border-radius:50%;background:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .tete .kind.rec{color:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .tete .kind.rec i{background:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .tete h1{margin:.5rem 0 0;font-size:1.75rem;font-weight:700;letter-spacing:-.042em;line-height:1.08}
-[data-surface="pme"] [data-ecran="dossier"] .tete .obj{margin:.375rem 0 0;font-size:.875rem;color:var(--t2);line-height:1.35}
-[data-surface="pme"] [data-ecran="dossier"] .tete .obj .mod{margin-inline-start:.625rem;padding:0;border:0;background:none;font:inherit;color:var(--tx);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-[data-surface="pme"] [data-ecran="dossier"] .tete .obj .mod:disabled{color:var(--t3);cursor:default}
-[data-surface="pme"] [data-ecran="dossier"] .tete .amt{margin:1rem 0 0;display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono); font-size:2.125rem;font-weight:600;letter-spacing:-.055em;line-height:1}
-[data-surface="pme"] [data-ecran="dossier"] .tete .amt u{text-decoration:none;font-size:.9375rem;font-weight:500;letter-spacing:.02em;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .tete .vent{color:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .tete .decomp{margin:.75rem 0 0;font-family:var(--mono);font-size:.6875rem;color:var(--t3);line-height:1.6}
 [data-surface="pme"] [data-ecran="dossier"] .solde{background:var(--d1);border-radius:18px;padding:1rem;margin-top:1.125rem}
 [data-surface="pme"] [data-ecran="dossier"] .solde .hd{display:flex;align-items:baseline;gap:.75rem}
 [data-surface="pme"] [data-ecran="dossier"] .solde .hd b{flex:1;font-size:.875rem;font-weight:600;letter-spacing:-.018em}
@@ -1325,39 +1312,6 @@
 [data-surface="pme"] [data-ecran="dossier"] .centr.calme p{color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .centr b{font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .centr button{margin-top:.75rem;border:0;border-radius:999px;background:var(--acc);color:var(--on-acc); padding:.5rem .875rem;font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer}
-[data-surface="pme"] [data-ecran="dossier"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
-[data-surface="pme"] [data-ecran="dossier"] .sec h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.034em}
-[data-surface="pme"] [data-ecran="dossier"] .chain{position:relative;padding-inline-start:1.75rem}
-[data-surface="pme"] [data-ecran="dossier"] .chain:before{content:'';position:absolute;inset-inline-start:5px;top:12px;bottom:28px;width:1px; background:rgba(0,0,0,.1)}
-[data-surface="pme"] [data-ecran="dossier"] .doc{position:relative;display:flex;align-items:flex-start;gap:.8125rem;background:var(--d1); border-radius:16px;padding:.8125rem .9375rem;margin-bottom:.5rem;width:100%;border:0; font-family:inherit;text-align:start;color:var(--tx);cursor:pointer;transition:background .18s}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .doc:hover{background:var(--d2)}}
-[data-surface="pme"] [data-ecran="dossier"] .doc:before{content:'';position:absolute;inset-inline-start:-1.75rem;top:1.125rem;width:11px;height:11px; border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px var(--d0)}
-[data-surface="pme"] [data-ecran="dossier"] .doc.miss{background:none;border:1px dashed rgba(138,91,0,.4)}
-[data-surface="pme"] [data-ecran="dossier"] .doc.miss:before{background:none;box-shadow:0 0 0 4px var(--d0),inset 0 0 0 1.5px var(--am)}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .doc.miss:hover{background:rgba(138,91,0,.06)}}
-[data-surface="pme"] [data-ecran="dossier"] .doc .bd{flex:1;min-width:0;display:grid;gap:.1875rem}
-[data-surface="pme"] [data-ecran="dossier"] .doc .tp{font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.14em; text-transform:uppercase;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .doc.miss .tp{color:var(--am)}
-[data-surface="pme"] [data-ecran="dossier"] .doc b{font-size:.875rem;font-weight:600;letter-spacing:-.018em}
-[data-surface="pme"] [data-ecran="dossier"] .doc .mt{font-family:var(--mono);font-size:.6875rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .doc .vl{font-family:var(--mono);font-size:.8125rem;font-weight:600;letter-spacing:-.035em;flex:none; align-self:center}
-[data-surface="pme"] [data-ecran="dossier"] .doc .ask{font-size:.75rem;font-weight:600;color:var(--am)}
-[data-surface="pme"] [data-ecran="dossier"] .lines{background:var(--d1);border-radius:18px;overflow:hidden}
-[data-surface="pme"] [data-ecran="dossier"] .rg{display:flex;align-items:center;gap:.8125rem;padding:.875rem .9375rem;width:100%;border:0; background:none;font-family:inherit;text-align:start;color:var(--tx);cursor:pointer; transition:background .18s}
-[data-surface="pme"] [data-ecran="dossier"] .rg+.rg{box-shadow:inset 0 1px 0 var(--dl)}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .rg:hover{background:var(--d2)}}
-[data-surface="pme"] [data-ecran="dossier"] .rg i{width:38px;height:38px;border-radius:12px;background:rgba(0,0,0,.06);flex:none; display:grid;place-items:center}
-[data-surface="pme"] [data-ecran="dossier"] .rg i svg{width:20px;height:20px}
-[data-surface="pme"] [data-ecran="dossier"] .rg .bd{flex:1;min-width:0;display:grid;gap:.125rem}
-[data-surface="pme"] [data-ecran="dossier"] .rg b{font-size:.875rem;font-weight:600;letter-spacing:-.018em}
-[data-surface="pme"] [data-ecran="dossier"] .rg .mt{font-family:var(--mono);font-size:.6875rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .rg .recu{display:inline-flex;align-items:center;gap:.375rem;font-size:.6875rem;font-weight:600; color:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .rg .recu svg{width:12px;height:12px;stroke-width:2.6}
-[data-surface="pme"] [data-ecran="dossier"] .rg .recu.am{color:var(--am)} /* ANO-025 : lecture sous le seuil de reserve */
-[data-surface="pme"] [data-ecran="dossier"] .rg .vl{font-family:var(--mono);font-size:.875rem;font-weight:600;letter-spacing:-.035em;flex:none}
-[data-surface="pme"] [data-ecran="dossier"] .add{display:inline-flex;align-items:center;gap:.5rem;margin-top:.625rem;border:1px solid var(--dl); background:none;border-radius:999px;padding:.5625rem .875rem;color:var(--t2);font-family:inherit; font-size:.8125rem;font-weight:600;cursor:pointer;transition:border-color .18s,color .18s}
-[data-surface="pme"] [data-ecran="dossier"] .add svg{width:15px;height:15px;stroke-width:2.2}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .add:hover{border-color:var(--acc);color:var(--acc)}}
 [data-surface="pme"] [data-ecran="dossier"] .ctrl{background:var(--d1);border-radius:18px;padding:.3125rem 0;overflow:hidden}
 [data-surface="pme"] [data-ecran="dossier"] .ck{display:flex;align-items:flex-start;gap:.75rem;padding:.6875rem .9375rem}
 [data-surface="pme"] [data-ecran="dossier"] .ck i{width:18px;height:18px;flex:none;margin-top:.0625rem;color:var(--acc)}
@@ -1366,36 +1320,105 @@
 [data-surface="pme"] [data-ecran="dossier"] .ck.az i{color:var(--az)}
 [data-surface="pme"] [data-ecran="dossier"] .ck p{margin:0;font-size:.8125rem;line-height:1.4;color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .ck.q p, [data-surface="pme"] [data-ecran="dossier"] .ck.no p, [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#3C4450}
-[data-surface="pme"] [data-ecran="dossier"] .ck .rep{display:flex;gap:.5rem;margin-top:.625rem}
-[data-surface="pme"] [data-ecran="dossier"] .ck .rep button{border:0;border-radius:999px;padding:.4375rem .8125rem;font-family:inherit; font-size:.75rem;font-weight:700;cursor:pointer;background:var(--acc);color:var(--on-acc)}
-[data-surface="pme"] [data-ecran="dossier"] .ck .rep button.sec{background:var(--d2);color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .rev{background:var(--d1);border-radius:18px;padding:1rem;margin-top:.625rem}
 [data-surface="pme"] [data-ecran="dossier"] .rev .q{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);font-size:.625rem; font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .rev .q i{width:7px;height:7px;border-radius:50%;background:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .rev .q.lock i{background:var(--am)}
 [data-surface="pme"] [data-ecran="dossier"] .rev .q.lock{color:var(--am)}
 [data-surface="pme"] [data-ecran="dossier"] .rev p{margin:.625rem 0 0;font-size:.8125rem;line-height:1.5;color:var(--t2)}
-[data-surface="pme"] [data-ecran="dossier"] .rev .b{display:flex;gap:.5rem;margin-top:.875rem;flex-wrap:wrap}
-[data-surface="pme"] [data-ecran="dossier"] .rev .b button{border:1px solid var(--dl);background:none;border-radius:999px;padding:.5rem .875rem; font-family:inherit;font-size:.75rem;font-weight:600;color:var(--t2);cursor:pointer; transition:border-color .18s,color .18s}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .rev .b button:hover{border-color:var(--acc);color:var(--acc)}}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .rev .b button.sup:hover{border-color:var(--ve);color:var(--ve)}}
 [data-surface="pme"] [data-ecran="dossier"] .rev .chx{display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.75rem}
 [data-surface="pme"] [data-ecran="dossier"] .rev .chx button{border:0;border-radius:999px;background:var(--d2);color:var(--t2);font-family:inherit; font-size:.75rem;font-weight:500;padding:.4375rem .75rem;cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .rev .chx button.on{background:var(--acc);color:var(--on-acc);font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .rev .go{margin-top:.875rem}
 [data-surface="pme"] [data-ecran="dossier"] .rev .go button{border:0;border-radius:999px;background:var(--acc);color:var(--on-acc); padding:.5rem .9375rem;font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer}
-[data-surface="pme"] [data-ecran="dossier"] .rg .ann{border:0;background:none;color:var(--t3);font-family:inherit;font-size:.6875rem; font-weight:600;cursor:pointer;padding:.25rem .375rem;flex:none}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .rg .ann:hover{color:var(--ve)}}
-[data-surface="pme"] [data-ecran="dossier"] .jr{background:var(--d1);border-radius:18px;padding:.9375rem}
-[data-surface="pme"] [data-ecran="dossier"] .jr div{display:flex;align-items:baseline;gap:.75rem;font-family:var(--mono);font-size:.75rem; padding:.25rem 0}
-[data-surface="pme"] [data-ecran="dossier"] .jr div span{flex:1;color:var(--t2)}
-[data-surface="pme"] [data-ecran="dossier"] .jr div u{text-decoration:none;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .jr div.now span{color:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#3C4450;letter-spacing:-.012em}
-[data-surface="pme"] [data-ecran="dossier"] .acts{display:flex;gap:.625rem;margin-top:1.5rem}
-[data-surface="pme"] [data-ecran="dossier"] .acts button{flex:1;border:0;border-radius:999px;padding:.875rem .75rem;font-family:inherit; font-size:.875rem;font-weight:700;letter-spacing:-.015em;cursor:pointer; background:var(--d2);color:var(--tx);transition:transform var(--t-touche) var(--e-entre)}
-[data-surface="pme"] [data-ecran="dossier"] .acts button.pr{background:var(--acc);color:var(--on-acc)}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="dossier"] .acts button:hover{transform:scale(1.02)}}
+
+/* ===================================================== LA FICHE D'UNE PIÈCE
+ * 24 octobre 2026, maquette validée par Wissem : la pièce en tête (la vraie
+ * page en vignette), UNE carte de décision, l'avancement, puis trois onglets.
+ * Tout est tiré des jetons : le thème sombre suit sans une règle de plus.
+ * La couleur dit un état, jamais un décor : ambre = attend une réponse,
+ * vermillon = bloqué, azur = à faire ensuite, vert = fait. */
+[data-surface="pme"] [data-ecran="dossier"] .f-id{display:flex;gap:1rem;padding:1.25rem var(--gout) .5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-vign{flex:none;width:96px;height:128px;padding:0;border:0;border-radius:12px;overflow:hidden; background:var(--d2);cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+[data-surface="pme"] [data-ecran="dossier"] .f-vign .apercu{width:100%;height:100%}
+[data-surface="pme"] [data-ecran="dossier"] .f-qui{flex:1;min-width:0;display:flex;flex-direction:column;gap:.375rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-qui h1{margin:.125rem 0 0;font-size:1.5rem;line-height:1.15;font-weight:800;letter-spacing:-.025em; overflow-wrap:anywhere}
+[data-surface="pme"] [data-ecran="dossier"] .f-etat{align-self:flex-start;display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .625rem; border-radius:999px;background:var(--d2);color:var(--t2);font-size:.75rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .f-etat i{width:6px;height:6px;border-radius:50%;background:currentColor}
+[data-surface="pme"] [data-ecran="dossier"] .f-etat.am{background:var(--am-d);color:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-etat.az{background:var(--az-d);color:var(--az)}
+[data-surface="pme"] [data-ecran="dossier"] .f-etat.ok{background:var(--me);color:var(--me-tx)}
+[data-surface="pme"] [data-ecran="dossier"] .f-typ{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-typ .puce{display:inline-flex;align-items:center;gap:.375rem;min-height:34px;padding:0 .75rem; border-radius:999px;border:1px solid var(--dl);background:none;color:var(--tx);font-family:inherit;font-size:.8125rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .f-typ button.puce{cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-typ .puce svg{width:14px;height:14px;stroke-width:2}
+[data-surface="pme"] [data-ecran="dossier"] .f-typ .dt{font-family:var(--mono);font-size:.8125rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-mt{padding:.5rem var(--gout) 0;display:grid;gap:.625rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-mt .amt{display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono);font-size:2.5rem; font-weight:600;letter-spacing:-.05em;line-height:1}
+[data-surface="pme"] [data-ecran="dossier"] .f-mt .amt u{text-decoration:none;font-size:.875rem;font-weight:500;letter-spacing:.02em;color:var(--t3)}
+[data-surface="pme"] [data-ecran="dossier"] .f-puces{display:flex;flex-wrap:wrap;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-puces span{padding:.375rem .625rem;border-radius:8px;background:var(--d1);font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-puces b{font-family:var(--mono);font-weight:600;color:var(--tx)}
+[data-surface="pme"] [data-ecran="dossier"] .f-puces em{font-style:normal;color:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec{margin:1.25rem var(--gout) 0;padding:1.125rem;border-radius:var(--r-xl);background:var(--d1); border:1px solid var(--dl);display:grid;gap:.875rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec.am{border-color:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec.ve{border-color:var(--ve)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec.az{border-color:var(--az)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-tete{display:flex;gap:.75rem;align-items:flex-start}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-titre{margin:0;font-size:1rem;line-height:1.4;font-weight:600;letter-spacing:-.01em}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-sous{margin:.25rem 0 0;font-size:.875rem;line-height:1.45;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes{display:grid;gap:.625rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes.deux{grid-template-columns:repeat(2,minmax(0,1fr))}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes button{min-height:48px;padding:.5rem .875rem;border-radius:999px;border:1px solid var(--dl); background:none;color:var(--tx);font-family:inherit;font-size:.9375rem;font-weight:600;line-height:1.2;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes button.pr{border:0;background:var(--acc);color:var(--on-acc);font-weight:700}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes button.sup{border-color:var(--ve);color:var(--ve)}
+[data-surface="pme"] [data-ecran="dossier"] .f-dec-gestes button:disabled{opacity:.4;cursor:default}
+[data-surface="pme"] [data-ecran="dossier"] .f-av{margin:1.25rem var(--gout) 0;display:grid;gap:.625rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-av .barres{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i{height:4px;border-radius:2px;background:var(--d2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i.faite{background:var(--acc)}
+[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i.courante{background:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-av p{margin:0;display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;font-size:.8125rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-av p b{color:var(--tx)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ong{position:sticky;top:0;z-index:5;margin:1.5rem var(--gout) 0;padding:4px;border-radius:14px; background:var(--d1);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+[data-surface="pme"] [data-ecran="dossier"] .f-ong button{min-height:40px;border:0;border-radius:10px;background:none;color:var(--t2); font-family:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-ong button[aria-selected="true"]{background:var(--tx);color:var(--bg)}
+[data-surface="pme"] [data-ecran="dossier"] .f-pan{padding:1.125rem var(--gout) 2rem;display:grid;gap:.875rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-carte{border-radius:var(--r-lg);background:var(--d1);overflow:hidden}
+[data-surface="pme"] [data-ecran="dossier"] .f-carte.f-cab{padding:1rem;display:grid;gap:.75rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-cab-etat{margin:0;font-size:.9375rem;font-weight:600;line-height:1.35}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne{width:100%;min-height:58px;display:flex;align-items:center;gap:.75rem;padding:.625rem 1rem; border:0;border-bottom:1px solid var(--hr);background:none;color:var(--tx);font-family:inherit;text-align:start; text-decoration:none;box-sizing:border-box}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne:last-child{border-bottom:0}
+[data-surface="pme"] [data-ecran="dossier"] button.f-ligne, [data-surface="pme"] [data-ecran="dossier"] a.f-ligne{cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne:disabled{opacity:.4;cursor:default}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:.1875rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb{font-size:.8125rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb-a{font-size:.9375rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne.sup .lb-a{color:var(--ve)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .et{font-size:.75rem;font-weight:600;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.ok{color:var(--acc)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.am{color:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl{font-family:var(--mono);font-size:.9375rem;font-weight:600;text-align:end;overflow-wrap:anywhere}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl-g{font-size:.9375rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .dt{font-family:var(--mono);font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .ch{flex:none;width:18px;height:18px;stroke-width:2;color:var(--t3)}
+[dir="rtl"] [data-surface="pme"] [data-ecran="dossier"] .f-ligne .ch{transform:scaleX(-1)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne input[type="date"]{min-height:44px;border:1px solid var(--dl);border-radius:12px; background:var(--d2);color:var(--tx);padding:0 .625rem;font-family:var(--mono);font-size:.875rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-note{margin:0;font-size:.8125rem;line-height:1.45;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-bouton{min-height:48px;border-radius:999px;border:1px solid var(--dl);background:none;color:var(--tx); font-family:inherit;font-size:.9375rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-bouton:disabled{opacity:.4;cursor:default}
+[data-surface="pme"] [data-ecran="dossier"] .f-tit{margin-top:.75rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-tit h2{margin:0;display:flex;align-items:center;font-size:1.0625rem;font-weight:700;letter-spacing:-.015em}
+[data-surface="pme"] [data-ecran="dossier"] .f-tit span{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr{padding:.375rem 1rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr div{display:flex;align-items:center;gap:.75rem;min-height:40px;font-size:.875rem;color:var(--t3)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--d2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr span{flex:1}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr u{text-decoration:none;font-family:var(--mono);font-size:.75rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .faite{color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .faite i{background:var(--acc)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .courante{color:var(--tx);font-weight:700}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .courante i{background:var(--am)}
 
 
 /* ======================== écran · bibliotheque ======================== */
@@ -2257,12 +2280,7 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.09); margin-top:.75rem;overflow:hidden}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(232,199,106,.08);border:1px solid rgba(232,199,106,.24)}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr p{margin:0;font-size:.8125rem;line-height:1.5;color:#EBD9A8}
-.dark [data-surface="pme"] [data-ecran="dossier"] .chain:before{content:'';position:absolute;inset-inline-start:5px;top:12px;bottom:28px;width:1px; background:rgba(255,255,255,.1)}
-.dark [data-surface="pme"] [data-ecran="dossier"] .doc.miss{background:none;border:1px dashed rgba(232,199,106,.4)}
-@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="dossier"] .doc.miss:hover{background:rgba(232,199,106,.06)}}
-.dark [data-surface="pme"] [data-ecran="dossier"] .rg i{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 .dark [data-surface="pme"] [data-ecran="dossier"] .ck.q p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.no p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#E4E4E7}
-.dark [data-surface="pme"] [data-ecran="dossier"] .note p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .grp i{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.06);flex:none; display:grid;place-items:center}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .grp i.cli{background:rgba(143,227,177,.13);color:var(--acc)}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .d{display:inline-block;width:9px;height:9px;border-radius:50%;background:#2F2F34;vertical-align:middle}

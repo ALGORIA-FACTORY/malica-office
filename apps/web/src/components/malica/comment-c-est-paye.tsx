@@ -30,11 +30,13 @@
  * suivante — avec des libellés justes et des comptes faux, donc invisible.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, FileText } from "lucide-react";
-import { useState } from "react";
+import { Camera, FileText, Plus, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { files } from "@/capabilities/files";
 import { usePme } from "@/components/malica/pme-context";
+import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { totalDesPaiements } from "@/lib/total-des-paiements";
@@ -54,6 +56,8 @@ export function CommentCEstPaye({
   tiers,
   reference,
   decimales,
+  ajoutOuvert,
+  onAjout,
 }: {
   pieceId: string;
   /**
@@ -84,6 +88,15 @@ export function CommentCEstPaye({
   reference: string | null;
   /** Les décimales de la devise, lues au pack. `null` tant qu'on ne les a pas. */
   decimales: number | null;
+  /**
+   * La feuille « Ajouter un règlement » est-elle ouverte ?
+   *
+   * Tenue par l'écran de la pièce, parce que la carte de décision l'ouvre
+   * aussi (24 octobre 2026, maquette validée par Wissem : « Reste à payer →
+   * Ajouter un règlement »).
+   */
+  ajoutOuvert: boolean;
+  onAjout: (ouvert: boolean) => void;
 }) {
   const { t, locale, dir } = useI18n();
   const pme = usePme();
@@ -132,27 +145,6 @@ export function CommentCEstPaye({
     queryFn: () => office().capture.paiementsDUnePiece(pieceId),
   });
 
-  /**
-   * Ce qui est NÉ de cette facture : le reçu, les talons.
-   *
-   * 13 octobre 2026 : « le reçu ne se génère pas ». Et même quand il se
-   * générait, l'écran de la PME n'en montrait RIEN — aucune liste, aucun
-   * nom, aucun geste pour l'ouvrir. Le bouton passait une seconde en
-   * « Chargement… », revenait, et c'était tout. Le cabinet, lui, lisait
-   * déjà ces pièces depuis septembre (`piecesIssuesDe`).
-   */
-  const joints = useQuery({
-    queryKey: ["joints", pieceId],
-    queryFn: () => office().capture.piecesIssuesDe(pieceId),
-  });
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
-  const nomDuType = (code: string | null) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? code ?? "—";
-
   /** Les motifs d'annulation, du référentiel et traduits — jamais du code. */
   const motifs = useQuery({
     queryKey: ["motifs-annulation", locale],
@@ -174,6 +166,18 @@ export function CommentCEstPaye({
   const [partiel, setPartiel] = useState<boolean | null>(null);
   const [montantSaisi, setMontantSaisi] = useState("");
   const [referenceSaisie, setReferenceSaisie] = useState("");
+  /**
+   * Le moyen CHOISI dans la feuille — pas encore inscrit.
+   *
+   * Jusqu'au 24 octobre 2026, toucher un moyen l'inscrivait aussitôt. La
+   * feuille sépare le choix de l'inscription : on choisit, on relit le
+   * montant sur le bouton « Enregistrer », et seulement alors la ligne part.
+   */
+  const [moyenChoisi, setMoyenChoisi] = useState<string | null>(null);
+  /** Le reçu vient d'être produit : il est rangé dans « Documents liés ». */
+  const [recuCree, setRecuCree] = useState(false);
+  const feuille = useRef<HTMLDivElement | null>(null);
+  useSuperposition(ajoutOuvert, () => onAjout(false), feuille);
   /** Le paiement dont on a ouvert la correction, et son motif choisi. */
   const [aCorriger, setACorriger] = useState<string | null>(null);
 
@@ -279,6 +283,8 @@ export function CommentCEstPaye({
       setPartiel(null);
       setMontantSaisi("");
       setReferenceSaisie("");
+      setMoyenChoisi(null);
+      onAjout(false);
       await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
     },
     onError: (e: unknown) => poserErreur("autre", e),
@@ -379,8 +385,6 @@ export function CommentCEstPaye({
    */
   const exigeUneReference = (code: string) =>
     (moyens.data ?? []).find((m) => m.code === code)?.exigeReference ?? false;
-  /** Un moyen au moins en demande une : on montre alors le champ. */
-  const uneReferenceEstUtile = (moyens.data ?? []).some((m) => m.exigeReference);
 
   /**
    * ============================================= LE REÇU DE DÉPENSE OU DE REVENU
@@ -476,6 +480,7 @@ export function CommentCEstPaye({
     onSuccess: async (element) => {
       effacerErreur();
       setRecuEnAttente(element !== null && element.pieceId === null);
+      setRecuCree(element === null || element.pieceId !== null);
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
       await qc.invalidateQueries({ queryKey: ["piece", pieceId] });
       await qc.invalidateQueries({ queryKey: ["joints", pieceId] });
@@ -492,15 +497,22 @@ export function CommentCEstPaye({
     decimales !== null &&
     vivants.some((p) => p.montantMineur !== null);
 
-  return (
-    <section className="mt-6 border-t border-border pt-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-marigold">
-        {t("pme.paiement.titre")}
-      </p>
+  /** « Pas encore payé » : un constat, pas un moyen — il a son propre bouton. */
+  const nonPaye = (moyens.data ?? []).find((m) => m.code === "non_paye") ?? null;
+  const moyensPayes = (moyens.data ?? []).filter((m) => m.code !== "non_paye");
+  const referenceExigee = moyenChoisi !== null && exigeUneReference(moyenChoisi);
+  const enregistrable =
+    moyenChoisi !== null &&
+    historiquePret &&
+    !inscrire.isPending &&
+    montantAInscrire !== null &&
+    !(referenceExigee && referenceSaisie.trim() === "");
 
+  return (
+    <section className="grid gap-3">
       {paiements.isPending ? <p role="status">{t("common.loading")}</p> : null}
       {paiements.error || moyens.error ? (
-        <div role="alert" className="mt-2 text-[13px] text-signal-warn">
+        <div role="alert" className="text-[13px] text-signal-warn">
           <p>
             {texteDeLErreur(
               paiements.error ?? moyens.error,
@@ -521,91 +533,121 @@ export function CommentCEstPaye({
         </div>
       ) : null}
       {paiements.isSuccess && payeMineur === null ? (
-        <p role="status" className="mt-2 text-[13px] text-signal-warn">
+        <p role="status" className="text-[13px] text-signal-warn">
           {t("pme.paiement.incomplet")}
+        </p>
+      ) : null}
+
+      {/*
+       * ====================================== LES DEUX GESTES, AVANT L'HISTOIRE
+       *
+       * 24 octobre 2026, maquette validée par Wissem : un bouton « Ajouter un
+       * règlement » ouvre une feuille en trois temps (combien, comment,
+       * quand) ; « Pas encore payé » reste un geste à part, d'un seul toucher.
+       * La grille des huit moyens et ses trois phrases quittent la page.
+       */}
+      {solde ? (
+        <p className="text-[14px] font-medium text-signal-ok">{t("pme.paiement.solde")}</p>
+      ) : (
+        <div className="grid gap-2">
+          <button
+            type="button"
+            onClick={() => onAjout(true)}
+            disabled={!historiquePret || moyensPayes.length === 0}
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-foreground text-[15px] font-semibold text-background disabled:opacity-40"
+          >
+            <Plus className="h-[18px] w-[18px]" aria-hidden />
+            {t("pme.paiement.ajouterUn")}
+          </button>
+          {nonPaye ? (
+            <button
+              type="button"
+              onClick={() => inscrire.mutate(nonPaye.code)}
+              disabled={inscrire.isPending || !historiquePret}
+              className="h-[48px] w-full rounded-full border border-border text-[14px] font-medium hover:bg-accent disabled:opacity-40"
+            >
+              {nonPaye.libelle}
+            </button>
+          ) : null}
+        </div>
+      )}
+      {erreur && erreurDe !== "recu" && !ajoutOuvert ? (
+        <p role="alert" className="text-[12.5px] text-signal-warn">
+          {erreur}
         </p>
       ) : null}
 
       {deja.length > 0 ? (
         <>
           {/*
-           * Ce qui a DÉJÀ été inscrit, en premier : un acompte puis un solde
-           * sont deux faits, et le second ne remplace pas le premier.
+           * Ce qui a DÉJÀ été inscrit : un acompte puis un solde sont deux
+           * faits, et le second ne remplace pas le premier.
            */}
-          <ul className="mt-2.5 grid gap-px border border-border bg-border">
+          <ul className="grid gap-2">
             {deja.map((p) => (
-              <li key={p.id} className={`bg-card px-3 py-2 ${p.eteint ? "opacity-55" : ""}`}>
+              <li
+                key={p.id}
+                className={`rounded-[18px] border border-border bg-card px-4 py-3 ${p.eteint ? "opacity-55" : ""}`}
+              >
                 <span className="flex items-baseline justify-between gap-3">
-                  <span className={`text-[13.5px] font-medium ${p.eteint ? "line-through" : ""}`}>
+                  <span className={`text-[14px] font-semibold ${p.eteint ? "line-through" : ""}`}>
                     {libelleDuMoyen(p.moyenCode)}
                     {p.reference ? (
-                      <span className="num ms-1.5 text-[12px] text-text-2">{p.reference}</span>
+                      <span className="num ms-1.5 text-[12px] font-normal text-text-2">
+                        {p.reference}
+                      </span>
                     ) : null}
                   </span>
                   {/*
-                   * Le montant aux decimales du PACK.
-                   *
-                   * Il etait divise par 1000 en dur, avec trois decimales
-                   * ecrites a la main : juste en Tunisie, faux dans la
-                   * premiere monnaie a deux decimales — et invisible, parce
-                   * que le libelle, lui, resterait juste (R4). L'ecran du
-                   * cabinet faisait deja correctement, a deux fichiers de la.
+                   * Le montant aux décimales du PACK, jamais divisé par 1000 en
+                   * dur : juste en Tunisie, faux dans la première monnaie à deux
+                   * décimales — et invisible (R4).
                    */}
-                  <span className={`num shrink-0 text-[13.5px] ${p.eteint ? "line-through" : ""}`}>
+                  <span className={`num shrink-0 text-[14px] ${p.eteint ? "line-through" : ""}`}>
                     {lisible(p.montantMineur)}
                   </span>
                 </span>
                 {p.eteint ? (
-                  <span className="mt-0.5 block text-[11.5px] text-text-2">
+                  <span className="mt-0.5 block text-[12px] text-text-2">
                     {p.annulePaiementId === null
                       ? t("pme.paiement.etat.annule")
                       : t("pme.paiement.etat.annulation")}
                   </span>
                 ) : null}
-                {/*
-                 * Le manque était dit, et rien ne permettait d'y répondre :
-                 * une ligne orange sur toutes les pièces, pour toujours. Elle
-                 * est devenue le bouton qui ouvre l'appareil.
-                 */}
+                {/* Le manque se dit, et le bouton qui y répond est là. */}
                 {p.justificatifPieceId === null && exigeUnePreuve(p.moyenCode) ? (
                   <button
                     type="button"
                     onClick={() => rattacher.mutate(p.id)}
                     disabled={rattacher.isPending}
-                    className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-signal-warn underline underline-offset-2 disabled:opacity-40"
+                    className="mt-1.5 flex min-h-[36px] items-center gap-1.5 text-[12.5px] font-medium text-signal-warn disabled:opacity-40"
                   >
-                    <Camera className="h-[13px] w-[13px]" aria-hidden />
+                    <Camera className="h-[14px] w-[14px]" aria-hidden />
                     {rattacher.isPending ? t("common.loading") : t("pme.paiement.preuve.prendre")}
                   </button>
                 ) : p.justificatifPieceId !== null ? (
-                  <span className="mt-0.5 block text-[11.5px] text-signal-ok">
+                  <span className="mt-0.5 block text-[12px] text-signal-ok">
                     {t("pme.paiement.preuve.jointe")}
                   </span>
                 ) : null}
 
                 {/*
-                 * ======================================= LE RETOUR EN ARRIERE
+                 * ======================================= LE RETOUR EN ARRIÈRE
                  *
-                 * « Il faut avoir le moyen de retour si le moyen de paiement
-                 * choisi est faux. » Le 13 octobre, la seule issue etait d'en
-                 * ajouter un second — et le total doublait.
-                 *
-                 * On n'efface pas : on eteint, avec un motif. L'ancienne
-                 * ligne reste lisible, barree.
+                 * On n'efface pas : on éteint, avec un motif. L'ancienne ligne
+                 * reste lisible, barrée (R7).
                  */}
                 {!p.eteint ? (
                   aCorriger === p.id ? (
-                    <span className="mt-1.5 block">
-                      <span className="block text-[11.5px] text-text-2">
-                        {t("pme.paiement.pourquoi")}
-                      </span>
+                    <span className="mt-2 grid gap-1.5">
+                      <span className="text-[12px] text-text-2">{t("pme.paiement.pourquoi")}</span>
                       {(motifs.data ?? []).map((m) => (
                         <button
                           key={m.id}
                           type="button"
                           disabled={annuler.isPending}
                           onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
-                          className="mt-1 block min-h-[36px] w-full border border-border px-2 text-start text-[12.5px] hover:bg-accent disabled:opacity-40"
+                          className="min-h-[40px] rounded-[12px] border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
                         >
                           {m.libelle}
                         </button>
@@ -613,7 +655,7 @@ export function CommentCEstPaye({
                       <button
                         type="button"
                         onClick={() => setACorriger(null)}
-                        className="mt-1 text-[11.5px] text-text-2 underline underline-offset-2"
+                        className="min-h-[36px] text-start text-[12.5px] text-text-2 underline underline-offset-2"
                       >
                         {t("common.cancel")}
                       </button>
@@ -622,7 +664,7 @@ export function CommentCEstPaye({
                     <button
                       type="button"
                       onClick={() => setACorriger(p.id)}
-                      className="mt-0.5 block text-[11.5px] text-text-2 underline underline-offset-2"
+                      className="mt-1 min-h-[36px] text-[12.5px] text-text-2 underline underline-offset-2"
                     >
                       {t("pme.paiement.corriger")}
                     </button>
@@ -631,180 +673,219 @@ export function CommentCEstPaye({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[12px] text-text-2">{t("pme.paiement.ajouter")}</p>
 
           {/*
            * ========================================== LE REÇU, QUAND IL A UN SENS
            *
-           * Il n'apparaît qu'une fois un règlement inscrit, et seulement si la
-           * lecture a tranché dépense ou revenu : un « reçu de dépense » posé
-           * sur une vente est un document faux, et un document faux remis à un
-           * tiers est pire qu'un document absent.
+           * Seulement une fois un règlement inscrit, et seulement si le sens est
+           * tranché : un « reçu de dépense » posé sur une vente est un document
+           * faux. Une fois produit, il rejoint « Documents liés » (onglet Suivi),
+           * et l'écran le DIT — « il ne se passe rien » était le défaut du
+           * 13 octobre.
            */}
           {recuPossible ? (
             <button
               type="button"
               onClick={() => recu.mutate()}
               disabled={recu.isPending}
-              className="mt-2.5 flex min-h-[44px] w-full items-center justify-center gap-2 border border-foreground text-[13.5px] font-medium hover:bg-accent disabled:opacity-40"
+              className="flex h-[48px] w-full items-center justify-center gap-2 rounded-full border border-foreground text-[14px] font-medium hover:bg-accent disabled:opacity-40"
             >
-              <FileText className="h-[15px] w-[15px]" aria-hidden />
+              <FileText className="h-[16px] w-[16px]" aria-hidden />
               {recu.isPending ? t("common.loading") : t("pme.recu.generer")}
             </button>
           ) : null}
-
-          {/*
-           * L'ERREUR SOUS LE GESTE QUI L'A PRODUITE.
-           *
-           * Elle s'affichait jusqu'ici tout en bas de la section, sous la
-           * grille des huit moyens — environ deux cent vingt pixels plus
-           * loin, donc hors de l'ecran. « Il ne se passe rien » voulait dire
-           * « le message est en bas de page ».
-           */}
           {erreur && erreurDe === "recu" ? (
-            <p className="mt-1.5 text-[12.5px] text-signal-warn">{erreur}</p>
+            <p className="text-[12.5px] text-signal-warn">{erreur}</p>
           ) : null}
           {recuEnAttente ? (
-            <p className="mt-1.5 text-[12.5px] text-text-2">{t("pme.recu.enAttente")}</p>
-          ) : null}
-
-          {/*
-           * CE QUI EST NE DE CETTE FACTURE.
-           *
-           * Sans cette liste, un recu produit, depose et lu restait
-           * invisible sur l'ecran qui venait de le creer — et le dirigeant
-           * concluait, a juste titre, que rien ne s'etait passe.
-           */}
-          {(joints.data ?? []).length > 0 ? (
-            <ul className="mt-2 grid gap-px border border-border bg-border">
-              {(joints.data ?? []).map((j) => (
-                <li
-                  key={j.id}
-                  className="flex items-baseline justify-between gap-3 bg-card px-3 py-1.5"
-                >
-                  <span className="text-[12.5px]">{nomDuType(j.documentKind)}</span>
-                  <span className="num shrink-0 text-[11.5px] text-text-2">
-                    {j.createdAt.slice(0, 10)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
-      ) : (
-        <p className="mt-1.5 text-[13px] leading-[1.5] text-text-2">{t("pme.paiement.lede")}</p>
-      )}
-
-      {/*
-       * ================================ TOTALITE OU PARTIE, ET COMBIEN RESTE
-       *
-       * L'ecran inscrivait toujours le TTC entier. La colonne acceptait
-       * pourtant un acompte depuis le premier jour — personne ne pouvait le
-       * saisir. On pose donc la question, et on propose par defaut ce qui
-       * RESTE, jamais le total : c'est en reproposant le total entier qu'on
-       * fabrique un doublon.
-       */}
-      {solde ? (
-        <p className="mt-3 text-[12.5px] text-signal-ok">{t("pme.paiement.solde")}</p>
-      ) : (
-        <>
-          {restantMineur !== null && payeMineur !== null && payeMineur > 0 ? (
-            <p className="mt-3 flex items-baseline justify-between gap-3 text-[12.5px]">
-              <span className="text-text-2">{t("pme.paiement.reste")}</span>
-              <span className="num font-medium">{lisible(restantMineur)}</span>
+            <p role="status" className="text-[12.5px] text-text-2">
+              {t("pme.recu.enAttente")}
+            </p>
+          ) : recuCree ? (
+            <p role="status" className="text-[12.5px] text-signal-ok">
+              {t("pme.recu.cree")}
             </p>
           ) : null}
-
-          {partiel === null ? (
-            <p className="mt-2 text-[13px] text-text-2">{t("pme.paiement.choisirMontant")}</p>
-          ) : null}
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPartiel(false)}
-              aria-pressed={partiel === false}
-              className={`min-h-[40px] border px-2 text-[12.5px] ${
-                partiel === false ? "border-foreground font-medium" : "border-border"
-              }`}
-            >
-              {t("pme.paiement.tout")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPartiel(true)}
-              aria-pressed={partiel === true}
-              className={`min-h-[40px] border px-2 text-[12.5px] ${
-                partiel ? "border-foreground font-medium" : "border-border"
-              }`}
-            >
-              {t("pme.paiement.partie")}
-            </button>
-          </div>
-
-          {partiel ? (
-            <label className="mt-1.5 block">
-              <span className="text-[11.5px] text-text-2">{t("pme.paiement.combien")}</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={montantSaisi}
-                onChange={(e) => setMontantSaisi(e.target.value)}
-                className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
-              />
-            </label>
-          ) : null}
-
-          <label className="mt-1.5 block">
-            <span className="text-[11.5px] text-text-2">{t("pme.paiement.quand")}</span>
-            <input
-              type="date"
-              value={dateDuPaiement}
-              max={aujourdHui}
-              onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
-              className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
-            />
-          </label>
-
-          {uneReferenceEstUtile ? (
-            <label className="mt-1.5 block">
-              <span className="text-[11.5px] text-text-2">{t("pme.paiement.reference")}</span>
-              <input
-                type="text"
-                value={referenceSaisie}
-                onChange={(e) => setReferenceSaisie(e.target.value)}
-                className="num mt-0.5 block min-h-[44px] w-full border border-border bg-card px-2.5 text-[14px]"
-              />
-            </label>
-          ) : null}
         </>
-      )}
-
-      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-        {(moyens.data ?? []).map((m) => (
-          <button
-            key={m.code}
-            type="button"
-            onClick={() => inscrire.mutate(m.code)}
-            disabled={
-              inscrire.isPending ||
-              !historiquePret ||
-              // Un montant partiel illisible n'inscrit rien : le bouton le dit
-              // en restant eteint, plutot que de laisser la base refuser.
-              (m.code !== "non_paye" && montantAInscrire === null) ||
-              (exigeUneReference(m.code) && referenceSaisie.trim() === "")
-            }
-            className="min-h-[46px] border border-border px-2.5 text-[13.5px] font-medium hover:bg-accent disabled:opacity-40"
-          >
-            {m.libelle}
-          </button>
-        ))}
-      </div>
-
-      {erreur && erreurDe !== "recu" ? (
-        <p role="alert" className="mt-2 text-[12.5px] text-signal-warn">
-          {erreur}
-        </p>
       ) : null}
+
+      {/*
+       * ============================================ LA FEUILLE, EN TROIS TEMPS
+       *
+       * Rendue dans `document.body`, comme l'aide ⓘ : un écran animé par
+       * `transform` deviendrait le cadre du `position: fixed`.
+       *
+       * Les gardes d'avant restent les mêmes, et c'est voulu : le montant se
+       * CHOISIT (totalité ou partie — jamais pré-coché, c'est en reproposant
+       * le total qu'on a fabriqué le doublon du 13 octobre), rien ne part
+       * avant que l'historique ait répondu, et la référence est exigée quand
+       * le pack le dit. La photo du justificatif s'ouvre à l'enregistrement,
+       * quand le moyen l'exige — un abandon de l'appareil n'annule rien.
+       */}
+      {ajoutOuvert && !solde && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[60] flex flex-col justify-end bg-foreground/40"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) onAjout(false);
+              }}
+            >
+              <div
+                ref={feuille}
+                role="dialog"
+                aria-modal="true"
+                aria-label={t("pme.paiement.titre")}
+                className="mx-auto grid max-h-[88vh] w-full max-w-md gap-5 overflow-y-auto rounded-t-[28px] border-t border-border bg-background px-[20px] pb-safe pt-3 text-start"
+              >
+                <span aria-hidden className="mx-auto h-1 w-10 rounded-full bg-border" />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[21px] font-semibold leading-[1.2] tracking-[-0.02em]">
+                    {t("pme.paiement.titre")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onAjout(false)}
+                    aria-label={t("common.fermer")}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
+                  >
+                    <X className="h-[18px] w-[18px]" aria-hidden />
+                  </button>
+                </div>
+
+                {/* 1 · combien */}
+                <div className="grid gap-2">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("pme.paiement.temps.combien")}
+                  </p>
+                  {restantMineur !== null && payeMineur !== null && payeMineur > 0 ? (
+                    <p className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="text-text-2">{t("pme.paiement.reste")}</span>
+                      <span className="num font-medium">{lisible(restantMineur)}</span>
+                    </p>
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
+                    <button
+                      type="button"
+                      onClick={() => setPartiel(false)}
+                      aria-pressed={partiel === false}
+                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                        partiel === false
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-text-2"
+                      }`}
+                    >
+                      {t("pme.paiement.tout")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPartiel(true)}
+                      aria-pressed={partiel === true}
+                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                        partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                      }`}
+                    >
+                      {t("pme.paiement.partie")}
+                    </button>
+                  </div>
+                  {partiel ? (
+                    <label className="grid gap-1">
+                      <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={montantSaisi}
+                        onChange={(e) => setMontantSaisi(e.target.value)}
+                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+
+                {/* 2 · comment */}
+                <div className="grid gap-2">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("pme.paiement.temps.comment")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {moyensPayes.map((m) => (
+                      <button
+                        key={m.code}
+                        type="button"
+                        onClick={() => setMoyenChoisi(m.code)}
+                        aria-pressed={moyenChoisi === m.code}
+                        className={`min-h-[44px] rounded-full px-4 text-[14px] font-medium ${
+                          moyenChoisi === m.code
+                            ? "bg-foreground text-background"
+                            : "border border-border hover:bg-accent"
+                        }`}
+                      >
+                        {m.libelle}
+                      </button>
+                    ))}
+                  </div>
+                  {moyenChoisi !== null && exigeUnePreuve(moyenChoisi) ? (
+                    <p className="flex items-center gap-1.5 text-[12.5px] text-text-2">
+                      <Camera className="h-[14px] w-[14px]" aria-hidden />
+                      {t("pme.paiement.preuve.appareil")}
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* 3 · quand, et la référence si le moyen en porte une */}
+                <div className="grid gap-2">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("pme.paiement.temps.quand")}
+                  </p>
+                  <label className="grid gap-1">
+                    <span className="text-[12.5px] text-text-2">{t("pme.paiement.quand")}</span>
+                    <input
+                      type="date"
+                      value={dateDuPaiement}
+                      max={aujourdHui}
+                      onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
+                      className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
+                    />
+                  </label>
+                  {referenceExigee ? (
+                    <label className="grid gap-1">
+                      <span className="text-[12.5px] text-text-2">
+                        {t("pme.paiement.reference")}
+                      </span>
+                      <input
+                        type="text"
+                        value={referenceSaisie}
+                        onChange={(e) => setReferenceSaisie(e.target.value)}
+                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+
+                {erreur && erreurDe !== "recu" ? (
+                  <p role="alert" className="text-[12.5px] text-signal-warn">
+                    {erreur}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={!enregistrable}
+                  onClick={() => moyenChoisi && inscrire.mutate(moyenChoisi)}
+                  className="mb-3 h-[54px] w-full rounded-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-40"
+                >
+                  {inscrire.isPending
+                    ? t("common.loading")
+                    : montantAInscrire !== null
+                      ? t("pme.paiement.enregistrer", {
+                          montant: lisible(montantAInscrire),
+                          devise,
+                        })
+                      : t("pme.paiement.enregistrerSansMontant")}
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
