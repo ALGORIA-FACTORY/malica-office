@@ -1499,6 +1499,9 @@ if (PMES.sotumag.id) {
          * la main sur la facture déjà inscrite est refusée : ce serait une
          * seconde écriture de la même pièce.
          */
+        // La facture de démonstration a été composée à la main : on analyse
+        // sa lecture courante comme dans le parcours réel, sans contourner le garde.
+        await rpc("capture", "analyser", [facturee.pieceId]);
         const paiementId = await rpc("capture", "enregistrerPaiement", [
           {
             pieceId: facturee.pieceId,
