@@ -15,7 +15,22 @@ androidWebViewHierarchy: devtools
 - setAirplaneMode: disabled
 - launchApp:
     clearState: true
-- assertVisible: "Espace Malica Office"
+# Le 24 octobre 2026 (exécution 40111311271, deux fois de suite), l'émulateur
+# a tué le processus neuf pendant qu'il effaçait l'ancien — logcat : « Destroy
+# timeout of remove-task, attempt to kill Task… Killing <nouveau pid> », puis
+# « failed to attach ». L'écran restait blanc. Une relance unique suffit.
+- extendedWaitUntil:
+    visible: "Espace Malica Office"
+    timeout: 15000
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Espace Malica Office"
+    commands:
+      - launchApp
+- extendedWaitUntil:
+    visible: "Espace Malica Office"
+    timeout: 20000
 - tapOn: "Adresse e-mail"
 - inputText: ${MALICA_EMAIL}
 - tapOn: "Mot de passe"
