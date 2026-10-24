@@ -225,6 +225,46 @@ function Fin({ am, children }: { am?: boolean; children: ReactNode }) {
 }
 
 /**
+ * Ce qu'on montre pendant qu'un résumé (questions, dates) se charge — et, s'il
+ * échoue, de quoi ne pas rester bloqué (revue Codex de #85) : réessayer, ou
+ * continuer sans lui. Le résumé n'est qu'une aide ; le règlement et l'envoi ne
+ * doivent pas l'attendre.
+ */
+function Attente({
+  echec,
+  reessayer,
+  continuer,
+}: {
+  echec: boolean;
+  reessayer: () => void;
+  continuer: () => void;
+}) {
+  const { t } = useI18n();
+  if (!echec) {
+    return (
+      <p className="c-sous" role="status">
+        {t("pme.capture.q.jeRegarde")}
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="c-sous" role="alert">
+        {t("common.error")}
+      </p>
+      <div className="go">
+        <button type="button" className="pr" onClick={continuer}>
+          {t("pme.capture.continuer")}
+        </button>
+        <button type="button" className="sc" onClick={reessayer}>
+          {t("common.reessayer")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/**
  * Deux destinations, et pas trois.
  *
  * `entite` n'en est pas une : c'est le LIEU où « La société » met la pièce
@@ -672,9 +712,18 @@ function PmeCapturer() {
    * l'URL, comme toute capture), elle remplace l'ancienne dans le lot figé, à
    * la même place ; l'ancienne est supprimée, et la neuve part en lecture.
    */
-  const remplacer = useMutation({
-    mutationFn: async ({ ancienne, neuves }: { ancienne: string; neuves: readonly string[] }) => {
-      await office().capture.supprimer(ancienne);
+  /*
+   * Deux temps, pour qu'un échec laisse toujours de quoi reprendre (revue
+   * Codex de #85) :
+   *   1. supprimer l'ancienne — refusée, rien n'a bougé : le lot garde
+   *      l'ancienne, et « Reprendre la photo » se retente ;
+   *   2. une fois l'ancienne partie, la neuve prend sa place dans le lot, PUIS
+   *      on demande sa lecture — refusée, la neuve reste dans le lot, non lue,
+   *      et « Réessayer » relance cette seule lecture.
+   */
+  const [aRelire, setARelire] = useState<readonly string[]>([]);
+  const lireNeuves = useMutation({
+    mutationFn: async (neuves: readonly string[]) => {
       const pris: Record<string, string> = {};
       for (const id of neuves) {
         await office().collab.setPieceVis(id, "entite");
@@ -684,9 +733,23 @@ function PmeCapturer() {
     },
     onSuccess: async (pris) => {
       setTravaux((t) => ({ ...t, ...pris }));
+      setARelire([]);
       setErreur(null);
       setEtape(3);
       await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+    },
+    onError: (raison: unknown, neuves) => {
+      setARelire(neuves);
+      echoue(raison);
+    },
+  });
+  const remplacer = useMutation({
+    mutationFn: async ({ ancienne }: { ancienne: string; neuves: readonly string[] }) =>
+      office().capture.supprimer(ancienne),
+    onSuccess: async (_, { ancienne, neuves }) => {
+      setFige((f) => (f ?? []).flatMap((id) => (id === ancienne ? neuves : [id])));
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      lireNeuves.mutate(neuves);
     },
     onError: echoue,
   });
@@ -694,7 +757,6 @@ function PmeCapturer() {
     if (aRemplacer === null || fige === null || remplacer.isPending) return;
     const neuves = duPassage.filter((id) => !fige.includes(id));
     if (neuves.length === 0) return;
-    setFige(fige.flatMap((id) => (id === aRemplacer ? neuves : [id])));
     setARemplacer(null);
     remplacer.mutate({ ancienne: aRemplacer, neuves });
   }, [aRemplacer, fige, duPassage, remplacer]);
@@ -778,6 +840,7 @@ function PmeCapturer() {
     setQuestion(0);
     setVerifiee(0);
     setARemplacer(null);
+    setARelire([]);
     setMoyen(null);
     setReference("");
     setPaye(false);
@@ -1251,10 +1314,20 @@ function PmeCapturer() {
                   ? t("pme.capture.verif.suivante")
                   : t("pme.capture.verif.bon")}
               </button>
+              {aRelire.length > 0 ? (
+                <button
+                  type="button"
+                  className="sc"
+                  disabled={lireNeuves.isPending}
+                  onClick={() => lireNeuves.mutate(aRelire)}
+                >
+                  {t("common.reessayer")}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="sc"
-                disabled={pme.capturing || remplacer.isPending}
+                disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
                 onClick={() => {
                   setARemplacer(enVerification.id);
                   pme.ouvrirScanner();
@@ -1319,9 +1392,11 @@ function PmeCapturer() {
               </div>
             </>
           ) : (
-            <p className="c-sous" role="status">
-              {t("pme.capture.q.jeRegarde")}
-            </p>
+            <Attente
+              echec={questions.isError}
+              reessayer={() => void questions.refetch()}
+              continuer={() => setEtape(6)}
+            />
           )
         ) : null}
 
@@ -1331,9 +1406,11 @@ function PmeCapturer() {
             dossier de la pièce. */}
         {!plusTard && etape === 6 ? (
           vide6 || !sansDate.isSuccess ? (
-            <p className="c-sous" role="status">
-              {t("pme.capture.q.jeRegarde")}
-            </p>
+            <Attente
+              echec={sansDate.isError}
+              reessayer={() => void sansDate.refetch()}
+              continuer={() => setEtape(7)}
+            />
           ) : (
             <>
               <Dit
