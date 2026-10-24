@@ -179,7 +179,7 @@ test("deux PDF se déposent réellement et un nouvel ajout quitte l'étape préc
   expect(new Set(ids).size).toBe(2);
   await expect(page.locator(".bande .vg")).toHaveCount(2);
   await page.locator('[data-ecran="capture"] .go .pr').click();
-  await expect(page.getByText("Ces 2 pièces sont pour la société, ou pour vous ?")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pour qui ?" })).toBeVisible();
   await ajouter.click();
   await expect(page).toHaveURL(/\/pme\/capturer$/);
   await expect(page.getByRole("button", { name: "Importer des PDF", exact: true })).toBeVisible();

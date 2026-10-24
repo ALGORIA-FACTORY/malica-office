@@ -29,13 +29,25 @@ const UN_IDENTIFIANT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 export interface LotDeCapture {
   /** Les pièces de ce passage, ou `undefined` : tout ce qui n'est pas lu. */
   pieces?: string;
+  /**
+   * Partir de « Pour qui ? » plutôt que de l'appareil.
+   *
+   * 24 octobre 2026 : « À lire » (accueil, bibliothèque) rouvre des pièces DÉJÀ
+   * prises. Leur reproposer l'appareil, c'était un écran de trop. Le seul
+   * départ admis est celui-là, et seulement avec un lot : sans lot, il n'y a
+   * rien à destiner, et le paramètre est jeté.
+   */
+  depart?: "destination";
 }
 
 export function lireLotDeCapture(search: Record<string, unknown>): LotDeCapture {
   const brut = search["pieces"];
   if (typeof brut !== "string") return {};
   const retenus = identifiantsDuLot(brut);
-  return retenus.length === 0 ? {} : { pieces: retenus.join(",") };
+  if (retenus.length === 0) return {};
+  return search["depart"] === "destination"
+    ? { pieces: retenus.join(","), depart: "destination" }
+    : { pieces: retenus.join(",") };
 }
 
 /** Les identifiants d'un lot, dans l'ordre reçu, sans doublon ni intrus. */

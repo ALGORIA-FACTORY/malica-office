@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { Aide } from "@/components/malica/aide";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
@@ -140,21 +142,6 @@ const G = {
   fat: "M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21zM9.5 9.5l2 2 3.5-3.5M9 15h6",
 } as const;
 
-/** Les fausses lignes d'un papier : c'est le dessin, et c'est tout ce que
- *  c'est — aucune vignette réelle n'est rendue ici, les octets ne descendent
- *  pas sur cet écran. */
-function lignes(n: number, haut: number, pas: number) {
-  return Array.from({ length: n }, (_, i) => (
-    <i
-      key={i}
-      style={{
-        top: `${haut + i * pas}%`,
-        width: i % 3 === 2 ? "40%" : i % 3 === 1 ? "72%" : "62%",
-      }}
-    />
-  ));
-}
-
 function Icone({ d }: { d: string }) {
   return (
     <svg viewBox="0 0 24 24" className="g" aria-hidden>
@@ -238,6 +225,46 @@ function Fin({ am, children }: { am?: boolean; children: ReactNode }) {
 }
 
 /**
+ * Ce qu'on montre pendant qu'un résumé (questions, dates) se charge — et, s'il
+ * échoue, de quoi ne pas rester bloqué (revue Codex de #85) : réessayer, ou
+ * continuer sans lui. Le résumé n'est qu'une aide ; le règlement et l'envoi ne
+ * doivent pas l'attendre.
+ */
+function Attente({
+  echec,
+  reessayer,
+  continuer,
+}: {
+  echec: boolean;
+  reessayer: () => void;
+  continuer: () => void;
+}) {
+  const { t } = useI18n();
+  if (!echec) {
+    return (
+      <p className="c-sous" role="status">
+        {t("pme.capture.q.jeRegarde")}
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="c-sous" role="alert">
+        {t("common.error")}
+      </p>
+      <div className="go">
+        <button type="button" className="pr" onClick={continuer}>
+          {t("pme.capture.continuer")}
+        </button>
+        <button type="button" className="sc" onClick={reessayer}>
+          {t("common.reessayer")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/**
  * Deux destinations, et pas trois.
  *
  * `entite` n'en est pas une : c'est le LIEU où « La société » met la pièce
@@ -305,6 +332,20 @@ function PmeCapturer() {
    */
   const [partante, setPartante] = useState<string | null>(null);
   const [question, setQuestion] = useState(0);
+  /** La pièce montrée à « Vérifier » : on les passe une à une. */
+  const [verifiee, setVerifiee] = useState(0);
+  /**
+   * « Reprendre la photo » à la vérification : la pièce que la nouvelle photo
+   * remplace. Revue Codex de #85 : le scanner déposait une pièce NEUVE, hors
+   * du lot figé — la vérification montrait toujours l'ancienne, et le
+   * règlement comme l'envoi la visaient encore. La neuve prend donc sa place
+   * dans le lot, l'ancienne est supprimée, et la neuve se lit.
+   */
+  const [aRemplacer, setARemplacer] = useState<string | null>(null);
+  /** « Oui, déjà payées » : ouvre le choix du moyen. */
+  const [payeOui, setPayeOui] = useState(false);
+  /** « Plus tard » : un écran de fin, les pièces restent non lues. */
+  const [plusTard, setPlusTard] = useState(false);
   const [moyen, setMoyen] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [paye, setPaye] = useState(false);
@@ -460,7 +501,7 @@ function PmeCapturer() {
 
   const questions = useQuery({
     queryKey: ["charge-questions", pme.tenantId],
-    enabled: etape >= 5,
+    enabled: etape >= 4,
     queryFn: () => office().charges.questions(pme.tenantId),
   });
 
@@ -472,7 +513,7 @@ function PmeCapturer() {
 
   const sansDate = useQuery({
     queryKey: ["charges-sans-date", pme.tenantId],
-    enabled: etape >= 6,
+    enabled: etape >= 4,
     queryFn: () => office().charges.enAttenteDeDate(pme.tenantId),
   });
 
@@ -497,7 +538,14 @@ function PmeCapturer() {
   });
 
   const aRepondre = (questions.data ?? []).filter((q) => q.answer === null);
-  const courante = aRepondre[question] ?? null;
+  /*
+   * L'index suit la liste, qui RÉTRÉCIT après chaque réponse (revue Codex de
+   * #85) : « Continuer » sur la première, réponse à la seconde — la liste n'a
+   * plus qu'une question, l'index vaut 1, et l'écran restait sans question ni
+   * bouton. On le ramène dans la liste.
+   */
+  const rang = Math.min(question, Math.max(aRepondre.length - 1, 0));
+  const courante = aRepondre[rang] ?? null;
   const libelleFamille = (code: string) =>
     (familles.data ?? []).find((f) => f.code === code)?.label ?? code;
 
@@ -659,18 +707,122 @@ function PmeCapturer() {
     },
   });
 
+  /*
+   * La photo reprise : dès que le scanner rend la pièce neuve (elle arrive par
+   * l'URL, comme toute capture), elle remplace l'ancienne dans le lot figé, à
+   * la même place ; l'ancienne est supprimée, et la neuve part en lecture.
+   */
+  /*
+   * Deux temps, pour qu'un échec laisse toujours de quoi reprendre (revue
+   * Codex de #85) :
+   *   1. supprimer l'ancienne — refusée, rien n'a bougé : le lot garde
+   *      l'ancienne, et « Reprendre la photo » se retente ;
+   *   2. une fois l'ancienne partie, la neuve prend sa place dans le lot, PUIS
+   *      on demande sa lecture — refusée, la neuve reste dans le lot, non lue,
+   *      et « Réessayer » relance cette seule lecture.
+   */
+  const [aRelire, setARelire] = useState<readonly string[]>([]);
+  const lireNeuves = useMutation({
+    mutationFn: async (neuves: readonly string[]) => {
+      const pris: Record<string, string> = {};
+      for (const id of neuves) {
+        await office().collab.setPieceVis(id, "entite");
+        pris[id] = (await office().malica.demanderLaLecture(id)).travailId;
+      }
+      return pris;
+    },
+    onSuccess: async (pris) => {
+      setTravaux((t) => ({ ...t, ...pris }));
+      setARelire([]);
+      setErreur(null);
+      setEtape(3);
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+    },
+    onError: (raison: unknown, neuves) => {
+      setARelire(neuves);
+      echoue(raison);
+    },
+  });
+  const remplacer = useMutation({
+    mutationFn: async ({ ancienne }: { ancienne: string; neuves: readonly string[] }) =>
+      office().capture.supprimer(ancienne),
+    onSuccess: async (_, { ancienne, neuves }) => {
+      setFige((f) => (f ?? []).flatMap((id) => (id === ancienne ? neuves : [id])));
+      await qc.invalidateQueries({ queryKey: ["pieces-lues", pme.tenantId] });
+      lireNeuves.mutate(neuves);
+    },
+    onError: echoue,
+  });
+  useEffect(() => {
+    if (aRemplacer === null || fige === null || remplacer.isPending) return;
+    const neuves = duPassage.filter((id) => !fige.includes(id));
+    if (neuves.length === 0) return;
+    setARemplacer(null);
+    remplacer.mutate({ ancienne: aRemplacer, neuves });
+  }, [aRemplacer, fige, duPassage, remplacer]);
+
   /* ── la navigation ───────────────────────────────────────────────────── */
 
   /** 8bis : l'espace privé a sa propre fin, et il n'y a rien à lire. */
   const finPrivee = dest === "prive";
 
+  /*
+   * ============================================ LES ÉTAPES SANS RIEN À FAIRE PASSENT
+   *
+   * 24 octobre 2026, parcours validé par Wissem : « Aucune question » et « Tout
+   * est daté » étaient deux écrans où l'on ne pouvait que toucher « Continuer ».
+   * Ils passent seuls quand la réponse est connue — et le retour les saute
+   * aussi, sinon « ‹ » depuis le règlement retomberait sur un écran qui
+   * repartirait aussitôt en avant.
+   */
+  const vide5 = questions.isSuccess && aRepondre.length === 0;
+  const vide6 =
+    sansDate.isSuccess &&
+    (sansDate.data?.pieces ?? 0) === 0 &&
+    retenues.every((p) => p.dateDocument !== null);
+  useEffect(() => {
+    if (etape === 5 && vide5) setEtape(6);
+    else if (etape === 6 && vide6) setEtape(7);
+  }, [etape, vide5, vide6]);
+
+  /*
+   * « À lire » (accueil, bibliothèque) rouvre un lot déjà pris : on part de
+   * « Pour qui ? », une fois, dès que le lot est là.
+   */
+  useEffect(() => {
+    if (
+      lotDemande.depart === "destination" &&
+      etape === 0 &&
+      fige === null &&
+      candidats.length > 0
+    ) {
+      setFige(candidats.map((p) => p.id));
+      setEtape(1);
+    }
+  }, [lotDemande.depart, etape, fige, candidats]);
+
   function reculer() {
+    setARemplacer(null);
+    if (plusTard) {
+      setPlusTard(false);
+      return;
+    }
     if (etape === 0) {
       void navigate({ to: "/pme" });
       return;
     }
     // La fin privée vient de la destination, pas du règlement.
-    setEtape(finPrivee && etape === 8 ? 1 : Math.max(0, etape - 1));
+    if (finPrivee && etape === 8) {
+      setEtape(1);
+      return;
+    }
+    if (etape === 4 && verifiee > 0) {
+      setVerifiee(verifiee - 1);
+      return;
+    }
+    let e = etape - 1;
+    while ((e === 6 && vide6) || (e === 5 && vide5)) e -= 1;
+    setEtape(Math.max(0, e));
   }
 
   function recommencer() {
@@ -686,10 +838,15 @@ function PmeCapturer() {
     setExclues([]);
     setChoisie(null);
     setQuestion(0);
+    setVerifiee(0);
+    setARemplacer(null);
+    setARelire([]);
     setMoyen(null);
     setReference("");
     setPaye(false);
+    setPayeOui(false);
     setTransmis(null);
+    setPlusTard(false);
   }
 
   const pasEncore = (p: PieceLue) => p.emetteur === null;
@@ -700,28 +857,35 @@ function PmeCapturer() {
           new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
         );
 
+  /** La pièce montrée à « Vérifier » : une à la fois. */
+  const enVerification = retenues[Math.min(verifiee, Math.max(0, retenues.length - 1))] ?? null;
+  const moyensPayes = (moyens.data ?? []).filter((m) => m.code !== "non_paye");
+  /** « Plus tard » se propose tant que rien n'a été lu ni décidé. */
+  const plusTardPossible =
+    !plusTard && (etape === 1 || etape === 2 || (etape === 0 && lot.length > 0));
+
   /* ── l'écran ─────────────────────────────────────────────────────────── */
 
   return (
     <div data-ecran="capture" className="rg-rise">
       {/*
        * La barre : des traits, pas des chiffres. Un pas sur neuf ne se compte
-       * pas, il se voit.
+       * pas, il se voit. Le retour est TOUJOURS là, à gauche.
        */}
       <div className="prog">
         <button type="button" className="x" onClick={reculer} aria-label={t("pme.capture.revenir")}>
-          <Icone d={etape === 0 ? G.x : G.back} />
+          <Icone d={etape === 0 && !plusTard ? G.x : G.back} />
         </button>
         <span className="tr" aria-hidden>
           {ETAPES.map((cle, i) => (
-            <i key={cle} className={i < etape ? "on" : ""} />
+            <i key={cle} className={i < etape || (plusTard && i === 0) ? "on" : ""} />
           ))}
         </span>
-        <span className="n">
-          {finPrivee && etape === 8
-            ? t("pme.capture.etape.faitPrive")
-            : t(ETAPES[etape] ?? "pme.capture.etape.capturer")}
-        </span>
+        {plusTardPossible ? (
+          <button type="button" className="tard" onClick={() => setPlusTard(true)}>
+            {t("pme.capture.plusTardCourt")}
+          </button>
+        ) : null}
       </div>
 
       <div className="pad">
@@ -732,52 +896,64 @@ function PmeCapturer() {
           </div>
         ) : null}
 
-        {/* ══════════════════════════════════ 0 · l'appareil : on photographie,
-            on ne lit pas. Le geste appartient au layout ; cet écran l'appelle. */}
-        {etape === 0 ? (
+        {/* ═══════════════════════════════════════════ PLUS TARD : une vraie fin
+            Les pièces restent telles quelles, non lues, et « À lire » les
+            retrouve — sur l'accueil et dans la bibliothèque. On ne revient
+            plus au début pour reposer la question. */}
+        {plusTard ? (
           <>
-            {/* L'obturateur. « Galerie » prend des images, le troisième bouton
-                prend des PDF — c'est le rattrapage d'un mois. Le flash du
-                dessin n'a pas de geste : la capacité ne l'expose pas. */}
-            <div className="shut">
+            <div className="c-ok am">
+              <span className="rond">
+                <Icone d={G.horl} />
+              </span>
+              <h1>{t("pme.capture.plusTard.titre")}</h1>
+              <p>{t("pme.capture.plusTard.sous")}</p>
+            </div>
+            <div className="go">
+              <button type="button" className="pr" onClick={() => void navigate({ to: "/pme" })}>
+                {t("pme.capture.plusTard.accueil")}
+              </button>
+              <button type="button" className="sc" onClick={recommencer}>
+                {t("pme.capture.fin.suivante")}
+              </button>
+            </div>
+          </>
+        ) : null}
+
+        {/* ══════════════════════════════════ 0 · AJOUTER : on photographie,
+            on ne lit pas. Le geste appartient au layout ; cet écran l'appelle. */}
+        {!plusTard && etape === 0 ? (
+          <>
+            <h1 className="c-titre">{t("pme.capture.ajouter.titre")}</h1>
+            <button
+              type="button"
+              className="c-photo"
+              disabled={pme.capturing}
+              onClick={pme.ouvrirScanner}
+            >
+              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+              <span>{t("pme.capture.photo")}</span>
+            </button>
+            <div className="c-deux">
               <button type="button" disabled={pme.capturing} onClick={() => pme.capture("images")}>
                 <Icone d={G.gal} />
-                {t("pme.capture.galerie")}
+                <span>{t("pme.capture.galerie")}</span>
               </button>
-              <button
-                type="button"
-                className="big"
-                aria-label={t("pme.capture.photo")}
-                disabled={pme.capturing}
-                onClick={pme.ouvrirScanner}
-              />
               <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
                 <Icone d={G.fat} />
-                {t("pme.doc.importer")}
+                <span>{t("pme.doc.importer")}</span>
               </button>
             </div>
+            {pme.capturing ? <p className="c-sous">{t("pme.capture.preparation")}</p> : null}
 
-            <div className="cam">
-              <div className="pap">{lignes(7, 16, 10)}</div>
-              <div className="fr">
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="hint">
-                {pme.capturing
-                  ? t("pme.capture.preparation")
-                  : lot.length > 0
-                    ? t("pme.capture.lot.nonLues", { count: lot.length })
-                    : t("pme.capture.poser")}
-              </div>
-            </div>
-
-            {/* La bande : ce qui est entré, et le petit menu de la vignette
-                ouverte. Pas d'image : les octets ne descendent pas ici. */}
+            {/* La bande : ce qui est entré, avec sa vraie page, et le petit menu
+                de la vignette ouverte. */}
             {lot.length > 0 ? (
               <>
+                <p className="c-sous">{t("pme.capture.lot.nonLues", { count: lot.length })}</p>
                 <div className="bande">
                   {lot.map((p) => (
                     <button
@@ -794,7 +970,7 @@ function PmeCapturer() {
                       aria-label={p.emetteur ?? t("pme.capture.pieceNonLue")}
                       onClick={() => setChoisie(choisie === p.id ? null : p.id)}
                     >
-                      <span className="pp">{lignes(4, 22, 16)}</span>
+                      <ApercuDePiece pieceId={p.id} className="mini" />
                       {exclues.includes(p.id) ? (
                         <span className="bg">
                           <Icone d={G.prive} />
@@ -841,18 +1017,6 @@ function PmeCapturer() {
               </>
             ) : null}
 
-            {lot.length === 0 ? (
-              <div className="opt">
-                <Opt
-                  ic={G.fat}
-                  titre={t("pme.capture.fatoora")}
-                  sous={t("pme.capture.fatoora.sous")}
-                  vl={t("pme.capture.aVenir")}
-                  off
-                />
-              </div>
-            ) : null}
-
             {enFile.length > 0 ? (
               <div className="flag">
                 <i />
@@ -860,47 +1024,44 @@ function PmeCapturer() {
               </div>
             ) : null}
 
-            <p className="foot">
-              {lot.length > 0 ? t("pme.capture.foot.lot") : t("pme.capture.foot.horsReseau")}
-            </p>
-
-            <div className="go">
-              <button
-                type="button"
-                className="pr"
-                disabled={lot.length === 0}
-                onClick={() => {
-                  setFige(lot.map((p) => p.id));
-                  setEtape(1);
-                }}
-              >
-                {lot.length > 0
-                  ? t("pme.capture.repondre", { count: lot.length })
-                  : t("pme.capture.rienARepondre")}
-              </button>
-              <button
-                type="button"
-                className="sc"
-                onClick={() => void navigate({ to: "/pme/list" })}
-              >
-                {t("pme.capture.plusTard")}
-              </button>
-            </div>
+            {lot.length > 0 ? (
+              <div className="go">
+                <button
+                  type="button"
+                  className="pr"
+                  onClick={() => {
+                    setFige(lot.map((p) => p.id));
+                    setEtape(1);
+                  }}
+                >
+                  {t("pme.capture.repondre", { count: lot.length })}
+                </button>
+              </div>
+            ) : null}
           </>
         ) : null}
 
-        {/* ═════════════════════════════════ 1 · LA DESTINATION, AVANT LA LECTURE
-            B6 : une pièce personnelle est déposée dans l'espace personnel,
-            jamais transmise NI LUE. La poser après, c'était débiter le quota de
-            la société pour un papier qui ne la regarde pas. */}
-        {etape === 1 ? (
+        {/* ═════════════════════════════════ 1 · POUR QUI ? — avant la lecture
+            B6 : une pièce personnelle n'est jamais lue. La question se pose donc
+            avant : la poser après, c'était débiter le quota de la société pour
+            un papier qui ne la regarde pas. Un toucher répond et avance. */}
+        {!plusTard && etape === 1 ? (
           <>
-            <Vignette lot={lot} />
-            <Dit q={t("pme.capture.dest.q", { count: lot.length })} s={t("pme.capture.dest.s")} />
+            <div className="c-tete">
+              <h1 className="c-titre">{t("pme.capture.dest.titre")}</h1>
+              <Aide
+                titre={t("pme.capture.dest.titre")}
+                paragraphes={[
+                  { texte: t("pme.capture.dest.s") },
+                  { texte: t("pme.capture.dest.prive.flag") },
+                ]}
+              />
+            </div>
+            <p className="c-sous">{t("pme.capture.lot.nonLues", { count: lot.length })}</p>
 
             {/* Le sélecteur de société n'apparaît que s'il y a plusieurs
                 dossiers — et il vient du layout, qui les a déjà. */}
-            {pme.dossiers.length > 1 && dest !== "prive" ? (
+            {pme.dossiers.length > 1 ? (
               <div className="ch">
                 <span className="t">{t("pme.capture.dest.societeLabel")}</span>
                 {pme.dossiers.map((d) => (
@@ -916,119 +1077,74 @@ function PmeCapturer() {
               </div>
             ) : null}
 
-            <div className="opt">
-              <Opt
-                ic={G.cab}
-                titre={t("pme.capture.dest.societe")}
-                sous={
-                  pme.aUnCabinet
-                    ? t("pme.capture.dest.societe.cabinet")
-                    : t("pme.capture.dest.societe.sansCabinet")
-                }
-                on={dest === "societe"}
-                onClick={() => setDest("societe")}
-              />
-              {/*
-               * ============================ L'OPTION « À VENIR » A DISPARU, ET C'EST UNE FIN
-               *
-               * Une troisième option vivait ici, désactivée, étiquetée
-               * « À VENIR » : « La société, sans transmettre ». Elle attendait
-               * que `Visibility` accepte `entite`.
-               *
-               * `entite` est accepté depuis aujourd'hui — et c'est désormais ce
-               * que « La société » FAIT : la pièce entre dans la bibliothèque
-               * de la société, lue et rangée, et elle n'est transmise que si on
-               * le dit à l'étape 8, en deux boutons de même poids. L'option
-               * décrivait donc exactement « La société » suivie de « Garder ».
-               *
-               * Un placeholder qui promet ce que l'écran d'à côté fait déjà est
-               * un doublon qui s'annonce comme un manque. R9 l'interdit, et il
-               * ne se remplace par rien.
-               */}
-              <Opt
-                ic={G.prive}
-                titre={t("pme.capture.dest.prive")}
-                sous={t("pme.capture.dest.prive.sous")}
-                on={dest === "prive"}
-                onClick={() => setDest("prive")}
-              />
-            </div>
-
-            {dest === "prive" ? (
-              <div className="flag">
-                <i />
-                <span>{t("pme.capture.dest.prive.flag")}</span>
-              </div>
-            ) : null}
-
-            <div className="go">
-              <button
-                type="button"
-                className="pr"
-                disabled={dest === null || garder.isPending}
-                onClick={() => {
-                  if (dest === "prive") {
-                    garder.mutate(
-                      lot.map((p) => p.id),
-                      { onSuccess: () => setEtape(8) },
-                    );
-                    return;
-                  }
-                  setEtape(2);
-                }}
-              >
-                {dest === "prive" ? t("pme.capture.dest.ranger") : t("pme.capture.continuer")}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="c-carte acc"
+              onClick={() => {
+                setDest("societe");
+                setEtape(2);
+              }}
+            >
+              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                <path d="M4 21V7l8-4 8 4v14M9 21v-5h6v5M8 10h1M15 10h1M8 13.5h1M15 13.5h1" />
+              </svg>
+              <b>{t("pme.capture.dest.societe")}</b>
+              <span>{t("pme.capture.dest.societe.court")}</span>
+            </button>
+            <button
+              type="button"
+              className="c-carte"
+              disabled={garder.isPending}
+              onClick={() => {
+                setDest("prive");
+                garder.mutate(
+                  lot.map((p) => p.id),
+                  { onSuccess: () => setEtape(8) },
+                );
+              }}
+            >
+              <Icone d={G.prive} />
+              <b>{t("pme.capture.dest.prive")}</b>
+              <span>{t("pme.capture.dest.prive.court")}</span>
+            </button>
           </>
         ) : null}
 
-        {/* ══════════════════════════════════════ 2 · CE QU'ON LIT, ET LE COMPTE
+        {/* ══════════════════════════════════════ 2 · LIRE MAINTENANT ?
             Tout est coché : décocher est plus court que cocher, et ce qu'on
-            décoche reste chez soi, non lu, sans rien coûter. */}
-        {etape === 2 ? (
+            décoche reste chez soi, non lu, sans rien coûter. Le compte dit ce
+            que le geste coûte, avant de le faire. */}
+        {!plusTard && etape === 2 ? (
           <>
-            <Dit q={t("pme.capture.choix.q")} s={t("pme.capture.choix.s")} />
-
-            {lot.map((p) => {
-              const gardee = exclues.includes(p.id);
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  className={gardee ? "pick pv" : "pick on"}
-                  onClick={() =>
-                    setExclues((e) => (gardee ? e.filter((x) => x !== p.id) : [...e, p.id]))
-                  }
-                >
-                  <span className="box">
-                    <Icone d={G.ok} />
-                  </span>
-                  <span className="bd">
-                    <b>
-                      {p.emetteur ?? t("pme.capture.pieceNonLue")}
-                      {p.total !== null ? ` · ${montant(p.total, locale)}` : ""}
-                    </b>
-                    <span className={gardee ? "az" : undefined}>
-                      {gardee
-                        ? t("pme.capture.choix.gardee")
-                        : (jour(p.dateDocument ?? p.createdAt) ?? t("pme.capture.choix.sansDate"))}
+            <h1 className="c-titre">{t("pme.capture.choix.titre")}</h1>
+            <p className="c-sous">{t("pme.capture.choix.retirer")}</p>
+            <div className="c-grille">
+              {lot.map((p) => {
+                const gardee = exclues.includes(p.id);
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className={gardee ? "c-vg off" : "c-vg"}
+                    aria-pressed={!gardee}
+                    aria-label={p.emetteur ?? t("pme.capture.pieceNonLue")}
+                    onClick={() =>
+                      setExclues((e) => (gardee ? e.filter((x) => x !== p.id) : [...e, p.id]))
+                    }
+                  >
+                    <ApercuDePiece pieceId={p.id} />
+                    <span className="coche" aria-hidden>
+                      <Icone d={G.ok} />
                     </span>
-                  </span>
-                </button>
-              );
-            })}
-
-            <p className="foot">{t("pme.capture.choix.foot")}</p>
+                  </button>
+                );
+              })}
+            </div>
 
             {/*
-             * CE QUE LE GESTE COÛTE, avant de le faire.
-             *
-             * `lectures_restantes` quand on l'a, « — » quand on ne l'a pas. Et
-             * le bouton n'est jamais barré par le plafond : c'est la base qui
+             * Le bouton n'est jamais barré par le plafond : c'est la base qui
              * refuse la lecture de trop, et une pièce refusée reste là,
-             * intacte, non lue. Barrer ici aurait empêché de ranger des pièces
-             * qu'on peut parfaitement ranger.
+             * intacte, non lue.
              */}
             {restantes !== null && restantes < retenues.length ? (
               <div className="flag">
@@ -1042,6 +1158,9 @@ function PmeCapturer() {
               </div>
             ) : null}
 
+            <p className="c-compte">
+              {t("pme.capture.choix.compte", { count: retenues.length, reste: resteDit })}
+            </p>
             <div className="go">
               <button
                 type="button"
@@ -1049,66 +1168,105 @@ function PmeCapturer() {
                 disabled={retenues.length === 0 || lire.isPending}
                 onClick={() => lire.mutate()}
               >
-                {t("pme.capture.choix.lire", { count: retenues.length, reste: resteDit })}
+                {lire.isPending
+                  ? t("common.loading")
+                  : t("pme.capture.choix.lireCourt", { count: retenues.length })}
               </button>
-              <button type="button" className="sc" onClick={() => setEtape(0)}>
-                {t("pme.capture.pasMaintenant")}
+              <button type="button" className="sc" onClick={() => setPlusTard(true)}>
+                {t("pme.capture.plusTardCourt")}
               </button>
             </div>
           </>
         ) : null}
 
-        {/* ══════════════════════════════════════════════════ 3 · LA LECTURE
-            Demandée, pas automatique. Ce qui s'affiche est l'état réel de
-            chaque pièce, redemandé tant qu'une tourne. */}
-        {etape === 3 ? (
+        {/* ══════════════════════════════════════════════════ 3 · JE LIS
+            Ce qui s'affiche est l'état réel de chaque pièce, redemandé tant
+            qu'une tourne. On peut vérifier la première sans attendre les
+            autres, ou revenir à l'accueil : la lecture continue. */}
+        {!plusTard && etape === 3 ? (
           <>
-            <Dit
-              q={t("pme.capture.lire.q", { count: retenues.length })}
-              s={t("pme.capture.lire.s")}
-            />
-            <div className="lect">
+            <div className="c-malica">
+              <img src={portraitMalica} alt="Malica" width={620} height={620} />
+              <h1>{t("pme.capture.lire.q", { count: retenues.length })}</h1>
+            </div>
+            <div className="c-liste">
               {retenues.map((p) => {
                 const etat = (lectures.data ?? []).find((e) => e.id === p.id);
                 /*
-                 * « Faite » veut dire LUE, pas « plus rien ne tourne ». Le
-                 * dossier porte déjà un émetteur, ou la file durable dit
-                 * « termine » : rien d'autre ne coche cette pastille.
+                 * « Faite » veut dire LUE, pas « plus rien ne tourne » : le
+                 * dossier porte un émetteur, ou la file durable dit « termine ».
                  */
                 const faite = !pasEncore(p) || etat?.etat === "termine";
-                const mot = etat?.etat ? t(MOT_DU_TRAVAIL[etat.etat]) : null;
+                const mot = faite
+                  ? t("pme.capture.lire.lue")
+                  : etat?.etat
+                    ? t(MOT_DU_TRAVAIL[etat.etat])
+                    : t("pme.capture.travail.a_faire");
                 return (
                   <div key={p.id} className={faite ? "ok" : ""}>
-                    <i />
-                    <span>{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
-                    {mot ? <span>· {mot}</span> : null}
+                    <ApercuDePiece pieceId={p.id} className="mini" />
+                    <span className="nom">{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
+                    <span className="et">{mot}</span>
                   </div>
                 );
               })}
             </div>
-            <p className="foot">{t("pme.capture.lire.foot")}</p>
             <div className="go">
               <button type="button" className="pr" onClick={() => setEtape(4)}>
-                {t("pme.capture.lire.voir")}
+                {t("pme.capture.lire.verifier")}
+              </button>
+              <button type="button" className="sc" onClick={() => void navigate({ to: "/pme" })}>
+                {t("pme.capture.lire.accueil")}
               </button>
             </div>
           </>
         ) : null}
 
-        {/* ═══════════════════════════════════════════ 4 · CE QUE MALICA A LU
-            Quatre lignes, et chacune se corrige. Ce qui manque est ambre : une
-            valeur absente n'est pas une valeur nulle. */}
-        {etape === 4 ? (
+        {/* ═══════════════════════════════════════════ 4 · VÉRIFIER, UNE À UNE
+            La vraie page, le montant, quatre lignes. Chaque ligne se corrige sur
+            le dossier de la pièce, où `capture.preciser` vit (R7 : une précision
+            s'ajoute, elle n'écrase jamais). */}
+        {!plusTard && etape === 4 && enVerification ? (
           <>
-            <Dit q={t("pme.capture.lu.q")} s={t("pme.capture.lu.s")} />
-            {retenues.map((p) => {
-              /* « Corriger » mène au dossier de la pièce, et pas ailleurs :
-                 c'est là que `capture.preciser` vit, et une précision s'ajoute
-                 — elle n'écrase jamais (R7). */
+            <p className="c-rang">
+              {t("pme.capture.verif.rang", {
+                n: Math.min(verifiee, retenues.length - 1) + 1,
+                total: retenues.length,
+              })}
+            </p>
+            <div className="c-piece">
+              <button
+                type="button"
+                className="c-grande"
+                aria-label={t("pme.piece.voir")}
+                onClick={() =>
+                  void navigate({
+                    to: "/pme/piece/$pieceId",
+                    params: { pieceId: enVerification.id },
+                  })
+                }
+              >
+                <ApercuDePiece pieceId={enVerification.id} />
+              </button>
+              <div className="qui">
+                {enVerification.kind ? (
+                  <span className="k">{t(CLE_DU_TYPE[enVerification.kind])}</span>
+                ) : null}
+                <h1>{enVerification.emetteur ?? t("pme.capture.pieceNonLue")}</h1>
+                {enVerification.total !== null ? (
+                  <span className="mt">
+                    {montant(enVerification.total, locale)}{" "}
+                    <u>{enVerification.devise ?? pme.currency}</u>
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            {(() => {
+              const p = enVerification;
               const corriger = () =>
                 void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } });
               return (
-                <div className="lu" key={p.id}>
+                <div className="lu">
                   <LigneLue k={t("pme.extract.issuer")} v={p.emetteur} onCorriger={corriger} />
                   <LigneLue
                     k={t("pme.extract.date")}
@@ -1128,20 +1286,9 @@ function PmeCapturer() {
                         : `${montant(p.total, locale)} ${p.devise ?? pme.currency}`
                     }
                     mono
-                    onCorriger={() =>
-                      void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
-                    }
+                    onCorriger={corriger}
                   />
-                  {/*
-                   * ============================ LE MOTIF PASSE PAR SON TRADUCTEUR
-                   *
-                   * `lectureRefusee.motif` est un CODE de la base —
-                   * « plafond_atteint », « licence_suspendue ». Il s'affichait
-                   * ici tel quel, alors que `libelleDuRefus` existe, est testé
-                   * et sert déjà aux écrans de la bibliothèque et du coffre.
-                   * C'est le défaut « ISSUER » sous un autre nom, et R4
-                   * l'interdit.
-                   */}
+                  {/* Le motif passe par son traducteur : c'est un CODE de la base. */}
                   {p.lectureRefusee ? (
                     <div className="flag">
                       <i />
@@ -1154,244 +1301,247 @@ function PmeCapturer() {
                   ) : null}
                 </div>
               );
-            })}
+            })()}
             <div className="go">
-              <button type="button" className="pr" onClick={() => setEtape(5)}>
-                {t("pme.capture.continuer")}
+              <button
+                type="button"
+                className="pr"
+                onClick={() =>
+                  verifiee + 1 < retenues.length ? setVerifiee(verifiee + 1) : setEtape(5)
+                }
+              >
+                {verifiee + 1 < retenues.length
+                  ? t("pme.capture.verif.suivante")
+                  : t("pme.capture.verif.bon")}
+              </button>
+              {aRelire.length > 0 ? (
+                <button
+                  type="button"
+                  className="sc"
+                  disabled={lireNeuves.isPending}
+                  onClick={() => lireNeuves.mutate(aRelire)}
+                >
+                  {t("common.reessayer")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="sc"
+                disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
+                onClick={() => {
+                  setARemplacer(enVerification.id);
+                  pme.ouvrirScanner();
+                }}
+              >
+                {t("pme.verifie.corriger")}
               </button>
             </div>
           </>
         ) : null}
 
         {/* ═══════════════════════════════ 5 · LES QUESTIONS, UNE PAR ÉCRAN
-            Le seuil est une politique de l'entreprise, pas une règle lisible :
-            la question se pose, elle ne se tranche pas toute seule. */}
-        {etape === 5 ? (
-          <>
-            {courante ? (
-              <>
-                <Dit
-                  q={t("pme.capture.q.q", {
-                    famille: libelleFamille(courante.familleCode),
-                    montant: montant(courante.observed, locale),
-                    devise: pme.currency,
-                  })}
-                  s={t("pme.capture.q.s", {
-                    base: montant(courante.baseline, locale),
-                    devise: pme.currency,
-                  })}
+            Seulement s'il y en a : sinon l'étape passe seule. Le seuil est une
+            politique de l'entreprise : la question se pose, elle ne se tranche
+            pas toute seule. */}
+        {!plusTard && etape === 5 ? (
+          courante ? (
+            <>
+              <Dit
+                q={t("pme.capture.q.q", {
+                  famille: libelleFamille(courante.familleCode),
+                  montant: montant(courante.observed, locale),
+                  devise: pme.currency,
+                })}
+                s={t("pme.capture.q.s", {
+                  base: montant(courante.baseline, locale),
+                  devise: pme.currency,
+                })}
+              />
+              <div className="opt">
+                <Opt
+                  ic={G.ok}
+                  titre={t("pme.capture.q.exceptionnel")}
+                  sous={t("pme.capture.q.exceptionnel.sous")}
+                  onClick={() => repondre.mutate("exceptionnel")}
+                  off={repondre.isPending}
                 />
-                <div className="opt">
-                  <Opt
-                    ic={G.ok}
-                    titre={t("pme.capture.q.exceptionnel")}
-                    sous={t("pme.capture.q.exceptionnel.sous")}
-                    onClick={() => repondre.mutate("exceptionnel")}
-                    off={repondre.isPending}
-                  />
-                  <Opt
-                    ic={G.horl}
-                    titre={t("pme.capture.q.aVerifier")}
-                    sous={t("pme.capture.q.aVerifier.sous")}
-                    onClick={() => repondre.mutate("a_verifier")}
-                    off={repondre.isPending}
-                  />
+                <Opt
+                  ic={G.horl}
+                  titre={t("pme.capture.q.aVerifier")}
+                  sous={t("pme.capture.q.aVerifier.sous")}
+                  onClick={() => repondre.mutate("a_verifier")}
+                  off={repondre.isPending}
+                />
+              </div>
+              <p className="foot">
+                {t("pme.capture.q.position", { n: rang + 1, total: aRepondre.length })}
+              </p>
+              <div className="go">
+                <button
+                  type="button"
+                  className="pr"
+                  onClick={() =>
+                    rang + 1 < aRepondre.length ? setQuestion(rang + 1) : setEtape(6)
+                  }
+                >
+                  {t("pme.capture.continuer")}
+                </button>
+                <button type="button" className="sc" onClick={() => setEtape(6)}>
+                  {t("pme.capture.plusTardCourt")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <Attente
+              echec={questions.isError}
+              reessayer={() => void questions.refetch()}
+              continuer={() => setEtape(6)}
+            />
+          )
+        ) : null}
+
+        {/* ══════════════════════════════════════════ 6 · CE QUI ATTEND SA DATE
+            Seulement s'il y en a. C'est la date qui décide de la TVA, et elle
+            ne se choisit pas à la place de quelqu'un : le geste est sur le
+            dossier de la pièce. */}
+        {!plusTard && etape === 6 ? (
+          vide6 || !sansDate.isSuccess ? (
+            <Attente
+              echec={sansDate.isError}
+              reessayer={() => void sansDate.refetch()}
+              continuer={() => setEtape(7)}
+            />
+          ) : (
+            <>
+              <Dit
+                q={t("pme.capture.dates.q", { count: sansDate.data?.pieces ?? 0 })}
+                s={t("pme.capture.dates.s")}
+              />
+              {(sansDate.data?.totalHt ?? null) !== null ? (
+                <div className="flag">
+                  <i />
+                  <span>
+                    {t("pme.capture.dates.flag", {
+                      montant: montant(sansDate.data!.totalHt, locale),
+                      devise: pme.currency,
+                    })}
+                  </span>
                 </div>
-                <p className="foot">
-                  {t("pme.capture.q.position", { n: question + 1, total: aRepondre.length })}
-                </p>
+              ) : null}
+              {retenues.filter((p) => p.dateDocument === null).length > 0 ? (
+                <div className="lu">
+                  {retenues
+                    .filter((p) => p.dateDocument === null)
+                    .map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() =>
+                          void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
+                        }
+                      >
+                        <span className="k">{t("pme.capture.dates.sansDate")}</span>
+                        <span className="v am">{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
+                        <span className="ed">{t("pme.capture.dates.dater")}</span>
+                      </button>
+                    ))}
+                </div>
+              ) : null}
+              <div className="go">
+                <button type="button" className="pr" onClick={() => setEtape(7)}>
+                  {t("pme.capture.continuer")}
+                </button>
+              </div>
+            </>
+          )
+        ) : null}
+
+        {/* ═══════════════════════════════════════════ 7 · DÉJÀ PAYÉES ?
+            Une réponse pour tout le lot : un mois d'achats au comptoir est
+            presque toujours d'un seul moyen. Le montant n'est pas retapé — le
+            Socle prend celui de chaque pièce. « Pas encore » passe à la fin :
+            chaque pièce garde son règlement ouvert, sur sa fiche. */}
+        {!plusTard && etape === 7 ? (
+          <>
+            <h1 className="c-titre">{t("pme.capture.pay.titre", { count: retenues.length })}</h1>
+            <p className="c-sous">{t("pme.capture.fin.lues", { count: retenues.length })}</p>
+            <div className="c-seg">
+              <button
+                type="button"
+                aria-pressed={payeOui}
+                className={payeOui ? "on" : undefined}
+                onClick={() => setPayeOui(true)}
+              >
+                {t("pme.capture.pay.oui")}
+              </button>
+              <button type="button" onClick={() => setEtape(8)}>
+                {t("pme.capture.pay.pasEncore")}
+              </button>
+            </div>
+
+            {payeOui ? (
+              <>
+                <div className="c-puces" role="group" aria-label={t("pme.paiement.moyen")}>
+                  {moyensPayes.map((m) => (
+                    <button
+                      type="button"
+                      key={m.code}
+                      aria-pressed={moyen === m.code}
+                      className={moyen === m.code ? "on" : undefined}
+                      onClick={() => {
+                        setMoyen(m.code);
+                        setReference("");
+                      }}
+                    >
+                      {m.libelle}
+                    </button>
+                  ))}
+                </div>
+                {/* La référence n'est demandée que si le référentiel l'exige. */}
+                {moyenChoisi?.exigeReference === true ? (
+                  <div className="ch">
+                    <span className="t">{t("pme.capture.pay.referenceLabel")}</span>
+                    <input
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      aria-label={t("pme.capture.pay.reference.aria")}
+                    />
+                  </div>
+                ) : null}
+                {exigeTalon ? <p className="c-sous">{t("pme.capture.pay.talon")}</p> : null}
                 <div className="go">
                   <button
                     type="button"
                     className="pr"
-                    onClick={() =>
-                      question + 1 < aRepondre.length ? setQuestion(question + 1) : setEtape(6)
-                    }
+                    disabled={moyen === null || payer.isPending}
+                    onClick={() => payer.mutate()}
                   >
-                    {t("pme.capture.continuer")}
-                  </button>
-                  <button type="button" className="sc" onClick={() => setEtape(6)}>
-                    {t("pme.capture.plusTardCourt")}
+                    {payer.isPending ? t("common.loading") : t("pme.capture.pay.enregistrer")}
                   </button>
                 </div>
               </>
-            ) : (
-              <>
-                <Dit
-                  q={t("pme.capture.q.aucune")}
-                  s={
-                    questions.isPending
-                      ? t("pme.capture.q.jeRegarde")
-                      : t("pme.capture.q.rienDAnormal")
-                  }
-                />
-                <div className="go">
-                  <button type="button" className="pr" onClick={() => setEtape(6)}>
-                    {t("pme.capture.continuer")}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        ) : null}
-
-        {/* ══════════════════════════════════════════ 6 · CE QUI ATTEND SA DATE
-            Une pièce sans date lue n'entre dans aucun mois — ni celui du scan.
-            C'est sa date qui décide de la TVA, et elle ne se choisit pas à la
-            place de quelqu'un : le geste est sur le dossier de la pièce. */}
-        {etape === 6 ? (
-          <>
-            <Dit
-              q={
-                (sansDate.data?.pieces ?? 0) > 0
-                  ? t("pme.capture.dates.q", { count: sansDate.data!.pieces })
-                  : t("pme.capture.dates.q.toutes")
-              }
-              s={
-                (sansDate.data?.pieces ?? 0) > 0
-                  ? t("pme.capture.dates.s")
-                  : t("pme.capture.dates.s.ok")
-              }
-            />
-            {(sansDate.data?.totalHt ?? null) !== null ? (
-              <div className="flag">
-                <i />
-                <span>
-                  {t("pme.capture.dates.flag", {
-                    montant: montant(sansDate.data!.totalHt, locale),
-                    devise: pme.currency,
-                  })}
-                </span>
-              </div>
             ) : null}
-            {retenues.filter((p) => p.dateDocument === null).length > 0 ? (
-              <div className="lu">
-                {retenues
-                  .filter((p) => p.dateDocument === null)
-                  .map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      onClick={() =>
-                        void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
-                      }
-                    >
-                      <span className="k">{t("pme.capture.dates.sansDate")}</span>
-                      <span className="v am">{p.emetteur ?? t("pme.capture.pieceNonLue")}</span>
-                      <span className="ed">{t("pme.capture.dates.dater")}</span>
-                    </button>
-                  ))}
-              </div>
-            ) : null}
-            <div className="go">
-              <button type="button" className="pr" onClick={() => setEtape(7)}>
-                {t("pme.capture.continuer")}
-              </button>
-            </div>
-          </>
-        ) : null}
-
-        {/* ═══════════════════════════════════════════ 7 · LE RÈGLEMENT GROUPÉ
-            Une question pour tout le lot : un mois d'achats au comptoir est
-            presque toujours d'un seul moyen. C'est le seul gain que la lecture
-            en masse rend possible. */}
-        {etape === 7 ? (
-          <>
-            <Dit
-              q={t("pme.capture.pay.q", { count: retenues.length })}
-              s={t("pme.capture.pay.s")}
-            />
-            <div className="opt">
-              {(moyens.data ?? []).map((m) => (
-                <Opt
-                  key={m.code}
-                  ic={m.exigeJustificatif ? G.pay : G.ok}
-                  titre={m.libelle}
-                  sous={
-                    m.exigeJustificatif
-                      ? t("pme.capture.pay.talon")
-                      : t("pme.capture.pay.sansPreuve")
-                  }
-                  on={moyen === m.code}
-                  onClick={() => {
-                    setMoyen(m.code);
-                    setReference("");
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* La référence n'est demandée que si le référentiel l'exige : un
-                numéro de chèque se note, une espèce n'en a pas. */}
-            {moyenChoisi?.exigeReference === true ? (
-              <div className="ch">
-                <span className="t">{t("pme.capture.pay.referenceLabel")}</span>
-                <input
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  aria-label={t("pme.capture.pay.reference.aria")}
-                />
-              </div>
-            ) : null}
-
-            {exigeTalon ? (
-              <div className="flag">
-                <i />
-                <span>{t("pme.capture.pay.talon.flag")}</span>
-              </div>
-            ) : null}
-
-            <div className="go">
-              <button
-                type="button"
-                className="pr"
-                disabled={moyen === null || payer.isPending}
-                onClick={() => payer.mutate()}
-              >
-                {t("pme.capture.pay.inscrire")}
-              </button>
-              <button type="button" className="sc" onClick={() => setEtape(8)}>
-                {t("pme.capture.pay.plusTard")}
-              </button>
-            </div>
           </>
         ) : null}
 
         {/* ══════════════════════════════════════════════════════ 8 · LA FIN
             Deux boutons de même poids. La transmission est une DÉCISION, prise
             ici, quand le verdict de la lecture existe — et pas à la photo. */}
-        {etape === 8 && !finPrivee ? (
+        {!plusTard && etape === 8 && !finPrivee ? (
           <>
-            <Dit
-              q={transmis === null ? t("pme.capture.fin.q") : t("pme.capture.fin.q.range")}
-              s={
-                transmis === null
-                  ? t("pme.capture.fin.s")
-                  : restantes === null
-                    ? undefined
-                    : t("pme.capture.fin.reste", { count: restantes })
-              }
-            />
-            {/*
-             * ===================================== LE GRAS PORTE LA PHRASE, PAS UN SUFFIXE
-             *
-             * Ces lignes se composaient par concaténation : « pièce » + « s »,
-             * un `<b>` autour d'un fragment de mot, un morceau ajouté après la
-             * phrase. Aucune des trois ne survit à une autre langue — l'arabe
-             * n'accorde pas par un « s », et un fragment inséré au milieu
-             * d'une phrase atterrit ailleurs quand l'ordre des mots change ou
-             * quand on écrit de droite à gauche.
-             *
-             * Chaque ligne est donc UNE phrase, accordée par `count`, et le
-             * gras porte la phrase entière quand il y en a.
-             */}
+            <div className="c-ok">
+              <span className="rond">
+                <Icone d={G.ok} />
+              </span>
+              <h1>{t("pme.capture.fin.lues", { count: retenues.length })}</h1>
+              {restantes !== null ? (
+                <p>{t("pme.capture.fin.reste", { count: restantes })}</p>
+              ) : null}
+            </div>
             <div className="fin">
-              <Fin>
-                <b>{t("pme.capture.fin.lues", { count: retenues.length })}</b>
-                {exclues.length > 0
-                  ? ` · ${t("pme.capture.fin.gardees", { count: exclues.length })}`
-                  : ""}
-              </Fin>
+              {exclues.length > 0 ? (
+                <Fin>{t("pme.capture.fin.gardees", { count: exclues.length })}</Fin>
+              ) : null}
               {paye && moyenChoisi ? (
                 <Fin>
                   {exigeTalon
@@ -1403,9 +1553,7 @@ function PmeCapturer() {
               )}
               {aRepondre.length > 0 ? (
                 <Fin am>{t("pme.capture.fin.questions", { count: aRepondre.length })}</Fin>
-              ) : (
-                <Fin>{t("pme.capture.fin.questions.aucune")}</Fin>
-              )}
+              ) : null}
               {transmis === true ? (
                 <Fin>{t("pme.capture.fin.transmises", { count: retenues.length })}</Fin>
               ) : transmis === false ? (
@@ -1413,78 +1561,75 @@ function PmeCapturer() {
               ) : null}
             </div>
 
-            <p className="foot">{t("pme.capture.fin.foot")}</p>
-
-            <div className="go">
-              {transmis === null ? (
-                <>
+            {transmis === null ? (
+              pme.aUnCabinet ? (
+                <div className="c-envoi">
+                  <b>{t("pme.capture.fin.envoyer.q", { count: retenues.length })}</b>
+                  <div className="deux">
+                    <button
+                      type="button"
+                      disabled={terminer.isPending}
+                      onClick={() => terminer.mutate(false)}
+                    >
+                      {t("pme.capture.fin.garder")}
+                    </button>
+                    <button
+                      type="button"
+                      className="pr"
+                      disabled={terminer.isPending}
+                      onClick={() => terminer.mutate(true)}
+                    >
+                      {t("pme.capture.fin.envoyer")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="go">
                   <button
                     type="button"
                     className="pr"
-                    disabled={!pme.aUnCabinet || terminer.isPending}
-                    onClick={() => terminer.mutate(true)}
-                  >
-                    {pme.aUnCabinet
-                      ? t("pme.capture.fin.transmettre")
-                      : t("pme.capture.fin.sansCabinet")}
-                  </button>
-                  <button
-                    type="button"
-                    className="sc"
                     disabled={terminer.isPending}
                     onClick={() => terminer.mutate(false)}
                   >
-                    {t("pme.capture.fin.garder")}
+                    {t("pme.capture.fin.terminer")}
                   </button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="pr" onClick={recommencer}>
-                    {t("pme.capture.fin.suivante")}
-                  </button>
-                  <button
-                    type="button"
-                    className="sc"
-                    onClick={() => void navigate({ to: "/pme/list" })}
-                  >
-                    {t("pme.capture.fin.voirPieces")}
-                  </button>
-                </>
-              )}
-            </div>
+                </div>
+              )
+            ) : (
+              <div className="go">
+                <button type="button" className="pr" onClick={recommencer}>
+                  {t("pme.capture.fin.suivante")}
+                </button>
+                <button
+                  type="button"
+                  className="sc"
+                  onClick={() => void navigate({ to: "/pme/list" })}
+                >
+                  {t("pme.capture.fin.voirPieces")}
+                </button>
+              </div>
+            )}
           </>
         ) : null}
 
         {/* ═══════════════════════════════════════ 8bis · LA FIN, CHEZ VOUS
-            Rien n'a été appelé, et c'est le propos : non lue, quota intact,
-            invisible. Il n'y a pas de « fin » à écrire, il y a une promesse à
-            tenir. */}
-        {etape === 8 && finPrivee ? (
+            Rien n'a été lu, et c'est le propos : quota intact, invisible. */}
+        {!plusTard && etape === 8 && finPrivee ? (
           <>
-            <Dit q={t("pme.capture.prive.q")} s={t("pme.capture.prive.s")} />
-            <div className="fin">
-              <Fin>{t("pme.capture.prive.espace")}</Fin>
-              <Fin>
-                <b>
-                  {restantes === null
-                    ? t("pme.capture.prive.intactes", { count: lot.length })
-                    : t("pme.capture.prive.intactes.reste", {
-                        count: lot.length,
-                        reste: restantes,
-                      })}
-                </b>
-              </Fin>
-              <Fin>{t("pme.capture.prive.invisible")}</Fin>
+            <div className="c-ok">
+              <span className="rond">
+                <Icone d={G.prive} />
+              </span>
+              <h1>{t("pme.capture.prive.q")}</h1>
+              <p>
+                {restantes === null
+                  ? t("pme.capture.prive.intactes", { count: lot.length })
+                  : t("pme.capture.prive.intactes.reste", {
+                      count: lot.length,
+                      reste: restantes,
+                    })}
+              </p>
             </div>
-            <div className="opt">
-              <Opt
-                ic={G.cab}
-                titre={t("pme.capture.prive.verser")}
-                sous={t("pme.capture.prive.verser.sous")}
-                onClick={() => void navigate({ to: "/pme/coffre" })}
-              />
-            </div>
-            <p className="foot">{t("pme.capture.prive.foot")}</p>
             <div className="go">
               <button type="button" className="pr" onClick={recommencer}>
                 {t("pme.capture.fin.suivante")}
@@ -1500,24 +1645,6 @@ function PmeCapturer() {
           </>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-/** L'en-tête de la pièce, ou du lot : qui, et combien de pages. */
-function Vignette({ lot }: { lot: readonly PieceLue[] }) {
-  const { t } = useI18n();
-  const premiere = lot[0] ?? null;
-  return (
-    <div className="vig">
-      <span className="pg">
-        <b />
-        {lignes(6, 30, 11)}
-      </span>
-      <span className="bd">
-        <b>{premiere?.emetteur ?? t("pme.capture.pieceNonLue")}</b>
-        <span>{t("pme.capture.lot.nonLues", { count: lot.length })}</span>
-      </span>
     </div>
   );
 }
@@ -1542,12 +1669,20 @@ function LigneLue({
 }) {
   const { t } = useI18n();
   return (
-    <button type="button" onClick={onCorriger}>
+    <button
+      type="button"
+      onClick={onCorriger}
+      aria-label={`${k} — ${t("pme.capture.lu.corriger")}`}
+    >
       <span className="k">{k}</span>
       <span className={["v", mono ? "mono" : "", v === null ? "am" : ""].filter(Boolean).join(" ")}>
         {v ?? t("pme.capture.lu.nonLu")}
       </span>
-      <span className="ed">{t("pme.capture.lu.corriger")}</span>
+      <span className="ed" aria-hidden>
+        <svg viewBox="0 0 24 24" className="g">
+          <path d="M4 20h4L19 9l-4-4L4 16z" />
+        </svg>
+      </span>
     </button>
   );
 }

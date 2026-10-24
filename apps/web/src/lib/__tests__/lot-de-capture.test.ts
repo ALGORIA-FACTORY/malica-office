@@ -42,6 +42,16 @@ describe("le lot passé dans l'URL", () => {
   it("un lot absent, vide ou entièrement faux vaut « montre-moi ce qui traîne »", () => {
     expect(lireLotDeCapture({})).toEqual({});
     expect(lireLotDeCapture({ pieces: "" })).toEqual({});
+  });
+
+  it("ne part de « Pour qui ? » qu'avec un lot, et seulement sur la valeur admise", () => {
+    const id = "11111111-2222-4333-8444-555555555555";
+    expect(lireLotDeCapture({ pieces: id, depart: "destination" })).toEqual({
+      pieces: id,
+      depart: "destination",
+    });
+    expect(lireLotDeCapture({ depart: "destination" })).toEqual({});
+    expect(lireLotDeCapture({ pieces: id, depart: "ailleurs" })).toEqual({ pieces: id });
     expect(lireLotDeCapture({ pieces: "nimporte,quoi" })).toEqual({});
     expect(lireLotDeCapture({ pieces: 42 })).toEqual({});
   });
