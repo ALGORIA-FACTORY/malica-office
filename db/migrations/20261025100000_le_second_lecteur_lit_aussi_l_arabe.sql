@@ -20,5 +20,5 @@ insert into agents.model_pricing
   (provider, model, role, price_in_per_mtok, price_out_per_mtok, currency, sovereign, effective_from)
 values
   ('interne', 'PP-OCRv5_mobile_det+latin_PP-OCRv5_mobile_rec+arabic_PP-OCRv5_mobile_rec', 'vision',
-   0, 0, 'EUR', true, date '2026-10-25')
+   0, 0, 'EUR', true, date '2026-10-24')
 on conflict do nothing;

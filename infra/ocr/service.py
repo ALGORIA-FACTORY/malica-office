@@ -32,6 +32,7 @@ connaître la taille de l'image, qu'il n'a pas.
 
 import io
 import os
+import re
 import threading
 import time
 
@@ -41,7 +42,7 @@ from PIL import Image, ImageOps
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
 import cv2  # noqa: E402
-from fastapi import FastAPI, Request  # noqa: E402
+from fastapi import FastAPI, HTTPException, Request  # noqa: E402
 from paddleocr import PaddleOCR, TextRecognition  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 
@@ -60,9 +61,12 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 DETECTION = os.environ.get("OCR_MODELE_DETECTION", "PP-OCRv5_mobile_det")
 RECONNAISSANCE = os.environ.get("OCR_MODELE_RECONNAISSANCE", "latin_PP-OCRv5_mobile_rec")
 
-# L'appareil : « cpu » par defaut (la machine de recette n'a pas de carte
-# graphique). Mesure du 24 octobre 2026 sur une RTX 5070 : 0,2 s par page au
-# lieu de 9 s sur processeur, au meme taux de champs trouves.
+# L'appareil : « cpu ». Mesure du 24 octobre 2026 sur une RTX 5070 (Paddle
+# 3.2.1 cu129) : 0,2 s par page au lieu de 9 s, au meme taux de champs
+# trouves. MAIS l'image de ce depot installe paddlepaddle POUR PROCESSEUR :
+# « gpu:0 » n'y demarre pas. Le reglage n'a de sens qu'avec une image
+# construite sur paddlepaddle-gpu et un compose qui reserve la carte — ni
+# l'une ni l'autre n'existent encore (dit dans docs/exploitation.md).
 APPAREIL = os.environ.get("OCR_APPAREIL", "cpu")
 
 # Le redressement de page reste COUPE, et c'est mesure le 24 octobre 2026
@@ -95,7 +99,8 @@ _ocr = PaddleOCR(
 # moins bien les chiffres. Aucun des deux ne suffit seul. Combines ligne par
 # ligne : 91 % des champs trouves au lieu de 88 %, raison sociale arabe lue a
 # 100 % (imprimee) et 94 % (manuscrite) — pour un temps double (1,1 s au lieu
-# de 0,56 s par page sur carte graphique).
+# de 0,56 s par page a travers ce service sur carte graphique, redimension
+# comprise ; 0,2 s pour le modele latin seul hors service).
 #
 # Quand `OCR_MODELE_RECONNAISSANCE_ARABE` est posee, chaque ligne detectee est
 # relue par le modele arabe, et la ligne garde la lecture qui contient de
@@ -103,6 +108,12 @@ _ocr = PaddleOCR(
 # devient arabe. Une seule detection, deux reconnaissances : le cout est celui
 # de la seconde reconnaissance, pas d'une seconde lecture.
 RECONNAISSANCE_ARABE = os.environ.get("OCR_MODELE_RECONNAISSANCE_ARABE", "")
+# Seul le modele mesure, precharge dans l'image et tarife (migration
+# 20261025100000) est accepte : un autre nom se telechargerait au demarrage et
+# chaque releve serait refuse au journal, faute de tarif.
+MODELES_ARABES_CONNUS = {"arabic_PP-OCRv5_mobile_rec"}
+if RECONNAISSANCE_ARABE and RECONNAISSANCE_ARABE not in MODELES_ARABES_CONNUS:
+    raise SystemExit(f"OCR_MODELE_RECONNAISSANCE_ARABE inconnu : {RECONNAISSANCE_ARABE}")
 _arabe = (
     TextRecognition(model_name=RECONNAISSANCE_ARABE, device=APPAREIL, enable_mkldnn=False)
     if RECONNAISSANCE_ARABE
@@ -123,32 +134,50 @@ def _garder_l_arabe(latin: str, arabe: str, score_latin: float, score_arabe: flo
     chiffres = sum(1 for c in visibles if c.isdigit() or c in ",./:-")
     if visibles and chiffres / len(visibles) >= 0.6:
         return False
+    # Une ligne MIXTE (« المجموع 4 135,183 ») ne bascule que si les deux
+    # lectures portent les memes nombres : le modele latin lit mieux les
+    # chiffres, et un montant ne se troque pas contre un libelle mieux lu.
+    if re.findall(r"\d+", latin) != re.findall(r"\d+", arabe):
+        return False
     return score_arabe >= score_latin * 0.8
 
 
 def _decouper(tableau: numpy.ndarray, polygone) -> numpy.ndarray:
     """La ligne, redressee : la meme decoupe que celle du pipeline PaddleOCR."""
-    pts = numpy.array(polygone, dtype=numpy.float32).reshape(-1, 2)[:4]
-    largeur = int(max(numpy.linalg.norm(pts[0] - pts[1]), numpy.linalg.norm(pts[2] - pts[3])))
-    hauteur = int(max(numpy.linalg.norm(pts[0] - pts[3]), numpy.linalg.norm(pts[1] - pts[2])))
+    pts = numpy.array(polygone, dtype=numpy.float32).reshape(-1, 2)
+    if len(pts) != 4:
+        # Un polygone a plus de quatre points : son rectangle minimal, coins
+        # dans l'ordre haut-gauche, haut-droite, bas-droite, bas-gauche.
+        boite = cv2.boxPoints(cv2.minAreaRect(pts))
+        somme, diff = boite.sum(axis=1), numpy.diff(boite, axis=1).ravel()
+        pts = numpy.float32([boite[somme.argmin()], boite[diff.argmin()],
+                             boite[somme.argmax()], boite[diff.argmax()]])
+    largeur = max(1, int(max(numpy.linalg.norm(pts[0] - pts[1]), numpy.linalg.norm(pts[2] - pts[3]))))
+    hauteur = max(1, int(max(numpy.linalg.norm(pts[0] - pts[3]), numpy.linalg.norm(pts[1] - pts[2]))))
     cible = numpy.float32([[0, 0], [largeur, 0], [largeur, hauteur], [0, hauteur]])
     m = cv2.getPerspectiveTransform(pts, cible)
-    return cv2.warpPerspective(
-        tableau, m, (max(1, largeur), max(1, hauteur)), borderMode=cv2.BORDER_REPLICATE
-    )
+    ligne = cv2.warpPerspective(tableau, m, (largeur, hauteur), borderMode=cv2.BORDER_REPLICATE)
+    # Comme le pipeline : une boite bien plus haute que large est une ligne
+    # verticale, on la couche.
+    return numpy.rot90(ligne) if hauteur / largeur >= 1.5 else ligne
 
 
 def _relire_en_arabe(tableau, polygones, textes, scores):
-    """Relire chaque ligne en arabe ; garder l'arabe la ou il en a."""
-    if _arabe is None or not polygones:
+    """Relire chaque ligne en arabe ; garder l'arabe la ou il en a.
+
+    Seulement sur `rec_polys` — les polygones des lignes RECONNUES, alignes
+    index par index sur `rec_texts` et `rec_scores`. Jamais sur `dt_polys`,
+    qui ne leur correspond pas.
+    """
+    n = min(len(polygones), len(textes), len(scores))
+    if _arabe is None or n == 0:
         return textes, scores
-    decoupes = [_decouper(tableau, p) for p in polygones]
+    decoupes = [_decouper(tableau, polygones[i]) for i in range(n)]
     relus = [r.json["res"] for r in _arabe.predict(decoupes)]
     sortie_t, sortie_s = list(textes), list(scores)
-    for i, r in enumerate(relus):
+    for i, r in enumerate(relus[:n]):
         texte_ar, score_ar = r.get("rec_text", ""), float(r.get("rec_score", 0.0))
-        score_lat = float(scores[i]) if i < len(scores) else 0.0
-        if _garder_l_arabe(textes[i] if i < len(textes) else "", texte_ar, score_lat, score_ar):
+        if _garder_l_arabe(textes[i], texte_ar, float(scores[i]), score_ar):
             sortie_t[i], sortie_s[i] = texte_ar, score_ar
     return sortie_t, sortie_s
 
@@ -160,11 +189,21 @@ def _relire_en_arabe(tableau, polygones, textes, scores):
 # 24 octobre 2026).
 _un_a_la_fois = threading.Lock()
 
+# Et l'attente du verrou est BORNEE (revue du 24 octobre 2026). L'API renonce
+# a 120 s ; une requete qui attendrait plus longtemps serait lue pour rien, et
+# pousserait les suivantes en delai. Au-dela, 503 : l'API bascule tout de
+# suite sur le modele de vision. Une lecture deja commencee, elle, ne
+# s'interrompt pas — Paddle ne sait pas annuler — d'ou une borne bien sous
+# le delai de l'API.
+ATTENTE_MAX_S = float(os.environ.get("OCR_ATTENTE_MAX_S", "45"))
+
 app = FastAPI()
 
 
+# `async` : le controle de sante ne doit pas passer par le pool de fils que
+# les lectures en attente occupent.
 @app.get("/sante")
-def sante() -> dict:
+async def sante() -> dict:
     return {
         "ok": True,
         "detection": DETECTION,
@@ -182,8 +221,12 @@ async def lire(requete: Request) -> dict:
 
 
 def _lire(octets: bytes) -> dict:
-    with _un_a_la_fois:
+    if not _un_a_la_fois.acquire(timeout=ATTENTE_MAX_S):
+        raise HTTPException(status_code=503, detail="lecteur occupe")
+    try:
         return _lire_seul(octets)
+    finally:
+        _un_a_la_fois.release()
 
 
 def _lire_seul(octets: bytes) -> dict:
@@ -239,7 +282,7 @@ def _lire_seul(octets: bytes) -> dict:
         textes = donnees.get("rec_texts", [])
         polygones = donnees.get("rec_polys", []) or donnees.get("dt_polys", [])
         scores = donnees.get("rec_scores", [])
-        textes, scores = _relire_en_arabe(tableau, polygones, textes, scores)
+        textes, scores = _relire_en_arabe(tableau, donnees.get("rec_polys", []), textes, scores)
         for i, texte in enumerate(textes):
             if not texte or not texte.strip():
                 continue
