@@ -35,14 +35,15 @@ export function TelechargerDossierComptable({
       const { construireArchiveComptable } = await import("@/lib/archive-comptable");
       const archive = await construireArchiveComptable(
         dossier,
-        (id) => transport().appeler(`/pieces/${id}/contenu`, { signal: controle.signal }),
+        (id, signal) => transport().appeler(`/pieces/${id}/contenu`, { signal }),
         (n, total) => setProgression({ n, total }),
         controle.signal,
       );
       controle.signal.throwIfAborted();
       const nom = nomClient.replace(/[^\p{L}\p{N}_-]/gu, "-").slice(0, 80) || clientId;
+      // L'archive est déjà un Blob construit en flux : on la remet telle quelle.
       const { chemin } = await enregistrerUnFichier(
-        new Blob([new Uint8Array(archive)], { type: "application/zip" }),
+        archive,
         `${nom}_${new Date().toISOString().slice(0, 10)}.zip`,
       );
       return chemin;
