@@ -18,7 +18,12 @@ import { z } from "zod";
 import { callDeepSeek } from "../conseil/deepseek.ts";
 import { repairArticles } from "./article-repair.ts";
 import { extrairePagesScannees } from "./pdf-image.ts";
-import { lireAvecPaddle, ouvrirLeCoupeCircuit, secondLecteurDisponible } from "./paddle.ts";
+import {
+  SecondLecteurOccupe,
+  lireAvecPaddle,
+  ouvrirLeCoupeCircuit,
+  secondLecteurDisponible,
+} from "./paddle.ts";
 import { readPdfTextLayer } from "./pdf-text.ts";
 import { BANDES_MAX, decouperEnBandes, fusionnerBandes } from "./bandes.ts";
 import { PanneFournisseur } from "../../fabrique/travaux-execution.ts";
@@ -584,9 +589,10 @@ async function releverDesPages(
        * et c'est le seul recours qui reste.
        */
       if (!(e instanceof PanneFournisseur) || !visionDisponible()) throw e;
-      ouvrirLeCoupeCircuit();
+      // Occupé n'est pas tombé : cette pièce seule change de lecteur.
+      if (!(e instanceof SecondLecteurOccupe)) ouvrirLeCoupeCircuit();
       console.error(
-        `[lecture] PaddleOCR en panne (${e.message}) : bascule sur le modèle de vision`,
+        `[lecture] PaddleOCR indisponible (${e.message}) : bascule sur le modèle de vision`,
       );
       return { releve: null, tente: true };
     }
