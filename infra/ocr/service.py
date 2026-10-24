@@ -32,15 +32,17 @@ connaître la taille de l'image, qu'il n'a pas.
 
 import io
 import os
+import threading
 import time
 
 import numpy
-from PIL import Image
+from PIL import Image, ImageOps
 
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
 from fastapi import FastAPI, Request  # noqa: E402
 from paddleocr import PaddleOCR  # noqa: E402
+from starlette.concurrency import run_in_threadpool  # noqa: E402
 
 # Les modèles MOBILE, pas « server » : mesurés à 1,8 Go de pointe, quand les
 # modèles medium font tomber le conteneur sur la machine de recette, partagée
@@ -57,11 +59,22 @@ from paddleocr import PaddleOCR  # noqa: E402
 DETECTION = os.environ.get("OCR_MODELE_DETECTION", "PP-OCRv5_mobile_det")
 RECONNAISSANCE = os.environ.get("OCR_MODELE_RECONNAISSANCE", "latin_PP-OCRv5_mobile_rec")
 
+# L'appareil : « cpu » par defaut (la machine de recette n'a pas de carte
+# graphique). Mesure du 24 octobre 2026 sur une RTX 5070 : 0,2 s par page au
+# lieu de 9 s sur processeur, au meme taux de champs trouves.
+APPAREIL = os.environ.get("OCR_APPAREIL", "cpu")
+
+# Le redressement de page reste COUPE, et c'est mesure : le 24 octobre 2026,
+# sur des factures arabes, le classifieur d'orientation a retourne la page a
+# 180 degres — « 2 687,888 » relu « 888'L89 Z » — et fait tomber le taux de
+# champs trouves de 86 % a 36 %. La photo est deja redressee par l'ecran de
+# capture ; son orientation EXIF est appliquee ci-dessous.
 # `enable_mkldnn=False` n'est pas un réglage de confort : avec l'accélérateur
 # activé, paddle 3.3.1 échoue sur « ConvertPirAttribute2RuntimeAttribute not
 # support ». Vérifié identique sur Linux et sur Windows, le 13 octobre 2026.
 _ocr = PaddleOCR(
     lang=os.environ.get("OCR_LANGUE", "fr"),
+    device=APPAREIL,
     text_detection_model_name=DETECTION,
     text_recognition_model_name=RECONNAISSANCE,
     use_doc_orientation_classify=False,
@@ -70,21 +83,45 @@ _ocr = PaddleOCR(
     enable_mkldnn=False,
 )
 
+# Le predicteur n'est pas sur a plusieurs fils : une seule lecture a la fois,
+# mais HORS de la boucle d'evenements. Avant, `predict` tournait dans la
+# boucle elle-meme : pendant une lecture de trente secondes, le controle de
+# sante ne repondait plus et le conteneur passait « unhealthy » (audit du
+# 24 octobre 2026).
+_un_a_la_fois = threading.Lock()
+
 app = FastAPI()
 
 
 @app.get("/sante")
 def sante() -> dict:
-    return {"ok": True, "detection": DETECTION, "reconnaissance": RECONNAISSANCE}
+    return {
+        "ok": True,
+        "detection": DETECTION,
+        "reconnaissance": RECONNAISSANCE,
+        "appareil": APPAREIL,
+    }
 
 
 @app.post("/lire")
 async def lire(requete: Request) -> dict:
     """Une image en corps brut ; des lignes et leurs boîtes normalisées."""
     octets = await requete.body()
+    return await run_in_threadpool(_lire, octets)
+
+
+def _lire(octets: bytes) -> dict:
+    with _un_a_la_fois:
+        return _lire_seul(octets)
+
+
+def _lire_seul(octets: bytes) -> dict:
     debut = time.time()
 
-    image = Image.open(io.BytesIO(octets)).convert("RGB")
+    # L'orientation que le telephone a notee dans la photo : sans elle, une
+    # photo prise en portrait par un appareil qui enregistre en paysage arrive
+    # couchee, et chaque ligne se lit de travers.
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(octets))).convert("RGB")
 
     # ============================= ON BORNE CE QU'ON REGARDE, ET ON MESURE POURQUOI
     #
