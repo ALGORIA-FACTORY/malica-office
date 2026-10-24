@@ -5,7 +5,9 @@ import type {
   DossierComptable,
   ControlesComptables,
 } from "@malica/socle/ports/repositories";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { Requete } from "./db.ts";
+import { lireParametres } from "./scan/analyse.ts";
 
 const Id = z.string().uuid();
 const Periode = z
@@ -17,33 +19,101 @@ const Choix = z.array(Id).min(1).max(2000);
 /** Une borne de restitution, pas une troncature silencieuse. */
 const MAX_DOCUMENTS = 2000;
 
+/*
+ * ======================================== LE MOIS D'UN DOCUMENT, ET SON FUSEAU
+ *
+ * Un document se range au mois de SA date quand la lecture l'a établie : une
+ * facture de janvier transmise en mars appartient à janvier, et c'est la même
+ * date de référence que l'analyse retient pour ses paramètres
+ * (`scan/analyse.ts`, `dateRef`). À défaut, au mois de sa réception.
+ *
+ * La réception est un instant ; son mois dépend du fuseau. Celui-ci est celui
+ * de la personne (`notif.preferences.fuseau`), jamais un fuseau écrit ici
+ * (R4). Une personne sans préférence reçoit le défaut LIVRÉ de cette colonne,
+ * inscrit dans sa ligne — visible et modifiable (R10), comme le fait déjà
+ * `notif.remettre`.
+ *
+ * `$3` porte ce fuseau dans les deux lectures qui partagent ce gabarit.
+ */
+const DATE_DU_DOCUMENT = `case when x.payload ->> 'document_date' ~ '^\\d{4}-\\d{2}-\\d{2}$'
+       then x.payload ->> 'document_date' end`;
+const DATE_DE_CLASSEMENT = `coalesce(${DATE_DU_DOCUMENT},
+       to_char(p.created_at at time zone $3::text, 'YYYY-MM-DD'))`;
+
 const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as type,
-  p.status, p.created_at::text as "recuLe",
+  p.status, p.created_at::text as "recuLe", p.sha256 as empreinte,
   (select parent.id from pieces_v parent where parent.id = p.source_piece_id
      and parent.tenant_id = p.tenant_id and parent.vis = 'partage') as "sourcePieceId",
   o.currency as devise,
   nullif(x.payload ->> 'document_date', '') as "dateDocument",
+  ${DATE_DE_CLASSEMENT} as "dateDeClassement",
   case when p.document_kind = 'facture_vente' then null
        else nullif(btrim(x.payload ->> 'issuer'), '') end as tiers,
   coalesce(nullif(x.payload -> 'references' ->> 'invoice_no', ''),
            nullif(x.payload -> 'references' ->> 'document_no', ''),
            nullif(x.payload -> 'references' ->> 'numero', ''),
            nullif(x.payload -> 'references' ->> 'reference', '')) as reference,
-  case when a.normalisation ->> 'etat' in ('tranche', 'non_verifie')
-         and a.extraction_id = x.id and sp.value_num is not null
-       then ((a.normalisation -> 'montants' ->> 'ttc')::numeric
-             / power(10::numeric, sp.value_num::numeric))::text end as montant
+  case when a.normalisation ->> 'etat' in ('tranche', 'non_verifie') and a.extraction_id = x.id
+       then a.normalisation -> 'montants' ->> 'ttc' end as "ttcMineur",
+  a.pack_version_id as "packAnalyse",
+  -- La date à laquelle l'analyse a lu ses paramètres : la même règle, la même session.
+  coalesce(${DATE_DU_DOCUMENT}, to_char(p.created_at, 'YYYY-MM-DD')) as "dateAnalyse"
   from pieces_v p
   join organizations_v o on o.id = p.tenant_id
   left join lateral (select id, payload from extractions_v x
                       where x.piece_id = p.id order by created_at desc, id desc limit 1) x on true
   left join lateral (select extraction_id, pack_version_id, normalisation from capture.analyses a
-                      where a.piece_id = p.id order by created_at desc, id desc limit 1) a on true
-  left join lateral (select value_num from ref.socle_params sp
-                      where sp.pack_version_id = a.pack_version_id and sp.code = 'money.decimals'
-                        and sp.valid_from <= p.created_at::date
-                        and (sp.valid_to is null or sp.valid_to >= p.created_at::date)
-                      order by valid_from desc limit 1) sp on true`;
+                      where a.piece_id = p.id order by created_at desc, id desc limit 1) a on true`;
+
+type LigneDocument = Omit<DocumentComptable, "montant"> & {
+  ttcMineur: string | null;
+  packAnalyse: string | null;
+  dateAnalyse: string;
+};
+
+/** Le fuseau de la personne connectée : sa préférence, ou le défaut livré inscrit chez elle. */
+async function fuseauDeLaPersonne(db: Requete): Promise<string> {
+  await db.query(
+    `insert into notif.preferences (user_id) values (auth.uid()) on conflict (user_id) do nothing`,
+  );
+  const { rows } = await db.query<{ fuseau: string | null }>(
+    `select fuseau from notif.preferences where user_id = auth.uid()`,
+  );
+  const fuseau = rows[0]?.fuseau;
+  if (!fuseau)
+    throw Object.assign(new Error("fuseau horaire absent des préférences de la personne"), {
+      code: "22023",
+    });
+  return fuseau;
+}
+
+/**
+ * Le montant TTC en unités de la devise. Les décimales viennent du chemin
+ * commun des paramètres (`lireParametres`), au pack et à la date que l'analyse
+ * a retenus : ce sont celles qui ont produit l'unité mineure.
+ */
+async function avecMontants(db: Requete, lignes: LigneDocument[]): Promise<DocumentComptable[]> {
+  const decimales = new Map<string, Promise<number>>();
+  const lire = (pack: string, date: string) => {
+    const cle = `${pack}|${date}`;
+    let d = decimales.get(cle);
+    if (!d) {
+      d = lireParametres(db, pack, date).then((p) => p["money.decimals"]);
+      decimales.set(cle, d);
+    }
+    return d;
+  };
+  const documents: DocumentComptable[] = [];
+  // Séquentiel : une seule connexion, et un paramètre lu une fois par (pack, date).
+  for (const { ttcMineur, packAnalyse, dateAnalyse, ...doc } of lignes) {
+    const montant =
+      ttcMineur !== null && packAnalyse !== null
+        ? depuisUniteMineure(Number(ttcMineur), await lire(packAnalyse, dateAnalyse))
+        : null;
+    documents.push({ ...doc, montant });
+  }
+  return documents;
+}
 
 /** Un compte membre des deux espaces ne doit pas restituer ses pièces privées. */
 async function exigerMandat(db: Requete, cabinetId: string, clientId: string): Promise<void> {
@@ -68,19 +138,20 @@ export async function documents(
 ): Promise<DocumentComptable[]> {
   Periode.parse(periode);
   await exigerMandat(db, cabinetId, clientId);
-  const { rows } = await db.query<DocumentComptable>(
+  const fuseau = await fuseauDeLaPersonne(db);
+  const { rows } = await db.query<LigneDocument>(
     `${DOCUMENTS}
     where p.tenant_id = $1 and p.vis = 'partage'
-      and ($2::text is null or to_char(p.created_at at time zone 'Africa/Tunis', 'YYYY-MM') = $2)
-    order by p.created_at desc, p.id limit $3`,
-    [clientId, periode, MAX_DOCUMENTS + 1],
+      and ($2::text is null or left(${DATE_DE_CLASSEMENT}, 7) = $2)
+    order by p.created_at desc, p.id limit $4`,
+    [clientId, periode, fuseau, MAX_DOCUMENTS + 1],
   );
   if (rows.length > MAX_DOCUMENTS)
     throw Object.assign(
       new Error("Ce dossier est volumineux : choisissez un mois pour le consulter."),
       { code: "22023" },
     );
-  return rows;
+  return avecMontants(db, rows);
 }
 
 export async function documentsLies(
@@ -123,12 +194,14 @@ export async function documentsLies(
   if (pieces.some((id) => !selection.has(id)))
     throw Object.assign(new Error("document introuvable ou non transmis"), { code: "42501" });
   const tous = [...selection];
-  const { rows: docs } = await db.query<DocumentComptable>(
+  const fuseau = await fuseauDeLaPersonne(db);
+  const { rows: lignes } = await db.query<LigneDocument>(
     `${DOCUMENTS}
     where p.tenant_id = $1 and p.vis = 'partage' and p.id = any($2::uuid[])
     order by p.created_at, p.id`,
-    [clientId, tous],
+    [clientId, tous, fuseau],
   );
+  const docs = await avecMontants(db, lignes);
   const { rows: ecritures } = await db.query<DossierComptable["ecritures"][number]>(
     `select e.id, e.piece_id as "pieceId", e.paiement_id as "paiementId", e.nature,
             e.journal, e.date_ecriture::text as date, e.libelle, e.status as statut,

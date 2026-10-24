@@ -1331,6 +1331,10 @@ export interface DocumentComptable {
   tiers: string | null;
   dateDocument: string | null;
   recuLe: string;
+  /** « YYYY-MM-DD » : la date du document, sinon le jour de réception dans le fuseau de la personne. */
+  dateDeClassement: string;
+  /** SHA-256 scellée à la réception, telle qu'en base ; nulle si la pièce n'a jamais été scellée. */
+  empreinte: string | null;
   montant: string | null;
   devise: string;
   sourcePieceId: string | null;
