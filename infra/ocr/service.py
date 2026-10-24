@@ -97,8 +97,8 @@ _ocr = PaddleOCR(
 # mais ne lit JAMAIS un mot arabe (raison sociale : 0 % de ressemblance). Le
 # modele arabe lit la raison sociale (100 % imprimee, 85 % manuscrite), et lit
 # moins bien les chiffres. Aucun des deux ne suffit seul. Combines ligne par
-# ligne : 91 % des champs trouves au lieu de 88 %, raison sociale arabe lue a
-# 100 % (imprimee) et 94 % (manuscrite) — pour un temps double (1,1 s au lieu
+# ligne : 90 % des champs trouves au lieu de 88 %, raison sociale arabe lue a
+# 100 % (imprimee) et 88 % (manuscrite) — pour un temps double (1,1 s au lieu
 # de 0,56 s par page a travers ce service sur carte graphique, redimension
 # comprise ; 0,2 s pour le modele latin seul hors service).
 #
