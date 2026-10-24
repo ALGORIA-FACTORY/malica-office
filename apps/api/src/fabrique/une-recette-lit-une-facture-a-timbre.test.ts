@@ -301,30 +301,21 @@ describe("une facture à timbre, lue par une recette", { skip: !BASE_CONFIGUREE 
    * raison pour laquelle la limite a pu passer pour moins grave qu'elle
    * n'était.
    */
-  it("sans droit désigné, le TIMBRE AU BARÈME passe — mais son montant vient du PACK, sans citation", () => {
+  it("sans droit désigné, un résidu égal au timbre reste bloquant", () => {
     const { extract, citations } = extraitParRecette();
     const pivot = pivoter({ ...extract, other_charges: [] });
-
     assert.deepEqual(
       pivot.motifs.filter((x) => x.code.startsWith("RESIDUAL")).map((x) => x.code),
-      ["RESIDUAL_MATCHED_PACK_CHARGE"],
-      "le moteur RATTRAPE un résidu égal au montant fixe du pack, en « info »",
+      ["RESIDUAL_UNEXPLAINED"],
     );
-    assert.equal(pivot.approvable, true, "donc l'écriture passait — et c'est le piège");
-
-    /*
-     * Le montant inscrit vient alors de `fixed_amount`, pas d'un jeton. La
-     * ligne existe, elle est juste ici, et AUCUNE citation ne la porte : c'est
-     * un montant sans preuve d'origine dans une écriture, très exactement ce
-     * que R2 interdit. La recette, elle, la cite.
-     */
-    const timbre = pivot.lines.find(
-      (l) => l.account_code === compteDuTimbre(extract.document_kind),
+    assert.equal(pivot.approvable, false);
+    assert.equal(
+      pivot.lines.find((l) => l.account_code === compteDuTimbre(extract.document_kind)),
+      undefined,
     );
-    assert.ok(timbre, "rattrapé, le droit a bien une ligne");
     assert.ok(
       citations.some((c) => c.field === "other_charges[0].amount"),
-      "la recette, elle, cite le jeton du montant",
+      "la recette cite le droit ; sans cette désignation le moteur ne l'invente pas",
     );
   });
 
@@ -345,7 +336,7 @@ describe("une facture à timbre, lue par une recette", { skip: !BASE_CONFIGUREE 
     });
     assert.deepEqual(
       pivot.motifs.filter((x) => x.severity === "block").map((x) => x.code),
-      ["MISSING_ACCOUNT_MAPPING"],
+      ["MISSING_ACCOUNT_MAPPING", "RESIDUAL_UNEXPLAINED"],
     );
     assert.equal(pivot.approvable, false);
   });
@@ -365,7 +356,12 @@ describe("une facture à timbre, lue par une recette", { skip: !BASE_CONFIGUREE 
     );
 
     const avec = pivoter(extract);
-    assert.equal(avec.approvable, true, "désigné, le droit boucle le pied");
+    assert.equal(
+      avec.approvable,
+      false,
+      "la désignation conserve le montant imprimé, elle ne valide pas un droit hors barème",
+    );
+    assert.ok(avec.motifs.some((x) => x.code === "FISCAL_CHARGE_MISMATCH"));
 
     const sans = pivoter({ ...extract, other_charges: [] });
     assert.deepEqual(

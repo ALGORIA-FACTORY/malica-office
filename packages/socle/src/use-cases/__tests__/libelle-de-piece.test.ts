@@ -14,10 +14,10 @@ describe("la référence du document", () => {
     expect(referenceDuDocument({ reference: "R-9", document_no: "D-2" })).toBe("D-2");
   });
 
-  it("prend la première référence connue plutôt que rien", () => {
+  it("ne transforme pas une référence annexe en numéro de facture", () => {
     // Une clé que nos lectures ne nomment pas encore vaut mieux qu'un libellé
     // sans référence : elle permet quand même de retrouver la pièce.
-    expect(referenceDuDocument({ bon_de_commande: "BC-77" })).toBe("BC-77");
+    expect(referenceDuDocument({ bon_de_commande: "BC-77", customer_tax_id: "MF-1" })).toBeNull();
   });
 
   it("rend null quand il n'y a rien à rendre", () => {
@@ -47,5 +47,12 @@ describe("les faits d'une pièce lue", () => {
   it("porte la date du DOCUMENT, jamais celle de la saisie", () => {
     const extract = factureAchatSimple();
     expect(faitsDuLibelle(extract).date).toBe(extract.document_date);
+  });
+  it("une vente ne nomme jamais notre société comme client", () => {
+    expect(faitsDuLibelle(factureVenteSimple()).contrepartie).toBeNull();
+    expect(
+      faitsDuLibelle({ ...factureVenteSimple(), references: { customer_name: "Client réel" } })
+        .contrepartie,
+    ).toBe("Client réel");
   });
 });

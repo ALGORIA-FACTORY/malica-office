@@ -283,6 +283,9 @@
   ],
   "supervision": [
     "auditForPiece",
+    "controlesPiece",
+    "documents",
+    "documentsLies",
     "journalDuMandat",
     "listClients",
     "listMyCabinets",

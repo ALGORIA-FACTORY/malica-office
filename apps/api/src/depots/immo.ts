@@ -18,17 +18,23 @@
  */
 
 import type { Requete } from "../db.ts";
-import { dec } from "./decimal.ts";
+import { dec, enVigueur } from "./decimal.ts";
 
 export const immo = {
+  /**
+   * Les catégories qu'on peut choisir AUJOURD'HUI. Une catégorie se versionne
+   * (20261024160000) : la ligne close reste celle des biens déjà enregistrés,
+   * et seule la ligne en vigueur s'offre à un bien nouveau.
+   */
   async categories(db: Requete, packVersionId: string) {
     const { rows } = await db.query(
       `select id, code, label, method, duree_annees, coefficient, account_immo,
-              account_amort, account_dotation, legal_reference
+              account_amort, account_dotation, legal_reference,
+              valid_from::text as valid_from, valid_to::text as valid_to
          from ref_immo_categories_v where pack_version_id = $1 order by code`,
       [packVersionId],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
+    return enVigueur(rows as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as string,
       code: r["code"] as string,
       label: r["label"] as string,
@@ -87,6 +93,17 @@ export const immo = {
       packVersionId: string;
     },
   ): Promise<string> {
+    // Un bien nouveau prend la catégorie EN VIGUEUR : une ligne close reste
+    // celle des biens déjà enregistrés (20261024160000), elle ne s'offre plus.
+    const { rows: categorie } = await db.query(
+      `select valid_from::text as valid_from, valid_to::text as valid_to
+         from ref_immo_categories_v where id = $1`,
+      [input.categoryId],
+    );
+    if (enVigueur(categorie as Record<string, unknown>[]).length === 0)
+      throw Object.assign(new Error("Cette catégorie d'immobilisation n'est plus en vigueur."), {
+        code: "22023",
+      });
     const { rows } = await db.query<{ id: string }>(
       `insert into immo_assets_v
          (tenant_id, entity_id, vis, piece_id, category_id, label, mise_en_service,

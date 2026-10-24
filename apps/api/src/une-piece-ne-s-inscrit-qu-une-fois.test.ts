@@ -195,8 +195,16 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     assert.equal(avant.ok && avant.inscrite, null);
 
     const ids = await sousIdentite(expert.id, async (db) => [
-      await office.inscrireLeReglement(db, paiement),
-      await office.inscrireLeReglement(db, paiement),
+      await office.inscrireLeReglement(db, paiement, {
+        codes: [],
+        baseReglee: "100.000",
+        justification: "Opération qualifiée hors retenue",
+      }),
+      await office.inscrireLeReglement(db, paiement, {
+        codes: [],
+        baseReglee: "100.000",
+        justification: "Opération qualifiée hors retenue",
+      }),
     ]);
     assert.equal(ids[0], ids[1], "redemander rend la même écriture");
     const { rows: e } = await admin.query<{ status: string; nature: string }>(

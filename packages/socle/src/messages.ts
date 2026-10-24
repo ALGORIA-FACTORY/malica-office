@@ -5,6 +5,8 @@
  * ce fichier ne porte que le châssis d'interface.
  */
 
+import { frBibliotheque, enBibliotheque, arBibliotheque } from "./messages-bibliotheque.ts";
+
 export const LOCALES = ["fr", "en", "ar"] as const;
 export type Locale = (typeof LOCALES)[number];
 
@@ -17,6 +19,7 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 export const RTL_LOCALES: readonly Locale[] = ["ar"];
 
 const fr = {
+  ...frBibliotheque,
   "cab.design.journee": "Votre journée, en clair.",
   "cab.design.commencer": "Commencer la revue",
   "cab.design.situation": "Situation de votre comptabilité",
@@ -1685,12 +1688,13 @@ const fr = {
   "cab.review.dossier": "Dossier : facture et règlement",
   "cab.review.reglement.retenue":
     "Retenue à la source constatée : {libelle}, {montant} sur un TTC de {ttc}. Le règlement ne porte que le net.",
-  "cab.review.reglement.retenueNonOperee":
-    "Réglé pour le TTC entier ({ttc}) au-dessus du seuil de retenue : aucune retenue à la source n'a été opérée. Le payeur en reste redevable.",
   "cab.review.reglement.inscrire": "Inscrire",
   "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
+  "cab.review.paiement.annulationAInscrire":
+    "Annulation demandée par le client : l’écriture d’annulation attend votre inscription.",
+  "cab.review.paiement.inscrireAnnulation": "Inscrire l’annulation",
   "cab.review.enregistre": "Enregistré : {chemin}",
   "cab.review.joints": "Documents joints",
   "cab.review.joints.vide": "Aucun document joint à cette pièce.",
@@ -3656,6 +3660,7 @@ const fr = {
 type Dict = Record<keyof typeof fr, string>;
 
 const en: Dict = {
+  ...enBibliotheque,
   "cab.design.journee": "Your day, at a glance.",
   "cab.design.commencer": "Start reviewing",
   "cab.design.situation": "Your accounting overview",
@@ -5257,12 +5262,13 @@ const en: Dict = {
   "cab.review.dossier": "File: invoice and settlement",
   "cab.review.reglement.retenue":
     "Withholding tax found: {libelle}, {montant} on a gross of {ttc}. The payment carries only the net.",
-  "cab.review.reglement.retenueNonOperee":
-    "Paid for the full gross ({ttc}) above the withholding threshold: no tax was withheld. The payer remains liable.",
   "cab.review.reglement.inscrire": "Post",
   "cab.review.reglement.inscrit": "Posted to the journal — it appears in the FEC.",
   "cab.review.paiement.reference": "Reference",
   "cab.review.paiement.eteint": "Settlement cancelled — no accounting effect",
+  "cab.review.paiement.annulationAInscrire":
+    "Cancellation requested by the client: the reversing entry awaits your posting.",
+  "cab.review.paiement.inscrireAnnulation": "Post the cancellation",
   "cab.review.enregistre": "Saved: {chemin}",
   "cab.review.joints": "Attached documents",
   "cab.review.joints.vide": "No document attached to this one.",
@@ -7113,6 +7119,7 @@ const en: Dict = {
 };
 
 const ar: Dict = {
+  ...arBibliotheque,
   "cab.design.journee": "يومكم، بكل وضوح.",
   "cab.design.commencer": "بدء المراجعة",
   "cab.design.situation": "نظرة على المحاسبة",
@@ -8686,12 +8693,13 @@ const ar: Dict = {
   "cab.review.dossier": "ملف: فاتورة وخلاص",
   "cab.review.reglement.retenue":
     "خصم من المورد ثابت: {libelle}، {montant} من مبلغ جملي {ttc}. الصك لا يحمل إلا الصافي.",
-  "cab.review.reglement.retenueNonOperee":
-    "خُلص كامل المبلغ ({ttc}) فوق عتبة الخصم من المورد: لم يُخصم شيء. يبقى الدافع مدينًا به.",
   "cab.review.reglement.inscrire": "تسجيل",
   "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في ملف FEC.",
   "cab.review.paiement.reference": "المرجع",
   "cab.review.paiement.eteint": "تمّ إلغاء التسديد — دون أثر محاسبي",
+  "cab.review.paiement.annulationAInscrire":
+    "طلب الحريف إلغاء التسديد: قيد الإلغاء في انتظار تسجيلك.",
+  "cab.review.paiement.inscrireAnnulation": "تسجيل الإلغاء",
   "cab.review.enregistre": "حُفظ في: {chemin}",
   "cab.review.joints": "الوثائق المرفقة",
   "cab.review.joints.vide": "لا توجد وثيقة مرفقة بهذه الوثيقة.",

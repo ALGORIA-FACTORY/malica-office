@@ -1,10 +1,20 @@
+import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  useCanGoBack,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
+import { ControlesComptables } from "@/components/malica/controles-comptables";
+import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
+import { extensionDuContenu } from "@/lib/archive-comptable";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import {
   ActionButton,
@@ -19,6 +29,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
+import { saisieDecimale } from "@/lib/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { Citation, CompteDuPlan, Ecriture } from "@malica/socle/ports/repositories";
@@ -85,7 +96,8 @@ interface Correction {
 function libelleDuCompte(plan: readonly CompteDuPlan[], code: string): string | null {
   const propre = code.trim();
   if (!propre) return null;
-  return plan.find((c) => c.code === propre)?.libelle ?? null;
+  const comptes = plan.filter((c) => c.code === propre);
+  return comptes.find((c) => c.origine === "cabinet")?.libelle ?? comptes[0]?.libelle ?? null;
 }
 
 /**
@@ -113,6 +125,11 @@ function CabinetReview() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
+  const [vue, setVue] = useState<"ecritures" | "controles">("ecritures");
+  const clients = useQuery({
+    queryKey: ["cab-clients", org.id],
+    queryFn: () => office().supervision.listClients(org.id),
+  });
 
   const [motifId, setMotifId] = useState<string>("");
   const [note, setNote] = useState<string>("");
@@ -205,6 +222,19 @@ function CabinetReview() {
    * suivante. C'est l'ordre de la file du jour — le même que sur « Aujourd'hui ».
    */
   const navigate = useNavigate();
+  /*
+   * ============================================== REVENIR D'OÙ L'ON VIENT
+   *
+   * La pièce s'ouvre depuis la file du jour, la bibliothèque, les
+   * propositions, le rapprochement… Le retour suit l'historique du routeur :
+   * on revient à l'écran qui l'a ouverte, avec ses filtres. Sans historique
+   * (lien ouvert directement), le lien mène à la file de revue.
+   *
+   * Précédente et suivante REMPLACENT l'entrée : parcourir la file ne doit
+   * pas obliger à revenir pièce par pièce.
+   */
+  const router = useRouter();
+  const peutRevenir = useCanGoBack();
   const file = useQuery({
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
@@ -217,7 +247,7 @@ function CabinetReview() {
   const precedente = rangDansLaFile > 0 ? ((file.data ?? [])[rangDansLaFile - 1] ?? null) : null;
   const suivante = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile + 1] ?? null) : null;
   const allerA = (id: string) =>
-    void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id } });
+    void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id }, replace: true });
 
   const plan = useQuery({
     queryKey: ["plan-cabinet", org.id],
@@ -308,15 +338,18 @@ function CabinetReview() {
    */
   const telecharger = useMutation({
     mutationFn: async () => {
-      const octets = dossier.data?.contenu;
-      if (!octets) return null;
+      const octets = await office().capture.apercu(pieceId);
+      if (!octets) throw new Error(t("cab.biblio.missing"));
       const payload = dossier.data?.extraction?.payload as
         { references?: Record<string, string> } | undefined;
       const ref = payload?.references
         ? Object.values(payload.references).find((v) => v && v.trim().length > 0)
         : null;
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
-      const { chemin } = await enregistrerUnFichier(octets, `${ref ?? pieceId}.pdf`);
+      const { chemin } = await enregistrerUnFichier(
+        octets,
+        `${ref ?? pieceId}.${extensionDuContenu(octets.type)}`,
+      );
       return chemin;
     },
     onSuccess: (chemin) => setCheminEnregistre(chemin),
@@ -336,10 +369,14 @@ function CabinetReview() {
   const telechargerUnJoint = useMutation({
     mutationFn: async (jointId: string) => {
       const d = await office().capture.dossier(jointId);
-      if (!d.contenu) return null;
+      const octets = await office().capture.apercu(jointId);
+      if (!octets) throw new Error(t("cab.biblio.missing"));
       const { enregistrerUnFichier } = await import("@/capabilities/enregistrer-un-fichier");
       const nom = nomDuType(d.piece.documentKind) ?? jointId;
-      const { chemin } = await enregistrerUnFichier(d.contenu, `${nom}.pdf`);
+      const { chemin } = await enregistrerUnFichier(
+        octets,
+        `${nom}_${jointId}.${extensionDuContenu(octets.type)}`,
+      );
       return chemin;
     },
     onSuccess: (chemin) => setCheminEnregistre(chemin),
@@ -495,6 +532,11 @@ function CabinetReview() {
       <header className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
         <Link
           to="/cabinet"
+          onClick={(e) => {
+            if (!peutRevenir) return;
+            e.preventDefault();
+            router.history.back();
+          }}
           aria-label={t("cab.review.back")}
           title={t("cab.review.back")}
           className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
@@ -606,7 +648,18 @@ function CabinetReview() {
         </div>
       ) : null}
 
-      <div className="grid gap-8 xl:grid-cols-[1.15fr_1fr]">
+      <div className="flex flex-wrap justify-end gap-3">
+        <TelechargerDossierComptable
+          cabinetId={org.id}
+          clientId={piece.tenantId}
+          nomClient={
+            clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? piece.tenantId
+          }
+          pieces={[pieceId]}
+          libelle={t("cab.biblio.operation")}
+        />
+      </div>
+      <div className="cab-operation-layout grid gap-8 xl:grid-cols-[1.15fr_1fr]">
         <section className="min-w-0 space-y-3">
           <SectionTitle>{t("cab.review.document")}</SectionTitle>
           {contenu ? (
@@ -735,12 +788,21 @@ function CabinetReview() {
                         {preuveOuverte === p.justificatifPieceId && p.justificatifPieceId ? (
                           <ApercuDeLaPreuve jointId={p.justificatifPieceId} />
                         ) : null}
-                        {p.eteint ? (
+                        {p.eteint && p.annulationAInscrire ? (
+                          <AnnulationAInscrire
+                            ecritureId={p.annulationAInscrire}
+                            pieceId={pieceId}
+                          />
+                        ) : p.eteint ? (
                           <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
                             {t("cab.review.paiement.eteint")}
                           </span>
                         ) : (
-                          <EcritureDuReglement paiementId={p.id} pieceId={pieceId} />
+                          <EcritureDuReglement
+                            paiementId={p.id}
+                            pieceId={pieceId}
+                            plan={plan.data ?? []}
+                          />
                         )}
                       </li>
                     ))}
@@ -858,264 +920,302 @@ function CabinetReview() {
         </section>
 
         <section className="space-y-3">
-          <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
-          {!booked ? (
-            proposition.isPending ? (
-              <EmptyState>{t("common.loading")}</EmptyState>
-            ) : proposition.data?.ok ? (
-              <>
-                <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
-                <InkTable
-                  caption={t("cab.review.proposee")}
-                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
-                >
-                  {proposition.data.proposition.lignes.map((l, i) => (
-                    <InkTableRow key={i}>
-                      <InkCell>
-                        <span className="num">{l.account_code}</span>{" "}
-                        <span className="text-muted-foreground">{l.libelle}</span>
-                      </InkCell>
-                      <InkCell numeric>{montant(l.debit, locale)}</InkCell>
-                      <InkCell numeric>{montant(l.credit, locale)}</InkCell>
-                    </InkTableRow>
-                  ))}
-                </InkTable>
-              </>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
-                {/*
-                 * La raison vient du serveur, en français, et porte les motifs
-                 * des contrôles. L'écran de la PME la rend déjà ainsi : une
-                 * seule phrase, construite là où le jugement est posé. La
-                 * traduire demanderait de faire voyager les motifs structurés,
-                 * et c'est une autre correction — celle-ci cesse de les taire.
-                 */}
-                <p className="text-[12.5px] text-muted-foreground">
-                  {proposition.data?.raison ?? ""}
-                </p>
-              </div>
-            )
-          ) : (
-            <>
-              <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
-                {t("cab.review.ecriture.meta", {
-                  journal: booked.journal,
-                  date: jour(booked.dateEcriture),
-                  devise: booked.devise,
-                })}
-              </p>
-              <InkTable
-                caption={t("cab.review.ecriture")}
-                head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
-              >
-                {booked.lines.map((line) => (
-                  <InkTableRow key={line.ordinal}>
-                    <InkCell>
-                      <span className="num">{line.accountCode}</span>{" "}
-                      <span className="text-muted-foreground">{line.libelle}</span>
-                    </InkCell>
-                    <InkCell numeric>{montant(line.debit, locale)}</InkCell>
-                    <InkCell numeric>{montant(line.credit, locale)}</InkCell>
-                  </InkTableRow>
-                ))}
-              </InkTable>
-
-              {!done && correction ? (
-                <div className="space-y-3 border border-s-2 border-border border-s-signal-warn bg-card p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal-warn">
-                    {t("cab.review.correct.title")}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground">
-                    {t("cab.review.correct.lede")}
-                  </p>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.correct.libelle")}
-                    </span>
-                    <input
-                      type="text"
-                      value={correction.libelle}
-                      onChange={(e) =>
-                        setCorrection((c) => (c ? { ...c, libelle: e.target.value } : c))
-                      }
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    />
-                  </label>
-                  {remarques.length > 0 ? (
-                    <ul className="space-y-0.5 text-[11px] text-signal-warn">
-                      {remarques.map((r) => (
-                        <li key={r}>{r}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-
-                  <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan.data ?? []} />
+          <div className="cab-doclib-tabs" role="tablist" aria-label={t("cab.biblio.entries")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={vue === "ecritures"}
+              onClick={() => setVue("ecritures")}
+            >
+              {t("cab.biblio.entries")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={vue === "controles"}
+              onClick={() => setVue("controles")}
+            >
+              {t("cab.biblio.fiscal")}
+            </button>
+          </div>
+          {vue === "controles" ? (
+            <ControlesComptables cabinetId={org.id} pieceId={pieceId} />
+          ) : null}
+          <div hidden={vue !== "ecritures"} className="space-y-3">
+            <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
+            {!booked ? (
+              proposition.isPending ? (
+                <EmptyState>{t("common.loading")}</EmptyState>
+              ) : proposition.data?.ok ? (
+                <>
+                  <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
                   <InkTable
-                    caption={t("cab.review.correct.title")}
+                    caption={t("cab.review.proposee")}
                     head={[
                       t("pme.journal.account"),
                       t("pme.journal.debit"),
                       t("pme.journal.credit"),
                     ]}
                   >
-                    {correction.lignes.map((ligne, index) => (
-                      <InkTableRow key={ligne.ordinal}>
+                    {proposition.data.proposition.lignes.map((l, i) => (
+                      <InkTableRow key={i}>
                         <InkCell>
-                          <SaisieDeCompte
-                            valeur={ligne.compte}
-                            onChange={(code) =>
-                              setCorrection((c) =>
-                                c
-                                  ? {
-                                      ...c,
-                                      lignes: c.lignes.map((l, i) =>
-                                        i === index ? { ...l, compte: code } : l,
-                                      ),
-                                    }
-                                  : c,
-                              )
-                            }
-                            plan={plan.data ?? []}
-                            label={t("pme.journal.account")}
-                            inconnuLabel={t("cab.review.correct.unknown")}
-                            listeId={LISTE_DES_COMPTES}
-                            collectifLabel={t("plan.collectif.court")}
-                            originesLabels={{
-                              officiel: t("plan.origin.officiel"),
-                              extension: t("plan.origin.extension"),
-                              cabinet: t("plan.origin.cabinet"),
-                            }}
+                          <LigneDuCompte
+                            code={l.account_code}
+                            intitule={libelleDuCompte(plan.data ?? [], l.account_code)}
+                            libelle={l.libelle}
                           />
                         </InkCell>
-                        <InkCell numeric>{ligne.debit}</InkCell>
-                        <InkCell numeric>{ligne.credit}</InkCell>
+                        <InkCell numeric>{montant(l.debit, locale)}</InkCell>
+                        <InkCell numeric>{montant(l.credit, locale)}</InkCell>
                       </InkTableRow>
                     ))}
                   </InkTable>
-
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("cab.review.correct.motif.needed")}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    <ActionButton
-                      variant="ink"
-                      disabled={!correctionPrete || corriger.isPending}
-                      onClick={() => corriger.mutate()}
-                    >
-                      {corriger.isPending ? t("common.loading") : t("cab.review.correct.apply")}
-                    </ActionButton>
-                    <ActionButton disabled={corriger.isPending} onClick={() => setCorrection(null)}>
-                      {t("cab.review.correct.cancel")}
-                    </ActionButton>
-                  </div>
-                </div>
-              ) : null}
-
-              {reversal ? (
-                <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
-                  <p className="font-medium">{reversal.libelle}</p>
-                  <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
-                </div>
-              ) : null}
-
-              {done ? (
-                <p className="border border-border bg-card px-3 py-3 text-[13px]">
-                  {done === "valide"
-                    ? t("cab.review.done.valide")
-                    : done === "corrige"
-                      ? t("cab.review.done.corrige")
-                      : t("cab.review.done.retourne")}
-                </p>
+                </>
               ) : (
-                <div className="space-y-3 border border-border bg-card p-3">
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.motif")}
-                    </span>
-                    <select
-                      value={motifId}
-                      onChange={(e) => setMotifId(e.target.value)}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    >
-                      <option value="">{t("cab.review.motif.choose")}</option>
-                      {(motifs.data ?? []).map((motif) => (
-                        <option key={motif.id} value={motif.id}>
-                          {motif.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {t("cab.review.note")}
-                    </span>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={3}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                    />
-                  </label>
-
-                  {noteMissing ? (
-                    <p className="text-[11px] text-signal-warn">{t("cab.review.note.required")}</p>
-                  ) : null}
-
-                  <StickyActions>
-                    <ActionButton
-                      variant="ink"
-                      disabled={review.isPending}
-                      onClick={() => review.mutate("valide")}
-                    >
-                      {t("cab.review.validate")}
-                    </ActionButton>
-                    <ActionButton
-                      disabled={review.isPending || !motifId || noteMissing}
-                      onClick={() => review.mutate("retourne")}
-                    >
-                      {t("cab.review.return")}
-                    </ActionButton>
-                    {correction ? null : (
-                      <ActionButton
-                        disabled={review.isPending}
-                        onClick={() => setCorrection(correctionDepuis(booked, libellePropose))}
-                      >
-                        {t("cab.review.correct.open")}
-                      </ActionButton>
-                    )}
-                  </StickyActions>
+                <div className="space-y-1">
+                  <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
+                  {/*
+                   * La raison vient du serveur, en français, et porte les motifs
+                   * des contrôles. L'écran de la PME la rend déjà ainsi : une
+                   * seule phrase, construite là où le jugement est posé. La
+                   * traduire demanderait de faire voyager les motifs structurés,
+                   * et c'est une autre correction — celle-ci cesse de les taire.
+                   */}
+                  <p className="text-[12.5px] text-muted-foreground">
+                    {proposition.data?.raison ?? ""}
+                  </p>
                 </div>
-              )}
-            </>
-          )}
-
-          <SectionTitle>{t("cab.review.audit")}</SectionTitle>
-          {(audit.data ?? []).length === 0 ? (
-            <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
-          ) : (
-            <ul className="grid gap-px border border-border bg-border text-[12px]">
-              {(audit.data ?? []).map((entry) => (
-                <li
-                  key={entry.id}
-                  className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+              )
+            ) : (
+              <>
+                <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {t("cab.review.ecriture.meta", {
+                    journal: booked.journal,
+                    date: jour(booked.dateEcriture),
+                    devise: booked.devise,
+                  })}
+                </p>
+                <InkTable
+                  caption={t("cab.review.ecriture")}
+                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
                 >
-                  <span>{libelleDeLAction(entry.action, t)}</span>
-                  <span className="num shrink-0 text-muted-foreground">
-                    {new Intl.DateTimeFormat(locale, {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }).format(new Date(entry.at))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+                  {booked.lines.map((line) => (
+                    <InkTableRow key={line.ordinal}>
+                      <InkCell>
+                        <LigneDuCompte
+                          code={line.accountCode}
+                          intitule={libelleDuCompte(plan.data ?? [], line.accountCode)}
+                          libelle={line.libelle}
+                        />
+                      </InkCell>
+                      <InkCell numeric>{montant(line.debit, locale)}</InkCell>
+                      <InkCell numeric>{montant(line.credit, locale)}</InkCell>
+                    </InkTableRow>
+                  ))}
+                </InkTable>
+
+                {!done && correction ? (
+                  <div className="space-y-3 border border-s-2 border-border border-s-signal-warn bg-card p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal-warn">
+                      {t("cab.review.correct.title")}
+                    </p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {t("cab.review.correct.lede")}
+                    </p>
+
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.correct.libelle")}
+                      </span>
+                      <input
+                        type="text"
+                        value={correction.libelle}
+                        onChange={(e) =>
+                          setCorrection((c) => (c ? { ...c, libelle: e.target.value } : c))
+                        }
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      />
+                    </label>
+                    {remarques.length > 0 ? (
+                      <ul className="space-y-0.5 text-[11px] text-signal-warn">
+                        {remarques.map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan.data ?? []} />
+                    <InkTable
+                      caption={t("cab.review.correct.title")}
+                      head={[
+                        t("pme.journal.account"),
+                        t("pme.journal.debit"),
+                        t("pme.journal.credit"),
+                      ]}
+                    >
+                      {correction.lignes.map((ligne, index) => (
+                        <InkTableRow key={ligne.ordinal}>
+                          <InkCell>
+                            <SaisieDeCompte
+                              valeur={ligne.compte}
+                              onChange={(code) =>
+                                setCorrection((c) =>
+                                  c
+                                    ? {
+                                        ...c,
+                                        lignes: c.lignes.map((l, i) =>
+                                          i === index ? { ...l, compte: code } : l,
+                                        ),
+                                      }
+                                    : c,
+                                )
+                              }
+                              plan={plan.data ?? []}
+                              label={t("pme.journal.account")}
+                              inconnuLabel={t("cab.review.correct.unknown")}
+                              listeId={LISTE_DES_COMPTES}
+                              collectifLabel={t("plan.collectif.court")}
+                              originesLabels={{
+                                officiel: t("plan.origin.officiel"),
+                                extension: t("plan.origin.extension"),
+                                cabinet: t("plan.origin.cabinet"),
+                              }}
+                            />
+                          </InkCell>
+                          <InkCell numeric>{ligne.debit}</InkCell>
+                          <InkCell numeric>{ligne.credit}</InkCell>
+                        </InkTableRow>
+                      ))}
+                    </InkTable>
+
+                    <p className="text-[11px] text-muted-foreground">
+                      {t("cab.review.correct.motif.needed")}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      <ActionButton
+                        variant="ink"
+                        disabled={!correctionPrete || corriger.isPending}
+                        onClick={() => corriger.mutate()}
+                      >
+                        {corriger.isPending ? t("common.loading") : t("cab.review.correct.apply")}
+                      </ActionButton>
+                      <ActionButton
+                        disabled={corriger.isPending}
+                        onClick={() => setCorrection(null)}
+                      >
+                        {t("cab.review.correct.cancel")}
+                      </ActionButton>
+                    </div>
+                  </div>
+                ) : null}
+
+                {reversal ? (
+                  <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
+                    <p className="font-medium">{reversal.libelle}</p>
+                    <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
+                  </div>
+                ) : null}
+
+                {done ? (
+                  <p className="border border-border bg-card px-3 py-3 text-[13px]">
+                    {done === "valide"
+                      ? t("cab.review.done.valide")
+                      : done === "corrige"
+                        ? t("cab.review.done.corrige")
+                        : t("cab.review.done.retourne")}
+                  </p>
+                ) : (
+                  <div className="space-y-3 border border-border bg-card p-3">
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.motif")}
+                      </span>
+                      <select
+                        value={motifId}
+                        onChange={(e) => setMotifId(e.target.value)}
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      >
+                        <option value="">{t("cab.review.motif.choose")}</option>
+                        {(motifs.data ?? []).map((motif) => (
+                          <option key={motif.id} value={motif.id}>
+                            {motif.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {t("cab.review.note")}
+                      </span>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        rows={3}
+                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
+                      />
+                    </label>
+
+                    {noteMissing ? (
+                      <p className="text-[11px] text-signal-warn">
+                        {t("cab.review.note.required")}
+                      </p>
+                    ) : null}
+
+                    <StickyActions>
+                      <ActionButton
+                        variant="ink"
+                        disabled={review.isPending}
+                        onClick={() => review.mutate("valide")}
+                      >
+                        {t("cab.review.validate")}
+                      </ActionButton>
+                      <ActionButton
+                        disabled={review.isPending || !motifId || noteMissing}
+                        onClick={() => review.mutate("retourne")}
+                      >
+                        {t("cab.review.return")}
+                      </ActionButton>
+                      {correction ? null : (
+                        <ActionButton
+                          disabled={review.isPending}
+                          onClick={() => setCorrection(correctionDepuis(booked, libellePropose))}
+                        >
+                          {t("cab.review.correct.open")}
+                        </ActionButton>
+                      )}
+                    </StickyActions>
+                  </div>
+                )}
+              </>
+            )}
+
+            <SectionTitle>{t("cab.review.audit")}</SectionTitle>
+            {(audit.data ?? []).length === 0 ? (
+              <EmptyState>{t("cab.review.audit.empty")}</EmptyState>
+            ) : (
+              <ul className="grid gap-px border border-border bg-border text-[12px]">
+                {(audit.data ?? []).map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
+                  >
+                    <span>{libelleDeLAction(entry.action, t)}</span>
+                    <span className="num shrink-0 text-muted-foreground">
+                      {new Intl.DateTimeFormat(locale, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).format(new Date(entry.at))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       </div>
 
@@ -1171,21 +1271,79 @@ function grouperLesSignalements(
  * La facture constate une dette, le règlement l'éteint. L'expert voit donc
  * les deux, séparément, et c'est lui qui inscrit.
  */
-function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; pieceId: string }) {
+/**
+ * L'annulation d'un règlement que la PME a demandée, dans un dossier confié :
+ * la contre-passation est proposée, l'expert l'inscrit (24 octobre 2026).
+ * Tant qu'elle ne l'est pas, le règlement d'origine compte encore : l'écran
+ * ne dit donc pas « sans effet comptable ».
+ */
+function AnnulationAInscrire({ ecritureId, pieceId }: { ecritureId: string; pieceId: string }) {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const inscrire = useMutation({
+    mutationFn: () => office().office.book(ecritureId),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
+        qc.invalidateQueries({ queryKey: ["paiements", pieceId] }),
+      ]);
+    },
+  });
+  return (
+    <div className="mt-1.5">
+      <p className="text-[11.5px] text-signal-warn">
+        {t("cab.review.paiement.annulationAInscrire")}
+      </p>
+      <button
+        type="button"
+        onClick={() => inscrire.mutate()}
+        disabled={inscrire.isPending || inscrire.isSuccess}
+        className="mt-1 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+      >
+        {inscrire.isPending ? t("common.loading") : t("cab.review.paiement.inscrireAnnulation")}
+      </button>
+      {inscrire.error ? (
+        <p role="alert" className="mt-1 text-[11.5px] text-signal-stop">
+          {inscrire.error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function EcritureDuReglement({
+  paiementId,
+  pieceId,
+  plan,
+}: {
+  paiementId: string;
+  pieceId: string;
+  plan: readonly CompteDuPlan[];
+}) {
   const { t, locale } = useI18n();
   const qc = useQueryClient();
+  const [qualification, setQualification] = useState<QualificationDeRetenue>();
+  const [codes, setCodes] = useState<string[]>([]);
+  const [base, setBase] = useState("");
+  const [tva, setTva] = useState("");
+  const [assietteIR, setAssietteIR] = useState("");
+  const [justification, setJustification] = useState("");
+  // Sous le seuil, rien n'est demandé ; le comptable peut quand même déclarer
+  // une retenue sans seuil (honoraires, loyers, non-résidents).
+  const [declarer, setDeclarer] = useState(false);
   const proposition = useQuery({
-    queryKey: ["reglement", paiementId],
-    queryFn: () => office().office.propositionDeReglement(paiementId),
+    queryKey: ["reglement", paiementId, qualification],
+    queryFn: () => office().office.propositionDeReglement(paiementId, qualification),
   });
   const inscrire = useMutation({
     // Proposer ET comptabiliser, une fois : l'écriture du règlement entre au
     // journal et au FEC, et redemander rend la même (ANO-006).
-    mutationFn: () => office().office.inscrireLeReglement(paiementId),
+    mutationFn: () => office().office.inscrireLeReglement(paiementId, qualification),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
         qc.invalidateQueries({ queryKey: ["reglement", paiementId] }),
+        qc.invalidateQueries({ queryKey: ["paiements", pieceId] }),
       ]);
     },
   });
@@ -1194,7 +1352,27 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
   const r = proposition.data;
   if (!r) return null;
 
-  if (!r.ok) return <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>;
+  if (!r.ok)
+    return (
+      <div>
+        <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>
+        {qualification ? (
+          <button type="button" onClick={() => setQualification(undefined)}>
+            {t("cab.retenue.edit")}
+          </button>
+        ) : null}
+      </div>
+    );
+
+  const saisie = qualificationSaisie({
+    codes,
+    base: base || r.ttc || "",
+    tva,
+    assietteIR,
+    justification,
+    paye: r.paye,
+    motifExige: r.retenue.cas === "a_confirmer",
+  });
 
   return (
     <div className="mt-2 border-s-2 border-border ps-2.5">
@@ -1202,11 +1380,140 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
         {t("cab.review.reglement")} · {r.ecriture.journal} · {r.ecriture.dateEcriture}
       </p>
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
-      {/*
-       * La retenue à la source, CONSTATÉE sur le payé (19 octobre 2026) : le
-       * Socle ne la suppose jamais. Opérée, elle a sa ligne ; due et non
-       * opérée, l'expert le lit ici — le payeur en reste redevable.
-       */}
+      {!r.inscrite &&
+      !qualification &&
+      r.retenue.cas === "sans_objet" &&
+      !declarer &&
+      r.tauxDisponibles.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setDeclarer(true)}
+          className="mt-1 text-[11.5px] font-medium underline underline-offset-2"
+        >
+          {t("cab.retenue.declarer")}
+        </button>
+      ) : null}
+      {!r.inscrite && (r.retenue.cas === "a_confirmer" || (declarer && !qualification)) ? (
+        <fieldset className="my-3 min-w-0 space-y-2 rounded-lg border border-border p-3">
+          <legend className="px-1 text-[12px] font-medium">{t("cab.retenue.qualify")}</legend>
+          <select
+            aria-label={t("cab.retenue.withholding")}
+            className="w-full border border-border bg-background p-2 text-[12px]"
+            value={
+              codes.find((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ??
+              ""
+            }
+            onChange={(e) =>
+              setCodes([
+                ...codes.filter(
+                  (c) => r.tauxDisponibles.find((x) => x.code === c)?.famille === "tva",
+                ),
+                ...(e.target.value ? [e.target.value] : []),
+              ])
+            }
+          >
+            <option value="">{t("cab.retenue.noWithholding")}</option>
+            {r.tauxDisponibles
+              .filter((x) => x.famille !== "tva")
+              .map((x) => (
+                <option key={x.code} value={x.code}>
+                  {x.libelle}
+                </option>
+              ))}
+          </select>
+          {r.tauxDisponibles
+            .filter((x) => x.famille === "tva")
+            .map((x) => (
+              <label key={x.code} className="flex items-center gap-2 text-[12px]">
+                <input
+                  type="checkbox"
+                  checked={codes.includes(x.code)}
+                  onChange={(e) =>
+                    setCodes(
+                      e.target.checked ? [...codes, x.code] : codes.filter((c) => c !== x.code),
+                    )
+                  }
+                />
+                {x.libelle}
+              </label>
+            ))}
+          {codes.length ? (
+            <>
+              <label className="block text-[12px]">
+                {t("cab.retenue.grossSettled")}
+                <input
+                  inputMode="decimal"
+                  className="mt-1 w-full border border-border bg-background p-2"
+                  value={base || r.ttc || ""}
+                  onChange={(e) => setBase(e.target.value)}
+                />
+              </label>
+              {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ? (
+                <label className="block text-[12px]">
+                  {t("cab.retenue.irBase")}
+                  <input
+                    inputMode="decimal"
+                    className="mt-1 w-full border border-border bg-background p-2"
+                    value={assietteIR || base || r.ttc || ""}
+                    onChange={(e) => setAssietteIR(e.target.value)}
+                  />
+                </label>
+              ) : null}
+              {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.base === "tva") ? (
+                <label className="block text-[12px]">
+                  {t("cab.retenue.vatSettled")}
+                  <input
+                    inputMode="decimal"
+                    className="mt-1 w-full border border-border bg-background p-2"
+                    value={tva}
+                    onChange={(e) => setTva(e.target.value)}
+                  />
+                </label>
+              ) : null}
+            </>
+          ) : null}
+          {/*
+           * Le certificat se justifie quand une retenue est OPÉRÉE. « Sans
+           * retenue » sous le seuil n'a rien à justifier ; au-dessus du seuil,
+           * ne rien retenir est une décision et se motive (exonération,
+           * attestation, nature de l'opération).
+           */}
+          <label className="block text-[12px]">
+            {t("cab.retenue.taxEvidence")}
+            <input
+              className="mt-1 w-full border border-border bg-background p-2"
+              value={justification}
+              required={saisie.avecRetenue || r.retenue.cas === "a_confirmer"}
+              onChange={(e) => setJustification(e.target.value)}
+            />
+          </label>
+          {saisie.illisible ? (
+            <p role="alert" className="text-[11.5px] text-signal-warn">
+              {t("cab.retenue.montantIllisible")}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            disabled={!saisie.qualification}
+            className="h-8 border border-border px-3 text-[12px] disabled:opacity-40"
+            onClick={() => saisie.qualification && setQualification(saisie.qualification)}
+          >
+            {t("cab.retenue.preview")}
+          </button>
+        </fieldset>
+      ) : null}
+      {r.inscrite && r.retenue.cas === "a_confirmer" ? (
+        <p className="my-2 text-[12px] text-signal-warn">{t("cab.retenue.unconfirmed")}</p>
+      ) : null}
+      {qualification && !r.inscrite ? (
+        <button
+          type="button"
+          className="my-2 text-[12px] underline"
+          onClick={() => setQualification(undefined)}
+        >
+          {t("cab.retenue.edit")}
+        </button>
+      ) : null}
       {r.retenue.cas === "operee"
         ? (() => {
             const ttc = montant(r.retenue.ttc, locale);
@@ -1221,15 +1528,17 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
             ));
           })()
         : null}
-      {r.retenue.cas === "non_operee" ? (
-        <p className="mt-0.5 text-[11.5px] text-signal-warn">
-          {t("cab.review.reglement.retenueNonOperee", { ttc: montant(r.retenue.ttc, locale) })}
-        </p>
+      {r.retenue.cas === "sans_objet" ? (
+        <p className="mt-0.5 text-[11.5px] text-muted-foreground">{t("cab.retenue.sansObjet")}</p>
       ) : null}
       <ul className="mt-1">
         {r.ecriture.lignes.map((l, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3 text-[12px]">
-            <span className="num">{l.account_code}</span>
+            <LigneDuCompte
+              code={l.account_code}
+              intitule={libelleDuCompte(plan, l.account_code)}
+              libelle={l.libelle}
+            />
             <span className="num shrink-0">
               {Number(l.debit) > 0
                 ? `${montant(l.debit, locale)} D`
@@ -1246,7 +1555,7 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
         <button
           type="button"
           onClick={() => inscrire.mutate()}
-          disabled={inscrire.isPending || inscrire.isSuccess}
+          disabled={inscrire.isPending || inscrire.isSuccess || r.retenue.cas === "a_confirmer"}
           className="mt-1.5 h-7 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
         >
           {inscrire.isPending ? t("common.loading") : t("cab.review.reglement.inscrire")}
@@ -1258,6 +1567,77 @@ function EcritureDuReglement({ paiementId, pieceId }: { paiementId: string; piec
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Ce que la saisie du traitement fiscal permet d'envoyer au moteur.
+ *
+ * Les montants sont relus par `saisieDecimale` : « 1 234,500 », tel que
+ * l'écran l'affiche, devient « 1234.500 ». Un montant illisible n'est pas
+ * envoyé — le moteur le refuserait, et la personne ne saurait pas lequel.
+ * Sans retenue, la base réglée est le payé déclaré, et aucune justification
+ * n'est exigée.
+ */
+function qualificationSaisie(s: {
+  codes: string[];
+  base: string;
+  tva: string;
+  assietteIR: string;
+  justification: string;
+  paye: string;
+  /** Au-dessus d'un seuil, ne rien retenir se motive aussi. */
+  motifExige: boolean;
+}): { avecRetenue: boolean; illisible: boolean; qualification: QualificationDeRetenue | null } {
+  const avecRetenue = s.codes.length > 0;
+  const facultatif = (v: string) => (v.trim() ? saisieDecimale(v) : null);
+  const baseReglee = avecRetenue ? saisieDecimale(s.base) : s.paye;
+  const tvaReglee = facultatif(s.tva);
+  const assietteIR = facultatif(s.assietteIR);
+  const illisible =
+    avecRetenue &&
+    (baseReglee === null ||
+      (s.tva.trim() !== "" && tvaReglee === null) ||
+      (s.assietteIR.trim() !== "" && assietteIR === null));
+  const justification = s.justification.trim();
+  const pret =
+    !illisible && baseReglee !== null && ((!avecRetenue && !s.motifExige) || justification !== "");
+  return {
+    avecRetenue,
+    illisible,
+    qualification: pret
+      ? { codes: s.codes, baseReglee, tvaReglee, assietteIR, justification }
+      : null,
+  };
+}
+
+/**
+ * L'intitulé du compte ET le libellé de la ligne.
+ *
+ * L'un dit OÙ va le montant (« 4011 Fournisseurs »), l'autre POURQUOI
+ * (« Retenue 1,5 % / tiers ») : remplacer le second par le premier perdait
+ * ce qui distingue deux lignes sur le même compte. Le libellé n'est répété
+ * que s'il apporte autre chose que l'intitulé.
+ */
+function LigneDuCompte({
+  code,
+  intitule,
+  libelle,
+}: {
+  code: string;
+  intitule: string | null;
+  libelle: string;
+}) {
+  const { t } = useI18n();
+  const propre = libelle.trim();
+  return (
+    <span className="min-w-0">
+      <span className="num">{code}</span>{" "}
+      <span className="text-muted-foreground">{intitule ?? t("cab.biblio.accountUnknown")}</span>
+      {propre && propre !== intitule ? (
+        <span className="block text-[11.5px] text-text-2">{propre}</span>
+      ) : null}
+    </span>
   );
 }
 

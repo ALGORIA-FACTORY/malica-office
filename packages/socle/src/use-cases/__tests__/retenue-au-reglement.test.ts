@@ -1,165 +1,103 @@
-/**
- * La retenue à la source se constate sur le règlement — elle ne se suppose pas.
- *
- * 19 octobre 2026 : un achat de 1 969,610 DT payé par chèque s'écrivait
- * 401 / 532 pour le tout. Au-dessus du seuil de l'article 52-I-g, l'acheteur
- * retient une part du prix : le chèque ne porte que le net.
- *
- * Les taux et le seuil sont ceux que le référentiel rendrait ; aucun n'est
- * écrit dans le moteur (R4).
- */
 import { describe, expect, it } from "vitest";
-
 import { construireReglement, type EntreeReglement } from "../ecriture-de-reglement.ts";
-import { constaterLaRetenue, type TauxDeRetenue } from "../retenue-au-reglement.ts";
+import {
+  constaterLaRetenue,
+  lireLaQualification,
+  RetenueNonQualifiee,
+} from "../retenue-au-reglement.ts";
 
-const TAUX: TauxDeRetenue[] = [
-  { code: "RAS_MARCHES_ACQUISITIONS", taux: "0.015", libelle: "RAS acquisitions 1,5 %" },
-  { code: "RAS_MARCHES_TAUX_REDUIT_1", taux: "0.01", libelle: "RAS acquisitions 1 %" },
-  { code: "RAS_MARCHES_TAUX_REDUIT_05", taux: "0.005", libelle: "RAS acquisitions 0,5 %" },
-];
-const BASE = { seuil: "1000", taux: TAUX, decimales: 3 };
+const BASE = {
+  ttc: "2000.000",
+  paye: "1970.000",
+  seuil: null,
+  decimales: 3,
+  taux: [
+    { code: "IR", taux: "0.015", libelle: "Retenue IR", seuil: "1000", famille: "ir" as const },
+    {
+      code: "TVA",
+      taux: "0.25",
+      libelle: "TVA retenue",
+      base: "tva" as const,
+      famille: "tva" as const,
+    },
+  ],
+};
+const q = {
+  codes: ["IR"],
+  baseReglee: "2000.000",
+  justification: "Certificat RS-1, opération qualifiée",
+};
 
-describe("constater la retenue d'un règlement", () => {
-  it("le chèque porte le net à 1,5 % : la retenue a été opérée", () => {
-    // 1 969,610 × 1,5 % = 29,544 ; le net est 1 940,066.
-    const c = constaterLaRetenue({ ...BASE, ttc: "1969.610", paye: "1940.066" });
-    expect(c).toMatchObject({ cas: "operee", code: "RAS_MARCHES_ACQUISITIONS", montant: "29.544" });
+describe("retenue explicitement qualifiée", () => {
+  it("1970 sur 2000 ne prouve jamais une retenue de 30", () => {
+    expect(constaterLaRetenue(BASE)).toEqual({ cas: "a_confirmer" });
   });
-
-  it("le payé dit lequel des taux a servi : 1 % ici", () => {
-    const c = constaterLaRetenue({ ...BASE, ttc: "2000.000", paye: "1980.000" });
-    expect(c).toMatchObject({
-      cas: "operee",
-      code: "RAS_MARCHES_TAUX_REDUIT_1",
-      montant: "20.000",
-    });
+  it("le seuil ne suffit pas à rendre un impôt applicable", () => {
+    expect(constaterLaRetenue({ ...BASE, paye: BASE.ttc })).toEqual({ cas: "a_confirmer" });
   });
-
-  it("payé pour le TTC entier au-dessus du seuil : rien n'a été retenu, et on le dit", () => {
-    expect(constaterLaRetenue({ ...BASE, ttc: "1969.610", paye: "1969.610" })).toEqual({
-      cas: "non_operee",
-      ttc: "1969.610",
-    });
-  });
-
-  it("sous le seuil, il n'y a rien à constater", () => {
-    expect(constaterLaRetenue({ ...BASE, ttc: "999.999", paye: "985.000" })).toEqual({
-      cas: "sans_objet",
-    });
-  });
-
-  it("le seuil s'entend « égal ou supérieur »", () => {
-    expect(constaterLaRetenue({ ...BASE, ttc: "1000.000", paye: "985.000" }).cas).toBe("operee");
-  });
-
-  it("un acompte ne se lit pas comme une retenue", () => {
-    expect(constaterLaRetenue({ ...BASE, ttc: "1969.610", paye: "1000.000" })).toEqual({
-      cas: "sans_objet",
-    });
-  });
-
-  it("sans référentiel, le moteur ne conclut rien", () => {
+  it("un paiement partiel sans retenue conserve 30 de dette", () => {
     expect(
-      constaterLaRetenue({
-        ttc: "1969.610",
-        paye: "1940.066",
-        seuil: null,
-        taux: [],
-        decimales: 3,
-      }),
+      constaterLaRetenue({ ...BASE, qualification: { ...q, codes: [], baseReglee: "1970.000" } }),
     ).toEqual({ cas: "sans_objet" });
   });
-
-  it("l'arrondi d'un millime n'empêche pas de constater", () => {
-    // 1 234,567 × 1,5 % = 18,518505 → 18,519 ; un payeur qui arrondit à
-    // 18,518 paie 1 216,049. Les deux se reconnaissent.
-    expect(constaterLaRetenue({ ...BASE, ttc: "1234.567", paye: "1216.049" })).toMatchObject({
+  it("une retenue qualifiée a le montant calculé, sans ajustement", () => {
+    expect(constaterLaRetenue({ ...BASE, qualification: q })).toMatchObject({
       cas: "operee",
-      montant: "18.518",
+      montant: "30.000",
     });
   });
-});
-
-/** Le catalogue complet du 20 octobre, tel que la base le rendrait. */
-const TOUS: TauxDeRetenue[] = [
-  { code: "RAS_MARCHES_ACQUISITIONS", taux: "0.015", libelle: "RAS 1,5 %", seuil: "1000" },
-  { code: "RAS_MARCHES_TAUX_REDUIT_1", taux: "0.01", libelle: "RAS 1 %", seuil: "1000" },
-  { code: "RAS_HONORAIRES", taux: "0.1", libelle: "RAS 10 % honoraires", seuil: null },
-  { code: "RAS_HONORAIRES_REEL", taux: "0.03", libelle: "RAS 3 % honoraires", seuil: null },
-  { code: "RAS_HOTELS", taux: "0.05", libelle: "RAS 5 % — à qualifier", seuil: null },
-  {
-    code: "rs_tva_publique",
-    taux: "0.25",
-    libelle: "TVA retenue 25 %",
-    base: "tva",
-    famille: "tva",
-    seuil: "1000",
-  },
-];
-
-describe("toutes les retenues à la source (20 octobre 2026)", () => {
-  const base = { seuil: null, taux: TOUS, decimales: 3 };
-
-  it("des honoraires payés à 90 % : la retenue de 10 %, sans seuil", () => {
-    const c = constaterLaRetenue({ ...base, ttc: "595.000", tva: "95.000", paye: "535.500" });
-    expect(c).toMatchObject({ cas: "operee", code: "RAS_HONORAIRES", montant: "59.500" });
+  it("une retenue sur un versement partiel utilise sa part brute", () => {
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        paye: "985.000",
+        qualification: { ...q, baseReglee: "1000.000" },
+      }),
+    ).toMatchObject({ cas: "operee", montant: "15.000", ttc: "1000.000" });
   });
 
-  it("des honoraires au régime réel : 3 %", () => {
-    const c = constaterLaRetenue({ ...base, ttc: "1190.000", tva: "190.000", paye: "1154.300" });
-    expect(c).toMatchObject({ cas: "operee", code: "RAS_HONORAIRES_REEL", montant: "35.700" });
+  it("distingue l'assiette qualifiée de la dette brute, sans taxer une somme exclue", () => {
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        ttc: "2001.000",
+        paye: "1971.000",
+        qualification: { ...q, baseReglee: "2001.000", assietteIR: "2000.000" },
+      }),
+    ).toMatchObject({ cas: "operee", montant: "30.000", ttc: "2001.000" });
   });
-
-  it("un ministère retient l'impôt ET 25 % de la TVA : deux retenues, une seule écriture", () => {
-    // 2 380 TTC dont 380 de TVA : 1,5 % × 2 380 = 35,700 ; 25 % × 380 = 95,000.
-    const c = constaterLaRetenue({ ...base, ttc: "2380.000", tva: "380.000", paye: "2249.300" });
-    expect(c.cas).toBe("operee");
-    if (c.cas !== "operee") return;
-    expect(c.retenues.map((r) => [r.code, r.famille, r.montant])).toEqual([
-      ["RAS_MARCHES_ACQUISITIONS", "ir", "35.700"],
-      ["rs_tva_publique", "tva", "95.000"],
-    ]);
-    expect(c.montant).toBe("130.700");
+  it("l'impôt et la TVA retenue sont explicitement cumulés", () => {
+    const c = constaterLaRetenue({
+      ...BASE,
+      ttc: "2380.000",
+      tva: "380.000",
+      paye: "2249.300",
+      qualification: { ...q, codes: ["IR", "TVA"], baseReglee: "2380.000", tvaReglee: "380.000" },
+    });
+    expect(c).toMatchObject({ cas: "operee", montant: "130.700" });
+    if (c.cas === "operee") expect(c.retenues.map((r) => r.montant)).toEqual(["35.700", "95.000"]);
   });
-
-  it("des honoraires payés en entier ne se signalent pas : la nature ne se lit pas sur le chèque", () => {
-    expect(constaterLaRetenue({ ...base, ttc: "595.000", tva: "95.000", paye: "595.000" })).toEqual(
-      {
-        cas: "sans_objet",
-      },
+  it.each([
+    { ...q, codes: ["INCONNU"] },
+    { ...q, codes: ["IR", "IR"] },
+    { ...q, justification: " " },
+    { ...q, baseReglee: "2100.000" },
+    { ...q, baseReglee: "2000.0001" },
+    { ...q, codes: ["TVA"], tvaReglee: "381.000" },
+  ])("refuse une qualification invalide : %j", (qualification) => {
+    expect(() => constaterLaRetenue({ ...BASE, tva: "380.000", qualification })).toThrow(
+      RetenueNonQualifiee,
     );
   });
-
-  it("au-dessus du seuil des acquisitions, payé en entier : signalé", () => {
-    expect(
-      constaterLaRetenue({ ...base, ttc: "2380.000", tva: "380.000", paye: "2380.000" }).cas,
-    ).toBe("non_operee");
+  it("ne modifie pas une taxe d'un millime pour expliquer le net", () => {
+    expect(() => constaterLaRetenue({ ...BASE, paye: "1970.001", qualification: q })).toThrow(
+      /ne correspondent/,
+    );
   });
-
-  it("sans TVA lue, la retenue de TVA n'est pas essayée", () => {
-    const c = constaterLaRetenue({ ...base, ttc: "2380.000", tva: null, paye: "2249.300" });
-    expect(c.cas).toBe("sans_objet");
-  });
-
-  it("deux retenues s'écrivent sur leurs deux comptes, et l'écriture s'équilibre", () => {
-    const e = construireReglement({
-      ...ACHAT,
-      sens: "facture_vente",
-      counterpartyAccount: "411",
-      montant: "2249.300",
-      retenue: null,
-      retenues: [
-        { montant: "35.700", compte: "4341", libelle: "RAS 1,5 %" },
-        { montant: "95.000", compte: "43668", libelle: "TVA retenue 25 %" },
-      ],
-    });
-    expect(e.lignes.map((l) => [l.account_code, l.debit, l.credit])).toEqual([
-      ["532", "2249.300", "0.000"],
-      ["4341", "35.700", "0.000"],
-      ["43668", "95.000", "0.000"],
-      ["411", "0.000", "2380.000"],
-    ]);
+  it("refuse la TVA retenue sans TVA connue", () => {
+    expect(() => constaterLaRetenue({ ...BASE, qualification: { ...q, codes: ["TVA"] } })).toThrow(
+      /TVA/,
+    );
   });
 });
 
@@ -167,6 +105,7 @@ const ACHAT: EntreeReglement = {
   sens: "facture_achat",
   montant: "1940.066",
   devise: "TND",
+  decimales: 3,
   payeLe: "2026-10-13",
   moyenLibelle: "Chèque",
   tresorerieAccount: "532",
@@ -218,5 +157,88 @@ describe("l'écriture d'un règlement avec retenue", () => {
     expect(() =>
       construireReglement({ ...ACHAT, retenue: { montant: "29.544", compte: "", libelle: "x" } }),
     ).toThrow(/retenue/);
+  });
+});
+
+/*
+ * Décision du 24 octobre 2026 (Wissem Barouni) : sous le seuil légal, aucune
+ * qualification n'est demandée. Un taux sans seuil (honoraires) ne déclenche
+ * pas la question à lui seul : le règlement ne connaît pas la nature de
+ * l'opération, le comptable la déclare s'il le faut.
+ */
+describe("sous le seuil, aucune question", () => {
+  const AVEC_HONORAIRES = {
+    ...BASE,
+    taux: [
+      ...BASE.taux,
+      { code: "HON", taux: "0.10", libelle: "Honoraires", seuil: null, famille: "ir" as const },
+    ],
+  };
+  it("un paiement de 50 sous le seuil de 1 000 n'appelle aucune qualification", () => {
+    expect(constaterLaRetenue({ ...AVEC_HONORAIRES, ttc: "50.000", paye: "50.000" })).toEqual({
+      cas: "sans_objet",
+    });
+  });
+  it("au seuil exactement, la question est posée (montant égal ou supérieur)", () => {
+    expect(constaterLaRetenue({ ...AVEC_HONORAIRES, ttc: "1000.000", paye: "1000.000" })).toEqual({
+      cas: "a_confirmer",
+    });
+  });
+  it("sous le seuil, le comptable peut quand même déclarer une retenue sans seuil", () => {
+    expect(
+      constaterLaRetenue({
+        ...AVEC_HONORAIRES,
+        ttc: "500.000",
+        paye: "450.000",
+        qualification: { codes: ["HON"], baseReglee: "500.000", justification: "Certificat H-1" },
+      }),
+    ).toMatchObject({ cas: "operee", montant: "50.000" });
+  });
+  it("sous le seuil, « sans retenue » n'exige aucun texte", () => {
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        ttc: "500.000",
+        paye: "500.000",
+        qualification: { codes: [], baseReglee: "500.000", justification: "" },
+      }),
+    ).toEqual({ cas: "sans_objet" });
+  });
+  it("au-dessus du seuil, « sans retenue » se motive", () => {
+    expect(() =>
+      constaterLaRetenue({
+        ...BASE,
+        paye: BASE.ttc,
+        qualification: { codes: [], baseReglee: BASE.ttc, justification: "" },
+      }),
+    ).toThrow(/pourquoi aucune retenue/);
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        paye: BASE.ttc,
+        qualification: {
+          codes: [],
+          baseReglee: BASE.ttc,
+          justification: "Attestation d'exonération n° 2026-118",
+        },
+      }),
+    ).toEqual({ cas: "sans_objet" });
+  });
+  it("une retenue déclarée exige sa référence", () => {
+    expect(() =>
+      constaterLaRetenue({ ...BASE, qualification: { ...q, justification: "  " } }),
+    ).toThrow(RetenueNonQualifiee);
+  });
+});
+
+describe("la qualification reçue est relue", () => {
+  it("garde ses seuls champs connus", () => {
+    expect(lireLaQualification({ ...q, tvaReglee: null })).toEqual({ ...q, tvaReglee: null });
+  });
+  it("refuse un champ étranger, qui finirait sinon dans l'audit", () => {
+    expect(() => lireLaQualification({ ...q, note: "<script>" })).toThrow(RetenueNonQualifiee);
+  });
+  it("refuse un montant qui n'est pas un texte", () => {
+    expect(() => lireLaQualification({ ...q, baseReglee: 2000 })).toThrow(RetenueNonQualifiee);
   });
 });

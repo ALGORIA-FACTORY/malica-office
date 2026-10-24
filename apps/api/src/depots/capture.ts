@@ -1,3 +1,4 @@
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /**
  * La capture — pièces, plan de tokens, citations, lecture citée.
  *
@@ -26,7 +27,7 @@ import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import type { EtatDUnTravail } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece } from "../scan/analyse.ts";
+import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { referentiel } from "./referentiel.ts";
@@ -1160,16 +1161,50 @@ export const capture = {
   /** Les paiements d'une pièce, du plus ancien au plus récent. */
   async paiementsDUnePiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select id, moyen_code, montant_mineur, devise, paye_le,
-              justificatif_piece_id, created_at, reference,
-              annule_paiement_id, eteint
-         from paiements_v where piece_id = $1 order by created_at`,
+      `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
+              p.justificatif_piece_id, p.created_at, p.reference,
+              p.annule_paiement_id, p.eteint, p.pack_version_id,
+              app.dette_eteinte(p.id)::text as brut,
+              (select e.id from ecritures_v e
+                where e.paiement_id = p.id and e.nature = 'reglement'
+                  and e.reverses_id is not null and e.status = 'proposee'
+                order by e.created_at desc limit 1) as annulation_a_inscrire
+         from paiements_v p
+        where p.piece_id = $1 order by p.created_at`,
       [pieceId],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
+    /*
+     * La dette éteinte se lit par `app.dette_eteinte`, la même fonction que la
+     * proposition de règlement ; ses décimales par `lireParametres`, au
+     * paramétrage daté du jour du paiement, comme la proposition. Ces deux
+     * lectures étaient recopiées ici, et la copie des décimales relisait
+     * `ref.socle_params` à la main (24 octobre 2026).
+     */
+    const decimalesAu = new Map<string, Promise<number>>();
+    const decimales = (pack: string, jour: string) => {
+      const cle = `${pack}|${jour}`;
+      let d = decimalesAu.get(cle);
+      if (!d) {
+        d = lireParametres(db, pack, jour).then((p) => p["money.decimals"]);
+        decimalesAu.set(cle, d);
+      }
+      return d;
+    };
+    const lignes = rows as Record<string, unknown>[];
+    const dettes = await Promise.all(
+      lignes.map(async (r) => {
+        const brut = r["brut"] as string | null;
+        const jour = r["paye_le"] as string | null;
+        if (brut == null || jour == null) return null;
+        const d = await decimales(r["pack_version_id"] as string, jour);
+        return Number(enUnitesExactes(brut, d));
+      }),
+    );
+    return lignes.map((r, i) => ({
       id: r["id"] as string,
       moyenCode: r["moyen_code"] as string,
       montantMineur: r["montant_mineur"] === null ? null : Number(r["montant_mineur"]),
+      detteEteinteMineur: dettes[i] ?? null,
       devise: r["devise"] as string,
       payeLe: (r["paye_le"] as string | null) ?? null,
       justificatifPieceId: (r["justificatif_piece_id"] as string | null) ?? null,
@@ -1186,6 +1221,8 @@ export const capture = {
        * une seule définition, un seul endroit.
        */
       eteint: Boolean(r["eteint"]),
+      /** La contre-passation proposée qui attend l'expert du dossier. */
+      annulationAInscrire: (r["annulation_a_inscrire"] as string | null) ?? null,
     }));
   },
 

@@ -73,7 +73,7 @@ describe("l'écriture proposée", () => {
   });
 
   it("omet la référence absente au lieu d'inventer", () => {
-    expect(proposer(factureVenteSimple()).libelle).toBe("Vente — Client SA — du 10/07/2026");
+    expect(proposer(factureVenteSimple()).libelle).toBe("Vente — du 10/07/2026");
   });
 });
 

@@ -35,6 +35,7 @@ import {
   Gauge,
   Inbox,
   Landmark,
+  Library,
   ListChecks,
   Menu,
   ScanSearch,
@@ -320,6 +321,7 @@ function Coquille({
       key: "portefeuille",
       label: t("cab.nav.group.portefeuille"),
       items: [
+        { to: "/cabinet/bibliotheque", label: t("cab.biblio.title"), icon: Library, exact: false },
         {
           to: "/cabinet/clients",
           label: t("cab.nav.clients"),

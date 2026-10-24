@@ -42,7 +42,8 @@
  * R1 : ce module ne connaît ni la base, ni le réseau, ni le modèle. Il reçoit
  * des valeurs et rend des valeurs.
  */
-import { sommeDecimale } from "../somme-decimale.ts";
+import { D } from "../domain/decimal.ts";
+import { enUnitesExactes, sommeDecimale } from "../somme-decimale.ts";
 
 /** Le sens que le moteur sait traiter. Le reste n'y entre pas. */
 export type SensDuReglement = "facture_achat" | "facture_vente";
@@ -53,6 +54,7 @@ export interface EntreeReglement {
   /** Le montant réglé, tel que le Socle le rend — jamais recalculé ici. */
   montant: string;
   devise: string;
+  decimales: number;
   /** La date du règlement, déclarée. C'est elle qui date l'écriture. */
   payeLe: string;
   /** Le libellé du moyen, tel que le pack le traduit : « Chèque », « Espèces ». */
@@ -117,7 +119,9 @@ export class ReglementIncomplet extends Error {
   }
 }
 
-const ZERO = /^-?0+([.,]0+)?$/;
+function montantPositif(montant: string): boolean {
+  return /^\d+(\.\d+)?$/.test(montant) && D(montant).isFinite() && D(montant).gt(0);
+}
 
 /**
  * Composer le libellé d'un règlement.
@@ -147,8 +151,18 @@ function composerLibelle(e: EntreeReglement): string {
  * lieu du tiers (19 octobre 2026).
  */
 export function construireReglement(e: EntreeReglement): EcritureDeReglement {
-  if (e.montant.trim() === "" || ZERO.test(e.montant.trim()))
-    throw new ReglementIncomplet("aucun montant n'a été réglé");
+  if (!Number.isInteger(e.decimales) || e.decimales < 0)
+    throw new ReglementIncomplet("la précision de la devise manque au paramétrage");
+  const exact = (valeur: string): string => {
+    try {
+      enUnitesExactes(valeur, e.decimales);
+    } catch {
+      throw new ReglementIncomplet("un montant dépasse la précision de la devise");
+    }
+    return sommeDecimale([valeur], e.decimales);
+  };
+  const zero = D(0).toFixed(e.decimales);
+  if (!montantPositif(e.montant)) throw new ReglementIncomplet("aucun montant n'a été réglé");
   if (e.payeLe.trim() === "")
     throw new ReglementIncomplet("la date du règlement n'est pas renseignée");
   if (e.tresorerieAccount.trim() === "")
@@ -160,31 +174,34 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
 
   // Le montant tel qu'il est rendu, normalisé une seule fois — et jamais
   // recalculé : il vient du Socle, qui l'a déjà tranché.
-  const montant = sommeDecimale([e.montant]);
+  const montant = exact(e.montant);
   const libelle = composerLibelle(e);
 
   // Une retenue (19 octobre) ou plusieurs (20 octobre : impôt ET TVA retenus
   // par un payeur public).
   const rs = e.retenues ?? (e.retenue ? [e.retenue] : []);
-  for (const r of rs)
+  for (const r of rs) {
+    if (!montantPositif(r.montant))
+      throw new ReglementIncomplet("le montant de retenue est invalide");
     if (r.compte.trim() === "")
       throw new ReglementIncomplet(
         `le compte de la retenue « ${r.libelle} » n'est pas au paramétrage`,
       );
+  }
   // La dette éteinte : le net réglé, plus les retenues.
-  const eteint = sommeDecimale([e.montant, ...rs.map((r) => r.montant)]);
+  const eteint = sommeDecimale([e.montant, ...rs.map((r) => exact(r.montant))], e.decimales);
 
   const tresorerie: LigneDeReglement = {
     account_code: e.tresorerieAccount,
     libelle: e.moyenLibelle,
-    debit: e.sens === "facture_vente" ? montant : "0.000",
-    credit: e.sens === "facture_vente" ? "0.000" : montant,
+    debit: e.sens === "facture_vente" ? montant : zero,
+    credit: e.sens === "facture_vente" ? zero : montant,
   };
   const tiers: LigneDeReglement = {
     account_code: e.counterpartyAccount,
     libelle: e.tiers ?? e.moyenLibelle,
-    debit: e.sens === "facture_achat" ? eteint : "0.000",
-    credit: e.sens === "facture_achat" ? "0.000" : eteint,
+    debit: e.sens === "facture_achat" ? eteint : zero,
+    credit: e.sens === "facture_achat" ? zero : eteint,
   };
 
   if (rs.length > 0) {
@@ -193,8 +210,8 @@ export function construireReglement(e: EntreeReglement): EcritureDeReglement {
       libelle: r.libelle,
       // À l'achat, on la doit à l'État : crédit. À la vente, le client l'a
       // versée pour nous : c'est une créance sur l'État, au débit.
-      debit: e.sens === "facture_vente" ? sommeDecimale([r.montant]) : "0.000",
-      credit: e.sens === "facture_vente" ? "0.000" : sommeDecimale([r.montant]),
+      debit: e.sens === "facture_vente" ? exact(r.montant) : zero,
+      credit: e.sens === "facture_vente" ? zero : exact(r.montant),
     }));
     return {
       journal: e.journalCode,

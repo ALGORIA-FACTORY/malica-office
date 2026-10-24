@@ -1,3 +1,4 @@
+import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue-au-reglement.ts";
 /**
  * Ports du domaine. Les écrans ne connaissent que ce vocabulaire :
  * aucune requête, aucun nom de table, aucun SQL au-delà de cette frontière.
@@ -747,6 +748,8 @@ export interface FaitDeDemande {
 
 /** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
 export interface PaiementDUnePiece {
+  /** Dette éteinte comptabilisée, net + retenues qualifiées ; jamais le montant du reçu. */
+  detteEteinteMineur?: number | null;
   id: string;
   moyenCode: string;
   /** En unités mineures. Nul quand rien n'a encore été payé. */
@@ -768,6 +771,11 @@ export interface PaiementDUnePiece {
    * endroit, et aucun ecran qui choisit.
    */
   eteint: boolean;
+  /**
+   * L'écriture d'annulation proposée qui attend l'expert, s'il y en a une :
+   * dans un dossier confié, la PME annule, l'expert inscrit (24 octobre 2026).
+   */
+  annulationAInscrire?: string | null;
 }
 
 /** Un motif d'annulation du referentiel, traduit. */
@@ -1150,14 +1158,17 @@ export interface OfficeRepository {
    * La facture constate une dette ; le reglement l'eteint. Deux faits, deux
    * dates — les confondre rend tout rapprochement bancaire impossible.
    */
-  propositionDeReglement(paiementId: string): Promise<PropositionDeReglement>;
+  propositionDeReglement(
+    paiementId: string,
+    qualification?: QualificationDeRetenue,
+  ): Promise<PropositionDeReglement>;
   /** Inscrire le reglement propose. Rend l'identifiant de l'ecriture. */
-  proposerLeReglement(paiementId: string): Promise<string>;
+  proposerLeReglement(paiementId: string, qualification?: QualificationDeRetenue): Promise<string>;
   /**
    * Proposer puis comptabiliser le règlement, en une transaction. Idempotent :
    * un règlement déjà inscrit rend son écriture.
    */
-  inscrireLeReglement(paiementId: string): Promise<string>;
+  inscrireLeReglement(paiementId: string, qualification?: QualificationDeRetenue): Promise<string>;
   /**
    * Les lignes comptabilisées entre deux dates.
    *
@@ -1291,6 +1302,15 @@ export interface StatistiquesCabinet {
 }
 
 export interface SupervisionRepository {
+  /** Bibliothèque des seules pièces transmises d'un mandat actif et affecté. */
+  documents(
+    cabinetId: string,
+    clientId: string,
+    periode: string | null,
+  ): Promise<DocumentComptable[]>;
+  /** Ferme les liens documentaires sous la même autorisation, sans inclure de pièce privée. */
+  documentsLies(cabinetId: string, clientId: string, pieces: string[]): Promise<DossierComptable>;
+  controlesPiece(cabinetId: string, pieceId: string): Promise<ControlesComptables | null>;
   statistiques(cabinetTenantId: string, locale: string): Promise<StatistiquesCabinet>;
   /** Les derniers événements d'un dossier mandaté, du plus récent au plus ancien. */
   journalDuMandat(
@@ -1312,6 +1332,64 @@ export interface SupervisionRepository {
     note?: string | null;
   }): Promise<string | null>;
   auditForPiece(pieceId: string): Promise<AuditEntry[]>;
+}
+
+export interface DocumentComptable {
+  id: string;
+  tenantId: string;
+  type: string | null;
+  status: PieceStatus;
+  reference: string | null;
+  tiers: string | null;
+  dateDocument: string | null;
+  recuLe: string;
+  /** « YYYY-MM-DD » : la date du document, sinon le jour de réception dans le fuseau de la personne. */
+  dateDeClassement: string;
+  /** SHA-256 scellée à la réception, telle qu'en base ; nulle si la pièce n'a jamais été scellée. */
+  empreinte: string | null;
+  montant: string | null;
+  devise: string;
+  sourcePieceId: string | null;
+}
+
+export interface ControlesComptables {
+  pieceId: string;
+  analyseId: string;
+  aJour: boolean;
+  controles: Array<{ code: string; statut: string; motif: string }>;
+}
+
+export interface DossierComptable {
+  documents: DocumentComptable[];
+  paiements?: Array<{
+    id: string;
+    pieceId: string;
+    moyen: string;
+    montantMineur: string | null;
+    devise: string;
+    date: string | null;
+    reference: string | null;
+    justificatifId: string | null;
+    annule: boolean;
+  }>;
+  /** Journal technique de restitution : aucun certificat fiscal n'est inventé. */
+  ecritures: Array<{
+    id: string;
+    pieceId: string;
+    paiementId: string | null;
+    nature: string;
+    journal: string;
+    date: string;
+    libelle: string;
+    statut: string;
+    compte: string;
+    compteLibelle?: string;
+    devise?: string;
+    revue?: string | null;
+    debit: string;
+    credit: string;
+  }>;
+  controles?: ControlesComptables[];
 }
 
 // ------------------------------------------------------- paramètres du Socle
@@ -2520,7 +2598,11 @@ export type PropositionDeReglement =
        * Ce que le règlement dit de la retenue à la source (19 octobre 2026) :
        * opérée (à quel taux, combien), due mais non opérée, ou sans objet.
        */
+      tauxDisponibles: TauxDeRetenue[];
+      ttc: string | null;
+      paye: string;
       retenue:
+        | { cas: "a_confirmer" }
         | {
             cas: "operee";
             code: string;
@@ -2537,7 +2619,6 @@ export type PropositionDeReglement =
               montant: string;
             }>;
           }
-        | { cas: "non_operee"; ttc: string }
         | { cas: "sans_objet" };
     }
   | { ok: false; raison: string };

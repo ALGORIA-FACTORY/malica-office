@@ -238,7 +238,26 @@ describe("balance / droits hors TVA", () => {
     expect(p.approvable).toBe(true);
   });
 
-  it("un résidu de pied égal au droit du pack est attribué et l'écriture s'équilibre", () => {
+  it("un droit imprimé hors barème conserve sa valeur mais bloque l'inscription", () => {
+    const base = factureAchatSimple();
+    const p = computePivot({
+      extract: {
+        ...base,
+        other_charges: [{ code: "DROIT_TIMBRE", label: "Timbre", amount: "2.000" }],
+        totals: { ...base.totals, ttc: "1192.000" },
+      },
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: timbre,
+      tolerances: TOLERANCES,
+    });
+    expect(p.approvable).toBe(false);
+    expect(p.motifs.some((m) => m.code === "FISCAL_CHARGE_MISMATCH")).toBe(true);
+    expect(p.lines.find((l) => l.account_code === "6654")?.debit).toBe("2.000");
+  });
+  it("un résidu égal au timbre ne prouve pas un droit : il reste bloquant", () => {
     const base = factureAchatSimple();
     // TTC imprimé = HT + TVA + 1.000 sans ligne de droit lue.
     const extract = { ...base, other_charges: [], totals: { ...base.totals, ttc: "1191.000" } };
@@ -251,10 +270,9 @@ describe("balance / droits hors TVA", () => {
       fiscal_charges: timbre,
       tolerances: TOLERANCES,
     });
-    expect(p.motifs.some((m) => m.code === "RESIDUAL_MATCHED_PACK_CHARGE")).toBe(true);
-    expect(p.lines.find((l) => l.account_code === "6654")?.debit).toBe("1.000");
-    expect(p.totals.debit).toBe(p.totals.credit);
-    expect(p.approvable).toBe(true);
+    expect(p.motifs.some((m) => m.code === "RESIDUAL_UNEXPLAINED")).toBe(true);
+    expect(p.lines.find((l) => l.account_code === "6654")).toBeUndefined();
+    expect(p.approvable).toBe(false);
   });
 
   it("un résidu sans droit correspondant au pack bloque l'écriture", () => {
