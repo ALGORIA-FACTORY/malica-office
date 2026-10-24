@@ -13,7 +13,7 @@ import { modeleOcr } from "../modeles.ts";
 
 import { ouvrirLeCoupeCircuit, refermerLeCoupeCircuit, secondLecteurDisponible } from "./paddle.ts";
 import { autreLecteur, qualiteDeLecture } from "./read-flow.ts";
-import { planBorne } from "./vision.ts";
+import { planBorne, relever } from "./vision.ts";
 
 const incoherent = { code: "ARITHMETIQUE_INCOHERENTE" };
 
@@ -126,5 +126,58 @@ describe("PaddleOCR tombé est écarté un moment, puis réessayé", () => {
     process.env["OCR_URL"] = "http://ocr.invalid";
     ouvrirLeCoupeCircuit(Date.now() - 10 * 60_000);
     assert.equal(secondLecteurDisponible(), true);
+  });
+});
+
+describe("PaddleOCR OCCUPÉ n'est pas PaddleOCR tombé", () => {
+  const vraiFetch = globalThis.fetch;
+  const avant = {
+    ocr: process.env["OCR_URL"],
+    qwen: process.env["QWEN_API_KEY"],
+    base: process.env["QWEN_BASE_URL"],
+  };
+  afterEach(() => {
+    globalThis.fetch = vraiFetch;
+    refermerLeCoupeCircuit();
+    for (const [cle, val] of [
+      ["OCR_URL", avant.ocr],
+      ["QWEN_API_KEY", avant.qwen],
+      ["QWEN_BASE_URL", avant.base],
+    ] as const) {
+      if (val === undefined) delete process.env[cle];
+      else process.env[cle] = val;
+    }
+  });
+
+  /** PaddleOCR répond `statut` ; le modèle de vision s'arrête net (hors sujet ici). */
+  async function lireAvecUnPaddleQuiRepond(statut: number): Promise<string[]> {
+    process.env["OCR_URL"] = "http://ocr.invalid";
+    process.env["QWEN_API_KEY"] = "cle-d-essai";
+    process.env["QWEN_BASE_URL"] = "http://vision.invalid";
+    const appels: string[] = [];
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const adresse = String(url instanceof Request ? url.url : url);
+      appels.push(adresse.includes("ocr.invalid") ? "paddle" : "vision");
+      if (adresse.includes("ocr.invalid")) {
+        return { ok: false, status: statut, json: async () => ({}) } as unknown as Response;
+      }
+      throw new Error("arret du test");
+    }) as typeof fetch;
+    await assert.rejects(() =>
+      relever({ dataUrl: "data:image/png;base64,AA==", mime: "image/png" }),
+    );
+    return appels;
+  }
+
+  it("503 : cette pièce passe à la vision, les suivantes gardent PaddleOCR", async () => {
+    const appels = await lireAvecUnPaddleQuiRepond(503);
+    assert.deepEqual(appels.slice(0, 2), ["paddle", "vision"]);
+    assert.equal(secondLecteurDisponible(), true, "un service occupé n'ouvre pas le coupe-circuit");
+  });
+
+  it("500 : la pièce passe à la vision, et PaddleOCR est écarté un moment", async () => {
+    const appels = await lireAvecUnPaddleQuiRepond(500);
+    assert.deepEqual(appels.slice(0, 2), ["paddle", "vision"]);
+    assert.equal(secondLecteurDisponible(), false);
   });
 });

@@ -26,6 +26,9 @@ ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True \
     OCR_MODELE_DETECTION=PP-OCRv5_mobile_det \
     OCR_MODELE_RECONNAISSANCE=latin_PP-OCRv5_mobile_rec \
     OCR_LANGUE=fr \
+    # Le second alphabet, ligne par ligne : vide = coupe. Ses poids sont dans
+    # l'image (ci-dessous), l'allumer ne demande aucun reseau.
+    OCR_MODELE_RECONNAISSANCE_ARABE= \
     # Sans borne, Paddle ouvre un fil par cœur vu et affame le reste de la
     # machine — qui porte aussi la base de données.
     OMP_NUM_THREADS=2
@@ -42,7 +45,9 @@ from paddleocr import PaddleOCR;\
 PaddleOCR(lang='fr', text_detection_model_name='PP-OCRv5_mobile_det',\
           text_recognition_model_name='latin_PP-OCRv5_mobile_rec',\
           use_doc_orientation_classify=False, use_doc_unwarping=False,\
-          use_textline_orientation=False, enable_mkldnn=False).predict('/tmp/vide.png')"
+          use_textline_orientation=False, enable_mkldnn=False).predict('/tmp/vide.png');\
+from paddleocr import TextRecognition;\
+TextRecognition(model_name='arabic_PP-OCRv5_mobile_rec', enable_mkldnn=False)"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -fsS http://127.0.0.1:8000/sante || exit 1
