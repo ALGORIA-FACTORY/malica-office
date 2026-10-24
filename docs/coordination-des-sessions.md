@@ -375,3 +375,5 @@ une base jetable.
 - 2026-10-24 - Codex - Synchronisation avec main après #88 et #89 : leurs corrections de lecture et d'accueil sont conservées intégralement. Seul conflit : les ajouts au journal, tous conservés. Aucun changement des écrans PME dans le différentiel de #87. Relance des preuves sur ce résultat et sur les gardes de plan/trésorerie.
 
 - 2026-10-24 - Codex - CI du résultat synchronisé : 1 282 tests API réussis, 8 sautés ; Socle/web/style/typage/knip réussis. Le jeu de démonstration composait deux factures à la main sans analyser leur extraction : il appelle désormais l'analyse réelle avant leur règlement, au lieu de contourner le nouveau garde de fraîcheur.
+
+- 2026-10-24 - Codex - La normalisation du jeu de démonstration a révélé une seconde faiblesse de fixture : les citations pointaient des lignes complètes (« TVA … montant TND ») et aucune ne portait le HT. Le plan synthétique sépare désormais les montants imprimés en jetons et les cite individuellement, avec leurs coordonnées, sans inventer un montant ni assouplir le garde fiscal.

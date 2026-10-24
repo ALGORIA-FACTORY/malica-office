@@ -783,16 +783,41 @@ async function lire(pieceId, piece) {
       y1: 1 - yPdf / 842,
     };
   };
-  const tokens = textes.map((text, i) => ({
-    page: 1,
-    ordinal: i + 1,
-    text,
-    confidence: 0.98,
-    ...boite(i),
-  }));
+  // Un montant se cite seul, comme dans un vrai plan OCR : une ligne entière
+  // « TVA 19 % 798.000 TND » ne constitue pas un jeton monétaire lisible.
+  const tokens = [];
+  const ordinauxParLigne = [];
+  for (const [i, text] of textes.entries()) {
+    const monetaire = text.match(
+      new RegExp(`^(.*?)(-?\\d+(?:\\.\\d+)?) (${ref.pack.currency})(.*)$`),
+    );
+    const fragments = monetaire
+      ? [monetaire[1], monetaire[2], `${monetaire[3]}${monetaire[4]}`]
+      : [text];
+    const ordinaux = [];
+    let position = 0;
+    for (const fragment of fragments) {
+      if (!fragment.trim()) continue;
+      const debut = text.indexOf(fragment, position);
+      position = debut + fragment.length;
+      const ordinal = tokens.length + 1;
+      ordinaux.push(ordinal);
+      tokens.push({
+        page: 1,
+        ordinal,
+        text: fragment.trim(),
+        confidence: 0.98,
+        ...boite(i),
+        x0: (60 + debut * 5.6) / 595,
+        x1: Math.min(1, (60 + position * 5.6) / 595),
+      });
+    }
+    ordinauxParLigne.push(ordinaux);
+  }
   const aCiter = {
     issuer: piece.issuer,
     document_date: "Date :",
+    "totals.base_ht": `${ref.pack.currency} HT`,
     "totals.vat": tauxParCode(piece.taxCode).label,
     "totals.ttc": "TOTAL TTC",
     ...(piece.droit ? { "other_charges[0].amount": piece.droit.label } : {}),
@@ -800,7 +825,23 @@ async function lire(pieceId, piece) {
   const citations = Object.entries(aCiter).map(([field, aiguille]) => {
     const i = textes.findIndex((t) => t.includes(aiguille));
     if (i < 0) throw new Error(`citation ${field} : « ${aiguille} » absent de la pièce`);
-    return { field, page: 1, ordinal: i + 1, zone: "p.1" };
+    const montant =
+      field === "totals.base_ht"
+        ? piece.extrait.totals.base_ht
+        : field === "totals.vat"
+          ? piece.extrait.totals.vat
+          : field === "totals.ttc"
+            ? piece.extrait.totals.ttc
+            : field === "other_charges[0].amount"
+              ? piece.extrait.other_charges[0].amount
+              : null;
+    const ordinal =
+      montant === null
+        ? ordinauxParLigne[i][0]
+        : ordinauxParLigne[i].find((o) => tokens[o - 1].text === montant);
+    if (!ordinal)
+      throw new Error(`citation ${field} : montant distinct absent de la ligne imprimée`);
+    return { field, page: 1, ordinal, zone: "p.1" };
   });
   const persister = (articles) =>
     rpc("capture", "persisterLecture", [
@@ -1501,7 +1542,11 @@ if (PMES.sotumag.id) {
          */
         // La facture de démonstration a été composée à la main : on analyse
         // sa lecture courante comme dans le parcours réel, sans contourner le garde.
-        await rpc("capture", "analyser", [facturee.pieceId]);
+        const analyse = await rpc("capture", "analyser", [facturee.pieceId]);
+        if (analyse.normalisation.montants.ttc === null)
+          throw new Error(
+            `Analyse de la facture de démonstration : ${analyse.normalisation.etat} — ${analyse.normalisation.raison ?? "montant non tranché"}`,
+          );
         const paiementId = await rpc("capture", "enregistrerPaiement", [
           {
             pieceId: facturee.pieceId,
