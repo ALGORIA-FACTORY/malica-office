@@ -68,8 +68,15 @@ begin
    select tenant_id, v_reversal, ordinal, account_code,
           'Annulation — ' || libelle, credit, debit, tax_code
      from socle.ecriture_lignes where ecriture_id = v_original.id;
-   update socle.ecritures set status = 'booked', booked_by = auth.uid(),
-          booked_at = now(), updated_at = now() where id = v_reversal;
+   -- Revue du 24 octobre 2026 (décision de Wissem Barouni) : quand une
+   -- comptabilité tient le dossier, c'est son expert qui inscrit. La
+   -- contre-passation reste PROPOSÉE dans sa file ; la PME ne touche pas au
+   -- grand livre qu'elle a confié. Une PME autonome tient seule ses comptes :
+   -- elle inscrit, par le même chemin que toute écriture.
+   if not exists (select 1 from identity.engagements g
+                   where g.pme_org_id = new.tenant_id and g.status = 'actif') then
+     perform public.socle_ecriture_book(v_reversal);
+   end if;
    insert into audit.event_log
      (tenant_id, actor, action, object_schema, object_table, object_id, payload)
    values (new.tenant_id, auth.uid(), 'reglement.contre_passe', 'socle', 'ecritures',
@@ -140,5 +147,66 @@ as $$
     join comptes k on k.pack_version_id = e.pack_version_id and k.compte = l.account_code
    order by k.sens, e.date_ecriture, e.id, l.ordinal
 $$;
+
+-- Une contre-passation proposée s'inscrit par le chemin commun (revue du 24
+-- octobre 2026) : la garde « une seule écriture vivante par pièce » ne la
+-- confond plus avec un second règlement. Corps repris de la base
+-- (20261022450000), seule cette condition change.
+CREATE OR REPLACE FUNCTION public.socle_ecriture_book(p_ecriture uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare
+  v_tenant  uuid;
+  v_piece   uuid;
+  v_nature  text;
+  v_paiement uuid;
+  v_reverses uuid;
+begin
+  select piece_id into v_piece from socle.ecritures where id = p_ecriture;
+  if v_piece is not null then
+    perform 1 from capture.pieces where id = v_piece for update;
+  end if;
+
+  select e.nature, e.paiement_id, e.reverses_id into v_nature, v_paiement, v_reverses
+    from socle.ecritures e where e.id = p_ecriture and e.status = 'proposee';
+  -- Une contre-passation éteint l'écriture vivante : elle ne la double pas.
+  if v_nature is not null and v_piece is not null and v_reverses is null and exists (
+       select 1 from socle.ecritures o
+        where o.piece_id = v_piece and o.id <> p_ecriture
+          and o.nature = v_nature and o.paiement_id is not distinct from v_paiement
+          and app.ecriture_vivante(o.id)) then
+    raise exception 'Cette pièce porte déjà une écriture inscrite : une seconde la compterait deux fois.'
+      using errcode = 'check_violation', hint = 'piece.deja_inscrite';
+  end if;
+
+  update socle.ecritures
+     set status = 'booked',
+         booked_by = auth.uid(),
+         booked_at = now(),
+         updated_at = now()
+   where id = p_ecriture and status = 'proposee'
+  returning tenant_id into v_tenant;
+
+  if v_tenant is null then
+    raise exception 'ecriture introuvable, deja comptabilisee ou non autorisee'
+      using errcode = '42501';
+  end if;
+
+  -- Un règlement inscrit ne fait pas repasser une facture supervisée en
+  -- « comptabilisée » : seule l'écriture de la facture fait le statut.
+  if v_nature = 'piece' then
+    update capture.pieces
+       set status = 'comptabilisee', updated_at = now()
+     where id = v_piece;
+  end if;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                              object_id, payload)
+  values (v_tenant, auth.uid(), 'ecriture.booked', 'socle', 'ecritures', p_ecriture,
+          jsonb_build_object('piece_id', v_piece, 'nature', v_nature,
+                             'paiement_id', v_paiement));
+end $function$;
 
 commit;

@@ -5,10 +5,8 @@ import {
   ReglementIncomplet,
   type EcritureDeReglement,
 } from "@malica/socle/use-cases/ecriture-de-reglement";
-import {
-  contrepartieDuDocument,
-  referenceDuDocument,
-} from "@malica/socle/use-cases/libelle-de-piece";
+import { contrepartieDuDocument } from "@malica/socle/domain/contrepartie";
+import { referenceDuDocument } from "@malica/socle/use-cases/libelle-de-piece";
 import {
   constaterLaRetenue,
   RetenueNonQualifiee,
@@ -43,6 +41,38 @@ const ROLE_DE_LA_RETENUE = {
   facture_achat: "RETENUE_SOURCE_OPEREE",
   facture_vente: "RETENUE_SOURCE_SUBIE",
 } as const;
+
+/** Plusieurs comptes possibles pour un même rôle : la base ne choisit pas au hasard. */
+const AMBIGU = Symbol("ambigu");
+
+/**
+ * Le compte d'un rôle, à trois niveaux comme partout : le dossier, la
+ * comptabilité qui le mandate, puis le défaut fourni (le compte du moyen de
+ * paiement) ou, à défaut, le pack. Une seule lecture pour la trésorerie et
+ * les retenues : deux surcharges contradictoires sont refusées, jamais
+ * départagées par l'ordre d'une requête.
+ */
+async function compteDuRole(
+  db: Requete,
+  tenantId: string,
+  role: string,
+  packVersionId: string,
+  defaut: string | null,
+): Promise<string | null | typeof AMBIGU> {
+  const { rows } = await db.query<{ compte: string | null }>(
+    `select distinct coalesce(d.account_code, c.account_code, $4::text,
+              (select p.account_code from ref.role_bindings p
+                where p.role_code = $2 and p.pack_version_id = $3)) as compte
+       from (select 1) source
+       left join parametrage_role_bindings_v d on d.role_code = $2
+         and d.portee = 'dossier' and d.portee_id = $1
+       left join parametrage_role_bindings_v c on c.role_code = $2 and c.portee = 'cabinet'
+         and c.portee_id in (select cabinet_org_id from engagements_v
+                              where pme_org_id = $1 and status = 'actif')`,
+    [tenantId, role, packVersionId, defaut],
+  );
+  return rows.length === 1 ? rows[0]!.compte : AMBIGU;
+}
 
 export async function propositionDeReglement(
   db: Requete,
@@ -98,21 +128,19 @@ export async function propositionDeReglement(
 
   let compteTresorerie = l.tresorerie_account;
   if (l.role_tresorerie) {
-    const { rows: regles } = await db.query<{ compte: string | null }>(
-      `select distinct coalesce(d.account_code, c.account_code, $3) as compte
-         from (select 1) source
-         left join parametrage_role_bindings_v d on d.role_code = $2
-           and d.portee = 'dossier' and d.portee_id = $1
-         left join parametrage_role_bindings_v c on c.role_code = $2 and c.portee = 'cabinet'
-           and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1 and status = 'actif')`,
-      [l.tenant_id, l.role_tresorerie, compteTresorerie],
+    const compte = await compteDuRole(
+      db,
+      l.tenant_id,
+      l.role_tresorerie,
+      l.pack_version_id,
+      compteTresorerie,
     );
-    if (regles.length !== 1)
+    if (compte === AMBIGU)
       return {
         ok: false,
         raison: "Plusieurs comptes de trésorerie sont configurés : précisez le compte du dossier.",
       };
-    compteTresorerie = regles[0]!.compte;
+    compteTresorerie = compte;
   }
 
   // La pièce telle qu'elle a été LUE : l'émetteur, sa référence, et le TTC
@@ -245,23 +273,16 @@ export async function propositionDeReglement(
         // Le compte, à trois niveaux comme partout : le dossier, la
         // comptabilité qui le mandate, le pack.
         const role = r.famille === "tva" ? "TVA_RETENUE_SUBIE" : ROLE_DE_LA_RETENUE[sens];
-        const { rows: compte } = await db.query<{ compte: string | null }>(
-          `select coalesce(d.account_code, c.account_code, p.account_code) as compte
-             from ref.account_roles r
-             left join ref.role_bindings p
-               on p.role_code = r.code and p.pack_version_id = $2
-             left join parametrage_role_bindings_v d
-               on d.role_code = r.code and d.portee = 'dossier' and d.portee_id = $1
-             left join parametrage_role_bindings_v c
-               on c.role_code = r.code and c.portee = 'cabinet'
-              and c.portee_id in (select cabinet_org_id from engagements_v where pme_org_id = $1 and status = 'actif')
-            where r.code = $3
-            limit 1`,
-          [l.tenant_id, l.pack_version_id, role],
-        );
+        const compte = await compteDuRole(db, l.tenant_id, role, l.pack_version_id, null);
+        if (compte === AMBIGU)
+          return {
+            ok: false,
+            raison:
+              "Plusieurs comptes de retenue à la source sont configurés : précisez le compte du dossier.",
+          };
         lignesDeRetenue.push({
           montant: r.montant,
-          compte: compte[0]?.compte ?? "",
+          compte: compte ?? "",
           libelle: r.libelle,
         });
       }
@@ -276,10 +297,7 @@ export async function propositionDeReglement(
       devise: string;
       brut: string | null;
     }>(
-      `select p.montant_mineur::text, p.devise,
-              (select sum(ll.debit)::text from ecritures_v e
-                join ecriture_lignes_v ll on ll.ecriture_id = e.id
-               where e.paiement_id = p.id and e.nature = 'reglement' and app.ecriture_vivante(e.id)) as brut
+      `select p.montant_mineur::text, p.devise, app.dette_eteinte(p.id)::text as brut
          from paiements_v p where p.piece_id = $1 and p.id <> $2 and not p.eteint
            and p.montant_mineur is not null`,
       [l.piece_id, paiementId],

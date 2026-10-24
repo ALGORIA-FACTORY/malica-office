@@ -11,8 +11,7 @@ import { contrepartieDuDocument } from "../domain/contrepartie.ts";
 import { nomDeLaNature, type FaitsDuLibelle } from "../engines/libelle.ts";
 
 // La contrepartie vit au domaine : le moteur d'équilibre la lit aussi, et un
-// moteur ne dépend pas d'un cas d'usage. Elle reste offerte ici à l'API.
-export { contrepartieDuDocument };
+// moteur ne dépend pas d'un cas d'usage.
 
 /** Seules les clés désignant explicitement le numéro du document sont retenues. */
 const CLES_DE_REFERENCE = ["invoice_no", "document_no", "numero", "reference"];

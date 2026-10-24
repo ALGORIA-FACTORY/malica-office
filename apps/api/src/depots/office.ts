@@ -1,6 +1,8 @@
-import type {
-  ConstatDeRetenue,
-  QualificationDeRetenue,
+import {
+  lireLaQualification,
+  RetenueNonQualifiee,
+  type ConstatDeRetenue,
+  type QualificationDeRetenue,
 } from "@malica/socle/use-cases/retenue-au-reglement";
 /**
  * Le bureau — proposition, comptabilisation, lecture des écritures.
@@ -49,6 +51,37 @@ function parEcriture(lignes: Record<string, unknown>[]): Map<string, Ligne[]> {
     carte.set(cle, liste);
   }
   return carte;
+}
+
+/** Un refus métier, rendu comme tel au client (22023), jamais comme une panne. */
+function refusMetier(message: string): Error {
+  return Object.assign(new Error(message), { code: "22023" });
+}
+
+/**
+ * La qualification reçue du navigateur est relue avant tout usage : seuls ses
+ * champs connus entrent dans le calcul et dans l'audit.
+ */
+function qualificationLue(entree: unknown): QualificationDeRetenue | undefined {
+  if (entree === undefined || entree === null) return undefined;
+  try {
+    return lireLaQualification(entree);
+  } catch (e) {
+    if (e instanceof RetenueNonQualifiee) throw refusMetier(e.message);
+    throw e;
+  }
+}
+
+/** Deux jeux de lignes portent-ils exactement les mêmes comptes et montants ? */
+function memesLignes(
+  a: ReadonlyArray<{ account_code: string; debit: string; credit: string }>,
+  b: ReadonlyArray<{ account_code: string; debit: string; credit: string }>,
+): boolean {
+  const cle = (l: { account_code: string; debit: string; credit: string }) =>
+    `${l.account_code}|${Number(l.debit).toFixed(6)}|${Number(l.credit).toFixed(6)}`;
+  const x = a.map(cle).sort();
+  const y = b.map(cle).sort();
+  return x.length === y.length && x.every((k, i) => k === y[i]);
 }
 
 async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]>> {
@@ -133,7 +166,7 @@ export const office = {
     paiementId: string,
     qualification?: QualificationDeRetenue,
   ) {
-    const r = await propositionDeReglement(db, paiementId, qualification);
+    const r = await propositionDeReglement(db, paiementId, qualificationLue(qualification));
     if (!r.ok) return r;
     // Déjà inscrit ? L'écran le dit et retire le bouton (ANO-006) : la base,
     // elle, rend la même écriture si on redemande.
@@ -194,8 +227,9 @@ export const office = {
                      where p.id = $1 for update of pi`,
       [paiementId],
     );
-    const r = await propositionDeReglement(db, paiementId, qualification);
-    if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
+    const qualifiee = qualificationLue(qualification);
+    const r = await propositionDeReglement(db, paiementId, qualifiee);
+    if (!r.ok) throw refusMetier(r.raison);
     // Une écriture inscrite est immuable. Une proposition se recompose depuis
     // les faits courants, sans réutiliser une ancienne inférence fiscale.
     const { rows: deja } = await db.query<{ id: string }>(
@@ -226,12 +260,12 @@ export const office = {
       lignes: r.ecriture.lignes,
       paiementId,
     });
-    if (qualification)
+    if (qualifiee)
       await db.query(
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
        select tenant_id, auth.uid(), 'reglement.qualifie', 'socle', 'ecritures', id, $2::jsonb
          from ecritures_v where id = $1`,
-        [id, JSON.stringify({ paiementId, qualification, retenue: r.retenue })],
+        [id, JSON.stringify({ paiementId, qualification: qualifiee, retenue: r.retenue })],
       );
     return id;
   },
@@ -337,7 +371,50 @@ export const office = {
     return id;
   },
 
+  /**
+   * Comptabiliser une écriture proposée.
+   *
+   * Un règlement proposé est recomposé depuis les faits COURANTS avant d'être
+   * inscrit (revue du 24 octobre 2026) : une proposition d'hier — l'ancienne
+   * retenue devinée, un cumul dépassé depuis par un autre paiement — ne passe
+   * plus par le simple bouton « valider ». Les lignes doivent être exactement
+   * celles que le moteur rend aujourd'hui avec la qualification conservée.
+   * Une contre-passation n'est pas recomposée : elle recopie l'original.
+   */
   async book(db: Requete, ecritureId: string): Promise<void> {
+    const { rows } = await db.query<{
+      nature: string;
+      reverses_id: string | null;
+      paiement_id: string | null;
+      status: string;
+      qualification: unknown;
+    }>(
+      `select e.nature, e.reverses_id, e.paiement_id, e.status,
+              (select a.payload -> 'qualification' from audit.event_log a
+                where a.object_id = e.id and a.action = 'reglement.qualifie'
+                order by a.at desc limit 1) as qualification
+         from ecritures_v e where e.id = $1`,
+      [ecritureId],
+    );
+    const e = rows[0];
+    if (e && e.nature === "reglement" && e.reverses_id === null && e.status === "proposee") {
+      if (!e.paiement_id) throw refusMetier("Un règlement sans paiement ne s'inscrit pas.");
+      const r = await propositionDeReglement(db, e.paiement_id, qualificationLue(e.qualification));
+      if (!r.ok) throw refusMetier(r.raison);
+      if (r.retenue.cas === "a_confirmer")
+        throw refusMetier("Confirmez le traitement de la retenue avant inscription.");
+      const proposees = (await lignesDe(db, [ecritureId])).get(ecritureId) ?? [];
+      const attendues = r.ecriture.lignes;
+      if (
+        !memesLignes(
+          proposees.map((l) => ({ account_code: l.accountCode, debit: l.debit, credit: l.credit })),
+          attendues,
+        )
+      )
+        throw refusMetier(
+          "Cette proposition de règlement ne correspond plus aux faits : proposez-la à nouveau.",
+        );
+    }
     await db.query(`select public.socle_ecriture_book($1)`, [ecritureId]);
   },
 

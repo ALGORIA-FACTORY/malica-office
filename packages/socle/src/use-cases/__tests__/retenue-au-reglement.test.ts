@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { construireReglement, type EntreeReglement } from "../ecriture-de-reglement.ts";
-import { constaterLaRetenue, RetenueNonQualifiee } from "../retenue-au-reglement.ts";
+import {
+  constaterLaRetenue,
+  lireLaQualification,
+  RetenueNonQualifiee,
+} from "../retenue-au-reglement.ts";
 
 const BASE = {
   ttc: "2000.000",
@@ -153,5 +157,67 @@ describe("l'écriture d'un règlement avec retenue", () => {
     expect(() =>
       construireReglement({ ...ACHAT, retenue: { montant: "29.544", compte: "", libelle: "x" } }),
     ).toThrow(/retenue/);
+  });
+});
+
+/*
+ * Décision du 24 octobre 2026 (Wissem Barouni) : sous le seuil légal, aucune
+ * qualification n'est demandée. Un taux sans seuil (honoraires) ne déclenche
+ * pas la question à lui seul : le règlement ne connaît pas la nature de
+ * l'opération, le comptable la déclare s'il le faut.
+ */
+describe("sous le seuil, aucune question", () => {
+  const AVEC_HONORAIRES = {
+    ...BASE,
+    taux: [
+      ...BASE.taux,
+      { code: "HON", taux: "0.10", libelle: "Honoraires", seuil: null, famille: "ir" as const },
+    ],
+  };
+  it("un paiement de 50 sous le seuil de 1 000 n'appelle aucune qualification", () => {
+    expect(constaterLaRetenue({ ...AVEC_HONORAIRES, ttc: "50.000", paye: "50.000" })).toEqual({
+      cas: "sans_objet",
+    });
+  });
+  it("au seuil exactement, la question est posée (montant égal ou supérieur)", () => {
+    expect(constaterLaRetenue({ ...AVEC_HONORAIRES, ttc: "1000.000", paye: "1000.000" })).toEqual({
+      cas: "a_confirmer",
+    });
+  });
+  it("sous le seuil, le comptable peut quand même déclarer une retenue sans seuil", () => {
+    expect(
+      constaterLaRetenue({
+        ...AVEC_HONORAIRES,
+        ttc: "500.000",
+        paye: "450.000",
+        qualification: { codes: ["HON"], baseReglee: "500.000", justification: "Certificat H-1" },
+      }),
+    ).toMatchObject({ cas: "operee", montant: "50.000" });
+  });
+  it("« sans retenue » n'exige aucun texte", () => {
+    expect(
+      constaterLaRetenue({
+        ...BASE,
+        paye: BASE.ttc,
+        qualification: { codes: [], baseReglee: BASE.ttc, justification: "" },
+      }),
+    ).toEqual({ cas: "sans_objet" });
+  });
+  it("une retenue déclarée exige sa référence", () => {
+    expect(() =>
+      constaterLaRetenue({ ...BASE, qualification: { ...q, justification: "  " } }),
+    ).toThrow(RetenueNonQualifiee);
+  });
+});
+
+describe("la qualification reçue est relue", () => {
+  it("garde ses seuls champs connus", () => {
+    expect(lireLaQualification({ ...q, tvaReglee: null })).toEqual({ ...q, tvaReglee: null });
+  });
+  it("refuse un champ étranger, qui finirait sinon dans l'audit", () => {
+    expect(() => lireLaQualification({ ...q, note: "<script>" })).toThrow(RetenueNonQualifiee);
+  });
+  it("refuse un montant qui n'est pas un texte", () => {
+    expect(() => lireLaQualification({ ...q, baseReglee: 2000 })).toThrow(RetenueNonQualifiee);
   });
 });

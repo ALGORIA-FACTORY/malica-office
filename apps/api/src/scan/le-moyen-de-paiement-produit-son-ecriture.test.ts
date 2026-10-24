@@ -446,6 +446,62 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     await rpc("capture", "annulerPaiement", p, motif);
     await assert.rejects(rpc("office", "book", id), /annulé/);
   });
+  it("sous le seuil légal, un règlement s'inscrit sans aucune qualification", async () => {
+    // Décision du 24 octobre 2026 : 100 DT est sous le seuil de 1 000 DT TTC,
+    // aucune retenue n'est à constater et rien n'est demandé au comptable.
+    const f = await piece("sous-le-seuil", "facture_achat");
+    const p = await payer(f, "especes", 100_000, "CAISSE-1");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition & {
+      retenue?: { cas: string };
+    };
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.retenue?.cas, "sans_objet");
+    const id = await rpc("office", "inscrireLeReglement", p);
+    const { rows } = await admin((db) =>
+      db.query(`select status from socle.ecritures where id = $1`, [id]),
+    );
+    assert.equal(rows[0]!.status, "booked");
+  });
+
+  it("une proposition d'hier qui ne correspond plus aux faits ne s'inscrit pas", async () => {
+    // L'ancien moteur devinait 30 de retenue sur 1 970 payés pour 2 000. Une
+    // telle proposition, restée dans la file, ne passe plus par « valider ».
+    const f = await piece("proposition-perimee", "facture_achat");
+    await lue(f, 2_000_000);
+    const p = await payer(f, "virement", 1_970_000, "PERIME-1");
+    const r = (await rpc("office", "propositionDeReglement", p)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    const devinee = [
+      { account_code: "401", libelle: "Fournisseur", debit: "2000.000", credit: "0.000" },
+      { account_code: "532", libelle: "Banque", debit: "0.000", credit: "1970.000" },
+      { account_code: "432", libelle: "Retenue devinée", debit: "0.000", credit: "30.000" },
+    ];
+    const id = (await rpc("office", "propose", {
+      pieceId: f,
+      journal: r.ecriture.journal,
+      date: r.ecriture.dateEcriture,
+      libelle: r.ecriture.libelle,
+      packVersionId: pack,
+      devise: "TND",
+      lignes: devinee,
+      paiementId: p,
+    })) as string;
+    await assert.rejects(rpc("office", "book", id), /Confirmez|ne correspond plus/);
+    const { rows } = await admin((db) =>
+      db.query(`select status from socle.ecritures where id = $1`, [id]),
+    );
+    assert.equal(rows[0]!.status, "proposee");
+  });
+
+  it("une qualification qui porte un champ étranger est refusée avant l'audit", async () => {
+    const f = await piece("qualification-etrangere", "facture_achat");
+    const p = await payer(f, "virement", 100_000, "VIR-ETRANGER");
+    await assert.rejects(
+      rpc("office", "inscrireLeReglement", p, { ...sansRetenue(), commentaire: "hors schéma" }),
+      /illisible/,
+    );
+  });
+
   it("une retenue qualifiée solde la dette, conserve le net et bloque un second solde erroné", async () => {
     const f = await piece("solde-avec-ras", "facture_achat");
     await lue(f, 2_000_000);

@@ -18,17 +18,23 @@
  */
 
 import type { Requete } from "../db.ts";
-import { dec } from "./decimal.ts";
+import { dec, enVigueur } from "./decimal.ts";
 
 export const immo = {
+  /**
+   * Les catégories qu'on peut choisir AUJOURD'HUI. Une catégorie se versionne
+   * (20261024160000) : la ligne close reste celle des biens déjà enregistrés,
+   * et seule la ligne en vigueur s'offre à un bien nouveau.
+   */
   async categories(db: Requete, packVersionId: string) {
     const { rows } = await db.query(
       `select id, code, label, method, duree_annees, coefficient, account_immo,
-              account_amort, account_dotation, legal_reference
+              account_amort, account_dotation, legal_reference,
+              valid_from::text as valid_from, valid_to::text as valid_to
          from ref_immo_categories_v where pack_version_id = $1 order by code`,
       [packVersionId],
     );
-    return (rows as Record<string, unknown>[]).map((r) => ({
+    return enVigueur(rows as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as string,
       code: r["code"] as string,
       label: r["label"] as string,

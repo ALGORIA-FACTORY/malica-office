@@ -2607,7 +2607,6 @@ export type PropositionDeReglement =
               montant: string;
             }>;
           }
-        | { cas: "non_operee"; ttc: string }
         | { cas: "sans_objet" };
     }
   | { ok: false; raison: string };

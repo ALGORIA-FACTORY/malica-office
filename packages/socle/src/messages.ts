@@ -1671,8 +1671,6 @@ const fr = {
   "cab.review.dossier": "Dossier : facture et règlement",
   "cab.review.reglement.retenue":
     "Retenue à la source constatée : {libelle}, {montant} sur un TTC de {ttc}. Le règlement ne porte que le net.",
-  "cab.review.reglement.retenueNonOperee":
-    "Réglé pour le TTC entier ({ttc}) au-dessus du seuil de retenue : aucune retenue à la source n'a été opérée. Le payeur en reste redevable.",
   "cab.review.reglement.inscrire": "Inscrire",
   "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
   "cab.review.paiement.reference": "Référence",
@@ -5235,8 +5233,6 @@ const en: Dict = {
   "cab.review.dossier": "File: invoice and settlement",
   "cab.review.reglement.retenue":
     "Withholding tax found: {libelle}, {montant} on a gross of {ttc}. The payment carries only the net.",
-  "cab.review.reglement.retenueNonOperee":
-    "Paid for the full gross ({ttc}) above the withholding threshold: no tax was withheld. The payer remains liable.",
   "cab.review.reglement.inscrire": "Post",
   "cab.review.reglement.inscrit": "Posted to the journal — it appears in the FEC.",
   "cab.review.paiement.reference": "Reference",
@@ -8656,8 +8652,6 @@ const ar: Dict = {
   "cab.review.dossier": "ملف: فاتورة وخلاص",
   "cab.review.reglement.retenue":
     "خصم من المورد ثابت: {libelle}، {montant} من مبلغ جملي {ttc}. الصك لا يحمل إلا الصافي.",
-  "cab.review.reglement.retenueNonOperee":
-    "خُلص كامل المبلغ ({ttc}) فوق عتبة الخصم من المورد: لم يُخصم شيء. يبقى الدافع مدينًا به.",
   "cab.review.reglement.inscrire": "تسجيل",
   "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في ملف FEC.",
   "cab.review.paiement.reference": "المرجع",

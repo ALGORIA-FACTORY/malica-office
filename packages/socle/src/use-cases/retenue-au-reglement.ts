@@ -1,4 +1,6 @@
 /** Une retenue exige une qualification explicite ; le net seul ne prouve aucun impôt. */
+import { z } from "zod";
+
 import { D, toFixedStr } from "../domain/decimal.ts";
 
 /** Un taux de retenue possible, tel que le référentiel le rend. */
@@ -34,16 +36,32 @@ export interface EntreeRetenue {
   qualification?: QualificationDeRetenue;
 }
 
-export interface QualificationDeRetenue {
-  codes: string[];
-  /** Part brute de dette réglée, avant retenues ; peut être partielle. */
-  baseReglee: string;
-  /** TVA comprise dans cette part, nécessaire seulement pour une retenue de TVA. */
-  tvaReglee?: string | null;
-  /** Assiette IR qualifiée si elle diffère du brut éteint (hors sommes exclues). */
-  assietteIR?: string | null;
-  /** Référence du certificat ou justification du traitement fiscal. */
-  justification: string;
+/**
+ * La qualification telle qu'elle entre : un objet venu du navigateur n'est
+ * conservé qu'après lecture de ce schéma. Un champ inconnu est refusé, pour
+ * que l'audit ne garde que ce que le comptable a qualifié.
+ */
+const schemaDeQualification = z
+  .object({
+    codes: z.array(z.string().min(1)).max(4),
+    /** Part brute de dette réglée, avant retenues ; peut être partielle. */
+    baseReglee: z.string(),
+    /** TVA comprise dans cette part, nécessaire seulement pour une retenue de TVA. */
+    tvaReglee: z.string().nullable().optional(),
+    /** Assiette IR qualifiée si elle diffère du brut éteint (hors sommes exclues). */
+    assietteIR: z.string().nullable().optional(),
+    /** Référence du certificat ou justification ; exigée dès qu'une retenue est déclarée. */
+    justification: z.string().max(500),
+  })
+  .strict();
+
+export type QualificationDeRetenue = z.infer<typeof schemaDeQualification>;
+
+/** Lit une qualification reçue ; rien d'autre que ses champs n'est gardé. */
+export function lireLaQualification(entree: unknown): QualificationDeRetenue {
+  const r = schemaDeQualification.safeParse(entree);
+  if (!r.success) throw new RetenueNonQualifiee("Qualification fiscale illisible.");
+  return r.data;
 }
 
 export class RetenueNonQualifiee extends Error {}
@@ -71,14 +89,28 @@ export type ConstatDeRetenue =
       /** Toutes les retenues constatées, une ou deux. */
       retenues: RetenueConstatee[];
     }
-  /** Au-dessus d'un seuil, payé pour le TTC entier : rien n'a été retenu. */
-  | { cas: "non_operee"; ttc: string }
   /** Sous les seuils, sans référentiel, ou paiement partiel : rien à constater. */
   | { cas: "sans_objet" };
 
+/**
+ * Un seuil du référentiel est-il atteint par le TTC de la pièce ?
+ *
+ * Décision du 24 octobre 2026 (Wissem Barouni) : sous le seuil légal, aucune
+ * qualification n'est demandée. Seuls les taux qui PORTENT un seuil peuvent
+ * déclencher la question ; un taux sans seuil (honoraires, loyers) dépend de
+ * la nature de l'opération, que le règlement ne connaît pas : le comptable le
+ * déclare s'il s'applique, rien ne le devine.
+ */
+function unSeuilEstAtteint(e: EntreeRetenue, ttc: string): boolean {
+  return e.taux.some((t) => {
+    const seuil = t.seuil !== undefined ? t.seuil : e.seuil;
+    return seuil !== null && !D(ttc).lt(D(seuil));
+  });
+}
+
 export function constaterLaRetenue(e: EntreeRetenue): ConstatDeRetenue {
   const q = e.qualification;
-  if (!q) return e.taux.length ? { cas: "a_confirmer" } : { cas: "sans_objet" };
+  if (!q) return unSeuilEstAtteint(e, e.ttc) ? { cas: "a_confirmer" } : { cas: "sans_objet" };
   const refuse = (message: string): never => {
     throw new RetenueNonQualifiee(message);
   };
@@ -90,8 +122,10 @@ export function constaterLaRetenue(e: EntreeRetenue): ConstatDeRetenue {
       return refuse("La précision du montant dépasse celle de la devise.");
     return d;
   };
-  if (!Array.isArray(q.codes) || typeof q.justification !== "string" || !q.justification.trim())
-    return refuse("La qualification fiscale exige une justification.");
+  if (!Array.isArray(q.codes) || typeof q.justification !== "string")
+    return refuse("Qualification fiscale illisible.");
+  if (q.codes.length > 0 && !q.justification.trim())
+    return refuse("Une retenue déclarée exige la référence du certificat ou une justification.");
   const ttc = decimal(e.ttc);
   const paye = decimal(e.paye);
   const brut = decimal(q.baseReglee);
