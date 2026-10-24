@@ -2037,19 +2037,9 @@
 [data-surface="pme"] [data-ecran="capture"] .c-envoi button:disabled{opacity:.45;cursor:default}
 
 /* ================================================================= À LIRE
- * 24 octobre 2026 : les pièces remises « à plus tard » se retrouvent — un bloc
- * sur l'accueil, une pastille dans la bibliothèque, et un écran pour choisir.
- * Ambre : elles attendent une réponse. */
-[data-surface="pme"] [data-ecran="accueil"] .alire{margin-top:1rem;border-radius:var(--r-xl);background:var(--d1);border:1px solid var(--am); padding:1.125rem;display:grid;gap:1rem}
-[data-surface="pme"] [data-ecran="accueil"] .alire .tete{display:flex;align-items:center;gap:.625rem}
-[data-surface="pme"] [data-ecran="accueil"] .alire .tete i{width:10px;height:10px;border-radius:50%;background:var(--am)}
-[data-surface="pme"] [data-ecran="accueil"] .alire .tete b{flex:1;font-size:1.125rem}
-[data-surface="pme"] [data-ecran="accueil"] .alire .tete span{font-family:var(--mono);font-size:1.125rem;font-weight:600;color:var(--am)}
-[data-surface="pme"] [data-ecran="accueil"] .alire .pages{display:flex;gap:.625rem}
-[data-surface="pme"] [data-ecran="accueil"] .alire .pages .apercu{width:60px;height:80px;border-radius:8px;overflow:hidden;flex:none}
-[data-surface="pme"] [data-ecran="accueil"] .alire .gestes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.625rem}
-[data-surface="pme"] [data-ecran="accueil"] .alire .gestes a{min-height:48px;border-radius:999px;border:1px solid var(--dl);color:var(--tx); display:flex;align-items:center;justify-content:center;font-size:.9375rem;font-weight:600;text-decoration:none}
-[data-surface="pme"] [data-ecran="accueil"] .alire .gestes a.pr{border:0;background:var(--acc);color:var(--on-acc);font-weight:700}
+ * Les pièces remises « à plus tard » : un accès avec compteur dans la carte
+ * Malica, une pastille dans la bibliothèque, un écran dédié pour choisir. */
+[data-surface="pme"] [data-ecran="accueil"] .hero .cta.a-lire{color:var(--am);border-color:var(--am);text-decoration:none}
 [data-surface="pme"] [data-ecran="bibliotheque"] .fil .alire{flex:none;white-space:nowrap;display:inline-flex;align-items:center;min-height:34px;padding:0 .875rem;border-radius:999px; background:var(--am-d);color:var(--am);font-size:.8125rem;font-weight:700;text-decoration:none}
 [data-surface="pme"] [data-ecran="alire"] .tete{display:flex;align-items:center;gap:.75rem;padding:1rem var(--gout) .5rem}
 [data-surface="pme"] [data-ecran="alire"] .tete .bk{width:44px;height:44px;border-radius:50%;border:0;background:var(--d2);color:var(--tx); display:grid;place-items:center;cursor:pointer;flex:none}
