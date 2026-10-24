@@ -83,6 +83,20 @@ export function creerCaptureHttp(): CaptureRepository {
       );
     },
 
+    async piecesRattachees(pieceId: string) {
+      return (await rpc<Record<string, unknown>[]>("capture", "piecesRattachees", [pieceId])).map(
+        versPiece,
+      );
+    },
+
+    async rattacher(pieceId: string, autreId: string) {
+      return rpc<{ deja: boolean }>("capture", "rattacher", [pieceId, autreId]);
+    },
+
+    async detacher(pieceId: string, autreId: string, motif: string) {
+      await rpc<void>("capture", "detacher", [pieceId, autreId, motif]);
+    },
+
     async daterLaPiece(pieceId: string, date: string) {
       return rpc<{ periode: string | null }>("capture", "daterLaPiece", [pieceId, date]);
     },

@@ -1419,6 +1419,17 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .faite i{background:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .courante{color:var(--tx);font-weight:700}
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .courante i{background:var(--am)}
+/* Un document rattaché : la ligne mène à lui, « Détacher » est à côté. Le
+ * détachement s'ouvre sur place et demande pourquoi (la base l'exige). */
+[data-surface="pme"] [data-ecran="dossier"] .f-liee .bd{color:inherit;text-decoration:none}
+[data-surface="pme"] [data-ecran="dossier"] .f-mini{flex:none;min-height:36px;padding:0 .75rem;border-radius:999px;border:1px solid var(--dl); background:none;color:var(--t2);font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache{flex-wrap:wrap;align-items:stretch;padding:.75rem 1rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache .bd{flex-basis:100%}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache input{min-height:44px;border:1px solid var(--dl);border-radius:12px;background:var(--d2); color:var(--tx);padding:0 .75rem;font-family:inherit;font-size:.9375rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes{flex-basis:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button{min-height:44px;border-radius:999px;border:1px solid var(--dl);background:none; color:var(--tx);font-family:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button.sup{border-color:var(--ve);color:var(--ve)}
+[data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button:disabled{opacity:.4;cursor:default}
 
 
 /* ======================== écran · bibliotheque ======================== */
