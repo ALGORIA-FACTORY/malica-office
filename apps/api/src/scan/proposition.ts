@@ -153,8 +153,9 @@ async function proposerDepuisLeJugement(
     pack_version_id: string | null;
     jurisdiction: string;
     sens_dit: string | null;
+    recue_le: string;
   }>(
-    `select e.id as extraction, e.payload,
+    `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
             a.pack_version_id, o.jurisdiction,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit
@@ -218,7 +219,13 @@ async function proposerDepuisLeJugement(
   const saisie = dateSaisie && /^\d{4}-\d{2}-\d{2}$/.test(dateSaisie) ? dateSaisie : null;
   // Une date lue n'est jamais remplacée ; la saisie ne complète que ce qui manque.
   const date = lue ? payload.document_date! : saisie;
-  const p = await lireParametres(db, pack, date ?? new Date().toISOString().slice(0, 10));
+  // Le paramétrage et le barème se lisent à la date de la pièce, par la même
+  // règle que l'analyse : la date de la facture, à défaut celle de sa
+  // réception (« la pièce vit à la date de sa facture », note du 10 octobre
+  // 2026). Le jour de la LECTURE n'en est pas une : au lendemain d'un
+  // changement du timbre, il bloquait toute facture antérieure.
+  const jour = date ?? ligne.recue_le;
+  const p = await lireParametres(db, pack, jour);
   const dec = p["money.decimals"];
 
   const m = n.montants;
@@ -270,7 +277,7 @@ async function proposerDepuisLeJugement(
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
     referentiel.accountMappings(db, pack),
-    referentiel.fiscalCharges(db, pack),
+    referentiel.fiscalCharges(db, pack, "fr", jour),
   ]);
   // Le moteur ne connaît que l'achat et la vente : le reste n'y entre pas.
   const mappings = tousLesComptes.filter((c): c is typeof c & SensConnu =>

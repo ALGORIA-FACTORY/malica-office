@@ -150,9 +150,15 @@ export const referentiel = {
    * milieu de l'arabe, alors que la traduction était à côté. Le repli sur le
    * français est explicite — un libellé sans traduction s'affiche, il ne vide
    * pas l'écran.
+   *
+   * Le barème se lit À UNE DATE. Il était filtré sur le jour de la lecture,
+   * et la proposition d'écriture s'en servait pour contrôler le droit imprimé
+   * sur la pièce (`FISCAL_CHARGE_MISMATCH`) : au lendemain d'un changement du
+   * tarif du timbre, toute facture antérieure aurait été bloquée pour avoir
+   * porté le tarif de SON jour. Un contrôle de pièce passe la date de la
+   * pièce ; un écran qui montre le barème en vigueur n'en passe pas.
    */
-  async fiscalCharges(db: Requete, packId: string, locale = "fr") {
-    const jour = aujourdhui();
+  async fiscalCharges(db: Requete, packId: string, locale = "fr", jour = aujourdhui()) {
     const { rows } = await db.query(
       `select c.code, c.document_kind, c.account_code, c.fixed_amount,
               c.legal_reference, c.valid_from, c.valid_to,
