@@ -1,6 +1,12 @@
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  useCanGoBack,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -23,6 +29,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
+import { saisieDecimale } from "@/lib/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { Citation, CompteDuPlan, Ecriture } from "@malica/socle/ports/repositories";
@@ -215,6 +222,19 @@ function CabinetReview() {
    * suivante. C'est l'ordre de la file du jour — le même que sur « Aujourd'hui ».
    */
   const navigate = useNavigate();
+  /*
+   * ============================================== REVENIR D'OÙ L'ON VIENT
+   *
+   * La pièce s'ouvre depuis la file du jour, la bibliothèque, les
+   * propositions, le rapprochement… Le retour suit l'historique du routeur :
+   * on revient à l'écran qui l'a ouverte, avec ses filtres. Sans historique
+   * (lien ouvert directement), le lien mène à la file de revue.
+   *
+   * Précédente et suivante REMPLACENT l'entrée : parcourir la file ne doit
+   * pas obliger à revenir pièce par pièce.
+   */
+  const router = useRouter();
+  const peutRevenir = useCanGoBack();
   const file = useQuery({
     queryKey: ["cab-queue", org.id],
     queryFn: () => office().supervision.queue(org.id),
@@ -227,7 +247,7 @@ function CabinetReview() {
   const precedente = rangDansLaFile > 0 ? ((file.data ?? [])[rangDansLaFile - 1] ?? null) : null;
   const suivante = rangDansLaFile >= 0 ? ((file.data ?? [])[rangDansLaFile + 1] ?? null) : null;
   const allerA = (id: string) =>
-    void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id } });
+    void navigate({ to: "/cabinet/piece/$pieceId", params: { pieceId: id }, replace: true });
 
   const plan = useQuery({
     queryKey: ["plan-cabinet", org.id],
@@ -511,8 +531,12 @@ function CabinetReview() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
         <Link
-          to="/cabinet/bibliotheque"
-          search={{ client: piece.tenantId }}
+          to="/cabinet"
+          onClick={(e) => {
+            if (!peutRevenir) return;
+            e.preventDefault();
+            router.history.back();
+          }}
           aria-label={t("cab.review.back")}
           title={t("cab.review.back")}
           className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
@@ -931,11 +955,11 @@ function CabinetReview() {
                     {proposition.data.proposition.lignes.map((l, i) => (
                       <InkTableRow key={i}>
                         <InkCell>
-                          <span className="num">{l.account_code}</span>{" "}
-                          <span className="text-muted-foreground">
-                            {libelleDuCompte(plan.data ?? [], l.account_code) ??
-                              t("cab.biblio.accountUnknown")}
-                          </span>
+                          <LigneDuCompte
+                            code={l.account_code}
+                            intitule={libelleDuCompte(plan.data ?? [], l.account_code)}
+                            libelle={l.libelle}
+                          />
                         </InkCell>
                         <InkCell numeric>{montant(l.debit, locale)}</InkCell>
                         <InkCell numeric>{montant(l.credit, locale)}</InkCell>
@@ -974,11 +998,11 @@ function CabinetReview() {
                   {booked.lines.map((line) => (
                     <InkTableRow key={line.ordinal}>
                       <InkCell>
-                        <span className="num">{line.accountCode}</span>{" "}
-                        <span className="text-muted-foreground">
-                          {libelleDuCompte(plan.data ?? [], line.accountCode) ??
-                            t("cab.biblio.accountUnknown")}
-                        </span>
+                        <LigneDuCompte
+                          code={line.accountCode}
+                          intitule={libelleDuCompte(plan.data ?? [], line.accountCode)}
+                          libelle={line.libelle}
+                        />
                       </InkCell>
                       <InkCell numeric>{montant(line.debit, locale)}</InkCell>
                       <InkCell numeric>{montant(line.credit, locale)}</InkCell>
@@ -1286,11 +1310,20 @@ function EcritureDuReglement({
         <p className="mt-1.5 text-[11.5px] text-muted-foreground">{r.raison}</p>
         {qualification ? (
           <button type="button" onClick={() => setQualification(undefined)}>
-            {t("cab.biblio.qualifyEdit")}
+            {t("cab.retenue.edit")}
           </button>
         ) : null}
       </div>
     );
+
+  const saisie = qualificationSaisie({
+    codes,
+    base: base || r.ttc || "",
+    tva,
+    assietteIR,
+    justification,
+    paye: r.paye,
+  });
 
   return (
     <div className="mt-2 border-s-2 border-border ps-2.5">
@@ -1300,9 +1333,9 @@ function EcritureDuReglement({
       <p className="mt-0.5 text-[11.5px] text-muted-foreground">{r.ecriture.libelle}</p>
       {!r.inscrite && r.retenue.cas === "a_confirmer" ? (
         <fieldset className="my-3 min-w-0 space-y-2 rounded-lg border border-border p-3">
-          <legend className="px-1 text-[12px] font-medium">{t("cab.biblio.qualify")}</legend>
+          <legend className="px-1 text-[12px] font-medium">{t("cab.retenue.qualify")}</legend>
           <select
-            aria-label={t("cab.biblio.withholding")}
+            aria-label={t("cab.retenue.withholding")}
             className="w-full border border-border bg-background p-2 text-[12px]"
             value={
               codes.find((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ??
@@ -1317,7 +1350,7 @@ function EcritureDuReglement({
               ])
             }
           >
-            <option value="">{t("cab.biblio.noWithholding")}</option>
+            <option value="">{t("cab.retenue.noWithholding")}</option>
             {r.tauxDisponibles
               .filter((x) => x.famille !== "tva")
               .map((x) => (
@@ -1345,7 +1378,7 @@ function EcritureDuReglement({
           {codes.length ? (
             <>
               <label className="block text-[12px]">
-                {t("cab.biblio.grossSettled")}
+                {t("cab.retenue.grossSettled")}
                 <input
                   inputMode="decimal"
                   className="mt-1 w-full border border-border bg-background p-2"
@@ -1355,7 +1388,7 @@ function EcritureDuReglement({
               </label>
               {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.famille !== "tva") ? (
                 <label className="block text-[12px]">
-                  {t("cab.biblio.irBase")}
+                  {t("cab.retenue.irBase")}
                   <input
                     inputMode="decimal"
                     className="mt-1 w-full border border-border bg-background p-2"
@@ -1366,7 +1399,7 @@ function EcritureDuReglement({
               ) : null}
               {codes.some((c) => r.tauxDisponibles.find((x) => x.code === c)?.base === "tva") ? (
                 <label className="block text-[12px]">
-                  {t("cab.biblio.vatSettled")}
+                  {t("cab.retenue.vatSettled")}
                   <input
                     inputMode="decimal"
                     className="mt-1 w-full border border-border bg-background p-2"
@@ -1377,34 +1410,37 @@ function EcritureDuReglement({
               ) : null}
             </>
           ) : null}
+          {/*
+           * Le certificat se justifie quand une retenue est OPÉRÉE. « Sans
+           * retenue » n'en a pas : exiger un texte n'obtiendrait qu'un « RAS »
+           * tapé pour passer, et cette trace-là ne prouve rien.
+           */}
           <label className="block text-[12px]">
-            {t("cab.biblio.taxEvidence")}
+            {t("cab.retenue.taxEvidence")}
             <input
               className="mt-1 w-full border border-border bg-background p-2"
               value={justification}
+              required={saisie.avecRetenue}
               onChange={(e) => setJustification(e.target.value)}
             />
           </label>
+          {saisie.illisible ? (
+            <p role="alert" className="text-[11.5px] text-signal-warn">
+              {t("cab.retenue.montantIllisible")}
+            </p>
+          ) : null}
           <button
             type="button"
-            disabled={!justification.trim()}
+            disabled={!saisie.qualification}
             className="h-8 border border-border px-3 text-[12px] disabled:opacity-40"
-            onClick={() =>
-              setQualification({
-                codes,
-                baseReglee: codes.length ? (base || r.ttc || "").replace(",", ".") : r.paye,
-                tvaReglee: tva.replace(",", "."),
-                assietteIR: assietteIR.replace(",", "."),
-                justification,
-              })
-            }
+            onClick={() => saisie.qualification && setQualification(saisie.qualification)}
           >
-            {t("cab.biblio.previewTax")}
+            {t("cab.retenue.preview")}
           </button>
         </fieldset>
       ) : null}
       {r.inscrite && r.retenue.cas === "a_confirmer" ? (
-        <p className="my-2 text-[12px] text-signal-warn">{t("cab.biblio.unconfirmedRetention")}</p>
+        <p className="my-2 text-[12px] text-signal-warn">{t("cab.retenue.unconfirmed")}</p>
       ) : null}
       {qualification && !r.inscrite ? (
         <button
@@ -1412,7 +1448,7 @@ function EcritureDuReglement({
           className="my-2 text-[12px] underline"
           onClick={() => setQualification(undefined)}
         >
-          {t("cab.biblio.qualifyEdit")}
+          {t("cab.retenue.edit")}
         </button>
       ) : null}
       {r.retenue.cas === "operee"
@@ -1429,20 +1465,17 @@ function EcritureDuReglement({
             ));
           })()
         : null}
-      {r.retenue.cas === "non_operee" ? (
-        <p className="mt-0.5 text-[11.5px] text-signal-warn">
-          {t("cab.review.reglement.retenueNonOperee", { ttc: montant(r.retenue.ttc, locale) })}
-        </p>
+      {r.retenue.cas === "sans_objet" ? (
+        <p className="mt-0.5 text-[11.5px] text-muted-foreground">{t("cab.retenue.sansObjet")}</p>
       ) : null}
       <ul className="mt-1">
         {r.ecriture.lignes.map((l, i) => (
           <li key={i} className="flex items-baseline justify-between gap-3 text-[12px]">
-            <span>
-              <span className="num">{l.account_code}</span>
-              <span className="ms-2 text-muted-foreground">
-                {libelleDuCompte(plan, l.account_code) ?? t("cab.biblio.accountUnknown")}
-              </span>
-            </span>
+            <LigneDuCompte
+              code={l.account_code}
+              intitule={libelleDuCompte(plan, l.account_code)}
+              libelle={l.libelle}
+            />
             <span className="num shrink-0">
               {Number(l.debit) > 0
                 ? `${montant(l.debit, locale)} D`
@@ -1471,6 +1504,74 @@ function EcritureDuReglement({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Ce que la saisie du traitement fiscal permet d'envoyer au moteur.
+ *
+ * Les montants sont relus par `saisieDecimale` : « 1 234,500 », tel que
+ * l'écran l'affiche, devient « 1234.500 ». Un montant illisible n'est pas
+ * envoyé — le moteur le refuserait, et la personne ne saurait pas lequel.
+ * Sans retenue, la base réglée est le payé déclaré, et aucune justification
+ * n'est exigée.
+ */
+function qualificationSaisie(s: {
+  codes: string[];
+  base: string;
+  tva: string;
+  assietteIR: string;
+  justification: string;
+  paye: string;
+}): { avecRetenue: boolean; illisible: boolean; qualification: QualificationDeRetenue | null } {
+  const avecRetenue = s.codes.length > 0;
+  const facultatif = (v: string) => (v.trim() ? saisieDecimale(v) : null);
+  const baseReglee = avecRetenue ? saisieDecimale(s.base) : s.paye;
+  const tvaReglee = facultatif(s.tva);
+  const assietteIR = facultatif(s.assietteIR);
+  const illisible =
+    avecRetenue &&
+    (baseReglee === null ||
+      (s.tva.trim() !== "" && tvaReglee === null) ||
+      (s.assietteIR.trim() !== "" && assietteIR === null));
+  const justification = s.justification.trim();
+  const pret = !illisible && baseReglee !== null && (!avecRetenue || justification !== "");
+  return {
+    avecRetenue,
+    illisible,
+    qualification: pret
+      ? { codes: s.codes, baseReglee, tvaReglee, assietteIR, justification }
+      : null,
+  };
+}
+
+/**
+ * L'intitulé du compte ET le libellé de la ligne.
+ *
+ * L'un dit OÙ va le montant (« 4011 Fournisseurs »), l'autre POURQUOI
+ * (« Retenue 1,5 % / tiers ») : remplacer le second par le premier perdait
+ * ce qui distingue deux lignes sur le même compte. Le libellé n'est répété
+ * que s'il apporte autre chose que l'intitulé.
+ */
+function LigneDuCompte({
+  code,
+  intitule,
+  libelle,
+}: {
+  code: string;
+  intitule: string | null;
+  libelle: string;
+}) {
+  const { t } = useI18n();
+  const propre = libelle.trim();
+  return (
+    <span className="min-w-0">
+      <span className="num">{code}</span>{" "}
+      <span className="text-muted-foreground">{intitule ?? t("cab.biblio.accountUnknown")}</span>
+      {propre && propre !== intitule ? (
+        <span className="block text-[11.5px] text-text-2">{propre}</span>
+      ) : null}
+    </span>
   );
 }
 

@@ -1,10 +1,7 @@
 /* La comptabilité : une surface de travail claire, indépendante du thème PME. */
 .cabinet-workspace .cab-doclib {
-  --library-ink: #20322f;
-  --library-green: #22634d;
-  --library-wash: #f5faf5;
-  --library-line: #e3eae5;
-  color: var(--library-ink);
+  /* Aucune couleur propre : les jetons de l'espace suivent son thème. */
+  color: var(--foreground);
   max-width: 1200px;
   margin-inline: auto;
 }
@@ -31,7 +28,7 @@
   gap: 8px;
   min-width: 0;
   padding: 20px;
-  border: 1px solid var(--library-line);
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
   text-align: start;
@@ -46,8 +43,8 @@
   color: var(--muted-foreground);
 }
 .cabinet-workspace .cab-doclib-client[aria-pressed="true"] {
-  border-color: var(--library-green);
-  background: var(--library-wash);
+  border-color: var(--foreground);
+  background: var(--accent);
 }
 .cabinet-workspace .cab-doclib-button {
   display: inline-flex;
@@ -65,9 +62,9 @@
   cursor: not-allowed;
 }
 .cabinet-workspace .cab-doclib-primary {
-  background: #22634d;
-  color: #fff;
-  border-color: #22634d;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
 }
 .cabinet-workspace .cab-doclib-search {
   display: flex;
@@ -102,8 +99,8 @@
   font-size: 13px;
 }
 .cabinet-workspace .cab-doclib-tabs button[aria-selected="true"] {
-  border-bottom-color: #22634d;
-  color: #22634d;
+  border-bottom-color: var(--foreground);
+  color: var(--foreground);
 }
 .cabinet-workspace .cab-doclib-documents > li {
   display: grid;
@@ -114,7 +111,7 @@
   border-bottom: 1px solid var(--border);
 }
 .cabinet-workspace .cab-doclib-documents input {
-  accent-color: #22634d;
+  accent-color: var(--primary);
 }
 .cabinet-workspace .cab-doclib-documents strong {
   display: block;
@@ -138,10 +135,10 @@
   border-radius: 16px;
   background: var(--card);
   color: var(--foreground);
-  box-shadow: 0 20px 80px rgb(20 40 30 / 20%);
+  box-shadow: 0 20px 80px color-mix(in srgb, var(--foreground) 20%, transparent);
 }
 .cabinet-workspace .cab-doclib-dialog::backdrop {
-  background: rgb(20 40 30 / 35%);
+  background: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 .cabinet-workspace .cab-doclib-dialog h2 {
   font-size: 20px;

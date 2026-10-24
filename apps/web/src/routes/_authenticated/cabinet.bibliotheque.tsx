@@ -8,7 +8,7 @@ import { TelechargerDossierComptable } from "@/components/malica/telecharger-dos
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { toneForStatus } from "@/lib/file-cabinet";
-import { montant } from "@/lib/lisible";
+import { dateEnChiffres, montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
 
@@ -52,7 +52,7 @@ function Bibliotheque() {
         <p className="mt-2 text-[13px] text-muted-foreground">{t("cab.biblio.subtitle")}</p>
       </header>
       <div className="cab-doclib-clients">
-        {actifs.slice(0, 3).map((c) => (
+        {actifs.slice(0, RACCOURCIS_CLIENTS).map((c) => (
           <button
             type="button"
             key={c.tenantId}
@@ -112,13 +112,16 @@ function Bibliotheque() {
   );
 }
 
-const FILTRES = ["all", "achats", "ventes", "preuves", "autres"] as const;
-function categorie(type: string | null) {
-  if (type === "facture_achat" || type === "avoir_achat") return "achats";
-  if (type === "facture_vente" || type === "avoir_vente") return "ventes";
-  if (type === "justificatif_paiement" || type === "recu_de_paiement") return "preuves";
-  return "autres";
-}
+/**
+ * Les clients offerts en raccourci : une rangée de `.cab-doclib-clients`, qui
+ * compte trois colonnes. Les autres restent dans la liste juste dessous — un
+ * raccourci n'est pas un filtre, et aucun client n'en devient inaccessible.
+ */
+const RACCOURCIS_CLIENTS = 3;
+
+/** Tous les documents, ou un seul type du référentiel ; `null` : le type n'est pas établi. */
+type Filtre = { tous: true } | { tous: false; type: string | null };
+const TOUS: Filtre = { tous: true };
 
 function DocumentsClient({
   client,
@@ -130,7 +133,7 @@ function DocumentsClient({
   periode: string;
 }) {
   const { t, locale } = useI18n();
-  const [filtre, setFiltre] = useState<(typeof FILTRES)[number]>("all");
+  const [filtre, setFiltre] = useState<Filtre>(TOUS);
   const [recherche, setRecherche] = useState("");
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const documents = useQuery({
@@ -143,21 +146,30 @@ function DocumentsClient({
   });
   const nomType = (type: string | null) =>
     types.data?.find((d) => d.code === type)?.libelle ?? t("cab.biblio.document");
+  /*
+   * Un onglet par type PRÉSENT dans ce dossier, dans l'ordre et sous le nom
+   * du référentiel (`ref.document_types`). Aucune liste de codes ici : un type
+   * ajouté au référentiel a son onglet sans déploiement.
+   */
+  const presents = new Set((documents.data ?? []).map((d) => d.type));
+  const onglets: Array<{ type: string | null; libelle: string }> = [
+    ...(types.data ?? [])
+      .filter((ty) => presents.has(ty.code))
+      .map((ty) => ({ type: ty.code, libelle: ty.libelle })),
+    ...([...presents].some((ty) => ty === null || !types.data?.some((r) => r.code === ty))
+      ? [{ type: null, libelle: t("cab.biblio.autres") }]
+      : []),
+  ];
+  const typeDuFiltre = (type: string | null) =>
+    type !== null && types.data?.some((r) => r.code === type) ? type : null;
   const lignes = (documents.data ?? []).filter(
     (d) =>
-      (filtre === "all" || categorie(d.type) === filtre) &&
+      (filtre.tous || typeDuFiltre(d.type) === filtre.type) &&
       [d.tiers, d.reference, d.type, nomType(d.type)].some((s) =>
         s?.toLocaleLowerCase(locale).includes(recherche.toLocaleLowerCase(locale)),
       ),
   );
   const selectionVisible = lignes.filter((d) => selection.has(d.id)).map((d) => d.id);
-  const date = (s: string) =>
-    new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      timeZone: "Africa/Tunis",
-    }).format(new Date(s));
   if (documents.isPending) return <p role="status">{t("common.loading")}</p>;
   if (documents.isError)
     return (
@@ -197,15 +209,23 @@ function DocumentsClient({
         ) : null}
       </div>
       <div className="cab-doclib-tabs" role="tablist" aria-label={t("cab.biblio.document")}>
-        {FILTRES.map((f) => (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filtre.tous}
+          onClick={() => setFiltre(TOUS)}
+        >
+          {t("cab.biblio.all")}
+        </button>
+        {onglets.map((o) => (
           <button
             type="button"
             role="tab"
-            aria-selected={filtre === f}
-            key={f}
-            onClick={() => setFiltre(f)}
+            aria-selected={!filtre.tous && filtre.type === o.type}
+            key={o.type ?? ""}
+            onClick={() => setFiltre({ tous: false, type: o.type })}
           >
-            {t(`cab.biblio.${f}` as MessageKey)}
+            {o.libelle}
           </button>
         ))}
       </div>
@@ -233,7 +253,7 @@ function DocumentsClient({
                 <strong>{d.tiers ?? d.reference ?? nomType(d.type)}</strong>
                 <span>
                   {d.reference ? `${d.reference} · ` : ""}
-                  {nomType(d.type)} · {date(d.recuLe)}
+                  {nomType(d.type)} · {dateEnChiffres(d.dateDeClassement, locale)}
                 </span>
               </Link>
               <span className="num text-end text-[12px]">
