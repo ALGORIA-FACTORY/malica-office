@@ -94,7 +94,21 @@ export interface Analyse {
   normalisation: ResultatNormalisation;
 }
 
-export async function analyserPiece(db: Requete, pieceId: string): Promise<Analyse> {
+/**
+ * Juger une pièce lue et poser le jugement.
+ *
+ * `siChange` (25 octobre 2026, décision de Wissem Barouni) : rejuger une
+ * pièce pas encore confirmée avec les règles d'AUJOURD'HUI. Un jugement ne
+ * se réécrit pas (R7) ; un jugement nouveau ne s'inscrit que s'il diffère du
+ * dernier posé sur la même lecture. Rouvrir une pièce dont rien n'a changé
+ * n'ajoute donc aucune ligne. Le jugement est déterministe : aucun modèle,
+ * aucune lecture décomptée.
+ */
+export async function analyserPiece(
+  db: Requete,
+  pieceId: string,
+  { siChange = false }: { siChange?: boolean } = {},
+): Promise<Analyse & { nouvelle: boolean }> {
   const { rows: pieces } = await db.query<{
     tenant_id: string;
     doublon_de: string | null;
@@ -378,22 +392,43 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   const controles = controlerPiece(aControler, contexte);
   const { verdict, motifs } = rendreVerdict(controles);
 
+  const valeurs = [
+    piece.tenant_id,
+    pieceId,
+    extraction.id,
+    pack,
+    JSON.stringify(normalisation),
+    JSON.stringify(controles),
+    verdict,
+    JSON.stringify(motifs),
+  ];
   const { rows: poses } = await db.query<{ id: string }>(
-    `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
-                                   normalisation, controles, verdict, motifs)
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb)
-     returning id`,
-    [
-      piece.tenant_id,
-      pieceId,
-      extraction.id,
-      pack,
-      JSON.stringify(normalisation),
-      JSON.stringify(controles),
-      verdict,
-      JSON.stringify(motifs),
-    ],
+    siChange
+      ? `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                       normalisation, controles, verdict, motifs)
+         select $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb
+          where not exists (
+            select 1 from (select a.pack_version_id, a.normalisation, a.controles, a.verdict, a.motifs
+                             from capture.analyses a
+                            where a.piece_id = $2 and a.extraction_id = $3
+                            order by a.created_at desc limit 1) d
+             where d.pack_version_id = $4 and d.normalisation = $5::jsonb
+               and d.controles = $6::jsonb and d.verdict = $7 and d.motifs = $8::jsonb)
+         returning id`
+      : `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                       normalisation, controles, verdict, motifs)
+         values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb)
+         returning id`,
+    valeurs,
   );
+  if (poses[0])
+    return { id: poses[0].id, verdict, motifs, controles, normalisation, nouvelle: true };
 
-  return { id: poses[0]!.id, verdict, motifs, controles, normalisation };
+  // Rien n'a changé : le dernier jugement posé reste celui qui vaut.
+  const { rows: dernier } = await db.query<{ id: string }>(
+    `select id from capture.analyses where piece_id = $1 and extraction_id = $2
+      order by created_at desc limit 1`,
+    [pieceId, extraction.id],
+  );
+  return { id: dernier[0]!.id, verdict, motifs, controles, normalisation, nouvelle: false };
 }

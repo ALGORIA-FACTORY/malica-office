@@ -154,11 +154,16 @@ async function proposerDepuisLeJugement(
     jurisdiction: string;
     sens_dit: string | null;
     recue_le: string;
+    a_rejuger: boolean;
   }>(
     `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
             a.pack_version_id, o.jurisdiction,
-            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit
+            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
+            -- Pas encore confirmée, et l'appelant est de la société : son
+            -- jugement se refait aux règles du jour (25 octobre 2026).
+            (p.status in ('lue', 'retournee')
+              and p.tenant_id in (select app.member_orgs())) as a_rejuger
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
        join lateral (select id, payload from capture.extractions x
@@ -170,8 +175,11 @@ async function proposerDepuisLeJugement(
   );
   let ligne = derniers[0];
   if (!ligne) return { ok: false, raison: "Cette pièce n'a pas encore été lue." };
-  if (ligne.analyse_extraction !== ligne.extraction) {
-    const a = await analyserPiece(db, pieceId);
+  // Une lecture nouvelle se juge ; une pièce pas encore confirmée se REJUGE
+  // aux règles d'aujourd'hui. Une ancienne pièce ne garde plus le verdict
+  // d'une règle corrigée depuis : seul un jugement différent s'inscrit.
+  if (ligne.analyse_extraction !== ligne.extraction || ligne.a_rejuger) {
+    const a = await analyserPiece(db, pieceId, { siChange: true });
     const { rows } = await db.query<{ pack_version_id: string }>(
       `select pack_version_id from capture.analyses where id = $1`,
       [a.id],
