@@ -1083,9 +1083,6 @@
 [data-surface="pme"] [data-teinte="gouvernance"]{--pf:#E7E1F5;--pe:#2E2152;--pp:#CBBFEA}
 [data-surface="pme"] [data-teinte="fiscal"]{--pf:#F6DCE7;--pe:#4A1730;--pp:#EBBCD0}
 [data-surface="pme"] [data-teinte="autres"]{--pf:#EBEBED;--pe:#18181B;--pp:#D4D4D8}
-/* Un dossier vide reste à sa place : en pointillé, sans fond. */
-[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv{background:transparent;border:1.5px dashed var(--t3);color:var(--t2)}
-[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv b{color:var(--tx)}
 /* La tuile de la capture : la même pochette, en petit. */
 [data-surface="pme"] .tuile-dossier{background:var(--pf);color:var(--pe);border:0;cursor:pointer}
 /* Le dossier où la pièce se trouve déjà, en correction. */
