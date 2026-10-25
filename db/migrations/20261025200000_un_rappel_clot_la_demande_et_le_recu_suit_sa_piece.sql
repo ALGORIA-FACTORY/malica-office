@@ -235,6 +235,10 @@ select d.tenant_id, d.piece_id, 'suppression', 'retiree', null, null
 
 -- b) Les pièces dérivées partagées alors que leur source ne l'est pas. Seul
 --    ce sens est corrigé : rendre privé ce qui n'aurait jamais dû partir.
+--    Seulement celles NÉES partagées (l'écran passait `partage` à la
+--    génération) : une pièce que la PME a choisi de transmettre ensuite porte
+--    un `piece.vis_changed` vers `partage`, et elle ne revient que par accord
+--    du cabinet — la régularisation ne passe pas outre.
 --    L'autre sens (source partagée, reçu privé) est un choix possible de la
 --    PME, et partager à sa place serait une transmission qu'elle n'a pas faite.
 with corrigees as (
@@ -248,6 +252,10 @@ with corrigees as (
      and r.vis = 'partage'::app.vis_t
      and s.vis <> 'partage'::app.vis_t
      and r.status not in ('comptabilisee', 'supervisee')
+     and not exists (select 1 from audit.event_log e
+                      where e.object_id = r.id
+                        and e.action = 'piece.vis_changed'
+                        and e.payload ->> 'to' = 'partage')
   returning r.id, r.tenant_id, s.vis as vis_source, s.id as source_id
 )
 insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
