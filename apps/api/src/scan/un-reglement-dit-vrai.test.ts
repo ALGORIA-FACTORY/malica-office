@@ -132,8 +132,9 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     for (const m of (await rpc("capture", "motifsDAnnulation", "fr")) as Array<{
       id: string;
       code: string;
+      proposable: boolean;
     }>) {
-      motifs[m.code] = m.id;
+      if (m.proposable) motifs[m.code] = m.id;
     }
   });
 

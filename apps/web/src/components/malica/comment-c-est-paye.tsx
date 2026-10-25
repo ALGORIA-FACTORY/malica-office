@@ -40,6 +40,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import { totalDesPaiements } from "@/lib/total-des-paiements";
+import { etatDuReglement, historiqueDuReglement } from "@/lib/etat-du-reglement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { vidage } from "@/lib/hors-ligne";
 import { office } from "@/verticals/malica-office/composition";
@@ -180,6 +181,15 @@ export function CommentCEstPaye({
   useSuperposition(ajoutOuvert, () => onAjout(false), feuille);
   /** Le paiement dont on a ouvert la correction, et son motif choisi. */
   const [aCorriger, setACorriger] = useState<string | null>(null);
+  /*
+   * CORRIGER D'UN GESTE (maquette du 25 octobre 2026) : la feuille d'ajout
+   * s'ouvre DÉJÀ REMPLIE avec le règlement à corriger ; on change ce qui est
+   * faux, on dit pourquoi, et la base annule l'ancien et inscrit le nouveau
+   * ensemble (`capture.corrigerPaiement`).
+   */
+  const [enCorrection, setEnCorrection] = useState<string | null>(null);
+  const [motifChoisi, setMotifChoisi] = useState<string | null>(null);
+  const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
 
   /*
    * ============================== LA DATE DU PAIEMENT SE DÉCLARE, ELLE NE SE DEVINE PAS
@@ -506,7 +516,73 @@ export function CommentCEstPaye({
     historiquePret &&
     !inscrire.isPending &&
     montantAInscrire !== null &&
-    !(referenceExigee && referenceSaisie.trim() === "");
+    !(referenceExigee && referenceSaisie.trim() === "") &&
+    (enCorrection === null || motifChoisi !== null);
+
+  const etat = paiements.isSuccess ? etatDuReglement(ttcMineur, deja) : null;
+  const historique = historiqueDuReglement(deja);
+  const vente = sens === "revenu";
+  const libelleDuMotif = (id: string | null) =>
+    (motifs.data ?? []).find((m) => m.id === id)?.libelle ?? "";
+  const jourCourt = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat(locale, {
+          day: "2-digit",
+          month: "2-digit",
+          timeZone: "UTC",
+        }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso))
+      : "";
+  /** Le plafond d'un montant : ce qui reste, plus l'ancien règlement s'il se corrige. */
+  const ancien = enCorrection ? (deja.find((p) => p.id === enCorrection) ?? null) : null;
+  const plafond = restantMineur === null ? null : restantMineur + (ancien?.montantMineur ?? 0);
+
+  const ouvrirLaCorrection = (id: string) => {
+    const p = deja.find((x) => x.id === id);
+    if (!p || decimales === null) return;
+    effacerErreur();
+    setEnCorrection(id);
+    setMotifChoisi(null);
+    setPartiel(true);
+    setMontantSaisi(
+      // Saisi comme on l'écrit : la virgule décimale, sans séparateur de milliers.
+      p.montantMineur === null
+        ? ""
+        : String(depuisUniteMineure(p.montantMineur, decimales)).replace(".", ","),
+    );
+    setMoyenChoisi(p.moyenCode);
+    setDateDuPaiement(p.payeLe ?? aujourdHui);
+    setReferenceSaisie(p.reference ?? "");
+    onAjout(true);
+  };
+  const fermerLaFeuille = () => {
+    setEnCorrection(null);
+    setMotifChoisi(null);
+    onAjout(false);
+  };
+
+  const corriger = useMutation({
+    mutationFn: async () => {
+      if (!enCorrection || !motifChoisi || !moyenChoisi || montantAInscrire === null)
+        throw new Error(t("pme.paiement.incomplet"));
+      return office().capture.corrigerPaiement({
+        paiementId: enCorrection,
+        motifId: motifChoisi,
+        moyenCode: moyenChoisi,
+        montantMineur: montantAInscrire,
+        payeLe: dateDuPaiement,
+        reference: referenceSaisie.trim() === "" ? null : referenceSaisie.trim(),
+      });
+    },
+    onSuccess: async () => {
+      effacerErreur();
+      setMontantSaisi("");
+      setReferenceSaisie("");
+      setMoyenChoisi(null);
+      fermerLaFeuille();
+      await qc.invalidateQueries({ queryKey: ["paiements", pieceId] });
+    },
+    onError: (e: unknown) => poserErreur("autre", e),
+  });
 
   return (
     <section className="grid gap-3">
@@ -532,34 +608,104 @@ export function CommentCEstPaye({
           </button>
         </div>
       ) : null}
-      {paiements.isSuccess && payeMineur === null ? (
-        <p role="status" className="text-[13px] text-signal-warn">
-          {t("pme.paiement.incomplet")}
-        </p>
+      {/*
+       * ======================================== 1 · L'ÉTAT, EN UNE PHRASE
+       *
+       * Maquette « Paiements d'une pièce », validée par Wissem le 25 octobre
+       * 2026 : où en est la pièce se lit d'abord, en une phrase — payée, en
+       * partie (avec le reste), pas encore, ou le total à confirmer. Jamais un
+       * « — » qu'il faudrait interpréter.
+       */}
+      {etat ? (
+        <div className="grid gap-2 rounded-[18px] bg-card p-4">
+          <span
+            className={`flex items-center gap-2 text-[13px] font-semibold ${
+              etat.kind === "paye"
+                ? "text-signal-ok"
+                : etat.kind === "partiel" ||
+                    etat.kind === "a_confirmer" ||
+                    etat.kind === "illisible"
+                  ? "text-signal-warn"
+                  : "text-text-2"
+            }`}
+          >
+            <i aria-hidden className="h-2 w-2 rounded-full bg-current" />
+            {etat.kind === "paye"
+              ? t(vente ? "pme.paiement.etat.payeVente" : "pme.paiement.etat.paye")
+              : etat.kind === "partiel"
+                ? t(vente ? "pme.paiement.etat.partielVente" : "pme.paiement.etat.partiel")
+                : etat.kind === "non_paye"
+                  ? t(vente ? "pme.paiement.etat.nonPayeVente" : "pme.paiement.etat.nonPaye")
+                  : etat.kind === "a_confirmer"
+                    ? t("pme.paiement.etat.aConfirmer")
+                    : etat.kind === "illisible"
+                      ? t("pme.paiement.incomplet")
+                      : t("pme.paiement.etat.rien")}
+          </span>
+          {/* L'avancement : payé sur le TTC, quand les deux sont connus. */}
+          {etat.kind === "paye" || etat.kind === "partiel" ? (
+            <span
+              aria-hidden
+              className="order-last flex h-1.5 overflow-hidden rounded-full bg-muted"
+            >
+              <i
+                className={etat.kind === "paye" ? "bg-signal-ok" : "bg-signal-warn"}
+                style={{
+                  width: `${ttcMineur ? Math.min(100, Math.round((etat.paye / ttcMineur) * 100)) : 100}%`,
+                }}
+              />
+            </span>
+          ) : null}
+          {etat.kind === "paye" ? (
+            <b className="num text-[24px] font-semibold tracking-[-0.03em]">
+              {lisible(etat.paye)} {devise}
+            </b>
+          ) : etat.kind === "partiel" ? (
+            <b className="num text-[24px] font-semibold tracking-[-0.03em]">
+              {t("pme.paiement.grand.reste", { montant: `${lisible(etat.reste)} ${devise}` })}
+            </b>
+          ) : null}
+          <span className="text-[13px] leading-[1.45] text-text-2">
+            {etat.kind === "paye"
+              ? t("pme.paiement.phrase.paye")
+              : etat.kind === "partiel"
+                ? t("pme.paiement.phrase.partiel", {
+                    paye: lisible(etat.paye),
+                    total: lisible(ttcMineur),
+                  })
+                : etat.kind === "non_paye"
+                  ? t("pme.paiement.phrase.nonPaye", { date: jourCourt(etat.depuis) })
+                  : etat.kind === "a_confirmer"
+                    ? t("pme.paiement.phrase.aConfirmer", { paye: lisible(etat.paye) })
+                    : etat.kind === "rien"
+                      ? t("pme.paiement.phrase.rien")
+                      : null}
+          </span>
+        </div>
       ) : null}
 
       {/*
-       * ====================================== LES DEUX GESTES, AVANT L'HISTOIRE
+       * ============================== 2 · LE GESTE QUI A UN SENS MAINTENANT
        *
-       * 24 octobre 2026, maquette validée par Wissem : un bouton « Ajouter un
-       * règlement » ouvre une feuille en trois temps (combien, comment,
-       * quand) ; « Pas encore payé » reste un geste à part, d'un seul toucher.
-       * La grille des huit moyens et ses trois phrases quittent la page.
+       * « Ajouter un règlement » tant que ce n'est pas soldé ; « Pas encore
+       * payé » seulement quand rien n'est inscrit — proposé à côté d'un
+       * règlement, il disait le contraire de la ligne d'en dessous.
        */}
-      {solde ? (
-        <p className="text-[14px] font-medium text-signal-ok">{t("pme.paiement.solde")}</p>
-      ) : (
+      {!solde ? (
         <div className="grid gap-2">
           <button
             type="button"
-            onClick={() => onAjout(true)}
+            onClick={() => {
+              setEnCorrection(null);
+              onAjout(true);
+            }}
             disabled={!historiquePret || moyensPayes.length === 0}
             className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-foreground text-[15px] font-semibold text-background disabled:opacity-40"
           >
             <Plus className="h-[18px] w-[18px]" aria-hidden />
             {t("pme.paiement.ajouterUn")}
           </button>
-          {nonPaye ? (
+          {nonPaye && vivants.length === 0 ? (
             <button
               type="button"
               onClick={() => inscrire.mutate(nonPaye.code)}
@@ -570,28 +716,24 @@ export function CommentCEstPaye({
             </button>
           ) : null}
         </div>
-      )}
+      ) : null}
       {erreur && erreurDe !== "recu" && !ajoutOuvert ? (
         <p role="alert" className="text-[12.5px] text-signal-warn">
           {erreur}
         </p>
       ) : null}
 
-      {deja.length > 0 ? (
+      {vivants.length > 0 || historique.length > 0 ? (
         <>
-          {/*
-           * Ce qui a DÉJÀ été inscrit : un acompte puis un solde sont deux
-           * faits, et le second ne remplace pas le premier.
-           */}
+          {/* 3 · ce qui compte aujourd'hui : les règlements vivants, seuls. */}
           <ul className="grid gap-2">
-            {deja.map((p) => (
-              <li
-                key={p.id}
-                className={`rounded-[18px] border border-border bg-card px-4 py-3 ${p.eteint ? "opacity-55" : ""}`}
-              >
+            {vivants.map((p) => (
+              <li key={p.id} className="rounded-[18px] border border-border bg-card px-4 py-3">
                 <span className="flex items-baseline justify-between gap-3">
-                  <span className={`text-[14px] font-semibold ${p.eteint ? "line-through" : ""}`}>
-                    {libelleDuMoyen(p.moyenCode)}
+                  <span className="text-[14px] font-semibold">
+                    {p.moyenCode === "non_paye"
+                      ? t(vente ? "pme.paiement.etat.nonPayeVente" : "pme.paiement.etat.nonPaye")
+                      : libelleDuMoyen(p.moyenCode)}
                     {p.reference ? (
                       <span className="num ms-1.5 text-[12px] font-normal text-text-2">
                         {p.reference}
@@ -603,17 +745,13 @@ export function CommentCEstPaye({
                    * dur : juste en Tunisie, faux dans la première monnaie à deux
                    * décimales — et invisible (R4).
                    */}
-                  <span className={`num shrink-0 text-[14px] ${p.eteint ? "line-through" : ""}`}>
-                    {lisible(p.montantMineur)}
-                  </span>
+                  {p.montantMineur !== null ? (
+                    <span className="num shrink-0 text-[14px]">{lisible(p.montantMineur)}</span>
+                  ) : null}
                 </span>
-                {p.eteint ? (
-                  <span className="mt-0.5 block text-[12px] text-text-2">
-                    {p.annulePaiementId === null
-                      ? t("pme.paiement.etat.annule")
-                      : t("pme.paiement.etat.annulation")}
-                  </span>
-                ) : null}
+                <span className="mt-0.5 block text-[12px] text-text-2">
+                  {jourCourt(p.payeLe ?? p.createdAt)}
+                </span>
                 {/* Le manque se dit, et le bouton qui y répond est là. */}
                 {p.justificatifPieceId === null && exigeUnePreuve(p.moyenCode) ? (
                   <button
@@ -634,28 +772,28 @@ export function CommentCEstPaye({
                 {/*
                  * ======================================= LE RETOUR EN ARRIÈRE
                  *
-                 * On n'efface pas : on éteint, avec un motif. L'ancienne ligne
-                 * reste lisible, barrée (R7).
+                 * On n'efface pas : on annule, avec un motif, et l'ancienne ligne
+                 * rejoint l'historique (R7). Un règlement se CORRIGE d'un geste ;
+                 * « pas encore payé » se retire (« Ce n'était pas exact »).
                  */}
-                {!p.eteint ? (
+                {p.moyenCode === "non_paye" ? (
                   aCorriger === p.id ? (
                     <span className="mt-2 grid gap-1.5">
-                      <span className="text-[12px] text-text-2">{t("pme.paiement.pourquoi")}</span>
-                      {/* Les motifs qui disent vrai pour CE geste : corriger un
-                          règlement, ou retirer « pas encore payé ». */}
+                      <span className="text-[12.5px] leading-[1.45] text-text-2">
+                        {t("pme.paiement.pasExact.explique")}
+                      </span>
                       {(motifs.data ?? [])
-                        .filter(
-                          (m) => m.pour === (p.moyenCode === "non_paye" ? "non_paye" : "reglement"),
-                        )
+                        .filter((m) => m.proposable && m.pour === "non_paye")
+                        .slice(0, 1)
                         .map((m) => (
                           <button
                             key={m.id}
                             type="button"
                             disabled={annuler.isPending}
                             onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
-                            className="min-h-[40px] rounded-[12px] border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
+                            className="min-h-[44px] rounded-full border border-border px-4 text-[13.5px] font-medium hover:bg-accent disabled:opacity-40"
                           >
-                            {m.libelle}
+                            {t("pme.paiement.pasExact.retirer")}
                           </button>
                         ))}
                       <button
@@ -670,15 +808,73 @@ export function CommentCEstPaye({
                     <button
                       type="button"
                       onClick={() => setACorriger(p.id)}
-                      className="mt-1 min-h-[36px] text-[12.5px] text-text-2 underline underline-offset-2"
+                      className="mt-1 min-h-[40px] text-[13px] text-text-2 underline underline-offset-2"
                     >
-                      {t("pme.paiement.corriger")}
+                      {t("pme.paiement.pasExact")}
                     </button>
                   )
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => ouvrirLaCorrection(p.id)}
+                    disabled={decimales === null}
+                    className="mt-1 min-h-[40px] text-[13px] text-text-2 underline underline-offset-2 disabled:opacity-40"
+                  >
+                    {t("pme.paiement.corrigerCe")}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
+
+          {/*
+           * 4 · L'HISTORIQUE, REPLIÉ : chaque règlement annulé une fois, avec la
+           * date et le motif de son annulation. La ligne d'annulation n'est plus
+           * une ligne de plus.
+           */}
+          {historique.length > 0 ? (
+            <div className="grid gap-2">
+              <button
+                type="button"
+                onClick={() => setHistoriqueOuvert(!historiqueOuvert)}
+                aria-expanded={historiqueOuvert}
+                className="flex min-h-[44px] items-center justify-between text-[13px] text-text-2"
+              >
+                <span>{t("pme.paiement.historique", { count: historique.length })}</span>
+                <span aria-hidden>{historiqueOuvert ? "\u2303" : "\u2304"}</span>
+              </button>
+              {historiqueOuvert ? (
+                <ul className="grid gap-1.5">
+                  {historique.map((h) => (
+                    <li key={h.ligne.id} className="rounded-[14px] bg-muted px-3.5 py-2.5">
+                      <span className="flex items-baseline justify-between gap-3 text-text-2">
+                        <span className="text-[13px] line-through">
+                          {h.ligne.moyenCode === "non_paye"
+                            ? t(
+                                vente
+                                  ? "pme.paiement.etat.nonPayeVente"
+                                  : "pme.paiement.etat.nonPaye",
+                              )
+                            : libelleDuMoyen(h.ligne.moyenCode)}
+                        </span>
+                        {h.ligne.montantMineur !== null ? (
+                          <span className="num text-[13px] line-through">
+                            {lisible(h.ligne.montantMineur)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="mt-0.5 block text-[12px] text-text-2">
+                        {t("pme.paiement.annuleLe", {
+                          date: jourCourt(h.le),
+                          motif: libelleDuMotif(h.motifId),
+                        })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
 
           {/*
            * ========================================== LE REÇU, QUAND IL A UN SENS
@@ -728,29 +924,31 @@ export function CommentCEstPaye({
        * le pack le dit. La photo du justificatif s'ouvre à l'enregistrement,
        * quand le moyen l'exige — un abandon de l'appareil n'annule rien.
        */}
-      {ajoutOuvert && !solde && typeof document !== "undefined"
+      {ajoutOuvert && (!solde || enCorrection !== null) && typeof document !== "undefined"
         ? createPortal(
             <div
               className="fixed inset-0 z-[60] flex flex-col justify-end bg-foreground/40"
               onClick={(e) => {
-                if (e.target === e.currentTarget) onAjout(false);
+                if (e.target === e.currentTarget) fermerLaFeuille();
               }}
             >
               <div
                 ref={feuille}
                 role="dialog"
                 aria-modal="true"
-                aria-label={t("pme.paiement.titre")}
+                aria-label={t(
+                  enCorrection ? "pme.paiement.correction.titre" : "pme.paiement.titre",
+                )}
                 className="mx-auto grid max-h-[88vh] w-full max-w-md gap-5 overflow-y-auto rounded-t-[28px] border-t border-border bg-background px-[20px] pb-safe pt-3 text-start"
               >
                 <span aria-hidden className="mx-auto h-1 w-10 rounded-full bg-border" />
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[21px] font-semibold leading-[1.2] tracking-[-0.02em]">
-                    {t("pme.paiement.titre")}
+                    {t(enCorrection ? "pme.paiement.correction.titre" : "pme.paiement.titre")}
                   </p>
                   <button
                     type="button"
-                    onClick={() => onAjout(false)}
+                    onClick={fermerLaFeuille}
                     aria-label={t("common.fermer")}
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
                   >
@@ -758,41 +956,53 @@ export function CommentCEstPaye({
                   </button>
                 </div>
 
+                {enCorrection ? (
+                  <p className="text-[13px] leading-[1.45] text-text-2">
+                    {t("pme.paiement.correction.explique")}
+                  </p>
+                ) : null}
+
                 {/* 1 · combien */}
                 <div className="grid gap-2">
                   <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     {t("pme.paiement.temps.combien")}
                   </p>
-                  {restantMineur !== null && payeMineur !== null && payeMineur > 0 ? (
+                  {/* En correction, la borne dit le vrai plafond ; « reste 0 » trompait. */}
+                  {!enCorrection &&
+                  restantMineur !== null &&
+                  payeMineur !== null &&
+                  payeMineur > 0 ? (
                     <p className="flex items-baseline justify-between gap-3 text-[13px]">
                       <span className="text-text-2">{t("pme.paiement.reste")}</span>
                       <span className="num font-medium">{lisible(restantMineur)}</span>
                     </p>
                   ) : null}
-                  <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
-                    <button
-                      type="button"
-                      onClick={() => setPartiel(false)}
-                      aria-pressed={partiel === false}
-                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                        partiel === false
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-text-2"
-                      }`}
-                    >
-                      {t("pme.paiement.tout")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPartiel(true)}
-                      aria-pressed={partiel === true}
-                      className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                        partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
-                      }`}
-                    >
-                      {t("pme.paiement.partie")}
-                    </button>
-                  </div>
+                  {enCorrection ? null : (
+                    <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
+                      <button
+                        type="button"
+                        onClick={() => setPartiel(false)}
+                        aria-pressed={partiel === false}
+                        className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                          partiel === false
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-text-2"
+                        }`}
+                      >
+                        {t("pme.paiement.tout")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPartiel(true)}
+                        aria-pressed={partiel === true}
+                        className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                          partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                        }`}
+                      >
+                        {t("pme.paiement.partie")}
+                      </button>
+                    </div>
+                  )}
                   {partiel ? (
                     <label className="grid gap-1">
                       <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
@@ -804,6 +1014,12 @@ export function CommentCEstPaye({
                         className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
                       />
                     </label>
+                  ) : null}
+                  {/* La borne se dit AVANT d'être refusée par la base. */}
+                  {partiel && plafond !== null ? (
+                    <p className="text-[12.5px] text-signal-warn">
+                      {t("pme.paiement.borne", { montant: `${lisible(plafond)} ${devise}` })}
+                    </p>
                   ) : null}
                 </div>
 
@@ -852,6 +1068,12 @@ export function CommentCEstPaye({
                       className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
                     />
                   </label>
+                  {/* Un acompte précède souvent la facture : on le dit, sans bloquer. */}
+                  {dateDeLaPiece && dateDuPaiement < dateDeLaPiece ? (
+                    <p className="text-[12.5px] text-signal-warn">
+                      {t("pme.paiement.avantFacture")}
+                    </p>
+                  ) : null}
                   {referenceExigee ? (
                     <label className="grid gap-1">
                       <span className="text-[12.5px] text-text-2">
@@ -872,20 +1094,50 @@ export function CommentCEstPaye({
                     {erreur}
                   </p>
                 ) : null}
+                {/* 4 · pourquoi corriger : les motifs d'un règlement, seulement. */}
+                {enCorrection ? (
+                  <div className="grid gap-2">
+                    <p className="text-[12.5px] text-text-2">{t("pme.paiement.pourquoi")}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(motifs.data ?? [])
+                        .filter((m) => m.proposable && m.pour === "reglement")
+                        .map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setMotifChoisi(m.id)}
+                            aria-pressed={motifChoisi === m.id}
+                            className={`min-h-[44px] rounded-full px-4 text-[13.5px] font-medium ${
+                              motifChoisi === m.id
+                                ? "bg-foreground text-background"
+                                : "border border-border hover:bg-accent"
+                            }`}
+                          >
+                            {m.libelle}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 <button
                   type="button"
-                  disabled={!enregistrable}
-                  onClick={() => moyenChoisi && inscrire.mutate(moyenChoisi)}
+                  disabled={!enregistrable || corriger.isPending}
+                  onClick={() =>
+                    enCorrection ? corriger.mutate() : moyenChoisi && inscrire.mutate(moyenChoisi)
+                  }
                   className="mb-3 h-[54px] w-full rounded-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-40"
                 >
-                  {inscrire.isPending
+                  {inscrire.isPending || corriger.isPending
                     ? t("common.loading")
-                    : montantAInscrire !== null
-                      ? t("pme.paiement.enregistrer", {
-                          montant: lisible(montantAInscrire),
-                          devise,
-                        })
-                      : t("pme.paiement.enregistrerSansMontant")}
+                    : enCorrection
+                      ? t("pme.paiement.correction.enregistrer")
+                      : montantAInscrire !== null
+                        ? t("pme.paiement.enregistrer", {
+                            montant: lisible(montantAInscrire),
+                            devise,
+                          })
+                        : t("pme.paiement.enregistrerSansMontant")}
                 </button>
               </div>
             </div>,
