@@ -194,6 +194,21 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  it("une analyse plus récente sans total retire le total : rien ne se règle sur l'ancienne", async () => {
+    const id = await piece("relue", "100.000");
+    await admin((a) =>
+      a.query(
+        `insert into capture.analyses
+           (tenant_id, piece_id, extraction_id, pack_version_id, normalisation, controles, verdict, motifs)
+         select tenant_id, piece_id, extraction_id, pack_version_id,
+                '{"etat":"tranche","montants":{}}'::jsonb, controles, verdict, motifs
+           from capture.analyses where piece_id = $1`,
+        [id],
+      ),
+    );
+    await assert.rejects(() => regler(id, "especes", null), /paiement\.montant_requis/);
+  });
+
   it("une pièce d'un autre dossier ne se règle pas depuis celui-ci", async () => {
     const id = await piece("intrus", "100.000");
     await assert.rejects(() =>

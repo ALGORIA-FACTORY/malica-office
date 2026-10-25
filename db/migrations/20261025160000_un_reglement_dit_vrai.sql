@@ -89,14 +89,18 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select (a.normalisation -> 'montants' ->> 'ttc')::bigint
-    from capture.extractions e
-    join capture.analyses a on a.extraction_id = e.id
-   where e.piece_id = p_piece
-     and (a.normalisation -> 'montants' ->> 'ttc') ~ '^[0-9]+$'
-     and e.created_at = (select max(x.created_at) from capture.extractions x where x.piece_id = p_piece)
-   order by a.created_at desc
-   limit 1
+  -- La DERNIÈRE analyse de la dernière extraction fait foi : si elle n'établit
+  -- pas de total, il n'y en a pas — on ne retombe pas sur une analyse périmée.
+  select case when d.ttc ~ '^[0-9]+$' then d.ttc::bigint end
+    from (
+      select a.normalisation -> 'montants' ->> 'ttc' as ttc
+        from capture.extractions e
+        join capture.analyses a on a.extraction_id = e.id
+       where e.piece_id = p_piece
+         and e.created_at = (select max(x.created_at) from capture.extractions x where x.piece_id = p_piece)
+       order by a.created_at desc
+       limit 1
+    ) d
 $$;
 
 -- --- Les règles, à l'inscription -------------------------------------------------------------

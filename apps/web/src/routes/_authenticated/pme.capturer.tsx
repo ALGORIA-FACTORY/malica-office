@@ -8,7 +8,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
 import { lectureEnSuspens, presentation, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
@@ -610,14 +610,24 @@ function PmeCapturer() {
        * (`paiement.montant_requis`) : on ne devine pas. Ces pièces se règlent
        * sur leur fiche, où le montant se dit.
        */
+      /*
+       * Chaque règlement est sa propre transaction : si le lot échoue en
+       * route, les premiers restent inscrits. Rejouer le lot doit finir le
+       * travail — une pièce déjà soldée (`paiement.deja_solde`) est sautée,
+       * pas une raison de s'arrêter avant les suivantes.
+       */
       for (const p of lues.filter((x) => x.total !== null)) {
-        await office().capture.enregistrerPaiement({
-          pieceId: p.id,
-          packId: pme.packId,
-          moyenCode: moyen,
-          devise: p.devise ?? pme.currency,
-          reference: reference.trim() === "" ? null : reference.trim(),
-        });
+        try {
+          await office().capture.enregistrerPaiement({
+            pieceId: p.id,
+            packId: pme.packId,
+            moyenCode: moyen,
+            devise: p.devise ?? pme.currency,
+            reference: reference.trim() === "" ? null : reference.trim(),
+          });
+        } catch (e) {
+          if (!(vientDeNous(e) && e.message === "paiement.deja_solde")) throw e;
+        }
       }
     },
     onSuccess: async () => {
