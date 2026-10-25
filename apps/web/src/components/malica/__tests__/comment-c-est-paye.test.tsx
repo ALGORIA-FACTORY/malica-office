@@ -297,6 +297,26 @@ describe("corriger un règlement", () => {
     expect(api.corriger).not.toHaveBeenCalled();
   });
 
+  it("un ancien règlement sans montant se corrige avec le bon montant", async () => {
+    api.paiements.mockResolvedValue([{ ...regle, montantMineur: null }]);
+    monter();
+    fireEvent.click(await screen.findByText("pme.paiement.corrigerCe"));
+    fireEvent.change(screen.getByLabelText("pme.paiement.combien"), {
+      target: { value: "119" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "montant_errone" }));
+    const enregistrer = await screen.findByRole("button", {
+      name: "pme.paiement.correction.enregistrer",
+    });
+    await waitFor(() => expect((enregistrer as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(enregistrer);
+    await waitFor(() =>
+      expect(api.corriger).toHaveBeenCalledWith(
+        expect.objectContaining({ paiementId: "regle", montantMineur: 119000 }),
+      ),
+    );
+  });
+
   it("une correction abandonnée ne préremplit pas l'ajout suivant", async () => {
     api.paiements.mockResolvedValue([{ ...regle, montantMineur: 50000 }]);
     monter();

@@ -335,6 +335,16 @@ export function CommentCEstPaye({
   const restantMineur =
     ttcMineur === null || payeMineur === null ? null : Math.max(0, ttcMineur - payeMineur);
   const solde = restantMineur !== null && restantMineur === 0 && vivants.length > 0;
+  /*
+   * En correction, la ligne corrigée ne compte pas : elle va s'éteindre. Un
+   * ancien règlement sans montant connu ne doit donc pas empêcher d'inscrire
+   * le bon (relevé par la revue de #102).
+   */
+  const payeHorsCorrection = !paiements.isSuccess
+    ? null
+    : enCorrection
+      ? totalDesPaiements(deja.filter((p) => p.id !== enCorrection))
+      : payeMineur;
 
   /** Le montant lisible, aux décimales du pack — jamais divisé par 1000 en dur. */
   const lisible = (mineur: number | null) =>
@@ -350,7 +360,7 @@ export function CommentCEstPaye({
    * doublon du 13 octobre.
    */
   const montantAInscrire = (() => {
-    if (!historiquePret || payeMineur === null || partiel === null) return null;
+    if (!historiquePret || payeHorsCorrection === null || partiel === null) return null;
     if (!partiel)
       return restantMineur !== null && Number.isSafeInteger(restantMineur) && restantMineur > 0
         ? restantMineur
@@ -537,9 +547,11 @@ export function CommentCEstPaye({
           timeZone: "UTC",
         }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso))
       : "";
-  /** Le plafond d'un montant : ce qui reste, plus l'ancien règlement s'il se corrige. */
-  const ancien = enCorrection ? (deja.find((p) => p.id === enCorrection) ?? null) : null;
-  const plafond = restantMineur === null ? null : restantMineur + (ancien?.montantMineur ?? 0);
+  /** Le plafond d'un montant : ce qui reste, la ligne corrigée mise à part. */
+  const plafond =
+    ttcMineur === null || payeHorsCorrection === null
+      ? null
+      : Math.max(0, ttcMineur - payeHorsCorrection);
 
   const ouvrirLaCorrection = (id: string) => {
     const p = deja.find((x) => x.id === id);
