@@ -1359,14 +1359,15 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne:last-child{border-bottom:0}
 [data-surface="pme"] [data-ecran="dossier"] button.f-ligne, [data-surface="pme"] [data-ecran="dossier"] a.f-ligne{cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne:disabled{opacity:.4;cursor:default}
-[data-surface="pme"] [data-ecran="dossier"] .f-ligne .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:.1875rem}
+/* Le libellé garde sa colonne : une valeur longue (« INFOTECH SOLUTIONS SARL ») se replie, elle n'écrase pas « Émetteur » lettre à lettre. */
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .bd{flex:1 1 auto;min-width:5.5rem;display:flex;flex-direction:column;gap:.1875rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb{font-size:.8125rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb-a{font-size:.9375rem;font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne.sup .lb-a{color:var(--ve)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et{font-size:.75rem;font-weight:600;color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.ok{color:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.am{color:var(--am)}
-[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl{font-family:var(--mono);font-size:.9375rem;font-weight:600;text-align:end;overflow-wrap:anywhere}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl{flex:0 1 auto;min-width:0;font-family:var(--mono);font-size:.9375rem;font-weight:600;text-align:end;overflow-wrap:anywhere}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl-g{font-size:.9375rem;font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .dt{font-family:var(--mono);font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .ch{flex:none;width:18px;height:18px;stroke-width:2;color:var(--t3)}

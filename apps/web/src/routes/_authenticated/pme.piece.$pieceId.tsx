@@ -38,6 +38,13 @@ import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
+import {
+  avancementDeLaPiece,
+  ecritureDeLaPiece,
+  noteDeSuppression,
+  partageeAvecLeCabinet,
+  RANG_COMPTEE,
+} from "@/lib/fiche-de-la-piece";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
@@ -651,7 +658,8 @@ function PieceScreen() {
   // précision de la personne si la lecture n'avait pas su.
   const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
 
-  const booked = (ecritures.data ?? []).find((e) => e.status === "booked");
+  // L'écriture DE la pièce : la vivante — jamais un règlement ni une annulée.
+  const booked = ecritureDeLaPiece(ecritures.data);
 
   /**
    * Un seul geste : la proposition du Socle et sa comptabilisation s'enchaînent.
@@ -783,21 +791,15 @@ function PieceScreen() {
    * le cabinet. Reprendre l'ordre de la maquette aurait dessiné un circuit
    * qui n'existe pas dans le produit.
    */
-  const rang: Record<string, number> = {
-    capturee: 1,
-    lue: 2,
-    proposee: 3,
-    comptabilisee: 4,
-    supervisee: 5,
-    retournee: 3,
-  };
-  const atteint = rang[piece.status] ?? 1;
+  // Une seule source pour l'étape atteinte ET pour « comptée » : le parcours
+  // et la pastille ne peuvent pas se contredire.
+  const { atteint, comptee } = avancementDeLaPiece(piece.status, booked);
   const etapes = (
     [
       ["recue", 1],
       ["lue", 2],
       ["confirmee", 3],
-      ["comptee", 4],
+      ["comptee", RANG_COMPTEE],
       ["vue", 5],
       ["declaree", 6],
     ] as const
@@ -1273,6 +1275,7 @@ function PieceScreen() {
    */
   const role = acces.data?.role ?? null;
   const siege = role === "collaborateur";
+  const noteSuppression = noteDeSuppression(demandeDeSuppression, vis);
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -1421,13 +1424,6 @@ function PieceScreen() {
    * au cabinet, le reste à payer — puis elle devient une ligne calme. Aucun
    * geste n'est perdu : chacun a aussi sa place dans un onglet.
    */
-  /*
-   * Comptée : par l'écriture lue, OU par le statut de la pièce — l'écriture
-   * peut tarder d'une requête, et une pièce comptée ne doit jamais reposer la
-   * question du montant.
-   */
-  const comptee =
-    Boolean(booked) || piece.status === "comptabilisee" || piece.status === "supervisee";
   const pastille: { cle: MessageKey; ton: "ok" | "am" | "az" | "neutre" } = comptee
     ? { cle: "pme.dossier.etat.comptabilisee", ton: "ok" }
     : piece.status === "retournee"
@@ -1975,7 +1971,7 @@ function PieceScreen() {
           ) : null}
 
           {/* Le cabinet : transmise, gardée, ou à décider. */}
-          {cabinet.data && (!booked || piece.vis !== "partage") ? (
+          {cabinet.data && (!comptee || piece.vis !== "partage") ? (
             <div className="f-carte f-cab">
               {piece.vis === "partage" ? (
                 <>
@@ -2285,7 +2281,7 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {(vis === "partage" || (vis === "entite" && siege)) &&
+              {partageeAvecLeCabinet(vis) &&
               (!demandeDeSuppression || demandeDeSuppression === "retiree") ? (
                 /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
                 <button
@@ -2318,9 +2314,10 @@ function PieceScreen() {
               ) : null}
             </div>
           )}
-          {demandeDeSuppression === "demandee" ? (
+          {/* Hors partage, une vieille demande ne parle plus : le « Supprimer » ordinaire suffit. */}
+          {noteSuppression === "demandee" ? (
             <p className="f-note">{t("pme.piece.suppressionDemandee")}</p>
-          ) : demandeDeSuppression === "refusee" ? (
+          ) : noteSuppression === "refusee" ? (
             <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
 
