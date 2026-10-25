@@ -195,7 +195,7 @@ function Formulaire({
                 { value: "importateur", label: t("fq.importer") },
                 { value: "revendeur", label: t("fq.reseller") },
                 { value: "prestataire", label: t("fq.service") },
-                { value: "autre", label: t("fx.autre") },
+                { value: "autre", label: t("fq.other") },
               ]}
             />
           </div>

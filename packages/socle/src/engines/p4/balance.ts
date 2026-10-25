@@ -171,6 +171,9 @@ export function computePivot(input: PivotInput): PivotV1 {
       });
       continue;
     }
+    const totalDuDroit = sum(
+      (extract.other_charges ?? []).filter((d) => d.code === c.code).map((d) => d.amount),
+    );
     const allocations = (qualifiees ?? [])
       .flatMap((l) => l.droits)
       .filter((d) => d.code === c.code);
@@ -178,7 +181,7 @@ export function computePivot(input: PivotInput): PivotV1 {
       if (
         !qualifiees ||
         !allocations.length ||
-        !sum(allocations.map((d) => d.montant)).eq(c.amount)
+        !sum(allocations.map((d) => d.montant)).eq(totalDuDroit)
       )
         motifs.push({
           code: "FISCAL_CHARGE_MISMATCH",
@@ -186,12 +189,16 @@ export function computePivot(input: PivotInput): PivotV1 {
           message: `Assiette ou ventilation de « ${c.code} » absente ou différente du droit lu.`,
         });
     }
-    if (rule.fixed_amount != null && !D(c.amount).eq(D(rule.fixed_amount))) {
+    if (rule.fixed_amount != null && !totalDuDroit.eq(D(rule.fixed_amount))) {
       motifs.push({
         code: "FISCAL_CHARGE_MISMATCH",
         severity: "block",
-        message: `Droit « ${c.code} » différent du barème applicable : lu ${c.amount}, attendu ${rule.fixed_amount}`,
-        detail: { charge_code: c.code, actual: c.amount, expected: rule.fixed_amount },
+        message: `Droit « ${c.code} » différent du barème applicable : lu ${round(totalDuDroit.toString())}, attendu ${rule.fixed_amount}`,
+        detail: {
+          charge_code: c.code,
+          actual: totalDuDroit.toString(),
+          expected: rule.fixed_amount,
+        },
       });
     }
     charges.push({

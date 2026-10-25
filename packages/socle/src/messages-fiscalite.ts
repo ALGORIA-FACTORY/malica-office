@@ -1,7 +1,7 @@
 export const frFiscalite = {
   "fq.title": "Qualifier la fiscalité de cette pièce",
   "fq.hint":
-    "Vérifiez les bases sur la pièce. Les taxes sont calculées côté serveur ; une assiette non soumise se renseigne à zéro.",
+    "Vérifiez les bases sur la pièce. Les taxes sont calculées automatiquement ; indiquez zéro pour une base non soumise.",
   "fq.date": "Date de l’opération",
   "fq.context": "Opération",
   "fq.interior": "Intérieure",
@@ -12,6 +12,7 @@ export const frFiscalite = {
   "fq.importer": "Importateur",
   "fq.reseller": "Revendeur",
   "fq.service": "Prestataire",
+  "fq.other": "Autre",
   "fq.printed": "HT imprimé",
   "fq.base": "Part du HT affectée",
   "fq.account": "Imputation du HT et des coûts non récupérables",
@@ -128,7 +129,7 @@ export const frFiscalite = {
 export const enFiscalite = {
   "fq.title": "Qualify this document’s tax treatment",
   "fq.hint":
-    "Check the bases against the document. Taxes are computed on the server; use zero for a non-taxable base.",
+    "Check the bases against the document. Taxes are calculated automatically; use zero for a non-taxable base.",
   "fq.date": "Transaction date",
   "fq.context": "Transaction",
   "fq.interior": "Domestic",
@@ -139,6 +140,7 @@ export const enFiscalite = {
   "fq.importer": "Importer",
   "fq.reseller": "Reseller",
   "fq.service": "Service provider",
+  "fq.other": "Other",
   "fq.printed": "Printed net base",
   "fq.base": "Allocated net base",
   "fq.account": "Account for net cost and non-recoverable taxes",
@@ -253,7 +255,7 @@ export const enFiscalite = {
 
 export const arFiscalite = {
   "fq.title": "تحديد المعالجة الجبائية للوثيقة",
-  "fq.hint": "تحقق من القواعد على الوثيقة. يحتسب الخادم الأداءات؛ أدخل صفرا للقاعدة غير الخاضعة.",
+  "fq.hint": "تحقق من القواعد على الوثيقة. تحتسب الأداءات آليا؛ أدخل صفرا للقاعدة غير الخاضعة.",
   "fq.date": "تاريخ العملية",
   "fq.context": "العملية",
   "fq.interior": "داخلية",
@@ -264,6 +266,7 @@ export const arFiscalite = {
   "fq.importer": "مورد",
   "fq.reseller": "تاجر",
   "fq.service": "مسدي خدمات",
+  "fq.other": "أخرى",
   "fq.printed": "المبلغ المطبوع دون أداء",
   "fq.base": "الجزء المخصص دون أداء",
   "fq.account": "حساب الكلفة والأداءات غير القابلة للاسترجاع",

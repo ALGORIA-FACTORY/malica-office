@@ -206,6 +206,38 @@ describe("qualification fiscale : calculs indépendants et équilibre strict", (
     expect(debit(unique, MAP_ACHAT.vat_account)).toBe("0.001");
     expect(scinde.totals).toEqual({ debit: "0.012", credit: "0.012" });
   });
+  it("rapproche le total d'un droit proportionnel imprimé sur plusieurs lignes", () => {
+    const f = piece();
+    f.other_charges = [
+      { code: "FODEC", label: "Droit A", amount: "5" },
+      { code: "FODEC", label: "Droit B", amount: "5" },
+    ];
+    const p = pivot(f);
+    expect(p.approvable).toBe(true);
+    expect(debit(p, "cout")).toBe("1010.000");
+    expect(p.totals.credit).toBe("1201.900");
+  });
+  it("un droit fixe par document ne peut pas être doublé par deux lignes imprimées", () => {
+    const f = factureAchatSimple();
+    f.other_charges = [
+      { code: "FIXE", label: "Fixe", amount: "1" },
+      { code: "FIXE", label: "Fixe", amount: "1" },
+    ];
+    f.totals.ttc = "1192";
+    const p = computePivot({
+      extract: f,
+      source_item_id: null,
+      tenant_currency: TND,
+      tax_rates: TAX_RATES_TN,
+      mapping: MAP_ACHAT,
+      fiscal_charges: [
+        { code: "FIXE", label: "Droit fixe par document", account_code: "taxe", fixed_amount: "1" },
+      ],
+      tolerances: TOLERANCES,
+    });
+    expect(p.approvable).toBe(false);
+    expect(p.motifs.some((m) => m.code === "FISCAL_CHARGE_MISMATCH")).toBe(true);
+  });
   it("refuse une TVA calculée hors droit et un écart TTC d'un millime", () => {
     const f = piece();
     f.lines[0]!.vat_amount = "190";
