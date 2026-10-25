@@ -4,6 +4,7 @@ import type { Ecriture } from "@malica/socle/ports/repositories";
 import {
   avancementDeLaPiece,
   ecritureDeLaPiece,
+  etiquetteDeLecture,
   noteDeSuppression,
   partageeAvecLeCabinet,
   RANG_COMPTEE,
@@ -94,5 +95,28 @@ describe("la note de suppression", () => {
     expect(partageeAvecLeCabinet("partage")).toBe(true);
     expect(partageeAvecLeCabinet("entite")).toBe(false);
     expect(partageeAvecLeCabinet("personnel")).toBe(false);
+  });
+});
+
+describe("l'étiquette d'une ligne lue (maquette « C »)", () => {
+  it("une pièce comptée dit « confirmé », quelle que soit la confiance du jugement", () => {
+    for (const aVerifier of [true, false])
+      for (const confianceConnue of [true, false])
+        expect(etiquetteDeLecture({ comptee: true, confianceConnue, aVerifier })).toBe("confirme");
+  });
+
+  it("avant, le jugement décide : « à vérifier » ou « source »", () => {
+    expect(etiquetteDeLecture({ comptee: false, confianceConnue: true, aVerifier: true })).toBe(
+      "aVerifier",
+    );
+    expect(etiquetteDeLecture({ comptee: false, confianceConnue: true, aVerifier: false })).toBe(
+      "source",
+    );
+  });
+
+  it("tant que le jugement n'est pas arrivé, rien de faux : ni coche, ni « à vérifier »", () => {
+    expect(etiquetteDeLecture({ comptee: false, confianceConnue: false, aVerifier: true })).toBe(
+      "inconnue",
+    );
   });
 });

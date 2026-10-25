@@ -101,7 +101,7 @@ async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]
  * l'ordre ne disait pas laquelle vit (ANO-CAB-005, ANO-FC-012).
  */
 const COLONNES_ECRITURE = `e.id, e.piece_id, e.journal, e.date_ecriture, e.devise, e.libelle,
-       e.status, e.pack_version_id,
+       e.status, e.pack_version_id, e.booked_at,
        (e.status = 'booked' and e.nature = 'piece' and e.reverses_id is null
         and not exists (select 1 from ecritures_v r where r.reverses_id = e.id)) as vivante`;
 
@@ -116,6 +116,8 @@ function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) 
     libelle: (r["libelle"] as string) ?? "",
     status: r["status"] as string,
     packVersionId: r["pack_version_id"] as string,
+    // Quand la personne a confirmé : la fiche le dit (« confirmé le … »).
+    bookedAt: r["booked_at"] == null ? null : new Date(r["booked_at"] as string).toISOString(),
     lines: lignes.get(r["id"] as string) ?? [],
   };
 }

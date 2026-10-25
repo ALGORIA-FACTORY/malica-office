@@ -3705,6 +3705,81 @@ const fr = {
   "pme.malica.retenue": "Envoyée en relecture — cet avis engage votre dossier",
   "pme.malica.pied":
     "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
+  // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
+  "pme.accompagne.genre.recu": "Reçu",
+  "pme.accompagne.genre.justificatif": "Justificatif",
+  "pme.accompagne.recu.sous": "Produit le {date} par Malica",
+  "pme.accompagne.justificatif.sous": "Photographié le {date}",
+  "pme.accompagne.etat.valide": "Valide",
+  "pme.accompagne.etat.joint": "Justificatif joint",
+  "pme.accompagne.etat.neVautPlus": "Ne vaut plus",
+  "pme.accompagne.etat.sansReglement": "Sans règlement",
+  "pme.accompagne.recu.atteste": "Atteste le règlement {par} du {date} : {montant} {devise}.",
+  "pme.accompagne.recu.atteste.plusieurs": "Atteste {count} règlements : {montant} {devise}.",
+  "pme.accompagne.recu.ancien":
+    "Produit avant que Malica ne retienne les règlements qu’un reçu atteste : il reste valable.",
+  "pme.accompagne.recu.annule":
+    "Le règlement qu’il atteste ({moyen} du {date}, {montant} {devise}) a été annulé le {le} : {motif}. Le reçu reste lisible, il ne compte plus.",
+  "pme.accompagne.justificatif.prouve": "Prouve le règlement {par} du {date} : {montant} {devise}.",
+  "pme.accompagne.justificatif.annule":
+    "Le règlement qu’il prouve ({moyen} du {date}, {montant} {devise}) a été annulé le {le} : {motif}. Rattachez-le au bon règlement.",
+  "pme.accompagne.justificatif.sansReglement":
+    "Il n’est rattaché à aucun règlement. Rattachez-le à celui qu’il prouve.",
+  "pme.accompagne.rattacheA": "Rattaché à",
+  "pme.accompagne.ouvrir": "Ouvrir",
+  "pme.accompagne.mere.du": "{type} du {date}",
+  "pme.accompagne.mere.ttc": "TTC {montant} {devise}",
+  "pme.accompagne.mere.reglement": "{tiers} · {moyen} du {date}",
+  "pme.accompagne.agrandir.recu": "Agrandir le reçu",
+  "pme.accompagne.agrandir.photo": "Agrandir la photo",
+  "pme.accompagne.toucher": "Toucher pour agrandir",
+  "pme.accompagne.photoDu": "Photo du {date} · toucher pour agrandir",
+  "pme.accompagne.tampon": "Annulé",
+  "pme.accompagne.nouveauRecu": "Produire un nouveau reçu",
+  "pme.accompagne.rattacher": "Rattacher à un autre règlement",
+  "pme.accompagne.reprendre": "Reprendre la photo",
+  "pme.accompagne.supprimer.recu": "Supprimer ce reçu",
+  "pme.accompagne.supprimer.justificatif": "Supprimer",
+  "pme.accompagne.note.recu":
+    "Un reçu se produit depuis la facture : il ne se lit pas et ne se photographie pas.",
+  "pme.accompagne.note.recuPerime": "Le nouveau reçu ne reprend que les règlements en vigueur.",
+  "pme.accompagne.note.justificatif":
+    "Un justificatif accompagne un règlement : il ne se lit pas, il se range avec lui.",
+  "pme.accompagne.feuille.rattacher.explique":
+    "Le justificatif quitte le règlement {par} du {date} de {tiers} et va au règlement choisi. Seuls les règlements sans justificatif sont proposés.",
+  "pme.accompagne.feuille.rattacher.expliqueSeul":
+    "Le justificatif va au règlement choisi. Seuls les règlements sans justificatif sont proposés.",
+  "pme.accompagne.feuille.rattacher.aucun": "Aucun règlement sans justificatif dans ce dossier.",
+  "pme.accompagne.feuille.rattacher.bouton": "Rattacher",
+  "pme.accompagne.feuille.candidat": "{moyen} · {montant} · le {date}",
+  "pme.accompagne.feuille.reprendre.avertit":
+    "L’ancienne photo sera supprimée et remplacée par la nouvelle. Le rattachement au règlement est gardé.",
+  "pme.accompagne.feuille.reprendre.bouton": "Prendre la nouvelle photo",
+  "pme.accompagne.feuille.supprimer.recu": "Supprimer ce reçu ?",
+  "pme.accompagne.feuille.supprimer.justificatif": "Supprimer ?",
+  "pme.accompagne.feuille.supprimer.bouton": "Supprimer",
+  "pme.accompagne.feuille.supprimer.recu.explique":
+    "Le reçu sera supprimé. Le règlement n’est pas touché : vous pourrez produire un autre reçu depuis la facture.",
+  "pme.accompagne.feuille.supprimer.recuPerime.explique":
+    "Le reçu sera supprimé. Le règlement annulé reste dans l’historique de la facture.",
+  "pme.accompagne.feuille.supprimer.justificatif.explique":
+    "Le justificatif sera supprimé. Le règlement reste inscrit, sans justificatif : « {action} » réapparaît sur la facture.",
+  "refus.accompagne.engagee":
+    "Ce document est déjà engagé en comptabilité : il ne se supprime ni ne se remplace plus.",
+  "refus.justificatif.nouvelle_photo":
+    "Cette pièce ne peut pas remplacer le justificatif : reprenez une nouvelle photo.",
+  "refus.accompagne.transmise":
+    "Ce document a été transmis à votre comptabilité : il ne se supprime ni ne se remplace sans son accord.",
+  "refus.justificatif.reglement_deja_prouve": "Ce règlement a déjà son justificatif.",
+  "refus.justificatif.reglement_eteint":
+    "Ce règlement a été annulé : il ne reçoit plus de justificatif.",
+  "refus.justificatif.autre_cote_du_cabinet":
+    "Ce règlement n’est pas du même côté que le justificatif : l’un est transmis à votre comptabilité, l’autre non.",
+  "pme.verifie.confirme": "confirmé",
+  "pme.verifie.confirmeLe":
+    "Vous avez confirmé cette lecture le {date} : chaque ligne pointe toujours vers sa source.",
+  "pme.verifie.confirmeSansDate":
+    "Vous avez confirmé cette lecture : chaque ligne pointe toujours vers sa source.",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -7215,6 +7290,79 @@ const en: Dict = {
   "pme.malica.retenue": "Sent for review — this advice has consequences for your file",
   "pme.malica.pied":
     "I cite the article and the version in force on the date. I do not decide in place of your accountant on what has consequences for your file.",
+  // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
+  "pme.accompagne.genre.recu": "Receipt",
+  "pme.accompagne.genre.justificatif": "Proof",
+  "pme.accompagne.recu.sous": "Produced by Malica on {date}",
+  "pme.accompagne.justificatif.sous": "Photographed on {date}",
+  "pme.accompagne.etat.valide": "Valid",
+  "pme.accompagne.etat.joint": "Proof attached",
+  "pme.accompagne.etat.neVautPlus": "No longer counts",
+  "pme.accompagne.etat.sansReglement": "No payment",
+  "pme.accompagne.recu.atteste": "Attests the payment {par} on {date}: {montant} {devise}.",
+  "pme.accompagne.recu.atteste.plusieurs": "Attests {count} payments: {montant} {devise}.",
+  "pme.accompagne.recu.ancien":
+    "Produced before Malica kept track of what a receipt attests: it remains valid.",
+  "pme.accompagne.recu.annule":
+    "The payment it attests ({moyen} on {date}, {montant} {devise}) was cancelled on {le}: {motif}. The receipt stays readable; it no longer counts.",
+  "pme.accompagne.justificatif.prouve": "Proves the payment {par} on {date}: {montant} {devise}.",
+  "pme.accompagne.justificatif.annule":
+    "The payment it proves ({moyen} on {date}, {montant} {devise}) was cancelled on {le}: {motif}. Attach it to the right payment.",
+  "pme.accompagne.justificatif.sansReglement":
+    "It is not attached to any payment. Attach it to the one it proves.",
+  "pme.accompagne.rattacheA": "Attached to",
+  "pme.accompagne.ouvrir": "Open",
+  "pme.accompagne.mere.du": "{type} of {date}",
+  "pme.accompagne.mere.ttc": "Total {montant} {devise}",
+  "pme.accompagne.mere.reglement": "{tiers} · {moyen} of {date}",
+  "pme.accompagne.agrandir.recu": "Enlarge the receipt",
+  "pme.accompagne.agrandir.photo": "Enlarge the photo",
+  "pme.accompagne.toucher": "Tap to enlarge",
+  "pme.accompagne.photoDu": "Photo of {date} · tap to enlarge",
+  "pme.accompagne.tampon": "Cancelled",
+  "pme.accompagne.nouveauRecu": "Produce a new receipt",
+  "pme.accompagne.rattacher": "Attach to another payment",
+  "pme.accompagne.reprendre": "Retake the photo",
+  "pme.accompagne.supprimer.recu": "Delete this receipt",
+  "pme.accompagne.supprimer.justificatif": "Delete",
+  "pme.accompagne.note.recu":
+    "A receipt is produced from the invoice: it is not read and not photographed.",
+  "pme.accompagne.note.recuPerime": "The new receipt only includes the payments in force.",
+  "pme.accompagne.note.justificatif":
+    "A proof goes with a payment: it is not read, it is filed with it.",
+  "pme.accompagne.feuille.rattacher.explique":
+    "The proof leaves the payment {par} on {date} from {tiers} and goes to the chosen payment. Only payments without proof are offered.",
+  "pme.accompagne.feuille.rattacher.expliqueSeul":
+    "The proof goes to the chosen payment. Only payments without proof are offered.",
+  "pme.accompagne.feuille.rattacher.aucun": "No payment without proof in this file.",
+  "pme.accompagne.feuille.rattacher.bouton": "Attach",
+  "pme.accompagne.feuille.candidat": "{moyen} · {montant} · on {date}",
+  "pme.accompagne.feuille.reprendre.avertit":
+    "The old photo will be deleted and replaced by the new one. The link to the payment is kept.",
+  "pme.accompagne.feuille.reprendre.bouton": "Take the new photo",
+  "pme.accompagne.feuille.supprimer.recu": "Delete this receipt?",
+  "pme.accompagne.feuille.supprimer.justificatif": "Delete?",
+  "pme.accompagne.feuille.supprimer.bouton": "Delete",
+  "pme.accompagne.feuille.supprimer.recu.explique":
+    "The receipt will be deleted. The payment is not touched: you can produce another receipt from the invoice.",
+  "pme.accompagne.feuille.supprimer.recuPerime.explique":
+    "The receipt will be deleted. The cancelled payment stays in the invoice history.",
+  "pme.accompagne.feuille.supprimer.justificatif.explique":
+    "The proof will be deleted. The payment stays recorded, without proof: “{action}” appears again on the invoice.",
+  "refus.accompagne.engagee":
+    "This document is already used in the books: it can no longer be deleted or replaced.",
+  "refus.justificatif.nouvelle_photo": "This piece cannot replace the proof: take a new photo.",
+  "refus.accompagne.transmise":
+    "This document was sent to your accountant: it cannot be deleted or replaced without their agreement.",
+  "refus.justificatif.reglement_deja_prouve": "This payment already has its proof.",
+  "refus.justificatif.reglement_eteint": "This payment was cancelled: it no longer takes a proof.",
+  "refus.justificatif.autre_cote_du_cabinet":
+    "This payment is not on the same side as the proof: one was sent to your accountant, the other was not.",
+  "pme.verifie.confirme": "confirmed",
+  "pme.verifie.confirmeLe":
+    "You confirmed this reading on {date}: every line still points to its source.",
+  "pme.verifie.confirmeSansDate":
+    "You confirmed this reading: every line still points to its source.",
 };
 
 const ar: Dict = {
@@ -10618,6 +10766,72 @@ const ar: Dict = {
   "pme.malica.retenue": "أُرسلت للمراجعة — هذا الرأي له أثر على ملفكم",
   "pme.malica.pied":
     "أستشهد بالفصل وبنسخته السارية في التاريخ المعني. لا أحسم بدلًا من خبيركم المحاسب فيما له أثر على ملفكم.",
+  // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
+  "pme.accompagne.genre.recu": "وصل",
+  "pme.accompagne.genre.justificatif": "مؤيّد",
+  "pme.accompagne.recu.sous": "أنتجته ماليكا في {date}",
+  "pme.accompagne.justificatif.sous": "صُوِّر في {date}",
+  "pme.accompagne.etat.valide": "صالح",
+  "pme.accompagne.etat.joint": "المؤيّد مرفق",
+  "pme.accompagne.etat.neVautPlus": "لم يعد يُعتدّ به",
+  "pme.accompagne.etat.sansReglement": "دون تسديد",
+  "pme.accompagne.recu.atteste": "يشهد على التسديد {par} بتاريخ {date}: {montant} {devise}.",
+  "pme.accompagne.recu.atteste.plusieurs": "يشهد على {count} تسديدات: {montant} {devise}.",
+  "pme.accompagne.recu.ancien":
+    "أُنتج قبل أن تحتفظ ماليكا بالتسديدات التي يشهد عليها الوصل: يبقى صالحًا.",
+  "pme.accompagne.recu.annule":
+    "التسديد الذي يشهد عليه ({moyen} بتاريخ {date}، {montant} {devise}) أُلغي في {le}: {motif}. يبقى الوصل مقروءًا، لكنه لم يعد يُعتدّ به.",
+  "pme.accompagne.justificatif.prouve": "يُثبت التسديد {par} بتاريخ {date}: {montant} {devise}.",
+  "pme.accompagne.justificatif.annule":
+    "التسديد الذي يُثبته ({moyen} بتاريخ {date}، {montant} {devise}) أُلغي في {le}: {motif}. اربطوه بالتسديد الصحيح.",
+  "pme.accompagne.justificatif.sansReglement": "غير مرتبط بأي تسديد. اربطوه بالتسديد الذي يُثبته.",
+  "pme.accompagne.rattacheA": "مرتبط بـ",
+  "pme.accompagne.ouvrir": "فتح",
+  "pme.accompagne.mere.du": "{type} بتاريخ {date}",
+  "pme.accompagne.mere.ttc": "المجموع {montant} {devise}",
+  "pme.accompagne.mere.reglement": "{tiers} · {moyen} بتاريخ {date}",
+  "pme.accompagne.agrandir.recu": "تكبير الوصل",
+  "pme.accompagne.agrandir.photo": "تكبير الصورة",
+  "pme.accompagne.toucher": "المسوا للتكبير",
+  "pme.accompagne.photoDu": "صورة {date} · المسوا للتكبير",
+  "pme.accompagne.tampon": "ملغى",
+  "pme.accompagne.nouveauRecu": "إنتاج وصل جديد",
+  "pme.accompagne.rattacher": "ربطه بتسديد آخر",
+  "pme.accompagne.reprendre": "إعادة التقاط الصورة",
+  "pme.accompagne.supprimer.recu": "حذف هذا الوصل",
+  "pme.accompagne.supprimer.justificatif": "حذف",
+  "pme.accompagne.note.recu": "يُنتَج الوصل من الفاتورة: لا يُقرأ ولا يُصوَّر.",
+  "pme.accompagne.note.recuPerime": "لا يتضمّن الوصل الجديد إلا التسديدات السارية.",
+  "pme.accompagne.note.justificatif": "يرافق المؤيّد تسديدًا: لا يُقرأ، بل يُحفظ معه.",
+  "pme.accompagne.feuille.rattacher.explique":
+    "يغادر المؤيّد التسديد {par} بتاريخ {date} لدى {tiers} ويذهب إلى التسديد المختار. لا تُقترح إلا التسديدات التي لا مؤيّد لها.",
+  "pme.accompagne.feuille.rattacher.expliqueSeul":
+    "يذهب المؤيّد إلى التسديد المختار. لا تُقترح إلا التسديدات التي لا مؤيّد لها.",
+  "pme.accompagne.feuille.rattacher.aucun": "لا يوجد في هذا الملف تسديد دون مؤيّد.",
+  "pme.accompagne.feuille.rattacher.bouton": "ربط",
+  "pme.accompagne.feuille.candidat": "{moyen} · {montant} · بتاريخ {date}",
+  "pme.accompagne.feuille.reprendre.avertit":
+    "ستُحذف الصورة القديمة وتُستبدل بالجديدة. ويبقى الربط بالتسديد كما هو.",
+  "pme.accompagne.feuille.reprendre.bouton": "التقاط الصورة الجديدة",
+  "pme.accompagne.feuille.supprimer.recu": "حذف هذا الوصل؟",
+  "pme.accompagne.feuille.supprimer.justificatif": "حذف؟",
+  "pme.accompagne.feuille.supprimer.bouton": "حذف",
+  "pme.accompagne.feuille.supprimer.recu.explique":
+    "سيُحذف الوصل. لا يُمسّ التسديد: يمكنكم إنتاج وصل آخر من الفاتورة.",
+  "pme.accompagne.feuille.supprimer.recuPerime.explique":
+    "سيُحذف الوصل. يبقى التسديد الملغى في سجلّ الفاتورة.",
+  "pme.accompagne.feuille.supprimer.justificatif.explique":
+    "سيُحذف المؤيّد. يبقى التسديد مسجّلًا دون مؤيّد: يعود «{action}» إلى الظهور على الفاتورة.",
+  "refus.accompagne.engagee": "هذه الوثيقة مستعملة في المحاسبة: لم تعد تُحذف ولا تُستبدل.",
+  "refus.justificatif.nouvelle_photo": "لا يمكن لهذه الوثيقة أن تعوّض المؤيّد: التقطوا صورة جديدة.",
+  "refus.accompagne.transmise": "أُرسلت هذه الوثيقة إلى محاسبكم: لا تُحذف ولا تُستبدل دون موافقته.",
+  "refus.justificatif.reglement_deja_prouve": "لهذا التسديد مؤيّده بالفعل.",
+  "refus.justificatif.reglement_eteint": "أُلغي هذا التسديد: لم يعد يقبل مؤيّدًا.",
+  "refus.justificatif.autre_cote_du_cabinet":
+    "هذا التسديد ليس في الجهة نفسها التي فيها المؤيّد: أحدهما أُرسل إلى محاسبكم والآخر لا.",
+  "pme.verifie.confirme": "مؤكَّد",
+  "pme.verifie.confirmeLe": "أكّدتم هذه القراءة في {date}: كل سطر ما زال يشير إلى مصدره.",
+  "pme.verifie.confirmeSansDate": "أكّدتم هذه القراءة: كل سطر ما زال يشير إلى مصدره.",
 };
 
 export type MessageKey = keyof typeof fr;

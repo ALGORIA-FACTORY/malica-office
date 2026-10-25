@@ -20,6 +20,7 @@
     "annulerPaiement",
     "corrigerPaiement",
     "daterLaPiece",
+    "deplacerJustificatif",
     "detacher",
     "dossier",
     "enregistrer",
@@ -28,12 +29,15 @@
     "lister",
     "motifsDAnnulation",
     "paiementsDUnePiece",
+    "pieceQuiAccompagne",
     "piecesIssuesDe",
     "piecesRattachees",
     "preciser",
     "rattacher",
     "rattacherJustificatif",
-    "supprimer"
+    "remplacerJustificatif",
+    "supprimer",
+    "supprimerPieceQuiAccompagne"
   ],
   "charges": [
     "anomalyThreshold",

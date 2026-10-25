@@ -81,3 +81,23 @@ export function noteDeSuppression(
   if (!partageeAvecLeCabinet(vis)) return null;
   return fait === "demandee" || fait === "refusee" ? fait : null;
 }
+
+/**
+ * Ce que dit l'étiquette d'une ligne lue (maquette « C », 25 octobre 2026).
+ *
+ * Une pièce COMPTÉE a été confirmée par la personne : ses lignes ne sont plus
+ * « à vérifier » ni seulement « source » — elles sont « confirmé ». Avant, la
+ * confiance du jugement décide ; tant qu'elle n'est pas connue, on ne dit rien
+ * de faux (« inconnue » : l'écran propose seulement de voir la zone source).
+ */
+export type EtiquetteDeLecture = "confirme" | "aVerifier" | "source" | "inconnue";
+
+export function etiquetteDeLecture(ligne: {
+  comptee: boolean;
+  confianceConnue: boolean;
+  aVerifier: boolean;
+}): EtiquetteDeLecture {
+  if (ligne.comptee) return "confirme";
+  if (!ligne.confianceConnue) return "inconnue";
+  return ligne.aVerifier ? "aVerifier" : "source";
+}
