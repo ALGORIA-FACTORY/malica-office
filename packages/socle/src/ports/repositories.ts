@@ -758,7 +758,8 @@ export type DemandeSurPiece = "rappel" | "suppression";
  */
 export interface FaitDeDemande {
   objet: DemandeSurPiece;
-  fait: "demandee" | "accordee" | "refusee";
+  /** `retiree` : la demande n'a plus d'objet (la pièce est revenue au privé par un rappel accordé). */
+  fait: "demandee" | "accordee" | "refusee" | "retiree";
   note: string | null;
   createdAt: string;
 }

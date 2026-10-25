@@ -518,7 +518,7 @@ export const collab = {
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
       objet: r["objet"] as "rappel" | "suppression",
-      fait: r["fait"] as "demandee" | "accordee" | "refusee",
+      fait: r["fait"] as "demandee" | "accordee" | "refusee" | "retiree",
       note: (r["note"] as string | null) ?? null,
       createdAt: (r["created_at"] as Date).toISOString(),
     }));

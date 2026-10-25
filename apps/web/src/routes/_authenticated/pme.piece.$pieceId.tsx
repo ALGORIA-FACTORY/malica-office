@@ -2281,8 +2281,9 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {partageeAvecLeCabinet(vis) && !demandeDeSuppression ? (
-                /* Une demande déjà inscrite ne se redemande pas. */
+              {partageeAvecLeCabinet(vis) &&
+              (!demandeDeSuppression || demandeDeSuppression === "retiree") ? (
+                /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
                 <button
                   type="button"
                   className="f-ligne sup"
