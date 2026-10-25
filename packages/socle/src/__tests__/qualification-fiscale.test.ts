@@ -169,6 +169,43 @@ describe("qualification fiscale : calculs indépendants et équilibre strict", (
     expect(p.totals).toEqual({ debit: "0.004", credit: "0.004" });
     expect(debit(p, "cout")).toBe("0.004");
   });
+  it("scinder un usage ne change pas le droit fiscal d'un groupe TVA", () => {
+    const unique = calcul(qualification([ligne("0.300")]));
+    const scindees = calcul(qualification([ligne("0.150"), ligne("0.150", "non_deductible")]));
+    expect(sum(scindees.flatMap((l) => l.droits).map((d) => d.montant)).toFixed(3)).toBe(
+      unique[0]!.droits[0]!.montant,
+    );
+    expect(scindees.flatMap((l) => l.droits).map((d) => d.montant)).toEqual(["0.002", "0.001"]);
+    const f = piece();
+    f.lines[0]!.base_ht = "0.300";
+    f.lines[0]!.vat_amount = "0.058";
+    f.other_charges[0]!.amount = "0.003";
+    f.totals = { base_ht: "0.300", vat: "0.058", ttc: "0.361" };
+    expect(pivot(f, scindees).approvable).toBe(true);
+  });
+  it("scinder le même usage commun ne multiplie pas l'arrondi de déduction", () => {
+    const f = piece();
+    f.lines[0]!.base_ht = "0.010";
+    f.lines[0]!.vat_amount = "0.002";
+    f.other_charges[0]!.amount = "0";
+    f.totals = { base_ht: "0.010", vat: "0.002", ttc: "0.012" };
+    const unique = pivot(f, calcul(qualification([ligne("0.010", "prorata")]), "partiel", "60"));
+    const scinde = pivot(
+      f,
+      calcul(
+        qualification([
+          ligne("0.005", "prorata"),
+          { ...ligne("0.005", "prorata"), compteCout: "stock" },
+        ]),
+        "partiel",
+        "60",
+      ),
+    );
+    expect(scinde.approvable).toBe(true);
+    expect(debit(scinde, MAP_ACHAT.vat_account)).toBe("0.001");
+    expect(debit(unique, MAP_ACHAT.vat_account)).toBe("0.001");
+    expect(scinde.totals).toEqual({ debit: "0.012", credit: "0.012" });
+  });
   it("refuse une TVA calculée hors droit et un écart TTC d'un millime", () => {
     const f = piece();
     f.lines[0]!.vat_amount = "190";

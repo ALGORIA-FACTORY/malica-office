@@ -1,3 +1,4 @@
+import { repartirMontant } from "../../domain/repartir-montant.ts";
 import { D, toFixedStr, sum } from "../../domain/decimal.ts";
 import type { FiscalCharge } from "../../ports/repositories.ts";
 import type {
@@ -23,7 +24,7 @@ export function calculerLignesFiscales(e: {
   )
     throw new Error("La qualification doit couvrir chaque ligne fiscale de la lecture courante.");
   const arrondi = (x: string) => toFixedStr(D(x), e.decimales);
-  return [...q.lignes]
+  const lignes = [...q.lignes]
     .sort((a, b) => a.index - b.index)
     .map((l) => {
       if (!D(l.baseHt).eq(arrondi(l.baseHt)))
@@ -75,7 +76,7 @@ export function calculerLignesFiscales(e: {
         return {
           code: d.code,
           assiette: d.assiette,
-          montant: arrondi(D(d.assiette).mul(rate).toString()),
+          montant: D(d.assiette).mul(rate).toString(),
           taxable: r?.dansBaseTva ?? def.taxable ?? false,
           compte: def.accountCode,
           incorporeAuCout: q.documentKind === "facture_achat" && def.incorporeAuCoutAchat === true,
@@ -92,4 +93,24 @@ export function calculerLignesFiscales(e: {
         ),
       };
     });
+  // Une ventilation comptable ne crée pas un nouvel arrondi fiscal : le droit
+  // est liquidé sur la base de son groupe TVA, puis réparti entre ses usages.
+  for (const index of new Set(lignes.map((l) => l.index))) {
+    const ds = lignes.filter((l) => l.index === index).flatMap((l) => l.droits);
+    for (const code of new Set(ds.map((d) => d.code))) {
+      const groupe = ds.filter((d) => d.code === code);
+      const montants = repartirMontant(
+        arrondi(sum(groupe.map((d) => d.montant)).toString()),
+        groupe.map((d) => d.montant),
+        e.decimales,
+      );
+      groupe.forEach((d, i) => {
+        d.montant = montants[i]!;
+      });
+    }
+  }
+  return lignes.map((l) => ({
+    ...l,
+    majorationTva: arrondi(sum(l.droits.filter((d) => d.taxable).map((d) => d.montant)).toString()),
+  }));
 }

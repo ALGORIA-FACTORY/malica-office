@@ -1,3 +1,4 @@
+import { repartirMontant } from "../../domain/repartir-montant.ts";
 import type { LigneFiscaleCalculee } from "../../ports/qualification-fiscale.ts";
 /**
  * P4 — moteur d'équilibre : construit l'écriture depuis un extract.v1 et vérifie
@@ -294,15 +295,29 @@ export function computePivot(input: PivotInput): PivotV1 {
       const source = extract.lines[i]!;
       const ls = qualifiees.filter((l) => l.index === i);
       const poids = ls.map((l) => D(l.baseHt).plus(l.majorationTva));
-      const montantTva = repartir(
+      const montantTva = repartirMontant(
         source.vat_amount,
         poids.map((p) => p.toString()),
         decimals,
       );
+      const recuperables = [...montantTva];
+      if (achat) {
+        for (const taux of new Set(ls.map((l) => l.tauxDeduction))) {
+          const indices = ls
+            .map((l, n) => (l.tauxDeduction === taux ? n : -1))
+            .filter((n) => n >= 0);
+          const parts = indices.map((n) => montantTva[n]!);
+          const total = round(sum(parts).mul(taux).toString());
+          const reparties = repartirMontant(total, parts, decimals);
+          indices.forEach((n, i) => {
+            recuperables[n] = reparties[i]!;
+          });
+        }
+      }
       for (const [n, l] of ls.entries()) {
         pousser(l.compteCout, source.label, round(l.baseHt));
         const tva = montantTva[n] ?? "0";
-        const recuperable = achat ? round(D(tva).mul(l.tauxDeduction).toString()) : tva;
+        const recuperable = recuperables[n] ?? "0";
         const nonRecuperable = D(tva).minus(recuperable).toString();
         pousser(
           input.vat_accounts_by_tax_code?.[source.tax_code] ?? mapping.vat_account,
@@ -418,27 +433,4 @@ export function computePivot(input: PivotInput): PivotV1 {
     motifs,
     approvable: traffic_light !== "ROUGE",
   };
-}
-
-/** Répartition au plus fort reste : la somme égale exactement la TVA imprimée. */
-function repartir(montant: string, poids: string[], decimales: number): string[] {
-  if (!poids.length) return [];
-  const total = sum(poids);
-  if (total.isZero()) {
-    if (!D(montant).isZero()) return poids.map(() => "0");
-    return poids.map(() => "0");
-  }
-  const echelle = D(10).pow(decimales);
-  const mineur = D(montant).mul(echelle);
-  const quotas = poids.map((p) => mineur.mul(p).div(total));
-  const entiers = quotas.map((q) => q.floor());
-  let reste = mineur.minus(sum(entiers.map((e) => e.toString()))).toNumber();
-  const ordre = quotas
-    .map((q, i) => ({ i, reste: q.minus(entiers[i]!) }))
-    .sort((a, b) => b.reste.comparedTo(a.reste) || a.i - b.i);
-  for (const o of ordre) {
-    if (reste-- <= 0) break;
-    entiers[o.i] = entiers[o.i]!.plus(1);
-  }
-  return entiers.map((v) => v.div(echelle).toFixed(decimales));
 }

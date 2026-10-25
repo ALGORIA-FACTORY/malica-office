@@ -1,20 +1,21 @@
 begin;
 create table if not exists ref.fiscal_cost_classes (
  jurisdiction text not null, account_class text not null, document_kind text not null, source_ref text not null,
- primary key(jurisdiction,account_class,document_kind)
+ valid_from date not null, valid_to date,
+ primary key(jurisdiction,account_class,document_kind,valid_from)
 );
 alter table ref.fiscal_cost_classes enable row level security;
 alter table ref.fiscal_cost_classes force row level security;
 create policy fiscal_cost_classes_lire on ref.fiscal_cost_classes for select to authenticated using(true);
 grant select on ref.fiscal_cost_classes to authenticated;
-insert into ref.fiscal_cost_classes(jurisdiction,account_class,document_kind,source_ref) values
- ('TN','2','facture_achat','NC 01 — actifs non courants ; NC 05'),
- ('TN','3','facture_achat','NC 01 — stocks ; NC 04'),
- ('TN','6','facture_achat','NC 01 — achats et charges'),
- ('TN','7','facture_vente','NC 01 — produits') on conflict do nothing;
+insert into ref.fiscal_cost_classes(jurisdiction,account_class,document_kind,source_ref,valid_from) values
+ ('TN','2','facture_achat','NC 01 — actifs non courants ; NC 05',date '2026-01-01'),
+ ('TN','3','facture_achat','NC 01 — stocks ; NC 04',date '2026-01-01'),
+ ('TN','6','facture_achat','NC 01 — achats et charges',date '2026-01-01'),
+ ('TN','7','facture_vente','NC 01 — produits',date '2026-01-01') on conflict do nothing;
 -- NC 04 §12 et NC 05 : une taxe non récupérable suit le coût de l'achat.
 alter table ref.fiscal_charges add column if not exists incorpore_au_cout_achat boolean not null default false;
-update ref.fiscal_charges set incorpore_au_cout_achat = true where code = 'FODEC';
+update ref.fiscal_charges set incorpore_au_cout_achat = true where code = 'FODEC' and pack_version_id in(select id from ref.jurisdiction_packs where jurisdiction='TN');
 create or replace view public.ref_fiscal_charges_v with (security_invoker = true) as
  select id, pack_version_id, code, label, document_kind, account_code, fixed_amount,
         taxable, legal_reference, valid_from, valid_to, rate, basis, incorpore_au_cout_achat

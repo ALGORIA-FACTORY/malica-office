@@ -75,7 +75,10 @@ function Formulaire({
   const { t } = useI18n();
   const qc = useQueryClient();
   const q = c.qualification;
-  const [edition, setEdition] = useState(!q);
+  const sourceChangee = q !== null && q.extractionId !== c.extractionId;
+  const [edition, setEdition] = useState(
+    !q || sourceChangee || q.profilVersionId !== c.profilVersionId,
+  );
   const [date, setDate] = useState(c.dateLue ?? q?.dateOperation ?? "");
   const [contexte, setContexte] = useState<QualificationFiscale["contexte"]>(
     q?.contexte ?? "interieur",
@@ -101,7 +104,7 @@ function Formulaire({
     })),
   });
   const [lignes, setLignes] = useState<Affectation[]>(
-    q?.lignes ?? c.lignes.map((l) => nouveau(l.index)),
+    !sourceChangee && q ? q.lignes : c.lignes.map((l) => nouveau(l.index)),
   );
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState(false);

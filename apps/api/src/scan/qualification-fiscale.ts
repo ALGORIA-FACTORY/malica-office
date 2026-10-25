@@ -123,14 +123,11 @@ export async function inscrireQualificationFiscale(db: Requete, brut: unknown) {
     regimeTva: c.regimeTva,
     decimales: c.decimales,
   });
-  // Un coût doit être une imputation existante, non un compte inventé par une saisie.
+  // Un coût doit être une imputation existante du pack ou du mandat courant.
+  const comptes = new Set((await comptesDeCout(db, c)).map((p) => p.code));
   for (const l of lignes) {
     enUnitesExactes(l.baseHt, c.decimales);
-    const { rows: comptes } = await db.query(
-      `select account_code from plan_comptable_v where account_code=$1 and account_class::text in(select account_class from ref.fiscal_cost_classes where jurisdiction=$3 and document_kind=$4) and (tenant_id is null or tenant_id=$2 or tenant_id in(select e.cabinet_org_id from identity.engagements e where e.pme_org_id=$2 and e.status='actif'))`,
-      [l.compteCout, c.tenant_id, c.jurisdiction, q.documentKind],
-    );
-    if (!comptes.length)
+    if (!comptes.has(l.compteCout))
       throw new Error(`Compte de coût « ${l.compteCout} » absent du plan applicable.`);
   }
   const { rows } = await db.query<{ id: string }>(
@@ -179,10 +176,7 @@ export async function contexteQualificationFiscale(db: Requete, pieceId: string)
     [pieceId, c.extraction_id],
   );
   const n = analyses[0]?.normalisation;
-  const { rows: comptes } = await db.query<{ code: string; libelle: string }>(
-    `select distinct account_code as code,label as libelle from plan_comptable_v where account_class::text in(select account_class from ref.fiscal_cost_classes where jurisdiction=$2 and document_kind=$3) and (tenant_id is null or tenant_id=$1 or tenant_id in(select cabinet_org_id from identity.engagements where pme_org_id=$1 and status='actif')) order by account_code`,
-    [c.tenant_id, c.jurisdiction, c.kind],
-  );
+  const comptes = await comptesDeCout(db, c);
   return {
     extractionId: c.extraction_id,
     profilVersionId: c.profil?.id ?? null,
@@ -213,4 +207,20 @@ export async function contexteQualificationFiscale(db: Requete, pieceId: string)
         taxable: d.taxable ?? false,
       })),
   };
+}
+
+async function comptesDeCout(db: Requete, c: Awaited<ReturnType<typeof contexteFiscalQualifie>>) {
+  const { rows } = await db.query<{ code: string; libelle: string }>(
+    `
+  with comptes as (
+    select null::uuid as tenant_id,account_code,label,account_class from ref.accounts where pack_version_id=$5
+    union all select tenant_id,account_code,label,account_class from parametrage.accounts
+  )
+  select distinct on(pc.account_code) pc.account_code as code,pc.label as libelle from comptes pc
+  where pc.account_class::text in(select account_class from ref.fiscal_cost_classes where jurisdiction=$2 and document_kind=$3 and valid_from<=$4::date and (valid_to is null or valid_to>$4::date))
+   and (pc.tenant_id is null or pc.tenant_id=$1 or pc.tenant_id in(select cabinet_org_id from identity.engagements where pme_org_id=$1 and status='actif' and starts_on<=current_date and (ends_on is null or ends_on>=current_date)))
+  order by pc.account_code,(pc.tenant_id=$1) desc nulls last,(pc.tenant_id is not null) desc`,
+    [c.tenant_id, c.jurisdiction, c.kind, c.date, c.pack_id],
+  );
+  return rows;
 }

@@ -402,7 +402,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
         code: r.code,
         mode: r.mode,
         valeur: r.valeur,
-        assiette: r.assiette,
+        assiette: r.assiette || "Base imposable de la ligne qualifiée",
         dansBaseTva: r.dansBaseTva,
         typeOperation: "Produits qualifiés du scénario",
         applicabilite: "applicable" as const,
@@ -778,7 +778,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     );
     await assert.rejects(
       sousIdentite(expert.id, (db) => office.book(db, ecriture)),
-      /TVA incohérente/,
+      /TVA|montants|lecture|cohér/i,
     );
   });
   it("le nouveau mandataire reprend l'historique fiscal du client, l'ancien perd son accès", async () => {

@@ -17,7 +17,17 @@ export function appliquerAttentesFiscales(e: {
   const c = e.configuration;
   const regles = c.regles.filter((r) => r.operation === e.operation);
   if (!regles.length) throw new Error("Le profil fiscal ne qualifie pas ce sens d’opération.");
-  if (!e.qualification && regles.some((r) => r.applicabilite === "a_qualifier"))
+  if (
+    regles.some(
+      (r) =>
+        r.applicabilite === "a_qualifier" &&
+        !(
+          e.qualification &&
+          (r.famille === "tva" ||
+            e.qualification.some((l) => l.droits.some((d) => d.code === r.code)))
+        ),
+    )
+  )
     throw new Error("Des règles fiscales de ce dossier restent à qualifier dans les paramètres.");
   const unique = (rs: RegleFiscale[], code: string) => {
     if (rs.length !== 1)

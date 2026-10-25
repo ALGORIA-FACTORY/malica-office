@@ -426,6 +426,7 @@ for (const largeur of [390, 1440]) {
     browser,
   }, testInfo) => {
     await page.setViewportSize({ width: largeur, height: 950 });
+    page.setDefaultTimeout(10_000);
     const rpc = async (depot: string, methode: string, args: unknown[]) => {
       const r = await page.request.post("/rpc", { data: { depot, methode, args } });
       expect(r.ok(), await r.text()).toBeTruthy();
@@ -500,14 +501,17 @@ for (const largeur of [390, 1440]) {
       };
       expect(c.comptes.length).toBeGreaterThan(0);
       await page
-        .getByLabel("Qualité du redevable de la taxe", { exact: true })
+        .getByRole("combobox", { name: "Qualité du redevable de la taxe", exact: true })
         .selectOption("fabricant");
       await page.getByLabel("Part du HT affectée", { exact: true }).fill("1000.000");
       await page
-        .getByLabel("Imputation du HT et des coûts non récupérables", { exact: true })
+        .getByRole("combobox", {
+          name: "Imputation du HT et des coûts non récupérables",
+          exact: true,
+        })
         .selectOption(c.comptes[0]!.code);
       await page
-        .getByLabel("Affectation de la TVA", { exact: true })
+        .getByRole("combobox", { name: "Affectation de la TVA", exact: true })
         .selectOption("non_deductible");
       await page
         .getByLabel("FODEC · Base assujettie (zéro si non soumise)", { exact: true })
@@ -535,7 +539,7 @@ for (const largeur of [390, 1440]) {
       });
       expect(cabinet.id).toBeTruthy();
     } finally {
-      await ctx.close();
+      await ctx.close().catch(() => undefined);
     }
   });
 }

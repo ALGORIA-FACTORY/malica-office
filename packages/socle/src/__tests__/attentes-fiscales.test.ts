@@ -81,6 +81,36 @@ describe("le profil fiscal contrôle les attentes sans inventer la pièce", () =
       }),
     ).toThrow(/par ligne/);
   });
+  it("une qualification de TVA ne valide pas une autre obligation inconnue", () => {
+    expect(() =>
+      appliquerAttentesFiscales({
+        ...entree,
+        qualification: [],
+        configuration: {
+          ...c,
+          regles: [
+            r,
+            {
+              ...r,
+              famille: "autre",
+              code: "AUTRE",
+              applicabilite: "a_qualifier",
+              mode: "aucun",
+              valeur: null,
+            },
+          ],
+        },
+      }),
+    ).toThrow(/qualifier/);
+  });
+  it("un prorata d'achat ne réduit jamais la TVA collectée sur les ventes", () => {
+    expect(
+      appliquerAttentesFiscales({
+        ...entree,
+        configuration: { ...c, regimeTva: "partiel", prorataTva: 60 },
+      }).taxRates[0]!.rate,
+    ).toBe("0.08375");
+  });
   it("le timbre attendu ne devient jamais un montant ajouté à la pièce", () => {
     const timbre: RegleFiscale = {
       ...r,
