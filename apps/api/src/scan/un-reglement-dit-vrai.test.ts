@@ -50,7 +50,7 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
   };
 
   /** Une pièce, lue avec ce TTC (ou sans total lu). */
-  async function piece(cle: string, ttc: string | null) {
+  async function piece(cle: string, ttc: string | null, ttcDuSolveur: string | null = ttc) {
     const p = (await rpc("capture", "enregistrer", {
       tenantId: org,
       source: "photo",
@@ -59,13 +59,36 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
       contentType: "image/jpeg",
       pageCount: 1,
     })) as { id: string };
-    await admin((a) =>
-      a.query(
+    await admin(async (a) => {
+      const { rows } = await a.query<{ id: string }>(
         `insert into capture.extractions (tenant_id, piece_id, contract, payload)
-         values ($1, $2, 'extract.v1', $3::jsonb)`,
-        [org, p.id, JSON.stringify({ totals: ttc === null ? {} : { ttc }, lines: [] })],
-      ),
-    );
+         values ($1, $2, 'extract.v1', $3::jsonb) returning id`,
+        [
+          org,
+          p.id,
+          JSON.stringify({
+            totals: ttcDuSolveur === null ? {} : { ttc: ttcDuSolveur },
+            lines: [],
+          }),
+        ],
+      );
+      // Le TTC qui fait foi est celui de l'ANALYSE, en unités mineures.
+      if (ttc !== null)
+        await a.query(
+          `insert into capture.analyses
+             (tenant_id, piece_id, extraction_id, pack_version_id, normalisation, controles, verdict, motifs)
+           values ($1, $2, $3, $4, $5::jsonb,
+                   '[{"code":"arithmetique","statut":"conforme","motif":"Contrôle de la fixture"}]'::jsonb,
+                   'à comptabiliser', '[{"motif":"Contrôle de la fixture"}]'::jsonb)`,
+          [
+            org,
+            p.id,
+            rows[0]!.id,
+            packId,
+            JSON.stringify({ etat: "tranche", montants: { ttc: Math.round(Number(ttc) * 1000) } }),
+          ],
+        );
+    });
     return p.id;
   }
 
@@ -160,6 +183,29 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     );
     const sansTotal = await piece("sans-total", null);
     await assert.rejects(() => regler(sansTotal, "especes", null), /paiement\.montant_requis/);
+  });
+
+  it("le TTC qui fait foi est celui de l'analyse, pas le brut du solveur", async () => {
+    const id = await piece("solveur", "100.000", "9999.999");
+    await regler(id, "especes", null);
+    assert.deepEqual(
+      (await vivants(id)).map((l) => l.montantMineur),
+      [100_000],
+    );
+  });
+
+  it("une pièce d'un autre dossier ne se règle pas depuis celui-ci", async () => {
+    const id = await piece("intrus", "100.000");
+    await assert.rejects(() =>
+      sousIdentite(u.id, (db) =>
+        db.query(
+          `insert into capture.paiements
+               (tenant_id, vis, piece_id, moyen_code, pack_version_id, devise, montant_mineur, paye_le)
+             values (gen_random_uuid(), 'entite', $1, 'especes', $2, 'TND', 1000, date '2026-10-01')`,
+          [id, packId],
+        ),
+      ),
+    );
   });
 
   it("deux appuis donnent un seul règlement, même sans TTC lu", async () => {

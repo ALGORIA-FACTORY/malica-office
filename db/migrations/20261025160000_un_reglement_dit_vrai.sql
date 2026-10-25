@@ -74,23 +74,28 @@ insert into ref.labels (ns, key, locale, value) values
   ('paiement_motif_annulation', 'regle_depuis', 'ar', 'سُدّد منذ ذلك الحين')
 on conflict (ns, key, locale) do update set value = excluded.value;
 
--- --- Le TTC lu d'une pièce, en unités mineures --------------------------------------------------
+-- --- Le TTC tranché d'une pièce, en unités mineures -------------------------------------------
+--
+-- Celui de l'ANALYSE de la dernière lecture (`normalisation.montants.ttc`,
+-- déjà en unités mineures), celui que `scan/reglement.ts` lit pour écrire le
+-- règlement — jamais le montant brut du solveur (`payload.totals.ttc`), qui
+-- peut différer des jetons cités (revue Codex de #101). Sans analyse, le TTC
+-- est inconnu.
 
-create or replace function capture.ttc_mineur(p_piece uuid, p_devise text)
+create or replace function capture.ttc_mineur(p_piece uuid)
 returns bigint
 language sql
 stable
 security invoker
 set search_path = ''
 as $$
-  -- La dernière lecture, partielle ou entière ; un TTC illisible vaut « inconnu ».
-  select round((e.payload -> 'totals' ->> 'ttc')::numeric * power(10, d.exposant))::bigint
+  select (a.normalisation -> 'montants' ->> 'ttc')::bigint
     from capture.extractions e
-    join ref.devises d on d.code = p_devise
+    join capture.analyses a on a.extraction_id = e.id
    where e.piece_id = p_piece
-     and e.contract like 'extract.v1%'
-     and (e.payload -> 'totals' ->> 'ttc') ~ '^[0-9]+(\.[0-9]+)?$'
-   order by e.created_at desc
+     and (a.normalisation -> 'montants' ->> 'ttc') ~ '^[0-9]+$'
+     and e.created_at = (select max(x.created_at) from capture.extractions x where x.piece_id = p_piece)
+   order by a.created_at desc
    limit 1
 $$;
 
@@ -109,6 +114,14 @@ begin
   -- Une annulation n'est pas un règlement : elle a ses propres gardes.
   if new.annule_paiement_id is not null then
     return new;
+  end if;
+
+  -- La pièce appartient au dossier inscrit : la politique d'insertion vérifie
+  -- le dossier, pas la pièce, et cette fonction lit (et éteint) au-delà de la
+  -- RLS de l'appelant (revue Codex de #101).
+  if not exists (select 1 from capture.pieces x
+                  where x.id = new.piece_id and x.tenant_id = new.tenant_id) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
 
   -- Une seule inscription à la fois par pièce : deux appuis simultanés ne
@@ -133,9 +146,14 @@ begin
     return new;
   end if;
 
-  v_ttc := capture.ttc_mineur(new.piece_id, new.devise);
-  select coalesce(sum(p.montant_mineur), 0) into v_paye
+  v_ttc := capture.ttc_mineur(new.piece_id);
+  -- Ce qui est DÉJÀ éteint : la dette qu'éteint chaque règlement (retenue à la
+  -- source comprise, `app.dette_eteinte`), sinon son montant (revue Codex).
+  select coalesce(sum(coalesce(
+           round(app.dette_eteinte(p.id) * power(10, d.exposant))::bigint,
+           p.montant_mineur)), 0) into v_paye
     from capture.paiements p
+    join ref.devises d on d.code = p.devise
    where p.piece_id = new.piece_id and p.annule_paiement_id is null
      and p.moyen_code <> 'non_paye'
      and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id);
@@ -202,7 +220,8 @@ begin
          p.montant_mineur, p.devise, p.paye_le, p.id,
          (select m.id from ref.paiement_motifs_annulation m where m.code = 'regle_depuis')
     from capture.paiements p
-   where p.piece_id = new.piece_id and p.annule_paiement_id is null
+   where p.piece_id = new.piece_id and p.tenant_id = new.tenant_id
+     and p.annule_paiement_id is null
      and p.moyen_code = 'non_paye'
      and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id);
   return null;
