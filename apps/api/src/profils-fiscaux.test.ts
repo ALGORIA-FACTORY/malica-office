@@ -477,6 +477,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
         confianceParChamp: { "totals.ttc": 0.95 },
       });
     await persister();
+    await rpc("capture", "preciser", piece.id, "document_kind", "facture_achat");
     await rpc("capture", "analyser", piece.id);
     const c = await sousIdentite(expert.id, (db) =>
       office.contexteQualificationFiscale(db, piece.id),
@@ -552,7 +553,30 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       ).rows[0]?.q,
       enregistree.id,
     );
-    await persister();
+    await assert.rejects(persister(), /R7|déjà|deja/);
+    const nouvelle = await sousIdentite(expert.id, (db) =>
+      fiscalite.enregistrerProfilFiscal(db, {
+        cabinetId: cabinet,
+        profilId: profil.profilId,
+        precedentId: profil.id,
+        nom: profil.nom,
+        categorie: profil.categorie,
+        jurisdiction: "TN",
+        dateEffet: aujourd,
+        configuration: {
+          ...configuration,
+          regles: regles.map((r) => (r.code === "FODEC" ? { ...r, valeur: "2" } : r)),
+        },
+      }),
+    );
+    await sousIdentite(expert.id, (db) =>
+      fiscalite.appliquerProfilFiscal(db, {
+        cabinetId: cabinet,
+        versionProfilId: nouvelle.id,
+        dateEffet: aujourd,
+        cibles: [{ clientId: d.id, precedentId: c.profilVersionId }],
+      }),
+    );
     const obsolete = await sousIdentite(expert.id, (db) => office.propositionDePiece(db, piece.id));
     assert.equal(obsolete.ok, false);
   });
