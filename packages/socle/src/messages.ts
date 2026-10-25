@@ -356,6 +356,8 @@ const fr = {
     "Cette pièce est le double d'une pièce déjà lue : je ne la relis pas.",
   "pme.refus.piece_personnelle":
     "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
+  "refus.piece.rappelEnAttente":
+    "Le retour de cette pièce est demandé au cabinet : elle se comptabilise une fois la demande tranchée.",
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
@@ -418,6 +420,7 @@ const fr = {
   "pme.status.supervisee": "Supervisée",
   "pme.status.retournee": "Retournée",
   "pme.status.a_revalider": "À revalider",
+  "pme.piece.supprimee": "Cette pièce a été supprimée : elle n'est plus dans vos documents.",
   "pme.piece.title": "Pièce",
   "pme.piece.source": "Origine",
   "pme.read.run": "Lire la pièce",
@@ -660,6 +663,10 @@ const fr = {
   "pme.regle.classe.cabinet":
     "Classé dans {classe}, transmis à {cabinet}. Vous n'avez plus rien à faire.",
   "pme.regle.classe.inconnu": "votre plan comptable",
+  "pme.regle.classe.seul": "Classé dans {classe}.",
+  "pme.regle.reste.transmettre":
+    "Il vous reste à décider : la transmettre à {cabinet}, ou la garder.",
+  "pme.regle.reste.regler": "Il vous reste à dire comment elle est réglée.",
   "pme.regle.tva.recuperable": "+{montant} {devise} de TVA récupérable",
   "pme.regle.tva.nonRecuperable": "{montant} {devise} de TVA comprise dans la charge",
   "pme.tva.nonAssujetti":
@@ -1615,6 +1622,7 @@ const fr = {
     "Deux endroits de la pièce répondaient à la même règle : je n’ai pas choisi au hasard.",
   "cab.code.autre": "Signalement de lecture.",
   "cab.notif.kind.piece.demande": "Votre client demande le retour d'une pièce",
+  "cab.notif.kind.piece.demande.suppression": "Votre client demande la suppression d'une pièce",
   "cab.notif.kind.piece.demande_tranchee": "Demande tranchée",
   "cab.notif.kind.piece.a_valider": "Des pièces attendent la validation du dirigeant.",
   "cab.notif.kind.piece.a_revalider": "Une pièce corrigée par le client est à revalider.",
@@ -2208,6 +2216,14 @@ const fr = {
   "notif.kind.piece.a_valider":
     "Des pièces attendent votre validation avant de partir à la comptabilité",
   "notif.kind.piece.a_revalider": "Une pièce corrigée après transmission est à revoir",
+  "notif.kind.piece.demande_tranchee.rappel.accorde":
+    "Votre comptabilité a accordé le retour de la pièce : elle est de nouveau chez vous seul.",
+  "notif.kind.piece.demande_tranchee.rappel.refuse":
+    "Votre comptabilité a refusé le retour de la pièce.",
+  "notif.kind.piece.demande_tranchee.suppression.accorde":
+    "Votre comptabilité a accordé la suppression : la pièce est effacée.",
+  "notif.kind.piece.demande_tranchee.suppression.refuse":
+    "Votre comptabilité a refusé la suppression de la pièce.",
   "notif.kind.piece.demande_tranchee": "Votre comptabilité a répondu à votre demande sur une pièce",
   "notif.kind.acces.propose": "Votre comptabilité propose de prendre votre abonnement en charge",
   "notif.kind.acces.accepte":
@@ -4104,6 +4120,8 @@ const en: Dict = {
     "This document duplicates one already read: I am not reading it again.",
   "pme.refus.piece_personnelle":
     "This document is private. Add it to the company to allow reading; sending it to the accountant is a separate action.",
+  "refus.piece.rappelEnAttente":
+    "A return of this document has been requested from the accounting firm: it can be booked once the request is settled.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
   "refus.place.incluses_prises": "All the places included in the subscription are taken.",
@@ -4158,6 +4176,7 @@ const en: Dict = {
   "pme.status.supervisee": "Reviewed",
   "pme.status.retournee": "Returned",
   "pme.status.a_revalider": "To review again",
+  "pme.piece.supprimee": "This document has been deleted: it is no longer among your documents.",
   "pme.piece.title": "Document",
   "pme.piece.source": "Source",
   "pme.read.run": "Read the document",
@@ -4385,6 +4404,9 @@ const en: Dict = {
   "pme.regle.classe.cabinet":
     "Filed under {classe}, sent to {cabinet}. Nothing left for you to do.",
   "pme.regle.classe.inconnu": "your chart of accounts",
+  "pme.regle.classe.seul": "Filed under {classe}.",
+  "pme.regle.reste.transmettre": "One decision left: send it to {cabinet}, or keep it.",
+  "pme.regle.reste.regler": "One thing left: say how it was paid.",
   "pme.regle.tva.recuperable": "+{montant} {devise} of recoverable VAT",
   "pme.regle.tva.nonRecuperable": "{montant} {devise} of VAT included in the expense",
   "pme.tva.nonAssujetti":
@@ -5315,6 +5337,7 @@ const en: Dict = {
     "Two places on the document matched the same rule: I did not pick one at random.",
   "cab.code.autre": "Reading flag.",
   "cab.notif.kind.piece.demande": "Your client is asking for a document back",
+  "cab.notif.kind.piece.demande.suppression": "Your client is asking to delete a document",
   "cab.notif.kind.piece.demande_tranchee": "Request settled",
   "cab.notif.kind.piece.a_valider": "Documents await the owner's approval.",
   "cab.notif.kind.piece.a_revalider": "A document corrected by the client needs approving again.",
@@ -5897,6 +5920,14 @@ const en: Dict = {
   "notif.kind.mandat.refuse": "The engagement was declined",
   "notif.kind.piece.a_valider": "Documents await your approval before going to your accountant",
   "notif.kind.piece.a_revalider": "A document corrected after sending needs another look",
+  "notif.kind.piece.demande_tranchee.rappel.accorde":
+    "Your accountant granted the return: the document is yours alone again.",
+  "notif.kind.piece.demande_tranchee.rappel.refuse":
+    "Your accountant declined to return the document.",
+  "notif.kind.piece.demande_tranchee.suppression.accorde":
+    "Your accountant granted the deletion: the document is erased.",
+  "notif.kind.piece.demande_tranchee.suppression.refuse":
+    "Your accountant declined to delete the document.",
   "notif.kind.piece.demande_tranchee": "Your accountant answered your request about a document",
   "notif.kind.acces.propose": "Your accountant offers to cover your subscription",
   "notif.kind.acces.accepte": "Your subscription is now covered by your accountant",
@@ -7677,6 +7708,8 @@ const ar: Dict = {
   "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
   "pme.refus.piece_personnelle":
     "هذه الوثيقة خاصة. أضفها إلى المؤسسة لقراءتها؛ إرسالها للمحاسبة عملية مستقلة.",
+  "refus.piece.rappelEnAttente":
+    "طُلب من مكتب المحاسبة استرجاع هذه الوثيقة: تُسجَّل محاسبيًا بعد البتّ في الطلب.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
   "refus.place.incluses_prises": "كل المقاعد المشمولة في الاشتراك مشغولة.",
@@ -7729,6 +7762,7 @@ const ar: Dict = {
   "pme.status.supervisee": "مُراجَعة",
   "pme.status.retournee": "مُعادة",
   "pme.status.a_revalider": "إعادة المصادقة",
+  "pme.piece.supprimee": "حُذفت هذه الوثيقة: لم تعد ضمن وثائقك.",
   "pme.piece.title": "وثيقة",
   "pme.piece.source": "المصدر",
   "pme.read.run": "قراءة الوثيقة",
@@ -7951,6 +7985,9 @@ const ar: Dict = {
   "pme.regle.classe": "صُنِّفت في {classe}. لم يبقَ عليك شيء.",
   "pme.regle.classe.cabinet": "صُنِّفت في {classe}، وأُرسلت إلى {cabinet}. لم يبقَ عليك شيء.",
   "pme.regle.classe.inconnu": "دليلك المحاسبي",
+  "pme.regle.classe.seul": "صُنّفت في {classe}.",
+  "pme.regle.reste.transmettre": "بقي أن تقرّر: إرسالها إلى {cabinet} أو الاحتفاظ بها.",
+  "pme.regle.reste.regler": "بقي أن تقول كيف دُفعت.",
   "pme.regle.tva.recuperable": "+{montant} {devise} أداء قابل للاسترجاع",
   "pme.regle.tva.nonRecuperable":
     "{montant} {devise} من الأداء على القيمة المضافة مدرجة في الأعباء",
@@ -8868,6 +8905,7 @@ const ar: Dict = {
   "cab.code.designationAmbigue": "موضعان في الوثيقة استجابا لنفس القاعدة: لم أختر عشوائيًا.",
   "cab.code.autre": "تنبيه قراءة.",
   "cab.notif.kind.piece.demande": "عميلك يطلب استرجاع وثيقة",
+  "cab.notif.kind.piece.demande.suppression": "عميلك يطلب حذف وثيقة",
   "cab.notif.kind.piece.demande_tranchee": "تم البتّ في الطلب",
   "cab.notif.kind.piece.a_valider": "مستندات تنتظر مصادقة المسيّر.",
   "cab.notif.kind.piece.a_revalider": "مستند صحّحه الحريف يحتاج إلى مصادقة من جديد.",
@@ -9434,6 +9472,11 @@ const ar: Dict = {
   "notif.kind.mandat.refuse": "رُفضت الوكالة",
   "notif.kind.piece.a_valider": "مستندات تنتظر مصادقتك قبل إرسالها إلى المحاسبة",
   "notif.kind.piece.a_revalider": "مستند صُحّح بعد إرساله يحتاج إلى مراجعة",
+  "notif.kind.piece.demande_tranchee.rappel.accorde":
+    "وافق محاسبك على الاسترجاع: عادت الوثيقة إليك وحدك.",
+  "notif.kind.piece.demande_tranchee.rappel.refuse": "رفض محاسبك استرجاع الوثيقة.",
+  "notif.kind.piece.demande_tranchee.suppression.accorde": "وافق محاسبك على الحذف: حُذفت الوثيقة.",
+  "notif.kind.piece.demande_tranchee.suppression.refuse": "رفض محاسبك حذف الوثيقة.",
   "notif.kind.piece.demande_tranchee": "ردّت المحاسبة على طلبك بشأن مستند",
   "notif.kind.acces.propose": "تقترح المحاسبة تحمّل اشتراكك",
   "notif.kind.acces.accepte": "أصبح اشتراكك على عاتق المحاسبة",

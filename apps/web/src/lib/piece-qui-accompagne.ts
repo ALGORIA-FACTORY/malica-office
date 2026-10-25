@@ -120,3 +120,14 @@ export function totalAtteste(reglements: readonly ReglementAccompagne[]): number
 export function repriseRefusee(f: Pick<PieceQuiAccompagne, "vis">): MessageKey | null {
   return f.vis === "partage" ? "refus.accompagne.transmise" : null;
 }
+
+/**
+ * La clé d'idempotence d'un reçu : la facture et les règlements qu'il atteste.
+ *
+ * Deux appuis sur « Générer le reçu », ou un dépôt rejoué depuis la file hors
+ * ligne, donnent la même clé, donc le même reçu (la base rend celui qui
+ * existe). Un règlement de plus, ou un de moins, fait un autre reçu.
+ */
+export function cleDuRecu(pieceId: string, paiements: ReadonlyArray<string>): string {
+  return `recu:${pieceId}:${[...paiements].sort().join(",")}`;
+}

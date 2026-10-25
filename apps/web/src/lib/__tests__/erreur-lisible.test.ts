@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { texteDeLErreur, vientDeNous } from "../erreur-lisible";
+import { estIntrouvable, texteDeLErreur, vientDeNous } from "../erreur-lisible";
 import { ErreurApi } from "../transport/erreurs";
 
 const DEFAUT = "Une erreur est survenue.";
@@ -55,5 +55,16 @@ describe("ce qu'on montre d'une erreur", () => {
     expect(vientDeNous(new ErreurApi("refus", 400))).toBe(true);
     expect(vientDeNous(new Error("autre chose"))).toBe(false);
     expect(vientDeNous("pas une erreur")).toBe(false);
+  });
+});
+
+describe("une pièce qui n'existe plus", () => {
+  // Audit du 25 octobre 2026 : une pièce effacée par une suppression accordée
+  // s'ouvrait sur « Une erreur est survenue », sans chemin de retour.
+  it("se reconnaît au 404 de l'API, et à lui seul", () => {
+    expect(estIntrouvable(new ErreurApi("introuvable", 404))).toBe(true);
+    expect(estIntrouvable(new ErreurApi("refus", 400))).toBe(false);
+    expect(estIntrouvable(new Error("introuvable"))).toBe(false);
+    expect(estIntrouvable(null)).toBe(false);
   });
 });

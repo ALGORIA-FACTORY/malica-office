@@ -74,7 +74,11 @@ export const supervision = {
          left join organizations_v o on o.id = e.pme_org_id
          left join lateral (
            select status, count(*) as n
-             from pieces_v where tenant_id = e.pme_org_id group by status
+             from pieces_v
+            -- Un reçu ou un justificatif accompagne une pièce : il ne compte
+            -- pas parmi les pièces « déposées, pas encore lues ».
+            where tenant_id = e.pme_org_id and not app.piece_accompagne(id)
+            group by status
          ) p on true
         where e.cabinet_org_id = $1
           -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
@@ -175,6 +179,9 @@ export const supervision = {
         -- La file du cabinet, c'est ce qui lui a été TRANSMIS : une pièce « chez
         -- vous » n'y paraît pas, même pour un compte membre des deux côtés.
         where p.vis = 'partage'
+          -- Un reçu ou un justificatif voyage avec sa pièce (« Documents
+          -- liés ») : il n'entre pas dans la file comme une pièce à lire.
+          and not app.piece_accompagne(p.id)
           and ($2::uuid is null or p.tenant_id = $2)
         order by p.created_at desc
         limit 200`,

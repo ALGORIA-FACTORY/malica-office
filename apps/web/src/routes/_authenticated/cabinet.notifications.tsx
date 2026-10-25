@@ -21,6 +21,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useNotificationsDuCabinet } from "@/hooks/use-notifications-du-cabinet";
 import { useI18n, type MessageKey } from "@/i18n";
+import { phraseDeLaDemande } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -245,7 +246,13 @@ function CabinetNotifications() {
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13.5px]">
-                        {t(PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre")}
+                        {t(
+                          // Retour ou suppression : l'objet de la demande se dit
+                          // (audit du 25 octobre 2026), jamais « retour » pour tout.
+                          n.kind === "piece.demande"
+                            ? phraseDeLaDemande((n.payload ?? {}) as Record<string, unknown>)
+                            : (PHRASE_DU_GENRE[n.kind] ?? "cab.notif.kind.autre"),
+                        )}
                       </span>
                       <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
                         {nomDuClient(n)} · <span className="num">{heureLisible(n.createdAt)}</span>

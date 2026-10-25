@@ -400,8 +400,9 @@ function PmeHome() {
     const pieces = lesLues.filter(
       (p) => dossierDeLaPiece(p, sept.types) === d.code && dansLaPeriode(p, d.periode, periode),
     );
+    // Un reçu ou un justificatif n'attend rien : il compte pour fait.
     const faites = pieces.filter(
-      (p) => p.status === "comptabilisee" || p.status === "supervisee",
+      (p) => p.accompagne || p.status === "comptabilisee" || p.status === "supervisee",
     ).length;
     return {
       ...d,

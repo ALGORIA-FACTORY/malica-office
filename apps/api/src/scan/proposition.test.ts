@@ -179,6 +179,43 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     assert.equal(avec.proposition.pivot.entry_date, "2026-09-12");
   });
 
+  it("une date donnée à la main se relit partout : fiche, jugement et proposition", async () => {
+    /*
+     * Audit du 25 octobre 2026 : la précision s'inscrivait, mais la fiche ne la
+     * rendait pas — « Indiquer la date » revenait pour toujours, et l'écriture
+     * se datait du jour proposé par l'écran plutôt que du jour enregistré.
+     */
+    const piece = await pieceLue("datee", lecture({ numero: "P-DATEE", sansDate: true }));
+    await rpc("capture", "daterLaPiece", piece, "2026-09-03");
+
+    const dossier = (await rpc("capture", "dossier", piece)) as {
+      extraction: { payload: { document_date?: string | null } };
+      precisions: Record<string, string>;
+    };
+    assert.equal(dossier.extraction.payload.document_date, "2026-09-03");
+    assert.equal(dossier.precisions["document_date"], "2026-09-03");
+
+    const jugement = (await rpc("capture", "analyser", piece)) as {
+      controles: Array<{ code: string; preuves?: { date?: string } }>;
+    };
+    const dates = jugement.controles.find((c) => c.code === "coherence_dates");
+    assert.equal(dates?.preuves?.date, "2026-09-03", "le jugement voit la date donnée");
+
+    // L'écran propose un autre jour sans l'avoir écrit : c'est l'enregistré qui compte.
+    const r = (await rpc("office", "propositionDePiece", piece, "2026-09-20")) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.proposition.pivot.entry_date, "2026-09-03");
+  });
+
+  it("une précision de date ne remplace jamais une date lue", async () => {
+    const piece = await pieceLue("lue-et-precisee", lecture({ numero: "P-LUE-PRECISEE" }));
+    await rpc("capture", "daterLaPiece", piece, "2026-08-01");
+    const dossier = (await rpc("capture", "dossier", piece)) as {
+      extraction: { payload: { document_date?: string | null } };
+    };
+    assert.equal(dossier.extraction.payload.document_date, "2026-09-10");
+  });
+
   it("comptabilisable au verdict, mais le moteur ne l'approuve pas : pas d'écriture, et pourquoi", async () => {
     // Les contrôles lisent la confiance PAR CHAMP (haute ici) ; le moteur, la
     // confiance GLOBALE de la désignation (0,3, sous le seuil bloquant).
