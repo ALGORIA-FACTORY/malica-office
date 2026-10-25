@@ -103,8 +103,15 @@ export function creerVidage(deps: {
     return tous.sort((a, b) => a.creeLe.localeCompare(b.creeLe));
   }
 
+  /**
+   * Les clés abandonnées pendant un pas en vol : quand l'appel revient, il ne
+   * réécrit pas l'élément — un abandon ne ressuscite pas sans ses octets.
+   */
+  const abandonnees = new Set<string>();
+
   async function appliquer(e: ElementDeFile, evt: Evenement): Promise<ElementDeFile> {
     const suivant = transition(e, evt, maintenant());
+    if (abandonnees.has(e.cle)) return suivant;
     if (suivant.etat === "lecture_demandee") {
       await deps.depot.supprimer(e.cle);
       await publier(suivant);
@@ -295,6 +302,7 @@ export function creerVidage(deps: {
     },
 
     async abandonner(cle) {
+      abandonnees.add(cle);
       await deps.depot.supprimer(cle);
       await publier();
     },

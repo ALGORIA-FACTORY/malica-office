@@ -105,6 +105,26 @@ describe("un dépôt en ligne", () => {
     expect(arrivee?.etat).toBe("enregistree");
   });
 
+  it("un élément abandonné pendant son enregistrement ne revient pas quand l'appel aboutit", async () => {
+    const depot = depotMemoire();
+    let liberer: () => void = () => undefined;
+    const enVol = new Promise<void>((r) => (liberer = r));
+    const r = ports();
+    const lent: PortsDuVidage = {
+      ...r.ports,
+      async enregistrer(e) {
+        await enVol;
+        return r.ports.enregistrer(e);
+      },
+    };
+    const v = creerVidage({ depot, ports: lent, enLigne: () => true });
+    const cle = await v.deposer({ ...ENTREE, cle: "lent" }, octets());
+    await v.abandonner(cle);
+    liberer();
+    await v.vider();
+    expect(await depot.lister()).toEqual([]);
+  });
+
   it("un reçu que Malica vient de fabriquer ne repart PAS en lecture", async () => {
     /*
      * 13 octobre 2026. Trois reçus se sont retrouvés en base classés

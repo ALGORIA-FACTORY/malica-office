@@ -68,10 +68,16 @@ export async function photographierUnePreuve(p: {
   const element = await vidage().attendre(cle, 30_000, "deposee");
   if (element && (element.etat === "deposee" || element.etat === "lecture_demandee"))
     return element.pieceId;
+  // Un enregistrement encore en vol se laisse aboutir : sa pièce, si elle
+  // naît, est supprimée ci-dessous plutôt que laissée vide sur le serveur.
+  const pose =
+    element && element.pieceId === null && element.etat === "a_envoyer"
+      ? await vidage().attendre(cle, 30_000)
+      : element;
   await vidage().abandonner(cle);
-  if (element?.pieceId)
+  if (pose?.pieceId)
     await office()
-      .capture.supprimer(element.pieceId)
+      .capture.supprimer(pose.pieceId)
       .catch(() => undefined);
   throw new ErreurReseau("hors_ligne");
 }
