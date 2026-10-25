@@ -31,7 +31,7 @@ import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
-import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { estIntrouvable, texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -40,12 +40,12 @@ import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import {
-  avancementDeLaPiece,
+  dateAEnregistrer,
   ecritureDeLaPiece,
   etiquetteDeLecture,
   noteDeSuppression,
+  parcoursDeLaPiece,
   partageeAvecLeCabinet,
-  RANG_COMPTEE,
 } from "@/lib/fiche-de-la-piece";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
@@ -509,7 +509,12 @@ function PieceScreen() {
    * sans rien signaler.
    */
   const dater = useMutation({
-    mutationFn: (date: string) => office().capture.daterLaPiece(pieceId, date),
+    mutationFn: async (date: string) => {
+      await office().capture.daterLaPiece(pieceId, date);
+      // Le jugement suit la date, comme il suit le sens : sans nouvelle
+      // analyse, il resterait celui d'une pièce « date à saisir ».
+      await office().capture.analyser(pieceId);
+    },
     onSuccess: async () => {
       setError(null);
       // Les charges changent de mois : leur lecture est a refaire.
@@ -650,7 +655,19 @@ function PieceScreen() {
    */
   const jourDuScan = (dossier.data?.piece.createdAt ?? new Date().toISOString()).slice(0, 10);
   const [dateSaisie, setDateSaisie] = useState<string | null>(null);
-  const dateRetenue = dateSaisie ?? jourDuScan;
+  // La date déjà donnée par la personne (une précision) : c'est elle que le
+  // champ rouvre, jamais le jour du scan.
+  const datePrecisee = dossier.data?.precisions["document_date"] ?? null;
+  const dateRetenue = dateSaisie ?? datePrecisee ?? jourDuScan;
+  /** Enregistre la valeur du champ — y compris le jour proposé, gardé tel quel. */
+  const enregistrerLaDate = (v: string) => {
+    const date = dateAEnregistrer(
+      v,
+      datePrecisee,
+      dater.isPending ? (dater.variables ?? null) : null,
+    );
+    if (date) dater.mutate(date);
+  };
 
   /*
    * Les droits hors TVA, et le pack qui les nomme. Le libellé et la référence
@@ -744,7 +761,44 @@ function PieceScreen() {
 
   if (dossier.isPending)
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
-  if (!dossier.data) return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
+  if (!dossier.data) {
+    /*
+     * UNE PIÈCE SUPPRIMÉE N'EST PAS UNE PANNE (audit du 25 octobre 2026).
+     *
+     * Une suppression accordée par le cabinet efface la pièce ; la
+     * notification, un lien gardé, y menaient encore — et l'écran disait
+     * « Une erreur est survenue », sans chemin de retour.
+     */
+    if (estIntrouvable(dossier.error)) {
+      return (
+        <div data-ecran="dossier">
+          <div className="top">
+            <button
+              type="button"
+              className="bk"
+              aria-label={t("pme.regler.retour")}
+              onClick={() => void navigateList()}
+            >
+              <svg viewBox="0 0 24 24" className="g" aria-hidden>
+                <path d="M14.5 5.5L8 12l6.5 6.5" />
+              </svg>
+            </button>
+            <span className="ttl">{t("pme.piece.title")}</span>
+          </div>
+          <div className="centr calme" role="status">
+            <i />
+            <div>
+              <p>{t("pme.piece.supprimee")}</p>
+              <button type="button" onClick={() => void navigateList()}>
+                {t("pme.regler.retour")}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <p className="text-sm text-signal-warn">{t("common.error")}</p>;
+  }
 
   const { piece, contenu, extraction, citations, lectureRefusee } = dossier.data;
 
@@ -825,24 +879,13 @@ function PieceScreen() {
    * le cabinet. Reprendre l'ordre de la maquette aurait dessiné un circuit
    * qui n'existe pas dans le produit.
    */
-  // Une seule source pour l'étape atteinte ET pour « comptée » : le parcours
-  // et la pastille ne peuvent pas se contredire.
-  const { atteint, comptee } = avancementDeLaPiece(piece.status, booked);
-  const etapes = (
-    [
-      ["recue", 1],
-      ["lue", 2],
-      ["confirmee", 3],
-      ["comptee", RANG_COMPTEE],
-      ["vue", 5],
-      ["declaree", 6],
-    ] as const
-  ).map(([cle, seuil]) => ({
-    cle,
-    label: t(`pme.parcours.${cle}` as MessageKey),
-    // « Déclarée » n'a pas encore d'état dans le produit : elle reste en
-    // attente plutôt que de laisser croire que le parcours s'arrête avant.
-    etat: seuil > atteint ? "attente" : seuil === atteint ? "courante" : "faite",
+  // Une seule dérivation pour le parcours, « comptée » ET la pastille : les
+  // trois ne peuvent pas se contredire (audit du 25 octobre 2026).
+  const parcours = parcoursDeLaPiece(piece.status, booked);
+  const { comptee } = parcours;
+  const etapes = parcours.etapes.map((e) => ({
+    ...e,
+    label: t(`pme.parcours.${e.cle}` as MessageKey),
   }));
 
   /** Les articles relevés sur la pièce. Le contrat les porte ; l'écran les montre. */
@@ -958,6 +1001,15 @@ function PieceScreen() {
    * tard ne rejoue pas la coche : on fête la confirmation, pas l'état.
    */
   if (regle) {
+    const resteAFaire: "transmettre" | "regler" | null =
+      cabinet.data &&
+      piece.vis !== "partage" &&
+      !piece.gardeeLe &&
+      acces.data?.role !== "collaborateur"
+        ? "transmettre"
+        : paiements.isSuccess && !(paiements.data ?? []).some((p) => !p.eteint)
+          ? "regler"
+          : null;
     return (
       <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-10 text-center">
         <svg
@@ -979,10 +1031,24 @@ function PieceScreen() {
            * transmission sans qu'elle ait eu lieu est un mensonge — et sur une
            * pièce comptable, un mensonge qui coûte cher à découvrir.
            */}
-          {cabinet.data && piece.vis === "partage"
-            ? t("pme.regle.classe.cabinet", { classe: classement, cabinet: cabinet.data.name })
-            : t("pme.regle.classe", { classe: classement })}
+          {resteAFaire
+            ? t("pme.regle.classe.seul", { classe: classement })
+            : cabinet.data && piece.vis === "partage"
+              ? t("pme.regle.classe.cabinet", { classe: classement, cabinet: cabinet.data.name })
+              : t("pme.regle.classe", { classe: classement })}
         </p>
+        {/*
+         * « Vous n'avez plus rien à faire » seulement quand c'est VRAI : une
+         * transmission à décider ou un règlement à dire restent un geste
+         * (audit du 25 octobre 2026).
+         */}
+        {resteAFaire ? (
+          <p className="mt-2 max-w-[280px] text-[15px] leading-[1.55] text-foreground">
+            {resteAFaire === "transmettre" && cabinet.data
+              ? t("pme.regle.reste.transmettre", { cabinet: cabinet.data.name })
+              : t("pme.regle.reste.regler")}
+          </p>
+        ) : null}
         {tvaDuDoc ? (
           <span className="mt-6 inline-flex items-center gap-2 border border-signal-ok px-3.5 py-2 text-[13px] font-semibold text-signal-ok">
             <span aria-hidden className="h-[5px] w-[5px] bg-current" />
@@ -1472,19 +1538,14 @@ function PieceScreen() {
    * au cabinet, le reste à payer — puis elle devient une ligne calme. Aucun
    * geste n'est perdu : chacun a aussi sa place dans un onglet.
    */
-  const pastille: { cle: MessageKey; ton: "ok" | "am" | "az" | "neutre" } = comptee
-    ? { cle: "pme.dossier.etat.comptabilisee", ton: "ok" }
-    : piece.status === "retournee"
-      ? { cle: "pme.home.etat.retour", ton: "az" }
-      : piece.status === "lue" || piece.status === "proposee"
-        ? { cle: "pme.charges.answer.verifier", ton: "am" }
-        : { cle: "pme.refus.titre", ton: "neutre" };
+  const pastille = parcours.pastille;
+  // Le parcours nomme l'étape ATTEINTE — celle de la pastille —, puis la suivante.
   const indexCourant = Math.max(
     0,
-    etapes.findIndex((e) => e.etat === "courante"),
+    etapes.findIndex((e) => e.cle === parcours.derniere),
   );
   const courante = etapes[indexCourant];
-  const suivante = etapes[indexCourant + 1] ?? null;
+  const suivante = etapes.find((e) => e.cle === parcours.prochaine) ?? null;
   const aTransmettre =
     Boolean(cabinet.data) && piece.vis !== "partage" && !piece.gardeeLe && !siege;
   const resteAPayer = comptee && resteMineur !== null && resteMineur > 0;
@@ -1562,86 +1623,97 @@ function PieceScreen() {
               },
             ],
           }
-        : !comptee && bloquee
+        : !comptee && demandeDeRappel === "demandee"
           ? {
-              // La raison passe devant le bouton mort (10 octobre 2026).
-              ton: "ve",
-              titre: raisonDuBlocage,
-              sous: t("pme.bloque.geste"),
-              gestes: [
-                { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
-                ...(aTransmettre && cabinet.data
-                  ? [
-                      {
-                        libelle: t("pme.transmettre.action"),
-                        action: () => transmettre.mutate(),
-                        eteint: transmettre.isPending || garder.isPending,
-                        principal: true,
-                      },
-                    ]
-                  : []),
-              ],
+              /*
+               * Rappeler et inscrire se contredisent : tant que le cabinet n'a
+               * pas tranché le rappel, la base refuse le « Oui ». On le dit au
+               * lieu d'offrir un bouton qui échouerait (audit du 25 octobre).
+               */
+              ton: "az",
+              titre: t("refus.piece.rappelEnAttente"),
+              gestes: [],
             }
-          : !comptee
+          : !comptee && bloquee
             ? {
-                ton: "am",
-                titre: payload?.totals?.ttc
-                  ? t("pme.verifie.question", {
-                      montant: lisible(payload.totals.ttc) ?? "",
-                      devise,
-                    })
-                  : t("pme.verifie.question.sansTotal"),
+                // La raison passe devant le bouton mort (10 octobre 2026).
+                ton: "ve",
+                titre: raisonDuBlocage,
+                sous: t("pme.bloque.geste"),
                 gestes: [
                   { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
-                  {
-                    libelle: confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui"),
-                    action: () => confirm.mutate(),
-                    eteint: confirm.isPending || !confirmable,
-                    principal: true,
-                  },
+                  ...(aTransmettre && cabinet.data
+                    ? [
+                        {
+                          libelle: t("pme.transmettre.action"),
+                          action: () => transmettre.mutate(),
+                          eteint: transmettre.isPending || garder.isPending,
+                          principal: true,
+                        },
+                      ]
+                    : []),
                 ],
               }
-            : aTransmettre && cabinet.data
+            : !comptee
               ? {
-                  /*
-                   * La transmission est une DÉCISION (4 et 7 octobre) : deux
-                   * boutons de même poids — garder chez soi est légitime.
-                   */
-                  ton: "az",
-                  titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
-                  sous: t("pme.transmettre.chezvous"),
+                  ton: "am",
+                  titre: payload?.totals?.ttc
+                    ? t("pme.verifie.question", {
+                        montant: lisible(payload.totals.ttc) ?? "",
+                        devise,
+                      })
+                    : t("pme.verifie.question.sansTotal"),
                   gestes: [
+                    { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
                     {
-                      libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
-                      action: () => garder.mutate(),
-                      eteint: garder.isPending || transmettre.isPending,
-                    },
-                    {
-                      libelle: transmettre.isPending
-                        ? t("common.loading")
-                        : t("pme.transmettre.action"),
-                      action: () => transmettre.mutate(),
-                      eteint: transmettre.isPending || garder.isPending,
+                      libelle: confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui"),
+                      action: () => confirm.mutate(),
+                      eteint: confirm.isPending || !confirmable,
                       principal: true,
                     },
                   ],
                 }
-              : resteAPayer
+              : aTransmettre && cabinet.data
                 ? {
+                    /*
+                     * La transmission est une DÉCISION (4 et 7 octobre) : deux
+                     * boutons de même poids — garder chez soi est légitime.
+                     */
                     ton: "az",
-                    titre: t("pme.piece.decision.reste", {
-                      montant: resteLisible ?? "",
-                      devise,
-                    }),
+                    titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
+                    sous: t("pme.transmettre.chezvous"),
                     gestes: [
                       {
-                        libelle: t("pme.paiement.ajouterUn"),
-                        action: ouvrirLeReglement,
+                        libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
+                        action: () => garder.mutate(),
+                        eteint: garder.isPending || transmettre.isPending,
+                      },
+                      {
+                        libelle: transmettre.isPending
+                          ? t("common.loading")
+                          : t("pme.transmettre.action"),
+                        action: () => transmettre.mutate(),
+                        eteint: transmettre.isPending || garder.isPending,
                         principal: true,
                       },
                     ],
                   }
-                : { ton: "ok", titre: t("pme.book.done"), sous: classement, gestes: [] };
+                : resteAPayer
+                  ? {
+                      ton: "az",
+                      titre: t("pme.piece.decision.reste", {
+                        montant: resteLisible ?? "",
+                        devise,
+                      }),
+                      gestes: [
+                        {
+                          libelle: t("pme.paiement.ajouterUn"),
+                          action: ouvrirLeReglement,
+                          principal: true,
+                        },
+                      ],
+                    }
+                  : { ton: "ok", titre: t("pme.book.done"), sous: classement, gestes: [] };
 
   return (
     <div data-ecran="dossier">
@@ -1858,17 +1930,27 @@ function PieceScreen() {
         >
           <div className="f-carte">
             {lignesCitees.map((l) =>
-              l.cle === "date" && l.valeur === null ? (
+              l.cle === "date" &&
+              (l.valeur === null ||
+                (datePrecisee !== null &&
+                  !byField.get(l.champ) &&
+                  STATUTS_PRECISABLES.has(piece.status))) ? (
                 /*
                  * La pièce ne porte pas de date lisible : le jour du scan est
                  * proposé, modifiable, et la saisie pose une PRÉCISION (R7).
+                 * Une fois donnée, la date reste modifiable tant que la pièce
+                 * n'est pas engagée, et le champ rouvre CETTE date.
                  */
                 <div className="f-ligne" key={l.cle}>
                   <span className="bd">
                     <span className="lb">{l.label}</span>
-                    <span className="et am">
-                      {dater.isPending ? t("common.loading") : t("piece.date.duScan")}
-                    </span>
+                    {dater.isPending ? (
+                      <span className="et am">{t("common.loading")}</span>
+                    ) : datePrecisee !== null ? (
+                      <span className="et ok">{t("pme.verifie.confirme")}</span>
+                    ) : (
+                      <span className="et am">{t("piece.date.duScan")}</span>
+                    )}
                   </span>
                   <input
                     type="date"
@@ -1877,12 +1959,14 @@ function PieceScreen() {
                     max={new Date().toISOString().slice(0, 10)}
                     disabled={dater.isPending}
                     onChange={(e) => {
-                      const v = e.target.value;
-                      setDateSaisie(v);
+                      setDateSaisie(e.target.value);
                       // Un champ `date` rend une chaîne vide tant que la saisie
                       // est incomplète : on n'enregistre que ce qui est une date.
-                      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) dater.mutate(v);
+                      enregistrerLaDate(e.target.value);
                     }}
+                    // Garder le jour proposé est une réponse : quitter le champ
+                    // l'enregistre, même sans l'avoir changé.
+                    onBlur={(e) => enregistrerLaDate(e.target.value)}
                   />
                 </div>
               ) : byField.get(l.champ) ? (
@@ -2037,7 +2121,16 @@ function PieceScreen() {
           ) : null}
 
           {/* Le cabinet : transmise, gardée, ou à décider. */}
-          {cabinet.data && (!comptee || piece.vis !== "partage") ? (
+          {/*
+           * Une pièce comptée et transmise ne se rappelle plus — mais la
+           * réponse à un rappel demandé avant reste lisible ici (audit du
+           * 25 octobre 2026 : le refus du cabinet ne se voyait nulle part).
+           */}
+          {cabinet.data &&
+          (!comptee ||
+            piece.vis !== "partage" ||
+            demandeDeRappel === "demandee" ||
+            demandeDeRappel === "refusee") ? (
             <div className="f-carte f-cab">
               {piece.vis === "partage" ? (
                 <>
@@ -2052,7 +2145,7 @@ function PieceScreen() {
                     <p className="f-note">
                       {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                     </p>
-                  ) : (
+                  ) : !comptee ? (
                     <button
                       type="button"
                       className="f-bouton"
@@ -2063,7 +2156,7 @@ function PieceScreen() {
                         ? t("common.loading")
                         : t("pme.transmettre.rappeler", { cabinet: cabinet.data.name })}
                     </button>
-                  )}
+                  ) : null}
                 </>
               ) : piece.gardeeLe ? (
                 /*

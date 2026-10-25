@@ -68,7 +68,7 @@ begin
   where f.tenant_id = new.tenant_id and f.date_effet <= (new.payload->>'dateOperation')::date
   order by f.date_effet desc, f.created_at desc limit 1;
  if profil is distinct from new.profil_version_id then raise exception 'Le profil fiscal a changé : actualisez la qualification.' using errcode='check_violation'; end if;
- if coalesce((select nullif(x.payload->>'document_date','')::date from capture.extractions x where x.id=lecture),(new.payload->>'dateOperation')::date) is distinct from (new.payload->>'dateOperation')::date then raise exception 'La date qualifiée diffère de la date imprimée.' using errcode='check_violation'; end if;
+ if coalesce((select nullif(x.payload->>'document_date','')::date from capture.extractions x where x.id=lecture),(select nullif(d.valeur,'')::date from capture.precisions d where d.piece_id=new.piece_id and d.champ='document_date' order by d.decided_at desc limit 1),(new.payload->>'dateOperation')::date) is distinct from (new.payload->>'dateOperation')::date then raise exception 'La date qualifiée diffère de la date imprimée.' using errcode='check_violation'; end if;
  if new.payload->>'pieceId' is distinct from new.piece_id::text
     or new.payload->>'extractionId' is distinct from new.extraction_id::text then
   raise exception 'La qualification doit citer la pièce et sa lecture.' using errcode='check_violation';

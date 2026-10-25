@@ -58,6 +58,78 @@ export function avancementDeLaPiece(
   return { atteint, comptee: atteint >= RANG_COMPTEE };
 }
 
+/** Les étapes du parcours, dans l'ordre du PRODUIT, et le rang qui les atteint. */
+const ETAPES = [
+  ["recue", 1],
+  ["lue", 2],
+  ["confirmee", 3],
+  ["comptee", RANG_COMPTEE],
+  ["vue", RANG_DU_STATUT.supervisee],
+  ["declaree", 6],
+] as const;
+
+type CleDEtape = (typeof ETAPES)[number][0];
+type EtatDEtape = "faite" | "courante" | "attente";
+
+export interface ParcoursDeLaPiece extends AvancementDeLaPiece {
+  /** Chaque étape : faite, en cours (la prochaine), ou en attente. */
+  etapes: ReadonlyArray<{ cle: CleDEtape; etat: EtatDEtape }>;
+  /** La dernière étape faite — celle que la pastille et le parcours nomment. */
+  derniere: CleDEtape;
+  /** L'étape qui vient, s'il y en a une. */
+  prochaine: CleDEtape | null;
+  /** La pastille du haut de la fiche. */
+  pastille: {
+    cle:
+      | "pme.status.supervisee"
+      | "pme.dossier.etat.comptabilisee"
+      | "pme.home.etat.retour"
+      | "pme.charges.answer.verifier"
+      | "pme.refus.titre";
+    ton: "ok" | "am" | "az" | "neutre";
+  };
+}
+
+/**
+ * Le parcours ET la pastille, d'une seule dérivation.
+ *
+ * Audit du 25 octobre 2026 : une pièce comptée portait la pastille
+ * « Comptabilisée » pendant que le parcours disait « Comptée : en cours », en
+ * ambre ; une pièce supervisée gardait « Comptabilisée » sous « Étape 5 ·
+ * Vue ». Deux calculs voisins, deux réponses. L'étape ATTEINTE est faite ; la
+ * suivante est en cours ; et la pastille nomme l'étape atteinte.
+ *
+ * « Déclarée » n'a pas encore d'état dans le produit : elle reste en attente,
+ * jamais « en cours ».
+ */
+export function parcoursDeLaPiece(
+  status: PieceStatus,
+  ecriture: Ecriture | null,
+): ParcoursDeLaPiece {
+  const { atteint, comptee } = avancementDeLaPiece(status, ecriture);
+  const etapes = ETAPES.map(([cle, rang]) => ({
+    cle,
+    etat: (rang <= atteint
+      ? "faite"
+      : rang === atteint + 1 && cle !== "declaree"
+        ? "courante"
+        : "attente") as EtatDEtape,
+  }));
+  const derniere = [...ETAPES].reverse().find(([, rang]) => rang <= atteint)?.[0] ?? "recue";
+  const prochaine = ETAPES.find(([, rang]) => rang > atteint)?.[0] ?? null;
+  const pastille: ParcoursDeLaPiece["pastille"] =
+    atteint >= RANG_DU_STATUT.supervisee
+      ? { cle: "pme.status.supervisee", ton: "ok" }
+      : comptee
+        ? { cle: "pme.dossier.etat.comptabilisee", ton: "ok" }
+        : status === "retournee"
+          ? { cle: "pme.home.etat.retour", ton: "az" }
+          : status === "lue" || status === "proposee"
+            ? { cle: "pme.charges.answer.verifier", ton: "am" }
+            : { cle: "pme.refus.titre", ton: "neutre" };
+  return { atteint, comptee, etapes, derniere, prochaine, pastille };
+}
+
 /**
  * La pièce est entre les mains du cabinet : partagée. C'est là seulement
  * qu'une suppression se DEMANDE — `piece_demander` refuse toute autre pièce,
@@ -100,4 +172,27 @@ export function etiquetteDeLecture(ligne: {
   if (ligne.comptee) return "confirme";
   if (!ligne.confianceConnue) return "inconnue";
   return ligne.aVerifier ? "aVerifier" : "source";
+}
+
+const JOUR_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * La date à enregistrer depuis le champ « Date », ou `null` s'il n'y a rien à
+ * écrire.
+ *
+ * Audit du 25 octobre 2026 : le jour du scan proposé ne s'enregistrait que si
+ * on le CHANGEAIT — garder la date proposée n'écrivait rien, et la pièce
+ * restait « date à indiquer ». La valeur affichée est donc enregistrable
+ * telle quelle (en quittant le champ), sauf si c'est déjà celle qui est
+ * enregistrée ou celle qui est en train de l'être. Une saisie incomplète
+ * (chaîne vide d'un champ `date`) n'écrit rien.
+ */
+export function dateAEnregistrer(
+  saisie: string,
+  enregistree: string | null,
+  enCours: string | null,
+): string | null {
+  if (!JOUR_ISO.test(saisie)) return null;
+  if (saisie === enregistree || saisie === enCours) return null;
+  return saisie;
 }

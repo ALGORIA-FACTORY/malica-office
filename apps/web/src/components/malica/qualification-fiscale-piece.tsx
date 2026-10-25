@@ -53,7 +53,7 @@ export function QualificationFiscalePiece({
           </p>
         ) : contexte.data ? (
           <Formulaire
-            key={`${contexte.data.extractionId}/${contexte.data.profilVersionId}/${contexte.data.qualification?.id}`}
+            key={`${contexte.data.extractionId}/${contexte.data.profilVersionId}/${contexte.data.qualification?.id}/${contexte.data.dateLue}/${contexte.data.documentKind}`}
             c={contexte.data}
             pieceId={pieceId}
             expert={acces.data?.role === "expert"}
@@ -76,9 +76,13 @@ function Formulaire({
   const qc = useQueryClient();
   const q = c.qualification;
   const sourceChangee = q !== null && q.extractionId !== c.extractionId;
-  const [edition, setEdition] = useState(
-    !q || sourceChangee || q.profilVersionId !== c.profilVersionId,
-  );
+  const perimee =
+    !!q &&
+    (sourceChangee ||
+      q.profilVersionId !== c.profilVersionId ||
+      q.documentKind !== c.documentKind ||
+      (c.dateLue !== null && q.dateOperation !== c.dateLue));
+  const [edition, setEdition] = useState(!q || perimee);
   const [date, setDate] = useState(c.dateLue ?? q?.dateOperation ?? "");
   const [contexte, setContexte] = useState<QualificationFiscale["contexte"]>(
     q?.contexte ?? "interieur",
@@ -145,7 +149,7 @@ function Formulaire({
   return (
     <div className="mt-3 space-y-4">
       <p className="text-sm text-muted-foreground">{t("fq.hint")}</p>
-      {q && (q.extractionId !== c.extractionId || q.profilVersionId !== c.profilVersionId) ? (
+      {perimee ? (
         <p role="alert" className="text-sm text-signal-warn">
           {t("fq.stale")}
         </p>

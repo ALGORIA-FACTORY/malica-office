@@ -462,8 +462,9 @@ function VosDocuments() {
         carte.set(cle, g);
       }
       g.pieces.push(p);
-      if (p.status === "capturee") g.nonLues += 1;
-      if (p.total !== null) {
+      // Un reçu ou un justificatif ne se lit pas : il n'est jamais « pas encore lu ».
+      if (p.status === "capturee" && !p.accompagne) g.nonLues += 1;
+      if (p.total !== null && !p.accompagne) {
         if (p.kind === "facture_vente") g.ventes.push(p.total);
         else g.achats.push(p.total);
       }
@@ -554,11 +555,13 @@ function VosDocuments() {
    * serait un mensonge, pas une approximation.
    */
   const montantsConnus = useMemo(
-    () => toutes.filter((p) => p.total !== null).map((p) => p.total!),
+    // Un reçu ou un justificatif répète le montant de sa facture : il ne
+    // s'additionne pas, et il n'est pas « sans montant » non plus.
+    () => toutes.filter((p) => !p.accompagne && p.total !== null).map((p) => p.total!),
     [toutes],
   );
   const totalExercice = montantsConnus.length === 0 ? null : sommeDecimale(montantsConnus);
-  const sansMontant = toutes.length - montantsConnus.length;
+  const sansMontant = toutes.filter((p) => !p.accompagne).length - montantsConnus.length;
 
   // -------------------------------------------------------------- les gestes
   const choisirAxe = (suivant: Axe) => {

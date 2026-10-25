@@ -32,6 +32,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  */
 
 import type { Requete } from "../db.ts";
+import { dateDeLaPiece } from "../depots/dates.ts";
 
 /*
  * Les deux noms des matricules ne sont plus écrits ici : ils viennent de la
@@ -160,16 +161,15 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   const org = orgs[0];
   if (!org) throw new Error("piece.introuvable");
 
-  const datePiece =
-    payload.document_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.document_date)
-      ? payload.document_date
-      : null;
+  const { rows: dites } = await db.query<{ valeur: string }>(
+    `select valeur from capture.precisions where piece_id=$1 and champ='document_date' order by decided_at desc limit 1`,
+    [pieceId],
+  );
   const qualificationDate = await lireQualificationFiscale(db, pieceId);
-  const dateRef =
-    datePiece ??
-    (qualificationDate?.extractionId === extraction.id
-      ? qualificationDate.dateOperation
-      : piece.recue_le);
+  const datePiece =
+    dateDeLaPiece(payload.document_date, dites[0]?.valeur ?? null) ??
+    (qualificationDate?.extractionId === extraction.id ? qualificationDate.dateOperation : null);
+  const dateRef = datePiece ?? piece.recue_le;
 
   const { rows: packs } = await db.query<{ id: string }>(
     `select id from ref.jurisdiction_packs

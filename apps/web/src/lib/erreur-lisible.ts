@@ -67,3 +67,12 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
   noterAuJournal(ou, raison);
   return defaut;
 }
+
+/**
+ * L'API a répondu que l'objet n'existe pas — ou plus (404). Une pièce
+ * effacée par une suppression accordée en est le cas courant : ce n'est pas
+ * une panne, et l'écran le dit autrement.
+ */
+export function estIntrouvable(raison: unknown): boolean {
+  return raison instanceof ErreurApi && raison.statut === 404;
+}

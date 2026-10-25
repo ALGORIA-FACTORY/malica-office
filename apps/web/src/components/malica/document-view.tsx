@@ -32,7 +32,7 @@
  */
 
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
@@ -112,8 +112,18 @@ export function DocumentView({ contenu, highlight, label }: Props) {
   // Une image ne s'affiche pas depuis un tampon : il lui faut une URL. Celle-ci
   // est locale au navigateur et meurt avec le composant — contrairement à une
   // URL signée, qui circule.
-  const urlLocale = useMemo(() => URL.createObjectURL(new Blob([contenu])), [contenu]);
-  useEffect(() => () => URL.revokeObjectURL(urlLocale), [urlLocale]);
+  //
+  // Créée ET révoquée dans le MÊME effet (audit du 25 octobre 2026) : créée
+  // par un `useMemo` et révoquée par un effet, l'URL survivait dans le mémo
+  // pendant que le démontage-remontage du mode strict la révoquait — la photo
+  // JPEG s'ouvrait sur « Document illisible » (ERR_FILE_NOT_FOUND). Chaque
+  // essai repart d'une URL neuve : « Réessayer » ne réaffiche pas l'URL morte.
+  const [urlLocale, setUrlLocale] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    const url = URL.createObjectURL(new Blob([contenu]));
+    setUrlLocale(url);
+    return () => URL.revokeObjectURL(url);
+  }, [contenu, essai]);
 
   // La page citée prime : une citation en page 3 ouvre la page 3.
   useEffect(() => {
@@ -548,14 +558,14 @@ export function DocumentView({ contenu, highlight, label }: Props) {
           </div>
         ) : (
           <div className="relative inline-block min-w-full">
-            {etat === "image" ? (
+            {etat === "image" && urlLocale ? (
               <img
                 src={urlLocale}
                 alt={label}
                 className="block w-full"
                 onError={() => setEtat("erreur")}
               />
-            ) : (
+            ) : etat === "image" ? null : (
               <canvas ref={canvasRef} className="block" />
             )}
             {cadreCite && etat !== "chargement" ? (

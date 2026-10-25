@@ -30,6 +30,7 @@ import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 
 import type { Requete } from "../db.ts";
 import { enDecimal } from "../malica/lecture/montants.ts";
+import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
 import { analyserPiece, lireParametres } from "./analyse.ts";
@@ -159,12 +160,16 @@ async function proposerDepuisLeJugement(
     pack_version_id: string | null;
     jurisdiction: string;
     sens_dit: string | null;
+    date_dite: string | null;
     recue_le: string;
   }>(
     `select p.tenant_id, e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
             a.pack_version_id, o.jurisdiction,
-            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit
+            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
+            (select q.valeur from capture.precisions q
+              where q.piece_id = p.id and q.champ = 'document_date'
+              order by q.decided_at desc limit 1) as date_dite
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
        join lateral (select id, payload from capture.extractions x
@@ -228,12 +233,11 @@ async function proposerDepuisLeJugement(
     lines?: Array<Record<string, unknown>>;
     other_charges?: Array<Record<string, unknown>>;
   };
-  const lue = payload.document_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.document_date);
-  const saisie = dateSaisie && /^\d{4}-\d{2}-\d{2}$/.test(dateSaisie) ? dateSaisie : null;
-  // Une date lue n'est jamais remplacée ; la saisie ne complète que ce qui manque.
-  const date = lue
-    ? payload.document_date!
-    : (fiscalQualifie.qualification?.dateOperation ?? saisie);
+  // La date imprimée, puis la précision enregistrée, puis la qualification.
+  const date = dateDeLaPiece(
+    payload.document_date,
+    ligne.date_dite ?? fiscalQualifie.qualification?.dateOperation ?? dateSaisie,
+  );
   // Le paramétrage et le barème se lisent à la date de la pièce, par la même
   // règle que l'analyse : la date de la facture, à défaut celle de sa
   // réception (« la pièce vit à la date de sa facture », note du 10 octobre

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { PieceQuiAccompagne, ReglementAccompagne } from "@malica/socle/ports/repositories";
 
-import { ficheQuiAccompagne, repriseRefusee, totalAtteste } from "../piece-qui-accompagne";
+import {
+  cleDuRecu,
+  ficheQuiAccompagne,
+  repriseRefusee,
+  totalAtteste,
+} from "../piece-qui-accompagne";
 
 const reglement = (id: string, autre: Partial<ReglementAccompagne> = {}): ReglementAccompagne => ({
   id,
@@ -122,5 +127,13 @@ describe("reprendre la photo", () => {
     expect(repriseRefusee({ vis: "partage" })).toBe("refus.accompagne.transmise");
     expect(repriseRefusee({ vis: "personnel" })).toBeNull();
     expect(repriseRefusee({ vis: "entite" })).toBeNull();
+  });
+});
+
+describe("la clé d'un reçu", () => {
+  it("ne dépend que de la facture et des règlements attestés, pas de leur ordre", () => {
+    expect(cleDuRecu("f", ["b", "a"])).toBe(cleDuRecu("f", ["a", "b"]));
+    expect(cleDuRecu("f", ["a"])).not.toBe(cleDuRecu("f", ["a", "b"]));
+    expect(cleDuRecu("f", ["a"])).not.toBe(cleDuRecu("g", ["a"]));
   });
 });

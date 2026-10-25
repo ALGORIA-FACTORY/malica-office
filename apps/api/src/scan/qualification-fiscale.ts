@@ -40,17 +40,19 @@ async function contexteFiscalQualifie(db: Requete, pieceId: string, dateConfirme
     extraction_id: string;
     payload: Record<string, unknown>;
     date: string;
+    date_dite: string | null;
     kind: string;
     pack_id: string;
   }>(
-    `select p.tenant_id,o.jurisdiction,x.id as extraction_id,x.payload,
-    coalesce(nullif(x.payload->>'document_date','')::date,$2::date,(qd.payload->>'dateOperation')::date,p.created_at::date)::text as date,
+    `select p.tenant_id,o.jurisdiction,x.id as extraction_id,x.payload,dt.valeur as date_dite,
+    coalesce(nullif(x.payload->>'document_date','')::date,nullif(dt.valeur,'')::date,$2::date,(qd.payload->>'dateOperation')::date,p.created_at::date)::text as date,
     coalesce(case when p.document_kind_statut='confirme' then p.document_kind end,x.payload->>'document_kind') as kind,
     pk.id as pack_id
   from capture.pieces p join identity.organizations o on o.id=p.tenant_id
   join lateral (select id,payload from capture.extractions where piece_id=p.id order by created_at desc limit 1) x on true
+  left join lateral (select valeur from capture.precisions where piece_id=p.id and champ='document_date' order by decided_at desc limit 1) dt on true
   left join lateral (select payload from parametrage.qualifications_fiscales where piece_id=p.id and extraction_id=x.id order by created_at desc limit 1) qd on true
-  join lateral (select id from ref.jurisdiction_packs where jurisdiction=o.jurisdiction and effective_from <= coalesce(nullif(x.payload->>'document_date','')::date,$2::date,(qd.payload->>'dateOperation')::date,p.created_at::date) order by effective_from desc limit 1) pk on true
+  join lateral (select id from ref.jurisdiction_packs where jurisdiction=o.jurisdiction and effective_from <= coalesce(nullif(x.payload->>'document_date','')::date,nullif(dt.valeur,'')::date,$2::date,(qd.payload->>'dateOperation')::date,p.created_at::date) order by effective_from desc limit 1) pk on true
   where p.id=$1`,
     [pieceId, dateConfirmee ?? null],
   );
@@ -181,7 +183,7 @@ export async function contexteQualificationFiscale(db: Requete, pieceId: string)
     extractionId: c.extraction_id,
     profilVersionId: c.profil?.id ?? null,
     documentKind: c.kind as "facture_achat" | "facture_vente",
-    dateLue: (c.payload["document_date"] as string | null) ?? null,
+    dateLue: (c.payload["document_date"] as string | null) ?? c.date_dite ?? null,
     decimales: c.decimales,
     prorata: c.prorata,
     regimeTva: c.regimeTva,

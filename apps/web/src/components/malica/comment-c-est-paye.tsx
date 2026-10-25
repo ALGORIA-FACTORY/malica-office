@@ -33,7 +33,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, FileText, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { files } from "@/capabilities/files";
 import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
 import { usePme } from "@/components/malica/pme-context";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -43,6 +42,7 @@ import { totalDesPaiements } from "@/lib/total-des-paiements";
 import { etatDuReglement, historiqueDuReglement } from "@/lib/etat-du-reglement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { vidage } from "@/lib/hors-ligne";
+import { cleDuRecu } from "@/lib/piece-qui-accompagne";
 import { photographierUnePreuve } from "@/lib/preuve-de-paiement";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -432,7 +432,15 @@ export function CommentCEstPaye({
       const rendu = await rendreRecuEnPdf(construit, dir);
       const cle = await vidage().deposer(
         {
-          cle: files.newIdempotencyKey(),
+          /*
+           * La clé dit CE QUE le reçu atteste : deux appuis, ou un appui
+           * rejoué depuis la file, donnent le même reçu et non deux
+           * (audit du 25 octobre 2026). Un règlement de plus fait un autre reçu.
+           */
+          cle: cleDuRecu(
+            pieceId,
+            attestes.map((p) => p.id),
+          ),
           tenantId: pme.tenantId,
           entityId: pme.entityId,
           source: "pdf",
@@ -973,7 +981,14 @@ export function CommentCEstPaye({
             ) : null}
             {/* La borne se dit AVANT d'être refusée par la base. */}
             {partiel && plafond !== null ? (
-              <p className="text-[12.5px] text-signal-warn">
+              // Une indication tant que le montant tient ; une alerte quand il dépasse.
+              <p
+                className={`text-[12.5px] ${
+                  montantAInscrire !== null && montantAInscrire > plafond
+                    ? "text-signal-warn"
+                    : "text-text-2"
+                }`}
+              >
                 {t("pme.paiement.borne", { montant: `${lisible(plafond)} ${devise}` })}
               </p>
             ) : null}

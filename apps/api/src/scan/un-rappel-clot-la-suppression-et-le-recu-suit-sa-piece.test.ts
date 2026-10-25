@@ -214,6 +214,36 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
     assert.equal(await visDe(recu), "partage");
   });
 
+  it("la file du cabinet et ses compteurs ne prennent pas un reçu pour une pièce à lire", async () => {
+    const facture = await deposer("facture-file");
+    await rpc("collab", "setPieceVis", facture, "partage");
+    const recu = await deposer("recu-file", {
+      documentKind: "recu_de_paiement",
+      sourcePieceId: facture,
+    });
+    const file = (await rpcCab("supervision", "queue", cabinet, org)) as Array<{
+      pieceId?: string;
+      id?: string;
+    }>;
+    const ids = file.map((l) => l.pieceId ?? l.id);
+    assert.ok(ids.includes(facture), "la facture transmise est dans la file");
+    assert.ok(!ids.includes(recu), "son reçu l'accompagne, il n'y entre pas");
+    const clients = (await rpcCab("supervision", "listClients", cabinet)) as Array<{
+      tenantId: string;
+      counts: Record<string, number>;
+    }>;
+    const avant = clients.find((c) => c.tenantId === org)!.counts["capturee"] ?? 0;
+    await deposer("recu-file-2", { documentKind: "recu_de_paiement", sourcePieceId: facture });
+    const apres =
+      (
+        (await rpcCab("supervision", "listClients", cabinet)) as Array<{
+          tenantId: string;
+          counts: Record<string, number>;
+        }>
+      ).find((c) => c.tenantId === org)!.counts["capturee"] ?? 0;
+    assert.equal(apres, avant, "un reçu de plus ne fait pas une pièce « pas encore lue » de plus");
+  });
+
   it("le rappel accordé ramène aussi le reçu qui en est issu", async () => {
     const facture = await deposer("facture-rappelee");
     await rpc("collab", "setPieceVis", facture, "partage");
