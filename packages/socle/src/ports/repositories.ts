@@ -780,6 +780,8 @@ export interface PaiementDUnePiece {
   reference: string | null;
   /** Le paiement que cette ligne eteint, si c'est une annulation. */
   annulePaiementId: string | null;
+  /** Le motif de l'annulation, sur une ligne d'annulation. */
+  annulationMotifId?: string | null;
   /**
    * Eteint : annule, ou annulation d'un autre.
    *
@@ -801,8 +803,12 @@ export interface MotifDAnnulation {
   code: string;
   libelle: string;
   exigeUneNote: boolean;
-  /** Le motif sert à corriger un règlement, ou à retirer « pas encore payé ». */
-  pour: "reglement" | "non_paye";
+  /** Le motif sert à corriger un règlement, à retirer « pas encore payé », ou à la base. */
+  pour: "reglement" | "non_paye" | "systeme";
+  /** Proposé à la personne ; sinon seulement lu dans l'historique. */
+  proposable: boolean;
+  /** Vrai : la correction réinscrit un règlement. Faux : il est seulement retiré. */
+  remplace: boolean;
 }
 
 export interface Citation {

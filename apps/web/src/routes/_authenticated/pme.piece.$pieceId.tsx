@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { totalDesPaiements } from "@/lib/total-des-paiements";
 
-import { SoldeDePiece } from "@/components/malica/solde-de-piece";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -1310,18 +1309,10 @@ function PieceScreen() {
     payload?.totals?.ttc && decimales !== null
       ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
       : null;
-  const payeLisible =
-    decimales !== null && payeMineur !== null
-      ? lisible(depuisUniteMineure(payeMineur, decimales))
-      : null;
   const resteMineur = ttcMineur !== null && payeMineur !== null ? ttcMineur - payeMineur : null;
   const resteLisible =
     resteMineur !== null && decimales !== null
       ? lisible(depuisUniteMineure(Math.max(resteMineur, 0), decimales))
-      : null;
-  const part =
-    ttcMineur !== null && payeMineur !== null && ttcMineur > 0
-      ? Math.min(100, Math.max(0, (payeMineur / ttcMineur) * 100))
       : null;
 
   /*
@@ -1951,14 +1942,6 @@ function PieceScreen() {
           id="panneau-reglement"
           aria-labelledby="onglet-reglement"
         >
-          <SoldeDePiece
-            paye={payeLisible}
-            total={lisible(payload?.totals?.ttc)}
-            reste={resteLisible}
-            soldee={resteMineur === null ? null : resteMineur <= 0}
-            progression={part}
-            devise={devise}
-          />
           <CommentCEstPaye
             pieceId={pieceId}
             visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}

@@ -1272,14 +1272,6 @@
 [data-surface="pme"] [data-ecran="dossier"] .exs button span{font-family:var(--mono);font-size:.5625rem;letter-spacing:.06em;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(255,255,255,.74)}
-[data-surface="pme"] [data-ecran="dossier"] .solde{background:var(--d1);border-radius:18px;padding:1rem;margin-top:1.125rem}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd{display:flex;align-items:baseline;gap:.75rem}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd b{flex:1;font-size:.875rem;font-weight:600;letter-spacing:-.018em}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd span{font-family:var(--mono);font-size:.8125rem;font-weight:600;color:var(--t2)}
-[data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(0,0,0,.09); margin-top:.75rem;overflow:hidden}
-[data-surface="pme"] [data-ecran="dossier"] .solde .bar i{display:block;height:100%;border-radius:999px; background:linear-gradient(90deg,var(--accs),var(--acc))}
-[data-surface="pme"] [data-ecran="dossier"] .solde .ech{margin-top:.6875rem;font-size:.75rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .solde .ech b{color:var(--am);font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(138,91,0,.08);border:1px solid rgba(138,91,0,.24)}
 [data-surface="pme"] [data-ecran="dossier"] .centr.calme{background:var(--d1);border-color:transparent}
 [data-surface="pme"] [data-ecran="dossier"] .centr i{width:8px;height:8px;border-radius:50%;background:var(--am);flex:none;margin-top:.4375rem}
@@ -2388,7 +2380,6 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:.375rem;justify-content:center; padding:.5rem;background:rgba(0,0,0,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs button{display:grid;gap:.0625rem;justify-items:center;padding:.4375rem .75rem;border:0; border-radius:999px;background:rgba(255,255,255,.07);color:var(--t2);cursor:pointer; font-family:inherit;white-space:nowrap}
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(7,33,15,.62)}
-.dark [data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.09); margin-top:.75rem;overflow:hidden}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(232,199,106,.08);border:1px solid rgba(232,199,106,.24)}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr p{margin:0;font-size:.8125rem;line-height:1.5;color:#EBD9A8}
 .dark [data-surface="pme"] [data-ecran="dossier"] .ck.q p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.no p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#E4E4E7}

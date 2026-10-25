@@ -132,8 +132,9 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     for (const m of (await rpc("capture", "motifsDAnnulation", "fr")) as Array<{
       id: string;
       code: string;
+      proposable: boolean;
     }>) {
-      motifs[m.code] = m.id;
+      if (m.proposable) motifs[m.code] = m.id;
     }
   });
 
@@ -282,6 +283,25 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
       [100_000],
       "la transaction entière est défaite : l'ancien règlement vit toujours",
     );
+  });
+
+  it("un motif qui retire ne réinscrit rien : la correction est refusée, le retrait passe", async () => {
+    const id = await piece("double", "100.000");
+    await regler(id, "especes", 100_000);
+    const [ancien] = await vivants(id);
+    await assert.rejects(
+      () =>
+        rpc("capture", "corrigerPaiement", {
+          paiementId: ancien!.id,
+          motifId: motifs["inscrit_en_double"],
+          moyenCode: "especes",
+          montantMineur: 100_000,
+          payeLe: "2026-10-13",
+        }),
+      /paiement\.motif_qui_retire/,
+    );
+    await rpc("capture", "annulerPaiement", ancien!.id, motifs["inscrit_en_double"]);
+    assert.equal((await vivants(id)).length, 0);
   });
 
   it("les motifs proposés : ceux de la personne, jamais celui de la base", async () => {

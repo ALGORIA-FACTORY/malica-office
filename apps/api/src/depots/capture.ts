@@ -1165,7 +1165,7 @@ export const capture = {
     const { rows } = await db.query(
       `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
               p.justificatif_piece_id, p.created_at, p.reference,
-              p.annule_paiement_id, p.eteint, p.pack_version_id,
+              p.annule_paiement_id, p.annulation_motif_id, p.eteint, p.pack_version_id,
               app.dette_eteinte(p.id)::text as brut,
               (select e.id from ecritures_v e
                 where e.paiement_id = p.id and e.nature = 'reglement'
@@ -1215,6 +1215,7 @@ export const capture = {
       reference: (r["reference"] as string | null) ?? null,
       /** Le paiement que cette ligne éteint, s'il s'agit d'une annulation. */
       annulePaiementId: (r["annule_paiement_id"] as string | null) ?? null,
+      annulationMotifId: (r["annulation_motif_id"] as string | null) ?? null,
       /**
        * Éteint : annulé, ou annulation d'un autre.
        *
@@ -1246,14 +1247,15 @@ export const capture = {
   /** Les motifs d'annulation du référentiel, traduits. */
   async motifsDAnnulation(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select m.id, m.code, m.requires_note, m.pour,
+      `select m.id, m.code, m.requires_note, m.pour, m.remplace,
+              -- Proposé à la personne : en vigueur, et pas « systeme » (le
+              -- motif qu'écrit la base quand un règlement éteint « pas encore
+              -- payé »). Les autres restent lisibles : l'historique les nomme.
+              (m.valid_to is null and m.pour <> 'systeme') as proposable,
               coalesce(l.value, m.code) as libelle
          from ref.paiement_motifs_annulation m
          left join ref.labels l
            on l.ns = 'paiement_motif_annulation' and l.key = m.code and l.locale = $1
-        -- « systeme » : le motif qu'écrit la base elle-même (un règlement
-        -- éteint « pas encore payé »), jamais un choix de la personne.
-        where m.valid_to is null and m.pour <> 'systeme'
         order by m.rang, m.code`,
       [locale],
     );
@@ -1262,7 +1264,9 @@ export const capture = {
       code: r["code"] as string,
       libelle: r["libelle"] as string,
       exigeUneNote: Boolean(r["requires_note"]),
-      pour: r["pour"] as "reglement" | "non_paye",
+      pour: r["pour"] as "reglement" | "non_paye" | "systeme",
+      proposable: Boolean(r["proposable"]),
+      remplace: Boolean(r["remplace"]),
     }));
   },
 
