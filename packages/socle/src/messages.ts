@@ -605,6 +605,8 @@ const fr = {
   "pme.paiement.correction.explique":
     "L'ancien règlement sera annulé et gardé dans l'historique. Rien n'est effacé.",
   "pme.paiement.correction.enregistrer": "Enregistrer la correction",
+  "pme.paiement.correction.retirer": "Retirer ce règlement",
+  "pme.paiement.correction.retireExplique": "Ce règlement sera retiré : rien ne le remplace.",
   "pme.paiement.borne": "Au plus {montant} : ce qui reste à payer.",
   "pme.paiement.avantFacture": "Avant la date de la facture : un acompte ?",
   "pme.type.titre": "Qu'est-ce que c'est ?",
@@ -3006,6 +3008,7 @@ const fr = {
   "paiement.deja_non_paye": "« Pas encore payé » est déjà inscrit.",
   "paiement.non_paye_ne_se_corrige_pas":
     "« Pas encore payé » ne se corrige pas : retirez-le ou ajoutez un règlement.",
+  "paiement.motif_qui_retire": "Ce motif retire le règlement : rien ne le remplace.",
   "paiement.montant_perime":
     "Le montant dû a changé depuis : reprenez le paiement depuis vos factures.",
   "paiement.prestataire_du_lien":
@@ -4253,6 +4256,8 @@ const en: Dict = {
   "pme.paiement.correction.explique":
     "The old payment will be cancelled and kept in the history. Nothing is erased.",
   "pme.paiement.correction.enregistrer": "Save the correction",
+  "pme.paiement.correction.retirer": "Remove this payment",
+  "pme.paiement.correction.retireExplique": "This payment will be removed: nothing replaces it.",
   "pme.paiement.borne": "At most {montant}: what is left to pay.",
   "pme.paiement.avantFacture": "Before the invoice date: a deposit?",
   "pme.type.titre": "What is it?",
@@ -6598,6 +6603,7 @@ const en: Dict = {
   "paiement.deja_non_paye": '"Not paid yet" is already recorded.',
   "paiement.non_paye_ne_se_corrige_pas":
     '"Not paid yet" is not corrected: remove it or add a payment.',
+  "paiement.motif_qui_retire": "This reason removes the payment: nothing replaces it.",
   "paiement.montant_perime":
     "The amount due has changed since: start the payment again from your invoices.",
   "paiement.prestataire_du_lien":
@@ -7745,6 +7751,8 @@ const ar: Dict = {
   "pme.paiement.correction.titre": "تصحيح هذا الخلاص",
   "pme.paiement.correction.explique": "سيُلغى الخلاص القديم ويُحفظ في السجلّ. لا يُمحى شيء.",
   "pme.paiement.correction.enregistrer": "تسجيل التصحيح",
+  "pme.paiement.correction.retirer": "سحب هذا الخلاص",
+  "pme.paiement.correction.retireExplique": "سيُسحب هذا الخلاص: لا شيء يعوّضه.",
   "pme.paiement.borne": "على الأكثر {montant}: ما تبقّى للدفع.",
   "pme.paiement.avantFacture": "قبل تاريخ الفاتورة: تسبقة؟",
   "pme.type.titre": "ما هذا؟",
@@ -10031,6 +10039,7 @@ const ar: Dict = {
   "paiement.deja_regle": "يوجد خلاص مسجّل: صحّحوه بدل إضافة «لم يُدفع بعد».",
   "paiement.deja_non_paye": "«لم يُدفع بعد» مسجّل مسبقًا.",
   "paiement.non_paye_ne_se_corrige_pas": "«لم يُدفع بعد» لا يُصحَّح: احذفوه أو أضيفوا خلاصًا.",
+  "paiement.motif_qui_retire": "هذا السبب يسحب الخلاص: لا شيء يعوّضه.",
   "paiement.montant_perime": "تغيّر المبلغ المستحق منذ ذلك الحين: أعيدوا الدفع من فواتيركم.",
   "paiement.prestataire_du_lien": "فُتح هذا الدفع لدى مزوّد آخر: يُتحقَّق منه لديه.",
   "pme.reglages.offres.aRegler": "تم: أنت الآن على باقة {offre}. ادفع فرق الشهر أدناه.",

@@ -807,6 +807,8 @@ export interface MotifDAnnulation {
   pour: "reglement" | "non_paye" | "systeme";
   /** Proposé à la personne ; sinon seulement lu dans l'historique. */
   proposable: boolean;
+  /** Vrai : la correction réinscrit un règlement. Faux : il est seulement retiré. */
+  remplace: boolean;
 }
 
 export interface Citation {

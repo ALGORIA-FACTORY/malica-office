@@ -5,7 +5,13 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PaiementDUnePiece } from "@malica/socle/ports/repositories";
 
-const api = vi.hoisted(() => ({ paiements: vi.fn(), inscrire: vi.fn() }));
+const api = vi.hoisted(() => ({
+  paiements: vi.fn(),
+  inscrire: vi.fn(),
+  motifs: vi.fn(),
+  annuler: vi.fn(),
+  corriger: vi.fn(),
+}));
 vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({ tenantId: "dossier", entityId: "societe", packId: "pack" }),
 }));
@@ -28,7 +34,9 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       paiementsDUnePiece: api.paiements,
       enregistrerPaiement: api.inscrire,
       piecesIssuesDe: async () => [],
-      motifsDAnnulation: async () => [],
+      motifsDAnnulation: api.motifs,
+      annulerPaiement: api.annuler,
+      corrigerPaiement: api.corriger,
     },
   }),
 }));
@@ -91,6 +99,7 @@ describe("la déclaration d'un règlement", () => {
     vi.resetAllMocks();
     api.paiements.mockResolvedValue([]);
     api.inscrire.mockResolvedValue({});
+    api.motifs.mockResolvedValue([]);
   });
   afterEach(cleanup);
 
@@ -242,5 +251,66 @@ describe("la déclaration d'un règlement", () => {
         expect.objectContaining({ moyenCode: "cheque", reference: "0012345" }),
       ),
     );
+  });
+});
+
+describe("corriger un règlement", () => {
+  const regle = {
+    id: "regle",
+    moyenCode: "especes",
+    montantMineur: 119000,
+    payeLe: "2026-10-22",
+    eteint: false,
+    justificatifPieceId: null,
+    annulePaiementId: null,
+    reference: null,
+  } as PaiementDUnePiece;
+  const motif = (code: string, remplace: boolean) => ({
+    id: `m-${code}`,
+    code,
+    libelle: code,
+    exigeUneNote: false,
+    pour: "reglement" as const,
+    proposable: true,
+    remplace,
+  });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    api.paiements.mockResolvedValue([regle]);
+    api.motifs.mockResolvedValue([
+      motif("montant_errone", true),
+      motif("inscrit_en_double", false),
+    ]);
+    api.annuler.mockResolvedValue({});
+    api.corriger.mockResolvedValue({});
+  });
+  afterEach(cleanup);
+
+  it("un motif qui retire annule sans réinscrire", async () => {
+    monter();
+    fireEvent.click(await screen.findByText("pme.paiement.corrigerCe"));
+    fireEvent.click(await screen.findByRole("button", { name: "inscrit_en_double" }));
+    const retirer = await screen.findByRole("button", { name: "pme.paiement.correction.retirer" });
+    fireEvent.click(retirer);
+    await waitFor(() => expect(api.annuler).toHaveBeenCalledWith("regle", "m-inscrit_en_double"));
+    expect(api.corriger).not.toHaveBeenCalled();
+  });
+
+  it("une correction abandonnée ne préremplit pas l'ajout suivant", async () => {
+    api.paiements.mockResolvedValue([{ ...regle, montantMineur: 50000 }]);
+    monter();
+    fireEvent.click(await screen.findByText("pme.paiement.corrigerCe"));
+    fireEvent.click(await screen.findByRole("button", { name: "common.fermer" }));
+    const ajouter = await screen.findByRole("button", { name: "pme.paiement.ajouterUn" });
+    fireEvent.click(ajouter);
+    await screen.findByRole("button", { name: "Espèces" });
+    expect(
+      (
+        screen.getByRole("button", {
+          name: /^(pme\.paiement\.enregistrer|common\.loading)/,
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 });

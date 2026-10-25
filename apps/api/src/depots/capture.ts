@@ -1247,7 +1247,7 @@ export const capture = {
   /** Les motifs d'annulation du référentiel, traduits. */
   async motifsDAnnulation(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select m.id, m.code, m.requires_note, m.pour,
+      `select m.id, m.code, m.requires_note, m.pour, m.remplace,
               -- Proposé à la personne : en vigueur, et pas « systeme » (le
               -- motif qu'écrit la base quand un règlement éteint « pas encore
               -- payé »). Les autres restent lisibles : l'historique les nomme.
@@ -1266,6 +1266,7 @@ export const capture = {
       exigeUneNote: Boolean(r["requires_note"]),
       pour: r["pour"] as "reglement" | "non_paye" | "systeme",
       proposable: Boolean(r["proposable"]),
+      remplace: Boolean(r["remplace"]),
     }));
   },
 

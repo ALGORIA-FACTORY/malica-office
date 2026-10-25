@@ -511,13 +511,18 @@ export function CommentCEstPaye({
   const nonPaye = (moyens.data ?? []).find((m) => m.code === "non_paye") ?? null;
   const moyensPayes = (moyens.data ?? []).filter((m) => m.code !== "non_paye");
   const referenceExigee = moyenChoisi !== null && exigeUneReference(moyenChoisi);
+  /** Le motif choisi retire le règlement sans le remplacer (référentiel). */
+  const motifQuiRetire =
+    enCorrection !== null &&
+    (motifs.data ?? []).find((m) => m.id === motifChoisi)?.remplace === false;
   const enregistrable =
-    moyenChoisi !== null &&
-    historiquePret &&
-    !inscrire.isPending &&
-    montantAInscrire !== null &&
-    !(referenceExigee && referenceSaisie.trim() === "") &&
-    (enCorrection === null || motifChoisi !== null);
+    motifQuiRetire ||
+    (moyenChoisi !== null &&
+      historiquePret &&
+      !inscrire.isPending &&
+      montantAInscrire !== null &&
+      !(referenceExigee && referenceSaisie.trim() === "") &&
+      (enCorrection === null || motifChoisi !== null));
 
   const etat = paiements.isSuccess ? etatDuReglement(ttcMineur, deja) : null;
   const historique = historiqueDuReglement(deja);
@@ -555,6 +560,15 @@ export function CommentCEstPaye({
     onAjout(true);
   };
   const fermerLaFeuille = () => {
+    // Une correction abandonnée ne laisse rien derrière elle : « Ajouter »
+    // s'ouvre ensuite vide, pas sur l'ancien règlement prêt à être réinscrit.
+    if (enCorrection !== null) {
+      setPartiel(null);
+      setMontantSaisi("");
+      setMoyenChoisi(null);
+      setReferenceSaisie("");
+      setDateDuPaiement(aujourdHui);
+    }
     setEnCorrection(null);
     setMotifChoisi(null);
     onAjout(false);
@@ -562,6 +576,8 @@ export function CommentCEstPaye({
 
   const corriger = useMutation({
     mutationFn: async () => {
+      if (enCorrection && motifChoisi && motifQuiRetire)
+        return office().capture.annulerPaiement(enCorrection, motifChoisi);
       if (!enCorrection || !motifChoisi || !moyenChoisi || montantAInscrire === null)
         throw new Error(t("pme.paiement.incomplet"));
       return office().capture.corrigerPaiement({
@@ -1117,6 +1133,11 @@ export function CommentCEstPaye({
                           </button>
                         ))}
                     </div>
+                    {motifQuiRetire ? (
+                      <p className="text-[12.5px] text-text-2">
+                        {t("pme.paiement.correction.retireExplique")}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -1130,14 +1151,16 @@ export function CommentCEstPaye({
                 >
                   {inscrire.isPending || corriger.isPending
                     ? t("common.loading")
-                    : enCorrection
-                      ? t("pme.paiement.correction.enregistrer")
-                      : montantAInscrire !== null
-                        ? t("pme.paiement.enregistrer", {
-                            montant: lisible(montantAInscrire),
-                            devise,
-                          })
-                        : t("pme.paiement.enregistrerSansMontant")}
+                    : motifQuiRetire
+                      ? t("pme.paiement.correction.retirer")
+                      : enCorrection
+                        ? t("pme.paiement.correction.enregistrer")
+                        : montantAInscrire !== null
+                          ? t("pme.paiement.enregistrer", {
+                              montant: lisible(montantAInscrire),
+                              devise,
+                            })
+                          : t("pme.paiement.enregistrerSansMontant")}
                 </button>
               </div>
             </div>,
