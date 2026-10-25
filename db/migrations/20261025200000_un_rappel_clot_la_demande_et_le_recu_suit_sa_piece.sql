@@ -256,11 +256,13 @@ with corrigees as (
                       where e.object_id = r.id
                         and e.action = 'piece.vis_changed'
                         and e.payload ->> 'to' = 'partage')
-  returning r.id, r.tenant_id, s.vis as vis_source, s.id as source_id
+  returning r.id, r.tenant_id, r.created_by, s.vis as vis_source, s.id as source_id
 )
 insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
                              object_id, payload)
-select tenant_id, null, 'piece.vis_changed', 'capture', 'pieces', id,
+-- `actor` est obligatoire et aucune session n'en porte pendant une migration :
+-- l'auteur de la pièce régularisée tient la ligne (le staging a refusé `null`).
+select tenant_id, created_by, 'piece.vis_changed', 'capture', 'pieces', id,
        jsonb_build_object('from', 'partage', 'to', vis_source,
                           'suit_la_source', source_id,
                           'regularisation', '20261025200000')
