@@ -283,6 +283,8 @@ export function libelleDuCode(code: string, t: T): string {
 /** Ce qu'une action de la piste d'audit veut dire. */
 export function libelleDeLAction(action: string, t: T): string {
   const ACTIONS: Record<string, MessageKey> = {
+    "fiscalite.version_creee": "fx.versionCreated",
+    "fiscalite.appliquee": "fx.versionApplied",
     "piece.captured": "cab.notif.kind.piece.captured",
     "piece.read": "cab.notif.kind.piece.read",
     "piece.partagee": "cab.notif.kind.piece.partagee",

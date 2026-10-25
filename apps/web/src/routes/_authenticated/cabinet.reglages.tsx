@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { ProfilsFiscaux } from "@/components/malica/profils-fiscaux";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/cabinet/reglages")({
   component: CabinetReglages,
 });
 
-type Onglet = "cabinet" | "calendrier" | "integrations";
+type Onglet = "cabinet" | "calendrier" | "integrations" | "fiscalite";
 const TOUTES = "*";
 const PERIODICITES: Record<string, MessageKey> = {
   mensuelle: "cab.settings.cal.periodicite.mensuelle",
@@ -134,10 +135,20 @@ function CabinetReglages() {
           >
             {t("cab.settings.tab.integrations")}
           </button>
+          <button
+            type="button"
+            className={classeOnglet(onglet === "fiscalite")}
+            aria-current={onglet === "fiscalite" ? "page" : undefined}
+            onClick={() => setOnglet("fiscalite")}
+          >
+            {t("fx.title")}
+          </button>
         </nav>
       </EnTeteCabinet>
 
-      {onglet === "cabinet" ? (
+      {onglet === "fiscalite" ? (
+        <ProfilsFiscaux cabinetId={org.id} />
+      ) : onglet === "cabinet" ? (
         <CabinetEtEquipe />
       ) : onglet === "calendrier" ? (
         <CalendrierDesEcheances />

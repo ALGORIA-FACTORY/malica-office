@@ -14,6 +14,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { ProfilsFiscaux } from "./profils-fiscaux";
 import { useI18n, type MessageKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -136,6 +137,7 @@ export function OuvrirDossier({ cabinetId }: { cabinetId: string }) {
       ) : (
         <>
           <p className="text-[13.5px] text-text-2">{t("cab.dossier.ouvert")}</p>
+          <ProfilsFiscaux cabinetId={cabinetId} clientId={dossier.id} />
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {

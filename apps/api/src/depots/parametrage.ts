@@ -13,6 +13,7 @@
  * refuser.
  */
 
+import { fiscalite } from "./fiscalite.ts";
 import type { Requete } from "../db.ts";
 import { versReport } from "./report-d-echeance.ts";
 
@@ -64,6 +65,7 @@ function versReglages(brut: ReglagesCabinetBruts) {
 }
 
 export const parametrage = {
+  ...fiscalite,
   /**
    * Les seuils et préférences du cabinet. Absents, la base rend les défauts
    * de son schéma — jamais un écran ne les porte.
@@ -216,7 +218,7 @@ export const parametrage = {
     const { rows } = await db.query<{ secteur: string }>(
       `select distinct f.secteur
          from identity.engagements e
-         join identity.fiches_fiscales f on f.tenant_id = e.pme_org_id and f.valid_to is null
+         join identity.fiches_fiscales f on f.tenant_id = e.pme_org_id and f.valid_from <= current_date and (f.valid_to is null or f.valid_to > current_date)
         where e.cabinet_org_id = $1 and e.status = 'actif' and f.secteur is not null
         order by 1`,
       [tenantId],

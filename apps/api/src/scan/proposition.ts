@@ -1,3 +1,5 @@
+import { appliquerAttentesFiscales } from "@malica/socle/engines/fiscalite/profil";
+import { fiscaliteDuDossier } from "./fiscalite-du-dossier.ts";
 /**
  * 3B-6 — La proposition d'écriture, calculée côté serveur.
  *
@@ -145,6 +147,7 @@ async function proposerDepuisLeJugement(
   // Le jugement de la DERNIÈRE lecture ; s'il manque, on juge maintenant.
   const { rows: derniers } = await db.query<{
     extraction: string;
+    tenant_id: string;
     payload: Record<string, unknown>;
     analyse_extraction: string | null;
     verdict: string | null;
@@ -155,7 +158,7 @@ async function proposerDepuisLeJugement(
     sens_dit: string | null;
     recue_le: string;
   }>(
-    `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
+    `select p.tenant_id, e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
             a.pack_version_id, o.jurisdiction,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit
@@ -274,7 +277,7 @@ async function proposerDepuisLeJugement(
     },
   };
 
-  const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
+  const [tauxDuPack, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
     referentiel.accountMappings(db, pack),
     referentiel.fiscalCharges(db, pack, "fr", jour),
@@ -283,7 +286,7 @@ async function proposerDepuisLeJugement(
   const mappings = tousLesComptes.filter((c): c is typeof c & SensConnu =>
     sensConnu(c.documentKind),
   );
-  const fiscalCharges = tousLesDroits.filter((c): c is typeof c & SensConnu =>
+  let fiscalCharges = tousLesDroits.filter((c): c is typeof c & SensConnu =>
     sensConnu(c.documentKind),
   );
 
@@ -293,12 +296,40 @@ async function proposerDepuisLeJugement(
   const { rows: regimes } = await db.query<{ regime_tva: string | null }>(
     `select f.regime_tva
        from capture.pieces p
-       join identity.fiches_fiscales f on f.tenant_id = p.tenant_id and f.valid_to is null
+       join identity.fiches_fiscales f on f.tenant_id = p.tenant_id and f.valid_from <= $2::date and (f.valid_to is null or f.valid_to > $2::date)
       where p.id = $1
       order by f.valid_from desc limit 1`,
-    [pieceId],
+    [pieceId, jour],
   );
-  const tvaNonDeductible = regimes[0]?.regime_tva === "non_assujetti";
+  let tvaNonDeductible = regimes[0]?.regime_tva === "non_assujetti";
+  let taxRates = tauxDuPack;
+  const fiscalite = await fiscaliteDuDossier(db, ligne.tenant_id, jour);
+  if (fiscalite) {
+    try {
+      const attentes = appliquerAttentesFiscales({
+        configuration: fiscalite.configuration,
+        dateEffet: fiscalite.date_effet,
+        operation: normalise.document_kind === "facture_vente" ? "vente" : "achat",
+        codesTva: lignesLues.map((l) => String(l["tax_code"] ?? "")),
+        droits: droits.map((d, i) => ({
+          code: String(d["code"] ?? ""),
+          amount: enDecimal(autres[i]!, dec),
+        })),
+        taxRates,
+        fiscalCharges,
+      });
+      taxRates = attentes.taxRates;
+      fiscalCharges = attentes.fiscalCharges;
+      tvaNonDeductible = attentes.tvaNonDeductible;
+    } catch (e) {
+      return {
+        ok: false,
+        verdict,
+        verdictCode: codeDuVerdict(verdict),
+        raison: e instanceof Error ? e.message : "Profil fiscal à qualifier.",
+      };
+    }
+  }
 
   try {
     const proposition = buildProposal({
@@ -329,6 +360,7 @@ async function proposerDepuisLeJugement(
       verdictCode: codeDuVerdict(verdict),
       packVersionId: pack,
       proposition,
+      ...(fiscalite ? { fiscaliteVersionId: fiscalite.id } : {}),
     };
   } catch (e) {
     if (e instanceof LectureIncomplete)

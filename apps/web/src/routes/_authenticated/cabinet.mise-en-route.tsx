@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { ProfilsFiscaux } from "@/components/malica/profils-fiscaux";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
@@ -126,7 +127,14 @@ function MiseEnRoute() {
         <div className="cab-surface">
           {etape === 1 ? <LeCabinet /> : null}
           {etape === 2 ? <LEquipe /> : null}
-          {etape === 3 ? <LesMandats /> : null}
+          {etape === 3 ? (
+            <>
+              <LesMandats />
+              <div className="mt-6 border-t border-border pt-6">
+                <ProfilsFiscaux cabinetId={org.id} />
+              </div>
+            </>
+          ) : null}
           {etape === 4 ? <LeSeuil /> : null}
 
           <div className="mt-5 flex flex-wrap gap-2.5 border-t border-border pt-4">

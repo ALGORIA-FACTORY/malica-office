@@ -358,3 +358,62 @@ for (const largeur of [390, 1440]) {
     });
   });
 }
+
+// Base d'épreuve réelle : profil et affectation passent par RPC, RLS et migrations.
+for (const largeur of [390, 1440]) {
+  test(`profil fiscal : enregistrer puis appliquer à un dossier à ${largeur} px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: largeur, height: 950 });
+    const rpc = async (depot: string, methode: string, args: unknown[]) => {
+      const r = await page.request.post("/rpc", { data: { depot, methode, args } });
+      expect(r.ok(), await r.text()).toBeTruthy();
+      return (await r.json()).resultat;
+    };
+    const orgs = (await rpc("identite", "listMyOrganizations", [])) as Array<{
+      id: string;
+      kind: string;
+    }>;
+    const cabinet = orgs.find((o) => o.kind === "cabinet")!;
+    const marque = `Fiscalité ${largeur} ${Date.now()}`;
+    const chiffres = String(Date.now()).slice(-7);
+    const client = (await rpc("identite", "ouvrirDossier", [
+      { cabinetTenantId: cabinet.id, name: marque, legalId: `${chiffres}W/A/M/000`, adresse: null },
+    ])) as { id: string };
+    await page.goto("/cabinet/reglages");
+    await page.getByRole("button", { name: "Comptabilité et fiscalité", exact: true }).click();
+    await page.getByRole("button", { name: "Créer un profil", exact: true }).click();
+    await page.getByLabel("Nom du profil", { exact: true }).fill(marque);
+    await page.getByLabel("Catégorie de clients", { exact: true }).first().fill(marque);
+    await page
+      .getByLabel("Activités concernées", { exact: true })
+      .fill("Activité du parcours de test");
+    await page.getByRole("button", { name: "Enregistrer cette version" }).click();
+    await expect(page.getByText("Version enregistrée.", { exact: true })).toBeVisible();
+    await page.getByLabel("Rechercher un client").fill(marque);
+    await page.getByLabel("Sélectionner les clients affichés").check();
+    await page.getByRole("button", { name: "Prévisualiser les changements" }).click();
+    await expect(page.getByText(/Modification prévue/)).toBeVisible();
+    await page.getByRole("button", { name: "Appliquer aux 1 clients éligibles" }).click();
+    await expect(
+      page.getByText("1 dossiers mis à jour · 0 écartés", { exact: true }),
+    ).toBeVisible();
+    const ds = (await rpc("parametrage", "historiqueFiscal", [cabinet.id, client.id])) as Array<{
+      configuration: { regles: Array<{ applicabilite: string; valeur: string | null }> };
+    }>;
+    expect(ds).toHaveLength(1);
+    expect(ds[0]!.configuration.regles).toHaveLength(5);
+    expect(
+      ds[0]!.configuration.regles.every(
+        (r) => r.applicabilite === "a_qualifier" && r.valeur === null,
+      ),
+    ).toBeTruthy();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBeTruthy();
+    await testInfo.attach(`profils-fiscaux-${largeur}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
+  });
+}

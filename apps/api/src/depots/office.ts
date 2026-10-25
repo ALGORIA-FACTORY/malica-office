@@ -142,7 +142,7 @@ export const office = {
   ): Promise<string> {
     const r = await propositionDePiece(db, pieceId, dateSaisie);
     if (!r.ok) throw Object.assign(new Error(r.raison), { code: "22023" });
-    return office.propose(db, {
+    const id = await office.propose(db, {
       pieceId,
       journal: r.proposition.journal,
       date: r.proposition.pivot.entry_date,
@@ -151,6 +151,15 @@ export const office = {
       devise: r.proposition.pivot.currency,
       lignes: r.proposition.lignes,
     });
+    if (r.fiscaliteVersionId)
+      await db.query(
+        `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+       select p.tenant_id, auth.uid(), 'fiscalite.appliquee', 'socle', 'ecritures', $2,
+         jsonb_build_object('version_dossier', $3::text, 'piece_id', p.id)
+       from capture.pieces p where p.id = $1`,
+        [pieceId, id, r.fiscaliteVersionId],
+      );
+    return id;
   },
 
   /**
@@ -295,7 +304,15 @@ export const office = {
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
        select tenant_id, auth.uid(), 'reglement.qualifie', 'socle', 'ecritures', id, $2::jsonb
          from ecritures_v where id = $1`,
-        [id, JSON.stringify({ paiementId, qualification: qualifiee, retenue: r.retenue })],
+        [
+          id,
+          JSON.stringify({
+            paiementId,
+            qualification: qualifiee,
+            retenue: r.retenue,
+            fiscaliteVersionId: r.fiscaliteVersionId ?? null,
+          }),
+        ],
       );
     return id;
   },

@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { ProfilsFiscaux } from "@/components/malica/profils-fiscaux";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { ecrireDossierCourant } from "@/components/malica/dossier-courant";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
@@ -216,6 +217,12 @@ function CabinetClient() {
 
   return (
     <div className="space-y-8">
+      <details className="rounded-xl border border-border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-semibold">{t("fx.title")}</summary>
+        <div className="mt-5">
+          <ProfilsFiscaux cabinetId={org.id} clientId={clientId} />
+        </div>
+      </details>
       {/* ---- masthead */}
       <header className="-mx-4 -mt-6 bg-foreground px-4 py-8 text-background sm:-mx-6 sm:px-6 lg:-mx-9 lg:-mt-7 lg:px-10 lg:py-9">
         <div className="flex flex-wrap items-end justify-between gap-5">
