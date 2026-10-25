@@ -315,19 +315,14 @@ function PieceScreen() {
   });
 
   /** Le nom d'un type de document vient du référentiel traduit, jamais du code. */
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
+  const sept = useDossiers();
   const nomDuType = (code: string | null) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
+    sept.types.find((x) => x.code === code)?.libelle ?? null;
   /*
    * La fiche dit le DOSSIER puis le type précis : « Tickets et reçus · Reçu de
    * paiement » (maquette du 25 octobre 2026). Le même dossier que la tuile
    * choisie à la capture et que la carte de l'accueil.
    */
-  const sept = useDossiers();
   const dossierEtType = (code: string | null, vente: boolean) => {
     const d = sept.parCode(
       dossierDeLaPiece({ typeDeDocument: code, kind: vente ? "facture_vente" : null }, sept.types),

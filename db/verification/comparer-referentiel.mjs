@@ -66,6 +66,7 @@ const EXCLUES = {
   "ref.charge_famille_rules.id": CLE_TECHNIQUE,
   "ref.charge_familles.id": CLE_TECHNIQUE,
   "ref.document_types.created_at": HORODATAGE,
+  "ref.dossiers.created_at": HORODATAGE,
   "ref.fiscal_charges.id": CLE_TECHNIQUE,
   "ref.fiscal_obligations.id": CLE_TECHNIQUE,
   "ref.fiscal_parameters.id": CLE_TECHNIQUE,

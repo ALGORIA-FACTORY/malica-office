@@ -21,6 +21,20 @@
 -- R7 : aucune date du jour. R11 : référentiel en lecture seule pour les
 -- comptes connectés.
 
+-- Deux dossiers n'ont pas de type dominant : un document de gouvernance
+-- peut être un PV, des statuts, un contrat ; un document fiscal ou social, une
+-- déclaration TVA, CNSS ou un bulletin de paie. Les choisir à la capture ne
+-- doit pas affirmer un type précis que personne n'a déclaré (revue du
+-- 25 octobre) : ils écrivent un type GÉNÉRIQUE, que la fiche permet de
+-- préciser. Ni l'un ni l'autre ne porte d'écriture.
+insert into ref.document_types (code, famille, libelle, fondement, porte_ecriture, transmissible, rang) values
+  ('document_gouvernance', 'juridique', 'Document de gouvernance',
+   'Un document de la vie de la société (PV, statuts, contrat) dont le type précis reste à dire.',
+   false, true, 205),
+  ('document_fiscal_social', 'fiscal_social', 'Document fiscal ou social',
+   'Une déclaration ou une pièce sociale dont le type précis reste à dire.',
+   false, true, 105);
+
 create table ref.dossiers (
   code            text primary key,
   rang            integer not null unique,
@@ -33,6 +47,7 @@ create table ref.dossiers (
 
 alter table ref.dossiers enable row level security;
 alter table ref.dossiers force row level security;
+revoke all on table ref.dossiers from public, anon;
 grant select on table ref.dossiers to authenticated;
 create policy ref_dossiers_sel on ref.dossiers for select to authenticated using (true);
 
@@ -41,8 +56,8 @@ insert into ref.dossiers (code, rang, teinte, periode, type_par_defaut) values
   ('ventes',        20, 'ventes',        'mois',  'facture_vente'),
   ('banque',        30, 'banque',        'mois',  'releve_bancaire'),
   ('tickets_recus', 40, 'tickets',       'mois',  'ticket_caisse'),
-  ('gouvernance',   50, 'gouvernance',   'annee', 'pv_ago'),
-  ('fiscal_social', 60, 'fiscal',        'annee', 'declaration_tva'),
+  ('gouvernance',   50, 'gouvernance',   'annee', 'document_gouvernance'),
+  ('fiscal_social', 60, 'fiscal',        'annee', 'document_fiscal_social'),
   ('autres',        70, 'autres',        'mois',  'autre_document');
 
 alter table ref.document_types
@@ -60,12 +75,14 @@ update ref.document_types set dossier = v.dossier
     ('recu_de_paiement', 'tickets_recus'),
     ('justificatif_paiement', 'tickets_recus'),
     ('note_frais', 'tickets_recus'),
+    ('document_gouvernance', 'gouvernance'),
     ('pv_ago', 'gouvernance'),
     ('pv_age', 'gouvernance'),
     ('statuts', 'gouvernance'),
     ('extrait_rne', 'gouvernance'),
     ('contrat', 'gouvernance'),
     ('bail', 'gouvernance'),
+    ('document_fiscal_social', 'fiscal_social'),
     ('declaration_tva', 'fiscal_social'),
     ('declaration_impot', 'fiscal_social'),
     ('declaration_cnss', 'fiscal_social'),
@@ -77,8 +94,8 @@ update ref.document_types set dossier = v.dossier
   ) as v (code, dossier)
  where ref.document_types.code = v.code;
 
--- Un avoir émis est une vente.
-update ref.document_types set dossier_si_vente = 'ventes' where code = 'avoir';
+-- Un avoir ou un bon de livraison émis est une vente.
+update ref.document_types set dossier_si_vente = 'ventes' where code in ('avoir', 'bon_livraison');
 
 -- Un type nouveau sans dossier ne passe pas inaperçu : il échoue ici.
 alter table ref.document_types alter column dossier set not null;
@@ -114,9 +131,16 @@ insert into ref.labels (ns, key, locale, value) values
 on conflict (ns, key, locale) do update set value = excluded.value;
 
 -- Le PV d'AGO s'appelait « Gouvernance » parce que la capture nommait des
--- types ; elle nomme désormais des dossiers. La fiche dit « Gouvernance · PV
--- d'AGO », pas « Gouvernance · Gouvernance ».
+-- types ; elle nomme désormais des dossiers, et le générique a son propre
+-- type. La fiche dit « Gouvernance · PV d'AGO », pas « Gouvernance ·
+-- Gouvernance ».
 insert into ref.labels (ns, key, locale, value) values
+  ('document_type', 'document_gouvernance', 'fr', 'Document de gouvernance'),
+  ('document_type', 'document_gouvernance', 'en', 'Governance document'),
+  ('document_type', 'document_gouvernance', 'ar', 'وثيقة حوكمة'),
+  ('document_type', 'document_fiscal_social', 'fr', 'Document fiscal ou social'),
+  ('document_type', 'document_fiscal_social', 'en', 'Tax or payroll document'),
+  ('document_type', 'document_fiscal_social', 'ar', 'وثيقة جبائية أو اجتماعية'),
   ('document_type', 'pv_ago', 'fr', 'PV d''AGO'),
   ('document_type', 'pv_ago', 'en', 'AGM minutes'),
   ('document_type', 'pv_ago', 'ar', 'محضر جلسة عامة عادية')

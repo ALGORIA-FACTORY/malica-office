@@ -8,7 +8,8 @@ import { montant } from "@/lib/lisible";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
-import { dossierDeLaPiece } from "@/lib/dossiers";
+import { currentPeriod } from "@/hooks/use-tva";
+import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -65,13 +66,28 @@ function Dossier() {
   const dossier =
     sept.parCode(type) ?? sept.parCode(sept.types.find((x) => x.code === type)?.dossier);
   const libelle = dossier?.libelle ?? "";
-  const toutes = (lues.data ?? [])
-    .filter(
-      (p) =>
-        dossier !== null &&
-        p.vis !== "personnel" &&
-        dossierDeLaPiece(p, sept.types) === dossier.code,
-    )
+  /*
+   * LA MÊME PÉRIODE QUE SA CARTE : la carte « Aucune pièce » ne doit pas
+   * ouvrir une page pleine (revue du 25 octobre). Ce qui est plus ancien se
+   * retrouve dans la bibliothèque, rangée par dossier.
+   */
+  const periode = currentPeriod();
+  const duDossier = (lues.data ?? []).filter(
+    (p) =>
+      dossier !== null && p.vis !== "personnel" && dossierDeLaPiece(p, sept.types) === dossier.code,
+  );
+  const horsPeriode = dossier
+    ? duDossier.filter((p) => !dansLaPeriode(p, dossier.periode, periode)).length
+    : 0;
+  const etiquette = !dossier
+    ? ""
+    : dossier.periode === "mois"
+      ? new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
+          new Date(`${periode}-01T00:00:00Z`),
+        )
+      : periode.slice(0, 4);
+  const toutes = duDossier
+    .filter((p) => dossier !== null && dansLaPeriode(p, dossier.periode, periode))
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
   const faites = toutes.filter((p) => etatDe(p) === "comptabilisee").length;
   const aVerifier = toutes.filter((p) => etatDe(p) === "verifier");
@@ -101,7 +117,9 @@ function Dossier() {
             <span className="ini">{libelle.slice(0, 1)}</span>
           </span>
           <span className="tx">
-            <span className="k">{t("pme.dossier.kicker")}</span>
+            <span className="k">
+              {[t("pme.dossier.kicker"), etiquette].filter(Boolean).join(" · ")}
+            </span>
             <h1>{libelle}</h1>
             <span>{t("pme.home.dossier.pieces", { count: toutes.length })}</span>
           </span>
@@ -160,7 +178,7 @@ function Dossier() {
           </div>
         ) : null}
 
-        {lues.isPending ? (
+        {lues.isPending || !sept.pret ? (
           <p className="vide">{t("common.loading")}</p>
         ) : visibles.length === 0 ? (
           <p className="vide">{t("pme.dossier.vide")}</p>
@@ -187,6 +205,11 @@ function Dossier() {
             })}
           </div>
         )}
+        {horsPeriode > 0 ? (
+          <Link to="/pme/list" search={{ axe: "dossier" }} className="plus-anciennes">
+            {t("pme.dossier.horsPeriode", { count: horsPeriode })}
+          </Link>
+        ) : null}
       </div>
     </div>
   );

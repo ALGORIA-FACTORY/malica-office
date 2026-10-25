@@ -1084,14 +1084,16 @@
 [data-surface="pme"] [data-teinte="fiscal"]{--pf:#F6DCE7;--pe:#4A1730;--pp:#EBBCD0}
 [data-surface="pme"] [data-teinte="autres"]{--pf:#EBEBED;--pe:#18181B;--pp:#D4D4D8}
 /* Un dossier vide reste à sa place : en pointillé, sans fond. */
-[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv{background:transparent;border:1.5px dashed var(--pp);color:var(--t2)}
+[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv{background:transparent;border:1.5px dashed var(--t3);color:var(--t2)}
 [data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv b{color:var(--tx)}
 /* La tuile de la capture : la même pochette, en petit. */
 [data-surface="pme"] .tuile-dossier{background:var(--pf);color:var(--pe);border:0;cursor:pointer}
 /* Le dossier où la pièce se trouve déjà, en correction. */
 [data-surface="pme"] .tuile-dossier[aria-pressed="true"]{outline:2px solid var(--tx);outline-offset:2px}
 [data-surface="pme"] .tuile-dossier .ini{position:absolute;inset-inline-end:-.5rem;top:.375rem;font-size:4rem;font-weight:800;letter-spacing:-.06em;line-height:1;opacity:.12}
-[data-surface="pme"] .tuile-dossier .ex{position:relative;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+[data-surface="pme"] .tuile-dossier .ex{position:relative;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+[data-surface="pme"] .tuile-dossier .nom{position:relative}
+[dir="rtl"] [data-surface="pme"] .tuile-dossier .ex,[data-surface="pme"][dir="rtl"] .tuile-dossier .ex{font-family:inherit;letter-spacing:0}
 [data-surface="pme"] [data-ecran="accueil"] .recentes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
 [data-surface="pme"] [data-ecran="accueil"] .recentes a{display:flex;align-items:center;gap:.625rem;min-height:56px;border-radius:8px;background:var(--d1);overflow:hidden;color:var(--tx);text-decoration:none}
 [data-surface="pme"] [data-ecran="accueil"] .recentes .apercu.mini{border:0;border-radius:0}
@@ -1135,6 +1137,7 @@
 [data-surface="pme"] [data-ecran="pochette"] .tete .av .bar{display:block;flex:1;height:6px;border-radius:3px;background:rgba(0,0,0,.1);overflow:hidden}
 [data-surface="pme"] [data-ecran="pochette"] .tete .av .bar i{display:block;height:100%;background:var(--acc)}
 [data-surface="pme"] [data-ecran="pochette"] .pad{padding:1.125rem 1.25rem 2rem}
+[data-surface="pme"] [data-ecran="pochette"] .plus-anciennes{display:flex;align-items:center;min-height:44px;margin-top:.75rem;font-size:.875rem;font-weight:600;color:var(--t2);text-decoration:underline;text-underline-offset:4px}
 [data-surface="pme"] [data-ecran="pochette"] .gestes{display:flex;align-items:center;gap:.75rem}
 [data-surface="pme"] [data-ecran="pochette"] .principal{flex:1;min-height:48px;border-radius:24px;background:var(--acc);color:var(--on-acc);display:flex;align-items:center;justify-content:center;padding:0 1rem;font-size:.9375rem;font-weight:700;text-decoration:none;text-align:center}
 [data-surface="pme"] [data-ecran="pochette"] .plus{width:48px;height:48px;margin-inline-start:auto;border-radius:50%;border:1px solid var(--dl);background:transparent;color:var(--tx);display:grid;place-items:center;cursor:pointer}

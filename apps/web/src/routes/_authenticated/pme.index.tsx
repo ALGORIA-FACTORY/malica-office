@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import { piecesALire, piecesEnEchec, raisonCourte } from "@/lib/lecture";
+import { attendLaPersonne, piecesALire, piecesEnEchec, raisonCourte } from "@/lib/lecture";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
@@ -377,7 +377,7 @@ function PmeHome() {
   const premierEchec = enEchec.at(0) ?? null;
   const raisonDuPremier = premierEchec ? raisonCourte(issueDeLecture(premierEchec)) : null;
   const aTraiter = lesLues
-    .filter((p) => p.status === "lue" || p.status === "proposee" || p.status === "retournee")
+    .filter(attendLaPersonne)
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
     .slice(0, RANGEE);
   const dejaVues = new Set(aTraiter.map((p) => p.id));
@@ -639,7 +639,7 @@ function PmeHome() {
           </span>
         </div>
 
-        {/* ── 4. vos dossiers : une pochette par type de pièce ─────────── */}
+        {/* ── 4. vos dossiers : les sept, toujours (`ref.dossiers`) ──────── */}
         {dossiers.length > 0 ? (
           <>
             <div className="sec">

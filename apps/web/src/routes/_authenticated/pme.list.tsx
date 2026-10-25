@@ -10,7 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
-import { piecesALire } from "@/lib/lecture";
+import { attendLaPersonne, piecesALire } from "@/lib/lecture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
@@ -20,7 +20,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
-import { dossierDeLaPiece } from "@/lib/dossiers";
+import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -60,9 +60,6 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
 const AXES = ["mois", "dossier", "categorie", "tiers", "op"] as const;
 type Axe = (typeof AXES)[number];
 
-/** Ce qui attend la personne : lu, proposé, ou renvoyé par le cabinet. */
-const attendLaPersonne = (p: PieceLue) =>
-  p.status === "lue" || p.status === "proposee" || p.status === "retournee";
 type Vue = "liste" | "annee";
 /**
  * Le sens d'une pièce — et c'est exactement l'ancien filtre de cet écran.
@@ -241,9 +238,26 @@ function VosDocuments() {
   const navigate = useNavigate();
 
   const [vue, setVue] = useState<Vue>("liste");
+  /*
+   * L'axe et le filtre VIVENT DANS L'ADRESSE : le retour arrière, un
+   * rechargement et l'onglet « Bibliothèque » de la barre (sans paramètre)
+   * disent tous ce que la page montre.
+   */
   const recherche = Route.useSearch();
-  const [axe, setAxe] = useState<Axe>(recherche.axe ?? "mois");
-  const [aVerifier, setAVerifier] = useState(recherche.etat === "a_verifier");
+  const axe: Axe = recherche.axe ?? "mois";
+  const aVerifier = recherche.etat === "a_verifier";
+  const allerA = (suite: { axe?: Axe; etat?: "a_verifier" }) =>
+    void navigate({
+      to: "/pme/list",
+      search: {
+        ...(suite.axe && suite.axe !== "mois" ? { axe: suite.axe } : {}),
+        ...(suite.etat ? { etat: suite.etat } : {}),
+      },
+      replace: true,
+    });
+  const setAxe = (suivant: Axe) =>
+    allerA({ axe: suivant, ...(aVerifier ? { etat: "a_verifier" } : {}) });
+  const setAVerifier = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "a_verifier" } : {}) });
   const sept = useDossiers();
   const [sens, setSens] = useState<Sens>("tous");
   /** Le groupe ouvert, ou `null` : la liste des groupes. */
@@ -285,13 +299,6 @@ function VosDocuments() {
     queryKey: ["charges-familles", pme.packId, locale],
     enabled: !!pme.packId,
     queryFn: () => office().charges.familles(pme.packId!, locale),
-  });
-
-  /** Le nom d'un type de document vient du référentiel traduit, jamais du code. */
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
   });
 
   /**
@@ -336,7 +343,7 @@ function VosDocuments() {
     natureParNom.get(nom.trim().toLocaleLowerCase(locale)) ?? null;
 
   /** Le mois d'une pièce : celui du DOCUMENT s'il est lu, sinon celui du dépôt. */
-  const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
+  const moisDe = moisDeLaPiece;
 
   /** La colonne de la grille annuelle où un mois tombe, ou -1 hors exercice. */
   const colonneDe = (periodeDuMois: string) =>
@@ -373,7 +380,8 @@ function VosDocuments() {
   };
 
   const nomDuType = (code: string) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ??
+    // Le nom d'un type vient du référentiel traduit (`useDossiers`), jamais du code.
+    sept.types.find((x) => x.code === code)?.libelle ??
     (code === "facture_achat"
       ? t("pme.doc.type.achats")
       : code === "facture_vente"

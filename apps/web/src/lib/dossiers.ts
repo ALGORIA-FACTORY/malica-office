@@ -52,9 +52,13 @@ export function typePourLeDossier(
   actuel: PieceTypee | null,
   types: readonly TypeRange[],
 ): string {
-  if (actuel && dossierDeLaPiece(actuel, types) === d.code && actuel.typeDeDocument) {
-    return actuel.typeDeDocument;
-  }
+  const t = types.find((x) => x.code === actuel?.typeDeDocument);
+  /*
+   * Un type rangé selon le sens (un avoir) GARDE son type entre ses deux
+   * dossiers : réécrire un avoir en « facture de vente » le ferait compter
+   * comme une vente (revue du 25 octobre). Le sens se corrige à part.
+   */
+  if (t && (t.dossier === d.code || t.dossierSiVente === d.code)) return t.code;
   return d.typeParDefaut;
 }
 
@@ -68,6 +72,16 @@ export function dansLaPeriode(
   periode: Dossier["periode"],
   moisCourant: string,
 ): boolean {
-  const date = (p.dateDocument ?? p.createdAt).slice(0, 7);
-  return periode === "mois" ? date === moisCourant : date.slice(0, 4) === moisCourant.slice(0, 4);
+  const mois = moisDeLaPiece(p);
+  return periode === "mois" ? mois === moisCourant : mois.slice(0, 4) === moisCourant.slice(0, 4);
+}
+
+/**
+ * Le mois d'une pièce (`AAAA-MM`) : celui de sa date quand la lecture en a
+ * rendu une LISIBLE, sinon celui de la photo. Une date d'une autre forme ne
+ * fait pas disparaître la pièce de toutes les cartes.
+ */
+export function moisDeLaPiece(p: Pick<PieceLue, "dateDocument" | "createdAt">): string {
+  const lue = p.dateDocument && /^\d{4}-\d{2}-\d{2}/.test(p.dateDocument) ? p.dateDocument : null;
+  return (lue ?? p.createdAt).slice(0, 7);
 }

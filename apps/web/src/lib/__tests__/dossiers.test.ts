@@ -55,6 +55,15 @@ describe("le type qu'écrit le choix d'un dossier", () => {
   });
 });
 
+describe("un avoir garde son type entre achats et ventes", () => {
+  const ventes: Dossier = { ...tickets, code: "ventes", typeParDefaut: "facture_vente" };
+  it("le choix de Ventes ne le réécrit pas en facture de vente", () => {
+    expect(
+      typePourLeDossier(ventes, { typeDeDocument: "avoir", kind: "facture_achat" }, types),
+    ).toBe("avoir");
+  });
+});
+
 describe("la période d'une carte dit vrai", () => {
   const piece = (dateDocument: string | null, createdAt = "2026-10-20T10:00:00Z") => ({
     dateDocument,
@@ -69,6 +78,10 @@ describe("la période d'une carte dit vrai", () => {
   it("l'année, pour un PV ou une déclaration", () => {
     expect(dansLaPeriode(piece("2026-02-15"), "annee", "2026-10")).toBe(true);
     expect(dansLaPeriode(piece("2025-12-31"), "annee", "2026-10")).toBe(false);
+  });
+
+  it("une date illisible ne fait pas disparaître la pièce : la date de la photo", () => {
+    expect(dansLaPeriode(piece("20/10/2026"), "mois", "2026-10")).toBe(true);
   });
 
   it("sans date lue, la date de la photo", () => {

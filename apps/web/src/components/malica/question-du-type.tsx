@@ -123,8 +123,10 @@ export function QuestionDuType({
                 {d.libelle.slice(0, 1)}
               </span>
               {/* Un exemple de ce qu'il range : le nom de son type par défaut. */}
-              <span className="ex">{types.find((x) => x.code === d.typeParDefaut)?.libelle}</span>
-              {d.libelle}
+              <span className="ex" aria-hidden="true">
+                {types.find((x) => x.code === d.typeParDefaut)?.libelle}
+              </span>
+              <span className="nom">{d.libelle}</span>
             </button>
           ))}
           {/*
