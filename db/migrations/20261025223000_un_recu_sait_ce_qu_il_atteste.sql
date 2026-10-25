@@ -333,20 +333,27 @@ begin
 
   -- Chaque règlement est un règlement RÉEL de la pièce dont le reçu est issu :
   -- ni une annulation, ni « pas encore payé », ni le règlement d'une autre.
-  if exists (
-    select 1 from unnest(p_paiements) as x(id)
-     where not exists (select 1 from capture.paiements p
-                        where p.id = x.id and p.piece_id = v_source
-                          and p.tenant_id = v_tenant
-                          and p.annule_paiement_id is null
-                          and p.montant_mineur is not null)
-  ) then
-    raise exception 'reglement introuvable ou non autorise pour ce recu'
-      using errcode = '42501';
-  end if;
+  -- Un identifiant qui ne l'est pas (règlement disparu entre la production
+  -- du reçu et son envoi depuis la file hors ligne) est écarté et tracé :
+  -- lever ici bloquerait le reçu dans la file pour toujours.
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, payload)
+  select v_tenant, auth.uid(), 'recu.reglement_ecarte', 'capture', 'pieces', p_recu,
+         jsonb_build_object('paiement', x.id)
+    from unnest(p_paiements) as x(id)
+   where not exists (select 1 from capture.paiements p
+                      where p.id = x.id and p.piece_id = v_source
+                        and p.tenant_id = v_tenant
+                        and p.annule_paiement_id is null
+                        and p.montant_mineur is not null);
 
   insert into capture.recu_paiements (tenant_id, piece_id, paiement_id)
   select v_tenant, p_recu, x.id from unnest(p_paiements) as x(id)
+   where exists (select 1 from capture.paiements p
+                  where p.id = x.id and p.piece_id = v_source
+                    and p.tenant_id = v_tenant
+                    and p.annule_paiement_id is null
+                    and p.montant_mineur is not null)
   on conflict (tenant_id, piece_id, paiement_id) do nothing;
   get diagnostics v_n = row_count;
   return v_n;
@@ -533,6 +540,13 @@ begin
   if p_supprime and v_vis = 'partage'::app.vis_t then
     raise exception 'refus.accompagne.transmise' using errcode = 'check_violation';
   end if;
+  -- Les mêmes refus que `capture_piece_supprimer`, dits AVANT la photo : une
+  -- pièce engagée ou qui sert dans une écriture ne disparaît plus.
+  if p_supprime and (
+       (select status from capture.pieces where id = p_piece) not in ('capturee', 'lue')
+       or exists (select 1 from socle.ecritures e where e.piece_id = p_piece)) then
+    raise exception 'refus.accompagne.engagee' using errcode = 'check_violation';
+  end if;
   return v_tenant;
 end
 $$;
@@ -568,6 +582,9 @@ begin
   -- Deux déplacements simultanés vers le même règlement : le second attend
   -- et voit la preuve du premier. Pas de `for update` : la table refuse
   -- l'UPDATE (R7), et PostgreSQL le soumettrait à cette politique.
+  -- La pièce aussi : deux déplacements simultanés de la même preuve vers deux
+  -- règlements feraient qu'une photo en prouve deux.
+  perform pg_advisory_xact_lock(hashtextextended(p_piece::text, 0));
   perform pg_advisory_xact_lock(hashtextextended(p_paiement::text, 0));
 
   select * into v_cible from public.paiements_v where id = p_paiement;
@@ -634,6 +651,21 @@ begin
   if v_tenant_n is null or v_tenant_n <> v_tenant or p_nouveau = p_ancien then
     raise exception 'justificatif introuvable ou non autorise dans ce dossier'
       using errcode = '42501';
+  end if;
+  -- La nouvelle pièce est une photo de preuve qui vient d'être prise, et rien
+  -- d'autre : jamais une facture lue, une pièce d'un autre côté du cabinet,
+  -- ni une preuve qui prouve déjà quelque chose.
+  if not exists (
+       select 1 from capture.pieces n, capture.pieces a
+        where n.id = p_nouveau and a.id = p_ancien
+          and n.document_kind = 'justificatif_paiement'
+          and n.status = 'capturee'
+          and n.vis = a.vis
+          and (n.source_piece_id is null or n.source_piece_id = a.source_piece_id))
+     or exists (select 1 from capture.extractions x where x.piece_id = p_nouveau)
+     or exists (select 1 from public.paiements_v v where v.justificatif_piece_id = p_nouveau)
+     or exists (select 1 from capture.recu_paiements r where r.piece_id = p_nouveau) then
+    raise exception 'refus.justificatif.nouvelle_photo' using errcode = 'check_violation';
   end if;
 
   select coalesce(array_agg(r), '{}') into v_reglements from app.reglements_prouves_par(p_ancien) r;

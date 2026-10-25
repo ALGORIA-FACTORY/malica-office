@@ -3764,6 +3764,10 @@ const fr = {
     "Le reçu sera supprimé. Le règlement annulé reste dans l’historique de la facture.",
   "pme.accompagne.feuille.supprimer.justificatif.explique":
     "Le justificatif sera supprimé. Le règlement reste inscrit, sans justificatif : « {action} » réapparaît sur la facture.",
+  "refus.accompagne.engagee":
+    "Ce document est déjà engagé en comptabilité : il ne se supprime ni ne se remplace plus.",
+  "refus.justificatif.nouvelle_photo":
+    "Cette pièce ne peut pas remplacer le justificatif : reprenez une nouvelle photo.",
   "refus.accompagne.transmise":
     "Ce document a été transmis à votre comptabilité : il ne se supprime ni ne se remplace sans son accord.",
   "refus.justificatif.reglement_deja_prouve": "Ce règlement a déjà son justificatif.",
@@ -7345,6 +7349,9 @@ const en: Dict = {
     "The receipt will be deleted. The cancelled payment stays in the invoice history.",
   "pme.accompagne.feuille.supprimer.justificatif.explique":
     "The proof will be deleted. The payment stays recorded, without proof: “{action}” appears again on the invoice.",
+  "refus.accompagne.engagee":
+    "This document is already used in the books: it can no longer be deleted or replaced.",
+  "refus.justificatif.nouvelle_photo": "This piece cannot replace the proof: take a new photo.",
   "refus.accompagne.transmise":
     "This document was sent to your accountant: it cannot be deleted or replaced without their agreement.",
   "refus.justificatif.reglement_deja_prouve": "This payment already has its proof.",
@@ -10815,6 +10822,8 @@ const ar: Dict = {
     "سيُحذف الوصل. يبقى التسديد الملغى في سجلّ الفاتورة.",
   "pme.accompagne.feuille.supprimer.justificatif.explique":
     "سيُحذف المؤيّد. يبقى التسديد مسجّلًا دون مؤيّد: يعود «{action}» إلى الظهور على الفاتورة.",
+  "refus.accompagne.engagee": "هذه الوثيقة مستعملة في المحاسبة: لم تعد تُحذف ولا تُستبدل.",
+  "refus.justificatif.nouvelle_photo": "لا يمكن لهذه الوثيقة أن تعوّض المؤيّد: التقطوا صورة جديدة.",
   "refus.accompagne.transmise": "أُرسلت هذه الوثيقة إلى محاسبكم: لا تُحذف ولا تُستبدل دون موافقته.",
   "refus.justificatif.reglement_deja_prouve": "لهذا التسديد مؤيّده بالفعل.",
   "refus.justificatif.reglement_eteint": "أُلغي هذا التسديد: لم يعد يقبل مؤيّدًا.",

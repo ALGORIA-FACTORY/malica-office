@@ -254,10 +254,19 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
     const f = await facture("autre-f", "COMPTOIR ESSAI");
     const g = await facture("autre-g", "AUTRE ESSAI");
     const pg2 = await regler(g, "especes");
-    await assert.rejects(
-      () => nee("autre-r", f, "recu_de_paiement", [pg2]),
-      /introuvable ou non autorise/,
-    );
+    // Écarté et tracé, jamais lié : lever bloquerait un reçu rejoué depuis
+    // la file hors ligne dont un règlement a disparu entre-temps.
+    const r = await nee("autre-r", f, "recu_de_paiement", [pg2]);
+    assert.deepEqual((await fiche(r))?.reglements ?? [], []);
+    const ecartes = await admin(async (a) => {
+      const { rows } = await a.query(
+        `select payload ->> 'paiement' as p from audit.event_log
+          where object_id = $1 and action = 'recu.reglement_ecarte'`,
+        [r],
+      );
+      return rows.map((x) => x.p as string);
+    });
+    assert.deepEqual(ecartes, [pg2]);
     const talon = await nee("autre-t", f, "justificatif_paiement");
     await assert.rejects(
       () =>
@@ -388,6 +397,32 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
       [p],
       "le rattachement au règlement est gardé",
     );
+  });
+
+  it("reprendre la photo n'accepte qu'une photo de preuve neuve, jamais une facture lue", async () => {
+    const f = await facture("rep2-f", "COMPTOIR ESSAI");
+    const talon = await nee("rep2-t", f, "justificatif_paiement");
+    await regler(f, "cheque", talon);
+    const autre = await facture("rep2-autre", "AUTRE ESSAI");
+    await assert.rejects(
+      () => rpc("capture", "remplacerJustificatif", talon, autre),
+      /refus\.justificatif\.nouvelle_photo/,
+    );
+    assert.equal(await existe(talon), true, "rien ne bouge");
+  });
+
+  it("un autre dossier ne déplace ni ne remplace une preuve qui n'est pas la sienne", async () => {
+    const f = await facture("x-f", "COMPTOIR ESSAI");
+    const talon = await nee("x-t", f, "justificatif_paiement");
+    const p = await regler(f, "cheque", talon);
+    await assert.rejects(
+      () => rpcDe(intrus, "capture", "deplacerJustificatif", talon, p),
+      undefined,
+      "deplacer",
+    );
+    // Invisible pour lui : la porte rend « rien effacé », comme `supprimer`.
+    assert.equal(await rpcDe(intrus, "capture", "supprimerPieceQuiAccompagne", talon), false);
+    assert.equal(await existe(talon), true);
   });
 
   it("une pièce transmise ne se reprend ni ne se supprime : la clé le dit, rien ne bouge", async () => {

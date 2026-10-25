@@ -38,6 +38,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourEtMois, montant } from "@/lib/lisible";
 import { ficheQuiAccompagne, repriseRefusee, totalAtteste } from "@/lib/piece-qui-accompagne";
 import { photographierUnePreuve } from "@/lib/preuve-de-paiement";
+import { ErreurReseau } from "@/lib/transport/erreurs";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceQuiAccompagne } from "@malica/socle/ports/repositories";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -210,6 +211,13 @@ export function PieceQuiAccompagneFiche({
 
   const reprendre = useMutation({
     mutationFn: async () => {
+      /*
+       * Hors ligne, la photo partirait plus tard comme une preuve seule, et
+       * l'ancienne resterait : chaque essai ferait un doublon. On le dit
+       * AVANT d'ouvrir l'appareil.
+       */
+      if (typeof navigator !== "undefined" && navigator.onLine === false)
+        throw new ErreurReseau("hors_ligne");
       const nouveau = await photographierUnePreuve({
         tenantId: pme.tenantId,
         entityId: pme.entityId,
@@ -217,7 +225,15 @@ export function PieceQuiAccompagneFiche({
         sourcePieceId: mere?.id ?? pieceId,
       });
       if (!nouveau) return null;
-      await office().capture.remplacerJustificatif(pieceId, nouveau);
+      try {
+        await office().capture.remplacerJustificatif(pieceId, nouveau);
+      } catch (e) {
+        // Un remplacement refusé ne laisse pas une photo orpheline derrière lui.
+        await office()
+          .capture.supprimer(nouveau)
+          .catch(() => undefined);
+        throw e;
+      }
       return nouveau;
     },
     onSuccess: async (nouveau) => {
