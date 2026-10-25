@@ -358,8 +358,25 @@ export interface ReferentialRepository {
       libelle: string;
       porteEcriture: boolean;
       transmissible: boolean;
-      /** Vrai pour les types proposés au moment de la photo — six, pas dix-sept. */
+      /** Vrai pour les types qu'un dossier donne à la capture — sept, un par dossier. */
       proposeALaCapture: boolean;
+      /** Le dossier qui range ce type (`ref.dossiers`). */
+      dossier: string;
+      /** Le dossier quand la pièce est une vente (un avoir émis) ; sinon `null`. */
+      dossierSiVente: string | null;
+    }>
+  >;
+  /** Les sept dossiers, dans leur ordre : de la capture à la bibliothèque. */
+  dossiers(locale: string): Promise<
+    Array<{
+      code: string;
+      libelle: string;
+      /** Le nom d'une teinte du dessin, jamais une couleur. */
+      teinte: string;
+      /** Ce que compte la carte : le mois en cours, ou l'année. */
+      periode: "mois" | "annee";
+      /** Le type qu'une pièce reçoit quand on choisit ce dossier à la capture. */
+      typeParDefaut: string;
     }>
   >;
   /**

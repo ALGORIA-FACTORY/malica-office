@@ -14,6 +14,7 @@ import {
  */
 
 import type { Requete } from "../db.ts";
+import { fiscaliteDuDossier } from "../scan/fiscalite-du-dossier.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 
@@ -431,12 +432,15 @@ export const office = {
   async book(db: Requete, ecritureId: string): Promise<void> {
     const { rows } = await db.query<{
       nature: string;
+      tenant_id: string;
+      piece_id: string | null;
+      date_ecriture: string;
       reverses_id: string | null;
       paiement_id: string | null;
       status: string;
       qualification: unknown;
     }>(
-      `select e.nature, e.reverses_id, e.paiement_id, e.status,
+      `select e.nature, e.tenant_id, e.piece_id, e.date_ecriture::text, e.reverses_id, e.paiement_id, e.status,
               (select a.payload -> 'qualification' from audit.event_log a
                 where a.object_id = e.id and a.action = 'reglement.qualifie'
                 order by a.at desc limit 1) as qualification
@@ -444,6 +448,7 @@ export const office = {
       [ecritureId],
     );
     const e = rows[0];
+    let versionFiscale: string | undefined;
     if (e && e.nature === "reglement" && e.reverses_id === null && e.status === "proposee") {
       if (!e.paiement_id) throw refusMetier("Un règlement sans paiement ne s'inscrit pas.");
       const r = await propositionDeReglement(db, e.paiement_id, qualificationLue(e.qualification));
@@ -461,8 +466,40 @@ export const office = {
         throw refusMetier(
           "Cette proposition de règlement ne correspond plus aux faits : proposez-la à nouveau.",
         );
+      versionFiscale = r.fiscaliteVersionId;
+    }
+    if (e?.nature === "piece" && e.piece_id && e.reverses_id === null && e.status === "proposee") {
+      await db.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [e.tenant_id]);
+      const fiscalite = await fiscaliteDuDossier(db, e.tenant_id, e.date_ecriture);
+      if (fiscalite) {
+        const r = await propositionDePiece(db, e.piece_id, e.date_ecriture);
+        if (!r.ok) throw refusMetier(r.raison);
+        const proposees = (await lignesDe(db, [ecritureId])).get(ecritureId) ?? [];
+        if (
+          r.proposition.pivot.entry_date !== e.date_ecriture ||
+          !memesLignes(
+            proposees.map((l) => ({
+              account_code: l.accountCode,
+              debit: l.debit,
+              credit: l.credit,
+            })),
+            r.proposition.lignes,
+          )
+        )
+          throw refusMetier(
+            "Le profil fiscal ou la pièce a changé : proposez à nouveau l’écriture avant inscription.",
+          );
+        versionFiscale = r.fiscaliteVersionId;
+      }
     }
     await db.query(`select public.socle_ecriture_book($1)`, [ecritureId]);
+    if (versionFiscale)
+      await db.query(
+        `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+       values ($1, auth.uid(), 'fiscalite.appliquee', 'socle', 'ecritures', $2,
+         jsonb_build_object('version_dossier', $3::text, 'comptabilisee', true))`,
+        [e!.tenant_id, ecritureId, versionFiscale],
+      );
   },
 
   async ecrituresByIds(db: Requete, ids: string[]) {

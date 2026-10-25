@@ -198,21 +198,31 @@ export const fiscalite = {
       basis: string | null;
       taxable: boolean | null;
       legal_reference: string | null;
+      seuil: string | null;
     }>(
       `with p as (select id from ref.jurisdiction_packs where jurisdiction = $1
        and effective_from <= $2::date and (effective_to is null or effective_to > $2::date)
        order by effective_from desc limit 1)
       select t.code, t.label, 'tva' as famille, op as operation, t.rate::text,
-        null::text as fixed_amount, null::text as basis, null::boolean as taxable, t.legal_reference
+        null::text as fixed_amount, null::text as basis, null::boolean as taxable, t.legal_reference, null::text as seuil
       from ref.tva_rates t join p on p.id = t.pack_version_id
       cross join unnest(array['achat','vente']) op
       where t.valid_from <= $2::date and (t.valid_to is null or t.valid_to > $2::date)
       union all
       select c.code, c.label, c.famille,
         case when c.document_kind = 'facture_achat' then 'achat' else 'vente' end,
-        c.rate::text, c.fixed_amount::text, c.basis, c.taxable, c.legal_reference
+        c.rate::text, c.fixed_amount::text, c.basis, c.taxable, c.legal_reference, null::text
       from ref.fiscal_charges c join p on p.id = c.pack_version_id
       where c.valid_from <= $2::date and (c.valid_to is null or c.valid_to > $2::date)
+      union all
+      select r.code, r.libelle, 'retenue', op, r.taux::text, null::text,
+        r.base, null::boolean, concat_ws(' — ', f.texte_source, f.article), r.seuil::text
+      from ref.retenues_au_reglement($1, $2::date) r
+      join ref.fiscal_parameters f on f.jurisdiction = $1 and f.code = r.code
+        and f.valid_from <= $2::date and (f.valid_to is null or f.valid_to > $2::date)
+      cross join unnest(array['paiement_emis','paiement_recu']) op
+      where r.sens = 'tous' or (r.sens = 'achat' and op = 'paiement_emis')
+        or (r.sens = 'vente' and op = 'paiement_recu')
       order by famille, label, operation`,
       [jurisdiction, d],
     );
@@ -226,6 +236,7 @@ export const fiscalite = {
       assiette: r.basis ?? "",
       dansBaseTva: r.taxable,
       referenceLegale: r.legal_reference ?? "",
+      ...(r.famille === "retenue" ? { seuil: r.seuil } : {}),
     }));
   },
   apercuFiscal: apercu,

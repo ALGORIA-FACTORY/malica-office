@@ -269,6 +269,7 @@ export const referentiel = {
   async typesDeDocument(db: Requete, locale: string) {
     const { rows } = await db.query(
       `select d.code, d.famille, d.porte_ecriture, d.transmissible, d.propose_a_la_capture,
+              d.dossier, d.dossier_si_vente,
               coalesce(demandee.value, francais.value, d.libelle) as libelle
          from ref.document_types d
          left join ref_labels_v demandee
@@ -287,6 +288,38 @@ export const referentiel = {
       porteEcriture: Boolean(r["porte_ecriture"]),
       transmissible: Boolean(r["transmissible"]),
       proposeALaCapture: Boolean(r["propose_a_la_capture"]),
+      dossier: r["dossier"] as string,
+      dossierSiVente: (r["dossier_si_vente"] as string | null) ?? null,
+    }));
+  },
+
+  /**
+   * Les sept dossiers — de la capture à la bibliothèque, un seul mot.
+   *
+   * 25 octobre 2026, maquette validée par Wissem : la capture les propose,
+   * l'accueil les montre tous (même vides), la page Dossier et la
+   * bibliothèque les reprennent. L'ordre, la teinte, la période et le type
+   * qu'un choix à la capture écrit sont dans `ref.dossiers` (R4) ; le nom
+   * vient de `ref.labels`, avec le même repli explicite sur le français.
+   */
+  async dossiers(db: Requete, locale: string) {
+    const { rows } = await db.query(
+      `select x.code, x.teinte, x.periode, x.type_par_defaut,
+              coalesce(demandee.value, francais.value, x.code) as libelle
+         from ref.dossiers x
+         left join ref_labels_v demandee
+           on demandee.ns = 'dossier' and demandee.key = x.code and demandee.locale = $1
+         left join ref_labels_v francais
+           on francais.ns = 'dossier' and francais.key = x.code and francais.locale = 'fr'
+        order by x.rang`,
+      [locale],
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      code: r["code"] as string,
+      libelle: r["libelle"] as string,
+      teinte: r["teinte"] as string,
+      periode: r["periode"] as "mois" | "annee",
+      typeParDefaut: r["type_par_defaut"] as string,
     }));
   },
 

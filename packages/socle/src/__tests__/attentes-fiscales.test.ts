@@ -137,4 +137,17 @@ describe("le profil fiscal contrôle les attentes sans inventer la pièce", () =
       /pas applicable/,
     );
   });
+  it("un nouveau seuil de retenue est versionné avec le taux", () => {
+    const cfg: ConfigurationFiscale = {
+      ...c,
+      regles: [{ ...r, famille: "retenue", operation: "paiement_emis", seuil: "234.567" }],
+    };
+    const a = attentesDeRetenue(
+      cfg,
+      "paiement_emis",
+      [{ code: "TEST", taux: "0.01", seuil: "123.456" }],
+      ["TEST"],
+    );
+    expect(a[0]!.seuil).toBe("234.567");
+  });
 });

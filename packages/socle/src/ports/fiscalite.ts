@@ -15,6 +15,7 @@ export const RegleFiscaleSchema = z
     mode: z.enum(["taux", "montant", "aucun"]),
     valeur: decimal.nullable(),
     assiette: texte,
+    seuil: decimal.nullable().optional(),
     dansBaseTva: z.boolean().nullable(),
     deductibilite: z.enum(["oui", "non", "partielle", "a_qualifier"]),
     referenceLegale: texte,
@@ -119,4 +120,5 @@ export interface CatalogueFiscal {
   assiette: string;
   dansBaseTva: boolean | null;
   referenceLegale: string;
+  seuil?: string | null | undefined;
 }

@@ -44,6 +44,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
   let expert: Utilisateur;
   let autre: Utilisateur;
   let dirigeant: Utilisateur;
+  let collaborateur: Utilisateur;
   let cabinet = "";
   let autreCabinet = "";
   const clients: string[] = [];
@@ -71,7 +72,12 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     const e = await creerCompte(`expert-${marque}@essai.local`, "MotDePasseTresLong2026!");
     const a = await creerCompte(`autre-${marque}@essai.local`, "MotDePasseTresLong2026!");
     const d = await creerCompte(`dirigeant-${marque}@essai.local`, "MotDePasseTresLong2026!");
-    assert.ok(e && a && d);
+    const coll = await creerCompte(
+      `collaborateur-${marque}@essai.local`,
+      "MotDePasseTresLong2026!",
+    );
+    assert.ok(e && a && d && coll);
+    collaborateur = coll;
     expert = e;
     autre = a;
     dirigeant = d;
@@ -100,6 +106,10 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       if (u.id === expert.id) cabinet = r;
       else autreCabinet = r;
     }
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1,$2,'collaborateur')`,
+      [cabinet, collaborateur.id],
+    );
     for (let n = 0; n < 2; n++) {
       const r = await sousIdentite(expert.id, (db) =>
         identite.ouvrirDossier(db, {
@@ -258,7 +268,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       await sousIdentite(autre.id, (db) => fiscalite.profilsFiscaux(db, cabinet)),
       [],
     );
-    for (const user of [dirigeant, autre])
+    for (const user of [dirigeant, autre, collaborateur])
       await assert.rejects(
         sousIdentite(user.id, (db) =>
           fiscalite.appliquerProfilFiscal(db, {
@@ -289,6 +299,82 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     assert.ok(c.some((r) => r.famille === "tva" && r.mode === "taux"));
     assert.ok(c.some((r) => r.famille === "timbre" && r.mode === "montant"));
     assert.ok(c.some((r) => r.famille === "fodec" && r.mode === "taux"));
+    assert.ok(
+      c.some(
+        (r) => r.famille === "retenue" && r.operation === "paiement_emis" && r.seuil !== undefined,
+      ),
+    );
+  });
+
+  it("préserve la fiche fiscale antérieure jusqu'à une reprise individuelle explicite", async () => {
+    const d = await sousIdentite(expert.id, (db) =>
+      identite.ouvrirDossier(db, {
+        cabinetTenantId: cabinet,
+        name: `Particularité ${marque}`,
+        legalId: matriculeDEssai(),
+        adresse: null,
+      }),
+    );
+    supplementaires.push(d.id);
+    await admin.query(
+      `insert into identity.fiches_fiscales (tenant_id, regime_tva, secteur, source, valid_from, created_by) values ($1, 'non_assujetti', 'Activité propre au client', 'saisie', current_date-1, $2)`,
+      [d.id, expert.id],
+    );
+    const l: LotFiscal = {
+      cabinetId: cabinet,
+      versionProfilId: p.id,
+      dateEffet: aujourd,
+      cibles: [{ clientId: d.id, precedentId: null }],
+    };
+    const preview = await sousIdentite(expert.id, (db) => fiscalite.apercuFiscal(db, l));
+    assert.equal(preview[0]!.statut, "personnalise");
+    assert.equal(preview[0]!.avant!.regimeTva, "non_assujetti");
+    assert.deepEqual(
+      await sousIdentite(expert.id, (db) => fiscalite.appliquerProfilFiscal(db, l)),
+      { appliques: 0, ignores: 1 },
+    );
+    assert.equal(
+      (await sousIdentite(expert.id, (db) => identite.ficheCourante(db, d.id)))!.regimeTva,
+      "non_assujetti",
+    );
+    assert.equal(
+      (
+        await sousIdentite(expert.id, (db) =>
+          fiscalite.appliquerProfilFiscal(db, { ...l, remplacerPersonnalisation: true }),
+        )
+      ).appliques,
+      1,
+    );
+    assert.equal(
+      (await sousIdentite(expert.id, (db) => identite.ficheCourante(db, d.id)))!.regimeTva,
+      "assujetti",
+    );
+  });
+  it("deux applications concurrentes d'un aperçu ne créent qu'une version", async () => {
+    const d = await sousIdentite(expert.id, (db) =>
+      identite.ouvrirDossier(db, {
+        cabinetTenantId: cabinet,
+        name: `Concurrence ${marque}`,
+        legalId: matriculeDEssai(),
+        adresse: null,
+      }),
+    );
+    supplementaires.push(d.id);
+    const l: LotFiscal = {
+      cabinetId: cabinet,
+      versionProfilId: p.id,
+      dateEffet: aujourd,
+      cibles: [{ clientId: d.id, precedentId: null }],
+    };
+    const rs = await Promise.allSettled(
+      [1, 2].map(() => sousIdentite(expert.id, (db) => fiscalite.appliquerProfilFiscal(db, l))),
+    );
+    assert.equal(rs.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal(rs.filter((r) => r.status === "rejected").length, 1);
+    assert.equal(
+      (await sousIdentite(expert.id, (db) => fiscalite.historiqueFiscal(db, cabinet, d.id))).length,
+      1,
+    );
   });
   it("les règles du dossier contrôlent réellement la proposition et la version utilisée est tracée", async () => {
     const d = await sousIdentite(expert.id, (db) =>
@@ -300,6 +386,10 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       }),
     );
     supplementaires.push(d.id);
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1,$2,'dirigeant')`,
+      [d.id, dirigeant.id],
+    );
     const catalogue = await sousIdentite(expert.id, (db) =>
       fiscalite.catalogueFiscal(db, "TN", aujourd),
     );
@@ -349,7 +439,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       )
     ).rows[0]!.id;
     const rpc = (depot: string, methode: string, ...args: unknown[]) =>
-      sousIdentiteDuServeur(expert.id, (db) =>
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
         executerRpc(db, { depot, methode, args }, "serveur"),
       );
     const l = lecture({ clientMf: d.legalId, numero: `F-${marque}` });
@@ -417,5 +507,32 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     );
     assert.equal(traces.rows.length, 1);
     assert.notEqual(traces.rows[0]!.version, h[0]!.id);
+    const dernier = await sousIdentite(expert.id, (db) =>
+      fiscalite.historiqueFiscal(db, cabinet, d.id),
+    );
+    const modifie = await sousIdentite(expert.id, (db) =>
+      fiscalite.enregistrerProfilFiscal(db, {
+        cabinetId: cabinet,
+        profilId: corrigee.profilId,
+        precedentId: corrigee.id,
+        nom: corrigee.nom,
+        categorie: corrigee.categorie,
+        jurisdiction: "TN",
+        dateEffet: aujourd,
+        configuration: config,
+      }),
+    );
+    await sousIdentite(expert.id, (db) =>
+      fiscalite.appliquerProfilFiscal(db, {
+        cabinetId: cabinet,
+        versionProfilId: modifie.id,
+        dateEffet: aujourd,
+        cibles: [{ clientId: d.id, precedentId: dernier[0]!.id }],
+      }),
+    );
+    await assert.rejects(
+      sousIdentite(expert.id, (db) => office.book(db, ecriture)),
+      /TVA incohérente/,
+    );
   });
 });

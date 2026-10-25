@@ -113,6 +113,9 @@ begin
        or length(trim(coalesce(r->>'typeOperation',''))) = 0 then
       raise exception 'Règle fiscale incomplète.' using errcode = 'check_violation';
     end if;
+    if r->>'seuil' is not null and r->>'seuil' !~ '^\d+(\.\d{1,6})?$' then
+      raise exception 'Seuil fiscal invalide.' using errcode = 'check_violation';
+    end if;
     if r->>'applicabilite' <> 'a_qualifier' and length(trim(coalesce(r->>'referenceLegale',''))) = 0 then
       raise exception 'Référence légale requise.' using errcode = 'check_violation';
     end if;

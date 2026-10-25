@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -6,9 +5,11 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { currentPeriod } from "@/hooks/use-tva";
+import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
 });
 
 /**
- * Un dossier ouvert — la « playlist » d'un type de pièce.
+ * Un dossier ouvert — la « playlist » d'un des sept dossiers (`ref.dossiers`).
  *
  * 23 octobre 2026, maquette validée par Wissem : la pochette touchée sur
  * l'accueil s'ouvre ici, avec UN geste principal (vérifier ce qui attend),
@@ -57,15 +58,36 @@ function Dossier() {
   const [filtre, setFiltre] = useState<Etat | "toutes">("toutes");
 
   const lues = usePiecesLues();
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
-
-  const libelle = (typesDoc.data ?? []).find((x) => x.code === type)?.libelle ?? type;
-  const toutes = (lues.data ?? [])
-    .filter((p) => p.typeDeDocument === type && p.vis !== "personnel")
+  /*
+   * Le paramètre est un DOSSIER (`ref.dossiers`) depuis le 25 octobre 2026.
+   * Un lien d'avant portait un type : il ouvre le dossier de ce type.
+   */
+  const sept = useDossiers();
+  const dossier =
+    sept.parCode(type) ?? sept.parCode(sept.types.find((x) => x.code === type)?.dossier);
+  const libelle = dossier?.libelle ?? "";
+  /*
+   * LA MÊME PÉRIODE QUE SA CARTE : la carte « Aucune pièce » ne doit pas
+   * ouvrir une page pleine (revue du 25 octobre). Ce qui est plus ancien se
+   * retrouve dans la bibliothèque, rangée par dossier.
+   */
+  const periode = currentPeriod();
+  const duDossier = (lues.data ?? []).filter(
+    (p) =>
+      dossier !== null && p.vis !== "personnel" && dossierDeLaPiece(p, sept.types) === dossier.code,
+  );
+  const horsPeriode = dossier
+    ? duDossier.filter((p) => !dansLaPeriode(p, dossier.periode, periode)).length
+    : 0;
+  const etiquette = !dossier
+    ? ""
+    : dossier.periode === "mois"
+      ? new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
+          new Date(`${periode}-01T00:00:00Z`),
+        )
+      : periode.slice(0, 4);
+  const toutes = duDossier
+    .filter((p) => dossier !== null && dansLaPeriode(p, dossier.periode, periode))
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
   const faites = toutes.filter((p) => etatDe(p) === "comptabilisee").length;
   const aVerifier = toutes.filter((p) => etatDe(p) === "verifier");
@@ -79,7 +101,7 @@ function Dossier() {
 
   return (
     <div data-ecran="pochette" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
-      <div className="tete">
+      <div className="tete" data-teinte={dossier?.teinte}>
         <button
           type="button"
           className="bk"
@@ -95,7 +117,9 @@ function Dossier() {
             <span className="ini">{libelle.slice(0, 1)}</span>
           </span>
           <span className="tx">
-            <span className="k">{t("pme.dossier.kicker")}</span>
+            <span className="k">
+              {[t("pme.dossier.kicker"), etiquette].filter(Boolean).join(" · ")}
+            </span>
             <h1>{libelle}</h1>
             <span>{t("pme.home.dossier.pieces", { count: toutes.length })}</span>
           </span>
@@ -154,7 +178,7 @@ function Dossier() {
           </div>
         ) : null}
 
-        {lues.isPending ? (
+        {lues.isPending || !sept.pret ? (
           <p className="vide">{t("common.loading")}</p>
         ) : visibles.length === 0 ? (
           <p className="vide">{t("pme.dossier.vide")}</p>
@@ -181,6 +205,11 @@ function Dossier() {
             })}
           </div>
         )}
+        {horsPeriode > 0 ? (
+          <Link to="/pme/list" search={{ axe: "dossier" }} className="plus-anciennes">
+            {t("pme.dossier.horsPeriode", { count: horsPeriode })}
+          </Link>
+        ) : null}
       </div>
     </div>
   );

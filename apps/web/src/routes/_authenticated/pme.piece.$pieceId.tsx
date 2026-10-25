@@ -36,6 +36,8 @@ import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
@@ -313,13 +315,21 @@ function PieceScreen() {
   });
 
   /** Le nom d'un type de document vient du référentiel traduit, jamais du code. */
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
+  const sept = useDossiers();
   const nomDuType = (code: string | null) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
+    sept.types.find((x) => x.code === code)?.libelle ?? null;
+  /*
+   * La fiche dit le DOSSIER puis le type précis : « Tickets et reçus · Reçu de
+   * paiement » (maquette du 25 octobre 2026). Le même dossier que la tuile
+   * choisie à la capture et que la carte de l'accueil.
+   */
+  const dossierEtType = (code: string | null, vente: boolean) => {
+    const d = sept.parCode(
+      dossierDeLaPiece({ typeDeDocument: code, kind: vente ? "facture_vente" : null }, sept.types),
+    );
+    const type = nomDuType(code);
+    return [d?.libelle, type].filter(Boolean).join(" · ") || null;
+  };
 
   const invalidate = async () => {
     await Promise.all([
@@ -1656,16 +1666,16 @@ function PieceScreen() {
                 className={vente ? "puce vent" : "puce"}
                 disabled={preciser.isPending}
                 onClick={() => setCorrigerType(true)}
-                aria-label={`${nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")} — ${t("pme.piece.type.modifier")}`}
+                aria-label={`${dossierEtType(piece.documentKind, vente) ?? t("pme.piece.sens.inconnu")} — ${t("pme.piece.type.modifier")}`}
               >
-                {nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")}
+                {dossierEtType(piece.documentKind, vente) ?? t("pme.piece.sens.inconnu")}
                 <svg viewBox="0 0 24 24" className="g" aria-hidden>
                   <path d="M4 20h4L19 9l-4-4L4 16z" />
                 </svg>
               </button>
             ) : (
               <span className={vente ? "puce vent" : "puce"}>
-                {nomDuType(piece.documentKind) ?? t("pme.piece.sens.inconnu")}
+                {dossierEtType(piece.documentKind, vente) ?? t("pme.piece.sens.inconnu")}
               </span>
             )}
             {payload?.document_date ? (
@@ -1677,7 +1687,7 @@ function PieceScreen() {
       {corrigerType ? (
         <QuestionDuType
           documents={[nomDuType(piece.documentKind) ?? t("pme.piece.title")]}
-          actuel={piece.documentKind}
+          actuel={{ typeDeDocument: piece.documentKind, kind: vente ? "facture_vente" : null }}
           mode="correction"
           onRepondre={(code) =>
             code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)

@@ -98,7 +98,7 @@ export function appliquerAttentesFiscales(e: {
 }
 
 /** Le certificat, la base et le seuil restent qualifiés au règlement. */
-export function attentesDeRetenue<T extends { code: string; taux: string }>(
+export function attentesDeRetenue<T extends { code: string; taux: string; seuil?: string | null }>(
   c: ConfigurationFiscale,
   operation: "paiement_emis" | "paiement_recu",
   taux: readonly T[],
@@ -128,6 +128,10 @@ export function attentesDeRetenue<T extends { code: string; taux: string }>(
       throw new Error(
         `La retenue « ${r.code} » doit disposer d’une assiette et d’un seuil au référentiel avant utilisation.`,
       );
-    return { ...origine, taux: D(r.valeur).div(100).toString() };
+    return {
+      ...origine,
+      ...(r.seuil !== undefined ? { seuil: r.seuil } : {}),
+      taux: D(r.valeur).div(100).toString(),
+    };
   });
 }

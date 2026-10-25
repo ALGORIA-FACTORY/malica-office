@@ -1,4 +1,5 @@
 export const frFiscalite = {
+  "fx.threshold": "Seuil de retenue — vide si aucun",
   "fx.versionCreated": "Paramétrage fiscal versionné",
   "fx.versionApplied": "Paramétrage fiscal appliqué à l’écriture",
   "fx.formerMember": "Ancien membre de la comptabilité",
@@ -97,6 +98,7 @@ export const frFiscalite = {
 } as const;
 
 export const enFiscalite = {
+  "fx.threshold": "Withholding threshold — blank if none",
   "fx.versionCreated": "Tax settings versioned",
   "fx.versionApplied": "Tax settings applied to entry",
   "fx.formerMember": "Former accounting team member",
@@ -194,6 +196,7 @@ export const enFiscalite = {
 } as const;
 
 export const arFiscalite = {
+  "fx.threshold": "عتبة الخصم — فارغ عند عدم وجودها",
   "fx.versionCreated": "تم إنشاء نسخة من الإعدادات الجبائية",
   "fx.versionApplied": "تم تطبيق الإعدادات الجبائية على القيد",
   "fx.formerMember": "عضو سابق في فريق المحاسبة",

@@ -31,6 +31,15 @@ const plusRecenteDAbord = (x: PieceLue, y: PieceLue) => y.createdAt.localeCompar
  * Une pièce dont la lecture a ÉCHOUÉ n'est pas « à lire » : elle attend un
  * geste précis, et `piecesEnEchec` la porte. La plus récente d'abord.
  */
+/**
+ * Ce qui attend la personne : lu, proposé, ou renvoyé par le cabinet. La
+ * rangée « Ce que j'ai préparé » de l'accueil et le filtre « À vérifier » de
+ * la bibliothèque, où mène son « Tout voir », lisent cette seule règle.
+ */
+export function attendLaPersonne(p: Pick<PieceLue, "status">): boolean {
+  return p.status === "lue" || p.status === "proposee" || p.status === "retournee";
+}
+
 export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {
   return pieces
     .filter((p) => !p.gardeeLe && issueDeLecture(p).kind === "a_lire")

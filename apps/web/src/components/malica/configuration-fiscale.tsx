@@ -241,6 +241,7 @@ export function ConfigurationFiscaleForm({
                   modifier(i, {
                     code: c.code,
                     referenceLegale: c.referenceLegale,
+                    ...(c.seuil !== undefined ? { seuil: c.seuil } : {}),
                     assiette: c.assiette,
                     dansBaseTva: c.dansBaseTva,
                     ...(r.applicabilite === "applicable" ? { mode: c.mode, valeur: c.valeur } : {}),
@@ -317,6 +318,13 @@ export function ConfigurationFiscaleForm({
                   }
                 />
               </div>
+            ) : null}
+            {r.famille === "retenue" && r.applicabilite === "applicable" ? (
+              <TexteFiscal
+                label={t("fx.threshold")}
+                value={r.seuil ?? ""}
+                onChange={(v) => modifier(i, { seuil: v.replace(",", ".") || null })}
+              />
             ) : null}
             <TexteFiscal
               label={t("fx.source")}
