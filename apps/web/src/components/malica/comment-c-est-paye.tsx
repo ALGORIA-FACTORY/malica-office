@@ -30,19 +30,20 @@
  * suivante — avec des libellés justes et des comptes faux, donc invisible.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, FileText, Plus, X } from "lucide-react";
+import { Camera, FileText, Plus } from "lucide-react";
 import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import { files } from "@/capabilities/files";
+import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
 import { usePme } from "@/components/malica/pme-context";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
-import { montant } from "@/lib/lisible";
+import { jourEtMois, montant } from "@/lib/lisible";
 import { totalDesPaiements } from "@/lib/total-des-paiements";
 import { etatDuReglement, historiqueDuReglement } from "@/lib/etat-du-reglement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { vidage } from "@/lib/hors-ligne";
+import { photographierUnePreuve } from "@/lib/preuve-de-paiement";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { construireRecu } from "@malica/socle/use-cases/recu-de-paiement";
@@ -210,51 +211,14 @@ export function CommentCEstPaye({
   const aujourdHui = new Date().toISOString().slice(0, 10);
   const [dateDuPaiement, setDateDuPaiement] = useState(aujourdHui);
 
-  /**
-   * La photo du justificatif — même capture, même archive, même chiffrement.
-   *
-   * Elle passe par la FILE, comme toute pièce : hors ligne, la preuve attend
-   * dans l'appareil et part au retour du réseau. Photographier un talon de
-   * chèque dans un parking sans réseau est précisément le cas qui se présente.
-   *
-   * Son type, `justificatif_paiement`, porte `porte_ecriture = false` : un
-   * document transmis au cabinet et comptabilisable une seconde fois est la
-   * façon la plus simple de compter une charge deux fois.
-   */
-  async function photographierLaPreuve(): Promise<string | null> {
-    const [pris] = await files.takePhoto();
-    if (!pris) return null;
-    const cle = await vidage().deposer(
-      {
-        cle: files.newIdempotencyKey(),
-        tenantId: pme.tenantId,
-        entityId: pme.entityId,
-        source: pris.source,
-        // La preuve suit la facture : si celle-ci est partie au cabinet, le
-        // talon part avec elle — « transmise au comptable avec la photo ».
-        vis: visDeLaPiece,
-        contentType: pris.blob.type || "application/pdf",
-        documentKind: "justificatif_paiement",
-        /*
-         * LA PREUVE SAIT DE QUELLE FACTURE ELLE VIENT.
-         *
-         * 13 octobre 2026 : le talon de chèque photographié apparaissait
-         * comme un document flottant — dans la liste de la PME et chez le
-         * cabinet, sous « pas encore classés », avec « Émetteur non trouvé ».
-         *
-         * La cause tenait en une absence : cette propriété manquait ici,
-         * alors que le reçu la passe cent quarante lignes plus bas, dans ce
-         * même fichier. Les deux étages de la file font `?? null`, donc
-         * l'oubli ne levait rien : la pièce naissait orpheline, en silence.
-         */
-        sourcePieceId: pieceId,
-        nomFichier: pris.name,
-      },
-      pris.blob,
-    );
-    const element = await vidage().attendre(cle, 8_000);
-    return element?.pieceId ?? null;
-  }
+  /** La photo du justificatif : le chemin commun (`lib/preuve-de-paiement`). */
+  const photographierLaPreuve = () =>
+    photographierUnePreuve({
+      tenantId: pme.tenantId,
+      entityId: pme.entityId,
+      vis: visDeLaPiece,
+      sourcePieceId: pieceId,
+    });
 
   const inscrire = useMutation({
     /*
@@ -426,6 +390,13 @@ export function CommentCEstPaye({
       if (sens === null || decimales === null || !pme.packId) return null;
       const mentions = await office().referential.mentionsDuPack(pme.packId, locale);
       const emisLe = new Date().toISOString().slice(0, 10);
+      /*
+       * Seuls les paiements QUI ONT EU LIEU. « Pas encore payé » est une
+       * réponse valable sur une facture à trente jours, et ce n'est pas un
+       * règlement : le faire figurer sur un reçu attesterait d'un versement
+       * qui n'existe pas.
+       */
+      const attestes = vivants.filter((p) => p.montantMineur !== null);
       const construit = construireRecu({
         sens,
         decimales,
@@ -433,19 +404,11 @@ export function CommentCEstPaye({
         dossier: { nom: pme.orgName, matricule: pme.matricule },
         tiers,
         piece: { reference, date: dateDeLaPiece },
-        /*
-         * Seuls les paiements QUI ONT EU LIEU. « Pas encore payé » est une
-         * réponse valable sur une facture à trente jours, et ce n'est pas un
-         * règlement : le faire figurer sur un reçu attesterait d'un versement
-         * qui n'existe pas.
-         */
-        paiements: vivants
-          .filter((p) => p.montantMineur !== null)
-          .map((p) => ({
-            moyen: libelleDuMoyen(p.moyenCode),
-            montant: depuisUniteMineure(p.montantMineur!, decimales),
-            date: p.payeLe,
-          })),
+        paiements: attestes.map((p) => ({
+          moyen: libelleDuMoyen(p.moyenCode),
+          montant: depuisUniteMineure(p.montantMineur!, decimales),
+          date: p.payeLe,
+        })),
         // Seulement celles que le pack rend obligatoires : un reçu qui
         // recopierait toute la liste serait illisible.
         mentions: mentions.filter((m) => m.mandatory).map((m) => m.label),
@@ -478,6 +441,8 @@ export function CommentCEstPaye({
           contentType: "application/pdf",
           documentKind: "recu_de_paiement",
           sourcePieceId: pieceId,
+          // Ce que le reçu atteste : s'il en annule un, le reçu le saura.
+          paiementsAttestes: attestes.map((p) => p.id),
           nomFichier: rendu.name,
         },
         rendu.blob,
@@ -539,14 +504,7 @@ export function CommentCEstPaye({
   const vente = sens === "revenu";
   const libelleDuMotif = (id: string | null) =>
     (motifs.data ?? []).find((m) => m.id === id)?.libelle ?? "";
-  const jourCourt = (iso: string | null) =>
-    iso
-      ? new Intl.DateTimeFormat(locale, {
-          day: "2-digit",
-          month: "2-digit",
-          timeZone: "UTC",
-        }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso))
-      : "";
+  const jourCourt = (iso: string | null) => (iso ? jourEtMois(iso, locale) : "");
   /** Le plafond d'un montant : ce qui reste, la ligne corrigée mise à part. */
   const plafond =
     ttcMineur === null || payeHorsCorrection === null
@@ -952,233 +910,196 @@ export function CommentCEstPaye({
        * le pack le dit. La photo du justificatif s'ouvre à l'enregistrement,
        * quand le moyen l'exige — un abandon de l'appareil n'annule rien.
        */}
-      {ajoutOuvert && (!solde || enCorrection !== null) && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-[60] flex flex-col justify-end bg-foreground/40"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) fermerLaFeuille();
-              }}
-            >
-              <div
-                ref={feuille}
-                role="dialog"
-                aria-modal="true"
-                aria-label={t(
-                  enCorrection ? "pme.paiement.correction.titre" : "pme.paiement.titre",
-                )}
-                className="mx-auto grid max-h-[88vh] w-full max-w-md gap-5 overflow-y-auto rounded-t-[28px] border-t border-border bg-background px-[20px] pb-safe pt-3 text-start"
-              >
-                <span aria-hidden className="mx-auto h-1 w-10 rounded-full bg-border" />
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[21px] font-semibold leading-[1.2] tracking-[-0.02em]">
-                    {t(enCorrection ? "pme.paiement.correction.titre" : "pme.paiement.titre")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={fermerLaFeuille}
-                    aria-label={t("common.fermer")}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted"
-                  >
-                    <X className="h-[18px] w-[18px]" aria-hidden />
-                  </button>
-                </div>
+      {ajoutOuvert && (!solde || enCorrection !== null) ? (
+        <FeuilleDuBas
+          titre={t(enCorrection ? "pme.paiement.correction.titre" : "pme.paiement.titre")}
+          onFermer={fermerLaFeuille}
+          feuilleRef={feuille}
+          disposition="grid gap-5 overflow-y-auto"
+        >
+          {enCorrection ? (
+            <p className="text-[13px] leading-[1.45] text-text-2">
+              {t("pme.paiement.correction.explique")}
+            </p>
+          ) : null}
 
-                {enCorrection ? (
-                  <p className="text-[13px] leading-[1.45] text-text-2">
-                    {t("pme.paiement.correction.explique")}
-                  </p>
-                ) : null}
-
-                {/* 1 · combien */}
-                <div className="grid gap-2">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t("pme.paiement.temps.combien")}
-                  </p>
-                  {/* En correction, la borne dit le vrai plafond ; « reste 0 » trompait. */}
-                  {!enCorrection &&
-                  restantMineur !== null &&
-                  payeMineur !== null &&
-                  payeMineur > 0 ? (
-                    <p className="flex items-baseline justify-between gap-3 text-[13px]">
-                      <span className="text-text-2">{t("pme.paiement.reste")}</span>
-                      <span className="num font-medium">{lisible(restantMineur)}</span>
-                    </p>
-                  ) : null}
-                  {enCorrection ? null : (
-                    <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
-                      <button
-                        type="button"
-                        onClick={() => setPartiel(false)}
-                        aria-pressed={partiel === false}
-                        className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                          partiel === false
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-text-2"
-                        }`}
-                      >
-                        {t("pme.paiement.tout")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPartiel(true)}
-                        aria-pressed={partiel === true}
-                        className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                          partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
-                        }`}
-                      >
-                        {t("pme.paiement.partie")}
-                      </button>
-                    </div>
-                  )}
-                  {partiel ? (
-                    <label className="grid gap-1">
-                      <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={montantSaisi}
-                        onChange={(e) => setMontantSaisi(e.target.value)}
-                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
-                      />
-                    </label>
-                  ) : null}
-                  {/* La borne se dit AVANT d'être refusée par la base. */}
-                  {partiel && plafond !== null ? (
-                    <p className="text-[12.5px] text-signal-warn">
-                      {t("pme.paiement.borne", { montant: `${lisible(plafond)} ${devise}` })}
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* 2 · comment */}
-                <div className="grid gap-2">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t("pme.paiement.temps.comment")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {moyensPayes.map((m) => (
-                      <button
-                        key={m.code}
-                        type="button"
-                        onClick={() => setMoyenChoisi(m.code)}
-                        aria-pressed={moyenChoisi === m.code}
-                        className={`min-h-[44px] rounded-full px-4 text-[14px] font-medium ${
-                          moyenChoisi === m.code
-                            ? "bg-foreground text-background"
-                            : "border border-border hover:bg-accent"
-                        }`}
-                      >
-                        {m.libelle}
-                      </button>
-                    ))}
-                  </div>
-                  {moyenChoisi !== null && exigeUnePreuve(moyenChoisi) ? (
-                    <p className="flex items-center gap-1.5 text-[12.5px] text-text-2">
-                      <Camera className="h-[14px] w-[14px]" aria-hidden />
-                      {t("pme.paiement.preuve.appareil")}
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* 3 · quand, et la référence si le moyen en porte une */}
-                <div className="grid gap-2">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    {t("pme.paiement.temps.quand")}
-                  </p>
-                  <label className="grid gap-1">
-                    <span className="text-[12.5px] text-text-2">{t("pme.paiement.quand")}</span>
-                    <input
-                      type="date"
-                      value={dateDuPaiement}
-                      max={aujourdHui}
-                      onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
-                      className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
-                    />
-                  </label>
-                  {/* Un acompte précède souvent la facture : on le dit, sans bloquer. */}
-                  {dateDeLaPiece && dateDuPaiement < dateDeLaPiece ? (
-                    <p className="text-[12.5px] text-signal-warn">
-                      {t("pme.paiement.avantFacture")}
-                    </p>
-                  ) : null}
-                  {referenceExigee ? (
-                    <label className="grid gap-1">
-                      <span className="text-[12.5px] text-text-2">
-                        {t("pme.paiement.reference")}
-                      </span>
-                      <input
-                        type="text"
-                        value={referenceSaisie}
-                        onChange={(e) => setReferenceSaisie(e.target.value)}
-                        className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-
-                {erreur && erreurDe !== "recu" ? (
-                  <p role="alert" className="text-[12.5px] text-signal-warn">
-                    {erreur}
-                  </p>
-                ) : null}
-                {/* 4 · pourquoi corriger : les motifs d'un règlement, seulement. */}
-                {enCorrection ? (
-                  <div className="grid gap-2">
-                    <p className="text-[12.5px] text-text-2">{t("pme.paiement.pourquoi")}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(motifs.data ?? [])
-                        .filter((m) => m.proposable && m.pour === "reglement")
-                        .map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setMotifChoisi(m.id)}
-                            aria-pressed={motifChoisi === m.id}
-                            className={`min-h-[44px] rounded-full px-4 text-[13.5px] font-medium ${
-                              motifChoisi === m.id
-                                ? "bg-foreground text-background"
-                                : "border border-border hover:bg-accent"
-                            }`}
-                          >
-                            {m.libelle}
-                          </button>
-                        ))}
-                    </div>
-                    {motifQuiRetire ? (
-                      <p className="text-[12.5px] text-text-2">
-                        {t("pme.paiement.correction.retireExplique")}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-
+          {/* 1 · combien */}
+          <div className="grid gap-2">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {t("pme.paiement.temps.combien")}
+            </p>
+            {/* En correction, la borne dit le vrai plafond ; « reste 0 » trompait. */}
+            {!enCorrection && restantMineur !== null && payeMineur !== null && payeMineur > 0 ? (
+              <p className="flex items-baseline justify-between gap-3 text-[13px]">
+                <span className="text-text-2">{t("pme.paiement.reste")}</span>
+                <span className="num font-medium">{lisible(restantMineur)}</span>
+              </p>
+            ) : null}
+            {enCorrection ? null : (
+              <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
                 <button
                   type="button"
-                  disabled={!enregistrable || corriger.isPending}
-                  onClick={() =>
-                    enCorrection ? corriger.mutate() : moyenChoisi && inscrire.mutate(moyenChoisi)
-                  }
-                  className="mb-3 h-[54px] w-full rounded-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-40"
+                  onClick={() => setPartiel(false)}
+                  aria-pressed={partiel === false}
+                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                    partiel === false ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                  }`}
                 >
-                  {inscrire.isPending || corriger.isPending
-                    ? t("common.loading")
-                    : motifQuiRetire
-                      ? t("pme.paiement.correction.retirer")
-                      : enCorrection
-                        ? t("pme.paiement.correction.enregistrer")
-                        : montantAInscrire !== null
-                          ? t("pme.paiement.enregistrer", {
-                              montant: lisible(montantAInscrire),
-                              devise,
-                            })
-                          : t("pme.paiement.enregistrerSansMontant")}
+                  {t("pme.paiement.tout")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartiel(true)}
+                  aria-pressed={partiel === true}
+                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
+                    partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                  }`}
+                >
+                  {t("pme.paiement.partie")}
                 </button>
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+            )}
+            {partiel ? (
+              <label className="grid gap-1">
+                <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={montantSaisi}
+                  onChange={(e) => setMontantSaisi(e.target.value)}
+                  className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
+                />
+              </label>
+            ) : null}
+            {/* La borne se dit AVANT d'être refusée par la base. */}
+            {partiel && plafond !== null ? (
+              <p className="text-[12.5px] text-signal-warn">
+                {t("pme.paiement.borne", { montant: `${lisible(plafond)} ${devise}` })}
+              </p>
+            ) : null}
+          </div>
+
+          {/* 2 · comment */}
+          <div className="grid gap-2">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {t("pme.paiement.temps.comment")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {moyensPayes.map((m) => (
+                <button
+                  key={m.code}
+                  type="button"
+                  onClick={() => setMoyenChoisi(m.code)}
+                  aria-pressed={moyenChoisi === m.code}
+                  className={`min-h-[44px] rounded-full px-4 text-[14px] font-medium ${
+                    moyenChoisi === m.code
+                      ? "bg-foreground text-background"
+                      : "border border-border hover:bg-accent"
+                  }`}
+                >
+                  {m.libelle}
+                </button>
+              ))}
+            </div>
+            {moyenChoisi !== null && exigeUnePreuve(moyenChoisi) ? (
+              <p className="flex items-center gap-1.5 text-[12.5px] text-text-2">
+                <Camera className="h-[14px] w-[14px]" aria-hidden />
+                {t("pme.paiement.preuve.appareil")}
+              </p>
+            ) : null}
+          </div>
+
+          {/* 3 · quand, et la référence si le moyen en porte une */}
+          <div className="grid gap-2">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {t("pme.paiement.temps.quand")}
+            </p>
+            <label className="grid gap-1">
+              <span className="text-[12.5px] text-text-2">{t("pme.paiement.quand")}</span>
+              <input
+                type="date"
+                value={dateDuPaiement}
+                max={aujourdHui}
+                onChange={(e) => setDateDuPaiement(e.target.value || aujourdHui)}
+                className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
+              />
+            </label>
+            {/* Un acompte précède souvent la facture : on le dit, sans bloquer. */}
+            {dateDeLaPiece && dateDuPaiement < dateDeLaPiece ? (
+              <p className="text-[12.5px] text-signal-warn">{t("pme.paiement.avantFacture")}</p>
+            ) : null}
+            {referenceExigee ? (
+              <label className="grid gap-1">
+                <span className="text-[12.5px] text-text-2">{t("pme.paiement.reference")}</span>
+                <input
+                  type="text"
+                  value={referenceSaisie}
+                  onChange={(e) => setReferenceSaisie(e.target.value)}
+                  className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[15px]"
+                />
+              </label>
+            ) : null}
+          </div>
+
+          {erreur && erreurDe !== "recu" ? (
+            <p role="alert" className="text-[12.5px] text-signal-warn">
+              {erreur}
+            </p>
+          ) : null}
+          {/* 4 · pourquoi corriger : les motifs d'un règlement, seulement. */}
+          {enCorrection ? (
+            <div className="grid gap-2">
+              <p className="text-[12.5px] text-text-2">{t("pme.paiement.pourquoi")}</p>
+              <div className="flex flex-wrap gap-2">
+                {(motifs.data ?? [])
+                  .filter((m) => m.proposable && m.pour === "reglement")
+                  .map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMotifChoisi(m.id)}
+                      aria-pressed={motifChoisi === m.id}
+                      className={`min-h-[44px] rounded-full px-4 text-[13.5px] font-medium ${
+                        motifChoisi === m.id
+                          ? "bg-foreground text-background"
+                          : "border border-border hover:bg-accent"
+                      }`}
+                    >
+                      {m.libelle}
+                    </button>
+                  ))}
+              </div>
+              {motifQuiRetire ? (
+                <p className="text-[12.5px] text-text-2">
+                  {t("pme.paiement.correction.retireExplique")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            disabled={!enregistrable || corriger.isPending}
+            onClick={() =>
+              enCorrection ? corriger.mutate() : moyenChoisi && inscrire.mutate(moyenChoisi)
+            }
+            className="mb-3 h-[54px] w-full rounded-full bg-foreground text-[16px] font-semibold text-background disabled:opacity-40"
+          >
+            {inscrire.isPending || corriger.isPending
+              ? t("common.loading")
+              : motifQuiRetire
+                ? t("pme.paiement.correction.retirer")
+                : enCorrection
+                  ? t("pme.paiement.correction.enregistrer")
+                  : montantAInscrire !== null
+                    ? t("pme.paiement.enregistrer", {
+                        montant: lisible(montantAInscrire),
+                        devise,
+                      })
+                    : t("pme.paiement.enregistrerSansMontant")}
+          </button>
+        </FeuilleDuBas>
+      ) : null}
     </section>
   );
 }

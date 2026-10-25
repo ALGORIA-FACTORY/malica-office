@@ -57,6 +57,12 @@ export interface ElementDeFile {
    * et non arriver orpheline.
    */
   sourcePieceId?: string | null;
+  /**
+   * Pour un reçu : les règlements qu'il atteste. Ils voyagent avec lui pour
+   * la même raison que la facture : un reçu produit hors ligne doit savoir,
+   * au retour du réseau, ce qu'il atteste.
+   */
+  paiementsAttestes?: string[] | null;
   nomFichier: string;
   /** En octets — pour le plafond, et pour dire « 1,2 Mo » à l'écran. */
   taille: number;
@@ -80,6 +86,7 @@ export type NouvelElement = Pick<
   | "contentType"
   | "documentKind"
   | "sourcePieceId"
+  | "paiementsAttestes"
   | "nomFichier"
   | "taille"
 >;

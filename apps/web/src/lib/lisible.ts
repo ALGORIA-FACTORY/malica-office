@@ -111,3 +111,15 @@ export function deMois(mois: string, locale: string): string {
   const premiere = mois.trim().charAt(0).toLowerCase();
   return "aàâeéèêiîoôuûy".includes(premiere) ? `d'${mois}` : `de ${mois}`;
 }
+
+/**
+ * Le jour et le mois, en chiffres (« 13/10 ») — d'une date du Socle ou d'un
+ * instant. Lu en UTC, comme `dateEnChiffres`.
+ */
+export function jourEtMois(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
+}

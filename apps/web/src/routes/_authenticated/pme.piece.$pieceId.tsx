@@ -17,6 +17,7 @@ import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { Aide } from "@/components/malica/aide";
+import { PieceQuiAccompagneFiche } from "@/components/malica/piece-qui-accompagne";
 import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import {
@@ -25,7 +26,7 @@ import {
   motifDeLEtat,
   motifDeRefusConnu,
 } from "@/lib/champ-lisible";
-import { montant, quantite } from "@/lib/lisible";
+import { jourEtMois, montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
@@ -41,6 +42,7 @@ import { RAISON_LONGUE } from "@/lib/lecture";
 import {
   avancementDeLaPiece,
   ecritureDeLaPiece,
+  etiquetteDeLecture,
   noteDeSuppression,
   partageeAvecLeCabinet,
   RANG_COMPTEE,
@@ -66,8 +68,28 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: PieceScreen,
+  /*
+   * L'onglet à ouvrir : « Produire un nouveau reçu », depuis la fiche d'un
+   * reçu qui ne compte plus, ouvre la facture sur ses règlements. Un
+   * paramètre inconnu est ignoré, jamais une erreur.
+   */
+  validateSearch: (s: Record<string, unknown>): { onglet?: Onglet } =>
+    ONGLETS.includes(s["onglet"] as Onglet) ? { onglet: s["onglet"] as Onglet } : {},
+  component: PieceScreenDeLaPiece,
 });
+
+const ONGLETS = ["lecture", "reglement", "suivi"] as const;
+type Onglet = (typeof ONGLETS)[number];
+
+/**
+ * Une pièce, un écran : passer d'une pièce à une autre (la mère d'un reçu, le
+ * reçu d'une facture) remonte l'écran, au lieu de garder l'onglet, la feuille
+ * ou l'erreur de la précédente.
+ */
+function PieceScreenDeLaPiece() {
+  const { pieceId } = Route.useParams();
+  return <PieceScreen key={pieceId} />;
+}
 
 /*
  * ================================ LES MOTS DE CET ÉCRAN SONT AU DICTIONNAIRE
@@ -176,7 +198,8 @@ function PieceScreen() {
    * il faut une séparation de section ») : une carte de décision, puis trois
    * onglets — Lecture, Règlement, Suivi — au lieu de quinze blocs empilés.
    */
-  const [onglet, setOnglet] = useState<"lecture" | "reglement" | "suivi">("lecture");
+  const ongletDemande = Route.useSearch().onglet;
+  const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? "lecture");
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   // Le bouton retour ferme d'abord ce qui est ouvert par-dessus la pièce.
   useSuperposition(
@@ -254,6 +277,17 @@ function PieceScreen() {
       void qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     }
   }, [etat.data, attente, qc, pieceId, pme.tenantId]);
+
+  /**
+   * Une pièce qui en ACCOMPAGNE une autre — un reçu, un justificatif — ne se
+   * lit jamais : elle a sa propre fiche (maquette du 25 octobre 2026). La
+   * base dit si c'est le cas ; `null` pour toute autre pièce.
+   */
+  const accompagne = useQuery({
+    queryKey: ["piece-qui-accompagne", pieceId, locale],
+    queryFn: () => office().capture.pieceQuiAccompagne(pieceId, locale),
+    enabled: !lue,
+  });
 
   const ecritures = useQuery({
     queryKey: ["ecritures", pieceId],
@@ -1112,6 +1146,20 @@ function PieceScreen() {
    * l'aperçu de l'appareil photo. Deux gestes seulement — lire, ou retirer
    * et reprendre. Rien ne part tant que la personne n'a pas vu.
    */
+  if (!extraction && accompagne.isPending) {
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  }
+  if (!extraction && accompagne.data) {
+    return (
+      <PieceQuiAccompagneFiche
+        pieceId={pieceId}
+        typeDeDocument={piece.documentKind}
+        donnees={accompagne.data}
+        onAgrandir={() => setPiece(true)}
+      />
+    );
+  }
+
   if (!extraction) {
     return (
       <div className="rg-rise flex flex-col gap-4 px-1 pt-2">
@@ -1847,13 +1895,25 @@ function PieceScreen() {
                 >
                   <span className="bd">
                     <span className="lb">{l.label}</span>
-                    {!confianceConnue ? (
-                      <span className="et">{t("pme.citation.show")}</span>
-                    ) : aVerifier.has(l.champ) ? (
-                      <span className="et am">{t("pme.citation.aVerifier")}</span>
-                    ) : (
-                      <span className="et ok">{t("pme.citation.source")}</span>
-                    )}
+                    {(() => {
+                      // Comptée : la personne a confirmé la lecture (maquette « C »).
+                      switch (
+                        etiquetteDeLecture({
+                          comptee,
+                          confianceConnue,
+                          aVerifier: aVerifier.has(l.champ),
+                        })
+                      ) {
+                        case "confirme":
+                          return <span className="et ok">{t("pme.verifie.confirme")}</span>;
+                        case "inconnue":
+                          return <span className="et">{t("pme.citation.show")}</span>;
+                        case "aVerifier":
+                          return <span className="et am">{t("pme.citation.aVerifier")}</span>;
+                        case "source":
+                          return <span className="et ok">{t("pme.citation.source")}</span>;
+                      }
+                    })()}
                   </span>
                   <span className="vl">{l.valeur ?? "—"}</span>
                   <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
@@ -1871,7 +1931,13 @@ function PieceScreen() {
               ),
             )}
           </div>
-          <p className="f-note">{t("pme.verifie.source")}</p>
+          <p className="f-note">
+            {!comptee
+              ? t("pme.verifie.source")
+              : booked?.bookedAt
+                ? t("pme.verifie.confirmeLe", { date: jourEtMois(booked.bookedAt, locale) })
+                : t("pme.verifie.confirmeSansDate")}
+          </p>
           {articles.length > 0 ? (
             <button type="button" className="f-bouton" onClick={() => setDetail(true)}>
               {t("pme.detail.voir")}

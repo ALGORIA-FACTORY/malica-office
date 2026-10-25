@@ -15,6 +15,7 @@ function ecriture(id: string, lignes: Array<[string, string, string, string]>): 
     status: "booked",
     vivante: true,
     packVersionId: "pack",
+    bookedAt: null,
     lines: lignes.map(([accountCode, libelle, debit, credit], ordinal) => ({
       ordinal,
       accountCode,
