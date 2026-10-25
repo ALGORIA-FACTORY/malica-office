@@ -30,6 +30,7 @@ import type { Requete } from "../db.ts";
 import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
+import { dateDeLaPiece } from "./dates.ts";
 import { referentiel } from "./referentiel.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
@@ -445,6 +446,13 @@ export const capture = {
       if (precisions["document_kind"]) {
         p["document_kind"] = precisions["document_kind"];
       }
+      // La date donnée à la main complète une date non lue — jamais une date
+      // lue. Sans elle, la fiche redemandait la date pour toujours.
+      const date = dateDeLaPiece(
+        p["document_date"] as string | null | undefined,
+        precisions["document_date"],
+      );
+      if (date) p["document_date"] = date;
       return p;
     })();
     return {

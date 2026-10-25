@@ -102,6 +102,7 @@ import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
+import { laReponseAEffaceLaPiece, phraseDeLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -191,7 +192,16 @@ function PmeNotifications() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", pme.tenantId] }),
   });
 
-  const kindLabel = (kind: string) => t(GENRES[kind] ?? "cab.notif.kind.autre");
+  /*
+   * La réponse du cabinet à une demande se dit avec son objet et son verdict
+   * (audit du 25 octobre 2026) : « a répondu » seul ne disait ni oui ni non.
+   */
+  const kindLabel = (kind: string, payload: Record<string, unknown> = {}) =>
+    t(
+      kind === "piece.demande_tranchee"
+        ? phraseDeLaReponse(payload)
+        : (GENRES[kind] ?? "cab.notif.kind.autre"),
+    );
 
   const rows = notifs.data ?? [];
   /** Non lue : elle demande encore quelque chose. C'est une carte. */
@@ -227,7 +237,8 @@ function PmeNotifications() {
     payload: Record<string, unknown>,
   ): { libelle: string; aller: () => void } | null => {
     const pieceId = chaine(payload, "piece_id");
-    if (pieceId) {
+    // Une suppression accordée : la pièce n'existe plus, rien ne s'y ouvre.
+    if (pieceId && !laReponseAEffaceLaPiece(kind, payload)) {
       return {
         libelle: t("pme.notifs.open"),
         aller: () => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } }),
@@ -342,11 +353,11 @@ function PmeNotifications() {
                    * guillemets, comme le dessin la cite. Ailleurs c'est un
                    * sujet ou un nom : il se lit tel quel.
                    */
-                  const cite = n.kind === "piece.retournee";
+                  const cite = n.kind === "piece.retournee" || n.kind === "piece.demande_tranchee";
                   return (
                     <div key={n.id} className="card">
                       <div className="hd">
-                        <b>{kindLabel(n.kind)}</b>
+                        <b>{kindLabel(n.kind, payload)}</b>
                         <span>{instant(n.createdAt)}</span>
                       </div>
                       {detail ? <p>{cite ? `« ${detail} »` : detail}</p> : null}
@@ -443,7 +454,7 @@ function PmeNotifications() {
                             <IconePiece />
                           </i>
                           <span className="bd">
-                            <b>{kindLabel(n.kind)}</b>
+                            <b>{kindLabel(n.kind, payload)}</b>
                             {detail ? <span>{detail}</span> : null}
                           </span>
                           <span className="rt">

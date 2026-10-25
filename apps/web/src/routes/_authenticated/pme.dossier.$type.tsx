@@ -43,6 +43,8 @@ const ETATS: ReadonlyArray<{ etat: Exclude<Etat, "autre">; cle: MessageKey }> = 
 ];
 
 function etatDe(p: PieceLue): Etat {
+  // Un reçu ou un justificatif ne se lit pas : il n'est jamais « non lu ».
+  if (p.accompagne) return "autre";
   if (p.status === "lue" || p.status === "proposee") return "verifier";
   if (p.status === "retournee") return "retour";
   if (p.status === "comptabilisee" || p.status === "supervisee") return "comptabilisee";

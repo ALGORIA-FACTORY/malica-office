@@ -45,6 +45,7 @@ import {
   valeurLisible,
 } from "@/lib/champ-lisible";
 import { toneForStatus } from "@/lib/file-cabinet";
+import { apresLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
@@ -138,6 +139,7 @@ function CabinetReview() {
   // Le motif d'un refus. Exige par la base, et exige ici : un refus sans
   // motif n'apprend rien a celui qui a demande.
   const [noteDeRefus, setNoteDeRefus] = useState<string>("");
+  const [erreurDeReponse, setErreurDeReponse] = useState<string | null>(null);
   // Dans la coque native il n'y a pas de dossier de téléchargements qu'on
   // puisse ouvrir : on dit OÙ le fichier a été écrit. Un bouton qui semble ne
   // rien faire est pire que pas de bouton.
@@ -387,17 +389,41 @@ function CabinetReview() {
   });
 
   const repondre = useMutation({
-    mutationFn: ({ accorde }: { accorde: boolean }) =>
-      office().collab.repondreSurPiece(
+    mutationFn: async ({ accorde }: { accorde: boolean }) => {
+      const objet = demandeEnAttente!;
+      await office().collab.repondreSurPiece(
         pieceId,
-        demandeEnAttente!,
+        objet,
         accorde,
         accorde ? null : noteDeRefus.trim(),
-      ),
-    onSuccess: async () => {
+      );
+      return { objet, accorde };
+    },
+    onMutate: () => setErreurDeReponse(null),
+    onSuccess: async ({ objet, accorde }) => {
       setNoteDeRefus("");
+      /*
+       * UNE PIÈCE EFFACÉE NE SE REGARDE PLUS (audit du 25 octobre 2026).
+       *
+       * La suppression accordée efface la pièce : rester ici montrait une
+       * page fantôme, chaque appel répondant 404. On passe à la suivante de
+       * la file, ou à la file elle-même — AVANT de relire, pour ne pas
+       * redemander ce qui n'existe plus.
+       */
+      const ensuite = apresLaReponse(objet, accorde, suivante?.pieceId ?? null);
+      if (ensuite) {
+        if (ensuite === "file") void navigate({ to: "/cabinet", replace: true });
+        else allerA(ensuite.piece);
+        qc.removeQueries({ queryKey: ["piece", pieceId] });
+      }
       await qc.invalidateQueries();
     },
+    // Un refus de la base se lit ici, sous les boutons qui l'ont provoqué :
+    // l'écran ne disait rien, et le cabinet recliquait.
+    onError: (e: unknown) =>
+      setErreurDeReponse(
+        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
+      ),
   });
 
   const review = useMutation({
@@ -645,6 +671,11 @@ function CabinetReview() {
               {t("cab.demande.refuser")}
             </button>
           </div>
+          {erreurDeReponse ? (
+            <p role="alert" className="mt-2 text-[12px] text-signal-warn">
+              {erreurDeReponse}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

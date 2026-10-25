@@ -3,9 +3,11 @@ import type { Ecriture } from "@malica/socle/ports/repositories";
 
 import {
   avancementDeLaPiece,
+  dateAEnregistrer,
   ecritureDeLaPiece,
   etiquetteDeLecture,
   noteDeSuppression,
+  parcoursDeLaPiece,
   partageeAvecLeCabinet,
   RANG_COMPTEE,
 } from "@/lib/fiche-de-la-piece";
@@ -118,5 +120,72 @@ describe("l'étiquette d'une ligne lue (maquette « C »)", () => {
     expect(etiquetteDeLecture({ comptee: false, confianceConnue: false, aVerifier: true })).toBe(
       "inconnue",
     );
+  });
+});
+
+describe("la date donnée à la main (audit du 25 octobre 2026)", () => {
+  it("garder le jour proposé s'enregistre, même sans l'avoir changé", () => {
+    expect(dateAEnregistrer("2026-10-20", null, null)).toBe("2026-10-20");
+  });
+
+  it("n'écrit pas deux fois la même date, ni ce qui est en train de s'écrire", () => {
+    expect(dateAEnregistrer("2026-10-20", "2026-10-20", null)).toBeNull();
+    expect(dateAEnregistrer("2026-10-20", null, "2026-10-20")).toBeNull();
+    expect(dateAEnregistrer("2026-10-21", "2026-10-20", null)).toBe("2026-10-21");
+  });
+
+  it("une saisie incomplète n'écrit rien", () => {
+    expect(dateAEnregistrer("", null, null)).toBeNull();
+    expect(dateAEnregistrer("2026-10", null, null)).toBeNull();
+  });
+});
+
+describe("la pastille et le parcours disent la même chose (audit du 25 octobre 2026)", () => {
+  const vivante = ecriture("v", { vivante: true });
+  const etatDe = (p: ReturnType<typeof parcoursDeLaPiece>, cle: string) =>
+    p.etapes.find((e) => e.cle === cle)?.etat;
+
+  it("une pièce comptée : « Comptabilisée », et « Comptée » est FAITE, pas en cours", () => {
+    for (const p of [parcoursDeLaPiece("comptabilisee", null), parcoursDeLaPiece("lue", vivante)]) {
+      expect(p.pastille.cle).toBe("pme.dossier.etat.comptabilisee");
+      expect(p.derniere).toBe("comptee");
+      expect(etatDe(p, "comptee")).toBe("faite");
+      expect(etatDe(p, "vue")).toBe("courante");
+      expect(p.prochaine).toBe("vue");
+    }
+  });
+
+  it("une pièce supervisée : la pastille suit l'étape 5", () => {
+    const p = parcoursDeLaPiece("supervisee", vivante);
+    expect(p.pastille).toEqual({ cle: "pme.status.supervisee", ton: "ok" });
+    expect(p.derniere).toBe("vue");
+    expect(etatDe(p, "vue")).toBe("faite");
+    expect(etatDe(p, "declaree")).toBe("attente");
+  });
+
+  it("une pièce lue attend sa confirmation : ambre des deux côtés", () => {
+    const p = parcoursDeLaPiece("lue", null);
+    expect(p.pastille.ton).toBe("am");
+    expect(p.derniere).toBe("lue");
+    expect(etatDe(p, "confirmee")).toBe("courante");
+  });
+
+  it("une seule étape au plus est en cours, et jamais avant une étape faite", () => {
+    const statuts = [
+      "capturee",
+      "lue",
+      "proposee",
+      "comptabilisee",
+      "supervisee",
+      "retournee",
+    ] as const;
+    for (const status of statuts)
+      for (const e of [null, vivante]) {
+        const p = parcoursDeLaPiece(status, e);
+        const etats = p.etapes.map((x) => x.etat);
+        expect(etats.filter((x) => x === "courante").length).toBeLessThanOrEqual(1);
+        expect(etats.join(",")).toMatch(/^(faite,)*(courante,)?(attente,?)*$/);
+        expect(etatDe(p, p.derniere)).toBe("faite");
+      }
   });
 });

@@ -24,3 +24,23 @@ export function enDate(d: unknown): string | null {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+const JOUR_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * La date d'une pièce : celle LUE sur le document, à défaut celle que la
+ * personne a donnée (la dernière précision `document_date`), sinon rien.
+ *
+ * Une date lue n'est jamais remplacée ; la précision ne complète que ce qui
+ * manque. Une seule règle pour la fiche, le jugement et la proposition —
+ * trois copies divergeaient : la fiche ignorait la précision et redemandait
+ * la date pour toujours (audit du 25 octobre 2026).
+ */
+export function dateDeLaPiece(
+  lue: string | null | undefined,
+  precisee: string | null | undefined,
+): string | null {
+  if (lue && JOUR_ISO.test(lue)) return lue;
+  if (precisee && JOUR_ISO.test(precisee)) return precisee;
+  return null;
+}
