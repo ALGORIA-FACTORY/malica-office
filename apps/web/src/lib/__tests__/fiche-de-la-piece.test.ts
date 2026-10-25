@@ -77,23 +77,22 @@ describe("l'avancement : le parcours et « comptée » ne se contredisent jamais
 
 describe("la note de suppression", () => {
   it("se tait sur une pièce rappelée au privé, même si une demande reste en attente", () => {
-    expect(noteDeSuppression("demandee", "personnel", false)).toBeNull();
-    expect(noteDeSuppression("refusee", "personnel", false)).toBeNull();
-    expect(noteDeSuppression("demandee", "entite", false)).toBeNull();
+    expect(noteDeSuppression("demandee", "personnel")).toBeNull();
+    expect(noteDeSuppression("refusee", "personnel")).toBeNull();
+    expect(noteDeSuppression("demandee", "entite")).toBeNull();
   });
 
   it("parle quand la pièce est chez le cabinet", () => {
-    expect(noteDeSuppression("demandee", "partage", false)).toBe("demandee");
-    expect(noteDeSuppression("refusee", "partage", false)).toBe("refusee");
-    expect(noteDeSuppression("demandee", "entite", true)).toBe("demandee");
-    expect(noteDeSuppression(null, "partage", false)).toBeNull();
-    expect(noteDeSuppression("accordee", "partage", false)).toBeNull();
+    expect(noteDeSuppression("demandee", "partage")).toBe("demandee");
+    expect(noteDeSuppression("refusee", "partage")).toBe("refusee");
+    expect(noteDeSuppression("demandee", "entite")).toBeNull();
+    expect(noteDeSuppression(null, "partage")).toBeNull();
+    expect(noteDeSuppression("accordee", "partage")).toBeNull();
   });
 
   it("suit la même règle que le bouton « demander la suppression »", () => {
-    expect(partageeAvecLeCabinet("partage", false)).toBe(true);
-    expect(partageeAvecLeCabinet("entite", true)).toBe(true);
-    expect(partageeAvecLeCabinet("entite", false)).toBe(false);
-    expect(partageeAvecLeCabinet("personnel", true)).toBe(false);
+    expect(partageeAvecLeCabinet("partage")).toBe(true);
+    expect(partageeAvecLeCabinet("entite")).toBe(false);
+    expect(partageeAvecLeCabinet("personnel")).toBe(false);
   });
 });

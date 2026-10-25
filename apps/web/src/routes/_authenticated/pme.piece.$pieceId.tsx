@@ -1275,7 +1275,7 @@ function PieceScreen() {
    */
   const role = acces.data?.role ?? null;
   const siege = role === "collaborateur";
-  const noteSuppression = noteDeSuppression(demandeDeSuppression, vis, siege);
+  const noteSuppression = noteDeSuppression(demandeDeSuppression, vis);
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -2281,7 +2281,7 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {partageeAvecLeCabinet(vis, siege) && !demandeDeSuppression ? (
+              {partageeAvecLeCabinet(vis) && !demandeDeSuppression ? (
                 /* Une demande déjà inscrite ne se redemande pas. */
                 <button
                   type="button"

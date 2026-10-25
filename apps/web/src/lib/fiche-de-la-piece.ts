@@ -59,11 +59,12 @@ export function avancementDeLaPiece(
 }
 
 /**
- * La pièce est entre les mains du cabinet : partagée, ou — vue du siège —
- * versée à la société. C'est là seulement qu'une suppression se DEMANDE.
+ * La pièce est entre les mains du cabinet : partagée. C'est là seulement
+ * qu'une suppression se DEMANDE — `piece_demander` refuse toute autre pièce,
+ * et un bouton qui ne peut qu'échouer ne se montre pas.
  */
-export function partageeAvecLeCabinet(vis: Visibility, siege: boolean): boolean {
-  return vis === "partage" || (vis === "entite" && siege);
+export function partageeAvecLeCabinet(vis: Visibility): boolean {
+  return vis === "partage";
 }
 
 /**
@@ -76,8 +77,7 @@ export function partageeAvecLeCabinet(vis: Visibility, siege: boolean): boolean 
 export function noteDeSuppression(
   fait: string | null,
   vis: Visibility,
-  siege: boolean,
 ): "demandee" | "refusee" | null {
-  if (!partageeAvecLeCabinet(vis, siege)) return null;
+  if (!partageeAvecLeCabinet(vis)) return null;
   return fait === "demandee" || fait === "refusee" ? fait : null;
 }
