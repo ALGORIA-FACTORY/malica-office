@@ -16,6 +16,8 @@
  */
 import { files } from "@/capabilities/files";
 import { vidage } from "@/lib/hors-ligne";
+import { ErreurReseau } from "@/lib/transport/erreurs";
+import { office } from "@/verticals/malica-office/composition";
 import type { Visibility } from "@malica/socle/ports/repositories";
 
 /** L'identifiant de la nouvelle pièce, ou `null` si l'appareil a été refermé ou si elle attend le réseau. */
@@ -36,6 +38,12 @@ export async function photographierUnePreuve(p: {
    * la file font `?? null` : un oubli ne lève rien, la pièce naît orpheline.
    */
   sourcePieceId: string;
+  /**
+   * Remplacer une photo DÉTRUIT l'ancienne : on n'y va qu'avec la nouvelle
+   * arrivée, octets compris. Sans dépôt confirmé dans le délai, la nouvelle
+   * est abandonnée (file et pièce) et l'ancienne reste — `null`.
+   */
+  depotExige?: boolean;
 }): Promise<string | null> {
   const [pris] = await files.takePhoto();
   if (!pris) return null;
@@ -53,6 +61,17 @@ export async function photographierUnePreuve(p: {
     },
     pris.blob,
   );
-  const element = await vidage().attendre(cle, 8_000);
-  return element?.pieceId ?? null;
+  if (!p.depotExige) {
+    const element = await vidage().attendre(cle, 8_000);
+    return element?.pieceId ?? null;
+  }
+  const element = await vidage().attendre(cle, 30_000, "deposee");
+  if (element && (element.etat === "deposee" || element.etat === "lecture_demandee"))
+    return element.pieceId;
+  await vidage().abandonner(cle);
+  if (element?.pieceId)
+    await office()
+      .capture.supprimer(element.pieceId)
+      .catch(() => undefined);
+  throw new ErreurReseau("hors_ligne");
 }

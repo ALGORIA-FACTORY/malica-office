@@ -77,6 +77,34 @@ describe("un dépôt en ligne", () => {
     expect(await depot.lister()).toEqual([]);
   });
 
+  it("un dépôt refusé parce que la pièce est déjà scellée (409) est un dépôt arrivé", async () => {
+    // Même clé rejouée, ou reçu regénéré pour les mêmes règlements : les octets
+    // qui font foi sont déjà chez l'API. L'élément ne reste pas en échec.
+    const depot = depotMemoire();
+    const r = ports({
+      deposerOctets: () => new ErreurApi("le contenu de cette pièce est scellé", 409),
+    });
+    const v = creerVidage({ depot, ports: r.ports, enLigne: () => true });
+    const cle = await v.deposer(
+      { ...ENTREE, cle: "scelle", documentKind: "recu_de_paiement" },
+      octets(),
+    );
+    const arrivee = await v.attendre(cle, 1000, "deposee");
+    expect(arrivee).toMatchObject({ pieceId: "piece-scelle", etat: "deposee" });
+    await v.vider();
+    expect(await depot.lister()).toEqual([]);
+  });
+
+  it("attendre le dépôt ne conclut pas sur une pièce enregistrée mais encore vide", async () => {
+    const depot = depotMemoire();
+    const r = ports({ deposerOctets: () => new ErreurReseau("injoignable") });
+    const v = creerVidage({ depot, ports: r.ports, enLigne: () => true });
+    const cle = await v.deposer({ ...ENTREE, cle: "vide" }, octets());
+    const arrivee = await v.attendre(cle, 300, "deposee");
+    expect(arrivee?.pieceId).toBe("piece-vide");
+    expect(arrivee?.etat).toBe("enregistree");
+  });
+
   it("un reçu que Malica vient de fabriquer ne repart PAS en lecture", async () => {
     /*
      * 13 octobre 2026. Trois reçus se sont retrouvés en base classés

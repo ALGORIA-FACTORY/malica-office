@@ -53,8 +53,16 @@ export interface Vidage {
   deposer(entree: Omit<NouvelElement, "taille">, octets: Blob): Promise<string>;
   /** Une passe sur tout ce qui peut partir. Vol unique. */
   vider(): Promise<void>;
-  /** Attend que l'élément soit arrivé chez l'API, ou que le délai passe. */
-  attendre(cle: string, delaiMs: number): Promise<ElementDeFile | null>;
+  /**
+   * Attend que l'élément soit arrivé chez l'API, ou que le délai passe.
+   * `jusqua: "deposee"` attend aussi ses OCTETS : un geste qui détruit
+   * l'ancien document ne part pas sur une pièce encore vide.
+   */
+  attendre(
+    cle: string,
+    delaiMs: number,
+    jusqua?: "enregistree" | "deposee",
+  ): Promise<ElementDeFile | null>;
   reessayer(cle: string): Promise<void>;
   abandonner(cle: string): Promise<void>;
   elements(): Promise<ElementDeFile[]>;
@@ -138,7 +146,17 @@ export function creerVidage(deps: {
           await appliquer(e, { type: "echec", nature: "refus", message: "file.octets_perdus" });
           return true;
         }
-        await deps.ports.deposerOctets(e.pieceId!, octets, e.contentType);
+        try {
+          await deps.ports.deposerOctets(e.pieceId!, octets, e.contentType);
+        } catch (erreur) {
+          /*
+           * 409 : la pièce est déjà scellée — ses octets sont déjà chez
+           * l'API. C'est le cas d'un dépôt rejoué (même clé, réponse perdue)
+           * ou d'un reçu regénéré pour les mêmes règlements : le contenu qui
+           * fait foi est celui déjà scellé, et l'élément est arrivé.
+           */
+          if (!(erreur instanceof ErreurApi && erreur.statut === 409)) throw erreur;
+        }
         await appliquer(e, { type: "deposee" });
         return true;
       }
@@ -234,9 +252,14 @@ export function creerVidage(deps: {
 
     vider,
 
-    attendre(cle, delaiMs) {
+    attendre(cle, delaiMs, jusqua = "enregistree") {
       return new Promise((resoudre) => {
         let fini = false;
+        let vu: ElementDeFile | null = null;
+        const arrive = (e: ElementDeFile) =>
+          jusqua === "deposee"
+            ? e.etat === "deposee" || e.etat === "lecture_demandee"
+            : e.pieceId !== null;
         const conclure = (e: ElementDeFile | null) => {
           if (fini) return;
           fini = true;
@@ -246,9 +269,10 @@ export function creerVidage(deps: {
         };
         const examiner = (elements: ElementDeFile[]) => {
           const e = elements.find((x) => x.cle === cle);
-          // Purgé : la pièce est partie et sa lecture demandée — c'est arrivé.
-          if (!e) conclure(null);
-          else if (e.pieceId !== null || e.etat === "echec_definitif") conclure(e);
+          // Purgé : la pièce est partie, octets compris — c'est arrivé.
+          if (!e) conclure(jusqua === "deposee" && vu ? { ...vu, etat: "deposee" } : vu);
+          else if (arrive(e) || e.etat === "echec_definitif") conclure(e);
+          else vu = e;
         };
         const desabonner = (() => {
           abonnes.add(examiner);

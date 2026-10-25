@@ -437,7 +437,7 @@ export function CommentCEstPaye({
            * rejoué depuis la file, donnent le même reçu et non deux
            * (audit du 25 octobre 2026). Un règlement de plus fait un autre reçu.
            */
-          cle: cleDuRecu(
+          cle: await cleDuRecu(
             pieceId,
             attestes.map((p) => p.id),
           ),

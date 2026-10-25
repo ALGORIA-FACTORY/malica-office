@@ -127,7 +127,18 @@ export function repriseRefusee(f: Pick<PieceQuiAccompagne, "vis">): MessageKey |
  * Deux appuis sur « Générer le reçu », ou un dépôt rejoué depuis la file hors
  * ligne, donnent la même clé, donc le même reçu (la base rend celui qui
  * existe). Un règlement de plus, ou un de moins, fait un autre reçu.
+ *
+ * Longueur FIXE : la file de l'application native en fait un nom de fichier,
+ * et six règlements concaténés dépassaient les 255 octets permis.
  */
-export function cleDuRecu(pieceId: string, paiements: ReadonlyArray<string>): string {
-  return `recu:${pieceId}:${[...paiements].sort().join(",")}`;
+export async function cleDuRecu(
+  pieceId: string,
+  paiements: ReadonlyArray<string>,
+): Promise<string> {
+  const canon = [...paiements].sort().join(",");
+  const empreinte = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canon)),
+  );
+  const hex = Array.from(empreinte.slice(0, 16), (o) => o.toString(16).padStart(2, "0")).join("");
+  return `recu-${pieceId}-${hex}`;
 }

@@ -131,9 +131,16 @@ describe("reprendre la photo", () => {
 });
 
 describe("la clé d'un reçu", () => {
-  it("ne dépend que de la facture et des règlements attestés, pas de leur ordre", () => {
-    expect(cleDuRecu("f", ["b", "a"])).toBe(cleDuRecu("f", ["a", "b"]));
-    expect(cleDuRecu("f", ["a"])).not.toBe(cleDuRecu("f", ["a", "b"]));
-    expect(cleDuRecu("f", ["a"])).not.toBe(cleDuRecu("g", ["a"]));
+  it("ne dépend que de la facture et des règlements attestés, pas de leur ordre", async () => {
+    expect(await cleDuRecu("f", ["b", "a"])).toBe(await cleDuRecu("f", ["a", "b"]));
+    expect(await cleDuRecu("f", ["a"])).not.toBe(await cleDuRecu("f", ["a", "b"]));
+    expect(await cleDuRecu("f", ["a"])).not.toBe(await cleDuRecu("g", ["a"]));
+  });
+
+  it("garde une longueur fixe, même pour six règlements (nom de fichier sur Android)", async () => {
+    const id = "6a2d49aa-3c67-4033-8b3d-ef6995c63752";
+    const six = Array.from({ length: 6 }, (_, i) => `${id.slice(0, -1)}${i}`);
+    expect((await cleDuRecu(id, six)).length).toBe((await cleDuRecu(id, [id])).length);
+    expect((await cleDuRecu(id, six)).length).toBeLessThan(120);
   });
 });
