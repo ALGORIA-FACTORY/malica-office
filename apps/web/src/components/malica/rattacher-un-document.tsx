@@ -66,7 +66,12 @@ export function RattacherUnDocument({
       setErreur(null);
       setCherche("");
       onFermer();
-      await qc.invalidateQueries({ queryKey: ["rattachees", pieceId] });
+      // La pièce elle-même aussi : un retour du cabinet qui demandait ce
+      // document se lit désormais « fait » (25 octobre 2026).
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["rattachees", pieceId] }),
+        qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
+      ]);
     },
     onError: (e: unknown) =>
       setErreur(texteDeLErreur(e, "components/malica/rattacher-un-document", t("common.error"))),

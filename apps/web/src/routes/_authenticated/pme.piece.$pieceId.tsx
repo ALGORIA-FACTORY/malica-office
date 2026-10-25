@@ -19,6 +19,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { Aide } from "@/components/malica/aide";
 import { PieceQuiAccompagneFiche } from "@/components/malica/piece-qui-accompagne";
 import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
+import { CarteDuRetour } from "@/components/malica/retour-du-cabinet";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import {
   libelleDuChamp,
@@ -28,7 +29,7 @@ import {
 } from "@/lib/champ-lisible";
 import { jourEtMois, montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
-import type { Citation } from "@malica/socle/ports/repositories";
+import type { Citation, GesteDeRetour } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
 import { estIntrouvable, texteDeLErreur } from "@/lib/erreur-lisible";
@@ -308,6 +309,16 @@ function PieceScreen() {
   const rattachees = useQuery({
     queryKey: ["rattachees", pieceId],
     queryFn: () => office().capture.piecesRattachees(pieceId),
+  });
+  /*
+   * Ce que la comptabilité a dit en retournant la pièce : motif, note, geste,
+   * et si le geste est fait. Sous la clé de la pièce : tout ce qui la relit
+   * (rattacher, préciser la date, répondre) relit aussi le retour.
+   */
+  const retour = useQuery({
+    queryKey: ["piece", pieceId, "retour", locale],
+    queryFn: () => office().capture.retourDeLaPiece(pieceId, locale),
+    enabled: dossier.data?.piece.status === "retournee",
   });
   /*
    * Le nom de l'émetteur des documents rattachés : la lecture que la
@@ -1539,13 +1550,28 @@ function PieceScreen() {
    * geste n'est perdu : chacun a aussi sa place dans un onglet.
    */
   const pastille = parcours.pastille;
+  /*
+   * Retournée par la comptabilité, pas encore comptée : l'étape en cours est
+   * la confirmation, et elle se dit « À reprendre » (maquette du 25 octobre).
+   */
+  const retourEnCours = piece.status === "retournee" && !comptee ? (retour.data ?? null) : null;
+  const indexAReprendre = retourEnCours ? etapes.findIndex((e) => e.cle === "confirmee") : -1;
   // Le parcours nomme l'étape ATTEINTE — celle de la pastille —, puis la suivante.
-  const indexCourant = Math.max(
-    0,
-    etapes.findIndex((e) => e.cle === parcours.derniere),
-  );
-  const courante = etapes[indexCourant];
-  const suivante = etapes.find((e) => e.cle === parcours.prochaine) ?? null;
+  const indexCourant =
+    indexAReprendre >= 0
+      ? indexAReprendre
+      : Math.max(
+          0,
+          etapes.findIndex((e) => e.cle === parcours.derniere),
+        );
+  const courante =
+    indexAReprendre >= 0
+      ? { ...etapes[indexAReprendre]!, label: t("pme.parcours.aReprendre") }
+      : etapes[indexCourant];
+  const suivante =
+    indexAReprendre >= 0
+      ? (etapes[indexAReprendre + 1] ?? null)
+      : (etapes.find((e) => e.cle === parcours.prochaine) ?? null);
   const aTransmettre =
     Boolean(cabinet.data) && piece.vis !== "partage" && !piece.gardeeLe && !siege;
   const resteAPayer = comptee && resteMineur !== null && resteMineur > 0;
@@ -1561,6 +1587,29 @@ function PieceScreen() {
     setOnglet(o);
     document.getElementById("onglets-de-la-piece")?.scrollIntoView({ behavior: "smooth" });
   };
+
+  /*
+   * Le geste d'un retour, branché sur ce qui existe déjà sur la fiche : la
+   * feuille « Rattacher un document », l'onglet Lecture pour la date, le
+   * Suivi pour la demande de suppression, le Règlement. « Répondre » est
+   * tenu par la carte elle-même.
+   */
+  const faireLeGesteDuRetour = (geste: GesteDeRetour) => {
+    if (
+      geste === "joindre_document" ||
+      geste === "joindre_facture_conforme" ||
+      geste === "reprendre_photo"
+    ) {
+      allerA("suivi");
+      setRattacherOuvert(true);
+    } else if (geste === "corriger_date") allerA("lecture");
+    else if (geste === "voir_reglement") allerA("reglement");
+    else if (geste === "demander_suppression") allerA("suivi");
+  };
+  const gesteAvecPhoto = (geste: GesteDeRetour) =>
+    geste === "joindre_document" ||
+    geste === "joindre_facture_conforme" ||
+    geste === "reprendre_photo";
 
   type Geste = { libelle: string; action: () => void; principal?: boolean; eteint?: boolean };
   const decision: {
@@ -1827,41 +1876,52 @@ function PieceScreen() {
       </div>
 
       {/* ── 2 · LA décision du moment ─────────────────────────────────── */}
-      <div className={`f-dec ${decision.ton}`}>
-        <div className="f-dec-tete">
-          <MalicaAvatar size={44} alt="Malica" rond />
-          <div>
-            <p className="f-dec-titre">
-              {decision.titre}
-              <Aide
-                titre={t("pme.piece.revenir")}
-                paragraphes={[
-                  ...(decision.sous ? [{ texte: decision.sous }] : []),
-                  { texte: t("pme.piece.foot") },
-                ]}
-              />
-            </p>
-            {decision.sous && decision.gestes.length === 0 ? (
-              <p className="f-dec-sous">{decision.sous}</p>
-            ) : null}
+      {retourEnCours ? (
+        <CarteDuRetour
+          pieceId={pieceId}
+          retour={retourEnCours}
+          onGeste={() => faireLeGesteDuRetour(retourEnCours.geste)}
+          onPhotographier={gesteAvecPhoto(retourEnCours.geste) ? pme.ouvrirScanner : null}
+          onVoirLeFait={() => allerA("suivi")}
+          renvoyer={{ action: () => confirm.mutate(), enCours: confirm.isPending }}
+        />
+      ) : (
+        <div className={`f-dec ${decision.ton}`}>
+          <div className="f-dec-tete">
+            <MalicaAvatar size={44} alt="Malica" rond />
+            <div>
+              <p className="f-dec-titre">
+                {decision.titre}
+                <Aide
+                  titre={t("pme.piece.revenir")}
+                  paragraphes={[
+                    ...(decision.sous ? [{ texte: decision.sous }] : []),
+                    { texte: t("pme.piece.foot") },
+                  ]}
+                />
+              </p>
+              {decision.sous && decision.gestes.length === 0 ? (
+                <p className="f-dec-sous">{decision.sous}</p>
+              ) : null}
+            </div>
           </div>
+          {decision.gestes.length > 0 ? (
+            <div className={decision.gestes.length > 1 ? "f-dec-gestes deux" : "f-dec-gestes"}>
+              {decision.gestes.map((g) => (
+                <button
+                  key={g.libelle}
+                  type="button"
+                  className={g.principal ? "pr" : undefined}
+                  disabled={g.eteint}
+                  onClick={g.action}
+                >
+                  {g.libelle}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-        {decision.gestes.length > 0 ? (
-          <div className={decision.gestes.length > 1 ? "f-dec-gestes deux" : "f-dec-gestes"}>
-            {decision.gestes.map((g) => (
-              <button
-                key={g.libelle}
-                type="button"
-                className={g.principal ? "pr" : undefined}
-                disabled={g.eteint}
-                onClick={g.action}
-              >
-                {g.libelle}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      )}
 
       {error ? (
         <div className="rev">
@@ -1876,8 +1936,8 @@ function PieceScreen() {
       {/* ── 3 · où elle en est ────────────────────────────────────────── */}
       <div className="f-av">
         <div className="barres" aria-hidden>
-          {etapes.map((e) => (
-            <i key={e.cle} className={e.etat} />
+          {etapes.map((e, i) => (
+            <i key={e.cle} className={i === indexAReprendre ? "courante az" : e.etat} />
           ))}
         </div>
         <p>

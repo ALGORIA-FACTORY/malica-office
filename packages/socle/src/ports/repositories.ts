@@ -1120,6 +1120,10 @@ export interface CaptureRepository {
    * La fiche d'une pièce qui en ACCOMPAGNE une autre — un reçu produit par
    * Malica, le justificatif d'un règlement —, ou `null` pour toute autre pièce.
    */
+  /** Le retour du cabinet sur cette pièce, s'il y en a un. */
+  retourDeLaPiece(pieceId: string, locale: string): Promise<RetourDuCabinet | null>;
+  /** Répondre au cabinet sur une pièce transmise. */
+  repondreAuCabinet(pieceId: string, texte: string): Promise<void>;
   pieceQuiAccompagne(pieceId: string, locale: string): Promise<PieceQuiAccompagne | null>;
   /** Rattacher un justificatif à un autre règlement sans preuve du dossier. */
   deplacerJustificatif(pieceId: string, paiementId: string): Promise<void>;
@@ -1350,12 +1354,36 @@ export interface OfficeRepository {
 // --------------------------------------------------------------- supervision
 export type ReviewOutcome = "valide" | "retourne";
 
+/** Le geste qu'un motif de retour demande au client (ref.rejet_motifs.geste). */
+export type GesteDeRetour =
+  | "joindre_document"
+  | "joindre_facture_conforme"
+  | "reprendre_photo"
+  | "corriger_date"
+  | "repondre"
+  | "demander_suppression"
+  | "voir_reglement";
+
 export interface RejetMotif {
   id: string;
   code: string;
   label: string;
   severity: string;
   requiresNote: boolean;
+  /** Ce que le client devra faire : le référentiel le dit, l'écran le montre. */
+  geste: GesteDeRetour;
+}
+
+/** Un retour du cabinet, tel que la PME le lit sur sa pièce. */
+export interface RetourDuCabinet {
+  le: string;
+  note: string | null;
+  motif: string;
+  motifLibelle: string;
+  geste: GesteDeRetour;
+  cabinet: string | null;
+  /** Le geste demandé est fait : une preuve postérieure au retour existe. */
+  fait: boolean;
 }
 
 export interface ClientSummary {
@@ -1453,6 +1481,10 @@ export interface SupervisionRepository {
     motifId?: string | null;
     note?: string | null;
   }): Promise<string | null>;
+  /** Retourner une pièce transmise pas encore inscrite (motif gouverné, note). */
+  retourner(input: { pieceId: string; motifId: string; note?: string | null }): Promise<void>;
+  /** Relancer le client sur une pièce transmise qu'il n'a pas confirmée. */
+  demanderConfirmation(pieceId: string): Promise<void>;
   auditForPiece(pieceId: string): Promise<AuditEntry[]>;
 }
 
