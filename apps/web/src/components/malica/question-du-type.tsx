@@ -117,9 +117,7 @@ export function QuestionDuType({
               data-teinte={d.teinte}
               aria-pressed={sortie.mode === "correction" ? d.code === dossierActuel : undefined}
               onClick={() => onRepondre(typePourLeDossier(d, actuel, types))}
-              className={`tuile-dossier relative flex min-h-[104px] flex-col items-start justify-between gap-3 overflow-hidden rounded-[18px] p-3.5 text-start text-[16px] font-extrabold leading-tight ${
-                d.code === dossierActuel ? "ring-2 ring-foreground" : ""
-              }`}
+              className="tuile-dossier relative flex min-h-[104px] flex-col items-start justify-between gap-3 overflow-hidden rounded-[18px] p-3.5 text-start text-[16px] font-extrabold leading-tight"
             >
               <span aria-hidden className="ini">
                 {d.libelle.slice(0, 1)}

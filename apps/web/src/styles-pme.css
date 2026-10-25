@@ -1088,6 +1088,8 @@
 [data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv b{color:var(--tx)}
 /* La tuile de la capture : la même pochette, en petit. */
 [data-surface="pme"] .tuile-dossier{background:var(--pf);color:var(--pe);border:0;cursor:pointer}
+/* Le dossier où la pièce se trouve déjà, en correction. */
+[data-surface="pme"] .tuile-dossier[aria-pressed="true"]{outline:2px solid var(--tx);outline-offset:2px}
 [data-surface="pme"] .tuile-dossier .ini{position:absolute;inset-inline-end:-.5rem;top:.375rem;font-size:4rem;font-weight:800;letter-spacing:-.06em;line-height:1;opacity:.12}
 [data-surface="pme"] .tuile-dossier .ex{position:relative;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
 [data-surface="pme"] [data-ecran="accueil"] .recentes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
