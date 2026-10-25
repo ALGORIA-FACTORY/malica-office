@@ -197,6 +197,51 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
     assert.ok(!transmises.some((x) => x.pieceId === autre), "retournée : hors déclaration");
   });
 
+  it("la TVA d'une facture se range au mois de son écriture, des deux côtés, même transmise plus tard", async () => {
+    const sept = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
+                                     document_kind, document_kind_statut, transmise_le)
+         values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,
+        [pme, `essai/${marque}-sept.pdf`, `${marque}-sept`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    await admin.query(
+      `insert into capture.extractions (tenant_id, piece_id, contract, payload)
+       values ($1, $2, 'extract.v1', '{}'::jsonb)`,
+      [pme, sept],
+    );
+    await sousIdentiteDuServeur(expert.id, async (db) => {
+      const n = await office.propose(db, {
+        pieceId: sept,
+        journal: "ACH",
+        date: "2026-09-10",
+        libelle: "Facture de septembre",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignes("601"),
+      });
+      await office.book(db, n);
+    });
+    const vus = async (from: string, to: string) => {
+      const pme_ = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        office.extraitsTransmis(db, pme, from, to),
+      );
+      const cab = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        office.bookedExtracts(db, pme, from, to),
+      );
+      return [pme_.some((x) => x.pieceId === sept), cab.some((x) => x.pieceId === sept)];
+    };
+    // Transmise aujourd'hui, datée du 10/09 : septembre, des deux côtés.
+    assert.deepEqual(await vus("2026-09-01", "2026-09-30"), [true, true]);
+    const aujourdHui = (
+      await admin.query<{ m: string }>(`select to_char(current_date, 'YYYY-MM') as m`)
+    ).rows[0]!.m;
+    if (aujourdHui !== "2026-09")
+      assert.deepEqual(await vus(`${aujourdHui}-01`, `${aujourdHui}-28`), [false, false]);
+  });
+
   it("une réimputation refusée n'écrit rien : pas de contre-passation orpheline", async () => {
     const { rows: courante } = await admin.query<{ id: string }>(
       `select id from socle.ecritures where piece_id = $1 and status = 'booked'

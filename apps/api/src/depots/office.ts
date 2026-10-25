@@ -541,7 +541,11 @@ export const office = {
             select 1 from ecritures_v r
              where r.reverses_id = e.id and r.status = 'booked'
           )
-          and e.date_ecriture between $2 and $3
+          -- Le jour d'imputation, la même règle que côté PME
+          -- (app.jour_d_imputation_tva) : la date de l'écriture, sauf mois
+          -- déjà déclaré — la pièce passe alors au jour de son inscription.
+          and app.jour_d_imputation_tva(e.tenant_id, e.date_ecriture, e.booked_at::date)
+              between $2 and $3
           and x.contract = 'extract.v1'
         order by x.piece_id, x.created_at desc`,
       [tenantId, from, to],
@@ -553,7 +557,14 @@ export const office = {
   },
 
   /**
-   * Les lectures des pièces TRANSMISES dans la fenêtre, avec leur date d'envoi.
+   * Les lectures des pièces TRANSMISES imputées à la fenêtre, avec leur date d'envoi.
+   *
+   * 25 OCTOBRE 2026 — la règle change (décision de Wissem sur l'audit) : une
+   * pièce transmise pèse dans le mois de son ÉCRITURE, comme chez le cabinet,
+   * et non plus dans celui de sa transmission ; seule une pièce arrivée après
+   * la déclaration de son mois passe au mois de sa transmission (report, art. 9
+   * du Code de la TVA). Les deux écrans ne peuvent plus diverger. L'historique
+   * ci-dessous reste pour comprendre d'où l'on vient.
    *
    * ================================================================= POURQUOI
    *
@@ -596,16 +607,41 @@ export const office = {
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
     const { rows } = await db.query(
       `select distinct on (x.piece_id)
-              x.piece_id, x.payload, p.transmise_le
+              x.piece_id, x.payload, p.transmise_le, i.impute_le::text as impute_le
          from extractions_v x
          -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
          -- doublon, d'un type qui porte écriture. Retournée par le cabinet,
          -- elle n'y est pas tant qu'elle n'est pas reprise ; transmise sans
          -- avoir été confirmée, non plus.
          join pieces_qui_comptent_v p on p.id = x.piece_id
+         -- Son écriture vivante, si le cabinet l'a déjà inscrite : sa date
+         -- est la date de la facture. Pas encore inscrite (confirmée, chez le
+         -- cabinet), c'est la date du document qui la porte.
+         left join lateral (
+           select e.date_ecriture
+             from ecritures_v e
+            where e.piece_id = p.id
+              and e.nature = 'piece' and e.status = 'booked'
+              and e.reverses_id is null
+              and not exists (select 1 from ecritures_v r
+                               where r.reverses_id = e.id and r.status = 'booked')
+            order by e.created_at desc
+            limit 1
+         ) e on true
+         cross join lateral (select app.jour_d_imputation_tva(
+                p.tenant_id,
+                coalesce(e.date_ecriture,
+                         case when x.payload ->> 'document_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+                              then (x.payload ->> 'document_date')::date end,
+                         p.transmise_le::date),
+                p.transmise_le::date) as impute_le) i
         where p.tenant_id = $1
-          and p.transmise_le >= $2::date
-          and p.transmise_le < ($3::date + interval '1 day')
+          and p.transmise_le is not null
+          -- 25 octobre 2026 : le mois de l'ÉCRITURE (la date de la facture),
+          -- et non plus celui de la transmission — sauf mois déjà déclaré,
+          -- où la pièce passe au jour de sa transmission. Une seule règle
+          -- pour les deux côtés (app.jour_d_imputation_tva).
+          and i.impute_le between $2::date and $3::date
           and x.contract = 'extract.v1'
         order by x.piece_id, x.created_at desc`,
       [tenantId, from, to],
@@ -614,6 +650,8 @@ export const office = {
       pieceId: r["piece_id"] as string,
       extract: r["payload"],
       transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+      /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
+      imputeeLe: r["impute_le"] as string,
     }));
   },
 

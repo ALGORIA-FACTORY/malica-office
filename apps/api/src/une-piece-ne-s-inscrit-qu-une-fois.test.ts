@@ -167,6 +167,47 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
     assert.equal(await vivantes(piece, "piece"), "1");
   });
 
+  it("une contre-passation prend la date de l'écriture annulée, tant que son mois n'est pas déclaré", async () => {
+    const motif = (
+      await admin.query<{ id: string }>(
+        `select id from ref.rejet_motifs order by requires_note limit 1`,
+      )
+    ).rows[0]!.id;
+    const retournee = async (date: string) => {
+      const piece = await nouvellePiece("partage");
+      const ecr = await sousIdentite(expert.id, async (db) => {
+        const id = await office.propose(db, { ...facture(piece), date });
+        await office.book(db, id);
+        return id;
+      });
+      await sousIdentite(expert.id, (db) =>
+        db.query(`select public.socle_ecriture_review($1, 'retourne', $2, 'à reprendre')`, [
+          ecr,
+          motif,
+        ]),
+      );
+      const { rows } = await admin.query<{ d: string }>(
+        `select date_ecriture::text as d from socle.ecritures where reverses_id = $1`,
+        [ecr],
+      );
+      return rows[0]!.d;
+    };
+    // Mois non déclaré : le mois s'annule proprement, rien ne glisse sur le suivant.
+    assert.equal(await retournee("2026-09-10"), "2026-09-10");
+    // Mois déclaré : on ne réécrit pas un mois déposé — la correction passe au jour.
+    await admin.query(
+      `insert into schedule.echeances
+         (tenant_id, kind, label, period, due_date, pack_version_id, status, fait_le)
+       values ($1, 'TVA_PM', 'Declaration mensuelle TVA', '2026-08', date '2026-09-28', $2,
+               'fait', date '2026-09-20')
+       on conflict (tenant_id, kind, period) do update set status = 'fait', fait_le = excluded.fait_le`,
+      [pme, pack],
+    );
+    const aujourdHui = (await admin.query<{ d: string }>(`select current_date::text as d`)).rows[0]!
+      .d;
+    assert.equal(await retournee("2026-08-10"), aujourdHui);
+  });
+
   it("ANO-006 : inscrire un règlement le comptabilise, une fois, sans toucher la facture", async () => {
     const piece = await nouvellePiece("partage");
     await sousIdentite(expert.id, async (db) => {
