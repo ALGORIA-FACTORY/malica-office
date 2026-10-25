@@ -10,7 +10,7 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
-import { piecesALire } from "@/lib/lecture";
+import { attendLaPersonne, piecesALire } from "@/lib/lecture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { montant } from "@/lib/lisible";
@@ -19,6 +19,8 @@ import { office } from "@/verticals/malica-office/composition";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -37,10 +39,27 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  /*
+   * Les liens de l'accueil ouvrent CE QU'ILS ANNONCENT (maquette du
+   * 25 octobre 2026) : « Tout voir » de ce que Malica a préparé arrive filtré
+   * sur ce qui attend la personne ; « Bibliothèque » arrive rangée par
+   * dossier. Un paramètre inconnu est ignoré, jamais une erreur.
+   */
+  validateSearch: (s: Record<string, unknown>): { etat?: "a_verifier"; axe?: Axe } => ({
+    ...(s["etat"] === "a_verifier" ? { etat: "a_verifier" as const } : {}),
+    ...(AXES.includes(s["axe"] as Axe) ? { axe: s["axe"] as Axe } : {}),
+  }),
   component: VosDocuments,
 });
 
-type Axe = "mois" | "dossier" | "tiers" | "op";
+/*
+ * « Dossier » = l'un des sept dossiers (`ref.dossiers`), comme sur l'accueil.
+ * Ce que cet axe appelait « dossier » jusqu'au 25 octobre 2026 était la
+ * famille de dépense de l'article : il s'appelle désormais « Catégorie ».
+ */
+const AXES = ["mois", "dossier", "categorie", "tiers", "op"] as const;
+type Axe = (typeof AXES)[number];
+
 type Vue = "liste" | "annee";
 /**
  * Le sens d'une pièce — et c'est exactement l'ancien filtre de cet écran.
@@ -219,7 +238,27 @@ function VosDocuments() {
   const navigate = useNavigate();
 
   const [vue, setVue] = useState<Vue>("liste");
-  const [axe, setAxe] = useState<Axe>("mois");
+  /*
+   * L'axe et le filtre VIVENT DANS L'ADRESSE : le retour arrière, un
+   * rechargement et l'onglet « Bibliothèque » de la barre (sans paramètre)
+   * disent tous ce que la page montre.
+   */
+  const recherche = Route.useSearch();
+  const axe: Axe = recherche.axe ?? "mois";
+  const aVerifier = recherche.etat === "a_verifier";
+  const allerA = (suite: { axe?: Axe; etat?: "a_verifier" }) =>
+    void navigate({
+      to: "/pme/list",
+      search: {
+        ...(suite.axe && suite.axe !== "mois" ? { axe: suite.axe } : {}),
+        ...(suite.etat ? { etat: suite.etat } : {}),
+      },
+      replace: true,
+    });
+  const setAxe = (suivant: Axe) =>
+    allerA({ axe: suivant, ...(aVerifier ? { etat: "a_verifier" } : {}) });
+  const setAVerifier = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "a_verifier" } : {}) });
+  const sept = useDossiers();
   const [sens, setSens] = useState<Sens>("tous");
   /** Le groupe ouvert, ou `null` : la liste des groupes. */
   const [ouvert, setOuvert] = useState<string | null>(null);
@@ -262,13 +301,6 @@ function VosDocuments() {
     queryFn: () => office().charges.familles(pme.packId!, locale),
   });
 
-  /** Le nom d'un type de document vient du référentiel traduit, jamais du code. */
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
-
   /**
    * Les tiers du dossier — pour dire « Client » ou « Fournisseur ».
    *
@@ -281,7 +313,7 @@ function VosDocuments() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const dossierParPiece = useMemo(() => {
+  const categorieParPiece = useMemo(() => {
     const carte = new Map<string, string>();
     for (const a of articles.data ?? []) {
       if (!carte.has(a.pieceId)) carte.set(a.pieceId, a.familleCode);
@@ -289,7 +321,7 @@ function VosDocuments() {
     return carte;
   }, [articles.data]);
 
-  const nomDuDossier = (code: string) =>
+  const nomDeLaCategorie = (code: string) =>
     (familles.data ?? []).find((f) => f.code === code)?.label ?? code;
 
   /**
@@ -311,7 +343,7 @@ function VosDocuments() {
     natureParNom.get(nom.trim().toLocaleLowerCase(locale)) ?? null;
 
   /** Le mois d'une pièce : celui du DOCUMENT s'il est lu, sinon celui du dépôt. */
-  const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
+  const moisDe = moisDeLaPiece;
 
   /** La colonne de la grille annuelle où un mois tombe, ou -1 hors exercice. */
   const colonneDe = (periodeDuMois: string) =>
@@ -348,7 +380,8 @@ function VosDocuments() {
   };
 
   const nomDuType = (code: string) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ??
+    // Le nom d'un type vient du référentiel traduit (`useDossiers`), jamais du code.
+    sept.types.find((x) => x.code === code)?.libelle ??
     (code === "facture_achat"
       ? t("pme.doc.type.achats")
       : code === "facture_vente"
@@ -363,9 +396,13 @@ function VosDocuments() {
   }, [toutes]);
 
   const visibles = useMemo(
-    () => (sens === "tous" ? toutes : toutes.filter((p) => p.kind === sens)),
-    [toutes, sens],
+    () =>
+      toutes.filter(
+        (p) => (sens === "tous" || p.kind === sens) && (!aVerifier || attendLaPersonne(p)),
+      ),
+    [toutes, sens, aVerifier],
   );
+  const combienAttendent = useMemo(() => toutes.filter(attendLaPersonne).length, [toutes]);
 
   // ------------------------------------------------------------------ l'en-tête
   const nombreDeTiers = useMemo(
@@ -395,9 +432,15 @@ function VosDocuments() {
   // --------------------------------------------------------------- les groupes
   const cleDe = (p: PieceLue): string => {
     if (axe === "mois") return moisDe(p);
-    if (axe === "dossier") return dossierParPiece.get(p.id) ?? "";
+    if (axe === "dossier") return dossierDeLaPiece(p, sept.types) ?? "";
+    if (axe === "categorie") return categorieParPiece.get(p.id) ?? "";
     if (axe === "tiers") return p.emetteur ?? "";
     return p.kind ?? "";
+  };
+
+  const rangDuDossier = (code: string) => {
+    const i = sept.dossiers.findIndex((d) => d.code === code);
+    return i < 0 ? sept.dossiers.length : i;
   };
 
   const groupes = useMemo<Groupe[]>(() => {
@@ -433,10 +476,12 @@ function VosDocuments() {
     const sortie = [...carte.values()];
     // Par mois, le plus récent devant ; sur les autres axes, le plus gros.
     if (axe === "mois") sortie.sort((a, b) => b.cle.localeCompare(a.cle));
+    // Les dossiers gardent l'ordre de l'accueil ; sans dossier, en dernier.
+    else if (axe === "dossier") sortie.sort((a, b) => rangDuDossier(a.cle) - rangDuDossier(b.cle));
     else sortie.sort((a, b) => poids(b) - poids(a));
     return sortie;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibles, axe, dossierParPiece, moisDeLExercice]);
+  }, [visibles, axe, categorieParPiece, sept.types, sept.dossiers, moisDeLExercice]);
 
   /*
    * ------------------------------------------------------------- la cadence
@@ -482,7 +527,8 @@ function VosDocuments() {
   const titreDuGroupe = (cle: string): string => {
     if (cle === "") return t("pme.doc.type.autre");
     if (axe === "mois") return `${nomDuMois(cle)} ${cle.slice(0, 4)}`;
-    if (axe === "dossier") return nomDuDossier(cle);
+    if (axe === "dossier") return sept.parCode(cle)?.libelle ?? cle;
+    if (axe === "categorie") return nomDeLaCategorie(cle);
     if (axe === "op") return nomDuType(cle);
     return cle;
   };
@@ -534,7 +580,8 @@ function VosDocuments() {
 
   const axes: Array<{ cle: Axe; nom: string }> = [
     { cle: "mois", nom: t("pme.vue.mois") },
-    { cle: "dossier", nom: t("pme.recu.dossier") },
+    { cle: "dossier", nom: t("pme.list.axeDossier") },
+    { cle: "categorie", nom: t("pme.list.axeCategorie") },
     { cle: "tiers", nom: t("pme.recu.tiers") },
     { cle: "op", nom: t("pme.list.axeOperation") },
   ];
@@ -659,7 +706,7 @@ function VosDocuments() {
         </div>
 
         {/* Les types réellement présents dans le dossier, et « tous » devant. */}
-        {typesPresents.length > 1 ? (
+        {typesPresents.length > 1 || combienAttendent > 0 || aVerifier ? (
           <div className="fil">
             {(["tous", ...typesPresents] as Sens[]).map((c) => (
               <button
@@ -676,6 +723,19 @@ function VosDocuments() {
                 {c === "tous" ? t("pme.doc.type.tous") : nomDuType(c)}
               </button>
             ))}
+            {/* Ce qui attend la personne : là où mène « Tout voir » de l'accueil. */}
+            <button
+              type="button"
+              className={cn(aVerifier && "on")}
+              aria-pressed={aVerifier}
+              onClick={() => {
+                setAVerifier(!aVerifier);
+                setOuvert(null);
+                setTout(false);
+              }}
+            >
+              {t("pme.charges.answer.verifier")}
+            </button>
           </div>
         ) : null}
 
@@ -755,8 +815,11 @@ function VosDocuments() {
                   </span>
                   <span className="mt">
                     {[
-                      dossierParPiece.has(p.id) ? nomDuDossier(dossierParPiece.get(p.id)!) : null,
-                      p.kind ? nomDuType(p.kind) : null,
+                      // Le dossier, comme sur l'accueil ; puis la catégorie de dépense.
+                      sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null,
+                      categorieParPiece.has(p.id)
+                        ? nomDeLaCategorie(categorieParPiece.get(p.id)!)
+                        : null,
                     ]
                       .filter((x): x is string => !!x)
                       .join(" · ") || "—"}
