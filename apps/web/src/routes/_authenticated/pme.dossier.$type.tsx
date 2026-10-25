@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -6,9 +5,10 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
-import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { dossierDeLaPiece } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
 });
 
 /**
- * Un dossier ouvert — la « playlist » d'un type de pièce.
+ * Un dossier ouvert — la « playlist » d'un des sept dossiers (`ref.dossiers`).
  *
  * 23 octobre 2026, maquette validée par Wissem : la pochette touchée sur
  * l'accueil s'ouvre ici, avec UN geste principal (vérifier ce qui attend),
@@ -57,15 +57,21 @@ function Dossier() {
   const [filtre, setFiltre] = useState<Etat | "toutes">("toutes");
 
   const lues = usePiecesLues();
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
-
-  const libelle = (typesDoc.data ?? []).find((x) => x.code === type)?.libelle ?? type;
+  /*
+   * Le paramètre est un DOSSIER (`ref.dossiers`) depuis le 25 octobre 2026.
+   * Un lien d'avant portait un type : il ouvre le dossier de ce type.
+   */
+  const sept = useDossiers();
+  const dossier =
+    sept.parCode(type) ?? sept.parCode(sept.types.find((x) => x.code === type)?.dossier);
+  const libelle = dossier?.libelle ?? "";
   const toutes = (lues.data ?? [])
-    .filter((p) => p.typeDeDocument === type && p.vis !== "personnel")
+    .filter(
+      (p) =>
+        dossier !== null &&
+        p.vis !== "personnel" &&
+        dossierDeLaPiece(p, sept.types) === dossier.code,
+    )
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
   const faites = toutes.filter((p) => etatDe(p) === "comptabilisee").length;
   const aVerifier = toutes.filter((p) => etatDe(p) === "verifier");
@@ -79,7 +85,7 @@ function Dossier() {
 
   return (
     <div data-ecran="pochette" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
-      <div className="tete">
+      <div className="tete" data-teinte={dossier?.teinte}>
         <button
           type="button"
           className="bk"

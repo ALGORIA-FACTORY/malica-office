@@ -20,6 +20,9 @@ import { nombre } from "@/lib/forfait";
 import { montant, montantSigne } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useDossiers } from "@/hooks/use-dossiers";
+import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
+import type { PieceLue } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/pme/")({
   head: () => ({
@@ -84,8 +87,6 @@ function compte(valeur: number | string | null | undefined): string {
 const RANGEE = 8;
 /** Combien de pièces récentes, en grille de deux. */
 const RECENTES = 4;
-/** Les teintes des pochettes (`.poch.p0` à `.p4`, `styles-pme.css`). */
-const TEINTES = 5;
 
 /**
  * L'accueil PME — le dessin validé (`livraison/ecrans/malica-accueil.html`,
@@ -334,11 +335,7 @@ function PmeHome() {
    * Les noms des types viennent du référentiel traduit, jamais du code.
    */
   const lues = usePiecesLues();
-  const typesDoc = useQuery({
-    queryKey: ["types-document", locale],
-    queryFn: () => office().referential.typesDeDocument(locale),
-    staleTime: 60 * 60 * 1000,
-  });
+  const sept = useDossiers();
   // Comme l'écran des échéances : le calendrier se dérive d'abord
   // (idempotent), puis se lit — sinon un compte dont personne n'a encore
   // ouvert ses échéances n'en verrait aucune ici (revue de #80).
@@ -354,10 +351,8 @@ function PmeHome() {
   });
   const catalogue = useCatalogueDesOffres().data;
 
-  const typeParPiece = new Map((lues.data ?? []).map((p) => [p.id, p.typeDeDocument]));
-  const libelleDuType = (code: string | null | undefined) =>
-    (typesDoc.data ?? []).find((x) => x.code === code)?.libelle ?? null;
-  const nomDuType = (pieceId: string) => libelleDuType(typeParPiece.get(pieceId));
+  // Une pièce se nomme par son dossier, comme sa carte et sa tuile de capture.
+  const nomDuDossier = (p: PieceLue) => sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle;
   const jour = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
       new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
@@ -391,26 +386,31 @@ function PmeHome() {
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt))
     .slice(0, RECENTES);
 
-  // Une pochette par type présent dans la bibliothèque, la plus fournie d'abord.
-  const dossiers = (() => {
-    const parType = new Map<string, { total: number; faites: number }>();
-    for (const p of lesLues) {
-      if (!p.typeDeDocument) continue;
-      const g = parType.get(p.typeDeDocument) ?? { total: 0, faites: 0 };
-      g.total += 1;
-      if (p.status === "comptabilisee" || p.status === "supervisee") g.faites += 1;
-      parType.set(p.typeDeDocument, g);
-    }
-    return [...parType.entries()]
-      .map(([code, g]) => ({
-        code,
-        libelle: libelleDuType(code) ?? code,
-        total: g.total,
-        faites: g.faites,
-        part: Math.round((g.faites / g.total) * 100),
-      }))
-      .sort((x, y) => y.total - x.total);
-  })();
+  /*
+   * SEPT DOSSIERS, TOUJOURS LES MÊMES (maquette validée le 25 octobre 2026).
+   *
+   * Une carte n'existait que pour un type qui avait des pièces : « Gouvernance »
+   * disparaissait dès qu'aucun PV n'était rangé, et sa couleur dépendait de sa
+   * place. Désormais chaque dossier du référentiel a sa carte, dans son ordre
+   * et sa teinte — vide, elle reste là, en pointillé. Elle compte la période
+   * qu'elle affiche : le mois en cours, ou l'année pour un PV ou une
+   * déclaration.
+   */
+  const dossiers = sept.dossiers.map((d) => {
+    const pieces = lesLues.filter(
+      (p) => dossierDeLaPiece(p, sept.types) === d.code && dansLaPeriode(p, d.periode, periode),
+    );
+    const faites = pieces.filter(
+      (p) => p.status === "comptabilisee" || p.status === "supervisee",
+    ).length;
+    return {
+      ...d,
+      total: pieces.length,
+      faites,
+      part: pieces.length === 0 ? 0 : Math.round((faites / pieces.length) * 100),
+      etiquette: d.periode === "mois" ? moisCourant : periode.slice(0, 4),
+    };
+  });
 
   // Les prochaines échéances non faites, la plus proche d'abord.
   const aujourdhui = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
@@ -544,7 +544,7 @@ function PmeHome() {
           <>
             <div className="sec">
               <h2>{t("pme.home.prepare")}</h2>
-              <Link to="/pme/list">
+              <Link to="/pme/list" search={{ etat: "a_verifier" }}>
                 {t("common.toutVoir")} <Chevron className="g fl" />
               </Link>
             </div>
@@ -567,7 +567,7 @@ function PmeHome() {
                   </span>
                   <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                   <span>
-                    {[nomDuType(p.id), jour(p.dateDocument ?? p.createdAt)]
+                    {[nomDuDossier(p), jour(p.dateDocument ?? p.createdAt)]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
@@ -644,20 +644,21 @@ function PmeHome() {
           <>
             <div className="sec">
               <h2>{t("pme.home.dossiers")}</h2>
-              <Link to="/pme/list">
+              <Link to="/pme/list" search={{ axe: "dossier" }}>
                 {t("pme.home.bibliotheque")} <Chevron className="g fl" />
               </Link>
             </div>
             <div className="rail">
-              {dossiers.map((d, i) => (
+              {dossiers.map((d) => (
                 <Link
                   key={d.code}
                   to="/pme/dossier/$type"
                   params={{ type: d.code }}
-                  className={`poch p${i % TEINTES}`}
+                  data-teinte={d.teinte}
+                  className={d.total === 0 ? "poch vide" : "poch"}
                 >
                   <span className="cv">
-                    <span className="mo">{moisCourant}</span>
+                    <span className="mo">{d.etiquette}</span>
                     <span className="ini" aria-hidden="true">
                       {d.libelle.slice(0, 1)}
                     </span>
@@ -666,8 +667,17 @@ function PmeHome() {
                       <i style={{ width: `${d.part}%` }} />
                     </span>
                   </span>
-                  <b>{t("pme.home.dossier.pieces", { count: d.total })}</b>
-                  <span>{t("pme.home.dossier.faites", { count: d.faites })}</span>
+                  {d.total === 0 ? (
+                    <>
+                      <b>{t("pme.home.dossier.aucune")}</b>
+                      <span>{t("pme.home.dossier.ajouter")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <b>{t("pme.home.dossier.pieces", { count: d.total })}</b>
+                      <span>{t("pme.home.dossier.faites", { count: d.faites })}</span>
+                    </>
+                  )}
                 </Link>
               ))}
             </div>

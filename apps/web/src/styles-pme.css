@@ -1074,11 +1074,22 @@
 [data-surface="pme"] [data-ecran="accueil"] .poch .av i{display:block;height:100%;background:currentColor}
 [data-surface="pme"] [data-ecran="accueil"] .poch > b{font-size:.875rem;font-weight:700}
 [data-surface="pme"] [data-ecran="accueil"] .poch > span{font-size:.75rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="accueil"] .poch.p0{--pf:#DCEFE3;--pe:#163A2A;--pp:#B8DCC5}
-[data-surface="pme"] [data-ecran="accueil"] .poch.p1{--pf:#D6E7F6;--pe:#123554;--pp:#B3D1EC}
-[data-surface="pme"] [data-ecran="accueil"] .poch.p2{--pf:#F6EAC8;--pe:#4A3405;--pp:#EAD59C}
-[data-surface="pme"] [data-ecran="accueil"] .poch.p3{--pf:#EBEBED;--pe:#18181B;--pp:#D4D4D8}
-[data-surface="pme"] [data-ecran="accueil"] .poch.p4{--pf:#F6DCE7;--pe:#4A1730;--pp:#EBBCD0}
+/* Une teinte PAR DOSSIER (`ref.dossiers.teinte`), jamais par position : la
+   carte, la tuile de la capture et l'en-tête du dossier la partagent. */
+[data-surface="pme"] [data-teinte="achats"]{--pf:#DCEFE3;--pe:#163A2A;--pp:#B8DCC5}
+[data-surface="pme"] [data-teinte="ventes"]{--pf:#D6E7F6;--pe:#123554;--pp:#B3D1EC}
+[data-surface="pme"] [data-teinte="banque"]{--pf:#D7EEF0;--pe:#123C42;--pp:#AFD9DE}
+[data-surface="pme"] [data-teinte="tickets"]{--pf:#F6EAC8;--pe:#4A3405;--pp:#EAD59C}
+[data-surface="pme"] [data-teinte="gouvernance"]{--pf:#E7E1F5;--pe:#2E2152;--pp:#CBBFEA}
+[data-surface="pme"] [data-teinte="fiscal"]{--pf:#F6DCE7;--pe:#4A1730;--pp:#EBBCD0}
+[data-surface="pme"] [data-teinte="autres"]{--pf:#EBEBED;--pe:#18181B;--pp:#D4D4D8}
+/* Un dossier vide reste à sa place : en pointillé, sans fond. */
+[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv{background:transparent;border:1.5px dashed var(--pp);color:var(--t2)}
+[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv b{color:var(--tx)}
+/* La tuile de la capture : la même pochette, en petit. */
+[data-surface="pme"] .tuile-dossier{background:var(--pf);color:var(--pe);border:0;cursor:pointer}
+[data-surface="pme"] .tuile-dossier .ini{position:absolute;inset-inline-end:-.5rem;top:.375rem;font-size:4rem;font-weight:800;letter-spacing:-.06em;line-height:1;opacity:.12}
+[data-surface="pme"] .tuile-dossier .ex{position:relative;font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
 [data-surface="pme"] [data-ecran="accueil"] .recentes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
 [data-surface="pme"] [data-ecran="accueil"] .recentes a{display:flex;align-items:center;gap:.625rem;min-height:56px;border-radius:8px;background:var(--d1);overflow:hidden;color:var(--tx);text-decoration:none}
 [data-surface="pme"] [data-ecran="accueil"] .recentes .apercu.mini{border:0;border-radius:0}
@@ -1108,6 +1119,7 @@
 
 /* ══════════════════════ écran · un dossier ouvert (« pochette ») ══════════════ */
 [data-surface="pme"] [data-ecran="pochette"] .tete{background:var(--me);color:var(--me-tx);padding:1rem 1.25rem 1.5rem;display:grid;gap:1.125rem}
+[data-surface="pme"] [data-ecran="pochette"] .tete[data-teinte]{background:var(--pf);color:var(--pe)}
 [data-surface="pme"] [data-ecran="pochette"] .tete .bk{width:44px;height:44px;border-radius:50%;border:0;background:rgba(0,0,0,.08);color:inherit;display:grid;place-items:center;cursor:pointer}
 [data-surface="pme"] [data-ecran="pochette"] .tete .bk svg{width:20px;height:20px}
 [data-surface="pme"] [data-ecran="pochette"] .tete .id{display:flex;align-items:flex-end;gap:1rem}
@@ -2352,11 +2364,13 @@ html.dark:has([data-surface="pme"]),
 
 /* --- les couleurs écrites en dur, écran par écran ------------------------- */
 .dark [data-surface="pme"] .rev button{border:0;border-radius:999px;background:rgba(255,255,255,.06);color:var(--t2); font-size:.6875rem;font-weight:600;padding:.375rem .6875rem;cursor:pointer;white-space:nowrap}
-.dark [data-surface="pme"] [data-ecran="accueil"] .poch.p0{--pf:#1F3A2C;--pe:#BFF0D2;--pp:#2B5440}
-.dark [data-surface="pme"] [data-ecran="accueil"] .poch.p1{--pf:#1F2C3A;--pe:#C3DBF3;--pp:#2C3F55}
-.dark [data-surface="pme"] [data-ecran="accueil"] .poch.p2{--pf:#3A2F1A;--pe:#F1DDA6;--pp:#54442A}
-.dark [data-surface="pme"] [data-ecran="accueil"] .poch.p3{--pf:#2A2A2E;--pe:#E4E4E7;--pp:#3F3F46}
-.dark [data-surface="pme"] [data-ecran="accueil"] .poch.p4{--pf:#33212B;--pe:#F3C9DA;--pp:#4B3140}
+.dark [data-surface="pme"] [data-teinte="achats"]{--pf:#1F3A2C;--pe:#BFF0D2;--pp:#2B5440}
+.dark [data-surface="pme"] [data-teinte="ventes"]{--pf:#1F2C3A;--pe:#C3DBF3;--pp:#2C3F55}
+.dark [data-surface="pme"] [data-teinte="banque"]{--pf:#1E3236;--pe:#BDE6EC;--pp:#2A464B}
+.dark [data-surface="pme"] [data-teinte="tickets"]{--pf:#3A2F1A;--pe:#F1DDA6;--pp:#54442A}
+.dark [data-surface="pme"] [data-teinte="gouvernance"]{--pf:#2B2438;--pe:#DCCFF5;--pp:#3E3452}
+.dark [data-surface="pme"] [data-teinte="fiscal"]{--pf:#33212B;--pe:#F3C9DA;--pp:#4B3140}
+.dark [data-surface="pme"] [data-teinte="autres"]{--pf:#2A2A2E;--pe:#E4E4E7;--pp:#3F3F46}
 .dark [data-surface="pme"] [data-ecran="pochette"] .tete .bk,
 .dark [data-surface="pme"] [data-ecran="pochette"] .tete .cv{background:rgba(255,255,255,.08)}
 .dark [data-surface="pme"] [data-ecran="pochette"] .tete .av .bar{background:rgba(255,255,255,.12)}
