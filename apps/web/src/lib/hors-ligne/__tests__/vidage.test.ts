@@ -125,6 +125,23 @@ describe("un dépôt en ligne", () => {
     expect(await depot.lister()).toEqual([]);
   });
 
+  it("un nouveau dépôt sous une clé abandonnée repart normalement", async () => {
+    const depot = depotMemoire();
+    const r = ports();
+    let t = 0;
+    const v = creerVidage({
+      depot,
+      ports: r.ports,
+      enLigne: () => true,
+      maintenant: () => Date.UTC(2026, 9, 25, 12, 0, t++),
+    });
+    const cle = await v.deposer({ ...ENTREE, cle: "meme-recu" }, octets());
+    await v.abandonner(cle);
+    await v.deposer({ ...ENTREE, cle: "meme-recu" }, octets());
+    const arrivee = await v.attendre("meme-recu", 1000, "deposee");
+    expect(arrivee).toMatchObject({ pieceId: "piece-meme-recu" });
+  });
+
   it("un reçu que Malica vient de fabriquer ne repart PAS en lecture", async () => {
     /*
      * 13 octobre 2026. Trois reçus se sont retrouvés en base classés

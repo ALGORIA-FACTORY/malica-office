@@ -104,14 +104,15 @@ export function creerVidage(deps: {
   }
 
   /**
-   * Les clés abandonnées pendant un pas en vol : quand l'appel revient, il ne
-   * réécrit pas l'élément — un abandon ne ressuscite pas sans ses octets.
+   * Les éléments (clé + création) abandonnés pendant un pas en vol : quand
+   * l'appel revient, il ne réécrit pas l'élément — un abandon ne ressuscite
+   * pas sans ses octets.
    */
   const abandonnees = new Set<string>();
 
   async function appliquer(e: ElementDeFile, evt: Evenement): Promise<ElementDeFile> {
     const suivant = transition(e, evt, maintenant());
-    if (abandonnees.has(e.cle)) return suivant;
+    if (abandonnees.has(`${e.cle}@${e.creeLe}`)) return suivant;
     if (suivant.etat === "lecture_demandee") {
       await deps.depot.supprimer(e.cle);
       await publier(suivant);
@@ -302,7 +303,10 @@ export function creerVidage(deps: {
     },
 
     async abandonner(cle) {
-      abandonnees.add(cle);
+      // L'élément abandonné, pas sa clé : un nouveau dépôt sous la même clé
+      // (un reçu regénéré pour les mêmes règlements) repart normalement.
+      const e = (await deps.depot.lister()).find((x) => x.cle === cle);
+      if (e) abandonnees.add(`${cle}@${e.creeLe}`);
       await deps.depot.supprimer(cle);
       await publier();
     },
