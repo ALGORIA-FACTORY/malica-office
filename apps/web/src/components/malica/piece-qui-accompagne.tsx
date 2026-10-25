@@ -223,6 +223,7 @@ export function PieceQuiAccompagneFiche({
         entityId: pme.entityId,
         vis: donnees.vis,
         sourcePieceId: mere?.id ?? pieceId,
+        depotExige: true,
       });
       if (!nouveau) return null;
       try {
