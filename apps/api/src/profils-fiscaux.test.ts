@@ -467,6 +467,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       mode: "pdf-text",
       confianceParChamp: { "totals.ttc": 0.95 },
     });
+    await rpc("capture", "analyser", piece.id);
     const refusee = await sousIdentite(expert.id, (db) => office.propositionDePiece(db, piece.id));
     assert.equal(refusee.ok, false);
     if (!refusee.ok) assert.match(refusee.raison, /TVA incohérente/);
