@@ -1,3 +1,4 @@
+import type { LigneFiscaleCalculee } from "../ports/qualification-fiscale.ts";
 /**
  * Cas d'usage : proposer l'écriture d'une pièce lue.
  * Le calcul est intégralement délégué au Socle ; ce module n'assemble que les
@@ -115,6 +116,7 @@ export function buildProposal(params: {
   taxRates: readonly TaxRate[];
   mappings: readonly AccountMapping[];
   fiscalCharges?: readonly FiscalCharge[];
+  lignesFiscales?: readonly LigneFiscaleCalculee[];
   currency: string;
   /**
    * Les paramètres lus au paramétrage daté. EXIGÉS.
@@ -205,6 +207,8 @@ export function buildProposal(params: {
         account_code: c.accountCode,
         document_kind: c.documentKind,
         fixed_amount: c.fixedAmount,
+        ...(c.rate !== undefined ? { rate: c.rate } : {}),
+        ...(c.taxable !== undefined ? { taxable: c.taxable } : {}),
       })),
 
     /*
@@ -218,6 +222,7 @@ export function buildProposal(params: {
         .map((m) => [m.taxCode as string, m.vatAccount]),
     ),
 
+    ...(params.lignesFiscales ? { lignes_fiscales: params.lignesFiscales } : {}),
     tolerances: {
       rounding_tolerance: (1 / 10 ** decimals).toFixed(decimals),
       confidence_orange: params.parametres.confianceReserve,
@@ -238,7 +243,12 @@ export function buildProposal(params: {
   ]);
   const compteDeCharge = params.compteDeNature || mapping.mainAccount;
   const lignesDuPivot = (() => {
-    if (!params.tvaNonDeductible || extract.document_kind === "facture_vente") return pivot.lines;
+    if (
+      params.lignesFiscales ||
+      !params.tvaNonDeductible ||
+      extract.document_kind === "facture_vente"
+    )
+      return pivot.lines;
     const tva = pivot.lines.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);
     if (tva.length === 0) return pivot.lines;
     const iCharge = pivot.lines.findIndex((l) => l.account_code === compteDeCharge);

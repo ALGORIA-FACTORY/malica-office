@@ -1,3 +1,10 @@
+import { D } from "@malica/socle/domain/decimal";
+import {
+  ancresFiscales,
+  lignesQualifiees,
+  lireQualificationFiscale,
+} from "./qualification-fiscale.ts";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /**
  * 3B — Juger une pièce lue, côté serveur.
  *
@@ -157,7 +164,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     payload.document_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.document_date)
       ? payload.document_date
       : null;
-  const dateRef = datePiece ?? piece.recue_le;
+  const qualificationDate = await lireQualificationFiscale(db, pieceId);
+  const dateRef =
+    datePiece ??
+    (qualificationDate?.extractionId === extraction.id
+      ? qualificationDate.dateOperation
+      : piece.recue_le);
 
   const { rows: packs } = await db.query<{ id: string }>(
     `select id from ref.jurisdiction_packs
@@ -225,7 +237,26 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       order by code, valid_from desc`,
     [pack, codes, dateRef],
   );
-  const tauxDe = new Map(taux.map((t) => [t.code, t.rate]));
+  const tauxDe = new Map(taux.map((t) => [t.code, String(t.rate)]));
+  const qualifie = await lignesQualifiees(db, pieceId);
+  const ancres = qualifie.lignes ? ancresFiscales(qualifie.lignes, p["money.decimals"]!) : null;
+  for (const code of codes) {
+    const rs =
+      qualifie.contexte.profil?.configuration.regles.filter(
+        (r) =>
+          r.famille === "tva" &&
+          r.code === code &&
+          r.operation === (sensRetenu === "facture_vente" ? "vente" : "achat") &&
+          r.applicabilite !== "a_qualifier",
+      ) ?? [];
+    if (rs.length === 1)
+      tauxDe.set(
+        code,
+        rs[0]!.applicabilite === "applicable"
+          ? D(rs[0]!.valeur!).div(100).toString()
+          : D(0).toString(),
+      );
+  }
 
   // Les droits fixés par le paramétrage (le droit de timbre…) : leur valeur
   // attendue ancre l'échelle des montants quand l'égalité la laisse ouverte.
@@ -233,8 +264,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   const codesDroits = [
     ...new Set(droits.map((d) => d.code).filter((c): c is string => Boolean(c))),
   ];
-  const { rows: fixes } = await db.query<{ code: string; fixed_amount: string | null }>(
-    `select distinct on (code) code, fixed_amount from ref.fiscal_charges
+  const { rows: fixes } = await db.query<{
+    code: string;
+    fixed_amount: string | null;
+    taxable: boolean;
+  }>(
+    `select distinct on (code) code, fixed_amount, taxable from ref.fiscal_charges
       where pack_version_id = $1 and code = any($2)
         and (document_kind = $3 or document_kind is null)
         and valid_from <= $4::date and (valid_to is null or valid_to >= $4::date)
@@ -249,6 +284,19 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   );
 
   const nbAutres = droits.length;
+  if (ancres)
+    for (const [code, montant] of ancres.droits) {
+      const mineur = Number(enUnitesExactes(montant, p["money.decimals"]!));
+      if (!Number.isSafeInteger(mineur))
+        throw new Error("Montant fiscal trop grand pour être normalisé sans perte.");
+      fixeDe.set(code, mineur);
+    }
+  const majorationsDroits =
+    !ancres && lignes.length === 1
+      ? droits.flatMap((d, i) =>
+          fixes.find((f) => f.code === d.code)?.taxable ? [{ ligne: 0, autre: i }] : [],
+        )
+      : [];
   const sansTaux = lignes.find((l) => !l.tax_code || !tauxDe.has(l.tax_code));
   const normalisation: ResultatNormalisation =
     lignes.length === 0 || sansTaux
@@ -305,22 +353,28 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
                 brut(`lines[${i}].base_ht`) ??
                 (lignes.length === 1 ? brut("totals.base_ht") : null),
               taux: tauxDe.get(l.tax_code!)!,
+              ...(ancres?.bases[i] ? ancres.bases[i] : {}),
             })),
+            majorationsDroits,
             tva: brut("totals.vat"),
-            autres: droits.flatMap((d, i) => {
+            autres: droits.map((d, i) => {
               const b = brut(`other_charges[${i}].amount`);
-              if (b === null) return [];
+              if (b === null) return "";
               const attendu = d.code ? fixeDe.get(d.code) : undefined;
-              return [attendu === undefined ? b : { brut: b, attendu }];
+              return attendu === undefined ? b : { brut: b, attendu };
             }),
             ttc: brut("totals.ttc"),
           },
           {
             decimales: p["money.decimals"]!,
-            toleranceMineure: p["lecture.tolerance_arrondi_mineure"]!,
+            toleranceMineure: ancres ? 0 : p["lecture.tolerance_arrondi_mineure"]!,
           },
         );
 
+  Object.assign(normalisation, {
+    qualificationFiscaleId: qualifie.qualification?.id ?? null,
+    fiscaliteVersionId: qualifie.contexte.profil?.id ?? null,
+  });
   const refs = payload.references ?? {};
   const aControler: PieceAControler = {
     documentKind: sensRetenu,

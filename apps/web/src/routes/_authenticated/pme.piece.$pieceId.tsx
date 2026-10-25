@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { totalDesPaiements } from "@/lib/total-des-paiements";
 
-import { SoldeDePiece } from "@/components/malica/solde-de-piece";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -18,6 +17,7 @@ import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { Aide } from "@/components/malica/aide";
+import { PieceQuiAccompagneFiche } from "@/components/malica/piece-qui-accompagne";
 import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import {
@@ -26,7 +26,7 @@ import {
   motifDeLEtat,
   motifDeRefusConnu,
 } from "@/lib/champ-lisible";
-import { montant, quantite } from "@/lib/lisible";
+import { jourEtMois, montant, quantite } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
@@ -39,6 +39,14 @@ import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
+import {
+  avancementDeLaPiece,
+  ecritureDeLaPiece,
+  etiquetteDeLecture,
+  noteDeSuppression,
+  partageeAvecLeCabinet,
+  RANG_COMPTEE,
+} from "@/lib/fiche-de-la-piece";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
@@ -60,8 +68,28 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: PieceScreen,
+  /*
+   * L'onglet à ouvrir : « Produire un nouveau reçu », depuis la fiche d'un
+   * reçu qui ne compte plus, ouvre la facture sur ses règlements. Un
+   * paramètre inconnu est ignoré, jamais une erreur.
+   */
+  validateSearch: (s: Record<string, unknown>): { onglet?: Onglet } =>
+    ONGLETS.includes(s["onglet"] as Onglet) ? { onglet: s["onglet"] as Onglet } : {},
+  component: PieceScreenDeLaPiece,
 });
+
+const ONGLETS = ["lecture", "reglement", "suivi"] as const;
+type Onglet = (typeof ONGLETS)[number];
+
+/**
+ * Une pièce, un écran : passer d'une pièce à une autre (la mère d'un reçu, le
+ * reçu d'une facture) remonte l'écran, au lieu de garder l'onglet, la feuille
+ * ou l'erreur de la précédente.
+ */
+function PieceScreenDeLaPiece() {
+  const { pieceId } = Route.useParams();
+  return <PieceScreen key={pieceId} />;
+}
 
 /*
  * ================================ LES MOTS DE CET ÉCRAN SONT AU DICTIONNAIRE
@@ -170,7 +198,8 @@ function PieceScreen() {
    * il faut une séparation de section ») : une carte de décision, puis trois
    * onglets — Lecture, Règlement, Suivi — au lieu de quinze blocs empilés.
    */
-  const [onglet, setOnglet] = useState<"lecture" | "reglement" | "suivi">("lecture");
+  const ongletDemande = Route.useSearch().onglet;
+  const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? "lecture");
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   // Le bouton retour ferme d'abord ce qui est ouvert par-dessus la pièce.
   useSuperposition(
@@ -248,6 +277,17 @@ function PieceScreen() {
       void qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
     }
   }, [etat.data, attente, qc, pieceId, pme.tenantId]);
+
+  /**
+   * Une pièce qui en ACCOMPAGNE une autre — un reçu, un justificatif — ne se
+   * lit jamais : elle a sa propre fiche (maquette du 25 octobre 2026). La
+   * base dit si c'est le cas ; `null` pour toute autre pièce.
+   */
+  const accompagne = useQuery({
+    queryKey: ["piece-qui-accompagne", pieceId, locale],
+    queryFn: () => office().capture.pieceQuiAccompagne(pieceId, locale),
+    enabled: !lue,
+  });
 
   const ecritures = useQuery({
     queryKey: ["ecritures", pieceId],
@@ -652,7 +692,8 @@ function PieceScreen() {
   // précision de la personne si la lecture n'avait pas su.
   const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
 
-  const booked = (ecritures.data ?? []).find((e) => e.status === "booked");
+  // L'écriture DE la pièce : la vivante — jamais un règlement ni une annulée.
+  const booked = ecritureDeLaPiece(ecritures.data);
 
   /**
    * Un seul geste : la proposition du Socle et sa comptabilisation s'enchaînent.
@@ -784,21 +825,15 @@ function PieceScreen() {
    * le cabinet. Reprendre l'ordre de la maquette aurait dessiné un circuit
    * qui n'existe pas dans le produit.
    */
-  const rang: Record<string, number> = {
-    capturee: 1,
-    lue: 2,
-    proposee: 3,
-    comptabilisee: 4,
-    supervisee: 5,
-    retournee: 3,
-  };
-  const atteint = rang[piece.status] ?? 1;
+  // Une seule source pour l'étape atteinte ET pour « comptée » : le parcours
+  // et la pastille ne peuvent pas se contredire.
+  const { atteint, comptee } = avancementDeLaPiece(piece.status, booked);
   const etapes = (
     [
       ["recue", 1],
       ["lue", 2],
       ["confirmee", 3],
-      ["comptee", 4],
+      ["comptee", RANG_COMPTEE],
       ["vue", 5],
       ["declaree", 6],
     ] as const
@@ -1111,6 +1146,20 @@ function PieceScreen() {
    * l'aperçu de l'appareil photo. Deux gestes seulement — lire, ou retirer
    * et reprendre. Rien ne part tant que la personne n'a pas vu.
    */
+  if (!extraction && accompagne.isPending) {
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  }
+  if (!extraction && accompagne.data) {
+    return (
+      <PieceQuiAccompagneFiche
+        pieceId={pieceId}
+        typeDeDocument={piece.documentKind}
+        donnees={accompagne.data}
+        onAgrandir={() => setPiece(true)}
+      />
+    );
+  }
+
   if (!extraction) {
     return (
       <div className="rg-rise flex flex-col gap-4 px-1 pt-2">
@@ -1274,6 +1323,7 @@ function PieceScreen() {
    */
   const role = acces.data?.role ?? null;
   const siege = role === "collaborateur";
+  const noteSuppression = noteDeSuppression(demandeDeSuppression, vis);
 
   /**
    * Le mois de la pièce, pour la pastille du haut. Rien si la date manque.
@@ -1310,18 +1360,10 @@ function PieceScreen() {
     payload?.totals?.ttc && decimales !== null
       ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
       : null;
-  const payeLisible =
-    decimales !== null && payeMineur !== null
-      ? lisible(depuisUniteMineure(payeMineur, decimales))
-      : null;
   const resteMineur = ttcMineur !== null && payeMineur !== null ? ttcMineur - payeMineur : null;
   const resteLisible =
     resteMineur !== null && decimales !== null
       ? lisible(depuisUniteMineure(Math.max(resteMineur, 0), decimales))
-      : null;
-  const part =
-    ttcMineur !== null && payeMineur !== null && ttcMineur > 0
-      ? Math.min(100, Math.max(0, (payeMineur / ttcMineur) * 100))
       : null;
 
   /*
@@ -1430,13 +1472,6 @@ function PieceScreen() {
    * au cabinet, le reste à payer — puis elle devient une ligne calme. Aucun
    * geste n'est perdu : chacun a aussi sa place dans un onglet.
    */
-  /*
-   * Comptée : par l'écriture lue, OU par le statut de la pièce — l'écriture
-   * peut tarder d'une requête, et une pièce comptée ne doit jamais reposer la
-   * question du montant.
-   */
-  const comptee =
-    Boolean(booked) || piece.status === "comptabilisee" || piece.status === "supervisee";
   const pastille: { cle: MessageKey; ton: "ok" | "am" | "az" | "neutre" } = comptee
     ? { cle: "pme.dossier.etat.comptabilisee", ton: "ok" }
     : piece.status === "retournee"
@@ -1860,13 +1895,25 @@ function PieceScreen() {
                 >
                   <span className="bd">
                     <span className="lb">{l.label}</span>
-                    {!confianceConnue ? (
-                      <span className="et">{t("pme.citation.show")}</span>
-                    ) : aVerifier.has(l.champ) ? (
-                      <span className="et am">{t("pme.citation.aVerifier")}</span>
-                    ) : (
-                      <span className="et ok">{t("pme.citation.source")}</span>
-                    )}
+                    {(() => {
+                      // Comptée : la personne a confirmé la lecture (maquette « C »).
+                      switch (
+                        etiquetteDeLecture({
+                          comptee,
+                          confianceConnue,
+                          aVerifier: aVerifier.has(l.champ),
+                        })
+                      ) {
+                        case "confirme":
+                          return <span className="et ok">{t("pme.verifie.confirme")}</span>;
+                        case "inconnue":
+                          return <span className="et">{t("pme.citation.show")}</span>;
+                        case "aVerifier":
+                          return <span className="et am">{t("pme.citation.aVerifier")}</span>;
+                        case "source":
+                          return <span className="et ok">{t("pme.citation.source")}</span>;
+                      }
+                    })()}
                   </span>
                   <span className="vl">{l.valeur ?? "—"}</span>
                   <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
@@ -1884,7 +1931,13 @@ function PieceScreen() {
               ),
             )}
           </div>
-          <p className="f-note">{t("pme.verifie.source")}</p>
+          <p className="f-note">
+            {!comptee
+              ? t("pme.verifie.source")
+              : booked?.bookedAt
+                ? t("pme.verifie.confirmeLe", { date: jourEtMois(booked.bookedAt, locale) })
+                : t("pme.verifie.confirmeSansDate")}
+          </p>
           {articles.length > 0 ? (
             <button type="button" className="f-bouton" onClick={() => setDetail(true)}>
               {t("pme.detail.voir")}
@@ -1951,14 +2004,6 @@ function PieceScreen() {
           id="panneau-reglement"
           aria-labelledby="onglet-reglement"
         >
-          <SoldeDePiece
-            paye={payeLisible}
-            total={lisible(payload?.totals?.ttc)}
-            reste={resteLisible}
-            soldee={resteMineur === null ? null : resteMineur <= 0}
-            progression={part}
-            devise={devise}
-          />
           <CommentCEstPaye
             pieceId={pieceId}
             visDeLaPiece={piece.vis === "partage" ? "partage" : "personnel"}
@@ -1992,7 +2037,7 @@ function PieceScreen() {
           ) : null}
 
           {/* Le cabinet : transmise, gardée, ou à décider. */}
-          {cabinet.data && (!booked || piece.vis !== "partage") ? (
+          {cabinet.data && (!comptee || piece.vis !== "partage") ? (
             <div className="f-carte f-cab">
               {piece.vis === "partage" ? (
                 <>
@@ -2302,8 +2347,9 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {(vis === "partage" || (vis === "entite" && siege)) && !demandeDeSuppression ? (
-                /* Une demande déjà inscrite ne se redemande pas. */
+              {partageeAvecLeCabinet(vis) &&
+              (!demandeDeSuppression || demandeDeSuppression === "retiree") ? (
+                /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
                 <button
                   type="button"
                   className="f-ligne sup"
@@ -2334,9 +2380,10 @@ function PieceScreen() {
               ) : null}
             </div>
           )}
-          {demandeDeSuppression === "demandee" ? (
+          {/* Hors partage, une vieille demande ne parle plus : le « Supprimer » ordinaire suffit. */}
+          {noteSuppression === "demandee" ? (
             <p className="f-note">{t("pme.piece.suppressionDemandee")}</p>
-          ) : demandeDeSuppression === "refusee" ? (
+          ) : noteSuppression === "refusee" ? (
             <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
 

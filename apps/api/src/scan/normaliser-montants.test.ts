@@ -290,3 +290,47 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     assert.equal(r.etat, "ambigu");
   });
 });
+
+describe("assiettes fiscales qualifiées, sans réécrire l'imprimé", () => {
+  it("vérifie TVA sur HT augmenté du droit lu", () => {
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "1000,000", taux: "0.19", attendu: 1000000, majoration: 10000 }],
+        tva: "191,900",
+        autres: [{ brut: "10,000", attendu: 10000 }],
+        ttc: "1201,900",
+      },
+      { decimales: 3, toleranceMineure: 0 },
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 1000000);
+    assert.equal(r.montants.autres[0], 10000);
+  });
+  it("refuse une TVA omettant le droit taxable", () => {
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "1000,000", taux: "0.19", attendu: 1000000, majoration: 10000 }],
+        tva: "190,000",
+        autres: [{ brut: "10,000", attendu: 10000 }],
+        ttc: "1200,000",
+      },
+      { decimales: 3, toleranceMineure: 0 },
+    );
+    assert.equal(r.etat, "incoherent");
+  });
+  it("qualifie plusieurs assiettes TVA dont une seule porte le droit", () => {
+    const r = normaliserMontants(
+      {
+        bases: [
+          { ht: "5000,000", taux: "0.19", attendu: 5000000, majoration: 50000 },
+          { ht: "800,000", taux: "0.07", attendu: 800000, majoration: 0 },
+        ],
+        tva: "1015,500",
+        autres: [{ brut: "50,000", attendu: 50000 }],
+        ttc: "6865,500",
+      },
+      { decimales: 3, toleranceMineure: 0 },
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+  });
+});

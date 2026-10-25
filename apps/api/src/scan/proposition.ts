@@ -1,3 +1,6 @@
+import type { FiscalCharge } from "@malica/socle/ports/repositories";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
+import { lignesQualifiees } from "./qualification-fiscale.ts";
 import { appliquerAttentesFiscales } from "@malica/socle/engines/fiscalite/profil";
 import { fiscaliteDuDossier } from "./fiscalite-du-dossier.ts";
 /**
@@ -173,7 +176,14 @@ async function proposerDepuisLeJugement(
   );
   let ligne = derniers[0];
   if (!ligne) return { ok: false, raison: "Cette pièce n'a pas encore été lue." };
-  if (ligne.analyse_extraction !== ligne.extraction) {
+  const fiscalQualifie = await lignesQualifiees(db, pieceId);
+  if (
+    ligne.analyse_extraction !== ligne.extraction ||
+    (ligne.normalisation?.qualificationFiscaleId ?? null) !==
+      (fiscalQualifie.qualification?.id ?? null) ||
+    (ligne.normalisation?.fiscaliteVersionId ?? null) !==
+      (fiscalQualifie.contexte.profil?.id ?? null)
+  ) {
     const a = await analyserPiece(db, pieceId);
     const { rows } = await db.query<{ pack_version_id: string }>(
       `select pack_version_id from capture.analyses where id = $1`,
@@ -221,7 +231,9 @@ async function proposerDepuisLeJugement(
   const lue = payload.document_date && /^\d{4}-\d{2}-\d{2}$/.test(payload.document_date);
   const saisie = dateSaisie && /^\d{4}-\d{2}-\d{2}$/.test(dateSaisie) ? dateSaisie : null;
   // Une date lue n'est jamais remplacée ; la saisie ne complète que ce qui manque.
-  const date = lue ? payload.document_date! : saisie;
+  const date = lue
+    ? payload.document_date!
+    : (fiscalQualifie.qualification?.dateOperation ?? saisie);
   // Le paramétrage et le barème se lisent à la date de la pièce, par la même
   // règle que l'analyse : la date de la facture, à défaut celle de sa
   // réception (« la pièce vit à la date de sa facture », note du 10 octobre
@@ -249,9 +261,13 @@ async function proposerDepuisLeJugement(
       raison: "Aucune écriture ne se propose : un droit hors TVA n'a pas été lu.",
     };
 
-  const tvas = m.bases.map((b, i) =>
-    lignesLues.length === 1 && m.tva !== null ? m.tva : tvaDeBase(b.ht!, m.bases[i]!.taux),
-  );
+  const tvas = m.bases.map((b, i) => {
+    if (lignesLues.length === 1 && m.tva !== null) return m.tva;
+    const majoration = (fiscalQualifie.lignes ?? [])
+      .filter((l) => l.index === i)
+      .reduce((s, l) => s + Number(enUnitesExactes(l.majorationTva, dec)), 0);
+    return tvaDeBase(b.ht! + majoration, m.bases[i]!.taux);
+  });
   const somme = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
   const totalHt = somme(m.bases.map((b) => b.ht!));
   const totalTva = m.tva ?? somme(tvas);
@@ -286,7 +302,7 @@ async function proposerDepuisLeJugement(
   const mappings = tousLesComptes.filter((c): c is typeof c & SensConnu =>
     sensConnu(c.documentKind),
   );
-  let fiscalCharges = tousLesDroits.filter((c): c is typeof c & SensConnu =>
+  let fiscalCharges: FiscalCharge[] = tousLesDroits.filter((c): c is typeof c & SensConnu =>
     sensConnu(c.documentKind),
   );
 
@@ -301,6 +317,15 @@ async function proposerDepuisLeJugement(
       order by f.valid_from desc limit 1`,
     [pieceId, jour],
   );
+  if (
+    normalise.document_kind === "facture_achat" &&
+    regimes[0]?.regime_tva === "partiel" &&
+    !fiscalQualifie.lignes
+  )
+    return {
+      ok: false,
+      raison: "Qualifiez l’affectation directe et le prorata de TVA par ligne fiscale.",
+    };
   let tvaNonDeductible = regimes[0]?.regime_tva === "non_assujetti";
   let taxRates = tauxDuPack;
   const fiscalite = await fiscaliteDuDossier(db, ligne.tenant_id, jour);
@@ -308,6 +333,7 @@ async function proposerDepuisLeJugement(
     try {
       const attentes = appliquerAttentesFiscales({
         configuration: fiscalite.configuration,
+        ...(fiscalQualifie.lignes ? { qualification: fiscalQualifie.lignes } : {}),
         dateEffet: fiscalite.date_effet,
         operation: normalise.document_kind === "facture_vente" ? "vente" : "achat",
         codesTva: lignesLues.map((l) => String(l["tax_code"] ?? "")),
@@ -338,6 +364,7 @@ async function proposerDepuisLeJugement(
       taxRates,
       mappings,
       fiscalCharges,
+      ...(fiscalQualifie.lignes ? { lignesFiscales: fiscalQualifie.lignes } : {}),
       compteDeNature,
       tvaNonDeductible,
       currency: String((ligne.payload as { currency?: string }).currency ?? ""),
@@ -361,6 +388,9 @@ async function proposerDepuisLeJugement(
       packVersionId: pack,
       proposition,
       ...(fiscalite ? { fiscaliteVersionId: fiscalite.id } : {}),
+      ...(fiscalQualifie.qualification
+        ? { qualificationFiscaleId: fiscalQualifie.qualification.id }
+        : {}),
     };
   } catch (e) {
     if (e instanceof LectureIncomplete)

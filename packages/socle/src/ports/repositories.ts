@@ -1,4 +1,9 @@
 import type {
+  QualificationFiscale,
+  QualificationFiscaleInscrite,
+  ContexteQualificationFiscale,
+} from "./qualification-fiscale.ts";
+import type {
   NouveauProfilFiscal,
   ProfilFiscal,
   FiscaliteDossier,
@@ -721,6 +726,10 @@ export interface AccountClass {
 }
 
 export interface FiscalCharge {
+  rate?: string | null;
+  basis?: string | null;
+  taxable?: boolean;
+  incorporeAuCoutAchat?: boolean;
   code: string;
   label: string;
   documentKind: "facture_achat" | "facture_vente";
@@ -783,7 +792,8 @@ export type DemandeSurPiece = "rappel" | "suppression";
  */
 export interface FaitDeDemande {
   objet: DemandeSurPiece;
-  fait: "demandee" | "accordee" | "refusee";
+  /** `retiree` : la demande n'a plus d'objet (la pièce est revenue au privé par un rappel accordé). */
+  fait: "demandee" | "accordee" | "refusee" | "retiree";
   note: string | null;
   createdAt: string;
 }
@@ -805,6 +815,8 @@ export interface PaiementDUnePiece {
   reference: string | null;
   /** Le paiement que cette ligne eteint, si c'est une annulation. */
   annulePaiementId: string | null;
+  /** Le motif de l'annulation, sur une ligne d'annulation. */
+  annulationMotifId?: string | null;
   /**
    * Eteint : annule, ou annulation d'un autre.
    *
@@ -826,6 +838,12 @@ export interface MotifDAnnulation {
   code: string;
   libelle: string;
   exigeUneNote: boolean;
+  /** Le motif sert à corriger un règlement, à retirer « pas encore payé », ou à la base. */
+  pour: "reglement" | "non_paye" | "systeme";
+  /** Proposé à la personne ; sinon seulement lu dans l'historique. */
+  proposable: boolean;
+  /** Vrai : la correction réinscrit un règlement. Faux : il est seulement retiré. */
+  remplace: boolean;
 }
 
 export interface Citation {
@@ -910,6 +928,12 @@ export interface NouvellePiece {
    * personne ne peut dire ce qu'il atteste.
    */
   sourcePieceId?: string | null;
+  /**
+   * Pour un reçu : les règlements qu'il atteste, inscrits avec lui. Un reçu
+   * sans cette liste ne saurait pas qu'il ne compte plus quand l'un d'eux est
+   * annulé.
+   */
+  paiementsAttestes?: string[] | null;
 }
 
 /**
@@ -923,6 +947,12 @@ export interface PieceLue {
   id: string;
   status: PieceStatus;
   createdAt: string;
+  /**
+   * Un reçu généré depuis une pièce, ou le justificatif d'un paiement : il
+   * accompagne une autre pièce et ne se lit jamais (`app.piece_accompagne`,
+   * la même règle que le verdict de lecture). Jamais « à lire ».
+   */
+  accompagne?: boolean;
   /**
    * Où la pièce est — et c'est ce qui décide si elle peut être lue.
    *
@@ -967,6 +997,61 @@ export interface PieceLue {
 export interface LectureRefusee {
   motif: string;
   le: string;
+}
+
+/**
+ * Une pièce qui en accompagne une autre, telle que sa fiche la montre
+ * (`public.piece_qui_accompagne`). Les libellés sont déjà traduits.
+ */
+export interface PieceQuiAccompagne {
+  genre: "recu" | "justificatif";
+  vis: Visibility;
+  creeLe: string;
+  /** La pièce à laquelle elle est rattachée, résumée par sa lecture. */
+  mere: {
+    id: string;
+    typeDeDocument: string | null;
+    emetteur: string | null;
+    date: string | null;
+    /** Le TTC lu, chaîne décimale du Socle. */
+    ttc: string | null;
+    devise: string | null;
+  } | null;
+  /** Ce que le reçu atteste, ou ce que le justificatif prouve. */
+  reglements: ReglementAccompagne[];
+  /** Faux dès qu'un de ces règlements est éteint. */
+  vaut: boolean;
+  /** L'extinction qui la fait ne plus compter : sa date, son motif traduit. */
+  annulation: { paiementId: string; le: string; motif: string } | null;
+  /** Justificatif : les règlements du dossier sans preuve, où il peut aller. */
+  candidats: CandidatAuJustificatif[];
+}
+
+export interface ReglementAccompagne {
+  id: string;
+  moyenCode: string;
+  /** « Chèque » */
+  moyen: string;
+  /** « par chèque » */
+  moyenPar: string;
+  /** « Talon de chèque » */
+  nomDeLaPreuve: string;
+  montantMineur: number | null;
+  devise: string;
+  payeLe: string | null;
+  eteint: boolean;
+}
+
+export interface CandidatAuJustificatif {
+  id: string;
+  moyenCode: string;
+  moyen: string;
+  montantMineur: number | null;
+  devise: string;
+  payeLe: string | null;
+  pieceId: string;
+  /** L'émetteur lu sur la pièce du règlement. */
+  tiers: string | null;
 }
 
 export interface CaptureRepository {
@@ -1054,8 +1139,32 @@ export interface CaptureRepository {
    * lisible. Refuse d'annuler deux fois, ou d'annuler une annulation.
    */
   annulerPaiement(paiementId: string, motifId: string): Promise<void>;
+  /** Corriger d'un geste : l'ancien s'annule, le nouveau s'inscrit, ensemble. */
+  corrigerPaiement(input: {
+    paiementId: string;
+    motifId: string;
+    moyenCode: string;
+    montantMineur: number;
+    payeLe: string;
+    reference?: string | null;
+  }): Promise<string>;
   /** Les motifs d'annulation du referentiel, traduits. */
   motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
+  /**
+   * La fiche d'une pièce qui en ACCOMPAGNE une autre — un reçu produit par
+   * Malica, le justificatif d'un règlement —, ou `null` pour toute autre pièce.
+   */
+  pieceQuiAccompagne(pieceId: string, locale: string): Promise<PieceQuiAccompagne | null>;
+  /** Rattacher un justificatif à un autre règlement sans preuve du dossier. */
+  deplacerJustificatif(pieceId: string, paiementId: string): Promise<void>;
+  /**
+   * Reprendre la photo : la nouvelle devient la preuve des mêmes règlements et
+   * l'ancienne est supprimée, ensemble. Refusé (`refus.accompagne.transmise`)
+   * sur une pièce transmise au cabinet.
+   */
+  remplacerJustificatif(ancienId: string, nouveauId: string): Promise<boolean>;
+  /** Supprimer un reçu, ou un justificatif détaché de ses règlements. Même refus. */
+  supprimerPieceQuiAccompagne(pieceId: string): Promise<boolean>;
   dossier(pieceId: string): Promise<PieceDossier>;
   /**
    * Les octets d'une pièce seuls, pour son aperçu dans une liste — sans sa
@@ -1122,6 +1231,11 @@ export interface Ecriture {
    * premier changement de version.
    */
   packVersionId: string;
+  /**
+   * Quand l'écriture a été inscrite — donc quand la personne a confirmé la
+   * lecture. `null` tant qu'elle ne l'est pas.
+   */
+  bookedAt: string | null;
   lines: EcritureLine[];
 }
 
@@ -1166,6 +1280,7 @@ export type PropositionDePiece = (
       verdictCode: CodeVerdict | null;
       packVersionId: string;
       fiscaliteVersionId?: string;
+      qualificationFiscaleId?: string;
       proposition: ProposalResult;
     }
   | {
@@ -1186,6 +1301,9 @@ export type PropositionDePiece = (
 };
 
 export interface OfficeRepository {
+  contexteQualificationFiscale(pieceId: string): Promise<ContexteQualificationFiscale>;
+  qualificationFiscale(pieceId: string): Promise<QualificationFiscaleInscrite | null>;
+  qualifierFiscalite(input: QualificationFiscale): Promise<{ id: string }>;
   propose(input: ProposedEcriture): Promise<string>;
   /**
    * La proposition d'écriture d'une pièce, calculée côté SERVEUR : depuis les

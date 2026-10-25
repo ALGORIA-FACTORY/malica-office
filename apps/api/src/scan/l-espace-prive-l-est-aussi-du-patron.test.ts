@@ -180,8 +180,9 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
         [pme, ordonnance, jeton[0]!.id],
       );
       await p.query(
-        `insert into capture.paiements (tenant_id, vis, piece_id, moyen_code, pack_version_id, devise)
-         values ($1, 'personnel', $2, 'especes', $3, 'TND')`,
+        `insert into capture.paiements
+           (tenant_id, vis, piece_id, moyen_code, pack_version_id, devise, montant_mineur, paye_le)
+         values ($1, 'personnel', $2, 'especes', $3, 'TND', 1000, date '2026-10-01')`,
         [pme, ordonnance, pack],
       );
     });

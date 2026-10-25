@@ -392,9 +392,9 @@ function PmeHome() {
    * Une carte n'existait que pour un type qui avait des pièces : « Gouvernance »
    * disparaissait dès qu'aucun PV n'était rangé, et sa couleur dépendait de sa
    * place. Désormais chaque dossier du référentiel a sa carte, dans son ordre
-   * et sa teinte — vide, elle reste là, en pointillé. Elle compte la période
-   * qu'elle affiche : le mois en cours, ou l'année pour un PV ou une
-   * déclaration.
+   * et sa teinte — vide, elle reste là, dans sa couleur (Wissem, 25 octobre).
+   * Elle compte la période qu'elle affiche : le mois en cours, ou l'année pour
+   * un PV ou une déclaration.
    */
   const dossiers = sept.dossiers.map((d) => {
     const pieces = lesLues.filter(
@@ -655,7 +655,7 @@ function PmeHome() {
                   to="/pme/dossier/$type"
                   params={{ type: d.code }}
                   data-teinte={d.teinte}
-                  className={d.total === 0 ? "poch vide" : "poch"}
+                  className="poch"
                 >
                   <span className="cv">
                     <span className="mo">{d.etiquette}</span>

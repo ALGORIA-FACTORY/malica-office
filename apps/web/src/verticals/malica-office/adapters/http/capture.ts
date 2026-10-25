@@ -29,6 +29,7 @@ import type {
   PieceLue,
   Token,
   PaiementDUnePiece,
+  PieceQuiAccompagne,
 } from "@malica/socle/ports/repositories";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
@@ -108,11 +109,27 @@ export function creerCaptureHttp(): CaptureRepository {
     async annulerPaiement(paiementId: string, motifId: string) {
       await rpc<void>("capture", "annulerPaiement", [paiementId, motifId]);
     },
+    async corrigerPaiement(input: Parameters<CaptureRepository["corrigerPaiement"]>[0]) {
+      return rpc<string>("capture", "corrigerPaiement", [input]);
+    },
     async motifsDAnnulation(locale: string) {
       return rpc<MotifDAnnulation[]>("capture", "motifsDAnnulation", [locale]);
     },
     async paiementsDUnePiece(pieceId: string) {
       return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
+    },
+    // Une pièce qui accompagne : l'API rend déjà la forme du port.
+    async pieceQuiAccompagne(pieceId: string, locale: string) {
+      return rpc<PieceQuiAccompagne | null>("capture", "pieceQuiAccompagne", [pieceId, locale]);
+    },
+    async deplacerJustificatif(pieceId: string, paiementId: string) {
+      await rpc<void>("capture", "deplacerJustificatif", [pieceId, paiementId]);
+    },
+    async remplacerJustificatif(ancienId: string, nouveauId: string) {
+      return rpc<boolean>("capture", "remplacerJustificatif", [ancienId, nouveauId]);
+    },
+    async supprimerPieceQuiAccompagne(pieceId: string) {
+      return rpc<boolean>("capture", "supprimerPieceQuiAccompagne", [pieceId]);
     },
 
     async enregistrer(piece: NouvellePiece): Promise<string> {

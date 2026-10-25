@@ -43,6 +43,11 @@ describe("les pièces à lire", () => {
     expect(r.map((p) => p.id)).toEqual(["recente", "ancienne"]);
   });
 
+  it("un reçu ou un justificatif n'est jamais « à lire » : la lecture le refuse", () => {
+    const r = piecesALire([piece("facture"), piece("recu", { accompagne: true })]);
+    expect(r.map((p) => p.id)).toEqual(["facture"]);
+  });
+
   it("ne modifie pas la liste reçue", () => {
     const liste = [piece("a", { createdAt: "2026-10-20T10:00:00Z" }), piece("b")];
     piecesALire(liste);

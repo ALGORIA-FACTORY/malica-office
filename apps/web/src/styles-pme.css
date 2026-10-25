@@ -1083,9 +1083,6 @@
 [data-surface="pme"] [data-teinte="gouvernance"]{--pf:#E7E1F5;--pe:#2E2152;--pp:#CBBFEA}
 [data-surface="pme"] [data-teinte="fiscal"]{--pf:#F6DCE7;--pe:#4A1730;--pp:#EBBCD0}
 [data-surface="pme"] [data-teinte="autres"]{--pf:#EBEBED;--pe:#18181B;--pp:#D4D4D8}
-/* Un dossier vide reste à sa place : en pointillé, sans fond. */
-[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv{background:transparent;border:1.5px dashed var(--t3);color:var(--t2)}
-[data-surface="pme"] [data-ecran="accueil"] .poch.vide .cv b{color:var(--tx)}
 /* La tuile de la capture : la même pochette, en petit. */
 [data-surface="pme"] .tuile-dossier{background:var(--pf);color:var(--pe);border:0;cursor:pointer}
 /* Le dossier où la pièce se trouve déjà, en correction. */
@@ -1275,14 +1272,6 @@
 [data-surface="pme"] [data-ecran="dossier"] .exs button span{font-family:var(--mono);font-size:.5625rem;letter-spacing:.06em;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on{background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(255,255,255,.74)}
-[data-surface="pme"] [data-ecran="dossier"] .solde{background:var(--d1);border-radius:18px;padding:1rem;margin-top:1.125rem}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd{display:flex;align-items:baseline;gap:.75rem}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd b{flex:1;font-size:.875rem;font-weight:600;letter-spacing:-.018em}
-[data-surface="pme"] [data-ecran="dossier"] .solde .hd span{font-family:var(--mono);font-size:.8125rem;font-weight:600;color:var(--t2)}
-[data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(0,0,0,.09); margin-top:.75rem;overflow:hidden}
-[data-surface="pme"] [data-ecran="dossier"] .solde .bar i{display:block;height:100%;border-radius:999px; background:linear-gradient(90deg,var(--accs),var(--acc))}
-[data-surface="pme"] [data-ecran="dossier"] .solde .ech{margin-top:.6875rem;font-size:.75rem;color:var(--t3)}
-[data-surface="pme"] [data-ecran="dossier"] .solde .ech b{color:var(--am);font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(138,91,0,.08);border:1px solid rgba(138,91,0,.24)}
 [data-surface="pme"] [data-ecran="dossier"] .centr.calme{background:var(--d1);border-color:transparent}
 [data-surface="pme"] [data-ecran="dossier"] .centr i{width:8px;height:8px;border-radius:50%;background:var(--am);flex:none;margin-top:.4375rem}
@@ -1370,14 +1359,15 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne:last-child{border-bottom:0}
 [data-surface="pme"] [data-ecran="dossier"] button.f-ligne, [data-surface="pme"] [data-ecran="dossier"] a.f-ligne{cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne:disabled{opacity:.4;cursor:default}
-[data-surface="pme"] [data-ecran="dossier"] .f-ligne .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:.1875rem}
+/* Le libellé garde sa colonne : une valeur longue (« INFOTECH SOLUTIONS SARL ») se replie, elle n'écrase pas « Émetteur » lettre à lettre. */
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .bd{flex:1 1 auto;min-width:5.5rem;display:flex;flex-direction:column;gap:.1875rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb{font-size:.8125rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .lb-a{font-size:.9375rem;font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne.sup .lb-a{color:var(--ve)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et{font-size:.75rem;font-weight:600;color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.ok{color:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .et.am{color:var(--am)}
-[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl{font-family:var(--mono);font-size:.9375rem;font-weight:600;text-align:end;overflow-wrap:anywhere}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl{flex:0 1 auto;min-width:0;font-family:var(--mono);font-size:.9375rem;font-weight:600;text-align:end;overflow-wrap:anywhere}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .vl-g{font-size:.9375rem;font-weight:600}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .dt{font-family:var(--mono);font-size:.75rem;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ligne .ch{flex:none;width:18px;height:18px;stroke-width:2;color:var(--t3)}
@@ -1409,6 +1399,43 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button{min-height:44px;border-radius:999px;border:1px solid var(--dl);background:none; color:var(--tx);font-family:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button.sup{border-color:var(--ve);color:var(--ve)}
 [data-surface="pme"] [data-ecran="dossier"] .f-detache-gestes button:disabled{opacity:.4;cursor:default}
+/* Une pièce qui en accompagne une autre — reçu, justificatif (maquette du
+ * 25 octobre 2026). Les lignes, la carte, la note et le bouton principal sont
+ * ceux de la fiche ; ne s'ajoutent que l'en-tête, la carte d'état, la carte
+ * de la pièce mère et les deux aperçus. Le PAPIER du reçu reste clair dans
+ * les deux thèmes — c'est une feuille, comme `.apercu` — et son tampon garde
+ * l'ambre du thème clair, lisible sur ce papier. */
+[data-surface="pme"] [data-ecran="dossier"] .a-tete{padding:1.25rem var(--gout) .5rem;display:flex;flex-direction:column;gap:.25rem}
+[data-surface="pme"] [data-ecran="dossier"] .a-lab{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+/* L'arabe ne s'espace pas : ses lettres se lient. */
+[dir="rtl"] [data-surface="pme"] [data-ecran="dossier"] .a-lab{letter-spacing:0}
+[data-surface="pme"] [data-ecran="dossier"] .a-tete h1{margin:0;font-size:1.5rem;line-height:1.15;font-weight:800;letter-spacing:-.03em;overflow-wrap:anywhere}
+[data-surface="pme"] [data-ecran="dossier"] .a-tete .sous{font-size:.8125rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .a-corps{padding:.75rem var(--gout) 1.5rem;display:flex;flex-direction:column;gap:.875rem}
+[data-surface="pme"] [data-ecran="dossier"] .a-etat{padding:1rem;display:flex;flex-direction:column;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .a-etat .q{display:flex;align-items:center;gap:.5rem;font-size:.8125rem;font-weight:600;color:var(--acc)}
+[data-surface="pme"] [data-ecran="dossier"] .a-etat .q.am{color:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .a-etat .q i{width:8px;height:8px;border-radius:50%;background:currentColor}
+[data-surface="pme"] [data-ecran="dossier"] .a-etat p{margin:0;font-size:.875rem;line-height:1.5;color:var(--tx)}
+[data-surface="pme"] [data-ecran="dossier"] .f-ligne.a-mere{min-height:64px;padding:.75rem 1rem;border:1px solid var(--dl);border-radius:var(--r-lg)}
+[data-surface="pme"] [data-ecran="dossier"] .a-mere .lb{font-size:.78125rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .a-mere .ouv{flex:none;font-size:.8125rem;font-weight:600}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu{--papier:#FAFAFA;--tampon:#8A5B00;position:relative;width:100%;border:0;padding:18px 18px 0;border-radius:var(--r-lg); background:var(--d1);cursor:zoom-in;display:flex;flex-direction:column;font-family:inherit}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu .papier{position:relative;display:block;border-radius:6px 6px 0 0;overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.45)}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu .apercu{height:300px;border:0;border-radius:0;background:var(--papier)}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu .dent{display:block;height:10px; background:radial-gradient(circle at 6px -2px,var(--d1) 6px,var(--papier) 6.5px) repeat-x;background-size:12px 10px}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu.perime{--papier:#ECECEE}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu.perime .apercu, [data-surface="pme"] [data-ecran="dossier"] .a-recu.perime .dent{filter:grayscale(1)}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu .tampon{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%) rotate(-12deg); border:3px solid var(--tampon);color:var(--tampon);border-radius:8px;padding:4px 14px;background:rgba(250,250,250,.85); font-size:1.25rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+[data-surface="pme"] [data-ecran="dossier"] .a-recu .toucher{align-self:flex-end;margin:10px 0 12px;font-size:.75rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo{position:relative;width:100%;height:230px;border:0;padding:0;border-radius:var(--r-lg);overflow:hidden; background:var(--d2);cursor:zoom-in;font-family:inherit}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .apercu{border:0;border-radius:0}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .coin{position:absolute;width:22px;height:22px;border:0 solid #FFFFFF}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .coin.hd{top:14px;inset-inline-start:14px;border-top-width:2px;border-inline-start-width:2px;border-start-start-radius:4px}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .coin.hf{top:14px;inset-inline-end:14px;border-top-width:2px;border-inline-end-width:2px;border-start-end-radius:4px}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .coin.bd{bottom:14px;inset-inline-start:14px;border-bottom-width:2px;border-inline-start-width:2px;border-end-start-radius:4px}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .coin.bf{bottom:14px;inset-inline-end:14px;border-bottom-width:2px;border-inline-end-width:2px;border-end-end-radius:4px}
+[data-surface="pme"] [data-ecran="dossier"] .a-photo .pastille{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:14px; background:rgba(10,10,10,.72);color:#FFFFFF;font-size:.75rem;font-weight:600;white-space:nowrap}
 
 
 /* ======================== écran · bibliotheque ======================== */
@@ -2391,7 +2418,6 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:.375rem;justify-content:center; padding:.5rem;background:rgba(0,0,0,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px); border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;scrollbar-width:none}
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs button{display:grid;gap:.0625rem;justify-items:center;padding:.4375rem .75rem;border:0; border-radius:999px;background:rgba(255,255,255,.07);color:var(--t2);cursor:pointer; font-family:inherit;white-space:nowrap}
 .dark [data-surface="pme"] [data-ecran="dossier"] .exs button.on span{color:rgba(7,33,15,.62)}
-.dark [data-surface="pme"] [data-ecran="dossier"] .solde .bar{display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.09); margin-top:.75rem;overflow:hidden}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr{display:flex;align-items:flex-start;gap:.75rem;border-radius:16px;padding:.875rem .9375rem; margin-top:.875rem;background:rgba(232,199,106,.08);border:1px solid rgba(232,199,106,.24)}
 .dark [data-surface="pme"] [data-ecran="dossier"] .centr p{margin:0;font-size:.8125rem;line-height:1.5;color:#EBD9A8}
 .dark [data-surface="pme"] [data-ecran="dossier"] .ck.q p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.no p, .dark [data-surface="pme"] [data-ecran="dossier"] .ck.az p{color:#E4E4E7}

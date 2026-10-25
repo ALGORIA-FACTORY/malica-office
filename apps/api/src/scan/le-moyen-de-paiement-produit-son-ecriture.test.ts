@@ -526,11 +526,10 @@ describe("le moyen de paiement produit son écriture", { skip: !BASE_CONFIGUREE 
     }>;
     assert.equal(historique.find((x) => x.id === p)!.montantMineur, 1_970_000);
     assert.equal(historique.find((x) => x.id === p)!.detteEteinteMineur, 2_000_000);
-    const enTrop = await payer(f, "virement", 30_000, "FAUX-SOLDE");
-    await assert.rejects(
-      rpc("office", "inscrireLeReglement", enTrop, sansRetenue("30.000")),
-      /dépasse la dette/,
-    );
+    // Depuis le 25 octobre 2026, le second solde n'entre même plus : la base
+    // juge le règlement sur la dette DÉJÀ éteinte, retenue comprise
+    // (`un_reglement_dit_vrai`). Le refus de l'écriture reste derrière lui.
+    await assert.rejects(payer(f, "virement", 30_000, "FAUX-SOLDE"), /paiement\.depasse_le_total/);
   });
   it("reprend le compte du tiers effectivement inscrit sur la facture", async () => {
     const f = await piece("tiers-inscrit", "facture_achat");

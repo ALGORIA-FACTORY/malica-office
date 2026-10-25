@@ -26,6 +26,10 @@
  * Alors on lit le code. Dans CE composant, et dans celui-là seulement, tout
  * ce qu'on dépose naît d'une facture affichée à l'écran : un talon, un reçu.
  * Un dépôt sans parent y est forcément une étourderie.
+ *
+ * Le 25 octobre 2026, la photo du justificatif a quitté ce composant pour
+ * `lib/preuve-de-paiement.ts`, que la fiche d'un justificatif emploie aussi
+ * (« Reprendre la photo ») : l'épreuve lit les deux fichiers.
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -33,7 +37,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /** Le chemin part du dossier de travail de Vitest, c'est-à-dire `apps/web`. */
-const FICHIER = resolve(process.cwd(), "src/components/malica/comment-c-est-paye.tsx");
+const FICHIERS = [
+  resolve(process.cwd(), "src/components/malica/comment-c-est-paye.tsx"),
+  resolve(process.cwd(), "src/lib/preuve-de-paiement.ts"),
+];
 
 /** Le code, commentaires retirés — un exemple en commentaire ne prouve rien. */
 function sansCommentaires(source: string): string {
@@ -46,8 +53,9 @@ function sansCommentaires(source: string): string {
 
 describe("toute preuve déposée sait de quelle facture elle vient", () => {
   it("chaque dépôt de cet écran porte `sourcePieceId`", () => {
-    const code = sansCommentaires(readFileSync(FICHIER, "utf8"));
-    const depots = code.split("vidage().deposer(").slice(1);
+    const depots = FICHIERS.flatMap((f) =>
+      sansCommentaires(readFileSync(f, "utf8")).split("vidage().deposer(").slice(1),
+    );
 
     // Deux dépôts aujourd'hui : le justificatif et le reçu. Si ce nombre
     // change, c'est qu'un troisième est né — et il doit passer ici aussi.

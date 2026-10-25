@@ -1,3 +1,4 @@
+import type { LigneFiscaleCalculee } from "../../ports/qualification-fiscale.ts";
 /**
  * P4 — moteur d'équilibre : construit l'écriture depuis un extract.v1 et vérifie
  * Σdébit = Σcrédit STRICTEMENT (aucune conversion Number, aucun taux en dur).
@@ -23,6 +24,8 @@ export interface FiscalChargeRule {
   document_kind?: "facture_achat" | "facture_vente" | null;
   /** Montant fixe au pack (droit de timbre…), chaîne décimale ou null. */
   fixed_amount?: string | null;
+  rate?: string | null;
+  taxable?: boolean;
 }
 
 export interface PivotInput {
@@ -44,6 +47,7 @@ export interface PivotInput {
    * cas du pack tunisien — n'a rien à dire ici.
    */
   vat_accounts_by_tax_code?: Readonly<Record<string, string>>;
+  lignes_fiscales?: readonly LigneFiscaleCalculee[];
   tolerances: Tolerances;
 }
 
@@ -69,12 +73,38 @@ export function computePivot(input: PivotInput): PivotV1 {
     }
   }
 
+  const qualifiees = input.lignes_fiscales;
+  if (qualifiees) {
+    for (let i = 0; i < extract.lines.length; i++) {
+      const ls = qualifiees.filter((l) => l.index === i);
+      if (!ls.length || !sum(ls.map((l) => l.baseHt)).eq(extract.lines[i]!.base_ht))
+        motifs.push({
+          code: "FISCAL_CHARGE_MISMATCH",
+          severity: "block",
+          message: "La ventilation fiscale ne correspond pas au HT lu.",
+          detail: { ligne: i },
+        });
+    }
+    if (qualifiees.some((l) => l.index >= extract.lines.length))
+      motifs.push({
+        code: "FISCAL_CHARGE_MISMATCH",
+        severity: "block",
+        message: "Une ligne fiscale n’existe plus dans la lecture.",
+      });
+  }
   // 2) Vérifier cohérence taux ↔ montants (base × rate ≈ vat).
-  for (const { line, rate } of perLineRate) {
+  for (const [i, { line, rate }] of perLineRate.entries()) {
     if (!rate) continue;
-    const expected = D(line.base_ht).times(rate.rate);
+    const majoration = sum(
+      (qualifiees ?? []).filter((l) => l.index === i).map((l) => l.majorationTva),
+    );
+    const expected = D(line.base_ht).plus(majoration).times(rate.rate);
     const diff = expected.minus(line.vat_amount).abs();
-    if (diff.greaterThan(tolerances.rounding_tolerance)) {
+    if (
+      qualifiees
+        ? !D(round(expected.toString())).eq(line.vat_amount)
+        : diff.greaterThan(tolerances.rounding_tolerance)
+    ) {
       motifs.push({
         code: "TAX_RATE_MISMATCH",
         severity: "block",
@@ -126,7 +156,7 @@ export function computePivot(input: PivotInput): PivotV1 {
 
   // Droits et taxes hors TVA imprimés sur la pièce : le montant est lu (cité),
   // le compte vient du pack. Une charge sans compte au pack bloque l'écriture.
-  const charges: Array<{ label: string; account_code: string; amount: string }> = [];
+  const charges: Array<{ code: string; label: string; account_code: string; amount: string }> = [];
   for (const c of extract.other_charges ?? []) {
     const rule = fiscalCharges.find(
       (r) => r.code === c.code && (!r.document_kind || r.document_kind === extract.document_kind),
@@ -140,6 +170,21 @@ export function computePivot(input: PivotInput): PivotV1 {
       });
       continue;
     }
+    const allocations = (qualifiees ?? [])
+      .flatMap((l) => l.droits)
+      .filter((d) => d.code === c.code);
+    if (rule.rate != null || rule.taxable) {
+      if (
+        !qualifiees ||
+        !allocations.length ||
+        !sum(allocations.map((d) => d.montant)).eq(c.amount)
+      )
+        motifs.push({
+          code: "FISCAL_CHARGE_MISMATCH",
+          severity: "block",
+          message: `Assiette ou ventilation de « ${c.code} » absente ou différente du droit lu.`,
+        });
+    }
     if (rule.fixed_amount != null && !D(c.amount).eq(D(rule.fixed_amount))) {
       motifs.push({
         code: "FISCAL_CHARGE_MISMATCH",
@@ -149,6 +194,7 @@ export function computePivot(input: PivotInput): PivotV1 {
       });
     }
     charges.push({
+      code: c.code,
       label: c.label || rule.label,
       account_code: rule.account_code,
       amount: round(c.amount),
@@ -159,7 +205,7 @@ export function computePivot(input: PivotInput): PivotV1 {
   // sur la pièce peut être imputée ; le résidu non expliqué reste bloquant.
   const declared = sum(charges.map((c) => c.amount));
   const residual = D(extract.totals.ttc).minus(totalHT).minus(totalVAT).minus(declared);
-  if (residual.abs().greaterThan(tolerances.rounding_tolerance)) {
+  if (qualifiees ? !residual.isZero() : residual.abs().greaterThan(tolerances.rounding_tolerance)) {
     motifs.push({
       code: "RESIDUAL_UNEXPLAINED",
       severity: "block",
@@ -231,12 +277,91 @@ export function computePivot(input: PivotInput): PivotV1 {
     }
   }
 
+  if (qualifiees) {
+    const comptesQualifies: JournalLineV1[] = [];
+    const achat = extract.document_kind === "facture_achat";
+    const pousser = (compte: string, label: string, montant: string, tax_code?: string) => {
+      if (D(montant).isZero()) return;
+      comptesQualifies.push({
+        account_code: compte,
+        label,
+        debit: achat ? montant : "0",
+        credit: achat ? "0" : montant,
+        ...(tax_code ? { tax_code } : {}),
+      });
+    };
+    for (let i = 0; i < extract.lines.length; i++) {
+      const source = extract.lines[i]!;
+      const ls = qualifiees.filter((l) => l.index === i);
+      const poids = ls.map((l) => D(l.baseHt).plus(l.majorationTva));
+      const montantTva = repartir(
+        source.vat_amount,
+        poids.map((p) => p.toString()),
+        decimals,
+      );
+      for (const [n, l] of ls.entries()) {
+        pousser(l.compteCout, source.label, round(l.baseHt));
+        const tva = montantTva[n] ?? "0";
+        const recuperable = achat ? round(D(tva).mul(l.tauxDeduction).toString()) : tva;
+        const nonRecuperable = D(tva).minus(recuperable).toString();
+        pousser(
+          input.vat_accounts_by_tax_code?.[source.tax_code] ?? mapping.vat_account,
+          achat ? `TVA déductible ${source.tax_code}` : `TVA collectée ${source.tax_code}`,
+          recuperable,
+          source.tax_code,
+        );
+        if (achat)
+          pousser(l.compteCout, `TVA non récupérable · ${source.label}`, round(nonRecuperable));
+        for (const d of l.droits)
+          pousser(
+            d.incorporeAuCout ? l.compteCout : d.compte,
+            `${d.code} · ${source.label}`,
+            round(d.montant),
+          );
+      }
+    }
+    for (const c of charges.filter(
+      (c) => !qualifiees.flatMap((l) => l.droits).some((d) => d.code === c.code),
+    ))
+      pousser(c.account_code, c.label, c.amount);
+    for (const code of new Set(qualifiees.flatMap((l) => l.droits).map((d) => d.code))) {
+      const attendue = sum(
+        qualifiees
+          .flatMap((l) => l.droits)
+          .filter((d) => d.code === code)
+          .map((d) => d.montant),
+      );
+      const lue = sum(
+        (extract.other_charges ?? []).filter((d) => d.code === code).map((d) => d.amount),
+      );
+      if (!attendue.eq(lue))
+        motifs.push({
+          code: "FISCAL_CHARGE_MISMATCH",
+          severity: "block",
+          message: `Le total qualifié de « ${code} » diffère de la pièce.`,
+        });
+    }
+    const contrepartie: JournalLineV1 = {
+      account_code: mapping.counterparty_account,
+      label: achat
+        ? `Fournisseur ${extract.issuer}`
+        : (contrepartieDuDocument(extract) ?? "Client"),
+      debit: achat ? "0" : round(counterparty.toString()),
+      credit: achat ? round(counterparty.toString()) : "0",
+    };
+    lines.splice(
+      0,
+      lines.length,
+      ...(achat ? [...comptesQualifies, contrepartie] : [contrepartie, ...comptesQualifies]),
+    );
+  }
+
   // 4) Vérifier l'équilibre STRICT (tolérance = 0 par défaut).
   const totalDebit = sum(lines.map((l) => l.debit));
   const totalCredit = sum(lines.map((l) => l.credit));
   const gap = totalDebit.minus(totalCredit).abs();
   if (gap.greaterThan(0)) {
-    if (gap.lessThanOrEqualTo(tolerances.rounding_tolerance)) {
+    if (!qualifiees && gap.lessThanOrEqualTo(tolerances.rounding_tolerance)) {
       motifs.push({
         code: "ROUNDING_WITHIN_TOLERANCE",
         severity: "warn",
@@ -293,4 +418,27 @@ export function computePivot(input: PivotInput): PivotV1 {
     motifs,
     approvable: traffic_light !== "ROUGE",
   };
+}
+
+/** Répartition au plus fort reste : la somme égale exactement la TVA imprimée. */
+function repartir(montant: string, poids: string[], decimales: number): string[] {
+  if (!poids.length) return [];
+  const total = sum(poids);
+  if (total.isZero()) {
+    if (!D(montant).isZero()) return poids.map(() => "0");
+    return poids.map(() => "0");
+  }
+  const echelle = D(10).pow(decimales);
+  const mineur = D(montant).mul(echelle);
+  const quotas = poids.map((p) => mineur.mul(p).div(total));
+  const entiers = quotas.map((q) => q.floor());
+  let reste = mineur.minus(sum(entiers.map((e) => e.toString()))).toNumber();
+  const ordre = quotas
+    .map((q, i) => ({ i, reste: q.minus(entiers[i]!) }))
+    .sort((a, b) => b.reste.comparedTo(a.reste) || a.i - b.i);
+  for (const o of ordre) {
+    if (reste-- <= 0) break;
+    entiers[o.i] = entiers[o.i]!.plus(1);
+  }
+  return entiers.map((v) => v.div(echelle).toFixed(decimales));
 }

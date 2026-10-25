@@ -1,4 +1,12 @@
 import {
+  contexteQualificationFiscale,
+  lireQualificationFiscale,
+  inscrireQualificationFiscale,
+  lignesQualifiees,
+  ancresFiscales,
+} from "../scan/qualification-fiscale.ts";
+import { analyserPiece } from "../scan/analyse.ts";
+import {
   lireLaQualification,
   RetenueNonQualifiee,
   type ConstatDeRetenue,
@@ -102,7 +110,7 @@ async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]
  * l'ordre ne disait pas laquelle vit (ANO-CAB-005, ANO-FC-012).
  */
 const COLONNES_ECRITURE = `e.id, e.piece_id, e.journal, e.date_ecriture, e.devise, e.libelle,
-       e.status, e.pack_version_id,
+       e.status, e.pack_version_id, e.booked_at,
        (e.status = 'booked' and e.nature = 'piece' and e.reverses_id is null
         and not exists (select 1 from ecritures_v r where r.reverses_id = e.id)) as vivante`;
 
@@ -117,11 +125,29 @@ function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) 
     libelle: (r["libelle"] as string) ?? "",
     status: r["status"] as string,
     packVersionId: r["pack_version_id"] as string,
+    // Quand la personne a confirmé : la fiche le dit (« confirmé le … »).
+    bookedAt: r["booked_at"] == null ? null : new Date(r["booked_at"] as string).toISOString(),
     lines: lignes.get(r["id"] as string) ?? [],
   };
 }
 
 export const office = {
+  contexteQualificationFiscale,
+  qualificationFiscale: lireQualificationFiscale,
+  async qualifierFiscalite(db: Requete, input: unknown) {
+    const r = await inscrireQualificationFiscale(db, input);
+    const q = await lireQualificationFiscale(db, (input as { pieceId: string }).pieceId);
+    const analyse = await analyserPiece(db, q!.pieceId);
+    if (analyse.normalisation.etat !== "tranche")
+      throw new Error(
+        `La qualification ne vérifie pas les montants imprimés : ${analyse.normalisation.raison}`,
+      );
+    const qualifiee = await lignesQualifiees(db, q!.pieceId);
+    const ancres = ancresFiscales(qualifiee.lignes!, qualifiee.contexte.decimales);
+    if (ancres.bases.some((a, i) => analyse.normalisation.montants.bases[i]?.ht !== a.attendu))
+      throw new Error("La ventilation qualifiée ne correspond pas aux bases HT imprimées.");
+    return r;
+  },
   /**
    * La proposition d'écriture d'une pièce, calculée par le SERVEUR (3B-6) :
    * depuis les montants imprimés et normalisés, seulement si le verdict la
@@ -152,13 +178,13 @@ export const office = {
       devise: r.proposition.pivot.currency,
       lignes: r.proposition.lignes,
     });
-    if (r.fiscaliteVersionId)
+    if (r.fiscaliteVersionId || r.qualificationFiscaleId)
       await db.query(
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
        select p.tenant_id, auth.uid(), 'fiscalite.appliquee', 'socle', 'ecritures', $2,
-         jsonb_build_object('version_dossier', $3::text, 'piece_id', p.id)
+         jsonb_build_object('version_dossier', $3::text, 'piece_id', p.id, 'qualification_fiscale', $4::text)
        from capture.pieces p where p.id = $1`,
-        [pieceId, id, r.fiscaliteVersionId],
+        [pieceId, id, r.fiscaliteVersionId ?? null, r.qualificationFiscaleId ?? null],
       );
     return id;
   },
@@ -449,6 +475,7 @@ export const office = {
     );
     const e = rows[0];
     let versionFiscale: string | undefined;
+    let qualificationFiscaleId: string | undefined;
     if (e && e.nature === "reglement" && e.reverses_id === null && e.status === "proposee") {
       if (!e.paiement_id) throw refusMetier("Un règlement sans paiement ne s'inscrit pas.");
       const r = await propositionDeReglement(db, e.paiement_id, qualificationLue(e.qualification));
@@ -471,7 +498,12 @@ export const office = {
     if (e?.nature === "piece" && e.piece_id && e.reverses_id === null && e.status === "proposee") {
       await db.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [e.tenant_id]);
       const fiscalite = await fiscaliteDuDossier(db, e.tenant_id, e.date_ecriture);
-      if (fiscalite) {
+      const qualification = await lireQualificationFiscale(db, e.piece_id);
+      const { rows: complexes } = await db.query<{ present: boolean }>(
+        `select exists(select 1 from capture.extractions x join lateral jsonb_array_elements(coalesce(x.payload->'other_charges','[]'::jsonb)) d on true join ref.fiscal_charges c on c.code=d->>'code' where x.piece_id=$1 and (c.rate is not null or c.taxable)) as present`,
+        [e.piece_id],
+      );
+      if (fiscalite || qualification || complexes[0]?.present) {
         const r = await propositionDePiece(db, e.piece_id, e.date_ecriture);
         if (!r.ok) throw refusMetier(r.raison);
         const proposees = (await lignesDe(db, [ecritureId])).get(ecritureId) ?? [];
@@ -490,15 +522,16 @@ export const office = {
             "Le profil fiscal ou la pièce a changé : proposez à nouveau l’écriture avant inscription.",
           );
         versionFiscale = r.fiscaliteVersionId;
+        qualificationFiscaleId = r.qualificationFiscaleId;
       }
     }
     await db.query(`select public.socle_ecriture_book($1)`, [ecritureId]);
-    if (versionFiscale)
+    if (versionFiscale || qualificationFiscaleId)
       await db.query(
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
        values ($1, auth.uid(), 'fiscalite.appliquee', 'socle', 'ecritures', $2,
-         jsonb_build_object('version_dossier', $3::text, 'comptabilisee', true))`,
-        [e!.tenant_id, ecritureId, versionFiscale],
+         jsonb_build_object('version_dossier', $3::text, 'comptabilisee', true, 'qualification_fiscale', $4::text))`,
+        [e!.tenant_id, ecritureId, versionFiscale ?? null, qualificationFiscaleId ?? null],
       );
   },
 

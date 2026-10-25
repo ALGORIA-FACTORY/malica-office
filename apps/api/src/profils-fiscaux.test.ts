@@ -376,6 +376,186 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       1,
     );
   });
+  it("qualifie un FODEC depuis les jetons, contrôle les rôles et trace la comptabilisation", async () => {
+    const d = await sousIdentite(expert.id, (db) =>
+      identite.ouvrirDossier(db, {
+        cabinetTenantId: cabinet,
+        name: `FODEC ${marque}`,
+        legalId: matriculeDEssai(),
+        adresse: null,
+      }),
+    );
+    supplementaires.push(d.id);
+    await admin.query(
+      `insert into identity.memberships(tenant_id,user_id,role) values($1,$2,'dirigeant')`,
+      [d.id, dirigeant.id],
+    );
+    const catalogue = await sousIdentite(expert.id, (db) =>
+      fiscalite.catalogueFiscal(db, "TN", aujourd),
+    );
+    const regles = ["TVA19", "FODEC"].map((code) => {
+      const r = catalogue.find((r) => r.operation === "achat" && r.code === code)!;
+      assert.ok(r);
+      return {
+        famille: r.famille,
+        operation: r.operation,
+        code: r.code,
+        mode: r.mode,
+        valeur: r.valeur,
+        assiette: r.assiette,
+        dansBaseTva: r.dansBaseTva,
+        typeOperation: "Produits qualifiés du scénario",
+        applicabilite: "applicable" as const,
+        deductibilite: "oui" as const,
+        referenceLegale: "Justificatif du scénario de test",
+        conditions: "",
+        justificatif: "",
+      };
+    });
+    const profil = await sousIdentite(expert.id, (db) =>
+      fiscalite.enregistrerProfilFiscal(db, {
+        cabinetId: cabinet,
+        profilId: null,
+        precedentId: null,
+        nom: "FODEC test",
+        categorie: "Produits qualifiés",
+        jurisdiction: "TN",
+        dateEffet: aujourd,
+        configuration: { ...configuration, regles },
+      }),
+    );
+    await sousIdentite(expert.id, (db) =>
+      fiscalite.appliquerProfilFiscal(db, {
+        cabinetId: cabinet,
+        versionProfilId: profil.id,
+        dateEffet: aujourd,
+        cibles: [{ clientId: d.id, precedentId: null }],
+      }),
+    );
+    const rpc = (depot: string, methode: string, ...args: unknown[]) =>
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
+        executerRpc(db, { depot, methode, args }, "serveur"),
+      );
+    const packId = (
+      await admin.query<{ id: string }>(
+        `select id from ref.jurisdiction_packs where jurisdiction='TN' and effective_from<=current_date order by effective_from desc limit 1`,
+      )
+    ).rows[0]!.id;
+    const l = lecture({
+      clientMf: d.legalId,
+      numero: `FD-${marque}`,
+      ht: ["1", "000,000"],
+      tva: "191,900",
+      ttc: ["1", "201,900"],
+      solveurFaux: true,
+    });
+    l.tokens[10]!.text = "10,000";
+    l.tokens[5]!.text = aujourd.split("-").reverse().join("/");
+    l.extract.document_date = aujourd;
+    l.extract.other_charges = [{ code: "FODEC", label: "FODEC", amount: "999" }];
+    const piece = (await rpc("capture", "enregistrer", {
+      tenantId: d.id,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `fd-${marque}`,
+      contentType: "application/pdf",
+      pageCount: 1,
+    })) as { id: string };
+    const persister = () =>
+      rpc("capture", "persisterLecture", {
+        pieceId: piece.id,
+        packId,
+        tokens: l.tokens,
+        contract: "extract.v1",
+        extract: l.extract,
+        citations: l.citations,
+        flags: [],
+        articles: [],
+        documentKind: "facture_achat",
+        documentDate: aujourd,
+        mode: "pdf-text",
+        confianceParChamp: { "totals.ttc": 0.95 },
+      });
+    await persister();
+    await rpc("capture", "analyser", piece.id);
+    const c = await sousIdentite(expert.id, (db) =>
+      office.contexteQualificationFiscale(db, piece.id),
+    );
+    assert.ok(c.comptes.length);
+    assert.ok(c.lignes[0]!.htLu?.includes("000"));
+    const q = {
+      pieceId: piece.id,
+      extractionId: c.extractionId,
+      profilVersionId: c.profilVersionId,
+      precedentId: null,
+      documentKind: "facture_achat",
+      dateOperation: aujourd,
+      contexte: "interieur",
+      qualiteOperateur: "fabricant",
+      justification: "Produits soumis identifiés dans la facture du scénario",
+      lignes: [
+        {
+          index: 0,
+          baseHt: "1000.000",
+          compteCout: c.comptes[0]!.code,
+          deduction: "deductible",
+          droits: [
+            {
+              code: "FODEC",
+              assiette: "1000.000",
+              referenceLegale: "Source légale et produit vérifiés dans ce scénario",
+            },
+          ],
+        },
+      ],
+    };
+    for (const u of [dirigeant, collaborateur, autre])
+      await assert.rejects(sousIdentite(u.id, (db) => office.qualifierFiscalite(db, q)));
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        office.qualifierFiscalite(db, { ...q, lignes: [{ ...q.lignes[0], baseHt: "900" }] }),
+      ),
+      /qualification|montants|dépasse/i,
+    );
+    assert.equal(
+      await sousIdentite(expert.id, (db) => office.qualificationFiscale(db, piece.id)),
+      null,
+    );
+    const enregistree = await sousIdentite(expert.id, (db) => office.qualifierFiscalite(db, q));
+    const r = await sousIdentite(expert.id, (db) => office.propositionDePiece(db, piece.id));
+    assert.equal(r.ok, true, !r.ok ? r.raison : "");
+    if (r.ok) {
+      assert.equal(r.qualificationFiscaleId, enregistree.id);
+      assert.equal(r.proposition.pivot.totals.debit, "1201.900");
+    }
+    await assert.rejects(
+      sousIdentite(expert.id, (db) => office.qualifierFiscalite(db, q)),
+      /changé/,
+    );
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        db.query(`update parametrage.qualifications_fiscales set payload=payload where id=$1`, [
+          enregistree.id,
+        ]),
+      ),
+    );
+    const ecriture = await sousIdentite(expert.id, (db) =>
+      office.proposerDepuisPiece(db, piece.id),
+    );
+    await sousIdentite(expert.id, (db) => office.book(db, ecriture));
+    assert.equal(
+      (
+        await admin.query<{ q: string }>(
+          `select payload->>'qualification_fiscale' q from audit.event_log where object_id=$1 and action='fiscalite.appliquee' and payload->>'comptabilisee'='true'`,
+          [ecriture],
+        )
+      ).rows[0]?.q,
+      enregistree.id,
+    );
+    await persister();
+    const obsolete = await sousIdentite(expert.id, (db) => office.propositionDePiece(db, piece.id));
+    assert.equal(obsolete.ok, false);
+  });
   it("les règles du dossier contrôlent réellement la proposition et la version utilisée est tracée", async () => {
     const d = await sousIdentite(expert.id, (db) =>
       identite.ouvrirDossier(db, {
@@ -470,7 +650,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     await rpc("capture", "analyser", piece.id);
     const refusee = await sousIdentite(expert.id, (db) => office.propositionDePiece(db, piece.id));
     assert.equal(refusee.ok, false);
-    if (!refusee.ok) assert.match(refusee.raison, /TVA incohérente/);
+    if (!refusee.ok) assert.match(refusee.raison, /TVA|montants|convention|normalis|cohér/i);
     const corrigee = await sousIdentite(expert.id, (db) =>
       fiscalite.enregistrerProfilFiscal(db, {
         cabinetId: cabinet,

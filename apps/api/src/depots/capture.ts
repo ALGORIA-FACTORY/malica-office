@@ -105,6 +105,63 @@ async function projeterLesArticles(
   ]);
 }
 
+/**
+ * Effacer une pièce par une porte de la base, puis ses octets.
+ *
+ * L'ordre compte. On lit le tenant AVANT : après, la ligne n'existe plus et
+ * l'on ne saurait plus où est le fichier. Et les octets ne partent qu'une fois
+ * que la base a dit oui — un refus laisse la pièce entière.
+ */
+async function effacerPar(
+  db: Requete,
+  pieceId: string,
+  porte: () => Promise<unknown>,
+): Promise<boolean> {
+  const { rows } = await db.query<{ tenant_id: string }>(
+    `select tenant_id from pieces_v where id = $1`,
+    [pieceId],
+  );
+  const tenantId = rows[0]?.tenant_id;
+  if (!tenantId) return false;
+  await porte();
+  await effacerContenu(tenantId, pieceId);
+  return true;
+}
+
+/** Ce que rend `public.piece_qui_accompagne` (voir la migration `20261025223000`). */
+interface PieceQuiAccompagneBrute {
+  genre: "recu" | "justificatif";
+  vis: string;
+  creeLe: string;
+  mere: {
+    id: string;
+    typeDeDocument: string | null;
+    emetteur: string | null;
+    date: string | null;
+    ttc: string | null;
+    devise: string | null;
+  } | null;
+  reglements: Array<{
+    id: string;
+    moyenCode: string;
+    montantMineur: number | string | null;
+    devise: string;
+    payeLe: string | null;
+    eteint: boolean;
+  }>;
+  vaut: boolean;
+  annulation: { paiementId: string; le: string; motifCode: string } | null;
+  candidats: Array<{
+    id: string;
+    moyenCode: string;
+    montantMineur: number | string | null;
+    devise: string;
+    payeLe: string | null;
+    pieceId: string;
+    tiers: string | null;
+  }>;
+}
+
 function versPiece(r: Record<string, unknown>) {
   return {
     id: r["id"] as string,
@@ -160,6 +217,14 @@ export const capture = {
        * flottant et personne ne peut dire ce qu'il atteste.
        */
       sourcePieceId?: string | null;
+      /**
+       * Les règlements qu'un reçu ATTESTE — ceux que l'écran a mis dessus.
+       *
+       * Inscrits dans la même transaction que le reçu (`recu_attester_paiements`) :
+       * un reçu sans cette liste ne saurait pas qu'il ne compte plus quand l'un
+       * d'eux est annulé.
+       */
+      paiementsAttestes?: string[] | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
@@ -200,6 +265,15 @@ export const capture = {
         where id = $1`,
       [id, chemin, input.contentType ?? null],
     );
+
+    // Rejouable : la même clé rend le même reçu, et la base n'inscrit la
+    // même liste qu'une fois.
+    if (input.paiementsAttestes && input.paiementsAttestes.length > 0) {
+      await db.query(`select public.recu_attester_paiements($1, $2::uuid[])`, [
+        id,
+        input.paiementsAttestes,
+      ]);
+    }
     return { id, chemin };
   },
 
@@ -242,6 +316,7 @@ export const capture = {
      */
     const { rows } = await db.query(
       `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.document_kind, x.payload,
+              app.piece_accompagne(p.id) as accompagne,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
@@ -289,6 +364,7 @@ export const capture = {
         createdAt: r["created_at"] as string,
         vis: r["vis"] as string,
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
+        accompagne: Boolean(r["accompagne"]),
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
         kind:
@@ -999,17 +1075,119 @@ export const capture = {
     if (parAccord !== false) {
       throw Object.assign(new Error("suppression.accord_reserve_au_cabinet"), { code: "42501" });
     }
-    const { rows } = await db.query<{ tenant_id: string }>(
-      `select tenant_id from pieces_v where id = $1`,
+    return effacerPar(db, pieceId, () =>
+      db.query(`select public.capture_piece_supprimer($1, $2)`, [pieceId, parAccord]),
+    );
+  },
+
+  /**
+   * La fiche d'une pièce qui en ACCOMPAGNE une autre — un reçu produit par
+   * Malica, le justificatif photographié d'un règlement — ou `null`.
+   *
+   * La base dit tout (`piece_qui_accompagne`) : le genre, la pièce mère, les
+   * règlements attestés ou prouvés, s'il compte encore et pourquoi pas, et —
+   * pour un justificatif — les règlements sans preuve où il peut aller. Les
+   * libellés viennent du référentiel, dans la langue demandée.
+   */
+  async pieceQuiAccompagne(db: Requete, pieceId: string, locale: string) {
+    const { rows } = await db.query<{ f: PieceQuiAccompagneBrute | null }>(
+      `select public.piece_qui_accompagne($1) as f`,
       [pieceId],
     );
-    const tenantId = rows[0]?.tenant_id;
-    if (!tenantId) return false;
+    const f = rows[0]?.f ?? null;
+    if (!f) return null;
 
-    await db.query(`select public.capture_piece_supprimer($1, $2)`, [pieceId, parAccord]);
-    // La base a dit oui : les octets n'ont plus de raison d'exister.
-    await effacerContenu(tenantId, pieceId);
-    return true;
+    /*
+     * La base rend des CODES ; leurs noms viennent du référentiel, dans la
+     * langue demandée, le français à défaut, le code en dernier (R4). Une
+     * requête pour tous les moyens de la fiche.
+     */
+    const codes = [...new Set([...f.reglements, ...f.candidats].map((r) => r.moyenCode))];
+    const { rows: noms } = await db.query<{
+      code: string;
+      moyen: string;
+      par: string;
+      preuve: string;
+    }>(
+      `select c.code,
+              coalesce(md.value, mf.value, c.code) as moyen,
+              coalesce(pd.value, pf.value, c.code) as par,
+              coalesce(jd.value, jf.value, c.code) as preuve
+         from unnest($1::text[]) as c(code)
+         left join ref_labels_v md on md.ns = 'moyen_paiement' and md.key = c.code and md.locale = $2
+         left join ref_labels_v mf on mf.ns = 'moyen_paiement' and mf.key = c.code and mf.locale = 'fr'
+         left join ref_labels_v pd on pd.ns = 'moyen_paiement_par' and pd.key = c.code and pd.locale = $2
+         left join ref_labels_v pf on pf.ns = 'moyen_paiement_par' and pf.key = c.code and pf.locale = 'fr'
+         left join ref_labels_v jd on jd.ns = 'justificatif_du_moyen' and jd.key = c.code and jd.locale = $2
+         left join ref_labels_v jf on jf.ns = 'justificatif_du_moyen' and jf.key = c.code and jf.locale = 'fr'`,
+      [codes, locale],
+    );
+    const nom = new Map(noms.map((n) => [n.code, n]));
+    const { rows: motif } = f.annulation
+      ? await db.query<{ libelle: string }>(
+          `select coalesce(
+                    (select value from ref_labels_v where ns = 'paiement_motif_annulation'
+                        and key = $1 and locale = $2),
+                    (select value from ref_labels_v where ns = 'paiement_motif_annulation'
+                        and key = $1 and locale = 'fr'),
+                    $1) as libelle`,
+          [f.annulation.motifCode, locale],
+        )
+      : { rows: [] };
+
+    const montantMineur = (v: number | string | null) => (v === null ? null : Number(v));
+    return {
+      genre: f.genre,
+      vis: f.vis,
+      creeLe: new Date(f.creeLe).toISOString(),
+      mere: f.mere,
+      reglements: f.reglements.map((r) => ({
+        ...r,
+        moyen: nom.get(r.moyenCode)?.moyen ?? r.moyenCode,
+        moyenPar: nom.get(r.moyenCode)?.par ?? r.moyenCode,
+        nomDeLaPreuve: nom.get(r.moyenCode)?.preuve ?? r.moyenCode,
+        montantMineur: montantMineur(r.montantMineur),
+      })),
+      vaut: f.vaut,
+      annulation: f.annulation
+        ? {
+            paiementId: f.annulation.paiementId,
+            le: new Date(f.annulation.le).toISOString(),
+            motif: motif[0]?.libelle ?? f.annulation.motifCode,
+          }
+        : null,
+      candidats: f.candidats.map((c) => ({
+        ...c,
+        moyen: nom.get(c.moyenCode)?.moyen ?? c.moyenCode,
+        montantMineur: montantMineur(c.montantMineur),
+      })),
+    };
+  },
+
+  /**
+   * Rattacher un justificatif à un autre règlement, sans preuve, du dossier.
+   * Il quitte les règlements qu'il prouvait par un fait nouveau (R7).
+   */
+  async deplacerJustificatif(db: Requete, pieceId: string, paiementId: string): Promise<void> {
+    await db.query(`select public.justificatif_deplacer($1, $2)`, [pieceId, paiementId]);
+  },
+
+  /**
+   * Reprendre la photo : la nouvelle devient la preuve des mêmes règlements,
+   * l'ancienne disparaît — dans la même transaction, ou rien. Une pièce
+   * transmise au cabinet ne se remplace pas sans son accord.
+   */
+  async remplacerJustificatif(db: Requete, ancienId: string, nouveauId: string): Promise<boolean> {
+    return effacerPar(db, ancienId, () =>
+      db.query(`select public.justificatif_remplacer($1, $2)`, [ancienId, nouveauId]),
+    );
+  },
+
+  /** Supprimer un reçu, ou un justificatif après l'avoir détaché de ses règlements. */
+  async supprimerPieceQuiAccompagne(db: Requete, pieceId: string): Promise<boolean> {
+    return effacerPar(db, pieceId, () =>
+      db.query(`select public.piece_qui_accompagne_supprimer($1)`, [pieceId]),
+    );
   },
 
   /**
@@ -1163,7 +1341,7 @@ export const capture = {
     const { rows } = await db.query(
       `select p.id, p.moyen_code, p.montant_mineur, p.devise, p.paye_le,
               p.justificatif_piece_id, p.created_at, p.reference,
-              p.annule_paiement_id, p.eteint, p.pack_version_id,
+              p.annule_paiement_id, p.annulation_motif_id, p.eteint, p.pack_version_id,
               app.dette_eteinte(p.id)::text as brut,
               (select e.id from ecritures_v e
                 where e.paiement_id = p.id and e.nature = 'reglement'
@@ -1213,6 +1391,7 @@ export const capture = {
       reference: (r["reference"] as string | null) ?? null,
       /** Le paiement que cette ligne éteint, s'il s'agit d'une annulation. */
       annulePaiementId: (r["annule_paiement_id"] as string | null) ?? null,
+      annulationMotifId: (r["annulation_motif_id"] as string | null) ?? null,
       /**
        * Éteint : annulé, ou annulation d'un autre.
        *
@@ -1244,12 +1423,15 @@ export const capture = {
   /** Les motifs d'annulation du référentiel, traduits. */
   async motifsDAnnulation(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select m.id, m.code, m.requires_note,
+      `select m.id, m.code, m.requires_note, m.pour, m.remplace,
+              -- Proposé à la personne : en vigueur, et pas « systeme » (le
+              -- motif qu'écrit la base quand un règlement éteint « pas encore
+              -- payé »). Les autres restent lisibles : l'historique les nomme.
+              (m.valid_to is null and m.pour <> 'systeme') as proposable,
               coalesce(l.value, m.code) as libelle
          from ref.paiement_motifs_annulation m
          left join ref.labels l
            on l.ns = 'paiement_motif_annulation' and l.key = m.code and l.locale = $1
-        where m.valid_to is null
         order by m.rang, m.code`,
       [locale],
     );
@@ -1258,6 +1440,53 @@ export const capture = {
       code: r["code"] as string,
       libelle: r["libelle"] as string,
       exigeUneNote: Boolean(r["requires_note"]),
+      pour: r["pour"] as "reglement" | "non_paye" | "systeme",
+      proposable: Boolean(r["proposable"]),
+      remplace: Boolean(r["remplace"]),
     }));
+  },
+
+  /**
+   * Corriger un règlement d'un geste : l'ancien s'annule avec son motif et
+   * le nouveau s'inscrit, dans la même transaction (`paiement_corriger`). La
+   * pièce n'est jamais, même un instant, sans règlement ou réglée deux fois,
+   * et les règles de `un_reglement_dit_vrai` jugent le nouveau sans l'ancien.
+   */
+  async corrigerPaiement(
+    db: Requete,
+    input: {
+      paiementId: string;
+      motifId: string;
+      moyenCode: string;
+      montantMineur: number;
+      payeLe: string;
+      reference?: string | null;
+    },
+  ): Promise<string> {
+    const { rows: moyen } = await db.query<{ code: string }>(
+      `select m.code from ref_payment_means_v m
+         join capture.paiements p on p.pack_version_id = m.pack_version_id
+        where p.id = $1 and m.code = $2 and m.code <> 'non_paye'
+          and m.valid_from <= $3::date and (m.valid_to is null or m.valid_to >= $3::date)`,
+      [input.paiementId, input.moyenCode, input.payeLe],
+    );
+    if (moyen.length === 0) {
+      throw Object.assign(
+        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
+        { code: "22023" },
+      );
+    }
+    const { rows } = await db.query<{ id: string }>(
+      `select public.paiement_corriger($1, $2, $3, $4::bigint, $5::date, $6) as id`,
+      [
+        input.paiementId,
+        input.motifId,
+        input.moyenCode,
+        input.montantMineur,
+        input.payeLe,
+        input.reference ?? null,
+      ],
+    );
+    return rows[0]!.id;
   },
 };

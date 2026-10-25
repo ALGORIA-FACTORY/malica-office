@@ -49,7 +49,9 @@ export interface Candidat {
 
 export interface EntreeMontants {
   /** Une base par taux : le HT tel qu'imprimé, et le taux du paramétrage (« 0.19 »). */
-  bases: Array<{ ht: string | null; taux: string | number }>;
+  bases: Array<{ ht: string | null; taux: string | number; attendu?: number; majoration?: number }>;
+  /** Droit imprimé incorporé à une base TVA (cas non ventilé, un seul taux). */
+  majorationsDroits?: Array<{ ligne: number; autre: number }>;
   /** La TVA imprimée, si elle l'est. */
   tva?: string | null;
   /**
@@ -78,6 +80,8 @@ type EtatNormalisation =
   | "illisible"; // un montant n'a aucune lecture
 
 export interface ResultatNormalisation {
+  qualificationFiscaleId?: string | null;
+  fiscaliteVersionId?: string | null;
   etat: EtatNormalisation;
   montants: {
     bases: Array<{ ht: number | null; taux: string }>;
@@ -410,6 +414,9 @@ export function normaliserMontants(
     return vide("illisible", "un HT est absent : la facture ne peut pas être vérifiée");
   if (entree.tva) champs.push({ nom: "tva", brut: entree.tva });
   const attendus = new Map<string, number>();
+  entree.bases.forEach((b, i) => {
+    if (b.attendu !== undefined) attendus.set(`ht${i}`, b.attendu);
+  });
   (entree.autres ?? []).forEach((a, i) => {
     const nom = `autre${i}`;
     if (typeof a === "string") return champs.push({ nom, brut: a });
@@ -555,7 +562,13 @@ export function normaliserMontants(
   function verifie(pris: Candidat[]): boolean {
     const v = valeurs(pris);
     if (v.hts.some((h) => h < 0n)) return false;
-    const tvaCalculee = v.hts.reduce((s, h, i) => s + arrondi(h * rats[i]![0], rats[i]![1]), 0n);
+    const tvaCalculee = v.hts.reduce((s, h, i) => {
+      const fixe = BigInt(entree.bases[i]?.majoration ?? 0);
+      const variable = (entree.majorationsDroits ?? [])
+        .filter((m) => m.ligne === i)
+        .reduce((a, m) => a + (v.autres[m.autre] ?? 0n), 0n);
+      return s + arrondi((h + fixe + variable) * rats[i]![0], rats[i]![1]);
+    }, 0n);
     if (v.tva !== undefined && abs(v.tva - tvaCalculee) > tol) return false;
     if (v.ttc !== undefined) {
       const tva = v.tva ?? tvaCalculee;

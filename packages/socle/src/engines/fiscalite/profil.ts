@@ -1,3 +1,4 @@
+import type { LigneFiscaleCalculee } from "../../ports/qualification-fiscale.ts";
 import { D } from "../../domain/decimal.ts";
 import type { ConfigurationFiscale, RegleFiscale } from "../../ports/fiscalite.ts";
 import type { TaxRate, FiscalCharge } from "../../ports/repositories.ts";
@@ -5,6 +6,7 @@ import type { TaxRate, FiscalCharge } from "../../ports/repositories.ts";
 /** Un profil fournit des attentes, jamais des montants absents de la pièce. */
 export function appliquerAttentesFiscales(e: {
   configuration: ConfigurationFiscale;
+  qualification?: readonly LigneFiscaleCalculee[];
   dateEffet: string;
   operation: "achat" | "vente";
   codesTva: string[];
@@ -15,7 +17,7 @@ export function appliquerAttentesFiscales(e: {
   const c = e.configuration;
   const regles = c.regles.filter((r) => r.operation === e.operation);
   if (!regles.length) throw new Error("Le profil fiscal ne qualifie pas ce sens d’opération.");
-  if (regles.some((r) => r.applicabilite === "a_qualifier"))
+  if (!e.qualification && regles.some((r) => r.applicabilite === "a_qualifier"))
     throw new Error("Des règles fiscales de ce dossier restent à qualifier dans les paramètres.");
   const unique = (rs: RegleFiscale[], code: string) => {
     if (rs.length !== 1)
@@ -25,10 +27,14 @@ export function appliquerAttentesFiscales(e: {
   let taux = [...e.taxRates];
   const deductibilites = new Set<string>();
   for (const code of new Set(e.codesTva)) {
-    const r = unique(
-      regles.filter((r) => r.famille === "tva" && r.code === code),
-      code,
-    );
+    const candidates = regles.filter((r) => r.famille === "tva" && r.code === code);
+    if (
+      e.qualification &&
+      (candidates.length === 0 ||
+        (candidates.length === 1 && candidates[0]!.applicabilite === "a_qualifier"))
+    )
+      continue;
+    const r = unique(candidates, code);
     if (r.applicabilite === "applicable" && (r.mode !== "taux" || r.valeur === null))
       throw new Error("Le taux de TVA attendu n’est pas défini.");
     const origine = taux
@@ -47,10 +53,12 @@ export function appliquerAttentesFiscales(e: {
     if (e.operation === "achat" && D(rate).gt(0)) deductibilites.add(r.deductibilite);
   }
   if (
-    deductibilites.has("a_qualifier") ||
-    deductibilites.has("partielle") ||
-    deductibilites.size > 1 ||
-    c.prorataTva !== null
+    e.operation === "achat" &&
+    !e.qualification &&
+    (deductibilites.has("a_qualifier") ||
+      deductibilites.has("partielle") ||
+      deductibilites.size > 1 ||
+      c.prorataTva !== null)
   ) {
     throw new Error(
       "La déduction partielle ou mixte de TVA exige une qualification par ligne avant proposition automatique.",
@@ -65,13 +73,17 @@ export function appliquerAttentesFiscales(e: {
       regles.filter((r) => r.famille !== "tva" && r.code === droit.code),
       droit.code,
     );
-    if (r.applicabilite !== "applicable" && !D(droit.amount).isZero())
+    if (
+      r.applicabilite !== "applicable" &&
+      !(e.qualification && r.applicabilite === "a_qualifier") &&
+      !D(droit.amount).isZero()
+    )
       throw new Error(`Le droit « ${droit.code} » contredit le profil fiscal du dossier.`);
-    if (r.applicabilite === "applicable" && r.mode === "taux")
+    if (!e.qualification && r.applicabilite === "applicable" && r.mode === "taux")
       throw new Error(
         `L’assiette du droit proportionnel « ${droit.code} » doit être qualifiée par ligne avant proposition automatique.`,
       );
-    if (r.dansBaseTva && !D(droit.amount).isZero())
+    if (!e.qualification && r.dansBaseTva && !D(droit.amount).isZero())
       throw new Error(
         `L’intégration de « ${droit.code} » à l’assiette TVA nécessite un contrôle par ligne.`,
       );
@@ -82,10 +94,25 @@ export function appliquerAttentesFiscales(e: {
     );
     if (!d)
       throw new Error(`Le droit « ${droit.code} » ne dispose pas d’imputation au référentiel.`);
-    d.fixedAmount = r.applicabilite === "applicable" ? r.valeur : D(0).toString();
+    if (r.mode === "taux" && r.applicabilite === "applicable") {
+      d.rate = D(r.valeur!).div(100).toString();
+      if (r.dansBaseTva !== null) d.taxable = r.dansBaseTva;
+      d.fixedAmount = null;
+    } else if (r.applicabilite !== "a_qualifier")
+      d.fixedAmount = r.applicabilite === "applicable" ? r.valeur : D(0).toString();
   }
   for (const r of regles.filter((r) => r.famille !== "tva" && r.applicabilite === "applicable")) {
-    if (!e.droits.some((d) => d.code === r.code))
+    if (
+      !e.droits.some((d) => d.code === r.code) &&
+      !(
+        e.qualification &&
+        e.qualification.some((l) => l.droits.some((d) => d.code === r.code)) &&
+        e.qualification
+          .flatMap((l) => l.droits)
+          .filter((d) => d.code === r.code)
+          .every((d) => D(d.montant).isZero())
+      )
+    )
       throw new Error(
         `Le droit attendu « ${r.code} » n’a pas été identifié sur la pièce ; vérifiez son applicabilité.`,
       );
