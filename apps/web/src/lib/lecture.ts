@@ -41,9 +41,13 @@ export function attendLaPersonne(p: Pick<PieceLue, "status">): boolean {
 }
 
 export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {
-  return pieces
-    .filter((p) => !p.gardeeLe && issueDeLecture(p).kind === "a_lire")
-    .sort(plusRecenteDAbord);
+  return (
+    pieces
+      // Un reçu ou un justificatif accompagne une pièce : la lecture le refuse,
+      // l'écran ne le propose donc pas (25 octobre 2026).
+      .filter((p) => !p.gardeeLe && !p.accompagne && issueDeLecture(p).kind === "a_lire")
+      .sort(plusRecenteDAbord)
+  );
 }
 
 /** Les pièces dont la lecture a échoué et qui attendent un geste. */
