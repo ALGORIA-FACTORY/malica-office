@@ -899,6 +899,12 @@ export interface PieceLue {
   status: PieceStatus;
   createdAt: string;
   /**
+   * Un reçu généré depuis une pièce, ou le justificatif d'un paiement : il
+   * accompagne une autre pièce et ne se lit jamais (`app.piece_accompagne`,
+   * la même règle que le verdict de lecture). Jamais « à lire ».
+   */
+  accompagne?: boolean;
+  /**
    * Où la pièce est — et c'est ce qui décide si elle peut être lue.
    *
    * Une pièce `personnel` n'est jamais lue (B6). L'écran qui l'affiche doit

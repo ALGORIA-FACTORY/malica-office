@@ -242,6 +242,7 @@ export const capture = {
      */
     const { rows } = await db.query(
       `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.document_kind, x.payload,
+              app.piece_accompagne(p.id) as accompagne,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
                 order by decided_at desc limit 1) as precision_kind,
@@ -289,6 +290,7 @@ export const capture = {
         createdAt: r["created_at"] as string,
         vis: r["vis"] as string,
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
+        accompagne: Boolean(r["accompagne"]),
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
         kind:
