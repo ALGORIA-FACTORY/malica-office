@@ -417,7 +417,7 @@ describe("un reçu sait ce qu'il atteste", { skip: !BASE_CONFIGUREE }, () => {
     const p = await regler(f, "cheque", talon);
     await assert.rejects(
       () => rpcDe(intrus, "capture", "deplacerJustificatif", talon, p),
-      undefined,
+      Error,
       "deplacer",
     );
     // Invisible pour lui : la porte rend « rien effacé », comme `supprimer`.
