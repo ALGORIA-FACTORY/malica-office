@@ -268,6 +268,66 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
     assert.equal(dossier.documents.find((d) => d.id === facture)?.empreinte, empreinte);
   });
 
+  it("classe une pièce sans date lue selon sa qualification, puis sa précision enregistrée", async () => {
+    const piece = (
+      await sousIdentite(expert.id, (db) =>
+        db.query<{ id: string }>(
+          `insert into capture.pieces(tenant_id,source,vis,storage_path,idempotency_key,created_by,document_kind,document_kind_statut) values($1,'pdf','partage',$2,$2,$3,'facture_achat','confirme') returning id`,
+          [client, `${marque}-date-fiscale`, expert.id],
+        ),
+      )
+    ).rows[0]!.id;
+    const extraction = (
+      await admin.query<{ id: string }>(
+        `insert into capture.extractions(tenant_id,piece_id,contract,payload) values($1,$2,'extract.v1','{"document_kind":"facture_achat","document_date":null}') returning id`,
+        [client, piece],
+      )
+    ).rows[0]!.id;
+    const payload = {
+      pieceId: piece,
+      extractionId: extraction,
+      profilVersionId: null,
+      precedentId: null,
+      documentKind: "facture_achat",
+      dateOperation: "2026-02-18",
+      contexte: "interieur",
+      qualiteOperateur: "autre",
+      justification: "Date confirmée sur les justificatifs du scénario",
+      lignes: [
+        { index: 0, baseHt: "1", compteCout: "601", deduction: "non_deductible", droits: [] },
+      ],
+    };
+    await sousIdentite(expert.id, (db) =>
+      db.query(
+        `insert into parametrage.qualifications_fiscales(tenant_id,piece_id,extraction_id,payload) values($1,$2,$3,$4::jsonb)`,
+        [client, piece, extraction, JSON.stringify(payload)],
+      ),
+    );
+    const qualifiee = await sousIdentite(expert.id, (db) =>
+      documents(db, cabinet, client, "2026-02"),
+    );
+    assert.equal(qualifiee.find((d) => d.id === piece)?.dateDeClassement, "2026-02-18");
+    assert.equal(qualifiee.find((d) => d.id === piece)?.dateDocument, "2026-02-18");
+    await sousIdentite(expert.id, (db) =>
+      db.query(
+        `insert into capture.precisions(tenant_id,piece_id,champ,valeur) values($1,$2,'document_date','2026-03-18')`,
+        [client, piece],
+      ),
+    );
+    assert.equal(
+      (await sousIdentite(expert.id, (db) => documents(db, cabinet, client, "2026-03"))).find(
+        (d) => d.id === piece,
+      )?.dateDeClassement,
+      "2026-03-18",
+    );
+    assert.equal(
+      (await sousIdentite(expert.id, (db) => documents(db, cabinet, client, "2026-02"))).some(
+        (d) => d.id === piece,
+      ),
+      false,
+    );
+  });
+
   it("la révocation retire l'accès à la bibliothèque et à la restitution", async () => {
     await sousIdentite(dirigeant.id, (db) =>
       identite.revoquerMandat(db, client, "Fin de la recette de bibliothèque"),
