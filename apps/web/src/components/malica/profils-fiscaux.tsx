@@ -518,7 +518,7 @@ export function ProfilsFiscaux({ cabinetId, clientId }: { cabinetId: string; cli
                     >
                       {t("fx.detail")}
                     </button>
-                    {expert && d ? (
+                    {expert && d && versions.some((v) => v.id === d.versionProfilId) ? (
                       <button
                         type="button"
                         className={BOUTON}

@@ -6,6 +6,7 @@ Le comptable peut créer un profil par catégorie depuis les paramètres ou la m
 - Activité, régime fiscal, régime TVA, prorata, règles par opération, seuil de retenue, référence légale, conditions, justificatif et date d'effet.
 - Valeurs suggérées par le pack à la date choisie. Un changement de taux, de montant ou de traitement reste une décision explicite de l'expert.
 - Profils et instantanés de dossier append-only ; auteur et historique conservés. Le cabinet peut avoir plusieurs juridictions de profils, mais une affectation exige celle du client.
+- Lors d’une reprise de mandat, l’historique appartient au client : le nouveau mandataire le conserve, l’ancien perd l’accès.
 - Application groupée avec sélection, filtre par catégorie, aperçu avant/après et contrôle du mandat. Les particularités existantes, juridictions incompatibles et dates incohérentes sont écartées. La reprise de particularités exige un geste individuel explicite.
 - Contrôle de concurrence, verrouillage ordonné, transaction unique, détection d'un aperçu périmé. Aucun écrasement silencieux.
 - La fiche fiscale existante est versionnée dans la même transaction sans perdre forme juridique, mode de dépôt ou exercice. Les lectures courantes respectent une date d'effet future.

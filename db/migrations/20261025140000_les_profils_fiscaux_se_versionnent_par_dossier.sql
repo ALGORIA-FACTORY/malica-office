@@ -170,8 +170,8 @@ begin
     raise exception 'Dossier modifié depuis l’aperçu ou date antérieure.' using errcode = 'check_violation';
   end if;
   select * into profil from parametrage.profils_fiscaux where id = new.version_profil_id and tenant_id = new.cabinet_id;
-  select jurisdiction into j from identity.organizations where id = new.tenant_id;
-  if profil.id is null or profil.jurisdiction <> j or new.date_effet < profil.date_effet
+  select jurisdiction into j from identity.organizations where id = new.tenant_id and archived_at is null;
+  if profil.id is null or j is null or profil.jurisdiction <> j or new.date_effet < profil.date_effet
      or new.categorie <> profil.categorie then
     raise exception 'Profil incompatible avec le dossier ou sa date.' using errcode = 'check_violation';
   end if;

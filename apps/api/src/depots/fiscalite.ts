@@ -164,9 +164,12 @@ export const fiscalite = {
     date: string,
   ): Promise<FiscaliteDossier[]> {
     const { rows } = await db.query<{ d: FiscaliteDossier }>(
-      `${SELECT_DOSSIER} where id in (select distinct on (tenant_id) id
-       from parametrage.fiscalite_dossiers where cabinet_id = $1 and date_effet <= $2::date
-       order by tenant_id, date_effet desc, created_at desc)`,
+      `${SELECT_DOSSIER} where id in (select distinct on (d.tenant_id) d.id
+       from parametrage.fiscalite_dossiers d join identity.engagements e on e.pme_org_id = d.tenant_id
+       where e.cabinet_org_id = $1 and e.status = 'actif'
+         and e.starts_on <= current_date and (e.ends_on is null or e.ends_on >= current_date)
+         and d.date_effet <= $2::date
+       order by d.tenant_id, d.date_effet desc, d.created_at desc)`,
       [uuid.parse(cabinetId), jour.parse(date)],
     );
     return rows.map((r) => r.d);
@@ -177,7 +180,10 @@ export const fiscalite = {
     clientId: string,
   ): Promise<FiscaliteDossier[]> {
     const { rows } = await db.query<{ d: FiscaliteDossier }>(
-      `${SELECT_DOSSIER} where cabinet_id = $1 and tenant_id = $2 order by date_effet desc, created_at desc`,
+      `${SELECT_DOSSIER} where tenant_id = $2 and exists (
+        select 1 from identity.engagements e where e.cabinet_org_id = $1 and e.pme_org_id = $2
+          and e.status = 'actif' and e.starts_on <= current_date and (e.ends_on is null or e.ends_on >= current_date))
+        order by date_effet desc, created_at desc`,
       [uuid.parse(cabinetId), uuid.parse(clientId)],
     );
     return rows.map((r) => r.d);

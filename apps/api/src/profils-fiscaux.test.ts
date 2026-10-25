@@ -536,4 +536,73 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       /TVA incohérente/,
     );
   });
+  it("le nouveau mandataire reprend l'historique fiscal du client, l'ancien perd son accès", async () => {
+    const d = await sousIdentite(expert.id, (db) =>
+      identite.ouvrirDossier(db, {
+        cabinetTenantId: cabinet,
+        name: `Reprise ${marque}`,
+        legalId: matriculeDEssai(),
+        adresse: null,
+      }),
+    );
+    supplementaires.push(d.id);
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1,$2,'dirigeant')`,
+      [d.id, dirigeant.id],
+    );
+    await sousIdentite(expert.id, (db) =>
+      fiscalite.appliquerProfilFiscal(db, {
+        cabinetId: cabinet,
+        versionProfilId: p.id,
+        dateEffet: aujourd,
+        cibles: [{ clientId: d.id, precedentId: null }],
+      }),
+    );
+    const h = await sousIdentite(expert.id, (db) => fiscalite.historiqueFiscal(db, cabinet, d.id));
+    await sousIdentite(dirigeant.id, (db) =>
+      identite.revoquerMandat(db, d.id, "Reprise du scénario fiscal"),
+    );
+    const mandat = await sousIdentite(autre.id, (db) =>
+      identite.proposerMandat(db, autreCabinet, d.legalId),
+    );
+    await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, mandat.id, true));
+    assert.deepEqual(
+      await sousIdentite(expert.id, (db) => fiscalite.historiqueFiscal(db, cabinet, d.id)),
+      [],
+    );
+    const reprises = await sousIdentite(autre.id, (db) =>
+      fiscalite.fiscaliteDossiers(db, autreCabinet, aujourd),
+    );
+    assert.equal(reprises.find((x) => x.clientId === d.id)!.id, h[0]!.id);
+    assert.equal(
+      (await sousIdentite(autre.id, (db) => fiscalite.historiqueFiscal(db, autreCabinet, d.id)))
+        .length,
+      1,
+    );
+    const pr = await sousIdentite(autre.id, (db) =>
+      fiscalite.enregistrerProfilFiscal(db, {
+        cabinetId: autreCabinet,
+        profilId: null,
+        precedentId: null,
+        nom: "Reprise",
+        categorie: "Reprise",
+        jurisdiction: "TN",
+        dateEffet: aujourd,
+        configuration,
+      }),
+    );
+    assert.equal(
+      (
+        await sousIdentite(autre.id, (db) =>
+          fiscalite.appliquerProfilFiscal(db, {
+            cabinetId: autreCabinet,
+            versionProfilId: pr.id,
+            dateEffet: aujourd,
+            cibles: [{ clientId: d.id, precedentId: h[0]!.id }],
+          }),
+        )
+      ).appliques,
+      1,
+    );
+  });
 });
