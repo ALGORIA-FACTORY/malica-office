@@ -801,6 +801,8 @@ export interface MotifDAnnulation {
   code: string;
   libelle: string;
   exigeUneNote: boolean;
+  /** Le motif sert à corriger un règlement, ou à retirer « pas encore payé ». */
+  pour: "reglement" | "non_paye";
 }
 
 export interface Citation {
@@ -1035,6 +1037,15 @@ export interface CaptureRepository {
    * lisible. Refuse d'annuler deux fois, ou d'annuler une annulation.
    */
   annulerPaiement(paiementId: string, motifId: string): Promise<void>;
+  /** Corriger d'un geste : l'ancien s'annule, le nouveau s'inscrit, ensemble. */
+  corrigerPaiement(input: {
+    paiementId: string;
+    motifId: string;
+    moyenCode: string;
+    montantMineur: number;
+    payeLe: string;
+    reference?: string | null;
+  }): Promise<string>;
   /** Les motifs d'annulation du referentiel, traduits. */
   motifsDAnnulation(locale: string): Promise<MotifDAnnulation[]>;
   dossier(pieceId: string): Promise<PieceDossier>;

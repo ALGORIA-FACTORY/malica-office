@@ -176,7 +176,9 @@ describe("le paiement d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
       moyenCode: "cheque",
       montantMineur: 513_493,
       devise: "TND",
-      payeLe: "2026-10-28",
+      // Une date passée : depuis le 25 octobre 2026, la base refuse un
+      // règlement daté dans l'avenir (20261025160000).
+      payeLe: "2026-10-20",
     });
     const liste = (await rpc("capture", "paiementsDUnePiece", id)) as Array<{
       moyenCode: string;
@@ -230,7 +232,7 @@ describe("le paiement d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
-  it("une date sans montant est refusée par la base, et réciproquement", async () => {
+  it("un règlement sans montant, sur une pièce sans TTC lu, est refusé : on ne devine pas", async () => {
     const id = await piece("moitie");
     await assert.rejects(
       () =>
@@ -241,7 +243,7 @@ describe("le paiement d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
           devise: "TND",
           payeLe: "2026-10-09",
         }),
-      /paiements_date_et_montant_ensemble/,
+      /paiement\.montant_requis/,
       "un paiement à moitié saisi est un paiement qu'on ne peut pas lire",
     );
   });

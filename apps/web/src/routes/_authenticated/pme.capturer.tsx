@@ -605,7 +605,12 @@ function PmeCapturer() {
   const payer = useMutation({
     mutationFn: async () => {
       if (!pme.packId || !moyen) throw new Error(t("common.error"));
-      for (const p of lues) {
+      /*
+       * Sans total lu, la base refuse un règlement sans montant
+       * (`paiement.montant_requis`) : on ne devine pas. Ces pièces se règlent
+       * sur leur fiche, où le montant se dit.
+       */
+      for (const p of lues.filter((x) => x.total !== null)) {
         await office().capture.enregistrerPaiement({
           pieceId: p.id,
           packId: pme.packId,

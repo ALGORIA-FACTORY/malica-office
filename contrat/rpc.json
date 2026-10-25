@@ -18,6 +18,7 @@
   "capture": [
     "analyser",
     "annulerPaiement",
+    "corrigerPaiement",
     "daterLaPiece",
     "detacher",
     "dossier",
