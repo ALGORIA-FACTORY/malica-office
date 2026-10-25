@@ -641,17 +641,23 @@ export function CommentCEstPaye({
                   aCorriger === p.id ? (
                     <span className="mt-2 grid gap-1.5">
                       <span className="text-[12px] text-text-2">{t("pme.paiement.pourquoi")}</span>
-                      {(motifs.data ?? []).map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          disabled={annuler.isPending}
-                          onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
-                          className="min-h-[40px] rounded-[12px] border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
-                        >
-                          {m.libelle}
-                        </button>
-                      ))}
+                      {/* Les motifs qui disent vrai pour CE geste : corriger un
+                          règlement, ou retirer « pas encore payé ». */}
+                      {(motifs.data ?? [])
+                        .filter(
+                          (m) => m.pour === (p.moyenCode === "non_paye" ? "non_paye" : "reglement"),
+                        )
+                        .map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            disabled={annuler.isPending}
+                            onClick={() => annuler.mutate({ paiementId: p.id, motifId: m.id })}
+                            className="min-h-[40px] rounded-[12px] border border-border px-3 text-start text-[13px] hover:bg-accent disabled:opacity-40"
+                          >
+                            {m.libelle}
+                          </button>
+                        ))}
                       <button
                         type="button"
                         onClick={() => setACorriger(null)}

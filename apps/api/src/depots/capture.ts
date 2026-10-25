@@ -1246,12 +1246,14 @@ export const capture = {
   /** Les motifs d'annulation du référentiel, traduits. */
   async motifsDAnnulation(db: Requete, locale: string) {
     const { rows } = await db.query(
-      `select m.id, m.code, m.requires_note,
+      `select m.id, m.code, m.requires_note, m.pour,
               coalesce(l.value, m.code) as libelle
          from ref.paiement_motifs_annulation m
          left join ref.labels l
            on l.ns = 'paiement_motif_annulation' and l.key = m.code and l.locale = $1
-        where m.valid_to is null
+        -- « systeme » : le motif qu'écrit la base elle-même (un règlement
+        -- éteint « pas encore payé »), jamais un choix de la personne.
+        where m.valid_to is null and m.pour <> 'systeme'
         order by m.rang, m.code`,
       [locale],
     );
@@ -1260,6 +1262,51 @@ export const capture = {
       code: r["code"] as string,
       libelle: r["libelle"] as string,
       exigeUneNote: Boolean(r["requires_note"]),
+      pour: r["pour"] as "reglement" | "non_paye",
     }));
+  },
+
+  /**
+   * Corriger un règlement d'un geste : l'ancien s'annule avec son motif et
+   * le nouveau s'inscrit, dans la même transaction (`paiement_corriger`). La
+   * pièce n'est jamais, même un instant, sans règlement ou réglée deux fois,
+   * et les règles de `un_reglement_dit_vrai` jugent le nouveau sans l'ancien.
+   */
+  async corrigerPaiement(
+    db: Requete,
+    input: {
+      paiementId: string;
+      motifId: string;
+      moyenCode: string;
+      montantMineur: number;
+      payeLe: string;
+      reference?: string | null;
+    },
+  ): Promise<string> {
+    const { rows: moyen } = await db.query<{ code: string }>(
+      `select m.code from ref_payment_means_v m
+         join capture.paiements p on p.pack_version_id = m.pack_version_id
+        where p.id = $1 and m.code = $2 and m.code <> 'non_paye'
+          and m.valid_from <= $3::date and (m.valid_to is null or m.valid_to >= $3::date)`,
+      [input.paiementId, input.moyenCode, input.payeLe],
+    );
+    if (moyen.length === 0) {
+      throw Object.assign(
+        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
+        { code: "22023" },
+      );
+    }
+    const { rows } = await db.query<{ id: string }>(
+      `select public.paiement_corriger($1, $2, $3, $4::bigint, $5::date, $6) as id`,
+      [
+        input.paiementId,
+        input.motifId,
+        input.moyenCode,
+        input.montantMineur,
+        input.payeLe,
+        input.reference ?? null,
+      ],
+    );
+    return rows[0]!.id;
   },
 };

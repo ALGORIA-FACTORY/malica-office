@@ -2966,6 +2966,18 @@ const fr = {
   "pme.reglages.factures.etat.a_echoir": "À échoir",
   "pme.reglages.factures.etat.en_retard": "En retard",
   "paiement.facture_rien_a_regler": "Cette facture n'a plus rien à régler.",
+  "paiement.depasse_le_total": "Ce règlement dépasse ce qui reste à payer sur la facture.",
+  "paiement.montant_positif": "Le montant d'un règlement doit être supérieur à zéro.",
+  "paiement.montant_requis": "Le total de la facture n'est pas lu : dites le montant réglé.",
+  "paiement.deja_solde": "Cette facture est déjà entièrement réglée.",
+  "paiement.date_future":
+    "Un règlement ne peut pas être daté dans l'avenir. S'il est prévu, choisissez « Pas encore payé ».",
+  "paiement.en_double": "Ce règlement vient d'être inscrit : il ne compte qu'une fois.",
+  "paiement.deja_regle":
+    "Un règlement est déjà inscrit : corrigez-le plutôt que d'ajouter « Pas encore payé ».",
+  "paiement.deja_non_paye": "« Pas encore payé » est déjà inscrit.",
+  "paiement.non_paye_ne_se_corrige_pas":
+    "« Pas encore payé » ne se corrige pas : retirez-le ou ajoutez un règlement.",
   "paiement.montant_perime":
     "Le montant dû a changé depuis : reprenez le paiement depuis vos factures.",
   "paiement.prestataire_du_lien":
@@ -6519,6 +6531,18 @@ const en: Dict = {
   "pme.reglages.factures.etat.a_echoir": "Not yet due",
   "pme.reglages.factures.etat.en_retard": "Overdue",
   "paiement.facture_rien_a_regler": "Nothing is left to pay on this invoice.",
+  "paiement.depasse_le_total": "This payment is more than what remains to be paid on the invoice.",
+  "paiement.montant_positif": "A payment amount must be greater than zero.",
+  "paiement.montant_requis": "The invoice total has not been read: enter the amount paid.",
+  "paiement.deja_solde": "This invoice is already fully paid.",
+  "paiement.date_future":
+    'A payment cannot be dated in the future. If it is planned, choose "Not paid yet".',
+  "paiement.en_double": "This payment was just recorded: it counts only once.",
+  "paiement.deja_regle":
+    'A payment is already recorded: correct it rather than adding "Not paid yet".',
+  "paiement.deja_non_paye": '"Not paid yet" is already recorded.',
+  "paiement.non_paye_ne_se_corrige_pas":
+    '"Not paid yet" is not corrected: remove it or add a payment.',
   "paiement.montant_perime":
     "The amount due has changed since: start the payment again from your invoices.",
   "paiement.prestataire_du_lien":
@@ -9918,6 +9942,15 @@ const ar: Dict = {
   "pme.reglages.factures.etat.a_echoir": "لم يحن أجلها",
   "pme.reglages.factures.etat.en_retard": "متأخرة",
   "paiement.facture_rien_a_regler": "لم يعد على هذه الفاتورة شيء للدفع.",
+  "paiement.depasse_le_total": "هذا الخلاص يتجاوز ما تبقّى للدفع من الفاتورة.",
+  "paiement.montant_positif": "يجب أن يكون مبلغ الخلاص أكبر من الصفر.",
+  "paiement.montant_requis": "لم يُقرأ مجموع الفاتورة: أدخلوا المبلغ المدفوع.",
+  "paiement.deja_solde": "هذه الفاتورة مدفوعة بالكامل.",
+  "paiement.date_future": "لا يمكن تأريخ خلاص في المستقبل. إن كان مبرمجًا، اختاروا «لم يُدفع بعد».",
+  "paiement.en_double": "سُجّل هذا الخلاص للتوّ: يُحتسب مرّة واحدة.",
+  "paiement.deja_regle": "يوجد خلاص مسجّل: صحّحوه بدل إضافة «لم يُدفع بعد».",
+  "paiement.deja_non_paye": "«لم يُدفع بعد» مسجّل مسبقًا.",
+  "paiement.non_paye_ne_se_corrige_pas": "«لم يُدفع بعد» لا يُصحَّح: احذفوه أو أضيفوا خلاصًا.",
   "paiement.montant_perime": "تغيّر المبلغ المستحق منذ ذلك الحين: أعيدوا الدفع من فواتيركم.",
   "paiement.prestataire_du_lien": "فُتح هذا الدفع لدى مزوّد آخر: يُتحقَّق منه لديه.",
   "pme.reglages.offres.aRegler": "تم: أنت الآن على باقة {offre}. ادفع فرق الشهر أدناه.",

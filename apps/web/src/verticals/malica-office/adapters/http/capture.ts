@@ -108,6 +108,9 @@ export function creerCaptureHttp(): CaptureRepository {
     async annulerPaiement(paiementId: string, motifId: string) {
       await rpc<void>("capture", "annulerPaiement", [paiementId, motifId]);
     },
+    async corrigerPaiement(input: Parameters<CaptureRepository["corrigerPaiement"]>[0]) {
+      return rpc<string>("capture", "corrigerPaiement", [input]);
+    },
     async motifsDAnnulation(locale: string) {
       return rpc<MotifDAnnulation[]>("capture", "motifsDAnnulation", [locale]);
     },
