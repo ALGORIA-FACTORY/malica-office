@@ -30,6 +30,7 @@ import type {
   Token,
   PaiementDUnePiece,
   PieceQuiAccompagne,
+  RetourDuCabinet,
 } from "@malica/socle/ports/repositories";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
@@ -119,6 +120,12 @@ export function creerCaptureHttp(): CaptureRepository {
       return rpc<PaiementDUnePiece[]>("capture", "paiementsDUnePiece", [pieceId]);
     },
     // Une pièce qui accompagne : l'API rend déjà la forme du port.
+    async retourDeLaPiece(pieceId: string, locale: string) {
+      return rpc<RetourDuCabinet | null>("capture", "retourDeLaPiece", [pieceId, locale]);
+    },
+    async repondreAuCabinet(pieceId: string, texte: string) {
+      await rpc<void>("capture", "repondreAuCabinet", [pieceId, texte]);
+    },
     async pieceQuiAccompagne(pieceId: string, locale: string) {
       return rpc<PieceQuiAccompagne | null>("capture", "pieceQuiAccompagne", [pieceId, locale]);
     },

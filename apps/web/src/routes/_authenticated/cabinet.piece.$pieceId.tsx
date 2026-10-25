@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
+import { DecisionSansConfirmation } from "@/components/malica/decision-sans-confirmation";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { extensionDuContenu } from "@/lib/archive-comptable";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
@@ -47,6 +48,7 @@ import {
 import { toneForStatus } from "@/lib/file-cabinet";
 import { apresLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { lueSansConfirmation } from "@/lib/retour-du-cabinet";
 
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
@@ -542,6 +544,9 @@ function CabinetReview() {
     const lu = ExtractV1.safeParse(dossier.data?.extraction?.payload);
     return lu.success ? composerLibelle(faitsDuLibelle(lu.data)) : null;
   })();
+  // Ce que la lecture a relevé, pour nommer la pièce dans la décision.
+  const luPourDecision = extraction?.payload as
+    { issuer?: string; currency?: string; totals?: { ttc?: string | null } } | undefined;
   const compteVide = correction?.lignes.some((l) => !l.compte.trim()) ?? false;
   const correctionPrete = Boolean(correction && motifId && !noteMissing && !compteVide);
   // Une date d'écriture, dans la langue de la personne — jamais l'ISO brut de la base.
@@ -973,6 +978,30 @@ function CabinetReview() {
             <ControlesComptables cabinetId={org.id} pieceId={pieceId} />
           ) : null}
           <div hidden={vue !== "ecritures"} className="space-y-3">
+            {/*
+             * Lue, transmise, sans le « Oui » du client : la décision passe
+             * avant l'écriture proposée (maquette du 25 octobre 2026).
+             */}
+            {lueSansConfirmation(piece.status, Boolean(booked)) ? (
+              <DecisionSansConfirmation
+                pieceId={pieceId}
+                titre={[
+                  luPourDecision?.issuer,
+                  luPourDecision?.totals?.ttc
+                    ? `${montant(luPourDecision.totals.ttc, locale)} ${luPourDecision.currency ?? ""}`.trim()
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                comptes={
+                  proposition.data?.ok
+                    ? proposition.data.proposition.lignes.map((l) => l.account_code).join(" · ")
+                    : null
+                }
+                inscriptible={Boolean(proposition.data?.ok)}
+                motifs={motifs.data ?? []}
+              />
+            ) : null}
             <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
             {!booked ? (
               proposition.isPending ? (

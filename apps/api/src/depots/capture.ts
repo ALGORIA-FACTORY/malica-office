@@ -24,7 +24,7 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  */
 
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
-import type { EtatDUnTravail } from "@malica/socle/ports/repositories";
+import type { EtatDUnTravail, GesteDeRetour } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, lireParametres } from "../scan/analyse.ts";
@@ -1097,6 +1097,34 @@ export const capture = {
    * pour un justificatif — les règlements sans preuve où il peut aller. Les
    * libellés viennent du référentiel, dans la langue demandée.
    */
+  /**
+   * Ce que la PME lit d'un retour du cabinet : motif (libellé du référentiel),
+   * note, date, cabinet, le geste demandé et s'il est fait (`piece_retour`).
+   * `null` hors retour.
+   */
+  async retourDeLaPiece(db: Requete, pieceId: string, locale: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select public.piece_retour($1, $2) as r`,
+      [pieceId, locale],
+    );
+    const r = rows[0]?.r ?? null;
+    if (!r) return null;
+    return {
+      le: new Date(r["le"] as string).toISOString(),
+      note: (r["note"] as string | null) ?? null,
+      motif: r["motif"] as string,
+      motifLibelle: r["motifLibelle"] as string,
+      geste: r["geste"] as GesteDeRetour,
+      cabinet: (r["cabinet"] as string | null) ?? null,
+      fait: Boolean(r["fait"]),
+    };
+  },
+
+  /** La réponse du client au cabinet sur une pièce transmise, tracée et notifiée. */
+  async repondreAuCabinet(db: Requete, pieceId: string, texte: string): Promise<void> {
+    await db.query(`select public.piece_repondre_au_cabinet($1, $2)`, [pieceId, texte]);
+  },
+
   async pieceQuiAccompagne(db: Requete, pieceId: string, locale: string) {
     const { rows } = await db.query<{ f: PieceQuiAccompagneBrute | null }>(
       `select public.piece_qui_accompagne($1) as f`,

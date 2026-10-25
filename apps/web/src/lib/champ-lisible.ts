@@ -291,6 +291,8 @@ export function libelleDeLAction(action: string, t: T): string {
     "piece.precisee": "cab.notif.kind.piece.precisee",
     "piece.vis_changed": "cab.notif.kind.piece.vis_changed",
     "piece.articles_projected": "cab.notif.kind.piece.articles_projected",
+    "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",
+    "piece.reponse_client": "cab.notif.kind.piece.reponse_client",
     "echeance.faite": "cab.journal.echeance.faite",
     "echeance.rouverte": "cab.journal.echeance.rouverte",
     "conseil.retenu": "cab.journal.conseil.retenu",

@@ -11,6 +11,7 @@
  */
 
 import type { Requete } from "../db.ts";
+import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
 
@@ -309,7 +310,7 @@ export const supervision = {
     // français est explicite : un motif sans traduction s'affiche, il ne
     // disparaît pas.
     const { rows } = await db.query(
-      `select m.id, m.code, m.severity, m.requires_note,
+      `select m.id, m.code, m.severity, m.requires_note, m.geste,
               coalesce(demandee.value, francais.value, m.code) as label
          from ref_rejet_motifs_v m
          left join ref_labels_v demandee
@@ -326,7 +327,29 @@ export const supervision = {
       label: m["label"] as string,
       severity: m["severity"] as string,
       requiresNote: Boolean(m["requires_note"]),
+      geste: m["geste"] as GesteDeRetour,
     }));
+  },
+
+  /**
+   * Retourner au client une pièce transmise PAS ENCORE inscrite, avec le motif
+   * gouverné et la note (`piece_retourner`). Une pièce inscrite se retourne
+   * par `review` : elle a une écriture à contre-passer.
+   */
+  async retourner(
+    db: Requete,
+    input: { pieceId: string; motifId: string; note?: string | null },
+  ): Promise<void> {
+    await db.query(`select public.piece_retourner($1, $2, $3)`, [
+      input.pieceId,
+      input.motifId,
+      input.note ?? null,
+    ]);
+  },
+
+  /** Relancer le client sur une pièce transmise qu'il n'a pas confirmée. */
+  async demanderConfirmation(db: Requete, pieceId: string): Promise<void> {
+    await db.query(`select public.piece_demander_confirmation($1)`, [pieceId]);
   },
 
   async review(

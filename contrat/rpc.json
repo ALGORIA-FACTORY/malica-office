@@ -36,6 +36,8 @@
     "rattacher",
     "rattacherJustificatif",
     "remplacerJustificatif",
+    "repondreAuCabinet",
+    "retourDeLaPiece",
     "supprimer",
     "supprimerPieceQuiAccompagne"
   ],
@@ -290,6 +292,7 @@
   "supervision": [
     "auditForPiece",
     "controlesPiece",
+    "demanderConfirmation",
     "documents",
     "documentsLies",
     "journalDuMandat",
@@ -297,6 +300,7 @@
     "listMyCabinets",
     "motifs",
     "queue",
+    "retourner",
     "review",
     "statistiques"
   ],
