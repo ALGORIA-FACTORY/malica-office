@@ -132,6 +132,15 @@ export function attentesDeRetenue<T extends { code: string; taux: string; seuil?
       ...origine,
       ...(r.seuil !== undefined ? { seuil: r.seuil } : {}),
       taux: D(r.valeur).div(100).toString(),
+      ...("libelle" in origine ? { libelle: `${r.typeOperation} · ${r.valeur} %` } : {}),
     };
   });
+}
+
+/** Sous tous les seuils applicables : aucune question ajoutée par le profil. */
+export function retenueDuProfilAQualifier(
+  taux: readonly { seuil?: string | null }[],
+  ttc: string,
+): boolean {
+  return taux.some((t) => t.seuil == null || !D(ttc).lt(D(t.seuil)));
 }

@@ -1,4 +1,7 @@
-import { attentesDeRetenue } from "@malica/socle/engines/fiscalite/profil";
+import {
+  attentesDeRetenue,
+  retenueDuProfilAQualifier,
+} from "@malica/socle/engines/fiscalite/profil";
 import { fiscaliteDuDossier } from "./fiscalite-du-dossier.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /** Règlement composé à partir des faits et d'une qualification fiscale explicite. */
@@ -266,9 +269,9 @@ export async function propositionDeReglement(
           tauxDisponibles,
           qualification?.codes,
         );
+      const dansLeChampDuProfil = fiscalite && retenueDuProfilAQualifier(tauxDisponibles, ttc);
       if (
-        fiscalite &&
-        tauxDisponibles.length &&
+        dansLeChampDuProfil &&
         qualification &&
         !qualification.codes.length &&
         !qualification.justification.trim()
@@ -288,7 +291,7 @@ export async function propositionDeReglement(
         decimales,
         ...(qualification ? { qualification } : {}),
       });
-      if (fiscalite && tauxDisponibles.length && !qualification) retenue = { cas: "a_confirmer" };
+      if (dansLeChampDuProfil && !qualification) retenue = { cas: "a_confirmer" };
     } catch (e) {
       if (fiscalite && e instanceof Error) return { ok: false, raison: e.message };
       if (e instanceof RetenueNonQualifiee) return { ok: false, raison: e.message };

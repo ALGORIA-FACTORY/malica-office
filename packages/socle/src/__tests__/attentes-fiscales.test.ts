@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { appliquerAttentesFiscales, attentesDeRetenue } from "../engines/fiscalite/profil.ts";
+import {
+  appliquerAttentesFiscales,
+  attentesDeRetenue,
+  retenueDuProfilAQualifier,
+} from "../engines/fiscalite/profil.ts";
 import type { ConfigurationFiscale, RegleFiscale } from "../ports/fiscalite.ts";
 
 const r: RegleFiscale = {
@@ -149,5 +153,18 @@ describe("le profil fiscal contrôle les attentes sans inventer la pièce", () =
       ["TEST"],
     );
     expect(a[0]!.seuil).toBe("234.567");
+  });
+  it("le profil ne pose aucune question sous le seuil, mais qualifie la borne et les cas sans seuil", () => {
+    expect(retenueDuProfilAQualifier([{ seuil: "234.567" }], "234.566")).toBe(false);
+    expect(retenueDuProfilAQualifier([{ seuil: "234.567" }], "234.567")).toBe(true);
+    expect(retenueDuProfilAQualifier([{ seuil: null }], "1.000")).toBe(true);
+    expect(retenueDuProfilAQualifier([], "9999.000")).toBe(false);
+    const a = attentesDeRetenue(
+      { ...c, regles: [{ ...r, famille: "retenue", operation: "paiement_emis" }] },
+      "paiement_emis",
+      [{ code: "TEST", taux: "0.01", libelle: "Ancien taux" }],
+      ["TEST"],
+    );
+    expect(a[0]!.libelle).toContain("8.375 %");
   });
 });

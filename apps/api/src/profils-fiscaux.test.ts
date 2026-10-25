@@ -508,6 +508,71 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
     );
     assert.equal(traces.rows.length, 1);
     assert.notEqual(traces.rows[0]!.version, h[0]!.id);
+    const ras = catalogue.find(
+      (r) =>
+        r.famille === "retenue" &&
+        r.operation === "paiement_emis" &&
+        r.seuil !== null &&
+        r.seuil !== undefined,
+    )!;
+    assert.ok(ras);
+    const profilPaiement = await sousIdentite(expert.id, (db) =>
+      fiscalite.enregistrerProfilFiscal(db, {
+        cabinetId: cabinet,
+        profilId: corrigee.profilId,
+        precedentId: corrigee.id,
+        nom: corrigee.nom,
+        categorie: corrigee.categorie,
+        jurisdiction: "TN",
+        dateEffet: aujourd,
+        configuration: {
+          ...corrigee.configuration,
+          regles: [
+            ...corrigee.configuration.regles,
+            {
+              ...configuration.regles[0]!,
+              famille: "retenue",
+              operation: "paiement_emis",
+              code: ras.code,
+              valeur: ras.valeur,
+              seuil: "2000.000",
+              assiette: ras.assiette,
+              referenceLegale: "Seuil du scénario de test, sans portée réglementaire",
+            },
+          ],
+        },
+      }),
+    );
+    const avantPaiement = await sousIdentite(expert.id, (db) =>
+      fiscalite.historiqueFiscal(db, cabinet, d.id),
+    );
+    await sousIdentite(expert.id, (db) =>
+      fiscalite.appliquerProfilFiscal(db, {
+        cabinetId: cabinet,
+        versionProfilId: profilPaiement.id,
+        dateEffet: aujourd,
+        cibles: [{ clientId: d.id, precedentId: avantPaiement[0]!.id }],
+      }),
+    );
+    const paiement = (await rpc("capture", "enregistrerPaiement", {
+      pieceId: piece.id,
+      packId,
+      moyenCode: "virement",
+      montantMineur: 100000,
+      devise: "TND",
+      payeLe: aujourd,
+      reference: "Test sous seuil",
+    })) as string;
+    const reglement = await sousIdentite(expert.id, (db) =>
+      office.propositionDeReglement(db, paiement),
+    );
+    assert.equal(reglement.ok, true, !reglement.ok ? reglement.raison : "");
+    if (reglement.ok)
+      assert.equal(
+        reglement.retenue.cas,
+        "sans_objet",
+        "Sous le seuil du profil, aucune question de retenue.",
+      );
     const dernier = await sousIdentite(expert.id, (db) =>
       fiscalite.historiqueFiscal(db, cabinet, d.id),
     );
@@ -515,7 +580,7 @@ describe("les profils fiscaux se versionnent sous l'identité réelle", { skip: 
       fiscalite.enregistrerProfilFiscal(db, {
         cabinetId: cabinet,
         profilId: corrigee.profilId,
-        precedentId: corrigee.id,
+        precedentId: profilPaiement.id,
         nom: corrigee.nom,
         categorie: corrigee.categorie,
         jurisdiction: "TN",
