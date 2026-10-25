@@ -554,13 +554,30 @@ function PmeCapturer() {
    * lues, et ne coûtent rien. `garderPiece` inscrit la décision sans toucher
    * à la visibilité.
    */
+  /*
+   * ENTRER DANS LA SOCIÉTÉ N'EST UTILE QU'À UNE PIÈCE PERSONNELLE.
+   *
+   * 25 octobre 2026, sur le téléphone de Wissem : deux pièces déjà transmises
+   * au cabinet, remises « à lire », et « Lire les 2 » répondait « une pièce
+   * transmise ne revient que par accord du cabinet ». La chaîne demandait
+   * `entite` à une pièce `partage` — un RETRAIT au cabinet, que la base refuse
+   * à raison. Une pièce de la société ou transmise se lit telle quelle
+   * (`lecture_autorisee` ne refuse que `personnel`). Une pièce que la liste
+   * ne connaît pas encore (photo de l'instant) est traitée comme née
+   * `personnel`.
+   */
+  const entrerDansLaSociete = async (id: string) => {
+    const vis = (pieces.data ?? []).find((p) => p.id === id)?.vis;
+    if (vis !== "entite" && vis !== "partage") await office().collab.setPieceVis(id, "entite");
+  };
+
   const lire = useMutation({
     mutationFn: async () => {
       // Les décochées sont gardées d'abord : elles ne doivent pas rester en
       // suspens pendant que les autres se lisent.
       for (const id of exclues) await office().collab.garderPiece(id);
       for (const id of ids) {
-        await office().collab.setPieceVis(id, "entite");
+        await entrerDansLaSociete(id);
         await office().malica.demanderLaLecture(id);
       }
     },
@@ -683,7 +700,7 @@ function PmeCapturer() {
   const lireNeuves = useMutation({
     mutationFn: async (neuves: readonly string[]) => {
       for (const id of neuves) {
-        await office().collab.setPieceVis(id, "entite");
+        await entrerDansLaSociete(id);
         await office().malica.demanderLaLecture(id);
       }
     },
