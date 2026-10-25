@@ -1342,7 +1342,7 @@ export interface OfficeRepository {
     tenantId: string,
     from: string,
     to: string,
-  ): Promise<Array<{ pieceId: string; extract: unknown; transmiseLe: string }>>;
+  ): Promise<Array<{ pieceId: string; extract: unknown; transmiseLe: string; imputeeLe: string }>>;
   /** Les pièces parties au cabinet sans qu'on sache quand. Voir `extraitsTransmis`. */
   transmisesSansDate(tenantId: string): Promise<number>;
 }

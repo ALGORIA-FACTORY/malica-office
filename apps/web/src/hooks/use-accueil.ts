@@ -204,7 +204,8 @@ export function useAccueil(periode: string): Accueil {
     for (const ligne of extraits.data) {
       const lu = ExtractV1.safeParse(ligne.extract);
       if (!lu.success) continue;
-      const cle = ligne.transmiseLe.slice(0, 7);
+      // Le mois d'imputation, la même règle que le cabinet (25 octobre 2026).
+      const cle = ligne.imputeeLe.slice(0, 7);
       const liste = parMois.get(cle) ?? [];
       liste.push({ item_id: ligne.pieceId, extract: lu.data });
       parMois.set(cle, liste);
