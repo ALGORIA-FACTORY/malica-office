@@ -127,6 +127,10 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       sousIdentite(utilisateur, (db) =>
         db.query(`select public.socle_ecriture_review($1, 'valide')`, [id]),
       );
+    await admin.query(
+      `update identity.organizations set validation_mode = 'mandate' where id = $1`,
+      [pme],
+    );
     try {
       // Sans ligne de réglage, le défaut livré est désactivé.
       const seul = await inscrire();
@@ -159,6 +163,10 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       await valider(id);
     } finally {
       await regler(null);
+      await admin.query(
+        `update identity.organizations set validation_mode = 'autonome' where id = $1`,
+        [pme],
+      );
     }
   });
 
