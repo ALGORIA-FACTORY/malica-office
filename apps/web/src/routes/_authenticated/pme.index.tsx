@@ -566,7 +566,7 @@ function PmeHome() {
                         : t("pme.charges.answer.verifier")}
                     </span>
                   </span>
-                  <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                  <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
                   <span>
                     {[nomDuDossier(p), jour(p.dateDocument ?? p.createdAt)]
                       .filter(Boolean)
@@ -699,7 +699,7 @@ function PmeHome() {
                 <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
                   <ApercuDePiece pieceId={p.id} className="mini" />
                   <span className="bd">
-                    <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
+                    <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
                     <span>
                       {p.total ? `${montant(p.total, locale)} ${p.devise ?? a.devise}` : "—"}
                     </span>

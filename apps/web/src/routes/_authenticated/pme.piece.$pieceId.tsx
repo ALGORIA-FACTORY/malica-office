@@ -413,6 +413,8 @@ function PieceScreen() {
     mutationFn: () => office().capture.supprimer(pieceId),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      // L'accueil montre les pièces lues : sans cela, la pièce effacée y restait.
+      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       void navigate({ to: "/pme/list" });
     },
     onError: (e: unknown) => {
@@ -1373,6 +1375,43 @@ function PieceScreen() {
             </button>
           </>
         )}
+        {/*
+         * Supprimer, tout court (26 octobre 2026) : « Reprendre » efface ET
+         * rouvre l'appareil photo ; une photo prise par erreur n'avait aucune
+         * sortie sans en reprendre une autre. Hors partage, la base l'accepte.
+         */}
+        {vis !== "partage" ? (
+          confirmerSuppression ? (
+            <div className="flex flex-col gap-2 border border-border bg-card p-4">
+              <p className="text-[14px]">{t("pme.supprimer.sur")}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmerSuppression(false)}
+                  className="h-[48px] border border-border text-[14px] font-medium"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  disabled={supprimer.isPending}
+                  onClick={() => supprimer.mutate()}
+                  className="h-[48px] border border-signal-stop text-[14px] font-semibold text-signal-stop disabled:opacity-40"
+                >
+                  {supprimer.isPending ? t("common.loading") : t("pme.supprimer.oui")}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmerSuppression(true)}
+              className="h-[48px] w-full text-[14px] font-medium text-signal-stop"
+            >
+              {t("pme.supprimer.action")}
+            </button>
+          )
+        ) : null}
         {error ? <p className="text-xs text-signal-warn">{error}</p> : null}
       </div>
     );
@@ -2413,7 +2452,7 @@ function PieceScreen() {
               Ce bloc lit `vis` et le RÔLE, et rien d'autre :
                 personnel            → libre : corriger, supprimer
                 entite · siège       → avant validation : corriger, demander
-                entite · dirigeant   → libre : corriger, mettre au privé
+                entite · dirigeant   → libre : corriger, mettre au privé, supprimer
                 partage              → sur accord : corriger, demander
               « Corriger » reprend la PHOTO : R7 interdit d'effacer un relevé. */}
           <div className="f-tit">
@@ -2525,8 +2564,15 @@ function PieceScreen() {
                   </span>
                 </button>
               ) : null}
-              {/* Effacer : seulement un brouillon resté privé. */}
-              {piece.vis === "personnel" &&
+              {/*
+               * Effacer : tant que la pièce n'est pas partie au cabinet ni
+               * comptée. `entite` est encore « chez le client » — la base le
+               * dit (`capture_piece_supprimer`) ; l'écran ne l'offrait qu'au
+               * privé, et une pièce de la société restait sans sortie
+               * (26 octobre 2026). Le collaborateur, lui, demande.
+               */}
+              {piece.vis !== "partage" &&
+              !(piece.vis === "entite" && siege) &&
               (piece.status === "capturee" || piece.status === "lue") ? (
                 <button
                   type="button"
