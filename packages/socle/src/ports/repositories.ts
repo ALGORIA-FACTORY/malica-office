@@ -1279,6 +1279,11 @@ export interface OfficeRepository {
   /** Enregistre la proposition du serveur : aucune ligne ne vient du client. */
   proposerDepuisPiece(pieceId: string, dateSaisie?: string | null): Promise<string>;
   /**
+   * Le cabinet inscrit une pièce que le client n'a pas confirmée : il confirme
+   * le type lu, puis propose et comptabilise, en une transaction.
+   */
+  inscrireLaPieceDuClient(pieceId: string): Promise<string>;
+  /**
    * Ce que le moyen de paiement engage : l'ecriture du reglement.
    *
    * La facture constate une dette ; le reglement l'eteint. Deux faits, deux

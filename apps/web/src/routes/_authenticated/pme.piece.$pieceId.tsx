@@ -1555,6 +1555,9 @@ function PieceScreen() {
    * la confirmation, et elle se dit « À reprendre » (maquette du 25 octobre).
    */
   const retourEnCours = piece.status === "retournee" && !comptee ? (retour.data ?? null) : null;
+  // Tant que le retour se lit, aucune carte : l'ancienne offrait un « Oui »
+  // qui recomptabilisait sans le geste demandé (relecture de #114).
+  const retourSeLit = piece.status === "retournee" && !comptee && retour.isPending;
   const indexAReprendre = retourEnCours ? etapes.findIndex((e) => e.cle === "confirmee") : -1;
   // Le parcours nomme l'étape ATTEINTE — celle de la pastille —, puis la suivante.
   const indexCourant =
@@ -1876,7 +1879,11 @@ function PieceScreen() {
       </div>
 
       {/* ── 2 · LA décision du moment ─────────────────────────────────── */}
-      {retourEnCours ? (
+      {retourSeLit ? (
+        <div className="f-dec az" role="status">
+          <p className="f-dec-titre">{t("common.loading")}</p>
+        </div>
+      ) : retourEnCours ? (
         <CarteDuRetour
           pieceId={pieceId}
           retour={retourEnCours}

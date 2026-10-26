@@ -232,6 +232,7 @@
     "ecrituresByIds",
     "ecrituresForPiece",
     "extraitsTransmis",
+    "inscrireLaPieceDuClient",
     "inscrireLeReglement",
     "periodeLignes",
     "propose",

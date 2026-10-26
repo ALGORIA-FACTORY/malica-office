@@ -54,10 +54,9 @@ export function DecisionSansConfirmation({
   const echec = (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error")));
 
   const inscrire = useMutation({
-    mutationFn: async () => {
-      const id = await office().office.proposerDepuisPiece(pieceId);
-      await office().office.book(id);
-    },
+    // Le type lu se confirme au nom du cabinet, puis le serveur propose et
+    // inscrit : un seul appel, une transaction.
+    mutationFn: () => office().office.inscrireLaPieceDuClient(pieceId),
     onMutate: () => setErreur(null),
     onSuccess: relire,
     onError: echec,

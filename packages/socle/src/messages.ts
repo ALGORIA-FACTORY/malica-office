@@ -2067,6 +2067,8 @@ const fr = {
   "refus.confirmation.sans_objet":
     "Il n’y a rien à faire confirmer : la pièce n’attend plus le « Oui » du client.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
+  "refus.inscription.type_inconnu":
+    "La lecture n’a pas reconnu le type de cette pièce : demandez au client de le confirmer.",
   "notif.kind.piece.confirmation_demandee": "Votre comptabilité attend votre « Oui » sur une pièce",
   "cab.notif.kind.piece.confirmation_demandee": "Le client a été invité à confirmer une pièce.",
   "cab.notif.kind.piece.reponse_client": "Le client a répondu sur une pièce.",
@@ -5826,6 +5828,8 @@ const en: Dict = {
   "refus.confirmation.sans_objet":
     "There is nothing to confirm: the document no longer awaits the client’s “Yes”.",
   "refus.reponse.vide": "Write your reply before sending it.",
+  "refus.inscription.type_inconnu":
+    "The reading did not recognise this document’s type: ask the client to confirm it.",
   "notif.kind.piece.confirmation_demandee":
     "Your accountant is waiting for your “Yes” on a document",
   "cab.notif.kind.piece.confirmation_demandee": "The client was asked to confirm a document.",
@@ -9433,6 +9437,7 @@ const ar: Dict = {
   "refus.retour.inscrite": "هذه الوثيقة مُسجَّلة: تُرجَع من قيدها الذي سيُعكَس.",
   "refus.confirmation.sans_objet": "لا شيء للتأكيد: الوثيقة لم تعد تنتظر «نعم» الحريف.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
+  "refus.inscription.type_inconnu": "لم تتعرّف القراءة على نوع هذه الوثيقة: اطلب من الحريف تأكيده.",
   "notif.kind.piece.confirmation_demandee": "محاسبك ينتظر «نعم» منك على وثيقة",
   "cab.notif.kind.piece.confirmation_demandee": "دُعي الحريف إلى تأكيد وثيقة.",
   "cab.notif.kind.piece.reponse_client": "ردّ الحريف بخصوص وثيقة.",
