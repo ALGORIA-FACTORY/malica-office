@@ -310,12 +310,22 @@ describe("le socle de la fabrique de lecteurs", { skip: !BASE_CONFIGUREE }, () =
       ["fabrique.derives", `update fabrique.derives set nature = 'correction_humaine'`],
     ];
 
+    /*
+     * Un refus franc vaut le refus muet : depuis le 27 octobre 2026, les
+     * tables que l'effacement d'une pièce emporte retirent le droit lui-même
+     * (`permission denied`), ce qui est plus strict encore.
+     */
+    const touche = (sql: string) =>
+      sousIdentiteDuServeur(a.id, async (db) => (await db.query(sql)).rowCount ?? 0).catch(
+        (e: { code?: string }) => {
+          if (e.code === "42501") return 0;
+          throw e;
+        },
+      );
     for (const [table, mutation] of mutations) {
-      const touchees = await sousIdentiteDuServeur(a.id, async (db) => {
-        const r = await db.query(mutation);
-        const d = await db.query(mutation.replace(/^update (\S+) set .*/, "delete from $1"));
-        return (r.rowCount ?? 0) + (d.rowCount ?? 0);
-      });
+      const touchees =
+        (await touche(mutation)) +
+        (await touche(mutation.replace(/^update (\S+) set .*/, "delete from $1")));
       assert.equal(touchees, 0, `${table} laisse « authenticated » réécrire ou effacer un fait`);
     }
 

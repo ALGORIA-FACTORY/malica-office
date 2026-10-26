@@ -410,7 +410,12 @@ function PieceScreen() {
     useCallback(() => setConfirmerSuppression(false), []),
   );
   const supprimer = useMutation({
-    mutationFn: () => office().capture.supprimer(pieceId),
+    // `false` : la pièce n'est plus visible. Ce n'est pas un succès — le
+    // journal le garde (27 octobre 2026 : « aucun effet », sans trace).
+    mutationFn: async () => {
+      if (!(await office().capture.supprimer(pieceId)))
+        throw new Error(`suppression sans effet : ${pieceId}`);
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
       // L'accueil montre les pièces lues : sans cela, la pièce effacée y restait.
