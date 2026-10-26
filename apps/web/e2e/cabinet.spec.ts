@@ -40,10 +40,13 @@ test("une panne du portefeuille ne devient pas un mandat vide et la relance retr
     } else await route.continue();
   });
   await page.goto("/cabinet/clients");
+  // Une panne (5xx) part au journal : l'écran dit sa phrase et offre la
+  // relance, jamais le texte brut du serveur (27 octobre 2026).
   const alerte = page
     .getByRole("alert")
-    .filter({ hasText: "Portefeuille temporairement indisponible" });
+    .filter({ has: page.getByRole("button", { name: "Réessayer", exact: true }) });
   await expect(alerte).toBeVisible({ timeout: 20_000 });
+  await expect(alerte).not.toContainText("Portefeuille temporairement indisponible");
   await expect(page.getByText("Aucun mandat actif.", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Mandats actifs", { exact: true })).toHaveCount(0);
   panne = false;
@@ -207,9 +210,11 @@ test("une panne des statistiques laisse les affectations accessibles", async ({ 
   });
   await page.goto("/cabinet/pilotage");
   await expect(page.locator("#affecter form")).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Statistiques temporairement indisponibles", {
-    timeout: 20_000,
-  });
+  // Une panne (5xx) part au journal : l'alerte reste, sans le texte brut.
+  await expect(page.getByRole("alert").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("alert").first()).not.toContainText(
+    "Statistiques temporairement indisponibles",
+  );
   await expect(page.locator("#affecter select").first()).toBeEnabled();
   await expect(page.locator(".cab-summary-value").last()).toHaveText("—");
 });
