@@ -54,6 +54,18 @@ export function vientDeNous(raison: unknown): raison is Error {
  * ce qui permet, en lisant le journal, de savoir quel geste l'a produite.
  */
 export function texteDeLErreur(raison: unknown, ou: string, defaut: string): string {
+  /*
+   * 27 octobre 2026, Wissem : « pas d'erreur à l'écran, tout dans le journal,
+   * pour que tu corriges ». Une réponse 5xx de l'API n'est pas un refus rédigé
+   * pour la personne : c'est une panne — la suppression bloquée par R7 en
+   * était une, et l'écran l'affichait en texte brut, sans que personne ne la
+   * relise. Elle part au journal, et l'écran dit seulement la phrase prévue.
+   * Les refus métier (4xx) restent affichés : ils disent quoi faire.
+   */
+  if (raison instanceof ErreurApi && raison.statut >= 500) {
+    noterAuJournal(ou, raison);
+    return defaut;
+  }
   if (vientDeNous(raison)) {
     // Un refus de la base peut lever une CLÉ du dictionnaire (« refus.licence.
     // transmission ») plutôt qu'une phrase française : on la dit dans la

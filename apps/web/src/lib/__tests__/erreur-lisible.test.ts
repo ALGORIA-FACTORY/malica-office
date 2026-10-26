@@ -18,6 +18,11 @@ describe("ce qu'on montre d'une erreur", () => {
     expect(texteDeLErreur(moteur, "épreuve", DEFAUT)).toBe(DEFAUT);
   });
 
+  it("une panne de l'API (5xx) part au journal, pas à l'écran", () => {
+    const panne = new ErreurApi("R7 : DELETE interdit sur fabrique.executions", 500);
+    expect(texteDeLErreur(panne, "épreuve", DEFAUT)).toBe(DEFAUT);
+  });
+
   it("ne montre jamais un tableau de validation", () => {
     const zod = new Error('[{"validation":"regex","path":["document_date"]}]');
     expect(texteDeLErreur(zod, "épreuve", DEFAUT)).toBe(DEFAUT);
