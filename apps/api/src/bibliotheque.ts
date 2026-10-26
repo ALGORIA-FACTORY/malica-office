@@ -36,7 +36,8 @@ const MAX_DOCUMENTS = 2000;
  * `$3` porte ce fuseau dans les deux lectures qui partagent ce gabarit.
  */
 const DATE_DU_DOCUMENT = `case when x.payload ->> 'document_date' ~ '^\\d{4}-\\d{2}-\\d{2}$'
-       then x.payload ->> 'document_date' end`;
+       then x.payload ->> 'document_date'
+       else coalesce(dt.valeur,fq.payload->>'dateOperation') end`;
 const DATE_DE_CLASSEMENT = `coalesce(${DATE_DU_DOCUMENT},
        to_char(p.created_at at time zone $3::text, 'YYYY-MM-DD'))`;
 
@@ -45,7 +46,7 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
   (select parent.id from pieces_v parent where parent.id = p.source_piece_id
      and parent.tenant_id = p.tenant_id and parent.vis = 'partage') as "sourcePieceId",
   o.currency as devise,
-  nullif(x.payload ->> 'document_date', '') as "dateDocument",
+  ${DATE_DU_DOCUMENT} as "dateDocument",
   ${DATE_DE_CLASSEMENT} as "dateDeClassement",
   case when p.document_kind = 'facture_vente' then null
        else nullif(btrim(x.payload ->> 'issuer'), '') end as tiers,
@@ -62,6 +63,10 @@ const DOCUMENTS = `select p.id, p.tenant_id as "tenantId", p.document_kind as ty
   join organizations_v o on o.id = p.tenant_id
   left join lateral (select id, payload from extractions_v x
                       where x.piece_id = p.id order by created_at desc, id desc limit 1) x on true
+  left join lateral (select valeur from capture.precisions
+                      where piece_id=p.id and champ='document_date' order by decided_at desc limit 1) dt on true
+  left join lateral (select payload from parametrage.qualifications_fiscales
+                      where piece_id=p.id and extraction_id=x.id order by created_at desc limit 1) fq on true
   left join lateral (select extraction_id, pack_version_id, normalisation from capture.analyses a
                       where a.piece_id = p.id order by created_at desc, id desc limit 1) a on true`;
 

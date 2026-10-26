@@ -161,7 +161,7 @@ export const referentiel = {
   async fiscalCharges(db: Requete, packId: string, locale = "fr", jour = aujourdhui()) {
     const { rows } = await db.query(
       `select c.code, c.document_kind, c.account_code, c.fixed_amount,
-              c.legal_reference, c.valid_from, c.valid_to,
+              c.legal_reference, c.valid_from, c.valid_to, c.rate, c.basis, c.taxable, c.incorpore_au_cout_achat,
               coalesce(demandee.value, francais.value, c.label) as label
          from ref_fiscal_charges_v c
          left join ref_labels_v demandee
@@ -181,6 +181,10 @@ export const referentiel = {
         label: r["label"] as string,
         documentKind: r["document_kind"] as string,
         accountCode: r["account_code"] as string,
+        rate: r["rate"] == null ? null : String(r["rate"]),
+        basis: r["basis"] == null ? null : String(r["basis"]),
+        taxable: r["taxable"] === true,
+        incorporeAuCoutAchat: r["incorpore_au_cout_achat"] === true,
         fixedAmount:
           r["fixed_amount"] === null || r["fixed_amount"] === undefined
             ? null

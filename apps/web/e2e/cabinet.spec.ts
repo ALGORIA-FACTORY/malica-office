@@ -4,7 +4,8 @@
  */
 import { expect, test } from "@playwright/test";
 
-import { preparerLAppareil } from "./comptes";
+import { preparerLAppareil, ETAT_DIRIGEANT } from "./comptes";
+import { lecture } from "../../api/src/scan/lecture-d-essai";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "fr");
@@ -356,5 +357,189 @@ for (const largeur of [390, 1440]) {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });
+  });
+}
+
+// Base d'épreuve réelle : profil et affectation passent par RPC, RLS et migrations.
+for (const largeur of [390, 1440]) {
+  test(`profil fiscal : enregistrer puis appliquer à un dossier à ${largeur} px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: largeur, height: 950 });
+    const rpc = async (depot: string, methode: string, args: unknown[]) => {
+      const r = await page.request.post("/rpc", { data: { depot, methode, args } });
+      expect(r.ok(), await r.text()).toBeTruthy();
+      return (await r.json()).resultat;
+    };
+    const orgs = (await rpc("identite", "listMyOrganizations", [])) as Array<{
+      id: string;
+      kind: string;
+    }>;
+    const cabinet = orgs.find((o) => o.kind === "cabinet")!;
+    const marque = `Fiscalité ${largeur} ${Date.now()}`;
+    const chiffres = String(Date.now()).slice(-7);
+    const client = (await rpc("identite", "ouvrirDossier", [
+      { cabinetTenantId: cabinet.id, name: marque, legalId: `${chiffres}W/A/M/000`, adresse: null },
+    ])) as { id: string };
+    await page.goto("/cabinet/reglages");
+    await page.getByRole("button", { name: "Comptabilité et fiscalité", exact: true }).click();
+    await page.getByRole("button", { name: "Créer un profil", exact: true }).click();
+    await page.getByLabel("Nom du profil", { exact: true }).fill(marque);
+    await page.getByLabel("Catégorie de clients", { exact: true }).first().fill(marque);
+    await page
+      .getByLabel("Activités concernées", { exact: true })
+      .fill("Activité du parcours de test");
+    await page.getByRole("button", { name: "Enregistrer cette version" }).click();
+    await expect(page.getByText("Version enregistrée.", { exact: true })).toBeVisible();
+    await page.getByLabel("Rechercher un client").fill(marque);
+    await page.getByLabel("Sélectionner les clients affichés").check();
+    await page.getByRole("button", { name: "Prévisualiser les changements" }).click();
+    await expect(page.getByText(/Modification prévue/)).toBeVisible();
+    await page.getByRole("button", { name: "Appliquer aux 1 clients éligibles" }).click();
+    await expect(
+      page.getByText("1 dossiers mis à jour · 0 écartés", { exact: true }),
+    ).toBeVisible();
+    const ds = (await rpc("parametrage", "historiqueFiscal", [cabinet.id, client.id])) as Array<{
+      configuration: { regles: Array<{ applicabilite: string; valeur: string | null }> };
+    }>;
+    expect(ds).toHaveLength(1);
+    expect(ds[0]!.configuration.regles).toHaveLength(5);
+    expect(
+      ds[0]!.configuration.regles.every(
+        (r) => r.applicabilite === "a_qualifier" && r.valeur === null,
+      ),
+    ).toBeTruthy();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBeTruthy();
+    await testInfo.attach(`profils-fiscaux-${largeur}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    });
+  });
+}
+
+// La qualification utilise une lecture synthétique citée, les vrais RPC et la RLS.
+for (const largeur of [390, 1440]) {
+  test(`qualification fiscale de pièce : vérifier et enregistrer à ${largeur} px`, async ({
+    page,
+    browser,
+  }, testInfo) => {
+    await page.setViewportSize({ width: largeur, height: 950 });
+    page.setDefaultTimeout(10_000);
+    const rpc = async (depot: string, methode: string, args: unknown[]) => {
+      const r = await page.request.post("/rpc", { data: { depot, methode, args } });
+      expect(r.ok(), await r.text()).toBeTruthy();
+      return (await r.json()).resultat;
+    };
+    const orgs = (await rpc("identite", "listMyOrganizations", [])) as {
+      id: string;
+      kind: string;
+    }[];
+    const cabinet = orgs.find((o) => o.kind === "cabinet")!;
+    const ctx = await browser.newContext({ storageState: ETAT_DIRIGEANT });
+    try {
+      const appel = async (depot: string, methode: string, args: unknown[]) => {
+        const r = await ctx.request.post(new URL("/rpc", page.url()).href, {
+          data: { depot, methode, args },
+        });
+        expect(r.ok(), await r.text()).toBeTruthy();
+        return (await r.json()).resultat;
+      };
+      // page.url vaut about:blank avant navigation : utiliser la base de Playwright.
+      await page.goto("/cabinet/bibliotheque");
+      const mesOrgs = (await appel("identite", "listMyOrganizations", [])) as {
+        id: string;
+        kind: string;
+        legalId: string;
+      }[];
+      const client = mesOrgs.find((o) => o.kind === "pme")!;
+      expect(client).toBeTruthy();
+      const pack = (await rpc("referentiel", "activePack", ["TN"])) as { id: string };
+      const l = lecture({
+        clientMf: client.legalId,
+        numero: `FQ-${largeur}-${Date.now()}`,
+        ht: ["1", "000,000"],
+        tva: "191,900",
+        ttc: ["1", "201,900"],
+      });
+      l.tokens[10]!.text = "10,000";
+      l.extract.other_charges = [{ code: "FODEC", label: "FODEC", amount: "10.000" }];
+      const piece = (await appel("capture", "enregistrer", [
+        {
+          tenantId: client.id,
+          source: "pdf",
+          vis: "partage",
+          idempotencyKey: `fq-${largeur}-${Date.now()}`,
+          contentType: "application/pdf",
+          pageCount: 1,
+        },
+      ])) as { id: string };
+      await appel("capture", "persisterLecture", [
+        {
+          pieceId: piece.id,
+          packId: pack.id,
+          tokens: l.tokens,
+          contract: "extract.v1",
+          extract: l.extract,
+          citations: l.citations,
+          flags: [],
+          articles: [],
+          documentKind: "facture_achat",
+          documentDate: l.extract.document_date,
+          mode: "pdf-text",
+          confianceParChamp: { "totals.ttc": 0.95 },
+        },
+      ]);
+      await appel("capture", "analyser", [piece.id]);
+      await page.goto(`/cabinet/piece/${piece.id}`);
+      await page
+        .getByRole("button", { name: "Qualifier la fiscalité de cette pièce", exact: true })
+        .click();
+      const c = (await rpc("office", "contexteQualificationFiscale", [piece.id])) as {
+        comptes: { code: string }[];
+      };
+      expect(c.comptes.length).toBeGreaterThan(0);
+      await page
+        .getByRole("combobox", { name: "Qualité du redevable de la taxe", exact: true })
+        .selectOption("fabricant");
+      await page.getByLabel("Part du HT affectée", { exact: true }).fill("1000.000");
+      await page
+        .getByRole("combobox", {
+          name: "Imputation du HT et des coûts non récupérables",
+          exact: true,
+        })
+        .selectOption(c.comptes[0]!.code);
+      await page
+        .getByRole("combobox", { name: "Affectation de la TVA", exact: true })
+        .selectOption("non_deductible");
+      await page
+        .getByLabel("FODEC · Base assujettie (zéro si non soumise)", { exact: true })
+        .fill("1000.000");
+      await page
+        .getByLabel("Justification et pièces établissant l’assujettissement ou l’exonération", {
+          exact: true,
+        })
+        .fill("Produits et usage vérifiés pour le scénario navigateur");
+      const sauvegarde = page.waitForResponse(
+        (r) =>
+          r.url().endsWith("/rpc") && r.request().postDataJSON()?.methode === "qualifierFiscalite",
+      );
+      await page.getByRole("button", { name: "Vérifier et enregistrer", exact: true }).click();
+      const response = await sauvegarde;
+      expect(response.ok(), await response.text()).toBeTruthy();
+      const q = (await rpc("office", "qualificationFiscale", [piece.id])) as { id: string };
+      expect(q.id).toBeTruthy();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      ).toBeTruthy();
+      await testInfo.attach(`qualification-fiscale-${largeur}`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      });
+      expect(cabinet.id).toBeTruthy();
+    } finally {
+      await ctx.close().catch(() => undefined);
+    }
   });
 }

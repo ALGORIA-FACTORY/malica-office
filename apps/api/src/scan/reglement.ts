@@ -1,3 +1,8 @@
+import {
+  attentesDeRetenue,
+  retenueDuProfilAQualifier,
+} from "@malica/socle/engines/fiscalite/profil";
+import { fiscaliteDuDossier } from "./fiscalite-du-dossier.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
 /** Règlement composé à partir des faits et d'une qualification fiscale explicite. */
 import {
@@ -26,6 +31,7 @@ export type PropositionDeReglement =
       ecriture: EcritureDeReglement;
       packVersionId: string;
       pieceId: string;
+      fiscaliteVersionId?: string;
       /** Ce que le règlement dit de la retenue à la source. */
       retenue: ConstatDeRetenue;
       tauxDisponibles: TauxDeRetenue[];
@@ -233,6 +239,7 @@ export async function propositionDeReglement(
     counterparty = mapping.length === 1 ? mapping[0]!.counterparty_account : "";
   }
   let tauxDisponibles: TauxDeRetenue[] = [];
+  const fiscalite = await fiscaliteDuDossier(db, l.tenant_id, l.paye_le);
 
   let retenue: ConstatDeRetenue = { cas: "sans_objet" };
   const lignesDeRetenue: Array<{ montant: string; compte: string; libelle: string }> = [];
@@ -255,6 +262,26 @@ export async function propositionDeReglement(
     const sensCourt = sens === "facture_achat" ? "achat" : "vente";
     tauxDisponibles = taux.filter((t) => t.sens === "tous" || t.sens === sensCourt);
     try {
+      if (fiscalite)
+        tauxDisponibles = attentesDeRetenue(
+          fiscalite.configuration,
+          sens === "facture_achat" ? "paiement_emis" : "paiement_recu",
+          tauxDisponibles,
+          qualification?.codes,
+        );
+      const dansLeChampDuProfil = fiscalite && retenueDuProfilAQualifier(tauxDisponibles, ttc);
+      if (
+        dansLeChampDuProfil &&
+        qualification &&
+        !qualification.codes.length &&
+        !qualification.justification.trim()
+      ) {
+        return {
+          ok: false,
+          raison:
+            "L’absence de retenue prévue par le profil doit être justifiée pour cette opération.",
+        };
+      }
       retenue = constaterLaRetenue({
         ttc,
         tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
@@ -264,7 +291,9 @@ export async function propositionDeReglement(
         decimales,
         ...(qualification ? { qualification } : {}),
       });
+      if (dansLeChampDuProfil && !qualification) retenue = { cas: "a_confirmer" };
     } catch (e) {
+      if (fiscalite && e instanceof Error) return { ok: false, raison: e.message };
       if (e instanceof RetenueNonQualifiee) return { ok: false, raison: e.message };
       throw e;
     }
@@ -346,6 +375,7 @@ export async function propositionDeReglement(
       tauxDisponibles,
       ttc,
       paye,
+      ...(fiscalite ? { fiscaliteVersionId: fiscalite.id } : {}),
     };
   } catch (e) {
     if (e instanceof ReglementIncomplet) return { ok: false, raison: e.message };

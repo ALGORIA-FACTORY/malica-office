@@ -779,7 +779,7 @@ export const capture = {
           and rt.code = f.regime_tva
           and rt.valid_from <= f.valid_from
           and (rt.valid_to is null or rt.valid_to > f.valid_from)
-        where f.tenant_id = $1 and f.valid_to is null
+        where f.tenant_id = $1 and f.valid_from <= current_date and (f.valid_to is null or f.valid_to > current_date)
         order by f.valid_from desc limit 1`,
       [tenantId, org["jurisdiction"] as string],
     );

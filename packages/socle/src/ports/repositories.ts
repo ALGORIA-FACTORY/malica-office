@@ -1,3 +1,17 @@
+import type {
+  QualificationFiscale,
+  QualificationFiscaleInscrite,
+  ContexteQualificationFiscale,
+} from "./qualification-fiscale.ts";
+import type {
+  NouveauProfilFiscal,
+  ProfilFiscal,
+  FiscaliteDossier,
+  CatalogueFiscal,
+  LotFiscal,
+  ApercuFiscal,
+  ConfigurationFiscale,
+} from "./fiscalite.ts";
 import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue-au-reglement.ts";
 /**
  * Ports du domaine. Les écrans ne connaissent que ce vocabulaire :
@@ -165,7 +179,7 @@ export interface IdentityRepository {
   /** Le contact rejoint le dossier ; son compte doit porter l'adresse invitée. */
   accepterInvitationParLien(jeton: string): Promise<{ tenantId: string; role: string }>;
   /** Les régimes que la juridiction connaît, tels que la base les porte. */
-  regimesDisponibles(jurisdiction: string): Promise<RegimeDisponible[]>;
+  regimesDisponibles(jurisdiction: string, jour?: string | null): Promise<RegimeDisponible[]>;
   /** Les formes juridiques et modes de dépôt que le calendrier distingue. */
   formesDisponibles(jurisdiction: string): Promise<FormeDisponible[]>;
   ficheCourante(tenantId: string): Promise<FicheCourante | null>;
@@ -477,6 +491,22 @@ export interface AccesRepository {
 }
 
 export interface ParametrageRepository {
+  profilsFiscaux(cabinetId: string): Promise<ProfilFiscal[]>;
+  enregistrerProfilFiscal(input: NouveauProfilFiscal): Promise<ProfilFiscal>;
+  fiscaliteDossiers(cabinetId: string, date: string): Promise<FiscaliteDossier[]>;
+  historiqueFiscal(cabinetId: string, clientId: string): Promise<FiscaliteDossier[]>;
+  catalogueFiscal(jurisdiction: string, date: string): Promise<CatalogueFiscal[]>;
+  apercuFiscal(input: LotFiscal): Promise<ApercuFiscal[]>;
+  appliquerProfilFiscal(input: LotFiscal): Promise<{ appliques: number; ignores: number }>;
+  personnaliserFiscalite(input: {
+    cabinetId: string;
+    clientId: string;
+    versionProfilId: string;
+    precedentId: string | null;
+    dateEffet: string;
+    configuration: ConfigurationFiscale;
+  }): Promise<{ id: string }>;
+
   reglagesCabinet(tenantId: string): Promise<ReglagesCabinet>;
   /** Quand la mise en route a été terminée, ou rien si elle ne l'a jamais été. */
   miseEnRoute(tenantId: string): Promise<{ termineeLe: string | null }>;
@@ -696,6 +726,10 @@ export interface AccountClass {
 }
 
 export interface FiscalCharge {
+  rate?: string | null;
+  basis?: string | null;
+  taxable?: boolean;
+  incorporeAuCoutAchat?: boolean;
   code: string;
   label: string;
   documentKind: "facture_achat" | "facture_vente";
@@ -1249,6 +1283,8 @@ export type PropositionDePiece = (
       verdict: string;
       verdictCode: CodeVerdict | null;
       packVersionId: string;
+      fiscaliteVersionId?: string;
+      qualificationFiscaleId?: string;
       proposition: ProposalResult;
     }
   | {
@@ -1269,6 +1305,9 @@ export type PropositionDePiece = (
 };
 
 export interface OfficeRepository {
+  contexteQualificationFiscale(pieceId: string): Promise<ContexteQualificationFiscale>;
+  qualificationFiscale(pieceId: string): Promise<QualificationFiscaleInscrite | null>;
+  qualifierFiscalite(input: QualificationFiscale): Promise<{ id: string }>;
   propose(input: ProposedEcriture): Promise<string>;
   /**
    * La proposition d'écriture d'une pièce, calculée côté SERVEUR : depuis les

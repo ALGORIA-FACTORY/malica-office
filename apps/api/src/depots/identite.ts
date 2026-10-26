@@ -109,7 +109,8 @@ export const identite = {
               debut_activite, cloture_exercice, forme_juridique, mode_depot,
               source, piece_id, valid_from, valid_to
          from identity.fiches_fiscales
-        where tenant_id = $1 and valid_to is null
+        where tenant_id = $1 and valid_from <= current_date
+          and (valid_to is null or valid_to > current_date)
         order by valid_from desc limit 1`,
       [tenantId],
     );

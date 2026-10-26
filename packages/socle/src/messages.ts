@@ -1,3 +1,4 @@
+import { frFiscalite, enFiscalite, arFiscalite } from "./messages-fiscalite.ts";
 /**
  * Libellés d'interface FR / EN / AR.
  * Doctrine : aucune chaîne figée dans un composant. Les libellés métier
@@ -20,6 +21,7 @@ export const RTL_LOCALES: readonly Locale[] = ["ar"];
 
 const fr = {
   ...frBibliotheque,
+  ...frFiscalite,
   "cab.design.journee": "Votre journée, en clair.",
   "cab.design.commencer": "Commencer la revue",
   "cab.design.situation": "Situation de votre comptabilité",
@@ -3856,6 +3858,7 @@ type Dict = Record<keyof typeof fr, string>;
 
 const en: Dict = {
   ...enBibliotheque,
+  ...enFiscalite,
   "cab.design.journee": "Your day, at a glance.",
   "cab.design.commencer": "Start reviewing",
   "cab.design.situation": "Your accounting overview",
@@ -7507,6 +7510,7 @@ const en: Dict = {
 
 const ar: Dict = {
   ...arBibliotheque,
+  ...arFiscalite,
   "cab.design.journee": "يومكم، بكل وضوح.",
   "cab.design.commencer": "بدء المراجعة",
   "cab.design.situation": "نظرة على المحاسبة",

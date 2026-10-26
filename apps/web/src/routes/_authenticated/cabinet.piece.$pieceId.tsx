@@ -1,3 +1,4 @@
+import { QualificationFiscalePiece } from "@/components/malica/qualification-fiscale-piece";
 import type { QualificationDeRetenue } from "@malica/socle/use-cases/retenue-au-reglement";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -1003,6 +1004,9 @@ function CabinetReview() {
               />
             ) : null}
             <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
+            {!booked && dossier.data?.extraction ? (
+              <QualificationFiscalePiece pieceId={pieceId} cabinetId={org.id} />
+            ) : null}
             {!booked ? (
               proposition.isPending ? (
                 <EmptyState>{t("common.loading")}</EmptyState>
