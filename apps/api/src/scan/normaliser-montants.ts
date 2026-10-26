@@ -140,6 +140,11 @@ export interface ResultatNormalisation {
 const CONFIANCE_LECTURE_UNIQUE_VERIFIEE = 1;
 /** Des lectures concurraient ; l'arithmétique en a gardé une seule. */
 const CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE = 0.9;
+/**
+ * Le HT imprimé comprend les autres montants (le timbre) : la base taxable
+ * s'en déduit, et la TVA comme le total la confirment tous deux.
+ */
+const CONFIANCE_HT_AUTRES_COMPRIS = 0.9;
 /** Lecture unique, mais rien pour la vérifier. */
 const CONFIANCE_NON_VERIFIEE = 0.5;
 /**
@@ -150,7 +155,9 @@ const CONFIANCE_NON_VERIFIEE = 0.5;
  */
 const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 
-const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
+// « DNT » (dinar tunisien) : la facture MYTEK du 26 octobre 2026 imprime
+// « TTC : 510,000 DNT », et son total était illisible.
+const DEVISE = /^(?:DT|DNT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
 const ESPACES = /[\s\u00A0\u202F]/u;
 
 /** Les lectures possibles d'un montant imprimé. Vide : illisible. */
@@ -506,6 +513,62 @@ export function normaliserMontants(
   const distinctes = new Map<string, Candidat[]>();
   for (const v of valides) distinctes.set(v.map((c) => c.mineur).join("|"), v);
 
+  /*
+   * ============================== LE HT QUI COMPREND DÉJÀ LE TIMBRE (26 octobre 2026)
+   *
+   * Facture MYTEK réelle : « TOTAL HT 428,731 », « Base TVA 427,731 »,
+   * « TVA 81,269 », « Timbre fiscal 1,000 », « Total avec Timbre 428,731 »,
+   * « TTC 510,000 ». Le HT imprimé COMPREND le timbre ; la base taxable est
+   * 427,731. Lue comme une base, elle comptait le timbre deux fois
+   * (428,731 + 81,269 + 1,000 = 511,000) : « la facture ne tient pas », et
+   * plus aucun montant n'était rendu.
+   *
+   * Seconde lecture, seulement quand la première n'a rien gardé, sur UNE
+   * base, avec des autres montants et une TVA imprimée : base = HT imprimé −
+   * autres. Elle n'est retenue que si la TVA imprimée vaut arrondi(base ×
+   * taux) — l'écart d'un timbre de 1,000 au taux de 19 % fait 190 millimes,
+   * bien au-delà de l'arrondi — ET, si le total est lu, si base + TVA +
+   * autres = TTC. Sans total lu, la confiance est celle d'une lecture que la
+   * seule TVA vérifie. Rien n'est inventé : la base est la différence de deux
+   * montants imprimés et cités.
+   */
+  if (
+    distinctes.size === 0 &&
+    entree.bases.length === 1 &&
+    (entree.autres ?? []).length > 0 &&
+    Boolean(entree.tva)
+  ) {
+    const compris = new Map<string, Candidat[]>();
+    const essayer = (i: number, pris: Candidat[]) => {
+      if (i === lectures.length) {
+        if (verifie(pris, true)) compris.set(pris.map((c) => c.mineur).join("|"), [...pris]);
+        return;
+      }
+      for (const c of lectures[i]!) {
+        pris.push(c);
+        essayer(i + 1, pris);
+        pris.pop();
+      }
+    };
+    essayer(0, []);
+    if (compris.size === 1) {
+      const [retenue] = [...compris.values()];
+      return construire(
+        retenue!,
+        "tranche",
+        champs.some((c) => c.nom === "ttc")
+          ? CONFIANCE_HT_AUTRES_COMPRIS
+          : CONFIANCE_VERIFIEE_SANS_LE_TOTAL,
+        1,
+        (champs.some((c) => c.nom === "ttc")
+          ? "le HT imprimé comprend les autres montants (timbre) : la base taxable en est déduite, et la TVA comme le total imprimés la vérifient"
+          : "le HT imprimé comprend les autres montants (timbre) : la base taxable en est déduite, et la TVA imprimée la vérifie") +
+          suffixe,
+        true,
+      );
+    }
+  }
+
   if (distinctes.size === 0)
     return vide(
       "incoherent",
@@ -542,7 +605,7 @@ export function normaliserMontants(
         : "convention tranchée par l'arithmétique de la facture") + suffixe,
   );
 
-  function valeurs(pris: Candidat[]) {
+  function valeursImprimees(pris: Candidat[]) {
     const par = new Map(champs.map((c, i) => [c.nom, BigInt(pris[i]!.mineur)]));
     return {
       hts: entree.bases.map((_, i) => par.get(`ht${i}`)!),
@@ -552,8 +615,19 @@ export function normaliserMontants(
     };
   }
 
-  function verifie(pris: Candidat[]): boolean {
-    const v = valeurs(pris);
+  /**
+   * `autresCompris` : le HT imprimé comprend les autres montants ; la base
+   * taxable est HT − autres (une seule base, voir plus haut).
+   */
+  function valeurs(pris: Candidat[], autresCompris = false) {
+    const v = valeursImprimees(pris);
+    if (!autresCompris) return v;
+    const autres = v.autres.reduce((s, a) => s + a, 0n);
+    return { ...v, hts: v.hts.map((h) => h - autres) };
+  }
+
+  function verifie(pris: Candidat[], autresCompris = false): boolean {
+    const v = valeurs(pris, autresCompris);
     if (v.hts.some((h) => h < 0n)) return false;
     const tvaCalculee = v.hts.reduce((s, h, i) => s + arrondi(h * rats[i]![0], rats[i]![1]), 0n);
     if (v.tva !== undefined && abs(v.tva - tvaCalculee) > tol) return false;
@@ -571,8 +645,9 @@ export function normaliserMontants(
     confiance: number,
     lecturesValides: number,
     raison: string,
+    autresCompris = false,
   ): ResultatNormalisation {
-    const v = valeurs(pris);
+    const v = valeurs(pris, autresCompris);
     return {
       etat,
       montants: {
