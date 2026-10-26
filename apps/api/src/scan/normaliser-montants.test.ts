@@ -329,11 +329,10 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     assert.doesNotMatch(r.raison, /comprend/);
   });
 
-  it("« 510,000 DNT » se lit : DNT est le dinar", () => {
-    assert.deepEqual(
-      candidatsMontant("510,000 DNT", 3).map((c) => c.mineur),
-      candidatsMontant("510,000 DT", 3).map((c) => c.mineur),
-    );
+  it("MYTEK tel qu'imprimé : « 510,000 DNT » reste un total non lu, la TVA suffit", () => {
+    // La devise se lit dans le paramétrage (R4), pas dans ce code : un total
+    // que la vérification ne lit pas est écarté et NOMMÉ, et la TVA imprimée
+    // confirme seule la base déduite.
     const r = normaliserMontants(
       {
         bases: [{ ht: "428,731", taux: TAUX }],
@@ -344,8 +343,8 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
       P,
     );
     assert.equal(r.etat, "tranche", r.raison);
-    assert.equal(r.montants.ttc, 510_000);
-    assert.equal(r.totalNonLu, null);
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.equal(r.totalNonLu, "510,000 DNT");
   });
 
   it("total non lu : la TVA seule vérifie la base déduite, sans la note pleine", () => {

@@ -155,9 +155,7 @@ const CONFIANCE_NON_VERIFIEE = 0.5;
  */
 const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 
-// « DNT » (dinar tunisien) : la facture MYTEK du 26 octobre 2026 imprime
-// « TTC : 510,000 DNT », et son total était illisible.
-const DEVISE = /^(?:DT|DNT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
+const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
 const ESPACES = /[\s\u00A0\u202F]/u;
 
 /** Les lectures possibles d'un montant imprimé. Vide : illisible. */
