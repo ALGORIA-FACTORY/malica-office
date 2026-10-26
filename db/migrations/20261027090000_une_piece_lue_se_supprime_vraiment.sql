@@ -129,3 +129,8 @@ drop trigger if exists fabrique_derives_no_upd on fabrique.derives;
 create trigger fabrique_derives_no_upd
   before update or delete on fabrique.derives
   for each row execute function app.deny_mutation_hors_effacement_de_piece();
+
+-- Le garde d'effacement ne vaut que pour la cascade : aucun droit direct de
+-- modifier ou d'effacer n'est ouvert à `authenticated` (`schema.test.ts`).
+revoke update, delete on fabrique.executions, fabrique.exemples, fabrique.derives
+  from authenticated;
