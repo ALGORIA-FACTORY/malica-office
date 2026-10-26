@@ -572,6 +572,8 @@ const fr = {
   "pme.home.cabinet.absent": "Aucune comptabilité mandatée",
   "pme.paiement.tout": "J’ai tout payé",
   "pme.paiement.partie": "Une partie seulement",
+  "pme.paiement.totalInconnu":
+    "Le total de cette facture n’a pas été lu : choisissez « Une partie seulement » et indiquez le montant payé.",
   "pme.paiement.combien": "Combien avez-vous payé ?",
   "pme.paiement.reference": "Numéro du chèque, de la traite ou du virement",
   "pme.paiement.quand": "Quand l’avez-vous payée ?",
@@ -4369,6 +4371,8 @@ const en: Dict = {
   "pme.home.cabinet.absent": "No appointed accountant",
   "pme.paiement.tout": "I paid it all",
   "pme.paiement.partie": "Only part of it",
+  "pme.paiement.totalInconnu":
+    "This invoice’s total was not read: choose “Only part of it” and enter the amount paid.",
   "pme.paiement.combien": "How much did you pay?",
   "pme.paiement.reference": "Cheque, draft or transfer number",
   "pme.paiement.quand": "When did you pay it?",
@@ -8009,6 +8013,8 @@ const ar: Dict = {
   "pme.home.cabinet.absent": "لا يوجد محاسب مفوّض",
   "pme.paiement.tout": "دفعتُ المبلغ كاملاً",
   "pme.paiement.partie": "جزء منه فقط",
+  "pme.paiement.totalInconnu":
+    "لم يُقرأ مجموع هذه الفاتورة: اختر «جزء منه فقط» وأدخل المبلغ المدفوع.",
   "pme.paiement.combien": "كم دفعت؟",
   "pme.paiement.reference": "رقم الشيك أو الكمبيالة أو التحويل",
   "pme.paiement.quand": "متى دفعتَها؟",

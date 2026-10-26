@@ -290,3 +290,86 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     assert.equal(r.etat, "ambigu");
   });
 });
+
+/*
+ * 26 octobre 2026 — facture MYTEK réelle : « TOTAL HT 428,731 » comprend le
+ * timbre ; « Base TVA 427,731 », « TVA 81,269 », « Timbre fiscal 1,000 »,
+ * « TTC 510,000 ». Lu tel quel, le timbre comptait deux fois et la pièce
+ * finissait « incohérente », sans aucun montant.
+ */
+describe("le HT imprimé qui comprend déjà le timbre", () => {
+  const TIMBRE = [{ brut: "1,000", attendu: 1000 }];
+
+  it("la base taxable se déduit, et la TVA comme le total la vérifient", () => {
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "428,731", taux: TAUX }],
+        tva: "81,269",
+        autres: TIMBRE,
+        ttc: "510,000",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 427_731, "la base taxable, pas le HT imprimé");
+    assert.equal(r.montants.tva, 81_269);
+    assert.deepEqual(r.montants.autres, [1000]);
+    assert.equal(r.montants.ttc, 510_000);
+    assert.equal(r.imprime.bases[0], "428,731", "ce que la pièce imprime reste dit");
+    assert.match(r.raison, /comprend les autres montants/);
+  });
+
+  it("un HT sans timbre se lit comme avant : la seconde lecture ne sert pas", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "427,731", taux: TAUX }], tva: "81,269", autres: TIMBRE, ttc: "510,000" },
+      P,
+    );
+    assert.equal(r.etat, "tranche");
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.doesNotMatch(r.raison, /comprend/);
+  });
+
+  it("MYTEK tel qu'imprimé : « 510,000 DNT » reste un total non lu, la TVA suffit", () => {
+    // La devise se lit dans le paramétrage (R4), pas dans ce code : un total
+    // que la vérification ne lit pas est écarté et NOMMÉ, et la TVA imprimée
+    // confirme seule la base déduite.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "428,731", taux: TAUX }],
+        tva: "81,269",
+        autres: TIMBRE,
+        ttc: "510,000 DNT",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.equal(r.totalNonLu, "510,000 DNT");
+  });
+
+  it("total non lu : la TVA seule vérifie la base déduite, sans la note pleine", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "428,731", taux: TAUX }], tva: "81,269", autres: TIMBRE },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.ok(r.confiance < 0.9);
+  });
+
+  it("sans TVA imprimée, on ne déduit rien : une seule confirmation ne suffit pas", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "428,731", taux: TAUX }], autres: TIMBRE, ttc: "510,000" },
+      P,
+    );
+    assert.notEqual(r.montants.bases[0]?.ht, 427_731);
+  });
+
+  it("une TVA qui ne tombe pas sur la base déduite reste incohérente", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "428,731", taux: TAUX }], tva: "81,500", autres: TIMBRE, ttc: "510,231" },
+      P,
+    );
+    assert.equal(r.etat, "incoherent");
+  });
+});

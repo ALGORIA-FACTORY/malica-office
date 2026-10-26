@@ -945,12 +945,19 @@ export function CommentCEstPaye({
             ) : null}
             {enCorrection ? null : (
               <div className="grid grid-cols-2 gap-1 rounded-[18px] bg-muted p-1">
+                {/*
+                 * 27 octobre 2026 : sur une facture dont le total n'a pas été
+                 * lu, « J'ai tout payé » n'avait aucun montant à inscrire, et
+                 * « Enregistrer » restait gris sans un mot. Sans total, on
+                 * saisit le montant ; et le choix se voit, comme les moyens.
+                 */}
                 <button
                   type="button"
                   onClick={() => setPartiel(false)}
+                  disabled={ttcMineur === null}
                   aria-pressed={partiel === false}
-                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                    partiel === false ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                  className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium disabled:opacity-40 ${
+                    partiel === false ? "bg-foreground text-background shadow-sm" : "text-text-2"
                   }`}
                 >
                   {t("pme.paiement.tout")}
@@ -960,13 +967,18 @@ export function CommentCEstPaye({
                   onClick={() => setPartiel(true)}
                   aria-pressed={partiel === true}
                   className={`min-h-[44px] rounded-[12px] px-2 text-[13.5px] font-medium ${
-                    partiel ? "bg-background text-foreground shadow-sm" : "text-text-2"
+                    partiel ? "bg-foreground text-background shadow-sm" : "text-text-2"
                   }`}
                 >
                   {t("pme.paiement.partie")}
                 </button>
               </div>
             )}
+            {!enCorrection && ttcMineur === null ? (
+              <p className="text-[12.5px] leading-[1.45] text-text-2">
+                {t("pme.paiement.totalInconnu")}
+              </p>
+            ) : null}
             {partiel ? (
               <label className="grid gap-1">
                 <span className="text-[12.5px] text-text-2">{t("pme.paiement.combien")}</span>
