@@ -33,15 +33,50 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
   const motifs: Record<string, string> = {};
 
   let n = 0;
-  /** Une pièce transmise, lue, que le client n'a pas confirmée. */
-  const lue = async () => {
+  const lignesDEssai = [
+    { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: null },
+    { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000", tax_code: null },
+  ];
+  const proposerEtInscrire = (userId: string, pieceId: string) =>
+    sousIdentiteDuServeur(userId, async (db) => {
+      const e = await office.propose(db, {
+        pieceId,
+        journal: "ACH",
+        date: "2026-10-02",
+        libelle: "Facture essai",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignesDEssai,
+      });
+      await office.book(db, e);
+      return e;
+    });
+  const lier = (de: string, a: string, fait: "rattache" | "detache") =>
+    admin.query(
+      `insert into capture.rattachements (tenant_id, piece_id, piece_liee_id, fait, motif, auteur)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [pme, de, a, fait, fait === "detache" ? "pas le bon document" : null, dirigeant.id],
+    );
+  /**
+   * Une pièce transmise, lue, que le client n'a pas confirmée : son type est
+   * lu, « a_confirmer » — le cas réel (relecture de #114, 26 octobre 2026 :
+   * une fixture « confirme » cachait le refus du verrou R2).
+   */
+  const lue = async (typeStatut: "a_confirmer" | "a_determiner" = "a_confirmer") => {
     n += 1;
     const id = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
-         values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,
-        [pme, `essai/${marque}-${n}.pdf`, `${marque}-${n}`, dirigeant.id],
+         values ($1, 'pdf', 'partage', $2, $3, $4, $5, $6, now()) returning id`,
+        [
+          pme,
+          `essai/${marque}-${n}.pdf`,
+          `${marque}-${n}`,
+          dirigeant.id,
+          typeStatut === "a_determiner" ? null : "facture_achat",
+          typeStatut,
+        ],
       );
       return rows[0]!.id;
     });
@@ -139,35 +174,22 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
 
     // Le document joint APRÈS le retour : le geste est fait.
     const bl = await lue();
-    await admin.query(
-      `insert into capture.rattachements (tenant_id, piece_id, piece_liee_id, fait, auteur)
-       values ($1, $2, $3, 'rattache', $4)`,
-      [pme, id, bl, dirigeant.id],
-    );
+    await lier(id, bl, "rattache");
     assert.equal((await retour(id))?.fait, true);
+    // Détaché : il ne l'est plus. Rattaché depuis l'autre pièce : il l'est.
+    await lier(id, bl, "detache");
+    assert.equal((await retour(id))?.fait, false, "un document détaché ne prouve rien");
+    const autre = await lue();
+    await lier(autre, id, "rattache");
+    assert.equal((await retour(id))?.fait, true, "le sens du rattachement ne compte pas");
 
-    // Le geste fait, le client renvoie : son « Oui » inscrit l'écriture.
-    await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const e = await office.propose(db, {
-        pieceId: id,
-        journal: "ACH",
-        date: "2026-10-02",
-        libelle: "Facture essai",
-        packVersionId: pack,
-        devise: "TND",
-        lignes: [
-          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: null },
-          {
-            account_code: "401",
-            libelle: "Fournisseur",
-            debit: "0",
-            credit: "100.000",
-            tax_code: null,
-          },
-        ],
-      });
-      await office.book(db, e);
-    });
+    // Le geste fait, le client renvoie : son « Oui » confirme le type, puis inscrit.
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query(`select public.capture_precision_persist($1, 'document_kind', 'facture_achat')`, [
+        id,
+      ]),
+    );
+    await proposerEtInscrire(dirigeant.id, id);
     assert.equal(await statut(id), "comptabilisee");
     assert.equal(await retour(id), null, "plus rien à reprendre");
   });
@@ -231,31 +253,57 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
     await assert.rejects(repondre(id, "   "), /refus\.reponse\.vide/);
   });
 
-  it("le cabinet inscrit lui-même l'écriture d'une pièce que le client n'a pas confirmée", async () => {
+  it("corriger la date se prouve par une date, pas par une autre précision", async () => {
     const id = await lue();
-    const ecr = await sousIdentiteDuServeur(expert.id, async (db) => {
-      const e = await office.propose(db, {
-        pieceId: id,
-        journal: "ACH",
-        date: "2026-10-02",
-        libelle: "Facture essai",
-        packVersionId: pack,
-        devise: "TND",
-        lignes: [
-          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: null },
-          {
-            account_code: "401",
-            libelle: "Fournisseur",
-            debit: "0",
-            credit: "100.000",
-            tax_code: null,
-          },
-        ],
-      });
-      await office.book(db, e);
-      return e;
-    });
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.retourner(db, { pieceId: id, motifId: motifs["hors_exercice"]! }),
+    );
+    const preciser = (champ: string, valeur: string) =>
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query(`select public.capture_precision_persist($1, $2, $3)`, [id, champ, valeur]),
+      );
+    await preciser("document_kind", "facture_achat");
+    assert.equal((await retour(id))?.fait, false, "le type n'est pas la date");
+    await preciser("document_date", "2026-10-02");
+    assert.equal((await retour(id))?.fait, true);
+  });
+
+  it("le cabinet inscrit lui-même une pièce que le client n'a pas confirmée", async () => {
+    const id = await lue();
+    // Le verrou R2 refuse tant que le type n'est que lu.
+    await assert.rejects(proposerEtInscrire(expert.id, id), /R2/);
+    // Le client ne confirme pas par cette porte.
+    await assert.rejects(
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+      ),
+      /supervision revient/,
+    );
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+    );
+    const ecr = await proposerEtInscrire(expert.id, id);
     const { rows } = await admin.query(`select status from socle.ecritures where id = $1`, [ecr]);
     assert.equal(rows[0]?.status, "booked");
+    // Confirmé au nom du cabinet, et tracé.
+    const { rows: p } = await admin.query<{ par: string }>(
+      `select decided_by::text as par from capture.precisions
+        where piece_id = $1 and champ = 'document_kind'`,
+      [id],
+    );
+    assert.deepEqual(
+      p.map((x) => x.par),
+      [expert.id],
+    );
+  });
+
+  it("un type que la lecture n'a pas reconnu ne se devine pas", async () => {
+    const id = await lue("a_determiner");
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+      ),
+      /refus\.inscription\.type_inconnu/,
+    );
   });
 });

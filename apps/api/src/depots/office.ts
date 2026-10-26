@@ -156,6 +156,21 @@ export const office = {
   },
 
   /**
+   * Le cabinet inscrit l'écriture d'une pièce que le client n'a pas confirmée.
+   *
+   * Le verrou R2 attend un type « confirme » : le cabinet confirme le type LU,
+   * en son nom et tracé, puis le serveur propose et comptabilise. Un appel,
+   * une transaction : un type confirmé sans écriture ne reste pas derrière un
+   * échec (relecture de #114, 26 octobre 2026).
+   */
+  async inscrireLaPieceDuClient(db: Requete, pieceId: string): Promise<string> {
+    await db.query(`select public.piece_confirmer_le_type_lu($1)`, [pieceId]);
+    const id = await office.proposerDepuisPiece(db, pieceId);
+    await office.book(db, id);
+    return id;
+  },
+
+  /**
    * Ce que le moyen de paiement engage : l'ecriture du reglement.
    *
    * La facture constate une dette ; le reglement l'eteint. Ce sont DEUX
