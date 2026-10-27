@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pieceSuivanteATransmettre, resteATransmettre } from "../envoi";
+import { fusionnerLEnvoi, pieceSuivanteATransmettre, resteATransmettre } from "../envoi";
 
 const p = (id: string, vis = "entite", status = "lue", gardeeLe: string | null = null) => ({
   id,
@@ -32,5 +32,28 @@ describe("la pièce suivante", () => {
   it("ne rend jamais la pièce qu'on vient d'envoyer, et rien quand il n'y a plus rien", () => {
     expect(pieceSuivanteATransmettre([p("a")], "a")).toBeNull();
     expect(pieceSuivanteATransmettre([p("a", "partage"), p("b", "personnel")], "a")).toBeNull();
+  });
+});
+
+describe("réessayer une pièce restée", () => {
+  it("garde les autres restées, jamais retentées", () => {
+    const avant = {
+      parties: ["a"],
+      restees: [
+        { id: "b", refus: null },
+        { id: "c", refus: null },
+      ],
+    };
+    const apres = fusionnerLEnvoi(avant, ["b"], { parties: ["b"], restees: [] });
+    expect(apres).toEqual({ parties: ["a", "b"], restees: [{ id: "c", refus: null }] });
+  });
+
+  it("remplace la raison d'une pièce retentée et encore refusée", () => {
+    const avant = { parties: [], restees: [{ id: "b", refus: null }] };
+    const apres = fusionnerLEnvoi(avant, ["b"], {
+      parties: [],
+      restees: [{ id: "b", refus: "Licence impayée" }],
+    });
+    expect(apres.restees).toEqual([{ id: "b", refus: "Licence impayée" }]);
   });
 });

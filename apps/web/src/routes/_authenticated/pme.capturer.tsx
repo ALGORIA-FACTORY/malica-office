@@ -19,6 +19,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
+import { fusionnerLEnvoi, type EtatDeLEnvoi, type Restee } from "@/lib/envoi";
 
 /**
  * Capturer — de la photo à la pièce, une question par écran.
@@ -334,10 +335,7 @@ function PmeCapturer() {
    * une panne au milieu laisse les premières parties, et l'écran ne dit
    * jamais « tout est parti » à tort.
    */
-  const [envoiDuLot, setEnvoiDuLot] = useState<{
-    parties: readonly string[];
-    restees: readonly string[];
-  } | null>(null);
+  const [envoiDuLot, setEnvoiDuLot] = useState<EtatDeLEnvoi | null>(null);
   const cabinet = useMonCabinet(pme.tenantId);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -671,28 +669,26 @@ function PmeCapturer() {
   const envoyer = useMutation({
     mutationFn: async (ids: readonly string[]) => {
       const parties: string[] = [];
-      const restees: string[] = [];
+      const restees: Restee[] = [];
       for (const id of ids) {
         try {
           await office().collab.setPieceVis(id, "partage");
           parties.push(id);
         } catch (e) {
-          // La raison va au journal ; l'écran nomme la pièce restée.
-          texteDeLErreur(e, "routes/_authenticated/pme.capturer", "");
-          restees.push(id);
+          // Une panne va au journal ; un refus rédigé (licence impayée…) dit
+          // quoi faire, et se lit sur la pièce restée (revue Codex de #125).
+          const refus = texteDeLErreur(e, "routes/_authenticated/pme.capturer", "");
+          restees.push({ id, refus: refus || null });
         }
       }
       return { parties, restees };
     },
-    onSuccess: async (r) => {
-      setErreur(null);
+    onSuccess: async (r, ids) => {
+      setErreur(r.restees.find((x) => x.refus)?.refus ?? null);
       // Relire d'abord : l'heure dite est celle que la base a posée.
       await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
-      setEnvoiDuLot((avant) => ({
-        parties: [...(avant?.parties ?? []), ...r.parties],
-        restees: r.restees,
-      }));
+      setEnvoiDuLot((avant) => fusionnerLEnvoi(avant, ids, r));
       if (r.parties.length > 0 || (envoiDuLot?.parties.length ?? 0) > 0) setTransmis(true);
     },
     onError: echoue,
@@ -1573,7 +1569,10 @@ function PmeCapturer() {
           ? (() => {
               const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
               const parties = retenues.filter((p) => envoiDuLot.parties.includes(p.id));
-              const restees = retenues.filter((p) => envoiDuLot.restees.includes(p.id));
+              const restees = envoiDuLot.restees.flatMap((r) => {
+                const p = retenues.find((x) => x.id === r.id);
+                return p ? [{ ...p, refus: r.refus }] : [];
+              });
               const derniere = parties
                 .map((p) => p.transmiseLe)
                 .filter((d): d is string => Boolean(d))
@@ -1620,7 +1619,7 @@ function PmeCapturer() {
                     liste: restees.map((p) => ({
                       id: p.id,
                       nom: p.emetteur ?? t("envoi.piece.sansNom"),
-                      raison: t("envoi.lot.restee.raison"),
+                      raison: p.refus ?? t("envoi.lot.restee.raison"),
                       ouvrir: () => envoyer.mutate([p.id]),
                     })),
                   }}
@@ -1688,7 +1687,7 @@ function PmeCapturer() {
                     /* Rien n'est parti : une phrase, et réessayer. */
                     <PasEncoreParti
                       qui={cabinet.data?.name ?? t("pme.coffre.votreComptable")}
-                      reessayer={() => envoyer.mutate(envoiDuLot.restees)}
+                      reessayer={() => envoyer.mutate(envoiDuLot.restees.map((r) => r.id))}
                       enCours={envoyer.isPending}
                     />
                   ) : (
