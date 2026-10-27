@@ -2065,9 +2065,12 @@ const fr = {
   "envoi.lot.tout": "{count} envoyées.",
   "envoi.lot.tout#one": "Envoyée.",
   "envoi.lot.tout#other": "{count} envoyées.",
-  "envoi.lot.chez": "Elles sont chez {qui} depuis {quand}. {qui} les comptabilise ; vous serez prévenu s'il a une question.",
-  "envoi.lot.chez#one": "Elle est chez {qui} depuis {quand}. {qui} la comptabilise ; vous serez prévenu s'il a une question.",
-  "envoi.lot.chez#other": "Elles sont chez {qui} depuis {quand}. {qui} les comptabilise ; vous serez prévenu s'il a une question.",
+  "envoi.lot.chez":
+    "Elles sont chez {qui} depuis {quand}. {qui} les comptabilise ; vous serez prévenu s'il a une question.",
+  "envoi.lot.chez#one":
+    "Elle est chez {qui} depuis {quand}. {qui} la comptabilise ; vous serez prévenu s'il a une question.",
+  "envoi.lot.chez#other":
+    "Elles sont chez {qui} depuis {quand}. {qui} les comptabilise ; vous serez prévenu s'il a une question.",
   "envoi.lot.restee": "Restées chez vous",
   "envoi.lot.restee#one": "Restée chez vous",
   "envoi.lot.restee#other": "Restées chez vous",
@@ -2090,8 +2093,10 @@ const fr = {
   "envoi.cab.client": "le client",
   "envoi.cab.retour.titre": "Retournée au client.",
   "envoi.cab.retour.phrase": "{piece} est chez {client} depuis {quand}, avec le motif « {motif} ».",
-  "envoi.cab.retour.phrase.note": "{piece} est chez {client} depuis {quand}, avec le motif « {motif} » et votre note.",
-  "envoi.cab.retour.suite": "Le client fait ce que le motif demande, puis la renvoie. Elle reviendra dans votre file à ce moment-là.",
+  "envoi.cab.retour.phrase.note":
+    "{piece} est chez {client} depuis {quand}, avec le motif « {motif} » et votre note.",
+  "envoi.cab.retour.suite":
+    "Le client fait ce que le motif demande, puis la renvoie. Elle reviendra dans votre file à ce moment-là.",
   "envoi.cab.retour.lit": "Ce qu'il lit",
   "envoi.cab.file": "Revenir à la file",
   "pme.retour.fait.sous": "Fait après le retour de votre comptabilité",
@@ -5870,9 +5875,12 @@ const en: Dict = {
   "envoi.lot.tout": "{count} sent.",
   "envoi.lot.tout#one": "Sent.",
   "envoi.lot.tout#other": "{count} sent.",
-  "envoi.lot.chez": "They are with {qui} since {quand}. {qui} will record them; you'll be told if they have a question.",
-  "envoi.lot.chez#one": "It is with {qui} since {quand}. {qui} will record it; you'll be told if they have a question.",
-  "envoi.lot.chez#other": "They are with {qui} since {quand}. {qui} will record them; you'll be told if they have a question.",
+  "envoi.lot.chez":
+    "They are with {qui} since {quand}. {qui} will record them; you'll be told if they have a question.",
+  "envoi.lot.chez#one":
+    "It is with {qui} since {quand}. {qui} will record it; you'll be told if they have a question.",
+  "envoi.lot.chez#other":
+    "They are with {qui} since {quand}. {qui} will record them; you'll be told if they have a question.",
   "envoi.lot.restee": "Still with you",
   "envoi.lot.restee#one": "Still with you",
   "envoi.lot.restee#other": "Still with you",
@@ -5895,8 +5903,10 @@ const en: Dict = {
   "envoi.cab.client": "the client",
   "envoi.cab.retour.titre": "Returned to the client.",
   "envoi.cab.retour.phrase": "{piece} is with {client} since {quand}, with the reason “{motif}”.",
-  "envoi.cab.retour.phrase.note": "{piece} is with {client} since {quand}, with the reason “{motif}” and your note.",
-  "envoi.cab.retour.suite": "The client does what the reason asks, then sends it back. It will be back in your queue then.",
+  "envoi.cab.retour.phrase.note":
+    "{piece} is with {client} since {quand}, with the reason “{motif}” and your note.",
+  "envoi.cab.retour.suite":
+    "The client does what the reason asks, then sends it back. It will be back in your queue then.",
   "envoi.cab.retour.lit": "What they read",
   "envoi.cab.file": "Back to the queue",
   "pme.retour.fait.sous": "Done after your accountant’s return",
@@ -9525,8 +9535,10 @@ const ar: Dict = {
   "envoi.lot.tout#one": "أُرسلت.",
   "envoi.lot.tout#other": "أُرسلت {count}.",
   "envoi.lot.chez": "هي لدى {qui} منذ {quand}. يتولّى {qui} تسجيلها، وسنُعلمك إن كان لديه سؤال.",
-  "envoi.lot.chez#one": "هي لدى {qui} منذ {quand}. يتولّى {qui} تسجيلها، وسنُعلمك إن كان لديه سؤال.",
-  "envoi.lot.chez#other": "هي لدى {qui} منذ {quand}. يتولّى {qui} تسجيلها، وسنُعلمك إن كان لديه سؤال.",
+  "envoi.lot.chez#one":
+    "هي لدى {qui} منذ {quand}. يتولّى {qui} تسجيلها، وسنُعلمك إن كان لديه سؤال.",
+  "envoi.lot.chez#other":
+    "هي لدى {qui} منذ {quand}. يتولّى {qui} تسجيلها، وسنُعلمك إن كان لديه سؤال.",
   "envoi.lot.restee": "بقيت لديك",
   "envoi.lot.restee#one": "بقيت لديك",
   "envoi.lot.restee#other": "بقيت لديك",

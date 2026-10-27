@@ -367,9 +367,7 @@ export const capture = {
         createdAt: r["created_at"] as string,
         vis: r["vis"] as string,
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
-        transmiseLe: r["transmise_le"]
-          ? new Date(r["transmise_le"] as string).toISOString()
-          : null,
+        transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
         accompagne: Boolean(r["accompagne"]),
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
