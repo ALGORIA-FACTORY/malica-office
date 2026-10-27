@@ -124,6 +124,32 @@ describe("une pièce lue se supprime", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  it("une pièce qui nourrit une recette le dit, au lieu de buter sur R7", async () => {
+    const id = await lueParRecette("c");
+    await sousIdentiteDuServeur(u.id, async (db) => {
+      const x = await db.query<{ id: string }>(
+        `insert into fabrique.exemples
+           (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu)
+         values ($1, $2, $3, 'correction_humaine', 'designation_champ', 'apprentissage', '{}'::jsonb)
+         returning id`,
+        [org, id, `sig-${marque}`],
+      );
+      await db.query(
+        `insert into fabrique.recette_version_exemples
+           (tenant_id, recette_version_id, exemple_id, nourrit_une_recette, usage)
+         values ($1, $2, $3, true, 'apprentissage')`,
+        [org, version, x.rows[0]!.id],
+      );
+    });
+    await assert.rejects(
+      sousIdentiteDuServeur(u.id, (db) =>
+        executerRpc(db, { depot: "capture", methode: "supprimer", args: [id] }),
+      ),
+      /refus\.suppression\.exemple_de_recette/,
+    );
+    assert.equal(await existe(id), true);
+  });
+
   it("hors effacement d'une pièce, l'exécution reste indélébile", async () => {
     const id = await lueParRecette("b");
     await tracer(id);

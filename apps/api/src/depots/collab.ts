@@ -324,9 +324,17 @@ export const collab = {
   async notifications(db: Requete, tenantIds: string[]) {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      `select id, tenant_id, kind, payload, read_at, created_at
-         from notifications_v where tenant_id = any($1::uuid[])
-        order by created_at desc limit 100`,
+      // La lecture est celle de la personne (27 octobre 2026) ; le `read_at`
+      // d'avant vaut encore pour les membres du dossier qui l'avaient posé.
+      `select n.id, n.tenant_id, n.kind, n.payload, n.created_at,
+              coalesce(
+                (select l.lu_le from collab.notification_lectures l
+                  where l.tenant_id = n.tenant_id and l.notification_id = n.id
+                    and l.user_id = auth.uid()),
+                case when n.tenant_id in (select app.member_orgs()) then n.read_at end
+              ) as read_at
+         from notifications_v n where n.tenant_id = any($1::uuid[])
+        order by n.created_at desc limit 100`,
       [tenantIds],
     );
     return (rows as Record<string, unknown>[]).map((n) => ({
@@ -342,7 +350,8 @@ export const collab = {
   async markRead(db: Requete, id: string): Promise<void> {
     // `now()` plutôt que l'horloge du navigateur : deux postes mal réglés
     // dateraient la même lecture à des heures différentes.
-    await db.query(`update notifications_v set read_at = now() where id = $1`, [id]);
+    // Chacun sa lecture : celle du cabinet ne lit pas à la place du dirigeant.
+    await db.query(`select public.notification_marquer_lue($1)`, [id]);
   },
 
   /**

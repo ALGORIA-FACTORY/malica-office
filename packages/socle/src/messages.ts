@@ -2069,6 +2069,8 @@ const fr = {
   "refus.confirmation.sans_objet":
     "Il n’y a rien à faire confirmer : la pièce n’attend plus le « Oui » du client.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
+  "refus.suppression.exemple_de_recette":
+    "Cette pièce sert d’exemple à une recette de lecture : elle ne peut plus être supprimée.",
   "refus.inscription.type_inconnu":
     "La lecture n’a pas reconnu le type de cette pièce : demandez au client de le confirmer.",
   "notif.kind.piece.confirmation_demandee": "Votre comptabilité attend votre « Oui » sur une pièce",
@@ -5832,6 +5834,8 @@ const en: Dict = {
   "refus.confirmation.sans_objet":
     "There is nothing to confirm: the document no longer awaits the client’s “Yes”.",
   "refus.reponse.vide": "Write your reply before sending it.",
+  "refus.suppression.exemple_de_recette":
+    "This document is an example for a reading recipe: it can no longer be deleted.",
   "refus.inscription.type_inconnu":
     "The reading did not recognise this document’s type: ask the client to confirm it.",
   "notif.kind.piece.confirmation_demandee":
@@ -9443,6 +9447,7 @@ const ar: Dict = {
   "refus.retour.inscrite": "هذه الوثيقة مُسجَّلة: تُرجَع من قيدها الذي سيُعكَس.",
   "refus.confirmation.sans_objet": "لا شيء للتأكيد: الوثيقة لم تعد تنتظر «نعم» الحريف.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
+  "refus.suppression.exemple_de_recette": "هذه الوثيقة مثال لوصفة قراءة: لم يعد بالإمكان حذفها.",
   "refus.inscription.type_inconnu": "لم تتعرّف القراءة على نوع هذه الوثيقة: اطلب من الحريف تأكيده.",
   "notif.kind.piece.confirmation_demandee": "محاسبك ينتظر «نعم» منك على وثيقة",
   "cab.notif.kind.piece.confirmation_demandee": "دُعي الحريف إلى تأكيد وثيقة.",
