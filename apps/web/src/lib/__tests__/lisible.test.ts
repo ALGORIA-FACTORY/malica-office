@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deMois, montant, montantSigne, quantite } from "../lisible";
+import { deMois, momentDeLEnvoi, montant, montantSigne, quantite } from "../lisible";
 
 describe("un montant, dans la langue du lecteur", () => {
   it("groupe les milliers et pose la virgule française", () => {
@@ -121,5 +121,19 @@ describe("un montant absent", () => {
 
   it("une quantité absente se tait pareil", () => {
     expect(quantite(null as unknown as string, "fr")).toBe("");
+  });
+});
+
+describe("le moment d'un envoi", () => {
+  it("dit l'heure quand c'est aujourd'hui", () => {
+    const maintenant = new Date(2026, 9, 27, 11, 0);
+    const r = momentDeLEnvoi(new Date(2026, 9, 27, 10, 42).toISOString(), "fr", maintenant);
+    expect(r).toEqual({ quand: "10:42", aujourdhui: true });
+  });
+
+  it("dit le jour quand ce n'est pas aujourd'hui", () => {
+    const maintenant = new Date(2026, 9, 27, 9, 0);
+    const r = momentDeLEnvoi(new Date(2026, 9, 26, 23, 50).toISOString(), "fr", maintenant);
+    expect(r).toEqual({ quand: "26/10", aujourdhui: false });
   });
 });

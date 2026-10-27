@@ -17,11 +17,12 @@ import type { RetourDuCabinet } from "@malica/socle/ports/repositories";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
+import { ConfirmationSurPlace, PasEncoreParti } from "@/components/malica/envoye";
 import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { jourEtMois } from "@/lib/lisible";
+import { jourEtMois, momentDeLEnvoi } from "@/lib/lisible";
 import { FAIT_DU_GESTE, LIBELLE_DU_GESTE } from "@/lib/retour-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -47,6 +48,9 @@ export function CarteDuRetour({
 }) {
   const { t, locale } = useI18n();
   const [reponseOuverte, setReponseOuverte] = useState(false);
+  /** La réponse partie : elle s'écrit à la place du bouton, et reste. */
+  const [reponseEnvoyee, setReponseEnvoyee] = useState<{ texte: string; le: string } | null>(null);
+  const qui = retour.cabinet ?? t("pme.coffre.votreComptable");
   const faitLibelle = FAIT_DU_GESTE[retour.geste];
   // Le geste sans trace n'attend rien : on le propose, et on peut renvoyer.
   const pret = retour.fait;
@@ -111,20 +115,43 @@ export function CarteDuRetour({
         {pret ? t("pme.retour.renvoyer.pret") : t("pme.retour.renvoyer.attente")}
       </p>
 
-      {repondreEstLeGeste && !montrerLeFait ? null : (
+      {reponseEnvoyee ? (
+        <ConfirmationSurPlace
+          titre={t("envoi.reponse.fait", { qui })}
+          detail={t("envoi.reponse.detail", {
+            texte: reponseEnvoyee.texte,
+            quand: momentDeLEnvoi(reponseEnvoyee.le, locale).quand,
+          })}
+        />
+      ) : repondreEstLeGeste && !montrerLeFait ? null : (
         <button type="button" className="f-ret-repondre" onClick={ouvrirLaReponse}>
           {t("pme.retour.geste.repondre")}
         </button>
       )}
 
       {reponseOuverte ? (
-        <RepondreAuCabinet pieceId={pieceId} onFermer={() => setReponseOuverte(false)} />
+        <RepondreAuCabinet
+          pieceId={pieceId}
+          qui={qui}
+          onFermer={() => setReponseOuverte(false)}
+          onEnvoyee={setReponseEnvoyee}
+        />
       ) : null}
     </div>
   );
 }
 
-function RepondreAuCabinet({ pieceId, onFermer }: { pieceId: string; onFermer: () => void }) {
+function RepondreAuCabinet({
+  pieceId,
+  qui,
+  onFermer,
+  onEnvoyee,
+}: {
+  pieceId: string;
+  qui: string;
+  onFermer: () => void;
+  onEnvoyee: (r: { texte: string; le: string }) => void;
+}) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const feuille = useRef<HTMLDivElement | null>(null);
@@ -137,10 +164,14 @@ function RepondreAuCabinet({ pieceId, onFermer }: { pieceId: string; onFermer: (
     mutationFn: () => office().capture.repondreAuCabinet(pieceId, texte.trim()),
     onMutate: () => setErreur(null),
     onSuccess: async () => {
+      // Écrite après la réponse du serveur : jamais une promesse.
+      onEnvoyee({ texte: texte.trim(), le: new Date().toISOString() });
       fermer();
+      // Le préfixe relit aussi le retour (`["piece", id, "retour", …]`).
       await qc.invalidateQueries({ queryKey: ["piece", pieceId] });
     },
-    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+    // Une panne va au journal ; seul un refus rédigé (4xx) a une phrase.
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, "") || null),
   });
 
   return (
@@ -160,6 +191,9 @@ function RepondreAuCabinet({ pieceId, onFermer }: { pieceId: string; onFermer: (
           className="resize-none rounded-[14px] border border-border bg-card px-3 py-3 text-[15px] outline-none"
         />
       </label>
+      {envoyer.isError ? (
+        <PasEncoreParti qui={qui} reessayer={() => envoyer.mutate()} enCours={envoyer.isPending} />
+      ) : null}
       {erreur ? (
         <p role="alert" className="text-[13px] text-signal-warn">
           {erreur}
@@ -167,6 +201,7 @@ function RepondreAuCabinet({ pieceId, onFermer }: { pieceId: string; onFermer: (
       ) : null}
       <button
         type="button"
+        hidden={envoyer.isError}
         disabled={!texte.trim() || envoyer.isPending}
         onClick={() => envoyer.mutate()}
         className="min-h-[52px] rounded-full bg-foreground text-[15px] font-semibold text-background disabled:opacity-40"

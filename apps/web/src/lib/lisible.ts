@@ -123,3 +123,28 @@ export function jourEtMois(iso: string, locale: string): string {
     timeZone: "UTC",
   }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
 }
+
+/**
+ * Quand une chose est partie, dit comme on le dit (écran « Envoyé », maquette
+ * validée le 27 octobre 2026) : l'heure si c'est aujourd'hui (« 10:42 »),
+ * sinon le jour (« 26/10 »).
+ *
+ * Un instant, pas une date : il se lit à l'heure du lecteur. `maintenant` est
+ * un paramètre pour que le test ne dépende pas de l'horloge.
+ */
+export function momentDeLEnvoi(
+  iso: string,
+  locale: string,
+  maintenant: Date = new Date(),
+): { quand: string; aujourdhui: boolean } {
+  const d = new Date(iso);
+  const aujourdhui =
+    d.getFullYear() === maintenant.getFullYear() &&
+    d.getMonth() === maintenant.getMonth() &&
+    d.getDate() === maintenant.getDate();
+  const quand = new Intl.DateTimeFormat(
+    locale,
+    aujourdhui ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "2-digit" },
+  ).format(d);
+  return { quand, aujourdhui };
+}

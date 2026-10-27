@@ -10,6 +10,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 
 export const Route = createFileRoute("/_authenticated/pme/regler")({
   head: () => ({
@@ -147,11 +148,7 @@ function ARegler() {
     queryFn: () => office().supervision.motifs(locale),
   });
 
-  const cabinet = useQuery({
-    queryKey: ["mon-cabinet", pme.tenantId],
-    queryFn: () => office().identity.monCabinet(pme.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const cabinet = useMonCabinet(pme.tenantId);
 
   const pieces = usePiecesLues();
 

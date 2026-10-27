@@ -737,6 +737,13 @@ export interface Piece {
    * et « je n'ai rien dit », et la question revenait à chaque visite.
    */
   gardeeLe: string | null;
+  /**
+   * Quand la pièce est partie chez le cabinet — posé par la base au passage
+   * en `partage`, et seulement là. L'écran « Envoyé » et la trace de la pièce
+   * disent « chez AUDICORP depuis 10:42 » avec cette heure-là, pas celle du
+   * téléphone.
+   */
+  transmiseLe: string | null;
 }
 
 export interface Token {
@@ -930,6 +937,8 @@ export interface PieceLue {
   vis: Visibility;
   /** Le jour où le dirigeant a DÉCIDÉ de la garder chez lui ; `null` s'il n'a rien décidé. */
   gardeeLe?: string | null;
+  /** Quand elle est partie chez le cabinet (la base le pose au passage en `partage`). */
+  transmiseLe?: string | null;
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
