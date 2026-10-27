@@ -197,7 +197,10 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
       );
       const neuf = await preparer(db, d.principal, d.facture);
       assert.notEqual(neuf.paiement_id, p.paiement_id);
-      assert.equal(Number(neuf.montant_ttc), Number(p.montant_ttc) - 1);
+      // En millimes entiers : en flottant, 4,647 − 1 vaut 3,6470000000000002
+      // (le montant d'essai dépend du jour — échec du 27 octobre 2026).
+      const millimes = (v: string | number) => Math.round(Number(v) * 1000);
+      assert.equal(millimes(neuf.montant_ttc), millimes(p.montant_ttc) - 1000);
     });
   });
 
