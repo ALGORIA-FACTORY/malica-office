@@ -76,6 +76,12 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
    */
   validateSearch: (s: Record<string, unknown>): { onglet?: Onglet } =>
     ONGLETS.includes(s["onglet"] as Onglet) ? { onglet: s["onglet"] as Onglet } : {},
+  /*
+   * Une autre pièce, un autre écran : sans cela, le routeur garde le
+   * composant et son état d'une pièce à l'autre (« Validée » affiché sur la
+   * suivante, boutons disparus — audit du 27 octobre 2026).
+   */
+  remountDeps: ({ params }) => params,
   component: PieceScreenDeLaPiece,
 });
 

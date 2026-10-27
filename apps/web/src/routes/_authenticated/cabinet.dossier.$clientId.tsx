@@ -46,6 +46,12 @@ export const Route = createFileRoute("/_authenticated/cabinet/dossier/$clientId"
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  /*
+   * Une autre pièce, un autre écran : sans cela, le routeur garde le
+   * composant et son état d'une pièce à l'autre (« Validée » affiché sur la
+   * suivante, boutons disparus — audit du 27 octobre 2026).
+   */
+  remountDeps: ({ params }) => params,
   component: CabinetClient,
 });
 

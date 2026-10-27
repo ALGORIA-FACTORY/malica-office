@@ -1,9 +1,44 @@
-import { QueryClient } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { noterAuJournal } from "./lib/journal-atelier";
+import { ErreurReseau } from "./lib/transport/erreurs";
 import { routeTree } from "./routeTree.gen";
+
+/*
+ * ============================================ AUCUN ÉCHEC NE SE PERD (27 octobre 2026)
+ *
+ * « Pas d'erreur à l'écran, tout dans le journal, pour que tu corriges. »
+ * L'audit a trouvé des gestes dont l'échec n'allait nulle part : une
+ * mutation sans `onError` (supprimer une conversation, ouvrir un fil, la
+ * relance d'un client…), une lecture en échec rendue comme une liste vide.
+ * Le client de requêtes inscrit donc au journal, en base, tout échec qu'un
+ * écran ne traite pas lui-même. Pas de réseau n'est pas une panne : on ne
+ * l'inscrit pas.
+ */
+function journaliser(ou: string, raison: unknown): void {
+  if (raison instanceof ErreurReseau) return;
+  // L'écran d'où vient l'échec : c'est lui qu'on ouvre pour corriger.
+  const ecran = typeof window === "undefined" ? "" : `${window.location.pathname} · `;
+  noterAuJournal(`${ecran}${ou}`, raison);
+}
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (raison, requete) =>
+        journaliser(`lecture ${JSON.stringify(requete.queryKey)}`, raison),
+    }),
+    mutationCache: new MutationCache({
+      // Un écran qui traite son échec passe par `texteDeLErreur`, qui
+      // journalise déjà : on ne l'inscrit pas deux fois.
+      onError: (raison, _variables, _contexte, mutation) => {
+        if (!mutation.options.onError)
+          journaliser(
+            `geste ${JSON.stringify(mutation.options.mutationKey ?? "sans clé")}`,
+            raison,
+          );
+      },
+    }),
     defaultOptions: {
       queries: {
         /*
