@@ -19,6 +19,7 @@ import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { usePrix } from "@/hooks/use-decimales";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
+import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
@@ -749,11 +750,7 @@ function Organisation({
 }) {
   const { t, locale } = useI18n();
   const pme = usePme();
-  const cabinet = useQuery({
-    queryKey: ["mon-cabinet", org.tenantId],
-    queryFn: () => office().identity.monCabinet(org.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const cabinet = useMonCabinet(org.tenantId);
 
   const matricule = courante ? pme.matricule : null;
 
@@ -947,7 +944,7 @@ function LeMandat({ tenantId }: { tenantId: string }) {
       setRevoquer(false);
       setArmee(false);
       await qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] });
-      await qc.invalidateQueries({ queryKey: ["mon-cabinet", tenantId] });
+      await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
     },
     onError: (e: unknown) => {
       setArmee(false);

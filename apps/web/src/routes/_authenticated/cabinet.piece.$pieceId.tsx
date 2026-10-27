@@ -14,6 +14,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
 import { DecisionSansConfirmation } from "@/components/malica/decision-sans-confirmation";
+import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { extensionDuContenu } from "@/lib/archive-comptable";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
@@ -144,6 +145,13 @@ function CabinetReview() {
   const [note, setNote] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"valide" | "retourne" | "corrige" | null>(null);
+  /**
+   * Le retour au client vient de partir : le panneau « Retournée au client »
+   * prend la place des écritures (maquette « Écran Envoyé », 27 octobre
+   * 2026). Un état de la page — relue, la pièce change de statut, et le
+   * composant qui a fait le geste disparaît.
+   */
+  const [retourEnvoye, setRetourEnvoye] = useState<RetourEnvoye | null>(null);
   // Le motif d'un refus. Exige par la base, et exige ici : un refus sans
   // motif n'apprend rien a celui qui a demande.
   const [noteDeRefus, setNoteDeRefus] = useState<string>("");
@@ -445,6 +453,12 @@ function CabinetReview() {
     onSuccess: async (_data, outcome) => {
       setError(null);
       setDone(outcome);
+      if (outcome === "retourne")
+        setRetourEnvoye({
+          motif: (motifs.data ?? []).find((m) => m.id === motifId)?.label ?? "",
+          note: note.trim() ? note.trim() : null,
+          le: new Date().toISOString(),
+        });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
         qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
@@ -553,6 +567,15 @@ function CabinetReview() {
   // Ce que la lecture a relevé, pour nommer la pièce dans la décision.
   const luPourDecision = extraction?.payload as
     { issuer?: string; currency?: string; totals?: { ttc?: string | null } } | undefined;
+  /** « ÉMETTEUR · montant devise », tel que lu — la décision et le panneau du retour. */
+  const titreDeLaPiece = [
+    luPourDecision?.issuer,
+    luPourDecision?.totals?.ttc
+      ? `${montant(luPourDecision.totals.ttc, locale)} ${luPourDecision.currency ?? ""}`.trim()
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const compteVide = correction?.lignes.some((l) => !l.compte.trim()) ?? false;
   const correctionPrete = Boolean(correction && motifId && !noteMissing && !compteVide);
   // Une date d'écriture, dans la langue de la personne — jamais l'ISO brut de la base.
@@ -961,7 +984,16 @@ function CabinetReview() {
           ) : null}
         </section>
 
-        <section className="space-y-3">
+        {retourEnvoye ? (
+          <PanneauRetourne
+            piece={titreDeLaPiece}
+            client={dansLaFile?.clientName ?? null}
+            retour={retourEnvoye}
+            suivante={suivante ? () => allerA(suivante.pieceId) : null}
+            file={() => void navigate({ to: "/cabinet" })}
+          />
+        ) : null}
+        <section className="space-y-3" hidden={retourEnvoye !== null}>
           <div className="cab-doclib-tabs" role="tablist" aria-label={t("cab.biblio.entries")}>
             <button
               type="button"
@@ -991,14 +1023,7 @@ function CabinetReview() {
             {lueSansConfirmation(piece.status, Boolean(booked)) ? (
               <DecisionSansConfirmation
                 pieceId={pieceId}
-                titre={[
-                  luPourDecision?.issuer,
-                  luPourDecision?.totals?.ttc
-                    ? `${montant(luPourDecision.totals.ttc, locale)} ${luPourDecision.currency ?? ""}`.trim()
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                titre={titreDeLaPiece}
                 comptes={
                   proposition.data?.ok
                     ? proposition.data.proposition.lignes.map((l) => l.account_code).join(" · ")
@@ -1006,6 +1031,8 @@ function CabinetReview() {
                 }
                 inscriptible={Boolean(proposition.data?.ok)}
                 motifs={motifs.data ?? []}
+                client={dansLaFile?.clientName ?? null}
+                onRetournee={setRetourEnvoye}
               />
             ) : null}
             <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>

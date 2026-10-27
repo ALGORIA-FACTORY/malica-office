@@ -20,9 +20,15 @@ import { X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  ConfirmationSurPlace,
+  PasEncoreParti,
+  type RetourEnvoye,
+} from "@/components/malica/envoye";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { momentDeLEnvoi } from "@/lib/lisible";
 import { LIBELLE_DU_GESTE } from "@/lib/retour-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -34,6 +40,8 @@ export function DecisionSansConfirmation({
   comptes,
   inscriptible,
   motifs,
+  client,
+  onRetournee,
 }: {
   pieceId: string;
   /** « ÉMETTEUR · montant devise », tel que lu. */
@@ -43,11 +51,21 @@ export function DecisionSansConfirmation({
   /** Le Socle propose une écriture : sinon « Inscrire » n'a rien à inscrire. */
   inscriptible: boolean;
   motifs: readonly RejetMotif[];
+  /** Le client, tel que la file le nomme ; `null` : « le client ». */
+  client: string | null;
+  /**
+   * Le retour est parti. Le panneau « Retournée au client » vit sur la page :
+   * relue, la pièce n'est plus « lue sans confirmation » et ce composant
+   * disparaît — le panneau, lui, doit rester.
+   */
+  onRetournee: (r: RetourEnvoye) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const qc = useQueryClient();
   const [erreur, setErreur] = useState<string | null>(null);
-  const [fait, setFait] = useState<"relance" | "retour" | null>(null);
+  /** Ce qui est parti, et quand — écrit après la réponse du serveur. */
+  const [fait, setFait] = useState<{ quoi: "relance"; le: string } | null>(null);
+  const nomDuClient = client ?? t("envoi.cab.client");
   const [feuille, setFeuille] = useState(false);
 
   const relire = () => qc.invalidateQueries();
@@ -65,21 +83,14 @@ export function DecisionSansConfirmation({
     mutationFn: () => office().supervision.demanderConfirmation(pieceId),
     onMutate: () => setErreur(null),
     onSuccess: async () => {
-      setFait("relance");
+      setFait({ quoi: "relance", le: new Date().toISOString() });
       await relire();
     },
-    onError: echec,
+    // « Pas encore parti » se dit sur place ; une panne reste au journal.
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, "") || null),
   });
 
   const occupe = inscrire.isPending || relancer.isPending;
-
-  if (fait === "retour") {
-    return (
-      <p className="border border-border bg-card px-3 py-3 text-[13px]" role="status">
-        {t("cab.retour.fait")}
-      </p>
-    );
-  }
 
   return (
     <section className="space-y-4" aria-labelledby="decision-sans-confirmation">
@@ -112,7 +123,7 @@ export function DecisionSansConfirmation({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button
             type="button"
-            disabled={occupe || fait === "relance"}
+            disabled={occupe || fait?.quoi === "relance"}
             onClick={() => relancer.mutate()}
             className="min-h-[48px] border border-border bg-card px-4 text-[13.5px] font-semibold hover:bg-accent disabled:opacity-50"
           >
@@ -127,10 +138,17 @@ export function DecisionSansConfirmation({
             {t("cab.lue.retourner")}
           </button>
         </div>
-        {fait === "relance" ? (
-          <p role="status" className="text-[12.5px] text-signal-ok">
-            {t("cab.lue.relance")}
-          </p>
+        {fait?.quoi === "relance" ? (
+          <ConfirmationSurPlace
+            titre={t("envoi.relance.fait", { client: nomDuClient })}
+            detail={t("envoi.relance.detail", { quand: momentDeLEnvoi(fait.le, locale).quand })}
+          />
+        ) : relancer.isError ? (
+          <PasEncoreParti
+            qui={nomDuClient}
+            reessayer={() => relancer.mutate()}
+            enCours={relancer.isPending}
+          />
         ) : null}
         {erreur ? (
           <p role="alert" className="text-[12.5px] text-signal-stop">
@@ -145,9 +163,9 @@ export function DecisionSansConfirmation({
           pieceId={pieceId}
           motifs={motifs}
           onFermer={() => setFeuille(false)}
-          onRetournee={async () => {
+          onRetournee={async (r) => {
             setFeuille(false);
-            setFait("retour");
+            onRetournee({ ...r, le: new Date().toISOString() });
             await relire();
           }}
         />
@@ -172,7 +190,7 @@ function RetournerAuClient({
   pieceId: string;
   motifs: readonly RejetMotif[];
   onFermer: () => void;
-  onRetournee: () => Promise<void>;
+  onRetournee: (r: { motif: string; note: string | null }) => Promise<void>;
 }) {
   const { t } = useI18n();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -193,7 +211,8 @@ function RetournerAuClient({
         note: note.trim() ? note.trim() : null,
       }),
     onMutate: () => setErreur(null),
-    onSuccess: onRetournee,
+    onSuccess: () =>
+      onRetournee({ motif: motif?.label ?? "", note: note.trim() ? note.trim() : null }),
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 

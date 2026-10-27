@@ -31,6 +31,7 @@ import { office } from "@/verticals/malica-office/composition";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 
 /*
  * Le cadrage du navigateur — détection, redressement, et un modèle qui se
@@ -96,12 +97,7 @@ function PmeLayout() {
    * cabinet dès la photo — voir `visibiliteALaCapture` et les deux défauts
    * qu'elle arbitre.
    */
-  const monCabinet = useQuery({
-    queryKey: ["mon-cabinet", org?.id],
-    queryFn: () => office().identity.monCabinet(org!.id),
-    enabled: Boolean(org?.id),
-    staleTime: 10 * 60 * 1000,
-  });
+  const monCabinet = useMonCabinet(org?.id);
 
   /*
    * Y a-t-il un cabinet mandaté ? La BASCULE vers son espace est partie de la

@@ -8,10 +8,12 @@ import { usePme } from "@/components/malica/pme-context";
 import { Aide } from "@/components/malica/aide";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { jourEtMois, momentDeLEnvoi, montant } from "@/lib/lisible";
+import { EcranEnvoye } from "@/components/malica/envoye";
 import { office } from "@/verticals/malica-office/composition";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 
 export const Route = createFileRoute("/_authenticated/pme/coffre")({
   head: () => ({
@@ -143,26 +145,26 @@ function PmeCoffre() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [erreur, setErreur] = useState<string | null>(null);
+  /** La pièce qui vient de partir : l'écran « Envoyé » la nomme. */
+  const [envoyee, setEnvoyee] = useState<string | null>(null);
 
   const pieces = usePiecesLues();
 
-  const cabinet = useQuery({
-    queryKey: ["mon-cabinet", pme.tenantId],
-    queryFn: () => office().identity.monCabinet(pme.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const cabinet = useMonCabinet(pme.tenantId);
 
   const basculer = useMutation({
     mutationFn: async (p: PieceLue) => {
       // La décision est relue au dernier instant ; aucun destinataire n'est inventé.
       const destinataire = await office().identity.monCabinet(pme.tenantId);
       if (!destinataire) throw new Error(t("relation.sansDestinataire"));
-      return office().collab.setPieceVis(p.id, "partage");
+      await office().collab.setPieceVis(p.id, "partage");
+      return p.id;
     },
-    onSuccess: async () => {
+    onSuccess: async (id) => {
       setErreur(null);
       await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
+      setEnvoyee(id);
     },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
@@ -211,6 +213,45 @@ function PmeCoffre() {
   };
 
   const panne = pieces.error ?? null;
+
+  /* ============================================================== ENVOYÉ
+   *
+   * La pièce quitte le coffre : sans cet écran, elle disparaissait de la
+   * liste sans un mot (maquette « Écran Envoyé », 27 octobre 2026).
+   */
+  const partie = envoyee ? ((pieces.data ?? []).find((p) => p.id === envoyee) ?? null) : null;
+  if (partie && partie.vis === "partage") {
+    const quand = partie.transmiseLe ? momentDeLEnvoi(partie.transmiseLe, locale).quand : null;
+    return (
+      <EcranEnvoye
+        titre={t("envoi.titre")}
+        quoi={
+          quand
+            ? t("envoi.piece.chez", { piece: titreDe(partie), qui: nomDuCabinet, quand })
+            : t("pme.transmettre.faite", { cabinet: nomDuCabinet })
+        }
+        suite={t("envoi.piece.suite", { qui: nomDuCabinet })}
+        trace={
+          partie.transmiseLe
+            ? t("envoi.trace", {
+                qui: nomDuCabinet,
+                jour: jourEtMois(partie.transmiseLe, locale),
+              })
+            : null
+        }
+        principale={{ libelle: t("envoi.coffre.retour"), action: () => setEnvoyee(null) }}
+        secondaire={{
+          libelle: t("envoi.voir"),
+          action: () =>
+            void navigate({
+              to: "/pme/piece/$pieceId",
+              params: { pieceId: partie.id },
+              search: { onglet: "suivi" },
+            }),
+        }}
+      />
+    );
+  }
 
   return (
     <div

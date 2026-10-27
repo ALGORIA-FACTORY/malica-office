@@ -13,7 +13,7 @@ import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { attendLaPersonne, piecesALire } from "@/lib/lecture";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
-import { montant } from "@/lib/lisible";
+import { momentDeLEnvoi, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
@@ -21,6 +21,9 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
+import { resteATransmettre } from "@/lib/envoi";
+import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -183,49 +186,114 @@ interface Groupe {
  * de masse. Deux touches : la première arme, la seconde engage.
  */
 function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const cabinet = useMonCabinet(pme.tenantId);
   const [armee, setArmee] = useState(false);
-  const [retour, setRetour] = useState<string | null>(null);
-  const restantes = pieces.filter(
-    (p) => p.vis === "entite" && !p.gardeeLe && p.status !== "retournee",
-  );
+  /** Les pièces parties dans ce geste — l'écran « Envoyé » les compte. */
+  const [envoi, setEnvoi] = useState<readonly string[] | null>(null);
+  /** Un refus rédigé par la base (impayé, pièce privée) : il dit quoi faire. */
+  const [refus, setRefus] = useState<string | null>(null);
+  const restantes = pieces.filter(resteATransmettre);
+  const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
   const transmettre = useMutation({
-    mutationFn: () => office().collab.transmettreLesPieces(restantes.map((p) => p.id)),
-    onSuccess: async (r) => {
+    mutationFn: async (ids: readonly string[]) => {
+      await office().collab.transmettreLesPieces([...ids]);
+      return ids;
+    },
+    onMutate: () => setRefus(null),
+    onSuccess: async (ids) => {
       setArmee(false);
-      setRetour(t("pme.list.transmettre.fait", { count: r.transmises }));
+      // Relire avant de dire : le compte et l'heure viennent de la base.
       await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
+      setEnvoi(ids);
     },
     onError: (e: unknown) => {
       setArmee(false);
-      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.list", t("common.error")));
+      // « Pas encore parti » se dit sur place ; la panne va au journal, le
+      // refus rédigé (4xx) se lit dessous.
+      setRefus(texteDeLErreur(e, "routes/_authenticated/pme.list", "") || null);
     },
   });
-  if (!pme.aUnCabinet || (restantes.length === 0 && !retour)) return null;
+
+  /* ====================================================== ENVOYÉ, EN LOT
+   *
+   * Jamais « tout est parti » sur un succès partiel : ce qui est resté est
+   * nommé, avec de quoi l'ouvrir (maquette du 27 octobre 2026).
+   */
+  if (envoi) {
+    const duLot = pieces.filter((p) => envoi.includes(p.id));
+    const parties = duLot.filter((p) => p.vis === "partage");
+    const restees = duLot.filter((p) => p.vis !== "partage");
+    const derniere = parties
+      .map((p) => p.transmiseLe)
+      .filter((d): d is string => Boolean(d))
+      .sort()
+      .at(-1);
+    const fermer = () => setEnvoi(null);
+    return (
+      <EcranEnvoye
+        titre={
+          restees.length > 0
+            ? t("envoi.lot.titre", { count: parties.length, total: duLot.length })
+            : t("envoi.lot.tout", { count: parties.length })
+        }
+        quoi={
+          derniere
+            ? t("envoi.lot.chez", {
+                count: parties.length,
+                qui,
+                quand: momentDeLEnvoi(derniere, locale).quand,
+              })
+            : t("pme.list.transmettre.fait", { count: parties.length })
+        }
+        suite={null}
+        trace={null}
+        restees={{
+          titre: t("envoi.lot.restee", { count: restees.length }),
+          ouvrir: t("envoi.lot.ouvrir"),
+          liste: restees.map((p) => ({
+            id: p.id,
+            nom: p.emetteur ?? t("envoi.piece.sansNom"),
+            raison: t("envoi.lot.restee.raison"),
+            ouvrir: () => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } }),
+          })),
+        }}
+        principale={{ libelle: t("envoi.lot.revenir"), action: fermer }}
+        secondaire={null}
+      />
+    );
+  }
+
+  if (!pme.aUnCabinet || restantes.length === 0) return null;
   return (
     <div className="card">
-      {restantes.length > 0 ? (
-        <>
-          <p className="t-body">{t("pme.list.transmettre.reste", { count: restantes.length })}</p>
-          <button
-            type="button"
-            className="btn"
-            disabled={transmettre.isPending}
-            onClick={() => (armee ? transmettre.mutate() : (setArmee(true), setRetour(null)))}
-          >
-            {transmettre.isPending
-              ? t("common.loading")
-              : armee
-                ? t("pme.list.transmettre.confirmer", { count: restantes.length })
-                : t("pme.list.transmettre.action")}
-          </button>
-        </>
-      ) : null}
-      {retour ? (
-        <p className="t-body" aria-live="polite">
-          {retour}
+      <p className="t-body">{t("pme.list.transmettre.reste", { count: restantes.length })}</p>
+      {transmettre.isError && !armee ? (
+        <PasEncoreParti
+          qui={qui}
+          reessayer={() => transmettre.mutate(restantes.map((p) => p.id))}
+          enCours={transmettre.isPending}
+        />
+      ) : (
+        <button
+          type="button"
+          className="btn"
+          disabled={transmettre.isPending}
+          onClick={() => (armee ? transmettre.mutate(restantes.map((p) => p.id)) : setArmee(true))}
+        >
+          {transmettre.isPending
+            ? t("common.loading")
+            : armee
+              ? t("pme.list.transmettre.confirmer", { count: restantes.length })
+              : t("pme.list.transmettre.action")}
+        </button>
+      )}
+      {refus ? (
+        <p className="t-body" role="alert">
+          {refus}
         </p>
       ) : null}
     </div>

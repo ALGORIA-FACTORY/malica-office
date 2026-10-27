@@ -21,6 +21,7 @@ import { montant, montantSigne } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
@@ -204,11 +205,7 @@ function PmeHome() {
   // Qui attend, exactement. « Votre comptable » est une périphrase : le
   // dirigeant connaît son cabinet par son nom, et c'est ce nom qui doit
   // apparaître quand quelque chose lui est retourné.
-  const cabinet = useQuery({
-    queryKey: ["mon-cabinet", pme.tenantId],
-    queryFn: () => office().identity.monCabinet(pme.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const cabinet = useMonCabinet(pme.tenantId);
 
   /*
    * L'OFFRE, LUE UNE FOIS — PAR LE LAYOUT.

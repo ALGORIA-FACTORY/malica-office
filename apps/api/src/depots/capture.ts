@@ -179,6 +179,7 @@ function versPiece(r: Record<string, unknown>) {
       "a_determiner",
     // `null` = la question est encore ouverte, et l'écran doit la poser.
     gardeeLe: (r["gardee_le"] as string | null) ?? null,
+    transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
     sourcePieceId: (r["source_piece_id"] as string | null) ?? null,
   };
 }
@@ -281,7 +282,7 @@ export const capture = {
   async lister(db: Requete, tenantId: string) {
     const { rows } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-                document_kind, document_kind_statut, gardee_le, source_piece_id
+                document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
          from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
       [tenantId],
     );
@@ -316,7 +317,8 @@ export const capture = {
      * sait. Le préfixe couvre donc les deux contrats.
      */
     const { rows } = await db.query(
-      `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.document_kind, x.payload,
+      `select p.id, p.status, p.created_at, p.vis, p.gardee_le, p.transmise_le, p.document_kind,
+              x.payload,
               app.piece_accompagne(p.id) as accompagne,
               (select valeur from precisions_v q
                 where q.piece_id = p.id and q.champ = 'document_kind'
@@ -365,6 +367,7 @@ export const capture = {
         createdAt: r["created_at"] as string,
         vis: r["vis"] as string,
         gardeeLe: (r["gardee_le"] as string | null) ?? null,
+        transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
         accompagne: Boolean(r["accompagne"]),
         emetteur: lu?.issuer ?? null,
         dateDocument: lu?.document_date ?? null,
@@ -396,7 +399,7 @@ export const capture = {
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut, gardee_le, source_piece_id
+              document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
          from pieces_v where id = $1`,
       [pieceId],
     );
@@ -1317,7 +1320,7 @@ export const capture = {
   async piecesIssuesDe(db: Requete, pieceId: string) {
     const { rows } = await db.query(
       `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut, gardee_le, source_piece_id
+              document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
          from pieces_v where source_piece_id = $1 order by created_at`,
       [pieceId],
     );
@@ -1336,7 +1339,7 @@ export const capture = {
     const { rows } = await db.query(
       `select p.id, p.tenant_id, p.entity_id, p.vis, p.source, p.storage_path, p.status,
               p.created_at, p.document_kind, p.document_kind_statut, p.gardee_le,
-              p.source_piece_id
+              p.transmise_le, p.source_piece_id
          from rattachements_v r
          join pieces_v p
            on p.id = case when r.piece_id = $1 then r.piece_liee_id else r.piece_id end

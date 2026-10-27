@@ -11,6 +11,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { cleMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -39,7 +40,7 @@ export function MandatsProposes({ tenantId }: { tenantId: string }) {
           : t("pme.mandat.refuse"),
       );
       await qc.invalidateQueries({ queryKey: ["mandats-proposes", tenantId] });
-      await qc.invalidateQueries({ queryKey: ["mon-cabinet", tenantId] });
+      await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
     },
     onError: (e: unknown) =>
       setErreur(texteDeLErreur(e, "components/malica/MandatsProposes", t("pme.mandat.erreur"))),

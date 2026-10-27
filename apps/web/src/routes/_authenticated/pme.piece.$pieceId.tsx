@@ -20,6 +20,7 @@ import { Aide } from "@/components/malica/aide";
 import { PieceQuiAccompagneFiche } from "@/components/malica/piece-qui-accompagne";
 import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { CarteDuRetour } from "@/components/malica/retour-du-cabinet";
+import { ConfirmationSurPlace, EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
 import {
   libelleDuChamp,
@@ -27,7 +28,8 @@ import {
   motifDeLEtat,
   motifDeRefusConnu,
 } from "@/lib/champ-lisible";
-import { jourEtMois, montant, quantite } from "@/lib/lisible";
+import { jourEtMois, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
+import { pieceSuivanteATransmettre } from "@/lib/envoi";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation, GesteDeRetour } from "@malica/socle/ports/repositories";
 import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
@@ -38,6 +40,7 @@ import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import {
@@ -196,6 +199,12 @@ function PieceScreen() {
    * coche. On fête la confirmation, pas la comptabilisation.
    */
   const [regle, setRegle] = useState(false);
+  /**
+   * « Envoyé » : la transmission vient d'aboutir (maquette du 27 octobre
+   * 2026). Un état d'écran, comme `regle` — rouvrir une pièce transmise ne
+   * rejoue pas l'écran.
+   */
+  const [envoye, setEnvoye] = useState(false);
   const [montrerPiece, setPiece] = useState(false);
   const [montrerDetail, setDetail] = useState(false);
   /**
@@ -220,11 +229,7 @@ function PieceScreen() {
 
   // Qui reçoit la pièce. Sans mandat, elle reste au dossier — et l'écran le
   // dit autrement plutôt que d'inventer un destinataire.
-  const cabinet = useQuery({
-    queryKey: ["mon-cabinet", pme.tenantId],
-    queryFn: () => office().identity.monCabinet(pme.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const cabinet = useMonCabinet(pme.tenantId);
 
   /**
    * Qui je suis dans ce dossier — `dirigeant` ou `collaborateur`.
@@ -336,7 +341,10 @@ function PieceScreen() {
    * (`issueDeLecture`) : un échec se voit ici comme sur l'accueil et à la
    * capture, par la même règle et la même source.
    */
-  const luesDuDossier = usePiecesLues({ enabled: !lue || (rattachees.data ?? []).length > 0 });
+  // « Pièce suivante » de l'écran Envoyé se choisit dans la même liste.
+  const luesDuDossier = usePiecesLues({
+    enabled: !lue || (rattachees.data ?? []).length > 0 || envoye,
+  });
   const cettePiece = (luesDuDossier.data ?? []).find((x) => x.id === pieceId) ?? null;
   const issue = cettePiece ? issueDeLecture(cettePiece) : null;
   // Une pièce lue n'est jamais en échec, même si la liste en cache le croit
@@ -502,7 +510,10 @@ function PieceScreen() {
     mutationFn: () => office().collab.setPieceVis(pieceId, "partage"),
     onSuccess: async () => {
       setError(null);
+      // Relire d'abord : l'écran dit « depuis 10:42 » avec l'heure posée par
+      // la base (`transmise_le`), pas celle du téléphone.
       await invalidate();
+      setEnvoye(true);
     },
     onError: (e: unknown) =>
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
@@ -581,10 +592,17 @@ function PieceScreen() {
     mutationFn: () => office().collab.demanderSurPiece(pieceId, "rappel"),
     onSuccess: async () => {
       setError(null);
+      // La demande se lit dans `demandes-piece` : sans elle, le bouton restait
+      // et rien ne disait que la demande était partie (audit du 27 octobre).
+      await qc.invalidateQueries({ queryKey: ["demandes-piece", pieceId] });
       await invalidate();
     },
-    onError: (e: unknown) =>
-      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+    // « Pas encore parti » se dit sur place ; seul un refus rédigé (4xx) a
+    // une phrase à ajouter. Une panne reste au journal.
+    onError: (e: unknown) => {
+      const refus = texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", "");
+      if (refus) setError(refus);
+    },
   });
 
   /**
@@ -600,8 +618,12 @@ function PieceScreen() {
       await qc.invalidateQueries({ queryKey: ["demandes-piece", pieceId] });
       await invalidate();
     },
-    onError: (e: unknown) =>
-      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+    // « Pas encore parti » se dit sur place ; seul un refus rédigé (4xx) a
+    // une phrase à ajouter. Une panne reste au journal.
+    onError: (e: unknown) => {
+      const refus = texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", "");
+      if (refus) setError(refus);
+    },
   });
 
   // L'état des demandes, s'il y en a : leur dernier fait, par objet.
@@ -1015,6 +1037,70 @@ function PieceScreen() {
           </p>
         ) : null}
       </div>
+    );
+  }
+
+  /* ============================================================== ENVOYÉ
+   *
+   * La transmission vient d'aboutir : plein écran, dans le style de « C'est
+   * réglé » (maquette « Écran Envoyé », validée le 27 octobre 2026). Qui l'a
+   * reçue, depuis quand — l'heure de la base —, ce qui se passe ensuite, et
+   * la trace que la pièce garde.
+   */
+  if (envoye && piece.vis === "partage") {
+    const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+    const depuis = piece.transmiseLe ? momentDeLEnvoi(piece.transmiseLe, locale) : null;
+    const suivanteADecider = pieceSuivanteATransmettre(luesDuDossier.data ?? [], pieceId);
+    const fermer = () => setEnvoye(false);
+    return (
+      <EcranEnvoye
+        titre={t("envoi.titre")}
+        quoi={
+          depuis
+            ? t("envoi.piece.chez", {
+                piece: payload?.issuer ?? t("envoi.piece.sansNom"),
+                qui,
+                quand: depuis.quand,
+              })
+            : t("pme.transmettre.faite", { cabinet: qui })
+        }
+        suite={t("envoi.piece.suite", { qui })}
+        trace={
+          piece.transmiseLe
+            ? t("envoi.trace", { qui, jour: jourEtMois(piece.transmiseLe, locale) })
+            : null
+        }
+        principale={
+          suivanteADecider
+            ? {
+                libelle: t("envoi.suivante"),
+                action: () =>
+                  void navigate({
+                    to: "/pme/piece/$pieceId",
+                    params: { pieceId: suivanteADecider.id },
+                  }),
+              }
+            : { libelle: t("envoi.lot.revenir"), action: () => void navigateList() }
+        }
+        secondaire={{
+          libelle: t("envoi.voir"),
+          action: () => {
+            fermer();
+            setOnglet("suivi");
+          },
+        }}
+        lien={
+          comptee
+            ? null
+            : {
+                libelle: t("envoi.rappel"),
+                action: () => {
+                  fermer();
+                  rappeler.mutate();
+                },
+              }
+        }
+      />
     );
   }
 
@@ -2254,14 +2340,25 @@ function PieceScreen() {
                   <p className="f-cab-etat">
                     {t("pme.transmettre.faite", { cabinet: cabinet.data.name })}
                   </p>
-                  {demandeDeRappel === "demandee" ? (
-                    <p className="f-note">
-                      {t("pme.transmettre.rappel.enAttente", { cabinet: cabinet.data.name })}
-                    </p>
+                  {demandeDeRappel === "demandee" && dernierFaitDuRappel ? (
+                    /* Un geste court : la confirmation remplace le bouton, et reste. */
+                    <ConfirmationSurPlace
+                      titre={t("envoi.rappel.fait", { qui: cabinet.data.name })}
+                      detail={t("envoi.demande.detail", {
+                        qui: cabinet.data.name,
+                        quand: momentDeLEnvoi(dernierFaitDuRappel.createdAt, locale).quand,
+                      })}
+                    />
                   ) : demandeDeRappel === "refusee" ? (
                     <p className="f-note">
                       {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                     </p>
+                  ) : !comptee && rappeler.isError ? (
+                    <PasEncoreParti
+                      qui={cabinet.data.name}
+                      reessayer={() => rappeler.mutate()}
+                      enCours={rappeler.isPending}
+                    />
                   ) : !comptee ? (
                     <button
                       type="button"
@@ -2598,8 +2695,22 @@ function PieceScreen() {
             </div>
           )}
           {/* Hors partage, une vieille demande ne parle plus : le « Supprimer » ordinaire suffit. */}
-          {noteSuppression === "demandee" ? (
-            <p className="f-note">{t("pme.piece.suppressionDemandee")}</p>
+          {noteSuppression === "demandee" && dernierFaitDeSuppression ? (
+            <ConfirmationSurPlace
+              titre={t("envoi.suppression.fait", {
+                qui: cabinet.data?.name ?? t("pme.coffre.votreComptable"),
+              })}
+              detail={t("envoi.demande.detail", {
+                qui: cabinet.data?.name ?? t("pme.coffre.votreComptable"),
+                quand: momentDeLEnvoi(dernierFaitDeSuppression.createdAt, locale).quand,
+              })}
+            />
+          ) : demanderSuppression.isError ? (
+            <PasEncoreParti
+              qui={cabinet.data?.name ?? t("pme.coffre.votreComptable")}
+              reessayer={() => demanderSuppression.mutate()}
+              enCours={demanderSuppression.isPending}
+            />
           ) : noteSuppression === "refusee" ? (
             <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
