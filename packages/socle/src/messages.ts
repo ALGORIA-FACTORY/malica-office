@@ -3648,20 +3648,30 @@ const fr = {
   "pme.regler.pied":
     "Les retours sur pièces et les avis arrivent du même cabinet, donc de la même boîte. Ce qui les sépare n'est pas l'écran : c'est ce qu'ils vous demandent de faire.",
   /**
-   * Trois phrases du dessin de « Mon espace » ne sont PAS écrites, car fausses
-   * ici : « attaché à votre compte » (la liste est attachée au DOSSIER),
-   * « aucun bouton pour transmettre » (c'est le seul geste de l'écran),
-   * « dans les deux sens » (le geste ne va que de `personnel` vers `partage`).
+   * « Mon espace » (maquette « Malica sans blocage », 28 octobre 2026) : une
+   * grille de miniatures par mois, et deux gestes sur les papiers choisis —
+   * les mettre dans la société, ou les supprimer.
    */
   "pme.coffre.titre": "Vos papiers",
-  "pme.coffre.bouger": "À transmettre",
-  /**
-   * Le dessin ajoute « …ou la supprimer sans demander à personne » :
-   * `capture.supprimer` n'est pas appelé par cet écran. La phrase s'arrête à ce
-   * que l'écran fait.
-   */
-  "pme.coffre.libre":
-    "Vous l'avez mise ici après l'avoir capturée. Elle n'est jamais partie au cabinet : vous pouvez encore la remettre dans la bibliothèque.",
+  "pme.coffre.compte": "Mon espace · {count} papiers",
+  "pme.coffre.compte#one": "Mon espace · {count} papier",
+  "pme.coffre.compte#other": "Mon espace · {count} papiers",
+  "pme.coffre.choisir": "Choisir {piece}",
+  "pme.coffre.choisir.aide":
+    "Touchez le rond d'un papier pour le choisir, puis mettez-le dans la société ou supprimez-le. Toucher le papier lui-même l'ouvre.",
+  "pme.coffre.mettre": "Mettre dans la société",
+  "pme.coffre.supprimer": "Supprimer",
+  "pme.coffre.supprimer.titre": "Supprimer ces {count} papiers ?",
+  "pme.coffre.supprimer.titre#one": "Supprimer ce papier ?",
+  "pme.coffre.supprimer.titre#other": "Supprimer ces {count} papiers ?",
+  "pme.coffre.supprimer.sur": "Ils seront effacés définitivement.",
+  "pme.coffre.supprimer.sur#one": "Il sera effacé définitivement.",
+  "pme.coffre.supprimer.sur#other": "Ils seront effacés définitivement.",
+  "pme.coffre.mis.titre": "Dans la société.",
+  "pme.coffre.mis.quoi": "{count} papiers sont dans la société.",
+  "pme.coffre.mis.quoi#one": "{piece} est dans la société.",
+  "pme.coffre.mis.quoi#other": "{count} papiers sont dans la société.",
+  "pme.coffre.mis.suite": "Rien n'est parti chez {qui}.",
   /**
    * Le dessin écrit « sa sortie passe par une demande » : aucune méthode ne
    * porte cette demande. La phrase garde ce qui est tenu : l'accord du cabinet et
@@ -7412,9 +7422,25 @@ const en: Dict = {
   "pme.regler.pied":
     "Feedback on documents and advice come from the same firm, so from the same inbox. What sets them apart is not the screen: it is what they ask you to do.",
   "pme.coffre.titre": "Your papers",
-  "pme.coffre.bouger": "To send",
-  "pme.coffre.libre":
-    "You put it here after capturing it. It never went to the firm: you can still move it back to the library.",
+  "pme.coffre.compte": "My space · {count} papers",
+  "pme.coffre.compte#one": "My space · {count} paper",
+  "pme.coffre.compte#other": "My space · {count} papers",
+  "pme.coffre.choisir": "Select {piece}",
+  "pme.coffre.choisir.aide":
+    "Tap the circle on a paper to select it, then move it to the company or delete it. Tapping the paper itself opens it.",
+  "pme.coffre.mettre": "Move to the company",
+  "pme.coffre.supprimer": "Delete",
+  "pme.coffre.supprimer.titre": "Delete these {count} papers?",
+  "pme.coffre.supprimer.titre#one": "Delete this paper?",
+  "pme.coffre.supprimer.titre#other": "Delete these {count} papers?",
+  "pme.coffre.supprimer.sur": "They will be permanently erased.",
+  "pme.coffre.supprimer.sur#one": "It will be permanently erased.",
+  "pme.coffre.supprimer.sur#other": "They will be permanently erased.",
+  "pme.coffre.mis.titre": "In the company.",
+  "pme.coffre.mis.quoi": "{count} papers are in the company.",
+  "pme.coffre.mis.quoi#one": "{piece} is in the company.",
+  "pme.coffre.mis.quoi#other": "{count} papers are in the company.",
+  "pme.coffre.mis.suite": "Nothing has gone to {qui}.",
   "pme.coffre.pied":
     "A document already sent does not come back silently: its return needs your firm's approval, and every move is logged.",
   "pme.echeances.titre": "What's due",
@@ -10995,9 +11021,25 @@ const ar: Dict = {
   "pme.regler.pied":
     "الملاحظات على الوثائق والآراء تأتي من المكتب نفسه، أي من صندوق الوارد نفسه. ما يميّزها ليس الشاشة، بل ما تطلبه منكم.",
   "pme.coffre.titre": "أوراقكم",
-  "pme.coffre.bouger": "للإرسال",
-  "pme.coffre.libre":
-    "وضعتموها هنا بعد التقاطها. لم تُرسل قط إلى المكتب: لا يزال بإمكانكم إعادتها إلى المكتبة.",
+  "pme.coffre.compte": "مساحتي · {count} أوراق",
+  "pme.coffre.compte#one": "مساحتي · {count} ورقة",
+  "pme.coffre.compte#other": "مساحتي · {count} أوراق",
+  "pme.coffre.choisir": "اختيار {piece}",
+  "pme.coffre.choisir.aide":
+    "المس الدائرة على ورقة لاختيارها، ثم انقلها إلى الشركة أو احذفها. لمس الورقة نفسها يفتحها.",
+  "pme.coffre.mettre": "نقل إلى الشركة",
+  "pme.coffre.supprimer": "حذف",
+  "pme.coffre.supprimer.titre": "حذف هذه الأوراق ({count})؟",
+  "pme.coffre.supprimer.titre#one": "حذف هذه الورقة؟",
+  "pme.coffre.supprimer.titre#other": "حذف هذه الأوراق ({count})؟",
+  "pme.coffre.supprimer.sur": "ستُحذف نهائيًا.",
+  "pme.coffre.supprimer.sur#one": "ستُحذف نهائيًا.",
+  "pme.coffre.supprimer.sur#other": "ستُحذف نهائيًا.",
+  "pme.coffre.mis.titre": "في الشركة.",
+  "pme.coffre.mis.quoi": "{count} أوراق في الشركة.",
+  "pme.coffre.mis.quoi#one": "{piece} في الشركة.",
+  "pme.coffre.mis.quoi#other": "{count} أوراق في الشركة.",
+  "pme.coffre.mis.suite": "لم يُرسل شيء إلى {qui}.",
   "pme.coffre.pied":
     "الوثيقة المرسلة لا تعود في صمت: إرجاعها يتطلب موافقة مكتبكم، وكل انتقال يُسجَّل في السجل.",
   "pme.echeances.titre": "ما يحلّ أجله",
