@@ -357,6 +357,61 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
         assert.equal(rejoue.id, nouvelle);
       });
 
+      it("dans la file du cabinet, la photo de remplacement garde la place de l'ancienne", async () => {
+        const ancienne = await retournee(cas);
+        // Envoyée APRÈS l'ancienne, retournée elle aussi : même priorité.
+        const plusRecente = await retournee(cas);
+        const { id: nouvelle } = (await pmeFait("capture.enregistrer", {
+          tenantId: pme,
+          source: "photo",
+          vis: "partage",
+          idempotencyKey: `${marque}-file-${ancienne}`,
+          contentType: "image/jpeg",
+          remplace: ancienne,
+        })) as { id: string };
+        const file = (
+          (await cabinetFait("supervision.queue", cabinet, pme)) as Array<{ pieceId: string }>
+        ).map((x) => x.pieceId);
+        assert.ok(
+          file.indexOf(plusRecente) < file.indexOf(nouvelle),
+          "classée à la date d'envoi de l'ancienne, pas à celle de la photo",
+        );
+      });
+
+      it("les règlements saisis sur l'ancienne photo se lisent sur la nouvelle", async () => {
+        const ancienne = await retournee(cas);
+        const paiement = (await pmeFait("capture.enregistrerPaiement", {
+          pieceId: ancienne,
+          packId: pack,
+          moyenCode: "especes",
+          montantMineur: 40000,
+          devise: "TND",
+          payeLe: "2026-10-03",
+        })) as string;
+        const { id: nouvelle } = (await pmeFait("capture.enregistrer", {
+          tenantId: pme,
+          source: "photo",
+          vis: "partage",
+          idempotencyKey: `${marque}-paiement-${ancienne}`,
+          contentType: "image/jpeg",
+          remplace: ancienne,
+        })) as { id: string };
+        const vus = (await pmeFait("capture.paiementsDUnePiece", nouvelle)) as Array<{
+          id: string;
+          montantMineur: number | null;
+        }>;
+        assert.deepEqual(
+          vus.map((p) => [p.id, p.montantMineur]),
+          [[paiement, 40000]],
+        );
+        // Le fait n'a pas bougé (R7) : le règlement reste inscrit sur sa pièce.
+        const { rows } = await admin.query<{ piece_id: string }>(
+          `select piece_id from capture.paiements where id = $1`,
+          [paiement],
+        );
+        assert.equal(rows[0]?.piece_id, ancienne);
+      });
+
       it("lue, la photo de remplacement garde son retour jusqu'à « Renvoyer »", async () => {
         const ancienne = await retournee(cas);
         const { id: nouvelle } = (await pmeFait("capture.enregistrer", {
