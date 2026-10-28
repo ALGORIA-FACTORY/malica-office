@@ -1,12 +1,23 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 
-import type { MonForfait } from "@malica/socle/ports/repositories";
+import type { MonForfait, Visibility } from "@malica/socle/ports/repositories";
 
 import type { OuverturesDuForfait } from "@/lib/forfait";
 import type { ElementDeFile } from "@/lib/hors-ligne/file";
 import { dossierDuJournal } from "@/lib/journal-atelier";
 
 export type CaptureKind = "photo" | "images" | "pdf";
+
+/** La pièce que la photo prise va remplacer, et où elle est : la nouvelle y va. */
+export interface PieceARemplacer {
+  id: string;
+  vis: Visibility;
+  /**
+   * Où l'on revient : la fiche de la nouvelle photo, ou le lot de la capture
+   * en cours, où elle prend la place de l'ancienne.
+   */
+  ensuite: "fiche" | "lot";
+}
 
 /** Ce qui attend de partir pour ce dossier, et les deux gestes sur un échec. */
 export interface FileDAttente {
@@ -71,6 +82,13 @@ export interface PmeContextValue {
    * pièce obligerait à revenir à l'accueil pour retrouver l'obturateur.
    */
   ouvrirScanner: () => void;
+  /**
+   * Le même scanner, ouvert depuis une pièce : la photo prise la REMPLACE
+   * (« Malica sans blocage », 28 octobre 2026). Elle prend sa place — retour,
+   * rattachements, file du cabinet — et l'ancienne reste comme version
+   * précédente. Une photo sans lien, c'est `ouvrirScanner`.
+   */
+  reprendreLaPhoto: (piece: PieceARemplacer) => void;
   capturing: boolean;
   captureError: string | null;
   /** La file hors ligne de ce dossier : ce que la liste et l'accueil montrent. */

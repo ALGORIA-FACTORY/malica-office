@@ -63,6 +63,13 @@ export interface ElementDeFile {
    * au retour du réseau, ce qu'il atteste.
    */
   paiementsAttestes?: string[] | null;
+  /**
+   * La pièce que cette photo REMPLACE (« Reprendre la photo »). Elle voyage
+   * pour la même raison que la facture d'un reçu : une photo reprise hors
+   * ligne doit prendre la place de l'ancienne au retour du réseau, et non
+   * arriver comme une pièce de plus.
+   */
+  remplace?: string | null;
   nomFichier: string;
   /** En octets — pour le plafond, et pour dire « 1,2 Mo » à l'écran. */
   taille: number;
@@ -87,6 +94,7 @@ export type NouvelElement = Pick<
   | "documentKind"
   | "sourcePieceId"
   | "paiementsAttestes"
+  | "remplace"
   | "nomFichier"
   | "taille"
 >;

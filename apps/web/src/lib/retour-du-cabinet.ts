@@ -33,6 +33,35 @@ export const FAIT_DU_GESTE: Partial<Record<GesteDeRetour, MessageKey>> = {
   repondre: "pme.retour.fait.reponse",
 };
 
+/**
+ * Les sorties d'une pièce retournée (« Malica sans blocage », 28 octobre
+ * 2026) : rien ne bloque. `geste` est le geste propre au motif quand aucune
+ * autre sortie ne le porte déjà (joindre un document, corriger la date, voir
+ * le règlement).
+ */
+export type SortieDuRetour =
+  "geste" | "renvoyer" | "reprendre_photo" | "repondre" | "garder" | "supprimer";
+
+/** Le geste du motif, dit par la sortie qui le fait quand il y en a une. */
+const SORTIE_DU_GESTE: Partial<Record<GesteDeRetour, SortieDuRetour>> = {
+  reprendre_photo: "reprendre_photo",
+  repondre: "repondre",
+  demander_suppression: "supprimer",
+};
+
+/**
+ * Dans l'ordre de l'écran, chacune une fois : la principale d'abord — le
+ * geste demandé tant qu'il n'est pas fait, « Renvoyer » ensuite —, puis les
+ * autres.
+ */
+export function sortiesDuRetour(geste: GesteDeRetour, fait: boolean): SortieDuRetour[] {
+  const duMotif = SORTIE_DU_GESTE[geste] ?? "geste";
+  const ordre: SortieDuRetour[] = fait
+    ? ["renvoyer", duMotif, "reprendre_photo", "repondre", "garder", "supprimer"]
+    : [duMotif, "renvoyer", "reprendre_photo", "repondre", "garder", "supprimer"];
+  return [...new Set(ordre)];
+}
+
 /** La pièce attend-elle une décision du cabinet sans le « Oui » du client ? */
 export function lueSansConfirmation(status: string, inscrite: boolean): boolean {
   return !inscrite && (status === "lue" || status === "proposee");
