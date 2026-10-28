@@ -1440,7 +1440,9 @@ export const capture = {
                   and e.reverses_id is not null and e.status = 'proposee'
                 order by e.created_at desc limit 1) as annulation_a_inscrire
          from paiements_v p
-        where p.piece_id = $1 order by p.created_at`,
+        -- Les règlements de toutes ses versions : une photo reprise garde ceux
+        -- saisis sur l'ancienne, qui restent inscrits où ils sont nés (R7).
+        where p.piece_id in (select app.versions_de_la_piece($1)) order by p.created_at`,
       [pieceId],
     );
     /*

@@ -1440,6 +1440,11 @@ export interface QueueItem {
   status: PieceStatus;
   source: "photo" | "pdf";
   createdAt: string;
+  /**
+   * Quand la pièce est arrivée au cabinet : sa transmission, héritée par une
+   * photo reprise. La file se classe par elle, et l'attente se compte d'elle.
+   */
+  envoyeeLe: string;
   ecritureId: string | null;
   libelle: string | null;
   dateEcriture: string | null;

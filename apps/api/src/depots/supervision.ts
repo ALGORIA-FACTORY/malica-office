@@ -120,6 +120,9 @@ export const supervision = {
     // pièce — ce que l'adaptateur reconstituait par une boucle et une carte.
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
+              -- La date d'envoi : une photo reprise hérite de celle de l'ancienne
+              -- (piece_remplacer), et garde ainsi sa place dans la file.
+              coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
               dem.objet as demande_objet
@@ -189,7 +192,7 @@ export const supervision = {
           -- une pièce que le client a retirée (archivée) n'attend plus rien.
           and p.remplacee_par is null and p.archivee_le is null
           and ($2::uuid is null or p.tenant_id = $2)
-        order by p.created_at desc
+        order by coalesce(p.transmise_le, p.created_at) desc
         limit 200`,
       [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );
@@ -202,6 +205,7 @@ export const supervision = {
         status: p["status"] as string,
         source: p["source"] as string,
         createdAt: p["created_at"] as string,
+        envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
         ecritureId: (p["ecriture_id"] as string | null) ?? null,
         libelle: (p["libelle"] as string | null) ?? null,
         dateEcriture: (p["date_ecriture"] as string | null) ?? null,
@@ -213,7 +217,7 @@ export const supervision = {
       .sort((a, b) => {
         const d = (PRIORITE[a.status] ?? 9) - (PRIORITE[b.status] ?? 9);
         if (d !== 0) return d;
-        return a.createdAt < b.createdAt ? 1 : -1;
+        return a.envoyeeLe < b.envoyeeLe ? 1 : -1;
       });
   },
 
