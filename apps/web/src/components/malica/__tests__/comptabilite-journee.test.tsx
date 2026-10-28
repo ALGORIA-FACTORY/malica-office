@@ -49,6 +49,8 @@ vi.mock("@tanstack/react-query", () => ({
     if (k === "cab-conseil-stats") data = { totaux: { enAttente: 0 } };
     if (k === "cab-honoraires-synthese") data = { nbRetard: 0 };
     if (k === "ref-pack") data = null;
+    // La miniature de chaque ligne de la file : rien à montrer, la feuille esquissée.
+    if (k === "apercu") data = null;
     return {
       data,
       isPending: false,

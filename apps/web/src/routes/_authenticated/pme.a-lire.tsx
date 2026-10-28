@@ -126,7 +126,7 @@ function ALire() {
                       <path d="M4.5 12.5l4.5 4.5 10-10" />
                     </svg>
                   </span>
-                  <ApercuDePiece pieceId={p.id} className="mini" />
+                  <ApercuDePiece pieceId={p.id} className="vignette" />
                   <span className="bd">
                     <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                     <span>{t("pme.aLire.prise", { jour: jour(p.createdAt) })}</span>

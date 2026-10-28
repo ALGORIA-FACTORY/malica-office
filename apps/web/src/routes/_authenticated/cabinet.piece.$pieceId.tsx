@@ -10,6 +10,7 @@ import {
 import { Download, Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
@@ -897,8 +898,11 @@ function CabinetReview() {
                          * identifiant machine à l'écran — le défaut « ISSUER »
                          * du 5 octobre, sous un autre nom.
                          */}
-                        <span className="truncate text-[13px]">
-                          {nomDuType(j.documentKind) ?? t("cab.review.document")}
+                        <span className="flex min-w-0 items-center gap-3">
+                          <ApercuDePiece pieceId={j.id} className="vignette" />
+                          <span className="truncate text-[13px]">
+                            {nomDuType(j.documentKind) ?? t("cab.review.document")}
+                          </span>
                         </span>
                         <button
                           type="button"

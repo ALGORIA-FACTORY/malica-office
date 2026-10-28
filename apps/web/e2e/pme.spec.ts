@@ -244,9 +244,10 @@ test("les pièces du dossier se listent et s'ouvrent", async ({ page }) => {
   await expect(groupe).toBeVisible();
   await groupe.click();
 
-  // Et dedans, la première pièce s'ouvre.
+  // Et dedans, la première pièce s'ouvre — avec sa miniature à gauche.
   const piece = page.locator('a[href^="/pme/piece/"]').first();
   await expect(piece).toBeVisible();
+  await expect(piece.locator(".apercu.vignette")).toBeVisible();
   await piece.click();
   await expect(page).toHaveURL(/\/pme\/piece\/[0-9a-f-]{36}$/);
 });
