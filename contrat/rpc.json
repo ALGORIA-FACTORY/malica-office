@@ -225,6 +225,10 @@
     "consigner",
     "dernieres"
   ],
+  "journalDuJour": [
+    "exporter",
+    "lire"
+  ],
   "office": [
     "book",
     "bookedExtracts",

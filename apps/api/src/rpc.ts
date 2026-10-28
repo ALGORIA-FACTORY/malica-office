@@ -30,6 +30,7 @@ import { fabrique } from "./depots/fabrique.ts";
 import { facturation } from "./depots/facturation.ts";
 import { identite } from "./depots/identite.ts";
 import { journal } from "./depots/journal.ts";
+import { journalDuJour } from "./depots/journal-du-jour.ts";
 import { immo } from "./depots/immo.ts";
 import { integrations } from "./depots/integrations.ts";
 import { office } from "./depots/office.ts";
@@ -63,6 +64,7 @@ const DEPOTS = {
   immo,
   integrations,
   journal,
+  journalDuJour,
   office,
   parametrage,
   referentiel,
