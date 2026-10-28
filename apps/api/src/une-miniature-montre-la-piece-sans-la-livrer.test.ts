@@ -127,6 +127,109 @@ describe("fabriquer une miniature", () => {
     assert.equal(await fabriquerMiniature(pdf, "application/pdf"), null);
   });
 
+  /*
+   * ============================================ L'ORIENTATION EXIF
+   *
+   * Un téléphone enregistre souvent la photo couchée et écrit dans l'EXIF
+   * comment la redresser. Une miniature qui l'ignorerait montrerait la
+   * facture de travers. Mesuré le 28 octobre 2026 : `@napi-rs/canvas`
+   * applique le tag au décodage — aucun redressement n'est donc écrit dans
+   * `miniature.ts`, et ces épreuves gardent ce fait sous surveillance.
+   *
+   * La photo source est faite de quatre quarts de couleur (rouge, bleu en
+   * haut ; vert, jaune en bas) : la couleur des deux coins du haut de la
+   * miniature dit, sans ambiguïté, laquelle des huit transformations a été
+   * appliquée.
+   */
+  describe("redresse la photo selon son orientation EXIF", () => {
+    async function quartiers(): Promise<Buffer> {
+      const toile = createCanvas(200, 100);
+      const ctx = toile.getContext("2d");
+      for (const [couleur, x, y] of [
+        ["#FF0000", 0, 0],
+        ["#0000FF", 100, 0],
+        ["#00FF00", 0, 50],
+        ["#FFFF00", 100, 50],
+      ] as const) {
+        ctx.fillStyle = couleur;
+        ctx.fillRect(x, y, 100, 50);
+      }
+      return toile.encode("jpeg", 95);
+    }
+
+    /** Un segment APP1 « Exif » minimal : un IFD0 qui ne porte que l'orientation. */
+    function avecOrientation(jpeg: Buffer, orientation: number): Buffer {
+      const tiff = Buffer.from([
+        0x4d,
+        0x4d,
+        0x00,
+        0x2a,
+        0x00,
+        0x00,
+        0x00,
+        0x08,
+        0x00,
+        0x01,
+        0x01,
+        0x12,
+        0x00,
+        0x03,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        orientation,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+      ]);
+      const corps = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), tiff]);
+      const longueur = corps.length + 2;
+      const app1 = Buffer.from([0xff, 0xe1, longueur >> 8, longueur & 0xff]);
+      return Buffer.concat([jpeg.subarray(0, 2), app1, corps, jpeg.subarray(2)]);
+    }
+
+    function couleurEn(ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>, x: number) {
+      const [r, g, b] = ctx.getImageData(x, 5, 1, 1).data;
+      const fort = (v: number | undefined) => (v ?? 0) > 160;
+      if (fort(r) && fort(g) && !fort(b)) return "jaune";
+      if (fort(r)) return "rouge";
+      if (fort(g)) return "vert";
+      if (fort(b)) return "bleu";
+      return "?";
+    }
+
+    // [orientation, largeur, hauteur, coin haut-début, coin haut-fin]
+    const attendus = [
+      [1, 200, 100, "rouge", "bleu"],
+      [2, 200, 100, "bleu", "rouge"],
+      [3, 200, 100, "jaune", "vert"],
+      [4, 200, 100, "vert", "jaune"],
+      [5, 100, 200, "rouge", "vert"],
+      [6, 100, 200, "vert", "rouge"],
+      [7, 100, 200, "jaune", "bleu"],
+      [8, 100, 200, "bleu", "jaune"],
+    ] as const;
+
+    for (const [orientation, largeur, hauteur, gauche, droite] of attendus) {
+      it(`orientation ${orientation}`, async () => {
+        const source = avecOrientation(await quartiers(), orientation);
+        const mini = await fabriquerMiniature(new Uint8Array(source), "image/jpeg");
+        assert.ok(mini);
+        const image = await loadImage(mini);
+        assert.deepEqual([image.width, image.height], [largeur, hauteur]);
+        const toile = createCanvas(image.width, image.height);
+        const ctx = toile.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+        assert.deepEqual([couleurEn(ctx, 5), couleurEn(ctx, image.width - 6)], [gauche, droite]);
+      });
+    }
+  });
+
   it("n'invente rien d'un contenu illisible ou d'un type inconnu", async () => {
     const bruit = new Uint8Array([1, 2, 3, 4, 5]);
     assert.equal(await fabriquerMiniature(bruit, "image/jpeg"), null);

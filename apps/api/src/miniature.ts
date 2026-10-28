@@ -20,7 +20,9 @@
  *
  * ========================================================== CE QU'ELLE MONTRE
  *
- *   — une photo : elle-même, réduite ;
+ *   — une photo : elle-même, réduite, et redressée selon son orientation
+ *     EXIF — `loadImage` l'applique au décodage (mesuré sur les huit
+ *     orientations, voir l'épreuve) ;
  *   — un PDF : sa première page quand cette page EST une image (un scan,
  *     `extrairePagesScannees`, la même extraction que la lecture) ;
  *   — tout le reste (PDF de texte, type inconnu, image illisible) : `null`.
