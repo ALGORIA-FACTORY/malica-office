@@ -195,7 +195,8 @@ describe("sans mandat actif, la pièce est au client", { skip: !BASE_CONFIGUREE 
       code("42501"),
     );
     await rpc(expertA, "collab", "repondreSurPiece", id, "rappel", true, null);
-    assert.equal(await visDe(id), "personnel");
+    // Rendue à la société, jamais à un espace privé (« Malica sans blocage »).
+    assert.equal(await visDe(id), "entite");
   });
 
   for (const statut of ["comptabilisee", "supervisee"]) {

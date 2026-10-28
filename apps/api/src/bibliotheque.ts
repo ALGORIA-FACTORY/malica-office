@@ -142,6 +142,8 @@ export async function documents(
   const { rows } = await db.query<LigneDocument>(
     `${DOCUMENTS}
     where p.tenant_id = $1 and p.vis = 'partage'
+      -- Une version précédente se lit depuis la photo qui la remplace.
+      and p.remplacee_par is null
       and ($2::text is null or left(${DATE_DE_CLASSEMENT}, 7) = $2)
     order by p.created_at desc, p.id limit $4`,
     [clientId, periode, fuseau, MAX_DOCUMENTS + 1],

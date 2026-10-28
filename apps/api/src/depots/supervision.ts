@@ -79,6 +79,8 @@ export const supervision = {
             -- Un reçu ou un justificatif accompagne une pièce : il ne compte
             -- pas parmi les pièces « déposées, pas encore lues ».
             where tenant_id = e.pme_org_id and not app.piece_accompagne(id)
+              -- Ni une version précédente, ni une pièce que le client a retirée.
+              and remplacee_par is null and archivee_le is null
             group by status
          ) p on true
         where e.cabinet_org_id = $1
@@ -183,6 +185,9 @@ export const supervision = {
           -- Un reçu ou un justificatif voyage avec sa pièce (« Documents
           -- liés ») : il n'entre pas dans la file comme une pièce à lire.
           and not app.piece_accompagne(p.id)
+          -- La photo qui en remplace une autre a pris sa place dans la file ;
+          -- une pièce que le client a retirée (archivée) n'attend plus rien.
+          and p.remplacee_par is null and p.archivee_le is null
           and ($2::uuid is null or p.tenant_id = $2)
         order by p.created_at desc
         limit 200`,

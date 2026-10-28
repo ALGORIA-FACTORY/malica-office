@@ -728,6 +728,10 @@ export interface Piece {
   documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
   /** La facture dont cette pièce est issue — un reçu, un justificatif. */
   sourcePieceId: string | null;
+  /** La photo que celle-ci remplace (« Reprendre la photo ») : sa version précédente. */
+  remplace: string | null;
+  /** La photo qui a remplacé celle-ci : elle a quitté les listes, jamais effacée. */
+  remplaceePar: string | null;
   /**
    * Quand le dirigeant a décidé de garder la pièce chez lui.
    *
@@ -907,6 +911,12 @@ export interface NouvellePiece {
    * annulé.
    */
   paiementsAttestes?: string[] | null;
+  /**
+   * La pièce que cette photo REMPLACE (« Reprendre la photo ») : la nouvelle
+   * prend sa place — retour en cours, rattachements, file du cabinet —, et
+   * l'ancienne reste comme version précédente.
+   */
+  remplace?: string | null;
 }
 
 /**
@@ -1133,6 +1143,12 @@ export interface CaptureRepository {
   retourDeLaPiece(pieceId: string, locale: string): Promise<RetourDuCabinet | null>;
   /** Répondre au cabinet sur une pièce transmise. */
   repondreAuCabinet(pieceId: string, texte: string): Promise<void>;
+  /**
+   * Renvoyer au cabinet une pièce qu'il a retournée : le retour est clos, rien
+   * ne s'inscrit — le cabinet propose sur la lecture courante, ou force. Rend
+   * l'heure du renvoi, celle de la base.
+   */
+  renvoyer(pieceId: string): Promise<{ le: string }>;
   pieceQuiAccompagne(pieceId: string, locale: string): Promise<PieceQuiAccompagne | null>;
   /** Rattacher un justificatif à un autre règlement sans preuve du dossier. */
   deplacerJustificatif(pieceId: string, paiementId: string): Promise<void>;
@@ -1168,12 +1184,13 @@ export interface CaptureRepository {
    */
   analyser(pieceId: string): Promise<unknown>;
   /**
-   * Efface une pièce qui n'est encore partie nulle part.
+   * Efface une pièce qui n'est pas partie, ou que le cabinet a retournée.
    *
-   * La base refuse si elle a été transmise au cabinet, si elle est engagée
-   * dans une écriture, ou si quoi que ce soit s'en sert de justificatif.
-   * Une pièce effacée emporte ses citations, son plan de tokens et ses
-   * octets — il ne doit rien en rester.
+   * La base refuse si elle a été transmise sans être retournée, si une
+   * écriture vivante l'engage, ou si quoi que ce soit s'en sert de
+   * justificatif. Une écriture contre-passée la retient : elle est alors
+   * archivée — invisible pour le client, gardée par le cabinet. Une pièce
+   * effacée emporte ses citations, son plan de tokens et ses octets.
    */
   supprimer(pieceId: string): Promise<boolean>;
 }

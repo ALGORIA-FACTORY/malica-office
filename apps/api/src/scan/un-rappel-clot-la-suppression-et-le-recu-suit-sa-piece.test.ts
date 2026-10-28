@@ -131,7 +131,8 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
 
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
 
-    assert.equal(await visDe(id), "personnel");
+    // Rendue à la société, jamais à un espace privé (« Malica sans blocage »).
+    assert.equal(await visDe(id), "entite");
     assert.deepEqual(
       await faits(id, "suppression"),
       ["demandee", "retiree"],
@@ -256,11 +257,11 @@ describe("le rappel accordé et ce qui suit la pièce", { skip: !BASE_CONFIGUREE
     await rpc("collab", "demanderSurPiece", facture, "rappel");
     await rpcCab("collab", "repondreSurPiece", facture, "rappel", true, null);
 
-    assert.equal(await visDe(facture), "personnel");
+    assert.equal(await visDe(facture), "entite");
     assert.equal(
       await visDe(recu),
-      "personnel",
-      "un reçu n'est jamais partagé si sa source ne l'est pas",
+      "entite",
+      "un reçu n'est jamais partagé si sa source ne l'est pas : il la suit",
     );
   });
 });
