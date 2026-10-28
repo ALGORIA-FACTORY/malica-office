@@ -111,8 +111,11 @@ grant select on public.exports_v to authenticated;
 -- Le périmètre et la garde sont ceux des exports (`app.export_mandats`) :
 -- membre du cabinet, mandats actifs ; un dossier hors périmètre lève. Une
 -- société n'est jamais le cabinet demandé : elle est refusée.
+--
+-- Le libellé rendu est celui de `ref.journals` ; sa traduction se joint à la
+-- lecture, dans la langue de l'écran (`ref_labels_v`, espace `journal`).
 create or replace function public.journal_du_jour_lire(
-  p_cabinet uuid, p_client uuid, p_jour date, p_fuseau text, p_locale text
+  p_cabinet uuid, p_client uuid, p_jour date, p_fuseau text
 )
 returns table (
   client_tenant_id uuid,
@@ -182,7 +185,7 @@ begin
            o.name,
            d.id,
            d.journal,
-           coalesce(lj.value, lf.value, j.libelle, d.journal),
+           coalesce(j.libelle, d.journal),
            j.rang,
            d.piece_id,
            d.libelle,
@@ -215,12 +218,10 @@ begin
       join socle.ecriture_lignes l on l.ecriture_id = d.id
       join identity.organizations o on o.id = d.tenant_id
       left join ref.journals j on j.code = d.journal
-      left join ref.labels lj on lj.ns = 'journal' and lj.key = d.journal and lj.locale = p_locale
-      left join ref.labels lf on lf.ns = 'journal' and lf.key = d.journal and lf.locale = 'fr'
      order by j.rang nulls last, d.journal, d.v_inscrite_le, o.name, d.id, l.ordinal;
 end $$;
-revoke all on function public.journal_du_jour_lire(uuid, uuid, date, text, text) from public, anon;
-grant execute on function public.journal_du_jour_lire(uuid, uuid, date, text, text) to authenticated;
+revoke all on function public.journal_du_jour_lire(uuid, uuid, date, text) from public, anon;
+grant execute on function public.journal_du_jour_lire(uuid, uuid, date, text) to authenticated;
 
 -- --- 4. Journaliser un export du journal du jour -------------------------------------
 -- Le numéro est calculé par l'appelant sous verrou (le contenu du fichier le

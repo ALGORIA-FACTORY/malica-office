@@ -47,7 +47,7 @@ import {
 } from "./exports.ts";
 
 /** Les colonnes du fichier, les mêmes en CSV et en Excel. */
-export const COLONNES_JOURNAL_DU_JOUR = [
+const COLONNES_JOURNAL_DU_JOUR = [
   "dossier",
   "journal",
   "journal_libelle",
@@ -107,7 +107,7 @@ function toutesLesEcritures(journaux: readonly JournalAuJour[]): EcritureAuJourn
 }
 
 /** L'instantané du journal tel qu'il est. */
-export function instantaneDe(journaux: readonly JournalAuJour[]): InstantaneDuJournal {
+function instantaneDe(journaux: readonly JournalAuJour[]): InstantaneDuJournal {
   const ecritures = toutesLesEcritures(journaux);
   return {
     ecritures: ecritures.map((e) => e.id),
@@ -311,12 +311,20 @@ async function lireLeJournal(
   locale: string,
   decimales: number,
 ): Promise<JournalAuJour[]> {
+  // Le libellé du journal dans la langue de l'écran, le français à défaut
+  // (R4 : du référentiel, jamais du code). L'ordre est celui de la base.
   const { rows } = await db.query<LigneLue>(
-    `select client_tenant_id, client_nom, ecriture_id, journal, journal_libelle, piece_id,
-            ecriture_libelle, ordinal, compte, compte_libelle, debit::text as debit,
-            credit::text as credit, devise, origine, inscrite_le, heure, par, reverses_id,
-            contre_passee_le
-       from public.journal_du_jour_lire($1, $2, $3::date, $4, $5)`,
+    `select f.client_tenant_id, f.client_nom, f.ecriture_id, f.journal,
+            coalesce(demandee.value, francais.value, f.journal_libelle) as journal_libelle,
+            f.piece_id, f.ecriture_libelle, f.ordinal, f.compte, f.compte_libelle,
+            f.debit::text as debit, f.credit::text as credit, f.devise, f.origine,
+            f.inscrite_le, f.heure, f.par, f.reverses_id, f.contre_passee_le
+       from public.journal_du_jour_lire($1, $2, $3::date, $4) with ordinality as f
+       left join ref_labels_v demandee
+         on demandee.ns = 'journal' and demandee.key = f.journal and demandee.locale = $5
+       left join ref_labels_v francais
+         on francais.ns = 'journal' and francais.key = f.journal and francais.locale = 'fr'
+      order by f.ordinality`,
     [cabinetTenantId, clientTenantId, jour, fuseau, locale],
   );
   return rangerLeJournal(rows, decimales);
