@@ -36,6 +36,7 @@ import type { Request, Response } from "express";
 
 import { sousLAppelant } from "./cles-api.ts";
 import type { Requete } from "./db.ts";
+import { fabriquerMiniature } from "./miniature.ts";
 
 /**
  * La racine du stockage, exigée au démarrage comme `JWT_SECRET`.
@@ -100,6 +101,16 @@ function cheminAbsolu(tenantId: string, pieceId: string): string {
  */
 export async function effacerContenu(tenantId: string, pieceId: string): Promise<void> {
   await rm(cheminAbsolu(tenantId, pieceId), { force: true });
+  // Sa miniature aussi : une petite photo de la pièce reste la pièce.
+  await rm(cheminDeLaMiniature(tenantId, pieceId), { force: true });
+}
+
+/**
+ * La miniature vit à côté de la pièce, sous le même dossier de tenant, et son
+ * nom se dérive du même identifiant lu en base. Voir `miniature.ts`.
+ */
+function cheminDeLaMiniature(tenantId: string, pieceId: string): string {
+  return cheminAbsolu(tenantId, `${pieceId}.miniature.jpg`);
 }
 
 interface LignePiece {
@@ -306,4 +317,56 @@ export async function servirContenu(req: Request, res: Response): Promise<void> 
   // Les pièces ne sont pas publiques : aucun cache partagé ne doit les garder.
   res.setHeader("Cache-Control", "private, no-store");
   await pipeline(createReadStream(source), res);
+}
+
+/**
+ * Rend la miniature d'une pièce : même `select`, même RLS, mêmes 404 que
+ * `servirContenu` — une miniature montre la pièce, elle n'est pas moins
+ * protégée qu'elle.
+ *
+ * Faite à la première demande, puis gardée (les octets d'une pièce sont
+ * scellés). Un contenu qui n'en donne pas (un PDF de texte) se garde aussi,
+ * comme un fichier VIDE, et se rend en 204 : sans cela, chaque ouverture de
+ * liste relirait le PDF pour rien. L'écran montre alors sa feuille esquissée.
+ */
+export async function servirMiniature(req: Request, res: Response): Promise<void> {
+  const piece = await pieceAutorisee(req, req.params["id"]);
+  if (!piece) {
+    res.status(404).json({ erreur: "pièce introuvable" });
+    return;
+  }
+
+  const miniature = cheminDeLaMiniature(piece.tenant_id, piece.id);
+  let octets: Buffer;
+  try {
+    octets = await readFile(miniature);
+  } catch {
+    let source: Buffer;
+    try {
+      source = await readFile(cheminAbsolu(piece.tenant_id, piece.id));
+    } catch {
+      res.status(404).json({ erreur: "contenu absent" });
+      return;
+    }
+    octets =
+      (await fabriquerMiniature(new Uint8Array(source), piece.content_type ?? TYPE_INCONNU)) ??
+      Buffer.alloc(0);
+    // Écrite à côté puis renommée, comme une pièce : deux demandes simultanées
+    // posent les mêmes octets, et aucune ne lit un fichier à moitié écrit.
+    const provisoire = `${miniature}.${randomUUID()}.partiel`;
+    await writeFile(provisoire, octets);
+    await rename(provisoire, miniature);
+  }
+
+  // Le cache reste celui de l'application, en mémoire : un cache HTTP du
+  // navigateur ne distingue pas deux comptes sur le même appareil, et rendrait
+  // la miniature à quiconque redemande l'URL après une déconnexion.
+  res.setHeader("Cache-Control", "private, no-store");
+  if (octets.length === 0) {
+    res.status(204).end();
+    return;
+  }
+  res.setHeader("Content-Type", "image/jpeg");
+  res.setHeader("Content-Length", String(octets.length));
+  res.end(octets);
 }
