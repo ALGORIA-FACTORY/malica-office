@@ -24,6 +24,7 @@ import type {
   TiersRepository,
   HonorairesRepository,
   ExportsRepository,
+  JournalDuJourRepository,
   FabriqueRepository,
   IntegrationsRepository,
   SignalementsRepository,
@@ -83,6 +84,8 @@ export interface OfficeRuntime {
   honoraires: HonorairesRepository;
   integrations: IntegrationsRepository;
   exports: ExportsRepository;
+  /** Le journal du jour du comptable, et ses exports numérotés. */
+  journalDuJour: JournalDuJourRepository;
   /** Les fils de conversation — de la base, sans modèle : un dépôt comme les autres. */
   conversations: ConversationsRepository;
   /** Ce que la personne signale elle-même quand quelque chose n'a pas marché. */
@@ -129,6 +132,7 @@ export function office(): OfficeRuntime {
       honoraires: creerDepotHttp<HonorairesRepository>("honoraires"),
       integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
       exports: creerDepotHttp<ExportsRepository>("exports"),
+      journalDuJour: creerDepotHttp<JournalDuJourRepository>("journalDuJour"),
       conversations: creerDepotHttp<ConversationsRepository>("conversations"),
       signalements: creerDepotHttp<SignalementsRepository>("signalements"),
       fabrique: creerDepotHttp<FabriqueRepository>("fabrique"),

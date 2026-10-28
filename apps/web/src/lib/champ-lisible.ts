@@ -323,6 +323,7 @@ export function libelleDeLAction(action: string, t: T): string {
     "ecriture.booked": "cab.notif.kind.ecriture.booked",
     "ecriture.validee": "cab.notif.kind.ecriture.validee",
     "ecriture.retournee": "cab.notif.kind.ecriture.retournee",
+    "ecriture.forcee": "cab.journal.ecriture.forcee",
   };
   return t(ACTIONS[action] ?? "cab.audit.autre");
 }
