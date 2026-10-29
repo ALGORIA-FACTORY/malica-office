@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LOCALES, MESSAGES } from "@malica/socle/messages";
 
 import {
+  dernierRetourParPiece,
   FAIT_DU_GESTE,
   LIBELLE_DU_GESTE,
   lueSansConfirmation,
@@ -38,5 +39,31 @@ describe("un retour du cabinet dit un geste", () => {
     expect(lueSansConfirmation("lue", true)).toBe(false);
     expect(lueSansConfirmation("retournee", false)).toBe(false);
     expect(lueSansConfirmation("comptabilisee", false)).toBe(false);
+  });
+});
+
+describe("dernierRetourParPiece", () => {
+  const n = (id: string, piece: string | undefined, createdAt: string) => ({
+    id,
+    piece,
+    createdAt,
+  });
+
+  it("garde une seule carte par pièce : le retour le plus récent", () => {
+    const r = dernierRetourParPiece(
+      [
+        n("a", "p1", "2026-10-20T10:00:00Z"),
+        n("b", "p1", "2026-10-28T10:00:00Z"),
+        n("c", "p2", "2026-10-25T10:00:00Z"),
+      ],
+      (x) => x.piece,
+    );
+    expect(r.map((x) => x.id)).toEqual(["b", "c"]);
+  });
+
+  it("écarte un retour sans pièce", () => {
+    expect(
+      dernierRetourParPiece([n("a", undefined, "2026-10-20T10:00:00Z")], (x) => x.piece),
+    ).toEqual([]);
   });
 });
