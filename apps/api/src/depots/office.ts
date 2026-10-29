@@ -482,7 +482,11 @@ export const office = {
   async ecrituresForPiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
       `select ${COLONNES_ECRITURE}
-         from ecritures_v e where piece_id = $1 order by created_at desc`,
+         from ecritures_v e
+        -- La pièce, c'est toutes ses versions : un règlement saisi sur une
+        -- photo reprise garde son écriture sur l'ancienne.
+        where piece_id in (select app.versions_de_la_piece($1))
+        order by created_at desc`,
       [pieceId],
     );
     const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
