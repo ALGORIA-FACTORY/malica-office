@@ -23,6 +23,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
+import { fabrique } from "./depots/fabrique.ts";
 import { identite } from "./depots/identite.ts";
 import { office } from "./depots/office.ts";
 import { supervision } from "./depots/supervision.ts";
@@ -260,7 +261,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
         assert.ok(await notifie(id, "piece.gardee"));
         // Jamais vers un espace privé, même par la porte de la visibilité.
         const autre = await retournee(cas);
-        await assert.rejects(pmeFait("collab.setPieceVis", autre, "personnel"));
+        await assert.rejects(
+          pmeFait("collab.setPieceVis", autre, "personnel"),
+          /ne revient que par accord du cabinet/,
+        );
         assert.equal((await etat(autre))?.vis, "partage");
       });
 
@@ -493,15 +497,14 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     });
   };
 
-  it("une photo privée remplacée puis retirée reste au client : le cabinet ne la lit jamais", async () => {
+  it("une photo privée remplacée puis retirée part avec ses versions : le cabinet ne la lit jamais", async () => {
     const a = await privee();
     const b = await remplacer(a, "personnel");
     assert.equal(await pmeFait("capture.supprimer", b), true);
-    const apres = await etat(a);
-    assert.ok(apres, "jamais effacée");
-    assert.equal(apres?.archivee_le, null, "jamais partagée, sans écriture : pas d'archive");
-    await assert.rejects(cabinetFait("capture.dossier", a), /piece\.not_found/);
-    assert.ok((await listeDeLaPme()).includes(a), "elle redevient la pièce du client");
+    // Sans écriture sur la chaîne, la pièce part tout entière, comme une
+    // pièce jamais reprise (revue indépendante de #127).
+    assert.equal(await etat(a), null, "la version précédente part avec la courante");
+    assert.ok(!(await listeDeLaPme()).includes(a));
   });
 
   it("une version précédente ne se supprime, ne se garde, ni ne se demande", async () => {
@@ -1211,5 +1214,284 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const autre = await transmiseLue();
     await pmeFait("capture.rattacher", id, autre);
     assert.equal(await fait(id), true);
+  });
+
+  /* ============ revue indépendante de #127 (29 octobre 2026) */
+
+  const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("une version remplacée ne se lit plus : refus définitif, travail clos, octets refusés", async () => {
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      n += 1;
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
+                                     transmise_le)
+         values ($1, 'pdf', 'partage', $2, $3, $4, now()) returning id`,
+        [pme, `essai/${marque}-${n}.pdf`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    const { travailId } = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      fabrique.enregistrerLecture(db, ancienne),
+    );
+    await remplacer(ancienne);
+    const verdict = (
+      await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query<{ v: { autorisee: boolean; motif: string } }>(
+          `select public.lecture_autorisee($1) as v`,
+          [ancienne],
+        ),
+      )
+    ).rows[0]!.v;
+    assert.deepEqual([verdict.autorisee, verdict.motif], [false, "piece_remplacee"]);
+    const { rows } = await admin.query<{ etat: string; prenable: boolean | null }>(
+      `select etat, prenable from fabrique.etat_des_travaux_v where travail_id = $1`,
+      [travailId],
+    );
+    assert.equal(rows[0]?.etat, "refuse", "le travail de l'ancienne ne se reprend plus");
+    assert.notEqual(rows[0]?.prenable, true);
+    await assert.rejects(
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query(`select public.capture_sceller_empreinte($1, $2)`, [ancienne, "a".repeat(64)]),
+      ),
+      /refus\.piece\.remplacee/,
+    );
+  });
+
+  it("une photo gardée puis supprimée sans écriture emporte ses versions : le cabinet ne relit rien", async () => {
+    const ancienne = await retournee("avant écriture");
+    const nouvelle = await remplacer(ancienne);
+    await pmeFait("collab.garderPiece", nouvelle);
+    assert.equal(await pmeFait("capture.supprimer", nouvelle), true);
+    assert.equal(await etat(ancienne), null, "aucune archive : rien n'a été inscrit");
+    await assert.rejects(cabinetFait("capture.dossier", ancienne), /piece\.not_found/);
+  });
+
+  it("inscrire un règlement hérité et remplacer la courante ne se croisent pas", async () => {
+    const ancienne = await transmiseLue();
+    const paiement = await payer(ancienne, 10000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 10000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
+    // L'inscription tient sa transaction ouverte ; la reprise arrive pendant.
+    const inscription = sousIdentiteDuServeur(expert.id, async (db) => {
+      await office.book(db, ecriture);
+      await dormir(400);
+    });
+    await dormir(100);
+    const reprise = remplacer(nouvelle);
+    const [ins, rep] = await Promise.allSettled([inscription, reprise]);
+    assert.equal(ins.status, "fulfilled", String((ins as PromiseRejectedResult).reason));
+    assert.equal(rep.status, "rejected", "la reprise attend l'inscription, puis la voit");
+    assert.match(String((rep as PromiseRejectedResult).reason), /refus\.remplacement\.inscrite/);
+  });
+
+  it("inscrire un règlement hérité et supprimer la courante ne se croisent pas", async () => {
+    const ancienne = await transmiseLue();
+    const paiement = await payer(ancienne, 10000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 10000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
+    // La suppression passe par l'accord du cabinet, qui l'exécute aussitôt.
+    await pmeFait("collab.demanderSurPiece", nouvelle, "suppression");
+    const inscription = sousIdentiteDuServeur(expert.id, async (db) => {
+      await office.book(db, ecriture);
+      await dormir(400);
+    });
+    await dormir(100);
+    const suppression = cabinetFait("collab.repondreSurPiece", nouvelle, "suppression", true, null);
+    const [ins, sup] = await Promise.allSettled([inscription, suppression]);
+    assert.equal(ins.status, "fulfilled", String((ins as PromiseRejectedResult).reason));
+    assert.equal(sup.status, "rejected", "la suppression attend l'inscription, puis la voit");
+    assert.ok(await etat(nouvelle), "la pièce que l'écriture porte est toujours là");
+  });
+
+  it("le retour d'une version précédente ne se lit plus : seule la courante le porte", async () => {
+    const ancienne = await retournee("avant écriture");
+    const nouvelle = await remplacer(ancienne);
+    assert.equal(await pmeFait("capture.retourDeLaPiece", ancienne, "fr"), null);
+    assert.ok(await pmeFait("capture.retourDeLaPiece", nouvelle, "fr"));
+  });
+
+  it("une reprise hors ligne refusée le dit par un code de reprise", async () => {
+    const ancienne = await retournee("avant écriture");
+    await remplacer(ancienne);
+    // L'ancienne est déjà remplacée : une seconde photo arrive pour elle.
+    await assert.rejects(
+      pmeFait("capture.enregistrer", {
+        tenantId: pme,
+        source: "photo",
+        vis: "partage",
+        idempotencyKey: `${marque}-r2-${ancienne}`,
+        contentType: "image/jpeg",
+        remplace: ancienne,
+      }),
+      /refus\.piece\.remplacee/,
+    );
+    // Retirée entre-temps : la pièce n'est plus là.
+    const retiree = await privee();
+    assert.equal(await pmeFait("capture.supprimer", retiree), true);
+    await assert.rejects(remplacer(retiree, "personnel"), /refus\.remplacement\.introuvable/);
+  });
+
+  it("un fait nouveau sur une version gelée va à la courante", async () => {
+    const ancienne = await retournee("avant écriture");
+    const nouvelle = await remplacer(ancienne);
+    const paiement = await payer(ancienne, 1000);
+    const { rows } = await admin.query<{ piece_id: string }>(
+      `select piece_id from capture.paiements where id = $1`,
+      [paiement],
+    );
+    assert.equal(rows[0]?.piece_id, nouvelle, "le règlement va à la version courante");
+    const { id: recu } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-recu-gele-${ancienne}`,
+      contentType: "application/pdf",
+      documentKind: "recu_de_paiement",
+      sourcePieceId: ancienne,
+    })) as { id: string };
+    const { rows: source } = await admin.query<{ source_piece_id: string }>(
+      `select source_piece_id from capture.pieces where id = $1`,
+      [recu],
+    );
+    assert.equal(source[0]?.source_piece_id, nouvelle, "le reçu est issu de la courante");
+  });
+
+  it("rien ne s'écrit plus sur une version gelée : analyse, articles, biens, stocks, fiche fiscale", async () => {
+    const ancienne = await transmiseLue();
+    await remplacer(ancienne);
+    await assert.rejects(ttcTranche(ancienne, 1000), /refus\.piece\.remplacee/);
+    await assert.rejects(
+      sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query(`select public.capture_articles_persist($1, $2, null, '601', '[]'::jsonb)`, [
+          ancienne,
+          pack,
+        ]),
+      ),
+      /refus\.piece\.remplacee/,
+    );
+    const { rows } = await admin.query<{ t: string }>(
+      `select tgrelid::regclass::text as t from pg_trigger
+        where tgname = 'pas_de_geste_sur_une_version_precedente' order by 1`,
+    );
+    for (const table of [
+      "capture.analyses",
+      "capture.piece_articles",
+      "identity.fiches_fiscales",
+      "immo.assets",
+      "stocks.mouvements",
+    ]) {
+      assert.ok(
+        rows.some((r) => r.t === table),
+        `${table} refuse un fait nouveau sur une version gelée`,
+      );
+    }
+  });
+
+  it("la file du cabinet montre l'écriture inscrite sur une version précédente", async () => {
+    const { nouvelle, ecriture } = await reglementHeriteInscrit();
+    const file = (await cabinetFait("supervision.queue", cabinet, pme)) as Array<{
+      pieceId: string;
+      ecritureId: string | null;
+    }>;
+    assert.equal(file.find((q) => q.pieceId === nouvelle)?.ecritureId, ecriture);
+  });
+
+  it("une photo reprise aux mêmes octets n'est pas le doublon de sa version précédente", async () => {
+    const ancienne = await privee();
+    const empreinte = "b".repeat(63) + String(n % 10);
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query(`select public.capture_sceller_empreinte($1, $2)`, [ancienne, empreinte]),
+    );
+    const nouvelle = await remplacer(ancienne, "personnel");
+    const r = (
+      await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        db.query<{ r: { doublonDe: string | null } }>(
+          `select public.capture_sceller_empreinte($1, $2) as r`,
+          [nouvelle, empreinte],
+        ),
+      )
+    ).rows[0]!.r;
+    assert.equal(r.doublonDe, null);
+    const { rows } = await admin.query<{ doublon_de: string | null }>(
+      `select doublon_de from capture.pieces where id = $1`,
+      [nouvelle],
+    );
+    assert.equal(rows[0]?.doublon_de, null);
+  });
+
+  it("le cabinet ne lit pas le remplacement d'une photo qu'il ne voit plus", async () => {
+    const ancienne = await retournee("avant écriture");
+    const nouvelle = await remplacer(ancienne);
+    await pmeFait("collab.garderPiece", nouvelle);
+    const vus = await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select 1 from capture.remplacements where piece_id = $1`, [ancienne]),
+    );
+    assert.equal(vus.rows.length, 0);
+  });
+
+  it("une chaîne A → B → C mène de A à C en un geste", async () => {
+    const a = await retournee("avant écriture");
+    const b = await remplacer(a);
+    const c = await remplacer(b);
+    const dossier = (await pmeFait("capture.dossier", a)) as {
+      piece: { versionCourante: string; remplaceePar: string | null };
+    };
+    assert.equal(dossier.piece.remplaceePar, b);
+    assert.equal(dossier.piece.versionCourante, c);
+  });
+
+  it("joindre un document ne se prouve pas par une nouvelle photo", async () => {
+    const id = await transmiseLue();
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.retourner(db, {
+        pieceId: id,
+        motifId: motifs["justificatif_manquant"]!,
+        note: "Le bon de livraison, s'il vous plaît.",
+      }),
+    );
+    const nouvelle = await remplacer(id);
+    const retour = (await pmeFait("capture.retourDeLaPiece", nouvelle, "fr")) as { fait: boolean };
+    assert.equal(retour.fait, false, "le geste demandé est de joindre, pas de reprendre");
+  });
+
+  it("une photo reprise par le dirigeant reste celle de son auteur", async () => {
+    const siege = await creerCompte(`siege-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(siege);
+    // Une offre qui ouvre les sièges, par la vraie porte.
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query("select public.forfait_changer('team', $1, current_date)", [pme]),
+    );
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')`,
+      [pme, siege.id],
+    );
+    n += 1;
+    const ancienne = await sousIdentiteDuServeur(siege.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, siege.id],
+      );
+      return rows[0]!.id;
+    });
+    const nouvelle = await remplacer(ancienne, "entite");
+    const { rows } = await admin.query<{ created_by: string; auteur: string }>(
+      `select p.created_by, r.auteur from capture.pieces p
+         join capture.remplacements r on r.remplacee_par = p.id where p.id = $1`,
+      [nouvelle],
+    );
+    assert.equal(rows[0]?.created_by, siege.id, "la pièce reste celle du siège");
+    assert.equal(rows[0]?.auteur, dirigeant.id, "qui l'a reprise est au registre");
   });
 });
