@@ -142,6 +142,8 @@ export async function documents(
   const { rows } = await db.query<LigneDocument>(
     `${DOCUMENTS}
     where p.tenant_id = $1 and p.vis = 'partage'
+      -- Une version précédente se lit depuis la photo qui la remplace.
+      and p.remplacee_par is null
       and ($2::text is null or left(${DATE_DE_CLASSEMENT}, 7) = $2)
     order by p.created_at desc, p.id limit $4`,
     [clientId, periode, fuseau, MAX_DOCUMENTS + 1],
@@ -166,16 +168,20 @@ export async function documentsLies(
   await db.query(`select app.export_mandats($1, $2)`, [cabinetId, clientId]);
   // Les deux bouts de chaque arête sont joints aux pièces autorisées AVANT
   // la récursion. Une pièce cachée ne peut pas servir de pont vers une autre.
+  // Chaque bout est lu à sa VERSION COURANTE : un lien saisi sur une photo
+  // reprise mène à celle qui l'a remplacée, sans que le fait change (R7).
   const { rows: ids } = await db.query<{ id: string }>(
     `with recursive
     visibles as materialized (select id, source_piece_id from pieces_v
-      where tenant_id = $1 and vis = 'partage'),
+      where tenant_id = $1 and vis = 'partage' and remplacee_par is null),
     liens as (
-      select id as a, source_piece_id as b from visibles where source_piece_id is not null
-      union select pa.piece_id, pa.justificatif_piece_id from paiements_v pa
-        where pa.tenant_id = $1 and pa.justificatif_piece_id is not null
-      union select r.piece_id, r.piece_liee_id from rattachements_v r
-        where r.tenant_id = $1 and r.fait = 'rattache'
+      select l.a, app.version_courante(l.b) as b from (
+        select id as a, source_piece_id as b from visibles where source_piece_id is not null
+        union select app.version_courante(pa.piece_id), pa.justificatif_piece_id from paiements_v pa
+          where pa.tenant_id = $1 and pa.justificatif_piece_id is not null
+        union select r.piece_id, r.piece_liee_id
+          from rattachements_v r where r.tenant_id = $1 and r.fait = 'rattache'
+      ) l
     ),
     aretes as (select l.a, l.b from liens l join visibles a on a.id = l.a join visibles b on b.id = l.b),
     parcours(id) as (
@@ -203,7 +209,9 @@ export async function documentsLies(
   );
   const docs = await avecMontants(db, lignes);
   const { rows: ecritures } = await db.query<DossierComptable["ecritures"][number]>(
-    `select e.id, e.piece_id as "pieceId", e.paiement_id as "paiementId", e.nature,
+    // Écritures et règlements d'une pièce : ceux de toutes ses versions, au nom
+    // de la photo courante.
+    `select e.id, app.version_courante(e.piece_id) as "pieceId", e.paiement_id as "paiementId", e.nature,
             e.journal, e.date_ecriture::text as date, e.libelle, e.status as statut,
             l.account_code as compte, e.devise, e.review_outcome as revue,
             coalesce((select pa.label from plan_comptable_v pa
@@ -213,18 +221,18 @@ export async function documentsLies(
                        where ra.pack_version_id = e.pack_version_id and ra.account_code = l.account_code), '') as "compteLibelle",
             l.debit::text, l.credit::text
        from ecritures_v e join ecriture_lignes_v l on l.ecriture_id = e.id
-      where e.tenant_id = $1 and e.vis = 'partage' and e.piece_id = any($2::uuid[])
+      where e.tenant_id = $1 and e.vis = 'partage' and app.version_courante(e.piece_id) = any($2::uuid[])
       order by e.date_ecriture, e.id, l.ordinal`,
     [clientId, tous, cabinetId],
   );
   const controles = await lireControles(db, tous);
   const { rows: paiements } = await db.query<NonNullable<DossierComptable["paiements"]>[number]>(
-    `select p.id, p.piece_id as "pieceId", p.moyen_code as moyen,
+    `select p.id, app.version_courante(p.piece_id) as "pieceId", p.moyen_code as moyen,
             p.montant_mineur::text as "montantMineur", p.devise, p.paye_le::text as date,
             p.reference, j.id as "justificatifId", p.eteint as annule
        from paiements_v p
        left join pieces_v j on j.id = p.justificatif_piece_id and j.tenant_id = $1 and j.vis = 'partage'
-      where p.tenant_id = $1 and p.piece_id = any($2::uuid[])
+      where p.tenant_id = $1 and app.version_courante(p.piece_id) = any($2::uuid[])
        order by p.created_at, p.id`,
     [clientId, tous],
   );

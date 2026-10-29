@@ -102,6 +102,8 @@ export const integrations = {
            where k.tenant_id = $1)                                               as dernier_usage,
          (select count(*) from pieces_v p
            where p.tenant_id in (select id from perimetre) and p.source = 'photo'
+             -- Une photo reprise est une pièce, pas deux.
+             and p.remplacee_par is null
              and p.created_at >= now() - interval '30 days')                    as pieces_app_30j,
          (select max(p.created_at) from pieces_v p
            where p.tenant_id in (select id from perimetre) and p.source = 'photo') as derniere_piece_app,

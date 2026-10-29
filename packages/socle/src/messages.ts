@@ -368,6 +368,7 @@ const fr = {
   "pme.refus.organisation_sans_licence":
     "Ce dossier n'a pas d'abonnement actif : je range les pièces, je ne les lis pas encore.",
   "pme.refus.piece_deja_lue": "Cette pièce a déjà été lue : sa relecture ne coûte rien.",
+  "pme.refus.piece_remplacee": "Une nouvelle photo a remplacé celle-ci : c'est elle qui se lit.",
   "pme.refus.autre": "Je n'ai pas lu cette pièce, et la raison ne m'est pas connue.",
   "pme.refus.le": "Refusée le {date}",
   "pme.doc.titre": "Vos documents",
@@ -677,7 +678,6 @@ const fr = {
   "pme.scan.final":
     "Voici la page telle que je la lirai. Si elle vous convient, lisez-la ; sinon, reprenez la photo.",
   "pme.scan.page": "Page {n}",
-  "pme.scan.reprendre": "Supprimer et reprendre la photo",
   "pme.sens.question": "Cette pièce est-elle un achat ou une vente ?",
   "pme.sens.pourquoi":
     "Ni l’émetteur ni le destinataire ne sont votre entreprise : je ne tranche pas seule.",
@@ -2038,7 +2038,6 @@ const fr = {
   "pme.retour.etat": "Retournée par votre comptabilité le {date}",
   "pme.retour.etat.court": "Retournée par votre comptabilité",
   "pme.retour.etat.pret": "Corrigée — prête à renvoyer",
-  "pme.retour.aFaire": "Ce qu’il faut faire",
   "pme.retour.geste.joindre_document": "Joindre le document",
   "pme.retour.geste.joindre_facture_conforme": "Joindre une facture conforme",
   "pme.retour.geste.reprendre_photo": "Reprendre la photo",
@@ -2101,11 +2100,19 @@ const fr = {
   "envoi.cab.file": "Revenir à la file",
   "pme.retour.fait.sous": "Fait après le retour de votre comptabilité",
   "pme.retour.voir": "Voir",
-  "pme.retour.photographier": "Photographier d’abord le document",
   "pme.retour.renvoyer": "Renvoyer à la comptabilité",
-  "pme.retour.renvoyer.pret":
-    "La comptabilité reçoit la pièce corrigée, avec ce que vous avez fait.",
-  "pme.retour.renvoyer.attente": "Possible dès que le geste demandé est fait.",
+  "pme.retour.aide.titre": "Ce que vous pouvez faire",
+  "pme.retour.aide.renvoyer":
+    "La pièce repart chez {qui}, avec ce que vous avez fait. Rien n’est comptabilisé de votre côté : {qui} la reprend sur sa lecture actuelle.",
+  "pme.retour.aide.reprendre":
+    "La nouvelle photo remplace celle-ci et repart à la lecture. L’ancienne reste attachée comme version précédente.",
+  "pme.retour.aide.repondre": "Écrire à {qui} : expliquer, demander, ou ne pas être d’accord.",
+  "pme.retour.garder": "Garder",
+  "pme.retour.aide.garder":
+    "La pièce reste dans la société, marquée « Gardée » : elle ne part pas. {qui} en est prévenu.",
+  "pme.retour.aide.supprimer":
+    "La pièce disparaît de vos pièces. Si {qui} l’avait déjà prise en charge, il la garde archivée.",
+  "pme.retour.supprimer.sur": "Elle disparaît de vos pièces. Vous êtes sûr ?",
   "pme.retour.reponse.champ": "Votre réponse",
   "pme.retour.reponse.envoyer": "Envoyer la réponse",
   "pme.parcours.aReprendre": "À reprendre",
@@ -2114,6 +2121,20 @@ const fr = {
   "refus.confirmation.sans_objet":
     "Il n’y a rien à faire confirmer : la pièce n’attend plus le « Oui » du client.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
+  "refus.piece.remplacee":
+    "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
+  "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
+  "refus.remplacement.accompagne":
+    "Un reçu ou un justificatif se reprend depuis le règlement qu’il accompagne.",
+  "refus.remplacement.inscrite":
+    "Cette pièce est prise en charge : votre comptable la retourne d’abord, puis la photo se reprend.",
+  "refus.remplacement.nouvelle_photo":
+    "Cette photo ne peut pas en remplacer une autre : reprenez-la depuis la pièce.",
+  "refus.renvoi.sans_retour": "Cette pièce n’a pas été retournée : il n’y a rien à renvoyer.",
+  "refus.suppression.inscrite":
+    "Cette pièce est prise en charge par votre comptable : demandez-lui de la retourner, puis supprimez-la.",
+  "refus.rappel.inscrite":
+    "Cette pièce est prise en charge par votre comptable : demandez-lui de la retourner, puis gardez-la.",
   "refus.suppression.exemple_de_recette":
     "Cette pièce sert d’exemple à une recette de lecture : elle ne peut plus être supprimée.",
   "refus.inscription.type_inconnu":
@@ -2122,6 +2143,20 @@ const fr = {
   "cab.notif.kind.piece.confirmation_demandee": "Le client a été invité à confirmer une pièce.",
   "cab.notif.kind.piece.reponse_client": "Le client a répondu sur une pièce.",
   "notif.kind.piece.reponse_client": "Votre réponse est partie à la comptabilité",
+  "cab.notif.kind.piece.renvoyee": "Le client a renvoyé une pièce retournée.",
+  "cab.notif.kind.piece.remplacee": "Le client a repris la photo d’une pièce.",
+  "cab.notif.kind.piece.gardee": "Le client a gardé une pièce retournée.",
+  "cab.notif.kind.piece.supprimee": "Le client a supprimé une pièce retournée.",
+  "cab.notif.kind.piece.archivee":
+    "Le client a retiré une pièce prise en charge : elle est archivée.",
+  "notif.kind.piece.renvoyee": "Pièce renvoyée à la comptabilité",
+  "notif.kind.piece.remplacee": "Nouvelle photo envoyée à la comptabilité",
+  "notif.kind.piece.gardee": "Pièce gardée dans la société",
+  "notif.kind.piece.supprimee": "Pièce supprimée",
+  "notif.kind.piece.archivee": "Pièce retirée de vos documents",
+  "piece.versionPrecedente.titre": "Version précédente",
+  "piece.versionPrecedente.remplacee": "Une nouvelle photo a remplacé celle-ci.",
+  "piece.versionPrecedente.voir": "Voir la photo actuelle",
   "pme.nav.coffre": "Mon espace",
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
@@ -2899,6 +2934,20 @@ const fr = {
   "pme.file.etat.echec_definitif": "Refusée — {raison}",
   "pme.file.reessayer": "Réessayer",
   "pme.file.abandonner": "Abandonner",
+  "pme.file.reprise.etat": "La photo n'a pas pu remplacer l'ancienne",
+  "pme.file.reprise.aide.titre": "Pourquoi la reprise n'a pas abouti",
+  "pme.file.reprise.pourquoi.remplacee":
+    "L'ancienne photo a déjà été remplacée entre-temps — depuis un autre appareil, ou par une autre personne.",
+  "pme.file.reprise.pourquoi.inscrite":
+    "Le cabinet a inscrit la pièce entre-temps : elle ne se remplace plus.",
+  "pme.file.reprise.pourquoi.introuvable": "L'ancienne pièce a été retirée entre-temps.",
+  "pme.file.reprise.pourquoi.autre": "Cette photo ne peut pas remplacer l'ancienne pièce.",
+  "pme.file.reprise.libre": "Garder comme nouvelle pièce",
+  "pme.file.reprise.aide.libre":
+    "La photo part comme une pièce à part, au même endroit que l'ancienne. Rien n'est perdu.",
+  "pme.file.reprise.courante": "Remplacer la version actuelle",
+  "pme.file.reprise.aide.courante":
+    "La photo remplace la version actuelle de la pièce — celle qui a remplacé l'ancienne.",
   "pme.file.pleine": "Trop de photos en attente : envoyez d'abord ce qui attend.",
   "pme.file.pasUnPdf":
     "Ce fichier n'est pas un PDF : {noms}. Choisissez le PDF de la facture, ou prenez-la en photo.",
@@ -4234,6 +4283,7 @@ const en: Dict = {
     "This company has no active subscription: I file the documents, I do not read them yet.",
   "pme.refus.piece_deja_lue":
     "This document has already been read: reading it again costs nothing.",
+  "pme.refus.piece_remplacee": "A new photo replaced this one: that is the one that gets read.",
   "pme.refus.autre": "I did not read this document, and the reason is unknown to me.",
   "pme.refus.le": "Refused on {date}",
   "pme.doc.titre": "Your documents",
@@ -4519,7 +4569,6 @@ const en: Dict = {
   "pme.scan.final":
     "Here is the page as I will read it. If it looks right, read it; otherwise retake the photo.",
   "pme.scan.page": "Page {n}",
-  "pme.scan.reprendre": "Delete and retake the photo",
   "pme.sens.question": "Is this document a purchase or a sale?",
   "pme.sens.pourquoi":
     "Neither the issuer nor the recipient is your company: I will not decide alone.",
@@ -5848,7 +5897,6 @@ const en: Dict = {
   "pme.retour.etat": "Returned by your accountant on {date}",
   "pme.retour.etat.court": "Returned by your accountant",
   "pme.retour.etat.pret": "Corrected — ready to send back",
-  "pme.retour.aFaire": "What to do",
   "pme.retour.geste.joindre_document": "Attach the document",
   "pme.retour.geste.joindre_facture_conforme": "Attach a compliant invoice",
   "pme.retour.geste.reprendre_photo": "Retake the photo",
@@ -5911,10 +5959,19 @@ const en: Dict = {
   "envoi.cab.file": "Back to the queue",
   "pme.retour.fait.sous": "Done after your accountant’s return",
   "pme.retour.voir": "See",
-  "pme.retour.photographier": "Photograph the document first",
   "pme.retour.renvoyer": "Send back to your accountant",
-  "pme.retour.renvoyer.pret": "Your accountant receives the corrected document, with what you did.",
-  "pme.retour.renvoyer.attente": "Available once the requested action is done.",
+  "pme.retour.aide.titre": "What you can do",
+  "pme.retour.aide.renvoyer":
+    "The document goes back to {qui}, with what you did. Nothing is booked on your side: {qui} takes it up from its current reading.",
+  "pme.retour.aide.reprendre":
+    "The new photo replaces this one and is read again. The old one stays attached as the previous version.",
+  "pme.retour.aide.repondre": "Write to {qui}: explain, ask, or disagree.",
+  "pme.retour.garder": "Keep",
+  "pme.retour.aide.garder":
+    "The document stays in the company, marked “Kept”: it is not sent. {qui} is notified.",
+  "pme.retour.aide.supprimer":
+    "The document leaves your documents. If {qui} had already taken it up, they keep it archived.",
+  "pme.retour.supprimer.sur": "It will leave your documents. Are you sure?",
   "pme.retour.reponse.champ": "Your reply",
   "pme.retour.reponse.envoyer": "Send the reply",
   "pme.parcours.aReprendre": "To rework",
@@ -5923,6 +5980,19 @@ const en: Dict = {
   "refus.confirmation.sans_objet":
     "There is nothing to confirm: the document no longer awaits the client’s “Yes”.",
   "refus.reponse.vide": "Write your reply before sending it.",
+  "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
+  "refus.piece.archivee": "The client withdrew this document: it is archived.",
+  "refus.remplacement.accompagne":
+    "A receipt or a proof of payment is retaken from the payment it goes with.",
+  "refus.remplacement.inscrite":
+    "This document has been taken up: your accountant returns it first, then the photo can be retaken.",
+  "refus.remplacement.nouvelle_photo":
+    "This photo cannot replace another one: retake it from the document.",
+  "refus.renvoi.sans_retour": "This document was not returned: there is nothing to send back.",
+  "refus.suppression.inscrite":
+    "Your accountant has taken up this document: ask them to return it, then delete it.",
+  "refus.rappel.inscrite":
+    "Your accountant has taken up this document: ask them to return it, then keep it.",
   "refus.suppression.exemple_de_recette":
     "This document is an example for a reading recipe: it can no longer be deleted.",
   "refus.inscription.type_inconnu":
@@ -5932,6 +6002,20 @@ const en: Dict = {
   "cab.notif.kind.piece.confirmation_demandee": "The client was asked to confirm a document.",
   "cab.notif.kind.piece.reponse_client": "The client replied about a document.",
   "notif.kind.piece.reponse_client": "Your reply was sent to your accountant",
+  "cab.notif.kind.piece.renvoyee": "The client sent back a returned document.",
+  "cab.notif.kind.piece.remplacee": "The client retook the photo of a document.",
+  "cab.notif.kind.piece.gardee": "The client kept a returned document.",
+  "cab.notif.kind.piece.supprimee": "The client deleted a returned document.",
+  "cab.notif.kind.piece.archivee":
+    "The client withdrew a document you had taken up: it is archived.",
+  "notif.kind.piece.renvoyee": "Document sent back to your accountant",
+  "notif.kind.piece.remplacee": "New photo sent to your accountant",
+  "notif.kind.piece.gardee": "Document kept in the company",
+  "notif.kind.piece.supprimee": "Document deleted",
+  "notif.kind.piece.archivee": "Document withdrawn from your documents",
+  "piece.versionPrecedente.titre": "Previous version",
+  "piece.versionPrecedente.remplacee": "A new photo replaced this one.",
+  "piece.versionPrecedente.voir": "See the current photo",
   "pme.nav.coffre": "My space",
   "pme.nav.echeances": "Deadlines",
   "pme.nav.notifs": "Alerts",
@@ -6700,6 +6784,20 @@ const en: Dict = {
   "pme.file.etat.echec_definitif": "Refused — {raison}",
   "pme.file.reessayer": "Retry",
   "pme.file.abandonner": "Discard",
+  "pme.file.reprise.etat": "The photo could not replace the old one",
+  "pme.file.reprise.aide.titre": "Why the retake did not go through",
+  "pme.file.reprise.pourquoi.remplacee":
+    "The old photo was already replaced in the meantime — from another device, or by someone else.",
+  "pme.file.reprise.pourquoi.inscrite":
+    "The firm booked the document in the meantime: it can no longer be replaced.",
+  "pme.file.reprise.pourquoi.introuvable": "The old document was removed in the meantime.",
+  "pme.file.reprise.pourquoi.autre": "This photo cannot replace the old document.",
+  "pme.file.reprise.libre": "Keep as a new document",
+  "pme.file.reprise.aide.libre":
+    "The photo is sent as a separate document, to the same place as the old one. Nothing is lost.",
+  "pme.file.reprise.courante": "Replace the current version",
+  "pme.file.reprise.aide.courante":
+    "The photo replaces the document's current version — the one that replaced the old photo.",
   "pme.file.pleine": "Too many photos waiting: send what is waiting first.",
   "pme.file.pasUnPdf":
     "This file is not a PDF: {noms}. Choose the invoice PDF, or take a photo of it.",
@@ -7923,6 +8021,7 @@ const ar: Dict = {
   "pme.refus.organisation_sans_licence":
     "هذا الملف ليس له اشتراك نشط: أحفظ الوثائق ولا أقرؤها بعد.",
   "pme.refus.piece_deja_lue": "هذه الوثيقة قُرئت من قبل: إعادة قراءتها لا تكلّف شيئًا.",
+  "pme.refus.piece_remplacee": "حلّت صورة جديدة محلّ هذه: هي التي تُقرأ.",
   "pme.refus.autre": "لم أقرأ هذه الوثيقة، والسبب غير معروف لديّ.",
   "pme.refus.le": "رُفضت في {date}",
   "pme.doc.titre": "وثائقك",
@@ -8203,7 +8302,6 @@ const ar: Dict = {
   "pme.read.none": "لم تُقرأ الوثيقة بعد.",
   "pme.scan.final": "هذه هي الصفحة كما سأقرؤها. إن كانت مناسبة فاقرأها، وإلا فأعد التقاط الصورة.",
   "pme.scan.page": "الصفحة {n}",
-  "pme.scan.reprendre": "حذف الصورة وإعادة التقاطها",
   "pme.sens.question": "هل هذه الوثيقة شراء أم بيع؟",
   "pme.sens.pourquoi": "لا المُصدر ولا المُرسل إليه هو مؤسستك: لن أقرر وحدي.",
   "pme.sens.contredit": "ما قرأته متناقض: اسم المُصدِر لا يوافق اتّجاه الوثيقة. أكّد ذلك وسأسجّله.",
@@ -9507,7 +9605,6 @@ const ar: Dict = {
   "pme.retour.etat": "أرجعها محاسبك في {date}",
   "pme.retour.etat.court": "أرجعها محاسبك",
   "pme.retour.etat.pret": "مُصحَّحة — جاهزة لإعادة الإرسال",
-  "pme.retour.aFaire": "ما يجب فعله",
   "pme.retour.geste.joindre_document": "إرفاق الوثيقة",
   "pme.retour.geste.joindre_facture_conforme": "إرفاق فاتورة مطابقة",
   "pme.retour.geste.reprendre_photo": "إعادة التصوير",
@@ -9567,22 +9664,53 @@ const ar: Dict = {
   "envoi.cab.file": "العودة إلى القائمة",
   "pme.retour.fait.sous": "تمّ بعد إرجاع محاسبك",
   "pme.retour.voir": "عرض",
-  "pme.retour.photographier": "صوّر الوثيقة أولًا",
   "pme.retour.renvoyer": "إعادة الإرسال إلى المحاسبة",
-  "pme.retour.renvoyer.pret": "تتلقّى المحاسبة الوثيقة المصحَّحة مع ما قمت به.",
-  "pme.retour.renvoyer.attente": "متاح بعد إنجاز الإجراء المطلوب.",
+  "pme.retour.aide.titre": "ما يمكنك فعله",
+  "pme.retour.aide.renvoyer":
+    "تعود الوثيقة إلى {qui} مع ما قمت به. لا يُسجَّل شيء من جهتك: يستأنفها {qui} انطلاقًا من قراءتها الحالية.",
+  "pme.retour.aide.reprendre":
+    "تحلّ الصورة الجديدة محلّ هذه وتُقرأ من جديد. تبقى القديمة مرفقة كنسخة سابقة.",
+  "pme.retour.aide.repondre": "اكتب إلى {qui}: لتشرح أو تسأل أو تعترض.",
+  "pme.retour.garder": "الاحتفاظ بها",
+  "pme.retour.aide.garder":
+    "تبقى الوثيقة في الشركة بعلامة «محتفَظ بها»: لا تُرسَل. ويُعلَم {qui} بذلك.",
+  "pme.retour.aide.supprimer":
+    "تختفي الوثيقة من وثائقك. إن كان {qui} قد تكفّل بها، فإنه يحتفظ بها مؤرشفة.",
+  "pme.retour.supprimer.sur": "ستختفي من وثائقك. هل أنت متأكد؟",
   "pme.retour.reponse.champ": "ردّك",
   "pme.retour.reponse.envoyer": "إرسال الرد",
   "pme.parcours.aReprendre": "للمراجعة",
   "refus.retour.inscrite": "هذه الوثيقة مُسجَّلة: تُرجَع من قيدها الذي سيُعكَس.",
   "refus.confirmation.sans_objet": "لا شيء للتأكيد: الوثيقة لم تعد تنتظر «نعم» الحريف.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
+  "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
+  "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
+  "refus.remplacement.accompagne": "يُعاد تصوير الوصل أو إثبات الدفع من الدفعة التي يرافقها.",
+  "refus.remplacement.inscrite": "تكفّل محاسبك بهذه الوثيقة: يُرجعها أولًا، ثم يُعاد تصويرها.",
+  "refus.remplacement.nouvelle_photo":
+    "لا يمكن لهذه الصورة أن تحلّ محلّ أخرى: أعد التصوير من الوثيقة.",
+  "refus.renvoi.sans_retour": "لم تُرجَع هذه الوثيقة: لا شيء لإعادة إرساله.",
+  "refus.suppression.inscrite": "تكفّل محاسبك بهذه الوثيقة: اطلب منه إرجاعها، ثم احذفها.",
+  "refus.rappel.inscrite": "تكفّل محاسبك بهذه الوثيقة: اطلب منه إرجاعها، ثم احتفظ بها.",
   "refus.suppression.exemple_de_recette": "هذه الوثيقة مثال لوصفة قراءة: لم يعد بالإمكان حذفها.",
   "refus.inscription.type_inconnu": "لم تتعرّف القراءة على نوع هذه الوثيقة: اطلب من الحريف تأكيده.",
   "notif.kind.piece.confirmation_demandee": "محاسبك ينتظر «نعم» منك على وثيقة",
   "cab.notif.kind.piece.confirmation_demandee": "دُعي الحريف إلى تأكيد وثيقة.",
   "cab.notif.kind.piece.reponse_client": "ردّ الحريف بخصوص وثيقة.",
   "notif.kind.piece.reponse_client": "أُرسل ردّك إلى المحاسبة",
+  "cab.notif.kind.piece.renvoyee": "أعاد الحريف إرسال وثيقة مُرجَعة.",
+  "cab.notif.kind.piece.remplacee": "أعاد الحريف تصوير وثيقة.",
+  "cab.notif.kind.piece.gardee": "احتفظ الحريف بوثيقة مُرجَعة.",
+  "cab.notif.kind.piece.supprimee": "حذف الحريف وثيقة مُرجَعة.",
+  "cab.notif.kind.piece.archivee": "سحب الحريف وثيقة تكفّلت بها: هي مؤرشفة.",
+  "notif.kind.piece.renvoyee": "أُعيد إرسال الوثيقة إلى المحاسبة",
+  "notif.kind.piece.remplacee": "أُرسلت صورة جديدة إلى المحاسبة",
+  "notif.kind.piece.gardee": "احتُفظ بالوثيقة في الشركة",
+  "notif.kind.piece.supprimee": "حُذفت الوثيقة",
+  "notif.kind.piece.archivee": "سُحبت الوثيقة من وثائقك",
+  "piece.versionPrecedente.titre": "النسخة السابقة",
+  "piece.versionPrecedente.remplacee": "حلّت صورة جديدة محلّ هذه.",
+  "piece.versionPrecedente.voir": "عرض الصورة الحالية",
   "pme.nav.coffre": "مساحتي",
   "pme.nav.echeances": "الآجال",
   "pme.nav.notifs": "التنبيهات",
@@ -10327,6 +10455,19 @@ const ar: Dict = {
   "pme.file.etat.echec_definitif": "مرفوضة — {raison}",
   "pme.file.reessayer": "أعد المحاولة",
   "pme.file.abandonner": "تجاهل",
+  "pme.file.reprise.etat": "تعذّر أن تحلّ الصورة محلّ القديمة",
+  "pme.file.reprise.aide.titre": "لماذا لم تنجح إعادة التصوير",
+  "pme.file.reprise.pourquoi.remplacee":
+    "استُبدلت الصورة القديمة في الأثناء — من جهاز آخر أو من شخص آخر.",
+  "pme.file.reprise.pourquoi.inscrite": "سجّل المكتب الوثيقة في الأثناء: لم يعد استبدالها ممكنًا.",
+  "pme.file.reprise.pourquoi.introuvable": "سُحبت الوثيقة القديمة في الأثناء.",
+  "pme.file.reprise.pourquoi.autre": "لا يمكن لهذه الصورة أن تحلّ محلّ الوثيقة القديمة.",
+  "pme.file.reprise.libre": "الاحتفاظ بها كوثيقة جديدة",
+  "pme.file.reprise.aide.libre":
+    "تُرسل الصورة كوثيقة مستقلة، إلى المكان نفسه الذي كانت فيه القديمة. لا يضيع شيء.",
+  "pme.file.reprise.courante": "استبدال النسخة الحالية",
+  "pme.file.reprise.aide.courante":
+    "تحلّ الصورة محلّ النسخة الحالية من الوثيقة، تلك التي حلّت محلّ القديمة.",
   "pme.file.pleine": "صور كثيرة في الانتظار: أرسل ما ينتظر أولًا.",
   "pme.file.pasUnPdf": "هذا الملف ليس ملف PDF: {noms}. اختر ملف PDF للفاتورة، أو التقط لها صورة.",
   "pme.capture.preparation": "أُحضّر مستندك…",

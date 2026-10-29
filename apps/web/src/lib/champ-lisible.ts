@@ -148,6 +148,7 @@ const MOTIFS_DE_REFUS: Record<string, MessageKey> = {
   licence_suspendue: "pme.refus.licence_suspendue",
   organisation_sans_licence: "pme.refus.organisation_sans_licence",
   piece_deja_lue: "pme.refus.piece_deja_lue",
+  piece_remplacee: "pme.refus.piece_remplacee",
 };
 
 export function libelleDuRefus(motif: string, t: T): string {
@@ -293,6 +294,9 @@ export function libelleDeLAction(action: string, t: T): string {
     "piece.articles_projected": "cab.notif.kind.piece.articles_projected",
     "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",
     "piece.reponse_client": "cab.notif.kind.piece.reponse_client",
+    "piece.renvoyee": "cab.notif.kind.piece.renvoyee",
+    "piece.remplacee": "cab.notif.kind.piece.remplacee",
+    "piece.archivee": "cab.notif.kind.piece.archivee",
     "echeance.faite": "cab.journal.echeance.faite",
     "echeance.rouverte": "cab.journal.echeance.rouverte",
     "conseil.retenu": "cab.journal.conseil.retenu",

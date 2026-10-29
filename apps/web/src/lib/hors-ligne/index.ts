@@ -36,6 +36,7 @@ export function vidage(): Vidage {
             documentKind: e.documentKind ?? null,
             sourcePieceId: e.sourcePieceId ?? null,
             paiementsAttestes: e.paiementsAttestes ?? null,
+            remplace: e.remplace ?? null,
           }),
         deposerOctets: (pieceId, octets, contentType) =>
           office().capture.deposerOctets(pieceId, octets, contentType),

@@ -95,6 +95,57 @@ describe("un dépôt en ligne", () => {
     expect(await depot.lister()).toEqual([]);
   });
 
+  it("les octets d'une pièce remplacée entre-temps (410) partent sans demander de lecture", async () => {
+    // La photo a été reprise ailleurs avant que ses octets arrivent : l'API
+    // n'en veut plus. Ce n'est ni un dépôt arrivé à relire, ni un échec à montrer.
+    const depot = depotMemoire();
+    const r = ports({ deposerOctets: () => new ErreurApi("refus.piece.remplacee", 410) });
+    const v = creerVidage({ depot, ports: r.ports, enLigne: () => true });
+    await v.deposer({ ...ENTREE, cle: "tard" }, octets());
+    await v.vider();
+    expect(r.appels).toEqual(["enregistrer:tard", "deposer:piece-tard"]);
+    expect(await depot.lister()).toEqual([]);
+  });
+
+  it("une reprise refusée se garde comme une pièce à part, ou remplace la version actuelle", async () => {
+    const depot = depotMemoire();
+    const cibles: Array<string | null> = [];
+    let refus = true;
+    const r = ports();
+    const reprise: PortsDuVidage = {
+      ...r.ports,
+      async enregistrer(e) {
+        cibles.push(e.remplace ?? null);
+        if (refus) throw new ErreurApi("refus.piece.remplacee", 400);
+        return r.ports.enregistrer(e);
+      },
+    };
+    const v = creerVidage({ depot, ports: reprise, enLigne: () => true });
+    const cle = await v.deposer({ ...ENTREE, cle: "reprise", remplace: "A" }, octets());
+    await v.vider();
+    expect((await depot.lister())[0]).toMatchObject({
+      etat: "echec_definitif",
+      derniereErreur: "refus.piece.remplacee",
+    });
+
+    // « Remplacer la version actuelle » : la même photo, vers la courante.
+    refus = false;
+    await v.recibler(cle, "C");
+    await v.vider();
+    expect(cibles).toEqual(["A", "C"]);
+    expect(await depot.lister()).toEqual([]);
+
+    // « Garder comme nouvelle pièce » : sans lien.
+    refus = true;
+    const cle2 = await v.deposer({ ...ENTREE, cle: "libre", remplace: "A" }, octets());
+    await v.vider();
+    refus = false;
+    await v.recibler(cle2, null);
+    await v.vider();
+    expect(cibles.slice(2)).toEqual(["A", null]);
+    expect(await depot.lister()).toEqual([]);
+  });
+
   it("attendre le dépôt ne conclut pas sur une pièce enregistrée mais encore vide", async () => {
     const depot = depotMemoire();
     const r = ports({ deposerOctets: () => new ErreurReseau("injoignable") });

@@ -52,11 +52,16 @@ export function useFileDAttente(tenantId: string | null): FileDAttente {
   }, []);
 
   const reessayer = useCallback((cle: string) => void vidage().reessayer(cle), []);
+  const recibler = useCallback(
+    (cle: string, remplace: string | null) => void vidage().recibler(cle, remplace),
+    [],
+  );
   const abandonner = useCallback((cle: string) => void vidage().abandonner(cle), []);
 
   return {
     elements: tenantId ? elements.filter((e) => e.tenantId === tenantId) : [],
     reessayer,
+    recibler,
     abandonner,
   };
 }

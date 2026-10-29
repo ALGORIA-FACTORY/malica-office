@@ -1,78 +1,124 @@
 /**
  * La pièce retournée par la comptabilité, sur la fiche du client.
  *
- * Maquette « Retours du cabinet et pièces à confirmer », validée le
- * 25 octobre 2026. Avant, un retour ne montrait ni le motif ni la note : la
- * carte redemandait « C'est bien le bon montant ? », et « Oui » recomptabilisait
- * sans le document que le cabinet attendait.
+ * Maquette « Retours du cabinet et pièces à confirmer » (25 octobre 2026),
+ * puis « Malica sans blocage » (28 octobre) : une pièce retournée ne bloque
+ * jamais. Avant, « Renvoyer » restait éteint tant que le geste n'était pas
+ * fait, et ni supprimer ni garder n'étaient possibles sans l'accord du
+ * cabinet — qui les refusait ensuite.
  *
  * Désormais, dans cet ordre :
  *   1. ce que le cabinet dit, tel quel — motif, note entre guillemets, qui ;
- *   2. ce qu'il faut faire — UN geste, celui que le motif désigne ;
- *   3. « Renvoyer à la comptabilité », possible seulement quand le geste est
- *      fait (la base le dit : une preuve postérieure au retour) ;
- *   4. « Répondre à la comptabilité », pour ne pas être d'accord, ou demander.
+ *      ce que fait chaque sortie est dans le ⓘ, pas dans la carte ;
+ *   2. ce qui est déjà fait, quand la base le prouve (après le retour) ;
+ *   3. les sorties, deux par ligne : le geste du motif — ou « Renvoyer » une
+ *      fois fait —, puis reprendre la photo (elle REMPLACE celle-ci),
+ *      répondre, garder, supprimer.
  */
 import type { RetourDuCabinet } from "@malica/socle/ports/repositories";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
+import { Aide } from "@/components/malica/aide";
 import { ConfirmationSurPlace, PasEncoreParti } from "@/components/malica/envoye";
 import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
 import { useSuperposition } from "@/hooks/use-superposition";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourEtMois, momentDeLEnvoi } from "@/lib/lisible";
-import { FAIT_DU_GESTE, LIBELLE_DU_GESTE } from "@/lib/retour-du-cabinet";
+import {
+  FAIT_DU_GESTE,
+  LIBELLE_DU_GESTE,
+  sortiesDuRetour,
+  type SortieDuRetour,
+} from "@/lib/retour-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
 
 const OU = "components/malica/retour-du-cabinet";
+
+/** Un geste de la fiche, et s'il est en cours. */
+interface Geste {
+  action: () => void;
+  enCours: boolean;
+}
+
+/** Ce que dit le ⓘ de chaque sortie : son nom, puis ce qu'elle fait. */
+const AIDE_DE_LA_SORTIE: Record<Exclude<SortieDuRetour, "geste">, MessageKey> = {
+  renvoyer: "pme.retour.aide.renvoyer",
+  reprendre_photo: "pme.retour.aide.reprendre",
+  repondre: "pme.retour.aide.repondre",
+  garder: "pme.retour.aide.garder",
+  supprimer: "pme.retour.aide.supprimer",
+};
 
 export function CarteDuRetour({
   pieceId,
   retour,
   onGeste,
-  onPhotographier,
+  onReprendreLaPhoto,
   onVoirLeFait,
   renvoyer,
+  garder,
+  supprimer,
 }: {
   pieceId: string;
   retour: RetourDuCabinet;
   /** Le geste du motif, branché par la fiche sur l'action qui existe déjà. */
   onGeste: () => void;
-  /** Pour un document à joindre qui n'est pas encore photographié. */
-  onPhotographier: (() => void) | null;
+  /** Le scanner, ouvert pour REMPLACER cette pièce. */
+  onReprendreLaPhoto: () => void;
   /** Montrer ce qui a été fait — la chaîne de la pièce. */
   onVoirLeFait: () => void;
-  renvoyer: { action: () => void; enCours: boolean };
+  renvoyer: Geste;
+  garder: Geste;
+  /** Effacer, ou archiver si le cabinet l'avait prise en charge : la base tranche. */
+  supprimer: Geste;
 }) {
   const { t, locale } = useI18n();
   const [reponseOuverte, setReponseOuverte] = useState(false);
-  /** La réponse partie : elle s'écrit à la place du bouton, et reste. */
+  /** La réponse partie : elle s'écrit sous les sorties, et reste. */
   const [reponseEnvoyee, setReponseEnvoyee] = useState<{ texte: string; le: string } | null>(null);
+  /** Deux temps, jamais un seul : un effacement ne part pas par mégarde. */
+  const [aConfirmer, setAConfirmer] = useState(false);
   const qui = retour.cabinet ?? t("pme.coffre.votreComptable");
   const faitLibelle = FAIT_DU_GESTE[retour.geste];
-  // Le geste sans trace n'attend rien : on le propose, et on peut renvoyer.
-  const pret = retour.fait;
-  const montrerLeFait = pret && faitLibelle != null;
-  const repondreEstLeGeste = retour.geste === "repondre";
-  const ouvrirLaReponse = () => setReponseOuverte(true);
+  const montrerLeFait = retour.fait && faitLibelle != null;
+  const sorties = sortiesDuRetour(retour.geste, retour.fait);
+  const enCours = renvoyer.enCours || garder.enCours || supprimer.enCours;
+
+  const bouton: Record<SortieDuRetour, { libelle: string; action: () => void; enCours?: boolean }> =
+    {
+      geste: { libelle: t(LIBELLE_DU_GESTE[retour.geste]), action: onGeste },
+      renvoyer: { libelle: t("pme.retour.renvoyer"), ...renvoyer },
+      reprendre_photo: {
+        libelle: t("pme.retour.geste.reprendre_photo"),
+        action: onReprendreLaPhoto,
+      },
+      repondre: { libelle: t("pme.retour.geste.repondre"), action: () => setReponseOuverte(true) },
+      garder: { libelle: t("pme.retour.garder"), ...garder },
+      supprimer: { libelle: t("pme.supprimer.action"), action: () => setAConfirmer(true) },
+    };
 
   return (
     <div className="f-ret">
       <div className="f-ret-dit">
-        <span className={pret ? "f-ret-etat ok" : "f-ret-etat"}>
+        <span className={retour.fait ? "f-ret-etat ok" : "f-ret-etat"}>
           <i />
-          {pret
+          {retour.fait
             ? t("pme.retour.etat.pret")
             : t("pme.retour.etat", { date: jourEtMois(retour.le, locale) })}
+          <Aide
+            titre={t("pme.retour.aide.titre")}
+            paragraphes={sorties
+              .filter((s): s is Exclude<SortieDuRetour, "geste"> => s !== "geste")
+              .map((s) => ({ titre: bouton[s].libelle, texte: t(AIDE_DE_LA_SORTIE[s], { qui }) }))}
+          />
         </span>
         <b>{retour.motifLibelle}</b>
         {retour.note ? <q>{retour.note}</q> : null}
         {retour.cabinet ? <span className="f-ret-qui">{retour.cabinet}</span> : null}
       </div>
 
-      <p className="f-ret-tit">{t("pme.retour.aFaire")}</p>
       {montrerLeFait ? (
         <div className="f-ret-fait">
           <svg viewBox="0 0 24 24" className="g" aria-hidden>
@@ -86,34 +132,40 @@ export function CarteDuRetour({
             {t("pme.retour.voir")}
           </button>
         </div>
-      ) : (
-        <div className="f-ret-gestes">
-          <button
-            type="button"
-            className="pr"
-            onClick={repondreEstLeGeste ? ouvrirLaReponse : onGeste}
-          >
-            {t(LIBELLE_DU_GESTE[retour.geste])}
-          </button>
-          {onPhotographier ? (
-            <button type="button" onClick={onPhotographier}>
-              {t("pme.retour.photographier")}
+      ) : null}
+
+      {aConfirmer ? (
+        <div className="f-ret-sur" role="alertdialog" aria-label={t("pme.supprimer.action")}>
+          <p>{t("pme.retour.supprimer.sur")}</p>
+          <div className="f-dec-gestes deux">
+            <button type="button" onClick={() => setAConfirmer(false)}>
+              {t("common.cancel")}
             </button>
-          ) : null}
+            <button
+              type="button"
+              className="sup"
+              disabled={supprimer.enCours}
+              onClick={supprimer.action}
+            >
+              {supprimer.enCours ? t("common.loading") : t("pme.supprimer.oui")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="f-dec-gestes deux f-ret-sorties">
+          {sorties.map((s, i) => (
+            <button
+              key={s}
+              type="button"
+              className={i === 0 ? "pr" : s === "supprimer" ? "sup" : undefined}
+              disabled={enCours}
+              onClick={bouton[s].action}
+            >
+              {bouton[s].enCours ? t("common.loading") : bouton[s].libelle}
+            </button>
+          ))}
         </div>
       )}
-
-      <button
-        type="button"
-        className="f-ret-renvoi"
-        disabled={!pret || renvoyer.enCours}
-        onClick={renvoyer.action}
-      >
-        {renvoyer.enCours ? t("common.loading") : t("pme.retour.renvoyer")}
-      </button>
-      <p className="f-ret-aide">
-        {pret ? t("pme.retour.renvoyer.pret") : t("pme.retour.renvoyer.attente")}
-      </p>
 
       {reponseEnvoyee ? (
         <ConfirmationSurPlace
@@ -123,11 +175,7 @@ export function CarteDuRetour({
             quand: momentDeLEnvoi(reponseEnvoyee.le, locale).quand,
           })}
         />
-      ) : repondreEstLeGeste && !montrerLeFait ? null : (
-        <button type="button" className="f-ret-repondre" onClick={ouvrirLaReponse}>
-          {t("pme.retour.geste.repondre")}
-        </button>
-      )}
+      ) : null}
 
       {reponseOuverte ? (
         <RepondreAuCabinet

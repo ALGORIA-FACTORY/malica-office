@@ -225,4 +225,35 @@ describe("la route de stockage", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(lecture.status, 404);
     assert.deepEqual(await lecture.json(), { erreur: "contenu absent" });
   });
+
+  it("les octets d'une photo remplacée entre-temps sont refusés pour ce qu'ils sont (410)", async () => {
+    const enregistrer = (cle: string, remplace?: string) =>
+      sousIdentite(a.id, (db) =>
+        executerRpc(db, {
+          depot: "capture",
+          methode: "enregistrer",
+          args: [
+            {
+              tenantId: orgA,
+              source: "photo",
+              vis: "personnel",
+              idempotencyKey: `${marque}-${cle}`,
+              contentType: "image/jpeg",
+              ...(remplace ? { remplace } : {}),
+            },
+          ],
+        }),
+      ) as Promise<{ id: string }>;
+    // Hors ligne : la ligne est partie, les octets non ; la photo est reprise
+    // ailleurs avant qu'ils arrivent.
+    const ancienne = await enregistrer("hors-ligne");
+    await enregistrer("reprise", ancienne.id);
+    const depot = await fetch(`${base}/pieces/${ancienne.id}/contenu`, {
+      method: "POST",
+      headers: { ...entetes(jetonA), "Content-Type": "image/jpeg" },
+      body: Buffer.from("octets arrivés trop tard"),
+    });
+    assert.equal(depot.status, 410, "ni scellée (409), ni panne : remplacée");
+    assert.deepEqual(await depot.json(), { erreur: "refus.piece.remplacee" });
+  });
 });

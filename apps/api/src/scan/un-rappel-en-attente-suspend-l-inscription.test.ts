@@ -148,9 +148,9 @@ describe("un rappel en attente suspend l'inscription", { skip: !BASE_CONFIGUREE 
     );
     assert.equal((await etatDe(id)).status, "lue", "rien n'a été proposé ni inscrit");
 
-    // Le cabinet peut donc toujours accorder : la pièce revient au privé.
+    // Le cabinet peut donc toujours accorder : la pièce revient à la société.
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
-    assert.equal((await etatDe(id)).vis, "personnel");
+    assert.equal((await etatDe(id)).vis, "entite");
 
     // La demande tranchée, l'inscription redevient possible.
     const ecriture = (await rpc("office", "proposerDepuisPiece", id)) as string;
