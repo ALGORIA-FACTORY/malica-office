@@ -65,11 +65,14 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
   const cabinetFait = fait(() => expert);
   const collaborateurFait = fait(() => collaborateur);
 
+  const nomDu = (mode: keyof typeof dossiers) => `PME ${mode.toUpperCase()} ${marque}`;
+
   let n = 0;
   /**
-   * Une facture d'achat (émise par un fournisseur, adressée au dossier) que
-   * la lecture dit « vente » : le sens se contredit. Envoyée au cabinet en
-   * mandat ; gardée à la société dans un dossier autonome.
+   * Une facture adressée au dossier (son matricule côté client), lue « achat »,
+   * dont l'émetteur est lu au NOM du dossier — le cas de la recette du 20
+   * octobre : le sens se contredit, et rien d'autre n'est en défaut. Envoyée
+   * au cabinet en mandat ; gardée à la société dans un dossier autonome.
    */
   const contredite = async (mode: keyof typeof dossiers) => {
     n += 1;
@@ -95,11 +98,11 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
               packId,
               tokens: l.tokens,
               contract: "extract.v1",
-              extract: { ...l.extract, document_kind: "facture_vente" },
+              extract: { ...l.extract, issuer: nomDu(mode) },
               citations: l.citations,
               flags: [],
               articles: [],
-              documentKind: "facture_vente",
+              documentKind: "facture_achat",
               documentDate: l.extract.document_date,
               mode: "pdf-text",
               confianceParChamp: { "totals.ttc": 0.95 },
@@ -149,7 +152,7 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
       d.id = await creer(
         dirigeant,
         "pme",
-        `PME ${mode.toUpperCase()} ${marque}`,
+        nomDu(mode),
         mode === "mandat" ? "mandate" : "autonome",
         d.mf,
       );
