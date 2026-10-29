@@ -65,6 +65,9 @@ function versPiece(p: Record<string, unknown>): Piece {
     gardeeLe: (p["gardeeLe"] as string | null) ?? null,
     transmiseLe: (p["transmiseLe"] as string | null) ?? null,
     sourcePieceId: (p["sourcePieceId"] as string | null) ?? null,
+    remplace: (p["remplace"] as string | null) ?? null,
+    remplaceePar: (p["remplaceePar"] as string | null) ?? null,
+    versionCourante: p["versionCourante"] as string,
   };
 }
 
@@ -126,6 +129,9 @@ export function creerCaptureHttp(): CaptureRepository {
     },
     async repondreAuCabinet(pieceId: string, texte: string) {
       await rpc<void>("capture", "repondreAuCabinet", [pieceId, texte]);
+    },
+    async renvoyer(pieceId: string) {
+      return rpc<{ le: string }>("capture", "renvoyer", [pieceId]);
     },
     async pieceQuiAccompagne(pieceId: string, locale: string) {
       return rpc<PieceQuiAccompagne | null>("capture", "pieceQuiAccompagne", [pieceId, locale]);

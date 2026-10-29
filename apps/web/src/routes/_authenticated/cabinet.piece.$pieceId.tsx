@@ -17,6 +17,7 @@ import { ControlesComptables } from "@/components/malica/controles-comptables";
 import { DecisionSansConfirmation } from "@/components/malica/decision-sans-confirmation";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
+import { VersionPrecedente } from "@/components/malica/version-precedente";
 import { extensionDuContenu } from "@/lib/archive-comptable";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import {
@@ -532,6 +533,46 @@ function CabinetReview() {
   if (!dossier.data) return <EmptyState>{t("cab.review.nodoc")}</EmptyState>;
 
   const { piece, contenu, extraction } = dossier.data;
+
+  /*
+   * ============================================== UNE VERSION PRÉCÉDENTE
+   *
+   * Le client a repris la photo : celle-ci est gelée, et tout geste sur elle
+   * serait refusé (`refus.piece.remplacee`). Une notification ancienne y mène
+   * pourtant. On la montre, sans aucune action, et le chemin vers la photo qui
+   * fait foi — le même avis que côté PME.
+   */
+  if (piece.remplaceePar) {
+    return (
+      <div className="space-y-6">
+        <header className="flex flex-wrap items-center gap-4 border-b border-border pb-4">
+          <Link
+            to="/cabinet"
+            onClick={(e) => {
+              if (!peutRevenir) return;
+              e.preventDefault();
+              router.history.back();
+            }}
+            aria-label={t("cab.review.back")}
+            title={t("cab.review.back")}
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center border border-border bg-card hover:bg-accent"
+          >
+            ←
+          </Link>
+          <h1 className="min-w-0 flex-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.02em]">
+            {t("piece.versionPrecedente.titre")}
+          </h1>
+        </header>
+        <VersionPrecedente
+          className="flex items-start gap-3 border border-s-[3px] border-border bg-card p-4 text-[13px] [&_button]:mt-3 [&_button]:h-9 [&_button]:border [&_button]:border-foreground [&_button]:bg-foreground [&_button]:px-3 [&_button]:font-medium [&_button]:text-background"
+          onVoir={() => allerA(piece.versionCourante)}
+        />
+        {contenu ? (
+          <DocumentView contenu={contenu} highlight={null} label={t("cab.review.document")} />
+        ) : null}
+      </div>
+    );
+  }
 
   const articles =
     (

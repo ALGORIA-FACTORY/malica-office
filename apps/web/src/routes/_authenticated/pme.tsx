@@ -8,7 +8,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { CalendarClock, FileText, Home as HomeIcon, Lock, Plus, Settings } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
@@ -16,7 +16,11 @@ import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useTransitionDEcran } from "@/components/malica/mouvement";
-import { PmeProvider, type CaptureKind } from "@/components/malica/pme-context";
+import {
+  PmeProvider,
+  type CaptureKind,
+  type PieceARemplacer,
+} from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
@@ -216,6 +220,21 @@ function PmeLayout() {
    */
   const [aTyper, setATyper] = useState<PickedFile[]>([]);
 
+  /*
+   * ================================== LA PHOTO QUI EN REMPLACE UNE AUTRE
+   *
+   * « Reprendre la photo », depuis une pièce (« Malica sans blocage »,
+   * 28 octobre 2026) : le même scanner, et la photo qu'il rend REMPLACE la
+   * pièce d'où on l'a ouvert. Avant, elle arrivait comme une pièce de plus, et
+   * « Renvoyer » inscrivait l'ancienne lecture.
+   *
+   * Une référence et non un état : le scanner rend la main par un rappel, et
+   * c'est la pièce demandée à l'ouverture qu'il faut lire à ce moment-là. Un
+   * abandon l'efface — sans quoi la photo suivante, prise depuis la barre,
+   * remplacerait une pièce sans qu'on l'ait demandé.
+   */
+  const aRemplacer = useRef<PieceARemplacer | null>(null);
+
   const choisir = useMutation({
     mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
       if (typeof input === "object") {
@@ -230,16 +249,24 @@ function PmeLayout() {
     },
     onSuccess: (choisis) => {
       setCaptureError(null);
-      if (choisis.length > 0) setATyper(choisis);
+      const remplace = aRemplacer.current;
+      aRemplacer.current = null;
+      if (choisis.length === 0) return;
+      // La photo qui remplace garde le type de l'ancienne : la question ne se
+      // repose pas, la lecture aura le dernier mot.
+      if (remplace) capture.mutate({ lot: choisis, documentKind: null, remplace });
+      else setATyper(choisis);
     },
-    onError: (e: unknown) =>
+    onError: (e: unknown) => {
+      aRemplacer.current = null;
       setCaptureError(
         e instanceof FilePleine
           ? t("pme.file.pleine")
           : e instanceof FichierNonPdf
             ? t("pme.file.pasUnPdf", { noms: e.noms.join(", ") })
             : texteDeLErreur(e, "routes/_authenticated/pme", t("common.error")),
-      ),
+      );
+    },
   });
 
   const capture = useMutation({
@@ -252,11 +279,20 @@ function PmeLayout() {
      * serait pris pour un doublon du premier : neuf factures sur dix
      * disparaîtraient sans aucun message.
      */
-    mutationFn: async (input: { lot: readonly PickedFile[]; documentKind: string | null }) => {
+    mutationFn: async (input: {
+      lot: readonly PickedFile[];
+      documentKind: string | null;
+      remplace?: PieceARemplacer;
+    }) => {
       if (!org) return [];
       const identifiants: string[] = [];
-      for (const picked of input.lot) {
-        const id = await deposerUnePiece(picked, input.documentKind);
+      for (const [i, picked] of input.lot.entries()) {
+        // Une pièce ne se remplace qu'une fois : par la première photo du lot.
+        const id = await deposerUnePiece(
+          picked,
+          input.documentKind,
+          i === 0 ? (input.remplace ?? null) : null,
+        );
         if (id) identifiants.push(id);
       }
       return identifiants;
@@ -282,11 +318,23 @@ function PmeLayout() {
      * l'écran demanderait la destination des trente pièces du dossier pour
      * une seule photo prise.
      */
-    onSuccess: async (identifiants) => {
+    onSuccess: async (identifiants, input) => {
       setCaptureError(null);
       if (!org) return;
       await qc.invalidateQueries({ queryKey: ["pieces", org.id] });
       await qc.invalidateQueries({ queryKey: clePiecesLues(org.id) });
+      // La photo qui remplace a déjà sa destination : celle de l'ancienne.
+      // Depuis une fiche, on l'ouvre à la place de l'ancienne ; hors ligne, la
+      // liste la montre. Depuis le lot de la capture, elle y revient.
+      const nouvelle = input.remplace ? identifiants[0] : undefined;
+      if (input.remplace?.ensuite === "fiche") {
+        await navigate(
+          nouvelle
+            ? { to: "/pme/piece/$pieceId", params: { pieceId: nouvelle }, replace: true }
+            : { to: "/pme/list" },
+        );
+        return;
+      }
       await navigate({
         to: "/pme/capturer",
         search: identifiants.length > 0 ? { pieces: identifiants.join(",") } : {},
@@ -300,9 +348,16 @@ function PmeLayout() {
       ),
   });
 
-  async function deposerUnePiece(picked: PickedFile, documentKind: string | null) {
+  async function deposerUnePiece(
+    picked: PickedFile,
+    documentKind: string | null,
+    remplace: PieceARemplacer | null,
+  ) {
     if (!org) return null;
-    const vis = visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) });
+    // Une photo de remplacement est là où était l'ancienne ; la base le
+    // redit (`piece_remplacer`), et la file sait ainsi si elle se lit.
+    const vis =
+      remplace?.vis ?? visibiliteALaCapture({ mandatActif: Boolean(monCabinet.data?.id) });
     /*
      * ============================================ RANGÉE AVANT DE PARTIR
      *
@@ -337,6 +392,7 @@ function PmeLayout() {
         vis,
         contentType: picked.blob.type || "application/pdf",
         documentKind,
+        remplace: remplace?.id ?? null,
         nomFichier: picked.name,
       },
       picked.blob,
@@ -379,14 +435,30 @@ function PmeLayout() {
       }
       // Déjà cadrées par l'appareil : on ne refait pas le travail.
       if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
+      else aRemplacer.current = null;
     })();
   }, [choisir]);
 
-  // Le scanner de la page se ferme au bouton retour, avant de reculer.
-  useSuperposition(
-    scanning,
-    useCallback(() => setScanning(false), []),
+  /** Une photo sans lien : jamais le remplacement d'une pièce ouverte avant. */
+  const ouvrirScanner = useCallback(() => {
+    aRemplacer.current = null;
+    ouvrirCapture();
+  }, [ouvrirCapture]);
+  const reprendreLaPhoto = useCallback(
+    (piece: PieceARemplacer) => {
+      aRemplacer.current = piece;
+      ouvrirCapture();
+    },
+    [ouvrirCapture],
   );
+  /** Le scanner fermé sans photo : rien n'est remplacé. */
+  const abandonnerLeScanner = useCallback(() => {
+    aRemplacer.current = null;
+    setScanning(false);
+  }, []);
+
+  // Le scanner de la page se ferme au bouton retour, avant de reculer.
+  useSuperposition(scanning, abandonnerLeScanner);
 
   /*
    * L'initiale de la barre vient du compte ouvert — `beforeLoad` de
@@ -502,7 +574,8 @@ function PmeLayout() {
                 choisirDossier: selectOrg,
                 aUnCabinet,
                 capture: (kind) => choisir.mutate(kind),
-                ouvrirScanner: ouvrirCapture,
+                ouvrirScanner,
+                reprendreLaPhoto,
                 capturing: capture.isPending || choisir.isPending,
                 captureError,
                 file,
@@ -623,7 +696,7 @@ function PmeLayout() {
         {scanning ? (
           <Suspense fallback={null}>
             <CameraScanner
-              onCancel={() => setScanning(false)}
+              onCancel={abandonnerLeScanner}
               onFallback={() => {
                 setScanning(false);
                 choisir.mutate("photo");

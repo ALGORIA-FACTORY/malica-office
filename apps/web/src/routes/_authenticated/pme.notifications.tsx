@@ -151,6 +151,11 @@ const GENRES: Record<string, MessageKey> = {
   "conseil.decide": "notif.kind.conseil.decide",
   "piece.confirmation_demandee": "notif.kind.piece.confirmation_demandee",
   "piece.reponse_client": "notif.kind.piece.reponse_client",
+  "piece.renvoyee": "notif.kind.piece.renvoyee",
+  "piece.remplacee": "notif.kind.piece.remplacee",
+  "piece.gardee": "notif.kind.piece.gardee",
+  "piece.supprimee": "notif.kind.piece.supprimee",
+  "piece.archivee": "notif.kind.piece.archivee",
 };
 
 const OU = "routes/_authenticated/pme.notifications";

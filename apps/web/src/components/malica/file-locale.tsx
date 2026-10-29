@@ -7,17 +7,108 @@
  * qu'on ne la confonde jamais avec ce que le cabinet a déjà.
  */
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
+import { Aide } from "@/components/malica/aide";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
-import type { ElementDeFile } from "@/lib/hors-ligne/file";
+import { CODE_DEJA_REMPLACEE, repriseRefusee, type ElementDeFile } from "@/lib/hors-ligne/file";
+import { office } from "@/verticals/malica-office/composition";
 
 function tailleLisible(octets: number, locale: string): string {
   const mo = octets / (1024 * 1024);
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(mo)} Mo`;
 }
 
+/** Pourquoi la reprise n'a pas abouti, par code de `piece_remplacer`. */
+const POURQUOI_LA_REPRISE: Record<string, MessageKey> = {
+  [CODE_DEJA_REMPLACEE]: "pme.file.reprise.pourquoi.remplacee",
+  "refus.remplacement.inscrite": "pme.file.reprise.pourquoi.inscrite",
+  "refus.remplacement.introuvable": "pme.file.reprise.pourquoi.introuvable",
+};
+
+/**
+ * Une photo reprise hors ligne, que la reprise ne peut plus accueillir : la
+ * garder comme une pièce à part (le geste premier — rien ne se perd), ou, si
+ * l'ancienne a seulement été remplacée entre-temps, remplacer la version
+ * actuelle. Abandonner reste possible, en dernier.
+ */
+function LigneDeReprise({ e }: { e: ElementDeFile }) {
+  const { t } = useI18n();
+  const { file } = usePme();
+  const [erreur, setErreur] = useState(false);
+  const code = e.derniereErreur ?? "";
+  const versLaCourante = code === CODE_DEJA_REMPLACEE;
+  const remplacerLaCourante = async () => {
+    try {
+      // Lue au geste, pas avant : la chaîne a pu bouger depuis le refus.
+      const d = await office().capture.dossier(e.remplace!);
+      file.recibler(e.cle, d.piece.versionCourante);
+    } catch {
+      setErreur(true);
+    }
+  };
+  return (
+    <div className="border-t border-border border-s-2 border-s-line-strong py-2.5 ps-2">
+      <span className="block truncate text-[14px] font-medium">{e.nomFichier}</span>
+      <span className="mt-px flex items-center text-[11px] text-muted-foreground">
+        {t("pme.file.reprise.etat")}
+        <Aide
+          titre={t("pme.file.reprise.aide.titre")}
+          paragraphes={[
+            { texte: t(POURQUOI_LA_REPRISE[code] ?? "pme.file.reprise.pourquoi.autre") },
+            { titre: t("pme.file.reprise.libre"), texte: t("pme.file.reprise.aide.libre") },
+            ...(versLaCourante
+              ? [
+                  {
+                    titre: t("pme.file.reprise.courante"),
+                    texte: t("pme.file.reprise.aide.courante"),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </span>
+      <span className="mt-1 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => file.recibler(e.cle, null)}
+          className="min-h-[44px] px-2 text-[11px] font-medium uppercase tracking-wider"
+        >
+          {t("pme.file.reprise.libre")}
+        </button>
+        {versLaCourante ? (
+          <button
+            type="button"
+            onClick={() => void remplacerLaCourante()}
+            className="min-h-[44px] px-2 text-[11px] uppercase tracking-wider"
+          >
+            {t("pme.file.reprise.courante")}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => file.abandonner(e.cle)}
+          className="min-h-[44px] px-2 text-[11px] uppercase tracking-wider text-muted-foreground"
+        >
+          {t("pme.file.abandonner")}
+        </button>
+      </span>
+      {erreur ? (
+        <p role="alert" className="text-[11px] text-signal-warn">
+          {t("common.error")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function Ligne({ e }: { e: ElementDeFile }) {
+  if (repriseRefusee(e)) return <LigneDeReprise e={e} />;
+  return <LigneDEnvoi e={e} />;
+}
+
+function LigneDEnvoi({ e }: { e: ElementDeFile }) {
   const { t, locale } = useI18n();
   const { file } = usePme();
   const etat = t(`pme.file.etat.${e.etat}` as MessageKey, { raison: e.derniereErreur ?? "" });

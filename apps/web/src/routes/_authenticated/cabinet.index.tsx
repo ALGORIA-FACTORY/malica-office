@@ -178,7 +178,8 @@ function CabinetToday() {
 
   /* ---- le Socle, vingt-quatre heures : des comptes de lignes, rien d'autre */
   const depuisHier = Date.now() - JOUR_MS;
-  const recentes = rows.filter((r) => new Date(r.createdAt).getTime() >= depuisHier);
+  // Reçues = arrivées au cabinet : une photo reprise garde la date de la première.
+  const recentes = rows.filter((r) => new Date(r.envoyeeLe).getTime() >= depuisHier);
   const socle = [
     { key: "recues", label: t("cab.today.socle.recues"), value: String(recentes.length) },
     {
@@ -606,7 +607,7 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
       ]}
     >
       {rows.map((row, i) => {
-        const jours = joursDAttente(row.createdAt);
+        const jours = joursDAttente(row.envoyeeLe);
         return (
           <InkTableRow key={row.pieceId}>
             <InkCell numeric>{i + 1}</InkCell>

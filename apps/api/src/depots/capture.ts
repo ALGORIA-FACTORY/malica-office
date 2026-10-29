@@ -116,7 +116,7 @@ async function projeterLesArticles(
 async function effacerPar(
   db: Requete,
   pieceId: string,
-  porte: () => Promise<unknown>,
+  porte: () => Promise<{ effacee: boolean }>,
 ): Promise<boolean> {
   const { rows } = await db.query<{ tenant_id: string }>(
     `select tenant_id from pieces_v where id = $1`,
@@ -124,8 +124,17 @@ async function effacerPar(
   );
   const tenantId = rows[0]?.tenant_id;
   if (!tenantId) return false;
-  await porte();
-  await effacerContenu(tenantId, pieceId);
+  // La pièce, c'est toutes ses versions : effacée, elle part tout entière
+  // (`capture_piece_supprimer`), et les octets de chacune avec elle. On les
+  // nomme AVANT : après, la chaîne n'existe plus.
+  const { rows: versions } = await db.query<{ id: string }>(
+    `select v as id from app.versions_de_la_piece($1) v`,
+    [pieceId],
+  );
+  // Une pièce archivée garde ses octets : le cabinet la conserve.
+  if ((await porte()).effacee) {
+    for (const v of versions) await effacerContenu(tenantId, v.id);
+  }
   return true;
 }
 
@@ -181,7 +190,38 @@ function versPiece(r: Record<string, unknown>) {
     gardeeLe: (r["gardee_le"] as string | null) ?? null,
     transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
     sourcePieceId: (r["source_piece_id"] as string | null) ?? null,
+    // La photo qu'elle remplace, et celle qui l'a remplacée (`capture.remplacements`).
+    remplace: (r["remplace"] as string | null) ?? null,
+    remplaceePar: (r["remplacee_par"] as string | null) ?? null,
+    versionCourante: r["version_courante"] as string,
   };
+}
+
+/**
+ * Les colonnes d'une pièce telles que `versPiece` les lit, préfixées de
+ * l'alias de la requête quand elle en joint d'autres.
+ */
+function colonnesDeLaPiece(alias?: string): string {
+  return [
+    "id",
+    "tenant_id",
+    "entity_id",
+    "vis",
+    "source",
+    "storage_path",
+    "status",
+    "created_at",
+    "document_kind",
+    "document_kind_statut",
+    "gardee_le",
+    "transmise_le",
+    "source_piece_id",
+    "remplace",
+    "remplacee_par",
+    "version_courante",
+  ]
+    .map((c) => (alias ? `${alias}.${c}` : c))
+    .join(", ");
 }
 
 export const capture = {
@@ -227,6 +267,14 @@ export const capture = {
        * d'eux est annulé.
        */
       paiementsAttestes?: string[] | null;
+      /**
+       * La pièce que cette photo REMPLACE (« Reprendre la photo ») : la
+       * nouvelle prend sa place — retour en cours, rattachements, file du
+       * cabinet —, l'ancienne reste comme version précédente. Dans la même
+       * transaction que l'enregistrement : une photo de remplacement ne naît
+       * jamais sans lien.
+       */
+      remplace?: string | null;
     },
   ): Promise<{ id: string; chemin: string }> {
     // L'empreinte (`p_sha256`) reste nulle ICI : à l'enregistrement, les octets
@@ -243,7 +291,10 @@ export const capture = {
         `${input.tenantId}/en-cours`,
         input.idempotencyKey,
         input.entityId ?? null,
-        input.vis,
+        // Une photo de remplacement naît privée : c'est `piece_remplacer` qui
+        // lui donne la place de l'ancienne, sans en faire une transmission
+        // nouvelle (un impayé ne l'empêche pas de corriger une pièce envoyée).
+        input.remplace ? "personnel" : input.vis,
         input.pageCount ?? null,
         input.documentKind ?? null,
         input.sourcePieceId ?? null,
@@ -276,14 +327,20 @@ export const capture = {
         input.paiementsAttestes,
       ]);
     }
+    // Rejouable aussi : la même paire rend `deja`.
+    if (input.remplace) {
+      await db.query(`select public.piece_remplacer($1, $2)`, [input.remplace, id]);
+    }
     return { id, chemin };
   },
 
   async lister(db: Requete, tenantId: string) {
+    // Une pièce remplacée par une nouvelle photo quitte les listes : elle
+    // reste, comme version précédente, derrière celle qui la remplace.
     const { rows } = await db.query(
-      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-                document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
-         from pieces_v where tenant_id = $1 order by created_at desc limit 100`,
+      `select ${colonnesDeLaPiece()}
+         from pieces_v where tenant_id = $1 and remplacee_par is null
+        order by created_at desc limit 100`,
       [tenantId],
     );
     return (rows as Record<string, unknown>[]).map(versPiece);
@@ -349,7 +406,8 @@ export const capture = {
             where t.tenant_id = $1 and t.nature = 'lecture_piece'
             order by t.piece_id, t.demande_le desc
          ) w on w.piece_id = p.id
-        where p.tenant_id = $1
+        -- Une version précédente n'est pas une pièce de plus (« Reprendre la photo »).
+        where p.tenant_id = $1 and p.remplacee_par is null
         order by p.created_at desc`,
       [tenantId],
     );
@@ -398,9 +456,7 @@ export const capture = {
 
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
-      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
-         from pieces_v where id = $1`,
+      `select ${colonnesDeLaPiece()} from pieces_v where id = $1`,
       [pieceId],
     );
     const brut = (pieces as Record<string, unknown>[])[0];
@@ -804,7 +860,10 @@ export const capture = {
             order by effective_from desc limit 1`,
         [org["jurisdiction"] as string],
       ),
-      db.query(`select id, status from pieces_v where tenant_id = $1 limit 500`, [tenantId]),
+      db.query(
+        `select id, status from pieces_v where tenant_id = $1 and remplacee_par is null limit 500`,
+        [tenantId],
+      ),
       db.query(
         `select id, date_ecriture, journal, libelle, status from ecritures_v
             where tenant_id = $1 order by date_ecriture desc limit 25`,
@@ -1060,14 +1119,16 @@ export const capture = {
   },
 
   /**
-   * Supprimer une pièce qui n'est encore partie nulle part.
+   * Supprimer une pièce qui n'est pas partie, ou que le cabinet a retournée.
    *
    * ============================================== CE QUI DÉCIDE, ET OÙ
    *
-   * Pas ici. C'est `capture_piece_supprimer` qui refuse — pièce transmise,
-   * pièce engagée, pièce servant de justificatif — et la RLS qui décide de ce
-   * que l'appelant voit. Cette méthode ne fait qu'enchaîner deux gestes que la
-   * base ne peut pas faire seule : demander, puis effacer les octets.
+   * Pas ici. C'est `capture_piece_supprimer` qui refuse — pièce transmise et
+   * non retournée, pièce engagée, pièce servant de justificatif —, qui
+   * archive une pièce qu'une écriture contre-passée retient, et la RLS qui
+   * décide de ce que l'appelant voit. Cette méthode ne fait qu'enchaîner deux
+   * gestes que la base ne peut pas faire seule : demander, puis effacer les
+   * octets d'une pièce effacée.
    *
    * L'ordre compte. On lit le tenant AVANT la suppression : après, la ligne
    * n'existe plus et l'on ne saurait plus où est le fichier.
@@ -1086,9 +1147,31 @@ export const capture = {
     if (parAccord !== false) {
       throw Object.assign(new Error("suppression.accord_reserve_au_cabinet"), { code: "42501" });
     }
-    return effacerPar(db, pieceId, () =>
-      db.query(`select public.capture_piece_supprimer($1, $2)`, [pieceId, parAccord]),
+    // La base efface, ou archive une pièce qu'une écriture contre-passée
+    // retient : celle-là garde ses octets.
+    return effacerPar(db, pieceId, async () => {
+      const { rows } = await db.query<{ issue: "supprimee" | "archivee" }>(
+        `select public.capture_piece_supprimer($1, $2) as issue`,
+        [pieceId, parAccord],
+      );
+      return { effacee: rows[0]?.issue === "supprimee" };
+    });
+  },
+
+  /**
+   * « Renvoyer » : la pièce retournée repart au cabinet, son retour clos.
+   *
+   * Rien ne s'inscrit ici, et c'est le propos (« Malica sans blocage »,
+   * 28 octobre 2026) : le renvoi faisait inscrire par la PME l'écriture de la
+   * pièce — et, après une contre-passation, celle de l'ANCIENNE lecture. Le
+   * cabinet propose maintenant sur la lecture courante, ou force.
+   */
+  async renvoyer(db: Requete, pieceId: string): Promise<{ le: string }> {
+    const { rows } = await db.query<{ le: string }>(
+      `select public.piece_renvoyer($1) ->> 'le' as le`,
+      [pieceId],
     );
+    return { le: new Date(rows[0]!.le).toISOString() };
   },
 
   /**
@@ -1217,16 +1300,22 @@ export const capture = {
    * transmise au cabinet ne se remplace pas sans son accord.
    */
   async remplacerJustificatif(db: Requete, ancienId: string, nouveauId: string): Promise<boolean> {
-    return effacerPar(db, ancienId, () =>
-      db.query(`select public.justificatif_remplacer($1, $2)`, [ancienId, nouveauId]),
-    );
+    // L'ancienne photo d'un justificatif n'a pas d'écriture : elle est effacée.
+    return effacerPar(db, ancienId, async () => {
+      await db.query(`select public.justificatif_remplacer($1, $2)`, [ancienId, nouveauId]);
+      return { effacee: true };
+    });
   },
 
   /** Supprimer un reçu, ou un justificatif après l'avoir détaché de ses règlements. */
   async supprimerPieceQuiAccompagne(db: Requete, pieceId: string): Promise<boolean> {
-    return effacerPar(db, pieceId, () =>
-      db.query(`select public.piece_qui_accompagne_supprimer($1)`, [pieceId]),
-    );
+    return effacerPar(db, pieceId, async () => {
+      const { rows } = await db.query<{ effacee: boolean }>(
+        `select public.piece_qui_accompagne_supprimer($1) as effacee`,
+        [pieceId],
+      );
+      return { effacee: rows[0]?.effacee === true };
+    });
   },
 
   /**
@@ -1319,9 +1408,11 @@ export const capture = {
    */
   async piecesIssuesDe(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-              document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id
-         from pieces_v where source_piece_id = $1 order by created_at`,
+      // Ceux de toutes ses versions : un reçu reste issu de la facture dont la
+      // photo a été reprise.
+      `select ${colonnesDeLaPiece()}
+         from pieces_v where source_piece_id in (select app.versions_de_la_piece($1))
+        order by created_at`,
       [pieceId],
     );
     return (rows as Record<string, unknown>[]).map(versPiece);
@@ -1331,15 +1422,14 @@ export const capture = {
    * Les documents RATTACHÉS à une pièce après sa lecture, dans un sens ou dans
    * l'autre : un bon de livraison, un avoir, un devis (24 octobre 2026).
    *
-   * L'état courant d'une paire est son dernier fait (`rattachements_v`) ; une
-   * paire détachée n'est plus rendue. `pieces_v` fait le reste : une pièce que
-   * ce lecteur ne voit pas n'apparaît pas, même rattachée.
+   * L'état courant d'une paire LOGIQUE est son dernier fait (`rattachements_v`,
+   * bouts lus à leur version courante) ; une paire détachée n'est plus rendue.
+   * `pieces_v` fait le reste : une pièce que ce lecteur ne voit pas
+   * n'apparaît pas, même rattachée.
    */
   async piecesRattachees(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select p.id, p.tenant_id, p.entity_id, p.vis, p.source, p.storage_path, p.status,
-              p.created_at, p.document_kind, p.document_kind_statut, p.gardee_le,
-              p.transmise_le, p.source_piece_id
+      `select ${colonnesDeLaPiece("p")}
          from rattachements_v r
          join pieces_v p
            on p.id = case when r.piece_id = $1 then r.piece_liee_id else r.piece_id end
@@ -1387,7 +1477,9 @@ export const capture = {
                   and e.reverses_id is not null and e.status = 'proposee'
                 order by e.created_at desc limit 1) as annulation_a_inscrire
          from paiements_v p
-        where p.piece_id = $1 order by p.created_at`,
+        -- Les règlements de toutes ses versions : une photo reprise garde ceux
+        -- saisis sur l'ancienne, qui restent inscrits où ils sont nés (R7).
+        where p.piece_id in (select app.versions_de_la_piece($1)) order by p.created_at`,
       [pieceId],
     );
     /*

@@ -22,6 +22,7 @@ import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { CarteDuRetour } from "@/components/malica/retour-du-cabinet";
 import { ConfirmationSurPlace, EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
+import { VersionPrecedente } from "@/components/malica/version-precedente";
 import {
   libelleDuChamp,
   libelleDuRefus,
@@ -205,6 +206,8 @@ function PieceScreen() {
    * rejoue pas l'écran.
    */
   const [envoye, setEnvoye] = useState(false);
+  /** Le même écran après « Renvoyer », à l'heure du renvoi que la base a posée. */
+  const [renvoyeeLe, setRenvoyeeLe] = useState<string | null>(null);
   const [montrerPiece, setPiece] = useState(false);
   const [montrerDetail, setDetail] = useState(false);
   /**
@@ -343,7 +346,7 @@ function PieceScreen() {
    */
   // « Pièce suivante » de l'écran Envoyé se choisit dans la même liste.
   const luesDuDossier = usePiecesLues({
-    enabled: !lue || (rattachees.data ?? []).length > 0 || envoye,
+    enabled: !lue || (rattachees.data ?? []).length > 0 || envoye || renvoyeeLe !== null,
   });
   const cettePiece = (luesDuDossier.data ?? []).find((x) => x.id === pieceId) ?? null;
   const issue = cettePiece ? issueDeLecture(cettePiece) : null;
@@ -440,22 +443,6 @@ function PieceScreen() {
       setConfirmerSuppression(false);
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error")));
     },
-  });
-
-  /**
-   * Supprimer et reprendre : la page ne convient pas, on la retire et l'on
-   * rouvre l'appareil photo. Un scan non lu et non transmis n'engage rien.
-   */
-  const reprendre = useMutation({
-    mutationFn: () => office().capture.supprimer(pieceId),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
-      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
-      await navigate({ to: "/pme" });
-      pme.ouvrirScanner();
-    },
-    onError: (e: unknown) =>
-      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
   });
 
   /**
@@ -759,6 +746,25 @@ function PieceScreen() {
   const booked = ecritureDeLaPiece(ecritures.data);
 
   /**
+   * « Renvoyer » une pièce retournée : elle repart au cabinet, son retour
+   * clos, et RIEN ne s'inscrit ici (« Malica sans blocage », 28 octobre 2026).
+   * Le renvoi passait par le « Oui » ci-dessous et inscrivait l'écriture — après
+   * une contre-passation, celle de l'ancienne lecture, avec ses montants faux.
+   * Le cabinet propose sur la lecture courante, ou force. L'écran « Envoyé. »
+   * dit l'heure de la base.
+   */
+  const renvoyer = useMutation({
+    mutationFn: () => office().capture.renvoyer(pieceId),
+    onSuccess: async ({ le }) => {
+      setError(null);
+      await invalidate();
+      setRenvoyeeLe(le);
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
+  });
+
+  /**
    * Un seul geste : la proposition du Socle et sa comptabilisation s'enchaînent.
    * La PME ne compose jamais l'écriture, elle confirme ce qu'elle a vu cité.
    */
@@ -847,6 +853,10 @@ function PieceScreen() {
   }
 
   const { piece, contenu, extraction, citations, lectureRefusee } = dossier.data;
+
+  /** Reprendre la photo REMPLACE cette pièce : le scanner le sait. */
+  const reprendreLaPhoto = () =>
+    pme.reprendreLaPhoto({ id: piece.id, vis: piece.vis, ensuite: "fiche" });
 
   /**
    * Où la pièce est — et c'est ce qui décide si elle peut être lue.
@@ -1047,11 +1057,16 @@ function PieceScreen() {
    * reçue, depuis quand — l'heure de la base —, ce qui se passe ensuite, et
    * la trace que la pièce garde.
    */
-  if (envoye && piece.vis === "partage") {
+  if ((envoye || renvoyeeLe) && piece.vis === "partage") {
     const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
-    const depuis = piece.transmiseLe ? momentDeLEnvoi(piece.transmiseLe, locale) : null;
+    // Renvoyée : l'heure du renvoi ; transmise : celle de la transmission.
+    const parti = renvoyeeLe ?? piece.transmiseLe;
+    const depuis = parti ? momentDeLEnvoi(parti, locale) : null;
     const suivanteADecider = pieceSuivanteATransmettre(luesDuDossier.data ?? [], pieceId);
-    const fermer = () => setEnvoye(false);
+    const fermer = () => {
+      setEnvoye(false);
+      setRenvoyeeLe(null);
+    };
     return (
       <EcranEnvoye
         titre={t("envoi.titre")}
@@ -1065,11 +1080,7 @@ function PieceScreen() {
             : t("pme.transmettre.faite", { cabinet: qui })
         }
         suite={t("envoi.piece.suite", { qui })}
-        trace={
-          piece.transmiseLe
-            ? t("envoi.trace", { qui, jour: jourEtMois(piece.transmiseLe, locale) })
-            : null
-        }
+        trace={parti ? t("envoi.trace", { qui, jour: jourEtMois(parti, locale) }) : null}
         principale={
           suivanteADecider
             ? {
@@ -1221,6 +1232,49 @@ function PieceScreen() {
     );
   }
 
+  /*
+   * ============================================== UNE VERSION PRÉCÉDENTE
+   *
+   * Une nouvelle photo a remplacé celle-ci (« Reprendre la photo ») : elle
+   * n'est plus dans les listes, jamais effacée, et ne se traite plus — c'est
+   * la nouvelle qui porte le retour, les rattachements et la file. On la
+   * montre, et le chemin vers la version courante — la dernière de la chaîne.
+   */
+  if (piece.remplaceePar) {
+    const courante = piece.versionCourante;
+    return (
+      <div data-ecran="dossier">
+        <div className="top">
+          <button
+            type="button"
+            className="bk"
+            aria-label={t("pme.regler.retour")}
+            onClick={() => void navigateList()}
+          >
+            <svg viewBox="0 0 24 24" className="g" aria-hidden>
+              <path d="M14.5 5.5L8 12l6.5 6.5" />
+            </svg>
+          </button>
+          <span className="ttl">{t("piece.versionPrecedente.titre")}</span>
+        </div>
+        <div className="f-id">
+          <button
+            type="button"
+            className="f-vign"
+            aria-label={t("pme.piece.voir")}
+            onClick={() => setPiece(true)}
+          >
+            <ApercuDePiece pieceId={pieceId} />
+          </button>
+        </div>
+        <VersionPrecedente
+          className="centr calme"
+          onVoir={() => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: courante } })}
+        />
+      </div>
+    );
+  }
+
   /* ====================================================== LE DÉTAIL DES LIGNES
    *
    * Ce que le dirigeant reconnaît. Il se souvient d'avoir acheté trois cents
@@ -1319,8 +1373,8 @@ function PieceScreen() {
   /* ========================================================= PAS ENCORE LUE
    *
    * Le scan final, en grand, AVANT le geste : c'est lui qui sera lu, pas
-   * l'aperçu de l'appareil photo. Deux gestes seulement — lire, ou retirer
-   * et reprendre. Rien ne part tant que la personne n'a pas vu.
+   * l'aperçu de l'appareil photo. Deux gestes seulement — lire, ou reprendre
+   * la photo (elle remplace celle-ci). Rien ne part tant que la personne n'a pas vu.
    */
   if (!extraction && accompagne.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
@@ -1377,13 +1431,8 @@ function PieceScreen() {
               )}
             </p>
             <p className="nd">{t("pme.lecture.echec.nonDecomptee")}</p>
-            <button
-              type="button"
-              className="pr"
-              onClick={() => reprendre.mutate()}
-              disabled={reprendre.isPending}
-            >
-              {t("pme.scan.reprendre")}
+            <button type="button" className="pr" onClick={reprendreLaPhoto}>
+              {t("pme.verifie.corriger")}
             </button>
             <button
               type="button"
@@ -1464,11 +1513,10 @@ function PieceScreen() {
             </button>
             <button
               type="button"
-              onClick={() => reprendre.mutate()}
-              disabled={reprendre.isPending}
-              className="h-[48px] w-full border border-border text-[14px] font-medium disabled:opacity-40"
+              onClick={reprendreLaPhoto}
+              className="h-[48px] w-full border border-border text-[14px] font-medium"
             >
-              {t("pme.scan.reprendre")}
+              {t("pme.verifie.corriger")}
             </button>
           </>
         )}
@@ -1691,6 +1739,12 @@ function PieceScreen() {
    * la confirmation, et elle se dit « À reprendre » (maquette du 25 octobre).
    */
   const retourEnCours = piece.status === "retournee" && !comptee ? (retour.data ?? null) : null;
+  /*
+   * Retournée, la pièce est RENDUE au client : il la supprime ou la garde sans
+   * rien demander (« Malica sans blocage »). Les demandes au cabinet n'ont
+   * plus lieu d'être proposées.
+   */
+  const rendue = piece.status === "retournee" && piece.vis === "partage";
   // Tant que le retour se lit, aucune carte : l'ancienne offrait un « Oui »
   // qui recomptabilisait sans le geste demandé (relecture de #114).
   const retourSeLit = piece.status === "retournee" && !comptee && retour.isPending;
@@ -1728,27 +1782,18 @@ function PieceScreen() {
   };
 
   /*
-   * Le geste d'un retour, branché sur ce qui existe déjà sur la fiche : la
+   * Le geste propre au motif, branché sur ce qui existe déjà sur la fiche : la
    * feuille « Rattacher un document », l'onglet Lecture pour la date, le
-   * Suivi pour la demande de suppression, le Règlement. « Répondre » est
-   * tenu par la carte elle-même.
+   * Règlement. Reprendre la photo, répondre et supprimer sont des sorties de
+   * la carte elle-même (`sortiesDuRetour`).
    */
   const faireLeGesteDuRetour = (geste: GesteDeRetour) => {
-    if (
-      geste === "joindre_document" ||
-      geste === "joindre_facture_conforme" ||
-      geste === "reprendre_photo"
-    ) {
+    if (geste === "joindre_document" || geste === "joindre_facture_conforme") {
       allerA("suivi");
       setRattacherOuvert(true);
     } else if (geste === "corriger_date") allerA("lecture");
     else if (geste === "voir_reglement") allerA("reglement");
-    else if (geste === "demander_suppression") allerA("suivi");
   };
-  const gesteAvecPhoto = (geste: GesteDeRetour) =>
-    geste === "joindre_document" ||
-    geste === "joindre_facture_conforme" ||
-    geste === "reprendre_photo";
 
   type Geste = { libelle: string; action: () => void; principal?: boolean; eteint?: boolean };
   const decision: {
@@ -1829,7 +1874,7 @@ function PieceScreen() {
                 titre: raisonDuBlocage,
                 sous: t("pme.bloque.geste"),
                 gestes: [
-                  { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
+                  { libelle: t("pme.verifie.corriger"), action: reprendreLaPhoto },
                   ...(aTransmettre && cabinet.data
                     ? [
                         {
@@ -1852,7 +1897,7 @@ function PieceScreen() {
                       })
                     : t("pme.verifie.question.sansTotal"),
                   gestes: [
-                    { libelle: t("pme.verifie.corriger"), action: pme.ouvrirScanner },
+                    { libelle: t("pme.verifie.corriger"), action: reprendreLaPhoto },
                     {
                       libelle: confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui"),
                       action: () => confirm.mutate(),
@@ -2024,9 +2069,11 @@ function PieceScreen() {
           pieceId={pieceId}
           retour={retourEnCours}
           onGeste={() => faireLeGesteDuRetour(retourEnCours.geste)}
-          onPhotographier={gesteAvecPhoto(retourEnCours.geste) ? pme.ouvrirScanner : null}
+          onReprendreLaPhoto={reprendreLaPhoto}
           onVoirLeFait={() => allerA("suivi")}
-          renvoyer={{ action: () => confirm.mutate(), enCours: confirm.isPending }}
+          renvoyer={{ action: () => renvoyer.mutate(), enCours: renvoyer.isPending }}
+          garder={{ action: () => garder.mutate(), enCours: garder.isPending }}
+          supprimer={{ action: () => supprimer.mutate(), enCours: supprimer.isPending }}
         />
       ) : (
         <div className={`f-dec ${decision.ton}`}>
@@ -2353,7 +2400,7 @@ function PieceScreen() {
                     <p className="f-note">
                       {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                     </p>
-                  ) : !comptee && rappeler.isError ? (
+                  ) : rendue ? null : !comptee && rappeler.isError ? (
                     <PasEncoreParti
                       qui={cabinet.data.name}
                       reessayer={() => rappeler.mutate()}
@@ -2431,10 +2478,31 @@ function PieceScreen() {
               />
             </h2>
             <span>
-              {t("pme.piece.chaine.pieces", { count: nes.length + lesRattachees.length + 1 })}
+              {t("pme.piece.chaine.pieces", {
+                count: nes.length + lesRattachees.length + (piece.remplace ? 2 : 1),
+              })}
             </span>
           </div>
           <div className="f-carte">
+            {/* La photo que celle-ci a remplacée : gardée, jamais effacée. */}
+            {piece.remplace ? (
+              <Link
+                className="f-ligne"
+                to="/pme/piece/$pieceId"
+                params={{ pieceId: piece.remplace }}
+                preload="intent"
+              >
+                <span className="bd">
+                  <span className="lb">{t("piece.versionPrecedente.titre")}</span>
+                  <span className="vl-g">
+                    {nomDuType(piece.documentKind) ?? t("pme.piece.title")}
+                  </span>
+                </span>
+                <svg viewBox="0 0 24 24" className="g ch" aria-hidden>
+                  <path d="M9.5 5.5L16 12l-6.5 6.5" />
+                </svg>
+              </Link>
+            ) : null}
             {nes.map((p) => (
               <Link
                 key={p.id}
@@ -2518,7 +2586,7 @@ function PieceScreen() {
                 </div>
               ),
             )}
-            {nes.length === 0 && lesRattachees.length === 0 ? (
+            {nes.length === 0 && lesRattachees.length === 0 && !piece.remplace ? (
               <div className="f-ligne">
                 <span className="bd">
                   <span className="et">{t("pme.piece.chaine.vide")}</span>
@@ -2614,7 +2682,7 @@ function PieceScreen() {
             </div>
           ) : (
             <div className="f-carte">
-              <button type="button" className="f-ligne" onClick={pme.ouvrirScanner}>
+              <button type="button" className="f-ligne" onClick={reprendreLaPhoto}>
                 <span className="bd">
                   <span className="lb-a">{t("pme.verifie.corriger")}</span>
                 </span>
@@ -2655,6 +2723,7 @@ function PieceScreen() {
                 </button>
               ) : null}
               {partageeAvecLeCabinet(vis) &&
+              !rendue &&
               (!demandeDeSuppression || demandeDeSuppression === "retiree") ? (
                 /* Une demande déjà inscrite ne se redemande pas ; une demande retirée (la pièce était revenue au privé) peut l'être. */
                 <button
@@ -2679,9 +2748,10 @@ function PieceScreen() {
                * privé, et une pièce de la société restait sans sortie
                * (26 octobre 2026). Le collaborateur, lui, demande.
                */}
-              {piece.vis !== "partage" &&
-              !(piece.vis === "entite" && siege) &&
-              (piece.status === "capturee" || piece.status === "lue") ? (
+              {rendue ||
+              (piece.vis !== "partage" &&
+                !(piece.vis === "entite" && siege) &&
+                (piece.status === "capturee" || piece.status === "lue")) ? (
                 <button
                   type="button"
                   className="f-ligne sup"

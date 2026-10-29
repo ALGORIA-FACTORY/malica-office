@@ -63,6 +63,13 @@ export interface ElementDeFile {
    * au retour du réseau, ce qu'il atteste.
    */
   paiementsAttestes?: string[] | null;
+  /**
+   * La pièce que cette photo REMPLACE (« Reprendre la photo »). Elle voyage
+   * pour la même raison que la facture d'un reçu : une photo reprise hors
+   * ligne doit prendre la place de l'ancienne au retour du réseau, et non
+   * arriver comme une pièce de plus.
+   */
+  remplace?: string | null;
   nomFichier: string;
   /** En octets — pour le plafond, et pour dire « 1,2 Mo » à l'écran. */
   taille: number;
@@ -87,6 +94,7 @@ export type NouvelElement = Pick<
   | "documentKind"
   | "sourcePieceId"
   | "paiementsAttestes"
+  | "remplace"
   | "nomFichier"
   | "taille"
 >;
@@ -96,7 +104,26 @@ export type Evenement =
   | { type: "deposee" }
   | { type: "lecture_demandee" }
   | { type: "echec"; nature: "reseau" | "serveur" | "refus"; message: string }
-  | { type: "reessayer" };
+  | { type: "reessayer" }
+  /** Une reprise refusée repart vers une autre cible : la version actuelle, ou aucune. */
+  | { type: "recibler"; remplace: string | null };
+
+/**
+ * Une photo qui reprenait une pièce, et que l'API a refusée PARCE QUE la
+ * reprise n'est plus possible : l'ancienne a été remplacée, inscrite ou
+ * retirée entre-temps. Les codes viennent de `piece_remplacer`.
+ *
+ * Abandonner serait perdre la photo — contre « rien ne bloque ». Elle se garde
+ * alors comme une pièce à part, ou remplace la version actuelle.
+ */
+export function repriseRefusee(e: ElementDeFile): boolean {
+  if (!e.remplace || e.etat !== "echec_definitif") return false;
+  const code = e.derniereErreur ?? "";
+  return code === CODE_DEJA_REMPLACEE || code.startsWith("refus.remplacement.");
+}
+
+/** L'ancienne a déjà été remplacée : il y a une version actuelle à remplacer. */
+export const CODE_DEJA_REMPLACEE = "refus.piece.remplacee";
 
 /** Cinquante éléments, deux cent cinquante mégaoctets : au-delà, on le dit au lieu de jeter. */
 export const PLAFOND_ELEMENTS = 50;
@@ -153,6 +180,17 @@ export function transition(e: ElementDeFile, evt: Evenement, maintenant: number)
         prochainEssaiLe: new Date(maintenant + delaiAvantEssai(tentatives)).toISOString(),
       };
     }
+    case "recibler":
+      // Seul un échec se recible : on ne détourne pas un envoi en cours.
+      if (e.etat !== "echec_definitif") return e;
+      return {
+        ...e,
+        etat: "a_envoyer",
+        remplace: evt.remplace,
+        tentatives: 0,
+        prochainEssaiLe: null,
+        derniereErreur: null,
+      };
     case "reessayer":
       if (e.etat !== "echec_definitif") return { ...e, tentatives: 0, prochainEssaiLe: null };
       return {

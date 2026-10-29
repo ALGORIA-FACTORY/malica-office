@@ -365,7 +365,11 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
          from capture.pieces p
          join lateral (select payload from capture.extractions x
                         where x.piece_id = p.id order by created_at desc limit 1) e on true
-        where p.tenant_id = $1 and p.id <> $2`,
+        where p.tenant_id = $1 and p.id <> $2
+          -- Une photo reprise n'est pas le doublon de celle qu'elle remplace,
+          -- ni une version précédente celui d'une autre pièce.
+          and p.id not in (select app.versions_de_la_piece($2))
+          and not exists (select 1 from capture.remplacements r where r.piece_id = p.id)`,
       [piece.tenant_id, pieceId, NOM_MATRICULE_EMETTEUR],
     ),
   ]);
