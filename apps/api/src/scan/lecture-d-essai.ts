@@ -30,6 +30,11 @@ export function lecture(
     sansDate?: boolean;
     /** La confiance globale de la désignation (0,9 par défaut). */
     confianceGlobale?: number;
+    /**
+     * Les jetons que la citation de la LIGNE couvre, quand ce ne sont pas ceux
+     * du HT du pied — deux colonnes d'une même ligne, par exemple.
+     */
+    ligne?: string[];
   } = {},
 ) {
   const numero = opts.numero ?? "F-2026-0042";
@@ -47,7 +52,9 @@ export function lecture(
     ["1,000", 0.78], // 10
     [opts.ttc?.[0] ?? "1", 0.82], // 11 ─┐ « 1 470,126 »
     [opts.ttc?.[1] ?? "470,126", 0.82], // 12 ─┘
+    ...(opts.ligne ?? []).map((t): [string, number] => [t, 0.5]), // 13… la ligne, si elle est à part
   ];
+  const ordinauxDeLaLigne = (opts.ligne ?? []).map((_, i) => 13 + i);
   const tokens: Jeton[] = textes.map(([text, y], ordinal) => ({
     page: 1,
     ordinal,
@@ -66,7 +73,9 @@ export function lecture(
     ...cite("references.numero", 4),
     ...(opts.sansDate ? [] : cite("document_date", 5)),
     ...cite("references.matricule_fiscal_client", 6),
-    ...cite("lines[0].base_ht", 7, 8),
+    ...(ordinauxDeLaLigne.length > 0
+      ? cite("lines[0].base_ht", ...ordinauxDeLaLigne)
+      : cite("lines[0].base_ht", 7, 8)),
     ...cite("totals.base_ht", 7, 8),
     ...cite("lines[0].vat_amount", 9),
     ...cite("totals.vat", 9),

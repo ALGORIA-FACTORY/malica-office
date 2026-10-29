@@ -48,8 +48,12 @@ export interface Candidat {
 }
 
 export interface EntreeMontants {
-  /** Une base par taux : le HT tel qu'imprimé, et le taux du paramétrage (« 0.19 »). */
-  bases: Array<{ ht: string | null; taux: string | number }>;
+  /**
+   * Une base par taux : le HT tel qu'imprimé, et le taux du paramétrage
+   * (« 0.19 »). `pied` : le HT global du pied de facture, quand la base vient
+   * d'une ligne — il ne sert que si la ligne ne se lit pas (voir plus bas).
+   */
+  bases: Array<{ ht: string | null; taux: string | number; pied?: string | null }>;
   /** La TVA imprimée, si elle l'est. */
   tva?: string | null;
   /**
@@ -128,6 +132,13 @@ export interface ResultatNormalisation {
    * côté. Le contrôle arithmétique le lit et pose une réserve.
    */
   totalNonLu: string | null;
+  /**
+   * La base imprimée sur la LIGNE qu'aucune lecture ne rend, quand c'est le HT
+   * du pied de facture qui a été retenu à sa place — `null` sinon. Comme
+   * `totalNonLu`, il existe pour que la substitution se voie : le contrôle
+   * arithmétique le lit et pose une réserve.
+   */
+  ligneNonLue: string | null;
   raison: string;
 }
 
@@ -158,9 +169,8 @@ const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
 const ESPACES = /[\s\u00A0\u202F]/u;
 
-/** Les lectures possibles d'un montant imprimé. Vide : illisible. */
 /**
- * Les blocs d'une plage qui a couvert le MÊME montant plusieurs fois.
+ * Les occurrences d'une plage qui a couvert le MÊME montant plusieurs fois.
  *
  * ================================================================= POURQUOI
  *
@@ -175,76 +185,155 @@ const ESPACES = /[\s\u00A0\u202F]/u;
  * Deux virgules décimales : aucune lecture ne tient, et la chaîne a eu raison
  * de ne rien rendre plutôt que d'inventer.
  *
+ * ========================================== LE 29 OCTOBRE : L'ESPACE DES MILLIERS
+ *
+ * La première version coupait le texte à CHAQUE espace et exigeait des blocs
+ * textuellement identiques. Or l'espace est aussi le séparateur des milliers :
+ * « 3 020,000 3 020,000) » — le HT et le total d'une même ligne — donnait
+ * « 3 », « 020,000 », « 3 », « 020,000 », et la facture finissait « anomalie
+ * à signaler », sans écriture.
+ *
+ * On découpe donc les jetons (séparés par des espaces ou du bruit de colonne :
+ * « | », « ; », « : ») en OCCURRENCES consécutives, de toutes les façons
+ * possibles, et l'on ne garde que les découpages où chaque occurrence a
+ * EXACTEMENT les mêmes lectures que les autres.
+ *
  * ========================================== POURQUOI CE N'EST PAS UNE SUPPOSITION
  *
- * Quand les blocs répétés sont TEXTUELLEMENT IDENTIQUES, il n'y a qu'une
- * valeur possible — quel que soit l'endroit où la plage aurait dû s'arrêter,
- * on lit le même nombre. Rendre cette valeur ne choisit rien.
+ * Quand toutes les occurrences ont les mêmes lectures, rendre ces lectures ne
+ * choisit rien : quel que soit l'endroit où la plage aurait dû s'arrêter, on
+ * lit le même nombre. Et la convention (virgule décimale ou des milliers)
+ * reste tranchée ensuite par l'arithmétique de la facture, comme pour
+ * n'importe quel montant.
  *
- * La règle est donc volontairement étroite, et deux choses la bornent :
+ * Trois bornes, et chacune refuse plutôt que de choisir :
  *
- *   — des blocs DIFFÉRENTS ne se départagent pas. « 514,700 200,000 » reste
- *     illisible, parce qu'on ne sait pas lequel était visé ;
- *   — elle ne s'applique qu'APRÈS l'échec de la lecture entière, donc
- *     « 2 800,000 » se recolle comme avant — ses blocs ne sont pas identiques.
+ *   — des occurrences DIFFÉRENTES ne se départagent pas. « 514,700 200,000 »
+ *     reste illisible, parce qu'on ne sait pas laquelle était visée ;
+ *   — deux découpages qui donnent deux montants différents : illisible ;
+ *   — elle ne s'applique qu'APRÈS l'échec de la lecture entière, et si le
+ *     texte recollé sans ses espaces ne se lit pas non plus — « 3 020 3 020 »
+ *     pourrait être 30 203 020 aux espaces parasites, on ne tranche pas.
  *
  * R2 tient : aucune valeur n'est inventée, et celle-ci pointe toujours vers
  * les jetons de la plage.
  */
-function blocsIdentiques(texte: string): string | null {
+/** Assez pour cinq occurrences d'un montant à quatre groupes de chiffres. */
+const JETONS_PAR_CELLULE_MAX = 20;
+
+function occurrencesIdentiques(texte: string, decimales: number): Candidat[] {
   // `\s` couvre déjà l'espace insécable et l'espace fine insécable. Les
   // écrire eux-mêmes dans une classe les ferait entrer littéralement dans le
   // fichier, invisibles — ce que le lint refuse, à juste titre.
-  const blocs = texte.split(/\s+/u).filter((b) => b.length > 0);
-  if (blocs.length < 2) return null;
-  return blocs.every((b) => b === blocs[0]) ? blocs[0]! : null;
+  const jetons = texte.split(/[\s|;:]+/u).filter((b) => b.length > 0);
+  // Au-delà, le nombre de découpages croît en 2^n ; une cellule n'en porte pas tant.
+  if (jetons.length < 2 || jetons.length > JETONS_PAR_CELLULE_MAX) return [];
+
+  const cle = (ls: Candidat[]) =>
+    ls
+      .map((c) => c.mineur)
+      .sort((a, b) => a - b)
+      .join("|");
+  const lectures = new Map<string, Candidat[]>();
+  const lire = (debut: number, fin: number) => {
+    const morceau = jetons.slice(debut, fin).join(" ");
+    let l = lectures.get(morceau);
+    if (!l) lectures.set(morceau, (l = lectureEntiere(morceau, decimales)));
+    return l;
+  };
+  // Le reste des jetons, à partir de `debut`, se découpe-t-il en occurrences
+  // qui ont toutes la clé `attendue` ?
+  const echecs = new Set<string>();
+  const seDecoupe = (debut: number, attendue: string): boolean => {
+    if (debut === jetons.length) return true;
+    if (echecs.has(`${debut}|${attendue}`)) return false;
+    for (let fin = debut + 1; fin <= jetons.length; fin += 1) {
+      const l = lire(debut, fin);
+      if (l.length > 0 && cle(l) === attendue && seDecoupe(fin, attendue)) return true;
+    }
+    echecs.add(`${debut}|${attendue}`);
+    return false;
+  };
+
+  const retenues = new Map<string, Candidat[]>();
+  for (let fin = 1; fin < jetons.length; fin += 1) {
+    const premiere = lire(0, fin);
+    if (premiere.length === 0) continue;
+    const c = cle(premiere);
+    if (seDecoupe(fin, c)) retenues.set(c, premiere);
+  }
+  // Un seul montant possible : on le rend. Deux : on ne choisit pas.
+  return retenues.size === 1 ? [...retenues.values()][0]! : [];
 }
 
 /**
- * Retirer les parentheses ORPHELINES, et elles seules.
+ * Retirer les parenthèses ORPHELINES, et elles seules.
  *
- * ================================================= LE DEFAUT QUI L'A FAIT NAITRE
+ * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
  *
- * 15 octobre 2026. Une facture d'achat imprime « (base 514,700) » a cote du
- * taux de TVA. La designation a englobe la parenthese fermante, et le montant
- * est arrive ici sous la forme « 514,700 514,700) ».
+ * 15 octobre 2026. Une facture d'achat imprime « (base 514,700) » à côté du
+ * taux de TVA. La désignation a englobé la parenthèse fermante, et le montant
+ * est arrivé ici sous la forme « 514,700 514,700) ».
  *
- * Un seul caractere parasite, et un montant parfaitement lu devenait
- * illisible : verdict « anomalie a signaler », aucune ecriture proposee. La
- * regle des blocs identiques aurait sauve le cas — « 514,700 » deux fois —
- * si le « ) » n'avait pas rendu les deux blocs differents.
+ * Un seul caractère parasite, et un montant parfaitement lu devenait
+ * illisible : verdict « anomalie à signaler », aucune écriture proposée.
  *
  * ========================================== POURQUOI PAS LES PAIRES
  *
- * Une parenthese EQUILIBREE a un sens en comptabilite : « (514,700) » se lit
- * moins 514,700. Les retirer transformerait un negatif en positif, en
- * silence — l'erreur la plus grave possible sur un montant. La chaine ne sait
- * pas encore lire cette notation ; elle refuse, et c'est le bon refus.
+ * Une parenthèse APPARIÉE a un sens en comptabilité : « (514,700) » se lit
+ * moins 514,700. La retirer transformerait un négatif en positif, en
+ * silence — l'erreur la plus grave possible sur un montant. La chaîne ne lit
+ * pas cette notation, et c'est voulu : la même facture imprime aussi
+ * « (base 514,700) », et lire la paire comme un négatif inscrirait au crédit
+ * ce qui va au débit. Elle refuse ; la personne saisit.
  *
- * Une fermante sans ouvrante, elle, ne peut rien signifier de tel.
+ * ========================================== LE 29 OCTOBRE : PAR APPARIEMENT
+ *
+ * La première version comptait les parenthèses et, au moindre déséquilibre,
+ * les retirait TOUTES : « (3 020,000)) » devenait 3 020,000, positif — la
+ * paire perdue avec l'orpheline. On apparie désormais : seule une parenthèse
+ * sans partenaire est retirée, et une paire qui reste fait refuser la lecture.
  */
 function sansParenthesesOrphelines(texte: string): string {
-  let ouvertes = 0;
-  let fermees = 0;
-  for (const c of texte) {
-    if (c === "(") ouvertes += 1;
-    else if (c === ")") fermees += 1;
-  }
-  if (ouvertes === fermees) return texte;
-  return texte.replace(/[()]/g, "");
+  const caracteres = [...texte];
+  const orphelines = new Set<number>();
+  const ouvertes: number[] = [];
+  caracteres.forEach((c, i) => {
+    if (c === "(") ouvertes.push(i);
+    else if (c === ")" && ouvertes.pop() === undefined) orphelines.add(i);
+  });
+  for (const i of ouvertes) orphelines.add(i);
+  return caracteres.filter((_, i) => !orphelines.has(i)).join("");
 }
 
+/**
+ * Les chiffres arabes-indiens (U+0660…) et persans (U+06F0…) en chiffres
+ * latins ; la virgule décimale arabe (U+066B) en virgule, le séparateur des
+ * milliers arabe (U+066C) en apostrophe — que la lecture ne prend jamais pour
+ * une décimale. Une transcription, pas une interprétation : chaque caractère a
+ * un seul équivalent.
+ */
+function enChiffresLatins(texte: string): string {
+  return texte
+    .replace(/[٠-٩]/gu, (c) => String(c.codePointAt(0)! - 0x0660))
+    .replace(/[۰-۹]/gu, (c) => String(c.codePointAt(0)! - 0x06f0))
+    .replace(/٫/gu, ",")
+    .replace(/٬/gu, "'");
+}
+
+/** Les lectures possibles d'un montant imprimé. Vide : illisible. */
 export function candidatsMontant(entree: string, decimales: number): Candidat[] {
-  const brut = sansParenthesesOrphelines(entree);
-  const repete = blocsIdentiques(brut.trim());
-  if (repete !== null) {
-    const lectures = candidatsMontant(repete, decimales);
-    // La répétition ne sert que si elle DÉBLOQUE. Si le texte entier se lit
-    // déjà, c'est lui qui fait foi : « 2 2 » peut être deux fois deux, et la
-    // lecture entière le dit mieux que la règle.
-    if (lectures.length > 0 && candidatsMontant(brut.replace(/\s+/gu, ""), decimales).length === 0)
-      return lectures;
-  }
+  const brut = sansParenthesesOrphelines(enChiffresLatins(entree)).trim();
+  const entiere = lectureEntiere(brut, decimales);
+  if (entiere.length > 0) return entiere;
+  // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
+  // espaces parasites, et non un montant répété. On ne tranche pas.
+  if (lectureEntiere(brut.replace(/\s+/gu, ""), decimales).length > 0) return [];
+  return occurrencesIdentiques(brut, decimales);
+}
+
+/** Les lectures d'un texte pris comme UN seul montant. */
+function lectureEntiere(brut: string, decimales: number): Candidat[] {
   let texte = brut.trim();
   // La devise, collée ou non, en tête ou en queue — et rien d'autre de littéral.
   texte = texte.replace(
@@ -359,6 +448,43 @@ export function normaliserMontants(
   entree: EntreeMontants,
   p: ParametresMontants,
 ): ResultatNormalisation {
+  /*
+   * ============================== LA LIGNE ILLISIBLE, LE PIED LISIBLE (29 octobre 2026)
+   *
+   * Sur une facture à une base, le HT de la ligne et le HT du pied sont le
+   * même montant, imprimé deux fois. Quand la ligne ne se lit pas — sa
+   * citation a couvert deux colonnes différentes, par exemple — le pied, lui,
+   * peut se lire : on le retient, à une condition, que la facture ENTIÈRE le
+   * vérifie (`tranche` : la TVA imprimée vaut arrondi(HT × taux), le total
+   * vaut la somme). Sinon, rien ne change : la ligne reste illisible.
+   *
+   * Rien n'est déduit — le HT retenu est imprimé et cité — et la substitution
+   * se dit (`ligneNonLue`) : le contrôle arithmétique pose une réserve, la
+   * personne qui supervise la voit. Plusieurs bases : le pied ne se ventile
+   * pas entre elles, on n'y touche pas.
+   */
+  const [seule] = entree.bases;
+  const pied = seule?.pied?.trim() ?? "";
+  const ligne = seule?.ht?.trim() ?? "";
+  if (
+    entree.bases.length === 1 &&
+    ligne !== "" &&
+    pied !== "" &&
+    pied !== ligne &&
+    candidatsMontant(ligne, p.decimales).length === 0
+  ) {
+    const parLePied = normaliserMontants(
+      { ...entree, bases: [{ ht: pied, taux: seule!.taux }] },
+      p,
+    );
+    if (parLePied.etat === "tranche")
+      return {
+        ...parLePied,
+        ligneNonLue: ligne,
+        raison: `${parLePied.raison} ; la base de la ligne « ${ligne} » ne se lit pas, celle du pied de facture est retenue`,
+      };
+  }
+
   const taux = entree.bases.map((b) => String(b.taux));
 
   /*
@@ -401,6 +527,7 @@ export function normaliserMontants(
     conventions: [],
     lecturesValides,
     totalNonLu,
+    ligneNonLue: null,
     raison,
   });
 
@@ -453,7 +580,7 @@ export function normaliserMontants(
 
   const illisible = champs.findIndex((_, i) => brutes[i]!.length === 0);
   if (illisible >= 0)
-    return vide("illisible", `montant illisible : « ${champs[illisible]!.brut} »${suffixe}`);
+    return vide("illisible", `montant illisible « ${champs[illisible]!.brut} »${suffixe}`);
 
   // Un droit fixé par le paramétrage ne se lit qu'à sa valeur. Imprimé
   // autrement, il n'ancre rien et garde toutes ses lectures.
@@ -659,6 +786,7 @@ export function normaliserMontants(
       conventions: pris.map((c, i) => `${champs[i]!.nom} : ${c.convention}`),
       lecturesValides,
       totalNonLu,
+      ligneNonLue: null,
       raison,
     };
   }

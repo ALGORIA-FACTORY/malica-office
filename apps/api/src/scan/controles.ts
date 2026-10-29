@@ -174,6 +174,18 @@ function arithmetique(p: PieceAControler): ResultatControle {
           motif: `Le total imprimé « ${m.totalNonLu} » n'a pas pu être lu ; les montants retenus se vérifient entre eux — ${m.raison}.`,
           preuves,
         };
+      /*
+       * La base de la ligne ne se lisait pas ; celle du pied de facture, que
+       * la facture entière vérifie, a été retenue (29 octobre 2026). Même
+       * raisonnement : on comptabilise, et on le dit.
+       */
+      if (m.ligneNonLue)
+        return {
+          code: "coherence_arithmetique",
+          statut: "reserve",
+          motif: `Base retenue depuis le pied de facture : la ligne « ${m.ligneNonLue} » ne se lit pas. À vérifier.`,
+          preuves: { ...preuves, ligneNonLue: m.ligneNonLue },
+        };
       return {
         code: "coherence_arithmetique",
         statut: "conforme",
@@ -198,7 +210,9 @@ function arithmetique(p: PieceAControler): ResultatControle {
       return {
         code: "coherence_arithmetique",
         statut: "anomalie",
-        motif: `Aucun montant n'est retenu — ils sont à saisir : ${m.raison}.`,
+        // Court, et dit le geste : l'écran l'affiche sous « le Socle ne
+        // propose aucune écriture » (29 octobre 2026).
+        motif: `À saisir : ${m.raison}.`,
         preuves,
       };
   }

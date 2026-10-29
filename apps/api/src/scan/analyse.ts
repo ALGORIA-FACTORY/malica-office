@@ -302,6 +302,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
            * ferait porter à la pièce un défaut qu'elle n'a pas.
            */
           totalNonLu: null,
+          ligneNonLue: null,
           raison:
             lignes.length === 0
               ? "aucune base par taux n'a été lue"
@@ -314,6 +315,8 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
                 brut(`lines[${i}].base_ht`) ??
                 (lignes.length === 1 ? brut("totals.base_ht") : null),
               taux: tauxDe.get(l.tax_code!)!,
+              // Le HT du pied, si la ligne ne se lit pas (29 octobre 2026).
+              pied: lignes.length === 1 ? brut("totals.base_ht") : null,
             })),
             tva: brut("totals.vat"),
             autres: droits.flatMap((d, i) => {
