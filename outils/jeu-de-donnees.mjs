@@ -868,28 +868,33 @@ async function lire(pieceId, piece) {
   }
 }
 
+/**
+ * Le cabinet prend la pièce en charge (« Malica sans blocage », 28 octobre
+ * 2026) : le client ne confirme ni n'inscrit rien. Le jeu joue l'experte —
+ * elle valide ce que le Socle propose, sinon elle saisit les lignes de la
+ * pièce (forcer), avec son type. Session : l'experte du cabinet.
+ */
 async function comptabiliser(pieceId, piece) {
   const existantes = await rpc("office", "ecrituresForPiece", [pieceId]);
   const gravee = existantes.find((x) => x.status === "booked");
-  if (gravee) return { id: gravee.id, detail: "déjà comptabilisée" };
-  // La lecture du jeu porte le type de la pièce, mais la règle R2 veut
-  // qu'une personne le confirme avant toute écriture : le jeu joue la
-  // personne, comme le fait l'écran de la pièce.
-  await rpc("capture", "preciser", [pieceId, "document_kind", piece.kind]);
+  if (gravee) return { id: gravee.id, detail: "déjà prise en charge" };
+  const proposition = await rpc("office", "propositionDePiece", [pieceId]);
+  if (proposition.ok) {
+    const id = await rpc("office", "valider", [pieceId]);
+    return { id, detail: `validée · ${proposition.proposition.journal}` };
+  }
   const p = lignesDuPivot(piece);
-  const id = await rpc("office", "propose", [
+  const id = await rpc("office", "forcer", [
     {
       pieceId,
       journal: p.journal,
       date: piece.date,
       libelle: p.libelle,
-      packVersionId: ref.pack.id,
       lignes: p.lignes,
-      devise: ref.pack.currency,
+      typeDeDocument: piece.kind,
     },
   ]);
-  await rpc("office", "book", [id]);
-  return { id, detail: `${p.journal} · ${p.lignes.length} lignes` };
+  return { id, detail: `forcée · ${p.journal} · ${p.lignes.length} lignes` };
 }
 
 /** Les tiers d'un dossier, pour que la lecture et le plan les connaissent. */
@@ -1146,6 +1151,7 @@ for (const [cle, jeu] of Object.entries(PIECES)) {
   if (nb !== null)
     e.verdict(`les tiers de ${pme.name} sont connus`, true, nb ? `${nb} créé(s)` : "déjà là");
   ECRITURES[cle] = [];
+  const lues = [];
   for (const [i, piece] of jeu.pieces.entries()) {
     const marque = `jeu-${cle}-${i + 1}`;
     const pieceId = await etape(`dépôt ${marque}`, () => deposer(pme.id, marque, piece));
@@ -1154,21 +1160,30 @@ for (const [cle, jeu] of Object.entries(PIECES)) {
     if (!piece.lue) continue;
     const lecture = await etape(`lecture ${marque}`, () => lire(pieceId, piece));
     if (lecture) e.verdict(`${piece.reference} est lue sans IA`, true, lecture);
+    // Comme la lecture réelle (`read-flow.ts`), le jugement suit la lecture,
+    // dans la session de la PME : c'est sur lui que le cabinet valide.
+    await etape(`jugement ${marque}`, () => rpc("capture", "analyser", [pieceId]));
+    lues.push({ marque, pieceId, piece });
+  }
+  // Le cabinet prend en charge ce que la PME a envoyé.
+  await e.connecter(LEILA);
+  for (const { marque, pieceId, piece } of lues) {
     const ecriture = await etape(`écriture ${marque}`, () => comptabiliser(pieceId, piece));
     if (ecriture) {
       e.verdict(
-        `${piece.reference} est proposée puis comptabilisée`,
+        `${piece.reference} est prise en charge par le cabinet`,
         Boolean(ecriture.id),
         ecriture.detail,
       );
       ECRITURES[cle].push({ pieceId, ecritureId: ecriture.id, piece });
     }
   }
+  await e.connecter(pme.compte);
   const historique = await rpc("capture", "listAvecLecture", [pme.id]);
   e.verdict(
     `l'historique de ${pme.name} porte ses pièces`,
     historique.length >= jeu.pieces.length,
-    `${historique.length} pièce(s), ${historique.filter((p) => p.status === "comptabilisee").length} comptabilisée(s)`,
+    `${historique.length} pièce(s), ${historique.filter((p) => p.status === "supervisee").length} prise(s) en charge`,
   );
 }
 
@@ -1177,7 +1192,7 @@ const file = await rpc("supervision", "queue", [cabinet.id]);
 e.verdict(
   "la file du cabinet porte les pièces transmises",
   file.length > 0,
-  `${file.length} pièce(s), ${file.filter((p) => p.status === "comptabilisee").length} à superviser`,
+  `${file.length} pièce(s), ${file.filter((p) => ["recue", "vue", "corrigee"].includes(p.statut)).length} à traiter`,
 );
 
 /* ============================================================ 7. les honoraires */
