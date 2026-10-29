@@ -931,6 +931,88 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.equal(rows.length, 1, "une seule écriture pour le règlement");
   });
 
+  /* ============ une écriture vivante se cherche sur toute la chaîne (revue Codex de #127) */
+
+  /** Un règlement saisi sur l'ancienne photo, inscrit après la reprise : l'écriture vit sur A. */
+  const reglementHeriteInscrit = async () => {
+    const ancienne = await transmiseLue();
+    const paiement = await payer(ancienne, 10000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 10000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
+    return { ancienne, nouvelle, ecriture };
+  };
+
+  it("une photo reprise dont le règlement hérité est inscrit ne se retourne, ne se remplace ni ne se supprime", async () => {
+    const { nouvelle, ecriture } = await reglementHeriteInscrit();
+    // La fiche de la courante montre l'écriture de la pièce, toutes versions.
+    const vues = (await cabinetFait("office.ecrituresForPiece", nouvelle)) as Array<{ id: string }>;
+    assert.ok(vues.some((e) => e.id === ecriture), "l'écriture héritée est sur la fiche");
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.retourner(db, { pieceId: nouvelle, motifId: motifs["montant_incoherent"]! }),
+      ),
+      /refus\.retour\.inscrite/,
+    );
+    await assert.rejects(remplacer(nouvelle), /refus\.remplacement\.inscrite/);
+    // Retournée par quelque chemin que ce soit, elle reste engagée : ni
+    // supprimée, ni partie dans un espace privé.
+    await admin.query(`update capture.pieces set status = 'retournee' where id = $1`, [nouvelle]);
+    await assert.rejects(pmeFait("capture.supprimer", nouvelle), /engagée/);
+    await assert.rejects(
+      pmeFait("collab.setPieceVis", nouvelle, "personnel"),
+      /reste dans la societe/,
+    );
+    assert.ok(await etat(nouvelle), "la photo courante existe toujours");
+  });
+
+  it("ni rappel ni suppression ne se demandent sur une photo dont le règlement hérité est inscrit", async () => {
+    const { nouvelle } = await reglementHeriteInscrit();
+    await assert.rejects(
+      pmeFait("collab.demanderSurPiece", nouvelle, "rappel"),
+      /refus\.rappel\.inscrite/,
+    );
+    await assert.rejects(
+      pmeFait("collab.demanderSurPiece", nouvelle, "suppression"),
+      /refus\.suppression\.inscrite/,
+    );
+  });
+
+  it("partager la photo courante transmet l'écriture proposée sur l'ancienne", async () => {
+    n += 1;
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    const paiement = await payer(ancienne, 10000);
+    const nouvelle = await remplacer(ancienne, "entite");
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 10000);
+    await admin.query(
+      `update capture.pieces set document_kind_statut = 'confirme' where id = $1`,
+      [nouvelle],
+    );
+    const ecriture = (await pmeFait("office.proposerLeReglement", paiement)) as string;
+    const cote = async () =>
+      (
+        await admin.query<{ vis: string }>(
+          `select vis::text as vis from socle.ecritures where id = $1`,
+          [ecriture],
+        )
+      ).rows[0]?.vis;
+    assert.equal(await cote(), "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    assert.equal(await cote(), "partage", "l'écriture suit la pièce chez le cabinet");
+  });
+
   /** Une photo de la société, jamais partie au cabinet. */
   const societe = async () => {
     n += 1;
@@ -983,6 +1065,20 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.ok(
       lignes.every((l) => l.piece_ref === numero),
       "la référence est lue sur la version courante",
+    );
+    // Le rapprochement bancaire lit la même référence.
+    const banque = await sousIdentiteDuServeur(expert.id, async (db) => {
+      const { rows: b } = await db.query<{ reference: string | null }>(
+        `select reference from public.banque_book_lignes($1, '5', '2026-01-01', '2026-12-31')
+          where ecriture_id = $2`,
+        [pme, ecriture],
+      );
+      return b;
+    });
+    assert.ok(banque.length > 0, "le règlement est au rapprochement");
+    assert.ok(
+      banque.every((b) => b.reference === numero),
+      "le rapprochement lit la référence de la version courante",
     );
   });
 
