@@ -24,7 +24,7 @@
  *   — rien n'est demandé tant que l'aperçu n'approche pas de l'écran
  *     (`IntersectionObserver`, marge de 200 px) ;
  *   — une fois lu, il reste en cache : une pièce ne change pas d'octets ;
- *   — sans image (un PDF de texte, une pièce sans octets), et pendant le
+ *   — sans image (un PDF chiffré ou cassé, une pièce sans octets), et pendant le
  *     chargement, la feuille esquissée prend la place, sans rien inventer.
  *
  * Une pièce photographiée hors ligne existe avant ses octets : le serveur

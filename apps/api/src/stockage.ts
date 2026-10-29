@@ -113,6 +113,33 @@ function cheminDeLaMiniature(tenantId: string, pieceId: string): string {
   return cheminAbsolu(tenantId, `${pieceId}.miniature.jpg`);
 }
 
+/**
+ * Le constat « pas de miniature », gardé à la place de la miniature. Il porte
+ * sa version : jusqu'au 29 octobre 2026, seul un PDF scanné avait sa page,
+ * et un PDF de texte gardait ce constat sous la forme d'un fichier VIDE —
+ * devenu faux depuis que toute page de PDF se rend. Un fichier vide se lit
+ * donc comme périmé, et la miniature se refait à la demande suivante. Si ce
+ * qui donne une miniature change encore, la version change avec lui.
+ */
+const SANS_MINIATURE = Buffer.from("malica:sans-miniature:2");
+
+/**
+ * Ce qui est gardé pour une pièce : sa miniature, le constat « pas de
+ * miniature » (un `Buffer` vide), ou `null` — rien de gardé, ou un constat
+ * périmé : elle est à faire.
+ */
+async function miniatureGardee(chemin: string): Promise<Buffer | null> {
+  let garde: Buffer;
+  try {
+    garde = await readFile(chemin);
+  } catch {
+    return null;
+  }
+  if (garde.equals(SANS_MINIATURE)) return Buffer.alloc(0);
+  // Une miniature est un JPEG (FF D8 FF) ; tout le reste est périmé.
+  return garde[0] === 0xff && garde[1] === 0xd8 && garde[2] === 0xff ? garde : null;
+}
+
 interface LignePiece {
   id: string;
   tenant_id: string;
@@ -486,7 +513,8 @@ const existe = (chemin: string) =>
 /**
  * Fabrique, garde et rend la miniature d'une pièce.
  *
- *   — `Buffer` (vide : « pas de miniature », par nature, gardé) ;
+ *   — `Buffer` (vide : « pas de miniature », par nature, gardé comme
+ *     `SANS_MINIATURE`) ;
  *   — `"absent"` : la pièce n'a pas d'octets, ou ils ont été effacés pendant
  *     la fabrication ;
  *   — `"passager"` : la fabrication a échoué. RIEN n'est gardé : la demande
@@ -527,7 +555,7 @@ async function fabriquerEtGarder(
     // fichier à moitié écrit.
     const provisoire = `${miniature}.${randomUUID()}.partiel`;
     try {
-      await writeFile(provisoire, octets);
+      await writeFile(provisoire, octets.length > 0 ? octets : SANS_MINIATURE);
       await rename(provisoire, miniature);
     } finally {
       await rm(provisoire, { force: true });
@@ -552,9 +580,9 @@ async function fabriquerEtGarder(
  * protégée qu'elle.
  *
  * Faite à la première demande, puis gardée (les octets d'une pièce sont
- * scellés). Un contenu qui n'en donne pas PAR NATURE (un PDF de texte, un
- * format refusé) se garde aussi, comme un fichier VIDE, et se rend en 204 :
- * sans cela, chaque ouverture de liste relirait le PDF pour rien. Un échec
+ * scellés). Un contenu qui n'en donne pas PAR NATURE (un PDF chiffré, un
+ * format refusé) se garde aussi, comme constat (`SANS_MINIATURE`), et se rend
+ * en 204 : sans cela, chaque ouverture de liste relirait le PDF pour rien. Un échec
  * passager se rend en 503 (`miniature.indisponible`), rien n'est gardé, et
  * l'écran réessaie.
  */
@@ -565,10 +593,10 @@ export async function servirMiniature(req: Request, res: Response): Promise<void
     return;
   }
 
-  let resultat: Buffer | "absent" | "passager";
-  try {
-    resultat = await readFile(cheminDeLaMiniature(piece.tenant_id, piece.id));
-  } catch {
+  let resultat: Buffer | "absent" | "passager" | null = await miniatureGardee(
+    cheminDeLaMiniature(piece.tenant_id, piece.id),
+  );
+  if (!resultat) {
     const cle = `${piece.tenant_id}/${piece.id}`;
     let enCours = fabrications.get(cle);
     if (!enCours) {

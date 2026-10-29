@@ -31,24 +31,38 @@
  *     déclaré : JPEG, PNG, WebP, et PDF. Rien d'autre n'est décodé ;
  *   — les dimensions se lisent dans l'EN-TÊTE, et une image au-delà de
  *     `PLAFOND_PIXELS` n'est pas décodée. Pour un PDF, pdf.js reçoit le même
- *     plafond (`maxImageSize`).
+ *     plafond (`maxImageSize`) : une image qui le dépasse n'est pas dessinée,
+ *     le reste de la page l'est.
+ *
+ * Un PDF se rend dans un FIL À PART (`miniature-pdf.ts`), borné en temps et en
+ * mémoire (`limitesDuRenduPdf`) : pdf.js travaille en microtâches, et aucune
+ * minuterie du fil de l'API ne l'arrêterait. Il ne lit ni police système ni
+ * adresse fournie par le PDF : polices standard, CMaps et décodeurs viennent
+ * du paquet installé.
  *
  * ========================================================== CE QU'ELLE MONTRE
  *
  *   — une photo : elle-même, réduite, et redressée selon son orientation
  *     EXIF — `loadImage` l'applique au décodage (mesuré sur les huit
  *     orientations, voir l'épreuve) ;
- *   — un PDF : sa première page quand cette page EST une image (un scan,
- *     `extrairePagesScannees`, la même extraction que la lecture) ;
- *   — rien (`null`), PAR NATURE, pour tout le reste : format refusé, image
- *     trop grande, PDF de texte. Ce constat est durable : le serveur le garde.
+ *   — un PDF, QUEL QU'IL SOIT : sa première page, rendue par pdf.js sur
+ *     `@napi-rs/canvas` directement à la taille de la boîte — un scan, une
+ *     page de texte, un scan en plusieurs bandes. (Jusqu'au 29 octobre 2026,
+ *     seule une page faite d'UNE image avait sa miniature ; un PDF de texte de
+ *     4,7 Mo rendait 204 sur staging. Le rendu est aussi plus rapide que
+ *     l'ancienne extraction : 0,75 s contre 1,7 s pour un scan A4 à 300 dpi.)
+ *   — rien (`null`), PAR NATURE : format refusé, image trop grande, PDF
+ *     chiffré, cassé ou sans page, ou PDF qui dépasse ses bornes de rendu.
+ *     Ce constat est durable : le serveur le garde.
  *
  * Un échec de décodage, lui, LÈVE : il peut être passager (mémoire, disque),
  * et l'appelant ne doit pas le figer en « pas de miniature ».
  */
+import { Worker } from "node:worker_threads";
+
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 
-import { extrairePagesScannees } from "./malica/lecture/pdf-image.ts";
+import type { DemandeDeRendu, RenduDePage } from "./miniature-pdf.ts";
 
 /**
  * La boîte où la miniature tient, en pixels. Le plus grand cadre qui la montre
@@ -68,13 +82,6 @@ const QUALITE = 72;
  * entière, seule sa miniature n'est pas faite.
  */
 const PLAFOND_PIXELS = 50_000_000;
-
-/**
- * Écart toléré entre la forme de l'image et celle de la page pour dire que
- * l'image EST la page. Un scan la couvre (même forme, aux marges près) ; un
- * logo, presque jamais.
- */
-const ECART_DE_FORME = 0.2;
 
 type Format = "jpeg" | "png" | "webp" | "pdf";
 
@@ -158,14 +165,61 @@ function dimensionsDe(
   return null;
 }
 
-/** L'image source d'un PDF : sa première page, si c'est un scan. */
-async function premierePageScannee(octets: Uint8Array): Promise<string | null> {
-  const [page] = await extrairePagesScannees(octets, 1, PLAFOND_PIXELS);
-  if (!page || page.page !== 1) return null;
-  if (page.largeur * page.hauteur > PLAFOND_PIXELS) return null;
-  const forme = page.largeur / page.hauteur;
-  if (Math.abs(forme - page.formatDeLaPage) / page.formatDeLaPage > ECART_DE_FORME) return null;
-  return page.dataUrl;
+/**
+ * Les bornes du rendu d'un PDF, dans un objet : une épreuve les resserre pour
+ * mettre en scène un PDF trop lourd sans attendre le vrai délai.
+ *
+ *   — `delaiMs` : au-delà, le fil est terminé. Une page de facture se rend en
+ *     quelques centaines de millisecondes ; quinze secondes, c'est un PDF
+ *     construit pour ne jamais finir.
+ *   — `memoireMo` : le tas JavaScript du fil, où pdf.js tient ce qu'il lit
+ *     du PDF. Les pixels des images vivent hors de ce tas : eux, c'est
+ *     `PLAFOND_PIXELS` qui les borne.
+ */
+export const limitesDuRenduPdf = { delaiMs: 15_000, memoireMo: 512 };
+
+/**
+ * La première page d'un PDF, rendue dans la boîte (`miniature-pdf.ts`, dans
+ * un fil à part). `null` quand il n'en a pas à montrer, par nature — chiffré,
+ * cassé, sans page — ou quand il dépasse ses bornes (`limitesDuRenduPdf`) :
+ * le même PDF les dépasserait encore à la prochaine demande. Lève sur toute
+ * autre erreur du rendu.
+ */
+function premierePageDuPdf(octets: Uint8Array): Promise<Buffer | null> {
+  // Une COPIE, transférée au fil : l'appelant garde ses octets intacts.
+  const copie = new ArrayBuffer(octets.byteLength);
+  new Uint8Array(copie).set(octets);
+  const demande: DemandeDeRendu = {
+    octets: new Uint8Array(copie),
+    boite: BOITE,
+    plafondPixels: PLAFOND_PIXELS,
+    qualite: QUALITE,
+  };
+  return new Promise((resoudre, rejeter) => {
+    const fil = new Worker(new URL("./miniature-pdf.ts", import.meta.url), {
+      workerData: demande,
+      transferList: [copie],
+      resourceLimits: { maxOldGenerationSizeMb: limitesDuRenduPdf.memoireMo },
+    });
+    let reglee = false;
+    const regler = (suite: () => void) => {
+      if (reglee) return;
+      reglee = true;
+      clearTimeout(minuterie);
+      void fil.terminate();
+      suite();
+    };
+    const minuterie = setTimeout(() => regler(() => resoudre(null)), limitesDuRenduPdf.delaiMs);
+    fil.once("message", ({ jpeg }: RenduDePage) =>
+      regler(() => resoudre(jpeg ? Buffer.from(jpeg) : null)),
+    );
+    fil.once("error", (erreur: Error & { code?: string }) =>
+      regler(() => (erreur.code === "ERR_WORKER_OUT_OF_MEMORY" ? resoudre(null) : rejeter(erreur))),
+    );
+    fil.once("exit", (code) =>
+      regler(() => rejeter(new Error(`rendu du PDF interrompu (code ${code})`))),
+    );
+  });
 }
 
 /**
@@ -176,18 +230,13 @@ async function premierePageScannee(octets: Uint8Array): Promise<string | null> {
 export async function fabriquerMiniature(octets: Uint8Array): Promise<Buffer | null> {
   const format = formatDe(octets);
   if (!format) return null;
+  // Un PDF sort du fil déjà rendu à la taille de la boîte.
+  if (format === "pdf") return premierePageDuPdf(octets);
 
-  let source: Buffer | string | null;
-  if (format === "pdf") {
-    source = await premierePageScannee(octets);
-  } else {
-    const taille = dimensionsDe(octets, format);
-    if (!taille || taille.largeur * taille.hauteur > PLAFOND_PIXELS) return null;
-    source = Buffer.from(octets);
-  }
-  if (!source) return null;
+  const taille = dimensionsDe(octets, format);
+  if (!taille || taille.largeur * taille.hauteur > PLAFOND_PIXELS) return null;
 
-  const image = await loadImage(source);
+  const image = await loadImage(Buffer.from(octets));
   if (!image.width || !image.height) return null;
   // Jamais agrandie : une petite photo reste ce qu'elle est.
   const echelle = Math.min(1, BOITE.largeur / image.width, BOITE.hauteur / image.height);
