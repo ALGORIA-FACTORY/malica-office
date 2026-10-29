@@ -951,7 +951,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const { nouvelle, ecriture } = await reglementHeriteInscrit();
     // La fiche de la courante montre l'écriture de la pièce, toutes versions.
     const vues = (await cabinetFait("office.ecrituresForPiece", nouvelle)) as Array<{ id: string }>;
-    assert.ok(vues.some((e) => e.id === ecriture), "l'écriture héritée est sur la fiche");
+    assert.ok(
+      vues.some((e) => e.id === ecriture),
+      "l'écriture héritée est sur la fiche",
+    );
     await assert.rejects(
       sousIdentiteDuServeur(expert.id, (db) =>
         supervision.retourner(db, { pieceId: nouvelle, motifId: motifs["montant_incoherent"]! }),
@@ -1034,10 +1037,9 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const nouvelle = await remplacer(ancienne, "entite");
     await lire(nouvelle);
     await ttcTranche(nouvelle, 10000);
-    await admin.query(
-      `update capture.pieces set document_kind_statut = 'confirme' where id = $1`,
-      [nouvelle],
-    );
+    await admin.query(`update capture.pieces set document_kind_statut = 'confirme' where id = $1`, [
+      nouvelle,
+    ]);
     const ecriture = (await pmeFait("office.proposerLeReglement", paiement)) as string;
     const cote = async () =>
       (
