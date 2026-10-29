@@ -1411,9 +1411,10 @@ export const capture = {
    * Les documents RATTACHÉS à une pièce après sa lecture, dans un sens ou dans
    * l'autre : un bon de livraison, un avoir, un devis (24 octobre 2026).
    *
-   * L'état courant d'une paire est son dernier fait (`rattachements_v`) ; une
-   * paire détachée n'est plus rendue. `pieces_v` fait le reste : une pièce que
-   * ce lecteur ne voit pas n'apparaît pas, même rattachée.
+   * L'état courant d'une paire LOGIQUE est son dernier fait (`rattachements_v`,
+   * bouts lus à leur version courante) ; une paire détachée n'est plus rendue.
+   * `pieces_v` fait le reste : une pièce que ce lecteur ne voit pas
+   * n'apparaît pas, même rattachée.
    */
   async piecesRattachees(db: Requete, pieceId: string) {
     const { rows } = await db.query(
@@ -1422,8 +1423,6 @@ export const capture = {
          join pieces_v p
            on p.id = case when r.piece_id = $1 then r.piece_liee_id else r.piece_id end
         where (r.piece_id = $1 or r.piece_liee_id = $1) and r.fait = 'rattache'
-          -- Remplacée, une pièce liée est rattachée par la photo qui la remplace.
-          and p.remplacee_par is null
         order by r.created_at`,
       [pieceId],
     );

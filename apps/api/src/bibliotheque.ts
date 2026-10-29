@@ -179,7 +179,7 @@ export async function documentsLies(
         select id as a, source_piece_id as b from visibles where source_piece_id is not null
         union select app.version_courante(pa.piece_id), pa.justificatif_piece_id from paiements_v pa
           where pa.tenant_id = $1 and pa.justificatif_piece_id is not null
-        union select app.version_courante(r.piece_id), app.version_courante(r.piece_liee_id)
+        union select r.piece_id, r.piece_liee_id
           from rattachements_v r where r.tenant_id = $1 and r.fait = 'rattache'
       ) l
     ),
