@@ -23,7 +23,7 @@ import {
 import { z } from "zod";
 
 import type { Requete } from "../db.ts";
-import { lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 
@@ -293,6 +293,30 @@ export const office = {
     await office.book(db, id);
     if (etaitEnRetour) await closLeRetour(db, pieceId, id);
     return id;
+  },
+
+  /**
+   * TRANCHER LE SENS — achat ou vente, quand la lecture ne l'a pas dit ou se
+   * contredit (décision du dirigeant, 29 octobre 2026 : le comptable décide,
+   * jamais la PME, qui ne confirme rien).
+   *
+   * Le sens est un type qui porte une écriture, établi par le cabinet du
+   * dossier (`piece_type_etabli_par_le_cabinet`, lot 5) : une précision datée,
+   * à son nom (R7). Puis le Socle rejuge la pièce — le contrôle du sens suit
+   * la décision — et la proposition se relit : le comptable la valide, ou
+   * force. Une pièce qui porte déjà une écriture vivante ne change plus de
+   * sens ici : on force, ce qui contre-passe.
+   */
+  async trancherLeSens(db: Requete, pieceId: string, sens: string): Promise<{ type: string }> {
+    if (await ecritureVivante(db, pieceId)) throw refusMetier("refus.sens.ecriture_vivante");
+    const { rows } = await db.query<{ r: { type: string }; lue: boolean }>(
+      `select public.piece_type_etabli_par_le_cabinet($1, $2) as r,
+              exists (select 1 from extractions_v x where x.piece_id = $1) as lue`,
+      [pieceId, sens],
+    );
+    // Une pièce sans lecture n'a rien à rejuger : son écriture se saisit.
+    if (rows[0]!.lue) await analyserPiece(db, pieceId);
+    return { type: rows[0]!.r.type };
   },
 
   /**

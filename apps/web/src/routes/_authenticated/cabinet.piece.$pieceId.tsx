@@ -39,6 +39,7 @@ import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { composerLibelle } from "@malica/socle/engines/libelle";
 import { statutCabinet } from "@malica/socle/statut-d-envoi";
 import { faitsDuLibelle } from "@malica/socle/use-cases/libelle-de-piece";
+import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 
 import {
   libelleDeLAction,
@@ -505,6 +506,34 @@ function CabinetReview() {
     .join(" · ");
   // La date lue sur la pièce, pour une écriture saisie à la main.
   const dateLue = (extraction?.payload as { document_date?: string } | undefined)?.document_date;
+  /*
+   * ============================================== LE SENS SE TRANCHE ICI
+   *
+   * Décision du dirigeant, 29 octobre 2026 : un achat ou une vente que la
+   * lecture ne tranche pas, ou qu'elle contredit (l'émetteur lu n'est pas
+   * celui qu'attend le sens lu), se décide au cabinet — jamais à la PME, qui
+   * ne confirme rien. Tant qu'aucune personne n'a établi le type et qu'aucune
+   * écriture ne vit, et que le Socle ne propose rien pour cette raison, le
+   * comptable tranche en un geste. Le type qui porte une écriture vient du
+   * référentiel (`porteEcriture`), jamais d'un code écrit ici.
+   */
+  const sensLu =
+    (extraction?.payload as { document_kind?: string | null } | undefined)?.document_kind ?? null;
+  const porteEcriture = (code: string | null) =>
+    Boolean(code && (typesDoc.data ?? []).find((ty) => ty.code === code)?.porteEcriture);
+  const sensATrancher =
+    vivante === null &&
+    piece.documentKindStatut !== "confirme" &&
+    proposition.data?.ok === false &&
+    ((proposition.data.controlesEnDefaut ?? []).includes("sens_de_la_piece") ||
+      leSensResteADemander({ sensLu, typeDeclare: piece.documentKind }));
+  /*
+   * Forcer ne dépend jamais du sens : un type qui ne porte pas d'écriture (un
+   * ticket, un relevé, aucun) se choisit dans la saisie, comme un type que la
+   * lecture n'a pas reconnu (R2).
+   */
+  const typeAEtablir =
+    piece.documentKind === null || (typesDoc.isSuccess && !porteEcriture(piece.documentKind));
 
   return (
     <div className="space-y-6">
@@ -980,7 +1009,8 @@ function CabinetReview() {
                 suivi={dossier.data.suivi}
                 vivante={vivante}
                 proposition={proposition.data}
-                typeAEtablir={piece.documentKind === null}
+                typeAEtablir={typeAEtablir}
+                sens={sensATrancher ? { lu: sensLu } : null}
                 dateLue={dateLue ?? null}
                 libellePropose={libellePropose}
                 plan={plan.data ?? []}

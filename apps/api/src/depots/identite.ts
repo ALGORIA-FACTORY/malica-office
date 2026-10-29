@@ -254,7 +254,7 @@ export const identite = {
    */
   async monCabinet(db: Requete, pmeTenantId: string) {
     const { rows } = await db.query(
-      `select o.id, o.name
+      `select o.id, o.name, app.livres_tenus_par_le_cabinet($1) as livres
          from engagements_v e
          join organizations_v o on o.id = e.cabinet_org_id
         where e.pme_org_id = $1 and e.status = 'actif'
@@ -263,7 +263,13 @@ export const identite = {
       [pmeTenantId],
     );
     const trouve = (rows as Record<string, unknown>[])[0];
-    return trouve ? { id: trouve["id"] as string, name: trouve["name"] as string } : null;
+    return trouve
+      ? {
+          id: trouve["id"] as string,
+          name: trouve["name"] as string,
+          tientLesLivres: Boolean(trouve["livres"]),
+        }
+      : null;
   },
 
   /** Les mandats qu'un cabinet propose à cette PME, et qui attendent sa réponse. */

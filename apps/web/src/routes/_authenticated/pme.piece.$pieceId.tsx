@@ -32,7 +32,6 @@ import { jourEtMois, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
 import { pieceSuivanteATransmettre } from "@/lib/envoi";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation, GesteDeRetour } from "@malica/socle/ports/repositories";
-import { leSensResteADemander } from "@malica/socle/sens-de-la-piece";
 import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
 import { estIntrouvable, texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
@@ -455,9 +454,12 @@ function PieceScreen() {
   /**
    * UNE CORRECTION EST UNE ÉCRITURE NOUVELLE (R7).
    *
-   * Le sens de la pièce, quand la lecture n'a pas pu le dire : un achat ou
-   * une vente. La réponse est une entrée nouvelle — jamais une modification
+   * Le type de la pièce, corrigé après la lecture (la feuille « Qu'est-ce que
+   * c'est ? »). La réponse est une entrée nouvelle — jamais une modification
    * de la lecture ; le dossier la rend ensuite comme si elle avait été lue.
+   * Dans un dossier dont le cabinet tient les livres, le sens (achat ou
+   * vente) n'est pas à la PME : la feuille ne le propose pas, la base le
+   * refuse (29 octobre 2026).
    */
   const preciser = useMutation({
     mutationFn: async (valeur: string) => {
@@ -813,22 +815,6 @@ function PieceScreen() {
    */
   const motifNonLue = motifDeLEtat(lectureRefusee, vis);
 
-  /*
-   * ================================ LE SENS SE DEMANDE UNE FOIS, PAS DEUX
-   *
-   * 13 octobre 2026 : « il y a une deuxième fois où l'app demande achat ou
-   * vente ». La réponse était là, dans le même objet, à deux champs de
-   * distance : la personne avait répondu à la capture, la lecture ne tranchait
-   * pas — ce qui est normal sur un achat tunisien — et l'écran reposait la
-   * question. Une déclaration qui n'est ni un achat ni une vente — un relevé
-   * bancaire, un ticket — ne répond pas à la question et ne la clôt donc pas.
-   */
-  const sensIndetermine =
-    extraction != null &&
-    leSensResteADemander({
-      sensLu: (extraction.payload as { document_kind?: string | null } | null)?.document_kind,
-      typeDeclare: piece.documentKind,
-    });
   // Une citation par champ : la dernière écrite est celle qui fait foi.
   const byField = new Map(citations.map((c) => [c.field, c]));
   const payload = extraction?.payload as ExtractPayload | undefined;
@@ -1482,7 +1468,7 @@ function PieceScreen() {
    * ---------------------------------------------- CE QUE J'AI VÉRIFIÉ
    *
    * Uniquement des faits que le produit connaît : un refus de lecture, une
-   * date absente, un sens non tranché, un verdict qui bloque, un classement
+   * date absente, un verdict qui bloque, un classement
    * retenu. Aucun contrôle inventé — une liste de coches qui ne vient d'aucun
    * appel apprend à ne plus lire la liste.
    *
@@ -1495,7 +1481,6 @@ function PieceScreen() {
     k: "ok" | "q" | "no" | "az";
     p: string;
     sous?: string | null;
-    corps?: "sens" | "sensContredit" | null;
   }> = [];
   if (dossier.data.lectureRefusee) {
     controles.push({ cle: "refus", k: "no", p: t("pme.piece.lectureRefusee") });
@@ -1505,36 +1490,20 @@ function PieceScreen() {
     // lecture, à la ligne « Date », là où la personne la cherche.
     controles.push({ cle: "date", k: "q", p: t("pme.date.manque.lede") });
   }
-  if (sensIndetermine) {
-    controles.push({
-      cle: "sens",
-      k: "q",
-      p: t("pme.sens.pourquoi"),
-      corps: "sens",
-    });
-  }
   /*
-   * Recette du 20 octobre 2026 : une vente dont l'émetteur est mal lu (« PME »
-   * au lieu du nom de la société) restait en « sens à confirmer » sans aucun
-   * geste pour le confirmer. La lecture a un sens ; la personne le confirme,
-   * et le contrôle suit sa décision.
+   * LE SENS N'EST PAS UNE QUESTION POUR LA PME (décision du dirigeant, 29
+   * octobre 2026). Un achat ou une vente que la lecture ne tranche pas, ou
+   * qu'elle contredit, se tranche au cabinet ; l'écran ne demandait « Oui,
+   * c'est bien une vente de ma société » qu'à quelqu'un qui ne confirme rien.
+   * Une pièce qui n'attend que cela n'est pas bloquée pour la PME : elle
+   * l'envoie, c'est tout.
    */
-  const sensLu = (extraction?.payload as { document_kind?: string | null } | null)?.document_kind;
-  const sensContredit =
-    !sensIndetermine &&
+  const sensAuCabinet =
     proposalAttempt != null &&
     !proposalAttempt.ok &&
-    proposalAttempt.controlesEnDefaut.includes("sens_de_la_piece") &&
-    (sensLu === "facture_achat" || sensLu === "facture_vente");
-  if (sensContredit) {
-    controles.push({
-      cle: "sensContredit",
-      k: "q",
-      p: t("pme.sens.contredit"),
-      corps: "sensContredit",
-    });
-  }
-  if (!proposable && !sensIndetermine && !sensContredit && proposalAttempt && !proposalAttempt.ok) {
+    proposalAttempt.controlesEnDefaut.length > 0 &&
+    proposalAttempt.controlesEnDefaut.every((c) => c === "sens_de_la_piece");
+  if (!proposable && !sensAuCabinet && proposalAttempt && !proposalAttempt.ok) {
     /*
      * LA RAISON PASSE DEVANT LE BOUTON MORT.
      *
@@ -1563,9 +1532,8 @@ function PieceScreen() {
    * boutons et des actions ». Maquette validée (« C bon ») : la pièce en tête,
    * UNE carte de décision, l'avancement, puis Lecture · Règlement · Suivi.
    *
-   * La carte pose une seule question à la fois, dans cet ordre : le sens si
-   * la lecture ne l'a pas tranché, la date si elle manque, l'envoi au
-   * cabinet, le reste à payer — puis elle devient une ligne calme, le statut
+   * La carte pose une seule question à la fois, dans cet ordre : la date si
+   * elle manque, l'envoi au cabinet, le reste à payer — puis elle devient une ligne calme, le statut
    * de la pièce. Elle ne demande jamais de confirmer une écriture : la PME
    * n'en voit aucune (« Malica sans blocage », 28 octobre 2026). Aucun geste
    * n'est perdu : chacun a aussi sa place dans un onglet.
@@ -1590,7 +1558,7 @@ function PieceScreen() {
   const aTransmettre =
     Boolean(cabinet.data) && piece.vis !== "partage" && !piece.gardeeLe && !siege;
   const resteAPayer = resteMineur !== null && resteMineur > 0;
-  const bloquee = !proposable && proposalAttempt != null && !proposalAttempt.ok;
+  const bloquee = !proposable && !sensAuCabinet && proposalAttempt != null && !proposalAttempt.ok;
 
   const constats = controles.filter((c) => c.k === "ok" || c.cle === "refus");
 
@@ -1623,134 +1591,92 @@ function PieceScreen() {
     titre: string;
     sous?: string;
     gestes: Geste[];
-  } = sensIndetermine
-    ? {
-        ton: "am",
-        titre: t("pme.sens.pourquoi"),
-        gestes: [
-          {
-            libelle: nomDuType("facture_achat") ?? "",
-            action: () => preciser.mutate("facture_achat"),
-            eteint: preciser.isPending,
-          },
-          {
-            libelle: nomDuType("facture_vente") ?? "",
-            action: () => preciser.mutate("facture_vente"),
-            eteint: preciser.isPending,
-          },
-        ],
-      }
-    : sensContredit
+  } =
+    !priseEnCharge && dateAbsente
       ? {
           ton: "am",
-          titre: t("pme.sens.contredit"),
+          titre: t("pme.date.manque.lede"),
           gestes: [
             {
-              // L'autre réponse, de même poids (ANO-LIVE-002) : la personne
-              // corrige la lecture, et sa réponse l'emporte.
-              libelle:
-                sensLu === "facture_vente" ? t("pme.sens.plutotAchat") : t("pme.sens.plutotVente"),
-              action: () =>
-                preciser.mutate(sensLu === "facture_vente" ? "facture_achat" : "facture_vente"),
-              eteint: preciser.isPending,
-            },
-            {
-              libelle:
-                sensLu === "facture_vente"
-                  ? t("pme.sens.confirmerVente")
-                  : t("pme.sens.confirmerAchat"),
-              action: () =>
-                preciser.mutate(sensLu === "facture_vente" ? "facture_vente" : "facture_achat"),
-              eteint: preciser.isPending,
+              libelle: t("pme.piece.decision.date"),
+              action: () => allerA("lecture"),
               principal: true,
             },
           ],
         }
-      : !priseEnCharge && dateAbsente
+      : !priseEnCharge && demandeDeRappel === "demandee"
         ? {
-            ton: "am",
-            titre: t("pme.date.manque.lede"),
-            gestes: [
-              {
-                libelle: t("pme.piece.decision.date"),
-                action: () => allerA("lecture"),
-                principal: true,
-              },
-            ],
+            /*
+             * Rappeler et inscrire se contredisent : tant que le cabinet n'a
+             * pas tranché le rappel, la base refuse toute inscription. On le
+             * dit au lieu d'offrir un bouton qui échouerait.
+             */
+            ton: "az",
+            titre: t("refus.piece.rappelEnAttente"),
+            gestes: [],
           }
-        : !priseEnCharge && demandeDeRappel === "demandee"
+        : !priseEnCharge && bloquee
           ? {
-              /*
-               * Rappeler et inscrire se contredisent : tant que le cabinet n'a
-               * pas tranché le rappel, la base refuse toute inscription. On le
-               * dit au lieu d'offrir un bouton qui échouerait.
-               */
-              ton: "az",
-              titre: t("refus.piece.rappelEnAttente"),
-              gestes: [],
+              // La raison passe devant le bouton mort (10 octobre 2026).
+              ton: "ve",
+              titre: raisonDuBlocage,
+              sous: t("pme.bloque.geste"),
+              gestes: [
+                { libelle: t("pme.verifie.corriger"), action: reprendreLaPhoto },
+                ...(aTransmettre && cabinet.data
+                  ? [
+                      {
+                        libelle: t("pme.transmettre.action"),
+                        action: () => transmettre.mutate(),
+                        eteint: transmettre.isPending || garder.isPending,
+                        principal: true,
+                      },
+                    ]
+                  : []),
+              ],
             }
-          : !priseEnCharge && bloquee
+          : aTransmettre && cabinet.data
             ? {
-                // La raison passe devant le bouton mort (10 octobre 2026).
-                ton: "ve",
-                titre: raisonDuBlocage,
-                sous: t("pme.bloque.geste"),
+                /*
+                 * La transmission est une DÉCISION (4 et 7 octobre) : deux
+                 * boutons de même poids — garder chez soi est légitime.
+                 */
+                ton: "az",
+                titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
+                sous: t("pme.transmettre.chezvous"),
                 gestes: [
-                  { libelle: t("pme.verifie.corriger"), action: reprendreLaPhoto },
-                  ...(aTransmettre && cabinet.data
-                    ? [
-                        {
-                          libelle: t("pme.transmettre.action"),
-                          action: () => transmettre.mutate(),
-                          eteint: transmettre.isPending || garder.isPending,
-                          principal: true,
-                        },
-                      ]
-                    : []),
+                  {
+                    libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
+                    action: () => garder.mutate(),
+                    eteint: garder.isPending || transmettre.isPending,
+                  },
+                  {
+                    libelle: transmettre.isPending
+                      ? t("common.loading")
+                      : t("pme.transmettre.action"),
+                    action: () => transmettre.mutate(),
+                    eteint: transmettre.isPending || garder.isPending,
+                    principal: true,
+                  },
                 ],
               }
-            : aTransmettre && cabinet.data
+            : resteAPayer
               ? {
-                  /*
-                   * La transmission est une DÉCISION (4 et 7 octobre) : deux
-                   * boutons de même poids — garder chez soi est légitime.
-                   */
                   ton: "az",
-                  titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
-                  sous: t("pme.transmettre.chezvous"),
+                  titre: t("pme.piece.decision.reste", {
+                    montant: resteLisible ?? "",
+                    devise,
+                  }),
                   gestes: [
                     {
-                      libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
-                      action: () => garder.mutate(),
-                      eteint: garder.isPending || transmettre.isPending,
-                    },
-                    {
-                      libelle: transmettre.isPending
-                        ? t("common.loading")
-                        : t("pme.transmettre.action"),
-                      action: () => transmettre.mutate(),
-                      eteint: transmettre.isPending || garder.isPending,
+                      libelle: t("pme.paiement.ajouterUn"),
+                      action: ouvrirLeReglement,
                       principal: true,
                     },
                   ],
                 }
-              : resteAPayer
-                ? {
-                    ton: "az",
-                    titre: t("pme.piece.decision.reste", {
-                      montant: resteLisible ?? "",
-                      devise,
-                    }),
-                    gestes: [
-                      {
-                        libelle: t("pme.paiement.ajouterUn"),
-                        action: ouvrirLeReglement,
-                        principal: true,
-                      },
-                    ],
-                  }
-                : // Rien à faire : la carte dit où la pièce en est, un mot.
-                  { ton: TON_PME[statut], titre: motDuStatut(statut), gestes: [] };
+              : // Rien à faire : la carte dit où la pièce en est, un mot.
+                { ton: TON_PME[statut], titre: motDuStatut(statut), gestes: [] };
 
   return (
     <div data-ecran="dossier">
@@ -1832,6 +1758,7 @@ function PieceScreen() {
         <QuestionDuType
           documents={[nomDuType(piece.documentKind) ?? t("pme.piece.title")]}
           actuel={{ typeDeDocument: piece.documentKind, kind: vente ? "facture_vente" : null }}
+          sensAuCabinet={cabinet.data?.tientLesLivres ?? false}
           mode="correction"
           onRepondre={(code) =>
             code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)

@@ -581,7 +581,11 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
   it("en mandat, la PME n'inscrit pas l'écriture d'une pièce ; un dossier autonome, si", async () => {
     // Le dirigeant tente de passer par les méthodes de bas niveau.
     const id = await transmise(true);
-    await pmeFait("capture.preciser", id, "document_kind", "facture_achat");
+    // Le sens non plus n'est pas à elle (29 octobre 2026).
+    await assert.rejects(
+      pmeFait("capture.preciser", id, "document_kind", "facture_achat"),
+      /refus\.sens\.reserve_au_cabinet/,
+    );
     const ecriture = (await pmeFait("office.proposerDepuisPiece", id)) as string;
     await assert.rejects(
       pmeFait("office.book", ecriture),

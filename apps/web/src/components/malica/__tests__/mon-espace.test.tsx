@@ -53,7 +53,9 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       supprimer: api.supprimer,
     },
     collab: { setPieceVis: api.setPieceVis, transmettreLesPieces: api.transmettreLesPieces },
-    identity: { monCabinet: async () => ({ id: "cab", name: "CABINET ESSAI" }) },
+    identity: {
+      monCabinet: async () => ({ id: "cab", name: "CABINET ESSAI", tientLesLivres: true }),
+    },
   }),
 }));
 
