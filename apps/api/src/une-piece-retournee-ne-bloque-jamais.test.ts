@@ -747,4 +747,64 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     };
     assert.equal(fiche.mere?.id, nouvelle);
   });
+
+  it("un « pas encore payé » de l'ancienne photo s'éteint quand la nouvelle est réglée", async () => {
+    const ancienne = await retournee("avant écriture");
+    const nonPaye = await payer(ancienne, null, { moyenCode: "non_paye" });
+    const nouvelle = await remplacer(ancienne);
+    await payer(nouvelle, 30000);
+    const { rows } = await admin.query(
+      `select 1 from capture.paiements where annule_paiement_id = $1`,
+      [nonPaye],
+    );
+    assert.equal(rows.length, 1, "le « pas encore payé » ne survit pas au règlement");
+  });
+
+  it("un justificatif se déplace vers un règlement de l'ancienne photo, côté et mère de la courante", async () => {
+    // L'ancienne n'est jamais partie ; la nouvelle, si : leurs côtés diffèrent.
+    n += 1;
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    const paiement = await payer(ancienne, 20000);
+    const nouvelle = await remplacer(ancienne, "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    const { id: talon } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `${marque}-talon-dep-${nouvelle}`,
+      contentType: "image/jpeg",
+      documentKind: "justificatif_paiement",
+      sourcePieceId: nouvelle,
+    })) as { id: string };
+    await pmeFait("capture.deplacerJustificatif", talon, paiement);
+    const { rows } = await admin.query<{ source_piece_id: string }>(
+      `select source_piece_id from capture.pieces where id = $1`,
+      [talon],
+    );
+    assert.equal(rows[0]?.source_piece_id, nouvelle);
+  });
+
+  it("ce qui est issu d'une version archivée la suit aux archives", async () => {
+    const ancienne = await retournee("avant écriture");
+    const { id: recu } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-recu-arch-${ancienne}`,
+      contentType: "application/pdf",
+      documentKind: "recu_de_paiement",
+      sourcePieceId: ancienne,
+    })) as { id: string };
+    const nouvelle = await remplacer(ancienne);
+    assert.equal(await pmeFait("capture.supprimer", nouvelle), true);
+    assert.ok((await etat(ancienne))?.archivee_le, "la version que le cabinet a connue s'archive");
+    assert.ok((await etat(recu))?.archivee_le, "son reçu la suit");
+  });
 });
