@@ -17,6 +17,8 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
+import { facturation } from "../depots/facturation.ts";
+
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 
@@ -193,6 +195,22 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
         [ancienne.rows[0]!.id],
       );
       assert.deepEqual(v.rows[0], { utilisable: true, expiree: false });
+    });
+  });
+
+  it("une recharge sans échéance sort de l'API avec `expire_le` nul, jamais « infinity »", async () => {
+    // Staging, 29 octobre 2026 : l'écran des réglages est tombé sur
+    // `expire_le: "infinity"` (« Invalid time value »). La base garde
+    // « infinity » pour trier et comparer ; ce qui sort dit « pas d'échéance ».
+    await dansUneTransaction(async (db) => {
+      const s = await societe(db, "solo");
+      const achat = await acheter(db, s);
+      assert.equal(achat["expire_le"], null, "l'achat rend une recharge sans échéance");
+
+      const miennes = await sous(db, s.principal, () => facturation.mesRecharges(db));
+      assert.equal(miennes.length, 1);
+      assert.equal(miennes[0]!["expire_le"], null);
+      assert.equal(miennes[0]!["recharge_id"], achat["recharge_id"]);
     });
   });
 

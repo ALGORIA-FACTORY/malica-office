@@ -24,7 +24,7 @@ import {
   useCatalogueDesOffres,
 } from "@/hooks/use-offres";
 import { useI18n, type MessageKey } from "@/i18n";
-import { montant } from "@/lib/lisible";
+import { dateEnLettres, montant } from "@/lib/lisible";
 import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -361,10 +361,6 @@ export function PayerALAnnee() {
 
   if (!principal || !annuel.data) return null;
   const a = annuel.data;
-  const date = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
-      new Date(`${iso}T12:00:00`),
-    );
 
   if (a.en_cours) {
     return (
@@ -376,8 +372,8 @@ export function PayerALAnnee() {
         <p className="t-body">
           {t("pme.reglages.annuel.enCours.sous", {
             offre: libelleDOffre(catalogue, a.en_cours.offre),
-            du: date(a.en_cours.du),
-            au: date(a.en_cours.au),
+            du: dateEnLettres(a.en_cours.du, locale),
+            au: dateEnLettres(a.en_cours.au, locale),
             offerts: a.en_cours.mois_offerts,
           })}
         </p>
@@ -409,7 +405,12 @@ export function PayerALAnnee() {
           {t("pme.reglages.annuel.ttc", { ttc: aLEchelle(p.ttc), devise: pme.currency })}
         </p>
       ) : null}
-      <p className="t-body">{t("pme.reglages.annuel.dates", { du: date(p.du), au: date(p.au) })}</p>
+      <p className="t-body">
+        {t("pme.reglages.annuel.dates", {
+          du: dateEnLettres(p.du, locale),
+          au: dateEnLettres(p.au, locale),
+        })}
+      </p>
       {a.ferme ? (
         <p className="t-body">{ferme ? t(ferme) : null}</p>
       ) : (
@@ -502,10 +503,6 @@ export function MesRecharges() {
   if (!principal) return null;
 
   const offre = pme.forfait.ligne?.offre ?? null;
-  const date = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(
-      new Date(`${iso.slice(0, 10)}T00:00:00Z`),
-    );
   const liste = [...(paliers.data ?? [])].sort((a, b) => a.rang - b.rang);
   const libelleDu = (code: string | null) =>
     liste.find((p) => p.code === code)
@@ -559,11 +556,16 @@ export function MesRecharges() {
         ) : (
           (miennes.data ?? []).map((r) => (
             <p key={r.recharge_id} className="t-body" data-recharge={r.recharge_id}>
-              {t("pme.reglages.recharges.reste", {
-                restantes: r.restantes,
-                lectures: r.lectures,
-                date: date(r.expire_le),
-              })}
+              {r.expire_le === null
+                ? t("pme.reglages.recharges.reste.sansDateLimite", {
+                    restantes: r.restantes,
+                    lectures: r.lectures,
+                  })
+                : t("pme.reglages.recharges.reste", {
+                    restantes: r.restantes,
+                    lectures: r.lectures,
+                    date: dateEnLettres(r.expire_le, locale),
+                  })}
               {r.gelee ? ` — ${t("pme.reglages.recharges.gelee")}` : ""}
               {r.expiree ? ` — ${t("pme.reglages.recharges.expiree")}` : ""}
             </p>

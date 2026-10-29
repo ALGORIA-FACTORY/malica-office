@@ -3305,7 +3305,8 @@ export interface PalierDeRecharge {
   libelle: string;
   prix_ht: string;
   lectures: number;
-  validite_mois: number;
+  /** `null` : le palier n'a pas d'échéance (depuis le 20 octobre 2026). */
+  validite_mois: number | null;
   rang: number;
 }
 
@@ -3315,7 +3316,8 @@ export interface RechargeDeLaLicence {
   lectures: number;
   prix_ht: string;
   achetee_le: string;
-  expire_le: string;
+  /** `null` : la recharge n'expire pas (la base garde « infinity », l'API rend nul). */
+  expire_le: string | null;
   origine: "achat" | "automatique" | "plateforme";
   restantes: number;
   utilisable: boolean;

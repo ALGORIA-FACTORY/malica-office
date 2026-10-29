@@ -22,6 +22,7 @@ import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { dateEnLettres } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
@@ -810,12 +811,6 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
     onError: (e: unknown) =>
       setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
   });
-  const date = (iso: string | null) =>
-    iso
-      ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
-          new Date(`${iso}T12:00:00`),
-        )
-      : "";
   const lignes = (propositions.data ?? []).filter(
     (a) => a.statut === "propose" || a.statut === "actif",
   );
@@ -828,7 +823,7 @@ function AbonnementDeLaComptabilite({ tenantId }: { tenantId: string }) {
             {t("pme.abo.cabinet.couvert", {
               cabinet: a.cabinet_nom,
               offre: libelleDOffre(catalogue, a.offre_code),
-              date: date(a.effet_du),
+              date: dateEnLettres(a.effet_du, locale),
             })}
           </p>
         ) : (
@@ -953,10 +948,6 @@ function LeMandat({ tenantId }: { tenantId: string }) {
   });
 
   const m = mandat.data;
-  const date = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
-      new Date(`${iso}T12:00:00`),
-    );
 
   return (
     <>
@@ -987,7 +978,7 @@ function LeMandat({ tenantId }: { tenantId: string }) {
                     : "pme.reglages.org.mandat.propose",
                   {
                     nom: m.comptabilite,
-                    date: date(m.depuis),
+                    date: dateEnLettres(m.depuis, locale),
                   },
                 )
               : t("pme.reglages.org.cabinet.aucun")}

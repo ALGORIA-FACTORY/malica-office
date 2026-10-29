@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { deMois, momentDeLEnvoi, montant, montantSigne, quantite } from "../lisible";
+import {
+  dateEnChiffres,
+  dateEnLettres,
+  deMois,
+  momentDeLEnvoi,
+  montant,
+  montantSigne,
+  quantite,
+} from "../lisible";
 
 describe("un montant, dans la langue du lecteur", () => {
   it("groupe les milliers et pose la virgule française", () => {
@@ -135,5 +143,22 @@ describe("le moment d'un envoi", () => {
     const maintenant = new Date(2026, 9, 27, 9, 0);
     const r = momentDeLEnvoi(new Date(2026, 9, 26, 23, 50).toISOString(), "fr", maintenant);
     expect(r).toEqual({ quand: "26/10", aujourdhui: false });
+  });
+});
+
+describe("une date du Socle ne fait jamais tomber un écran", () => {
+  it("se lit en lettres, au jour du calendrier", () => {
+    expect(dateEnLettres("2026-10-23", "fr")).toBe("23 octobre 2026");
+    expect(dateEnLettres("2026-10-23T23:30:00Z", "fr")).toBe("23 octobre 2026");
+  });
+
+  it("absente, elle rend la phrase de l'appelant", () => {
+    expect(dateEnLettres(null, "fr", "sans date limite")).toBe("sans date limite");
+    expect(dateEnLettres(undefined, "fr")).toBe("");
+  });
+
+  it("illisible — « infinity » du 29 octobre 2026 —, elle s'affiche neutre sans lever", () => {
+    expect(dateEnLettres("infinity", "fr")).toBe("—");
+    expect(dateEnChiffres("infinity", "fr")).toBe("—");
   });
 });

@@ -11,6 +11,7 @@
  * pour formater perdrait de la précision au-delà de quinze chiffres, et un
  * grand livre en centimes y arrive.
  */
+import { noterAuJournal } from "./journal-atelier";
 
 /**
  * Un montant du Socle, dans la langue du lecteur.
@@ -81,19 +82,52 @@ export function quantite(valeur: string | null | undefined, locale: string): str
   return montant(sansZeros === "" || sansZeros === "-" ? "0" : sansZeros, locale);
 }
 
+/** Ce qu'affiche une date que le Socle a rendue illisible : rien qui ressemble à une date. */
+const DATE_ILLISIBLE = "—";
+
 /**
- * Une date du Socle (« 2026-11-30 »), en chiffres, dans la langue du lecteur.
+ * Le jour d'une date du Socle, mis en forme ; jamais d'exception.
  *
- * Lue en UTC : une date de calendrier n'a pas d'heure, et la lire à minuit
+ * Lu en UTC : une date de calendrier n'a pas d'heure, et la lire à minuit
  * local la ferait reculer d'un jour à l'ouest de Greenwich.
+ *
+ * Le 29 octobre 2026, une recharge sans échéance est arrivée avec
+ * `expire_le: "infinity"` : `Intl` a levé « Invalid time value » au milieu du
+ * rendu, et tout l'écran des réglages est tombé. Une date illisible part donc
+ * au journal et s'affiche neutre ; une date ABSENTE n'est pas une erreur et
+ * rend `sansDate`.
  */
+function jourDuSocle(
+  iso: string | null | undefined,
+  locale: string,
+  forme: Intl.DateTimeFormatOptions,
+  sansDate: string,
+): string {
+  if (iso === null || iso === undefined || iso === "") return sansDate;
+  const jour = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(jour.getTime())) {
+    noterAuJournal("lib/lisible : date", new RangeError(`date illisible : ${iso}`));
+    return DATE_ILLISIBLE;
+  }
+  return new Intl.DateTimeFormat(locale, { ...forme, timeZone: "UTC" }).format(jour);
+}
+
+/** Une date du Socle (« 2026-11-30 »), en chiffres, dans la langue du lecteur. */
 export function dateEnChiffres(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
+  return jourDuSocle(iso, locale, { day: "2-digit", month: "2-digit", year: "numeric" }, "");
+}
+
+/**
+ * Une date du Socle en toutes lettres (« 30 novembre 2026 »), dans la langue
+ * du lecteur. Absente, elle rend `sansDate` — la phrase que l'appelant a
+ * choisie, vide par défaut.
+ */
+export function dateEnLettres(
+  iso: string | null | undefined,
+  locale: string,
+  sansDate = "",
+): string {
+  return jourDuSocle(iso, locale, { day: "numeric", month: "long", year: "numeric" }, sansDate);
 }
 
 /**
