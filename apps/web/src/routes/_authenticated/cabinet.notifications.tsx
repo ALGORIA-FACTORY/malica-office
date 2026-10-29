@@ -86,6 +86,13 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   // Retours du cabinet (25 octobre 2026) : la relance, et la réponse du client.
   "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",
   "piece.reponse_client": "cab.notif.kind.piece.reponse_client",
+  // « Malica sans blocage » (28 octobre 2026) : chaque choix du client sur une
+  // pièce retournée arrive au cabinet.
+  "piece.renvoyee": "cab.notif.kind.piece.renvoyee",
+  "piece.remplacee": "cab.notif.kind.piece.remplacee",
+  "piece.gardee": "cab.notif.kind.piece.gardee",
+  "piece.supprimee": "cab.notif.kind.piece.supprimee",
+  "piece.archivee": "cab.notif.kind.piece.archivee",
 };
 
 /** Un genre qui attend un geste du cabinet se lit en or. */
@@ -99,6 +106,9 @@ const ATTEND_LE_CABINET = new Set([
   "piece.demande",
   // Une réponse du client sur une pièce retournée attend une lecture.
   "piece.reponse_client",
+  // Renvoyée, ou rephotographiée : la pièce attend de nouveau le cabinet.
+  "piece.renvoyee",
+  "piece.remplacee",
 ]);
 
 /** Les genres qui mènent ailleurs qu'à une pièce : la file d'arbitrage, les mandats, les PV. */

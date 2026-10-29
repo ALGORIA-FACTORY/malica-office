@@ -43,7 +43,7 @@ import { origineAutorisee } from "./origines.ts";
 import { malica } from "./malica.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
 import { estUneCoque, exigerIdentite, NOM_COOKIE, presenterLeClient } from "./session.ts";
-import { deposerContenu, servirContenu, sonderLeStockage } from "./stockage.ts";
+import { deposerContenu, servirContenu, servirMiniature, sonderLeStockage } from "./stockage.ts";
 
 /** Le journal d'atelier, en fichier — relisible après coup, en développement seulement. */
 const JOURNAL_ATELIER = new URL("../journal-atelier.log", import.meta.url);
@@ -120,6 +120,11 @@ app.post("/pieces/:id/contenu", exigerAppelant, exigerPorteeDepot, (req, res, ne
 
 app.get("/pieces/:id/contenu", exigerIdentite, (req, res, next) => {
   servirContenu(req, res).catch(next);
+});
+
+/** Sa miniature, pour les listes — voir `miniature.ts`. Même garde, même RLS. */
+app.get("/pieces/:id/miniature", exigerIdentite, (req, res, next) => {
+  servirMiniature(req, res).catch(next);
 });
 
 app.use(express.json({ limit: "1mb" }));

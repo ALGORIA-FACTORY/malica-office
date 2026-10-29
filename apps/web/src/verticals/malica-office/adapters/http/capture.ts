@@ -65,6 +65,9 @@ function versPiece(p: Record<string, unknown>): Piece {
     gardeeLe: (p["gardeeLe"] as string | null) ?? null,
     transmiseLe: (p["transmiseLe"] as string | null) ?? null,
     sourcePieceId: (p["sourcePieceId"] as string | null) ?? null,
+    remplace: (p["remplace"] as string | null) ?? null,
+    remplaceePar: (p["remplaceePar"] as string | null) ?? null,
+    versionCourante: p["versionCourante"] as string,
   };
 }
 
@@ -126,6 +129,9 @@ export function creerCaptureHttp(): CaptureRepository {
     },
     async repondreAuCabinet(pieceId: string, texte: string) {
       await rpc<void>("capture", "repondreAuCabinet", [pieceId, texte]);
+    },
+    async renvoyer(pieceId: string) {
+      return rpc<{ le: string }>("capture", "renvoyer", [pieceId]);
     },
     async pieceQuiAccompagne(pieceId: string, locale: string) {
       return rpc<PieceQuiAccompagne | null>("capture", "pieceQuiAccompagne", [pieceId, locale]);
@@ -210,6 +216,20 @@ export function creerCaptureHttp(): CaptureRepository {
       // sont pas publiques, et une URL nue n'emporterait ni cookie ni jeton.
       const reponse = await transport().appeler(`/pieces/${pieceId}/contenu`);
       return reponse.ok ? await reponse.blob() : null;
+    },
+
+    async miniature(pieceId: string) {
+      // 204 : le serveur n'en tire pas de ce contenu, par nature — `null`, la
+      // feuille esquissée, et c'est définitif.
+      // 404 (pas d'octets ENCORE) et 5xx (fabrication en échec un instant) :
+      // des erreurs, que l'aperçu sait réessayer — jamais un `null` qui se
+      // garderait pour toujours.
+      const reponse = await transport().appeler(`/pieces/${pieceId}/miniature`);
+      if (reponse.status === 404 || reponse.status >= 500) {
+        const corps = (await reponse.json().catch(() => null)) as { erreur?: string } | null;
+        throw new ErreurApi(corps?.erreur ?? "contenu absent", reponse.status);
+      }
+      return reponse.status === 200 ? await reponse.blob() : null;
     },
 
     async preciser(pieceId: string, champ: "document_kind", valeur: string) {

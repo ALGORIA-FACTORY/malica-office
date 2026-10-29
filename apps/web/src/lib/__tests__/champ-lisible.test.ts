@@ -115,6 +115,7 @@ describe("pourquoi une pièce n'est pas lue", () => {
   it("traduit chaque motif que la base inscrit", () => {
     expect(libelleDuRefus("piece_personnelle", t as never)).toBe("pme.refus.piece_personnelle");
     expect(libelleDuRefus("plafond_atteint", t as never)).toBe("pme.refus.plafond_atteint");
+    expect(libelleDuRefus("piece_remplacee", t as never)).toBe("pme.refus.piece_remplacee");
     expect(libelleDuRefus("licence_resiliee", t as never)).toBe("pme.refus.licence.autre");
     expect(libelleDuRefus("inconnu", t as never)).toBe("pme.refus.autre");
   });

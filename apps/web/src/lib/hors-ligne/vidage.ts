@@ -64,6 +64,11 @@ export interface Vidage {
     jusqua?: "enregistree" | "deposee",
   ): Promise<ElementDeFile | null>;
   reessayer(cle: string): Promise<void>;
+  /**
+   * Une reprise refusée repart : vers la version actuelle de la pièce, ou sans
+   * lien (`null`) — la photo devient une pièce à part. Rien ne se perd.
+   */
+  recibler(cle: string, remplace: string | null): Promise<void>;
   abandonner(cle: string): Promise<void>;
   elements(): Promise<ElementDeFile[]>;
   surChangement(cb: (elements: ElementDeFile[]) => void): () => void;
@@ -157,6 +162,16 @@ export function creerVidage(deps: {
         try {
           await deps.ports.deposerOctets(e.pieceId!, octets, e.contentType);
         } catch (erreur) {
+          /*
+           * 410 : la photo a été reprise ailleurs pendant que ses octets
+           * attendaient le réseau. L'API n'en veut plus — la pièce est une
+           * version précédente, gelée — et sa lecture serait refusée. L'élément
+           * part, sans demander de lecture : rien ne reste en échec pour rien.
+           */
+          if (erreur instanceof ErreurApi && erreur.statut === 410) {
+            await appliquer(await appliquer(e, { type: "deposee" }), { type: "lecture_demandee" });
+            return true;
+          }
           /*
            * 409 : la pièce est déjà scellée — ses octets sont déjà chez
            * l'API. C'est le cas d'un dépôt rejoué (même clé, réponse perdue)
@@ -299,6 +314,13 @@ export function creerVidage(deps: {
       const e = (await deps.depot.lister()).find((x) => x.cle === cle);
       if (!e) return;
       await appliquer(e, { type: "reessayer" });
+      void vider();
+    },
+
+    async recibler(cle, remplace) {
+      const e = (await deps.depot.lister()).find((x) => x.cle === cle);
+      if (!e) return;
+      await appliquer(e, { type: "recibler", remplace });
       void vider();
     },
 

@@ -238,10 +238,13 @@ export const office = {
     paiementId: string,
     qualification?: QualificationDeRetenue,
   ): Promise<string> {
-    // Même verrou que la comptabilisation et l'annulation : aucune course entre les trois.
+    // Le verrou de la VERSION COURANTE de la pièce, celui que prend
+    // `socle_ecriture_propose` : deux inscriptions d'un même règlement, même
+    // saisi sur une photo reprise, passent l'une après l'autre.
     await db.query(
-      `select pi.id from capture.pieces pi join paiements_v p on p.piece_id = pi.id
-                     where p.id = $1 for update of pi`,
+      `select pi.id from capture.pieces pi join paiements_v p
+           on pi.id = app.version_courante(p.piece_id)
+        where p.id = $1 for update of pi`,
       [paiementId],
     );
     const qualifiee = qualificationLue(qualification);
@@ -441,6 +444,16 @@ export const office = {
    * Une contre-passation n'est pas recomposée : elle recopie l'original.
    */
   async book(db: Requete, ecritureId: string): Promise<void> {
+    // Le verrou de `socle_ecriture_book` — la pièce de l'écriture et sa
+    // version courante, dans l'ordre des identifiants —, pris AVANT que la
+    // proposition soit relue : une reprise ou une suppression de la courante
+    // attend l'inscription entière, puis la voit.
+    await db.query(
+      `select pi.id from capture.pieces pi join ecritures_v e
+           on pi.id in (e.piece_id, app.version_courante(e.piece_id))
+        where e.id = $1 order by pi.id for update of pi`,
+      [ecritureId],
+    );
     const { rows } = await db.query<{
       nature: string;
       reverses_id: string | null;
@@ -491,7 +504,11 @@ export const office = {
   async ecrituresForPiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
       `select ${COLONNES_ECRITURE}
-         from ecritures_v e where piece_id = $1 order by created_at desc`,
+         from ecritures_v e
+        -- La pièce, c'est toutes ses versions : un règlement saisi sur une
+        -- photo reprise garde son écriture sur l'ancienne.
+        where piece_id in (select app.versions_de_la_piece($1))
+        order by created_at desc`,
       [pieceId],
     );
     const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
@@ -692,7 +709,8 @@ export const office = {
   async transmisesSansDate(db: Requete, tenantId: string): Promise<number> {
     const { rows } = await db.query<{ n: string }>(
       `select count(*)::text as n from pieces_v
-        where tenant_id = $1 and vis = 'partage' and transmise_le is null`,
+        where tenant_id = $1 and vis = 'partage' and transmise_le is null
+          and remplacee_par is null`,
       [tenantId],
     );
     return Number(rows[0]?.n ?? 0);

@@ -318,7 +318,9 @@ function PmeCapturer() {
    * remplace. Revue Codex de #85 : le scanner déposait une pièce NEUVE, hors
    * du lot figé — la vérification montrait toujours l'ancienne, et le
    * règlement comme l'envoi la visaient encore. La neuve prend donc sa place
-   * dans le lot, l'ancienne est supprimée, et la neuve se lit.
+   * dans le lot, et la neuve se lit. L'ancienne n'est plus supprimée : la
+   * base l'a remplacée (`piece_remplacer`, « Malica sans blocage ») — version
+   * précédente, jamais effacée, hors des listes.
    */
   const [aRemplacer, setARemplacer] = useState<string | null>(null);
   /** « Oui, déjà payées » : ouvre le choix du moyen. */
@@ -711,20 +713,6 @@ function PmeCapturer() {
     },
   });
 
-  /*
-   * La photo reprise : dès que le scanner rend la pièce neuve (elle arrive par
-   * l'URL, comme toute capture), elle remplace l'ancienne dans le lot figé, à
-   * la même place ; l'ancienne est supprimée, et la neuve part en lecture.
-   */
-  /*
-   * Deux temps, pour qu'un échec laisse toujours de quoi reprendre (revue
-   * Codex de #85) :
-   *   1. supprimer l'ancienne — refusée, rien n'a bougé : le lot garde
-   *      l'ancienne, et « Reprendre la photo » se retente ;
-   *   2. une fois l'ancienne partie, la neuve prend sa place dans le lot, PUIS
-   *      on demande sa lecture — refusée, la neuve reste dans le lot, non lue,
-   *      et « Réessayer » relance cette seule lecture.
-   */
   const [aRelire, setARelire] = useState<readonly string[]>([]);
   /*
    * Demander la lecture de quelques pièces du lot : la photo reprise, et
@@ -749,23 +737,22 @@ function PmeCapturer() {
       echoue(raison);
     },
   });
-  const remplacer = useMutation({
-    mutationFn: async ({ ancienne }: { ancienne: string; neuves: readonly string[] }) =>
-      office().capture.supprimer(ancienne),
-    onSuccess: async (_, { ancienne, neuves }) => {
-      setFige((f) => (f ?? []).flatMap((id) => (id === ancienne ? neuves : [id])));
-      await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
-      lireNeuves.mutate(neuves);
-    },
-    onError: echoue,
-  });
+  /*
+   * La photo reprise : dès que le scanner rend la pièce neuve (elle arrive par
+   * l'URL, comme toute capture), elle prend la place de l'ancienne dans le lot
+   * figé. La base a déjà fait le remplacement à l'enregistrement, et la neuve,
+   * née là où était l'ancienne, part en lecture par la file : il reste à la
+   * suivre (étape 3).
+   */
   useEffect(() => {
-    if (aRemplacer === null || fige === null || remplacer.isPending) return;
+    if (aRemplacer === null || fige === null) return;
     const neuves = duPassage.filter((id) => !fige.includes(id));
     if (neuves.length === 0) return;
     setARemplacer(null);
-    remplacer.mutate({ ancienne: aRemplacer, neuves });
-  }, [aRemplacer, fige, duPassage, remplacer]);
+    setFige((f) => (f ?? []).flatMap((id) => (id === aRemplacer ? neuves : [id])));
+    setEtape(3);
+    void qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
+  }, [aRemplacer, fige, duPassage, qc, pme.tenantId]);
 
   /* ── la navigation ───────────────────────────────────────────────────── */
 
@@ -1219,7 +1206,7 @@ function PmeCapturer() {
                 return (
                   <div key={p.id} className={vue.ton}>
                     <div className="ligne">
-                      <ApercuDePiece pieceId={p.id} className="mini" />
+                      <ApercuDePiece pieceId={p.id} className="vignette" />
                       <span className="nom">
                         <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                         {raison ? <small>{raison}</small> : null}
@@ -1232,10 +1219,10 @@ function PmeCapturer() {
                           <button
                             type="button"
                             className="pr"
-                            disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
+                            disabled={pme.capturing || lireNeuves.isPending}
                             onClick={() => {
                               setARemplacer(p.id);
-                              pme.ouvrirScanner();
+                              pme.reprendreLaPhoto({ id: p.id, vis: p.vis, ensuite: "lot" });
                             }}
                           >
                             {t("pme.verifie.corriger")}
@@ -1362,10 +1349,14 @@ function PmeCapturer() {
               <button
                 type="button"
                 className="sc"
-                disabled={pme.capturing || remplacer.isPending || lireNeuves.isPending}
+                disabled={pme.capturing || lireNeuves.isPending}
                 onClick={() => {
                   setARemplacer(enVerification.id);
-                  pme.ouvrirScanner();
+                  pme.reprendreLaPhoto({
+                    id: enVerification.id,
+                    vis: enVerification.vis,
+                    ensuite: "lot",
+                  });
                 }}
               >
                 {t("pme.verifie.corriger")}

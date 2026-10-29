@@ -79,6 +79,8 @@ export const supervision = {
             -- Un reçu ou un justificatif accompagne une pièce : il ne compte
             -- pas parmi les pièces « déposées, pas encore lues ».
             where tenant_id = e.pme_org_id and not app.piece_accompagne(id)
+              -- Ni une version précédente, ni une pièce que le client a retirée.
+              and remplacee_par is null and archivee_le is null
             group by status
          ) p on true
         where e.cabinet_org_id = $1
@@ -118,6 +120,9 @@ export const supervision = {
     // pièce — ce que l'adaptateur reconstituait par une boucle et une carte.
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
+              -- La date d'envoi : une photo reprise hérite de celle de l'ancienne
+              -- (piece_remplacer), et garde ainsi sa place dans la file.
+              coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
               dem.objet as demande_objet
@@ -125,12 +130,15 @@ export const supervision = {
          join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
           and p.tenant_id in (select app.mandats_visibles($1))
          left join organizations_v o on o.id = p.tenant_id
+         -- La pièce, c'est toutes ses versions : un règlement saisi sur une
+         -- photo reprise a son écriture sur l'ancienne, et elle attend ici.
          left join lateral (
-           select distinct on (x.piece_id) x.id, x.libelle, x.date_ecriture
+           select x.id, x.libelle, x.date_ecriture
              from ecritures_v x
-            where x.piece_id = p.id and x.status = 'booked'
+            where x.piece_id in (select app.versions_de_la_piece(p.id)) and x.status = 'booked'
               and x.reverses_id is null and x.review_outcome is null
-            order by x.piece_id, x.created_at desc
+            order by x.created_at desc
+            limit 1
          ) e on true
          -- Le montant de l'écriture : la somme de ses débits, telle que le
          -- Socle l'a posée. L'écran ne l'additionne pas.
@@ -183,8 +191,11 @@ export const supervision = {
           -- Un reçu ou un justificatif voyage avec sa pièce (« Documents
           -- liés ») : il n'entre pas dans la file comme une pièce à lire.
           and not app.piece_accompagne(p.id)
+          -- La photo qui en remplace une autre a pris sa place dans la file ;
+          -- une pièce que le client a retirée (archivée) n'attend plus rien.
+          and p.remplacee_par is null and p.archivee_le is null
           and ($2::uuid is null or p.tenant_id = $2)
-        order by p.created_at desc
+        order by coalesce(p.transmise_le, p.created_at) desc
         limit 200`,
       [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );
@@ -197,6 +208,7 @@ export const supervision = {
         status: p["status"] as string,
         source: p["source"] as string,
         createdAt: p["created_at"] as string,
+        envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
         ecritureId: (p["ecriture_id"] as string | null) ?? null,
         libelle: (p["libelle"] as string | null) ?? null,
         dateEcriture: (p["date_ecriture"] as string | null) ?? null,
@@ -208,7 +220,7 @@ export const supervision = {
       .sort((a, b) => {
         const d = (PRIORITE[a.status] ?? 9) - (PRIORITE[b.status] ?? 9);
         if (d !== 0) return d;
-        return a.createdAt < b.createdAt ? 1 : -1;
+        return a.envoyeeLe < b.envoyeeLe ? 1 : -1;
       });
   },
 

@@ -191,7 +191,8 @@ describe("le retour d'une pièce", { skip: !BASE_CONFIGUREE }, () => {
     await rpcCab("collab", "repondreSurPiece", id, "rappel", true, null);
 
     const apres = await visDe(id);
-    assert.equal(apres.vis, "personnel", "accorder un rappel rend la pièce");
+    // À la société, jamais à un espace privé (« Malica sans blocage »).
+    assert.equal(apres.vis, "entite", "accorder un rappel rend la pièce");
     assert.equal(
       apres.transmise_le,
       null,

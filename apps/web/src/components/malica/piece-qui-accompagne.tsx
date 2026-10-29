@@ -336,7 +336,7 @@ export function PieceQuiAccompagneFiche({
             onClick={onAgrandir}
           >
             <span className="papier">
-              <ApercuDePiece pieceId={pieceId} />
+              <ApercuDePiece pieceId={pieceId} taille="page" />
               {fiche.tampon ? <span className="tampon">{t("pme.accompagne.tampon")}</span> : null}
             </span>
             <span className="dent" aria-hidden />
@@ -349,7 +349,7 @@ export function PieceQuiAccompagneFiche({
             aria-label={t("pme.accompagne.agrandir.photo")}
             onClick={onAgrandir}
           >
-            <ApercuDePiece pieceId={pieceId} />
+            <ApercuDePiece pieceId={pieceId} taille="page" />
             <span className="coin hd" aria-hidden />
             <span className="coin hf" aria-hidden />
             <span className="coin bd" aria-hidden />

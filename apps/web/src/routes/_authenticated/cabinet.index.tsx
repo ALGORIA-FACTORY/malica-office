@@ -26,6 +26,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import {
   EmptyState,
@@ -178,7 +179,8 @@ function CabinetToday() {
 
   /* ---- le Socle, vingt-quatre heures : des comptes de lignes, rien d'autre */
   const depuisHier = Date.now() - JOUR_MS;
-  const recentes = rows.filter((r) => new Date(r.createdAt).getTime() >= depuisHier);
+  // Reçues = arrivées au cabinet : une photo reprise garde la date de la première.
+  const recentes = rows.filter((r) => new Date(r.envoyeeLe).getTime() >= depuisHier);
   const socle = [
     { key: "recues", label: t("cab.today.socle.recues"), value: String(recentes.length) },
     {
@@ -615,35 +617,41 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
       ]}
     >
       {rows.map((row, i) => {
-        const jours = joursDAttente(row.createdAt);
+        const jours = joursDAttente(row.envoyeeLe);
         return (
           <InkTableRow key={row.pieceId}>
             <InkCell numeric>{i + 1}</InkCell>
             <InkCell>
-              <span className="block font-medium">{row.clientName}</span>
-              {/*
-               * Une demande qui attend se VOIT dans la file. Sans cette
-               * pastille, le comptable devrait ouvrir chaque pièce pour
-               * découvrir qu'un client attend une réponse — donc il ne la
-               * découvrirait pas.
-               */}
-              {row.demandeEnAttente ? (
-                <span className="mt-0.5 inline-block bg-signal-warn px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-background">
-                  {t(
-                    row.demandeEnAttente === "rappel"
-                      ? "cab.file.demande.rappel"
-                      : "cab.file.demande.suppression",
-                  )}
+              {/* La vraie page, à gauche : le comptable reconnaît la pièce avant de l'ouvrir. */}
+              <span className="flex items-center gap-3">
+                <ApercuDePiece pieceId={row.pieceId} className="vignette" />
+                <span className="min-w-0">
+                  <span className="block font-medium">{row.clientName}</span>
+                  {/*
+                   * Une demande qui attend se VOIT dans la file. Sans cette
+                   * pastille, le comptable devrait ouvrir chaque pièce pour
+                   * découvrir qu'un client attend une réponse — donc il ne la
+                   * découvrirait pas.
+                   */}
+                  {row.demandeEnAttente ? (
+                    <span className="mt-0.5 inline-block bg-signal-warn px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-background">
+                      {t(
+                        row.demandeEnAttente === "rappel"
+                          ? "cab.file.demande.rappel"
+                          : "cab.file.demande.suppression",
+                      )}
+                    </span>
+                  ) : null}
+                  {row.collaborateur ? (
+                    <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="num bg-foreground px-1 text-[9px] text-background">
+                        {initialesDe(row.collaborateur)}
+                      </span>
+                      <span className="truncate">{row.collaborateur}</span>
+                    </span>
+                  ) : null}
                 </span>
-              ) : null}
-              {row.collaborateur ? (
-                <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="num bg-foreground px-1 text-[9px] text-background">
-                    {initialesDe(row.collaborateur)}
-                  </span>
-                  <span className="truncate">{row.collaborateur}</span>
-                </span>
-              ) : null}
+              </span>
             </InkCell>
             <InkCell>
               {/*

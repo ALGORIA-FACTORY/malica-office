@@ -99,6 +99,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
@@ -150,6 +151,11 @@ const GENRES: Record<string, MessageKey> = {
   "conseil.decide": "notif.kind.conseil.decide",
   "piece.confirmation_demandee": "notif.kind.piece.confirmation_demandee",
   "piece.reponse_client": "notif.kind.piece.reponse_client",
+  "piece.renvoyee": "notif.kind.piece.renvoyee",
+  "piece.remplacee": "notif.kind.piece.remplacee",
+  "piece.gardee": "notif.kind.piece.gardee",
+  "piece.supprimee": "notif.kind.piece.supprimee",
+  "piece.archivee": "notif.kind.piece.archivee",
 };
 
 const OU = "routes/_authenticated/pme.notifications";
@@ -230,6 +236,15 @@ function PmeNotifications() {
     );
 
   /**
+   * La pièce dont la carte parle, si elle existe encore. Une suppression
+   * accordée : la pièce n'existe plus, rien ne s'y ouvre ni ne s'y montre.
+   */
+  const pieceDe = (kind: string, payload: Record<string, unknown>): string | null => {
+    const pieceId = chaine(payload, "piece_id");
+    return pieceId && !laReponseAEffaceLaPiece(kind, payload) ? pieceId : null;
+  };
+
+  /**
    * Le geste que le CABINET demande, et rien d'autre : ouvrir la piece dont
    * il parle, ou aller repondre au mandat qu'il propose. Sans destination,
    * `null` - la carte garde son seul accuse de lecture.
@@ -238,9 +253,8 @@ function PmeNotifications() {
     kind: string,
     payload: Record<string, unknown>,
   ): { libelle: string; aller: () => void } | null => {
-    const pieceId = chaine(payload, "piece_id");
-    // Une suppression accordée : la pièce n'existe plus, rien ne s'y ouvre.
-    if (pieceId && !laReponseAEffaceLaPiece(kind, payload)) {
+    const pieceId = pieceDe(kind, payload);
+    if (pieceId) {
       return {
         libelle: t("pme.notifs.open"),
         aller: () => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId } }),
@@ -349,6 +363,7 @@ function PmeNotifications() {
                   const payload = (n.payload ?? {}) as Record<string, unknown>;
                   const detail = detailDe(n.kind, payload);
                   const geste = gesteDe(n.kind, payload);
+                  const piece = pieceDe(n.kind, payload);
                   /*
                    * Sur un retour de piece, le detail EST la parole du
                    * cabinet - la note qu'il a ecrite. Elle se cite, entre
@@ -359,6 +374,7 @@ function PmeNotifications() {
                   return (
                     <div key={n.id} className="card">
                       <div className="hd">
+                        {piece ? <ApercuDePiece pieceId={piece} className="vignette" /> : null}
                         <b>{kindLabel(n.kind, payload)}</b>
                         <span>{instant(n.createdAt)}</span>
                       </div>

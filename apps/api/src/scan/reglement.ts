@@ -81,6 +81,13 @@ export async function propositionDeReglement(
 ): Promise<PropositionDeReglement> {
   const { rows } = await db.query<{
     piece_id: string;
+    /**
+     * La photo courante de la pièce : celle qui en a remplacé l'ancienne, ou
+     * la pièce elle-même. C'est SA lecture et SON écriture qui disent le sens,
+     * le TTC et le tiers — jamais l'ancienne lecture (« Malica sans blocage »).
+     * L'écriture du règlement reste sur la pièce du règlement (`piece_id`).
+     */
+    piece_courante: string;
     tenant_id: string;
     moyen_code: string;
     montant_mineur: string | null;
@@ -95,7 +102,7 @@ export async function propositionDeReglement(
     journal_code: string | null;
     moyen_libelle: string;
   }>(
-    `select p.piece_id, pi.tenant_id, p.moyen_code, p.montant_mineur, p.devise,
+    `select p.piece_id, pi.id as piece_courante, pi.tenant_id, p.moyen_code, p.montant_mineur, p.devise,
             p.paye_le::text as paye_le, p.reference, p.eteint, p.pack_version_id,
             pi.document_kind,
             case when pi.document_kind = 'facture_vente' then m.tresorerie_account_vente
@@ -103,7 +110,7 @@ export async function propositionDeReglement(
             case when pi.document_kind = 'facture_vente' then m.role_vente else m.role_achat end as role_tresorerie,
             m.journal_code, m.libelle as moyen_libelle
        from paiements_v p
-       join pieces_v pi on pi.id = p.piece_id
+       join pieces_v pi on pi.id = app.version_courante(p.piece_id)
        left join ref_payment_means_v m
          on m.pack_version_id = p.pack_version_id and m.code = p.moyen_code
         and m.valid_from <= p.paye_le and (m.valid_to is null or m.valid_to >= p.paye_le)
@@ -163,7 +170,7 @@ export async function propositionDeReglement(
        left join lateral (select normalisation from capture.analyses y
                            where y.piece_id = p.id and y.extraction_id = e.id order by created_at desc limit 1) a on true
       where p.id = $1`,
-    [l.piece_id],
+    [l.piece_courante],
   );
   const piece = lue[0];
   if (
@@ -202,7 +209,7 @@ export async function propositionDeReglement(
          join ecriture_lignes_v ll on ll.ecriture_id = e.id
         where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
         group by e.id`,
-      [l.piece_id],
+      [l.piece_courante],
     );
     if (totaux.length === 1) ttc = totaux[0]!.total;
   }
@@ -215,13 +222,13 @@ export async function propositionDeReglement(
       where e.piece_id = $1 and e.nature = 'piece' and app.ecriture_vivante(e.id)
         and (($2 = 'facture_achat' and ll.credit = $3::numeric and ll.debit = 0)
           or ($2 = 'facture_vente' and ll.debit = $3::numeric and ll.credit = 0))`,
-    [l.piece_id, sens, ttc],
+    [l.piece_courante, sens, ttc],
   );
   let counterparty = comptes.length === 1 ? comptes[0]!.compte : "";
   if (!comptes.length) {
     const { rows: inscrite } = await db.query(
       `select id from ecritures_v where piece_id = $1 and nature = 'piece' and app.ecriture_vivante(id)`,
-      [l.piece_id],
+      [l.piece_courante],
     );
     if (inscrite.length)
       return { ok: false, raison: "Le compte du tiers inscrit doit être vérifié." };
@@ -298,7 +305,8 @@ export async function propositionDeReglement(
       brut: string | null;
     }>(
       `select p.montant_mineur::text, p.devise, app.dette_eteinte(p.id)::text as brut
-         from paiements_v p where p.piece_id = $1 and p.id <> $2 and not p.eteint
+         from paiements_v p where p.piece_id in (select app.versions_de_la_piece($1))
+           and p.id <> $2 and not p.eteint
            and p.montant_mineur is not null`,
       [l.piece_id, paiementId],
     );
