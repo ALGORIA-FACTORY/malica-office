@@ -1368,9 +1368,13 @@ export const capture = {
       `insert into capture.paiements
          (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
           montant_mineur, devise, paye_le, justificatif_piece_id, reference)
-       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
+       select c.tenant_id, c.entity_id, c.vis, p.id, $2, $3,
               $4::bigint, $5, $6::date, $7, $8
-         from pieces_v p where p.id = $1
+         from pieces_v p
+         -- Saisi sur une photo reprise, le règlement reste sur elle (le fait),
+         -- mais prend le dossier, l'établissement et le côté de la courante.
+         join pieces_v c on c.id = app.version_courante(p.id)
+        where p.id = $1
        returning id`,
       [
         input.pieceId,
