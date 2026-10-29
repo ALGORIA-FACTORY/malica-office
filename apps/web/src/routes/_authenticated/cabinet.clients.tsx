@@ -250,7 +250,7 @@ function CabinetClients() {
             key: "retournees",
             label: t("cab.kpi.returned"),
             value: retournees,
-            tone: retournees ? "text-signal-stop" : "",
+            tone: retournees ? "text-signal-info" : "",
           },
         ].map((k) => (
           <div key={k.key} className="border border-border bg-card px-4 py-4">
@@ -423,7 +423,7 @@ function LigneClient({
       <InkCell numeric>{mois}</InkCell>
       <InkCell numeric>
         <span
-          className={cn(client.parStatut.retournee ? "text-signal-stop" : "text-muted-foreground")}
+          className={cn(client.parStatut.retournee ? "text-signal-info" : "text-muted-foreground")}
         >
           {client.parStatut.retournee}
         </span>

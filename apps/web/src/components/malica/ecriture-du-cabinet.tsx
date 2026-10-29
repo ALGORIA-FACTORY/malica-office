@@ -160,7 +160,14 @@ export function EcritureDuCabinet({
   const inscrire = useMutation({
     mutationFn: () =>
       validation
-        ? office().office.valider(pieceId)
+        ? // L'empreinte de la proposition affichée : le serveur inscrit celle-là,
+          // ou refuse si elle a changé depuis (`refus.proposition.changee`).
+          office().office.valider(
+            pieceId,
+            depart.depart === "proposee" && proposition?.ok
+              ? (proposition.empreinte ?? null)
+              : null,
+          )
         : office().office.forcer({
             pieceId,
             journal: saisie.journal,
@@ -199,7 +206,14 @@ export function EcritureDuCabinet({
       minute: "2-digit",
     }).format(new Date(iso));
   const remarques = critiquerLibelle(saisie.libelle);
-  const principal = depart.depart === "rien" ? t("cab.ecriture.saisir") : t("cab.ecriture.valider");
+  // Le bouton dit ce qui partira : la proposition telle quelle se valide ;
+  // une ligne changée, c'est forcer — avec son nom.
+  const principal =
+    depart.depart === "rien"
+      ? t("cab.ecriture.saisir")
+      : validation
+        ? t("cab.ecriture.valider")
+        : t("cab.ecriture.forcer");
 
   return (
     <section className="space-y-3" aria-labelledby="ecriture-du-cabinet">
@@ -308,105 +322,119 @@ export function EcritureDuCabinet({
       ) : null}
 
       <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan} />
-      <div className="overflow-x-auto border border-border bg-card">
-        <table className="w-full min-w-[560px] text-[13px]">
-          <thead>
-            <tr className="bg-muted text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              <th className="px-2.5 py-2 text-start">{t("pme.journal.account")}</th>
-              <th className="px-2.5 py-2 text-start">{t("cab.ecriture.ligne.libelle")}</th>
-              <th className="px-2.5 py-2 text-end">{t("pme.journal.debit")}</th>
-              <th className="px-2.5 py-2 text-end">{t("pme.journal.credit")}</th>
-              <th className="w-9" aria-hidden />
-            </tr>
-          </thead>
-          <tbody>
-            {saisie.lignes.map((l, i) => (
-              <tr key={i} className="border-t border-border align-top">
-                <td className="w-[30%] px-2.5 py-2">
-                  <SaisieDeCompte
-                    valeur={l.account_code}
-                    onChange={(code) => changerLigne(i, { account_code: code })}
-                    plan={plan}
-                    label={t("pme.journal.account")}
-                    inconnuLabel={t("cab.ecriture.compte.inconnu")}
-                    listeId={LISTE_DES_COMPTES}
-                    collectifLabel={t("plan.collectif.court")}
-                    originesLabels={{
-                      officiel: t("plan.origin.officiel"),
-                      extension: t("plan.origin.extension"),
-                      cabinet: t("plan.origin.cabinet"),
-                    }}
-                  />
-                </td>
-                <td className="px-2.5 py-2">
+      {/*
+       * Les lignes, sans défilement horizontal : sur un téléphone, une carte par
+       * ligne (compte, libellé, puis débit et crédit côte à côte) ; dès « sm »,
+       * la grille d'un tableau. Les intitulés de colonne ne s'affichent qu'en
+       * grille ; en carte, chaque champ porte le sien.
+       */}
+      <div className="border border-border bg-card text-[13px]">
+        <div
+          aria-hidden
+          className="hidden bg-muted px-2.5 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:gap-2"
+        >
+          <span>{t("pme.journal.account")}</span>
+          <span>{t("cab.ecriture.ligne.libelle")}</span>
+          <span className="text-end">{t("pme.journal.debit")}</span>
+          <span className="text-end">{t("pme.journal.credit")}</span>
+          <span />
+        </div>
+        <ul>
+          {saisie.lignes.map((l, i) => (
+            <li
+              key={i}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.25rem] gap-2 border-t border-border px-2.5 py-2 first:border-t-0 sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem] sm:items-start sm:first:border-t"
+            >
+              <div className="col-span-2 sm:col-span-1">
+                <SaisieDeCompte
+                  valeur={l.account_code}
+                  onChange={(code) => changerLigne(i, { account_code: code })}
+                  plan={plan}
+                  label={t("pme.journal.account")}
+                  inconnuLabel={t("cab.ecriture.compte.inconnu")}
+                  listeId={LISTE_DES_COMPTES}
+                  collectifLabel={t("plan.collectif.court")}
+                  originesLabels={{
+                    officiel: t("plan.origin.officiel"),
+                    extension: t("plan.origin.extension"),
+                    cabinet: t("plan.origin.cabinet"),
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
+                }
+                aria-label={t("cab.ecriture.ligne.retirer")}
+                className="col-start-3 row-start-1 flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+              <label className="col-span-3 flex flex-col gap-1 sm:col-span-1 sm:row-start-1 sm:col-start-2">
+                <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
+                  {t("cab.ecriture.ligne.libelle")}
+                </span>
+                <input
+                  type="text"
+                  value={l.libelle}
+                  onChange={(e) => changerLigne(i, { libelle: e.target.value })}
+                  className="w-full border border-border bg-background px-2 py-1 text-[13px]"
+                />
+              </label>
+              {(["debit", "credit"] as const).map((cote) => (
+                <label
+                  key={cote}
+                  className={
+                    cote === "debit"
+                      ? "flex flex-col gap-1 sm:row-start-1 sm:col-start-3"
+                      : "flex flex-col gap-1 sm:row-start-1 sm:col-start-4"
+                  }
+                >
+                  <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
+                    {t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit")}
+                  </span>
                   <input
                     type="text"
-                    value={l.libelle}
-                    aria-label={t("cab.ecriture.ligne.libelle")}
-                    onChange={(e) => changerLigne(i, { libelle: e.target.value })}
-                    className="w-full border border-border bg-background px-2 py-1 text-[13px]"
+                    inputMode="decimal"
+                    dir="ltr"
+                    value={l[cote]}
+                    onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
+                    className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
                   />
-                </td>
-                {(["debit", "credit"] as const).map((cote) => (
-                  <td key={cote} className="w-[17%] px-2.5 py-2">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={l[cote]}
-                      aria-label={t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit")}
-                      onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
-                      className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
-                    />
-                  </td>
-                ))}
-                <td className="px-1 py-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
-                    }
-                    aria-label={t("cab.ecriture.ligne.retirer")}
-                    className="flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-border bg-muted font-semibold">
-              <td className="px-2.5 py-2">
-                <button
-                  type="button"
-                  onClick={() => setSaisie((s) => ({ ...s, lignes: [...s.lignes, LIGNE_VIDE] }))}
-                  className="inline-flex min-h-[32px] items-center gap-1.5 text-[12.5px] font-semibold underline-offset-4 hover:underline"
-                >
-                  <Plus className="h-3.5 w-3.5" aria-hidden />
-                  {t("cab.ecriture.ligne.ajouter")}
-                </button>
-              </td>
-              <td
-                className={
-                  controle && !controle.defaut
-                    ? "px-2.5 py-2 text-signal-ok"
-                    : "px-2.5 py-2 text-signal-stop"
-                }
-                aria-live="polite"
-              >
-                {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
-              </td>
-              <td className="num px-2.5 py-2 text-end">
-                {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}
-              </td>
-              <td className="num px-2.5 py-2 text-end">
-                {controle?.totalCredit ? montant(controle.totalCredit, locale) : "—"}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
+                </label>
+              ))}
+            </li>
+          ))}
+        </ul>
+        <div className="grid grid-cols-2 gap-2 border-t border-border bg-muted px-2.5 py-2 font-semibold sm:grid-cols-[minmax(0,3fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_2.25rem]">
+          <button
+            type="button"
+            onClick={() => setSaisie((s) => ({ ...s, lignes: [...s.lignes, LIGNE_VIDE] }))}
+            className="col-span-2 inline-flex min-h-[32px] items-center gap-1.5 justify-self-start text-[12.5px] font-semibold underline-offset-4 hover:underline sm:col-span-1"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            {t("cab.ecriture.ligne.ajouter")}
+          </button>
+          <p
+            className={
+              controle && !controle.defaut
+                ? "col-span-2 text-signal-ok sm:col-span-1"
+                : "col-span-2 text-signal-stop sm:col-span-1"
+            }
+            aria-live="polite"
+          >
+            {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
+          </p>
+          <p className="num text-end">
+            <span className="sr-only">{t("pme.journal.debit")} </span>
+            {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}
+          </p>
+          <p className="num text-end">
+            <span className="sr-only">{t("pme.journal.credit")} </span>
+            {controle?.totalCredit ? montant(controle.totalCredit, locale) : "—"}
+          </p>
+        </div>
       </div>
 
       {/* Deux gestes, même hauteur, même largeur ; aucun n'attend le client. */}

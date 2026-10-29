@@ -460,7 +460,8 @@ function CabinetClient() {
                 {
                   label: t("cab.dos.feux.retournees"),
                   n: client.parStatut.retournee,
-                  tone: "stop",
+                  // Retournée : chez le client — bleu, « chez l'autre » (spec §2).
+                  tone: "info",
                 },
                 { label: t("cab.dos.feux.nonLues"), n: client.counts.capturee, tone: "neutral" },
                 { label: t("cab.dos.feux.echeances"), n: proches.length, tone: "warn" },
@@ -472,8 +473,8 @@ function CabinetClient() {
                       "mt-1 h-[7px] w-[7px] shrink-0",
                       f.n === 0
                         ? "bg-signal-ok"
-                        : f.tone === "stop"
-                          ? "bg-signal-stop"
+                        : f.tone === "info"
+                          ? "bg-signal-info"
                           : f.tone === "warn"
                             ? "bg-marigold"
                             : "bg-border",

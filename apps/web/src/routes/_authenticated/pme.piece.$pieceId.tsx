@@ -865,7 +865,7 @@ function PieceScreen() {
     suivi: dossier.data.suivi,
   });
   const priseEnCharge = statut === "prise_en_charge";
-  /** Le cabinet, nommé quand on le connaît : « Vue par AUDICORP ». */
+  /** Le cabinet, nommé quand on le connaît : « Vue par CABINET D’ESSAI ». */
   const nomDuCabinet = dossier.data.suivi?.vuePar ?? cabinet.data?.name ?? null;
   const motDuStatut = (cle: typeof statut) => {
     const qui = MOT_PME_QUI[cle];
@@ -1575,15 +1575,15 @@ function PieceScreen() {
    * Une pièce retournée n'est jamais prise en charge (son écriture est
    * contre-passée), et rien ne s'y confirme.
    */
-  const retourEnCours = piece.status === "retournee" ? (retour.data ?? null) : null;
+  const retourEnCours = statut === "retour" ? (retour.data ?? null) : null;
   /*
    * Retournée, la pièce est RENDUE au client : il la supprime ou la garde sans
    * rien demander (« Malica sans blocage »). Les demandes au cabinet n'ont
    * plus lieu d'être proposées.
    */
-  const rendue = piece.status === "retournee" && piece.vis === "partage";
+  const rendue = statut === "retour" && piece.vis === "partage";
   // Tant que le retour se lit, aucune carte (relecture de #114).
-  const retourSeLit = piece.status === "retournee" && retour.isPending;
+  const retourSeLit = statut === "retour" && retour.isPending;
   // Où elle en est chez le cabinet : envoyée, vue, prise en charge.
   const ouEnEst = ouEnEstLaPiece(dossier.data.suivi);
   const derniereFaite = ouEnEst.map((e) => e.le !== null).lastIndexOf(true);

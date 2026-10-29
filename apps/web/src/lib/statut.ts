@@ -22,7 +22,7 @@ export const MOT_PME: Readonly<Record<StatutPme, MessageKey>> = {
   prise_en_charge: "statut.pme.prise_en_charge",
 };
 
-/** Le mot qui nomme l'autre, quand on le connaît : « Vue par AUDICORP ». */
+/** Le mot qui nomme l'autre, quand on le connaît : « Vue par CABINET D’ESSAI ». */
 export const MOT_PME_QUI: Readonly<Partial<Record<StatutPme, MessageKey>>> = {
   envoyee: "statut.pme.envoyee.qui",
   vue: "statut.pme.vue.qui",

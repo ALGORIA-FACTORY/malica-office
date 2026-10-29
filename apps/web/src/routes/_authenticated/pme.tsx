@@ -1,3 +1,4 @@
+import { MESSAGES } from "@malica/socle/messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -46,20 +47,19 @@ const CameraScanner = lazy(() =>
   import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
 );
 
+/**
+ * L'en-tête se rend avant que la langue de la personne soit connue : il se lit
+ * dans la langue par défaut du dictionnaire, jamais en dur dans le code.
+ */
+const META = MESSAGES.fr;
+
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
     meta: [
-      { title: "Espace PME — Malica Office" },
-      {
-        name: "description",
-        content:
-          "Photographiez une facture, lisez-la avec citation de la zone source, confirmez l'écriture et suivez la TVA de la période.",
-      },
-      { property: "og:title", content: "Espace PME — Malica Office" },
-      {
-        property: "og:description",
-        content: "Capture citée, écriture proposée par le Socle, TVA de la période.",
-      },
+      { title: META["meta.pme.titre"] },
+      { name: "description", content: META["meta.pme.description"] },
+      { property: "og:title", content: META["meta.pme.titre"] },
+      { property: "og:description", content: META["meta.pme.og"] },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

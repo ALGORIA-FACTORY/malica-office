@@ -666,7 +666,11 @@ const fr = {
   "pme.vue.mois": "Mois",
   "pme.vue.annee": "Année",
   "pme.tva.source":
-    "Chaque montant vient d'une pièce que vous avez confirmée. Je ne calcule rien que je ne puisse citer.",
+    "Chaque montant vient d'une pièce que votre comptable a prise en charge. Je ne calcule rien que je ne puisse citer.",
+  "meta.pme.description":
+    "Photographiez une facture, lisez-la avec citation de la zone source, envoyez-la à votre comptable et suivez la TVA de la période.",
+  "meta.pme.titre": "Espace PME — Malica Office",
+  "meta.pme.og": "Capture citée, prise en charge par votre comptable, TVA de la période.",
   "pme.tva.rangee":
     "Une pièce compte dans le mois où vous l'avez envoyée à votre comptable — c'est lui qui la déclare. Vos charges, elles, se rangent à la date de la facture.",
   "pme.tva.sansDate":
@@ -1986,8 +1990,6 @@ const fr = {
   "pme.retour.reponse.envoyer": "Envoyer la réponse",
   "refus.retour.inscrite":
     "Un règlement de cette pièce est inscrit au journal : annulez-le d’abord, puis retournez la pièce.",
-  "refus.confirmation.sans_objet":
-    "Il n’y a rien à faire confirmer : la pièce n’attend plus le « Oui » du client.",
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
   "refus.piece.remplacee":
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
@@ -2020,6 +2022,12 @@ const fr = {
   "refus.ecriture.sens": "Chaque ligne va au débit ou au crédit : jamais aux deux, jamais à aucun.",
   "refus.ecriture.desequilibre":
     "L’écriture n’est pas équilibrée : le total des débits doit égaler celui des crédits.",
+  "refus.ecriture.taxe":
+    "Un code de taxe n'existe pas dans le référentiel à cette date : choisissez un taux du référentiel, ou laissez la ligne sans taxe.",
+  "refus.ecriture.saisie":
+    "La saisie est incomplète : chaque ligne demande un compte, un libellé, un débit et un crédit, et l'écriture une date et un journal. Complétez-la, puis recommencez.",
+  "refus.proposition.changee":
+    "La proposition a changé depuis que vous l'avez ouverte (nouvelle lecture ou correction du client). Relisez-la, puis validez.",
   "refus.ecriture.journal": "Choisissez le journal de l’écriture.",
   "statut.pme.mon_espace": "Mon espace",
   "statut.pme.a_envoyer": "À envoyer",
@@ -2062,6 +2070,7 @@ const fr = {
   "cab.ecriture.equilibree": "Équilibrée",
   "cab.ecriture.saisir": "Saisir l’écriture",
   "cab.ecriture.valider": "Valider",
+  "cab.ecriture.forcer": "Forcer l'écriture",
   "cab.ecriture.retourner": "Retourner au client…",
   "pme.piece.ou": "Où elle en est",
   "pme.piece.ou.avenir": "à venir",
@@ -2362,6 +2371,9 @@ const fr = {
   "cab.prop.done": "{count} écritures validées.",
   "cab.prop.done#one": "{count} écriture validée.",
   "cab.prop.done#other": "{count} écritures validées.",
+  "cab.prop.echecs": "{count} en échec : {raison}",
+  "cab.prop.echecs#one": "{count} en échec : {raison}",
+  "cab.prop.echecs#other": "{count} en échec ; la première : {raison}",
   "cab.prop.panel.kicker": "File",
   "cab.prop.panel": "{count} écritures attendent votre validation.",
   "cab.prop.panel#one": "{count} écriture attend votre validation.",
@@ -4386,7 +4398,11 @@ const en: Dict = {
   "pme.vue.mois": "Month",
   "pme.vue.annee": "Year",
   "pme.tva.source":
-    "Every amount comes from a document you confirmed. I compute nothing I cannot cite.",
+    "Every amount comes from a document your accountant took in charge. I compute nothing I cannot cite.",
+  "meta.pme.description":
+    "Photograph an invoice, read it with the source area cited, send it to your accountant and follow the period's VAT.",
+  "meta.pme.titre": "SME space — Malica Office",
+  "meta.pme.og": "Cited capture, taken in charge by your accountant, the period's VAT.",
   "pme.tva.rangee":
     "A document counts in the month you sent it to your accountant — they are the one who files it. Your expenses, in contrast, sit at the invoice date.",
   "pme.tva.sansDate":
@@ -5682,8 +5698,6 @@ const en: Dict = {
   "pme.retour.reponse.envoyer": "Send the reply",
   "refus.retour.inscrite":
     "A payment of this document is booked: cancel it first, then return the document.",
-  "refus.confirmation.sans_objet":
-    "There is nothing to confirm: the document no longer awaits the client’s “Yes”.",
   "refus.reponse.vide": "Write your reply before sending it.",
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
@@ -5716,6 +5730,12 @@ const en: Dict = {
   "refus.ecriture.sens": "Each line goes to debit or credit: never both, never neither.",
   "refus.ecriture.desequilibre":
     "The entry is not balanced: total debits must equal total credits.",
+  "refus.ecriture.taxe":
+    "A tax code does not exist in the reference data at this date: pick a rate from the reference data, or leave the line without tax.",
+  "refus.ecriture.saisie":
+    "The entry is incomplete: each line needs an account, a label, a debit and a credit, and the entry a date and a journal. Complete it, then try again.",
+  "refus.proposition.changee":
+    "The proposal changed since you opened it (new reading or a correction by the client). Review it again, then validate.",
   "refus.ecriture.journal": "Choose the entry’s journal.",
   "statut.pme.mon_espace": "My space",
   "statut.pme.a_envoyer": "To send",
@@ -5758,6 +5778,7 @@ const en: Dict = {
   "cab.ecriture.equilibree": "Balanced",
   "cab.ecriture.saisir": "Enter the entry",
   "cab.ecriture.valider": "Validate",
+  "cab.ecriture.forcer": "Force the entry",
   "cab.ecriture.retourner": "Return to the client…",
   "pme.piece.ou": "Where it stands",
   "pme.piece.ou.avenir": "to come",
@@ -6053,6 +6074,9 @@ const en: Dict = {
   "cab.prop.done": "{count} entries approved.",
   "cab.prop.done#one": "{count} entry approved.",
   "cab.prop.done#other": "{count} entries approved.",
+  "cab.prop.echecs": "{count} failed: {raison}",
+  "cab.prop.echecs#one": "{count} failed: {raison}",
+  "cab.prop.echecs#other": "{count} failed; the first: {raison}",
   "cab.prop.panel.kicker": "Queue",
   "cab.prop.panel": "{count} entries awaiting your approval.",
   "cab.prop.panel#one": "{count} entry awaiting your approval.",
@@ -7961,7 +7985,12 @@ const ar: Dict = {
   "pme.journal.account": "حساب",
   "pme.vue.mois": "شهر",
   "pme.vue.annee": "سنة",
-  "pme.tva.source": "كل مبلغ مصدره وثيقة أكّدتها. لا أحتسب شيئًا لا أستطيع الاستشهاد بمصدره.",
+  "pme.tva.source":
+    "كل مبلغ مصدره وثيقة تكفّل بها محاسبك. لا أحتسب شيئًا لا أستطيع الاستشهاد بمصدره.",
+  "meta.pme.description":
+    "صوّر فاتورة، واقرأها مع الإحالة إلى موضعها، وأرسلها إلى محاسبك وتابع أداء الفترة على القيمة المضافة.",
+  "meta.pme.titre": "فضاء المؤسسة — Malica Office",
+  "meta.pme.og": "التقاط موثّق، يتكفّل به محاسبك، وأداء الفترة على القيمة المضافة.",
   "pme.tva.rangee":
     "تُحتسب الوثيقة في الشهر الذي أرسلتَها فيه إلى محاسبك — فهو من يصرّح بها. أمّا مصاريفك فتُرتَّب حسب تاريخ الفاتورة.",
   "pme.tva.sansDate":
@@ -9235,7 +9264,6 @@ const ar: Dict = {
   "pme.retour.reponse.champ": "ردّك",
   "pme.retour.reponse.envoyer": "إرسال الرد",
   "refus.retour.inscrite": "دفعة هذه الوثيقة مُسجَّلة في اليومية: ألغِها أولًا، ثم أرجِع الوثيقة.",
-  "refus.confirmation.sans_objet": "لا شيء للتأكيد: الوثيقة لم تعد تنتظر «نعم» الحريف.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
@@ -9259,6 +9287,12 @@ const ar: Dict = {
   "refus.ecriture.montant": "مبلغ لا يُقرأ، أو يحمل أرقامًا عشرية أكثر من العملة.",
   "refus.ecriture.sens": "كل سطر في المدين أو في الدائن: لا في الاثنين ولا في أيٍّ منهما.",
   "refus.ecriture.desequilibre": "القيد غير متوازن: يجب أن يساوي مجموع المدين مجموع الدائن.",
+  "refus.ecriture.taxe":
+    "رمز ضريبة غير موجود في المرجع في هذا التاريخ: اختر نسبة من المرجع، أو اترك السطر دون ضريبة.",
+  "refus.ecriture.saisie":
+    "الإدخال ناقص: يتطلب كل سطر حسابًا وبيانًا ومدينًا ودائنًا، ويتطلب القيد تاريخًا ودفترًا. أكمله ثم أعد المحاولة.",
+  "refus.proposition.changee":
+    "تغيّر المقترح منذ أن فتحته (قراءة جديدة أو تصحيح من الحريف). راجعه ثم صادق عليه.",
   "refus.ecriture.journal": "اختر يومية القيد.",
   "statut.pme.mon_espace": "مساحتي",
   "statut.pme.a_envoyer": "للإرسال",
@@ -9300,6 +9334,7 @@ const ar: Dict = {
   "cab.ecriture.equilibree": "متوازن",
   "cab.ecriture.saisir": "إدخال القيد",
   "cab.ecriture.valider": "مصادقة",
+  "cab.ecriture.forcer": "فرض القيد",
   "cab.ecriture.retourner": "إرجاع إلى الحريف…",
   "pme.piece.ou": "أين وصلت",
   "pme.piece.ou.avenir": "لاحقًا",
@@ -9584,6 +9619,9 @@ const ar: Dict = {
   "cab.prop.done": "تمت المصادقة على {count} قيد.",
   "cab.prop.done#one": "تمت المصادقة على قيد واحد.",
   "cab.prop.done#other": "تمت المصادقة على {count} قيد.",
+  "cab.prop.echecs": "{count} تعذّر: {raison}",
+  "cab.prop.echecs#one": "واحدة تعذّرت: {raison}",
+  "cab.prop.echecs#other": "{count} تعذّرت؛ الأولى: {raison}",
   "cab.prop.panel.kicker": "الطابور",
   "cab.prop.panel": "{count} قيد ينتظر مصادقتك.",
   "cab.prop.panel#one": "قيد واحد ينتظر مصادقتك.",

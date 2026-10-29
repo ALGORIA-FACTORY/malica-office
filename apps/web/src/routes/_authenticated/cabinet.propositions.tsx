@@ -55,6 +55,7 @@ import {
   ecritureEnMasse,
   estChargeOuProduit,
   lotDe,
+  parPiece,
   type EcritureDuLot,
   type Lot,
 } from "@/lib/propositions";
@@ -212,64 +213,77 @@ function CabinetPropositions() {
   }, [rows, clients.data, collabDe]);
 
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({});
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [fait, setFait] = useState<{ validees: number; forcees: number } | null>(null);
+  const [fait, setFait] = useState<{
+    validees: number;
+    forcees: number;
+    echecs: number;
+    raison: string | null;
+  } | null>(null);
 
-  /* ---- valider : chaque pièce, par le geste de la pièce (`office.valider`) */
+  /** La raison d'un échec, lisible : le refus métier tel que le serveur le dit. */
+  const raisonDe = (x: unknown) =>
+    texteDeLErreur(x, "routes/_authenticated/cabinet.propositions", t("common.error"));
+  const relireLaFile = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
+      qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
+      qc.invalidateQueries({ queryKey: ["cab-ecritures"] }),
+      qc.invalidateQueries({ queryKey: ["proposition"] }),
+    ]);
+
+  /*
+   * ---- valider : chaque pièce, par le geste de la pièce (`office.valider`),
+   * avec l'empreinte de la proposition que le lot affiche (relue du cache, ou
+   * lue à l'instant) : le serveur n'inscrit que celle-là.
+   */
   const valider = useMutation({
-    mutationFn: async (pieces: QueueItem[]) => {
-      for (const p of pieces) await office().office.valider(p.pieceId);
-      return pieces.length;
-    },
-    onSuccess: async (n) => {
-      setErreur(null);
-      setFait({ validees: n, forcees: 0 });
+    mutationFn: (pieces: QueueItem[]) =>
+      parPiece(pieces, raisonDe, async (p) => {
+        if (p.ecritureId) return office().office.valider(p.pieceId, null);
+        const proposition = await qc.fetchQuery({
+          queryKey: ["proposition", p.pieceId, "lot"],
+          queryFn: () => office().office.propositionDePiece(p.pieceId),
+        });
+        return office().office.valider(
+          p.pieceId,
+          proposition.ok ? (proposition.empreinte ?? null) : null,
+        );
+      }),
+    onMutate: () => setFait(null),
+    onSuccess: async ({ passees, echecs, raison }) => {
+      setFait({ validees: passees, forcees: 0, echecs, raison });
       setRetenues({});
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
-      ]);
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "routes/_authenticated/cabinet.propositions", t("common.error"))),
+    onSettled: relireLaFile,
   });
 
   /* ---- forcer : la charge du lot sur un autre compte — pièce par pièce, `office.forcer` */
   const forcer = useMutation({
-    mutationFn: async (input: {
+    mutationFn: (input: {
       lots: Array<{ pieceId: string; base: EcritureEnSaisie }>;
       compte: CompteDuPlan;
-    }) => {
-      for (const { pieceId, base } of input.lots) {
-        const lignes = base.lignes.map((l) =>
-          estChargeOuProduit(l.account_code)
-            ? { ...l, account_code: input.compte.code, libelle: input.compte.libelle }
-            : l,
-        );
+    }) =>
+      parPiece(input.lots, raisonDe, ({ pieceId, base }) =>
         // Une pièce = une transaction : contre-passation et réimputation
         // passent ensemble, ou rien n'est écrit pour cette pièce.
-        await office().office.forcer({
+        office().office.forcer({
           pieceId,
           journal: base.journal,
           date: base.date,
           libelle: base.libelle,
-          lignes,
-        });
-      }
-      return input.lots.length;
-    },
-    onSuccess: async (n) => {
-      setErreur(null);
-      setFait({ validees: 0, forcees: n });
+          lignes: base.lignes.map((l) =>
+            estChargeOuProduit(l.account_code)
+              ? { ...l, account_code: input.compte.code, libelle: input.compte.libelle }
+              : l,
+          ),
+        }),
+      ),
+    onMutate: () => setFait(null),
+    onSuccess: async ({ passees, echecs, raison }) => {
+      setFait({ validees: 0, forcees: passees, echecs, raison });
       setRetenues({});
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-ecritures"] }),
-      ]);
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "routes/_authenticated/cabinet.propositions", t("common.error"))),
+    onSettled: relireLaFile,
   });
 
   const pourcent = (v: number) => Math.round(v * 100);
@@ -366,13 +380,19 @@ function CabinetPropositions() {
       ) : null}
 
       {fait ? (
-        <p className="border border-border bg-card px-4 py-3 text-[13px]">
-          {fait.validees > 0
-            ? t("cab.prop.done", { count: fait.validees })
-            : t("cab.prop.forces", { count: fait.forcees })}
-        </p>
+        <div role="status" className="space-y-1 border border-border bg-card px-4 py-3 text-[13px]">
+          <p>
+            {fait.forcees > 0
+              ? t("cab.prop.forces", { count: fait.forcees })
+              : t("cab.prop.done", { count: fait.validees })}
+          </p>
+          {fait.echecs > 0 ? (
+            <p className="text-signal-stop">
+              {t("cab.prop.echecs", { count: fait.echecs, raison: fait.raison ?? "" })}
+            </p>
+          ) : null}
+        </div>
       ) : null}
-      {erreur ? <p className="text-[12.5px] text-signal-warn">{erreur}</p> : null}
 
       {/* ---- les lots par confiance */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

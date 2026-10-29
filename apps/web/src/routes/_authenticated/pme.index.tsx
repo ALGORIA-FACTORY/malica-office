@@ -404,9 +404,11 @@ function PmeHome() {
     const pieces = lesLues.filter(
       (p) => dossierDeLaPiece(p, sept.types) === d.code && dansLaPeriode(p, d.periode, periode),
     );
-    // Un reçu ou un justificatif n'attend rien : il compte pour fait.
+    // Un reçu ou un justificatif n'attend rien : il compte pour fait. Une
+    // pièce est faite quand le cabinet l'a prise en charge — la règle de la
+    // liste (`statutDeLaPieceLue`), sur les faits du suivi.
     const faites = pieces.filter(
-      (p) => p.accompagne || p.status === "comptabilisee" || p.status === "supervisee",
+      (p) => p.accompagne || statutDeLaPieceLue(p) === "prise_en_charge",
     ).length;
     return {
       ...d,

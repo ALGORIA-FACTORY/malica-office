@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { Ecriture } from "@malica/socle/ports/repositories";
 
-import { compteDeCharge, ecritureEnMasse, estChargeOuProduit, lotDe } from "../propositions";
+import {
+  compteDeCharge,
+  ecritureEnMasse,
+  estChargeOuProduit,
+  lotDe,
+  parPiece,
+} from "../propositions";
 
 function ecriture(id: string, lignes: Array<[string, string, string, string]>): Ecriture {
   return {
@@ -116,5 +122,21 @@ describe("compteDeCharge", () => {
     expect(estChargeOuProduit("706")).toBe(true);
     expect(estChargeOuProduit("411")).toBe(false);
     expect(estChargeOuProduit("4366")).toBe(false);
+  });
+});
+
+describe("un lot, pièce par pièce", () => {
+  it("une pièce qui échoue n'arrête pas les suivantes ; le bilan dit combien et pourquoi", async () => {
+    const vues: string[] = [];
+    const bilan = await parPiece(
+      ["a", "b", "c", "d"],
+      (e) => (e as Error).message,
+      async (p) => {
+        vues.push(p);
+        if (p === "b" || p === "d") throw new Error(`refus ${p}`);
+      },
+    );
+    expect(vues).toEqual(["a", "b", "c", "d"]);
+    expect(bilan).toEqual({ passees: 2, echecs: 2, raison: "refus b" });
   });
 });

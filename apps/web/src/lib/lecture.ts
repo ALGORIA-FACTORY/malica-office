@@ -145,3 +145,23 @@ export function raisonCourte(i: IssueDeLecture): MessageKey | null {
       return null;
   }
 }
+
+/**
+ * Ce que l'accueil compte de la liste, par la même règle qu'elle
+ * (`statutDeLaPieceLue`) : une pièce inscrite avant « Malica sans blocage »,
+ * encore `comptabilisee` mais prise en charge, est close ici comme elle est
+ * « Prise en charge » dans la liste.
+ */
+export function avancementDeLaListe(liste: ReadonlyArray<LigneDeLaListe>) {
+  const lues = liste.filter((p) => p.status !== "capturee");
+  const closes = liste.filter((p) => statutDeLaPieceLue(p) === "prise_en_charge").length;
+  return {
+    /** Part des pièces prises en charge, de 0 à 1 ; `null` sans pièce. */
+    avancement: liste.length === 0 ? null : closes / liste.length,
+    enAttente: lues.filter((p) => statutDeLaPieceLue(p) === "a_envoyer").length,
+    documentsLus: lues.length,
+    documentsNonLus: liste.length - lues.length,
+    jamaisRienDepose: liste.length === 0,
+    retournees: liste.filter((p) => statutDeLaPieceLue(p) === "retour").length,
+  };
+}

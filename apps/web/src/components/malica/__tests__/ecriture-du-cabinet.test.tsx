@@ -51,6 +51,7 @@ const PROPOSITION = {
   verdict: "à comptabiliser",
   verdictCode: null,
   packVersionId: "pack",
+  empreinte: "empreinte-affichee",
   proposition: {
     journal: "ACH",
     libelle: "Achat COMPTOIR DU LAC",
@@ -145,19 +146,20 @@ describe("la pièce côté comptable", () => {
     expect(api.valider).not.toHaveBeenCalled();
   });
 
-  it("proposée et inchangée : VALIDER, le serveur inscrit la proposition", async () => {
+  it("proposée et inchangée : VALIDER envoie l'empreinte de ce qui est affiché", async () => {
     api.valider.mockResolvedValue("e1");
     monter(PROPOSITION);
     fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.valider" }));
-    await waitFor(() => expect(api.valider).toHaveBeenCalledWith("p1"));
+    await waitFor(() => expect(api.valider).toHaveBeenCalledWith("p1", "empreinte-affichee"));
     expect(api.forcer).not.toHaveBeenCalled();
   });
 
-  it("proposée puis modifiée : le même bouton la force", async () => {
+  it("proposée puis modifiée : le bouton dit « Forcer l'écriture », et force", async () => {
     api.forcer.mockResolvedValue("e1");
     monter(PROPOSITION);
     saisir("pme.journal.account", "622", 0);
-    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.valider" }));
+    expect(screen.queryByRole("button", { name: "cab.ecriture.valider" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.forcer" }));
     await waitFor(() => expect(api.forcer).toHaveBeenCalledTimes(1));
     expect(api.forcer.mock.calls[0]![0].lignes[0]).toMatchObject({
       account_code: "622",
@@ -175,5 +177,11 @@ describe("la pièce côté comptable", () => {
     expect(boutons[0]!.parentElement).toBe(boutons[1]!.parentElement);
     expect(boutons[0]!.parentElement!.className).toContain("grid-cols-2");
     expect(document.body.textContent).not.toMatch(/confirm/i);
+  });
+
+  it("aucune largeur minimale : les lignes ne défilent pas sur un téléphone", () => {
+    monter(PROPOSITION);
+    expect(document.body.innerHTML).not.toMatch(/min-w-\[/);
+    expect(document.querySelector("table")).toBeNull();
   });
 });

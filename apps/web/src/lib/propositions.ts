@@ -114,3 +114,35 @@ export function compteDeCharge(e: EcritureDuLot): EcritureLine | null {
     null
   );
 }
+
+/** Ce qu'un lot a donné : combien de pièces sont passées, combien ont échoué, et pourquoi. */
+export interface BilanDuLot {
+  passees: number;
+  echecs: number;
+  /** La raison du premier échec, lisible ; `null` quand tout est passé. */
+  raison: string | null;
+}
+
+/**
+ * Un lot passe pièce par pièce, chacune dans sa transaction : une pièce qui
+ * échoue n'arrête pas les autres, et l'écran dit combien sont passées et
+ * combien ont échoué — au lieu de s'arrêter à la première sans rien dire des
+ * suivantes.
+ */
+export async function parPiece<T>(
+  elements: readonly T[],
+  raisonDe: (erreur: unknown) => string,
+  geste: (element: T) => Promise<unknown>,
+): Promise<BilanDuLot> {
+  const bilan: BilanDuLot = { passees: 0, echecs: 0, raison: null };
+  for (const e of elements) {
+    try {
+      await geste(e);
+      bilan.passees += 1;
+    } catch (x) {
+      bilan.echecs += 1;
+      bilan.raison ??= raisonDe(x);
+    }
+  }
+  return bilan;
+}

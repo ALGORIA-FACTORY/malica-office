@@ -252,7 +252,7 @@ export function PanneauCabinet() {
   const visibles = propositions.filter((p) => !remises.has(p.cle));
 
   const enFile = rows.filter((r) => r.status === "capturee" || r.status === "lue").length;
-  const retours = rows.filter((r) => r.status === "retournee").length;
+  const retours = rows.filter((r) => r.statut === "retournee").length;
   const agents: Agent[] = [
     {
       cle: "lecture",

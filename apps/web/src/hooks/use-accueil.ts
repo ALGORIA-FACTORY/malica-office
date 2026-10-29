@@ -28,12 +28,13 @@ import { useMemo } from "react";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { useDecimales } from "./use-decimales";
+import { usePiecesLues } from "./use-pieces-lues";
+import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
-import { statutPme } from "@malica/socle/statut-d-envoi";
 
 import { monthBounds } from "./use-tva";
 
@@ -170,10 +171,9 @@ export function useAccueil(periode: string): Accueil {
     },
   });
 
-  const pieces = useQuery({
-    queryKey: ["pieces", pme.tenantId],
-    queryFn: () => office().capture.list(pme.tenantId),
-  });
+  // La liste avec ses faits de suivi : le statut se classe comme partout
+  // ailleurs (`statutDeLaPieceLue`), jamais sur le statut brut.
+  const pieces = usePiecesLues();
 
   // ------------------------------------------------------ la série de douze
   const serie = useMemo<MoisDeTva[]>(() => {
@@ -307,9 +307,13 @@ export function useAccueil(periode: string): Accueil {
        * ======================================= LES ÉTATS, ET CE QU'ILS VEULENT DIRE
        *
        * capturee                       déposée, pas encore lue
-       * lue, dans la société           à envoyer, ou gardée : la décision du dirigeant
-       * supervisee                     prise en charge par le cabinet : close
-       * retournee                      le cabinet la renvoie
+       * à envoyer · gardée             dans la société : la décision du dirigeant
+       * prise en charge                le cabinet l'a validée ou forcée : close
+       * retour                         le cabinet la renvoie
+       *
+       * Chaque état vient de `statutDeLaPieceLue`, sur les faits du suivi : une
+       * pièce inscrite avant « Malica sans blocage » (encore `comptabilisee`)
+       * est « Prise en charge » ici comme dans la liste.
        *
        * Le compte du mois, lui, a disparu d'ici : il était pris sur
        * `createdAt` — la date de la PHOTO — pendant que « Vos documents »
@@ -317,20 +321,7 @@ export function useAccueil(periode: string): Accueil {
        * sur l'autre écran, le 10 octobre. Une seule définition, et elle vit
        * là où la date de la pièce est connue.
        */
-      const lues = liste.filter((p) => p.status !== "capturee");
-      const closes = liste.filter((p) => p.status === "supervisee").length;
-      return {
-        avancement: liste.length === 0 ? null : closes / liste.length,
-        enAttente: lues.filter(
-          (p) =>
-            statutPme({ vis: p.vis, status: p.status, gardeeLe: p.gardeeLe, suivi: null }) ===
-            "a_envoyer",
-        ).length,
-        documentsLus: lues.length,
-        documentsNonLus: liste.length - lues.length,
-        jamaisRienDepose: liste.length === 0,
-        retournees: liste.filter((p) => p.status === "retournee").length,
-      };
+      return avancementDeLaListe(liste);
     }, [pieces.data]);
 
   return {

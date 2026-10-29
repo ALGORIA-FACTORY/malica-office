@@ -166,7 +166,7 @@ export function RetournerAuClient({
           type="button"
           disabled={!motif || noteManquante || retourner.isPending}
           onClick={() => retourner.mutate()}
-          className="mt-auto min-h-[52px] border border-foreground bg-foreground text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
+          className="mt-auto min-h-[48px] border border-foreground bg-foreground text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
         >
           {retourner.isPending ? t("common.loading") : t("cab.retour.envoyer")}
         </button>
