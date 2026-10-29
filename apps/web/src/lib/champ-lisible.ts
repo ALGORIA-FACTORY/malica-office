@@ -13,6 +13,7 @@
  */
 import type { MessageKey } from "@/i18n";
 
+import { phraseDeLaDemande } from "./demande-sur-piece";
 import { montant } from "./lisible";
 
 type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
@@ -269,6 +270,9 @@ export function libelleDuCode(code: string, t: T): string {
      * auraient appris a se mefier des deux.
      */
     MONTANT_PEUT_ETRE_AMPUTE: "cab.code.ampute",
+    // Même famille : un montant refusé parce qu'il est absurde (une TVA plus
+    // grande que sa base), pas parce qu'il manque.
+    MONTANT_INVRAISEMBLABLE: "cab.code.invraisemblable",
     ARITHMETIQUE_INCOHERENTE: "cab.code.incoherent",
     /*
      * `DESIGNATION_AMBIGUE` ne dit pas qu'une lecture a echoue : elle dit que
@@ -281,8 +285,52 @@ export function libelleDuCode(code: string, t: T): string {
   return t(CODES[code] ?? "cab.code.autre");
 }
 
-/** Ce qu'une action de la piste d'audit veut dire. */
-export function libelleDeLAction(action: string, t: T): string {
+type Payload = Readonly<Record<string, unknown>>;
+
+/**
+ * Ce qu'un événement dit de plus que son genre, quand son payload le porte.
+ *
+ * Relevé sur staging le 29 octobre 2026 : le journal de la pièce lisait « La
+ * visibilité d'une pièce a changé. » et « Le client a précisé le sens d'une
+ * pièce. » — ce dernier pour un type que le CABINET venait d'établir. Le
+ * payload disait déjà où la pièce allait et qui avait précisé quoi ; aucune
+ * phrase ne le lisait. Un payload ancien, sans ces clés, garde la phrase du
+ * genre : on ne devine rien.
+ */
+function libelleDuPayload(action: string, payload: Payload): MessageKey | null {
+  if (action === "piece.vis_changed") {
+    const vers = payload["to"];
+    if (vers === "partage") return "cab.journal.piece.vers_cabinet";
+    if (vers === "personnel") return "cab.journal.piece.vers_mon_espace";
+    if (vers === "entite") {
+      return payload["from"] === "partage" && payload["par_accord"] === true
+        ? "cab.journal.piece.rendue"
+        : "cab.journal.piece.vers_societe";
+    }
+    return null;
+  }
+  if (action === "piece.precisee") {
+    if (payload["par_le_cabinet"] === true) return "cab.journal.piece.type_etabli";
+    if (payload["champ"] === "document_kind") return "cab.journal.piece.type_corrige";
+    if (payload["champ"] === "document_date") return "cab.journal.piece.date_corrigee";
+    return null;
+  }
+  if (action === "piece.demande") return phraseDeLaDemande(payload);
+  if (action === "piece.demande_tranchee" && typeof payload["accorde"] === "boolean") {
+    return payload["accorde"]
+      ? "cab.journal.piece.demande_accordee"
+      : "cab.journal.piece.demande_refusee";
+  }
+  return null;
+}
+
+/** Ce qu'une action de la piste d'audit veut dire — avec son payload, quand il précise. */
+export function libelleDeLAction(action: string, t: T, payload?: unknown): string {
+  const precis =
+    payload !== null && typeof payload === "object"
+      ? libelleDuPayload(action, payload as Payload)
+      : null;
+  if (precis) return t(precis);
   const ACTIONS: Record<string, MessageKey> = {
     "piece.captured": "cab.notif.kind.piece.captured",
     "piece.read": "cab.notif.kind.piece.read",
@@ -297,6 +345,11 @@ export function libelleDeLAction(action: string, t: T): string {
     "piece.renvoyee": "cab.notif.kind.piece.renvoyee",
     "piece.remplacee": "cab.notif.kind.piece.remplacee",
     "piece.archivee": "cab.notif.kind.piece.archivee",
+    "piece.gardee": "cab.notif.kind.piece.gardee",
+    "piece.supprimee": "cab.notif.kind.piece.supprimee",
+    "piece.demande_tranchee": "cab.notif.kind.piece.demande_tranchee",
+    "piece.a_revalider": "cab.notif.kind.piece.a_revalider",
+    "piece.corrigee_apres_transmission": "cab.notif.kind.piece.precisee",
     "echeance.faite": "cab.journal.echeance.faite",
     "echeance.rouverte": "cab.journal.echeance.rouverte",
     "conseil.retenu": "cab.journal.conseil.retenu",

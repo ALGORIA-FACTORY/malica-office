@@ -69,3 +69,37 @@ describe("la visionneuse d'une photo", () => {
     expect(vivantes.size).toBe(0);
   });
 });
+
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
+  GlobalWorkerOptions: {},
+  // Un document qui ne finit jamais de s'ouvrir : l'état d'attente, figé.
+  getDocument: () => ({ promise: new Promise(() => {}), destroy: async () => {} }),
+}));
+vi.mock("pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker", () => ({
+  default: class {},
+}));
+
+/** Les premiers octets d'un PDF. */
+const pdf = () => new TextEncoder().encode("%PDF-1.7\n").buffer;
+
+/**
+ * Relevé sur staging le 29 octobre 2026, au téléphone : pendant « Ouverture du
+ * document… », le canevas encore vide s'affichait en grand bloc noir.
+ */
+describe("la visionneuse pendant l'ouverture", () => {
+  afterEach(cleanup);
+
+  it("montre l'aperçu de la pièce, et cache le canevas encore vide", async () => {
+    const { container } = render(
+      <DocumentView
+        contenu={pdf()}
+        highlight={null}
+        label="pièce"
+        attente={<span data-testid="apercu" />}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("pme.doc.loading"));
+    expect(screen.getByTestId("apercu")).toBeTruthy();
+    expect(container.querySelector("canvas")?.classList.contains("hidden")).toBe(true);
+  });
+});

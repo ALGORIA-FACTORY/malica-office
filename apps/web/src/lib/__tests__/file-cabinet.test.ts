@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { feuDuStatut, joursDAttente } from "../file-cabinet";
+import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
+
+import { feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "../file-cabinet";
 
 describe("joursDAttente", () => {
   const maintenant = Date.parse("2026-09-04T10:00:00Z");
@@ -24,5 +26,35 @@ describe("feuDuStatut", () => {
     expect(feuDuStatut("retournee")).toBe("info");
     expect(feuDuStatut("validee")).toBe("ok");
     expect(feuDuStatut("forcee")).toBe("ok");
+  });
+});
+
+describe("prisesEnChargeDepuis", () => {
+  const depuis = Date.parse("2026-09-03T10:00:00Z");
+  const suivi = (s: Partial<SuiviDEnvoi>): SuiviDEnvoi => ({
+    envoyeeLe: "2026-09-01T08:00:00Z",
+    vueLe: null,
+    vuePar: null,
+    corrigeeLe: null,
+    priseLe: null,
+    prise: null,
+    prisePar: null,
+    ...s,
+  });
+
+  it("compte les validées et les forcées à la date de la prise en charge", () => {
+    const pieces = [
+      // Reçue il y a trois jours, validée ce matin : elle compte.
+      { suivi: suivi({ prise: "validee", priseLe: "2026-09-04T08:00:00Z" }) },
+      { suivi: suivi({ prise: "forcee", priseLe: "2026-09-03T11:00:00Z" }) },
+      // Prise en charge avant la fenêtre : elle ne compte pas.
+      { suivi: suivi({ prise: "validee", priseLe: "2026-09-02T08:00:00Z" }) },
+    ];
+    expect(prisesEnChargeDepuis(pieces, depuis)).toBe(2);
+  });
+
+  it("ne compte ni une pièce vue, ni une pièce sans suivi", () => {
+    const pieces = [{ suivi: suivi({ vueLe: "2026-09-04T08:00:00Z" }) }, { suivi: null }];
+    expect(prisesEnChargeDepuis(pieces, depuis)).toBe(0);
   });
 });

@@ -32,7 +32,7 @@
  */
 
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/i18n";
 import { noterAuJournal } from "@/lib/journal-atelier";
@@ -44,6 +44,13 @@ interface Props {
   contenu: ArrayBuffer;
   highlight: Citation | null;
   label: string;
+  /**
+   * Ce qui tient la place pendant l'ouverture — l'aperçu de la pièce
+   * (`ApercuDePiece`). Relevé sur staging le 29 octobre 2026, au téléphone :
+   * pendant « Ouverture du document… », le canevas encore vide s'affichait en
+   * grand bloc noir au-dessus du contenu.
+   */
+  attente?: ReactNode;
 }
 
 /** Les paliers de zoom. Au-delà de 4×, un scan à 200 ppp ne montre plus rien. */
@@ -81,7 +88,7 @@ function tourner(bbox: Citation["bbox"], rotation: Rotation) {
   };
 }
 
-export function DocumentView({ contenu, highlight, label }: Props) {
+export function DocumentView({ contenu, highlight, label, attente }: Props) {
   const { t } = useI18n();
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,6 +115,8 @@ export function DocumentView({ contenu, highlight, label }: Props) {
   const [rotation, setRotation] = useState<Rotation>(0);
   const [rendus, setRendus] = useState(0);
   const [essai, setEssai] = useState(0);
+  /** Rien n'est encore peint : le document s'ouvre, ou sa première page se dessine. */
+  const enAttente = etat === "chargement" || (etat === "pdf" && rendus === 0);
 
   // Une image ne s'affiche pas depuis un tampon : il lui faut une URL. Celle-ci
   // est locale au navigateur et meurt avec le composant — contrairement à une
@@ -566,7 +575,8 @@ export function DocumentView({ contenu, highlight, label }: Props) {
                 onError={() => setEtat("erreur")}
               />
             ) : etat === "image" ? null : (
-              <canvas ref={canvasRef} className="block" />
+              // Jamais peint, il ne se montre pas : il se remplit hors écran.
+              <canvas ref={canvasRef} className={cn("block", enAttente && "hidden")} />
             )}
             {cadreCite && etat !== "chargement" ? (
               <span
@@ -575,10 +585,15 @@ export function DocumentView({ contenu, highlight, label }: Props) {
                 style={cadreCite}
               />
             ) : null}
-            {etat === "chargement" || (etat === "pdf" && rendus === 0) ? (
-              <p role="status" className="p-6 text-center text-[12px] text-muted-foreground">
-                {t("pme.doc.loading")}
-              </p>
+            {enAttente ? (
+              <>
+                {attente ? (
+                  <div className="mx-auto w-40 p-4 [&_.apercu]:h-52">{attente}</div>
+                ) : null}
+                <p role="status" className="p-6 text-center text-[12px] text-muted-foreground">
+                  {t("pme.doc.loading")}
+                </p>
+              </>
             ) : null}
           </div>
         )}

@@ -43,9 +43,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { normaliserMontants } from "./normaliser-montants.ts";
+import { deviseDEssai } from "./devise-d-essai.ts";
 
 /** Du paramétrage dans la vraie vie ; fixé ici par le test. */
-const P = { decimales: 3, toleranceMineure: 1 };
+const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 
 /* La facture du 11 octobre, telle qu'elle imprime. */
 const BASES = [

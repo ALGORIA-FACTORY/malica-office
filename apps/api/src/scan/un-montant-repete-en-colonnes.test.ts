@@ -46,10 +46,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { candidatsMontant, normaliserMontants } from "./normaliser-montants.ts";
+import { deviseDEssai } from "./devise-d-essai.ts";
 
-const P = { decimales: 3, toleranceMineure: 1 };
+const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const valeurs = (brut: string, decimales = P.decimales) =>
-  candidatsMontant(brut, decimales)
+  candidatsMontant(brut, { ...P, decimales })
     .map((c) => c.mineur)
     .sort((a, b) => a - b);
 
@@ -114,7 +115,7 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
   ];
   for (const [brut, pourquoi] of REFUS)
     it(`« ${brut} » reste illisible : ${pourquoi}`, () => {
-      assert.deepEqual(candidatsMontant(brut, P.decimales), []);
+      assert.deepEqual(candidatsMontant(brut, P), []);
     });
 });
 

@@ -97,6 +97,54 @@ describe("codes et actions", () => {
     expect(libelleDeLAction("ecriture.booked", t as never)).toBe("cab.notif.kind.ecriture.booked");
     expect(libelleDeLAction("immo.prorata", t as never)).toBe("cab.audit.autre");
   });
+
+  it("dit où la pièce est allée, et qui l'a précisée, quand le payload le porte", () => {
+    const lit = (action: string, payload: unknown) => libelleDeLAction(action, t as never, payload);
+    expect(lit("piece.vis_changed", { from: "entite", to: "partage" })).toBe(
+      "cab.journal.piece.vers_cabinet",
+    );
+    expect(lit("piece.vis_changed", { from: "partage", to: "entite", par_accord: true })).toBe(
+      "cab.journal.piece.rendue",
+    );
+    expect(lit("piece.vis_changed", { from: "personnel", to: "entite" })).toBe(
+      "cab.journal.piece.vers_societe",
+    );
+    expect(lit("piece.vis_changed", { from: "entite", to: "personnel" })).toBe(
+      "cab.journal.piece.vers_mon_espace",
+    );
+    // Le type établi par le cabinet n'est pas une précision du client.
+    expect(
+      lit("piece.precisee", {
+        champ: "document_kind",
+        valeur: "facture_achat",
+        par_le_cabinet: true,
+      }),
+    ).toBe("cab.journal.piece.type_etabli");
+    expect(lit("piece.precisee", { champ: "document_kind", valeur: "facture_vente" })).toBe(
+      "cab.journal.piece.type_corrige",
+    );
+    expect(lit("piece.precisee", { champ: "document_date", valeur: "2026-10-01" })).toBe(
+      "cab.journal.piece.date_corrigee",
+    );
+    expect(lit("piece.demande", { objet: "suppression" })).toBe(
+      "cab.notif.kind.piece.demande.suppression",
+    );
+    expect(lit("piece.demande_tranchee", { objet: "rappel", accorde: false })).toBe(
+      "cab.journal.piece.demande_refusee",
+    );
+  });
+
+  it("garde la phrase du genre pour un payload ancien, sans deviner", () => {
+    expect(libelleDeLAction("piece.vis_changed", t as never, {})).toBe(
+      "cab.notif.kind.piece.vis_changed",
+    );
+    expect(libelleDeLAction("piece.precisee", t as never, null)).toBe(
+      "cab.notif.kind.piece.precisee",
+    );
+    expect(libelleDeLAction("piece.demande_tranchee", t as never, { objet: "rappel" })).toBe(
+      "cab.notif.kind.piece.demande_tranchee",
+    );
+  });
 });
 
 describe("pourquoi une pièce n'est pas lue", () => {

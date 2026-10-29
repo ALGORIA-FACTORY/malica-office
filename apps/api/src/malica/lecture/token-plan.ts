@@ -1,6 +1,7 @@
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
 
 import { enDecimal, treillisMontant, type Hypothese } from "./montants.ts";
+import type { DeviseLue } from "../../scan/normaliser-montants.ts";
 import { plageAmputee } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
@@ -346,7 +347,7 @@ export function lireMontantDuPlan(
   tokens: readonly PageToken[],
   field: string,
   ref: TokenRef | null | undefined,
-  decimales: number,
+  devise: DeviseLue,
   zone?: string | null,
   binding?: CitationBinding,
 ): MontantLu {
@@ -405,19 +406,21 @@ export function lireMontantDuPlan(
     };
   }
 
-  const hypotheses = treillisMontant(texte, decimales);
+  const hypotheses = treillisMontant(texte, devise);
 
   if (hypotheses.length === 0) {
     return {
       value: null,
       citation,
-      flag: { field, code: "VALUE_NOT_A_NUMBER", detail: token.text },
+      // Toute la plage, pas son premier jeton : « 5,460 301,150 » dit pourquoi
+      // rien n'est rendu, « 5,460 » laisserait croire à une panne.
+      flag: { field, code: "VALUE_NOT_A_NUMBER", detail: texte },
       hypotheses,
     };
   }
   if (hypotheses.length === 1) {
     return {
-      value: enDecimal(hypotheses[0]!.millimes, decimales),
+      value: enDecimal(hypotheses[0]!.millimes, devise.decimales),
       citation,
       flag: null,
       hypotheses,
@@ -429,7 +432,7 @@ export function lireMontantDuPlan(
     flag: {
       field,
       code: "SEPARATEUR_AMBIGU",
-      detail: `« ${texte} » se lit ${hypotheses.map((h) => enDecimal(h.millimes, decimales)).join(" ou ")}`,
+      detail: `« ${texte} » se lit ${hypotheses.map((h) => enDecimal(h.millimes, devise.decimales)).join(" ou ")}`,
     },
     hypotheses,
   };

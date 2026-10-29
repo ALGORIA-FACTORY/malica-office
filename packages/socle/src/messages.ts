@@ -100,14 +100,14 @@ const fr = {
   "landing.surfaces.title": "Deux surfaces, un seul cerveau",
   "landing.surfaces.pme.title": "Espace PME",
   "landing.surfaces.pme.body":
-    "Un tap, moins de dix secondes. Capture hors-ligne, file d'attente, confirmation en un geste. La classification est un sous-produit.",
+    "Une photo, un geste : Envoyer. Vous suivez la pièce : Envoyée · Vue · Retour · Prise en charge.",
   "landing.surfaces.cabinet.title": "Espace comptabilité",
   "landing.surfaces.cabinet.body":
     "File priorisée, écran côte-à-côte pièce/écriture, retour motivé par référentiel gouverné, contre-passation datée.",
 
   "landing.cycle.title": "Le cycle d'une pièce",
   "landing.cycle.steps":
-    "capturée · lue avec citations · proposée par le Socle · confirmée par la PME · comptabilisée · supervisée par la comptabilité · conforme ou retournée avec motif",
+    "photographiée · lue par Malica · envoyée · vue par le cabinet · validée ou forcée, ou retournée avec un motif",
   "landing.footer": "Algoria Factory · Système Comptable Tunisien · extensible UEMOA / OHADA",
 
   "auth.title": "Espace Malica Office",
@@ -279,9 +279,9 @@ const fr = {
   "pme.home.dossier.pieces": "{count} pièces",
   "pme.home.dossier.pieces#one": "{count} pièce",
   "pme.home.dossier.pieces#other": "{count} pièces",
-  "pme.home.dossier.faites": "{count} comptabilisées",
-  "pme.home.dossier.faites#one": "{count} comptabilisée",
-  "pme.home.dossier.faites#other": "{count} comptabilisées",
+  "pme.home.dossier.faites": "{count} prises en charge",
+  "pme.home.dossier.faites#one": "{count} prise en charge",
+  "pme.home.dossier.faites#other": "{count} prises en charge",
   "pme.home.dossier.aucune": "Aucune pièce",
   "pme.home.dossier.ajouter": "+ Ajouter",
   "pme.list.axeDossier": "Dossier",
@@ -351,7 +351,7 @@ const fr = {
   "pme.refus.piece_personnelle":
     "Cette pièce est privée. Ajoutez-la à la société pour permettre sa lecture ; l’envoi à la comptabilité est une action distincte.",
   "refus.piece.rappelEnAttente":
-    "Le retour de cette pièce est demandé au cabinet : elle se comptabilise une fois la demande tranchée.",
+    "Le retour de cette pièce est demandé au cabinet : attendez sa réponse.",
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
@@ -422,7 +422,7 @@ const fr = {
     "Je relève chaque mot avant de vous répondre — je ne devine jamais un montant.",
   "pme.bloque.anomalie":
     "Les montants de cette pièce ne se recoupent pas. Je ne propose rien plutôt que de proposer un chiffre faux.",
-  "pme.bloque.rejet": "Cette pièce ne peut pas être comptabilisée telle quelle.",
+  "pme.bloque.rejet": "Cette pièce ne peut pas être prise en charge telle quelle.",
   "pme.bloque.rapprocher": "Il manque un rapprochement avant que je puisse proposer l'écriture.",
   "pme.bloque.geste":
     "Reprenez la photo si elle est floue, ou envoyez-la à votre comptable : il tranchera.",
@@ -683,7 +683,7 @@ const fr = {
   "pme.tva.collectee": "TVA collectée",
   "pme.tva.deductible": "TVA déductible",
   "pme.tva.solde": "Solde",
-  "pme.tva.empty": "Aucune écriture comptabilisée sur cette période.",
+  "pme.tva.empty": "Aucune pièce prise en charge sur cette période.",
   "pme.charges.title": "Vos charges",
   "pme.charges.trend.down": "En baisse de {value} — beau travail.",
   "pme.charges.trend.up": "En hausse de {value}.",
@@ -1023,7 +1023,13 @@ const fr = {
   "cab.today.title": "Aujourd'hui",
   "cab.nav.group.cabinet": "Outils et réglages",
   "cab.search": "Tout chercher",
-  "cab.today.summary": "{pieces} pièces dans la file · {clients} mandats actifs.",
+  "cab.today.summary": "{pieces} dans la file · {mandats}.",
+  "cab.today.summary.pieces": "{count} pièces",
+  "cab.today.summary.pieces#one": "{count} pièce",
+  "cab.today.summary.pieces#other": "{count} pièces",
+  "cab.today.summary.mandats": "{count} mandats actifs",
+  "cab.today.summary.mandats#one": "{count} mandat actif",
+  "cab.today.summary.mandats#other": "{count} mandats actifs",
   "cab.today.bulk": "Valider en masse",
   "cab.malica.status": "pr\u00e9sente",
   "malica.chat.intro":
@@ -1412,7 +1418,7 @@ const fr = {
   "cab.today.socle": "Le Socle — dernières 24 h",
   "cab.today.socle.recues": "pièces reçues",
   "cab.today.socle.lues": "pièces lues",
-  "cab.today.socle.comptabilisees": "écritures comptabilisées",
+  "cab.today.socle.prises": "prises en charge",
   "cab.today.socle.doctrine":
     "Chaque chiffre vient d’un moteur déterministe. Malica les restitue, ne les calcule pas.",
   "cab.notif.malica":
@@ -1425,17 +1431,16 @@ const fr = {
   "cab.notif.marquerLu": "Marquer lu",
   "cab.notif.ouvrir": "Ouvrir",
   "cab.notif.vide": "Aucune notification pour l’instant.",
-  "cab.notif.kind.piece.partagee": "Une pièce vous a été transmise.",
+  "cab.notif.kind.piece.partagee": "Pièce reçue du client.",
   "cab.notif.kind.piece.captured": "Une pièce a été déposée.",
   "cab.notif.kind.piece.read": "Une pièce a été lue.",
   "cab.notif.kind.piece.validee": "Une pièce a été validée.",
   "cab.notif.kind.piece.retournee": "Une pièce a été retournée au client.",
-  "cab.notif.kind.piece.precisee": "Le client a précisé le sens d’une pièce.",
-  "cab.notif.kind.piece.vis_changed": "La visibilité d’une pièce a changé.",
+  "cab.notif.kind.piece.precisee": "Le client a corrigé une pièce.",
+  "cab.notif.kind.piece.vis_changed": "Une pièce a changé d’espace.",
   "cab.notif.kind.piece.articles_projected": "Les articles d’une pièce ont été projetés.",
   "cab.notif.kind.ecriture.proposed": "Le Socle a proposé une écriture.",
-  "cab.notif.kind.ecriture.booked":
-    "Une écriture a été comptabilisée : elle attend votre supervision.",
+  "cab.notif.kind.ecriture.booked": "Une écriture a été inscrite.",
   "cab.notif.kind.ecriture.validee": "Une écriture a été validée.",
   "cab.notif.kind.ecriture.retournee": "Une écriture a été retournée.",
   "cab.notif.kind.autre": "Un événement du dossier.",
@@ -1466,6 +1471,8 @@ const fr = {
     "Montant tranché par l’arithmétique de la facture : c’est la seule lecture qui boucle.",
   "cab.code.ampute":
     "Montant non rendu : il est collé au nombre voisin sur la pièce, et une lecture amputée vaut moins que pas de lecture.",
+  "cab.code.invraisemblable":
+    "Montant non rendu : la TVA lue dépasse la base de sa ligne, l’une des deux est mal lue. Relisez-les sur la pièce.",
   "cab.code.incoherent":
     "La pièce ne boucle pas : ce que son arithmétique donne et ce qu’elle imprime diffèrent.",
   "cab.code.designationAmbigue":
@@ -1577,14 +1584,17 @@ const fr = {
   "cab.review.paiement.preuveIllisible": "Cette preuve ne peut pas s’afficher ici.",
   "cab.review.reglement": "Écriture du règlement",
   "cab.review.dossier": "Dossier : facture et règlement",
-  "cab.review.reglement.retenue":
-    "Retenue à la source constatée : {libelle}, {montant} sur un TTC de {ttc}. Le règlement ne porte que le net.",
+  "cab.review.reglement.retenue": "Retenue à la source : {libelle}, {montant} sur {ttc} TTC.",
+  "cab.review.reglement.retenue.aide":
+    "Le règlement ne porte que le net : la retenue est versée à l’État pour le compte du fournisseur.",
   "cab.review.reglement.inscrire": "Inscrire",
   "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
-  "cab.review.paiement.annulationAInscrire":
-    "Annulation demandée par le client : l’écriture d’annulation attend votre inscription.",
+  "cab.review.paiement.annules": "{count} règlements annulés",
+  "cab.review.paiement.annules#one": "{count} règlement annulé",
+  "cab.review.paiement.annules#other": "{count} règlements annulés",
+  "cab.review.paiement.annulationAInscrire": "Annulation demandée par le client : à inscrire.",
   "cab.review.paiement.inscrireAnnulation": "Inscrire l’annulation",
   "cab.review.enregistre": "Enregistré : {chemin}",
   "cab.review.joints": "Documents joints",
@@ -1593,7 +1603,7 @@ const fr = {
   "cab.review.back": "Retour à la file",
   "cab.malica.title": "Malica",
   "cab.malica.queue":
-    "Je classe la file : le comptabilisé passe avant le proposé, le retourné reste visible. Je ne décide d'aucune conformité.",
+    "Je classe la file : ce qui attend votre geste d’abord, le retourné reste visible. Je ne décide d'aucune conformité.",
   "cab.malica.review":
     "Chaque montant affiché ouvre sa zone source. Je n'ai transcrit aucun chiffre : le Socle a produit l'écriture, le pack en fixe les comptes.",
   "cab.echeances.title": "Échéances",
@@ -1655,6 +1665,15 @@ const fr = {
   "cab.export.format.journal_xlsx": "Journal du jour (Excel)",
   "cab.nav.journal": "Journal du jour",
   "cab.journal.ecriture.forcee": "Le cabinet a forcé l’écriture.",
+  "cab.journal.piece.type_etabli": "Type de pièce établi par le cabinet.",
+  "cab.journal.piece.type_corrige": "Le client a corrigé le type de la pièce.",
+  "cab.journal.piece.date_corrigee": "Le client a corrigé la date de la pièce.",
+  "cab.journal.piece.vers_cabinet": "Pièce envoyée au cabinet.",
+  "cab.journal.piece.rendue": "Pièce rendue au client, à sa demande.",
+  "cab.journal.piece.vers_societe": "Pièce revenue dans la société.",
+  "cab.journal.piece.vers_mon_espace": "Pièce passée dans Mon espace.",
+  "cab.journal.piece.demande_accordee": "Demande du client accordée.",
+  "cab.journal.piece.demande_refusee": "Demande du client refusée.",
   "cab.settings.fuseau.titre": "Fuseau horaire du cabinet",
   "cab.settings.fuseau.lede":
     "Le jour du journal, le numéro de ses exports et leur comparaison se lisent dans ce fuseau.",
@@ -2075,7 +2094,7 @@ const fr = {
   "pme.piece.ou": "Où elle en est",
   "pme.piece.ou.avenir": "à venir",
   "pme.list.aVous": "À vous",
-  "cab.notif.kind.piece.confirmation_demandee": "Le client a été invité à confirmer une pièce.",
+  "cab.notif.kind.piece.confirmation_demandee": "Le client a été relancé sur une pièce.",
   "cab.notif.kind.piece.reponse_client": "Le client a répondu sur une pièce.",
   "notif.kind.piece.reponse_client": "Votre réponse est partie à la comptabilité",
   "cab.notif.kind.piece.renvoyee": "Le client a renvoyé une pièce retournée.",
@@ -2812,7 +2831,7 @@ const fr = {
   "pme.file.reprise.pourquoi.remplacee":
     "L'ancienne photo a déjà été remplacée entre-temps — depuis un autre appareil, ou par une autre personne.",
   "pme.file.reprise.pourquoi.inscrite":
-    "Le cabinet a inscrit la pièce entre-temps : elle ne se remplace plus.",
+    "Le cabinet a pris la pièce en charge entre-temps : elle ne se remplace plus.",
   "pme.file.reprise.pourquoi.introuvable": "L'ancienne pièce a été retirée entre-temps.",
   "pme.file.reprise.pourquoi.autre": "Cette photo ne peut pas remplacer l'ancienne pièce.",
   "pme.file.reprise.libre": "Garder comme nouvelle pièce",
@@ -3793,7 +3812,7 @@ const fr = {
     "Ce règlement a été annulé : il ne reçoit plus de justificatif.",
   "refus.justificatif.autre_cote_du_cabinet":
     "Ce règlement n’est pas du même côté que le justificatif : l’un est transmis à votre comptabilité, l’autre non.",
-  "pme.verifie.confirme": "confirmé",
+  "pme.verifie.confirme": "saisie",
 } as const;
 
 type Dict = Record<keyof typeof fr, string>;
@@ -3878,14 +3897,14 @@ const en: Dict = {
   "landing.surfaces.title": "Two surfaces, one brain",
   "landing.surfaces.pme.title": "Company workspace",
   "landing.surfaces.pme.body":
-    "One tap, under ten seconds. Offline capture, queue, one-gesture confirmation. Classification is a by-product.",
+    "One photo, one gesture: Send. You follow the document: Sent · Seen · Returned · Taken up.",
   "landing.surfaces.cabinet.title": "Accounting workspace",
   "landing.surfaces.cabinet.body":
     "Prioritised queue, side-by-side document and entry, governed rejection reasons, dated reversal.",
 
   "landing.cycle.title": "The life of a document",
   "landing.cycle.steps":
-    "captured · read with citations · proposed by the core · confirmed by the company · booked · reviewed by the firm · compliant or returned with a reason",
+    "photographed · read by Malica · sent · seen by the firm · validated or forced, or returned with a reason",
   "landing.footer": "Algoria Factory · Tunisian accounting system · extensible to UEMOA / OHADA",
 
   "auth.title": "Malica Office workspace",
@@ -4056,9 +4075,9 @@ const en: Dict = {
   "pme.home.dossier.pieces": "{count} documents",
   "pme.home.dossier.pieces#one": "{count} document",
   "pme.home.dossier.pieces#other": "{count} documents",
-  "pme.home.dossier.faites": "{count} booked",
-  "pme.home.dossier.faites#one": "{count} booked",
-  "pme.home.dossier.faites#other": "{count} booked",
+  "pme.home.dossier.faites": "{count} taken up",
+  "pme.home.dossier.faites#one": "{count} taken up",
+  "pme.home.dossier.faites#other": "{count} taken up",
   "pme.home.dossier.aucune": "No documents",
   "pme.home.dossier.ajouter": "+ Add",
   "pme.list.axeDossier": "Folder",
@@ -4113,7 +4132,7 @@ const en: Dict = {
   "pme.refus.piece_personnelle":
     "This document is private. Add it to the company to allow reading; sending it to the accountant is a separate action.",
   "refus.piece.rappelEnAttente":
-    "A return of this document has been requested from the accounting firm: it can be booked once the request is settled.",
+    "A return of this document has been requested from the accounting firm: wait for its answer.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
   "refus.place.incluses_prises": "All the places included in the subscription are taken.",
@@ -4163,7 +4182,7 @@ const en: Dict = {
   "pme.lecture.sous": "I note every word before answering — I never guess an amount.",
   "pme.bloque.anomalie":
     "The amounts on this document don't add up. I'd rather propose nothing than propose a wrong figure.",
-  "pme.bloque.rejet": "This document cannot be posted as it stands.",
+  "pme.bloque.rejet": "This document cannot be taken up as it stands.",
   "pme.bloque.rapprocher": "A reconciliation is missing before I can propose the entry.",
   "pme.bloque.geste":
     "Retake the photo if it is blurred, or send it to your accountant — they will decide.",
@@ -4415,7 +4434,7 @@ const en: Dict = {
   "pme.tva.collectee": "Output VAT",
   "pme.tva.deductible": "Input VAT",
   "pme.tva.solde": "Balance",
-  "pme.tva.empty": "No booked entry for this period.",
+  "pme.tva.empty": "No document taken up for this period.",
   "pme.charges.title": "Your expenses",
   "pme.charges.trend.down": "Down {value} — nice work.",
   "pme.charges.trend.up": "Up {value}.",
@@ -4744,7 +4763,13 @@ const en: Dict = {
   "cab.today.title": "Today",
   "cab.nav.group.cabinet": "Tools and settings",
   "cab.search": "Search everything",
-  "cab.today.summary": "{pieces} documents in the queue · {clients} active engagements.",
+  "cab.today.summary": "{pieces} in the queue · {mandats}.",
+  "cab.today.summary.pieces": "{count} documents",
+  "cab.today.summary.pieces#one": "{count} document",
+  "cab.today.summary.pieces#other": "{count} documents",
+  "cab.today.summary.mandats": "{count} active engagements",
+  "cab.today.summary.mandats#one": "{count} active engagement",
+  "cab.today.summary.mandats#other": "{count} active engagements",
   "cab.today.bulk": "Approve in bulk",
   "cab.malica.status": "present",
   "malica.chat.intro":
@@ -5129,7 +5154,7 @@ const en: Dict = {
   "cab.today.socle": "The Socle — last 24 h",
   "cab.today.socle.recues": "documents received",
   "cab.today.socle.lues": "documents read",
-  "cab.today.socle.comptabilisees": "entries booked",
+  "cab.today.socle.prises": "taken up",
   "cab.today.socle.doctrine":
     "Every figure comes from a deterministic engine. Malica reports them, it does not compute them.",
   "cab.notif.malica":
@@ -5142,16 +5167,16 @@ const en: Dict = {
   "cab.notif.marquerLu": "Mark as read",
   "cab.notif.ouvrir": "Open",
   "cab.notif.vide": "No notification yet.",
-  "cab.notif.kind.piece.partagee": "A document was sent to you.",
+  "cab.notif.kind.piece.partagee": "Document received from the client.",
   "cab.notif.kind.piece.captured": "A document was filed.",
   "cab.notif.kind.piece.read": "A document was read.",
   "cab.notif.kind.piece.validee": "A document was approved.",
   "cab.notif.kind.piece.retournee": "A document was returned to the client.",
-  "cab.notif.kind.piece.precisee": "The client clarified the direction of a document.",
-  "cab.notif.kind.piece.vis_changed": "A document’s visibility changed.",
+  "cab.notif.kind.piece.precisee": "The client corrected a document.",
+  "cab.notif.kind.piece.vis_changed": "A document moved to another space.",
   "cab.notif.kind.piece.articles_projected": "A document’s line items were projected.",
   "cab.notif.kind.ecriture.proposed": "The Socle proposed an entry.",
-  "cab.notif.kind.ecriture.booked": "An entry was booked: it awaits your supervision.",
+  "cab.notif.kind.ecriture.booked": "An entry was recorded.",
   "cab.notif.kind.ecriture.validee": "An entry was approved.",
   "cab.notif.kind.ecriture.retournee": "An entry was returned.",
   "cab.notif.kind.autre": "An event on the file.",
@@ -5181,6 +5206,8 @@ const en: Dict = {
     "Amount settled by the invoice arithmetic: it is the only reading that balances.",
   "cab.code.ampute":
     "Amount not returned: it runs into the neighbouring number on the document, and a clipped reading is worth less than none.",
+  "cab.code.invraisemblable":
+    "Amount not returned: the VAT read is larger than the base on its line, so one of them is misread. Check both on the document.",
   "cab.code.incoherent":
     "The document does not balance: what its arithmetic gives and what it prints differ.",
   "cab.code.designationAmbigue":
@@ -5290,14 +5317,17 @@ const en: Dict = {
   "cab.review.paiement.preuveIllisible": "This proof cannot be displayed here.",
   "cab.review.reglement": "Settlement entry",
   "cab.review.dossier": "File: invoice and settlement",
-  "cab.review.reglement.retenue":
-    "Withholding tax found: {libelle}, {montant} on a gross of {ttc}. The payment carries only the net.",
+  "cab.review.reglement.retenue": "Withholding tax: {libelle}, {montant} on a gross of {ttc}.",
+  "cab.review.reglement.retenue.aide":
+    "The payment carries only the net: the withholding is paid to the State on the supplier’s behalf.",
   "cab.review.reglement.inscrire": "Post",
   "cab.review.reglement.inscrit": "Posted to the journal — it appears in the FEC.",
   "cab.review.paiement.reference": "Reference",
   "cab.review.paiement.eteint": "Settlement cancelled — no accounting effect",
-  "cab.review.paiement.annulationAInscrire":
-    "Cancellation requested by the client: the reversing entry awaits your posting.",
+  "cab.review.paiement.annules": "{count} cancelled settlements",
+  "cab.review.paiement.annules#one": "{count} cancelled settlement",
+  "cab.review.paiement.annules#other": "{count} cancelled settlements",
+  "cab.review.paiement.annulationAInscrire": "Cancellation requested by the client: to post.",
   "cab.review.paiement.inscrireAnnulation": "Post the cancellation",
   "cab.review.enregistre": "Saved: {chemin}",
   "cab.review.joints": "Attached documents",
@@ -5306,7 +5336,7 @@ const en: Dict = {
   "cab.review.back": "Back to the queue",
   "cab.malica.title": "Malica",
   "cab.malica.queue":
-    "I order the queue: booked before proposed, returned stays visible. I decide no compliance.",
+    "I order the queue: what awaits you first, returned stays visible. I decide no compliance.",
   "cab.malica.review":
     "Every displayed amount opens its source zone. I transcribed no figure: the engine produced the entry, the pack sets the accounts.",
   "cab.echeances.title": "Deadlines",
@@ -5367,6 +5397,15 @@ const en: Dict = {
   "cab.export.format.journal_xlsx": "Daily journal (Excel)",
   "cab.nav.journal": "Daily journal",
   "cab.journal.ecriture.forcee": "The practice forced the entry.",
+  "cab.journal.piece.type_etabli": "Document type set by the practice.",
+  "cab.journal.piece.type_corrige": "The client corrected the document type.",
+  "cab.journal.piece.date_corrigee": "The client corrected the document date.",
+  "cab.journal.piece.vers_cabinet": "Document sent to the practice.",
+  "cab.journal.piece.rendue": "Document handed back to the client, at their request.",
+  "cab.journal.piece.vers_societe": "Document back in the company.",
+  "cab.journal.piece.vers_mon_espace": "Document moved to My space.",
+  "cab.journal.piece.demande_accordee": "Client request granted.",
+  "cab.journal.piece.demande_refusee": "Client request declined.",
   "cab.settings.fuseau.titre": "Practice time zone",
   "cab.settings.fuseau.lede":
     "The day of the journal, the number of its exports and their comparison are read in this time zone.",
@@ -5783,7 +5822,7 @@ const en: Dict = {
   "pme.piece.ou": "Where it stands",
   "pme.piece.ou.avenir": "to come",
   "pme.list.aVous": "Your move",
-  "cab.notif.kind.piece.confirmation_demandee": "The client was asked to confirm a document.",
+  "cab.notif.kind.piece.confirmation_demandee": "The client was reminded about a document.",
   "cab.notif.kind.piece.reponse_client": "The client replied about a document.",
   "notif.kind.piece.reponse_client": "Your reply was sent to your accountant",
   "cab.notif.kind.piece.renvoyee": "The client sent back a returned document.",
@@ -6512,7 +6551,7 @@ const en: Dict = {
   "pme.file.reprise.pourquoi.remplacee":
     "The old photo was already replaced in the meantime — from another device, or by someone else.",
   "pme.file.reprise.pourquoi.inscrite":
-    "The firm booked the document in the meantime: it can no longer be replaced.",
+    "The firm took up the document in the meantime: it can no longer be replaced.",
   "pme.file.reprise.pourquoi.introuvable": "The old document was removed in the meantime.",
   "pme.file.reprise.pourquoi.autre": "This photo cannot replace the old document.",
   "pme.file.reprise.libre": "Keep as a new document",
@@ -7400,7 +7439,7 @@ const en: Dict = {
   "refus.justificatif.reglement_eteint": "This payment was cancelled: it no longer takes a proof.",
   "refus.justificatif.autre_cote_du_cabinet":
     "This payment is not on the same side as the proof: one was sent to your accountant, the other was not.",
-  "pme.verifie.confirme": "confirmed",
+  "pme.verifie.confirme": "entered",
 };
 
 const ar: Dict = {
@@ -7481,14 +7520,14 @@ const ar: Dict = {
   "landing.surfaces.title": "واجهتان، عقل واحد",
   "landing.surfaces.pme.title": "فضاء المؤسسة",
   "landing.surfaces.pme.body":
-    "لمسة واحدة في أقل من عشر ثوان. تصوير دون شبكة، طابور انتظار، تأكيد بحركة واحدة.",
+    "صورة وحركة واحدة: إرسال. تتابع الوثيقة: أُرسلت · اطُّلع عليها · مُرجَعة · تمّ التكفّل بها.",
   "landing.surfaces.cabinet.title": "فضاء المحاسبة",
   "landing.surfaces.cabinet.body":
     "قائمة مرتّبة بالأولوية، عرض متجاور للوثيقة والقيد، أسباب إرجاع محكومة، قيد معاكس بتاريخه.",
 
   "landing.cycle.title": "دورة حياة الوثيقة",
   "landing.cycle.steps":
-    "مصوّرة · مقروءة بمراجعها · مقترحة من المحرك · مؤكَّدة من المؤسسة · مُحاسَبة · مراجَعة من المكتب · مطابقة أو مُرجَعة بسبب",
+    "مصوّرة · مقروءة من Malica · مُرسَلة · اطّلع عليها المكتب · مُصادَق عليها أو مفروضة، أو مُرجَعة بسبب",
   "landing.footer": "ألغوريا فاكتوري · النظام المحاسبي التونسي · قابل للتوسّع نحو UEMOA / OHADA",
 
   "auth.title": "مساحة ماليكا أوفيس",
@@ -7657,9 +7696,9 @@ const ar: Dict = {
   "pme.home.dossier.pieces": "{count} وثائق",
   "pme.home.dossier.pieces#one": "وثيقة واحدة",
   "pme.home.dossier.pieces#other": "{count} وثائق",
-  "pme.home.dossier.faites": "{count} مُرحّلة",
-  "pme.home.dossier.faites#one": "واحدة مُرحّلة",
-  "pme.home.dossier.faites#other": "{count} مُرحّلة",
+  "pme.home.dossier.faites": "{count} تمّ التكفّل بها",
+  "pme.home.dossier.faites#one": "واحدة تمّ التكفّل بها",
+  "pme.home.dossier.faites#other": "{count} تمّ التكفّل بها",
   "pme.home.dossier.aucune": "لا توجد وثائق",
   "pme.home.dossier.ajouter": "+ إضافة",
   "pme.list.axeDossier": "الملف",
@@ -7709,8 +7748,7 @@ const ar: Dict = {
   "pme.refus.piece_en_double": "هذه الوثيقة نسخة من وثيقة سبقت قراءتها: لن أعيد قراءتها.",
   "pme.refus.piece_personnelle":
     "هذه الوثيقة خاصة. أضفها إلى المؤسسة لقراءتها؛ إرسالها للمحاسبة عملية مستقلة.",
-  "refus.piece.rappelEnAttente":
-    "طُلب من مكتب المحاسبة استرجاع هذه الوثيقة: تُسجَّل محاسبيًا بعد البتّ في الطلب.",
+  "refus.piece.rappelEnAttente": "طُلب من مكتب المحاسبة استرجاع هذه الوثيقة: انتظر ردّه.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
   "refus.place.incluses_prises": "كل المقاعد المشمولة في الاشتراك مشغولة.",
@@ -7758,7 +7796,7 @@ const ar: Dict = {
   "pme.lecture.sous": "أرصد كل كلمة قبل أن أجيبك — لا أخمّن مبلغًا أبدًا.",
   "pme.bloque.anomalie":
     "مبالغ هذه الوثيقة لا تتطابق. أفضّل ألّا أقترح شيئًا على أن أقترح رقمًا خاطئًا.",
-  "pme.bloque.rejet": "لا يمكن محاسبة هذه الوثيقة على حالها.",
+  "pme.bloque.rejet": "لا يمكن التكفّل بهذه الوثيقة على حالها.",
   "pme.bloque.rapprocher": "تنقص مطابقة قبل أن أقترح القيد.",
   "pme.bloque.geste": "أعد التصوير إن كانت الصورة غير واضحة، أو أرسلها إلى محاسبك ليقرّر.",
   "pme.membres.lede":
@@ -8003,7 +8041,7 @@ const ar: Dict = {
   "pme.tva.collectee": "الأداء المحصَّل",
   "pme.tva.deductible": "الأداء القابل للطرح",
   "pme.tva.solde": "الرصيد",
-  "pme.tva.empty": "لا يوجد قيد مُحاسَب في هذه الفترة.",
+  "pme.tva.empty": "لا توجد وثيقة تمّ التكفّل بها في هذه الفترة.",
   "pme.charges.title": "مصاريفك",
   "pme.charges.trend.down": "انخفاض بنسبة {value} — عمل جيد.",
   "pme.charges.trend.up": "ارتفاع بنسبة {value}.",
@@ -8352,7 +8390,13 @@ const ar: Dict = {
   "cab.today.title": "اليوم",
   "cab.nav.group.cabinet": "الأدوات والإعدادات",
   "cab.search": "\u0627\u0644\u0628\u062d\u062b \u0641\u064a \u0627\u0644\u0643\u0644",
-  "cab.today.summary": "{pieces} وثيقة في قائمة العمل · {clients} تكليف نشط.",
+  "cab.today.summary": "{pieces} في قائمة العمل · {mandats}.",
+  "cab.today.summary.pieces": "{count} وثيقة",
+  "cab.today.summary.pieces#one": "وثيقة واحدة",
+  "cab.today.summary.pieces#other": "{count} وثيقة",
+  "cab.today.summary.mandats": "{count} تكليف نشط",
+  "cab.today.summary.mandats#one": "تكليف نشط واحد",
+  "cab.today.summary.mandats#other": "{count} تكليف نشط",
   "cab.today.bulk": "\u062a\u0623\u0643\u064a\u062f \u062c\u0645\u0627\u0639\u064a",
   "cab.malica.status": "\u062d\u0627\u0636\u0631\u0629",
   "malica.chat.intro": "اسأل عن هذا الملف. لا أحتسب شيئًا: أعيد ما أنتجه المحرّك مع مصدره.",
@@ -8715,7 +8759,7 @@ const ar: Dict = {
   "cab.today.socle": "السوكل — آخر 24 ساعة",
   "cab.today.socle.recues": "وثائق مستلمة",
   "cab.today.socle.lues": "وثائق مقروءة",
-  "cab.today.socle.comptabilisees": "قيود محاسَبة",
+  "cab.today.socle.prises": "تمّ التكفّل بها",
   "cab.today.socle.doctrine": "كل رقم يأتي من محرّك حتمي. ماليكا تنقلها ولا تحسبها.",
   "cab.notif.malica": "أجمع ما أبلغتك به ملفاتك. النقطة الذهبية تنتظر إجراءً منك.",
   "cab.notif.kicker.attente": "{n} في الانتظار",
@@ -8726,16 +8770,16 @@ const ar: Dict = {
   "cab.notif.marquerLu": "تعليم كمقروء",
   "cab.notif.ouvrir": "فتح",
   "cab.notif.vide": "لا تنبيهات حتى الآن.",
-  "cab.notif.kind.piece.partagee": "أُرسلت إليك وثيقة.",
+  "cab.notif.kind.piece.partagee": "وثيقة واردة من الحريف.",
   "cab.notif.kind.piece.captured": "أودعت وثيقة.",
   "cab.notif.kind.piece.read": "قُرئت وثيقة.",
   "cab.notif.kind.piece.validee": "صودق على وثيقة.",
   "cab.notif.kind.piece.retournee": "أُرجعت وثيقة إلى الحريف.",
-  "cab.notif.kind.piece.precisee": "حدّد الحريف اتجاه وثيقة.",
-  "cab.notif.kind.piece.vis_changed": "تغيّرت رؤية وثيقة.",
+  "cab.notif.kind.piece.precisee": "صحّح الحريف وثيقة.",
+  "cab.notif.kind.piece.vis_changed": "انتقلت وثيقة إلى فضاء آخر.",
   "cab.notif.kind.piece.articles_projected": "أُسقطت بنود وثيقة.",
   "cab.notif.kind.ecriture.proposed": "اقترح السوكل قيدًا.",
-  "cab.notif.kind.ecriture.booked": "حوسب قيد: ينتظر إشرافك.",
+  "cab.notif.kind.ecriture.booked": "سُجّل قيد.",
   "cab.notif.kind.ecriture.validee": "صودق على قيد.",
   "cab.notif.kind.ecriture.retournee": "أُرجع قيد.",
   "cab.notif.kind.autre": "حدث في الملف.",
@@ -8763,6 +8807,8 @@ const ar: Dict = {
   "cab.code.arithmetique": "مبلغ حسمته حسابات الفاتورة: هي القراءة الوحيدة التي تتوازن.",
   "cab.code.ampute":
     "مبلغ لم يُرجَع: هو ملتصق بالعدد المجاور في الوثيقة، وقراءة مبتورة أسوأ من غياب القراءة.",
+  "cab.code.invraisemblable":
+    "مبلغ لم يُرجَع: الأداء على القيمة المضافة المقروء يفوق أساس سطره، فأحدهما مقروء خطأً. راجِعهما على الوثيقة.",
   "cab.code.incoherent": "الوثيقة لا تتوازن: ما تعطيه حساباتها يخالف ما تطبعه.",
   "cab.code.designationAmbigue": "موضعان في الوثيقة استجابا لنفس القاعدة: لم أختر عشوائيًا.",
   "cab.code.autre": "تنبيه قراءة.",
@@ -8868,14 +8914,17 @@ const ar: Dict = {
   "cab.review.paiement.preuveIllisible": "لا يمكن عرض هذا المؤيّد هنا.",
   "cab.review.reglement": "قيد التسديد",
   "cab.review.dossier": "ملف: فاتورة وخلاص",
-  "cab.review.reglement.retenue":
-    "خصم من المورد ثابت: {libelle}، {montant} من مبلغ جملي {ttc}. الصك لا يحمل إلا الصافي.",
+  "cab.review.reglement.retenue": "خصم من المورد: {libelle}، {montant} من مبلغ جملي {ttc}.",
+  "cab.review.reglement.retenue.aide":
+    "الصك لا يحمل إلا الصافي: يُدفع الخصم إلى الدولة لحساب المزوّد.",
   "cab.review.reglement.inscrire": "تسجيل",
   "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في ملف FEC.",
   "cab.review.paiement.reference": "المرجع",
   "cab.review.paiement.eteint": "تمّ إلغاء التسديد — دون أثر محاسبي",
-  "cab.review.paiement.annulationAInscrire":
-    "طلب الحريف إلغاء التسديد: قيد الإلغاء في انتظار تسجيلك.",
+  "cab.review.paiement.annules": "{count} تسديدات ملغاة",
+  "cab.review.paiement.annules#one": "تسديد واحد ملغى",
+  "cab.review.paiement.annules#other": "{count} تسديدات ملغاة",
+  "cab.review.paiement.annulationAInscrire": "طلب الحريف إلغاء التسديد: للتسجيل.",
   "cab.review.paiement.inscrireAnnulation": "تسجيل الإلغاء",
   "cab.review.enregistre": "حُفظ في: {chemin}",
   "cab.review.joints": "الوثائق المرفقة",
@@ -8883,8 +8932,7 @@ const ar: Dict = {
   "cab.review.audit.empty": "لا يوجد حدث مُسجَّل.",
   "cab.review.back": "العودة إلى القائمة",
   "cab.malica.title": "ماليكا",
-  "cab.malica.queue":
-    "أرتّب القائمة: المحاسَب قبل المقترح، والمُرجَع يبقى ظاهرًا. لا أقرّر أي مطابقة.",
+  "cab.malica.queue": "أرتّب القائمة: ما ينتظرك أوّلًا، والمُرجَع يبقى ظاهرًا. لا أقرّر أي مطابقة.",
   "cab.malica.review":
     "كل مبلغ معروض يفتح منطقته الأصلية. لم أنسخ أي رقم: المحرّك أنتج القيد، والحزمة تحدّد الحسابات.",
   "cab.echeances.title": "الآجال",
@@ -8945,6 +8993,15 @@ const ar: Dict = {
   "cab.export.format.journal_xlsx": "يومية اليوم (Excel)",
   "cab.nav.journal": "يومية اليوم",
   "cab.journal.ecriture.forcee": "فرض المكتب القيد.",
+  "cab.journal.piece.type_etabli": "حدّد المكتب نوع الوثيقة.",
+  "cab.journal.piece.type_corrige": "صحّح الحريف نوع الوثيقة.",
+  "cab.journal.piece.date_corrigee": "صحّح الحريف تاريخ الوثيقة.",
+  "cab.journal.piece.vers_cabinet": "أُرسلت الوثيقة إلى المكتب.",
+  "cab.journal.piece.rendue": "أُعيدت الوثيقة إلى الحريف بطلب منه.",
+  "cab.journal.piece.vers_societe": "عادت الوثيقة إلى الشركة.",
+  "cab.journal.piece.vers_mon_espace": "نُقلت الوثيقة إلى مساحتي.",
+  "cab.journal.piece.demande_accordee": "قُبل طلب الحريف.",
+  "cab.journal.piece.demande_refusee": "رُفض طلب الحريف.",
   "cab.settings.fuseau.titre": "المنطقة الزمنية للمكتب",
   "cab.settings.fuseau.lede":
     "يُقرأ يوم اليومية ورقم تصديراتها والمقارنة بينها في هذه المنطقة الزمنية.",
@@ -9339,7 +9396,7 @@ const ar: Dict = {
   "pme.piece.ou": "أين وصلت",
   "pme.piece.ou.avenir": "لاحقًا",
   "pme.list.aVous": "بانتظارك",
-  "cab.notif.kind.piece.confirmation_demandee": "دُعي الحريف إلى تأكيد وثيقة.",
+  "cab.notif.kind.piece.confirmation_demandee": "ذُكِّر الحريف بوثيقة.",
   "cab.notif.kind.piece.reponse_client": "ردّ الحريف بخصوص وثيقة.",
   "notif.kind.piece.reponse_client": "أُرسل ردّك إلى المحاسبة",
   "cab.notif.kind.piece.renvoyee": "أعاد الحريف إرسال وثيقة مُرجَعة.",
@@ -10047,7 +10104,8 @@ const ar: Dict = {
   "pme.file.reprise.aide.titre": "لماذا لم تنجح إعادة التصوير",
   "pme.file.reprise.pourquoi.remplacee":
     "استُبدلت الصورة القديمة في الأثناء — من جهاز آخر أو من شخص آخر.",
-  "pme.file.reprise.pourquoi.inscrite": "سجّل المكتب الوثيقة في الأثناء: لم يعد استبدالها ممكنًا.",
+  "pme.file.reprise.pourquoi.inscrite":
+    "تكفّل المكتب بالوثيقة في الأثناء: لم يعد استبدالها ممكنًا.",
   "pme.file.reprise.pourquoi.introuvable": "سُحبت الوثيقة القديمة في الأثناء.",
   "pme.file.reprise.pourquoi.autre": "لا يمكن لهذه الصورة أن تحلّ محلّ الوثيقة القديمة.",
   "pme.file.reprise.libre": "الاحتفاظ بها كوثيقة جديدة",
@@ -10886,7 +10944,7 @@ const ar: Dict = {
   "refus.justificatif.reglement_eteint": "أُلغي هذا التسديد: لم يعد يقبل مؤيّدًا.",
   "refus.justificatif.autre_cote_du_cabinet":
     "هذا التسديد ليس في الجهة نفسها التي فيها المؤيّد: أحدهما أُرسل إلى محاسبكم والآخر لا.",
-  "pme.verifie.confirme": "مؤكَّد",
+  "pme.verifie.confirme": "مُدخَل",
 };
 
 export type MessageKey = keyof typeof fr;

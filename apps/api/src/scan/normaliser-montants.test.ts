@@ -18,9 +18,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { candidatsMontant, normaliserMontants } from "./normaliser-montants.ts";
+import { deviseDEssai } from "./devise-d-essai.ts";
 
 /** Ce qui vient du paramétrage dans la vraie vie — ici, fixé par le test. */
-const P = { decimales: 3, toleranceMineure: 1 };
+const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const TAUX = "0.19";
 
 // 1 234,560 × 1,19 = 1 469,1264 → TVA arrondie 234,566 → TTC 1 469,126.
@@ -85,7 +86,7 @@ describe("les dix écritures d'un même montant, tranchées par la facture", () 
 
 describe("jamais deviné sur un montant isolé", () => {
   it("un montant ambigu, seul, ne rend aucune valeur", () => {
-    const c = candidatsMontant("2.800", P.decimales);
+    const c = candidatsMontant("2.800", P);
     assert.equal(c.length, 2, "deux lectures : point décimal, point des milliers");
     const r = normaliserMontants({ bases: [{ ht: "2.800", taux: TAUX }] }, P);
     assert.equal(r.etat, "ambigu");
@@ -136,8 +137,8 @@ describe("une facture qui ne tient pas", () => {
    */
   it("le même montant répété n'a qu'une valeur, et elle se lit", () => {
     assert.deepEqual(
-      candidatsMontant("514,700 514,700", 3).map((c) => c.mineur),
-      candidatsMontant("514,700", 3).map((c) => c.mineur),
+      candidatsMontant("514,700 514,700", deviseDEssai(3)).map((c) => c.mineur),
+      candidatsMontant("514,700", deviseDEssai(3)).map((c) => c.mineur),
       "une plage qui a couvert deux fois le même montant lit ce montant",
     );
     // La facture PAPETERIE NOUR telle qu'elle est imprimée : le droit de
@@ -158,16 +159,16 @@ describe("une facture qui ne tient pas", () => {
   });
 
   it("deux montants DIFFÉRENTS restent illisibles : on ne choisit pas", () => {
-    assert.deepEqual(candidatsMontant("514,700 200,000", 3), []);
-    assert.deepEqual(candidatsMontant("1 000,000 2 000,000", 3), []);
+    assert.deepEqual(candidatsMontant("514,700 200,000", deviseDEssai(3)), []);
+    assert.deepEqual(candidatsMontant("1 000,000 2 000,000", deviseDEssai(3)), []);
   });
 
   it("et un montant coupé par l'espace des milliers se recolle toujours", () => {
     // La garantie du 5 octobre. Si la règle de répétition la cassait, la
     // troncature des milliers reviendrait — et c'était le défaut n° 1.
     assert.deepEqual(
-      candidatsMontant("2 800,000", 3).map((c) => c.mineur),
-      candidatsMontant("2800,000", 3).map((c) => c.mineur),
+      candidatsMontant("2 800,000", deviseDEssai(3)).map((c) => c.mineur),
+      candidatsMontant("2800,000", deviseDEssai(3)).map((c) => c.mineur),
     );
   });
 
@@ -221,9 +222,12 @@ describe("la TVA imprimée, et plusieurs taux", () => {
   it("la tolérance d'arrondi vient de l'appelant, pas de la fonction", () => {
     // 1 469,127 : un millime d'écart. Toléré à 1, refusé à 0.
     const entree = { bases: [{ ht: "1 234,560", taux: TAUX }], ttc: "1 469,127" };
-    assert.equal(normaliserMontants(entree, { decimales: 3, toleranceMineure: 1 }).etat, "tranche");
     assert.equal(
-      normaliserMontants(entree, { decimales: 3, toleranceMineure: 0 }).etat,
+      normaliserMontants(entree, { ...deviseDEssai(3), toleranceMineure: 1 }).etat,
+      "tranche",
+    );
+    assert.equal(
+      normaliserMontants(entree, { ...deviseDEssai(3), toleranceMineure: 0 }).etat,
       "incoherent",
     );
   });
@@ -248,7 +252,7 @@ describe("les lectures d'un montant isolé", () => {
   for (const [brut, attendus] of cas) {
     it(`« ${brut} »`, () => {
       assert.deepEqual(
-        candidatsMontant(brut, 3)
+        candidatsMontant(brut, deviseDEssai(3))
           .map((c) => c.mineur)
           .sort((a, b) => a - b),
         attendus,
@@ -257,7 +261,7 @@ describe("les lectures d'un montant isolé", () => {
   }
 
   it("plus de décimales que la devise n'en porte, non nulles : aucune lecture", () => {
-    assert.deepEqual(candidatsMontant("1234,5678", 3), []);
+    assert.deepEqual(candidatsMontant("1234,5678", deviseDEssai(3)), []);
   });
 });
 
@@ -329,10 +333,10 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     assert.doesNotMatch(r.raison, /comprend/);
   });
 
-  it("MYTEK tel qu'imprimé : « 510,000 DNT » reste un total non lu, la TVA suffit", () => {
-    // La devise se lit dans le paramétrage (R4), pas dans ce code : un total
-    // que la vérification ne lit pas est écarté et NOMMÉ, et la TVA imprimée
-    // confirme seule la base déduite.
+  it("MYTEK tel qu'imprimé : « 510,000 DNT » se lit, « DNT » étant une marque du référentiel", () => {
+    // La devise se lit dans le référentiel (R4), pas dans ce code : depuis le
+    // 30 octobre 2026, `ref.devises_marques` porte « DNT » (dinar tunisien),
+    // et le total imprimé confirme la base déduite avec la TVA.
     const r = normaliserMontants(
       {
         bases: [{ ht: "428,731", taux: TAUX }],
@@ -344,7 +348,25 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     );
     assert.equal(r.etat, "tranche", r.raison);
     assert.equal(r.montants.bases[0]?.ht, 427_731);
-    assert.equal(r.totalNonLu, "510,000 DNT");
+    assert.equal(r.montants.ttc, 510_000);
+    assert.equal(r.totalNonLu, null);
+  });
+
+  it("une marque que le référentiel ne connaît pas laisse le total non lu, la TVA suffit", () => {
+    // Un total que la vérification ne lit pas est écarté et NOMMÉ, et la TVA
+    // imprimée confirme seule la base déduite.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "428,731", taux: TAUX }],
+        tva: "81,269",
+        autres: TIMBRE,
+        ttc: "510,000 USD",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.equal(r.totalNonLu, "510,000 USD");
   });
 
   it("total non lu : la TVA seule vérifie la base déduite, sans la note pleine", () => {
