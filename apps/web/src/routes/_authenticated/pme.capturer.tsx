@@ -1206,7 +1206,7 @@ function PmeCapturer() {
                 return (
                   <div key={p.id} className={vue.ton}>
                     <div className="ligne">
-                      <ApercuDePiece pieceId={p.id} className="mini" />
+                      <ApercuDePiece pieceId={p.id} className="vignette" />
                       <span className="nom">
                         <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                         {raison ? <small>{raison}</small> : null}

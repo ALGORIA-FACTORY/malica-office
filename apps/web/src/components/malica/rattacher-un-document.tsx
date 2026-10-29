@@ -130,9 +130,7 @@ export function RattacherUnDocument({
               onClick={() => rattacher.mutate(p.id)}
               className="flex min-h-[64px] w-full items-center gap-3 rounded-[14px] px-1 py-2 text-start hover:bg-accent disabled:opacity-40"
             >
-              <span className="h-[52px] w-[40px] shrink-0 overflow-hidden rounded-[6px] bg-muted">
-                <ApercuDePiece pieceId={p.id} className="mini" />
-              </span>
+              <ApercuDePiece pieceId={p.id} className="vignette" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-[15px] font-semibold">
                   {p.emetteur ?? t("pme.capture.pieceNonLue")}

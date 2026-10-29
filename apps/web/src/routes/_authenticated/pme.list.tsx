@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { FileLocale } from "@/components/malica/file-locale";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
@@ -21,6 +22,7 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
+import { avancementDeLaPiece, ecritureDeLaPiece, parcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
 import { resteATransmettre } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -859,59 +861,62 @@ function VosDocuments() {
                   params={{ pieceId: p.id }}
                   className={cn("pc", p.status === "capturee" && "dim")}
                 >
-                  <span className="hd">
+                  <VignetteDeLaPiece piece={p} />
+                  <span className="cps">
+                    <span className="hd">
+                      {/*
+                       * ================================ LE TITRE NE MENT PLUS
+                       *
+                       * Il valait `p.emetteur ?? "Pas encore lue"` : dès que
+                       * l'émetteur manquait, la ligne annonçait une pièce non
+                       * lue — y compris quand l'état juste en dessous affichait
+                       * « Lue ». Deux phrases contradictoires sur la même ligne,
+                       * et c'est celle du haut qu'on croit.
+                       */}
+                      <span className="nm">
+                        {p.emetteur ??
+                          (p.status === "capturee"
+                            ? t("pme.list.nonLue")
+                            : t("pme.list.sansEmetteur"))}
+                      </span>
+                      {/*
+                       * Une pièce non lue n'a pas de montant : elle affiche « — »
+                       * et compte quand même dans le groupe, parce qu'elle a bien
+                       * été déposée. « 0,000 » serait un fait comptable.
+                       */}
+                      <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
+                        {p.total === null ? "—" : montant(p.total, locale)}
+                      </span>
+                    </span>
+                    <span className="mt">
+                      {[
+                        // Le dossier, comme sur l'accueil ; puis la catégorie de dépense.
+                        sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null,
+                        categorieParPiece.has(p.id)
+                          ? nomDeLaCategorie(categorieParPiece.get(p.id)!)
+                          : null,
+                      ]
+                        .filter((x): x is string => !!x)
+                        .join(" · ") || "—"}
+                    </span>
+                    <span className="mt">{jour(p)}</span>
                     {/*
-                     * ================================ LE TITRE NE MENT PLUS
+                     * ================= UNE PIÈCE NON LUE N'EST PAS UNE PIÈCE QUI ATTEND
                      *
-                     * Il valait `p.emetteur ?? "Pas encore lue"` : dès que
-                     * l'émetteur manquait, la ligne annonçait une pièce non
-                     * lue — y compris quand l'état juste en dessous affichait
-                     * « Lue ». Deux phrases contradictoires sur la même ligne,
-                     * et c'est celle du haut qu'on croit.
+                     * `capturee` recouvrait deux états que rien ne séparait :
+                     * « je vais la lire » et « je ne l'ai PAS lue ». Le dirigeant
+                     * au plafond de son forfait voyait le même mot que celui dont
+                     * la facture part en lecture dans la seconde.
                      */}
-                    <span className="nm">
-                      {p.emetteur ??
-                        (p.status === "capturee"
-                          ? t("pme.list.nonLue")
-                          : t("pme.list.sansEmetteur"))}
-                    </span>
-                    {/*
-                     * Une pièce non lue n'a pas de montant : elle affiche « — »
-                     * et compte quand même dans le groupe, parce qu'elle a bien
-                     * été déposée. « 0,000 » serait un fait comptable.
-                     */}
-                    <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
-                      {p.total === null ? "—" : montant(p.total, locale)}
-                    </span>
+                    {p.status === "capturee" ? (
+                      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
+                    ) : (
+                      <span className={cn("tag", p.status === "retournee" && "ve")}>
+                        <i aria-hidden />
+                        {t(`pme.status.${p.status}` as never)}
+                      </span>
+                    )}
                   </span>
-                  <span className="mt">
-                    {[
-                      // Le dossier, comme sur l'accueil ; puis la catégorie de dépense.
-                      sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null,
-                      categorieParPiece.has(p.id)
-                        ? nomDeLaCategorie(categorieParPiece.get(p.id)!)
-                        : null,
-                    ]
-                      .filter((x): x is string => !!x)
-                      .join(" · ") || "—"}
-                  </span>
-                  <span className="mt">{jour(p)}</span>
-                  {/*
-                   * ================= UNE PIÈCE NON LUE N'EST PAS UNE PIÈCE QUI ATTEND
-                   *
-                   * `capturee` recouvrait deux états que rien ne séparait :
-                   * « je vais la lire » et « je ne l'ai PAS lue ». Le dirigeant
-                   * au plafond de son forfait voyait le même mot que celui dont
-                   * la facture part en lecture dans la seconde.
-                   */}
-                  {p.status === "capturee" ? (
-                    <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
-                  ) : (
-                    <span className={cn("tag", p.status === "retournee" && "ve")}>
-                      <i aria-hidden />
-                      {t(`pme.status.${p.status}` as never)}
-                    </span>
-                  )}
                 </Link>
               ))}
             </div>
@@ -1083,6 +1088,27 @@ function poids(g: Groupe): number {
   for (const v of g.achats) total += Number(v);
   for (const v of g.ventes) total += Number(v);
   return total;
+}
+
+/**
+ * La vraie photo d'une ligne, à gauche, et son point d'état.
+ *
+ * Le point dit la MÊME chose que la pastille de la fiche : même dérivation
+ * (`parcoursDeLaPiece`), même source — l'écriture vivante comprise, sous la
+ * clé de requête que la fiche emploie. Une écriture ne peut faire avancer que
+ * la pièce lue et pas encore comptée : c'est la seule qu'on interroge.
+ */
+function VignetteDeLaPiece({ piece }: { piece: PieceLue }) {
+  const peutAvancer =
+    piece.status !== "capturee" && !avancementDeLaPiece(piece.status, null).comptee;
+  const ecritures = useQuery({
+    queryKey: ["ecritures", piece.id],
+    queryFn: () => office().office.ecrituresForPiece(piece.id),
+    enabled: peutAvancer,
+    staleTime: 5 * 60 * 1000,
+  });
+  const ton = parcoursDeLaPiece(piece.status, ecritureDeLaPiece(ecritures.data)).pastille.ton;
+  return <ApercuDePiece pieceId={piece.id} className="vignette" ton={ton} />;
 }
 
 /* ===========================================================================

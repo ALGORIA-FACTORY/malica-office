@@ -197,7 +197,7 @@ function Dossier() {
               const nom = ETATS.find((x) => x.etat === e);
               return (
                 <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
-                  <ApercuDePiece pieceId={p.id} className="mini" />
+                  <ApercuDePiece pieceId={p.id} className="vignette" />
                   <span className="bd">
                     <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                     <span>

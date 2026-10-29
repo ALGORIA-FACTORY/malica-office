@@ -218,6 +218,20 @@ export function creerCaptureHttp(): CaptureRepository {
       return reponse.ok ? await reponse.blob() : null;
     },
 
+    async miniature(pieceId: string) {
+      // 204 : le serveur n'en tire pas de ce contenu, par nature — `null`, la
+      // feuille esquissée, et c'est définitif.
+      // 404 (pas d'octets ENCORE) et 5xx (fabrication en échec un instant) :
+      // des erreurs, que l'aperçu sait réessayer — jamais un `null` qui se
+      // garderait pour toujours.
+      const reponse = await transport().appeler(`/pieces/${pieceId}/miniature`);
+      if (reponse.status === 404 || reponse.status >= 500) {
+        const corps = (await reponse.json().catch(() => null)) as { erreur?: string } | null;
+        throw new ErreurApi(corps?.erreur ?? "contenu absent", reponse.status);
+      }
+      return reponse.status === 200 ? await reponse.blob() : null;
+    },
+
     async preciser(pieceId: string, champ: "document_kind", valeur: string) {
       return (await appeler("capture", "preciser", [pieceId, champ, valeur])) as {
         id: string;

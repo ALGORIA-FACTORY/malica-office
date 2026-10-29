@@ -36,6 +36,7 @@ import type { Request, Response } from "express";
 
 import { sousLAppelant } from "./cles-api.ts";
 import type { Requete } from "./db.ts";
+import { fabrique } from "./miniature.ts";
 
 /**
  * La racine du stockage, exigée au démarrage comme `JWT_SECRET`.
@@ -100,6 +101,16 @@ function cheminAbsolu(tenantId: string, pieceId: string): string {
  */
 export async function effacerContenu(tenantId: string, pieceId: string): Promise<void> {
   await rm(cheminAbsolu(tenantId, pieceId), { force: true });
+  // Sa miniature aussi : une petite photo de la pièce reste la pièce.
+  await rm(cheminDeLaMiniature(tenantId, pieceId), { force: true });
+}
+
+/**
+ * La miniature vit à côté de la pièce, sous le même dossier de tenant, et son
+ * nom se dérive du même identifiant lu en base. Voir `miniature.ts`.
+ */
+function cheminDeLaMiniature(tenantId: string, pieceId: string): string {
+  return cheminAbsolu(tenantId, `${pieceId}.miniature.jpg`);
 }
 
 interface LignePiece {
@@ -314,4 +325,176 @@ export async function servirContenu(req: Request, res: Response): Promise<void> 
   // Les pièces ne sont pas publiques : aucun cache partagé ne doit les garder.
   res.setHeader("Cache-Control", "private, no-store");
   await pipeline(createReadStream(source), res);
+}
+
+/**
+ * Combien de miniatures se fabriquent EN MÊME TEMPS, au plus. Décoder une
+ * photo de 50 mégapixels prend environ 200 Mo et plusieurs centaines de
+ * millisecondes de processeur : une liste de cent pièces jamais vues, ouverte
+ * d'un coup, ne doit pas mettre l'API à genoux. Réglable par l'environnement
+ * (`MINIATURES_SIMULTANEES`), comme `AUTH_ESSAIS_PAR_MINUTE` ; vide : 2.
+ */
+function simultaneesPermises(): number {
+  const n = Number(process.env["MINIATURES_SIMULTANEES"] || 2);
+  return Number.isInteger(n) && n > 0 ? n : 2;
+}
+
+let enFabrication = 0;
+const enAttente: (() => void)[] = [];
+
+/** Un sémaphore minimal : la tâche attend son tour, puis rend le sien. */
+async function aSonTour<T>(tache: () => Promise<T>): Promise<T> {
+  if (enFabrication >= simultaneesPermises()) {
+    await new Promise<void>((suivant) => enAttente.push(suivant));
+  }
+  enFabrication += 1;
+  try {
+    return await tache();
+  } finally {
+    enFabrication -= 1;
+    enAttente.shift()?.();
+  }
+}
+
+/**
+ * Une fabrication par pièce, partagée : vingt demandes simultanées de la même
+ * miniature (une liste ouverte deux fois, deux onglets) attendent la même
+ * promesse au lieu de décoder vingt fois la même photo.
+ */
+const fabrications = new Map<string, Promise<Buffer | "absent" | "passager">>();
+
+/**
+ * La lecture d'une source, dans un objet : une épreuve la compte
+ * (`mock.method`) pour vérifier combien de photos entières sont tenues en
+ * mémoire à la fois.
+ */
+export const disque = { lire: (chemin: string) => readFile(chemin) };
+
+class ContenuAbsent extends Error {}
+
+const existe = (chemin: string) =>
+  stat(chemin).then(
+    () => true,
+    () => false,
+  );
+
+/**
+ * Fabrique, garde et rend la miniature d'une pièce.
+ *
+ *   — `Buffer` (vide : « pas de miniature », par nature, gardé) ;
+ *   — `"absent"` : la pièce n'a pas d'octets, ou ils ont été effacés pendant
+ *     la fabrication ;
+ *   — `"passager"` : la fabrication a échoué. RIEN n'est gardé : la demande
+ *     suivante réessaiera, une panne d'un instant ne devient pas une absence
+ *     définitive.
+ */
+async function fabriquerEtGarder(
+  tenantId: string,
+  pieceId: string,
+): Promise<Buffer | "absent" | "passager"> {
+  const source = cheminAbsolu(tenantId, pieceId);
+  const miniature = cheminDeLaMiniature(tenantId, pieceId);
+  try {
+    /*
+     * La source se lit DANS le tour de fabrication, jamais avant : lue avant
+     * d'attendre, chaque demande en file tenait sa photo entière en mémoire
+     * (relu par Codex, PR #128 : vingt demandes, deux décodeurs, vingt
+     * sources tenues). Le sémaphore borne ainsi la mémoire, pas seulement le
+     * processeur.
+     */
+    const octets = await aSonTour(async () => {
+      let octetsSource: Buffer;
+      try {
+        octetsSource = await disque.lire(source);
+      } catch {
+        throw new ContenuAbsent();
+      }
+      try {
+        return (await fabrique.miniature(new Uint8Array(octetsSource))) ?? Buffer.alloc(0);
+      } catch (cause) {
+        // Au journal, jamais au client : l'écran sait seulement qu'il peut réessayer.
+        console.error("[miniature]", pieceId, cause);
+        return "passager" as const;
+      }
+    });
+    if (octets === "passager") return "passager";
+    // Écrite à côté puis renommée, comme une pièce : aucune demande ne lit un
+    // fichier à moitié écrit.
+    const provisoire = `${miniature}.${randomUUID()}.partiel`;
+    try {
+      await writeFile(provisoire, octets);
+      await rename(provisoire, miniature);
+    } finally {
+      await rm(provisoire, { force: true });
+    }
+    // La pièce a pu être supprimée PENDANT la fabrication : `effacerContenu` a
+    // alors effacé une miniature qui n'existait pas encore, et celle-ci lui
+    // survivrait. Elle part avec la pièce.
+    if (!(await existe(source))) {
+      await rm(miniature, { force: true });
+      throw new ContenuAbsent();
+    }
+    return octets;
+  } catch (erreur) {
+    if (erreur instanceof ContenuAbsent) return "absent";
+    throw erreur;
+  }
+}
+
+/**
+ * Rend la miniature d'une pièce : même `select`, même RLS, mêmes 404 que
+ * `servirContenu` — une miniature montre la pièce, elle n'est pas moins
+ * protégée qu'elle.
+ *
+ * Faite à la première demande, puis gardée (les octets d'une pièce sont
+ * scellés). Un contenu qui n'en donne pas PAR NATURE (un PDF de texte, un
+ * format refusé) se garde aussi, comme un fichier VIDE, et se rend en 204 :
+ * sans cela, chaque ouverture de liste relirait le PDF pour rien. Un échec
+ * passager se rend en 503 (`miniature.indisponible`), rien n'est gardé, et
+ * l'écran réessaie.
+ */
+export async function servirMiniature(req: Request, res: Response): Promise<void> {
+  const piece = await pieceAutorisee(req, req.params["id"]);
+  if (!piece) {
+    res.status(404).json({ erreur: "pièce introuvable" });
+    return;
+  }
+
+  let resultat: Buffer | "absent" | "passager";
+  try {
+    resultat = await readFile(cheminDeLaMiniature(piece.tenant_id, piece.id));
+  } catch {
+    const cle = `${piece.tenant_id}/${piece.id}`;
+    let enCours = fabrications.get(cle);
+    if (!enCours) {
+      enCours = fabriquerEtGarder(piece.tenant_id, piece.id).finally(() =>
+        fabrications.delete(cle),
+      );
+      fabrications.set(cle, enCours);
+    }
+    resultat = await enCours;
+  }
+
+  if (resultat === "absent") {
+    res.status(404).json({ erreur: "contenu absent" });
+    return;
+  }
+  // Le cache reste celui de l'application, en mémoire : un cache HTTP du
+  // navigateur ne distingue pas deux comptes sur le même appareil, et rendrait
+  // la miniature à quiconque redemande l'URL après une déconnexion.
+  res.setHeader("Cache-Control", "private, no-store");
+  // Passager : un code À PART, que l'écran réessaie. 204 ne dit plus que
+  // « ce document n'a pas de miniature », et l'écran le garde.
+  if (resultat === "passager") {
+    res.setHeader("Retry-After", "2");
+    res.status(503).json({ erreur: "miniature.indisponible" });
+    return;
+  }
+  if (resultat.length === 0) {
+    res.status(204).end();
+    return;
+  }
+  res.setHeader("Content-Type", "image/jpeg");
+  res.setHeader("Content-Length", String(resultat.length));
+  res.end(resultat);
 }

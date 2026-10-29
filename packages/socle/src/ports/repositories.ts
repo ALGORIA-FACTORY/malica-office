@@ -1173,6 +1173,12 @@ export interface CaptureRepository {
    */
   apercu(pieceId: string): Promise<Blob | null>;
   /**
+   * Sa miniature JPEG, faite une fois par le serveur, pour les listes : quelques
+   * dizaines de kilo-octets au lieu des octets complets. `null` quand le
+   * contenu n'en donne pas (un PDF de texte) ou qu'il n'existe pas.
+   */
+  miniature(pieceId: string): Promise<Blob | null>;
+  /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
    * le référentiel propose au choix (`propose_a_la_capture`). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint

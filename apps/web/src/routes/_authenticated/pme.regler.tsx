@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { LivrablesRecus } from "@/components/malica/livrables-recus";
 import { useI18n } from "@/i18n";
@@ -308,6 +309,9 @@ function ARegler() {
                      * que l'expert a choisi, à côté du nom de l'émetteur.
                      */}
                     <div className="hd">
+                      {charge.piece_id ? (
+                        <ApercuDePiece pieceId={charge.piece_id} className="vignette" />
+                      ) : null}
                       <b>{emetteur(charge.piece_id)}</b>
                       <span>
                         {t("pme.regler.motif")} {libelleDuMotif(charge.motif_id)}
