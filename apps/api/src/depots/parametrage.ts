@@ -63,6 +63,23 @@ function versReglages(brut: ReglagesCabinetBruts) {
   };
 }
 
+interface FuseauBrut {
+  fuseau: string | null;
+  defaut: string | null;
+  regle: boolean;
+  aujourdhui: string | null;
+}
+
+function versFuseau(r: FuseauBrut | undefined) {
+  if (!r) throw new Error("fuseau.illisible");
+  return {
+    fuseau: r.fuseau ?? null,
+    defaut: r.defaut ?? null,
+    regle: Boolean(r.regle),
+    aujourdhui: r.aujourdhui ?? null,
+  };
+}
+
 export const parametrage = {
   /**
    * Les seuils et préférences du cabinet. Absents, la base rend les défauts
@@ -127,6 +144,28 @@ export const parametrage = {
     const r = rows[0]?.r;
     if (!r) throw new Error("reglages.non_enregistres");
     return versReglages(r);
+  },
+
+  /**
+   * Le fuseau horaire du cabinet (décision du dirigeant, 29 octobre 2026) :
+   * un paramètre métier, en base. Le référentiel de la juridiction livre le
+   * défaut ; l'expert l'arrête ici. Le jour du journal, son numéro et la
+   * comparaison des exports en dépendent.
+   */
+  async fuseauDuCabinet(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{ r: FuseauBrut }>(
+      `select public.cabinet_fuseau_lire($1) as r`,
+      [tenantId],
+    );
+    return versFuseau(rows[0]?.r);
+  },
+
+  async definirFuseauDuCabinet(db: Requete, tenantId: string, fuseau: string | null) {
+    const { rows } = await db.query<{ r: FuseauBrut }>(
+      `select public.cabinet_fuseau_definir($1, $2) as r`,
+      [tenantId, fuseau],
+    );
+    return versFuseau(rows[0]?.r);
   },
 
   /**

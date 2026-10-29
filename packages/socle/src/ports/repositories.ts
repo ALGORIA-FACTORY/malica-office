@@ -476,6 +476,18 @@ export interface AccesRepository {
   monAcces(tenantId: string): Promise<MonAcces>;
 }
 
+/**
+ * Le fuseau horaire d'un cabinet. `defaut` vient du référentiel de sa
+ * juridiction ; `regle` dit si le cabinet a arrêté le sien (R10 : un défaut se
+ * dit). `fuseau` nul : ni l'un ni l'autre — le journal du jour le demande.
+ */
+export interface FuseauDuCabinet {
+  fuseau: string | null;
+  defaut: string | null;
+  regle: boolean;
+  aujourdhui: string | null;
+}
+
 export interface ParametrageRepository {
   reglagesCabinet(tenantId: string): Promise<ReglagesCabinet>;
   /** Quand la mise en route a été terminée, ou rien si elle ne l'a jamais été. */
@@ -491,6 +503,10 @@ export interface ParametrageRepository {
     ton: string;
     seuilCertitudeConseil: number;
   }): Promise<ReglagesCabinet>;
+  /** Le fuseau horaire du cabinet : celui qui fait foi pour son journal du jour. */
+  fuseauDuCabinet(tenantId: string): Promise<FuseauDuCabinet>;
+  /** L'expert arrête le fuseau ; `null` rend celui de la juridiction. */
+  definirFuseauDuCabinet(tenantId: string, fuseau: string | null): Promise<FuseauDuCabinet>;
   calendrierCabinet(
     tenantId: string,
     exercice: number,
@@ -2335,6 +2351,9 @@ export interface DernierExportDuJournal {
 
 export interface JournalDuJour {
   jour: string;
+  /** Le jour du cabinet, dans son fuseau : on ne lit pas le journal de demain. */
+  aujourdhui: string;
+  fuseau: string;
   journaux: JournalAuJour[];
   totaux: {
     ecritures: number;
@@ -2365,13 +2384,14 @@ export interface JournalExporte {
 export interface JournalDuJourRepository {
   /**
    * Le journal d'un jour : un dossier, ou tous les mandats (`null`). Le jour
-   * se lit dans le fuseau de la personne (`Intl`), les libellés dans sa langue.
+   * se lit dans le fuseau du cabinet (ses réglages, au défaut de sa
+   * juridiction) ; sans jour, c'est le sien aujourd'hui. Libellés dans la
+   * langue demandée.
    */
   lire(
     cabinetTenantId: string,
     clientTenantId: string | null,
-    jour: string,
-    fuseau: string,
+    jour: string | null,
     locale: string,
   ): Promise<JournalDuJour>;
   /** Produit le fichier, le numérote et le journalise (append-only + audit). */
@@ -2379,7 +2399,6 @@ export interface JournalDuJourRepository {
     cabinetTenantId: string,
     clientTenantId: string | null,
     jour: string,
-    fuseau: string,
     locale: string,
     format: FormatDuJournal,
   ): Promise<JournalExporte>;

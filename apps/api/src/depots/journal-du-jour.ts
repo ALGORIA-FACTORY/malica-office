@@ -8,16 +8,21 @@
  * rangé par journal, contrôlé débit = crédit, qu'il exporte en Excel ou en
  * CSV. Chaque export est numéroté et gardé ; le suivant dit ce qui a changé.
  *
- * La base porte les définitions : ce qui est « inscrit ce jour-là » et
- * l'origine d'une écriture vivent dans `journal_du_jour_lire`, le numéro et
- * la trace dans `journal_export_journaliser`. Ici on range, on additionne
- * (en entiers, `sommeDecimale`), on compare deux exports, on met en forme
- * avec le moteur des exports — mêmes séparateurs, même encodage, mêmes
- * montants cadrés sans flottant.
+ * La base porte les définitions : ce qui est « pris en charge ce jour-là »,
+ * l'origine d'une écriture et le fuseau du cabinet vivent dans
+ * `journal_du_jour_lire` ; le numéro et la trace dans
+ * `journal_export_journaliser`. Ici on range, on additionne (en entiers,
+ * `sommeDecimale`, à la précision de CHAQUE devise lue dans `ref.devises`),
+ * on compare deux exports, on met en forme avec le moteur des exports.
+ *
+ * Le jour est celui du cabinet, pas celui de l'écran ni du serveur : le
+ * fuseau est un réglage du cabinet, au défaut de sa juridiction (décision du
+ * dirigeant, 29 octobre 2026).
  *
  * Le journal reste modifiable au sens comptable (R7) : une correction est une
  * contre-passation et une écriture nouvelle ; toutes deux y paraissent le
- * jour où elles sont inscrites. Rien ici n'écrit une écriture.
+ * jour où elles sont inscrites. Un jour passé ne change pas après coup : il
+ * se lit dans des faits gelés (inscription, piste d'audit).
  */
 
 import type {
@@ -63,10 +68,20 @@ const COLONNES_JOURNAL_DU_JOUR = [
   "par",
   "changement",
 ] as const;
+type Colonne = (typeof COLONNES_JOURNAL_DU_JOUR)[number];
 
-const INDICE_DEBIT = COLONNES_JOURNAL_DU_JOUR.indexOf("debit");
-const INDICE_CREDIT = COLONNES_JOURNAL_DU_JOUR.indexOf("credit");
-const INDICE_DEVISE = COLONNES_JOURNAL_DU_JOUR.indexOf("devise");
+/** Le contrôle débit = crédit, tel que le fichier l'écrit sur ses lignes de total. */
+const CONTROLE = { tient: "equilibre", netientpas: "desequilibre" } as const;
+
+/** La précision de chaque devise, en décimales, lue dans `ref.devises`. */
+export type Exposants = ReadonlyMap<string, number>;
+
+function exposantDe(exposants: Exposants, devise: string): number {
+  const n = exposants.get(devise);
+  // Aucun repli (R4) : une devise absent du référentiel n'a pas de précision connue.
+  if (n === undefined) throw new RefusExport(`devise inconnue du référentiel : ${devise}`);
+  return n;
+}
 
 /** Ce qu'un export a figé : ses écritures, et celles qui y étaient déjà contre-passées. */
 export interface InstantaneDuJournal {
@@ -115,20 +130,21 @@ function instantaneDe(journaux: readonly JournalAuJour[]): InstantaneDuJournal {
   };
 }
 
-/** Les totaux par devise, additionnés en entiers. */
-function soldesDe(ecritures: readonly EcritureAuJournal[], decimales: number): SoldeDuJournal[] {
+/** Les totaux par devise, additionnés en entiers à la précision de la devise. */
+function soldesDe(ecritures: readonly EcritureAuJournal[], exposants: Exposants): SoldeDuJournal[] {
   const parDevise = new Map<string, EcritureAuJournal[]>();
   for (const e of ecritures) parDevise.set(e.devise, [...(parDevise.get(e.devise) ?? []), e]);
   return [...parDevise.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([devise, liste]) => {
+      const n = exposantDe(exposants, devise);
       const debit = sommeDecimale(
         liste.map((e) => e.debit),
-        decimales,
+        n,
       );
       const credit = sommeDecimale(
         liste.map((e) => e.credit),
-        decimales,
+        n,
       );
       return { devise, debit, credit, equilibre: debit === credit };
     });
@@ -161,7 +177,10 @@ interface LigneLue {
  * Range les lignes lues en journaux, puis en écritures, dans l'ordre de la
  * base (le rang du journal, puis l'heure). Pur : se prouve sans base.
  */
-export function rangerLeJournal(lignes: readonly LigneLue[], decimales: number): JournalAuJour[] {
+export function rangerLeJournal(
+  lignes: readonly LigneLue[],
+  exposants: Exposants,
+): JournalAuJour[] {
   const journaux = new Map<
     string,
     { libelle: string; ecritures: Map<string, EcritureAuJournal> }
@@ -193,74 +212,95 @@ export function rangerLeJournal(lignes: readonly LigneLue[], decimales: number):
       };
       j.ecritures.set(l.ecriture_id, e);
     }
+    const n = exposantDe(exposants, l.devise);
     e.lignes.push({
       ordinal: Number(l.ordinal),
       compte: l.compte,
       compteLibelle: l.compte_libelle,
-      debit: dec(l.debit, decimales),
-      credit: dec(l.credit, decimales),
+      debit: dec(l.debit, n),
+      credit: dec(l.credit, n),
     });
   }
   return [...journaux.entries()].map(([code, j]) => {
-    const ecritures = [...j.ecritures.values()].map((e) => ({
-      ...e,
-      debit: sommeDecimale(
-        e.lignes.map((l) => l.debit),
-        decimales,
-      ),
-      credit: sommeDecimale(
-        e.lignes.map((l) => l.credit),
-        decimales,
-      ),
-    }));
-    return { code, libelle: j.libelle, ecritures, soldes: soldesDe(ecritures, decimales) };
+    const ecritures = [...j.ecritures.values()].map((e) => {
+      const n = exposantDe(exposants, e.devise);
+      return {
+        ...e,
+        debit: sommeDecimale(
+          e.lignes.map((l) => l.debit),
+          n,
+        ),
+        credit: sommeDecimale(
+          e.lignes.map((l) => l.credit),
+          n,
+        ),
+      };
+    });
+    return { code, libelle: j.libelle, ecritures, soldes: soldesDe(ecritures, exposants) };
   });
 }
 
-/** Les lignes du fichier : une par ligne d'écriture, journal après journal. */
-function rangeesDuFichier(
+/** Une rangée du fichier, colonne par colonne ; ce qui n'est pas nommé reste vide. */
+function rangee(valeurs: Partial<Record<Colonne, Cellule>>): Cellule[] {
+  return COLONNES_JOURNAL_DU_JOUR.map((c) => valeurs[c] ?? { texte: "" });
+}
+
+/** Une ligne de total : le contrôle débit = crédit écrit dans le fichier lui-même. */
+function rangeeDeTotal(s: SoldeDuJournal, journal: { code: string; libelle: string } | null) {
+  return rangee({
+    journal: { texte: journal?.code ?? "" },
+    journal_libelle: { texte: journal?.libelle ?? "" },
+    ecriture: { texte: "total" },
+    debit: { montant: s.debit },
+    credit: { montant: s.credit },
+    devise: { texte: s.devise },
+    origine: { texte: s.equilibre ? CONTROLE.tient : CONTROLE.netientpas },
+  });
+}
+
+/**
+ * Le contenu du fichier : une rangée par ligne d'écriture, journal après
+ * journal ; puis le total de chaque journal et le total général, devise par
+ * devise, chacun avec son contrôle. Pur : se prouve sans base.
+ */
+export function contenuDuFichier(
   journaux: readonly JournalAuJour[],
   precedent: InstantaneDuJournal | null,
-): Cellule[][] {
-  return journaux.flatMap((j) =>
+  exposants: Exposants,
+): { entete: readonly string[]; lignes: Cellule[][]; totaux: Cellule[][] } {
+  const lignes = journaux.flatMap((j) =>
     j.ecritures.flatMap((e) => {
       const changement = changementDe(e, precedent);
-      return e.lignes.map((l) => [
-        { texte: e.clientNom },
-        { texte: j.code },
-        { texte: j.libelle },
-        { texte: e.id },
-        { texte: e.heure },
-        { texte: e.libelle },
-        { texte: l.compte },
-        { texte: l.compteLibelle },
-        { montant: l.debit },
-        { montant: l.credit },
-        { texte: e.devise },
-        { texte: e.origine },
-        { texte: e.par ?? "" },
-        { texte: changement },
-      ]);
+      return e.lignes.map((l) =>
+        rangee({
+          dossier: { texte: e.clientNom },
+          journal: { texte: j.code },
+          journal_libelle: { texte: j.libelle },
+          ecriture: { texte: e.id },
+          heure: { texte: e.heure },
+          libelle: { texte: e.libelle },
+          compte: { texte: l.compte },
+          compte_libelle: { texte: l.compteLibelle },
+          debit: { montant: l.debit },
+          credit: { montant: l.credit },
+          devise: { texte: e.devise },
+          origine: { texte: e.origine },
+          par: { texte: e.par ?? "" },
+          changement: { texte: changement },
+        }),
+      );
     }),
   );
+  const totaux = [
+    ...journaux.flatMap((j) => j.soldes.map((s) => rangeeDeTotal(s, j))),
+    ...soldesDe(toutesLesEcritures(journaux), exposants).map((s) => rangeeDeTotal(s, null)),
+  ];
+  return { entete: COLONNES_JOURNAL_DU_JOUR, lignes, totaux };
 }
 
 /** Le texte d'une cellule, tel qu'un CSV l'écrit. */
 function texteDe(c: Cellule): string {
   return "montant" in c ? c.montant : c.texte;
-}
-
-/** Les lignes de total d'un classeur : une par devise, montants sous leurs colonnes. */
-function totauxDuClasseur(soldes: readonly SoldeDuJournal[]): Cellule[][] {
-  return soldes.map((s) =>
-    COLONNES_JOURNAL_DU_JOUR.map((_, i): Cellule => {
-      if (i === 0) return { texte: "total" };
-      if (i === INDICE_DEBIT) return { montant: s.debit };
-      if (i === INDICE_CREDIT) return { montant: s.credit };
-      if (i === INDICE_DEVISE) return { texte: s.devise };
-      return { texte: "" };
-    }),
-  );
 }
 
 interface DernierExportLu extends InstantaneDuJournal {
@@ -302,15 +342,31 @@ async function dernierExport(
   };
 }
 
+/** Le fuseau du cabinet et son « aujourd'hui », tels que la base les résout. */
+async function calendrierDuCabinet(
+  db: Requete,
+  cabinetTenantId: string,
+): Promise<{ fuseau: string; aujourdhui: string }> {
+  const { rows } = await db.query<{ r: { fuseau: string | null; aujourdhui: string | null } }>(
+    `select public.cabinet_fuseau_lire($1) as r`,
+    [cabinetTenantId],
+  );
+  const r = rows[0]?.r;
+  if (!r?.fuseau || !r.aujourdhui) {
+    throw new RefusExport(
+      "le fuseau horaire du cabinet n'est pas défini : réglez-le dans les réglages du cabinet",
+    );
+  }
+  return { fuseau: r.fuseau, aujourdhui: r.aujourdhui };
+}
+
 async function lireLeJournal(
   db: Requete,
   cabinetTenantId: string,
   clientTenantId: string | null,
   jour: string,
-  fuseau: string,
   locale: string,
-  decimales: number,
-): Promise<JournalAuJour[]> {
+): Promise<{ journaux: JournalAuJour[]; exposants: Exposants }> {
   // Le libellé du journal dans la langue de l'écran, le français à défaut
   // (R4 : du référentiel, jamais du code). L'ordre est celui de la base.
   const { rows } = await db.query<LigneLue>(
@@ -319,15 +375,20 @@ async function lireLeJournal(
             f.piece_id, f.ecriture_libelle, f.ordinal, f.compte, f.compte_libelle,
             f.debit::text as debit, f.credit::text as credit, f.devise, f.origine,
             f.inscrite_le, f.heure, f.par, f.reverses_id, f.contre_passee_le
-       from public.journal_du_jour_lire($1, $2, $3::date, $4) with ordinality as f
+       from public.journal_du_jour_lire($1, $2, $3::date) with ordinality as f
        left join ref_labels_v demandee
-         on demandee.ns = 'journal' and demandee.key = f.journal and demandee.locale = $5
+         on demandee.ns = 'journal' and demandee.key = f.journal and demandee.locale = $4
        left join ref_labels_v francais
          on francais.ns = 'journal' and francais.key = f.journal and francais.locale = 'fr'
       order by f.ordinality`,
-    [cabinetTenantId, clientTenantId, jour, fuseau, locale],
+    [cabinetTenantId, clientTenantId, jour, locale],
   );
-  return rangerLeJournal(rows, decimales);
+  const { rows: devises } = await db.query<{ code: string; exposant: number }>(
+    `select code, exposant from ref.devises where code = any($1::text[])`,
+    [[...new Set(rows.map((r) => r.devise))]],
+  );
+  const exposants: Exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
+  return { journaux: rangerLeJournal(rows, exposants), exposants };
 }
 
 const FORMATS: Record<FormatDuJournal, FormatDuJournalExporte> = {
@@ -349,37 +410,39 @@ function verifierLeJour(jour: string): void {
 }
 
 export const journalDuJour = {
+  /** Le journal d'un jour du cabinet ; sans jour, celui d'aujourd'hui dans son fuseau. */
   async lire(
     db: Requete,
     cabinetTenantId: string,
     clientTenantId: string | null,
-    jour: string,
-    fuseau: string,
+    jourDemande: string | null,
     locale: string,
   ): Promise<JournalDuJour> {
-    verifierLeJour(jour);
-    const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
-    const journaux = await lireLeJournal(
+    if (jourDemande !== null) verifierLeJour(jourDemande);
+    await contexteDExport(db, cabinetTenantId, clientTenantId);
+    const { fuseau, aujourdhui } = await calendrierDuCabinet(db, cabinetTenantId);
+    const jour = jourDemande ?? aujourdhui;
+    const { journaux, exposants } = await lireLeJournal(
       db,
       cabinetTenantId,
       clientTenantId,
       jour,
-      fuseau,
       locale,
-      ctx.decimales,
     );
     const ecritures = toutesLesEcritures(journaux);
     const compte = (o: OrigineAuJournal) => ecritures.filter((e) => e.origine === o).length;
     const dernier = await dernierExport(db, cabinetTenantId, clientTenantId, jour);
     return {
       jour,
+      aujourdhui,
+      fuseau,
       journaux,
       totaux: {
         ecritures: ecritures.length,
         validees: compte("validee"),
         forcees: compte("forcee"),
         contrePassations: compte("contre_passation"),
-        soldes: soldesDe(ecritures, ctx.decimales),
+        soldes: soldesDe(ecritures, exposants),
       },
       dernierExport: dernier
         ? {
@@ -407,33 +470,31 @@ export const journalDuJour = {
     cabinetTenantId: string,
     clientTenantId: string | null,
     jour: string,
-    fuseau: string,
     locale: string,
     format: string,
   ): Promise<JournalExporte> {
     if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
     verifierLeJour(jour);
     const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
+    const { fuseau } = await calendrierDuCabinet(db, cabinetTenantId);
 
     await db.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [
       `journal-du-jour:${cabinetTenantId}:${clientTenantId ?? "*"}:${jour}`,
     ]);
     const precedent = await dernierExport(db, cabinetTenantId, clientTenantId, jour);
-    const journaux = await lireLeJournal(
+    const { journaux, exposants } = await lireLeJournal(
       db,
       cabinetTenantId,
       clientTenantId,
       jour,
-      fuseau,
       locale,
-      ctx.decimales,
     );
     const numero = (precedent?.numero ?? 0) + 1;
     const instantane = instantaneDe(journaux);
     const ecart = precedent
       ? ecartEntre(precedent, instantane)
       : { ajoutees: 0, contrePassees: 0, retirees: 0 };
-    const rangees = rangeesDuFichier(journaux, precedent);
+    const fichier = contenuDuFichier(journaux, precedent, exposants);
     const nom = `journal-${ctx.nomDuPerimetre}-${dateFec(jour)}-n${numero}.${format}`;
 
     let octets: string | Uint8Array;
@@ -442,21 +503,20 @@ export const journalDuJour = {
       octets = classeurXlsx(
         {
           nom: dateFec(jour),
-          entete: COLONNES_JOURNAL_DU_JOUR,
-          lignes: rangees,
-          totaux: totauxDuClasseur(soldesDe(toutesLesEcritures(journaux), ctx.decimales)),
+          entete: fichier.entete,
+          lignes: fichier.lignes,
+          totaux: fichier.totaux,
           droiteAGauche: locale === "ar",
         },
-        ctx.decimales,
-        // Les entrées de l'archive sont datées du jour exporté : même contenu,
-        // mêmes octets.
-        new Date(`${jour}T12:00:00`),
+        // Les entrées de l'archive sont datées du jour exporté, en UTC : même
+        // contenu, mêmes octets, quel que soit le fuseau du serveur.
+        new Date(`${jour}T12:00:00Z`),
       );
       typeMime = TYPE_MIME_XLSX;
     } else {
       octets = formaterCsv(
-        COLONNES_JOURNAL_DU_JOUR,
-        rangees.map((r) => r.map(texteDe)),
+        fichier.entete,
+        [...fichier.lignes, ...fichier.totaux].map((r) => r.map(texteDe)),
       );
       typeMime = TYPE_MIME_CSV;
     }
@@ -472,7 +532,7 @@ export const journalDuJour = {
         jour,
         FORMATS[format],
         numero,
-        rangees.length,
+        fichier.lignes.length,
         taille,
         sha,
         ctx.packId,
@@ -491,7 +551,7 @@ export const journalDuJour = {
       contenu: typeof octets === "string" ? octets : Buffer.from(octets).toString("base64"),
       encodage: typeof octets === "string" ? "utf8" : "base64",
       taille,
-      lignes: rangees.length,
+      lignes: fichier.lignes.length,
       empreinte: sha,
       precedent: precedent?.numero ?? null,
       ecart,

@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { fichierDuJournal, jourDuPoste, jourLisible, jourVoisin } from "../journal-du-jour";
+import { fichierDuJournal, jourLisible, jourVoisin } from "../journal-du-jour";
 
-describe("le journal du jour, côté poste", () => {
-  it("prend le jour du poste, pas le jour UTC", () => {
-    expect(jourDuPoste(new Date(2026, 9, 28, 0, 30))).toBe("2026-10-28");
-  });
-
+describe("le journal du jour, côté écran", () => {
   it("recule et avance d'un jour, mois et années compris", () => {
     expect(jourVoisin("2026-03-01", -1)).toBe("2026-02-28");
     expect(jourVoisin("2026-12-31", 1)).toBe("2027-01-01");

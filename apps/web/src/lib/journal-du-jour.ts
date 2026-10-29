@@ -1,27 +1,17 @@
 /**
- * Le journal du jour, côté poste : quel jour, dans quel fuseau, et le fichier.
+ * Le journal du jour, côté écran : le jour lu dans l'adresse, ses voisins,
+ * et le fichier rendu par l'API.
  *
- * Le jour du comptable est celui de SON poste, pas celui du serveur : une
- * écriture validée à 00 h 30 à Tunis appartient au journal de ce jour-là,
- * même si l'horloge du serveur dit encore la veille. L'écran envoie donc le
- * fuseau du navigateur ; la base lit le jour dans ce fuseau.
+ * Le jour « d'aujourd'hui » n'est PAS calculé ici : il est celui du cabinet,
+ * dans son fuseau (un réglage du cabinet, au défaut de sa juridiction), et
+ * l'API le rend. L'horloge du poste n'en décide pas (décision du dirigeant,
+ * 29 octobre 2026).
  *
  * Rien ici ne calcule un montant : les totaux viennent de l'API.
  */
 import type { JournalExporte } from "@malica/socle/ports/repositories";
 
 const JOUR_MS = 86_400_000;
-
-/** Le fuseau du poste, tel que le navigateur le connaît (« Africa/Tunis »). */
-export function fuseauDuPoste(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
-/** Le jour du poste, AAAA-MM-JJ — pas `toISOString()`, qui donnerait le jour UTC. */
-export function jourDuPoste(maintenant: Date = new Date()): string {
-  const deux = (n: number) => String(n).padStart(2, "0");
-  return `${maintenant.getFullYear()}-${deux(maintenant.getMonth() + 1)}-${deux(maintenant.getDate())}`;
-}
 
 /** Le jour d'avant ou d'après, en jours calendaires. */
 export function jourVoisin(jour: string, decalage: number): string {

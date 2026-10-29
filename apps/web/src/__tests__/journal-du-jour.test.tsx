@@ -73,6 +73,8 @@ const ecriture = (
 
 const JOURNAL: JournalDuJour = {
   jour: "2026-10-28",
+  aujourdhui: "2026-10-29",
+  fuseau: "Africa/Tunis",
   journaux: [
     {
       code: "J1",
@@ -101,6 +103,8 @@ const JOURNAL: JournalDuJour = {
 };
 const VIDE: JournalDuJour = {
   jour: "2026-10-28",
+  aujourdhui: "2026-10-29",
+  fuseau: "Africa/Tunis",
   journaux: [],
   totaux: { ecritures: 0, validees: 0, forcees: 0, contrePassations: 0, soldes: [] },
   dernierExport: null,
@@ -163,7 +167,7 @@ describe("le journal du jour", () => {
     // Le montant passe tel quel : aucun flottant entre l'API et l'écran.
     expect(screen.getAllByText("9 007 199 254 740,993 XXX").length).toBeGreaterThan(0);
     expect(screen.getByText("1 · 1")).toBeTruthy();
-    expect(lire).toHaveBeenCalledWith("cabinet", "client", "2026-10-28", expect.any(String), "fr");
+    expect(lire).toHaveBeenCalledWith("cabinet", "client", "2026-10-28", "fr");
   });
 
   it("dit le dernier export et ce qui a changé depuis", async () => {
@@ -183,14 +187,7 @@ describe("le journal du jour", () => {
     expect(csv.className).toContain("min-h-[48px]");
     fireEvent.click(excel);
     await waitFor(() => expect(enregistrer).toHaveBeenCalled());
-    expect(exporter).toHaveBeenCalledWith(
-      "cabinet",
-      "client",
-      "2026-10-28",
-      expect.any(String),
-      "fr",
-      "xlsx",
-    );
+    expect(exporter).toHaveBeenCalledWith("cabinet", "client", "2026-10-28", "fr", "xlsx");
     expect(enregistrer.mock.calls[0]).toEqual([expect.any(Blob), EXPORTE.nomDeFichier]);
     expect(await screen.findByRole("status")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain('"numero":3');
@@ -215,6 +212,22 @@ describe("le journal du jour", () => {
     recherche = { client: "tous", jour: "2026-10-28" };
     monter();
     await screen.findByRole("region", { name: "Journal un" });
-    expect(lire).toHaveBeenLastCalledWith("cabinet", null, "2026-10-28", expect.any(String), "fr");
+    expect(lire).toHaveBeenLastCalledWith("cabinet", null, "2026-10-28", "fr");
+  });
+
+  it("sans jour dans l'adresse, prend celui du cabinet — pas l'horloge du poste", async () => {
+    recherche = { client: "client" };
+    lire.mockResolvedValue({ ...JOURNAL, jour: "2026-10-29", aujourdhui: "2026-10-29" });
+    monter();
+    await screen.findByRole("region", { name: "Journal un" });
+    expect(lire).toHaveBeenCalledWith("cabinet", "client", null, "fr");
+    // Aujourd'hui pour le cabinet : on n'avance pas vers demain.
+    expect(
+      (screen.getByRole("button", { name: "cab.jdj.suivant" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "cab.jdj.exporter.csv" }));
+    await waitFor(() =>
+      expect(exporter).toHaveBeenCalledWith("cabinet", "client", "2026-10-29", "fr", "csv"),
+    );
   });
 });

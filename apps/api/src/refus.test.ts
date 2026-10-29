@@ -14,6 +14,22 @@ import { describe, it } from "node:test";
 import { introuvableLisible, refusLisible } from "./refus.ts";
 
 describe("refus lisible", () => {
+  it("dit deux gestes simultanés comme un refus : le nôtre tel quel, celui du moteur sans ses verrous", () => {
+    const notre = {
+      code: "40001",
+      message: "un autre export de ce journal vient d'etre produit : recommencez",
+    };
+    assert.equal(refusLisible(notre), notre.message);
+    const moteur = {
+      code: "40001",
+      message: "could not serialize access due to concurrent update",
+    };
+    assert.equal(
+      refusLisible(moteur),
+      "un autre geste vient de modifier ces données : recommencez",
+    );
+  });
+
   it("rend le message d'un refus écrit par un déclencheur", () => {
     // Ce que produit `raise exception ... using errcode = 'check_violation'` :
     // un code, un message, et aucun champ de localisation.

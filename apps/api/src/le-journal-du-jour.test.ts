@@ -21,15 +21,13 @@ import { fermerLePool, sousIdentite } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { journalDuJour } from "./depots/journal-du-jour.ts";
 import { office } from "./depots/office.ts";
+import { parametrage } from "./depots/parametrage.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
-
-/** Le fuseau du lecteur : UTC, pour que « aujourd'hui » soit celui de la base. */
-const FUSEAU = "UTC";
 
 describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `journal-jour-${Date.now()}`;
@@ -82,7 +80,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     });
 
   const lire = (qui: Utilisateur, cab: string, client: string | null, j = jour) =>
-    sousIdentite(qui.id, (db) => journalDuJour.lire(db, cab, client, j, FUSEAU, "fr"));
+    sousIdentite(qui.id, (db) => journalDuJour.lire(db, cab, client, j, "fr"));
 
   before(async () => {
     const d = await creerCompte(`dirigeant-${marque}@essai.local`, mdp);
@@ -117,10 +115,12 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       `select id from ref.rejet_motifs order by requires_note, sort_order limit 1`,
     );
     motif = m[0]!.id;
-    const { rows: j } = await admin.query<{ jour: string }>(
-      `select (now() at time zone 'UTC')::date::text as jour`,
+    // Le jour du cabinet : celui de son fuseau, au défaut de sa juridiction.
+    const calendrier = await sousIdentite(expert.id, (db) =>
+      parametrage.fuseauDuCabinet(db, cabinet),
     );
-    jour = j[0]!.jour;
+    assert.ok(calendrier.fuseau && calendrier.aujourdhui && !calendrier.regle);
+    jour = calendrier.aujourdhui;
 
     // Validée : l'expert inscrit la proposition du Socle, montant hors de portée d'un flottant.
     ids["validee"] = await inscrire(expert, await piece("a"), "Facture A", lignes("601", GRAND));
@@ -215,7 +215,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       `select value from ref.labels where ns = 'journal' and key = 'ACH' and locale = 'ar'`,
     );
     const ar = await sousIdentite(expert.id, (db) =>
-      journalDuJour.lire(db, cabinet, pme, jour, FUSEAU, "ar"),
+      journalDuJour.lire(db, cabinet, pme, jour, "ar"),
     );
     assert.equal(ar.journaux[0]?.libelle, rows[0]?.value);
   });
@@ -246,20 +246,25 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     await assert.rejects(lire(autreExpert, cabinet, pme), /introuvable ou non/);
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) =>
-        journalDuJour.exporter(db, cabinet, pme, jour, FUSEAU, "fr", "csv"),
+        journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
       ),
     );
   });
 
   it("numérote chaque export, garde son empreinte, et dit ce qui a changé depuis", async () => {
     const premier = await sousIdentite(expert.id, (db) =>
-      journalDuJour.exporter(db, cabinet, pme, jour, FUSEAU, "fr", "csv"),
+      journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
     );
     assert.equal(premier.numero, 1);
     assert.equal(premier.precedent, null);
     assert.equal(premier.encodage, "utf8");
     assert.ok(premier.contenu.startsWith("﻿dossier;journal;journal_libelle;ecriture;"));
     assert.ok(premier.contenu.includes(`;${GRAND};0.000;TND;validee;`));
+    // Le contrôle débit = crédit est DANS le fichier : le total du journal et le général.
+    const totaux = premier.contenu.split("\r\n").filter((l) => l.includes(";total;"));
+    assert.equal(totaux.length, 2);
+    for (const t of totaux) assert.ok(t.endsWith(";TND;equilibre;;"), t);
+    assert.equal(premier.lignes, 10, "les lignes d'écriture, sans les totaux");
     assert.equal(
       premier.empreinte,
       createHash("sha256").update(premier.contenu, "utf8").digest("hex"),
@@ -287,7 +292,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     assert.deepEqual(apres.dernierExport?.ecart, { ajoutees: 2, contrePassees: 1, retirees: 0 });
 
     const second = await sousIdentite(expert.id, (db) =>
-      journalDuJour.exporter(db, cabinet, pme, jour, FUSEAU, "fr", "xlsx"),
+      journalDuJour.exporter(db, cabinet, pme, jour, "fr", "xlsx"),
     );
     assert.equal(second.numero, 2);
     assert.equal(second.precedent, 1);
@@ -302,7 +307,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
 
     // Une autre journée recommence à 1.
     const veille = await sousIdentite(expert.id, (db) =>
-      journalDuJour.exporter(db, cabinet, pme, "2020-01-01", FUSEAU, "fr", "csv"),
+      journalDuJour.exporter(db, cabinet, pme, "2020-01-01", "fr", "csv"),
     );
     assert.equal(veille.numero, 1);
     assert.equal(veille.lignes, 0);
@@ -327,5 +332,142 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       ),
       /recommencez/,
     );
+  });
+
+  it("deux exports VRAIMENT simultanés : le second attend, et porte le numéro suivant", async () => {
+    const exporter = () =>
+      sousIdentite(expert.id, (db) => journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"));
+    const [a, b] = await Promise.all([exporter(), exporter()]);
+    const numeros = [a.numero, b.numero].sort((x, y) => x - y);
+    assert.equal(numeros[1], numeros[0]! + 1);
+    assert.equal(Math.max(a.precedent ?? 0, b.precedent ?? 0), numeros[0]);
+  });
+
+  it("une validée en supervision puis forcée reste à son journal : un jour passé ne change pas", async () => {
+    // Relecture du 29 octobre 2026 : le retour réécrit `reviewed_at` et
+    // `review_outcome`, et la validée disparaissait.
+    await sousIdentite(expert.id, (db) =>
+      office.corrigerLImputation(db, {
+        ecritureId: ids["supervisee"]!,
+        motifId: motif,
+        note: "Honoraires : 622",
+        libelle: "Facture B réimputée",
+        lignes: lignes("622", "0.100"),
+      }),
+    );
+    const j = await lire(expert, cabinet, pme);
+    const ecritures = j.journaux.flatMap((x) => x.ecritures);
+    const supervisee = ecritures.find((e) => e.id === ids["supervisee"]);
+    assert.equal(supervisee?.origine, "validee");
+    assert.ok(supervisee?.contrePasseeLe, "et elle se dit contre-passée");
+    assert.ok(ecritures.some((e) => e.contrePasse === ids["supervisee"]));
+    assert.ok(ecritures.some((e) => e.origine === "forcee" && e.libelle === "Facture B réimputée"));
+    assert.ok(j.totaux.soldes.every((s) => s.equilibre));
+  });
+
+  it("la contre-passation d'une écriture jamais prise en charge n'entre pas au journal", async () => {
+    await sousIdentite(expert.id, (db) =>
+      supervision.review(db, {
+        ecritureId: ids["horsJournal"]!,
+        outcome: "retourne",
+        motifId: motif,
+        note: "à reprendre",
+      }),
+    );
+    const j = await lire(expert, cabinet, pme);
+    const ecritures = j.journaux.flatMap((x) => x.ecritures);
+    assert.ok(!ecritures.some((e) => e.contrePasse === ids["horsJournal"]));
+  });
+
+  it("reconnaît un forçage d'avant la marque : retour et correction dans une transaction", async () => {
+    const remplacee = await inscrire(expert, await piece("h"), "Facture H", lignes("601", "3.000"));
+    // Ce que faisait `corrigerLImputation` avant le 28 octobre : sans `ecriture.forcee`.
+    const correction = await sousIdentite(expert.id, async (db) => {
+      await db.query(`select public.socle_ecriture_review($1, 'retourne', $2, 'ancien')`, [
+        remplacee,
+        motif,
+      ]);
+      const n = await office.propose(db, {
+        pieceId: (
+          await db.query<{ p: string }>(`select piece_id as p from ecritures_v where id = $1`, [
+            remplacee,
+          ])
+        ).rows[0]!.p,
+        journal: "ACH",
+        date: "2026-10-20",
+        libelle: "Facture H réimputée",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignes("622", "3.000"),
+      });
+      await office.book(db, n);
+      return n;
+    });
+    const { rows } = await admin.query(
+      `select 1 from audit.event_log where object_id = $1 and action = 'ecriture.forcee'`,
+      [correction],
+    );
+    assert.equal(rows.length, 0, "aucune marque : le forçage se reconnaît à la transaction");
+    const j = await lire(expert, cabinet, pme);
+    const e = j.journaux.flatMap((x) => x.ecritures).find((x) => x.id === correction);
+    assert.equal(e?.origine, "forcee");
+  });
+
+  it("lit le jour dans le fuseau du cabinet : près de minuit, Tunis et Dakar diffèrent", async () => {
+    // 23 h 30 UTC le 14 mars : 00 h 30 le 15 à Tunis (UTC+1), 23 h 30 le 14 à Dakar (UTC+0).
+    const id = await sousIdentite(expert.id, async (db) =>
+      office.propose(db, {
+        pieceId: await piece("minuit"),
+        journal: "ACH",
+        date: "2026-03-14",
+        libelle: "Facture de minuit",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignes("601", "2.000"),
+      }),
+    );
+    await admin.query(
+      `update socle.ecritures
+          set status = 'booked', booked_by = $2, booked_at = '2026-03-14T23:30:00Z'
+        where id = $1`,
+      [id, expert.id],
+    );
+    const present = async (j: string) =>
+      (await lire(expert, cabinet, pme, j)).journaux
+        .flatMap((x) => x.ecritures)
+        .find((e) => e.id === id);
+
+    // Le défaut de la juridiction du cabinet (TN) : Tunis.
+    assert.equal((await present("2026-03-15"))?.heure, "00:30");
+    assert.equal(await present("2026-03-14"), undefined);
+
+    // L'expert arrête Dakar : l'écriture revient au 14, et le numéro suit ce jour-là.
+    const regle = await sousIdentite(expert.id, (db) =>
+      parametrage.definirFuseauDuCabinet(db, cabinet, "Africa/Dakar"),
+    );
+    assert.deepEqual([regle.fuseau, regle.regle], ["Africa/Dakar", true]);
+    assert.equal((await present("2026-03-14"))?.heure, "23:30");
+    assert.equal(await present("2026-03-15"), undefined);
+    const exporte = await sousIdentite(expert.id, (db) =>
+      journalDuJour.exporter(db, cabinet, pme, "2026-03-14", "fr", "csv"),
+    );
+    assert.equal(exporte.numero, 1);
+    assert.ok(exporte.contenu.includes(id));
+
+    // Un fuseau inventé est refusé ; seul l'expert le règle ; nul, le défaut revient.
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        parametrage.definirFuseauDuCabinet(db, cabinet, "Mars/Olympe"),
+      ),
+      /n'existe pas/,
+    );
+    await assert.rejects(
+      sousIdentite(dirigeant.id, (db) => parametrage.definirFuseauDuCabinet(db, cabinet, null)),
+    );
+    const defaut = await sousIdentite(expert.id, (db) =>
+      parametrage.definirFuseauDuCabinet(db, cabinet, null),
+    );
+    assert.equal(defaut.regle, false);
+    assert.equal(defaut.fuseau, defaut.defaut);
   });
 });

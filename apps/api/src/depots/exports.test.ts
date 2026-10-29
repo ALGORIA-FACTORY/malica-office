@@ -15,6 +15,7 @@ import {
   COLONNES_FEC,
   dateFec,
   empreinte,
+  formaterCsv,
   formaterCsvEcritures,
   formaterFec,
   tailleEnOctets,
@@ -133,6 +134,24 @@ describe("le CSV des écritures", () => {
     const lignes = texte.trimEnd().split("\r\n");
     assert.equal(lignes[0], "\uFEFF" + COLONNES_CSV_ECRITURES.join(";"));
     assert.ok(lignes[1]!.includes('"a;b ""c"""'));
+  });
+});
+
+describe("le CSV ne porte pas de formule", () => {
+  it("désarme un texte qui commence comme une formule, et laisse un nombre nombre", () => {
+    // Relecture du 29 octobre 2026 : un libellé lu sur une pièce s'exécutait
+    // dans le tableur qui ouvrait le fichier.
+    for (const piege of ['=HYPERLINK("x","y")', "+1+1", "-2+3", "@SOMME(A1)", "\tcmd", "\rcmd"]) {
+      const champs = formaterCsvEcritures([ligne({ ecritureLibelle: piege })], 3)
+        .trimEnd()
+        .split("\r\n")[1]!;
+      assert.ok(!champs.includes(`;${piege}`), piege);
+      assert.ok(champs.includes(`'${piege.replaceAll('"', '""')}`), piege);
+    }
+    const negatif = formaterCsv(["montant"], [["-12.500"]])
+      .trimEnd()
+      .split("\r\n")[1];
+    assert.equal(negatif, "-12.500");
   });
 });
 

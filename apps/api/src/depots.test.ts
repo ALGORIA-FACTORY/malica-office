@@ -200,7 +200,8 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
       ["exports", "exercices", [cabinet, null]],
       ["exports", "estimer", [cabinet, null, "2020-01-01", "2030-12-31", "csv_ecritures"]],
       ["exports", "estimer", [cabinet, null, "2020-01-01", "2030-12-31", "csv_plan"]],
-      ["journalDuJour", "lire", [cabinet, null, "2026-10-28", "UTC", "fr"]],
+      ["journalDuJour", "lire", [cabinet, null, null, "fr"]],
+      ["parametrage", "fuseauDuCabinet", [cabinet]],
       ["identite", "formesDisponibles", ["TN"]],
 
       ["charges", "familles", [pack]],

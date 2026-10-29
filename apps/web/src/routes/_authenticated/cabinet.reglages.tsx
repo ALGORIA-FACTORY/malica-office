@@ -461,6 +461,8 @@ function CabinetEtEquipe() {
         ) : null}
       </div>
 
+      <FuseauDuCabinet />
+
       {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
       <section className="border border-border bg-card p-4">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -477,6 +479,96 @@ function CabinetEtEquipe() {
         </Link>
       </section>
     </div>
+  );
+}
+
+/** La valeur du choix « le fuseau de la juridiction » : aucun réglage propre au cabinet. */
+const FUSEAU_DE_LA_JURIDICTION = "";
+
+/**
+ * Le fuseau horaire du cabinet (décision du dirigeant, 29 octobre 2026) : le
+ * jour du journal, le numéro de ses exports et leur comparaison s'y lisent.
+ * Le référentiel de la juridiction livre le défaut ; l'expert l'arrête ici.
+ * La base refuse un autre que l'expert, et un fuseau qui n'existe pas.
+ */
+function FuseauDuCabinet() {
+  const { t } = useI18n();
+  const { org } = useCabinet();
+  const qc = useQueryClient();
+  const fuseau = useQuery({
+    queryKey: ["cab-fuseau", org.id],
+    queryFn: () => office().parametrage.fuseauDuCabinet(org.id),
+  });
+  const [choix, setChoix] = useState<string | null>(null);
+  const [fait, setFait] = useState(false);
+  const enregistrer = useMutation({
+    mutationFn: (valeur: string) =>
+      office().parametrage.definirFuseauDuCabinet(
+        org.id,
+        valeur === FUSEAU_DE_LA_JURIDICTION ? null : valeur,
+      ),
+    onSuccess: async () => {
+      setFait(true);
+      setChoix(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["cab-fuseau", org.id] }),
+        qc.invalidateQueries({ queryKey: ["cab-journal-du-jour", org.id] }),
+      ]);
+    },
+  });
+  if (!fuseau.data) return null;
+  const regle = fuseau.data.regle ? (fuseau.data.fuseau ?? "") : FUSEAU_DE_LA_JURIDICTION;
+  const valeur = choix ?? regle;
+
+  return (
+    <section className="border border-border bg-card p-4">
+      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {t("cab.settings.fuseau.titre")}
+      </p>
+      <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
+        {t("cab.settings.fuseau.lede")}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <select
+          value={valeur}
+          onChange={(e) => {
+            setFait(false);
+            setChoix(e.target.value);
+          }}
+          aria-label={t("cab.settings.fuseau.titre")}
+          className="min-h-[44px] border border-border bg-background px-3 text-[13px]"
+        >
+          <option value={FUSEAU_DE_LA_JURIDICTION}>
+            {fuseau.data.defaut
+              ? t("cab.settings.fuseau.defaut", { fuseau: fuseau.data.defaut })
+              : t("cab.settings.fuseau.aucun")}
+          </option>
+          {Intl.supportedValuesOf("timeZone").map((z) => (
+            <option key={z} value={z}>
+              {z}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={valeur === regle || enregistrer.isPending}
+          onClick={() => enregistrer.mutate(valeur)}
+          className="min-h-[44px] border border-foreground bg-foreground px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
+        >
+          {t("cab.settings.enregistrer")}
+        </button>
+        {fait ? (
+          <span role="status" className="text-[12.5px] text-signal-ok">
+            {t("cab.settings.enregistre")}
+          </span>
+        ) : null}
+        {enregistrer.isError ? (
+          <span role="alert" className="text-[12.5px] text-signal-stop">
+            {texteDeLErreur(enregistrer.error, OU, t("common.error"))}
+          </span>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

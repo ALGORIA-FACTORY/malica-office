@@ -250,10 +250,12 @@
   "parametrage": [
     "calendrierCabinet",
     "creerObligationPropre",
+    "definirFuseauDuCabinet",
     "definirLiaison",
     "definirObligation",
     "definirReglagesCabinet",
     "fermerCompte",
+    "fuseauDuCabinet",
     "miseEnRoute",
     "ouvrirCompte",
     "plan",

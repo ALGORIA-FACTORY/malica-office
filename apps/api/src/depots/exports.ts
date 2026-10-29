@@ -134,9 +134,19 @@ function champFec(v: string | null | undefined): string {
     .trim();
 }
 
-/** Un champ CSV : entouré de guillemets dès qu'il porte un séparateur, un guillemet ou un saut de ligne. */
+/**
+ * Un champ CSV : entouré de guillemets dès qu'il porte un séparateur, un
+ * guillemet ou un saut de ligne.
+ *
+ * Et désarmé s'il commence comme une formule (relecture du 29 octobre 2026) :
+ * un libellé lu sur une pièce — donc écrit par un tiers — qui commence par
+ * `=`, `+`, `-`, `@`, une tabulation ou un retour chariot s'exécute dans le
+ * tableur qui ouvre le fichier. Une apostrophe en tête le garde texte. Un
+ * nombre décimal écrit (`-12.500`) n'est pas une formule : il reste nombre.
+ */
 function champCsv(v: string | null | undefined): string {
-  const s = v ?? "";
+  const brut = v ?? "";
+  const s = /^[=+\-@\t\r]/.test(brut) && !/^-?\d+(\.\d+)?$/.test(brut) ? `'${brut}` : brut;
   return /[;"\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 

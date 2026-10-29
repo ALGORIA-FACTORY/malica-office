@@ -26,13 +26,7 @@ import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dos
 import { EmptyState, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import {
-  fichierDuJournal,
-  fuseauDuPoste,
-  jourDuPoste,
-  jourLisible,
-  jourVoisin,
-} from "@/lib/journal-du-jour";
+import { fichierDuJournal, jourLisible, jourVoisin } from "@/lib/journal-du-jour";
 import { montant } from "@/lib/lisible";
 import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
 import { cn } from "@/lib/utils";
@@ -86,9 +80,9 @@ function CabinetJournal() {
   const [fait, setFait] = useState<JournalExporte | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  const aujourdhui = jourDuPoste();
-  const jour = recherche.jour ?? aujourdhui;
-  const fuseau = fuseauDuPoste();
+  // Sans jour dans l'adresse, l'API rend celui du cabinet, dans SON fuseau
+  // (un réglage du cabinet, pas l'horloge de ce poste).
+  const jourDemande = recherche.jour ?? null;
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -102,14 +96,16 @@ function CabinetJournal() {
   const clientId = client?.tenantId ?? null;
 
   const journal = useQuery({
-    queryKey: ["cab-journal-du-jour", org.id, clientId, jour, fuseau, locale],
-    queryFn: () => office().journalDuJour.lire(org.id, clientId, jour, fuseau, locale),
+    queryKey: ["cab-journal-du-jour", org.id, clientId, jourDemande, locale],
+    queryFn: () => office().journalDuJour.lire(org.id, clientId, jourDemande, locale),
     enabled: clients.isSuccess,
   });
+  const donnees = journal.data;
+  const jour = donnees?.jour ?? jourDemande;
 
   const exporter = useMutation({
-    mutationFn: (format: FormatDuJournal) =>
-      office().journalDuJour.exporter(org.id, clientId, jour, fuseau, locale, format),
+    mutationFn: ({ format, du }: { format: FormatDuJournal; du: string }) =>
+      office().journalDuJour.exporter(org.id, clientId, du, locale, format),
     onMutate: () => {
       setErreur(null);
       setFait(null);
@@ -128,25 +124,33 @@ function CabinetJournal() {
 
   const aller = (suite: { client?: string; jour?: string }) => {
     setFait(null);
-    void navigate({ search: { client: client?.tenantId ?? TOUS, jour, ...suite } });
+    void navigate({
+      search: { client: client?.tenantId ?? TOUS, ...(jour ? { jour } : {}), ...suite },
+    });
   };
 
-  const dateLongue = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${jour}T00:00:00Z`));
+  const dateLongue = jour
+    ? new Intl.DateTimeFormat(locale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "UTC",
+      }).format(new Date(`${jour}T00:00:00Z`))
+    : "…";
   const dateCourte = (j: string) =>
     new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
       new Date(`${j}T00:00:00Z`),
     );
+  // L'heure d'un export, dans le fuseau du cabinet : celui de son journal.
   const heure = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+    new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      ...(donnees ? { timeZone: donnees.fuseau } : {}),
+    }).format(new Date(iso));
 
-  const veille = jourVoisin(jour, -1);
-  const lendemain = jourVoisin(jour, 1);
-  const donnees = journal.data;
+  const veille = jour ? jourVoisin(jour, -1) : null;
+  const lendemain = jour ? jourVoisin(jour, 1) : null;
   const vide = !donnees || donnees.totaux.ecritures === 0;
   const dernier = donnees?.dernierExport ?? null;
   const changements = dernier
@@ -194,25 +198,29 @@ function CabinetJournal() {
                 ))}
               </select>
             </label>
-            <button
-              type="button"
-              className={navigation}
-              aria-label={t("cab.jdj.precedent")}
-              onClick={() => aller({ jour: veille })}
-            >
-              <ChevronLeft size={15} aria-hidden className="rtl:-scale-x-100" />
-              {dateCourte(veille)}
-            </button>
-            <button
-              type="button"
-              className={navigation}
-              aria-label={t("cab.jdj.suivant")}
-              disabled={jour >= aujourdhui}
-              onClick={() => aller({ jour: lendemain })}
-            >
-              {dateCourte(lendemain)}
-              <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
-            </button>
+            {veille && lendemain && donnees ? (
+              <>
+                <button
+                  type="button"
+                  className={navigation}
+                  aria-label={t("cab.jdj.precedent")}
+                  onClick={() => aller({ jour: veille })}
+                >
+                  <ChevronLeft size={15} aria-hidden className="rtl:-scale-x-100" />
+                  {dateCourte(veille)}
+                </button>
+                <button
+                  type="button"
+                  className={navigation}
+                  aria-label={t("cab.jdj.suivant")}
+                  disabled={lendemain > donnees.aujourdhui}
+                  onClick={() => aller({ jour: lendemain })}
+                >
+                  {dateCourte(lendemain)}
+                  <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
+                </button>
+              </>
+            ) : null}
           </>
         }
       />
@@ -274,20 +282,20 @@ function CabinetJournal() {
         <button
           type="button"
           disabled={vide || exporter.isPending}
-          onClick={() => exporter.mutate("xlsx")}
+          onClick={() => donnees && exporter.mutate({ format: "xlsx", du: donnees.jour })}
           className="min-h-[48px] border border-foreground bg-foreground px-4 text-[13.5px] font-semibold text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-40"
         >
-          {exporter.isPending && exporter.variables === "xlsx"
+          {exporter.isPending && exporter.variables?.format === "xlsx"
             ? t("cab.jdj.exporter.enCours")
             : t("cab.jdj.exporter.xlsx")}
         </button>
         <button
           type="button"
           disabled={vide || exporter.isPending}
-          onClick={() => exporter.mutate("csv")}
+          onClick={() => donnees && exporter.mutate({ format: "csv", du: donnees.jour })}
           className="min-h-[48px] border border-foreground bg-card px-4 text-[13.5px] font-semibold hover:bg-accent disabled:opacity-40"
         >
-          {exporter.isPending && exporter.variables === "csv"
+          {exporter.isPending && exporter.variables?.format === "csv"
             ? t("cab.jdj.exporter.enCours")
             : t("cab.jdj.exporter.csv")}
         </button>
