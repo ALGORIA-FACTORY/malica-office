@@ -34,7 +34,10 @@
 --      retour contre-passe, il n'approuve rien).
 --   7. `piece_retourner` retourne à toute étape : une pièce prise en charge
 --      se retourne avec la contre-passation de son écriture.
---   8. La relance « confirmez » disparaît : `piece_demander_confirmation`
+--   8. Dans un dossier en mandat suivi par un cabinet engagé, seul le cabinet
+--      (expert ou collaborateur) inscrit l'écriture d'une pièce ; le dossier
+--      autonome et le dossier sans cabinet gardent la main (`socle_ecriture_book`).
+--   9. La relance « confirmez » disparaît : `piece_demander_confirmation`
 --      n'a plus d'objet. Les notifications déjà posées restent (R7).
 
 begin;
@@ -169,18 +172,17 @@ declare
   v_ecriture uuid;
   v_cabinet  uuid;
 begin
-  select tenant_id, vis into v_tenant, v_vis from capture.pieces where id = p_piece;
-  if v_tenant is null then
+  -- La même règle de lecture que la pièce elle-même (R6), et la SEULE :
+  -- `app.piece_lisible` juge par la version courante (une version précédente
+  -- n'a pas de visibilité propre ; une courante retirée ferme l'accès du
+  -- cabinet) et par l'auteur d'une pièce personnelle. Le suivi ne se lit à
+  -- travers les versions qu'une fois ce contrôle passé.
+  if not app.piece_lisible(p_piece) then
     return;
   end if;
-  -- La même règle de lecture que la pièce elle-même (R6) : ses membres, et le
-  -- cabinet engagé pour ce qui lui a été transmis.
+  select tenant_id, vis into v_tenant, v_vis
+    from capture.pieces where id = app.version_courante(p_piece);
   v_client := v_tenant in (select app.member_orgs());
-  if not (v_client
-          or (v_vis = 'partage'::app.vis_t and v_tenant in (select app.engaged_orgs()))
-          or (select app.is_platform())) then
-    return;
-  end if;
 
   if v_vis = 'partage'::app.vis_t then
     envoyee_le := app.dernier_envoi(p_piece);
@@ -383,7 +385,8 @@ grant execute on function public.piece_type_etabli_par_le_cabinet(uuid, text) to
 -- Repris À L'IDENTIQUE de `20261022450000`, sauf le statut posé : une
 -- écriture de pièce que le cabinet inscrit est prise en charge dans la même
 -- instruction (`ecritures_prise_en_charge`) — la pièce est donc supervisée,
--- et non « comptabilisée, à superviser ».
+-- et non « comptabilisée, à superviser ». Et, en mandat, seul le cabinet
+-- inscrit l'écriture d'une pièce (point 8 de l'en-tête).
 
 create or replace function public.socle_ecriture_book(p_ecriture uuid)
 returns void
@@ -420,6 +423,21 @@ begin
      and v_dossier not in (select app.engaged_orgs_as_expert()) then
     raise exception 'L''annulation d''un règlement est inscrite par l''expert mandaté.'
       using errcode = '42501', hint = 'reglement.annulation_expert';
+  end if;
+  -- L'écriture d'une pièce, dans un dossier EN MANDAT confié à un cabinet
+  -- engagé, est l'acte du cabinet (« Malica sans blocage ») : le client ne
+  -- voit ni ne confirme d'écriture, il n'en inscrit donc pas non plus. Le
+  -- dossier AUTONOME tient lui-même ses livres (`booked_autonome`), et un
+  -- dossier sans cabinet n'a personne d'autre pour les tenir : ces deux cas
+  -- restent ouverts. Le règlement, lui, reste un geste de la PME (`pme.regler`).
+  if v_nature = 'piece'
+     and exists (select 1 from identity.organizations o
+                  where o.id = v_dossier and o.validation_mode = 'mandate')
+     and exists (select 1 from identity.engagements g
+                  where g.pme_org_id = v_dossier and g.status = 'actif')
+     and not app.supervise_le_dossier(v_dossier) then
+    raise exception 'refus.inscription.reservee_au_cabinet'
+      using errcode = '42501', hint = 'inscription.cabinet';
   end if;
   -- Une contre-passation éteint l'écriture vivante : elle ne la double pas.
   if v_nature is not null and v_piece is not null and v_reverses is null and exists (
@@ -831,5 +849,17 @@ grant execute on function public.piece_retourner(uuid, uuid, text) to authentica
 -- déjà inscrites restent (R7).
 
 drop function if exists public.piece_demander_confirmation(uuid);
+
+-- --- 11. Le pilotage compte les prises en charge ---------------------------------------------------
+--
+-- « Supervisées du mois » comptait les revues `valide`. La prise en charge
+-- (valider ou forcer) n'écrit plus de revue : c'est son registre qui compte,
+-- lu par le cabinet sous sa RLS (`tenant_id` = le cabinet).
+
+create or replace view public.prises_en_charge_v with (security_invoker = true) as
+  select tenant_id, ecriture_id, client_tenant_id, par, par_nom, prise_le
+    from socle.prises_en_charge;
+
+grant select on public.prises_en_charge_v to authenticated;
 
 commit;

@@ -457,7 +457,11 @@ function CabinetClient() {
                   n: client.aTraiter,
                   tone: "warn",
                 },
-                { label: t("cab.dos.feux.retournees"), n: client.counts.retournee, tone: "stop" },
+                {
+                  label: t("cab.dos.feux.retournees"),
+                  n: client.parStatut.retournee,
+                  tone: "stop",
+                },
                 { label: t("cab.dos.feux.nonLues"), n: client.counts.capturee, tone: "neutral" },
                 { label: t("cab.dos.feux.echeances"), n: proches.length, tone: "warn" },
               ].map((f) => (

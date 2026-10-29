@@ -1470,7 +1470,9 @@ export interface ClientSummary {
   mandatJusquau: string | null;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
-  /** Ce qui attend le cabinet : reçu, ni pris en charge ni retourné au client. */
+  /** Les mêmes pièces, classées comme la file (Reçue · Vue · Corrigée · Retournée · Validée · Forcée). */
+  parStatut: Record<StatutCabinet, number>;
+  /** Ce qui attend le cabinet : `A_TRAITER` sur `parStatut`. */
   aTraiter: number;
 }
 

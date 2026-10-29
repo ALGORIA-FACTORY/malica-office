@@ -453,4 +453,190 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     await forcer("facture_achat");
     assert.equal(await vuParLeCabinet(id), "forcee");
   });
+
+  /** Le suivi tel que la base le rend à `u` : aucune ligne = refusé. */
+  const suiviEnBase = async (u: Utilisateur, id: string) =>
+    sousIdentite(u.id, async (db) => {
+      const { rows } = await db.query(`select * from app.suivi_de_la_piece($1)`, [id]);
+      return rows;
+    });
+
+  it("le suivi d'une version précédente se ferme quand sa courante est retirée", async () => {
+    const id = await transmise(true);
+    assert.equal((await suiviEnBase(expert, id)).length, 1, "envoyée : le cabinet la suit");
+    // Le client reprend la photo, puis la rappelle avec l'accord du cabinet :
+    // la version courante n'est plus transmise. L'ancienne, figée, porte
+    // encore `partage`.
+    const nouvelle = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-retiree-${id}`,
+      contentType: "application/pdf",
+      pageCount: 1,
+      remplace: id,
+    })) as { id: string };
+    await pmeFait("collab.demanderSurPiece", nouvelle.id, "rappel");
+    await cabinetFait("collab.repondreSurPiece", nouvelle.id, "rappel", true, null);
+    assert.equal(
+      (await admin.query(`select vis from capture.pieces where id = $1`, [nouvelle.id])).rows[0]
+        .vis,
+      "entite",
+    );
+    assert.equal(
+      (await admin.query(`select vis from capture.pieces where id = $1`, [id])).rows[0].vis,
+      "partage",
+    );
+    assert.deepEqual(
+      await suiviEnBase(expert, id),
+      [],
+      "l'ancienne version n'a pas de visibilité propre : la courante juge",
+    );
+  });
+
+  it("le suivi d'une pièce personnelle ne se lit que par son auteur", async () => {
+    // Un dossier à deux dirigeants, sans licence qui compte les places.
+    const auteur = await creerCompte(`auteur-${marque}@essai.local`, mdp);
+    const associe = await creerCompte(`associe-${marque}@essai.local`, mdp);
+    assert.ok(auteur && associe);
+    const { rows } = await admin.query<{ id: string }>(
+      `insert into identity.organizations (kind, name, jurisdiction, currency)
+       values ('pme', $1, 'TN', 'TND') returning id`,
+      [`PME A DEUX ${marque}`],
+    );
+    const aDeux = rows[0]!.id;
+    try {
+      for (const u of [auteur, associe])
+        await admin.query(
+          `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')`,
+          [aDeux, u.id],
+        );
+      const p = (await rpc(auteur, "capture", "enregistrer", {
+        tenantId: aDeux,
+        source: "pdf",
+        vis: "personnel",
+        idempotencyKey: `${marque}-personnelle`,
+        contentType: "application/pdf",
+        pageCount: 1,
+      })) as { id: string };
+      assert.equal((await suiviEnBase(auteur, p.id)).length, 1, "son auteur la suit");
+      assert.deepEqual(await suiviEnBase(associe, p.id), [], "un autre membre, non");
+    } finally {
+      await admin.query(
+        `update identity.organizations
+            set archived_at = now(), archived_reason = 'fixture de test automatisé'
+          where id = $1 and archived_at is null`,
+        [aDeux],
+      );
+    }
+  });
+
+  it("une pièce prise en charge avant la migration ne compte pas « À traiter »", async () => {
+    const id = await transmise(true);
+    await cabinetFait("office.valider", id);
+    // L'état d'avant « Malica sans blocage » : l'écriture inscrite par le
+    // cabinet laissait la pièce « comptabilisee », sa prise en charge faite.
+    await admin.query(`update capture.pieces set status = 'comptabilisee' where id = $1`, [id]);
+
+    const ligne = await ligneDeFile(id);
+    assert.equal(ligne?.statut, "validee");
+    const client = (
+      (await cabinetFait("supervision.listClients", cabinet)) as {
+        tenantId: string;
+        aTraiter: number;
+        parStatut: Record<string, number>;
+      }[]
+    ).find((c) => c.tenantId === pme)!;
+    const file = (await cabinetFait("supervision.queue", cabinet)) as LigneDeFile[];
+    assert.equal(
+      client.aTraiter,
+      file.filter((r) => ["recue", "vue", "corrigee"].includes(r.statut)).length,
+      "le compteur et la file classent par la même règle",
+    );
+    assert.equal(client.parStatut["validee"], file.filter((r) => r.statut === "validee").length);
+    await assert.rejects(cabinetFait("office.valider", id), /refus\.prise_en_charge\.deja/);
+  });
+
+  it("le pilotage compte la prise en charge du mois, au nom du comptable", async () => {
+    const id = await transmise(true);
+    await cabinetFait("office.valider", id);
+    const st = (await cabinetFait("supervision.statistiques", cabinet, "fr")) as {
+      parMois: { mois: string; collaborateur: string | null; supervisees: number }[];
+    };
+    const mois = new Date().toISOString().slice(0, 7);
+    const ligne = st.parMois.find(
+      (m) => m.mois === mois && m.collaborateur === `expert-${marque}@essai.local`,
+    );
+    assert.ok(ligne && ligne.supervisees >= 1, JSON.stringify(st.parMois));
+  });
+
+  it("en mandat, la PME n'inscrit pas l'écriture d'une pièce ; un dossier autonome, si", async () => {
+    // Le dirigeant tente de passer par les méthodes de bas niveau.
+    const id = await transmise(true);
+    await pmeFait("capture.preciser", id, "document_kind", "facture_achat");
+    const ecriture = (await pmeFait("office.proposerDepuisPiece", id)) as string;
+    await assert.rejects(
+      pmeFait("office.book", ecriture),
+      /refus\.inscription\.reservee_au_cabinet/,
+    );
+    assert.deepEqual(await ecrituresVivantes(id), []);
+
+    // Un dossier autonome tient ses livres : rien ne change pour lui.
+    const mfAutonome = matriculeDEssai("B", "M");
+    const autonome = await sousIdentite(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
+        [`PME AUTONOME ${marque}`, mfAutonome],
+      );
+      return rows[0]!.id;
+    });
+    try {
+      const l = lectureDEssai({ clientMf: mfAutonome, numero: "AUTO-1" });
+      const p = (await pmeFait("capture.enregistrer", {
+        tenantId: autonome,
+        source: "pdf",
+        vis: "entite",
+        idempotencyKey: `${marque}-autonome`,
+        contentType: "application/pdf",
+        pageCount: 1,
+      })) as { id: string };
+      await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        executerRpc(
+          db,
+          {
+            depot: "capture",
+            methode: "persisterLecture",
+            args: [
+              {
+                pieceId: p.id,
+                packId,
+                tokens: l.tokens,
+                contract: "extract.v1",
+                extract: l.extract,
+                citations: l.citations,
+                flags: [],
+                articles: [],
+                documentKind: "facture_achat",
+                documentDate: l.extract.document_date,
+                mode: "pdf-text",
+                confianceParChamp: { "totals.ttc": 0.95 },
+              },
+            ],
+          },
+          "serveur",
+        ),
+      );
+      await pmeFait("capture.preciser", p.id, "document_kind", "facture_achat");
+      const e = (await pmeFait("office.proposerDepuisPiece", p.id)) as string;
+      await pmeFait("office.book", e);
+      assert.equal(await statutEnBase(p.id), "comptabilisee");
+    } finally {
+      await admin.query(
+        `update identity.organizations
+            set archived_at = now(), archived_reason = 'fixture de test automatisé'
+          where id = $1 and archived_at is null`,
+        [autonome],
+      );
+    }
+  });
 });

@@ -162,7 +162,7 @@ function CabinetClients() {
   /* ---- les chiffres */
   const attente = rows.reduce((s, c) => s + c.aTraiter, 0);
   const sans = rows.filter((c) => !collabDe.has(c.tenantId)).length;
-  const retournees = rows.reduce((s, c) => s + c.counts.retournee, 0);
+  const retournees = rows.reduce((s, c) => s + c.parStatut.retournee, 0);
   const moi = compte.data?.email ?? null;
 
   /* ---- les filtres */
@@ -423,9 +423,9 @@ function LigneClient({
       <InkCell numeric>{mois}</InkCell>
       <InkCell numeric>
         <span
-          className={cn(client.counts.retournee ? "text-signal-stop" : "text-muted-foreground")}
+          className={cn(client.parStatut.retournee ? "text-signal-stop" : "text-muted-foreground")}
         >
-          {client.counts.retournee}
+          {client.parStatut.retournee}
         </span>
       </InkCell>
       <InkCell>

@@ -6,9 +6,8 @@ import type {
   ControlesComptables,
 } from "@malica/socle/ports/repositories";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
-import { statutCabinet } from "@malica/socle/statut-d-envoi";
 import type { Requete } from "./db.ts";
-import { COLONNES_DU_SUIVI, versSuivi } from "./depots/suivi.ts";
+import { COLONNES_DU_SUIVI, statutAuCabinet } from "./depots/suivi.ts";
 import { lireParametres } from "./scan/analyse.ts";
 
 const Id = z.string().uuid();
@@ -132,11 +131,8 @@ async function avecStatuts(
        cross join lateral app.suivi_de_la_piece(p.id) s`,
     [documents.map((d) => d.id)],
   );
-  const suivis = new Map(rows.map((r) => [r["id"] as string, versSuivi(r)]));
-  return documents.map((d) => ({
-    ...d,
-    statut: statutCabinet({ status: d.status, suivi: suivis.get(d.id) ?? null }),
-  }));
+  const faits = new Map(rows.map((r) => [r["id"] as string, r]));
+  return documents.map((d) => ({ ...d, statut: statutAuCabinet(d.status, faits.get(d.id)) }));
 }
 
 /** Un compte membre des deux espaces ne doit pas restituer ses pièces privées. */
