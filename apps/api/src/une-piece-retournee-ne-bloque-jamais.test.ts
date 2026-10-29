@@ -895,6 +895,42 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.equal(verdicts.length, 1, "le verdict est inscrit sur la version courante");
   });
 
+  it("deux inscriptions simultanées d'un règlement hérité n'en font qu'une", async () => {
+    // L'ancienne est restée dans la société : le cabinet ne peut pas la
+    // verrouiller. Seul le verrou de la version courante sérialise.
+    n += 1;
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    const paiement = await payer(ancienne, 20000);
+    const nouvelle = await remplacer(ancienne, "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 20000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    // Deux connexions, deux transactions, au même instant.
+    const issues = await Promise.allSettled([
+      cabinetFait("office.proposerLeReglement", paiement),
+      cabinetFait("office.proposerLeReglement", paiement),
+    ]);
+    const rendues = issues.flatMap((i) => (i.status === "fulfilled" ? [i.value] : []));
+    assert.ok(rendues.length >= 1, "au moins une inscription aboutit");
+    assert.equal(new Set(rendues).size, 1, "la seconde rend la même écriture");
+    const { rows } = await admin.query(
+      `select id from socle.ecritures
+        where paiement_id = $1 and nature = 'reglement' and reverses_id is null`,
+      [paiement],
+    );
+    assert.equal(rows.length, 1, "une seule écriture pour le règlement");
+  });
+
   /** Une photo de la société, jamais partie au cabinet. */
   const societe = async () => {
     n += 1;

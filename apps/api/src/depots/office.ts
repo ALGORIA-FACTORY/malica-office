@@ -238,10 +238,13 @@ export const office = {
     paiementId: string,
     qualification?: QualificationDeRetenue,
   ): Promise<string> {
-    // Même verrou que la comptabilisation et l'annulation : aucune course entre les trois.
+    // Le verrou de la VERSION COURANTE de la pièce, celui que prend
+    // `socle_ecriture_propose` : deux inscriptions d'un même règlement, même
+    // saisi sur une photo reprise, passent l'une après l'autre.
     await db.query(
-      `select pi.id from capture.pieces pi join paiements_v p on p.piece_id = pi.id
-                     where p.id = $1 for update of pi`,
+      `select pi.id from capture.pieces pi join paiements_v p
+           on pi.id = app.version_courante(p.piece_id)
+        where p.id = $1 for update of pi`,
       [paiementId],
     );
     const qualifiee = qualificationLue(qualification);
