@@ -64,7 +64,7 @@ describe("une pièce retournée ne bloque jamais", () => {
       "pme.retour.renvoyer",
       "pme.retour.geste.reprendre_photo",
       "pme.retour.geste.repondre",
-      "pme.garder.action",
+      "pme.retour.garder",
       "pme.supprimer.action",
     ]);
     const boutons = boutonsDeSortie();
@@ -87,7 +87,7 @@ describe("une pièce retournée ne bloque jamais", () => {
   it("reprendre la photo et garder sont des gestes directs", () => {
     const g = monter();
     fireEvent.click(screen.getByRole("button", { name: "pme.retour.geste.reprendre_photo" }));
-    fireEvent.click(screen.getByRole("button", { name: "pme.garder.action" }));
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.garder" }));
     expect(g.onReprendreLaPhoto).toHaveBeenCalledOnce();
     expect(g.garder.action).toHaveBeenCalledOnce();
   });
@@ -143,7 +143,7 @@ describe("une pièce retournée ne bloque jamais", () => {
       (screen.getByRole("button", { name: "common.loading" }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
-      (screen.getByRole("button", { name: "pme.garder.action" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "pme.retour.garder" }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
 });
