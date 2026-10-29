@@ -10,6 +10,7 @@ import {
 import { Download, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
@@ -266,6 +267,10 @@ function CabinetReview() {
     queryKey: ["paiements", pieceId],
     queryFn: () => office().capture.paiementsDUnePiece(pieceId),
   });
+  // Vivant : tout règlement qui porte encore un effet, ou un geste (l'annulation à inscrire).
+  const vivants = (paiements.data ?? []).filter((p) => !p.eteint || p.annulationAInscrire);
+  const annules = (paiements.data ?? []).filter((p) => p.eteint && !p.annulationAInscrire);
+  const [annulesOuverts, setAnnulesOuverts] = useState(false);
 
   /**
    * Les moyens du pack, traduits, à la date de la pièce.
@@ -642,7 +647,12 @@ function CabinetReview() {
             <>
               {/* La pièce ne se surligne plus ici : la liste des citations est
                   partie, et plus rien ne désigne de zone. */}
-              <DocumentView contenu={contenu} highlight={null} label={t("cab.review.document")} />
+              <DocumentView
+                contenu={contenu}
+                highlight={null}
+                label={t("cab.review.document")}
+                attente={<ApercuDePiece pieceId={piece.id} />}
+              />
               {/*
                * ============================================ SORTIR LA PIÈCE DE L'ÉCRAN
                *
@@ -685,104 +695,126 @@ function CabinetReview() {
               {(paiements.data ?? []).length > 0 ? (
                 <>
                   <SectionTitle>{t("cab.review.paiements")}</SectionTitle>
-                  <ul className="grid gap-px border border-border bg-border">
-                    {(paiements.data ?? []).map((p) => (
-                      <li key={p.id} className="bg-card px-3 py-2.5">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="text-[13px] font-medium">
-                            {libelleDuMoyen(p.moyenCode)}
-                          </span>
-                          <span className="num shrink-0 text-[13px]">
-                            {p.montantMineur === null || decimales === null
-                              ? "—"
-                              : `${montant(depuisUniteMineure(p.montantMineur, decimales), locale)} ${p.devise}`}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 flex items-center justify-between gap-3">
-                          <span className="text-[11.5px] text-muted-foreground">
-                            {p.payeLe ?? t("cab.review.paiement.sansDate")}
-                          </span>
-                          {/*
-                           * La photo du talon — « le moyen de paiement, photo
-                           * ou information, transmis par la PME au cabinet ».
-                           * Elle se télécharge, parce qu'une preuve qu'on ne
-                           * peut pas joindre à un dossier n'est pas une
-                           * preuve.
-                           */}
-                          {p.justificatifPieceId ? (
-                            <span className="flex shrink-0 items-center gap-1.5">
+                  {/*
+                   * Relevé sur staging le 29 octobre 2026 : six règlements
+                   * annulés passaient AVANT le vivant. Le vivant d'abord (et
+                   * l'annulation qui attend son inscription, qui est un geste) ;
+                   * les annulés, sans effet comptable, se replient sous une ligne.
+                   */}
+                  {[vivants, annulesOuverts ? annules : []].map((lot, i) =>
+                    lot.length === 0 ? null : (
+                      <ul key={i} className="grid gap-px border border-border bg-border">
+                        {lot.map((p) => (
+                          <li key={p.id} className="bg-card px-3 py-2.5">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="text-[13px] font-medium">
+                                {libelleDuMoyen(p.moyenCode)}
+                              </span>
+                              <span className="num shrink-0 text-[13px]">
+                                {p.montantMineur === null || decimales === null
+                                  ? "—"
+                                  : `${montant(depuisUniteMineure(p.montantMineur, decimales), locale)} ${p.devise}`}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center justify-between gap-3">
+                              <span className="text-[11.5px] text-muted-foreground">
+                                {p.payeLe ?? t("cab.review.paiement.sansDate")}
+                              </span>
                               {/*
-                               * ============================= VOIR, AVANT DE TÉLÉCHARGER
-                               *
-                               * La preuve ne se téléchargeait que. Pour lire un
-                               * numéro de chèque, l'expert enregistrait un
-                               * fichier, l'ouvrait hors de l'application, puis
-                               * revenait — pour trois chiffres.
-                               *
-                               * `DocumentView` est déjà là, deux cents lignes
-                               * plus haut, et sert à la facture. Un composant
-                               * disponible, éprouvé, et non appelé : c'est le
-                               * motif récurrent de ce dépôt.
+                               * La photo du talon — « le moyen de paiement, photo
+                               * ou information, transmis par la PME au cabinet ».
+                               * Elle se télécharge, parce qu'une preuve qu'on ne
+                               * peut pas joindre à un dossier n'est pas une
+                               * preuve.
                                */}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPreuveOuverte(
-                                    preuveOuverte === p.justificatifPieceId
-                                      ? null
-                                      : p.justificatifPieceId,
-                                  )
-                                }
-                                className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent"
-                              >
-                                <Eye className="h-[12px] w-[12px]" aria-hidden />
-                                {preuveOuverte === p.justificatifPieceId
-                                  ? t("cab.review.paiement.fermer")
-                                  : t("cab.review.paiement.voir")}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => telechargerUnJoint.mutate(p.justificatifPieceId!)}
-                                disabled={telechargerUnJoint.isPending}
-                                className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
-                              >
-                                <Download className="h-[12px] w-[12px]" aria-hidden />
-                                {t("cab.review.paiement.preuve")}
-                              </button>
-                            </span>
-                          ) : (
-                            <span className="text-[11.5px] text-signal-warn">
-                              {t("cab.review.paiement.sansPreuve")}
-                            </span>
-                          )}
-                        </div>
-                        {p.reference ? (
-                          <span className="num mt-0.5 block text-[11.5px] text-muted-foreground">
-                            {t("cab.review.paiement.reference")} {p.reference}
-                          </span>
-                        ) : null}
-                        {preuveOuverte === p.justificatifPieceId && p.justificatifPieceId ? (
-                          <ApercuDeLaPreuve jointId={p.justificatifPieceId} />
-                        ) : null}
-                        {p.eteint && p.annulationAInscrire ? (
-                          <AnnulationAInscrire
-                            ecritureId={p.annulationAInscrire}
-                            pieceId={pieceId}
-                          />
-                        ) : p.eteint ? (
-                          <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
-                            {t("cab.review.paiement.eteint")}
-                          </span>
-                        ) : (
-                          <EcritureDuReglement
-                            paiementId={p.id}
-                            pieceId={pieceId}
-                            plan={plan.data ?? []}
-                          />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                              {p.justificatifPieceId ? (
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                  {/*
+                                   * ============================= VOIR, AVANT DE TÉLÉCHARGER
+                                   *
+                                   * La preuve ne se téléchargeait que. Pour lire un
+                                   * numéro de chèque, l'expert enregistrait un
+                                   * fichier, l'ouvrait hors de l'application, puis
+                                   * revenait — pour trois chiffres.
+                                   *
+                                   * `DocumentView` est déjà là, deux cents lignes
+                                   * plus haut, et sert à la facture. Un composant
+                                   * disponible, éprouvé, et non appelé : c'est le
+                                   * motif récurrent de ce dépôt.
+                                   */}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPreuveOuverte(
+                                        preuveOuverte === p.justificatifPieceId
+                                          ? null
+                                          : p.justificatifPieceId,
+                                      )
+                                    }
+                                    className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent"
+                                  >
+                                    <Eye className="h-[12px] w-[12px]" aria-hidden />
+                                    {preuveOuverte === p.justificatifPieceId
+                                      ? t("cab.review.paiement.fermer")
+                                      : t("cab.review.paiement.voir")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      telechargerUnJoint.mutate(p.justificatifPieceId!)
+                                    }
+                                    disabled={telechargerUnJoint.isPending}
+                                    className="inline-flex h-7 items-center gap-1.5 border border-border px-2 text-[11.5px] font-medium hover:bg-accent disabled:opacity-40"
+                                  >
+                                    <Download className="h-[12px] w-[12px]" aria-hidden />
+                                    {t("cab.review.paiement.preuve")}
+                                  </button>
+                                </span>
+                              ) : (
+                                <span className="text-[11.5px] text-signal-warn">
+                                  {t("cab.review.paiement.sansPreuve")}
+                                </span>
+                              )}
+                            </div>
+                            {p.reference ? (
+                              <span className="num mt-0.5 block text-[11.5px] text-muted-foreground">
+                                {t("cab.review.paiement.reference")} {p.reference}
+                              </span>
+                            ) : null}
+                            {preuveOuverte === p.justificatifPieceId && p.justificatifPieceId ? (
+                              <ApercuDeLaPreuve jointId={p.justificatifPieceId} />
+                            ) : null}
+                            {p.eteint && p.annulationAInscrire ? (
+                              <AnnulationAInscrire
+                                ecritureId={p.annulationAInscrire}
+                                pieceId={pieceId}
+                              />
+                            ) : p.eteint ? (
+                              <span className="mt-0.5 block text-[11.5px] text-muted-foreground">
+                                {t("cab.review.paiement.eteint")}
+                              </span>
+                            ) : (
+                              <EcritureDuReglement
+                                paiementId={p.id}
+                                pieceId={pieceId}
+                                plan={plan.data ?? []}
+                              />
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ),
+                  )}
+                  {annules.length > 0 ? (
+                    <button
+                      type="button"
+                      aria-expanded={annulesOuverts}
+                      onClick={() => setAnnulesOuverts((o) => !o)}
+                      className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] text-muted-foreground underline underline-offset-4"
+                    >
+                      {t("cab.review.paiement.annules", { count: annules.length })}
+                    </button>
+                  ) : null}
                 </>
               ) : null}
 
@@ -839,6 +871,7 @@ function CabinetReview() {
             <>
               <SectionTitle>{t("pme.extract.articles")}</SectionTitle>
               <InkTable
+                empile
                 caption={t("pme.extract.articles")}
                 head={[
                   t("pme.extract.designation"),
@@ -851,16 +884,16 @@ function CabinetReview() {
                 {articles.map((article, index) => (
                   <InkTableRow key={index}>
                     <InkCell>{article.designation}</InkCell>
-                    <InkCell numeric>
+                    <InkCell numeric label={t("pme.extract.qty")}>
                       {article.quantity ? quantite(article.quantity, locale) : "—"}
                     </InkCell>
-                    <InkCell numeric>
+                    <InkCell numeric label={t("pme.extract.pu_ht")}>
                       {article.unit_price_ht ? montant(article.unit_price_ht, locale) : "—"}
                     </InkCell>
-                    <InkCell numeric>
+                    <InkCell numeric label={t("pme.extract.pu_ttc")}>
                       {article.unit_price_ttc ? montant(article.unit_price_ttc, locale) : "—"}
                     </InkCell>
-                    <InkCell numeric>
+                    <InkCell numeric label={t("pme.extract.base")}>
                       {article.total_ht ? montant(article.total_ht, locale) : "—"}
                     </InkCell>
                   </InkTableRow>
@@ -967,7 +1000,7 @@ function CabinetReview() {
                     key={entry.id}
                     className="flex items-baseline justify-between gap-3 bg-card px-3 py-2"
                   >
-                    <span>{libelleDeLAction(entry.action, t)}</span>
+                    <span>{libelleDeLAction(entry.action, t, entry.payload)}</span>
                     <span className="num shrink-0 text-muted-foreground">
                       {new Intl.DateTimeFormat(locale, {
                         day: "2-digit",
@@ -1069,7 +1102,11 @@ function AnnulationAInscrire({ ecritureId, pieceId }: { ecritureId: string; piec
       </button>
       {inscrire.error ? (
         <p role="alert" className="mt-1 text-[11.5px] text-signal-stop">
-          {inscrire.error.message}
+          {texteDeLErreur(
+            inscrire.error,
+            "routes/_authenticated/cabinet.piece.$pieceId",
+            t("common.error"),
+          )}
         </p>
       ) : null}
     </div>
@@ -1283,12 +1320,17 @@ function EcritureDuReglement({
         ? (() => {
             const ttc = montant(r.retenue.ttc, locale);
             return r.retenue.retenues.map((x) => (
-              <p key={x.code} className="mt-0.5 text-[11.5px]">
+              <p key={x.code} className="mt-0.5 flex items-center text-[11.5px]">
                 {t("cab.review.reglement.retenue", {
                   libelle: x.libelle,
                   montant: montant(x.montant, locale),
                   ttc,
                 })}
+                {/* Le pourquoi du net va dans le i : l'écran garde le fait et le chiffre. */}
+                <Aide
+                  titre={x.libelle}
+                  paragraphes={[{ texte: t("cab.review.reglement.retenue.aide") }]}
+                />
               </p>
             ));
           })()

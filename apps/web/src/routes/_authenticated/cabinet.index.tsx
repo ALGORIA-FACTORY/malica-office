@@ -38,7 +38,7 @@ import {
   SignalLight,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { feuDuStatut, joursDAttente } from "@/lib/file-cabinet";
+import { feuDuStatut, joursDAttente, prisesEnChargeDepuis } from "@/lib/file-cabinet";
 import { MOT_CABINET } from "@/lib/statut";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
@@ -192,6 +192,7 @@ function CabinetToday() {
   /* ---- le Socle, vingt-quatre heures : des comptes de lignes, rien d'autre */
   const depuisHier = Date.now() - JOUR_MS;
   // Reçues = arrivées au cabinet : une photo reprise garde la date de la première.
+  // Prises en charge = validées ou forcées dans la fenêtre, quelle que soit l'arrivée.
   const recentes = rows.filter((r) => new Date(r.envoyeeLe).getTime() >= depuisHier);
   const socle = [
     { key: "recues", label: t("cab.today.socle.recues"), value: String(recentes.length) },
@@ -201,9 +202,9 @@ function CabinetToday() {
       value: String(recentes.filter((r) => r.status !== "capturee").length),
     },
     {
-      key: "comptabilisees",
-      label: t("cab.today.socle.comptabilisees"),
-      value: String(recentes.filter((r) => r.ecritureId !== null).length),
+      key: "prises",
+      label: t("cab.today.socle.prises"),
+      value: String(prisesEnChargeDepuis(rows, depuisHier)),
     },
   ];
 
@@ -247,7 +248,10 @@ function CabinetToday() {
           <p className="cab-eyebrow">{today}</p>
           <h1>{t("cab.design.journee")}</h1>
           <p className="cab-day-summary">
-            {t("cab.today.summary", { pieces: rows.length, clients: clientCount })}
+            {t("cab.today.summary", {
+              pieces: t("cab.today.summary.pieces", { count: rows.length }),
+              mandats: t("cab.today.summary.mandats", { count: clientCount }),
+            })}
           </p>
           {/* La journée se referme sur son journal : tous les dossiers, aujourd'hui. */}
           <Link

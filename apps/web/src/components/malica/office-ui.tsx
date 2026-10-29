@@ -305,17 +305,30 @@ export function SectionRepliable({
 }
 
 /** Table d'encre — filets, chiffres en mono, aucune zébrure colorée. */
+/**
+ * `empile` : sur un téléphone, chaque ligne devient une carte — la première
+ * cellule en titre, les autres « libellé · valeur » (le libellé vient de
+ * `InkCell label`). Relevé sur staging le 29 octobre 2026 à 375 px : le
+ * tableau des articles défilait de côté et coupait PU TTC et Base.
+ */
 export function InkTable({
   head,
   children,
   caption,
+  empile,
 }: {
   head: ReactNode[];
   children: ReactNode;
   caption?: string;
+  empile?: boolean;
 }) {
   return (
-    <div className="cab-table overflow-x-auto border border-border bg-card">
+    <div
+      className={cn(
+        "cab-table overflow-x-auto border border-border bg-card",
+        empile && "cab-table-empile",
+      )}
+    >
       <table className="min-w-full border-collapse text-[13px]">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
@@ -345,13 +358,17 @@ export function InkCell({
   children,
   numeric,
   className,
+  label,
 }: {
   children: ReactNode;
   numeric?: boolean;
   className?: string;
+  /** Le nom de la colonne, lu par une table `empile` sur un téléphone. */
+  label?: string;
 }) {
   return (
     <td
+      data-label={label}
       className={cn(
         "max-w-[18rem] px-3 py-2 align-top break-words",
         numeric && "num whitespace-nowrap text-end",
