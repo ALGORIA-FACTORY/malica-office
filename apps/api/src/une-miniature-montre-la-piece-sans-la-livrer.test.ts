@@ -480,6 +480,99 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     fetch(`${base}/pieces/${id}/miniature`, { headers: entetes(dirigeant) });
   const miniatureSurDisque = (id: string) => path.join(racineEssai, pme, `${id}.miniature.jpg`);
 
+  /*
+   * ============================================ AVEC LES VERSIONS (LOT 1)
+   *
+   * « Reprendre la photo » remplace : la nouvelle prend la place de
+   * l'ancienne, qui reste comme version précédente (`pieces_v.remplacee_par`).
+   * La miniature suit la pièce sur les trois points où une version change
+   * quelque chose : les listes, les droits de lecture, l'effacement.
+   */
+  async function reprendre(ancienne: string, cle: string): Promise<string> {
+    const p = (await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      executerRpc(
+        db,
+        {
+          depot: "capture",
+          methode: "enregistrer",
+          args: [
+            {
+              tenantId: pme,
+              source: "photo",
+              vis: "entite",
+              idempotencyKey: `${marque}-${cle}`,
+              contentType: "image/jpeg",
+              pageCount: 1,
+              remplace: ancienne,
+            },
+          ],
+        },
+        "serveur",
+      ),
+    )) as { id: string };
+    const depot = await fetch(`${base}/pieces/${p.id}/contenu`, {
+      method: "POST",
+      headers: { ...entetes(dirigeant), "Content-Type": "image/jpeg" },
+      body: new Uint8Array(await photo(900, 1200)),
+    });
+    assert.equal(depot.status, 201);
+    return p.id;
+  }
+
+  it("une version précédente ne paraît dans aucune liste (Vos documents, Mon espace)", async () => {
+    const ancienne = await neuve("v-liste");
+    const nouvelle = await reprendre(ancienne, "v-liste-reprise");
+    const lues = (await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "listAvecLecture", args: [pme] }, "serveur"),
+    )) as { id: string }[];
+    const ids = lues.map((p) => p.id);
+    assert.ok(ids.includes(nouvelle));
+    assert.ok(!ids.includes(ancienne), "la version précédente n'a pas de miniature de liste");
+  });
+
+  it("la miniature d'une version suit les droits de ses octets, à la lettre", async () => {
+    const ancienne = await neuve("v-droits");
+    const nouvelle = await reprendre(ancienne, "v-droits-reprise");
+    for (const qui of [dirigeant, siege, tiers]) {
+      for (const id of [ancienne, nouvelle]) {
+        const octets = await fetch(`${base}/pieces/${id}/contenu`, { headers: entetes(qui) });
+        const mini = await fetch(`${base}/pieces/${id}/miniature`, { headers: entetes(qui) });
+        await octets.arrayBuffer();
+        await mini.arrayBuffer();
+        // Lisible : 200 des deux côtés ; illisible : 404 des deux côtés.
+        assert.equal(
+          mini.status === 404,
+          octets.status === 404,
+          `${qui === tiers ? "tiers" : qui === siege ? "siège" : "dirigeant"} sur ${
+            id === ancienne ? "l'ancienne" : "la nouvelle"
+          } : octets ${octets.status}, miniature ${mini.status}`,
+        );
+      }
+    }
+    assert.equal(
+      (await fetch(`${base}/pieces/${ancienne}/miniature`, { headers: entetes(tiers) })).status,
+      404,
+    );
+  });
+
+  it("effacer la pièce efface la miniature de chacune de ses versions", async () => {
+    const ancienne = await neuve("v-efface");
+    assert.equal((await demander(ancienne)).status, 200);
+    const nouvelle = await reprendre(ancienne, "v-efface-reprise");
+    assert.equal((await demander(nouvelle)).status, 200);
+    await access(miniatureSurDisque(ancienne));
+    await access(miniatureSurDisque(nouvelle));
+
+    const supprimee = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      executerRpc(db, { depot: "capture", methode: "supprimer", args: [nouvelle] }, "serveur"),
+    );
+    assert.equal(supprimee, true);
+    for (const id of [ancienne, nouvelle]) {
+      await assert.rejects(access(miniatureSurDisque(id)), `miniature de ${id} restée`);
+      await assert.rejects(access(path.join(racineEssai, pme, id)), `octets de ${id} restés`);
+    }
+  });
+
   it("vingt demandes simultanées de la même pièce : une seule fabrication", async () => {
     const id = await neuve("meme");
     const espion = mock.method(fabrique, "miniature");
