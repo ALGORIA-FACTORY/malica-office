@@ -982,6 +982,44 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
   });
 
+  it("sous un rappel en attente, un règlement hérité ne s'inscrit pas ; le rappel refusé, il s'inscrit", async () => {
+    const ancienne = await transmiseLue();
+    const paiement = await payer(ancienne, 10000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 10000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    await pmeFait("collab.demanderSurPiece", nouvelle, "rappel");
+    await assert.rejects(
+      cabinetFait("office.inscrireLeReglement", paiement),
+      /refus\.piece\.rappelEnAttente/,
+    );
+    await cabinetFait("collab.repondreSurPiece", nouvelle, "rappel", false, "Elle reste ici.");
+    const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
+    const { rows } = await admin.query<{ status: string }>(
+      `select status from socle.ecritures where id = $1`,
+      [ecriture],
+    );
+    assert.equal(rows[0]?.status, "booked");
+  });
+
+  it("un rappel ne s'accorde pas tant qu'une écriture vit sur une version de la pièce", async () => {
+    const { nouvelle } = await reglementHeriteInscrit();
+    // Une demande d'avant cette règle, restée en attente.
+    await admin.query(
+      `insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, auteur)
+       values ($1, $2, 'rappel', 'demandee', $3)`,
+      [pme, nouvelle, dirigeant.id],
+    );
+    await assert.rejects(
+      cabinetFait("collab.repondreSurPiece", nouvelle, "rappel", true, null),
+      /reste partagee/,
+    );
+    assert.equal((await etat(nouvelle))?.vis, "partage");
+  });
+
   it("partager la photo courante transmet l'écriture proposée sur l'ancienne", async () => {
     n += 1;
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
