@@ -30,6 +30,7 @@ import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { fabrique, fabriquerMiniature } from "./miniature.ts";
 import { executerRpc } from "./rpc.ts";
+import { disque } from "./stockage.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -647,13 +648,57 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     }
   });
 
-  it("un échec passager rend 204 sans rien garder, et la demande suivante réussit", async () => {
+  /*
+   * Relu par Codex sur la PR #128 : la source était lue AVANT d'attendre son
+   * tour de décodage. Deux décodeurs permis, vingt demandes : vingt photos
+   * entières en mémoire à la fois (jusqu'à 40 Mio chacune). Le sémaphore ne
+   * bornait que le décodage, pas la mémoire.
+   */
+  it("vingt pièces à la fois : jamais plus de deux sources en mémoire", async () => {
+    const ids = await Promise.all(Array.from({ length: 20 }, (_, i) => neuve(`memoire-${i}`)));
+    const original = fabrique.miniature;
+    const lire = disque.lire;
+    let tenues = 0;
+    let pic = 0;
+    const lecture = mock.method(disque, "lire", async (chemin: string) => {
+      const octets = await lire(chemin);
+      tenues += 1;
+      pic = Math.max(pic, tenues);
+      return octets;
+    });
+    const decodage = mock.method(fabrique, "miniature", async (octets: Uint8Array) => {
+      try {
+        // Un décodage lent : les demandes s'empilent pendant qu'il tourne.
+        await new Promise((r) => setTimeout(r, 30));
+        return await original(octets);
+      } finally {
+        tenues -= 1;
+      }
+    });
+    try {
+      const reponses = await Promise.all(ids.map((id) => demander(id)));
+      assert.deepEqual(new Set(reponses.map((r) => r.status)), new Set([200]));
+      assert.equal(lecture.mock.callCount(), 20);
+      assert.ok(pic <= 2, `${pic} sources tenues en mémoire à la fois`);
+    } finally {
+      lecture.mock.restore();
+      decodage.mock.restore();
+    }
+  });
+
+  /*
+   * Relu par Codex sur la PR #128 : un échec passager rendait le même 204
+   * qu'un document SANS miniature, et l'écran le gardait pour toujours.
+   */
+  it("un échec passager rend 503, sans rien garder ; la demande suivante réussit", async () => {
     const id = await neuve("passager");
     const espion = mock.method(fabrique, "miniature", async () => {
       throw new Error("mémoire insuffisante, un instant");
     });
     try {
-      assert.equal((await demander(id)).status, 204);
+      const reponse = await demander(id);
+      assert.equal(reponse.status, 503);
+      assert.deepEqual(await reponse.json(), { erreur: "miniature.indisponible" });
       await assert.rejects(access(miniatureSurDisque(id)));
       const restes = (await readdir(path.join(racineEssai, pme))).filter((f) =>
         f.endsWith(".partiel"),

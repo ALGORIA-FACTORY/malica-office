@@ -31,6 +31,10 @@
  * répond 404 « contenu absent » tant que la file ne les a pas déposés. Ce
  * 404-là n'est pas définitif — l'aperçu réessaie, à intervalles croissants et
  * bornés, et la file le relance dès qu'elle a déposé (`rafraichirLApercu`).
+ * Un 5xx (la fabrication a échoué un instant) se réessaie de même. Seul un
+ * 204 — « ce document n'a pas de miniature » — est gardé pour définitif ; une
+ * erreur ne l'est jamais : réessais épuisés, l'aperçu redemande à son
+ * prochain affichage.
  *
  * ============================================================ CE QU'IL DIT
  *
@@ -52,8 +56,12 @@ import { office } from "@/verticals/malica-office/composition";
 /** La teinte du point d'état : celle de la pastille de la pièce. */
 type TonDeLaPiece = ParcoursDeLaPiece["pastille"]["ton"];
 
-/** Quatre reprises d'un aperçu sans octets encore : après 2, 4, 8 puis 16 s. */
+/** Quatre reprises, après 2, 4, 8 puis 16 s : octets pas encore là, ou échec passager. */
 const REPRISES = 4;
+
+/** Ce qui peut changer d'un instant à l'autre : pas d'octets encore (404), une panne (5xx). */
+const passagere = (erreur: unknown) =>
+  erreur instanceof ErreurApi && (erreur.statut === 404 || erreur.statut >= 500);
 
 /** L'image de la page entière, ou `null` : le contenu n'en donne pas. */
 async function pageDe(pieceId: string): Promise<Blob | null> {
@@ -108,8 +116,8 @@ export function ApercuDePiece({
     enabled: proche,
     staleTime: Infinity,
     gcTime: 10 * 60 * 1000,
-    // Seul « contenu absent » se réessaie : les octets peuvent être en route.
-    retry: (n, erreur) => erreur instanceof ErreurApi && erreur.statut === 404 && n < REPRISES,
+    // Seul ce qui est passager se réessaie ; un 204 (`null`) est une réponse.
+    retry: (n, erreur) => passagere(erreur) && n < REPRISES,
     retryDelay: (n) => 2000 * 2 ** n,
   });
 

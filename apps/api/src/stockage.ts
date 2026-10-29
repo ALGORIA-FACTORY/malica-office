@@ -363,6 +363,13 @@ async function aSonTour<T>(tache: () => Promise<T>): Promise<T> {
  */
 const fabrications = new Map<string, Promise<Buffer | "absent" | "passager">>();
 
+/**
+ * La lecture d'une source, dans un objet : une épreuve la compte
+ * (`mock.method`) pour vérifier combien de photos entières sont tenues en
+ * mémoire à la fois.
+ */
+export const disque = { lire: (chemin: string) => readFile(chemin) };
+
 class ContenuAbsent extends Error {}
 
 const existe = (chemin: string) =>
@@ -388,19 +395,29 @@ async function fabriquerEtGarder(
   const source = cheminAbsolu(tenantId, pieceId);
   const miniature = cheminDeLaMiniature(tenantId, pieceId);
   try {
-    let octetsSource: Buffer;
-    try {
-      octetsSource = await readFile(source);
-    } catch {
-      throw new ContenuAbsent();
-    }
-    let octets: Buffer;
-    try {
-      octets =
-        (await aSonTour(() => fabrique.miniature(new Uint8Array(octetsSource)))) ?? Buffer.alloc(0);
-    } catch {
-      return "passager";
-    }
+    /*
+     * La source se lit DANS le tour de fabrication, jamais avant : lue avant
+     * d'attendre, chaque demande en file tenait sa photo entière en mémoire
+     * (relu par Codex, PR #128 : vingt demandes, deux décodeurs, vingt
+     * sources tenues). Le sémaphore borne ainsi la mémoire, pas seulement le
+     * processeur.
+     */
+    const octets = await aSonTour(async () => {
+      let octetsSource: Buffer;
+      try {
+        octetsSource = await disque.lire(source);
+      } catch {
+        throw new ContenuAbsent();
+      }
+      try {
+        return (await fabrique.miniature(new Uint8Array(octetsSource))) ?? Buffer.alloc(0);
+      } catch (cause) {
+        // Au journal, jamais au client : l'écran sait seulement qu'il peut réessayer.
+        console.error("[miniature]", pieceId, cause);
+        return "passager" as const;
+      }
+    });
+    if (octets === "passager") return "passager";
     // Écrite à côté puis renommée, comme une pièce : aucune demande ne lit un
     // fichier à moitié écrit.
     const provisoire = `${miniature}.${randomUUID()}.partiel`;
@@ -433,7 +450,8 @@ async function fabriquerEtGarder(
  * scellés). Un contenu qui n'en donne pas PAR NATURE (un PDF de texte, un
  * format refusé) se garde aussi, comme un fichier VIDE, et se rend en 204 :
  * sans cela, chaque ouverture de liste relirait le PDF pour rien. Un échec
- * passager se rend aussi en 204, mais rien n'est gardé.
+ * passager se rend en 503 (`miniature.indisponible`), rien n'est gardé, et
+ * l'écran réessaie.
  */
 export async function servirMiniature(req: Request, res: Response): Promise<void> {
   const piece = await pieceAutorisee(req, req.params["id"]);
@@ -465,7 +483,14 @@ export async function servirMiniature(req: Request, res: Response): Promise<void
   // navigateur ne distingue pas deux comptes sur le même appareil, et rendrait
   // la miniature à quiconque redemande l'URL après une déconnexion.
   res.setHeader("Cache-Control", "private, no-store");
-  if (resultat === "passager" || resultat.length === 0) {
+  // Passager : un code À PART, que l'écran réessaie. 204 ne dit plus que
+  // « ce document n'a pas de miniature », et l'écran le garde.
+  if (resultat === "passager") {
+    res.setHeader("Retry-After", "2");
+    res.status(503).json({ erreur: "miniature.indisponible" });
+    return;
+  }
+  if (resultat.length === 0) {
     res.status(204).end();
     return;
   }

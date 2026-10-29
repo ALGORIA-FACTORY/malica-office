@@ -138,6 +138,28 @@ describe("l'aperçu d'une pièce", () => {
     expect(api.miniature).toHaveBeenCalledTimes(2);
   });
 
+  it("un échec passager du serveur (503) se réessaie, puis l'image paraît", async () => {
+    api.miniature
+      .mockRejectedValueOnce(new ErreurApi("miniature.indisponible", 503))
+      .mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    const { container } = monter(<ApercuDePiece pieceId="p6d" />);
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull(), {
+      timeout: 5000,
+    });
+    expect(api.miniature).toHaveBeenCalledTimes(2);
+  });
+
+  it("204 (pas de miniature, par nature) : la feuille, et aucune reprise", async () => {
+    api.miniature.mockResolvedValue(null);
+    const { container } = monter(<ApercuDePiece pieceId="p6e" />);
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(api.miniature).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 2500));
+    expect(api.miniature).toHaveBeenCalledTimes(1);
+    expect(container.querySelector(".esq")).not.toBeNull();
+  });
+
   it("une autre erreur ne se réessaie pas : la feuille reste", async () => {
     api.miniature.mockRejectedValue(new ErreurApi("refusé", 403));
     monter(<ApercuDePiece pieceId="p6b" />);
