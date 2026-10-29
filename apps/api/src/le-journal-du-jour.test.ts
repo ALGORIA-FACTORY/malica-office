@@ -17,13 +17,14 @@ import { strFromU8, unzipSync } from "fflate";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { fermerLePool, sousIdentite } from "./db.ts";
+import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { journalDuJour } from "./depots/journal-du-jour.ts";
 import { office } from "./depots/office.ts";
 import { parametrage } from "./depots/parametrage.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
+import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -469,5 +470,109 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(defaut.regle, false);
     assert.equal(defaut.fuseau, defaut.defaut);
+  });
+
+  /* ============ avec les versions d'une pièce (lot 1, #127) */
+
+  const rpc = (qui: Utilisateur, depot: string, methode: string, ...args: unknown[]) =>
+    sousIdentiteDuServeur(qui.id, (db) => executerRpc(db, { depot, methode, args }));
+  const entrees = async () =>
+    (await lire(expert, cabinet, pme)).journaux.flatMap((x) => x.ecritures);
+
+  it("un règlement saisi sur une version précédente paraît une fois, sous la pièce courante", async () => {
+    const ancienne = await piece("version-a");
+    const paiement = (await rpc(dirigeant, "capture", "enregistrerPaiement", {
+      pieceId: ancienne,
+      packId: pack,
+      moyenCode: "especes",
+      montantMineur: 30000,
+      devise: "TND",
+      payeLe: "2026-10-03",
+    })) as string;
+    const { id: courante } = (await rpc(dirigeant, "capture", "enregistrer", {
+      tenantId: pme,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `${marque}-version-b`,
+      contentType: "image/jpeg",
+      remplace: ancienne,
+    })) as { id: string };
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query(
+        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', $3::jsonb,
+                                             '[]'::jsonb, '[]'::jsonb)`,
+        [
+          courante,
+          JSON.stringify([{ page: 1, ordinal: 0, text: "TOTAL", x0: 0, y0: 0, x1: 1, y1: 1 }]),
+          JSON.stringify({ document_kind: "facture_achat" }),
+        ],
+      ),
+    );
+    await admin.query(
+      `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                     normalisation, controles, verdict, motifs)
+       select $1, $2, x.id, $3, jsonb_build_object('montants', jsonb_build_object('ttc', '30000')),
+              '["essai"]', 'à comptabiliser', '["essai"]'
+         from capture.extractions x where x.piece_id = $2
+        order by x.created_at desc limit 1`,
+      [pme, courante, pack],
+    );
+    await sousIdentite(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [courante]),
+    );
+    const reglement = (await rpc(expert, "office", "inscrireLeReglement", paiement)) as string;
+
+    const vues = (await entrees()).filter((e) => e.id === reglement);
+    assert.equal(vues.length, 1, "une fois");
+    assert.equal(vues[0]?.pieceId, courante, "sous la pièce courante, pas la version remplacée");
+  });
+
+  it("la contre-passation d'une pièce retournée puis supprimée reste au journal", async () => {
+    const p = await piece("supprimee");
+    const prise = await inscrire(expert, p, "Facture S", lignes("601", "4.000"));
+    await sousIdentite(expert.id, (db) =>
+      supervision.review(db, { ecritureId: prise, outcome: "retourne", motifId: motif, note: "x" }),
+    );
+    assert.equal(await rpc(dirigeant, "capture", "supprimer", p), true);
+    const { rows } = await admin.query(`select archivee_le from capture.pieces where id = $1`, [p]);
+    assert.ok(rows[0]?.archivee_le, "la pièce s'archive, elle ne part pas");
+    const ecritures = await entrees();
+    assert.ok(ecritures.some((e) => e.id === prise && e.contrePasseeLe));
+    assert.ok(ecritures.some((e) => e.contrePasse === prise && e.origine === "contre_passation"));
+  });
+
+  it("une chaîne supprimée sans écriture inscrite ne laisse rien au journal", async () => {
+    const ancienne = await piece("sans-ecriture");
+    await sousIdentite(expert.id, (db) =>
+      office.propose(db, {
+        pieceId: ancienne,
+        journal: "ACH",
+        date: "2026-10-20",
+        libelle: "Jamais inscrite",
+        packVersionId: pack,
+        devise: "TND",
+        lignes: lignes("601", "5.000"),
+      }),
+    );
+    await sousIdentite(expert.id, (db) =>
+      supervision.retourner(db, { pieceId: ancienne, motifId: motif, note: "x" }),
+    );
+    const { id: courante } = (await rpc(dirigeant, "capture", "enregistrer", {
+      tenantId: pme,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `${marque}-sans-ecriture-b`,
+      contentType: "image/jpeg",
+      remplace: ancienne,
+    })) as { id: string };
+    const avant = (await entrees()).length;
+    assert.equal(await rpc(dirigeant, "capture", "supprimer", courante), true);
+    const { rows } = await admin.query(`select 1 from capture.pieces where id = any($1::uuid[])`, [
+      [ancienne, courante],
+    ]);
+    assert.equal(rows.length, 0, "la chaîne part tout entière");
+    const apres = await entrees();
+    assert.equal(apres.length, avant);
+    assert.ok(!apres.some((e) => e.pieceId === ancienne || e.pieceId === courante));
   });
 });
