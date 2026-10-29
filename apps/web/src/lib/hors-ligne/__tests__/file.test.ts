@@ -114,9 +114,17 @@ describe("une reprise refusée", () => {
   });
 
   it("repart vers une autre cible — la version actuelle, ou aucune", () => {
-    const vers = transition(refusee("refus.piece.remplacee"), { type: "recibler", remplace: "C" }, T0);
+    const vers = transition(
+      refusee("refus.piece.remplacee"),
+      { type: "recibler", remplace: "C" },
+      T0,
+    );
     expect(vers).toMatchObject({ etat: "a_envoyer", remplace: "C", derniereErreur: null });
-    const libre = transition(refusee("refus.remplacement.inscrite"), { type: "recibler", remplace: null }, T0);
+    const libre = transition(
+      refusee("refus.remplacement.inscrite"),
+      { type: "recibler", remplace: null },
+      T0,
+    );
     expect(libre).toMatchObject({ etat: "a_envoyer", remplace: null, tentatives: 0 });
     // Hors d'un échec, rien ne bouge : on ne détourne pas un envoi en cours.
     const enCours = element("enregistree", { remplace: "A" });

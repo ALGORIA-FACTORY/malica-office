@@ -15,7 +15,7 @@ const dossier = vi.hoisted(() => ({
     remplaceePar: "B",
     versionCourante: "C",
   },
-  contenu: null,
+  contenu: new ArrayBuffer(1),
   extraction: null,
 }));
 

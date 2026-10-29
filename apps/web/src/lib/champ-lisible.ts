@@ -148,6 +148,7 @@ const MOTIFS_DE_REFUS: Record<string, MessageKey> = {
   licence_suspendue: "pme.refus.licence_suspendue",
   organisation_sans_licence: "pme.refus.organisation_sans_licence",
   piece_deja_lue: "pme.refus.piece_deja_lue",
+  piece_remplacee: "pme.refus.piece_remplacee",
 };
 
 export function libelleDuRefus(motif: string, t: T): string {

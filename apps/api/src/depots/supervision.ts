@@ -130,12 +130,15 @@ export const supervision = {
          join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
           and p.tenant_id in (select app.mandats_visibles($1))
          left join organizations_v o on o.id = p.tenant_id
+         -- La pièce, c'est toutes ses versions : un règlement saisi sur une
+         -- photo reprise a son écriture sur l'ancienne, et elle attend ici.
          left join lateral (
-           select distinct on (x.piece_id) x.id, x.libelle, x.date_ecriture
+           select x.id, x.libelle, x.date_ecriture
              from ecritures_v x
-            where x.piece_id = p.id and x.status = 'booked'
+            where x.piece_id in (select app.versions_de_la_piece(p.id)) and x.status = 'booked'
               and x.reverses_id is null and x.review_outcome is null
-            order by x.piece_id, x.created_at desc
+            order by x.created_at desc
+            limit 1
          ) e on true
          -- Le montant de l'écriture : la somme de ses débits, telle que le
          -- Socle l'a posée. L'écran ne l'additionne pas.

@@ -124,8 +124,17 @@ async function effacerPar(
   );
   const tenantId = rows[0]?.tenant_id;
   if (!tenantId) return false;
+  // La pièce, c'est toutes ses versions : effacée, elle part tout entière
+  // (`capture_piece_supprimer`), et les octets de chacune avec elle. On les
+  // nomme AVANT : après, la chaîne n'existe plus.
+  const { rows: versions } = await db.query<{ id: string }>(
+    `select v as id from app.versions_de_la_piece($1) v`,
+    [pieceId],
+  );
   // Une pièce archivée garde ses octets : le cabinet la conserve.
-  if ((await porte()).effacee) await effacerContenu(tenantId, pieceId);
+  if ((await porte()).effacee) {
+    for (const v of versions) await effacerContenu(tenantId, v.id);
+  }
   return true;
 }
 
@@ -184,6 +193,7 @@ function versPiece(r: Record<string, unknown>) {
     // La photo qu'elle remplace, et celle qui l'a remplacée (`capture.remplacements`).
     remplace: (r["remplace"] as string | null) ?? null,
     remplaceePar: (r["remplacee_par"] as string | null) ?? null,
+    versionCourante: r["version_courante"] as string,
   };
 }
 
@@ -208,6 +218,7 @@ function colonnesDeLaPiece(alias?: string): string {
     "source_piece_id",
     "remplace",
     "remplacee_par",
+    "version_courante",
   ]
     .map((c) => (alias ? `${alias}.${c}` : c))
     .join(", ");
@@ -1368,13 +1379,9 @@ export const capture = {
       `insert into capture.paiements
          (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
           montant_mineur, devise, paye_le, justificatif_piece_id, reference)
-       select c.tenant_id, c.entity_id, c.vis, p.id, $2, $3,
+       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
               $4::bigint, $5, $6::date, $7, $8
-         from pieces_v p
-         -- Saisi sur une photo reprise, le règlement reste sur elle (le fait),
-         -- mais prend le dossier, l'établissement et le côté de la courante.
-         join pieces_v c on c.id = app.version_courante(p.id)
-        where p.id = $1
+         from pieces_v p where p.id = $1
        returning id`,
       [
         input.pieceId,

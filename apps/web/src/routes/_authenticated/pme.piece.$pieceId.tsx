@@ -22,6 +22,7 @@ import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
 import { CarteDuRetour } from "@/components/malica/retour-du-cabinet";
 import { ConfirmationSurPlace, EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { RefusDeLecture } from "@/components/malica/lecture-refusee";
+import { VersionPrecedente } from "@/components/malica/version-precedente";
 import {
   libelleDuChamp,
   libelleDuRefus,
@@ -1237,10 +1238,10 @@ function PieceScreen() {
    * Une nouvelle photo a remplacé celle-ci (« Reprendre la photo ») : elle
    * n'est plus dans les listes, jamais effacée, et ne se traite plus — c'est
    * la nouvelle qui porte le retour, les rattachements et la file. On la
-   * montre, et le chemin vers la nouvelle.
+   * montre, et le chemin vers la version courante — la dernière de la chaîne.
    */
   if (piece.remplaceePar) {
-    const nouvelle = piece.remplaceePar;
+    const courante = piece.versionCourante;
     return (
       <div data-ecran="dossier">
         <div className="top">
@@ -1254,7 +1255,7 @@ function PieceScreen() {
               <path d="M14.5 5.5L8 12l6.5 6.5" />
             </svg>
           </button>
-          <span className="ttl">{t("pme.piece.versionPrecedente")}</span>
+          <span className="ttl">{t("piece.versionPrecedente.titre")}</span>
         </div>
         <div className="f-id">
           <button
@@ -1266,20 +1267,10 @@ function PieceScreen() {
             <ApercuDePiece pieceId={pieceId} />
           </button>
         </div>
-        <div className="centr calme" role="status">
-          <i />
-          <div>
-            <p>{t("pme.piece.remplacee")}</p>
-            <button
-              type="button"
-              onClick={() =>
-                void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: nouvelle } })
-              }
-            >
-              {t("pme.piece.remplacee.voir")}
-            </button>
-          </div>
-        </div>
+        <VersionPrecedente
+          className="centr calme"
+          onVoir={() => void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: courante } })}
+        />
       </div>
     );
   }
@@ -2502,7 +2493,7 @@ function PieceScreen() {
                 preload="intent"
               >
                 <span className="bd">
-                  <span className="lb">{t("pme.piece.versionPrecedente")}</span>
+                  <span className="lb">{t("piece.versionPrecedente.titre")}</span>
                   <span className="vl-g">
                     {nomDuType(piece.documentKind) ?? t("pme.piece.title")}
                   </span>

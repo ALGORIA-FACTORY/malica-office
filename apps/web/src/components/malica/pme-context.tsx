@@ -23,6 +23,8 @@ export interface PieceARemplacer {
 export interface FileDAttente {
   elements: ReadonlyArray<ElementDeFile>;
   reessayer: (cle: string) => void;
+  /** Une reprise refusée repart vers la version actuelle, ou sans lien (`null`). */
+  recibler: (cle: string, remplace: string | null) => void;
   abandonner: (cle: string) => void;
 }
 

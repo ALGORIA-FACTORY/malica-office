@@ -67,6 +67,7 @@ function versPiece(p: Record<string, unknown>): Piece {
     sourcePieceId: (p["sourcePieceId"] as string | null) ?? null,
     remplace: (p["remplace"] as string | null) ?? null,
     remplaceePar: (p["remplaceePar"] as string | null) ?? null,
+    versionCourante: p["versionCourante"] as string,
   };
 }
 

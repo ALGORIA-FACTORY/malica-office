@@ -263,6 +263,14 @@ export async function deposerContenu(req: Request, res: Response): Promise<void>
       res.status(413).json({ erreur: "pièce trop volumineuse" });
       return;
     }
+    // Remplacée pendant que ses octets voyageaient : ils arrivent trop tard.
+    // Ce n'est ni « déjà scellée » (409, que la file tient pour arrivée), ni
+    // une panne : la pièce n'en veut plus, et la file n'en demande pas la
+    // lecture.
+    if ((erreur as { message?: string }).message === "refus.piece.remplacee") {
+      res.status(410).json({ erreur: "refus.piece.remplacee" });
+      return;
+    }
     if ((erreur as { code?: string }).code === "23514") {
       res.status(409).json({ erreur: "le contenu de cette pièce est scellé" });
       return;

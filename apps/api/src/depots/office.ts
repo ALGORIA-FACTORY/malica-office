@@ -432,6 +432,16 @@ export const office = {
    * Une contre-passation n'est pas recomposée : elle recopie l'original.
    */
   async book(db: Requete, ecritureId: string): Promise<void> {
+    // Le verrou de `socle_ecriture_book` — la pièce de l'écriture et sa
+    // version courante, dans l'ordre des identifiants —, pris AVANT que la
+    // proposition soit relue : une reprise ou une suppression de la courante
+    // attend l'inscription entière, puis la voit.
+    await db.query(
+      `select pi.id from capture.pieces pi join ecritures_v e
+           on pi.id in (e.piece_id, app.version_courante(e.piece_id))
+        where e.id = $1 order by pi.id for update of pi`,
+      [ecritureId],
+    );
     const { rows } = await db.query<{
       nature: string;
       reverses_id: string | null;

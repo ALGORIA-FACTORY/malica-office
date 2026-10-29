@@ -733,6 +733,11 @@ export interface Piece {
   /** La photo qui a remplacé celle-ci : elle a quitté les listes, jamais effacée. */
   remplaceePar: string | null;
   /**
+   * La photo qui fait foi : celle-ci, ou la dernière de sa chaîne de reprises.
+   * Le lien d'une version précédente y mène en un geste, même après A → B → C.
+   */
+  versionCourante: string;
+  /**
    * Quand le dirigeant a décidé de garder la pièce chez lui.
    *
    * `null` ne veut pas dire « non » : il veut dire « pas encore répondu », et

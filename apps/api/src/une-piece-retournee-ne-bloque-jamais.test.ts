@@ -796,7 +796,9 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   });
 
   it("ce qui est issu d'une version archivée la suit aux archives", async () => {
-    const ancienne = await retournee("avant écriture");
+    // Une écriture inscrite puis contre-passée sur la chaîne : la pièce
+    // s'archive au lieu de partir (revue indépendante de #127).
+    const ancienne = await retournee("après contre-passation");
     const { id: recu } = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "pdf",
@@ -1219,6 +1221,20 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   /* ============ revue indépendante de #127 (29 octobre 2026) */
 
   const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  /**
+   * Inscrit l'écriture dans une transaction qui reste ouverte : `pris` se
+   * résout quand l'inscription est faite (ses verrous tenus), `fin` au commit.
+   */
+  const inscrireSansCommettre = (ecriture: string) => {
+    let tenu: () => void = () => undefined;
+    const pris = new Promise<void>((r) => (tenu = r));
+    const fin = sousIdentiteDuServeur(expert.id, async (db) => {
+      await office.book(db, ecriture);
+      tenu();
+      await dormir(400);
+    });
+    return { pris: Promise.race([pris, fin]), fin };
+  };
 
   it("une version remplacée ne se lit plus : refus définitif, travail clos, octets refusés", async () => {
     const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
@@ -1278,13 +1294,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
     const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
     // L'inscription tient sa transaction ouverte ; la reprise arrive pendant.
-    const inscription = sousIdentiteDuServeur(expert.id, async (db) => {
-      await office.book(db, ecriture);
-      await dormir(400);
-    });
-    await dormir(100);
+    const inscription = inscrireSansCommettre(ecriture);
+    await inscription.pris;
     const reprise = remplacer(nouvelle);
-    const [ins, rep] = await Promise.allSettled([inscription, reprise]);
+    const [ins, rep] = await Promise.allSettled([inscription.fin, reprise]);
     assert.equal(ins.status, "fulfilled", String((ins as PromiseRejectedResult).reason));
     assert.equal(rep.status, "rejected", "la reprise attend l'inscription, puis la voit");
     assert.match(String((rep as PromiseRejectedResult).reason), /refus\.remplacement\.inscrite/);
@@ -1302,13 +1315,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
     // La suppression passe par l'accord du cabinet, qui l'exécute aussitôt.
     await pmeFait("collab.demanderSurPiece", nouvelle, "suppression");
-    const inscription = sousIdentiteDuServeur(expert.id, async (db) => {
-      await office.book(db, ecriture);
-      await dormir(400);
-    });
-    await dormir(100);
+    const inscription = inscrireSansCommettre(ecriture);
+    await inscription.pris;
     const suppression = cabinetFait("collab.repondreSurPiece", nouvelle, "suppression", true, null);
-    const [ins, sup] = await Promise.allSettled([inscription, suppression]);
+    const [ins, sup] = await Promise.allSettled([inscription.fin, suppression]);
     assert.equal(ins.status, "fulfilled", String((ins as PromiseRejectedResult).reason));
     assert.equal(sup.status, "rejected", "la suppression attend l'inscription, puis la voit");
     assert.ok(await etat(nouvelle), "la pièce que l'écriture porte est toujours là");
@@ -1373,9 +1383,10 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await assert.rejects(ttcTranche(ancienne, 1000), /refus\.piece\.remplacee/);
     await assert.rejects(
       sousIdentiteDuServeur(dirigeant.id, (db) =>
-        db.query(`select public.capture_articles_persist($1, $2, null, '601', '[]'::jsonb)`, [
+        db.query(`select public.capture_articles_persist($1, $2, null, '601', $3::jsonb)`, [
           ancienne,
           pack,
+          JSON.stringify([{ designation: "Ramettes de papier", total_ht: "10.000" }]),
         ]),
       ),
       /refus\.piece\.remplacee/,

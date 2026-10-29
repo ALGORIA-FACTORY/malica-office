@@ -368,6 +368,7 @@ const fr = {
   "pme.refus.organisation_sans_licence":
     "Ce dossier n'a pas d'abonnement actif : je range les pièces, je ne les lis pas encore.",
   "pme.refus.piece_deja_lue": "Cette pièce a déjà été lue : sa relecture ne coûte rien.",
+  "pme.refus.piece_remplacee": "Une nouvelle photo a remplacé celle-ci : c'est elle qui se lit.",
   "pme.refus.autre": "Je n'ai pas lu cette pièce, et la raison ne m'est pas connue.",
   "pme.refus.le": "Refusée le {date}",
   "pme.doc.titre": "Vos documents",
@@ -2153,9 +2154,9 @@ const fr = {
   "notif.kind.piece.gardee": "Pièce gardée dans la société",
   "notif.kind.piece.supprimee": "Pièce supprimée",
   "notif.kind.piece.archivee": "Pièce retirée de vos documents",
-  "pme.piece.versionPrecedente": "Version précédente",
-  "pme.piece.remplacee": "Une nouvelle photo a remplacé celle-ci.",
-  "pme.piece.remplacee.voir": "Voir la nouvelle photo",
+  "piece.versionPrecedente.titre": "Version précédente",
+  "piece.versionPrecedente.remplacee": "Une nouvelle photo a remplacé celle-ci.",
+  "piece.versionPrecedente.voir": "Voir la photo actuelle",
   "pme.nav.coffre": "Mon espace",
   "pme.nav.echeances": "Échéances",
   "pme.nav.notifs": "Alertes",
@@ -2933,6 +2934,20 @@ const fr = {
   "pme.file.etat.echec_definitif": "Refusée — {raison}",
   "pme.file.reessayer": "Réessayer",
   "pme.file.abandonner": "Abandonner",
+  "pme.file.reprise.etat": "La photo n'a pas pu remplacer l'ancienne",
+  "pme.file.reprise.aide.titre": "Pourquoi la reprise n'a pas abouti",
+  "pme.file.reprise.pourquoi.remplacee":
+    "L'ancienne photo a déjà été remplacée entre-temps — depuis un autre appareil, ou par une autre personne.",
+  "pme.file.reprise.pourquoi.inscrite":
+    "Le cabinet a inscrit la pièce entre-temps : elle ne se remplace plus.",
+  "pme.file.reprise.pourquoi.introuvable": "L'ancienne pièce a été retirée entre-temps.",
+  "pme.file.reprise.pourquoi.autre": "Cette photo ne peut pas remplacer l'ancienne pièce.",
+  "pme.file.reprise.libre": "Garder comme nouvelle pièce",
+  "pme.file.reprise.aide.libre":
+    "La photo part comme une pièce à part, au même endroit que l'ancienne. Rien n'est perdu.",
+  "pme.file.reprise.courante": "Remplacer la version actuelle",
+  "pme.file.reprise.aide.courante":
+    "La photo remplace la version actuelle de la pièce — celle qui a remplacé l'ancienne.",
   "pme.file.pleine": "Trop de photos en attente : envoyez d'abord ce qui attend.",
   "pme.file.pasUnPdf":
     "Ce fichier n'est pas un PDF : {noms}. Choisissez le PDF de la facture, ou prenez-la en photo.",
@@ -4268,6 +4283,7 @@ const en: Dict = {
     "This company has no active subscription: I file the documents, I do not read them yet.",
   "pme.refus.piece_deja_lue":
     "This document has already been read: reading it again costs nothing.",
+  "pme.refus.piece_remplacee": "A new photo replaced this one: that is the one that gets read.",
   "pme.refus.autre": "I did not read this document, and the reason is unknown to me.",
   "pme.refus.le": "Refused on {date}",
   "pme.doc.titre": "Your documents",
@@ -5997,9 +6013,9 @@ const en: Dict = {
   "notif.kind.piece.gardee": "Document kept in the company",
   "notif.kind.piece.supprimee": "Document deleted",
   "notif.kind.piece.archivee": "Document withdrawn from your documents",
-  "pme.piece.versionPrecedente": "Previous version",
-  "pme.piece.remplacee": "A new photo replaced this one.",
-  "pme.piece.remplacee.voir": "See the new photo",
+  "piece.versionPrecedente.titre": "Previous version",
+  "piece.versionPrecedente.remplacee": "A new photo replaced this one.",
+  "piece.versionPrecedente.voir": "See the current photo",
   "pme.nav.coffre": "My space",
   "pme.nav.echeances": "Deadlines",
   "pme.nav.notifs": "Alerts",
@@ -6768,6 +6784,20 @@ const en: Dict = {
   "pme.file.etat.echec_definitif": "Refused — {raison}",
   "pme.file.reessayer": "Retry",
   "pme.file.abandonner": "Discard",
+  "pme.file.reprise.etat": "The photo could not replace the old one",
+  "pme.file.reprise.aide.titre": "Why the retake did not go through",
+  "pme.file.reprise.pourquoi.remplacee":
+    "The old photo was already replaced in the meantime — from another device, or by someone else.",
+  "pme.file.reprise.pourquoi.inscrite":
+    "The firm booked the document in the meantime: it can no longer be replaced.",
+  "pme.file.reprise.pourquoi.introuvable": "The old document was removed in the meantime.",
+  "pme.file.reprise.pourquoi.autre": "This photo cannot replace the old document.",
+  "pme.file.reprise.libre": "Keep as a new document",
+  "pme.file.reprise.aide.libre":
+    "The photo is sent as a separate document, to the same place as the old one. Nothing is lost.",
+  "pme.file.reprise.courante": "Replace the current version",
+  "pme.file.reprise.aide.courante":
+    "The photo replaces the document's current version — the one that replaced the old photo.",
   "pme.file.pleine": "Too many photos waiting: send what is waiting first.",
   "pme.file.pasUnPdf":
     "This file is not a PDF: {noms}. Choose the invoice PDF, or take a photo of it.",
@@ -7991,6 +8021,7 @@ const ar: Dict = {
   "pme.refus.organisation_sans_licence":
     "هذا الملف ليس له اشتراك نشط: أحفظ الوثائق ولا أقرؤها بعد.",
   "pme.refus.piece_deja_lue": "هذه الوثيقة قُرئت من قبل: إعادة قراءتها لا تكلّف شيئًا.",
+  "pme.refus.piece_remplacee": "حلّت صورة جديدة محلّ هذه: هي التي تُقرأ.",
   "pme.refus.autre": "لم أقرأ هذه الوثيقة، والسبب غير معروف لديّ.",
   "pme.refus.le": "رُفضت في {date}",
   "pme.doc.titre": "وثائقك",
@@ -9677,9 +9708,9 @@ const ar: Dict = {
   "notif.kind.piece.gardee": "احتُفظ بالوثيقة في الشركة",
   "notif.kind.piece.supprimee": "حُذفت الوثيقة",
   "notif.kind.piece.archivee": "سُحبت الوثيقة من وثائقك",
-  "pme.piece.versionPrecedente": "النسخة السابقة",
-  "pme.piece.remplacee": "حلّت صورة جديدة محلّ هذه.",
-  "pme.piece.remplacee.voir": "عرض الصورة الجديدة",
+  "piece.versionPrecedente.titre": "النسخة السابقة",
+  "piece.versionPrecedente.remplacee": "حلّت صورة جديدة محلّ هذه.",
+  "piece.versionPrecedente.voir": "عرض الصورة الحالية",
   "pme.nav.coffre": "مساحتي",
   "pme.nav.echeances": "الآجال",
   "pme.nav.notifs": "التنبيهات",
@@ -10424,6 +10455,19 @@ const ar: Dict = {
   "pme.file.etat.echec_definitif": "مرفوضة — {raison}",
   "pme.file.reessayer": "أعد المحاولة",
   "pme.file.abandonner": "تجاهل",
+  "pme.file.reprise.etat": "تعذّر أن تحلّ الصورة محلّ القديمة",
+  "pme.file.reprise.aide.titre": "لماذا لم تنجح إعادة التصوير",
+  "pme.file.reprise.pourquoi.remplacee":
+    "استُبدلت الصورة القديمة في الأثناء — من جهاز آخر أو من شخص آخر.",
+  "pme.file.reprise.pourquoi.inscrite": "سجّل المكتب الوثيقة في الأثناء: لم يعد استبدالها ممكنًا.",
+  "pme.file.reprise.pourquoi.introuvable": "سُحبت الوثيقة القديمة في الأثناء.",
+  "pme.file.reprise.pourquoi.autre": "لا يمكن لهذه الصورة أن تحلّ محلّ الوثيقة القديمة.",
+  "pme.file.reprise.libre": "الاحتفاظ بها كوثيقة جديدة",
+  "pme.file.reprise.aide.libre":
+    "تُرسل الصورة كوثيقة مستقلة، إلى المكان نفسه الذي كانت فيه القديمة. لا يضيع شيء.",
+  "pme.file.reprise.courante": "استبدال النسخة الحالية",
+  "pme.file.reprise.aide.courante":
+    "تحلّ الصورة محلّ النسخة الحالية من الوثيقة، تلك التي حلّت محلّ القديمة.",
   "pme.file.pleine": "صور كثيرة في الانتظار: أرسل ما ينتظر أولًا.",
   "pme.file.pasUnPdf": "هذا الملف ليس ملف PDF: {noms}. اختر ملف PDF للفاتورة، أو التقط لها صورة.",
   "pme.capture.preparation": "أُحضّر مستندك…",
