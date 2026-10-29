@@ -26,12 +26,18 @@ import { ecrireDossierCourant, useDossierCourant } from "@/components/malica/dos
 import { EmptyState, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { fichierDuJournal, jourLisible, jourVoisin } from "@/lib/journal-du-jour";
+import {
+  jourLisible,
+  jourVoisin,
+  nombreDeChangements,
+  partiesDeLEcart,
+} from "@/lib/journal-du-jour";
 import { montant } from "@/lib/lisible";
 import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
+  EcartDepuisLExport,
   EcritureAuJournal,
   FormatDuJournal,
   JournalExporte,
@@ -111,15 +117,26 @@ function CabinetJournal() {
       setFait(null);
     },
     onSuccess: async (r) => {
-      await enregistrerUnFichier(fichierDuJournal(r), r.nomDeFichier);
+      // Le numéro est pris et le fichier gardé : il se télécharge depuis le
+      // stockage — si la remise échoue, il reste dans la liste ci-dessous.
       setFait(r);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["cab-journal-du-jour", org.id] }),
         qc.invalidateQueries({ queryKey: ["cab-exports", org.id] }),
       ]);
+      remettre.mutate({ id: r.id, nomDeFichier: r.nomDeFichier });
     },
     onError: (e) =>
       setErreur(texteDeLErreur(e, "journal du jour : export", t("cab.export.erreur"))),
+  });
+
+  /** Un export gardé, remis au poste : juste produit, ou d'un numéro passé. */
+  const remettre = useMutation({
+    mutationFn: async ({ id, nomDeFichier }: { id: string; nomDeFichier: string }) =>
+      enregistrerUnFichier(await office().journalDuJour.fichier(id), nomDeFichier),
+    onMutate: () => setErreur(null),
+    onError: (e) =>
+      setErreur(texteDeLErreur(e, "journal du jour : téléchargement", t("cab.jdj.remise.erreur"))),
   });
 
   const aller = (suite: { client?: string; jour?: string }) => {
@@ -153,9 +170,13 @@ function CabinetJournal() {
   const lendemain = jour ? jourVoisin(jour, 1) : null;
   const vide = !donnees || donnees.totaux.ecritures === 0;
   const dernier = donnees?.dernierExport ?? null;
-  const changements = dernier
-    ? dernier.ecart.ajoutees + dernier.ecart.contrePassees + dernier.ecart.retirees
-    : 0;
+  const changements = dernier ? nombreDeChangements(dernier.ecart) : 0;
+  const detailDeLEcart = (ecart: EcartDepuisLExport, numero: number) =>
+    ecart.fuseauChange
+      ? t("cab.jdj.fuseauChange", { numero })
+      : partiesDeLEcart(ecart)
+          .map((p) => t(p.cle, { n: p.n }))
+          .join(" · ");
 
   const navigation =
     "inline-flex min-h-[48px] items-center gap-1 border border-border bg-card px-4 text-[13px] font-semibold hover:bg-accent disabled:opacity-40";
@@ -257,22 +278,24 @@ function CabinetJournal() {
               : t("cab.jdj.export.aucun")
           }
           detail={
-            dernier && changements > 0
-              ? t("cab.jdj.ecart", {
-                  ajoutees: dernier.ecart.ajoutees,
-                  contrePassees: dernier.ecart.contrePassees,
-                }) +
-                (dernier.ecart.retirees > 0
-                  ? ` · ${t("cab.jdj.ecart.retirees", { retirees: dernier.ecart.retirees })}`
-                  : "")
+            dernier && (changements > 0 || dernier.ecart.fuseauChange)
+              ? detailDeLEcart(dernier.ecart, dernier.numero)
               : null
           }
-          ton={dernier ? (changements > 0 ? "text-signal-warn" : "text-signal-ok") : undefined}
+          ton={
+            dernier
+              ? changements > 0 || dernier.ecart.fuseauChange
+                ? "text-signal-warn"
+                : "text-signal-ok"
+              : undefined
+          }
         >
           {dernier
             ? changements > 0
               ? t("cab.jdj.changements", { count: changements, n: changements })
-              : t("cab.jdj.aJour")
+              : dernier.ecart.fuseauChange
+                ? t("cab.jdj.fuseauChange.court")
+                : t("cab.jdj.aJour")
             : "—"}
         </Compteur>
       </div>
@@ -309,13 +332,49 @@ function CabinetJournal() {
         <p role="status" className="num text-[12.5px] text-signal-ok">
           {t("cab.jdj.fait", { numero: fait.numero, fichier: fait.nomDeFichier })}
           {fait.precedent !== null
-            ? ` · ${t("cab.jdj.depuis", {
-                count: fait.ecart.ajoutees + fait.ecart.contrePassees + fait.ecart.retirees,
-                n: fait.ecart.ajoutees + fait.ecart.contrePassees + fait.ecart.retirees,
-                precedent: fait.precedent,
-              })}`
+            ? ` · ${
+                fait.ecart.fuseauChange
+                  ? t("cab.jdj.fuseauChange", { numero: fait.precedent })
+                  : t("cab.jdj.depuis", {
+                      count: nombreDeChangements(fait.ecart),
+                      n: nombreDeChangements(fait.ecart),
+                      precedent: fait.precedent,
+                    })
+              }`
             : null}
         </p>
+      ) : null}
+
+      {/* ---- les exports de ce jour, gardés : chacun se télécharge à nouveau */}
+      {donnees && donnees.exports.length > 0 ? (
+        <section aria-label={t("cab.jdj.exports")} className="space-y-2">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {t("cab.jdj.exports")}
+          </h2>
+          <ul className="divide-y divide-border border border-border bg-card">
+            {[...donnees.exports].reverse().map((x) => (
+              <li
+                key={x.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
+              >
+                <span className="num text-[12.5px]">
+                  {t("cab.jdj.export", { numero: x.numero, heure: heure(x.createdAt) })} ·{" "}
+                  {x.format.toUpperCase()}
+                  {x.auteur ? ` · ${x.auteur}` : ""}
+                </span>
+                <button
+                  type="button"
+                  disabled={remettre.isPending}
+                  onClick={() => remettre.mutate({ id: x.id, nomDeFichier: x.nomDeFichier })}
+                  className="min-h-[48px] border border-foreground bg-card px-4 text-[12.5px] font-semibold hover:bg-accent disabled:opacity-40"
+                  aria-label={t("cab.jdj.telecharger.numero", { numero: x.numero })}
+                >
+                  {t("cab.jdj.telecharger")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {/* ---- les journaux */}

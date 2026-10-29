@@ -1,5 +1,6 @@
 import { creerAuthHttp } from "./adapters/http/auth";
 import { creerCaptureHttp } from "./adapters/http/capture";
+import { creerJournalDuJourHttp } from "./adapters/http/journal-du-jour";
 import { creerMalicaHttp } from "./adapters/http/malica";
 import { creerDepotHttp } from "./adapters/http/rpc";
 import type { AuthPort } from "@malica/socle/ports/auth";
@@ -132,7 +133,7 @@ export function office(): OfficeRuntime {
       honoraires: creerDepotHttp<HonorairesRepository>("honoraires"),
       integrations: creerDepotHttp<IntegrationsRepository>("integrations"),
       exports: creerDepotHttp<ExportsRepository>("exports"),
-      journalDuJour: creerDepotHttp<JournalDuJourRepository>("journalDuJour"),
+      journalDuJour: creerJournalDuJourHttp(),
       conversations: creerDepotHttp<ConversationsRepository>("conversations"),
       signalements: creerDepotHttp<SignalementsRepository>("signalements"),
       fabrique: creerDepotHttp<FabriqueRepository>("fabrique"),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fichierDuJournal, jourLisible, jourVoisin } from "../journal-du-jour";
+import { jourLisible, jourVoisin, nombreDeChangements, partiesDeLEcart } from "../journal-du-jour";
 
 describe("le journal du jour, côté écran", () => {
   it("recule et avance d'un jour, mois et années compris", () => {
@@ -15,15 +15,15 @@ describe("le journal du jour, côté écran", () => {
     expect(jourLisible(20261028)).toBeUndefined();
   });
 
-  it("rend les octets d'un classeur tels que l'API les a encodés", async () => {
-    const octets = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff]);
-    const blob = fichierDuJournal({
-      contenu: btoa(String.fromCharCode(...octets)),
-      encodage: "base64",
-      typeMime: "application/octet-stream",
-    });
-    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(octets);
-    const texte = fichierDuJournal({ contenu: "a;b", encodage: "utf8", typeMime: "text/csv" });
-    expect(await texte.text()).toBe("a;b");
+  it("ne dit que les parties non nulles d'un écart — « retirées » seul s'il est seul", () => {
+    const seul = { ajoutees: 0, contrePassees: 0, retirees: 1, fuseauChange: false };
+    expect(partiesDeLEcart(seul)).toEqual([{ cle: "cab.jdj.ecart.retirees", n: 1 }]);
+    expect(nombreDeChangements(seul)).toBe(1);
+    expect(
+      partiesDeLEcart({ ajoutees: 2, contrePassees: 1, retirees: 0, fuseauChange: false }),
+    ).toEqual([
+      { cle: "cab.jdj.ecart.ajoutees", n: 2 },
+      { cle: "cab.jdj.ecart.contrePassees", n: 1 },
+    ]);
   });
 });

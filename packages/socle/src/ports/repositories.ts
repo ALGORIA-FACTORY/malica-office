@@ -2369,6 +2369,21 @@ export interface EcartDepuisLExport {
   contrePassees: number;
   /** Une écriture sortie du journal depuis l'export : ne devrait pas arriver, et se dit si elle arrive. */
   retirees: number;
+  /**
+   * Le fuseau du cabinet a changé depuis l'export : le jour est recoupé, les
+   * écritures ne se comparent pas (les trois comptes valent alors zéro).
+   */
+  fuseauChange: boolean;
+}
+
+/** Un export numéroté du jour, gardé : il se télécharge à nouveau. */
+export interface ExportDuJour {
+  id: string;
+  numero: number;
+  format: FormatDuJournal;
+  createdAt: string;
+  auteur: string | null;
+  nomDeFichier: string;
 }
 
 export type FormatDuJournal = "csv" | "xlsx";
@@ -2396,16 +2411,16 @@ export interface JournalDuJour {
     soldes: SoldeDuJournal[];
   };
   dernierExport: DernierExportDuJournal | null;
+  /** Les exports numérotés de ce jour, du premier au dernier. */
+  exports: ExportDuJour[];
 }
 
-/** Le fichier du journal : texte (CSV) ou octets en base64 (Excel). */
+/** L'export produit et gardé : ses octets se lisent par `fichier(id)`. */
 export interface JournalExporte {
   id: string;
   numero: number;
   nomDeFichier: string;
   typeMime: string;
-  contenu: string;
-  encodage: "utf8" | "base64";
   taille: number;
   lignes: number;
   empreinte: string;
@@ -2435,6 +2450,8 @@ export interface JournalDuJourRepository {
     locale: string,
     format: FormatDuJournal,
   ): Promise<JournalExporte>;
+  /** Les octets d'un export gardé, sous les droits du cabinet. */
+  fichier(exportId: string): Promise<Blob>;
 }
 
 export interface ExportsRepository {

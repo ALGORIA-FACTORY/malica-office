@@ -16,7 +16,9 @@ import { after, before, describe, it } from "node:test";
 import { strFromU8, unzipSync } from "fflate";
 import pg from "pg";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import type { AddressInfo } from "node:net";
+
+import { creerCompte, emettreJeton, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { journalDuJour } from "./depots/journal-du-jour.ts";
@@ -25,6 +27,7 @@ import { parametrage } from "./depots/parametrage.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { lireUnExport } from "./stockage.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -82,6 +85,12 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
 
   const lire = (qui: Utilisateur, cab: string, client: string | null, j = jour) =>
     sousIdentite(qui.id, (db) => journalDuJour.lire(db, cab, client, j, "fr"));
+
+  /** Le fichier GARDÉ d'un export, relu sous l'identité donnée (la même RLS que la route). */
+  const fichier = (qui: Utilisateur, exportId: string) =>
+    sousIdentite(qui.id, (db) => lireUnExport(db, exportId));
+  const texteGarde = async (exportId: string) =>
+    Buffer.from((await fichier(expert, exportId))!.octets).toString("utf8");
 
   before(async () => {
     const d = await creerCompte(`dirigeant-${marque}@essai.local`, mdp);
@@ -242,14 +251,44 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
 
   it("refuse la PME, et un autre cabinet", async () => {
     await assert.rejects(lire(dirigeant, cabinet, pme), /introuvable ou non/);
-    await assert.rejects(lire(dirigeant, pme, pme));
+    await assert.rejects(lire(dirigeant, pme, pme), /introuvable ou non/);
     await assert.rejects(lire(autreExpert, autreCabinet, pme), /introuvable ou non/);
     await assert.rejects(lire(autreExpert, cabinet, pme), /introuvable ou non/);
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) =>
         journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
       ),
+      /introuvable ou non/,
     );
+  });
+
+  it("les lectures internes du journal ne s'appellent pas d'un autre dossier", async () => {
+    // Revue de #129 : deux fonctions `security definer` sans garde rendaient la
+    // prise en charge et le fuseau de n'importe quel cabinet.
+    await assert.rejects(
+      sousIdentite(autreExpert.id, (db) =>
+        db.query(`select * from app.ecriture_prise_en_charge($1, $2)`, [cabinet, ids["validee"]]),
+      ),
+      /permission denied|permission refusée/,
+    );
+    await assert.rejects(
+      sousIdentite(autreExpert.id, (db) => db.query(`select app.fuseau_du_cabinet($1)`, [cabinet])),
+      /permission denied|permission refusée/,
+    );
+  });
+
+  it("refuse d'exporter un jour à venir : un jour futur ne prend pas de numéro", async () => {
+    await assert.rejects(
+      sousIdentite(expert.id, (db) =>
+        journalDuJour.exporter(db, cabinet, pme, "2099-01-01", "fr", "csv"),
+      ),
+      /à venir/,
+    );
+    const { rows } = await admin.query(
+      `select 1 from collab.exports where tenant_id = $1 and du = '2099-01-01'`,
+      [cabinet],
+    );
+    assert.equal(rows.length, 0);
   });
 
   it("numérote chaque export, garde son empreinte, et dit ce qui a changé depuis", async () => {
@@ -258,18 +297,22 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(premier.numero, 1);
     assert.equal(premier.precedent, null);
-    assert.equal(premier.encodage, "utf8");
-    assert.ok(premier.contenu.startsWith("﻿dossier;journal;journal_libelle;ecriture;"));
-    assert.ok(premier.contenu.includes(`;${GRAND};0.000;TND;validee;`));
+    // Le fichier est GARDÉ (revue de #129) : il se relit, à l'octet près.
+    const garde1 = await fichier(expert, premier.id);
+    assert.ok(garde1, "le fichier numéroté se télécharge à nouveau");
+    assert.equal(garde1.nomDeFichier, premier.nomDeFichier);
+    const contenu = Buffer.from(garde1.octets).toString("utf8");
+    assert.ok(contenu.startsWith("﻿dossier;journal;journal_libelle;ecriture;"));
+    assert.ok(contenu.includes(`;${GRAND};0.000;TND;validee;`));
     // Le contrôle débit = crédit est DANS le fichier : le total du journal et le général.
-    const totaux = premier.contenu.split("\r\n").filter((l) => l.includes(";total;"));
+    const totaux = contenu.split("\r\n").filter((l) => l.includes(";total;"));
     assert.equal(totaux.length, 2);
     for (const t of totaux) assert.ok(t.endsWith(";TND;equilibre;;"), t);
     assert.equal(premier.lignes, 10, "les lignes d'écriture, sans les totaux");
-    assert.equal(
-      premier.empreinte,
-      createHash("sha256").update(premier.contenu, "utf8").digest("hex"),
-    );
+    assert.equal(premier.empreinte, createHash("sha256").update(garde1.octets).digest("hex"));
+    // La PME et un autre cabinet ne le lisent pas.
+    assert.equal(await fichier(dirigeant, premier.id), null);
+    assert.equal(await fichier(autreExpert, premier.id), null);
     const { rows: garde } = await admin.query<{ numero: number; empreinte: string; n: number }>(
       `select numero, empreinte, cardinality(ecritures) as n from collab.exports where id = $1`,
       [premier.id],
@@ -290,18 +333,32 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     const apres = await lire(expert, cabinet, pme);
     assert.equal(apres.dernierExport?.numero, 1);
     assert.equal(apres.dernierExport?.format, "csv");
-    assert.deepEqual(apres.dernierExport?.ecart, { ajoutees: 2, contrePassees: 1, retirees: 0 });
+    assert.deepEqual(apres.dernierExport?.ecart, {
+      ajoutees: 2,
+      contrePassees: 1,
+      retirees: 0,
+      fuseauChange: false,
+    });
+    assert.deepEqual(
+      apres.exports.map((x) => [x.numero, x.id]),
+      [[1, premier.id]],
+      "les exports du jour, chacun retéléchargeable",
+    );
 
     const second = await sousIdentite(expert.id, (db) =>
       journalDuJour.exporter(db, cabinet, pme, jour, "fr", "xlsx"),
     );
     assert.equal(second.numero, 2);
     assert.equal(second.precedent, 1);
-    assert.deepEqual(second.ecart, { ajoutees: 2, contrePassees: 1, retirees: 0 });
-    assert.equal(second.encodage, "base64");
-    const octets = Buffer.from(second.contenu, "base64");
+    assert.deepEqual(second.ecart, {
+      ajoutees: 2,
+      contrePassees: 1,
+      retirees: 0,
+      fuseauChange: false,
+    });
+    const octets = (await fichier(expert, second.id))!.octets;
     assert.equal(second.empreinte, createHash("sha256").update(octets).digest("hex"));
-    const feuille = strFromU8(unzipSync(new Uint8Array(octets))["xl/worksheets/sheet1.xml"]!);
+    const feuille = strFromU8(unzipSync(octets)["xl/worksheets/sheet1.xml"]!);
     assert.ok(feuille.includes(`<v>${GRAND}</v>`), "le montant entre tel quel, sans flottant");
     assert.ok(feuille.includes(">contre_passee<"), "l'écriture contre-passée depuis le n° 1");
     assert.ok(feuille.includes(">ajoutee<"), "les écritures nouvelles depuis le n° 1");
@@ -312,6 +369,32 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(veille.numero, 1);
     assert.equal(veille.lignes, 0);
+  });
+
+  it("sert un export gardé par sa route, au cabinet seul, sous son nom", async () => {
+    const exporte = await sousIdentite(expert.id, (db) =>
+      journalDuJour.exporter(db, cabinet, pme, jour, "fr", "xlsx"),
+    );
+    const { app } = await import("./app.ts");
+    const serveur = app.listen(0);
+    await new Promise((resoudre) => serveur.once("listening", resoudre));
+    const base = `http://127.0.0.1:${(serveur.address() as AddressInfo).port}`;
+    try {
+      const telecharger = (qui: Utilisateur) =>
+        fetch(`${base}/exports/${exporte.id}/contenu`, {
+          headers: { Authorization: `Bearer ${emettreJeton(qui)}` },
+        });
+      const r = await telecharger(expert);
+      assert.equal(r.status, 200);
+      assert.equal(r.headers.get("content-type"), exporte.typeMime);
+      assert.ok(r.headers.get("content-disposition")?.includes(exporte.nomDeFichier));
+      const octets = new Uint8Array(await r.arrayBuffer());
+      assert.equal(createHash("sha256").update(octets).digest("hex"), exporte.empreinte);
+      assert.equal((await telecharger(dirigeant)).status, 404);
+      assert.equal((await telecharger(autreExpert)).status, 404);
+    } finally {
+      await new Promise<void>((resoudre) => serveur.close(() => resoudre()));
+    }
   });
 
   it("garde les exports au seul cabinet : la PME n'en lit aucun", async () => {
@@ -327,7 +410,8 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       sousIdentite(expert.id, (db) =>
         db.query(
           `select public.journal_export_journaliser($1, $2, $3::date, 'journal_csv', 1, 0, 0,
-                    repeat('0', 64), $4, '{}'::uuid[], '{}'::uuid[], '{}'::jsonb)`,
+                    repeat('0', 64), $4, '{}'::uuid[], '{}'::uuid[], '{}'::jsonb,
+                    public.cabinet_fuseau_lire($1) ->> 'fuseau', 'essai.csv', 'text/csv')`,
           [cabinet, pme, jour, pack],
         ),
       ),
@@ -453,7 +537,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       journalDuJour.exporter(db, cabinet, pme, "2026-03-14", "fr", "csv"),
     );
     assert.equal(exporte.numero, 1);
-    assert.ok(exporte.contenu.includes(id));
+    assert.ok((await texteGarde(exporte.id)).includes(id));
 
     // Un fuseau inventé est refusé ; seul l'expert le règle ; nul, le défaut revient.
     await assert.rejects(
@@ -574,5 +658,128 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     const apres = await entrees();
     assert.equal(apres.length, avant);
     assert.ok(!apres.some((e) => e.pieceId === ancienne || e.pieceId === courante));
+  });
+
+  /* ============ revue de #129 : un jour passé ne change jamais après coup */
+
+  it("un collaborateur parti : ses écritures et leurs contre-passations restent, son nom aussi", async () => {
+    const parti = await creerCompte(`parti-${marque}@essai.local`, mdp);
+    assert.ok(parti);
+    await admin.query(
+      `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'expert')`,
+      [cabinet, parti.id],
+    );
+    const sienne = await inscrire(parti, await piece("parti"), "Facture P", lignes("601", "6.000"));
+    await sousIdentite(parti.id, (db) =>
+      supervision.review(db, {
+        ecritureId: sienne,
+        outcome: "retourne",
+        motifId: motif,
+        note: "x",
+      }),
+    );
+    const avant = (await entrees()).filter((e) => e.id === sienne || e.contrePasse === sienne);
+    assert.equal(avant.length, 2);
+    assert.ok(avant.every((e) => e.par === `parti-${marque}@essai.local`));
+
+    await admin.query(`delete from identity.memberships where tenant_id = $1 and user_id = $2`, [
+      cabinet,
+      parti.id,
+    ]);
+    const apres = (await entrees()).filter((e) => e.id === sienne || e.contrePasse === sienne);
+    assert.deepEqual(apres, avant, "le jour passé est inchangé");
+  });
+
+  it("une contre-passation avant toute prise en charge reste hors du jour, même prise en charge le lendemain", async () => {
+    // Repro de la revue de #129 : retour le jour D d'une écriture de la société,
+    // validation le jour D+1 — la contre-passation entrait alors au jour D.
+    const e = await inscrire(
+      dirigeant,
+      await piece("d-puis-d1"),
+      "Facture D1",
+      lignes("601", "8.000"),
+    );
+    await sousIdentite(expert.id, (db) =>
+      supervision.review(db, { ecritureId: e, outcome: "retourne", motifId: motif, note: "x" }),
+    );
+    const rev = (
+      await admin.query<{ id: string }>(`select id from socle.ecritures where reverses_id = $1`, [
+        e,
+      ])
+    ).rows[0]!.id;
+    // Le retour recule d'un jour (le jour D), faits gelés compris. Les gardes
+    // R7 se lèvent pour CETTE session seulement (`session_replication_role`) :
+    // un `alter table … disable trigger` verrouillerait la table de toutes les
+    // épreuves qui tournent en parallèle.
+    const session = await admin.connect();
+    try {
+      await session.query(`set session_replication_role = replica`);
+      await session.query(
+        `update socle.ecritures set booked_at = booked_at - interval '1 day',
+                created_at = created_at - interval '1 day' where id = $1`,
+        [rev],
+      );
+      await session.query(
+        `update socle.prises_en_charge set prise_le = prise_le - interval '1 day'
+          where ecriture_id = $1`,
+        [rev],
+      );
+    } finally {
+      await session.query(`reset session_replication_role`);
+      session.release();
+    }
+    const veille = (
+      await admin.query<{ d: string }>(
+        `select (booked_at at time zone app.fuseau_du_cabinet($1))::date::text as d
+           from socle.ecritures where id = $2`,
+        [cabinet, rev],
+      )
+    ).rows[0]!.d;
+    const idsDuJour = async () =>
+      (await lire(expert, cabinet, pme, veille)).journaux
+        .flatMap((x) => x.ecritures)
+        .map((x) => x.id);
+    const avant = await idsDuJour();
+    // Le jour D+1, l'écriture annulée est prise en charge. Depuis le lot 1, la
+    // supervision refuse une écriture déjà contre-passée : le fait est posé tel
+    // qu'il serait gelé, pour éprouver la règle elle-même.
+    await admin.query(
+      `insert into socle.prises_en_charge (tenant_id, ecriture_id, client_tenant_id, par, par_nom, prise_le)
+       values ($1, $2, $3, $4, 'essai', now())`,
+      [cabinet, e, pme, expert.id],
+    );
+    assert.deepEqual(await idsDuJour(), avant, "le jour D ne change pas après coup");
+    assert.ok(!avant.includes(rev));
+  });
+
+  it("un fuseau changé ne fabrique pas d'écart : l'export suivant le dit", async () => {
+    const premier = await sousIdentite(expert.id, (db) =>
+      journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
+    );
+    await sousIdentite(expert.id, (db) =>
+      parametrage.definirFuseauDuCabinet(db, cabinet, "Pacific/Kiritimati"),
+    );
+    try {
+      const lu = await lire(expert, cabinet, pme, jour);
+      assert.equal(lu.dernierExport?.numero, premier.numero);
+      assert.deepEqual(lu.dernierExport?.ecart, {
+        ajoutees: 0,
+        contrePassees: 0,
+        retirees: 0,
+        fuseauChange: true,
+      });
+      const suivant = await sousIdentite(expert.id, (db) =>
+        journalDuJour.exporter(db, cabinet, pme, jour, "fr", "csv"),
+      );
+      assert.equal(suivant.ecart.fuseauChange, true);
+      assert.ok(!(await texteGarde(suivant.id)).includes(";ajoutee"), "aucun faux « ajoutée »");
+      const { rows } = await admin.query<{ fuseau: string }>(
+        `select fuseau from collab.exports where id = $1`,
+        [suivant.id],
+      );
+      assert.equal(rows[0]?.fuseau, "Pacific/Kiritimati", "chaque export garde son fuseau");
+    } finally {
+      await sousIdentite(expert.id, (db) => parametrage.definirFuseauDuCabinet(db, cabinet, null));
+    }
   });
 });

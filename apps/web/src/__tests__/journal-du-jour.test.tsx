@@ -98,8 +98,26 @@ const JOURNAL: JournalDuJour = {
     format: "csv",
     createdAt: "2026-10-28T10:40:00.000Z",
     auteur: null,
-    ecart: { ajoutees: 1, contrePassees: 1, retirees: 0 },
+    ecart: { ajoutees: 1, contrePassees: 1, retirees: 0, fuseauChange: false },
   },
+  exports: [
+    {
+      id: "export-1",
+      numero: 1,
+      format: "xlsx",
+      createdAt: "2026-10-28T09:00:00.000Z",
+      auteur: null,
+      nomDeFichier: "journal-essai-20261028-n1.xlsx",
+    },
+    {
+      id: "export-2",
+      numero: 2,
+      format: "csv",
+      createdAt: "2026-10-28T10:40:00.000Z",
+      auteur: null,
+      nomDeFichier: "journal-essai-20261028-n2.csv",
+    },
+  ],
 };
 const VIDE: JournalDuJour = {
   jour: "2026-10-28",
@@ -108,23 +126,25 @@ const VIDE: JournalDuJour = {
   journaux: [],
   totaux: { ecritures: 0, validees: 0, forcees: 0, contrePassations: 0, soldes: [] },
   dernierExport: null,
+  exports: [],
 };
 const EXPORTE: JournalExporte = {
   id: "x",
   numero: 3,
   nomDeFichier: "journal-essai-20261028-n3.xlsx",
   typeMime: "application/octet-stream",
-  contenu: btoa("PK"),
-  encodage: "base64",
   taille: 2,
   lignes: 6,
   empreinte: "0".repeat(64),
   precedent: 2,
-  ecart: { ajoutees: 1, contrePassees: 1, retirees: 0 },
+  ecart: { ajoutees: 1, contrePassees: 1, retirees: 0, fuseauChange: false },
 };
+/** Les octets GARDÉS d'un export : c'est eux que l'écran remet. */
+const GARDE = new Blob(["PK"]);
 
 const lire = vi.fn(async () => JOURNAL);
 const exporter = vi.fn(async () => EXPORTE);
+const fichier = vi.fn(async () => GARDE);
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
     supervision: {
@@ -132,7 +152,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         { tenantId: "client", name: "Client d'essai", engagementStatus: "actif" },
       ],
     },
-    journalDuJour: { lire, exporter },
+    journalDuJour: { lire, exporter, fichier },
   }),
 }));
 
@@ -173,7 +193,8 @@ describe("le journal du jour", () => {
   it("dit le dernier export et ce qui a changé depuis", async () => {
     monter();
     expect(await screen.findByText(/^cab\.jdj\.changements .*"n":2/)).toBeTruthy();
-    expect(screen.getByText(/^cab\.jdj\.export .*"numero":2/)).toBeTruthy();
+    // Le compteur, et la ligne de l’export dans la liste des exports du jour.
+    expect(screen.getAllByText(/^cab\.jdj\.export .*"numero":2/)).toHaveLength(2);
   });
 
   it("exporte en Excel d'abord : deux boutons côte à côte, le fichier remis, le numéro dit", async () => {
@@ -188,7 +209,9 @@ describe("le journal du jour", () => {
     fireEvent.click(excel);
     await waitFor(() => expect(enregistrer).toHaveBeenCalled());
     expect(exporter).toHaveBeenCalledWith("cabinet", "client", "2026-10-28", "fr", "xlsx");
-    expect(enregistrer.mock.calls[0]).toEqual([expect.any(Blob), EXPORTE.nomDeFichier]);
+    // Le fichier remis est celui que le serveur a GARDÉ, relu par son numéro.
+    expect(fichier).toHaveBeenCalledWith(EXPORTE.id);
+    expect(enregistrer.mock.calls[0]).toEqual([GARDE, EXPORTE.nomDeFichier]);
     expect(await screen.findByRole("status")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain('"numero":3');
   });
@@ -229,5 +252,42 @@ describe("le journal du jour", () => {
     await waitFor(() =>
       expect(exporter).toHaveBeenCalledWith("cabinet", "client", "2026-10-29", "fr", "csv"),
     );
+  });
+
+  it("chaque export passé du jour se télécharge à nouveau, depuis le fichier gardé", async () => {
+    monter();
+    const liste = await screen.findByRole("region", { name: "cab.jdj.exports" });
+    fireEvent.click(
+      within(liste).getByRole("button", { name: 'cab.jdj.telecharger.numero {"numero":1}' }),
+    );
+    await waitFor(() => expect(fichier).toHaveBeenCalledWith("export-1"));
+    await waitFor(() =>
+      expect(enregistrer).toHaveBeenCalledWith(GARDE, "journal-essai-20261028-n1.xlsx"),
+    );
+    expect(exporter).not.toHaveBeenCalled();
+  });
+
+  it("ne dit que les parties non nulles de l'écart, et un fuseau changé", async () => {
+    lire.mockResolvedValue({
+      ...JOURNAL,
+      dernierExport: {
+        ...JOURNAL.dernierExport!,
+        ecart: { ajoutees: 0, contrePassees: 0, retirees: 1, fuseauChange: false },
+      },
+    });
+    monter();
+    expect(await screen.findByText('cab.jdj.ecart.retirees {"n":1}')).toBeTruthy();
+    expect(screen.queryByText(/cab\.jdj\.ecart\.ajoutees/)).toBeNull();
+
+    cleanup();
+    lire.mockResolvedValue({
+      ...JOURNAL,
+      dernierExport: {
+        ...JOURNAL.dernierExport!,
+        ecart: { ajoutees: 0, contrePassees: 0, retirees: 0, fuseauChange: true },
+      },
+    });
+    monter();
+    expect(await screen.findByText('cab.jdj.fuseauChange {"numero":2}')).toBeTruthy();
   });
 });

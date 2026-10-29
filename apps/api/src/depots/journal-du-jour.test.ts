@@ -113,16 +113,38 @@ describe("le fichier porte ses totaux et son contrôle", () => {
 
 describe("ce qui a changé depuis l'export précédent", () => {
   it("compte les écritures ajoutées, contre-passées depuis, et retirées", () => {
+    const z = "Zone/Essai";
     assert.deepEqual(
       ecartEntre(
-        { ecritures: ["a", "b", "c"], contrePassees: ["c"] },
-        { ecritures: ["a", "b", "c", "d", "e"], contrePassees: ["b", "c"] },
+        { ecritures: ["a", "b", "c"], contrePassees: ["c"], fuseau: z },
+        { ecritures: ["a", "b", "c", "d", "e"], contrePassees: ["b", "c"], fuseau: z },
       ),
-      { ajoutees: 2, contrePassees: 1, retirees: 0 },
+      { ajoutees: 2, contrePassees: 1, retirees: 0, fuseauChange: false },
     );
     assert.deepEqual(
-      ecartEntre({ ecritures: ["a"], contrePassees: [] }, { ecritures: [], contrePassees: [] }),
-      { ajoutees: 0, contrePassees: 0, retirees: 1 },
+      ecartEntre(
+        { ecritures: ["a"], contrePassees: [], fuseau: z },
+        { ecritures: [], contrePassees: [], fuseau: z },
+      ),
+      { ajoutees: 0, contrePassees: 0, retirees: 1, fuseauChange: false },
+    );
+  });
+
+  it("un fuseau changé ne fabrique ni ajout ni retrait : il se dit", () => {
+    assert.deepEqual(
+      ecartEntre(
+        { ecritures: ["a"], contrePassees: [], fuseau: "Zone/Une" },
+        { ecritures: ["b"], contrePassees: [], fuseau: "Zone/Deux" },
+      ),
+      { ajoutees: 0, contrePassees: 0, retirees: 0, fuseauChange: true },
+    );
+    // Un export d'avant qu'on garde son fuseau se compare comme avant.
+    assert.equal(
+      ecartEntre(
+        { ecritures: ["a"], contrePassees: [], fuseau: null },
+        { ecritures: ["b"], contrePassees: [], fuseau: "Zone/Deux" },
+      ).fuseauChange,
+      false,
     );
   });
 });

@@ -51,7 +51,15 @@ import {
   type FormatDuJournalExporte,
 } from "./exports.ts";
 
-/** Les colonnes du fichier, les mêmes en CSV et en Excel. */
+/**
+ * Les colonnes du fichier, les mêmes en CSV et en Excel.
+ *
+ * Décision (revue de #129) : les en-têtes et les valeurs codées (`validee`,
+ * `forcee`, `equilibre`, `ajoutee`…) restent des codes français STABLES, dans
+ * toutes les langues de l'écran. Le fichier est fait pour être importé : un
+ * logiciel lit un code, pas une traduction, et un même export ne doit pas
+ * changer de colonnes selon la langue de celui qui l'a produit.
+ */
 const COLONNES_JOURNAL_DU_JOUR = [
   "dossier",
   "journal",
@@ -83,17 +91,34 @@ function exposantDe(exposants: Exposants, devise: string): number {
   return n;
 }
 
-/** Ce qu'un export a figé : ses écritures, et celles qui y étaient déjà contre-passées. */
+/**
+ * Ce qu'un export a figé : ses écritures, celles qui y étaient déjà
+ * contre-passées, et le fuseau dans lequel le jour a été coupé (nul pour un
+ * export d'avant qu'on le garde).
+ */
 export interface InstantaneDuJournal {
   ecritures: readonly string[];
   contrePassees: readonly string[];
+  fuseau: string | null;
 }
 
-/** Ce qui a changé entre deux instantanés du même journal. */
+/** Les deux instantanés ne coupent pas le même jour : le fuseau du cabinet a changé. */
+function fuseauChange(precedent: InstantaneDuJournal, courant: InstantaneDuJournal): boolean {
+  return precedent.fuseau !== null && precedent.fuseau !== courant.fuseau;
+}
+
+/**
+ * Ce qui a changé entre deux instantanés du même journal. Un fuseau changé
+ * recoupe le jour : comparer les écritures fabriquerait des ajouts et des
+ * retraits qui n'en sont pas — on le dit, et on ne compte rien.
+ */
 export function ecartEntre(
   precedent: InstantaneDuJournal,
   courant: InstantaneDuJournal,
 ): EcartDepuisLExport {
+  if (fuseauChange(precedent, courant)) {
+    return { ajoutees: 0, contrePassees: 0, retirees: 0, fuseauChange: true };
+  }
   const avant = new Set(precedent.ecritures);
   const maintenant = new Set(courant.ecritures);
   const dejaContrePassees = new Set(precedent.contrePassees);
@@ -102,6 +127,7 @@ export function ecartEntre(
     contrePassees: courant.contrePassees.filter((id) => avant.has(id) && !dejaContrePassees.has(id))
       .length,
     retirees: precedent.ecritures.filter((id) => !maintenant.has(id)).length,
+    fuseauChange: false,
   };
 }
 
@@ -122,11 +148,12 @@ function toutesLesEcritures(journaux: readonly JournalAuJour[]): EcritureAuJourn
 }
 
 /** L'instantané du journal tel qu'il est. */
-function instantaneDe(journaux: readonly JournalAuJour[]): InstantaneDuJournal {
+function instantaneDe(journaux: readonly JournalAuJour[], fuseau: string): InstantaneDuJournal {
   const ecritures = toutesLesEcritures(journaux);
   return {
     ecritures: ecritures.map((e) => e.id),
     contrePassees: ecritures.filter((e) => e.contrePasseeLe).map((e) => e.id),
+    fuseau,
   };
 }
 
@@ -303,43 +330,49 @@ function texteDe(c: Cellule): string {
   return "montant" in c ? c.montant : c.texte;
 }
 
-interface DernierExportLu extends InstantaneDuJournal {
+interface ExportLu extends InstantaneDuJournal {
+  id: string;
   numero: number;
   format: FormatDuJournalExporte;
   createdAt: string;
   auteur: string | null;
+  nomDeFichier: string | null;
 }
 
-/** Le dernier export du journal de ce jour, pour ce périmètre. Sous RLS : le cabinet seul le lit. */
-async function dernierExport(
+/**
+ * Les exports du journal de ce jour, pour ce périmètre, du premier au dernier.
+ * Sous RLS : le cabinet seul les lit.
+ */
+async function exportsDuJour(
   db: Requete,
   cabinetTenantId: string,
   clientTenantId: string | null,
   jour: string,
-): Promise<DernierExportLu | null> {
+): Promise<ExportLu[]> {
   const { rows } = await db.query(
-    `select x.numero, x.format, x.created_at, x.ecritures::text[] as ecritures,
-            x.contre_passees::text[] as contre_passees, m.email as auteur
+    `select x.id, x.numero, x.format, x.created_at, x.ecritures::text[] as ecritures,
+            x.contre_passees::text[] as contre_passees, x.fuseau, x.nom_de_fichier,
+            m.email as auteur
        from exports_v x
        left join cabinet_members_v m on m.user_id = x.created_by and m.tenant_id = x.tenant_id
       where x.tenant_id = $1
         and x.client_tenant_id is not distinct from $2::uuid
         and x.du = $3::date
         and x.numero is not null
-      order by x.numero desc
-      limit 1`,
+      order by x.numero`,
     [cabinetTenantId, clientTenantId, jour],
   );
-  const r = (rows as Record<string, unknown>[])[0];
-  if (!r) return null;
-  return {
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    id: r["id"] as string,
     numero: Number(r["numero"]),
     format: r["format"] as FormatDuJournalExporte,
     createdAt: new Date(r["created_at"] as string).toISOString(),
     auteur: (r["auteur"] as string | null) ?? null,
+    nomDeFichier: (r["nom_de_fichier"] as string | null) ?? null,
     ecritures: (r["ecritures"] as string[]) ?? [],
     contrePassees: (r["contre_passees"] as string[]) ?? [],
-  };
+    fuseau: (r["fuseau"] as string | null) ?? null,
+  }));
 }
 
 /** Le fuseau du cabinet et son « aujourd'hui », tels que la base les résout. */
@@ -431,7 +464,8 @@ export const journalDuJour = {
     );
     const ecritures = toutesLesEcritures(journaux);
     const compte = (o: OrigineAuJournal) => ecritures.filter((e) => e.origine === o).length;
-    const dernier = await dernierExport(db, cabinetTenantId, clientTenantId, jour);
+    const exports = await exportsDuJour(db, cabinetTenantId, clientTenantId, jour);
+    const dernier = exports.at(-1);
     return {
       jour,
       aujourdhui,
@@ -450,20 +484,34 @@ export const journalDuJour = {
             format: FORMAT_LU[dernier.format],
             createdAt: dernier.createdAt,
             auteur: dernier.auteur,
-            ecart: ecartEntre(dernier, instantaneDe(journaux)),
+            ecart: ecartEntre(dernier, instantaneDe(journaux, fuseau)),
           }
         : null,
+      // Chaque export numéroté du jour, à retélécharger : ceux d'avant qu'on
+      // garde les fichiers (sans nom de fichier) n'en ont pas.
+      exports: exports
+        .filter((x) => x.nomDeFichier !== null)
+        .map((x) => ({
+          id: x.id,
+          numero: x.numero,
+          format: FORMAT_LU[x.format],
+          createdAt: x.createdAt,
+          auteur: x.auteur,
+          nomDeFichier: x.nomDeFichier!,
+        })),
     };
   },
 
   /**
-   * Produit le fichier, le numérote, le journalise, et rend son contenu.
+   * Produit le fichier, le numérote, le journalise et le GARDE ; rend de quoi
+   * le télécharger (`/exports/:id/contenu`), maintenant ou plus tard.
    *
    * Le numéro est dans le fichier, l'empreinte porte le fichier : il faut
    * donc connaître le numéro AVANT d'écrire. Un verrou de transaction, propre
    * au cabinet, au dossier et au jour, sérialise deux exports simultanés ; la
    * base vérifie encore que le numéro suit le dernier, et l'index unique
-   * tranche en dernier recours.
+   * tranche en dernier recours. Le fichier s'écrit dans la même transaction :
+   * s'il ne s'écrit pas, rien n'est numéroté.
    */
   async exporter(
     db: Requete,
@@ -476,12 +524,17 @@ export const journalDuJour = {
     if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
     verifierLeJour(jour);
     const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
-    const { fuseau } = await calendrierDuCabinet(db, cabinetTenantId);
+    const { fuseau, aujourdhui } = await calendrierDuCabinet(db, cabinetTenantId);
+    // Un jour à venir n'a pas de journal : il ne prend pas de numéro.
+    if (jour > aujourdhui) {
+      throw new RefusExport("ce jour est à venir : il n'a pas encore de journal à exporter");
+    }
 
     await db.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [
       `journal-du-jour:${cabinetTenantId}:${clientTenantId ?? "*"}:${jour}`,
     ]);
-    const precedent = await dernierExport(db, cabinetTenantId, clientTenantId, jour);
+    const precedent =
+      (await exportsDuJour(db, cabinetTenantId, clientTenantId, jour)).at(-1) ?? null;
     const { journaux, exposants } = await lireLeJournal(
       db,
       cabinetTenantId,
@@ -490,11 +543,16 @@ export const journalDuJour = {
       locale,
     );
     const numero = (precedent?.numero ?? 0) + 1;
-    const instantane = instantaneDe(journaux);
+    const instantane = instantaneDe(journaux, fuseau);
     const ecart = precedent
       ? ecartEntre(precedent, instantane)
-      : { ajoutees: 0, contrePassees: 0, retirees: 0 };
-    const fichier = contenuDuFichier(journaux, precedent, exposants);
+      : { ajoutees: 0, contrePassees: 0, retirees: 0, fuseauChange: false };
+    // Un fuseau changé recoupe le jour : aucune ligne ne se dit « ajoutée ».
+    const fichier = contenuDuFichier(
+      journaux,
+      precedent && !ecart.fuseauChange ? precedent : null,
+      exposants,
+    );
     const nom = `journal-${ctx.nomDuPerimetre}-${dateFec(jour)}-n${numero}.${format}`;
 
     let octets: string | Uint8Array;
@@ -525,7 +583,8 @@ export const journalDuJour = {
     const sha = empreinte(octets);
     const { rows } = await db.query<{ id: string }>(
       `select public.journal_export_journaliser($1, $2, $3::date, $4, $5, $6, $7, $8, $9,
-                                                $10::uuid[], $11::uuid[], $12::jsonb) as id`,
+                                                $10::uuid[], $11::uuid[], $12::jsonb,
+                                                $13, $14, $15) as id`,
       [
         cabinetTenantId,
         clientTenantId,
@@ -538,18 +597,24 @@ export const journalDuJour = {
         ctx.packId,
         instantane.ecritures,
         instantane.contrePassees,
-        JSON.stringify({ precedent: precedent?.numero ?? null, ...ecart, fuseau }),
+        JSON.stringify({ precedent: precedent?.numero ?? null, ...ecart }),
+        fuseau,
+        nom,
+        typeMime,
       ],
     );
     const id = rows[0]?.id;
     if (!id) throw new Error("journal_du_jour.non_journalise");
+    // Import à l'appel : `stockage.ts` sert aussi les routes (sous l'appelant,
+    // via `cles-api.ts` → `rpc.ts`), qui importent ce dépôt — un import en tête
+    // fermerait le cycle avant que ce module soit initialisé.
+    const { garderUnExport } = await import("../stockage.ts");
+    await garderUnExport(cabinetTenantId, id, octets);
     return {
       id,
       numero,
       nomDeFichier: nom,
       typeMime,
-      contenu: typeof octets === "string" ? octets : Buffer.from(octets).toString("base64"),
-      encodage: typeof octets === "string" ? "utf8" : "base64",
       taille,
       lignes: fichier.lignes.length,
       empreinte: sha,

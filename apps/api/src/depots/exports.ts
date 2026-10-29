@@ -143,6 +143,8 @@ function champFec(v: string | null | undefined): string {
  * `=`, `+`, `-`, `@`, une tabulation ou un retour chariot s'exécute dans le
  * tableur qui ouvre le fichier. Une apostrophe en tête le garde texte. Un
  * nombre décimal écrit (`-12.500`) n'est pas une formule : il reste nombre.
+ * À réévaluer à la phase « logiciel et API » (spec §4) : un import machine
+ * lirait l'apostrophe comme une donnée.
  */
 function champCsv(v: string | null | undefined): string {
   const brut = v ?? "";
