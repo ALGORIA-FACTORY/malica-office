@@ -1,6 +1,12 @@
 /**
  * Propositions du Socle — la validation en masse, par client.
  *
+ * Depuis « Malica sans blocage » (lot 5), le client ne confirme plus rien :
+ * les pièces du lot sont celles que le cabinet a À TRAITER (reçues, vues,
+ * corrigées), et « Valider » prend en charge l'écriture que le Socle propose
+ * (`office.valider`). Forcer le lot passe par `office.forcer`, pièce par
+ * pièce : la vivante est contre-passée, la nouvelle marquée « forcée ».
+ *
  * ============================================================== POURQUOI
  *
  * L'écran du design : trois lots par confiance de lecture, puis un lot par
@@ -33,7 +39,7 @@
  * `fabrique.executions`, issue `designation`. Une abstention rend la main à la
  * chaîne, la pièce est lue par le modèle, et elle est mesurée comme avant.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -49,12 +55,16 @@ import {
   ecritureEnMasse,
   estChargeOuProduit,
   lotDe,
+  parPiece,
+  type EcritureDuLot,
   type Lot,
 } from "@/lib/propositions";
+import { ecritureDeDepart, type EcritureEnSaisie } from "@/lib/ecriture-du-cabinet";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { CompteDuPlan, Ecriture, QueueItem } from "@malica/socle/ports/repositories";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
 export const Route = createFileRoute("/_authenticated/cabinet/propositions")({
   head: () => ({
@@ -103,10 +113,6 @@ function CabinetPropositions() {
     queryKey: ["cab-assignments", org.id],
     queryFn: () => office().collab.assignments(org.id),
   });
-  const motifs = useQuery({
-    queryKey: ["cab-motifs", locale],
-    queryFn: () => office().supervision.motifs(locale),
-  });
   // La même clé que le rail du cabinet : une seule lecture du rôle.
   const acces = useQuery({
     queryKey: ["cab-acces", org.id],
@@ -119,7 +125,8 @@ function CabinetPropositions() {
   const rows = useMemo(
     () =>
       (queue.data ?? []).filter(
-        (r) => actifs.has(r.tenantId) && r.status === "comptabilisee" && r.ecritureId,
+        // À traiter, et lue : le Socle a de quoi proposer.
+        (r) => actifs.has(r.tenantId) && A_TRAITER.has(r.statut) && r.status !== "capturee",
       ),
     [queue.data, actifs],
   );
@@ -206,82 +213,85 @@ function CabinetPropositions() {
   }, [rows, clients.data, collabDe]);
 
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({});
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [fait, setFait] = useState<{ validees: number; forcees: number } | null>(null);
+  const [fait, setFait] = useState<{
+    validees: number;
+    forcees: number;
+    echecs: number;
+    raison: string | null;
+  } | null>(null);
 
-  /* ---- valider : chaque écriture, par la méthode de la revue */
+  /** La raison d'un échec, lisible : le refus métier tel que le serveur le dit. */
+  const raisonDe = (x: unknown) =>
+    texteDeLErreur(x, "routes/_authenticated/cabinet.propositions", t("common.error"));
+  const relireLaFile = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
+      qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
+      qc.invalidateQueries({ queryKey: ["cab-ecritures"] }),
+      qc.invalidateQueries({ queryKey: ["proposition"] }),
+    ]);
+
+  /*
+   * ---- valider : chaque pièce, par le geste de la pièce (`office.valider`),
+   * avec l'empreinte de la proposition que le lot affiche (relue du cache, ou
+   * lue à l'instant) : le serveur n'inscrit que celle-là.
+   */
   const valider = useMutation({
-    mutationFn: async (pieces: QueueItem[]) => {
-      let n = 0;
-      for (const p of pieces) {
-        if (!p.ecritureId) continue;
-        await office().supervision.review({ ecritureId: p.ecritureId, outcome: "valide" });
-        n += 1;
-      }
-      return n;
-    },
-    onSuccess: async (n) => {
-      setErreur(null);
-      setFait({ validees: n, forcees: 0 });
+    mutationFn: (pieces: QueueItem[]) =>
+      parPiece(pieces, raisonDe, async (p) => {
+        if (p.ecritureId) return office().office.valider(p.pieceId, null);
+        const proposition = await qc.fetchQuery({
+          queryKey: ["proposition", p.pieceId, "lot"],
+          queryFn: () => office().office.propositionDePiece(p.pieceId),
+        });
+        return office().office.valider(
+          p.pieceId,
+          proposition.ok ? (proposition.empreinte ?? null) : null,
+        );
+      }),
+    onMutate: () => setFait(null),
+    onSuccess: async ({ passees, echecs, raison }) => {
+      setFait({ validees: passees, forcees: 0, echecs, raison });
       setRetenues({});
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
-      ]);
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "routes/_authenticated/cabinet.propositions", t("common.error"))),
+    onSettled: relireLaFile,
   });
 
-  /* ---- forcer : contre-passer, réimputer, comptabiliser — pièce par pièce */
+  /* ---- forcer : la charge du lot sur un autre compte — pièce par pièce, `office.forcer` */
   const forcer = useMutation({
-    mutationFn: async (input: {
-      pieces: QueueItem[];
+    mutationFn: (input: {
+      lots: Array<{ pieceId: string; base: EcritureEnSaisie }>;
       compte: CompteDuPlan;
-      motifId: string;
-      note: string | null;
-    }) => {
-      let n = 0;
-      for (const p of input.pieces) {
-        const e = p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined;
-        if (!e) continue;
-        const lignes = e.lines.map((l) => ({
-          account_code: estChargeOuProduit(l.accountCode) ? input.compte.code : l.accountCode,
-          libelle: estChargeOuProduit(l.accountCode) ? input.compte.libelle : l.libelle,
-          debit: l.debit,
-          credit: l.credit,
-          tax_code: l.taxCode,
-        }));
+    }) =>
+      parPiece(input.lots, raisonDe, ({ pieceId, base }) =>
         // Une pièce = une transaction : contre-passation et réimputation
         // passent ensemble, ou rien n'est écrit pour cette pièce.
-        await office().office.corrigerLImputation({
-          ecritureId: e.id,
-          motifId: input.motifId,
-          note: input.note,
-          libelle: e.libelle,
-          lignes,
-        });
-        n += 1;
-      }
-      return n;
-    },
-    onSuccess: async (n) => {
-      setErreur(null);
-      setFait({ validees: 0, forcees: n });
+        office().office.forcer({
+          pieceId,
+          journal: base.journal,
+          date: base.date,
+          libelle: base.libelle,
+          lignes: base.lignes.map((l) =>
+            estChargeOuProduit(l.account_code)
+              ? { ...l, account_code: input.compte.code, libelle: input.compte.libelle }
+              : l,
+          ),
+        }),
+      ),
+    onMutate: () => setFait(null),
+    onSuccess: async ({ passees, echecs, raison }) => {
+      setFait({ validees: 0, forcees: passees, echecs, raison });
       setRetenues({});
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-ecritures"] }),
-      ]);
     },
-    onError: (e: unknown) =>
-      setErreur(texteDeLErreur(e, "routes/_authenticated/cabinet.propositions", t("common.error"))),
+    onSettled: relireLaFile,
   });
 
   const pourcent = (v: number) => Math.round(v * 100);
-  const totalDe = (pieces: QueueItem[]) =>
-    sommeDecimale(pieces.map((p) => p.montant).filter((m): m is string => m !== null));
+  /** Le total connu d'un lot, ou « — » : une pièce sans écriture n'a pas encore de montant posé. */
+  const totalDe = (pieces: QueueItem[]) => {
+    const montants = pieces.map((p) => p.montant).filter((m): m is string => m !== null);
+    return montants.length > 0 ? montant(sommeDecimale(montants), locale) : "—";
+  };
   const occupe = valider.isPending || forcer.isPending;
 
   const cartesDeLot: Array<{ lot: Lot; label: string; note: string; action: string }> =
@@ -370,13 +380,19 @@ function CabinetPropositions() {
       ) : null}
 
       {fait ? (
-        <p className="border border-border bg-card px-4 py-3 text-[13px]">
-          {fait.validees > 0
-            ? t("cab.prop.done", { count: fait.validees })
-            : t("cab.prop.forces", { count: fait.forcees })}
-        </p>
+        <div role="status" className="space-y-1 border border-border bg-card px-4 py-3 text-[13px]">
+          <p>
+            {fait.forcees > 0
+              ? t("cab.prop.forces", { count: fait.forcees })
+              : t("cab.prop.done", { count: fait.validees })}
+          </p>
+          {fait.echecs > 0 ? (
+            <p className="text-signal-stop">
+              {t("cab.prop.echecs", { count: fait.echecs, raison: fait.raison ?? "" })}
+            </p>
+          ) : null}
+        </div>
       ) : null}
-      {erreur ? <p className="text-[12.5px] text-signal-warn">{erreur}</p> : null}
 
       {/* ---- les lots par confiance */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -476,7 +492,6 @@ function CabinetPropositions() {
                 retenir={retenir}
                 ecritureDe={ecritureDe}
                 lueParRecette={lueParRecette}
-                motifs={motifs.data ?? []}
                 occupe={occupe || !superviseur}
                 valider={(pieces) => valider.mutate(pieces)}
                 forcer={(input) => forcer.mutate(input)}
@@ -494,7 +509,7 @@ function CabinetPropositions() {
           <div className="flex flex-wrap items-center gap-4 px-4 py-3 sm:px-6 lg:px-9">
             <span className="text-[13px]">
               {t("cab.prop.pied.retenues", { count: selection.length })}
-              <span className="num"> · {montant(totalDe(selection), locale)}</span>
+              <span className="num"> · {totalDe(selection)}</span>
             </span>
             <span className="num text-[11px] text-muted-foreground">
               {t("cab.prop.pied.clients", {
@@ -532,7 +547,6 @@ function GroupeClient({
   retenir,
   ecritureDe,
   lueParRecette,
-  motifs,
   occupe,
   valider,
   forcer,
@@ -553,14 +567,11 @@ function GroupeClient({
   ecritureDe: Map<string, Ecriture>;
   /** Vrai quand une RECETTE a lu cette pièce : alors aucun pourcentage ne s'affiche. */
   lueParRecette: (pieceId: string) => boolean;
-  motifs: Array<{ id: string; label: string; requiresNote: boolean }>;
   occupe: boolean;
   valider: (pieces: QueueItem[]) => void;
   forcer: (input: {
-    pieces: QueueItem[];
+    lots: Array<{ pieceId: string; base: EcritureEnSaisie }>;
     compte: CompteDuPlan;
-    motifId: string;
-    note: string | null;
   }) => void;
   totalDe: (pieces: QueueItem[]) => string;
   locale: string;
@@ -570,9 +581,42 @@ function GroupeClient({
   const toutes = retenues.length === groupe.pieces.length;
   const retenuesOuToutes = retenues.length > 0 ? retenues : groupe.pieces;
 
-  const ecritures = retenuesOuToutes
-    .map((p) => (p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined))
-    .filter((e): e is Ecriture => e !== undefined);
+  /*
+   * L'écriture de chaque pièce : celle qu'un client inscrivait autrefois et
+   * que le cabinet n'a pas encore prise en charge, sinon celle que le Socle
+   * propose — lue quand le lot s'ouvre, jamais avant.
+   */
+  const sansEcriture = ouvert ? groupe.pieces.filter((p) => !p.ecritureId) : [];
+  const propositions = useQueries({
+    queries: sansEcriture.map((p) => ({
+      queryKey: ["proposition", p.pieceId, "lot"],
+      queryFn: () => office().office.propositionDePiece(p.pieceId),
+    })),
+  });
+  const propositionDe = new Map(sansEcriture.map((p, i) => [p.pieceId, propositions[i]?.data]));
+  const baseDe = (p: QueueItem): EcritureEnSaisie | null => {
+    const inscrite = p.ecritureId ? (ecritureDe.get(p.ecritureId) ?? null) : null;
+    const base = ecritureDeDepart(inscrite, propositionDe.get(p.pieceId));
+    return base.depart === "rien" ? null : base;
+  };
+  const duLot = (p: QueueItem): EcritureDuLot | null => {
+    const base = baseDe(p);
+    return base
+      ? {
+          id: p.pieceId,
+          lines: base.lignes.map((l, ordinal) => ({
+            ordinal,
+            accountCode: l.account_code,
+            libelle: l.libelle,
+            debit: l.debit,
+            credit: l.credit,
+            taxCode: l.tax_code,
+          })),
+        }
+      : null;
+  };
+  const ecritures = retenuesOuToutes.map(duLot).filter((e): e is EcritureDuLot => e !== null);
+  const journalDuLot = retenuesOuToutes.map(baseDe).find((b) => b !== null)?.journal ?? "";
   const masse = useMemo(() => ecritureEnMasse(ecritures), [ecritures]);
   const totalDebit = sommeDecimale(masse.map((m) => m.debit));
   /*
@@ -594,15 +638,12 @@ function GroupeClient({
     enabled: ouvert,
   });
   const [compte, setCompte] = useState("");
-  const [motifId, setMotifId] = useState("");
-  const [note, setNote] = useState("");
-  const motif = motifs.find((m) => m.id === motifId) ?? null;
   const compteChoisi = (plan.data ?? []).find((c) => c.code === compte) ?? null;
-  const pret =
-    Boolean(compteChoisi) &&
-    Boolean(motif) &&
-    retenues.length > 0 &&
-    (!motif?.requiresNote || note.trim().length > 0);
+  const lots = retenues.flatMap((p) => {
+    const base = baseDe(p);
+    return base ? [{ pieceId: p.pieceId, base }] : [];
+  });
+  const pret = Boolean(compteChoisi) && lots.length > 0;
 
   return (
     <li className="border border-border bg-card">
@@ -628,10 +669,7 @@ function GroupeClient({
         </div>
         <div className="flex gap-6">
           <Chiffre label={t("cab.prop.groupe.pieces")} valeur={String(groupe.pieces.length)} />
-          <Chiffre
-            label={t("cab.prop.groupe.total")}
-            valeur={montant(totalDe(groupe.pieces), locale)}
-          />
+          <Chiffre label={t("cab.prop.groupe.total")} valeur={totalDe(groupe.pieces)} />
           <Chiffre
             label={t("cab.prop.groupe.confiance")}
             valeur={
@@ -671,9 +709,7 @@ function GroupeClient({
                 <h3 className="text-[12.5px] font-semibold uppercase tracking-[0.16em]">
                   {t("cab.prop.masse.titre")}
                 </h3>
-                <span className="num text-[10.5px] text-muted-foreground">
-                  {ecritures[0] ? `${ecritures[0].journal} · ${ecritures[0].devise}` : ""}
-                </span>
+                <span className="num text-[10.5px] text-muted-foreground">{journalDuLot}</span>
               </div>
               <div className="mt-2 overflow-x-auto border border-border">
                 <table className="w-full text-[13px]">
@@ -718,7 +754,7 @@ function GroupeClient({
               </p>
               <ul className="mt-2 divide-y divide-border border border-border">
                 {groupe.pieces.map((p) => {
-                  const e = p.ecritureId ? ecritureDe.get(p.ecritureId) : undefined;
+                  const e = duLot(p);
                   const charge = e ? compteDeCharge(e) : null;
                   return (
                     <li key={p.pieceId} className="flex flex-wrap items-center gap-3 px-3 py-2">
@@ -788,51 +824,13 @@ function GroupeClient({
                 ))}
               </select>
             </label>
-            <label className="block">
-              <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                {t("cab.prop.force.motif")}
-              </span>
-              <select
-                value={motifId}
-                onChange={(e) => setMotifId(e.target.value)}
-                className="mt-1 w-full border border-border bg-card px-2 py-1.5 text-[12.5px]"
-              >
-                <option value="">{t("cab.review.motif.choose")}</option>
-                {motifs.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {motif?.requiresNote ? (
-              <label className="block">
-                <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  {t("cab.prop.force.note")}
-                </span>
-                <textarea
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="mt-1 w-full border border-border bg-card px-2 py-1.5 text-[12.5px]"
-                />
-              </label>
-            ) : null}
             {!pret ? (
               <p className="text-[11px] text-muted-foreground">{t("cab.prop.force.manque")}</p>
             ) : null}
             <button
               type="button"
               disabled={!pret || occupe}
-              onClick={() =>
-                compteChoisi &&
-                forcer({
-                  pieces: retenues,
-                  compte: compteChoisi,
-                  motifId,
-                  note: note.trim() ? note.trim() : null,
-                })
-              }
+              onClick={() => compteChoisi && forcer({ lots, compte: compteChoisi })}
               className="border border-foreground bg-foreground px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-background disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("cab.prop.force.action")}

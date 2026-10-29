@@ -8,20 +8,18 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { Download, Eye } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { DocumentView } from "@/components/malica/document-view";
 import { ControlesComptables } from "@/components/malica/controles-comptables";
-import { DecisionSansConfirmation } from "@/components/malica/decision-sans-confirmation";
+import { EcritureDuCabinet } from "@/components/malica/ecriture-du-cabinet";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { VersionPrecedente } from "@/components/malica/version-precedente";
 import { extensionDuContenu } from "@/lib/archive-comptable";
-import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import {
-  ActionButton,
   EmptyState,
   InkCell,
   InkTable,
@@ -29,16 +27,16 @@ import {
   MalicaNote,
   SectionTitle,
   SignalLight,
-  StickyActions,
 } from "@/components/malica/office-ui";
-import { useI18n, type MessageKey } from "@/i18n";
+import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
 import { saisieDecimale } from "@/lib/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
-import type { Citation, CompteDuPlan, Ecriture } from "@malica/socle/ports/repositories";
+import type { CompteDuPlan } from "@malica/socle/ports/repositories";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
-import { composerLibelle, critiquerLibelle } from "@malica/socle/engines/libelle";
+import { composerLibelle } from "@malica/socle/engines/libelle";
+import { statutCabinet } from "@malica/socle/statut-d-envoi";
 import { faitsDuLibelle } from "@malica/socle/use-cases/libelle-de-piece";
 
 import {
@@ -48,10 +46,10 @@ import {
   valeurDuChamp,
   valeurLisible,
 } from "@/lib/champ-lisible";
-import { toneForStatus } from "@/lib/file-cabinet";
+import { feuDuStatut } from "@/lib/file-cabinet";
 import { apresLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { lueSansConfirmation } from "@/lib/retour-du-cabinet";
+import { MOT_CABINET } from "@/lib/statut";
 
 export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   head: () => ({
@@ -81,55 +79,12 @@ export const Route = createFileRoute("/_authenticated/cabinet/piece/$pieceId")({
   component: CabinetReview,
 });
 
-/**
- * La correction en cours de saisie.
- *
- * Elle vit à côté de l'écriture d'origine, jamais dedans : celle-ci est
- * comptabilisée, donc close. Chaque ligne garde son montant — corriger une
- * IMPUTATION ne change pas ce que la pièce dit. Un montant faux n'est pas une
- * erreur d'imputation, c'est une pièce à relire, et le motif n'est pas le même.
- */
-/** Un seul identifiant : la liste du plan est rendue une fois pour l'écran. */
-const LISTE_DES_COMPTES = "plan-du-cabinet";
-
-interface Correction {
-  libelle: string;
-  lignes: Array<{
-    ordinal: number;
-    compte: string;
-    libelleDOrigine: string;
-    debit: string;
-    credit: string;
-    taxCode: string | null;
-  }>;
-}
-
 /** Le libellé que le plan donne à ce compte — officiel, extension, ou du cabinet. */
 function libelleDuCompte(plan: readonly CompteDuPlan[], code: string): string | null {
   const propre = code.trim();
   if (!propre) return null;
   const comptes = plan.filter((c) => c.code === propre);
   return comptes.find((c) => c.origine === "cabinet")?.libelle ?? comptes[0]?.libelle ?? null;
-}
-
-/**
- * La correction part de l'écriture telle qu'elle est : on force, on ne
- * recommence pas. Le libellé, lui, part de ce que Malica propose — l'expert
- * arrête le paramétrage, il ne le compose pas de zéro (R10). À défaut de
- * lecture exploitable, on garde celui qui est en base plutôt que rien.
- */
-function correctionDepuis(ecriture: Ecriture, libellePropose: string | null): Correction {
-  return {
-    libelle: libellePropose ?? ecriture.libelle,
-    lignes: ecriture.lines.map((l) => ({
-      ordinal: l.ordinal,
-      compte: l.accountCode,
-      libelleDOrigine: l.libelle,
-      debit: l.debit,
-      credit: l.credit,
-      taxCode: l.taxCode,
-    })),
-  };
 }
 
 function CabinetReview() {
@@ -143,10 +98,7 @@ function CabinetReview() {
     queryFn: () => office().supervision.listClients(org.id),
   });
 
-  const [motifId, setMotifId] = useState<string>("");
-  const [note, setNote] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<"valide" | "retourne" | "corrige" | null>(null);
   /**
    * Le retour au client vient de partir : le panneau « Retournée au client »
    * prend la place des écritures (maquette « Écran Envoyé », 27 octobre
@@ -162,9 +114,6 @@ function CabinetReview() {
   // puisse ouvrir : on dit OÙ le fichier a été écrit. Un bouton qui semble ne
   // rien faire est pire que pas de bouton.
   const [cheminEnregistre, setCheminEnregistre] = useState<string | null>(null);
-  // `null` : on n'a pas ouvert la correction. Une fois ouverte, on tient la
-  // saisie à part de l'écriture d'origine — celle-ci ne se modifie jamais.
-  const [correction, setCorrection] = useState<Correction | null>(null);
   /** La preuve dont l'apercu est ouvert. Une seule a la fois : l'ecran reste lisible. */
   const [preuveOuverte, setPreuveOuverte] = useState<string | null>(null);
 
@@ -276,11 +225,6 @@ function CabinetReview() {
   });
 
   useMalicaPanel(<MalicaNote>{t("cab.malica.review")}</MalicaNote>, [locale]);
-
-  const selectedMotif = useMemo(
-    () => (motifs.data ?? []).find((m) => m.id === motifId) ?? null,
-    [motifs.data, motifId],
-  );
 
   /**
    * Le cabinet tranche la demande du client, et l'accord FAIT la chose.
@@ -444,88 +388,31 @@ function CabinetReview() {
       ),
   });
 
-  const review = useMutation({
-    mutationFn: (outcome: "valide" | "retourne") =>
-      office().supervision.review({
-        ecritureId: booked!.id,
-        outcome,
-        motifId: outcome === "retourne" ? motifId : null,
-        note: note.trim() ? note.trim() : null,
-      }),
-    onSuccess: async (_data, outcome) => {
-      setError(null);
-      setDone(outcome);
-      if (outcome === "retourne")
-        setRetourEnvoye({
-          motif: (motifs.data ?? []).find((m) => m.id === motifId)?.label ?? "",
-          note: note.trim() ? note.trim() : null,
-          le: new Date().toISOString(),
-        });
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
-        qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
-        qc.invalidateQueries({ queryKey: ["piece-audit", pieceId] }),
-        qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
-      ]);
-    },
-    onError: (e: unknown) =>
-      setError(
-        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
-      ),
-  });
-
-  /**
-   * Forcer l'imputation.
+  /*
+   * ============================================== OUVRIR, C'EST VOIR
    *
-   * Une écriture comptabilisée ne se modifie pas — c'est le fondement de la
-   * piste d'audit, et la base le refuserait. On fait donc ce que fait un
-   * cabinet sur papier depuis toujours : contre-passer, puis réimputer.
-   *
-   * Trois écritures subsistent — l'erreur, son annulation, la correction —
-   * et c'est exactement ce qu'un contrôleur doit pouvoir lire. Le motif
-   * gouverné (« imputation à revoir ») dit pourquoi, et la note pourquoi
-   * précisément : la base exige les deux.
+   * « Malica sans blocage », §4 : ouvrir une pièce la dit « Vue », et le
+   * client lit « Vue par {cabinet} ». Un fait, posé une fois par envoi : la
+   * base rend la même vue si l'on rouvre. Une panne ne gêne pas l'écran —
+   * elle va au journal, et la pièce se travaille quand même.
    */
-  const corriger = useMutation({
-    mutationFn: async () => {
-      if (!booked || !correction) throw new Error(t("cab.review.correct.nothing"));
-      const lignes = correction.lignes.map((l) => ({
-        account_code: l.compte.trim(),
-        libelle: libelleDuCompte(plan.data ?? [], l.compte) ?? l.libelleDOrigine,
-        debit: l.debit,
-        credit: l.credit,
-        tax_code: l.taxCode,
-      }));
-
-      // Contre-passation motivée, écriture corrigée sous le même pack, et
-      // comptabilisation : UN appel, une transaction. Trois appels laissaient
-      // la facture contre-passée sans réimputation quand le deuxième échouait.
-      await office().office.corrigerLImputation({
-        ecritureId: booked.id,
-        motifId,
-        note: note.trim() ? note.trim() : null,
-        libelle: correction.libelle.trim(),
-        lignes,
-      });
-    },
-    onSuccess: async () => {
-      setError(null);
-      setDone("corrige");
-      setCorrection(null);
+  const voir = useMutation({
+    mutationFn: () => office().supervision.voir(pieceId),
+    onSuccess: async ({ deja }) => {
+      if (deja) return;
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
-        qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
-        qc.invalidateQueries({ queryKey: ["piece-audit", pieceId] }),
         qc.invalidateQueries({ queryKey: ["cab-queue", org.id] }),
-        qc.invalidateQueries({ queryKey: ["cab-clients", org.id] }),
       ]);
     },
     onError: (e: unknown) =>
-      setError(
-        texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", t("common.error")),
-      ),
+      void texteDeLErreur(e, "routes/_authenticated/cabinet.piece.$pieceId", ""),
   });
+  const aOuvrir = dossier.data?.piece.vis === "partage" && !dossier.data.piece.remplaceePar;
+  const { mutate: marquerVue } = voir;
+  useEffect(() => {
+    if (aOuvrir) marquerVue();
+  }, [aOuvrir, marquerVue]);
 
   if (dossier.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
@@ -588,18 +475,11 @@ function CabinetReview() {
           }
         | undefined
     )?.articles ?? [];
-  const all = ecritures.data ?? [];
-  // L'écriture qu'on lit et qu'on corrige : la vivante, jamais une
+  // L'écriture qu'on lit et qu'on force : la vivante, jamais une
   // contre-passation ni un règlement (ANO-CAB-005, ANO-FC-012).
-  const booked = all.find((e) => e.vivante) ?? null;
-  const reversal = all.find((e) => e.libelle.startsWith("Contre-passation")) ?? null;
-
-  const noteMissing = Boolean(selectedMotif?.requiresNote) && note.trim().length === 0;
-
-  // Les remarques ne bloquent pas : l'expert reste maître de ce qu'il écrit,
-  // mais il voit ce qu'un contrôleur verra. Un refus se contourne en tapant
-  // n'importe quoi ; une remarque, non.
-  const remarques = correction ? critiquerLibelle(correction.libelle) : [];
+  const vivante = (ecritures.data ?? []).find((e) => e.vivante) ?? null;
+  // Le mot du cabinet, dérivé au Socle — le même que dans la file.
+  const statut = statutCabinet({ status: piece.status, suivi: dossier.data.suivi });
   // Le libellé que Malica propose pour cette pièce, s'il est composable.
   // Une lecture partielle ne compose rien : on ne devine pas une contrepartie.
   const libellePropose = (() => {
@@ -618,16 +498,8 @@ function CabinetReview() {
   ]
     .filter(Boolean)
     .join(" · ");
-  const compteVide = correction?.lignes.some((l) => !l.compte.trim()) ?? false;
-  const correctionPrete = Boolean(correction && motifId && !noteMissing && !compteVide);
-  // Une date d'écriture, dans la langue de la personne — jamais l'ISO brut de la base.
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(new Date(iso));
+  // La date lue sur la pièce, pour une écriture saisie à la main.
+  const dateLue = (extraction?.payload as { document_date?: string } | undefined)?.document_date;
 
   return (
     <div className="space-y-6">
@@ -673,10 +545,7 @@ function CabinetReview() {
             ) : null}
           </h1>
         </div>
-        <SignalLight
-          tone={toneForStatus(piece.status)}
-          label={t(`pme.status.${piece.status}` as MessageKey)}
-        />
+        <SignalLight tone={feuDuStatut(statut)} label={t(MOT_CABINET[statut])} />
         <span className="flex shrink-0 gap-1">
           <button
             type="button"
@@ -1062,282 +931,30 @@ function CabinetReview() {
           ) : null}
           <div hidden={vue !== "ecritures"} className="space-y-3">
             {/*
-             * Lue, transmise, sans le « Oui » du client : la décision passe
-             * avant l'écriture proposée (maquette du 25 octobre 2026).
+             * L'écriture, et les gestes du comptable : valider ou forcer,
+             * retourner. Aucun n'attend le client (« Malica sans blocage »).
+             * La table repart de ce qui existe à chaque changement : écriture
+             * prise en charge, proposition du Socle, ou rien.
              */}
-            {lueSansConfirmation(piece.status, Boolean(booked)) ? (
-              <DecisionSansConfirmation
+            {ecritures.isPending || (extraction && proposition.isPending) ? (
+              <EmptyState>{t("common.loading")}</EmptyState>
+            ) : (
+              <EcritureDuCabinet
+                key={`${vivante?.id ?? "-"}|${proposition.data?.ok ? "p" : "r"}`}
                 pieceId={pieceId}
-                titre={titreDeLaPiece}
-                comptes={
-                  proposition.data?.ok
-                    ? proposition.data.proposition.lignes.map((l) => l.account_code).join(" · ")
-                    : null
-                }
-                inscriptible={Boolean(proposition.data?.ok)}
+                clientId={piece.tenantId}
+                statut={statut}
+                suivi={dossier.data.suivi}
+                vivante={vivante}
+                proposition={proposition.data}
+                typeAEtablir={piece.documentKind === null}
+                dateLue={dateLue ?? null}
+                libellePropose={libellePropose}
+                plan={plan.data ?? []}
+                decimales={decimales}
                 motifs={motifs.data ?? []}
-                client={dansLaFile?.clientName ?? null}
                 onRetournee={setRetourEnvoye}
               />
-            ) : null}
-            <SectionTitle>{t("cab.review.ecriture")}</SectionTitle>
-            {!booked ? (
-              proposition.isPending ? (
-                <EmptyState>{t("common.loading")}</EmptyState>
-              ) : proposition.data?.ok ? (
-                <>
-                  <p className="text-[12px] text-signal-warn">{t("cab.review.proposee")}</p>
-                  <InkTable
-                    caption={t("cab.review.proposee")}
-                    head={[
-                      t("pme.journal.account"),
-                      t("pme.journal.debit"),
-                      t("pme.journal.credit"),
-                    ]}
-                  >
-                    {proposition.data.proposition.lignes.map((l, i) => (
-                      <InkTableRow key={i}>
-                        <InkCell>
-                          <LigneDuCompte
-                            code={l.account_code}
-                            intitule={libelleDuCompte(plan.data ?? [], l.account_code)}
-                            libelle={l.libelle}
-                          />
-                        </InkCell>
-                        <InkCell numeric>{montant(l.debit, locale)}</InkCell>
-                        <InkCell numeric>{montant(l.credit, locale)}</InkCell>
-                      </InkTableRow>
-                    ))}
-                  </InkTable>
-                </>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-[13px] font-medium">{t("cab.review.aucune")}</p>
-                  {/*
-                   * La raison vient du serveur, en français, et porte les motifs
-                   * des contrôles. L'écran de la PME la rend déjà ainsi : une
-                   * seule phrase, construite là où le jugement est posé. La
-                   * traduire demanderait de faire voyager les motifs structurés,
-                   * et c'est une autre correction — celle-ci cesse de les taire.
-                   */}
-                  <p className="text-[12.5px] text-muted-foreground">
-                    {proposition.data?.raison ?? ""}
-                  </p>
-                </div>
-              )
-            ) : (
-              <>
-                <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {t("cab.review.ecriture.meta", {
-                    journal: booked.journal,
-                    date: jour(booked.dateEcriture),
-                    devise: booked.devise,
-                  })}
-                </p>
-                <InkTable
-                  caption={t("cab.review.ecriture")}
-                  head={[t("pme.journal.account"), t("pme.journal.debit"), t("pme.journal.credit")]}
-                >
-                  {booked.lines.map((line) => (
-                    <InkTableRow key={line.ordinal}>
-                      <InkCell>
-                        <LigneDuCompte
-                          code={line.accountCode}
-                          intitule={libelleDuCompte(plan.data ?? [], line.accountCode)}
-                          libelle={line.libelle}
-                        />
-                      </InkCell>
-                      <InkCell numeric>{montant(line.debit, locale)}</InkCell>
-                      <InkCell numeric>{montant(line.credit, locale)}</InkCell>
-                    </InkTableRow>
-                  ))}
-                </InkTable>
-
-                {!done && correction ? (
-                  <div className="space-y-3 border border-s-2 border-border border-s-signal-warn bg-card p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-signal-warn">
-                      {t("cab.review.correct.title")}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {t("cab.review.correct.lede")}
-                    </p>
-
-                    <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        {t("cab.review.correct.libelle")}
-                      </span>
-                      <input
-                        type="text"
-                        value={correction.libelle}
-                        onChange={(e) =>
-                          setCorrection((c) => (c ? { ...c, libelle: e.target.value } : c))
-                        }
-                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                      />
-                    </label>
-                    {remarques.length > 0 ? (
-                      <ul className="space-y-0.5 text-[11px] text-signal-warn">
-                        {remarques.map((r) => (
-                          <li key={r}>{r}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-
-                    <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan.data ?? []} />
-                    <InkTable
-                      caption={t("cab.review.correct.title")}
-                      head={[
-                        t("pme.journal.account"),
-                        t("pme.journal.debit"),
-                        t("pme.journal.credit"),
-                      ]}
-                    >
-                      {correction.lignes.map((ligne, index) => (
-                        <InkTableRow key={ligne.ordinal}>
-                          <InkCell>
-                            <SaisieDeCompte
-                              valeur={ligne.compte}
-                              onChange={(code) =>
-                                setCorrection((c) =>
-                                  c
-                                    ? {
-                                        ...c,
-                                        lignes: c.lignes.map((l, i) =>
-                                          i === index ? { ...l, compte: code } : l,
-                                        ),
-                                      }
-                                    : c,
-                                )
-                              }
-                              plan={plan.data ?? []}
-                              label={t("pme.journal.account")}
-                              inconnuLabel={t("cab.review.correct.unknown")}
-                              listeId={LISTE_DES_COMPTES}
-                              collectifLabel={t("plan.collectif.court")}
-                              originesLabels={{
-                                officiel: t("plan.origin.officiel"),
-                                extension: t("plan.origin.extension"),
-                                cabinet: t("plan.origin.cabinet"),
-                              }}
-                            />
-                          </InkCell>
-                          <InkCell numeric>{ligne.debit}</InkCell>
-                          <InkCell numeric>{ligne.credit}</InkCell>
-                        </InkTableRow>
-                      ))}
-                    </InkTable>
-
-                    <p className="text-[11px] text-muted-foreground">
-                      {t("cab.review.correct.motif.needed")}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      <ActionButton
-                        variant="ink"
-                        disabled={!correctionPrete || corriger.isPending}
-                        onClick={() => corriger.mutate()}
-                      >
-                        {corriger.isPending ? t("common.loading") : t("cab.review.correct.apply")}
-                      </ActionButton>
-                      <ActionButton
-                        disabled={corriger.isPending}
-                        onClick={() => setCorrection(null)}
-                      >
-                        {t("cab.review.correct.cancel")}
-                      </ActionButton>
-                    </div>
-                  </div>
-                ) : null}
-
-                {reversal ? (
-                  <div className="border border-s-2 border-border border-s-signal-stop bg-card p-3 text-[12px]">
-                    <p className="font-medium">{reversal.libelle}</p>
-                    <p className="num mt-1 text-muted-foreground">{jour(reversal.dateEcriture)}</p>
-                  </div>
-                ) : null}
-
-                {done ? (
-                  <div className="border border-border bg-card px-3 py-3 text-[13px]">
-                    <p>
-                      {done === "valide"
-                        ? t("cab.review.done.valide")
-                        : done === "corrige"
-                          ? t("cab.review.done.corrige")
-                          : t("cab.review.done.retourne")}
-                    </p>
-                    {/* Validée, forcée ou contre-passée : c'est au journal d'aujourd'hui. */}
-                    <Link
-                      to="/cabinet/journal"
-                      search={{ client: piece.tenantId }}
-                      className="mt-2 inline-flex min-h-[44px] items-center font-semibold underline underline-offset-4"
-                    >
-                      {t("cab.nav.journal")}
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-3 border border-border bg-card p-3">
-                    <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        {t("cab.review.motif")}
-                      </span>
-                      <select
-                        value={motifId}
-                        onChange={(e) => setMotifId(e.target.value)}
-                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                      >
-                        <option value="">{t("cab.review.motif.choose")}</option>
-                        {(motifs.data ?? []).map((motif) => (
-                          <option key={motif.id} value={motif.id}>
-                            {motif.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        {t("cab.review.note")}
-                      </span>
-                      <textarea
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        rows={3}
-                        className="mt-1 w-full border border-border bg-background px-3 py-2 text-[13px]"
-                      />
-                    </label>
-
-                    {noteMissing ? (
-                      <p className="text-[11px] text-signal-warn">
-                        {t("cab.review.note.required")}
-                      </p>
-                    ) : null}
-
-                    <StickyActions>
-                      <ActionButton
-                        variant="ink"
-                        disabled={review.isPending}
-                        onClick={() => review.mutate("valide")}
-                      >
-                        {t("cab.review.validate")}
-                      </ActionButton>
-                      <ActionButton
-                        disabled={review.isPending || !motifId || noteMissing}
-                        onClick={() => review.mutate("retourne")}
-                      >
-                        {t("cab.review.return")}
-                      </ActionButton>
-                      {correction ? null : (
-                        <ActionButton
-                          disabled={review.isPending}
-                          onClick={() => setCorrection(correctionDepuis(booked, libellePropose))}
-                        >
-                          {t("cab.review.correct.open")}
-                        </ActionButton>
-                      )}
-                    </StickyActions>
-                  </div>
-                )}
-              </>
             )}
 
             <SectionTitle>{t("cab.review.audit")}</SectionTitle>

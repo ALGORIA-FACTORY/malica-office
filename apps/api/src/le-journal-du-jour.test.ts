@@ -14,6 +14,7 @@ import { createHash } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 
 import { strFromU8, unzipSync } from "fflate";
+import type { LigneSaisie } from "@malica/socle/ecriture-saisie";
 import pg from "pg";
 
 import type { AddressInfo } from "node:net";
@@ -47,11 +48,12 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
   let jour = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
   const ids: Record<string, string> = {};
+  const pieces: Record<string, string> = {};
 
   /** Un montant qu'un flottant ne sait pas écrire : seize chiffres significatifs et plus. */
   const GRAND = "9007199254740.993";
 
-  const lignes = (charge: string, montant: string) => [
+  const lignes = (charge: string, montant: string): LigneSaisie[] => [
     { account_code: charge, libelle: "Achat", debit: montant, credit: "0", tax_code: null },
     { account_code: "401", libelle: "Fournisseur", debit: "0", credit: montant, tax_code: null },
   ];
@@ -82,6 +84,12 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       await office.book(db, id);
       return id;
     });
+
+  /** Forcer : le comptable réimpute, la vivante est contre-passée (lot 5). */
+  const forcer = (pieceId: string, libelle: string, l: LigneSaisie[]) =>
+    sousIdentite(expert.id, (db) =>
+      office.forcer(db, { pieceId, journal: "ACH", date: "2026-10-20", libelle, lignes: l }),
+    );
 
   const lire = (qui: Utilisateur, cab: string, client: string | null, j = jour) =>
     sousIdentite(qui.id, (db) => journalDuJour.lire(db, cab, client, j, "fr"));
@@ -135,33 +143,17 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
     // Validée : l'expert inscrit la proposition du Socle, montant hors de portée d'un flottant.
     ids["validee"] = await inscrire(expert, await piece("a"), "Facture A", lignes("601", GRAND));
 
-    // Validée en supervision : la société inscrit, l'expert valide.
-    ids["supervisee"] = await inscrire(
-      dirigeant,
-      await piece("b"),
-      "Facture B",
-      lignes("601", "0.100"),
-    );
+    // Validée en supervision : la société inscrivait (avant le lot 5), l'expert valide.
+    pieces["b"] = await piece("b");
+    ids["supervisee"] = await inscrire(dirigeant, pieces["b"], "Facture B", lignes("601", "0.100"));
     await sousIdentite(expert.id, (db) =>
       supervision.review(db, { ecritureId: ids["supervisee"]!, outcome: "valide" }),
     );
 
     // Forcée : l'expert réimpute — contre-passation de l'erreur, puis la correction.
-    ids["remplacee"] = await inscrire(
-      expert,
-      await piece("c"),
-      "Facture C",
-      lignes("601", "0.200"),
-    );
-    ids["forcee"] = await sousIdentite(expert.id, (db) =>
-      office.corrigerLImputation(db, {
-        ecritureId: ids["remplacee"]!,
-        motifId: motif,
-        note: "Honoraires : 622",
-        libelle: "Facture C réimputée",
-        lignes: lignes("622", "0.200"),
-      }),
-    );
+    pieces["c"] = await piece("c");
+    ids["remplacee"] = await inscrire(expert, pieces["c"], "Facture C", lignes("601", "0.200"));
+    ids["forcee"] = await forcer(pieces["c"], "Facture C réimputée", lignes("622", "0.200"));
 
     // Inscrite par la société, jamais prise en charge : pas au journal du cabinet.
     ids["horsJournal"] = await inscrire(
@@ -431,15 +423,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
   it("une validée en supervision puis forcée reste à son journal : un jour passé ne change pas", async () => {
     // Relecture du 29 octobre 2026 : le retour réécrit `reviewed_at` et
     // `review_outcome`, et la validée disparaissait.
-    await sousIdentite(expert.id, (db) =>
-      office.corrigerLImputation(db, {
-        ecritureId: ids["supervisee"]!,
-        motifId: motif,
-        note: "Honoraires : 622",
-        libelle: "Facture B réimputée",
-        lignes: lignes("622", "0.100"),
-      }),
-    );
+    await forcer(pieces["b"]!, "Facture B réimputée", lignes("622", "0.100"));
     const j = await lire(expert, cabinet, pme);
     const ecritures = j.journaux.flatMap((x) => x.ecritures);
     const supervisee = ecritures.find((e) => e.id === ids["supervisee"]);
@@ -602,7 +586,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
       [pme, courante, pack],
     );
     await sousIdentite(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [courante]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [courante]),
     );
     const reglement = (await rpc(expert, "office", "inscrireLeReglement", paiement)) as string;
 

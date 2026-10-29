@@ -5,6 +5,8 @@ import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue
  */
 
 import type { DerniereLecture } from "../issue-de-lecture.ts";
+import type { LigneSaisie } from "../ecriture-saisie.ts";
+import type { StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
@@ -357,6 +359,11 @@ export interface ReferentialRepository {
       dossierSiVente: string | null;
     }>
   >;
+  /**
+   * Les journaux du référentiel (achats, ventes, banque, caisse, OD), dans leur
+   * ordre, nommés dans la langue demandée — ceux où le comptable saisit.
+   */
+  journaux(locale: string): Promise<Array<{ code: string; libelle: string }>>;
   /** Les sept dossiers, dans leur ordre : de la capture à la bibliothèque. */
   dossiers(locale: string): Promise<
     Array<{
@@ -880,6 +887,12 @@ export interface PieceDossier {
    * exposées à part pour que l'écran sache ce qui vient d'elle.
    */
   precisions: Record<string, string>;
+  /**
+   * Où elle en est chez le cabinet — envoyée, vue, corrigée, prise en charge —
+   * ou `null` si elle n'y est jamais partie. Le mot se dérive au Socle
+   * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
+   */
+  suivi: SuiviDEnvoi | null;
   /** Voir `PieceLue.lectureRefusee` : le motif, tant que la pièce n'est pas lue. */
   lectureRefusee?: LectureRefusee | null;
   citations: Citation[];
@@ -970,6 +983,8 @@ export interface PieceLue {
   gardeeLe?: string | null;
   /** Quand elle est partie chez le cabinet (la base le pose au passage en `partage`). */
   transmiseLe?: string | null;
+  /** Où elle en est chez le cabinet ; `null` si elle n'y est jamais partie. */
+  suivi?: SuiviDEnvoi | null;
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
@@ -1303,6 +1318,8 @@ export type PropositionDePiece = (
       verdictCode: CodeVerdict | null;
       packVersionId: string;
       proposition: ProposalResult;
+      /** Ce que l'écran montre, en une empreinte : VALIDER la renvoie, le serveur n'inscrit qu'elle. */
+      empreinte?: string;
     }
   | {
       ok: false;
@@ -1332,10 +1349,27 @@ export interface OfficeRepository {
   /** Enregistre la proposition du serveur : aucune ligne ne vient du client. */
   proposerDepuisPiece(pieceId: string, dateSaisie?: string | null): Promise<string>;
   /**
-   * Le cabinet inscrit une pièce que le client n'a pas confirmée : il confirme
-   * le type lu, puis propose et comptabilise, en une transaction.
+   * VALIDER : le cabinet prend en charge l'écriture que le Socle propose — il
+   * établit le type lu, propose et inscrit, en une transaction. Le client ne
+   * confirme rien. Rend l'identifiant de l'écriture. `empreinte` : celle de la
+   * proposition affichée (`propositionDePiece`) ; si elle a changé, refus
+   * `refus.proposition.changee`. `null` pour une écriture déjà inscrite.
    */
-  inscrireLaPieceDuClient(pieceId: string): Promise<string>;
+  valider(pieceId: string, empreinte: string | null): Promise<string>;
+  /**
+   * FORCER : le comptable modifie l'écriture, ou la saisit quand le Socle ne
+   * propose rien. La vivante est contre-passée, la nouvelle inscrite et
+   * marquée « forcée » ; la pièce n'est ni retournée ni signalée au client.
+   * `typeDeDocument` établit le type quand la lecture n'en a reconnu aucun.
+   */
+  forcer(input: {
+    pieceId: string;
+    journal: string;
+    date: string;
+    libelle: string;
+    lignes: LigneSaisie[];
+    typeDeDocument?: string | null;
+  }): Promise<string>;
   /**
    * Ce que le moyen de paiement engage : l'ecriture du reglement.
    *
@@ -1368,24 +1402,6 @@ export interface OfficeRepository {
    */
   retenuesDuMois(tenantId: string, periode: string): Promise<RetenueDuMois[]>;
   book(ecritureId: string): Promise<void>;
-  /**
-   * Forcer l'imputation d'une écriture comptabilisée : contre-passation
-   * motivée, écriture corrigée, comptabilisation — en une transaction.
-   * Rend l'identifiant de l'écriture corrigée.
-   */
-  corrigerLImputation(input: {
-    ecritureId: string;
-    motifId: string;
-    note: string | null;
-    libelle: string;
-    lignes: Array<{
-      account_code: string;
-      libelle: string;
-      debit: string;
-      credit: string;
-      tax_code: string | null;
-    }>;
-  }): Promise<string>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;
   bookedExtracts(
@@ -1458,6 +1474,10 @@ export interface ClientSummary {
   mandatJusquau: string | null;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
+  /** Les mêmes pièces, classées comme la file (Reçue · Vue · Corrigée · Retournée · Validée · Forcée). */
+  parStatut: Record<StatutCabinet, number>;
+  /** Ce qui attend le cabinet : `A_TRAITER` sur `parStatut`. */
+  aTraiter: number;
 }
 
 export interface QueueItem {
@@ -1465,6 +1485,9 @@ export interface QueueItem {
   tenantId: string;
   clientName: string;
   status: PieceStatus;
+  /** Le mot du cabinet (Reçue · Vue · Corrigée · Retournée · Validée · Forcée), dérivé au Socle. */
+  statut: StatutCabinet;
+  suivi: SuiviDEnvoi | null;
   source: "photo" | "pdf";
   createdAt: string;
   /**
@@ -1472,6 +1495,7 @@ export interface QueueItem {
    * photo reprise. La file se classe par elle, et l'attente se compte d'elle.
    */
   envoyeeLe: string;
+  /** L'écriture vivante de la pièce — celle de la facture d'abord, sinon un règlement. */
   ecritureId: string | null;
   libelle: string | null;
   dateEcriture: string | null;
@@ -1535,7 +1559,7 @@ export interface SupervisionRepository {
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
-  /** File priorisée : comptabilisé d'abord, puis proposé, puis lu. */
+  /** File priorisée : corrigée, reçue, vue d'abord ; retournée ; prise en charge. */
   queue(cabinetTenantId: string, tenantId?: string): Promise<QueueItem[]>;
   motifs(locale: string): Promise<RejetMotif[]>;
   review(input: {
@@ -1544,10 +1568,13 @@ export interface SupervisionRepository {
     motifId?: string | null;
     note?: string | null;
   }): Promise<string | null>;
-  /** Retourner une pièce transmise pas encore inscrite (motif gouverné, note). */
+  /**
+   * Retourner au client à toute étape (motif gouverné, note). Prise en charge,
+   * son écriture est contre-passée au journal du jour.
+   */
   retourner(input: { pieceId: string; motifId: string; note?: string | null }): Promise<void>;
-  /** Relancer le client sur une pièce transmise qu'il n'a pas confirmée. */
-  demanderConfirmation(pieceId: string): Promise<void>;
+  /** Le cabinet ouvre la pièce : elle est « Vue », une fois par envoi. */
+  voir(pieceId: string): Promise<{ vueLe: string | null; deja: boolean }>;
   auditForPiece(pieceId: string): Promise<AuditEntry[]>;
 }
 
@@ -1556,6 +1583,8 @@ export interface DocumentComptable {
   tenantId: string;
   type: string | null;
   status: PieceStatus;
+  /** Le mot du cabinet, dans la bibliothèque ; un dossier exporté garde le seul `status`. */
+  statut?: StatutCabinet;
   reference: string | null;
   tiers: string | null;
   dateDocument: string | null;

@@ -6,16 +6,18 @@
  *
  * Elle exerce, par `/rpc`, chaque geste que les écrans proposent, dans
  * l'ordre d'un usage réel : la file du jour et ses filtres, l'ouverture d'une
- * pièce avec ses citations et son journal, la validation d'une écriture, le
- * retour motivé puis la réimputation, la validation en masse, l'affectation
+ * pièce (« Vue ») avec ses citations, la validation de l'écriture que le
+ * Socle propose, le forçage, le retour motivé d'une pièce prise en charge
+ * (contre-passée), la réponse du client puis la réimputation, la validation
+ * d'un lot, l'affectation
  * d'un dossier, les notifications lues, les statistiques de pilotage, les
  * exercices, l'estimation et la génération d'un export avec son historique,
  * enfin la création, l'usage et la révocation d'une clé d'API.
  *
- * Rejouable : les pièces portent des clés d'idempotence fixes, ce qui existe
- * est repris. Une pièce validée reçoit une nouvelle écriture à la passe
- * suivante ; une pièce retournée se réimpute. Les clés d'API se révoquent en
- * fin de passe — une clé ne s'efface pas, la liste garde la trace.
+ * Rejouable : chaque passe dépose ses propres pièces (leur clé d'idempotence
+ * porte l'heure de la passe) — le client ne confirme rien, le cabinet prend
+ * en charge (« Malica sans blocage », 28 octobre 2026). Les clés d'API se
+ * révoquent en fin de passe — une clé ne s'efface pas, la liste garde la trace.
  */
 import { createHash } from "node:crypto";
 
@@ -27,13 +29,20 @@ const NEANT = "00000000-0000-0000-0000-000000000000";
 const DEBUT = new Date().toISOString();
 const AUJOURDHUI = DEBUT.slice(0, 10);
 
-/** Un PDF d'une page, sans texte : la lecture citée porte ses propres jetons. */
-const PDF = Buffer.from(
-  "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" +
-    "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
-    "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
-  "latin1",
-);
+/**
+ * Un PDF d'une page, sans texte : la lecture citée porte ses propres jetons.
+ * Chaque pièce a ses octets (un commentaire la nomme, avec l'heure de la
+ * passe) : deux fichiers identiques à l'octet sont un doublon strict, que le
+ * Socle refuse — à raison — de comptabiliser.
+ */
+const pdf = (marque, passe = DEBUT) =>
+  Buffer.from(
+    "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" +
+      "2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
+      "3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\ntrailer<</Root 1 0 R>>\n" +
+      `%${marque} ${passe}\n%%EOF\n`,
+    "latin1",
+  );
 
 /** Un appel `/rpc` porté par une clé, sans session : ce qu'un outil tiers envoie. */
 async function sousCle(cle, depot, methode, args = []) {
@@ -131,6 +140,14 @@ function extrait(reference) {
   };
 }
 
+/** Un montant tel qu'une facture l'imprime : groupes de milliers, virgule décimale. */
+function imprime(n) {
+  const [entier, decimal] = montant(n).split(".");
+  const groupes = entier.replace(/\B(?=(\d{3})+(?!\d))/g, " ").split(" ");
+  groupes[groupes.length - 1] += decimal ? `,${decimal}` : "";
+  return groupes;
+}
+
 /** Les lignes de l'écriture d'achat, le libellé importé du plan — jamais tapé. */
 function lignesDAchat(compteDeCharge) {
   return [
@@ -158,11 +175,15 @@ function lignesDAchat(compteDeCharge) {
   ];
 }
 
+/** Ce qui attend le cabinet : le même ensemble que `A_TRAITER` du Socle. */
+const A_TRAITER = new Set(["recue", "vue", "corrigee"]);
+
 /**
- * Une pièce transmise, lue, avec une écriture comptabilisée en attente de
- * supervision. Ce qui existe est repris : la pièce par sa clé d'idempotence,
- * les octets s'ils sont déjà là, la lecture si elle a eu lieu, l'écriture
- * si la file en porte encore une non revue.
+ * Une pièce transmise au cabinet, lue — et rien de plus : depuis « Malica
+ * sans blocage » (28 octobre 2026), le client ne propose ni n'inscrit
+ * d'écriture, c'est le cabinet qui valide ou force. Chaque passe dépose ses
+ * propres pièces (la clé d'idempotence porte l'heure de la passe) : une passe
+ * rejouée ne retrouve pas une pièce déjà prise en charge par la précédente.
  */
 async function assurerPiece(marque, source, reference) {
   const piece = await e.rpc("capture", "enregistrer", [
@@ -170,89 +191,76 @@ async function assurerPiece(marque, source, reference) {
       tenantId: dossier.tenantId,
       source,
       vis: "partage",
-      idempotencyKey: `epreuve-file:${marque}`,
+      idempotencyKey: `epreuve-file:${marque}:${DEBUT}`,
       contentType: "application/pdf",
       pageCount: 1,
     },
   ]);
   e.verdict(`la pièce « ${marque} » est enregistrée, transmise au cabinet`, Boolean(piece?.id));
 
-  const relecture = await e.appel(`/pieces/${piece.id}/contenu`);
-  if (!relecture.ok) {
-    const depot = await e.appel(`/pieces/${piece.id}/contenu`, {
-      method: "POST",
-      headers: { "Content-Type": "application/pdf" },
-      body: PDF,
-    });
-    e.verdict(`ses octets se déposent`, depot.status === 201, `${depot.status}`);
-  } else {
-    e.verdict(`ses octets étaient déjà déposés`, true);
-  }
+  const depot = await e.appel(`/pieces/${piece.id}/contenu`, {
+    method: "POST",
+    headers: { "Content-Type": "application/pdf" },
+    body: pdf(marque),
+  });
+  e.verdict(`ses octets se déposent`, depot.status === 201, `${depot.status}`);
 
-  let d = await e.rpc("capture", "dossier", [piece.id]);
-  if (!d.extraction) {
-    const textes = ["FACTURE No " + reference, "VERRES DE TUNISIE", "TVA 19%", "TOTAL TTC"];
-    const jetons = textes.map((text, i) => ({
-      page: 1,
-      ordinal: i + 1,
-      text,
-      confidence: 0.98,
-      x0: 0.1,
-      x1: 0.6,
-      y0: 0.08 + i * 0.03,
-      y1: 0.1 + i * 0.03,
-    }));
-    const citations = [
-      ["document_date", 1],
-      ["issuer", 2],
-      ["totals.vat", 3],
-      ["totals.ttc", 4],
-    ].map(([field, ordinal]) => ({ field, page: 1, ordinal, zone: "p.1" }));
-    await e.rpc("capture", "persisterLecture", [
-      {
-        pieceId: piece.id,
-        packId: pack.id,
-        tokens: jetons,
-        contract: "extract.v1",
-        extract: extrait(reference),
-        citations,
-        flags: [],
-        articles: [],
-        documentKind: "facture_achat",
-        documentDate: AUJOURDHUI,
-      },
-    ]);
-    d = await e.rpc("capture", "dossier", [piece.id]);
+  // Les montants IMPRIMÉS, cités : le Socle ne propose une écriture que sur
+  // des montants qu'il retrouve sur la page (« 1 200,000 », coupé par
+  // groupes comme un relevé réel), jamais sur ceux de l'extraction seule.
+  const textes = [["FACTURE No " + reference], ["VERRES DE TUNISIE"]];
+  const champs = [["document_date"], ["issuer"]];
+  for (const [n, cites] of [
+    [HT, ["lines[0].base_ht", "totals.base_ht"]],
+    [TVA, ["lines[0].vat_amount", "totals.vat"]],
+    [TTC, ["lines[0].ttc", "totals.ttc"]],
+  ]) {
+    textes.push(imprime(n));
+    champs.push(cites);
   }
+  const jetons = [];
+  const citations = [];
+  textes.forEach((morceaux, i) => {
+    const ordinaux = morceaux.map((text) => {
+      const ordinal = jetons.length + 1;
+      jetons.push({
+        page: 1,
+        ordinal,
+        text,
+        confidence: 0.98,
+        x0: 0.1,
+        x1: 0.6,
+        y0: 0.08 + i * 0.03,
+        y1: 0.1 + i * 0.03,
+      });
+      return ordinal;
+    });
+    for (const field of champs[i])
+      for (const ordinal of ordinaux) citations.push({ field, page: 1, ordinal, zone: "p.1" });
+  });
+  await e.rpc("capture", "persisterLecture", [
+    {
+      pieceId: piece.id,
+      packId: pack.id,
+      tokens: jetons,
+      contract: "extract.v1",
+      extract: extrait(reference),
+      citations,
+      flags: [],
+      articles: [],
+      documentKind: "facture_achat",
+      documentDate: AUJOURDHUI,
+    },
+  ]);
+  const d = await e.rpc("capture", "dossier", [piece.id]);
   e.verdict(
     `elle porte une lecture citée`,
-    Boolean(d.extraction) && d.citations.length === 4 && d.tokens.length >= 4,
+    Boolean(d.extraction) &&
+      d.citations.length === citations.length &&
+      d.tokens.length === jetons.length,
     `${d.citations.length} citation(s)`,
   );
-
-  const dansLaFile = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
-    (r) => r.pieceId === piece.id,
-  );
-  let ecritureId = dansLaFile?.ecritureId ?? null;
-  if (!ecritureId) {
-    await e.confirmerLeType(piece.id, "facture_achat");
-    ecritureId = await e.rpc("office", "propose", [
-      {
-        pieceId: piece.id,
-        journal: "ACH",
-        date: AUJOURDHUI,
-        libelle: `Facture VERRES DE TUNISIE ${reference}`,
-        packVersionId: pack.id,
-        devise: pack.currency,
-        lignes: lignesDAchat(achat.mainAccount),
-      },
-    ]);
-    await e.rpc("office", "book", [ecritureId]);
-    e.verdict(`une écriture est proposée puis comptabilisée`, Boolean(ecritureId));
-  } else {
-    e.verdict(`une écriture comptabilisée l'attendait déjà`, true);
-  }
-  return { id: piece.id, ecritureId };
+  return { id: piece.id, ecritureId: null, empreinte: null };
 }
 
 const pieceA = await assurerPiece("a-valider", "photo", "E-2026-001");
@@ -264,22 +272,18 @@ const file = await e.rpc("supervision", "queue", [cabinet.id]);
 const ligneA = file.find((r) => r.pieceId === pieceA.id);
 const ligneB = file.find((r) => r.pieceId === pieceB.id);
 e.verdict(
-  "les deux pièces sont dans la file, comptabilisées, avec leur écriture",
-  ligneA?.status === "comptabilisee" &&
-    ligneB?.status === "comptabilisee" &&
-    ligneA.ecritureId === pieceA.ecritureId &&
-    ligneB.ecritureId === pieceB.ecritureId,
+  "les deux pièces sont dans la file, « Reçues », sans écriture : rien n'attend le client",
+  ligneA?.statut === "recue" &&
+    ligneB?.statut === "recue" &&
+    ligneA.ecritureId === null &&
+    ligneB.ecritureId === null,
+  `${ligneA?.statut} · ${ligneB?.statut}`,
 );
 e.verdict(
-  "chaque ligne nomme le client, son libellé, sa date et le montant posé par le Socle",
+  "chaque ligne nomme le client et son heure d'envoi",
   [ligneA, ligneB].every(
-    (r) =>
-      r?.clientName === dossier.name &&
-      typeof r.libelle === "string" &&
-      r.dateEcriture?.startsWith(AUJOURDHUI) &&
-      Number(r.montant) === TTC,
+    (r) => r?.clientName === dossier.name && r.envoyeeLe?.startsWith(AUJOURDHUI),
   ),
-  `${ligneA?.montant} ${pack.currency}`,
 );
 e.verdict(
   "la confiance de lecture accompagne la pièce",
@@ -287,8 +291,8 @@ e.verdict(
   `${ligneA?.confiance}`,
 );
 {
-  const premierNonPrioritaire = file.findIndex((r) => r.status !== "comptabilisee");
-  const dernierPrioritaire = file.map((r) => r.status).lastIndexOf("comptabilisee");
+  const premierNonPrioritaire = file.findIndex((r) => !A_TRAITER.has(r.statut));
+  const dernierPrioritaire = file.map((r) => A_TRAITER.has(r.statut)).lastIndexOf(true);
   e.verdict(
     "ce qui attend le cabinet passe en tête de file",
     premierNonPrioritaire === -1 || dernierPrioritaire < premierNonPrioritaire,
@@ -302,13 +306,14 @@ e.verdict(
     parDossier.length > 0 && parDossier.every((r) => r.tenantId === dossier.tenantId),
     `${parDossier.length} pièce(s)`,
   );
-  const compteurs = (await e.rpc("supervision", "listClients", [cabinet.id])).find(
+  const client = (await e.rpc("supervision", "listClients", [cabinet.id])).find(
     (c) => c.tenantId === dossier.tenantId,
-  )?.counts;
+  );
+  const aTraiterDansLaFile = parDossier.filter((r) => A_TRAITER.has(r.statut)).length;
   e.verdict(
-    "les compteurs du client comptent au moins ces deux pièces à superviser",
-    (compteurs?.comptabilisee ?? 0) >= 2,
-    `${compteurs?.comptabilisee ?? 0} comptabilisée(s)`,
+    "le compteur « À traiter » du client compte ces deux pièces, comme la file",
+    (client?.aTraiter ?? 0) >= 2 && client.aTraiter === aTraiterDansLaFile,
+    `${client?.aTraiter ?? 0} à traiter · ${aTraiterDansLaFile} dans la file`,
   );
   const membres = await e.rpc("collab", "members", [cabinet.id]);
   e.verdict(
@@ -327,30 +332,30 @@ e.verdict(
 /* ------------------------------------------------ la revue */
 e.section("La revue d'une pièce");
 {
+  const vue = await e.rpc("supervision", "voir", [pieceA.id]);
   const d = await e.rpc("capture", "dossier", [pieceA.id]);
   e.verdict(
-    "la pièce s'ouvre : statut, lecture, citations situées sur la page",
-    d.piece.status === "comptabilisee" &&
+    "la pièce s'ouvre : « Vue », lecture, citations situées sur la page",
+    vue.deja === false &&
+      Boolean(d.suivi?.vueLe) &&
       d.extraction?.contract === "extract.v1" &&
       d.citations.every((c) => c.page === 1 && c.bbox && typeof c.bbox.x0 === "number"),
   );
+  const ligne = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
+    (r) => r.pieceId === pieceA.id,
+  );
+  e.verdict("la file la dit « Vue »", ligne?.statut === "vue", ligne?.statut ?? "absente");
   const octets = await e.appel(`/pieces/${pieceA.id}/contenu`);
   e.verdict("la visionneuse reçoit les octets", octets.ok, `${octets.status}`);
-  const ecritures = await e.rpc("office", "ecrituresForPiece", [pieceA.id]);
-  const comptabilisee = ecritures.find((x) => x.id === pieceA.ecritureId);
+  const p = await e.rpc("office", "propositionDePiece", [pieceA.id]);
+  pieceA.empreinte = p.ok ? p.empreinte : null;
   e.verdict(
-    "l'écriture proposée est équilibrée, sous le pack en vigueur",
-    comptabilisee?.status === "booked" &&
-      comptabilisee.packVersionId === pack.id &&
-      somme(comptabilisee.lines.map((l) => l.debit)) ===
-        somme(comptabilisee.lines.map((l) => l.credit)),
-    `${comptabilisee?.lines.length ?? 0} ligne(s)`,
-  );
-  const audit = await e.rpc("supervision", "auditForPiece", [pieceA.id]);
-  e.verdict(
-    "le journal de la pièce raconte sa comptabilisation",
-    audit.some((x) => x.action === "ecriture.booked"),
-    audit.map((x) => x.action).join(", "),
+    "le Socle propose une écriture équilibrée, sous le pack en vigueur",
+    p.ok === true &&
+      p.packVersionId === pack.id &&
+      somme(p.proposition.lignes.map((l) => l.debit)) ===
+        somme(p.proposition.lignes.map((l) => l.credit)),
+    p.ok ? `${p.proposition.lignes.length} ligne(s)` : p.raison,
   );
 }
 const motifs = await e.rpc("supervision", "motifs", ["fr"]);
@@ -362,37 +367,80 @@ e.verdict(
 
 /* ---- valider */
 {
-  const rendu = await e.rpc("supervision", "review", [
-    { ecritureId: pieceA.ecritureId, outcome: "valide", motifId: null, note: null },
-  ]);
+  const changee = await e.rpcAttenduEnEchec("office", "valider", [pieceA.id, "0".repeat(64)]);
+  e.verdict(
+    "valider une proposition autre que celle affichée est refusé",
+    /refus\.proposition\.changee/.test(changee?.message ?? ""),
+    changee?.message ?? "acceptée",
+  );
+  // Le cabinet valide ce que l'écran lui a montré : l'empreinte l'accompagne.
+  pieceA.ecritureId = await e.rpc("office", "valider", [pieceA.id, pieceA.empreinte]);
   const d = await e.rpc("capture", "dossier", [pieceA.id]);
   e.verdict(
-    "valider supervise la pièce, sans contre-passation",
-    rendu === null && d.piece.status === "supervisee",
+    "valider prend la pièce en charge, sans le client",
+    Boolean(pieceA.ecritureId) && d.piece.status === "supervisee",
     d.piece.status,
   );
-  const encore = await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId]);
+  const ligne = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
+    (r) => r.pieceId === pieceA.id,
+  );
   e.verdict(
-    "la file ne lui prête plus d'écriture à revoir",
-    encore.find((r) => r.pieceId === pieceA.id)?.ecritureId === null,
+    "la file la dit « Validée », avec son écriture et le montant posé par le Socle",
+    ligne?.statut === "validee" &&
+      ligne.ecritureId === pieceA.ecritureId &&
+      ligne.dateEcriture?.startsWith(AUJOURDHUI) &&
+      Number(ligne.montant) === TTC,
+    `${ligne?.statut} · ${ligne?.montant} ${pack.currency}`,
+  );
+  const ecritures = await e.rpc("office", "ecrituresForPiece", [pieceA.id]);
+  e.verdict(
+    "son écriture est inscrite, sous le pack en vigueur",
+    ecritures.some(
+      (x) => x.id === pieceA.ecritureId && x.status === "booked" && x.packVersionId === pack.id,
+    ),
   );
   const audit = await e.rpc("supervision", "auditForPiece", [pieceA.id]);
   e.verdict(
-    "le journal garde la validation, avec son auteur",
-    audit.some((x) => x.action === "ecriture.validee" && x.actor === moi.id),
+    "le journal garde l'inscription, avec son auteur",
+    audit.some((x) => x.action === "ecriture.booked" && x.actor === moi.id),
+    audit.map((x) => x.action).join(", "),
+  );
+  const encore = await e.rpcAttenduEnEchec("office", "valider", [pieceA.id, pieceA.empreinte]);
+  e.verdict(
+    "une pièce prise en charge ne se valide pas deux fois",
+    encore !== null,
+    encore?.message ?? "",
   );
 }
 
-/* ---- retourner, avec motif */
+/* ---- forcer, puis retourner avec motif : la prise en charge se défait */
 const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
 {
-  const sansMotif = await e.rpcAttenduEnEchec("supervision", "review", [
-    { ecritureId: pieceB.ecritureId, outcome: "retourne", motifId: null, note: null },
+  pieceB.ecritureId = await e.rpc("office", "forcer", [
+    {
+      pieceId: pieceB.id,
+      journal: "ACH",
+      date: AUJOURDHUI,
+      libelle: "Facture VERRES DE TUNISIE E-2026-002",
+      lignes: lignesDAchat(achat.mainAccount),
+    },
+  ]);
+  const ligne = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
+    (r) => r.pieceId === pieceB.id,
+  );
+  e.verdict(
+    "forcer saisit l'écriture du comptable : la pièce est « Forcée »",
+    ligne?.statut === "forcee" && ligne.ecritureId === pieceB.ecritureId,
+    ligne?.statut ?? "absente",
+  );
+
+  const sansMotif = await e.rpcAttenduEnEchec("supervision", "retourner", [
+    { pieceId: pieceB.id, motifId: null, note: null },
   ]);
   e.verdict("un retour sans motif est refusé", sansMotif !== null, sansMotif?.message ?? "");
   if (motif.requiresNote) {
-    const sansNote = await e.rpcAttenduEnEchec("supervision", "review", [
-      { ecritureId: pieceB.ecritureId, outcome: "retourne", motifId: motif.id, note: "" },
+    const sansNote = await e.rpcAttenduEnEchec("supervision", "retourner", [
+      { pieceId: pieceB.id, motifId: motif.id, note: "" },
     ]);
     e.verdict(
       `le motif « ${motif.label} » exige une note : sans elle, refus`,
@@ -400,18 +448,13 @@ const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
       sansNote?.message ?? "",
     );
   }
-  const contrePassation = await e.rpc("supervision", "review", [
-    {
-      ecritureId: pieceB.ecritureId,
-      outcome: "retourne",
-      motifId: motif.id,
-      note: "Épreuve — imputation à revoir",
-    },
+  await e.rpc("supervision", "retourner", [
+    { pieceId: pieceB.id, motifId: motif.id, note: "Épreuve — imputation à revoir" },
   ]);
   const ecritures = await e.rpc("office", "ecrituresForPiece", [pieceB.id]);
-  const reversal = ecritures.find((x) => x.id === contrePassation);
+  const reversal = ecritures.find((x) => x.libelle.startsWith("Contre-passation"));
   e.verdict(
-    "retourner contre-passe : une écriture inverse, comptabilisée, nommée comme telle",
+    "retourner une pièce prise en charge contre-passe : une écriture inverse, inscrite, nommée",
     reversal?.status === "booked" && reversal.libelle.startsWith("Contre-passation"),
     reversal?.libelle ?? "aucune",
   );
@@ -421,31 +464,30 @@ const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
   e.verdict(
     "le journal garde le retour et son motif",
     audit.some((x) => x.action === "ecriture.retournee" && x.motifId === motif.id),
+    audit.map((x) => x.action).join(", "),
   );
 }
 
-/* ---- corriger : contre-passer puis réimputer, jamais modifier */
+/* ---- le client répond et renvoie ; le comptable réimpute, jamais ne modifie */
 {
+  await e.rpc("capture", "repondreAuCabinet", [pieceB.id, "Une charge de verrerie."]);
+  await e.rpc("capture", "renvoyer", [pieceB.id]);
   const avant = (await e.rpc("office", "ecrituresForPiece", [pieceB.id])).length;
-  await e.confirmerLeType(pieceB.id, "facture_achat");
-  const id = await e.rpc("office", "propose", [
+  const id = await e.rpc("office", "forcer", [
     {
       pieceId: pieceB.id,
       journal: "ACH",
       date: AUJOURDHUI,
       libelle: "Facture VERRES DE TUNISIE E-2026-002 — réimputée",
-      packVersionId: pack.id,
-      devise: pack.currency,
       lignes: lignesDAchat(autreCharge),
     },
   ]);
-  await e.rpc("office", "book", [id]);
   pieceB.ecritureId = id;
   const apres = await e.rpc("office", "ecrituresForPiece", [pieceB.id]);
   const d = await e.rpc("capture", "dossier", [pieceB.id]);
   e.verdict(
     "la réimputation ajoute une écriture : l'erreur, son annulation et la correction subsistent",
-    apres.length === avant + 1 && apres.length >= 3 && d.piece.status === "comptabilisee",
+    apres.length === avant + 1 && apres.length >= 3 && d.piece.status === "supervisee",
     `${apres.length} écriture(s) · ${d.piece.status}`,
   );
   e.verdict(
@@ -461,6 +503,7 @@ const motif = motifs.find((m) => m.requiresNote) ?? motifs[0];
 
 /* ------------------------------------------------ propositions en masse */
 e.section("Propositions — la validation en masse");
+const pieceC = await assurerPiece("en-lot", "pdf", "E-2026-003");
 {
   const reglages = await e.rpc("parametrage", "reglagesCabinet", [cabinet.id]);
   e.verdict(
@@ -470,22 +513,25 @@ e.section("Propositions — la validation en masse");
       reglages.seuilConfianceLot <= 1,
     `revue ${reglages.seuilConfianceRevue} · lot ${reglages.seuilConfianceLot}${reglages.regle ? "" : " (défauts)"}`,
   );
-  const aValider = (await e.rpc("supervision", "queue", [cabinet.id])).filter(
-    (r) => r.status === "comptabilisee" && r.ecritureId,
-  );
-  const ids = aValider.map((r) => r.ecritureId);
-  const ecritures = await e.rpc("office", "ecrituresByIds", [ids]);
-  e.verdict(
-    "chaque proposition en attente a son écriture, lignes comprises",
-    ids.length > 0 &&
-      ecritures.length === new Set(ids).size &&
-      ecritures.every((x) => x.lines.length >= 2),
-    `${ids.length} proposition(s)`,
+  const aValider = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).filter(
+    (r) => A_TRAITER.has(r.statut),
   );
   e.verdict(
-    "la pièce réimputée y figure, prête pour le lot",
-    aValider.some((r) => r.pieceId === pieceB.id && r.ecritureId === pieceB.ecritureId),
+    "la pièce reçue figure au lot, prête à valider",
+    aValider.some((r) => r.pieceId === pieceC.id),
+    `${aValider.length} à traiter`,
   );
+  const p = await e.rpc("office", "propositionDePiece", [pieceC.id]);
+  e.verdict(
+    "chaque pièce du lot a sa proposition, lignes comprises",
+    p.ok === true && p.proposition.lignes.length >= 2,
+    p.ok ? `${p.proposition.lignes.length} ligne(s)` : p.raison,
+  );
+  pieceC.ecritureId = await e.rpc("office", "valider", [pieceC.id, p.ok ? p.empreinte : null]);
+  const ligne = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
+    (r) => r.pieceId === pieceC.id,
+  );
+  e.verdict("validée, elle quitte le lot", ligne?.statut === "validee", ligne?.statut ?? "");
   const planDeCharge = await e.rpc("parametrage", "plan", [dossier.tenantId, [6]]);
   e.verdict(
     "le plan de charge du dossier se lit pour la réimputation d'un lot",
@@ -541,7 +587,7 @@ const collaborateur = membres.find((m) => m.email === COMPTE_DEV.email);
   const s = stats.find((x) => x.tenantId === dossier.tenantId);
   e.verdict(
     "les comptages du dossier suivent ce qui vient d'être fait",
-    s && s.pieces >= 2 && s.supervisees >= 1 && s.comptabilisees >= 1,
+    s && s.pieces >= 3 && s.supervisees >= 3,
     s ? `${s.pieces} pièces · ${s.supervisees} supervisée(s)` : "aucun",
   );
   const st = await e.rpc("supervision", "statistiques", [cabinet.id, "fr"]);
@@ -559,7 +605,7 @@ const collaborateur = membres.find((m) => m.email === COMPTE_DEV.email);
     st.motifsDeRetour.map((m) => `${m.label} ×${m.retours}`).join(", "),
   );
   e.verdict(
-    "la validation du jour paraît dans les supervisées du mois, au nom du compte",
+    "la prise en charge du jour paraît dans les supervisées du mois, au nom du compte",
     st.parMois.some(
       (m) => m.mois === AUJOURDHUI.slice(0, 7) && m.collaborateur === COMPTE_DEV.email,
     ),
@@ -571,23 +617,24 @@ e.section("Notifications");
 {
   const ids = clients.map((c) => c.tenantId);
   const notifs = await e.rpc("collab", "notifications", [ids]);
-  const validee = notifs.find(
-    (n) => n.kind === "piece.validee" && n.payload?.piece_id === pieceA.id && n.createdAt >= DEBUT,
-  );
-  const retournee = notifs.find(
-    (n) =>
-      n.kind === "piece.retournee" && n.payload?.piece_id === pieceB.id && n.createdAt >= DEBUT,
-  );
+  const deLaPasse = (piece) =>
+    notifs.filter((n) => n.payload?.piece_id === piece && n.createdAt >= DEBUT);
+  const retournee = deLaPasse(pieceB.id).find((n) => n.kind === "piece.retournee");
   e.verdict(
-    "la validation et le retour ont chacun posé une notification, non lue, qui mène à la pièce",
-    Boolean(validee && retournee) && !validee.readAt && !retournee.readAt,
+    "le retour a posé une notification, non lue, qui mène à la pièce",
+    Boolean(retournee) && !retournee.readAt,
   );
-  await e.rpc("collab", "markRead", [validee.id]);
+  // La prise en charge ne dérange pas le client : il lit « Prise en charge »
+  // sur sa pièce, aucune notification ne l'appelle.
+  e.verdict(
+    "valider ne notifie pas le client",
+    deLaPasse(pieceA.id).length === 0 && deLaPasse(pieceC.id).length === 0,
+  );
+  await e.rpc("collab", "markRead", [retournee.id]);
   const relues = await e.rpc("collab", "notifications", [ids]);
   e.verdict(
     "marquer lu date la lecture, sans rien effacer",
-    relues.find((n) => n.id === validee.id)?.readAt !== null &&
-      relues.some((n) => n.id === retournee.id),
+    relues.find((n) => n.id === retournee.id)?.readAt != null,
   );
   const nonLues = relues.filter((n) => !n.readAt && n.createdAt >= DEBUT);
   for (const n of nonLues) await e.rpc("collab", "markRead", [n.id]);
@@ -877,7 +924,8 @@ const depotCle = await e.rpc("integrations", "creerCle", [
     const octets = await fetch(`${e.BASE}/pieces/${enregistree.resultat.id}/contenu`, {
       method: "POST",
       headers: { Authorization: `Bearer ${depotCle.cle}`, "Content-Type": "application/pdf" },
-      body: PDF,
+      // Sa clé d'idempotence est fixe : ses octets aussi, d'une passe à l'autre.
+      body: pdf("par-cle", "fixe"),
     });
     e.verdict(
       "et y dépose les octets par la route des pièces",

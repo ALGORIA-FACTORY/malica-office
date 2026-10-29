@@ -32,6 +32,7 @@ import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
 import { referentiel } from "./referentiel.ts";
+import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
 interface VerdictDeLecture {
@@ -382,7 +383,8 @@ export const capture = {
                 order by decided_at desc limit 1) as precision_kind,
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
-              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le
+              w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
+              ${COLONNES_DU_SUIVI}
          from pieces_v p
          left join lateral (
            select e.payload
@@ -392,6 +394,10 @@ export const capture = {
             order by e.created_at desc
             limit 1
          ) x on true
+         -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
+         left join lateral (
+           select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
+         ) s on true
          /*
           * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
           *
@@ -436,6 +442,7 @@ export const capture = {
         total: lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
+        suivi: versSuivi(r),
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
         // Le motif brut ne quitte jamais le serveur : il peut porter un message
         // technique. Seul son code `lecture.*` reconnu voyage.
@@ -462,29 +469,37 @@ export const capture = {
     const brut = (pieces as Record<string, unknown>[])[0];
     if (!brut) throw new Error("piece.not_found");
 
-    const [{ rows: ex }, { rows: cit }, { rows: tok }, { rows: prec }, { rows: refus }] =
-      await Promise.all([
-        db.query(
-          `select id, contract, payload, flags, created_at
+    const [
+      { rows: ex },
+      { rows: cit },
+      { rows: tok },
+      { rows: prec },
+      { rows: refus },
+      { rows: suivi },
+    ] = await Promise.all([
+      db.query(
+        `select id, contract, payload, flags, created_at
            from extractions_v where piece_id = $1 order by created_at desc limit 1`,
-          [pieceId],
-        ),
-        db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
-        db.query(
-          `select page, ordinal, text, x0, y0, x1, y1
+        [pieceId],
+      ),
+      db.query(`select field, page, bbox, zone from citations_v where piece_id = $1`, [pieceId]),
+      db.query(
+        `select page, ordinal, text, x0, y0, x1, y1
            from token_plan_v where piece_id = $1 order by ordinal`,
-          [pieceId],
-        ),
-        // La dernière précision par champ : ce que la personne a tranché.
-        db.query(
-          `select distinct on (champ) champ, valeur
+        [pieceId],
+      ),
+      // La dernière précision par champ : ce que la personne a tranché.
+      db.query(
+        `select distinct on (champ) champ, valeur
            from precisions_v where piece_id = $1 order by champ, decided_at desc`,
-          [pieceId],
-        ),
-        db.query(`select ${REFUS_DE_LECTURE} as lecture_refusee from pieces_v p where p.id = $1`, [
-          pieceId,
-        ]),
-      ]);
+        [pieceId],
+      ),
+      db.query(`select ${REFUS_DE_LECTURE} as lecture_refusee from pieces_v p where p.id = $1`, [
+        pieceId,
+      ]),
+      // Où elle en est chez le cabinet — la même lecture que les listes.
+      db.query(`select ${COLONNES_DU_SUIVI} from app.suivi_de_la_piece($1) s`, [pieceId]),
+    ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
     const precisions = Object.fromEntries(
@@ -526,6 +541,7 @@ export const capture = {
           }
         : null,
       precisions,
+      suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
         motif: string;
         le: string;

@@ -133,7 +133,7 @@ function CabinetPilotage() {
         userId: m.userId,
         email: m.email,
         mandats,
-        attente: mandats.reduce((n, c) => n + c.counts.comptabilisee, 0),
+        attente: mandats.reduce((n, c) => n + c.aTraiter, 0),
         traitees: s.reduce((n, x) => n + x.supervisees, 0),
         delai: heures.length
           ? heures.reduce((n, x) => n + x.heuresMoyennes, 0) / heures.length
@@ -450,7 +450,7 @@ function CabinetPilotage() {
                     collab={collab}
                     premier={premier}
                     client={m}
-                    attente={m.counts.comptabilisee}
+                    attente={m.aTraiter}
                     traitees={statsDisponibles ? (s?.supervisees ?? 0) : null}
                     delai={heures(s && s.heuresMoyennes > 0 ? s.heuresMoyennes : null)}
                     sante={statsDisponibles ? t(santeDuMandat(taux, tauxCabinet)) : "—"}

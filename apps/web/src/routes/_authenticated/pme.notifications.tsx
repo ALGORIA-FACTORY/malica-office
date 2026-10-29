@@ -149,7 +149,6 @@ const GENRES: Record<string, MessageKey> = {
   "conseil.arbitrage": "notif.kind.conseil.arbitrage",
   "conseil.repondu": "notif.kind.conseil.repondu",
   "conseil.decide": "notif.kind.conseil.decide",
-  "piece.confirmation_demandee": "notif.kind.piece.confirmation_demandee",
   "piece.reponse_client": "notif.kind.piece.reponse_client",
   "piece.renvoyee": "notif.kind.piece.renvoyee",
   "piece.remplacee": "notif.kind.piece.remplacee",

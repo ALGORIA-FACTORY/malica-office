@@ -11,7 +11,8 @@ import marqueRg from "@/assets/rg-mark.svg";
 import malica from "@/assets/malica.webp";
 import { cn } from "@/lib/utils";
 
-export type Tone = "ok" | "warn" | "stop" | "neutral";
+/** Vert pris en charge, ambre à vous, bleu chez l'autre, rouge à corriger, gris rien à faire. */
+export type Tone = "ok" | "warn" | "info" | "stop" | "neutral";
 
 /**
  * Employé seulement ici — par `SignalLight` et par la poignée. knip l'a
@@ -25,9 +26,11 @@ function SignalDot({ tone = "neutral" }: { tone?: Tone }) {
       ? "bg-signal-ok"
       : tone === "warn"
         ? "bg-signal-warn"
-        : tone === "stop"
-          ? "bg-signal-stop"
-          : "bg-foreground";
+        : tone === "info"
+          ? "bg-signal-info"
+          : tone === "stop"
+            ? "bg-signal-stop"
+            : "bg-foreground";
   return <span aria-hidden className={cn("inline-block h-2 w-2 shrink-0", color)} />;
 }
 
@@ -474,15 +477,6 @@ export function MalicaNote({ kicker, children }: { kicker?: string; children: Re
     <div className="border border-border px-3 py-3">
       {kicker ? <Eyebrow>{kicker}</Eyebrow> : null}
       <div className={cn("text-[13px] leading-relaxed", kicker && "mt-1")}>{children}</div>
-    </div>
-  );
-}
-
-/** Barre d'actions collée en bas de la colonne de travail. */
-export function StickyActions({ children }: { children: ReactNode }) {
-  return (
-    <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 border-t border-border bg-background px-4 py-3">
-      {children}
     </div>
   );
 }

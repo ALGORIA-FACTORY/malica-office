@@ -2,14 +2,14 @@
  * Ce que la file du cabinet lit dans une pièce — hors de tout écran, pour
  * que plusieurs écrans le lisent pareil et qu'une épreuve le fixe.
  */
-import type { PieceStatus } from "@malica/socle/ports/repositories";
+import { TON_CABINET, type StatutCabinet } from "@malica/socle/statut-d-envoi";
 
-/** Le ton d'un statut : ce qui attend un geste est or, ce qui est réglé est vert. */
-export function toneForStatus(status: PieceStatus): "ok" | "warn" | "stop" | "neutral" {
-  if (status === "supervisee") return "ok";
-  if (status === "retournee") return "stop";
-  if (status === "comptabilisee") return "warn";
-  return "neutral";
+import type { Tone } from "@/components/malica/office-ui";
+import { FEU_DU_TON } from "@/lib/statut";
+
+/** Le feu d'un statut du cabinet : ambre à vous, bleu chez le client, vert pris en charge. */
+export function feuDuStatut(statut: StatutCabinet): Tone {
+  return FEU_DU_TON[TON_CABINET[statut]];
 }
 
 const JOUR_MS = 86_400_000;

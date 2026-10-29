@@ -10,6 +10,7 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dernierRetourParPiece } from "@/lib/retour-du-cabinet";
+import { statutDeLaPieceLue } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -158,7 +159,8 @@ function ARegler() {
 
   // Seules les pièces ENCORE retournées : une pièce reprise puis
   // recomptabilisée ne doit plus figurer ici, même si sa notification reste.
-  const enAttente = (pieces.data ?? []).filter((p) => p.status === "retournee");
+  // « Retour » : la même règle que la liste et l'accueil (`statutDeLaPieceLue`).
+  const enAttente = (pieces.data ?? []).filter((p) => statutDeLaPieceLue(p) === "retour");
 
   const retours = dernierRetourParPiece(
     (notifs.data ?? [])

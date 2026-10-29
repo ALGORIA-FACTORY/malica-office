@@ -28,6 +28,8 @@ import { useMemo } from "react";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { useDecimales } from "./use-decimales";
+import { usePiecesLues } from "./use-pieces-lues";
+import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
@@ -82,11 +84,12 @@ export interface Accueil {
    * agir, et c'est pour cela qu'il vient en premier.
    */
   aReverser: string | null;
-  /** Part des pièces du mois déjà comptabilisées, de 0 à 1. `null` : aucune pièce. */
+  /** Part des pièces prises en charge par le cabinet, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
   /**
-   * Les pièces qui attendent une réponse DU DIRIGEANT : lues, et pas encore
-   * confirmées.
+   * Les pièces qui attendent une réponse DU DIRIGEANT : lues, dans la
+   * société, ni envoyées ni gardées — « À envoyer ». Il ne confirme aucune
+   * écriture (« Malica sans blocage », 28 octobre 2026).
    *
    * Ce n'est pas un compte par mois, et c'est voulu. Le 10 octobre, l'accueil
    * disait « Presque » à 0 % et « quelques factures » sans en connaître le
@@ -168,10 +171,9 @@ export function useAccueil(periode: string): Accueil {
     },
   });
 
-  const pieces = useQuery({
-    queryKey: ["pieces", pme.tenantId],
-    queryFn: () => office().capture.list(pme.tenantId),
-  });
+  // La liste avec ses faits de suivi : le statut se classe comme partout
+  // ailleurs (`statutDeLaPieceLue`), jamais sur le statut brut.
+  const pieces = usePiecesLues();
 
   // ------------------------------------------------------ la série de douze
   const serie = useMemo<MoisDeTva[]>(() => {
@@ -305,10 +307,13 @@ export function useAccueil(periode: string): Accueil {
        * ======================================= LES ÉTATS, ET CE QU'ILS VEULENT DIRE
        *
        * capturee                       déposée, pas encore lue
-       * lue · proposee                 lue, et elle attend le dirigeant
-       * confirmee                      il a répondu, le cabinet suit
-       * comptabilisee · supervisee     close
-       * retournee                      le cabinet la renvoie
+       * à envoyer · gardée             dans la société : la décision du dirigeant
+       * prise en charge                le cabinet l'a validée ou forcée : close
+       * retour                         le cabinet la renvoie
+       *
+       * Chaque état vient de `statutDeLaPieceLue`, sur les faits du suivi : une
+       * pièce inscrite avant « Malica sans blocage » (encore `comptabilisee`)
+       * est « Prise en charge » ici comme dans la liste.
        *
        * Le compte du mois, lui, a disparu d'ici : il était pris sur
        * `createdAt` — la date de la PHOTO — pendant que « Vos documents »
@@ -316,18 +321,7 @@ export function useAccueil(periode: string): Accueil {
        * sur l'autre écran, le 10 octobre. Une seule définition, et elle vit
        * là où la date de la pièce est connue.
        */
-      const lues = liste.filter((p) => p.status !== "capturee");
-      const closes = liste.filter(
-        (p) => p.status === "comptabilisee" || p.status === "supervisee",
-      ).length;
-      return {
-        avancement: liste.length === 0 ? null : closes / liste.length,
-        enAttente: liste.filter((p) => p.status === "lue" || p.status === "proposee").length,
-        documentsLus: lues.length,
-        documentsNonLus: liste.length - lues.length,
-        jamaisRienDepose: liste.length === 0,
-        retournees: liste.filter((p) => p.status === "retournee").length,
-      };
+      return avancementDeLaListe(liste);
     }, [pieces.data]);
 
   return {

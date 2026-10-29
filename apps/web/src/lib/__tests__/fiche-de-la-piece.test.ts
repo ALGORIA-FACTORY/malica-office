@@ -1,80 +1,52 @@
 import { describe, expect, it } from "vitest";
-import type { Ecriture } from "@malica/socle/ports/repositories";
+import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 
 import {
-  avancementDeLaPiece,
   dateAEnregistrer,
-  ecritureDeLaPiece,
   etiquetteDeLecture,
   noteDeSuppression,
-  parcoursDeLaPiece,
+  ouEnEstLaPiece,
   partageeAvecLeCabinet,
-  RANG_COMPTEE,
 } from "@/lib/fiche-de-la-piece";
 
-const ecriture = (id: string, autre: Partial<Ecriture> = {}): Ecriture =>
-  ({
-    id,
-    pieceId: "piece",
-    journal: "AC",
-    dateEcriture: "2026-10-20",
-    devise: "TND",
-    libelle: "",
-    status: "booked",
-    vivante: false,
-    lines: [],
-    ...autre,
-  }) as Ecriture;
-
-describe("l'écriture de la pièce", () => {
-  it("ignore les règlements et leurs annulations, même inscrits (pièce COMPTOIR)", () => {
-    const reglements = [
-      ecriture("p1", { journal: "BQ" }),
-      ecriture("a1", { journal: "BQ" }),
-      ecriture("p2", { journal: "CA" }),
-      ecriture("a2", { journal: "CA" }),
-    ];
-    expect(ecritureDeLaPiece(reglements)).toBeNull();
-    expect(avancementDeLaPiece("lue", ecritureDeLaPiece(reglements))).toEqual({
-      atteint: 2,
-      comptee: false,
-    });
-  });
-
-  it("retient la vivante, pas la contre-passée", () => {
-    const vivante = ecriture("v", { vivante: true });
-    expect(ecritureDeLaPiece([ecriture("old"), vivante])).toBe(vivante);
-    expect(ecritureDeLaPiece(undefined)).toBeNull();
-  });
+const suivi = (s: Partial<SuiviDEnvoi>): SuiviDEnvoi => ({
+  envoyeeLe: "2026-10-27T10:42:00.000Z",
+  vueLe: null,
+  vuePar: null,
+  corrigeeLe: null,
+  priseLe: null,
+  prise: null,
+  prisePar: null,
+  ...s,
 });
 
-describe("l'avancement : le parcours et « comptée » ne se contredisent jamais", () => {
-  const statuts = [
-    "capturee",
-    "lue",
-    "proposee",
-    "comptabilisee",
-    "supervisee",
-    "retournee",
-  ] as const;
-
-  it.each(statuts)("statut %s, avec ou sans écriture vivante", (status) => {
-    for (const e of [null, ecriture("v", { vivante: true })]) {
-      const { atteint, comptee } = avancementDeLaPiece(status, e);
-      expect(comptee).toBe(atteint >= RANG_COMPTEE);
-      if (e) expect(comptee).toBe(true);
-    }
-  });
-
-  it("le statut suffit quand l'écriture tarde d'une requête", () => {
-    expect(avancementDeLaPiece("comptabilisee", null)).toEqual({ atteint: 4, comptee: true });
-    expect(avancementDeLaPiece("supervisee", null)).toEqual({ atteint: 5, comptee: true });
-  });
-
-  it("une écriture vivante pousse le parcours à « Comptée »", () => {
-    expect(avancementDeLaPiece("proposee", ecriture("v", { vivante: true })).atteint).toBe(
-      RANG_COMPTEE,
+/** Maquette « Fiche PME sans écriture » (28 octobre 2026) : trois étapes, aucune écriture. */
+describe("où elle en est", () => {
+  it("envoyée, vue, prise en charge — chacune son heure, ou à venir", () => {
+    expect(ouEnEstLaPiece(suivi({}))).toEqual([
+      { cle: "envoyee", le: "2026-10-27T10:42:00.000Z" },
+      { cle: "vue", le: null },
+      { cle: "prise_en_charge", le: null },
+    ]);
+    const prise = ouEnEstLaPiece(
+      suivi({
+        vueLe: "2026-10-28T09:15:00.000Z",
+        prise: "forcee",
+        priseLe: "2026-10-28T09:20:00.000Z",
+      }),
     );
+    expect(prise.map((e) => e.le !== null)).toEqual([true, true, true]);
+  });
+
+  it("une vue d'avant le renvoi ne compte plus", () => {
+    const e = ouEnEstLaPiece(
+      suivi({ envoyeeLe: "2026-10-29T08:00:00.000Z", vueLe: "2026-10-28T09:15:00.000Z" }),
+    );
+    expect(e[1]).toEqual({ cle: "vue", le: null });
+  });
+
+  it("jamais partie : tout est à venir", () => {
+    expect(ouEnEstLaPiece(null).every((e) => e.le === null)).toBe(true);
   });
 });
 
@@ -101,25 +73,13 @@ describe("la note de suppression", () => {
 });
 
 describe("l'étiquette d'une ligne lue (maquette « C »)", () => {
-  it("une pièce comptée dit « confirmé », quelle que soit la confiance du jugement", () => {
-    for (const aVerifier of [true, false])
-      for (const confianceConnue of [true, false])
-        expect(etiquetteDeLecture({ comptee: true, confianceConnue, aVerifier })).toBe("confirme");
-  });
-
-  it("avant, le jugement décide : « à vérifier » ou « source »", () => {
-    expect(etiquetteDeLecture({ comptee: false, confianceConnue: true, aVerifier: true })).toBe(
-      "aVerifier",
-    );
-    expect(etiquetteDeLecture({ comptee: false, confianceConnue: true, aVerifier: false })).toBe(
-      "source",
-    );
+  it("le jugement décide : « à vérifier » ou « source » — la PME ne confirme rien", () => {
+    expect(etiquetteDeLecture({ confianceConnue: true, aVerifier: true })).toBe("aVerifier");
+    expect(etiquetteDeLecture({ confianceConnue: true, aVerifier: false })).toBe("source");
   });
 
   it("tant que le jugement n'est pas arrivé, rien de faux : ni coche, ni « à vérifier »", () => {
-    expect(etiquetteDeLecture({ comptee: false, confianceConnue: false, aVerifier: true })).toBe(
-      "inconnue",
-    );
+    expect(etiquetteDeLecture({ confianceConnue: false, aVerifier: true })).toBe("inconnue");
   });
 });
 
@@ -137,55 +97,5 @@ describe("la date donnée à la main (audit du 25 octobre 2026)", () => {
   it("une saisie incomplète n'écrit rien", () => {
     expect(dateAEnregistrer("", null, null)).toBeNull();
     expect(dateAEnregistrer("2026-10", null, null)).toBeNull();
-  });
-});
-
-describe("la pastille et le parcours disent la même chose (audit du 25 octobre 2026)", () => {
-  const vivante = ecriture("v", { vivante: true });
-  const etatDe = (p: ReturnType<typeof parcoursDeLaPiece>, cle: string) =>
-    p.etapes.find((e) => e.cle === cle)?.etat;
-
-  it("une pièce comptée : « Comptabilisée », et « Comptée » est FAITE, pas en cours", () => {
-    for (const p of [parcoursDeLaPiece("comptabilisee", null), parcoursDeLaPiece("lue", vivante)]) {
-      expect(p.pastille.cle).toBe("pme.dossier.etat.comptabilisee");
-      expect(p.derniere).toBe("comptee");
-      expect(etatDe(p, "comptee")).toBe("faite");
-      expect(etatDe(p, "vue")).toBe("courante");
-      expect(p.prochaine).toBe("vue");
-    }
-  });
-
-  it("une pièce supervisée : la pastille suit l'étape 5", () => {
-    const p = parcoursDeLaPiece("supervisee", vivante);
-    expect(p.pastille).toEqual({ cle: "pme.status.supervisee", ton: "ok" });
-    expect(p.derniere).toBe("vue");
-    expect(etatDe(p, "vue")).toBe("faite");
-    expect(etatDe(p, "declaree")).toBe("attente");
-  });
-
-  it("une pièce lue attend sa confirmation : ambre des deux côtés", () => {
-    const p = parcoursDeLaPiece("lue", null);
-    expect(p.pastille.ton).toBe("am");
-    expect(p.derniere).toBe("lue");
-    expect(etatDe(p, "confirmee")).toBe("courante");
-  });
-
-  it("une seule étape au plus est en cours, et jamais avant une étape faite", () => {
-    const statuts = [
-      "capturee",
-      "lue",
-      "proposee",
-      "comptabilisee",
-      "supervisee",
-      "retournee",
-    ] as const;
-    for (const status of statuts)
-      for (const e of [null, vivante]) {
-        const p = parcoursDeLaPiece(status, e);
-        const etats = p.etapes.map((x) => x.etat);
-        expect(etats.filter((x) => x === "courante").length).toBeLessThanOrEqual(1);
-        expect(etats.join(",")).toMatch(/^(faite,)*(courante,)?(attente,?)*$/);
-        expect(etatDe(p, p.derniere)).toBe("faite");
-      }
   });
 });

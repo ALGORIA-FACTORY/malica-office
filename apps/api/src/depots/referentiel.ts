@@ -294,6 +294,23 @@ export const referentiel = {
   },
 
   /**
+   * Les journaux où le comptable saisit une écriture qu'il force : ceux du
+   * référentiel, dans l'ordre du journal du jour (`rang`), nommés par
+   * `ref.labels` avec le même repli explicite sur le libellé de la table.
+   */
+  async journaux(db: Requete, locale: string) {
+    const { rows } = await db.query<{ code: string; libelle: string }>(
+      `select j.code, coalesce(demandee.value, j.libelle) as libelle
+         from ref.journals j
+         left join ref_labels_v demandee
+           on demandee.ns = 'journal' and demandee.key = j.code and demandee.locale = $1
+        order by j.rang nulls last, j.code`,
+      [locale],
+    );
+    return rows;
+  },
+
+  /**
    * Les sept dossiers — de la capture à la bibliothèque, un seul mot.
    *
    * 25 octobre 2026, maquette validée par Wissem : la capture les propose,

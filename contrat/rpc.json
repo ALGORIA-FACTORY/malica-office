@@ -233,11 +233,10 @@
   "office": [
     "book",
     "bookedExtracts",
-    "corrigerLImputation",
     "ecrituresByIds",
     "ecrituresForPiece",
     "extraitsTransmis",
-    "inscrireLaPieceDuClient",
+    "forcer",
     "inscrireLeReglement",
     "periodeLignes",
     "propose",
@@ -246,7 +245,8 @@
     "propositionDePiece",
     "propositionDeReglement",
     "retenuesDuMois",
-    "transmisesSansDate"
+    "transmisesSansDate",
+    "valider"
   ],
   "parametrage": [
     "calendrierCabinet",
@@ -275,6 +275,7 @@
     "classesDeComptes",
     "dossiers",
     "fiscalCharges",
+    "journaux",
     "juridictions",
     "mentionsDuPack",
     "moyensDePaiement",
@@ -300,7 +301,6 @@
   "supervision": [
     "auditForPiece",
     "controlesPiece",
-    "demanderConfirmation",
     "documents",
     "documentsLies",
     "journalDuMandat",
@@ -310,7 +310,8 @@
     "queue",
     "retourner",
     "review",
-    "statistiques"
+    "statistiques",
+    "voir"
   ],
   "tiers": [
     "comptesCollectifs",

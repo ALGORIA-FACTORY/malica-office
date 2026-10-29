@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { totalDesPaiements } from "@/lib/total-des-paiements";
 
 import { useDecimales } from "@/hooks/use-decimales";
-import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { useSuperposition } from "@/hooks/use-superposition";
 
 import { useI18n, type MessageKey } from "@/i18n";
@@ -46,12 +45,13 @@ import { dossierDeLaPiece } from "@/lib/dossiers";
 import { RAISON_LONGUE } from "@/lib/lecture";
 import {
   dateAEnregistrer,
-  ecritureDeLaPiece,
   etiquetteDeLecture,
   noteDeSuppression,
-  parcoursDeLaPiece,
+  ouEnEstLaPiece,
   partageeAvecLeCabinet,
 } from "@/lib/fiche-de-la-piece";
+import { MOT_PME, MOT_PME_QUI } from "@/lib/statut";
+import { statutPme, TON_PME, type TonDuStatut } from "@malica/socle/statut-d-envoi";
 import { codeDeLecture, demandeUnGeste, issueDeLecture } from "@malica/socle/issue-de-lecture";
 
 export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
@@ -61,13 +61,13 @@ export const Route = createFileRoute("/_authenticated/pme/piece/$pieceId")({
       {
         name: "description",
         content:
-          "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation.",
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez le cabinet.",
       },
       { property: "og:title", content: "Ma pièce — Malica Office" },
       {
         property: "og:description",
         content:
-          "Lecture citée d'une pièce : chaque montant ouvre sa zone source avant confirmation.",
+          "Lecture citée d'une pièce : chaque montant ouvre sa zone source ; où elle en est chez le cabinet.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -179,7 +179,6 @@ function PieceScreen() {
   const { pieceId } = Route.useParams();
   const { t, locale } = useI18n();
   const pme = usePme();
-  const nonAssujetti = useNonAssujetti();
   const qc = useQueryClient();
   // Les décimales de la devise viennent du pack. `null` tant qu'on ne les a
   // pas : on n'en suppose aucune (R4).
@@ -193,16 +192,8 @@ function PieceScreen() {
    */
   const [attente, setAttente] = useState(false);
   /**
-   * Le soulagement n'arrive qu'une fois.
-   *
-   * Il est porté par un état d'écran, pas par le statut de la pièce : rouvrir
-   * une facture comptabilisée trois jours plus tard ne doit pas rejouer la
-   * coche. On fête la confirmation, pas la comptabilisation.
-   */
-  const [regle, setRegle] = useState(false);
-  /**
    * « Envoyé » : la transmission vient d'aboutir (maquette du 27 octobre
-   * 2026). Un état d'écran, comme `regle` — rouvrir une pièce transmise ne
+   * 2026). Un état d'écran — rouvrir une pièce transmise ne
    * rejoue pas l'écran.
    */
   const [envoye, setEnvoye] = useState(false);
@@ -304,11 +295,6 @@ function PieceScreen() {
     enabled: !lue,
   });
 
-  const ecritures = useQuery({
-    queryKey: ["ecritures", pieceId],
-    queryFn: () => office().office.ecrituresForPiece(pieceId),
-  });
-
   /**
    * LA CHAÎNE — ce qui est né de cette pièce (reçu, talons), puis ce qui lui a
    * été RATTACHÉ après la lecture (bon de livraison, avoir, devis).
@@ -402,7 +388,6 @@ function PieceScreen() {
   const invalidate = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
-      qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
       qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] }),
       // La liste dit l'issue de la lecture à l'accueil, à la capture et ici.
       qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) }),
@@ -742,9 +727,6 @@ function PieceScreen() {
   // précision de la personne si la lecture n'avait pas su.
   const payloadDeLaProposition = dossier.data?.extraction?.payload ?? null;
 
-  // L'écriture DE la pièce : la vivante — jamais un règlement ni une annulée.
-  const booked = ecritureDeLaPiece(ecritures.data);
-
   /**
    * « Renvoyer » une pièce retournée : elle repart au cabinet, son retour
    * clos, et RIEN ne s'inscrit ici (« Malica sans blocage », 28 octobre 2026).
@@ -759,53 +741,6 @@ function PieceScreen() {
       setError(null);
       await invalidate();
       setRenvoyeeLe(le);
-    },
-    onError: (e: unknown) =>
-      setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
-  });
-
-  /**
-   * Un seul geste : la proposition du Socle et sa comptabilisation s'enchaînent.
-   * La PME ne compose jamais l'écriture, elle confirme ce qu'elle a vu cité.
-   */
-  const confirm = useMutation({
-    mutationFn: async () => {
-      // Une proposition calculable prime toujours sur une proposition ancienne :
-      // le Socle a pu changer d'avis (droit du pack, résidu). Le RPC remplace la
-      // proposition existante ; une écriture non équilibrée n'est jamais confirmée.
-      let ecritureId: string | null = null;
-      if (proposal) {
-        if (!pme.packId || !proposal.pivot.approvable) throw new Error(t("pme.confirm.review"));
-        /*
-         * Le « Oui » vaut pour tout ce qui est à l'écran, le sens de la pièce
-         * compris. Tant que le type n'a été que lu, la personne le confirme
-         * ici, avant l'écriture : c'est ce que le verrou R2 attend, et la
-         * précision reste datée et signée à côté de la lecture (R7).
-         */
-        const pieceLue = dossier.data?.piece;
-        const type = (payloadDeLaProposition as { document_kind?: string } | null)?.document_kind;
-        if (
-          pieceLue &&
-          pieceLue.documentKindStatut !== "confirme" &&
-          (type === "facture_achat" || type === "facture_vente")
-        ) {
-          await office().capture.preciser(pieceId, "document_kind", type);
-        }
-        // Le serveur recalcule et enregistre : aucune ligne ne part d'ici.
-        ecritureId = await office().office.proposerDepuisPiece(pieceId, dateRetenue);
-      } else {
-        // Jamais de repli sur une proposition ancienne : sans calcul du Socle,
-        // il n'y a rien à confirmer. La raison rendue est celle de l'écran,
-        // traduite — jamais la prose du serveur, qui parle au cabinet.
-        throw new Error(raisonDuBlocage);
-      }
-      if (!ecritureId) throw new Error(t("pme.confirm.review"));
-      await office().office.book(ecritureId);
-    },
-    onSuccess: async () => {
-      setError(null);
-      setRegle(true);
-      await invalidate();
     },
     onError: (e: unknown) =>
       setError(texteDeLErreur(e, "routes/_authenticated/pme.piece.$pieceId", t("common.error"))),
@@ -897,7 +832,8 @@ function PieceScreen() {
   // Une citation par champ : la dernière écrite est celle qui fait foi.
   const byField = new Map(citations.map((c) => [c.field, c]));
   const payload = extraction?.payload as ExtractPayload | undefined;
-  const confirmable = Boolean(proposal?.pivot.approvable);
+  // Le Socle propose une écriture : sinon la lecture est « à corriger ».
+  const proposable = Boolean(proposal?.pivot.approvable);
 
   /**
    * Un montant du Socle, dans la langue du lecteur — ou rien s'il n'y en a pas.
@@ -918,31 +854,23 @@ function PieceScreen() {
   };
 
   /**
-   * « Classé dans … » — le libellé du compte principal que le Socle a retenu.
-   *
-   * Pas une catégorie d'écran : la première ligne de l'écriture proposée, donc
-   * exactement ce qui sera comptabilisé.
+   * Le statut de la pièce, un mot et une couleur (« Malica sans blocage »,
+   * §2) — le même que dans la liste, dérivé au Socle des faits de la base.
+   * La PME ne voit aucune écriture : « Prise en charge » le dit à sa place.
    */
-  const classement = proposal?.lignes[0]?.libelle ?? t("pme.regle.classe.inconnu");
-
-  /** La TVA du document, telle que la lecture l'a relevée. */
-  const tvaDuDoc = payload?.totals?.vat ? montant(payload.totals.vat, locale) : null;
-
-  /**
-   * Le parcours de la pièce, étape par étape.
-   *
-   * L'ordre est le NÔTRE : une pièce est comptabilisée avant d'être vue par
-   * le cabinet. Reprendre l'ordre de la maquette aurait dessiné un circuit
-   * qui n'existe pas dans le produit.
-   */
-  // Une seule dérivation pour le parcours, « comptée » ET la pastille : les
-  // trois ne peuvent pas se contredire (audit du 25 octobre 2026).
-  const parcours = parcoursDeLaPiece(piece.status, booked);
-  const { comptee } = parcours;
-  const etapes = parcours.etapes.map((e) => ({
-    ...e,
-    label: t(`pme.parcours.${e.cle}` as MessageKey),
-  }));
+  const statut = statutPme({
+    vis: piece.vis,
+    status: piece.status,
+    gardeeLe: piece.gardeeLe,
+    suivi: dossier.data.suivi,
+  });
+  const priseEnCharge = statut === "prise_en_charge";
+  /** Le cabinet, nommé quand on le connaît : « Vue par CABINET D’ESSAI ». */
+  const nomDuCabinet = dossier.data.suivi?.vuePar ?? cabinet.data?.name ?? null;
+  const motDuStatut = (cle: typeof statut) => {
+    const qui = MOT_PME_QUI[cle];
+    return qui && nomDuCabinet ? t(qui, { qui: nomDuCabinet }) : t(MOT_PME[cle]);
+  };
 
   /** Les articles relevés sur la pièce. Le contrat les porte ; l'écran les montre. */
   const articles = payload?.articles ?? [];
@@ -1101,7 +1029,7 @@ function PieceScreen() {
           },
         }}
         lien={
-          comptee
+          priseEnCharge
             ? null
             : {
                 libelle: t("envoi.rappel"),
@@ -1112,83 +1040,6 @@ function PieceScreen() {
               }
         }
       />
-    );
-  }
-
-  /* ========================================================== C'EST RÉGLÉ
-   *
-   * Le pic de soulagement, plein écran lui aussi, et il n'arrive qu'UNE fois
-   * — à la confirmation. Rouvrir une facture comptabilisée trois jours plus
-   * tard ne rejoue pas la coche : on fête la confirmation, pas l'état.
-   */
-  if (regle) {
-    const resteAFaire: "transmettre" | "regler" | null =
-      cabinet.data &&
-      piece.vis !== "partage" &&
-      !piece.gardeeLe &&
-      acces.data?.role !== "collaborateur"
-        ? "transmettre"
-        : paiements.isSuccess && !(paiements.data ?? []).some((p) => !p.eteint)
-          ? "regler"
-          : null;
-    return (
-      <div className="pt-safe rg-rise fixed inset-0 z-40 mx-auto flex w-full max-w-md flex-col items-center justify-center bg-background px-10 text-center">
-        <svg
-          width="34"
-          height="34"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          aria-hidden
-        >
-          <path d="M4 12.5l5 5L20 6.5" strokeDasharray="34" className="rg-draw" />
-        </svg>
-        <p className="mt-5 text-[27px] font-semibold tracking-[-0.03em]">{t("pme.regle.titre")}</p>
-        <p className="mt-2.5 max-w-[280px] text-[15px] leading-[1.55] text-text-2">
-          {/*
-           * On ne dit « transmis » que si la pièce l'est VRAIMENT. Promettre la
-           * transmission sans qu'elle ait eu lieu est un mensonge — et sur une
-           * pièce comptable, un mensonge qui coûte cher à découvrir.
-           */}
-          {resteAFaire
-            ? t("pme.regle.classe.seul", { classe: classement })
-            : cabinet.data && piece.vis === "partage"
-              ? t("pme.regle.classe.cabinet", { classe: classement, cabinet: cabinet.data.name })
-              : t("pme.regle.classe", { classe: classement })}
-        </p>
-        {/*
-         * « Vous n'avez plus rien à faire » seulement quand c'est VRAI : une
-         * transmission à décider ou un règlement à dire restent un geste
-         * (audit du 25 octobre 2026).
-         */}
-        {resteAFaire ? (
-          <p className="mt-2 max-w-[280px] text-[15px] leading-[1.55] text-foreground">
-            {resteAFaire === "transmettre" && cabinet.data
-              ? t("pme.regle.reste.transmettre", { cabinet: cabinet.data.name })
-              : t("pme.regle.reste.regler")}
-          </p>
-        ) : null}
-        {tvaDuDoc ? (
-          <span className="mt-6 inline-flex items-center gap-2 border border-signal-ok px-3.5 py-2 text-[13px] font-semibold text-signal-ok">
-            <span aria-hidden className="h-[5px] w-[5px] bg-current" />
-            {payload?.document_kind === "facture_vente"
-              ? t("pme.regle.tva.collectee", { montant: tvaDuDoc, devise: pme.currency })
-              : nonAssujetti
-                ? // Non assujetti : la TVA payée est un coût, elle rejoint la charge.
-                  t("pme.regle.tva.nonRecuperable", { montant: tvaDuDoc, devise: pme.currency })
-                : t("pme.regle.tva.recuperable", { montant: tvaDuDoc, devise: pme.currency })}
-          </span>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => setRegle(false)}
-          className="mt-[34px] border-b border-line-strong pb-[3px] text-[13px] font-medium text-muted-foreground"
-        >
-          {t("pme.regle.voir")}
-        </button>
-      </div>
     );
   }
 
@@ -1683,13 +1534,7 @@ function PieceScreen() {
       corps: "sensContredit",
     });
   }
-  if (
-    !confirmable &&
-    !sensIndetermine &&
-    !sensContredit &&
-    proposalAttempt &&
-    !proposalAttempt.ok
-  ) {
+  if (!proposable && !sensIndetermine && !sensContredit && proposalAttempt && !proposalAttempt.ok) {
     /*
      * LA RAISON PASSE DEVANT LE BOUTON MORT.
      *
@@ -1705,16 +1550,6 @@ function PieceScreen() {
       sous: t("pme.bloque.geste"),
     });
   }
-  if (confirmable) {
-    controles.push({
-      cle: "classe",
-      k: "ok",
-      p: `${t("pme.piece.classee")} ${classement}`,
-    });
-  }
-  if (booked) {
-    controles.push({ cle: "comptee", k: "ok", p: t("pme.book.done") });
-  }
 
   /** La chaîne : la pièce elle-même, puis ce qui en est né. */
   const nes = joints.data ?? [];
@@ -1729,46 +1564,33 @@ function PieceScreen() {
    * UNE carte de décision, l'avancement, puis Lecture · Règlement · Suivi.
    *
    * La carte pose une seule question à la fois, dans cet ordre : le sens si
-   * la lecture ne l'a pas tranché, la date si elle manque, le montant, l'envoi
-   * au cabinet, le reste à payer — puis elle devient une ligne calme. Aucun
-   * geste n'est perdu : chacun a aussi sa place dans un onglet.
+   * la lecture ne l'a pas tranché, la date si elle manque, l'envoi au
+   * cabinet, le reste à payer — puis elle devient une ligne calme, le statut
+   * de la pièce. Elle ne demande jamais de confirmer une écriture : la PME
+   * n'en voit aucune (« Malica sans blocage », 28 octobre 2026). Aucun geste
+   * n'est perdu : chacun a aussi sa place dans un onglet.
    */
-  const pastille = parcours.pastille;
   /*
-   * Retournée par la comptabilité, pas encore comptée : l'étape en cours est
-   * la confirmation, et elle se dit « À reprendre » (maquette du 25 octobre).
+   * Retournée par la comptabilité : la carte du retour remplace la décision.
+   * Une pièce retournée n'est jamais prise en charge (son écriture est
+   * contre-passée), et rien ne s'y confirme.
    */
-  const retourEnCours = piece.status === "retournee" && !comptee ? (retour.data ?? null) : null;
+  const retourEnCours = statut === "retour" ? (retour.data ?? null) : null;
   /*
    * Retournée, la pièce est RENDUE au client : il la supprime ou la garde sans
    * rien demander (« Malica sans blocage »). Les demandes au cabinet n'ont
    * plus lieu d'être proposées.
    */
-  const rendue = piece.status === "retournee" && piece.vis === "partage";
-  // Tant que le retour se lit, aucune carte : l'ancienne offrait un « Oui »
-  // qui recomptabilisait sans le geste demandé (relecture de #114).
-  const retourSeLit = piece.status === "retournee" && !comptee && retour.isPending;
-  const indexAReprendre = retourEnCours ? etapes.findIndex((e) => e.cle === "confirmee") : -1;
-  // Le parcours nomme l'étape ATTEINTE — celle de la pastille —, puis la suivante.
-  const indexCourant =
-    indexAReprendre >= 0
-      ? indexAReprendre
-      : Math.max(
-          0,
-          etapes.findIndex((e) => e.cle === parcours.derniere),
-        );
-  const courante =
-    indexAReprendre >= 0
-      ? { ...etapes[indexAReprendre]!, label: t("pme.parcours.aReprendre") }
-      : etapes[indexCourant];
-  const suivante =
-    indexAReprendre >= 0
-      ? (etapes[indexAReprendre + 1] ?? null)
-      : (etapes.find((e) => e.cle === parcours.prochaine) ?? null);
+  const rendue = statut === "retour" && piece.vis === "partage";
+  // Tant que le retour se lit, aucune carte (relecture de #114).
+  const retourSeLit = statut === "retour" && retour.isPending;
+  // Où elle en est chez le cabinet : envoyée, vue, prise en charge.
+  const ouEnEst = ouEnEstLaPiece(dossier.data.suivi);
+  const derniereFaite = ouEnEst.map((e) => e.le !== null).lastIndexOf(true);
   const aTransmettre =
     Boolean(cabinet.data) && piece.vis !== "partage" && !piece.gardeeLe && !siege;
-  const resteAPayer = comptee && resteMineur !== null && resteMineur > 0;
-  const bloquee = !confirmable && proposalAttempt != null && !proposalAttempt.ok;
+  const resteAPayer = resteMineur !== null && resteMineur > 0;
+  const bloquee = !proposable && proposalAttempt != null && !proposalAttempt.ok;
 
   const constats = controles.filter((c) => c.k === "ok" || c.cle === "refus");
 
@@ -1797,7 +1619,7 @@ function PieceScreen() {
 
   type Geste = { libelle: string; action: () => void; principal?: boolean; eteint?: boolean };
   const decision: {
-    ton: "am" | "ve" | "ok" | "az";
+    ton: "ve" | TonDuStatut;
     titre: string;
     sous?: string;
     gestes: Geste[];
@@ -1844,7 +1666,7 @@ function PieceScreen() {
             },
           ],
         }
-      : !comptee && dateAbsente
+      : !priseEnCharge && dateAbsente
         ? {
             ton: "am",
             titre: t("pme.date.manque.lede"),
@@ -1856,18 +1678,18 @@ function PieceScreen() {
               },
             ],
           }
-        : !comptee && demandeDeRappel === "demandee"
+        : !priseEnCharge && demandeDeRappel === "demandee"
           ? {
               /*
                * Rappeler et inscrire se contredisent : tant que le cabinet n'a
-               * pas tranché le rappel, la base refuse le « Oui ». On le dit au
-               * lieu d'offrir un bouton qui échouerait (audit du 25 octobre).
+               * pas tranché le rappel, la base refuse toute inscription. On le
+               * dit au lieu d'offrir un bouton qui échouerait.
                */
               ton: "az",
               titre: t("refus.piece.rappelEnAttente"),
               gestes: [],
             }
-          : !comptee && bloquee
+          : !priseEnCharge && bloquee
             ? {
                 // La raison passe devant le bouton mort (10 octobre 2026).
                 ton: "ve",
@@ -1887,66 +1709,48 @@ function PieceScreen() {
                     : []),
                 ],
               }
-            : !comptee
+            : aTransmettre && cabinet.data
               ? {
-                  ton: "am",
-                  titre: payload?.totals?.ttc
-                    ? t("pme.verifie.question", {
-                        montant: lisible(payload.totals.ttc) ?? "",
-                        devise,
-                      })
-                    : t("pme.verifie.question.sansTotal"),
+                  /*
+                   * La transmission est une DÉCISION (4 et 7 octobre) : deux
+                   * boutons de même poids — garder chez soi est légitime.
+                   */
+                  ton: "az",
+                  titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
+                  sous: t("pme.transmettre.chezvous"),
                   gestes: [
-                    { libelle: t("pme.verifie.corriger"), action: reprendreLaPhoto },
                     {
-                      libelle: confirm.isPending ? t("pme.confirm.pending") : t("pme.verifie.oui"),
-                      action: () => confirm.mutate(),
-                      eteint: confirm.isPending || !confirmable,
+                      libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
+                      action: () => garder.mutate(),
+                      eteint: garder.isPending || transmettre.isPending,
+                    },
+                    {
+                      libelle: transmettre.isPending
+                        ? t("common.loading")
+                        : t("pme.transmettre.action"),
+                      action: () => transmettre.mutate(),
+                      eteint: transmettre.isPending || garder.isPending,
                       principal: true,
                     },
                   ],
                 }
-              : aTransmettre && cabinet.data
+              : resteAPayer
                 ? {
-                    /*
-                     * La transmission est une DÉCISION (4 et 7 octobre) : deux
-                     * boutons de même poids — garder chez soi est légitime.
-                     */
                     ton: "az",
-                    titre: t("pme.transmettre.question", { cabinet: cabinet.data.name }),
-                    sous: t("pme.transmettre.chezvous"),
+                    titre: t("pme.piece.decision.reste", {
+                      montant: resteLisible ?? "",
+                      devise,
+                    }),
                     gestes: [
                       {
-                        libelle: garder.isPending ? t("common.loading") : t("pme.garder.action"),
-                        action: () => garder.mutate(),
-                        eteint: garder.isPending || transmettre.isPending,
-                      },
-                      {
-                        libelle: transmettre.isPending
-                          ? t("common.loading")
-                          : t("pme.transmettre.action"),
-                        action: () => transmettre.mutate(),
-                        eteint: transmettre.isPending || garder.isPending,
+                        libelle: t("pme.paiement.ajouterUn"),
+                        action: ouvrirLeReglement,
                         principal: true,
                       },
                     ],
                   }
-                : resteAPayer
-                  ? {
-                      ton: "az",
-                      titre: t("pme.piece.decision.reste", {
-                        montant: resteLisible ?? "",
-                        devise,
-                      }),
-                      gestes: [
-                        {
-                          libelle: t("pme.paiement.ajouterUn"),
-                          action: ouvrirLeReglement,
-                          principal: true,
-                        },
-                      ],
-                    }
-                  : { ton: "ok", titre: t("pme.book.done"), sous: classement, gestes: [] };
+                : // Rien à faire : la carte dit où la pièce en est, un mot.
+                  { ton: TON_PME[statut], titre: motDuStatut(statut), gestes: [] };
 
   return (
     <div data-ecran="dossier">
@@ -1990,9 +1794,9 @@ function PieceScreen() {
           <ApercuDePiece pieceId={pieceId} />
         </button>
         <div className="f-qui">
-          <span className={`f-etat ${pastille.ton}`}>
+          <span className={`f-etat ${TON_PME[statut]}`}>
             <i />
-            {t(pastille.cle)}
+            {motDuStatut(statut)}
           </span>
           <h1>{payload?.issuer ?? t("pme.piece.title")}</h1>
           <div className="f-typ">
@@ -2123,21 +1927,30 @@ function PieceScreen() {
         </div>
       ) : null}
 
-      {/* ── 3 · où elle en est ────────────────────────────────────────── */}
-      <div className="f-av">
-        <div className="barres" aria-hidden>
-          {etapes.map((e, i) => (
-            <i key={e.cle} className={i === indexAReprendre ? "courante az" : e.etat} />
-          ))}
+      {/* ── 3 · où elle en est : envoyée, vue, prise en charge — aucune écriture ── */}
+      {piece.vis === "partage" ? (
+        <div className="f-ou">
+          <span>{t("pme.piece.ou")}</span>
+          <div className="f-carte f-jr">
+            {ouEnEst.map((e, i) => (
+              <div
+                key={e.cle}
+                className={
+                  i === derniereFaite
+                    ? `courante ${TON_PME[statut]}`
+                    : e.le !== null
+                      ? "faite"
+                      : "attente"
+                }
+              >
+                <i />
+                <span>{motDuStatut(e.cle)}</span>
+                <u>{e.le ? momentDeLEnvoi(e.le, locale).quand : t("pme.piece.ou.avenir")}</u>
+              </div>
+            ))}
+          </div>
         </div>
-        <p>
-          <span>
-            {t("pme.piece.etape", { n: indexCourant + 1, total: etapes.length })} ·{" "}
-            <b>{courante?.label}</b>
-          </span>
-          {suivante ? <span>{t("pme.piece.ensuite", { etape: suivante.label })}</span> : null}
-        </p>
-      </div>
+      ) : null}
 
       {/* ── 4 · les onglets ───────────────────────────────────────────── */}
       <div
@@ -2230,16 +2043,12 @@ function PieceScreen() {
                   <span className="bd">
                     <span className="lb">{l.label}</span>
                     {(() => {
-                      // Comptée : la personne a confirmé la lecture (maquette « C »).
                       switch (
                         etiquetteDeLecture({
-                          comptee,
                           confianceConnue,
                           aVerifier: aVerifier.has(l.champ),
                         })
                       ) {
-                        case "confirme":
-                          return <span className="et ok">{t("pme.verifie.confirme")}</span>;
                         case "inconnue":
                           return <span className="et">{t("pme.citation.show")}</span>;
                         case "aVerifier":
@@ -2265,13 +2074,7 @@ function PieceScreen() {
               ),
             )}
           </div>
-          <p className="f-note">
-            {!comptee
-              ? t("pme.verifie.source")
-              : booked?.bookedAt
-                ? t("pme.verifie.confirmeLe", { date: jourEtMois(booked.bookedAt, locale) })
-                : t("pme.verifie.confirmeSansDate")}
-          </p>
+          <p className="f-note">{t("pme.verifie.source")}</p>
           {articles.length > 0 ? (
             <button type="button" className="f-bouton" onClick={() => setDetail(true)}>
               {t("pme.detail.voir")}
@@ -2377,7 +2180,7 @@ function PieceScreen() {
            * 25 octobre 2026 : le refus du cabinet ne se voyait nulle part).
            */}
           {cabinet.data &&
-          (!comptee ||
+          (!priseEnCharge ||
             piece.vis !== "partage" ||
             demandeDeRappel === "demandee" ||
             demandeDeRappel === "refusee") ? (
@@ -2400,13 +2203,13 @@ function PieceScreen() {
                     <p className="f-note">
                       {t("pme.transmettre.rappel.refuse", { note: noteDuRappel ?? "" })}
                     </p>
-                  ) : rendue ? null : !comptee && rappeler.isError ? (
+                  ) : rendue ? null : !priseEnCharge && rappeler.isError ? (
                     <PasEncoreParti
                       qui={cabinet.data.name}
                       reessayer={() => rappeler.mutate()}
                       enCours={rappeler.isPending}
                     />
-                  ) : !comptee ? (
+                  ) : !priseEnCharge ? (
                     <button
                       type="button"
                       className="f-bouton"
@@ -2784,27 +2587,6 @@ function PieceScreen() {
           ) : noteSuppression === "refusee" ? (
             <p className="f-note">{t("pme.piece.suppressionRefusee")}</p>
           ) : null}
-
-          {/* ── le parcours, en détail ──────────────────────────────────── */}
-          <div className="f-tit">
-            <h2>{t("pme.piece.parcours")}</h2>
-            <span>{t("pme.piece.etapes", { count: etapes.length })}</span>
-          </div>
-          <div className="f-carte f-jr">
-            {etapes.map((e) => (
-              <div key={e.cle} className={e.etat}>
-                <i />
-                <span>{e.label}</span>
-                <u>
-                  {e.etat === "faite"
-                    ? t("pme.piece.etat.faite")
-                    : e.etat === "courante"
-                      ? t("pme.piece.etat.courante")
-                      : t("pme.piece.etat.attente")}
-                </u>
-              </div>
-            ))}
-          </div>
         </div>
       ) : null}
     </div>

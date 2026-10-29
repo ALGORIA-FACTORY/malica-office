@@ -69,6 +69,7 @@ import { initialesDe } from "@/lib/initiales";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
 export const Route = createFileRoute("/_authenticated/cabinet")({
   head: () => ({
@@ -275,7 +276,7 @@ function Coquille({
     (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),
   );
   const aSuperviser = (queue.data ?? []).filter(
-    (r) => mandatsActifs.has(r.tenantId) && r.status === "comptabilisee",
+    (r) => mandatsActifs.has(r.tenantId) && A_TRAITER.has(r.statut),
   ).length;
   const nonLues = (notifications.data ?? []).filter((n) => !n.readAt).length;
   // Un mandat révoqué ou refusé reste lisible dans la liste, mais il ne compte

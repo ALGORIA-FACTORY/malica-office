@@ -6,7 +6,7 @@
  * Rien ici n'est un moteur : les seuils viennent des réglages du cabinet,
  * les montants du Socle ; on classe et l'on additionne, exactement.
  */
-import type { Ecriture, EcritureLine } from "@malica/socle/ports/repositories";
+import type { EcritureLine } from "@malica/socle/ports/repositories";
 
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
@@ -57,8 +57,17 @@ export interface LigneDeMasse {
   credit: string;
 }
 
+/**
+ * Une écriture vue par l'écran des propositions : celle qui est inscrite, ou
+ * celle que le Socle propose — identifiée par sa pièce ou par elle-même.
+ */
+export interface EcritureDuLot {
+  id: string;
+  lines: readonly EcritureLine[];
+}
+
 /** L'agrégat exact des écritures retenues, compte par compte, dans l'ordre des comptes. */
-export function ecritureEnMasse(ecritures: readonly Ecriture[]): LigneDeMasse[] {
+export function ecritureEnMasse(ecritures: readonly EcritureDuLot[]): LigneDeMasse[] {
   const parCompte = new Map<
     string,
     { libelle: string; pieces: Set<string>; debits: string[]; credits: string[] }
@@ -98,10 +107,42 @@ export function estChargeOuProduit(compte: string): boolean {
 }
 
 /** Le compte de charge ou de produit d'une écriture, sinon le premier débit non nul. */
-export function compteDeCharge(e: Ecriture): EcritureLine | null {
+export function compteDeCharge(e: EcritureDuLot): EcritureLine | null {
   return (
     e.lines.find((l) => estChargeOuProduit(l.accountCode)) ??
     e.lines.find((l) => !/^0(\.0+)?$/.test(l.debit)) ??
     null
   );
+}
+
+/** Ce qu'un lot a donné : combien de pièces sont passées, combien ont échoué, et pourquoi. */
+export interface BilanDuLot {
+  passees: number;
+  echecs: number;
+  /** La raison du premier échec, lisible ; `null` quand tout est passé. */
+  raison: string | null;
+}
+
+/**
+ * Un lot passe pièce par pièce, chacune dans sa transaction : une pièce qui
+ * échoue n'arrête pas les autres, et l'écran dit combien sont passées et
+ * combien ont échoué — au lieu de s'arrêter à la première sans rien dire des
+ * suivantes.
+ */
+export async function parPiece<T>(
+  elements: readonly T[],
+  raisonDe: (erreur: unknown) => string,
+  geste: (element: T) => Promise<unknown>,
+): Promise<BilanDuLot> {
+  const bilan: BilanDuLot = { passees: 0, echecs: 0, raison: null };
+  for (const e of elements) {
+    try {
+      await geste(e);
+      bilan.passees += 1;
+    } catch (x) {
+      bilan.echecs += 1;
+      bilan.raison ??= raisonDe(x);
+    }
+  }
+  return bilan;
 }

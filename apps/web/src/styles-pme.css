@@ -1147,9 +1147,9 @@
 [data-surface="pme"] [data-ecran="pochette"] .liste .bd b{font-size:.9375rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] [data-ecran="pochette"] .liste .bd span{display:flex;align-items:center;gap:.375rem;font-size:.75rem;color:var(--t2)}
 [data-surface="pme"] [data-ecran="pochette"] .liste .bd i{width:7px;height:7px;flex:none;border-radius:50%;background:var(--t3)}
-[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-etat="verifier"]{background:var(--am)}
-[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-etat="retour"]{background:var(--az)}
-[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-etat="comptabilisee"]{background:var(--acc)}
+[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-ton="am"]{background:var(--am)}
+[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-ton="az"]{background:var(--az)}
+[data-surface="pme"] [data-ecran="pochette"] .liste .bd i[data-ton="ok"]{background:var(--acc)}
 [data-surface="pme"] [data-ecran="pochette"] .liste em{font-style:normal;font-family:var(--mono);font-size:.8125rem;font-weight:600}
 [data-surface="pme"] [data-ecran="pochette"] .vide{margin:1.5rem 0 0;font-size:.875rem;color:var(--t2)}
 
@@ -1359,14 +1359,9 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-fait .bd b{font-size:.875rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-fait .bd span{font-size:.78125rem;color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-fait button{min-height:44px;padding:0 .25rem;border:0;background:none;color:var(--t2);font-family:inherit;font-size:.8125rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i.courante.az{background:var(--az)}
-[data-surface="pme"] [data-ecran="dossier"] .f-av{margin:1.25rem var(--gout) 0;display:grid;gap:.625rem}
-[data-surface="pme"] [data-ecran="dossier"] .f-av .barres{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
-[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i{height:4px;border-radius:2px;background:var(--d2)}
-[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i.faite{background:var(--acc)}
-[data-surface="pme"] [data-ecran="dossier"] .f-av .barres i.courante{background:var(--am)}
-[data-surface="pme"] [data-ecran="dossier"] .f-av p{margin:0;display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;font-size:.8125rem;color:var(--t2)}
-[data-surface="pme"] [data-ecran="dossier"] .f-av p b{color:var(--tx)}
+/* « Où elle en est » (maquette « Fiche PME sans écriture », 28 octobre 2026) : envoyée, vue, prise en charge. */
+[data-surface="pme"] [data-ecran="dossier"] .f-ou{margin:1.25rem var(--gout) 0;display:grid;gap:.5rem}
+[data-surface="pme"] [data-ecran="dossier"] .f-ou > span{font-family:var(--mono);font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ong{position:sticky;top:0;z-index:5;margin:1.5rem var(--gout) 0;padding:4px;border-radius:14px; background:var(--d1);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
 [data-surface="pme"] [data-ecran="dossier"] .f-ong button{min-height:40px;border:0;border-radius:10px;background:none;color:var(--t2); font-family:inherit;font-size:.875rem;font-weight:600;cursor:pointer}
 [data-surface="pme"] [data-ecran="dossier"] .f-ong button[aria-selected="true"]{background:var(--tx);color:var(--bg)}
@@ -1407,6 +1402,8 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .faite i{background:var(--acc)}
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .courante{color:var(--tx);font-weight:700}
 [data-surface="pme"] [data-ecran="dossier"] .f-jr .courante i{background:var(--am)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .courante.az i{background:var(--az)}
+[data-surface="pme"] [data-ecran="dossier"] .f-jr .courante.ok i{background:var(--acc)}
 /* Un document rattaché : la ligne mène à lui, « Détacher » est à côté. Le
  * détachement s'ouvre sur place et demande pourquoi (la base l'exige). */
 [data-surface="pme"] [data-ecran="dossier"] .f-liee .bd{color:inherit;text-decoration:none}
@@ -1510,7 +1507,8 @@
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag{display:inline-flex;align-items:center;gap:.375rem;margin-top:.4375rem;font-size:.6875rem; font-weight:600;color:var(--t2)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.am{color:var(--am)}
-[data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.ve{color:var(--ve)}
+[data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.az{color:var(--az)}
+[data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.ok{color:var(--acc)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc .tag.mg{color:var(--mg)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .pc.dim .nm, [data-surface="pme"] [data-ecran="bibliotheque"] .pc.dim .vl{color:var(--t2)}
 [data-surface="pme"] [data-ecran="bibliotheque"] .more{width:100%;border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem; font-weight:600;cursor:pointer;padding:.75rem 0 .25rem;text-align:start}

@@ -184,8 +184,11 @@ describe("revue d'une pièce", () => {
       } as unknown as Ecriture,
     ]);
     monter();
-    expect(await screen.findByText("Fournisseurs")).toBeTruthy();
-    expect(screen.getByText("Retenue 1,5 % / tiers")).toBeTruthy();
+    // L'écriture s'édite sur place : l'intitulé du compte s'affiche sous le
+    // code (et dans la liste du plan), le libellé de la ligne est la valeur
+    // de son champ.
+    expect((await screen.findAllByText("Fournisseurs")).length).toBeGreaterThan(0);
+    expect(screen.getByDisplayValue("Retenue 1,5 % / tiers")).toBeTruthy();
   });
 
   describe("le traitement fiscal du règlement", () => {

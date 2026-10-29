@@ -35,12 +35,20 @@ vi.mock("@tanstack/react-query", () => ({
         ? [{ tenantId: "client", name: "Dossier de test", engagementStatus: "actif" }]
         : [];
     if (k === "cab-queue" && donnees.actifs)
-      data = ["comptabilisee", "retournee", "supervisee"].map((status, i) => ({
+      // Le statut d'envoi est dérivé à l'API ; la file l'affiche tel quel.
+      data = (
+        [
+          ["comptabilisee", "recue"],
+          ["retournee", "retournee"],
+          ["supervisee", "validee"],
+        ] as const
+      ).map(([status, statut], i) => ({
         pieceId: `piece-${i}`,
         tenantId: "client",
         clientName: "Dossier de test",
         libelle: `Pièce de test ${i}`,
         status,
+        statut,
         createdAt: new Date().toISOString(),
         ecritureId: `ecriture-${i}`,
         montant: null,
@@ -77,12 +85,12 @@ describe("une journée de comptabilité compréhensible et actionnable", () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
   afterEach(cleanup);
-  it("la carte À superviser filtre la vraie file et permet de retrouver toute la file", () => {
+  it("la carte À traiter filtre la vraie file et permet de retrouver toute la file", () => {
     donnees.actifs = true;
     render(interfaceReelle());
     const table = screen.getByRole("table", { name: "File priorisée" });
     expect(within(table).getAllByRole("row")).toHaveLength(4);
-    fireEvent.click(screen.getByRole("button", { name: /À superviser.*Prêtes pour votre revue/ }));
+    fireEvent.click(screen.getByRole("button", { name: /À traiter.*Reçues, vues ou corrigées/ }));
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     fireEvent.change(screen.getByRole("textbox", { name: "Filtrer client ou libellé" }), {
       target: { value: "introuvable" },

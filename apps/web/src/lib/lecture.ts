@@ -16,6 +16,7 @@ import {
 } from "@malica/socle/issue-de-lecture";
 import type { MessageKey } from "@malica/socle/messages";
 import type { PieceLue } from "@malica/socle/ports/repositories";
+import { statutPme, TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
 
 /**
  * Le rythme auquel un écran redemande l'état d'une lecture qui tourne.
@@ -31,13 +32,27 @@ const plusRecenteDAbord = (x: PieceLue, y: PieceLue) => y.createdAt.localeCompar
  * Une pièce dont la lecture a ÉCHOUÉ n'est pas « à lire » : elle attend un
  * geste précis, et `piecesEnEchec` la porte. La plus récente d'abord.
  */
+type LigneDeLaListe = Pick<PieceLue, "vis" | "status" | "gardeeLe" | "suivi">;
+
+/** Le statut d'une pièce de la liste, côté PME (« Malica sans blocage », §2). */
+export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
+  return statutPme({
+    vis: p.vis,
+    status: p.status,
+    gardeeLe: p.gardeeLe ?? null,
+    suivi: p.suivi ?? null,
+  });
+}
+
 /**
- * Ce qui attend la personne : lu, proposé, ou renvoyé par le cabinet. La
- * rangée « Ce que j'ai préparé » de l'accueil et le filtre « À vérifier » de
- * la bibliothèque, où mène son « Tout voir », lisent cette seule règle.
+ * Ce qui attend la personne — l'ambre de son statut : une pièce lue à
+ * envoyer, ou revenue du cabinet. Jamais une pièce à « confirmer » : la PME
+ * ne confirme plus rien (« Malica sans blocage », 28 octobre 2026). La
+ * rangée « Ce que j'ai préparé » de l'accueil et le filtre « À vous » de la
+ * bibliothèque, où mène son « Tout voir », lisent cette seule règle.
  */
-export function attendLaPersonne(p: Pick<PieceLue, "status">): boolean {
-  return p.status === "lue" || p.status === "proposee" || p.status === "retournee";
+export function attendLaPersonne(p: LigneDeLaListe): boolean {
+  return p.status !== "capturee" && TON_PME[statutDeLaPieceLue(p)] === "am";
 }
 
 export function piecesALire(pieces: readonly PieceLue[]): PieceLue[] {
@@ -129,4 +144,24 @@ export function raisonCourte(i: IssueDeLecture): MessageKey | null {
     default:
       return null;
   }
+}
+
+/**
+ * Ce que l'accueil compte de la liste, par la même règle qu'elle
+ * (`statutDeLaPieceLue`) : une pièce inscrite avant « Malica sans blocage »,
+ * encore `comptabilisee` mais prise en charge, est close ici comme elle est
+ * « Prise en charge » dans la liste.
+ */
+export function avancementDeLaListe(liste: ReadonlyArray<LigneDeLaListe>) {
+  const lues = liste.filter((p) => p.status !== "capturee");
+  const closes = liste.filter((p) => statutDeLaPieceLue(p) === "prise_en_charge").length;
+  return {
+    /** Part des pièces prises en charge, de 0 à 1 ; `null` sans pièce. */
+    avancement: liste.length === 0 ? null : closes / liste.length,
+    enAttente: lues.filter((p) => statutDeLaPieceLue(p) === "a_envoyer").length,
+    documentsLus: lues.length,
+    documentsNonLus: liste.length - lues.length,
+    jamaisRienDepose: liste.length === 0,
+    retournees: liste.filter((p) => statutDeLaPieceLue(p) === "retour").length,
+  };
 }

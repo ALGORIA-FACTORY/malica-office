@@ -62,11 +62,6 @@ export function sortiesDuRetour(geste: GesteDeRetour, fait: boolean): SortieDuRe
   return [...new Set(ordre)];
 }
 
-/** La pièce attend-elle une décision du cabinet sans le « Oui » du client ? */
-export function lueSansConfirmation(status: string, inscrite: boolean): boolean {
-  return !inscrite && (status === "lue" || status === "proposee");
-}
-
 /**
  * Un retour par pièce, le plus récent. Le cabinet peut retourner deux fois la
  * même pièce (renvoyée, puis retournée encore) : chaque retour laisse sa

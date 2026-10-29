@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import {
+  avancementDeLaListe,
   lectureEnSuspens,
   piecesALire,
   piecesEnEchec,
   presentation,
   raisonCourte,
+  statutDeLaPieceLue,
 } from "@/lib/lecture";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 
@@ -118,5 +120,35 @@ describe("chaque issue a sa présentation", () => {
     expect(presentation({ kind: "a_lire" }).geste).toBe("lire");
     expect(presentation({ kind: "echec", code: null }).geste).toBe("relire");
     expect(presentation({ kind: "attente", reessaieLe: null }).geste).toBeNull();
+  });
+});
+
+describe("l'accueil et la liste classent par la même règle", () => {
+  const suivi = (prise: "validee" | "forcee" | null) => ({
+    envoyeeLe: "2026-10-01T08:00:00.000Z",
+    vueLe: null,
+    vuePar: null,
+    corrigeeLe: null,
+    priseLe: prise ? "2026-10-02T08:00:00.000Z" : null,
+    prise,
+    prisePar: null,
+  });
+  it("une pièce inscrite avant la migration, prise en charge, est close des deux côtés", () => {
+    // Encore « comptabilisee » en base, sa prise en charge faite.
+    const ancienne = {
+      vis: "partage",
+      status: "comptabilisee",
+      gardeeLe: null,
+      suivi: suivi("validee"),
+    };
+    const retournee = { vis: "partage", status: "retournee", gardeeLe: null, suivi: suivi(null) };
+    const aEnvoyer = { vis: "entite", status: "lue", gardeeLe: null, suivi: null };
+    const liste = [ancienne, retournee, aEnvoyer] as Parameters<typeof avancementDeLaListe>[0];
+    expect(statutDeLaPieceLue(liste[0]!)).toBe("prise_en_charge");
+    expect(avancementDeLaListe(liste)).toMatchObject({
+      avancement: 1 / 3,
+      enAttente: 1,
+      retournees: 1,
+    });
   });
 });

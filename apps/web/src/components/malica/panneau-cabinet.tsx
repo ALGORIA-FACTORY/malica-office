@@ -19,6 +19,7 @@ import type { MessageKey } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { QueueItem } from "@malica/socle/ports/repositories";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
 import { useCabinet } from "./cabinet-context";
 
@@ -130,7 +131,7 @@ export function PanneauCabinet() {
     () => (queue.data ?? []).filter((r) => ids.includes(r.tenantId)),
     [queue.data, ids],
   );
-  const aSuperviser = rows.filter((r) => r.status === "comptabilisee");
+  const aSuperviser = rows.filter((r) => A_TRAITER.has(r.statut));
   const plusAncienne = aSuperviser.reduce((max, r) => Math.max(max, -jours(r.createdAt)), 0);
 
   /* ---- les échéances dans leur délai de rappel */
@@ -251,7 +252,7 @@ export function PanneauCabinet() {
   const visibles = propositions.filter((p) => !remises.has(p.cle));
 
   const enFile = rows.filter((r) => r.status === "capturee" || r.status === "lue").length;
-  const retours = rows.filter((r) => r.status === "retournee").length;
+  const retours = rows.filter((r) => r.statut === "retournee").length;
   const agents: Agent[] = [
     {
       cle: "lecture",

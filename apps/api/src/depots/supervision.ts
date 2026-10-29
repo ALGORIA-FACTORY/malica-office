@@ -13,7 +13,10 @@
 import type { Requete } from "../db.ts";
 import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
+import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
 import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
+
+import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -25,14 +28,48 @@ const COMPTES_VIDES = {
   retournee: 0,
 } as const;
 
-/** L'ordre de la file : ce qui attend le cabinet d'abord. */
-const PRIORITE: Record<string, number> = {
-  comptabilisee: 0,
-  retournee: 1,
-  proposee: 2,
-  lue: 3,
-  capturee: 4,
-  supervisee: 5,
+/** Chaque statut du cabinet compte, même à zéro. */
+const STATUTS_VIDES: Readonly<Record<StatutCabinet, number>> = {
+  recue: 0,
+  vue: 0,
+  corrigee: 0,
+  retournee: 0,
+  validee: 0,
+  forcee: 0,
+};
+
+/**
+ * Les pièces que le cabinet supervise : celles de ses mandats visibles (tous
+ * pour l'expert, les siens pour le collaborateur). La file et les compteurs
+ * partent de ce MÊME ensemble — sinon un compteur dit « 3 à traiter » quand la
+ * file en montre deux.
+ */
+const PIECES_DU_CABINET = `pieces_v p
+         join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
+          and p.tenant_id in (select app.mandats_visibles($1))`;
+
+/**
+ * Ce qui a été TRANSMIS au cabinet : une pièce « chez vous » n'y paraît pas,
+ * même pour un compte membre des deux côtés ; un reçu ou un justificatif
+ * voyage avec sa pièce (« Documents liés ») ; la photo qui en remplace une
+ * autre a pris sa place ; une pièce que le client a retirée n'attend plus rien.
+ */
+const TRANSMISE = `p.vis = 'partage'
+          and not app.piece_accompagne(p.id)
+          and p.remplacee_par is null and p.archivee_le is null`;
+
+/**
+ * L'ordre de la file : ce qui attend le cabinet d'abord — la pièce corrigée
+ * par le client, la reçue, la vue —, puis ce qui est chez le client, puis ce
+ * qui est pris en charge.
+ */
+const PRIORITE: Readonly<Record<StatutCabinet, number>> = {
+  corrigee: 0,
+  recue: 1,
+  vue: 2,
+  retournee: 3,
+  validee: 4,
+  forcee: 4,
 };
 
 export const supervision = {
@@ -61,43 +98,53 @@ export const supervision = {
   },
 
   async listClients(db: Requete, cabinetTenantId: string) {
-    // Trois requêtes et un croisement manuel deviennent une jointure avec
-    // agrégat : les compteurs sont calculés là où sont les lignes.
-    const { rows } = await db.query(
-      `select e.pme_org_id, e.status, e.starts_on, e.ends_on,
-              -- Un mandat terminé garde le nom du client (ANO-013).
-              coalesce(o.name, app.nom_d_un_client_du_cabinet(e.pme_org_id)) as name,
-              o.legal_id, o.jurisdiction, o.currency, o.validation_mode,
-              coalesce(
-                jsonb_object_agg(p.status, p.n) filter (where p.status is not null),
-                '{}'::jsonb) as comptes
-         from engagements_v e
-         left join organizations_v o on o.id = e.pme_org_id
-         left join lateral (
-           select status, count(*) as n
-             from pieces_v
-            -- Un reçu ou un justificatif accompagne une pièce : il ne compte
-            -- pas parmi les pièces « déposées, pas encore lues ».
-            where tenant_id = e.pme_org_id and not app.piece_accompagne(id)
-              -- Ni une version précédente, ni une pièce que le client a retirée.
-              and remplacee_par is null and archivee_le is null
-            group by status
-         ) p on true
-        where e.cabinet_org_id = $1
-          -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
-          and e.pme_org_id in (select app.mandats_visibles($1))
-        group by e.pme_org_id, e.status, e.starts_on, e.ends_on, o.name, o.legal_id, o.jurisdiction,
-                 o.currency, o.validation_mode`,
-      [cabinetTenantId],
-    );
+    const [mandats, pieces] = await Promise.all([
+      db.query(
+        `select e.pme_org_id, e.status, e.starts_on, e.ends_on,
+                -- Un mandat terminé garde le nom du client (ANO-013).
+                coalesce(o.name, app.nom_d_un_client_du_cabinet(e.pme_org_id)) as name,
+                o.legal_id, o.jurisdiction, o.currency, o.validation_mode
+           from engagements_v e
+           left join organizations_v o on o.id = e.pme_org_id
+          where e.cabinet_org_id = $1
+            -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
+            and e.pme_org_id in (select app.mandats_visibles($1))`,
+        [cabinetTenantId],
+      ),
+      // Les pièces de la file, avec leurs faits : les compteurs se classent
+      // comme la file, par `statutAuCabinet`.
+      db.query(
+        `select p.tenant_id, p.status, ${COLONNES_DU_SUIVI}
+           from ${PIECES_DU_CABINET}
+           left join lateral app.suivi_de_la_piece(p.id) s on true
+          where ${TRANSMISE}`,
+        [cabinetTenantId],
+      ),
+    ]);
 
-    return (rows as Record<string, unknown>[])
+    const parClient = new Map<
+      string,
+      { comptes: Record<string, number>; parStatut: Record<StatutCabinet, number> }
+    >();
+    for (const r of pieces.rows as Record<string, unknown>[]) {
+      const tenant = r["tenant_id"] as string;
+      let c = parClient.get(tenant);
+      if (!c) {
+        c = { comptes: { ...COMPTES_VIDES }, parStatut: { ...STATUTS_VIDES } };
+        parClient.set(tenant, c);
+      }
+      const brut = r["status"] as string;
+      c.comptes[brut] = (c.comptes[brut] ?? 0) + 1;
+      c.parStatut[statutAuCabinet(brut, r)] += 1;
+    }
+
+    return (mandats.rows as Record<string, unknown>[])
       .map((r) => {
-        const bruts = (r["comptes"] ?? {}) as Record<string, unknown>;
-        const comptes = { ...COMPTES_VIDES } as Record<string, number>;
-        for (const [statut, n] of Object.entries(bruts)) comptes[statut] = Number(n);
+        const tenant = r["pme_org_id"] as string;
+        const c = parClient.get(tenant);
+        const parStatut = c?.parStatut ?? { ...STATUTS_VIDES };
         return {
-          tenantId: r["pme_org_id"] as string,
+          tenantId: tenant,
           name: (r["name"] as string) ?? "—",
           legalId: (r["legal_id"] as string | null) ?? null,
           // Les deux colonnes sont NOT NULL en base, et la jointure part du
@@ -109,15 +156,18 @@ export const supervision = {
           engagementStatus: r["status"] as string,
           mandatDepuis: (r["starts_on"] as string | null) ?? null,
           mandatJusquau: (r["ends_on"] as string | null) ?? null,
-          counts: comptes,
+          counts: c?.comptes ?? { ...COMPTES_VIDES },
+          parStatut,
+          // La même règle que la file : `A_TRAITER` du Socle.
+          aTraiter: (Object.keys(parStatut) as StatutCabinet[])
+            .filter((st) => A_TRAITER.has(st))
+            .reduce((n, st) => n + parStatut[st], 0),
         };
       })
-      .sort((a, b) => (b.counts["comptabilisee"] ?? 0) - (a.counts["comptabilisee"] ?? 0));
+      .sort((a, b) => b.aTraiter - a.aTraiter);
   },
 
   async queue(db: Requete, cabinetTenantId: string, tenantId?: string) {
-    // `distinct on` rend la dernière écriture comptabilisée non revue de chaque
-    // pièce — ce que l'adaptateur reconstituait par une boucle et une carte.
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
               -- La date d'envoi : une photo reprise hérite de celle de l'ancienne
@@ -125,21 +175,22 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
-              dem.objet as demande_objet
-         from pieces_v p
-         join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
-          and p.tenant_id in (select app.mandats_visibles($1))
+              dem.objet as demande_objet, ${COLONNES_DU_SUIVI}
+         from ${PIECES_DU_CABINET}
          left join organizations_v o on o.id = p.tenant_id
-         -- La pièce, c'est toutes ses versions : un règlement saisi sur une
-         -- photo reprise a son écriture sur l'ancienne, et elle attend ici.
+         -- L'écriture VIVANTE de la pièce — celle de la facture d'abord, sinon
+         -- un règlement —, sur toutes ses versions : un règlement saisi sur une
+         -- photo reprise a son écriture sur l'ancienne.
          left join lateral (
            select x.id, x.libelle, x.date_ecriture
              from ecritures_v x
-            where x.piece_id in (select app.versions_de_la_piece(p.id)) and x.status = 'booked'
-              and x.reverses_id is null and x.review_outcome is null
-            order by x.created_at desc
+            where x.piece_id in (select app.versions_de_la_piece(p.id))
+              and app.ecriture_vivante(x.id)
+            order by (x.nature = 'piece') desc, x.created_at desc
             limit 1
          ) e on true
+         -- Envoyée, vue, corrigée, prise en charge : le Socle en dérive le statut.
+         left join lateral app.suivi_de_la_piece(p.id) s on true
          -- Le montant de l'écriture : la somme de ses débits, telle que le
          -- Socle l'a posée. L'écran ne l'additionne pas.
          left join lateral (
@@ -185,15 +236,7 @@ export const supervision = {
             where d.piece_id = p.id
             order by d.created_at desc limit 1
          ) dem on true
-        -- La file du cabinet, c'est ce qui lui a été TRANSMIS : une pièce « chez
-        -- vous » n'y paraît pas, même pour un compte membre des deux côtés.
-        where p.vis = 'partage'
-          -- Un reçu ou un justificatif voyage avec sa pièce (« Documents
-          -- liés ») : il n'entre pas dans la file comme une pièce à lire.
-          and not app.piece_accompagne(p.id)
-          -- La photo qui en remplace une autre a pris sa place dans la file ;
-          -- une pièce que le client a retirée (archivée) n'attend plus rien.
-          and p.remplacee_par is null and p.archivee_le is null
+        where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
         order by coalesce(p.transmise_le, p.created_at) desc
         limit 200`,
@@ -201,24 +244,29 @@ export const supervision = {
     );
 
     return (rows as Record<string, unknown>[])
-      .map((p) => ({
-        pieceId: p["piece_id"] as string,
-        tenantId: p["tenant_id"] as string,
-        clientName: (p["client"] as string) ?? "—",
-        status: p["status"] as string,
-        source: p["source"] as string,
-        createdAt: p["created_at"] as string,
-        envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
-        ecritureId: (p["ecriture_id"] as string | null) ?? null,
-        libelle: (p["libelle"] as string | null) ?? null,
-        dateEcriture: (p["date_ecriture"] as string | null) ?? null,
-        montant: (p["montant"] as string | null) ?? null,
-        collaborateur: (p["collaborateur"] as string | null) ?? null,
-        confiance: p["confiance"] == null ? null : Number(p["confiance"]),
-        demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
-      }))
+      .map((p) => {
+        const suivi = versSuivi(p);
+        return {
+          pieceId: p["piece_id"] as string,
+          tenantId: p["tenant_id"] as string,
+          clientName: (p["client"] as string) ?? "—",
+          status: p["status"] as string,
+          statut: statutAuCabinet(p["status"] as string, p),
+          suivi,
+          source: p["source"] as string,
+          createdAt: p["created_at"] as string,
+          envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
+          ecritureId: (p["ecriture_id"] as string | null) ?? null,
+          libelle: (p["libelle"] as string | null) ?? null,
+          dateEcriture: (p["date_ecriture"] as string | null) ?? null,
+          montant: (p["montant"] as string | null) ?? null,
+          collaborateur: (p["collaborateur"] as string | null) ?? null,
+          confiance: p["confiance"] == null ? null : Number(p["confiance"]),
+          demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
+        };
+      })
       .sort((a, b) => {
-        const d = (PRIORITE[a.status] ?? 9) - (PRIORITE[b.status] ?? 9);
+        const d = PRIORITE[a.statut] - PRIORITE[b.statut];
         if (d !== 0) return d;
         return a.envoyeeLe < b.envoyeeLe ? 1 : -1;
       });
@@ -231,14 +279,18 @@ export const supervision = {
   async statistiques(db: Requete, cabinetTenantId: string, locale: string) {
     const [parMois, motifs, socle] = await Promise.all([
       db.query(
-        `select to_char(date_trunc('month', e.reviewed_at), 'YYYY-MM') as mois,
+        // Les prises en charge du cabinet (valider, forcer — et les revues
+        // `valide` d'avant, que le registre a reprises) : une pièce par mois et
+        // par collaborateur, même forcée deux fois.
+        `select to_char(date_trunc('month', pc.prise_le), 'YYYY-MM') as mois,
                 coalesce(m.email, '') as collaborateur,
-                count(*)::int as supervisees
-           from ecritures_v e
-           join engagements_v g on g.pme_org_id = e.tenant_id and g.cabinet_org_id = $1
-           left join cabinet_members_v m on m.user_id = e.reviewed_by and m.tenant_id = $1
-          where e.review_outcome = 'valide'
-            and e.reviewed_at >= date_trunc('month', now()) - interval '11 months'
+                count(distinct e.piece_id)::int as supervisees
+           from prises_en_charge_v pc
+           join ecritures_v e on e.id = pc.ecriture_id and e.nature = 'piece'
+           join engagements_v g on g.pme_org_id = pc.client_tenant_id and g.cabinet_org_id = $1
+           left join cabinet_members_v m on m.user_id = pc.par and m.tenant_id = $1
+          where pc.tenant_id = $1
+            and pc.prise_le >= date_trunc('month', now()) - interval '11 months'
           group by 1, 2
           order by 1, 2`,
         [cabinetTenantId],
@@ -344,9 +396,9 @@ export const supervision = {
   },
 
   /**
-   * Retourner au client une pièce transmise PAS ENCORE inscrite, avec le motif
-   * gouverné et la note (`piece_retourner`). Une pièce inscrite se retourne
-   * par `review` : elle a une écriture à contre-passer.
+   * Retourner au client, à toute étape, avec le motif gouverné et la note
+   * (`piece_retourner`). Une pièce prise en charge l'est avec la
+   * contre-passation de son écriture, au journal du jour (spec §4).
    */
   async retourner(
     db: Requete,
@@ -359,9 +411,18 @@ export const supervision = {
     ]);
   },
 
-  /** Relancer le client sur une pièce transmise qu'il n'a pas confirmée. */
-  async demanderConfirmation(db: Requete, pieceId: string): Promise<void> {
-    await db.query(`select public.piece_demander_confirmation($1)`, [pieceId]);
+  /**
+   * Le cabinet ouvre la pièce : elle est « Vue » (spec §4), et le client lit
+   * « Vue par {cabinet} ». Un fait, posé une fois par envoi : rouvrir rend la
+   * même vue (`deja`).
+   */
+  async voir(db: Requete, pieceId: string): Promise<{ vueLe: string | null; deja: boolean }> {
+    const { rows } = await db.query<{ r: { vue_le: string | null; deja: boolean } }>(
+      `select public.piece_voir($1) as r`,
+      [pieceId],
+    );
+    const r = rows[0]!.r;
+    return { vueLe: r.vue_le ? new Date(r.vue_le).toISOString() : null, deja: r.deja };
   },
 
   async review(

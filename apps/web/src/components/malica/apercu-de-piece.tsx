@@ -41,20 +41,20 @@
  * Partout où il paraît, le nom de la pièce est écrit à côté, ou porté par le
  * bouton qui l'entoure : l'aperçu est donc décoratif (`aria-hidden`, `alt`
  * vide), sinon le lecteur d'écran dirait la pièce deux fois. Le point d'état, en
- * haut à l'extrémité de la ligne (à gauche en arabe), reprend la teinte de la
- * pastille de la pièce (`parcoursDeLaPiece`) : il ne porte jamais seul une
+ * haut à l'extrémité de la ligne (à gauche en arabe), reprend la teinte du
+ * statut de la pièce (`statut-d-envoi.ts`) : il ne porte jamais seul une
  * information, le statut est écrit dans la ligne.
  */
+import type { TonDuStatut } from "@malica/socle/statut-d-envoi";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
-import type { ParcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
 import { ErreurApi } from "@/lib/transport/erreurs";
 import { office } from "@/verticals/malica-office/composition";
 
-/** La teinte du point d'état : celle de la pastille de la pièce. */
-type TonDeLaPiece = ParcoursDeLaPiece["pastille"]["ton"];
+/** La teinte du point d'état : celle du statut de la pièce. */
+type TonDeLaPiece = TonDuStatut;
 
 /** Quatre reprises, après 2, 4, 8 puis 16 s : octets pas encore là, ou échec passager. */
 const REPRISES = 4;

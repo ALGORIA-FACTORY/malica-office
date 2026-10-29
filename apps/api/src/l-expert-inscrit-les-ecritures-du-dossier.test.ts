@@ -110,19 +110,11 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("forcer l'imputation contre-passe ET réimpute, en une transaction", async () => {
-    const { rows: avant } = await admin.query<{ id: string }>(
-      `select id from socle.ecritures where piece_id = $1 and status = 'booked'
-        and reverses_id is null order by created_at desc limit 1`,
-      [piece],
-    );
-    const { rows: motifs } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by requires_note limit 1`,
-    );
     const nouvelle = await sousIdentiteDuServeur(expert.id, (db) =>
-      office.corrigerLImputation(db, {
-        ecritureId: avant[0]!.id,
-        motifId: motifs[0]!.id,
-        note: "Honoraires : 622",
+      office.forcer(db, {
+        pieceId: piece,
+        journal: "ACH",
+        date: "2026-10-20",
         libelle: "Facture essai réimputée",
         lignes: lignes("622"),
       }),
@@ -243,14 +235,6 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("une réimputation refusée n'écrit rien : pas de contre-passation orpheline", async () => {
-    const { rows: courante } = await admin.query<{ id: string }>(
-      `select id from socle.ecritures where piece_id = $1 and status = 'booked'
-        and reverses_id is null order by created_at desc limit 1`,
-      [piece],
-    );
-    const { rows: motifs } = await admin.query<{ id: string }>(
-      `select id from ref.rejet_motifs order by requires_note limit 1`,
-    );
     const compter = async () =>
       (
         await admin.query<{ n: string }>(
@@ -259,16 +243,18 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
         )
       ).rows[0]!.n;
     const avant = await compter();
+    // Équilibrée, mais sur un compte hors du plan : la base refuse APRÈS la
+    // contre-passation, et la transaction emporte les deux.
     await assert.rejects(
       sousIdentiteDuServeur(expert.id, (db) =>
-        office.corrigerLImputation(db, {
-          ecritureId: courante[0]!.id,
-          motifId: motifs[0]!.id,
-          note: "déséquilibrée",
-          libelle: "Déséquilibrée",
+        office.forcer(db, {
+          pieceId: piece,
+          journal: "ACH",
+          date: "2026-10-20",
+          libelle: "Hors du plan",
           lignes: [
-            { account_code: "622", libelle: "x", debit: "100.000", credit: "0", tax_code: null },
-            { account_code: "401", libelle: "y", debit: "0", credit: "90.000", tax_code: null },
+            { account_code: "999999", libelle: "x", debit: "100.000", credit: "0", tax_code: null },
+            { account_code: "401", libelle: "y", debit: "0", credit: "100.000", tax_code: null },
           ],
         }),
       ),

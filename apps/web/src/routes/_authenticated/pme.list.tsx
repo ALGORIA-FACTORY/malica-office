@@ -11,7 +11,9 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
-import { attendLaPersonne, piecesALire } from "@/lib/lecture";
+import { attendLaPersonne, piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
+import { TON_PME } from "@malica/socle/statut-d-envoi";
+import { MOT_PME } from "@/lib/statut";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { momentDeLEnvoi, montant } from "@/lib/lisible";
@@ -22,7 +24,6 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
-import { avancementDeLaPiece, ecritureDeLaPiece, parcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
 import { resteATransmettre } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -50,8 +51,8 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
    * sur ce qui attend la personne ; « Bibliothèque » arrive rangée par
    * dossier. Un paramètre inconnu est ignoré, jamais une erreur.
    */
-  validateSearch: (s: Record<string, unknown>): { etat?: "a_verifier"; axe?: Axe } => ({
-    ...(s["etat"] === "a_verifier" ? { etat: "a_verifier" as const } : {}),
+  validateSearch: (s: Record<string, unknown>): { etat?: "a_vous"; axe?: Axe } => ({
+    ...(s["etat"] === "a_vous" ? { etat: "a_vous" as const } : {}),
     ...(AXES.includes(s["axe"] as Axe) ? { axe: s["axe"] as Axe } : {}),
   }),
   component: VosDocuments,
@@ -315,8 +316,8 @@ function VosDocuments() {
    */
   const recherche = Route.useSearch();
   const axe: Axe = recherche.axe ?? "mois";
-  const aVerifier = recherche.etat === "a_verifier";
-  const allerA = (suite: { axe?: Axe; etat?: "a_verifier" }) =>
+  const aVerifier = recherche.etat === "a_vous";
+  const allerA = (suite: { axe?: Axe; etat?: "a_vous" }) =>
     void navigate({
       to: "/pme/list",
       search: {
@@ -326,8 +327,8 @@ function VosDocuments() {
       replace: true,
     });
   const setAxe = (suivant: Axe) =>
-    allerA({ axe: suivant, ...(aVerifier ? { etat: "a_verifier" } : {}) });
-  const setAVerifier = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "a_verifier" } : {}) });
+    allerA({ axe: suivant, ...(aVerifier ? { etat: "a_vous" } : {}) });
+  const setAVerifier = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "a_vous" } : {}) });
   const sept = useDossiers();
   const [sens, setSens] = useState<Sens>("tous");
   /** Le groupe ouvert, ou `null` : la liste des groupes. */
@@ -807,7 +808,7 @@ function VosDocuments() {
                 setTout(false);
               }}
             >
-              {t("pme.charges.answer.verifier")}
+              {t("pme.list.aVous")}
             </button>
           </div>
         ) : null}
@@ -911,9 +912,10 @@ function VosDocuments() {
                     {p.status === "capturee" ? (
                       <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
                     ) : (
-                      <span className={cn("tag", p.status === "retournee" && "ve")}>
+                      // Le statut, un mot et une couleur — jamais une écriture.
+                      <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
                         <i aria-hidden />
-                        {t(`pme.status.${p.status}` as never)}
+                        {t(MOT_PME[statutDeLaPieceLue(p)])}
                       </span>
                     )}
                   </span>
@@ -1033,7 +1035,7 @@ function VosDocuments() {
             {/* Aucune information n'est portée par la seule couleur : la légende. */}
             <div className="lgd">
               <span>
-                <i className="d ok" aria-hidden /> {t("pme.parcours.recue")}
+                <i className="d ok" aria-hidden /> {t("pme.list.legendeRecue")}
               </span>
               <span>
                 <i className="d miss" aria-hidden /> {t("pme.list.legendeAttendue")}
@@ -1093,21 +1095,13 @@ function poids(g: Groupe): number {
 /**
  * La vraie photo d'une ligne, à gauche, et son point d'état.
  *
- * Le point dit la MÊME chose que la pastille de la fiche : même dérivation
- * (`parcoursDeLaPiece`), même source — l'écriture vivante comprise, sous la
- * clé de requête que la fiche emploie. Une écriture ne peut faire avancer que
- * la pièce lue et pas encore comptée : c'est la seule qu'on interroge.
+ * Le point dit la MÊME chose que la pastille de la fiche : le statut dérivé au
+ * Socle (`statutPme`), des faits que la liste porte déjà — aucune requête par
+ * ligne, et aucune écriture lue : la PME n'en voit pas. Une pièce pas encore
+ * lue n'a pas de statut d'envoi : point gris.
  */
 function VignetteDeLaPiece({ piece }: { piece: PieceLue }) {
-  const peutAvancer =
-    piece.status !== "capturee" && !avancementDeLaPiece(piece.status, null).comptee;
-  const ecritures = useQuery({
-    queryKey: ["ecritures", piece.id],
-    queryFn: () => office().office.ecrituresForPiece(piece.id),
-    enabled: peutAvancer,
-    staleTime: 5 * 60 * 1000,
-  });
-  const ton = parcoursDeLaPiece(piece.status, ecritureDeLaPiece(ecritures.data)).pastille.ton;
+  const ton = piece.status === "capturee" ? "neutre" : TON_PME[statutDeLaPieceLue(piece)];
   return <ApercuDePiece pieceId={piece.id} className="vignette" ton={ton} />;
 }
 
