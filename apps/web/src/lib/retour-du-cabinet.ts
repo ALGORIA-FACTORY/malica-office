@@ -66,3 +66,26 @@ export function sortiesDuRetour(geste: GesteDeRetour, fait: boolean): SortieDuRe
 export function lueSansConfirmation(status: string, inscrite: boolean): boolean {
   return !inscrite && (status === "lue" || status === "proposee");
 }
+
+/**
+ * Un retour par pièce, le plus récent. Le cabinet peut retourner deux fois la
+ * même pièce (renvoyée, puis retournée encore) : chaque retour laisse sa
+ * notification, et l'écran « Il vous attend » montrait alors deux cartes pour
+ * une seule facture (recette du 29 octobre 2026). Une notification sans pièce
+ * n'est pas une carte : elle n'aurait aucun geste à porter.
+ */
+export function dernierRetourParPiece<T extends { createdAt: string }>(
+  retours: readonly T[],
+  pieceDe: (retour: T) => string | undefined,
+): T[] {
+  const parPiece = new Map<string, T>();
+  for (const retour of retours) {
+    const pieceId = pieceDe(retour);
+    if (!pieceId) continue;
+    const deja = parPiece.get(pieceId);
+    if (!deja || Date.parse(retour.createdAt) > Date.parse(deja.createdAt)) {
+      parPiece.set(pieceId, retour);
+    }
+  }
+  return [...parPiece.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}

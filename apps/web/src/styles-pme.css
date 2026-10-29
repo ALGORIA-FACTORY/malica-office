@@ -1804,9 +1804,13 @@
 [data-surface="pme"] [data-famille="papiers"] .card .hd b{flex:1;font-size:.875rem;font-weight:600;letter-spacing:-.018em}
 [data-surface="pme"] [data-famille="papiers"] .card .hd span{font-family:var(--mono);font-size:.75rem;color:var(--t2)}
 [data-surface="pme"] [data-famille="papiers"] .card p{margin:0;font-size:.8125rem;line-height:1.5;color:var(--t2)}
-[data-surface="pme"] [data-famille="papiers"] .card .b{display:flex;gap:.5rem;margin-top:.875rem}
-[data-surface="pme"] [data-famille="papiers"] .card .b button{border:0;border-radius:999px;padding:.5rem .875rem;font-size:.75rem;font-weight:700; cursor:pointer;background:var(--acc);color:var(--on-acc)}
-[data-surface="pme"] [data-famille="papiers"] .card .b button.sec{background:var(--s2);color:var(--t2)}
+/* Deux gestes côte à côte, règle de « Malica sans blocage » (docs/sans-blocage.md §5) :
+ * même hauteur (48 px), même largeur, le principal plein à gauche, le secondaire
+ * en contour à droite. Une grille à colonnes égales tient la largeur ; l'étirement
+ * de la rangée tient la hauteur, même quand un libellé passe sur deux lignes. */
+[data-surface="pme"] [data-famille="papiers"] .card .b{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:stretch;gap:.5rem;margin-top:.875rem}
+[data-surface="pme"] [data-famille="papiers"] .card .b button{display:flex;align-items:center;justify-content:center;min-height:48px;margin:0;border:1px solid var(--acc);border-radius:999px;padding:.375rem .75rem;font-family:inherit;font-size:.875rem;font-weight:700;line-height:1.2;text-align:center;cursor:pointer;background:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] [data-famille="papiers"] .card .b button.sec{border-color:var(--dl);background:transparent;color:var(--tx)}
 [data-surface="pme"] [data-famille="papiers"] .mur{display:flex;align-items:flex-start;gap:.75rem;background:rgba(31,111,178,.07); border:1px solid rgba(31,111,178,.22);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
 [data-surface="pme"] [data-famille="papiers"] .mur svg{width:17px;height:17px;flex:none;margin-top:.0625rem;color:var(--az)}
 [data-surface="pme"] [data-famille="papiers"] .mur p{margin:0;font-size:.8125rem;line-height:1.5;color:#1A5A92}
