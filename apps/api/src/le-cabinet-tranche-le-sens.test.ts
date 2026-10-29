@@ -43,8 +43,8 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
   const marque = `sens-${Date.now()}`;
   const mdp = "MotDePasseTresLong2026!";
   const dossiers = {
-    mandat: { id: "", mf: matriculeDEssai("S", "M") },
-    autonome: { id: "", mf: matriculeDEssai("T", "M") },
+    mandat: { id: "", mf: matriculeDEssai("A", "M") },
+    autonome: { id: "", mf: matriculeDEssai("B", "M") },
   };
   let dirigeant: Utilisateur;
   let expert: Utilisateur;
