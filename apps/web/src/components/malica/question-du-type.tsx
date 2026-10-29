@@ -61,6 +61,7 @@ export function QuestionDuType({
   documents,
   onRepondre,
   actuel = null,
+  sensAuCabinet = false,
   ...sortie
 }: {
   documents: readonly string[];
@@ -68,6 +69,13 @@ export function QuestionDuType({
   onRepondre: (code: string) => void;
   /** La pièce corrigée : son type et le sens lu, pour marquer son dossier. */
   actuel?: { typeDeDocument: string | null; kind: "facture_achat" | "facture_vente" | null } | null;
+  /**
+   * Le cabinet tient les livres du dossier : en correction, un dossier dont le
+   * type porte une écriture — un achat, une vente — n'est pas proposé. Le sens
+   * se tranche au cabinet, jamais à la PME (29 octobre 2026) ; la base le
+   * refuse de toute façon (`refus.sens.reserve_au_cabinet`).
+   */
+  sensAuCabinet?: boolean;
 } & Sortie) {
   const { t } = useI18n();
   /*
@@ -86,6 +94,13 @@ export function QuestionDuType({
    */
   const { dossiers, types } = useDossiers();
   const dossierActuel = actuel ? dossierDeLaPiece(actuel, types) : null;
+  // Le dossier où la pièce est déjà reste proposé : le choisir ne change rien.
+  const proposes = dossiers.filter(
+    (d) =>
+      !sensAuCabinet ||
+      d.code === dossierActuel ||
+      !types.find((x) => x.code === typePourLeDossier(d, actuel, types))?.porteEcriture,
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end bg-foreground/40">
@@ -110,7 +125,7 @@ export function QuestionDuType({
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2.5">
-          {dossiers.map((d) => (
+          {proposes.map((d) => (
             <button
               key={d.code}
               type="button"

@@ -87,9 +87,13 @@ export interface IdentityRepository {
    * Le cabinet qui suit ce dossier, vu depuis la PME.
    *
    * `null` quand personne ne la mandate — et l'écran dit alors autre chose
-   * plutôt que d'inventer un interlocuteur.
+   * plutôt que d'inventer un interlocuteur. `tientLesLivres` : le dossier est
+   * en mandat avec ce cabinet engagé — l'écriture et le sens d'une pièce
+   * (achat ou vente) sont alors son acte, jamais celui de la PME.
    */
-  monCabinet(pmeTenantId: string): Promise<{ id: string; name: string } | null>;
+  monCabinet(
+    pmeTenantId: string,
+  ): Promise<{ id: string; name: string; tientLesLivres: boolean } | null>;
   /** Les mandats proposés à cette PME, qui attendent sa réponse. */
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
   repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
@@ -745,7 +749,8 @@ export interface Piece {
    * Le type de la pièce (facture d'achat, de vente…) et ce qu'on en sait :
    * lu par Malica (`a_confirmer`), tranché par une personne (`confirme`),
    * ou encore inconnu. Le verrou R2 n'accepte une écriture que sur un type
-   * confirmé : l'écran confirme donc le type avec le « Oui » du dirigeant.
+   * confirmé : dans un dossier tenu par un cabinet, c'est le cabinet qui
+   * l'établit, sens compris — jamais la PME (29 octobre 2026).
    */
   documentKind: string | null;
   documentKindStatut: "a_determiner" | "a_confirmer" | "confirme";
@@ -1356,6 +1361,14 @@ export interface OfficeRepository {
    * `refus.proposition.changee`. `null` pour une écriture déjà inscrite.
    */
   valider(pieceId: string, empreinte: string | null): Promise<string>;
+  /**
+   * TRANCHER LE SENS : le cabinet du dossier établit un achat ou une vente
+   * (un type qui porte une écriture) quand la lecture ne le dit pas ou se
+   * contredit — précision datée, à son nom — puis le Socle rejuge la pièce.
+   * La PME ne tranche jamais le sens d'un dossier dont le cabinet tient les
+   * livres. Refus `refus.sens.ecriture_vivante` si une écriture vit déjà.
+   */
+  trancherLeSens(pieceId: string, sens: string): Promise<{ type: string }>;
   /**
    * FORCER : le comptable modifie l'écriture, ou la saisit quand le Socle ne
    * propose rien. La vivante est contre-passée, la nouvelle inscrite et

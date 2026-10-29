@@ -14,7 +14,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CompteDuPlan, PropositionDePiece } from "@malica/socle/ports/repositories";
 
-const api = vi.hoisted(() => ({ valider: vi.fn(), forcer: vi.fn(), journal: vi.fn() }));
+const api = vi.hoisted(() => ({
+  valider: vi.fn(),
+  forcer: vi.fn(),
+  trancherLeSens: vi.fn(),
+  journal: vi.fn(),
+}));
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
     t: (cle: string, v?: Record<string, unknown>) => (v ? `${cle} ${JSON.stringify(v)}` : cle),
@@ -26,13 +31,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
-    office: { valider: api.valider, forcer: api.forcer },
+    office: { valider: api.valider, forcer: api.forcer, trancherLeSens: api.trancherLeSens },
     referential: {
       journaux: async () => [
         { code: "ACH", libelle: "Journal des achats" },
         { code: "OD", libelle: "Opérations diverses" },
       ],
-      typesDeDocument: async () => [],
+      // Les deux types qui portent une écriture, et un qui n'en porte pas.
+      typesDeDocument: async () => [
+        { code: "facture_achat", libelle: "Facture d'achat", porteEcriture: true },
+        { code: "facture_vente", libelle: "Facture de vente", porteEcriture: true },
+        { code: "ticket_caisse", libelle: "Ticket de caisse", porteEcriture: false },
+      ],
     },
     journal: { consigner: api.journal },
   }),
@@ -74,7 +84,14 @@ const RIEN = {
   raison: "Montants lus incohérents.",
 } as PropositionDePiece;
 
-function monter(proposition: PropositionDePiece) {
+/** Rien de proposé, parce que le sens lu se contredit. */
+const SENS_A_TRANCHER = {
+  ok: false,
+  raison: "Le sens est à confirmer.",
+  controlesEnDefaut: ["sens_de_la_piece"],
+} as PropositionDePiece;
+
+function monter(proposition: PropositionDePiece, sens: { lu: string | null } | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -86,6 +103,7 @@ function monter(proposition: PropositionDePiece) {
         vivante={null}
         proposition={proposition}
         typeAEtablir={false}
+        sens={sens}
         dateLue="2026-10-27"
         libellePropose="Achat COMPTOIR DU LAC"
         plan={PLAN}
@@ -176,6 +194,32 @@ describe("la pièce côté comptable", () => {
     ];
     expect(boutons[0]!.parentElement).toBe(boutons[1]!.parentElement);
     expect(boutons[0]!.parentElement!.className).toContain("grid-cols-2");
+    expect(document.body.textContent).not.toMatch(/confirm/i);
+  });
+
+  it("le sens se tranche au cabinet : deux gestes égaux, le sens lu à gauche, plein", async () => {
+    api.trancherLeSens.mockResolvedValue({ type: "facture_achat" });
+    monter(SENS_A_TRANCHER, { lu: "facture_vente" });
+    const vente = await screen.findByRole("button", { name: "Facture de vente" });
+    const achat = screen.getByRole("button", { name: "Facture d'achat" });
+    expect(screen.queryByRole("button", { name: "Ticket de caisse" })).toBeNull();
+    // Même rangée, même largeur ; le principal (plein) à gauche.
+    expect(vente.parentElement).toBe(achat.parentElement);
+    expect(vente.parentElement!.className).toContain("grid-cols-2");
+    expect(vente.compareDocumentPosition(achat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(vente.className).toContain("bg-foreground");
+    expect(achat.className).not.toContain("bg-foreground");
+    for (const b of [vente, achat]) expect(b.className).toContain("min-h-[48px]");
+
+    fireEvent.click(achat);
+    await waitFor(() => expect(api.trancherLeSens).toHaveBeenCalledWith("p1", "facture_achat"));
+  });
+
+  it("le sens ne bloque jamais le forçage : la saisie reste à côté", async () => {
+    monter(SENS_A_TRANCHER, { lu: null });
+    await screen.findByRole("button", { name: "Facture d'achat" });
+    expect(screen.getByRole("button", { name: "cab.ecriture.saisir" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "cab.ecriture.retourner" })).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/confirm/i);
   });
 

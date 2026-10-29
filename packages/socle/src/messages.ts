@@ -616,14 +616,6 @@ const fr = {
   "pme.scan.final":
     "Voici la page telle que je la lirai. Si elle vous convient, lisez-la ; sinon, reprenez la photo.",
   "pme.scan.page": "Page {n}",
-  "pme.sens.pourquoi":
-    "Ni l’émetteur ni le destinataire ne sont votre entreprise : je ne tranche pas seule.",
-  "pme.sens.contredit":
-    "Ce que j'ai lu se contredit : le nom de l'émetteur ne correspond pas au sens de la pièce. Confirmez-le, je le note.",
-  "pme.sens.confirmerVente": "Oui, c'est bien une vente de ma société",
-  "pme.sens.plutotAchat": "Non, c'est un achat — j'ai payé",
-  "pme.sens.plutotVente": "Non, c'est une vente — j'ai encaissé",
-  "pme.sens.confirmerAchat": "Oui, c'est bien un achat de ma société",
   "pme.read.flags": "Signalements de lecture",
   "pme.extract.issuer": "Émetteur",
   "pme.extract.date": "Date",
@@ -2035,6 +2027,10 @@ const fr = {
   "refus.retour.deja": "Cette pièce est déjà chez le client : elle reviendra quand il la renverra.",
   "refus.prise_en_charge.deja":
     "Cette pièce est déjà prise en charge : modifiez son écriture pour la forcer, ou retournez-la.",
+  "refus.sens.reserve_au_cabinet":
+    "Ce dossier est confié à votre cabinet : c'est lui qui dit si la pièce est un achat ou une vente. Envoyez-lui la pièce.",
+  "refus.sens.ecriture_vivante":
+    "Cette pièce porte déjà une écriture : modifiez l'écriture pour la forcer, ou retournez la pièce.",
   "refus.ecriture.lignes": "Une écriture a au moins deux lignes.",
   "refus.ecriture.compte": "Une ligne n’a pas de compte : choisissez-le dans le plan.",
   "refus.ecriture.montant": "Un montant ne se lit pas, ou porte plus de décimales que la devise.",
@@ -2082,6 +2078,13 @@ const fr = {
   "cab.ecriture.libelle.manque": "Écrivez le libellé de l’écriture.",
   "cab.ecriture.type": "Type de pièce",
   "cab.ecriture.type.choisir": "Choisir le type",
+  "cab.sens.titre": "Achat ou vente ?",
+  "cab.sens.aide.pourquoi":
+    "La lecture ne dit pas si cette pièce est un achat ou une vente, ou elle se contredit : le nom de l'émetteur ne correspond pas au sens lu. C'est à vous de trancher ; le client ne confirme rien.",
+  "cab.sens.aide.trace":
+    "Votre choix est daté et gardé à votre nom. Malica rejuge aussitôt la pièce et propose l'écriture, que vous validez ou forcez.",
+  "cab.sens.aide.forcer":
+    "Vous pouvez aussi saisir l'écriture directement : le sens ne bloque jamais le forçage.",
   "cab.ecriture.ligne.libelle": "Libellé",
   "cab.ecriture.ligne.retirer": "Retirer la ligne",
   "cab.ecriture.ligne.ajouter": "Ajouter une ligne",
@@ -4375,14 +4378,6 @@ const en: Dict = {
   "pme.scan.final":
     "Here is the page as I will read it. If it looks right, read it; otherwise retake the photo.",
   "pme.scan.page": "Page {n}",
-  "pme.sens.pourquoi":
-    "Neither the issuer nor the recipient is your company: I will not decide alone.",
-  "pme.sens.contredit":
-    "What I read contradicts itself: the issuer's name does not match the document's direction. Confirm it and I will note it.",
-  "pme.sens.confirmerVente": "Yes, this is a sale by my company",
-  "pme.sens.plutotAchat": "No, it's a purchase — I paid",
-  "pme.sens.plutotVente": "No, it's a sale — I was paid",
-  "pme.sens.confirmerAchat": "Yes, this is a purchase by my company",
   "pme.read.flags": "Reading flags",
   "pme.extract.issuer": "Issuer",
   "pme.extract.date": "Date",
@@ -5763,6 +5758,10 @@ const en: Dict = {
     "This document is already with the client: it comes back when they send it again.",
   "refus.prise_en_charge.deja":
     "This document is already taken up: edit its entry to force it, or return it.",
+  "refus.sens.reserve_au_cabinet":
+    "This file is entrusted to your firm: it decides whether the document is a purchase or a sale. Send it the document.",
+  "refus.sens.ecriture_vivante":
+    "This document already carries an entry: edit the entry to force it, or return the document.",
   "refus.ecriture.lignes": "An entry has at least two lines.",
   "refus.ecriture.compte": "A line has no account: choose it from the chart.",
   "refus.ecriture.montant": "An amount cannot be read, or has more decimals than the currency.",
@@ -5810,6 +5809,13 @@ const en: Dict = {
   "cab.ecriture.libelle.manque": "Write the entry label.",
   "cab.ecriture.type": "Document type",
   "cab.ecriture.type.choisir": "Choose the type",
+  "cab.sens.titre": "Purchase or sale?",
+  "cab.sens.aide.pourquoi":
+    "The reading does not say whether this document is a purchase or a sale, or it contradicts itself: the issuer's name does not match the direction read. You decide; the client confirms nothing.",
+  "cab.sens.aide.trace":
+    "Your choice is dated and kept under your name. Malica re-checks the document at once and proposes the entry, which you validate or force.",
+  "cab.sens.aide.forcer":
+    "You can also enter the entry directly: the direction never blocks forcing.",
   "cab.ecriture.ligne.libelle": "Label",
   "cab.ecriture.ligne.retirer": "Remove the line",
   "cab.ecriture.ligne.ajouter": "Add a line",
@@ -7984,12 +7990,6 @@ const ar: Dict = {
     "ملفك غير خاضع للأداء على القيمة المضافة: لا أداء عليك لتسديده ولا فائض لترحيله. الأداء المدفوع على مشترياتك مدرج في أعبائك.",
   "pme.scan.final": "هذه هي الصفحة كما سأقرؤها. إن كانت مناسبة فاقرأها، وإلا فأعد التقاط الصورة.",
   "pme.scan.page": "الصفحة {n}",
-  "pme.sens.pourquoi": "لا المُصدر ولا المُرسل إليه هو مؤسستك: لن أقرر وحدي.",
-  "pme.sens.contredit": "ما قرأته متناقض: اسم المُصدِر لا يوافق اتّجاه الوثيقة. أكّد ذلك وسأسجّله.",
-  "pme.sens.confirmerVente": "نعم، هذه عملية بيع لشركتي",
-  "pme.sens.plutotAchat": "لا، إنها شراء — أنا من دفع",
-  "pme.sens.plutotVente": "لا، إنها بيع — أنا من قبض",
-  "pme.sens.confirmerAchat": "نعم، هذه عملية شراء لشركتي",
   "pme.read.flags": "تنبيهات القراءة",
   "pme.extract.issuer": "المُصدِر",
   "pme.extract.date": "التاريخ",
@@ -9339,6 +9339,10 @@ const ar: Dict = {
     "هذا الملف موكول إلى مكتب المحاسبة: هو من يسجّل قيد الوثيقة. أرسل إليه الوثيقة.",
   "refus.retour.deja": "هذه الوثيقة عند الحريف: ستعود حين يعيد إرسالها.",
   "refus.prise_en_charge.deja": "تمّ التكفّل بهذه الوثيقة: عدّل قيدها لفرضه، أو أرجِعها.",
+  "refus.sens.reserve_au_cabinet":
+    "هذا الملف موكول إلى مكتبك المحاسبي: هو من يحدّد إن كانت الوثيقة شراءً أو بيعًا. أرسِلها إليه.",
+  "refus.sens.ecriture_vivante":
+    "تحمل هذه الوثيقة قيدًا بالفعل: عدّل القيد لفرضه، أو أرجِع الوثيقة.",
   "refus.ecriture.lignes": "يتضمّن القيد سطرين على الأقل.",
   "refus.ecriture.compte": "سطر بلا حساب: اختره من الدليل.",
   "refus.ecriture.montant": "مبلغ لا يُقرأ، أو يحمل أرقامًا عشرية أكثر من العملة.",
@@ -9384,6 +9388,12 @@ const ar: Dict = {
   "cab.ecriture.libelle.manque": "اكتب بيان القيد.",
   "cab.ecriture.type": "نوع الوثيقة",
   "cab.ecriture.type.choisir": "اختر النوع",
+  "cab.sens.titre": "شراء أم بيع؟",
+  "cab.sens.aide.pourquoi":
+    "لا تُبيّن القراءة إن كانت هذه الوثيقة شراءً أو بيعًا، أو أنها متناقضة: اسم المُصدِر لا يوافق الاتّجاه المقروء. القرار لك؛ الحريف لا يؤكّد شيئًا.",
+  "cab.sens.aide.trace":
+    "اختيارك مؤرَّخ ومحفوظ باسمك. تعيد Malica فحص الوثيقة فورًا وتقترح القيد، فتصادق عليه أو تفرضه.",
+  "cab.sens.aide.forcer": "يمكنك أيضًا إدخال القيد مباشرة: الاتّجاه لا يمنع الفرض أبدًا.",
   "cab.ecriture.ligne.libelle": "البيان",
   "cab.ecriture.ligne.retirer": "حذف السطر",
   "cab.ecriture.ligne.ajouter": "إضافة سطر",

@@ -366,8 +366,10 @@ async function ecriture(pieceId, packId, journal, libelle, date, lignes, comptab
   if (existantes.some((e) => e.status === "booked")) return null;
 
   // La lecture a porté le type de la pièce, mais la règle R2 veut qu'une
-  // personne le confirme avant toute écriture : le jeu joue la personne,
-  // comme le « Oui » de l'écran. Le journal dit le sens de la facture.
+  // personne l'établisse avant toute écriture. Le compte de développement est
+  // l'expert du cabinet qui supervise ces dossiers : c'est à ce titre qu'il
+  // tranche le sens — une PME seule ne le peut plus quand le cabinet tient
+  // ses livres (29 octobre 2026). Le journal dit le sens de la facture.
   await rpc("capture", "preciser", [
     pieceId,
     "document_kind",

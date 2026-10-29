@@ -245,6 +245,7 @@
     "propositionDePiece",
     "propositionDeReglement",
     "retenuesDuMois",
+    "trancherLeSens",
     "transmisesSansDate",
     "valider"
   ],

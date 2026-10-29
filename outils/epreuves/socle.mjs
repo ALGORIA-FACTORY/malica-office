@@ -137,14 +137,16 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
   }
 
   /**
-   * Le verrou R2 : une personne confirme le type d'une pièce avant toute
-   * écriture. L'épreuve joue la personne — une fois : une pièce déjà
-   * confirmée, ou déjà engagée par une écriture, ne se précise plus.
+   * Le verrou R2 : une personne établit le type d'une pièce avant toute
+   * écriture. Dans un dossier tenu par un cabinet, c'est le cabinet qui
+   * tranche le sens (achat ou vente), jamais la PME (29 octobre 2026) :
+   * l'épreuve joue le cabinet — une fois : une pièce déjà établie, ou déjà
+   * engagée par une écriture, ne se tranche plus.
    */
   async function confirmerLeType(pieceId, kind) {
     const { piece } = await rpc("capture", "dossier", [pieceId]);
     if (piece.documentKindStatut === "confirme") return;
-    await rpc("capture", "preciser", [pieceId, "document_kind", kind]);
+    await rpc("office", "trancherLeSens", [pieceId, kind]);
   }
 
   function verdict(libelle, ok, detail = "") {

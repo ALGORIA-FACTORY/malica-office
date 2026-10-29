@@ -64,6 +64,7 @@ export function EcritureDuCabinet({
   vivante,
   proposition,
   typeAEtablir,
+  sens,
   dateLue,
   libellePropose,
   plan,
@@ -80,8 +81,14 @@ export function EcritureDuCabinet({
   vivante: Ecriture | null;
   /** Ce que le Socle propose, ou pourquoi il ne propose rien ; absent sans lecture. */
   proposition: PropositionDePiece | undefined;
-  /** La lecture n'a reconnu aucun type : le comptable le choisit (R2). */
+  /** Le type de la pièce ne porte pas d'écriture, ou manque : le comptable le choisit (R2). */
   typeAEtablir: boolean;
+  /**
+   * Le sens (achat ou vente) est à trancher par le comptable : la lecture ne
+   * le dit pas ou se contredit. `lu` : le sens lu, s'il y en a un. `null`
+   * quand rien n'est à trancher.
+   */
+  sens: { lu: string | null } | null;
   /** La date lue sur la pièce, pour une écriture saisie. */
   dateLue: string | null;
   /** Le libellé que Malica compose pour cette pièce, pour une écriture saisie. */
@@ -117,9 +124,17 @@ export function EcritureDuCabinet({
   const types = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),
-    enabled: typeAEtablir,
+    enabled: typeAEtablir || sens !== null,
     staleTime: 60 * 60 * 1000,
   });
+  /*
+   * Les deux sens sont les types qui portent une écriture, lus au
+   * référentiel. Celui que la lecture a lu passe en premier — le geste
+   * principal, à gauche ; l'autre, de même taille, le contredit.
+   */
+  const sensPossibles = (types.data ?? [])
+    .filter((d) => d.porteEcriture)
+    .sort((a, b) => Number(b.code === sens?.lu) - Number(a.code === sens?.lu));
 
   const lignes = saisie.lignes.map(relue);
   const controle = decimales === null ? null : controlerLaSaisie(lignes, decimales);
@@ -181,6 +196,14 @@ export function EcritureDuCabinet({
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
+  // Trancher le sens : une précision datée à son nom, puis le Socle rejuge.
+  const trancher = useMutation({
+    mutationFn: (code: string) => office().office.trancherLeSens(pieceId, code),
+    onMutate: () => setErreur(null),
+    onSuccess: relire,
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+  });
+
   const changerLigne = (index: number, patch: Partial<LigneSaisie>) =>
     setSaisie((s) => ({
       ...s,
@@ -217,7 +240,40 @@ export function EcritureDuCabinet({
 
   return (
     <section className="space-y-3" aria-labelledby="ecriture-du-cabinet">
-      {depart.depart === "rien" && proposition && !proposition.ok ? (
+      {sens && proposition && !proposition.ok ? (
+        <div className="space-y-2.5 border border-signal-warn bg-card px-3.5 py-3">
+          <p id="sens-a-trancher" className="flex items-center text-[14px] font-semibold">
+            {t("cab.sens.titre")}
+            <Aide
+              titre={t("cab.sens.titre")}
+              paragraphes={[
+                { texte: t("cab.sens.aide.pourquoi") },
+                { texte: t("cab.sens.aide.trace") },
+                { texte: t("cab.sens.aide.forcer") },
+                // La raison du Socle, telle qu'il l'a posée.
+                { texte: proposition.raison },
+              ]}
+            />
+          </p>
+          <div className="grid grid-cols-2 gap-2.5" role="group" aria-labelledby="sens-a-trancher">
+            {sensPossibles.map((d, i) => (
+              <button
+                key={d.code}
+                type="button"
+                disabled={trancher.isPending || inscrire.isPending}
+                onClick={() => trancher.mutate(d.code)}
+                className={
+                  i === 0
+                    ? "min-h-[48px] border border-foreground bg-foreground px-4 text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
+                    : "min-h-[48px] border border-border bg-card px-4 text-[14px] font-semibold hover:bg-accent disabled:opacity-50"
+                }
+              >
+                {d.libelle}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : depart.depart === "rien" && proposition && !proposition.ok ? (
         <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
           {t("cab.ecriture.rien")}
           <Aide
