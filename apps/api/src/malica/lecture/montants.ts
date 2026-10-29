@@ -85,10 +85,13 @@ export function treillisMontant(texte: string, decimales: number): Hypothese[] {
   // Les lettres, les symboles de devise et le pourcentage sont de la
   // décoration : « 1 234,560 TND », « 19 % », « 1 234,56 € ». Les ESPACES,
   // elles, ne le sont pas : voir plus bas. Une espace collée à un séparateur
-  // (« 1 234 ,560 ») n'en est pas une.
+  // (« 1 234 ,560 ») ou à l'intérieur d'une parenthèse (« (1 234,560 DT) »,
+  // une fois la devise retirée) n'en est pas une.
   const nu = texte
     .replace(/[\p{L}\p{Sc}\p{Mn}%]/gu, " ")
     .replace(/\s*([.,])\s*/gu, "$1")
+    .replace(/\(\s+/gu, "(")
+    .replace(/\s+\)/gu, ")")
     .replace(/\s+/gu, " ")
     .trim()
     .replace(/^([(+-]+) /u, "$1");

@@ -93,6 +93,17 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
     ["514,700 514,700", [514700]],
     ["3 020,000 3 020,000", [3020000]],
     ["(3 020,000) (3 020,000)", [-3020000]],
+    // Un négatif entre parenthèses garde sa devise et ses espaces intérieures
+    // (revue de #138) : l'espace collée à une parenthèse n'est pas un groupe.
+    ["(1 234,560 DT)", [-1234560]],
+    ["(123,450 €)", [-123450]],
+    ["( 1 234,560 )", [-1234560]],
+    ["(DT 1 234,560)", [-1234560]],
+    ["(€ 123,450)", [-123450]],
+    [" ( 1 234,560 DT ) ", [-1234560]],
+    ["DT (1 234,560)", [-1234560]],
+    ["(1 234,560) DT", [-1234560]],
+    ["( 123,450€ )", [-123450]],
     ["3 020,000 DT 3 020,000 DT", [3020000]],
   ];
   for (const [texte, attendu] of lisibles) {
