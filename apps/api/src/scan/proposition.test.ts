@@ -278,6 +278,79 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     );
   });
 
+  /*
+   * 29 octobre 2026, écran du cabinet : « montant illisible : « 3 020,000
+   * 3 020,000) » », pièce « anomalie à signaler », aucune écriture. La
+   * citation de la ligne couvrait deux colonnes — HT et total de la ligne —
+   * plus une parenthèse parasite. 3 020,000 + 573,800 (19 %) + 1,000 (timbre)
+   * = 3 594,800 : le total de l'en-tête.
+   */
+  const FACTURE_DU_29 = {
+    ht: ["3", "020,000"] as [string, string],
+    tva: "573,800",
+    ttc: ["3", "594,800"] as [string, string],
+  };
+
+  it("29 octobre : un HT répété sur deux colonnes se lit, et l'écriture se propose, équilibrée", async () => {
+    const piece = await pieceLue(
+      "deux-colonnes",
+      lecture({
+        numero: "P-DEUX-COLONNES",
+        ...FACTURE_DU_29,
+        ligne: ["3", "020,000", "3", "020,000)"],
+      }),
+    );
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.verdict, "à comptabiliser");
+    const lignes = r.proposition.lignes;
+    assert.equal(somme(lignes, "debit"), somme(lignes, "credit"), "l'écriture est équilibrée");
+    assert.equal(somme(lignes, "credit"), 3_594_800);
+    const debits = lignes.map((l) => l.debit);
+    assert.ok(debits.includes("3020.000"), `HT : ${debits.join(", ")}`);
+    assert.ok(debits.includes("573.800"), "TVA");
+    assert.ok(debits.includes("1.000"), "timbre");
+  });
+
+  it("la ligne illisible, le pied lisible et vérifié : l'écriture se propose depuis le pied, avec réserve", async () => {
+    const piece = await pieceLue(
+      "pied",
+      lecture({
+        numero: "P-PIED",
+        ...FACTURE_DU_29,
+        // Deux montants DIFFÉRENTS sur la ligne : on ne choisit pas entre eux.
+        ligne: ["3", "020,000", "3", "200,000"],
+      }),
+    );
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.verdict, "à comptabiliser avec réserve", "signalé, jamais en silence");
+    assert.equal(somme(r.proposition.lignes, "credit"), 3_594_800);
+    const jugement = (await rpc("capture", "analyser", piece)) as {
+      motifs: Array<{ code: string; motif: string }>;
+    };
+    const motif = jugement.motifs.find((m) => m.code === "coherence_arithmetique")?.motif ?? "";
+    assert.match(motif, /3 020,000 3 200,000/);
+    assert.match(motif, /pied de facture/);
+  });
+
+  it("rien ne se lit, ni la ligne ni le pied : la raison est courte, et dit quoi faire", async () => {
+    const piece = await pieceLue(
+      "rien",
+      lecture({
+        numero: "P-RIEN",
+        ...FACTURE_DU_29,
+        ht: ["3 020,000", "3 200,000"],
+        ligne: ["3", "020,000", "3", "200,000"],
+      }),
+    );
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(!r.ok);
+    assert.equal(r.verdict, "anomalie à signaler");
+    assert.match(r.raison, /À saisir : montant illisible « 3 020,000 3 200,000 »\.$/);
+    assert.ok(r.raison.length <= 140, `trop long (${r.raison.length}) : ${r.raison}`);
+  });
+
   it("proposerDepuisPiece refuse ce que propositionDePiece refuse", async () => {
     const piece = await pieceLue("refus", lecture({ titre: "PROFORMA", numero: "P-REFUS" }));
     await assert.rejects(rpc("office", "proposerDepuisPiece", piece), /à rejeter/);
