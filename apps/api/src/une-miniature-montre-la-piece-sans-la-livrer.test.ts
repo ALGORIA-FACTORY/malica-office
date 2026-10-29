@@ -9,18 +9,21 @@
  *
  * Ce que ce fichier établit :
  *   — la miniature d'une photo est un JPEG bien plus léger, dans sa boîte ;
- *   — un PDF scanné donne sa première page ; un PDF de texte, ou un logo, rien
- *     (204 : l'écran garde sa feuille esquissée) ;
+ *   — tout PDF donne sa première page, rendue : un scan, une page de texte,
+ *     un scan en plusieurs images ; seul un PDF chiffré, cassé ou sans page
+ *     n'en donne pas (204 : l'écran garde sa feuille esquissée) ;
+ *   — un « pas de miniature » gardé AVANT le rendu des PDF se refait ;
  *   — la RLS est la même que celle du contenu : un membre d'un autre tenant ne
  *     la lit pas, ni le dirigeant la pièce PERSONNELLE de son siège (404) ;
  *   — supprimer la pièce efface aussi sa miniature.
  */
 import assert from "node:assert/strict";
-import { access, mkdtemp, readdir, rm } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it, mock } from "node:test";
+import { deflateSync } from "node:zlib";
 
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import pg from "pg";
@@ -28,7 +31,7 @@ import pg from "pg";
 import { creerCompte, emettreJeton, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
-import { fabrique, fabriquerMiniature } from "./miniature.ts";
+import { fabrique, fabriquerMiniature, limitesDuRenduPdf } from "./miniature.ts";
 import { executerRpc } from "./rpc.ts";
 import { disque } from "./stockage.ts";
 
@@ -48,6 +51,70 @@ async function photo(largeur = 1200, hauteur = 1600): Promise<Buffer> {
   return toile.encode("jpeg", 92);
 }
 
+/** Un objet PDF : son corps, en morceaux de texte ou d'octets. */
+type Objet = (string | Buffer)[];
+
+/**
+ * Un PDF d'UNE page : catalogue (1), arbre des pages (2), la page (3), son
+ * contenu (4), puis les `objets` donnés, numérotés à partir de 5.
+ */
+function unePage(o: {
+  contenu: string;
+  ressources?: string;
+  boite?: string;
+  objets?: Objet[];
+  /** Ce qu'on ajoute au `trailer` (un `/Encrypt`, par exemple). */
+  trailer?: string;
+  /** Sans page du tout : l'arbre est vide. */
+  sansPage?: boolean;
+}): Uint8Array {
+  const objets: Objet[] = [
+    ["<< /Type /Catalog /Pages 2 0 R >>"],
+    [
+      o.sansPage
+        ? "<< /Type /Pages /Kids [] /Count 0 >>"
+        : "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    ],
+    [
+      `<< /Type /Page /Parent 2 0 R /MediaBox [${o.boite ?? "0 0 595 842"}] ` +
+        `/Resources << ${o.ressources ?? ""} >> /Contents 4 0 R >>`,
+    ],
+    [`<< /Length ${Buffer.byteLength(o.contenu, "latin1")} >>\nstream\n${o.contenu}endstream`],
+    ...(o.objets ?? []),
+  ];
+  const morceaux: Buffer[] = [];
+  const offsets: number[] = [];
+  let taille = 0;
+  const pousser = (m: string | Buffer) => {
+    const b = typeof m === "string" ? Buffer.from(m, "latin1") : m;
+    morceaux.push(b);
+    taille += b.length;
+  };
+  pousser("%PDF-1.7\n");
+  objets.forEach((corps, i) => {
+    offsets[i] = taille;
+    pousser(`${i + 1} 0 obj\n`);
+    for (const c of corps) pousser(c);
+    pousser("\nendobj\n");
+  });
+  const debut = taille;
+  pousser(`xref\n0 ${objets.length + 1}\n0000000000 65535 f \n`);
+  for (const off of offsets) pousser(`${String(off).padStart(10, "0")} 00000 n \n`);
+  pousser(
+    `trailer\n<< /Size ${objets.length + 1} /Root 1 0 R ${o.trailer ?? ""} >>\n` +
+      `startxref\n${debut}\n%%EOF\n`,
+  );
+  return new Uint8Array(Buffer.concat(morceaux));
+}
+
+/** Une image JPEG en objet PDF. */
+const imageJpeg = (jpeg: Buffer, largeur: number, hauteur: number): Objet => [
+  `<< /Type /XObject /Subtype /Image /Width ${largeur} /Height ${hauteur} ` +
+    `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,
+  jpeg,
+  "\nendstream",
+];
+
 /**
  * Un PDF d'une page A4 qui porte une image JPEG, posée sur toute la page (un
  * scan) ou dans un coin (un logo sur un document de texte).
@@ -59,42 +126,47 @@ function pdfAvecImage(
   pose: "page" | "logo",
 ): Uint8Array {
   const place = pose === "page" ? "595 0 0 842 0 0" : "80 0 0 80 40 740";
-  const dessin = `q ${place} cm /Im1 Do Q\n`;
-  const morceaux: (string | Buffer)[] = [];
-  const offsets: number[] = [];
-  let taille = 0;
-  const pousser = (m: string | Buffer) => {
-    morceaux.push(m);
-    taille += typeof m === "string" ? Buffer.byteLength(m, "latin1") : m.length;
-  };
-  const objet = (n: number, corps: (string | Buffer)[]) => {
-    offsets[n - 1] = taille;
-    pousser(`${n} 0 obj\n`);
-    for (const c of corps) pousser(c);
-    pousser("\nendobj\n");
-  };
+  return unePage({
+    contenu: `q ${place} cm /Im1 Do Q\n`,
+    ressources: "/XObject << /Im1 5 0 R >>",
+    objets: [imageJpeg(jpeg, largeur, hauteur)],
+  });
+}
 
-  pousser("%PDF-1.4\n");
-  objet(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
-  objet(2, ["<< /Type /Pages /Kids [3 0 R] /Count 1 >>"]);
-  objet(3, [
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
-      "/Resources << /XObject << /Im1 5 0 R >> >> /Contents 4 0 R >>",
-  ]);
-  objet(4, [`<< /Length ${dessin.length} >>\nstream\n${dessin}endstream`]);
-  objet(5, [
-    `<< /Type /XObject /Subtype /Image /Width ${largeur} /Height ${hauteur} ` +
-      `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`,
-    jpeg,
-    "\nendstream",
-  ]);
-  const debut = taille;
-  pousser(`xref\n0 6\n0000000000 65535 f \n`);
-  for (const o of offsets) pousser(`${String(o).padStart(10, "0")} 00000 n \n`);
-  pousser(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${debut}\n%%EOF\n`);
-  return new Uint8Array(
-    Buffer.concat(morceaux.map((m) => (typeof m === "string" ? Buffer.from(m, "latin1") : m))),
-  );
+/** Une facture de TEXTE seul, en Helvetica non embarquée (une police standard). */
+const pdfDeTexte = () =>
+  unePage({
+    contenu:
+      "BT /F1 64 Tf 40 700 Td (FACTURE) Tj ET\n" +
+      "BT /F1 64 Tf 40 560 Td (N 2026-0042) Tj ET\n" +
+      "BT /F1 64 Tf 40 420 Td (TOTAL 118,000) Tj ET\n",
+    ressources: "/Font << /F1 5 0 R >>",
+    objets: [["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]],
+  });
+
+/**
+ * Un PDF chiffré : un `/Encrypt` standard dont le mot de passe d'ouverture
+ * n'est pas vide. Sans le mot de passe, rien ne s'en lit.
+ */
+const pdfChiffre = () =>
+  unePage({
+    contenu: "BT /F1 24 Tf 40 700 Td (SECRET) Tj ET\n",
+    objets: [
+      [`<< /Filter /Standard /V 1 /R 2 /O <${"ab".repeat(32)}> /U <${"cd".repeat(32)}> /P -4 >>`],
+    ],
+    trailer: `/Encrypt 5 0 R /ID [<${"01".repeat(16)}> <${"01".repeat(16)}>]`,
+  });
+
+/** La taille d'une miniature, et combien de ses pixels sont sombres (de l'encre). */
+async function lire(mini: Buffer) {
+  const image = await loadImage(mini);
+  const toile = createCanvas(image.width, image.height);
+  const ctx = toile.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  const { data } = ctx.getImageData(0, 0, image.width, image.height);
+  let sombres = 0;
+  for (let i = 0; i < data.length; i += 4) if (data[i]! < 100) sombres += 1;
+  return { largeur: image.width, hauteur: image.height, sombres };
 }
 
 describe("fabriquer une miniature", () => {
@@ -123,9 +195,144 @@ describe("fabriquer une miniature", () => {
     assert.ok(image.height <= 480 && image.width <= 360);
   });
 
-  it("ne prend pas le logo d'un PDF de texte pour la page", async () => {
-    const pdf = pdfAvecImage(await photo(200, 200), 200, 200, "logo");
-    assert.equal(await fabriquerMiniature(pdf), null);
+  /*
+   * ================================================ TOUT PDF A SA PAGE
+   *
+   * Vu sur staging le 29 octobre 2026 : un PDF de 4,7 Mo (%PDF-1.7) rendait
+   * 204, et la liste montrait une feuille esquissée au lieu de sa page. La
+   * miniature ne venait que d'un PDF dont la page 1 ÉTAIT une seule image ;
+   * un PDF de texte, ou un scan en plusieurs bandes, n'en avait aucune.
+   */
+  describe("rend la première page de tout PDF", () => {
+    it("un PDF de texte seul : sa page, avec son encre, dans la boîte", async () => {
+      const mini = await fabriquerMiniature(pdfDeTexte());
+      assert.ok(mini, "un PDF de texte donne sa page");
+      const { largeur, hauteur, sombres } = await lire(mini);
+      assert.ok(largeur <= 360 && hauteur <= 480, `${largeur} × ${hauteur}`);
+      // A4 dans 360 × 480 : la hauteur remplit la boîte.
+      assert.equal(hauteur, 480);
+      assert.ok(sombres > 500, `le texte est dessiné (${sombres} pixels d'encre)`);
+    });
+
+    it("un PDF de texte qui porte un logo : la page, pas le logo", async () => {
+      const mini = await fabriquerMiniature(pdfAvecImage(await photo(200, 200), 200, 200, "logo"));
+      assert.ok(mini);
+      const { largeur, hauteur } = await lire(mini);
+      assert.ok(hauteur > largeur, "la forme d'une page A4, pas celle d'un logo carré");
+    });
+
+    it("un scan en plusieurs images : la page entière", async () => {
+      const haut = await photo(600, 424);
+      const bas = await photo(600, 424);
+      const mini = await fabriquerMiniature(
+        unePage({
+          contenu: "q 595 0 0 421 0 421 cm /Im1 Do Q q 595 0 0 421 0 0 cm /Im2 Do Q\n",
+          ressources: "/XObject << /Im1 5 0 R /Im2 6 0 R >>",
+          objets: [imageJpeg(haut, 600, 424), imageJpeg(bas, 600, 424)],
+        }),
+      );
+      assert.ok(mini, "un scan en bandes donne sa page");
+      const { largeur, hauteur } = await lire(mini);
+      assert.ok(largeur <= 360 && hauteur <= 480 && hauteur > largeur);
+    });
+
+    it("un PDF chiffré, cassé ou sans page : rien, et c'est durable (pas d'exception)", async () => {
+      const bruit = Buffer.alloc(4096);
+      for (let i = 0; i < bruit.length; i += 1) bruit[i] = (i * 2654435761) >>> 24;
+      for (const [nom, pdf] of [
+        ["chiffré", pdfChiffre()],
+        ["cassé", new Uint8Array(Buffer.concat([Buffer.from("%PDF-1.7\n"), bruit]))],
+        ["sans page", unePage({ contenu: "", sansPage: true })],
+      ] as const) {
+        assert.equal(await fabriquerMiniature(pdf), null, nom);
+      }
+    });
+
+    /*
+     * Une page de 14 400 points de côté (le plus grand format permis) et une
+     * image de 7 100 × 7 100 (plus de 50 mégapixels), noire, sur toute la
+     * page. La miniature est faite à la taille de la boîte, jamais à celle
+     * de la page ; et l'image, au-delà du plafond, n'est pas décodée : la
+     * page reste BLANCHE. Décodée, elle serait noire.
+     */
+    it("une page immense : rendue dans la boîte, et l'image hors plafond jamais décodée", async () => {
+      const cote = 7100;
+      const noire = deflateSync(Buffer.alloc(Math.ceil(cote / 8) * cote));
+      const t0 = Date.now();
+      const mini = await fabriquerMiniature(
+        unePage({
+          boite: "0 0 14400 14400",
+          contenu: "q 14400 0 0 14400 0 0 cm /Im1 Do Q\n",
+          ressources: "/XObject << /Im1 5 0 R >>",
+          objets: [
+            [
+              `<< /Type /XObject /Subtype /Image /Width ${cote} /Height ${cote} ` +
+                `/ColorSpace /DeviceGray /BitsPerComponent 1 /Filter /FlateDecode ` +
+                `/Length ${noire.length} >>\nstream\n`,
+              noire,
+              "\nendstream",
+            ],
+          ],
+        }),
+      );
+      assert.ok(mini);
+      const { largeur, hauteur, sombres } = await lire(mini);
+      assert.deepEqual([largeur, hauteur], [360, 360]);
+      assert.equal(sombres, 0, "l'image au-delà du plafond n'a pas été décodée");
+      assert.ok(Date.now() - t0 < 5000, `${Date.now() - t0} ms`);
+    });
+
+    /*
+     * pdf.js 6 colle une image RGB par bandes, en un temps qui croît comme le
+     * carré de sa hauteur (voir `elargirLesImagesRgb`). Une image haute de
+     * 12 000 lignes y passait plusieurs secondes ; élargie en RGBA d'abord,
+     * une fraction de seconde.
+     */
+    it("une image RGB très haute se rend en temps linéaire", async () => {
+      const [largeur, hauteur] = [400, 12_000];
+      const grise = deflateSync(Buffer.alloc(largeur * hauteur * 3, 0x40));
+      const t0 = Date.now();
+      const mini = await fabriquerMiniature(
+        unePage({
+          contenu: "q 595 0 0 842 0 0 cm /Im1 Do Q\n",
+          ressources: "/XObject << /Im1 5 0 R >>",
+          objets: [
+            [
+              `<< /Type /XObject /Subtype /Image /Width ${largeur} /Height ${hauteur} ` +
+                `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode ` +
+                `/Length ${grise.length} >>\nstream\n`,
+              grise,
+              "\nendstream",
+            ],
+          ],
+        }),
+      );
+      const duree = Date.now() - t0;
+      assert.ok(mini);
+      assert.ok((await lire(mini)).sombres > 100_000, "l'image grise est dessinée");
+      assert.ok(duree < 2500, `${duree} ms`);
+    });
+
+    /*
+     * pdf.js travaille en microtâches : dans le fil de l'API, aucune minuterie
+     * ne l'aurait interrompu. Le rendu tourne dans un fil à part, terminé à
+     * son délai. Le délai est resserré ici, et le PDF porte assez de tracés
+     * pour le dépasser.
+     */
+    it("un PDF trop lourd est arrêté à son délai : rien, sans attendre la fin", async () => {
+      const delai = limitesDuRenduPdf.delaiMs;
+      limitesDuRenduPdf.delaiMs = 100;
+      try {
+        const t0 = Date.now();
+        const mini = await fabriquerMiniature(
+          unePage({ contenu: "0 0 m 595 842 l 0 842 l h f\n".repeat(400_000) }),
+        );
+        assert.equal(mini, null);
+        assert.ok(Date.now() - t0 < 2000, `${Date.now() - t0} ms`);
+      } finally {
+        limitesDuRenduPdf.delaiMs = delai;
+      }
+    });
   });
 
   /*
@@ -304,8 +511,10 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
   let dansLaSociete = "";
   /** Une photo que le siège garde pour lui. */
   let privee = "";
-  /** Un PDF de texte : aucune miniature à en tirer. */
+  /** Un PDF de texte : sa page se rend. */
   let texte = "";
+  /** Un PDF chiffré : aucune miniature à en tirer. */
+  let chiffre = "";
 
   const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
     const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -396,13 +605,8 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     const jpeg = new Uint8Array(await photo());
     dansLaSociete = await deposer(dirigeant, "societe", "entite", "image/jpeg", jpeg);
     privee = await deposer(siege, "privee", "personnel", "image/jpeg", jpeg);
-    texte = await deposer(
-      dirigeant,
-      "texte",
-      "entite",
-      "application/pdf",
-      pdfAvecImage(await photo(200, 200), 200, 200, "logo"),
-    );
+    texte = await deposer(dirigeant, "texte", "entite", "application/pdf", pdfDeTexte());
+    chiffre = await deposer(dirigeant, "chiffre", "entite", "application/pdf", pdfChiffre());
   });
 
   after(async () => {
@@ -447,16 +651,53 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(sienne.status, 200);
   });
 
-  it("un PDF de texte n'a pas de miniature : 204, et l'écran garde sa feuille", async () => {
+  it("un PDF de texte a sa miniature : sa page, en JPEG", async () => {
     const reponse = await fetch(`${base}/pieces/${texte}/miniature`, {
       headers: entetes(dirigeant),
     });
-    assert.equal(reponse.status, 204);
-    // Le constat est gardé : la deuxième demande ne relit pas le PDF.
-    const encore = await fetch(`${base}/pieces/${texte}/miniature`, {
-      headers: entetes(dirigeant),
-    });
-    assert.equal(encore.status, 204);
+    assert.equal(reponse.status, 200);
+    assert.equal(reponse.headers.get("content-type"), "image/jpeg");
+    await reponse.arrayBuffer();
+  });
+
+  it("un PDF chiffré n'a pas de miniature : 204, gardé, jamais refait", async () => {
+    const espion = mock.method(fabrique, "miniature");
+    try {
+      const reponse = await fetch(`${base}/pieces/${chiffre}/miniature`, {
+        headers: entetes(dirigeant),
+      });
+      assert.equal(reponse.status, 204);
+      // Le constat est gardé : la deuxième demande ne relit pas le PDF.
+      const encore = await fetch(`${base}/pieces/${chiffre}/miniature`, {
+        headers: entetes(dirigeant),
+      });
+      assert.equal(encore.status, 204);
+      assert.equal(espion.mock.callCount(), 1);
+    } finally {
+      espion.mock.restore();
+    }
+  });
+
+  /*
+   * Avant le rendu des PDF, un PDF de texte gardait « pas de miniature » : un
+   * fichier VIDE à la place de la miniature. Après le déploiement, ces
+   * constats-là sont périmés et la miniature se refait à la demande suivante.
+   */
+  it("un « pas de miniature » gardé avant le rendu des PDF se refait", async () => {
+    const ancien = await deposer(
+      dirigeant,
+      "ancien-vide",
+      "entite",
+      "application/pdf",
+      pdfDeTexte(),
+    );
+    await writeFile(miniatureSurDisque(ancien), Buffer.alloc(0));
+    const reponse = await demander(ancien);
+    assert.equal(reponse.status, 200);
+    assert.equal(reponse.headers.get("content-type"), "image/jpeg");
+    await reponse.arrayBuffer();
+    const gardee = await readFile(miniatureSurDisque(ancien));
+    assert.deepEqual([...gardee.subarray(0, 3)], [0xff, 0xd8, 0xff], "un JPEG, gardé à sa place");
   });
 
   it("sans jeton, rien", async () => {

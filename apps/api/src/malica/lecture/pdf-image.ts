@@ -150,13 +150,6 @@ export interface PageImage {
   page: number;
   largeur: number;
   hauteur: number;
-  /**
-   * Largeur sur hauteur de la PAGE (sa `MediaBox`), pas de l'image. Un PDF
-   * de texte porte souvent un logo : sa plus grande image n'est pas la page,
-   * et c'est ce rapport qui permet de le voir (la miniature d'une pièce ne
-   * doit pas montrer un logo en guise de facture).
-   */
-  formatDeLaPage: number;
 }
 
 /**
@@ -167,17 +160,7 @@ export interface PageImage {
  * pièce. Si une page en porte plusieurs, on prend celle qui couvre le plus de
  * pixels et le relevé le dira par ce qu'il ne trouve pas.
  */
-export async function extrairePagesScannees(
-  bytes: Uint8Array,
-  maxPages = 5,
-  /**
-   * Le plafond, en pixels, d'une image que pdf.js accepte de décoder ; au-delà
-   * il ne la décode pas (`maxImageSize`). Sans lui, un PDF qui déclare une
-   * image de 100 000 × 100 000 ferait allouer des dizaines de gigaoctets.
-   * Absent : le défaut de pdf.js, comme avant.
-   */
-  maxImageSize?: number,
-): Promise<PageImage[]> {
+export async function extrairePagesScannees(bytes: Uint8Array, maxPages = 5): Promise<PageImage[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const tache = pdfjs.getDocument({
     // Une COPIE : `getDocument` transfère le tableau et le DÉTACHE. Voir le
@@ -191,7 +174,6 @@ export async function extrairePagesScannees(
     // qu'aucun encodeur ne pourrait relire hors navigateur.
     isOffscreenCanvasSupported: false,
     verbosity: 0,
-    ...(maxImageSize === undefined ? {} : { maxImageSize }),
   });
   const doc = await tache.promise;
   const sortie: PageImage[] = [];
@@ -240,13 +222,11 @@ export async function extrairePagesScannees(
       }
       const b64 =
         typeof btoa === "function" ? btoa(bin) : Buffer.from(bin, "binary").toString("base64");
-      const [x0, y0, x1, y1] = page.view as [number, number, number, number];
       sortie.push({
         dataUrl: `data:image/png;base64,${b64}`,
         page: p,
         largeur: meilleur.largeur,
         hauteur: meilleur.hauteur,
-        formatDeLaPage: Math.abs(x1 - x0) / Math.max(1, Math.abs(y1 - y0)),
       });
     }
   } finally {
