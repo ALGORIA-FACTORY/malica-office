@@ -94,6 +94,16 @@ export interface ReadFlag {
      */
     | "MONTANT_PEUT_ETRE_AMPUTE"
     /**
+     * Une TVA de ligne lue plus grande que la base de sa ligne : l'une des
+     * deux est mal lue.
+     *
+     * Posé le 29 octobre 2026, après une TVA de ligne lue 5 460 301,150 sur
+     * une base de 1 585,000 (deux cellules jointes en un nombre). La TVA
+     * sort `null` au lieu de nourrir une somme absurde ; la pièce est
+     * partielle et rien ne peut s'écrire.
+     */
+    | "MONTANT_INVRAISEMBLABLE"
+    /**
      * Plusieurs jetons satisfont la règle, et rien ne les départage.
      *
      * Posé le 18 octobre 2026, avec la fabrique de lecteurs. Un lecteur

@@ -60,6 +60,7 @@ import {
 import type { ExigencesDeValidation } from "./recette-validateur.ts";
 import type { ParametresDeClassement, ParametresDeDistance } from "./signature-distance.ts";
 import type { ParametresDeSignature } from "./signature.ts";
+import { deviseDEssai } from "../scan/devise-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL_ADMIN"]);
 
@@ -125,7 +126,7 @@ function extraitParRecette(plan: readonly PageToken[] = FACTURE_A_TIMBRE()): Ext
   const lu = buildExtractFromTokenPlan({
     tokens: [...plan],
     selection: designation.par.selection,
-    decimals: DECIMALES,
+    devise: deviseDEssai(DECIMALES),
     matriculeDossier: MATRICULE_DU_DOSSIER,
   });
   return lu.extract as unknown as ExtractV1;

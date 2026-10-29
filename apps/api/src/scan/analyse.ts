@@ -87,6 +87,25 @@ export async function lireParametres(
   return p as Record<(typeof PARAMETRES)[number], number>;
 }
 
+/**
+ * Les marques de devise que les lecteurs de montants retirent comme une
+ * décoration : les codes ISO de `ref.devises` et les marques imprimées de
+ * `ref.devises_marques` (« D.T. », « د.ت », « € »). Toutes les devises, pas
+ * seulement celle du pack : une marque ne décide pas de la devise de la
+ * pièce, elle dit seulement qu'un mot n'est pas un nombre. Une liste vide est
+ * une erreur — sans elle, aucun « 1 234,560 DT » ne se lirait plus.
+ */
+export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
+  const { rows } = await db.query<{ marque: string }>(
+    `select code as marque from ref.devises
+      union
+     select marque from ref.devises_marques
+      order by 1`,
+  );
+  if (rows.length === 0) throw new Error("Aucune marque de devise au référentiel.");
+  return rows.map((r) => r.marque);
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -329,6 +348,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
           },
           {
             decimales: p["money.decimals"]!,
+            marques: await lireMarquesDeDevise(db),
             toleranceMineure: p["lecture.tolerance_arrondi_mineure"]!,
           },
         );

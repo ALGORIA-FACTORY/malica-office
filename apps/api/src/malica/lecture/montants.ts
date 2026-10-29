@@ -21,6 +21,13 @@
  * Module pur : aucun réseau, aucune base, aucun framework.
  */
 
+import {
+  groupesDeMilliersValides,
+  occurrencesIdentiques,
+  sansMarquesDeDevise,
+  type DeviseLue,
+} from "../../scan/normaliser-montants.ts";
+
 /** Une lecture admissible d'un texte, en unités mineures entières. */
 export interface Hypothese {
   /** La valeur en unités mineures (millimes pour le dinar), toujours entière. */
@@ -69,10 +76,33 @@ export function enDecimal(millimes: number, decimales: number): string {
  * absente vaut mieux qu'une lecture arrondie : l'arrondi est une décision, et
  * ce n'est pas à la lecture de la prendre.
  */
-export function treillisMontant(texte: string, decimales: number): Hypothese[] {
-  // Les lettres, les symboles de devise, le pourcentage et les espaces sont
-  // de la décoration : « 1 234,560 TND », « 19 % », « 1 234,56 € ».
-  const nu = texte.replace(/[\p{L}\p{Sc}\p{Mn}%\s]/gu, "");
+export function treillisMontant(texte: string, devise: DeviseLue): Hypothese[] {
+  const { decimales } = devise;
+  /*
+   * ============================ UN TAUX N'EST PAS UNE DÉCORATION À CÔTÉ D'UN MONTANT
+   *
+   * « 19 % » seul se lit 19 : le signe est une décoration. Mais un taux À CÔTÉ
+   * d'un autre nombre dit que la plage a couvert deux cellules — « 19% 306,610 »
+   * se lisait 19 306,610. Il n'y a alors rien à lire.
+   */
+  const horsTaux = texte.replace(TAUX, "");
+  if (horsTaux !== texte && /\d/u.test(horsTaux)) return [];
+
+  // Seules les marques de devise que le référentiel connaît sont une
+  // décoration (« 1 234,560 D.T. », « د.ت 1 234,560 », « 123,450 € ») : tout
+  // autre mot (« art. 9 », « TVA 19 ») fait du texte un texte. Les ESPACES ne
+  // sont pas une décoration non plus : voir plus bas. Une espace collée à un
+  // séparateur (« 1 234 ,560 ») ou à l'intérieur d'une parenthèse
+  // (« (1 234,560 DT) », une fois la devise retirée) n'en est pas une.
+  const sansMarques = sansMarquesDeDevise(texte.replace(/%/gu, " "), devise.marques);
+  if (sansMarques === null) return [];
+  const nu = sansMarques
+    .replace(/\s*([.,])\s*/gu, "$1")
+    .replace(/\(\s+/gu, "(")
+    .replace(/\s+\)/gu, ")")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .replace(/^([(+-]+) /u, "$1");
 
   /*
    * ============================ TOUT LE RESTE DÉCIDE, ET DIT NON
@@ -86,7 +116,65 @@ export function treillisMontant(texte: string, decimales: number): Hypothese[] {
    * Effacer un caractère qu'on ne comprend pas, c'est décider à la place du
    * papier — la faute même que ce module existe pour supprimer.
    */
-  if (!nu || !/^[\d.,()+-]+$/.test(nu)) return [];
+  if (!nu || !/^[\d.,()+ -]+$/.test(nu)) return [];
+
+  /*
+   * ============================ DEUX NOMBRES COLLÉS NE FONT PAS UN NOMBRE (29 octobre 2026)
+   *
+   * Staging : « lines[0].vat_amount + lines[1].vat_amount donne 5460306.610 ».
+   * Le récapitulatif de TVA imprimait une colonne par taux — « TVA  5,460
+   * 301,150 » — et une désignation a couvert les deux cellules. La plage
+   * arrive ici jointe par une espace, et cette fonction retirait TOUTES les
+   * espaces comme de la décoration : « 5,460301,150 », lu 5 460 301,150, une
+   * lecture unique, sans drapeau. Le solveur l'a additionnée.
+   *
+   * Une espace entre des chiffres n'est un séparateur de milliers que si les
+   * groupes le prouvent — 1 à 3 chiffres, puis des groupes de 3, la partie
+   * décimale à la fin seulement (« 1 585,000 »). Sinon, la plage porte
+   * plusieurs nombres : le même montant répété en colonnes se lit (la règle
+   * de `occurrencesIdentiques`, partagée avec la normalisation du scan), deux
+   * montants différents ne se lisent pas. Et si le texte recollé sans ses
+   * espaces se lit, on ne tranche pas non plus : « 12 3,500 » est peut-être
+   * 123,500 aux espaces parasites, peut-être deux nombres.
+   */
+  const morceaux = nu.split(" ");
+  if (morceaux.length === 1 || espacesDeMilliers(morceaux))
+    return lireUnNombre(morceaux.join(""), decimales);
+  if (lireUnNombre(morceaux.join(""), decimales).length > 0) return [];
+  return occurrencesIdentiques(
+    nu,
+    (occurrence) => {
+      const groupes = occurrence.split(" ");
+      return groupes.length === 1 || espacesDeMilliers(groupes)
+        ? lireUnNombre(groupes.join(""), decimales)
+        : [];
+    },
+    (h) => h.millimes,
+  );
+}
+
+/** Un taux et son signe : « 19% », « 7 % », « 0,5 % ». */
+const TAUX = /\d+(?:[.,]\d+)?\s?%/gu;
+
+/**
+ * Les morceaux d'un texte coupé à ses espaces sont-ils les groupes de milliers
+ * d'UN montant ? Le premier peut porter le signe, le dernier sa partie
+ * décimale (et la parenthèse qui ferme un négatif).
+ */
+function espacesDeMilliers(morceaux: readonly string[]): boolean {
+  const dernier = /^(\d+)(?:[.,]\d*)?\)?$/u.exec(morceaux[morceaux.length - 1]!);
+  return (
+    dernier !== null &&
+    groupesDeMilliersValides([
+      morceaux[0]!.replace(/^[(+-]+/u, ""),
+      ...morceaux.slice(1, -1),
+      dernier[1]!,
+    ])
+  );
+}
+
+/** Les lectures d'un texte sans espace, pris comme UN montant. */
+function lireUnNombre(nu: string, decimales: number): Hypothese[] {
   let s = nu;
 
   let negatif = false;
@@ -116,14 +204,22 @@ export function treillisMontant(texte: string, decimales: number): Hypothese[] {
 
   // Deux séparateurs différents : le DERNIER porte les décimales, l'autre les
   // milliers. « 1.234,56 » et « 1,234.56 » se lisent tous les deux sans doute.
+  // Ce qui précède la décimale doit être des milliers bien formés, d'un seul
+  // signe : « 1,234.567,89 » porte deux décimales, « 5,460.301,150 » deux
+  // nombres — ni l'un ni l'autre n'est UN montant.
   if (dernierPoint > -1 && derniereVirgule > -1) {
     const idx = Math.max(dernierPoint, derniereVirgule);
-    ajouter(s.slice(0, idx).replace(/[.,]/g, ""), s.slice(idx + 1), "decimale");
+    const avant = s.slice(0, idx);
+    if (avant.includes(s[idx]!) || !groupesDeMilliersValides(avant.split(/[.,]/))) return [];
+    ajouter(avant.replace(/[.,]/g, ""), s.slice(idx + 1), "decimale");
     return hypotheses;
   }
 
   // La virgule ne sépare jamais les milliers en Tunisie : elle est décimale.
+  // Donc une seule : « 5,460301,150 » (deux montants que l'OCR a collés) se
+  // lisait 5 460 301,150 en effaçant la première.
   if (derniereVirgule > -1) {
+    if (s.indexOf(",") !== derniereVirgule) return [];
     ajouter(
       s.slice(0, derniereVirgule).replace(/,/g, ""),
       s.slice(derniereVirgule + 1),
@@ -133,9 +229,10 @@ export function treillisMontant(texte: string, decimales: number): Hypothese[] {
   }
 
   if (dernierPoint > -1) {
-    // Plusieurs points : ce sont des groupes de milliers, l'affaire est close.
+    // Plusieurs points : ce sont des groupes de milliers, l'affaire est close —
+    // s'ils en ont la forme (« 5.46.3 » n'en a pas).
     if (s.indexOf(".") !== dernierPoint) {
-      ajouter(chiffres, "", "milliers");
+      if (groupesDeMilliersValides(s.split("."))) ajouter(chiffres, "", "milliers");
       return hypotheses;
     }
     const entier = s.slice(0, dernierPoint);

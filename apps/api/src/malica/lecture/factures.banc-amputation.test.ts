@@ -5,6 +5,7 @@ import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * ============================================ LE BANC DE L'AMPUTATION
@@ -130,7 +131,7 @@ const lire = (
       ...selection,
       totals: { base_ht: null, vat: null, ttc: null, ...(selection.totals ?? {}) },
     } as unknown as VisionSelection,
-    decimals: 3,
+    devise: deviseDEssai(3),
     matriculeDossier: MATRICULE_DOSSIER,
   });
 

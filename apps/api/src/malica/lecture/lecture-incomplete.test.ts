@@ -4,12 +4,13 @@ import { describe, it } from "node:test";
 import { lireMontantDuPlan, normalizeDate, type PageToken } from "./token-plan.ts";
 
 /** Le dinar : trois décimales. Aucune devise n'est supposée par défaut. */
-const DINAR = 3;
+const DINAR = deviseDEssai(3);
 import {
   buildProposal,
   champMetier,
   LectureIncomplete,
 } from "@malica/socle/use-cases/propose-ecriture";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * ============================================== LE DÉFAUT QUE CECI VERROUILLE

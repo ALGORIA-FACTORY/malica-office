@@ -45,8 +45,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { candidatsMontant, normaliserMontants } from "./normaliser-montants.ts";
+import { deviseDEssai } from "./devise-d-essai.ts";
 
-const P = { decimales: 3, toleranceMineure: 1 };
+const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 
 describe("une parenthèse orpheline n'efface pas un montant", () => {
   it("le défaut du 15 octobre : « 514,700 514,700) » se lit comme « 514,700 »", () => {
@@ -56,24 +57,21 @@ describe("une parenthèse orpheline n'efface pas un montant", () => {
      * facture qui tranche, comme pour n'importe quel montant. Ce que la
      * parenthèse orpheline enlevait, c'est la possibilité MÊME de lire.
      */
-    assert.deepEqual(
-      candidatsMontant("514,700 514,700)", P.decimales),
-      candidatsMontant("514,700", P.decimales),
-    );
-    assert.ok(candidatsMontant("514,700 514,700)", P.decimales).length > 0);
+    assert.deepEqual(candidatsMontant("514,700 514,700)", P), candidatsMontant("514,700", P));
+    assert.ok(candidatsMontant("514,700 514,700)", P).length > 0);
   });
 
   it("une fermante seule, collée à un nombre, est du bruit", () => {
     assert.deepEqual(
-      candidatsMontant("514,700)", P.decimales).map((x) => x.mineur),
-      candidatsMontant("514,700", P.decimales).map((x) => x.mineur),
+      candidatsMontant("514,700)", P).map((x) => x.mineur),
+      candidatsMontant("514,700", P).map((x) => x.mineur),
     );
   });
 
   it("une ouvrante seule aussi", () => {
     assert.deepEqual(
-      candidatsMontant("(514,700", P.decimales).map((x) => x.mineur),
-      candidatsMontant("514,700", P.decimales).map((x) => x.mineur),
+      candidatsMontant("(514,700", P).map((x) => x.mineur),
+      candidatsMontant("514,700", P).map((x) => x.mineur),
     );
   });
 
@@ -84,7 +82,7 @@ describe("une parenthèse orpheline n'efface pas un montant", () => {
      * silence transformerait un négatif en positif, l'erreur la plus grave
      * possible sur un montant.
      */
-    assert.deepEqual(candidatsMontant("(514,700)", P.decimales), []);
+    assert.deepEqual(candidatsMontant("(514,700)", P), []);
   });
 
   it("la facture du 15 octobre se normalise, et son écriture peut se proposer", () => {

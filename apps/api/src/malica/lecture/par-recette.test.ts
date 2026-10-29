@@ -55,6 +55,7 @@ import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import { selectionDepuisReponse, type VisionSelection } from "./vision.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /*
  * Les réglages de CE banc. En exécution ils viennent du référentiel, datés et
@@ -220,7 +221,7 @@ function construire(plan: readonly PageToken[], selection: VisionSelection) {
   return buildExtractFromTokenPlan({
     tokens: plan,
     selection,
-    decimals: DECIMALES,
+    devise: deviseDEssai(DECIMALES),
     // Aucun matricule n'est désigné de part et d'autre : le sens reste à
     // confirmer, et il le reste des DEUX côtés. C'est la comparaison qui
     // compte, pas le confort du cas.

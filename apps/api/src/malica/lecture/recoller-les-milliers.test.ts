@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { JEU_D_OR } from "./jeu-d-or.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken } from "./token-plan.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * Le recollage des milliers — éprouvé sur le PLAN RÉEL, puis sur les pièges.
@@ -109,7 +110,7 @@ describe("recoller les milliers — sur le plan réel de la facture du 4 octobre
     // montants SANS qu'aucun modèle ait à désigner une plage.
     const { treillisMontant } = await import("./montants.ts");
     const lit = (ordinal: number) =>
-      treillisMontant(texteDe(recolle, ordinal) ?? "", DINAR).map((h) => h.millimes);
+      treillisMontant(texteDe(recolle, ordinal) ?? "", deviseDEssai(DINAR)).map((h) => h.millimes);
     assert.deepEqual(lit(88), [2800000]);
     assert.deepEqual(lit(90), [2800000]);
     assert.deepEqual(lit(107), [3020000]);

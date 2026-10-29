@@ -7,9 +7,10 @@ import {
   resolveFromTokenPlan,
   type PageToken,
 } from "./token-plan.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /** Le dinar : trois décimales. Aucune devise n'est supposée par défaut. */
-const DINAR = 3;
+const DINAR = deviseDEssai(3);
 
 const tokens: PageToken[] = [
   { page: 1, ordinal: 0, text: "SOTUMAG", x0: 0.1, y0: 0.1, x1: 0.3, y1: 0.12 },
