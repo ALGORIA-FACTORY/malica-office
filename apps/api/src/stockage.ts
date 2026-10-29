@@ -306,7 +306,19 @@ export async function servirContenu(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const source = cheminAbsolu(piece.tenant_id, piece.id);
+  await envoyerLesOctets(res, cheminAbsolu(piece.tenant_id, piece.id), piece.content_type, null);
+}
+
+/**
+ * Envoie un fichier du stockage — une pièce, ou un export gardé : le même
+ * geste, les mêmes en-têtes, un seul endroit.
+ */
+async function envoyerLesOctets(
+  res: Response,
+  source: string,
+  type: string | null,
+  nomDeFichier: string | null,
+): Promise<void> {
   let taille: number;
   try {
     taille = (await stat(source)).size;
@@ -320,11 +332,104 @@ export async function servirContenu(req: Request, res: Response): Promise<void> 
 
   // Le type vient de la base, jamais de l'extension ni du contenu. Absent, on
   // l'avoue au lieu de deviner.
-  res.setHeader("Content-Type", piece.content_type ?? TYPE_INCONNU);
+  res.setHeader("Content-Type", type ?? TYPE_INCONNU);
   res.setHeader("Content-Length", String(taille));
   // Les pièces ne sont pas publiques : aucun cache partagé ne doit les garder.
   res.setHeader("Cache-Control", "private, no-store");
+  if (nomDeFichier) {
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(nomDeFichier)}`,
+    );
+  }
   await pipeline(createReadStream(source), res);
+}
+
+/* ================================================== LES EXPORTS DU JOURNAL, GARDÉS
+ *
+ * Spec §4 : « chaque export est numéroté et gardé ». Le journal des exports
+ * (`collab.exports`) dit le numéro et l'empreinte ; les octets vivent ici, sous
+ * le dossier du cabinet (`<racine>/<cabinet>/exports/<export>`), et se relisent
+ * sous la même règle que les pièces : la ligne, demandée à la base sous
+ * l'identité de l'appelant — la RLS du journal des exports décide, rien d'autre.
+ */
+
+function cheminDUnExport(cabinetId: string, exportId: string): string {
+  return cheminAbsolu(cabinetId, path.join("exports", exportId));
+}
+
+/**
+ * Garde les octets d'un export que la base vient de numéroter. Appelé dans la
+ * transaction qui le numérote : si l'écriture échoue, la transaction tombe et
+ * le numéro n'est pas consommé.
+ */
+export async function garderUnExport(
+  cabinetId: string,
+  exportId: string,
+  octets: string | Uint8Array,
+): Promise<void> {
+  const destination = cheminDUnExport(cabinetId, exportId);
+  await mkdir(path.dirname(destination), { recursive: true });
+  const provisoire = `${destination}.${randomUUID()}.partiel`;
+  try {
+    await writeFile(provisoire, octets);
+    await rename(provisoire, destination);
+  } catch (erreur) {
+    await rm(provisoire, { force: true });
+    throw erreur;
+  }
+}
+
+interface LigneExport {
+  id: string;
+  tenant_id: string;
+  nom_de_fichier: string;
+  type_mime: string;
+}
+
+async function ligneDUnExport(db: Requete, exportId: string): Promise<LigneExport | null> {
+  if (!UUID.test(exportId)) return null;
+  const { rows } = await db.query<LigneExport>(
+    `select id, tenant_id, nom_de_fichier, type_mime from exports_v
+      where id = $1 and numero is not null and nom_de_fichier is not null`,
+    [exportId],
+  );
+  return rows[0] ?? null;
+}
+
+/** Les octets d'un export gardé, sous l'identité de l'appelant ; `null` : absent ou interdit. */
+export async function lireUnExport(
+  db: Requete,
+  exportId: string,
+): Promise<{ octets: Uint8Array; nomDeFichier: string; typeMime: string } | null> {
+  const ligne = await ligneDUnExport(db, exportId);
+  if (!ligne) return null;
+  try {
+    const octets = await readFile(cheminDUnExport(ligne.tenant_id, ligne.id));
+    return {
+      octets: new Uint8Array(octets),
+      nomDeFichier: ligne.nom_de_fichier,
+      typeMime: ligne.type_mime,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Rend un export gardé, en pièce jointe, sous son nom. */
+export async function servirUnExport(req: Request, res: Response): Promise<void> {
+  const exportId = req.params["id"] ?? "";
+  const ligne = await sousLAppelant(req, (db) => ligneDUnExport(db, exportId));
+  if (!ligne) {
+    res.status(404).json({ erreur: "export introuvable" });
+    return;
+  }
+  await envoyerLesOctets(
+    res,
+    cheminDUnExport(ligne.tenant_id, ligne.id),
+    ligne.type_mime,
+    ligne.nom_de_fichier,
+  );
 }
 
 /**

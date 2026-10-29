@@ -12,7 +12,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
@@ -461,6 +461,8 @@ function CabinetEtEquipe() {
         ) : null}
       </div>
 
+      <FuseauDuCabinet />
+
       {/* ---- le parcours de mise en route : un parcours qu'on rejoue si besoin */}
       <section className="border border-border bg-card p-4">
         <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -477,6 +479,113 @@ function CabinetEtEquipe() {
         </Link>
       </section>
     </div>
+  );
+}
+
+/**
+ * Le fuseau horaire du cabinet (décision du dirigeant, 29 octobre 2026) : le
+ * jour du journal, le numéro de ses exports et leur comparaison s'y lisent.
+ * Le référentiel de la juridiction livre le défaut ; l'expert l'arrête ici.
+ *
+ * Quatre cents fuseaux ne se déroulent pas : on TAPE (« Tunis », « Dakar »),
+ * la liste propose — le même geste que la saisie d'un compte
+ * (`saisie-compte.tsx`). Les autres rôles le lisent sans le changer, et la
+ * base refuse de toute façon un autre que l'expert, et un fuseau inconnu.
+ */
+function FuseauDuCabinet() {
+  const { t } = useI18n();
+  const { org } = useCabinet();
+  const qc = useQueryClient();
+  const listeId = useId();
+  const fuseau = useQuery({
+    queryKey: ["cab-fuseau", org.id],
+    queryFn: () => office().parametrage.fuseauDuCabinet(org.id),
+  });
+  const acces = useQuery({
+    queryKey: ["cab-acces", org.id],
+    queryFn: () => office().acces.monAcces(org.id),
+  });
+  const [saisie, setSaisie] = useState<string | null>(null);
+  const [fait, setFait] = useState(false);
+  const enregistrer = useMutation({
+    mutationFn: (valeur: string | null) =>
+      office().parametrage.definirFuseauDuCabinet(org.id, valeur),
+    onSuccess: async () => {
+      setFait(true);
+      setSaisie(null);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["cab-fuseau", org.id] }),
+        qc.invalidateQueries({ queryKey: ["cab-journal-du-jour", org.id] }),
+      ]);
+    },
+  });
+  if (!fuseau.data) return null;
+  const expert = acces.data?.role === "expert";
+  const regle = fuseau.data.regle ? (fuseau.data.fuseau ?? "") : "";
+  const valeur = saisie ?? regle;
+  const defaut = fuseau.data.defaut
+    ? t("cab.settings.fuseau.defaut", { fuseau: fuseau.data.defaut })
+    : t("cab.settings.fuseau.aucun");
+
+  return (
+    <section className="border border-border bg-card p-4">
+      <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {t("cab.settings.fuseau.titre")}
+      </p>
+      <p className="mt-1 max-w-[70ch] text-[12.5px] leading-[1.5] text-text-2">
+        {t("cab.settings.fuseau.lede")}
+      </p>
+      {expert ? (
+        <div className="mt-3 grid max-w-xl gap-2">
+          <input
+            list={listeId}
+            value={valeur}
+            placeholder={defaut}
+            onChange={(e) => {
+              setFait(false);
+              setSaisie(e.target.value);
+            }}
+            aria-label={t("cab.settings.fuseau.titre")}
+            className="min-h-[48px] border border-border bg-background px-3 text-[13px]"
+          />
+          <datalist id={listeId}>
+            {Intl.supportedValuesOf("timeZone").map((z) => (
+              <option key={z} value={z} />
+            ))}
+          </datalist>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={valeur.trim() === "" || valeur === regle || enregistrer.isPending}
+              onClick={() => enregistrer.mutate(valeur.trim())}
+              className="min-h-[48px] border border-foreground bg-foreground px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-background disabled:opacity-40"
+            >
+              {t("cab.settings.enregistrer")}
+            </button>
+            <button
+              type="button"
+              disabled={!fuseau.data.regle || enregistrer.isPending}
+              onClick={() => enregistrer.mutate(null)}
+              className="min-h-[48px] border border-foreground bg-card px-4 text-[11px] font-semibold uppercase tracking-[0.14em] disabled:opacity-40"
+            >
+              {t("cab.settings.fuseau.retablir")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="num mt-3 text-[13px]">{fuseau.data.regle ? fuseau.data.fuseau : defaut}</p>
+      )}
+      {fait ? (
+        <p role="status" className="mt-2 text-[12.5px] text-signal-ok">
+          {t("cab.settings.enregistre")}
+        </p>
+      ) : null}
+      {enregistrer.isError ? (
+        <p role="alert" className="mt-2 text-[12.5px] text-signal-stop">
+          {texteDeLErreur(enregistrer.error, OU, t("common.error"))}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

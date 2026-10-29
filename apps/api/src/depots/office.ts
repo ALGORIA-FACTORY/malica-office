@@ -418,6 +418,18 @@ export const office = {
       lignes: input.lignes,
     });
     await office.book(db, id);
+    // Le fait qui dit « forcée » au journal du jour (`journal_du_jour_lire`) :
+    // l'écriture nouvelle ne vient pas du Socle, le comptable l'a écrite. La
+    // piste d'audit garde qui et quand ; rien n'est déduit après coup.
+    await db.query(
+      `insert into audit.event_log
+         (tenant_id, actor, action, object_schema, object_table, object_id, motif_id,
+          pack_version_id, payload)
+       select tenant_id, auth.uid(), 'ecriture.forcee', 'socle', 'ecritures', id, $2,
+              pack_version_id, jsonb_build_object('piece_id', piece_id, 'remplace', $3::uuid)
+         from ecritures_v where id = $1`,
+      [id, input.motifId, input.ecritureId],
+    );
     return id;
   },
 

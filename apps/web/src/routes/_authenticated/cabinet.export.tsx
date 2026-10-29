@@ -24,7 +24,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
-import type { ExportGenere, FormatExport } from "@malica/socle/ports/repositories";
+import type { ExportGenere, ExportRecent, FormatExport } from "@malica/socle/ports/repositories";
 
 export const Route = createFileRoute("/_authenticated/cabinet/export")({
   head: () => ({
@@ -60,11 +60,18 @@ const FORMATS: ReadonlyArray<{ code: FormatExport; label: MessageKey; hint: Mess
     hint: "cab.export.format.csv_plan.hint",
   },
 ];
-/** Le libellé de chaque format, dérivé de la liste : une seule table à tenir. */
-const LIBELLE_DU_FORMAT = Object.fromEntries(FORMATS.map((f) => [f.code, f.label])) as Record<
-  FormatExport,
-  MessageKey
->;
+/**
+ * Le libellé de chaque format du relevé : ceux qu'on choisit ici, dérivés de
+ * la liste, et ceux du journal du jour, exportés depuis son écran.
+ */
+const LIBELLE_DU_FORMAT: Record<ExportRecent["format"], MessageKey> = {
+  ...(Object.fromEntries(FORMATS.map((f) => [f.code, f.label])) as Record<
+    FormatExport,
+    MessageKey
+  >),
+  journal_csv: "cab.export.format.journal_csv",
+  journal_xlsx: "cab.export.format.journal_xlsx",
+};
 const OCTETS_PAR_PALIER = 1024;
 const UNITES = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 

@@ -21,6 +21,7 @@ import {
   CircleCheck,
   FileCheck2,
   MessageSquare,
+  NotebookText,
   Search,
   Users,
 } from "lucide-react";
@@ -236,6 +237,15 @@ function CabinetToday() {
           <p className="cab-day-summary">
             {t("cab.today.summary", { pieces: rows.length, clients: clientCount })}
           </p>
+          {/* La journée se referme sur son journal : tous les dossiers, aujourd'hui. */}
+          <Link
+            to="/cabinet/journal"
+            search={{ client: "tous" }}
+            className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold underline underline-offset-4"
+          >
+            <NotebookText size={16} aria-hidden />
+            {t("cab.nav.journal")}
+          </Link>
         </div>
         <div className="cab-day-actions">
           <Link to="/cabinet/clients" className="cab-button cab-button-secondary">

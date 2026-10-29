@@ -226,6 +226,10 @@
     "consigner",
     "dernieres"
   ],
+  "journalDuJour": [
+    "exporter",
+    "lire"
+  ],
   "office": [
     "book",
     "bookedExtracts",
@@ -247,10 +251,12 @@
   "parametrage": [
     "calendrierCabinet",
     "creerObligationPropre",
+    "definirFuseauDuCabinet",
     "definirLiaison",
     "definirObligation",
     "definirReglagesCabinet",
     "fermerCompte",
+    "fuseauDuCabinet",
     "miseEnRoute",
     "ouvrirCompte",
     "plan",

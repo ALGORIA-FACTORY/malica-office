@@ -27,6 +27,8 @@ import { referentiel } from "./referentiel.ts";
 /** Les formats que ce dépôt sait produire. Le libellé humain vit dans l'écran. */
 const FORMATS_EXPORT = ["fec", "csv_ecritures", "csv_plan"] as const;
 type FormatExport = (typeof FORMATS_EXPORT)[number];
+/** Les formats du journal du jour, tels que le journal des exports les nomme. */
+export type FormatDuJournalExporte = "journal_csv" | "journal_xlsx";
 
 /** Les dix-huit colonnes du fichier des écritures comptables, dans l'ordre du format. */
 export const COLONNES_FEC = [
@@ -132,9 +134,21 @@ function champFec(v: string | null | undefined): string {
     .trim();
 }
 
-/** Un champ CSV : entouré de guillemets dès qu'il porte un séparateur, un guillemet ou un saut de ligne. */
+/**
+ * Un champ CSV : entouré de guillemets dès qu'il porte un séparateur, un
+ * guillemet ou un saut de ligne.
+ *
+ * Et désarmé s'il commence comme une formule (relecture du 29 octobre 2026) :
+ * un libellé lu sur une pièce — donc écrit par un tiers — qui commence par
+ * `=`, `+`, `-`, `@`, une tabulation ou un retour chariot s'exécute dans le
+ * tableur qui ouvre le fichier. Une apostrophe en tête le garde texte. Un
+ * nombre décimal écrit (`-12.500`) n'est pas une formule : il reste nombre.
+ * À réévaluer à la phase « logiciel et API » (spec §4) : un import machine
+ * lirait l'apostrophe comme une donnée.
+ */
 function champCsv(v: string | null | undefined): string {
-  const s = v ?? "";
+  const brut = v ?? "";
+  const s = /^[=+\-@\t\r]/.test(brut) && !/^-?\d+(\.\d+)?$/.test(brut) ? `'${brut}` : brut;
   return /[;"\r\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 
@@ -193,7 +207,7 @@ export function formaterFec(
 }
 
 /** Un CSV : marque d'ordre d'octets, en-tête, lignes. */
-function formaterCsv(entete: readonly string[], lignes: string[][]): string {
+export function formaterCsv(entete: readonly string[], lignes: string[][]): string {
   const sortie = [entete.join(SEPARATEUR_CSV)];
   for (const l of lignes) sortie.push(l.map(champCsv).join(SEPARATEUR_CSV));
   return BOM + sortie.join(FIN_DE_LIGNE) + FIN_DE_LIGNE;
@@ -229,13 +243,16 @@ function formaterCsvPlan(comptes: CompteExport[]): string {
   );
 }
 
-/** SHA-256 du contenu, en hexadécimal — l'empreinte que le journal garde. */
-export function empreinte(contenu: string): string {
-  return createHash("sha256").update(contenu, "utf8").digest("hex");
+/** SHA-256 du contenu — texte en UTF-8, ou octets —, en hexadécimal : l'empreinte que le journal garde. */
+export function empreinte(contenu: string | Uint8Array): string {
+  const h = createHash("sha256");
+  return (typeof contenu === "string" ? h.update(contenu, "utf8") : h.update(contenu)).digest(
+    "hex",
+  );
 }
 
-export function tailleEnOctets(contenu: string): number {
-  return Buffer.byteLength(contenu, "utf8");
+export function tailleEnOctets(contenu: string | Uint8Array): number {
+  return typeof contenu === "string" ? Buffer.byteLength(contenu, "utf8") : contenu.byteLength;
 }
 
 /** Un nom de fichier ne garde que lettres et chiffres du nom qu'on lui donne. */
@@ -255,7 +272,7 @@ function estFormat(v: string): v is FormatExport {
  * en 400 avec sa phrase. Un `Error` nu sortirait en « erreur interne », et
  * l'écran n'aurait rien à dire de plus.
  */
-class RefusExport extends Error {
+export class RefusExport extends Error {
   readonly code = "22023";
 }
 
@@ -336,25 +353,26 @@ async function planDe(
   }));
 }
 
+/** Ce que tout export lit avant d'écrire une ligne : qui exporte, quoi, à quelle précision. */
+export interface ContexteDExport {
+  cabinetNom: string;
+  packId: string;
+  deviseDuPack: string;
+  decimales: number;
+  /** Le radical du nom de fichier : le matricule du périmètre, à défaut son nom. */
+  nomDuPerimetre: string;
+}
+
 /**
- * Construit le fichier. Le pack en vigueur pour la juridiction du cabinet
- * donne la précision monétaire et la devise de référence ; sans pack, on
- * lève — un export sans précision connue serait un chiffre inventé.
+ * Le pack en vigueur pour la juridiction du cabinet donne la précision
+ * monétaire et la devise de référence ; sans pack, on lève — un export sans
+ * précision connue serait un chiffre inventé.
  */
-async function construire(
+export async function contexteDExport(
   db: Requete,
   cabinetTenantId: string,
   clientTenantId: string | null,
-  du: string,
-  au: string,
-  format: string,
-): Promise<Construit> {
-  if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
-  if (format === "fec" && !clientTenantId) {
-    throw new RefusExport("le FEC se produit dossier par dossier : choisissez un client");
-  }
-  if (du > au) throw new RefusExport("la période est à l'envers : le début suit la fin");
-
+): Promise<ContexteDExport> {
   const { rows: orgs } = await db.query(
     `select id, name, legal_id, jurisdiction from organizations_v where id = any($1::uuid[])`,
     [clientTenantId ? [cabinetTenantId, clientTenantId] : [cabinetTenantId]],
@@ -369,40 +387,66 @@ async function construire(
   const pack = await referentiel.activePack(db, cabinet["jurisdiction"] as string);
   if (!pack) throw new RefusExport("aucun pack en vigueur pour la juridiction du cabinet");
   const params = await referentiel.socleParams(db, pack.id);
-  const decimales = params.moneyDecimals;
 
   const perimetre = client ?? cabinet;
-  const nomDuPerimetre = radical(
-    (perimetre["legal_id"] as string | null) ?? (perimetre["name"] as string),
-  );
+  return {
+    cabinetNom: cabinet["name"] as string,
+    packId: pack.id,
+    deviseDuPack: pack.currency,
+    decimales: params.moneyDecimals,
+    nomDuPerimetre: radical(
+      (perimetre["legal_id"] as string | null) ?? (perimetre["name"] as string),
+    ),
+  };
+}
+
+/** Le type d'un fichier CSV, tel que le navigateur le reçoit. */
+export const TYPE_MIME_CSV = "text/csv;charset=utf-8";
+
+/** Construit le fichier d'une période, à la précision du pack du cabinet. */
+async function construire(
+  db: Requete,
+  cabinetTenantId: string,
+  clientTenantId: string | null,
+  du: string,
+  au: string,
+  format: string,
+): Promise<Construit> {
+  if (!estFormat(format)) throw new RefusExport("ce format d'export n'existe pas");
+  if (format === "fec" && !clientTenantId) {
+    throw new RefusExport("le FEC se produit dossier par dossier : choisissez un client");
+  }
+  if (du > au) throw new RefusExport("la période est à l'envers : le début suit la fin");
+
+  const ctx = await contexteDExport(db, cabinetTenantId, clientTenantId);
 
   if (format === "csv_plan") {
-    const comptes = await planDe(db, cabinetTenantId, pack.id);
+    const comptes = await planDe(db, cabinetTenantId, ctx.packId);
     return {
       contenu: formaterCsvPlan(comptes),
       lignes: comptes.length,
-      nomDeFichier: `plan-comptable-${radical(cabinet["name"] as string)}-${dateFec(au)}.csv`,
-      typeMime: "text/csv;charset=utf-8",
-      packId: pack.id,
+      nomDeFichier: `plan-comptable-${radical(ctx.cabinetNom)}-${dateFec(au)}.csv`,
+      typeMime: TYPE_MIME_CSV,
+      packId: ctx.packId,
     };
   }
 
   const lignes = await lignesDe(db, cabinetTenantId, clientTenantId, du, au);
   if (format === "fec") {
     return {
-      contenu: formaterFec(lignes, decimales, pack.currency),
+      contenu: formaterFec(lignes, ctx.decimales, ctx.deviseDuPack),
       lignes: lignes.length,
-      nomDeFichier: `${nomDuPerimetre}FEC${dateFec(au)}.txt`,
+      nomDeFichier: `${ctx.nomDuPerimetre}FEC${dateFec(au)}.txt`,
       typeMime: "text/plain;charset=utf-8",
-      packId: pack.id,
+      packId: ctx.packId,
     };
   }
   return {
-    contenu: formaterCsvEcritures(lignes, decimales),
+    contenu: formaterCsvEcritures(lignes, ctx.decimales),
     lignes: lignes.length,
-    nomDeFichier: `ecritures-${nomDuPerimetre}-${dateFec(du)}-${dateFec(au)}.csv`,
-    typeMime: "text/csv;charset=utf-8",
-    packId: pack.id,
+    nomDeFichier: `ecritures-${ctx.nomDuPerimetre}-${dateFec(du)}-${dateFec(au)}.csv`,
+    typeMime: TYPE_MIME_CSV,
+    packId: ctx.packId,
   };
 }
 
@@ -478,11 +522,15 @@ export const exports = {
     };
   },
 
-  /** Les derniers exports du cabinet, avec le dossier et l'auteur. */
+  /**
+   * Les derniers exports du cabinet, avec le dossier et l'auteur — ceux des
+   * exercices comme ceux du journal du jour : un seul relevé de ce qui est
+   * sorti du cabinet.
+   */
   async historique(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
       `select x.id, x.client_tenant_id, o.name as client_nom, x.format, x.du, x.au, x.lignes,
-              x.taille_octets, x.empreinte, x.created_at, m.email as auteur
+              x.taille_octets, x.empreinte, x.created_at, x.numero, m.email as auteur
          from exports_v x
          left join organizations_v o on o.id = x.client_tenant_id
          left join cabinet_members_v m on m.user_id = x.created_by and m.tenant_id = x.tenant_id
@@ -495,12 +543,13 @@ export const exports = {
       id: r["id"] as string,
       clientTenantId: (r["client_tenant_id"] as string | null) ?? null,
       clientNom: (r["client_nom"] as string | null) ?? null,
-      format: r["format"] as FormatExport,
+      format: r["format"] as FormatExport | FormatDuJournalExporte,
       du: r["du"] as string,
       au: r["au"] as string,
       lignes: Number(r["lignes"]),
       taille: Number(r["taille_octets"]),
       empreinte: r["empreinte"] as string,
+      numero: r["numero"] == null ? null : Number(r["numero"]),
       auteur: (r["auteur"] as string | null) ?? null,
       createdAt: r["created_at"] as string,
     }));

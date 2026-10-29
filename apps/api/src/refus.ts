@@ -27,6 +27,7 @@ const CODES_DE_REFUS = new Set([
   "22023", // invalid_parameter_value — « juridiction requise »
   "P0002", // no_data_found           — « aucun compte relié à ce rôle »
   "42501", // insufficient_privilege  — « ce compte est officiel »
+  "40001", // serialization_failure   — « un autre export vient d'être produit : recommencez »
 ]);
 
 /** Les règles de la base qui se nomment dans leur message, et ce qu'elles disent. */
@@ -122,6 +123,11 @@ export function refusLisible(erreur: unknown): string | null {
    */
   if (e.code === "42501" && /row-level security|sécurité au niveau ligne/i.test(e.message ?? ""))
     return "ce geste ne vous est pas permis sur ce dossier";
+
+  // Deux gestes simultanés : notre `raise` dit lequel ; celui du moteur nomme
+  // ses verrous, et ne se montre pas.
+  if (e.code === "40001" && !/recommencez/.test(e.message ?? ""))
+    return "un autre geste vient de modifier ces données : recommencez";
 
   // Peuplés par PostgreSQL, jamais par un `raise` : c'est la signature d'une
   // violation détectée par le moteur, dont le message porte des noms internes.

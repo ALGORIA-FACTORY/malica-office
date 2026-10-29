@@ -1257,13 +1257,23 @@ function CabinetReview() {
                 ) : null}
 
                 {done ? (
-                  <p className="border border-border bg-card px-3 py-3 text-[13px]">
-                    {done === "valide"
-                      ? t("cab.review.done.valide")
-                      : done === "corrige"
-                        ? t("cab.review.done.corrige")
-                        : t("cab.review.done.retourne")}
-                  </p>
+                  <div className="border border-border bg-card px-3 py-3 text-[13px]">
+                    <p>
+                      {done === "valide"
+                        ? t("cab.review.done.valide")
+                        : done === "corrige"
+                          ? t("cab.review.done.corrige")
+                          : t("cab.review.done.retourne")}
+                    </p>
+                    {/* Validée, forcée ou contre-passée : c'est au journal d'aujourd'hui. */}
+                    <Link
+                      to="/cabinet/journal"
+                      search={{ client: piece.tenantId }}
+                      className="mt-2 inline-flex min-h-[44px] items-center font-semibold underline underline-offset-4"
+                    >
+                      {t("cab.nav.journal")}
+                    </Link>
+                  </div>
                 ) : (
                   <div className="space-y-3 border border-border bg-card p-3">
                     <label className="block">

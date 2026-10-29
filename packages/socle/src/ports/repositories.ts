@@ -476,6 +476,18 @@ export interface AccesRepository {
   monAcces(tenantId: string): Promise<MonAcces>;
 }
 
+/**
+ * Le fuseau horaire d'un cabinet. `defaut` vient du référentiel de sa
+ * juridiction ; `regle` dit si le cabinet a arrêté le sien (R10 : un défaut se
+ * dit). `fuseau` nul : ni l'un ni l'autre — le journal du jour le demande.
+ */
+export interface FuseauDuCabinet {
+  fuseau: string | null;
+  defaut: string | null;
+  regle: boolean;
+  aujourdhui: string | null;
+}
+
 export interface ParametrageRepository {
   reglagesCabinet(tenantId: string): Promise<ReglagesCabinet>;
   /** Quand la mise en route a été terminée, ou rien si elle ne l'a jamais été. */
@@ -491,6 +503,10 @@ export interface ParametrageRepository {
     ton: string;
     seuilCertitudeConseil: number;
   }): Promise<ReglagesCabinet>;
+  /** Le fuseau horaire du cabinet : celui qui fait foi pour son journal du jour. */
+  fuseauDuCabinet(tenantId: string): Promise<FuseauDuCabinet>;
+  /** L'expert arrête le fuseau ; `null` rend celui de la juridiction. */
+  definirFuseauDuCabinet(tenantId: string, fuseau: string | null): Promise<FuseauDuCabinet>;
   calendrierCabinet(
     tenantId: string,
     exercice: number,
@@ -2280,14 +2296,162 @@ export interface ExportRecent {
   id: string;
   clientTenantId: string | null;
   clientNom: string | null;
-  format: FormatExport;
+  /** Un export d'exercice, ou un export du journal du jour (`journal_csv`, `journal_xlsx`). */
+  format: FormatExport | `journal_${FormatDuJournal}`;
   du: string;
   au: string;
   lignes: number;
   taille: number;
   empreinte: string;
+  /** Le numéro d'un export du journal du jour dans sa journée ; nul pour un exercice. */
+  numero: number | null;
   auteur: string | null;
   createdAt: string;
+}
+
+// ------------------------------------------------------------------ journal du jour
+/**
+ * Comment une écriture est entrée au journal du cabinet : proposée par le
+ * Socle et prise en charge, modifiée ou saisie par le comptable, ou
+ * contre-passation d'une autre.
+ */
+export type OrigineAuJournal = "validee" | "forcee" | "contre_passation";
+
+export interface LigneAuJournal {
+  ordinal: number;
+  compte: string;
+  compteLibelle: string;
+  /** Chaînes décimales à la précision du pack : jamais un flottant. */
+  debit: string;
+  credit: string;
+}
+
+export interface EcritureAuJournal {
+  id: string;
+  clientTenantId: string;
+  clientNom: string;
+  pieceId: string | null;
+  libelle: string;
+  devise: string;
+  origine: OrigineAuJournal;
+  /** L'instant où elle est entrée au journal, et son heure dans le fuseau demandé. */
+  inscriteLe: string;
+  heure: string;
+  /** Le membre du cabinet qui l'a inscrite ; nul s'il n'en est pas un. */
+  par: string | null;
+  /** L'écriture qu'elle annule, pour une contre-passation. */
+  contrePasse: string | null;
+  /** Quand elle a été contre-passée à son tour, si elle l'a été. */
+  contrePasseeLe: string | null;
+  debit: string;
+  credit: string;
+  lignes: LigneAuJournal[];
+}
+
+/** Le total d'une devise : le contrôle débit = crédit se lit devise par devise. */
+export interface SoldeDuJournal {
+  devise: string;
+  debit: string;
+  credit: string;
+  equilibre: boolean;
+}
+
+export interface JournalAuJour {
+  code: string;
+  libelle: string;
+  ecritures: EcritureAuJournal[];
+  soldes: SoldeDuJournal[];
+}
+
+/** Ce qui a changé depuis l'export précédent du même jour. */
+export interface EcartDepuisLExport {
+  ajoutees: number;
+  contrePassees: number;
+  /** Une écriture sortie du journal depuis l'export : ne devrait pas arriver, et se dit si elle arrive. */
+  retirees: number;
+  /**
+   * Le fuseau du cabinet a changé depuis l'export : le jour est recoupé, les
+   * écritures ne se comparent pas (les trois comptes valent alors zéro).
+   */
+  fuseauChange: boolean;
+}
+
+/** Un export numéroté du jour, gardé : il se télécharge à nouveau. */
+export interface ExportDuJour {
+  id: string;
+  numero: number;
+  format: FormatDuJournal;
+  createdAt: string;
+  auteur: string | null;
+  nomDeFichier: string;
+}
+
+export type FormatDuJournal = "csv" | "xlsx";
+
+export interface DernierExportDuJournal {
+  numero: number;
+  format: FormatDuJournal;
+  createdAt: string;
+  auteur: string | null;
+  /** Ce qui a changé depuis, sur le journal tel qu'il est maintenant. */
+  ecart: EcartDepuisLExport;
+}
+
+export interface JournalDuJour {
+  jour: string;
+  /** Le jour du cabinet, dans son fuseau : on ne lit pas le journal de demain. */
+  aujourdhui: string;
+  fuseau: string;
+  journaux: JournalAuJour[];
+  totaux: {
+    ecritures: number;
+    validees: number;
+    forcees: number;
+    contrePassations: number;
+    soldes: SoldeDuJournal[];
+  };
+  dernierExport: DernierExportDuJournal | null;
+  /** Les exports numérotés de ce jour, du premier au dernier. */
+  exports: ExportDuJour[];
+}
+
+/** L'export produit et gardé : ses octets se lisent par `fichier(id)`. */
+export interface JournalExporte {
+  id: string;
+  numero: number;
+  nomDeFichier: string;
+  typeMime: string;
+  taille: number;
+  lignes: number;
+  empreinte: string;
+  /** Le numéro de l'export précédent du même jour, et ce qui a changé depuis. */
+  precedent: number | null;
+  ecart: EcartDepuisLExport;
+}
+
+export interface JournalDuJourRepository {
+  /**
+   * Le journal d'un jour : un dossier, ou tous les mandats (`null`). Le jour
+   * se lit dans le fuseau du cabinet (ses réglages, au défaut de sa
+   * juridiction) ; sans jour, c'est le sien aujourd'hui. Libellés dans la
+   * langue demandée.
+   */
+  lire(
+    cabinetTenantId: string,
+    clientTenantId: string | null,
+    jour: string | null,
+    locale: string,
+  ): Promise<JournalDuJour>;
+  /** Produit le fichier, le numérote et le journalise (append-only + audit). */
+  exporter(
+    cabinetTenantId: string,
+    clientTenantId: string | null,
+    jour: string,
+    locale: string,
+    format: FormatDuJournal,
+  ): Promise<JournalExporte>;
+  /** Les octets d'un export gardé, sous les droits du cabinet. */
+  fichier(exportId: string): Promise<Blob>;
 }
 
 export interface ExportsRepository {

@@ -38,6 +38,7 @@ import {
   Library,
   ListChecks,
   Menu,
+  NotebookText,
   ScanSearch,
   Search,
   Settings2,
@@ -116,6 +117,7 @@ interface Groupe {
  */
 const ONGLETS_DU_DOSSIER: Array<{ to: string; label: MessageKey; icon: LucideIcon }> = [
   { to: "/cabinet/propositions", label: "cab.nav.propositions", icon: ListChecks },
+  { to: "/cabinet/journal", label: "cab.nav.journal", icon: NotebookText },
   { to: "/cabinet/rapprochement", label: "cab.nav.banque", icon: Landmark },
   { to: "/cabinet/echeances", label: "cab.nav.echeances", icon: CalendarClock },
   { to: "/cabinet/immobilisations", label: "cab.nav.immo", icon: Building2 },
