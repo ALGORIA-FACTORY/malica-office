@@ -3672,6 +3672,13 @@ const fr = {
   "pme.coffre.mis.quoi#one": "{piece} est dans la société.",
   "pme.coffre.mis.quoi#other": "{count} papiers sont dans la société.",
   "pme.coffre.mis.suite": "Rien n'est parti chez {qui}.",
+  "pme.coffre.partiel.mis": "{faits} sur {total} sont dans la société ; {count} restent choisis.",
+  "pme.coffre.partiel.mis#one": "{faits} sur {total} sont dans la société ; {count} reste choisi.",
+  "pme.coffre.partiel.mis#other":
+    "{faits} sur {total} sont dans la société ; {count} restent choisis.",
+  "pme.coffre.partiel.supprimes": "{faits} sur {total} supprimés ; {count} restent choisis.",
+  "pme.coffre.partiel.supprimes#one": "{faits} sur {total} supprimés ; {count} reste choisi.",
+  "pme.coffre.partiel.supprimes#other": "{faits} sur {total} supprimés ; {count} restent choisis.",
   /**
    * Le dessin écrit « sa sortie passe par une demande » : aucune méthode ne
    * porte cette demande. La phrase garde ce qui est tenu : l'accord du cabinet et
@@ -7441,6 +7448,12 @@ const en: Dict = {
   "pme.coffre.mis.quoi#one": "{piece} is in the company.",
   "pme.coffre.mis.quoi#other": "{count} papers are in the company.",
   "pme.coffre.mis.suite": "Nothing has gone to {qui}.",
+  "pme.coffre.partiel.mis": "{faits} of {total} are in the company; {count} still selected.",
+  "pme.coffre.partiel.mis#one": "{faits} of {total} are in the company; {count} still selected.",
+  "pme.coffre.partiel.mis#other": "{faits} of {total} are in the company; {count} still selected.",
+  "pme.coffre.partiel.supprimes": "{faits} of {total} deleted; {count} still selected.",
+  "pme.coffre.partiel.supprimes#one": "{faits} of {total} deleted; {count} still selected.",
+  "pme.coffre.partiel.supprimes#other": "{faits} of {total} deleted; {count} still selected.",
   "pme.coffre.pied":
     "A document already sent does not come back silently: its return needs your firm's approval, and every move is logged.",
   "pme.echeances.titre": "What's due",
@@ -11040,6 +11053,12 @@ const ar: Dict = {
   "pme.coffre.mis.quoi#one": "{piece} في الشركة.",
   "pme.coffre.mis.quoi#other": "{count} أوراق في الشركة.",
   "pme.coffre.mis.suite": "لم يُرسل شيء إلى {qui}.",
+  "pme.coffre.partiel.mis": "{faits} من {total} في الشركة؛ لا تزال {count} محددة.",
+  "pme.coffre.partiel.mis#one": "{faits} من {total} في الشركة؛ لا تزال {count} محددة.",
+  "pme.coffre.partiel.mis#other": "{faits} من {total} في الشركة؛ لا تزال {count} محددة.",
+  "pme.coffre.partiel.supprimes": "حُذفت {faits} من {total}؛ لا تزال {count} محددة.",
+  "pme.coffre.partiel.supprimes#one": "حُذفت {faits} من {total}؛ لا تزال {count} محددة.",
+  "pme.coffre.partiel.supprimes#other": "حُذفت {faits} من {total}؛ لا تزال {count} محددة.",
   "pme.coffre.pied":
     "الوثيقة المرسلة لا تعود في صمت: إرجاعها يتطلب موافقة مكتبكم، وكل انتقال يُسجَّل في السجل.",
   "pme.echeances.titre": "ما يحلّ أجله",

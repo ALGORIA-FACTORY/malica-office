@@ -22,7 +22,7 @@ import type { NatureTiers, PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
-import { parcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
+import { avancementDeLaPiece, ecritureDeLaPiece, parcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
 import { resteATransmettre } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -861,12 +861,7 @@ function VosDocuments() {
                   params={{ pieceId: p.id }}
                   className={cn("pc", p.status === "capturee" && "dim")}
                 >
-                  {/* La vraie photo, à gauche ; le point reprend la pastille de la pièce. */}
-                  <ApercuDePiece
-                    pieceId={p.id}
-                    className="vignette"
-                    ton={parcoursDeLaPiece(p.status, null).pastille.ton}
-                  />
+                  <VignetteDeLaPiece piece={p} />
                   <span className="cps">
                     <span className="hd">
                       {/*
@@ -1093,6 +1088,27 @@ function poids(g: Groupe): number {
   for (const v of g.achats) total += Number(v);
   for (const v of g.ventes) total += Number(v);
   return total;
+}
+
+/**
+ * La vraie photo d'une ligne, à gauche, et son point d'état.
+ *
+ * Le point dit la MÊME chose que la pastille de la fiche : même dérivation
+ * (`parcoursDeLaPiece`), même source — l'écriture vivante comprise, sous la
+ * clé de requête que la fiche emploie. Une écriture ne peut faire avancer que
+ * la pièce lue et pas encore comptée : c'est la seule qu'on interroge.
+ */
+function VignetteDeLaPiece({ piece }: { piece: PieceLue }) {
+  const peutAvancer =
+    piece.status !== "capturee" && !avancementDeLaPiece(piece.status, null).comptee;
+  const ecritures = useQuery({
+    queryKey: ["ecritures", piece.id],
+    queryFn: () => office().office.ecrituresForPiece(piece.id),
+    enabled: peutAvancer,
+    staleTime: 5 * 60 * 1000,
+  });
+  const ton = parcoursDeLaPiece(piece.status, ecritureDeLaPiece(ecritures.data)).pastille.ton;
+  return <ApercuDePiece pieceId={piece.id} className="vignette" ton={ton} />;
 }
 
 /* ===========================================================================

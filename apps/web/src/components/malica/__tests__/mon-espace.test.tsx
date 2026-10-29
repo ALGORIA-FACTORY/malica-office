@@ -18,6 +18,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
+import { ErreurApi } from "@/lib/transport/erreurs";
 
 const base = vi.hoisted(() => ({ pieces: [] as Partial<PieceLue>[] }));
 const api = vi.hoisted(() => ({
@@ -41,6 +42,8 @@ vi.mock("@/i18n", () => ({
       vars && "count" in vars ? `${cle}:${String(vars["count"])}` : cle,
     locale: "fr",
   }),
+  // `texteDeLErreur` traduit un refus rédigé dans la langue rangée.
+  localeRangee: () => "fr",
 }));
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
@@ -65,6 +68,8 @@ function piece(id: string, jour: string, vis: PieceLue["vis"] = "personnel"): Pa
     dateDocument: jour,
     createdAt: `${jour}T08:00:00Z`,
     transmiseLe: null,
+    total: null,
+    devise: null,
   };
 }
 
@@ -149,6 +154,36 @@ describe("Mon espace", () => {
     fireEvent.click(screen.getByRole("button", { name: "pme.prive.transmettre" }));
     await screen.findByText("envoi.lot.tout:2");
     expect(api.transmettreLesPieces).toHaveBeenCalledWith(["a", "b"]);
+  });
+
+  it("un lot arrêté en route dit ce qui est passé, et garde le reste choisi", async () => {
+    api.setPieceVis.mockImplementation(async (id: string, vis: PieceLue["vis"]) => {
+      if (id === "b") throw new ErreurApi("REFUS_DE_LA_BASE", 409);
+      base.pieces.find((x) => x.id === id)!.vis = vis;
+      return true;
+    });
+    monter();
+    await screen.findByText("pme.coffre.compte:3");
+    const ronds = screen.getAllByRole("button", { name: "pme.coffre.choisir" });
+    fireEvent.click(ronds[0]!);
+    fireEvent.click(ronds[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "pme.coffre.mettre" }));
+
+    const alerte = await screen.findByRole("alert");
+    // « 1 sur 2 sont dans la société ; 1 reste choisi », puis la raison.
+    expect(alerte.textContent).toContain("pme.coffre.partiel.mis:1");
+    expect(alerte.textContent).toContain("REFUS_DE_LA_BASE");
+    await screen.findByText("pme.coffre.compte:2");
+    const restant = screen.getAllByRole("button", { name: "pme.coffre.choisir" });
+    expect(restant.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1);
+    expect(screen.queryByText("pme.coffre.mis.titre")).toBeNull();
+  });
+
+  it("montre le montant lu à côté de la date", async () => {
+    base.pieces[0] = { ...base.pieces[0]!, total: "412.300", devise: "TND" };
+    monter();
+    await screen.findByText("pme.coffre.compte:3");
+    expect(document.querySelector(".tuile .dt")!.textContent).toMatch(/412,300 TND/);
   });
 
   it("supprime après confirmation, et pas avant", async () => {

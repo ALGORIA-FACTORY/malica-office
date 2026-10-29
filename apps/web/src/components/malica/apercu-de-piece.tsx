@@ -27,11 +27,16 @@
  *   — sans image (un PDF de texte, une pièce sans octets), et pendant le
  *     chargement, la feuille esquissée prend la place, sans rien inventer.
  *
+ * Une pièce photographiée hors ligne existe avant ses octets : le serveur
+ * répond 404 « contenu absent » tant que la file ne les a pas déposés. Ce
+ * 404-là n'est pas définitif — l'aperçu réessaie, à intervalles croissants et
+ * bornés, et la file le relance dès qu'elle a déposé (`rafraichirLApercu`).
+ *
  * ============================================================ CE QU'IL DIT
  *
- * Dans une liste, le nom de la pièce est écrit à côté : l'aperçu est alors
- * décoratif (`aria-hidden`), sinon le lecteur d'écran le dirait deux fois.
- * Seul, il prend un `nom`, et devient une image nommée. Le point d'état, en
+ * Partout où il paraît, le nom de la pièce est écrit à côté, ou porté par le
+ * bouton qui l'entoure : l'aperçu est donc décoratif (`aria-hidden`, `alt`
+ * vide), sinon le lecteur d'écran dirait la pièce deux fois. Le point d'état, en
  * haut à l'extrémité de la ligne (à gauche en arabe), reprend la teinte de la
  * pastille de la pièce (`parcoursDeLaPiece`) : il ne porte jamais seul une
  * information, le statut est écrit dans la ligne.
@@ -41,10 +46,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import type { ParcoursDeLaPiece } from "@/lib/fiche-de-la-piece";
+import { ErreurApi } from "@/lib/transport/erreurs";
 import { office } from "@/verticals/malica-office/composition";
 
 /** La teinte du point d'état : celle de la pastille de la pièce. */
 type TonDeLaPiece = ParcoursDeLaPiece["pastille"]["ton"];
+
+/** Quatre reprises d'un aperçu sans octets encore : après 2, 4, 8 puis 16 s. */
+const REPRISES = 4;
 
 /** L'image de la page entière, ou `null` : le contenu n'en donne pas. */
 async function pageDe(pieceId: string): Promise<Blob | null> {
@@ -62,7 +71,6 @@ export function ApercuDePiece({
   className,
   taille = "miniature",
   ton,
-  nom,
 }: {
   pieceId: string;
   className?: string;
@@ -70,8 +78,6 @@ export function ApercuDePiece({
   taille?: "miniature" | "page";
   /** Le point d'état ; absent, pas de point. */
   ton?: TonDeLaPiece;
-  /** Le nom à dire quand rien d'autre ne le dit ; absent, l'aperçu est décoratif. */
-  nom?: string;
 }) {
   const cadre = useRef<HTMLSpanElement | null>(null);
   const [proche, setProche] = useState(false);
@@ -102,7 +108,9 @@ export function ApercuDePiece({
     enabled: proche,
     staleTime: Infinity,
     gcTime: 10 * 60 * 1000,
-    retry: false,
+    // Seul « contenu absent » se réessaie : les octets peuvent être en route.
+    retry: (n, erreur) => erreur instanceof ErreurApi && erreur.statut === 404 && n < REPRISES,
+    retryDelay: (n) => 2000 * 2 ** n,
   });
 
   // L'URL d'objet vit avec le composant, et se rend à sa disparition.
@@ -117,12 +125,8 @@ export function ApercuDePiece({
     };
   }, [image.data]);
 
-  const accessible = nom
-    ? ({ role: "img", "aria-label": nom } as const)
-    : ({ "aria-hidden": true } as const);
-
   return (
-    <span ref={cadre} className={["apercu", className].filter(Boolean).join(" ")} {...accessible}>
+    <span ref={cadre} className={["apercu", className].filter(Boolean).join(" ")} aria-hidden>
       {url ? (
         <img src={url} alt="" />
       ) : (

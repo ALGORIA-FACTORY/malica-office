@@ -1757,7 +1757,7 @@
 [data-surface="pme"] [data-ecran="coffre"] .tuile.on .apercu{outline:2px solid var(--acc);outline-offset:2px}
 /* Le rond qui choisit : une cible de 44 points, dans le coin, pour un rond de 24. */
 [data-surface="pme"] [data-ecran="coffre"] .choix{position:absolute;top:0;inset-inline-end:0;width:44px;height:44px;display:grid;place-items:center;padding:0;border:0;background:none;cursor:pointer}
-[data-surface="pme"] [data-ecran="coffre"] .choix > span{width:24px;height:24px;box-sizing:border-box;border-radius:50%;border:2px solid #FFFFFF;background:rgba(10,10,10,.35);display:grid;place-items:center;color:transparent}
+[data-surface="pme"] [data-ecran="coffre"] .choix > span{width:24px;height:24px;box-sizing:border-box;border-radius:50%;border:2px solid var(--bg);background:color-mix(in srgb,var(--tx) 35%,transparent);display:grid;place-items:center;color:transparent}
 [data-surface="pme"] [data-ecran="coffre"] .choix svg{width:14px;height:14px;stroke-width:3}
 [data-surface="pme"] [data-ecran="coffre"] .choix[aria-pressed="true"] > span{border-color:var(--acc);background:var(--acc);color:var(--on-acc)}
 [data-surface="pme"] [data-ecran="coffre"] .choix:disabled{cursor:default}

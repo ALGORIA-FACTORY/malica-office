@@ -22,6 +22,8 @@ vi.mock("@/verticals/malica-office/composition", () => ({
 }));
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { rafraichirLApercu } from "@/lib/rafraichir-l-apercu";
+import { ErreurApi } from "@/lib/transport/erreurs";
 
 /** Un `IntersectionObserver` que l'épreuve déclenche à la main. */
 class ObservateurDEssai {
@@ -41,11 +43,14 @@ class ObservateurDEssai {
 
 function monter(enfant: ReactNode, dir: "ltr" | "rtl" = "ltr") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <div dir={dir}>{enfant}</div>
-    </QueryClientProvider>,
-  );
+  return {
+    client,
+    ...render(
+      <QueryClientProvider client={client}>
+        <div dir={dir}>{enfant}</div>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 describe("l'aperçu d'une pièce", () => {
@@ -109,16 +114,48 @@ describe("l'aperçu d'une pièce", () => {
     expect(api.miniature).not.toHaveBeenCalled();
   });
 
-  it("est décoratif dans une ligne qui écrit déjà le nom", () => {
+  it("est décoratif : le nom de la pièce est toujours écrit à côté", async () => {
+    api.miniature.mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
     const { container } = monter(<ApercuDePiece pieceId="p5" />);
     const cadre = container.querySelector(".apercu")!;
     expect(cadre.getAttribute("aria-hidden")).toBe("true");
     expect(cadre.getAttribute("role")).toBeNull();
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull());
+    expect(container.querySelector("img")!.getAttribute("alt")).toBe("");
   });
 
-  it("se nomme quand rien d'autre ne le nomme", () => {
-    const { getByRole } = monter(<ApercuDePiece pieceId="p6" nom="PAPETERIE ESSAI" />);
-    expect(getByRole("img", { name: "PAPETERIE ESSAI" })).toBeTruthy();
+  it("un « contenu absent » (404) n'est pas définitif : il se réessaie", async () => {
+    // La pièce photographiée hors ligne : la ligne existe, les octets arrivent.
+    api.miniature
+      .mockRejectedValueOnce(new ErreurApi("contenu absent", 404))
+      .mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    const { container } = monter(<ApercuDePiece pieceId="p6" />);
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull(), {
+      timeout: 5000,
+    });
+    expect(api.miniature).toHaveBeenCalledTimes(2);
+  });
+
+  it("une autre erreur ne se réessaie pas : la feuille reste", async () => {
+    api.miniature.mockRejectedValue(new ErreurApi("refusé", 403));
+    monter(<ApercuDePiece pieceId="p6b" />);
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(api.miniature).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 2500));
+    expect(api.miniature).toHaveBeenCalledTimes(1);
+  });
+
+  it("la file hors ligne relance l'aperçu quand elle a déposé les octets", async () => {
+    api.miniature.mockResolvedValueOnce(null);
+    const { client, container } = monter(<ApercuDePiece pieceId="p6c" />);
+    act(() => ObservateurDEssai.tous[0]!.approcher());
+    await waitFor(() => expect(api.miniature).toHaveBeenCalledTimes(1));
+    expect(container.querySelector("img")).toBeNull();
+    api.miniature.mockResolvedValue(new Blob(["jpeg"], { type: "image/jpeg" }));
+    await act(() => rafraichirLApercu(client, "p6c"));
+    await waitFor(() => expect(container.querySelector("img")).not.toBeNull());
   });
 
   it("porte le point d'état seulement quand on lui en donne un", () => {

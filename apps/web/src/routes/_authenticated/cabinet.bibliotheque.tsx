@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, FileText, Library, Search } from "lucide-react";
+import { ChevronRight, Library, Search } from "lucide-react";
 import { useState } from "react";
+import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet } from "@/components/malica/cabinet-context";
 import { EmptyState, SignalLight } from "@/components/malica/office-ui";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
@@ -248,7 +249,7 @@ function DocumentsClient({
                   })
                 }
               />
-              <FileText className="h-5 w-5 text-muted-foreground" aria-hidden />
+              <ApercuDePiece pieceId={d.id} className="vignette" />
               <Link to="/cabinet/piece/$pieceId" params={{ pieceId: d.id }} className="min-w-0">
                 <strong>{d.tiers ?? d.reference ?? nomType(d.type)}</strong>
                 <span>

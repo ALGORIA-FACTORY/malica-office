@@ -5,12 +5,13 @@ import { useRef, useState } from "react";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { FileLocale } from "@/components/malica/file-locale";
 import { FeuilleDuBas } from "@/components/malica/feuille-du-bas";
+import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { Aide } from "@/components/malica/aide";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { jourEtMois, momentDeLEnvoi } from "@/lib/lisible";
+import { jourEtMois, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { EcranEnvoye } from "@/components/malica/envoye";
 import { office } from "@/verticals/malica-office/composition";
@@ -39,6 +40,34 @@ export const Route = createFileRoute("/_authenticated/pme/coffre")({
 });
 
 const OU = "routes/_authenticated/pme.coffre";
+
+/** Un lot arrêté en route : ce qui est passé, ce qui reste, et pourquoi. */
+class LotInterrompu extends Error {
+  constructor(
+    readonly faits: readonly string[],
+    readonly restants: readonly string[],
+    override readonly cause: unknown,
+  ) {
+    super("lot interrompu");
+  }
+}
+
+/** Un geste sur chaque papier, l'un après l'autre ; s'il s'arrête, on sait où. */
+async function unParUn(
+  ids: readonly string[],
+  geste: (id: string) => Promise<unknown>,
+): Promise<readonly string[]> {
+  const faits: string[] = [];
+  for (const [i, id] of ids.entries()) {
+    try {
+      await geste(id);
+    } catch (cause) {
+      throw new LotInterrompu(faits, ids.slice(i), cause);
+    }
+    faits.push(id);
+  }
+  return faits;
+}
 
 /** Le mois d'une pièce, `AAAA-MM` : la date du document, sinon celle du dépôt. */
 const moisDe = (p: PieceLue) => (p.dateDocument ?? p.createdAt).slice(0, 7);
@@ -108,11 +137,25 @@ function PmeCoffre() {
     await qc.invalidateQueries({ queryKey: ["pieces", pme.tenantId] });
   };
 
+  /**
+   * Un geste interrompu au milieu d'un lot se DIT : combien sont passés, et
+   * ce qui reste — choisi, prêt à être repris. Jamais un état partiel muet.
+   */
+  const direLInterruption = (
+    e: unknown,
+    cle: "pme.coffre.partiel.mis" | "pme.coffre.partiel.supprimes",
+  ) => {
+    if (!(e instanceof LotInterrompu)) return texteDeLErreur(e, OU, t("common.error"));
+    const raison = texteDeLErreur(e.cause, OU, t("common.error"));
+    if (e.faits.length === 0) return raison;
+    setChoisis(e.restants);
+    const total = e.faits.length + e.restants.length;
+    return `${t(cle, { faits: e.faits.length, total, count: e.restants.length })} ${raison}`;
+  };
+
   const mettre = useMutation({
-    mutationFn: async (ids: readonly string[]) => {
-      for (const id of ids) await office().collab.setPieceVis(id, "entite");
-      return ids;
-    },
+    mutationFn: (ids: readonly string[]) =>
+      unParUn(ids, (id) => office().collab.setPieceVis(id, "entite")),
     onSuccess: async (ids) => {
       setErreur(null);
       setChoisis([]);
@@ -120,8 +163,7 @@ function PmeCoffre() {
       setMisEnSociete(ids);
     },
     onError: async (e: unknown) => {
-      setErreur(texteDeLErreur(e, OU, t("common.error")));
-      // Une partie a pu passer avant le refus : la liste dit ce qui reste.
+      setErreur(direLInterruption(e, "pme.coffre.partiel.mis"));
       await relire();
     },
   });
@@ -129,12 +171,11 @@ function PmeCoffre() {
   const supprimer = useMutation({
     // `false` : la pièce n'est plus visible. Ce n'est pas un succès — le
     // journal le garde, comme sur la fiche.
-    mutationFn: async (ids: readonly string[]) => {
-      for (const id of ids) {
+    mutationFn: (ids: readonly string[]) =>
+      unParUn(ids, async (id) => {
         if (!(await office().capture.supprimer(id)))
           throw new Error(`suppression sans effet : ${id}`);
-      }
-    },
+      }),
     onSuccess: async () => {
       setErreur(null);
       setChoisis([]);
@@ -143,7 +184,7 @@ function PmeCoffre() {
     },
     onError: async (e: unknown) => {
       setConfirmer(false);
-      setErreur(texteDeLErreur(e, OU, t("common.error")));
+      setErreur(direLInterruption(e, "pme.coffre.partiel.supprimes"));
       await relire();
     },
   });
@@ -194,6 +235,14 @@ function PmeCoffre() {
   const titreDe = (p: PieceLue) =>
     p.emetteur ?? (p.status === "capturee" ? t("pme.list.nonLue") : t("pme.list.sansEmetteur"));
   const jour = (p: PieceLue) => jourEtMois(p.dateDocument ?? p.createdAt, locale);
+  /**
+   * Le montant, ou rien : « un montant absent n'est pas un montant nul ».
+   * `montant(null)` rend la chaîne vide, et rien ne s'affiche.
+   */
+  const somme = (p: PieceLue) => {
+    const rendu = montant(p.total, locale);
+    return rendu === "" ? "" : `${rendu} ${p.devise ?? pme.currency}`;
+  };
 
   const basculer = (id: string) =>
     setChoisis((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
@@ -269,7 +318,12 @@ function PmeCoffre() {
             ) : null}
           </>
         }
-        suite={t("pme.coffre.mis.suite", { qui: nomDuCabinet })}
+        suite={
+          cabinet.data
+            ? t("pme.coffre.mis.suite", { qui: nomDuCabinet })
+            : // Sans cabinet, la raison de l'absence de « Transmettre » se dit ici.
+              t("relation.sansDestinataire")
+        }
         trace={null}
         principale={{ libelle: t("envoi.coffre.retour"), action: () => setMisEnSociete(null) }}
         secondaire={
@@ -389,7 +443,17 @@ function PmeCoffre() {
                         >
                           <ApercuDePiece pieceId={p.id} />
                           <b>{titreDe(p)}</b>
-                          <span className="dt">{jour(p)}</span>
+                          <span className="dt">
+                            {[jour(p), somme(p)].filter(Boolean).join(" · ")}
+                          </span>
+                          {p.status === "capturee" ? (
+                            <EtatDeLecture
+                              refus={p.lectureRefusee}
+                              vis={p.vis}
+                              lecture={p.lecture}
+                              motifDitAilleurs="piece_personnelle"
+                            />
+                          ) : null}
                         </button>
                         <button
                           type="button"

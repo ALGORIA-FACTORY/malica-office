@@ -655,8 +655,8 @@
  * dans `body`, hors de toute surface) : sa forme est donc écrite ici, une
  * fois, avec les jetons communs. `styles-pme.css` n'y pose que les siens.
  *
- * La page est du papier, dans les deux thèmes : son fond ne suit pas le
- * thème, comme une feuille posée sur la table.
+ * Ses couleurs sont les jetons de la surface : la feuille esquissée suit le
+ * thème, la vraie photo, elle, garde les siennes.
  */
 .apercu {
   position: relative;
@@ -667,7 +667,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--card);
 }
 .apercu img {
   display: block;
@@ -686,12 +686,12 @@
   display: block;
   height: 5px;
   border-radius: 2px;
-  background: #e4e4e7;
+  background: var(--border);
 }
 .apercu .esq i:nth-child(1) {
   width: 45%;
   height: 9px;
-  background: #0a0a0a;
+  background: var(--foreground);
 }
 .apercu .esq i:nth-child(2) {
   width: 70%;
