@@ -865,4 +865,69 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await assert.rejects(cabinetFait("capture.dossier", a), /piece\.not_found/);
     await assert.rejects(cabinetFait("capture.dossier", b), /piece\.not_found/);
   });
+
+  /* ============ un rattachement se lit par paire LOGIQUE (revue Codex de #127) */
+
+  const lies = async (pieceId: string) =>
+    ((await pmeFait("capture.piecesRattachees", pieceId)) as Array<{ id: string }>).map(
+      (p) => p.id,
+    );
+  const dossierLie = async (pieceId: string) =>
+    (
+      (await cabinetFait("supervision.documentsLies", cabinet, pme, [pieceId])) as {
+        documents: Array<{ id: string }>;
+      }
+    ).documents.map((d) => d.id);
+
+  it("détacher sur la photo courante détache pour de bon : le lien de l'ancienne ne revient pas", async () => {
+    const ancienne = await retournee("avant écriture");
+    const bl = await transmiseLue();
+    await pmeFait("capture.rattacher", ancienne, bl);
+    const nouvelle = await remplacer(ancienne);
+    assert.deepEqual(await lies(nouvelle), [bl], "hérité, lu à travers la courante");
+    await pmeFait("capture.detacher", nouvelle, bl, "pas le bon bon de livraison");
+    assert.deepEqual(await lies(nouvelle), []);
+    assert.ok(!(await dossierLie(nouvelle)).includes(bl), "le dossier lié ne le ressuscite pas");
+    // Rattacher de nouveau : le dernier fait de la paire gagne.
+    await pmeFait("capture.rattacher", nouvelle, bl);
+    assert.deepEqual(await lies(nouvelle), [bl]);
+    assert.ok((await dossierLie(nouvelle)).includes(bl));
+  });
+
+  it("un rattachement hérité ne se refait pas, et ne se détache pas sur l'ancienne", async () => {
+    const ancienne = await retournee("avant écriture");
+    const bl = await transmiseLue();
+    await pmeFait("capture.rattacher", ancienne, bl);
+    const nouvelle = await remplacer(ancienne);
+    assert.deepEqual(await pmeFait("capture.rattacher", nouvelle, bl), { deja: true });
+    await assert.rejects(
+      pmeFait("capture.detacher", ancienne, bl, "essai"),
+      /refus\.piece\.remplacee/,
+    );
+    // Aucun fait recopié : l'historique de la paire tient en un seul fait.
+    const { rows } = await admin.query(
+      `select 1 from capture.rattachements where $1 in (piece_id, piece_liee_id)`,
+      [bl],
+    );
+    assert.equal(rows.length, 1);
+  });
+
+  it("la preuve « rattachement » d'un retour reste juste : un lien d'avant le retour ne prouve rien", async () => {
+    const id = await transmiseLue();
+    const bl = await transmiseLue();
+    await pmeFait("capture.rattacher", id, bl);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.retourner(db, {
+        pieceId: id,
+        motifId: motifs["justificatif_manquant"]!,
+        note: "Le bon de livraison, s'il vous plaît.",
+      }),
+    );
+    const fait = async (p: string) =>
+      ((await pmeFait("capture.retourDeLaPiece", p, "fr")) as { fait: boolean }).fait;
+    assert.equal(await fait(id), false);
+    const autre = await transmiseLue();
+    await pmeFait("capture.rattacher", id, autre);
+    assert.equal(await fait(id), true);
+  });
 });
