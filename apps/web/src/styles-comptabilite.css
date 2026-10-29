@@ -1244,3 +1244,52 @@
   height: 100%;
   object-fit: contain;
 }
+
+/*
+ * Une table `empile` (InkTable) sur un téléphone : une carte par ligne. La
+ * première cellule est le titre ; les autres posent leur libellé (data-label)
+ * à gauche de la valeur. Aucun défilement de côté.
+ */
+@media (max-width: 640px) {
+  .cab-table.cab-table-empile {
+    overflow-x: visible;
+  }
+  .cab-table.cab-table-empile thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .cab-table.cab-table-empile table,
+  .cab-table.cab-table-empile tbody,
+  .cab-table.cab-table-empile tr,
+  .cab-table.cab-table-empile td {
+    display: block;
+    width: 100%;
+  }
+  .cab-table.cab-table-empile tr {
+    padding: 10px 12px;
+  }
+  .cabinet-workspace .cab-table.cab-table-empile td,
+  .cab-table.cab-table-empile td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: none;
+    padding: 2px 0;
+  }
+  .cab-table.cab-table-empile td:not([data-label]) {
+    display: block;
+    padding-bottom: 6px;
+    font-weight: 500;
+  }
+  .cab-table.cab-table-empile td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted-foreground);
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    text-align: start;
+  }
+}

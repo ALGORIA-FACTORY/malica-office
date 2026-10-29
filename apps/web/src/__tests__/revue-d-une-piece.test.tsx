@@ -316,4 +316,38 @@ describe("revue d'une pièce", () => {
     fireEvent.click(screen.getByRole("button", { name: "cab.review.paiement.inscrireAnnulation" }));
     await waitFor(() => expect(api.book).toHaveBeenCalledWith("contre-passation"));
   });
+
+  it("le règlement vivant d'abord ; les annulés se replient sous une ligne", async () => {
+    const reglementDe = (id: string, eteint: boolean) => ({
+      id,
+      moyenCode: "virement",
+      montantMineur: 100000,
+      devise: "TND",
+      payeLe: "2026-10-20",
+      reference: null,
+      justificatifPieceId: null,
+      eteint,
+      annulationAInscrire: null,
+    });
+    // L'ordre de staging : six annulés, puis le vivant.
+    api.paiements.mockResolvedValue([
+      ...["a1", "a2", "a3", "a4", "a5", "a6"].map((id) => reglementDe(id, true)),
+      reglementDe("vivant", false),
+    ]);
+    monter();
+    const repli = await screen.findByRole("button", { name: "cab.review.paiement.annules" });
+    expect(repli.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText("cab.review.paiement.eteint")).toBeNull();
+
+    fireEvent.click(repli);
+    expect(repli.getAttribute("aria-expanded")).toBe("true");
+    const lignes = screen.getAllByText("cab.review.paiement.eteint");
+    expect(lignes).toHaveLength(6);
+    // Le vivant est rendu avant le premier annulé : la première ligne n'est pas éteinte.
+    const premiere = screen.getAllByText("cab.review.paiement.sansPreuve")[0]!.closest("li")!;
+    expect(premiere.textContent).not.toContain("cab.review.paiement.eteint");
+    expect(
+      premiere.compareDocumentPosition(lignes[0]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
