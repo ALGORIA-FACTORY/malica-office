@@ -807,4 +807,61 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     assert.ok((await etat(ancienne))?.archivee_le, "la version que le cabinet a connue s'archive");
     assert.ok((await etat(recu))?.archivee_le, "son reçu la suit");
   });
+
+  /* === « une version précédente se lit à travers sa version courante » (revue Codex de #127) */
+
+  it("une photo de la société remplacée puis partagée : le cabinet voit ses règlements hérités", async () => {
+    n += 1;
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+    const paiement = await payer(ancienne, 25000);
+    const nouvelle = await remplacer(ancienne, "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    const vus = (await cabinetFait("capture.paiementsDUnePiece", nouvelle)) as Array<{
+      id: string;
+    }>;
+    assert.deepEqual(
+      vus.map((p) => p.id),
+      [paiement],
+    );
+  });
+
+  it("le dossier lié de la photo courante garde les justificatifs de l'ancienne", async () => {
+    const ancienne = await retournee("avant écriture");
+    const { id: talon } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `${marque}-talon-lie-${ancienne}`,
+      contentType: "image/jpeg",
+      documentKind: "justificatif_paiement",
+      sourcePieceId: ancienne,
+    })) as { id: string };
+    const paiement = await payer(ancienne, 15000, { justificatifPieceId: talon });
+    const nouvelle = await remplacer(ancienne);
+    const lie = (await cabinetFait("supervision.documentsLies", cabinet, pme, [nouvelle])) as {
+      documents: Array<{ id: string }>;
+      paiements: Array<{ id: string; pieceId: string }>;
+    };
+    const docs = lie.documents.map((d) => d.id);
+    assert.ok(docs.includes(nouvelle) && docs.includes(talon), "le justificatif reste lié");
+    assert.ok(!docs.includes(ancienne), "la version précédente ne s'ajoute pas au dossier");
+    assert.deepEqual(
+      lie.paiements.map((p) => [p.id, p.pieceId]),
+      [[paiement, nouvelle]],
+    );
+  });
+
+  it("une version privée jamais partagée reste invisible au cabinet tant que sa courante l'est", async () => {
+    const a = await privee();
+    const b = await remplacer(a, "personnel");
+    await assert.rejects(cabinetFait("capture.dossier", a), /piece\.not_found/);
+    await assert.rejects(cabinetFait("capture.dossier", b), /piece\.not_found/);
+  });
 });
