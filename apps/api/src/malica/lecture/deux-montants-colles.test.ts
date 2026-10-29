@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { candidatsMontant } from "../../scan/normaliser-montants.ts";
+
 import { treillisMontant } from "./montants.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
@@ -42,7 +45,7 @@ import type { VisionSelection } from "./vision.ts";
 const DINAR = 3;
 
 const valeurs = (texte: string, decimales = DINAR): number[] =>
-  treillisMontant(texte, decimales).map((h) => h.millimes);
+  treillisMontant(texte, deviseDEssai(decimales)).map((h) => h.millimes);
 
 describe("treillisMontant — deux nombres collés ne se fondent jamais en un", () => {
   const illisibles: ReadonlyArray<readonly [texte: string, pourquoi: string]> = [
@@ -65,7 +68,6 @@ describe("treillisMontant — deux nombres collés ne se fondent jamais en un", 
      */
     ["1 000,000 2 000,000", "deux montants à milliers, côte à côte (lu 10 000 002 000,000)"],
     ["12,34,56", "trois virgules (lu 1 234,560)"],
-    ["4 812,300 TND.", "le point final de la phrase (lu 4 812 300 dinars)"],
     ["Ramettes A4 80g", "les chiffres d'une désignation (lu 480)"],
     ["Post it 50x40", "un format, pas un montant (lu 5 040)"],
     ["1 septembre 2026", "une date en lettres (lu 12 026)"],
@@ -88,7 +90,6 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
     ["1.234.567", [1234567000]],
     ["1.234,56 TND", [1234560]],
     ["12345.678", [12345678]],
-    ["19 %", [19000]],
     // Le même montant répété en colonnes (#135) : une seule valeur, la sienne.
     ["514,700 514,700", [514700]],
     ["3 020,000 3 020,000", [3020000]],
@@ -109,6 +110,51 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
   for (const [texte, attendu] of lisibles) {
     it(`« ${texte} » se lit ${attendu.join(" ou ")}`, () => {
       assert.deepEqual(valeurs(texte), attendu);
+    });
+  }
+});
+
+describe("les marques de devise viennent du référentiel, pour les deux lecteurs", () => {
+  /*
+   * 30 octobre 2026. « 1 234,560 D.T. » se lisait 1 234 560 dinars au plan de
+   * jetons (le point de l'abréviation restait collé au nombre), et la
+   * normalisation du scan portait sa propre liste de marques en dur. Les
+   * marques sont désormais une donnée (`ref.devises`, `ref.devises_marques`),
+   * et un mot que le référentiel ne connaît pas fait d'un texte un texte.
+   */
+  const DEVISE = deviseDEssai(DINAR);
+  const parLeScan = (texte: string) => candidatsMontant(texte, DEVISE).map((c) => c.mineur);
+  const cas: ReadonlyArray<readonly [texte: string, attendu: number[]]> = [
+    ["1 234,560 D.T.", [1234560]],
+    ["د.ت 1 234,560", [1234560]],
+    ["1 234,560 TND.", [1234560]],
+    ["(1 234,560 D.T.)", [-1234560]],
+    ["1 234,560 DT.", [1234560]],
+    ["1 234,560 د.ت.", [1234560]],
+    ["D.T. 1 234,560", [1234560]],
+    ["1 234,560D.T.", [1234560]],
+    ["4 812,300 TND.", [4812300]],
+    ["art. 9", []],
+    ["TVA 19 %", []],
+    ["N° 12.", []],
+    ["Total 1 234,560", []],
+    ["1 234,560 USD", []],
+  ];
+  for (const [texte, attendu] of cas) {
+    it(`« ${texte} » : ${attendu.length ? attendu.join(" ou ") : "pas un montant"}`, () => {
+      assert.deepEqual(valeurs(texte), attendu, "lecture au plan de jetons");
+    });
+  }
+  // La normalisation du scan lit les mêmes marques. Elle garde ses propres
+  // conventions (la virgule des milliers à l'anglaise ; une paire de
+  // parenthèses refusée plutôt que lue en négatif, voir
+  // `une-parenthese-orpheline.test.ts`) : on compare donc la présence d'une
+  // lecture et la valeur décimale, hors parenthèses.
+  for (const [texte, attendu] of cas.filter(([t]) => !t.includes("("))) {
+    it(`le scan, sur « ${texte} »`, () => {
+      const lu = parLeScan(texte);
+      if (attendu.length === 0) assert.deepEqual(lu, []);
+      else assert.ok(lu.includes(attendu[0]!), `${lu.join(", ")}`);
     });
   }
 });
@@ -185,7 +231,7 @@ const lire = (selection: Partial<VisionSelection>) =>
       ...selection,
       totals: { base_ht: null, vat: null, ttc: null, ...(selection.totals ?? {}) },
     } as unknown as VisionSelection,
-    decimals: DINAR,
+    devise: deviseDEssai(DINAR),
     matriculeDossier: null,
   });
 

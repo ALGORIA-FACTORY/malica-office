@@ -67,9 +67,23 @@ export interface EntreeMontants {
   ttc?: string | null;
 }
 
-export interface ParametresMontants {
+/**
+ * Ce que le référentiel dit de la devise pour LIRE un montant. Partagé avec la
+ * lecture au plan de jetons (`malica/lecture/montants.ts`) : les deux lecteurs
+ * lisent les mêmes décimales et les mêmes marques.
+ */
+export interface DeviseLue {
   /** Décimales de la devise — du paramétrage (money.decimals), jamais d'une table en dur. */
   decimales: number;
+  /**
+   * Les marques de devise imprimées (« DT », « D.T. », « د.ت », « € ») : les
+   * codes de `ref.devises` et les lignes de `ref.devises_marques`, lus par
+   * `lireMarquesDeDevise` (`scan/analyse.ts`). Jamais une liste en dur.
+   */
+  marques: readonly string[];
+}
+
+export interface ParametresMontants extends DeviseLue {
   /** Écart d'arrondi admis, en unités mineures — du paramétrage. */
   toleranceMineure: number;
 }
@@ -166,7 +180,44 @@ const CONFIANCE_NON_VERIFIEE = 0.5;
  */
 const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 
-const DEVISE = /^(?:DT|TND|D\.T\.?|DINARS?|د\.?\s?ت\.?)$/iu;
+/**
+ * Un mot imprimé à côté d'un nombre : des lettres, des symboles (« € »,
+ * « ° »), éventuellement liés par des points ou des espaces (« D.T. »,
+ * « F CFA »), avec le point qui le clôt.
+ */
+const MOT = /[\p{L}\p{M}\p{Sc}\p{So}]+(?:[.\s]*[\p{L}\p{M}\p{Sc}\p{So}]+)*\.?/gu;
+
+/** Une marque comparée sans casse, sans points ni espaces : « D.T. » vaut « dt ». */
+const cleDeMarque = (s: string): string => s.normalize("NFKC").replace(/[\s.]/gu, "").toUpperCase();
+
+/**
+ * Retire d'un montant imprimé les marques de devise que le RÉFÉRENTIEL
+ * connaît, et elles seules.
+ *
+ * ================================================================= POURQUOI
+ *
+ * 30 octobre 2026. Les deux lecteurs de montants ne lisaient pas la devise de
+ * la même façon : celui-ci portait sa propre liste en dur (DT, TND, D.T,
+ * DINARS, د.ت), celui du plan de jetons effaçait toute lettre et laissait le
+ * point d'une abréviation collé au nombre — « 1 234,560 D.T. » y valait
+ * 1 234 560 dinars. Les marques vivent désormais dans `ref.devises` et
+ * `ref.devises_marques`, et les deux lecteurs passent par cette fonction.
+ *
+ * Tout autre mot fait du texte un texte, pas un montant : « art. 9 »,
+ * « N° 12. », « TVA 19 » rendent `null`. Effacer un mot qu'on ne connaît pas,
+ * c'est lire un nombre que le papier n'a peut-être pas voulu dire.
+ */
+export function sansMarquesDeDevise(texte: string, marques: readonly string[]): string | null {
+  const connues = new Set(marques.map(cleDeMarque));
+  let inconnu = false;
+  const reste = texte.replace(MOT, (mot) => {
+    if (connues.has(cleDeMarque(mot))) return " ";
+    inconnu = true;
+    return mot;
+  });
+  return inconnu ? null : reste;
+}
+
 const ESPACES = /[\s\u00A0\u202F]/u;
 
 /**
@@ -332,8 +383,11 @@ function enChiffresLatins(texte: string): string {
 }
 
 /** Les lectures possibles d'un montant imprimé. Vide : illisible. */
-export function candidatsMontant(entree: string, decimales: number): Candidat[] {
-  const brut = sansParenthesesOrphelines(enChiffresLatins(entree)).trim();
+export function candidatsMontant(entree: string, devise: DeviseLue): Candidat[] {
+  const { decimales } = devise;
+  const sansMarques = sansMarquesDeDevise(enChiffresLatins(entree), devise.marques);
+  if (sansMarques === null) return [];
+  const brut = sansParenthesesOrphelines(sansMarques).trim();
   const entiere = lectureEntiere(brut, decimales);
   if (entiere.length > 0) return entiere;
   // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
@@ -363,14 +417,8 @@ export function groupesDeMilliersValides(groupes: readonly string[]): boolean {
 
 /** Les lectures d'un texte pris comme UN seul montant. */
 function lectureEntiere(brut: string, decimales: number): Candidat[] {
+  // La devise a déjà été retirée (`sansMarquesDeDevise`) : rien de littéral ici.
   let texte = brut.trim();
-  // La devise, collée ou non, en tête ou en queue — et rien d'autre de littéral.
-  texte = texte.replace(
-    /([\d.,'\u2019\s\u00A0\u202F])([^\d.,'\u2019\s\u00A0\u202F-]+)$/u,
-    (m, a, dev) => (DEVISE.test(dev.trim()) ? a : m),
-  );
-  texte = texte.replace(/^([^\d\s-]+)\s*/u, (m, dev) => (DEVISE.test(dev.trim()) ? "" : m));
-  texte = texte.trim();
   let signe = 1n;
   if (texte.startsWith("-")) {
     signe = -1n;
@@ -497,7 +545,7 @@ export function normaliserMontants(
     ligne !== "" &&
     pied !== "" &&
     pied !== ligne &&
-    candidatsMontant(ligne, p.decimales).length === 0
+    candidatsMontant(ligne, p).length === 0
   ) {
     const parLePied = normaliserMontants(
       { ...entree, bases: [{ ht: pied, taux: seule!.taux }] },
@@ -576,7 +624,7 @@ export function normaliserMontants(
   });
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
-  const brutes = champs.map((c) => candidatsMontant(c.brut, p.decimales));
+  const brutes = champs.map((c) => candidatsMontant(c.brut, p));
 
   /*
    * ======================================= LE TOTAL EST UN RAPPEL, PAS UNE DONNÉE

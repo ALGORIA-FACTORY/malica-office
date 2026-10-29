@@ -2,12 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { resoudreFacture, treillisMontant, type ChampMontant } from "./montants.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /** Le dinar tunisien : trois décimales, donc le millime pour unité entière. */
 const DINAR = 3;
 
 const valeurs = (texte: string, decimales = DINAR): number[] =>
-  treillisMontant(texte, decimales).map((h) => h.millimes);
+  treillisMontant(texte, deviseDEssai(decimales)).map((h) => h.millimes);
 
 describe("treillisMontant — ce qui est certain", () => {
   it("la virgule sépare les décimales : « 1 234,560 » fait 1 234 560 millimes", () => {
@@ -67,7 +68,7 @@ describe("treillisMontant — ce qui reste ambigu", () => {
 
   it("chaque lecture dit d'où elle vient", () => {
     assert.deepEqual(
-      treillisMontant("2.800", DINAR).map((h) => h.lecture),
+      treillisMontant("2.800", deviseDEssai(DINAR)).map((h) => h.lecture),
       ["decimale", "milliers"],
     );
   });
@@ -87,7 +88,7 @@ describe("treillisMontant — une devise à deux décimales", () => {
 describe("resoudreFacture — l'arithmétique tranche", () => {
   const champ = (nom: string, texte: string, decimales = DINAR): ChampMontant => ({
     champ: nom,
-    hypotheses: treillisMontant(texte, decimales),
+    hypotheses: treillisMontant(texte, deviseDEssai(decimales)),
   });
 
   it("une seule lecture : la valeur est décidée par la lecture", () => {
@@ -217,7 +218,7 @@ describe("treillisMontant — ce qui n'est pas un montant", () => {
 describe("resoudreFacture — une contrainte violée se dit", () => {
   const champ = (nom: string, texte: string, decimales = DINAR): ChampMontant => ({
     champ: nom,
-    hypotheses: treillisMontant(texte, decimales),
+    hypotheses: treillisMontant(texte, deviseDEssai(decimales)),
   });
 
   it("la facture du 4 octobre, telle que le produit l'avait lue", () => {

@@ -21,7 +21,12 @@
  * Module pur : aucun réseau, aucune base, aucun framework.
  */
 
-import { groupesDeMilliersValides, occurrencesIdentiques } from "../../scan/normaliser-montants.ts";
+import {
+  groupesDeMilliersValides,
+  occurrencesIdentiques,
+  sansMarquesDeDevise,
+  type DeviseLue,
+} from "../../scan/normaliser-montants.ts";
 
 /** Une lecture admissible d'un texte, en unités mineures entières. */
 export interface Hypothese {
@@ -71,7 +76,8 @@ export function enDecimal(millimes: number, decimales: number): string {
  * absente vaut mieux qu'une lecture arrondie : l'arrondi est une décision, et
  * ce n'est pas à la lecture de la prendre.
  */
-export function treillisMontant(texte: string, decimales: number): Hypothese[] {
+export function treillisMontant(texte: string, devise: DeviseLue): Hypothese[] {
+  const { decimales } = devise;
   /*
    * ============================ UN TAUX N'EST PAS UNE DÉCORATION À CÔTÉ D'UN MONTANT
    *
@@ -82,13 +88,15 @@ export function treillisMontant(texte: string, decimales: number): Hypothese[] {
   const horsTaux = texte.replace(TAUX, "");
   if (horsTaux !== texte && /\d/u.test(horsTaux)) return [];
 
-  // Les lettres, les symboles de devise et le pourcentage sont de la
-  // décoration : « 1 234,560 TND », « 19 % », « 1 234,56 € ». Les ESPACES,
-  // elles, ne le sont pas : voir plus bas. Une espace collée à un séparateur
-  // (« 1 234 ,560 ») ou à l'intérieur d'une parenthèse (« (1 234,560 DT) »,
-  // une fois la devise retirée) n'en est pas une.
-  const nu = texte
-    .replace(/[\p{L}\p{Sc}\p{Mn}%]/gu, " ")
+  // Seules les marques de devise que le référentiel connaît sont une
+  // décoration (« 1 234,560 D.T. », « د.ت 1 234,560 », « 123,450 € ») : tout
+  // autre mot (« art. 9 », « TVA 19 ») fait du texte un texte. Les ESPACES ne
+  // sont pas une décoration non plus : voir plus bas. Une espace collée à un
+  // séparateur (« 1 234 ,560 ») ou à l'intérieur d'une parenthèse
+  // (« (1 234,560 DT) », une fois la devise retirée) n'en est pas une.
+  const sansMarques = sansMarquesDeDevise(texte.replace(/%/gu, " "), devise.marques);
+  if (sansMarques === null) return [];
+  const nu = sansMarques
     .replace(/\s*([.,])\s*/gu, "$1")
     .replace(/\(\s+/gu, "(")
     .replace(/\s+\)/gu, ")")

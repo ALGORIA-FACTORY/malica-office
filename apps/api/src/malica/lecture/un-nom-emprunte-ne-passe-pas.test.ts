@@ -5,6 +5,7 @@ import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
+import { deviseDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * ============================== UN NOM QUI RESSEMBLE N'EST PAS UN NOM
@@ -87,7 +88,7 @@ const lire = (references: Record<string, { page: number; ordinal: number } | nul
       references,
       overall_confidence: 0.5,
     } as unknown as VisionSelection,
-    decimals: 3,
+    devise: deviseDEssai(3),
     matriculeDossier: MATRICULE_DOSSIER,
   });
 

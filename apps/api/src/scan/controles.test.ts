@@ -19,8 +19,9 @@ import {
   type PieceAControler,
 } from "./controles.ts";
 import { normaliserMontants } from "./normaliser-montants.ts";
+import { deviseDEssai } from "./devise-d-essai.ts";
 
-const P = { decimales: 3, toleranceMineure: 1 };
+const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
   {
     bases: [{ ht: "1 234,560", taux: "0.19" }],

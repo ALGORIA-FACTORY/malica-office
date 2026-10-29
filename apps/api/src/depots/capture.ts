@@ -27,7 +27,7 @@ import { codeDeLecture } from "@malica/socle/issue-de-lecture";
 import type { EtatDUnTravail, GesteDeRetour } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireMarquesDeDevise, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
@@ -639,6 +639,7 @@ export const capture = {
       jurisdiction,
       currency: org["currency"] as string,
       moneyDecimals,
+      marquesDevise: await lireMarquesDeDevise(db),
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,

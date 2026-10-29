@@ -71,6 +71,7 @@ import {
 } from "./signature-plans-synthetiques.ts";
 import type { ParametresDeClassement, ParametresDeDistance } from "./signature-distance.ts";
 import type { ParametresDeSignature } from "./signature.ts";
+import { deviseDEssai } from "../scan/devise-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL_ADMIN"]);
 
@@ -487,7 +488,7 @@ describe("le générateur propose une recette à timbre", { skip: !BASE_CONFIGUR
     const lu = buildExtractFromTokenPlan({
       tokens: [...plan],
       selection: designation.par.selection,
-      decimals: DECIMALES,
+      devise: deviseDEssai(DECIMALES),
       matriculeDossier: MATRICULE_DU_DOSSIER,
     });
     const extract = lu.extract as unknown as ExtractV1;

@@ -28,6 +28,7 @@ import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-l
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
 
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
+import type { DeviseLue } from "../../scan/normaliser-montants.ts";
 
 import { enDecimal, resoudreFacture, type Contrainte } from "./montants.ts";
 import {
@@ -62,7 +63,8 @@ type Ref = TokenRef | null | undefined;
 export function buildExtractFromTokenPlan(params: {
   tokens: readonly PageToken[];
   selection: VisionSelection;
-  decimals: number;
+  /** Décimales et marques de la devise, du référentiel (jamais du code). */
+  devise: DeviseLue;
   /*
    * Le matricule de la fiche du dossier. OBLIGATOIRE, et null quand la fiche
    * n'en porte pas — jamais absent du paramètre.
@@ -74,7 +76,8 @@ export function buildExtractFromTokenPlan(params: {
    */
   matriculeDossier: string | null;
 }): BuiltRead {
-  const { tokens, selection, decimals } = params;
+  const { tokens, selection, devise } = params;
+  const decimals = devise.decimales;
   const citations: FieldCitation[] = [];
   const flags: ReadFlag[] = [];
 
@@ -82,7 +85,7 @@ export function buildExtractFromTokenPlan(params: {
 
   const treillis = new Map<string, { ref: Ref; hypotheses: ReturnType<typeof lireHypotheses> }>();
   function lireHypotheses(field: string, ref: Ref) {
-    return lireMontantDuPlan(tokens, field, ref ?? null, decimals).hypotheses;
+    return lireMontantDuPlan(tokens, field, ref ?? null, devise).hypotheses;
   }
   const relever = (field: string, ref: Ref): void => {
     treillis.set(field, { ref, hypotheses: lireHypotheses(field, ref) });
@@ -229,7 +232,7 @@ export function buildExtractFromTokenPlan(params: {
    * quelles lectures restaient en lice, pour que l'écran pose la question.
    */
   const montant = (field: string, ref: Ref, zone?: string, uiField?: string): string | null => {
-    const m = lireMontantDuPlan(tokens, field, ref ?? null, decimals, zone ?? null, {
+    const m = lireMontantDuPlan(tokens, field, ref ?? null, devise, zone ?? null, {
       zone: zone ?? null,
       uiField: uiField ?? field,
     });
@@ -257,7 +260,7 @@ export function buildExtractFromTokenPlan(params: {
 
   /** Cite un token déjà lu sous un second nom de champ, sans le relire. */
   const citerAussi = (field: string, ref: Ref, zone?: string): void => {
-    const m = lireMontantDuPlan(tokens, field, ref ?? null, decimals, zone ?? null, {
+    const m = lireMontantDuPlan(tokens, field, ref ?? null, devise, zone ?? null, {
       zone: zone ?? null,
       uiField: field,
     });
