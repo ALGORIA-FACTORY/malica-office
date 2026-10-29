@@ -22,6 +22,7 @@ import {
   type PieceARemplacer,
 } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { RegrouperLesPages } from "@/components/malica/regrouper-les-pages";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -221,6 +222,17 @@ function PmeLayout() {
   const [aTyper, setATyper] = useState<PickedFile[]>([]);
 
   /*
+   * ================================ PLUSIEURS FEUILLES, PLUSIEURS FACTURES
+   *
+   * 29 octobre 2026, sur un vrai téléphone : deux factures scannées dans le
+   * même passage du scanner devenaient UNE pièce, et la seconde n'était
+   * jamais lue. Les pages d'un scan attendent ici que la personne dise
+   * lesquelles vont ensemble (`RegrouperLesPages`) ; par défaut, chaque
+   * feuille est une facture.
+   */
+  const [aRegrouper, setARegrouper] = useState<Blob[] | null>(null);
+
+  /*
    * ================================== LA PHOTO QUI EN REMPLACE UNE AUTRE
    *
    * « Reprendre la photo », depuis une pièce (« Malica sans blocage »,
@@ -236,12 +248,15 @@ function PmeLayout() {
   const aRemplacer = useRef<PieceARemplacer | null>(null);
 
   const choisir = useMutation({
-    mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
+    mutationFn: async (input: CaptureKind | { factures: Blob[][]; dejaCadrees?: boolean }) => {
       if (typeof input === "object") {
-        // Plusieurs PAGES d'UNE pièce : à ne pas confondre avec plusieurs
-        // pièces. La distinction est dans la capacité, pas ici.
-        const une = await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true });
-        return une ? [une] : [];
+        // Une pièce par FACTURE, et les pages de chacune dans un seul PDF.
+        const pieces: PickedFile[] = [];
+        for (const pages of input.factures) {
+          const une = await files.scanPages(pages, { dejaCadree: input.dejaCadrees === true });
+          if (une) pieces.push(une);
+        }
+        return pieces;
       }
       if (input === "pdf") return files.pickPdfs();
       if (input === "images") return files.pickImages();
@@ -433,9 +448,12 @@ function PmeLayout() {
         setScanning(true);
         return;
       }
-      // Déjà cadrées par l'appareil : on ne refait pas le travail.
-      if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
-      else aRemplacer.current = null;
+      // Déjà cadrées par l'appareil : on ne refait pas le travail. Plusieurs
+      // pages : la personne dit lesquelles font une même facture — sauf pour
+      // une photo reprise, qui remplace UNE pièce.
+      if (pages.length === 0) aRemplacer.current = null;
+      else if (pages.length > 1 && !aRemplacer.current) setARegrouper(pages);
+      else choisir.mutate({ factures: [pages], dejaCadrees: true });
     })();
   }, [choisir]);
 
@@ -592,6 +610,16 @@ function PmeLayout() {
           )}
         </main>
 
+        {aRegrouper ? (
+          <RegrouperLesPages
+            pages={aRegrouper}
+            onValider={(factures) => {
+              setARegrouper(null);
+              choisir.mutate({ factures, dejaCadrees: true });
+            }}
+          />
+        ) : null}
+
         {aTyper.length > 0 ? (
           <QuestionDuType
             documents={aTyper.map((p) => p.name)}
@@ -703,7 +731,8 @@ function PmeLayout() {
               }}
               onDone={(pages) => {
                 setScanning(false);
-                if (pages.length > 0) choisir.mutate({ pages });
+                if (pages.length > 1 && !aRemplacer.current) setARegrouper(pages);
+                else if (pages.length > 0) choisir.mutate({ factures: [pages] });
               }}
             />
           </Suspense>
