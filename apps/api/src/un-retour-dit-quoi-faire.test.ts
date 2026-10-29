@@ -1,6 +1,7 @@
 /**
- * Un retour du cabinet dit quoi faire ; le cabinet a des gestes devant une
- * pièce que le client n'a pas confirmée (maquette validée le 25 octobre 2026).
+ * Un retour du cabinet dit quoi faire (maquette validée le 25 octobre 2026) ;
+ * le cabinet établit lui-même le type d'une pièce que le client ne confirme
+ * pas (« Malica sans blocage », lot 5).
  *
  *   node --experimental-strip-types --test src/un-retour-dit-quoi-faire.test.ts
  */
@@ -183,14 +184,16 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
     await lier(autre, id, "rattache");
     assert.equal((await retour(id))?.fait, true, "le sens du rattachement ne compte pas");
 
-    // Le geste fait, le client renvoie : son « Oui » confirme le type, puis inscrit.
+    // Le geste fait, le client renvoie ; le cabinet la prend en charge. Le
+    // client n'inscrit rien, ne confirme rien.
     await sousIdentiteDuServeur(dirigeant.id, (db) =>
-      db.query(`select public.capture_precision_persist($1, 'document_kind', 'facture_achat')`, [
-        id,
-      ]),
+      executerRpc(db, { depot: "capture", methode: "renvoyer", args: [id] }),
     );
-    await proposerEtInscrire(dirigeant.id, id);
-    assert.equal(await statut(id), "comptabilisee");
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
+    );
+    await proposerEtInscrire(expert.id, id);
+    assert.equal(await statut(id), "supervisee");
     assert.equal(await retour(id), null, "plus rien à reprendre");
   });
 
@@ -209,33 +212,6 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
       /supervision revient/,
     );
     assert.equal(await statut(id), "lue");
-  });
-
-  it("une pièce inscrite ne se retourne pas par cette porte : elle a une écriture à contre-passer", async () => {
-    const id = await lue();
-    await admin.query(`update capture.pieces set status = 'comptabilisee' where id = $1`, [id]);
-    await assert.rejects(
-      sousIdentiteDuServeur(expert.id, (db) =>
-        supervision.retourner(db, { pieceId: id, motifId: motifs["doublon"]! }),
-      ),
-      /refus\.retour\.inscrite/,
-    );
-  });
-
-  it("relancer le client le notifie, et seulement sur une pièce lue", async () => {
-    const id = await lue();
-    await sousIdentiteDuServeur(expert.id, (db) => supervision.demanderConfirmation(db, id));
-    const { rows } = await admin.query(
-      `select 1 from collab.notifications
-        where tenant_id = $1 and kind = 'piece.confirmation_demandee' and payload ->> 'piece_id' = $2`,
-      [pme, id],
-    );
-    assert.equal(rows.length, 1);
-    await admin.query(`update capture.pieces set status = 'retournee' where id = $1`, [id]);
-    await assert.rejects(
-      sousIdentiteDuServeur(expert.id, (db) => supervision.demanderConfirmation(db, id)),
-      /refus\.confirmation\.sans_objet/,
-    );
   });
 
   it("répondre au cabinet fait le geste « répondre », trace et notifie", async () => {
@@ -268,19 +244,19 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal((await retour(id))?.fait, true);
   });
 
-  it("le cabinet inscrit lui-même une pièce que le client n'a pas confirmée", async () => {
+  it("le cabinet établit le type et inscrit lui-même : le client ne confirme rien", async () => {
     const id = await lue();
     // Le verrou R2 refuse tant que le type n'est que lu.
     await assert.rejects(proposerEtInscrire(expert.id, id), /R2/);
-    // Le client ne confirme pas par cette porte.
+    // Le client n'établit pas le type par cette porte.
     await assert.rejects(
       sousIdentiteDuServeur(dirigeant.id, (db) =>
-        db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+        db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
       ),
       /supervision revient/,
     );
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
     );
     const ecr = await proposerEtInscrire(expert.id, id);
     const { rows } = await admin.query(`select status from socle.ecritures where id = $1`, [ecr]);
@@ -301,7 +277,7 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
     const id = await lue("a_determiner");
     await assert.rejects(
       sousIdentiteDuServeur(expert.id, (db) =>
-        db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+        db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
       ),
       /refus\.inscription\.type_inconnu/,
     );

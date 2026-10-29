@@ -13,7 +13,10 @@
 import type { Requete } from "../db.ts";
 import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
+import { statutCabinet, type StatutCabinet } from "@malica/socle/statut-d-envoi";
 import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
+
+import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -25,14 +28,18 @@ const COMPTES_VIDES = {
   retournee: 0,
 } as const;
 
-/** L'ordre de la file : ce qui attend le cabinet d'abord. */
-const PRIORITE: Record<string, number> = {
-  comptabilisee: 0,
-  retournee: 1,
-  proposee: 2,
-  lue: 3,
-  capturee: 4,
-  supervisee: 5,
+/**
+ * L'ordre de la file : ce qui attend le cabinet d'abord — la pièce corrigée
+ * par le client, la reçue, la vue —, puis ce qui est chez le client, puis ce
+ * qui est pris en charge.
+ */
+const PRIORITE: Readonly<Record<StatutCabinet, number>> = {
+  corrigee: 0,
+  recue: 1,
+  vue: 2,
+  retournee: 3,
+  validee: 4,
+  forcee: 4,
 };
 
 export const supervision = {
@@ -96,6 +103,15 @@ export const supervision = {
         const bruts = (r["comptes"] ?? {}) as Record<string, unknown>;
         const comptes = { ...COMPTES_VIDES } as Record<string, number>;
         for (const [statut, n] of Object.entries(bruts)) comptes[statut] = Number(n);
+        /*
+         * À traiter : ce que le cabinet a reçu et n'a ni pris en charge
+         * (« supervisee ») ni rendu au client (« retournee ») — la même règle
+         * que `A_TRAITER` du Socle, en comptes. La RLS ne lui montre que ce
+         * qui lui a été transmis.
+         */
+        const aTraiter = Object.entries(comptes)
+          .filter(([statut]) => statut !== "supervisee" && statut !== "retournee")
+          .reduce((n, [, c]) => n + c, 0);
         return {
           tenantId: r["pme_org_id"] as string,
           name: (r["name"] as string) ?? "—",
@@ -110,14 +126,13 @@ export const supervision = {
           mandatDepuis: (r["starts_on"] as string | null) ?? null,
           mandatJusquau: (r["ends_on"] as string | null) ?? null,
           counts: comptes,
+          aTraiter,
         };
       })
-      .sort((a, b) => (b.counts["comptabilisee"] ?? 0) - (a.counts["comptabilisee"] ?? 0));
+      .sort((a, b) => b.aTraiter - a.aTraiter);
   },
 
   async queue(db: Requete, cabinetTenantId: string, tenantId?: string) {
-    // `distinct on` rend la dernière écriture comptabilisée non revue de chaque
-    // pièce — ce que l'adaptateur reconstituait par une boucle et une carte.
     const { rows } = await db.query(
       `select p.id as piece_id, p.tenant_id, p.status, p.source, p.created_at,
               -- La date d'envoi : une photo reprise hérite de celle de l'ancienne
@@ -125,21 +140,24 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
-              dem.objet as demande_objet
+              dem.objet as demande_objet, ${COLONNES_DU_SUIVI}
          from pieces_v p
          join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
           and p.tenant_id in (select app.mandats_visibles($1))
          left join organizations_v o on o.id = p.tenant_id
-         -- La pièce, c'est toutes ses versions : un règlement saisi sur une
-         -- photo reprise a son écriture sur l'ancienne, et elle attend ici.
+         -- L'écriture VIVANTE de la pièce — celle de la facture d'abord, sinon
+         -- un règlement —, sur toutes ses versions : un règlement saisi sur une
+         -- photo reprise a son écriture sur l'ancienne.
          left join lateral (
            select x.id, x.libelle, x.date_ecriture
              from ecritures_v x
-            where x.piece_id in (select app.versions_de_la_piece(p.id)) and x.status = 'booked'
-              and x.reverses_id is null and x.review_outcome is null
-            order by x.created_at desc
+            where x.piece_id in (select app.versions_de_la_piece(p.id))
+              and app.ecriture_vivante(x.id)
+            order by (x.nature = 'piece') desc, x.created_at desc
             limit 1
          ) e on true
+         -- Envoyée, vue, corrigée, prise en charge : le Socle en dérive le statut.
+         left join lateral app.suivi_de_la_piece(p.id) s on true
          -- Le montant de l'écriture : la somme de ses débits, telle que le
          -- Socle l'a posée. L'écran ne l'additionne pas.
          left join lateral (
@@ -201,24 +219,29 @@ export const supervision = {
     );
 
     return (rows as Record<string, unknown>[])
-      .map((p) => ({
-        pieceId: p["piece_id"] as string,
-        tenantId: p["tenant_id"] as string,
-        clientName: (p["client"] as string) ?? "—",
-        status: p["status"] as string,
-        source: p["source"] as string,
-        createdAt: p["created_at"] as string,
-        envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
-        ecritureId: (p["ecriture_id"] as string | null) ?? null,
-        libelle: (p["libelle"] as string | null) ?? null,
-        dateEcriture: (p["date_ecriture"] as string | null) ?? null,
-        montant: (p["montant"] as string | null) ?? null,
-        collaborateur: (p["collaborateur"] as string | null) ?? null,
-        confiance: p["confiance"] == null ? null : Number(p["confiance"]),
-        demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
-      }))
+      .map((p) => {
+        const suivi = versSuivi(p);
+        return {
+          pieceId: p["piece_id"] as string,
+          tenantId: p["tenant_id"] as string,
+          clientName: (p["client"] as string) ?? "—",
+          status: p["status"] as string,
+          statut: statutCabinet({ status: p["status"] as string, suivi }),
+          suivi,
+          source: p["source"] as string,
+          createdAt: p["created_at"] as string,
+          envoyeeLe: new Date(p["envoyee_le"] as string).toISOString(),
+          ecritureId: (p["ecriture_id"] as string | null) ?? null,
+          libelle: (p["libelle"] as string | null) ?? null,
+          dateEcriture: (p["date_ecriture"] as string | null) ?? null,
+          montant: (p["montant"] as string | null) ?? null,
+          collaborateur: (p["collaborateur"] as string | null) ?? null,
+          confiance: p["confiance"] == null ? null : Number(p["confiance"]),
+          demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
+        };
+      })
       .sort((a, b) => {
-        const d = (PRIORITE[a.status] ?? 9) - (PRIORITE[b.status] ?? 9);
+        const d = PRIORITE[a.statut] - PRIORITE[b.statut];
         if (d !== 0) return d;
         return a.envoyeeLe < b.envoyeeLe ? 1 : -1;
       });
@@ -344,9 +367,9 @@ export const supervision = {
   },
 
   /**
-   * Retourner au client une pièce transmise PAS ENCORE inscrite, avec le motif
-   * gouverné et la note (`piece_retourner`). Une pièce inscrite se retourne
-   * par `review` : elle a une écriture à contre-passer.
+   * Retourner au client, à toute étape, avec le motif gouverné et la note
+   * (`piece_retourner`). Une pièce prise en charge l'est avec la
+   * contre-passation de son écriture, au journal du jour (spec §4).
    */
   async retourner(
     db: Requete,
@@ -359,9 +382,18 @@ export const supervision = {
     ]);
   },
 
-  /** Relancer le client sur une pièce transmise qu'il n'a pas confirmée. */
-  async demanderConfirmation(db: Requete, pieceId: string): Promise<void> {
-    await db.query(`select public.piece_demander_confirmation($1)`, [pieceId]);
+  /**
+   * Le cabinet ouvre la pièce : elle est « Vue » (spec §4), et le client lit
+   * « Vue par {cabinet} ». Un fait, posé une fois par envoi : rouvrir rend la
+   * même vue (`deja`).
+   */
+  async voir(db: Requete, pieceId: string): Promise<{ vueLe: string | null; deja: boolean }> {
+    const { rows } = await db.query<{ r: { vue_le: string | null; deja: boolean } }>(
+      `select public.piece_voir($1) as r`,
+      [pieceId],
+    );
+    const r = rows[0]!.r;
+    return { vueLe: r.vue_le ? new Date(r.vue_le).toISOString() : null, deja: r.deja };
   },
 
   async review(

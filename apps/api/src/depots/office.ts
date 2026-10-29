@@ -13,7 +13,14 @@ import {
  * qui les protège.
  */
 
+import {
+  controlerLaSaisie,
+  ligneNormalisee,
+  type LigneSaisie,
+} from "@malica/socle/ecriture-saisie";
+
 import type { Requete } from "../db.ts";
+import { lireParametres } from "../scan/analyse.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
 
@@ -82,6 +89,26 @@ function memesLignes(
   const x = a.map(cle).sort();
   const y = b.map(cle).sort();
   return x.length === y.length && x.every((k, i) => k === y[i]);
+}
+
+/**
+ * L'écriture VIVANTE de la pièce (toutes ses versions), son pack, sa devise,
+ * et si un cabinet l'a prise en charge — `null` si la pièce n'en porte pas.
+ */
+async function ecritureVivante(
+  db: Requete,
+  pieceId: string,
+): Promise<{ id: string; pack: string; devise: string; prise: boolean } | null> {
+  const { rows } = await db.query<{ id: string; pack: string; devise: string; prise: boolean }>(
+    `select e.id, e.pack_version_id as pack, e.devise,
+            (select s.prise from app.suivi_de_la_piece($1) s) is not null as prise
+       from ecritures_v e
+      where e.piece_id in (select app.versions_de_la_piece($1))
+        and e.nature = 'piece' and app.ecriture_vivante(e.id)
+      limit 1`,
+    [pieceId],
+  );
+  return rows[0] ?? null;
 }
 
 async function lignesDe(db: Requete, ids: string[]): Promise<Map<string, Ligne[]>> {
@@ -156,17 +183,103 @@ export const office = {
   },
 
   /**
-   * Le cabinet inscrit l'écriture d'une pièce que le client n'a pas confirmée.
+   * VALIDER — le cabinet prend en charge l'écriture que le Socle propose
+   * (« Malica sans blocage », 30 octobre 2026). Le client ne confirme rien.
    *
-   * Le verrou R2 attend un type « confirme » : le cabinet confirme le type LU,
-   * en son nom et tracé, puis le serveur propose et comptabilise. Un appel,
-   * une transaction : un type confirmé sans écriture ne reste pas derrière un
-   * échec (relecture de #114, 26 octobre 2026).
+   * Le verrou R2 attend un type établi par une personne : le cabinet établit
+   * le type LU, en son nom et tracé, puis le serveur propose et inscrit — la
+   * pièce est prise en charge, « Validée ». Une écriture inscrite AVANT (par
+   * le client, quand il confirmait encore) se valide par la revue, qui la
+   * prend en charge à son tour. Un appel, une transaction.
    */
-  async inscrireLaPieceDuClient(db: Requete, pieceId: string): Promise<string> {
-    await db.query(`select public.piece_confirmer_le_type_lu($1)`, [pieceId]);
+  async valider(db: Requete, pieceId: string): Promise<string> {
+    // D'abord : seul le cabinet du dossier établit le type, donc valide.
+    await db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [pieceId]);
+    const vivante = await ecritureVivante(db, pieceId);
+    if (vivante?.prise) throw refusMetier("refus.prise_en_charge.deja");
+    if (vivante) {
+      await db.query(`select public.socle_ecriture_review($1, 'valide')`, [vivante.id]);
+      return vivante.id;
+    }
     const id = await office.proposerDepuisPiece(db, pieceId);
     await office.book(db, id);
+    return id;
+  },
+
+  /**
+   * FORCER — le comptable modifie l'écriture, ou la saisit quand le Socle ne
+   * propose rien (spec §4). C'est son acte : la pièce n'est ni retournée ni
+   * signalée au client, qui lit « Prise en charge ».
+   *
+   * Une écriture inscrite ne se modifie pas (R7) : la vivante est
+   * contre-passée, la nouvelle inscrite, dans la même transaction — tout passe
+   * ou rien n'est écrit. Le fait `ecriture.forcee` dit au journal du jour
+   * qu'elle vient du comptable (nom et heure : sa prise en charge).
+   *
+   * Le pack et la devise viennent de l'écriture remplacée, sinon de la pièce
+   * et de son dossier — jamais de l'écran. Le type se précise quand la lecture
+   * n'en a reconnu aucun (`typeDeDocument`).
+   */
+  async forcer(
+    db: Requete,
+    input: {
+      pieceId: string;
+      journal: string;
+      date: string;
+      libelle: string;
+      lignes: LigneSaisie[];
+      typeDeDocument?: string | null;
+    },
+  ): Promise<string> {
+    await db.query(`select public.piece_type_etabli_par_le_cabinet($1, $2)`, [
+      input.pieceId,
+      input.typeDeDocument ?? null,
+    ]);
+    const vivante = await ecritureVivante(db, input.pieceId);
+    const { rows } = await db.query<{ pack: string; devise: string; journal: boolean }>(
+      `select coalesce($2::uuid, app.pack_de_la_piece($1)) as pack,
+              coalesce($3,
+                       (select x.payload ->> 'currency' from extractions_v x
+                         where x.piece_id = $1 order by x.created_at desc limit 1),
+                       (select o.currency from organizations_v o
+                          join pieces_v p on p.tenant_id = o.id where p.id = $1)) as devise,
+              exists (select 1 from ref.journals j where j.code = $4) as journal`,
+      [input.pieceId, vivante?.pack ?? null, vivante?.devise ?? null, input.journal],
+    );
+    const contexte = rows[0]!;
+    if (!contexte.journal) throw refusMetier("refus.ecriture.journal");
+    const { "money.decimals": decimales } = await lireParametres(db, contexte.pack, input.date);
+    const { defaut } = controlerLaSaisie(input.lignes, decimales);
+    if (defaut) throw refusMetier(`refus.ecriture.${defaut}`);
+
+    if (vivante) {
+      // La contre-passation porte le motif gouverné du forçage (référentiel).
+      await db.query(
+        `select public.socle_ecriture_contre_passer(
+                  $1, (select m.id from ref_rejet_motifs_v m where m.code = 'ecriture_forcee'))`,
+        [vivante.id],
+      );
+    }
+    const id = await office.propose(db, {
+      pieceId: input.pieceId,
+      journal: input.journal,
+      date: input.date,
+      libelle: input.libelle.trim(),
+      packVersionId: contexte.pack,
+      devise: contexte.devise,
+      lignes: input.lignes.map(ligneNormalisee),
+    });
+    await office.book(db, id);
+    // Le fait qui dit « forcée » au journal du jour (`app.ecriture_prise_en_charge`).
+    await db.query(
+      `insert into audit.event_log
+         (tenant_id, actor, action, object_schema, object_table, object_id,
+          pack_version_id, payload)
+       select tenant_id, auth.uid(), 'ecriture.forcee', 'socle', 'ecritures', id,
+              pack_version_id, jsonb_build_object('piece_id', piece_id, 'remplace', $2::uuid)
+         from ecritures_v where id = $1`,
+      [id, vivante?.id ?? null],
+    );
     return id;
   },
 
@@ -368,69 +481,6 @@ export const office = {
       ],
     );
     return rows[0]!.id;
-  },
-
-  /**
-   * Forcer l'imputation : contre-passer, réimputer, comptabiliser — EN UNE
-   * transaction (20 octobre 2026).
-   *
-   * L'écran enchaînait trois appels. Le premier passait, le deuxième était
-   * refusé, et la facture restait contre-passée sans réimputation : sortie des
-   * livres. Une seule requête, donc une seule transaction : tout passe, ou
-   * rien n'est écrit. Le journal, la date, le pack et la devise viennent de
-   * l'écriture remplacée, lue ici — pas de ce que l'écran affirme.
-   */
-  async corrigerLImputation(
-    db: Requete,
-    input: {
-      ecritureId: string;
-      motifId: string;
-      note: string | null;
-      libelle: string;
-      lignes: unknown;
-    },
-  ): Promise<string> {
-    const { rows } = await db.query<{
-      piece_id: string;
-      journal: string;
-      date_ecriture: string;
-      devise: string;
-      pack_version_id: string;
-    }>(
-      `select piece_id, journal, date_ecriture::text as date_ecriture, devise, pack_version_id
-         from ecritures_v where id = $1`,
-      [input.ecritureId],
-    );
-    const remplacee = rows[0];
-    if (!remplacee) throw Object.assign(new Error("écriture introuvable"), { code: "22023" });
-    await db.query(`select public.socle_ecriture_review($1, 'retourne', $2, $3)`, [
-      input.ecritureId,
-      input.motifId,
-      input.note,
-    ]);
-    const id = await office.propose(db, {
-      pieceId: remplacee.piece_id,
-      journal: remplacee.journal,
-      date: remplacee.date_ecriture,
-      libelle: input.libelle,
-      packVersionId: remplacee.pack_version_id,
-      devise: remplacee.devise,
-      lignes: input.lignes,
-    });
-    await office.book(db, id);
-    // Le fait qui dit « forcée » au journal du jour (`journal_du_jour_lire`) :
-    // l'écriture nouvelle ne vient pas du Socle, le comptable l'a écrite. La
-    // piste d'audit garde qui et quand ; rien n'est déduit après coup.
-    await db.query(
-      `insert into audit.event_log
-         (tenant_id, actor, action, object_schema, object_table, object_id, motif_id,
-          pack_version_id, payload)
-       select tenant_id, auth.uid(), 'ecriture.forcee', 'socle', 'ecritures', id, $2,
-              pack_version_id, jsonb_build_object('piece_id', piece_id, 'remplace', $3::uuid)
-         from ecritures_v where id = $1`,
-      [id, input.motifId, input.ecritureId],
-    );
-    return id;
   },
 
   /**

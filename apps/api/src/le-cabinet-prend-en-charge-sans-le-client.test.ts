@@ -88,7 +88,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     const p = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "pdf",
-      vis: "partage",
+      vis: "entite",
       idempotencyKey: `${marque}-${n}`,
       contentType: "application/pdf",
       pageCount: 1,
@@ -120,6 +120,8 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
       ),
     );
     await pmeFait("capture.analyser", p.id);
+    // Le propriétaire l'envoie : la base pose l'heure de l'envoi.
+    await pmeFait("collab.setPieceVis", p.id, "partage");
     return p.id;
   };
 
@@ -320,7 +322,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
           { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "0.2", tax_code: null },
         ],
       }),
-      /équilibr/,
+      /refus\.ecriture\.desequilibre/,
     );
 
     const ecriture = (await cabinetFait("office.forcer", {

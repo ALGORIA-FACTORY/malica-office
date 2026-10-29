@@ -116,7 +116,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   /** Le cabinet inscrit lui-même l'écriture de la pièce (« prise en charge »). */
   const priseEnCharge = async (pieceId: string) => {
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [pieceId]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [pieceId]),
     );
     const e = await proposer(pieceId);
     await sousIdentiteDuServeur(expert.id, (db) => office.book(db, e));
@@ -568,7 +568,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const confirmee = async () => {
       const id = await transmiseLue();
       await sousIdentiteDuServeur(expert.id, (db) =>
-        db.query(`select public.piece_confirmer_le_type_lu($1)`, [id]),
+        db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]),
       );
       return id;
     };
@@ -880,7 +880,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 30000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
     const { rows } = await admin.query<{ piece_id: string; status: string }>(
@@ -918,7 +918,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 20000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     // Deux connexions, deux transactions, au même instant.
     const issues = await Promise.allSettled([
@@ -946,7 +946,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 10000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
     return { ancienne, nouvelle, ecriture };
@@ -997,7 +997,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 10000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     await pmeFait("collab.demanderSurPiece", nouvelle, "rappel");
     await assert.rejects(
@@ -1090,7 +1090,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
     await ttcTranche(nouvelle, 30000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
     const { rows } = await admin.query<{ vis: string }>(
@@ -1290,7 +1290,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 10000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
     // L'inscription tient sa transaction ouverte ; la reprise arrive pendant.
@@ -1310,7 +1310,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await lire(nouvelle);
     await ttcTranche(nouvelle, 10000);
     await sousIdentiteDuServeur(expert.id, (db) =>
-      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
     const ecriture = (await cabinetFait("office.proposerLeReglement", paiement)) as string;
     // La suppression passe par l'accord du cabinet, qui l'exécute aussitôt.
