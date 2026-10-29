@@ -260,7 +260,7 @@ async function assurerPiece(marque, source, reference) {
       d.tokens.length === jetons.length,
     `${d.citations.length} citation(s)`,
   );
-  return { id: piece.id, ecritureId: null };
+  return { id: piece.id, ecritureId: null, empreinte: null };
 }
 
 const pieceA = await assurerPiece("a-valider", "photo", "E-2026-001");
@@ -348,6 +348,7 @@ e.section("La revue d'une pièce");
   const octets = await e.appel(`/pieces/${pieceA.id}/contenu`);
   e.verdict("la visionneuse reçoit les octets", octets.ok, `${octets.status}`);
   const p = await e.rpc("office", "propositionDePiece", [pieceA.id]);
+  pieceA.empreinte = p.ok ? p.empreinte : null;
   e.verdict(
     "le Socle propose une écriture équilibrée, sous le pack en vigueur",
     p.ok === true &&
@@ -366,7 +367,14 @@ e.verdict(
 
 /* ---- valider */
 {
-  pieceA.ecritureId = await e.rpc("office", "valider", [pieceA.id]);
+  const changee = await e.rpcAttenduEnEchec("office", "valider", [pieceA.id, "0".repeat(64)]);
+  e.verdict(
+    "valider une proposition autre que celle affichée est refusé",
+    /refus\.proposition\.changee/.test(changee?.message ?? ""),
+    changee?.message ?? "acceptée",
+  );
+  // Le cabinet valide ce que l'écran lui a montré : l'empreinte l'accompagne.
+  pieceA.ecritureId = await e.rpc("office", "valider", [pieceA.id, pieceA.empreinte]);
   const d = await e.rpc("capture", "dossier", [pieceA.id]);
   e.verdict(
     "valider prend la pièce en charge, sans le client",
@@ -397,7 +405,7 @@ e.verdict(
     audit.some((x) => x.action === "ecriture.booked" && x.actor === moi.id),
     audit.map((x) => x.action).join(", "),
   );
-  const encore = await e.rpcAttenduEnEchec("office", "valider", [pieceA.id]);
+  const encore = await e.rpcAttenduEnEchec("office", "valider", [pieceA.id, pieceA.empreinte]);
   e.verdict(
     "une pièce prise en charge ne se valide pas deux fois",
     encore !== null,
@@ -519,7 +527,7 @@ const pieceC = await assurerPiece("en-lot", "pdf", "E-2026-003");
     p.ok === true && p.proposition.lignes.length >= 2,
     p.ok ? `${p.proposition.lignes.length} ligne(s)` : p.raison,
   );
-  pieceC.ecritureId = await e.rpc("office", "valider", [pieceC.id]);
+  pieceC.ecritureId = await e.rpc("office", "valider", [pieceC.id, p.ok ? p.empreinte : null]);
   const ligne = (await e.rpc("supervision", "queue", [cabinet.id, dossier.tenantId])).find(
     (r) => r.pieceId === pieceC.id,
   );

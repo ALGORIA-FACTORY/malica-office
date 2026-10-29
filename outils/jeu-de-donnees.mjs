@@ -880,7 +880,7 @@ async function comptabiliser(pieceId, piece) {
   if (gravee) return { id: gravee.id, detail: "déjà prise en charge" };
   const proposition = await rpc("office", "propositionDePiece", [pieceId]);
   if (proposition.ok) {
-    const id = await rpc("office", "valider", [pieceId]);
+    const id = await rpc("office", "valider", [pieceId, proposition.empreinte]);
     return { id, detail: `validée · ${proposition.proposition.journal}` };
   }
   const p = lignesDuPivot(piece);

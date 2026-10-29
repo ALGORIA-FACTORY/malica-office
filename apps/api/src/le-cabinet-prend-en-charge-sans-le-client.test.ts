@@ -131,6 +131,14 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     const d = await dossier(dirigeant, id);
     return statutPme({ vis: d.piece.vis, status: d.piece.status, suivi: d.suivi });
   };
+  /** Valider comme l'écran : la proposition affichée, et son empreinte. */
+  const valider = async (id: string) => {
+    const p = (await cabinetFait("office.propositionDePiece", id)) as {
+      ok: boolean;
+      empreinte?: string;
+    };
+    return cabinetFait("office.valider", id, p.empreinte ?? null);
+  };
   const ligneDeFile = async (id: string) =>
     ((await cabinetFait("supervision.queue", cabinet)) as LigneDeFile[]).find(
       (r) => r.pieceId === id,
@@ -356,7 +364,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
 
   it("le Socle propose : le comptable valide, sans le client, même en mode mandat", async () => {
     const id = await transmise(true);
-    const ecriture = (await cabinetFait("office.valider", id)) as string;
+    const ecriture = (await valider(id)) as string;
     assert.deepEqual(await ecrituresVivantes(id), [ecriture]);
     assert.equal(await statutEnBase(id), "supervisee");
     assert.equal(await vuParLeCabinet(id), "validee");
@@ -372,14 +380,14 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
       rows.map((r) => r.par),
       [expert.id],
     );
-    await assert.rejects(cabinetFait("office.valider", id), /refus\.prise_en_charge\.deja/);
+    await assert.rejects(valider(id), /refus\.prise_en_charge\.deja/);
     // La PME ne valide rien.
     await assert.rejects(pmeFait("office.valider", id), /supervision revient/);
   });
 
   it("forcer une écriture validée ne retourne pas la pièce et ne prévient pas le client", async () => {
     const id = await transmise(true);
-    const validee = (await cabinetFait("office.valider", id)) as string;
+    const validee = (await valider(id)) as string;
     const avant = await notifications(id, "piece.retournee");
 
     const forcee = (await cabinetFait("office.forcer", {
@@ -406,7 +414,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
 
   it("retourner une pièce prise en charge : contre-passation, puis « Retour » chez la PME", async () => {
     const id = await transmise(true);
-    const validee = (await cabinetFait("office.valider", id)) as string;
+    const validee = (await valider(id)) as string;
     // Le même comptable qui l'a validée la retourne : défaire n'est pas valider.
     await cabinetFait("supervision.retourner", {
       pieceId: id,
@@ -533,7 +541,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
 
   it("une pièce prise en charge avant la migration ne compte pas « À traiter »", async () => {
     const id = await transmise(true);
-    await cabinetFait("office.valider", id);
+    await valider(id);
     // L'état d'avant « Malica sans blocage » : l'écriture inscrite par le
     // cabinet laissait la pièce « comptabilisee », sa prise en charge faite.
     await admin.query(`update capture.pieces set status = 'comptabilisee' where id = $1`, [id]);
@@ -554,12 +562,12 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
       "le compteur et la file classent par la même règle",
     );
     assert.equal(client.parStatut["validee"], file.filter((r) => r.statut === "validee").length);
-    await assert.rejects(cabinetFait("office.valider", id), /refus\.prise_en_charge\.deja/);
+    await assert.rejects(valider(id), /refus\.prise_en_charge\.deja/);
   });
 
   it("le pilotage compte la prise en charge du mois, au nom du comptable", async () => {
     const id = await transmise(true);
-    await cabinetFait("office.valider", id);
+    await valider(id);
     const st = (await cabinetFait("supervision.statistiques", cabinet, "fr")) as {
       parMois: { mois: string; collaborateur: string | null; supervisees: number }[];
     };

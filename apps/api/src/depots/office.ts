@@ -13,11 +13,14 @@ import {
  * qui les protège.
  */
 
+import { createHash } from "node:crypto";
+
 import {
   controlerLaSaisie,
   ligneNormalisee,
   type LigneSaisie,
 } from "@malica/socle/ecriture-saisie";
+import { z } from "zod";
 
 import type { Requete } from "../db.ts";
 import { lireParametres } from "../scan/analyse.ts";
@@ -149,15 +152,83 @@ function versEcriture(r: Record<string, unknown>, lignes: Map<string, Ligne[]>) 
   };
 }
 
+type Proposee = Awaited<ReturnType<typeof propositionDePiece>>;
+
+/**
+ * L'empreinte d'une proposition : ce que l'écran montre au comptable (journal,
+ * date, libellé, devise, pack, lignes), en une chaîne stable. VALIDER inscrit
+ * ce qui a été montré, ou refuse : si la lecture ou le jugement a changé
+ * entre l'affichage et le geste, la proposition n'est plus la même.
+ */
+function empreinteDe(r: Proposee): string | null {
+  if (!r.ok) return null;
+  const { journal, libelle, lignes, pivot } = r.proposition;
+  const forme = [
+    journal,
+    pivot.entry_date,
+    libelle,
+    pivot.currency,
+    r.packVersionId,
+    lignes.map((l) => [l.account_code, l.libelle, l.debit, l.credit, l.tax_code]),
+  ];
+  return createHash("sha256").update(JSON.stringify(forme)).digest("hex");
+}
+
+/**
+ * Ce que FORCER reçoit du navigateur, relu avant tout usage : une entrée
+ * malformée est un refus qui dit quoi corriger, jamais une panne.
+ */
+const LIGNE_FORCEE = z.object({
+  account_code: z.string(),
+  libelle: z.string(),
+  debit: z.string(),
+  credit: z.string(),
+  tax_code: z.string().nullable().optional(),
+});
+const FORCER = z.object({
+  pieceId: z.string().uuid(),
+  journal: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  libelle: z.string(),
+  lignes: z.array(LIGNE_FORCEE),
+  typeDeDocument: z.string().nullable().optional(),
+});
+
+/**
+ * Un retour en attente que le cabinet prend en charge malgré tout (« rien ne
+ * bloque ») est CLOS, et un fait le dit : la carte du retour disparaît, le
+ * client lit « Prise en charge » au lieu d'un geste devenu sans objet
+ * (reprendre une photo d'une pièce déjà inscrite). Rien si la pièce n'était
+ * pas en retour.
+ */
+async function enRetour(db: Requete, pieceId: string): Promise<boolean> {
+  const { rows } = await db.query<{ r: boolean }>(
+    `select status = 'retournee' as r from pieces_v where id = app.version_courante($1)`,
+    [pieceId],
+  );
+  return rows[0]?.r === true;
+}
+async function closLeRetour(db: Requete, pieceId: string, ecritureId: string): Promise<void> {
+  await db.query(
+    `insert into audit.event_log
+       (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+     select tenant_id, auth.uid(), 'piece.retour_clos', 'capture', 'pieces', id,
+            jsonb_build_object('ecriture_id', $2::uuid, 'par_le_cabinet', true)
+       from pieces_v where id = app.version_courante($1)`,
+    [pieceId, ecritureId],
+  );
+}
+
 export const office = {
   /**
    * La proposition d'écriture d'une pièce, calculée par le SERVEUR (3B-6) :
    * depuis les montants imprimés et normalisés, seulement si le verdict la
    * déclare comptabilisable. `dateSaisie` complète une date non lue — elle ne
-   * remplace jamais une date lue.
+   * remplace jamais une date lue. Son `empreinte` accompagne VALIDER.
    */
   async propositionDePiece(db: Requete, pieceId: string, dateSaisie: string | null = null) {
-    return propositionDePiece(db, pieceId, dateSaisie);
+    const r = await propositionDePiece(db, pieceId, dateSaisie);
+    return r.ok ? { ...r, empreinte: empreinteDe(r)! } : r;
   },
 
   /**
@@ -191,8 +262,12 @@ export const office = {
    * pièce est prise en charge, « Validée ». Une écriture inscrite AVANT (par
    * le client, quand il confirmait encore) se valide par la revue, qui la
    * prend en charge à son tour. Un appel, une transaction.
+   *
+   * `empreinte` est celle de la proposition que l'écran a montrée : le
+   * serveur n'inscrit que celle-là. Si elle a changé entre-temps, il refuse
+   * et l'écran la relit (`refus.proposition.changee`).
    */
-  async valider(db: Requete, pieceId: string): Promise<string> {
+  async valider(db: Requete, pieceId: string, empreinte: string | null = null): Promise<string> {
     // D'abord : seul le cabinet du dossier établit le type, donc valide.
     await db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [pieceId]);
     const vivante = await ecritureVivante(db, pieceId);
@@ -201,8 +276,22 @@ export const office = {
       await db.query(`select public.socle_ecriture_review($1, 'valide')`, [vivante.id]);
       return vivante.id;
     }
-    const id = await office.proposerDepuisPiece(db, pieceId);
+    const etaitEnRetour = await enRetour(db, pieceId);
+    const r = await propositionDePiece(db, pieceId, null);
+    if (!r.ok) throw refusMetier(r.raison);
+    if (empreinte === null || empreinteDe(r) !== empreinte)
+      throw refusMetier("refus.proposition.changee");
+    const id = await office.propose(db, {
+      pieceId,
+      journal: r.proposition.journal,
+      date: r.proposition.pivot.entry_date,
+      libelle: r.proposition.libelle,
+      packVersionId: r.packVersionId,
+      devise: r.proposition.pivot.currency,
+      lignes: r.proposition.lignes,
+    });
     await office.book(db, id);
+    if (etaitEnRetour) await closLeRetour(db, pieceId, id);
     return id;
   },
 
@@ -222,7 +311,7 @@ export const office = {
    */
   async forcer(
     db: Requete,
-    input: {
+    brut: {
       pieceId: string;
       journal: string;
       date: string;
@@ -231,11 +320,15 @@ export const office = {
       typeDeDocument?: string | null;
     },
   ): Promise<string> {
+    const lu = FORCER.safeParse(brut);
+    if (!lu.success) throw refusMetier("refus.ecriture.saisie");
+    const input = lu.data;
     await db.query(`select public.piece_type_etabli_par_le_cabinet($1, $2)`, [
       input.pieceId,
       input.typeDeDocument ?? null,
     ]);
     const vivante = await ecritureVivante(db, input.pieceId);
+    const etaitEnRetour = await enRetour(db, input.pieceId);
     const { rows } = await db.query<{ pack: string; devise: string; journal: boolean }>(
       `select coalesce($2::uuid, app.pack_de_la_piece($1)) as pack,
               coalesce($3,
@@ -249,8 +342,21 @@ export const office = {
     const contexte = rows[0]!;
     if (!contexte.journal) throw refusMetier("refus.ecriture.journal");
     const { "money.decimals": decimales } = await lireParametres(db, contexte.pack, input.date);
-    const { defaut } = controlerLaSaisie(input.lignes, decimales);
+    const lignes: LigneSaisie[] = input.lignes.map((l) => ({ ...l, tax_code: l.tax_code ?? null }));
+    const { defaut } = controlerLaSaisie(lignes, decimales);
     if (defaut) throw refusMetier(`refus.ecriture.${defaut}`);
+    // Un code de taxe vient du référentiel du pack, en vigueur à la date de
+    // l'écriture : un code inconnu fausserait la TVA déclarée (R4).
+    const codes = [...new Set(lignes.map((l) => l.tax_code).filter((c): c is string => !!c))];
+    if (codes.length > 0) {
+      const { rows: connus } = await db.query<{ code: string }>(
+        `select distinct code from ref_tva_rates_v
+          where pack_version_id = $1 and code = any($2::text[])
+            and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
+        [contexte.pack, codes, input.date],
+      );
+      if (connus.length !== codes.length) throw refusMetier("refus.ecriture.taxe");
+    }
 
     if (vivante) {
       // La contre-passation porte le motif gouverné du forçage (référentiel).
@@ -267,7 +373,7 @@ export const office = {
       libelle: input.libelle.trim(),
       packVersionId: contexte.pack,
       devise: contexte.devise,
-      lignes: input.lignes.map(ligneNormalisee),
+      lignes: lignes.map(ligneNormalisee),
     });
     await office.book(db, id);
     // Le fait qui dit « forcée » au journal du jour (`app.ecriture_prise_en_charge`).
@@ -280,6 +386,7 @@ export const office = {
          from ecritures_v where id = $1`,
       [id, vivante?.id ?? null],
     );
+    if (etaitEnRetour) await closLeRetour(db, input.pieceId, id);
     return id;
   },
 

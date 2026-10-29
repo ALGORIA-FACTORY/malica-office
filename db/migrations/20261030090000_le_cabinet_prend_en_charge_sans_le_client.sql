@@ -34,9 +34,11 @@
 --      retour contre-passe, il n'approuve rien).
 --   7. `piece_retourner` retourne à toute étape : une pièce prise en charge
 --      se retourne avec la contre-passation de son écriture.
---   8. Dans un dossier en mandat suivi par un cabinet engagé, seul le cabinet
---      (expert ou collaborateur) inscrit l'écriture d'une pièce ; le dossier
---      autonome et le dossier sans cabinet gardent la main (`socle_ecriture_book`).
+--   8. Dans un dossier en mandat suivi par un cabinet engagé
+--      (`app.livres_tenus_par_le_cabinet`), seul le cabinet inscrit
+--      l'écriture d'une pièce, la revoit ou contre-passe une écriture ; le
+--      dossier autonome et le dossier sans cabinet gardent la main. Le
+--      collaborateur n'agit que sur les dossiers qui lui sont affectés.
 --   9. La relance « confirmez » disparaît : `piece_demander_confirmation`
 --      n'a plus d'objet. Les notifications déjà posées restent (R7).
 
@@ -45,7 +47,9 @@ begin;
 -- --- 0. Qui supervise ce dossier ------------------------------------------------------------------
 --
 -- La règle était recopiée dans trois fonctions : l'expert ou le collaborateur
--- d'un cabinet engagé. Elle s'écrit une fois.
+-- d'un cabinet engagé. Elle s'écrit une fois — et le collaborateur n'agit que
+-- sur les dossiers qui lui sont AFFECTÉS, la règle que la file applique déjà
+-- (`app.mandats_visibles`) : ce qu'il ne voit pas, il ne le valide pas.
 
 create or replace function app.supervise_le_dossier(p_tenant uuid)
 returns boolean
@@ -59,11 +63,55 @@ as $$
       from identity.engagements e
       join identity.memberships m on m.tenant_id = e.cabinet_org_id
      where e.pme_org_id = p_tenant and e.status = 'actif'
-       and m.user_id = auth.uid() and m.role in ('expert', 'collaborateur'))
+       and m.user_id = auth.uid()
+       and (m.role = 'expert'
+            or (m.role = 'collaborateur'
+                and exists (select 1 from collab.assignments a
+                             where a.cabinet_tenant_id = e.cabinet_org_id
+                               and a.client_tenant_id = p_tenant
+                               and a.collaborator_id = auth.uid()
+                               and a.active))))
 $$;
 
 revoke all on function app.supervise_le_dossier(uuid) from public, anon;
 grant execute on function app.supervise_le_dossier(uuid) to authenticated;
+
+-- Les livres de ce dossier sont-ils tenus par un cabinet ? En mandat, avec un
+-- engagement actif : l'écriture d'une pièce, sa revue et toute
+-- contre-passation sont alors l'acte du cabinet, jamais de la PME — sinon le
+-- journal du jour et l'export du cabinet ne disent plus ce qui est inscrit.
+create or replace function app.livres_tenus_par_le_cabinet(p_tenant uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from identity.organizations o
+                  where o.id = p_tenant and o.validation_mode = 'mandate')
+     and exists (select 1 from identity.engagements g
+                  where g.pme_org_id = p_tenant and g.status = 'actif')
+$$;
+
+revoke all on function app.livres_tenus_par_le_cabinet(uuid) from public, anon;
+grant execute on function app.livres_tenus_par_le_cabinet(uuid) to authenticated;
+
+-- Le geste de supervision sur ce dossier est-il permis ? Le cabinet qui le
+-- tient, toujours ; la société elle-même seulement quand elle tient ses livres.
+create or replace function app.peut_superviser(p_tenant uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select app.supervise_le_dossier(p_tenant)
+      or (not app.livres_tenus_par_le_cabinet(p_tenant)
+          and p_tenant in (select app.member_orgs()))
+$$;
+
+revoke all on function app.peut_superviser(uuid) from public, anon;
+grant execute on function app.peut_superviser(uuid) to authenticated;
 
 -- --- 1. Une pièce ouverte par le cabinet est « Vue » ----------------------------------------------
 
@@ -76,8 +124,15 @@ create table if not exists capture.vues (
   par            uuid not null,
   -- Le nom au moment de l'ouverture : un compte renommé ne réécrit pas l'histoire.
   par_nom        text,
+  -- L'envoi (ou la correction du client) que cette ouverture a vu : une
+  -- « Vue » par envoi et par cabinet, la première. Deux ouvertures
+  -- simultanées n'en écrivent qu'une (index unique, `on conflict do nothing`).
+  depuis         timestamptz not null,
   vue_le         timestamptz not null default now()
 );
+
+create unique index if not exists vues_une_par_envoi_idx
+  on capture.vues (tenant_id, piece_id, cabinet_org_id, depuis);
 
 create index if not exists vues_tenant_piece_idx on capture.vues (tenant_id, piece_id, vue_le desc);
 create index if not exists vues_piece_idx on capture.vues (piece_id, vue_le desc);
@@ -87,6 +142,13 @@ select app.enable_tenant_rls('capture', 'vues', false, true);
 
 -- Personne n'écrit ce registre à la main : `piece_voir` est sa seule porte.
 revoke insert, update, delete on table capture.vues from authenticated;
+
+-- Il se lit au cabinet. Le client lit « Vue par {cabinet} » dans
+-- `app.suivi_de_la_piece` — le nom du cabinet, jamais celui du comptable.
+drop policy if exists capture_vues_sel on capture.vues;
+create policy capture_vues_sel on capture.vues
+  for select to authenticated
+  using (cabinet_org_id in (select app.member_orgs()) or (select app.is_platform()));
 
 -- Un fait ne se modifie pas (R7) ; il part seulement avec sa pièce, quand
 -- `capture_piece_supprimer` l'efface (le premier passage du garde).
@@ -234,45 +296,53 @@ declare
   v_tenant  uuid;
   v_vis     app.vis_t;
   v_cabinet uuid;
+  v_archivee timestamptz;
   v_depuis  timestamptz;
   v_le      timestamptz;
 begin
-  select tenant_id, vis into v_tenant, v_vis from capture.pieces where id = p_piece;
+  select tenant_id, vis, archivee_le into v_tenant, v_vis, v_archivee
+    from capture.pieces where id = p_piece;
   if v_tenant is null or v_vis <> 'partage'::app.vis_t then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
-  -- Tout membre du cabinet engagé : l'assistant qui ouvre la pièce l'a vue.
+  -- Tout membre du cabinet engagé à qui le dossier est visible (l'assistant
+  -- qui ouvre la pièce l'a vue ; le collaborateur, sur ses dossiers affectés).
   select e.cabinet_org_id into v_cabinet
     from identity.engagements e
     join identity.memberships m on m.tenant_id = e.cabinet_org_id
    where e.pme_org_id = v_tenant and e.status = 'actif' and m.user_id = auth.uid()
+     and v_tenant in (select app.mandats_visibles(e.cabinet_org_id))
    order by e.starts_on desc nulls last
    limit 1;
   if v_cabinet is null then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   -- Une version précédente se lit, elle ne se « voit » pas : la nouvelle
-  -- photo n'a pas été ouverte.
-  if exists (select 1 from capture.remplacements r where r.piece_id = p_piece) then
+  -- photo n'a pas été ouverte. Une pièce retirée par le client non plus :
+  -- elle n'attend plus rien.
+  if v_archivee is not null
+     or exists (select 1 from capture.remplacements r where r.piece_id = p_piece) then
     return jsonb_build_object('piece_id', p_piece, 'vue_le', null, 'deja', false);
   end if;
 
   -- Idempotent par envoi : une seule « Vue » depuis le dernier envoi ou la
-  -- dernière correction du client. Rouvrir n'écrit rien.
-  v_depuis := greatest(app.dernier_envoi(p_piece), app.corrigee_par_le_client(p_piece));
-  select max(v.vue_le) into v_le
-    from capture.vues v
-   where v.piece_id = p_piece and v.cabinet_org_id = v_cabinet
-     and (v_depuis is null or v.vue_le >= v_depuis);
+  -- dernière correction du client — la première. Rouvrir n'écrit rien, deux
+  -- ouvertures simultanées non plus (l'index unique tranche).
+  v_depuis := coalesce(greatest(app.dernier_envoi(p_piece), app.corrigee_par_le_client(p_piece)),
+                       '-infinity'::timestamptz);
+  insert into capture.vues (tenant_id, piece_id, cabinet_org_id, par, par_nom, depuis)
+  values (v_tenant, p_piece, v_cabinet, auth.uid(), app.nom_au_moment(auth.uid()), v_depuis)
+  on conflict (tenant_id, piece_id, cabinet_org_id, depuis) do nothing
+  returning vue_le into v_le;
   if v_le is not null then
-    return jsonb_build_object('piece_id', p_piece, 'vue_le', v_le, 'deja', true);
+    return jsonb_build_object('piece_id', p_piece, 'vue_le', v_le, 'deja', false);
   end if;
 
-  insert into capture.vues (tenant_id, piece_id, cabinet_org_id, par, par_nom)
-  values (v_tenant, p_piece, v_cabinet, auth.uid(), app.nom_au_moment(auth.uid()))
-  returning vue_le into v_le;
-
-  return jsonb_build_object('piece_id', p_piece, 'vue_le', v_le, 'deja', false);
+  select v.vue_le into v_le
+    from capture.vues v
+   where v.tenant_id = v_tenant and v.piece_id = p_piece
+     and v.cabinet_org_id = v_cabinet and v.depuis = v_depuis;
+  return jsonb_build_object('piece_id', p_piece, 'vue_le', v_le, 'deja', true);
 end
 $$;
 
@@ -291,7 +361,8 @@ stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(
+  -- Rien pour qui ne lit pas la pièce : la fonction voit sous la RLS, pas à côté.
+  select case when app.piece_lisible(p_piece) then coalesce(
     (select a.pack_version_id from capture.analyses a
       where a.piece_id = p_piece order by a.created_at desc limit 1),
     (select jp.id
@@ -299,7 +370,7 @@ as $$
        join identity.organizations o on o.jurisdiction = jp.jurisdiction
        join capture.pieces p on p.tenant_id = o.id
       where p.id = p_piece and jp.effective_from <= current_date
-      order by jp.effective_from desc limit 1))
+      order by jp.effective_from desc limit 1)) end
 $$;
 
 revoke all on function app.pack_de_la_piece(uuid) from public, anon;
@@ -431,10 +502,7 @@ begin
   -- dossier sans cabinet n'a personne d'autre pour les tenir : ces deux cas
   -- restent ouverts. Le règlement, lui, reste un geste de la PME (`pme.regler`).
   if v_nature = 'piece'
-     and exists (select 1 from identity.organizations o
-                  where o.id = v_dossier and o.validation_mode = 'mandate')
-     and exists (select 1 from identity.engagements g
-                  where g.pme_org_id = v_dossier and g.status = 'actif')
+     and app.livres_tenus_par_le_cabinet(v_dossier)
      and not app.supervise_le_dossier(v_dossier) then
     raise exception 'refus.inscription.reservee_au_cabinet'
       using errcode = '42501', hint = 'inscription.cabinet';
@@ -526,7 +594,8 @@ begin
   if v_tenant is null then
     raise exception 'ecriture introuvable ou non autorisee' using errcode = '42501';
   end if;
-  if v_tenant not in (select app.member_orgs()) and not app.supervise_le_dossier(v_tenant) then
+  -- Défaire une écriture d'un dossier tenu par un cabinet est l'acte du cabinet.
+  if not app.peut_superviser(v_tenant) then
     raise exception 'La supervision revient à l''expert ou au collaborateur du cabinet.'
       using errcode = '42501', hint = 'supervision.role';
   end if;
@@ -596,8 +665,10 @@ begin
   end if;
   -- La supervision est le second regard : elle revient à l'expert ou au
   -- collaborateur du cabinet engagé, jamais à l'assistant (ANO-CAB-006). Un
-  -- membre de la société (dossier autonome) garde la main sur son dossier.
-  if v_tenant not in (select app.member_orgs()) and not app.supervise_le_dossier(v_tenant) then
+  -- membre de la société la garde seulement quand elle tient ses livres
+  -- (dossier autonome, ou sans cabinet) : en mandat, elle ne valide ni ne
+  -- contre-passe l'écriture du cabinet.
+  if not app.peut_superviser(v_tenant) then
     raise exception 'La supervision revient à l''expert ou au collaborateur du cabinet.'
       using errcode = '42501', hint = 'supervision.role';
   end if;
@@ -795,6 +866,17 @@ begin
     raise exception 'ce motif exige une note' using errcode = 'check_violation';
   end if;
 
+  -- Un règlement inscrit engage la pièce (lot 1, #127) : il s'annule d'abord,
+  -- la pièce se retourne ensuite. Retourner ne défait pas un paiement réel —
+  -- et cela vaut AVANT la prise en charge comme après : le contrôle précède
+  -- la contre-passation de l'écriture de la facture.
+  if exists (select 1 from socle.ecritures e
+              where e.piece_id in (select app.versions_de_la_piece(p_piece))
+                and e.nature <> 'piece'
+                and app.ecriture_vivante(e.id)) then
+    raise exception 'refus.retour.inscrite' using errcode = 'check_violation';
+  end if;
+
   -- Prise en charge : son écriture se contre-passe au journal du jour, puis
   -- la même carte de retour (spec §3). La revue fait les deux.
   select e.id into v_vivante
@@ -807,13 +889,6 @@ begin
     v_rev := public.socle_ecriture_review(v_vivante, 'retourne', p_motif, p_note);
     return jsonb_build_object('piece_id', p_piece, 'motif_id', p_motif,
                               'contre_passation', v_rev);
-  end if;
-  -- Un règlement inscrit engage la pièce (lot 1, #127) : il s'annule d'abord,
-  -- la pièce se retourne ensuite. Retourner ne défait pas un paiement réel.
-  if exists (select 1 from socle.ecritures e
-              where e.piece_id in (select app.versions_de_la_piece(p_piece))
-                and app.ecriture_vivante(e.id)) then
-    raise exception 'refus.retour.inscrite' using errcode = 'check_violation';
   end if;
 
   v_pack := app.pack_de_la_piece(p_piece);
@@ -861,5 +936,55 @@ create or replace view public.prises_en_charge_v with (security_invoker = true) 
     from socle.prises_en_charge;
 
 grant select on public.prises_en_charge_v to authenticated;
+
+-- --- 12. Toute contre-passation d'une écriture du journal y entre -------------------------------
+--
+-- Repris de `20261029230000`, plus un cas : la contre-passation d'une écriture
+-- qu'un cabinet a prise en charge entre à SON journal, quel que soit l'auteur
+-- (un dossier autonome qui défait l'écriture de son cabinet, une reprise).
+-- Sans elle, le journal du jour et l'export montreraient l'écriture et non
+-- son annulation.
+
+create or replace function app.geler_la_prise_en_charge()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_par uuid;
+  v_le  timestamptz;
+begin
+  if tg_op = 'INSERT' then
+    if new.status <> 'booked' then return null; end if;
+    v_par := new.booked_by;
+    v_le := new.booked_at;
+  elsif new.status = 'booked' and old.status is distinct from 'booked' then
+    v_par := new.booked_by;
+    v_le := new.booked_at;
+  elsif new.review_outcome = 'valide' and new.reviewed_at is distinct from old.reviewed_at then
+    v_par := new.reviewed_by;
+    v_le := new.reviewed_at;
+  else
+    return null;
+  end if;
+
+  insert into socle.prises_en_charge (tenant_id, ecriture_id, client_tenant_id, par, par_nom, prise_le)
+  select e.cabinet_org_id, new.id, new.tenant_id, v_par, app.nom_au_moment(v_par), v_le
+    from identity.engagements e
+    join identity.memberships m on m.tenant_id = e.cabinet_org_id and m.user_id = v_par
+   where e.pme_org_id = new.tenant_id and e.status = 'actif'
+  on conflict (tenant_id, ecriture_id) do nothing;
+
+  if new.reverses_id is not null and new.status = 'booked' then
+    insert into socle.prises_en_charge (tenant_id, ecriture_id, client_tenant_id, par, par_nom, prise_le)
+    select o.tenant_id, new.id, new.tenant_id, v_par, app.nom_au_moment(v_par), v_le
+      from socle.prises_en_charge o
+     where o.ecriture_id = new.reverses_id
+    on conflict (tenant_id, ecriture_id) do nothing;
+  end if;
+  return null;
+end $$;
+revoke all on function app.geler_la_prise_en_charge() from public, anon, authenticated;
 
 commit;

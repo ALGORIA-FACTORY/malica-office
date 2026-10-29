@@ -1318,6 +1318,8 @@ export type PropositionDePiece = (
       verdictCode: CodeVerdict | null;
       packVersionId: string;
       proposition: ProposalResult;
+      /** Ce que l'écran montre, en une empreinte : VALIDER la renvoie, le serveur n'inscrit qu'elle. */
+      empreinte?: string;
     }
   | {
       ok: false;
@@ -1349,9 +1351,11 @@ export interface OfficeRepository {
   /**
    * VALIDER : le cabinet prend en charge l'écriture que le Socle propose — il
    * établit le type lu, propose et inscrit, en une transaction. Le client ne
-   * confirme rien. Rend l'identifiant de l'écriture.
+   * confirme rien. Rend l'identifiant de l'écriture. `empreinte` : celle de la
+   * proposition affichée (`propositionDePiece`) ; si elle a changé, refus
+   * `refus.proposition.changee`. `null` pour une écriture déjà inscrite.
    */
-  valider(pieceId: string): Promise<string>;
+  valider(pieceId: string, empreinte: string | null): Promise<string>;
   /**
    * FORCER : le comptable modifie l'écriture, ou la saisit quand le Socle ne
    * propose rien. La vivante est contre-passée, la nouvelle inscrite et

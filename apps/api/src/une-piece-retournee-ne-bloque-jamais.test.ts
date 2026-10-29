@@ -938,8 +938,13 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
 
   /* ============ une écriture vivante se cherche sur toute la chaîne (revue Codex de #127) */
 
-  /** Un règlement saisi sur l'ancienne photo, inscrit après la reprise : l'écriture vit sur A. */
-  const reglementHeriteInscrit = async () => {
+  /**
+   * Un règlement saisi sur l'ancienne photo, inscrit après la reprise : l'écriture vit sur A.
+   * `facture` : la facture elle-même est prise en charge d'abord (forcée par le
+   * cabinet) — le cas que la revue de #134 a trouvé ouvert : le retour passait
+   * par la contre-passation de la facture et ne voyait plus le règlement.
+   */
+  const reglementHeriteInscrit = async ({ facture = false }: { facture?: boolean } = {}) => {
     const ancienne = await transmiseLue();
     const paiement = await payer(ancienne, 10000);
     const nouvelle = await remplacer(ancienne);
@@ -948,9 +953,36 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await sousIdentiteDuServeur(expert.id, (db) =>
       db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [nouvelle]),
     );
+    if (facture)
+      await cabinetFait("office.forcer", {
+        pieceId: nouvelle,
+        journal: "ACH",
+        date: "2026-10-02",
+        libelle: "Facture prise en charge",
+        lignes: [
+          { account_code: "601", libelle: "Achat", debit: "10", credit: "0", tax_code: null },
+          { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "10", tax_code: null },
+        ],
+      });
     const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
     return { ancienne, nouvelle, ecriture };
   };
+
+  it("une facture prise en charge dont le règlement est inscrit ne se retourne pas", async () => {
+    const { nouvelle, ecriture } = await reglementHeriteInscrit({ facture: true });
+    await assert.rejects(
+      sousIdentiteDuServeur(expert.id, (db) =>
+        supervision.retourner(db, { pieceId: nouvelle, motifId: motifs["montant_incoherent"]! }),
+      ),
+      /refus\.retour\.inscrite/,
+    );
+    const { rows } = await admin.query<{ vivante: boolean }>(
+      `select app.ecriture_vivante($1) as vivante`,
+      [ecriture],
+    );
+    assert.equal(rows[0]?.vivante, true, "le règlement reste inscrit");
+    assert.notEqual((await etat(nouvelle))?.status, "retournee");
+  });
 
   it("une photo reprise dont le règlement hérité est inscrit ne se retourne, ne se remplace ni ne se supprime", async () => {
     const { nouvelle, ecriture } = await reglementHeriteInscrit();
