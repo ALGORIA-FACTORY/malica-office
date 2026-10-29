@@ -645,4 +645,106 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
       );
     }
   });
+
+  /* ============ revue Codex de #127 : la chaîne des versions, partout (29 octobre 2026) */
+
+  /** Le TTC tranché par l'analyse de la dernière lecture d'une pièce. */
+  const ttcTranche = async (pieceId: string, ttcMineur: number) => {
+    await admin.query(
+      `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                     normalisation, controles, verdict, motifs)
+       select $1, $2, x.id, $3, jsonb_build_object('montants', jsonb_build_object('ttc', $4::text)),
+              '["essai"]', 'à comptabiliser', '["essai"]'
+         from capture.extractions x where x.piece_id = $2
+        order by x.created_at desc limit 1`,
+      [pme, pieceId, pack, ttcMineur],
+    );
+  };
+  const payer = (pieceId: string, montantMineur: number | null, extra = {}) =>
+    pmeFait("capture.enregistrerPaiement", {
+      pieceId,
+      packId: pack,
+      moyenCode: "especes",
+      montantMineur,
+      devise: "TND",
+      payeLe: "2026-10-03",
+      ...extra,
+    }) as Promise<string>;
+
+  it("un règlement sur la nouvelle photo compte ceux saisis sur l'ancienne", async () => {
+    const ancienne = await retournee("avant écriture");
+    await ttcTranche(ancienne, 100000);
+    await payer(ancienne, 60000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 100000);
+    // Un montant explicite ne dépasse pas le total cumulé des versions.
+    await assert.rejects(payer(nouvelle, 50000), /paiement\.depasse_le_total/);
+    // « Tout payé » règle le reste : 40, pas 100.
+    const solde = await payer(nouvelle, null);
+    const { rows } = await admin.query<{ m: string }>(
+      `select montant_mineur::text as m from capture.paiements where id = $1`,
+      [solde],
+    );
+    assert.equal(rows[0]?.m, "40000");
+  });
+
+  it("un reçu produit depuis la nouvelle photo atteste les règlements de l'ancienne", async () => {
+    const ancienne = await retournee("avant écriture");
+    const paiement = await payer(ancienne, 30000);
+    const nouvelle = await remplacer(ancienne);
+    const { id: recu } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-recu-chaine-${nouvelle}`,
+      contentType: "application/pdf",
+      documentKind: "recu_de_paiement",
+      sourcePieceId: nouvelle,
+      paiementsAttestes: [paiement],
+    })) as { id: string };
+    const { rows } = await admin.query(
+      `select 1 from capture.recu_paiements where piece_id = $1 and paiement_id = $2`,
+      [recu, paiement],
+    );
+    assert.equal(rows.length, 1, "le reçu sait ce qu'il atteste");
+  });
+
+  it("garder la nouvelle photo emporte l'ancienne et ses reçus hors du cabinet", async () => {
+    const ancienne = await retournee("avant écriture");
+    const { id: recu } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-recu-garde-${ancienne}`,
+      contentType: "application/pdf",
+      documentKind: "recu_de_paiement",
+      sourcePieceId: ancienne,
+    })) as { id: string };
+    const nouvelle = await remplacer(ancienne);
+    await pmeFait("collab.garderPiece", nouvelle);
+    assert.equal((await etat(recu))?.vis, "entite", "le reçu suit sa facture");
+    assert.equal((await etat(ancienne))?.vis, "entite", "la version précédente aussi");
+    await assert.rejects(cabinetFait("capture.dossier", recu), /piece\.not_found/);
+    await assert.rejects(cabinetFait("capture.dossier", ancienne), /piece\.not_found/);
+  });
+
+  it("le justificatif d'un règlement de l'ancienne photo mène à la nouvelle", async () => {
+    const ancienne = await retournee("avant écriture");
+    const { id: talon } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "photo",
+      vis: "partage",
+      idempotencyKey: `${marque}-talon-${ancienne}`,
+      contentType: "image/jpeg",
+      documentKind: "justificatif_paiement",
+      sourcePieceId: ancienne,
+    })) as { id: string };
+    await payer(ancienne, 20000, { justificatifPieceId: talon });
+    const nouvelle = await remplacer(ancienne);
+    const fiche = (await pmeFait("capture.pieceQuiAccompagne", talon, "fr")) as {
+      mere: { id: string } | null;
+    };
+    assert.equal(fiche.mere?.id, nouvelle);
+  });
 });
