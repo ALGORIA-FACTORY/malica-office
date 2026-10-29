@@ -2,45 +2,41 @@ import { describe, expect, it } from "vitest";
 
 import { MESSAGES, LOCALES } from "@malica/socle/messages";
 
+import { MOT_CABINET, MOT_PME, MOT_PME_QUI } from "@/lib/statut";
+
 /**
  * ============================================== LE DÉFAUT QUE CECI VERROUILLE
  *
- * La base autorise sept statuts de pièce ; le front n'en traduisait que six.
- * `confirmee` n'avait aucun libellé. Une pièce qui l'aurait atteint aurait
- * affiché sa CLÉ à l'écran — « pme.status.confirmee » —, c'est-à-dire du
- * jargon technique sous les yeux d'un dirigeant de PME.
+ * Un statut sans libellé affiche sa CLÉ à l'écran — « statut.pme.vue » —,
+ * c'est-à-dire du jargon technique sous les yeux d'un dirigeant de PME. C'est
+ * arrivé une fois (`confirmee`, jamais traduit) ; un statut rare échappe à la
+ * relecture, pas à une épreuve.
  *
- * Personne ne l'avait vu parce que ce statut est rare. C'est précisément le
- * genre d'écart qu'une épreuve attrape et qu'une relecture manque.
- *
- * La liste ci-dessous est celle de la contrainte `check` de `capture.pieces`.
- * Si un statut y est ajouté un jour, cette épreuve tombe tant qu'il n'a pas
- * ses trois traductions.
+ * Depuis « Malica sans blocage » (28 octobre 2026), l'écran ne montre plus le
+ * statut brut de la base mais le vocabulaire unique des deux rives, dérivé au
+ * Socle. Les tables `MOT_*` sont totales par leur type ; cette épreuve vérifie
+ * que chaque mot qu'elles désignent existe bien dans les trois langues.
  */
-const STATUTS_DE_LA_BASE = [
-  "capturee",
-  "lue",
-  "proposee",
-  "confirmee",
-  "comptabilisee",
-  "supervisee",
-  "retournee",
-] as const;
+const CLES = [
+  ...Object.values(MOT_PME),
+  ...Object.values(MOT_PME_QUI),
+  ...Object.values(MOT_CABINET),
+] as string[];
 
-describe("les statuts de pièce, vus par l'écran", () => {
+describe("les statuts d'envoi, vus par l'écran", () => {
   for (const langue of LOCALES) {
     it(`chaque statut a son libellé en ${langue}`, () => {
       const catalogue = MESSAGES[langue] as Record<string, string>;
-      const manquants = STATUTS_DE_LA_BASE.filter((s) => !catalogue[`pme.status.${s}`]);
+      const manquants = CLES.filter((cle) => !catalogue[cle]);
       expect(manquants, `statuts sans libellé en ${langue}`).toEqual([]);
     });
 
     it(`aucun libellé de statut ne laisse passer sa clé en ${langue}`, () => {
       const catalogue = MESSAGES[langue] as Record<string, string>;
-      for (const s of STATUTS_DE_LA_BASE) {
-        const libelle = catalogue[`pme.status.${s}`]!;
-        expect(libelle.startsWith("pme."), `${s} : la clé sert de libellé`).toBe(false);
-        expect(libelle.trim().length, `${s} : libellé vide`).toBeGreaterThan(0);
+      for (const cle of CLES) {
+        const libelle = catalogue[cle]!;
+        expect(libelle.startsWith("statut."), `${cle} : la clé sert de libellé`).toBe(false);
+        expect(libelle.trim().length, `${cle} : libellé vide`).toBeGreaterThan(0);
       }
     });
   }

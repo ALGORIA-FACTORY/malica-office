@@ -5,7 +5,14 @@ import { useEffect } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
-import { attendLaPersonne, piecesALire, piecesEnEchec, raisonCourte } from "@/lib/lecture";
+import {
+  attendLaPersonne,
+  piecesALire,
+  piecesEnEchec,
+  raisonCourte,
+  statutDeLaPieceLue,
+} from "@/lib/lecture";
+import { MOT_PME } from "@/lib/statut";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
@@ -355,8 +362,8 @@ function PmeHome() {
       new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
     );
 
-  // Ce qui attend la personne : ce que Malica a lu (à vérifier) et ce que le
-  // cabinet a renvoyé — les deux comptes de la carte de Malica, en pages.
+  // Ce qui attend la personne : ce que Malica a lu et qui reste à envoyer, et
+  // ce que le cabinet a renvoyé — les deux comptes de la carte, en pages.
   const lesLues = (lues.data ?? []).filter((p) => p.vis !== "personnel");
   /*
    * À LIRE — ce qui a été pris et attend encore une décision : ni lu, ni gardé
@@ -542,7 +549,7 @@ function PmeHome() {
           <>
             <div className="sec">
               <h2>{t("pme.home.prepare")}</h2>
-              <Link to="/pme/list" search={{ etat: "a_verifier" }}>
+              <Link to="/pme/list" search={{ etat: "a_vous" }}>
                 {t("common.toutVoir")} <Chevron className="g fl" />
               </Link>
             </div>
@@ -556,11 +563,10 @@ function PmeHome() {
                 >
                   <span className="pg">
                     <ApercuDePiece pieceId={p.id} />
-                    <span className={p.status === "retournee" ? "etq cab" : "etq"}>
+                    {/* Le mot du statut, ambre : à envoyer, ou revenue du cabinet. */}
+                    <span className="etq">
                       <i />
-                      {p.status === "retournee"
-                        ? t("pme.home.etat.retour")
-                        : t("pme.charges.answer.verifier")}
+                      {t(MOT_PME[statutDeLaPieceLue(p)])}
                     </span>
                   </span>
                   <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>

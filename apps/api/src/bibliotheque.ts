@@ -6,7 +6,9 @@ import type {
   ControlesComptables,
 } from "@malica/socle/ports/repositories";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
+import { statutCabinet } from "@malica/socle/statut-d-envoi";
 import type { Requete } from "./db.ts";
+import { COLONNES_DU_SUIVI, versSuivi } from "./depots/suivi.ts";
 import { lireParametres } from "./scan/analyse.ts";
 
 const Id = z.string().uuid();
@@ -115,6 +117,28 @@ async function avecMontants(db: Requete, lignes: LigneDocument[]): Promise<Docum
   return documents;
 }
 
+/**
+ * Le mot du cabinet pour chaque document (Reçue · Vue · Corrigée · Retournée ·
+ * Validée · Forcée), dérivé au Socle des mêmes faits que la file.
+ */
+async function avecStatuts(
+  db: Requete,
+  documents: DocumentComptable[],
+): Promise<DocumentComptable[]> {
+  if (documents.length === 0) return documents;
+  const { rows } = await db.query<Record<string, unknown>>(
+    `select p.id, ${COLONNES_DU_SUIVI}
+       from unnest($1::uuid[]) as p(id)
+       cross join lateral app.suivi_de_la_piece(p.id) s`,
+    [documents.map((d) => d.id)],
+  );
+  const suivis = new Map(rows.map((r) => [r["id"] as string, versSuivi(r)]));
+  return documents.map((d) => ({
+    ...d,
+    statut: statutCabinet({ status: d.status, suivi: suivis.get(d.id) ?? null }),
+  }));
+}
+
 /** Un compte membre des deux espaces ne doit pas restituer ses pièces privées. */
 async function exigerMandat(db: Requete, cabinetId: string, clientId: string): Promise<void> {
   Id.parse(cabinetId);
@@ -153,7 +177,7 @@ export async function documents(
       new Error("Ce dossier est volumineux : choisissez un mois pour le consulter."),
       { code: "22023" },
     );
-  return avecMontants(db, rows);
+  return avecStatuts(db, await avecMontants(db, rows));
 }
 
 export async function documentsLies(

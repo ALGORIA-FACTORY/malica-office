@@ -25,9 +25,7 @@ describe("controlerLaSaisie", () => {
 
   it("dit le défaut, dans l'ordre", () => {
     expect(controlerLaSaisie([ligne("601", "1", "")], 3).defaut).toBe("lignes");
-    expect(controlerLaSaisie([ligne("", "1", ""), ligne("401", "", "1")], 3).defaut).toBe(
-      "compte",
-    );
+    expect(controlerLaSaisie([ligne("", "1", ""), ligne("401", "", "1")], 3).defaut).toBe("compte");
     expect(controlerLaSaisie([ligne("601", "1,2,3", ""), ligne("401", "", "1")], 3).defaut).toBe(
       "montant",
     );
@@ -44,9 +42,9 @@ describe("controlerLaSaisie", () => {
   });
 
   it("refuse plus de décimales que la devise n'en porte", () => {
-    expect(controlerLaSaisie([ligne("601", "1.005", ""), ligne("401", "", "1.005")], 2).defaut).toBe(
-      "montant",
-    );
+    expect(
+      controlerLaSaisie([ligne("601", "1.005", ""), ligne("401", "", "1.005")], 2).defaut,
+    ).toBe("montant");
     expect(controlerLaSaisie([ligne("601", "1.050", ""), ligne("401", "", "1.05")], 2).defaut).toBe(
       null,
     );

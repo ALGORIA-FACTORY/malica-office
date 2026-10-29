@@ -160,7 +160,7 @@ function CabinetClients() {
   };
 
   /* ---- les chiffres */
-  const attente = rows.reduce((s, c) => s + c.counts.comptabilisee, 0);
+  const attente = rows.reduce((s, c) => s + c.aTraiter, 0);
   const sans = rows.filter((c) => !collabDe.has(c.tenantId)).length;
   const retournees = rows.reduce((s, c) => s + c.counts.retournee, 0);
   const moi = compte.data?.email ?? null;
@@ -168,7 +168,7 @@ function CabinetClients() {
   /* ---- les filtres */
   const [filtre, setFiltre] = useState<Filtre>("tous");
   const visibles = rows.filter((c) => {
-    if (filtre === "attente") return c.counts.comptabilisee > 0;
+    if (filtre === "attente") return c.aTraiter > 0;
     if (filtre === "sans") return !collabDe.has(c.tenantId);
     if (filtre === "miens") return moi !== null && collabDe.get(c.tenantId) === moi;
     return true;
@@ -177,7 +177,7 @@ function CabinetClients() {
     f === "tous"
       ? rows.length
       : f === "attente"
-        ? rows.filter((c) => c.counts.comptabilisee > 0).length
+        ? rows.filter((c) => c.aTraiter > 0).length
         : f === "sans"
           ? sans
           : rows.filter((c) => moi !== null && collabDe.get(c.tenantId) === moi).length;
@@ -416,10 +416,8 @@ function LigneClient({
         )}
       </InkCell>
       <InkCell numeric>
-        <span
-          className={cn(client.counts.comptabilisee ? "text-marigold" : "text-muted-foreground")}
-        >
-          {client.counts.comptabilisee}
+        <span className={cn(client.aTraiter ? "text-marigold" : "text-muted-foreground")}>
+          {client.aTraiter}
         </span>
       </InkCell>
       <InkCell numeric>{mois}</InkCell>

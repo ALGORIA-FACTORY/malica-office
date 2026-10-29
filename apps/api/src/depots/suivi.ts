@@ -18,12 +18,7 @@ const instant = (v: unknown): string | null =>
 
 /** `null` quand la base ne sait rien du chemin de la pièce : rien à suivre. */
 export function versSuivi(r: Record<string, unknown>): SuiviDEnvoi | null {
-  const faits = [
-    "suivi_envoyee_le",
-    "suivi_vue_le",
-    "suivi_corrigee_le",
-    "suivi_prise",
-  ] as const;
+  const faits = ["suivi_envoyee_le", "suivi_vue_le", "suivi_corrigee_le", "suivi_prise"] as const;
   if (faits.every((f) => r[f] == null)) return null;
   return {
     envoyeeLe: instant(r["suivi_envoyee_le"]),

@@ -32,6 +32,7 @@ import type {
   PieceQuiAccompagne,
   RetourDuCabinet,
 } from "@malica/socle/ports/repositories";
+import type { SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 import { transport } from "@/lib/transport";
 import { ErreurApi } from "@/lib/transport/erreurs";
 import { appeler } from "./rpc";
@@ -189,6 +190,7 @@ export function creerCaptureHttp(): CaptureRepository {
         extraction: Extraction | null;
         precisions?: Record<string, string>;
         lectureRefusee?: { motif: string; le: string } | null;
+        suivi?: SuiviDEnvoi | null;
         citations: Citation[];
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
@@ -206,6 +208,7 @@ export function creerCaptureHttp(): CaptureRepository {
         extraction: brut.extraction,
         precisions: brut.precisions ?? {},
         lectureRefusee: brut.lectureRefusee ?? null,
+        suivi: brut.suivi ?? null,
         citations: brut.citations,
         tokens: brut.tokens,
       };

@@ -61,8 +61,3 @@ export function sortiesDuRetour(geste: GesteDeRetour, fait: boolean): SortieDuRe
     : [duMotif, "renvoyer", "reprendre_photo", "repondre", "garder", "supprimer"];
   return [...new Set(ordre)];
 }
-
-/** La pièce attend-elle une décision du cabinet sans le « Oui » du client ? */
-export function lueSansConfirmation(status: string, inscrite: boolean): boolean {
-  return !inscrite && (status === "lue" || status === "proposee");
-}

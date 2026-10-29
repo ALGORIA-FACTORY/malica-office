@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { joursDAttente, toneForStatus } from "../file-cabinet";
+import { feuDuStatut, joursDAttente } from "../file-cabinet";
 
 describe("joursDAttente", () => {
   const maintenant = Date.parse("2026-09-04T10:00:00Z");
@@ -17,11 +17,12 @@ describe("joursDAttente", () => {
   });
 });
 
-describe("toneForStatus", () => {
-  it("colore ce qui attend, ce qui est réglé, ce qui est retourné", () => {
-    expect(toneForStatus("comptabilisee")).toBe("warn");
-    expect(toneForStatus("supervisee")).toBe("ok");
-    expect(toneForStatus("retournee")).toBe("stop");
-    expect(toneForStatus("lue")).toBe("neutral");
+describe("feuDuStatut", () => {
+  it("ambre à vous, bleu chez le client, vert pris en charge", () => {
+    expect(feuDuStatut("recue")).toBe("warn");
+    expect(feuDuStatut("corrigee")).toBe("warn");
+    expect(feuDuStatut("retournee")).toBe("info");
+    expect(feuDuStatut("validee")).toBe("ok");
+    expect(feuDuStatut("forcee")).toBe("ok");
   });
 });

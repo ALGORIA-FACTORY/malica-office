@@ -6,7 +6,7 @@
  * Rien ici n'est un moteur : les seuils viennent des réglages du cabinet,
  * les montants du Socle ; on classe et l'on additionne, exactement.
  */
-import type { Ecriture, EcritureLine } from "@malica/socle/ports/repositories";
+import type { EcritureLine } from "@malica/socle/ports/repositories";
 
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 
@@ -57,8 +57,17 @@ export interface LigneDeMasse {
   credit: string;
 }
 
+/**
+ * Une écriture vue par l'écran des propositions : celle qui est inscrite, ou
+ * celle que le Socle propose — identifiée par sa pièce ou par elle-même.
+ */
+export interface EcritureDuLot {
+  id: string;
+  lines: readonly EcritureLine[];
+}
+
 /** L'agrégat exact des écritures retenues, compte par compte, dans l'ordre des comptes. */
-export function ecritureEnMasse(ecritures: readonly Ecriture[]): LigneDeMasse[] {
+export function ecritureEnMasse(ecritures: readonly EcritureDuLot[]): LigneDeMasse[] {
   const parCompte = new Map<
     string,
     { libelle: string; pieces: Set<string>; debits: string[]; credits: string[] }
@@ -98,7 +107,7 @@ export function estChargeOuProduit(compte: string): boolean {
 }
 
 /** Le compte de charge ou de produit d'une écriture, sinon le premier débit non nul. */
-export function compteDeCharge(e: Ecriture): EcritureLine | null {
+export function compteDeCharge(e: EcritureDuLot): EcritureLine | null {
   return (
     e.lines.find((l) => estChargeOuProduit(l.accountCode)) ??
     e.lines.find((l) => !/^0(\.0+)?$/.test(l.debit)) ??

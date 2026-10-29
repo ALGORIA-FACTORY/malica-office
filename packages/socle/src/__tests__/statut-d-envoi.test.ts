@@ -51,7 +51,11 @@ describe("le statut côté PME", () => {
     expect(statutPme({ vis: "partage", status: "retournee", suivi: suivi() })).toBe("retour");
     for (const prise of ["validee", "forcee"] as const)
       expect(
-        statutPme({ vis: "partage", status: "supervisee", suivi: suivi({ prise, priseLe: envoi }) }),
+        statutPme({
+          vis: "partage",
+          status: "supervisee",
+          suivi: suivi({ prise, priseLe: envoi }),
+        }),
       ).toBe("prise_en_charge");
   });
 
@@ -75,9 +79,7 @@ describe("le statut côté cabinet", () => {
     expect(statutCabinet({ status: "lue", suivi: corrigee })).toBe("corrigee");
     const revue = { ...corrigee, vueLe: "2026-10-29T10:00:00.000Z" };
     expect(statutCabinet({ status: "lue", suivi: revue })).toBe("vue");
-    expect(statutCabinet({ status: "lue", suivi: suivi({ corrigeeLe: envoi }) })).toBe(
-      "corrigee",
-    );
+    expect(statutCabinet({ status: "lue", suivi: suivi({ corrigeeLe: envoi }) })).toBe("corrigee");
   });
 
   it("renvoyée sans rien changer : reçue, pas corrigée", () => {

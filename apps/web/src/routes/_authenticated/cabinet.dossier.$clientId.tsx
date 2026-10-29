@@ -25,6 +25,7 @@ import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ChargeQuestionRow } from "@malica/socle/ports/repositories";
+import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
 import { QueueTable } from "./cabinet.index";
 
@@ -149,7 +150,7 @@ function CabinetClient() {
   useMalicaPanel(<MalicaNote>{t("cab.dos.panel")}</MalicaNote>, [locale]);
 
   const rows = queue.data ?? [];
-  const aSuperviser = rows.filter((r) => r.status === "comptabilisee");
+  const aSuperviser = rows.filter((r) => A_TRAITER.has(r.statut));
   const duMois = rows.filter((r) => r.createdAt.slice(0, 7) === periode).length;
   // Trente jours : la fenêtre de lecture du feu, telle que son libellé la dit — pas une règle du pack.
   const proches = useMemo(() => {
@@ -453,7 +454,7 @@ function CabinetClient() {
               {[
                 {
                   label: t("cab.dos.feux.superviser"),
-                  n: client.counts.comptabilisee,
+                  n: client.aTraiter,
                   tone: "warn",
                 },
                 { label: t("cab.dos.feux.retournees"), n: client.counts.retournee, tone: "stop" },

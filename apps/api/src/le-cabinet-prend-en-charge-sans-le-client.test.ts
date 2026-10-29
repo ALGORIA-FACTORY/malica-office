@@ -319,7 +319,13 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
         libelle: "Facture saisie",
         lignes: [
           { account_code: "601", libelle: "Achat", debit: "0.3", credit: "0", tax_code: null },
-          { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "0.2", tax_code: null },
+          {
+            account_code: "401",
+            libelle: "Fournisseur",
+            debit: "0",
+            credit: "0.2",
+            tax_code: null,
+          },
         ],
       }),
       /refus\.ecriture\.desequilibre/,

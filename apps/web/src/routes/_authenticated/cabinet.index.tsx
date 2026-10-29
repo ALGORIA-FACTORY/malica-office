@@ -38,7 +38,8 @@ import {
   SignalLight,
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
-import { joursDAttente, toneForStatus } from "@/lib/file-cabinet";
+import { feuDuStatut, joursDAttente } from "@/lib/file-cabinet";
+import { MOT_CABINET } from "@/lib/statut";
 import { initialesDe } from "@/lib/initiales";
 import { montant } from "@/lib/lisible";
 import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
@@ -46,6 +47,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { QueueItem } from "@malica/socle/ports/repositories";
+import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
 
 export const Route = createFileRoute("/_authenticated/cabinet/")({
   head: () => ({
@@ -67,7 +69,18 @@ export const Route = createFileRoute("/_authenticated/cabinet/")({
   component: CabinetToday,
 });
 
-type Filtre = "tout" | "comptabilisee" | "retournee" | "supervisee";
+/**
+ * Les filtres de la file, dans le vocabulaire du cabinet (« Malica sans
+ * blocage », §2) : à traiter (reçue, vue, corrigée), retournée au client,
+ * prise en charge (validée, forcée).
+ */
+type Filtre = "tout" | "a_traiter" | "retournee" | "prise";
+
+/** Le filtre où tombe une pièce de la file. */
+function filtreDe(statut: StatutCabinet): Exclude<Filtre, "tout"> {
+  if (A_TRAITER.has(statut)) return "a_traiter";
+  return statut === "retournee" ? "retournee" : "prise";
+}
 
 const JOUR_MS = 86_400_000;
 
@@ -105,9 +118,11 @@ function CabinetToday() {
     () => (queue.data ?? []).filter((r) => actifs.has(r.tenantId)),
     [queue.data, actifs],
   );
-  const toReview = rows.filter((r) => r.status === "comptabilisee").length;
-  const returned = rows.filter((r) => r.status === "retournee").length;
-  const supervised = rows.filter((r) => r.status === "supervisee").length;
+  const compteParFiltre = (f: Filtre) =>
+    f === "tout" ? rows.length : rows.filter((r) => filtreDe(r.statut) === f).length;
+  const toReview = compteParFiltre("a_traiter");
+  const returned = compteParFiltre("retournee");
+  const supervised = compteParFiltre("prise");
   // Les clients mandatés : ni le mandat révoqué, ni le refusé (ANO-013).
   const clientCount = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
 
@@ -127,16 +142,13 @@ function CabinetToday() {
   const visibles = useMemo(() => {
     const q = texte.trim().toLocaleLowerCase();
     return rows.filter((r) => {
-      if (filtre !== "tout" && r.status !== filtre) return false;
+      if (filtre !== "tout" && filtreDe(r.statut) !== filtre) return false;
       if (collab === "" && r.collaborateur) return false;
       if (collab && r.collaborateur !== collab) return false;
       if (q && !`${r.clientName} ${r.libelle ?? ""}`.toLocaleLowerCase().includes(q)) return false;
       return true;
     });
   }, [rows, filtre, collab, texte]);
-
-  const compteParFiltre = (f: Filtre) =>
-    f === "tout" ? rows.length : rows.filter((r) => r.status === f).length;
 
   /* ---- la charge : par collaborateur, ses mandats et ce qui attend */
   const charge = useMemo(() => {
@@ -154,7 +166,7 @@ function CabinetToday() {
       parCollab.set(email, c);
     }
     for (const r of rows) {
-      if (!r.collaborateur || r.status !== "comptabilisee") continue;
+      if (!r.collaborateur || !A_TRAITER.has(r.statut)) continue;
       const c = parCollab.get(r.collaborateur) ?? { mandats: 0, attente: 0 };
       c.attente += 1;
       parCollab.set(r.collaborateur, c);
@@ -200,7 +212,7 @@ function CabinetToday() {
     day: "numeric",
     month: "long",
   }).format(new Date());
-  const premiere = rows.find((r) => r.status === "comptabilisee") ?? rows[0] ?? null;
+  const premiere = rows.find((r) => A_TRAITER.has(r.statut)) ?? rows[0] ?? null;
 
   const sources = [clients, queue, membres, affectations];
   const panne = sources.find((source) => source.error)?.error;
@@ -272,7 +284,7 @@ function CabinetToday() {
             detail: "cab.design.revueDetail",
             value: toReview,
             icon: FileCheck2,
-            filter: "comptabilisee",
+            filter: "a_traiter",
             tone: "review",
           },
           {
@@ -290,7 +302,7 @@ function CabinetToday() {
             detail: "cab.design.superviseesDetail",
             value: supervised,
             icon: CheckCheck,
-            filter: "supervisee",
+            filter: "prise",
             tone: "done",
           },
         ].map((k) => (
@@ -346,9 +358,9 @@ function CabinetToday() {
               {(
                 [
                   ["tout", "cab.today.filter.all"],
-                  ["comptabilisee", "cab.kpi.review"],
+                  ["a_traiter", "cab.kpi.review"],
                   ["retournee", "cab.kpi.returned"],
-                  ["supervisee", "cab.kpi.supervised"],
+                  ["prise", "cab.kpi.supervised"],
                 ] as Array<[Filtre, MessageKey]>
               ).map(([f, cle]) => (
                 <button
@@ -677,10 +689,7 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
             </InkCell>
             <InkCell numeric>{row.montant ? montant(row.montant, locale) : "—"}</InkCell>
             <InkCell>
-              <SignalLight
-                tone={toneForStatus(row.status)}
-                label={t(`pme.status.${row.status}` as MessageKey)}
-              />
+              <SignalLight tone={feuDuStatut(row.statut)} label={t(MOT_CABINET[row.statut])} />
             </InkCell>
             <InkCell numeric>
               {jours === 0 ? t("cab.queue.age.today") : t("cab.queue.age.days", { n: jours })}

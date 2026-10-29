@@ -33,6 +33,7 @@ import { computePnl, computeTva } from "@malica/socle";
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
+import { statutPme } from "@malica/socle/statut-d-envoi";
 
 import { monthBounds } from "./use-tva";
 
@@ -82,11 +83,12 @@ export interface Accueil {
    * agir, et c'est pour cela qu'il vient en premier.
    */
   aReverser: string | null;
-  /** Part des pièces du mois déjà comptabilisées, de 0 à 1. `null` : aucune pièce. */
+  /** Part des pièces prises en charge par le cabinet, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
   /**
-   * Les pièces qui attendent une réponse DU DIRIGEANT : lues, et pas encore
-   * confirmées.
+   * Les pièces qui attendent une réponse DU DIRIGEANT : lues, dans la
+   * société, ni envoyées ni gardées — « À envoyer ». Il ne confirme aucune
+   * écriture (« Malica sans blocage », 28 octobre 2026).
    *
    * Ce n'est pas un compte par mois, et c'est voulu. Le 10 octobre, l'accueil
    * disait « Presque » à 0 % et « quelques factures » sans en connaître le
@@ -305,9 +307,8 @@ export function useAccueil(periode: string): Accueil {
        * ======================================= LES ÉTATS, ET CE QU'ILS VEULENT DIRE
        *
        * capturee                       déposée, pas encore lue
-       * lue · proposee                 lue, et elle attend le dirigeant
-       * confirmee                      il a répondu, le cabinet suit
-       * comptabilisee · supervisee     close
+       * lue, dans la société           à envoyer, ou gardée : la décision du dirigeant
+       * supervisee                     prise en charge par le cabinet : close
        * retournee                      le cabinet la renvoie
        *
        * Le compte du mois, lui, a disparu d'ici : il était pris sur
@@ -317,12 +318,14 @@ export function useAccueil(periode: string): Accueil {
        * là où la date de la pièce est connue.
        */
       const lues = liste.filter((p) => p.status !== "capturee");
-      const closes = liste.filter(
-        (p) => p.status === "comptabilisee" || p.status === "supervisee",
-      ).length;
+      const closes = liste.filter((p) => p.status === "supervisee").length;
       return {
         avancement: liste.length === 0 ? null : closes / liste.length,
-        enAttente: liste.filter((p) => p.status === "lue" || p.status === "proposee").length,
+        enAttente: lues.filter(
+          (p) =>
+            statutPme({ vis: p.vis, status: p.status, gardeeLe: p.gardeeLe, suivi: null }) ===
+            "a_envoyer",
+        ).length,
         documentsLus: lues.length,
         documentsNonLus: liste.length - lues.length,
         jamaisRienDepose: liste.length === 0,

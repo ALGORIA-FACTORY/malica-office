@@ -73,7 +73,7 @@ export function controlerLaSaisie(
         ? "compte"
         : !lisibles
           ? "montant"
-          : lus.some((l) => (l.debit! > 0n) === (l.credit! > 0n))
+          : lus.some((l) => l.debit! > 0n === l.credit! > 0n)
             ? "sens"
             : totalDebit !== totalCredit
               ? "desequilibre"

@@ -56,6 +56,6 @@ describe("le cabinet devant une version précédente", () => {
     expect(html).toContain("DOCUMENT");
     // Ni valider, ni retourner, ni corriger, ni proposer : la base refuserait.
     expect(html).not.toMatch(/cab\.review\.(motif|correct|ecriture|prev|next)/);
-    expect(html).not.toContain("pme.status.retournee");
+    expect(html).not.toContain("statut.cab.");
   });
 });

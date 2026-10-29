@@ -6,6 +6,9 @@ import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
 import { montant } from "@/lib/lisible";
 import type { PieceLue } from "@malica/socle/ports/repositories";
+import { TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
+import { attendLaPersonne, statutDeLaPieceLue } from "@/lib/lecture";
+import { MOT_PME } from "@/lib/statut";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
@@ -28,9 +31,10 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
  * Un dossier ouvert — la « playlist » d'un des sept dossiers (`ref.dossiers`).
  *
  * 23 octobre 2026, maquette validée par Wissem : la pochette touchée sur
- * l'accueil s'ouvre ici, avec UN geste principal (vérifier ce qui attend),
+ * l'accueil s'ouvre ici, avec UN geste principal (ouvrir ce qui attend),
  * des filtres par état — seulement ceux qui ont des pièces — et la liste, chaque
- * ligne avec la vraie page en aperçu.
+ * ligne avec la vraie page en aperçu. L'état est le statut de la pièce, un
+ * mot et une couleur (« Malica sans blocage », §2) : jamais une écriture.
  *
  * Les pièces viennent de la lecture que l'accueil a déjà faite
  * (`capture.listAvecLecture` : type, émetteur, date, total — toutes les
@@ -38,25 +42,29 @@ export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
  * coûte aucune requête de plus. Une pièce privée n'est pas dans la bibliothèque, donc pas ici.
  */
 
-/** Les états qu'une personne distingue, et la clé de leur nom. */
-type Etat = "verifier" | "retour" | "comptabilisee" | "nonLue" | "autre";
+/** Les états qu'une personne distingue : le statut d'une pièce lue, ou « non lue ». */
+type Etat = StatutPme | "nonLue" | "autre";
 
+/** Dans l'ordre des filtres : ce qui vous attend d'abord, puis ce qui est chez le cabinet. */
 const ETATS: ReadonlyArray<{ etat: Exclude<Etat, "autre">; cle: MessageKey }> = [
-  { etat: "verifier", cle: "pme.charges.answer.verifier" },
-  { etat: "retour", cle: "pme.home.etat.retour" },
-  { etat: "comptabilisee", cle: "pme.dossier.etat.comptabilisee" },
+  { etat: "a_envoyer", cle: MOT_PME.a_envoyer },
+  { etat: "retour", cle: MOT_PME.retour },
+  { etat: "envoyee", cle: MOT_PME.envoyee },
+  { etat: "vue", cle: MOT_PME.vue },
+  { etat: "prise_en_charge", cle: MOT_PME.prise_en_charge },
+  { etat: "gardee", cle: MOT_PME.gardee },
   { etat: "nonLue", cle: "pme.refus.titre" },
 ];
 
 function etatDe(p: PieceLue): Etat {
   // Un reçu ou un justificatif ne se lit pas : il n'est jamais « non lu ».
   if (p.accompagne) return "autre";
-  if (p.status === "lue" || p.status === "proposee") return "verifier";
-  if (p.status === "retournee") return "retour";
-  if (p.status === "comptabilisee" || p.status === "supervisee") return "comptabilisee";
   if (p.status === "capturee") return "nonLue";
-  return "autre";
+  return statutDeLaPieceLue(p);
 }
+
+/** La couleur du point : celle du statut ; une pièce non lue reste grise. */
+const tonDe = (e: Etat) => (e === "nonLue" || e === "autre" ? "neutre" : TON_PME[e]);
 
 function Dossier() {
   const { type } = Route.useParams();
@@ -97,8 +105,8 @@ function Dossier() {
   const toutes = duDossier
     .filter((p) => dossier !== null && dansLaPeriode(p, dossier.periode, periode))
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
-  const faites = toutes.filter((p) => etatDe(p) === "comptabilisee").length;
-  const aVerifier = toutes.filter((p) => etatDe(p) === "verifier");
+  const faites = toutes.filter((p) => etatDe(p) === "prise_en_charge").length;
+  const aVerifier = toutes.filter(attendLaPersonne);
   const filtres = ETATS.filter((e) => toutes.some((p) => etatDe(p) === e.etat));
   const visibles = filtre === "toutes" ? toutes : toutes.filter((p) => etatDe(p) === filtre);
   const part = toutes.length === 0 ? 0 : Math.round((faites / toutes.length) * 100);
@@ -201,7 +209,7 @@ function Dossier() {
                   <span className="bd">
                     <b>{p.emetteur ?? t("pme.capture.pieceNonLue")}</b>
                     <span>
-                      <i data-etat={e} />
+                      <i data-ton={tonDe(e)} />
                       {[nom ? t(nom.cle) : null, jour(p.dateDocument ?? p.createdAt)]
                         .filter(Boolean)
                         .join(" · ")}

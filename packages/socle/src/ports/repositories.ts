@@ -1577,6 +1577,8 @@ export interface DocumentComptable {
   tenantId: string;
   type: string | null;
   status: PieceStatus;
+  /** Le mot du cabinet, dans la bibliothèque ; un dossier exporté garde le seul `status`. */
+  statut?: StatutCabinet;
   reference: string | null;
   tiers: string | null;
   dateDocument: string | null;

@@ -6,9 +6,10 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet } from "@/components/malica/cabinet-context";
 import { EmptyState, SignalLight } from "@/components/malica/office-ui";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
-import { useI18n, type MessageKey } from "@/i18n";
+import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { toneForStatus } from "@/lib/file-cabinet";
+import { feuDuStatut } from "@/lib/file-cabinet";
+import { MOT_CABINET } from "@/lib/statut";
 import { dateEnChiffres, montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
@@ -261,10 +262,9 @@ function DocumentsClient({
                 {d.montant !== null ? `${montant(d.montant, locale)} ${d.devise}` : "—"}
               </span>
               <span className="cab-doclib-doc-status">
-                <SignalLight
-                  tone={toneForStatus(d.status)}
-                  label={t(`pme.status.${d.status}` as MessageKey)}
-                />
+                {d.statut ? (
+                  <SignalLight tone={feuDuStatut(d.statut)} label={t(MOT_CABINET[d.statut])} />
+                ) : null}
               </span>
               <Link
                 to="/cabinet/piece/$pieceId"

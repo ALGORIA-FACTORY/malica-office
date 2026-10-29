@@ -1,0 +1,461 @@
+/**
+ * L'écriture d'une pièce, côté comptable (« Malica sans blocage », maquette
+ * « Pièce côté comptabilité », validée le 28 octobre 2026).
+ *
+ * Le défaut qui l'a fait naître, relevé sur staging le 29 octobre : sur une
+ * pièce au montant illisible, l'écran disait « Lue — le client n'a pas
+ * confirmé », éteignait « Inscrire » (le Socle ne proposait rien) et
+ * proposait de « Demander au client de confirmer ». Le comptable ne pouvait
+ * rien faire. Le client ne confirme plus rien ; rien ne bloque.
+ *
+ * Une table, toujours modifiable — l'écriture prise en charge, sinon la
+ * proposition du Socle, sinon des lignes à saisir. Deux gestes, côte à
+ * côte : VALIDER (ou SAISIR l'écriture quand rien n'est proposé) et
+ * RETOURNER au client. Validée telle que proposée : « validée » ; modifiée ou
+ * saisie : « forcée », avec le nom et l'heure. Les explications sont dans le
+ * i, jamais dans l'écran.
+ */
+import { controlerLaSaisie, type LigneSaisie } from "@malica/socle/ecriture-saisie";
+import { critiquerLibelle } from "@malica/socle/engines/libelle";
+import type {
+  CompteDuPlan,
+  Ecriture,
+  PropositionDePiece,
+  RejetMotif,
+} from "@malica/socle/ports/repositories";
+import type { StatutCabinet, SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { Plus, X } from "lucide-react";
+import { useState } from "react";
+
+import { Aide } from "@/components/malica/aide";
+import type { RetourEnvoye } from "@/components/malica/envoye";
+import { RetournerAuClient } from "@/components/malica/retourner-au-client";
+import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
+import { useI18n } from "@/i18n";
+import {
+  ecritureDeDepart,
+  inchangee,
+  LIGNE_VIDE,
+  relue,
+  type EcritureEnSaisie,
+} from "@/lib/ecriture-du-cabinet";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { montant } from "@/lib/lisible";
+import { MOT_CABINET } from "@/lib/statut";
+import { office } from "@/verticals/malica-office/composition";
+
+const OU = "components/malica/ecriture-du-cabinet";
+/** Une seule liste du plan pour l'écran. */
+const LISTE_DES_COMPTES = "plan-de-l-ecriture";
+
+/** Le libellé que le plan donne à ce compte — celui du cabinet d'abord. */
+function libelleDuPlan(plan: readonly CompteDuPlan[], code: string): string | null {
+  const comptes = plan.filter((c) => c.code === code.trim());
+  return comptes.find((c) => c.origine === "cabinet")?.libelle ?? comptes[0]?.libelle ?? null;
+}
+
+export function EcritureDuCabinet({
+  pieceId,
+  clientId,
+  statut,
+  suivi,
+  vivante,
+  proposition,
+  typeAEtablir,
+  dateLue,
+  libellePropose,
+  plan,
+  decimales,
+  motifs,
+  onRetournee,
+}: {
+  pieceId: string;
+  /** Le dossier du client : le journal du jour s'ouvre sur lui. */
+  clientId: string;
+  statut: StatutCabinet;
+  suivi: SuiviDEnvoi | null;
+  /** L'écriture vivante de la pièce, inscrite ; `null` s'il n'y en a pas. */
+  vivante: Ecriture | null;
+  /** Ce que le Socle propose, ou pourquoi il ne propose rien ; absent sans lecture. */
+  proposition: PropositionDePiece | undefined;
+  /** La lecture n'a reconnu aucun type : le comptable le choisit (R2). */
+  typeAEtablir: boolean;
+  /** La date lue sur la pièce, pour une écriture saisie. */
+  dateLue: string | null;
+  /** Le libellé que Malica compose pour cette pièce, pour une écriture saisie. */
+  libellePropose: string | null;
+  plan: readonly CompteDuPlan[];
+  /** Les décimales de la devise, du pack ; `null` tant qu'on ne les a pas (R4). */
+  decimales: number | null;
+  motifs: readonly RejetMotif[];
+  onRetournee: (r: RetourEnvoye) => void;
+}) {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const depart = ecritureDeDepart(vivante, proposition);
+  const [saisie, setSaisie] = useState<EcritureEnSaisie>(() =>
+    depart.depart === "rien"
+      ? {
+          journal: "",
+          date: dateLue ?? "",
+          libelle: libellePropose ?? "",
+          lignes: [LIGNE_VIDE, LIGNE_VIDE],
+        }
+      : depart,
+  );
+  const [type, setType] = useState("");
+  const [feuille, setFeuille] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const journaux = useQuery({
+    queryKey: ["journaux", locale],
+    queryFn: () => office().referential.journaux(locale),
+    staleTime: 60 * 60 * 1000,
+  });
+  const types = useQuery({
+    queryKey: ["types-document", locale],
+    queryFn: () => office().referential.typesDeDocument(locale),
+    enabled: typeAEtablir,
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const lignes = saisie.lignes.map(relue);
+  const controle = decimales === null ? null : controlerLaSaisie(lignes, decimales);
+  const telleQuelle = decimales !== null && inchangee({ ...saisie, lignes }, depart, decimales);
+  const prise = statut === "validee" || statut === "forcee";
+  /** Ce qui manque avant d'inscrire, dit par la même phrase que le refus du serveur. */
+  const manque: string | null =
+    controle === null
+      ? t("common.loading")
+      : !saisie.journal
+        ? t("refus.ecriture.journal")
+        : !saisie.date
+          ? t("cab.ecriture.date.manque")
+          : !saisie.libelle.trim()
+            ? t("cab.ecriture.libelle.manque")
+            : typeAEtablir && !type
+              ? t("refus.inscription.type_inconnu")
+              : controle.defaut
+                ? t(`refus.ecriture.${controle.defaut}`)
+                : null;
+
+  const relire = () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ["piece", pieceId] }),
+      qc.invalidateQueries({ queryKey: ["ecritures", pieceId] }),
+      qc.invalidateQueries({ queryKey: ["proposition", pieceId] }),
+      qc.invalidateQueries({ queryKey: ["piece-audit", pieceId] }),
+      qc.invalidateQueries({ queryKey: ["cab-queue"] }),
+      qc.invalidateQueries({ queryKey: ["cab-clients"] }),
+    ]);
+  /*
+   * Telle que proposée — ou telle qu'inscrite par le client, du temps où il
+   * confirmait encore, et pas encore prise en charge : le serveur valide,
+   * « validée ». Changée ou saisie : la saisie part, relue — « forcée ».
+   */
+  const validation =
+    telleQuelle && (depart.depart === "proposee" || (depart.depart === "inscrite" && !prise));
+  const inscrire = useMutation({
+    mutationFn: () =>
+      validation
+        ? office().office.valider(pieceId)
+        : office().office.forcer({
+            pieceId,
+            journal: saisie.journal,
+            date: saisie.date,
+            libelle: saisie.libelle.trim(),
+            lignes,
+            typeDeDocument: typeAEtablir ? type : null,
+          }),
+    onMutate: () => setErreur(null),
+    onSuccess: relire,
+    onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
+  });
+
+  const changerLigne = (index: number, patch: Partial<LigneSaisie>) =>
+    setSaisie((s) => ({
+      ...s,
+      lignes: s.lignes.map((l, i) => {
+        if (i !== index) return l;
+        const suivante = { ...l, ...patch };
+        // Le libellé suit le compte tant qu'il est celui du plan : il ne se
+        // recopie pas à la main (`saisie-compte.tsx`).
+        if (patch.account_code !== undefined) {
+          const avant = libelleDuPlan(plan, l.account_code);
+          if (!l.libelle.trim() || l.libelle === avant)
+            suivante.libelle = libelleDuPlan(plan, patch.account_code) ?? "";
+        }
+        return suivante;
+      }),
+    }));
+
+  const heure = (iso: string) =>
+    new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  const remarques = critiquerLibelle(saisie.libelle);
+  const principal = depart.depart === "rien" ? t("cab.ecriture.saisir") : t("cab.ecriture.valider");
+
+  return (
+    <section className="space-y-3" aria-labelledby="ecriture-du-cabinet">
+      {depart.depart === "rien" && proposition && !proposition.ok ? (
+        <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
+          {t("cab.ecriture.rien")}
+          <Aide
+            titre={t("cab.ecriture.rien.pourquoi")}
+            /*
+             * La raison vient du serveur, en français, et porte les motifs des
+             * contrôles : une seule phrase, construite là où le jugement est
+             * posé. Elle va dans le i : l'écran dit un mot et un geste.
+             */
+            paragraphes={[{ texte: proposition.raison }]}
+          />
+        </p>
+      ) : null}
+
+      <h2
+        id="ecriture-du-cabinet"
+        className="flex items-center text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+      >
+        {t("cab.ecriture.titre")}
+        <Aide
+          titre={t("cab.ecriture.titre")}
+          paragraphes={[
+            { texte: t("cab.ecriture.aide.validee") },
+            { texte: t("cab.ecriture.aide.client") },
+            { texte: t("cab.ecriture.aide.retour") },
+          ]}
+        />
+      </h2>
+
+      {suivi?.prise && suivi.priseLe ? (
+        <p role="status" className="text-[12.5px] font-medium text-signal-ok">
+          {t("cab.ecriture.prise", {
+            statut: t(MOT_CABINET[suivi.prise]),
+            par: suivi.prisePar ?? "",
+            quand: heure(suivi.priseLe),
+          })}
+        </p>
+      ) : null}
+
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)]">
+        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+          {t("cab.ecriture.journal")}
+          <select
+            value={saisie.journal}
+            onChange={(e) => setSaisie((s) => ({ ...s, journal: e.target.value }))}
+            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+          >
+            <option value="">{t("cab.ecriture.journal.choisir")}</option>
+            {(journaux.data ?? []).map((j) => (
+              <option key={j.code} value={j.code}>
+                {j.code} — {j.libelle}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+          {t("cab.ecriture.date")}
+          <input
+            type="date"
+            value={saisie.date}
+            onChange={(e) => setSaisie((s) => ({ ...s, date: e.target.value }))}
+            className="num h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+          {t("cab.ecriture.libelle")}
+          <input
+            type="text"
+            value={saisie.libelle}
+            onChange={(e) => setSaisie((s) => ({ ...s, libelle: e.target.value }))}
+            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+          />
+        </label>
+      </div>
+      {remarques.length > 0 ? (
+        // Les remarques ne bloquent pas : l'expert reste maître de ce qu'il
+        // écrit, mais il voit ce qu'un contrôleur verra.
+        <ul className="space-y-0.5 text-[11px] text-signal-warn">
+          {remarques.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      ) : null}
+      {typeAEtablir ? (
+        <label className="flex flex-col gap-1 text-[11px] font-semibold text-muted-foreground">
+          {t("cab.ecriture.type")}
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="h-9 border border-border bg-background px-2 text-[13px] font-normal text-foreground"
+          >
+            <option value="">{t("cab.ecriture.type.choisir")}</option>
+            {(types.data ?? [])
+              .filter((d) => d.porteEcriture)
+              .map((d) => (
+                <option key={d.code} value={d.code}>
+                  {d.libelle}
+                </option>
+              ))}
+          </select>
+        </label>
+      ) : null}
+
+      <ListeDesComptes id={LISTE_DES_COMPTES} plan={plan} />
+      <div className="overflow-x-auto border border-border bg-card">
+        <table className="w-full min-w-[560px] text-[13px]">
+          <thead>
+            <tr className="bg-muted text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+              <th className="px-2.5 py-2 text-start">{t("pme.journal.account")}</th>
+              <th className="px-2.5 py-2 text-start">{t("cab.ecriture.ligne.libelle")}</th>
+              <th className="px-2.5 py-2 text-end">{t("pme.journal.debit")}</th>
+              <th className="px-2.5 py-2 text-end">{t("pme.journal.credit")}</th>
+              <th className="w-9" aria-hidden />
+            </tr>
+          </thead>
+          <tbody>
+            {saisie.lignes.map((l, i) => (
+              <tr key={i} className="border-t border-border align-top">
+                <td className="w-[30%] px-2.5 py-2">
+                  <SaisieDeCompte
+                    valeur={l.account_code}
+                    onChange={(code) => changerLigne(i, { account_code: code })}
+                    plan={plan}
+                    label={t("pme.journal.account")}
+                    inconnuLabel={t("cab.ecriture.compte.inconnu")}
+                    listeId={LISTE_DES_COMPTES}
+                    collectifLabel={t("plan.collectif.court")}
+                    originesLabels={{
+                      officiel: t("plan.origin.officiel"),
+                      extension: t("plan.origin.extension"),
+                      cabinet: t("plan.origin.cabinet"),
+                    }}
+                  />
+                </td>
+                <td className="px-2.5 py-2">
+                  <input
+                    type="text"
+                    value={l.libelle}
+                    aria-label={t("cab.ecriture.ligne.libelle")}
+                    onChange={(e) => changerLigne(i, { libelle: e.target.value })}
+                    className="w-full border border-border bg-background px-2 py-1 text-[13px]"
+                  />
+                </td>
+                {(["debit", "credit"] as const).map((cote) => (
+                  <td key={cote} className="w-[17%] px-2.5 py-2">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      dir="ltr"
+                      value={l[cote]}
+                      aria-label={t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit")}
+                      onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
+                      className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
+                    />
+                  </td>
+                ))}
+                <td className="px-1 py-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
+                    }
+                    aria-label={t("cab.ecriture.ligne.retirer")}
+                    className="flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border bg-muted font-semibold">
+              <td className="px-2.5 py-2">
+                <button
+                  type="button"
+                  onClick={() => setSaisie((s) => ({ ...s, lignes: [...s.lignes, LIGNE_VIDE] }))}
+                  className="inline-flex min-h-[32px] items-center gap-1.5 text-[12.5px] font-semibold underline-offset-4 hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden />
+                  {t("cab.ecriture.ligne.ajouter")}
+                </button>
+              </td>
+              <td
+                className={
+                  controle && !controle.defaut
+                    ? "px-2.5 py-2 text-signal-ok"
+                    : "px-2.5 py-2 text-signal-stop"
+                }
+                aria-live="polite"
+              >
+                {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
+              </td>
+              <td className="num px-2.5 py-2 text-end">
+                {controle?.totalDebit ? montant(controle.totalDebit, locale) : "—"}
+              </td>
+              <td className="num px-2.5 py-2 text-end">
+                {controle?.totalCredit ? montant(controle.totalCredit, locale) : "—"}
+              </td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Deux gestes, même hauteur, même largeur ; aucun n'attend le client. */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {prise && telleQuelle ? (
+          <Link
+            to="/cabinet/journal"
+            search={{ client: clientId }}
+            className="flex min-h-[48px] items-center justify-center border border-foreground bg-foreground px-4 text-center text-[14px] font-semibold text-background hover:bg-background hover:text-foreground"
+          >
+            {t("cab.nav.journal")}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled={inscrire.isPending || manque !== null}
+            onClick={() => inscrire.mutate()}
+            className="min-h-[48px] border border-foreground bg-foreground px-4 text-[14px] font-semibold text-background hover:bg-background hover:text-foreground disabled:opacity-50"
+          >
+            {inscrire.isPending ? t("common.loading") : principal}
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={inscrire.isPending || statut === "retournee"}
+          onClick={() => setFeuille(true)}
+          className="min-h-[48px] border border-border bg-card px-4 text-[14px] font-semibold hover:bg-accent disabled:opacity-50"
+        >
+          {t("cab.ecriture.retourner")}
+        </button>
+      </div>
+      {erreur ? (
+        <p role="alert" className="text-[12.5px] text-signal-stop">
+          {erreur}
+        </p>
+      ) : null}
+
+      {feuille ? (
+        <RetournerAuClient
+          pieceId={pieceId}
+          motifs={motifs}
+          onFermer={() => setFeuille(false)}
+          onRetournee={async (r) => {
+            setFeuille(false);
+            onRetournee({ ...r, le: new Date().toISOString() });
+            await relire();
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}

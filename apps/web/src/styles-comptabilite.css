@@ -227,6 +227,8 @@
   --signal-ok: #14745b;
   --signal-warn: #99620c;
   --signal-stop: #bb3b40;
+  /* Azure de la marque : « chez l'autre » (une pièce retournée au client). */
+  --signal-info: #2968a5;
   --signal-soft: #fff7e7;
   color-scheme: light;
   font-size: 14px;

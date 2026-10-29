@@ -31,13 +31,7 @@ export interface SuiviDEnvoi {
 }
 
 export type StatutPme =
-  | "mon_espace"
-  | "a_envoyer"
-  | "gardee"
-  | "envoyee"
-  | "vue"
-  | "retour"
-  | "prise_en_charge";
+  "mon_espace" | "a_envoyer" | "gardee" | "envoyee" | "vue" | "retour" | "prise_en_charge";
 
 export type StatutCabinet = "recue" | "vue" | "corrigee" | "retournee" | "validee" | "forcee";
 
