@@ -187,10 +187,31 @@ function versPiece(r: Record<string, unknown>) {
   };
 }
 
-/** Les colonnes d'une pièce telles que `versPiece` les lit. */
-const COLONNES_DE_LA_PIECE = `id, tenant_id, entity_id, vis, source, storage_path, status, created_at,
-       document_kind, document_kind_statut, gardee_le, transmise_le, source_piece_id,
-       remplace, remplacee_par`;
+/**
+ * Les colonnes d'une pièce telles que `versPiece` les lit, préfixées de
+ * l'alias de la requête quand elle en joint d'autres.
+ */
+function colonnesDeLaPiece(alias?: string): string {
+  return [
+    "id",
+    "tenant_id",
+    "entity_id",
+    "vis",
+    "source",
+    "storage_path",
+    "status",
+    "created_at",
+    "document_kind",
+    "document_kind_statut",
+    "gardee_le",
+    "transmise_le",
+    "source_piece_id",
+    "remplace",
+    "remplacee_par",
+  ]
+    .map((c) => (alias ? `${alias}.${c}` : c))
+    .join(", ");
+}
 
 export const capture = {
   /**
@@ -259,7 +280,10 @@ export const capture = {
         `${input.tenantId}/en-cours`,
         input.idempotencyKey,
         input.entityId ?? null,
-        input.vis,
+        // Une photo de remplacement naît privée : c'est `piece_remplacer` qui
+        // lui donne la place de l'ancienne, sans en faire une transmission
+        // nouvelle (un impayé ne l'empêche pas de corriger une pièce envoyée).
+        input.remplace ? "personnel" : input.vis,
         input.pageCount ?? null,
         input.documentKind ?? null,
         input.sourcePieceId ?? null,
@@ -303,7 +327,7 @@ export const capture = {
     // Une pièce remplacée par une nouvelle photo quitte les listes : elle
     // reste, comme version précédente, derrière celle qui la remplace.
     const { rows } = await db.query(
-      `select ${COLONNES_DE_LA_PIECE}
+      `select ${colonnesDeLaPiece()}
          from pieces_v where tenant_id = $1 and remplacee_par is null
         order by created_at desc limit 100`,
       [tenantId],
@@ -421,7 +445,7 @@ export const capture = {
 
   async dossier(db: Requete, pieceId: string) {
     const { rows: pieces } = await db.query(
-      `select ${COLONNES_DE_LA_PIECE} from pieces_v where id = $1`,
+      `select ${colonnesDeLaPiece()} from pieces_v where id = $1`,
       [pieceId],
     );
     const brut = (pieces as Record<string, unknown>[])[0];
@@ -1373,8 +1397,11 @@ export const capture = {
    */
   async piecesIssuesDe(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select ${COLONNES_DE_LA_PIECE}
-         from pieces_v where source_piece_id = $1 order by created_at`,
+      // Ceux de toutes ses versions : un reçu reste issu de la facture dont la
+      // photo a été reprise.
+      `select ${colonnesDeLaPiece()}
+         from pieces_v where source_piece_id in (select app.versions_de_la_piece($1))
+        order by created_at`,
       [pieceId],
     );
     return (rows as Record<string, unknown>[]).map(versPiece);
@@ -1390,7 +1417,7 @@ export const capture = {
    */
   async piecesRattachees(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select p.*
+      `select ${colonnesDeLaPiece("p")}
          from rattachements_v r
          join pieces_v p
            on p.id = case when r.piece_id = $1 then r.piece_liee_id else r.piece_id end

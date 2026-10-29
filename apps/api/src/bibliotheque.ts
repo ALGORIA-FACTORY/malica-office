@@ -171,7 +171,7 @@ export async function documentsLies(
   const { rows: ids } = await db.query<{ id: string }>(
     `with recursive
     visibles as materialized (select id, source_piece_id from pieces_v
-      where tenant_id = $1 and vis = 'partage'),
+      where tenant_id = $1 and vis = 'partage' and remplacee_par is null),
     liens as (
       select id as a, source_piece_id as b from visibles where source_piece_id is not null
       union select pa.piece_id, pa.justificatif_piece_id from paiements_v pa

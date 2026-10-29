@@ -95,7 +95,7 @@ export function CarteDuRetour({
         action: onReprendreLaPhoto,
       },
       repondre: { libelle: t("pme.retour.geste.repondre"), action: () => setReponseOuverte(true) },
-      garder: { libelle: t("pme.garder.action"), ...garder },
+      garder: { libelle: t("pme.retour.garder"), ...garder },
       supprimer: { libelle: t("pme.supprimer.action"), action: () => setAConfirmer(true) },
     };
 

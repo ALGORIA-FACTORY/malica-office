@@ -2106,7 +2106,9 @@ const fr = {
   "pme.retour.aide.reprendre":
     "La nouvelle photo remplace celle-ci et repart à la lecture. L’ancienne reste attachée comme version précédente.",
   "pme.retour.aide.repondre": "Écrire à {qui} : expliquer, demander, ou ne pas être d’accord.",
-  "pme.retour.aide.garder": "La pièce va dans votre espace privé. {qui} en est prévenu.",
+  "pme.retour.garder": "Garder",
+  "pme.retour.aide.garder":
+    "La pièce reste dans la société, marquée « Gardée » : elle ne part pas. {qui} en est prévenu.",
   "pme.retour.aide.supprimer":
     "La pièce disparaît de vos pièces. Si {qui} l’avait déjà prise en charge, il la garde archivée.",
   "pme.retour.supprimer.sur": "Elle disparaît de vos pièces. Vous êtes sûr ?",
@@ -2148,7 +2150,7 @@ const fr = {
     "Le client a retiré une pièce prise en charge : elle est archivée.",
   "notif.kind.piece.renvoyee": "Pièce renvoyée à la comptabilité",
   "notif.kind.piece.remplacee": "Nouvelle photo envoyée à la comptabilité",
-  "notif.kind.piece.gardee": "Pièce gardée dans votre espace",
+  "notif.kind.piece.gardee": "Pièce gardée dans la société",
   "notif.kind.piece.supprimee": "Pièce supprimée",
   "notif.kind.piece.archivee": "Pièce retirée de vos documents",
   "pme.piece.versionPrecedente": "Version précédente",
@@ -5948,7 +5950,9 @@ const en: Dict = {
   "pme.retour.aide.reprendre":
     "The new photo replaces this one and is read again. The old one stays attached as the previous version.",
   "pme.retour.aide.repondre": "Write to {qui}: explain, ask, or disagree.",
-  "pme.retour.aide.garder": "The document goes to your private space. {qui} is notified.",
+  "pme.retour.garder": "Keep",
+  "pme.retour.aide.garder":
+    "The document stays in the company, marked “Kept”: it is not sent. {qui} is notified.",
   "pme.retour.aide.supprimer":
     "The document leaves your documents. If {qui} had already taken it up, they keep it archived.",
   "pme.retour.supprimer.sur": "It will leave your documents. Are you sure?",
@@ -5990,7 +5994,7 @@ const en: Dict = {
     "The client withdrew a document you had taken up: it is archived.",
   "notif.kind.piece.renvoyee": "Document sent back to your accountant",
   "notif.kind.piece.remplacee": "New photo sent to your accountant",
-  "notif.kind.piece.gardee": "Document kept in your space",
+  "notif.kind.piece.gardee": "Document kept in the company",
   "notif.kind.piece.supprimee": "Document deleted",
   "notif.kind.piece.archivee": "Document withdrawn from your documents",
   "pme.piece.versionPrecedente": "Previous version",
@@ -9636,7 +9640,9 @@ const ar: Dict = {
   "pme.retour.aide.reprendre":
     "تحلّ الصورة الجديدة محلّ هذه وتُقرأ من جديد. تبقى القديمة مرفقة كنسخة سابقة.",
   "pme.retour.aide.repondre": "اكتب إلى {qui}: لتشرح أو تسأل أو تعترض.",
-  "pme.retour.aide.garder": "تنتقل الوثيقة إلى فضائك الخاص، ويُعلَم {qui} بذلك.",
+  "pme.retour.garder": "الاحتفاظ بها",
+  "pme.retour.aide.garder":
+    "تبقى الوثيقة في الشركة بعلامة «محتفَظ بها»: لا تُرسَل. ويُعلَم {qui} بذلك.",
   "pme.retour.aide.supprimer":
     "تختفي الوثيقة من وثائقك. إن كان {qui} قد تكفّل بها، فإنه يحتفظ بها مؤرشفة.",
   "pme.retour.supprimer.sur": "ستختفي من وثائقك. هل أنت متأكد؟",
@@ -9668,7 +9674,7 @@ const ar: Dict = {
   "cab.notif.kind.piece.archivee": "سحب الحريف وثيقة تكفّلت بها: هي مؤرشفة.",
   "notif.kind.piece.renvoyee": "أُعيد إرسال الوثيقة إلى المحاسبة",
   "notif.kind.piece.remplacee": "أُرسلت صورة جديدة إلى المحاسبة",
-  "notif.kind.piece.gardee": "احتُفظ بالوثيقة في فضائك",
+  "notif.kind.piece.gardee": "احتُفظ بالوثيقة في الشركة",
   "notif.kind.piece.supprimee": "حُذفت الوثيقة",
   "notif.kind.piece.archivee": "سُحبت الوثيقة من وثائقك",
   "pme.piece.versionPrecedente": "النسخة السابقة",

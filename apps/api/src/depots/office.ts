@@ -680,7 +680,8 @@ export const office = {
   async transmisesSansDate(db: Requete, tenantId: string): Promise<number> {
     const { rows } = await db.query<{ n: string }>(
       `select count(*)::text as n from pieces_v
-        where tenant_id = $1 and vis = 'partage' and transmise_le is null`,
+        where tenant_id = $1 and vis = 'partage' and transmise_le is null
+          and remplacee_par is null`,
       [tenantId],
     );
     return Number(rows[0]?.n ?? 0);
