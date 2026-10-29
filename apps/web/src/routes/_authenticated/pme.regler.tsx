@@ -9,6 +9,7 @@ import { LivrablesRecus } from "@/components/malica/livrables-recus";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { dernierRetourParPiece } from "@/lib/retour-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -159,10 +160,17 @@ function ARegler() {
   // recomptabilisée ne doit plus figurer ici, même si sa notification reste.
   const enAttente = (pieces.data ?? []).filter((p) => p.status === "retournee");
 
-  const retours = (notifs.data ?? [])
-    .filter((n) => n.kind === "piece.retournee")
-    .map((n) => ({ notif: n, charge: (n.payload ?? {}) as RetourPayload }))
-    .filter((r) => enAttente.some((p) => p.id === r.charge.piece_id));
+  const retours = dernierRetourParPiece(
+    (notifs.data ?? [])
+      .filter((n) => n.kind === "piece.retournee")
+      .map((n) => ({
+        notif: n,
+        charge: (n.payload ?? {}) as RetourPayload,
+        createdAt: n.createdAt,
+      }))
+      .filter((r) => enAttente.some((p) => p.id === r.charge.piece_id)),
+    (r) => r.charge.piece_id,
+  );
 
   /** Ce que le cabinet a répondu sur une question de conseil. */
   const avis = (notifs.data ?? []).filter((n) => n.kind.startsWith("conseil."));

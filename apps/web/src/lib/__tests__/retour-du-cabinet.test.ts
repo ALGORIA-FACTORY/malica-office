@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LOCALES, MESSAGES } from "@malica/socle/messages";
 
-import { FAIT_DU_GESTE, LIBELLE_DU_GESTE, sortiesDuRetour } from "@/lib/retour-du-cabinet";
+import {
+  dernierRetourParPiece,
+  FAIT_DU_GESTE,
+  LIBELLE_DU_GESTE,
+  sortiesDuRetour,
+} from "@/lib/retour-du-cabinet";
 
 /** Maquette « Retours du cabinet et pièces à confirmer », 25 octobre 2026. */
 describe("un retour du cabinet dit un geste", () => {
@@ -25,5 +30,31 @@ describe("un retour du cabinet dit un geste", () => {
     expect(sortiesDuRetour("reprendre_photo", false)[0]).toBe("reprendre_photo");
     expect(sortiesDuRetour("repondre", false)[0]).toBe("repondre");
     expect(sortiesDuRetour("demander_suppression", false)).not.toContain("geste");
+  });
+});
+
+describe("dernierRetourParPiece", () => {
+  const n = (id: string, piece: string | undefined, createdAt: string) => ({
+    id,
+    piece,
+    createdAt,
+  });
+
+  it("garde une seule carte par pièce : le retour le plus récent", () => {
+    const r = dernierRetourParPiece(
+      [
+        n("a", "p1", "2026-10-20T10:00:00Z"),
+        n("b", "p1", "2026-10-28T10:00:00Z"),
+        n("c", "p2", "2026-10-25T10:00:00Z"),
+      ],
+      (x) => x.piece,
+    );
+    expect(r.map((x) => x.id)).toEqual(["b", "c"]);
+  });
+
+  it("écarte un retour sans pièce", () => {
+    expect(
+      dernierRetourParPiece([n("a", undefined, "2026-10-20T10:00:00Z")], (x) => x.piece),
+    ).toEqual([]);
   });
 });
