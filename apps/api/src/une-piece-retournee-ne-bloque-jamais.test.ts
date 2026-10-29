@@ -884,6 +884,96 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     );
     assert.equal(rows[0]?.status, "booked", "le contrôle R2 juge la version courante");
     assert.equal(rows[0]?.piece_id, ancienne, "l'écriture reste sur la pièce du règlement");
+    // Le second regard porte sur la pièce, donc sur sa version courante.
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      supervision.review(db, { ecritureId: ecriture, outcome: "valide" }),
+    );
+    const { rows: verdicts } = await admin.query(
+      `select 1 from capture.conformite where piece_id = $1`,
+      [nouvelle],
+    );
+    assert.equal(verdicts.length, 1, "le verdict est inscrit sur la version courante");
+  });
+
+  /** Une photo de la société, jamais partie au cabinet. */
+  const societe = async () => {
+    n += 1;
+    return sousIdentiteDuServeur(dirigeant.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
+         values ($1, 'photo', 'entite', $2, $3, $4) returning id`,
+        [pme, `essai/${marque}-${n}.jpg`, `${marque}-${n}`, dirigeant.id],
+      );
+      return rows[0]!.id;
+    });
+  };
+
+  it("un règlement hérité s'inscrit et s'exporte comme la version courante, partagée depuis", async () => {
+    const ancienne = await societe();
+    const paiement = await payer(ancienne, 30000);
+    const nouvelle = await remplacer(ancienne, "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    const numero = `FB-${marque}`;
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query(
+        `select public.capture_read_persist($1, $2::jsonb, 'extract.v1', $3::jsonb,
+                                             '[]'::jsonb, '[]'::jsonb)`,
+        [
+          nouvelle,
+          JSON.stringify([{ page: 1, ordinal: 0, text: "TOTAL", x0: 0, y0: 0, x1: 1, y1: 1 }]),
+          JSON.stringify({ document_kind: "facture_achat", references: { numero } }),
+        ],
+      ),
+    );
+    await ttcTranche(nouvelle, 30000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
+    const { rows } = await admin.query<{ vis: string }>(
+      `select vis::text as vis from socle.ecritures where id = $1`,
+      [ecriture],
+    );
+    assert.equal(rows[0]?.vis, "partage", "le côté de l'écriture est celui de la courante");
+    const lignes = await sousIdentiteDuServeur(expert.id, async (db) => {
+      const { rows: l } = await db.query<{ piece_ref: string }>(
+        `select piece_ref from public.export_lignes_lire($1, $2, '2026-01-01', '2026-12-31')
+          where ecriture_id = $3`,
+        [cabinet, pme, ecriture],
+      );
+      return l;
+    });
+    assert.ok(lignes.length > 0, "le règlement entre dans l'export du cabinet");
+    assert.ok(
+      lignes.every((l) => l.piece_ref === numero),
+      "la référence est lue sur la version courante",
+    );
+  });
+
+  it("un règlement ou un reçu saisi sur l'ancienne photo prend le côté de la courante", async () => {
+    const ancienne = await societe();
+    const nouvelle = await remplacer(ancienne, "entite");
+    await pmeFait("collab.setPieceVis", nouvelle, "partage");
+    const paiement = await payer(ancienne, 1000);
+    const { rows } = await admin.query<{ vis: string }>(
+      `select vis::text as vis from capture.paiements where id = $1`,
+      [paiement],
+    );
+    assert.equal(rows[0]?.vis, "partage");
+
+    const gardee = await retournee("avant écriture");
+    const courante = await remplacer(gardee);
+    await pmeFait("collab.garderPiece", courante);
+    const { id: recu } = (await pmeFait("capture.enregistrer", {
+      tenantId: pme,
+      source: "pdf",
+      vis: "partage",
+      idempotencyKey: `${marque}-recu-ancienne-${gardee}`,
+      contentType: "application/pdf",
+      documentKind: "recu_de_paiement",
+      sourcePieceId: gardee,
+    })) as { id: string };
+    assert.equal((await etat(recu))?.vis, "entite", "le reçu ne part pas au cabinet");
   });
 
   /* ============ un rattachement se lit par paire LOGIQUE (revue Codex de #127) */
