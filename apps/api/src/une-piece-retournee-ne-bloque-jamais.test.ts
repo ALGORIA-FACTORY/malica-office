@@ -866,6 +866,26 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     await assert.rejects(cabinetFait("capture.dossier", b), /piece\.not_found/);
   });
 
+  /* ============ un règlement hérité s'inscrit : la pièce se juge à sa courante (revue Codex de #127) */
+
+  it("un règlement saisi sur l'ancienne photo s'inscrit quand le type de la nouvelle est confirmé", async () => {
+    const ancienne = await transmiseLue();
+    const paiement = await payer(ancienne, 30000);
+    const nouvelle = await remplacer(ancienne);
+    await lire(nouvelle);
+    await ttcTranche(nouvelle, 30000);
+    await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(`select public.piece_confirmer_le_type_lu($1)`, [nouvelle]),
+    );
+    const ecriture = (await cabinetFait("office.inscrireLeReglement", paiement)) as string;
+    const { rows } = await admin.query<{ piece_id: string; status: string }>(
+      `select piece_id, status from socle.ecritures where id = $1`,
+      [ecriture],
+    );
+    assert.equal(rows[0]?.status, "booked", "le contrôle R2 juge la version courante");
+    assert.equal(rows[0]?.piece_id, ancienne, "l'écriture reste sur la pièce du règlement");
+  });
+
   /* ============ un rattachement se lit par paire LOGIQUE (revue Codex de #127) */
 
   const lies = async (pieceId: string) =>
