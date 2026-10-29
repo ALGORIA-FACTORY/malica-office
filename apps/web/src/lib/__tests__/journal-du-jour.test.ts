@@ -11,6 +11,8 @@ describe("le journal du jour, côté écran", () => {
   it("ne lit dans l'adresse qu'un vrai jour", () => {
     expect(jourLisible("2026-10-28")).toBe("2026-10-28");
     expect(jourLisible("2026-02-30")).toBeUndefined();
+    expect(jourLisible("2026-13-45")).toBeUndefined();
+    expect(jourLisible("0000-00-00")).toBeUndefined();
     expect(jourLisible("28/10/2026")).toBeUndefined();
     expect(jourLisible(20261028)).toBeUndefined();
   });

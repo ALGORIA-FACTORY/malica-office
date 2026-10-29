@@ -23,7 +23,11 @@ export function jourVoisin(jour: string, decalage: number): string {
 /** Un jour lu dans l'adresse : AAAA-MM-JJ, et une vraie date ; sinon rien. */
 export function jourLisible(v: unknown): string | undefined {
   if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
-  return new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v ? v : undefined;
+  // « 2026-13-45 » a la forme d'un jour sans en être un : `new Date` le rend
+  // invalide, et `toISOString` lèverait au milieu du rendu (recette du 29/10).
+  const jour = new Date(`${v}T00:00:00Z`);
+  if (Number.isNaN(jour.getTime())) return undefined;
+  return jour.toISOString().slice(0, 10) === v ? v : undefined;
 }
 
 /** Combien d'écritures ont bougé depuis l'export précédent. */
