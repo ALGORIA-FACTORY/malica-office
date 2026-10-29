@@ -269,6 +269,9 @@ export function libelleDuCode(code: string, t: T): string {
      * auraient appris a se mefier des deux.
      */
     MONTANT_PEUT_ETRE_AMPUTE: "cab.code.ampute",
+    // Même famille : un montant refusé parce qu'il est absurde (une TVA plus
+    // grande que sa base), pas parce qu'il manque.
+    MONTANT_INVRAISEMBLABLE: "cab.code.invraisemblable",
     ARITHMETIQUE_INCOHERENTE: "cab.code.incoherent",
     /*
      * `DESIGNATION_AMBIGUE` ne dit pas qu'une lecture a echoue : elle dit que

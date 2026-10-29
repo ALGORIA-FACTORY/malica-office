@@ -221,7 +221,17 @@ const ESPACES = /[\s\u00A0\u202F]/u;
 /** Assez pour cinq occurrences d'un montant à quatre groupes de chiffres. */
 const JETONS_PAR_CELLULE_MAX = 20;
 
-function occurrencesIdentiques(texte: string, decimales: number): Candidat[] {
+/**
+ * Exportée pour la lecture au plan de jetons (`malica/lecture/montants.ts`),
+ * qui a la même question à trancher avec SON lecteur d'un montant : `lire`
+ * rend les lectures d'un morceau pris comme un seul montant, `valeur` la
+ * valeur en unités mineures d'une lecture. Une seule règle, deux lecteurs.
+ */
+export function occurrencesIdentiques<L>(
+  texte: string,
+  lire: (morceau: string) => L[],
+  valeur: (lecture: L) => number,
+): L[] {
   // `\s` couvre déjà l'espace insécable et l'espace fine insécable. Les
   // écrire eux-mêmes dans une classe les ferait entrer littéralement dans le
   // fichier, invisibles — ce que le lint refuse, à juste titre.
@@ -229,16 +239,16 @@ function occurrencesIdentiques(texte: string, decimales: number): Candidat[] {
   // Au-delà, le nombre de découpages croît en 2^n ; une cellule n'en porte pas tant.
   if (jetons.length < 2 || jetons.length > JETONS_PAR_CELLULE_MAX) return [];
 
-  const cle = (ls: Candidat[]) =>
+  const cle = (ls: L[]) =>
     ls
-      .map((c) => c.mineur)
+      .map(valeur)
       .sort((a, b) => a - b)
       .join("|");
-  const lectures = new Map<string, Candidat[]>();
-  const lire = (debut: number, fin: number) => {
+  const lectures = new Map<string, L[]>();
+  const lirePlage = (debut: number, fin: number) => {
     const morceau = jetons.slice(debut, fin).join(" ");
     let l = lectures.get(morceau);
-    if (!l) lectures.set(morceau, (l = lectureEntiere(morceau, decimales)));
+    if (!l) lectures.set(morceau, (l = lire(morceau)));
     return l;
   };
   // Le reste des jetons, à partir de `debut`, se découpe-t-il en occurrences
@@ -248,16 +258,16 @@ function occurrencesIdentiques(texte: string, decimales: number): Candidat[] {
     if (debut === jetons.length) return true;
     if (echecs.has(`${debut}|${attendue}`)) return false;
     for (let fin = debut + 1; fin <= jetons.length; fin += 1) {
-      const l = lire(debut, fin);
+      const l = lirePlage(debut, fin);
       if (l.length > 0 && cle(l) === attendue && seDecoupe(fin, attendue)) return true;
     }
     echecs.add(`${debut}|${attendue}`);
     return false;
   };
 
-  const retenues = new Map<string, Candidat[]>();
+  const retenues = new Map<string, L[]>();
   for (let fin = 1; fin < jetons.length; fin += 1) {
-    const premiere = lire(0, fin);
+    const premiere = lirePlage(0, fin);
     if (premiere.length === 0) continue;
     const c = cle(premiere);
     if (seDecoupe(fin, c)) retenues.set(c, premiere);
@@ -329,7 +339,26 @@ export function candidatsMontant(entree: string, decimales: number): Candidat[] 
   // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
   // espaces parasites, et non un montant répété. On ne tranche pas.
   if (lectureEntiere(brut.replace(/\s+/gu, ""), decimales).length > 0) return [];
-  return occurrencesIdentiques(brut, decimales);
+  return occurrencesIdentiques(
+    brut,
+    (morceau) => lectureEntiere(morceau, decimales),
+    (c) => c.mineur,
+  );
+}
+
+/**
+ * Des groupes de milliers bien formés : un premier groupe de 1 à 3 chiffres,
+ * puis des groupes d'exactement 3. Partagée avec la lecture au plan de jetons
+ * (`malica/lecture/montants.ts`) : « 5.46.3 » n'y est pas plus un nombre
+ * qu'ici.
+ */
+export function groupesDeMilliersValides(groupes: readonly string[]): boolean {
+  return (
+    groupes.length > 0 &&
+    groupes.every((g) => /^\d+$/.test(g)) &&
+    groupes[0]!.length <= 3 &&
+    groupes.slice(1).every((g) => g.length === 3)
+  );
 }
 
 /** Les lectures d'un texte pris comme UN seul montant. */
@@ -377,9 +406,6 @@ function lectureEntiere(brut: string, decimales: number): Candidat[] {
     )
       lectures.set(cle, { mineur: Number(v), convention });
   };
-  /** Des groupes de milliers bien formés : 1 à 3 chiffres, puis des groupes de 3. */
-  const milliersValides = (gs: string[]) =>
-    gs.length > 0 && gs[0]!.length <= 3 && gs.slice(1).every((g) => g.length === 3);
   /** La partie décimale, ramenée aux décimales de la devise ; null si elle en porte plus, non nulles. */
   const partieDecimale = (d: string): bigint | null => {
     if (d.length > decimales) {
@@ -408,7 +434,7 @@ function lectureEntiere(brut: string, decimales: number): Candidat[] {
   if (dernier === "." || dernier === ",") {
     const milliers = new Set(avant);
     const coherent = milliers.size === 0 || (milliers.size === 1 && !milliers.has(dernier));
-    if (coherent && (avant.length === 0 || milliersValides(entiers))) {
+    if (coherent && (avant.length === 0 || groupesDeMilliersValides(entiers))) {
       const dec = partieDecimale(fin);
       if (dec !== null)
         ajouter(BigInt(entiers.join("")) * echelle + dec, `décimale « ${dernier} »`);
@@ -417,7 +443,7 @@ function lectureEntiere(brut: string, decimales: number): Candidat[] {
 
   // 2. Tous les séparateurs sont des milliers : un entier.
   const tous = new Set(seps);
-  if (tous.size === 1 && milliersValides(groupes)) {
+  if (tous.size === 1 && groupesDeMilliersValides(groupes)) {
     const n = BigInt(groupes.join(""));
     ajouter(n * echelle, `milliers « ${dernier} », entier`);
     // Et l'espace qui sépare les millimes (« 1 234 560 » pour 1 234,560).

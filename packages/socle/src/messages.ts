@@ -1466,6 +1466,8 @@ const fr = {
     "Montant tranché par l’arithmétique de la facture : c’est la seule lecture qui boucle.",
   "cab.code.ampute":
     "Montant non rendu : il est collé au nombre voisin sur la pièce, et une lecture amputée vaut moins que pas de lecture.",
+  "cab.code.invraisemblable":
+    "Montant non rendu : la TVA lue dépasse la base de sa ligne, l’une des deux est mal lue. Relisez-les sur la pièce.",
   "cab.code.incoherent":
     "La pièce ne boucle pas : ce que son arithmétique donne et ce qu’elle imprime diffèrent.",
   "cab.code.designationAmbigue":
@@ -5181,6 +5183,8 @@ const en: Dict = {
     "Amount settled by the invoice arithmetic: it is the only reading that balances.",
   "cab.code.ampute":
     "Amount not returned: it runs into the neighbouring number on the document, and a clipped reading is worth less than none.",
+  "cab.code.invraisemblable":
+    "Amount not returned: the VAT read is larger than the base on its line, so one of them is misread. Check both on the document.",
   "cab.code.incoherent":
     "The document does not balance: what its arithmetic gives and what it prints differ.",
   "cab.code.designationAmbigue":
@@ -8763,6 +8767,8 @@ const ar: Dict = {
   "cab.code.arithmetique": "مبلغ حسمته حسابات الفاتورة: هي القراءة الوحيدة التي تتوازن.",
   "cab.code.ampute":
     "مبلغ لم يُرجَع: هو ملتصق بالعدد المجاور في الوثيقة، وقراءة مبتورة أسوأ من غياب القراءة.",
+  "cab.code.invraisemblable":
+    "مبلغ لم يُرجَع: الأداء على القيمة المضافة المقروء يفوق أساس سطره، فأحدهما مقروء خطأً. راجِعهما على الوثيقة.",
   "cab.code.incoherent": "الوثيقة لا تتوازن: ما تعطيه حساباتها يخالف ما تطبعه.",
   "cab.code.designationAmbigue": "موضعان في الوثيقة استجابا لنفس القاعدة: لم أختر عشوائيًا.",
   "cab.code.autre": "تنبيه قراءة.",

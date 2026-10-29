@@ -411,7 +411,9 @@ export function lireMontantDuPlan(
     return {
       value: null,
       citation,
-      flag: { field, code: "VALUE_NOT_A_NUMBER", detail: token.text },
+      // Toute la plage, pas son premier jeton : « 5,460 301,150 » dit pourquoi
+      // rien n'est rendu, « 5,460 » laisserait croire à une panne.
+      flag: { field, code: "VALUE_NOT_A_NUMBER", detail: texte },
       hypotheses,
     };
   }

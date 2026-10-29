@@ -104,6 +104,46 @@ export function buildExtractFromTokenPlan(params: {
   });
   selection.other_charges.forEach((c, k) => relever(`other_charges[${k}].amount`, c.amount));
 
+  /*
+   * ============================ UNE TVA NE DÉPASSE JAMAIS SA BASE (29 octobre 2026)
+   *
+   * Staging : une TVA de ligne lue 5 460 301,150 sur une base de 1 585,000 —
+   * deux cellules jointes en un nombre — et le solveur l'a additionnée :
+   * « donne 5460306.610 ». La lecture est corrigée à la racine
+   * (`treillisMontant`), mais une plage mal désignée peut encore pointer un
+   * montant lisible et absurde : la base voisine, le total du pied.
+   *
+   * Aucun taux n'est lu ici (R4) : l'invariant est qu'une taxe sur la valeur
+   * ne dépasse pas la valeur. Une TVA de ligne dont TOUTES les lectures
+   * dépassent TOUTES celles de sa base n'en est pas une : elle sort sans
+   * valeur, avec un drapeau, et le solveur ne la voit pas — sans quoi il
+   * l'additionnerait dans la TVA du pied. Une base illisible ne juge rien ;
+   * une base ambiguë ne juge qu'avec sa plus grande lecture.
+   *
+   * Les TOTAUX du pied n'y passent pas, délibérément : leur TVA et leur base
+   * entrent dans l'équation du TTC, qui juge déjà la facture ET dit quel
+   * nombre ne tient pas. Le loyer du 4 octobre (HT lu « 3 » au lieu de
+   * 3 020,000, TVA 573,800 juste) le montre : c'est la base qui était fausse,
+   * et retirer la TVA aurait éteint le seul drapeau qui le disait.
+   */
+  const invraisemblables = new Map<string, string>();
+  for (const [i] of selection.lines.entries()) {
+    const tva = `lines[${i}].vat_amount`;
+    const base = `lines[${i}].base_ht`;
+    const lue = treillis.get(tva)!;
+    const bases = treillis.get(base)!.hypotheses.map((h) => Math.abs(h.millimes));
+    if (bases.length === 0 || lue.hypotheses.length === 0) continue;
+    const plafond = Math.max(...bases);
+    if (lue.hypotheses.every((h) => Math.abs(h.millimes) > plafond)) {
+      invraisemblables.set(
+        tva,
+        `TVA lue ${lue.hypotheses.map((h) => enDecimal(h.millimes, decimals)).join(" ou ")}, ` +
+          `plus grande que la base de sa ligne ${enDecimal(plafond, decimals)} : l'une des deux est mal lue`,
+      );
+      treillis.set(tva, { ...lue, hypotheses: [] });
+    }
+  }
+
   // Les équations. Aucune ne connaît de taux : un taux vit dans le paramétrage
   // daté (R4), et la TVA n'entre ici que comme un montant lu, additionné.
   //
@@ -194,6 +234,12 @@ export function buildExtractFromTokenPlan(params: {
       uiField: uiField ?? field,
     });
     if (m.citation) citations.push(m.citation);
+
+    const invraisemblable = invraisemblables.get(field);
+    if (invraisemblable !== undefined) {
+      flags.push({ field, code: "MONTANT_INVRAISEMBLABLE", detail: invraisemblable });
+      return null;
+    }
 
     const decide = resolution.valeurs.get(field);
     if (m.hypotheses.length > 1 && decide?.decidePar === "arithmetique") {
