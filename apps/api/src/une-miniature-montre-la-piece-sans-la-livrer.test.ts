@@ -16,11 +16,11 @@
  *   — supprimer la pièce efface aussi sa miniature.
  */
 import assert from "node:assert/strict";
-import { access, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, readdir, rm } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { after, before, describe, it } from "node:test";
+import { after, before, describe, it, mock } from "node:test";
 
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import pg from "pg";
@@ -28,7 +28,7 @@ import pg from "pg";
 import { creerCompte, emettreJeton, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
-import { fabriquerMiniature } from "./miniature.ts";
+import { fabrique, fabriquerMiniature } from "./miniature.ts";
 import { executerRpc } from "./rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -99,7 +99,7 @@ function pdfAvecImage(
 describe("fabriquer une miniature", () => {
   it("réduit une photo dans sa boîte, en JPEG, bien plus léger", async () => {
     const source = await photo();
-    const mini = await fabriquerMiniature(new Uint8Array(source), "image/jpeg");
+    const mini = await fabriquerMiniature(new Uint8Array(source));
     assert.ok(mini, "une photo donne une miniature");
     const image = await loadImage(mini);
     assert.equal(image.width, 360);
@@ -108,7 +108,7 @@ describe("fabriquer une miniature", () => {
   });
 
   it("n'agrandit jamais une petite image", async () => {
-    const mini = await fabriquerMiniature(new Uint8Array(await photo(120, 160)), "image/jpeg");
+    const mini = await fabriquerMiniature(new Uint8Array(await photo(120, 160)));
     assert.ok(mini);
     const image = await loadImage(mini);
     assert.equal(image.width, 120);
@@ -116,7 +116,7 @@ describe("fabriquer une miniature", () => {
 
   it("montre la première page d'un PDF scanné", async () => {
     const pdf = pdfAvecImage(await photo(600, 848), 600, 848, "page");
-    const mini = await fabriquerMiniature(pdf, "application/pdf");
+    const mini = await fabriquerMiniature(pdf);
     assert.ok(mini, "un scan donne sa page");
     const image = await loadImage(mini);
     assert.ok(image.height <= 480 && image.width <= 360);
@@ -124,7 +124,7 @@ describe("fabriquer une miniature", () => {
 
   it("ne prend pas le logo d'un PDF de texte pour la page", async () => {
     const pdf = pdfAvecImage(await photo(200, 200), 200, 200, "logo");
-    assert.equal(await fabriquerMiniature(pdf, "application/pdf"), null);
+    assert.equal(await fabriquerMiniature(pdf), null);
   });
 
   /*
@@ -218,7 +218,7 @@ describe("fabriquer une miniature", () => {
     for (const [orientation, largeur, hauteur, gauche, droite] of attendus) {
       it(`orientation ${orientation}`, async () => {
         const source = avecOrientation(await quartiers(), orientation);
-        const mini = await fabriquerMiniature(new Uint8Array(source), "image/jpeg");
+        const mini = await fabriquerMiniature(new Uint8Array(source));
         assert.ok(mini);
         const image = await loadImage(mini);
         assert.deepEqual([image.width, image.height], [largeur, hauteur]);
@@ -230,11 +230,61 @@ describe("fabriquer une miniature", () => {
     }
   });
 
-  it("n'invente rien d'un contenu illisible ou d'un type inconnu", async () => {
-    const bruit = new Uint8Array([1, 2, 3, 4, 5]);
-    assert.equal(await fabriquerMiniature(bruit, "image/jpeg"), null);
-    assert.equal(await fabriquerMiniature(bruit, "application/pdf"), null);
-    assert.equal(await fabriquerMiniature(bruit, "application/octet-stream"), null);
+  it("n'invente rien d'un contenu sans signature reconnue", async () => {
+    assert.equal(await fabriquerMiniature(new Uint8Array([1, 2, 3, 4, 5])), null);
+  });
+
+  it("lit le format dans les octets : un WebP passe, comme un PNG", async () => {
+    const toile = createCanvas(300, 400);
+    toile.getContext("2d").fillRect(0, 0, 300, 400);
+    for (const format of ["webp", "png"] as const) {
+      const mini = await fabriquerMiniature(new Uint8Array(await toile.encode(format as "webp")));
+      assert.ok(mini, format);
+      assert.equal((await loadImage(mini)).width, 300);
+    }
+  });
+
+  /*
+   * ========================================== CE QUI NE DOIT PAS ENTRER
+   *
+   * Relu le 29 octobre 2026 : une SVG de 70 octets déclarant 200 000 × 200 000
+   * abattait le processus de l'API (Skia, `tryAllocPixels`, assertion fatale
+   * qu'aucun `try` ne rattrape). Avant la correction, l'épreuve SVG ci-dessous
+   * ne rendait pas un échec : elle tuait le lanceur d'épreuves.
+   */
+  describe("refuse ce qui ferait tomber le décodeur", () => {
+    it("une SVG, quelle que soit sa taille déclarée : jamais décodée", async () => {
+      for (const svg of [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="200000" height="200000"/>',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><image href="file:///etc/hostname" width="100" height="100"/></svg>',
+      ]) {
+        assert.equal(await fabriquerMiniature(new TextEncoder().encode(svg)), null);
+      }
+    });
+
+    it("un PNG qui annonce 60 000 × 60 000 n'est pas décodé", async () => {
+      const png = Buffer.from(await createCanvas(10, 10).encode("png"));
+      png.writeUInt32BE(60_000, 16);
+      png.writeUInt32BE(60_000, 20);
+      const t0 = Date.now();
+      assert.equal(await fabriquerMiniature(new Uint8Array(png)), null);
+      assert.ok(Date.now() - t0 < 200, "refusé à l'en-tête, sans décodage");
+    });
+
+    it("un JPEG qui annonce 65 000 × 65 000 n'est pas décodé", async () => {
+      const jpeg = Buffer.from(await photo(16, 16));
+      // Le premier SOFn porte la hauteur en +5 et la largeur en +7.
+      let i = 2;
+      while (!(jpeg[i + 1]! >= 0xc0 && jpeg[i + 1]! <= 0xc3)) i += 2 + jpeg.readUInt16BE(i + 2);
+      jpeg.writeUInt16BE(65_000, i + 5);
+      jpeg.writeUInt16BE(65_000, i + 7);
+      assert.equal(await fabriquerMiniature(new Uint8Array(jpeg)), null);
+    });
+
+    it("un PNG annoncé en tête d'un en-tête tronqué n'est pas décodé", async () => {
+      const tronque = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]);
+      assert.equal(await fabriquerMiniature(tronque), null);
+    });
   });
 });
 
@@ -421,5 +471,104 @@ describe("la route de la miniature", { skip: !BASE_CONFIGUREE }, () => {
     );
     assert.equal(supprimee, true);
     await assert.rejects(access(chemin));
+  });
+
+  /** Une pièce neuve, sans miniature encore : chaque épreuve de charge a la sienne. */
+  const neuve = async (cle: string) =>
+    deposer(dirigeant, cle, "entite", "image/jpeg", new Uint8Array(await photo()));
+  const demander = (id: string) =>
+    fetch(`${base}/pieces/${id}/miniature`, { headers: entetes(dirigeant) });
+  const miniatureSurDisque = (id: string) => path.join(racineEssai, pme, `${id}.miniature.jpg`);
+
+  it("vingt demandes simultanées de la même pièce : une seule fabrication", async () => {
+    const id = await neuve("meme");
+    const espion = mock.method(fabrique, "miniature");
+    try {
+      const reponses = await Promise.all(Array.from({ length: 20 }, () => demander(id)));
+      assert.deepEqual(new Set(reponses.map((r) => r.status)), new Set([200]));
+      assert.equal(espion.mock.callCount(), 1);
+    } finally {
+      espion.mock.restore();
+    }
+  });
+
+  it("vingt pièces différentes à la fois : jamais plus de deux fabrications", async (t) => {
+    const ids = await Promise.all(Array.from({ length: 20 }, (_, i) => neuve(`charge-${i}`)));
+    const original = fabrique.miniature;
+    let enCours = 0;
+    let pic = 0;
+    const espion = mock.method(fabrique, "miniature", async (octets: Uint8Array) => {
+      enCours += 1;
+      pic = Math.max(pic, enCours);
+      try {
+        return await original(octets);
+      } finally {
+        enCours -= 1;
+      }
+    });
+    try {
+      const t0 = performance.now();
+      const reponses = await Promise.all(ids.map((id) => demander(id)));
+      const duree = Math.round(performance.now() - t0);
+      assert.deepEqual(new Set(reponses.map((r) => r.status)), new Set([200]));
+      assert.equal(espion.mock.callCount(), 20);
+      assert.ok(pic <= 2, `pic de ${pic} fabrications simultanées`);
+      // Rendre ensuite les vingt, déjà gardées, ne refabrique rien.
+      const t1 = performance.now();
+      await Promise.all(ids.map((id) => demander(id)));
+      const dureeGardees = Math.round(performance.now() - t1);
+      assert.equal(espion.mock.callCount(), 20);
+      t.diagnostic(
+        `20 miniatures neuves (photos 1200×1600) : ${duree} ms, pic ${pic} ; ` +
+          `les mêmes, gardées : ${dureeGardees} ms`,
+      );
+    } finally {
+      espion.mock.restore();
+    }
+  });
+
+  it("une pièce supprimée PENDANT la fabrication ne laisse pas de miniature", async () => {
+    const id = await neuve("supprimee-pendant");
+    const original = fabrique.miniature;
+    let lacher: () => void = () => {};
+    const lachee = new Promise<void>((r) => (lacher = r));
+    let entree: () => void = () => {};
+    const entreeFaite = new Promise<void>((r) => (entree = r));
+    const espion = mock.method(fabrique, "miniature", async (octets: Uint8Array) => {
+      entree();
+      await lachee;
+      return original(octets);
+    });
+    try {
+      const reponse = demander(id);
+      await entreeFaite;
+      const supprimee = await sousIdentiteDuServeur(dirigeant.id, (db) =>
+        executerRpc(db, { depot: "capture", methode: "supprimer", args: [id] }, "serveur"),
+      );
+      assert.equal(supprimee, true);
+      lacher();
+      assert.equal((await reponse).status, 404);
+      await assert.rejects(access(miniatureSurDisque(id)));
+    } finally {
+      espion.mock.restore();
+    }
+  });
+
+  it("un échec passager rend 204 sans rien garder, et la demande suivante réussit", async () => {
+    const id = await neuve("passager");
+    const espion = mock.method(fabrique, "miniature", async () => {
+      throw new Error("mémoire insuffisante, un instant");
+    });
+    try {
+      assert.equal((await demander(id)).status, 204);
+      await assert.rejects(access(miniatureSurDisque(id)));
+      const restes = (await readdir(path.join(racineEssai, pme))).filter((f) =>
+        f.endsWith(".partiel"),
+      );
+      assert.deepEqual(restes, []);
+    } finally {
+      espion.mock.restore();
+    }
+    assert.equal((await demander(id)).status, 200);
   });
 });

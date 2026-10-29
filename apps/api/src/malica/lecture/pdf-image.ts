@@ -167,7 +167,17 @@ export interface PageImage {
  * pièce. Si une page en porte plusieurs, on prend celle qui couvre le plus de
  * pixels et le relevé le dira par ce qu'il ne trouve pas.
  */
-export async function extrairePagesScannees(bytes: Uint8Array, maxPages = 5): Promise<PageImage[]> {
+export async function extrairePagesScannees(
+  bytes: Uint8Array,
+  maxPages = 5,
+  /**
+   * Le plafond, en pixels, d'une image que pdf.js accepte de décoder ; au-delà
+   * il ne la décode pas (`maxImageSize`). Sans lui, un PDF qui déclare une
+   * image de 100 000 × 100 000 ferait allouer des dizaines de gigaoctets.
+   * Absent : le défaut de pdf.js, comme avant.
+   */
+  maxImageSize?: number,
+): Promise<PageImage[]> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const tache = pdfjs.getDocument({
     // Une COPIE : `getDocument` transfère le tableau et le DÉTACHE. Voir le
@@ -181,6 +191,7 @@ export async function extrairePagesScannees(bytes: Uint8Array, maxPages = 5): Pr
     // qu'aucun encodeur ne pourrait relire hors navigateur.
     isOffscreenCanvasSupported: false,
     verbosity: 0,
+    ...(maxImageSize === undefined ? {} : { maxImageSize }),
   });
   const doc = await tache.promise;
   const sortie: PageImage[] = [];
