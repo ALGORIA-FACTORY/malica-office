@@ -724,7 +724,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
     const nouvelle = await remplacer(ancienne);
     await pmeFait("collab.garderPiece", nouvelle);
     assert.equal((await etat(recu))?.vis, "entite", "le reçu suit sa facture");
-    assert.equal((await etat(ancienne))?.vis, "entite", "la version précédente aussi");
+    // La version précédente garde son fait ; elle se lit à travers la courante,
+    // désormais dans la société : le cabinet ne la lit plus (ci-dessous).
     await assert.rejects(cabinetFait("capture.dossier", recu), /piece\.not_found/);
     await assert.rejects(cabinetFait("capture.dossier", ancienne), /piece\.not_found/);
   });
