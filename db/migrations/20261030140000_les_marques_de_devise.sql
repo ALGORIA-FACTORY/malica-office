@@ -45,6 +45,11 @@ insert into ref.devises_marques (marque, devise) values
   ('TND.',   'TND'),
   ('DINAR',  'TND'),
   ('DINARS', 'TND'),
+  -- « dinar tunisien » : « 510,000 DNT » sur la facture MYTEK.
+  ('DNT',    'TND'),
+  ('DNT.',   'TND'),
+  ('D.N.T',  'TND'),
+  ('D.N.T.', 'TND'),
   ('د.ت',    'TND'),
   ('د.ت.',   'TND'),
   ('€',      'EUR');

@@ -333,10 +333,10 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     assert.doesNotMatch(r.raison, /comprend/);
   });
 
-  it("MYTEK tel qu'imprimé : « 510,000 DNT » reste un total non lu, la TVA suffit", () => {
-    // La devise se lit dans le paramétrage (R4), pas dans ce code : un total
-    // que la vérification ne lit pas est écarté et NOMMÉ, et la TVA imprimée
-    // confirme seule la base déduite.
+  it("MYTEK tel qu'imprimé : « 510,000 DNT » se lit, « DNT » étant une marque du référentiel", () => {
+    // La devise se lit dans le référentiel (R4), pas dans ce code : depuis le
+    // 30 octobre 2026, `ref.devises_marques` porte « DNT » (dinar tunisien),
+    // et le total imprimé confirme la base déduite avec la TVA.
     const r = normaliserMontants(
       {
         bases: [{ ht: "428,731", taux: TAUX }],
@@ -348,7 +348,25 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
     );
     assert.equal(r.etat, "tranche", r.raison);
     assert.equal(r.montants.bases[0]?.ht, 427_731);
-    assert.equal(r.totalNonLu, "510,000 DNT");
+    assert.equal(r.montants.ttc, 510_000);
+    assert.equal(r.totalNonLu, null);
+  });
+
+  it("une marque que le référentiel ne connaît pas laisse le total non lu, la TVA suffit", () => {
+    // Un total que la vérification ne lit pas est écarté et NOMMÉ, et la TVA
+    // imprimée confirme seule la base déduite.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "428,731", taux: TAUX }],
+        tva: "81,269",
+        autres: TIMBRE,
+        ttc: "510,000 USD",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]?.ht, 427_731);
+    assert.equal(r.totalNonLu, "510,000 USD");
   });
 
   it("total non lu : la TVA seule vérifie la base déduite, sans la note pleine", () => {

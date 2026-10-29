@@ -134,6 +134,8 @@ describe("les marques de devise viennent du référentiel, pour les deux lecteur
     ["D.T. 1 234,560", [1234560]],
     ["1 234,560D.T.", [1234560]],
     ["4 812,300 TND.", [4812300]],
+    ["510,000 DNT", [510000]],
+    ["510,000 D.N.T.", [510000]],
     ["art. 9", []],
     ["TVA 19 %", []],
     ["N° 12.", []],
