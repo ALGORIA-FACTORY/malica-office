@@ -7,6 +7,7 @@ import {
   delaiAvantEssai,
   estADeclencher,
   nouvelElement,
+  repriseRefusee,
   transition,
   type ElementDeFile,
   type EtatElement,
@@ -94,5 +95,31 @@ describe("les échecs", () => {
     const e = element("lecture_demandee");
     expect(transition(e, { type: "echec", nature: "reseau", message: "x" }, T0)).toBe(e);
     expect(estADeclencher(e, T0)).toBe(false);
+  });
+});
+
+describe("une reprise refusée", () => {
+  const refusee = (message: string) =>
+    element("echec_definitif", { remplace: "A", derniereErreur: message });
+
+  it("se reconnaît à son code, et seulement sur une photo qui reprenait une pièce", () => {
+    expect(repriseRefusee(refusee("refus.piece.remplacee"))).toBe(true);
+    expect(repriseRefusee(refusee("refus.remplacement.inscrite"))).toBe(true);
+    expect(repriseRefusee(refusee("refus.remplacement.introuvable"))).toBe(true);
+    expect(repriseRefusee(refusee("pièce trop volumineuse"))).toBe(false);
+    expect(
+      repriseRefusee(element("echec_definitif", { derniereErreur: "refus.piece.remplacee" })),
+    ).toBe(false);
+    expect(repriseRefusee(element("a_envoyer", { remplace: "A" }))).toBe(false);
+  });
+
+  it("repart vers une autre cible — la version actuelle, ou aucune", () => {
+    const vers = transition(refusee("refus.piece.remplacee"), { type: "recibler", remplace: "C" }, T0);
+    expect(vers).toMatchObject({ etat: "a_envoyer", remplace: "C", derniereErreur: null });
+    const libre = transition(refusee("refus.remplacement.inscrite"), { type: "recibler", remplace: null }, T0);
+    expect(libre).toMatchObject({ etat: "a_envoyer", remplace: null, tentatives: 0 });
+    // Hors d'un échec, rien ne bouge : on ne détourne pas un envoi en cours.
+    const enCours = element("enregistree", { remplace: "A" });
+    expect(transition(enCours, { type: "recibler", remplace: null }, T0)).toBe(enCours);
   });
 });
