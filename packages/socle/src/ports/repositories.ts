@@ -1135,6 +1135,8 @@ export interface CandidatAuJustificatif {
 }
 
 export interface CaptureRepository {
+  /** Son Mon espace hors des sociétés quittées : il part avec son compte (lot 4). */
+  monEspaceHorsSociete(): Promise<PieceDeMonEspace[]>;
   /**
    * Les deux pas d'un dépôt, séparés pour que la file hors ligne reprenne
    * entre les deux : la ligne d'abord (même clé → même pièce), les octets
@@ -2396,6 +2398,17 @@ export interface CollabRepository {
   ): Promise<void>;
   /** Les faits d'une demande, du plus récent au plus ancien. L'état courant est le premier. */
   demandesDUnePiece(pieceId: string): Promise<FaitDeDemande[]>;
+}
+
+/** Une pièce de son Mon espace, d'une société qu'il a quittée : elle part avec son compte. */
+export interface PieceDeMonEspace {
+  id: string;
+  tenantId: string;
+  /** Le nom de la société quittée. */
+  societe: string;
+  createdAt: string;
+  contentType: string | null;
+  documentKind: string | null;
 }
 
 /** Ce que dit un envoi : chez qui la pièce est partie, et l'heure de la base. */

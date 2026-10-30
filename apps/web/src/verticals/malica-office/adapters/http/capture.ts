@@ -27,6 +27,7 @@ import type {
   Piece,
   PieceDossier,
   PieceStatus,
+  PieceDeMonEspace,
   PieceLue,
   Token,
   PaiementDUnePiece,
@@ -78,6 +79,10 @@ export function creerCaptureHttp(): CaptureRepository {
     // L'API rend déjà la forme du port : rien à transposer ici.
     async listAvecLecture(tenantId: string): Promise<PieceLue[]> {
       return rpc<PieceLue[]>("capture", "listAvecLecture", [tenantId]);
+    },
+
+    async monEspaceHorsSociete(): Promise<PieceDeMonEspace[]> {
+      return rpc<PieceDeMonEspace[]>("capture", "monEspaceHorsSociete", []);
     },
 
     // Le paiement d'une pièce : l'API rend déjà la forme du port.

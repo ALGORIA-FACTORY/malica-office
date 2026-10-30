@@ -27,6 +27,7 @@
     "enregistrerPaiement",
     "listAvecLecture",
     "lister",
+    "monEspaceHorsSociete",
     "motifsDAnnulation",
     "paiementsDUnePiece",
     "pieceQuiAccompagne",

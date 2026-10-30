@@ -1,3 +1,4 @@
+import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { MESSAGES } from "@malica/socle/messages";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -553,6 +554,8 @@ function PmeLayout() {
           ) : !org ? (
             <div className="border border-border bg-card p-6">
               <p className="text-sm text-muted-foreground">{t("pme.noorg")}</p>
+              {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
+              <LienMonEspaceParti className="mt-4 flex min-h-[48px] items-center border border-border px-4 text-sm font-medium" />
               <Link
                 to="/onboarding"
                 className="mt-4 inline-block border border-foreground bg-foreground px-4 py-2 text-xs uppercase tracking-wide text-background"

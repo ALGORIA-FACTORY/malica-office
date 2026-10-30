@@ -28,6 +28,7 @@ import type {
   EtatDUnTravail,
   GesteDeRetour,
   MontantsDuCabinet,
+  PieceDeMonEspace,
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
@@ -372,6 +373,26 @@ export const capture = {
       await db.query(`select public.piece_remplacer($1, $2)`, [input.remplace, id]);
     }
     return { id, chemin };
+  },
+
+  /**
+   * Son Mon espace, hors des sociétés qu'il a quittées (lot 4) : il part avec
+   * son compte. La base le rend à son auteur seul ; il le télécharge (route
+   * `/pieces/:id/contenu`, sous RLS) et le supprime, sans jamais l'envoyer.
+   */
+  async monEspaceHorsSociete(db: Requete): Promise<PieceDeMonEspace[]> {
+    const { rows } = await db.query(
+      `select id, tenant_id, societe, created_at, content_type, document_kind
+         from public.mon_espace_hors_societe()`,
+    );
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      id: r["id"] as string,
+      tenantId: r["tenant_id"] as string,
+      societe: r["societe"] as string,
+      createdAt: new Date(r["created_at"] as string | Date).toISOString(),
+      contentType: (r["content_type"] as string | null) ?? null,
+      documentKind: (r["document_kind"] as string | null) ?? null,
+    }));
   },
 
   async lister(db: Requete, tenantId: string) {

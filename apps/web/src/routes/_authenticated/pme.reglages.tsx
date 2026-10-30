@@ -17,6 +17,7 @@ import { Aide } from "@/components/malica/aide";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
+import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { usePrix } from "@/hooks/use-decimales";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -169,6 +170,8 @@ function PmeReglages() {
           </span>
         </div>
         <MonNom />
+        {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
+        <LienMonEspaceParti className="btn btn-sec mt-2" />
         <SeDeconnecter className="btn btn-sec mt-2" />
       </div>
 
