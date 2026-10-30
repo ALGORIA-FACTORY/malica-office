@@ -76,8 +76,12 @@ grant execute on function app.ecriture_prise_en_charge_de(uuid) to authenticated
 -- La TVA : les comptes de TVA du pack et les rôles qui y sont liés. Un droit :
 -- le compte du droit au pack, et le rôle qui y est lié. Le tiers : la
 -- contrepartie du pack et tout rôle de tiers ou de trésorerie — un achat payé
--- comptant a la caisse pour contrepartie. La base : une charge ou un produit.
--- Le reste est « autre » : ni HT, ni charge.
+-- comptant a la caisse pour contrepartie. La base : une charge ou un produit,
+-- et une IMMOBILISATION acquise — un rôle que les schémas d'écriture du
+-- journal de ce sens portent au montant HT sans être une charge ni un produit
+-- (`ref.entry_template_lines`) : elle est HT, jamais une charge du mois, et
+-- marquée pour que la déclaration puisse en isoler la TVA. Le reste est
+-- « autre » : ni HT, ni charge.
 
 create or replace function app.nature_des_comptes(
   p_cabinet uuid,
@@ -86,7 +90,7 @@ create or replace function app.nature_des_comptes(
   p_kind    text,
   p_date    date,
   p_comptes text[])
-returns table (account_code text, nature text, droit_code text)
+returns table (account_code text, nature text, droit_code text, immobilisation boolean)
 language sql
 stable
 security definer
@@ -131,11 +135,27 @@ as $$
     select ro.prefixe, 'tiers', null, 3
       from roles ro
      where ro.famille in ('tiers', 'tresorerie') and ro.prefixe is not null
+    union
+    select ro.prefixe, 'immobilisation', null, 4
+      from roles ro
+     where ro.prefixe is not null
+       and ro.famille not in ('charge', 'produit')
+       and ro.code in (
+         select l.role_code
+           from ref.entry_template_lines l
+           join ref.entry_templates e on e.code = l.template_code
+          where l.grandeur = 'montant_ht'
+            and e.journal_code in (select m.journal_code from ref.account_mappings m
+                                    where m.pack_version_id = p_pack
+                                      and m.document_kind = p_kind))
   )
   select a.compte,
-         coalesce(t.nature,
-                  case when cl.nature in ('charge', 'produit') then 'base' else 'autre' end),
-         t.droit_code
+         case when t.nature = 'immobilisation' then 'base'
+              else coalesce(t.nature,
+                            case when cl.nature in ('charge', 'produit') then 'base'
+                                 else 'autre' end) end,
+         t.droit_code,
+         coalesce(t.nature = 'immobilisation', false)
     from unnest(p_comptes) as a(compte)
     left join lateral (
       select x.nature, x.droit_code
@@ -178,7 +198,8 @@ returns table (
   libelle         text,
   date_ecriture   date,
   pack_version_id uuid,
-  devise          text
+  devise          text,
+  immobilisation  boolean
 )
 language sql
 stable
@@ -208,6 +229,7 @@ as $$
   rangees as (
     select l.ecriture_id, l.ordinal, l.account_code, l.libelle, l.tax_code,
            e.pack_version_id, e.date_ecriture, e.devise, n.nature, n.droit_code,
+           n.immobilisation,
            case when k.document_kind = 'facture_vente' then l.credit - l.debit
                 else l.debit - l.credit end as cote
       from e
@@ -226,7 +248,8 @@ as $$
            when 'base' then coalesce(r.tax_code, (select code from unique_tva))
          end,
          case when r.nature in ('tiers', 'autre') then -r.cote else r.cote end,
-         r.account_code, r.libelle, r.date_ecriture, r.pack_version_id, r.devise
+         r.account_code, r.libelle, r.date_ecriture, r.pack_version_id, r.devise,
+         r.immobilisation
     from rangees r
    order by r.ordinal
 $$;
@@ -257,9 +280,13 @@ as $$
       from l
   ),
   par_code as (
+    -- `immobilisation` : toute la base de ce taux est une immobilisation
+    -- acquise, et sa TVA peut s'en déclarer à part.
     select tax_code,
            coalesce(sum(montant) filter (where nature = 'base'), 0) as ht,
-           coalesce(sum(montant) filter (where nature = 'tva'), 0)  as tva
+           coalesce(sum(montant) filter (where nature = 'tva'), 0)  as tva,
+           coalesce(bool_and(immobilisation) filter (where nature = 'base'), false)
+             as immobilisation
       from l
      where nature in ('base', 'tva')
      group by tax_code
@@ -291,7 +318,8 @@ as $$
                            'tax_code', pc.tax_code,
                            'base_ht', pc.ht::text,
                            'vat_amount', pc.tva::text,
-                           'ttc', (pc.ht + pc.tva)::text) order by pc.tax_code)
+                           'ttc', (pc.ht + pc.tva)::text,
+                           'immobilisation', pc.immobilisation) order by pc.tax_code)
                            from par_code pc), '[]'::jsonb),
       'other_charges', coalesce((select jsonb_agg(jsonb_build_object(
                                    'code', d.droit_code, 'label', d.droit_code,
@@ -324,7 +352,8 @@ as $$
     from app.lignes_prises_en_charge(p_piece) l
     cross join lateral public.charge_famille_resolve(
       l.pack_version_id, l.account_code, l.libelle, l.date_ecriture) r
-   where l.nature = 'base'
+   -- Une immobilisation acquise est HT, jamais une charge du mois.
+   where l.nature = 'base' and not l.immobilisation
    order by l.ordinal
 $$;
 

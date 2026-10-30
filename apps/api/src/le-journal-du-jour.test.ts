@@ -54,7 +54,7 @@ describe("le journal du jour du comptable", { skip: !BASE_CONFIGUREE }, () => {
   const GRAND = "9007199254740.993";
 
   const lignes = (charge: string, montant: string): LigneSaisie[] => [
-    { account_code: charge, libelle: "Achat", debit: montant, credit: "0", tax_code: null },
+    { account_code: charge, libelle: "Achat", debit: montant, credit: "0", tax_code: "EXO" },
     { account_code: "401", libelle: "Fournisseur", debit: "0", credit: montant, tax_code: null },
   ];
 

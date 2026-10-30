@@ -741,7 +741,12 @@ function lignesDuPivot(x) {
     libelle: `${ex.document_kind === "facture_achat" ? "Achat" : "Vente"} — ${ex.issuer} — Réf. ${x.reference} du ${enJour(ex.document_date)}`,
     lignes: lignes
       .filter((l) => enMillimes(l.debit) !== 0n || enMillimes(l.credit) !== 0n)
-      .map((l) => ({ ...l, tax_code: l.account_code === mapping.vatAccount ? premierCode : null })),
+      .map((l) => ({
+        ...l,
+        tax_code: [mapping.vatAccount, mapping.mainAccount].includes(l.account_code)
+          ? premierCode
+          : null,
+      })),
   };
 }
 

@@ -407,6 +407,13 @@ export const office = {
       lignes.some((l) => natureDe.get(l.account_code) === "base" && !l.tax_code)
     )
       throw refusMetier("refus.ecriture.taxe_base");
+    // Sans ligne de TVA, la base dit son régime (exonérée, export…) : sinon
+    // sa base manque à la déclaration (revue de #140, cas J).
+    if (
+      tva.length === 0 &&
+      lignes.some((l) => natureDe.get(l.account_code) === "base" && !l.tax_code)
+    )
+      throw refusMetier("refus.ecriture.taxe_sans_tva");
 
     if (vivante) {
       // La contre-passation porte le motif gouverné du forçage (référentiel).

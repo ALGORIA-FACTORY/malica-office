@@ -268,7 +268,7 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
         date: jour,
         libelle: "Facture saisie par le cabinet",
         lignes: [
-          { account_code: "601", libelle: "Achat", debit: "10.000", credit: "0", tax_code: null },
+          { account_code: "601", libelle: "Achat", debit: "10.000", credit: "0", tax_code: "EXO" },
           {
             account_code: "401",
             libelle: "Fournisseur",
@@ -514,5 +514,54 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     const [x] = (await extraits(id)) as Array<{ totals: { vat: string } } | undefined>;
     assert.equal(x?.totals.vat, "234.566", "la TVA du mois garde la lecture");
     assert.deepEqual(await chargesDe(id), [], "les charges aussi : aucune ligne du cabinet");
+  });
+
+  // Seconde revue de #140, cas I : une immobilisation acquise gardait la lecture.
+  it("une immobilisation acquise : HT, pas une charge, et sa TVA marquée", async () => {
+    const id = await transmise();
+    await force(id, [
+      L("2282", "1000.000", "0"),
+      L("43662", "190.000", "0", "TVA19"),
+      L("404", "0", "1190.000"),
+    ]);
+    const r = await lu(id);
+    assert.deepEqual([r.ht, r.tva, r.ttc], [1000, 190, 1190]);
+    assert.deepEqual(r.lignes, [["TVA19", 1000, 190]]);
+    assert.deepEqual(r.charges, [], "une immobilisation n'est pas une charge du mois");
+    const [brut] = (await extraits(id)) as Array<{ lines: Array<{ immobilisation?: boolean }> }>;
+    assert.equal(brut?.lines[0]?.immobilisation, true, "la déclaration peut l'isoler");
+  });
+
+  // Cas J : un achat exonéré forcé sans code manquait à la déclaration.
+  it("sans ligne de TVA, la base dit son code (exonérée, export) — sinon refusé", async () => {
+    const id = await transmise();
+    await assert.rejects(
+      force(id, [L("601", "1000.000", "0"), L("401", "0", "1000.000")]),
+      /refus\.ecriture\.taxe_sans_tva/,
+    );
+    await force(id, [L("601", "1000.000", "0", "EXO"), L("401", "0", "1000.000")]);
+    const r = await lu(id);
+    assert.deepEqual(r.lignes, [["EXO", 1000, 0]]);
+    assert.deepEqual([r.ht, r.tva, r.ttc], [1000, 0, 1000]);
+  });
+
+  // Cas K : « Doublon probable » restait après le retrait de l'original.
+  it("l'original retiré, la seconde n'est plus un doublon probable", async () => {
+    const jumelles = (e: Record<string, unknown>) => ({
+      ...e,
+      references: { numero: `RETIREE-${marque}` },
+    });
+    const original = await transmise(jumelles);
+    const seconde = await transmise(jumelles);
+    const signal = async () =>
+      (
+        (await cabinetFait("supervision.queue", cabinet)) as Array<{
+          pieceId: string;
+          doublonDe: string | null;
+        }>
+      ).find((r) => r.pieceId === seconde)?.doublonDe ?? null;
+    assert.equal(await signal(), original);
+    await admin.query(`update capture.pieces set archivee_le = now() where id = $1`, [original]);
+    assert.equal(await signal(), null);
   });
 });

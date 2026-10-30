@@ -2053,6 +2053,8 @@ const fr = {
   "refus.ecriture.taxe_tva": "Une ligne de TVA n’a pas de taux : choisissez son code de taxe.",
   "refus.ecriture.taxe_base":
     "La facture porte plusieurs taux : choisissez le code de taxe de chaque ligne de base.",
+  "refus.ecriture.taxe_sans_tva":
+    "Aucune ligne de TVA : choisissez le code de taxe de chaque ligne de base (exonérée, export…).",
   "statut.pme.mon_espace": "Mon espace",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
@@ -5798,6 +5800,8 @@ const en: Dict = {
   "refus.ecriture.taxe_tva": "A VAT line has no rate: choose its tax code.",
   "refus.ecriture.taxe_base":
     "The invoice has several rates: choose the tax code of each base line.",
+  "refus.ecriture.taxe_sans_tva":
+    "No VAT line: choose the tax code of each base line (exempt, export…).",
   "statut.pme.mon_espace": "My space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
@@ -9389,6 +9393,8 @@ const ar: Dict = {
   "refus.ecriture.journal": "اختر يومية القيد.",
   "refus.ecriture.taxe_tva": "سطر أداء على القيمة المضافة بلا نسبة: اختر رمز الأداء.",
   "refus.ecriture.taxe_base": "الفاتورة بعدّة نسب: اختر رمز الأداء لكل سطر من الأساس.",
+  "refus.ecriture.taxe_sans_tva":
+    "لا سطر للأداء على القيمة المضافة: اختر رمز الأداء لكل سطر من الأساس (معفى، تصدير…).",
   "statut.pme.mon_espace": "مساحتي",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",

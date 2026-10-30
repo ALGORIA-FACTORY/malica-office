@@ -248,8 +248,10 @@ export const supervision = {
                     where a.piece_id = p.id order by a.created_at desc limit 1) a
              cross join lateral jsonb_array_elements(a.controles) as c(v)
             where c.v ->> 'code' = 'doublon' and c.v ->> 'statut' = 'rapprocher'
+              -- L'autre pièce est encore là : ni retirée, ni remplacée.
               and exists (select 1 from pieces_v x
-                           where x.id = (c.v -> 'preuves' ->> 'semblable')::uuid)
+                           where x.id = (c.v -> 'preuves' ->> 'semblable')::uuid
+                             and x.archivee_le is null and x.remplacee_par is null)
             limit 1
          ) dbl on true
         where ${TRANSMISE}
