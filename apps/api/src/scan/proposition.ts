@@ -197,6 +197,7 @@ function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
       verdict,
       verdictCode: codeDuVerdict(verdict),
       raison: `Aucune écriture ne se propose : ${n.raison}.`,
+      raisonCode: "montants",
     };
   return null;
 }
@@ -235,6 +236,7 @@ export function composerLaProposition(
       verdict,
       verdictCode: codeDuVerdict(verdict),
       raison: `Aucune écriture ne se propose : facture en ${devise}, dossier tenu en ${r.deviseDuDossier} — montant converti à saisir.`,
+      raisonCode: "devise",
     };
   /*
    * Le taux que la facture prouve (`analyse.ts`) : la ligne qui le porte est
@@ -259,6 +261,7 @@ export function composerLaProposition(
       verdict,
       verdictCode: codeDuVerdict(verdict),
       raison: "Aucune écriture ne se propose : une base n'a pas été lue.",
+      raisonCode: "base_non_lue",
     };
   if (m.autres.length !== droits.length || m.autres.some((a) => a === null))
     return {
@@ -266,6 +269,7 @@ export function composerLaProposition(
       verdict,
       verdictCode: codeDuVerdict(verdict),
       raison: "Aucune écriture ne se propose : un droit hors TVA n'a pas été lu.",
+      raisonCode: "droit_non_lu",
     };
 
   const tvas = m.bases.map((b, i) =>
@@ -319,6 +323,7 @@ export function composerLaProposition(
         verdict,
         verdictCode: codeDuVerdict(verdict),
         raison: `L'écriture ne s'équilibre pas : ${proposition.pivot.motifs.map((x) => x.message).join(" ; ")}`,
+        raisonCode: "desequilibre",
       };
     return {
       ok: true,
@@ -334,6 +339,7 @@ export function composerLaProposition(
         verdict,
         verdictCode: codeDuVerdict(verdict),
         raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
+        raisonCode: "a_completer",
       };
     if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
       return {
@@ -342,6 +348,7 @@ export function composerLaProposition(
         verdictCode: codeDuVerdict(verdict),
         raison:
           "Aucune écriture ne se propose : le paramétrage n'a pas de compte pour ce type de pièce.",
+        raisonCode: "compte_manquant",
       };
     throw e;
   }
@@ -384,7 +391,8 @@ async function proposerDepuisLeJugement(
     [pieceId],
   );
   let ligne = derniers[0];
-  if (!ligne) return { ok: false, raison: "Cette pièce n'a pas encore été lue." };
+  if (!ligne)
+    return { ok: false, raison: "Cette pièce n'a pas encore été lue.", raisonCode: "non_lue" };
   if (ligne.analyse_extraction !== ligne.extraction) {
     const a = await analyserPiece(db, pieceId);
     const { rows } = await db.query<{ pack_version_id: string }>(
@@ -428,7 +436,11 @@ async function proposerDepuisLeJugement(
     (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
   const decimales = await lireExposant(db, devise);
   if (decimales === null)
-    return { ok: false, raison: `Aucune écriture ne se propose : devise « ${devise} » inconnue.` };
+    return {
+      ok: false,
+      raison: `Aucune écriture ne se propose : devise « ${devise} » inconnue.`,
+      raisonCode: "devise",
+    };
 
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),

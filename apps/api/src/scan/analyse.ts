@@ -436,7 +436,84 @@ export function jugerLaLecture(
   return { normalisation, controles, verdict, motifs };
 }
 
+/**
+ * La version des règles du jugement, posée sur chaque analyse
+ * (`capture.analyses.regles`).
+ *
+ * ================================================================= POURQUOI
+ *
+ * Le 30 octobre 2026 (PR 142), le Socle a appris à déduire ce que la facture
+ * prouve et propose bien plus souvent. Mais `capture.analyses` est en ajout
+ * seul et le dernier passage fait foi : une pièce jugée la veille gardait son
+ * ancien verdict, et le cabinet lisait « le Socle ne propose rien » là où les
+ * règles du jour proposaient. Rien ne disait qu'un jugement était périmé.
+ *
+ * Elle vit ICI, et nulle part ailleurs : la date du jour où les règles de
+ * `jugerLaLecture` (normalisation, contrôles, verdict) ont changé d'une façon
+ * qui peut changer un verdict. On la change avec elles. Une analyse posée
+ * avant ce marqueur le porte NUL : elle est périmée par définition.
+ */
+export const REGLES_DU_JUGEMENT = "2026-10-30";
+
+/** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
+interface JugementDeLaPiece {
+  tenantId: string;
+  pieceId: string;
+  extractionId: string;
+  pack: string;
+  normalisation: ResultatNormalisation;
+  controles: ResultatControle[];
+  verdict: string;
+  motifs: Analyse["motifs"];
+  cle: ReturnType<typeof cleDeDoublon>;
+}
+
+/** Juger une pièce lue et poser le jugement. Un nouveau passage s'ajoute toujours. */
 export async function analyserPiece(db: Requete, pieceId: string): Promise<Analyse> {
+  return poserLeJugement(db, await jugerLaPiece(db, pieceId));
+}
+
+/**
+ * Rejuger une pièce aux règles du jour, sans rien ajouter si rien ne change.
+ *
+ * Le jugement est recalculé par la même chaîne qu'`analyserPiece`, puis
+ * comparé au dernier posé : même lecture, même pack, même verdict, mêmes
+ * motifs, mêmes contrôles, mêmes montants normalisés, même clé de doublon.
+ * Identique, rien ne s'écrit — c'est ce qui rend le rejeu idempotent : le
+ * jouer deux fois n'ajoute rien. Différent, une analyse NOUVELLE s'ajoute
+ * (R7) ; l'ancienne reste, datée, pour qui veut savoir ce qui a été dit.
+ */
+export async function rejugerLaPiece(db: Requete, pieceId: string): Promise<{ change: boolean }> {
+  const j = await jugerLaPiece(db, pieceId);
+  const { rows } = await db.query<{ identique: boolean }>(
+    `select a.extraction_id = $2 and a.pack_version_id = $3 and a.verdict = $4
+            and a.motifs = $5::jsonb and a.controles = $6::jsonb
+            and a.normalisation = $7::jsonb
+            and a.doublon_numero is not distinct from $8
+            and a.doublon_mf is not distinct from $9
+            and a.doublon_lu is not distinct from $10 as identique
+       from capture.analyses a
+      where a.piece_id = $1
+      order by a.created_at desc limit 1`,
+    [
+      pieceId,
+      j.extractionId,
+      j.pack,
+      j.verdict,
+      JSON.stringify(j.motifs),
+      JSON.stringify(j.controles),
+      JSON.stringify(j.normalisation),
+      j.cle.numero,
+      j.cle.mf,
+      j.cle.lu,
+    ],
+  );
+  if (rows[0]?.identique) return { change: false };
+  await poserLeJugement(db, j);
+  return { change: true };
+}
+
+async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaPiece> {
   const { rows: pieces } = await db.query<{
     tenant_id: string;
     doublon_de: string | null;
@@ -637,26 +714,42 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     doublonProbable: semblables[0]?.id ?? null,
   });
 
+  return {
+    tenantId: piece.tenant_id,
+    pieceId,
+    extractionId: extraction.id,
+    pack,
+    normalisation,
+    controles,
+    verdict,
+    motifs,
+    cle,
+  };
+}
+
+async function poserLeJugement(db: Requete, j: JugementDeLaPiece): Promise<Analyse> {
   const { rows: poses } = await db.query<{ id: string }>(
     `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
                                    normalisation, controles, verdict, motifs,
-                                   doublon_numero, doublon_mf, doublon_lu)
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9, $10, $11)
+                                   doublon_numero, doublon_mf, doublon_lu, regles)
+     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9, $10, $11, $12)
      returning id`,
     [
-      piece.tenant_id,
-      pieceId,
-      extraction.id,
-      pack,
-      JSON.stringify(normalisation),
-      JSON.stringify(controles),
-      verdict,
-      JSON.stringify(motifs),
-      cle.numero,
-      cle.mf,
-      cle.lu,
+      j.tenantId,
+      j.pieceId,
+      j.extractionId,
+      j.pack,
+      JSON.stringify(j.normalisation),
+      JSON.stringify(j.controles),
+      j.verdict,
+      JSON.stringify(j.motifs),
+      j.cle.numero,
+      j.cle.mf,
+      j.cle.lu,
+      REGLES_DU_JUGEMENT,
     ],
   );
 
+  const { verdict, motifs, controles, normalisation } = j;
   return { id: poses[0]!.id, verdict, motifs, controles, normalisation };
 }
