@@ -484,12 +484,11 @@ describe("doublon", () => {
     assert.equal(c.statut, "rapprocher");
     assert.equal(c.preuves["semblable"], "piece-9");
   });
-  it("un numéro illisible d'un côté ne cache pas la jumelle", () => {
-    const c = statut(sansMatricule, "doublon", {
-      ...CONTEXTE,
-      autresPieces: [{ ...jumelle, numero: null }],
-    });
-    assert.equal(c.statut, "rapprocher");
+  it("sans numéro lu des deux côtés, rien n'est signalé : deux achats du jour sont plausibles", () => {
+    for (const autres of [[{ ...jumelle, numero: null }], [jumelle]]) {
+      const p = autres[0]!.numero ? facture({ ...sansMatricule, numero: null }) : sansMatricule;
+      assert.equal(statut(p, "doublon", { ...CONTEXTE, autresPieces: autres }).statut, "conforme");
+    }
   });
   it("un autre total, une autre date ou un autre numéro : pas un doublon", () => {
     for (const autre of [

@@ -178,12 +178,14 @@ export interface CleDeDoublon {
  * Deux façons d'être la même pièce :
  *   — même émetteur au matricule (sept chiffres) et même numéro ;
  *   — même émetteur (au matricule quand les deux le portent, sinon au nom),
- *     même date et même total, le numéro égal ou illisible d'un côté.
+ *     même date, même numéro et même total.
  *
  * La seconde est née sur staging le 30 octobre 2026 : MEUBLES EL AMEN du 20
  * janvier, 8 772,728, deux fois ; INFOTECH, 13 690,165, deux fois. Aucune des
  * deux n'imprimait de matricule lisible : la première règle, seule, ne
- * cherchait pas plus loin.
+ * cherchait pas plus loin. Sans numéro lu des deux côtés, rien n'est
+ * signalé : deux achats du même jour, au même prix, chez le même
+ * fournisseur, sont deux factures plausibles.
  */
 export function pieceSemblable(
   piece: Omit<CleDeDoublon, "id">,
@@ -207,7 +209,8 @@ export function pieceSemblable(
         a.date === piece.date &&
         ttc !== null &&
         normMontant(a.ttc) === ttc &&
-        (numero === null || autreNumero === null || numero === autreNumero)
+        numero !== null &&
+        autreNumero === numero
       );
     }) ?? null
   );
@@ -587,9 +590,7 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
     return {
       code: "doublon",
       statut: "rapprocher",
-      motif: p.numero
-        ? `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`
-        : "Même émetteur, même date et même total qu'une autre pièce : une seconde photo de la même facture — à rapprocher avant toute écriture.",
+      motif: `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`,
       preuves: { semblable: semblable.id },
     };
   return {
