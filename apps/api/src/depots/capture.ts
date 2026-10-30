@@ -36,7 +36,7 @@ import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
 import { referentiel } from "./referentiel.ts";
-import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
+import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
 interface VerdictDeLecture {
@@ -427,7 +427,8 @@ export const capture = {
               -- cabinet : il décide.
               case when s.prise is not null
                    then app.montants_pris_en_charge(p.id) end as du_cabinet,
-              ${COLONNES_DU_SUIVI}
+              ${COLONNES_DU_SUIVI},
+              ${COLONNES_DU_CIRCUIT}
          from pieces_v p
          left join lateral (
            select e.payload
@@ -441,6 +442,8 @@ export const capture = {
          left join lateral (
            select * from app.suivi_de_la_piece(p.id) where p.vis = 'partage'
          ) s on true
+         -- Le passage siège → propriétaire, et le côté de qui regarde.
+         left join lateral app.circuit_de_la_piece(p.id) c on true
          /*
           * LE DERNIER TRAVAIL DE LECTURE, POUR QUE L'ÉCHEC SE VOIE.
           *
@@ -488,6 +491,7 @@ export const capture = {
         devise: cab?.devise ?? lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
         suivi: versSuivi(r),
+        circuit: versCircuit(r),
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
         // Le motif brut ne quitte jamais le serveur : il peut porter un message
         // technique. Seul son code `lecture.*` reconnu voyage.
@@ -521,6 +525,7 @@ export const capture = {
       { rows: prec },
       { rows: refus },
       { rows: suivi },
+      { rows: circuit },
       { rows: montants },
     ] = await Promise.all([
       db.query(
@@ -545,6 +550,8 @@ export const capture = {
       ]),
       // Où elle en est chez le cabinet — la même lecture que les listes.
       db.query(`select ${COLONNES_DU_SUIVI} from app.suivi_de_la_piece($1) s`, [pieceId]),
+      // Où elle en est chez le propriétaire, et de quel côté on la regarde.
+      db.query(`select ${COLONNES_DU_CIRCUIT} from app.circuit_de_la_piece($1) c`, [pieceId]),
       // Forcée, ses montants sont ceux du cabinet ; validée, ceux de la lecture.
       db.query(`select app.montants_pris_en_charge($1) as m`, [pieceId]),
     ]);
@@ -590,6 +597,7 @@ export const capture = {
         : null,
       precisions,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
+      circuit: circuit[0] ? versCircuit(circuit[0] as Record<string, unknown>) : null,
       montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
       ecritureIllisible: ecritureIllisible((montants as Record<string, unknown>[])[0]?.["m"]),
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
@@ -1226,7 +1234,8 @@ export const capture = {
   },
 
   /**
-   * « Renvoyer » : la pièce retournée repart au cabinet, son retour clos.
+   * « Renvoyer » : la pièce retournée repart à qui l'a retournée — au
+   * propriétaire (le siège), au cabinet (qui lui transmet) —, son retour clos.
    *
    * Rien ne s'inscrit ici, et c'est le propos (« Malica sans blocage »,
    * 28 octobre 2026) : le renvoi faisait inscrire par la PME l'écriture de la
@@ -1251,9 +1260,9 @@ export const capture = {
    * libellés viennent du référentiel, dans la langue demandée.
    */
   /**
-   * Ce que la PME lit d'un retour du cabinet : motif (libellé du référentiel),
-   * note, date, cabinet, le geste demandé et s'il est fait (`piece_retour`).
-   * `null` hors retour.
+   * Ce que la PME lit d'un retour — du cabinet, ou du propriétaire au siège :
+   * motif (libellé du référentiel), note, date, qui l'a retournée, le geste
+   * demandé et s'il est fait (`piece_retour`). `null` hors retour.
    */
   async retourDeLaPiece(db: Requete, pieceId: string, locale: string) {
     const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
@@ -1268,12 +1277,16 @@ export const capture = {
       motif: r["motif"] as string,
       motifLibelle: r["motifLibelle"] as string,
       geste: r["geste"] as GesteDeRetour,
-      cabinet: (r["cabinet"] as string | null) ?? null,
+      chez: r["chez"] as "proprietaire" | "cabinet",
+      qui: (r["qui"] as string | null) ?? null,
       fait: Boolean(r["fait"]),
     };
   },
 
-  /** La réponse du client au cabinet sur une pièce transmise, tracée et notifiée. */
+  /**
+   * La réponse à un retour — du client au cabinet, ou du siège au propriétaire
+   * qui la lui a retournée —, tracée et notifiée.
+   */
   async repondreAuCabinet(db: Requete, pieceId: string, texte: string): Promise<void> {
     await db.query(`select public.piece_repondre_au_cabinet($1, $2)`, [pieceId, texte]);
   },

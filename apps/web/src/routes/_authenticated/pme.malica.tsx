@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useEffect, useRef, useState } from "react";
 
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
@@ -165,11 +166,7 @@ function PmeMalica() {
    * seule lecture du rôle pour toute la navigation, et le même `staleTime` :
    * un rôle ne change pas entre deux écrans.
    */
-  const acces = useQuery({
-    queryKey: ["mon-acces", pme.tenantId],
-    queryFn: () => office().acces.monAcces(pme.tenantId),
-    staleTime: 10 * 60 * 1000,
-  });
+  const acces = useMonAcces(pme.tenantId);
 
   /*
    * Y a-t-il un cabinet, et comment s'appelle-t-il. Le nom sert la carte de

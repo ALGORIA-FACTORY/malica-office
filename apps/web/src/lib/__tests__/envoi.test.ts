@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
 
+import type { Visibility } from "@malica/socle/ports/repositories";
+import type { CircuitInterne } from "@malica/socle/statut-d-envoi";
+
 import { fusionnerLEnvoi, pieceSuivanteATransmettre, resteATransmettre } from "../envoi";
 
-const p = (id: string, vis = "entite", status = "lue", gardeeLe: string | null = null) => ({
+const p = (
+  id: string,
+  vis: Visibility = "entite",
+  status = "lue",
+  gardeeLe: string | null = null,
+) => ({
   id,
   vis,
   status,
   gardeeLe,
+});
+
+/** Le passage siège → propriétaire, vu du siège (lot 4). */
+const duSiege = (dernier: CircuitInterne["dernier"]): CircuitInterne => ({
+  recoit: false,
+  dernier,
+  envoyeeLe: dernier ? "2026-10-30T09:00:00.000Z" : null,
+  vueLe: null,
+  vuePar: null,
+  retourneeLe: null,
+  retourPar: null,
+  corrigeeLe: null,
+  auteur: "Sami",
+  mienne: true,
 });
 
 describe("ce qui reste à transmettre", () => {
@@ -19,6 +41,13 @@ describe("ce qui reste à transmettre", () => {
     expect(resteATransmettre(p("a", "entite", "lue", "2026-10-27"))).toBe(false);
     expect(resteATransmettre(p("a", "partage"))).toBe(false);
     expect(resteATransmettre(p("a", "entite", "retournee"))).toBe(false);
+  });
+
+  it("le siège : ce qui n'est pas encore parti chez le propriétaire, rien d'autre", () => {
+    expect(resteATransmettre({ ...p("a"), circuit: duSiege(null) })).toBe(true);
+    expect(resteATransmettre({ ...p("a"), circuit: duSiege("rappelee") })).toBe(true);
+    expect(resteATransmettre({ ...p("a"), circuit: duSiege("envoyee") })).toBe(false);
+    expect(resteATransmettre({ ...p("a"), circuit: duSiege("retournee") })).toBe(false);
   });
 });
 

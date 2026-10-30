@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useId, useMemo, useState } from "react";
 
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { IntegrationsEtApi } from "@/components/malica/integrations-panel";
 import { EmptyState, MalicaNote, SectionTitle, EnTeteCabinet } from "@/components/malica/office-ui";
@@ -501,10 +502,7 @@ function FuseauDuCabinet() {
     queryKey: ["cab-fuseau", org.id],
     queryFn: () => office().parametrage.fuseauDuCabinet(org.id),
   });
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
   const [saisie, setSaisie] = useState<string | null>(null);
   const [fait, setFait] = useState(false);
   const enregistrer = useMutation({
@@ -740,10 +738,7 @@ function CalendrierDesEcheances() {
   });
 
   // Qui règle le calendrier : l'expert seul. Les autres le consultent.
-  const acces = useQuery({
-    queryKey: ["cab-acces", org.id],
-    queryFn: () => office().acces.monAcces(org.id),
-  });
+  const acces = useMonAcces(org.id);
   const lectureSeule = acces.data?.role !== "expert";
 
   const rows = calendrier.data ?? [];

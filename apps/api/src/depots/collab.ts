@@ -450,16 +450,38 @@ export const collab = {
   },
 
   /**
-   * Transmettre d'un geste les pièces restées chez la société (recette « vie
+   * LE geste « Envoyer » (« Malica sans blocage », lot 4) : un seul circuit,
+   * deux fois. Le siège envoie au propriétaire ; qui en a le droit transmet au
+   * comptable, et y renvoie la pièce qu'il lui a retournée. La base choisit
+   * le passage d'après les droits de l'appelant (`piece_envoyer`).
+   */
+  async envoyer(
+    db: Requete,
+    pieceId: string,
+  ): Promise<{ chez: "proprietaire" | "cabinet"; le: string; deja: boolean }> {
+    const { rows } = await db.query<{ r: { chez: string; le: string; deja?: boolean } }>(
+      `select public.piece_envoyer($1) as r`,
+      [pieceId],
+    );
+    const r = rows[0]!.r;
+    return {
+      chez: r.chez as "proprietaire" | "cabinet",
+      le: new Date(r.le).toISOString(),
+      deja: Boolean(r.deja),
+    };
+  },
+
+  /**
+   * Envoyer d'un geste les pièces restées chez la société (recette « vie
    * réelle », ANO-LIVE-003 : 32 à 41 gestes pour seize pièces). Chacune passe
-   * par la même porte que la transmission à l'unité — la base en garde les
-   * règles (impayé, pièce privée) —, dans UNE transaction : tout part, ou
-   * rien, et le refus dit pourquoi.
+   * par la même porte que l'envoi à l'unité — la base en garde les règles
+   * (impayé, pièce privée, droit d'envoyer) —, dans UNE transaction : tout
+   * part, ou rien, et le refus dit pourquoi.
    */
   async transmettreLesPieces(db: Requete, pieceIds: string[]): Promise<{ transmises: number }> {
     let transmises = 0;
     for (const id of pieceIds) {
-      if (await collab.setPieceVis(db, id, "partage")) transmises += 1;
+      if (!(await collab.envoyer(db, id)).deja) transmises += 1;
     }
     return { transmises };
   },
@@ -502,7 +524,11 @@ export const collab = {
     return { dejaDemandee: Boolean(rows[0]?.deja) };
   },
 
-  /** Le cabinet tranche. Un accord de rappel remet la pièce chez la PME, ici même. */
+  /**
+   * Trancher : le cabinet, ou le propriétaire pour la demande d'un siège. Un
+   * accord de rappel remet la pièce dans la société, ici même ; l'accord du
+   * propriétaire sur une pièce déjà chez le cabinet y transmet la demande.
+   */
   async repondreSurPiece(
     db: Requete,
     pieceId: string,
@@ -521,8 +547,8 @@ export const collab = {
   /** Les demandes portées sur une pièce, du fait le plus récent au plus ancien. */
   async demandesDUnePiece(db: Requete, pieceId: string) {
     const { rows } = await db.query(
-      `select objet, fait, note, created_at from demandes_sur_piece_v
-        where piece_id = $1 order by created_at desc`,
+      `select objet, fait, note, created_at, etape from demandes_sur_piece_v
+        where piece_id = $1 order by created_at desc, id desc`,
       [pieceId],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
@@ -530,6 +556,7 @@ export const collab = {
       fait: r["fait"] as "demandee" | "accordee" | "refusee" | "retiree",
       note: (r["note"] as string | null) ?? null,
       createdAt: (r["created_at"] as Date).toISOString(),
+      etape: r["etape"] as "proprietaire" | "cabinet",
     }));
   },
 };

@@ -9,6 +9,10 @@
  * L'aperçu montre ce que le client lira, mot pour mot : le motif, la note
  * entre guillemets, et le geste qu'on lui demandera. Rien n'y est inventé :
  * le geste vient du référentiel, comme sur la fiche du client.
+ *
+ * Un seul circuit, deux fois (lot 4) : le propriétaire retourne au siège la
+ * pièce qu'il en a reçue par la MÊME feuille — `destinataire` nomme le siège,
+ * et la base (`piece_retourner`) choisit le passage d'après ses droits.
  */
 import type { RejetMotif } from "@malica/socle/ports/repositories";
 import { useMutation } from "@tanstack/react-query";
@@ -27,11 +31,14 @@ const OU = "components/malica/retourner-au-client";
 export function RetournerAuClient({
   pieceId,
   motifs,
+  destinataire,
   onFermer,
   onRetournee,
 }: {
   pieceId: string;
   motifs: readonly RejetMotif[];
+  /** Le prénom du siège, quand c'est le propriétaire qui retourne ; sinon le client. */
+  destinataire?: string;
   onFermer: () => void;
   /** Le retour est parti : le motif et la note, pour le panneau « Retournée ». */
   onRetournee: (r: { motif: string; note: string | null }) => Promise<void>;
@@ -45,6 +52,20 @@ export function RetournerAuClient({
   useSuperposition(true, fermer, ref);
 
   const motif = motifs.find((m) => m.id === motifId) ?? null;
+  // Les mots de la feuille : au client (le cabinet), ou au siège (le propriétaire).
+  const mots = destinataire
+    ? {
+        titre: t("circuit.retourner", { qui: destinataire }),
+        lede: t("circuit.retour.lede", { qui: destinataire }),
+        note: t("circuit.retour.note", { qui: destinataire }),
+        apercu: t("circuit.retour.apercu", { qui: destinataire }),
+      }
+    : {
+        titre: t("cab.retour.titre"),
+        lede: t("cab.retour.lede"),
+        note: t("cab.retour.note"),
+        apercu: t("cab.retour.apercu"),
+      };
   const noteManquante = Boolean(motif?.requiresNote) && note.trim().length === 0;
 
   const retourner = useMutation({
@@ -72,11 +93,11 @@ export function RetournerAuClient({
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-label={t("cab.retour.titre")}
+        aria-label={mots.titre}
         className="flex h-full w-full max-w-[560px] flex-col gap-4 overflow-y-auto bg-background px-6 py-7 text-start sm:px-8"
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[22px] font-semibold tracking-[-0.02em]">{t("cab.retour.titre")}</p>
+          <p className="text-[22px] font-semibold tracking-[-0.02em]">{mots.titre}</p>
           <button
             type="button"
             onClick={fermer}
@@ -86,9 +107,7 @@ export function RetournerAuClient({
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
-        <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-          {t("cab.retour.lede")}
-        </p>
+        <p className="text-[13.5px] leading-relaxed text-muted-foreground">{mots.lede}</p>
 
         <fieldset className="space-y-2">
           <legend className="text-[12.5px] font-semibold">{t("cab.retour.motif")}</legend>
@@ -113,7 +132,7 @@ export function RetournerAuClient({
 
         <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold">
           <span>
-            {t("cab.retour.note")}{" "}
+            {mots.note}{" "}
             <span
               className={
                 motif?.requiresNote
@@ -138,7 +157,7 @@ export function RetournerAuClient({
         {motif ? (
           <>
             <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              {t("cab.retour.apercu")}
+              {mots.apercu}
             </p>
             <div className="flex flex-col gap-2 rounded-2xl bg-foreground p-4 text-background">
               <span className="flex items-center gap-2 text-[12.5px] font-semibold">

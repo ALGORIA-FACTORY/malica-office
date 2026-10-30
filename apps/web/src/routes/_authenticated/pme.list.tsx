@@ -11,9 +11,9 @@ import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
-import { attendLaPersonne, piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
-import { TON_PME } from "@malica/socle/statut-d-envoi";
-import { MOT_PME } from "@/lib/statut";
+import { attendLaPersonne, piecesALire, recueDUnSiege, statutDeLaPieceLue } from "@/lib/lecture";
+import { statutDuCircuit, TON_PME } from "@malica/socle/statut-d-envoi";
+import { motDuStatut } from "@/lib/statut";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
@@ -27,6 +27,7 @@ import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
 import { resteATransmettre } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { aLeDroit, useMonAcces } from "@/hooks/use-mon-acces";
 
 export const Route = createFileRoute("/_authenticated/pme/list")({
   head: () => ({
@@ -51,8 +52,8 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
    * sur ce qui attend la personne ; « Bibliothèque » arrive rangée par
    * dossier. Un paramètre inconnu est ignoré, jamais une erreur.
    */
-  validateSearch: (s: Record<string, unknown>): { etat?: "a_vous"; axe?: Axe } => ({
-    ...(s["etat"] === "a_vous" ? { etat: "a_vous" as const } : {}),
+  validateSearch: (s: Record<string, unknown>): { etat?: Etat; axe?: Axe } => ({
+    ...(s["etat"] === "a_vous" || s["etat"] === "recues" ? { etat: s["etat"] } : {}),
     ...(AXES.includes(s["axe"] as Axe) ? { axe: s["axe"] as Axe } : {}),
   }),
   component: VosDocuments,
@@ -65,6 +66,8 @@ export const Route = createFileRoute("/_authenticated/pme/list")({
  */
 const AXES = ["mois", "dossier", "categorie", "tiers", "op"] as const;
 type Axe = (typeof AXES)[number];
+/** Ce qui attend la personne ; la file du propriétaire (les pièces reçues de ses sièges). */
+type Etat = "a_vous" | "recues";
 
 type Vue = "liste" | "annee";
 /**
@@ -194,6 +197,13 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const cabinet = useMonCabinet(pme.tenantId);
+  /*
+   * Le même geste en lot, deux passages (lot 4) : le siège envoie au
+   * propriétaire, le propriétaire au comptable. La base choisit
+   * (`collab.transmettreLesPieces` passe par `piece_envoyer`).
+   */
+  const acces = useMonAcces(pme.tenantId);
+  const auProprietaire = aLeDroit(acces.data, "envoi.proprietaire");
   const [armee, setArmee] = useState(false);
   /** Les pièces parties dans ce geste — l'écran « Envoyé » les compte. */
   const [envoi, setEnvoi] = useState<readonly string[] | null>(null);
@@ -201,6 +211,11 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
   const [refus, setRefus] = useState<string | null>(null);
   const restantes = pieces.filter(resteATransmettre);
   const qui = cabinet.data?.name ?? t("pme.coffre.votreComptable");
+  /** Partie dans ce geste : chez le propriétaire (le siège), ou au cabinet. */
+  const partie = (p: PieceLue) =>
+    auProprietaire ? statutDuCircuit(p).chez === "proprietaire" : p.vis === "partage";
+  const partieLe = (p: PieceLue) =>
+    auProprietaire ? (p.circuit?.envoyeeLe ?? null) : (p.transmiseLe ?? null);
   const transmettre = useMutation({
     mutationFn: async (ids: readonly string[]) => {
       await office().collab.transmettreLesPieces([...ids]);
@@ -228,10 +243,10 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
    */
   if (envoi) {
     const duLot = pieces.filter((p) => envoi.includes(p.id));
-    const parties = duLot.filter((p) => p.vis === "partage");
-    const restees = duLot.filter((p) => p.vis !== "partage");
+    const parties = duLot.filter(partie);
+    const restees = duLot.filter((p) => !partie(p));
     const derniere = parties
-      .map((p) => p.transmiseLe)
+      .map(partieLe)
       .filter((d): d is string => Boolean(d))
       .sort()
       .at(-1);
@@ -244,13 +259,18 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
             : t("envoi.lot.tout", { count: parties.length })
         }
         quoi={
-          derniere
-            ? t("envoi.lot.chez", {
+          derniere && auProprietaire
+            ? t("circuit.lot.chez", {
                 count: parties.length,
-                qui,
                 quand: momentDeLEnvoi(derniere, locale).quand,
               })
-            : t("pme.list.transmettre.fait", { count: parties.length })
+            : derniere
+              ? t("envoi.lot.chez", {
+                  count: parties.length,
+                  qui,
+                  quand: momentDeLEnvoi(derniere, locale).quand,
+                })
+              : t("pme.list.transmettre.fait", { count: parties.length })
         }
         suite={null}
         trace={null}
@@ -270,13 +290,17 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
     );
   }
 
-  if (!pme.aUnCabinet || restantes.length === 0) return null;
+  if ((!pme.aUnCabinet && !auProprietaire) || restantes.length === 0) return null;
   return (
     <div className="card">
-      <p className="t-body">{t("pme.list.transmettre.reste", { count: restantes.length })}</p>
+      <p className="t-body">
+        {t(auProprietaire ? "circuit.lot.reste" : "pme.list.transmettre.reste", {
+          count: restantes.length,
+        })}
+      </p>
       {transmettre.isError && !armee ? (
         <PasEncoreParti
-          qui={qui}
+          qui={auProprietaire ? t("circuit.proprietaire") : qui}
           reessayer={() => transmettre.mutate(restantes.map((p) => p.id))}
           enCours={transmettre.isPending}
         />
@@ -291,7 +315,7 @@ function TransmettreCeQuiReste({ pieces }: { pieces: readonly PieceLue[] }) {
             ? t("common.loading")
             : armee
               ? t("pme.list.transmettre.confirmer", { count: restantes.length })
-              : t("pme.list.transmettre.action")}
+              : t(auProprietaire ? "circuit.lot.action" : "pme.list.transmettre.action")}
         </button>
       )}
       {refus ? (
@@ -307,6 +331,8 @@ function VosDocuments() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const navigate = useNavigate();
+  // Le cabinet, nommé dans « Vue par CABINET D’ESSAI » quand il a ouvert la pièce.
+  const nomDuCabinet = useMonCabinet(pme.tenantId).data?.name ?? null;
 
   const [vue, setVue] = useState<Vue>("liste");
   /*
@@ -317,7 +343,9 @@ function VosDocuments() {
   const recherche = Route.useSearch();
   const axe: Axe = recherche.axe ?? "mois";
   const aVerifier = recherche.etat === "a_vous";
-  const allerA = (suite: { axe?: Axe; etat?: "a_vous" }) =>
+  // La file du propriétaire : les pièces reçues de ses sièges (lot 4).
+  const recues = recherche.etat === "recues";
+  const allerA = (suite: { axe?: Axe; etat?: Etat }) =>
     void navigate({
       to: "/pme/list",
       search: {
@@ -327,8 +355,9 @@ function VosDocuments() {
       replace: true,
     });
   const setAxe = (suivant: Axe) =>
-    allerA({ axe: suivant, ...(aVerifier ? { etat: "a_vous" } : {}) });
+    allerA({ axe: suivant, ...(recherche.etat ? { etat: recherche.etat } : {}) });
   const setAVerifier = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "a_vous" } : {}) });
+  const setRecues = (oui: boolean) => allerA({ axe, ...(oui ? { etat: "recues" } : {}) });
   const sept = useDossiers();
   const [sens, setSens] = useState<Sens>("tous");
   /** Le groupe ouvert, ou `null` : la liste des groupes. */
@@ -463,11 +492,15 @@ function VosDocuments() {
   const visibles = useMemo(
     () =>
       toutes.filter(
-        (p) => (sens === "tous" || p.kind === sens) && (!aVerifier || attendLaPersonne(p)),
+        (p) =>
+          (sens === "tous" || p.kind === sens) &&
+          (!aVerifier || attendLaPersonne(p)) &&
+          (!recues || recueDUnSiege(p)),
       ),
-    [toutes, sens, aVerifier],
+    [toutes, sens, aVerifier, recues],
   );
   const combienAttendent = useMemo(() => toutes.filter(attendLaPersonne).length, [toutes]);
+  const combienRecues = useMemo(() => toutes.filter(recueDUnSiege).length, [toutes]);
 
   // ------------------------------------------------------------------ l'en-tête
   const nombreDeTiers = useMemo(
@@ -774,7 +807,7 @@ function VosDocuments() {
         </div>
 
         {/* Les types réellement présents dans le dossier, et « tous » devant. */}
-        {typesPresents.length > 1 || combienAttendent > 0 || aVerifier ? (
+        {typesPresents.length > 1 || combienAttendent > 0 || aVerifier || recues ? (
           <div className="fil">
             {(["tous", ...typesPresents] as Sens[]).map((c) => (
               <button
@@ -804,6 +837,21 @@ function VosDocuments() {
             >
               {t("pme.list.aVous")}
             </button>
+            {/* La file du propriétaire : ce que ses sièges lui ont envoyé. */}
+            {combienRecues > 0 || recues ? (
+              <button
+                type="button"
+                className={cn(recues && "on")}
+                aria-pressed={recues}
+                onClick={() => {
+                  setRecues(!recues);
+                  setOuvert(null);
+                  setTout(false);
+                }}
+              >
+                {t("statut.cab.recue")} · {combienRecues}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
@@ -909,7 +957,7 @@ function VosDocuments() {
                       // Le statut, un mot et une couleur — jamais une écriture.
                       <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
                         <i aria-hidden />
-                        {t(MOT_PME[statutDeLaPieceLue(p)])}
+                        {motDuStatut(statutDuCircuit(p), nomDuCabinet, t)}
                       </span>
                     )}
                   </span>

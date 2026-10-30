@@ -13,7 +13,8 @@ import {
   raisonCourte,
   statutDeLaPieceLue,
 } from "@/lib/lecture";
-import { MOT_PME } from "@/lib/statut";
+import { motDuStatut } from "@/lib/statut";
+import { statutDuCircuit } from "@malica/socle/statut-d-envoi";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
@@ -579,7 +580,7 @@ function PmeHome() {
                     {/* Le mot du statut, ambre : à envoyer, ou revenue du cabinet. */}
                     <span className="etq">
                       <i />
-                      {t(MOT_PME[statutDeLaPieceLue(p)])}
+                      {motDuStatut(statutDuCircuit(p), cabinet.data?.name ?? null, t)}
                     </span>
                   </span>
                   <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>

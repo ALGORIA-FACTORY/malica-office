@@ -14,6 +14,11 @@
  *   3. les sorties, deux par ligne : le geste du motif — ou « Renvoyer » une
  *      fois fait —, puis reprendre la photo (elle REMPLACE celle-ci),
  *      répondre, garder, supprimer.
+ *
+ * Un seul circuit, deux fois (lot 4) : la MÊME carte porte le retour du
+ * propriétaire au siège. Sur le retour du comptable d'une pièce de siège, le
+ * siège fait le geste et le propriétaire renvoie : la fiche ne passe
+ * « Renvoyer » et « Garder » qu'à qui en a le droit (`null` sinon).
  */
 import type { RetourDuCabinet } from "@malica/socle/ports/repositories";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,8 +74,10 @@ export function CarteDuRetour({
   onReprendreLaPhoto: () => void;
   /** Montrer ce qui a été fait — la chaîne de la pièce. */
   onVoirLeFait: () => void;
-  renvoyer: Geste;
-  garder: Geste;
+  /** `null` : ce n'est pas à cette personne de renvoyer. */
+  renvoyer: Geste | null;
+  /** `null` : garder n'est pas son geste (le siège, le retour du propriétaire). */
+  garder: Geste | null;
   /** Effacer, ou archiver si le cabinet l'avait prise en charge : la base tranche. */
   supprimer: Geste;
 }) {
@@ -80,22 +87,27 @@ export function CarteDuRetour({
   const [reponseEnvoyee, setReponseEnvoyee] = useState<{ texte: string; le: string } | null>(null);
   /** Deux temps, jamais un seul : un effacement ne part pas par mégarde. */
   const [aConfirmer, setAConfirmer] = useState(false);
-  const qui = retour.cabinet ?? t("pme.coffre.votreComptable");
+  // Qui l'a retournée : le cabinet, ou le prénom du propriétaire.
+  const qui = retour.qui ?? t("pme.coffre.votreComptable");
   const faitLibelle = FAIT_DU_GESTE[retour.geste];
   const montrerLeFait = retour.fait && faitLibelle != null;
-  const sorties = sortiesDuRetour(retour.geste, retour.fait);
-  const enCours = renvoyer.enCours || garder.enCours || supprimer.enCours;
+  const permises: Partial<Record<SortieDuRetour, Geste | null>> = { renvoyer, garder };
+  const sorties = sortiesDuRetour(retour.geste, retour.fait).filter(
+    (s) => !(s in permises) || permises[s] != null,
+  );
+  const enCours = Boolean(renvoyer?.enCours || garder?.enCours || supprimer.enCours);
+  const sansGeste = { action: () => undefined, enCours: false };
 
   const bouton: Record<SortieDuRetour, { libelle: string; action: () => void; enCours?: boolean }> =
     {
       geste: { libelle: t(LIBELLE_DU_GESTE[retour.geste]), action: onGeste },
-      renvoyer: { libelle: t("pme.retour.renvoyer"), ...renvoyer },
+      renvoyer: { libelle: t("pme.retour.renvoyer"), ...(renvoyer ?? sansGeste) },
       reprendre_photo: {
         libelle: t("pme.retour.geste.reprendre_photo"),
         action: onReprendreLaPhoto,
       },
       repondre: { libelle: t("pme.retour.geste.repondre"), action: () => setReponseOuverte(true) },
-      garder: { libelle: t("pme.retour.garder"), ...garder },
+      garder: { libelle: t("pme.retour.garder"), ...(garder ?? sansGeste) },
       supprimer: { libelle: t("pme.retour.supprimer"), action: () => setAConfirmer(true) },
     };
 
@@ -106,7 +118,10 @@ export function CarteDuRetour({
           <i />
           {retour.fait
             ? t("pme.retour.etat.pret")
-            : t("pme.retour.etat", { date: jourEtMois(retour.le, locale) })}
+            : retour.chez === "proprietaire"
+              ? // Le propriétaire au siège : son prénom, pas « votre comptabilité ».
+                t("pme.retour.etat.qui", { qui, date: jourEtMois(retour.le, locale) })
+              : t("pme.retour.etat", { date: jourEtMois(retour.le, locale) })}
           <Aide
             titre={t("pme.retour.aide.titre")}
             paragraphes={sorties
@@ -116,7 +131,7 @@ export function CarteDuRetour({
         </span>
         <b>{retour.motifLibelle}</b>
         {retour.note ? <q>{retour.note}</q> : null}
-        {retour.cabinet ? <span className="f-ret-qui">{retour.cabinet}</span> : null}
+        {retour.qui ? <span className="f-ret-qui">{retour.qui}</span> : null}
       </div>
 
       {montrerLeFait ? (

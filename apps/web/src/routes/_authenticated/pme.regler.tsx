@@ -1,3 +1,4 @@
+import { statutDuCircuit } from "@malica/socle/statut-d-envoi";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -165,7 +166,10 @@ function ARegler() {
 
   const retours = dernierRetourParPiece(
     (notifs.data ?? [])
-      .filter((n) => n.kind === "piece.retournee")
+      // Le retour du cabinet, ou celui du propriétaire au siège (lot 4).
+      .filter(
+        (n) => n.kind === "piece.retournee" || n.kind === "piece.retournee_par_le_proprietaire",
+      )
       .map((n) => ({
         notif: n,
         charge: (n.payload ?? {}) as RetourPayload,
@@ -174,6 +178,13 @@ function ARegler() {
       .filter((r) => enAttente.some((p) => p.id === r.charge.piece_id)),
     (r) => r.charge.piece_id,
   );
+
+  /** Qui a retourné la pièce : le cabinet, ou le propriétaire (son prénom). */
+  const quiDuRetour = (pieceId: string | undefined) => {
+    const p = enAttente.find((x) => x.id === pieceId);
+    const s = p ? statutDuCircuit(p) : null;
+    return s?.chez === "proprietaire" ? (s.qui ?? t("circuit.proprietaire")) : nomDuCabinet;
+  };
 
   /** Ce que le cabinet a répondu sur une question de conseil. */
   const avis = (notifs.data ?? []).filter((n) => n.kind.startsWith("conseil."));
@@ -335,7 +346,7 @@ function ARegler() {
                     <p>
                       {charge.note ? `« ${charge.note} » ` : ""}
                       {t("pme.regler.demande", {
-                        cabinet: nomDuCabinet,
+                        cabinet: quiDuRetour(charge.piece_id),
                         emetteur: emetteur(charge.piece_id),
                       })}
                     </p>

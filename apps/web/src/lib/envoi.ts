@@ -6,17 +6,26 @@
  * Une seule définition de « reste à transmettre » : la pièce est dans la
  * société (`entite`), le dirigeant n'a pas DÉCIDÉ de la garder, et le cabinet
  * ne l'a pas retournée (un retour se renvoie par sa propre carte, avec la
- * preuve du geste).
+ * preuve du geste). Pour le siège (lot 4), ce qui reste est ce qui n'est pas
+ * encore parti chez le propriétaire : son statut le dit, « À envoyer ».
  */
+import type { Visibility } from "@malica/socle/ports/repositories";
+import { statutPme, type CircuitInterne, type SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
+
 export interface PieceAEnvoyer {
   id: string;
-  vis: string;
+  vis: Visibility;
   gardeeLe?: string | null;
   status: string;
+  suivi?: SuiviDEnvoi | null;
+  circuit?: CircuitInterne | null;
 }
 
 export function resteATransmettre(p: PieceAEnvoyer): boolean {
-  return p.vis === "entite" && !p.gardeeLe && p.status !== "retournee";
+  if (p.vis !== "entite" || p.gardeeLe || p.status === "retournee") return false;
+  // Le siège : ce qui n'est pas encore parti chez le propriétaire.
+  if (p.circuit && !p.circuit.recoit) return statutPme(p) === "a_envoyer";
+  return true;
 }
 
 /**

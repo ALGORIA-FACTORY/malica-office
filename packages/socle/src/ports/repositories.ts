@@ -6,7 +6,7 @@ import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue
 
 import type { DerniereLecture } from "../issue-de-lecture.ts";
 import type { LigneSaisie } from "../ecriture-saisie.ts";
-import type { StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
+import type { CircuitInterne, StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
 
@@ -80,6 +80,19 @@ export interface InvitationRecue {
   role: string;
   expiresAt: string;
 }
+
+/**
+ * Les gestes que le référentiel ouvre à la personne dans une organisation
+ * (`ref.droits_des_roles`, lot 4). L'écran montre d'après eux ; chaque porte
+ * de la base refait le contrôle.
+ */
+export type Droit =
+  | "societe.tout_voir"
+  | "envoi.proprietaire"
+  | "envoi.cabinet"
+  | "piece.garder"
+  | "circuit.recevoir"
+  | "piece.supprimer_toutes";
 
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;
@@ -481,6 +494,11 @@ export interface MonAcces {
   /** dirigeant | collaborateur | expert | assistant, ou rien si je ne suis pas membre. */
   role: string | null;
   plateforme: boolean;
+  /**
+   * Ce que le référentiel ouvre à la personne ici (`ref.droits_des_roles`).
+   * L'écran montre d'après eux ; chaque porte de la base refait le contrôle.
+   */
+  droits: Droit[];
 }
 
 export interface AccesRepository {
@@ -793,8 +811,11 @@ export interface Token {
   y1: number;
 }
 
-/** Ce qu'une PME peut demander au cabinet sur une pièce transmise. */
+/** Ce qu'on peut demander sur une pièce envoyée : au propriétaire, ou au cabinet. */
 export type DemandeSurPiece = "rappel" | "suppression";
+
+/** À qui la demande est faite : le siège au propriétaire, le propriétaire au cabinet. */
+export type EtapeDeDemande = "proprietaire" | "cabinet";
 
 /**
  * Un fait d'une demande. Une demande n'est pas une ligne qui change d'état :
@@ -806,6 +827,7 @@ export interface FaitDeDemande {
   fait: "demandee" | "accordee" | "refusee" | "retiree";
   note: string | null;
   createdAt: string;
+  etape: EtapeDeDemande;
 }
 
 /** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
@@ -898,6 +920,8 @@ export interface PieceDossier {
    * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
    */
   suivi: SuiviDEnvoi | null;
+  /** Voir `PieceLue.circuit` : le passage siège → propriétaire, dans la société. */
+  circuit: CircuitInterne | null;
   /** Voir `PieceLue.lectureRefusee` : le motif, tant que la pièce n'est pas lue. */
   lectureRefusee?: LectureRefusee | null;
   /**
@@ -1015,6 +1039,11 @@ export interface PieceLue {
   transmiseLe?: string | null;
   /** Où elle en est chez le cabinet ; `null` si elle n'y est jamais partie. */
   suivi?: SuiviDEnvoi | null;
+  /**
+   * Le passage siège → propriétaire, et le côté de la personne qui regarde
+   * (`app.circuit_de_la_piece`) ; `null` pour qui n'est pas de la société.
+   */
+  circuit?: CircuitInterne | null;
   /** L'émetteur, tel que la lecture l'a relevé. */
   emetteur: string | null;
   /** La date portée par le DOCUMENT, qui décide de son mois. */
@@ -1503,14 +1532,20 @@ export interface RejetMotif {
   geste: GesteDeRetour;
 }
 
-/** Un retour du cabinet, tel que la PME le lit sur sa pièce. */
+/**
+ * Un retour, tel que la PME le lit sur sa pièce : du cabinet, ou du
+ * propriétaire au siège — la même carte (lot 4).
+ */
 export interface RetourDuCabinet {
   le: string;
   note: string | null;
   motif: string;
   motifLibelle: string;
   geste: GesteDeRetour;
-  cabinet: string | null;
+  /** Qui l'a retournée : le cabinet, ou le propriétaire. */
+  chez: "proprietaire" | "cabinet";
+  /** Son nom : celui du cabinet, ou le prénom du propriétaire. */
+  qui: string | null;
   /** Le geste demandé est fait : une preuve postérieure au retour existe. */
   fait: boolean;
 }
@@ -2322,7 +2357,12 @@ export interface CollabRepository {
   marquerEcheance(id: string, fait: boolean): Promise<{ status: string }>;
   /** Mur de visibilité (R6) : bascule journalisée, refusée après comptabilisation. */
   setPieceVis(pieceId: string, vis: Visibility): Promise<boolean>;
-  /** Transmettre d'un geste plusieurs pièces au cabinet ; tout part, ou rien. */
+  /**
+   * LE geste « Envoyer » : le siège au propriétaire, qui en a le droit au
+   * cabinet (une pièce retournée par le cabinet s'y renvoie). La base choisit.
+   */
+  envoyer(pieceId: string): Promise<EnvoiDUnePiece>;
+  /** Envoyer d'un geste plusieurs pièces, par la même porte ; tout part, ou rien. */
   transmettreLesPieces(pieceIds: string[]): Promise<{ transmises: number }>;
   /**
    * Inscrire la décision de garder la pièce dans l'espace privé.
@@ -2343,7 +2383,11 @@ export interface CollabRepository {
    * que l'état bloqué qu'on voulait défaire. Deux motifs, un mécanisme.
    */
   demanderSurPiece(pieceId: string, objet: DemandeSurPiece): Promise<{ dejaDemandee: boolean }>;
-  /** Le cabinet tranche. Un accord de rappel remet la pièce chez la PME. */
+  /**
+   * Le cabinet tranche, ou le propriétaire pour un siège. Un accord de rappel
+   * remet la pièce dans la société ; l'accord du propriétaire sur une pièce
+   * déjà chez le cabinet y transmet la demande.
+   */
   repondreSurPiece(
     pieceId: string,
     objet: DemandeSurPiece,
@@ -2352,6 +2396,14 @@ export interface CollabRepository {
   ): Promise<void>;
   /** Les faits d'une demande, du plus récent au plus ancien. L'état courant est le premier. */
   demandesDUnePiece(pieceId: string): Promise<FaitDeDemande[]>;
+}
+
+/** Ce que dit un envoi : chez qui la pièce est partie, et l'heure de la base. */
+export interface EnvoiDUnePiece {
+  chez: "proprietaire" | "cabinet";
+  le: string;
+  /** Elle y était déjà : rien de nouveau. */
+  deja: boolean;
 }
 
 // ------------------------------------------------------------------ exports

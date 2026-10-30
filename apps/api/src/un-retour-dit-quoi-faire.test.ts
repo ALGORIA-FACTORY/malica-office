@@ -170,7 +170,8 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(r?.motif, "justificatif_manquant");
     assert.equal(r?.geste, "joindre_document");
     assert.equal(r?.note, "Merci de joindre le bon de livraison BL-2210.");
-    assert.equal(r?.cabinet, `COMPTA ${marque}`);
+    assert.equal(r?.chez, "cabinet");
+    assert.equal(r?.qui, `COMPTA ${marque}`);
     assert.equal(r?.fait, false, "rien n'est encore joint");
 
     // Le document joint APRÈS le retour : le geste est fait.
