@@ -447,11 +447,63 @@ describe("doublon", () => {
     const c = statut(facture(), "doublon", {
       ...CONTEXTE,
       autresPieces: [
-        { id: "piece-7", emetteurIdentifiantFiscal: "1234567 B M 000", numero: "f-2026-0042" },
+        {
+          id: "piece-7",
+          emetteurIdentifiantFiscal: "1234567 B M 000",
+          emetteurNom: null,
+          numero: "f-2026-0042",
+          date: null,
+          ttc: null,
+        },
       ],
     });
     assert.equal(c.statut, "rapprocher");
     assert.equal(c.preuves["semblable"], "piece-7");
+  });
+
+  /*
+   * Staging, 30 octobre 2026 : MEUBLES EL AMEN du 20 janvier, 8 772,728, deux
+   * fois — sans matricule lisible. La règle du matricule ne cherchait pas plus
+   * loin, et les deux pièces passaient au cabinet sans un mot.
+   */
+  const sansMatricule = facture({
+    emetteur: { nom: "Meubles El Amen", identifiantFiscal: null },
+    date: "2026-01-20",
+    ttcLu: "8772.728",
+  });
+  const jumelle = {
+    id: "piece-9",
+    emetteurIdentifiantFiscal: null,
+    emetteurNom: "MEUBLES EL-AMEN",
+    numero: "F-2026-0042",
+    date: "2026-01-20",
+    ttc: "8772.7280",
+  };
+  it("même émetteur, même date, même numéro, même total, sans matricule : à rapprocher", () => {
+    const c = statut(sansMatricule, "doublon", { ...CONTEXTE, autresPieces: [jumelle] });
+    assert.equal(c.statut, "rapprocher");
+    assert.equal(c.preuves["semblable"], "piece-9");
+  });
+  it("un numéro illisible d'un côté ne cache pas la jumelle", () => {
+    const c = statut(sansMatricule, "doublon", {
+      ...CONTEXTE,
+      autresPieces: [{ ...jumelle, numero: null }],
+    });
+    assert.equal(c.statut, "rapprocher");
+  });
+  it("un autre total, une autre date ou un autre numéro : pas un doublon", () => {
+    for (const autre of [
+      { ...jumelle, ttc: "8772.729" },
+      { ...jumelle, date: "2026-01-21" },
+      { ...jumelle, numero: "F-2026-0043" },
+      { ...jumelle, emetteurNom: "MEUBLES EL AMAL" },
+    ]) {
+      assert.equal(
+        statut(sansMatricule, "doublon", { ...CONTEXTE, autresPieces: [autre] }).statut,
+        "conforme",
+        JSON.stringify(autre),
+      );
+    }
   });
 });
 
@@ -526,7 +578,14 @@ describe("le verdict", () => {
       controlerPiece(facture(), {
         ...CONTEXTE,
         autresPieces: [
-          { id: "p", emetteurIdentifiantFiscal: "1234567B/B/M/000", numero: "F-2026-0042" },
+          {
+            id: "p",
+            emetteurIdentifiantFiscal: "1234567B/B/M/000",
+            emetteurNom: null,
+            numero: "F-2026-0042",
+            date: null,
+            ttc: null,
+          },
         ],
       }),
     );

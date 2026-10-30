@@ -11,6 +11,7 @@ import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dernierRetourParPiece } from "@/lib/retour-du-cabinet";
 import { statutDeLaPieceLue } from "@/lib/lecture";
+import { jourOuInstant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -185,10 +186,7 @@ function ARegler() {
     // « pas encore lue » y serait faux à tous les coups.
     enAttente.find((p) => p.id === pieceId)?.emetteur ?? t("pme.list.sansEmetteur");
 
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", timeZone: "UTC" }).format(
-      new Date(iso),
-    );
+  const jour = (iso: string) => jourOuInstant(iso, locale, { day: "2-digit", month: "short" });
 
   const panne = notifs.error ?? pieces.error ?? cabinet.error ?? null;
   const chargement = notifs.isPending || pieces.isPending || cabinet.isPending;

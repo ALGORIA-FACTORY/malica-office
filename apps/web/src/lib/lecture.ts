@@ -165,3 +165,19 @@ export function avancementDeLaListe(liste: ReadonlyArray<LigneDeLaListe>) {
     retournees: liste.filter((p) => statutDeLaPieceLue(p) === "retour").length,
   };
 }
+
+/**
+ * L'état que dit l'accueil, UN seul, dont ses deux phrases se dérivent : un
+ * retour du cabinet passe avant tout ; puis ce qui reste à envoyer ; « en
+ * ordre » seulement quand rien n'attend la personne.
+ */
+export function etatDeLAccueil(a: {
+  avancement: number | null;
+  enAttente: number;
+  retournees: number;
+}): "vide" | "a_regler" | "a_envoyer" | "en_ordre" {
+  if (a.avancement === null) return "vide";
+  if (a.retournees > 0) return "a_regler";
+  if (a.enAttente > 0) return "a_envoyer";
+  return "en_ordre";
+}

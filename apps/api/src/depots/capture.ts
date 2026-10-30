@@ -24,7 +24,11 @@ import { enUnitesExactes } from "@malica/socle/somme-decimale";
  */
 
 import { codeDeLecture } from "@malica/socle/issue-de-lecture";
-import type { EtatDUnTravail, GesteDeRetour } from "@malica/socle/ports/repositories";
+import type {
+  EtatDUnTravail,
+  GesteDeRetour,
+  MontantsDuCabinet,
+} from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { analyserPiece, lireMarquesDeDevise, lireParametres } from "../scan/analyse.ts";
@@ -195,6 +199,24 @@ function versPiece(r: Record<string, unknown>) {
     remplace: (r["remplace"] as string | null) ?? null,
     remplaceePar: (r["remplacee_par"] as string | null) ?? null,
     versionCourante: r["version_courante"] as string,
+  };
+}
+
+/**
+ * Les montants du cabinet (`app.montants_pris_en_charge`), ou `null` : la
+ * PME en reçoit les totaux et les droits, jamais les lignes de l'écriture.
+ */
+function versMontantsDuCabinet(m: unknown): MontantsDuCabinet | null {
+  if (!m || typeof m !== "object") return null;
+  const { totals, other_charges } = m as {
+    totals: { base_ht: string; vat: string; ttc: string };
+    other_charges: Array<{ code: string; amount: string }>;
+  };
+  return {
+    baseHt: totals.base_ht,
+    tva: totals.vat,
+    ttc: totals.ttc,
+    droits: other_charges.map((d) => ({ code: d.code, amount: d.amount })),
   };
 }
 
@@ -384,6 +406,9 @@ export const capture = {
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
+              -- Prise en charge, le total est celui du cabinet : il décide.
+              case when s.prise is not null
+                   then app.montants_pris_en_charge(p.id) -> 'totals' ->> 'ttc' end as ttc_du_cabinet,
               ${COLONNES_DU_SUIVI}
          from pieces_v p
          left join lateral (
@@ -439,7 +464,7 @@ export const capture = {
           (lu?.document_kind as string | undefined) ??
           (r["precision_kind"] as string | null) ??
           null,
-        total: lu?.totals?.ttc ?? null,
+        total: (r["ttc_du_cabinet"] as string | null) ?? lu?.totals?.ttc ?? null,
         devise: lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
         suivi: versSuivi(r),
@@ -476,6 +501,7 @@ export const capture = {
       { rows: prec },
       { rows: refus },
       { rows: suivi },
+      { rows: montants },
     ] = await Promise.all([
       db.query(
         `select id, contract, payload, flags, created_at
@@ -499,6 +525,8 @@ export const capture = {
       ]),
       // Où elle en est chez le cabinet — la même lecture que les listes.
       db.query(`select ${COLONNES_DU_SUIVI} from app.suivi_de_la_piece($1) s`, [pieceId]),
+      // Prise en charge, ses montants sont ceux du cabinet : il décide.
+      db.query(`select app.montants_pris_en_charge($1) as m`, [pieceId]),
     ]);
 
     const extraction = (ex as Record<string, unknown>[])[0];
@@ -542,6 +570,7 @@ export const capture = {
         : null,
       precisions,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
+      montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
         motif: string;
         le: string;

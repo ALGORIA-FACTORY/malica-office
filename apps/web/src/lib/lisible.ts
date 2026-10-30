@@ -147,15 +147,34 @@ export function deMois(mois: string, locale: string): string {
 }
 
 /**
- * Le jour et le mois, en chiffres (« 13/10 ») — d'une date du Socle ou d'un
- * instant. Lu en UTC, comme `dateEnChiffres`.
+ * Le jour d'une date du Socle ou d'un instant, dans la forme demandée.
+ *
+ * Une DATE (« 2026-10-30 ») n'a pas de fuseau : elle se lit telle quelle. Un
+ * INSTANT (« 2026-10-29T23:20:00Z ») se lit à l'heure du lecteur, comme
+ * l'heure qu'on lui montre à côté. Relevé sur staging le 30 octobre 2026, à
+ * 00:20 à Tunis : « Transmise à AUDICORP · 29/10 » sous « depuis 00:20 » —
+ * le jour en UTC, l'heure locale, deux fuseaux dans la même phrase.
  */
+export function jourOuInstant(
+  iso: string,
+  locale: string,
+  forme: Intl.DateTimeFormatOptions = { day: "2-digit", month: "2-digit" },
+): string {
+  return iso.length === 10
+    ? new Intl.DateTimeFormat(locale, { ...forme, timeZone: "UTC" }).format(
+        new Date(`${iso}T00:00:00Z`),
+      )
+    : new Intl.DateTimeFormat(locale, forme).format(new Date(iso));
+}
+
+/** Le mois (`AAAA-MM`) d'un instant, à l'heure du lecteur — la même règle que son jour. */
+export function moisLocal(instant: Date): string {
+  return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Le jour et le mois, en chiffres (« 13/10 ») — d'une date du Socle ou d'un instant. */
 export function jourEtMois(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "UTC",
-  }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
+  return jourOuInstant(iso, locale);
 }
 
 /**

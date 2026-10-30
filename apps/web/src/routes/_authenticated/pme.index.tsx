@@ -7,6 +7,7 @@ import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
   attendLaPersonne,
+  etatDeLAccueil,
   piecesALire,
   piecesEnEchec,
   raisonCourte,
@@ -24,7 +25,7 @@ import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
-import { montant, montantSigne } from "@/lib/lisible";
+import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
@@ -280,12 +281,20 @@ function PmeHome() {
    * une, à la place de « 3 pièces. On les vérifie ? » du dessin — qui disait la
    * même chose, avec un nombre que seul le socle connaît.
    */
+  /*
+   * Les deux phrases de la carte se dérivent d'UN état (`etatDeLAccueil`).
+   * Relevé sur staging le 30 octobre 2026 : « AUDICORP attend 3 précisions »
+   * au-dessus de « Tout est en ordre. octobre est bouclé. » — l'une comptait
+   * les retours, l'autre seulement les pièces à envoyer.
+   */
+  const etat = etatDeLAccueil(a);
+  const attendent = t("pme.home.voix.attendent", { count: a.enAttente, mois: moisCourant });
   const phrase =
-    a.avancement === null
+    etat === "vide"
       ? t("pme.home.voix.rien")
-      : a.enAttente === 0
+      : etat === "en_ordre"
         ? t("pme.home.voix.enOrdre", { mois: moisCourant })
-        : t("pme.home.voix.attendent", { count: a.enAttente, mois: moisCourant });
+        : attendent;
 
   /*
    * L'écart avec le mois précédent — la seule phrase de cet écran qui compare.
@@ -324,10 +333,11 @@ function PmeHome() {
    * Le dernier cas couvre aussi le dossier vide : le geste proposé est celui
    * qui fait exister le produit, pas un lien vers une liste sans lignes.
    */
-  const aRegler = a.retournees > 0;
+  const aRegler = etat === "a_regler";
   const aVerifier = a.enAttente > 0;
   const titreHero = aRegler ? attendCabinet : phrase;
-  const sousHero = aRegler ? phrase : ecartPhrase;
+  // Sous un retour, ce qui reste à envoyer s'il y en a ; jamais « en ordre ».
+  const sousHero = aRegler && aVerifier ? attendent : ecartPhrase;
 
   /*
    * ============================================== LES RANGÉES, LUES DANS LA BASE
@@ -357,10 +367,7 @@ function PmeHome() {
 
   // Une pièce se nomme par son dossier, comme sa carte et sa tuile de capture.
   const nomDuDossier = (p: PieceLue) => sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle;
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
-      new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
-    );
+  const jour = (iso: string) => jourOuInstant(iso, locale);
 
   // Ce qui attend la personne : ce que Malica a lu et qui reste à envoyer, et
   // ce que le cabinet a renvoyé — les deux comptes de la carte, en pages.

@@ -15,6 +15,8 @@ import type { GesteDeRetour } from "@malica/socle/ports/repositories";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { A_TRAITER, type StatutCabinet } from "@malica/socle/statut-d-envoi";
 import { documents, documentsLies, controlesPiece } from "../bibliotheque.ts";
+import { arriveeAvant, clesDeDoublon } from "../scan/analyse.ts";
+import { pieceSemblable } from "../scan/controles.ts";
 
 import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
 
@@ -243,7 +245,28 @@ export const supervision = {
       [cabinetTenantId, tenantId ?? null, CLE_CONFIANCE_GLOBALE],
     );
 
-    return (rows as Record<string, unknown>[])
+    /*
+     * « Doublon probable » (staging, 30 octobre 2026) : deux pièces du même
+     * émetteur, de la même date, du même numéro et du même montant passaient
+     * toutes deux dans la file, sans un mot. La règle est celle du jugement
+     * de la lecture (`pieceSemblable`), relue ici sur l'état du dossier : une
+     * pièce lue en même temps que sa jumelle, ou avant elle, la reconnaît
+     * aussi. La seconde arrivée est signalée, jamais la première ; rien n'est
+     * supprimé — la PME décide.
+     */
+    const lignes = rows as Record<string, unknown>[];
+    const cles = await clesDeDoublon(db, [...new Set(lignes.map((p) => p["tenant_id"] as string))]);
+    const doublonDe = (pieceId: string): string | null => {
+      const elle = cles.find((c) => c.id === pieceId);
+      return elle
+        ? (pieceSemblable(
+            elle,
+            cles.filter((c) => arriveeAvant(c, elle)),
+          )?.id ?? null)
+        : null;
+    };
+
+    return lignes
       .map((p) => {
         const suivi = versSuivi(p);
         return {
@@ -263,6 +286,7 @@ export const supervision = {
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
+          doublonDe: doublonDe(p["piece_id"] as string),
         };
       })
       .sort((a, b) => {
@@ -467,11 +491,24 @@ export const supervision = {
     // Deux paramètres pour une seule valeur : `object_id` est un uuid, la clé
     // du `payload` est du texte. Un paramètre unique ne peut pas être les deux
     // — PostgreSQL refuse l'opérateur `text = uuid`.
+    //
+    // Forcer inscrit l'écriture SAISIE par le comptable par la même porte
+    // que la proposition du Socle (`socle_ecriture_propose`, puis
+    // l'inscription) : la porte pose « ecriture.proposed », et le journal
+    // lisait « Le Socle a proposé une écriture. » à la minute du forçage
+    // (staging, 30 octobre 2026). Le Socle n'a rien proposé : c'est le fait
+    // « ecriture.forcee » de la MÊME écriture qui dit ce qui s'est passé. Le
+    // fait reste au journal d'audit (R7) ; la piste de la pièce ne le répète
+    // pas sous un nom faux.
     const { rows } = await db.query(
-      `select id, action, actor, at, motif_id, payload
-         from event_log_v
-        where object_id = $1 or payload ->> 'piece_id' = $2
-        order by at desc limit 200`,
+      `select e.id, e.action, e.actor, e.at, e.motif_id, e.payload
+         from event_log_v e
+        where (e.object_id = $1 or e.payload ->> 'piece_id' = $2)
+          and not (e.action = 'ecriture.proposed'
+                   and exists (select 1 from event_log_v f
+                                where f.action = 'ecriture.forcee'
+                                  and f.object_id = e.object_id))
+        order by e.at desc limit 200`,
       [pieceId, pieceId],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({

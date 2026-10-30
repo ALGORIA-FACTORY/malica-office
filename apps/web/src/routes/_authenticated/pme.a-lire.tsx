@@ -6,6 +6,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { piecesALire } from "@/lib/lecture";
+import { jourOuInstant } from "@/lib/lisible";
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
@@ -51,10 +52,7 @@ function ALire() {
   const cochee = (id: string, i: number) => i < PLAFOND_ELEMENTS !== inversees.has(id);
   const choisies = aLire.filter((p, i) => cochee(p.id, i));
   const toutes = choisies.length === Math.min(aLire.length, PLAFOND_ELEMENTS);
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
-      new Date(iso),
-    );
+  const jour = (iso: string) => jourOuInstant(iso, locale);
   const basculer = (id: string, i: number) => {
     const ajout = !cochee(id, i);
     if (ajout && choisies.length >= PLAFOND_ELEMENTS) {

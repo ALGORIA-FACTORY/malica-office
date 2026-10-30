@@ -431,8 +431,16 @@ export function EcritureDuCabinet({
                 <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
                   {t("cab.ecriture.ligne.libelle")}
                 </span>
+                {/*
+                 * Un nom par champ ET par ligne : « Débit » dix fois ne dit
+                 * pas lequel (lecteur d'écran, staging du 30 octobre 2026).
+                 */}
                 <input
                   type="text"
+                  aria-label={t("cab.ecriture.ligne.champ", {
+                    champ: t("cab.ecriture.ligne.libelle"),
+                    n: i + 1,
+                  })}
                   value={l.libelle}
                   onChange={(e) => changerLigne(i, { libelle: e.target.value })}
                   className="w-full border border-border bg-background px-2 py-1 text-[13px]"
@@ -454,6 +462,10 @@ export function EcritureDuCabinet({
                     type="text"
                     inputMode="decimal"
                     dir="ltr"
+                    aria-label={t("cab.ecriture.ligne.champ", {
+                      champ: t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit"),
+                      n: i + 1,
+                    })}
                     value={l[cote]}
                     onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
                     className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"

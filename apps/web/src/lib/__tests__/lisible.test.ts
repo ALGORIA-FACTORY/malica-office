@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   dateEnChiffres,
   dateEnLettres,
   deMois,
+  jourEtMois,
+  jourOuInstant,
+  moisLocal,
   momentDeLEnvoi,
   montant,
   montantSigne,
@@ -143,6 +146,36 @@ describe("le moment d'un envoi", () => {
     const maintenant = new Date(2026, 9, 27, 9, 0);
     const r = momentDeLEnvoi(new Date(2026, 9, 26, 23, 50).toISOString(), "fr", maintenant);
     expect(r).toEqual({ quand: "26/10", aujourdhui: false });
+  });
+});
+
+/*
+ * Staging, 30 octobre 2026, à 00:20 à Tunis (UTC+1) : « Transmise à AUDICORP ·
+ * 29/10 » sous « depuis 00:20 » — le jour lu en UTC, l'heure en local.
+ */
+describe("un instant se lit à l'heure du lecteur, une date telle quelle", () => {
+  const fuseau = process.env["TZ"];
+  beforeAll(() => {
+    process.env["TZ"] = "Africa/Tunis";
+  });
+  afterAll(() => {
+    if (fuseau === undefined) delete process.env["TZ"];
+    else process.env["TZ"] = fuseau;
+  });
+
+  it("l'envoi de 00:20 à Tunis est du 30/10, comme son heure", () => {
+    const envoi = "2026-10-29T23:20:00.000Z";
+    expect(momentDeLEnvoi(envoi, "fr", new Date(envoi)).quand).toBe("00:20");
+    expect(jourEtMois(envoi, "fr")).toBe("30/10");
+    expect(jourOuInstant(envoi, "fr", { day: "2-digit", month: "short" })).toBe("30 oct.");
+  });
+
+  it("une date du Socle n'a pas de fuseau : elle reste son jour", () => {
+    expect(jourEtMois("2026-10-29", "fr")).toBe("29/10");
+  });
+
+  it("le mois d'un instant, à l'heure du lecteur", () => {
+    expect(moisLocal(new Date("2026-10-31T23:30:00.000Z"))).toBe("2026-11");
   });
 });
 

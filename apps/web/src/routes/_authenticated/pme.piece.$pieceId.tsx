@@ -860,7 +860,23 @@ function PieceScreen() {
 
   /** Les articles relevés sur la pièce. Le contrat les porte ; l'écran les montre. */
   const articles = payload?.articles ?? [];
-  const droits = droitsDeLaPiece(payload?.other_charges, packDroits.data ?? []);
+  /*
+   * LES MONTANTS QUI FONT FOI — le cabinet décide (1er novembre 2026).
+   *
+   * Relevé sur staging le 30 octobre : le cabinet avait forcé l'écriture
+   * (HT 1 663,000, TVA 306,610), et la fiche disait encore « TVA 5,460 ·
+   * Droit de timbre 2,000 », la lecture fausse. Prise en charge, la pièce
+   * montre les montants de l'écriture du cabinet — jamais l'écriture
+   * elle-même ; avant, ceux de la lecture.
+   */
+  const duCabinet = dossier.data.montantsDuCabinet ?? null;
+  const totaux = duCabinet
+    ? { base_ht: duCabinet.baseHt, vat: duCabinet.tva, ttc: duCabinet.ttc }
+    : payload?.totals;
+  const droits = droitsDeLaPiece(
+    duCabinet ? duCabinet.droits : payload?.other_charges,
+    packDroits.data ?? [],
+  );
 
   /** Le numéro porté par le document, s'il en porte un. */
   const reference = payload?.references
@@ -894,30 +910,37 @@ function PieceScreen() {
    * L'émetteur, la date, et LA TVA — parce que c'est la seule des trois qui
    * soit de l'argent pour le dirigeant. Le total, lui, est déjà au chapeau.
    */
-  const lignesCitees: Array<{ cle: string; label: string; valeur: string | null; champ: string }> =
-    [
-      {
-        cle: "issuer",
-        label: t("pme.extract.issuer"),
-        valeur: payload?.issuer ?? null,
-        champ: "issuer",
-      },
-      {
-        cle: "date",
-        label: t("pme.extract.date"),
-        valeur: jourLisible(payload?.document_date),
-        champ: "document_date",
-      },
-      {
-        cle: "tva",
-        label:
-          payload?.document_kind === "facture_vente"
-            ? t("pme.verifie.tvaCollectee")
-            : t("pme.verifie.tvaRecuperee"),
-        valeur: lisible(payload?.totals?.vat),
-        champ: "totals.vat",
-      },
-    ];
+  const lignesCitees: Array<{
+    cle: string;
+    label: string;
+    valeur: string | null;
+    champ: string;
+    /** Le montant vient de l'écriture du cabinet : il n'a pas de source sur la pièce. */
+    parLeCabinet?: boolean;
+  }> = [
+    {
+      cle: "issuer",
+      label: t("pme.extract.issuer"),
+      valeur: payload?.issuer ?? null,
+      champ: "issuer",
+    },
+    {
+      cle: "date",
+      label: t("pme.extract.date"),
+      valeur: jourLisible(payload?.document_date),
+      champ: "document_date",
+    },
+    {
+      cle: "tva",
+      label:
+        payload?.document_kind === "facture_vente"
+          ? t("pme.verifie.tvaCollectee")
+          : t("pme.verifie.tvaRecuperee"),
+      valeur: lisible(totaux?.vat),
+      champ: "totals.vat",
+      parLeCabinet: duCabinet !== null,
+    },
+  ];
 
   const voirLaSource = (champ: string) => {
     const c = byField.get(champ);
@@ -1172,12 +1195,12 @@ function PieceScreen() {
               <div className="flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
                 <span className="text-[13.5px] font-semibold">{t("pme.extract.base")}</span>
                 <span className="num text-[13.5px] font-semibold">
-                  {lisible(payload?.totals?.base_ht) ?? "—"}
+                  {lisible(totaux?.base_ht) ?? "—"}
                 </span>
               </div>
               <div className="flex items-baseline justify-between gap-3 pt-1.5">
                 <span className="text-[13.5px]">{t("pme.extract.vat")}</span>
-                <span className="num text-[13.5px]">{lisible(payload?.totals?.vat) ?? "—"}</span>
+                <span className="num text-[13.5px]">{lisible(totaux?.vat) ?? "—"}</span>
               </div>
               {droits.map((d, i) => (
                 <div
@@ -1192,9 +1215,11 @@ function PieceScreen() {
                 </div>
               ))}
               <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
-                <span className="text-[14px] font-semibold">{t("pme.verifie.total")}</span>
+                <span className="text-[14px] font-semibold">
+                  {duCabinet ? t("statut.pme.prise_en_charge") : t("pme.verifie.total")}
+                </span>
                 <span className="num text-[15px] font-semibold">
-                  {lisible(payload?.totals?.ttc) ?? "—"} {payload?.currency ?? pme.currency}
+                  {lisible(totaux?.ttc) ?? "—"} {payload?.currency ?? pme.currency}
                 </span>
               </div>
             </div>
@@ -1455,9 +1480,7 @@ function PieceScreen() {
   const paiementsVivants = (paiements.data ?? []).filter((p) => !p.eteint);
   const payeMineur = paiements.isSuccess ? totalDesPaiements(paiements.data) : null;
   const ttcMineur =
-    payload?.totals?.ttc && decimales !== null
-      ? Math.round(Number(payload.totals.ttc) * 10 ** decimales)
-      : null;
+    totaux?.ttc && decimales !== null ? Math.round(Number(totaux.ttc) * 10 ** decimales) : null;
   const resteMineur = ttcMineur !== null && payeMineur !== null ? ttcMineur - payeMineur : null;
   const resteLisible =
     resteMineur !== null && decimales !== null
@@ -1769,17 +1792,17 @@ function PieceScreen() {
 
       <div className="f-mt">
         <div className={vente ? "amt vent" : "amt"}>
-          {lisible(payload?.totals?.ttc) ?? "—"}{" "}
+          {lisible(totaux?.ttc) ?? "—"}{" "}
           <u>
             {devise} {t("pme.extract.ttc")}
           </u>
         </div>
         <div className="f-puces">
           <span>
-            {t("pme.extract.base")} <b>{lisible(payload?.totals?.base_ht) ?? "—"}</b>
+            {t("pme.extract.base")} <b>{lisible(totaux?.base_ht) ?? "—"}</b>
           </span>
           <span>
-            {t("pme.extract.vat")} <b>{lisible(payload?.totals?.vat) ?? "—"}</b>
+            {t("pme.extract.vat")} <b>{lisible(totaux?.vat) ?? "—"}</b>
           </span>
           {droits.map((d, i) => (
             <span key={`${d.code}-${i}`}>
@@ -1958,6 +1981,14 @@ function PieceScreen() {
                     // l'enregistre, même sans l'avoir changé.
                     onBlur={(e) => enregistrerLaDate(e.target.value)}
                   />
+                </div>
+              ) : l.parLeCabinet ? (
+                <div className="f-ligne" key={l.cle}>
+                  <span className="bd">
+                    <span className="lb">{l.label}</span>
+                    <span className="et ok">{t("statut.pme.prise_en_charge")}</span>
+                  </span>
+                  <span className="vl">{l.valeur ?? "—"}</span>
                 </div>
               ) : byField.get(l.champ) ? (
                 <button

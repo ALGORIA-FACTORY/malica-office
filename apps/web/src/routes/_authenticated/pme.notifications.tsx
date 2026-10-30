@@ -105,6 +105,7 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { laReponseAEffaceLaPiece, phraseDeLaReponse } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { jourOuInstant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/notifications")({
@@ -229,10 +230,7 @@ function PmeNotifications() {
     }).format(new Date(iso));
 
   /** Le jour seul, pour la colonne de droite d'une ligne. */
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", timeZone: "UTC" }).format(
-      new Date(iso),
-    );
+  const jour = (iso: string) => jourOuInstant(iso, locale, { day: "2-digit", month: "short" });
 
   /**
    * La pièce dont la carte parle, si elle existe encore. Une suppression

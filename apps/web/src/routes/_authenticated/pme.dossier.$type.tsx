@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n, type MessageKey } from "@/i18n";
-import { montant } from "@/lib/lisible";
+import { jourOuInstant, montant } from "@/lib/lisible";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
 import { attendLaPersonne, statutDeLaPieceLue } from "@/lib/lecture";
@@ -110,10 +110,7 @@ function Dossier() {
   const filtres = ETATS.filter((e) => toutes.some((p) => etatDe(p) === e.etat));
   const visibles = filtre === "toutes" ? toutes : toutes.filter((p) => etatDe(p) === filtre);
   const part = toutes.length === 0 ? 0 : Math.round((faites / toutes.length) * 100);
-  const jour = (iso: string) =>
-    new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(
-      new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
-    );
+  const jour = (iso: string) => jourOuInstant(iso, locale);
 
   return (
     <div data-ecran="pochette" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">

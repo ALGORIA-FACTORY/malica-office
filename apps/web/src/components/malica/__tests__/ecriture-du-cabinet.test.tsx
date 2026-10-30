@@ -115,14 +115,19 @@ function monter(proposition: PropositionDePiece, sens: { lu: string | null } | n
   );
 }
 
-/** Un compte se tape dans une liste proposée (`datalist`) : un combobox. */
+/**
+ * Un compte se tape dans une liste proposée (`datalist`) : un combobox. Les
+ * autres champs d'une ligne se nomment par leur rôle ET leur ligne.
+ */
 const saisir = (libelle: string, valeur: string, rang = 0) =>
   fireEvent.change(
-    screen.getAllByRole(libelle === "pme.journal.account" ? "combobox" : "textbox", {
-      name: libelle,
-    })[rang]!,
+    libelle === "pme.journal.account"
+      ? screen.getAllByRole("combobox", { name: libelle })[rang]!
+      : screen.getByRole("textbox", { name: nomDuChamp(libelle, rang) }),
     { target: { value: valeur } },
   );
+const nomDuChamp = (champ: string, rang: number) =>
+  `cab.ecriture.ligne.champ ${JSON.stringify({ champ, n: rang + 1 })}`;
 
 describe("la pièce côté comptable", () => {
   beforeEach(() => vi.resetAllMocks());
@@ -184,6 +189,17 @@ describe("la pièce côté comptable", () => {
       libelle: "Honoraires",
     });
     expect(api.valider).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Staging, 30 octobre 2026 : un lecteur d'écran lisait « Débit » sur chaque
+   * ligne, sans dire laquelle. Chaque champ se nomme par son rôle et sa ligne.
+   */
+  it("libellé, débit, crédit : un nom accessible par champ et par ligne", () => {
+    monter(PROPOSITION);
+    for (const champ of ["cab.ecriture.ligne.libelle", "pme.journal.debit", "pme.journal.credit"])
+      for (const rang of [0, 1])
+        expect(screen.getByRole("textbox", { name: nomDuChamp(champ, rang) })).toBeTruthy();
   });
 
   it("deux gestes côte à côte, aucun n'attend le client", () => {

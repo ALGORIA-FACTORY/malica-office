@@ -14,6 +14,8 @@
  */
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
+import { moisLocal } from "@/lib/lisible";
+
 export interface Dossier {
   code: string;
   libelle: string;
@@ -83,5 +85,6 @@ export function dansLaPeriode(
  */
 export function moisDeLaPiece(p: Pick<PieceLue, "dateDocument" | "createdAt">): string {
   const lue = p.dateDocument && /^\d{4}-\d{2}-\d{2}/.test(p.dateDocument) ? p.dateDocument : null;
-  return (lue ?? p.createdAt).slice(0, 7);
+  // La photo est un instant : son mois se lit à l'heure du lecteur, comme le mois en cours.
+  return lue ? lue.slice(0, 7) : moisLocal(new Date(p.createdAt));
 }

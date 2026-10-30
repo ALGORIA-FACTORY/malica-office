@@ -39,6 +39,7 @@ import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
 import {
   controlerPiece,
   rendreVerdict,
+  type CleDeDoublon,
   type ContexteControle,
   type PieceAControler,
   type ResultatControle,
@@ -106,6 +107,69 @@ export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
   return rows.map((r) => r.marque);
 }
 
+/** Une pièce telle que la recherche de doublon la compare, avec son dossier et son arrivée. */
+export type CleDeDoublonDatee = CleDeDoublon & { tenantId: string; arriveeLe: string };
+
+/**
+ * Les clés de doublon des pièces de ces dossiers, telles que leur DERNIÈRE
+ * lecture les porte : émetteur (nom et matricule), numéro, date, total.
+ *
+ * Une seule lecture pour deux usages — le jugement d'une pièce lue
+ * (`analyserPiece`) et la file du cabinet (« Doublon probable ») —, sinon les
+ * deux finiraient par ne plus reconnaître les mêmes doublons. Une photo
+ * reprise n'est pas le doublon de celle qu'elle remplace : les versions
+ * précédentes n'y sont pas ; une pièce retirée non plus.
+ */
+export async function clesDeDoublon(
+  db: Requete,
+  tenants: readonly string[],
+): Promise<CleDeDoublonDatee[]> {
+  // Le nom de la clé du matricule est LIÉ, pas écrit dans la requête : la
+  // recherche de doublon lit la même clé que l'invite impose au modèle.
+  const { rows } = await db.query<{
+    id: string;
+    tenant_id: string;
+    arrivee_le: Date | string;
+    nom: string | null;
+    mf: string | null;
+    numero: string | null;
+    date: string | null;
+    ttc: string | null;
+  }>(
+    `select p.id, p.tenant_id, p.created_at as arrivee_le,
+            x.payload ->> 'issuer' as nom,
+            x.payload -> 'references' ->> $2 as mf,
+            x.payload -> 'references' ->> 'numero' as numero,
+            x.payload ->> 'document_date' as date,
+            x.payload -> 'totals' ->> 'ttc' as ttc
+       from pieces_v p
+       join lateral (select e.payload from extractions_v e
+                      where e.piece_id = p.id order by e.created_at desc limit 1) x on true
+      where p.tenant_id = any($1::uuid[])
+        and p.remplacee_par is null and p.archivee_le is null`,
+    [tenants, NOM_MATRICULE_EMETTEUR],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    tenantId: r.tenant_id,
+    arriveeLe: new Date(r.arrivee_le).toISOString(),
+    emetteurNom: r.nom,
+    emetteurIdentifiantFiscal: r.mf,
+    numero: r.numero,
+    date: r.date,
+    ttc: r.ttc,
+  }));
+}
+
+/** `a` est arrivée avant `b` dans le même dossier : l'ordre de dépôt, puis l'identifiant. */
+export function arriveeAvant(a: CleDeDoublonDatee, b: CleDeDoublonDatee): boolean {
+  return (
+    a.tenantId === b.tenantId &&
+    a.id !== b.id &&
+    (a.arriveeLe < b.arriveeLe || (a.arriveeLe === b.arriveeLe && a.id < b.id))
+  );
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -148,6 +212,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     lines?: Array<{ tax_code?: string | null }>;
     other_charges?: unknown[];
     references?: Record<string, string>;
+    totals?: { ttc?: string | null };
   };
   /*
    * LE SENS DIT PAR LA PERSONNE L'EMPORTE SUR LE SENS LU (21 octobre 2026).
@@ -364,6 +429,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     destinataire: { nom: null, identifiantFiscal: refs[NOM_MATRICULE_CLIENT] ?? null },
     numero: refs["numero"] ?? null,
     date: datePiece,
+    ttcLu: payload.totals?.ttc ?? null,
     montants: normalisation,
     confianceParChamp: extraction.confiance_par_champ ?? {},
     reception: { doublonDe: piece.doublon_de, recueLe: piece.recue_le },
@@ -372,7 +438,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     sensConfirme: sensDit !== null,
   };
 
-  const [{ rows: types }, { rows: mentions }, { rows: autres }] = await Promise.all([
+  const [{ rows: types }, { rows: mentions }, cles] = await Promise.all([
     db.query<{ code: string; porte_ecriture: boolean }>(
       `select code, porte_ecriture from ref.document_types`,
     ),
@@ -380,21 +446,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       `select code, label from ref.mentions where pack_version_id = $1 and mandatory`,
       [pack],
     ),
-    db.query<{ id: string; mf: string | null; numero: string | null }>(
-      // Le nom de la clé est LIÉ, pas écrit dans la requête : la recherche de
-      // doublon lit la même clé que l'invite impose au modèle.
-      `select p.id, e.payload->'references'->>$3 as mf,
-              e.payload->'references'->>'numero' as numero
-         from capture.pieces p
-         join lateral (select payload from capture.extractions x
-                        where x.piece_id = p.id order by created_at desc limit 1) e on true
-        where p.tenant_id = $1 and p.id <> $2
-          -- Une photo reprise n'est pas le doublon de celle qu'elle remplace,
-          -- ni une version précédente celui d'une autre pièce.
-          and p.id not in (select app.versions_de_la_piece($2))
-          and not exists (select 1 from capture.remplacements r where r.piece_id = p.id)`,
-      [piece.tenant_id, pieceId, NOM_MATRICULE_EMETTEUR],
-    ),
+    clesDeDoublon(db, [piece.tenant_id]),
   ]);
 
   const contexte: ContexteControle = {
@@ -404,11 +456,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     seuilConfianceReserve: p["lecture.confiance_reserve"]!,
     seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
     ecartDateJours: p["piece.ecart_date_jours"]!,
-    autresPieces: autres.map((a) => ({
-      id: a.id,
-      emetteurIdentifiantFiscal: a.mf,
-      numero: a.numero,
-    })),
+    // La pièce ne répète que ce qui est arrivé AVANT elle : la seconde est le
+    // doublon, jamais la première.
+    autresPieces: (() => {
+      const elle = cles.find((c) => c.id === pieceId);
+      return elle ? cles.filter((c) => arriveeAvant(c, elle)) : [];
+    })(),
   };
 
   const controles = controlerPiece(aControler, contexte);

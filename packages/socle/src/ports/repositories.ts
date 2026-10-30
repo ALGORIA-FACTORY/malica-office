@@ -900,8 +900,23 @@ export interface PieceDossier {
   suivi: SuiviDEnvoi | null;
   /** Voir `PieceLue.lectureRefusee` : le motif, tant que la pièce n'est pas lue. */
   lectureRefusee?: LectureRefusee | null;
+  /**
+   * Les montants que le cabinet a arrêtés en prenant la pièce en charge, ou
+   * `null` avant : la lecture fait alors foi. Le cabinet décide ; la PME n'en
+   * voit que les montants, jamais l'écriture (1er novembre 2026).
+   */
+  montantsDuCabinet?: MontantsDuCabinet | null;
   citations: Citation[];
   tokens: Token[];
+}
+
+/** HT, TVA, droits et TTC d'une pièce, tirés de l'écriture prise en charge. */
+export interface MontantsDuCabinet {
+  baseHt: string;
+  tva: string;
+  ttc: string;
+  /** Un droit hors TVA par code du pack (`ref.fiscal_charges`), non nul. */
+  droits: Array<{ code: string; amount: string }>;
 }
 
 export interface NewPiece {
@@ -1525,6 +1540,12 @@ export interface QueueItem {
    * chercher est une demande qui dort. `null` quand il n'y a rien à trancher.
    */
   demandeEnAttente: DemandeSurPiece | null;
+  /**
+   * La pièce, arrivée avant, que celle-ci répète — même émetteur, même date,
+   * même numéro, même montant : « Doublon probable ». `null` sinon. Un
+   * signal, jamais une suppression : la PME décide.
+   */
+  doublonDe: string | null;
 }
 
 export interface AuditEntry {
@@ -2664,6 +2685,12 @@ export interface PieceArticle {
   citationUnitPriceHt: string | null;
   citationUnitPriceTtc: string | null;
   citationTotalHt: string | null;
+  /**
+   * D'où vient le montant : la lecture (cité, R2), ou l'écriture que le
+   * cabinet a prise en charge — il décide, et son montant s'affiche sans
+   * citation (1er novembre 2026).
+   */
+  source: "lecture" | "cabinet";
 }
 
 export interface ChargeQuestionRow {

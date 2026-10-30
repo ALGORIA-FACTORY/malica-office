@@ -21,6 +21,7 @@ import type {
   CaptureRepository,
   Citation,
   Extraction,
+  MontantsDuCabinet,
   NewPiece,
   NouvellePiece,
   Piece,
@@ -191,6 +192,7 @@ export function creerCaptureHttp(): CaptureRepository {
         precisions?: Record<string, string>;
         lectureRefusee?: { motif: string; le: string } | null;
         suivi?: SuiviDEnvoi | null;
+        montantsDuCabinet?: MontantsDuCabinet | null;
         citations: Citation[];
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
@@ -209,6 +211,7 @@ export function creerCaptureHttp(): CaptureRepository {
         precisions: brut.precisions ?? {},
         lectureRefusee: brut.lectureRefusee ?? null,
         suivi: brut.suivi ?? null,
+        montantsDuCabinet: brut.montantsDuCabinet ?? null,
         citations: brut.citations,
         tokens: brut.tokens,
       };

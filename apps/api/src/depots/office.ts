@@ -832,7 +832,19 @@ export const office = {
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
     const { rows } = await db.query(
       `select distinct on (x.piece_id)
-              x.piece_id, x.payload, p.transmise_le, i.impute_le::text as impute_le
+              x.piece_id,
+              -- Prise en charge, la pièce pèse de ce que le CABINET a inscrit
+              -- (1er novembre 2026) : ses lignes, ses droits, ses totaux, la
+              -- date et le sens de son écriture. Avant, de sa lecture.
+              case when p.source = 'cabinet'
+                   then x.payload || (
+                     select jsonb_build_object(
+                              'lines', c.m -> 'lines', 'other_charges', c.m -> 'other_charges',
+                              'totals', c.m -> 'totals', 'document_date', c.m -> 'date_ecriture',
+                              'currency', c.m -> 'currency', 'document_kind', p.document_kind)
+                       from (select app.montants_pris_en_charge(p.id) as m) c)
+                   else x.payload end as payload,
+              p.transmise_le, i.impute_le::text as impute_le
          from extractions_v x
          -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
          -- doublon, d'un type qui porte écriture. Retournée par le cabinet,

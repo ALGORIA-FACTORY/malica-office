@@ -16,7 +16,7 @@ import { TON_PME } from "@malica/socle/statut-d-envoi";
 import { MOT_PME } from "@/lib/statut";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
-import { momentDeLEnvoi, montant } from "@/lib/lisible";
+import { jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
@@ -441,14 +441,8 @@ function VosDocuments() {
       new Date(`${p}-01T00:00:00Z`),
     );
 
-  const jour = (p: PieceLue) => {
-    const iso = p.dateDocument ?? p.createdAt;
-    return new Intl.DateTimeFormat(locale, {
-      day: "2-digit",
-      month: "short",
-      timeZone: "UTC",
-    }).format(new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso));
-  };
+  const jour = (p: PieceLue) =>
+    jourOuInstant(p.dateDocument ?? p.createdAt, locale, { day: "2-digit", month: "short" });
 
   const nomDuType = (code: string) =>
     // Le nom d'un type vient du référentiel traduit (`useDossiers`), jamais du code.

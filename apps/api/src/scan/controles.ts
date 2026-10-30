@@ -56,6 +56,8 @@ export interface PieceAControler {
   numero: string | null;
   /** Date de la pièce, AAAA-MM-JJ, ou null si illisible. */
   date: string | null;
+  /** Le total TTC de la lecture, tel que les autres pièces le portent. */
+  ttcLu?: string | null;
   montants: ResultatNormalisation;
   confianceParChamp: Record<string, number>;
   reception: { doublonDe: string | null; recueLe: string };
@@ -79,11 +81,8 @@ export interface ContexteControle {
    * du mois de sa date.
    */
   ecartDateJours: number;
-  autresPieces: Array<{
-    id: string;
-    emetteurIdentifiantFiscal: string | null;
-    numero: string | null;
-  }>;
+  /** Les autres pièces du dossier, pour reconnaître un doublon (`pieceSemblable`). */
+  autresPieces: CleDeDoublon[];
 }
 
 export type Verdict =
@@ -145,6 +144,74 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
  */
 
 const normNumero = (n: string | null) => (n ? n.toUpperCase().replace(/[^0-9A-Z]/g, "") : null);
+
+/** Un nom d'émetteur comparable : sans accents, sans ponctuation, en capitales. */
+const normNom = (n: string | null) =>
+  n
+    ? n
+        .normalize("NFKD")
+        .replace(/\p{M}/gu, "")
+        .toUpperCase()
+        .replace(/[^\p{L}\p{N}]/gu, "") || null
+    : null;
+
+/** Un montant lu comparable : la valeur, pas l'écriture (« 8772.7280 » = « 8772.728 »). */
+const normMontant = (m: string | null) =>
+  m !== null && /^-?\d+(\.\d+)?$/.test(m.trim()) ? Number(m.trim()) : null;
+
+/** Ce qui fait reconnaître une pièce comme la même qu'une autre. */
+export interface CleDeDoublon {
+  id: string;
+  emetteurIdentifiantFiscal: string | null;
+  emetteurNom: string | null;
+  numero: string | null;
+  /** AAAA-MM-JJ, ou null. */
+  date: string | null;
+  /** Le total TTC lu, chaîne décimale, ou null. */
+  ttc: string | null;
+}
+
+/**
+ * La première des `autres` pièces que `piece` répète, ou `null` — UNE règle,
+ * pour le jugement de la lecture et pour la file du cabinet.
+ *
+ * Deux façons d'être la même pièce :
+ *   — même émetteur au matricule (sept chiffres) et même numéro ;
+ *   — même émetteur (au matricule quand les deux le portent, sinon au nom),
+ *     même date et même total, le numéro égal ou illisible d'un côté.
+ *
+ * La seconde est née sur staging le 30 octobre 2026 : MEUBLES EL AMEN du 20
+ * janvier, 8 772,728, deux fois ; INFOTECH, 13 690,165, deux fois. Aucune des
+ * deux n'imprimait de matricule lisible : la première règle, seule, ne
+ * cherchait pas plus loin.
+ */
+export function pieceSemblable(
+  piece: Omit<CleDeDoublon, "id">,
+  autres: readonly CleDeDoublon[],
+): CleDeDoublon | null {
+  const chiffres = (mf: string | null) => normaliserMatricule(mf).chiffres;
+  const mf = chiffres(piece.emetteurIdentifiantFiscal);
+  const nom = normNom(piece.emetteurNom);
+  const numero = normNumero(piece.numero);
+  const ttc = normMontant(piece.ttc);
+  return (
+    autres.find((a) => {
+      const autreMf = chiffres(a.emetteurIdentifiantFiscal);
+      const autreNumero = normNumero(a.numero);
+      if (mf && numero && autreMf === mf && autreNumero === numero) return true;
+      const memeEmetteur =
+        mf && autreMf ? mf === autreMf : nom !== null && normNom(a.emetteurNom) === nom;
+      return (
+        memeEmetteur &&
+        piece.date !== null &&
+        a.date === piece.date &&
+        ttc !== null &&
+        normMontant(a.ttc) === ttc &&
+        (numero === null || autreNumero === null || numero === autreNumero)
+      );
+    }) ?? null
+  );
+}
 
 /** Ce qu'un titre imprimé dit de la nature du document, quand ce n'est pas une facture. */
 const TITRES_NON_COMPTABLES: Array<[RegExp, string]> = [
@@ -506,30 +573,30 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
    * C'est une distinction, pas un relâchement : la conclusion de ce contrôle
    * est « à rapprocher », et personne n'est rejeté sur sa foi.
    */
-  const emetteur = normaliserMatricule(p.emetteur.identifiantFiscal).chiffres;
-  const numero = normNumero(p.numero);
-  const semblable =
-    emetteur && numero
-      ? ctx.autresPieces.find(
-          (a) =>
-            normaliserMatricule(a.emetteurIdentifiantFiscal).chiffres === emetteur &&
-            normNumero(a.numero) === numero,
-        )
-      : undefined;
+  const semblable = pieceSemblable(
+    {
+      emetteurIdentifiantFiscal: p.emetteur.identifiantFiscal,
+      emetteurNom: p.emetteur.nom,
+      numero: p.numero,
+      date: p.date,
+      ttc: p.ttcLu ?? null,
+    },
+    ctx.autresPieces,
+  );
   if (semblable)
     return {
       code: "doublon",
       statut: "rapprocher",
-      motif: `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`,
+      motif: p.numero
+        ? `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`
+        : "Même émetteur, même date et même total qu'une autre pièce : une seconde photo de la même facture — à rapprocher avant toute écriture.",
       preuves: { semblable: semblable.id },
     };
   return {
     code: "doublon",
     statut: "conforme",
     motif:
-      emetteur && numero
-        ? "Aucune autre pièce n'a le même fichier, ni le même émetteur et le même numéro."
-        : "Aucune autre pièce n'a le même fichier ; émetteur ou numéro illisible, la ressemblance n'a pas pu être cherchée plus loin.",
+      "Aucune autre pièce n'a le même fichier, ni le même émetteur avec le même numéro, ou la même date et le même total.",
     preuves: {},
   };
 }

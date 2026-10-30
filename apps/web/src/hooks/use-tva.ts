@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { moisLocal } from "@/lib/lisible";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
 import { computeTva } from "@malica/socle";
@@ -17,8 +18,9 @@ export function monthBounds(period: string): { from: string; to: string } {
   return { from: `${period}-01`, to: finDuMois(period) };
 }
 
+/** Le mois en cours, à l'heure du lecteur : à minuit à Tunis, le 1er est déjà le mois suivant. */
 export function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
+  return moisLocal(new Date());
 }
 
 /**
