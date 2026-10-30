@@ -114,6 +114,9 @@ export const MENTIONS_D_ESSAI = [
   "TIMBRE_FISCAL",
 ].map((code) => ({ code, libelle: code }));
 
+/** `ref.devises` : le nombre de décimales de chaque devise (migration `20261023110000`). */
+export const EXPOSANTS_D_ESSAI: Readonly<Record<string, number>> = { TND: 3, XOF: 0, EUR: 2 };
+
 /** Les deux types qui portent une écriture ; les autres n'en portent pas. */
 export const TYPES_D_ESSAI = [
   { code: "facture_achat", porteEcriture: true },

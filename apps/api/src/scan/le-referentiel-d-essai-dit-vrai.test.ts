@@ -17,6 +17,7 @@ import { referentiel } from "../depots/referentiel.ts";
 import { lireParametres } from "./analyse.ts";
 import {
   DROITS_D_ESSAI,
+  EXPOSANTS_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MENTIONS_D_ESSAI,
   PARAMETRES_D_ESSAI,
@@ -81,6 +82,15 @@ describe("le référentiel d'essai", { skip: !BASE_CONFIGUREE }, () => {
         mentions.map((m) => m.code),
         MENTIONS_D_ESSAI.map((m) => m.code).sort(),
         "mentions",
+      );
+
+      const { rows: devises } = await db.query<{ code: string; exposant: number }>(
+        `select code, exposant from ref.devises order by code`,
+      );
+      assert.deepEqual(
+        Object.fromEntries(devises.map((d) => [d.code, d.exposant])),
+        Object.fromEntries(Object.entries(EXPOSANTS_D_ESSAI).sort()),
+        "exposants des devises",
       );
 
       const { rows: types } = await db.query<{ code: string }>(

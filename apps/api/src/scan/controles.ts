@@ -220,6 +220,20 @@ function arithmetique(p: PieceAControler): ResultatControle {
   switch (m.etat) {
     case "tranche":
       /*
+       * Une valeur que la pièce n'a pas laissé lire, et que son arithmétique
+       * prouve (30 octobre 2026). On comptabilise, et l'on dit laquelle, par
+       * quelle formule : le cabinet voit pourquoi. Jamais en silence.
+       */
+      if (m.deduits.length > 0)
+        return {
+          code: "coherence_arithmetique",
+          statut: "reserve",
+          motif: `Déduit, non lu : ${m.deduits
+            .map((d) => `${d.champ} = ${d.valeur} (${d.formule})`)
+            .join(" ; ")}. À vérifier.`,
+          preuves: { ...preuves, deduits: m.deduits },
+        };
+      /*
        * Le total imprimé n'a pas pu être lu, et la facture tient quand même —
        * sa TVA la vérifie. On comptabilise, et on le DIT.
        *
@@ -597,13 +611,38 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       motif: "La date de la pièce n'a pas été lue : à saisir, elle décide de la période.",
       preuves: {},
     };
-  if (p.date > p.reception.recueLe)
-    return {
-      code: "coherence_dates",
-      statut: "anomalie",
-      motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe}.`,
-      preuves: { date: p.date, recueLe: p.reception.recueLe },
-    };
+  /*
+   * ================================ DATÉE APRÈS SA RÉCEPTION (30 octobre 2026)
+   *
+   * C'était toujours une anomalie, qui privait la pièce d'écriture. Deux
+   * causes la produisent : une facture émise d'avance (le loyer de septembre
+   * envoyé fin août), ou une date mal lue (le jour et le mois inversés). Peu
+   * de jours après la réception, les deux sont plausibles : l'écriture se
+   * propose à la date IMPRIMÉE, en RÉSERVE, et le cabinet — qui voit les deux
+   * dates — la confirme ou la corrige. Bloquer ne protégeait rien : le
+   * comptable saisissait la même écriture à la main.
+   *
+   * Au-delà de l'écart que le pack signale déjà (`piece.ecart_date_jours`),
+   * aucune facture ne s'émet si longtemps d'avance : la date est mal lue, et
+   * la pièce reste une anomalie. Le seuil est celui du pack, pas du code.
+   */
+  if (p.date > p.reception.recueLe) {
+    const avance = joursEntre(p.reception.recueLe, p.date);
+    const preuves = { date: p.date, recueLe: p.reception.recueLe, avanceJours: avance };
+    return avance > ctx.ecartDateJours
+      ? {
+          code: "coherence_dates",
+          statut: "anomalie",
+          motif: `La pièce est datée du ${p.date}, ${avance} jours après sa réception le ${p.reception.recueLe} : la date est à corriger.`,
+          preuves,
+        }
+      : {
+          code: "coherence_dates",
+          statut: "reserve",
+          motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe} : facture émise d'avance, ou date mal lue — à vérifier.`,
+          preuves,
+        };
+  }
   /*
    * ======================================= UNE DATE TROP ANCIENNE SE SIGNALE
    *
@@ -639,9 +678,36 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   };
 }
 
+/** Les chemins de montants qu'une lecture cite : bases, TVA, droits, totaux. */
+const MONTANT_CITE =
+  /^(totals\.(base_ht|vat|ttc)|lines\[\d+\]\.(base_ht|vat_amount|ttc)|other_charges\[\d+\]\.amount)$/;
+
+/**
+ * Un montant peu sûr que l'arithmétique de la facture FERME n'est pas un
+ * doute : la normalisation l'a retenu parce que toute la facture le vérifie
+ * (`tranche`). Seul le total écarté (`totalNonLu`) ne ferme rien.
+ */
+function fermeParLArithmetique(p: PieceAControler, champ: string): boolean {
+  return (
+    p.montants.etat === "tranche" &&
+    MONTANT_CITE.test(champ) &&
+    !(champ === "totals.ttc" && p.montants.totalNonLu !== null)
+  );
+}
+
 function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   const entrees = Object.entries(p.confianceParChamp);
-  const bloquants = entrees.filter(([, c]) => c < ctx.seuilConfianceBloquant).map(([k]) => k);
+  /*
+   * 30 octobre 2026 : un seul champ sous le seuil bloquant faisait de toute
+   * la pièce une anomalie, sans écriture — même un TTC que la TVA et la base
+   * vérifiaient au millime. Un montant que l'arithmétique ferme ne bloque
+   * plus : il reste « à relire », en réserve. Un champ qu'elle ne ferme pas
+   * (l'émetteur, la date, le numéro, un montant d'une facture qui ne tient
+   * pas) bloque toujours.
+   */
+  const bloquants = entrees
+    .filter(([k, c]) => c < ctx.seuilConfianceBloquant && !fermeParLArithmetique(p, k))
+    .map(([k]) => k);
   const reserves = entrees.filter(([, c]) => c < ctx.seuilConfianceReserve).map(([k]) => k);
   if (bloquants.length > 0)
     return {
@@ -652,13 +718,21 @@ function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle 
       // compris — l'écran les dit « à vérifier », pas seulement les pires.
       preuves: { champs: bloquants, seuil: ctx.seuilConfianceBloquant, aRelire: reserves },
     };
-  if (reserves.length > 0)
+  if (reserves.length > 0) {
+    const fermes = reserves.filter(
+      (k) => (p.confianceParChamp[k] ?? 1) < ctx.seuilConfianceBloquant,
+    );
     return {
       code: "confiance_lecture",
       statut: "reserve",
-      motif: `Lecture incertaine pour ${reserves.join(", ")} (sous ${ctx.seuilConfianceReserve}) : à relire.`,
-      preuves: { champs: reserves, seuil: ctx.seuilConfianceReserve },
+      motif:
+        `Lecture incertaine pour ${reserves.join(", ")} (sous ${ctx.seuilConfianceReserve}) : à relire.` +
+        (fermes.length > 0
+          ? ` ${fermes.join(", ")} : vérifié par l'arithmétique de la facture.`
+          : ""),
+      preuves: { champs: reserves, seuil: ctx.seuilConfianceReserve, fermes },
     };
+  }
   return {
     code: "confiance_lecture",
     statut: "conforme",

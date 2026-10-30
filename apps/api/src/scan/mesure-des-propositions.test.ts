@@ -50,6 +50,26 @@ describe("la mesure des propositions", () => {
     assert.deepEqual(fausses, []);
   });
 
+  it("les causes levées le 30 octobre reçoivent une écriture exacte", () => {
+    // Chacune était « aucune » au témoin : ce sont les déductions que
+    // l'arithmétique prouve, la date émise d'avance, le montant peu sûr fermé.
+    const levees = [
+      "TVA illisible, deux taux : HT et TTC la prouvent",
+      "TVA illisible, un taux : HT et TTC la prouvent",
+      "aucune ligne par taux lue : le taux se retrouve",
+      "code de taux inconnu du paramétrage : le taux se retrouve",
+      "deux taux, une base illisible : le HT du pied la prouve",
+      "un total peu sûr que l'arithmétique vérifie",
+      "datée après sa réception (loyer facturé d'avance)",
+      "le timbre nommé, son montant non cité",
+      "le timbre cité, illisible",
+    ];
+    assert.deepEqual(
+      levees.filter((nom) => m.parCas[nom]?.type !== "exacte"),
+      [],
+    );
+  });
+
   it("chaque pièce du témoin est encore mesurée", () => {
     assert.deepEqual(
       Object.keys(AVANT).filter((nom) => !(nom in m.parCas)),

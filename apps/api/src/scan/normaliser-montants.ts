@@ -68,6 +68,11 @@ export interface EntreeMontants {
   autres?: Array<string | { brut: string | null; attendu?: number }>;
   /** Le TTC imprimé. */
   ttc?: string | null;
+  /**
+   * Le HT global du pied, sur une facture à PLUSIEURS taux. Il ne sert qu'à
+   * prouver la base d'une ligne illisible (voir `deduits`).
+   */
+  htTotal?: string | null;
 }
 
 /**
@@ -171,7 +176,7 @@ export interface ResultatNormalisation {
  * montants imprimés et cités qui l'alimentent. Le contrôle arithmétique la
  * lit et pose une RÉSERVE — une déduction se dit toujours au cabinet.
  */
-export interface Deduction {
+interface Deduction {
   /** Le champ déduit, au chemin de l'extraction : « totals.vat », « other_charges[0].amount »… */
   champ: string;
   /** La valeur retenue : un montant en écriture décimale, ou un code de taux. */
@@ -632,14 +637,49 @@ export function normaliserMontants(
     raison,
   });
 
+  const seLit = (v: string | null | undefined) =>
+    texte(v) !== null && candidatsMontant(v!, p).length > 0;
+
+  /*
+   * ============================== CE QUE LA FACTURE PROUVE SANS LE LAISSER LIRE
+   *
+   * 30 octobre 2026, le dirigeant : « le Socle doit PROPOSER, et être EXACT ».
+   * Une TVA, une base de ligne ou un timbre illisibles laissaient la pièce
+   * sans écriture, alors que la facture imprimait tout ce qu'il faut pour les
+   * PROUVER. Une valeur n'est déduite que si l'arithmétique la ferme :
+   *
+   *   TVA      = TTC − Σ HT − droits, quand Σ arrondi(HT × taux) la vérifie
+   *              à la tolérance d'arrondi près ;
+   *   base k   = HT du pied − autres bases, quand la TVA et le TTC imprimés
+   *              vérifient la facture entière (plusieurs taux) ;
+   *   droit    = TTC − Σ HT − TVA, quand ce reste vaut EXACTEMENT le montant
+   *              que le paramétrage fixe à ce droit.
+   *
+   * Une seule déduction par pièce : deux inconnues se compensent, et une
+   * égalité qui les absorbe toutes deux ne prouve plus rien. La déduction se
+   * nomme (`deduits`) avec sa formule et ses opérandes cités, et le contrôle
+   * arithmétique pose une RÉSERVE : le cabinet voit pourquoi. Quand rien ne
+   * ferme, rien n'est rendu — comme avant.
+   */
+  const illisibles = entree.bases.flatMap((b, i) => (seLit(b.ht) ? [] : [i]));
+  const baseDeduite =
+    entree.bases.length > 1 &&
+    illisibles.length === 1 &&
+    seLit(entree.htTotal) &&
+    seLit(entree.tva) &&
+    seLit(entree.ttc)
+      ? illisibles[0]!
+      : null;
+
   // Les champs, dans un ordre fixe : bases, TVA, autres, TTC.
   type Champ = { nom: string; brut: string };
   const champs: Champ[] = [];
   entree.bases.forEach((b, i) => {
-    if (b.ht === null || b.ht.trim() === "") return;
+    if (b.ht === null || b.ht.trim() === "" || i === baseDeduite) return;
     champs.push({ nom: `ht${i}`, brut: b.ht });
   });
-  if (entree.bases.some((b) => b.ht === null || b.ht.trim() === ""))
+  if (baseDeduite !== null) champs.push({ nom: "htTotal", brut: entree.htTotal! });
+  else if (entree.bases.some((b) => b.ht === null || b.ht.trim() === ""))
     return vide("illisible", "un HT est absent : la facture ne peut pas être vérifiée");
   if (entree.tva) champs.push({ nom: "tva", brut: entree.tva });
   const attendus = new Map<string, number>();
@@ -668,8 +708,9 @@ export function normaliserMontants(
    * fois. Quand il manque et que la TVA reste lisible, la facture se vérifie
    * encore — par sa TVA. On l'écarte donc de l'équation, et on le NOMME.
    *
-   * Les autres champs ne se recomposent pas : une base, une TVA ou un droit
-   * illisible reste fatal. Les déduire serait inventer, et R2 l'interdit.
+   * Les autres champs ne se recomposent pas ainsi : une base, une TVA ou un
+   * droit ne se DEVINENT pas. Ils ne se retiennent que si l'arithmétique les
+   * prouve (plus haut), sans quoi la pièce reste illisible.
    */
   const iTtc = champs.findIndex((c) => c.nom === "ttc");
   if (iTtc >= 0 && brutes[iTtc]!.length === 0) {
@@ -678,10 +719,42 @@ export function normaliserMontants(
     brutes.splice(iTtc, 1);
   }
   const suffixe = totalNonLu ? ` ; le total imprimé « ${totalNonLu} » n'a pas pu être lu` : "";
+  const lu = (nom: string) => {
+    const i = champs.findIndex((c) => c.nom === nom);
+    return i >= 0 && brutes[i]!.length > 0;
+  };
+
+  // La TVA illisible : écartée de l'équation, que le TTC LU ferme seul.
+  let tvaNonLue: string | null = null;
+  const iTva = champs.findIndex((c) => c.nom === "tva");
+  if (iTva >= 0 && !lu("tva") && lu("ttc") && baseDeduite === null) {
+    tvaNonLue = champs[iTva]!.brut;
+    champs.splice(iTva, 1);
+    brutes.splice(iTva, 1);
+  }
+
+  // Le droit illisible ou non cité, que le paramétrage fixe : il ne prend que
+  // sa valeur fixée, et l'égalité devra tomber juste au millime (`verifie`).
+  const droitsDeduits = new Set<string>();
+  if (tvaNonLue === null && baseDeduite === null && lu("tva") && lu("ttc")) {
+    const candidats = champs.flatMap((c, i) =>
+      c.nom.startsWith("autre") && brutes[i]!.length === 0 && attendus.has(c.nom) ? [i] : [],
+    );
+    if (candidats.length === 1) {
+      const i = candidats[0]!;
+      brutes[i] = [{ mineur: attendus.get(champs[i]!.nom)!, convention: "déduit de la facture" }];
+      droitsDeduits.add(champs[i]!.nom);
+    }
+  }
 
   const illisible = champs.findIndex((_, i) => brutes[i]!.length === 0);
   if (illisible >= 0)
-    return vide("illisible", `montant illisible « ${champs[illisible]!.brut} »${suffixe}`);
+    return vide(
+      "illisible",
+      champs[illisible]!.brut.trim() === ""
+        ? `le montant d'un droit hors TVA n'est pas cité${suffixe}`
+        : `montant illisible « ${champs[illisible]!.brut} »${suffixe}`,
+    );
 
   // Un droit fixé par le paramétrage ne se lit qu'à sa valeur. Imprimé
   // autrement, il n'ancre rien et garde toutes ses lectures.
@@ -698,7 +771,7 @@ export function normaliserMontants(
   const rats = entree.bases.map((b) => rationnel(b.taux));
   const tol = BigInt(p.toleranceMineure);
   // Un total qu'on n'a pas su lire ne vérifie rien : il ne compte plus ici.
-  const aVerifier = (Boolean(entree.ttc) && totalNonLu === null) || Boolean(entree.tva);
+  const aVerifier = lu("ttc") || lu("tva");
   // L'ambiguïté se mesure sur ce qui est IMPRIMÉ : une lecture levée par
   // l'ancre n'était pas unique.
   const unique = brutes.every((l) => l.length === 1);
@@ -762,7 +835,8 @@ export function normaliserMontants(
     distinctes.size === 0 &&
     entree.bases.length === 1 &&
     (entree.autres ?? []).length > 0 &&
-    Boolean(entree.tva)
+    lu("tva") &&
+    droitsDeduits.size === 0
   ) {
     const compris = new Map<string, Candidat[]>();
     const essayer = (i: number, pris: Candidat[]) => {
@@ -817,24 +891,35 @@ export function normaliserMontants(
 
   const [retenue] = [...distinctes.values()];
   const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
+  const deduite = tvaNonLue !== null || baseDeduite !== null || droitsDeduits.size > 0;
   return construire(
     retenue!,
     "tranche",
     // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
-    // confirme aussi : on ne lui donne pas la note pleine.
-    totalNonLu ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL) : pleine,
+    // confirme aussi : on ne lui donne pas la note pleine. Une valeur déduite
+    // non plus : elle est vérifiée, pas lue.
+    deduite || totalNonLu ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL) : pleine,
     1,
-    (unique
-      ? "lecture unique, vérifiée par la facture"
-      : ancre
-        ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
-        : "convention tranchée par l'arithmétique de la facture") + suffixe,
+    (deduite
+      ? "une valeur illisible est déduite des montants imprimés, que la facture vérifie"
+      : unique
+        ? "lecture unique, vérifiée par la facture"
+        : ancre
+          ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
+          : "convention tranchée par l'arithmétique de la facture") + suffixe,
   );
 
   function valeursImprimees(pris: Candidat[]) {
     const par = new Map(champs.map((c, i) => [c.nom, BigInt(pris[i]!.mineur)]));
+    // La base déduite : le HT du pied, moins les bases lues.
+    const lues = entree.bases.reduce(
+      (s, _, i) => (i === baseDeduite ? s : s + par.get(`ht${i}`)!),
+      0n,
+    );
     return {
-      hts: entree.bases.map((_, i) => par.get(`ht${i}`)!),
+      hts: entree.bases.map((_, i) =>
+        i === baseDeduite ? par.get("htTotal")! - lues : par.get(`ht${i}`)!,
+      ),
       tva: par.get("tva"),
       autres: (entree.autres ?? []).map((_, i) => par.get(`autre${i}`)!),
       ttc: par.get("ttc"),
@@ -860,7 +945,9 @@ export function normaliserMontants(
     if (v.ttc !== undefined) {
       const tva = v.tva ?? tvaCalculee;
       const total = v.hts.reduce((s, h) => s + h, 0n) + tva + v.autres.reduce((s, a) => s + a, 0n);
-      if (abs(total - v.ttc) > tol) return false;
+      // Un droit déduit vaut EXACTEMENT le reste : l'arrondi admis porte sur
+      // la TVA, jamais sur un montant que le paramétrage fixe.
+      if (abs(total - v.ttc) > (droitsDeduits.size > 0 ? 0n : tol)) return false;
     }
     return true;
   }
@@ -874,11 +961,46 @@ export function normaliserMontants(
     autresCompris = false,
   ): ResultatNormalisation {
     const v = valeurs(pris, autresCompris);
+    const somme = (xs: bigint[]) => xs.reduce((s, x) => s + x, 0n);
+    // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
+    const tva =
+      tvaNonLue !== null && v.ttc !== undefined ? v.ttc - somme(v.hts) - somme(v.autres) : v.tva;
+    const montant = (x: bigint) => enDecimal(Number(x), p.decimales);
+    // Les montants imprimés qui alimentent la formule, et ce que la pièce
+    // imprimait à la place de la valeur déduite.
+    const operandes = (sauf: string, aLaPlace: string | null): Record<string, string> => ({
+      ...Object.fromEntries(champs.filter((c) => c.nom !== sauf).map((c) => [c.nom, c.brut])),
+      imprime: aLaPlace ?? "",
+    });
+    const deduits: Deduction[] = [];
+    if (tvaNonLue !== null && tva !== undefined)
+      deduits.push({
+        champ: "totals.vat",
+        valeur: montant(tva),
+        formule: "TVA = TTC − HT − droits, vérifiée par HT × taux",
+        operandes: operandes("tva", tvaNonLue),
+      });
+    if (baseDeduite !== null)
+      deduits.push({
+        champ: `lines[${baseDeduite}].base_ht`,
+        valeur: montant(v.hts[baseDeduite]!),
+        formule: "base = HT du pied − autres bases, vérifiée par la TVA et le TTC",
+        operandes: operandes("", entree.bases[baseDeduite]!.ht),
+      });
+    for (const nom of droitsDeduits) {
+      const i = Number(nom.slice("autre".length));
+      deduits.push({
+        champ: `other_charges[${i}].amount`,
+        valeur: montant(v.autres[i]!),
+        formule: "droit = TTC − HT − TVA, égal au montant que fixe le paramétrage",
+        operandes: operandes(nom, imprime.autres[i] ?? null),
+      });
+    }
     return {
       etat,
       montants: {
         bases: v.hts.map((h, i) => ({ ht: Number(h), taux: taux[i]! })),
-        tva: v.tva === undefined ? null : Number(v.tva),
+        tva: tva === undefined ? null : Number(tva),
         autres: v.autres.map(Number),
         ttc: v.ttc === undefined ? null : Number(v.ttc),
       },
@@ -888,7 +1010,7 @@ export function normaliserMontants(
       lecturesValides,
       totalNonLu,
       ligneNonLue: null,
-      deduits: [],
+      deduits,
       raison,
     };
   }

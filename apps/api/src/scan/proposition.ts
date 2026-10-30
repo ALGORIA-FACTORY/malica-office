@@ -32,7 +32,7 @@ import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireParametres } from "./analyse.ts";
+import { analyserPiece, lireExposant, lireParametres } from "./analyse.ts";
 import { enDecimal, tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
@@ -158,6 +158,9 @@ export interface JugementAProposer {
 /** Le référentiel daté de la proposition : le pack, à la date de la pièce. */
 export interface ReferentielDeLaProposition {
   packVersionId: string;
+  /** La devise du dossier : celle de ses livres. */
+  deviseDuDossier: string;
+  /** L'exposant de la devise de la pièce (`ref.devises`). */
   decimales: number;
   confianceReserve: number;
   confianceBloquante: number;
@@ -172,7 +175,7 @@ export interface ReferentielDeLaProposition {
  * Le jugement refuse-t-il, avant tout référentiel ? Le verdict d'abord, puis
  * des montants que la normalisation n'a pas retenus. Pure.
  */
-export function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
+function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
   const { verdict, normalisation: n } = j;
   if (!autoriseUneEcriture(verdict))
     return {
@@ -215,9 +218,40 @@ export function composerLaProposition(
   const payload = j.payload as {
     lines?: Array<Record<string, unknown>>;
     other_charges?: Array<Record<string, unknown>>;
-    currency?: string;
+    currency?: string | null;
   };
-  const lignesLues = payload.lines ?? [];
+  /*
+   * UNE PIÈCE EN DEVISE NE S'INSCRIT PAS TELLE QUELLE (30 octobre 2026).
+   *
+   * Une facture en euros d'un dossier tenu en dinars partait au journal avec
+   * ses montants en euros, dans des livres en dinars : équilibrée, plausible,
+   * fausse. La conversion demande le cours du jour de l'opération, que la
+   * pièce ne porte pas ; on ne le devine pas.
+   */
+  const devise = payload.currency ?? r.deviseDuDossier;
+  if (devise !== r.deviseDuDossier)
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: `Aucune écriture ne se propose : facture en ${devise}, dossier tenu en ${r.deviseDuDossier} — montant converti à saisir.`,
+    };
+  /*
+   * Le taux que la facture prouve (`analyse.ts`) : la ligne qui le porte est
+   * posée, ou son code corrigé — jamais en silence, la déduction est au
+   * jugement et sa réserve au verdict.
+   */
+  const tauxDeduit = (n.deduits ?? []).find((d) => d.champ === "lines[0].tax_code");
+  const libelleDuTaux = r.taxRates.find((t) => t.code === tauxDeduit?.valeur)?.label;
+  const lignesLues = tauxDeduit
+    ? [
+        {
+          ...payload.lines?.[0],
+          label: payload.lines?.[0]?.["label"] || libelleDuTaux || tauxDeduit.valeur,
+          tax_code: tauxDeduit.valeur,
+        },
+      ]
+    : (payload.lines ?? []);
   const droits = payload.other_charges ?? [];
   if (m.bases.length !== lignesLues.length || m.bases.some((b) => b.ht === null))
     return {
@@ -247,6 +281,7 @@ export function composerLaProposition(
     // Le sens dit par la personne l'emporte sur le sens lu (ANO-LIVE-002/004),
     // comme dans l'analyse : le dirigeant sait s'il a payé ou encaissé.
     ...(j.sensDit ? { document_kind: j.sensDit } : {}),
+    currency: devise,
     document_date: j.date,
     lines: lignesLues.map((l, i) => ({
       ...l,
@@ -271,7 +306,7 @@ export function composerLaProposition(
       fiscalCharges: r.fiscalCharges,
       compteDeNature: r.compteDeNature,
       tvaNonDeductible: r.tvaNonDeductible,
-      currency: String(payload.currency ?? ""),
+      currency: devise,
       parametres: {
         decimals: dec,
         confianceReserve: r.confianceReserve,
@@ -327,13 +362,14 @@ async function proposerDepuisLeJugement(
     normalisation: ResultatNormalisation | null;
     pack_version_id: string | null;
     jurisdiction: string;
+    devise_du_dossier: string;
     sens_dit: string | null;
     date_dite: string | null;
     recue_le: string;
   }>(
     `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
-            a.pack_version_id, o.jurisdiction,
+            a.pack_version_id, o.jurisdiction, o.currency as devise_du_dossier,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
@@ -387,6 +423,12 @@ async function proposerDepuisLeJugement(
   // changement du timbre, il bloquait toute facture antérieure.
   const jour = date ?? ligne.recue_le;
   const p = await lireParametres(db, pack, jour);
+  // L'exposant de la devise de la pièce, comme au jugement (`analyse.ts`).
+  const devise =
+    (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
+  const decimales = await lireExposant(db, devise);
+  if (decimales === null)
+    return { ok: false, raison: `Aucune écriture ne se propose : devise « ${devise} » inconnue.` };
 
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
@@ -407,7 +449,8 @@ async function proposerDepuisLeJugement(
 
   return composerLaProposition(jugement, {
     packVersionId: pack,
-    decimales: p["money.decimals"],
+    deviseDuDossier: ligne.devise_du_dossier,
+    decimales,
     confianceReserve: p["lecture.confiance_reserve"],
     confianceBloquante: p["lecture.confiance_bloquante"],
     taxRates,

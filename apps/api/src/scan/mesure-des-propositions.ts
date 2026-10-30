@@ -36,6 +36,7 @@ import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
 import {
   DROITS_D_ESSAI,
+  EXPOSANTS_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MARQUES_D_ESSAI,
   MENTIONS_D_ESSAI,
@@ -65,6 +66,8 @@ export interface CasDeMesure {
 const DOSSIER = { nom: "SOCIETE D'ESSAI SARL", identifiantFiscal: "1856324K/A/M/000" };
 const FOURNISSEUR = { nom: "FOURNISSEUR D'ESSAI SA", identifiantFiscal: "1234567B/B/M/000" };
 const CLIENT = { nom: "CLIENT D'ESSAI SARL", identifiantFiscal: "1765432C/A/M/000" };
+/** La devise des livres du dossier d'essai. */
+const DEVISE_DU_DOSSIER = "TND";
 
 interface Facture {
   sens?: "facture_achat" | "facture_vente";
@@ -456,6 +459,39 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    nom: "aucune ligne par taux lue, et aucun taux ne fait tenir la facture",
+    provenance: REPRODUIT,
+    lecture: facture({
+      lignes: [],
+      ht: "1 000,000",
+      tva: "150,000",
+      ttc: "1 150,000",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "deux inconnues : la TVA et le timbre illisibles",
+    provenance: REPRODUIT,
+    lecture: facture({
+      ...SIMPLE,
+      tva: "Z34,566",
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,OOO" }],
+    }),
+    attendu: null,
+  },
+  {
+    nom: "un total peu sûr, sur une facture qui ne tient pas",
+    provenance: REPRODUIT,
+    lecture: facture({ ...SIMPLE, ttc: "1 570,126", confiance: { "totals.ttc": 0.3 } }),
+    attendu: null,
+  },
+  {
+    nom: "datée trois mois après sa réception : la date est mal lue",
+    provenance: REPRODUIT,
+    lecture: facture({ ...SIMPLE, date: "2026-12-10", recueLe: "2026-09-15" }),
+    attendu: null,
+  },
+  {
     nom: "facture en euros pour un dossier en dinars",
     provenance: REPRODUIT,
     lecture: facture({
@@ -482,7 +518,7 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
   const n = jugement.normalisation;
   const sousMotif = (): string => {
     if (n.etat === "illisible") {
-      if (/aucune base par taux/.test(n.raison)) return "taux_non_lu";
+      if (/aucune base par taux|taux de TVA non lu/.test(n.raison)) return "taux_non_lu";
       if (/taux « .* » inconnu/.test(n.raison)) return "taux_inconnu";
       if (/un HT est absent/.test(n.raison)) return "base_absente";
       const illisible = /montant illisible « (.*?) »/.exec(n.raison)?.[1];
@@ -504,7 +540,7 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
   if (/une base n'a pas été lue/.test(raison)) return "proposition/base_non_lue";
   if (/droit hors TVA n'a pas été lu/.test(raison)) return "proposition/droit_non_lu";
   if (/à compléter/.test(raison)) return `proposition/a_completer`;
-  if (/devise/.test(raison)) return "proposition/devise";
+  if (/dossier tenu en|devise/.test(raison)) return "proposition/devise";
   if (/ne s'équilibre pas/.test(raison)) return "proposition/desequilibre";
   return "proposition/autre";
 }
@@ -513,20 +549,21 @@ const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}`;
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
-export function jouer(cas: CasDeMesure): Issue {
+function jouer(cas: CasDeMesure): Issue {
+  // Comme `analyserPiece` et `propositionDePiece` : l'exposant de la devise de
+  // la pièce, à défaut celle du dossier ; les droits fixés du sens retenu.
+  const decimales = EXPOSANTS_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER] ?? null;
+  const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
   const jugement = jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
     marques: MARQUES_D_ESSAI,
+    decimales,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
+    deviseDuDossier: DEVISE_DU_DOSSIER,
     droitsFixes: new Map(
-      DROITS_D_ESSAI.filter(
-        (d) =>
-          d.fixedAmount !== null &&
-          d.documentKind === (cas.lecture.sensDit ?? cas.lecture.payload.document_kind),
-      ).map((d) => [
-        d.code,
-        Math.round(Number(d.fixedAmount) * 10 ** PARAMETRES_D_ESSAI["money.decimals"]),
-      ]),
+      DROITS_D_ESSAI.flatMap((d) =>
+        d.fixedAmount !== null && d.documentKind === sens ? [[d.code, d.fixedAmount] as const] : [],
+      ),
     ),
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,
@@ -545,7 +582,9 @@ export function jouer(cas: CasDeMesure): Issue {
     },
     {
       packVersionId: "pack-d-essai",
-      decimales: PARAMETRES_D_ESSAI["money.decimals"],
+      deviseDuDossier: DEVISE_DU_DOSSIER,
+      // Une devise inconnue : le jugement a déjà refusé, rien ne se compose.
+      decimales: decimales ?? 0,
       confianceReserve: PARAMETRES_D_ESSAI["lecture.confiance_reserve"],
       confianceBloquante: PARAMETRES_D_ESSAI["lecture.confiance_bloquante"],
       taxRates: TAUX_D_ESSAI,
