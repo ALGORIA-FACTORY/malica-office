@@ -391,14 +391,18 @@ function ChargesScreen() {
                   className="ln"
                 >
                   <span className="hd">
-                    <span className="nm">{a.designation}</span>
+                    <span className="nm">{a.designation || t("pme.list.sansEmetteur")}</span>
                     {/*
                      * Un montant NON CITÉ ne s'écrit pas : le moteur le
                      * compte pour zéro faute de mieux, l'écran ne le
-                     * présente pas comme un prix lu.
+                     * présente pas comme un prix lu. Celui que le cabinet a
+                     * inscrit en prenant la pièce en charge fait foi sans
+                     * citation : il décide.
                      */}
                     <span className="vl">
-                      {a.citationTotalHt && a.totalHt ? montant(a.totalHt, locale) : "—"}
+                      {(a.citationTotalHt || a.source === "cabinet") && a.totalHt
+                        ? montant(a.totalHt, locale)
+                        : "—"}
                     </span>
                   </span>
                   <span className="qt">

@@ -76,7 +76,9 @@ export const charges = {
          from piece_articles_v a
          join pieces_qui_comptent_v q on q.id = a.piece_id
         where a.tenant_id = $1 and a.period is null
-          and q.document_kind <> 'facture_vente'`,
+          and q.document_kind <> 'facture_vente'
+          -- Forcée, la pièce a la date de l'écriture du cabinet.
+          and q.source = 'lecture'`,
       [tenantId],
     );
     const r = (rows as Record<string, unknown>[])[0] ?? {};
@@ -98,15 +100,34 @@ export const charges = {
    */
   async articles(db: Requete, tenantId: string, fromPeriod: string, toPeriod: string) {
     const { rows } = await db.query(
-      `select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht,
-              a.unit_price_ttc, a.total_ht, a.famille_code, a.famille_source, a.period,
-              a.document_date, a.citation_field, a.citation_quantity,
-              a.citation_unit_price_ht, a.citation_unit_price_ttc, a.citation_total_ht
-         from piece_articles_v a
-         join pieces_qui_comptent_v q on q.id = a.piece_id
-        where a.tenant_id = $1 and a.period >= $2 and a.period <= $3
-          and q.document_kind <> 'facture_vente'
-        order by a.period desc, a.ordinal asc`,
+      `select * from (
+         select a.piece_id, a.ordinal, a.designation, a.quantity, a.unit_price_ht,
+                a.unit_price_ttc, a.total_ht, a.famille_code, a.famille_source, a.period,
+                a.document_date, a.citation_field, a.citation_quantity,
+                a.citation_unit_price_ht, a.citation_unit_price_ttc, a.citation_total_ht,
+                'lecture' as source
+           from piece_articles_v a
+           join pieces_qui_comptent_v q on q.id = a.piece_id
+          where a.tenant_id = $1 and q.source = 'lecture'
+            and q.document_kind <> 'facture_vente'
+         union all
+         -- Prise en charge (1er novembre 2026) : la charge est ce que le
+         -- cabinet a inscrit en base, au mois de son écriture, rangée dans sa
+         -- famille par le même résolveur que les articles lus — le compte
+         -- d'abord, puis le libellé. La PME y lit l'émetteur, pas l'écriture.
+         select q.id, l.ordinal, coalesce(x.payload ->> 'issuer', ''),
+                null::numeric, null::numeric, null::numeric, l.montant, l.famille_code,
+                l.famille_source, to_char(l.date_ecriture, 'YYYY-MM'), l.date_ecriture,
+                null, null, null, null, null, 'cabinet'
+           from pieces_qui_comptent_v q
+           cross join lateral app.charges_prises_en_charge(q.id) l
+           left join lateral (select z.payload from extractions_v z where z.piece_id = q.id
+                               order by z.created_at desc limit 1) x on true
+          where q.tenant_id = $1 and q.source = 'cabinet'
+            and q.document_kind <> 'facture_vente'
+       ) a
+       where a.period >= $2 and a.period <= $3
+       order by a.period desc, a.ordinal asc`,
       [tenantId, fromPeriod, toPeriod],
     );
     return rows.map((r) => {
@@ -128,6 +149,7 @@ export const charges = {
         citationUnitPriceHt: (row["citation_unit_price_ht"] as string | null) ?? null,
         citationUnitPriceTtc: (row["citation_unit_price_ttc"] as string | null) ?? null,
         citationTotalHt: (row["citation_total_ht"] as string | null) ?? null,
+        source: row["source"] as "lecture" | "cabinet",
       };
     });
   },

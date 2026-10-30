@@ -18,13 +18,12 @@ import { useMemo } from "react";
 
 import { debutDExercice, finDuMois } from "@malica/socle/exercice";
 import { useI18n } from "@/i18n";
+import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import type { PnlV1 } from "@malica/socle/contracts/pnl.v1";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
-import { computeTva } from "@malica/socle/engines/tva/compute";
 
 export interface SyntheseClient {
   pack: { id: string; version: string; ratified: boolean } | null;
@@ -118,24 +117,11 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
   const tva = useMemo<TvaV1 | null>(() => {
     if (!devise || !extraits.data || !taux.data || extraits.data.length === 0) return null;
     if (decimales === null) return null;
-    const dedans = extraits.data
-      .map((e) => ({ item_id: e.pieceId, extract: ExtractV1.safeParse(e.extract) }))
-      .filter((e) => e.extract.success)
-      .map((e) => ({ item_id: e.item_id, extract: (e.extract as { data: ExtractV1 }).data }));
-    if (dedans.length === 0) return null;
-    return computeTva({
+    return tvaDesExtraits({
       period: periode,
       currency: { code: devise, decimals: decimales },
-      tax_rates: taux.data.map((r) => ({
-        code: r.code,
-        label: r.label,
-        rate: r.rate,
-        valid_from: r.validFrom,
-        valid_to: r.validTo,
-        jurisdiction: r.jurisdiction,
-      })),
-      achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
-      ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
+      taux: taux.data,
+      rows: extraits.data,
     });
   }, [extraits.data, taux.data, periode, devise, decimales]);
 

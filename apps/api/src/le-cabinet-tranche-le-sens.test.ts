@@ -250,7 +250,7 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
       date: "2026-09-10",
       libelle: "Achat FOURNISSEUR SA",
       lignes: [
-        { account_code: "601", libelle: "Achat", debit: "1470.126", credit: "0", tax_code: null },
+        { account_code: "601", libelle: "Achat", debit: "1470.126", credit: "0", tax_code: "EXO" },
         {
           account_code: "401",
           libelle: "Fournisseur",

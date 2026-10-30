@@ -658,6 +658,11 @@ export function QueueTable({ rows }: { rows: QueueItem[] }) {
                       )}
                     </span>
                   ) : null}
+                  {row.doublonDe ? (
+                    <span className="mt-0.5 ms-1 inline-block bg-signal-warn px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-background">
+                      {t("cab.file.doublon")}
+                    </span>
+                  ) : null}
                   {row.collaborateur ? (
                     <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <span className="num bg-foreground px-1 text-[9px] text-background">

@@ -178,8 +178,8 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
 
   /** Deux lignes équilibrées : des montants qu'un flottant ne sait pas additionner juste. */
   const lignesSaisies = (charge: string) => [
-    { account_code: charge, libelle: "Achat", debit: "0.1", credit: "0", tax_code: null },
-    { account_code: charge, libelle: "Achat", debit: "0.2", credit: "0", tax_code: null },
+    { account_code: charge, libelle: "Achat", debit: "0.1", credit: "0", tax_code: "EXO" },
+    { account_code: charge, libelle: "Achat", debit: "0.2", credit: "0", tax_code: "EXO" },
     { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "0.3", tax_code: null },
   ];
 
@@ -326,7 +326,7 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
         date: "2026-10-02",
         libelle: "Facture saisie",
         lignes: [
-          { account_code: "601", libelle: "Achat", debit: "0.3", credit: "0", tax_code: null },
+          { account_code: "601", libelle: "Achat", debit: "0.3", credit: "0", tax_code: "EXO" },
           {
             account_code: "401",
             libelle: "Fournisseur",

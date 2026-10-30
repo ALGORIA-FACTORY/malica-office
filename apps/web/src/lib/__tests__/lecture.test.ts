@@ -3,6 +3,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import {
   avancementDeLaListe,
+  etatDeLAccueil,
   lectureEnSuspens,
   piecesALire,
   piecesEnEchec,
@@ -150,5 +151,21 @@ describe("l'accueil et la liste classent par la même règle", () => {
       enAttente: 1,
       retournees: 1,
     });
+  });
+});
+
+/*
+ * Staging, 30 octobre 2026 : « AUDICORP attend 3 précisions » au-dessus de
+ * « Tout est en ordre. octobre est bouclé. ». Les deux phrases de l'accueil
+ * se dérivent d'UN état.
+ */
+describe("l'état de l'accueil", () => {
+  it("un retour du cabinet n'est jamais « en ordre », même sans rien à envoyer", () => {
+    expect(etatDeLAccueil({ avancement: 0.5, enAttente: 0, retournees: 3 })).toBe("a_regler");
+  });
+  it("en ordre seulement quand rien n'attend la personne", () => {
+    expect(etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0 })).toBe("en_ordre");
+    expect(etatDeLAccueil({ avancement: 0.5, enAttente: 2, retournees: 0 })).toBe("a_envoyer");
+    expect(etatDeLAccueil({ avancement: null, enAttente: 0, retournees: 0 })).toBe("vide");
   });
 });

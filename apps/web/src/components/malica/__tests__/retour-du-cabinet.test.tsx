@@ -65,7 +65,7 @@ describe("une pièce retournée ne bloque jamais", () => {
       "pme.retour.geste.reprendre_photo",
       "pme.retour.geste.repondre",
       "pme.retour.garder",
-      "pme.supprimer.action",
+      "pme.retour.supprimer",
     ]);
     const boutons = boutonsDeSortie();
     for (const b of boutons) expect((b as HTMLButtonElement).disabled).toBe(false);
@@ -94,23 +94,23 @@ describe("une pièce retournée ne bloque jamais", () => {
 
   it("supprimer se confirme, puis part ; « Annuler » rend les sorties", () => {
     const g = monter();
-    fireEvent.click(screen.getByRole("button", { name: "pme.supprimer.action" }));
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.supprimer" }));
     const sur = screen.getByRole("alertdialog");
     expect(within(sur).getByText("pme.retour.supprimer.sur")).toBeTruthy();
     expect(g.supprimer.action).not.toHaveBeenCalled();
     fireEvent.click(within(sur).getByRole("button", { name: "common.cancel" }));
     expect(sorties()).toContain("pme.retour.renvoyer");
 
-    fireEvent.click(screen.getByRole("button", { name: "pme.supprimer.action" }));
+    fireEvent.click(screen.getByRole("button", { name: "pme.retour.supprimer" }));
     fireEvent.click(screen.getByRole("button", { name: "pme.supprimer.oui" }));
     expect(g.supprimer.action).toHaveBeenCalledOnce();
   });
 
   it("le motif « demander la suppression » se fait par la suppression directe", () => {
     const g = monter({ geste: "demander_suppression", motif: "doublon" });
-    expect(sorties()[0]).toBe("pme.supprimer.action");
+    expect(sorties()[0]).toBe("pme.retour.supprimer");
     expect(sorties()).not.toContain("pme.retour.geste.demander_suppression");
-    fireEvent.click(screen.getAllByRole("button", { name: "pme.supprimer.action" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "pme.retour.supprimer" })[0]!);
     fireEvent.click(screen.getByRole("button", { name: "pme.supprimer.oui" }));
     expect(g.supprimer.action).toHaveBeenCalledOnce();
   });

@@ -51,6 +51,7 @@ import "@/styles-comptabilite.css";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { CabinetProvider } from "@/components/malica/cabinet-context";
+import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import { useDossierCourant } from "@/components/malica/dossier-courant";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import {
@@ -268,9 +269,11 @@ function Coquille({
     queryKey: ["cab-conseil-stats", org.id],
     queryFn: () => office().conseil.statistiques(org.id),
   });
+  // Le mois du cabinet, à son fuseau : pas celui du poste.
+  const moisDuCabinet = useMoisDuCabinet();
   const honoraires = useQuery({
-    queryKey: ["cab-honoraires-synthese", org.id, new Date().toISOString().slice(0, 7)],
-    queryFn: () => office().honoraires.synthese(org.id, new Date().toISOString().slice(0, 7)),
+    queryKey: ["cab-honoraires-synthese", org.id, moisDuCabinet],
+    queryFn: () => office().honoraires.synthese(org.id, moisDuCabinet),
   });
   const mandatsActifs = new Set(
     (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),

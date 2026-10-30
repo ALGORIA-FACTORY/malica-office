@@ -173,6 +173,13 @@ function CabinetReview() {
     queryKey: ["ref-pack", org.jurisdiction],
     queryFn: () => office().referential.activePack(org.jurisdiction),
   });
+  // Les codes de taxe du même pack, traduits : le taux d'une ligne se choisit là.
+  const codesDeTaxe = useQuery({
+    queryKey: ["tax-rates", packPaiements.data?.id, locale],
+    enabled: Boolean(packPaiements.data),
+    queryFn: () => office().referential.taxRates(packPaiements.data!.id, org.jurisdiction, locale),
+    select: (taux) => [...new Map(taux.map((r) => [r.code, r])).values()],
+  });
   // La date de la pièce quand elle a été lue ; à défaut aujourd'hui, et c'est
   // sans conséquence : cette date ne sert qu'à CHOISIR le libellé traduit d'un
   // moyen de paiement, jamais à ranger ou à calculer quoi que ce soit.
@@ -578,6 +585,29 @@ function CabinetReview() {
               <span className="text-text-2"> — {dansLaFile.libelle}</span>
             ) : null}
           </h1>
+          {/*
+           * Une pièce qui en répète une autre arrivée avant (staging, 30
+           * octobre 2026). Un mot et le lien vers l'autre ; le pourquoi dans
+           * le i. Rien n'est supprimé : la PME décide.
+           */}
+          {dansLaFile?.doublonDe ? (
+            <p className="mt-1.5 flex items-center gap-2 text-[12px]">
+              <span className="bg-signal-warn px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-background">
+                {t("cab.file.doublon")}
+              </span>
+              <Link
+                to="/cabinet/piece/$pieceId"
+                params={{ pieceId: dansLaFile.doublonDe }}
+                className="font-medium underline underline-offset-4"
+              >
+                {t("cab.doublon.voir")}
+              </Link>
+              <Aide
+                titre={t("cab.file.doublon")}
+                paragraphes={[{ texte: t("cab.doublon.aide") }]}
+              />
+            </p>
+          ) : null}
         </div>
         <SignalLight tone={feuDuStatut(statut)} label={t(MOT_CABINET[statut])} />
         <span className="flex shrink-0 gap-1">
@@ -1016,6 +1046,8 @@ function CabinetReview() {
                 plan={plan.data ?? []}
                 decimales={decimales}
                 motifs={motifs.data ?? []}
+                codesDeTaxe={codesDeTaxe.data ?? []}
+                illisible={dossier.data.ecritureIllisible ?? false}
                 onRetournee={setRetourEnvoye}
               />
             )}

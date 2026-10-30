@@ -30,7 +30,8 @@ import {
   SectionTitle,
   EnTeteCabinet,
 } from "@/components/malica/office-ui";
-import { currentPeriod, monthBounds } from "@/hooks/use-tva";
+import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
+import { monthBounds } from "@/hooks/use-tva";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
@@ -259,7 +260,10 @@ function CabinetRapprochement() {
   const qc = useQueryClient();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [compteId, setCompteId] = useState<string | null>(null);
-  const [period, setPeriod] = useState(currentPeriod);
+  // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
+  const moisDuCabinet = useMoisDuCabinet();
+  const [periodeChoisie, setPeriod] = useState<string | null>(null);
+  const period = periodeChoisie ?? moisDuCabinet;
   const [csv, setCsv] = useState("");
   const [importOuvert, setImportOuvert] = useState(false);
   const [importInfo, setImportInfo] = useState<string | null>(null);

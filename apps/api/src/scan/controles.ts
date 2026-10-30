@@ -79,11 +79,12 @@ export interface ContexteControle {
    * du mois de sa date.
    */
   ecartDateJours: number;
-  autresPieces: Array<{
-    id: string;
-    emetteurIdentifiantFiscal: string | null;
-    numero: string | null;
-  }>;
+  /**
+   * La pièce arrivée avant celle-ci qu'elle répète, selon sa clé
+   * (`cleDeDoublon`) et la règle de la base (`app.doublon_probable_de`), ou
+   * null.
+   */
+  doublonProbable: string | null;
 }
 
 export type Verdict =
@@ -145,6 +146,65 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
  */
 
 const normNumero = (n: string | null) => (n ? n.toUpperCase().replace(/[^0-9A-Z]/g, "") : null);
+
+/** Un nom d'émetteur comparable : sans accents, sans ponctuation, en capitales. */
+const normNom = (n: string | null) =>
+  n
+    ? n
+        .normalize("NFKD")
+        .replace(/\p{M}/gu, "")
+        .toUpperCase()
+        .replace(/[^\p{L}\p{N}]/gu, "") || null
+    : null;
+
+/** Un montant lu comparable : la valeur, pas l'écriture (« 8772.7280 » = « 8772.728 »). */
+const normMontant = (m: string | null) => {
+  // Une écriture décimale canonique, sans passer par un flottant : zéros de
+  // tête et de fin retirés, « -0 » ramené à « 0 ».
+  const lu = m === null ? null : /^(-?)0*(\d*?)(?:\.(\d*?)0*)?$/.exec(m.trim());
+  if (!lu || !/\d/.test(m!)) return null;
+  const entier = lu[2] || "0";
+  const decimales = lu[3] ? `.${lu[3]}` : "";
+  const absolu = `${entier}${decimales}`;
+  return absolu === "0" ? "0" : `${lu[1]}${absolu}`;
+};
+
+/**
+ * La clé de doublon d'une pièce, normalisée ICI et rangée avec son jugement
+ * (`capture.analyses.doublon_*`). La règle qui compare deux clés vit en base,
+ * une fois (`app.doublon_probable_de`) : la file du cabinet l'applique au
+ * moment où elle est lue, et l'ordre des lectures n'y fait rien.
+ *
+ * Deux façons d'être la même pièce, au même numéro :
+ *   — même émetteur au matricule (sept chiffres) ;
+ *   — quand l'une des deux n'a pas de matricule, même nom, même date et même
+ *     total.
+ *
+ * La seconde est née sur staging le 30 octobre 2026 : MEUBLES EL AMEN du 20
+ * janvier, 8 772,728, deux fois ; INFOTECH, 13 690,165, deux fois. Aucune des
+ * deux n'imprimait de matricule lisible. Sans numéro lu, la clé est vide et
+ * rien n'est signalé : deux achats du même jour, au même prix, chez le même
+ * fournisseur, sont deux factures plausibles.
+ */
+export function cleDeDoublon(piece: {
+  emetteurIdentifiantFiscal: string | null;
+  emetteurNom: string | null;
+  numero: string | null;
+  /** AAAA-MM-JJ, ou null. */
+  date: string | null;
+  /** Le total TTC lu, chaîne décimale, ou null. */
+  ttc: string | null;
+}): { numero: string | null; mf: string | null; lu: string | null } {
+  const numero = normNumero(piece.numero) || null;
+  if (!numero) return { numero: null, mf: null, lu: null };
+  const nom = normNom(piece.emetteurNom);
+  const ttc = normMontant(piece.ttc);
+  return {
+    numero,
+    mf: normaliserMatricule(piece.emetteurIdentifiantFiscal).chiffres || null,
+    lu: nom && piece.date && ttc ? `${nom}|${piece.date}|${ttc}` : null,
+  };
+}
 
 /** Ce qu'un titre imprimé dit de la nature du document, quand ce n'est pas une facture. */
 const TITRES_NON_COMPTABLES: Array<[RegExp, string]> = [
@@ -506,30 +566,18 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
    * C'est une distinction, pas un relâchement : la conclusion de ce contrôle
    * est « à rapprocher », et personne n'est rejeté sur sa foi.
    */
-  const emetteur = normaliserMatricule(p.emetteur.identifiantFiscal).chiffres;
-  const numero = normNumero(p.numero);
-  const semblable =
-    emetteur && numero
-      ? ctx.autresPieces.find(
-          (a) =>
-            normaliserMatricule(a.emetteurIdentifiantFiscal).chiffres === emetteur &&
-            normNumero(a.numero) === numero,
-        )
-      : undefined;
-  if (semblable)
+  if (ctx.doublonProbable)
     return {
       code: "doublon",
       statut: "rapprocher",
       motif: `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`,
-      preuves: { semblable: semblable.id },
+      preuves: { semblable: ctx.doublonProbable },
     };
   return {
     code: "doublon",
     statut: "conforme",
     motif:
-      emetteur && numero
-        ? "Aucune autre pièce n'a le même fichier, ni le même émetteur et le même numéro."
-        : "Aucune autre pièce n'a le même fichier ; émetteur ou numéro illisible, la ressemblance n'a pas pu être cherchée plus loin.",
+      "Aucune autre pièce n'a le même fichier, ni le même émetteur avec le même numéro, ou la même date et le même total.",
     preuves: {},
   };
 }

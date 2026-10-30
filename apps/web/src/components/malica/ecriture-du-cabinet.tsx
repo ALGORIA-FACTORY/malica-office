@@ -70,6 +70,8 @@ export function EcritureDuCabinet({
   plan,
   decimales,
   motifs,
+  codesDeTaxe,
+  illisible,
   onRetournee,
 }: {
   pieceId: string;
@@ -97,6 +99,13 @@ export function EcritureDuCabinet({
   /** Les décimales de la devise, du pack ; `null` tant qu'on ne les a pas (R4). */
   decimales: number | null;
   motifs: readonly RejetMotif[];
+  /** Les codes de taxe du pack, en vigueur, traduits : le choix d'une ligne. */
+  codesDeTaxe: ReadonlyArray<{ code: string; label: string }>;
+  /**
+   * L'écriture prise en charge ne se lit pas comme une facture : la PME
+   * garde sa lecture tant que le comptable ne l'a pas reprise.
+   */
+  illisible: boolean;
   onRetournee: (r: RetourEnvoye) => void;
 }) {
   const { t, locale } = useI18n();
@@ -303,6 +312,19 @@ export function EcritureDuCabinet({
         />
       </h2>
 
+      {illisible ? (
+        <p
+          role="status"
+          className="flex items-center border border-signal-warn bg-card px-3.5 py-2.5 text-[13px] text-signal-warn"
+        >
+          {t("cab.ecriture.illisible")}
+          <Aide
+            titre={t("cab.ecriture.illisible")}
+            paragraphes={[{ texte: t("cab.ecriture.illisible.aide") }]}
+          />
+        </p>
+      ) : null}
+
       {suivi?.prise && suivi.priseLe ? (
         <p role="status" className="text-[12.5px] font-medium text-signal-ok">
           {t("cab.ecriture.prise", {
@@ -406,7 +428,10 @@ export function EcritureDuCabinet({
                   valeur={l.account_code}
                   onChange={(code) => changerLigne(i, { account_code: code })}
                   plan={plan}
-                  label={t("pme.journal.account")}
+                  label={t("cab.ecriture.ligne.champ", {
+                    champ: t("pme.journal.account"),
+                    n: i + 1,
+                  })}
                   inconnuLabel={t("cab.ecriture.compte.inconnu")}
                   listeId={LISTE_DES_COMPTES}
                   collectifLabel={t("plan.collectif.court")}
@@ -422,7 +447,10 @@ export function EcritureDuCabinet({
                 onClick={() =>
                   setSaisie((s) => ({ ...s, lignes: s.lignes.filter((_, j) => j !== i) }))
                 }
-                aria-label={t("cab.ecriture.ligne.retirer")}
+                aria-label={t("cab.ecriture.ligne.champ", {
+                  champ: t("cab.ecriture.ligne.retirer"),
+                  n: i + 1,
+                })}
                 className="col-start-3 row-start-1 flex h-8 w-8 items-center justify-center text-muted-foreground hover:text-foreground sm:col-start-5"
               >
                 <X className="h-4 w-4" aria-hidden />
@@ -431,8 +459,16 @@ export function EcritureDuCabinet({
                 <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground sm:sr-only">
                   {t("cab.ecriture.ligne.libelle")}
                 </span>
+                {/*
+                 * Un nom par champ ET par ligne : « Débit » dix fois ne dit
+                 * pas lequel (lecteur d'écran, staging du 30 octobre 2026).
+                 */}
                 <input
                   type="text"
+                  aria-label={t("cab.ecriture.ligne.champ", {
+                    champ: t("cab.ecriture.ligne.libelle"),
+                    n: i + 1,
+                  })}
                   value={l.libelle}
                   onChange={(e) => changerLigne(i, { libelle: e.target.value })}
                   className="w-full border border-border bg-background px-2 py-1 text-[13px]"
@@ -454,12 +490,43 @@ export function EcritureDuCabinet({
                     type="text"
                     inputMode="decimal"
                     dir="ltr"
+                    aria-label={t("cab.ecriture.ligne.champ", {
+                      champ: t(cote === "debit" ? "pme.journal.debit" : "pme.journal.credit"),
+                      n: i + 1,
+                    })}
                     value={l[cote]}
                     onChange={(e) => changerLigne(i, { [cote]: e.target.value })}
                     className="num w-full border border-border bg-background px-2 py-1 text-end text-[13px]"
                   />
                 </label>
               ))}
+              {/*
+               * Le taux de la ligne, choisi au référentiel du pack : une ligne
+               * de TVA le dit toujours (le serveur refuse sinon) ; une base
+               * aussi quand la facture porte plusieurs taux. Jamais deviné
+               * (revue de #140). La proposition du Socle le pré-remplit.
+               */}
+              <label className="col-span-3 flex items-center gap-2 sm:col-span-2 sm:col-start-1 sm:row-start-2">
+                <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                  {t("cab.ecriture.ligne.taxe")}
+                </span>
+                <select
+                  aria-label={t("cab.ecriture.ligne.champ", {
+                    champ: t("cab.ecriture.ligne.taxe"),
+                    n: i + 1,
+                  })}
+                  value={l.tax_code ?? ""}
+                  onChange={(e) => changerLigne(i, { tax_code: e.target.value || null })}
+                  className="h-8 min-w-0 flex-1 border border-border bg-background px-2 text-[12.5px]"
+                >
+                  <option value="">—</option>
+                  {codesDeTaxe.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </li>
           ))}
         </ul>

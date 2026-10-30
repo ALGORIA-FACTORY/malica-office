@@ -10,7 +10,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
-import { jourEtMois, momentDeLEnvoi, montant } from "@/lib/lisible";
+import { jourEtMois, jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { lectureEnSuspens, presentation, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
 import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
 import { office } from "@/verticals/malica-office/composition";
@@ -844,11 +844,7 @@ function PmeCapturer() {
   }
 
   const jour = (iso: string | null) =>
-    iso === null
-      ? null
-      : new Intl.DateTimeFormat(locale, { day: "2-digit", month: "long", timeZone: "UTC" }).format(
-          new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso),
-        );
+    iso === null ? null : jourOuInstant(iso, locale, { day: "2-digit", month: "long" });
 
   /** La pièce montrée à « Vérifier » : une à la fois. */
   const enVerification = lues[Math.min(verifiee, Math.max(0, lues.length - 1))] ?? null;

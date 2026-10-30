@@ -39,6 +39,7 @@ import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
 import {
   controlerPiece,
   rendreVerdict,
+  cleDeDoublon,
   type ContexteControle,
   type PieceAControler,
   type ResultatControle,
@@ -148,6 +149,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     lines?: Array<{ tax_code?: string | null }>;
     other_charges?: unknown[];
     references?: Record<string, string>;
+    totals?: { ttc?: string | null };
   };
   /*
    * LE SENS DIT PAR LA PERSONNE L'EMPORTE SUR LE SENS LU (21 octobre 2026).
@@ -372,7 +374,18 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     sensConfirme: sensDit !== null,
   };
 
-  const [{ rows: types }, { rows: mentions }, { rows: autres }] = await Promise.all([
+  // La clé de doublon, rangée avec le jugement : la file du cabinet la relit
+  // au moment où elle est lue (`app.doublon_probable`), quel que soit l'ordre
+  // des lectures. Le jugement pose la même règle, avec cette clé-ci.
+  const cle = cleDeDoublon({
+    emetteurIdentifiantFiscal: aControler.emetteur.identifiantFiscal,
+    emetteurNom: aControler.emetteur.nom,
+    numero: aControler.numero,
+    date: aControler.date,
+    ttc: payload.totals?.ttc ?? null,
+  });
+
+  const [{ rows: types }, { rows: mentions }, { rows: semblables }] = await Promise.all([
     db.query<{ code: string; porte_ecriture: boolean }>(
       `select code, porte_ecriture from ref.document_types`,
     ),
@@ -380,21 +393,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       `select code, label from ref.mentions where pack_version_id = $1 and mandatory`,
       [pack],
     ),
-    db.query<{ id: string; mf: string | null; numero: string | null }>(
-      // Le nom de la clé est LIÉ, pas écrit dans la requête : la recherche de
-      // doublon lit la même clé que l'invite impose au modèle.
-      `select p.id, e.payload->'references'->>$3 as mf,
-              e.payload->'references'->>'numero' as numero
-         from capture.pieces p
-         join lateral (select payload from capture.extractions x
-                        where x.piece_id = p.id order by created_at desc limit 1) e on true
-        where p.tenant_id = $1 and p.id <> $2
-          -- Une photo reprise n'est pas le doublon de celle qu'elle remplace,
-          -- ni une version précédente celui d'une autre pièce.
-          and p.id not in (select app.versions_de_la_piece($2))
-          and not exists (select 1 from capture.remplacements r where r.piece_id = p.id)`,
-      [piece.tenant_id, pieceId, NOM_MATRICULE_EMETTEUR],
-    ),
+    db.query<{ id: string | null }>(`select app.doublon_probable_de($1, $2, $3, $4) as id`, [
+      pieceId,
+      cle.numero,
+      cle.mf,
+      cle.lu,
+    ]),
   ]);
 
   const contexte: ContexteControle = {
@@ -404,11 +408,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     seuilConfianceReserve: p["lecture.confiance_reserve"]!,
     seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
     ecartDateJours: p["piece.ecart_date_jours"]!,
-    autresPieces: autres.map((a) => ({
-      id: a.id,
-      emetteurIdentifiantFiscal: a.mf,
-      numero: a.numero,
-    })),
+    doublonProbable: semblables[0]?.id ?? null,
   };
 
   const controles = controlerPiece(aControler, contexte);
@@ -416,8 +416,9 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
 
   const { rows: poses } = await db.query<{ id: string }>(
     `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
-                                   normalisation, controles, verdict, motifs)
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb)
+                                   normalisation, controles, verdict, motifs,
+                                   doublon_numero, doublon_mf, doublon_lu)
+     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9, $10, $11)
      returning id`,
     [
       piece.tenant_id,
@@ -428,6 +429,9 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       JSON.stringify(controles),
       verdict,
       JSON.stringify(motifs),
+      cle.numero,
+      cle.mf,
+      cle.lu,
     ],
   );
 

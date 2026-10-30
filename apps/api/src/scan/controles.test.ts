@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  cleDeDoublon,
   controlerPiece,
   rendreVerdict,
   type ContexteControle,
@@ -69,7 +70,7 @@ const CONTEXTE: ContexteControle = {
   // Soixante jours, comme le pack tunisien : au-delà, l'écart entre la date de
   // la pièce et celle de sa réception est signalé.
   ecartDateJours: 60,
-  autresPieces: [],
+  doublonProbable: null,
 };
 
 const statut = (p: PieceAControler, code: string, ctx = CONTEXTE) =>
@@ -443,15 +444,66 @@ describe("doublon", () => {
     assert.equal(c.statut, "rejet");
     assert.equal(c.preuves["original"], "piece-1");
   });
-  it("même émetteur, même numéro qu'une autre pièce : à rapprocher", () => {
-    const c = statut(facture(), "doublon", {
-      ...CONTEXTE,
-      autresPieces: [
-        { id: "piece-7", emetteurIdentifiantFiscal: "1234567 B M 000", numero: "f-2026-0042" },
-      ],
-    });
+  it("la base nomme une pièce semblable : à rapprocher, l'autre nommée", () => {
+    const c = statut(facture(), "doublon", { ...CONTEXTE, doublonProbable: "piece-7" });
     assert.equal(c.statut, "rapprocher");
     assert.equal(c.preuves["semblable"], "piece-7");
+  });
+});
+
+/*
+ * La clé, normalisée ici ; la règle qui en compare deux vit en base
+ * (`app.doublon_probable_de`). Deux pièces sont semblables quand leurs
+ * numéros sont égaux et leurs matricules aussi — ou, sans matricule d'un
+ * côté, leurs « nom|date|total ».
+ */
+describe("la clé de doublon", () => {
+  /*
+   * Staging, 30 octobre 2026 : MEUBLES EL AMEN du 20 janvier, 8 772,728, deux
+   * fois — sans matricule lisible.
+   */
+  const lue = {
+    emetteurIdentifiantFiscal: null,
+    emetteurNom: "Meubles El Amen",
+    numero: "f-2026/0042",
+    date: "2026-01-20",
+    ttc: "8772.728",
+  };
+  it("deux écritures de la même facture donnent la même clé", () => {
+    assert.deepEqual(
+      cleDeDoublon(lue),
+      cleDeDoublon({
+        ...lue,
+        emetteurNom: "MEUBLES EL-AMEN",
+        numero: "F-2026-0042",
+        ttc: "8772.7280",
+      }),
+    );
+    assert.deepEqual(cleDeDoublon(lue), {
+      numero: "F20260042",
+      mf: null,
+      lu: "MEUBLESELAMEN|2026-01-20|8772.728",
+    });
+  });
+  it("le matricule compte à sept chiffres, lettre de contrôle lue ou non", () => {
+    assert.equal(
+      cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567 B M 000" }).mf,
+      cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567B/B/M/000" }).mf,
+    );
+  });
+  it("sans numéro lu, la clé est vide : rien n'est jamais signalé", () => {
+    for (const numero of [null, "", " / - "])
+      assert.deepEqual(cleDeDoublon({ ...lue, numero }), { numero: null, mf: null, lu: null });
+  });
+  it("un autre total, une autre date ou un autre nom : une autre clé", () => {
+    const k = cleDeDoublon(lue).lu;
+    for (const autre of [
+      { ...lue, ttc: "8772.729" },
+      { ...lue, date: "2026-01-21" },
+      { ...lue, emetteurNom: "MEUBLES EL AMAL" },
+    ])
+      assert.notEqual(cleDeDoublon(autre).lu, k, JSON.stringify(autre));
+    assert.equal(cleDeDoublon({ ...lue, date: null }).lu, null, "sans date, pas de clé lue");
   });
 });
 
@@ -522,14 +574,7 @@ describe("le verdict", () => {
     );
   });
   it("à rapprocher", () => {
-    const v = rendreVerdict(
-      controlerPiece(facture(), {
-        ...CONTEXTE,
-        autresPieces: [
-          { id: "p", emetteurIdentifiantFiscal: "1234567B/B/M/000", numero: "F-2026-0042" },
-        ],
-      }),
-    );
+    const v = rendreVerdict(controlerPiece(facture(), { ...CONTEXTE, doublonProbable: "p" }));
     assert.equal(v.verdict, "à rapprocher");
   });
   it("anomalie à signaler", () => {

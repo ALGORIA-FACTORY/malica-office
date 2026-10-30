@@ -24,6 +24,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
+import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import type { ChargeQuestionRow } from "@malica/socle/ports/repositories";
 import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
@@ -64,7 +65,10 @@ function CabinetClient() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
-  const [periode, setPeriode] = useState(() => new Date().toISOString().slice(0, 7));
+  // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
+  const moisDuCabinet = useMoisDuCabinet();
+  const [periodeChoisie, setPeriode] = useState<string | null>(null);
+  const periode = periodeChoisie ?? moisDuCabinet;
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
@@ -495,17 +499,19 @@ function CabinetClient() {
                   aria-hidden
                   className={cn(
                     "mt-1 h-[7px] w-[7px] shrink-0",
-                    tva ? "bg-signal-ok" : "bg-border",
+                    !tva ? "bg-border" : tva.refused.length > 0 ? "bg-signal-warn" : "bg-signal-ok",
                   )}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px]">{t("cab.dos.feux.tva")}</span>
                   <span className="num block text-[11px] text-muted-foreground">
-                    {tva
-                      ? t("cab.dos.feux.tva.calculee", {
-                          n: tva.collectee.length + tva.deductible.length,
-                        })
-                      : t("cab.dos.feux.tva.sans")}
+                    {!tva
+                      ? t("cab.dos.feux.tva.sans")
+                      : tva.refused.length > 0
+                        ? t("cab.dos.feux.tva.refusees", { count: tva.refused.length })
+                        : t("cab.dos.feux.tva.calculee", {
+                            n: tva.collectee.length + tva.deductible.length,
+                          })}
                   </span>
                 </span>
               </li>

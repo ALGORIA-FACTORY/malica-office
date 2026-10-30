@@ -34,7 +34,7 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
   const lignes = (compte: string) => [
-    { account_code: compte, libelle: "Achat", debit: "100.000", credit: "0", tax_code: null },
+    { account_code: compte, libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
     { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100.000", tax_code: null },
   ];
 

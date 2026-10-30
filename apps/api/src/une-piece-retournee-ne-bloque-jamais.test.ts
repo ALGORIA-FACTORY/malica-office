@@ -102,7 +102,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
         packVersionId: pack,
         devise: "TND",
         lignes: [
-          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: null },
+          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
           {
             account_code: "401",
             libelle: "Fournisseur",
@@ -960,7 +960,7 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
         date: "2026-10-02",
         libelle: "Facture prise en charge",
         lignes: [
-          { account_code: "601", libelle: "Achat", debit: "10", credit: "0", tax_code: null },
+          { account_code: "601", libelle: "Achat", debit: "10", credit: "0", tax_code: "EXO" },
           { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "10", tax_code: null },
         ],
       });

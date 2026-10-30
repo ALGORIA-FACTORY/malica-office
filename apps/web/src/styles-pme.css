@@ -1351,6 +1351,9 @@
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-dit q{font-size:.875rem;line-height:1.5;color:var(--tx);quotes:"« " " »"}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-qui{font-size:.78125rem;color:var(--t2)}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-sorties > button:last-child:nth-child(odd){grid-column:1 / -1}
+/* Une paire = 48 px : le libellé tient sur une ligne à 375 px, en fr comme en ar (staging du
+   30 octobre 2026 : « Reprendre la photo » passait à la ligne, la paire montait à 54 px). */
+[data-surface="pme"] [data-ecran="dossier"] .f-ret-sorties > button{padding-inline:.5rem;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-sur{display:grid;gap:.625rem}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-sur p{margin:0;font-size:.875rem;line-height:1.5}
 [data-surface="pme"] [data-ecran="dossier"] .f-ret-fait{min-height:56px;padding:.625rem .875rem;border-radius:1rem;border:1px solid var(--dl);display:flex;align-items:center;gap:.75rem}

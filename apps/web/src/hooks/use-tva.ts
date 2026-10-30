@@ -4,10 +4,10 @@ import { useMemo } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { moisLocal } from "@/lib/lisible";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
-import { computeTva } from "@malica/socle";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 
 export function monthBounds(period: string): { from: string; to: string } {
@@ -17,8 +17,9 @@ export function monthBounds(period: string): { from: string; to: string } {
   return { from: `${period}-01`, to: finDuMois(period) };
 }
 
+/** Le mois en cours, à l'heure du lecteur : à minuit à Tunis, le 1er est déjà le mois suivant. */
 export function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
+  return moisLocal(new Date());
 }
 
 /**
@@ -69,28 +70,11 @@ export function useTvaPeriod(period: string): {
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!extracts.data || !rates.data || decimales === null) return null;
-    const achats: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
-    const ventes: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
-    for (const row of extracts.data) {
-      const parsed = ExtractV1.safeParse(row.extract);
-      if (!parsed.success) continue;
-      const entry = { item_id: row.pieceId, extract: parsed.data };
-      if (parsed.data.document_kind === "facture_vente") ventes.push(entry);
-      else achats.push(entry);
-    }
-    return computeTva({
+    return tvaDesExtraits({
       period,
       currency: { code: pme.currency, decimals: decimales },
-      tax_rates: rates.data.map((r) => ({
-        code: r.code,
-        label: r.label,
-        rate: r.rate,
-        valid_from: r.validFrom,
-        valid_to: r.validTo,
-        jurisdiction: r.jurisdiction,
-      })),
-      achats,
-      ventes,
+      taux: rates.data,
+      rows: extracts.data,
     });
   }, [extracts.data, rates.data, decimales, period, pme.currency]);
 

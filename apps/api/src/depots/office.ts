@@ -381,6 +381,39 @@ export const office = {
       );
       if (connus.length !== codes.length) throw refusMetier("refus.ecriture.taxe");
     }
+    /*
+     * Le taux d'une ligne de TVA se dit, il ne se devine pas (revue de #140) :
+     * une facture à deux taux forcée sans codes sortait de la TVA du mois sans
+     * un mot. Chaque ligne de TVA porte son code ; une base aussi, dès que
+     * l'écriture porte plusieurs taux. La nature d'un compte vient du
+     * paramétrage du dossier, du cabinet, puis du pack (`app.nature_des_comptes`).
+     */
+    const { rows: natures } = await db.query<{ account_code: string; nature: string }>(
+      `select n.account_code, n.nature
+         from pieces_v p
+         cross join lateral app.nature_des_comptes(
+           (select g.cabinet_org_id from engagements_v g
+              join memberships_v m on m.tenant_id = g.cabinet_org_id and m.user_id = auth.uid()
+             where g.pme_org_id = p.tenant_id and g.status = 'actif' limit 1),
+           p.tenant_id, $2::uuid, p.document_kind, $3::date, $4::text[]) n
+        where p.id = app.version_courante($1)`,
+      [input.pieceId, contexte.pack, input.date, [...new Set(lignes.map((l) => l.account_code))]],
+    );
+    const natureDe = new Map(natures.map((n) => [n.account_code, n.nature]));
+    const tva = lignes.filter((l) => natureDe.get(l.account_code) === "tva");
+    if (tva.some((l) => !l.tax_code)) throw refusMetier("refus.ecriture.taxe_tva");
+    if (
+      new Set(tva.map((l) => l.tax_code)).size > 1 &&
+      lignes.some((l) => natureDe.get(l.account_code) === "base" && !l.tax_code)
+    )
+      throw refusMetier("refus.ecriture.taxe_base");
+    // Sans ligne de TVA, la base dit son régime (exonérée, export…) : sinon
+    // sa base manque à la déclaration (revue de #140, cas J).
+    if (
+      tva.length === 0 &&
+      lignes.some((l) => natureDe.get(l.account_code) === "base" && !l.tax_code)
+    )
+      throw refusMetier("refus.ecriture.taxe_sans_tva");
 
     if (vivante) {
       // La contre-passation porte le motif gouverné du forçage (référentiel).
@@ -832,7 +865,19 @@ export const office = {
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
     const { rows } = await db.query(
       `select distinct on (x.piece_id)
-              x.piece_id, x.payload, p.transmise_le, i.impute_le::text as impute_le
+              x.piece_id,
+              -- Forcée, la pièce pèse de ce que le CABINET a inscrit
+              -- (1er novembre 2026) : ses lignes, ses droits, ses totaux, la
+              -- date et le sens de son écriture. Validée, ou avant, de sa lecture.
+              case when p.source = 'cabinet'
+                   then x.payload || (
+                     select jsonb_build_object(
+                              'lines', c.m -> 'lines', 'other_charges', c.m -> 'other_charges',
+                              'totals', c.m -> 'totals', 'document_date', c.m -> 'date_ecriture',
+                              'currency', c.m -> 'currency', 'document_kind', p.document_kind)
+                       from (select app.montants_pris_en_charge(p.id) as m) c)
+                   else x.payload end as payload,
+              p.transmise_le, i.impute_le::text as impute_le
          from extractions_v x
          -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
          -- doublon, d'un type qui porte écriture. Retournée par le cabinet,

@@ -120,7 +120,7 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
     const p = (await rpc(u, "office", "propositionDePiece", id)) as { empreinte?: string };
     return rpc(u, "office", "valider", id, p.empreinte ?? null) as Promise<string>;
   };
-  const lignes = (tax: string | null = null) => [
+  const lignes = (tax: string | null = "EXO") => [
     { account_code: "601", libelle: "Achat", debit: "100", credit: "0", tax_code: tax },
     { account_code: "401", libelle: "Fournisseur", debit: "0", credit: "100", tax_code: null },
   ];

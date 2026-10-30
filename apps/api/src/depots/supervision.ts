@@ -175,7 +175,7 @@ export const supervision = {
               coalesce(p.transmise_le, p.created_at) as envoyee_le,
               o.name as client, e.id as ecriture_id, e.libelle, e.date_ecriture,
               m.montant, c.email as collaborateur, cf.confiance,
-              dem.objet as demande_objet, ${COLONNES_DU_SUIVI}
+              dem.objet as demande_objet, dbl.doublon_de, ${COLONNES_DU_SUIVI}
          from ${PIECES_DU_CABINET}
          left join organizations_v o on o.id = p.tenant_id
          -- L'écriture VIVANTE de la pièce — celle de la facture d'abord, sinon
@@ -236,6 +236,13 @@ export const supervision = {
             where d.piece_id = p.id
             order by d.created_at desc limit 1
          ) dem on true
+         -- « Doublon probable » (staging, 30 octobre 2026) : deux pièces du
+         -- même émetteur et du même numéro passaient toutes deux dans la
+         -- file, sans un mot. Calculé ICI, au moment où la file est lue, sur
+         -- les derniers jugements des deux pièces (« app.doublon_probable ») :
+         -- une première pièce lue après la seconde la fait signaler, une
+         -- pièce retirée cesse de compter. Rien n'est supprimé.
+         cross join lateral (select app.doublon_probable(p.id) as doublon_de) dbl
         where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
         order by coalesce(p.transmise_le, p.created_at) desc
@@ -263,6 +270,7 @@ export const supervision = {
           collaborateur: (p["collaborateur"] as string | null) ?? null,
           confiance: p["confiance"] == null ? null : Number(p["confiance"]),
           demandeEnAttente: (p["demande_objet"] as "rappel" | "suppression" | null) ?? null,
+          doublonDe: (p["doublon_de"] as string | null) ?? null,
         };
       })
       .sort((a, b) => {
@@ -467,11 +475,24 @@ export const supervision = {
     // Deux paramètres pour une seule valeur : `object_id` est un uuid, la clé
     // du `payload` est du texte. Un paramètre unique ne peut pas être les deux
     // — PostgreSQL refuse l'opérateur `text = uuid`.
+    //
+    // Forcer inscrit l'écriture SAISIE par le comptable par la même porte
+    // que la proposition du Socle (`socle_ecriture_propose`, puis
+    // l'inscription) : la porte pose « ecriture.proposed », et le journal
+    // lisait « Le Socle a proposé une écriture. » à la minute du forçage
+    // (staging, 30 octobre 2026). Le Socle n'a rien proposé : c'est le fait
+    // « ecriture.forcee » de la MÊME écriture qui dit ce qui s'est passé. Le
+    // fait reste au journal d'audit (R7) ; la piste de la pièce ne le répète
+    // pas sous un nom faux.
     const { rows } = await db.query(
-      `select id, action, actor, at, motif_id, payload
-         from event_log_v
-        where object_id = $1 or payload ->> 'piece_id' = $2
-        order by at desc limit 200`,
+      `select e.id, e.action, e.actor, e.at, e.motif_id, e.payload
+         from event_log_v e
+        where (e.object_id = $1 or e.payload ->> 'piece_id' = $2)
+          and not (e.action = 'ecriture.proposed'
+                   and exists (select 1 from event_log_v f
+                                where f.object_table = 'ecritures' and f.action = 'ecriture.forcee'
+                                  and f.object_id = e.object_id))
+        order by e.at desc limit 200`,
       [pieceId, pieceId],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
