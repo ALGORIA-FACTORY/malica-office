@@ -4,7 +4,7 @@ import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { treillisMontant, type Hypothese } from "./montants.ts";
-import { plageAmputee } from "./recoller-les-milliers.ts";
+import { plageAmputee, TOLERANCE_DE_LIGNE } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
  *
@@ -251,6 +251,74 @@ function jetonsDeLaPlage(
 const texteDeLaPlage = (plage: readonly PageToken[]): string => plage.map((t) => t.text).join(" ");
 
 /**
+ * Le texte d'un MONTANT cité, tel qu'il se lit : la plage, moins la parenthèse
+ * fermante qui ferme un mot coupé par la plage.
+ *
+ * ================================================================= POURQUOI
+ *
+ * La facture du 4 octobre imprime « (base 3 020,000) » : les jetons
+ * « (base », « 3 », « 020,000) ». La plage du montant cite « 3 020,000) ». La
+ * fermante y est du bruit — elle ferme « (base », un MOT que la plage a
+ * laissé dehors. Mais « 1 234,560) » peut aussi être un avoir « (1 234,560) »
+ * coupé par la plage, et le lire positif inscrirait un achat (revue de la
+ * PR 144). Le texte seul ne tranche pas ; le plan, si.
+ *
+ * On remonte donc la ligne, à gauche de la plage, jusqu'à la parenthèse
+ * ouvrante qui n'est pas fermée : suivie d'une lettre, elle ouvre un mot, et
+ * la fermante se retire ; suivie d'un chiffre, d'un signe, ou introuvable, le
+ * texte reste tel quel — et le lecteur des montants refuse toute parenthèse
+ * (`@malica/socle/montant-imprime`, règle 5). Les deux chaînes lisent ce
+ * texte-là : le plan de jetons, et la normalisation du scan (`analyse.ts`).
+ */
+export function texteDuMontantCite(
+  tokens: readonly PageToken[],
+  plage: { page: number; ordinal: number; ordinalEnd?: number },
+): string | null {
+  const fin = typeof plage.ordinalEnd === "number" ? plage.ordinalEnd : plage.ordinal;
+  const cites = tokens
+    .filter((t) => t.page === plage.page && t.ordinal >= plage.ordinal && t.ordinal <= fin)
+    .sort((a, b) => a.ordinal - b.ordinal);
+  const premier = cites[0];
+  if (!premier) return null;
+  const texte = texteDeLaPlage(cites);
+  // Les fermantes que la plage ne ferme pas elle-même.
+  let profondeur = 0;
+  let orphelines = 0;
+  for (const c of texte) {
+    if (c === "(") profondeur += 1;
+    else if (c === ")") {
+      if (profondeur > 0) profondeur -= 1;
+      else orphelines += 1;
+    }
+  }
+  if (orphelines !== 1 || profondeur !== 0) return texte;
+  const avant = tokens
+    .filter(
+      (t) =>
+        t.page === plage.page &&
+        t.ordinal < plage.ordinal &&
+        Math.abs(t.y0 - premier.y0) <= TOLERANCE_DE_LIGNE,
+    )
+    .sort((a, b) => a.ordinal - b.ordinal)
+    .map((t) => t.text)
+    .join(" ");
+  // L'ouvrante non fermée la plus proche, à gauche de la plage.
+  let ferme = 0;
+  for (let i = avant.length - 1; i >= 0; i -= 1) {
+    const c = avant[i];
+    if (c === ")") ferme += 1;
+    else if (c === "(") {
+      if (ferme > 0) {
+        ferme -= 1;
+        continue;
+      }
+      return /^\p{L}/u.test(avant.slice(i + 1)) ? texte.replace(/\)(?=[^)]*$)/u, "") : texte;
+    }
+  }
+  return texte;
+}
+
+/**
  * Filtre du plan de tokens : traduit une désignation de token en valeur.
  * `kind` décide de la relecture : montant, date ou texte brut.
  */
@@ -353,7 +421,11 @@ export function lireMontantDuPlan(
   }
   const plage = jetonsDeLaPlage(tokens, ref, token);
   const citation = citer(plage, field, "montant", zone, binding);
-  const texte = texteDeLaPlage(plage);
+  const texte = texteDuMontantCite(tokens, {
+    page: plage[0]!.page,
+    ordinal: plage[0]!.ordinal,
+    ordinalEnd: plage[plage.length - 1]!.ordinal,
+  })!;
 
   /*
    * LE MONTANT EST-IL ENTIER ? La question vient AVANT sa lecture.

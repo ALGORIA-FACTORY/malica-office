@@ -38,3 +38,27 @@ export function saisieDecimale(texte: string): string | null {
   const canonique = chiffres.replace(",", ".");
   return /^\d+(\.\d+)?$/.test(canonique) ? canonique : null;
 }
+
+/** Pourquoi une saisie de montant ne se lit pas : ce que l'écran doit dire, au lieu de griser. */
+export type RefusDeSaisie = "illisible" | "negatif" | "trop_precis";
+
+/**
+ * La raison pour laquelle un montant tapé ne s'inscrit pas — ou null s'il
+ * s'inscrit. Revue de la PR 144 : « 0,0001 » en dinars grisait le bouton du
+ * règlement sans un mot, et une valeur nette négative ne disait pas pourquoi
+ * elle était refusée. Un bouton grisé sans raison est une panne pour qui le
+ * regarde.
+ *
+ *   — illisible   : ni un nombre, ni un nombre négatif (« abc », « 1,2.3 ») ;
+ *   — negatif     : un nombre précédé d'un moins — la saisie n'en prend pas ;
+ *   — trop_precis : plus de décimales non nulles que la devise n'en porte. Un
+ *                   montant ne s'arrondit pas en silence.
+ */
+export function refusDeSaisie(texte: string, decimales: number): RefusDeSaisie | null {
+  const lu = saisieDecimale(texte);
+  if (lu === null) {
+    const sansMoins = texte.replace(/^\s*[-−]/u, "");
+    return sansMoins !== texte && saisieDecimale(sansMoins) !== null ? "negatif" : "illisible";
+  }
+  return /[1-9]/u.test(lu.split(".")[1]?.slice(decimales) ?? "") ? "trop_precis" : null;
+}

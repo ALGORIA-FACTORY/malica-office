@@ -1,48 +1,45 @@
 /**
- * La devise des épreuves de lecture : des décimales choisies par l'épreuve, le
- * séparateur décimal et les marques que porte le référentiel.
+ * Les devises des épreuves de lecture, telles que `lireLesDevises` les rend :
+ * exposant, séparateur décimal, marques imprimées de chaque devise.
  *
- * Les marques sont celles des codes de `ref.devises` et des lignes de
- * `ref.devises_marques` (migration `20261030140000_les_marques_de_devise`).
- * Elles sont recopiées ici pour que les épreuves pures tournent sans base ;
- * `les-marques-de-devise-viennent-du-referentiel.test.ts` vérifie, en base,
- * que la copie et le référentiel disent la même chose. Le séparateur décimal
- * vient de l'instantané du référentiel (`referentiel-d-essai.json`), vérifié
- * en base lui aussi.
+ * Rien n'y est recopié à la main : tout vient de l'instantané du référentiel
+ * (`referentiel-d-essai.json`), que `le-referentiel-d-essai-dit-vrai.test.ts`
+ * rejoue en base. Une épreuve peut choisir l'exposant de la devise du dossier
+ * — c'est ce qu'elle éprouve —, jamais ses marques.
  */
 import type { DeviseLue } from "@malica/socle/montant-imprime";
 
-import { DEVISES_D_ESSAI, DEVISE_D_ESSAI } from "./referentiel-d-essai.ts";
+import { DEVISES_D_ESSAI, DEVISE_D_ESSAI, MARQUES_D_ESSAI } from "./referentiel-d-essai.ts";
 
-export const MARQUES_D_ESSAI: readonly string[] = [
-  "D.T",
-  "D.T.",
-  "DINAR",
-  "DINARS",
-  "D.N.T",
-  "D.N.T.",
-  "DNT",
-  "DNT.",
-  "DT",
-  "DT.",
-  "EUR",
-  "TND",
-  "TND.",
-  "XOF",
-  "د.ت",
-  "د.ت.",
-  "€",
-];
+/** Toutes les devises du référentiel d'essai, comme `lireLesDevises`. */
+export const DEVISES_LUES_D_ESSAI: readonly DeviseLue[] = Object.entries(DEVISES_D_ESSAI).map(
+  ([code, d]) => ({
+    code,
+    decimales: d.exposant,
+    separateurDecimal: d.separateurDecimal,
+    marques: MARQUES_D_ESSAI,
+  }),
+);
 
 /**
- * Une devise d'épreuve : l'exposant que l'épreuve choisit, le séparateur
- * décimal de la devise du dossier d'essai, sauf si l'épreuve en nomme un.
+ * Une devise d'épreuve : la devise du dossier d'essai, à l'exposant que
+ * l'épreuve choisit, et au séparateur décimal qu'elle nomme le cas échéant.
  */
 export const deviseDEssai = (
   decimales: number,
   separateurDecimal = DEVISES_D_ESSAI[DEVISE_D_ESSAI]!.separateurDecimal,
 ): DeviseLue => ({
+  code: DEVISE_D_ESSAI,
   decimales,
   separateurDecimal,
   marques: MARQUES_D_ESSAI,
+});
+
+/**
+ * Ce que la relecture au plan de jetons reçoit (`buildExtractFromTokenPlan`) :
+ * toutes les devises, celle du dossier d'essai à l'exposant choisi.
+ */
+export const devisesDEssai = (decimales: number) => ({
+  devises: DEVISES_LUES_D_ESSAI.map((d) => (d.code === DEVISE_D_ESSAI ? { ...d, decimales } : d)),
+  deviseDuDossier: DEVISE_D_ESSAI,
 });

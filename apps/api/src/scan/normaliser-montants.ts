@@ -100,7 +100,8 @@ type EtatNormalisation =
   | "non_verifie" // rien à vérifier (pas de TTC ni de TVA) ; lecture unique
   | "ambigu" // plusieurs lectures distinctes vérifient, ou aucune vérification possible
   | "incoherent" // aucune lecture ne vérifie la facture
-  | "illisible"; // un montant n'a aucune lecture
+  | "illisible" // un montant n'a aucune lecture
+  | "avoir"; // les montants s'impriment en négatif : un avoir, que le cabinet saisit
 
 export interface ResultatNormalisation {
   etat: EtatNormalisation;
@@ -174,6 +175,21 @@ export interface ResultatNormalisation {
    * confiance ne lève que ceux-là (revue de la PR 142).
    */
   fermes: string[];
+  /**
+   * La valeur retenue n'est décidée que par le séparateur décimal de la
+   * devise : la lecture qu'il écarte (« 100,000 » lu 100 000) ferait tenir la
+   * facture elle aussi (revue de la PR 144). Le contrôle arithmétique pose une
+   * réserve, et la confiance n'est jamais pleine.
+   *
+   * Absent des jugements posés avant le 30 octobre 2026 : un lecteur lit `?? false`.
+   */
+  parConvention: boolean;
+  /**
+   * La devise de la pièce, décidée par `deviseDeLaPiece` (lue, imprimée, à
+   * défaut celle du dossier) — null quand elle ne se décide pas. La
+   * proposition la relit ici, et nulle part ailleurs.
+   */
+  devise: string | null;
   raison: string;
 }
 
@@ -230,15 +246,27 @@ const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
  *
  * Les chiffres arabes et persans se lisent, comme au relevé du 29 octobre
  * 2026 (`un-montant-repete-en-colonnes.test.ts`). La lecture au plan de jetons
- * les refuse, parce que son modèle de vision les rend inversés : ici, une
- * lecture inversée ne passerait pas l'égalité de la facture, et une lecture
- * qu'aucune égalité ne vérifie (`non_verifie`) part en réserve au cabinet.
+ * les refuse, parce que son modèle de vision les rend inversés ; ici, une
+ * valeur en chiffres arabes n'est retenue que si l'arithmétique de la facture
+ * la CONFIRME — une lecture inversée ne passe pas l'égalité. Non vérifiée,
+ * elle est refusée (revue de la PR 144 : « ٤ ٣٢١٫٥٦٥ », une base seule
+ * inversée, partait au journal).
  */
 export function candidatsMontant(entree: string, devise: DeviseLue): Candidat[] {
-  return lireUnMontantImprime(entree, devise).lectures.map((l) => ({
-    mineur: l.mineur,
-    convention: conventionDe(l),
-  }));
+  return lireLeChamp(entree, devise).candidats;
+}
+
+/** Un champ lu : ses candidats, et ce que la lecture en dit pour la politique du scan. */
+function lireLeChamp(
+  entree: string,
+  devise: DeviseLue,
+): { candidats: Candidat[]; chiffresArabes: boolean; ecartees: number[] } {
+  const lu = lireUnMontantImprime(entree, devise);
+  return {
+    candidats: lu.lectures.map((l) => ({ mineur: l.mineur, convention: conventionDe(l) })),
+    chiffresArabes: lu.chiffresArabes,
+    ecartees: lu.ecarteesParConvention,
+  };
 }
 
 /** Comment un montant a été lu, en clair : ce que la preuve du contrôle arithmétique montre. */
@@ -365,6 +393,8 @@ export function normaliserMontants(
     ligneNonLue: null,
     deduits: [],
     fermes: [],
+    parConvention: false,
+    devise: p.code,
     raison,
   });
 
@@ -403,7 +433,7 @@ export function normaliserMontants(
       : null;
 
   // Les champs, dans un ordre fixe : bases, TVA, autres, TTC.
-  type Champ = { nom: string; brut: string };
+  type Champ = { nom: string; brut: string; chiffresArabes?: boolean; ecartees?: number[] };
   const champs: Champ[] = [];
   entree.bases.forEach((b, i) => {
     if (b.ht === null || b.ht.trim() === "" || i === baseDeduite) return;
@@ -422,7 +452,25 @@ export function normaliserMontants(
   });
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
-  const brutes = champs.map((c) => candidatsMontant(c.brut, p));
+  const brutes = champs.map((c) => {
+    const lu = lireLeChamp(c.brut, p);
+    c.chiffresArabes = lu.chiffresArabes;
+    c.ecartees = lu.ecartees;
+    return lu.candidats;
+  });
+
+  /*
+   * ======================================= UN AVOIR NE SE PROPOSE PAS EN ACHAT
+   *
+   * Revue de la PR 144 : « -100,000 / -19,000 / -119,000 » finissait
+   * « incohérente » — une base négative ne vérifie pas l'équation —, ce qui
+   * est faux : la pièce tient, c'est un AVOIR. Ses écritures ne sont pas
+   * encore conçues ; il se dit, et le cabinet le saisit. Toutes les bases, la
+   * TVA et le total imprimés en négatif : le signe ne se devine pas ailleurs.
+   */
+  const signes = champs.flatMap((c, i) => (c.nom.startsWith("autre") ? [] : [brutes[i]!]));
+  if (signes.length > 0 && signes.every((l) => l.length > 0 && l.every((c) => c.mineur < 0)))
+    return vide("avoir", "les montants s'impriment en négatif : un avoir, à saisir par le cabinet");
 
   /*
    * ======================================= LE TOTAL EST UN RAPPEL, PAS UNE DONNÉE
@@ -507,6 +555,20 @@ export function normaliserMontants(
   // l'ancre n'était pas unique.
   const unique = brutes.every((l) => l.length === 1);
 
+  /*
+   * Une valeur en chiffres arabes n'est retenue que si l'arithmétique la
+   * confirme (voir `candidatsMontant`) : sans TTC ni TVA lus, rien ne la
+   * confirme ; sans TTC lu, un droit hors TVA n'entre dans aucune égalité.
+   */
+  const arabeNonVerifie = champs.find(
+    (c) => c.chiffresArabes && (!aVerifier || (c.nom.startsWith("autre") && !lu("ttc"))),
+  );
+  if (arabeNonVerifie)
+    return vide(
+      "illisible",
+      `montant en chiffres arabes que rien ne vérifie « ${arabeNonVerifie.brut} » : à saisir${suffixe}`,
+    );
+
   if (!aVerifier) {
     if (!unique)
       return vide(
@@ -524,24 +586,28 @@ export function normaliserMontants(
     );
   }
 
-  // Toutes les combinaisons, bornées : chaque montant a au plus trois lectures.
-  const valides: Candidat[][] = [];
-  const combiner = (i: number, pris: Candidat[]) => {
-    if (i === lectures.length) {
-      if (verifie(pris)) valides.push([...pris]);
-      return;
-    }
-    for (const c of lectures[i]!) {
-      pris.push(c);
-      combiner(i + 1, pris);
-      pris.pop();
-    }
+  /**
+   * Les combinaisons de lectures qui vérifient la facture, sans doublon de
+   * valeurs : deux combinaisons aux mêmes valeurs ne sont pas deux lectures.
+   * Bornées : chaque montant a au plus trois lectures.
+   */
+  const combinaisonsValides = (listes: readonly Candidat[][]): Map<string, Candidat[]> => {
+    const distinctes = new Map<string, Candidat[]>();
+    const combiner = (i: number, pris: Candidat[]) => {
+      if (i === listes.length) {
+        if (verifie(pris)) distinctes.set(pris.map((c) => c.mineur).join("|"), [...pris]);
+        return;
+      }
+      for (const c of listes[i]!) {
+        pris.push(c);
+        combiner(i + 1, pris);
+        pris.pop();
+      }
+    };
+    combiner(0, []);
+    return distinctes;
   };
-  combiner(0, []);
-
-  // Deux combinaisons aux mêmes valeurs ne sont pas deux lectures.
-  const distinctes = new Map<string, Candidat[]>();
-  for (const v of valides) distinctes.set(v.map((c) => c.mineur).join("|"), v);
+  const distinctes = combinaisonsValides(lectures);
 
   /*
    * ============================== LE HT QUI COMPREND DÉJÀ LE TIMBRE (26 octobre 2026)
@@ -623,13 +689,42 @@ export function normaliserMontants(
   const [retenue] = [...distinctes.values()];
   const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
   const deduite = tvaNonLue !== null || baseDeduite !== null || droitsDeduits.size > 0;
-  return construire(
+  /*
+   * ======================================= DÉCIDÉ PAR LA CONVENTION SEULE
+   *
+   * Revue de la PR 144. « 100,000 / 19,000 / 119,000 », sans timbre : la
+   * virgule du dinar est décimale (`ref.devises.separateur_decimal`), donc
+   * 100 dinars, en confiance pleine. Mais lus à l'anglaise — 100 000 dinars —
+   * les mêmes montants vérifient aussi la facture. La valeur n'est alors
+   * décidée que par la convention, pas par la pièce : elle se retient, et se
+   * DIT (réserve au contrôle arithmétique, confiance jamais pleine).
+   *
+   * INCERTAIN : la fréquence de ces factures (montants ronds, sans timbre ni
+   * reste d'arrondi, écrits à l'anglaise sans millimes) n'est pas mesurée ;
+   * elle se lit sur les jugements posés (`capture.analyses`, `parConvention`).
+   */
+  const avecLaConvention = lectures.map((l, i) => [
+    ...l,
+    ...(attendus.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
+      mineur,
+      convention: "écartée par le séparateur décimal de la devise",
+    })),
+  ]);
+  const parConvention =
+    avecLaConvention.some((l, i) => l.length > lectures[i]!.length) &&
+    combinaisonsValides(avecLaConvention).size > 1;
+  const confiance =
+    deduite || totalNonLu || parConvention
+      ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL)
+      : pleine;
+  const tranchee = construire(
     retenue!,
     "tranche",
     // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
     // confirme aussi : on ne lui donne pas la note pleine. Une valeur déduite
-    // non plus : elle est vérifiée, pas lue.
-    deduite || totalNonLu ? Math.min(pleine, CONFIANCE_VERIFIEE_SANS_LE_TOTAL) : pleine,
+    // non plus : elle est vérifiée, pas lue. Ni une valeur que la seule
+    // convention du séparateur a décidée.
+    confiance,
     1,
     (deduite
       ? "une valeur illisible est déduite des montants imprimés, que la facture vérifie"
@@ -637,8 +732,13 @@ export function normaliserMontants(
         ? "lecture unique, vérifiée par la facture"
         : ancre
           ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
-          : "convention tranchée par l'arithmétique de la facture") + suffixe,
+          : "convention tranchée par l'arithmétique de la facture") +
+      (parConvention
+        ? " ; décidé par la convention du séparateur décimal de la devise : lus à l'anglaise, les montants vérifient aussi la facture"
+        : "") +
+      suffixe,
   );
+  return { ...tranchee, parConvention };
 
   function valeursImprimees(pris: Candidat[]) {
     const par = new Map(champs.map((c, i) => [c.nom, BigInt(pris[i]!.mineur)]));
@@ -745,6 +845,8 @@ export function normaliserMontants(
       fermes: champs
         .filter((c) => !droitsDeduits.has(c.nom))
         .map((c) => entree.chemins?.[c.nom] ?? c.nom),
+      parConvention: false,
+      devise: p.code,
       raison,
     };
   }

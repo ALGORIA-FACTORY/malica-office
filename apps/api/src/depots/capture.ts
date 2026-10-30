@@ -31,7 +31,7 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireLaDevise, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireLesDevises, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
@@ -656,14 +656,13 @@ export const capture = {
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
 
-    // La devise du dossier telle que le référentiel la lit : son exposant, son
-    // séparateur décimal, les marques imprimées. La lecture des montants s'en
-    // sert pour décider si un texte est ambigu : « 2.800 » se lit de deux
-    // façons à trois décimales, « 100,000 » d'une seule quand la virgule est
-    // le séparateur décimal de la devise. C'est la même lecture que celle du
-    // jugement (`lireLaDevise`) : la devise se lit d'une seule façon.
-    const devise = await lireLaDevise(db, org["currency"] as string);
-    if (!devise) throw new Error("devise.inconnue");
+    // Toutes les devises du référentiel : exposant, séparateur décimal,
+    // marques imprimées. La relecture décide de celle de la PIÈCE
+    // (`deviseDeLaPiece`), comme le jugement — et non plus de celle du
+    // dossier seule (revue de la PR 144) : « 2.800 » se lit de deux façons à
+    // trois décimales, « 100,000 » d'une seule quand la virgule est le
+    // séparateur décimal de la devise, et « 100,00 € » n'est pas en dinars.
+    const devises = await lireLesDevises(db);
 
     const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
@@ -691,7 +690,7 @@ export const capture = {
       },
       jurisdiction,
       currency: org["currency"] as string,
-      devise,
+      devises,
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,

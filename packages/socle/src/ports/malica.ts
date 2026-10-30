@@ -131,6 +131,12 @@ export interface ReadFlag {
      * déduction refuse de choisir.
      */
     | "SENS_A_CONFIRMER"
+    /**
+     * La devise de la pièce ne se décide pas : une devise imprimée contredit
+     * la devise lue, ou plusieurs devises sont imprimées (revue de la PR 144 :
+     * « 100,00 € » partait en dinars). Le jugement refuse ; le cabinet saisit.
+     */
+    | "DEVISE_INCOHERENTE"
     | "DATE_UNREADABLE"
     | "DERIVED_BY_SOCLE";
   detail?: string;

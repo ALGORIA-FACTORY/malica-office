@@ -32,7 +32,10 @@
  *     milliers.
  *  2. Seules les marques de devise du référentiel (`ref.devises`,
  *     `ref.devises_marques`) sont une décoration. Tout autre mot fait du texte
- *     un texte : « art. 9 », « TVA 19 », « Total 1 234,560 ».
+ *     un texte : « art. 9 », « TVA 19 », « Total 1 234,560 ». Une marque est
+ *     celle d'UNE devise, et la lecture dit lesquelles elle a vues
+ *     (`devises`) : « 100,00 € » n'est pas un montant en dinars, et c'est
+ *     `deviseDeLaPiece` qui le dit (revue de la PR 144).
  *  3. Un « % » fait du texte un taux, jamais un montant.
  *  4. Un « / » ou un chiffre de part et d'autre d'un « : » font une date, une
  *     heure ou un numéro : « 08/09/2026 », « 23:18 ».
@@ -47,8 +50,12 @@
  *         Le texte ne tranche pas, donc on ne lit pas ;
  *       un « - » en queue, ou ailleurs, ne se lit pas non plus ; un montant
  *         commence et finit par un chiffre (« 8, » n'est pas fini).
- *     Une parenthèse ORPHELINE, sans partenaire, est du bruit de plage (« 514,700 »
- *     cité avec la fermante de « (base 514,700) ») : elle se retire, et elle seule.
+ *     Une parenthèse ORPHELINE ne se lit pas non plus : « (1 234,560 » et
+ *     « 1 234,560) » sont peut-être un avoir coupé (revue de la PR 144). La
+ *     seule fermante qui soit du bruit est celle qui ferme un MOT coupé par la
+ *     plage — « (base 514,700) » cité « 514,700) » — et seul le plan de jetons
+ *     le voit : `texteDuMontantCite` (`malica/lecture/token-plan.ts`) la retire
+ *     avant de lire, pour les deux chaînes.
  *  6. Une espace n'est un séparateur de milliers que si les groupes le
  *     prouvent : 1 à 3 chiffres, puis des groupes de 3. Une espace collée à un
  *     point ou à une virgule n'en est pas une (« 1 234 ,560 »).
@@ -57,14 +64,19 @@
  *     milliers d'une seule espèce (« 1.234,560 », « 1,234.560 », « 1'234.560 »).
  *     Les décimales sont celles de la devise (`ref.devises.exposant`) ; au-delà,
  *     seuls des zéros sont admis (« 1234,5600 ») — un chiffre de plus serait un
- *     arrondi, et ce n'est pas à la lecture de le décider.
+ *     arrondi, et ce n'est pas à la lecture de le décider. Une devise SANS
+ *     décimales (le franc CFA) n'en lit jamais : « 5,000 » y vaut 5 000, pas 5.
  *     Un séparateur qui n'apparaît qu'en une espèce peut aussi être un
  *     séparateur de milliers, si les groupes le prouvent (« 2.800 » : 2,800 ou
  *     2 800). Sauf LE SÉPARATEUR DÉCIMAL DE LA DEVISE (`ref.devises.separateur_decimal`) :
  *     il n'est des milliers que si ses trois chiffres ne peuvent pas être des
  *     décimales de la devise. « 100,000 » vaut 100 dinars et jamais 100 000 ;
- *     « 1,000 » en euros vaut 1,00 ou 1 000.
- *     L'apostrophe ne porte jamais de décimales.
+ *     « 1,000 » en euros vaut 1,00 ou 1 000. Ce que la convention écarte est
+ *     rendu à part (`ecarteesParConvention`) : quand la lecture écartée ferait
+ *     tenir la facture elle aussi, la valeur n'est décidée que par la
+ *     convention, et la normalisation le dit (réserve).
+ *     L'apostrophe ne porte jamais de décimales. Un premier groupe « 0 » n'ouvre
+ *     jamais des milliers : « 0.500 » vaut 0,500 et rien d'autre.
  *  8. Un premier groupe à zéro de tête (« 020,000 ») est le morceau d'un
  *     montant plus long, coupé à l'espace des milliers : il ne se lit pas.
  *  9. Sans séparateur, un nombre assez long se lit en unités ou en unités
@@ -81,17 +93,27 @@
  */
 import { enChiffresLatins } from "./chiffres.ts";
 
+/** Une marque imprimée (« D.T. », « € », « F CFA ») et la devise qu'elle désigne. */
+export interface MarqueDeDevise {
+  marque: string;
+  /** Le code ISO 4217 de `ref.devises`. */
+  devise: string;
+}
+
 /** Ce que le référentiel dit d'une devise pour en lire les montants. */
 export interface DeviseLue {
+  /** Son code ISO 4217 (`ref.devises.code`). */
+  code: string;
   /** L'exposant de la devise (`ref.devises.exposant`) : 3 pour le dinar. */
   decimales: number;
   /** Son séparateur décimal (`ref.devises.separateur_decimal`) : « , » ou « . ». */
   separateurDecimal: string;
   /**
-   * Les marques imprimées de TOUTES les devises (« DT », « D.T. », « د.ت »,
-   * « € ») : les codes de `ref.devises` et les lignes de `ref.devises_marques`.
+   * Les marques imprimées de TOUTES les devises, chacune avec la sienne : les
+   * codes de `ref.devises` et les lignes de `ref.devises_marques`. Toutes se
+   * retirent comme une décoration ; la lecture dit lesquelles elle a vues.
    */
-  marques: readonly string[];
+  marques: readonly MarqueDeDevise[];
 }
 
 /** Comment un texte a été lu. */
@@ -119,6 +141,13 @@ export interface MontantImprime {
   lectures: LectureDeMontant[];
   /** Le texte portait des chiffres arabes ou persans, transcrits. */
   chiffresArabes: boolean;
+  /** Les devises dont une marque est imprimée dans le texte (codes, triés). */
+  devises: string[];
+  /**
+   * Les valeurs que le séparateur décimal de la devise a écartées, et elles
+   * seules (« 100,000 » : 100 000) — vide quand la convention n'a rien décidé.
+   */
+  ecarteesParConvention: number[];
 }
 
 /* ------------------------------------------------------------ les marques */
@@ -133,37 +162,38 @@ const MOT = /[\p{L}\p{M}\p{Sc}\p{So}]+(?:[.\s]*[\p{L}\p{M}\p{Sc}\p{So}]+)*\.?/gu
 /** Une marque comparée sans casse, sans points ni espaces : « D.T. » vaut « dt ». */
 const cleDeMarque = (s: string): string => s.normalize("NFKC").replace(/[\s.]/gu, "").toUpperCase();
 
-/**
- * Retire les marques de devise que le RÉFÉRENTIEL connaît, et elles seules ;
- * null dès qu'un autre mot est imprimé (règle 2).
- */
-function sansMarquesDeDevise(texte: string, marques: readonly string[]): string | null {
-  const connues = new Set(marques.map(cleDeMarque));
-  let inconnu = false;
-  const reste = texte.replace(MOT, (mot) => {
-    if (connues.has(cleDeMarque(mot))) return " ";
-    inconnu = true;
-    return mot;
-  });
-  return inconnu ? null : reste;
+/** Les devises de chaque marque, à sa clé de comparaison. */
+function indexDesMarques(marques: readonly MarqueDeDevise[]): Map<string, Set<string>> {
+  const index = new Map<string, Set<string>>();
+  for (const m of marques) {
+    const cle = cleDeMarque(m.marque);
+    index.set(cle, (index.get(cle) ?? new Set()).add(m.devise));
+  }
+  return index;
 }
 
-/* ---------------------------------------------------------- les parenthèses */
-
 /**
- * Retire les parenthèses ORPHELINES, et elles seules, par appariement : dans
- * « (3 020,000)) », la paire reste — et fait refuser la lecture (règle 5).
+ * Retire les marques de devise que le RÉFÉRENTIEL connaît, et elles seules,
+ * en disant de quelles devises elles sont ; null dès qu'un autre mot est
+ * imprimé (règle 2).
  */
-function sansParenthesesOrphelines(texte: string): string {
-  const caracteres = [...texte];
-  const orphelines = new Set<number>();
-  const ouvertes: number[] = [];
-  caracteres.forEach((c, i) => {
-    if (c === "(") ouvertes.push(i);
-    else if (c === ")" && ouvertes.pop() === undefined) orphelines.add(i);
+function sansMarquesDeDevise(
+  texte: string,
+  marques: readonly MarqueDeDevise[],
+): { reste: string; devises: string[] } | null {
+  const connues = indexDesMarques(marques);
+  const vues = new Set<string>();
+  let inconnu = false;
+  const reste = texte.replace(MOT, (mot) => {
+    const devises = connues.get(cleDeMarque(mot));
+    if (!devises) {
+      inconnu = true;
+      return mot;
+    }
+    for (const d of devises) vues.add(d);
+    return " ";
   });
-  for (const i of ouvertes) orphelines.add(i);
-  return caracteres.filter((_, i) => !orphelines.has(i)).join("");
+  return inconnu ? null : { reste, devises: [...vues].sort() };
 }
 
 /* -------------------------------------------------------------- un montant */
@@ -177,6 +207,8 @@ function groupesDeMilliersValides(groupes: readonly string[]): boolean {
     groupes.length > 0 &&
     groupes.every((g) => /^\d+$/u.test(g)) &&
     groupes[0]!.length <= 3 &&
+    // « 0.500 » : un zéro n'ouvre pas des milliers (règle 7).
+    (groupes.length === 1 || groupes[0] !== "0") &&
     groupes.slice(1).every((g) => g.length === 3)
   );
 }
@@ -233,7 +265,8 @@ function lireUnSeulMontant(brut: string, devise: DeviseLue): LectureDeMontant[] 
 
   // Règle 7 : le dernier séparateur porte les décimales, les précédents sont
   // des milliers d'une seule espèce, distincte de la sienne.
-  if (dernier === "." || dernier === ",") {
+  // Une devise sans décimales n'en lit jamais (règle 7).
+  if ((dernier === "." || dernier === ",") && decimales > 0) {
     const milliers = new Set(avant);
     const uneEspece = milliers.size === 0 || (milliers.size === 1 && !milliers.has(dernier));
     const entiers = groupes.slice(0, -1);
@@ -331,11 +364,26 @@ function occurrencesIdentiques(texte: string, devise: DeviseLue): LectureDeMonta
 
 /* ------------------------------------------------------------------ l'entrée */
 
+/** Les lectures d'un texte déjà débarrassé de ses marques (règles 5 à 10). */
+function lireLeTexte(nu: string, devise: DeviseLue): LectureDeMontant[] {
+  const entiere = lireUnSeulMontant(nu, devise);
+  if (entiere.length > 0) return entiere;
+  // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
+  // espaces parasites, et non un montant répété. On ne tranche pas.
+  if (lireUnSeulMontant(nu.replace(/ /gu, ""), devise).length > 0) return [];
+  return occurrencesIdentiques(nu, devise);
+}
+
 /** Toutes les lectures admissibles d'un texte imprimé, selon les règles ci-dessus. */
 export function lireUnMontantImprime(texte: string, devise: DeviseLue): MontantImprime {
   const latin = enChiffresLatins(texte);
   const chiffresArabes = latin !== texte;
-  const rien: MontantImprime = { lectures: [], chiffresArabes };
+  const rien: MontantImprime = {
+    lectures: [],
+    chiffresArabes,
+    devises: [],
+    ecarteesParConvention: [],
+  };
 
   // Règles 3, 4 et 5 : un taux, une date ou une heure, un « + ».
   if (/[%/+]|\d:\d/u.test(latin)) return rien;
@@ -343,17 +391,74 @@ export function lireUnMontantImprime(texte: string, devise: DeviseLue): MontantI
 
   const sansMarques = sansMarquesDeDevise(transcrit, devise.marques);
   if (sansMarques === null) return rien;
-  const nu = sansParenthesesOrphelines(sansMarques)
+  const nu = sansMarques.reste
     .replace(/\s+/gu, " ")
     .replace(/ ?([.,]) ?/gu, "$1")
     .trim();
-  // Une paire restée, ou tout autre caractère : ce n'est pas un montant.
-  if (!nu || !/^[\d.,' |;:-]+$/u.test(nu)) return rien;
+  // Une parenthèse, appariée ou non (règle 5), ou tout autre caractère : ce
+  // n'est pas un montant.
+  if (!nu || !/^[\d.,' |;:-]+$/u.test(nu)) return { ...rien, devises: sansMarques.devises };
 
-  const entiere = lireUnSeulMontant(nu, devise);
-  if (entiere.length > 0) return { lectures: entiere, chiffresArabes };
-  // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
-  // espaces parasites, et non un montant répété. On ne tranche pas.
-  if (lireUnSeulMontant(nu.replace(/ /gu, ""), devise).length > 0) return rien;
-  return { lectures: occurrencesIdentiques(nu, devise), chiffresArabes };
+  const lectures = lireLeTexte(nu, devise);
+  // Ce que la même lecture rendrait si la devise ne privilégiait aucun
+  // séparateur : la différence est ce que la convention seule a écarté.
+  const sansConvention = lireLeTexte(nu, { ...devise, separateurDecimal: "" });
+  return {
+    lectures,
+    chiffresArabes,
+    devises: sansMarques.devises,
+    ecarteesParConvention: sansConvention
+      .map((l) => l.mineur)
+      .filter((v) => !lectures.some((l) => l.mineur === v)),
+  };
+}
+
+/* ------------------------------------------------------- la devise de la pièce */
+
+/** La devise d'une pièce, et d'où elle vient — ou pourquoi elle ne se décide pas. */
+export type DeviseDeLaPiece =
+  { code: string; source: "lue" | "imprimee" | "dossier" } | { code: null; raison: string };
+
+/**
+ * La devise d'une pièce : celle que la lecture a dite, confrontée aux marques
+ * que la pièce IMPRIME à côté de ses montants. Une seule règle, pour le plan
+ * de jetons, le jugement et la proposition.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Revue de la PR 144 : « 100,00 € / 19,00 € / 119,00 € » sans devise lue
+ * partait au journal en 100,000 DINARS. Le lecteur retirait « € » comme une
+ * décoration, et la devise manquante se remplaçait par celle du dossier. Un
+ * montant étranger inscrit au journal en dinars, à sa valeur faciale.
+ *
+ *   — plusieurs devises imprimées : on ne choisit pas ;
+ *   — une devise lue, une autre imprimée : « devise imprimée ≠ devise lue » ;
+ *   — aucune devise lue, une imprimée : c'est celle de la pièce ;
+ *   — aucune lue, aucune imprimée : celle du dossier (`source: "dossier"`).
+ *     INCERTAIN : c'est un défaut, pas une preuve — une facture étrangère sans
+ *     marque passerait. Il n'est admis que parce qu'aucune marque étrangère
+ *     n'est imprimée nulle part ; l'appelant le dit.
+ */
+export function deviseDeLaPiece(
+  lue: string | null | undefined,
+  textes: readonly (string | null | undefined)[],
+  marques: readonly MarqueDeDevise[],
+  deviseDuDossier: string,
+): DeviseDeLaPiece {
+  // Toute marque connue, même dans un texte qui n'est pas un montant
+  // (« Total 119,00 € ») : la pièce l'imprime.
+  const connues = indexDesMarques(marques);
+  const imprimees = new Set<string>();
+  for (const t of textes)
+    for (const mot of (t ?? "").match(MOT) ?? [])
+      for (const d of connues.get(cleDeMarque(mot)) ?? []) imprimees.add(d);
+  const [seule, ...autres] = [...imprimees].sort();
+  if (autres.length > 0)
+    return { code: null, raison: `plusieurs devises imprimées : ${[seule, ...autres].join(", ")}` };
+  const code = lue?.trim().toUpperCase() || null;
+  if (code && seule && seule !== code)
+    return { code: null, raison: `devise imprimée (${seule}) ≠ devise lue (${code})` };
+  if (code) return { code, source: "lue" };
+  if (seule) return { code: seule, source: "imprimee" };
+  return { code: deviseDuDossier, source: "dossier" };
 }

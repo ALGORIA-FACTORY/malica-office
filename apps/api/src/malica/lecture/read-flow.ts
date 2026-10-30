@@ -29,9 +29,10 @@ import type { LectureDePiece } from "@malica/socle/ports/malica";
 interface ContexteLecture {
   piece: { id: string; tenantId: string; source: string; contentType: string | null };
   packId: string;
-  /** La devise du dossier, et ce que le référentiel en dit pour lire ses montants. */
+  /** La devise du dossier. */
   currency: string;
-  devise: DeviseLue;
+  /** Toutes les devises du référentiel, pour lire les montants de la pièce. */
+  devises: DeviseLue[];
   dossier: { raisonSociale: string; identifiantFiscal: string | null };
   taxCodes: Array<{ code: string; label: string; rate: number }>;
   chargeCodes: Array<{ code: string; label: string }>;
@@ -182,7 +183,6 @@ export async function readPieceFlow(
   const parRecette = creerDesignateurDeRecette(api, {
     pieceId,
     tenantId: contexte.piece.tenantId,
-    devise: contexte.currency,
   });
 
   // Les paramètres de lecture ne s'écrivent qu'une fois : la première lecture
@@ -198,9 +198,6 @@ export async function readPieceFlow(
     // enregistré au lieu de le relire comme un inconnu à chaque facture.
     tiers: contexte.tiers,
     dossier: contexte.dossier,
-    // La devise du dossier : elle sert quand la pièce n'en imprime aucune.
-    // Sans elle, une facture muette devenait tunisienne par défaut.
-    devise: contexte.currency,
     taxCodes: contexte.taxCodes.map((r) => ({
       code: r.code,
       label: r.label,
@@ -213,10 +210,11 @@ export async function readPieceFlow(
     buildExtractFromTokenPlan({
       tokens: lecture.tokens,
       selection: lecture.selection,
-      // L'exposant, le séparateur décimal et les marques de la devise, dits
-      // par le référentiel (`lireLaDevise`), jamais écrits ici : le lecteur
-      // des montants s'en sert pour décider de l'ambiguïté, comme au scan.
-      devise: contexte.devise,
+      // Les devises du référentiel (`lireLesDevises`) et celle du dossier :
+      // la relecture décide de celle de la PIÈCE (`deviseDeLaPiece`), comme
+      // le jugement, et lit ses montants avec son exposant et son séparateur.
+      devises: contexte.devises,
+      deviseDuDossier: contexte.currency,
       // Le matricule de la fiche : c'est lui qui DÉDUIT le sens de la pièce, au
       // lieu de croire ce que le modèle en dit.
       matriculeDossier: contexte.dossier.identifiantFiscal,

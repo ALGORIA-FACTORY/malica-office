@@ -39,16 +39,17 @@ import { composerLaProposition } from "./proposition.ts";
 import {
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
-  DEVISES_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MENTIONS_D_ESSAI,
   PARAMETRES_D_ESSAI,
   TAUX_D_ESSAI,
+  TITRES_D_ESSAI,
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "../malica/lecture/read-piece.ts";
-import { deviseDEssai } from "./devise-d-essai.ts";
+import { texteDuMontantCite } from "../malica/lecture/token-plan.ts";
+import { DEVISES_LUES_D_ESSAI, devisesDEssai } from "./devise-d-essai.ts";
 
 /** Une ligne d'écriture attendue : compte, débit, crédit, et le code de taxe d'une ligne de TVA. */
 type LigneAttendue = readonly [string, string, string, string?];
@@ -62,6 +63,11 @@ export interface CasDeMesure {
   dossier?: { nom: string; identifiantFiscal: string };
   /** L'écriture juste, calculée à la main ; null : ne rien proposer est juste. */
   attendu: { journal: string; lignes: LigneAttendue[] } | null;
+  /**
+   * Le contrôle qui DOIT poser une réserve : une écriture exacte sans elle est
+   * fausse — la pièce passerait sans que le cabinet sache pourquoi douter.
+   */
+  reserve?: string;
 }
 
 /** Le dossier des cas fabriqués : un nom et un matricule fictifs. */
@@ -151,16 +157,14 @@ function depuisLeJeuDOr(): CasDeMesure[] {
     const lu = buildExtractFromTokenPlan({
       tokens: cas.tokens,
       selection: cas.designation,
-      devise: deviseDEssai(cas.decimales),
+      ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
+    // Le texte de chaque citation, comme `analyserPiece` le relit.
     const textes = new Map<string, string[]>();
     for (const c of lu.citations) {
-      const fin = (c as { ordinalEnd?: number }).ordinalEnd ?? c.ordinal;
-      const morceaux = cas.tokens
-        .filter((t) => t.page === c.page && t.ordinal >= c.ordinal && t.ordinal <= fin)
-        .map((t) => t.text);
-      textes.set(c.field, [...(textes.get(c.field) ?? []), ...morceaux]);
+      const texte = texteDuMontantCite(cas.tokens, c);
+      if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
     }
     const premiere = Math.min(...cas.tokens.map((t) => t.page));
     const haut = cas.tokens
@@ -536,8 +540,12 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
   {
     // Avant le 30 octobre 2026, la normalisation lisait aussi « 100,000 » à
     // l'anglaise : sans timbre pour ancrer l'échelle, dinars et milliers de
-    // dinars vérifiaient tous deux la facture, et rien n'était proposé.
+    // dinars vérifiaient tous deux la facture, et rien n'était proposé. La
+    // virgule du dinar est décimale ; mais lus à l'anglaise, les montants
+    // tiennent aussi : décidé par la convention, donc en réserve (revue de la
+    // PR 144).
     nom: "montants ronds à la virgule, sans timbre : la virgule du dinar est décimale",
+    reserve: "coherence_arithmetique",
     provenance: `${REPRODUIT} (lecteurs de montants unifiés)`,
     lecture: facture({
       lignes: [{ code: "TVA19", ht: "100,000" }],
@@ -565,6 +573,70 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       ht: "(1 234,560)",
       tva: "(234,566)",
       ttc: "(1 470,126)",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "titrée AVOIR, aux montants positifs : jamais un achat",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({ ...SIMPLE, titre: "AVOIR N° A-2026-0007" }),
+    attendu: null,
+  },
+  {
+    nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "-1 234,560" }],
+      ht: "-1 234,560",
+      tva: "-234,566",
+      ttc: "-1 470,126",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "un avoir coupé par la citation : « 1 234,560) » ne se lit pas positif",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "1 234,560)" }],
+      ht: "1 234,560)",
+      tva: "234,566)",
+      ttc: "1 470,126)",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "une base seule en chiffres arabes, que rien ne vérifie",
+    provenance: "revue indépendante de la PR 144 (chiffres que le modèle de vision inverse)",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "٤ ٣٢١٫٥٦٥" }],
+      ht: "٤ ٣٢١٫٥٦٥",
+      tva: null,
+      ttc: null,
+    }),
+    attendu: null,
+  },
+  {
+    nom: "des euros imprimés, aucune devise lue : jamais des dinars",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      currency: null,
+      lignes: [{ code: "TVA19", ht: "100,00 €" }],
+      ht: "100,00 €",
+      tva: "19,00 €",
+      ttc: "119,00 €",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "des euros imprimés, des dinars lus : la devise imprimée contredit la devise lue",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,00 €" }],
+      ht: "100,00 €",
+      tva: "19,00 €",
+      ttc: "119,00 €",
     }),
     attendu: null,
   },
@@ -625,12 +697,6 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
 const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
-/** La devise de la pièce, à défaut celle du dossier, lue comme `lireLaDevise` — comme `analyserPiece`. */
-const deviseDe = (cas: CasDeMesure) => {
-  const d = DEVISES_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER];
-  return d ? deviseDEssai(d.exposant, d.separateurDecimal) : null;
-};
-
 /** Juge un cas sur la vraie chaîne, avec le référentiel d'essai. */
 function juger(cas: CasDeMesure) {
   // Les droits fixés du sens retenu, comme `analyserPiece`.
@@ -646,16 +712,19 @@ function juger(cas: CasDeMesure) {
     ),
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,
+    titres: TITRES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
-    devise: deviseDe(cas),
+    devises: DEVISES_LUES_D_ESSAI,
   });
 }
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
 function jouer(cas: CasDeMesure): Issue {
-  const decimales = deviseDe(cas)?.decimales ?? null;
   const jugement = juger(cas);
+  // L'exposant de la devise que le jugement a décidée, comme `propositionDePiece`.
+  const decimales =
+    DEVISES_LUES_D_ESSAI.find((d) => d.code === jugement.normalisation.devise)?.decimales ?? null;
   const p = composerLaProposition(
     {
       pieceId: "00000000-0000-4000-8000-000000000000",
@@ -696,6 +765,8 @@ function jouer(cas: CasDeMesure): Issue {
     causes.push(`journal ${e.journal} ≠ ${cas.attendu.journal}`);
   if (lues.join() !== attendues.join())
     causes.push(`lignes ${lues.join(" ; ")} ≠ ${attendues.join(" ; ")}`);
+  if (cas.reserve && !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve"))
+    causes.push(`réserve « ${cas.reserve} » attendue, absente`);
   return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
 }
 

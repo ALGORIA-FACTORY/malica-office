@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { devisesDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * ================================================================ LE BANC
@@ -57,7 +57,7 @@ describe("banc des factures — pièce 286ea66b, ticket MOKA", () => {
   const lu = buildExtractFromTokenPlan({
     tokens: [jeton(0, "TOTAL"), jeton(1, "2.800")],
     selection: selection({ ttc: ref(1) }),
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",
@@ -86,7 +86,7 @@ describe("banc des factures — pièce b97ed23c, manuscrit ABDERRAHIM", () => {
   const lu = buildExtractFromTokenPlan({
     tokens: [jeton(0, "16000"), jeton(1, "44400")],
     selection: selection({ base_ht: ref(0), ttc: ref(1) }),
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",
@@ -104,7 +104,7 @@ describe("banc des factures — l'exemple de l'étude", () => {
   const lu = buildExtractFromTokenPlan({
     tokens: [jeton(0, "1.200"), jeton(1, "228"), jeton(2, "1.428")],
     selection: selection({ base_ht: ref(0), vat: ref(1), ttc: ref(2) }),
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",
@@ -135,7 +135,7 @@ describe("banc des factures — aucun chiffre inventé (3B, 18 septembre 2026)",
   const lu = buildExtractFromTokenPlan({
     tokens: [jeton(0, "FACTURE")],
     selection: selection({}),
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",
@@ -177,7 +177,7 @@ describe("banc des factures — pièce 73ae6059, le loyer tronqué (5 octobre 20
   const lu = buildExtractFromTokenPlan({
     tokens: [jeton(0, "3"), jeton(1, "573,800"), jeton(2, "3")],
     selection: selection({ base_ht: ref(0), vat: ref(1), ttc: ref(2) }),
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",
@@ -236,7 +236,7 @@ describe("banc des factures — le timbre appartient à l'équation (5 octobre 2
       }),
       other_charges: [{ code: "DROIT_TIMBRE", amount: ref(3) }],
     } as unknown as VisionSelection,
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     // Ces fixtures ne portent aucun matricule : le sens reste celui du modèle,
     // et les cas d'origine gardent exactement leur comportement.
     matriculeDossier: "1856324K/A/M/000",

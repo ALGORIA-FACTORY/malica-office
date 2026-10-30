@@ -295,11 +295,12 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     assert.equal(r.etat, "ambigu");
   });
 
-  it("à la virgule, séparateur décimal du dinar, rien n'est ambigu : aucune ancre n'est nécessaire", () => {
+  it("à la virgule, la convention du dinar décide — et le dit : réserve, jamais la confiance pleine", () => {
     // Avant le 30 octobre 2026, la normalisation lisait aussi « 100,000 » à
-    // l'anglaise (100 000 dinars), quand la lecture au plan de jetons ne le
-    // lisait que 100 dinars. Un seul lecteur désormais, et une règle qui vient
-    // de la devise : la virgule du dinar ne sépare pas de milliers.
+    // l'anglaise (100 000 dinars) : sans ancre, ambigu. La virgule est le
+    // séparateur décimal du dinar, donc 100 dinars. Mais lus à l'anglaise, les
+    // mêmes montants tiennent aussi : la valeur n'est décidée que par la
+    // convention (revue de la PR 144), et la normalisation le dit.
     const r = normaliserMontants(
       {
         bases: [{ ht: "100,000", taux: "0.19" }],
@@ -311,7 +312,26 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
     );
     assert.equal(r.etat, "tranche", r.raison);
     assert.equal(r.montants.bases[0]!.ht, 100_000);
-    assert.equal(r.confiance, 1, "chaque montant n'avait qu'une lecture, et la facture la vérifie");
+    assert.equal(r.parConvention, true);
+    assert.ok(r.confiance < 1, "décidé par la convention, pas par la pièce");
+    assert.match(r.raison, /convention/);
+  });
+
+  it("à la virgule, avec le timbre que fixe le paramétrage : la pièce décide, pas la convention", () => {
+    // Lus à l'anglaise, le timbre fixé (1,000 DT) ne tombe plus juste : seule
+    // la lecture décimale tient, et la convention n'a rien décidé.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "100,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: [{ brut: "1,000", attendu: 1_000 }],
+        ttc: "120,000",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.parConvention, false);
+    assert.equal(r.confiance, 1);
   });
 });
 

@@ -16,7 +16,7 @@
 import type { Requete } from "../db.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { lireParametres } from "./analyse.ts";
+import { lireLesTitres, lireParametres } from "./analyse.ts";
 
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
 const JOUR_DU_RELEVE = "2026-10-01";
@@ -72,6 +72,12 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
   }>(
     `select code, exposant, separateur_decimal as "separateurDecimal" from ref.devises order by code`,
   );
+  const { rows: marques } = await db.query<{ marque: string; devise: string }>(
+    `select code as marque, code as devise from ref.devises
+      union
+     select marque, devise from ref.devises_marques
+      order by 1, 2`,
+  );
   return {
     juridiction,
     jour: JOUR_DU_RELEVE,
@@ -82,6 +88,8 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     droits,
     mentions: mentions.map((m) => m.code),
     typesQuiPortentUneEcriture: types.map((t) => t.code),
+    titres: await lireLesTitres(db),
+    marques,
     devises: Object.fromEntries(
       devises.map((d) => [
         d.code,

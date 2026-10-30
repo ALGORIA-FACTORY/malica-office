@@ -252,6 +252,7 @@ export function libelleDuCode(code: string, t: T): string {
     VALUE_NOT_A_NUMBER: "cab.code.pasUnNombre",
     DATE_UNREADABLE: "cab.code.dateIllisible",
     SENS_A_CONFIRMER: "cab.code.sensAConfirmer",
+    DEVISE_INCOHERENTE: "cab.code.devise",
     /*
      * Ces deux-là protègent une comptabilite, et c'est pour cela qu'elles ne
      * peuvent pas tomber sur « Signalement de lecture. ».

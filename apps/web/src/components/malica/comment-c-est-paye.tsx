@@ -45,7 +45,8 @@ import { vidage } from "@/lib/hors-ligne";
 import { cleDuRecu } from "@/lib/piece-qui-accompagne";
 import { photographierUnePreuve } from "@/lib/preuve-de-paiement";
 import { office } from "@/verticals/malica-office/composition";
-import { saisieDecimale } from "@malica/socle/saisie-decimale";
+import { refusDeSaisie, saisieDecimale } from "@malica/socle/saisie-decimale";
+import { phraseDuRefus } from "@/lib/refus-de-saisie";
 import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 import { construireRecu } from "@malica/socle/use-cases/recu-de-paiement";
 
@@ -324,6 +325,7 @@ export function CommentCEstPaye({
    * solde, proposer à nouveau le total entier est l'erreur qui a produit le
    * doublon du 13 octobre.
    */
+  const refusDuMontant = decimales === null ? null : phraseDuRefus(montantSaisi, decimales);
   const montantAInscrire = (() => {
     if (!historiquePret || payeHorsCorrection === null || partiel === null) return null;
     if (!partiel)
@@ -333,9 +335,10 @@ export function CommentCEstPaye({
     if (decimales === null) return null;
     // Sur ses chiffres, jamais par un flottant : « 0,1 » + « 0,2 » n'a pas à
     // valoir 0,30000000000000004, et un montant plus précis que la devise ne
-    // s'arrondit pas en silence — il ne se lit pas.
+    // s'arrondit pas en silence — il ne se lit pas, et l'écran dit pourquoi
+    // (`refusDuMontant`, plus bas).
     const saisi = saisieDecimale(montantSaisi);
-    if (saisi === null || /[1-9]/.test(saisi.split(".")[1]?.slice(decimales) ?? "")) return null;
+    if (saisi === null || refusDeSaisie(montantSaisi, decimales) !== null) return null;
     const mineur = Number(enUnitesExactes(saisi, decimales));
     return Number.isSafeInteger(mineur) && mineur > 0 ? mineur : null;
   })();
@@ -994,6 +997,12 @@ export function CommentCEstPaye({
                   className="num min-h-[50px] w-full rounded-[12px] border border-border bg-card px-3 text-[17px]"
                 />
               </label>
+            ) : null}
+            {/* Le bouton ne se grise pas sans raison (revue de la PR 144). */}
+            {partiel && refusDuMontant ? (
+              <p role="alert" className="text-[12.5px] text-signal-warn">
+                {t(refusDuMontant)}
+              </p>
             ) : null}
             {/* La borne se dit AVANT d'être refusée par la base. */}
             {partiel && plafond !== null ? (

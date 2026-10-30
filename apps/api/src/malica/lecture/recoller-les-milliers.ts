@@ -56,7 +56,7 @@ import type { PageToken } from "./token-plan.ts";
 const ECART_MAX_EN_CARACTERES = 2;
 
 /** Au-delà, deux jetons ne sont pas sur la même ligne imprimée. */
-const TOLERANCE_DE_LIGNE = 0.006;
+export const TOLERANCE_DE_LIGNE = 0.006;
 
 /** Ce qui peut OUVRIR un groupe de milliers : une à trois chiffres, et rien d'autre. */
 const OUVRE = /^\d{1,3}$/;

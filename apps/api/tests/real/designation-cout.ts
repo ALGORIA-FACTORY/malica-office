@@ -44,6 +44,7 @@
 import { callDeepSeek, type DeepSeekRole } from "../../src/malica/conseil/deepseek.ts";
 import { buildExtractFromTokenPlan } from "../../src/malica/lecture/read-piece.ts";
 import { JEU_D_OR, type CasDOr } from "../../src/malica/lecture/jeu-d-or.ts";
+import { devisesDEssai } from "../../src/scan/devise-d-essai.ts";
 import {
   parseJsonLoose,
   selectionDepuisReponse,
@@ -237,8 +238,8 @@ ${planTexte(cas.tokens)}`,
   try {
     const lu = buildExtractFromTokenPlan({
       tokens: cas.tokens,
-      selection: selectionDepuisReponse(parseJsonLoose(res.answer), "TND", cas.tokens),
-      decimals: cas.decimales,
+      selection: selectionDepuisReponse(parseJsonLoose(res.answer), cas.tokens),
+      ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
     drapeaux = lu.flags.map((f) => `${f.field} : ${f.code}`);

@@ -49,6 +49,12 @@ export const TYPES_D_ESSAI = RELEVE_D_ESSAI.typesQuiPortentUneEcriture.map((code
   porteEcriture: true,
 }));
 
+/** Ce que le titre imprimé dit de la nature de la pièce (`ref.titres_de_piece`). */
+export const TITRES_D_ESSAI = RELEVE_D_ESSAI.titres;
+
+/** Les marques imprimées de chaque devise (`ref.devises`, `ref.devises_marques`). */
+export const MARQUES_D_ESSAI = RELEVE_D_ESSAI.marques;
+
 /** L'exposant et le séparateur décimal de chaque devise de `ref.devises`. */
 export const DEVISES_D_ESSAI: Readonly<
   Record<string, { exposant: number; separateurDecimal: string }>

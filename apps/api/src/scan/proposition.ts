@@ -33,7 +33,7 @@ import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireLaDevise, lireParametres } from "./analyse.ts";
+import { analyserPiece, lireLesDevises, lireParametres } from "./analyse.ts";
 import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
@@ -206,6 +206,25 @@ function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
 }
 
 /**
+ * La devise de la pièce, telle que le JUGEMENT l'a décidée (`deviseDeLaPiece`,
+ * `analyse.ts`), et nulle autre : relire `payload.currency ?? dossier` ici
+ * rendait « 100,00 € » en dinars (revue de la PR 144).
+ *
+ * Un jugement posé avant le 30 octobre 2026 ne la porte pas : il garde la
+ * règle sous laquelle il a été rendu, et `REGLES_DU_JUGEMENT` le date — le
+ * rejeu aux règles du jour (`rejugerLaPiece`) le refait. Le refaire ICI, à
+ * l'ouverture, toucherait une pièce dont l'écriture est déjà au journal.
+ */
+function deviseDuJugement(
+  n: ResultatNormalisation,
+  payload: unknown,
+  deviseDuDossier: string,
+): string | null {
+  if (n.devise !== undefined) return n.devise;
+  return (payload as { currency?: string | null }).currency ?? deviseDuDossier;
+}
+
+/**
  * Composer l'écriture d'un jugement qui l'autorise : montants IMPRIMÉS et
  * normalisés, référentiel daté, moteur du Socle. Pure — c'est la chaîne même
  * que `propositionDePiece` sert, et que la mesure des propositions joue.
@@ -222,7 +241,6 @@ export function composerLaProposition(
   const payload = j.payload as {
     lines?: Array<Record<string, unknown>>;
     other_charges?: Array<Record<string, unknown>>;
-    currency?: string | null;
   };
   /*
    * UNE PIÈCE EN DEVISE NE S'INSCRIT PAS TELLE QUELLE (30 octobre 2026).
@@ -232,7 +250,7 @@ export function composerLaProposition(
    * fausse. La conversion demande le cours du jour de l'opération, que la
    * pièce ne porte pas ; on ne le devine pas.
    */
-  const devise = payload.currency ?? r.deviseDuDossier;
+  const devise = deviseDuJugement(n, j.payload, r.deviseDuDossier);
   if (devise !== r.deviseDuDossier)
     return {
       ok: false,
@@ -434,10 +452,9 @@ async function proposerDepuisLeJugement(
   // changement du timbre, il bloquait toute facture antérieure.
   const jour = date ?? ligne.recue_le;
   const p = await lireParametres(db, pack, jour);
-  // L'exposant de la devise de la pièce, comme au jugement (`analyse.ts`).
-  const devise =
-    (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
-  const decimales = (await lireLaDevise(db, devise))?.decimales ?? null;
+  // L'exposant de la devise que le jugement a décidée (`analyse.ts`).
+  const devise = deviseDuJugement(ligne.normalisation!, ligne.payload, ligne.devise_du_dossier);
+  const decimales = (await lireLesDevises(db)).find((d) => d.code === devise)?.decimales ?? null;
   if (decimales === null)
     return {
       ok: false,

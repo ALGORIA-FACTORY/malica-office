@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { candidatsMontant } from "../../scan/normaliser-montants.ts";
 
 import { treillisMontant } from "./montants.ts";
@@ -96,13 +96,10 @@ describe("treillisMontant — ce qui se lisait se lit encore", () => {
     ["3 020,000 DT 3 020,000 DT", [3020000]],
     /*
      * Lus au plan de jetons depuis le 30 octobre 2026, comme ils l'étaient
-     * déjà à la normalisation du scan : la parenthèse orpheline de « (base
-     * 3 020,000) » est du bruit de plage (#135), le bruit de colonne sépare
-     * deux occurrences, l'apostrophe sépare des milliers, et des zéros au-delà
-     * des décimales de la devise ne changent pas la valeur.
+     * déjà à la normalisation du scan : le bruit de colonne sépare deux
+     * occurrences, l'apostrophe sépare des milliers, et des zéros au-delà des
+     * décimales de la devise ne changent pas la valeur.
      */
-    ["3 020,000)", [3020000]],
-    ["3 020,000 3 020,000)", [3020000]],
     ["3 020,000 | 3 020,000", [3020000]],
     ["1'234.560", [1234560]],
     ["1234,5600", [1234560]],
@@ -140,6 +137,14 @@ describe("treillisMontant — un signe que le texte ne tranche pas ne se lit pas
     "(1 234,560) DT",
     "( 123,450€ )",
     "(3 020,000))",
+    /*
+     * Une parenthèse orpheline non plus (revue de la PR 144) : « 1 234,560) »
+     * peut être un avoir coupé par la plage. Celle qui ferme un MOT coupé —
+     * « (base 3 020,000) » — se retire au plan (`une-parenthese-orpheline.test.ts`).
+     */
+    "3 020,000)",
+    "3 020,000 3 020,000)",
+    "(1 234,560",
     "+ 135,183",
     "+ 72,883",
     "3 020,000-",
@@ -274,7 +279,7 @@ const lire = (selection: Partial<VisionSelection>) =>
       ...selection,
       totals: { base_ht: null, vat: null, ttc: null, ...(selection.totals ?? {}) },
     } as unknown as VisionSelection,
-    devise: deviseDEssai(DINAR),
+    ...devisesDEssai(DINAR),
     matriculeDossier: null,
   });
 

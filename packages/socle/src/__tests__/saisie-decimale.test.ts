@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { saisieDecimale } from "../saisie-decimale.ts";
+import { refusDeSaisie, saisieDecimale } from "../saisie-decimale.ts";
 
 describe("saisie d'un montant", () => {
   it("relit les espaces de milliers, quelles qu'elles soient", () => {
@@ -29,5 +29,18 @@ describe("saisie d'un montant", () => {
     expect(saisieDecimale("12,5,0")).toBeNull();
     expect(saisieDecimale("-5")).toBeNull();
     expect(saisieDecimale("abc")).toBeNull();
+  });
+});
+
+describe("pourquoi une saisie de montant ne s'inscrit pas", () => {
+  it("dit la raison, au lieu de griser sans un mot", () => {
+    expect(refusDeSaisie("12,500", 3)).toBeNull();
+    expect(refusDeSaisie("1 234,5000", 3)).toBeNull();
+    expect(refusDeSaisie("0,0001", 3)).toBe("trop_precis");
+    expect(refusDeSaisie("12,345", 2)).toBe("trop_precis");
+    expect(refusDeSaisie("-5", 3)).toBe("negatif");
+    expect(refusDeSaisie("− 1 234,5", 3)).toBe("negatif");
+    expect(refusDeSaisie("abc", 3)).toBe("illisible");
+    expect(refusDeSaisie("-abc", 3)).toBe("illisible");
   });
 });
