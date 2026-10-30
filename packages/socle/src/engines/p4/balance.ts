@@ -13,6 +13,7 @@ import type {
 } from "../../domain/types.ts";
 import type { ExtractV1 } from "../../contracts/extract.v1.ts";
 import type { JournalLineV1, Motif, PivotV1 } from "../../contracts/pivot.v1.ts";
+import { periodeDeTva } from "../../exercice.ts";
 import { evaluateTrafficLight } from "./traffic-light.ts";
 
 export interface FiscalChargeRule {
@@ -275,7 +276,7 @@ export function computePivot(input: PivotInput): PivotV1 {
   }
 
   const traffic_light = evaluateTrafficLight(motifs);
-  const period = extract.document_date.slice(0, 7);
+  const period = periodeDeTva(extract.document_date);
 
   if (traffic_light === "VERT" && motifs.length === 0) {
     motifs.push({ code: "OK", severity: "info", message: "Écriture équilibrée et cohérente" });

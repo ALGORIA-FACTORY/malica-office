@@ -73,6 +73,12 @@ export interface EntreeMontants {
    * prouver la base d'une ligne illisible (voir `deduits`).
    */
   htTotal?: string | null;
+  /**
+   * Le chemin de citation de chaque montant (« ht0 », « htTotal », « tva »,
+   * « autre0 », « ttc », et « pied0 » pour le HT du pied d'une ligne seule),
+   * pour que `fermes` nomme les champs tels que la lecture les cite.
+   */
+  chemins?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -168,6 +174,13 @@ export interface ResultatNormalisation {
    * Absent des jugements posés avant cette date : un lecteur lit `?? []`.
    */
   deduits: Deduction[];
+  /**
+   * Les champs cités que l'équation retenue a VÉRIFIÉS, à leur chemin de
+   * citation : ni une valeur déduite, ni un total écarté, ni un montant qui
+   * n'entre pas dans l'équation (la TVA d'une ligne, son TTC). Le contrôle de
+   * confiance ne lève que ceux-là (revue de la PR 142).
+   */
+  fermes: string[];
   raison: string;
 }
 
@@ -579,7 +592,11 @@ export function normaliserMontants(
     candidatsMontant(ligne, p).length === 0
   ) {
     const parLePied = normaliserMontants(
-      { ...entree, bases: [{ ht: pied, taux: seule!.taux }] },
+      {
+        ...entree,
+        bases: [{ ht: pied, taux: seule!.taux }],
+        chemins: { ...entree.chemins, ht0: entree.chemins?.["pied0"] ?? "pied0" },
+      },
       p,
     );
     if (parLePied.etat === "tranche")
@@ -634,6 +651,7 @@ export function normaliserMontants(
     totalNonLu,
     ligneNonLue: null,
     deduits: [],
+    fermes: [],
     raison,
   });
 
@@ -1011,6 +1029,9 @@ export function normaliserMontants(
       totalNonLu,
       ligneNonLue: null,
       deduits,
+      fermes: champs
+        .filter((c) => !droitsDeduits.has(c.nom))
+        .map((c) => entree.chemins?.[c.nom] ?? c.nom),
       raison,
     };
   }

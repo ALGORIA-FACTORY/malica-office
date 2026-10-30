@@ -33,6 +33,23 @@ const montantsJustes = normaliserMontants(
   P,
 );
 
+/** La même facture, ses montants nommés à leur chemin de citation, comme `analyse.ts` les passe. */
+const citee = normaliserMontants(
+  {
+    bases: [{ ht: "1 234,560", taux: "0.19" }],
+    tva: "234,566",
+    autres: ["1,000"],
+    ttc: "1 470,126",
+    chemins: {
+      ht0: "lines[0].base_ht",
+      tva: "totals.vat",
+      autre0: "other_charges[0].amount",
+      ttc: "totals.ttc",
+    },
+  },
+  P,
+);
+
 /** Une facture d'achat irréprochable, adressée à ALGORIA FACTORY. */
 function facture(modif: Partial<PieceAControler> = {}): PieceAControler {
   return {
@@ -523,11 +540,16 @@ describe("la clé de doublon", () => {
 });
 
 describe("cohérence des dates", () => {
-  it("datée peu après sa réception : réserve — émise d'avance, ou date mal lue", () => {
-    const c = statut(facture({ date: "2026-10-01" }), "coherence_dates");
+  it("datée après sa réception, même période de TVA : réserve", () => {
+    const c = statut(facture({ date: "2026-09-20" }), "coherence_dates");
     assert.equal(c.statut, "reserve");
-    assert.match(c.motif, /2026-10-01/);
+    assert.match(c.motif, /2026-09-20/);
     assert.match(c.motif, /2026-09-15/);
+  });
+  it("datée dans une période de TVA postérieure à sa réception : anomalie, la date est demandée", () => {
+    const c = statut(facture({ date: "2026-10-01" }), "coherence_dates");
+    assert.equal(c.statut, "anomalie");
+    assert.match(c.motif, /^Date à préciser/);
   });
   it("date illisible : réserve", () => {
     assert.equal(statut(facture({ date: null }), "coherence_dates").statut, "reserve");
@@ -562,12 +584,22 @@ describe("confiance de lecture — seuils du paramétrage", () => {
     // 30 octobre 2026 : un TTC à 0,3 dont la base, la TVA et le timbre
     // imprimés vérifient la valeur au millime privait la pièce d'écriture.
     const c = statut(
-      facture({ confianceParChamp: { "totals.ttc": 0.3, numero: 0.9 } }),
+      facture({ montants: citee, confianceParChamp: { "totals.ttc": 0.3, numero: 0.9 } }),
       "confiance_lecture",
     );
     assert.equal(c.statut, "reserve");
     assert.deepEqual(c.preuves["fermes"], ["totals.ttc"]);
     assert.match(c.motif, /arithmétique/);
+  });
+  it("un montant peu sûr qui n'entre pas dans l'équation — la TVA d'une ligne — bloque", () => {
+    // Revue de la PR 142 : la dispense nommait des champs que l'arithmétique
+    // n'avait pas vérifiés.
+    const c = statut(
+      facture({ montants: citee, confianceParChamp: { "lines[0].vat_amount": 0.3 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "anomalie");
+    assert.deepEqual(c.preuves["champs"], ["lines[0].vat_amount"]);
   });
   it("le même montant, sur une facture qui ne tient pas : anomalie", () => {
     const faux = normaliserMontants(
@@ -712,34 +744,27 @@ describe("l'écart entre la date de la pièce et sa réception", () => {
     assert.equal(c.statut, "conforme");
   });
 
-  it("une date À VENIR, dans l'écart du pack : réserve — une facture s'émet d'avance", () => {
-    // 30 octobre 2026 : le loyer de septembre arrive fin août. Bloquer ne
-    // protégeait rien, le comptable saisissait la même écriture à la main.
+  it("une date À VENIR dans la période de TVA de la réception : réserve", () => {
     const c = dateDe(
       controlerPiece(
-        facture({ date: "2026-10-01", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        facture({ date: "2026-09-28", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
         CONTEXTE,
       ),
     );
     assert.equal(c.statut, "reserve");
-    assert.equal(c.preuves["avanceJours"], 16);
   });
 
-  it("une date À VENIR au-delà de l'écart du pack reste une anomalie : elle est mal lue", () => {
-    const c = dateDe(
-      controlerPiece(
-        facture({ date: "2026-11-20", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
-        CONTEXTE,
-      ),
-    );
-    assert.equal(c.statut, "anomalie");
-    // Le seuil vient du pack : élargi, la même date n'est plus qu'une réserve.
-    const large = dateDe(
-      controlerPiece(
-        facture({ date: "2026-11-20", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
-        { ...CONTEXTE, ecartDateJours: 400 },
-      ),
-    );
-    assert.equal(large.statut, "reserve");
+  it("une date À VENIR dans une période de TVA postérieure : anomalie, quel que soit l'écart du pack", () => {
+    // Revue de la PR 142 : le jour et le mois inversés, 2026-11-09 pour une
+    // pièce reçue le 2026-09-30 — l'écriture partirait dans une déclaration à venir.
+    for (const ecartDateJours of [60, 400]) {
+      const c = dateDe(
+        controlerPiece(
+          facture({ date: "2026-11-09", reception: { doublonDe: null, recueLe: "2026-09-30" } }),
+          { ...CONTEXTE, ecartDateJours },
+        ),
+      );
+      assert.equal(c.statut, "anomalie");
+    }
   });
 });

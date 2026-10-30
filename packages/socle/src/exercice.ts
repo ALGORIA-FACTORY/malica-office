@@ -53,6 +53,14 @@ export function debutDExercice(cloture: string | null, periode: string): string 
 /** Un mois, « AAAA-MM ». */
 export type Mois = string;
 
+/**
+ * La période de TVA où une pièce datée `date` (AAAA-MM-JJ) se range : son mois,
+ * celui que porte l'écriture (`pivot.v1.period`) et que la TVA déclare
+ * (`tva.v1.period`). Une seule règle, pour l'écriture et pour le contrôle de
+ * ses dates.
+ */
+export const periodeDeTva = (date: string): Mois => date.slice(0, 7);
+
 export interface MoisDExercice {
   periode: Mois;
   /**

@@ -245,6 +245,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     totalNonLu: null,
     ligneNonLue: null,
     deduits: [],
+    fermes: [],
     raison,
   });
 
@@ -268,6 +269,22 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     fixe !== undefined && (devise ?? r.deviseDuDossier) === r.deviseDuDossier
       ? Math.round(Number(fixe) * 10 ** r.decimales!)
       : undefined;
+  // Le chemin de citation de chaque montant : `fermes` nomme les champs ainsi.
+  const chemins: Record<string, string> = {
+    pied0: "totals.base_ht",
+    htTotal: "totals.base_ht",
+    tva: "totals.vat",
+    ttc: "totals.ttc",
+    ...Object.fromEntries(
+      lignes.map((_, i) => [
+        `ht${i}`,
+        brut(`lines[${i}].base_ht`) !== null || lignes.length > 1
+          ? `lines[${i}].base_ht`
+          : "totals.base_ht",
+      ]),
+    ),
+    ...Object.fromEntries(droits.map((_, i) => [`autre${i}`, `other_charges[${i}].amount`])),
+  };
   const autres = droits.map((d, i) => {
     const b = brut(`other_charges[${i}].amount`);
     const attendu = d.code ? enMineur(r.droitsFixes.get(d.code)) : undefined;
@@ -283,41 +300,59 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
    *
    * Sans ligne par taux lue, ou avec un code que le paramétrage ignore
    * (« TVA_19 » pour « TVA19 »), la pièce restait sans écriture. Sur une
-   * facture à UN taux qui imprime sa base et sa TVA, le taux se retrouve :
-   * on essaie chaque taux du paramétrage EN VIGUEUR à la date de la pièce, et
-   * on ne retient que celui sous lequel la facture entière tient — la TVA
-   * vaut arrondi(HT × taux), le total la somme. Un seul : il est déduit, et
-   * se dit. Aucun, ou plusieurs (une TVA nulle convient à « exonéré » comme à
-   * « export ») : on ne choisit pas.
+   * facture qui imprime sa base, sa TVA et son total, un taux se PROUVE à
+   * deux conditions :
+   *
+   *   — sous lui, et sous lui seul, la facture entière tient : la TVA vaut
+   *     arrondi(HT × taux), le total la somme ;
+   *   — aucun MÉLANGE des autres taux en vigueur ne donne la même TVA. Revue
+   *     de la PR 142 : 1 000 à 7 % et 1 000 à 19 % font 260 sur 2 000, soit
+   *     13 % — un taux du paramétrage, et pourtant deux lignes. Un rapport
+   *     TVA ÷ HT compris entre deux autres taux est toujours un mélange
+   *     possible ; seul le taux le plus haut en vigueur, ou le plus bas, ne
+   *     l'est pas.
+   *
+   * Le total doit être LU : sans lui, le taux serait une seconde valeur
+   * déduite, et une pièce n'en porte jamais deux. Sinon : « taux de TVA à
+   * préciser », et rien n'est proposé.
    */
   if (lignes.length === 0 || (lignes.length === 1 && sansTaux)) {
     const ht = brut("lines[0].base_ht") ?? brut("totals.base_ht");
     const tva = brut("totals.vat");
+    const ttc = brut("totals.ttc");
     const lu = sansTaux?.tax_code ?? null;
-    if (ht === null || tva === null)
-      return rien(
-        `taux de TVA non lu, et ${ht === null ? "la base HT" : "la TVA"} non plus : à saisir`,
-      );
+    if (ht === null || tva === null || ttc === null)
+      return rien("taux de TVA à préciser : la base, la TVA et le total ne sont pas tous lus");
     const tiennent = [...r.taux].flatMap(([code, taux]) => {
       const n = normaliserMontants(
         {
           bases: [{ ht, taux, pied: brut("totals.base_ht") }],
           tva,
           autres,
-          ttc: brut("totals.ttc"),
+          ttc,
+          chemins: {
+            ...chemins,
+            ht0: brut("lines[0].base_ht") !== null ? "lines[0].base_ht" : "totals.base_ht",
+          },
         },
         lecture,
       );
-      // Le taux se PROUVE par une TVA lue, jamais par une valeur déjà déduite.
-      return n.etat === "tranche" && n.deduits.length === 0 && n.montants.tva !== null
-        ? [{ code, n }]
+      // Le taux se PROUVE par une TVA et un total lus, jamais par une valeur déduite.
+      return n.etat === "tranche" &&
+        n.deduits.length === 0 &&
+        n.totalNonLu === null &&
+        n.montants.tva !== null
+        ? [{ code, taux, n }]
         : [];
     });
-    if (tiennent.length !== 1)
+    const valeurs = [...r.taux.values()].map(Number);
+    const extreme = (taux: string) =>
+      Number(taux) === Math.max(...valeurs) || Number(taux) === Math.min(...valeurs);
+    if (tiennent.length !== 1 || !extreme(tiennent[0]!.taux))
       return rien(
         tiennent.length === 0
-          ? `taux de TVA non lu : aucun taux du paramétrage au ${dateRef} ne fait tenir la facture`
-          : `taux de TVA non lu : plusieurs taux font tenir la facture (${tiennent.map((t) => t.code).join(", ")}) — à préciser`,
+          ? `taux de TVA à préciser : aucun taux du paramétrage au ${dateRef} ne fait tenir la facture`
+          : `taux de TVA à préciser : ${tiennent.map((t) => t.code).join(", ")} ou un mélange de taux`,
       );
     const [{ code, n }] = tiennent as [(typeof tiennent)[number]];
     return {
@@ -326,8 +361,8 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
         {
           champ: "lines[0].tax_code",
           valeur: code,
-          formule: `taux = TVA ÷ HT, seul taux du paramétrage au ${dateRef} qui fait tenir la facture`,
-          operandes: { ht, tva, ttc: brut("totals.ttc") ?? "", imprime: lu ?? "" },
+          formule: `taux = TVA ÷ HT : seul taux du paramétrage au ${dateRef} qui fait tenir la facture, et qu'aucun mélange des autres ne donne`,
+          operandes: { ht, tva, ttc, imprime: lu ?? "" },
         },
       ],
       raison: `${n.raison} ; le taux ${code} est déduit de la TVA et de la base imprimées`,
@@ -349,6 +384,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
       tva: brut("totals.vat"),
       autres,
       ttc: brut("totals.ttc"),
+      chemins,
     },
     lecture,
   );

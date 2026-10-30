@@ -60,7 +60,7 @@ describe("la mesure des propositions", () => {
       "code de taux inconnu du paramétrage : le taux se retrouve",
       "deux taux, une base illisible : le HT du pied la prouve",
       "un total peu sûr que l'arithmétique vérifie",
-      "datée après sa réception (loyer facturé d'avance)",
+      "datée après sa réception, dans la même période de TVA",
       "le timbre nommé, son montant non cité",
       "le timbre cité, illisible",
     ];

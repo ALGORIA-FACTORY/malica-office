@@ -36,6 +36,7 @@ import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
 import {
   DROITS_D_ESSAI,
+  DEVISE_D_ESSAI,
   EXPOSANTS_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
   MARQUES_D_ESSAI,
@@ -48,8 +49,8 @@ import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "../malica/lecture/read-piece.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
 
-/** Une ligne d'écriture attendue : compte, débit, crédit. */
-type LigneAttendue = readonly [string, string, string];
+/** Une ligne d'écriture attendue : compte, débit, crédit, et le code de taxe d'une ligne de TVA. */
+type LigneAttendue = readonly [string, string, string, string?];
 
 export interface CasDeMesure {
   nom: string;
@@ -67,7 +68,7 @@ const DOSSIER = { nom: "SOCIETE D'ESSAI SARL", identifiantFiscal: "1856324K/A/M/
 const FOURNISSEUR = { nom: "FOURNISSEUR D'ESSAI SA", identifiantFiscal: "1234567B/B/M/000" };
 const CLIENT = { nom: "CLIENT D'ESSAI SARL", identifiantFiscal: "1765432C/A/M/000" };
 /** La devise des livres du dossier d'essai. */
-const DEVISE_DU_DOSSIER = "TND";
+const DEVISE_DU_DOSSIER = DEVISE_D_ESSAI;
 
 interface Facture {
   sens?: "facture_achat" | "facture_vente";
@@ -190,8 +191,8 @@ function depuisLeJeuDOr(): CasDeMesure[] {
         journal: "ACH",
         lignes: [
           ["601", "3020.000", "0"],
-          ["4366", "573.800", "0"],
-          ["665", "1.000", "0"],
+          ["4366", "573.800", "0", "TVA19"],
+          ["6654", "1.000", "0"],
           ["401", "0", "3594.800"],
         ],
       },
@@ -204,8 +205,8 @@ const ACHAT_SIMPLE: CasDeMesure["attendu"] = {
   journal: "ACH",
   lignes: [
     ["601", "1234.560", "0"],
-    ["4366", "234.566", "0"],
-    ["665", "1.000", "0"],
+    ["4366", "234.566", "0", "TVA19"],
+    ["6654", "1.000", "0"],
     ["401", "0", "1470.126"],
   ],
 };
@@ -225,9 +226,9 @@ const DEUX_TAUX: CasDeMesure["attendu"] = {
   journal: "ACH",
   lignes: [
     ["601", "3561.300", "0"],
-    ["4366", "60.529", "0"],
-    ["4366", "512.354", "0"],
-    ["665", "1.000", "0"],
+    ["4366", "60.529", "0", "TVA07"],
+    ["4366", "512.354", "0", "TVA19"],
+    ["6654", "1.000", "0"],
     ["401", "0", "4135.183"],
   ],
 };
@@ -247,8 +248,8 @@ const MILLE: CasDeMesure["attendu"] = {
   journal: "ACH",
   lignes: [
     ["601", "1000.000", "0"],
-    ["4366", "190.000", "0"],
-    ["665", "1.000", "0"],
+    ["4366", "190.000", "0", "TVA19"],
+    ["6654", "1.000", "0"],
     ["401", "0", "1191.000"],
   ],
 };
@@ -283,8 +284,8 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       journal: "ACH",
       lignes: [
         ["601", "427.731", "0"],
-        ["4366", "81.269", "0"],
-        ["665", "1.000", "0"],
+        ["4366", "81.269", "0", "TVA19"],
+        ["6654", "1.000", "0"],
         ["401", "0", "510.000"],
       ],
     },
@@ -304,9 +305,9 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       journal: "VEN",
       lignes: [
         ["411", "2976.000", "0"],
-        ["4367", "0", "475.000"],
+        ["4367", "0", "475.000", "TVA19"],
         ["701", "0", "2500.000"],
-        ["4368", "0", "1.000"],
+        ["4371", "0", "1.000"],
       ],
     },
   },
@@ -418,10 +419,24 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    // Le loyer de septembre reçu fin août partirait dans la déclaration de
+    // septembre, encore à venir : la date se demande (revue de la PR 142).
     nom: "datée après sa réception (loyer facturé d'avance)",
     provenance: REPRODUIT,
     lecture: facture({ ...SIMPLE, date: "2026-09-01", recueLe: "2026-08-28" }),
+    attendu: null,
+  },
+  {
+    nom: "datée après sa réception, dans la même période de TVA",
+    provenance: REPRODUIT,
+    lecture: facture({ ...SIMPLE, date: "2026-09-20", recueLe: "2026-09-15" }),
     attendu: ACHAT_SIMPLE,
+  },
+  {
+    nom: "jour et mois inversés : 2026-11-09 pour une pièce reçue le 2026-09-30",
+    provenance: "revue indépendante de la PR 142",
+    lecture: facture({ ...SIMPLE, date: "2026-11-09", recueLe: "2026-09-30" }),
+    attendu: null,
   },
   {
     nom: "lue « vente », émise par un tiers : le cabinet tranche",
@@ -466,6 +481,32 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       ht: "1 000,000",
       tva: "150,000",
       ttc: "1 150,000",
+    }),
+    attendu: null,
+  },
+  {
+    // Revue de la PR 142 : 1 000 à 7 % + 1 000 à 19 % donnent 260 sur 2 000,
+    // soit 13 % — un taux du paramétrage, et pourtant un MÉLANGE.
+    nom: "aucune ligne par taux lue : 13 % peut être un mélange de 7 % et de 19 %",
+    provenance: "revue indépendante de la PR 142",
+    lecture: facture({
+      lignes: [],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,000" }],
+      ht: "2 000,000",
+      tva: "260,000",
+      ttc: "2 261,000",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "aucune ligne par taux lue, le total illisible : le taux ne se prouve pas",
+    provenance: "revue indépendante de la PR 142",
+    lecture: facture({
+      lignes: [],
+      droits: [{ code: "DROIT_TIMBRE", montant: "1,000" }],
+      ht: "1 000,000",
+      tva: "190,000",
+      ttc: "+ 191,000",
     }),
     attendu: null,
   },
@@ -518,7 +559,7 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
   const n = jugement.normalisation;
   const sousMotif = (): string => {
     if (n.etat === "illisible") {
-      if (/aucune base par taux|taux de TVA non lu/.test(n.raison)) return "taux_non_lu";
+      if (/aucune base par taux|taux de TVA à préciser/.test(n.raison)) return "taux_non_lu";
       if (/taux « .* » inconnu/.test(n.raison)) return "taux_inconnu";
       if (/un HT est absent/.test(n.raison)) return "base_absente";
       const illisible = /montant illisible « (.*?) »/.exec(n.raison)?.[1];
@@ -546,7 +587,7 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
 }
 
 const decimal = (s: string) => Number(s).toFixed(6);
-const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}`;
+const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
 function jouer(cas: CasDeMesure): Issue {
@@ -601,7 +642,9 @@ function jouer(cas: CasDeMesure): Issue {
   if (cas.attendu === null)
     return { type: "fausse", cause: "proposée alors que rien ne devait l'être" };
   const e = p.proposition!;
-  const lues = e.lignes.map((l) => cleDeLigne([l.account_code, l.debit, l.credit])).sort();
+  const lues = e.lignes
+    .map((l) => cleDeLigne([l.account_code, l.debit, l.credit, l.tax_code ?? ""]))
+    .sort();
   const attendues = cas.attendu.lignes.map(cleDeLigne).sort();
   const causes: string[] = [];
   if (e.journal !== cas.attendu.journal)

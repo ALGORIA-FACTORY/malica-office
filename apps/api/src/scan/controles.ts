@@ -25,6 +25,7 @@
  * et les seuils de confiance arrivent par le contexte, lus dans le paramétrage.
  */
 
+import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
 
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
@@ -615,31 +616,31 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
    * ================================ DATÉE APRÈS SA RÉCEPTION (30 octobre 2026)
    *
    * C'était toujours une anomalie, qui privait la pièce d'écriture. Deux
-   * causes la produisent : une facture émise d'avance (le loyer de septembre
-   * envoyé fin août), ou une date mal lue (le jour et le mois inversés). Peu
-   * de jours après la réception, les deux sont plausibles : l'écriture se
-   * propose à la date IMPRIMÉE, en RÉSERVE, et le cabinet — qui voit les deux
-   * dates — la confirme ou la corrige. Bloquer ne protégeait rien : le
-   * comptable saisissait la même écriture à la main.
+   * causes la produisent : une facture émise d'avance, ou une date mal lue
+   * (le jour et le mois inversés). Ce qui compte pour l'écriture, c'est la
+   * PÉRIODE DE TVA où elle se range (`periodeDeTva`, la règle même du pivot) :
    *
-   * Au-delà de l'écart que le pack signale déjà (`piece.ecart_date_jours`),
-   * aucune facture ne s'émet si longtemps d'avance : la date est mal lue, et
-   * la pièce reste une anomalie. Le seuil est celui du pack, pas du code.
+   *   — même période que la réception : l'écriture se propose à la date
+   *     imprimée, en RÉSERVE ; le cabinet voit les deux dates ;
+   *   — période postérieure : l'écriture partirait dans une déclaration À
+   *     VENIR (revue de la PR 142 : « 2026-11-09 » lu pour une pièce reçue le
+   *     2026-09-30). Rien ne se propose ; la date est demandée.
+   *
+   * INCERTAIN : la règle est à confirmer par un expert-comptable.
    */
   if (p.date > p.reception.recueLe) {
-    const avance = joursEntre(p.reception.recueLe, p.date);
-    const preuves = { date: p.date, recueLe: p.reception.recueLe, avanceJours: avance };
-    return avance > ctx.ecartDateJours
+    const preuves = { date: p.date, recueLe: p.reception.recueLe };
+    return periodeDeTva(p.date) > periodeDeTva(p.reception.recueLe)
       ? {
           code: "coherence_dates",
           statut: "anomalie",
-          motif: `La pièce est datée du ${p.date}, ${avance} jours après sa réception le ${p.reception.recueLe} : la date est à corriger.`,
+          motif: `Date à préciser : le ${p.date} tombe dans une période de TVA postérieure à la réception (${p.reception.recueLe}).`,
           preuves,
         }
       : {
           code: "coherence_dates",
           statut: "reserve",
-          motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe} : facture émise d'avance, ou date mal lue — à vérifier.`,
+          motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe}, dans la même période de TVA : à vérifier.`,
           preuves,
         };
   }
@@ -678,21 +679,15 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   };
 }
 
-/** Les chemins de montants qu'une lecture cite : bases, TVA, droits, totaux. */
-const MONTANT_CITE =
-  /^(totals\.(base_ht|vat|ttc)|lines\[\d+\]\.(base_ht|vat_amount|ttc)|other_charges\[\d+\]\.amount)$/;
-
 /**
  * Un montant peu sûr que l'arithmétique de la facture FERME n'est pas un
- * doute : la normalisation l'a retenu parce que toute la facture le vérifie
- * (`tranche`). Seul le total écarté (`totalNonLu`) ne ferme rien.
+ * doute : la normalisation l'a fait entrer dans l'équation que toute la
+ * facture vérifie (`fermes`). Un champ qui n'y est pas entré — la TVA d'une
+ * ligne, un total écarté, une valeur déduite — ne ferme rien (revue de la
+ * PR 142).
  */
 function fermeParLArithmetique(p: PieceAControler, champ: string): boolean {
-  return (
-    p.montants.etat === "tranche" &&
-    MONTANT_CITE.test(champ) &&
-    !(champ === "totals.ttc" && p.montants.totalNonLu !== null)
-  );
+  return p.montants.etat === "tranche" && (p.montants.fermes ?? []).includes(champ);
 }
 
 function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle {
@@ -720,7 +715,8 @@ function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle 
     };
   if (reserves.length > 0) {
     const fermes = reserves.filter(
-      (k) => (p.confianceParChamp[k] ?? 1) < ctx.seuilConfianceBloquant,
+      (k) =>
+        (p.confianceParChamp[k] ?? 1) < ctx.seuilConfianceBloquant && fermeParLArithmetique(p, k),
     );
     return {
       code: "confiance_lecture",
