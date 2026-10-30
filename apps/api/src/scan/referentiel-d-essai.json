@@ -1,0 +1,170 @@
+{
+  "juridiction": "TN",
+  "jour": "2026-10-01",
+  "devise": "TND",
+  "parametres": {
+    "lecture.confiance_bloquante": 0.4,
+    "lecture.confiance_reserve": 0.7,
+    "lecture.tolerance_arrondi_mineure": 1,
+    "money.decimals": 3,
+    "piece.ecart_date_jours": 60
+  },
+  "taux": [
+    {
+      "code": "EXO",
+      "rate": "0.000000",
+      "validFrom": "2026-01-01",
+      "validTo": null
+    },
+    {
+      "code": "EXPORT",
+      "rate": "0.000000",
+      "validFrom": "2026-01-01",
+      "validTo": null
+    },
+    {
+      "code": "TVA07",
+      "rate": "0.070000",
+      "validFrom": "2026-01-01",
+      "validTo": null
+    },
+    {
+      "code": "TVA13",
+      "rate": "0.130000",
+      "validFrom": "2026-01-01",
+      "validTo": null
+    },
+    {
+      "code": "TVA19",
+      "rate": "0.190000",
+      "validFrom": "2026-01-01",
+      "validTo": null
+    }
+  ],
+  "imputations": [
+    {
+      "documentKind": "facture_achat",
+      "taxCode": "EXO",
+      "mainAccount": "601",
+      "vatAccount": "4366",
+      "counterpartyAccount": "401",
+      "journalCode": "ACH"
+    },
+    {
+      "documentKind": "facture_achat",
+      "taxCode": "EXPORT",
+      "mainAccount": "601",
+      "vatAccount": "4366",
+      "counterpartyAccount": "401",
+      "journalCode": "ACH"
+    },
+    {
+      "documentKind": "facture_achat",
+      "taxCode": "TVA07",
+      "mainAccount": "601",
+      "vatAccount": "4366",
+      "counterpartyAccount": "401",
+      "journalCode": "ACH"
+    },
+    {
+      "documentKind": "facture_achat",
+      "taxCode": "TVA13",
+      "mainAccount": "601",
+      "vatAccount": "4366",
+      "counterpartyAccount": "401",
+      "journalCode": "ACH"
+    },
+    {
+      "documentKind": "facture_achat",
+      "taxCode": "TVA19",
+      "mainAccount": "601",
+      "vatAccount": "4366",
+      "counterpartyAccount": "401",
+      "journalCode": "ACH"
+    },
+    {
+      "documentKind": "facture_vente",
+      "taxCode": "EXO",
+      "mainAccount": "701",
+      "vatAccount": "4367",
+      "counterpartyAccount": "411",
+      "journalCode": "VEN"
+    },
+    {
+      "documentKind": "facture_vente",
+      "taxCode": "EXPORT",
+      "mainAccount": "701",
+      "vatAccount": "4367",
+      "counterpartyAccount": "411",
+      "journalCode": "VEN"
+    },
+    {
+      "documentKind": "facture_vente",
+      "taxCode": "TVA07",
+      "mainAccount": "701",
+      "vatAccount": "4367",
+      "counterpartyAccount": "411",
+      "journalCode": "VEN"
+    },
+    {
+      "documentKind": "facture_vente",
+      "taxCode": "TVA13",
+      "mainAccount": "701",
+      "vatAccount": "4367",
+      "counterpartyAccount": "411",
+      "journalCode": "VEN"
+    },
+    {
+      "documentKind": "facture_vente",
+      "taxCode": "TVA19",
+      "mainAccount": "701",
+      "vatAccount": "4367",
+      "counterpartyAccount": "411",
+      "journalCode": "VEN"
+    }
+  ],
+  "droits": [
+    {
+      "code": "DROIT_TIMBRE",
+      "documentKind": "facture_achat",
+      "accountCode": "6654",
+      "fixedAmount": "1.000"
+    },
+    {
+      "code": "DROIT_TIMBRE",
+      "documentKind": "facture_vente",
+      "accountCode": "4371",
+      "fixedAmount": "1.000"
+    },
+    {
+      "code": "FODEC",
+      "documentKind": "facture_achat",
+      "accountCode": "6652",
+      "fixedAmount": null
+    },
+    {
+      "code": "FODEC",
+      "documentKind": "facture_vente",
+      "accountCode": "4374",
+      "fixedAmount": null
+    }
+  ],
+  "mentions": [
+    "BASE_HT",
+    "DATE_FACTURE",
+    "DESIGNATION",
+    "IDENT_FISCAL_CLIENT",
+    "IDENT_FISCAL_EMETTEUR",
+    "MONTANT_TVA",
+    "NUMERO_SEQUENTIEL",
+    "TAUX_TVA",
+    "TIMBRE_FISCAL",
+    "TOTAL_TTC"
+  ],
+  "typesQuiPortentUneEcriture": ["facture_achat", "facture_vente"],
+  "exposants": {
+    "EUR": 2,
+    "TND": 3,
+    "XOF": 0
+  }
+}

@@ -64,7 +64,7 @@ const PARAMETRES = [
 ] as const;
 
 /** La bande du haut de la première page, où s'imprime le titre du document. */
-const HAUT_DE_PAGE = 0.25;
+export const HAUT_DE_PAGE = 0.25;
 
 /**
  * Le paramétrage daté de la lecture : décimales, seuils de confiance,
@@ -107,12 +107,333 @@ export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
   return rows.map((r) => r.marque);
 }
 
+/**
+ * Le nombre de décimales d'une devise, tel que `ref.devises` le porte (3 pour
+ * le dinar, 2 pour l'euro, 0 pour le franc CFA) — null si elle n'y est pas.
+ */
+export async function lireExposant(db: Requete, devise: string): Promise<number | null> {
+  const { rows } = await db.query<{ exposant: number }>(
+    `select exposant from ref.devises where code = $1`,
+    [devise],
+  );
+  return rows[0]?.exposant ?? null;
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
   motifs: Array<Pick<ResultatControle, "code" | "statut" | "motif">>;
   controles: ResultatControle[];
   normalisation: ResultatNormalisation;
+}
+
+/**
+ * Ce qu'une lecture porte, tel que la base le relit pour la juger.
+ *
+ * ================================================================= POURQUOI
+ *
+ * Le jugement était tissé dans les requêtes : on ne pouvait le jouer qu'avec
+ * une base. Le 30 octobre 2026, il a fallu MESURER combien de pièces
+ * reçoivent une écriture juste (`mesure-des-propositions.test.ts`) — sur la
+ * vraie chaîne, pas sur une copie qui dériverait. La chaîne est donc coupée
+ * en deux : ce qui lit (`analyserPiece`), ce qui juge (`jugerLaLecture`).
+ */
+export interface LectureAJuger {
+  payload: PayloadLu;
+  /** Le texte IMPRIMÉ d'un champ cité, jetons réassemblés ; null s'il n'est pas cité. */
+  imprime: (champ: string) => string | null;
+  /** Le haut de la première page, où s'imprime le titre du document. */
+  titre: string | null;
+  /** Le sens CONFIRMÉ par une personne, s'il l'a été. */
+  sensDit: string | null;
+  /** La date de la pièce : lue, à défaut donnée par une personne. */
+  date: string | null;
+  recueLe: string;
+  confianceParChamp: Record<string, number>;
+  doublonDe: string | null;
+}
+
+/** Ce que le référentiel daté dit, pour juger cette lecture-là. */
+export interface ReferentielDuJugement {
+  parametres: Record<(typeof PARAMETRES)[number], number>;
+  marques: readonly string[];
+  /**
+   * L'exposant de la devise de la PIÈCE (`ref.devises`), ou null quand le
+   * référentiel ne la connaît pas.
+   */
+  decimales: number | null;
+  /** TOUS les taux de TVA en vigueur à la date de la pièce, par code. */
+  taux: ReadonlyMap<string, string>;
+  /** La devise du dossier, celle de ses livres et de ses droits fixés. */
+  deviseDuDossier: string;
+  /** Les droits que le paramétrage FIXE (le timbre…), en écriture décimale, par code. */
+  droitsFixes: ReadonlyMap<string, string>;
+  tenant: ContexteControle["tenant"];
+  typesDocument: ContexteControle["typesDocument"];
+  mentionsObligatoires: ContexteControle["mentionsObligatoires"];
+  doublonProbable: string | null;
+}
+
+/** La part de l'extraction que le jugement relit. */
+interface PayloadLu {
+  issuer?: string | null;
+  document_date?: string | null;
+  document_kind?: string | null;
+  currency?: string | null;
+  lines?: Array<{ tax_code?: string | null }>;
+  other_charges?: Array<{ code?: string | null }>;
+  references?: Record<string, string>;
+  totals?: { ttc?: string | null };
+}
+
+/** Le sens retenu : celui que la personne a dit, à défaut celui de la lecture. */
+const sensRetenu = (l: Pick<LectureAJuger, "sensDit" | "payload">): string | null =>
+  l.sensDit ?? l.payload.document_kind ?? null;
+
+/**
+ * Normaliser les montants d'une lecture, depuis le texte IMPRIMÉ de ses
+ * champs cités et le référentiel daté. Pure.
+ */
+function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): ResultatNormalisation {
+  const { payload, imprime: brut } = l;
+  const p = r.parametres;
+  const lignes = payload.lines ?? [];
+  const droits = payload.other_charges ?? [];
+  const sansTaux = lignes.find((x) => !x.tax_code || !r.taux.has(x.tax_code));
+  const dateRef = l.date ?? l.recueLe;
+  const devise = payload.currency ?? null;
+
+  /** Ce que la pièce imprime, et rien de retenu : la raison seule. */
+  const rien = (raison: string): ResultatNormalisation => ({
+    etat: "illisible",
+    montants: {
+      bases: lignes.map(() => ({ ht: null, taux: "" })),
+      tva: null,
+      autres: droits.map(() => null),
+      ttc: null,
+    },
+    /*
+     * Ce que la pièce imprime, même ici — surtout ici.
+     *
+     * La pièce continue d'imprimer ses totaux : les déclarer absents
+     * ajouterait un reproche faux à un reproche juste (5 octobre 2026).
+     *
+     * Sans ligne par taux, la base imprimée est le HT global du pied :
+     * une facture qui ne ventile pas sa TVA porte quand même sa base.
+     */
+    imprime: {
+      bases:
+        lignes.length === 0
+          ? [brut("totals.base_ht")]
+          : lignes.map(
+              (_, i) =>
+                brut(`lines[${i}].base_ht`) ??
+                (lignes.length === 1 ? brut("totals.base_ht") : null),
+            ),
+      tva: brut("totals.vat"),
+      autres: droits.map((_, i) => brut(`other_charges[${i}].amount`)),
+      ttc: brut("totals.ttc"),
+    },
+    confiance: 0,
+    conventions: [],
+    lecturesValides: 0,
+    /*
+     * Aucun total n'a été écarté ici : on s'arrête AVANT la moindre
+     * lecture de montant. Dire le contraire ferait porter à la pièce un
+     * défaut qu'elle n'a pas.
+     */
+    totalNonLu: null,
+    ligneNonLue: null,
+    deduits: [],
+    fermes: [],
+    raison,
+  });
+
+  /*
+   * L'EXPOSANT EST CELUI DE LA DEVISE DE LA PIÈCE (30 octobre 2026).
+   *
+   * Les montants se lisaient aux décimales du PACK (`money.decimals`, trois
+   * pour la Tunisie), quelle que soit la devise imprimée : « 1 234,56 € »
+   * s'y lisait en millimes. L'exposant vient de `ref.devises`, pour la devise
+   * de la pièce ; une devise qu'il ne connaît pas ne se lit pas.
+   */
+  if (r.decimales === null) return rien(`devise « ${devise ?? "—"} » inconnue du référentiel`);
+  const lecture = {
+    decimales: r.decimales,
+    marques: r.marques,
+    toleranceMineure: p["lecture.tolerance_arrondi_mineure"],
+  };
+  // Un droit fixé l'est dans la devise du dossier : il n'ancre rien sur une
+  // pièce libellée dans une autre.
+  const enMineur = (fixe: string | undefined) =>
+    fixe !== undefined && (devise ?? r.deviseDuDossier) === r.deviseDuDossier
+      ? Math.round(Number(fixe) * 10 ** r.decimales!)
+      : undefined;
+  // Le chemin de citation de chaque montant : `fermes` nomme les champs ainsi.
+  const chemins: Record<string, string> = {
+    pied0: "totals.base_ht",
+    htTotal: "totals.base_ht",
+    tva: "totals.vat",
+    ttc: "totals.ttc",
+    ...Object.fromEntries(
+      lignes.map((_, i) => [
+        `ht${i}`,
+        brut(`lines[${i}].base_ht`) !== null || lignes.length > 1
+          ? `lines[${i}].base_ht`
+          : "totals.base_ht",
+      ]),
+    ),
+    ...Object.fromEntries(droits.map((_, i) => [`autre${i}`, `other_charges[${i}].amount`])),
+  };
+  const autres = droits.map((d, i) => {
+    const b = brut(`other_charges[${i}].amount`);
+    const attendu = d.code ? enMineur(r.droitsFixes.get(d.code)) : undefined;
+    // Un droit nommé dont le montant n'est pas cité reste dans l'équation :
+    // il ne s'y retient que si le paramétrage le fixe et que la facture le
+    // prouve (`normaliser-montants.ts`, « ce que la facture prouve »).
+    if (attendu !== undefined) return { brut: b, attendu };
+    return b ?? { brut: null };
+  });
+
+  /*
+   * ============================================= LE TAUX QUE LA FACTURE PROUVE
+   *
+   * Sans ligne par taux lue, ou avec un code que le paramétrage ignore
+   * (« TVA_19 » pour « TVA19 »), la pièce restait sans écriture. Sur une
+   * facture qui imprime sa base, sa TVA et son total, un taux se PROUVE à
+   * deux conditions :
+   *
+   *   — sous lui, et sous lui seul, la facture entière tient : la TVA vaut
+   *     arrondi(HT × taux), le total la somme ;
+   *   — aucun MÉLANGE des autres taux en vigueur ne donne la même TVA. Revue
+   *     de la PR 142 : 1 000 à 7 % et 1 000 à 19 % font 260 sur 2 000, soit
+   *     13 % — un taux du paramétrage, et pourtant deux lignes. Un rapport
+   *     TVA ÷ HT compris entre deux autres taux est toujours un mélange
+   *     possible ; seul le taux le plus haut en vigueur, ou le plus bas, ne
+   *     l'est pas.
+   *
+   * Le total doit être LU : sans lui, le taux serait une seconde valeur
+   * déduite, et une pièce n'en porte jamais deux. Sinon : « taux de TVA à
+   * préciser », et rien n'est proposé.
+   */
+  if (lignes.length === 0 || (lignes.length === 1 && sansTaux)) {
+    const ht = brut("lines[0].base_ht") ?? brut("totals.base_ht");
+    const tva = brut("totals.vat");
+    const ttc = brut("totals.ttc");
+    const lu = sansTaux?.tax_code ?? null;
+    if (ht === null || tva === null || ttc === null)
+      return rien("taux de TVA à préciser : la base, la TVA et le total ne sont pas tous lus");
+    const tiennent = [...r.taux].flatMap(([code, taux]) => {
+      const n = normaliserMontants(
+        {
+          bases: [{ ht, taux, pied: brut("totals.base_ht") }],
+          tva,
+          autres,
+          ttc,
+          chemins: {
+            ...chemins,
+            ht0: brut("lines[0].base_ht") !== null ? "lines[0].base_ht" : "totals.base_ht",
+          },
+        },
+        lecture,
+      );
+      // Le taux se PROUVE par une TVA et un total lus, jamais par une valeur déduite.
+      return n.etat === "tranche" &&
+        n.deduits.length === 0 &&
+        n.totalNonLu === null &&
+        n.montants.tva !== null
+        ? [{ code, taux, n }]
+        : [];
+    });
+    const valeurs = [...r.taux.values()].map(Number);
+    const extreme = (taux: string) =>
+      Number(taux) === Math.max(...valeurs) || Number(taux) === Math.min(...valeurs);
+    if (tiennent.length !== 1 || !extreme(tiennent[0]!.taux))
+      return rien(
+        tiennent.length === 0
+          ? `taux de TVA à préciser : aucun taux du paramétrage au ${dateRef} ne fait tenir la facture`
+          : `taux de TVA à préciser : ${tiennent.map((t) => t.code).join(", ")} ou un mélange de taux`,
+      );
+    const [{ code, n }] = tiennent as [(typeof tiennent)[number]];
+    return {
+      ...n,
+      deduits: [
+        {
+          champ: "lines[0].tax_code",
+          valeur: code,
+          formule: `taux = TVA ÷ HT : seul taux du paramétrage au ${dateRef} qui fait tenir la facture, et qu'aucun mélange des autres ne donne`,
+          operandes: { ht, tva, ttc, imprime: lu ?? "" },
+        },
+      ],
+      raison: `${n.raison} ; le taux ${code} est déduit de la TVA et de la base imprimées`,
+    };
+  }
+  if (sansTaux)
+    return rien(`taux « ${sansTaux.tax_code ?? "—"} » inconnu du paramétrage au ${dateRef}`);
+
+  return normaliserMontants(
+    {
+      bases: lignes.map((x, i) => ({
+        ht: brut(`lines[${i}].base_ht`) ?? (lignes.length === 1 ? brut("totals.base_ht") : null),
+        taux: r.taux.get(x.tax_code!)!,
+        // Le HT du pied, si la ligne ne se lit pas (29 octobre 2026).
+        pied: lignes.length === 1 ? brut("totals.base_ht") : null,
+      })),
+      // Plusieurs taux : le HT du pied prouve une base illisible.
+      htTotal: lignes.length > 1 ? brut("totals.base_ht") : null,
+      tva: brut("totals.vat"),
+      autres,
+      ttc: brut("totals.ttc"),
+      chemins,
+    },
+    lecture,
+  );
+}
+
+/**
+ * Juger une lecture : ses montants normalisés, ses contrôles motivés, son
+ * verdict. Pure — c'est la chaîne même qu'`analyserPiece` pose en base.
+ */
+export function jugerLaLecture(
+  l: LectureAJuger,
+  r: ReferentielDuJugement,
+): {
+  normalisation: ResultatNormalisation;
+  controles: ResultatControle[];
+  verdict: string;
+  motifs: Analyse["motifs"];
+} {
+  const normalisation = normaliserLaLecture(l, r);
+  const refs = l.payload.references ?? {};
+  const aControler: PieceAControler = {
+    documentKind: sensRetenu(l),
+    titre: l.titre,
+    emetteur: {
+      nom: l.payload.issuer || null,
+      identifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
+    },
+    destinataire: { nom: null, identifiantFiscal: refs[NOM_MATRICULE_CLIENT] ?? null },
+    numero: refs["numero"] ?? null,
+    date: l.date,
+    montants: normalisation,
+    confianceParChamp: l.confianceParChamp,
+    reception: { doublonDe: l.doublonDe, recueLe: l.recueLe },
+    // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
+    // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
+    sensConfirme: l.sensDit !== null,
+  };
+  const contexte: ContexteControle = {
+    tenant: r.tenant,
+    typesDocument: r.typesDocument,
+    mentionsObligatoires: r.mentionsObligatoires,
+    seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
+    seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
+    ecartDateJours: r.parametres["piece.ecart_date_jours"],
+    doublonProbable: r.doublonProbable,
+  };
+  const controles = controlerPiece(aControler, contexte);
+  const { verdict, motifs } = rendreVerdict(controles);
+  return { normalisation, controles, verdict, motifs };
 }
 
 export async function analyserPiece(db: Requete, pieceId: string): Promise<Analyse> {
@@ -142,15 +463,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   );
   const extraction = extractions[0];
   if (!extraction) throw refus("Cette pièce n'a pas encore été lue : il n'y a rien à juger.");
-  const payload = extraction.payload as {
-    issuer?: string | null;
-    document_date?: string | null;
-    document_kind?: string | null;
-    lines?: Array<{ tax_code?: string | null }>;
-    other_charges?: unknown[];
-    references?: Record<string, string>;
-    totals?: { ttc?: string | null };
-  };
+  const payload = extraction.payload as PayloadLu;
   /*
    * LE SENS DIT PAR LA PERSONNE L'EMPORTE SUR LE SENS LU (21 octobre 2026).
    *
@@ -163,13 +476,13 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     piece.document_kind_statut === "confirme" && piece.document_kind !== null
       ? piece.document_kind
       : null;
-  const sensRetenu = sensDit ?? payload.document_kind ?? null;
 
   const { rows: orgs } = await db.query<{
     name: string;
     legal_id: string | null;
     jurisdiction: string;
-  }>(`select name, legal_id, jurisdiction from identity.organizations where id = $1`, [
+    currency: string;
+  }>(`select name, legal_id, jurisdiction, currency from identity.organizations where id = $1`, [
     piece.tenant_id,
   ]);
   const org = orgs[0];
@@ -234,7 +547,6 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
   );
   const imprime = new Map<string, string[]>();
   for (const c of cites) imprime.set(c.field, [...(imprime.get(c.field) ?? []), c.text]);
-  const brut = (champ: string) => imprime.get(champ)?.join(" ") ?? null;
 
   const { rows: haut } = await db.query<{ text: string }>(
     `select text from capture.token_plan
@@ -243,25 +555,34 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       order by y0, x0`,
     [pieceId, HAUT_DE_PAGE],
   );
-  const titre = haut.length > 0 ? haut.map((t) => t.text).join(" ") : null;
 
-  // Les taux, par code, en vigueur à la date de la pièce.
-  const lignes = payload.lines ?? [];
-  const codes = [...new Set(lignes.map((l) => l.tax_code).filter((c): c is string => Boolean(c)))];
+  const lecture: LectureAJuger = {
+    payload,
+    imprime: (champ) => imprime.get(champ)?.join(" ") ?? null,
+    titre: haut.length > 0 ? haut.map((t) => t.text).join(" ") : null,
+    sensDit,
+    date: datePiece,
+    recueLe: piece.recue_le,
+    confianceParChamp: extraction.confiance_par_champ ?? {},
+    doublonDe: piece.doublon_de,
+  };
+
+  // Tous les taux en vigueur à la date de la pièce : ceux que la lecture
+  // nomme, et ceux parmi lesquels un taux non lu se retrouve.
   const { rows: taux } = await db.query<{ code: string; rate: string }>(
     `select distinct on (code) code, rate from ref.tva_rates
-      where pack_version_id = $1 and code = any($2) and valid_from <= $3::date
-        and (valid_to is null or valid_to >= $3::date)
+      where pack_version_id = $1 and valid_from <= $2::date
+        and (valid_to is null or valid_to >= $2::date)
       order by code, valid_from desc`,
-    [pack, codes, dateRef],
+    [pack, dateRef],
   );
-  const tauxDe = new Map(taux.map((t) => [t.code, t.rate]));
 
   // Les droits fixés par le paramétrage (le droit de timbre…) : leur valeur
   // attendue ancre l'échelle des montants quand l'égalité la laisse ouverte.
-  const droits = (payload.other_charges ?? []) as Array<{ code?: string | null }>;
   const codesDroits = [
-    ...new Set(droits.map((d) => d.code).filter((c): c is string => Boolean(c))),
+    ...new Set(
+      (payload.other_charges ?? []).map((d) => d.code).filter((c): c is string => Boolean(c)),
+    ),
   ];
   const { rows: fixes } = await db.query<{ code: string; fixed_amount: string | null }>(
     `select distinct on (code) code, fixed_amount from ref.fiscal_charges
@@ -269,119 +590,18 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
         and (document_kind = $3 or document_kind is null)
         and valid_from <= $4::date and (valid_to is null or valid_to >= $4::date)
       order by code, document_kind nulls last, valid_from desc`,
-    [pack, codesDroits, sensRetenu, dateRef],
+    [pack, codesDroits, sensRetenu(lecture), dateRef],
   );
-  const echelleMineure = 10 ** p["money.decimals"]!;
-  const fixeDe = new Map(
-    fixes
-      .filter((f) => f.fixed_amount !== null)
-      .map((f) => [f.code, Math.round(Number(f.fixed_amount) * echelleMineure)]),
-  );
-
-  const nbAutres = droits.length;
-  const sansTaux = lignes.find((l) => !l.tax_code || !tauxDe.has(l.tax_code));
-  const normalisation: ResultatNormalisation =
-    lignes.length === 0 || sansTaux
-      ? {
-          etat: "illisible",
-          montants: {
-            bases: lignes.map(() => ({ ht: null, taux: "" })),
-            tva: null,
-            autres: Array.from({ length: nbAutres }, () => null),
-            ttc: null,
-          },
-          /*
-           * Ce que la pièce imprime, même ici — surtout ici.
-           *
-           * Ce court-circuit se déclenche quand aucune base par taux n'est
-           * lisible, ou quand un code de taux est inconnu du paramétrage. La
-           * pièce, elle, continue d'imprimer ses totaux : les déclarer absents
-           * ajouterait un reproche faux à un reproche juste (5 octobre 2026).
-           *
-           * Sans ligne par taux, la base imprimée est le HT global du pied :
-           * une facture qui ne ventile pas sa TVA porte quand même sa base.
-           */
-          imprime: {
-            bases:
-              lignes.length === 0
-                ? [brut("totals.base_ht")]
-                : lignes.map(
-                    (_, i) =>
-                      brut(`lines[${i}].base_ht`) ??
-                      (lignes.length === 1 ? brut("totals.base_ht") : null),
-                  ),
-            tva: brut("totals.vat"),
-            autres: droits.map((_, i) => brut(`other_charges[${i}].amount`)),
-            ttc: brut("totals.ttc"),
-          },
-          confiance: 0,
-          conventions: [],
-          lecturesValides: 0,
-          /*
-           * Aucun total n'a été écarté ici : ce court-circuit tombe AVANT
-           * qu'on tente la moindre lecture de montant. Dire le contraire
-           * ferait porter à la pièce un défaut qu'elle n'a pas.
-           */
-          totalNonLu: null,
-          ligneNonLue: null,
-          raison:
-            lignes.length === 0
-              ? "aucune base par taux n'a été lue"
-              : `taux « ${sansTaux?.tax_code ?? "—"} » inconnu du paramétrage au ${dateRef}`,
-        }
-      : normaliserMontants(
-          {
-            bases: lignes.map((l, i) => ({
-              ht:
-                brut(`lines[${i}].base_ht`) ??
-                (lignes.length === 1 ? brut("totals.base_ht") : null),
-              taux: tauxDe.get(l.tax_code!)!,
-              // Le HT du pied, si la ligne ne se lit pas (29 octobre 2026).
-              pied: lignes.length === 1 ? brut("totals.base_ht") : null,
-            })),
-            tva: brut("totals.vat"),
-            autres: droits.flatMap((d, i) => {
-              const b = brut(`other_charges[${i}].amount`);
-              if (b === null) return [];
-              const attendu = d.code ? fixeDe.get(d.code) : undefined;
-              return [attendu === undefined ? b : { brut: b, attendu }];
-            }),
-            ttc: brut("totals.ttc"),
-          },
-          {
-            decimales: p["money.decimals"]!,
-            marques: await lireMarquesDeDevise(db),
-            toleranceMineure: p["lecture.tolerance_arrondi_mineure"]!,
-          },
-        );
-
-  const refs = payload.references ?? {};
-  const aControler: PieceAControler = {
-    documentKind: sensRetenu,
-    titre,
-    emetteur: {
-      nom: payload.issuer || null,
-      identifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
-    },
-    destinataire: { nom: null, identifiantFiscal: refs[NOM_MATRICULE_CLIENT] ?? null },
-    numero: refs["numero"] ?? null,
-    date: datePiece,
-    montants: normalisation,
-    confianceParChamp: extraction.confiance_par_champ ?? {},
-    reception: { doublonDe: piece.doublon_de, recueLe: piece.recue_le },
-    // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
-    // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
-    sensConfirme: sensDit !== null,
-  };
 
   // La clé de doublon, rangée avec le jugement : la file du cabinet la relit
   // au moment où elle est lue (`app.doublon_probable`), quel que soit l'ordre
   // des lectures. Le jugement pose la même règle, avec cette clé-ci.
+  const refs = payload.references ?? {};
   const cle = cleDeDoublon({
-    emetteurIdentifiantFiscal: aControler.emetteur.identifiantFiscal,
-    emetteurNom: aControler.emetteur.nom,
-    numero: aControler.numero,
-    date: aControler.date,
+    emetteurIdentifiantFiscal: refs[NOM_MATRICULE_EMETTEUR] ?? null,
+    emetteurNom: payload.issuer || null,
+    numero: refs["numero"] ?? null,
+    date: datePiece,
     ttc: payload.totals?.ttc ?? null,
   });
 
@@ -401,18 +621,21 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     ]),
   ]);
 
-  const contexte: ContexteControle = {
+  const { normalisation, controles, verdict, motifs } = jugerLaLecture(lecture, {
+    parametres: p,
+    marques: await lireMarquesDeDevise(db),
+    // L'exposant de la devise de la PIÈCE ; à défaut d'en lire une, celle du dossier.
+    decimales: await lireExposant(db, payload.currency ?? org.currency),
+    taux: new Map(taux.map((t) => [t.code, t.rate])),
+    deviseDuDossier: org.currency,
+    droitsFixes: new Map(
+      fixes.flatMap((f) => (f.fixed_amount === null ? [] : [[f.code, f.fixed_amount] as const])),
+    ),
     tenant: { nom: org.name, identifiantFiscal: org.legal_id },
     typesDocument: types.map((t) => ({ code: t.code, porteEcriture: t.porte_ecriture })),
     mentionsObligatoires: mentions.map((m) => ({ code: m.code, libelle: m.label })),
-    seuilConfianceReserve: p["lecture.confiance_reserve"]!,
-    seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
-    ecartDateJours: p["piece.ecart_date_jours"]!,
     doublonProbable: semblables[0]?.id ?? null,
-  };
-
-  const controles = controlerPiece(aControler, contexte);
-  const { verdict, motifs } = rendreVerdict(controles);
+  });
 
   const { rows: poses } = await db.query<{ id: string }>(
     `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,

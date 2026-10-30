@@ -19,17 +19,21 @@
  * enregistre sans qu'aucune ligne ne transite par le client.
  */
 
-import type { PropositionDePiece } from "@malica/socle/ports/repositories";
+import type {
+  AccountMapping,
+  FiscalCharge,
+  PropositionDePiece,
+  TaxRate,
+} from "@malica/socle/ports/repositories";
 import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 
 import type { Requete } from "../db.ts";
-import { enDecimal } from "../malica/lecture/montants.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireParametres } from "./analyse.ts";
-import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { analyserPiece, lireExposant, lireParametres } from "./analyse.ts";
+import { enDecimal, tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
 const sensConnu = (k: string): k is SensConnu["documentKind"] =>
@@ -48,7 +52,7 @@ export type { PropositionDePiece };
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
  * implémentations. La première qui aurait corrigé un cas limite aurait laissé
  * l'autre en arrière — et c'est celle-ci qui écrit l'écriture comptable.
- * Elle vient désormais de la lecture, où elle est éprouvée.
+ * Elle vit avec la normalisation des montants, que la lecture et le scan partagent.
  */
 
 /**
@@ -138,6 +142,211 @@ export async function propositionDePiece(
   return { ...resultat, champsAVerifier: await champsAVerifier(db, pieceId) };
 }
 
+/** Ce que le jugement a posé, et ce que la personne a dit, pour proposer. */
+export interface JugementAProposer {
+  pieceId: string;
+  payload: Record<string, unknown>;
+  verdict: string;
+  motifs: Array<{ motif: string; code?: string }> | null;
+  normalisation: ResultatNormalisation;
+  /** Le sens confirmé par une personne, s'il l'a été. */
+  sensDit: string | null;
+  /** La date retenue : lue, à défaut enregistrée ou saisie. */
+  date: string | null;
+}
+
+/** Le référentiel daté de la proposition : le pack, à la date de la pièce. */
+export interface ReferentielDeLaProposition {
+  packVersionId: string;
+  /** La devise du dossier : celle de ses livres. */
+  deviseDuDossier: string;
+  /** L'exposant de la devise de la pièce (`ref.devises`). */
+  decimales: number;
+  confianceReserve: number;
+  confianceBloquante: number;
+  taxRates: TaxRate[];
+  mappings: Array<AccountMapping & SensConnu>;
+  fiscalCharges: Array<FiscalCharge & SensConnu>;
+  compteDeNature: string | null;
+  tvaNonDeductible: boolean;
+}
+
+/**
+ * Le jugement refuse-t-il, avant tout référentiel ? Le verdict d'abord, puis
+ * des montants que la normalisation n'a pas retenus. Pure.
+ */
+function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
+  const { verdict, normalisation: n } = j;
+  if (!autoriseUneEcriture(verdict))
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: `Aucune écriture ne se propose : la pièce est « ${verdict} ». ${(j.motifs ?? [])
+        .map((m) => m.motif)
+        .join(" ")}`,
+      // Les CODES des contrôles en défaut : l'écran branche dessus (le geste
+      // « confirmer le sens », 20 octobre 2026), jamais sur la phrase.
+      controlesEnDefaut: (j.motifs ?? [])
+        .map((m) => m.code)
+        .filter((c): c is string => typeof c === "string"),
+    };
+  if (n.etat !== "tranche" && n.etat !== "non_verifie")
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: `Aucune écriture ne se propose : ${n.raison}.`,
+    };
+  return null;
+}
+
+/**
+ * Composer l'écriture d'un jugement qui l'autorise : montants IMPRIMÉS et
+ * normalisés, référentiel daté, moteur du Socle. Pure — c'est la chaîne même
+ * que `propositionDePiece` sert, et que la mesure des propositions joue.
+ */
+export function composerLaProposition(
+  j: JugementAProposer,
+  r: ReferentielDeLaProposition,
+): PropositionDePiece {
+  const refus = refusDuJugement(j);
+  if (refus) return refus;
+  const { verdict, normalisation: n } = j;
+  const dec = r.decimales;
+  const m = n.montants;
+  const payload = j.payload as {
+    lines?: Array<Record<string, unknown>>;
+    other_charges?: Array<Record<string, unknown>>;
+    currency?: string | null;
+  };
+  /*
+   * UNE PIÈCE EN DEVISE NE S'INSCRIT PAS TELLE QUELLE (30 octobre 2026).
+   *
+   * Une facture en euros d'un dossier tenu en dinars partait au journal avec
+   * ses montants en euros, dans des livres en dinars : équilibrée, plausible,
+   * fausse. La conversion demande le cours du jour de l'opération, que la
+   * pièce ne porte pas ; on ne le devine pas.
+   */
+  const devise = payload.currency ?? r.deviseDuDossier;
+  if (devise !== r.deviseDuDossier)
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: `Aucune écriture ne se propose : facture en ${devise}, dossier tenu en ${r.deviseDuDossier} — montant converti à saisir.`,
+    };
+  /*
+   * Le taux que la facture prouve (`analyse.ts`) : la ligne qui le porte est
+   * posée, ou son code corrigé — jamais en silence, la déduction est au
+   * jugement et sa réserve au verdict.
+   */
+  const tauxDeduit = (n.deduits ?? []).find((d) => d.champ === "lines[0].tax_code");
+  const libelleDuTaux = r.taxRates.find((t) => t.code === tauxDeduit?.valeur)?.label;
+  const lignesLues = tauxDeduit
+    ? [
+        {
+          ...payload.lines?.[0],
+          label: payload.lines?.[0]?.["label"] || libelleDuTaux || tauxDeduit.valeur,
+          tax_code: tauxDeduit.valeur,
+        },
+      ]
+    : (payload.lines ?? []);
+  const droits = payload.other_charges ?? [];
+  if (m.bases.length !== lignesLues.length || m.bases.some((b) => b.ht === null))
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: "Aucune écriture ne se propose : une base n'a pas été lue.",
+    };
+  if (m.autres.length !== droits.length || m.autres.some((a) => a === null))
+    return {
+      ok: false,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      raison: "Aucune écriture ne se propose : un droit hors TVA n'a pas été lu.",
+    };
+
+  const tvas = m.bases.map((b, i) =>
+    lignesLues.length === 1 && m.tva !== null ? m.tva : tvaDeBase(b.ht!, m.bases[i]!.taux),
+  );
+  const somme = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
+  const totalHt = somme(m.bases.map((b) => b.ht!));
+  const totalTva = m.tva ?? somme(tvas);
+  const autres = m.autres as number[];
+
+  const normalise = {
+    ...j.payload,
+    // Le sens dit par la personne l'emporte sur le sens lu (ANO-LIVE-002/004),
+    // comme dans l'analyse : le dirigeant sait s'il a payé ou encaissé.
+    ...(j.sensDit ? { document_kind: j.sensDit } : {}),
+    currency: devise,
+    document_date: j.date,
+    lines: lignesLues.map((l, i) => ({
+      ...l,
+      base_ht: enDecimal(m.bases[i]!.ht!, dec),
+      vat_amount: enDecimal(tvas[i]!, dec),
+      ttc: enDecimal(m.bases[i]!.ht! + tvas[i]!, dec),
+    })),
+    other_charges: droits.map((c, i) => ({ ...c, amount: enDecimal(autres[i]!, dec) })),
+    totals: {
+      base_ht: enDecimal(totalHt, dec),
+      vat: enDecimal(totalTva, dec),
+      ttc: enDecimal(m.ttc ?? totalHt + totalTva + somme(autres), dec),
+    },
+  };
+
+  try {
+    const proposition = buildProposal({
+      pieceId: j.pieceId,
+      payload: normalise,
+      taxRates: r.taxRates,
+      mappings: r.mappings,
+      fiscalCharges: r.fiscalCharges,
+      compteDeNature: r.compteDeNature,
+      tvaNonDeductible: r.tvaNonDeductible,
+      currency: devise,
+      parametres: {
+        decimals: dec,
+        confianceReserve: r.confianceReserve,
+        confianceBloquante: r.confianceBloquante,
+      },
+    });
+    if (!proposition.pivot.approvable)
+      return {
+        ok: false,
+        verdict,
+        verdictCode: codeDuVerdict(verdict),
+        raison: `L'écriture ne s'équilibre pas : ${proposition.pivot.motifs.map((x) => x.message).join(" ; ")}`,
+      };
+    return {
+      ok: true,
+      verdict,
+      verdictCode: codeDuVerdict(verdict),
+      packVersionId: r.packVersionId,
+      proposition,
+    };
+  } catch (e) {
+    if (e instanceof LectureIncomplete)
+      return {
+        ok: false,
+        verdict,
+        verdictCode: codeDuVerdict(verdict),
+        raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
+      };
+    if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
+      return {
+        ok: false,
+        verdict,
+        verdictCode: codeDuVerdict(verdict),
+        raison:
+          "Aucune écriture ne se propose : le paramétrage n'a pas de compte pour ce type de pièce.",
+      };
+    throw e;
+  }
+}
+
 async function proposerDepuisLeJugement(
   db: Requete,
   pieceId: string,
@@ -153,13 +362,14 @@ async function proposerDepuisLeJugement(
     normalisation: ResultatNormalisation | null;
     pack_version_id: string | null;
     jurisdiction: string;
+    devise_du_dossier: string;
     sens_dit: string | null;
     date_dite: string | null;
     recue_le: string;
   }>(
     `select e.id as extraction, e.payload, to_char(p.created_at, 'YYYY-MM-DD') as recue_le,
             a.extraction_id as analyse_extraction, a.verdict, a.motifs, a.normalisation,
-            a.pack_version_id, o.jurisdiction,
+            a.pack_version_id, o.jurisdiction, o.currency as devise_du_dossier,
             case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
@@ -189,40 +399,23 @@ async function proposerDepuisLeJugement(
       pack_version_id: rows[0]!.pack_version_id,
     };
   }
-  const verdict = ligne.verdict!;
-  const n = ligne.normalisation!;
   const pack = ligne.pack_version_id!;
-
-  if (!autoriseUneEcriture(verdict))
-    return {
-      ok: false,
-      verdict,
-      verdictCode: codeDuVerdict(verdict),
-      raison: `Aucune écriture ne se propose : la pièce est « ${verdict} ». ${(ligne.motifs ?? [])
-        .map((m) => m.motif)
-        .join(" ")}`,
-      // Les CODES des contrôles en défaut : l'écran branche dessus (le geste
-      // « confirmer le sens », 20 octobre 2026), jamais sur la phrase.
-      controlesEnDefaut: (ligne.motifs ?? [])
-        .map((m) => (m as { code?: string }).code)
-        .filter((c): c is string => typeof c === "string"),
-    };
-  if (n.etat !== "tranche" && n.etat !== "non_verifie")
-    return {
-      ok: false,
-      verdict,
-      verdictCode: codeDuVerdict(verdict),
-      raison: `Aucune écriture ne se propose : ${n.raison}.`,
-    };
-
-  const payload = ligne.payload as {
-    document_date?: string | null;
-    lines?: Array<Record<string, unknown>>;
-    other_charges?: Array<Record<string, unknown>>;
-  };
+  const payload = ligne.payload as { document_date?: string | null };
   // Une date lue n'est jamais remplacée ; à défaut, la date que la personne a
   // ENREGISTRÉE l'emporte sur celle que l'écran propose sans l'avoir écrite.
   const date = dateDeLaPiece(payload.document_date, ligne.date_dite ?? dateSaisie);
+  const jugement: JugementAProposer = {
+    pieceId,
+    payload: ligne.payload,
+    verdict: ligne.verdict!,
+    motifs: ligne.motifs,
+    normalisation: ligne.normalisation!,
+    sensDit: ligne.sens_dit,
+    date,
+  };
+  const refus = refusDuJugement(jugement);
+  if (refus) return refus;
+
   // Le paramétrage et le barème se lisent à la date de la pièce, par la même
   // règle que l'analyse : la date de la facture, à défaut celle de sa
   // réception (« la pièce vit à la date de sa facture », note du 10 octobre
@@ -230,68 +423,19 @@ async function proposerDepuisLeJugement(
   // changement du timbre, il bloquait toute facture antérieure.
   const jour = date ?? ligne.recue_le;
   const p = await lireParametres(db, pack, jour);
-  const dec = p["money.decimals"];
-
-  const m = n.montants;
-  const lignesLues = payload.lines ?? [];
-  const droits = payload.other_charges ?? [];
-  if (m.bases.length !== lignesLues.length || m.bases.some((b) => b.ht === null))
-    return {
-      ok: false,
-      verdict,
-      verdictCode: codeDuVerdict(verdict),
-      raison: "Aucune écriture ne se propose : une base n'a pas été lue.",
-    };
-  if (m.autres.length !== droits.length || m.autres.some((a) => a === null))
-    return {
-      ok: false,
-      verdict,
-      verdictCode: codeDuVerdict(verdict),
-      raison: "Aucune écriture ne se propose : un droit hors TVA n'a pas été lu.",
-    };
-
-  const tvas = m.bases.map((b, i) =>
-    lignesLues.length === 1 && m.tva !== null ? m.tva : tvaDeBase(b.ht!, m.bases[i]!.taux),
-  );
-  const somme = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
-  const totalHt = somme(m.bases.map((b) => b.ht!));
-  const totalTva = m.tva ?? somme(tvas);
-  const autres = m.autres as number[];
-
-  const normalise = {
-    ...ligne.payload,
-    // Le sens dit par la personne l'emporte sur le sens lu (ANO-LIVE-002/004),
-    // comme dans l'analyse : le dirigeant sait s'il a payé ou encaissé.
-    ...(ligne.sens_dit ? { document_kind: ligne.sens_dit } : {}),
-    document_date: date,
-    lines: lignesLues.map((l, i) => ({
-      ...l,
-      base_ht: enDecimal(m.bases[i]!.ht!, dec),
-      vat_amount: enDecimal(tvas[i]!, dec),
-      ttc: enDecimal(m.bases[i]!.ht! + tvas[i]!, dec),
-    })),
-    other_charges: droits.map((c, i) => ({ ...c, amount: enDecimal(autres[i]!, dec) })),
-    totals: {
-      base_ht: enDecimal(totalHt, dec),
-      vat: enDecimal(totalTva, dec),
-      ttc: enDecimal(m.ttc ?? totalHt + totalTva + somme(autres), dec),
-    },
-  };
+  // L'exposant de la devise de la pièce, comme au jugement (`analyse.ts`).
+  const devise =
+    (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
+  const decimales = await lireExposant(db, devise);
+  if (decimales === null)
+    return { ok: false, raison: `Aucune écriture ne se propose : devise « ${devise} » inconnue.` };
 
   const [taxRates, tousLesComptes, tousLesDroits] = await Promise.all([
     referentiel.taxRates(db, pack, ligne.jurisdiction),
     referentiel.accountMappings(db, pack),
     referentiel.fiscalCharges(db, pack, "fr", jour),
   ]);
-  // Le moteur ne connaît que l'achat et la vente : le reste n'y entre pas.
-  const mappings = tousLesComptes.filter((c): c is typeof c & SensConnu =>
-    sensConnu(c.documentKind),
-  );
-  const fiscalCharges = tousLesDroits.filter((c): c is typeof c & SensConnu =>
-    sensConnu(c.documentKind),
-  );
 
-  const compteDeNature = await compteDeLaNature(db, pieceId);
   // Le régime de TVA du dossier, tel que sa fiche fiscale en vigueur le dit :
   // un non-assujetti ne déduit pas la TVA qu'il paie (ANO-LIVE-001).
   const { rows: regimes } = await db.query<{ regime_tva: string | null }>(
@@ -302,54 +446,20 @@ async function proposerDepuisLeJugement(
       order by f.valid_from desc limit 1`,
     [pieceId],
   );
-  const tvaNonDeductible = regimes[0]?.regime_tva === "non_assujetti";
 
-  try {
-    const proposition = buildProposal({
-      pieceId,
-      payload: normalise,
-      taxRates,
-      mappings,
-      fiscalCharges,
-      compteDeNature,
-      tvaNonDeductible,
-      currency: String((ligne.payload as { currency?: string }).currency ?? ""),
-      parametres: {
-        decimals: dec,
-        confianceReserve: p["lecture.confiance_reserve"],
-        confianceBloquante: p["lecture.confiance_bloquante"],
-      },
-    });
-    if (!proposition.pivot.approvable)
-      return {
-        ok: false,
-        verdict,
-        verdictCode: codeDuVerdict(verdict),
-        raison: `L'écriture ne s'équilibre pas : ${proposition.pivot.motifs.map((x) => x.message).join(" ; ")}`,
-      };
-    return {
-      ok: true,
-      verdict,
-      verdictCode: codeDuVerdict(verdict),
-      packVersionId: pack,
-      proposition,
-    };
-  } catch (e) {
-    if (e instanceof LectureIncomplete)
-      return {
-        ok: false,
-        verdict,
-        verdictCode: codeDuVerdict(verdict),
-        raison: `Aucune écriture ne se propose : à compléter — ${e.champs.join(", ")}.`,
-      };
-    if (e instanceof Error && e.message === "MISSING_ACCOUNT_MAPPING")
-      return {
-        ok: false,
-        verdict,
-        verdictCode: codeDuVerdict(verdict),
-        raison:
-          "Aucune écriture ne se propose : le paramétrage n'a pas de compte pour ce type de pièce.",
-      };
-    throw e;
-  }
+  return composerLaProposition(jugement, {
+    packVersionId: pack,
+    deviseDuDossier: ligne.devise_du_dossier,
+    decimales,
+    confianceReserve: p["lecture.confiance_reserve"],
+    confianceBloquante: p["lecture.confiance_bloquante"],
+    taxRates,
+    // Le moteur ne connaît que l'achat et la vente : le reste n'y entre pas.
+    mappings: tousLesComptes.filter((c): c is typeof c & SensConnu => sensConnu(c.documentKind)),
+    fiscalCharges: tousLesDroits.filter((c): c is typeof c & SensConnu =>
+      sensConnu(c.documentKind),
+    ),
+    compteDeNature: await compteDeLaNature(db, pieceId),
+    tvaNonDeductible: regimes[0]?.regime_tva === "non_assujetti",
+  });
 }

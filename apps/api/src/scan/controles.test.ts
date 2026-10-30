@@ -33,6 +33,23 @@ const montantsJustes = normaliserMontants(
   P,
 );
 
+/** La même facture, ses montants nommés à leur chemin de citation, comme `analyse.ts` les passe. */
+const citee = normaliserMontants(
+  {
+    bases: [{ ht: "1 234,560", taux: "0.19" }],
+    tva: "234,566",
+    autres: ["1,000"],
+    ttc: "1 470,126",
+    chemins: {
+      ht0: "lines[0].base_ht",
+      tva: "totals.vat",
+      autre0: "other_charges[0].amount",
+      ttc: "totals.ttc",
+    },
+  },
+  P,
+);
+
 /** Une facture d'achat irréprochable, adressée à ALGORIA FACTORY. */
 function facture(modif: Partial<PieceAControler> = {}): PieceAControler {
   return {
@@ -111,6 +128,21 @@ describe("cohérence arithmétique", () => {
     const c = statut(facture(), "coherence_arithmetique");
     assert.equal(c.statut, "conforme");
     assert.match(c.motif, /vérifi/);
+  });
+  it("une valeur déduite, non lue : réserve, qui nomme le champ et la formule", () => {
+    const deduite = normaliserMontants(
+      {
+        bases: [{ ht: "1 234,560", taux: "0.19" }],
+        tva: "Z34,566",
+        autres: ["1,000"],
+        ttc: "1 470,126",
+      },
+      P,
+    );
+    const c = statut(facture({ montants: deduite }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /totals\.vat = 234\.566/);
+    assert.match(c.motif, /TTC − HT/);
   });
   it("la facture ne tient pas : anomalie", () => {
     const faux = normaliserMontants(
@@ -508,8 +540,16 @@ describe("la clé de doublon", () => {
 });
 
 describe("cohérence des dates", () => {
-  it("datée après sa réception : anomalie", () => {
-    assert.equal(statut(facture({ date: "2026-10-01" }), "coherence_dates").statut, "anomalie");
+  it("datée après sa réception, même période de TVA : réserve", () => {
+    const c = statut(facture({ date: "2026-09-20" }), "coherence_dates");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /2026-09-20/);
+    assert.match(c.motif, /2026-09-15/);
+  });
+  it("datée dans une période de TVA postérieure à sa réception : anomalie, la date est demandée", () => {
+    const c = statut(facture({ date: "2026-10-01" }), "coherence_dates");
+    assert.equal(c.statut, "anomalie");
+    assert.match(c.motif, /^Date à préciser/);
   });
   it("date illisible : réserve", () => {
     assert.equal(statut(facture({ date: null }), "coherence_dates").statut, "reserve");
@@ -539,6 +579,55 @@ describe("confiance de lecture — seuils du paramétrage", () => {
       statut(facture({ confianceParChamp: { total_ttc: 0.3 } }), "confiance_lecture").statut,
       "anomalie",
     );
+  });
+  it("un montant peu sûr que l'arithmétique ferme : réserve, pas anomalie", () => {
+    // 30 octobre 2026 : un TTC à 0,3 dont la base, la TVA et le timbre
+    // imprimés vérifient la valeur au millime privait la pièce d'écriture.
+    const c = statut(
+      facture({ montants: citee, confianceParChamp: { "totals.ttc": 0.3, numero: 0.9 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "reserve");
+    assert.deepEqual(c.preuves["fermes"], ["totals.ttc"]);
+    assert.match(c.motif, /arithmétique/);
+  });
+  it("un montant peu sûr qui n'entre pas dans l'équation — la TVA d'une ligne — bloque", () => {
+    // Revue de la PR 142 : la dispense nommait des champs que l'arithmétique
+    // n'avait pas vérifiés.
+    const c = statut(
+      facture({ montants: citee, confianceParChamp: { "lines[0].vat_amount": 0.3 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "anomalie");
+    assert.deepEqual(c.preuves["champs"], ["lines[0].vat_amount"]);
+  });
+  it("le même montant, sur une facture qui ne tient pas : anomalie", () => {
+    const faux = normaliserMontants(
+      { bases: [{ ht: "1 234,560", taux: "0.19" }], tva: "234,566", ttc: "2 000,000" },
+      P,
+    );
+    const c = statut(
+      facture({ montants: faux, confianceParChamp: { "totals.ttc": 0.3 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+  it("un champ que l'arithmétique ne ferme pas — l'émetteur — bloque toujours", () => {
+    const c = statut(facture({ confianceParChamp: { issuer: 0.3 } }), "confiance_lecture");
+    assert.equal(c.statut, "anomalie");
+    assert.deepEqual(c.preuves["champs"], ["issuer"]);
+  });
+  it("un total écarté (non lu) ne ferme rien", () => {
+    const sansTotal = normaliserMontants(
+      { bases: [{ ht: "1 234,560", taux: "0.19" }], tva: "234,566", ttc: "+ 470,126" },
+      P,
+    );
+    assert.equal(sansTotal.etat, "tranche");
+    const c = statut(
+      facture({ montants: sansTotal, confianceParChamp: { "totals.ttc": 0.3 } }),
+      "confiance_lecture",
+    );
+    assert.equal(c.statut, "anomalie");
   });
   it("les seuils viennent du contexte, pas du contrôle", () => {
     const p = facture({ confianceParChamp: { total_ttc: 0.6 } });
@@ -655,15 +744,27 @@ describe("l'écart entre la date de la pièce et sa réception", () => {
     assert.equal(c.statut, "conforme");
   });
 
-  it("une date À VENIR reste une anomalie, et non une réserve", () => {
-    // Elle ne s'explique par aucun rattrapage : une pièce ne peut pas être
-    // datée après le jour où on l'a reçue.
+  it("une date À VENIR dans la période de TVA de la réception : réserve", () => {
     const c = dateDe(
       controlerPiece(
-        facture({ date: "2026-10-01", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
+        facture({ date: "2026-09-28", reception: { doublonDe: null, recueLe: "2026-09-15" } }),
         CONTEXTE,
       ),
     );
-    assert.equal(c.statut, "anomalie");
+    assert.equal(c.statut, "reserve");
+  });
+
+  it("une date À VENIR dans une période de TVA postérieure : anomalie, quel que soit l'écart du pack", () => {
+    // Revue de la PR 142 : le jour et le mois inversés, 2026-11-09 pour une
+    // pièce reçue le 2026-09-30 — l'écriture partirait dans une déclaration à venir.
+    for (const ecartDateJours of [60, 400]) {
+      const c = dateDe(
+        controlerPiece(
+          facture({ date: "2026-11-09", reception: { doublonDe: null, recueLe: "2026-09-30" } }),
+          { ...CONTEXTE, ecartDateJours },
+        ),
+      );
+      assert.equal(c.statut, "anomalie");
+    }
   });
 });

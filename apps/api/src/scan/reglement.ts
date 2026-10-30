@@ -16,7 +16,7 @@ import {
 } from "@malica/socle/use-cases/retenue-au-reglement";
 
 import type { Requete } from "../db.ts";
-import { enDecimal } from "../malica/lecture/montants.ts";
+import { enDecimal } from "./normaliser-montants.ts";
 
 import { lireParametres } from "./analyse.ts";
 

@@ -25,6 +25,7 @@
  * et les seuils de confiance arrivent par le contexte, lus dans le paramétrage.
  */
 
+import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
 
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
@@ -219,6 +220,20 @@ function arithmetique(p: PieceAControler): ResultatControle {
   const preuves = { etat: m.etat, conventions: m.conventions, confiance: m.confiance };
   switch (m.etat) {
     case "tranche":
+      /*
+       * Une valeur que la pièce n'a pas laissé lire, et que son arithmétique
+       * prouve (30 octobre 2026). On comptabilise, et l'on dit laquelle, par
+       * quelle formule : le cabinet voit pourquoi. Jamais en silence.
+       */
+      if (m.deduits.length > 0)
+        return {
+          code: "coherence_arithmetique",
+          statut: "reserve",
+          motif: `Déduit, non lu : ${m.deduits
+            .map((d) => `${d.champ} = ${d.valeur} (${d.formule})`)
+            .join(" ; ")}. À vérifier.`,
+          preuves: { ...preuves, deduits: m.deduits },
+        };
       /*
        * Le total imprimé n'a pas pu être lu, et la facture tient quand même —
        * sa TVA la vérifie. On comptabilise, et on le DIT.
@@ -597,13 +612,38 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       motif: "La date de la pièce n'a pas été lue : à saisir, elle décide de la période.",
       preuves: {},
     };
-  if (p.date > p.reception.recueLe)
-    return {
-      code: "coherence_dates",
-      statut: "anomalie",
-      motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe}.`,
-      preuves: { date: p.date, recueLe: p.reception.recueLe },
-    };
+  /*
+   * ================================ DATÉE APRÈS SA RÉCEPTION (30 octobre 2026)
+   *
+   * C'était toujours une anomalie, qui privait la pièce d'écriture. Deux
+   * causes la produisent : une facture émise d'avance, ou une date mal lue
+   * (le jour et le mois inversés). Ce qui compte pour l'écriture, c'est la
+   * PÉRIODE DE TVA où elle se range (`periodeDeTva`, la règle même du pivot) :
+   *
+   *   — même période que la réception : l'écriture se propose à la date
+   *     imprimée, en RÉSERVE ; le cabinet voit les deux dates ;
+   *   — période postérieure : l'écriture partirait dans une déclaration À
+   *     VENIR (revue de la PR 142 : « 2026-11-09 » lu pour une pièce reçue le
+   *     2026-09-30). Rien ne se propose ; la date est demandée.
+   *
+   * INCERTAIN : la règle est à confirmer par un expert-comptable.
+   */
+  if (p.date > p.reception.recueLe) {
+    const preuves = { date: p.date, recueLe: p.reception.recueLe };
+    return periodeDeTva(p.date) > periodeDeTva(p.reception.recueLe)
+      ? {
+          code: "coherence_dates",
+          statut: "anomalie",
+          motif: `Date à préciser : le ${p.date} tombe dans une période de TVA postérieure à la réception (${p.reception.recueLe}).`,
+          preuves,
+        }
+      : {
+          code: "coherence_dates",
+          statut: "reserve",
+          motif: `La pièce est datée du ${p.date}, après sa réception le ${p.reception.recueLe}, dans la même période de TVA : à vérifier.`,
+          preuves,
+        };
+  }
   /*
    * ======================================= UNE DATE TROP ANCIENNE SE SIGNALE
    *
@@ -639,9 +679,30 @@ function dates(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   };
 }
 
+/**
+ * Un montant peu sûr que l'arithmétique de la facture FERME n'est pas un
+ * doute : la normalisation l'a fait entrer dans l'équation que toute la
+ * facture vérifie (`fermes`). Un champ qui n'y est pas entré — la TVA d'une
+ * ligne, un total écarté, une valeur déduite — ne ferme rien (revue de la
+ * PR 142).
+ */
+function fermeParLArithmetique(p: PieceAControler, champ: string): boolean {
+  return p.montants.etat === "tranche" && (p.montants.fermes ?? []).includes(champ);
+}
+
 function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle {
   const entrees = Object.entries(p.confianceParChamp);
-  const bloquants = entrees.filter(([, c]) => c < ctx.seuilConfianceBloquant).map(([k]) => k);
+  /*
+   * 30 octobre 2026 : un seul champ sous le seuil bloquant faisait de toute
+   * la pièce une anomalie, sans écriture — même un TTC que la TVA et la base
+   * vérifiaient au millime. Un montant que l'arithmétique ferme ne bloque
+   * plus : il reste « à relire », en réserve. Un champ qu'elle ne ferme pas
+   * (l'émetteur, la date, le numéro, un montant d'une facture qui ne tient
+   * pas) bloque toujours.
+   */
+  const bloquants = entrees
+    .filter(([k, c]) => c < ctx.seuilConfianceBloquant && !fermeParLArithmetique(p, k))
+    .map(([k]) => k);
   const reserves = entrees.filter(([, c]) => c < ctx.seuilConfianceReserve).map(([k]) => k);
   if (bloquants.length > 0)
     return {
@@ -652,13 +713,22 @@ function confiance(p: PieceAControler, ctx: ContexteControle): ResultatControle 
       // compris — l'écran les dit « à vérifier », pas seulement les pires.
       preuves: { champs: bloquants, seuil: ctx.seuilConfianceBloquant, aRelire: reserves },
     };
-  if (reserves.length > 0)
+  if (reserves.length > 0) {
+    const fermes = reserves.filter(
+      (k) =>
+        (p.confianceParChamp[k] ?? 1) < ctx.seuilConfianceBloquant && fermeParLArithmetique(p, k),
+    );
     return {
       code: "confiance_lecture",
       statut: "reserve",
-      motif: `Lecture incertaine pour ${reserves.join(", ")} (sous ${ctx.seuilConfianceReserve}) : à relire.`,
-      preuves: { champs: reserves, seuil: ctx.seuilConfianceReserve },
+      motif:
+        `Lecture incertaine pour ${reserves.join(", ")} (sous ${ctx.seuilConfianceReserve}) : à relire.` +
+        (fermes.length > 0
+          ? ` ${fermes.join(", ")} : vérifié par l'arithmétique de la facture.`
+          : ""),
+      preuves: { champs: reserves, seuil: ctx.seuilConfianceReserve, fermes },
     };
+  }
   return {
     code: "confiance_lecture",
     statut: "conforme",

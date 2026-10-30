@@ -1,0 +1,57 @@
+/**
+ * Le référentiel tunisien des épreuves pures : ce que le pack porte pour juger
+ * une pièce et en proposer l'écriture, sans base.
+ *
+ * Rien n'y est écrit à la main. L'instantané `referentiel-d-essai.json` est
+ * RELEVÉ d'une base migrée (`outils/relever-le-referentiel-d-essai.mjs`, par
+ * `releve-du-referentiel.ts`), et `le-referentiel-d-essai-dit-vrai.test.ts`
+ * rejoue le même relevé en base : au premier écart, l'épreuve échoue.
+ *
+ * La copie à la main du 30 octobre 2026 portait le timbre à 665 et 4368 ; le
+ * pack le porte à 6654 et 4371. C'est ce que l'instantané empêche.
+ */
+import { readFileSync } from "node:fs";
+
+import type { AccountMapping, FiscalCharge, TaxRate } from "@malica/socle/ports/repositories";
+
+import type { releverLeReferentiel } from "./releve-du-referentiel.ts";
+
+export { MARQUES_D_ESSAI } from "./devise-d-essai.ts";
+
+type Sens = "facture_achat" | "facture_vente";
+
+export const RELEVE_D_ESSAI = JSON.parse(
+  readFileSync(new URL("./referentiel-d-essai.json", import.meta.url), "utf8"),
+) as Awaited<ReturnType<typeof releverLeReferentiel>>;
+
+export const TAUX_D_ESSAI: TaxRate[] = RELEVE_D_ESSAI.taux.map((t) => ({
+  ...t,
+  label: t.code,
+  jurisdiction: RELEVE_D_ESSAI.juridiction,
+}));
+
+export const IMPUTATIONS_D_ESSAI = RELEVE_D_ESSAI.imputations as Array<
+  AccountMapping & { documentKind: Sens }
+>;
+
+export const DROITS_D_ESSAI: Array<FiscalCharge & { documentKind: Sens }> =
+  RELEVE_D_ESSAI.droits.map((d) => ({
+    ...d,
+    documentKind: d.documentKind as Sens,
+    label: d.code,
+    legalReference: null,
+  }));
+
+export const PARAMETRES_D_ESSAI = RELEVE_D_ESSAI.parametres;
+
+export const MENTIONS_D_ESSAI = RELEVE_D_ESSAI.mentions.map((code) => ({ code, libelle: code }));
+
+export const TYPES_D_ESSAI = RELEVE_D_ESSAI.typesQuiPortentUneEcriture.map((code) => ({
+  code,
+  porteEcriture: true,
+}));
+
+export const EXPOSANTS_D_ESSAI: Readonly<Record<string, number>> = RELEVE_D_ESSAI.exposants;
+
+/** La devise des livres du dossier d'essai : celle du pack. */
+export const DEVISE_D_ESSAI = RELEVE_D_ESSAI.devise;

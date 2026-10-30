@@ -28,9 +28,9 @@ import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-l
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
 
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
-import type { DeviseLue } from "../../scan/normaliser-montants.ts";
+import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
 
-import { enDecimal, resoudreFacture, type Contrainte } from "./montants.ts";
+import { resoudreFacture, type Contrainte } from "./montants.ts";
 import {
   lireMontantDuPlan,
   resolveFromTokenPlan,

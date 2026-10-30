@@ -33,8 +33,10 @@
  * facture reste vérifiable — par sa TVA. On garde ce qui est lu, on nomme ce
  * qui ne l'est pas, et l'écriture se propose avec sa réserve.
  *
- * Ce qui reste fatal ne bouge pas : une BASE illisible, une TVA illisible, un
- * droit illisible. Eux ne se recomposent pas, et les inventer serait R2 violé.
+ * Une BASE, une TVA ou un droit illisibles ne se recomposent pas ainsi : les
+ * inventer serait R2 violé. Depuis le 30 octobre 2026, ils ne se retiennent
+ * que si l'arithmétique de la facture les PROUVE, et la déduction se dit
+ * (`la-facture-prouve-ce-qu-elle-ne-laisse-pas-lire.test.ts`).
  *
  *   node --experimental-strip-types --test src/scan/un-total-illisible-n-efface-pas-la-facture.test.ts
  */
@@ -116,9 +118,25 @@ describe("un total illisible n'efface pas une facture qui se lit", () => {
     assert.equal(r.totalNonLu, null);
   });
 
-  it("une TVA illisible reste fatale, même si le total se lit", () => {
+  it("une TVA illisible, le total lu : la facture la PROUVE, et le dit", () => {
+    // 30 octobre 2026 (« le Socle doit proposer, et être exact ») : elle était
+    // fatale. Le TTC lu moins les bases et le timbre la donne, et Σ arrondi(HT
+    // × taux) la vérifie au millime — `la-facture-prouve-ce-qu-elle-ne-laisse-pas-lire.test.ts`.
     const r = normaliserMontants(
       { bases: BASES, tva: "+ 72,883", autres: [TIMBRE], ttc: "4 135,183" },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.tva, 572_883);
+    assert.deepEqual(
+      r.deduits.map((d) => d.champ),
+      ["totals.vat"],
+    );
+  });
+
+  it("une TVA illisible ET un total illisible : rien ne la prouve, elle reste fatale", () => {
+    const r = normaliserMontants(
+      { bases: BASES, tva: "+ 72,883", autres: [TIMBRE], ttc: TOTAL_PERDU },
       P,
     );
     assert.equal(r.etat, "illisible", r.raison);

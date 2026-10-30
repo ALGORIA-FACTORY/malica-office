@@ -55,20 +55,6 @@ function composer(
 }
 
 /**
- * Rend une valeur en unités mineures sous la forme décimale du contrat
- * (« 1428000 » millimes → « 1428.000 »). Le passage se fait sur les chiffres,
- * jamais par une division flottante : 0,1 + 0,2 n'est pas 0,3, et une facture
- * n'a pas à en souffrir.
- */
-export function enDecimal(millimes: number, decimales: number): string {
-  const negatif = millimes < 0;
-  const chiffres = String(Math.abs(millimes)).padStart(decimales + 1, "0");
-  const entier = chiffres.slice(0, chiffres.length - decimales);
-  const fraction = decimales > 0 ? `.${chiffres.slice(chiffres.length - decimales)}` : "";
-  return `${negatif ? "-" : ""}${entier}${fraction}`;
-}
-
-/**
  * Le treillis d'un texte : toutes ses lectures admissibles.
  *
  * Rendu vide quand le texte ne porte pas de nombre, ou quand il en porte un
