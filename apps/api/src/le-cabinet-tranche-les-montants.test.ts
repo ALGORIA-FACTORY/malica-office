@@ -61,14 +61,9 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
   const cabinetFait = (methode: string, ...args: unknown[]) => rpc(expert, methode, ...args);
 
   let n = 0;
-  /** Une facture lue (TVA19, timbre 1,000 — la lecture d'essai), transmise au cabinet. */
-  const transmise = async (
-    extrait?: (e: Record<string, unknown>) => Record<string, unknown>,
-    imprime: Parameters<typeof lectureDEssai>[0] = {},
-  ) => {
+  /** Une pièce déposée, pas encore lue. */
+  const deposee = async () => {
     n += 1;
-    const l = lectureDEssai({ ...imprime, clientMf: mfDossier, numero: `MNT-${marque}-${n}` });
-    const extract = extrait ? extrait(l.extract) : l.extract;
     const p = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
       source: "pdf",
@@ -77,6 +72,17 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
       contentType: "application/pdf",
       pageCount: 1,
     })) as { id: string };
+    return p.id;
+  };
+  /** Sa lecture (TVA19, timbre 1,000 — la lecture d'essai), jugée, puis transmise au cabinet. */
+  const lue = async (
+    id: string,
+    extrait?: (e: Record<string, unknown>) => Record<string, unknown>,
+    imprime: Parameters<typeof lectureDEssai>[0] = {},
+  ) => {
+    const l = lectureDEssai({ ...imprime, clientMf: mfDossier, numero: `MNT-${marque}-${id}` });
+    const extract = extrait ? extrait(l.extract) : l.extract;
+    const p = { id };
     await sousIdentiteDuServeur(dirigeant.id, (db) =>
       executerRpc(
         db,
@@ -107,6 +113,10 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     await pmeFait("collab.setPieceVis", p.id, "partage");
     return p.id;
   };
+  const transmise = async (
+    extrait?: (e: Record<string, unknown>) => Record<string, unknown>,
+    imprime: Parameters<typeof lectureDEssai>[0] = {},
+  ) => lue(await deposee(), extrait, imprime);
 
   /** Une ligne d'écriture saisie : compte, débit, crédit, code de taxe. */
   const L = (compte: string, debit: string, credit: string, taxe: string | null = null) => ({
@@ -566,6 +576,53 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(await signal(), original);
     await admin.query(`update capture.pieces set archivee_le = now() where id = $1`, [original]);
     assert.equal(await signal(), null);
+  });
+
+  /*
+   * Codex sur #140 : le verdict était posé UNE fois, à la lecture de la
+   * seconde. Une première pièce dont la lecture échoue, puis aboutit APRÈS
+   * celle de la seconde, n'était signalée nulle part. Le signal se calcule
+   * désormais à la lecture de la file : l'ordre des lectures n'y fait rien.
+   */
+  const doublonDe = async (id: string) =>
+    (
+      (await cabinetFait("supervision.queue", cabinet)) as Array<{
+        pieceId: string;
+        doublonDe: string | null;
+      }>
+    ).find((r) => r.pieceId === id)?.doublonDe ?? null;
+  const memeFacture = (numero: string | null) => (e: Record<string, unknown>) => ({
+    ...e,
+    references: numero === null ? {} : { numero },
+  });
+
+  it("la première lue APRÈS la seconde : la seconde est un doublon probable", async () => {
+    const numero = `TARDIVE-${marque}`;
+    const a = await deposee();
+    const b = await transmise(memeFacture(numero));
+    assert.equal(await doublonDe(b), null, "rien à comparer : A n'est pas lue");
+    await lue(a, memeFacture(numero));
+    assert.equal(await doublonDe(b), a);
+    assert.equal(await doublonDe(a), null, "la première n'est jamais le doublon");
+  });
+
+  it("la seconde lue après la première : la seconde est un doublon probable", async () => {
+    const numero = `DANS-L-ORDRE-${marque}`;
+    const a = await transmise(memeFacture(numero));
+    const b = await transmise(memeFacture(numero));
+    assert.equal(await doublonDe(b), a);
+    assert.equal(await doublonDe(a), null);
+  });
+
+  it("sans numéro lu sur l'une des deux, rien n'est signalé", async () => {
+    const numero = `UN-SEUL-${marque}`;
+    const a = await transmise(memeFacture(null));
+    const b = await transmise(memeFacture(null));
+    const c = await transmise(memeFacture(numero));
+    assert.deepEqual(
+      [await doublonDe(a), await doublonDe(b), await doublonDe(c)],
+      [null, null, null],
+    );
   });
 
   /*

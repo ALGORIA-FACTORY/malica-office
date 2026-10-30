@@ -39,7 +39,7 @@ import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
 import {
   controlerPiece,
   rendreVerdict,
-  type CleDeDoublon,
+  cleDeDoublon,
   type ContexteControle,
   type PieceAControler,
   type ResultatControle,
@@ -105,57 +105,6 @@ export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
   );
   if (rows.length === 0) throw new Error("Aucune marque de devise au référentiel.");
   return rows.map((r) => r.marque);
-}
-
-/**
- * Les pièces que celle-ci pourrait répéter : du même dossier, arrivées AVANT
- * elle (la seconde est le doublon, jamais la première), au même numéro —
- * les deux règles de `pieceSemblable` l'exigent. Leur DERNIÈRE lecture dit
- * émetteur, date et total. Une photo reprise n'est pas le doublon de celle
- * qu'elle remplace : les versions précédentes n'y sont pas ; une pièce
- * retirée non plus. Le verdict est posé UNE fois, ici, dans le jugement : la
- * file du cabinet le relit.
- */
-async function autresAuMemeNumero(
-  db: Requete,
-  pieceId: string,
-  numero: string | null,
-): Promise<CleDeDoublon[]> {
-  if (!numero) return [];
-  // Le nom de la clé du matricule est LIÉ, pas écrit dans la requête : la
-  // recherche de doublon lit la même clé que l'invite impose au modèle.
-  const { rows } = await db.query<{
-    id: string;
-    nom: string | null;
-    mf: string | null;
-    numero: string | null;
-    date: string | null;
-    ttc: string | null;
-  }>(
-    `select p.id, x.payload ->> 'issuer' as nom,
-            x.payload -> 'references' ->> $3 as mf,
-            x.payload -> 'references' ->> 'numero' as numero,
-            x.payload ->> 'document_date' as date,
-            x.payload -> 'totals' ->> 'ttc' as ttc
-       from pieces_v elle
-       join pieces_v p on p.tenant_id = elle.tenant_id
-                      and (p.created_at, p.id) < (elle.created_at, elle.id)
-       join lateral (select e.payload from extractions_v e
-                      where e.piece_id = p.id order by e.created_at desc limit 1) x on true
-      where elle.id = $1
-        and p.remplacee_par is null and p.archivee_le is null
-        and upper(regexp_replace(x.payload -> 'references' ->> 'numero', '[^0-9A-Za-z]', '', 'g'))
-            = upper(regexp_replace($2, '[^0-9A-Za-z]', '', 'g'))`,
-    [pieceId, numero, NOM_MATRICULE_EMETTEUR],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    emetteurNom: r.nom,
-    emetteurIdentifiantFiscal: r.mf,
-    numero: r.numero,
-    date: r.date,
-    ttc: r.ttc,
-  }));
 }
 
 export interface Analyse {
@@ -417,7 +366,6 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     destinataire: { nom: null, identifiantFiscal: refs[NOM_MATRICULE_CLIENT] ?? null },
     numero: refs["numero"] ?? null,
     date: datePiece,
-    ttcLu: payload.totals?.ttc ?? null,
     montants: normalisation,
     confianceParChamp: extraction.confiance_par_champ ?? {},
     reception: { doublonDe: piece.doublon_de, recueLe: piece.recue_le },
@@ -426,7 +374,18 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     sensConfirme: sensDit !== null,
   };
 
-  const [{ rows: types }, { rows: mentions }, cles] = await Promise.all([
+  // La clé de doublon, rangée avec le jugement : la file du cabinet la relit
+  // au moment où elle est lue (`app.doublon_probable`), quel que soit l'ordre
+  // des lectures. Le jugement pose la même règle, avec cette clé-ci.
+  const cle = cleDeDoublon({
+    emetteurIdentifiantFiscal: aControler.emetteur.identifiantFiscal,
+    emetteurNom: aControler.emetteur.nom,
+    numero: aControler.numero,
+    date: aControler.date,
+    ttc: payload.totals?.ttc ?? null,
+  });
+
+  const [{ rows: types }, { rows: mentions }, { rows: semblables }] = await Promise.all([
     db.query<{ code: string; porte_ecriture: boolean }>(
       `select code, porte_ecriture from ref.document_types`,
     ),
@@ -434,7 +393,12 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       `select code, label from ref.mentions where pack_version_id = $1 and mandatory`,
       [pack],
     ),
-    autresAuMemeNumero(db, pieceId, aControler.numero),
+    db.query<{ id: string | null }>(`select app.doublon_probable_de($1, $2, $3, $4) as id`, [
+      pieceId,
+      cle.numero,
+      cle.mf,
+      cle.lu,
+    ]),
   ]);
 
   const contexte: ContexteControle = {
@@ -444,7 +408,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     seuilConfianceReserve: p["lecture.confiance_reserve"]!,
     seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
     ecartDateJours: p["piece.ecart_date_jours"]!,
-    autresPieces: cles,
+    doublonProbable: semblables[0]?.id ?? null,
   };
 
   const controles = controlerPiece(aControler, contexte);
@@ -452,8 +416,9 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
 
   const { rows: poses } = await db.query<{ id: string }>(
     `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
-                                   normalisation, controles, verdict, motifs)
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb)
+                                   normalisation, controles, verdict, motifs,
+                                   doublon_numero, doublon_mf, doublon_lu)
+     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8::jsonb, $9, $10, $11)
      returning id`,
     [
       piece.tenant_id,
@@ -464,6 +429,9 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       JSON.stringify(controles),
       verdict,
       JSON.stringify(motifs),
+      cle.numero,
+      cle.mf,
+      cle.lu,
     ],
   );
 

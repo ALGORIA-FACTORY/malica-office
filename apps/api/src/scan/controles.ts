@@ -56,8 +56,6 @@ export interface PieceAControler {
   numero: string | null;
   /** Date de la pièce, AAAA-MM-JJ, ou null si illisible. */
   date: string | null;
-  /** Le total TTC de la lecture, tel que les autres pièces le portent. */
-  ttcLu?: string | null;
   montants: ResultatNormalisation;
   confianceParChamp: Record<string, number>;
   reception: { doublonDe: string | null; recueLe: string };
@@ -81,8 +79,12 @@ export interface ContexteControle {
    * du mois de sa date.
    */
   ecartDateJours: number;
-  /** Les autres pièces du dossier, pour reconnaître un doublon (`pieceSemblable`). */
-  autresPieces: CleDeDoublon[];
+  /**
+   * La pièce arrivée avant celle-ci qu'elle répète, selon sa clé
+   * (`cleDeDoublon`) et la règle de la base (`app.doublon_probable_de`), ou
+   * null.
+   */
+  doublonProbable: string | null;
 }
 
 export type Verdict =
@@ -167,9 +169,24 @@ const normMontant = (m: string | null) => {
   return absolu === "0" ? "0" : `${lu[1]}${absolu}`;
 };
 
-/** Ce qui fait reconnaître une pièce comme la même qu'une autre. */
-export interface CleDeDoublon {
-  id: string;
+/**
+ * La clé de doublon d'une pièce, normalisée ICI et rangée avec son jugement
+ * (`capture.analyses.doublon_*`). La règle qui compare deux clés vit en base,
+ * une fois (`app.doublon_probable_de`) : la file du cabinet l'applique au
+ * moment où elle est lue, et l'ordre des lectures n'y fait rien.
+ *
+ * Deux façons d'être la même pièce, au même numéro :
+ *   — même émetteur au matricule (sept chiffres) ;
+ *   — quand l'une des deux n'a pas de matricule, même nom, même date et même
+ *     total.
+ *
+ * La seconde est née sur staging le 30 octobre 2026 : MEUBLES EL AMEN du 20
+ * janvier, 8 772,728, deux fois ; INFOTECH, 13 690,165, deux fois. Aucune des
+ * deux n'imprimait de matricule lisible. Sans numéro lu, la clé est vide et
+ * rien n'est signalé : deux achats du même jour, au même prix, chez le même
+ * fournisseur, sont deux factures plausibles.
+ */
+export function cleDeDoublon(piece: {
   emetteurIdentifiantFiscal: string | null;
   emetteurNom: string | null;
   numero: string | null;
@@ -177,51 +194,16 @@ export interface CleDeDoublon {
   date: string | null;
   /** Le total TTC lu, chaîne décimale, ou null. */
   ttc: string | null;
-}
-
-/**
- * La première des `autres` pièces que `piece` répète, ou `null` — UNE règle,
- * posée par le jugement de la lecture, que la file du cabinet relit.
- *
- * Deux façons d'être la même pièce :
- *   — même émetteur au matricule (sept chiffres) et même numéro ;
- *   — même émetteur (au matricule quand les deux le portent, sinon au nom),
- *     même date, même numéro et même total.
- *
- * La seconde est née sur staging le 30 octobre 2026 : MEUBLES EL AMEN du 20
- * janvier, 8 772,728, deux fois ; INFOTECH, 13 690,165, deux fois. Aucune des
- * deux n'imprimait de matricule lisible : la première règle, seule, ne
- * cherchait pas plus loin. Sans numéro lu des deux côtés, rien n'est
- * signalé : deux achats du même jour, au même prix, chez le même
- * fournisseur, sont deux factures plausibles.
- */
-function pieceSemblable(
-  piece: Omit<CleDeDoublon, "id">,
-  autres: readonly CleDeDoublon[],
-): CleDeDoublon | null {
-  const chiffres = (mf: string | null) => normaliserMatricule(mf).chiffres;
-  const mf = chiffres(piece.emetteurIdentifiantFiscal);
+}): { numero: string | null; mf: string | null; lu: string | null } {
+  const numero = normNumero(piece.numero) || null;
+  if (!numero) return { numero: null, mf: null, lu: null };
   const nom = normNom(piece.emetteurNom);
-  const numero = normNumero(piece.numero);
   const ttc = normMontant(piece.ttc);
-  return (
-    autres.find((a) => {
-      const autreMf = chiffres(a.emetteurIdentifiantFiscal);
-      const autreNumero = normNumero(a.numero);
-      if (mf && numero && autreMf === mf && autreNumero === numero) return true;
-      const memeEmetteur =
-        mf && autreMf ? mf === autreMf : nom !== null && normNom(a.emetteurNom) === nom;
-      return (
-        memeEmetteur &&
-        piece.date !== null &&
-        a.date === piece.date &&
-        ttc !== null &&
-        normMontant(a.ttc) === ttc &&
-        numero !== null &&
-        autreNumero === numero
-      );
-    }) ?? null
-  );
+  return {
+    numero,
+    mf: normaliserMatricule(piece.emetteurIdentifiantFiscal).chiffres || null,
+    lu: nom && piece.date && ttc ? `${nom}|${piece.date}|${ttc}` : null,
+  };
 }
 
 /** Ce qu'un titre imprimé dit de la nature du document, quand ce n'est pas une facture. */
@@ -584,22 +566,12 @@ function doublon(p: PieceAControler, ctx: ContexteControle): ResultatControle {
    * C'est une distinction, pas un relâchement : la conclusion de ce contrôle
    * est « à rapprocher », et personne n'est rejeté sur sa foi.
    */
-  const semblable = pieceSemblable(
-    {
-      emetteurIdentifiantFiscal: p.emetteur.identifiantFiscal,
-      emetteurNom: p.emetteur.nom,
-      numero: p.numero,
-      date: p.date,
-      ttc: p.ttcLu ?? null,
-    },
-    ctx.autresPieces,
-  );
-  if (semblable)
+  if (ctx.doublonProbable)
     return {
       code: "doublon",
       statut: "rapprocher",
       motif: `Même émetteur et même numéro (${p.numero}) qu'une autre pièce : une seconde photo de la même facture, ou une facture rééditée — à rapprocher avant toute écriture.`,
-      preuves: { semblable: semblable.id },
+      preuves: { semblable: ctx.doublonProbable },
     };
   return {
     code: "doublon",

@@ -237,23 +237,12 @@ export const supervision = {
             order by d.created_at desc limit 1
          ) dem on true
          -- « Doublon probable » (staging, 30 octobre 2026) : deux pièces du
-         -- même émetteur, de la même date, du même numéro et du même montant
-         -- passaient toutes deux dans la file, sans un mot. Le jugement de la
-         -- DERNIÈRE lecture le dit, une fois, en base (contrôle « doublon », à
-         -- rapprocher, l'autre pièce nommée) : la file le lit, ne le refait
-         -- pas. L'autre pièce doit être visible ici. Rien n'est supprimé.
-         left join lateral (
-           select (c.v -> 'preuves' ->> 'semblable')::uuid as doublon_de
-             from (select a.controles from capture.analyses a
-                    where a.piece_id = p.id order by a.created_at desc limit 1) a
-             cross join lateral jsonb_array_elements(a.controles) as c(v)
-            where c.v ->> 'code' = 'doublon' and c.v ->> 'statut' = 'rapprocher'
-              -- L'autre pièce est encore là : ni retirée, ni remplacée.
-              and exists (select 1 from pieces_v x
-                           where x.id = (c.v -> 'preuves' ->> 'semblable')::uuid
-                             and x.archivee_le is null and x.remplacee_par is null)
-            limit 1
-         ) dbl on true
+         -- même émetteur et du même numéro passaient toutes deux dans la
+         -- file, sans un mot. Calculé ICI, au moment où la file est lue, sur
+         -- les derniers jugements des deux pièces (« app.doublon_probable ») :
+         -- une première pièce lue après la seconde la fait signaler, une
+         -- pièce retirée cesse de compter. Rien n'est supprimé.
+         cross join lateral (select app.doublon_probable(p.id) as doublon_de) dbl
         where ${TRANSMISE}
           and ($2::uuid is null or p.tenant_id = $2)
         order by coalesce(p.transmise_le, p.created_at) desc
