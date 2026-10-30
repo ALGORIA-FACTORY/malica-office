@@ -866,9 +866,9 @@ export const office = {
     const { rows } = await db.query(
       `select distinct on (x.piece_id)
               x.piece_id,
-              -- Prise en charge, la pièce pèse de ce que le CABINET a inscrit
+              -- Forcée, la pièce pèse de ce que le CABINET a inscrit
               -- (1er novembre 2026) : ses lignes, ses droits, ses totaux, la
-              -- date et le sens de son écriture. Avant, de sa lecture.
+              -- date et le sens de son écriture. Validée, ou avant, de sa lecture.
               case when p.source = 'cabinet'
                    then x.payload || (
                      select jsonb_build_object(

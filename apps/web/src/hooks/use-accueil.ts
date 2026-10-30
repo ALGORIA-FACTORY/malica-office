@@ -31,8 +31,8 @@ import { useDecimales } from "./use-decimales";
 import { usePiecesLues } from "./use-pieces-lues";
 import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
-import { computePnl, computeTva } from "@malica/socle";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
+import { computePnl } from "@malica/socle";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
 
@@ -62,6 +62,8 @@ interface MoisDeTva {
   collectee: string | null;
   /** Collectée moins déductible. Positif : à reverser. */
   solde: string | null;
+  /** Les pièces du mois hors du calcul — un extrait illisible, un taux inconnu. */
+  horsDuCalcul: number;
 }
 
 export interface Accueil {
@@ -84,6 +86,11 @@ export interface Accueil {
    * agir, et c'est pour cela qu'il vient en premier.
    */
   aReverser: string | null;
+  /**
+   * Les pièces du mois courant que la TVA ne compte pas, et pourquoi le
+   * chiffre est incomplet : jamais écartées en silence (Codex sur #140).
+   */
+  horsDuCalcul: number;
   /** Part des pièces prises en charge par le cabinet, de 0 à 1. `null` : aucune pièce. */
   avancement: number | null;
   /**
@@ -182,9 +189,11 @@ export function useAccueil(periode: string): Accueil {
       recuperee: null,
       collectee: null,
       solde: null,
+      horsDuCalcul: 0,
     }));
     if (!extraits.data || !taux.data || decimalesDuPack === null) return mois;
     const decimales = decimalesDuPack;
+    const tarifs = taux.data;
 
     /*
      * ================== LA TVA SE RANGE AU MOIS OÙ LE CABINET A REÇU LA PIÈCE
@@ -202,41 +211,30 @@ export function useAccueil(periode: string): Accueil {
      * dépense, et elle appartient à son mois. Les deux lectures diffèrent
      * exprès, et chaque écran dit laquelle il montre.
      */
-    const parMois = new Map<string, Array<{ item_id: string | null; extract: ExtractV1 }>>();
+    const parMois = new Map<string, Array<{ pieceId: string; extract: unknown }>>();
     for (const ligne of extraits.data) {
-      const lu = ExtractV1.safeParse(ligne.extract);
-      if (!lu.success) continue;
       // Le mois d'imputation, la même règle que le cabinet (25 octobre 2026).
       const cle = ligne.imputeeLe.slice(0, 7);
-      const liste = parMois.get(cle) ?? [];
-      liste.push({ item_id: ligne.pieceId, extract: lu.data });
-      parMois.set(cle, liste);
+      parMois.set(cle, [...(parMois.get(cle) ?? []), ligne]);
     }
-
-    const tarifs = taux.data.map((r) => ({
-      code: r.code,
-      label: r.label,
-      rate: r.rate,
-      valid_from: r.validFrom,
-      valid_to: r.validTo,
-      jurisdiction: r.jurisdiction,
-    }));
 
     return mois.map((m) => {
       const dedans = parMois.get(m.periode);
       if (!dedans || dedans.length === 0) return m;
-      const calcul = computeTva({
+      // Le même calcul que l'écran de la TVA : un extrait illisible y est
+      // refusé, et compté ici — jamais écarté en silence.
+      const calcul = tvaDesExtraits({
         period: m.periode,
         currency: { code: devise, decimals: decimales },
-        tax_rates: tarifs,
-        achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
-        ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
+        taux: tarifs,
+        rows: dedans,
       });
       return {
         periode: m.periode,
         recuperee: calcul.totals.deductible,
         collectee: calcul.totals.collectee,
         solde: calcul.totals.solde,
+        horsDuCalcul: calcul.refused.length,
       };
     });
   }, [extraits.data, taux.data, periode, devise, decimalesDuPack]);
@@ -332,6 +330,7 @@ export function useAccueil(periode: string): Accueil {
     serie,
     moisDeSuite,
     aReverser: serie[serie.length - 1]?.solde ?? null,
+    horsDuCalcul: serie[serie.length - 1]?.horsDuCalcul ?? 0,
     avancement,
     enAttente,
     documentsLus,

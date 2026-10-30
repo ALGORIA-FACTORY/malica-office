@@ -233,7 +233,7 @@ function versMontantsDuCabinet(m: unknown): MontantsDuCabinet | null {
   };
 }
 
-/** Prise en charge, mais l'écriture ne se lit pas comme une facture : le cabinet le voit. */
+/** Forcée, mais l'écriture ne se lit pas comme une facture : le cabinet le voit. */
 const ecritureIllisible = (m: unknown) =>
   Boolean(m && typeof m === "object" && (m as MontantsBruts).lisible === false);
 
@@ -423,7 +423,7 @@ export const capture = {
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
-              -- Prise en charge, le total, le sens et la date sont ceux du
+              -- Forcée, le total, le sens et la date sont ceux du
               -- cabinet : il décide.
               case when s.prise is not null
                    then app.montants_pris_en_charge(p.id) end as du_cabinet,
@@ -545,7 +545,7 @@ export const capture = {
       ]),
       // Où elle en est chez le cabinet — la même lecture que les listes.
       db.query(`select ${COLONNES_DU_SUIVI} from app.suivi_de_la_piece($1) s`, [pieceId]),
-      // Prise en charge, ses montants sont ceux du cabinet : il décide.
+      // Forcée, ses montants sont ceux du cabinet ; validée, ceux de la lecture.
       db.query(`select app.montants_pris_en_charge($1) as m`, [pieceId]),
     ]);
 

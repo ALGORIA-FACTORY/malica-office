@@ -7,8 +7,7 @@ import { useI18n } from "@/i18n";
 import { moisLocal } from "@/lib/lisible";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
-import { computeTva } from "@malica/socle";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
+import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 
 export function monthBounds(period: string): { from: string; to: string } {
@@ -21,32 +20,6 @@ export function monthBounds(period: string): { from: string; to: string } {
 /** Le mois en cours, à l'heure du lecteur : à minuit à Tunis, le 1er est déjà le mois suivant. */
 export function currentPeriod(): string {
   return moisLocal(new Date());
-}
-
-type Entree = { item_id: string | null; extract: ExtractV1 };
-
-/**
- * Les extraits du mois, rangés pour le moteur : achats, ventes — et ceux qui
- * ne se lisent pas. Une pièce dont l'extrait ne valide pas (un taux manquant
- * sur une ligne forcée, revue de #140) n'est jamais écartée en silence : elle
- * est « refusée », avec ce qui manque, et l'écran la compte.
- */
-export function extraitsDeLaTva(rows: ReadonlyArray<{ pieceId: string; extract: unknown }>) {
-  const achats: Entree[] = [];
-  const ventes: Entree[] = [];
-  const illisibles: TvaV1["refused"] = [];
-  for (const row of rows) {
-    const parsed = ExtractV1.safeParse(row.extract);
-    if (!parsed.success) {
-      const champs = [...new Set(parsed.error.issues.map((i) => i.path.join(".")))].sort();
-      illisibles.push({ reason: `EXTRAIT_ILLISIBLE:${champs.join(",")}`, item_id: row.pieceId });
-      continue;
-    }
-    const entree = { item_id: row.pieceId, extract: parsed.data };
-    if (parsed.data.document_kind === "facture_vente") ventes.push(entree);
-    else achats.push(entree);
-  }
-  return { achats, ventes, illisibles };
 }
 
 /**
@@ -97,22 +70,12 @@ export function useTvaPeriod(period: string): {
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!extracts.data || !rates.data || decimales === null) return null;
-    const { achats, ventes, illisibles } = extraitsDeLaTva(extracts.data);
-    const calcul = computeTva({
+    return tvaDesExtraits({
       period,
       currency: { code: pme.currency, decimals: decimales },
-      tax_rates: rates.data.map((r) => ({
-        code: r.code,
-        label: r.label,
-        rate: r.rate,
-        valid_from: r.validFrom,
-        valid_to: r.validTo,
-        jurisdiction: r.jurisdiction,
-      })),
-      achats,
-      ventes,
+      taux: rates.data,
+      rows: extracts.data,
     });
-    return { ...calcul, refused: [...illisibles, ...calcul.refused] };
   }, [extracts.data, rates.data, decimales, period, pme.currency]);
 
   return {

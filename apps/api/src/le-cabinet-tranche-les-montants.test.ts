@@ -62,9 +62,12 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
 
   let n = 0;
   /** Une facture lue (TVA19, timbre 1,000 — la lecture d'essai), transmise au cabinet. */
-  const transmise = async (extrait?: (e: Record<string, unknown>) => Record<string, unknown>) => {
+  const transmise = async (
+    extrait?: (e: Record<string, unknown>) => Record<string, unknown>,
+    imprime: Parameters<typeof lectureDEssai>[0] = {},
+  ) => {
     n += 1;
-    const l = lectureDEssai({ clientMf: mfDossier, numero: `MNT-${marque}-${n}` });
+    const l = lectureDEssai({ ...imprime, clientMf: mfDossier, numero: `MNT-${marque}-${n}` });
     const extract = extrait ? extrait(l.extract) : l.extract;
     const p = (await pmeFait("capture.enregistrer", {
       tenantId: pme,
@@ -563,5 +566,96 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(await signal(), original);
     await admin.query(`update capture.pieces set archivee_le = now() where id = $1`, [original]);
     assert.equal(await signal(), null);
+  });
+
+  /*
+   * Codex sur #140 : VALIDER une proposition inchangée inscrit ce que le Socle
+   * a tiré de la lecture — le cabinet n'a rien changé, la lecture EST sa
+   * décision. L'écriture validée fondait les bases de deux taux en une ligne
+   * sans code : l'extrait ne validait plus, et la TVA du mois perdait la pièce.
+   */
+  const valider = async (id: string) => {
+    const p = (await cabinetFait("office.propositionDePiece", id)) as { empreinte?: string };
+    return cabinetFait("office.valider", id, p.empreinte ?? null) as Promise<string>;
+  };
+  // Validée, l'écriture est datée de la facture : tous les mois, pas seulement le courant.
+  const lignesDeLaTva = async (id: string) => {
+    const tous = (await pmeFait(
+      "office.extraitsTransmis",
+      pme,
+      "2000-01-01",
+      "2100-12-31",
+    )) as Array<{
+      pieceId: string;
+      extract: unknown;
+    }>;
+    const x = tous.find((e) => e.pieceId === id)?.extract;
+    const valide = ExtractV1.safeParse(x);
+    assert.ok(valide.success, JSON.stringify(valide.error?.issues));
+    return valide.data.lines.map((l) => [l.tax_code, l.base_ht, l.vat_amount]);
+  };
+
+  it("valider une proposition à deux taux, inchangée : les deux taux restent dans la TVA du mois", async () => {
+    const id = await transmise(
+      (e) => ({
+        ...e,
+        lines: [
+          {
+            label: "Verres",
+            tax_code: "TVA07",
+            base_ht: "500.000",
+            vat_amount: "35.000",
+            ttc: "535.000",
+          },
+          {
+            label: "Montures",
+            tax_code: "TVA19",
+            base_ht: "734.560",
+            vat_amount: "139.566",
+            ttc: "874.126",
+          },
+        ],
+        totals: { base_ht: "1234.560", vat: "174.566", ttc: "1410.126" },
+      }),
+      { tva: "174,566", ttc: ["1", "410,126"], ligne: ["500,000"], autresLignes: [["734,560"]] },
+    );
+    await valider(id);
+    assert.deepEqual(await lignesDeLaTva(id), [
+      ["TVA07", "500.000", "35.000"],
+      ["TVA19", "734.560", "139.566"],
+    ]);
+    assert.equal(await montantsVusParLaPme(id), null, "validée, la PME lit la lecture");
+  });
+
+  it("valider une facture exonérée : sa base garde le code EXO", async () => {
+    const id = await transmise(
+      (e) => ({
+        ...e,
+        lines: [
+          {
+            label: "Livres",
+            tax_code: "EXO",
+            base_ht: "1234.560",
+            vat_amount: "0.000",
+            ttc: "1234.560",
+          },
+        ],
+        totals: { base_ht: "1234.560", vat: "0.000", ttc: "1235.560" },
+      }),
+      { tva: "0,000", ttc: ["1", "235,560"] },
+    );
+    await valider(id);
+    assert.deepEqual(await lignesDeLaTva(id), [["EXO", "1234.560", "0.000"]]);
+  });
+
+  it("forcer reste l'écriture du cabinet : ses lignes, pas la lecture", async () => {
+    const id = await transmise();
+    await force(id, [
+      L("601", "1000.000", "0"),
+      L("4366", "190.000", "0", "TVA19"),
+      L("401", "0", "1190.000"),
+    ]);
+    assert.deepEqual(await lignesDeLaTva(id), [["TVA19", "1000.000", "190.000"]]);
+    assert.equal(Number((await montantsVusParLaPme(id))?.ttc), 1190);
   });
 });

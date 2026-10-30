@@ -7,10 +7,16 @@
 -- chiffres du mois (charges, TVA) la comptaient aussi. Deux chiffres pour la
 -- même pièce, et celui que la PME voyait était faux.
 --
--- Règle du dirigeant : le cabinet décide. Une fois la pièce prise en charge
--- (validée ou forcée), ses montants sont ceux de l'écriture du cabinet ;
--- avant, ceux de la lecture. La PME ne voit jamais l'écriture : elle en lit
--- les MONTANTS, rangés par nature (HT, TVA, droits, TTC).
+-- Règle du dirigeant : le cabinet décide. Une fois la pièce FORCÉE (le
+-- cabinet a saisi ou changé les lignes), ses montants sont ceux de l'écriture
+-- du cabinet ; avant, ceux de la lecture. La PME ne voit jamais l'écriture :
+-- elle en lit les MONTANTS, rangés par nature (HT, TVA, droits, TTC).
+--
+-- VALIDÉE, la pièce garde sa lecture (Codex sur #140) : valider inscrit la
+-- proposition du Socle, tirée de la lecture sans rien y changer — la lecture
+-- EST la décision du cabinet, et elle seule porte le code de taxe de chaque
+-- taux. L'écriture validée fond les bases de deux taux en une ligne, et une
+-- facture exonérée n'y a pas de ligne de TVA : relue, elle perdrait ses codes.
 --
 -- Ce que ce fichier pose :
 --   1. `app.ecriture_prise_en_charge_de(piece)` : l'écriture vivante prise en
@@ -32,8 +38,8 @@
 --      faux publié.
 --   5. `app.charges_prises_en_charge(piece)` : ses charges, rangées par
 --      famille, sans compte.
---   6. `pieces_qui_comptent_v.source` : « cabinet » quand la pièce est prise
---      en charge et que son écriture se lit, « lecture » sinon — par une
+--   6. `pieces_qui_comptent_v.source` : « cabinet » quand la pièce est
+--      forcée et que son écriture se lit, « lecture » sinon — par une
 --      jointure, pas une fonction par ligne.
 --   7. `app.suivi_de_la_piece` : le nom du comptable qui a pris la pièce en
 --      charge se lit au cabinet, même quand le compte est AUSSI membre de la
@@ -212,6 +218,11 @@ as $$
       from socle.ecritures x
       join socle.prises_en_charge pc on pc.ecriture_id = x.id
      where x.id = app.ecriture_prise_en_charge_de(p_piece)
+       -- FORCÉE seulement : le cabinet a saisi ou changé les lignes. Validée,
+       -- l'écriture est la proposition du Socle tirée de la lecture, telle
+       -- quelle ; la lecture, codée taux par taux, EST la décision du cabinet.
+       and exists (select 1 from app.ecriture_prise_en_charge(pc.tenant_id, x.id) o
+                    where o.origine = 'forcee')
      order by pc.prise_le desc
      limit 1
   ),
@@ -336,7 +347,7 @@ grant execute on function app.montants_pris_en_charge(uuid) to authenticated;
 
 comment on function app.montants_pris_en_charge(uuid) is
   'Les montants d''une pièce prise en charge, tirés de l''écriture du cabinet, à la forme d''une '
-  'lecture extract.v1, quand l''écriture se lit comme une facture (`lisible`). Nul avant la prise en charge.';
+  'lecture extract.v1, quand l''écriture se lit comme une facture (`lisible`). Nul tant que la pièce n''est pas forcée : validée, elle garde sa lecture.';
 
 -- --- 5. Ses charges, sans compte -------------------------------------------------------------------
 
@@ -411,7 +422,7 @@ create or replace view public.pieces_qui_comptent_v with (security_invoker = tru
      and not exists (select 1 from capture.remplacements r where r.piece_id = p.id);
 
 comment on view public.pieces_qui_comptent_v is
-  'La pièce qui entre dans les chiffres du mois (charges, TVA) : type qui porte écriture, dans la société, sans doublon, confirmée ou prise en charge. `source` : « cabinet » (prise en charge, son écriture se lit comme une facture) ou « lecture » (1er novembre 2026).';
+  'La pièce qui entre dans les chiffres du mois (charges, TVA) : type qui porte écriture, dans la société, sans doublon, confirmée ou prise en charge. `source` : « cabinet » (forcée, son écriture se lit comme une facture) ou « lecture » (1er novembre 2026).';
 
 -- --- 7. Le nom du comptable se lit au cabinet --------------------------------------------------------
 --

@@ -499,17 +499,19 @@ function CabinetClient() {
                   aria-hidden
                   className={cn(
                     "mt-1 h-[7px] w-[7px] shrink-0",
-                    tva ? "bg-signal-ok" : "bg-border",
+                    !tva ? "bg-border" : tva.refused.length > 0 ? "bg-signal-warn" : "bg-signal-ok",
                   )}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px]">{t("cab.dos.feux.tva")}</span>
                   <span className="num block text-[11px] text-muted-foreground">
-                    {tva
-                      ? t("cab.dos.feux.tva.calculee", {
-                          n: tva.collectee.length + tva.deductible.length,
-                        })
-                      : t("cab.dos.feux.tva.sans")}
+                    {!tva
+                      ? t("cab.dos.feux.tva.sans")
+                      : tva.refused.length > 0
+                        ? t("cab.dos.feux.tva.refusees", { count: tva.refused.length })
+                        : t("cab.dos.feux.tva.calculee", {
+                            n: tva.collectee.length + tva.deductible.length,
+                          })}
                   </span>
                 </span>
               </li>

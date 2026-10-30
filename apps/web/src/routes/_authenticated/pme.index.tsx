@@ -536,6 +536,10 @@ function PmeHome() {
                   {t("pme.tva.col.deductible")}{" "}
                   <b>{a.recuperee === null ? "—" : montant(a.recuperee, locale)}</b>
                 </span>
+                {/* Une pièce que la TVA ne compte pas se dit : le chiffre est incomplet. */}
+                {a.horsDuCalcul > 0 ? (
+                  <span>{t("pme.home.tva.horsCalcul", { count: a.horsDuCalcul })}</span>
+                ) : null}
               </span>
             </>
           )}

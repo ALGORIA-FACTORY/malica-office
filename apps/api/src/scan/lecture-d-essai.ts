@@ -35,6 +35,8 @@ export function lecture(
      * du HT du pied — deux colonnes d'une même ligne, par exemple.
      */
     ligne?: string[];
+    /** Les lignes suivantes d'une facture à plusieurs taux : les jetons de la base de chacune. */
+    autresLignes?: string[][];
   } = {},
 ) {
   const numero = opts.numero ?? "F-2026-0042";
@@ -53,8 +55,11 @@ export function lecture(
     [opts.ttc?.[0] ?? "1", 0.82], // 11 ─┐ « 1 470,126 »
     [opts.ttc?.[1] ?? "470,126", 0.82], // 12 ─┘
     ...(opts.ligne ?? []).map((t): [string, number] => [t, 0.5]), // 13… la ligne, si elle est à part
+    ...(opts.autresLignes ?? []).flat().map((t): [string, number] => [t, 0.55]), // puis les suivantes
   ];
   const ordinauxDeLaLigne = (opts.ligne ?? []).map((_, i) => 13 + i);
+  let suivant = 13 + ordinauxDeLaLigne.length;
+  const ordinauxDesAutres = (opts.autresLignes ?? []).map((l) => l.map(() => suivant++));
   const tokens: Jeton[] = textes.map(([text, y], ordinal) => ({
     page: 1,
     ordinal,
@@ -76,6 +81,7 @@ export function lecture(
     ...(ordinauxDeLaLigne.length > 0
       ? cite("lines[0].base_ht", ...ordinauxDeLaLigne)
       : cite("lines[0].base_ht", 7, 8)),
+    ...ordinauxDesAutres.flatMap((o, i) => cite(`lines[${i + 1}].base_ht`, ...o)),
     ...cite("totals.base_ht", 7, 8),
     ...cite("lines[0].vat_amount", 9),
     ...cite("totals.vat", 9),

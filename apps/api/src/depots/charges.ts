@@ -77,7 +77,7 @@ export const charges = {
          join pieces_qui_comptent_v q on q.id = a.piece_id
         where a.tenant_id = $1 and a.period is null
           and q.document_kind <> 'facture_vente'
-          -- Prise en charge, la pièce a la date de l'écriture du cabinet.
+          -- Forcée, la pièce a la date de l'écriture du cabinet.
           and q.source = 'lecture'`,
       [tenantId],
     );
