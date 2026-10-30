@@ -808,7 +808,13 @@ export const office = {
     // On ne retient que les écritures vivantes : ni contre-passation, ni
     // écriture qu'une contre-passation comptabilisée annule.
     const { rows } = await db.query(
-      `select distinct on (x.piece_id) x.piece_id, x.payload
+      // 3 novembre 2026 : la pièce pèse de ce qui compte dans la TVA
+      // (app.extrait_de_la_tva), la même porte que la PME — forcée, les
+      // montants du cabinet ; sinon la lecture ; chaque ligne avec sa nature.
+      // Elle lisait la LECTURE d'une pièce forcée : la TVA du dossier ne
+      // recoupait pas le journal du cabinet.
+      `select distinct on (x.piece_id) x.piece_id,
+              app.extrait_de_la_tva(x.piece_id, x.payload) as payload
          from extractions_v x
          join ecritures_v e on e.piece_id = x.piece_id
         where e.tenant_id = $1
@@ -890,15 +896,10 @@ export const office = {
               x.piece_id,
               -- Forcée, la pièce pèse de ce que le CABINET a inscrit
               -- (1er novembre 2026) : ses lignes, ses droits, ses totaux, la
-              -- date et le sens de son écriture. Validée, ou avant, de sa lecture.
-              case when p.source = 'cabinet'
-                   then x.payload || (
-                     select jsonb_build_object(
-                              'lines', c.m -> 'lines', 'other_charges', c.m -> 'other_charges',
-                              'totals', c.m -> 'totals', 'document_date', c.m -> 'date_ecriture',
-                              'currency', c.m -> 'currency', 'document_kind', p.document_kind)
-                       from (select app.montants_pris_en_charge(p.id) as m) c)
-                   else x.payload end as payload,
+              -- date et le sens de son écriture. Validée, ou avant, de sa
+              -- lecture. Chaque ligne porte sa nature (3 novembre 2026). Une
+              -- seule porte, la même que le cabinet (bookedExtracts).
+              app.extrait_de_la_tva(p.id, x.payload) as payload,
               p.transmise_le, i.impute_le::text as impute_le
          from extractions_v x
          -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans

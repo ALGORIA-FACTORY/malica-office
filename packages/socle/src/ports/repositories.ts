@@ -9,6 +9,7 @@ import type { LigneSaisie } from "../ecriture-saisie.ts";
 import type { StatutCabinet, SuiviDEnvoi } from "../statut-d-envoi.ts";
 import type { CodeVerdict } from "../verdicts.ts";
 import type { ProposalResult } from "../use-cases/propose-ecriture.ts";
+import type { SensDeTva } from "../contracts/tva.v1.ts";
 
 export type OrgKind = "pme" | "cabinet";
 export type ValidationMode = "autonome" | "mandate";
@@ -316,6 +317,11 @@ export interface ReferentialRepository {
   accountMappings(packId: string): Promise<AccountMapping[]>;
   /** Ce qu'est chaque classe du plan : le compte de résultat en a besoin. */
   classesDeComptes(packId: string): Promise<AccountClass[]>;
+  /**
+   * Les lignes de la déclaration de TVA en vigueur au jour dit, libellés
+   * traduits, et la nature qui reçoit une ligne sans nature attribuée.
+   */
+  declarationTva(packId: string, jour: string, locale?: string): Promise<DeclarationTva>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
   /** Les droits hors TVA du pack, libelle traduit. */
   fiscalCharges(packId: string, locale?: string): Promise<FiscalCharge[]>;
@@ -678,6 +684,27 @@ export interface TiersRepository {
 }
 
 // ---------------------------------------------------------------- référentiel
+/**
+ * La déclaration de TVA telle que le référentiel la définit
+ * (`ref.tva_declaration_lignes`, `ref.tva_natures`) : ses lignes, et la nature
+ * où se range une TVA dont la nature n'a pas été attribuée. Aucun code ni
+ * libellé n'est écrit en TypeScript (R4).
+ */
+export interface DeclarationTva {
+  natureParDefaut: string;
+  lignes: Array<{
+    code: string;
+    /** Traduit ; le français à défaut. */
+    label: string;
+    sens: SensDeTva;
+    /** `null` : la ligne reçoit toutes les natures de son sens. */
+    nature: string | null;
+    ordinal: number;
+    /** R10 : la ligne est un défaut livré, à confirmer par un expert-comptable. */
+    incertain: boolean;
+  }>;
+}
+
 export interface TaxRate {
   code: string;
   label: string;

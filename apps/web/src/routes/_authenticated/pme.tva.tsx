@@ -141,11 +141,31 @@ function PmeTva() {
   const detail = nonAssujetti
     ? []
     : [
-        ...(tva?.collectee ?? []).map((b) => ({ sens: t("pme.tva.col.collectee"), seau: b })),
-        ...(tva?.deductible ?? []).map((b) => ({ sens: t("pme.tva.col.deductible"), seau: b })),
+        ...(tva?.collectee ?? []).map((b) => ({
+          cote: "collectee" as const,
+          sens: t("pme.tva.col.collectee"),
+          seau: b,
+        })),
+        ...(tva?.deductible ?? []).map((b) => ({
+          cote: "deductible" as const,
+          sens: t("pme.tva.col.deductible"),
+          seau: b,
+        })),
       ];
 
   const refusees = tva?.refused ?? [];
+
+  /*
+   * La déclaration, ligne par ligne, dans l'ordre et sous les libellés du
+   * référentiel (`ref.tva_declaration_lignes`) : la TVA des immobilisations à
+   * part de celle des autres biens et services. Le moteur la remplit ; l'écran
+   * la lit. Un dossier non assujetti n'en dépose pas.
+   */
+  const declaration = nonAssujetti ? [] : (tva?.declaration ?? []);
+  /** La ligne de la déclaration qui reçoit un seau déductible : son libellé nomme la nature. */
+  const ligneDeLaNature = (nature: string | null) =>
+    declaration.find((l) => l.sens === "deductible" && l.nature === nature);
+  const parDefaut = tva?.par_defaut.length ?? 0;
 
   /**
    * L'axe Premium du dessin. La licence appartient à la personne, et
@@ -331,8 +351,9 @@ function PmeTva() {
              * promet une pièce à voir qui n'existe pas. La feuille ne demande
              * pas `button` — `.rw` est agnostique de l'élément.
              */}
-            {detail.map(({ sens, seau }) => (
-              <div className="rw" key={`${sens}-${seau.tax_code}`}>
+            {detail.map(({ cote, sens, seau }) => (
+              // Un seau par taux ET par nature : la nature entre dans la clé.
+              <div className="rw" key={`${cote}-${seau.tax_code}-${seau.nature ?? ""}`}>
                 <i aria-hidden>
                   <IconePiece />
                 </i>
@@ -342,6 +363,9 @@ function PmeTva() {
                   </b>
                   <span>
                     {t("cab.immo.base")} {montant(seau.base, locale)}
+                    {cote === "deductible" && ligneDeLaNature(seau.nature)
+                      ? ` · ${ligneDeLaNature(seau.nature)!.label}`
+                      : null}
                   </span>
                 </span>
                 <span className="rt">
@@ -371,6 +395,69 @@ function PmeTva() {
                   <span className="vl">—</span>
                 </span>
               </div>
+            ) : null}
+
+            {/*
+             * ── la déclaration, ligne par ligne ──────────────────────────
+             *
+             * Les lignes du référentiel, toutes, même à zéro : c'est la forme
+             * du formulaire. L'explication (la nature, et que ces lignes sont
+             * un défaut à confirmer) est dans le ⓘ, jamais dans la carte.
+             */}
+            {declaration.length > 0 ? (
+              <>
+                <div className="sec">
+                  <h2>
+                    {t("tva.declaration.titre")}
+                    <Aide
+                      titre={t("tva.declaration.titre")}
+                      paragraphes={[
+                        { texte: t("tva.declaration.aide") },
+                        ...(declaration.some((l) => l.incertain)
+                          ? [{ texte: t("tva.declaration.aConfirmer") }]
+                          : []),
+                      ]}
+                    />
+                  </h2>
+                </div>
+                {declaration.map((l) => (
+                  <div className="rw" key={l.code}>
+                    <i aria-hidden>
+                      <IconePiece />
+                    </i>
+                    <span className="bd">
+                      <b>{l.label}</b>
+                      <span>
+                        {t("cab.immo.base")} {montant(l.base, locale)}
+                      </span>
+                    </span>
+                    <span className="rt">
+                      <span className="vl">{montant(l.vat, locale)}</span>
+                    </span>
+                  </div>
+                ))}
+                {/*
+                 * Ce qui est rangé par défaut, faute d'avoir pu attribuer la
+                 * nature : compté et dit, jamais muet. Le montant est déjà
+                 * dans la ligne par défaut ; on n'en écrit pas un second.
+                 */}
+                {parDefaut > 0 ? (
+                  <div className="rw">
+                    <i aria-hidden>
+                      <IconeInfo />
+                    </i>
+                    <span className="bd">
+                      <b>
+                        {t("tva.declaration.parDefaut", { count: parDefaut })}
+                        <Aide
+                          titre={t("tva.declaration.parDefaut", { count: parDefaut })}
+                          paragraphes={[{ texte: t("tva.declaration.parDefaut.aide") }]}
+                        />
+                      </b>
+                    </span>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </>
         )}

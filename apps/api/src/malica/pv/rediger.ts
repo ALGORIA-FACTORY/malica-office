@@ -6,7 +6,7 @@
  * R3 : le procès-verbal est le seul artefact qu'un modèle produit, et il ne
  * porte aucun chiffre liant. Ce module tient cette frontière en trois temps :
  *
- *   1. Les CHIFFRES sortent des moteurs du Socle — `computePnl`, `computeTva`
+ *   1. Les CHIFFRES sortent des moteurs du Socle — `computePnl`, `tvaDesExtraits`
  *      — nourris par ce que l'API rend pour ce client, exactement comme le
  *      dossier du cabinet les affiche. Les comptages viennent de la file et
  *      du calendrier. Aucun n'est calculé ici.
@@ -35,6 +35,7 @@ import { callDeepSeek, DeepSeekError, type DeepSeekMessage } from "../conseil/de
 import { nombresEtrangers } from "../conseil/redaction.ts";
 import type {
   ClientSummary,
+  DeclarationTva,
   Echeance,
   JurisdictionPack,
   LigneDePeriode,
@@ -44,9 +45,8 @@ import type {
   ReglagesCabinet,
   TaxRate,
 } from "@malica/socle/ports/repositories";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
-import { computeTva } from "@malica/socle/engines/tva/compute";
+import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import type { Fait, RaisonDEchec, ResultatRedaction } from "@malica/socle/ports/malica";
 
 /** Trente jours : l'horizon des « échéances à venir », le même que le dossier. */
@@ -100,11 +100,16 @@ async function rassemblerLesChiffres(
   ]);
 
   const debut = debutDExercice(fiche?.clotureExercice ?? null, periode);
-  const [lignes, taux, params, classes] = await Promise.all([
+  const [lignes, taux, declaration, params, classes] = await Promise.all([
     api.rpc<LigneDePeriode[]>("office", "periodeLignes", [client.tenantId, debut, fin]),
     pack
       ? api.rpc<TaxRate[]>("referentiel", "taxRates", [pack.id, client.jurisdiction])
       : Promise.resolve([] as TaxRate[]),
+    // Les lignes de la déclaration, au référentiel : le calcul de la TVA est
+    // celui de tous les écrans (`tvaDesExtraits`), et il les exige.
+    pack
+      ? api.rpc<DeclarationTva>("referentiel", "declarationTva", [pack.id, fin])
+      : Promise.resolve(null),
     // Les décimales viennent du pack, jamais d'une table de devises écrite
     // en TypeScript (R4). Le dépôt lève une erreur explicite si le paramètre
     // manque : un PV aux montants à la mauvaise échelle serait signé.
@@ -163,32 +168,27 @@ async function rassemblerLesChiffres(
     );
   }
 
-  if (extraits.length > 0 && taux.length > 0) {
-    const dedans = extraits
-      .map((e) => ({ item_id: e.pieceId, lu: ExtractV1.safeParse(e.extract) }))
-      .filter((e) => e.lu.success)
-      .map((e) => ({ item_id: e.item_id, extract: (e.lu as { data: ExtractV1 }).data }));
-    if (dedans.length > 0) {
-      const tva = computeTva({
-        period: periode,
-        currency: { code: devise, decimals: decimales },
-        tax_rates: taux.map((r) => ({
-          code: r.code,
-          label: r.label,
-          rate: r.rate,
-          valid_from: r.validFrom,
-          valid_to: r.validTo,
-          jurisdiction: r.jurisdiction,
-        })),
-        achats: dedans.filter((e) => e.extract.document_kind !== "facture_vente"),
-        ventes: dedans.filter((e) => e.extract.document_kind === "facture_vente"),
-      });
-      chiffres.push(
-        montant("tvaCollectee", tva.totals.collectee, "tva"),
-        montant("tvaDeductible", tva.totals.deductible, "tva"),
-        montant("tva", tva.totals.solde, "tva"),
-      );
-    }
+  /*
+   * La TVA du mois : le SEUL calcul des écrans (`tvaDesExtraits`, au Socle).
+   * Ce fichier refaisait l'assemblage à la main et écartait EN SILENCE un
+   * extrait qui ne validait pas, quand l'écran le refusait en le nommant
+   * (3 novembre 2026). Une pièce hors du calcul est désormais comptée au PV.
+   */
+  if (extraits.length > 0 && taux.length > 0 && declaration) {
+    const tva = tvaDesExtraits({
+      period: periode,
+      currency: { code: devise, decimals: decimales },
+      taux,
+      declaration,
+      rows: extraits,
+    });
+    chiffres.push(
+      montant("tvaCollectee", tva.totals.collectee, "tva"),
+      montant("tvaDeductible", tva.totals.deductible, "tva"),
+      montant("tva", tva.totals.solde, "tva"),
+    );
+    const horsCalcul = new Set(tva.refused.flatMap((r) => (r.item_id ? [r.item_id] : []))).size;
+    if (horsCalcul > 0) chiffres.push(nombre("tvaHorsCalcul", horsCalcul, "tva"));
   }
 
   const duMois = file.filter((p) => p.createdAt.slice(0, 7) === periode).length;

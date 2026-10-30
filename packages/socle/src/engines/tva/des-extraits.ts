@@ -1,17 +1,22 @@
 /**
- * La TVA d'un ensemble d'extraits : le seul calcul que font le mois
- * (`use-tva`), l'accueil (`use-accueil`) et la synthèse du cabinet
- * (`use-synthese-client`).
+ * La TVA d'un ensemble d'extraits : le SEUL calcul que font le mois
+ * (`use-tva`), l'accueil (`use-accueil`), la synthèse du cabinet
+ * (`use-synthese-client`) et le PV de réunion (`malica/pv/rediger`).
+ *
+ * Il vivait dans l'application web ; le PV, côté serveur, refaisait le même
+ * assemblage à la main — et écartait EN SILENCE un extrait qui ne validait
+ * pas, quand l'écran le refusait en le nommant. Il vit donc au Socle, où les
+ * deux rives le lisent (3 novembre 2026).
  *
  * Une pièce dont l'extrait ne valide pas (un taux manquant, revue de #140)
  * n'est jamais écartée en silence : elle est « refusée », avec ce qui manque
  * (`EXTRAIT_ILLISIBLE:<champs>`), à côté des refus du moteur — et l'écran la
  * compte.
  */
-import { computeTva } from "@malica/socle";
-import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
-import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
-import type { TaxRate } from "@malica/socle/ports/repositories";
+import { ExtractV1 } from "../../contracts/extract.v1.ts";
+import type { TvaV1 } from "../../contracts/tva.v1.ts";
+import type { DeclarationTva, TaxRate } from "../../ports/repositories.ts";
+import { computeTva } from "./compute.ts";
 
 type Entree = { item_id: string | null; extract: ExtractV1 };
 
@@ -19,6 +24,8 @@ export function tvaDesExtraits(args: {
   period: string;
   currency: { code: string; decimals: number };
   taux: ReadonlyArray<TaxRate>;
+  /** Les lignes de la déclaration, au référentiel (`referentiel.declarationTva`). */
+  declaration: DeclarationTva;
   rows: ReadonlyArray<{ pieceId: string; extract: unknown }>;
 }): TvaV1 {
   const achats: Entree[] = [];
@@ -46,6 +53,10 @@ export function tvaDesExtraits(args: {
       valid_to: r.validTo,
       jurisdiction: r.jurisdiction,
     })),
+    declaration: {
+      nature_par_defaut: args.declaration.natureParDefaut,
+      lignes: args.declaration.lignes,
+    },
     achats,
     ventes,
   });

@@ -5,7 +5,7 @@
  *
  * Le dossier d'un client affiche son compte de résultat en cumul d'exercice,
  * sa TVA du mois, ses pièces. Ces chiffres ne sont pas calculés par l'écran :
- * ils sortent des moteurs du Socle — `computePnl`, `computeTva` — nourris
+ * ils sortent des moteurs du Socle — `computePnl`, `tvaDesExtraits` — nourris
  * par ce que l'API rend pour CE client (lignes de période, extraits
  * comptabilisés, taux du pack). Le crochet PME fait la même chose pour son
  * propre dossier ; celui-ci le fait pour un client désigné.
@@ -18,7 +18,8 @@ import { useMemo } from "react";
 
 import { debutDExercice, finDuMois } from "@malica/socle/exercice";
 import { useI18n } from "@/i18n";
-import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
+import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { useDeclarationTva } from "./use-declaration-tva";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary } from "@malica/socle/ports/repositories";
 import type { PnlV1 } from "@malica/socle/contracts/pnl.v1";
@@ -114,18 +115,22 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
     });
   }, [lignes.data, plan.data, periode, devise, decimales, classes.data]);
 
+  const declaration = useDeclarationTva(pack.data?.id, fin);
+
   const tva = useMemo<TvaV1 | null>(() => {
     if (!devise || !extraits.data || !taux.data || extraits.data.length === 0) return null;
-    if (decimales === null) return null;
+    if (!declaration.data || decimales === null) return null;
     return tvaDesExtraits({
       period: periode,
       currency: { code: devise, decimals: decimales },
       taux: taux.data,
+      declaration: declaration.data,
       rows: extraits.data,
     });
-  }, [extraits.data, taux.data, periode, devise, decimales]);
+  }, [extraits.data, taux.data, declaration.data, periode, devise, decimales]);
 
-  const erreur = [pack, fiche, lignes, plan, extraits, taux].find((q) => q.isError)?.error ?? null;
+  const erreur =
+    [pack, fiche, lignes, plan, extraits, taux, declaration].find((q) => q.isError)?.error ?? null;
 
   return {
     pack: pack.data

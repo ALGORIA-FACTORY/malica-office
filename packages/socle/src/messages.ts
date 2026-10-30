@@ -2288,6 +2288,7 @@ const fr = {
   "cab.pv.chiffre.tvaCollectee": "TVA collectée du mois",
   "cab.pv.chiffre.tvaDeductible": "TVA déductible du mois",
   "cab.pv.chiffre.tva": "TVA du mois, collectée moins déductible",
+  "cab.pv.chiffre.tvaHorsCalcul": "Pièces hors du calcul de la TVA, à reprendre",
   "cab.pv.chiffre.pieces": "Pièces transmises dans le mois",
   "cab.pv.chiffre.aSuperviser": "Pièces en attente de supervision",
   "cab.pv.chiffre.retournees": "Pièces retournées au client",
@@ -3677,6 +3678,21 @@ const fr = {
   "pme.tva.refusees#other": "{count} lignes sans taux gouverné à leur date",
   "pme.tva.ceQuiChange": "À vérifier",
   "pme.tva.parSociete": "Par société",
+  /**
+   * La déclaration de TVA, ligne par ligne (3 novembre 2026). Les LIBELLÉS
+   * des lignes viennent du référentiel (`ref.tva_declaration_lignes`) ; ces
+   * clés ne disent que le titre et les explications du ⓘ.
+   */
+  "tva.declaration.titre": "La déclaration",
+  "tva.declaration.aide":
+    "Chaque ligne de la déclaration mensuelle reçoit la TVA de sa nature : celle des immobilisations (un bien porté en classe 2) se déclare à part de celle des autres biens et services. La nature se lit sur l'écriture du cabinet, ou sur les articles de la facture rangés au plan comptable.",
+  "tva.declaration.aConfirmer":
+    "Ces lignes sont un défaut de Malica : leur correspondance exacte avec le formulaire en vigueur est à confirmer par un expert-comptable.",
+  "tva.declaration.parDefaut": "{count} lignes rangées par défaut",
+  "tva.declaration.parDefaut#one": "{count} ligne rangée par défaut",
+  "tva.declaration.parDefaut#other": "{count} lignes rangées par défaut",
+  "tva.declaration.parDefaut.aide":
+    "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. Le cabinet la reclasse en forçant l'écriture.",
   /**
    * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
    */
@@ -6039,6 +6055,7 @@ const en: Dict = {
   "cab.pv.chiffre.tvaCollectee": "Output VAT for the month",
   "cab.pv.chiffre.tvaDeductible": "Input VAT for the month",
   "cab.pv.chiffre.tva": "VAT for the month, output minus input",
+  "cab.pv.chiffre.tvaHorsCalcul": "Documents left out of the VAT calculation, to rework",
   "cab.pv.chiffre.pieces": "Documents sent during the month",
   "cab.pv.chiffre.aSuperviser": "Documents awaiting review",
   "cab.pv.chiffre.retournees": "Documents returned to the client",
@@ -7349,6 +7366,16 @@ const en: Dict = {
   "pme.tva.refusees#other": "{count} lines with no governed rate at their date",
   "pme.tva.ceQuiChange": "To check",
   "pme.tva.parSociete": "By company",
+  "tva.declaration.titre": "The return",
+  "tva.declaration.aide":
+    "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the firm's entry, or from the invoice items mapped to the chart of accounts.",
+  "tva.declaration.aConfirmer":
+    "These lines are a Malica default: how exactly they match the form in force is to be confirmed by a chartered accountant.",
+  "tva.declaration.parDefaut": "{count} lines placed by default",
+  "tva.declaration.parDefaut#one": "{count} line placed by default",
+  "tva.declaration.parDefaut#other": "{count} lines placed by default",
+  "tva.declaration.parDefaut.aide":
+    "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The firm reclassifies it by forcing the entry.",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -9630,6 +9657,7 @@ const ar: Dict = {
   "cab.pv.chiffre.tvaCollectee": "الأداء المستخلص للشهر",
   "cab.pv.chiffre.tvaDeductible": "الأداء القابل للطرح للشهر",
   "cab.pv.chiffre.tva": "أداء الشهر، المستخلص ناقص القابل للطرح",
+  "cab.pv.chiffre.tvaHorsCalcul": "وثائق خارج احتساب الأداء على القيمة المضافة، للمراجعة",
   "cab.pv.chiffre.pieces": "الوثائق المرسلة خلال الشهر",
   "cab.pv.chiffre.aSuperviser": "وثائق في انتظار الإشراف",
   "cab.pv.chiffre.retournees": "وثائق أُعيدت إلى الحريف",
@@ -10884,6 +10912,16 @@ const ar: Dict = {
   "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.ceQuiChange": "للتحقق",
   "pme.tva.parSociete": "حسب الشركة",
+  "tva.declaration.titre": "التصريح",
+  "tva.declaration.aide":
+    "يتلقى كل سطر من التصريح الشهري الأداء على القيمة المضافة حسب طبيعته: يُصرَّح بأداء الأصول الثابتة (أصل مُقيَّد في الصنف 2) بمعزل عن أداء السلع والخدمات الأخرى. تُقرأ الطبيعة من قيد المكتب، أو من بنود الفاتورة المرتبة حسب المخطط المحاسبي.",
+  "tva.declaration.aConfirmer":
+    "هذه الأسطر إعداد افتراضي من Malica: يجب أن يؤكد خبير محاسب مطابقتها الدقيقة للنموذج الجاري به العمل.",
+  "tva.declaration.parDefaut": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.parDefaut#one": "سطر واحد مرتب افتراضيًا",
+  "tva.declaration.parDefaut#other": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.parDefaut.aide":
+    "لم تتمكن Malica من تحديد الجزء الذي يمثل أصلًا ثابتًا في هذه الفواتير: رُتّب أداؤها في السطر الافتراضي من التصريح، وهو محسوب. يعيد المكتب تصنيفه بفرض القيد.",
   "pme.fiche.barre": "وضعيتكم الجبائية",
   "pme.fiche.secCarte": "بطاقتكم",
   "pme.fiche.cartePasLue": "لم تُقرأ بعد",

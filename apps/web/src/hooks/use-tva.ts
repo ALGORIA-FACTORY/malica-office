@@ -7,7 +7,8 @@ import { useI18n } from "@/i18n";
 import { moisLocal } from "@/lib/lisible";
 import { useDecimales } from "./use-decimales";
 import { office } from "@/verticals/malica-office/composition";
-import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
+import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { useDeclarationTva } from "./use-declaration-tva";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 
 export function monthBounds(period: string): { from: string; to: string } {
@@ -68,19 +69,23 @@ export function useTvaPeriod(period: string): {
     enabled: !!pme.packId,
   });
 
+  // Les lignes de la déclaration en vigueur à la fin du mois.
+  const declaration = useDeclarationTva(pme.packId, to);
+
   const tva = useMemo<TvaV1 | null>(() => {
-    if (!extracts.data || !rates.data || decimales === null) return null;
+    if (!extracts.data || !rates.data || !declaration.data || decimales === null) return null;
     return tvaDesExtraits({
       period,
       currency: { code: pme.currency, decimals: decimales },
       taux: rates.data,
+      declaration: declaration.data,
       rows: extracts.data,
     });
-  }, [extracts.data, rates.data, decimales, period, pme.currency]);
+  }, [extracts.data, rates.data, declaration.data, decimales, period, pme.currency]);
 
   return {
     tva,
     count: extracts.data?.length ?? 0,
-    isPending: extracts.isPending || rates.isPending,
+    isPending: extracts.isPending || rates.isPending || declaration.isPending,
   };
 }

@@ -31,7 +31,8 @@ import { useDecimales } from "./use-decimales";
 import { usePiecesLues } from "./use-pieces-lues";
 import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
-import { tvaDesExtraits } from "@/lib/extraits-de-la-tva";
+import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { useDeclarationTva } from "./use-declaration-tva";
 import { computePnl } from "@malica/socle";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
@@ -167,6 +168,8 @@ export function useAccueil(periode: string): Accueil {
     enabled: !!pme.packId,
   });
 
+  const declaration = useDeclarationTva(pme.packId, to);
+
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],
     queryFn: () => {
@@ -191,9 +194,10 @@ export function useAccueil(periode: string): Accueil {
       solde: null,
       horsDuCalcul: 0,
     }));
-    if (!extraits.data || !taux.data || decimalesDuPack === null) return mois;
+    if (!extraits.data || !taux.data || !declaration.data || decimalesDuPack === null) return mois;
     const decimales = decimalesDuPack;
     const tarifs = taux.data;
+    const lignesDeDeclaration = declaration.data;
 
     /*
      * ================== LA TVA SE RANGE AU MOIS OÙ LE CABINET A REÇU LA PIÈCE
@@ -227,6 +231,7 @@ export function useAccueil(periode: string): Accueil {
         period: m.periode,
         currency: { code: devise, decimals: decimales },
         taux: tarifs,
+        declaration: lignesDeDeclaration,
         rows: dedans,
       });
       return {
@@ -237,7 +242,7 @@ export function useAccueil(periode: string): Accueil {
         horsDuCalcul: calcul.refused.length,
       };
     });
-  }, [extraits.data, taux.data, periode, devise, decimalesDuPack]);
+  }, [extraits.data, taux.data, declaration.data, periode, devise, decimalesDuPack]);
 
   const courant = serie[serie.length - 1]?.recuperee ?? null;
   const precedent = serie[serie.length - 2]?.recuperee ?? null;

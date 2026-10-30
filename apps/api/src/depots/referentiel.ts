@@ -92,6 +92,55 @@ export const referentiel = {
     });
   },
 
+  /**
+   * Les lignes de la déclaration de TVA en vigueur au jour dit
+   * (`ref.tva_declaration_lignes`), dans l'ordre du formulaire, libellés
+   * traduits (`ref.labels`, espace `tva_declaration_ligne`, le français à
+   * défaut), et la nature qui reçoit une TVA dont la nature n'est pas
+   * attribuée (`ref.tva_natures`). Sans nature par défaut, une erreur
+   * explicite : aucun repli implicite (R4).
+   */
+  async declarationTva(db: Requete, packId: string, jour: string, locale = "fr") {
+    const [{ rows: lignes }, { rows: defaut }] = await Promise.all([
+      db.query<{
+        code: string;
+        sens: "collectee" | "deductible";
+        nature: string | null;
+        ordinal: number;
+        incertain: boolean;
+        label: string;
+      }>(
+        `select l.code, l.sens, l.nature, l.ordinal, l.incertain,
+                coalesce(demandee.value, francais.value, l.label) as label
+           from ref.tva_declaration_lignes l
+           left join ref_labels_v demandee
+             on demandee.ns = 'tva_declaration_ligne' and demandee.key = l.code
+            and demandee.locale = $3
+           left join ref_labels_v francais
+             on francais.ns = 'tva_declaration_ligne' and francais.key = l.code
+            and francais.locale = 'fr'
+          where l.pack_version_id = $1
+            and l.valid_from <= $2::date and (l.valid_to is null or l.valid_to >= $2::date)
+          order by l.ordinal, l.code`,
+        [packId, jour, locale],
+      ),
+      db.query<{ code: string }>(`select code from ref.tva_natures where par_defaut`),
+    ]);
+    const natureParDefaut = defaut[0]?.code;
+    if (!natureParDefaut) throw new Error("ref.tva_natures : aucune nature par défaut");
+    return {
+      natureParDefaut,
+      lignes: lignes.map((l) => ({
+        code: l.code,
+        label: l.label,
+        sens: l.sens,
+        nature: l.nature,
+        ordinal: Number(l.ordinal),
+        incertain: l.incertain,
+      })),
+    };
+  },
+
   async accountMappings(db: Requete, packId: string) {
     const { rows } = await db.query(
       `select document_kind, tax_code, main_account, vat_account, counterparty_account,

@@ -9,6 +9,22 @@
 import type { Requete } from "../db.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
 
+/**
+ * Un article LU qui est une charge du mois : un achat qui compte, dont le
+ * cabinet n'a pas pris les montants (`source = 'lecture'`), et qui n'est pas
+ * une immobilisation acquise (3 novembre 2026) — ni par sa famille, rangée au
+ * plan (`app.famille_immobilisee`), ni par l'écriture que le cabinet a
+ * validée (`app.validee_en_immobilisation`). Une immobilisation est HT, jamais
+ * une charge du mois : la même règle que pour une écriture forcée. Alias :
+ * `a` (piece_articles_v), `q` (pieces_qui_comptent_v).
+ */
+const CHARGE_LUE = `q.source = 'lecture'
+            and q.document_kind <> 'facture_vente'
+            and not app.famille_immobilisee(a.tenant_id, a.pack_version_id, q.document_kind,
+                                            coalesce(a.document_date, q.created_at::date),
+                                            a.famille_code)
+            and not app.validee_en_immobilisation(q.id)`;
+
 export const charges = {
   /**
    * Les familles de charges du pack, traduites.
@@ -76,9 +92,8 @@ export const charges = {
          from piece_articles_v a
          join pieces_qui_comptent_v q on q.id = a.piece_id
         where a.tenant_id = $1 and a.period is null
-          and q.document_kind <> 'facture_vente'
           -- Forcée, la pièce a la date de l'écriture du cabinet.
-          and q.source = 'lecture'`,
+          and ${CHARGE_LUE}`,
       [tenantId],
     );
     const r = (rows as Record<string, unknown>[])[0] ?? {};
@@ -108,8 +123,7 @@ export const charges = {
                 'lecture' as source
            from piece_articles_v a
            join pieces_qui_comptent_v q on q.id = a.piece_id
-          where a.tenant_id = $1 and q.source = 'lecture'
-            and q.document_kind <> 'facture_vente'
+          where a.tenant_id = $1 and ${CHARGE_LUE}
          union all
          -- Prise en charge (1er novembre 2026) : la charge est ce que le
          -- cabinet a inscrit en base, au mois de son écriture, rangée dans sa
