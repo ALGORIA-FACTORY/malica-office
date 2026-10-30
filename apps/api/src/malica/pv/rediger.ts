@@ -46,7 +46,8 @@ import type {
   TaxRate,
 } from "@malica/socle/ports/repositories";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
-import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { EXTRAIT_ILLISIBLE, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import type { Fait, RaisonDEchec, ResultatRedaction } from "@malica/socle/ports/malica";
 
 /** Trente jours : l'horizon des « échéances à venir », le même que le dossier. */
@@ -63,6 +64,51 @@ const LANGUES: Record<string, string> = {
 
 interface FicheCourante {
   clotureExercice: string | null;
+}
+
+/* ------------------------------------------------------------- la TVA */
+
+/**
+ * Les chiffres de TVA du PV, depuis le SEUL calcul des écrans
+ * (`tvaDesExtraits`, au Socle). Ce fichier refaisait l'assemblage à la main
+ * et écartait EN SILENCE un extrait qui ne validait pas (3 novembre 2026).
+ *
+ * Revue de #145 : aucun montant de TVA n'est publié quand AUCUNE pièce n'a été
+ * comptée — un « 0,000 » signé au PV dirait une TVA nulle qu'on ne connaît
+ * pas. Les pièces hors du calcul sont celles dont l'extrait ne se lit pas
+ * (`EXTRAIT_ILLISIBLE`) : un refus du moteur sur une ligne ne retire pas la
+ * pièce, et une ligne n'est pas une pièce.
+ */
+export function chiffresDeLaTva(tva: TvaV1, extraits: number, devise: string): PvChiffre[] {
+  const horsCalcul = new Set(
+    tva.refused
+      .filter((r) => r.reason.startsWith(`${EXTRAIT_ILLISIBLE}:`))
+      .flatMap((r) => (r.item_id ? [r.item_id] : [])),
+  ).size;
+  const chiffres: PvChiffre[] = [];
+  if (extraits - horsCalcul > 0) {
+    const montant = (label: string, valeur: string): PvChiffre => ({
+      label,
+      valeur,
+      source: "tva",
+      genre: "montant",
+      devise,
+    });
+    chiffres.push(
+      montant("tvaCollectee", tva.totals.collectee),
+      montant("tvaDeductible", tva.totals.deductible),
+      montant("tva", tva.totals.solde),
+    );
+  }
+  if (horsCalcul > 0)
+    chiffres.push({
+      label: "tvaHorsCalcul",
+      valeur: String(horsCalcul),
+      source: "tva",
+      genre: "nombre",
+      devise: null,
+    });
+  return chiffres;
 }
 
 /* ----------------------------------------------------------- les chiffres */
@@ -168,27 +214,20 @@ async function rassemblerLesChiffres(
     );
   }
 
-  /*
-   * La TVA du mois : le SEUL calcul des écrans (`tvaDesExtraits`, au Socle).
-   * Ce fichier refaisait l'assemblage à la main et écartait EN SILENCE un
-   * extrait qui ne validait pas, quand l'écran le refusait en le nommant
-   * (3 novembre 2026). Une pièce hors du calcul est désormais comptée au PV.
-   */
-  if (extraits.length > 0 && taux.length > 0 && declaration) {
-    const tva = tvaDesExtraits({
-      period: periode,
-      currency: { code: devise, decimals: decimales },
-      taux,
-      declaration,
-      rows: extraits,
-    });
+  if (taux.length > 0 && declaration) {
     chiffres.push(
-      montant("tvaCollectee", tva.totals.collectee, "tva"),
-      montant("tvaDeductible", tva.totals.deductible, "tva"),
-      montant("tva", tva.totals.solde, "tva"),
+      ...chiffresDeLaTva(
+        tvaDesExtraits({
+          period: periode,
+          currency: { code: devise, decimals: decimales },
+          taux,
+          declaration,
+          rows: extraits,
+        }),
+        extraits.length,
+        devise,
+      ),
     );
-    const horsCalcul = new Set(tva.refused.flatMap((r) => (r.item_id ? [r.item_id] : []))).size;
-    if (horsCalcul > 0) chiffres.push(nombre("tvaHorsCalcul", horsCalcul, "tva"));
   }
 
   const duMois = file.filter((p) => p.createdAt.slice(0, 7) === periode).length;

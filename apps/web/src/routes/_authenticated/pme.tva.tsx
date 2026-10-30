@@ -457,6 +457,23 @@ function PmeTva() {
                     </span>
                   </div>
                 ) : null}
+                {/* Un référentiel incomplet : compté dans les totaux, nommé à part. */}
+                {(tva?.sans_ligne.length ?? 0) > 0 ? (
+                  <div className="rw">
+                    <i aria-hidden>
+                      <IconeInfo />
+                    </i>
+                    <span className="bd">
+                      <b>
+                        {t("tva.declaration.sansLigne", { count: tva!.sans_ligne.length })}
+                        <Aide
+                          titre={t("tva.declaration.sansLigne", { count: tva!.sans_ligne.length })}
+                          paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
+                        />
+                      </b>
+                    </span>
+                  </div>
+                ) : null}
               </>
             ) : null}
           </>

@@ -59,6 +59,16 @@ export const TvaV1 = z.object({
   par_defaut: z
     .array(z.object({ reason: z.string(), item_id: z.string().nullable(), tax_code: z.string() }))
     .default([]),
+  /**
+   * Les seaux qu'aucune ligne du référentiel ne porte (pas de ligne pour leur
+   * sens) : ils COMPTENT dans les totaux, la déclaration ne les montre pas, et
+   * l'écran les nomme — un référentiel incomplet, pas une pièce à reprendre.
+   */
+  sans_ligne: z
+    .array(
+      z.object({ sens: SensDeTva, tax_code: z.string(), nature: z.string(), vat: decimalString }),
+    )
+    .default([]),
   refused: z.array(z.object({ reason: z.string(), item_id: z.string().nullable() })).default([]),
 });
 export type TvaV1 = z.infer<typeof TvaV1>;

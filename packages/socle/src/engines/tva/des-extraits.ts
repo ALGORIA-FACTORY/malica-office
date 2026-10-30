@@ -20,6 +20,9 @@ import { computeTva } from "./compute.ts";
 
 type Entree = { item_id: string | null; extract: ExtractV1 };
 
+/** Le motif d'un extrait qui ne valide pas le contrat : la pièce entière est hors du calcul. */
+export const EXTRAIT_ILLISIBLE = "EXTRAIT_ILLISIBLE";
+
 export function tvaDesExtraits(args: {
   period: string;
   currency: { code: string; decimals: number };
@@ -35,7 +38,7 @@ export function tvaDesExtraits(args: {
     const lu = ExtractV1.safeParse(row.extract);
     if (!lu.success) {
       const champs = [...new Set(lu.error.issues.map((i) => i.path.join(".")))].sort();
-      illisibles.push({ reason: `EXTRAIT_ILLISIBLE:${champs.join(",")}`, item_id: row.pieceId });
+      illisibles.push({ reason: `${EXTRAIT_ILLISIBLE}:${champs.join(",")}`, item_id: row.pieceId });
       continue;
     }
     const entree = { item_id: row.pieceId, extract: lu.data };

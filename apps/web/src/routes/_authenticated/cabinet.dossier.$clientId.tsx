@@ -556,6 +556,16 @@ function CabinetClient() {
                   />
                 </p>
               ) : null}
+              {tva.sans_ligne.length > 0 ? (
+                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span aria-hidden className="h-[7px] w-[7px] shrink-0 bg-signal-warn" />
+                  {t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
+                  <Aide
+                    titre={t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
+                    paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
+                  />
+                </p>
+              ) : null}
             </section>
           ) : null}
 

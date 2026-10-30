@@ -3691,6 +3691,11 @@ const fr = {
   "tva.declaration.parDefaut": "{count} lignes rangées par défaut",
   "tva.declaration.parDefaut#one": "{count} ligne rangée par défaut",
   "tva.declaration.parDefaut#other": "{count} lignes rangées par défaut",
+  "tva.declaration.sansLigne": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne#one": "{count} montant sans ligne de déclaration",
+  "tva.declaration.sansLigne#other": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne.aide":
+    "Le référentiel de la déclaration n'a pas de ligne pour ces montants : ils comptent dans les totaux, mais aucune ligne de la déclaration ne les porte. Ce n'est pas une pièce à reprendre ; signalez-le à l'équipe Malica.",
   "tva.declaration.parDefaut.aide":
     "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. Le cabinet la reclasse en forçant l'écriture.",
   /**
@@ -7374,6 +7379,11 @@ const en: Dict = {
   "tva.declaration.parDefaut": "{count} lines placed by default",
   "tva.declaration.parDefaut#one": "{count} line placed by default",
   "tva.declaration.parDefaut#other": "{count} lines placed by default",
+  "tva.declaration.sansLigne": "{count} amounts with no return line",
+  "tva.declaration.sansLigne#one": "{count} amount with no return line",
+  "tva.declaration.sansLigne#other": "{count} amounts with no return line",
+  "tva.declaration.sansLigne.aide":
+    "The return referential has no line for these amounts: they count in the totals, but no line of the return carries them. This is not a document to rework; report it to the Malica team.",
   "tva.declaration.parDefaut.aide":
     "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The firm reclassifies it by forcing the entry.",
   "pme.fiche.barre": "Your tax profile",
@@ -10920,6 +10930,11 @@ const ar: Dict = {
   "tva.declaration.parDefaut": "أسطر مرتبة افتراضيًا: {count}",
   "tva.declaration.parDefaut#one": "سطر واحد مرتب افتراضيًا",
   "tva.declaration.parDefaut#other": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.sansLigne": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne#one": "مبلغ واحد دون سطر في التصريح",
+  "tva.declaration.sansLigne#other": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne.aide":
+    "لا يتضمن مرجع التصريح سطرًا لهذه المبالغ: هي محسوبة في المجاميع، لكن لا يحملها أي سطر من التصريح. ليست وثيقة للمراجعة؛ أبلغوا فريق Malica.",
   "tva.declaration.parDefaut.aide":
     "لم تتمكن Malica من تحديد الجزء الذي يمثل أصلًا ثابتًا في هذه الفواتير: رُتّب أداؤها في السطر الافتراضي من التصريح، وهو محسوب. يعيد المكتب تصنيفه بفرض القيد.",
   "pme.fiche.barre": "وضعيتكم الجبائية",

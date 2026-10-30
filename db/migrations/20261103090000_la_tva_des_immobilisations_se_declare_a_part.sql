@@ -29,22 +29,34 @@
 -- TypeScript : le moteur du Socle remplit les lignes qu'on lui donne.
 --
 -- La nature d'une ligne d'extrait se lit, dans cet ordre :
---   - FORCÉE : sur les comptes de l'écriture du cabinet (#140) ;
---   - VALIDÉE : la pièce garde sa lecture (#140), et sa nature vient des
---     comptes de base de l'écriture validée — toutes en immobilisation, ou
---     aucune ; mêlées, on ne sait pas les rapporter aux lignes lues ;
---   - SINON : sur les articles lus, par la famille que le référentiel leur
---     donne (`charge_famille_resolve`) et le compte de cette famille, rangé
---     par le plan (`app.nature_des_comptes`) — jamais par un mot écrit ici.
+--   - FORCÉE, et l'écriture se lit comme une facture : sur les comptes de
+--     l'écriture du cabinet (#140) ;
+--   - PRISE EN CHARGE autrement (validée, ou forcée sans se lire comme une
+--     facture — un avoir) : la pièce garde sa lecture (#140), et sa nature
+--     vient des comptes de base de l'écriture — toutes en immobilisation, ou
+--     aucune ; mêlées, on ne sait pas les rapporter aux lignes lues. Une fois
+--     l'écriture prise, ses comptes décident, jamais les familles d'articles ;
+--   - SINON : sur les articles projetés (`piece_articles_v`, la seule
+--     résolution des familles), par le compte de leur famille rangé au plan
+--     (`app.nature_des_comptes`) — jamais par un mot écrit ici. « Vos
+--     charges » suit la même règle.
 --
--- Une facture mêlée se partage, au même taux, par ce que les lignes de
--- l'écriture ou les articles chiffrés attribuent à l'immobilisation : la base
--- attribuée, et sa TVA au prorata de la base, arrondie au pair à l'exposant de
--- la devise — l'arrondi du Socle (`domain/decimal.ts`) ; le reste à l'autre
--- nature. Ce qui ne s'attribue pas (un article d'immobilisation sans montant
--- ou sans taux, des bases qui dépassent la ligne) reste sur la nature PAR
+-- La base attribuée à l'immobilisation l'est PAR CODE DE TAXE, et se répartit
+-- entre les lignes de ce code au prorata de leurs bases, arrondie au pair à
+-- l'exposant de la devise — l'arrondi du Socle (`domain/decimal.ts`) — la
+-- dernière ligne prenant le reste : aucun millime perdu. Une ligne partagée
+-- garde sa TVA au prorata, le reste à l'autre nature. Un avoir s'attribue
+-- comme une facture (même signe, part au plus égale à la base). Ce qui ne
+-- s'attribue pas (un article d'immobilisation sans montant ou sans taux, une
+-- part qui dépasse la base, des signes contraires) reste sur la nature PAR
 -- DÉFAUT du référentiel, marqué `nature_attribuee: false` : la TVA du mois le
 -- compte et le dit, jamais en silence.
+--
+-- Revue indépendante de #145 (30 octobre 2026) : cette version répartit par
+-- code (une facture d'immobilisation à deux lignes au même taux tombait par
+-- défaut), accepte les avoirs, laisse l'écriture décider de « Vos charges »,
+-- lit les pièces en une passe (la porte appelée par ligne coûtait 4,5 s pour
+-- 200 pièces), et refuse les familles d'un dossier étranger.
 --
 -- INCERTAIN (à confirmer par un expert-comptable) :
 --   - les lignes exactes du formulaire de déclaration mensuelle en vigueur. Le
@@ -183,11 +195,19 @@ grant execute on function app.arrondi_au_pair(numeric, integer) to authenticated
 
 -- --- 4. Les lignes d'un extrait, rangées par nature -----------------------------------------------------
 --
--- `p_immo` : la base attribuée à l'immobilisation, par code de taxe. Une ligne
--- dont toute la base l'est prend la nature d'immobilisation ; aucune, l'autre ;
--- une partie, elle se partage en deux. Ce qui ne s'attribue pas prend la
--- nature par défaut, marqué. Une ligne qui ne se lit pas (montant absent ou
--- non décimal) laisse l'extrait tel quel : le contrat le refusera, nommé.
+-- `p_immo` : la base attribuée à l'immobilisation, PAR CODE DE TAXE. Elle se
+-- répartit entre les lignes de ce code au prorata de leurs bases, arrondie au
+-- pair à l'exposant de la devise ; la dernière ligne reçoit le reste, pour
+-- qu'aucun millime ne se perde. Une ligne dont toute la base est attribuée
+-- prend la nature d'immobilisation ; aucune, l'autre ; une partie, elle se
+-- partage en deux (sa TVA au prorata, le reste à l'autre nature).
+--
+-- Un avoir s'attribue comme une facture : la part et la base ont le même
+-- signe, et la part ne dépasse pas la base en valeur absolue. Ce qui ne
+-- s'attribue pas (signes contraires, part trop grande, ligne de signe opposé
+-- au code) prend la nature par défaut, marqué, pour TOUT le code. Une ligne
+-- qui ne se lit pas (montant absent ou non décimal) laisse l'extrait tel
+-- quel : le contrat le refusera, nommé.
 
 create or replace function app.lignes_par_nature(
   p_lines       jsonb,
@@ -203,13 +223,6 @@ declare
   v_immo   text;
   v_autre  text;
   v_defaut text;
-  v_out    jsonb := '[]'::jsonb;
-  l        jsonb;
-  v_base   numeric;
-  v_tva    numeric;
-  v_part   numeric;
-  v_tva_im numeric;
-  v_meme   integer;
 begin
   if p_lines is null or jsonb_typeof(p_lines) <> 'array' then
     return p_lines;
@@ -231,40 +244,79 @@ begin
       using errcode = 'P0001';
   end if;
 
-  for l in select e from jsonb_array_elements(p_lines) e loop
-    v_base := (l ->> 'base_ht')::numeric;
-    v_tva  := (l ->> 'vat_amount')::numeric;
-    v_part := coalesce((p_immo ->> (l ->> 'tax_code'))::numeric, 0);
-    select count(*) into v_meme from jsonb_array_elements(p_lines) e
-     where e ->> 'tax_code' = l ->> 'tax_code';
-
-    if not coalesce(p_attribuable, false) or p_exposant is null
-       or v_part < 0 or v_part > greatest(v_base, 0)
-       or (v_part > 0 and v_part < v_base and v_meme > 1) then
-      v_out := v_out || jsonb_build_array(
-        l || jsonb_build_object('nature', v_defaut, 'nature_attribuee', false));
-    elsif v_part = 0 then
-      v_out := v_out || jsonb_build_array(
-        l || jsonb_build_object('nature', v_autre, 'nature_attribuee', true));
-    elsif v_part = v_base then
-      v_out := v_out || jsonb_build_array(
-        l || jsonb_build_object('nature', v_immo, 'nature_attribuee', true));
-    else
-      v_tva_im := app.arrondi_au_pair(v_tva * v_part / v_base, p_exposant);
-      v_out := v_out || jsonb_build_array(
-        l || jsonb_build_object(
-          'base_ht', v_part::text,
-          'vat_amount', v_tva_im::text,
-          'ttc', (v_part + v_tva_im)::text,
-          'nature', v_immo, 'nature_attribuee', true),
-        l || jsonb_build_object(
-          'base_ht', (v_base - v_part)::text,
-          'vat_amount', (v_tva - v_tva_im)::text,
-          'ttc', (v_base - v_part + v_tva - v_tva_im)::text,
-          'nature', v_autre, 'nature_attribuee', true));
-    end if;
-  end loop;
-  return v_out;
+  return (
+    with l as (
+      select t.e, t.ord, t.e ->> 'tax_code' as code,
+             (t.e ->> 'base_ht')::numeric as base, (t.e ->> 'vat_amount')::numeric as tva
+        from jsonb_array_elements(p_lines) with ordinality t(e, ord)
+    ),
+    c as (
+      select l.*,
+             sum(l.base) over (partition by l.code) as base_c,
+             coalesce((p_immo ->> l.code)::numeric, 0) as part_c,
+             row_number() over (partition by l.code order by l.ord desc) = 1 as dernier
+        from l
+    ),
+    brute as (
+      -- La part de chaque ligne au prorata ; la dernière du code prend le reste.
+      select c.*,
+             case when not c.dernier and c.base_c <> 0 and p_exposant is not null
+                  then app.arrondi_au_pair(c.part_c * c.base / c.base_c, p_exposant) end as p_raw
+        from c
+    ),
+    parts as (
+      select b.*,
+             case when b.dernier
+                  then b.part_c - coalesce(sum(b.p_raw) over (partition by b.code), 0)
+                  else coalesce(b.p_raw, 0) end as part
+        from brute b
+    ),
+    codes as (
+      select p.code,
+             coalesce(p_attribuable, false) and p_exposant is not null
+             and (min(p.part_c) = 0
+                  or (min(p.base_c) <> 0
+                      and sign(min(p.part_c)) = sign(min(p.base_c))
+                      and abs(min(p.part_c)) <= abs(min(p.base_c))
+                      and bool_and(p.part = 0
+                                   or (sign(p.part) = sign(p.base)
+                                       and abs(p.part) <= abs(p.base))))) as ok
+        from parts p
+       group by p.code
+    ),
+    sorties as (
+      select p.ord, x.rang, x.ligne
+        from parts p
+        join codes k on k.code = p.code
+        cross join lateral (
+          select 1 as rang,
+                 case
+                   when not k.ok then
+                     p.e || jsonb_build_object('nature', v_defaut, 'nature_attribuee', false)
+                   when p.part = 0 then
+                     p.e || jsonb_build_object('nature', v_autre, 'nature_attribuee', true)
+                   when p.part = p.base then
+                     p.e || jsonb_build_object('nature', v_immo, 'nature_attribuee', true)
+                   else
+                     p.e || jsonb_build_object(
+                       'base_ht', p.part::text,
+                       'vat_amount', app.arrondi_au_pair(p.tva * p.part / p.base, p_exposant)::text,
+                       'ttc', (p.part + app.arrondi_au_pair(p.tva * p.part / p.base, p_exposant))::text,
+                       'nature', v_immo, 'nature_attribuee', true)
+                 end as ligne
+          union all
+          select 2,
+                 p.e || jsonb_build_object(
+                   'base_ht', (p.base - p.part)::text,
+                   'vat_amount', (p.tva - app.arrondi_au_pair(p.tva * p.part / p.base, p_exposant))::text,
+                   'ttc', (p.base - p.part + p.tva
+                           - app.arrondi_au_pair(p.tva * p.part / p.base, p_exposant))::text,
+                   'nature', v_autre, 'nature_attribuee', true)
+           where k.ok and p.part <> 0 and p.part <> p.base
+        ) x
+    )
+    select coalesce(jsonb_agg(s.ligne order by s.ord, s.rang), '[]'::jsonb) from sorties s
+  );
 end
 $$;
 
@@ -274,9 +326,10 @@ grant execute on function app.lignes_par_nature(jsonb, jsonb, boolean, integer) 
 -- --- 5. Les lignes rangées d'une écriture prise en charge, forcée OU validée -------------------------
 --
 -- Le corps de `app.lignes_prises_en_charge` (20261101090000), l'origine en
--- paramètre : la nature d'une pièce VALIDÉE se lit sur les comptes de son
--- écriture, comme celle d'une pièce forcée. `lignes_prises_en_charge` en
--- devient l'appel pour « forcée » — une règle, un endroit.
+-- paramètre (nulle : forcée ou validée) : une fois l'écriture prise en charge,
+-- ce sont SES comptes qui disent la nature, qu'elle soit forcée ou validée.
+-- `lignes_prises_en_charge` en devient l'appel pour « forcée » — une règle,
+-- un endroit.
 
 create or replace function app.lignes_rangees(p_piece uuid, p_origine text)
 returns table (
@@ -305,7 +358,7 @@ as $$
       join socle.prises_en_charge pc on pc.ecriture_id = x.id
      where x.id = app.ecriture_prise_en_charge_de(p_piece)
        and exists (select 1 from app.ecriture_prise_en_charge(pc.tenant_id, x.id) o
-                    where o.origine = p_origine)
+                    where p_origine is null or o.origine = p_origine)
      order by pc.prise_le desc
      limit 1
   ),
@@ -462,34 +515,63 @@ $$;
 revoke all on function app.montants_pris_en_charge(uuid) from public, anon;
 grant execute on function app.montants_pris_en_charge(uuid) to authenticated;
 
--- --- 7. Ce que l'écriture VALIDÉE dit de la nature -----------------------------------------------------
+-- --- 6 bis. Les pièces prises en charge de dossiers donnés, en une passe -------------------------------
 --
--- Aucune ligne : la pièce n'est pas validée. Toutes les bases en
--- immobilisation : chaque ligne lue l'est entière. Aucune : aucune ne l'est.
--- Mêlées : l'écriture validée fond les bases (une ligne de charge pour tous
--- les taux), et rien ne dit quelle part de quelle ligne lue est
--- l'immobilisation — la nature ne s'attribue pas.
---
--- `app.validee_en_immobilisation` en est la question booléenne : une pièce
--- validée dont TOUTES les bases sont des immobilisations n'a aucune charge du
--- mois (« Vos charges » lit ses articles lus : ils n'y entrent pas).
+-- Revue de #145 : demander à chaque pièce si une écriture la prend en charge
+-- (`app.ecriture_prise_en_charge_de`) coûtait 1,7 ms par pièce, même pour
+-- celles qu'aucun cabinet n'a touchées. On part des PRISES (index par dossier
+-- client) : le coût suit les pièces prises en charge, pas toutes les pièces.
+-- `app.pieces_prises_en_charge` (20261101090000) en devient l'appel pour tous
+-- les dossiers de l'appelant — une règle, un endroit. Les dossiers demandés
+-- sont restreints à ceux de l'appelant (membre, ou cabinet engagé).
 
-create or replace function app.validee_en_immobilisation(p_piece uuid)
-returns boolean
+create or replace function app.prises_des_dossiers(p_dossiers uuid[])
+returns table (piece_id uuid, ecriture_id uuid)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(bool_and(r.immobilisation), false)
-    from app.lignes_rangees(p_piece, 'validee') r
-   where r.nature = 'base'
+  select distinct on (c.courante) c.courante, e.id
+    from socle.prises_en_charge pc
+    join socle.ecritures e on e.id = pc.ecriture_id
+    cross join lateral (select app.version_courante(e.piece_id) as courante) c
+   where pc.client_tenant_id = any (p_dossiers)
+     and pc.client_tenant_id in (select app.member_orgs() union select app.engaged_orgs())
+     and e.nature = 'piece'
+     and app.ecriture_vivante(e.id)
+   order by c.courante, pc.prise_le desc
 $$;
 
-revoke all on function app.validee_en_immobilisation(uuid) from public, anon;
-grant execute on function app.validee_en_immobilisation(uuid) to authenticated;
+revoke all on function app.prises_des_dossiers(uuid[]) from public, anon;
+grant execute on function app.prises_des_dossiers(uuid[]) to authenticated;
 
-create or replace function app.immobilisations_validees(p_piece uuid, p_payload jsonb)
+create or replace function app.pieces_prises_en_charge()
+returns table (piece_id uuid, ecriture_id uuid, lisible boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select v.piece_id, v.ecriture_id,
+         coalesce((app.montants_pris_en_charge(v.piece_id) ->> 'lisible')::boolean, false)
+    from app.prises_des_dossiers(array(select app.member_orgs() union select app.engaged_orgs())) v
+$$;
+
+revoke all on function app.pieces_prises_en_charge() from public, anon;
+grant execute on function app.pieces_prises_en_charge() to authenticated;
+
+-- --- 7. Ce que l'écriture PRISE EN CHARGE dit de la nature ----------------------------------------------
+--
+-- Une fois la pièce prise en charge — validée, ou forcée sans que son
+-- écriture se lise comme une facture (elle garde alors sa lecture) —, ce sont
+-- les comptes de l'écriture qui décident, jamais les familles des articles.
+-- Toutes les bases en immobilisation : chaque ligne lue l'est entière. Aucune :
+-- aucune ne l'est. Mêlées : l'écriture ne dit pas quelle part de quelle ligne
+-- lue est l'immobilisation (la validée fond les bases en une ligne de charge)
+-- — la nature ne s'attribue pas. Aucune ligne de base : pas de prise en charge.
+
+create or replace function app.immobilisations_prises(p_piece uuid, p_payload jsonb)
 returns table (immo jsonb, attribuable boolean)
 language sql
 stable
@@ -497,7 +579,7 @@ security definer
 set search_path = ''
 as $$
   with b as (
-    select r.immobilisation from app.lignes_rangees(p_piece, 'validee') r where r.nature = 'base'
+    select r.immobilisation from app.lignes_rangees(p_piece, null) r where r.nature = 'base'
   ),
   lues as (
     select e ->> 'tax_code' as code, e ->> 'base_ht' as base
@@ -517,157 +599,275 @@ as $$
   having count(*) > 0
 $$;
 
-revoke all on function app.immobilisations_validees(uuid, jsonb) from public, anon, authenticated;
+revoke all on function app.immobilisations_prises(uuid, jsonb) from public, anon;
+grant execute on function app.immobilisations_prises(uuid, jsonb) to authenticated;
 
--- --- 8. Ce que la LECTURE dit de la nature --------------------------------------------------------------
---
--- Chaque article lu prend la famille que le référentiel lui donne, au compte
--- d'imputation du pack (la même résolution que `piece_articles_v`), et la
--- famille son compte ; le plan dit si ce compte est une immobilisation. Un
--- article d'immobilisation sans montant, ou sans taux quand la pièce en porte
--- plusieurs, rend la pièce inattribuable.
+-- La question booléenne, pour « Vos charges » : une pièce prise en charge dont
+-- TOUTES les bases sont des immobilisations n'a aucune charge du mois.
 
--- Une famille d'articles est-elle une immobilisation, pour ce dossier, ce sens
--- et ce jour ? Son compte (`ref.charge_familles.main_account`), rangé par le
--- plan. La seule règle : la TVA (ci-dessous) et « Vos charges »
--- (`charges.articles`) la lisent toutes deux.
-
-create or replace function app.famille_immobilisee(
-  p_dossier uuid,
-  p_pack    uuid,
-  p_kind    text,
-  p_jour    date,
-  p_famille text)
+create or replace function app.prise_en_immobilisation(p_piece uuid)
 returns boolean
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select coalesce((
-    select n.immobilisation
-      from ref.charge_familles f
-      cross join lateral app.nature_des_comptes(
-        null, p_dossier, p_pack, p_kind, p_jour, array[f.main_account]) n
-     where f.pack_version_id = p_pack and f.code = p_famille and f.main_account is not null
-       and f.valid_from <= p_jour and (f.valid_to is null or f.valid_to >= p_jour)
-     order by f.valid_from desc
-     limit 1), false)
+  select coalesce(bool_and(r.immobilisation), false)
+    from app.lignes_rangees(p_piece, null) r
+   where r.nature = 'base'
 $$;
 
-revoke all on function app.famille_immobilisee(uuid, uuid, text, date, text) from public, anon;
-grant execute on function app.famille_immobilisee(uuid, uuid, text, date, text) to authenticated;
+revoke all on function app.prise_en_immobilisation(uuid) from public, anon;
+grant execute on function app.prise_en_immobilisation(uuid) to authenticated;
 
-create or replace function app.immobilisations_lues(p_piece uuid, p_payload jsonb)
-returns table (immo jsonb, attribuable boolean)
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  with ctx as (
-    select app.pack_de_la_piece(p_piece) as pack,
-           p.tenant_id as dossier,
-           coalesce(p_payload ->> 'document_kind', p.document_kind) as kind,
-           coalesce(case when p_payload ->> 'document_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-                         then (p_payload ->> 'document_date')::date end,
-                    p.created_at::date) as jour
-      from capture.pieces p
-     where p.id = app.version_courante(p_piece)
-  ),
-  codes as (
-    select distinct e ->> 'tax_code' as code
-      from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'lines') = 'array'
-                                     then p_payload -> 'lines' else '[]'::jsonb end) e
-     where e ->> 'tax_code' is not null
-  ),
-  imputation as (
-    select m.main_account
-      from ctx join ref.account_mappings m
-        on m.pack_version_id = ctx.pack and m.document_kind = ctx.kind
-     order by m.main_account
-     limit 1
-  ),
-  articles as (
-    select a.value ->> 'designation' as designation,
-           case when a.value ->> 'total_ht' ~ '^-?[0-9]+(\.[0-9]+)?$'
-                then (a.value ->> 'total_ht')::numeric end as total,
-           coalesce(a.value ->> 'tax_code',
-                    case when (select count(*) from codes) = 1
-                         then (select c.code from codes c) end) as code
-      from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'articles') = 'array'
-                                     then p_payload -> 'articles' else '[]'::jsonb end) a
-  ),
-  immos as (
-    select ar.code, ar.total
-      from articles ar
-      cross join ctx
-      left join imputation i on true
-      cross join lateral public.charge_famille_resolve(ctx.pack, i.main_account, ar.designation,
-                                                       ctx.jour) r
-     where app.famille_immobilisee(ctx.dossier, ctx.pack, ctx.kind, ctx.jour, r.famille_code)
-  )
-  select coalesce((select jsonb_object_agg(x.code, x.total::text)
-                     from (select im.code, sum(im.total) as total from immos im
-                            where im.code is not null group by im.code) x), '{}'::jsonb),
-         not exists (select 1 from immos im where im.total is null or im.code is null)
-$$;
-
-revoke all on function app.immobilisations_lues(uuid, jsonb) from public, anon, authenticated;
-
--- --- 9. L'extrait qui compte dans la TVA -----------------------------------------------------------------
+-- --- 8. Ce que la LECTURE dit de la nature, tant qu'aucune écriture n'est prise -------------------------
 --
--- Une seule porte pour la TVA de la PME (`extraitsTransmis`) ET celle du
--- cabinet (`bookedExtracts`) : forcée et lisible, les montants du cabinet ;
--- sinon la lecture. Dans les deux cas, chaque ligne porte sa nature.
+-- Les familles d'articles qui sont des immobilisations, pour un dossier, un
+-- pack, un sens et un jour : le compte de chaque famille
+-- (`ref.charge_familles.main_account`) rangé par le plan, en UN appel de
+-- `app.nature_des_comptes` pour toutes les familles. Le dossier doit être un
+-- de ceux de l'appelant (membre ou cabinet engagé) : la fonction ne renseigne
+-- pas sur le paramétrage d'un dossier étranger.
 
-create or replace function app.extrait_de_la_tva(p_piece uuid, p_payload jsonb)
-returns jsonb
+create or replace function app.familles_immobilisees(
+  p_dossier uuid,
+  p_pack    uuid,
+  p_kind    text,
+  p_jour    date)
+returns text[]
 language plpgsql
 stable
-security definer
+set search_path = ''
+as $$
+begin
+  if p_dossier is null
+     or p_dossier not in (select app.member_orgs() union select app.engaged_orgs()) then
+    raise exception 'dossier hors de portée' using errcode = '42501';
+  end if;
+  return (
+    with f as (
+      select f.code, f.main_account
+        from ref.charge_familles f
+       where f.pack_version_id = p_pack and f.main_account is not null
+         and f.valid_from <= p_jour and (f.valid_to is null or f.valid_to >= p_jour)
+    )
+    select coalesce(array_agg(distinct f.code order by f.code), '{}')
+      from f
+      join app.nature_des_comptes(null, p_dossier, p_pack, p_kind, p_jour,
+                                  array(select distinct x.main_account from f x)) n
+        on n.account_code = f.main_account and n.immobilisation
+  );
+end
+$$;
+
+revoke all on function app.familles_immobilisees(uuid, uuid, text, date) from public, anon;
+grant execute on function app.familles_immobilisees(uuid, uuid, text, date) to authenticated;
+
+-- Parmi des articles lus d'un dossier, ceux qui ne sont PAS des charges du
+-- mois : ceux d'une famille d'immobilisation, sur une pièce qu'aucune écriture
+-- n'a prise en charge ; et tous ceux d'une pièce prise en charge dont
+-- l'écriture ne porte que des immobilisations. L'appelant passe les articles
+-- qu'il a déjà lus (`[{id, piece_id, pack, famille, kind, jour}]`, sa propre
+-- requête sous sa RLS) : la vue des pièces n'est pas relue (revue de #145).
+-- Ensembliste : une résolution des familles par (pack, sens, jour), une
+-- question à l'écriture par pièce prise en charge — jamais par article.
+
+create or replace function app.articles_immobilises(p_tenant uuid, p_articles jsonb)
+returns setof uuid
+language sql
+stable
+set search_path = ''
+as $$
+  with a as (
+    select (e ->> 'id')::uuid as id, (e ->> 'piece_id')::uuid as piece_id,
+           (e ->> 'pack')::uuid as pack_version_id, e ->> 'famille' as famille_code,
+           e ->> 'kind' as document_kind, (e ->> 'jour')::date as jour
+      from jsonb_array_elements(coalesce(p_articles, '[]'::jsonb)) e
+  ),
+  prises as (
+    select x.piece_id from app.prises_des_dossiers(array[p_tenant]) x
+  ),
+  cles as (
+    select distinct a.pack_version_id, a.document_kind, a.jour
+      from a
+     where a.pack_version_id is not null
+       and a.piece_id not in (select p.piece_id from prises p)
+  ),
+  immo as (
+    select c.pack_version_id, c.document_kind, c.jour, f.code
+      from cles c
+      cross join lateral unnest(app.familles_immobilisees(p_tenant, c.pack_version_id,
+                                                           c.document_kind, c.jour)) f(code)
+  ),
+  prises_en_immobilisation as (
+    select p.piece_id from prises p
+     where p.piece_id in (select a.piece_id from a)
+       and app.prise_en_immobilisation(p.piece_id)
+  )
+  select a.id from a
+   where (a.piece_id not in (select p.piece_id from prises p) and exists (
+            select 1 from immo i
+             where i.pack_version_id = a.pack_version_id and i.document_kind = a.document_kind
+               and i.jour = a.jour and i.code = a.famille_code))
+      or a.piece_id in (select p.piece_id from prises_en_immobilisation p)
+$$;
+
+revoke all on function app.articles_immobilises(uuid, jsonb) from public, anon;
+grant execute on function app.articles_immobilises(uuid, jsonb) to authenticated;
+
+-- --- 9. Les extraits qui comptent dans la TVA ---------------------------------------------------------
+--
+-- Une seule porte pour la TVA de la PME (`extraitsTransmis`) ET celle du
+-- cabinet (`bookedExtracts`), ENSEMBLISTE : elle reçoit les pièces choisies
+-- (`[{piece_id, payload}]`) et rend leur extrait, chaque ligne avec sa nature.
+--   - forcée et lisible : les montants du cabinet ;
+--   - prise en charge autrement : la lecture, natures des comptes de l'écriture ;
+--   - sinon : la lecture, natures des familles de ses articles projetés
+--     (`piece_articles_v`, la seule résolution des familles), au taux de
+--     l'article lu au même rang ; les familles d'immobilisation se résolvent
+--     une fois par (dossier, pack, sens, jour) pour toutes les pièces.
+-- Sous la RLS de l'appelant (security invoker) : une pièce qu'il ne lit pas
+-- rend un extrait nul.
+
+create or replace function app.extraits_de_la_tva(p_entrees jsonb)
+returns table (piece_id uuid, payload jsonb)
+language plpgsql
+stable
 set search_path = ''
 as $$
 declare
+  v_entree   jsonb;
+  v_piece    uuid;
+  v_payload  jsonb;
   v_montants jsonb;
   v_immo     jsonb;
   v_attr     boolean;
   v_exposant integer;
+  v_dossier  uuid;
+  v_kind     text;
+  v_cree     date;
+  v_unique   text;
+  v_cache    jsonb := '{}'::jsonb;
+  v_cle      record;
+  v_prises   jsonb;
+  v_articles jsonb;
 begin
-  if not app.piece_lisible(p_piece) then
-    return null;
-  end if;
-  v_montants := app.montants_pris_en_charge(p_piece);
-  if coalesce((v_montants ->> 'lisible')::boolean, false) then
-    return coalesce(p_payload, '{}'::jsonb) || jsonb_build_object(
-      'lines', v_montants -> 'lines',
-      'other_charges', v_montants -> 'other_charges',
-      'totals', v_montants -> 'totals',
-      'document_date', v_montants -> 'date_ecriture',
-      'currency', v_montants -> 'currency',
-      'document_kind', v_montants -> 'document_kind');
-  end if;
-  if p_payload is null or jsonb_typeof(p_payload -> 'lines') is distinct from 'array' then
-    return p_payload;
-  end if;
-  select d.exposant into v_exposant from ref.devises d where d.code = p_payload ->> 'currency';
-  select v.immo, v.attribuable into v_immo, v_attr
-    from app.immobilisations_validees(p_piece, p_payload) v;
-  if not found then
-    select r.immo, r.attribuable into v_immo, v_attr
-      from app.immobilisations_lues(p_piece, p_payload) r;
-  end if;
-  return p_payload || jsonb_build_object(
-    'lines', app.lignes_par_nature(p_payload -> 'lines', v_immo, v_attr, v_exposant));
+  -- Les pièces prises en charge, en une passe sur les dossiers des pièces.
+  select coalesce(jsonb_object_agg(x.piece_id, x.ecriture_id), '{}'::jsonb) into v_prises
+    from app.prises_des_dossiers(array(
+           select distinct p.tenant_id from public.pieces_v p
+            where p.id in (select (e ->> 'piece_id')::uuid
+                             from jsonb_array_elements(coalesce(p_entrees, '[]'::jsonb)) e))) x;
+
+  -- Les articles projetés de toutes les pièces, lus en UNE requête : lus
+  -- pièce par pièce, la vue coûtait 5 ms chacune (revue de #145).
+  select coalesce(jsonb_object_agg(x.piece_id, x.articles), '{}'::jsonb) into v_articles
+    from (select a.piece_id,
+                 jsonb_agg(jsonb_build_object(
+                   'ordinal', a.ordinal, 'famille', a.famille_code, 'total', a.total_ht,
+                   'pack', a.pack_version_id, 'jour', a.document_date)) as articles
+            from public.piece_articles_v a
+           where a.piece_id in (select (e ->> 'piece_id')::uuid
+                                  from jsonb_array_elements(coalesce(p_entrees, '[]'::jsonb)) e)
+           group by a.piece_id) x;
+
+  for v_entree in select e from jsonb_array_elements(coalesce(p_entrees, '[]'::jsonb)) e loop
+    v_piece := (v_entree ->> 'piece_id')::uuid;
+    v_payload := v_entree -> 'payload';
+    piece_id := v_piece;
+
+    if not app.piece_lisible(v_piece) then
+      payload := null;
+      return next;
+      continue;
+    end if;
+
+    v_immo := null;
+    v_attr := null;
+    if v_prises ? app.version_courante(v_piece)::text then
+      v_montants := app.montants_pris_en_charge(v_piece);
+      if coalesce((v_montants ->> 'lisible')::boolean, false) then
+        payload := coalesce(v_payload, '{}'::jsonb) || jsonb_build_object(
+          'lines', v_montants -> 'lines',
+          'other_charges', v_montants -> 'other_charges',
+          'totals', v_montants -> 'totals',
+          'document_date', v_montants -> 'date_ecriture',
+          'currency', v_montants -> 'currency',
+          'document_kind', v_montants -> 'document_kind');
+        return next;
+        continue;
+      end if;
+    end if;
+
+    if v_payload is null or jsonb_typeof(v_payload -> 'lines') is distinct from 'array' then
+      payload := v_payload;
+      return next;
+      continue;
+    end if;
+    select d.exposant into v_exposant from ref.devises d where d.code = v_payload ->> 'currency';
+
+    if v_prises ? app.version_courante(v_piece)::text then
+      -- Prise en charge : les comptes de l'écriture décident.
+      select r.immo, r.attribuable into v_immo, v_attr
+        from app.immobilisations_prises(v_piece, v_payload) r;
+    else
+      -- Aucune écriture prise en charge : les articles lus décident.
+      select p.tenant_id, coalesce(v_payload ->> 'document_kind', p.document_kind),
+             p.created_at::date
+        into v_dossier, v_kind, v_cree
+        from public.pieces_v p where p.id = app.version_courante(v_piece);
+      select case when count(distinct e ->> 'tax_code') = 1 then min(e ->> 'tax_code') end
+        into v_unique
+        from jsonb_array_elements(v_payload -> 'lines') e;
+      for v_cle in
+        select distinct (a ->> 'pack')::uuid as pack_version_id,
+               coalesce((a ->> 'jour')::date, v_cree) as jour
+          from jsonb_array_elements(coalesce(v_articles -> v_piece::text, '[]'::jsonb)) a
+         where a ->> 'pack' is not null
+      loop
+        if not v_cache ? (v_cle.pack_version_id::text || '|' || v_kind || '|' || v_cle.jour) then
+          v_cache := v_cache || jsonb_build_object(
+            v_cle.pack_version_id::text || '|' || v_kind || '|' || v_cle.jour,
+            to_jsonb(app.familles_immobilisees(v_dossier, v_cle.pack_version_id, v_kind,
+                                               v_cle.jour)));
+        end if;
+      end loop;
+      with lus as (
+        -- Les articles lus non vides, dans l'ordre de leur projection.
+        select t.e, row_number() over (order by t.n) as rang
+          from jsonb_array_elements(case when jsonb_typeof(v_payload -> 'articles') = 'array'
+                                         then v_payload -> 'articles' else '[]'::jsonb end)
+               with ordinality t(e, n)
+         where coalesce(btrim(t.e ->> 'designation'), '') <> ''
+      ),
+      immos as (
+        select coalesce(l.e ->> 'tax_code', v_unique) as code, (a ->> 'total')::numeric as total
+          from jsonb_array_elements(coalesce(v_articles -> v_piece::text, '[]'::jsonb)) a
+          left join lus l on l.rang = (a ->> 'ordinal')::bigint
+         where coalesce(v_cache -> ((a ->> 'pack') || '|' || v_kind || '|'
+                                    || coalesce((a ->> 'jour')::date, v_cree)), '[]'::jsonb)
+               ? (a ->> 'famille')
+      )
+      select coalesce((select jsonb_object_agg(x.code, x.total::text)
+                         from (select im.code, sum(im.total) as total from immos im
+                                where im.code is not null group by im.code) x), '{}'::jsonb),
+             not exists (select 1 from immos im where im.total is null or im.code is null)
+        into v_immo, v_attr;
+    end if;
+
+    payload := v_payload || jsonb_build_object(
+      'lines', app.lignes_par_nature(v_payload -> 'lines', v_immo, v_attr, v_exposant));
+    return next;
+  end loop;
 end
 $$;
 
-revoke all on function app.extrait_de_la_tva(uuid, jsonb) from public, anon;
-grant execute on function app.extrait_de_la_tva(uuid, jsonb) to authenticated;
+revoke all on function app.extraits_de_la_tva(jsonb) from public, anon;
+grant execute on function app.extraits_de_la_tva(jsonb) to authenticated;
 
-comment on function app.extrait_de_la_tva(uuid, jsonb) is
-  'L''extrait d''une pièce tel qu''il compte dans la TVA : les montants du cabinet si elle est '
-  'forcée et que son écriture se lit, sa lecture sinon ; chaque ligne porte sa nature '
+comment on function app.extraits_de_la_tva(jsonb) is
+  'Les extraits de pièces tels qu''ils comptent dans la TVA : les montants du cabinet si la pièce '
+  'est forcée et que son écriture se lit, sa lecture sinon ; chaque ligne porte sa nature '
   '(ref.tva_natures), attribuée ou par défaut (3 novembre 2026).';
 
 commit;

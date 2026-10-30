@@ -108,14 +108,15 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
     credit,
     tax_code: taxe,
   });
-  const force = (pieceId: string, lignes: unknown[]) =>
+  /** Forcer l'écriture d'une pièce ; une vente établit son sens au passage. */
+  const force = (pieceId: string, lignes: unknown[], typeDeDocument?: string) =>
     cabinetFait("office.forcer", {
       pieceId,
-      journal: "ACH",
+      journal: typeDeDocument === "facture_vente" ? "VEN" : "ACH",
       date: jour,
       libelle: "Facture saisie par le cabinet",
       lignes,
-      typeDeDocument: null,
+      typeDeDocument: typeDeDocument ?? null,
     }) as Promise<string>;
 
   /** Une écriture proposée sur la pièce, à ce jour. */
@@ -421,5 +422,236 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
     }
     const ar = (await pmeFait("referentiel.declarationTva", packId, jour, "ar")) as DeclarationTva;
     assert.match(ar.lignes[0]!.label, /[؀-ۿ]/);
+    // Chaque langue rend SA traduction, jamais le français par repli.
+    const { rows: libelles } = await admin.query<{ key: string; locale: string; value: string }>(
+      `select key, locale, value from ref.labels where ns = 'tva_declaration_ligne'`,
+    );
+    for (const locale of ["en", "ar"]) {
+      const d = (await pmeFait(
+        "referentiel.declarationTva",
+        packId,
+        jour,
+        locale,
+      )) as DeclarationTva;
+      for (const l of d.lignes) {
+        const attendu = libelles.find((x) => x.key === l.code && x.locale === locale)?.value;
+        const fr = libelles.find((x) => x.key === l.code && x.locale === "fr")?.value;
+        assert.ok(attendu, `${l.code} a une traduction ${locale}`);
+        assert.equal(l.label, attendu, `${l.code} en ${locale}`);
+        assert.notEqual(l.label, fr, `${l.code} en ${locale} n'est pas le français`);
+      }
+    }
+  });
+
+  /*
+   * Revue indépendante de #145 (30 octobre 2026). Placées APRÈS l'épreuve du
+   * journal : leurs écritures ne changent pas ses sommes attendues.
+   */
+  const deuxLignes = (e: Record<string, unknown>) => ({
+    ...e,
+    lines: [
+      {
+        label: "a",
+        tax_code: "TVA19",
+        base_ht: "1000.000",
+        vat_amount: "190.000",
+        ttc: "1190.000",
+      },
+      { label: "b", tax_code: "TVA19", base_ht: "234.560", vat_amount: "44.566", ttc: "279.126" },
+    ],
+  });
+  /** Le cabinet inscrit telle quelle une écriture : la pièce est « Validée ». */
+  const valideeAvec = async (id: string, lignes: unknown[]) =>
+    sousIdentite(expert.id, async (db) => {
+      await db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [id]);
+      await office.book(db, await proposer(db, id, lignes));
+    });
+
+  it("P2-1 : validée tout immobilisation, deux lignes lues au même taux : les deux en immobilisation", async () => {
+    const id = await transmise(deuxLignes);
+    await valideeAvec(id, [
+      L("2282", "1234.560", "0"),
+      L("4366", "234.566", "0", "TVA19"),
+      L("401", "0", "1469.126"),
+    ]);
+    assert.deepEqual(await lignesDeLaTva(id, "extraitsTransmis"), [
+      ["TVA19", "1000.000", "190.000", IMMO, true],
+      ["TVA19", "234.560", "44.566", IMMO, true],
+    ]);
+  });
+
+  it("P2-1 : lue tout immobilisation par ses articles, deux lignes au même taux", async () => {
+    const id = await proposee((e) => ({
+      ...deuxLignes(e),
+      articles: [
+        { designation: `${MOT} a`, quantity: "1", total_ht: "1000.000", tax_code: "TVA19" },
+        { designation: `${MOT} b`, quantity: "1", total_ht: "234.560", tax_code: "TVA19" },
+      ],
+    }));
+    assert.deepEqual(await lignesDeLaTva(id, "extraitsTransmis"), [
+      ["TVA19", "1000.000", "190.000", IMMO, true],
+      ["TVA19", "234.560", "44.566", IMMO, true],
+    ]);
+  });
+
+  it("P2-1 : une part partielle se répartit ligne à ligne, sans perdre un millime", async () => {
+    // 617,280 d'immobilisation sur 1 234,560 : la moitié de chaque ligne.
+    const id = await proposee((e) => ({
+      ...deuxLignes(e),
+      articles: [
+        { designation: `${MOT} a`, quantity: "1", total_ht: "617.280", tax_code: "TVA19" },
+        {
+          designation: "Ramettes de papier",
+          quantity: "1",
+          total_ht: "617.280",
+          tax_code: "TVA19",
+        },
+      ],
+    }));
+    const lignes = await lignesDeLaTva(id, "extraitsTransmis");
+    assert.deepEqual(lignes, [
+      ["TVA19", "500.000", "95.000", IMMO, true],
+      ["TVA19", "500.000", "95.000", AUTRE, true],
+      ["TVA19", "117.280", "22.283", IMMO, true],
+      ["TVA19", "117.280", "22.283", AUTRE, true],
+    ]);
+    const millimes = (i: number) => lignes.reduce((s, l) => s + Math.round(Number(l[i]) * 1000), 0);
+    assert.equal(millimes(1), 1234560, "aucun millime de base perdu");
+    assert.equal(millimes(2), 234566, "aucun millime de TVA perdu");
+  });
+
+  it("P2-2 : un avoir lu sur une immobilisation se range en immobilisation", async () => {
+    const id = await transmise((e) => ({
+      ...e,
+      lines: [
+        {
+          label: "a",
+          tax_code: "TVA19",
+          base_ht: "-1000.000",
+          vat_amount: "-190.000",
+          ttc: "-1190.000",
+        },
+      ],
+      other_charges: [],
+      totals: { base_ht: "-1000.000", vat: "-190.000", ttc: "-1190.000" },
+      articles: [
+        { designation: `${MOT} avoir`, quantity: "1", total_ht: "-1000.000", tax_code: "TVA19" },
+      ],
+    }));
+    await sousIdentite(expert.id, (db) =>
+      proposer(db, id, [
+        L("401", "1190.000", "0"),
+        L("2282", "0", "1000.000"),
+        L("4366", "0", "190.000", "TVA19"),
+      ]),
+    );
+    assert.deepEqual(await lignesDeLaTva(id, "extraitsTransmis"), [
+      ["TVA19", "-1000.000", "-190.000", IMMO, true],
+    ]);
+  });
+
+  it("P2-2 : un avoir forcé par le cabinet sur une immobilisation : ses comptes décident", async () => {
+    const id = await transmise((e) => ({
+      ...e,
+      lines: [
+        {
+          label: "a",
+          tax_code: "TVA19",
+          base_ht: "-1000.000",
+          vat_amount: "-190.000",
+          ttc: "-1190.000",
+        },
+      ],
+      other_charges: [],
+      totals: { base_ht: "-1000.000", vat: "-190.000", ttc: "-1190.000" },
+    }));
+    await force(id, [
+      L("401", "1190.000", "0"),
+      L("2282", "0", "1000.000"),
+      L("4366", "0", "190.000", "TVA19"),
+    ]);
+    // Un avoir ne se lit pas comme une facture (#140) : la lecture reste,
+    // rangée par les comptes de l'écriture forcée.
+    assert.deepEqual(await lignesDeLaTva(id, "bookedExtracts"), [
+      ["TVA19", "-1000.000", "-190.000", IMMO, true],
+    ]);
+  });
+
+  it("P2-3 : validée en charge (601) quand la famille de l'article est une immobilisation : l'écriture décide", async () => {
+    const id = await transmise((e) => ({
+      ...e,
+      articles: [
+        { designation: `${MOT} logiciel`, quantity: "1", total_ht: "1234.560", tax_code: "TVA19" },
+      ],
+    }));
+    await valideeAvec(id, [
+      L("601", "1234.560", "0"),
+      L("4366", "234.566", "0", "TVA19"),
+      L("401", "0", "1469.126"),
+    ]);
+    const articles = (await pmeFait("charges.articles", pme, "2000-01", "2100-12")) as Array<{
+      pieceId: string;
+      designation: string;
+    }>;
+    assert.deepEqual(
+      articles.filter((a) => a.pieceId === id).map((a) => a.designation),
+      [`${MOT} logiciel`],
+      "le journal la porte en charge : « Vos charges » aussi",
+    );
+    assert.deepEqual(await lignesDeLaTva(id, "extraitsTransmis"), [
+      ["TVA19", "1234.560", "234.566", AUTRE, true],
+    ]);
+  });
+
+  it("une vente forcée au cabinet : sur la ligne collectée, jamais en immobilisation", async () => {
+    const id = await transmise();
+    await force(
+      id,
+      [
+        L("411", "1191.000", "0"),
+        L("707", "0", "1000.000"),
+        L("4367", "0", "190.000", "TVA19"),
+        L("4371", "0", "1.000"),
+      ],
+      "facture_vente",
+    );
+    assert.deepEqual(await lignesDeLaTva(id, "bookedExtracts"), [
+      ["TVA19", "1000.000", "190.000", AUTRE, true],
+    ]);
+    const tva = await tvaDuCabinet();
+    const collectee = tva.declaration.find((l) => l.sens === "collectee");
+    assert.equal(collectee?.vat, "190.000");
+    assert.equal(tva.totals.collectee, "190.000");
+  });
+
+  it("une porte réservée : les familles d'immobilisation d'un dossier étranger sont refusées", async () => {
+    const intrus = (await creerCompte(`intrus-${marque}@essai.local`, mdp))!;
+    await assert.rejects(
+      sousIdentite(intrus.id, (db) =>
+        db.query(`select app.familles_immobilisees($1, $2, 'facture_achat', $3::date)`, [
+          pme,
+          packId,
+          jour,
+        ]),
+      ),
+      /hors de portée/,
+    );
+    // Et la porte des extraits ne rend rien d'une pièce qu'il ne lit pas.
+    const { rows } = await admin.query<{ piece_id: string }>(
+      `select p.id as piece_id from capture.pieces p where p.tenant_id = $1 limit 1`,
+      [pme],
+    );
+    const lu = await sousIdentite(
+      intrus.id,
+      async (db) =>
+        (
+          await db.query<{ payload: unknown }>(
+            `select payload from app.extraits_de_la_tva(jsonb_build_array(jsonb_build_object(
+             'piece_id', $1::text, 'payload', '{"lines":[]}'::jsonb)))`,
+            [rows[0]!.piece_id],
+          )
+        ).rows,
+    );
+    assert.deepEqual(lu, [{ payload: null }]);
   });
 });

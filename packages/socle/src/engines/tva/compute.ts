@@ -85,7 +85,7 @@ function remplirLaDeclaration(
   seaux: Record<SensDeTva, Seau[]>,
   items: Record<SensDeTva, ReadonlyArray<{ item_id: string | null; extract: ExtractV1 }>>,
   parDefaut: TvaV1["par_defaut"],
-  refused: TvaV1["refused"],
+  sansLigne: TvaV1["sans_ligne"],
   dec: number,
 ): TvaV1["declaration"] {
   const lignes = [...declaration.lignes].sort((a, b) => a.ordinal - b.ordinal);
@@ -114,8 +114,14 @@ function remplirLaDeclaration(
       }
       if (!ligne) {
         // Aucune ligne pour ce sens : le référentiel est incomplet. Le seau
-        // compte dans les totaux ; la déclaration le dit refusé, jamais muet.
-        refused.push({ reason: `DECLARATION_SANS_LIGNE:${sens}`, item_id: null });
+        // compte dans les totaux, aucune ligne ne le porte, et il est NOMMÉ à
+        // part — ce n'est pas une ligne « sans taux » (revue de #145).
+        sansLigne.push({
+          sens,
+          tax_code: seau.tax_code,
+          nature: seau.nature,
+          vat: toFixedStr(D(seau.vat), dec),
+        });
         continue;
       }
       const c = cumul.get(ligne.code)!;
@@ -137,6 +143,7 @@ function remplirLaDeclaration(
 export function computeTva(input: TvaInput): TvaV1 {
   const refused: TvaV1["refused"] = [];
   const parDefaut: TvaV1["par_defaut"] = [];
+  const sansLigne: TvaV1["sans_ligne"] = [];
   const natureParDefaut = input.declaration.nature_par_defaut;
   const collectee = bucketize(input.ventes, input.tax_rates, natureParDefaut, refused, parDefaut);
   const deductible = bucketize(input.achats, input.tax_rates, natureParDefaut, refused, parDefaut);
@@ -149,7 +156,7 @@ export function computeTva(input: TvaInput): TvaV1 {
     { collectee, deductible },
     { collectee: input.ventes, deductible: input.achats },
     parDefaut,
-    refused,
+    sansLigne,
     dec,
   );
   const arrondi = (b: Seau) => ({
@@ -170,6 +177,7 @@ export function computeTva(input: TvaInput): TvaV1 {
     },
     declaration,
     par_defaut: parDefaut,
+    sans_ligne: sansLigne,
     refused,
   };
 }

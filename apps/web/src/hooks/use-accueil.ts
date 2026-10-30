@@ -32,7 +32,7 @@ import { usePiecesLues } from "./use-pieces-lues";
 import { avancementDeLaListe } from "@/lib/lecture";
 import { office } from "@/verticals/malica-office/composition";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
-import { useDeclarationTva } from "./use-declaration-tva";
+import { useDeclarationsTva } from "./use-declaration-tva";
 import { computePnl } from "@malica/socle";
 
 import { moisDecale, moisGlissants } from "@malica/socle/exercice";
@@ -168,7 +168,13 @@ export function useAccueil(periode: string): Accueil {
     enabled: !!pme.packId,
   });
 
-  const declaration = useDeclarationTva(pme.packId, to);
+  // La déclaration de CHAQUE mois de la série, en vigueur à sa fin : une
+  // ligne datée ne vaut pas pour les mois d'avant (revue de #145).
+  const finsDeMois = useMemo(
+    () => moisGlissants(periode, FENETRE).map((p) => monthBounds(p).to),
+    [periode],
+  );
+  const declarations = useDeclarationsTva(pme.packId, finsDeMois);
 
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],
@@ -194,10 +200,9 @@ export function useAccueil(periode: string): Accueil {
       solde: null,
       horsDuCalcul: 0,
     }));
-    if (!extraits.data || !taux.data || !declaration.data || decimalesDuPack === null) return mois;
+    if (!extraits.data || !taux.data || !declarations || decimalesDuPack === null) return mois;
     const decimales = decimalesDuPack;
     const tarifs = taux.data;
-    const lignesDeDeclaration = declaration.data;
 
     /*
      * ================== LA TVA SE RANGE AU MOIS OÙ LE CABINET A REÇU LA PIÈCE
@@ -224,14 +229,15 @@ export function useAccueil(periode: string): Accueil {
 
     return mois.map((m) => {
       const dedans = parMois.get(m.periode);
-      if (!dedans || dedans.length === 0) return m;
+      const declaration = declarations.get(monthBounds(m.periode).to);
+      if (!dedans || dedans.length === 0 || !declaration) return m;
       // Le même calcul que l'écran de la TVA : un extrait illisible y est
       // refusé, et compté ici — jamais écarté en silence.
       const calcul = tvaDesExtraits({
         period: m.periode,
         currency: { code: devise, decimals: decimales },
         taux: tarifs,
-        declaration: lignesDeDeclaration,
+        declaration,
         rows: dedans,
       });
       return {
@@ -242,7 +248,7 @@ export function useAccueil(periode: string): Accueil {
         horsDuCalcul: calcul.refused.length,
       };
     });
-  }, [extraits.data, taux.data, declaration.data, periode, devise, decimalesDuPack]);
+  }, [extraits.data, taux.data, declarations, periode, devise, decimalesDuPack]);
 
   const courant = serie[serie.length - 1]?.recuperee ?? null;
   const precedent = serie[serie.length - 2]?.recuperee ?? null;

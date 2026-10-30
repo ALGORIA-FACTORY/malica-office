@@ -228,4 +228,24 @@ describe("la déclaration sépare la TVA des immobilisations", () => {
     // Les lignes viennent dans l'ordre du référentiel, toutes, même à zéro.
     expect(r.declaration.map((l) => l.code)).toEqual(["L_COL", "L_IMMO", "L_AUTRE"]);
   });
+
+  it("un sens sans ligne au référentiel : compté, nommé à part, jamais « sans taux »", () => {
+    const r = tvaDesExtraits({
+      period: "2026-10",
+      currency: { code: "TND", decimals: 3 },
+      taux,
+      declaration: {
+        ...declaration,
+        lignes: declaration.lignes.filter((l) => l.sens !== "collectee"),
+      },
+      rows: [
+        { pieceId: "s", extract: extrait([ligne("TVA19", "100.000", "19.000")], "facture_vente") },
+      ],
+    });
+    expect(r.totals.collectee).toBe("19.000");
+    expect(r.refused).toEqual([]);
+    expect(r.sans_ligne).toEqual([
+      { sens: "collectee", tax_code: "TVA19", nature: "AUTRE", vat: "19.000" },
+    ]);
+  });
 });
