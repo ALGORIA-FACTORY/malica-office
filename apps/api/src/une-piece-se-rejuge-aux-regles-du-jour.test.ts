@@ -32,7 +32,7 @@ import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { contratRpc, executerRpc } from "./rpc.ts";
 import { REGLES_DU_JUGEMENT } from "./scan/analyse.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
-import type { BilanDuRejeu } from "./scan/rejeu.ts";
+import { rejugerALOuverture, type BilanDuRejeu } from "./scan/rejeu.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -141,6 +141,32 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
         [piece],
       )
     ).rows;
+  /**
+   * Un jugement d'avant le marqueur qui dit exactement ce que les règles du
+   * jour diraient : le dernier jugement, recopié sans `regles`.
+   */
+  const jugeeALAncienneALIdentique = async (piece: string) => {
+    await admin.query(
+      `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                     normalisation, controles, verdict, motifs,
+                                     doublon_numero, doublon_mf, doublon_lu)
+       select tenant_id, piece_id, extraction_id, pack_version_id, normalisation, controles,
+              verdict, motifs, doublon_numero, doublon_mf, doublon_lu
+         from capture.analyses where piece_id = $1 order by created_at desc limit 1`,
+      [piece],
+    );
+  };
+  /** Les analyses et les vérifications des deux dossiers : tout ce que le rejeu peut écrire. */
+  const ceQueLeRejeuEcrit = async () =>
+    (
+      await admin.query<{ analyses: string; verifications: string }>(
+        `select (select count(*) from capture.analyses where tenant_id = any($1::uuid[])) as analyses,
+                (select count(*) from capture.analyses_verifiees where tenant_id = any($1::uuid[]))
+                  as verifications`,
+        [[pme, autrePme]],
+      )
+    ).rows[0];
+
   const toutesLesAnalyses = async () =>
     Number(
       (
@@ -233,11 +259,11 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     const id = await transmise(pme, mfDossier);
     await jugeeALAncienne(id);
     await rejuger(expert, pme);
-    const avant = await toutesLesAnalyses();
+    const avant = await ceQueLeRejeuEcrit();
     const second = await rejuger(expert, pme);
     assert.equal(second.changees, 0, JSON.stringify(second));
     assert.ok(second.rejugees >= 1);
-    assert.equal(await toutesLesAnalyses(), avant);
+    assert.deepEqual(await ceQueLeRejeuEcrit(), avant);
   });
 
   it("une pièce qui porte une écriture vivante n'est pas touchée", async () => {
@@ -307,6 +333,43 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     assert.equal(apres.at(-1)?.regles, REGLES_DU_JUGEMENT);
     await proposition(expert, id);
     assert.equal((await analyses(id)).length, apres.length);
+  });
+
+  it("trois ouvertures d'une pièce ancienne inchangée ne la rejugent qu'une fois", async () => {
+    const id = await transmise(pme, mfDossier);
+    await jugeeALAncienneALIdentique(id);
+    const avant = await analyses(id);
+
+    const issues = [];
+    for (let i = 0; i < 3; i += 1)
+      issues.push(await sousIdentite(expert.id, (db) => rejugerALOuverture(db, id)));
+    // Un seul recalcul : il constate que rien ne change et le dit, les deux
+    // ouvertures suivantes lisent le jugement à jour sans rien recalculer.
+    assert.deepEqual(issues, ["verifie", "a_jour", "a_jour"]);
+    assert.deepEqual(await analyses(id), avant, "aucune analyse ajoutée");
+    const { rows } = await admin.query<{ regles: string }>(
+      `select regles from capture.analyses_verifiees where piece_id = $1`,
+      [id],
+    );
+    assert.deepEqual(rows, [{ regles: REGLES_DU_JUGEMENT }]);
+    // Par l'écran : l'ouverture n'écrit plus rien.
+    const ecrit = await ceQueLeRejeuEcrit();
+    await proposition(expert, id);
+    await proposition(expert, id);
+    assert.deepEqual(await ceQueLeRejeuEcrit(), ecrit);
+  });
+
+  it("rejouer le lot sur une pièce ancienne inchangée n'ajoute rien la seconde fois", async () => {
+    const id = await transmise(pme, mfDossier);
+    await jugeeALAncienneALIdentique(id);
+    const premier = await rejuger(expert, pme);
+    assert.ok(!premier.changements.some((c) => c.pieceId === id), "son jugement ne change pas");
+    const ecrit = await ceQueLeRejeuEcrit();
+    const second = await rejuger(expert, pme);
+    assert.equal(second.changees, 0, JSON.stringify(second));
+    assert.deepEqual(await ceQueLeRejeuEcrit(), ecrit);
+    const issue = await sousIdentite(expert.id, (db) => rejugerALOuverture(db, id));
+    assert.equal(issue, "a_jour");
   });
 
   it("l'essai dit ce qui changerait, et n'écrit rien", async () => {

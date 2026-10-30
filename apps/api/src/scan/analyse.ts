@@ -448,12 +448,21 @@ export function jugerLaLecture(
  * ancien verdict, et le cabinet lisait « le Socle ne propose rien » là où les
  * règles du jour proposaient. Rien ne disait qu'un jugement était périmé.
  *
- * Elle vit ICI, et nulle part ailleurs : la date du jour où les règles de
- * `jugerLaLecture` (normalisation, contrôles, verdict) ont changé d'une façon
- * qui peut changer un verdict. On la change avec elles. Une analyse posée
- * avant ce marqueur le porte NUL : elle est périmée par définition.
+ * Elle vit ICI, et nulle part ailleurs : `<date>.<empreinte>`, la date du
+ * changement de règles et les douze premiers caractères de l'empreinte de ce
+ * que `jugerLaLecture` (normalisation, contrôles, verdict) rend sur le témoin
+ * de mesure (`empreinteDesJugements`, `mesure-des-propositions.ts`).
+ *
+ * ========================================================= ON NE L'OUBLIE PAS
+ *
+ * Une version qu'il faut penser à changer est une version qu'on oubliera : les
+ * jugements d'avant passeraient pour à jour. L'empreinte la lie au jugement
+ * lui-même — `les-regles-du-jugement-suivent-le-jugement.test.ts` échoue dès
+ * que le jugement change sur le témoin sans qu'elle change, et donne la
+ * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
+ * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-30";
+export const REGLES_DU_JUGEMENT = "2026-10-30.f235152467f4";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -479,14 +488,24 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
  * Le jugement est recalculé par la même chaîne qu'`analyserPiece`, puis
  * comparé au dernier posé : même lecture, même pack, même verdict, mêmes
  * motifs, mêmes contrôles, mêmes montants normalisés, même clé de doublon.
- * Identique, rien ne s'écrit — c'est ce qui rend le rejeu idempotent : le
- * jouer deux fois n'ajoute rien. Différent, une analyse NOUVELLE s'ajoute
- * (R7) ; l'ancienne reste, datée, pour qui veut savoir ce qui a été dit.
+ * Différent, une analyse NOUVELLE s'ajoute (R7) ; l'ancienne reste, datée,
+ * pour qui veut savoir ce qui a été dit.
+ *
+ * Identique, l'analyse ne bouge pas (R7) : si elle a été rendue sous d'autres
+ * règles, le constat « revérifiée sous les règles du jour » s'inscrit à côté
+ * (`capture.analyses_verifiees`), une fois. Sans lui, une pièce ancienne que
+ * les règles du jour jugent pareil restait périmée, et chaque ouverture —
+ * la file du cabinet comprise — refaisait tout le jugement (revue de la PR 143).
+ * Le rejouer n'ajoute rien.
  */
-export async function rejugerLaPiece(db: Requete, pieceId: string): Promise<{ change: boolean }> {
+export async function rejugerLaPiece(
+  db: Requete,
+  pieceId: string,
+): Promise<{ change: boolean; verifie: boolean }> {
   const j = await jugerLaPiece(db, pieceId);
-  const { rows } = await db.query<{ identique: boolean }>(
-    `select a.extraction_id = $2 and a.pack_version_id = $3 and a.verdict = $4
+  const { rows } = await db.query<{ id: string; regles: string | null; identique: boolean }>(
+    `select a.id, a.regles,
+            a.extraction_id = $2 and a.pack_version_id = $3 and a.verdict = $4
             and a.motifs = $5::jsonb and a.controles = $6::jsonb
             and a.normalisation = $7::jsonb
             and a.doublon_numero is not distinct from $8
@@ -508,9 +527,19 @@ export async function rejugerLaPiece(db: Requete, pieceId: string): Promise<{ ch
       j.cle.lu,
     ],
   );
-  if (rows[0]?.identique) return { change: false };
-  await poserLeJugement(db, j);
-  return { change: true };
+  const derniere = rows[0];
+  if (!derniere?.identique) {
+    await poserLeJugement(db, j);
+    return { change: true, verifie: false };
+  }
+  if (derniere.regles === REGLES_DU_JUGEMENT) return { change: false, verifie: false };
+  const { rowCount } = await db.query(
+    `insert into capture.analyses_verifiees (tenant_id, piece_id, analyse_id, regles)
+     values ($1, $2, $3, $4)
+     on conflict (tenant_id, analyse_id, regles) do nothing`,
+    [j.tenantId, pieceId, derniere.id, REGLES_DU_JUGEMENT],
+  );
+  return { change: false, verifie: (rowCount ?? 0) > 0 };
 }
 
 async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaPiece> {

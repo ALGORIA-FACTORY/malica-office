@@ -124,23 +124,35 @@ async function consignerLEchec(db: Requete, tenantId: string, pieceId: string, e
 }
 
 /**
+ * Ce que l'ouverture a fait : rien à faire (`a_jour`, ou `hors_perimetre`),
+ * un jugement qui change (`change`), ou qui tient sous les règles du jour et
+ * le dit (`verifie`). Seuls les deux derniers ont recalculé le jugement.
+ */
+export type IssueALOuverture = "a_jour" | "hors_perimetre" | "change" | "verifie";
+
+/**
  * Rejuger, à l'ouverture, une pièce dont le jugement a été rendu sous des
  * règles plus anciennes — si l'appelant la supervise et qu'elle est dans le
- * périmètre. Rend vrai si une analyse nouvelle a été posée.
+ * périmètre. Un jugement est à jour quand sa dernière analyse porte les
+ * règles du jour, ou qu'un constat sous ces règles la nomme
+ * (`capture.analyses_verifiees`) : il ne se recalcule alors pas.
  */
-export async function rejugerALOuverture(db: Requete, pieceId: string): Promise<boolean> {
-  const { rows } = await db.query<{ ok: boolean }>(
-    `select exists (
-       select 1 from capture.pieces p
-        where p.id = $1
-          and (select a.regles from capture.analyses a
-                where a.piece_id = p.id order by a.created_at desc limit 1)
-              is distinct from $2
-          and ${DANS_LE_PERIMETRE}) as ok`,
+export async function rejugerALOuverture(db: Requete, pieceId: string): Promise<IssueALOuverture> {
+  const { rows } = await db.query<{ a_jour: boolean; dans: boolean }>(
+    `select coalesce(a.regles = $2 or exists (
+              select 1 from capture.analyses_verifiees v
+               where v.analyse_id = a.id and v.regles = $2), false) as a_jour,
+            exists (select 1 from capture.pieces p
+                     where p.id = $1 and ${DANS_LE_PERIMETRE}) as dans
+       from (select 1) un
+       left join lateral (select y.id, y.regles from capture.analyses y
+                           where y.piece_id = $1 order by y.created_at desc limit 1) a on true`,
     [pieceId, REGLES_DU_JUGEMENT],
   );
-  if (!rows[0]?.ok) return false;
-  return (await rejugerLaPiece(db, pieceId)).change;
+  if (rows[0]?.a_jour) return "a_jour";
+  if (!rows[0]?.dans) return "hors_perimetre";
+  const { change, verifie } = await rejugerLaPiece(db, pieceId);
+  return change ? "change" : verifie ? "verifie" : "a_jour";
 }
 
 /**
