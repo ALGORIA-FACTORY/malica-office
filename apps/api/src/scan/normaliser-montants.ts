@@ -61,8 +61,11 @@ export interface EntreeMontants {
    * qu'imprimés. Un droit FIXÉ par le paramétrage daté porte sa valeur attendue
    * (en unités mineures) : c'est lui qui ancre l'échelle quand l'égalité, sans
    * reste d'arrondi, la laisse ouverte.
+   *
+   * `brut: null` : la lecture NOMME le droit, mais n'en a pas cité le montant.
+   * Il ne se retient alors que si l'arithmétique le prouve (voir `deduits`).
    */
-  autres?: Array<string | { brut: string; attendu?: number }>;
+  autres?: Array<string | { brut: string | null; attendu?: number }>;
   /** Le TTC imprimé. */
   ttc?: string | null;
 }
@@ -153,7 +156,30 @@ export interface ResultatNormalisation {
    * arithmétique le lit et pose une réserve.
    */
   ligneNonLue: string | null;
+  /**
+   * Les valeurs que la pièce n'a pas laissé LIRE, et que son arithmétique
+   * PROUVE (30 octobre 2026). Vide quand tout a été lu.
+   *
+   * Absent des jugements posés avant cette date : un lecteur lit `?? []`.
+   */
+  deduits: Deduction[];
   raison: string;
+}
+
+/**
+ * Une valeur déduite, jamais devinée : la formule qui la donne, et les
+ * montants imprimés et cités qui l'alimentent. Le contrôle arithmétique la
+ * lit et pose une RÉSERVE — une déduction se dit toujours au cabinet.
+ */
+export interface Deduction {
+  /** Le champ déduit, au chemin de l'extraction : « totals.vat », « other_charges[0].amount »… */
+  champ: string;
+  /** La valeur retenue : un montant en écriture décimale, ou un code de taux. */
+  valeur: string;
+  /** La formule, en clair : « TVA = TTC − HT − droits ». */
+  formule: string;
+  /** Les opérandes, tels qu'imprimés et cités — et ce que la pièce imprimait à la place, s'il y a lieu. */
+  operandes: Record<string, string>;
 }
 
 /*
@@ -602,6 +628,7 @@ export function normaliserMontants(
     lecturesValides,
     totalNonLu,
     ligneNonLue: null,
+    deduits: [],
     raison,
   });
 
@@ -620,7 +647,7 @@ export function normaliserMontants(
     const nom = `autre${i}`;
     if (typeof a === "string") return champs.push({ nom, brut: a });
     if (a.attendu !== undefined) attendus.set(nom, a.attendu);
-    return champs.push({ nom, brut: a.brut });
+    return champs.push({ nom, brut: a.brut ?? "" });
   });
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
@@ -861,9 +888,24 @@ export function normaliserMontants(
       lecturesValides,
       totalNonLu,
       ligneNonLue: null,
+      deduits: [],
       raison,
     };
   }
+}
+
+/**
+ * Rend une valeur en unités mineures sous la forme décimale du contrat
+ * (« 1428000 » millimes → « 1428.000 »). Le passage se fait sur les chiffres,
+ * jamais par une division flottante : 0,1 + 0,2 n'est pas 0,3, et une facture
+ * n'a pas à en souffrir.
+ */
+export function enDecimal(millimes: number, decimales: number): string {
+  const negatif = millimes < 0;
+  const chiffres = String(Math.abs(millimes)).padStart(decimales + 1, "0");
+  const entier = chiffres.slice(0, chiffres.length - decimales);
+  const fraction = decimales > 0 ? `.${chiffres.slice(chiffres.length - decimales)}` : "";
+  return `${negatif ? "-" : ""}${entier}${fraction}`;
 }
 
 /**

@@ -1,0 +1,88 @@
+{
+  "jeu d'or — loyer de bureaux, septembre 2026": {
+    "type": "exacte"
+  },
+  "achat simple, un taux et le timbre": {
+    "type": "exacte"
+  },
+  "achat à deux taux et le timbre": {
+    "type": "exacte"
+  },
+  "le HT imprimé comprend le timbre (MYTEK)": {
+    "type": "exacte"
+  },
+  "vente simple, un taux et le timbre": {
+    "type": "exacte"
+  },
+  "total illisible, la TVA vérifie le reste": {
+    "type": "exacte"
+  },
+  "une proforma ne se comptabilise pas": {
+    "type": "refus_juste",
+    "motif": "nature_piece"
+  },
+  "une facture qui ne tient pas": {
+    "type": "refus_juste",
+    "motif": "coherence_arithmetique/incoherent"
+  },
+  "TVA illisible, deux taux : HT et TTC la prouvent": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/tva_illisible"
+  },
+  "TVA illisible, un taux : HT et TTC la prouvent": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/tva_illisible"
+  },
+  "TVA illisible, et la facture ne tient pas : rien ne se déduit": {
+    "type": "refus_juste",
+    "motif": "coherence_arithmetique/tva_illisible"
+  },
+  "aucune ligne par taux lue : le taux se retrouve": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/taux_non_lu"
+  },
+  "code de taux inconnu du paramétrage : le taux se retrouve": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/taux_inconnu"
+  },
+  "TVA nulle sans ligne de taux : exonéré ou export, on ne choisit pas": {
+    "type": "refus_juste",
+    "motif": "coherence_arithmetique/taux_non_lu"
+  },
+  "deux taux, une base illisible : le HT du pied la prouve": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/base_illisible"
+  },
+  "un total peu sûr que l'arithmétique vérifie": {
+    "type": "aucune",
+    "motif": "confiance_lecture"
+  },
+  "un émetteur peu sûr : rien ne le vérifie": {
+    "type": "refus_juste",
+    "motif": "confiance_lecture"
+  },
+  "datée après sa réception (loyer facturé d'avance)": {
+    "type": "aucune",
+    "motif": "coherence_dates"
+  },
+  "lue « vente », émise par un tiers : le cabinet tranche": {
+    "type": "refus_juste",
+    "motif": "sens_de_la_piece"
+  },
+  "le timbre nommé, son montant non cité": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/incoherent"
+  },
+  "le timbre cité, illisible": {
+    "type": "aucune",
+    "motif": "coherence_arithmetique/droit_illisible"
+  },
+  "le timbre illisible, et l'écart n'est pas un timbre": {
+    "type": "refus_juste",
+    "motif": "coherence_arithmetique/droit_illisible"
+  },
+  "facture en euros pour un dossier en dinars": {
+    "type": "fausse",
+    "cause": "proposée alors que rien ne devait l'être"
+  }
+}

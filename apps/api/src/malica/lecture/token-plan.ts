@@ -1,7 +1,7 @@
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
 
-import { enDecimal, treillisMontant, type Hypothese } from "./montants.ts";
-import type { DeviseLue } from "../../scan/normaliser-montants.ts";
+import { treillisMontant, type Hypothese } from "./montants.ts";
+import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
 import { plageAmputee } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
