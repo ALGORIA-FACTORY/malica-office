@@ -116,16 +116,14 @@ export const charges = {
          -- famille par le même résolveur que les articles lus — le compte
          -- d'abord, puis le libellé. La PME y lit l'émetteur, pas l'écriture.
          select q.id, l.ordinal, coalesce(x.payload ->> 'issuer', ''),
-                null::numeric, null::numeric, null::numeric, l.montant, r.famille_code,
-                r.famille_source, to_char(l.date_ecriture, 'YYYY-MM'), l.date_ecriture,
+                null::numeric, null::numeric, null::numeric, l.montant, l.famille_code,
+                l.famille_source, to_char(l.date_ecriture, 'YYYY-MM'), l.date_ecriture,
                 null, null, null, null, null, 'cabinet'
            from pieces_qui_comptent_v q
-           cross join lateral app.lignes_prises_en_charge(q.id) l
+           cross join lateral app.charges_prises_en_charge(q.id) l
            left join lateral (select z.payload from extractions_v z where z.piece_id = q.id
                                order by z.created_at desc limit 1) x on true
-           cross join lateral public.charge_famille_resolve(
-                  l.pack_version_id, l.account_code, l.libelle, l.date_ecriture) r
-          where q.tenant_id = $1 and q.source = 'cabinet' and l.nature = 'base'
+          where q.tenant_id = $1 and q.source = 'cabinet'
             and q.document_kind <> 'facture_vente'
        ) a
        where a.period >= $2 and a.period <= $3

@@ -156,8 +156,16 @@ const normNom = (n: string | null) =>
     : null;
 
 /** Un montant lu comparable : la valeur, pas l'écriture (« 8772.7280 » = « 8772.728 »). */
-const normMontant = (m: string | null) =>
-  m !== null && /^-?\d+(\.\d+)?$/.test(m.trim()) ? Number(m.trim()) : null;
+const normMontant = (m: string | null) => {
+  // Une écriture décimale canonique, sans passer par un flottant : zéros de
+  // tête et de fin retirés, « -0 » ramené à « 0 ».
+  const lu = m === null ? null : /^(-?)0*(\d*?)(?:\.(\d*?)0*)?$/.exec(m.trim());
+  if (!lu || !/\d/.test(m!)) return null;
+  const entier = lu[2] || "0";
+  const decimales = lu[3] ? `.${lu[3]}` : "";
+  const absolu = `${entier}${decimales}`;
+  return absolu === "0" ? "0" : `${lu[1]}${absolu}`;
+};
 
 /** Ce qui fait reconnaître une pièce comme la même qu'une autre. */
 export interface CleDeDoublon {
@@ -173,7 +181,7 @@ export interface CleDeDoublon {
 
 /**
  * La première des `autres` pièces que `piece` répète, ou `null` — UNE règle,
- * pour le jugement de la lecture et pour la file du cabinet.
+ * posée par le jugement de la lecture, que la file du cabinet relit.
  *
  * Deux façons d'être la même pièce :
  *   — même émetteur au matricule (sept chiffres) et même numéro ;
@@ -187,7 +195,7 @@ export interface CleDeDoublon {
  * signalé : deux achats du même jour, au même prix, chez le même
  * fournisseur, sont deux factures plausibles.
  */
-export function pieceSemblable(
+function pieceSemblable(
   piece: Omit<CleDeDoublon, "id">,
   autres: readonly CleDeDoublon[],
 ): CleDeDoublon | null {

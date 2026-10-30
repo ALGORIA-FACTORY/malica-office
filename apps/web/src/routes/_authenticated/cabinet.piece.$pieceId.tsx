@@ -173,6 +173,13 @@ function CabinetReview() {
     queryKey: ["ref-pack", org.jurisdiction],
     queryFn: () => office().referential.activePack(org.jurisdiction),
   });
+  // Les codes de taxe du même pack, traduits : le taux d'une ligne se choisit là.
+  const codesDeTaxe = useQuery({
+    queryKey: ["tax-rates", packPaiements.data?.id, locale],
+    enabled: Boolean(packPaiements.data),
+    queryFn: () => office().referential.taxRates(packPaiements.data!.id, org.jurisdiction, locale),
+    select: (taux) => [...new Map(taux.map((r) => [r.code, r])).values()],
+  });
   // La date de la pièce quand elle a été lue ; à défaut aujourd'hui, et c'est
   // sans conséquence : cette date ne sert qu'à CHOISIR le libellé traduit d'un
   // moyen de paiement, jamais à ranger ou à calculer quoi que ce soit.
@@ -1039,6 +1046,8 @@ function CabinetReview() {
                 plan={plan.data ?? []}
                 decimales={decimales}
                 motifs={motifs.data ?? []}
+                codesDeTaxe={codesDeTaxe.data ?? []}
+                illisible={dossier.data.ecritureIllisible ?? false}
                 onRetournee={setRetourEnvoye}
               />
             )}

@@ -202,23 +202,40 @@ function versPiece(r: Record<string, unknown>) {
   };
 }
 
+/** Ce que rend `app.montants_pris_en_charge` : une écriture prise en charge, lue ou non. */
+interface MontantsBruts {
+  lisible: boolean;
+  document_kind: string;
+  date_ecriture: string;
+  currency: string;
+  totals?: { base_ht: string; vat: string; ttc: string };
+  other_charges?: Array<{ code: string; amount: string }>;
+}
+
 /**
- * Les montants du cabinet (`app.montants_pris_en_charge`), ou `null` : la
- * PME en reçoit les totaux et les droits, jamais les lignes de l'écriture.
+ * Les montants du cabinet, ou `null` : la PME en reçoit les totaux, les
+ * droits, le sens, la date et la devise — jamais les lignes de l'écriture.
+ * Une écriture qui ne se lit pas comme une facture n'en publie aucun : la
+ * pièce garde sa lecture.
  */
 function versMontantsDuCabinet(m: unknown): MontantsDuCabinet | null {
   if (!m || typeof m !== "object") return null;
-  const { totals, other_charges } = m as {
-    totals: { base_ht: string; vat: string; ttc: string };
-    other_charges: Array<{ code: string; amount: string }>;
-  };
+  const b = m as MontantsBruts;
+  if (!b.lisible || !b.totals) return null;
   return {
-    baseHt: totals.base_ht,
-    tva: totals.vat,
-    ttc: totals.ttc,
-    droits: other_charges.map((d) => ({ code: d.code, amount: d.amount })),
+    baseHt: b.totals.base_ht,
+    tva: b.totals.vat,
+    ttc: b.totals.ttc,
+    droits: (b.other_charges ?? []).map((d) => ({ code: d.code, amount: d.amount })),
+    devise: b.currency,
+    documentKind: b.document_kind,
+    dateEcriture: b.date_ecriture,
   };
 }
+
+/** Prise en charge, mais l'écriture ne se lit pas comme une facture : le cabinet le voit. */
+const ecritureIllisible = (m: unknown) =>
+  Boolean(m && typeof m === "object" && (m as MontantsBruts).lisible === false);
 
 /**
  * Les colonnes d'une pièce telles que `versPiece` les lit, préfixées de
@@ -406,9 +423,10 @@ export const capture = {
               ${REFUS_DE_LECTURE} as lecture_refusee,
               w.etat as lecture_etat, w.dernier_motif as lecture_motif,
               w.prenable_a as lecture_reessaie_le, w.demande_le as lecture_demande_le,
-              -- Prise en charge, le total est celui du cabinet : il décide.
+              -- Prise en charge, le total, le sens et la date sont ceux du
+              -- cabinet : il décide.
               case when s.prise is not null
-                   then app.montants_pris_en_charge(p.id) -> 'totals' ->> 'ttc' end as ttc_du_cabinet,
+                   then app.montants_pris_en_charge(p.id) end as du_cabinet,
               ${COLONNES_DU_SUIVI}
          from pieces_v p
          left join lateral (
@@ -450,6 +468,7 @@ export const capture = {
         currency?: string;
         totals?: { ttc?: string };
       } | null;
+      const cab = versMontantsDuCabinet(r["du_cabinet"]);
       return {
         id: r["id"] as string,
         status: r["status"] as string,
@@ -459,13 +478,14 @@ export const capture = {
         transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
         accompagne: Boolean(r["accompagne"]),
         emetteur: lu?.issuer ?? null,
-        dateDocument: lu?.document_date ?? null,
+        dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
         kind:
+          cab?.documentKind ??
           (lu?.document_kind as string | undefined) ??
           (r["precision_kind"] as string | null) ??
           null,
-        total: (r["ttc_du_cabinet"] as string | null) ?? lu?.totals?.ttc ?? null,
-        devise: lu?.currency ?? null,
+        total: cab?.ttc ?? lu?.totals?.ttc ?? null,
+        devise: cab?.devise ?? lu?.currency ?? null,
         typeDeDocument: (r["document_kind"] as string | null) ?? null,
         suivi: versSuivi(r),
         lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
@@ -571,6 +591,7 @@ export const capture = {
       precisions,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
       montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
+      ecritureIllisible: ecritureIllisible((montants as Record<string, unknown>[])[0]?.["m"]),
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
         motif: string;
         le: string;

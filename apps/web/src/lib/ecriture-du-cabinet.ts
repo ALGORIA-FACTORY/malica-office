@@ -80,7 +80,7 @@ function memeMontant(a: string, b: string, decimales: number): boolean {
 /**
  * La saisie dit-elle exactement l'écriture de départ ? Même journal, même
  * date, même libellé, et les mêmes lignes dans le même ordre — comptes,
- * libellés et montants exacts. Sinon, elle sera « forcée ».
+ * libellés, codes de taxe et montants exacts. Sinon, elle sera « forcée ».
  */
 export function inchangee(
   saisie: EcritureEnSaisie,
@@ -97,6 +97,7 @@ export function inchangee(
       return (
         l.account_code.trim() === d.account_code.trim() &&
         l.libelle.trim() === d.libelle.trim() &&
+        (l.tax_code ?? null) === (d.tax_code ?? null) &&
         memeMontant(l.debit, d.debit, decimales) &&
         memeMontant(l.credit, d.credit, decimales)
       );

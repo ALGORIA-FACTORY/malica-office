@@ -906,6 +906,12 @@ export interface PieceDossier {
    * voit que les montants, jamais l'écriture (1er novembre 2026).
    */
   montantsDuCabinet?: MontantsDuCabinet | null;
+  /**
+   * Prise en charge, mais son écriture ne se lit pas comme une facture (une
+   * contrepartie du côté de la pièce, des totaux qui ne se recoupent pas) :
+   * aucun montant n'est publié, la pièce garde sa lecture, et le cabinet le voit.
+   */
+  ecritureIllisible?: boolean;
   citations: Citation[];
   tokens: Token[];
 }
@@ -917,6 +923,10 @@ export interface MontantsDuCabinet {
   ttc: string;
   /** Un droit hors TVA par code du pack (`ref.fiscal_charges`), non nul. */
   droits: Array<{ code: string; amount: string }>;
+  /** La devise, le sens et la date de l'écriture : le cabinet en décide aussi. */
+  devise: string;
+  documentKind: string;
+  dateEcriture: string;
 }
 
 export interface NewPiece {

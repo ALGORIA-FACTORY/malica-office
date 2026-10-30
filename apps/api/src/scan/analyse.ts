@@ -107,67 +107,55 @@ export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
   return rows.map((r) => r.marque);
 }
 
-/** Une pièce telle que la recherche de doublon la compare, avec son dossier et son arrivée. */
-export type CleDeDoublonDatee = CleDeDoublon & { tenantId: string; arriveeLe: string };
-
 /**
- * Les clés de doublon des pièces de ces dossiers, telles que leur DERNIÈRE
- * lecture les porte : émetteur (nom et matricule), numéro, date, total.
- *
- * Une seule lecture pour deux usages — le jugement d'une pièce lue
- * (`analyserPiece`) et la file du cabinet (« Doublon probable ») —, sinon les
- * deux finiraient par ne plus reconnaître les mêmes doublons. Une photo
- * reprise n'est pas le doublon de celle qu'elle remplace : les versions
- * précédentes n'y sont pas ; une pièce retirée non plus.
+ * Les pièces que celle-ci pourrait répéter : du même dossier, arrivées AVANT
+ * elle (la seconde est le doublon, jamais la première), au même numéro —
+ * les deux règles de `pieceSemblable` l'exigent. Leur DERNIÈRE lecture dit
+ * émetteur, date et total. Une photo reprise n'est pas le doublon de celle
+ * qu'elle remplace : les versions précédentes n'y sont pas ; une pièce
+ * retirée non plus. Le verdict est posé UNE fois, ici, dans le jugement : la
+ * file du cabinet le relit.
  */
-export async function clesDeDoublon(
+async function autresAuMemeNumero(
   db: Requete,
-  tenants: readonly string[],
-): Promise<CleDeDoublonDatee[]> {
+  pieceId: string,
+  numero: string | null,
+): Promise<CleDeDoublon[]> {
+  if (!numero) return [];
   // Le nom de la clé du matricule est LIÉ, pas écrit dans la requête : la
   // recherche de doublon lit la même clé que l'invite impose au modèle.
   const { rows } = await db.query<{
     id: string;
-    tenant_id: string;
-    arrivee_le: Date | string;
     nom: string | null;
     mf: string | null;
     numero: string | null;
     date: string | null;
     ttc: string | null;
   }>(
-    `select p.id, p.tenant_id, p.created_at as arrivee_le,
-            x.payload ->> 'issuer' as nom,
-            x.payload -> 'references' ->> $2 as mf,
+    `select p.id, x.payload ->> 'issuer' as nom,
+            x.payload -> 'references' ->> $3 as mf,
             x.payload -> 'references' ->> 'numero' as numero,
             x.payload ->> 'document_date' as date,
             x.payload -> 'totals' ->> 'ttc' as ttc
-       from pieces_v p
+       from pieces_v elle
+       join pieces_v p on p.tenant_id = elle.tenant_id
+                      and (p.created_at, p.id) < (elle.created_at, elle.id)
        join lateral (select e.payload from extractions_v e
                       where e.piece_id = p.id order by e.created_at desc limit 1) x on true
-      where p.tenant_id = any($1::uuid[])
-        and p.remplacee_par is null and p.archivee_le is null`,
-    [tenants, NOM_MATRICULE_EMETTEUR],
+      where elle.id = $1
+        and p.remplacee_par is null and p.archivee_le is null
+        and upper(regexp_replace(x.payload -> 'references' ->> 'numero', '[^0-9A-Za-z]', '', 'g'))
+            = upper(regexp_replace($2, '[^0-9A-Za-z]', '', 'g'))`,
+    [pieceId, numero, NOM_MATRICULE_EMETTEUR],
   );
   return rows.map((r) => ({
     id: r.id,
-    tenantId: r.tenant_id,
-    arriveeLe: new Date(r.arrivee_le).toISOString(),
     emetteurNom: r.nom,
     emetteurIdentifiantFiscal: r.mf,
     numero: r.numero,
     date: r.date,
     ttc: r.ttc,
   }));
-}
-
-/** `a` est arrivée avant `b` dans le même dossier : l'ordre de dépôt, puis l'identifiant. */
-export function arriveeAvant(a: CleDeDoublonDatee, b: CleDeDoublonDatee): boolean {
-  return (
-    a.tenantId === b.tenantId &&
-    a.id !== b.id &&
-    (a.arriveeLe < b.arriveeLe || (a.arriveeLe === b.arriveeLe && a.id < b.id))
-  );
 }
 
 export interface Analyse {
@@ -446,7 +434,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
       `select code, label from ref.mentions where pack_version_id = $1 and mandatory`,
       [pack],
     ),
-    clesDeDoublon(db, [piece.tenant_id]),
+    autresAuMemeNumero(db, pieceId, aControler.numero),
   ]);
 
   const contexte: ContexteControle = {
@@ -456,12 +444,7 @@ export async function analyserPiece(db: Requete, pieceId: string): Promise<Analy
     seuilConfianceReserve: p["lecture.confiance_reserve"]!,
     seuilConfianceBloquant: p["lecture.confiance_bloquante"]!,
     ecartDateJours: p["piece.ecart_date_jours"]!,
-    // La pièce ne répète que ce qui est arrivé AVANT elle : la seconde est le
-    // doublon, jamais la première.
-    autresPieces: (() => {
-      const elle = cles.find((c) => c.id === pieceId);
-      return elle ? cles.filter((c) => arriveeAvant(c, elle)) : [];
-    })(),
+    autresPieces: cles,
   };
 
   const controles = controlerPiece(aControler, contexte);

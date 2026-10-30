@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
 import { preparerLAppareil } from "./comptes";
+import { mesurerLesSortiesDuRetour } from "./sorties-du-retour";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "fr");
@@ -285,4 +286,10 @@ test("le même accueil utilise le desktop et conserve la navigation du télépho
       await expect(nav.getByRole("link", { name: "Mes pièces", exact: true })).toBeHidden();
     }
   }
+});
+
+test("à 375 px, chaque sortie d'une pièce retournée tient sur une ligne, 48 px", async ({
+  page,
+}) => {
+  await mesurerLesSortiesDuRetour(page, "fr");
 });

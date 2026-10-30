@@ -36,6 +36,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant, montantSigne, quantite } from "@/lib/lisible";
 import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
+import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
 import type { StockItem } from "@malica/socle/ports/repositories";
 import {
@@ -229,7 +230,10 @@ function CabinetStocks() {
   const valo = lecture?.valo ?? null;
 
   // ------------------------------------------------------- variation d'inventaire
-  const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
+  const moisDuCabinet = useMoisDuCabinet();
+  const [periodeChoisie, setPeriod] = useState<string | null>(null);
+  const period = periodeChoisie ?? moisDuCabinet;
   const [invDate, setInvDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Le stock initial de la période est le final de la dernière période constatée

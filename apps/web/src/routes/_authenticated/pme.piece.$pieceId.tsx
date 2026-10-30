@@ -36,7 +36,7 @@ import { STATUTS_PRECISABLES } from "@malica/socle/statut-de-la-piece";
 import { estIntrouvable, texteDeLErreur } from "@/lib/erreur-lisible";
 import { codeDuVerdict } from "@malica/socle/verdicts";
 import { droitsDeLaPiece } from "@/lib/droits-de-la-piece";
-import { depuisUniteMineure } from "@malica/socle/somme-decimale";
+import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -877,6 +877,10 @@ function PieceScreen() {
     duCabinet ? duCabinet.droits : payload?.other_charges,
     packDroits.data ?? [],
   );
+  // Le sens, la date et la devise aussi : ceux de l'écriture, quand elle fait foi.
+  const sensDeLaPiece = duCabinet?.documentKind ?? payload?.document_kind;
+  const dateDeLaPiece = duCabinet?.dateEcriture ?? payload?.document_date;
+  const deviseDeLaPiece = duCabinet?.devise ?? payload?.currency ?? pme.currency;
 
   /** Le numéro porté par le document, s'il en porte un. */
   const reference = payload?.references
@@ -927,13 +931,14 @@ function PieceScreen() {
     {
       cle: "date",
       label: t("pme.extract.date"),
-      valeur: jourLisible(payload?.document_date),
+      valeur: jourLisible(dateDeLaPiece),
       champ: "document_date",
+      parLeCabinet: duCabinet !== null,
     },
     {
       cle: "tva",
       label:
-        payload?.document_kind === "facture_vente"
+        sensDeLaPiece === "facture_vente"
           ? t("pme.verifie.tvaCollectee")
           : t("pme.verifie.tvaRecuperee"),
       valeur: lisible(totaux?.vat),
@@ -1216,10 +1221,10 @@ function PieceScreen() {
               ))}
               <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
                 <span className="text-[14px] font-semibold">
-                  {duCabinet ? t("statut.pme.prise_en_charge") : t("pme.verifie.total")}
+                  {duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total")}
                 </span>
                 <span className="num text-[15px] font-semibold">
-                  {lisible(totaux?.ttc) ?? "—"} {payload?.currency ?? pme.currency}
+                  {lisible(totaux?.ttc) ?? "—"} {deviseDeLaPiece}
                 </span>
               </div>
             </div>
@@ -1432,9 +1437,9 @@ function PieceScreen() {
    * vide, et l'absence — « — » quand on ne sait pas, jamais « 0 ».
    * ══════════════════════════════════════════════════════════════════════════ */
 
-  const vente = payload?.document_kind === "facture_vente";
-  const achat = payload?.document_kind === "facture_achat";
-  const devise = payload?.currency ?? pme.currency;
+  const vente = sensDeLaPiece === "facture_vente";
+  const achat = sensDeLaPiece === "facture_achat";
+  const devise = deviseDeLaPiece;
 
   /*
    * `vis` est lue plus haut, avant la branche « pas encore lue » : c'est elle
@@ -1479,8 +1484,15 @@ function PieceScreen() {
    */
   const paiementsVivants = (paiements.data ?? []).filter((p) => !p.eteint);
   const payeMineur = paiements.isSuccess ? totalDesPaiements(paiements.data) : null;
-  const ttcMineur =
-    totaux?.ttc && decimales !== null ? Math.round(Number(totaux.ttc) * 10 ** decimales) : null;
+  // En unités exactes de la devise, jamais par un flottant.
+  const ttcMineur = (() => {
+    if (!totaux?.ttc || decimales === null) return null;
+    try {
+      return Number(enUnitesExactes(totaux.ttc, decimales));
+    } catch {
+      return null;
+    }
+  })();
   const resteMineur = ttcMineur !== null && payeMineur !== null ? ttcMineur - payeMineur : null;
   const resteLisible =
     resteMineur !== null && decimales !== null

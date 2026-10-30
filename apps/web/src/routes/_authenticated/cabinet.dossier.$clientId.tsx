@@ -24,6 +24,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
+import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import type { ChargeQuestionRow } from "@malica/socle/ports/repositories";
 import { A_TRAITER } from "@malica/socle/statut-d-envoi";
 
@@ -64,7 +65,10 @@ function CabinetClient() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
   const qc = useQueryClient();
-  const [periode, setPeriode] = useState(() => new Date().toISOString().slice(0, 7));
+  // Le mois du cabinet, à son fuseau, tant que le comptable n'en choisit pas un autre.
+  const moisDuCabinet = useMoisDuCabinet();
+  const [periodeChoisie, setPeriode] = useState<string | null>(null);
+  const periode = periodeChoisie ?? moisDuCabinet;
 
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],

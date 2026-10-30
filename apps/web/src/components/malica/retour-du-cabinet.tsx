@@ -96,7 +96,7 @@ export function CarteDuRetour({
       },
       repondre: { libelle: t("pme.retour.geste.repondre"), action: () => setReponseOuverte(true) },
       garder: { libelle: t("pme.retour.garder"), ...garder },
-      supprimer: { libelle: t("pme.supprimer.action"), action: () => setAConfirmer(true) },
+      supprimer: { libelle: t("pme.retour.supprimer"), action: () => setAConfirmer(true) },
     };
 
   return (

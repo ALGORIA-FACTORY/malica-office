@@ -23,6 +23,32 @@ export function currentPeriod(): string {
   return moisLocal(new Date());
 }
 
+type Entree = { item_id: string | null; extract: ExtractV1 };
+
+/**
+ * Les extraits du mois, rangés pour le moteur : achats, ventes — et ceux qui
+ * ne se lisent pas. Une pièce dont l'extrait ne valide pas (un taux manquant
+ * sur une ligne forcée, revue de #140) n'est jamais écartée en silence : elle
+ * est « refusée », avec ce qui manque, et l'écran la compte.
+ */
+export function extraitsDeLaTva(rows: ReadonlyArray<{ pieceId: string; extract: unknown }>) {
+  const achats: Entree[] = [];
+  const ventes: Entree[] = [];
+  const illisibles: TvaV1["refused"] = [];
+  for (const row of rows) {
+    const parsed = ExtractV1.safeParse(row.extract);
+    if (!parsed.success) {
+      const champs = [...new Set(parsed.error.issues.map((i) => i.path.join(".")))].sort();
+      illisibles.push({ reason: `EXTRAIT_ILLISIBLE:${champs.join(",")}`, item_id: row.pieceId });
+      continue;
+    }
+    const entree = { item_id: row.pieceId, extract: parsed.data };
+    if (parsed.data.document_kind === "facture_vente") ventes.push(entree);
+    else achats.push(entree);
+  }
+  return { achats, ventes, illisibles };
+}
+
 /**
  * Le chiffre vient du Socle, jamais de l'écran : ce hook ne fait qu'assembler
  * les extraits comptabilisés et les taux gouvernés, puis invoque le moteur.
@@ -71,16 +97,8 @@ export function useTvaPeriod(period: string): {
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!extracts.data || !rates.data || decimales === null) return null;
-    const achats: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
-    const ventes: Array<{ item_id: string | null; extract: ExtractV1 }> = [];
-    for (const row of extracts.data) {
-      const parsed = ExtractV1.safeParse(row.extract);
-      if (!parsed.success) continue;
-      const entry = { item_id: row.pieceId, extract: parsed.data };
-      if (parsed.data.document_kind === "facture_vente") ventes.push(entry);
-      else achats.push(entry);
-    }
-    return computeTva({
+    const { achats, ventes, illisibles } = extraitsDeLaTva(extracts.data);
+    const calcul = computeTva({
       period,
       currency: { code: pme.currency, decimals: decimales },
       tax_rates: rates.data.map((r) => ({
@@ -94,6 +112,7 @@ export function useTvaPeriod(period: string): {
       achats,
       ventes,
     });
+    return { ...calcul, refused: [...illisibles, ...calcul.refused] };
   }, [extracts.data, rates.data, decimales, period, pme.currency]);
 
   return {

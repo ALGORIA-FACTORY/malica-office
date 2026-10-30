@@ -609,6 +609,7 @@ const fr = {
     "Chaque ligne vient de la pièce elle-même. Je n'ajoute ni ne calcule rien.",
   "pme.lecture.releve": "Relevé · {mots} mots situés",
   "pme.verifie.total": "Total lu sur la pièce",
+  "pme.verifie.totalTtc": "Total TTC",
   "pme.verifie.source": "Chaque ligne pointe vers sa source",
   "pme.verifie.corriger": "Reprendre la photo",
   "pme.tva.nonAssujetti":
@@ -1928,8 +1929,8 @@ const fr = {
   "pme.retour.etat": "Retournée par votre comptabilité le {date}",
   "pme.retour.etat.court": "Retournée par votre comptabilité",
   "pme.retour.etat.pret": "Corrigée — prête à renvoyer",
-  "pme.retour.geste.joindre_document": "Joindre le document",
-  "pme.retour.geste.joindre_facture_conforme": "Joindre une facture conforme",
+  "pme.retour.geste.joindre_document": "Joindre la pièce",
+  "pme.retour.geste.joindre_facture_conforme": "Joindre la facture",
   "pme.retour.geste.reprendre_photo": "Reprendre la photo",
   "pme.retour.geste.corriger_date": "Corriger la date",
   "pme.retour.geste.repondre": "Répondre",
@@ -1996,6 +1997,7 @@ const fr = {
     "La nouvelle photo remplace celle-ci et repart à la lecture. L’ancienne reste attachée comme version précédente.",
   "pme.retour.aide.repondre": "Écrire à {qui} : expliquer, demander, ou ne pas être d’accord.",
   "pme.retour.garder": "Garder",
+  "pme.retour.supprimer": "Supprimer",
   "pme.retour.aide.garder":
     "La pièce reste dans la société, marquée « Gardée » : elle ne part pas. {qui} en est prévenu.",
   "pme.retour.aide.supprimer":
@@ -2048,6 +2050,9 @@ const fr = {
   "refus.proposition.changee":
     "La proposition a changé depuis que vous l'avez ouverte (nouvelle lecture ou correction du client). Relisez-la, puis validez.",
   "refus.ecriture.journal": "Choisissez le journal de l’écriture.",
+  "refus.ecriture.taxe_tva": "Une ligne de TVA n’a pas de taux : choisissez son code de taxe.",
+  "refus.ecriture.taxe_base":
+    "La facture porte plusieurs taux : choisissez le code de taxe de chaque ligne de base.",
   "statut.pme.mon_espace": "Mon espace",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
@@ -2091,6 +2096,10 @@ const fr = {
     "Vous pouvez aussi saisir l'écriture directement : le sens ne bloque jamais le forçage.",
   "cab.ecriture.ligne.libelle": "Libellé",
   "cab.ecriture.ligne.champ": "{champ}, ligne {n}",
+  "cab.ecriture.ligne.taxe": "Taxe",
+  "cab.ecriture.illisible": "Le client voit encore la lecture",
+  "cab.ecriture.illisible.aide":
+    "Cette écriture ne se lit pas comme une facture : une contrepartie est du côté de la pièce, ou HT + TVA + droits ne font pas le total des contreparties. Aucun montant n’est publié au client tant qu’elle ne se lit pas.",
   "cab.ecriture.ligne.retirer": "Retirer la ligne",
   "cab.ecriture.ligne.ajouter": "Ajouter une ligne",
   "cab.ecriture.compte.inconnu": "Inconnu du plan — la base refusera",
@@ -4376,6 +4385,7 @@ const en: Dict = {
     "Every line comes from the document itself. I add nothing, I compute nothing.",
   "pme.lecture.releve": "Noted · {mots} words located",
   "pme.verifie.total": "Total read on the document",
+  "pme.verifie.totalTtc": "Total incl. VAT",
   "pme.verifie.source": "Every line points to its source",
   "pme.verifie.corriger": "Retake the photo",
   "pme.tva.nonAssujetti":
@@ -5664,8 +5674,8 @@ const en: Dict = {
   "pme.retour.etat": "Returned by your accountant on {date}",
   "pme.retour.etat.court": "Returned by your accountant",
   "pme.retour.etat.pret": "Corrected — ready to send back",
-  "pme.retour.geste.joindre_document": "Attach the document",
-  "pme.retour.geste.joindre_facture_conforme": "Attach a compliant invoice",
+  "pme.retour.geste.joindre_document": "Attach the file",
+  "pme.retour.geste.joindre_facture_conforme": "Attach the invoice",
   "pme.retour.geste.reprendre_photo": "Retake the photo",
   "pme.retour.geste.corriger_date": "Correct the date",
   "pme.retour.geste.repondre": "Reply",
@@ -5732,6 +5742,7 @@ const en: Dict = {
     "The new photo replaces this one and is read again. The old one stays attached as the previous version.",
   "pme.retour.aide.repondre": "Write to {qui}: explain, ask, or disagree.",
   "pme.retour.garder": "Keep",
+  "pme.retour.supprimer": "Delete",
   "pme.retour.aide.garder":
     "The document stays in the company, marked “Kept”: it is not sent. {qui} is notified.",
   "pme.retour.aide.supprimer":
@@ -5784,6 +5795,9 @@ const en: Dict = {
   "refus.proposition.changee":
     "The proposal changed since you opened it (new reading or a correction by the client). Review it again, then validate.",
   "refus.ecriture.journal": "Choose the entry’s journal.",
+  "refus.ecriture.taxe_tva": "A VAT line has no rate: choose its tax code.",
+  "refus.ecriture.taxe_base":
+    "The invoice has several rates: choose the tax code of each base line.",
   "statut.pme.mon_espace": "My space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
@@ -5827,6 +5841,10 @@ const en: Dict = {
     "You can also enter the entry directly: the direction never blocks forcing.",
   "cab.ecriture.ligne.libelle": "Label",
   "cab.ecriture.ligne.champ": "{champ}, line {n}",
+  "cab.ecriture.ligne.taxe": "Tax",
+  "cab.ecriture.illisible": "The client still sees the reading",
+  "cab.ecriture.illisible.aide":
+    "This entry does not read as an invoice: a counterpart sits on the document’s side, or net + VAT + duties do not equal the counterparts. No amount is shown to the client until it reads as one.",
   "cab.ecriture.ligne.retirer": "Remove the line",
   "cab.ecriture.ligne.ajouter": "Add a line",
   "cab.ecriture.compte.inconnu": "Not in the chart — the database will refuse",
@@ -7994,6 +8012,7 @@ const ar: Dict = {
   "pme.detail.provenance": "كل سطر مصدره الوثيقة نفسها. لا أضيف شيئًا ولا أحتسب شيئًا.",
   "pme.lecture.releve": "رُصد · {mots} كلمة محدَّدة",
   "pme.verifie.total": "المجموع المقروء على الوثيقة",
+  "pme.verifie.totalTtc": "المجموع بكل الأداءات",
   "pme.verifie.source": "كل سطر يشير إلى مصدره",
   "pme.verifie.corriger": "أعد التقاط الصورة",
   "pme.tva.nonAssujetti":
@@ -9263,7 +9282,7 @@ const ar: Dict = {
   "pme.retour.etat.court": "أرجعها محاسبك",
   "pme.retour.etat.pret": "مُصحَّحة — جاهزة لإعادة الإرسال",
   "pme.retour.geste.joindre_document": "إرفاق الوثيقة",
-  "pme.retour.geste.joindre_facture_conforme": "إرفاق فاتورة مطابقة",
+  "pme.retour.geste.joindre_facture_conforme": "إرفاق الفاتورة",
   "pme.retour.geste.reprendre_photo": "إعادة التصوير",
   "pme.retour.geste.corriger_date": "تصحيح التاريخ",
   "pme.retour.geste.repondre": "الرد",
@@ -9325,6 +9344,7 @@ const ar: Dict = {
     "تحلّ الصورة الجديدة محلّ هذه وتُقرأ من جديد. تبقى القديمة مرفقة كنسخة سابقة.",
   "pme.retour.aide.repondre": "اكتب إلى {qui}: لتشرح أو تسأل أو تعترض.",
   "pme.retour.garder": "الاحتفاظ بها",
+  "pme.retour.supprimer": "حذف",
   "pme.retour.aide.garder":
     "تبقى الوثيقة في الشركة بعلامة «محتفَظ بها»: لا تُرسَل. ويُعلَم {qui} بذلك.",
   "pme.retour.aide.supprimer":
@@ -9367,6 +9387,8 @@ const ar: Dict = {
   "refus.proposition.changee":
     "تغيّر المقترح منذ أن فتحته (قراءة جديدة أو تصحيح من الحريف). راجعه ثم صادق عليه.",
   "refus.ecriture.journal": "اختر يومية القيد.",
+  "refus.ecriture.taxe_tva": "سطر أداء على القيمة المضافة بلا نسبة: اختر رمز الأداء.",
+  "refus.ecriture.taxe_base": "الفاتورة بعدّة نسب: اختر رمز الأداء لكل سطر من الأساس.",
   "statut.pme.mon_espace": "مساحتي",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",
@@ -9408,6 +9430,10 @@ const ar: Dict = {
   "cab.sens.aide.forcer": "يمكنك أيضًا إدخال القيد مباشرة: الاتّجاه لا يمنع الفرض أبدًا.",
   "cab.ecriture.ligne.libelle": "البيان",
   "cab.ecriture.ligne.champ": "{champ}، السطر {n}",
+  "cab.ecriture.ligne.taxe": "الأداء",
+  "cab.ecriture.illisible": "الحريف ما زال يرى القراءة",
+  "cab.ecriture.illisible.aide":
+    "هذا القيد لا يُقرأ كفاتورة: طرف مقابل في جهة الوثيقة، أو المبلغ دون أداء مع الأداء والمعاليم لا يساوي مجموع الأطراف المقابلة. لا يُنشر أي مبلغ للحريف ما دام لا يُقرأ.",
   "cab.ecriture.ligne.retirer": "حذف السطر",
   "cab.ecriture.ligne.ajouter": "إضافة سطر",
   "cab.ecriture.compte.inconnu": "غير موجود في الدليل — ستَرفضه القاعدة",

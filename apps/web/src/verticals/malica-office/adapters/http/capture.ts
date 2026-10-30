@@ -193,6 +193,7 @@ export function creerCaptureHttp(): CaptureRepository {
         lectureRefusee?: { motif: string; le: string } | null;
         suivi?: SuiviDEnvoi | null;
         montantsDuCabinet?: MontantsDuCabinet | null;
+        ecritureIllisible?: boolean;
         citations: Citation[];
         tokens: Token[];
       }>("capture", "dossier", [pieceId]);
@@ -212,6 +213,7 @@ export function creerCaptureHttp(): CaptureRepository {
         lectureRefusee: brut.lectureRefusee ?? null,
         suivi: brut.suivi ?? null,
         montantsDuCabinet: brut.montantsDuCabinet ?? null,
+        ecritureIllisible: brut.ecritureIllisible ?? false,
         citations: brut.citations,
         tokens: brut.tokens,
       };

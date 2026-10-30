@@ -19,6 +19,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
@@ -104,25 +105,31 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     return p.id;
   };
 
-  /** Le forçage du staging : HT 1 663,000, TVA 306,610, TTC 1 969,610, sans timbre. */
-  const forcer = (pieceId: string) =>
+  /** Une ligne d'écriture saisie : compte, débit, crédit, code de taxe. */
+  const L = (compte: string, debit: string, credit: string, taxe: string | null = null) => ({
+    account_code: compte,
+    libelle: compte,
+    debit,
+    credit,
+    tax_code: taxe,
+  });
+  /** Forcer l'écriture d'une pièce ; une vente établit son sens au passage. */
+  const force = (pieceId: string, lignes: unknown[], typeDeDocument?: string) =>
     cabinetFait("office.forcer", {
       pieceId,
-      journal: "ACH",
+      journal: typeDeDocument === "facture_vente" ? "VEN" : "ACH",
       date: jour,
       libelle: "Facture saisie par le cabinet",
-      lignes: [
-        { account_code: "601", libelle: "Achat", debit: "1663.000", credit: "0", tax_code: null },
-        { account_code: "4366", libelle: "TVA", debit: "306.610", credit: "0", tax_code: null },
-        {
-          account_code: "401",
-          libelle: "Fournisseur",
-          debit: "0",
-          credit: "1969.610",
-          tax_code: null,
-        },
-      ],
+      lignes,
+      typeDeDocument: typeDeDocument ?? null,
     }) as Promise<string>;
+  /** Le forçage du staging : HT 1 663,000, TVA 306,610, TTC 1 969,610, sans timbre. */
+  const forcer = (pieceId: string) =>
+    force(pieceId, [
+      L("601", "1663.000", "0"),
+      L("4366", "306.610", "0", "TVA19"),
+      L("401", "0", "1969.610"),
+    ]);
 
   const montantsVusParLaPme = async (id: string) =>
     (
@@ -332,5 +339,180 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
       [[premiere, seconde]],
     );
     assert.equal(restent.length, 2);
+  });
+
+  /*
+   * Revue de #140 : les comptes se rangeaient à l'égalité exacte avec le
+   * compte du pack, et tout le reste était « HT ». Un achat comptant donnait
+   * HT -190 / TVA 190 / TTC 0 ; une TVA sur un sous-compte, TVA 0. Chaque cas
+   * du tableau de la revue, à l'achat et à la vente.
+   */
+  const extraits = async (id: string) => {
+    const mois = jour.slice(0, 7);
+    const fin = new Date(Date.UTC(Number(mois.slice(0, 4)), Number(mois.slice(5, 7)), 0))
+      .toISOString()
+      .slice(0, 10);
+    return (
+      (await pmeFait("office.extraitsTransmis", pme, `${mois}-01`, fin)) as Array<{
+        pieceId: string;
+        extract: unknown;
+      }>
+    )
+      .filter((e) => e.pieceId === id)
+      .map((e) => e.extract);
+  };
+  const chargesDe = async (id: string) =>
+    (
+      (await pmeFait("charges.articles", pme, jour.slice(0, 7), jour.slice(0, 7))) as Array<{
+        pieceId: string;
+        totalHt: string;
+        source: string;
+      }>
+    )
+      .filter((a) => a.pieceId === id)
+      .map((a) => [a.source, Number(a.totalHt)]);
+  /** Ce que la PME lit, et ce que la TVA du mois compte — toujours un extract.v1 valide. */
+  const lu = async (id: string) => {
+    const m = await montantsVusParLaPme(id);
+    const [x] = await extraits(id);
+    assert.ok(x, "la pièce pèse dans la TVA du mois");
+    const valide = ExtractV1.safeParse(x);
+    assert.ok(valide.success, JSON.stringify(valide.error?.issues));
+    return {
+      ht: Number(m?.baseHt),
+      tva: Number(m?.tva),
+      ttc: Number(m?.ttc),
+      droits: m?.droits.map((d) => [d.code, Number(d.amount)]),
+      sens: valide.data.document_kind,
+      lignes: valide.data.lines.map((l) => [l.tax_code, Number(l.base_ht), Number(l.vat_amount)]),
+      charges: await chargesDe(id),
+    };
+  };
+
+  for (const [cas, lignes, attendu] of [
+    [
+      "achat comptant : la caisse est la contrepartie",
+      [L("601", "1000.000", "0"), L("4366", "190.000", "0", "TVA19"), L("541", "0", "1190.000")],
+      { ht: 1000, tva: 190, ttc: 1190 },
+    ],
+    [
+      "TVA sur un sous-compte (43666)",
+      [L("601", "1000.000", "0"), L("43666", "190.000", "0", "TVA19"), L("401", "0", "1190.000")],
+      { ht: 1000, tva: 190, ttc: 1190 },
+    ],
+    [
+      "fournisseur sur un sous-compte (4011)",
+      [L("601", "1000.000", "0"), L("4366", "190.000", "0", "TVA19"), L("4011", "0", "1190.000")],
+      { ht: 1000, tva: 190, ttc: 1190 },
+    ],
+    [
+      "retenue à la source : ni HT, ni charge",
+      [
+        L("601", "1000.000", "0"),
+        L("4366", "190.000", "0", "TVA19"),
+        L("401", "0", "1172.150"),
+        L("4341", "0", "17.850"),
+      ],
+      { ht: 1000, tva: 190, ttc: 1190 },
+    ],
+    [
+      "achat avec timbre : un droit, pas une charge du mois",
+      [
+        L("601", "1000.000", "0"),
+        L("4366", "190.000", "0", "TVA19"),
+        L("6654", "1.000", "0"),
+        L("401", "0", "1191.000"),
+      ],
+      { ht: 1000, tva: 190, ttc: 1191, droits: [["DROIT_TIMBRE", 1]] },
+    ],
+  ] as const) {
+    it(`achat — ${cas}`, async () => {
+      const id = await transmise();
+      await force(id, [...lignes]);
+      const r = await lu(id);
+      assert.deepEqual(
+        { ht: r.ht, tva: r.tva, ttc: r.ttc },
+        { ht: attendu.ht, tva: attendu.tva, ttc: attendu.ttc },
+      );
+      assert.deepEqual(r.droits, "droits" in attendu ? attendu.droits : []);
+      assert.deepEqual(r.lignes, [["TVA19", 1000, 190]]);
+      assert.deepEqual(r.charges, [["cabinet", 1000]]);
+    });
+  }
+
+  it("vente avec timbre : HT au crédit d'un produit, TVA collectée, le sens du cabinet", async () => {
+    const id = await transmise();
+    await force(
+      id,
+      [
+        L("411", "1191.000", "0"),
+        L("707", "0", "1000.000"),
+        L("4367", "0", "190.000", "TVA19"),
+        L("4371", "0", "1.000"),
+      ],
+      "facture_vente",
+    );
+    const r = await lu(id);
+    assert.deepEqual([r.ht, r.tva, r.ttc], [1000, 190, 1191]);
+    assert.deepEqual(r.droits, [["DROIT_TIMBRE", 1]]);
+    assert.equal(r.sens, "facture_vente", "le sens est celui du cabinet, pas de la lecture");
+    assert.deepEqual(r.charges, [], "une vente n'est pas une charge");
+  });
+
+  it("deux taux : chaque ligne de TVA dit son code, sinon le forçage est refusé", async () => {
+    const id = await transmise();
+    await assert.rejects(
+      force(id, [
+        L("601", "1000.000", "0"),
+        L("4366", "35.000", "0"),
+        L("4366", "95.000", "0"),
+        L("401", "0", "1130.000"),
+      ]),
+      /refus\.ecriture\.taxe_tva/,
+    );
+    await assert.rejects(
+      force(id, [
+        L("601", "1000.000", "0"),
+        L("4366", "35.000", "0", "TVA07"),
+        L("4366", "95.000", "0", "TVA19"),
+        L("401", "0", "1130.000"),
+      ]),
+      /refus\.ecriture\.taxe_base/,
+      "deux taux : la base dit le sien",
+    );
+    await force(id, [
+      L("601", "500.000", "0", "TVA07"),
+      L("601", "500.000", "0", "TVA19"),
+      L("4366", "35.000", "0", "TVA07"),
+      L("4366", "95.000", "0", "TVA19"),
+      L("401", "0", "1130.000"),
+    ]);
+    const r = await lu(id);
+    assert.deepEqual(r.lignes, [
+      ["TVA07", 500, 35],
+      ["TVA19", 500, 95],
+    ]);
+  });
+
+  it("une écriture qui ne se lit pas comme une facture : la PME garde la lecture, le cabinet le voit", async () => {
+    const id = await transmise();
+    // Une contrepartie du côté de la pièce : rien ne dit ce qu'est son HT.
+    await force(id, [
+      L("601", "1000.000", "0"),
+      L("4366", "190.000", "0", "TVA19"),
+      L("4341", "100.000", "0"),
+      L("401", "0", "1290.000"),
+    ]);
+    const pme = (await pmeFait("capture.dossier", id)) as {
+      montantsDuCabinet: unknown;
+      suivi: { prise: string | null };
+    };
+    assert.equal(pme.montantsDuCabinet, null, "aucun chiffre faux n'est publié");
+    assert.ok(pme.suivi.prise, "la pièce reste prise en charge");
+    const auCabinet = (await cabinetFait("capture.dossier", id)) as { ecritureIllisible: boolean };
+    assert.equal(auCabinet.ecritureIllisible, true);
+    const [x] = (await extraits(id)) as Array<{ totals: { vat: string } } | undefined>;
+    assert.equal(x?.totals.vat, "234.566", "la TVA du mois garde la lecture");
+    assert.deepEqual(await chargesDe(id), [], "les charges aussi : aucune ligne du cabinet");
   });
 });

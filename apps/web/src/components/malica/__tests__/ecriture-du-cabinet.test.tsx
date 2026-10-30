@@ -91,7 +91,16 @@ const SENS_A_TRANCHER = {
   controlesEnDefaut: ["sens_de_la_piece"],
 } as PropositionDePiece;
 
-function monter(proposition: PropositionDePiece, sens: { lu: string | null } | null = null) {
+const TAUX = [
+  { code: "TVA07", label: "TVA 7 %" },
+  { code: "TVA19", label: "TVA 19 %" },
+];
+
+function monter(
+  proposition: PropositionDePiece,
+  sens: { lu: string | null } | null = null,
+  illisible = false,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
@@ -109,6 +118,8 @@ function monter(proposition: PropositionDePiece, sens: { lu: string | null } | n
         plan={PLAN}
         decimales={3}
         motifs={[]}
+        codesDeTaxe={TAUX}
+        illisible={illisible}
         onRetournee={vi.fn()}
       />
     </QueryClientProvider>,
@@ -121,9 +132,12 @@ function monter(proposition: PropositionDePiece, sens: { lu: string | null } | n
  */
 const saisir = (libelle: string, valeur: string, rang = 0) =>
   fireEvent.change(
-    libelle === "pme.journal.account"
-      ? screen.getAllByRole("combobox", { name: libelle })[rang]!
-      : screen.getByRole("textbox", { name: nomDuChamp(libelle, rang) }),
+    screen.getByRole(
+      libelle === "pme.journal.account" || libelle === "cab.ecriture.ligne.taxe"
+        ? "combobox"
+        : "textbox",
+      { name: nomDuChamp(libelle, rang) },
+    ),
     { target: { value: valeur } },
   );
 const nomDuChamp = (champ: string, rang: number) =>
@@ -200,6 +214,50 @@ describe("la pièce côté comptable", () => {
     for (const champ of ["cab.ecriture.ligne.libelle", "pme.journal.debit", "pme.journal.credit"])
       for (const rang of [0, 1])
         expect(screen.getByRole("textbox", { name: nomDuChamp(champ, rang) })).toBeTruthy();
+    // Le compte, le taux et « Retirer la ligne » aussi (revue de #140).
+    for (const rang of [0, 1]) {
+      expect(screen.getByRole("combobox", { name: nomDuChamp("pme.journal.account", rang) }));
+      expect(screen.getByRole("combobox", { name: nomDuChamp("cab.ecriture.ligne.taxe", rang) }));
+      expect(screen.getByRole("button", { name: nomDuChamp("cab.ecriture.ligne.retirer", rang) }));
+    }
+  });
+
+  /*
+   * Revue de #140 : une facture à deux taux forcée sans codes sortait de la
+   * TVA du mois sans un mot. Le taux d'une ligne se choisit au référentiel,
+   * pré-rempli par la proposition ; le changer, c'est forcer.
+   */
+  it("le taux d'une ligne : pré-rempli par la proposition, choisi au référentiel, il part", async () => {
+    api.forcer.mockResolvedValue("e1");
+    const proposition = {
+      ...PROPOSITION,
+      proposition: {
+        ...(PROPOSITION as unknown as { proposition: Record<string, unknown> }).proposition,
+        lignes: [
+          { account_code: "601", libelle: "Achats", debit: "1000", credit: "0", tax_code: "TVA19" },
+          {
+            account_code: "401",
+            libelle: "Fournisseurs",
+            debit: "0",
+            credit: "1000",
+            tax_code: null,
+          },
+        ],
+      },
+    } as unknown as PropositionDePiece;
+    monter(proposition);
+    const taux = screen.getByRole("combobox", { name: nomDuChamp("cab.ecriture.ligne.taxe", 0) });
+    expect((taux as HTMLSelectElement).value).toBe("TVA19");
+    expect(screen.getAllByRole("option", { name: "TVA 7 %" })).toHaveLength(2);
+    saisir("cab.ecriture.ligne.taxe", "TVA07", 0);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.forcer" }));
+    await waitFor(() => expect(api.forcer).toHaveBeenCalledTimes(1));
+    expect(api.forcer.mock.calls[0]![0].lignes[0]).toMatchObject({ tax_code: "TVA07" });
+  });
+
+  it("une écriture prise en charge qui ne se lit pas comme une facture se signale au cabinet", () => {
+    monter(PROPOSITION, null, true);
+    expect(screen.getByRole("status").textContent).toContain("cab.ecriture.illisible");
   });
 
   it("deux gestes côte à côte, aucun n'attend le client", () => {

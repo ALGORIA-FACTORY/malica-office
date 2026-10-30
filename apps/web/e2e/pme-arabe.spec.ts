@@ -5,6 +5,7 @@
 import { expect, test } from "@playwright/test";
 
 import { preparerLAppareil } from "./comptes";
+import { mesurerLesSortiesDuRetour } from "./sorties-du-retour";
 
 test.beforeEach(async ({ page }) => {
   await preparerLAppareil(page, "ar");
@@ -35,4 +36,10 @@ test("les réglages disent la langue, et permettent d'en changer", async ({ page
   await page.getByRole("button", { name: "Français" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByRole("heading", { name: "Réglages", exact: true })).toBeVisible();
+});
+
+test("à 375 px, chaque sortie d'une pièce retournée tient sur une ligne, 48 px, en arabe", async ({
+  page,
+}) => {
+  await mesurerLesSortiesDuRetour(page, "ar");
 });
