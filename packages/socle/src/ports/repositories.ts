@@ -1341,6 +1341,21 @@ export interface LigneDePeriode {
  * comparait la phrase francaise accent par accent, dans un autre paquet que
  * celui qui la produit.
  */
+/**
+ * Pourquoi un verdict qui laisse passer ne donne pas d'écriture. La phrase
+ * (`raison`) se lit ; le code se compte — le rejeu des pièces
+ * (`office.rejugerLesPieces`) dit combien restent sans proposition, et pourquoi.
+ */
+export type RaisonSansEcriture =
+  | "non_lue"
+  | "montants"
+  | "devise"
+  | "base_non_lue"
+  | "droit_non_lu"
+  | "desequilibre"
+  | "a_completer"
+  | "compte_manquant";
+
 export type PropositionDePiece = (
   | {
       ok: true;
@@ -1358,6 +1373,8 @@ export type PropositionDePiece = (
       verdictCode?: CodeVerdict | null;
       /** Les codes des contrôles en défaut (`sens_de_la_piece`…), quand le verdict bloque. */
       controlesEnDefaut?: string[];
+      /** Pourquoi l'écriture ne se compose pas, en un code stable, quand le verdict ne bloque pas. */
+      raisonCode?: RaisonSansEcriture;
     }
 ) & {
   /**

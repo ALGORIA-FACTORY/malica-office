@@ -26,6 +26,7 @@ import type { Requete } from "../db.ts";
 import { analyserPiece, lireParametres } from "../scan/analyse.ts";
 import { propositionDePiece } from "../scan/proposition.ts";
 import { propositionDeReglement } from "../scan/reglement.ts";
+import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan/rejeu.ts";
 
 import { dec } from "./decimal.ts";
 
@@ -227,8 +228,29 @@ export const office = {
    * remplace jamais une date lue. Son `empreinte` accompagne VALIDER.
    */
   async propositionDePiece(db: Requete, pieceId: string, dateSaisie: string | null = null) {
+    // Ouvrir une pièce jugée sous des règles plus anciennes la rejuge, si
+    // l'appelant la supervise : quelques requêtes, et aucune ligne si rien ne
+    // change (`scan/rejeu.ts`).
+    await rejugerALOuverture(db, pieceId);
     const r = await propositionDePiece(db, pieceId, dateSaisie);
     return r.ok ? { ...r, empreinte: empreinteDe(r)! } : r;
+  },
+
+  /**
+   * REJUGER LES PIÈCES aux règles du jour : celles d'un dossier, ou de tous
+   * ceux que l'appelant supervise (le cabinet qui tient le dossier, la
+   * société quand elle tient ses livres). N'écrit que des analyses, et
+   * seulement quand le jugement change ; ni écriture, ni règlement, ni fait.
+   * Par pages, sous un budget : repasser `suite` tant qu'elle n'est pas nulle.
+   * `essai` joue tout et n'écrit rien. Voir `scan/rejeu.ts`.
+   */
+  async rejugerLesPieces(
+    db: Requete,
+    tenantId: string | null = null,
+    apres: string | null = null,
+    essai = false,
+  ): Promise<BilanDuRejeu> {
+    return rejugerLesPieces(db, { tenantId, apres, essai });
   },
 
   /**

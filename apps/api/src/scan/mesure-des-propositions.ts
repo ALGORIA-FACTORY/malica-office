@@ -31,6 +31,8 @@
  * Les comptes comparés sont ceux du paramétrage : la nature de la charge
  * (`compteDeLaNature`) se lit en base et n'entre pas ici.
  */
+import { createHash } from "node:crypto";
+
 import { confianceParChamp } from "./confiance.ts";
 import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
@@ -589,16 +591,17 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
 const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
-/** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
-function jouer(cas: CasDeMesure): Issue {
-  // Comme `analyserPiece` et `propositionDePiece` : l'exposant de la devise de
-  // la pièce, à défaut celle du dossier ; les droits fixés du sens retenu.
-  const decimales = EXPOSANTS_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER] ?? null;
+/** L'exposant de la devise de la pièce, à défaut celle du dossier — comme `analyserPiece`. */
+const decimalesDe = (cas: CasDeMesure) =>
+  EXPOSANTS_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER] ?? null;
+
+/** Juge un cas sur la vraie chaîne, avec le référentiel d'essai. */
+function juger(cas: CasDeMesure) {
+  // Les droits fixés du sens retenu, comme `analyserPiece`.
   const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
-  const jugement = jugerLaLecture(cas.lecture, {
+  return jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
     marques: MARQUES_D_ESSAI,
-    decimales,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
     deviseDuDossier: DEVISE_DU_DOSSIER,
     droitsFixes: new Map(
@@ -610,7 +613,14 @@ function jouer(cas: CasDeMesure): Issue {
     typesDocument: TYPES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
+    decimales: decimalesDe(cas),
   });
+}
+
+/** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
+function jouer(cas: CasDeMesure): Issue {
+  const decimales = decimalesDe(cas);
+  const jugement = juger(cas);
   const p = composerLaProposition(
     {
       pieceId: "00000000-0000-4000-8000-000000000000",
@@ -681,6 +691,24 @@ export function mesurer(cas: readonly CasDeMesure[] = CAS_DE_MESURE): Mesure {
     parCas,
     motifs,
   };
+}
+
+/** Un JSON dont les clés sont triées : l'empreinte ne dépend pas de l'ordre d'écriture. */
+const enJsonStable = (v: unknown): string =>
+  JSON.stringify(v, (_, x: unknown) =>
+    x && typeof x === "object" && !Array.isArray(x)
+      ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b)))
+      : x,
+  );
+
+/**
+ * L'empreinte de ce que le jugement rend sur le témoin : normalisation,
+ * contrôles, verdict et motifs de chaque cas. Elle change dès qu'une règle
+ * change un jugement — et `REGLES_DU_JUGEMENT` (analyse.ts) la porte.
+ */
+export function empreinteDesJugements(cas: readonly CasDeMesure[] = CAS_DE_MESURE): string {
+  const jugements = cas.map((c) => ({ nom: c.nom, ...juger(c) }));
+  return createHash("sha256").update(enJsonStable(jugements)).digest("hex");
 }
 
 /** Le rapport, en clair : ce que l'épreuve imprime. */
