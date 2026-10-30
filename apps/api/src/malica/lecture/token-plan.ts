@@ -1,7 +1,9 @@
+import { enChiffresLatins } from "@malica/socle/chiffres";
+import type { DeviseLue } from "@malica/socle/montant-imprime";
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { treillisMontant, type Hypothese } from "./montants.ts";
-import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
 import { plageAmputee } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
@@ -24,8 +26,7 @@ function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | nul
   return tokens.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null;
 }
 
-/**
-/**
+/*
  * ================================== CE QUI A ÉTÉ RETIRÉ D'ICI, ET POURQUOI
  *
  * Ce module portait `normalizeAmount`, qui rendait UNE valeur par token. Pour
@@ -33,10 +34,12 @@ function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | nul
  * lu 2 800 dinars, par une règle fixe. Sur un ticket, c'est 2,800 dinar — et
  * l'erreur ne se voyait pas, puisque le résultat avait la forme d'un montant.
  *
- * La lecture d'un montant vit désormais dans `montants.ts` : elle rend TOUTES
+ * La lecture d'un montant vit désormais dans le lecteur unique du dépôt
+ * (`@malica/socle/montant-imprime`, par `treillisMontant`) : elle rend TOUTES
  * les lectures admissibles, et c'est l'arithmétique de la facture qui choisit
  * (`lireMontantDuPlan`, plus bas). Ce qu'elle ne choisit pas est demandé à
  * l'écran plutôt que deviné.
+ */
 
 /**
  * Une date existe-t-elle vraiment ?
@@ -60,32 +63,6 @@ function dateReelle(y: string, m: string, d: string): boolean {
   // Le mois 0 du mois suivant : le dernier jour du mois demandé.
   const dernier = new Date(Date.UTC(annee, mois, 0)).getUTCDate();
   return jour <= dernier;
-}
-
-/**
- * Les chiffres arabes et persans, ramenés aux latins.
- *
- * Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les deux séries de
- * chiffres sont contiguës dans Unicode, donc la conversion est un décalage —
- * pas une table, pas un cas particulier.
- *
- * Volontairement limité aux DATES. Les montants en chiffres arabes ne sont
- * toujours pas lus : élargir la lecture d'un montant demande le banc du jeu
- * d'or, pas une ligne ici.
- *
- * Ce commentaire a longtemps renvoyé à `montants.test.ts` pour ce refus.
- * Vérifié le 18 octobre 2026 : ce fichier ne contient aucun chiffre arabe. Le
- * refus tenait, et rien ne le gardait — un commentaire qui invoque une épreuve
- * inexistante est pire qu'un commentaire absent, parce qu'il arrête l'enquête.
- * Il est désormais verrouillé par `factures.banc-amputation.test.ts`, qui
- * exige `VALUE_NOT_A_NUMBER` et le contrat partiel sur « ٦٥٠,٠٠٠ » : le modèle
- * de vision rend les chiffres arabes INVERSÉS (« ١٢ » lu « ٢١ », mesuré), et
- * une lecture inversée d'un montant est pire que pas de lecture.
- */
-function enChiffresLatins(s: string): string {
-  return s
-    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
 }
 
 /**
@@ -174,6 +151,8 @@ const MOTIF_EN_LETTRES = new RegExp(
 );
 
 export function normalizeDate(text: string): string | null {
+  // Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les MONTANTS en
+  // chiffres arabes, eux, ne se lisent pas au plan : voir `treillisMontant`.
   const s = enChiffresLatins(text.trim());
   const rendre = (y: string, m: string, d: string): string | null =>
     dateReelle(y, m, d) ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
@@ -420,7 +399,7 @@ export function lireMontantDuPlan(
   }
   if (hypotheses.length === 1) {
     return {
-      value: enDecimal(hypotheses[0]!.millimes, devise.decimales),
+      value: depuisUniteMineure(hypotheses[0]!.millimes, devise.decimales),
       citation,
       flag: null,
       hypotheses,
@@ -432,7 +411,7 @@ export function lireMontantDuPlan(
     flag: {
       field,
       code: "SEPARATEUR_AMBIGU",
-      detail: `« ${texte} » se lit ${hypotheses.map((h) => enDecimal(h.millimes, devise.decimales)).join(" ou ")}`,
+      detail: `« ${texte} » se lit ${hypotheses.map((h) => depuisUniteMineure(h.millimes, devise.decimales)).join(" ou ")}`,
     },
     hypotheses,
   };

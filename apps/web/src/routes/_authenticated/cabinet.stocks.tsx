@@ -35,6 +35,7 @@ import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant, montantSigne, quantite } from "@/lib/lisible";
 import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { cn } from "@/lib/utils";
 import { useMoisDuCabinet } from "@/hooks/use-mois-du-cabinet";
 import { office } from "@/verticals/malica-office/composition";
@@ -69,7 +70,6 @@ export const Route = createFileRoute("/_authenticated/cabinet/stocks")({
 
 const OU = "routes/_authenticated/cabinet.stocks";
 /** Une chaîne décimale telle que le Socle l'accepte — la virgule du clavier français est admise. */
-const DECIMAL = /^-?\d+(\.\d+)?$/;
 const FIELD = "border border-border bg-card px-2.5 py-1.5 text-[12.5px] outline-none";
 const LABEL = "block text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground";
 const KICKER = "text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground";
@@ -290,9 +290,10 @@ function CabinetStocks() {
 
   // La saisie ne part au moteur que lorsqu'elle est un nombre : « abc » n'est
   // pas une valeur nette, et le moteur le refuserait en pleine lecture.
-  const valeurNetteSaisie = valeurNette.trim().replace(",", ".");
+  // « 1 234,500 », « ١٢٣٫٥ » : la règle de toute saisie de montant (`saisieDecimale`).
+  const valeurNetteSaisie = saisieDecimale(valeurNette);
   const depreciation =
-    lecture && client && coutAuJour !== null && DECIMAL.test(valeurNetteSaisie)
+    lecture && client && coutAuJour !== null && valeurNetteSaisie !== null
       ? computeStockDepreciation({
           currency: item?.devise || client.currency,
           decimals: lecture.decimals,

@@ -65,8 +65,12 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
   const { rows: types } = await db.query<{ code: string }>(
     `select code from ref.document_types where porte_ecriture order by code`,
   );
-  const { rows: devises } = await db.query<{ code: string; exposant: number }>(
-    `select code, exposant from ref.devises order by code`,
+  const { rows: devises } = await db.query<{
+    code: string;
+    exposant: number;
+    separateurDecimal: string;
+  }>(
+    `select code, exposant, separateur_decimal as "separateurDecimal" from ref.devises order by code`,
   );
   return {
     juridiction,
@@ -78,6 +82,11 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     droits,
     mentions: mentions.map((m) => m.code),
     typesQuiPortentUneEcriture: types.map((t) => t.code),
-    exposants: Object.fromEntries(devises.map((d) => [d.code, d.exposant])),
+    devises: Object.fromEntries(
+      devises.map((d) => [
+        d.code,
+        { exposant: d.exposant, separateurDecimal: d.separateurDecimal },
+      ]),
+    ),
   };
 }

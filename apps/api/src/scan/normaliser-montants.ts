@@ -8,9 +8,12 @@
  * « 1234560 », « 1 234,56 », « 1234,5600 », « 1 234,560DT ». Plusieurs sont
  * AMBIGUËS prises seules : « 2.800 » est deux dinars huit cents millimes, ou
  * deux mille huit cents dinars ; « 1234560 » est écrit en dinars, ou en
- * millimes sans séparateur ; « 100,000 » est cent dinars, ou cent mille à
- * l'anglaise. (« 1234.560 », lui, n'a qu'une lecture : un premier groupe de
- * quatre chiffres n'est pas un groupe de milliers.)
+ * millimes sans séparateur ; « 100.000 » est cent dinars, ou cent mille.
+ * (« 1234.560 », lui, n'a qu'une lecture : un premier groupe de quatre
+ * chiffres n'est pas un groupe de milliers ; « 100,000 » aussi, depuis le
+ * 30 octobre 2026 : la virgule est le séparateur décimal du dinar, et le
+ * référentiel le dit — `ref.devises.separateur_decimal`.) Les lectures d'un
+ * texte viennent du lecteur unique du dépôt (`@malica/socle/montant-imprime`).
  *
  * ============================================================== LA RÈGLE
  *
@@ -27,7 +30,7 @@
  *
  * L'ÉCHELLE se tranche d'elle-même quand l'arrondi laisse un reste : lu en
  * dinars, 1 234 560 × 1,19 laisse 400 millimes qui ne tombent pas sur le TTC.
- * Sans reste (100,000 × 1,19 = 119,000), lus tous en dinars ou tous en
+ * Sans reste (100.000 × 1,19 = 119.000), lus tous en dinars ou tous en
  * millimes, les montants tiennent pareil — un timbre imprimé aussi, puisqu'il
  * est lui-même ambigu. Ce qui la rompt alors, c'est un droit dont le
  * PARAMÉTRAGE fixe la valeur (le timbre à 1,000 DT) : `autres[].attendu`.
@@ -39,6 +42,12 @@
  * calcule en unités mineures entières (BigInt), le taux lu comme un rationnel
  * exact : pas un nombre flottant sur le chemin d'un montant.
  */
+import {
+  lireUnMontantImprime,
+  type DeviseLue,
+  type LectureDeMontant,
+} from "@malica/socle/montant-imprime";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 export interface Candidat {
   /** Le montant en unités mineures (millimes pour trois décimales). */
@@ -79,22 +88,6 @@ export interface EntreeMontants {
    * pour que `fermes` nomme les champs tels que la lecture les cite.
    */
   chemins?: Readonly<Record<string, string>>;
-}
-
-/**
- * Ce que le référentiel dit de la devise pour LIRE un montant. Partagé avec la
- * lecture au plan de jetons (`malica/lecture/montants.ts`) : les deux lecteurs
- * lisent les mêmes décimales et les mêmes marques.
- */
-export interface DeviseLue {
-  /** Décimales de la devise — du paramétrage (money.decimals), jamais d'une table en dur. */
-  decimales: number;
-  /**
-   * Les marques de devise imprimées (« DT », « D.T. », « د.ت », « € ») : les
-   * codes de `ref.devises` et les lignes de `ref.devises_marques`, lus par
-   * `lireMarquesDeDevise` (`scan/analyse.ts`). Jamais une liste en dur.
-   */
-  marques: readonly string[];
 }
 
 export interface ParametresMontants extends DeviseLue {
@@ -225,324 +218,44 @@ const CONFIANCE_NON_VERIFIEE = 0.5;
 const CONFIANCE_VERIFIEE_SANS_LE_TOTAL = 0.8;
 
 /**
- * Un mot imprimé à côté d'un nombre : des lettres, des symboles (« € »,
- * « ° »), éventuellement liés par des points ou des espaces (« D.T. »,
- * « F CFA »), avec le point qui le clôt.
+ * Les lectures possibles d'un montant imprimé, pour la normalisation. Vide :
+ * illisible.
+ *
+ * ======================================================== LA POLITIQUE DU SCAN
+ *
+ * Le texte se lit par le lecteur unique du dépôt (`@malica/socle/montant-imprime`,
+ * qui en écrit les règles) ; rien ne se relit ici. La normalisation en garde
+ * TOUTES les lectures : c'est l'arithmétique de la facture qui tranche entre
+ * elles, plus bas, et ce qu'elle ne tranche pas reste sans valeur.
+ *
+ * Les chiffres arabes et persans se lisent, comme au relevé du 29 octobre
+ * 2026 (`un-montant-repete-en-colonnes.test.ts`). La lecture au plan de jetons
+ * les refuse, parce que son modèle de vision les rend inversés : ici, une
+ * lecture inversée ne passerait pas l'égalité de la facture, et une lecture
+ * qu'aucune égalité ne vérifie (`non_verifie`) part en réserve au cabinet.
  */
-const MOT = /[\p{L}\p{M}\p{Sc}\p{So}]+(?:[.\s]*[\p{L}\p{M}\p{Sc}\p{So}]+)*\.?/gu;
-
-/** Une marque comparée sans casse, sans points ni espaces : « D.T. » vaut « dt ». */
-const cleDeMarque = (s: string): string => s.normalize("NFKC").replace(/[\s.]/gu, "").toUpperCase();
-
-/**
- * Retire d'un montant imprimé les marques de devise que le RÉFÉRENTIEL
- * connaît, et elles seules.
- *
- * ================================================================= POURQUOI
- *
- * 30 octobre 2026. Les deux lecteurs de montants ne lisaient pas la devise de
- * la même façon : celui-ci portait sa propre liste en dur (DT, TND, D.T,
- * DINARS, د.ت), celui du plan de jetons effaçait toute lettre et laissait le
- * point d'une abréviation collé au nombre — « 1 234,560 D.T. » y valait
- * 1 234 560 dinars. Les marques vivent désormais dans `ref.devises` et
- * `ref.devises_marques`, et les deux lecteurs passent par cette fonction.
- *
- * Tout autre mot fait du texte un texte, pas un montant : « art. 9 »,
- * « N° 12. », « TVA 19 » rendent `null`. Effacer un mot qu'on ne connaît pas,
- * c'est lire un nombre que le papier n'a peut-être pas voulu dire.
- */
-export function sansMarquesDeDevise(texte: string, marques: readonly string[]): string | null {
-  const connues = new Set(marques.map(cleDeMarque));
-  let inconnu = false;
-  const reste = texte.replace(MOT, (mot) => {
-    if (connues.has(cleDeMarque(mot))) return " ";
-    inconnu = true;
-    return mot;
-  });
-  return inconnu ? null : reste;
-}
-
-const ESPACES = /[\s\u00A0\u202F]/u;
-
-/**
- * Les occurrences d'une plage qui a couvert le MÊME montant plusieurs fois.
- *
- * ================================================================= POURQUOI
- *
- * 10 octobre 2026. La facture PAPETERIE NOUR reste bloquée sur « montant
- * illisible : « 514,700 514,700 » ».
- *
- * C'est l'envers de la plage de jetons ouverte le 5 octobre pour recoller
- * « 2 800,000 », que l'espace des milliers coupait en deux. Une plage peut
- * désormais couvrir deux montants — ici le même, imprimé deux fois côte à
- * côte, comme le font les factures qui répètent le total en pied de colonne.
- *
- * Deux virgules décimales : aucune lecture ne tient, et la chaîne a eu raison
- * de ne rien rendre plutôt que d'inventer.
- *
- * ========================================== LE 29 OCTOBRE : L'ESPACE DES MILLIERS
- *
- * La première version coupait le texte à CHAQUE espace et exigeait des blocs
- * textuellement identiques. Or l'espace est aussi le séparateur des milliers :
- * « 3 020,000 3 020,000) » — le HT et le total d'une même ligne — donnait
- * « 3 », « 020,000 », « 3 », « 020,000 », et la facture finissait « anomalie
- * à signaler », sans écriture.
- *
- * On découpe donc les jetons (séparés par des espaces ou du bruit de colonne :
- * « | », « ; », « : ») en OCCURRENCES consécutives, de toutes les façons
- * possibles, et l'on ne garde que les découpages où chaque occurrence a
- * EXACTEMENT les mêmes lectures que les autres.
- *
- * ========================================== POURQUOI CE N'EST PAS UNE SUPPOSITION
- *
- * Quand toutes les occurrences ont les mêmes lectures, rendre ces lectures ne
- * choisit rien : quel que soit l'endroit où la plage aurait dû s'arrêter, on
- * lit le même nombre. Et la convention (virgule décimale ou des milliers)
- * reste tranchée ensuite par l'arithmétique de la facture, comme pour
- * n'importe quel montant.
- *
- * Trois bornes, et chacune refuse plutôt que de choisir :
- *
- *   — des occurrences DIFFÉRENTES ne se départagent pas. « 514,700 200,000 »
- *     reste illisible, parce qu'on ne sait pas laquelle était visée ;
- *   — deux découpages qui donnent deux montants différents : illisible ;
- *   — elle ne s'applique qu'APRÈS l'échec de la lecture entière, et si le
- *     texte recollé sans ses espaces ne se lit pas non plus — « 3 020 3 020 »
- *     pourrait être 30 203 020 aux espaces parasites, on ne tranche pas.
- *
- * R2 tient : aucune valeur n'est inventée, et celle-ci pointe toujours vers
- * les jetons de la plage.
- */
-/** Assez pour cinq occurrences d'un montant à quatre groupes de chiffres. */
-const JETONS_PAR_CELLULE_MAX = 20;
-
-/**
- * Exportée pour la lecture au plan de jetons (`malica/lecture/montants.ts`),
- * qui a la même question à trancher avec SON lecteur d'un montant : `lire`
- * rend les lectures d'un morceau pris comme un seul montant, `valeur` la
- * valeur en unités mineures d'une lecture. Une seule règle, deux lecteurs.
- */
-export function occurrencesIdentiques<L>(
-  texte: string,
-  lire: (morceau: string) => L[],
-  valeur: (lecture: L) => number,
-): L[] {
-  // `\s` couvre déjà l'espace insécable et l'espace fine insécable. Les
-  // écrire eux-mêmes dans une classe les ferait entrer littéralement dans le
-  // fichier, invisibles — ce que le lint refuse, à juste titre.
-  const jetons = texte.split(/[\s|;:]+/u).filter((b) => b.length > 0);
-  // Au-delà, le nombre de découpages croît en 2^n ; une cellule n'en porte pas tant.
-  if (jetons.length < 2 || jetons.length > JETONS_PAR_CELLULE_MAX) return [];
-
-  const cle = (ls: L[]) =>
-    ls
-      .map(valeur)
-      .sort((a, b) => a - b)
-      .join("|");
-  const lectures = new Map<string, L[]>();
-  const lirePlage = (debut: number, fin: number) => {
-    const morceau = jetons.slice(debut, fin).join(" ");
-    let l = lectures.get(morceau);
-    if (!l) lectures.set(morceau, (l = lire(morceau)));
-    return l;
-  };
-  // Le reste des jetons, à partir de `debut`, se découpe-t-il en occurrences
-  // qui ont toutes la clé `attendue` ?
-  const echecs = new Set<string>();
-  const seDecoupe = (debut: number, attendue: string): boolean => {
-    if (debut === jetons.length) return true;
-    if (echecs.has(`${debut}|${attendue}`)) return false;
-    for (let fin = debut + 1; fin <= jetons.length; fin += 1) {
-      const l = lirePlage(debut, fin);
-      if (l.length > 0 && cle(l) === attendue && seDecoupe(fin, attendue)) return true;
-    }
-    echecs.add(`${debut}|${attendue}`);
-    return false;
-  };
-
-  const retenues = new Map<string, L[]>();
-  for (let fin = 1; fin < jetons.length; fin += 1) {
-    const premiere = lirePlage(0, fin);
-    if (premiere.length === 0) continue;
-    const c = cle(premiere);
-    if (seDecoupe(fin, c)) retenues.set(c, premiere);
-  }
-  // Un seul montant possible : on le rend. Deux : on ne choisit pas.
-  return retenues.size === 1 ? [...retenues.values()][0]! : [];
-}
-
-/**
- * Retirer les parenthèses ORPHELINES, et elles seules.
- *
- * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
- *
- * 15 octobre 2026. Une facture d'achat imprime « (base 514,700) » à côté du
- * taux de TVA. La désignation a englobé la parenthèse fermante, et le montant
- * est arrivé ici sous la forme « 514,700 514,700) ».
- *
- * Un seul caractère parasite, et un montant parfaitement lu devenait
- * illisible : verdict « anomalie à signaler », aucune écriture proposée.
- *
- * ========================================== POURQUOI PAS LES PAIRES
- *
- * Une parenthèse APPARIÉE a un sens en comptabilité : « (514,700) » se lit
- * moins 514,700. La retirer transformerait un négatif en positif, en
- * silence — l'erreur la plus grave possible sur un montant. La chaîne ne lit
- * pas cette notation, et c'est voulu : la même facture imprime aussi
- * « (base 514,700) », et lire la paire comme un négatif inscrirait au crédit
- * ce qui va au débit. Elle refuse ; la personne saisit.
- *
- * ========================================== LE 29 OCTOBRE : PAR APPARIEMENT
- *
- * La première version comptait les parenthèses et, au moindre déséquilibre,
- * les retirait TOUTES : « (3 020,000)) » devenait 3 020,000, positif — la
- * paire perdue avec l'orpheline. On apparie désormais : seule une parenthèse
- * sans partenaire est retirée, et une paire qui reste fait refuser la lecture.
- */
-function sansParenthesesOrphelines(texte: string): string {
-  const caracteres = [...texte];
-  const orphelines = new Set<number>();
-  const ouvertes: number[] = [];
-  caracteres.forEach((c, i) => {
-    if (c === "(") ouvertes.push(i);
-    else if (c === ")" && ouvertes.pop() === undefined) orphelines.add(i);
-  });
-  for (const i of ouvertes) orphelines.add(i);
-  return caracteres.filter((_, i) => !orphelines.has(i)).join("");
-}
-
-/**
- * Les chiffres arabes-indiens (U+0660…) et persans (U+06F0…) en chiffres
- * latins ; la virgule décimale arabe (U+066B) en virgule, le séparateur des
- * milliers arabe (U+066C) en apostrophe — que la lecture ne prend jamais pour
- * une décimale. Une transcription, pas une interprétation : chaque caractère a
- * un seul équivalent.
- */
-function enChiffresLatins(texte: string): string {
-  return texte
-    .replace(/[٠-٩]/gu, (c) => String(c.codePointAt(0)! - 0x0660))
-    .replace(/[۰-۹]/gu, (c) => String(c.codePointAt(0)! - 0x06f0))
-    .replace(/٫/gu, ",")
-    .replace(/٬/gu, "'");
-}
-
-/** Les lectures possibles d'un montant imprimé. Vide : illisible. */
 export function candidatsMontant(entree: string, devise: DeviseLue): Candidat[] {
-  const { decimales } = devise;
-  const sansMarques = sansMarquesDeDevise(enChiffresLatins(entree), devise.marques);
-  if (sansMarques === null) return [];
-  const brut = sansParenthesesOrphelines(sansMarques).trim();
-  const entiere = lectureEntiere(brut, decimales);
-  if (entiere.length > 0) return entiere;
-  // Recollé sans ses espaces, le texte se lit : ce pourrait être UN nombre aux
-  // espaces parasites, et non un montant répété. On ne tranche pas.
-  if (lectureEntiere(brut.replace(/\s+/gu, ""), decimales).length > 0) return [];
-  return occurrencesIdentiques(
-    brut,
-    (morceau) => lectureEntiere(morceau, decimales),
-    (c) => c.mineur,
-  );
+  return lireUnMontantImprime(entree, devise).lectures.map((l) => ({
+    mineur: l.mineur,
+    convention: conventionDe(l),
+  }));
 }
 
-/**
- * Des groupes de milliers bien formés : un premier groupe de 1 à 3 chiffres,
- * puis des groupes d'exactement 3. Partagée avec la lecture au plan de jetons
- * (`malica/lecture/montants.ts`) : « 5.46.3 » n'y est pas plus un nombre
- * qu'ici.
- */
-export function groupesDeMilliersValides(groupes: readonly string[]): boolean {
-  return (
-    groupes.length > 0 &&
-    groupes.every((g) => /^\d+$/.test(g)) &&
-    groupes[0]!.length <= 3 &&
-    groupes.slice(1).every((g) => g.length === 3)
-  );
-}
-
-/** Les lectures d'un texte pris comme UN seul montant. */
-function lectureEntiere(brut: string, decimales: number): Candidat[] {
-  // La devise a déjà été retirée (`sansMarquesDeDevise`) : rien de littéral ici.
-  let texte = brut.trim();
-  let signe = 1n;
-  if (texte.startsWith("-")) {
-    signe = -1n;
-    texte = texte.slice(1).trim();
+/** Comment un montant a été lu, en clair : ce que la preuve du contrôle arithmétique montre. */
+function conventionDe(l: LectureDeMontant): string {
+  const sep = l.separateur === " " ? "espace" : `« ${l.separateur ?? ""} »`;
+  switch (l.forme) {
+    case "decimale":
+      return `décimale ${sep}`;
+    case "milliers":
+      return `milliers ${sep}, entier`;
+    case "entier":
+      return "entier en unités";
+    case "mineures":
+      return l.separateur === null
+        ? "unités mineures sans séparateur"
+        : "unités mineures, milliers séparés par une espace";
   }
-  if (!/^\d[\d.,'\u2019\s\u00A0\u202F]*$/u.test(texte) || !/\d$/.test(texte)) return [];
-
-  // Les groupes de chiffres et les séparateurs entre eux.
-  const groupes: string[] = [];
-  const seps: string[] = [];
-  let courant = "";
-  for (const c of texte) {
-    if (/\d/.test(c)) {
-      courant += c;
-    } else {
-      if (!courant) return []; // deux séparateurs d'affilée
-      groupes.push(courant);
-      seps.push(ESPACES.test(c) ? " " : c === "\u2019" ? "'" : c);
-      courant = "";
-    }
-  }
-  groupes.push(courant);
-
-  const echelle = 10n ** BigInt(decimales);
-  const lectures = new Map<string, Candidat>();
-  const ajouter = (mineur: bigint, convention: string) => {
-    const v = signe * mineur;
-    const cle = v.toString();
-    if (
-      !lectures.has(cle) &&
-      v <= BigInt(Number.MAX_SAFE_INTEGER) &&
-      v >= -BigInt(Number.MAX_SAFE_INTEGER)
-    )
-      lectures.set(cle, { mineur: Number(v), convention });
-  };
-  /** La partie décimale, ramenée aux décimales de la devise ; null si elle en porte plus, non nulles. */
-  const partieDecimale = (d: string): bigint | null => {
-    if (d.length > decimales) {
-      if (!/^0+$/.test(d.slice(decimales))) return null;
-      d = d.slice(0, decimales);
-    }
-    return BigInt(d.padEnd(decimales, "0") || "0");
-  };
-
-  if (seps.length === 0) {
-    const n = BigInt(groupes[0]!);
-    ajouter(n * echelle, "entier en unités");
-    // Écrit en unités mineures, sans séparateur (« 1234560 » pour 1 234,560).
-    if (decimales > 0 && groupes[0]!.length > decimales)
-      ajouter(n, "unités mineures sans séparateur");
-    return [...lectures.values()];
-  }
-
-  const dernier = seps[seps.length - 1]!;
-  const avant = seps.slice(0, -1);
-  const entiers = groupes.slice(0, -1);
-  const fin = groupes[groupes.length - 1]!;
-
-  // 1. Le dernier séparateur est décimal ; les précédents sont des milliers,
-  //    tous du même signe, distinct du décimal. L'apostrophe n'est jamais décimale.
-  if (dernier === "." || dernier === ",") {
-    const milliers = new Set(avant);
-    const coherent = milliers.size === 0 || (milliers.size === 1 && !milliers.has(dernier));
-    if (coherent && (avant.length === 0 || groupesDeMilliersValides(entiers))) {
-      const dec = partieDecimale(fin);
-      if (dec !== null)
-        ajouter(BigInt(entiers.join("")) * echelle + dec, `décimale « ${dernier} »`);
-    }
-  }
-
-  // 2. Tous les séparateurs sont des milliers : un entier.
-  const tous = new Set(seps);
-  if (tous.size === 1 && groupesDeMilliersValides(groupes)) {
-    const n = BigInt(groupes.join(""));
-    ajouter(n * echelle, `milliers « ${dernier} », entier`);
-    // Et l'espace qui sépare les millimes (« 1 234 560 » pour 1 234,560).
-    if (dernier === " " && fin.length === decimales) ajouter(n, "millimes séparés par une espace");
-  }
-
-  return [...lectures.values()];
 }
 
 /** Un taux décimal (« 0.19 ») en rationnel exact : numérateur, dénominateur. */
@@ -983,7 +696,7 @@ export function normaliserMontants(
     // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
     const tva =
       tvaNonLue !== null && v.ttc !== undefined ? v.ttc - somme(v.hts) - somme(v.autres) : v.tva;
-    const montant = (x: bigint) => enDecimal(Number(x), p.decimales);
+    const montant = (x: bigint) => depuisUniteMineure(Number(x), p.decimales);
     // Les montants imprimés qui alimentent la formule, et ce que la pièce
     // imprimait à la place de la valeur déduite.
     const operandes = (sauf: string, aLaPlace: string | null): Record<string, string> => ({
@@ -1035,20 +748,6 @@ export function normaliserMontants(
       raison,
     };
   }
-}
-
-/**
- * Rend une valeur en unités mineures sous la forme décimale du contrat
- * (« 1428000 » millimes → « 1428.000 »). Le passage se fait sur les chiffres,
- * jamais par une division flottante : 0,1 + 0,2 n'est pas 0,3, et une facture
- * n'a pas à en souffrir.
- */
-export function enDecimal(millimes: number, decimales: number): string {
-  const negatif = millimes < 0;
-  const chiffres = String(Math.abs(millimes)).padStart(decimales + 1, "0");
-  const entier = chiffres.slice(0, chiffres.length - decimales);
-  const fraction = decimales > 0 ? `.${chiffres.slice(chiffres.length - decimales)}` : "";
-  return `${negatif ? "-" : ""}${entier}${fraction}`;
 }
 
 /**

@@ -31,11 +31,10 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireMarquesDeDevise, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireLaDevise, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
-import { referentiel } from "./referentiel.ts";
 import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
@@ -657,10 +656,14 @@ export const capture = {
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
 
-    // L'échelle de la devise vient du pack, pas du code. La lecture des
-    // montants s'en sert pour décider si un texte est ambigu : « 2.800 » se lit
-    // de deux façons à trois décimales, d'une seule à deux.
-    const { moneyDecimals } = await referentiel.socleParams(db, packId);
+    // La devise du dossier telle que le référentiel la lit : son exposant, son
+    // séparateur décimal, les marques imprimées. La lecture des montants s'en
+    // sert pour décider si un texte est ambigu : « 2.800 » se lit de deux
+    // façons à trois décimales, « 100,000 » d'une seule quand la virgule est
+    // le séparateur décimal de la devise. C'est la même lecture que celle du
+    // jugement (`lireLaDevise`) : la devise se lit d'une seule façon.
+    const devise = await lireLaDevise(db, org["currency"] as string);
+    if (!devise) throw new Error("devise.inconnue");
 
     const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
@@ -688,8 +691,7 @@ export const capture = {
       },
       jurisdiction,
       currency: org["currency"] as string,
-      moneyDecimals,
-      marquesDevise: await lireMarquesDeDevise(db),
+      devise,
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,

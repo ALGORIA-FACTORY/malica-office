@@ -26,9 +26,10 @@ import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
+import type { DeviseLue } from "@malica/socle/montant-imprime";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
-import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
 
 import { resoudreFacture, type Contrainte } from "./montants.ts";
 import {
@@ -140,8 +141,8 @@ export function buildExtractFromTokenPlan(params: {
     if (lue.hypotheses.every((h) => Math.abs(h.millimes) > plafond)) {
       invraisemblables.set(
         tva,
-        `TVA lue ${lue.hypotheses.map((h) => enDecimal(h.millimes, decimals)).join(" ou ")}, ` +
-          `plus grande que la base de sa ligne ${enDecimal(plafond, decimals)} : l'une des deux est mal lue`,
+        `TVA lue ${lue.hypotheses.map((h) => depuisUniteMineure(h.millimes, decimals)).join(" ou ")}, ` +
+          `plus grande que la base de sa ligne ${depuisUniteMineure(plafond, decimals)} : l'une des deux est mal lue`,
       );
       treillis.set(tva, { ...lue, hypotheses: [] });
     }
@@ -246,7 +247,7 @@ export function buildExtractFromTokenPlan(params: {
 
     const decide = resolution.valeurs.get(field);
     if (m.hypotheses.length > 1 && decide?.decidePar === "arithmetique") {
-      const valeur = enDecimal(decide.millimes, decimals);
+      const valeur = depuisUniteMineure(decide.millimes, decimals);
       flags.push({
         field,
         code: "DECIDE_PAR_ARITHMETIQUE",
@@ -540,8 +541,8 @@ export function buildExtractFromTokenPlan(params: {
       field: v.champ,
       code: "ARITHMETIQUE_INCOHERENTE",
       detail:
-        `${v.parties.join(v.operation === "produit" ? " × " : " + ")} donne ${enDecimal(v.calcule, decimals)}, ` +
-        `la pièce porte ${enDecimal(v.lu, decimals)}`,
+        `${v.parties.join(v.operation === "produit" ? " × " : " + ")} donne ${depuisUniteMineure(v.calcule, decimals)}, ` +
+        `la pièce porte ${depuisUniteMineure(v.lu, decimals)}`,
     });
   }
 

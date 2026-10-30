@@ -39,9 +39,8 @@ import { composerLaProposition } from "./proposition.ts";
 import {
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
-  EXPOSANTS_D_ESSAI,
+  DEVISES_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
-  MARQUES_D_ESSAI,
   MENTIONS_D_ESSAI,
   PARAMETRES_D_ESSAI,
   TAUX_D_ESSAI,
@@ -535,6 +534,41 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    // Avant le 30 octobre 2026, la normalisation lisait aussi « 100,000 » à
+    // l'anglaise : sans timbre pour ancrer l'échelle, dinars et milliers de
+    // dinars vérifiaient tous deux la facture, et rien n'était proposé.
+    nom: "montants ronds à la virgule, sans timbre : la virgule du dinar est décimale",
+    provenance: `${REPRODUIT} (lecteurs de montants unifiés)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,000" }],
+      ht: "100,000",
+      tva: "19,000",
+      ttc: "119,000",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "100.000", "0"],
+        ["4366", "19.000", "0", "TVA19"],
+        ["401", "0", "119.000"],
+      ],
+    },
+  },
+  {
+    // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
+    // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
+    nom: "des montants entre parenthèses : le signe ne se devine pas",
+    provenance: `${REPRODUIT} (lecteurs de montants unifiés)`,
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "(1 234,560)" }],
+      ht: "(1 234,560)",
+      tva: "(234,566)",
+      ttc: "(1 470,126)",
+    }),
+    attendu: null,
+  },
+  {
     nom: "facture en euros pour un dossier en dinars",
     provenance: REPRODUIT,
     lecture: facture({
@@ -591,9 +625,11 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
 const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
-/** L'exposant de la devise de la pièce, à défaut celle du dossier — comme `analyserPiece`. */
-const decimalesDe = (cas: CasDeMesure) =>
-  EXPOSANTS_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER] ?? null;
+/** La devise de la pièce, à défaut celle du dossier, lue comme `lireLaDevise` — comme `analyserPiece`. */
+const deviseDe = (cas: CasDeMesure) => {
+  const d = DEVISES_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER];
+  return d ? deviseDEssai(d.exposant, d.separateurDecimal) : null;
+};
 
 /** Juge un cas sur la vraie chaîne, avec le référentiel d'essai. */
 function juger(cas: CasDeMesure) {
@@ -601,7 +637,6 @@ function juger(cas: CasDeMesure) {
   const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
   return jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
-    marques: MARQUES_D_ESSAI,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
     deviseDuDossier: DEVISE_DU_DOSSIER,
     droitsFixes: new Map(
@@ -613,13 +648,13 @@ function juger(cas: CasDeMesure) {
     typesDocument: TYPES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
-    decimales: decimalesDe(cas),
+    devise: deviseDe(cas),
   });
 }
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
 function jouer(cas: CasDeMesure): Issue {
-  const decimales = decimalesDe(cas);
+  const decimales = deviseDe(cas)?.decimales ?? null;
   const jugement = juger(cas);
   const p = composerLaProposition(
     {

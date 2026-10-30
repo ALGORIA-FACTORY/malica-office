@@ -45,7 +45,8 @@ import { vidage } from "@/lib/hors-ligne";
 import { cleDuRecu } from "@/lib/piece-qui-accompagne";
 import { photographierUnePreuve } from "@/lib/preuve-de-paiement";
 import { office } from "@/verticals/malica-office/composition";
-import { depuisUniteMineure } from "@malica/socle/somme-decimale";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
+import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 import { construireRecu } from "@malica/socle/use-cases/recu-de-paiement";
 
 export function CommentCEstPaye({
@@ -330,9 +331,12 @@ export function CommentCEstPaye({
         ? restantMineur
         : null;
     if (decimales === null) return null;
-    const n = Number(montantSaisi.replace(",", "."));
-    if (!Number.isFinite(n) || n <= 0) return null;
-    const mineur = Math.round(n * 10 ** decimales);
+    // Sur ses chiffres, jamais par un flottant : « 0,1 » + « 0,2 » n'a pas à
+    // valoir 0,30000000000000004, et un montant plus précis que la devise ne
+    // s'arrondit pas en silence — il ne se lit pas.
+    const saisi = saisieDecimale(montantSaisi);
+    if (saisi === null || /[1-9]/.test(saisi.split(".")[1]?.slice(decimales) ?? "")) return null;
+    const mineur = Number(enUnitesExactes(saisi, decimales));
     return Number.isSafeInteger(mineur) && mineur > 0 ? mineur : null;
   })();
 

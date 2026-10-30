@@ -41,6 +41,8 @@
  * vocabulaire, et il devra descendre en base avec le reste de la couche 4.
  */
 
+import { enChiffresLatins } from "./chiffres.ts";
+
 /**
  * Ce qu'on a pu tirer d'une écriture de matricule.
  *
@@ -83,12 +85,6 @@ export interface MatriculeLu {
  */
 function sansTashkeel(s: string): string {
   return s.replace(/[ؐ-ًؚ-ٰٟ]/g, "");
-}
-
-function enChiffresLatins(s: string): string {
-  return s
-    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
 }
 
 /**

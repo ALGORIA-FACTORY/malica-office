@@ -31,8 +31,24 @@ describe("treillisMontant — ce qui est certain", () => {
     assert.deepEqual(valeurs("1.234.567"), [1234567000]);
   });
 
-  it("les parenthèses portent le signe négatif", () => {
-    assert.deepEqual(valeurs("(123,45)"), [-123450]);
+  it("le moins en tête porte le signe négatif", () => {
+    assert.deepEqual(valeurs("-123,45"), [-123450]);
+    assert.deepEqual(valeurs("- 1 234,560"), [-1234560]);
+  });
+
+  it("une paire de parenthèses ne se lit pas : négatif comptable, ou base entre parenthèses", () => {
+    // Elle se lisait moins 123,450 ici, et pas du tout à la normalisation du
+    // scan (#135) : « (base 514,700) » s'imprime sur ces factures (15 octobre
+    // 2026), et le texte seul ne dit pas le signe. Un seul lecteur depuis le
+    // 30 octobre 2026, et une seule règle : on ne lit pas.
+    assert.deepEqual(valeurs("(123,45)"), []);
+  });
+
+  it("un « + » n'est jamais un signe : c'était le « 4 » du total du 13 octobre", () => {
+    // « 4 135,183 » en blanc sur bande noire, rendu « + 135,183 » par la
+    // reconnaissance : le lire donnait un total amputé de 4 000 dinars.
+    assert.deepEqual(valeurs("+ 135,183"), []);
+    assert.deepEqual(valeurs("+135,183"), []);
   });
 
   it("un point suivi d'une ou deux décimales n'est pas ambigu", () => {
@@ -79,9 +95,14 @@ describe("treillisMontant — une devise à deux décimales", () => {
     assert.deepEqual(valeurs("12,5", 2), [1250]);
   });
 
-  it("« 2.800 » en euros : le point ne peut plus être décimal", () => {
-    // 2 800 euros font 280 000 centimes — l'échelle suit la devise.
-    assert.deepEqual(valeurs("2.800", 2), [280000]);
+  it("« 2.800 » en euros : 2 800 €, ou 2,80 € imprimé avec un zéro de trop", () => {
+    // 2 800 euros font 280 000 centimes — l'échelle suit la devise. Le zéro
+    // au-delà des centimes ne change pas la valeur : « 1234,5600 » est l'une
+    // des écritures relevées sur les pièces (`normaliser-montants.ts`), et
+    // l'arithmétique de la facture tranche entre les deux lectures.
+    assert.deepEqual(valeurs("2.800", 2), [280, 280000]);
+    // Un chiffre non nul au-delà ne se lit pas en décimales : ce serait un arrondi.
+    assert.deepEqual(valeurs("2.805", 2), [280500]);
   });
 });
 
@@ -183,10 +204,13 @@ describe("treillisMontant — ce qui n'est pas un montant", () => {
     assert.deepEqual(valeurs("FA/2026/00412"), []);
   });
 
-  it("la devise et le pourcentage restent de la décoration", () => {
+  it("la devise reste de la décoration ; un pourcentage fait un taux, pas un montant", () => {
     assert.deepEqual(valeurs("1.234,56 TND"), [1234560]);
     assert.deepEqual(valeurs("1 234,560 €"), [1234560]);
-    assert.deepEqual(valeurs("19%"), [19000]);
+    // « 19% » se lisait 19 dinars ici, et rien à la normalisation du scan : un
+    // taux désigné à la place d'un montant n'a pas à en devenir un.
+    assert.deepEqual(valeurs("19%"), []);
+    // Les chiffres arabes ne se lisent pas au plan de jetons (`treillisMontant`).
     assert.deepEqual(valeurs("١٢٣ د.ت"), []);
   });
 });

@@ -50,8 +50,8 @@ describe("les dix écritures d'un même montant, tranchées par la facture", () 
   }
 
   it("« 1 234 560 » et « 1234560 » : dinars ou millimes — le timbre tranche", () => {
-    // Avec un timbre « 1,000 » — lui-même ambigu : 1 dinar, ou 1 000 à l'anglaise —,
-    // une seule combinaison tient, la lecture en millimes :
+    // Avec un timbre « 1,000 » — un dinar : la virgule est le séparateur
+    // décimal du dinar —, une seule combinaison tient, la lecture en millimes :
     // 1 234,560 × 1,19 + 1,000 = 1 470,126.
     for (const [ht, ttc] of [
       ["1 234 560", "1 470 126"],
@@ -141,9 +141,10 @@ describe("une facture qui ne tient pas", () => {
       candidatsMontant("514,700", deviseDEssai(3)).map((c) => c.mineur),
       "une plage qui a couvert deux fois le même montant lit ce montant",
     );
-    // La facture PAPETERIE NOUR telle qu'elle est imprimée : le droit de
-    // timbre ancre l'échelle, sans quoi 514,700 se lit en dinars OU en
-    // millimes et la facture reste légitimement ambiguë.
+    // La facture PAPETERIE NOUR telle qu'elle est imprimée. La virgule est le
+    // séparateur décimal du dinar : 514,700 ne se lit qu'en dinars (avant le
+    // 30 octobre 2026, la normalisation le lisait aussi à l'anglaise, et seul
+    // le droit de timbre fixé tranchait l'échelle).
     const r = normaliserMontants(
       {
         bases: [{ ht: "514,700 514,700", taux: "0.19" }],
@@ -266,23 +267,23 @@ describe("les lectures d'un montant isolé", () => {
 });
 
 describe("un droit fixe du paramétrage ancre l'échelle", () => {
-  // « 100,000 / 19,000 / 1,000 / 120,000 » : lus tous en millimes ou tous en
-  // dinars (virgule des milliers), la facture tient pareil — le timbre imprimé
+  // « 100.000 / 19.000 / 1.000 / 120.000 » : lus tous en millimes ou tous en
+  // dinars (point des milliers), la facture tient pareil — le timbre imprimé
   // est lui-même ambigu. Ce qui tranche, c'est ce qu'il DOIT valoir : le droit
   // de timbre est fixé par le paramétrage daté (1,000 DT).
   const facture = {
-    bases: [{ ht: "100,000", taux: "0.19" }],
-    tva: "19,000",
-    ttc: "120,000",
+    bases: [{ ht: "100.000", taux: "0.19" }],
+    tva: "19.000",
+    ttc: "120.000",
   };
 
   it("sans ancre : ambigu, aucun chiffre", () => {
-    const r = normaliserMontants({ ...facture, autres: ["1,000"] }, P);
+    const r = normaliserMontants({ ...facture, autres: ["1.000"] }, P);
     assert.equal(r.etat, "ambigu");
   });
 
   it("avec la valeur que le paramétrage fixe au timbre : tranché", () => {
-    const r = normaliserMontants({ ...facture, autres: [{ brut: "1,000", attendu: 1_000 }] }, P);
+    const r = normaliserMontants({ ...facture, autres: [{ brut: "1.000", attendu: 1_000 }] }, P);
     assert.equal(r.etat, "tranche", r.raison);
     assert.equal(r.montants.bases[0]!.ht, 100_000);
     assert.equal(r.montants.ttc, 120_000);
@@ -290,8 +291,27 @@ describe("un droit fixe du paramétrage ancre l'échelle", () => {
   });
 
   it("un droit imprimé qui ne vaut pas ce que fixe le paramétrage n'ancre rien", () => {
-    const r = normaliserMontants({ ...facture, autres: [{ brut: "1,000", attendu: 2_000 }] }, P);
+    const r = normaliserMontants({ ...facture, autres: [{ brut: "1.000", attendu: 2_000 }] }, P);
     assert.equal(r.etat, "ambigu");
+  });
+
+  it("à la virgule, séparateur décimal du dinar, rien n'est ambigu : aucune ancre n'est nécessaire", () => {
+    // Avant le 30 octobre 2026, la normalisation lisait aussi « 100,000 » à
+    // l'anglaise (100 000 dinars), quand la lecture au plan de jetons ne le
+    // lisait que 100 dinars. Un seul lecteur désormais, et une règle qui vient
+    // de la devise : la virgule du dinar ne sépare pas de milliers.
+    const r = normaliserMontants(
+      {
+        bases: [{ ht: "100,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: ["1,000"],
+        ttc: "120,000",
+      },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 100_000);
+    assert.equal(r.confiance, 1, "chaque montant n'avait qu'une lecture, et la facture la vérifie");
   });
 });
 

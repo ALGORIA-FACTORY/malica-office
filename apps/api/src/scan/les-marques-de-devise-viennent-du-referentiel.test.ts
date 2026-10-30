@@ -15,8 +15,9 @@ import { after, describe, it } from "node:test";
 import { creerCompte } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 
-import { lireMarquesDeDevise } from "./analyse.ts";
+import { lireLaDevise } from "./analyse.ts";
 import { MARQUES_D_ESSAI } from "./devise-d-essai.ts";
+import { DEVISE_D_ESSAI } from "./referentiel-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
@@ -26,7 +27,9 @@ describe("les marques de devise du référentiel", { skip: !BASE_CONFIGUREE }, (
   it("se lisent sous l'identité d'un compte, et valent la copie des épreuves", async () => {
     const u = await creerCompte(`marques-${Date.now()}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(u);
-    const marques = await sousIdentite(u.id, (db) => lireMarquesDeDevise(db));
+    const devise = await sousIdentite(u.id, (db) => lireLaDevise(db, DEVISE_D_ESSAI));
+    assert.ok(devise, "la devise du dossier d essai est au référentiel");
+    const { marques } = devise;
     assert.deepEqual(
       [...marques].sort(),
       [...MARQUES_D_ESSAI].sort(),

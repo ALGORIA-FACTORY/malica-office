@@ -26,6 +26,7 @@ import {
 import { useI18n, type MessageKey } from "@/i18n";
 import { dateEnLettres, montant } from "@/lib/lisible";
 import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
@@ -490,7 +491,9 @@ export function MesRecharges() {
       office().facturation.reglerRechargeAutomatique(
         active,
         active ? palierAuto : null,
-        active ? plafond.replace(",", ".") : null,
+        // Une saisie qui ne se lit pas part telle quelle : c'est le serveur
+        // qui la refuse, et son refus dit quoi corriger.
+        active ? (saisieDecimale(plafond) ?? plafond) : null,
         pme.tenantId,
       ),
     onSuccess: async () => {

@@ -24,6 +24,9 @@
  * de réception —, jamais à la date du jour.
  */
 
+import type { DeviseLue } from "@malica/socle/montant-imprime";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
+
 import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 
@@ -89,34 +92,39 @@ export async function lireParametres(
 }
 
 /**
- * Les marques de devise que les lecteurs de montants retirent comme une
- * décoration : les codes ISO de `ref.devises` et les marques imprimées de
- * `ref.devises_marques` (« D.T. », « د.ت », « € »). Toutes les devises, pas
- * seulement celle du pack : une marque ne décide pas de la devise de la
- * pièce, elle dit seulement qu'un mot n'est pas un nombre. Une liste vide est
- * une erreur — sans elle, aucun « 1 234,560 DT » ne se lirait plus.
+ * Ce que le référentiel dit d'une devise pour en lire les montants
+ * (`@malica/socle/montant-imprime`) — null si `ref.devises` ne la connaît pas.
+ *
+ *   — l'exposant et le séparateur décimal, de `ref.devises` (3 et « , » pour
+ *     le dinar, 2 pour l'euro, 0 pour le franc CFA) ;
+ *   — les marques, de TOUTES les devises : les codes de `ref.devises` et les
+ *     marques imprimées de `ref.devises_marques` (« D.T. », « د.ت », « € »).
+ *     Une marque ne décide pas de la devise de la pièce, elle dit seulement
+ *     qu'un mot n'est pas un nombre.
+ *
+ * La lecture au plan de jetons, la normalisation et la proposition passent
+ * toutes par ici : la devise se lit d'une seule façon.
  */
-export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
-  const { rows } = await db.query<{ marque: string }>(
-    `select code as marque from ref.devises
-      union
-     select marque from ref.devises_marques
-      order by 1`,
-  );
-  if (rows.length === 0) throw new Error("Aucune marque de devise au référentiel.");
-  return rows.map((r) => r.marque);
-}
-
-/**
- * Le nombre de décimales d'une devise, tel que `ref.devises` le porte (3 pour
- * le dinar, 2 pour l'euro, 0 pour le franc CFA) — null si elle n'y est pas.
- */
-export async function lireExposant(db: Requete, devise: string): Promise<number | null> {
-  const { rows } = await db.query<{ exposant: number }>(
-    `select exposant from ref.devises where code = $1`,
-    [devise],
-  );
-  return rows[0]?.exposant ?? null;
+export async function lireLaDevise(db: Requete, code: string): Promise<DeviseLue | null> {
+  const [{ rows: devises }, { rows: marques }] = await Promise.all([
+    db.query<{ exposant: number; separateur_decimal: string }>(
+      `select exposant, separateur_decimal from ref.devises where code = $1`,
+      [code],
+    ),
+    db.query<{ marque: string }>(
+      `select code as marque from ref.devises
+        union
+       select marque from ref.devises_marques
+        order by 1`,
+    ),
+  ]);
+  const devise = devises[0];
+  if (!devise) return null;
+  return {
+    decimales: devise.exposant,
+    separateurDecimal: devise.separateur_decimal,
+    marques: marques.map((m) => m.marque),
+  };
 }
 
 export interface Analyse {
@@ -156,12 +164,11 @@ export interface LectureAJuger {
 /** Ce que le référentiel daté dit, pour juger cette lecture-là. */
 export interface ReferentielDuJugement {
   parametres: Record<(typeof PARAMETRES)[number], number>;
-  marques: readonly string[];
   /**
-   * L'exposant de la devise de la PIÈCE (`ref.devises`), ou null quand le
-   * référentiel ne la connaît pas.
+   * La devise de la PIÈCE telle que le référentiel la lit (`lireLaDevise`), ou
+   * null quand il ne la connaît pas.
    */
-  decimales: number | null;
+  devise: DeviseLue | null;
   /** TOUS les taux de TVA en vigueur à la date de la pièce, par code. */
   taux: ReadonlyMap<string, string>;
   /** La devise du dossier, celle de ses livres et de ses droits fixés. */
@@ -257,17 +264,15 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
    * s'y lisait en millimes. L'exposant vient de `ref.devises`, pour la devise
    * de la pièce ; une devise qu'il ne connaît pas ne se lit pas.
    */
-  if (r.decimales === null) return rien(`devise « ${devise ?? "—"} » inconnue du référentiel`);
-  const lecture = {
-    decimales: r.decimales,
-    marques: r.marques,
-    toleranceMineure: p["lecture.tolerance_arrondi_mineure"],
-  };
+  if (r.devise === null) return rien(`devise « ${devise ?? "—"} » inconnue du référentiel`);
+  const lecture = { ...r.devise, toleranceMineure: p["lecture.tolerance_arrondi_mineure"] };
   // Un droit fixé l'est dans la devise du dossier : il n'ancre rien sur une
-  // pièce libellée dans une autre.
+  // pièce libellée dans une autre. Converti sur ses chiffres, jamais par un
+  // flottant : un droit plus précis que la devise est une erreur du
+  // référentiel, et elle se dit au lieu de s'arrondir.
   const enMineur = (fixe: string | undefined) =>
     fixe !== undefined && (devise ?? r.deviseDuDossier) === r.deviseDuDossier
-      ? Math.round(Number(fixe) * 10 ** r.decimales!)
+      ? Number(enUnitesExactes(fixe, lecture.decimales))
       : undefined;
   // Le chemin de citation de chaque montant : `fermes` nomme les champs ainsi.
   const chemins: Record<string, string> = {
@@ -462,7 +467,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-30.f235152467f4";
+export const REGLES_DU_JUGEMENT = "2026-10-30.a350413926db";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -729,9 +734,8 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
 
   const { normalisation, controles, verdict, motifs } = jugerLaLecture(lecture, {
     parametres: p,
-    marques: await lireMarquesDeDevise(db),
-    // L'exposant de la devise de la PIÈCE ; à défaut d'en lire une, celle du dossier.
-    decimales: await lireExposant(db, payload.currency ?? org.currency),
+    // La devise de la PIÈCE ; à défaut d'en lire une, celle du dossier.
+    devise: await lireLaDevise(db, payload.currency ?? org.currency),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

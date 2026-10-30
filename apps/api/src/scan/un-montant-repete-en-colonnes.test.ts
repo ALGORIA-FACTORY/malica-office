@@ -75,9 +75,13 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
     // L'espace, séparateur des milliers, seul : inchangé.
     ["3 020,000", 3, [3_020_000]],
     ["12 345,678", 3, [12_345_678]],
-    // Le cas du 10 octobre, qui marchait, marche toujours.
-    ["514,700 514,700", 3, [514_700, 514_700_000]],
-    ["514,700 514,700)", 3, [514_700, 514_700_000]],
+    // Le cas du 10 octobre, qui marchait, marche toujours. Une seule lecture
+    // depuis le 30 octobre 2026 : la virgule est le séparateur décimal du dinar
+    // (`ref.devises.separateur_decimal`), et ne sépare pas de milliers.
+    ["514,700 514,700", 3, [514_700]],
+    ["514,700 514,700)", 3, [514_700]],
+    // Au point, l'ambiguïté demeure, et l'arithmétique de la facture tranche.
+    ["514.700 514.700", 3, [514_700, 514_700_000]],
     // Négatif par le signe moins, en tête : se lit.
     ["-3 020,000", 3, [-3_020_000]],
     ["-3 020,000 -3 020,000", 3, [-3_020_000]],

@@ -162,9 +162,18 @@
     "TOTAL_TTC"
   ],
   "typesQuiPortentUneEcriture": ["facture_achat", "facture_vente"],
-  "exposants": {
-    "EUR": 2,
-    "TND": 3,
-    "XOF": 0
+  "devises": {
+    "EUR": {
+      "exposant": 2,
+      "separateurDecimal": ","
+    },
+    "TND": {
+      "exposant": 3,
+      "separateurDecimal": ","
+    },
+    "XOF": {
+      "exposant": 0,
+      "separateurDecimal": ","
+    }
   }
 }

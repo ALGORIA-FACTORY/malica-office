@@ -203,12 +203,20 @@ describe("3B — la lecture journalisée, la pièce jugée", { skip: !BASE_CONFI
     assert.equal(a.verdict, "à rapprocher");
   });
 
-  it("montants ronds, virgule ambiguë : le timbre du paramétrage ancre l'échelle — à comptabiliser", async () => {
-    // « 100,000 / 19,000 / 1,000 / 120,000 » tient en millimes comme en dinars
-    // (virgule des milliers) ; le droit de timbre vaut 1,000 DT au paramétrage.
+  it("montants ronds, point ambigu : le timbre du paramétrage ancre l'échelle — à comptabiliser", async () => {
+    // « 100.000 / 19.000 / 1.000 / 120.000 » tient en millimes comme en dinars
+    // (point des milliers) ; le droit de timbre vaut 1,000 DT au paramétrage.
+    // Écrits à la virgule, ils ne seraient plus ambigus : la virgule est le
+    // séparateur décimal du dinar (`ref.devises.separateur_decimal`).
     const piece = await pieceLue(
       "ronds",
-      lecture({ ht: ["100,000", "DT"], tva: "19,000", ttc: ["120,000", "DT"], numero: "F-RONDS" }),
+      lecture({
+        ht: ["100.000", "DT"],
+        tva: "19.000",
+        timbre: "1.000",
+        ttc: ["120.000", "DT"],
+        numero: "F-RONDS",
+      }),
     );
     const a = (await rpc("capture", "analyser", piece)) as {
       verdict: string;

@@ -25,6 +25,7 @@ import type {
   PropositionDePiece,
   TaxRate,
 } from "@malica/socle/ports/repositories";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 
@@ -32,8 +33,8 @@ import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireExposant, lireParametres } from "./analyse.ts";
-import { enDecimal, tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { analyserPiece, lireLaDevise, lireParametres } from "./analyse.ts";
+import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
 const sensConnu = (k: string): k is SensConnu["documentKind"] =>
@@ -52,7 +53,9 @@ export type { PropositionDePiece };
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
  * implémentations. La première qui aurait corrigé un cas limite aurait laissé
  * l'autre en arrière — et c'est celle-ci qui écrit l'écriture comptable.
- * Elle vit avec la normalisation des montants, que la lecture et le scan partagent.
+ * Le 30 octobre 2026, une troisième copie a été trouvée au Socle
+ * (`depuisUniteMineure`, que les écrans appelaient déjà) : c'est elle qui
+ * reste, pour l'API comme pour le web.
  */
 
 /**
@@ -289,15 +292,15 @@ export function composerLaProposition(
     document_date: j.date,
     lines: lignesLues.map((l, i) => ({
       ...l,
-      base_ht: enDecimal(m.bases[i]!.ht!, dec),
-      vat_amount: enDecimal(tvas[i]!, dec),
-      ttc: enDecimal(m.bases[i]!.ht! + tvas[i]!, dec),
+      base_ht: depuisUniteMineure(m.bases[i]!.ht!, dec),
+      vat_amount: depuisUniteMineure(tvas[i]!, dec),
+      ttc: depuisUniteMineure(m.bases[i]!.ht! + tvas[i]!, dec),
     })),
-    other_charges: droits.map((c, i) => ({ ...c, amount: enDecimal(autres[i]!, dec) })),
+    other_charges: droits.map((c, i) => ({ ...c, amount: depuisUniteMineure(autres[i]!, dec) })),
     totals: {
-      base_ht: enDecimal(totalHt, dec),
-      vat: enDecimal(totalTva, dec),
-      ttc: enDecimal(m.ttc ?? totalHt + totalTva + somme(autres), dec),
+      base_ht: depuisUniteMineure(totalHt, dec),
+      vat: depuisUniteMineure(totalTva, dec),
+      ttc: depuisUniteMineure(m.ttc ?? totalHt + totalTva + somme(autres), dec),
     },
   };
 
@@ -434,7 +437,7 @@ async function proposerDepuisLeJugement(
   // L'exposant de la devise de la pièce, comme au jugement (`analyse.ts`).
   const devise =
     (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
-  const decimales = await lireExposant(db, devise);
+  const decimales = (await lireLaDevise(db, devise))?.decimales ?? null;
   if (decimales === null)
     return {
       ok: false,
