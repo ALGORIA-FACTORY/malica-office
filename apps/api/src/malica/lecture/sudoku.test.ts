@@ -246,7 +246,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         `select id from ref_packs_v where jurisdiction = 'TN'
           and effective_from <= current_date order by effective_from desc limit 1`,
       );
-      contexte = await lireLeContexteDuSudoku(c, rows[0]!.id, GRILLE_DE_LA_LECTURE_CITEE);
+      contexte = await lireLeContexteDuSudoku(c, rows[0]!.id, GRILLE_DE_LA_LECTURE_CITEE, "TND");
     } finally {
       c.release();
     }

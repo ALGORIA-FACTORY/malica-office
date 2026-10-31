@@ -118,6 +118,8 @@ export async function lireLeContexteDuSudoku(
   db: Requete,
   packId: string,
   grilleCode: string,
+  /** La devise de la pièce : son exposant (`ref.devises`) met les montants à l'échelle. */
+  deviseCode: string,
 ): Promise<ContexteDuSudoku> {
   const { rows: grilles } = await db.query<{ id: string }>(
     `select id from ref_grilles_v
@@ -130,7 +132,7 @@ export async function lireLeContexteDuSudoku(
   }
   const grilleId = grilles[0]!.id;
 
-  const [champs, preuves, params, taux, charges, formats] = await Promise.all([
+  const [champs, preuves, params, devises, taux, charges, formats] = await Promise.all([
     db.query<{
       code: string;
       type: string;
@@ -150,9 +152,12 @@ export async function lireLeContexteDuSudoku(
     db.query<{ code: string; value_num: string | null }>(
       `select code, value_num from ref_socle_params_v
         where pack_version_id = $1
-          and code in ('money.decimals', 'lecture.tolerance_arrondi_mineure')`,
+          and code = 'lecture.tolerance_arrondi_mineure'`,
       [packId],
     ),
+    db.query<{ exposant: number }>(`select exposant from ref.devises where code = $1`, [
+      deviseCode,
+    ]),
     // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
     // part dans la grille (la mention lue), jamais une instance « 0 % » que
     // n'importe quel zéro imprimé fermerait.
@@ -190,7 +195,10 @@ export async function lireLeContexteDuSudoku(
       throw new Error(`sudoku : paramètre absent du pack : ${code}`);
     return Number(v);
   };
-  const decimales = param("money.decimals");
+  const exposant = devises.rows[0]?.exposant;
+  if (exposant === undefined)
+    throw new Error(`sudoku : devise inconnue du référentiel : ${deviseCode}`);
+  const decimales = Number(exposant);
 
   // Une charge par code. Le pack la porte une fois par sens de facture (achat,
   // vente) : identiques, elles n'en font qu'une ; différentes, on refuse.
@@ -472,12 +480,13 @@ export function creerLeSudoku(
   return {
     async lire(lecture) {
       try {
+        if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
         contexte ??= api.rpc<ContexteDuSudoku>("capture", "contexteSudoku", [
           piece.packId,
           GRILLE_DE_LA_LECTURE_CITEE,
+          piece.devise.code,
         ]);
         const { grille, pack } = await contexte;
-        if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
         const sortie = resoudreLaPiece(jetonsDuSudoku(lecture.tokens, piece.devise), {
           grille,
           pack,
