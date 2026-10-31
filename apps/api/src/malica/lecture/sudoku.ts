@@ -386,15 +386,24 @@ export interface Sudoku {
 /**
  * Le sudoku branché sur la base, pour une pièce.
  *
- * Il reçoit la lecture de la chaîne (plan de jetons + sélection) et rend la
- * même, dont les montants sont désignés par la preuve quand la pièce est
- * prouvée. Ce qu'il a lu sur la lecture retenue s'inscrit dans
- * `capture.champs_lus`, prouvé ou non : c'est la mesure du recours au modèle,
- * pièce par pièce.
+ * DEUX MODES, et le premier est celui par défaut :
+ *
+ *   OBSERVE  (`designe: false`) — il lit chaque pièce et inscrit ce qu'il a
+ *            lu dans `capture.champs_lus`, prouvé ou non, mais la lecture de
+ *            la chaîne ressort à l'identique, à l'octet près. C'est l'épreuve
+ *            en vrai : sur les vraies pièces, à côté de la chaîne, sans rien
+ *            pouvoir casser.
+ *   DÉSIGNE  (`designe: true`) — quand la pièce est prouvée, les montants
+ *            désignés par la preuve remplacent ceux de la chaîne.
+ *
+ * Le passage de l'un à l'autre est une décision du dirigeant, prise sur les
+ * mesures de l'observation : `SUDOKU_DESIGNE=1` dans l'environnement de l'API,
+ * comme `OCR_URL` branche PaddleOCR. Aucun déploiement de code n'est requis.
  */
 export function creerLeSudoku(
   api: AppelApi,
   piece: { readonly pieceId: string; readonly packId: string; readonly devise: DeviseLue },
+  mode: { readonly designe: boolean },
 ): Sudoku {
   let contexte: Promise<ContexteDuSudoku> | null = null;
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
@@ -415,7 +424,7 @@ export function creerLeSudoku(
         const aInscrire = champsLusAInscrire(piece.pieceId, grille.code, sortie);
 
         const rendue: VisionRead =
-          sortie.issue !== "prouvee"
+          !mode.designe || sortie.issue !== "prouvee"
             ? lecture
             : {
                 ...lecture,
