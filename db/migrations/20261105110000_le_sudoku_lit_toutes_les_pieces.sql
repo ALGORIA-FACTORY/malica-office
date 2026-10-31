@@ -179,8 +179,10 @@ create table if not exists capture.champs_lus (
   grille_code text,
   champ_code  text,
   valeur      text,
-  statut      text check (statut in ('prouve', 'conforme', 'signale', 'absent')),
-  -- Les jetons qui portent la valeur ({page, ordinal}) : jamais de valeur sans citation (R2).
+  statut      text check (statut in ('prouve', 'conforme', 'signale', 'absent', 'deduit')),
+  -- Les jetons qui portent la valeur ({page, ordinal}) : jamais de valeur lue sans citation (R2).
+  -- Une cellule « deduit » (trouvée par le calcul du tableau) cite la case où elle
+  -- devrait être imprimée ({case}), pour une relecture ciblée.
   citations   jsonb,
   -- L'issue du sudoku pour la pièce : prouvee, ambigue, aucune.
   issue       text,

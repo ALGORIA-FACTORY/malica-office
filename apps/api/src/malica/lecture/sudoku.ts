@@ -476,7 +476,7 @@ export interface ChampsLusAInscrire {
     champ: string | null;
     valeur: string | null;
     statut: string | null;
-    citations: readonly RefDeJeton[];
+    citations: readonly (RefDeJeton | { readonly case: object })[];
   }[];
 }
 
@@ -519,7 +519,12 @@ export function champsLusAInscrire(
   if (lignes && lignes.statut !== "absent") {
     lignes.instances.forEach((l, i) => {
       const n = i + 1;
-      const cellules: Array<[string, { valeur: string; refs: readonly RefDeJeton[] } | null]> = [
+      const cellules: Array<
+        [
+          string,
+          { valeur: string; refs: readonly RefDeJeton[]; statut?: string; case?: object } | null,
+        ]
+      > = [
         ["designation", l.designation],
         ["quantite", l.quantite],
         ["prix_unitaire_ht", l.prix],
@@ -529,11 +534,15 @@ export function champsLusAInscrire(
       ];
       for (const [code, c] of cellules) {
         if (c) {
+          // Une cellule DÉDUITE (lecture middle-out) n'est pas imprimée : elle
+          // s'inscrit comme telle, avec l'endroit où elle devrait l'être, pour
+          // une relecture ciblée — jamais comme une valeur prouvée et citée.
+          const deduite = c.statut === "deduit";
           champs.push({
             champ: `${code}#${n}`,
             valeur: c.valeur,
-            statut: lignes.statut,
-            citations: c.refs,
+            statut: deduite ? "deduit" : lignes.statut,
+            citations: deduite && c.case ? [{ case: c.case }] : c.refs,
           });
         }
       }
