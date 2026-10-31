@@ -4,7 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentType, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { JournalDuJour, JournalExporte } from "@malica/socle/ports/repositories";
+import type {
+  JournalDuJour,
+  JournalExporte,
+  LigneAuJournal,
+} from "@malica/socle/ports/repositories";
 
 const naviguer = vi.fn();
 let recherche: { client?: string; jour?: string } = {};
@@ -42,12 +46,13 @@ const solde = {
   credit: "9007199254740.993",
   equilibre: true,
 };
-const ligne = (compte: string, debit: string, credit: string, ordinal: number) => ({
+const ligne = (compte: string, debit: string, credit: string, ordinal: number): LigneAuJournal => ({
   ordinal,
   compte,
   compteLibelle: `Compte ${compte}`,
   debit,
   credit,
+  origine: null,
 });
 const ecriture = (
   id: string,
@@ -188,6 +193,34 @@ describe("le journal du jour", () => {
     expect(screen.getAllByText("9 007 199 254 740,993 XXX").length).toBeGreaterThan(0);
     expect(screen.getByText("1 · 1")).toBeTruthy();
     expect(lire).toHaveBeenCalledWith("cabinet", "client", "2026-10-28", "fr");
+  });
+
+  it("une ligne convertie dit d'où vient son cours, et pourquoi (revue de #148)", async () => {
+    const convertie = ecriture("d1", "validee", "Expert d'essai");
+    convertie.lignes = [
+      {
+        ...ligne("A", "1.000", "0.000", 1),
+        origine: {
+          devise: "YYY",
+          montant: "1",
+          taux: "1",
+          dateDuCours: "2026-10-28",
+          source: "SRC",
+          origineDuCours: "derogation_dossier",
+          libelleOrigineDuCours: "Dérogation pour ce dossier",
+          motifDuCours: "Cours de la banque du client",
+        },
+      },
+      ligne("B", "0.000", "1.000", 2),
+    ];
+    lire.mockResolvedValue({
+      ...JOURNAL,
+      journaux: [{ ...JOURNAL.journaux[0]!, ecritures: [convertie] }],
+    });
+    monter();
+    expect(
+      await screen.findByText("Dérogation pour ce dossier · Cours de la banque du client"),
+    ).toBeTruthy();
   });
 
   it("dit le dernier export et ce qui a changé depuis", async () => {

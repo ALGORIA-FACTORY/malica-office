@@ -25,6 +25,7 @@ import { Route as AuthenticatedCabinetAbonnementsRouteImport } from './routes/_a
 import { Route as AuthenticatedCabinetBibliothequeRouteImport } from './routes/_authenticated/cabinet.bibliotheque'
 import { Route as AuthenticatedCabinetClientsRouteImport } from './routes/_authenticated/cabinet.clients'
 import { Route as AuthenticatedCabinetConseilRouteImport } from './routes/_authenticated/cabinet.conseil'
+import { Route as AuthenticatedCabinetCoursRouteImport } from './routes/_authenticated/cabinet.cours'
 import { Route as AuthenticatedCabinetEcheancesRouteImport } from './routes/_authenticated/cabinet.echeances'
 import { Route as AuthenticatedCabinetExportRouteImport } from './routes/_authenticated/cabinet.export'
 import { Route as AuthenticatedCabinetHonorairesRouteImport } from './routes/_authenticated/cabinet.honoraires'
@@ -145,6 +146,12 @@ const AuthenticatedCabinetConseilRoute =
   AuthenticatedCabinetConseilRouteImport.update({
     id: '/conseil',
     path: '/conseil',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
+const AuthenticatedCabinetCoursRoute =
+  AuthenticatedCabinetCoursRouteImport.update({
+    id: '/cours',
+    path: '/cours',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
 const AuthenticatedCabinetEcheancesRoute =
@@ -375,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/bibliotheque': typeof AuthenticatedCabinetBibliothequeRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
+  '/cabinet/cours': typeof AuthenticatedCabinetCoursRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
@@ -427,6 +435,7 @@ export interface FileRoutesByTo {
   '/cabinet/bibliotheque': typeof AuthenticatedCabinetBibliothequeRoute
   '/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
+  '/cabinet/cours': typeof AuthenticatedCabinetCoursRoute
   '/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
@@ -483,6 +492,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/bibliotheque': typeof AuthenticatedCabinetBibliothequeRoute
   '/_authenticated/cabinet/clients': typeof AuthenticatedCabinetClientsRoute
   '/_authenticated/cabinet/conseil': typeof AuthenticatedCabinetConseilRoute
+  '/_authenticated/cabinet/cours': typeof AuthenticatedCabinetCoursRoute
   '/_authenticated/cabinet/echeances': typeof AuthenticatedCabinetEcheancesRoute
   '/_authenticated/cabinet/export': typeof AuthenticatedCabinetExportRoute
   '/_authenticated/cabinet/honoraires': typeof AuthenticatedCabinetHonorairesRoute
@@ -539,6 +549,7 @@ export interface FileRouteTypes {
     | '/cabinet/bibliotheque'
     | '/cabinet/clients'
     | '/cabinet/conseil'
+    | '/cabinet/cours'
     | '/cabinet/echeances'
     | '/cabinet/export'
     | '/cabinet/honoraires'
@@ -591,6 +602,7 @@ export interface FileRouteTypes {
     | '/cabinet/bibliotheque'
     | '/cabinet/clients'
     | '/cabinet/conseil'
+    | '/cabinet/cours'
     | '/cabinet/echeances'
     | '/cabinet/export'
     | '/cabinet/honoraires'
@@ -646,6 +658,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/bibliotheque'
     | '/_authenticated/cabinet/clients'
     | '/_authenticated/cabinet/conseil'
+    | '/_authenticated/cabinet/cours'
     | '/_authenticated/cabinet/echeances'
     | '/_authenticated/cabinet/export'
     | '/_authenticated/cabinet/honoraires'
@@ -807,6 +820,13 @@ declare module '@tanstack/react-router' {
       path: '/conseil'
       fullPath: '/cabinet/conseil'
       preLoaderRoute: typeof AuthenticatedCabinetConseilRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
+    '/_authenticated/cabinet/cours': {
+      id: '/_authenticated/cabinet/cours'
+      path: '/cours'
+      fullPath: '/cabinet/cours'
+      preLoaderRoute: typeof AuthenticatedCabinetCoursRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
     '/_authenticated/cabinet/echeances': {
@@ -1076,6 +1096,7 @@ interface AuthenticatedCabinetRouteChildren {
   AuthenticatedCabinetBibliothequeRoute: typeof AuthenticatedCabinetBibliothequeRoute
   AuthenticatedCabinetClientsRoute: typeof AuthenticatedCabinetClientsRoute
   AuthenticatedCabinetConseilRoute: typeof AuthenticatedCabinetConseilRoute
+  AuthenticatedCabinetCoursRoute: typeof AuthenticatedCabinetCoursRoute
   AuthenticatedCabinetEcheancesRoute: typeof AuthenticatedCabinetEcheancesRoute
   AuthenticatedCabinetExportRoute: typeof AuthenticatedCabinetExportRoute
   AuthenticatedCabinetHonorairesRoute: typeof AuthenticatedCabinetHonorairesRoute
@@ -1104,6 +1125,7 @@ const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
   AuthenticatedCabinetBibliothequeRoute: AuthenticatedCabinetBibliothequeRoute,
   AuthenticatedCabinetClientsRoute: AuthenticatedCabinetClientsRoute,
   AuthenticatedCabinetConseilRoute: AuthenticatedCabinetConseilRoute,
+  AuthenticatedCabinetCoursRoute: AuthenticatedCabinetCoursRoute,
   AuthenticatedCabinetEcheancesRoute: AuthenticatedCabinetEcheancesRoute,
   AuthenticatedCabinetExportRoute: AuthenticatedCabinetExportRoute,
   AuthenticatedCabinetHonorairesRoute: AuthenticatedCabinetHonorairesRoute,

@@ -1452,6 +1452,9 @@ function PmeCapturer() {
                       montant: montant(sansDate.data!.totalHt, locale),
                       devise: pme.currency,
                     })}
+                    {sansDate.data!.piecesSansCours > 0
+                      ? ` ${t("pme.charges.sansDate.horsDuTotal", { count: sansDate.data!.piecesSansCours })}`
+                      : null}
                   </span>
                 </div>
               ) : null}

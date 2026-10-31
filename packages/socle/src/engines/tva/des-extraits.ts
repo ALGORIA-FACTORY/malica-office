@@ -23,22 +23,55 @@ type Entree = { item_id: string | null; extract: ExtractV1 };
 /** Le motif d'un extrait qui ne valide pas le contrat : la pièce entière est hors du calcul. */
 export const EXTRAIT_ILLISIBLE = "EXTRAIT_ILLISIBLE";
 
+/**
+ * Le motif d'un extrait dans une autre devise que celle du calcul
+ * (`EXTRAIT_EN_DEVISE:<code>`) : la pièce entière est hors du calcul.
+ *
+ * 31 octobre 2026 : le calcul additionnait les montants de chaque extrait
+ * sans regarder sa devise — 190,00 € de TVA comptaient 190,000 DT. Une pièce
+ * en devise entre dans la TVA par l'extrait que le jugement a CONVERTI
+ * (`app.extraits_de_la_tva`) ; sans cours, elle reste en devise, et le calcul
+ * la refuse en la nommant, comme un extrait illisible.
+ */
+export const EXTRAIT_EN_DEVISE = "EXTRAIT_EN_DEVISE";
+
+/**
+ * Le motif d'une pièce en devise dont la conversion est refusée
+ * (`CONVERSION_REFUSEE:<raison>`, `ConversionRefusee`) : une facture qui ne
+ * tient pas dans sa devise, un écart hors de sa borne. Revue de #148 : la
+ * lecture de la TVA laissait l'exception remonter et arrêtait tout le mois ;
+ * la pièce sort désormais du calcul, nommée, et seule.
+ */
+export const CONVERSION_REFUSEE = "CONVERSION_REFUSEE";
+
+/** Les motifs qui écartent une pièce ENTIÈRE du calcul (et non une ligne). */
+export const HORS_DU_CALCUL = [EXTRAIT_ILLISIBLE, EXTRAIT_EN_DEVISE, CONVERSION_REFUSEE] as const;
+
 export function tvaDesExtraits(args: {
   period: string;
   currency: { code: string; decimals: number };
   taux: ReadonlyArray<TaxRate>;
   /** Les lignes de la déclaration, au référentiel (`referentiel.declarationTva`). */
   declaration: DeclarationTva;
-  rows: ReadonlyArray<{ pieceId: string; extract: unknown }>;
+  /** `refus` : la pièce est déjà écartée en amont, avec sa raison (`CONVERSION_REFUSEE:…`). */
+  rows: ReadonlyArray<{ pieceId: string; extract: unknown; refus?: string }>;
 }): TvaV1 {
   const achats: Entree[] = [];
   const ventes: Entree[] = [];
   const illisibles: TvaV1["refused"] = [];
   for (const row of args.rows) {
+    if (row.refus) {
+      illisibles.push({ reason: row.refus, item_id: row.pieceId });
+      continue;
+    }
     const lu = ExtractV1.safeParse(row.extract);
     if (!lu.success) {
       const champs = [...new Set(lu.error.issues.map((i) => i.path.join(".")))].sort();
       illisibles.push({ reason: `${EXTRAIT_ILLISIBLE}:${champs.join(",")}`, item_id: row.pieceId });
+      continue;
+    }
+    if (lu.data.currency !== args.currency.code) {
+      illisibles.push({ reason: `${EXTRAIT_EN_DEVISE}:${lu.data.currency}`, item_id: row.pieceId });
       continue;
     }
     const entree = { item_id: row.pieceId, extract: lu.data };

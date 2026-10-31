@@ -30,12 +30,14 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 
 import { Aide } from "@/components/malica/aide";
+import { CoursDeLaPiece } from "@/components/malica/cours-de-change";
 import type { RetourEnvoye } from "@/components/malica/envoye";
 import { RetournerAuClient } from "@/components/malica/retourner-au-client";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
 import { useI18n } from "@/i18n";
 import {
   ecritureDeDepart,
+  originesDeDepart,
   inchangee,
   LIGNE_VIDE,
   relue,
@@ -111,6 +113,8 @@ export function EcritureDuCabinet({
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const depart = ecritureDeDepart(vivante, proposition);
+  // Une pièce en devise : l'origine de chaque ligne de départ, rang pour rang.
+  const origines = originesDeDepart(vivante, proposition);
   const [saisie, setSaisie] = useState<EcritureEnSaisie>(() =>
     depart.depart === "rien"
       ? {
@@ -282,7 +286,21 @@ export function EcritureDuCabinet({
             ))}
           </div>
         </div>
-      ) : depart.depart === "rien" && proposition && !proposition.ok ? (
+      ) : null}
+
+      {/*
+       * Une pièce en devise : le cours qui manque, à saisir en un geste, ou
+       * celui que l'écriture proposée applique, à corriger. Une écriture
+       * inscrite porte le sien : rien à saisir ici.
+       */}
+      {vivante === null ? (
+        <CoursDeLaPiece pieceId={pieceId} proposition={proposition} onRejugee={relire} />
+      ) : null}
+
+      {sens && proposition && !proposition.ok ? null : depart.depart === "rien" &&
+        proposition &&
+        !proposition.ok &&
+        proposition.raisonCode !== "taux_de_change" ? (
         <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
           {t("cab.ecriture.rien")}
           <Aide
@@ -527,6 +545,19 @@ export function EcritureDuCabinet({
                   ))}
                 </select>
               </label>
+              {/*
+               * Ce que la ligne vaut dans la devise de la pièce, et au cours de
+               * quel taux — tant que la saisie dit l'écriture de départ.
+               */}
+              {telleQuelle && origines[i] ? (
+                <p
+                  className="num col-span-3 text-end text-[11.5px] text-muted-foreground sm:col-span-2 sm:col-start-3 sm:row-start-2"
+                  dir="ltr"
+                >
+                  {montant(origines[i]!.montant, locale)} {origines[i]!.devise} ×{" "}
+                  {montant(origines[i]!.taux, locale)}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

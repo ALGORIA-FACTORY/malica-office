@@ -42,6 +42,14 @@ function ligne(partiel: Record<string, unknown>) {
     par: null,
     reverses_id: null,
     contre_passee_le: null,
+    devise_origine: null,
+    montant_origine: null,
+    taux_de_change: null,
+    date_du_cours: null,
+    source_du_cours: null,
+    origine_du_cours: null,
+    libelle_origine_du_cours: null,
+    motif_du_cours: null,
     ...partiel,
   };
 }
@@ -107,6 +115,75 @@ describe("le fichier porte ses totaux et son contrôle", () => {
         ["J2", "total", "0.200", "0.100", "XXX", "desequilibre"],
         ["", "total", "9007199254741.293", "9007199254741.193", "XXX", "desequilibre"],
       ],
+    );
+  });
+});
+
+describe("une ligne convertie d'une pièce en devise", () => {
+  it("le fichier porte sa devise et son montant d'origine, le taux, la date et la source du cours", () => {
+    const journaux = rangerLeJournal(
+      [
+        ligne({
+          debit: "3345.6",
+          devise_origine: "YYY",
+          montant_origine: "1000",
+          taux_de_change: "3.3456",
+          date_du_cours: "2026-09-10",
+          source_du_cours: "SRC",
+          origine_du_cours: "derogation_cabinet",
+          libelle_origine_du_cours: "Dérogation du cabinet",
+          motif_du_cours: "Cours de la banque du client",
+        }),
+        ligne({ ordinal: 2, compte: "B", credit: "3345.6" }),
+      ],
+      EXPOSANTS,
+    );
+    // L'écran lit l'origine du cours, traduite, et son motif (revue de #148).
+    assert.deepEqual(journaux[0]!.ecritures[0]!.lignes[0]!.origine, {
+      devise: "YYY",
+      montant: "1000",
+      taux: "3.3456",
+      dateDuCours: "2026-09-10",
+      source: "SRC",
+      origineDuCours: "derogation_cabinet",
+      libelleOrigineDuCours: "Dérogation du cabinet",
+      motifDuCours: "Cours de la banque du client",
+    });
+    const { entete, lignes } = contenuDuFichier(journaux, null, EXPOSANTS);
+    const texte = (c: { texte: string } | { montant: string }) =>
+      "montant" in c ? c.montant : c.texte;
+    const colonne = (nom: string) => entete.indexOf(nom);
+    const origine = [
+      "devise_origine",
+      "montant_origine",
+      "taux_de_change",
+      "date_du_cours",
+      "source_du_cours",
+      "origine_du_cours",
+      "motif_du_cours",
+    ];
+    // En fin de ligne : un import des colonnes d'avant n'en est pas dérangé.
+    // L'origine du cours est un CODE stable (un cours saisi ne se lit jamais
+    // « BCT » tout court), son motif tel qu'écrit.
+    assert.deepEqual(entete.slice(-7), origine);
+    assert.deepEqual(
+      origine.map((nom) => texte(lignes[0]![colonne(nom)]!)),
+      [
+        "YYY",
+        "1000",
+        "3.3456",
+        "2026-09-10",
+        "SRC",
+        "derogation_cabinet",
+        "Cours de la banque du client",
+      ],
+    );
+    // Le montant de la ligne reste celui des livres, à la précision de sa devise.
+    assert.equal(texte(lignes[0]![colonne("debit")]!), "3345.600");
+    // Une ligne sans devise d'origine laisse ses colonnes vides.
+    assert.deepEqual(
+      origine.map((nom) => texte(lignes[1]![colonne(nom)]!)),
+      ["", "", "", "", "", "", ""],
     );
   });
 });

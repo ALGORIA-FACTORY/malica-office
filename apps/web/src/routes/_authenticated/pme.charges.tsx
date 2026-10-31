@@ -169,6 +169,16 @@ function ChargesScreen() {
     queryFn: () => office().charges.enAttenteDeDate(pme.tenantId),
   });
 
+  /*
+   * Une pièce en devise sans cours de change n'entre dans aucun total
+   * (31 octobre 2026) : des euros ne s'additionnent pas à des dinars. Comme
+   * ce qui attend sa date, elle se dit ici — le geste est au cabinet.
+   */
+  const sansCours = useQuery({
+    queryKey: ["charges-sans-cours", pme.tenantId],
+    queryFn: () => office().charges.enAttenteDeCours(pme.tenantId),
+  });
+
   const result = useMemo(() => {
     if (!refs.data || !articles.data) return null;
     // La base de comparaison : les mois de l'exercice ANTÉRIEURS au mois
@@ -638,9 +648,26 @@ function ChargesScreen() {
                 {t("pme.charges.sansDate.detail", {
                   amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
                 })}
+                {/* Le total ne compte pas une pièce en devise sans cours : on le dit. */}
+                {sansDate.data.piecesSansCours > 0
+                  ? ` ${t("pme.charges.sansDate.horsDuTotal", { count: sansDate.data.piecesSansCours })}`
+                  : null}
               </p>
               <p>
                 <Link to="/pme/list">{t("pme.charges.sansDate.action")}</Link>
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {sansCours.data && sansCours.data.pieces > 0 ? (
+          <div className="note">
+            <img src={portraitMalica} alt="Malica" width={620} height={620} />
+            <div className="bd">
+              <p>
+                {t("pme.charges.sansCours.titre", { count: sansCours.data.pieces })}
+                {" — "}
+                {t("pme.charges.sansCours.detail", { devises: sansCours.data.devises.join(", ") })}
               </p>
             </div>
           </div>

@@ -7,11 +7,19 @@
 
 import { computePivot } from "../index.ts";
 import { D, toFixedStr } from "../domain/decimal.ts";
+import {
+  aSaDette,
+  convertirLExtrait,
+  uniteALExposant,
+  type ConversionFaite,
+  type CoursAApplique,
+} from "../engines/fx/convertir-l-extrait.ts";
 import { composerLibelle } from "../engines/libelle.ts";
 import { faitsDuLibelle } from "./libelle-de-piece.ts";
 import type { ExtractV1 as ExtractV1Type } from "../contracts/extract.v1.ts";
 import { ExtractV1 } from "../contracts/extract.v1.ts";
-import type { PivotV1 } from "../contracts/pivot.v1.ts";
+import type { JournalLineV1, PivotV1 } from "../contracts/pivot.v1.ts";
+import type { CurrencyDef } from "../domain/types.ts";
 import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositories.ts";
 
 /*
@@ -23,8 +31,7 @@ import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositorie
  * illustre : une juridiction a 2 decimales affichait un dinar la ou il y
  * avait un millime, sans aucune erreur. Plausible et faux.
  *
- * `ref.socle_params` porte `money.decimals` depuis le 25 aout, et
- * `referentiel.socleParams` LEVE une erreur explicite quand il manque. Cinq
+ * L'exposant d'une devise se lit dans `ref.devises` (sa seule source) ; cinq
  * chemins vivants appelaient la table d'ici plutot que lui.
  *
  * Le parametre est donc desormais exige. Une proposition sans decimales est
@@ -32,9 +39,28 @@ import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositorie
  * apercevoir a l'appel qu'a la balance.
  */
 
+/**
+ * Ce qu'une ligne convertie garde de la pièce en devise : la devise, le
+ * montant de la ligne dans cette devise (du même côté), le taux pour une
+ * unité et le cours appliqués. Absent sur une pièce dans la devise du dossier.
+ */
+export interface OrigineDeLaLigne {
+  devise_origine: string;
+  montant_origine: string;
+  taux_de_change: string;
+  cours_id: string;
+}
+
 export interface ProposalResult {
+  /** L'écriture, dans la devise du DOSSIER (convertie si la pièce est en devise). */
   pivot: PivotV1;
+  /** L'extrait d'où l'écriture se compose : converti, si la pièce est en devise. */
   extract: ExtractV1Type;
+  /**
+   * La conversion d'une pièce en devise : le cours, le taux, l'écart d'arrondi
+   * et la ligne qui l'a reçu. Absente dans la devise du dossier.
+   */
+  conversion?: ConversionFaite;
   journal: string;
   /**
    * Le libellé de l’écriture, composé.
@@ -45,13 +71,15 @@ export interface ProposalResult {
    * SAF-T, le FEC et ISO 21378 demandent en substance.
    */
   libelle: string;
-  lignes: Array<{
-    account_code: string;
-    libelle: string;
-    debit: string;
-    credit: string;
-    tax_code: string | null;
-  }>;
+  lignes: Array<
+    {
+      account_code: string;
+      libelle: string;
+      debit: string;
+      credit: string;
+      tax_code: string | null;
+    } & Partial<OrigineDeLaLigne>
+  >;
 }
 
 /**
@@ -144,6 +172,14 @@ export function buildProposal(params: {
    * la facture : il dit ce que la pièce porte.
    */
   tvaNonDeductible?: boolean;
+  /**
+   * La pièce est en devise (31 octobre 2026) : l'écriture se compose dans la
+   * devise du DOSSIER (`vers`), au cours que la règle de change désigne, et
+   * l'écart d'arrondi se porte selon la règle `ecart` du référentiel
+   * (`convertirLExtrait`). `currency` et `parametres.decimals` restent ceux
+   * de la PIÈCE : la facture se vérifie d'abord dans sa devise.
+   */
+  conversion?: { vers: CurrencyDef; cours: CoursAApplique; ecart: string };
 }): ProposalResult {
   const lu = ExtractV1.safeParse(params.payload);
   if (!lu.success) {
@@ -179,56 +215,105 @@ export function buildProposal(params: {
   const journalDuPack = mapping.journalCode;
   if (!journalDuPack) throw new Error("MISSING_JOURNAL");
 
-  const pivot = computePivot({
-    extract,
-    source_item_id: params.pieceId,
-    tenant_currency: { code: extract.currency, decimals },
-    tax_rates: params.taxRates.map((r) => ({
-      code: r.code,
-      label: r.label,
-      rate: r.rate,
-      valid_from: r.validFrom,
-      valid_to: r.validTo,
-      jurisdiction: r.jurisdiction,
-    })),
-    mapping: {
-      document_kind: extract.document_kind,
-      charge_or_product_account: params.compteDeNature || mapping.mainAccount,
-      vat_account: mapping.vatAccount,
-      counterparty_account: mapping.counterpartyAccount,
-    },
-    fiscal_charges: (params.fiscalCharges ?? [])
-      .filter((c) => c.documentKind === extract.document_kind)
-      .map((c) => ({
-        code: c.code,
-        label: c.label,
-        account_code: c.accountCode,
-        document_kind: c.documentKind,
-        fixed_amount: c.fixedAmount,
+  // Le pivot d'un extrait, dans une devise : le même moteur, la même
+  // imputation. Un droit FIXÉ par le pack l'est dans la devise du dossier :
+  // il ne se compare pas à un montant imprimé dans une autre.
+  const pivotDe = (
+    e: ExtractV1Type,
+    devise: CurrencyDef,
+    options: { droitsFixes: boolean; tvaVerifieeEn?: string },
+  ) =>
+    computePivot({
+      extract: e,
+      source_item_id: params.pieceId,
+      tenant_currency: devise,
+      tax_rates: params.taxRates.map((r) => ({
+        code: r.code,
+        label: r.label,
+        rate: r.rate,
+        valid_from: r.validFrom,
+        valid_to: r.validTo,
+        jurisdiction: r.jurisdiction,
       })),
+      mapping: {
+        document_kind: e.document_kind,
+        charge_or_product_account: params.compteDeNature || mapping.mainAccount,
+        vat_account: mapping.vatAccount,
+        counterparty_account: mapping.counterpartyAccount,
+      },
+      fiscal_charges: (params.fiscalCharges ?? [])
+        .filter((c) => c.documentKind === e.document_kind)
+        .map((c) => ({
+          code: c.code,
+          label: c.label,
+          account_code: c.accountCode,
+          document_kind: c.documentKind,
+          fixed_amount: options.droitsFixes ? c.fixedAmount : null,
+        })),
 
-    /*
-     * Le compte de TVA par code, quand le pack en distingue. Le mapping choisi
-     * plus haut l'est par le PREMIER code de taxe : sans cette table, la TVA
-     * d'un second taux partirait sur le compte du premier.
-     */
-    vat_accounts_by_tax_code: Object.fromEntries(
-      params.mappings
-        .filter((m) => m.documentKind === extract.document_kind && m.taxCode !== null)
-        .map((m) => [m.taxCode as string, m.vatAccount]),
-    ),
+      /*
+       * Le compte de TVA par code, quand le pack en distingue. Le mapping choisi
+       * plus haut l'est par le PREMIER code de taxe : sans cette table, la TVA
+       * d'un second taux partirait sur le compte du premier.
+       */
+      vat_accounts_by_tax_code: Object.fromEntries(
+        params.mappings
+          .filter((m) => m.documentKind === e.document_kind && m.taxCode !== null)
+          .map((m) => [m.taxCode as string, m.vatAccount]),
+      ),
 
-    tolerances: {
-      rounding_tolerance: (1 / 10 ** decimals).toFixed(decimals),
-      confidence_orange: params.parametres.confianceReserve,
-      confidence_red: params.parametres.confianceBloquante,
-    },
-  });
+      tolerances: {
+        rounding_tolerance: uniteALExposant(devise.decimals),
+        confidence_orange: params.parametres.confianceReserve,
+        confidence_red: params.parametres.confianceBloquante,
+      },
+      ...(options.tvaVerifieeEn ? { tva_verifiee_en: options.tvaVerifieeEn } : {}),
+    });
+
+  /*
+   * ============================================== UNE PIÈCE EN DEVISE (31 octobre 2026)
+   *
+   * D'abord la facture, dans SA devise : la TVA, le total, l'équilibre s'y
+   * vérifient — un droit fixé du pack n'y est pas comparé, il est dans la
+   * devise du dossier. Ensuite seulement l'extrait se convertit, et
+   * l'écriture se compose sur l'extrait converti, dans la devise du dossier,
+   * où le droit fixé se compare enfin. Chaque ligne garde son montant
+   * d'origine : les deux pivots ont la même forme (même extrait, mêmes
+   * comptes, même ordre), ligne pour ligne.
+   */
+  const deLaPiece: CurrencyDef = { code: extract.currency, decimals };
+  const conversion = params.conversion;
+  const origine = conversion ? pivotDe(extract, deLaPiece, { droitsFixes: false }) : null;
+  /*
+   * La dette envers le tiers est HT + TVA + droits (le pivot ne recopie
+   * jamais un TTC dont l'écart n'est pas justifié) : c'est elle qui se
+   * convertit (`aSaDette`, la même règle que la TVA du mois).
+   */
+  const converti =
+    conversion && origine?.approvable
+      ? convertirLExtrait(aSaDette(extract, decimals), {
+          de: deLaPiece,
+          vers: conversion.vers,
+          cours: conversion.cours,
+          ecart: conversion.ecart,
+        })
+      : null;
+  const pivot = !conversion
+    ? pivotDe(extract, deLaPiece, { droitsFixes: true })
+    : converti
+      ? pivotDe(converti.extrait, conversion.vers, {
+          droitsFixes: true,
+          tvaVerifieeEn: extract.currency,
+        })
+      : origine!;
+  const decimalesDuPivot = converti ? conversion!.vers.decimals : decimals;
 
   /*
    * La TVA non déductible rejoint la charge : chaque débit d'un compte de TVA
    * passe sur la première ligne de charge, au millime près, et la ligne de TVA
-   * disparaît. Seulement à l'achat : une vente ne déduit rien.
+   * disparaît. Seulement à l'achat : une vente ne déduit rien. La même règle
+   * s'applique aux lignes d'origine d'une pièce en devise : elles restent
+   * appariées, ligne pour ligne.
    */
   const comptesDeTva = new Set<string>([
     mapping.vatAccount,
@@ -237,45 +322,63 @@ export function buildProposal(params: {
       .map((m) => m.vatAccount),
   ]);
   const compteDeCharge = params.compteDeNature || mapping.mainAccount;
-  const lignesDuPivot = (() => {
-    if (!params.tvaNonDeductible || extract.document_kind === "facture_vente") return pivot.lines;
-    const tva = pivot.lines.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);
-    if (tva.length === 0) return pivot.lines;
-    const iCharge = pivot.lines.findIndex((l) => l.account_code === compteDeCharge);
-    if (iCharge < 0) return pivot.lines;
+  const tvaVersLaCharge = (lignes: readonly JournalLineV1[], n: number): JournalLineV1[] => {
+    if (!params.tvaNonDeductible || extract.document_kind === "facture_vente") return [...lignes];
+    const tva = lignes.filter((l) => comptesDeTva.has(l.account_code) && Number(l.debit) > 0);
+    if (tva.length === 0) return [...lignes];
+    const iCharge = lignes.findIndex((l) => l.account_code === compteDeCharge);
+    if (iCharge < 0) return [...lignes];
     const ajout = tva.reduce((s, l) => s.plus(D(l.debit)), D(0));
-    return pivot.lines
-      .map((l, i) =>
-        i === iCharge ? { ...l, debit: toFixedStr(D(l.debit).plus(ajout), decimals) } : l,
-      )
+    return lignes
+      .map((l, i) => (i === iCharge ? { ...l, debit: toFixedStr(D(l.debit).plus(ajout), n) } : l))
       .filter((l) => !tva.includes(l));
-  })();
+  };
+  const lignesDuPivot = tvaVersLaCharge(pivot.lines, decimalesDuPivot);
+  const lignesDOrigine = converti && origine ? tvaVersLaCharge(origine.lines, decimals) : null;
+  /** Le montant d'une ligne, du côté qui le porte ; null pour une ligne nulle. */
+  const montantDe = (l: JournalLineV1 | undefined) =>
+    !l ? null : !D(l.debit).isZero() ? l.debit : !D(l.credit).isZero() ? l.credit : null;
 
   return {
     pivot,
-    extract,
+    extract: converti?.extrait ?? extract,
+    ...(converti ? { conversion: converti.conversion } : {}),
     journal: journalDuPack,
     libelle: composerLibelle(faitsDuLibelle(extract)),
     // Une ligne nulle (TVA à zéro sur pièce exonérée) ne porte aucun fait
     // comptable : la base l'interdit, on ne la persiste pas. Le pivot du Socle
     // reste intact — c'est la seule vue persistée qui est filtrée.
-    lignes: lignesDuPivot
-      .filter((l) => Number(l.debit) !== 0 || Number(l.credit) !== 0)
-      .map((l) => ({
-        account_code: l.account_code,
-        libelle: l.label,
-        debit: l.debit,
-        credit: l.credit,
-        /*
-         * Le code vient de la LIGNE, et non plus du premier code de la pièce.
-         *
-         * Il était posé ainsi : `l.account_code === mapping.vatAccount ?
-         * firstTaxCode : null`. Sur une facture à deux taux, le moteur rendait
-         * une seule ligne de TVA — la somme — et elle recevait le code du
-         * premier taux. Toute la TVA d'une facture de restaurant partait donc
-         * à 7 %, ou à 19 % selon l'ordre des lignes, sans que rien ne le dise.
-         */
-        tax_code: l.tax_code ?? null,
-      })),
+    lignes: lignesDuPivot.flatMap((l, i) => {
+      if (montantDe(l) === null) return [];
+      const montantOrigine = montantDe(lignesDOrigine?.[i]);
+      return [
+        {
+          account_code: l.account_code,
+          libelle: l.label,
+          debit: l.debit,
+          credit: l.credit,
+          /*
+           * Le code vient de la LIGNE, et non plus du premier code de la pièce.
+           *
+           * Il était posé ainsi : `l.account_code === mapping.vatAccount ?
+           * firstTaxCode : null`. Sur une facture à deux taux, le moteur rendait
+           * une seule ligne de TVA — la somme — et elle recevait le code du
+           * premier taux. Toute la TVA d'une facture de restaurant partait donc
+           * à 7 %, ou à 19 % selon l'ordre des lignes, sans que rien ne le dise.
+           */
+          tax_code: l.tax_code ?? null,
+          // Ce que la ligne vaut dans la devise de la pièce — l'écart
+          // d'arrondi compris dans la ligne convertie qui l'a reçu.
+          ...(converti && montantOrigine !== null
+            ? {
+                devise_origine: converti.conversion.devise_origine,
+                montant_origine: montantOrigine,
+                taux_de_change: converti.conversion.taux_unitaire,
+                cours_id: converti.conversion.cours.id,
+              }
+            : {}),
+        },
+      ];
+    }),
   };
 }

@@ -435,19 +435,21 @@ describe("le HT imprimé qui comprend déjà le timbre", () => {
 
   it("une marque que le référentiel ne connaît pas laisse le total non lu, la TVA suffit", () => {
     // Un total que la vérification ne lit pas est écarté et NOMMÉ, et la TVA
-    // imprimée confirme seule la base déduite.
+    // imprimée confirme seule la base déduite. « XTS » : le code ISO 4217
+    // réservé aux essais, qu'aucun référentiel ne porte (« USD » y est entré
+    // le 31 octobre 2026).
     const r = normaliserMontants(
       {
         bases: [{ ht: "428,731", taux: TAUX }],
         tva: "81,269",
         autres: TIMBRE,
-        ttc: "510,000 USD",
+        ttc: "510,000 XTS",
       },
       P,
     );
     assert.equal(r.etat, "tranche", r.raison);
     assert.equal(r.montants.bases[0]?.ht, 427_731);
-    assert.equal(r.totalNonLu, "510,000 USD");
+    assert.equal(r.totalNonLu, "510,000 XTS");
   });
 
   it("total non lu : la TVA seule vérifie la base déduite, sans la note pleine", () => {
