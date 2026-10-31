@@ -98,6 +98,8 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
   capture: new Set([
     "contexteLecture",
     "contexteAssistant",
+    "contexteSudoku",
+    "inscrireChampsLus",
     "persisterLecture",
     "lectureAutorisee",
     "inscrireRefusDeLecture",

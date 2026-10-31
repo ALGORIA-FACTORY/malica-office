@@ -21,6 +21,7 @@ import { confianceParChamp } from "../../scan/confiance.ts";
 import { creerDesignateurDeRecette } from "./par-recette.ts";
 import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
+import { creerLeSudoku } from "./sudoku.ts";
 import { runVisionRead, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
@@ -222,7 +223,24 @@ export async function readPieceFlow(
       matriculeDossier: contexte.dossier.identifiantFiscal,
     });
 
-  const premiereLecture = await lecteurs.lire(parametres);
+  /*
+   * ================================================== LE SUDOKU, APRÈS LA DÉSIGNATION
+   *
+   * Chaque lecture — la première comme le rattrapage — passe par le sudoku :
+   * quand l'arithmétique de la pièce désigne ses montants d'une seule façon,
+   * cette désignation PROUVÉE remplace celle de la chaîne pour les totaux, les
+   * lignes de TVA et les droits. Sinon la lecture ressort inchangée. Il rend un
+   * `VisionRead` : tout l'aval — relecture dans le plan, contrôles,
+   * persistance — est celui d'avant. Voir `sudoku.ts`.
+   */
+  const sudoku = creerLeSudoku(api, {
+    pieceId,
+    packId: contexte.packId,
+    devise: { decimales: contexte.moneyDecimals, marques: contexte.marquesDevise },
+  });
+  const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku(await lecteurs.lire(p));
+
+  const premiereLecture = await lire(parametres);
   let read = premiereLecture;
   let built = construire(read);
 
@@ -256,7 +274,7 @@ export async function readPieceFlow(
      * du 24 octobre 2026). La premiere lecture existe : c'est elle qui sort.
      */
     try {
-      const secondeLecture = await lecteurs.lire({ ...parametres, ...autre });
+      const secondeLecture = await lire({ ...parametres, ...autre });
       const secondBuilt = construire(secondeLecture);
       if (qualiteDeLecture(secondBuilt) > qualiteDeLecture(built)) {
         read = secondeLecture;

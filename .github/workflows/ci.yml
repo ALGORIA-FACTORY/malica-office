@@ -123,6 +123,16 @@ jobs:
       - name: Installer
         run: npm ci
 
+      # Le sudoku : un moteur Rust, servi à l'API en WebAssembly. La cible
+      # wasm32 ne s'installe pas sur tous les postes : c'est ici qu'il est
+      # construit et éprouvé — ses bancs natifs d'abord (cargo), puis le chemin
+      # de production dans la suite de l'API (`sudoku.test.ts`).
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+          npm run test --workspace @malica/sudoku
+
       # Le même chemin qu'en production : `db/migrer.mjs` tient la table des
       # migrations appliquées. Une boucle psql rejouait tout — sur une base
       # neuve c'est pareil, sur un serveur qui vit ce serait faux.
@@ -138,6 +148,8 @@ jobs:
           DATABASE_URL_ADMIN: postgres://postgres:postgres@localhost:5432/malica
           JWT_SECRET: integration_continue_seulement_32_caracteres
           STOCKAGE_RACINE: ${{ runner.temp }}/pieces
+          # Le moteur est construit plus haut : ici, son absence est un échec.
+          MALICA_SUDOKU_EXIGE: "1"
 
   # Les épreuves : l'application vivante — API, site avec son relais, base
   # réelle, jeu de données — parcourue par les mêmes scripts que sur le poste
@@ -186,6 +198,12 @@ jobs:
 
       - name: Installer
         run: npm ci
+
+      # L'API lit avec le sudoku, comme en production.
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
 
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
