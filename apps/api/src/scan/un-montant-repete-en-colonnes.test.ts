@@ -30,8 +30,11 @@
  *   — « (3 020,000) » — une paire — n'est lu ni positif ni négatif : refusé.
  *     Une facture imprime aussi « (base 3 020,000) » ; lire la paire comme un
  *     négatif inscrirait au crédit ce qui va au débit. La personne saisit.
- *   — Une parenthèse orpheline est du bruit, et elle seule est retirée : une
- *     paire qui reste après l'avoir retirée est refusée comme ci-dessus.
+ *   — Une parenthèse orpheline ne se lit pas non plus (revue de la PR 144) :
+ *     elle peut fermer un avoir coupé par la citation. Celle qui ferme un MOT
+ *     coupé — « (base 3 020,000) » — se retire au plan de jetons, avant la
+ *     lecture (`texteDuMontantCite`) ; la normalisation reçoit alors
+ *     « 3 020,000 3 020,000 ».
  *   — Le signe moins en tête se lit ; en queue (« 3 020,000- »), non.
  *   — Les chiffres arabes-indiens (٠١٢…) et persans (۰۱۲…) se lisent comme
  *     leurs équivalents latins, la virgule décimale arabe « ٫ » comme une
@@ -57,8 +60,8 @@ const valeurs = (brut: string, decimales = P.decimales) =>
 describe("un montant répété en colonnes : la lecture d'un montant imprimé", () => {
   // [texte imprimé, décimales, lectures attendues en unités mineures]
   const CAS: Array<[string, number, number[]]> = [
-    // Le cas du 29 octobre, tel qu'il est arrivé.
-    ["3 020,000 3 020,000)", 3, [3_020_000]],
+    // Le cas du 29 octobre, tel que le plan le rend une fois retirée la
+    // parenthèse qui ferme « (base ».
     ["3 020,000 3 020,000", 3, [3_020_000]],
     ["3 020,000  3 020,000", 3, [3_020_000]],
     ["3 020,000 | 3 020,000", 3, [3_020_000]],
@@ -66,7 +69,6 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
     ["3 020,000 ; 3 020,000", 3, [3_020_000]],
     ["3 020,000 : 3 020,000 :", 3, [3_020_000]],
     ["3 020,000 3 020,000 3 020,000", 3, [3_020_000]],
-    ["3 020,000) 3 020,000)", 3, [3_020_000]],
     ["3 020,000 DT 3 020,000 DT", 3, [3_020_000]],
     // Le même montant, écrit avec ou sans l'espace des milliers.
     ["3 020,000 3020,000", 3, [3_020_000]],
@@ -75,9 +77,12 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
     // L'espace, séparateur des milliers, seul : inchangé.
     ["3 020,000", 3, [3_020_000]],
     ["12 345,678", 3, [12_345_678]],
-    // Le cas du 10 octobre, qui marchait, marche toujours.
-    ["514,700 514,700", 3, [514_700, 514_700_000]],
-    ["514,700 514,700)", 3, [514_700, 514_700_000]],
+    // Le cas du 10 octobre, qui marchait, marche toujours. Une seule lecture
+    // depuis le 30 octobre 2026 : la virgule est le séparateur décimal du dinar
+    // (`ref.devises.separateur_decimal`), et ne sépare pas de milliers.
+    ["514,700 514,700", 3, [514_700]],
+    // Au point, l'ambiguïté demeure, et l'arithmétique de la facture tranche.
+    ["514.700 514.700", 3, [514_700, 514_700_000]],
     // Négatif par le signe moins, en tête : se lit.
     ["-3 020,000", 3, [-3_020_000]],
     ["-3 020,000 -3 020,000", 3, [-3_020_000]],
@@ -86,7 +91,7 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
     ["3 020 | 3 020", 0, [3_020]],
     // Chiffres arabes-indiens et persans.
     ["٣ ٠٢٠٫٠٠٠", 3, [3_020_000]],
-    ["٣ ٠٢٠٫٠٠٠ ٣ ٠٢٠٫٠٠٠)", 3, [3_020_000]],
+    ["٣ ٠٢٠٫٠٠٠ ٣ ٠٢٠٫٠٠٠", 3, [3_020_000]],
     ["٣٬٠٢٠٫٠٠٠", 3, [3_020_000]],
     ["۳ ۰۲۰٫۰۰۰", 3, [3_020_000]],
   ];
@@ -104,6 +109,9 @@ describe("un montant répété en colonnes : la lecture d'un montant imprimé", 
     ["(3 020,000)", "une paire : ni positif, ni négatif"],
     ["(3 020,000) (3 020,000)", "deux paires"],
     ["(3 020,000))", "une paire, et une fermante orpheline"],
+    ["3 020,000 3 020,000)", "une fermante orpheline : peut-être un avoir coupé"],
+    ["3 020,000) 3 020,000)", "deux fermantes orphelines"],
+    ["514,700 514,700)", "une fermante orpheline"],
     ["(3 020,000) 3 020,000", "un négatif comptable et un positif"],
     ["3 020,000-", "le moins en queue"],
     ["3 020,000 -3 020,000", "le même chiffre, de signes contraires"],
@@ -129,7 +137,7 @@ describe("la facture du 29 octobre se normalise, et ne se devine pas", () => {
   it("HT répété en colonnes, TVA, timbre et total : tranchée", () => {
     const r = normaliserMontants(
       {
-        bases: [{ ht: "3 020,000 3 020,000)", taux: "0.19" }],
+        bases: [{ ht: "3 020,000 3 020,000", taux: "0.19" }],
         tva: "573,800",
         autres: [{ brut: "1,000", attendu: 1_000 }],
         ttc: "3 594,800",
@@ -147,7 +155,7 @@ describe("la facture du 29 octobre se normalise, et ne se devine pas", () => {
     // moteur refuse, et c'est le bon refus.
     const r = normaliserMontants(
       {
-        bases: [{ ht: "3 020,000 3 020,000)", taux: "0.19" }],
+        bases: [{ ht: "3 020,000 3 020,000", taux: "0.19" }],
         tva: "574,800",
         ttc: "3 594,800",
       },

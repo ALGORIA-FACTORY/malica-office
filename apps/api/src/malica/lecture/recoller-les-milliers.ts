@@ -56,7 +56,7 @@ import type { PageToken } from "./token-plan.ts";
 const ECART_MAX_EN_CARACTERES = 2;
 
 /** Au-delà, deux jetons ne sont pas sur la même ligne imprimée. */
-const TOLERANCE_DE_LIGNE = 0.006;
+export const TOLERANCE_DE_LIGNE = 0.006;
 
 /** Ce qui peut OUVRIR un groupe de milliers : une à trois chiffres, et rien d'autre. */
 const OUVRE = /^\d{1,3}$/;
@@ -102,10 +102,11 @@ const GROUPE = /^\d{3}$/;
  * absolument, et bien pire que de laisser un montant en deux morceaux.
  *
  * La ponctuation fermante est admise à dessein : « (base 3 020,000) » donne
- * « 3 » + « 020,000) ». Recoller rend « 3 020,000) », que le lecteur de
- * montants REFUSE — alors que « 3 » seul se lisait 3,000 sans un mot. Entre un
- * refus et une valeur fausse silencieuse, R2 choisit le refus : lui au moins
- * pose une question à l'écran.
+ * « 3 » + « 020,000) ». Recoller rend « 3 020,000) » — alors que « 3 » seul se
+ * lisait 3,000 sans un mot. Le lecteur de montants le refusait ; depuis le
+ * 30 octobre 2026, il lit comme la normalisation du scan (#135) : la fermante
+ * orpheline est du bruit, et « 3 020,000) » vaut 3 020,000, la base imprimée.
+ * Une PAIRE, elle, ne se lit toujours pas (`@malica/socle/montant-imprime`).
  */
 const DERNIER_GROUPE = /^\d{3}[.,]\d+[)\].,;:]?$/;
 

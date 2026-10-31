@@ -25,6 +25,7 @@ import type {
   PropositionDePiece,
   TaxRate,
 } from "@malica/socle/ports/repositories";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import { buildProposal, LectureIncomplete } from "@malica/socle/use-cases/propose-ecriture";
 import { autoriseUneEcriture, codeDuVerdict } from "@malica/socle/verdicts";
 
@@ -32,8 +33,8 @@ import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { analyserPiece, lireExposant, lireParametres } from "./analyse.ts";
-import { enDecimal, tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
+import { analyserPiece, lireLesDevises, lireParametres } from "./analyse.ts";
+import { tvaDeBase, type ResultatNormalisation } from "./normaliser-montants.ts";
 
 type SensConnu = { documentKind: "facture_achat" | "facture_vente" };
 const sensConnu = (k: string): k is SensConnu["documentKind"] =>
@@ -52,7 +53,9 @@ export type { PropositionDePiece };
  * `enDecimal` vivait ici en double : même signature, même sémantique, deux
  * implémentations. La première qui aurait corrigé un cas limite aurait laissé
  * l'autre en arrière — et c'est celle-ci qui écrit l'écriture comptable.
- * Elle vit avec la normalisation des montants, que la lecture et le scan partagent.
+ * Le 30 octobre 2026, une troisième copie a été trouvée au Socle
+ * (`depuisUniteMineure`, que les écrans appelaient déjà) : c'est elle qui
+ * reste, pour l'API comme pour le web.
  */
 
 /**
@@ -203,6 +206,25 @@ function refusDuJugement(j: JugementAProposer): PropositionDePiece | null {
 }
 
 /**
+ * La devise de la pièce, telle que le JUGEMENT l'a décidée (`deviseDeLaPiece`,
+ * `analyse.ts`), et nulle autre : relire `payload.currency ?? dossier` ici
+ * rendait « 100,00 € » en dinars (revue de la PR 144).
+ *
+ * Un jugement posé avant le 30 octobre 2026 ne la porte pas : il garde la
+ * règle sous laquelle il a été rendu, et `REGLES_DU_JUGEMENT` le date — le
+ * rejeu aux règles du jour (`rejugerLaPiece`) le refait. Le refaire ICI, à
+ * l'ouverture, toucherait une pièce dont l'écriture est déjà au journal.
+ */
+function deviseDuJugement(
+  n: ResultatNormalisation,
+  payload: unknown,
+  deviseDuDossier: string,
+): string | null {
+  if (n.devise !== undefined) return n.devise;
+  return (payload as { currency?: string | null }).currency ?? deviseDuDossier;
+}
+
+/**
  * Composer l'écriture d'un jugement qui l'autorise : montants IMPRIMÉS et
  * normalisés, référentiel daté, moteur du Socle. Pure — c'est la chaîne même
  * que `propositionDePiece` sert, et que la mesure des propositions joue.
@@ -219,7 +241,6 @@ export function composerLaProposition(
   const payload = j.payload as {
     lines?: Array<Record<string, unknown>>;
     other_charges?: Array<Record<string, unknown>>;
-    currency?: string | null;
   };
   /*
    * UNE PIÈCE EN DEVISE NE S'INSCRIT PAS TELLE QUELLE (30 octobre 2026).
@@ -229,7 +250,7 @@ export function composerLaProposition(
    * fausse. La conversion demande le cours du jour de l'opération, que la
    * pièce ne porte pas ; on ne le devine pas.
    */
-  const devise = payload.currency ?? r.deviseDuDossier;
+  const devise = deviseDuJugement(n, j.payload, r.deviseDuDossier);
   if (devise !== r.deviseDuDossier)
     return {
       ok: false,
@@ -289,15 +310,15 @@ export function composerLaProposition(
     document_date: j.date,
     lines: lignesLues.map((l, i) => ({
       ...l,
-      base_ht: enDecimal(m.bases[i]!.ht!, dec),
-      vat_amount: enDecimal(tvas[i]!, dec),
-      ttc: enDecimal(m.bases[i]!.ht! + tvas[i]!, dec),
+      base_ht: depuisUniteMineure(m.bases[i]!.ht!, dec),
+      vat_amount: depuisUniteMineure(tvas[i]!, dec),
+      ttc: depuisUniteMineure(m.bases[i]!.ht! + tvas[i]!, dec),
     })),
-    other_charges: droits.map((c, i) => ({ ...c, amount: enDecimal(autres[i]!, dec) })),
+    other_charges: droits.map((c, i) => ({ ...c, amount: depuisUniteMineure(autres[i]!, dec) })),
     totals: {
-      base_ht: enDecimal(totalHt, dec),
-      vat: enDecimal(totalTva, dec),
-      ttc: enDecimal(m.ttc ?? totalHt + totalTva + somme(autres), dec),
+      base_ht: depuisUniteMineure(totalHt, dec),
+      vat: depuisUniteMineure(totalTva, dec),
+      ttc: depuisUniteMineure(m.ttc ?? totalHt + totalTva + somme(autres), dec),
     },
   };
 
@@ -431,10 +452,9 @@ async function proposerDepuisLeJugement(
   // changement du timbre, il bloquait toute facture antérieure.
   const jour = date ?? ligne.recue_le;
   const p = await lireParametres(db, pack, jour);
-  // L'exposant de la devise de la pièce, comme au jugement (`analyse.ts`).
-  const devise =
-    (ligne.payload as { currency?: string | null }).currency ?? ligne.devise_du_dossier;
-  const decimales = await lireExposant(db, devise);
+  // L'exposant de la devise que le jugement a décidée (`analyse.ts`).
+  const devise = deviseDuJugement(ligne.normalisation!, ligne.payload, ligne.devise_du_dossier);
+  const decimales = (await lireLesDevises(db)).find((d) => d.code === devise)?.decimales ?? null;
   if (decimales === null)
     return {
       ok: false,

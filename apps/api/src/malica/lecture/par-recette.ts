@@ -46,11 +46,12 @@
  *                        `direction.incertaine` et la personne tranche.
  *                        C'est exactement ce qui arrive quand le modèle ne
  *                        peut pas l'établir — aucun chemin nouveau.
- *   `currency`           vient du DOSSIER, et l'appelant la passe. Ce n'est
- *                        pas un défaut écrit ici : c'est la même source que
- *                        celle du modèle sur une pièce qui n'imprime aucune
- *                        devise (`raw.currency ?? devise`), et aucun code
- *                        ISO n'apparaît dans ce fichier (R4).
+ *   `currency`           vaut `null` : une recette ne LIT pas de devise. La
+ *                        relecture la décide (`deviseDeLaPiece`, dans
+ *                        `read-piece.ts`) depuis les marques imprimées, et à
+ *                        défaut celle du dossier — la même règle que pour le
+ *                        modèle (revue de la PR 144). Aucun code ISO
+ *                        n'apparaît dans ce fichier (R4).
  *   `overall_confidence` une recette ne produit AUCUN score. L'appelant passe
  *                        donc le NEUTRE DU MINIMUM, et le nom du paramètre le
  *                        dit : `confiance.ts` calcule
@@ -144,7 +145,7 @@ export type ResultatDeLaFabrique =
 export function designerParRecette(
   plan: readonly PageToken[],
   contexte: ContexteDeFabrique,
-  valeursDuDossier: { readonly devise: string; readonly neutreDeConfiance: number },
+  valeursDuDossier: { readonly neutreDeConfiance: number },
 ): ResultatDeLaFabrique {
   exigerUnPlanRecolle(plan);
   const depart = Date.now();
@@ -310,7 +311,7 @@ function texteDuPlan(plan: readonly PageToken[], ref: TokenRef | null): string {
 function selectionDepuisRecette(
   sortie: SortieDeRecette,
   plan: readonly PageToken[],
-  valeurs: { readonly devise: string; readonly neutreDeConfiance: number },
+  valeurs: { readonly neutreDeConfiance: number },
 ): VisionSelection {
   const d = sortie.designation;
 
@@ -330,7 +331,7 @@ function selectionDepuisRecette(
     // Aucune recette ne tranche le sens d'une pièce : `null` est la réponse
     // que la chaîne sait traiter, et elle pose le drapeau qui pose la question.
     document_kind: null,
-    currency: valeurs.devise,
+    currency: null,
     issuer: d.issuer,
     document_date: d.document_date,
     lines: d.lines
@@ -393,7 +394,7 @@ export type DesignateurDeRecette = (
  */
 export function creerDesignateurDeRecette(
   api: AppelApi,
-  piece: { readonly pieceId: string; readonly tenantId: string; readonly devise: string },
+  piece: { readonly pieceId: string; readonly tenantId: string },
 ): DesignateurDeRecette {
   return async (plan) => {
     let contexte: ContexteDeFabrique;
@@ -411,7 +412,6 @@ export function creerDesignateurDeRecette(
     let resultat: ResultatDeLaFabrique;
     try {
       resultat = designerParRecette(plan, contexte, {
-        devise: piece.devise,
         // LE NEUTRE DU MINIMUM, et non un score. Voir l'en-tête : la confiance
         // d'un champ devient celle de son jeton relevé, parce qu'une recette
         // n'ajoute aucune incertitude d'échantillonnage — elle désigne ou elle

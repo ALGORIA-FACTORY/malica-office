@@ -230,7 +230,7 @@ describe("une recette qui désigne se journalise", { skip: !BASE_CONFIGUREE }, (
       org,
     ]);
 
-    const r = designerParRecette(FACTURE_A(), ctx, { devise: "TND", neutreDeConfiance: 1 });
+    const r = designerParRecette(FACTURE_A(), ctx, { neutreDeConfiance: 1 });
     assert.ok(r.applique, r.applique === false ? JSON.stringify(r.pourquoi) : "");
 
     await appeler(moi.id, "fabrique", "inscrireExecution", [

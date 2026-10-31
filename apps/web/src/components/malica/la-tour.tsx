@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnChiffres } from "@/lib/lisible";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import type {
   GrilleProposee,
@@ -1051,7 +1052,7 @@ function LaGrille() {
                         cle,
                         forme === "nombre_vide" && e.target.value.trim() === ""
                           ? null
-                          : e.target.value.replace(",", "."),
+                          : (saisieDecimale(e.target.value) ?? e.target.value),
                       )
                     }
                     className={CHAMP}
@@ -1078,7 +1079,9 @@ function LaGrille() {
                 <input
                   inputMode="decimal"
                   value={r[cle] === null || r[cle] === undefined ? "" : String(r[cle])}
-                  onChange={(e) => changerRecharge(i, cle, e.target.value.replace(",", "."))}
+                  onChange={(e) =>
+                    changerRecharge(i, cle, saisieDecimale(e.target.value) ?? e.target.value)
+                  }
                   className={CHAMP}
                 />
               </label>

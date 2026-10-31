@@ -287,18 +287,31 @@ describe("les dépôts portés répondent", { skip: !BASE_CONFIGUREE }, () => {
     const contexte = (await appeler("capture", "contexteLecture", [enregistree.id])) as {
       packId: string;
       currency: string;
-      moneyDecimals: number;
+      devises: Array<{
+        code: string;
+        decimales: number;
+        separateurDecimal: string;
+        marques: Array<{ marque: string; devise: string }>;
+      }>;
       piece: { contentType: string | null };
       taxCodes: Array<{ rate: unknown }>;
     };
     assert.equal(contexte.piece.contentType, "application/pdf", "le type vient de la base");
     assert.ok(contexte.packId, "la lecture exige un pack en vigueur");
-    // La lecture des montants a besoin de l échelle de la devise, et elle vient
-    // du pack : « 2.800 » est ambigu à trois décimales — 2,800 ou 2 800 — et ne
-    // l est plus à deux. Un « 3 » écrit dans le code lirait un dossier en euros
-    // comme un dossier en dinars, sans rien signaler.
-    assert.equal(contexte.currency, "TND", "la devise vient du dossier");
-    assert.equal(contexte.moneyDecimals, 3, "le pack tunisien tient le millime");
+    // La lecture des montants a besoin de l échelle et du séparateur décimal de
+    // la devise DE LA PIÈCE, et ils viennent du référentiel : « 2.800 » est
+    // ambigu à trois décimales — 2,800 ou 2 800 — et ne l est plus à deux ;
+    // « 100,000 » ne l est pas quand la virgule est décimale ; « 100,00 € »
+    // n est pas en dinars. Toutes les devises partent donc à la relecture, qui
+    // décide de celle de la pièce (`deviseDeLaPiece`).
+    assert.equal(contexte.currency, "TND", "la devise du dossier");
+    const dinar = contexte.devises.find((d) => d.code === "TND");
+    assert.equal(dinar?.decimales, 3, "le dinar tient le millime");
+    assert.equal(dinar?.separateurDecimal, ",", "la virgule est décimale en dinars");
+    assert.ok(
+      dinar?.marques.some((m) => m.marque === "€" && m.devise === "EUR"),
+      "chaque marque nomme sa devise",
+    );
 
     assert.ok(contexte.taxCodes.length > 0);
     for (const t of contexte.taxCodes) {

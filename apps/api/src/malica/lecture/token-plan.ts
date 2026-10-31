@@ -1,8 +1,10 @@
+import { enChiffresLatins } from "@malica/socle/chiffres";
+import type { DeviseLue } from "@malica/socle/montant-imprime";
 import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle/ports/malica";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { treillisMontant, type Hypothese } from "./montants.ts";
-import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
-import { plageAmputee } from "./recoller-les-milliers.ts";
+import { plageAmputee, TOLERANCE_DE_LIGNE } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
  *
@@ -24,8 +26,7 @@ function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | nul
   return tokens.find((t) => t.page === ref.page && t.ordinal === ref.ordinal) ?? null;
 }
 
-/**
-/**
+/*
  * ================================== CE QUI A ÉTÉ RETIRÉ D'ICI, ET POURQUOI
  *
  * Ce module portait `normalizeAmount`, qui rendait UNE valeur par token. Pour
@@ -33,10 +34,12 @@ function findToken(tokens: readonly PageToken[], ref: TokenRef): PageToken | nul
  * lu 2 800 dinars, par une règle fixe. Sur un ticket, c'est 2,800 dinar — et
  * l'erreur ne se voyait pas, puisque le résultat avait la forme d'un montant.
  *
- * La lecture d'un montant vit désormais dans `montants.ts` : elle rend TOUTES
+ * La lecture d'un montant vit désormais dans le lecteur unique du dépôt
+ * (`@malica/socle/montant-imprime`, par `treillisMontant`) : elle rend TOUTES
  * les lectures admissibles, et c'est l'arithmétique de la facture qui choisit
  * (`lireMontantDuPlan`, plus bas). Ce qu'elle ne choisit pas est demandé à
  * l'écran plutôt que deviné.
+ */
 
 /**
  * Une date existe-t-elle vraiment ?
@@ -60,32 +63,6 @@ function dateReelle(y: string, m: string, d: string): boolean {
   // Le mois 0 du mois suivant : le dernier jour du mois demandé.
   const dernier = new Date(Date.UTC(annee, mois, 0)).getUTCDate();
   return jour <= dernier;
-}
-
-/**
- * Les chiffres arabes et persans, ramenés aux latins.
- *
- * Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les deux séries de
- * chiffres sont contiguës dans Unicode, donc la conversion est un décalage —
- * pas une table, pas un cas particulier.
- *
- * Volontairement limité aux DATES. Les montants en chiffres arabes ne sont
- * toujours pas lus : élargir la lecture d'un montant demande le banc du jeu
- * d'or, pas une ligne ici.
- *
- * Ce commentaire a longtemps renvoyé à `montants.test.ts` pour ce refus.
- * Vérifié le 18 octobre 2026 : ce fichier ne contient aucun chiffre arabe. Le
- * refus tenait, et rien ne le gardait — un commentaire qui invoque une épreuve
- * inexistante est pire qu'un commentaire absent, parce qu'il arrête l'enquête.
- * Il est désormais verrouillé par `factures.banc-amputation.test.ts`, qui
- * exige `VALUE_NOT_A_NUMBER` et le contrat partiel sur « ٦٥٠,٠٠٠ » : le modèle
- * de vision rend les chiffres arabes INVERSÉS (« ١٢ » lu « ٢١ », mesuré), et
- * une lecture inversée d'un montant est pire que pas de lecture.
- */
-function enChiffresLatins(s: string): string {
-  return s
-    .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
 }
 
 /**
@@ -174,6 +151,8 @@ const MOTIF_EN_LETTRES = new RegExp(
 );
 
 export function normalizeDate(text: string): string | null {
+  // Une facture tunisienne peut porter « ١٥ سبتمبر ٢٠٢٦ ». Les MONTANTS en
+  // chiffres arabes, eux, ne se lisent pas au plan : voir `treillisMontant`.
   const s = enChiffresLatins(text.trim());
   const rendre = (y: string, m: string, d: string): string | null =>
     dateReelle(y, m, d) ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
@@ -270,6 +249,74 @@ function jetonsDeLaPlage(
 }
 
 const texteDeLaPlage = (plage: readonly PageToken[]): string => plage.map((t) => t.text).join(" ");
+
+/**
+ * Le texte d'un MONTANT cité, tel qu'il se lit : la plage, moins la parenthèse
+ * fermante qui ferme un mot coupé par la plage.
+ *
+ * ================================================================= POURQUOI
+ *
+ * La facture du 4 octobre imprime « (base 3 020,000) » : les jetons
+ * « (base », « 3 », « 020,000) ». La plage du montant cite « 3 020,000) ». La
+ * fermante y est du bruit — elle ferme « (base », un MOT que la plage a
+ * laissé dehors. Mais « 1 234,560) » peut aussi être un avoir « (1 234,560) »
+ * coupé par la plage, et le lire positif inscrirait un achat (revue de la
+ * PR 144). Le texte seul ne tranche pas ; le plan, si.
+ *
+ * On remonte donc la ligne, à gauche de la plage, jusqu'à la parenthèse
+ * ouvrante qui n'est pas fermée : suivie d'une lettre, elle ouvre un mot, et
+ * la fermante se retire ; suivie d'un chiffre, d'un signe, ou introuvable, le
+ * texte reste tel quel — et le lecteur des montants refuse toute parenthèse
+ * (`@malica/socle/montant-imprime`, règle 5). Les deux chaînes lisent ce
+ * texte-là : le plan de jetons, et la normalisation du scan (`analyse.ts`).
+ */
+export function texteDuMontantCite(
+  tokens: readonly PageToken[],
+  plage: { page: number; ordinal: number; ordinalEnd?: number },
+): string | null {
+  const fin = typeof plage.ordinalEnd === "number" ? plage.ordinalEnd : plage.ordinal;
+  const cites = tokens
+    .filter((t) => t.page === plage.page && t.ordinal >= plage.ordinal && t.ordinal <= fin)
+    .sort((a, b) => a.ordinal - b.ordinal);
+  const premier = cites[0];
+  if (!premier) return null;
+  const texte = texteDeLaPlage(cites);
+  // Les fermantes que la plage ne ferme pas elle-même.
+  let profondeur = 0;
+  let orphelines = 0;
+  for (const c of texte) {
+    if (c === "(") profondeur += 1;
+    else if (c === ")") {
+      if (profondeur > 0) profondeur -= 1;
+      else orphelines += 1;
+    }
+  }
+  if (orphelines !== 1 || profondeur !== 0) return texte;
+  const avant = tokens
+    .filter(
+      (t) =>
+        t.page === plage.page &&
+        t.ordinal < plage.ordinal &&
+        Math.abs(t.y0 - premier.y0) <= TOLERANCE_DE_LIGNE,
+    )
+    .sort((a, b) => a.ordinal - b.ordinal)
+    .map((t) => t.text)
+    .join(" ");
+  // L'ouvrante non fermée la plus proche, à gauche de la plage.
+  let ferme = 0;
+  for (let i = avant.length - 1; i >= 0; i -= 1) {
+    const c = avant[i];
+    if (c === ")") ferme += 1;
+    else if (c === "(") {
+      if (ferme > 0) {
+        ferme -= 1;
+        continue;
+      }
+      return /^\p{L}/u.test(avant.slice(i + 1)) ? texte.replace(/\)(?=[^)]*$)/u, "") : texte;
+    }
+  }
+  return texte;
+}
 
 /**
  * Filtre du plan de tokens : traduit une désignation de token en valeur.
@@ -374,7 +421,11 @@ export function lireMontantDuPlan(
   }
   const plage = jetonsDeLaPlage(tokens, ref, token);
   const citation = citer(plage, field, "montant", zone, binding);
-  const texte = texteDeLaPlage(plage);
+  const texte = texteDuMontantCite(tokens, {
+    page: plage[0]!.page,
+    ordinal: plage[0]!.ordinal,
+    ordinalEnd: plage[plage.length - 1]!.ordinal,
+  })!;
 
   /*
    * LE MONTANT EST-IL ENTIER ? La question vient AVANT sa lecture.
@@ -420,7 +471,7 @@ export function lireMontantDuPlan(
   }
   if (hypotheses.length === 1) {
     return {
-      value: enDecimal(hypotheses[0]!.millimes, devise.decimales),
+      value: depuisUniteMineure(hypotheses[0]!.millimes, devise.decimales),
       citation,
       flag: null,
       hypotheses,
@@ -432,7 +483,7 @@ export function lireMontantDuPlan(
     flag: {
       field,
       code: "SEPARATEUR_AMBIGU",
-      detail: `« ${texte} » se lit ${hypotheses.map((h) => enDecimal(h.millimes, devise.decimales)).join(" ou ")}`,
+      detail: `« ${texte} » se lit ${hypotheses.map((h) => depuisUniteMineure(h.millimes, devise.decimales)).join(" ou ")}`,
     },
     hypotheses,
   };

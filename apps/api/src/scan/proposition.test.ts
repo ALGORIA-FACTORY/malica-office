@@ -284,6 +284,11 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
    * citation de la ligne couvrait deux colonnes — HT et total de la ligne —
    * plus une parenthèse parasite. 3 020,000 + 573,800 (19 %) + 1,000 (timbre)
    * = 3 594,800 : le total de l'en-tête.
+   *
+   * La parenthèse n'est du bruit que parce que le plan montre ce qu'elle
+   * ferme : « (base », un mot que la citation a laissé dehors. Sans lui, elle
+   * peut fermer un avoir « (3 020,000) », et rien ne se lit (revue de la
+   * PR 144) — l'épreuve suivante.
    */
   const FACTURE_DU_29 = {
     ht: ["3", "020,000"] as [string, string],
@@ -297,6 +302,7 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
       lecture({
         numero: "P-DEUX-COLONNES",
         ...FACTURE_DU_29,
+        avantLaLigne: ["(base"],
         ligne: ["3", "020,000", "3", "020,000)"],
       }),
     );
@@ -310,6 +316,23 @@ describe("3B-6 — la proposition d'écriture, côté serveur", { skip: !BASE_CO
     assert.ok(debits.includes("3020.000"), `HT : ${debits.join(", ")}`);
     assert.ok(debits.includes("573.800"), "TVA");
     assert.ok(debits.includes("1.000"), "timbre");
+  });
+
+  it("la même ligne, sans le mot que ferme la parenthèse : la ligne ne se lit pas, le pied la remplace avec réserve", async () => {
+    // Revue de la PR 144 : « 3 020,000) » sans « (base » devant peut être un
+    // avoir coupé par la citation. La ligne ne se lit plus ; le HT du pied,
+    // que la facture entière vérifie, la remplace — et la réserve le dit.
+    const piece = await pieceLue(
+      "deux-colonnes-sans-mot",
+      lecture({
+        numero: "P-DEUX-COLONNES-SANS-MOT",
+        ...FACTURE_DU_29,
+        ligne: ["3", "020,000", "3", "020,000)"],
+      }),
+    );
+    const r = (await rpc("office", "propositionDePiece", piece)) as Proposition;
+    assert.ok(r.ok, r.ok ? "" : r.raison);
+    assert.equal(r.verdict, "à comptabiliser avec réserve");
   });
 
   it("la ligne illisible, le pied lisible et vérifié : l'écriture se propose depuis le pied, avec réserve", async () => {

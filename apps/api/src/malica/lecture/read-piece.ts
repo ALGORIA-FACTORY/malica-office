@@ -26,14 +26,16 @@ import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import { CLE_CONFIANCE_GLOBALE } from "@malica/socle/contracts/extract.v1";
 import { empruntAuVocabulaireReserve, lireLeSens } from "@malica/socle/sens-de-la-piece";
 import { D, toFixedStr } from "@malica/socle/domain/decimal";
+import { deviseDeLaPiece, type DeviseLue } from "@malica/socle/montant-imprime";
+import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../../fabrique/recette.ts";
-import { enDecimal, type DeviseLue } from "../../scan/normaliser-montants.ts";
 
 import { resoudreFacture, type Contrainte } from "./montants.ts";
 import {
   lireMontantDuPlan,
   resolveFromTokenPlan,
+  texteDuMontantCite,
   type FieldCitation,
   type PageToken,
   type ReadFlag,
@@ -63,8 +65,15 @@ type Ref = TokenRef | null | undefined;
 export function buildExtractFromTokenPlan(params: {
   tokens: readonly PageToken[];
   selection: VisionSelection;
-  /** Décimales et marques de la devise, du référentiel (jamais du code). */
-  devise: DeviseLue;
+  /**
+   * Toutes les devises du référentiel (`lireLesDevises`) : exposant,
+   * séparateur décimal, marques. Celle de la PIÈCE se décide ici, par
+   * `deviseDeLaPiece` — la règle même du jugement —, et jamais par le dossier
+   * seul (revue de la PR 144).
+   */
+  devises: readonly DeviseLue[];
+  /** La devise du dossier : celle de la pièce quand rien d'autre ne la dit. */
+  deviseDuDossier: string;
   /*
    * Le matricule de la fiche du dossier. OBLIGATOIRE, et null quand la fiche
    * n'en porte pas — jamais absent du paramètre.
@@ -76,10 +85,42 @@ export function buildExtractFromTokenPlan(params: {
    */
   matriculeDossier: string | null;
 }): BuiltRead {
-  const { tokens, selection, devise } = params;
-  const decimals = devise.decimales;
+  const { tokens, selection, devises, deviseDuDossier } = params;
   const citations: FieldCitation[] = [];
   const flags: ReadFlag[] = [];
+
+  /* ------------------------------------ 0. la devise de la pièce */
+
+  const refsDesMontants: Ref[] = [
+    ...selection.lines.flatMap((l) => [l.base_ht, l.vat_amount, l.ttc]),
+    selection.totals.base_ht,
+    selection.totals.vat,
+    selection.totals.ttc,
+    ...selection.articles.flatMap((a) => [
+      a.quantity,
+      a.unit_price_ht,
+      a.unit_price_ttc,
+      a.total_ht,
+    ]),
+    ...selection.other_charges.map((c) => c.amount),
+  ];
+  const decidee = deviseDeLaPiece(
+    selection.currency,
+    refsDesMontants.map((r) => (r ? texteDuMontantCite(tokens, r) : null)),
+    devises[0]?.marques ?? [],
+    deviseDuDossier,
+  );
+  if (decidee.code === null)
+    flags.push({ field: "currency", code: "DEVISE_INCOHERENTE", detail: decidee.raison });
+  // La devise qui LIT les montants : celle de la pièce ; quand elle ne se
+  // décide pas, ou que le référentiel ne la connaît pas, celle du dossier —
+  // et le jugement, qui relit les mêmes textes, refuse.
+  const codeLu = decidee.code ?? selection.currency?.toUpperCase() ?? deviseDuDossier;
+  const trouvee =
+    devises.find((d) => d.code === codeLu) ?? devises.find((d) => d.code === deviseDuDossier);
+  if (!trouvee) throw new Error(`devise du dossier « ${deviseDuDossier} » absente du référentiel`);
+  const devise: DeviseLue = trouvee;
+  const decimals = devise.decimales;
 
   /* ------------------------------------ 1. le relevé et ses équations */
 
@@ -140,8 +181,8 @@ export function buildExtractFromTokenPlan(params: {
     if (lue.hypotheses.every((h) => Math.abs(h.millimes) > plafond)) {
       invraisemblables.set(
         tva,
-        `TVA lue ${lue.hypotheses.map((h) => enDecimal(h.millimes, decimals)).join(" ou ")}, ` +
-          `plus grande que la base de sa ligne ${enDecimal(plafond, decimals)} : l'une des deux est mal lue`,
+        `TVA lue ${lue.hypotheses.map((h) => depuisUniteMineure(h.millimes, decimals)).join(" ou ")}, ` +
+          `plus grande que la base de sa ligne ${depuisUniteMineure(plafond, decimals)} : l'une des deux est mal lue`,
       );
       treillis.set(tva, { ...lue, hypotheses: [] });
     }
@@ -246,7 +287,7 @@ export function buildExtractFromTokenPlan(params: {
 
     const decide = resolution.valeurs.get(field);
     if (m.hypotheses.length > 1 && decide?.decidePar === "arithmetique") {
-      const valeur = enDecimal(decide.millimes, decimals);
+      const valeur = depuisUniteMineure(decide.millimes, decimals);
       flags.push({
         field,
         code: "DECIDE_PAR_ARITHMETIQUE",
@@ -491,7 +532,7 @@ export function buildExtractFromTokenPlan(params: {
     // validation du contrat et pouvaient finir dans une écriture (3B, 18 sept.).
     issuer: issuer ?? null,
     document_date: documentDate ?? null,
-    currency: selection.currency.toUpperCase(),
+    currency: codeLu,
     lines,
     articles,
     other_charges: otherCharges,
@@ -540,8 +581,8 @@ export function buildExtractFromTokenPlan(params: {
       field: v.champ,
       code: "ARITHMETIQUE_INCOHERENTE",
       detail:
-        `${v.parties.join(v.operation === "produit" ? " × " : " + ")} donne ${enDecimal(v.calcule, decimals)}, ` +
-        `la pièce porte ${enDecimal(v.lu, decimals)}`,
+        `${v.parties.join(v.operation === "produit" ? " × " : " + ")} donne ${depuisUniteMineure(v.calcule, decimals)}, ` +
+        `la pièce porte ${depuisUniteMineure(v.lu, decimals)}`,
     });
   }
 

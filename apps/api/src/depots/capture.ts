@@ -31,11 +31,10 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireMarquesDeDevise, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, lireLesDevises, lireParametres } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import { dateDeLaPiece } from "./dates.ts";
-import { referentiel } from "./referentiel.ts";
 import { COLONNES_DU_SUIVI, versSuivi } from "./suivi.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
@@ -657,10 +656,13 @@ export const capture = {
     const packId = (packs as Record<string, unknown>[])[0]?.["id"] as string | undefined;
     if (!packId) throw new Error("pack.absent");
 
-    // L'échelle de la devise vient du pack, pas du code. La lecture des
-    // montants s'en sert pour décider si un texte est ambigu : « 2.800 » se lit
-    // de deux façons à trois décimales, d'une seule à deux.
-    const { moneyDecimals } = await referentiel.socleParams(db, packId);
+    // Toutes les devises du référentiel : exposant, séparateur décimal,
+    // marques imprimées. La relecture décide de celle de la PIÈCE
+    // (`deviseDeLaPiece`), comme le jugement — et non plus de celle du
+    // dossier seule (revue de la PR 144) : « 2.800 » se lit de deux façons à
+    // trois décimales, « 100,000 » d'une seule quand la virgule est le
+    // séparateur décimal de la devise, et « 100,00 € » n'est pas en dinars.
+    const devises = await lireLesDevises(db);
 
     const [{ rows: taux }, { rows: charges }, { rows: tiers }] = await Promise.all([
       db.query(`select code, label, rate from ref_tva_rates_v where pack_version_id = $1`, [
@@ -688,8 +690,7 @@ export const capture = {
       },
       jurisdiction,
       currency: org["currency"] as string,
-      moneyDecimals,
-      marquesDevise: await lireMarquesDeDevise(db),
+      devises,
       dossier: {
         raisonSociale: (org["name"] as string) ?? "",
         identifiantFiscal: (org["legal_id"] as string | null) ?? null,
