@@ -59,6 +59,7 @@ export const GRILLE_DE_LA_LECTURE_CITEE = "facture";
 const CHAMP = {
   ht: "total_ht",
   ttc: "total_ttc",
+  net: "net_a_payer",
   base: "base_tva_par_taux",
   tva: "montant_tva_par_taux",
 } as const;
@@ -141,8 +142,8 @@ export async function lireLeContexteDuSudoku(
          from ref_grille_champs_v where grille_id = $1 order by code`,
       [grilleId],
     ),
-    db.query<{ code: string; expression: unknown; statut: string }>(
-      `select code, expression, statut from ref_grille_preuves_v
+    db.query<{ code: string; expression: unknown; statut: string; variante: string | null }>(
+      `select code, expression, statut, variante from ref_grille_preuves_v
         where grille_id = $1 and expression is not null order by code`,
       [grilleId],
     ),
@@ -223,6 +224,7 @@ export async function lireLeContexteDuSudoku(
         code: p.code,
         expression: p.expression,
         statut: p.statut,
+        variante: p.variante,
       })),
     },
     pack: {
@@ -233,6 +235,54 @@ export async function lireLeContexteDuSudoku(
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
     },
   };
+}
+
+/* ============================================ LES VARIANTES D'UNE GRILLE === */
+
+/**
+ * Résoudre une pièce avec toutes les variantes de sa grille.
+ *
+ * Une même pièce s'imprime de plusieurs façons (le timbre dans le TTC, ou
+ * après lui) : la grille porte des preuves communes et des preuves propres à
+ * chaque variante, en base. Chaque variante se joue seule ; la pièce est
+ * prouvée si toutes celles qui la prouvent s'accordent sur ses montants, et
+ * ambiguë si deux la prouvent autrement. L'unicité reste la preuve.
+ */
+export function resoudreLaPiece(
+  jetons: readonly JetonDuSudoku[],
+  contexte: ContexteDuSudoku,
+  moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
+): SortieDuSudoku {
+  const { grille, pack } = contexte;
+  const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
+  if (noms.length === 0) return moteur({ jetons, grille, pack });
+
+  const jouees = noms.map((variante) => ({
+    variante,
+    sortie: moteur({
+      jetons,
+      pack,
+      grille: {
+        ...grille,
+        preuves: grille.preuves.filter((p) => !p.variante || p.variante === variante),
+      },
+    }),
+  }));
+  const prouvees = jouees.filter((j) => j.sortie.issue === "prouvee");
+  if (prouvees.length === 0) {
+    const ambigue = jouees.find((j) => j.sortie.issue === "ambigue");
+    return (ambigue ?? jouees[0]!).sortie;
+  }
+  const empreinte = (o: SortieDuSudoku) =>
+    JSON.stringify([
+      o.champs[CHAMP.ht]?.valeur ?? null,
+      (o.champs[CHAMP.tva]?.instances ?? []).map((i) => [i.taux, i.valeur]),
+    ]);
+  const premiere = prouvees[0]!;
+  if (prouvees.some((j) => empreinte(j.sortie) !== empreinte(premiere.sortie))) {
+    return { ...premiere.sortie, issue: "ambigue", solutions: prouvees.length };
+  }
+  return { ...premiere.sortie, variante: premiere.variante };
 }
 
 /* ============================================ LA SÉLECTION, PAR LA PREUVE === */
@@ -298,7 +348,14 @@ export function selectionParLeSudoku(
     totals: {
       base_ht: ref(c[CHAMP.ht]?.refs),
       vat: montants.length === 1 ? ref(montants[0]!.refs) : selection.totals.vat,
-      ttc: ref(c[CHAMP.ttc]?.refs),
+      // Le TTC de la chaîne est le montant qui ferme HT + TVA + droits : sur une
+      // pièce qui imprime son TTC AVANT le timbre, c'est le net à payer prouvé.
+      ttc: ref(
+        (c[CHAMP.net]?.statut === "prouve" && c[CHAMP.net]?.refs.length
+          ? c[CHAMP.net]
+          : c[CHAMP.ttc]
+        )?.refs,
+      ),
     },
   };
 }
@@ -421,12 +478,10 @@ export function creerLeSudoku(
         ]);
         const { grille, pack } = await contexte;
         if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
-        const entree: EntreeDuSudoku = {
-          jetons: jetonsDuSudoku(lecture.tokens, piece.devise),
+        const sortie = resoudreLaPiece(jetonsDuSudoku(lecture.tokens, piece.devise), {
           grille,
           pack,
-        };
-        const sortie = resoudre(entree);
+        });
         const aInscrire = champsLusAInscrire(piece.pieceId, grille.code, sortie);
 
         const rendue: VisionRead =

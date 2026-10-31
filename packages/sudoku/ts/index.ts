@@ -46,6 +46,8 @@ export interface PreuveDeGrille {
   readonly code: string;
   readonly expression: unknown;
   readonly statut: string;
+  /** Nulle : la preuve vaut pour toute la grille. Nommée : pour cette variante seule. */
+  readonly variante?: string | null;
 }
 
 export interface Grille {
@@ -97,6 +99,8 @@ export interface ChampLu {
 
 export interface SortieDuSudoku {
   readonly issue: "prouvee" | "ambigue" | "aucune";
+  /** La variante de la grille qui a prouvé la pièce, quand la grille en a. */
+  readonly variante?: string;
   readonly solutions: number;
   readonly champs: Readonly<Record<string, ChampLu>>;
   readonly preuves: Readonly<Record<string, string>>;
