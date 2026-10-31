@@ -9,6 +9,8 @@
 --   2. `malica.piece_effacable` et `malica.paiements_effacables`, par lesquels
 --      `capture_piece_supprimer` laissait passer l'effacement des faits d'une
 --      pièce (R7). Même classe : ils deviennent un fait de la transaction.
+-- Et `piece_remplacer` clôt désormais une demande en attente à son étape
+-- (au propriétaire ou au comptable), lue par `app.etat_des_demandes`.
 
 begin;
 
@@ -109,14 +111,12 @@ begin
   -- les lit à travers la version courante.
 
   -- Une demande en attente sur l'ancienne n'a plus d'objet : on inscrit le
-  -- fait qui la clôt — la ligne « demandee » reste, R7.
-  insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur)
-  select a.tenant_id, p_ancienne, d.objet, 'retiree', null, auth.uid()
-    from (select distinct on (x.objet) x.objet, x.fait
-            from collab.demandes_sur_piece x
-           where x.piece_id = p_ancienne
-           order by x.objet, x.created_at desc) d
-   where d.fait = 'demandee';
+  -- fait qui la clôt, À SON ÉTAPE (au propriétaire, au comptable) — la ligne
+  -- « demandee » reste, R7. L'état se lit par étape (`app.etat_des_demandes`).
+  insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur, etape)
+  select a.tenant_id, p_ancienne, e.objet, 'retiree', null, auth.uid(), e.etape
+    from app.etat_des_demandes(p_ancienne) e
+   where e.fait = 'demandee';
 
   perform app.piece_oublie_ses_propositions(p_ancienne);
 

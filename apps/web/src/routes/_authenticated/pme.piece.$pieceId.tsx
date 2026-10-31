@@ -634,10 +634,10 @@ function PieceScreen() {
     },
   });
 
-  // L'état des demandes, s'il y en a : leur dernier fait, par objet.
+  // L'état des demandes, par objet et par étape, tel que la base le lit.
   const demandes = useQuery({
     queryKey: ["demandes-piece", pieceId],
-    queryFn: () => office().collab.demandesDUnePiece(pieceId),
+    queryFn: () => office().collab.etatDesDemandes(pieceId),
   });
   /*
    * Ce que le circuit propose ici (lot 4) : les droits du référentiel, le

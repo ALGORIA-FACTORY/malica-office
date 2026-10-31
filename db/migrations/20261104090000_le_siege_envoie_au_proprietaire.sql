@@ -1748,9 +1748,29 @@ comment on column collab.demandes_sur_piece.etape is
 create index if not exists demandes_sur_piece_etape_idx
   on collab.demandes_sur_piece (tenant_id, piece_id, etape, objet, created_at desc);
 
--- La vue garde ses colonnes ; l'étape s'ajoute à la fin.
+-- L'accord du propriétaire qui a fait partir la demande chez le comptable. Un
+-- FAIT, posé par la porte qui tranche (`piece_repondre`) : l'écran ne le
+-- devine plus en comparant des heures (revue Codex de #146 — la demande déjà
+-- en attente chez le comptable, réutilisée, était plus ancienne que l'accord,
+-- et l'écran proposait une seconde demande).
+alter table collab.demandes_sur_piece
+  add column if not exists transmise boolean not null default false;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'demandes_sur_piece_transmise_check') then
+    alter table collab.demandes_sur_piece
+      add constraint demandes_sur_piece_transmise_check
+      check (not transmise or (fait = 'accordee' and etape = 'proprietaire'));
+  end if;
+end $$;
+
+comment on column collab.demandes_sur_piece.transmise is
+  'Accordée par le propriétaire sur une pièce chez le comptable : la demande y est partie (étape cabinet).';
+
+-- La vue garde ses colonnes ; l'étape et la transmission s'ajoutent à la fin.
 create or replace view public.demandes_sur_piece_v with (security_invoker = true) as
-  select id, tenant_id, piece_id, objet, fait, note, auteur, created_at, etape
+  select id, tenant_id, piece_id, objet, fait, note, auteur, created_at, etape, transmise
     from collab.demandes_sur_piece;
 
 -- Le comptable ne lit que les demandes qui lui sont faites ; la société, celles
@@ -1762,7 +1782,57 @@ create policy collab_demandes_sur_piece_sel on collab.demandes_sur_piece
          or (etape = 'cabinet' and tenant_id in (select app.engaged_orgs()))
          or (select app.is_platform()));
 
--- Le dernier fait d'une demande, à une étape.
+-- L'ÉTAT des demandes d'une pièce : le dernier fait par objet ET par étape,
+-- sur toute la chaîne des versions. La seule lecture de cet état — la garde
+-- d'inscription, l'accord du comptable, les portes qui demandent et qui
+-- tranchent, la file du cabinet et l'écran la lisent toutes ici (revue Codex
+-- de #146 : « le dernier fait », toutes étapes confondues, faisait de la
+-- décision du propriétaire sur la demande d'un siège l'état d'un rappel encore
+-- en attente chez le comptable). `demandeur` : qui a fait la demande en cours
+-- à cette étape.
+create or replace function app.etat_des_demandes(p_piece uuid)
+returns table (objet text, etape text, fait text, note text, created_at timestamptz,
+               auteur uuid, transmise boolean, demandeur uuid)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select distinct on (d.objet, d.etape)
+         d.objet, d.etape, d.fait, d.note, d.created_at, d.auteur, d.transmise,
+         (select x.auteur from collab.demandes_sur_piece x
+           where x.piece_id in (select app.versions_de_la_piece(p_piece))
+             and x.objet = d.objet and x.etape = d.etape and x.fait = 'demandee'
+           order by x.created_at desc, x.id desc limit 1)
+    from collab.demandes_sur_piece d
+   where d.piece_id in (select app.versions_de_la_piece(p_piece))
+   order by d.objet, d.etape, d.created_at desc, d.id desc
+$$;
+
+revoke all on function app.etat_des_demandes(uuid) from public, anon, authenticated;
+
+-- Ce que l'écran en lit : la société, l'état des pièces qu'elle lit ; le
+-- comptable, la seule étape qui lui est faite.
+create or replace function app.etat_des_demandes_lisible(p_piece uuid)
+returns table (objet text, etape text, fait text, note text, created_at timestamptz,
+               transmise boolean)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select e.objet, e.etape, e.fait, e.note, e.created_at, e.transmise
+    from app.etat_des_demandes(p_piece) e
+   where app.piece_lisible(p_piece)
+     and (e.etape = 'cabinet'
+          or (select tenant_id from capture.pieces where id = p_piece)
+             in (select app.member_orgs()))
+$$;
+
+revoke all on function app.etat_des_demandes_lisible(uuid) from public, anon;
+grant execute on function app.etat_des_demandes_lisible(uuid) to authenticated;
+
+-- L'état d'une demande, à une étape.
 create or replace function app.derniere_demande(p_piece uuid, p_objet text, p_etape text)
 returns table (fait text, created_at timestamptz, auteur uuid)
 language sql
@@ -1770,11 +1840,9 @@ stable
 security definer
 set search_path = ''
 as $$
-  select d.fait, d.created_at, d.auteur
-    from collab.demandes_sur_piece d
-   where d.piece_id = p_piece and d.objet = p_objet and d.etape = p_etape
-   order by d.created_at desc, d.id desc
-   limit 1
+  select e.fait, e.created_at, e.demandeur
+    from app.etat_des_demandes(p_piece) e
+   where e.objet = p_objet and e.etape = p_etape
 $$;
 
 revoke all on function app.derniere_demande(uuid, text, text) from public, anon;
@@ -1799,13 +1867,33 @@ as $$
             and e.starts_on <= current_date
             and (e.ends_on is null or e.ends_on >= current_date))
        or coalesce((
-         select d.fait = 'accordee'
-                and d.created_at >= coalesce(pc.transmise_le, '-infinity'::timestamptz)
-           from collab.demandes_sur_piece d
-           join capture.pieces pc on pc.id = d.piece_id
-          where d.piece_id = p_piece and d.objet = p_objet and d.etape = 'cabinet'
-          order by d.created_at desc
-          limit 1), false))
+         select e.fait = 'accordee'
+                and e.created_at >= coalesce(pc.transmise_le, '-infinity'::timestamptz)
+           from app.etat_des_demandes(p_piece) e
+           join capture.pieces pc on pc.id = p_piece
+          where e.objet = p_objet and e.etape = 'cabinet'), false))
+$$;
+
+-- Rien ne s'inscrit sous un rappel EN ATTENTE CHEZ LE COMPTABLE. Repris de
+-- `20261029180000`, l'état par étape au lieu du dernier fait : la demande d'un
+-- siège au propriétaire ne regarde pas le comptable, et la décision du
+-- propriétaire sur elle ne lève pas la sienne.
+create or replace function app.pas_d_inscription_sous_rappel()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.piece_id is not null
+     and new.reverses_id is null
+     and (tg_op = 'INSERT' or (old.status = 'proposee' and new.status = 'booked'))
+     and exists (select 1 from app.etat_des_demandes(new.piece_id) e
+                  where e.objet = 'rappel' and e.etape = 'cabinet' and e.fait = 'demandee') then
+    raise exception 'refus.piece.rappelEnAttente' using errcode = 'check_violation';
+  end if;
+  return new;
+end
 $$;
 
 -- Demander. Le siège demande au propriétaire — pour une pièce partie chez lui,
@@ -1940,12 +2028,15 @@ begin
     end if;
     v_demandeur := v_dernier.auteur;
 
-    insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur, etape)
+    -- Accordée sur une pièce chez le comptable, la demande y part : un fait.
+    v_relayee := p_accorde and v_vis = 'partage'::app.vis_t;
+    insert into collab.demandes_sur_piece (tenant_id, piece_id, objet, fait, note, auteur, etape,
+                                           transmise)
     values (v_tenant, p_piece, p_objet,
             case when p_accorde then 'accordee' else 'refusee' end, p_note, auth.uid(),
-            'proprietaire');
+            'proprietaire', v_relayee);
 
-    if p_accorde and v_vis = 'partage'::app.vis_t then
+    if v_relayee then
       -- Chez le comptable : la demande part d'elle-même, au nom du propriétaire.
       if (select d.fait from app.derniere_demande(p_piece, p_objet, 'cabinet') d)
          is distinct from 'demandee' then
@@ -1958,7 +2049,6 @@ begin
         values (v_tenant, 'piece.demande',
                 jsonb_build_object('piece_id', p_piece, 'objet', p_objet));
       end if;
-      v_relayee := true;
     elsif p_accorde and p_objet = 'rappel' then
       -- Rendue au siège, dans la société : à envoyer de nouveau.
       insert into capture.circuit (tenant_id, piece_id, fait, par, par_nom)
@@ -2004,15 +2094,11 @@ begin
           jsonb_build_object('piece_id', p_piece, 'objet', p_objet, 'accorde', p_accorde,
                              'note', p_note));
 
-  -- La demande venait d'un siège, par son propriétaire : il apprend la réponse.
-  select d.auteur into v_demandeur
-    from collab.demandes_sur_piece d
-   where d.piece_id = p_piece and d.objet = p_objet and d.etape = 'proprietaire'
-     and d.fait = 'demandee'
-     and exists (select 1 from collab.demandes_sur_piece a
-                  where a.piece_id = p_piece and a.objet = p_objet and a.etape = 'proprietaire'
-                    and a.fait = 'accordee' and a.created_at >= d.created_at)
-   order by d.created_at desc limit 1;
+  -- La demande venait d'un siège, que son propriétaire a fait partir ici : il
+  -- apprend la réponse. L'état par étape le dit (`transmise`).
+  select e.demandeur into v_demandeur
+    from app.etat_des_demandes(p_piece) e
+   where e.objet = p_objet and e.etape = 'proprietaire' and e.transmise;
   if v_demandeur is not null then
     insert into collab.notifications (tenant_id, user_id, kind, payload)
     values (v_tenant, v_demandeur, 'piece.demande_tranchee',

@@ -10,7 +10,7 @@ import type {
   DemandeSurPiece,
   Droit,
   EtapeDeDemande,
-  FaitDeDemande,
+  EtatDeDemande,
   Visibility,
 } from "@malica/socle/ports/repositories";
 import type { CircuitInterne, StatutDuCircuit } from "@malica/socle/statut-d-envoi";
@@ -126,43 +126,40 @@ export function carteDuRecu(
 
 /** L'état d'une demande, tel que la personne qui l'a faite le lit. */
 export interface EtatDeMaDemande {
-  fait: FaitDeDemande["fait"];
+  fait: EtatDeDemande["fait"];
   note: string | null;
   createdAt: string;
   /**
    * Accordée par le propriétaire sur une pièce déjà chez le comptable : la
-   * demande y est partie d'elle-même (« Demande transmise à {cabinet} »), et
-   * c'est désormais la réponse du comptable que la personne attend.
+   * demande y est partie (« Demande transmise à {cabinet} »), et c'est
+   * désormais la réponse du comptable que la personne attend.
    */
   transmise: boolean;
 }
 
 /**
- * Le dernier fait de MA demande, à l'étape où je la fais. Les faits viennent
- * du plus récent au plus ancien (`collab.demandesDUnePiece`).
+ * MA demande, à l'étape où je la fais, d'après l'état que la base lit par
+ * étape (`collab.etatDesDemandes`). Transmise, c'est l'étape « cabinet » qui
+ * répond : la base le dit par un fait, l'écran ne compare aucune heure (revue
+ * Codex de #146).
  */
 export function etatDeMaDemande(
-  faits: readonly FaitDeDemande[],
+  etats: readonly EtatDeDemande[],
   objet: DemandeSurPiece,
   etape: EtapeDeDemande | null,
 ): EtatDeMaDemande | null {
   if (!etape) return null;
-  const duMeme = faits.filter((f) => f.objet === objet);
-  const mienne = duMeme.find((f) => f.etape === etape);
+  const a = (e: EtapeDeDemande) => etats.find((x) => x.objet === objet && x.etape === e);
+  const mienne = a(etape);
   if (!mienne) return null;
-  if (etape === "proprietaire" && mienne.fait === "accordee") {
-    const auComptable = duMeme.find(
-      (f) => f.etape === "cabinet" && Date.parse(f.createdAt) >= Date.parse(mienne.createdAt),
-    );
-    if (auComptable)
-      return {
-        fait: auComptable.fait,
-        note: auComptable.note,
-        createdAt: auComptable.createdAt,
-        transmise: true,
-      };
-  }
-  return { fait: mienne.fait, note: mienne.note, createdAt: mienne.createdAt, transmise: false };
+  const auComptable = mienne.transmise ? a("cabinet") : undefined;
+  const lue = auComptable ?? mienne;
+  return {
+    fait: lue.fait,
+    note: lue.note,
+    createdAt: lue.createdAt,
+    transmise: Boolean(auComptable),
+  };
 }
 
 /**
@@ -170,13 +167,13 @@ export function etatDeMaDemande(
  * propriétaire tranche ; l'écran ne la montre qu'à qui reçoit.
  */
 export function demandeDuSiegeATrancher(
-  faits: readonly FaitDeDemande[],
+  etats: readonly EtatDeDemande[],
   droits: readonly Droit[],
 ): DemandeSurPiece | null {
   if (!a(droits, "circuit.recevoir")) return null;
   return (
-    OBJETS.find(
-      (o) => faits.find((f) => f.objet === o && f.etape === "proprietaire")?.fait === "demandee",
+    OBJETS.find((o) =>
+      etats.some((e) => e.objet === o && e.etape === "proprietaire" && e.fait === "demandee"),
     ) ?? null
   );
 }

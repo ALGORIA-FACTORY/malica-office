@@ -898,6 +898,21 @@ export interface FaitDeDemande {
   etape: EtapeDeDemande;
 }
 
+/**
+ * L'ÉTAT d'une demande à une étape : son dernier fait, lu par la base
+ * (`app.etat_des_demandes`). `transmise` : accordée par le propriétaire sur une
+ * pièce chez le comptable, elle y est partie — c'est alors l'état de l'étape
+ * « cabinet » que son auteur attend.
+ */
+export interface EtatDeDemande {
+  objet: DemandeSurPiece;
+  etape: EtapeDeDemande;
+  fait: FaitDeDemande["fait"];
+  note: string | null;
+  createdAt: string;
+  transmise: boolean;
+}
+
 /** Un paiement inscrit sur une pièce. Un fait, jamais réécrit (R7). */
 export interface PaiementDUnePiece {
   /** Dette éteinte comptabilisée, net + retenues qualifiées ; jamais le montant du reçu. */
@@ -2464,8 +2479,10 @@ export interface CollabRepository {
     accorde: boolean,
     note?: string | null,
   ): Promise<void>;
-  /** Les faits d'une demande, du plus récent au plus ancien. L'état courant est le premier. */
+  /** Les faits d'une demande, du plus récent au plus ancien : son histoire. */
   demandesDUnePiece(pieceId: string): Promise<FaitDeDemande[]>;
+  /** L'état des demandes, par objet et par étape : ce que l'écran décide. */
+  etatDesDemandes(pieceId: string): Promise<EtatDeDemande[]>;
 }
 
 /** Une pièce de son Mon espace, d'une société qu'il a quittée : elle part avec son compte. */

@@ -7,6 +7,13 @@
  * il n'y a pas de vérification d'appartenance dans ce fichier.
  */
 
+import type {
+  DemandeSurPiece,
+  EtapeDeDemande,
+  EtatDeDemande,
+  FaitDeDemande,
+} from "@malica/socle/ports/repositories";
+
 import type { Requete } from "../db.ts";
 
 /** Une invitation reçue, vue par la personne qui peut la rejoindre. */
@@ -542,6 +549,35 @@ export const collab = {
       accorde,
       note ?? null,
     ]);
+  },
+
+  /**
+   * L'ÉTAT des demandes d'une pièce : le dernier fait par objet et par étape,
+   * tel que la base le lit (`app.etat_des_demandes`) — la garde d'inscription
+   * et les portes lisent le même. L'écran n'en refait aucune interprétation.
+   */
+  async etatDesDemandes(db: Requete, pieceId: string): Promise<EtatDeDemande[]> {
+    const { rows } = await db.query<{
+      objet: DemandeSurPiece;
+      etape: EtapeDeDemande;
+      fait: FaitDeDemande["fait"];
+      note: string | null;
+      created_at: Date;
+      transmise: boolean;
+    }>(
+      `select objet, etape, fait, note, created_at, transmise
+         from app.etat_des_demandes_lisible($1)
+        order by objet, etape`,
+      [pieceId],
+    );
+    return rows.map((r) => ({
+      objet: r.objet,
+      etape: r.etape,
+      fait: r.fait,
+      note: r.note,
+      createdAt: r.created_at.toISOString(),
+      transmise: r.transmise,
+    }));
   },
 
   /** Les demandes portées sur une pièce, du fait le plus récent au plus ancien. */

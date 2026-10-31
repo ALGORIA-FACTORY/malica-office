@@ -1,4 +1,4 @@
-import type { Droit, FaitDeDemande } from "@malica/socle/ports/repositories";
+import type { Droit, EtatDeDemande } from "@malica/socle/ports/repositories";
 import { statutDuCircuit, type CircuitInterne } from "@malica/socle/statut-d-envoi";
 import { describe, expect, it } from "vitest";
 
@@ -46,12 +46,14 @@ const piece = (
   return { ...base, statut: statutDuCircuit({ ...base, suivi: null }) };
 };
 
-const fait = (f: Partial<FaitDeDemande>): FaitDeDemande => ({
+/** L'état d'une demande à une étape, tel que `collab.etatDesDemandes` le rend. */
+const fait = (f: Partial<EtatDeDemande>): EtatDeDemande => ({
   objet: "rappel",
   fait: "demandee",
   note: null,
   createdAt: "2026-10-30T10:00:00.000Z",
   etape: "proprietaire",
+  transmise: false,
   ...f,
 });
 
@@ -178,34 +180,80 @@ describe("la carte de retour : qui renvoie", () => {
 
 describe("ma demande, et sa transmission au comptable", () => {
   it("accordée par le propriétaire sur une pièce chez le comptable : « Demande transmise »", () => {
-    const faits = [
+    const etats = [
       fait({ etape: "cabinet", createdAt: "2026-10-30T11:00:00.000Z", fait: "demandee" }),
-      fait({ fait: "accordee", createdAt: "2026-10-30T11:00:00.000Z" }),
-      fait({}),
+      fait({ fait: "accordee", createdAt: "2026-10-30T11:00:00.000Z", transmise: true }),
     ];
-    expect(etatDeMaDemande(faits, "rappel", "proprietaire")).toMatchObject({
+    expect(etatDeMaDemande(etats, "rappel", "proprietaire")).toMatchObject({
       fait: "demandee",
       transmise: true,
     });
   });
 
-  it("accordée sur une pièce chez lui : c'est fini, rien n'est transmis", () => {
-    const faits = [fait({ fait: "accordee", createdAt: "2026-10-30T11:00:00.000Z" }), fait({})];
-    expect(etatDeMaDemande(faits, "rappel", "proprietaire")).toMatchObject({
+  /*
+   * Revue Codex de #146 : la demande du propriétaire au comptable, déjà en
+   * attente, est réutilisée par l'accord ; elle est PLUS ANCIENNE que lui.
+   * La base dit « transmise » : l'écran ne compare pas les heures.
+   */
+  it("la demande du comptable déjà en attente, plus ancienne que l'accord, est bien celle qu'on attend", () => {
+    const etats = [
+      fait({ etape: "cabinet", createdAt: "2026-10-29T09:00:00.000Z", fait: "demandee" }),
+      fait({ fait: "accordee", createdAt: "2026-10-30T11:00:00.000Z", transmise: true }),
+    ];
+    expect(etatDeMaDemande(etats, "rappel", "proprietaire")).toEqual({
+      fait: "demandee",
+      note: null,
+      createdAt: "2026-10-29T09:00:00.000Z",
+      transmise: true,
+    });
+  });
+
+  it("le comptable a répondu : le siège lit sa réponse", () => {
+    const etats = [
+      fait({
+        etape: "cabinet",
+        fait: "refusee",
+        note: "Non",
+        createdAt: "2026-10-31T09:00:00.000Z",
+      }),
+      fait({ fait: "accordee", transmise: true }),
+    ];
+    expect(etatDeMaDemande(etats, "rappel", "proprietaire")).toMatchObject({
+      fait: "refusee",
+      note: "Non",
+      transmise: true,
+    });
+  });
+
+  it("accordée sur une pièce chez lui : c'est fini, rien n'est transmis — même s'il reste une vieille réponse du comptable", () => {
+    const etats = [
+      fait({ etape: "cabinet", fait: "refusee", createdAt: "2026-10-31T12:00:00.000Z" }),
+      fait({ fait: "accordee", createdAt: "2026-10-30T11:00:00.000Z" }),
+    ];
+    expect(etatDeMaDemande(etats, "rappel", "proprietaire")).toMatchObject({
       fait: "accordee",
       transmise: false,
     });
   });
 
   it("le propriétaire lit SA demande au comptable, pas celle du siège", () => {
-    const faits = [
+    const etats = [
       fait({ fait: "demandee" }),
       fait({ etape: "cabinet", fait: "refusee", note: "Non" }),
     ];
-    expect(etatDeMaDemande(faits, "rappel", "cabinet")).toMatchObject({
+    expect(etatDeMaDemande(etats, "rappel", "cabinet")).toMatchObject({
       fait: "refusee",
       note: "Non",
     });
-    expect(etatDeMaDemande(faits, "rappel", null)).toBeNull();
+    expect(etatDeMaDemande(etats, "rappel", null)).toBeNull();
+  });
+
+  it("la demande d'un siège attend le propriétaire tant que SON étape est en attente", () => {
+    const etats = [
+      fait({ etape: "cabinet", fait: "demandee" }),
+      fait({ fait: "refusee", note: "Non" }),
+    ];
+    expect(demandeDuSiegeATrancher(etats, PROPRIETAIRE)).toBeNull();
+    expect(demandeDuSiegeATrancher([fait({})], PROPRIETAIRE)).toBe("rappel");
   });
 });
