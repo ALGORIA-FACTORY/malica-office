@@ -12,7 +12,7 @@ import { MOT_PME } from "@/lib/statut";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
-import { dansLaPeriode, dossierDeLaPiece } from "@/lib/dossiers";
+import { dansLaPeriodeMontree, dossierDeLaPiece, periodeMontree } from "@/lib/dossiers";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
   head: () => ({
@@ -96,18 +96,20 @@ function Dossier() {
     (p) =>
       dossier !== null && p.vis !== "personnel" && dossierDeLaPiece(p, sept.types) === dossier.code,
   );
+  // La période de sa carte : la plus récente qui a des pièces (`periodeMontree`).
+  const montree = dossier ? periodeMontree(duDossier, dossier.periode, periode) : periode;
   const horsPeriode = dossier
-    ? duDossier.filter((p) => !dansLaPeriode(p, dossier.periode, periode)).length
+    ? duDossier.filter((p) => !dansLaPeriodeMontree(p, montree)).length
     : 0;
   const etiquette = !dossier
     ? ""
     : dossier.periode === "mois"
       ? new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(
-          new Date(`${periode}-01T00:00:00Z`),
+          new Date(`${montree}-01T00:00:00Z`),
         )
-      : periode.slice(0, 4);
+      : montree;
   const toutes = duDossier
-    .filter((p) => dossier !== null && dansLaPeriode(p, dossier.periode, periode))
+    .filter((p) => dossier !== null && dansLaPeriodeMontree(p, montree))
     .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
   const faites = toutes.filter((p) => etatDe(p) === "prise_en_charge").length;
   const aVerifier = toutes.filter(attendLaPersonne);
