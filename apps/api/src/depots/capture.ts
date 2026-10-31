@@ -36,6 +36,11 @@ import type { Requete } from "../db.ts";
 import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
+import {
+  lireLeContexteDuSudoku,
+  type ChampsLusAInscrire,
+  type ContexteDuSudoku,
+} from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
 import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
 
@@ -735,6 +740,33 @@ export const capture = {
         identifiantFiscal: (x["identifiant_fiscal"] as string | null) ?? null,
       })),
     };
+  },
+
+  /**
+   * La grille d'un type de document et les paramètres du pack, pour le sudoku.
+   * Tout vient des vues `ref_*_v` : rien n'est écrit dans le code (R4).
+   */
+  async contexteSudoku(db: Requete, packId: string, grilleCode: string): Promise<ContexteDuSudoku> {
+    return lireLeContexteDuSudoku(db, packId, grilleCode);
+  },
+
+  /**
+   * Ce que le sudoku a lu, champ par champ, prouvé ou non. Une lecture ne se
+   * réécrit pas (R7) : chaque passage ajoute ses lignes, la plus récente fait foi.
+   */
+  async inscrireChampsLus(db: Requete, input: ChampsLusAInscrire): Promise<{ inscrits: number }> {
+    if (input.champs.length === 0) return { inscrits: 0 };
+    const { rowCount } = await db.query(
+      `insert into capture.champs_lus
+         (tenant_id, piece_id, grille_code, champ_code, valeur, statut, citations, issue)
+       select p.tenant_id, p.id, $2, c.champ, c.valeur, c.statut, c.citations, $3
+         from pieces_v p
+        cross join jsonb_to_recordset($4::jsonb)
+             as c(champ text, valeur text, statut text, citations jsonb)
+        where p.id = $1`,
+      [input.pieceId, input.grille, input.issue, JSON.stringify(input.champs)],
+    );
+    return { inscrits: rowCount ?? 0 };
   },
 
   /**

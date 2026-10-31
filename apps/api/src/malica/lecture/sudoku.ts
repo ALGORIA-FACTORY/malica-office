@@ -1,0 +1,419 @@
+/**
+ * LE SUDOKU, BRANCHÉ — la désignation des montants par la preuve.
+ *
+ * ================================================================ CE QU'IL FAIT
+ *
+ * Les nombres d'une facture se désignent eux-mêmes : parmi toutes les
+ * affectations des montants lus aux champs de la grille, celle qui ferme
+ * l'arithmétique de la pièce (HT + TVA + droits = TTC, base × taux = TVA par
+ * taux, droit fixe du pack…) est la lecture. Une seule : elle est PROUVÉE et
+ * elle remplace la désignation des montants. Aucune ou plusieurs : rien ne
+ * change, et la pièce garde la désignation du modèle avec ses contrôles.
+ *
+ * Contrat : `docs/sudoku/contrat-du-moteur.md`. Moteur : `@malica/sudoku`.
+ *
+ * ========================================================= CE QU'IL NE FAIT PAS
+ *
+ * - Il ne LIT aucun montant (règle ① de la fabrique). Les lectures viennent du
+ *   treillis existant (`treillisMontant`) et des dates de `normalizeDate` ; il
+ *   rend des désignations (page, ordinal), et l'aval de R2 relit les valeurs
+ *   dans le plan, exactement comme pour le modèle et la recette.
+ * - Il ne porte aucune constante réglementaire (R4) : la grille, ses preuves,
+ *   les taux, les droits et les formats viennent de la base, par le pack.
+ * - Il ne tranche ni l'émetteur, ni la date, ni le sens de la pièce : ce ne
+ *   sont pas des montants, aucune arithmétique ne les prouve. Ils restent
+ *   désignés par la chaîne existante.
+ * - Il ne choisit pas encore le TYPE de document : la lecture citée lit des
+ *   factures (contrat extract.v1), donc la grille « facture ». Le routage
+ *   par type viendra avec les preuves des autres familles, banc par banc.
+ *
+ * ============================================================ SANS RÉGRESSION
+ *
+ * Un sudoku qui échoue — moteur absent, grille illisible, plafond atteint — ne
+ * prive personne de sa lecture : il crie dans le journal et rend la lecture
+ * telle qu'il l'a reçue. La seule décision de repli est vers le chemin éprouvé.
+ */
+
+import {
+  resoudre,
+  type EntreeDuSudoku,
+  type Grille,
+  type JetonDuSudoku,
+  type PackDuSudoku,
+  type RefDeJeton,
+  type SortieDuSudoku,
+} from "@malica/sudoku";
+
+import type { AppelApi } from "../appel-local.ts";
+import type { Requete } from "../../db.ts";
+import type { DeviseLue } from "../../scan/normaliser-montants.ts";
+
+import { treillisMontant } from "./montants.ts";
+import { normalizeDate, type PageToken, type TokenRef } from "./token-plan.ts";
+import type { VisionRead, VisionSelection } from "./vision.ts";
+
+/** La grille de la lecture citée : elle lit des factures (voir l'en-tête). */
+export const GRILLE_DE_LA_LECTURE_CITEE = "facture";
+
+/** Les codes de champs de la grille facture que la sélection connaît. */
+const CHAMP = {
+  ht: "total_ht",
+  ttc: "total_ttc",
+  base: "base_tva_par_taux",
+  tva: "montant_tva_par_taux",
+} as const;
+
+/* ======================================================== LES JETONS (§3) === */
+
+/**
+ * Le plan de jetons, au format du moteur.
+ *
+ * Une lecture décimale IMPRIMÉE est FORTE ; « milliers », « entier » et la
+ * virgule perdue sont des lectures de repli, que le moteur n'accepte que si aucune solution forte
+ * n'existe. C'est la distinction mesurée sur le banc : sans elle, une quantité
+ * ou une année devient un montant qui ferme une somme par hasard.
+ */
+const SEPARATEUR = /[.,]/u;
+
+export function jetonsDuSudoku(plan: readonly PageToken[], devise: DeviseLue): JetonDuSudoku[] {
+  return plan.map((t) => ({
+    page: t.page,
+    ordinal: t.ordinal,
+    texte: t.text,
+    x0: t.x0,
+    y0: t.y0,
+    x1: t.x1,
+    y1: t.y1,
+    montants: treillisMontant(t.text, devise).map((h) => ({
+      v: h.millimes,
+      // « 16000 » se lit aussi 16,000 (virgule perdue) : le treillis l'appelle
+      // décimale, mais aucun séparateur n'est imprimé. Elle reste faible.
+      forte: h.lecture === "decimale" && SEPARATEUR.test(t.text),
+    })),
+    date: normalizeDate(t.text),
+  }));
+}
+
+/* ===================================================== LA GRILLE ET LE PACK = */
+
+export interface ContexteDuSudoku {
+  readonly grille: Grille;
+  readonly pack: PackDuSudoku;
+}
+
+/** Un nombre de la base en parties par million, sans flottant au bout. */
+function ppm(x: unknown): number {
+  return Math.round(Number(x) * 1_000_000);
+}
+
+/**
+ * La grille et les paramètres du pack, lus par les vues `security_invoker`.
+ *
+ * Rien n'a de valeur par défaut : un paramètre absent lève, une charge que le
+ * pack définit deux fois avec deux valeurs différentes lève aussi — le moteur
+ * ne choisit pas entre deux référentiels.
+ */
+export async function lireLeContexteDuSudoku(
+  db: Requete,
+  packId: string,
+  grilleCode: string,
+): Promise<ContexteDuSudoku> {
+  const { rows: grilles } = await db.query<{ id: string }>(
+    `select id from ref_grilles_v
+      where pack_version_id = $1 and code = $2
+        and valid_from <= current_date and (valid_to is null or valid_to >= current_date)`,
+    [packId, grilleCode],
+  );
+  if (grilles.length !== 1) {
+    throw new Error(`sudoku : grille « ${grilleCode} » — ${grilles.length} en vigueur, 1 attendue`);
+  }
+  const grilleId = grilles[0]!.id;
+
+  const [champs, preuves, params, taux, charges, formats] = await Promise.all([
+    db.query<{
+      code: string;
+      type: string;
+      reperes_fr: string[] | null;
+      reperes_ar: string[] | null;
+      format_code: string | null;
+    }>(
+      `select code, type, reperes_fr, reperes_ar, format_code
+         from ref_grille_champs_v where grille_id = $1 order by code`,
+      [grilleId],
+    ),
+    db.query<{ code: string; expression: unknown; statut: string }>(
+      `select code, expression, statut from ref_grille_preuves_v
+        where grille_id = $1 and expression is not null order by code`,
+      [grilleId],
+    ),
+    db.query<{ code: string; value_num: string | null }>(
+      `select code, value_num from ref_socle_params_v
+        where pack_version_id = $1
+          and code in ('money.decimals', 'lecture.tolerance_arrondi_mineure')`,
+      [packId],
+    ),
+    // Un taux nul n'est pas un taux du barème : l'exonération est un chemin à
+    // part dans la grille (la mention lue), jamais une instance « 0 % » que
+    // n'importe quel zéro imprimé fermerait.
+    db.query<{ code: string; rate: string }>(
+      `select code, rate from ref_tva_rates_v
+        where pack_version_id = $1 and rate > 0
+          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+        order by code`,
+      [packId],
+    ),
+    db.query<{
+      code: string;
+      fixed_amount: string | null;
+      rate: string | null;
+      taxable: boolean;
+    }>(
+      `select code, fixed_amount, rate, taxable from ref_fiscal_charges_v
+        where pack_version_id = $1
+          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+        order by code`,
+      [packId],
+    ),
+    db.query<{ kind: string; pattern: string }>(
+      `select distinct on (kind) kind, pattern from ref.identifiant_formats
+        where pack_version_id = $1
+          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+        order by kind, valid_from desc`,
+      [packId],
+    ),
+  ]);
+
+  const param = (code: string): number => {
+    const v = params.rows.find((r) => r.code === code)?.value_num;
+    if (v === null || v === undefined)
+      throw new Error(`sudoku : paramètre absent du pack : ${code}`);
+    return Number(v);
+  };
+  const decimales = param("money.decimals");
+
+  // Une charge par code. Le pack la porte une fois par sens de facture (achat,
+  // vente) : identiques, elles n'en font qu'une ; différentes, on refuse.
+  const parCode = new Map<string, PackDuSudoku["charges"][number]>();
+  for (const c of charges.rows) {
+    const une = {
+      code: c.code,
+      montant_fixe:
+        c.fixed_amount === null ? null : Math.round(Number(c.fixed_amount) * 10 ** decimales),
+      taux_ppm: c.rate === null ? null : ppm(c.rate),
+      assiette_tva: c.taxable,
+    };
+    const deja = parCode.get(c.code);
+    if (deja && JSON.stringify(deja) !== JSON.stringify(une)) {
+      throw new Error(`sudoku : la charge ${c.code} a deux valeurs dans le pack`);
+    }
+    parCode.set(c.code, une);
+  }
+
+  return {
+    grille: {
+      code: grilleCode,
+      champs: champs.rows.map((c) => ({
+        code: c.code,
+        type: c.type,
+        reperes_fr: c.reperes_fr ?? [],
+        reperes_ar: c.reperes_ar ?? [],
+        format_code: c.format_code,
+      })),
+      preuves: preuves.rows.map((p) => ({
+        code: p.code,
+        expression: p.expression,
+        statut: p.statut,
+      })),
+    },
+    pack: {
+      decimales,
+      tolerance: param("lecture.tolerance_arrondi_mineure"),
+      baremes: { tva: taux.rows.map((t) => ({ code: t.code, ppm: ppm(t.rate) })) },
+      charges: [...parCode.values()],
+      formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
+    },
+  };
+}
+
+/* ============================================ LA SÉLECTION, PAR LA PREUVE === */
+
+function ref(refs: readonly RefDeJeton[] | undefined): TokenRef | null {
+  const r = refs?.[0];
+  return r ? { page: r.page, ordinal: r.ordinal } : null;
+}
+
+/**
+ * La sélection de la chaîne, dont les MONTANTS sont remplacés par ceux que le
+ * sudoku a prouvés. Rendue telle quelle si la pièce n'est pas prouvée.
+ *
+ * - totaux : HT et TTC prouvés ; la TVA totale l'est quand la facture n'a
+ *   qu'un taux (c'est alors l'instance unique). À plusieurs taux, le total de
+ *   TVA n'est pas un champ de la grille : la chaîne garde le sien, et ses
+ *   contrôles le vérifient contre les lignes prouvées.
+ * - lignes de TVA : une par taux prouvé, nommée par le barème du pack. Une
+ *   facture exonérée n'a aucune instance : les lignes de la chaîne restent.
+ * - droits : ceux que la grille prouve (les codes de charges du pack) sont
+ *   remplacés — ajoutés s'ils sont imprimés, retirés s'ils ne le sont pas ;
+ *   les autres droits de la chaîne restent.
+ */
+export function selectionParLeSudoku(
+  selection: VisionSelection,
+  sortie: SortieDuSudoku,
+  codesDeCharges: readonly string[],
+  champsDeCharges: Readonly<Record<string, string>>,
+): VisionSelection {
+  if (sortie.issue !== "prouvee") return selection;
+  const c = sortie.champs;
+
+  const bases = c[CHAMP.base]?.instances ?? [];
+  const montants = c[CHAMP.tva]?.instances ?? [];
+  const lignes =
+    montants.length === 0
+      ? selection.lines
+      : montants.map((m) => {
+          const deLaChaine = selection.lines.find((l) => l.tax_code === m.taux);
+          return {
+            label: deLaChaine?.label || "Ligne",
+            tax_code: m.taux,
+            base_ht: ref(bases.find((b) => b.taux === m.taux)?.refs),
+            vat_amount: ref(m.refs),
+            ttc: null,
+          };
+        });
+
+  const prouvees = codesDeCharges.filter((code) => champsDeCharges[code] !== undefined);
+  const droits = [
+    ...selection.other_charges.filter((d) => !prouvees.includes(d.code)),
+    ...prouvees.flatMap((code) => {
+      const champ = c[champsDeCharges[code]!];
+      const r = ref(champ?.refs);
+      return r && champ?.valeur !== null && champ?.valeur !== "0" ? [{ code, amount: r }] : [];
+    }),
+  ];
+
+  return {
+    ...selection,
+    lines: lignes,
+    other_charges: droits,
+    totals: {
+      base_ht: ref(c[CHAMP.ht]?.refs),
+      vat: montants.length === 1 ? ref(montants[0]!.refs) : selection.totals.vat,
+      ttc: ref(c[CHAMP.ttc]?.refs),
+    },
+  };
+}
+
+/** Quel champ de la grille porte quelle charge du pack ? Les preuves `charge` le disent. */
+export function champsDesCharges(grille: Grille): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const p of grille.preuves) {
+    const e = p.expression as { op?: unknown; code?: unknown; montant?: unknown } | null;
+    if (e?.op === "charge" && typeof e.code === "string" && typeof e.montant === "string") {
+      out[e.code] = e.montant;
+    }
+  }
+  return out;
+}
+
+/* ================================================== LE BRANCHEMENT ======= */
+
+/** Ce que `capture.inscrireChampsLus` reçoit : la sortie, champ par champ. */
+export interface ChampsLusAInscrire {
+  readonly pieceId: string;
+  readonly grille: string;
+  readonly issue: SortieDuSudoku["issue"];
+  readonly champs: readonly {
+    champ: string;
+    valeur: string | null;
+    statut: string;
+    citations: readonly RefDeJeton[];
+  }[];
+}
+
+export function champsLusAInscrire(
+  pieceId: string,
+  grille: string,
+  sortie: SortieDuSudoku,
+): ChampsLusAInscrire {
+  return {
+    pieceId,
+    grille,
+    issue: sortie.issue,
+    champs: Object.entries(sortie.champs).flatMap(([champ, lu]) => {
+      // Une valeur sans citation ne s'écrit pas (R2) ; un champ absent non plus.
+      if (lu.statut === "absent") return [];
+      const inst = lu.instances ?? [];
+      if (inst.length > 0) {
+        return inst.map((i) => ({
+          champ: `${champ}:${i.taux}`,
+          valeur: i.valeur,
+          statut: lu.statut,
+          citations: i.refs,
+        }));
+      }
+      return lu.refs.length > 0
+        ? [{ champ, valeur: lu.valeur, statut: lu.statut, citations: lu.refs }]
+        : [];
+    }),
+  };
+}
+
+export type Sudoku = (lecture: VisionRead) => Promise<VisionRead>;
+
+/**
+ * Le sudoku branché sur la base, pour une pièce.
+ *
+ * Il reçoit la lecture de la chaîne (plan de jetons + sélection) et rend la
+ * même, dont les montants sont désignés par la preuve quand la pièce est
+ * prouvée. Ce qu'il a lu s'inscrit dans `capture.champs_lus`, prouvé ou non :
+ * c'est la mesure du recours au modèle, pièce par pièce.
+ */
+export function creerLeSudoku(
+  api: AppelApi,
+  piece: { readonly pieceId: string; readonly packId: string; readonly devise: DeviseLue },
+): Sudoku {
+  let contexte: Promise<ContexteDuSudoku> | null = null;
+  return async (lecture) => {
+    try {
+      contexte ??= api.rpc<ContexteDuSudoku>("capture", "contexteSudoku", [
+        piece.packId,
+        GRILLE_DE_LA_LECTURE_CITEE,
+      ]);
+      const { grille, pack } = await contexte;
+      const entree: EntreeDuSudoku = {
+        jetons: jetonsDuSudoku(lecture.tokens, piece.devise),
+        grille,
+        pack,
+      };
+      const sortie = resoudre(entree);
+
+      await api
+        .rpc<void>("capture", "inscrireChampsLus", [
+          champsLusAInscrire(piece.pieceId, grille.code, sortie),
+        ])
+        .catch((e: unknown) => {
+          console.error(`sudoku : champs NON inscrits — pièce ${piece.pieceId} : ${message(e)}`);
+        });
+
+      if (sortie.issue !== "prouvee") return lecture;
+      const charges = champsDesCharges(grille);
+      return {
+        ...lecture,
+        selection: selectionParLeSudoku(
+          lecture.selection,
+          sortie,
+          pack.charges.map((ch) => ch.code),
+          charges,
+        ),
+      };
+    } catch (e: unknown) {
+      contexte = null;
+      console.error(`sudoku : lecture non prouvée — pièce ${piece.pieceId} : ${message(e)}`);
+      return lecture;
+    }
+  };
+}
+
+function message(e: unknown): string {
+  return e instanceof Error ? e.message.slice(0, 400) : String(e);
+}

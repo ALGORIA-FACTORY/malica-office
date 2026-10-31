@@ -1,0 +1,1631 @@
+[
+ {
+  "id": "F000",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 9,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 35076091,
+  "ttc": 40310353,
+  "timbre": 1000,
+  "fodec_mt": 350761,
+  "tva": {
+   "70": 205942,
+   "130": 3240374,
+   "190": 1436185
+  },
+  "bases": {
+   "70": 2912900,
+   "130": 24679164,
+   "190": 7484027
+  },
+  "recap": true
+ },
+ {
+  "id": "F001",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 6,
+  "taux": [
+   70
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 9751676,
+  "ttc": 10435293,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 682617
+  },
+  "bases": {
+   "70": 9751676
+  },
+  "recap": true
+ },
+ {
+  "id": "F002",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "photo",
+  "nb_lignes": 11,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 21075253,
+  "ttc": 24501360,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 337861,
+   "190": 3087246
+  },
+  "bases": {
+   "70": 4826588,
+   "190": 16248665
+  },
+  "recap": true
+ },
+ {
+  "id": "F003",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 11,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 16637093,
+  "ttc": 19997122,
+  "timbre": 1000,
+  "fodec_mt": 166371,
+  "tva": {
+   "190": 3192658
+  },
+  "bases": {
+   "190": 16637093
+  },
+  "recap": true
+ },
+ {
+  "id": "F004",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 3,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 71231983,
+  "ttc": 80665322,
+  "timbre": 0,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 8884931,
+   "190": 548408
+  },
+  "bases": {
+   "130": 68345625,
+   "190": 2886358
+  },
+  "recap": true
+ },
+ {
+  "id": "F005",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 38116312,
+  "ttc": 43072433,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 4955121
+  },
+  "bases": {
+   "130": 38116312
+  },
+  "recap": true
+ },
+ {
+  "id": "F006",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 37014937,
+  "ttc": 40467967,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 2088804,
+   "190": 1363226
+  },
+  "bases": {
+   "70": 29840063,
+   "190": 7174874
+  },
+  "recap": true
+ },
+ {
+  "id": "F007",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 5,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 9779156,
+  "ttc": 11661091,
+  "timbre": 1000,
+  "fodec_mt": 97792,
+  "tva": {
+   "70": 54529,
+   "190": 1728614
+  },
+  "bases": {
+   "70": 771266,
+   "190": 9007890
+  },
+  "recap": true
+ },
+ {
+  "id": "F008",
+  "type": "facture",
+  "style": "point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 11,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 165747027,
+  "ttc": 186897208,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 491235,
+   "130": 20584714,
+   "190": 73232
+  },
+  "bases": {
+   "70": 7017642,
+   "130": 158343955,
+   "190": 385430
+  },
+  "recap": false
+ },
+ {
+  "id": "F009",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 145741738,
+  "ttc": 164689164,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 18946426
+  },
+  "bases": {
+   "130": 145741738
+  },
+  "recap": false
+ },
+ {
+  "id": "F010",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 7,
+  "taux": [
+   70
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 21363222,
+  "ttc": 22859648,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 1495426
+  },
+  "bases": {
+   "70": 21363222
+  },
+  "recap": true
+ },
+ {
+  "id": "F011",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 45014482,
+  "ttc": 50867365,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 5851883
+  },
+  "bases": {
+   "130": 45014482
+  },
+  "recap": false
+ },
+ {
+  "id": "F012",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 5,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 17767445,
+  "ttc": 21322468,
+  "timbre": 1000,
+  "fodec_mt": 177674,
+  "tva": {
+   "130": 71985,
+   "190": 3304364
+  },
+  "bases": {
+   "130": 548250,
+   "190": 17219195
+  },
+  "recap": true
+ },
+ {
+  "id": "F013",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 6,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 6796277,
+  "ttc": 7396725,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 331414,
+   "130": 268034
+  },
+  "bases": {
+   "70": 4734480,
+   "130": 2061797
+  },
+  "recap": true
+ },
+ {
+  "id": "F014",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   70
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 1589995,
+  "ttc": 1719308,
+  "timbre": 1000,
+  "fodec_mt": 15900,
+  "tva": {
+   "70": 112413
+  },
+  "bases": {
+   "70": 1589995
+  },
+  "recap": true
+ },
+ {
+  "id": "F015",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 9,
+  "taux": [
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 20838963,
+  "ttc": 24799366,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 3959403
+  },
+  "bases": {
+   "190": 20838963
+  },
+  "recap": false
+ },
+ {
+  "id": "F016",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 8,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 50376732,
+  "ttc": 58696828,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 2713715,
+   "190": 5605381
+  },
+  "bases": {
+   "130": 20874728,
+   "190": 29502004
+  },
+  "recap": true
+ },
+ {
+  "id": "F017",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 9,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 47611837,
+  "ttc": 51313631,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 3118182,
+   "190": 582612
+  },
+  "bases": {
+   "70": 44545458,
+   "190": 3066379
+  },
+  "recap": true
+ },
+ {
+  "id": "F018",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 8,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 92223170,
+  "ttc": 99713741,
+  "timbre": 1000,
+  "fodec_mt": 922232,
+  "tva": {
+   "70": 6492667,
+   "190": 74672
+  },
+  "bases": {
+   "70": 91834052,
+   "190": 389118
+  },
+  "recap": true
+ },
+ {
+  "id": "F019",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 9,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 20883109,
+  "ttc": 23598913,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 2714804
+  },
+  "bases": {
+   "130": 20883109
+  },
+  "recap": true
+ },
+ {
+  "id": "F020",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 1,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 23456477,
+  "ttc": 26506819,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 3049342
+  },
+  "bases": {
+   "130": 23456477
+  },
+  "recap": false
+ },
+ {
+  "id": "F021",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 7,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 23750382,
+  "ttc": 27107311,
+  "timbre": 1000,
+  "fodec_mt": 237504,
+  "tva": {
+   "130": 3118425
+  },
+  "bases": {
+   "130": 23750382
+  },
+  "recap": false
+ },
+ {
+  "id": "F022",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 3,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 69204332,
+  "ttc": 78201895,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 8996563
+  },
+  "bases": {
+   "130": 69204332
+  },
+  "recap": false
+ },
+ {
+  "id": "F023",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 98863468,
+  "ttc": 117648527,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 18784059
+  },
+  "bases": {
+   "190": 98863468
+  },
+  "recap": true
+ },
+ {
+  "id": "F024",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 11,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 40684150,
+  "ttc": 48899280,
+  "timbre": 1000,
+  "fodec_mt": 406842,
+  "tva": {
+   "190": 7807288
+  },
+  "bases": {
+   "190": 40684150
+  },
+  "recap": false
+ },
+ {
+  "id": "F025",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 5,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 147904622,
+  "ttc": 167117835,
+  "timbre": 0,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 5174575,
+   "130": 38925,
+   "190": 13999713
+  },
+  "bases": {
+   "70": 73922500,
+   "130": 299422,
+   "190": 73682700
+  },
+  "recap": true
+ },
+ {
+  "id": "F026",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 12,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 118447939,
+  "ttc": 134300309,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 3815375,
+   "130": 245038,
+   "190": 11790957
+  },
+  "bases": {
+   "70": 54505359,
+   "130": 1884910,
+   "190": 62057670
+  },
+  "recap": true
+ },
+ {
+  "id": "F027",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 1,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 92467,
+  "ttc": 106533,
+  "timbre": 1000,
+  "fodec_mt": 925,
+  "tva": {
+   "130": 12141
+  },
+  "bases": {
+   "130": 92467
+  },
+  "recap": true
+ },
+ {
+  "id": "F028",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 6,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 55923981,
+  "ttc": 67216033,
+  "timbre": 1000,
+  "fodec_mt": 559240,
+  "tva": {
+   "190": 10731812
+  },
+  "bases": {
+   "190": 55923981
+  },
+  "recap": true
+ },
+ {
+  "id": "F029",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 3,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 1087407,
+  "ttc": 1195199,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 58226,
+   "190": 48566
+  },
+  "bases": {
+   "70": 831796,
+   "190": 255611
+  },
+  "recap": true
+ },
+ {
+  "id": "F030",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 13746989,
+  "ttc": 15690439,
+  "timbre": 1000,
+  "fodec_mt": 137470,
+  "tva": {
+   "130": 1804980
+  },
+  "bases": {
+   "130": 13746989
+  },
+  "recap": false
+ },
+ {
+  "id": "F031",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 3,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 410794,
+  "ttc": 462346,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 3327,
+   "130": 47225
+  },
+  "bases": {
+   "70": 47525,
+   "130": 363269
+  },
+  "recap": true
+ },
+ {
+  "id": "F032",
+  "type": "facture",
+  "style": "point",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 26077730,
+  "ttc": 28311164,
+  "timbre": 0,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 1387074,
+   "130": 744236,
+   "190": 102124
+  },
+  "bases": {
+   "70": 19815345,
+   "130": 5724890,
+   "190": 537495
+  },
+  "recap": true
+ },
+ {
+  "id": "F033",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 9,
+  "taux": [
+   70
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 152767319,
+  "ttc": 163461031,
+  "timbre": 0,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 10693712
+  },
+  "bases": {
+   "70": 152767319
+  },
+  "recap": false
+ },
+ {
+  "id": "F034",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 21867314,
+  "ttc": 26283325,
+  "timbre": 1000,
+  "fodec_mt": 218673,
+  "tva": {
+   "190": 4196338
+  },
+  "bases": {
+   "190": 21867314
+  },
+  "recap": true
+ },
+ {
+  "id": "F035",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   70
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 20388438,
+  "ttc": 21816629,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 1427191
+  },
+  "bases": {
+   "70": 20388438
+  },
+  "recap": true
+ },
+ {
+  "id": "F036",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 5,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 73550942,
+  "ttc": 83943690,
+  "timbre": 0,
+  "fodec_mt": 735509,
+  "tva": {
+   "130": 9657239
+  },
+  "bases": {
+   "130": 73550942
+  },
+  "recap": false
+ },
+ {
+  "id": "F037",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 9,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 13702646,
+  "ttc": 16307149,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 2603503
+  },
+  "bases": {
+   "190": 13702646
+  },
+  "recap": false
+ },
+ {
+  "id": "F038",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 2,
+  "taux": [
+   70
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 33475378,
+  "ttc": 35819654,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 2343276
+  },
+  "bases": {
+   "70": 33475378
+  },
+  "recap": true
+ },
+ {
+  "id": "F039",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 3,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 6613575,
+  "ttc": 7841267,
+  "timbre": 0,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 62590,
+   "190": 1165102
+  },
+  "bases": {
+   "130": 481458,
+   "190": 6132117
+  },
+  "recap": true
+ },
+ {
+  "id": "F040",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 6,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 32043573,
+  "ttc": 36210015,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 260,
+   "130": 4165182
+  },
+  "bases": {
+   "70": 3714,
+   "130": 32039859
+  },
+  "recap": false
+ },
+ {
+  "id": "F041",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 7,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 44534343,
+  "ttc": 50324808,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 5789465
+  },
+  "bases": {
+   "130": 44534343
+  },
+  "recap": true
+ },
+ {
+  "id": "F042",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 8,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 25182720,
+  "ttc": 29446641,
+  "timbre": 1000,
+  "fodec_mt": 251827,
+  "tva": {
+   "130": 1779853,
+   "190": 2231241
+  },
+  "bases": {
+   "130": 13555619,
+   "190": 11627101
+  },
+  "recap": true
+ },
+ {
+  "id": "F043",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 79297731,
+  "ttc": 90503500,
+  "timbre": 1000,
+  "fodec_mt": 792977,
+  "tva": {
+   "130": 10411792
+  },
+  "bases": {
+   "130": 79297731
+  },
+  "recap": true
+ },
+ {
+  "id": "F044",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 233787965,
+  "ttc": 254103569,
+  "timbre": 0,
+  "fodec_mt": 2337880,
+  "tva": {
+   "70": 14838409,
+   "130": 3139315
+  },
+  "bases": {
+   "70": 209878482,
+   "130": 23909483
+  },
+  "recap": true
+ },
+ {
+  "id": "F045",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 7,
+  "taux": [
+   70
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 16852383,
+  "ttc": 18033050,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 1179667
+  },
+  "bases": {
+   "70": 16852383
+  },
+  "recap": true
+ },
+ {
+  "id": "F046",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 11,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": true,
+  "ht": 197663971,
+  "ttc": 237573327,
+  "timbre": 1000,
+  "fodec_mt": 1976640,
+  "tva": {
+   "190": 37931716
+  },
+  "bases": {
+   "190": 197663971
+  },
+  "recap": false
+ },
+ {
+  "id": "F047",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   130
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 199141538,
+  "ttc": 227281237,
+  "timbre": 1000,
+  "fodec_mt": 1991415,
+  "tva": {
+   "130": 26147284
+  },
+  "bases": {
+   "130": 199141538
+  },
+  "recap": true
+ },
+ {
+  "id": "F048",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 50256438,
+  "ttc": 59916569,
+  "timbre": 1000,
+  "fodec_mt": 502564,
+  "tva": {
+   "130": 1056560,
+   "190": 8100007
+  },
+  "bases": {
+   "130": 8046917,
+   "190": 42209521
+  },
+  "recap": true
+ },
+ {
+  "id": "F049",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   70
+  ],
+  "remise": false,
+  "fodec": true,
+  "ht": 10170686,
+  "ttc": 10992461,
+  "timbre": 1000,
+  "fodec_mt": 101707,
+  "tva": {
+   "70": 719068
+  },
+  "bases": {
+   "70": 10170686
+  },
+  "recap": true
+ },
+ {
+  "id": "F050",
+  "type": "facture",
+  "style": "nosep",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 6,
+  "taux": [
+   70
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 12953629,
+  "ttc": 13861383,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 906754
+  },
+  "bases": {
+   "70": 12953629
+  },
+  "recap": true
+ },
+ {
+  "id": "F051",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 8,
+  "taux": [
+   70,
+   130,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 10107592,
+  "ttc": 11844801,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 75170,
+   "130": 119968,
+   "190": 1541071
+  },
+  "bases": {
+   "70": 1073857,
+   "130": 922833,
+   "190": 8110902
+  },
+  "recap": true
+ },
+ {
+  "id": "F052",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 3,
+  "taux": [
+   70,
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 10314165,
+  "ttc": 11257175,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 593648,
+   "190": 348362
+  },
+  "bases": {
+   "70": 8480680,
+   "190": 1833485
+  },
+  "recap": true
+ },
+ {
+  "id": "F053",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 8,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 21760516,
+  "ttc": 23865227,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 846016,
+   "130": 1257695
+  },
+  "bases": {
+   "70": 12085936,
+   "130": 9674580
+  },
+  "recap": true
+ },
+ {
+  "id": "F054",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "scan",
+  "nb_lignes": 10,
+  "taux": [
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 17217841,
+  "ttc": 20490231,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 3271390
+  },
+  "bases": {
+   "190": 17217841
+  },
+  "recap": false
+ },
+ {
+  "id": "F055",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 4,
+  "taux": [
+   190
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 10350578,
+  "ttc": 12318188,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 1966610
+  },
+  "bases": {
+   "190": 10350578
+  },
+  "recap": true
+ },
+ {
+  "id": "F056",
+  "type": "facture",
+  "style": "point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 12,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 134158186,
+  "ttc": 151599750,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 17440564
+  },
+  "bases": {
+   "130": 134158186
+  },
+  "recap": true
+ },
+ {
+  "id": "F057",
+  "type": "facture",
+  "style": "point",
+  "bilingue": false,
+  "labels_ar": false,
+  "degradation": "scan",
+  "nb_lignes": 1,
+  "taux": [
+   130
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 320796,
+  "ttc": 363499,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "130": 41703
+  },
+  "bases": {
+   "130": 320796
+  },
+  "recap": true
+ },
+ {
+  "id": "F058",
+  "type": "facture",
+  "style": "nosep_point",
+  "bilingue": true,
+  "labels_ar": false,
+  "degradation": "photo",
+  "nb_lignes": 12,
+  "taux": [
+   190
+  ],
+  "remise": true,
+  "fodec": false,
+  "ht": 77855970,
+  "ttc": 92649604,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "190": 14792634
+  },
+  "bases": {
+   "190": 77855970
+  },
+  "recap": true
+ },
+ {
+  "id": "F059",
+  "type": "facture",
+  "style": "espace",
+  "bilingue": true,
+  "labels_ar": true,
+  "degradation": "photo",
+  "nb_lignes": 8,
+  "taux": [
+   70,
+   130
+  ],
+  "remise": false,
+  "fodec": false,
+  "ht": 33668931,
+  "ttc": 37251874,
+  "timbre": 1000,
+  "fodec_mt": 0,
+  "tva": {
+   "70": 927521,
+   "130": 2654422
+  },
+  "bases": {
+   "70": 13250300,
+   "130": 20418631
+  },
+  "recap": true
+ },
+ {
+  "id": "T000",
+  "type": "ticket",
+  "ttc": 3860,
+  "degradation": "scan"
+ },
+ {
+  "id": "T001",
+  "type": "ticket",
+  "ttc": 69169,
+  "degradation": "photo"
+ },
+ {
+  "id": "T002",
+  "type": "ticket",
+  "ttc": 49719,
+  "degradation": "scan"
+ },
+ {
+  "id": "T003",
+  "type": "ticket",
+  "ttc": 37679,
+  "degradation": "photo"
+ },
+ {
+  "id": "T004",
+  "type": "ticket",
+  "ttc": 3296,
+  "degradation": "scan"
+ },
+ {
+  "id": "T005",
+  "type": "ticket",
+  "ttc": 64427,
+  "degradation": "photo"
+ }
+]
