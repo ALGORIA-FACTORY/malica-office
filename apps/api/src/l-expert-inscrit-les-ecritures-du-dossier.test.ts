@@ -54,8 +54,8 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
       });
     pme = await creer(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creer(expert, "cabinet", `COMPTA ${marque}`, null);
-    piece = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    piece = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,
@@ -135,8 +135,8 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("une facture contre-passée sans réimputation sort de la TVA du mois", async () => {
-    const autre = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const autre = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,
@@ -190,8 +190,8 @@ describe("l'expert mandaté inscrit les écritures du dossier", { skip: !BASE_CO
   });
 
   it("la TVA d'une facture se range au mois de son écriture, des deux côtés, même transmise plus tard", async () => {
-    const sept = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const sept = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, 'facture_achat', 'confirme', now()) returning id`,

@@ -19,6 +19,8 @@
  * documents de l'application, et le chemin est rendu pour que l'écran puisse
  * le dire. Un bouton qui semble ne rien faire est pire que pas de bouton.
  */
+import { nomDeFichierSur } from "@/lib/nom-de-fichier";
+
 import { estNatif } from "./coque";
 
 export interface FichierRemis {
@@ -26,10 +28,26 @@ export interface FichierRemis {
   chemin: string | null;
 }
 
-/** Les caractères qu'un système de fichiers refuse, remplacés — pas supprimés. */
-function nomSur(nom: string): string {
-  const propre = nom.replace(/[\\/:*?"<>|]/g, "-").trim();
-  return propre.length > 0 ? propre : "document";
+/**
+ * Un nom libre dans les documents de l'application. Capacitor ÉCRASE un
+ * fichier existant sans rien dire : deux remises du même nom perdaient la
+ * première (revue Codex de #146). Le second reçoit « nom (2).ext », et ainsi
+ * de suite ; au-delà, une erreur dite — jamais une perte silencieuse.
+ */
+const ESSAIS_DE_NOM = 100;
+
+async function nomLibre(
+  existe: (chemin: string) => Promise<boolean>,
+  nom: string,
+): Promise<string> {
+  const point = nom.lastIndexOf(".");
+  const base = point > 0 ? nom.slice(0, point) : nom;
+  const extension = point > 0 ? nom.slice(point) : "";
+  for (let n = 1; n <= ESSAIS_DE_NOM; n += 1) {
+    const essai = n === 1 ? nom : `${base} (${n})${extension}`;
+    if (!(await existe(essai))) return essai;
+  }
+  throw new Error("fichier.nom_indisponible");
 }
 
 export async function enregistrerUnFichier(
@@ -37,7 +55,7 @@ export async function enregistrerUnFichier(
   nom: string,
 ): Promise<FichierRemis> {
   const blob = octets instanceof Blob ? octets : new Blob([octets]);
-  const sur = nomSur(nom);
+  const sur = nomDeFichierSur(nom);
 
   if (estNatif()) {
     const { Filesystem, Directory } = await import("@capacitor/filesystem");
@@ -52,8 +70,16 @@ export async function enregistrerUnFichier(
       };
       lecteur.readAsDataURL(blob);
     });
+    const chemin = await nomLibre(
+      (path) =>
+        Filesystem.stat({ path, directory: Directory.Documents }).then(
+          () => true,
+          () => false,
+        ),
+      sur,
+    );
     const { uri } = await Filesystem.writeFile({
-      path: sur,
+      path: chemin,
       data: base64,
       directory: Directory.Documents,
       recursive: true,

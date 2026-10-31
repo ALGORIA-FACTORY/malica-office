@@ -36,6 +36,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentiteDuServeur, type Requete } from "../db.ts";
 
+import { arreterUneBorne } from "./borne-arretee.ts";
 import {
   executerUnTravail,
   PanneFournisseur,
@@ -112,16 +113,15 @@ describe("la file durable des travaux de lecture", { skip: !BASE_CONFIGUREE }, (
     });
   }
 
-  /** Le cabinet ARRÊTE une borne, au-dessus du défaut du pack (R10). */
+  /** Le cabinet ARRÊTE une borne, au-dessus du défaut du pack (R10), par l'opérateur. */
   async function arreter(borne: string, valeur: number): Promise<void> {
-    await sousIdentiteDuServeur(a.id, async (db) => {
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, $2, $3, 'épreuve automatisée')
-         on conflict (tenant_id, code) do update set value_num = excluded.value_num`,
-        [orgA, `fabrique.seuil.travail.${borne}`, valeur],
-      );
-    });
+    await arreterUneBorne(
+      orgA,
+      `fabrique.seuil.travail.${borne}`,
+      valeur,
+      "épreuve automatisée",
+      a.id,
+    );
   }
 
   /**

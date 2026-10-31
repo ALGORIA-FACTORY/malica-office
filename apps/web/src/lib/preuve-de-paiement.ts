@@ -16,8 +16,8 @@
  */
 import { files } from "@/capabilities/files";
 import { vidage } from "@/lib/hors-ligne";
+import { effacerUnDepotAvorte } from "@/hooks/use-gestes-du-circuit";
 import { ErreurReseau } from "@/lib/transport/erreurs";
-import { office } from "@/verticals/malica-office/composition";
 import type { Visibility } from "@malica/socle/ports/repositories";
 
 /** L'identifiant de la nouvelle pièce, ou `null` si l'appareil a été refermé ou si elle attend le réseau. */
@@ -75,9 +75,6 @@ export async function photographierUnePreuve(p: {
       ? await vidage().attendre(cle, 30_000)
       : element;
   await vidage().abandonner(cle);
-  if (pose?.pieceId)
-    await office()
-      .capture.supprimer(pose.pieceId)
-      .catch(() => undefined);
+  if (pose?.pieceId) await effacerUnDepotAvorte(pose.pieceId).catch(() => undefined);
   throw new ErreurReseau("hors_ligne");
 }

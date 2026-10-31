@@ -1,0 +1,662 @@
+{
+  "regle": "Une table d'état ou de faits ne s'écrit que par une porte (security definer). Chaque droit d'écriture direct qui reste à un client est ici, avec les chemins de l'application qui l'exigent aujourd'hui (fonctions security invoker, requêtes de l'API, vues écrites par l'API). Les autres se routeront par une porte (suite du lot 6) ; un droit nouveau ou plus large fait échouer les-clients-n-ecrivent-que-par-les-portes.test.ts.",
+  "droits": [
+    {
+      "objet": "agents.agent_runs",
+      "privilege": "INSERT",
+      "chemins": ["fn public.agents_run_log"]
+    },
+    {
+      "objet": "agents.conversation_messages",
+      "privilege": "INSERT",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "agents.conversations",
+      "privilege": "DELETE",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "agents.conversations",
+      "privilege": "INSERT",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "agents.conversations",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "agents.reponse_controles",
+      "privilege": "INSERT",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "agents.reponse_verdicts",
+      "privilege": "INSERT",
+      "chemins": ["api depots/conversations.ts"]
+    },
+    {
+      "objet": "app.signalements",
+      "privilege": "INSERT",
+      "chemins": ["api depots/signalements.ts"]
+    },
+    {
+      "objet": "audit.event_log",
+      "privilege": "INSERT",
+      "chemins": [
+        "api depots/office.ts",
+        "fn app.annulation_contre_passe_le_reglement",
+        "fn public.api_key_creer",
+        "fn public.api_key_revoquer",
+        "fn public.banque_delettrer",
+        "fn public.banque_lettrer",
+        "fn public.cabinet_inviter",
+        "fn public.cabinet_mise_en_route_terminer",
+        "fn public.cabinet_obligation_definir",
+        "fn public.cabinet_obligation_propre_creer",
+        "fn public.cabinet_reglages_definir",
+        "fn public.capture_piece_register",
+        "fn public.capture_precision_persist",
+        "fn public.capture_read_persist",
+        "fn public.capture_sceller_empreinte",
+        "fn public.charge_question_answer",
+        "fn public.collab_assign",
+        "fn public.etablissement_archiver",
+        "fn public.export_journaliser",
+        "fn public.immo_depreciation_constater",
+        "fn public.immo_dotation_constater",
+        "fn public.journal_export_journaliser",
+        "fn public.justificatif_deplacer",
+        "fn public.justificatif_remplacer",
+        "fn public.organisation_definir",
+        "fn public.paiement_annuler",
+        "fn public.paiement_rattacher_justificatif",
+        "fn public.piece_renvoyer",
+        "fn public.pv_envoyer",
+        "fn public.recu_attester_paiements",
+        "fn public.set_engagement_status",
+        "fn public.socle_ecriture_book",
+        "fn public.socle_ecriture_propose",
+        "fn public.socle_ecriture_review",
+        "fn public.stocks_depreciation_constater",
+        "fn public.stocks_inventaire_constater"
+      ],
+      "raison": "Les fonctions security invoker et les requêtes de l'API nommées journalisent : la politique `audit_event_log_ins` exige actor = auth.uid() (ni modification ni effacement)."
+    },
+    {
+      "objet": "audit.journal_client",
+      "privilege": "INSERT",
+      "chemins": ["fn public.journal_client_consigner"]
+    },
+    {
+      "objet": "banque.comptes",
+      "privilege": "INSERT",
+      "chemins": ["api depots/banque.ts (via public.banque_comptes_v)"]
+    },
+    {
+      "objet": "banque.lettrage_etat",
+      "privilege": "INSERT",
+      "chemins": ["fn public.banque_lettrer"]
+    },
+    {
+      "objet": "banque.lettrage_etat",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.banque_delettrer", "fn public.banque_lettrer"]
+    },
+    {
+      "objet": "banque.lettrages",
+      "privilege": "INSERT",
+      "chemins": ["fn public.banque_delettrer", "fn public.banque_lettrer"]
+    },
+    {
+      "objet": "banque.releve_lignes",
+      "privilege": "INSERT",
+      "chemins": ["api depots/banque.ts (via public.banque_lignes_v)"]
+    },
+    {
+      "objet": "banque.releve_lignes",
+      "privilege": "UPDATE",
+      "chemins": [
+        "api depots/banque.ts (via public.banque_lignes_v)",
+        "fn public.banque_delettrer",
+        "fn public.banque_lettrer"
+      ]
+    },
+    {
+      "objet": "capture.analyses",
+      "privilege": "INSERT",
+      "chemins": ["api scan/analyse.ts"]
+    },
+    {
+      "objet": "capture.analyses_verifiees",
+      "privilege": "INSERT",
+      "chemins": ["api scan/analyse.ts"]
+    },
+    {
+      "objet": "capture.citations",
+      "privilege": "INSERT",
+      "chemins": ["fn public.capture_read_persist"]
+    },
+    {
+      "objet": "capture.conformite",
+      "privilege": "INSERT",
+      "chemins": ["fn public.socle_ecriture_review"]
+    },
+    {
+      "objet": "capture.extractions",
+      "privilege": "INSERT",
+      "chemins": ["fn public.capture_read_persist"]
+    },
+    {
+      "objet": "capture.paiement_justificatifs",
+      "privilege": "INSERT",
+      "chemins": [
+        "fn public.justificatif_deplacer",
+        "fn public.justificatif_remplacer",
+        "fn public.paiement_rattacher_justificatif",
+        "fn public.piece_qui_accompagne_supprimer"
+      ]
+    },
+    {
+      "objet": "capture.paiements",
+      "privilege": "INSERT",
+      "chemins": [
+        "api depots/capture.ts",
+        "fn public.paiement_annuler",
+        "fn public.paiement_corriger"
+      ]
+    },
+    {
+      "objet": "capture.piece_articles",
+      "privilege": "DELETE",
+      "chemins": ["fn public.capture_articles_persist"]
+    },
+    {
+      "objet": "capture.piece_articles",
+      "privilege": "INSERT",
+      "chemins": ["fn public.capture_articles_persist"]
+    },
+    {
+      "objet": "capture.pieces",
+      "privilege": "INSERT",
+      "colonnes": [
+        "created_by",
+        "document_kind",
+        "document_kind_statut",
+        "entity_id",
+        "idempotency_key",
+        "page_count",
+        "sha256",
+        "source",
+        "source_piece_id",
+        "storage_path",
+        "tenant_id",
+        "vis"
+      ],
+      "chemins": ["fn public.capture_piece_register"],
+      "raison": "Le dépôt d'une photo (`capture_piece_register`, security invoker) : sans l'auteur (auth.uid() par défaut) ni l'état du circuit ; un envoi par insertion reste jugé par `seul_qui_en_a_le_droit_transmet`."
+    },
+    {
+      "objet": "capture.pieces",
+      "privilege": "UPDATE",
+      "colonnes": [
+        "document_kind",
+        "document_kind_statut",
+        "doublon_de",
+        "sha256",
+        "status",
+        "updated_at"
+      ],
+      "chemins": [
+        "fn public.capture_piece_register",
+        "fn public.capture_precision_persist",
+        "fn public.capture_read_persist",
+        "fn public.capture_sceller_empreinte",
+        "fn public.piece_renvoyer",
+        "fn public.socle_ecriture_book",
+        "fn public.socle_ecriture_propose",
+        "fn public.socle_ecriture_review"
+      ],
+      "raison": "Lecture, empreinte, précision et écriture comptable (fonctions security invoker) : le statut, le type, l'empreinte, le doublon. Jamais vis, gardee_le, transmise_le, archivee_le, source_piece_id, created_by, tenant_id, storage_path."
+    },
+    {
+      "objet": "capture.precisions",
+      "privilege": "INSERT",
+      "chemins": ["fn public.capture_precision_persist"]
+    },
+    {
+      "objet": "capture.rattachements",
+      "privilege": "INSERT",
+      "chemins": ["fn public.piece_detacher", "fn public.piece_rattacher"]
+    },
+    {
+      "objet": "capture.recu_paiements",
+      "privilege": "INSERT",
+      "chemins": ["fn public.recu_attester_paiements"]
+    },
+    {
+      "objet": "capture.token_plan",
+      "privilege": "INSERT",
+      "chemins": ["fn public.capture_read_persist"]
+    },
+    {
+      "objet": "collab.assignments",
+      "privilege": "INSERT",
+      "chemins": ["fn public.collab_assign"]
+    },
+    {
+      "objet": "collab.assignments",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.collab_assign"]
+    },
+    {
+      "objet": "collab.charge_questions",
+      "privilege": "INSERT",
+      "chemins": ["fn public.charge_question_answer"]
+    },
+    {
+      "objet": "collab.exports",
+      "privilege": "INSERT",
+      "chemins": ["fn public.export_journaliser", "fn public.journal_export_journaliser"]
+    },
+    {
+      "objet": "collab.notification_lectures",
+      "privilege": "INSERT",
+      "chemins": ["fn public.notification_marquer_lue"]
+    },
+    {
+      "objet": "collab.notifications",
+      "privilege": "INSERT",
+      "chemins": [
+        "fn app.annulation_contre_passe_le_reglement",
+        "fn public.piece_renvoyer",
+        "fn public.pv_envoyer",
+        "fn public.socle_ecriture_review"
+      ],
+      "raison": "Les fonctions security invoker nommées avisent toute la société : la politique `collab_notifications_ins` exige user_id null et l'une de leurs cinq natures. Un avis adressé passe par une porte."
+    },
+    {
+      "objet": "collab.obligations_cabinet",
+      "privilege": "INSERT",
+      "chemins": ["fn public.cabinet_obligation_definir"]
+    },
+    {
+      "objet": "collab.obligations_cabinet",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.cabinet_obligation_definir"]
+    },
+    {
+      "objet": "collab.obligations_propres",
+      "privilege": "INSERT",
+      "chemins": ["fn public.cabinet_obligation_propre_creer"]
+    },
+    {
+      "objet": "collab.pv_receptions",
+      "privilege": "INSERT",
+      "chemins": ["fn public.pv_accuser_reception"]
+    },
+    {
+      "objet": "collab.pv_reunions",
+      "privilege": "INSERT",
+      "chemins": ["api depots/collab.ts (via public.collab_pv_v)"]
+    },
+    {
+      "objet": "collab.pv_reunions",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/collab.ts (via public.collab_pv_v)", "fn public.pv_envoyer"]
+    },
+    {
+      "objet": "collab.reglages_cabinet",
+      "privilege": "INSERT",
+      "chemins": ["fn public.cabinet_mise_en_route_terminer", "fn public.cabinet_reglages_definir"]
+    },
+    {
+      "objet": "collab.reglages_cabinet",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.cabinet_mise_en_route_terminer", "fn public.cabinet_reglages_definir"]
+    },
+    {
+      "objet": "fabrique.derives",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.evaluation_exemples",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.evaluations",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.executions",
+      "privilege": "INSERT",
+      "chemins": ["api depots/fabrique.ts"]
+    },
+    {
+      "objet": "fabrique.exemples",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.promotions",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.recette_version_exemples",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.recette_versions",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.recettes",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/cycle.ts"]
+    },
+    {
+      "objet": "fabrique.travail_faits",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/travaux.ts", "fn fabrique.travail_prendre"]
+    },
+    {
+      "objet": "fabrique.travaux",
+      "privilege": "INSERT",
+      "chemins": ["api fabrique/travaux.ts", "fn fabrique.generation_proposer"]
+    },
+    {
+      "objet": "facturation.forfait_historique",
+      "privilege": "INSERT",
+      "chemins": ["fn public.forfait_changer"]
+    },
+    {
+      "objet": "facturation.forfait_historique",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.forfait_changer"]
+    },
+    {
+      "objet": "identity.api_keys",
+      "privilege": "INSERT",
+      "chemins": ["fn public.api_key_creer"]
+    },
+    {
+      "objet": "identity.api_keys",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.api_key_revoquer"]
+    },
+    {
+      "objet": "identity.engagements",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts (via public.engagements_v)"]
+    },
+    {
+      "objet": "identity.engagements",
+      "privilege": "UPDATE",
+      "chemins": [
+        "api depots/identite.ts (via public.engagements_v)",
+        "fn public.set_engagement_status"
+      ]
+    },
+    {
+      "objet": "identity.entities",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts (via public.entities_v)"]
+    },
+    {
+      "objet": "identity.entities",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.etablissement_archiver"]
+    },
+    {
+      "objet": "identity.fiches_fiscales",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "identity.fiches_fiscales",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "identity.invitations",
+      "privilege": "INSERT",
+      "chemins": ["fn public.cabinet_inviter"]
+    },
+    {
+      "objet": "identity.organizations",
+      "privilege": "UPDATE",
+      "chemins": ["fn public.organisation_definir"]
+    },
+    {
+      "objet": "identity.profiles",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "identity.profiles",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "immo.assets",
+      "privilege": "INSERT",
+      "chemins": ["api depots/immo.ts (via public.immo_assets_v)"]
+    },
+    {
+      "objet": "immo.assets",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/immo.ts (via public.immo_assets_v)"]
+    },
+    {
+      "objet": "immo.cessions",
+      "privilege": "INSERT",
+      "chemins": ["api depots/immo.ts (via public.immo_cessions_v)"]
+    },
+    {
+      "objet": "immo.depreciations",
+      "privilege": "INSERT",
+      "chemins": ["fn public.immo_depreciation_constater"]
+    },
+    {
+      "objet": "immo.dotations",
+      "privilege": "INSERT",
+      "chemins": ["fn public.immo_dotation_constater"]
+    },
+    {
+      "objet": "notif.preferences",
+      "privilege": "INSERT",
+      "chemins": ["api bibliotheque.ts"]
+    },
+    {
+      "objet": "parametrage.accounts",
+      "privilege": "DELETE",
+      "chemins": ["api depots/parametrage.ts"]
+    },
+    {
+      "objet": "parametrage.accounts",
+      "privilege": "INSERT",
+      "chemins": ["api depots/parametrage.ts"]
+    },
+    {
+      "objet": "parametrage.role_bindings",
+      "privilege": "DELETE",
+      "chemins": ["api depots/parametrage.ts"]
+    },
+    {
+      "objet": "parametrage.role_bindings",
+      "privilege": "INSERT",
+      "chemins": ["api depots/parametrage.ts"]
+    },
+    {
+      "objet": "parametrage.role_bindings",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/parametrage.ts"]
+    },
+    {
+      "objet": "public.banque_comptes_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/banque.ts"]
+    },
+    {
+      "objet": "public.banque_lignes_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/banque.ts"]
+    },
+    {
+      "objet": "public.banque_lignes_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/banque.ts"]
+    },
+    {
+      "objet": "public.collab_pv_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/collab.ts"]
+    },
+    {
+      "objet": "public.collab_pv_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/collab.ts"]
+    },
+    {
+      "objet": "public.engagements_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "public.engagements_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "public.entities_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/identite.ts"]
+    },
+    {
+      "objet": "public.immo_assets_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/immo.ts"]
+    },
+    {
+      "objet": "public.immo_assets_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/immo.ts"]
+    },
+    {
+      "objet": "public.immo_cessions_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/immo.ts"]
+    },
+    {
+      "objet": "public.stocks_items_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/stocks.ts"]
+    },
+    {
+      "objet": "public.stocks_items_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/stocks.ts"]
+    },
+    {
+      "objet": "public.stocks_mouvements_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/stocks.ts"]
+    },
+    {
+      "objet": "public.tiers_v",
+      "privilege": "INSERT",
+      "chemins": ["api depots/tiers.ts"]
+    },
+    {
+      "objet": "public.tiers_v",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/tiers.ts"]
+    },
+    {
+      "objet": "socle.ecriture_lignes",
+      "privilege": "INSERT",
+      "chemins": [
+        "fn app.annulation_contre_passe_le_reglement",
+        "fn public.immo_depreciation_constater",
+        "fn public.immo_dotation_constater",
+        "fn public.socle_ecriture_contre_passer",
+        "fn public.socle_ecriture_propose",
+        "fn public.stocks_depreciation_constater",
+        "fn public.stocks_inventaire_constater"
+      ]
+    },
+    {
+      "objet": "socle.ecritures",
+      "privilege": "DELETE",
+      "chemins": ["fn app.piece_oublie_ses_propositions", "fn public.socle_ecriture_propose"]
+    },
+    {
+      "objet": "socle.ecritures",
+      "privilege": "INSERT",
+      "chemins": [
+        "fn app.annulation_contre_passe_le_reglement",
+        "fn public.immo_depreciation_constater",
+        "fn public.immo_dotation_constater",
+        "fn public.socle_ecriture_contre_passer",
+        "fn public.socle_ecriture_propose",
+        "fn public.stocks_depreciation_constater",
+        "fn public.stocks_inventaire_constater"
+      ]
+    },
+    {
+      "objet": "socle.ecritures",
+      "privilege": "UPDATE",
+      "chemins": [
+        "fn public.immo_depreciation_constater",
+        "fn public.immo_dotation_constater",
+        "fn public.socle_ecriture_book",
+        "fn public.socle_ecriture_contre_passer",
+        "fn public.socle_ecriture_review",
+        "fn public.stocks_depreciation_constater",
+        "fn public.stocks_inventaire_constater"
+      ]
+    },
+    {
+      "objet": "stocks.depreciations",
+      "privilege": "INSERT",
+      "chemins": ["fn public.stocks_depreciation_constater"]
+    },
+    {
+      "objet": "stocks.inventaires",
+      "privilege": "INSERT",
+      "chemins": ["fn public.stocks_inventaire_constater"]
+    },
+    {
+      "objet": "stocks.items",
+      "privilege": "INSERT",
+      "chemins": ["api depots/stocks.ts (via public.stocks_items_v)"]
+    },
+    {
+      "objet": "stocks.items",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/stocks.ts (via public.stocks_items_v)"]
+    },
+    {
+      "objet": "stocks.mouvements",
+      "privilege": "INSERT",
+      "chemins": ["api depots/stocks.ts (via public.stocks_mouvements_v)"]
+    },
+    {
+      "objet": "tiers.auxiliaires",
+      "privilege": "INSERT",
+      "chemins": ["api depots/tiers.ts (via public.tiers_v)"]
+    },
+    {
+      "objet": "tiers.auxiliaires",
+      "privilege": "UPDATE",
+      "chemins": ["api depots/tiers.ts (via public.tiers_v)"]
+    }
+  ]
+}

@@ -30,6 +30,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 
+import { arreterUneBorne } from "./borne-arretee.ts";
 import { lireLesBornesDeRecette, lireLesReglages } from "./interprete-reglages.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -118,14 +119,14 @@ describe("les réglages de la fabrique", { skip: BASE_CONFIGUREE ? false : "sans
      * compte" sans lire un historique ». Ici, c'est « qui a décidé ce
      * seuil » — et la réponse voyage avec la valeur.
      */
-    const reglages = await sousIdentite(utilisateur.id, async (db) => {
-      await db.query(
-        `insert into parametrage.fabrique_seuils (tenant_id, code, value_num, motif)
-         values ($1, 'fabrique.seuil.signature.distance_max', 0.12, 'corpus du cabinet')`,
-        [tenant],
-      );
-      return lireLesReglages(db, tenant);
-    });
+    await arreterUneBorne(
+      tenant,
+      "fabrique.seuil.signature.distance_max",
+      0.12,
+      "corpus du cabinet",
+      utilisateur.id,
+    );
+    const reglages = await sousIdentite(utilisateur.id, (db) => lireLesReglages(db, tenant));
     assert.equal(reglages.classement.distanceMax, 0.12);
     assert.deepEqual(reglages.arretesParLeCabinet, ["distance_max"]);
     assert.equal(

@@ -230,11 +230,15 @@ export const supervision = {
          -- ce filtre ressortirait une vieille demande déjà tranchée, parce
          -- qu'il y a toujours une ligne « demandee » quelque part dans
          -- l'histoire.
+         -- L'état par étape (revue Codex de #146) : seule la demande faite
+         -- AU CABINET l'attend ; celle d'un siège à son propriétaire n'est
+         -- pas la sienne, et sa décision ne clôt pas celle du cabinet.
          left join lateral (
-           select case when d.fait = 'demandee' then d.objet end as objet
-             from demandes_sur_piece_v d
-            where d.piece_id = p.id
-            order by d.created_at desc limit 1
+           select e.objet
+             from app.etat_des_demandes_lisible(p.id) e
+            where e.etape = 'cabinet' and e.fait = 'demandee'
+            order by e.objet
+            limit 1
          ) dem on true
          -- « Doublon probable » (staging, 30 octobre 2026) : deux pièces du
          -- même émetteur et du même numéro passaient toutes deux dans la

@@ -9,7 +9,11 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ isSuccess: true, data: [], fetchStatus: "idle" }),
+  // Chaque requête rend la forme de son contrat : les droits sont une liste.
+  useQuery: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+    queryKey[0] === "mon-acces"
+      ? { isSuccess: true, data: { droits: [] }, fetchStatus: "idle" }
+      : { isSuccess: true, data: [], fetchStatus: "idle" },
   useMutation: () => ({}),
   useQueryClient: () => ({}),
 }));

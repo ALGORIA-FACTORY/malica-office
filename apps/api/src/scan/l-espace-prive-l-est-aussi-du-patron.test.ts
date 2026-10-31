@@ -159,7 +159,12 @@ describe("l'espace privé l'est aussi du dirigeant", { skip: !BASE_CONFIGUREE },
     // Le siège photographie une ordonnance, et la garde pour lui.
     ordonnance = await deposer("ordonnance", "personnel");
     entite = await deposer("entite", "entite");
-    partagee = await deposer("partagee", "partage");
+    // Le siège ne transmet pas au comptable (lot 4, 28 octobre 2026) : il
+    // verse sa pièce à la société, et le dirigeant la transmet.
+    partagee = await deposer("partagee", "entite");
+    await sousIdentiteDuServeur(dirigeant.id, (db) =>
+      db.query("select public.capture_piece_set_vis($1, 'partage')", [partagee]),
+    );
 
     // Ses dépendances : ce que la lecture en a tiré, le règlement qu'il a saisi,
     // et la citation qui pointe un mot de la page.

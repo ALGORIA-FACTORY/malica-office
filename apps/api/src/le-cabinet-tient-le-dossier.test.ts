@@ -154,7 +154,8 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
           [cabinet, code],
         ),
       ),
-      /row-level security|niveau ligne/,
+      // Plus aucun droit d'écriture direct : la porte `cabinet_report_poser` seule.
+      /permission denied|droit refusé/,
     );
     await admin.query(
       `insert into schedule.echeances (tenant_id, kind, label, period, due_date, date_legale, pack_version_id)

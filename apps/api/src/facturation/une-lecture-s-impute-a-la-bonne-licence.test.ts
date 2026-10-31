@@ -104,7 +104,9 @@ async function monter(db: pg.PoolClient, consommees: number): Promise<Cabinet> {
     );
   }
 
-  const piece = await nouvellePiece(db, tenant, dirigeant, "a-lire");
+  // La pièce du collaborateur : un siège ne lit que les siennes (lot 4), et le
+  // dirigeant voit toute la société — les deux la lisent.
+  const piece = await nouvellePiece(db, tenant, collaborateur, "a-lire");
   return { dirigeant, collaborateur, tenant, licence, piece };
 }
 

@@ -21,6 +21,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { EmptyState, MalicaNote, EnTeteCabinet } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
+import { enregistrerUnFichier } from "@/capabilities/enregistrer-un-fichier";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -90,16 +91,13 @@ function tailleLisible(octets: number, locale: string): string {
   }).format(valeur);
 }
 
-/** Le contenu rendu par l'API devient un fichier du poste — aucun serveur de fichiers. */
-function telecharger(e: ExportGenere): void {
-  const url = URL.createObjectURL(new Blob([e.contenu], { type: e.typeMime }));
-  const lien = document.createElement("a");
-  lien.href = url;
-  lien.download = e.nomDeFichier;
-  document.body.appendChild(lien);
-  lien.click();
-  lien.remove();
-  URL.revokeObjectURL(url);
+/**
+ * Le contenu rendu par l'API devient un fichier du poste — aucun serveur de
+ * fichiers. Par la seule porte qui remet un fichier : dans la coque native
+ * aussi, et sans jamais écraser un export précédent du même nom.
+ */
+function telecharger(e: ExportGenere) {
+  return enregistrerUnFichier(new Blob([e.contenu], { type: e.typeMime }), e.nomDeFichier);
 }
 
 function CabinetExport() {
@@ -162,9 +160,9 @@ function CabinetExport() {
       setErreur(null);
       setDernier(null);
     },
-    onSuccess: (r) => {
-      telecharger(r);
+    onSuccess: async (r) => {
       setDernier(r);
+      await telecharger(r);
       void qc.invalidateQueries({ queryKey: ["cab-exports", org.id] });
     },
     onError: (e) => setErreur(texteDeLErreur(e, "export : génération", t("cab.export.erreur"))),

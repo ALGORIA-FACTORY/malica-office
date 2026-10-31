@@ -8,6 +8,7 @@ import { useEffect, type ReactNode } from "react";
 
 import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
+import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { PackBanner } from "@/components/malica/PackBanner";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { useI18n } from "@/i18n";
@@ -106,6 +107,9 @@ function OfficeHome() {
         </div>
 
         <InvitationsPourMoi />
+
+        {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
+        <LienMonEspaceParti className="mt-6 inline-flex min-h-[48px] items-center border border-border px-4 text-sm font-medium" />
 
         {!orgsQuery.isPending && pmeOrgs.length === 0 && cabinetOrgs.length === 0 ? (
           <p className="mt-8 border border-border bg-card p-6 text-sm text-muted-foreground">

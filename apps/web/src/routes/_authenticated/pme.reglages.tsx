@@ -17,9 +17,11 @@ import { Aide } from "@/components/malica/aide";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
+import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { usePrix } from "@/hooks/use-decimales";
 import { libelleDOffre, offresQuiOuvrent, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { cleMonCabinet, useMonCabinet } from "@/hooks/use-mon-cabinet";
+import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
@@ -168,6 +170,8 @@ function PmeReglages() {
           </span>
         </div>
         <MonNom />
+        {/* Son Mon espace des sociétés quittées : il part avec le compte (lot 4). */}
+        <LienMonEspaceParti className="btn btn-sec mt-2" />
         <SeDeconnecter className="btn btn-sec mt-2" />
       </div>
 
@@ -616,10 +620,7 @@ function useLAbonnement(): LAbonnement {
   const { t } = useI18n();
   const pme = usePme();
 
-  const acces = useQuery({
-    queryKey: ["pme-acces", pme.tenantId],
-    queryFn: () => office().acces.monAcces(pme.tenantId),
-  });
+  const acces = useMonAcces(pme.tenantId);
 
   /*
    * Le forfait ne se redemande pas : le layout l'a lu, sans `tenantId`,
@@ -1037,10 +1038,7 @@ function Sieges({ abo, verrou }: { abo: LAbonnement; verrou: Verrou }) {
   const { t, locale } = useI18n();
   const pme = usePme();
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
-  const acces = useQuery({
-    queryKey: ["pme-acces", pme.tenantId],
-    queryFn: () => office().acces.monAcces(pme.tenantId),
-  });
+  const acces = useMonAcces(pme.tenantId);
   const dirigeant = acces.data?.role === "dirigeant";
 
   const groupes = grouperParOrganisation(abo.sieges);
