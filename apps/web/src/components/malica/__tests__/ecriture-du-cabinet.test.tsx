@@ -159,7 +159,7 @@ function monter(
   illisible = false,
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+  const ecran = (p: PropositionDePiece) => (
     <QueryClientProvider client={client}>
       <EcritureDuCabinet
         pieceId="p1"
@@ -167,7 +167,7 @@ function monter(
         statut="vue"
         suivi={null}
         vivante={null}
-        proposition={proposition}
+        proposition={p}
         typeAEtablir={false}
         sens={sens}
         dateLue="2026-10-27"
@@ -179,8 +179,10 @@ function monter(
         illisible={illisible}
         onRetournee={vi.fn()}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const { rerender } = render(ecran(proposition));
+  return { relire: (p: PropositionDePiece) => rerender(ecran(p)) };
 }
 
 /**
@@ -256,6 +258,34 @@ describe("une pièce en devise, côté comptable", () => {
         portee: "cabinet",
       }),
     );
+  });
+
+  it("le cours corrigé, la saisie repart de la nouvelle proposition : elle se valide, jamais forcée (revue de #148)", async () => {
+    api.valider.mockResolvedValue("e1");
+    const { relire } = monter(CONVERTIE);
+    const RECONVERTIE = {
+      ...CONVERTIE,
+      empreinte: "empreinte-au-nouveau-cours",
+      proposition: {
+        ...(CONVERTIE as { proposition: { lignes: Array<Record<string, string>> } }).proposition,
+        lignes: (
+          CONVERTIE as { proposition: { lignes: Array<Record<string, string>> } }
+        ).proposition.lignes.map((l) => ({
+          ...l,
+          debit: l["debit"] === "0" ? "0" : "3400.000",
+          credit: l["credit"] === "0" ? "0" : "3400.000",
+          taux_de_change: "3.4",
+        })),
+      },
+    } as unknown as PropositionDePiece;
+    relire(RECONVERTIE);
+    expect(screen.getAllByDisplayValue(/^3\s?400[,.]000$/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByDisplayValue(/^3\s?345[,.]600$/)).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.valider" }));
+    await waitFor(() =>
+      expect(api.valider).toHaveBeenCalledWith("p1", "empreinte-au-nouveau-cours"),
+    );
+    expect(api.forcer).not.toHaveBeenCalled();
   });
 
   it("une ligne changée n'est plus celle de la pièce en devise : son origine ne s'affiche plus", () => {

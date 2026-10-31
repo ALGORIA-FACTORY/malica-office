@@ -115,7 +115,7 @@ export function EcritureDuCabinet({
   const depart = ecritureDeDepart(vivante, proposition);
   // Une pièce en devise : l'origine de chaque ligne de départ, rang pour rang.
   const origines = originesDeDepart(vivante, proposition);
-  const [saisie, setSaisie] = useState<EcritureEnSaisie>(() =>
+  const saisieDeDepart = (): EcritureEnSaisie =>
     depart.depart === "rien"
       ? {
           journal: "",
@@ -123,8 +123,21 @@ export function EcritureDuCabinet({
           libelle: libellePropose ?? "",
           lignes: [LIGNE_VIDE, LIGNE_VIDE],
         }
-      : depart,
-  );
+      : depart;
+  const [saisie, setSaisie] = useState<EcritureEnSaisie>(saisieDeDepart);
+  /*
+   * La saisie repart de ce qui existe dès que cela change : une autre
+   * écriture prise en charge, une autre proposition (son empreinte). Revue
+   * de #148 : un cours corrigé rafraîchissait la proposition, mais la saisie
+   * gardait les montants convertis à l'ancien cours — ils ne correspondaient
+   * plus à la proposition, et l'écriture partait « forcée », sans son cours.
+   */
+  const cleDuDepart = `${vivante?.id ?? "-"}|${proposition?.ok ? (proposition.empreinte ?? "p") : "r"}`;
+  const [departLu, setDepartLu] = useState(cleDuDepart);
+  if (departLu !== cleDuDepart) {
+    setDepartLu(cleDuDepart);
+    setSaisie(saisieDeDepart());
+  }
   const [type, setType] = useState("");
   const [feuille, setFeuille] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
