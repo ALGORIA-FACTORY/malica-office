@@ -700,6 +700,11 @@ const fr = {
   "pme.charges.sansDate.detail":
     "Elles ne comptent dans aucun mois tant que leur date n'est pas lue : {amount}.",
   "pme.charges.sansDate.action": "Les ouvrir pour saisir la date",
+  "pme.charges.sansCours.titre": "{count} pièces en devise attendent leur cours",
+  "pme.charges.sansCours.titre#one": "1 pièce en devise attend son cours",
+  "pme.charges.sansCours.titre#other": "{count} pièces en devise attendent leur cours",
+  "pme.charges.sansCours.detail":
+    "Elles n’entrent dans aucun total tant que votre cabinet n’a pas saisi le cours ({devises}).",
   "pme.charges.question":
     "{famille} : {observed} ce mois, contre {baseline} habituellement ({value}). Est-ce exceptionnel ?",
   "pme.charges.answer.exceptionnel": "Oui, exceptionnel",
@@ -2064,6 +2069,15 @@ const fr = {
     "La facture porte plusieurs taux : choisissez le code de taxe de chaque ligne de base.",
   "refus.ecriture.taxe_sans_tva":
     "Aucune ligne de TVA : choisissez le code de taxe de chaque ligne de base (exonérée, export…).",
+  "refus.cours.supervision": "Un cours se saisit par le cabinet qui supervise le dossier.",
+  "refus.cours.invalide":
+    "Un cours est un taux positif, pour une unité (1, 10, 100…), dans une devise et une source du référentiel.",
+  "refus.cours.sans_objet":
+    "Cette pièce n’attend aucun cours : elle est dans la devise du dossier, ou sa date manque.",
+  "refus.cours.ecriture_vivante":
+    "L’écriture de cette pièce est inscrite avec son cours : retournez-la d’abord (contre-passation), puis saisissez le cours.",
+  "refus.ecriture.devise_du_dossier":
+    "Une écriture se passe dans la devise du dossier : une pièce en devise se convertit d’abord, au cours de la règle de change.",
   "statut.pme.mon_espace": "Mon espace",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
@@ -2105,6 +2119,32 @@ const fr = {
     "Votre choix est daté et gardé à votre nom. Malica rejuge aussitôt la pièce et propose l'écriture, que vous validez ou forcez.",
   "cab.sens.aide.forcer":
     "Vous pouvez aussi saisir l'écriture directement : le sens ne bloque jamais le forçage.",
+  "cab.cours.a_saisir": "Taux {devise}/{vers} du {jour} à saisir",
+  "cab.cours.aide.pourquoi":
+    "La facture est en {devise}, le dossier tenu en {vers} : l’écriture se convertit au cours {source} du jour que la règle de change désigne. Sans ce cours, rien ne se propose.",
+  "cab.cours.aide.regle":
+    "La règle de change (le jour retenu, le recul jusqu’au dernier cours publié, l’écart d’arrondi) est un défaut livré par Malica, à confirmer par un expert-comptable.",
+  "cab.cours.aide.trace":
+    "Le cours saisi est daté et gardé à votre nom ; il vaut pour les dossiers de votre cabinet. Une correction s’ajoute, rien n’est effacé, et la pièce est rejugée aussitôt.",
+  "cab.cours.taux": "{vers} pour {unite} {devise}",
+  "cab.cours.unite": "Unité ({devise})",
+  "cab.cours.enregistrer": "Enregistrer le taux",
+  "cab.cours.corriger": "Corriger le taux",
+  "cab.cours.applique": "{unite} {devise} = {taux} {vers} · {source} · {date}",
+  "cab.cours.tous": "Tous les cours",
+  "cab.cours.titre": "Cours de change",
+  "cab.cours.surtitre": "Les cours que vos dossiers lisent",
+  "cab.cours.malica":
+    "Un cours est une donnée : il vient de la source officielle, importé par l’exploitation ou saisi par vous. À date égale, le vôtre l’emporte pour vos dossiers.",
+  "cab.cours.vide": "Aucun cours pour l’instant.",
+  "cab.cours.importe": "Importé",
+  "cab.cours.saisi": "Saisi par le cabinet",
+  "cab.cours.date": "Date du cours",
+  "cab.cours.devise": "Devise",
+  "cab.cours.vers": "Devise du dossier",
+  "cab.cours.source": "Source",
+  "cab.cours.nouveau": "Saisir un cours",
+  "cab.cours.enregistre": "Cours enregistré.",
   "cab.ecriture.ligne.libelle": "Libellé",
   "cab.ecriture.ligne.champ": "{champ}, ligne {n}",
   "cab.ecriture.ligne.taxe": "Taxe",
@@ -4511,6 +4551,12 @@ const en: Dict = {
   "pme.charges.sansDate.titre#other": "{count} documents are waiting for their date",
   "pme.charges.sansDate.detail": "They count towards no month until their date is read: {amount}.",
   "pme.charges.sansDate.action": "Open them to enter the date",
+  "pme.charges.sansCours.titre": "{count} foreign-currency documents are waiting for their rate",
+  "pme.charges.sansCours.titre#one": "1 foreign-currency document is waiting for its rate",
+  "pme.charges.sansCours.titre#other":
+    "{count} foreign-currency documents are waiting for their rate",
+  "pme.charges.sansCours.detail":
+    "They count towards no total until your firm enters the rate ({devises}).",
   "pme.charges.question":
     "{famille}: {observed} this month versus {baseline} usually ({value}). Is this exceptional?",
   "pme.charges.answer.exceptionnel": "Yes, exceptional",
@@ -5860,6 +5906,15 @@ const en: Dict = {
     "The invoice has several rates: choose the tax code of each base line.",
   "refus.ecriture.taxe_sans_tva":
     "No VAT line: choose the tax code of each base line (exempt, export…).",
+  "refus.cours.supervision": "A rate is entered by the firm that supervises the file.",
+  "refus.cours.invalide":
+    "A rate is a positive number, for a unit (1, 10, 100…), in a currency and a source of the reference data.",
+  "refus.cours.sans_objet":
+    "This document awaits no rate: it is in the file’s currency, or its date is missing.",
+  "refus.cours.ecriture_vivante":
+    "This document’s entry is booked with its rate: return it first (reversal), then enter the rate.",
+  "refus.ecriture.devise_du_dossier":
+    "An entry is booked in the file’s currency: a foreign-currency document is converted first, at the exchange rule’s rate.",
   "statut.pme.mon_espace": "My space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
@@ -5901,6 +5956,32 @@ const en: Dict = {
     "Your choice is dated and kept under your name. Malica re-checks the document at once and proposes the entry, which you validate or force.",
   "cab.sens.aide.forcer":
     "You can also enter the entry directly: the direction never blocks forcing.",
+  "cab.cours.a_saisir": "{devise}/{vers} rate of {jour} to enter",
+  "cab.cours.aide.pourquoi":
+    "The invoice is in {devise}, the file is kept in {vers}: the entry is converted at the {source} rate of the day the exchange rule names. Without that rate, nothing is proposed.",
+  "cab.cours.aide.regle":
+    "The exchange rule (the day used, how far back to the last published rate, the rounding gap) is a default shipped by Malica, to be confirmed by a chartered accountant.",
+  "cab.cours.aide.trace":
+    "The rate you enter is dated and kept in your name; it applies to your firm’s files. A correction is added, nothing is erased, and the document is judged again at once.",
+  "cab.cours.taux": "{vers} for {unite} {devise}",
+  "cab.cours.unite": "Unit ({devise})",
+  "cab.cours.enregistrer": "Save the rate",
+  "cab.cours.corriger": "Correct the rate",
+  "cab.cours.applique": "{unite} {devise} = {taux} {vers} · {source} · {date}",
+  "cab.cours.tous": "All rates",
+  "cab.cours.titre": "Exchange rates",
+  "cab.cours.surtitre": "The rates your files read",
+  "cab.cours.malica":
+    "A rate is data: it comes from the official source, imported by operations or entered by you. On the same date, yours prevails for your files.",
+  "cab.cours.vide": "No rate yet.",
+  "cab.cours.importe": "Imported",
+  "cab.cours.saisi": "Entered by the firm",
+  "cab.cours.date": "Rate date",
+  "cab.cours.devise": "Currency",
+  "cab.cours.vers": "File currency",
+  "cab.cours.source": "Source",
+  "cab.cours.nouveau": "Enter a rate",
+  "cab.cours.enregistre": "Rate saved.",
   "cab.ecriture.ligne.libelle": "Label",
   "cab.ecriture.ligne.champ": "{champ}, line {n}",
   "cab.ecriture.ligne.taxe": "Tax",
@@ -8183,6 +8264,10 @@ const ar: Dict = {
   "pme.charges.sansDate.titre#other": "{count} وثائق تنتظر تاريخها",
   "pme.charges.sansDate.detail": "لا تُحسب في أي شهر ما لم يُقرأ تاريخها: {amount}.",
   "pme.charges.sansDate.action": "افتحها لإدخال التاريخ",
+  "pme.charges.sansCours.titre": "{count} وثائق بعملة أجنبية تنتظر سعر صرفها",
+  "pme.charges.sansCours.titre#one": "وثيقة واحدة بعملة أجنبية تنتظر سعر صرفها",
+  "pme.charges.sansCours.titre#other": "{count} وثائق بعملة أجنبية تنتظر سعر صرفها",
+  "pme.charges.sansCours.detail": "لا تدخل في أي مجموع ما لم يُدخل مكتبك سعر الصرف ({devises}).",
   "pme.charges.question":
     "{famille}: {observed} هذا الشهر مقابل {baseline} في المعتاد ({value}). هل هذا استثنائي؟",
   "pme.charges.answer.exceptionnel": "نعم، استثنائي",
@@ -9497,6 +9582,13 @@ const ar: Dict = {
   "refus.ecriture.taxe_base": "الفاتورة بعدّة نسب: اختر رمز الأداء لكل سطر من الأساس.",
   "refus.ecriture.taxe_sans_tva":
     "لا سطر للأداء على القيمة المضافة: اختر رمز الأداء لكل سطر من الأساس (معفى، تصدير…).",
+  "refus.cours.supervision": "يُدخل سعر الصرف المكتبُ الذي يشرف على الملف.",
+  "refus.cours.invalide": "سعر الصرف عدد موجب، لوحدة (1، 10، 100…)، بعملة ومصدر من المرجع.",
+  "refus.cours.sans_objet": "هذه الوثيقة لا تنتظر أي سعر صرف: هي بعملة الملف، أو ينقصها تاريخها.",
+  "refus.cours.ecriture_vivante":
+    "قيد هذه الوثيقة مسجّل بسعره: أرجعها أولًا (قيد عكسي)، ثم أدخل السعر.",
+  "refus.ecriture.devise_du_dossier":
+    "يُسجَّل القيد بعملة الملف: تُحوَّل الوثيقة بالعملة الأجنبية أولًا، بسعر قاعدة الصرف.",
   "statut.pme.mon_espace": "مساحتي",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",
@@ -9536,6 +9628,32 @@ const ar: Dict = {
   "cab.sens.aide.trace":
     "اختيارك مؤرَّخ ومحفوظ باسمك. تعيد Malica فحص الوثيقة فورًا وتقترح القيد، فتصادق عليه أو تفرضه.",
   "cab.sens.aide.forcer": "يمكنك أيضًا إدخال القيد مباشرة: الاتّجاه لا يمنع الفرض أبدًا.",
+  "cab.cours.a_saisir": "سعر {devise}/{vers} ليوم {jour} للإدخال",
+  "cab.cours.aide.pourquoi":
+    "الفاتورة بعملة {devise}، والملف ممسوك بعملة {vers}: يُحوَّل القيد بسعر {source} لليوم الذي تحدده قاعدة الصرف. بدون هذا السعر، لا يُقترح شيء.",
+  "cab.cours.aide.regle":
+    "قاعدة الصرف (اليوم المعتمد، والرجوع إلى آخر سعر منشور، وفارق التقريب) قيمة افتراضية من Malica، يؤكدها خبير محاسب.",
+  "cab.cours.aide.trace":
+    "السعر الذي تدخله مؤرَّخ ومحفوظ باسمك؛ ويسري على ملفات مكتبك. يُضاف التصحيح ولا يُمحى شيء، وتُعاد معالجة الوثيقة فورًا.",
+  "cab.cours.taux": "{vers} مقابل {unite} {devise}",
+  "cab.cours.unite": "الوحدة ({devise})",
+  "cab.cours.enregistrer": "حفظ السعر",
+  "cab.cours.corriger": "تصحيح السعر",
+  "cab.cours.applique": "{unite} {devise} = {taux} {vers} · {source} · {date}",
+  "cab.cours.tous": "كل الأسعار",
+  "cab.cours.titre": "أسعار الصرف",
+  "cab.cours.surtitre": "الأسعار التي تقرؤها ملفاتك",
+  "cab.cours.malica":
+    "سعر الصرف معطى: يأتي من المصدر الرسمي، يستورده فريق التشغيل أو تدخله أنت. عند تساوي التاريخ، يُعتمد سعرك لملفاتك.",
+  "cab.cours.vide": "لا يوجد سعر بعد.",
+  "cab.cours.importe": "مستورد",
+  "cab.cours.saisi": "أدخله المكتب",
+  "cab.cours.date": "تاريخ السعر",
+  "cab.cours.devise": "العملة",
+  "cab.cours.vers": "عملة الملف",
+  "cab.cours.source": "المصدر",
+  "cab.cours.nouveau": "إدخال سعر",
+  "cab.cours.enregistre": "تم حفظ السعر.",
   "cab.ecriture.ligne.libelle": "البيان",
   "cab.ecriture.ligne.champ": "{champ}، السطر {n}",
   "cab.ecriture.ligne.taxe": "الأداء",

@@ -342,9 +342,7 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
         }>;
       }>;
     };
-    const auJournal = journal.journaux
-      .flatMap((j) => j.ecritures)
-      .find((e) => e.id === ecritureId);
+    const auJournal = journal.journaux.flatMap((j) => j.ecritures).find((e) => e.id === ecritureId);
     assert.ok(auJournal, "l'écriture validée est au journal du jour");
     assert.deepEqual(
       auJournal.lignes.map((l) => [l.origine?.devise, l.origine?.montant]),
@@ -414,7 +412,12 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
     // Transmise ce mois-ci : imputée au mois de sa transmission si celui de
     // sa date est déclaré ; sinon à sa date. Les deux cas portent ses montants.
     const [duJour, auJour] = mois(jour);
-    const duMois = (await pmeFait("office.extraitsTransmis", pme, duJour, auJour)) as typeof transmis;
+    const duMois = (await pmeFait(
+      "office.extraitsTransmis",
+      pme,
+      duJour,
+      auJour,
+    )) as typeof transmis;
     const lu = (id: string) => de(id) ?? duMois.find((x) => x.pieceId === id)?.extract;
     assert.deepEqual(
       [lu(avecCours)?.currency, lu(avecCours)?.totals.vat, lu(avecCours)?.totals.ttc],

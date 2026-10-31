@@ -1517,8 +1517,16 @@ export interface OfficeRepository {
    * `taux` : une écriture décimale pour `unite` unités (1, 10, 100…).
    */
   saisirLeCoursDeLaPiece(pieceId: string, taux: string, unite: number): Promise<PropositionDePiece>;
-  /** Les cours que l'organisation lit : les siens, et ceux de l'exploitation. */
-  coursDeChange(orgId: string): Promise<CoursDeChange[]>;
+  /**
+   * L'écran des cours : ceux que l'organisation lit (les siens, et ceux de
+   * l'exploitation), et ce qu'une saisie peut nommer — les sources et les
+   * devises du référentiel.
+   */
+  coursDeChange(orgId: string): Promise<{
+    cours: CoursDeChange[];
+    sources: Array<{ code: string; nom: string }>;
+    devises: string[];
+  }>;
   /** Saisir un cours depuis l'écran des cours. Rend son identifiant. */
   saisirUnCours(input: {
     orgId: string;

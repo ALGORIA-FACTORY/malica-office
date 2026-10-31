@@ -800,7 +800,12 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       tva: "63.33 US$",
       ttc: "396.66 US$",
     }),
-    cours: { ...COURS_EUR, devise: "USD", id: "00000000-0000-4000-8000-0000000000d1", taux: "3.0125" },
+    cours: {
+      ...COURS_EUR,
+      devise: "USD",
+      id: "00000000-0000-4000-8000-0000000000d1",
+      taux: "3.0125",
+    },
     reserve: "cours_de_change",
     /*
      * 333,33 × 3,0125 = 1 004,1566… → 1 004,157 ; 63,33 × 3,0125 = 190,7816… →
@@ -870,7 +875,13 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
       tva: "190 000 F CFA",
       ttc: "1 190 000 F CFA",
     }),
-    cours: { ...COURS_EUR, devise: "XOF", id: "00000000-0000-4000-8000-0000000000c1", taux: "5.0123", unite: 1000 },
+    cours: {
+      ...COURS_EUR,
+      devise: "XOF",
+      id: "00000000-0000-4000-8000-0000000000c1",
+      taux: "5.0123",
+      unite: 1000,
+    },
     reserve: "cours_de_change",
     // 5,0123 pour 1 000 F CFA : 5 012,300 ; 952,337 ; 5 964,637.
     attendu: {

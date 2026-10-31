@@ -279,7 +279,14 @@ function coursDuJugement(
       raison: `Aucune écriture ne se propose : ${controle.motif}.`,
       raisonCode: "taux_de_change",
       ...(p.jour && p.source
-        ? { coursASaisir: { devise: p.devise, versDevise: p.versDevise, jour: p.jour, source: p.source } }
+        ? {
+            coursASaisir: {
+              devise: p.devise,
+              versDevise: p.versDevise,
+              jour: p.jour,
+              source: p.source,
+            },
+          }
         : {}),
     };
   return {

@@ -46,6 +46,7 @@
     "anomalyThreshold",
     "answer",
     "articles",
+    "enAttenteDeCours",
     "enAttenteDeDate",
     "familles",
     "questions"
@@ -233,6 +234,7 @@
   "office": [
     "book",
     "bookedExtracts",
+    "coursDeChange",
     "ecrituresByIds",
     "ecrituresForPiece",
     "extraitsTransmis",
@@ -246,6 +248,8 @@
     "propositionDeReglement",
     "rejugerLesPieces",
     "retenuesDuMois",
+    "saisirLeCoursDeLaPiece",
+    "saisirUnCours",
     "trancherLeSens",
     "transmisesSansDate",
     "valider"

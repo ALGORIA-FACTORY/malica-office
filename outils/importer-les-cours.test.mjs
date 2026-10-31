@@ -15,12 +15,26 @@ const ENTETE = "date,devise,vers_devise,taux,unite,source";
 
 test("un fichier juste se lit tel quel, taux en chaîne, unité en nombre", () => {
   const { cours, fautes } = lireLesCours(
-    `﻿${ENTETE}\r\n2026-09-10,EUR,TND,3.3456,1,BCT\r\n2026-09-10,JPY,TND,20.1234,1000,BCT\r\n\r\n`,
+    `\uFEFF${ENTETE}\r\n2026-09-10,EUR,TND,3.3456,1,BCT\r\n2026-09-10,JPY,TND,20.1234,1000,BCT\r\n\r\n`,
   );
   assert.deepEqual(fautes, []);
   assert.deepEqual(cours, [
-    { date: "2026-09-10", devise: "EUR", versDevise: "TND", taux: "3.3456", unite: 1, source: "BCT" },
-    { date: "2026-09-10", devise: "JPY", versDevise: "TND", taux: "20.1234", unite: 1000, source: "BCT" },
+    {
+      date: "2026-09-10",
+      devise: "EUR",
+      versDevise: "TND",
+      taux: "3.3456",
+      unite: 1,
+      source: "BCT",
+    },
+    {
+      date: "2026-09-10",
+      devise: "JPY",
+      versDevise: "TND",
+      taux: "20.1234",
+      unite: 1000,
+      source: "BCT",
+    },
   ]);
 });
 

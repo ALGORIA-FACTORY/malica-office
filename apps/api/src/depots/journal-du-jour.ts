@@ -453,7 +453,13 @@ async function lireLeJournal(
   const { rows: devises } = await db.query<{ code: string; exposant: number }>(
     `select code, exposant from ref.devises where code = any($1::text[])`,
     // Les devises des écritures, et celles d'origine des lignes converties.
-    [[...new Set(rows.flatMap((r) => [r.devise, ...(r.devise_origine ? [r.devise_origine] : [])]))]],
+    [
+      [
+        ...new Set(
+          rows.flatMap((r) => [r.devise, ...(r.devise_origine ? [r.devise_origine] : [])]),
+        ),
+      ],
+    ],
   );
   const exposants: Exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
   return { journaux: rangerLeJournal(rows, exposants), exposants };

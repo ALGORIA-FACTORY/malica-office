@@ -49,7 +49,7 @@ const ENTETE = ["date", "devise", "vers_devise", "taux", "unite", "source"];
  * une faute par ligne illisible, avec son numéro.
  */
 export function lireLesCours(texte) {
-  const lignes = texte.replace(/^﻿/, "").split(/\r?\n/);
+  const lignes = texte.replace(/^\uFEFF/, "").split(/\r?\n/);
   const fautes = [];
   const cours = [];
   const entete = (lignes[0] ?? "").split(",").map((c) => c.trim());
@@ -71,11 +71,13 @@ export function lireLesCours(texte) {
       fautes.push(`ligne ${n} : date « ${date} » illisible (AAAA-MM-JJ)`);
     else if (!/^[A-Z]{3}$/.test(devise) || !/^[A-Z]{3}$/.test(versDevise))
       fautes.push(`ligne ${n} : code de devise ISO 4217 attendu`);
-    else if (devise === versDevise) fautes.push(`ligne ${n} : une devise ne se change pas en elle-même`);
+    else if (devise === versDevise)
+      fautes.push(`ligne ${n} : une devise ne se change pas en elle-même`);
     else if (!/^\d+(\.\d+)?$/.test(taux) || !/[1-9]/.test(taux))
       fautes.push(`ligne ${n} : taux « ${taux} » illisible (positif, point décimal)`);
     else if (!/^10*$/.test(unite)) fautes.push(`ligne ${n} : unité « ${unite} » (1, 10, 100…)`);
-    else if (!/^[A-Z][A-Z0-9_]*$/.test(source)) fautes.push(`ligne ${n} : source « ${source} » illisible`);
+    else if (!/^[A-Z][A-Z0-9_]*$/.test(source))
+      fautes.push(`ligne ${n} : source « ${source} » illisible`);
     else cours.push({ date, devise, versDevise, taux, unite: Number(unite), source });
   });
   return { cours, fautes };

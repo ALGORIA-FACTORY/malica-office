@@ -78,7 +78,8 @@ export class RegleDEcartInconnue extends Error {
   }
 }
 
-const estUneRegle = (r: string): r is RegleDEcart => (REGLES_D_ECART as readonly string[]).includes(r);
+const estUneRegle = (r: string): r is RegleDEcart =>
+  (REGLES_D_ECART as readonly string[]).includes(r);
 
 /** Le taux pour une unité : exact, l'unité étant une puissance de dix. */
 export function tauxUnitaire(cours: Pick<CoursAApplique, "taux" | "unite">): string {

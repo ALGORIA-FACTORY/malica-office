@@ -223,8 +223,15 @@ const FORCER = z.object({
  * (jamais un flottant), pour une unité qui est une puissance de dix.
  */
 const COURS = z.object({
-  taux: z.string().regex(/^\d+(\.\d+)?$/).refine((t) => /[1-9]/.test(t)),
-  unite: z.number().int().positive().refine((u) => /^10*$/.test(String(u))),
+  taux: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .refine((t) => /[1-9]/.test(t)),
+  unite: z
+    .number()
+    .int()
+    .positive()
+    .refine((u) => /^10*$/.test(String(u))),
 });
 const SAISIE_DE_COURS = COURS.extend({
   orgId: z.string().uuid(),
@@ -479,7 +486,14 @@ export const office = {
    * Les cours que l'organisation lit : ceux qu'elle a saisis, et ceux que
    * l'exploitation a importés, du plus récent au plus ancien.
    */
-  async coursDeChange(db: Requete, orgId: string): Promise<CoursDeChange[]> {
+  async coursDeChange(
+    db: Requete,
+    orgId: string,
+  ): Promise<{
+    cours: CoursDeChange[];
+    sources: Array<{ code: string; nom: string }>;
+    devises: string[];
+  }> {
     const { rows } = await db.query<{
       id: string;
       devise: string;
@@ -500,17 +514,27 @@ export const office = {
         limit $2`,
       [orgId, COURS_LUS],
     );
-    return rows.map((r) => ({
-      id: r.id,
-      devise: r.devise,
-      versDevise: r.vers_devise,
-      date: r.date,
-      taux: r.taux,
-      unite: Number(r.unite),
-      source: r.source,
-      saisiParLeCabinet: r.du_cabinet,
-      saisiLe: new Date(r.saisi_le).toISOString(),
-    }));
+    const [{ rows: sources }, { rows: devises }] = await Promise.all([
+      db.query<{ code: string; nom: string }>(
+        `select code, nom from ref.sources_de_cours order by code collate "C"`,
+      ),
+      db.query<{ code: string }>(`select code from ref.devises order by code collate "C"`),
+    ]);
+    return {
+      cours: rows.map((r) => ({
+        id: r.id,
+        devise: r.devise,
+        versDevise: r.vers_devise,
+        date: r.date,
+        taux: r.taux,
+        unite: Number(r.unite),
+        source: r.source,
+        saisiParLeCabinet: r.du_cabinet,
+        saisiLe: new Date(r.saisi_le).toISOString(),
+      })),
+      sources,
+      devises: devises.map((d) => d.code),
+    };
   },
 
   /**

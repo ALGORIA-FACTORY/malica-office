@@ -27,7 +27,7 @@ import { REGLES_D_ECART } from "@malica/socle/engines/fx/convertir-l-extrait";
 import type { Requete } from "../db.ts";
 
 /** Les dates de la pièce dont le Socle sait prendre le cours (`change.date_retenue`). */
-export const DATES_RETENUES = ["date_facture", "date_reception"] as const;
+const DATES_RETENUES = ["date_facture", "date_reception"] as const;
 type DateRetenue = (typeof DATES_RETENUES)[number];
 
 /** La règle de change du pack, en vigueur à la date de la pièce. */
