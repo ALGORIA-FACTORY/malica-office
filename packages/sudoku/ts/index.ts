@@ -97,7 +97,29 @@ export interface ChampLu {
   readonly instances?: readonly InstanceLue[];
 }
 
+/** Une valeur lue et citée. */
+export interface Cite {
+  readonly valeur: string;
+  readonly refs: readonly RefDeJeton[];
+}
+
+/** Une ligne d'article (anneau 1). */
+export interface LigneLue {
+  readonly designation: Cite | null;
+  readonly quantite: Cite;
+  readonly prix: Cite;
+  readonly remise: Cite | null;
+  readonly montant: Cite;
+  readonly taux: { readonly code: string; readonly refs: readonly RefDeJeton[] } | null;
+}
+
 export interface SortieDuSudoku {
+  /** Les lignes d'articles, quand la grille porte une preuve `lignes`. Non bloquantes. */
+  readonly lignes?: {
+    readonly statut: "prouve" | "signale" | "absent";
+    readonly instances: readonly LigneLue[];
+    readonly taux_par_base: string;
+  } | null;
   readonly issue: "prouvee" | "ambigue" | "aucune";
   /** La variante de la grille qui a prouvé la pièce, quand la grille en a. */
   readonly variante?: string;

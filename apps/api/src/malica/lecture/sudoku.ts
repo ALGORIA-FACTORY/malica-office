@@ -295,6 +295,16 @@ export function resoudreLaPiece(
 
 /* ============================================ LA SÉLECTION, PAR LA PREUVE === */
 
+/** Une plage de jetons d'une même page : la désignation d'un article. */
+function plage(refs: readonly RefDeJeton[] | undefined): TokenRef | null {
+  if (!refs || refs.length === 0) return null;
+  const page = refs[0]!.page;
+  const ords = refs.filter((r) => r.page === page).map((r) => r.ordinal);
+  const debut = Math.min(...ords);
+  const fin = Math.max(...ords);
+  return fin > debut ? { page, ordinal: debut, ordinalEnd: fin } : { page, ordinal: debut };
+}
+
 function ref(refs: readonly RefDeJeton[] | undefined): TokenRef | null {
   const r = refs?.[0];
   return r ? { page: r.page, ordinal: r.ordinal } : null;
@@ -349,9 +359,25 @@ export function selectionParLeSudoku(
     }),
   ];
 
+  // L'anneau 1 : les lignes d'articles prouvées remplacent celles de la chaîne.
+  // La rubrique de chaque article se résout ensuite comme avant, en base, sur
+  // sa désignation (`charge_famille_resolve`) : rien n'est classé ici.
+  const articles =
+    sortie.lignes?.statut === "prouve"
+      ? sortie.lignes.instances.map((l) => ({
+          designation: plage(l.designation?.refs),
+          quantity: ref(l.quantite.refs),
+          unit_price_ht: ref(l.prix.refs),
+          unit_price_ttc: null,
+          total_ht: ref(l.montant.refs),
+          tax_code: l.taux?.code ?? null,
+        }))
+      : selection.articles;
+
   return {
     ...selection,
     lines: lignes,
+    articles,
     other_charges: droits,
     totals: {
       base_ht: ref(c[CHAMP.ht]?.refs),
@@ -407,26 +433,53 @@ export function champsLusAInscrire(
   grille: string,
   sortie: SortieDuSudoku,
 ): ChampsLusAInscrire {
-  const champs = Object.entries(sortie.champs).flatMap(([champ, lu]) => {
-    if (lu.statut === "absent") return [];
-    const inst = lu.instances ?? [];
-    if (inst.length > 0) {
-      return inst.map((i) => ({
-        champ: `${champ}:${i.taux}`,
-        valeur: i.refs.length > 0 ? i.valeur : null,
-        statut: lu.statut,
-        citations: i.refs,
-      }));
-    }
-    return [
-      {
-        champ,
-        valeur: lu.refs.length > 0 ? lu.valeur : null,
-        statut: lu.statut,
-        citations: lu.refs,
-      },
-    ];
-  });
+  const champs: Array<ChampsLusAInscrire["champs"][number]> = Object.entries(sortie.champs).flatMap(
+    ([champ, lu]) => {
+      if (lu.statut === "absent") return [];
+      const inst = lu.instances ?? [];
+      if (inst.length > 0) {
+        return inst.map((i) => ({
+          champ: `${champ}:${i.taux}`,
+          valeur: i.refs.length > 0 ? i.valeur : null,
+          statut: lu.statut,
+          citations: i.refs,
+        }));
+      }
+      return [
+        {
+          champ,
+          valeur: lu.refs.length > 0 ? lu.valeur : null,
+          statut: lu.statut,
+          citations: lu.refs,
+        },
+      ];
+    },
+  );
+  // Les lignes d'articles : une ligne inscrite par cellule citée.
+  const lignes = sortie.lignes;
+  if (lignes && lignes.statut !== "absent") {
+    lignes.instances.forEach((l, i) => {
+      const n = i + 1;
+      const cellules: Array<[string, { valeur: string; refs: readonly RefDeJeton[] } | null]> = [
+        ["designation", l.designation],
+        ["quantite", l.quantite],
+        ["prix_unitaire_ht", l.prix],
+        ["remise_ligne", l.remise],
+        ["montant_ligne_ht", l.montant],
+        ["taux_tva_ligne", l.taux ? { valeur: l.taux.code, refs: l.taux.refs } : null],
+      ];
+      for (const [code, c] of cellules) {
+        if (c) {
+          champs.push({
+            champ: `${code}#${n}`,
+            valeur: c.valeur,
+            statut: lignes.statut,
+            citations: c.refs,
+          });
+        }
+      }
+    });
+  }
   return {
     pieceId,
     grille,
