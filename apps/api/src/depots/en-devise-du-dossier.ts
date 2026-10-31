@@ -18,6 +18,7 @@
  */
 import { ExtractV1 } from "@malica/socle/contracts/extract.v1";
 import {
+  aSaDette,
   ConversionRefusee,
   convertirLExtrait,
   convertirUnMontant,
@@ -37,9 +38,18 @@ interface CoursDuJugement {
 }
 
 /**
- * La conversion de chaque pièce en devise dont le DERNIER jugement a lu un
- * cours : pièce → conversion prête pour le Socle. Une pièce sans cours n'y
- * est pas.
+ * La conversion de chaque pièce en devise, au cours qui fait foi pour elle :
+ *
+ *   — INSCRITE (son écriture de facture vivante porte un cours) : le cours de
+ *     son écriture, par le jugement qui l'a lu. Le journal a parlé ; un cours
+ *     importé ou une règle changée après coup ne la fait pas sortir de la TVA
+ *     (revue de #148 : une pièce inscrite au cours saisi, puis l'import du
+ *     jour arrivé, restait « en attente de cours » pour toujours — une pièce
+ *     inscrite ne se rejuge pas) ;
+ *   — pas encore inscrite : le cours de son DERNIER jugement, s'il est À JOUR ;
+ *     un jugement périmé attend d'être rejugé, la pièce attend son cours.
+ *
+ * Une pièce sans cours n'y est pas.
  */
 export async function conversionsDesPieces(
   db: Requete,
@@ -47,19 +57,39 @@ export async function conversionsDesPieces(
 ): Promise<Map<string, ConversionDemandee>> {
   if (pieceIds.length === 0) return new Map();
   const [{ rows }, devises] = await Promise.all([
-    // Seulement un cours À JOUR (revue de #148) : un jugement périmé attend
-    // d'être rejugé, la pièce attend son cours.
     db.query<{ piece_id: string; preuves: CoursDuJugement }>(
       `select x.piece_id, c -> 'preuves' as preuves
          from unnest($1::uuid[]) as x(piece_id)
-         cross join lateral (select a.controles, a.tenant_id from capture.analyses a
-                              where a.piece_id = x.piece_id
-                              order by a.created_at desc limit 1) a
+         left join lateral (
+           select l.cours_id
+             from ecritures_v e
+             join ecriture_lignes_v l on l.ecriture_id = e.id
+            where e.piece_id = x.piece_id
+              and e.nature = 'piece' and e.status = 'booked' and e.reverses_id is null
+              and not exists (select 1 from ecritures_v r
+                               where r.reverses_id = e.id and r.status = 'booked')
+              and l.cours_id is not null
+            limit 1
+         ) inscrite on true
+         cross join lateral (
+           select a.controles, a.tenant_id
+             from capture.analyses a
+            where a.piece_id = x.piece_id
+              and (inscrite.cours_id is null
+                   or exists (select 1 from jsonb_array_elements(
+                                case when jsonb_typeof(a.controles) = 'array' then a.controles
+                                     else '[]'::jsonb end) k
+                               where k ->> 'code' = 'cours_de_change'
+                                 and k -> 'preuves' -> 'cours' ->> 'id' = inscrite.cours_id::text))
+            order by a.created_at desc
+            limit 1
+         ) a
          cross join lateral jsonb_array_elements(
                 case when jsonb_typeof(a.controles) = 'array' then a.controles
                      else '[]'::jsonb end) c
         where c ->> 'code' = 'cours_de_change' and c ->> 'statut' = 'reserve'
-          and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)`,
+          and (inscrite.cours_id is not null
+               or app.cours_du_jugement_a_jour(a.tenant_id, a.controles))`,
       [[...new Set(pieceIds)]],
     ),
     lireLesDevises(db),
@@ -116,7 +146,7 @@ export async function extraitsEnDeviseDuDossier<T extends { pieceId: string; ext
     const lu = c ? ExtractV1.safeParse(l.extract) : null;
     if (!c || !lu?.success || lu.data.currency !== c.de.code) return l;
     try {
-      return { ...l, extract: convertirLExtrait(lu.data, c).extrait };
+      return { ...l, extract: convertirLExtrait(aSaDette(lu.data, c.de.decimals), c).extrait };
     } catch (e) {
       if (!(e instanceof ConversionRefusee)) throw e;
       return { ...l, refus: `${CONVERSION_REFUSEE}:${e.raison}` };

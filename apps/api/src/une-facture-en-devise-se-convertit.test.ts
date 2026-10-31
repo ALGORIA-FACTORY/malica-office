@@ -40,6 +40,7 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -848,5 +849,168 @@ describe("une facture en devise se convertit", { skip: !BASE_CONFIGUREE }, () =>
       [ecritureId],
     );
     assert.equal(rows[0]!.devise, "TND");
+  });
+  it("inscrite à un cours, elle le garde dans la TVA et « Vos charges » quand l'import du jour arrive (revue de #148)", async () => {
+    const jour = "2026-09-14";
+    const id = await transmise({ date: jour });
+    const saisie = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.5001", 1)) as Ok;
+    const ecritureId = (await cabinetFait("office.valider", id, saisie.empreinte)) as string;
+    const avant = await transmisDe(id, jour);
+    assert.deepEqual([avant?.extract.currency, avant?.refus], ["TND", undefined]);
+    const chargesAvant = (await pmeFait("charges.articles", pme, "2026-09", "2026-09")) as Array<{
+      pieceId: string;
+      totalHt: string | null;
+    }>;
+
+    // L'import officiel du jour passe devant la saisie : le jugement est
+    // périmé, mais le journal a parlé — la pièce ne se rejuge plus.
+    importeOk([`${jour},EUR,TND,3.5101,1,${source},`]);
+    assert.deepEqual(await transmisDe(id, jour), avant);
+    const chargesApres = (await pmeFait("charges.articles", pme, "2026-09", "2026-09")) as Array<{
+      pieceId: string;
+      totalHt: string | null;
+    }>;
+    assert.deepEqual(
+      chargesApres.filter((a) => a.pieceId === id),
+      chargesAvant.filter((a) => a.pieceId === id),
+    );
+    assert.deepEqual(
+      chargesApres.filter((a) => a.pieceId === id).map((a) => a.totalHt),
+      ["3500.100"],
+    );
+    assert.ok((await lignesInscrites(ecritureId)).every((l) => l.taux_de_change === "3.5001"));
+  });
+
+  it("une facture au total imprimé décalé d'une unité compte dans la TVA comme au journal (revue de #148)", async () => {
+    const jour = "2026-08-28";
+    const id = await transmise({
+      date: jour,
+      ht: ["500,00", "€"],
+      tva: "95,00",
+      ttc: ["595,01", "€"],
+      lus: ["500.00", "95.00", "595.01"],
+    });
+    await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.3456", 1);
+    await admin.query(`update capture.pieces set status = 'proposee' where id = $1`, [id]);
+    const lu = await transmisDe(id, jour);
+    // Convertie à sa dette (500 + 95), comme son écriture ; jamais refusée.
+    assert.deepEqual(
+      [lu?.extract.currency, lu?.extract.totals.ttc, lu?.extract.totals.vat, lu?.refus],
+      ["TND", "1990.632", "317.832", undefined],
+    );
+  });
+
+  it("une ligne convertie ne porte que le cours que le jugement a lu, encore à jour (revue de #148)", async () => {
+    const jour = "2026-09-15";
+    const id = await transmise({ date: jour });
+    const r = (await cabinetFait("office.saisirLeCoursDeLaPiece", id, "3.6001", 1)) as Ok;
+    const lignes = r.proposition.lignes;
+    assert.ok(lignes.every((l) => l.cours_id));
+    const proposer = (ls: unknown[]) =>
+      cabinetFait("office.propose", {
+        pieceId: id,
+        journal: "ACH",
+        date: jour,
+        libelle: "Forgée",
+        packVersionId: packId,
+        devise: "TND",
+        lignes: ls,
+      });
+    // Un autre taux, un cours inventé, une autre devise : refusés.
+    await assert.rejects(
+      proposer(lignes.map((l) => ({ ...l, taux_de_change: "9.9" }))),
+      /refus\.ecriture\.cours_de_la_ligne/,
+    );
+    await assert.rejects(
+      proposer(lignes.map((l) => ({ ...l, cours_id: randomUUID() }))),
+      /refus\.ecriture\.cours_de_la_ligne/,
+    );
+    await assert.rejects(
+      proposer(lignes.map((l) => ({ ...l, devise_origine: "USD" }))),
+      /refus\.ecriture\.cours_de_la_ligne/,
+    );
+    // Le cours change : la proposition d'hier ne s'inscrit plus.
+    importeOk([`${jour},EUR,TND,3.6101,1,${source},`]);
+    await assert.rejects(proposer(lignes), /refus\.ecriture\.cours_perime/);
+  });
+
+  it("dans le recul, l'import officiel d'avant passe devant une saisie du jour (revue de #148)", async () => {
+    // Un recul de cinq jours, pour ce dossier, à partir du 16 septembre.
+    await cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetId: cabinet,
+      portee: "dossier",
+      porteeId: pme,
+      packId,
+      depuis: "2026-09-16",
+      valeurs: [{ code: "change.recul_jours", valeur: "5" }],
+      motif: "Recul du week-end",
+    });
+    // Vendredi 18 : l'import officiel. Dimanche 20 : une pièce, une saisie.
+    importeOk([`2026-09-18,EUR,TND,3.7001,1,${source},`]);
+    const id = await transmise({ date: "2026-09-20" });
+    assert.deepEqual(await tauxPropose(id), ["3.7001"]);
+    await saisirUnCours(expert, {
+      orgId: cabinet,
+      devise: "EUR",
+      date: "2026-09-20",
+      taux: "3.7999",
+    });
+    assert.deepEqual(await tauxPropose(id), ["3.7001"]);
+    // Seule une dérogation motivée passe devant l'import.
+    await saisirUnCours(expert, {
+      orgId: cabinet,
+      devise: "EUR",
+      date: "2026-09-20",
+      taux: "3.7555",
+      motif: "Cours de la banque du cabinet",
+    });
+    assert.deepEqual(await tauxPropose(id), ["3.7555"]);
+  });
+  it("la règle du cabinet vaut pour ses dossiers ; une valeur nulle du dossier lui rend la main (revue de #148)", async () => {
+    const lire = async (jour: string) =>
+      (
+        (await cabinetFait(
+          "referentiel.regleDeChange",
+          packId,
+          pme,
+          jour,
+          "fr",
+        )) as RegleDeChangeDuDossier
+      ).valeurs
+        .filter((v) => v.code === "change.recul_jours")
+        .map((v) => [v.valeur, v.origine]);
+    await cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetId: cabinet,
+      portee: "cabinet",
+      porteeId: cabinet,
+      packId,
+      depuis: "2026-01-01",
+      valeurs: [{ code: "change.recul_jours", valeur: "3" }],
+    });
+    // Le dossier a sa propre décision : elle l'emporte.
+    assert.deepEqual(await lire("2026-11-30"), [["5", "dossier"]]);
+    // Rendue (valeur nulle) à partir du 1er décembre : le cabinet décide.
+    await cabinetFait("parametrage.arreterRegleDeChange", {
+      cabinetId: cabinet,
+      portee: "dossier",
+      porteeId: pme,
+      packId,
+      depuis: "2026-12-01",
+      valeurs: [{ code: "change.recul_jours", valeur: null }],
+    });
+    assert.deepEqual(await lire("2026-11-30"), [["5", "dossier"]]);
+    assert.deepEqual(await lire("2026-12-02"), [["3", "cabinet"]]);
+    // Un autre cabinet n'arrête rien pour celui-ci.
+    await assert.rejects(
+      rpc(autreExpert, "parametrage.arreterRegleDeChange", {
+        cabinetId: autreCabinet,
+        portee: "dossier",
+        porteeId: pme,
+        packId,
+        depuis: "2026-12-01",
+        valeurs: [{ code: "change.recul_jours", valeur: "9" }],
+      }),
+      /refus\.change\.regle\.droits/,
+    );
   });
 });

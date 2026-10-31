@@ -67,6 +67,19 @@ export function lireLesCours(texte) {
     fautes.push(`ligne 1 : en-tête attendu « ${ENTETE.join(",")}[,${MOTIF}] »`);
     return { cours, fautes };
   }
+  // Une ligne qui RÉPÈTE une ligne du fichier (même clé, même taux, même
+  // unité) se nomme : elle ne serait pas inscrite, et l'import tomberait sur
+  // un message trompeur (revue de #148). Une ligne qui corrige une ligne
+  // précédente du fichier, motivée, reste permise.
+  const vues = new Map();
+  const cle = (...champs) => champs.join("|");
+  // Un taux s'écrit de plusieurs façons (« 3.30 », « 3.3 ») : la clé le
+  // prend sous sa forme réduite, comme la base le compare.
+  const reduit = (t) =>
+    t
+      .replace(/^0+(?=\d)/, "")
+      .replace(/(\.\d*?)0+$/, "$1")
+      .replace(/\.$/, "");
   lignes.slice(1).forEach((brute, i) => {
     const n = i + 2;
     if (brute.trim() === "") return;
@@ -93,7 +106,14 @@ export function lireLesCours(texte) {
     else if (!/^10*$/.test(unite)) fautes.push(`ligne ${n} : unité « ${unite} » (1, 10, 100…)`);
     else if (!/^[A-Z][A-Z0-9_]*$/.test(source))
       fautes.push(`ligne ${n} : source « ${source} » illisible`);
-    else cours.push({ date, devise, versDevise, taux, unite: Number(unite), source, motif });
+    else if (vues.has(cle(date, devise, versDevise, source, reduit(taux), unite)))
+      fautes.push(
+        `ligne ${n} : répète la ligne ${vues.get(cle(date, devise, versDevise, source, reduit(taux), unite))}`,
+      );
+    else {
+      vues.set(cle(date, devise, versDevise, source, reduit(taux), unite), n);
+      cours.push({ date, devise, versDevise, taux, unite: Number(unite), source, motif });
+    }
   });
   return { cours, fautes };
 }
@@ -126,8 +146,18 @@ async function classer(client, c) {
 export async function importerLesCours(client, cours, lot, par) {
   await client.query("begin");
   try {
+    // Chaque cours se classe au regard du dernier cours de sa clé : celui
+    // d'une ligne précédente du fichier, sinon celui de la base.
     const classes = [];
-    for (const c of cours) classes.push(await classer(client, c));
+    const dernier = new Map();
+    for (const c of cours) {
+      const k = [c.date, c.devise, c.versDevise, c.source].join("|");
+      const avant = dernier.get(k);
+      // Une ligne qui répète la précédente est refusée à la lecture : la
+      // suivante, différente, la corrige.
+      classes.push(avant ? "correction" : await classer(client, c));
+      dernier.set(k, c);
+    }
     const compte = (k) => classes.filter((x) => x === k).length;
     const bilan = {
       nouveaux: compte("nouveau"),

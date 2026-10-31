@@ -39,9 +39,9 @@
 --      l'exploitation importe par `outils/importer-les-cours.mjs`, et chaque
 --      import est consigné (`parametrage.cours_de_change_imports`).
 --   5. `app.cours_applicable` : LE cours d'un dossier, pour une devise et un
---      jour — le plus proche du jour dans le recul, puis le rang de son
---      origine : une dérogation du dossier, du cabinet, puis l'import
---      officiel, puis la saisie. Un cours saisi ne passe JAMAIS devant
+--      jour — dans le recul, le rang de son origine d'abord (une dérogation
+--      du dossier, du cabinet, puis l'import officiel, puis la saisie), puis
+--      le plus proche du jour. Un cours saisi ne passe JAMAIS devant
 --      l'import officiel sans dérogation motivée.
 --   6. `app.cours_du_jugement_a_jour` : un jugement qui a lu un cours (ou une
 --      règle) est périmé dès que la même question rend une autre réponse.
@@ -107,7 +107,7 @@ create table ref.change_regles_d_ecart (
 );
 insert into ref.change_regles_d_ecart (code) values ('base_la_plus_grande');
 
--- La préséance des origines d'un cours, à date égale : la plus petite gagne.
+-- La préséance des origines d'un cours, dans le recul : la plus petite gagne.
 create table ref.rangs_des_cours (
   code text primary key check (code ~ '^[a-z][a-z_]*$'),
   rang smallint not null unique check (rang > 0)
@@ -286,8 +286,11 @@ begin
       select distinct on (r.portee, r.code) r.portee, r.code, r.valeur, r.decide_le
         from parametrage.regles_de_change r
        where r.pack_version_id = p_pack and r.valid_from <= p_jour
+         -- Seules comptent les décisions du cabinet qui tient le dossier
+         -- AUJOURD'HUI : celles d'un ancien cabinet ne le suivent pas.
+         and r.tenant_id in (select c.id from cabinet c)
          and ((r.portee = 'dossier' and r.portee_id = p_dossier)
-              or (r.portee = 'cabinet' and r.portee_id in (select c.id from cabinet c)))
+              or (r.portee = 'cabinet' and r.portee_id = r.tenant_id))
        order by r.portee, r.code, r.valid_from desc, r.decide_le desc
     ),
     -- Une décision dont la valeur n'est plus au référentiel ne décide rien.
@@ -345,7 +348,10 @@ begin
   if p_valeurs is null or jsonb_typeof(p_valeurs) <> 'array'
      or jsonb_array_length(p_valeurs) = 0
      or p_valid_from is null
-     or not exists (select 1 from ref.jurisdiction_packs j where j.id = p_pack)
+     -- Le pack de la juridiction de la portée, jamais celui d'une autre.
+     or not exists (select 1 from ref.jurisdiction_packs j
+                      join identity.organizations o on o.id = p_portee_id
+                     where j.id = p_pack and j.jurisdiction = o.jurisdiction)
      or exists (
        select 1 from jsonb_array_elements(p_valeurs) e
         where e ->> 'code' is null
@@ -595,10 +601,10 @@ grant execute on function public.cours_de_change_saisir(uuid, text, text, date, 
 -- --- 5. Le cours applicable -----------------------------------------------------------------------
 --
 -- Pour un dossier, une devise, un jour, la source et le recul de la règle :
--- le cours publié le plus près du jour, sans le dépasser ni remonter plus
--- loin que le recul ; à date égale, le RANG de son origine
--- (`ref.rangs_des_cours`) : la dérogation du dossier, celle du cabinet,
--- l'import officiel, la saisie ; à rang égal, la plus récente (une
+-- parmi les cours publiés sans dépasser le jour ni remonter plus loin que le
+-- recul, le RANG de son origine d'abord (`ref.rangs_des_cours`) : la
+-- dérogation du dossier, celle du cabinet, l'import officiel, la saisie ;
+-- puis le plus près du jour ; à rang et date égaux, la plus récente (une
 -- correction). Les cours d'un AUTRE cabinet n'entrent jamais.
 --
 -- `security definer` : tout appelant qui lit le dossier obtient le même
@@ -627,7 +633,10 @@ as $$
           or c.tenant_id = p_dossier
           or c.tenant_id in (select g.cabinet_org_id from identity.engagements g
                               where g.pme_org_id = p_dossier and g.status = 'actif'))
-   order by c.date_du_cours desc, r.rang, c.saisi_le desc, c.id
+   -- L'ORIGINE d'abord, la date ensuite (revue de #148) : une saisie du
+   -- dimanche ne passe pas devant l'import officiel du vendredi que le recul
+   -- retient ; seule une dérogation motivée passe devant l'import.
+   order by r.rang, c.date_du_cours desc, c.saisi_le desc, c.id
    limit 1
 $$;
 
@@ -800,6 +809,8 @@ declare
   v_l      jsonb;
   v_i      smallint := 0;
   v_devise_du_dossier text;
+  v_controles jsonb;
+  v_cours_juge uuid;
 begin
   -- Le verrou de la pièce sérialise deux clics, deux onglets, deux personnes.
   -- Une photo reprise se lit à sa version courante : c'est elle qu'on
@@ -814,6 +825,41 @@ begin
   select o.currency into v_devise_du_dossier from identity.organizations o where o.id = v_tenant;
   if p_devise is distinct from v_devise_du_dossier then
     raise exception 'refus.ecriture.devise_du_dossier' using errcode = '22023';
+  end if;
+  -- Une ligne convertie porte LE cours de la pièce, jamais un autre (revue de
+  -- #148 : la porte recopiait le cours, le taux et l'origine qu'on lui
+  -- donnait). Ce cours est celui que le DERNIER jugement de la pièce a lu,
+  -- jugement encore à jour ; la devise d'origine est celle du cours, le taux
+  -- celui du cours pour une unité.
+  if exists (select 1 from jsonb_array_elements(p_lignes) l
+              where nullif(l ->> 'cours_id', '') is not null
+                 or nullif(l ->> 'devise_origine', '') is not null) then
+    select a.controles into v_controles
+      from capture.analyses a
+     where a.piece_id in (p_piece, app.version_courante(p_piece))
+     order by a.created_at desc
+     limit 1;
+    select (k -> 'preuves' -> 'cours' ->> 'id')::uuid into v_cours_juge
+      from jsonb_array_elements(case when jsonb_typeof(v_controles) = 'array' then v_controles
+                                     else '[]'::jsonb end) k
+     where k ->> 'code' = 'cours_de_change' and k ->> 'statut' = 'reserve'
+     limit 1;
+    if v_cours_juge is null or not app.cours_du_jugement_a_jour(v_tenant, v_controles) then
+      raise exception 'refus.ecriture.cours_perime' using errcode = '22023';
+    end if;
+    if exists (
+      select 1
+        from jsonb_array_elements(p_lignes) l
+        left join parametrage.cours_de_change c on c.id = nullif(l ->> 'cours_id', '')::uuid
+       where (nullif(l ->> 'cours_id', '') is not null
+              or nullif(l ->> 'devise_origine', '') is not null)
+         and (c.id is distinct from v_cours_juge
+          or (l ->> 'devise_origine') is distinct from c.devise
+          or c.vers_devise is distinct from v_devise_du_dossier
+          or (l ->> 'taux_de_change')::numeric is distinct from c.taux / c.unite
+          or (l ->> 'montant_origine') is null)) then
+      raise exception 'refus.ecriture.cours_de_la_ligne' using errcode = '22023';
+    end if;
   end if;
   if p_paiement is not null
      and not exists (select 1 from capture.paiements

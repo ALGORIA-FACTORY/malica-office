@@ -152,6 +152,32 @@ function repartir(parties: readonly string[], c: ConversionDemandee): Decimal[] 
   });
 }
 
+/** Une unité de la devise à cet exposant, en décimal exact (« 0.001 » à 3). */
+export function uniteALExposant(decimals: number): string {
+  return D(1).div(D(10).pow(decimals)).toFixed(decimals);
+}
+
+/**
+ * La facture à sa DETTE envers le tiers (bases + TVA + droits), quand son
+ * total imprimé ne s'en écarte que de l'arrondi d'impression toléré — une
+ * unité de sa devise, la tolérance du pivot (`rounding_tolerance`). C'est la
+ * dette qui se convertit : un écart imprimé ne glisse pas dans une base
+ * convertie. Au-delà, l'extrait est rendu tel quel, et `convertirLExtrait`
+ * le refuse en le nommant (`desequilibre`).
+ *
+ * Une seule règle pour l'écriture (`propose-ecriture.ts`) et pour la TVA du
+ * mois (`en-devise-du-dossier.ts`) : revue de #148, une facture au total
+ * imprimé décalé d'un millime s'inscrivait au journal et sortait de la TVA.
+ */
+export function aSaDette(extrait: ExtractV1, decimals: number): ExtractV1 {
+  const dette = sum([
+    ...extrait.lines.flatMap((l) => [l.base_ht, l.vat_amount]),
+    ...extrait.other_charges.map((x) => x.amount),
+  ]);
+  if (dette.minus(extrait.totals.ttc).abs().greaterThan(uniteALExposant(decimals))) return extrait;
+  return { ...extrait, totals: { ...extrait.totals, ttc: toFixedStr(dette, decimals) } };
+}
+
 const signe = (x: Decimal) => (x.isZero() ? 0 : x.isNegative() ? -1 : 1);
 
 /**

@@ -2102,6 +2102,10 @@ const fr = {
     "L’écriture de cette pièce est inscrite avec son cours : retournez-la d’abord (contre-passation), puis saisissez le cours.",
   "refus.ecriture.devise_du_dossier":
     "Une écriture se passe dans la devise du dossier : une pièce en devise se convertit d’abord, au cours de la règle de change.",
+  "refus.ecriture.cours_perime":
+    "Le cours de cette pièce a changé depuis son jugement : rouvrez-la, elle se rejuge au cours qui fait foi.",
+  "refus.ecriture.cours_de_la_ligne":
+    "Une ligne convertie doit porter le cours de la pièce, sa devise et son taux, tels que le jugement les a lus.",
   "statut.pme.mon_espace": "Mon espace",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
@@ -6038,6 +6042,10 @@ const en: Dict = {
     "This document’s entry is booked with its rate: return it first (reversal), then enter the rate.",
   "refus.ecriture.devise_du_dossier":
     "An entry is booked in the file’s currency: a foreign-currency document is converted first, at the exchange rule’s rate.",
+  "refus.ecriture.cours_perime":
+    "This document’s rate changed after it was judged: reopen it to re-judge it at the rate that applies.",
+  "refus.ecriture.cours_de_la_ligne":
+    "A converted line must carry the document’s rate, currency and unit rate, as the judgment read them.",
   "statut.pme.mon_espace": "My space",
   "statut.pme.a_envoyer": "To send",
   "statut.pme.gardee": "Kept",
@@ -9807,6 +9815,10 @@ const ar: Dict = {
     "قيد هذه الوثيقة مسجّل بسعره: أرجعها أولًا (قيد عكسي)، ثم أدخل السعر.",
   "refus.ecriture.devise_du_dossier":
     "يُسجَّل القيد بعملة الملف: تُحوَّل الوثيقة بالعملة الأجنبية أولًا، بسعر قاعدة الصرف.",
+  "refus.ecriture.cours_perime":
+    "تغيّر سعر هذه الوثيقة بعد تقييمها: أعد فتحها لتُقيَّم بالسعر المعتمد.",
+  "refus.ecriture.cours_de_la_ligne":
+    "يجب أن يحمل السطر المحوَّل سعر الوثيقة وعملتها وسعر الوحدة كما قرأها التقييم.",
   "statut.pme.mon_espace": "مساحتي",
   "statut.pme.a_envoyer": "للإرسال",
   "statut.pme.gardee": "محفوظة",

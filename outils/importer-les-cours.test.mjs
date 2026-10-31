@@ -89,3 +89,20 @@ test("un fichier sans l'en-tête attendu ne se lit pas", () => {
   assert.equal(fautes.length, 1);
   assert.match(fautes[0], /^ligne 1 : en-tête attendu/);
 });
+
+test("une ligne qui répète une ligne du fichier se nomme ; une correction motivée reste permise (revue de #148)", () => {
+  const { cours, fautes } = lireLesCours(
+    [
+      `${ENTETE},motif`,
+      "2026-09-10,EUR,TND,3.3400,1,BCT,",
+      "2026-09-10,USD,TND,2.9,1,BCT,",
+      "2026-09-10,EUR,TND,3.34,1,BCT,",
+      "2026-09-10,EUR,TND,3.3401,1,BCT,Rectificatif de la source",
+    ].join("\n"),
+  );
+  assert.deepEqual(fautes, ["ligne 4 : répète la ligne 2"]);
+  assert.deepEqual(
+    cours.map((c) => c.taux),
+    ["3.3400", "2.9", "3.3401"],
+  );
+});

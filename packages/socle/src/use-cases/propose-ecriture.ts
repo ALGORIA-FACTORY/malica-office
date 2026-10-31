@@ -6,9 +6,11 @@
  */
 
 import { computePivot } from "../index.ts";
-import { D, sum, toFixedStr } from "../domain/decimal.ts";
+import { D, toFixedStr } from "../domain/decimal.ts";
 import {
+  aSaDette,
   convertirLExtrait,
+  uniteALExposant,
   type ConversionFaite,
   type CoursAApplique,
 } from "../engines/fx/convertir-l-extrait.ts";
@@ -29,8 +31,7 @@ import type { AccountMapping, FiscalCharge, TaxRate } from "../ports/repositorie
  * illustre : une juridiction a 2 decimales affichait un dinar la ou il y
  * avait un millime, sans aucune erreur. Plausible et faux.
  *
- * `ref.socle_params` porte `money.decimals` depuis le 25 aout, et
- * `referentiel.socleParams` LEVE une erreur explicite quand il manque. Cinq
+ * L'exposant d'une devise se lit dans `ref.devises` (sa seule source) ; cinq
  * chemins vivants appelaient la table d'ici plutot que lui.
  *
  * Le parametre est donc desormais exige. Une proposition sans decimales est
@@ -262,7 +263,7 @@ export function buildProposal(params: {
       ),
 
       tolerances: {
-        rounding_tolerance: (1 / 10 ** devise.decimals).toFixed(devise.decimals),
+        rounding_tolerance: uniteALExposant(devise.decimals),
         confidence_orange: params.parametres.confianceReserve,
         confidence_red: params.parametres.confianceBloquante,
       },
@@ -286,27 +287,16 @@ export function buildProposal(params: {
   /*
    * La dette envers le tiers est HT + TVA + droits (le pivot ne recopie
    * jamais un TTC dont l'écart n'est pas justifié) : c'est elle qui se
-   * convertit. Un écart imprimé, toléré dans la devise de la facture, ne
-   * glisse pas dans une base convertie.
+   * convertit (`aSaDette`, la même règle que la TVA du mois).
    */
-  const dette = toFixedStr(
-    sum([
-      ...extract.lines.flatMap((l) => [l.base_ht, l.vat_amount]),
-      ...extract.other_charges.map((x) => x.amount),
-    ]),
-    decimals,
-  );
   const converti =
     conversion && origine?.approvable
-      ? convertirLExtrait(
-          { ...extract, totals: { ...extract.totals, ttc: dette } },
-          {
-            de: deLaPiece,
-            vers: conversion.vers,
-            cours: conversion.cours,
-            ecart: conversion.ecart,
-          },
-        )
+      ? convertirLExtrait(aSaDette(extract, decimals), {
+          de: deLaPiece,
+          vers: conversion.vers,
+          cours: conversion.cours,
+          ecart: conversion.ecart,
+        })
       : null;
   const pivot = !conversion
     ? pivotDe(extract, deLaPiece, { droitsFixes: true })
