@@ -66,6 +66,28 @@ ferme HT + TVA + droits.
 sont exactes ; seuls `produit`, `taux` et `charge` à taux arrondissent, d'au plus
 la tolérance du pack (une unité mineure).
 
+### Les anneaux autour du centre
+
+Le centre, ce sont les totaux. Les anneaux s'y appuient sans le modifier : ils
+ont leur propre statut, et l'issue de la pièce reste celle du centre.
+
+- **Anneau 1 — les lignes** (`{"op":"lignes", …}`, preuve L01). Une rangée est
+  une ligne d'article quand quantité × prix (− remise) = montant. La somme exacte
+  des montants doit égaler le total HT prouvé au centre (ou le total brut). Les
+  lignes prouvées remplacent les articles de la chaîne ; leur rubrique se résout
+  ensuite en base, comme avant (`charge_famille_resolve`).
+- **Anneau 2 — les parties** (`{"op":"parties", …}`, preuve E01). Un seul des
+  matricules lus est celui du dossier, et un indice imprimé (« client »,
+  « émetteur ») dit le sens. La contrepartie est rapprochée des tiers du dossier,
+  et son nom est comparé sans la forme juridique (`ref.formes_juridiques`). La
+  géométrie confirme, mais ne décide jamais seule.
+- Les dates (E02 : émission ≤ échéance) et le numéro sont lus par leurs repères,
+  au statut `conforme`. Seul ce qui est **prouvé** remplace la désignation de la
+  chaîne.
+
+L'entrée gagne `connus` : le dossier, ses tiers et les formes juridiques, lus
+en base par l'adaptateur.
+
 ## 3. L'entrée du moteur (JSON)
 
 ```json
@@ -184,6 +206,19 @@ Restent signalées, sans faux positif : la retenue à la source, l'acompte, la T
 suspendue ou exonérée, l'avoir, les débours, les totaux volontairement faux, le
 timbre de 2,000 (INCERTAIN : il n'est pas dans le pack) et les imprimés
 manuscrits. Seize pièces sans couche de texte demandent un OCR.
+
+**Anneaux 1 et 2 sur les vraies pièces du staging** (lecture seule, comptes
+seulement) :
+
+- **Lignes prouvées : 302.** 277 sont identiques aux articles de la chaîne,
+  25 concernent des pièces où la chaîne n'en avait pas, 0 diffère.
+- **Parties prouvées : 302.** Pour 279, le sens est identique à celui de la
+  chaîne ; pour 23, la chaîne n'avait pas de sens ; 0 diffère.
+- **Centre** : inchangé.
+
+Sur les jeux du dirigeant, 84 pièces ont leurs lignes prouvées, avec 0 ligne
+fausse, y compris sur 1 871 mutations. Il n'y a ni sens, ni matricule, ni tiers
+faux.
 
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.

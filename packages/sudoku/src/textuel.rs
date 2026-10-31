@@ -20,7 +20,7 @@ pub enum Issue {
     Absent,
 }
 
-fn iso_valide(s: &str) -> bool {
+pub(crate) fn iso_valide(s: &str) -> bool {
     let b = s.as_bytes();
     b.len() == 10
         && b[4] == b'-'

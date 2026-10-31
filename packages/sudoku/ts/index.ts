@@ -69,7 +69,19 @@ export interface PackDuSudoku {
   readonly formats: Readonly<Record<string, string>>;
 }
 
+/** Ce que la base sait du dossier et de ses tiers (anneau 2). */
+export interface Connus {
+  readonly dossier: { readonly matricule: string; readonly raison_sociale: string | null } | null;
+  readonly tiers: readonly {
+    readonly code: string;
+    readonly matricule: string;
+    readonly raison_sociale: string | null;
+  }[];
+  readonly formes_juridiques: readonly string[];
+}
+
 export interface EntreeDuSudoku {
+  readonly connus?: Connus;
   readonly jetons: readonly JetonDuSudoku[];
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
@@ -113,7 +125,21 @@ export interface LigneLue {
   readonly taux: { readonly code: string; readonly refs: readonly RefDeJeton[] } | null;
 }
 
+/** Une valeur de l'en-tête, citée, avec son statut. */
+export interface ValeurLue extends Cite {
+  readonly statut: "prouve" | "conforme" | "signale";
+}
+
 export interface SortieDuSudoku {
+  /** Les parties (anneau 2) : le sens par le matricule du dossier, la contrepartie par les tiers. */
+  readonly parties?: {
+    readonly sens: "achat" | "vente" | null;
+    readonly statut: "prouve" | "signale" | "absent";
+    readonly emetteur: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
+    readonly client: { readonly matricule: ValeurLue | null; readonly nom: ValeurLue | null };
+    readonly tiers: { readonly code: string; readonly statut: string } | null;
+    readonly raison?: string;
+  };
   /** Les lignes d'articles, quand la grille porte une preuve `lignes`. Non bloquantes. */
   readonly lignes?: {
     readonly statut: "prouve" | "signale" | "absent";

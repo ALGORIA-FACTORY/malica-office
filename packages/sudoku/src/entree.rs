@@ -13,6 +13,38 @@ pub struct Entree {
     /// Plafond de combinaisons explorées ; au-delà, l'issue est `aucune`.
     #[serde(default)]
     pub plafond: Option<u64>,
+    /// Ce que la base sait du dossier et de ses tiers (anneau 2). Absent : l'en-tête
+    /// se lit par le format et les repères seuls.
+    #[serde(default)]
+    pub connus: Option<Connus>,
+}
+
+/// Les données du dossier et de ses tiers, lues en base par l'adaptateur.
+#[derive(Deserialize, Default)]
+pub struct Connus {
+    #[serde(default)]
+    pub dossier: Option<Partie>,
+    #[serde(default)]
+    pub tiers: Vec<Tiers>,
+    /// Les formes juridiques (« SARL », « SA »…) que la comparaison des raisons
+    /// sociales ignore : des mots du catalogue, fournis en entrée, jamais en dur.
+    #[serde(default)]
+    pub formes_juridiques: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct Partie {
+    pub matricule: String,
+    #[serde(default)]
+    pub raison_sociale: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct Tiers {
+    pub code: String,
+    pub matricule: String,
+    #[serde(default)]
+    pub raison_sociale: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
