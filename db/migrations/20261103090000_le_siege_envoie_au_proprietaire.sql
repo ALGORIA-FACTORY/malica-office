@@ -65,17 +65,72 @@ grant select on table ref.droits to authenticated;
 drop policy if exists ref_droits_sel on ref.droits;
 create policy ref_droits_sel on ref.droits for select to authenticated using (true);
 
+-- Les types d'organisation et les rôles d'adhésion qu'un droit peut viser :
+-- un droit ne s'attribue qu'à un rôle qui existe (revue de #146, P3-10). Ils
+-- reprennent, sans les changer, les valeurs que `identity.organizations.kind`
+-- et `identity.memberships.role` admettent.
+create table if not exists ref.types_d_organisation (
+  code       text primary key,
+  sort_order smallint not null
+);
+
+comment on table ref.types_d_organisation is
+  'Les types d''organisation : une PME (la société), un cabinet (le comptable).';
+
+alter table ref.types_d_organisation enable row level security;
+alter table ref.types_d_organisation force row level security;
+revoke all on table ref.types_d_organisation from public, anon;
+grant select on table ref.types_d_organisation to authenticated;
+drop policy if exists ref_types_d_organisation_sel on ref.types_d_organisation;
+create policy ref_types_d_organisation_sel on ref.types_d_organisation
+  for select to authenticated using (true);
+
+insert into ref.types_d_organisation (code, sort_order) values
+  ('pme',     10),
+  ('cabinet', 20)
+on conflict (code) do nothing;
+
+create table if not exists ref.roles_d_adhesion (
+  org_kind   text not null references ref.types_d_organisation(code),
+  role       text not null,
+  sort_order smallint not null,
+  primary key (org_kind, role)
+);
+
+comment on table ref.roles_d_adhesion is
+  'Les rôles d''adhésion par type d''organisation : un « collaborateur » de cabinet n''est pas un siège de PME.';
+
+alter table ref.roles_d_adhesion enable row level security;
+alter table ref.roles_d_adhesion force row level security;
+revoke all on table ref.roles_d_adhesion from public, anon;
+grant select on table ref.roles_d_adhesion to authenticated;
+drop policy if exists ref_roles_d_adhesion_sel on ref.roles_d_adhesion;
+create policy ref_roles_d_adhesion_sel on ref.roles_d_adhesion
+  for select to authenticated using (true);
+
+insert into ref.roles_d_adhesion (org_kind, role, sort_order) values
+  ('pme',     'dirigeant',     10),
+  ('pme',     'collaborateur', 20),
+  ('cabinet', 'expert',        10),
+  ('cabinet', 'collaborateur', 20),
+  ('cabinet', 'assistant',     30)
+on conflict (org_kind, role) do nothing;
+
 create table if not exists ref.droits_des_roles (
   -- Le type d'organisation : un « collaborateur » de cabinet n'est pas un siège.
-  org_kind   text not null,
+  org_kind   text not null references ref.types_d_organisation(code),
   -- Le rôle d'adhésion (`identity.memberships.role`).
   role       text not null,
   droit      text not null references ref.droits(code),
   valid_from date not null,
   valid_to   date,
   primary key (org_kind, role, droit, valid_from),
+  constraint droits_des_roles_role_fk foreign key (org_kind, role)
+    references ref.roles_d_adhesion(org_kind, role),
   constraint droits_des_roles_periode check (valid_to is null or valid_to > valid_from)
 );
+
+create index if not exists droits_des_roles_droit_fk_idx on ref.droits_des_roles (droit);
 
 comment on table ref.droits_des_roles is
   'Qui peut quoi, par type d''organisation et rôle d''adhésion, daté. Changer un droit est une ligne, jamais un déploiement.';
@@ -299,8 +354,81 @@ create policy capture_pieces_del on capture.pieces
 -- ensuite la lisibilité de ce qu'il en tire, comme avant. Mesuré : 5 172 ms →
 -- 6 ms. Et la version courante devient juste pour qui ne lit pas le fait de
 -- remplacement : elle ne s'arrête plus à mi-chemin.
-alter function app.version_courante(uuid) security definer;
-alter function app.versions_de_la_piece(uuid) security definer;
+--
+-- Une structure, mais pas celle de tout le monde (revue de #146, P3-7) : lue
+-- sans RLS, la chaîne d'une AUTRE société se dévidait à qui en tenait un
+-- identifiant. Elle ne se suit donc que dans une organisation où l'appelant
+-- est membre ou engagé (ou la plateforme), ou par l'auteur du remplacement
+-- (un siège parti garde la chaîne de son Mon espace) ; ailleurs, la
+-- fonction rend ce qu'on lui a donné, rien de plus. Les rôles de service
+-- (migrations, tâches du serveur) ne sont pas `authenticated` : ils suivent
+-- toute chaîne.
+--
+-- Une chaîne tient dans UNE société (`piece_remplacer` l'exige) : la garde se
+-- juge une fois par appel, sur le remplacement qui touche la pièce donnée —
+-- et seulement s'il y en a un. Jugée par maillon, dans la récursion, elle
+-- s'évaluait sur chaque ligne du registre avant la jointure (mesuré : 24 ms
+-- par appel sur 64 remplacements). Une fois par appel : +5 % sur l'épreuve
+-- du rejeu, la plus gourmande en chaînes.
+
+create or replace function app.chaine_ouverte(p_tenant uuid, p_auteur uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select current_setting('role', true) is distinct from 'authenticated'
+      or p_auteur = auth.uid()
+      or p_tenant in (select app.member_orgs())
+      or p_tenant in (select app.engaged_orgs())
+      or app.is_platform()
+$$;
+
+revoke all on function app.chaine_ouverte(uuid, uuid) from public, anon, authenticated;
+
+create or replace function app.version_courante(p_piece uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with recursive suite(id, rang) as (
+    select p_piece, 0
+    union all
+    select r.remplacee_par, s.rang + 1
+      from capture.remplacements r join suite s on r.piece_id = s.id
+  )
+  select case
+    when (select app.chaine_ouverte(r.tenant_id, r.auteur)
+            from capture.remplacements r
+           where r.piece_id = p_piece or r.remplacee_par = p_piece
+           limit 1)
+      then (select id from suite order by rang desc limit 1)
+    else p_piece
+  end
+$$;
+
+create or replace function app.versions_de_la_piece(p_piece uuid)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with recursive versions(id) as (
+    select app.version_courante(p_piece)
+    union
+    select r.piece_id from capture.remplacements r join versions v on r.remplacee_par = v.id
+  )
+  select id from versions
+   where id = p_piece
+      or (select app.chaine_ouverte(r.tenant_id, r.auteur)
+            from capture.remplacements r
+           where r.piece_id = p_piece or r.remplacee_par = p_piece
+           limit 1)
+$$;
 
 -- --- 3. Le passage siège → propriétaire, en faits ------------------------------------------------
 
@@ -575,17 +703,46 @@ $$;
 -- remplace une déjà partie (`piece_remplacer` : ce n'est pas un envoi), et la
 -- pièce issue d'une autre (reçu, justificatif) qui suit sa source. Sans
 -- identité (une migration, une maintenance), rien n'est jugé.
+--
+-- Le remplacement se reconnaissait à un réglage de session
+-- (`malica.remplacement`) que n'importe quelle session peut poser : un siège
+-- le posait, puis transmettait par la table (revue de #146, P3-8). Il se
+-- reconnaît désormais à un FAIT que seule `piece_remplacer` écrit (les
+-- clients n'insèrent pas dans `capture.remplacements`) : dans cette
+-- transaction, la pièce vient de remplacer une pièce déjà partie chez le
+-- comptable — elle en hérite le partage, ce n'est pas un envoi. Le réglage
+-- que `piece_remplacer` pose encore n'est plus lu par personne.
+
+create or replace function app.remplacement_en_cours(p_piece uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+      from capture.remplacements r
+      join capture.pieces a on a.id = r.piece_id
+     where r.remplacee_par = p_piece
+       -- La transaction qui l'inscrit : `now()` est l'heure de la transaction.
+       and r.created_at = now()
+       and a.vis = 'partage'::app.vis_t)
+$$;
+
+revoke all on function app.remplacement_en_cours(uuid) from public, anon;
+grant execute on function app.remplacement_en_cours(uuid) to authenticated;
 
 create or replace function app.seul_qui_en_a_le_droit_transmet()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 begin
   if new.vis = 'partage'::app.vis_t
      and (tg_op = 'INSERT' or old.vis is distinct from new.vis)
-     and coalesce(current_setting('malica.remplacement', true), '') <> new.id::text
+     and not app.remplacement_en_cours(new.id)
      and new.source_piece_id is null
      and (auth.uid() is not null or app.api_tenant() is not null)
      and not app.a_le_droit(new.tenant_id, 'envoi.cabinet') then
@@ -598,6 +755,23 @@ $$;
 
 revoke all on function app.seul_qui_en_a_le_droit_transmet() from public, anon, authenticated;
 
+-- La licence active, que la transmission exige : repris de
+-- `20261029190000`, le remplacement reconnu au même fait.
+create or replace function app.une_piece_transmise_exige_une_licence_active()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.vis = 'partage'::app.vis_t
+     and (tg_op = 'INSERT' or old.vis is distinct from new.vis)
+     and not app.remplacement_en_cours(new.id)
+  then
+    perform app.exiger_licence_active(new.tenant_id, 'transmission');
+  end if;
+  return new;
+end $$;
+
 drop trigger if exists seul_qui_en_a_le_droit_transmet on capture.pieces;
 create trigger seul_qui_en_a_le_droit_transmet
   before insert or update of vis on capture.pieces
@@ -606,7 +780,10 @@ create trigger seul_qui_en_a_le_droit_transmet
 -- --- 6. Envoyer : un geste, deux passages ----------------------------------------------------------
 
 -- Notifier les propriétaires, chacun la sienne : la pièce d'un siège ne se
--- lit que d'eux et de lui.
+-- lit que d'eux et de lui. Une porte INTERNE : seules les portes du circuit
+-- (`security definer`) l'appellent. Ouverte aux clients, elle laissait un
+-- membre écrire aux propriétaires n'importe quel avis, au nom de la base
+-- (revue de #146, P2-4).
 create or replace function app.notifier_les_receveurs(p_tenant uuid, p_kind text, p_payload jsonb)
 returns void
 language sql
@@ -621,8 +798,7 @@ as $$
      and p_tenant in (select app.member_orgs())
 $$;
 
-revoke all on function app.notifier_les_receveurs(uuid, text, jsonb) from public, anon;
-grant execute on function app.notifier_les_receveurs(uuid, text, jsonb) to authenticated;
+revoke all on function app.notifier_les_receveurs(uuid, text, jsonb) from public, anon, authenticated;
 
 -- Le siège envoie au propriétaire (ou lui renvoie, après un retour).
 create or replace function app.envoyer_au_proprietaire(p_piece uuid)
@@ -675,7 +851,9 @@ begin
   values (v_tenant, auth.uid(),
           case when v_dernier = 'retournee' then 'piece.renvoyee_au_proprietaire'
                else 'piece.envoyee_au_proprietaire' end,
-          'capture', 'pieces', p_piece, '{}'::jsonb);
+          -- `chez` : un fait du passage interne, que le cabinet ne lit pas
+          -- (`audit_event_log_sel`, `20261103110000`).
+          'capture', 'pieces', p_piece, jsonb_build_object('chez', 'proprietaire'));
 
   perform app.notifier_les_receveurs(v_tenant, 'piece.recue_du_siege',
                                      jsonb_build_object('piece_id', p_piece,
@@ -871,6 +1049,30 @@ $$;
 -- le motif gouverné et sa note — la même carte que le retour du comptable.
 -- Le reste est repris de `20261030090000`.
 
+-- Un retour porte un motif gouverné, actif, et sa note quand le motif l'exige :
+-- une règle, pour les deux passages.
+create or replace function app.exiger_un_motif_de_retour(p_motif uuid, p_note text)
+returns void
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_note_requise boolean;
+begin
+  select requires_note into v_note_requise
+    from ref.rejet_motifs where id = p_motif and active;
+  if v_note_requise is null then
+    raise exception 'motif inconnu' using errcode = 'check_violation';
+  end if;
+  if v_note_requise and coalesce(btrim(p_note), '') = '' then
+    raise exception 'ce motif exige une note' using errcode = 'check_violation';
+  end if;
+end
+$$;
+
+revoke all on function app.exiger_un_motif_de_retour(uuid, text) from public, anon, authenticated;
+
 create or replace function public.piece_retourner(p_piece uuid, p_motif uuid, p_note text)
 returns jsonb
 language plpgsql
@@ -883,7 +1085,6 @@ declare
   v_status text;
   v_auteur uuid;
   v_pack   uuid;
-  v_note_requise boolean;
   v_vivante uuid;
   v_rev    uuid;
 begin
@@ -904,14 +1105,7 @@ begin
     if (select fait from app.dernier_fait_du_circuit(p_piece)) is distinct from 'envoyee' then
       raise exception 'refus.retour.rien_recu' using errcode = 'check_violation';
     end if;
-    select requires_note into v_note_requise
-      from ref.rejet_motifs where id = p_motif and active;
-    if v_note_requise is null then
-      raise exception 'motif inconnu' using errcode = 'check_violation';
-    end if;
-    if v_note_requise and coalesce(btrim(p_note), '') = '' then
-      raise exception 'ce motif exige une note' using errcode = 'check_violation';
-    end if;
+    perform app.exiger_un_motif_de_retour(p_motif, p_note);
 
     insert into capture.circuit (tenant_id, piece_id, fait, par, par_nom, motif_id, note)
     values (v_tenant, p_piece, 'retournee', auth.uid(), app.prenom_au_moment(auth.uid()),
@@ -925,7 +1119,7 @@ begin
     insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
                                  object_id, motif_id, payload)
     values (v_tenant, auth.uid(), 'piece.retournee_au_siege', 'capture', 'pieces', p_piece,
-            p_motif, jsonb_build_object('note', nullif(btrim(p_note), '')));
+            p_motif, jsonb_build_object('note', nullif(btrim(p_note), ''), 'chez', 'proprietaire'));
 
     return jsonb_build_object('piece_id', p_piece, 'motif_id', p_motif, 'contre_passation', null,
                               'chez', 'siege');
@@ -945,14 +1139,7 @@ begin
     raise exception 'refus.retour.deja' using errcode = 'check_violation';
   end if;
 
-  select requires_note into v_note_requise
-    from ref.rejet_motifs where id = p_motif and active;
-  if v_note_requise is null then
-    raise exception 'motif inconnu' using errcode = 'check_violation';
-  end if;
-  if v_note_requise and coalesce(btrim(p_note), '') = '' then
-    raise exception 'ce motif exige une note' using errcode = 'check_violation';
-  end if;
+  perform app.exiger_un_motif_de_retour(p_motif, p_note);
 
   if exists (select 1 from socle.ecritures e
               where e.piece_id in (select app.versions_de_la_piece(p_piece))
@@ -1079,10 +1266,13 @@ as $$
 $$;
 
 -- Répondre à un retour : au comptable, ou au propriétaire qui a retourné la
--- pièce au siège. Repris de `20261026100000`.
+-- pièce au siège. Repris de `20261026100000`. `security definer` : elle
+-- prévient les propriétaires par la porte interne ; la lecture de la pièce,
+-- que la RLS faisait, est refaite ici.
 create or replace function public.piece_repondre_au_cabinet(p_piece uuid, p_texte text)
 returns jsonb
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -1091,7 +1281,8 @@ declare
   v_au_proprietaire boolean;
 begin
   select tenant_id, vis into v_tenant, v_vis from capture.pieces where id = p_piece;
-  if v_tenant is null or v_tenant not in (select app.member_orgs()) then
+  if v_tenant is null or v_tenant not in (select app.member_orgs())
+     or not app.piece_lisible(p_piece) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   v_au_proprietaire := v_vis = 'entite'::app.vis_t
@@ -1107,7 +1298,10 @@ begin
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
                                object_id, payload)
   values (v_tenant, auth.uid(), 'piece.reponse_client', 'capture', 'pieces', p_piece,
-          jsonb_build_object('texte', btrim(p_texte)));
+          jsonb_build_object('texte', btrim(p_texte))
+            -- Au propriétaire : un fait du passage interne.
+            || case when v_au_proprietaire then jsonb_build_object('chez', 'proprietaire')
+                    else '{}'::jsonb end);
 
   if v_au_proprietaire then
     perform app.notifier_les_receveurs(v_tenant, 'piece.reponse_client',
@@ -1188,10 +1382,21 @@ $$;
 -- d'un siège dans un espace privé, et le refusait au siège pour la sienne.
 -- Désormais chacun déplace les SIENNES, dans les deux sens ; jamais une pièce
 -- en route chez le propriétaire (elle se demande).
+--
+-- Revue de #146 :
+--   - P2-3 : la pièce que le comptable retourne revient à la société par qui
+--     transmet (`envoi.cabinet`), ou par l'accord du comptable — pas par le
+--     siège, qui la « gardait » ainsi de fait. `p_par_accord` ne se déclare
+--     pas soi-même : il ne vaut que pour le cabinet engagé, après son accord ;
+--   - P2-5 : la pièce qui entre dans la société est annoncée à ses
+--     propriétaires, chacun la sienne — jamais à toute l'organisation, où le
+--     cabinet la lisait. `security definer` pour cela (la porte interne) ; la
+--     lecture et l'adhésion, que la RLS gardaient, sont refaites ici.
 
 create or replace function public.capture_piece_set_vis(p_piece uuid, p_vis app.vis_t, p_par_accord boolean default false)
 returns jsonb
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -1205,7 +1410,10 @@ begin
   select tenant_id, vis, status, created_by
     into v_tenant, v_old, v_status, v_auteur
     from capture.pieces where id = p_piece for update;
-  if v_tenant is null then
+  if v_tenant is null
+     or not ((v_tenant in (select app.member_orgs()) and app.piece_lisible(p_piece))
+             or (p_par_accord and v_tenant in (select app.engaged_orgs())
+                 and app.accord_donne(p_piece, 'rappel'))) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   if v_old = p_vis then
@@ -1231,6 +1439,12 @@ begin
                      and e.status = 'booked'
                      and app.ecriture_vivante(e.id)) then
       raise exception 'une piece comptabilisee reste partagee' using errcode = 'check_violation';
+    end if;
+    -- Ce qui est chez le comptable revient par qui l'y envoie, ou par son accord.
+    if not app.a_le_droit(v_tenant, 'envoi.cabinet')
+       and not (p_par_accord and v_tenant in (select app.engaged_orgs())) then
+      raise exception 'refus.envoi.reserve_au_proprietaire'
+        using errcode = '42501', hint = 'envoi.proprietaire';
     end if;
     v_rendue := v_status = 'retournee' and p_vis = 'entite'::app.vis_t;
     if not v_rendue and not app.accord_donne(p_piece, 'rappel') then
@@ -1296,9 +1510,8 @@ begin
     insert into collab.notifications (tenant_id, kind, payload)
     values (v_tenant, 'piece.partagee', jsonb_build_object('piece_id', p_piece));
   elsif p_vis = 'entite'::app.vis_t and v_old = 'personnel'::app.vis_t then
-    insert into collab.notifications (tenant_id, kind, payload)
-    values (v_tenant, 'piece.a_valider',
-            jsonb_build_object('piece_id', p_piece, 'auteur', v_auteur));
+    perform app.notifier_les_receveurs(v_tenant, 'piece.a_valider',
+                                       jsonb_build_object('piece_id', p_piece, 'auteur', v_auteur));
   end if;
 
   if v_rendue and not p_par_accord then
@@ -1318,7 +1531,10 @@ $$;
 --   - la société : les siennes, ou toutes avec `piece.supprimer_toutes` — et
 --     l'auteur est prévenu ;
 --   - le siège ne retire pas une pièce partie chez le propriétaire : il la
---     demande. Retournée par lui, elle est rendue : il la supprime.
+--     demande. Retournée par lui, elle est rendue : il la supprime ;
+--   - son Mon espace part avec son compte : l'auteur d'une pièce privée la
+--     supprime, même hors de la société qu'il a quittée (`20261103100000`
+--     la lui montre).
 
 create or replace function public.capture_piece_supprimer(p_piece uuid, p_par_accord boolean default false)
 returns text
@@ -1347,6 +1563,8 @@ begin
   end if;
 
   if v_tenant not in (select app.member_orgs())
+     and not (v_vis = 'personnel' and v_auteur is not distinct from auth.uid()
+              and v_auteur is not null)
      and not (p_par_accord
               and v_tenant in (select app.engaged_orgs())
               and app.accord_donne(p_piece, 'suppression')) then
@@ -1573,10 +1791,13 @@ $$;
 
 -- Demander. Le siège demande au propriétaire — pour une pièce partie chez lui,
 -- ou déjà chez le comptable ; qui transmet au comptable lui demande. Repris
--- de `20261029100000`.
+-- de `20261029100000`. `security definer` : elle prévient les propriétaires
+-- par la porte interne ; ce que la RLS gardait (lire la pièce, en être
+-- membre) est refait ici.
 create or replace function public.piece_demander(p_piece uuid, p_objet text)
 returns jsonb
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -1589,7 +1810,8 @@ declare
 begin
   select tenant_id, vis, status, created_by into v_tenant, v_vis, v_status, v_auteur
     from capture.pieces where id = p_piece for update;
-  if v_tenant is null then
+  if v_tenant is null or v_tenant not in (select app.member_orgs())
+     or not app.piece_lisible(p_piece) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
 
@@ -1625,11 +1847,7 @@ begin
       using errcode = 'check_violation';
   end if;
 
-  -- Sous la RLS de la personne : les demandes de la pièce qu'elle lit.
-  select d.fait into v_dernier
-    from collab.demandes_sur_piece d
-   where d.piece_id = p_piece and d.objet = p_objet and d.etape = v_etape
-   order by d.created_at desc, d.id desc limit 1;
+  select d.fait into v_dernier from app.derniere_demande(p_piece, p_objet, v_etape) d;
   if v_dernier = 'demandee' then
     return jsonb_build_object('piece_id', p_piece, 'objet', p_objet, 'deja', true,
                               'etape', v_etape);
@@ -1833,6 +2051,13 @@ create policy collab_demandes_sur_piece_ins on collab.demandes_sur_piece
 -- notification de pièce, que de qui lit la pièce — ou, la pièce partie, de qui
 -- voit toute la société. Sans quoi un siège lirait, par la porte de service, la
 -- note d'un retour fait à un autre.
+--
+-- Le cabinet engagé suit la même règle (revue de #146, P2-5) : il lisait
+-- toute notification de société, y compris celles d'une pièce jamais
+-- envoyée. Il lit celles d'une pièce qu'il connaît ; jamais un avis du
+-- passage interne (`chez` = propriétaire). Une pièce effacée n'a plus de
+-- règle de lecture : l'avis de société qui en reste (« supprimée »,
+-- « archivée ») n'est émis que pour une pièce partie chez lui.
 
 create or replace function app.notification_lisible(p_tenant uuid, p_user uuid, p_payload jsonb)
 returns boolean
@@ -1843,8 +2068,16 @@ set search_path = ''
 as $$
   select case
     when p_user is not null then p_user = auth.uid()
-    -- Le cabinet engagé, la plateforme : ce qu'ils lisaient déjà.
-    when p_tenant not in (select app.member_orgs()) then true
+    when p_tenant not in (select app.member_orgs()) then
+      coalesce(p_payload ->> 'chez', '') <> 'proprietaire'
+      and case
+        when p_payload ? 'piece_id' and (p_payload ->> 'piece_id') ~* '^[0-9a-f-]{36}$'
+             and exists (select 1 from capture.pieces p
+                          where p.id = (p_payload ->> 'piece_id')::uuid)
+          then app.piece_lisible((p_payload ->> 'piece_id')::uuid)
+               or app.piece_connue_du_cabinet((p_payload ->> 'piece_id')::uuid)
+        else true
+      end
     when p_payload ? 'piece_id' and (p_payload ->> 'piece_id') ~* '^[0-9a-f-]{36}$' then
       case when exists (select 1 from capture.pieces p where p.id = (p_payload ->> 'piece_id')::uuid)
            then app.piece_lisible((p_payload ->> 'piece_id')::uuid)

@@ -2076,7 +2076,6 @@ const fr = {
   "monespace.vide": "Rien ici : aucune pièce privée d'une société quittée.",
   "monespace.aide":
     "Vous n'êtes plus membre de ces sociétés : vous pouvez télécharger ou supprimer vos pièces, jamais les leur envoyer.",
-  "monespace.supprimer": "Supprimer",
   "monespace.lien": "Mon espace des sociétés quittées ({count})",
   "monespace.lien#one": "Mon espace d'une société quittée (1)",
   "monespace.lien#other": "Mon espace des sociétés quittées ({count})",
@@ -5884,7 +5883,6 @@ const en: Dict = {
   "monespace.vide": "Nothing here: no private document from a company you left.",
   "monespace.aide":
     "You are no longer a member of these companies: you can download or delete your documents, never send them to them.",
-  "monespace.supprimer": "Delete",
   "monespace.lien": "My space from companies I left ({count})",
   "monespace.lien#one": "My space from a company I left (1)",
   "monespace.lien#other": "My space from companies I left ({count})",
@@ -9537,7 +9535,6 @@ const ar: Dict = {
   "monespace.vide": "لا شيء هنا: لا وثيقة خاصة من شركة غادرتها.",
   "monespace.aide":
     "لم تعد عضوًا في هذه الشركات: يمكنك تنزيل وثائقك أو حذفها، ولا يمكنك إرسالها إليها.",
-  "monespace.supprimer": "حذف",
   "monespace.lien": "مساحتي من الشركات التي غادرتها ({count})",
   "monespace.lien#one": "مساحتي من شركة غادرتها (1)",
   "monespace.lien#other": "مساحتي من الشركات التي غادرتها ({count})",

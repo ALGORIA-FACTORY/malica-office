@@ -85,14 +85,21 @@ export interface InvitationRecue {
  * Les gestes que le référentiel ouvre à la personne dans une organisation
  * (`ref.droits_des_roles`, lot 4). L'écran montre d'après eux ; chaque porte
  * de la base refait le contrôle.
+ *
+ * Une seule liste, dans l'ordre de `ref.droits.sort_order` : le type s'en
+ * déduit, et une épreuve de l'API la compare au référentiel
+ * (`le-circuit-ne-se-contourne-pas.test.ts`).
  */
-export type Droit =
-  | "societe.tout_voir"
-  | "envoi.proprietaire"
-  | "envoi.cabinet"
-  | "piece.garder"
-  | "circuit.recevoir"
-  | "piece.supprimer_toutes";
+export const DROITS = [
+  "societe.tout_voir",
+  "envoi.proprietaire",
+  "envoi.cabinet",
+  "piece.garder",
+  "circuit.recevoir",
+  "piece.supprimer_toutes",
+] as const;
+
+export type Droit = (typeof DROITS)[number];
 
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;

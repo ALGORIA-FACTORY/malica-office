@@ -46,6 +46,15 @@ const pool = new Pool({
   connectionString: url(),
   statement_timeout: 30_000,
   idle_in_transaction_session_timeout: 10_000,
+  /*
+   * Pas de compilation à la volée (JIT). Les politiques RLS appellent des
+   * fonctions, dont le coût estimé (100 par appel et par ligne) fait passer
+   * des requêtes de quelques millisecondes au-dessus de `jit_above_cost` :
+   * PostgreSQL les compilait avec LLVM à chaque appel. Mesuré le 31 octobre
+   * 2026 sur la liste du propriétaire : 2 s, dont 1,9 s de compilation ; 80 ms
+   * sans. `une-requete-de-l-api-ne-se-compile-pas.test.ts` y veille.
+   */
+  options: "-c jit=off",
 });
 
 function url(): string {
