@@ -17,6 +17,13 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date ISO YYYY-MM-DD req
 
 const confidence = z.number().min(0).max(1);
 
+/**
+ * Un code du référentiel (`ref.tva_natures.code`) : majuscules, chiffres et
+ * soulignés. Le contrat n'en connaît aucun ; c'est le référentiel qui les
+ * nomme, et la déclaration qui les range.
+ */
+const codeDuReferentiel = z.string().regex(/^[A-Z][A-Z0-9_]*$/, "Code du référentiel attendu");
+
 export const ExtractLineV1 = z.object({
   label: z.string().min(1),
   tax_code: z.string().min(1), // ex. "TVA_19" ; référence ref_office.tax_rates.code
@@ -24,6 +31,22 @@ export const ExtractLineV1 = z.object({
   vat_amount: decimalString,
   ttc: decimalString,
   confidence: confidence.optional(),
+  /**
+   * La NATURE de ce que la ligne taxe — une immobilisation acquise, ou un
+   * autre bien ou service (`ref.tva_natures`) —, qui choisit sa ligne de la
+   * déclaration de TVA (`ref.tva_declaration_lignes`). Ajout compatible
+   * (3 novembre 2026) : un extrait conservé sans nature se range sur la ligne
+   * de la nature par défaut du référentiel. Le serveur la pose à la lecture
+   * de l'extrait (`app.extrait_de_la_tva`), depuis les comptes de l'écriture
+   * du cabinet ou le plan comptable — jamais depuis un mot du libellé.
+   */
+  nature: codeDuReferentiel.optional(),
+  /**
+   * `false` : la nature n'a pas pu être attribuée (une facture mêlée qu'aucun
+   * article chiffré ne départage) ; la ligne est rangée sur la nature par
+   * défaut, et la TVA du mois la COMPTE à part — jamais en silence.
+   */
+  nature_attribuee: z.boolean().optional(),
 });
 
 /**

@@ -92,6 +92,97 @@ export const referentiel = {
     });
   },
 
+  /**
+   * Les lignes de la déclaration de TVA en vigueur au jour dit
+   * (`ref.tva_declaration_lignes`), dans l'ordre du formulaire, libellés
+   * traduits (`ref.labels`, espace `tva_declaration_ligne`, le français à
+   * défaut), et la nature qui reçoit une TVA dont la nature n'est pas
+   * attribuée (`ref.tva_natures`). Sans nature par défaut, une erreur
+   * explicite : aucun repli implicite (R4).
+   */
+  async declarationTva(
+    db: Requete,
+    packId: string,
+    dossierId: string,
+    jour: string,
+    locale = "fr",
+  ) {
+    const [{ rows: lignes }, { rows: defaut }, { rows: affectations }, { rows: natures }] =
+      await Promise.all([
+        db.query<{
+          code: string;
+          sens: "collectee" | "deductible";
+          nature: string | null;
+          ordinal: number;
+          incertain: boolean;
+          label: string;
+        }>(
+          `select l.code, l.sens, l.nature, l.ordinal, l.incertain,
+                coalesce(demandee.value, francais.value, l.label) as label
+           from ref.tva_declaration_lignes l
+           left join ref_labels_v demandee
+             on demandee.ns = 'tva_declaration_ligne' and demandee.key = l.code
+            and demandee.locale = $3
+           left join ref_labels_v francais
+             on francais.ns = 'tva_declaration_ligne' and francais.key = l.code
+            and francais.locale = 'fr'
+          where l.pack_version_id = $1
+            and l.valid_from <= $2::date and (l.valid_to is null or l.valid_to >= $2::date)
+          order by l.ordinal, l.code`,
+          [packId, jour, locale],
+        ),
+        db.query<{ code: string }>(`select code from ref.tva_natures where par_defaut`),
+        // R10 : la ligne de chaque (sens, nature), arrêtée par le dossier, puis
+        // son cabinet, puis le pack — la SEULE résolution (app.declaration_tva).
+        db.query<{
+          sens: "collectee" | "deductible";
+          nature: string;
+          ligne_code: string | null;
+          origine: "dossier" | "cabinet" | "pack";
+          decide_le: Date | null;
+        }>(
+          `select sens, nature, ligne_code, origine, decide_le
+           from app.declaration_tva($1, $2, $3::date)`,
+          [dossierId, packId, jour],
+        ),
+        db.query<{ code: string; label: string }>(
+          `select n.code, coalesce(demandee.value, francais.value, n.description) as label
+           from ref.tva_natures n
+           left join ref_labels_v demandee
+             on demandee.ns = 'tva_nature' and demandee.key = n.code and demandee.locale = $1
+           left join ref_labels_v francais
+             on francais.ns = 'tva_nature' and francais.key = n.code and francais.locale = 'fr'
+          order by n.ordinal`,
+          [locale],
+        ),
+      ]);
+    const natureParDefaut = defaut[0]?.code;
+    if (!natureParDefaut) throw new Error("ref.tva_natures : aucune nature par défaut");
+    return {
+      natureParDefaut,
+      lignes: lignes.map((l) => ({
+        code: l.code,
+        label: l.label,
+        sens: l.sens,
+        nature: l.nature,
+        ordinal: Number(l.ordinal),
+        // À confirmer tant qu'un défaut INCERTAIN du pack y range une TVA que
+        // personne au cabinet n'a arrêtée. Arrêtée (confirmée ou remplacée),
+        // l'affectation n'est plus un défaut : R10, « un défaut se dit ».
+        incertain:
+          l.incertain && affectations.some((a) => a.ligne_code === l.code && a.origine === "pack"),
+      })),
+      natures: natures.map((n) => ({ code: n.code, label: n.label })),
+      affectations: affectations.map((a) => ({
+        sens: a.sens,
+        nature: a.nature,
+        ligne: a.ligne_code,
+        origine: a.origine,
+        decideLe: a.decide_le ? a.decide_le.toISOString() : null,
+      })),
+    };
+  },
+
   async accountMappings(db: Requete, packId: string) {
     const { rows } = await db.query(
       `select document_kind, tax_code, main_account, vat_account, counterparty_account,

@@ -478,4 +478,40 @@ export const parametrage = {
       [input.tenantId, input.portee, input.porteeId, input.roleCode],
     );
   },
+
+  /**
+   * Arrête les lignes de la déclaration de TVA (R10) : pour chaque sens et
+   * nature, la ligne qui la reçoit — pour tout le cabinet (l'expert), ou pour
+   * un dossier qu'il supervise. Confirmer, c'est arrêter l'affectation telle
+   * qu'elle est ; `ligne: null` rend au défaut du pack. Rien ne se réécrit :
+   * chaque décision s'ajoute, datée et signée (`app.tva_affecter`), et la base
+   * refuse qui n'est pas du cabinet (`refus.tva.affectation.droits`).
+   */
+  async arreterDeclarationTva(
+    db: Requete,
+    input: {
+      cabinetId: string;
+      portee: "cabinet" | "dossier";
+      porteeId: string;
+      packId: string;
+      /** La première déclaration à laquelle la décision s'applique. */
+      depuis: string;
+      affectations: Array<{ sens: string; nature: string; ligne: string | null }>;
+      motif?: string | null;
+    },
+  ): Promise<{ decisions: number }> {
+    const { rows } = await db.query<{ n: number }>(
+      `select app.tva_affecter($1, $2, $3, $4, $5::date, $6::jsonb, $7) as n`,
+      [
+        input.cabinetId,
+        input.portee,
+        input.porteeId,
+        input.packId,
+        input.depuis,
+        JSON.stringify(input.affectations),
+        input.motif ?? null,
+      ],
+    );
+    return { decisions: Number(rows[0]?.n ?? 0) };
+  },
 };
