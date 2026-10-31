@@ -114,13 +114,14 @@ export async function lireParametres(
 export async function lireLesDevises(db: Requete): Promise<DeviseLue[]> {
   const [{ rows: devises }, { rows: marques }] = await Promise.all([
     db.query<{ code: string; exposant: number; separateur_decimal: string }>(
-      `select code, exposant, separateur_decimal from ref.devises order by code`,
+      `select code, exposant, separateur_decimal from ref.devises order by code collate "C"`,
     ),
     db.query<MarqueDeDevise>(
-      `select code as marque, code as devise from ref.devises
-        union
-       select marque, devise from ref.devises_marques
-        order by 1, 2`,
+      `select marque, devise from (
+         select code as marque, code as devise from ref.devises
+          union
+         select marque, devise from ref.devises_marques
+       ) m order by marque collate "C", devise collate "C"`,
     ),
   ]);
   if (devises.length === 0) throw new Error("Aucune devise au référentiel.");

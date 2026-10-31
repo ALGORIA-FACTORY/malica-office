@@ -21,6 +21,8 @@ import { lireLesTitres, lireParametres } from "./analyse.ts";
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
 const JOUR_DU_RELEVE = "2026-10-01";
 
+// Every text ordering below is binary (`collate "C"`): the snapshot must not
+// depend on the database's locale (C.UTF-8 locally, en_US in CI).
 export async function releverLeReferentiel(db: Requete, juridiction: string) {
   const { rows: packs } = await db.query<{ id: string; currency: string }>(
     `select id, currency from ref.jurisdiction_packs
@@ -44,7 +46,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
   }>(
     `select code, rate::text as rate, to_char(valid_from, 'YYYY-MM-DD') as "validFrom",
             to_char(valid_to, 'YYYY-MM-DD') as "validTo"
-       from ref_tva_rates_v where pack_version_id = $1 order by code, valid_from`,
+       from ref_tva_rates_v where pack_version_id = $1 order by code collate "C", valid_from`,
     [pack.id],
   );
   const imputations = (await referentiel.accountMappings(db, pack.id))
@@ -59,24 +61,25 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     }))
     .sort(par((d) => `${d.code}|${d.documentKind}`));
   const { rows: mentions } = await db.query<{ code: string }>(
-    `select code from ref.mentions where pack_version_id = $1 and mandatory order by code`,
+    `select code from ref.mentions where pack_version_id = $1 and mandatory order by code collate "C"`,
     [pack.id],
   );
   const { rows: types } = await db.query<{ code: string }>(
-    `select code from ref.document_types where porte_ecriture order by code`,
+    `select code from ref.document_types where porte_ecriture order by code collate "C"`,
   );
   const { rows: devises } = await db.query<{
     code: string;
     exposant: number;
     separateurDecimal: string;
   }>(
-    `select code, exposant, separateur_decimal as "separateurDecimal" from ref.devises order by code`,
+    `select code, exposant, separateur_decimal as "separateurDecimal" from ref.devises order by code collate "C"`,
   );
   const { rows: marques } = await db.query<{ marque: string; devise: string }>(
-    `select code as marque, code as devise from ref.devises
-      union
-     select marque, devise from ref.devises_marques
-      order by 1, 2`,
+    `select marque, devise from (
+       select code as marque, code as devise from ref.devises
+        union
+       select marque, devise from ref.devises_marques
+     ) m order by marque collate "C", devise collate "C"`,
   );
   return {
     juridiction,
