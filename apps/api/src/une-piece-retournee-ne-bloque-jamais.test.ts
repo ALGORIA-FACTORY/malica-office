@@ -77,8 +77,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   /** Une pièce transmise, lue, au type lu mais pas confirmé : le cas réel. */
   const transmiseLue = async () => {
     n += 1;
-    const id = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const id = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, now())
@@ -1276,9 +1276,9 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   };
 
   it("une version remplacée ne se lit plus : refus définitif, travail clos, octets refusés", async () => {
-    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
+    const ancienne = await sousIdentiteDuServeur(dirigeant.id, async () => {
       n += 1;
-      const { rows } = await db.query<{ id: string }>(
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, now()) returning id`,

@@ -47,9 +47,9 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
   });
   let n = 0;
   const nouvellePiece = (vis: "partage" | "entite") =>
-    sousIdentite(dirigeant.id, async (db) => {
+    sousIdentite(dirigeant.id, async () => {
       n += 1;
-      const { rows } = await db.query<{ id: string }>(
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', $5::app.vis_t, $2, $3, $4, 'facture_achat', 'confirme',

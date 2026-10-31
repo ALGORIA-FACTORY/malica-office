@@ -58,11 +58,6 @@ const REFUS_DE_LECTURE = `(
      and not exists (select 1 from extractions_v x where x.piece_id = p.id)
    order by e.at desc limit 1)`;
 
-/** Le chemin d'une pièce se déduit de la base : tenant, puis identifiant. */
-function cheminRelatif(tenantId: string, pieceId: string): string {
-  return `${tenantId}/${pieceId}`;
-}
-
 /**
  * Projeter les articles d'une pièce — un seul endroit.
  *
@@ -342,22 +337,15 @@ export const capture = {
     );
     const id = rows[0]!.id;
 
-    // La clé d'idempotence peut rendre une pièce déjà enregistrée : on relit le
-    // tenant plutôt que de faire confiance à celui qu'on a reçu.
-    const { rows: ligne } = await db.query<{ tenant_id: string }>(
-      `select tenant_id from pieces_v where id = $1`,
-      [id],
+    // Le chemin — dossier, puis identifiant — se pose par sa porte, qui le
+    // calcule de la pièce elle-même (la clé d'idempotence peut rendre une
+    // pièce déjà enregistrée : son dossier vient de la base, pas de l'appel).
+    // Un client ne réécrit plus `storage_path` (lot 6, verrous en base).
+    const { rows: pose } = await db.query<{ chemin: string }>(
+      `select public.capture_piece_poser_chemin($1, $2) as chemin`,
+      [id, input.contentType ?? null],
     );
-    const tenant = ligne[0]!.tenant_id;
-    const chemin = cheminRelatif(tenant, id);
-
-    await db.query(
-      `update pieces_v
-          set storage_path = $2,
-              content_type = coalesce($3, content_type)
-        where id = $1`,
-      [id, chemin, input.contentType ?? null],
-    );
+    const chemin = pose[0]!.chemin;
 
     // Rejouable : la même clé rend le même reçu, et la base n'inscrit la
     // même liste qu'une fois.

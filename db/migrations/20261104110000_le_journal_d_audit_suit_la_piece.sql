@@ -10,7 +10,8 @@
 -- une pièce qu'on ne lui avait jamais envoyée.
 --
 -- La règle de lecture d'un fait est désormais celle de sa pièce :
---   - chacun lit les faits qu'il a faits ;
+--   - chacun lit les faits qu'il a faits, dans une organisation dont il est
+--     (ou sur sa pièce de Mon espace) ;
 --   - un membre, ceux d'une pièce qu'il lit (la règle de `app.piece_lisible`,
 --     une pièce archivée restant au journal de qui voit toute la société) ;
 --     ceux qui ne portent sur aucune pièce, s'il voit toute la société
@@ -60,7 +61,11 @@ as $$
       when p_schema = 'socle' and p_table = 'ecritures' then
         (select e.piece_id from socle.ecritures e where e.id = p_objet)
     end,
-    case when (p_payload ->> 'piece_id') ~* '^[0-9a-f-]{36}$'
+    -- La forme exacte d'un identifiant : trente-six tirets passaient la garde
+    -- et faisaient tomber, au cast, la lecture de tout le journal (revue de
+    -- #146 : un fait empoisonné, écrit par un membre).
+    case when (p_payload ->> 'piece_id')
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
          then (p_payload ->> 'piece_id')::uuid end)
 $$;
 
@@ -83,8 +88,13 @@ revoke all on function app.piece_de_l_evenement(text, text, uuid, jsonb) from pu
 -- version courante : Mon espace à son auteur seul ; la société à qui la voit
 -- toute, ou à son auteur. Une pièce archivée (effacée, son écriture gardée)
 -- reste au journal de qui voit toute la société.
+--
+-- « Voit toute la société » se juge ICI, du dossier du fait : reçu en
+-- paramètre, un client pouvait poser la question comme s'il voyait tout
+-- (revue de #146, P3). Il ne se calcule que si la ligne en dépend — un fait
+-- de sa propre pièce n'en a pas besoin.
 
-create or replace function app.evenement_lisible_du_membre(p_tout_voir boolean, p_schema text,
+create or replace function app.evenement_lisible_du_membre(p_tenant uuid, p_schema text,
                                                           p_table text, p_objet uuid,
                                                           p_payload jsonb)
 returns boolean
@@ -100,22 +110,45 @@ declare
 begin
   v_piece := app.piece_de_l_evenement(p_schema, p_table, p_objet, p_payload);
   if v_piece is null then
-    return p_tout_voir;
+    return p_tenant in (select app.orgs_avec_droit('societe.tout_voir'));
   end if;
   select p.vis, p.created_by into v_vis, v_auteur
     from capture.pieces p where p.id = app.version_courante(v_piece);
   if not found then
-    return p_tout_voir and coalesce(p_payload ->> 'vis', '') <> 'personnel';
+    return coalesce(p_payload ->> 'vis', '') <> 'personnel'
+           and p_tenant in (select app.orgs_avec_droit('societe.tout_voir'));
   end if;
   if v_vis = 'personnel'::app.vis_t then
     return v_auteur = auth.uid();
   end if;
-  return p_tout_voir or v_auteur = auth.uid();
+  return v_auteur = auth.uid()
+         or p_tenant in (select app.orgs_avec_droit('societe.tout_voir'));
 end
 $$;
 
-revoke all on function app.evenement_lisible_du_membre(boolean, text, text, uuid, jsonb) from public, anon;
-grant execute on function app.evenement_lisible_du_membre(boolean, text, text, uuid, jsonb) to authenticated;
+revoke all on function app.evenement_lisible_du_membre(uuid, text, text, uuid, jsonb) from public, anon;
+grant execute on function app.evenement_lisible_du_membre(uuid, text, text, uuid, jsonb) to authenticated;
+
+-- Un fait de sa propre pièce de Mon espace : il se lit de son auteur même
+-- hors de la société qu'il a quittée (`20261104100000` lui laisse ces pièces).
+create or replace function app.evenement_de_mon_espace(p_schema text, p_table text, p_objet uuid,
+                                                      p_payload jsonb)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from capture.pieces p
+     where p.id = app.version_courante(app.piece_de_l_evenement(p_schema, p_table, p_objet,
+                                                                 p_payload))
+       and p.vis = 'personnel'::app.vis_t
+       and p.created_by = auth.uid())
+$$;
+
+revoke all on function app.evenement_de_mon_espace(text, text, uuid, jsonb) from public, anon;
+grant execute on function app.evenement_de_mon_espace(text, text, uuid, jsonb) to authenticated;
 
 -- Le cabinet : une pièce qu'il connaît (`app.piece_connue_du_cabinet`, qui
 -- couvre la pièce partagée et celle archivée après inscription) ; une pièce
@@ -149,12 +182,17 @@ drop policy if exists audit_event_log_sel on audit.event_log;
 create policy audit_event_log_sel on audit.event_log
   for select to authenticated
   using ((select app.is_platform())
-         -- Ce qu'on a fait soi-même.
-         or actor = (select auth.uid())
+         -- Ce qu'on a fait soi-même : dans une organisation dont on est, ou
+         -- sur sa pièce de Mon espace. Un siège parti ne relit pas les faits
+         -- de la société qu'il a quittée (revue de #146, P3).
+         or (actor = (select auth.uid())
+             and (tenant_id in (select app.member_orgs())
+                  or tenant_id in (select app.engaged_orgs())
+                  or app.evenement_de_mon_espace(object_schema, object_table, object_id,
+                                                 payload)))
          or (tenant_id in (select app.member_orgs())
-             and app.evenement_lisible_du_membre(
-                   tenant_id in (select app.orgs_avec_droit('societe.tout_voir')),
-                   object_schema, object_table, object_id, payload))
+             and app.evenement_lisible_du_membre(tenant_id, object_schema, object_table,
+                                                 object_id, payload))
          -- Ce que se disent le siège et le propriétaire ne regarde pas le comptable.
          or (tenant_id in (select app.engaged_orgs())
              and coalesce(payload ->> 'chez', '') <> 'proprietaire'

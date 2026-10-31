@@ -65,8 +65,8 @@ describe("un retour dit quoi faire", { skip: !BASE_CONFIGUREE }, () => {
    */
   const lue = async (typeStatut: "a_confirmer" | "a_determiner" = "a_confirmer") => {
     n += 1;
-    const id = await sousIdentiteDuServeur(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
+    const id = await sousIdentiteDuServeur(dirigeant.id, async () => {
+      const { rows } = await admin.query<{ id: string }>(
         `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by,
                                      document_kind, document_kind_statut, transmise_le)
          values ($1, 'pdf', 'partage', $2, $3, $4, $5, $6, now()) returning id`,

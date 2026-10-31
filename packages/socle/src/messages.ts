@@ -2028,6 +2028,7 @@ const fr = {
   "refus.reponse.vide": "Écrivez votre réponse avant de l’envoyer.",
   "refus.piece.remplacee":
     "Une nouvelle photo a remplacé cette pièce : c’est la nouvelle qui se traite.",
+  "refus.piece.origine_immuable": "Une pièce garde son dossier, son auteur et sa source.",
   "refus.piece.archivee": "Le client a retiré cette pièce : elle est archivée.",
   "refus.remplacement.accompagne":
     "Un reçu ou un justificatif se reprend depuis le règlement qu’il accompagne.",
@@ -5888,6 +5889,7 @@ const en: Dict = {
     "You returned it to your team member: it goes out once they have fixed it and sent it back.",
   "refus.reponse.vide": "Write your reply before sending it.",
   "refus.piece.remplacee": "A new photo replaced this document: the new one is the one to handle.",
+  "refus.piece.origine_immuable": "A document keeps its file, its author and its source.",
   "refus.piece.archivee": "The client withdrew this document: it is archived.",
   "refus.remplacement.accompagne":
     "A receipt or a proof of payment is retaken from the payment it goes with.",
@@ -9598,6 +9600,7 @@ const ar: Dict = {
   "refus.envoi.chez_le_siege": "أرجعتها إلى زميلك: تُرسل بعد أن يصلحها ويعيد إرسالها.",
   "refus.reponse.vide": "اكتب ردّك قبل إرساله.",
   "refus.piece.remplacee": "حلّت صورة جديدة محلّ هذه الوثيقة: الجديدة هي التي تُعالَج.",
+  "refus.piece.origine_immuable": "تحتفظ الوثيقة بملفّها وصاحبها ومصدرها.",
   "refus.piece.archivee": "سحب الحريف هذه الوثيقة: هي مؤرشفة.",
   "refus.remplacement.accompagne": "يُعاد تصوير الوصل أو إثبات الدفع من الدفعة التي يرافقها.",
   "refus.remplacement.inscrite": "تكفّل محاسبك بهذه الوثيقة: يُرجعها أولًا، ثم يُعاد تصويرها.",

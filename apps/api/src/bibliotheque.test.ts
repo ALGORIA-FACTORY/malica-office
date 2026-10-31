@@ -193,11 +193,12 @@ describe("bibliothèque comptable sous les rôles réels", { skip: !CONFIGUREE }
       values ($1,'pdf','partage',$2,$2,$3,'facture_achat','confirme','2002-01-31 12:00:00+00') returning id`,
       [client, `${marque}-tardive`, expert.id],
     );
-    await sousIdentite(expert.id, (db) =>
-      db.query(
-        `insert into notif.preferences (user_id, fuseau) values (auth.uid(), 'Pacific/Kiritimati')
-         on conflict (user_id) do update set fuseau = excluded.fuseau`,
-      ),
+    // Aucune route ne règle le fuseau ; un client ne réécrit plus une
+    // préférence en direct (lot 6, verrous en base) : l'opérateur la pose.
+    await admin.query(
+      `insert into notif.preferences (user_id, fuseau) values ($1, 'Pacific/Kiritimati')
+       on conflict (user_id) do update set fuseau = excluded.fuseau`,
+      [expert.id],
     );
     const fevrier = await sousIdentite(expert.id, (db) =>
       documents(db, cabinet, client, "2002-02"),

@@ -160,10 +160,23 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
 
   it("un siège ne se fait pas passer pour un remplacement de photo pour transmettre", async () => {
     const id = await s.deposer("sami", "entite");
+    // La colonne ne s'écrit plus du tout en direct (lot 6, verrous en base)…
     await assert.rejects(
       sousIdentiteDuServeur(s.gens.sami.id, async (db) => {
         await db.query(`select set_config('malica.remplacement', $1, true)`, [id]);
         await db.query(`update capture.pieces set vis = 'partage' where id = $1`, [id]);
+      }),
+      /permission denied for table pieces/,
+    );
+    // … et une pièce qui NAÎT partagée reste jugée : le réglage n'y fait rien.
+    await assert.rejects(
+      sousIdentiteDuServeur(s.gens.sami.id, async (db) => {
+        await db.query(`select set_config('malica.remplacement', $1, true)`, [id]);
+        await db.query(
+          `insert into capture.pieces (tenant_id, vis, source, storage_path, idempotency_key)
+           values ($1, 'partage', 'photo', 'essai/remplacement', $2)`,
+          [s.pme, `remplacement-${Date.now()}`],
+        );
       }),
       /refus\.envoi\.reserve_au_proprietaire/,
     );
