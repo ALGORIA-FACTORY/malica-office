@@ -330,6 +330,22 @@ $$;
 
 -- --- 6. Les stocks ----------------------------------------------------------------------------------
 
+-- Un établissement de cette société ? Les portes qui en reçoivent un le
+-- vérifient : une clé étrangère seule laisse pointer vers celui d'une autre
+-- (revue de #149).
+create or replace function app.entite_de(p_tenant uuid, p_entity uuid)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select exists (select 1 from identity.entities e
+                  where e.id = p_entity and e.tenant_id = p_tenant)
+$$;
+
+revoke all on function app.entite_de(uuid, uuid) from public, anon;
+grant execute on function app.entite_de(uuid, uuid) to authenticated;
+
 create or replace function public.stocks_article_creer(
   p_tenant uuid, p_entity uuid, p_category uuid, p_reference text, p_designation text,
   p_unite text, p_methode app.stock_methode_t, p_account_stock text, p_account_variation text,
@@ -345,6 +361,10 @@ begin
   if nullif(btrim(p_reference), '') is null or nullif(btrim(p_designation), '') is null
      or nullif(btrim(p_unite), '') is null then
     raise exception 'refus.saisie.incomplete' using errcode = '22023';
+  end if;
+  -- L'établissement est celui de la société, jamais d'une autre (revue de #149).
+  if p_entity is not null and not app.entite_de(p_tenant, p_entity) then
+    raise exception 'refus.saisie.etablissement' using errcode = '42501';
   end if;
   insert into stocks.items (tenant_id, entity_id, category_id, reference, designation, unite,
                             methode, account_stock, account_variation, devise, pack_version_id,
@@ -427,6 +447,10 @@ begin
      and not exists (select 1 from public.pieces_v p where p.id = p_piece and p.tenant_id = p_tenant) then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
+  -- L'établissement est celui de la société, jamais d'une autre (revue de #149).
+  if p_entity is not null and not app.entite_de(p_tenant, p_entity) then
+    raise exception 'refus.saisie.etablissement' using errcode = '42501';
+  end if;
   insert into immo.assets (tenant_id, entity_id, vis, piece_id, category_id, label,
                            mise_en_service, valeur_brute, valeur_residuelle, method,
                            duree_annees, coefficient, devise, pack_version_id, created_by)
@@ -497,6 +521,10 @@ begin
   if nullif(btrim(p_label), '') is null or nullif(btrim(p_account_code), '') is null
      or nullif(btrim(p_devise), '') is null then
     raise exception 'refus.saisie.incomplete' using errcode = '22023';
+  end if;
+  -- L'établissement est celui de la société, jamais d'une autre (revue de #149).
+  if p_entity is not null and not app.entite_de(p_tenant, p_entity) then
+    raise exception 'refus.saisie.etablissement' using errcode = '42501';
   end if;
   insert into banque.comptes (tenant_id, entity_id, label, iban, devise, account_code, created_by)
   values (p_tenant, p_entity, p_label, nullif(btrim(p_iban), ''), p_devise, p_account_code,
@@ -579,6 +607,11 @@ declare
 begin
   if p_valid_from is null or nullif(btrim(p_source), '') is null then
     raise exception 'refus.saisie.incomplete' using errcode = '22023';
+  end if;
+  -- La pièce qui la prouve est une pièce de la société (revue de #149).
+  if p_piece is not null
+     and not exists (select 1 from public.pieces_v p where p.id = p_piece and p.tenant_id = p_tenant) then
+    raise exception 'piece introuvable ou non autorisee' using errcode = '42501';
   end if;
   update identity.fiches_fiscales
      set valid_to = p_valid_from
@@ -907,6 +940,157 @@ begin
 end
 $$;
 
+-- Qui arrête un paramétrage (R10) : UNE règle pour la déclaration de TVA, la
+-- règle de change et les comptes des rôles (revue de #149 : la porte des
+-- comptes ne vérifiait rien, et un assistant d'une société pouvait relier un
+-- compte pour le cabinet d'un autre). Pour tout le cabinet : son
+-- expert-comptable, et la portée est le cabinet lui-même. Pour un dossier :
+-- quiconque, au cabinet qui le tient aujourd'hui, le supervise.
+create or replace function app.peut_arreter_le_parametrage(
+  p_cabinet uuid, p_portee text, p_portee_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(case p_portee
+    when 'cabinet' then p_portee_id = p_cabinet and app.has_org_role(p_cabinet, array['expert'])
+    when 'dossier' then
+      p_cabinet in (select app.member_orgs())
+      and app.supervise_le_dossier(p_portee_id)
+      and exists (select 1 from identity.engagements g
+                   where g.cabinet_org_id = p_cabinet and g.pme_org_id = p_portee_id
+                     and g.status = 'actif')
+    else false
+  end, false)
+$$;
+
+revoke all on function app.peut_arreter_le_parametrage(uuid, text, uuid) from public, anon;
+grant execute on function app.peut_arreter_le_parametrage(uuid, text, uuid) to authenticated;
+
+-- La déclaration de TVA et la règle de change s'y rangent : leurs corps sont
+-- repris tels quels, la vérification des droits en moins (elle est ici).
+create or replace function app.tva_affecter(
+  p_cabinet      uuid,
+  p_portee       text,
+  p_portee_id    uuid,
+  p_pack         uuid,
+  p_valid_from   date,
+  p_affectations jsonb,
+  p_motif        text default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_n integer;
+begin
+  if p_portee is null or p_portee not in ('cabinet', 'dossier') then
+    raise exception 'refus.tva.affectation.saisie' using errcode = '22023';
+  end if;
+  if not app.peut_arreter_le_parametrage(p_cabinet, p_portee, p_portee_id) then
+    raise exception 'refus.tva.affectation.droits' using errcode = '42501';
+  end if;
+
+  if p_affectations is null or jsonb_typeof(p_affectations) <> 'array'
+     or jsonb_array_length(p_affectations) = 0
+     or exists (
+       select 1 from jsonb_array_elements(p_affectations) e
+        where e ->> 'sens' is null or e ->> 'nature' is null
+           or not exists (select 1 from ref.tva_natures n where n.code = e ->> 'nature')
+           or (e ->> 'ligne' is not null and not exists (
+                 select 1 from ref.tva_declaration_lignes l
+                  where l.pack_version_id = p_pack and l.code = e ->> 'ligne'
+                    and l.sens = e ->> 'sens'
+                    and l.valid_from <= p_valid_from
+                    and (l.valid_to is null or l.valid_to >= p_valid_from)))) then
+    raise exception 'refus.tva.affectation.saisie' using errcode = '22023';
+  end if;
+
+  insert into parametrage.tva_affectations
+    (tenant_id, portee, portee_id, pack_version_id, sens, nature, ligne_code, valid_from, motif)
+  select p_cabinet, p_portee, p_portee_id, p_pack, e ->> 'sens', e ->> 'nature', e ->> 'ligne',
+         p_valid_from, nullif(btrim(coalesce(p_motif, '')), '')
+    from jsonb_array_elements(p_affectations) e;
+  get diagnostics v_n = row_count;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, pack_version_id, payload)
+  values (p_cabinet, auth.uid(), 'tva.affectation', 'parametrage', 'tva_affectations',
+          p_portee_id, p_pack,
+          jsonb_build_object('portee', p_portee, 'valid_from', p_valid_from,
+                             'affectations', p_affectations));
+  return v_n;
+end
+$$;
+
+create or replace function app.regle_de_change_arreter(
+  p_cabinet uuid, p_portee text, p_portee_id uuid, p_pack uuid, p_valid_from date,
+  p_valeurs jsonb, p_motif text default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_n integer;
+begin
+  if p_portee is null or p_portee not in ('cabinet', 'dossier') then
+    raise exception 'refus.change.regle.saisie' using errcode = '22023';
+  end if;
+  if not app.peut_arreter_le_parametrage(p_cabinet, p_portee, p_portee_id) then
+    raise exception 'refus.change.regle.droits' using errcode = '42501';
+  end if;
+  if p_valeurs is null or jsonb_typeof(p_valeurs) <> 'array'
+     or jsonb_array_length(p_valeurs) = 0
+     or p_valid_from is null
+     -- Le pack de la juridiction de la portée, jamais celui d'une autre.
+     or not exists (select 1 from ref.jurisdiction_packs j
+                      join identity.organizations o on o.id = p_portee_id
+                     where j.id = p_pack and j.jurisdiction = o.jurisdiction)
+     or exists (
+       select 1 from jsonb_array_elements(p_valeurs) e
+        where e ->> 'code' is null
+           or (e ->> 'valeur' is not null
+               and not app.valeur_de_change_valide(e ->> 'code', e ->> 'valeur'))) then
+    raise exception 'refus.change.regle.saisie' using errcode = '22023';
+  end if;
+
+  insert into parametrage.regles_de_change
+    (tenant_id, portee, portee_id, pack_version_id, code, valeur, valid_from, motif)
+  select p_cabinet, p_portee, p_portee_id, p_pack, e ->> 'code', e ->> 'valeur', p_valid_from,
+         nullif(btrim(coalesce(p_motif, '')), '')
+    from jsonb_array_elements(p_valeurs) e;
+  get diagnostics v_n = row_count;
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
+                               object_id, pack_version_id, payload)
+  values (p_cabinet, auth.uid(), 'change.regle_arretee', 'parametrage', 'regles_de_change',
+          p_portee_id, p_pack,
+          jsonb_build_object('portee', p_portee, 'valid_from', p_valid_from,
+                             'valeurs', p_valeurs, 'motif', p_motif));
+  return v_n;
+end
+$$;
+
+-- Une liaison posée par la porte d'avant pour une portée qui n'était pas la
+-- sienne ne décide rien : un cabinet ne relie que pour lui-même, un dossier
+-- ne l'est que par un cabinet qui l'a tenu. Ce sont des réglages (R10), pas
+-- des faits : ils partent, et leur nombre se dit.
+do $$
+declare v_n integer;
+begin
+  delete from parametrage.role_bindings b
+   where (b.portee = 'cabinet' and b.portee_id <> b.tenant_id)
+      or (b.portee = 'dossier'
+          and not exists (select 1 from identity.engagements g
+                           where g.cabinet_org_id = b.tenant_id and g.pme_org_id = b.portee_id));
+  get diagnostics v_n = row_count;
+  raise notice 'liaisons de comptes hors de leur portée retirées : %', v_n;
+end $$;
+
 -- Une décision remplace la précédente : c'est un paramétrage (R10), pas un
 -- journal ; l'écriture qu'elle produira reste immuable.
 create or replace function public.role_compte_definir(
@@ -917,6 +1101,9 @@ security definer
 set search_path = ''
 as $$
 begin
+  if not app.peut_arreter_le_parametrage(p_tenant, p_portee, p_portee_id) then
+    raise exception 'refus.role_compte.droits' using errcode = '42501';
+  end if;
   if nullif(btrim(p_role), '') is null or nullif(btrim(p_compte), '') is null then
     raise exception 'refus.saisie.incomplete' using errcode = '22023';
   end if;
@@ -945,6 +1132,9 @@ security definer
 set search_path = ''
 as $$
 begin
+  if not app.peut_arreter_le_parametrage(p_tenant, p_portee, p_portee_id) then
+    raise exception 'refus.role_compte.droits' using errcode = '42501';
+  end if;
   delete from parametrage.role_bindings
    where tenant_id = p_tenant and portee = p_portee and portee_id = p_portee_id
      and role_code = p_role;
@@ -1021,7 +1211,12 @@ begin
                                  montant_mineur, devise, paye_le, justificatif_piece_id, reference)
   select p.tenant_id, p.entity_id, p.vis, p.id, p_moyen, p_pack, p_montant_mineur, p_devise,
          p_paye_le, p_justificatif, p_reference
-    from public.pieces_v p where p.id = p_piece
+    from public.pieces_v p
+   where p.id = p_piece
+     -- Le justificatif est une pièce de la même société (revue de #149).
+     and (p_justificatif is null
+          or exists (select 1 from public.pieces_v j
+                      where j.id = p_justificatif and j.tenant_id = p.tenant_id))
   returning id into v_id;
   if v_id is null then
     raise exception 'piece introuvable ou non autorisee' using errcode = '42501';

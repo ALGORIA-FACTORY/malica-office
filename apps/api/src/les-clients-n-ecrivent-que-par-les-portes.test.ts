@@ -749,4 +749,43 @@ describe("aucune écriture directe, famille par famille", { skip: !BASE_CONFIGUR
       /refus\.saisie\.mal_formee/,
     );
   });
+  it("une porte n'écrit que dans sa portée : comptes des rôles, établissements (revue de #149)", async () => {
+    const essai = (qui: Personne, requete: string, valeurs: unknown[]) =>
+      sousIdentite(s.gens[qui].id, (db) => db.query(requete, valeurs));
+    // Ni un collaborateur ni la dirigeante de la société ne relient un compte
+    // pour le cabinet qui la tient — ce compte vaudrait pour tous ses dossiers.
+    for (const qui of ["sami", "amel"] as const)
+      await assert.rejects(
+        essai(
+          qui,
+          `select public.role_compte_definir($1, 'cabinet', $2, 'TVA_RETENUE_SUBIE', '4', null)`,
+          [s.pme, s.cabinet],
+        ),
+        /refus\.role_compte\.droits/,
+      );
+    // Un cabinet ne relie que pour lui-même, sous son propre nom.
+    await assert.rejects(
+      essai(
+        "expert",
+        `select public.role_compte_rendre_au_pack($1, 'cabinet', $2, 'TVA_RETENUE_SUBIE')`,
+        [s.pme, s.cabinet],
+      ),
+      /refus\.role_compte\.droits/,
+    );
+    // Un compte bancaire s'ouvre sur un établissement de la société, pas du cabinet.
+    const {
+      rows: [etablissement],
+    } = await s.admin.query<{ id: string }>(
+      `insert into identity.entities (tenant_id, code, name) values ($1, 'ESSAI', 'Établissement d''essai')
+       returning id`,
+      [s.cabinet],
+    );
+    await assert.rejects(
+      essai("amel", `select public.banque_compte_ouvrir($1, $2, 'Compte', null, 'TND', '532')`, [
+        s.pme,
+        etablissement!.id,
+      ]),
+      /refus\.saisie\.etablissement/,
+    );
+  });
 });
