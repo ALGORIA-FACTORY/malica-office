@@ -755,18 +755,12 @@ export const capture = {
    * réécrit pas (R7) : chaque passage ajoute ses lignes, la plus récente fait foi.
    */
   async inscrireChampsLus(db: Requete, input: ChampsLusAInscrire): Promise<{ inscrits: number }> {
-    if (input.champs.length === 0) return { inscrits: 0 };
-    const { rowCount } = await db.query(
-      `insert into capture.champs_lus
-         (tenant_id, piece_id, grille_code, champ_code, valeur, statut, citations, issue)
-       select p.tenant_id, p.id, $2, c.champ, c.valeur, c.statut, c.citations, $3
-         from pieces_v p
-        cross join jsonb_to_recordset($4::jsonb)
-             as c(champ text, valeur text, statut text, citations jsonb)
-        where p.id = $1`,
+    // Par la porte (`capture_champs_lus_inscrire`) : seules les portes écrivent.
+    const { rows } = await db.query<{ n: number }>(
+      `select public.capture_champs_lus_inscrire($1, $2, $3, $4::jsonb) as n`,
       [input.pieceId, input.grille, input.issue, JSON.stringify(input.champs)],
     );
-    return { inscrits: rowCount ?? 0 };
+    return { inscrits: rows[0]?.n ?? 0 };
   },
 
   /**

@@ -34,6 +34,7 @@
  * telle qu'il l'a reçue. La seule décision de repli est vers le chemin éprouvé.
  */
 
+import type { DeviseLue } from "@malica/socle/montant-imprime";
 import {
   resoudre,
   type EntreeDuSudoku,
@@ -46,7 +47,6 @@ import {
 
 import type { AppelApi } from "../appel-local.ts";
 import type { Requete } from "../../db.ts";
-import type { DeviseLue } from "../../scan/normaliser-montants.ts";
 
 import { treillisMontant } from "./montants.ts";
 import { normalizeDate, type PageToken, type TokenRef } from "./token-plan.ts";
@@ -402,7 +402,12 @@ export interface Sudoku {
  */
 export function creerLeSudoku(
   api: AppelApi,
-  piece: { readonly pieceId: string; readonly packId: string; readonly devise: DeviseLue },
+  piece: {
+    readonly pieceId: string;
+    readonly packId: string;
+    /** La devise du dossier, telle que `lireLesDevises` la rend ; absente, il ne lit pas. */
+    readonly devise: DeviseLue | undefined;
+  },
   mode: { readonly designe: boolean },
 ): Sudoku {
   let contexte: Promise<ContexteDuSudoku> | null = null;
@@ -415,6 +420,7 @@ export function creerLeSudoku(
           GRILLE_DE_LA_LECTURE_CITEE,
         ]);
         const { grille, pack } = await contexte;
+        if (!piece.devise) throw new Error("la devise du dossier est absente du référentiel");
         const entree: EntreeDuSudoku = {
           jetons: jetonsDuSudoku(lecture.tokens, piece.devise),
           grille,
