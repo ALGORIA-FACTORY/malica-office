@@ -5,7 +5,7 @@ import { buildExtractFromTokenPlan } from "./read-piece.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
 import type { VisionSelection } from "./vision.ts";
-import { deviseDEssai } from "../../scan/devise-d-essai.ts";
+import { devisesDEssai } from "../../scan/devise-d-essai.ts";
 
 /**
  * ============================================ LE BANC DE L'AMPUTATION
@@ -131,7 +131,7 @@ const lire = (
       ...selection,
       totals: { base_ht: null, vat: null, ttc: null, ...(selection.totals ?? {}) },
     } as unknown as VisionSelection,
-    devise: deviseDEssai(3),
+    ...devisesDEssai(3),
     matriculeDossier: MATRICULE_DOSSIER,
   });
 
@@ -481,7 +481,9 @@ describe("banc de l'amputation — les chiffres arabes orientaux restent refusé
    *
    * Vérifié le 18 octobre 2026 : `montants.test.ts` ne contient aucun chiffre
    * arabe. Le refus tenait, mais rien ne le gardait. Le commentaire pointe
-   * désormais ici.
+   * désormais ici. Depuis le 30 octobre 2026, le lecteur unique des montants
+   * LIT les chiffres arabes, et le dit ; le refus est la politique du plan de
+   * jetons, écrite à un seul endroit (`treillisMontant`).
    *
    * Il doit tenir : « ٦٥٠,٠٠٠ » lu par le modèle de vision revient avec ses
    * chiffres INVERSÉS — mesuré sur le nombre « ١٢ » rendu « ٢١ » — et une

@@ -39,17 +39,17 @@ import { composerLaProposition } from "./proposition.ts";
 import {
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
-  EXPOSANTS_D_ESSAI,
   IMPUTATIONS_D_ESSAI,
-  MARQUES_D_ESSAI,
   MENTIONS_D_ESSAI,
   PARAMETRES_D_ESSAI,
   TAUX_D_ESSAI,
+  TITRES_D_ESSAI,
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
 import { buildExtractFromTokenPlan } from "../malica/lecture/read-piece.ts";
-import { deviseDEssai } from "./devise-d-essai.ts";
+import { texteDuMontantCite } from "../malica/lecture/token-plan.ts";
+import { DEVISES_LUES_D_ESSAI, devisesDEssai } from "./devise-d-essai.ts";
 
 /** Une ligne d'écriture attendue : compte, débit, crédit, et le code de taxe d'une ligne de TVA. */
 type LigneAttendue = readonly [string, string, string, string?];
@@ -63,6 +63,11 @@ export interface CasDeMesure {
   dossier?: { nom: string; identifiantFiscal: string };
   /** L'écriture juste, calculée à la main ; null : ne rien proposer est juste. */
   attendu: { journal: string; lignes: LigneAttendue[] } | null;
+  /**
+   * Le contrôle qui DOIT poser une réserve : une écriture exacte sans elle est
+   * fausse — la pièce passerait sans que le cabinet sache pourquoi douter.
+   */
+  reserve?: string;
 }
 
 /** Le dossier des cas fabriqués : un nom et un matricule fictifs. */
@@ -152,16 +157,14 @@ function depuisLeJeuDOr(): CasDeMesure[] {
     const lu = buildExtractFromTokenPlan({
       tokens: cas.tokens,
       selection: cas.designation,
-      devise: deviseDEssai(cas.decimales),
+      ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
+    // Le texte de chaque citation, comme `analyserPiece` le relit.
     const textes = new Map<string, string[]>();
     for (const c of lu.citations) {
-      const fin = (c as { ordinalEnd?: number }).ordinalEnd ?? c.ordinal;
-      const morceaux = cas.tokens
-        .filter((t) => t.page === c.page && t.ordinal >= c.ordinal && t.ordinal <= fin)
-        .map((t) => t.text);
-      textes.set(c.field, [...(textes.get(c.field) ?? []), ...morceaux]);
+      const texte = texteDuMontantCite(cas.tokens, c);
+      if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
     }
     const premiere = Math.min(...cas.tokens.map((t) => t.page));
     const haut = cas.tokens
@@ -535,6 +538,154 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     attendu: null,
   },
   {
+    // Avant le 30 octobre 2026, la normalisation lisait aussi « 100,000 » à
+    // l'anglaise : sans timbre pour ancrer l'échelle, dinars et milliers de
+    // dinars vérifiaient tous deux la facture, et rien n'était proposé. La
+    // virgule du dinar est décimale ; mais lus à l'anglaise, les montants
+    // tiennent aussi : décidé par la convention, donc en réserve (revue de la
+    // PR 144).
+    nom: "montants ronds à la virgule, sans timbre : la virgule du dinar est décimale",
+    reserve: "coherence_arithmetique",
+    provenance: `${REPRODUIT} (lecteurs de montants unifiés)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,000" }],
+      ht: "100,000",
+      tva: "19,000",
+      ttc: "119,000",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "100.000", "0"],
+        ["4366", "19.000", "0", "TVA19"],
+        ["401", "0", "119.000"],
+      ],
+    },
+  },
+  {
+    // Revue de la PR 144 (Codex) : le timbre que le paramétrage fixe à 1,000
+    // s'imprime 2,000. Il ne tombe pas sur sa valeur : il n'ancre pas
+    // l'échelle, et lus à l'anglaise les montants tiennent encore. La seule
+    // présence d'un montant attendu taisait la convention. La réserve doit se
+    // poser ; et aucune écriture : le moteur inscrit le timbre à sa valeur
+    // fixée, que la pièce contredit — le cabinet tranche.
+    nom: "un timbre imprimé à une autre valeur que celle fixée : il n'ancre pas l'échelle",
+    reserve: "coherence_arithmetique",
+    provenance: `${REPRODUIT} (revue de la PR 144)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,000" }],
+      ht: "100,000",
+      tva: "19,000",
+      droits: [{ code: "DROIT_TIMBRE", montant: "2,000" }],
+      ttc: "121,000",
+    }),
+    attendu: null,
+  },
+  {
+    // Revue de la PR 144 (Codex), le même défaut par une autre branche : le HT
+    // imprimé comprend un droit qu'aucun montant fixé n'ancre (FODEC). La base
+    // taxable se déduit (101,000 − 1,000) ; lus à l'anglaise, les montants
+    // tiennent aussi. La branche rendait sa lecture avant le contrôle de la
+    // convention : « conforme », en silence.
+    nom: "le HT imprimé comprend un droit non fixé : la convention décide, et se dit",
+    reserve: "coherence_arithmetique",
+    provenance: `${REPRODUIT} (revue de la PR 144)`,
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "101,000" }],
+      ht: "101,000",
+      tva: "19,000",
+      droits: [{ code: "FODEC", montant: "1,000" }],
+      ttc: "120,000",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "100.000", "0"],
+        ["4366", "19.000", "0", "TVA19"],
+        ["6652", "1.000", "0"],
+        ["401", "0", "120.000"],
+      ],
+    },
+  },
+  {
+    // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
+    // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
+    nom: "des montants entre parenthèses : le signe ne se devine pas",
+    provenance: `${REPRODUIT} (lecteurs de montants unifiés)`,
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "(1 234,560)" }],
+      ht: "(1 234,560)",
+      tva: "(234,566)",
+      ttc: "(1 470,126)",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "titrée AVOIR, aux montants positifs : jamais un achat",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({ ...SIMPLE, titre: "AVOIR N° A-2026-0007" }),
+    attendu: null,
+  },
+  {
+    nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "-1 234,560" }],
+      ht: "-1 234,560",
+      tva: "-234,566",
+      ttc: "-1 470,126",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "un avoir coupé par la citation : « 1 234,560) » ne se lit pas positif",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      ...SIMPLE,
+      lignes: [{ code: "TVA19", ht: "1 234,560)" }],
+      ht: "1 234,560)",
+      tva: "234,566)",
+      ttc: "1 470,126)",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "une base seule en chiffres arabes, que rien ne vérifie",
+    provenance: "revue indépendante de la PR 144 (chiffres que le modèle de vision inverse)",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "٤ ٣٢١٫٥٦٥" }],
+      ht: "٤ ٣٢١٫٥٦٥",
+      tva: null,
+      ttc: null,
+    }),
+    attendu: null,
+  },
+  {
+    nom: "des euros imprimés, aucune devise lue : jamais des dinars",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      currency: null,
+      lignes: [{ code: "TVA19", ht: "100,00 €" }],
+      ht: "100,00 €",
+      tva: "19,00 €",
+      ttc: "119,00 €",
+    }),
+    attendu: null,
+  },
+  {
+    nom: "des euros imprimés, des dinars lus : la devise imprimée contredit la devise lue",
+    provenance: "revue indépendante de la PR 144",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "100,00 €" }],
+      ht: "100,00 €",
+      tva: "19,00 €",
+      ttc: "119,00 €",
+    }),
+    attendu: null,
+  },
+  {
     nom: "facture en euros pour un dossier en dinars",
     provenance: REPRODUIT,
     lecture: facture({
@@ -591,17 +742,12 @@ function motifDuRefus(jugement: ReturnType<typeof jugerLaLecture>, raison: strin
 const decimal = (s: string) => Number(s).toFixed(6);
 const cleDeLigne = (l: LigneAttendue) => `${l[0]}|${decimal(l[1])}|${decimal(l[2])}|${l[3] ?? ""}`;
 
-/** L'exposant de la devise de la pièce, à défaut celle du dossier — comme `analyserPiece`. */
-const decimalesDe = (cas: CasDeMesure) =>
-  EXPOSANTS_D_ESSAI[cas.lecture.payload.currency ?? DEVISE_DU_DOSSIER] ?? null;
-
 /** Juge un cas sur la vraie chaîne, avec le référentiel d'essai. */
-function juger(cas: CasDeMesure) {
+export function juger(cas: CasDeMesure) {
   // Les droits fixés du sens retenu, comme `analyserPiece`.
   const sens = cas.lecture.sensDit ?? cas.lecture.payload.document_kind;
   return jugerLaLecture(cas.lecture, {
     parametres: PARAMETRES_D_ESSAI,
-    marques: MARQUES_D_ESSAI,
     taux: new Map(TAUX_D_ESSAI.map((t) => [t.code, t.rate])),
     deviseDuDossier: DEVISE_DU_DOSSIER,
     droitsFixes: new Map(
@@ -611,16 +757,19 @@ function juger(cas: CasDeMesure) {
     ),
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,
+    titres: TITRES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
-    decimales: decimalesDe(cas),
+    devises: DEVISES_LUES_D_ESSAI,
   });
 }
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
 function jouer(cas: CasDeMesure): Issue {
-  const decimales = decimalesDe(cas);
   const jugement = juger(cas);
+  // L'exposant de la devise que le jugement a décidée, comme `propositionDePiece`.
+  const decimales =
+    DEVISES_LUES_D_ESSAI.find((d) => d.code === jugement.normalisation.devise)?.decimales ?? null;
   const p = composerLaProposition(
     {
       pieceId: "00000000-0000-4000-8000-000000000000",
@@ -645,8 +794,15 @@ function jouer(cas: CasDeMesure): Issue {
       tvaNonDeductible: false,
     },
   );
+  // La réserve attendue se vérifie aussi sur un refus : un refus juste dont le
+  // jugement tait le doute n'est pas juste.
+  const reserveAbsente =
+    cas.reserve !== undefined &&
+    !jugement.motifs.some((m) => m.code === cas.reserve && m.statut === "reserve");
   if (!p.ok) {
     const motif = motifDuRefus(jugement, p.raison);
+    if (cas.attendu === null && reserveAbsente)
+      return { type: "aucune", motif: `${motif} — réserve « ${cas.reserve} » attendue, absente` };
     return cas.attendu === null ? { type: "refus_juste", motif } : { type: "aucune", motif };
   }
   if (cas.attendu === null)
@@ -661,6 +817,7 @@ function jouer(cas: CasDeMesure): Issue {
     causes.push(`journal ${e.journal} ≠ ${cas.attendu.journal}`);
   if (lues.join() !== attendues.join())
     causes.push(`lignes ${lues.join(" ; ")} ≠ ${attendues.join(" ; ")}`);
+  if (reserveAbsente) causes.push(`réserve « ${cas.reserve} » attendue, absente`);
   return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
 }
 

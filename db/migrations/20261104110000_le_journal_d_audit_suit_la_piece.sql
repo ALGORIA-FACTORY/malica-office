@@ -18,7 +18,7 @@
 --   - le cabinet engagé, ceux d'une pièce qu'il connaît
 --     (`app.piece_connue_du_cabinet`) et ceux qui ne portent sur aucune pièce
 --     (son mandat, ses écritures) — jamais un fait du passage interne
---     (`chez` = propriétaire, posé par les portes de `20261103090000`) ;
+--     (`chez` = propriétaire, posé par les portes de `20261104090000`) ;
 --   - la plateforme : inchangée.
 -- Une pièce effacée n'a plus de règle : le fait qui en reste se lit de qui
 -- voit toute la société, sauf s'il venait de Mon espace ; du cabinet, s'il
@@ -31,8 +31,8 @@
 -- une pièce partagée), `capture.vues` (le cabinet ne lit pas celles du
 -- propriétaire).
 --
--- Et `app.pieces_prises_en_charge()` (`20261101090000`), lue sans RLS, rendait
--- à un siège l'identifiant des pièces prises en charge des autres (P3-6).
+-- Et `app.pieces_prises_en_charge()`, lue sans RLS, rendait à un siège
+-- l'identifiant des pièces prises en charge des autres (P3-6).
 
 begin;
 
@@ -163,29 +163,29 @@ create policy audit_event_log_sel on audit.event_log
 
 -- --- 3. Les pièces prises en charge : celles qu'on lit ------------------------------------------------
 --
--- Repris de `20261101090000`, la lecture de la pièce en plus.
+-- Repris de `20261103090000_la_tva_des_immobilisations_se_declare_a_part`
+-- (#145), la lecture de la pièce en plus. Depuis #145, la liste vient de
+-- `app.prises_des_dossiers`, que `app.pieces_prises_en_charge()` et la
+-- déclaration de TVA lisent ; la garde se pose donc à la source : un siège n'y
+-- trouve que ses pièces, et le propriétaire comme le cabinet n'y perdent rien.
 
-create or replace function app.pieces_prises_en_charge()
-returns table (piece_id uuid, ecriture_id uuid, lisible boolean)
+create or replace function app.prises_des_dossiers(p_dossiers uuid[])
+returns table (piece_id uuid, ecriture_id uuid)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  with vivantes as (
-    select distinct on (c.courante) c.courante, e.id
-      from socle.prises_en_charge pc
-      join socle.ecritures e on e.id = pc.ecriture_id
-      cross join lateral (select app.version_courante(e.piece_id) as courante) c
-     where pc.client_tenant_id in (select app.member_orgs() union select app.engaged_orgs())
-       and e.nature = 'piece'
-       and app.ecriture_vivante(e.id)
-     order by c.courante, pc.prise_le desc
-  )
-  select v.courante, v.id,
-         coalesce((app.montants_pris_en_charge(v.courante) ->> 'lisible')::boolean, false)
-    from vivantes v
-   where app.piece_lisible(v.courante)
+  select distinct on (c.courante) c.courante, e.id
+    from socle.prises_en_charge pc
+    join socle.ecritures e on e.id = pc.ecriture_id
+    cross join lateral (select app.version_courante(e.piece_id) as courante) c
+   where pc.client_tenant_id = any (p_dossiers)
+     and pc.client_tenant_id in (select app.member_orgs() union select app.engaged_orgs())
+     and e.nature = 'piece'
+     and app.ecriture_vivante(e.id)
+     and app.piece_lisible(c.courante)
+   order by c.courante, pc.prise_le desc
 $$;
 
 commit;

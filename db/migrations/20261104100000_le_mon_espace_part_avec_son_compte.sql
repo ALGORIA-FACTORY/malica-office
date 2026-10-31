@@ -1,7 +1,7 @@
 -- Son Mon espace part avec son compte (« Malica sans blocage », lot 4).
 --
 -- Un siège qui quitte la société y laisse ses pièces de la société ; son Mon
--- espace reste lisible de lui seul (`20261103090000`). Il manquait le reste :
+-- espace reste lisible de lui seul (`20261104090000`). Il manquait le reste :
 -- le voir hors de la société, le supprimer (la porte exigeait l'adhésion :
 -- « piece introuvable »), et la garantie qu'il n'entre jamais dans une
 -- société dont il n'est plus membre (la RLS d'écriture filtrait la ligne en
@@ -9,7 +9,7 @@
 --
 -- Ce que ce fichier pose : `public.mon_espace_hors_societe()`, ses pièces
 -- privées des sociétés qu'il a quittées, avec le nom de la société. Les
--- supprimer est à `capture_piece_supprimer` (`20261103090000`), qui le permet
+-- supprimer est à `capture_piece_supprimer` (`20261104090000`), qui le permet
 -- à l'auteur d'une pièce privée, même hors de la société.
 
 begin;

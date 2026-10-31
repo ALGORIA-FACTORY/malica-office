@@ -3,7 +3,7 @@
 -- Deux réglages de session portaient des décisions de la base, et toute
 -- session peut poser un réglage de session :
 --   1. `malica.remplacement`, que `piece_remplacer` posait pour dire « ce
---      n'est pas un envoi » : `20261103090000` le remplace par le fait inscrit
+--      n'est pas un envoi » : `20261104090000` le remplace par le fait inscrit
 --      dans `capture.remplacements`. Plus personne ne le lisait ; la porte ne
 --      le pose plus.
 --   2. `malica.piece_effacable` et `malica.paiements_effacables`, par lesquels

@@ -541,8 +541,13 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     assert.deepEqual([r.ht, r.tva, r.ttc], [1000, 190, 1190]);
     assert.deepEqual(r.lignes, [["TVA19", 1000, 190]]);
     assert.deepEqual(r.charges, [], "une immobilisation n'est pas une charge du mois");
-    const [brut] = (await extraits(id)) as Array<{ lines: Array<{ immobilisation?: boolean }> }>;
-    assert.equal(brut?.lines[0]?.immobilisation, true, "la déclaration peut l'isoler");
+    // La marque est devenue la NATURE du contrat (3 novembre 2026), validée :
+    // celle que le référentiel donne aux immobilisations.
+    const [brut] = (await extraits(id)) as Array<{ lines: Array<{ nature?: string }> }>;
+    const { rows } = await admin.query<{ code: string }>(
+      `select code from ref.tva_natures where immobilisation`,
+    );
+    assert.equal(brut?.lines[0]?.nature, rows[0]!.code, "la déclaration peut l'isoler");
   });
 
   // Cas J : un achat exonéré forcé sans code manquait à la déclaration.

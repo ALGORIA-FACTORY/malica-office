@@ -1,5 +1,5 @@
 /**
- * Une parenthèse orpheline n'efface pas un montant.
+ * Une parenthèse orpheline : du bruit de citation, ou un avoir coupé — le plan le dit.
  *
  * ================================================= LE DÉFAUT QUI L'A FAIT NAÎTRE
  *
@@ -36,59 +36,94 @@
  * moins 514,700. Les retirer transformerait un négatif en positif, en
  * silence — l'erreur la plus grave possible sur un montant.
  *
- * On ne retire donc que les parenthèses ORPHELINES : une fermante sans
- * ouvrante ne peut pas être une notation de signe, c'est du bruit.
+ * On ne retirait donc que les parenthèses ORPHELINES.
+ *
+ * ========================================== LE 30 OCTOBRE : CE QUE FERME LA PARENTHÈSE
+ *
+ * Revue de la PR 144 : une orpheline n'est pas toujours du bruit. « 514,700) »
+ * peut aussi être l'avoir « (514,700) » dont la citation a perdu l'ouvrante —
+ * et le lire positif proposait un ACHAT. Le texte seul ne tranche pas ; le
+ * plan, si. La fermante ne se retire que si elle ferme un MOT que la citation
+ * a laissé dehors (« (base »), et c'est le plan de jetons qui le dit
+ * (`texteDuMontantCite`), pour les deux chaînes. Sinon, rien ne se lit.
  *
  *   node --experimental-strip-types --test src/scan/une-parenthese-orpheline.test.ts
  */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
+
 import { candidatsMontant, normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 
-describe("une parenthèse orpheline n'efface pas un montant", () => {
-  it("le défaut du 15 octobre : « 514,700 514,700) » se lit comme « 514,700 »", () => {
-    /*
-     * Pas « une seule lecture » : « 514,700 » seul en a deux — virgule
-     * décimale, ou virgule des milliers — et c'est l'arithmétique de la
-     * facture qui tranche, comme pour n'importe quel montant. Ce que la
-     * parenthèse orpheline enlevait, c'est la possibilité MÊME de lire.
-     */
-    assert.deepEqual(candidatsMontant("514,700 514,700)", P), candidatsMontant("514,700", P));
-    assert.ok(candidatsMontant("514,700 514,700)", P).length > 0);
+/** Une ligne de la facture du 15 octobre : des jetons côte à côte, à la même hauteur. */
+const ligne = (jetons: Array<[ordinal: number, texte: string]>): PageToken[] =>
+  jetons.map(([ordinal, text], i) => ({
+    page: 1,
+    ordinal,
+    text,
+    x0: 0.1 + i * 0.12,
+    y0: 0.6,
+    x1: 0.2 + i * 0.12,
+    y1: 0.615,
+  }));
+
+describe("une parenthèse orpheline", () => {
+  it("le texte seul ne la lit pas : elle peut fermer un avoir", () => {
+    for (const t of ["514,700)", "(514,700", "514,700 514,700)", "(514,700)"])
+      assert.deepEqual(candidatsMontant(t, P), [], t);
   });
 
-  it("une fermante seule, collée à un nombre, est du bruit", () => {
+  it("le défaut du 15 octobre : la fermante de « (base 514,700) » se retire au plan", () => {
+    const plan = ligne([
+      [112, "97,793"],
+      [117, "(base"],
+      [118, "514,700)"],
+    ]);
+    const texte = texteDuMontantCite(plan, { page: 1, ordinal: 118 });
+    assert.equal(texte, "514,700");
     assert.deepEqual(
-      candidatsMontant("514,700)", P).map((x) => x.mineur),
-      candidatsMontant("514,700", P).map((x) => x.mineur),
+      candidatsMontant(texte!, P).map((c) => c.mineur),
+      [514_700],
     );
   });
 
-  it("une ouvrante seule aussi", () => {
-    assert.deepEqual(
-      candidatsMontant("(514,700", P).map((x) => x.mineur),
-      candidatsMontant("514,700", P).map((x) => x.mineur),
-    );
+  it("une ouvrante suivie d'un chiffre n'ouvre pas un mot : l'avoir coupé ne se lit pas", () => {
+    for (const avant of ["(", "(-", "TOTAL ("]) {
+      const plan = ligne([
+        [10, avant],
+        [11, "514,700)"],
+      ]);
+      const texte = texteDuMontantCite(plan, { page: 1, ordinal: 11 });
+      assert.equal(texte, "514,700)", avant);
+      assert.deepEqual(candidatsMontant(texte!, P), [], avant);
+    }
   });
 
-  it("une PAIRE n'est pas touchée : elle veut dire moins, et on ne devine pas", () => {
-    /*
-     * « (514,700) » se lit moins 514,700 en comptabilité. La chaîne ne sait
-     * pas encore lire cette notation, et c'est tant mieux : la retirer en
-     * silence transformerait un négatif en positif, l'erreur la plus grave
-     * possible sur un montant.
-     */
-    assert.deepEqual(candidatsMontant("(514,700)", P), []);
+  it("une parenthèse déjà fermée avant la citation n'est pas celle qu'on cherche", () => {
+    const plan = ligne([
+      [10, "(base"],
+      [11, "100,000)"],
+      [12, "514,700)"],
+    ]);
+    assert.equal(texteDuMontantCite(plan, { page: 1, ordinal: 12 }), "514,700)");
   });
 
-  it("la facture du 15 octobre se normalise, et son écriture peut se proposer", () => {
+  it("une ouvrante sur une autre ligne ne compte pas", () => {
+    const plan: PageToken[] = [
+      { page: 1, ordinal: 10, text: "(base", x0: 0.1, y0: 0.5, x1: 0.2, y1: 0.515 },
+      { page: 1, ordinal: 11, text: "514,700)", x0: 0.1, y0: 0.6, x1: 0.2, y1: 0.615 },
+    ];
+    assert.equal(texteDuMontantCite(plan, { page: 1, ordinal: 11 }), "514,700)");
+  });
+
+  it("la facture du 15 octobre, relue au plan, se normalise", () => {
     const r = normaliserMontants(
       {
-        bases: [{ ht: "514,700 514,700)", taux: "0.19" }],
+        bases: [{ ht: "514,700 514,700", taux: "0.19" }],
         tva: "97,793",
         autres: [{ brut: "1,000", attendu: 1_000 }],
         ttc: "613,493",

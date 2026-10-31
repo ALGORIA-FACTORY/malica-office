@@ -21,6 +21,7 @@ import {
 } from "./controles.ts";
 import { normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
+import { TITRES_D_ESSAI } from "./referentiel-d-essai.ts";
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
@@ -74,6 +75,7 @@ const CONTEXTE: ContexteControle = {
     { code: "facture_vente", porteEcriture: true },
     { code: "bon_livraison", porteEcriture: false },
   ],
+  titres: TITRES_D_ESSAI,
   mentionsObligatoires: [
     { code: "IDENT_FISCAL_EMETTEUR", libelle: "Identifiant fiscal de l'émetteur" },
     { code: "IDENT_FISCAL_CLIENT", libelle: "Identifiant fiscal du client" },

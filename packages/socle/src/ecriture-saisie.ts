@@ -11,6 +11,7 @@
  * pas que 0,1 + 0,2 = 0,3 ; la base, si, et elle refuserait une écriture que
  * l'écran aurait dite équilibrée.
  */
+import { saisieDecimale } from "./saisie-decimale.ts";
 import { enUnitesExactes, sommeDecimale } from "./somme-decimale.ts";
 
 /** Une ligne telle qu'elle part au Socle (`socle_ecriture_propose`). */
@@ -35,8 +36,12 @@ export interface ControleDeSaisie {
   defaut: DefautDeSaisie | null;
 }
 
-/** Un champ vide vaut zéro ; une virgule décimale vaut un point. */
-const montantSaisi = (v: string) => (v.trim() === "" ? "0" : v.trim().replace(",", "."));
+/**
+ * Un champ vide vaut zéro ; le reste se relit comme toute saisie de montant
+ * (`saisieDecimale` : « 1 234,500 », « ١٢٣٫٥ »). Ce qui ne s'y lit pas reste
+ * tel quel, et `unites` le refuse : le défaut « montant » le dit à l'écran.
+ */
+const montantSaisi = (v: string) => (v.trim() === "" ? "0" : (saisieDecimale(v) ?? v.trim()));
 
 function unites(v: string, decimales: number): bigint | null {
   try {

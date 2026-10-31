@@ -24,6 +24,13 @@
  * de réception —, jamais à la date du jour.
  */
 
+import {
+  deviseDeLaPiece,
+  type DeviseLue,
+  type MarqueDeDevise,
+} from "@malica/socle/montant-imprime";
+import { enUnitesExactes } from "@malica/socle/somme-decimale";
+
 import type { Requete } from "../db.ts";
 import { dateDeLaPiece } from "../depots/dates.ts";
 
@@ -35,6 +42,7 @@ import { dateDeLaPiece } from "../depots/dates.ts";
  * dise. C'est le motif récurrent de ce dépôt, et il se ferme par le lien.
  */
 import { REFERENCES_QUI_TRANCHENT_LE_SENS } from "../fabrique/recette.ts";
+import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
 
 import {
   controlerPiece,
@@ -89,34 +97,53 @@ export async function lireParametres(
 }
 
 /**
- * Les marques de devise que les lecteurs de montants retirent comme une
- * décoration : les codes ISO de `ref.devises` et les marques imprimées de
- * `ref.devises_marques` (« D.T. », « د.ت », « € »). Toutes les devises, pas
- * seulement celle du pack : une marque ne décide pas de la devise de la
- * pièce, elle dit seulement qu'un mot n'est pas un nombre. Une liste vide est
- * une erreur — sans elle, aucun « 1 234,560 DT » ne se lirait plus.
+ * Toutes les devises du référentiel, telles que les lecteurs de montants les
+ * lisent (`@malica/socle/montant-imprime`) :
+ *
+ *   — l'exposant et le séparateur décimal, de `ref.devises` (3 et « , » pour
+ *     le dinar, 2 pour l'euro, 0 pour le franc CFA) ;
+ *   — les marques de TOUTES les devises, chacune avec la sienne : les codes
+ *     de `ref.devises` et les marques imprimées de `ref.devises_marques`
+ *     (« D.T. », « د.ت », « € », « F CFA »). C'est ce qui permet de dire
+ *     qu'une pièce imprime « 100,00 € » et non des dinars.
+ *
+ * La relecture au plan de jetons, le jugement et la proposition passent tous
+ * par ici, et décident de la devise de la pièce par une seule règle
+ * (`deviseDeLaPiece`). Un référentiel sans devise est une erreur.
  */
-export async function lireMarquesDeDevise(db: Requete): Promise<string[]> {
-  const { rows } = await db.query<{ marque: string }>(
-    `select code as marque from ref.devises
-      union
-     select marque from ref.devises_marques
-      order by 1`,
-  );
-  if (rows.length === 0) throw new Error("Aucune marque de devise au référentiel.");
-  return rows.map((r) => r.marque);
+export async function lireLesDevises(db: Requete): Promise<DeviseLue[]> {
+  const [{ rows: devises }, { rows: marques }] = await Promise.all([
+    db.query<{ code: string; exposant: number; separateur_decimal: string }>(
+      `select code, exposant, separateur_decimal from ref.devises order by code collate "C"`,
+    ),
+    db.query<MarqueDeDevise>(
+      `select marque, devise from (
+         select code as marque, code as devise from ref.devises
+          union
+         select marque, devise from ref.devises_marques
+       ) m order by marque collate "C", devise collate "C"`,
+    ),
+  ]);
+  if (devises.length === 0) throw new Error("Aucune devise au référentiel.");
+  return devises.map((d) => ({
+    code: d.code,
+    decimales: d.exposant,
+    separateurDecimal: d.separateur_decimal,
+    marques,
+  }));
 }
 
 /**
- * Le nombre de décimales d'une devise, tel que `ref.devises` le porte (3 pour
- * le dinar, 2 pour l'euro, 0 pour le franc CFA) — null si elle n'y est pas.
+ * Ce que le titre imprimé d'une pièce dit de sa nature (`ref.titres_de_piece`),
+ * dans l'ordre du référentiel. Le contrôle de la nature les lit ; aucune liste
+ * de titres n'est écrite en TypeScript.
  */
-export async function lireExposant(db: Requete, devise: string): Promise<number | null> {
-  const { rows } = await db.query<{ exposant: number }>(
-    `select exposant from ref.devises where code = $1`,
-    [devise],
+export async function lireLesTitres(db: Requete): Promise<ContexteControle["titres"]> {
+  const { rows } = await db.query<ContexteControle["titres"][number]>(
+    `select motif, document_type as "documentType", statut, refus
+       from ref.titres_de_piece order by rang`,
   );
-  return rows[0]?.exposant ?? null;
+  return rows;
 }
 
 export interface Analyse {
@@ -156,12 +183,8 @@ export interface LectureAJuger {
 /** Ce que le référentiel daté dit, pour juger cette lecture-là. */
 export interface ReferentielDuJugement {
   parametres: Record<(typeof PARAMETRES)[number], number>;
-  marques: readonly string[];
-  /**
-   * L'exposant de la devise de la PIÈCE (`ref.devises`), ou null quand le
-   * référentiel ne la connaît pas.
-   */
-  decimales: number | null;
+  /** Toutes les devises du référentiel (`lireLesDevises`). */
+  devises: readonly DeviseLue[];
   /** TOUS les taux de TVA en vigueur à la date de la pièce, par code. */
   taux: ReadonlyMap<string, string>;
   /** La devise du dossier, celle de ses livres et de ses droits fixés. */
@@ -170,6 +193,8 @@ export interface ReferentielDuJugement {
   droitsFixes: ReadonlyMap<string, string>;
   tenant: ContexteControle["tenant"];
   typesDocument: ContexteControle["typesDocument"];
+  /** Ce que le titre imprimé dit de la nature de la pièce (`lireLesTitres`). */
+  titres: ContexteControle["titres"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
 }
@@ -201,11 +226,15 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
   const droits = payload.other_charges ?? [];
   const sansTaux = lignes.find((x) => !x.tax_code || !r.taux.has(x.tax_code));
   const dateRef = l.date ?? l.recueLe;
-  const devise = payload.currency ?? null;
 
-  /** Ce que la pièce imprime, et rien de retenu : la raison seule. */
-  const rien = (raison: string): ResultatNormalisation => ({
+  /**
+   * Ce que la pièce imprime, et rien de retenu : la raison seule — et la
+   * devise de la pièce quand elle s'est décidée.
+   */
+  const rien = (raison: string, devise: string | null): ResultatNormalisation => ({
     etat: "illisible",
+    devise,
+    parConvention: false,
     montants: {
       bases: lignes.map(() => ({ ht: null, taux: "" })),
       tva: null,
@@ -256,18 +285,38 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
    * pour la Tunisie), quelle que soit la devise imprimée : « 1 234,56 € »
    * s'y lisait en millimes. L'exposant vient de `ref.devises`, pour la devise
    * de la pièce ; une devise qu'il ne connaît pas ne se lit pas.
+   *
+   * ET LA DEVISE DE LA PIÈCE SE CONFRONTE À CE QU'ELLE IMPRIME (revue de la
+   * PR 144) : « 100,00 € » sans devise lue partait en 100,000 DINARS. La règle
+   * est `deviseDeLaPiece`, la même qu'à la relecture : une marque étrangère
+   * décide d'une devise non lue, contredit une devise lue, et seule une pièce
+   * qui n'imprime AUCUNE marque prend celle du dossier.
    */
-  if (r.decimales === null) return rien(`devise « ${devise ?? "—"} » inconnue du référentiel`);
-  const lecture = {
-    decimales: r.decimales,
-    marques: r.marques,
-    toleranceMineure: p["lecture.tolerance_arrondi_mineure"],
-  };
+  const textes = [
+    ...lignes.map((_, i) => brut(`lines[${i}].base_ht`)),
+    brut("totals.base_ht"),
+    brut("totals.vat"),
+    brut("totals.ttc"),
+    ...droits.map((_, i) => brut(`other_charges[${i}].amount`)),
+  ];
+  const decidee = deviseDeLaPiece(
+    payload.currency,
+    textes,
+    r.devises[0]?.marques ?? [],
+    r.deviseDuDossier,
+  );
+  if (decidee.code === null) return rien(decidee.raison, null);
+  const devise = decidee.code;
+  const deLaPiece = r.devises.find((d) => d.code === devise);
+  if (!deLaPiece) return rien(`devise « ${devise} » inconnue du référentiel`, null);
+  const lecture = { ...deLaPiece, toleranceMineure: p["lecture.tolerance_arrondi_mineure"] };
   // Un droit fixé l'est dans la devise du dossier : il n'ancre rien sur une
-  // pièce libellée dans une autre.
+  // pièce libellée dans une autre. Converti sur ses chiffres, jamais par un
+  // flottant : un droit plus précis que la devise est une erreur du
+  // référentiel, et elle se dit au lieu de s'arrondir.
   const enMineur = (fixe: string | undefined) =>
-    fixe !== undefined && (devise ?? r.deviseDuDossier) === r.deviseDuDossier
-      ? Math.round(Number(fixe) * 10 ** r.decimales!)
+    fixe !== undefined && devise === r.deviseDuDossier
+      ? Number(enUnitesExactes(fixe, lecture.decimales))
       : undefined;
   // Le chemin de citation de chaque montant : `fermes` nomme les champs ainsi.
   const chemins: Record<string, string> = {
@@ -322,7 +371,10 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     const ttc = brut("totals.ttc");
     const lu = sansTaux?.tax_code ?? null;
     if (ht === null || tva === null || ttc === null)
-      return rien("taux de TVA à préciser : la base, la TVA et le total ne sont pas tous lus");
+      return rien(
+        "taux de TVA à préciser : la base, la TVA et le total ne sont pas tous lus",
+        devise,
+      );
     const tiennent = [...r.taux].flatMap(([code, taux]) => {
       const n = normaliserMontants(
         {
@@ -353,6 +405,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
         tiennent.length === 0
           ? `taux de TVA à préciser : aucun taux du paramétrage au ${dateRef} ne fait tenir la facture`
           : `taux de TVA à préciser : ${tiennent.map((t) => t.code).join(", ")} ou un mélange de taux`,
+        devise,
       );
     const [{ code, n }] = tiennent as [(typeof tiennent)[number]];
     return {
@@ -369,7 +422,10 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     };
   }
   if (sansTaux)
-    return rien(`taux « ${sansTaux.tax_code ?? "—"} » inconnu du paramétrage au ${dateRef}`);
+    return rien(
+      `taux « ${sansTaux.tax_code ?? "—"} » inconnu du paramétrage au ${dateRef}`,
+      devise,
+    );
 
   return normaliserMontants(
     {
@@ -425,6 +481,7 @@ export function jugerLaLecture(
   const contexte: ContexteControle = {
     tenant: r.tenant,
     typesDocument: r.typesDocument,
+    titres: r.titres,
     mentionsObligatoires: r.mentionsObligatoires,
     seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
@@ -462,7 +519,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-10-30.f235152467f4";
+export const REGLES_DU_JUGEMENT = "2026-10-31.89a2ae691908";
 
 /** Le jugement d'une pièce, tel qu'il se pose : une ligne de `capture.analyses`. */
 interface JugementDeLaPiece {
@@ -638,21 +695,34 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
    * l'INTERVALLE, et la promesse devient un mécanisme. Pour une citation sans
    * plage, `coalesce` ramène l'intervalle au seul jeton cité : le comportement
    * des citations déjà en base ne change pas.
+   *
+   * Le texte de chaque citation se lit comme au plan de jetons
+   * (`texteDuMontantCite`) : la parenthèse qui ferme un MOT coupé par la plage
+   * — « (base 3 020,000) » cité « 3 020,000) » — se retire, et elle seule
+   * (revue de la PR 144). Le plan entier est donc relu : c'est lui qui le dit.
    */
-  const { rows: cites } = await db.query<{ field: string; text: string }>(
-    `select c.field, t.text
-       from capture.citations c
-       join capture.token_plan d on d.id = c.token_id
-       join capture.token_plan t
-         on t.piece_id = c.piece_id
-        and t.page = d.page
-        and t.ordinal between d.ordinal and coalesce(c.ordinal_end, d.ordinal)
-      where c.piece_id = $1
-      order by c.field, t.page, t.ordinal`,
-    [pieceId],
-  );
+  const [{ rows: cites }, { rows: plan }] = await Promise.all([
+    db.query<{ field: string; page: number; ordinal: number; fin: number }>(
+      `select c.field, d.page, d.ordinal, coalesce(c.ordinal_end, d.ordinal) as fin
+         from capture.citations c
+         join capture.token_plan d on d.id = c.token_id
+        where c.piece_id = $1
+        order by c.field, d.page, d.ordinal`,
+      [pieceId],
+    ),
+    db.query<PageToken>(
+      `select page, ordinal, text, x0::float8 as x0, y0::float8 as y0, x1::float8 as x1,
+              y1::float8 as y1
+         from capture.token_plan
+        where piece_id = $1 order by page, ordinal`,
+      [pieceId],
+    ),
+  ]);
   const imprime = new Map<string, string[]>();
-  for (const c of cites) imprime.set(c.field, [...(imprime.get(c.field) ?? []), c.text]);
+  for (const c of cites) {
+    const texte = texteDuMontantCite(plan, { page: c.page, ordinal: c.ordinal, ordinalEnd: c.fin });
+    if (texte !== null) imprime.set(c.field, [...(imprime.get(c.field) ?? []), texte]);
+  }
 
   const { rows: haut } = await db.query<{ text: string }>(
     `select text from capture.token_plan
@@ -729,9 +799,9 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
 
   const { normalisation, controles, verdict, motifs } = jugerLaLecture(lecture, {
     parametres: p,
-    marques: await lireMarquesDeDevise(db),
-    // L'exposant de la devise de la PIÈCE ; à défaut d'en lire une, celle du dossier.
-    decimales: await lireExposant(db, payload.currency ?? org.currency),
+    // La devise de la PIÈCE se décide au jugement (`deviseDeLaPiece`).
+    devises: await lireLesDevises(db),
+    titres: await lireLesTitres(db),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

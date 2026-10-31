@@ -31,7 +31,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n } from "@/i18n";
 import { montant, quantite } from "@/lib/lisible";
-import { saisieDecimale } from "@/lib/saisie-decimale";
+import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 import type { CompteDuPlan } from "@malica/socle/ports/repositories";

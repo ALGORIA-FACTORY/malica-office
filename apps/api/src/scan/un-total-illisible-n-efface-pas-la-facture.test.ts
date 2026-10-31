@@ -58,8 +58,9 @@ const BASES = [
 const TVA = "572,883"; // 60,529 + 512,354
 /*
  * Le droit de timbre, tel que `analyse.ts` le passe : son montant est FIXÉ par
- * le pack de juridiction, et cette valeur attendue ancre l'échelle. « 1,000 »
- * se lit sinon 1 dinar ou 1 000 dinars, et rien, sans le TTC, ne tranche.
+ * le pack de juridiction, et cette valeur attendue ancre l'échelle quand le
+ * droit est imprimé au point (« 1.000 » : 1 dinar ou 1 000 dinars). À la
+ * virgule, séparateur décimal du dinar, il n'a qu'une lecture.
  *
  * Limite connue, antérieure à cette correction : un droit SANS montant fixe au
  * référentiel garde ses deux lectures, et comme il n'entre dans aucune équation
@@ -94,16 +95,36 @@ describe("un total illisible n'efface pas une facture qui se lit", () => {
   it("sans TVA, plus rien ne vérifie — et le total perdu est nommé quand même", () => {
     /*
      * Le total écarté et la TVA absente, il ne reste rien pour confronter les
-     * lectures entre elles : « 1,000 » vaut un dinar ou mille. On ne feint pas
-     * la vérification, et on ne retient rien.
+     * lectures entre elles : « 696.600 » vaut 696,600 ou 696 600 dinars. On ne
+     * feint pas la vérification, et on ne retient rien.
      *
      * Ce qui change ici, et c'est tout l'objet : même dans ce refus, la pièce
      * dit QUEL total elle n'a pas su lire. Une perte silencieuse serait un
      * repli implicite.
      */
-    const r = normaliserMontants({ bases: [BASES[1]!], autres: [TIMBRE], ttc: TOTAL_PERDU }, P);
+    const r = normaliserMontants(
+      { bases: [{ ht: "696.600", taux: "0.19" }], autres: [TIMBRE], ttc: TOTAL_PERDU },
+      P,
+    );
     assert.equal(r.etat, "ambigu", r.raison);
     assert.equal(r.montants.bases[0]!.ht, null);
+    assert.equal(r.totalNonLu, TOTAL_PERDU);
+    assert.match(r.raison, /\+ 135,183/);
+  });
+
+  it("sans TVA, des lectures uniques restent non vérifiées — et le total perdu est nommé", () => {
+    /*
+     * « 2 696,600 » et le timbre « 1,000 » n'ont qu'une lecture chacun : la
+     * virgule est le séparateur décimal du dinar. Rien ne les vérifie, et la
+     * normalisation le dit (`non_verifie`, que le contrôle arithmétique pose
+     * en réserve) ; jusqu'au 30 octobre 2026, elle lisait aussi « 1,000 » à
+     * l'anglaise, et refusait tout.
+     */
+    const r = normaliserMontants({ bases: [BASES[1]!], autres: [TIMBRE], ttc: TOTAL_PERDU }, P);
+    assert.equal(r.etat, "non_verifie", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 2_696_600);
+    assert.equal(r.montants.ttc, null);
+    assert.ok(r.confiance < 1);
     assert.equal(r.totalNonLu, TOTAL_PERDU);
     assert.match(r.raison, /\+ 135,183/);
   });

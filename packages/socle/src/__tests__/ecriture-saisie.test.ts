@@ -23,6 +23,14 @@ describe("controlerLaSaisie", () => {
     expect(c).toEqual({ totalDebit: "0.300", totalCredit: "0.300", defaut: null });
   });
 
+  it("lit les montants comme l'écran les affiche : milliers et chiffres arabes", () => {
+    // Avant le 30 octobre 2026, « 1 234,500 » faisait « montant » : la saisie
+    // du Socle recopiait un `.replace(",", ".")` au lieu de `saisieDecimale`.
+    const c = controlerLaSaisie([ligne("601", "1 234,500", ""), ligne("401", "", "١٢٣٤٫٥")], 3);
+    expect(c).toEqual({ totalDebit: "1234.500", totalCredit: "1234.500", defaut: null });
+    expect(ligneNormalisee(ligne("601", "1 234,500", "")).debit).toBe("1234.500");
+  });
+
   it("dit le défaut, dans l'ordre", () => {
     expect(controlerLaSaisie([ligne("601", "1", "")], 3).defaut).toBe("lignes");
     expect(controlerLaSaisie([ligne("", "1", ""), ligne("401", "", "1")], 3).defaut).toBe("compte");

@@ -22,18 +22,17 @@
  */
 
 import {
-  groupesDeMilliersValides,
-  occurrencesIdentiques,
-  sansMarquesDeDevise,
+  lireUnMontantImprime,
   type DeviseLue,
-} from "../../scan/normaliser-montants.ts";
+  type FormeDeLecture,
+} from "@malica/socle/montant-imprime";
 
 /** Une lecture admissible d'un texte, en unités mineures entières. */
 export interface Hypothese {
   /** La valeur en unités mineures (millimes pour le dinar), toujours entière. */
   millimes: number;
   /** Comment le texte a été lu — ce qui rend l'ambiguïté explicable à l'écran. */
-  lecture: "decimale" | "milliers" | "entier";
+  lecture: FormeDeLecture;
 }
 
 /** Une puissance de dix entière : l'échelle de la devise. */
@@ -41,211 +40,28 @@ function echelle(decimales: number): number {
   return 10 ** decimales;
 }
 
-/** Assemble une valeur en unités mineures, ou null si elle sort de l'entier sûr. */
-function composer(
-  entier: string,
-  fraction: string,
-  decimales: number,
-  negatif: boolean,
-): number | null {
-  const complet = `${entier || "0"}${fraction.padEnd(decimales, "0")}`;
-  const n = Number(complet);
-  if (!Number.isSafeInteger(n)) return null;
-  return negatif ? -n : n;
-}
-
 /**
  * Le treillis d'un texte : toutes ses lectures admissibles.
  *
- * Rendu vide quand le texte ne porte pas de nombre, ou quand il en porte un
- * que la devise ne sait pas représenter (« 12,3456 » en dinars). Une lecture
- * absente vaut mieux qu'une lecture arrondie : l'arrondi est une décision, et
- * ce n'est pas à la lecture de la prendre.
+ * Le texte se lit par le lecteur unique du dépôt (`@malica/socle/montant-imprime`,
+ * qui en écrit les règles, et que la normalisation du scan appelle aussi) ;
+ * rien ne se relit ici. Rendu vide quand le texte n'est pas un montant, ou
+ * quand la devise ne sait pas le représenter (« 12,3456 » en dinars) : une
+ * lecture absente vaut mieux qu'une lecture arrondie.
+ *
+ * ======================================================= LA POLITIQUE DU PLAN
+ *
+ * Toutes les lectures deviennent des hypothèses, que l'arithmétique de la
+ * facture départage (`resoudreFacture`). Une seule exception, et elle tient à
+ * la source des jetons, pas au texte : un montant en chiffres arabes ou
+ * persans n'est pas lu. Le modèle de vision les rend INVERSÉS — mesuré le
+ * 18 octobre 2026 sur « ١٢ » rendu « ٢١ » — et une lecture inversée d'un
+ * montant est pire que pas de lecture (`factures.banc-amputation.test.ts`).
  */
 export function treillisMontant(texte: string, devise: DeviseLue): Hypothese[] {
-  const { decimales } = devise;
-  /*
-   * ============================ UN TAUX N'EST PAS UNE DÉCORATION À CÔTÉ D'UN MONTANT
-   *
-   * « 19 % » seul se lit 19 : le signe est une décoration. Mais un taux À CÔTÉ
-   * d'un autre nombre dit que la plage a couvert deux cellules — « 19% 306,610 »
-   * se lisait 19 306,610. Il n'y a alors rien à lire.
-   */
-  const horsTaux = texte.replace(TAUX, "");
-  if (horsTaux !== texte && /\d/u.test(horsTaux)) return [];
-
-  // Seules les marques de devise que le référentiel connaît sont une
-  // décoration (« 1 234,560 D.T. », « د.ت 1 234,560 », « 123,450 € ») : tout
-  // autre mot (« art. 9 », « TVA 19 ») fait du texte un texte. Les ESPACES ne
-  // sont pas une décoration non plus : voir plus bas. Une espace collée à un
-  // séparateur (« 1 234 ,560 ») ou à l'intérieur d'une parenthèse
-  // (« (1 234,560 DT) », une fois la devise retirée) n'en est pas une.
-  const sansMarques = sansMarquesDeDevise(texte.replace(/%/gu, " "), devise.marques);
-  if (sansMarques === null) return [];
-  const nu = sansMarques
-    .replace(/\s*([.,])\s*/gu, "$1")
-    .replace(/\(\s+/gu, "(")
-    .replace(/\s+\)/gu, ")")
-    .replace(/\s+/gu, " ")
-    .trim()
-    .replace(/^([(+-]+) /u, "$1");
-
-  /*
-   * ============================ TOUT LE RESTE DÉCIDE, ET DIT NON
-   *
-   * Un « / » ou un « : » ne se retire pas : il dit que ce jeton est une date,
-   * une heure ou un numéro de pièce — pas un montant. L'ancienne
-   * normalisation les effaçait et lisait les chiffres qui restaient. Sur le
-   * ticket MOKA du staging, « 08/09/2026 » devenait ainsi un montant de
-   * 8 092,026 dinars, et « 23:18 » un montant de 2,318 dinars.
-   *
-   * Effacer un caractère qu'on ne comprend pas, c'est décider à la place du
-   * papier — la faute même que ce module existe pour supprimer.
-   */
-  if (!nu || !/^[\d.,()+ -]+$/.test(nu)) return [];
-
-  /*
-   * ============================ DEUX NOMBRES COLLÉS NE FONT PAS UN NOMBRE (29 octobre 2026)
-   *
-   * Staging : « lines[0].vat_amount + lines[1].vat_amount donne 5460306.610 ».
-   * Le récapitulatif de TVA imprimait une colonne par taux — « TVA  5,460
-   * 301,150 » — et une désignation a couvert les deux cellules. La plage
-   * arrive ici jointe par une espace, et cette fonction retirait TOUTES les
-   * espaces comme de la décoration : « 5,460301,150 », lu 5 460 301,150, une
-   * lecture unique, sans drapeau. Le solveur l'a additionnée.
-   *
-   * Une espace entre des chiffres n'est un séparateur de milliers que si les
-   * groupes le prouvent — 1 à 3 chiffres, puis des groupes de 3, la partie
-   * décimale à la fin seulement (« 1 585,000 »). Sinon, la plage porte
-   * plusieurs nombres : le même montant répété en colonnes se lit (la règle
-   * de `occurrencesIdentiques`, partagée avec la normalisation du scan), deux
-   * montants différents ne se lisent pas. Et si le texte recollé sans ses
-   * espaces se lit, on ne tranche pas non plus : « 12 3,500 » est peut-être
-   * 123,500 aux espaces parasites, peut-être deux nombres.
-   */
-  const morceaux = nu.split(" ");
-  if (morceaux.length === 1 || espacesDeMilliers(morceaux))
-    return lireUnNombre(morceaux.join(""), decimales);
-  if (lireUnNombre(morceaux.join(""), decimales).length > 0) return [];
-  return occurrencesIdentiques(
-    nu,
-    (occurrence) => {
-      const groupes = occurrence.split(" ");
-      return groupes.length === 1 || espacesDeMilliers(groupes)
-        ? lireUnNombre(groupes.join(""), decimales)
-        : [];
-    },
-    (h) => h.millimes,
-  );
-}
-
-/** Un taux et son signe : « 19% », « 7 % », « 0,5 % ». */
-const TAUX = /\d+(?:[.,]\d+)?\s?%/gu;
-
-/**
- * Les morceaux d'un texte coupé à ses espaces sont-ils les groupes de milliers
- * d'UN montant ? Le premier peut porter le signe, le dernier sa partie
- * décimale (et la parenthèse qui ferme un négatif).
- */
-function espacesDeMilliers(morceaux: readonly string[]): boolean {
-  const dernier = /^(\d+)(?:[.,]\d*)?\)?$/u.exec(morceaux[morceaux.length - 1]!);
-  return (
-    dernier !== null &&
-    groupesDeMilliersValides([
-      morceaux[0]!.replace(/^[(+-]+/u, ""),
-      ...morceaux.slice(1, -1),
-      dernier[1]!,
-    ])
-  );
-}
-
-/** Les lectures d'un texte sans espace, pris comme UN montant. */
-function lireUnNombre(nu: string, decimales: number): Hypothese[] {
-  let s = nu;
-
-  let negatif = false;
-  if (/^\(.*\)$/.test(s)) {
-    negatif = true;
-    s = s.slice(1, -1);
-  }
-  if (s.startsWith("-")) {
-    negatif = true;
-    s = s.slice(1);
-  }
-  s = s.replace(/^\+/, "");
-  if (!/^\d[\d.,]*$/.test(s)) return [];
-
-  const chiffres = s.replace(/[.,]/g, "");
-  const dernierPoint = s.lastIndexOf(".");
-  const derniereVirgule = s.lastIndexOf(",");
-  const hypotheses: Hypothese[] = [];
-
-  const ajouter = (entier: string, fraction: string, lecture: Hypothese["lecture"]): void => {
-    if (fraction.length > decimales) return;
-    const millimes = composer(entier, fraction, decimales, negatif);
-    if (millimes === null) return;
-    if (hypotheses.some((h) => h.millimes === millimes)) return;
-    hypotheses.push({ millimes, lecture });
-  };
-
-  // Deux séparateurs différents : le DERNIER porte les décimales, l'autre les
-  // milliers. « 1.234,56 » et « 1,234.56 » se lisent tous les deux sans doute.
-  // Ce qui précède la décimale doit être des milliers bien formés, d'un seul
-  // signe : « 1,234.567,89 » porte deux décimales, « 5,460.301,150 » deux
-  // nombres — ni l'un ni l'autre n'est UN montant.
-  if (dernierPoint > -1 && derniereVirgule > -1) {
-    const idx = Math.max(dernierPoint, derniereVirgule);
-    const avant = s.slice(0, idx);
-    if (avant.includes(s[idx]!) || !groupesDeMilliersValides(avant.split(/[.,]/))) return [];
-    ajouter(avant.replace(/[.,]/g, ""), s.slice(idx + 1), "decimale");
-    return hypotheses;
-  }
-
-  // La virgule ne sépare jamais les milliers en Tunisie : elle est décimale.
-  // Donc une seule : « 5,460301,150 » (deux montants que l'OCR a collés) se
-  // lisait 5 460 301,150 en effaçant la première.
-  if (derniereVirgule > -1) {
-    if (s.indexOf(",") !== derniereVirgule) return [];
-    ajouter(
-      s.slice(0, derniereVirgule).replace(/,/g, ""),
-      s.slice(derniereVirgule + 1),
-      "decimale",
-    );
-    return hypotheses;
-  }
-
-  if (dernierPoint > -1) {
-    // Plusieurs points : ce sont des groupes de milliers, l'affaire est close —
-    // s'ils en ont la forme (« 5.46.3 » n'en a pas).
-    if (s.indexOf(".") !== dernierPoint) {
-      if (groupesDeMilliersValides(s.split("."))) ajouter(chiffres, "", "milliers");
-      return hypotheses;
-    }
-    const entier = s.slice(0, dernierPoint);
-    const fraction = s.slice(dernierPoint + 1);
-    // L'ORDRE COMPTE : la lecture décimale est rendue en premier parce que
-    // c'est la plus fréquente sur les pièces de détail. Aucune n'est
-    // privilégiée par le solveur — seule l'arithmétique départage.
-    ajouter(entier, fraction, "decimale");
-    // Un groupe de milliers fait exactement trois chiffres, et ce qui le
-    // précède en fait au plus trois : au-delà, le point ne peut plus être un
-    // séparateur de milliers, et l'ambiguïté disparaît d'elle-même.
-    if (fraction.length === 3 && entier.length >= 1 && entier.length <= 3) {
-      ajouter(`${entier}${fraction}`, "", "milliers");
-    }
-    return hypotheses;
-  }
-
-  // Aucun séparateur. Court, c'est un nombre de dinars. Long, c'est le cas que
-  // personne ne voit venir : « 16000 » vaut 16 dinars sur un ticket dont les
-  // décimales ont été saisies sans virgule, et 16 000 dinars sur une facture.
-  if (chiffres.length < decimales + 1) {
-    ajouter(chiffres, "", "entier");
-    return hypotheses;
-  }
-  ajouter(chiffres.slice(0, -decimales), chiffres.slice(-decimales), "decimale");
-  ajouter(chiffres, "", "entier");
-  return hypotheses;
+  const lu = lireUnMontantImprime(texte, devise);
+  if (lu.chiffresArabes) return [];
+  return lu.lectures.map((l) => ({ millimes: l.mineur, lecture: l.forme }));
 }
 
 /* --------------------------------------------------------------- le solveur */

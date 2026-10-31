@@ -712,7 +712,7 @@ $$;
 -- clients n'insèrent pas dans `capture.remplacements`) : dans cette
 -- transaction, la pièce vient de remplacer une pièce déjà partie chez le
 -- comptable — elle en hérite le partage, ce n'est pas un envoi. La porte ne
--- pose plus le réglage (`20261103120000`).
+-- pose plus le réglage (`20261104120000`).
 
 create or replace function app.remplacement_en_cours(p_piece uuid)
 returns boolean
@@ -853,7 +853,7 @@ begin
           case when v_dernier = 'retournee' then 'piece.renvoyee_au_proprietaire'
                else 'piece.envoyee_au_proprietaire' end,
           -- `chez` : un fait du passage interne, que le cabinet ne lit pas
-          -- (`audit_event_log_sel`, `20261103110000`).
+          -- (`audit_event_log_sel`, `20261104110000`).
           'capture', 'pieces', p_piece, jsonb_build_object('chez', 'proprietaire'));
 
   perform app.notifier_les_receveurs(v_tenant, 'piece.recue_du_siege',
@@ -1550,7 +1550,7 @@ $$;
 --   - le siège ne retire pas une pièce partie chez le propriétaire : il la
 --     demande. Retournée par lui, elle est rendue : il la supprime ;
 --   - son Mon espace part avec son compte : l'auteur d'une pièce privée la
---     supprime, même hors de la société qu'il a quittée (`20261103100000`
+--     supprime, même hors de la société qu'il a quittée (`20261104100000`
 --     la lui montre).
 
 create or replace function public.capture_piece_supprimer(p_piece uuid, p_par_accord boolean default false)
@@ -1720,7 +1720,7 @@ begin
     select id from suite order by rang
   loop
     -- L'effacement s'inscrit comme un fait de la transaction, que les gardes
-    -- de R7 lisent (`20261103120000`) ; il se retire avant de rendre la main.
+    -- de R7 lisent (`20261104120000`) ; il se retire avant de rendre la main.
     perform app.effacer_la_piece(v_version);
   end loop;
   perform app.effacements_clos();

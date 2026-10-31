@@ -220,6 +220,39 @@ async function closLeRetour(db: Requete, pieceId: string, ecritureId: string): P
   );
 }
 
+/**
+ * La TVA d'une sélection de pièces : on CHOISIT d'abord les pièces (la
+ * requête qui suit `AVEC_LEURS_EXTRAITS` rend `piece_id`, `payload` et ses
+ * colonnes propres, que `lusParLaPorte` nomme), puis `app.extraits_de_la_tva` lit toutes les pièces en
+ * un appel. Revue de #145 : la porte appelée PAR LIGNE, avant le
+ * `distinct on`, coûtait 4,5 s pour 200 pièces contre 0,54 s sans elle.
+ *
+ * Ce qui reste (mesuré le 31 octobre 2026, 200 pièces dont 40 forcées) :
+ * 1,2 s contre 0,41 s pour la sélection nue. L'écart est, pour l'essentiel,
+ * les montants du cabinet (`app.montants_pris_en_charge`, #140) : environ
+ * 9 ms par pièce FORCÉE, que la vue `pieces_qui_comptent_v` calcule déjà une
+ * fois pour dire si l'écriture se lit, et que la porte recalcule pour en
+ * lire les lignes. Les figer à la prise en charge, dans une table, a été
+ * écarté : leur rangement dépend du paramétrage du cabinet et du dossier
+ * (`parametrage.role_bindings`, R10), qui se change APRÈS la prise en charge
+ * — une copie figée contredirait la vue, la fiche de la PME et « Vos
+ * charges ». Le coût suit les pièces forcées, pas le nombre de pièces.
+ */
+const AVEC_LEURS_EXTRAITS = "with choisies as (";
+const lusParLaPorte = (colonnes: string) => `),
+       lues as (
+         select t.piece_id, t.payload
+           from app.extraits_de_la_tva(
+                  (select coalesce(jsonb_agg(jsonb_build_object('piece_id', c.piece_id,
+                                                                'payload', c.payload)),
+                                   '[]'::jsonb)
+                     from choisies c)) t
+       )
+       select ${colonnes}, l.payload
+         from choisies c
+         join lues l on l.piece_id = c.piece_id
+        order by c.piece_id`;
+
 export const office = {
   /**
    * La proposition d'écriture d'une pièce, calculée par le SERVEUR (3B-6) :
@@ -684,10 +717,16 @@ export const office = {
     // version courante, dans l'ordre des identifiants —, pris AVANT que la
     // proposition soit relue : une reprise ou une suppression de la courante
     // attend l'inscription entière, puis la voit.
+    //
+    // Les deux identifiants sont lus D'ABORD, puis cherchés par la clé : la
+    // jointure `pi.id in (e.piece_id, app.version_courante(e.piece_id))`
+    // appelait la fonction pour chaque pièce visible sous la RLS — douze
+    // secondes par inscription à 1 337 pièces (épreuve de charge, revue de #145).
     await db.query(
-      `select pi.id from capture.pieces pi join ecritures_v e
-           on pi.id in (e.piece_id, app.version_courante(e.piece_id))
-        where e.id = $1 order by pi.id for update of pi`,
+      `select pi.id from capture.pieces pi
+        where pi.id = any (select unnest(array[e.piece_id, app.version_courante(e.piece_id)])
+                             from ecritures_v e where e.id = $1)
+        order by pi.id for update of pi`,
       [ecritureId],
     );
     const { rows } = await db.query<{
@@ -808,7 +847,14 @@ export const office = {
     // On ne retient que les écritures vivantes : ni contre-passation, ni
     // écriture qu'une contre-passation comptabilisée annule.
     const { rows } = await db.query(
-      `select distinct on (x.piece_id) x.piece_id, x.payload
+      // 3 novembre 2026 : la pièce pèse de ce qui compte dans la TVA
+      // (app.extraits_de_la_tva), la même porte que la PME — forcée, les
+      // montants du cabinet ; sinon la lecture ; chaque ligne avec sa nature.
+      // Elle lisait la LECTURE d'une pièce forcée : la TVA du dossier ne
+      // recoupait pas le journal du cabinet. Les pièces se CHOISISSENT
+      // d'abord, puis la porte les lit toutes en un appel.
+      `${AVEC_LEURS_EXTRAITS}
+       select distinct on (x.piece_id) x.piece_id, x.payload
          from extractions_v x
          join ecritures_v e on e.piece_id = x.piece_id
         where e.tenant_id = $1
@@ -827,7 +873,8 @@ export const office = {
           and app.jour_d_imputation_tva(e.tenant_id, e.date_ecriture, e.booked_at::date)
               between $2 and $3
           and x.contract = 'extract.v1'
-        order by x.piece_id, x.created_at desc`,
+        order by x.piece_id, x.created_at desc
+       ${lusParLaPorte("c.piece_id")}`,
       [tenantId, from, to],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
@@ -886,19 +933,14 @@ export const office = {
    */
   async extraitsTransmis(db: Requete, tenantId: string, from: string, to: string) {
     const { rows } = await db.query(
-      `select distinct on (x.piece_id)
-              x.piece_id,
-              -- Forcée, la pièce pèse de ce que le CABINET a inscrit
-              -- (1er novembre 2026) : ses lignes, ses droits, ses totaux, la
-              -- date et le sens de son écriture. Validée, ou avant, de sa lecture.
-              case when p.source = 'cabinet'
-                   then x.payload || (
-                     select jsonb_build_object(
-                              'lines', c.m -> 'lines', 'other_charges', c.m -> 'other_charges',
-                              'totals', c.m -> 'totals', 'document_date', c.m -> 'date_ecriture',
-                              'currency', c.m -> 'currency', 'document_kind', p.document_kind)
-                       from (select app.montants_pris_en_charge(p.id) as m) c)
-                   else x.payload end as payload,
+      // Forcée, la pièce pèse de ce que le CABINET a inscrit (1er novembre
+      // 2026) : ses lignes, ses droits, ses totaux, la date et le sens de son
+      // écriture. Validée, ou avant, de sa lecture. Chaque ligne porte sa
+      // nature (3 novembre 2026). Une seule porte, la même que le cabinet
+      // (bookedExtracts), appelée une fois pour toutes les pièces choisies.
+      `${AVEC_LEURS_EXTRAITS}
+       select distinct on (x.piece_id)
+              x.piece_id, x.payload,
               p.transmise_le, i.impute_le::text as impute_le
          from extractions_v x
          -- La pièce qui compte (ANO-005) : confirmée, dans la société, sans
@@ -935,7 +977,8 @@ export const office = {
           -- pour les deux côtés (app.jour_d_imputation_tva).
           and i.impute_le between $2::date and $3::date
           and x.contract = 'extract.v1'
-        order by x.piece_id, x.created_at desc`,
+        order by x.piece_id, x.created_at desc
+       ${lusParLaPorte("c.piece_id, c.transmise_le, c.impute_le")}`,
       [tenantId, from, to],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({

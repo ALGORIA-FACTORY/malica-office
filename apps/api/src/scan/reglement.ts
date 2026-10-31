@@ -1,4 +1,4 @@
-import { enUnitesExactes } from "@malica/socle/somme-decimale";
+import { depuisUniteMineure, enUnitesExactes } from "@malica/socle/somme-decimale";
 /** Règlement composé à partir des faits et d'une qualification fiscale explicite. */
 import {
   construireReglement,
@@ -16,7 +16,6 @@ import {
 } from "@malica/socle/use-cases/retenue-au-reglement";
 
 import type { Requete } from "../db.ts";
-import { enDecimal } from "./normaliser-montants.ts";
 
 import { lireParametres } from "./analyse.ts";
 
@@ -200,8 +199,9 @@ export async function propositionDeReglement(
   const mineurs = [l.montant_mineur, piece?.ttc_mineur, piece?.tva_mineur].filter((v) => v != null);
   if (mineurs.some((v) => !Number.isSafeInteger(Number(v))))
     return { ok: false, raison: "Le montant dépasse la précision prise en charge." };
-  const paye = enDecimal(Number(l.montant_mineur), decimales);
-  let ttc = piece?.ttc_mineur != null ? enDecimal(Number(piece.ttc_mineur), decimales) : null;
+  const paye = depuisUniteMineure(Number(l.montant_mineur), decimales);
+  let ttc =
+    piece?.ttc_mineur != null ? depuisUniteMineure(Number(piece.ttc_mineur), decimales) : null;
 
   if (ttc === null) {
     const { rows: totaux } = await db.query<{ total: string }>(
@@ -264,7 +264,10 @@ export async function propositionDeReglement(
     try {
       retenue = constaterLaRetenue({
         ttc,
-        tva: piece.tva_mineur === null ? null : enDecimal(Number(piece.tva_mineur), decimales),
+        tva:
+          piece.tva_mineur === null
+            ? null
+            : depuisUniteMineure(Number(piece.tva_mineur), decimales),
         paye,
         seuil: null,
         taux: tauxDisponibles,

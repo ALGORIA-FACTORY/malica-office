@@ -546,6 +546,9 @@ const fr = {
   "pme.paiement.totalInconnu":
     "Le total de cette facture n’a pas été lu : choisissez « Une partie seulement » et indiquez le montant payé.",
   "pme.paiement.combien": "Combien avez-vous payé ?",
+  "saisie.refus.illisible": "Montant illisible : écrivez-le comme 1 234,500.",
+  "saisie.refus.negatif": "Un montant saisi ici ne peut pas être négatif.",
+  "saisie.refus.tropPrecis": "Trop de décimales pour cette devise.",
   "pme.paiement.reference": "Numéro du chèque, de la traite ou du virement",
   "pme.paiement.quand": "Quand l’avez-vous payée ?",
   "pme.paiement.pourquoi": "Pourquoi le corriger ?",
@@ -910,6 +913,8 @@ const fr = {
   "cab.stocks.invdup": "Cette période est déjà constatée pour cet article.",
   "cab.stocks.depreciation": "Dépréciation du stock",
   "cab.stocks.vnr": "Valeur nette de réalisation",
+  "cab.stocks.vnrNegative":
+    "La valeur nette ne descend pas sous zéro : au-delà du coût, la perte relève d'une provision, pas d'une dépréciation du stock.",
   "cab.stocks.note": "Note",
   "cab.stocks.cost": "Coût du stock",
   "cab.stocks.cumul": "Cumul déprécié",
@@ -1503,6 +1508,7 @@ const fr = {
   "cab.code.pasUnNombre": "La valeur désignée n'est pas un nombre.",
   "cab.code.dateIllisible": "La date n'a pas pu être lue sur la pièce.",
   "cab.code.sensAConfirmer": "Achat ou vente : à confirmer.",
+  "cab.code.devise": "Devise imprimée différente de la devise lue : à saisir.",
   "cab.audit.extract": "Lecture citée, contrat v1.",
   "cab.audit.autre": "Événement du dossier.",
   "cab.clients.kicker": "Portefeuille du cabinet",
@@ -2349,6 +2355,7 @@ const fr = {
   "cab.pv.chiffre.tvaCollectee": "TVA collectée du mois",
   "cab.pv.chiffre.tvaDeductible": "TVA déductible du mois",
   "cab.pv.chiffre.tva": "TVA du mois, collectée moins déductible",
+  "cab.pv.chiffre.tvaHorsCalcul": "Pièces hors du calcul de la TVA, à reprendre",
   "cab.pv.chiffre.pieces": "Pièces transmises dans le mois",
   "cab.pv.chiffre.aSuperviser": "Pièces en attente de supervision",
   "cab.pv.chiffre.retournees": "Pièces retournées au client",
@@ -3739,6 +3746,42 @@ const fr = {
   "pme.tva.ceQuiChange": "À vérifier",
   "pme.tva.parSociete": "Par société",
   /**
+   * La déclaration de TVA, ligne par ligne (3 novembre 2026). Les LIBELLÉS
+   * des lignes viennent du référentiel (`ref.tva_declaration_lignes`) ; ces
+   * clés ne disent que le titre et les explications du ⓘ.
+   */
+  "tva.declaration.titre": "La déclaration",
+  "tva.declaration.aide":
+    "Chaque ligne de la déclaration mensuelle reçoit la TVA de sa nature : celle des immobilisations (un bien porté en classe 2) se déclare à part de celle des autres biens et services. La nature se lit sur l'écriture du cabinet, ou sur les articles de la facture rangés au plan comptable.",
+  "tva.declaration.aConfirmer":
+    "Ces lignes sont un défaut de Malica : leur correspondance exacte avec le formulaire en vigueur est à confirmer par un expert-comptable.",
+  "tva.declaration.parDefaut": "{count} lignes rangées par défaut",
+  "tva.declaration.parDefaut#one": "{count} ligne rangée par défaut",
+  "tva.declaration.parDefaut#other": "{count} lignes rangées par défaut",
+  "tva.declaration.sansLigne": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne#one": "{count} montant sans ligne de déclaration",
+  "tva.declaration.sansLigne#other": "{count} montants sans ligne de déclaration",
+  "tva.declaration.sansLigne.aide":
+    "Le référentiel de la déclaration n'a pas de ligne pour ces montants : ils comptent dans les totaux, mais aucune ligne de la déclaration ne les porte. Ce n'est pas une pièce à reprendre ; signalez-le à l'équipe Malica.",
+  "tva.affectation.titre": "Lignes arrêtées par le cabinet",
+  "tva.affectation.aide":
+    "Pour chaque nature de TVA, la ligne de la déclaration qui la reçoit. Malica livre un défaut ; le cabinet l'arrête. Arrêter sans rien changer, c'est confirmer : la ligne n'est plus « à confirmer », pour vous comme pour le client.",
+  "tva.affectation.aide.portee":
+    "« Pour ce dossier » ne vaut que pour ce client. « Pour tout le cabinet » vaut pour tous vos dossiers qui n'ont pas leur propre choix ; il est réservé à l'expert-comptable. Chaque décision est datée et signée ; elle vaut à partir du mois affiché.",
+  "tva.affectation.origine.pack": "Défaut de Malica, à confirmer",
+  "tva.affectation.origine.cabinet": "Arrêtée par le cabinet",
+  "tva.affectation.origine.dossier": "Arrêtée pour ce dossier",
+  "tva.affectation.pourLeDossier": "Pour ce dossier",
+  "tva.affectation.pourLeCabinet": "Pour tout le cabinet",
+  "tva.affectation.arretee": "Lignes arrêtées.",
+  "tva.affectation.arretee.detail": "La TVA du mois les suit, ici et chez le client.",
+  "refus.tva.affectation.droits":
+    "Seul le cabinet qui tient ce dossier arrête ses lignes de TVA ; pour tout le cabinet, l'expert-comptable.",
+  "refus.tva.affectation.saisie":
+    "Une ligne choisie n'existe pas dans la déclaration de ce mois : rechargez la page et choisissez à nouveau.",
+  "tva.declaration.parDefaut.aide":
+    "Malica n'a pas pu dire quelle part de ces factures est une immobilisation : leur TVA est rangée sur la ligne par défaut de la déclaration, et comptée. Le cabinet la reclasse en forçant l'écriture.",
+  /**
    * Le solde par société n'est pas servi : le moteur tourne sur UN dossier.
    */
   "pme.fiche.barre": "Votre fiche fiscale",
@@ -4392,6 +4435,9 @@ const en: Dict = {
   "pme.paiement.totalInconnu":
     "This invoice’s total was not read: choose “Only part of it” and enter the amount paid.",
   "pme.paiement.combien": "How much did you pay?",
+  "saisie.refus.illisible": "Unreadable amount: write it like 1 234,500.",
+  "saisie.refus.negatif": "An amount entered here cannot be negative.",
+  "saisie.refus.tropPrecis": "Too many decimals for this currency.",
   "pme.paiement.reference": "Cheque, draft or transfer number",
   "pme.paiement.quand": "When did you pay it?",
   "pme.paiement.pourquoi": "Why change it?",
@@ -4738,6 +4784,8 @@ const en: Dict = {
   "cab.stocks.invdup": "This period is already recorded for this item.",
   "cab.stocks.depreciation": "Inventory write-down",
   "cab.stocks.vnr": "Net realisable value",
+  "cab.stocks.vnrNegative":
+    "Net value does not go below zero: a loss beyond cost is a provision, not a write-down of the stock.",
   "cab.stocks.note": "Note",
   "cab.stocks.cost": "Inventory cost",
   "cab.stocks.cumul": "Accumulated write-down",
@@ -5324,6 +5372,7 @@ const en: Dict = {
   "cab.code.pasUnNombre": "The designated value is not a number.",
   "cab.code.dateIllisible": "The date could not be read on the document.",
   "cab.code.sensAConfirmer": "Purchase or sale: to be confirmed.",
+  "cab.code.devise": "Printed currency differs from the currency read: enter it manually.",
   "cab.audit.extract": "Cited reading, contract v1.",
   "cab.audit.autre": "Event on the file.",
   "cab.clients.kicker": "Practice portfolio",
@@ -6161,6 +6210,7 @@ const en: Dict = {
   "cab.pv.chiffre.tvaCollectee": "Output VAT for the month",
   "cab.pv.chiffre.tvaDeductible": "Input VAT for the month",
   "cab.pv.chiffre.tva": "VAT for the month, output minus input",
+  "cab.pv.chiffre.tvaHorsCalcul": "Documents left out of the VAT calculation, to rework",
   "cab.pv.chiffre.pieces": "Documents sent during the month",
   "cab.pv.chiffre.aSuperviser": "Documents awaiting review",
   "cab.pv.chiffre.retournees": "Documents returned to the client",
@@ -7471,6 +7521,37 @@ const en: Dict = {
   "pme.tva.refusees#other": "{count} lines with no governed rate at their date",
   "pme.tva.ceQuiChange": "To check",
   "pme.tva.parSociete": "By company",
+  "tva.declaration.titre": "The return",
+  "tva.declaration.aide":
+    "Each line of the monthly return takes the VAT of its kind: VAT on fixed assets (an asset booked in class 2) is declared apart from VAT on other goods and services. The kind is read from the firm's entry, or from the invoice items mapped to the chart of accounts.",
+  "tva.declaration.aConfirmer":
+    "These lines are a Malica default: how exactly they match the form in force is to be confirmed by a chartered accountant.",
+  "tva.declaration.parDefaut": "{count} lines placed by default",
+  "tva.declaration.parDefaut#one": "{count} line placed by default",
+  "tva.declaration.parDefaut#other": "{count} lines placed by default",
+  "tva.declaration.sansLigne": "{count} amounts with no return line",
+  "tva.declaration.sansLigne#one": "{count} amount with no return line",
+  "tva.declaration.sansLigne#other": "{count} amounts with no return line",
+  "tva.declaration.sansLigne.aide":
+    "The return referential has no line for these amounts: they count in the totals, but no line of the return carries them. This is not a document to rework; report it to the Malica team.",
+  "tva.affectation.titre": "Lines set by the firm",
+  "tva.affectation.aide":
+    'For each kind of VAT, the return line that receives it. Malica ships a default; the firm sets it. Setting it unchanged confirms it: the line is no longer "to confirm", for you and for the client.',
+  "tva.affectation.aide.portee":
+    '"For this client" applies to this client only. "For the whole firm" applies to every client without its own choice, and is for the chartered accountant. Each decision is dated and signed, and applies from the month shown.',
+  "tva.affectation.origine.pack": "Malica default, to confirm",
+  "tva.affectation.origine.cabinet": "Set by the firm",
+  "tva.affectation.origine.dossier": "Set for this client",
+  "tva.affectation.pourLeDossier": "For this client",
+  "tva.affectation.pourLeCabinet": "For the whole firm",
+  "tva.affectation.arretee": "Lines set.",
+  "tva.affectation.arretee.detail": "This month's VAT follows them, here and at the client's.",
+  "refus.tva.affectation.droits":
+    "Only the firm that keeps this client's books sets its VAT lines; for the whole firm, the chartered accountant.",
+  "refus.tva.affectation.saisie":
+    "A chosen line is not in this month's return: reload the page and choose again.",
+  "tva.declaration.parDefaut.aide":
+    "Malica could not tell which part of these invoices is a fixed asset: their VAT sits on the return's default line, and is counted. The firm reclassifies it by forcing the entry.",
   "pme.fiche.barre": "Your tax profile",
   "pme.fiche.secCarte": "Your card",
   "pme.fiche.cartePasLue": "not read yet",
@@ -8091,6 +8172,9 @@ const ar: Dict = {
   "pme.paiement.totalInconnu":
     "لم يُقرأ مجموع هذه الفاتورة: اختر «جزء منه فقط» وأدخل المبلغ المدفوع.",
   "pme.paiement.combien": "كم دفعت؟",
+  "saisie.refus.illisible": "مبلغ غير مقروء: اكتبه هكذا 1 234,500.",
+  "saisie.refus.negatif": "لا يمكن أن يكون المبلغ المُدخل هنا سالبًا.",
+  "saisie.refus.tropPrecis": "عدد الأرقام العشرية أكبر مما تسمح به هذه العملة.",
   "pme.paiement.reference": "رقم الشيك أو الكمبيالة أو التحويل",
   "pme.paiement.quand": "متى دفعتَها؟",
   "pme.paiement.pourquoi": "لماذا تصحيحه؟",
@@ -8441,6 +8525,8 @@ const ar: Dict = {
   "cab.stocks.invdup": "هذه الفترة مثبتة سابقا لهذه المادة.",
   "cab.stocks.depreciation": "تدني قيمة المخزون",
   "cab.stocks.vnr": "القيمة الصافية للتحقق",
+  "cab.stocks.vnrNegative":
+    "لا تنزل القيمة الصافية تحت الصفر: الخسارة التي تتجاوز التكلفة مُدَّخر وليست انخفاضًا في قيمة المخزون.",
   "cab.stocks.note": "ملاحظة",
   "cab.stocks.cost": "كلفة المخزون",
   "cab.stocks.cumul": "مجموع التدني",
@@ -9011,6 +9097,7 @@ const ar: Dict = {
   "cab.code.pasUnNombre": "القيمة المحدَّدة ليست عددًا.",
   "cab.code.dateIllisible": "تعذّرت قراءة التاريخ على الوثيقة.",
   "cab.code.sensAConfirmer": "شراء أم بيع: للتأكيد.",
+  "cab.code.devise": "العملة المطبوعة تختلف عن العملة المقروءة: للإدخال يدويًا.",
   "cab.audit.extract": "قراءة مُستشهَدة، عقد الإصدار 1.",
   "cab.audit.autre": "حدث في الملف.",
   "cab.clients.kicker": "محفظة المكتب",
@@ -9807,6 +9894,7 @@ const ar: Dict = {
   "cab.pv.chiffre.tvaCollectee": "الأداء المستخلص للشهر",
   "cab.pv.chiffre.tvaDeductible": "الأداء القابل للطرح للشهر",
   "cab.pv.chiffre.tva": "أداء الشهر، المستخلص ناقص القابل للطرح",
+  "cab.pv.chiffre.tvaHorsCalcul": "وثائق خارج احتساب الأداء على القيمة المضافة، للمراجعة",
   "cab.pv.chiffre.pieces": "الوثائق المرسلة خلال الشهر",
   "cab.pv.chiffre.aSuperviser": "وثائق في انتظار الإشراف",
   "cab.pv.chiffre.retournees": "وثائق أُعيدت إلى الحريف",
@@ -11061,6 +11149,37 @@ const ar: Dict = {
   "pme.tva.refusees#other": "أسطر دون نسبة معتمدة في تاريخها: {count}",
   "pme.tva.ceQuiChange": "للتحقق",
   "pme.tva.parSociete": "حسب الشركة",
+  "tva.declaration.titre": "التصريح",
+  "tva.declaration.aide":
+    "يتلقى كل سطر من التصريح الشهري الأداء على القيمة المضافة حسب طبيعته: يُصرَّح بأداء الأصول الثابتة (أصل مُقيَّد في الصنف 2) بمعزل عن أداء السلع والخدمات الأخرى. تُقرأ الطبيعة من قيد المكتب، أو من بنود الفاتورة المرتبة حسب المخطط المحاسبي.",
+  "tva.declaration.aConfirmer":
+    "هذه الأسطر إعداد افتراضي من Malica: يجب أن يؤكد خبير محاسب مطابقتها الدقيقة للنموذج الجاري به العمل.",
+  "tva.declaration.parDefaut": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.parDefaut#one": "سطر واحد مرتب افتراضيًا",
+  "tva.declaration.parDefaut#other": "أسطر مرتبة افتراضيًا: {count}",
+  "tva.declaration.sansLigne": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne#one": "مبلغ واحد دون سطر في التصريح",
+  "tva.declaration.sansLigne#other": "مبالغ دون سطر في التصريح: {count}",
+  "tva.declaration.sansLigne.aide":
+    "لا يتضمن مرجع التصريح سطرًا لهذه المبالغ: هي محسوبة في المجاميع، لكن لا يحملها أي سطر من التصريح. ليست وثيقة للمراجعة؛ أبلغوا فريق Malica.",
+  "tva.affectation.titre": "أسطر يضبطها المكتب",
+  "tva.affectation.aide":
+    "لكل طبيعة من الأداء على القيمة المضافة، سطر التصريح الذي يتلقاها. تقدّم Malica إعدادًا افتراضيًا ويضبطه المكتب. الضبط دون تغيير تأكيد: لا يعود السطر «للتأكيد»، لديكم ولدى الحريف.",
+  "tva.affectation.aide.portee":
+    "«لهذا الملف» يسري على هذا الحريف وحده. «لكامل المكتب» يسري على كل الملفات التي ليس لها اختيارها، وهو للخبير المحاسب. كل قرار مؤرخ وموقّع، ويسري ابتداءً من الشهر المعروض.",
+  "tva.affectation.origine.pack": "إعداد Malica الافتراضي، للتأكيد",
+  "tva.affectation.origine.cabinet": "ضبطه المكتب",
+  "tva.affectation.origine.dossier": "ضُبط لهذا الملف",
+  "tva.affectation.pourLeDossier": "لهذا الملف",
+  "tva.affectation.pourLeCabinet": "لكامل المكتب",
+  "tva.affectation.arretee": "تم ضبط الأسطر.",
+  "tva.affectation.arretee.detail": "يتبعها أداء الشهر، هنا ولدى الحريف.",
+  "refus.tva.affectation.droits":
+    "لا يضبط أسطر الأداء إلا المكتب الذي يمسك هذا الملف؛ ولكامل المكتب، الخبير المحاسب.",
+  "refus.tva.affectation.saisie":
+    "أحد الأسطر المختارة غير موجود في تصريح هذا الشهر: أعيدوا تحميل الصفحة واختاروا من جديد.",
+  "tva.declaration.parDefaut.aide":
+    "لم تتمكن Malica من تحديد الجزء الذي يمثل أصلًا ثابتًا في هذه الفواتير: رُتّب أداؤها في السطر الافتراضي من التصريح، وهو محسوب. يعيد المكتب تصنيفه بفرض القيد.",
   "pme.fiche.barre": "وضعيتكم الجبائية",
   "pme.fiche.secCarte": "بطاقتكم",
   "pme.fiche.cartePasLue": "لم تُقرأ بعد",

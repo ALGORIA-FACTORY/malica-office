@@ -70,6 +70,18 @@ export interface PieceAControler {
 export interface ContexteControle {
   tenant: { nom: string; identifiantFiscal: string | null };
   typesDocument: Array<{ code: string; porteEcriture: boolean }>;
+  /**
+   * Ce que le titre imprimé dit de la nature de la pièce (`ref.titres_de_piece`),
+   * dans l'ordre du référentiel : le motif du titre (expression régulière, lue
+   * sans casse), le type de `ref.document_types` s'il existe, le statut et le
+   * refus — où « {titre} » est le titre lu.
+   */
+  titres: Array<{
+    motif: string;
+    documentType: string | null;
+    statut: "rejet" | "anomalie";
+    refus: string;
+  }>;
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
@@ -207,14 +219,6 @@ export function cleDeDoublon(piece: {
   };
 }
 
-/** Ce qu'un titre imprimé dit de la nature du document, quand ce n'est pas une facture. */
-const TITRES_NON_COMPTABLES: Array<[RegExp, string]> = [
-  [/pro\s*-?\s*forma/i, "une facture proforma"],
-  [/\bdevis\b/i, "un devis"],
-  [/bon\s+de\s+livraison/i, "un bon de livraison"],
-  [/bon\s+de\s+commande/i, "un bon de commande"],
-];
-
 function arithmetique(p: PieceAControler): ResultatControle {
   const m = p.montants;
   const preuves = { etat: m.etat, conventions: m.conventions, confiance: m.confiance };
@@ -261,6 +265,18 @@ function arithmetique(p: PieceAControler): ResultatControle {
           motif: `Base retenue depuis le pied de facture : la ligne « ${m.ligneNonLue} » ne se lit pas. À vérifier.`,
           preuves: { ...preuves, ligneNonLue: m.ligneNonLue },
         };
+      /*
+       * La valeur n'est décidée que par le séparateur décimal de la devise :
+       * lus autrement, les montants tiennent aussi (revue de la PR 144). On
+       * comptabilise la lecture de la convention, et on le dit.
+       */
+      if (m.parConvention)
+        return {
+          code: "coherence_arithmetique",
+          statut: "reserve",
+          motif: `Décidé par la convention : ${m.raison}. À vérifier.`,
+          preuves: { ...preuves, parConvention: true },
+        };
       return {
         code: "coherence_arithmetique",
         statut: "conforme",
@@ -279,6 +295,18 @@ function arithmetique(p: PieceAControler): ResultatControle {
         code: "coherence_arithmetique",
         statut: "anomalie",
         motif: `La facture ne tient pas : ${m.raison}.`,
+        preuves,
+      };
+    /*
+     * Des montants imprimés en négatif : un avoir, et non une facture qui ne
+     * tient pas (revue de la PR 144). Ses écritures ne sont pas conçues : rien
+     * ne se propose, et le cabinet le saisit.
+     */
+    case "avoir":
+      return {
+        code: "coherence_arithmetique",
+        statut: "anomalie",
+        motif: "Avoir : à saisir par le cabinet (montants imprimés en négatif).",
         preuves,
       };
     default:
@@ -338,16 +366,25 @@ function mentions(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       };
 }
 
+/*
+ * ============================================================ LE TITRE DIT LA NATURE
+ *
+ * Les titres vivaient ici, écrits en TypeScript, et l'AVOIR n'y était pas :
+ * une pièce titrée « AVOIR », aux montants positifs, se proposait en achat
+ * (revue de la PR 144). Ils vivent désormais au référentiel
+ * (`ref.titres_de_piece`) : un avoir se dit, et le cabinet le saisit — ses
+ * écritures ne sont pas encore conçues, et jamais un achat ne se propose.
+ */
 function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
-  for (const [motif, quoi] of TITRES_NON_COMPTABLES) {
-    if (p.titre && motif.test(p.titre))
-      return {
-        code: "nature_piece",
-        statut: "rejet",
-        motif: `Le document est ${quoi} (titre « ${p.titre} ») : ce n'est pas une pièce comptable, il ne se comptabilise pas.`,
-        preuves: { titre: p.titre, documentKind: p.documentKind },
-      };
-  }
+  const titre = p.titre;
+  const reconnu = titre ? ctx.titres.find((t) => new RegExp(t.motif, "iu").test(titre)) : undefined;
+  if (titre && reconnu)
+    return {
+      code: "nature_piece",
+      statut: reconnu.statut,
+      motif: reconnu.refus.replaceAll("{titre}", titre),
+      preuves: { titre, documentKind: p.documentKind, documentType: reconnu.documentType },
+    };
   if (!p.documentKind)
     return {
       code: "nature_piece",

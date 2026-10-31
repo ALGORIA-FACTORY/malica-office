@@ -172,8 +172,12 @@ export type VisionSelection = Omit<
   z.infer<typeof SelectionResponse>,
   "lines" | "articles" | "other_charges" | "currency"
 > & {
-  /** Toujours renseignée : celle de la pièce, sinon celle du dossier. */
-  currency: string;
+  /**
+   * Celle que la pièce imprime, ou null. Elle ne se remplace plus par celle du
+   * dossier ici : la devise de la pièce se décide à la relecture, confrontée
+   * aux marques imprimées (`deviseDeLaPiece`, revue de la PR 144).
+   */
+  currency: string | null;
   lines: VisionLine[];
   articles: VisionArticle[];
   other_charges: VisionCharge[];
@@ -767,13 +771,12 @@ async function releverSansRecollage(params: ParamsDeReleve): Promise<Releve> {
  */
 export function selectionDepuisReponse(
   reponse: unknown,
-  devise: string,
   tokens: readonly PageToken[],
 ): VisionSelection {
   const raw = SelectionResponse.parse(reponse);
   return {
     ...raw,
-    currency: raw.currency ?? devise,
+    currency: raw.currency ?? null,
     issuer: toRef(raw.issuer),
     document_date: toRef(raw.document_date),
     lines: raw.lines
@@ -867,8 +870,6 @@ export async function runVisionRead(params: {
   tiers?: ReadonlyArray<{ code: string; raisonSociale: string; nature: string }>;
   /** Le dossier lui-même : ce qui décide du sens de la pièce. */
   dossier?: { raisonSociale: string; identifiantFiscal: string | null };
-  /** La devise du dossier, retenue quand la pièce n'en imprime aucune. */
-  devise: string;
   /**
    * Un plan de jetons DEJA releve, qui remplace la passe 1.
    *
@@ -1019,7 +1020,7 @@ Tiers déjà enregistrés pour ce dossier. Ils servent à RECONNAÎTRE une raiso
     parseJsonLoose(res.answer);
     return res;
   });
-  const selection = selectionDepuisReponse(parseJsonLoose(pass2.answer), params.devise, tokens);
+  const selection = selectionDepuisReponse(parseJsonLoose(pass2.answer), tokens);
 
   return {
     tokens,
