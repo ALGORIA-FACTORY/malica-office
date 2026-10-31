@@ -25,7 +25,11 @@
  * couche de texte qui a perdu ses mots ; au jugement (`controles.ts`), pour ne
  * pas tirer la nature d'une pièce d'un titre qu'on n'a pas pu lire.
  */
-const PERDU = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f�ﭐ-﷿ﹰ-﻾]/u;
+// Les caractères de contrôle par leur classe Unicode (`\p{Cc}`), sauf la
+// tabulation et les fins de ligne, et sauf les contrôles C1 (U+0080–U+009F),
+// qui n'en faisaient pas partie : la même règle, sans caractère de contrôle
+// écrit dans l'expression (`no-control-regex`).
+const PERDU = /(?![\t\n\r\u0080-\u009f])[\p{Cc}�ﭐ-﷿ﹰ-﻾]/u;
 
 export function texteSansUnicode(texte: string): boolean {
   return PERDU.test(texte);

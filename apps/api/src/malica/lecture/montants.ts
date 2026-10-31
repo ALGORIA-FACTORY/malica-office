@@ -82,7 +82,7 @@ export function treillisMontant(texte: string, devise: DeviseLue, lecteur?: Lect
  * (`montant-imprime`) en rend toutes les lectures, et l'arithmétique de la
  * facture tranche, comme pour « , » et « . ».
  */
-export function litLesChiffresOrientaux(lecteur: Lecteur | undefined): boolean {
+function litLesChiffresOrientaux(lecteur: Lecteur | undefined): boolean {
   return lecteur === "pdf-text";
 }
 
