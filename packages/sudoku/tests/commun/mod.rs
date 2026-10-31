@@ -5,6 +5,8 @@
 //! du treillis TypeScript qui la fera en production.
 #![allow(dead_code)]
 
+pub mod jeux;
+
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::{json, Value};

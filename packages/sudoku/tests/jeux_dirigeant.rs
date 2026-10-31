@@ -11,11 +11,10 @@
 
 mod commun;
 
-use commun::donnees;
+use commun::jeux::{self, jeu, jeton, la_piece, par_variante};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
-use std::time::Instant;
 
 /// Code de la preuve des lignes dans la grille d'essai.
 const PREUVE: &str = "L01";
@@ -34,93 +33,24 @@ struct Verite {
     lignes: Option<Vec<LigneVraie>>,
 }
 
-/// Jeton compact : [page, ordinal, texte, x0, y0, x1, y1, [[v, forte]…], date].
-type JetonCompact = (u32, u32, String, f64, f64, f64, f64, Vec<(i64, u8)>, Option<String>);
-
-#[derive(Deserialize)]
-struct Piece {
-    id: String,
-    verite: Verite,
-    jetons: Vec<JetonCompact>,
-}
-
-fn jeton(j: &JetonCompact) -> Value {
-    let ms: Vec<Value> = j.7.iter().map(|(v, f)| json!({"v": v, "forte": *f == 1})).collect();
-    json!({"page": j.0, "ordinal": j.1, "texte": j.2, "x0": j.3, "y0": j.4, "x1": j.5, "y1": j.6,
-           "montants": ms, "date": j.8})
-}
+type Piece = jeux::Piece<Verite>;
 
 fn pieces() -> Vec<Piece> {
-    serde_json::from_str(&donnees("jeux_dirigeant_jetons.json")).unwrap()
+    jeux::pieces()
 }
 
 /// La grille facture et le pack livrés par la base ; `avec_lignes` ajoute la preuve L01.
 fn contexte(avec_lignes: bool) -> (Value, Value) {
-    let c: Value = serde_json::from_str(&donnees("grille_facture_en_base.json")).unwrap();
-    let mut grille = c["grille"].clone();
+    let (mut grille, pack) = jeux::en_base();
     if avec_lignes {
-        grille["preuves"].as_array_mut().unwrap().push(json!({
-            "code": PREUVE,
-            "regle": "Σ montants des lignes (q × PU × (1 − remise)) = total HT",
-            "genre": "arithmetique",
-            "statut": "defaut_a_valider",
-            "variante": null,
-            "expression": {"op": "lignes", "designation": "designation", "quantite": "quantite",
-                           "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht",
-                           "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}
-        }));
+        grille["preuves"].as_array_mut().unwrap().push(jeux::preuve_lignes(PREUVE));
     }
-    (grille, c["pack"].clone())
-}
-
-/// Chaque variante jouée seule (celles de `resoudreLaPiece`, apps/api/src/malica/lecture/sudoku.ts).
-fn par_variante(jetons: &[Value], grille: &Value, pack: &Value) -> Vec<(String, Value)> {
-    par_variante_chrono(jetons, grille, pack).0
+    (grille, pack)
 }
 
 /// Les variantes, et le temps passé dans le moteur seul (µs), hors construction du JSON d'entrée.
 fn par_variante_chrono(jetons: &[Value], grille: &Value, pack: &Value) -> (Vec<(String, Value)>, u128) {
-    let mut moteur = 0;
-    let preuves = grille["preuves"].as_array().unwrap();
-    let mut noms: Vec<String> = preuves.iter().filter_map(|p| p["variante"].as_str().map(String::from)).collect();
-    noms.sort();
-    noms.dedup();
-    let jouees = noms
-        .into_iter()
-        .map(|v| {
-            let mut g = grille.clone();
-            g["preuves"] = Value::Array(
-                preuves.iter().filter(|p| p["variante"].is_null() || p["variante"] == v.as_str()).cloned().collect(),
-            );
-            let e = json!({"jetons": jetons, "grille": g, "pack": pack}).to_string();
-            let t0 = Instant::now();
-            let s = malica_sudoku::solve(&e);
-            moteur += t0.elapsed().as_micros();
-            (v, serde_json::from_str(&s).unwrap())
-        })
-        .collect();
-    (jouees, moteur)
-}
-
-/// La combinaison des variantes, comme l'adaptateur : prouvée si toutes celles qui
-/// prouvent s'accordent sur HT et TVA par taux, ambiguë sinon.
-fn la_piece(jouees: &[(String, Value)]) -> Value {
-    let prouvees: Vec<&Value> = jouees.iter().map(|(_, o)| o).filter(|o| o["issue"] == "prouvee").collect();
-    if prouvees.is_empty() {
-        return jouees.iter().map(|(_, o)| o).find(|o| o["issue"] == "ambigue").unwrap_or(&jouees[0].1).clone();
-    }
-    let empreinte = |o: &Value| {
-        let tva: Vec<(Value, Value)> = o["champs"]["montant_tva_par_taux"]["instances"]
-            .as_array()
-            .map(|a| a.iter().map(|i| (i["taux"].clone(), i["valeur"].clone())).collect())
-            .unwrap_or_default();
-        (o["champs"]["total_ht"]["valeur"].clone(), tva)
-    };
-    let mut p = prouvees[0].clone();
-    if prouvees.iter().any(|o| empreinte(o) != empreinte(prouvees[0])) {
-        p["issue"] = json!("ambigue");
-    }
-    p
+    jeux::par_variante_avec(jetons, grille, pack, None)
 }
 
 fn mineures(x: f64) -> i64 {
@@ -157,10 +87,6 @@ fn sans_lignes(o: &Value) -> Value {
 
 /// Par jeu : prouvées justes, prouvées fausses, signalées, absentes, temps moteur (µs) avec et sans lignes.
 type Bilan = (u32, u32, u32, u32, Vec<u128>, Vec<u128>);
-
-fn jeu(id: &str) -> &str {
-    id.split('/').next().unwrap()
-}
 
 #[test]
 fn jeux_dirigeant_lignes_prouvees_sans_fausse_preuve() {

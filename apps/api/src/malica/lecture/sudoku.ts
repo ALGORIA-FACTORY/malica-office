@@ -37,6 +37,7 @@
 import type { DeviseLue } from "@malica/socle/montant-imprime";
 import {
   resoudre,
+  type Connus,
   type EntreeDuSudoku,
   type Grille,
   type JetonDuSudoku,
@@ -100,6 +101,8 @@ export function jetonsDuSudoku(plan: readonly PageToken[], devise: DeviseLue): J
 export interface ContexteDuSudoku {
   readonly grille: Grille;
   readonly pack: PackDuSudoku;
+  /** Les formes juridiques du pack : le nom d'un tiers se compare sans elles. */
+  readonly formesJuridiques: readonly string[];
 }
 
 /** Un nombre de la base en parties par million, sans flottant au bout. */
@@ -132,7 +135,7 @@ export async function lireLeContexteDuSudoku(
   }
   const grilleId = grilles[0]!.id;
 
-  const [champs, preuves, params, devises, taux, charges, formats] = await Promise.all([
+  const [champs, preuves, params, devises, taux, charges, formats, formes] = await Promise.all([
     db.query<{
       code: string;
       type: string;
@@ -185,6 +188,13 @@ export async function lireLeContexteDuSudoku(
         where pack_version_id = $1
           and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
         order by kind, valid_from desc`,
+      [packId],
+    ),
+    db.query<{ code: string }>(
+      `select distinct code from ref.formes_juridiques
+        where pack_version_id = $1
+          and valid_from <= current_date and (valid_to is null or valid_to >= current_date)
+        order by code`,
       [packId],
     ),
   ]);
@@ -242,6 +252,7 @@ export async function lireLeContexteDuSudoku(
       charges: [...parCode.values()],
       formats: Object.fromEntries(formats.rows.map((f) => [f.kind, f.pattern])),
     },
+    formesJuridiques: formes.rows.map((f) => f.code),
   };
 }
 
@@ -260,16 +271,19 @@ export function resoudreLaPiece(
   jetons: readonly JetonDuSudoku[],
   contexte: ContexteDuSudoku,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
+  connus?: Connus,
 ): SortieDuSudoku {
   const { grille, pack } = contexte;
+  const avecConnus = connus ? { connus } : {};
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
-  if (noms.length === 0) return moteur({ jetons, grille, pack });
+  if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
 
   const jouees = noms.map((variante) => ({
     variante,
     sortie: moteur({
       jetons,
       pack,
+      ...avecConnus,
       grille: {
         ...grille,
         preuves: grille.preuves.filter((p) => !p.variante || p.variante === variante),
@@ -374,8 +388,25 @@ export function selectionParLeSudoku(
         }))
       : selection.articles;
 
+  // L'anneau 2 : les parties prouvées par le matricule du dossier. Seul ce qui
+  // est PROUVÉ remplace la désignation de la chaîne ; un nom seulement
+  // « conforme » (tiers inconnu) ne remplace rien.
+  const parties = sortie.parties?.statut === "prouve" ? sortie.parties : null;
+  const prouve = (v: { statut: string; refs: readonly RefDeJeton[] } | null | undefined) =>
+    v && v.statut === "prouve" ? v.refs : undefined;
+  const mfEmetteur = parties ? ref(prouve(parties.emetteur.matricule)) : null;
+  const mfClient = parties ? ref(prouve(parties.client.matricule)) : null;
+  const nomEmetteur = parties ? plage(prouve(parties.emetteur.nom)) : null;
+  const references = {
+    ...selection.references,
+    ...(mfEmetteur ? { matricule_fiscal: mfEmetteur } : {}),
+    ...(mfClient ? { matricule_fiscal_client: mfClient } : {}),
+  };
+
   return {
     ...selection,
+    issuer: nomEmetteur ?? selection.issuer,
+    references,
     lines: lignes,
     articles,
     other_charges: droits,
@@ -525,6 +556,13 @@ export function creerLeSudoku(
     readonly packId: string;
     /** La devise du dossier, telle que `lireLesDevises` la rend ; absente, il ne lit pas. */
     readonly devise: DeviseLue | undefined;
+    /** Le dossier et ses tiers, tels que la base les connaît (anneau 2). */
+    readonly dossier: { readonly matricule: string | null; readonly raisonSociale: string };
+    readonly tiers: readonly {
+      readonly code: string;
+      readonly identifiantFiscal: string | null;
+      readonly raisonSociale: string;
+    }[];
   },
   mode: { readonly designe: boolean },
 ): Sudoku {
@@ -539,11 +577,25 @@ export function creerLeSudoku(
           GRILLE_DE_LA_LECTURE_CITEE,
           piece.devise.code,
         ]);
-        const { grille, pack } = await contexte;
-        const sortie = resoudreLaPiece(jetonsDuSudoku(lecture.tokens, piece.devise), {
-          grille,
-          pack,
-        });
+        const ctx = await contexte;
+        const { grille, pack } = ctx;
+        const connus: Connus = {
+          dossier: piece.dossier.matricule
+            ? { matricule: piece.dossier.matricule, raison_sociale: piece.dossier.raisonSociale }
+            : null,
+          tiers: piece.tiers.flatMap((t) =>
+            t.identifiantFiscal
+              ? [{ code: t.code, matricule: t.identifiantFiscal, raison_sociale: t.raisonSociale }]
+              : [],
+          ),
+          formes_juridiques: ctx.formesJuridiques,
+        };
+        const sortie = resoudreLaPiece(
+          jetonsDuSudoku(lecture.tokens, piece.devise),
+          ctx,
+          resoudre,
+          connus,
+        );
         const aInscrire = champsLusAInscrire(piece.pieceId, grille.code, sortie);
 
         const rendue: VisionRead =

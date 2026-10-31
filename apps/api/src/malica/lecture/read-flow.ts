@@ -240,6 +240,11 @@ export async function readPieceFlow(
       pieceId,
       packId: contexte.packId,
       devise: contexte.devises.find((d) => d.code === contexte.currency),
+      dossier: {
+        matricule: contexte.dossier.identifiantFiscal,
+        raisonSociale: contexte.dossier.raisonSociale,
+      },
+      tiers: contexte.tiers,
     },
     { designe: process.env["SUDOKU_DESIGNE"] === "1" },
   );

@@ -145,6 +145,13 @@ impl Triplet {
 
 /// Les rangées : jetons groupés par bande horizontale, triés de gauche à droite.
 fn rangees(jetons: &[Jeton]) -> Vec<Vec<usize>> {
+    rangees_selon(jetons, f64::min)
+}
+
+/// Les rangées, un jeton rejoignant la bande dont le premier jeton le recouvre de plus de
+/// la moitié de `hauteur(h_premier, h_jeton)` : `f64::min` pour les lignes d'articles,
+/// `f64::max` pour l'en-tête (un grand titre ne fusionne pas deux lignes de texte).
+pub(crate) fn rangees_selon(jetons: &[Jeton], hauteur: fn(f64, f64) -> f64) -> Vec<Vec<usize>> {
     let mut ordre: Vec<usize> = (0..jetons.len()).collect();
     ordre.sort_by(|&a, &b| {
         let (ja, jb) = (&jetons[a], &jetons[b]);
@@ -161,7 +168,7 @@ fn rangees(jetons: &[Jeton]) -> Vec<Vec<usize>> {
         let place = rangs.iter().rposition(|r| {
             let a = &jetons[r[0]];
             let ha = (a.y1 - a.y0).max(f64::EPSILON);
-            a.page == j.page && (a.y1.min(j.y1) - a.y0.max(j.y0)) > 0.5 * ha.min(hj)
+            a.page == j.page && (a.y1.min(j.y1) - a.y0.max(j.y0)) > 0.5 * hauteur(ha, hj)
         });
         match place {
             Some(k) => rangs[k].push(i),

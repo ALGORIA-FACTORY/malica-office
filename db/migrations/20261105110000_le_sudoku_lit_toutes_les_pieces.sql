@@ -97,7 +97,7 @@ create table if not exists ref.grille_preuves (
                      or (jsonb_typeof(expression) = 'object'
                          and expression ->> 'op' in ('somme', 'produit', 'taux', 'groupe_taux',
                                                      'charge', 'egal', 'format', 'ordre',
-                                                     'lignes'))),
+                                                     'lignes', 'parties'))),
   statut           text not null check (statut in ('defaut_a_valider', 'arrete', 'a_traduire')),
   -- Nulle : la preuve vaut pour toute la grille. Nommée : elle n'appartient qu'à
   -- cette variante (une même pièce s'imprime de deux façons, par exemple le
@@ -234,6 +234,43 @@ create trigger champs_lus_origine_serveur
   before insert on capture.champs_lus
   for each row execute function app.exiger_origine_serveur();
 
+-- ====================================== LES FORMES JURIDIQUES (anneau 2, noms)
+-- Le nom d'un tiers se compare sans sa forme juridique (« INFOTECH SOLUTIONS »
+-- et « INFOTECH SOLUTIONS SARL » sont le même tiers). Les formes sont une donnée
+-- du pack, pas du code (R4) ; défauts à valider (R10).
+create table if not exists ref.formes_juridiques (
+  id              uuid primary key default gen_random_uuid(),
+  pack_version_id uuid not null references ref.jurisdiction_packs(id),
+  code            text not null,
+  libelle         text not null,
+  statut          text not null default 'defaut_a_valider'
+                  check (statut in ('defaut_a_valider', 'arrete')),
+  valid_from      date not null,
+  valid_to        date,
+  unique (pack_version_id, code, valid_from)
+);
+alter table ref.formes_juridiques enable row level security;
+alter table ref.formes_juridiques force row level security;
+revoke all on table ref.formes_juridiques from public, anon, service_role;
+grant select on table ref.formes_juridiques to authenticated;
+drop policy if exists ref_formes_juridiques_sel on ref.formes_juridiques;
+create policy ref_formes_juridiques_sel on ref.formes_juridiques for select to authenticated using (true);
+create index if not exists formes_juridiques_pack_idx on ref.formes_juridiques (pack_version_id, code);
+
+insert into ref.formes_juridiques (pack_version_id, code, libelle, valid_from)
+select p.id, f.code, f.libelle, date '2026-01-01'
+  from ref.jurisdiction_packs p,
+       (values ('SA', 'Société anonyme'),
+               ('SARL', 'Société à responsabilité limitée'),
+               ('SUARL', 'Société unipersonnelle à responsabilité limitée'),
+               ('SNC', 'Société en nom collectif'),
+               ('SCS', 'Société en commandite simple'),
+               ('SCA', 'Société en commandite par actions'),
+               ('GIE', 'Groupement d''intérêt économique')) as f(code, libelle)
+ where p.jurisdiction = 'TN' and p.effective_from <= date '2026-01-01'
+   and (p.effective_to is null or p.effective_to >= date '2026-01-01')
+on conflict (pack_version_id, code, valid_from) do nothing;
+
 -- Seules les portes écrivent (20261104130000) : aucun droit d'écriture direct
 -- au client. La lecture du sudoku s'inscrit par cette porte, que le serveur
 -- seul appelle, pour une pièce que l'appelant peut modifier.
@@ -295,7 +332,7 @@ end $$;
 -- ================================================= 3. LES GRILLES (généré)
 --
 -- Généré depuis docs/sudoku/grille_tunisie.json (genere_le 2026-10-30) par
--- generer.py : 77 grilles, 2132 champs, 362 relations, 469 preuves dont 26 traduites.
+-- generer.py : 77 grilles, 2132 champs, 362 relations, 471 preuves dont 28 traduites.
 
 insert into ref.grilles (pack_version_id, code, famille, nom, document_type, statut, valid_from, valid_to)
 select p.id, v.code, v.famille, v.nom, dt.code, 'defaut_a_valider', date '2026-01-01', null
@@ -397,7 +434,7 @@ select g.id, v.parcelle, v.code, v.libelle, v.type, v.obligatoire, v.condition, 
     ('facture', 'En-tête émetteur', 'telephone_email_emetteur', 'Téléphone, fax, e-mail, site', 'texte', 'non', null::text, array['Tél', 'Fax', 'E-mail']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
     ('facture', 'En-tête émetteur', 'rib_emetteur', 'Coordonnées bancaires de l''émetteur (banque, RIB/IBAN)', 'identifiant', 'non', null::text, array['RIB', 'IBAN', 'Banque', 'Compte']::text[], '{}'::text[], null::text, null::text, 'pratique (donnée sensible : stocker chiffrée, ne jamais afficher en clair)', 'pratique'),
     ('facture', 'En-tête émetteur', 'code_tva_categorie_etablissement', 'Décomposition du matricule fiscal (clé, code TVA, catégorie, n° d''établissement secondaire)', 'identifiant', 'selon_cas', 'dérivé du matricule fiscal ; utile au recoupement des déclarations'::text, array['Code TVA', 'Code catégorie', 'N° établissement']::text[], '{}'::text[], null::text, null::text, 'Cahier des charges DGI 2007 (structure MF : matricule, clé, catégorie, établissement secondaire)', 'texte'),
-    ('facture', 'Destinataire (client)', 'nom_client', 'Identification du client (nom et prénom ou raison sociale)', 'texte', 'oui', null::text, array['Client', 'Doit', 'Facturé à', 'M.', 'Société']::text[], array['الحريف']::text[], null::text, null::text, 'Code TVA art. 18-II (« identification du client »)', 'texte'),
+    ('facture', 'Destinataire (client)', 'nom_client', 'Identification du client (nom et prénom ou raison sociale)', 'texte', 'oui', null::text, array['Client', 'Doit', 'Facturé à', 'M.', 'Société', 'Adressé à', 'Adressée à', 'Acheteur', 'Acquéreur', 'Bill to', 'Titulaire']::text[], array['الحريف']::text[], null::text, null::text, 'Code TVA art. 18-II (« identification du client »)', 'texte'),
     ('facture', 'Destinataire (client)', 'adresse_client', 'Adresse du client', 'adresse', 'oui', null::text, array['Adresse']::text[], array['العنوان']::text[], null::text, null::text, 'Code TVA art. 18-II', 'texte'),
     ('facture', 'Destinataire (client)', 'matricule_fiscal_client', 'Matricule fiscal du client', 'identifiant', 'selon_cas', 'client soumis à l''obligation de déclaration d''existence (art. 56 Code IRPP/IS)'::text, array['MF client', 'Matricule fiscal', 'Code TVA client']::text[], array['المعرف الجبائي']::text[], 'matricule_fiscal'::text, null::text, 'Code TVA art. 18-II (modifié art. 17 LFC 2014-54)', 'texte'),
     ('facture', 'Destinataire (client)', 'type_identifiant_client', 'Type d''identifiant du client (MF, CIN, carte de séjour, non-résident)', 'liste', 'selon_cas', 'listes déposées à la DGI (ventes en suspension) et facture électronique'::text, array['CIN', 'Carte de séjour', 'Passeport']::text[], '{}'::text[], null::text, null::text, 'Cahier des charges DGI 2007 (types 1 à 4) ; TEIF (INCERTAIN)', 'incertain'),
@@ -406,7 +443,7 @@ select g.id, v.parcelle, v.code, v.libelle, v.type, v.obligatoire, v.condition, 
     ('facture', 'Références', 'numero_facture', 'Numéro de facture, dans une série ininterrompue', 'identifiant', 'oui', null::text, array['Facture N°', 'N°', 'Numéro', 'Réf.']::text[], array['رقم الفاتورة']::text[], null::text, null::text, 'Code TVA art. 18-III', 'texte'),
     ('facture', 'Références', 'type_document', 'Intitulé du document (Facture, Note d''honoraires, Facture globale)', 'liste', 'oui', null::text, array['FACTURE', 'NOTE D''HONORAIRES', 'FACTURE GLOBALE']::text[], array['فاتورة']::text[], null::text, null::text, 'Code TVA art. 18-II, 18-II bis', 'texte'),
     ('facture', 'Références', 'date_operation', 'Date de l''opération', 'date', 'oui', null::text, array['Date', 'Date de livraison', 'Date de prestation']::text[], array['التاريخ']::text[], null::text, null::text, 'Code TVA art. 18-II (« la date de l''opération »)', 'texte'),
-    ('facture', 'Références', 'date_emission', 'Date d''émission de la facture', 'date', 'selon_cas', 'en pratique confondue avec la date de l''opération ; la loi vise la date de l''opération'::text, array['Date facture', 'Tunis, le', 'Le']::text[], array['التاريخ']::text[], null::text, null::text, 'pratique', 'pratique'),
+    ('facture', 'Références', 'date_emission', 'Date d''émission de la facture', 'date', 'selon_cas', 'en pratique confondue avec la date de l''opération ; la loi vise la date de l''opération'::text, array['Date facture', 'Tunis, le', 'Le', 'Date']::text[], array['التاريخ']::text[], null::text, null::text, 'pratique', 'pratique'),
     ('facture', 'Références', 'periode_prestation', 'Période couverte (prestations continues)', 'periode', 'non', null::text, array['Période', 'Du ... au ...']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
     ('facture', 'Références', 'ref_bon_commande', 'Référence du bon de commande client', 'identifiant', 'non', null::text, array['BC N°', 'Votre commande', 'Réf. commande']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
     ('facture', 'Références', 'ref_bon_livraison', 'Référence(s) du ou des bons de livraison', 'identifiant', 'non', null::text, array['BL N°', 'Bon de livraison']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
@@ -3907,6 +3944,8 @@ select g.id, v.code, v.regle, v.genre, v.expression, v.statut, v.variante
     ('facture', 'M02', 'FODEC imprimé = arrondi(total HT × taux du pack) (ref.fiscal_charges, FODEC) — preuve ajoutée par Malica ; une facture dont le FODEC ne porte que sur une partie des lignes n''est pas prouvée (signalée, jamais faussement prouvée)', 'arithmetique', '{"op": "charge", "montant": "montant_fodec", "code": "FODEC", "base": "total_ht"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M03', 'Variante TTC hors timbre : total_ttc = total HT + TVA + FODEC — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "total_ttc", "parties": ["total_ht", "montant_tva_par_taux", "montant_fodec?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
     ('facture', 'L01', 'Lignes d''articles : quantité × prix (− remise) = montant de ligne, et la somme des lignes = total HT (ou total brut HT) — preuve ajoutée par Malica, non bloquante pour les totaux', 'arithmetique', '{"op": "lignes", "designation": "designation", "quantite": "quantite", "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht", "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}'::jsonb, 'defaut_a_valider', null::text),
+    ('facture', 'E01', 'Les parties : un seul des matricules lus est celui du dossier ; il dit le sens (achat ou vente), l''autre est la contrepartie, rapprochée des tiers du dossier — preuve ajoutée par Malica, non bloquante', 'recoupement', '{"op": "parties", "emetteur": "matricule_fiscal_emetteur", "client": "matricule_fiscal_client", "nom_emetteur": "raison_sociale_emetteur", "nom_client": "nom_client", "numero": "numero_facture"}'::jsonb, 'defaut_a_valider', null::text),
+    ('facture', 'E02', 'Date d''émission ≤ date d''échéance — preuve ajoutée par Malica', 'format', '{"op": "ordre", "avant": "date_emission", "apres": "date_echeance"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'M04', 'Variante TTC hors timbre : net à payer = total TTC + droit de timbre — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "net_a_payer", "parties": ["total_ttc", "droit_timbre?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
     ('facture_electronique', 'P01', 'Le XML valide le schéma XSD TEIF officiel de la version déclarée', 'format', null::jsonb, 'a_traduire', null::text),
     ('facture_electronique', 'P02', 'La signature électronique est valide et le certificat non révoqué à la date de signature', 'format', null::jsonb, 'a_traduire', null::text),
@@ -4399,7 +4438,8 @@ begin
         select pr.expression ->> k as n
           from unnest(array['total', 'montant', 'base', 'total_base', 'total_montant',
                             'a', 'b', 'champ', 'avant', 'apres', 'exoneration',
-                            'designation', 'quantite', 'prix', 'remise', 'taux', 'total_brut']) k
+                            'designation', 'quantite', 'prix', 'remise', 'taux', 'total_brut',
+                            'emetteur', 'client', 'nom_emetteur', 'nom_client', 'numero']) k
          where pr.expression ? k
         union all
         select jsonb_array_elements_text(pr.expression -> k)

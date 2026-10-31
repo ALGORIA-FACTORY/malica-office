@@ -7,6 +7,7 @@
 //! charges, formats et libellés arrivent en entrée. Toute valeur rendue cite le
 //! jeton qui la porte (R2).
 
+mod entete;
 mod entree;
 mod lignes;
 mod modele;
@@ -62,6 +63,10 @@ pub struct Sortie {
     /// Les lignes d'articles (anneau 1), quand la grille porte une preuve `lignes`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lignes: Option<lignes::LignesSortie>,
+    /// Les parties de l'en-tête (anneau 2), quand la grille porte une preuve `parties`
+    /// et que l'entrée porte le dossier (`connus`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parties: Option<entete::PartiesSortie>,
 }
 
 fn erreur(m: String) -> String {
@@ -73,6 +78,7 @@ fn erreur(m: String) -> String {
         combinaisons: 0,
         raison: Some(m),
         lignes: None,
+        parties: None,
     };
     serde_json::to_string(&s).unwrap_or_default()
 }
@@ -314,6 +320,38 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         champs.insert(champ.code.clone(), sortie);
     }
 
+    // ---------- L'anneau 2 : l'en-tête, par ses relations avec la base du client ----------
+    // Avant les preuves `format` et `ordre`, qui lisent les champs qu'il établit.
+    let mut sortie_parties = None;
+    let mut statuts_parties: Vec<(String, &str)> = Vec::new();
+    let mut une_preuve_parties = false;
+    for p in &grille.preuves {
+        let Some(e) = p.expression.as_ref().filter(|e| e.get("op").and_then(|o| o.as_str()) == Some(entete::OP)) else {
+            continue;
+        };
+        if p.statut.as_deref() == Some("a_traduire") {
+            continue;
+        }
+        let st = if une_preuve_parties {
+            // une seule preuve de parties par grille
+            "non_evaluable"
+        } else {
+            une_preuve_parties = true;
+            match entete::lire_op(grille, e) {
+                Ok(op) => {
+                    let r = entete::prouver(&op, entree, &mut champs);
+                    for (c, v) in r.lus {
+                        lus.insert(c, v);
+                    }
+                    sortie_parties = r.parties;
+                    r.statut
+                }
+                Err(_) => "non_evaluable",
+            }
+        };
+        statuts_parties.push((p.code.clone(), st));
+    }
+
     // ---------- Les preuves ----------
     let mut preuves: BTreeMap<String, String> = BTreeMap::new();
     for i in modele.non_traduites.keys() {
@@ -361,6 +399,9 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         };
         preuves.insert(grille.preuves[*p].code.clone(), st.into());
     }
+    for (code, st) in statuts_parties {
+        preuves.insert(code, st.into());
+    }
 
     // ---------- L'anneau 1 : les lignes, sur la sortie du centre, sans la modifier ----------
     let mut sortie_lignes = None;
@@ -395,6 +436,7 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
         combinaisons: s.combinaisons,
         raison,
         lignes: sortie_lignes,
+        parties: sortie_parties,
     })
 }
 

@@ -46,6 +46,8 @@ import type { VisionRead } from "./vision.ts";
  */
 
 const devise = deviseDEssai(3);
+/** Le dossier de la facture réelle du jeu d'or : son matricule dit le sens. */
+const DOSSIER_D_OR = { matricule: JEU_D_OR[0]!.matriculeDossier, raisonSociale: "ALGORIA FACTORY" };
 
 describe("sudoku — les jetons du plan", () => {
   const plan: PageToken[] = [
@@ -177,7 +179,11 @@ describe("sudoku — la sélection rendue", () => {
         throw new Error("hors base");
       },
     };
-    const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise }, { designe: true });
+    const sudoku = creerLeSudoku(
+      api,
+      { pieceId: "p", packId: "k", devise, dossier: DOSSIER_D_OR, tiers: [] },
+      { designe: true },
+    );
     const lecture = { tokens: [], selection: cas.designation } as unknown as VisionRead;
     // Le contexte est illisible : la lecture ressort à l'identique, rien ne s'inscrit.
     assert.equal(await sudoku.lire(lecture), lecture);
@@ -308,6 +314,31 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
       const montants = (x: ReturnType<typeof extrait>) =>
         JSON.stringify({ t: x["totals"], l: x["lines"], c: x["other_charges"] });
       assert.equal(montants(extrait(sel)), montants(extrait(cas.designation)));
+      // L'anneau 2 : le sens ne se prouve que par un indice imprimé (« client »,
+      // « émetteur »…) ; la géométrie seule ne tranche pas (mesuré : 4 sens faux sur
+      // les mises en page à colonne latérale). Sur cette facture, aucun indice :
+      // les parties sont signalées, et la sélection garde les matricules de la chaîne.
+      // Prouvées, elles devraient être exactement celles du jeu d'or.
+      const avecDossier = resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte, undefined, {
+        dossier: { matricule: cas.matriculeDossier!, raison_sociale: null },
+        tiers: [],
+        formes_juridiques: contexte.formesJuridiques,
+      });
+      const selParties = selectionParLeSudoku(
+        cas.designation,
+        avecDossier,
+        contexte.pack.charges.map((c) => c.code),
+        champsDesCharges(contexte.grille),
+      );
+      const refs = extrait(selParties)["references"] as Record<string, unknown>;
+      if (avecDossier.parties?.statut === "prouve") {
+        assert.equal(avecDossier.parties.sens, "achat");
+      }
+      assert.equal(refs["matricule_fiscal"], cas.attendu["references.matricule_fiscal"]);
+      assert.equal(
+        refs["matricule_fiscal_client"],
+        cas.attendu["references.matricule_fiscal_client"],
+      );
       // L'anneau 1 : les articles prouvés valent ceux du jeu d'or, montant par montant.
       assert.equal(o.lignes?.statut, "prouve", `${cas.nom} : lignes ${o.lignes?.statut}`);
       for (const [chemin, attendu] of Object.entries(cas.attendu)) {
@@ -337,7 +368,11 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
           throw new Error("hors base");
         },
       };
-      const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise }, { designe });
+      const sudoku = creerLeSudoku(
+        api,
+        { pieceId: "p", packId: "k", devise, dossier: DOSSIER_D_OR, tiers: [] },
+        { designe },
+      );
       const rendue = await sudoku.lire(lecture);
       await sudoku.inscrire(rendue);
       return { rendue, inscrits: inscrits as ChampsLusAInscrire[] };
