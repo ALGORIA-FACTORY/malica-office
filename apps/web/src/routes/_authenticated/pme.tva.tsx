@@ -162,9 +162,8 @@ function PmeTva() {
    * la lit. Un dossier non assujetti n'en dépose pas.
    */
   const declaration = nonAssujetti ? [] : (tva?.declaration ?? []);
-  /** La ligne de la déclaration qui reçoit un seau déductible : son libellé nomme la nature. */
-  const ligneDeLaNature = (nature: string | null) =>
-    declaration.find((l) => l.sens === "deductible" && l.nature === nature);
+  /** La ligne de la déclaration qui a reçu un seau : son libellé nomme la nature. */
+  const ligneDuSeau = (code: string | null) => declaration.find((l) => l.code === code);
   const parDefaut = tva?.par_defaut.length ?? 0;
 
   /**
@@ -363,8 +362,8 @@ function PmeTva() {
                   </b>
                   <span>
                     {t("cab.immo.base")} {montant(seau.base, locale)}
-                    {cote === "deductible" && ligneDeLaNature(seau.nature)
-                      ? ` · ${ligneDeLaNature(seau.nature)!.label}`
+                    {cote === "deductible" && ligneDuSeau(seau.ligne)
+                      ? ` · ${ligneDuSeau(seau.ligne)!.label}`
                       : null}
                   </span>
                 </span>

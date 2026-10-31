@@ -7,6 +7,10 @@ export const EUR: CurrencyDef = { code: "EUR", decimals: 2 };
 /** Une déclaration d'essai : une ligne par sens, toutes natures confondues. */
 export const DECLARATION_ESSAI = {
   nature_par_defaut: "AUTRE",
+  affectations: [
+    { sens: "collectee" as const, nature: "AUTRE", ligne: "COL" },
+    { sens: "deductible" as const, nature: "AUTRE", ligne: "DED" },
+  ],
   lignes: [
     {
       code: "COL",

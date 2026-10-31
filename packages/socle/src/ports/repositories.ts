@@ -321,7 +321,12 @@ export interface ReferentialRepository {
    * Les lignes de la déclaration de TVA en vigueur au jour dit, libellés
    * traduits, et la nature qui reçoit une ligne sans nature attribuée.
    */
-  declarationTva(packId: string, jour: string, locale?: string): Promise<DeclarationTva>;
+  declarationTva(
+    packId: string,
+    dossierId: string,
+    jour: string,
+    locale?: string,
+  ): Promise<DeclarationTva>;
   /** Droits et taxes hors TVA du pack (droit de timbre…). */
   /** Les droits hors TVA du pack, libelle traduit. */
   fiscalCharges(packId: string, locale?: string): Promise<FiscalCharge[]>;
@@ -584,6 +589,19 @@ export interface ParametrageRepository {
     porteeId: string;
     roleCode: string;
   }): Promise<void>;
+  /**
+   * Arrête (ou confirme) les lignes de la déclaration de TVA, pour le cabinet
+   * ou pour un dossier qu'il supervise (R10). `ligne: null` rend au pack.
+   */
+  arreterDeclarationTva(input: {
+    cabinetId: string;
+    portee: "cabinet" | "dossier";
+    porteeId: string;
+    packId: string;
+    depuis: string;
+    affectations: Array<{ sens: SensDeTva; nature: string; ligne: string | null }>;
+    motif?: string | null;
+  }): Promise<{ decisions: number }>;
 }
 
 // ------------------------------------------------------------- intégrations
@@ -700,8 +718,24 @@ export interface DeclarationTva {
     /** `null` : la ligne reçoit toutes les natures de son sens. */
     nature: string | null;
     ordinal: number;
-    /** R10 : la ligne est un défaut livré, à confirmer par un expert-comptable. */
+    /**
+     * R10 : un défaut livré range une TVA sur cette ligne sans qu'un
+     * expert-comptable l'ait arrêtée — « à confirmer ».
+     */
     incertain: boolean;
+  }>;
+  /** Les natures, dans l'ordre du référentiel, et leur nom traduit. */
+  natures: Array<{ code: string; label: string }>;
+  /**
+   * Pour chaque (sens, nature), la ligne qui la reçoit et qui l'a décidé : le
+   * dossier, son cabinet, ou le pack (`app.declaration_tva`, R10).
+   */
+  affectations: Array<{
+    sens: SensDeTva;
+    nature: string;
+    ligne: string | null;
+    origine: "dossier" | "cabinet" | "pack";
+    decideLe: string | null;
   }>;
 }
 

@@ -15,6 +15,11 @@ import { chiffresDeLaTva } from "./rediger.ts";
 
 const declaration: DeclarationTva = {
   natureParDefaut: "AUTRE",
+  natures: [{ code: "AUTRE", label: "Autre" }],
+  affectations: [
+    { sens: "collectee", nature: "AUTRE", ligne: "C", origine: "pack", decideLe: null },
+    { sens: "deductible", nature: "AUTRE", ligne: "D", origine: "pack", decideLe: null },
+  ],
   lignes: [
     { code: "C", label: "C", sens: "collectee", nature: null, ordinal: 1, incertain: true },
     { code: "D", label: "D", sens: "deductible", nature: null, ordinal: 2, incertain: true },

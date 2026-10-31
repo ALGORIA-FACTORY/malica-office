@@ -54,6 +54,13 @@ const taux = [
 /** Un référentiel d'essai : ses codes et ses libellés ne sont écrits nulle part ailleurs. */
 const declaration: DeclarationTva = {
   natureParDefaut: "AUTRE",
+  natures: [{ code: "AUTRE", label: "Autre" }],
+  affectations: [
+    { sens: "collectee", nature: "IMMO", ligne: "L_COL", origine: "pack", decideLe: null },
+    { sens: "collectee", nature: "AUTRE", ligne: "L_COL", origine: "pack", decideLe: null },
+    { sens: "deductible", nature: "IMMO", ligne: "L_IMMO", origine: "pack", decideLe: null },
+    { sens: "deductible", nature: "AUTRE", ligne: "L_AUTRE", origine: "pack", decideLe: null },
+  ],
   lignes: [
     {
       code: "L_COL",
@@ -247,5 +254,26 @@ describe("la déclaration sépare la TVA des immobilisations", () => {
     expect(r.sans_ligne).toEqual([
       { sens: "collectee", tax_code: "TVA19", nature: "AUTRE", vat: "19.000" },
     ]);
+  });
+
+  it("l'affectation arrêtée par le cabinet range la nature sur SA ligne (R10)", () => {
+    const r = tvaDesExtraits({
+      period: "2026-10",
+      currency: { code: "TND", decimals: 3 },
+      taux,
+      declaration: {
+        ...declaration,
+        affectations: declaration.affectations.map((a) =>
+          a.sens === "deductible" && a.nature === "IMMO"
+            ? { ...a, ligne: "L_AUTRE", origine: "dossier" as const }
+            : a,
+        ),
+      },
+      rows: [{ pieceId: "a", extract: extrait([ligne("TVA19", "1000.000", "190.000", IMMO)]) }],
+    });
+    expect(ligneDe(r, "L_AUTRE")?.vat).toBe("190.000");
+    expect(ligneDe(r, "L_IMMO")?.vat).toBe("0.000");
+    expect(r.deductible[0]!.ligne).toBe("L_AUTRE");
+    expect(r.par_defaut).toEqual([]);
   });
 });

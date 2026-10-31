@@ -70,7 +70,7 @@ export function useTvaPeriod(period: string): {
   });
 
   // Les lignes de la déclaration en vigueur à la fin du mois.
-  const declaration = useDeclarationTva(pme.packId, to);
+  const declaration = useDeclarationTva(pme.packId, pme.tenantId, to);
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!extracts.data || !rates.data || !declaration.data || decimales === null) return null;

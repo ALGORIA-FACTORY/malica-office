@@ -226,6 +226,17 @@ async function closLeRetour(db: Requete, pieceId: string, ecritureId: string): P
  * colonnes propres, que `lusParLaPorte` nomme), puis `app.extraits_de_la_tva` lit toutes les pièces en
  * un appel. Revue de #145 : la porte appelée PAR LIGNE, avant le
  * `distinct on`, coûtait 4,5 s pour 200 pièces contre 0,54 s sans elle.
+ *
+ * Ce qui reste (mesuré le 31 octobre 2026, 200 pièces dont 40 forcées) :
+ * 1,2 s contre 0,41 s pour la sélection nue. L'écart est, pour l'essentiel,
+ * les montants du cabinet (`app.montants_pris_en_charge`, #140) : environ
+ * 9 ms par pièce FORCÉE, que la vue `pieces_qui_comptent_v` calcule déjà une
+ * fois pour dire si l'écriture se lit, et que la porte recalcule pour en
+ * lire les lignes. Les figer à la prise en charge, dans une table, a été
+ * écarté : leur rangement dépend du paramétrage du cabinet et du dossier
+ * (`parametrage.role_bindings`, R10), qui se change APRÈS la prise en charge
+ * — une copie figée contredirait la vue, la fiche de la PME et « Vos
+ * charges ». Le coût suit les pièces forcées, pas le nombre de pièces.
  */
 const AVEC_LEURS_EXTRAITS = "with choisies as (";
 const lusParLaPorte = (colonnes: string) => `),

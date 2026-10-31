@@ -180,6 +180,7 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
     const declaration = (await cabinetFait(
       "referentiel.declarationTva",
       packId,
+      pme,
       jour,
       "fr",
     )) as DeclarationTva;
@@ -408,6 +409,7 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
       const d = (await pmeFait(
         "referentiel.declarationTva",
         packId,
+        pme,
         jour,
         locale,
       )) as DeclarationTva;
@@ -420,7 +422,13 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
         locale,
       );
     }
-    const ar = (await pmeFait("referentiel.declarationTva", packId, jour, "ar")) as DeclarationTva;
+    const ar = (await pmeFait(
+      "referentiel.declarationTva",
+      packId,
+      pme,
+      jour,
+      "ar",
+    )) as DeclarationTva;
     assert.match(ar.lignes[0]!.label, /[؀-ۿ]/);
     // Chaque langue rend SA traduction, jamais le français par repli.
     const { rows: libelles } = await admin.query<{ key: string; locale: string; value: string }>(
@@ -430,6 +438,7 @@ describe("la TVA des immobilisations se déclare à part", { skip: !BASE_CONFIGU
       const d = (await pmeFait(
         "referentiel.declarationTva",
         packId,
+        pme,
         jour,
         locale,
       )) as DeclarationTva;

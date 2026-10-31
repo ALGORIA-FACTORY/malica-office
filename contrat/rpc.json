@@ -251,6 +251,7 @@
     "valider"
   ],
   "parametrage": [
+    "arreterDeclarationTva",
     "calendrierCabinet",
     "creerObligationPropre",
     "definirFuseauDuCabinet",

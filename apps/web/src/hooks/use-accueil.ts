@@ -174,7 +174,7 @@ export function useAccueil(periode: string): Accueil {
     () => moisGlissants(periode, FENETRE).map((p) => monthBounds(p).to),
     [periode],
   );
-  const declarations = useDeclarationsTva(pme.packId, finsDeMois);
+  const declarations = useDeclarationsTva(pme.packId, pme.tenantId, finsDeMois);
 
   const lignes = useQuery({
     queryKey: ["accueil-lignes", pme.tenantId, periode],

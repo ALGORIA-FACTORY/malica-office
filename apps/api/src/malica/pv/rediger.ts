@@ -154,7 +154,7 @@ async function rassemblerLesChiffres(
     // Les lignes de la déclaration, au référentiel : le calcul de la TVA est
     // celui de tous les écrans (`tvaDesExtraits`), et il les exige.
     pack
-      ? api.rpc<DeclarationTva>("referentiel", "declarationTva", [pack.id, fin])
+      ? api.rpc<DeclarationTva>("referentiel", "declarationTva", [pack.id, client.tenantId, fin])
       : Promise.resolve(null),
     // Les décimales viennent du pack, jamais d'une table de devises écrite
     // en TypeScript (R4). Le dépôt lève une erreur explicite si le paramètre

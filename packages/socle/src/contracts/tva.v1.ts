@@ -15,6 +15,8 @@ export const TvaBucket = z.object({
    * `null` sur un seau d'avant la nature (ajout compatible, 3 novembre 2026).
    */
   nature: z.string().nullable().default(null),
+  /** La ligne de la déclaration qui a reçu ce seau (`null` : aucune, voir `sans_ligne`). */
+  ligne: z.string().nullable().default(null),
   rate: decimalString,
   base: decimalString,
   vat: decimalString,

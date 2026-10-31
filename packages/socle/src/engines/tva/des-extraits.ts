@@ -59,6 +59,7 @@ export function tvaDesExtraits(args: {
     declaration: {
       nature_par_defaut: args.declaration.natureParDefaut,
       lignes: args.declaration.lignes,
+      affectations: args.declaration.affectations,
     },
     achats,
     ventes,

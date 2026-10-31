@@ -11,6 +11,8 @@ import type { SensDeTva, TvaV1 } from "../../contracts/tva.v1.ts";
  */
 export interface DeclarationInput {
   nature_par_defaut: string;
+  /** La ligne qui reçoit chaque (sens, nature) : la seule règle de rangement (R10). */
+  affectations: ReadonlyArray<{ sens: SensDeTva; nature: string; ligne: string | null }>;
   lignes: ReadonlyArray<{
     code: string;
     label: string;
@@ -30,7 +32,14 @@ export interface TvaInput {
   ventes: ReadonlyArray<{ item_id: string | null; extract: ExtractV1 }>;
 }
 
-type Seau = { tax_code: string; nature: string; rate: string; base: string; vat: string };
+type Seau = {
+  tax_code: string;
+  nature: string;
+  rate: string;
+  base: string;
+  vat: string;
+  ligne: string | null;
+};
 
 /**
  * Un seau par taux ET par nature. La nature d'une ligne est la sienne, ou la
@@ -65,6 +74,7 @@ function bucketize(
         rate: rate.rate,
         base: "0",
         vat: "0",
+        ligne: null,
       };
       cur.base = D(cur.base).plus(line.base_ht).toString();
       cur.vat = D(cur.vat).plus(line.vat_amount).toString();
@@ -89,9 +99,13 @@ function remplirLaDeclaration(
   dec: number,
 ): TvaV1["declaration"] {
   const lignes = [...declaration.lignes].sort((a, b) => a.ordinal - b.ordinal);
-  const ligneDe = (sens: SensDeTva, nature: string) =>
-    lignes.find((l) => l.sens === sens && l.nature === nature) ??
-    lignes.find((l) => l.sens === sens && l.nature === null);
+  // L'affectation du référentiel (dossier, cabinet, pack) : jamais devinée ici.
+  const ligneDe = (sens: SensDeTva, nature: string) => {
+    const code = declaration.affectations.find(
+      (a) => a.sens === sens && a.nature === nature,
+    )?.ligne;
+    return lignes.find((l) => l.code === code && l.sens === sens);
+  };
   const cumul = new Map(lignes.map((l) => [l.code, { base: D(0), vat: D(0) }]));
   for (const sens of ["collectee", "deductible"] as const) {
     for (const seau of seaux[sens]) {
@@ -124,6 +138,7 @@ function remplirLaDeclaration(
         });
         continue;
       }
+      seau.ligne = ligne.code;
       const c = cumul.get(ligne.code)!;
       c.base = c.base.plus(seau.base);
       c.vat = c.vat.plus(seau.vat);

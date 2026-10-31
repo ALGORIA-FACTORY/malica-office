@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { ecrireDossierCourant } from "@/components/malica/dossier-courant";
 import { Aide } from "@/components/malica/aide";
+import { ArreterLaDeclaration } from "@/components/malica/arreter-la-declaration";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useSyntheseClient } from "@/hooks/use-synthese-client";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -524,7 +525,7 @@ function CabinetClient() {
            * 2026) : la TVA des immobilisations à part. Les lignes et leurs
            * libellés viennent du référentiel ; le calcul est celui de la PME.
            */}
-          {tva && tva.declaration.length > 0 ? (
+          {synthese.declaration && synthese.pack ? (
             <section className="border border-border bg-card p-4">
               <p className="flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {t("tva.declaration.titre")}
@@ -532,40 +533,55 @@ function CabinetClient() {
                   titre={t("tva.declaration.titre")}
                   paragraphes={[
                     { texte: t("tva.declaration.aide") },
-                    ...(tva.declaration.some((l) => l.incertain)
+                    ...(synthese.declaration.lignes.some((l) => l.incertain)
                       ? [{ texte: t("tva.declaration.aConfirmer") }]
                       : []),
                   ]}
                 />
               </p>
-              <ul className="mt-3 divide-y divide-border">
-                {tva.declaration.map((l) => (
-                  <li key={l.code} className="flex items-baseline justify-between gap-3 py-2">
-                    <span className="min-w-0 text-[13px]">{l.label}</span>
-                    <span className="num shrink-0 text-[13px]">{montant(l.vat, locale)}</span>
-                  </li>
-                ))}
-              </ul>
-              {tva.par_defaut.length > 0 ? (
-                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span aria-hidden className="h-[7px] w-[7px] shrink-0 bg-signal-warn" />
-                  {t("tva.declaration.parDefaut", { count: tva.par_defaut.length })}
-                  <Aide
-                    titre={t("tva.declaration.parDefaut", { count: tva.par_defaut.length })}
-                    paragraphes={[{ texte: t("tva.declaration.parDefaut.aide") }]}
-                  />
-                </p>
+              {tva ? (
+                <>
+                  <ul className="mt-3 divide-y divide-border">
+                    {tva.declaration.map((l) => (
+                      <li key={l.code} className="flex items-baseline justify-between gap-3 py-2">
+                        <span className="min-w-0 text-[13px]">{l.label}</span>
+                        <span className="num shrink-0 text-[13px]">{montant(l.vat, locale)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {tva.par_defaut.length > 0 ? (
+                    <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span aria-hidden className="h-[7px] w-[7px] shrink-0 bg-signal-warn" />
+                      {t("tva.declaration.parDefaut", { count: tva.par_defaut.length })}
+                      <Aide
+                        titre={t("tva.declaration.parDefaut", { count: tva.par_defaut.length })}
+                        paragraphes={[{ texte: t("tva.declaration.parDefaut.aide") }]}
+                      />
+                    </p>
+                  ) : null}
+                  {tva.sans_ligne.length > 0 ? (
+                    <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span aria-hidden className="h-[7px] w-[7px] shrink-0 bg-signal-warn" />
+                      {t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
+                      <Aide
+                        titre={t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
+                        paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
+                      />
+                    </p>
+                  ) : null}
+                </>
               ) : null}
-              {tva.sans_ligne.length > 0 ? (
-                <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span aria-hidden className="h-[7px] w-[7px] shrink-0 bg-signal-warn" />
-                  {t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
-                  <Aide
-                    titre={t("tva.declaration.sansLigne", { count: tva.sans_ligne.length })}
-                    paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
-                  />
-                </p>
-              ) : null}
+              {/*
+               * Le cabinet arrête — ou confirme — la ligne de chaque nature,
+               * même un mois sans TVA (R10). La base dit qui en a le droit.
+               */}
+              <ArreterLaDeclaration
+                cabinetId={org.id}
+                dossierId={clientId}
+                packId={synthese.pack.id}
+                periode={periode}
+                declaration={synthese.declaration}
+              />
             </section>
           ) : null}
 

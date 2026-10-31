@@ -21,7 +21,7 @@ import { useI18n } from "@/i18n";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { useDeclarationTva } from "./use-declaration-tva";
 import { office } from "@/verticals/malica-office/composition";
-import type { ClientSummary } from "@malica/socle/ports/repositories";
+import type { ClientSummary, DeclarationTva } from "@malica/socle/ports/repositories";
 import type { PnlV1 } from "@malica/socle/contracts/pnl.v1";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
@@ -32,6 +32,8 @@ export interface SyntheseClient {
   clotureConnue: boolean;
   pnl: PnlV1 | null;
   tva: TvaV1 | null;
+  /** Les lignes de la déclaration du dossier et qui les a arrêtées (R10). */
+  declaration: DeclarationTva | null;
   chargement: boolean;
   /** La première lecture qui a échoué, ou rien : l'écran la dit au lieu d'afficher un vide. */
   erreur: unknown;
@@ -115,7 +117,7 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
     });
   }, [lignes.data, plan.data, periode, devise, decimales, classes.data]);
 
-  const declaration = useDeclarationTva(pack.data?.id, fin);
+  const declaration = useDeclarationTva(pack.data?.id, tenantId, fin);
 
   const tva = useMemo<TvaV1 | null>(() => {
     if (!devise || !extraits.data || !taux.data || extraits.data.length === 0) return null;
@@ -140,6 +142,7 @@ export function useSyntheseClient(client: ClientSummary | null, periode: string)
     clotureConnue: Boolean(fiche.data?.clotureExercice),
     pnl,
     tva,
+    declaration: declaration.data ?? null,
     // Une lecture en échec n'est plus « en cours » : l'écran montre l'erreur, pas le chargement.
     chargement: erreur === null && (lignes.isPending || extraits.isPending),
     erreur,
