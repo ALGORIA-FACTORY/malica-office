@@ -78,6 +78,34 @@ impl<'a> Plan<'a> {
         Plan { jetons, normes, gauche, dessus }
     }
 
+    /// Un repère est-il lu sur une RANGÉE qui porte un montant, à gauche de ce montant ?
+    ///
+    /// C'est la présence d'un champ facultatif : « Retenue à la source … -153,153 »
+    /// l'annonce, une mention de bas de page (« retenue à la source applicable au-delà
+    /// de 1 000 DT ») ou un titre (« Facture d'acompte ») ne l'annonce pas — mesuré le
+    /// 31/10/2026 sur le jeu de 100 factures (B-16, C-19).
+    pub fn annonce_chiffree(&self, reperes: &[String]) -> bool {
+        if reperes.is_empty() {
+            return false;
+        }
+        self.jetons.iter().enumerate().any(|(i, a)| {
+            if a.montants.is_empty() {
+                return false;
+            }
+            let ha = (a.y1 - a.y0).max(f64::EPSILON);
+            self.jetons.iter().enumerate().any(|(k, b)| {
+                if k == i || b.page != a.page || b.x0 >= a.x0 {
+                    return false;
+                }
+                let hb = (b.y1 - b.y0).max(f64::EPSILON);
+                let recouvre_v = (a.y1.min(b.y1) - a.y0.max(b.y0)) / ha.min(hb);
+                recouvre_v > 0.5 && reperes.iter().any(|r| self.normes[k].contains(r.as_str()))
+            }) || reperes.iter().any(|r| self.normes[i].contains(r.as_str()))
+                // ou en tête de sa colonne, juste au-dessus
+                || self.dessus[i].is_some_and(|k| reperes.iter().any(|r| self.normes[k].contains(r.as_str())))
+        })
+    }
+
     /// Un repère est-il lu quelque part sur la pièce ?
     pub fn annonce(&self, reperes: &[String]) -> bool {
         !reperes.is_empty() && self.normes.iter().any(|t| reperes.iter().any(|r| t.contains(r.as_str())))

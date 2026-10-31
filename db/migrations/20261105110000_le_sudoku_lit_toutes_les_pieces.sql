@@ -332,7 +332,7 @@ end $$;
 -- ================================================= 3. LES GRILLES (généré)
 --
 -- Généré depuis docs/sudoku/grille_tunisie.json (genere_le 2026-10-30) par
--- generer.py : 77 grilles, 2132 champs, 362 relations, 471 preuves dont 28 traduites.
+-- generer.py : 77 grilles, 2133 champs, 362 relations, 471 preuves dont 28 traduites.
 
 insert into ref.grilles (pack_version_id, code, famille, nom, document_type, statut, valid_from, valid_to)
 select p.id, v.code, v.famille, v.nom, dt.code, 'defaut_a_valider', date '2026-01-01', null
@@ -467,6 +467,7 @@ select g.id, v.parcelle, v.code, v.libelle, v.type, v.obligatoire, v.condition, 
     ('facture', 'Totaux', 'montant_en_lettres', 'Montant arrêté en toutes lettres', 'texte', 'non', null::text, array['Arrêtée la présente facture à la somme de']::text[], '{}'::text[], null::text, null::text, 'pratique tunisienne courante (« Arrêtée la présente facture à la somme de »)', 'pratique'),
     ('facture', 'Totaux', 'devise', 'Devise (TND par défaut ; devise étrangère à l''export)', 'liste', 'non', null::text, array['DT', 'TND', 'EUR', 'USD']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
     ('facture', 'Totaux', 'acomptes_deduits', 'Avances ou acomptes déjà facturés et déduits', 'montant', 'non', null::text, array['Acompte', 'Avance']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
+    ('facture', 'Totaux', 'montant_retenue_source', 'Montant de la retenue à la source déduite', 'montant', 'selon_cas', 'Quand la retenue à la source est déduite sur la facture (imprimée en négatif)'::text, array['Retenue à la source', 'Retenue']::text[], '{}'::text[], null::text, null::text, 'pratique (champ ajouté par Malica le 31/10/2026 : le catalogue n''a que la mention ; le montant ferme le net à payer — à valider par l''expert)', 'pratique'),
     ('facture', 'Taxes', 'base_tva_par_taux', 'Base imposable par taux de TVA', 'montant', 'oui', null::text, array['Base', 'Assiette', 'Base TVA']::text[], '{}'::text[], null::text, 'taux_tva'::text, 'Code TVA art. 18-II (taux et montants) ; détail par taux = pratique', 'pratique'),
     ('facture', 'Taxes', 'montant_tva_par_taux', 'Montant de TVA par taux', 'montant', 'oui', null::text, array['TVA', 'Montant TVA']::text[], array['الأداء على القيمة المضافة']::text[], null::text, 'taux_tva'::text, 'Code TVA art. 18-II', 'texte'),
     ('facture', 'Taxes', 'montant_fodec', 'FODEC (montant)', 'montant', 'selon_cas', 'produits soumis ; taux et inclusion dans l''assiette TVA INCERTAIN'::text, array['FODEC', 'F.O.D.E.C']::text[], '{}'::text[], null::text, null::text, 'INCERTAIN (paramétrage Malica : 1 % de la base HT, entrant dans l''assiette TVA, non vérifié)', 'incertain'),
@@ -476,7 +477,7 @@ select g.id, v.parcelle, v.code, v.libelle, v.type, v.obligatoire, v.condition, 
     ('facture', 'Règlement', 'date_echeance', 'Date d''échéance / délai de paiement', 'date', 'non', null::text, array['Échéance', 'Payable le', 'À 30 jours', 'Conditions de paiement']::text[], '{}'::text[], null::text, null::text, 'pratique (encadrement légal des délais de paiement : INCERTAIN)', 'incertain'),
     ('facture', 'Règlement', 'retenue_source_mention', 'Mention ou montant de retenue à la source', 'montant', 'non', 'si le client est tenu d''opérer une retenue ; justifiée par un certificat de retenue distinct'::text, array['Retenue à la source', 'RS', 'RAS']::text[], array['الخصم من المورد']::text[], null::text, null::text, 'Code IRPP/IS art. 52 : INCERTAIN (taux et seuils non relus)', 'incertain'),
     ('facture', 'Règlement', 'penalites_retard', 'Pénalités ou intérêts de retard', 'texte', 'non', null::text, array['Pénalités de retard']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
-    ('facture', 'Mentions', 'mention_suspension_exoneration', 'Mention de vente en suspension ou en exonération de TVA (avec base légale)', 'texte', 'selon_cas', 'opération en suspension (art. 11) ou exonérée (tableau A)'::text, array['Vente en suspension de TVA', 'Exonéré de TVA', 'Exonération', 'Article 11']::text[], '{}'::text[], null::text, null::text, 'Code TVA art. 11 (mention obligatoire en régime suspensif) ; tableau A pour l''exonération : mention facultative en pratique', 'pratique'),
+    ('facture', 'Mentions', 'mention_suspension_exoneration', 'Mention de vente en suspension ou en exonération de TVA (avec base légale)', 'texte', 'selon_cas', 'opération en suspension (art. 11) ou exonérée (tableau A)'::text, array['Vente en suspension de TVA', 'Exonéré de TVA', 'Exonération', 'Article 11', 'Suspension', 'En suspension', 'Exonéré', 'Exonérée', 'Exonérées', 'Exonérés']::text[], '{}'::text[], null::text, null::text, 'Code TVA art. 11 (mention obligatoire en régime suspensif) ; tableau A pour l''exonération : mention facultative en pratique', 'pratique'),
     ('facture', 'Mentions', 'mention_export', 'Mention export (vente hors taxes à l''exportation)', 'texte', 'selon_cas', 'vente à l''export'::text, array['Export', 'Exonéré export', 'Suspension TVA - export']::text[], '{}'::text[], null::text, null::text, 'Code TVA art. 11 (portée exacte INCERTAIN)', 'incertain'),
     ('facture', 'Mentions', 'mention_regime_forfaitaire', 'Mention de non-assujettissement / régime forfaitaire', 'texte', 'non', 'émetteur non assujetti'::text, array['Non assujetti à la TVA', 'Forfaitaire']::text[], '{}'::text[], null::text, null::text, 'pratique ; attention art. 2-I-2 : faire figurer la TVA rend redevable', 'pratique'),
     ('facture', 'Mentions', 'conditions_generales', 'Conditions générales de vente, clause de réserve de propriété', 'texte', 'non', null::text, array['Conditions générales', 'Réserve de propriété']::text[], '{}'::text[], null::text, null::text, 'pratique', 'pratique'),
@@ -3946,7 +3947,7 @@ select g.id, v.code, v.regle, v.genre, v.expression, v.statut, v.variante
     ('facture', 'L01', 'Lignes d''articles : quantité × prix (− remise) = montant de ligne, et la somme des lignes = total HT (ou total brut HT) — preuve ajoutée par Malica, non bloquante pour les totaux', 'arithmetique', '{"op": "lignes", "designation": "designation", "quantite": "quantite", "prix": "prix_unitaire_ht", "remise": "remise_ligne?", "montant": "montant_ligne_ht", "taux": "taux_tva_ligne?", "total": "total_ht", "total_brut": "total_brut_ht?"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'E01', 'Les parties : un seul des matricules lus est celui du dossier ; il dit le sens (achat ou vente), l''autre est la contrepartie, rapprochée des tiers du dossier — preuve ajoutée par Malica, non bloquante', 'recoupement', '{"op": "parties", "emetteur": "matricule_fiscal_emetteur", "client": "matricule_fiscal_client", "nom_emetteur": "raison_sociale_emetteur", "nom_client": "nom_client", "numero": "numero_facture"}'::jsonb, 'defaut_a_valider', null::text),
     ('facture', 'E02', 'Date d''émission ≤ date d''échéance — preuve ajoutée par Malica', 'format', '{"op": "ordre", "avant": "date_emission", "apres": "date_echeance"}'::jsonb, 'defaut_a_valider', null::text),
-    ('facture', 'M04', 'Variante TTC hors timbre : net à payer = total TTC + droit de timbre — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "net_a_payer", "parties": ["total_ttc", "droit_timbre?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
+    ('facture', 'M04', 'Variante TTC hors timbre : net à payer = total TTC + droit de timbre − retenue à la source − acomptes (imprimés en négatif) — preuve ajoutée par Malica', 'arithmetique', '{"op": "somme", "total": "net_a_payer", "parties": ["total_ttc", "droit_timbre?", "montant_retenue_source?", "acomptes_deduits?"]}'::jsonb, 'defaut_a_valider', 'ttc_hors_timbre'),
     ('facture_electronique', 'P01', 'Le XML valide le schéma XSD TEIF officiel de la version déclarée', 'format', null::jsonb, 'a_traduire', null::text),
     ('facture_electronique', 'P02', 'La signature électronique est valide et le certificat non révoqué à la date de signature', 'format', null::jsonb, 'a_traduire', null::text),
     ('facture_electronique', 'P03', 'La référence TTN est présente et unique', 'unicite', null::jsonb, 'a_traduire', null::text),
@@ -4425,8 +4426,8 @@ begin
     from ref.grille_champs c join ref.grilles g on g.id = c.grille_id
     join ref.jurisdiction_packs p on p.id = g.pack_version_id
    where p.jurisdiction = 'TN' and g.valid_from = date '2026-01-01';
-  if v_champs <> 2132 then
-    raise exception 'champs semés : %, 2132 attendus (le catalogue)', v_champs;
+  if v_champs <> 2133 then
+    raise exception 'champs semés : %, 2133 attendus (le catalogue + 1 ajouté)', v_champs;
   end if;
 
   with noms as (

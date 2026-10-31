@@ -194,18 +194,35 @@ même code que la branche :
 
 Moteur : 0,7 ms par pièce.
 
-**Les deux jeux de factures fictives du dirigeant** (31 octobre 2026), avec la
-couche de texte du PDF, le recollage, le lecteur de montants et la grille en base :
+**Le jeu de 100 factures fictives du dirigeant** (31 octobre 2026), lu par la
+couche de texte du PDF, avec le recollage, le lecteur de montants et la grille en
+base : 76 factures prouvées justes sur les 86 lisibles, et 0 fausse preuve.
 
-| Jeu                                                                 | Factures lues | Prouvées justes           | Fausses preuves |
-| ------------------------------------------------------------------- | ------------- | ------------------------- | --------------- |
-| 100 pièces en 5 lots (socle, fiscalité, nature, pièges, manuscrits) | 86            | 63 (4 sans les variantes) | 0               |
-| 50 achats                                                           | 36            | 24                        | 0               |
+D-08 compte parmi ces justes : elle imprime ses montants à deux décimales, et le
+sudoku rend les valeurs imprimées, arrondies, alors que la vérité du jeu note les
+valeurs exactes.
 
-Restent signalées, sans faux positif : la retenue à la source, l'acompte, la TVA
-suspendue ou exonérée, l'avoir, les débours, les totaux volontairement faux, le
-timbre de 2,000 (INCERTAIN : il n'est pas dans le pack) et les imprimés
-manuscrits. Seize pièces sans couche de texte demandent un OCR.
+Correctifs apportés après lecture des pièces :
+
+- Un montant négatif (« -1 560,000 ») et une devise collée (« 980,000DT ») sont
+  recollés.
+- Le net à payer ferme avec la retenue à la source et les acomptes déduits,
+  imprimés en négatif.
+- Un champ facultatif hors charge (retenue, acompte) n'est exigé que sur une
+  rangée chiffrée, et non sur une mention de bas de page ou un titre.
+- Une pièce imprimée à deux décimales a, pour ses taux, une tolérance d'un
+  demi-centime ; ses sommes restent exactes.
+
+Restent signalées :
+
+- les pièges que le jeu attend signalés (total faux, TVA fausse, imprimés vierges
+  manuscrits) ;
+- le timbre de 2,000 (INCERTAIN, absent du pack) ;
+- les débours et les montants hors TVA ;
+- l'espace pris comme séparateur décimal ;
+- la facture d'acompte et le reçu d'acompte.
+
+Le jeu de 50 achats donne 24 factures prouvées justes, et 0 fausse.
 
 **Anneaux 1 et 2 sur les vraies pièces du staging** (lecture seule, comptes
 seulement) :

@@ -111,9 +111,25 @@ fn resoudre(entree: &Entree) -> Result<Sortie, String> {
             _ => None,
         })
         .collect();
+    // Une CHARGE du pack (timbre, FODEC) est exigée dès que son libellé est lu, même
+    // sans montant à côté : c'est ce qui empêche un TTC de « fermer » sans le timbre
+    // imprimé que l'OCR a manqué. Les autres champs facultatifs (retenue, acompte…)
+    // ne le sont que sur une rangée chiffrée.
+    let charges: BTreeSet<usize> = modele
+        .contraintes
+        .iter()
+        .filter_map(|cp| match cp.c {
+            Contrainte::Charge { m, .. } => Some(m),
+            _ => None,
+        })
+        .collect();
     for (i, v) in modele.vars.iter_mut().enumerate() {
         if v.facultatif {
-            let annonce = plan.annonce(&reperes[v.champ]);
+            let annonce = if charges.contains(&i) {
+                plan.annonce(&reperes[v.champ])
+            } else {
+                plan.annonce_chiffree(&reperes[v.champ])
+            };
             let fixe_imprime = fixes.get(&i).is_some_and(|f| dom.forte(*f));
             v.present = annonce || fixe_imprime;
         }

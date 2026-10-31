@@ -267,13 +267,41 @@ export async function lireLeContexteDuSudoku(
  * prouvée si toutes celles qui la prouvent s'accordent sur ses montants, et
  * ambiguë si deux la prouvent autrement. L'unicité reste la preuve.
  */
+/**
+ * La précision IMPRIMÉE de la pièce : le plus grand nombre de décimales que
+ * portent ses montants lus en lecture forte.
+ *
+ * Une facture en dinars imprimée à deux décimales (« 204,21 ») arrondit déjà
+ * chaque taux au centime : 1 074,80 × 19 % = 204,212 s'imprime 204,21. La
+ * tolérance d'arrondi d'un TAUX ou d'un PRODUIT devient alors la moitié de
+ * l'unité imprimée (5 millimes), jamais celle d'une SOMME, qui reste exacte.
+ * Mesuré le 31 octobre 2026 (jeu de 100 factures, D-08).
+ */
+export function precisionImprimee(jetons: readonly JetonDuSudoku[]): number | null {
+  let max: number | null = null;
+  for (const j of jetons) {
+    if (!j.montants.some((m) => m.forte)) continue;
+    const d = /[.,](\d+)\D*$/u.exec(j.texte);
+    if (d) max = Math.max(max ?? 0, d[1]!.length);
+  }
+  return max;
+}
+
+function packALaPrecision(pack: PackDuSudoku, jetons: readonly JetonDuSudoku[]): PackDuSudoku {
+  const imprimee = precisionImprimee(jetons);
+  if (imprimee === null || imprimee === 0 || imprimee >= pack.decimales) return pack;
+  const demiUnite = Math.ceil(10 ** (pack.decimales - imprimee) / 2);
+  return demiUnite > pack.tolerance ? { ...pack, tolerance: demiUnite } : pack;
+}
+
 export function resoudreLaPiece(
   jetons: readonly JetonDuSudoku[],
   contexte: ContexteDuSudoku,
   moteur: (entree: EntreeDuSudoku) => SortieDuSudoku = resoudre,
   connus?: Connus,
 ): SortieDuSudoku {
-  const { grille, pack } = contexte;
+  const grille = contexte.grille;
+  const pack = packALaPrecision(contexte.pack, jetons);
   const avecConnus = connus ? { connus } : {};
   const noms = [...new Set(grille.preuves.flatMap((p) => (p.variante ? [p.variante] : [])))].sort();
   if (noms.length === 0) return moteur({ jetons, grille, pack, ...avecConnus });
