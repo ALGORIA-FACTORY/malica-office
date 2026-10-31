@@ -49,6 +49,19 @@ Deux clés facultatives de `groupe_taux`, ajoutées à l'exécution :
 toujours le total de TVA ; dans une `somme`, un champ de groupe vaut alors la
 somme de ses instances.
 
+**Variantes d'une grille.** Une même pièce s'imprime de plusieurs façons. Une
+preuve porte alors un nom de `variante` (colonne de `ref.grille_preuves`, nulle
+pour une preuve commune). L'adaptateur joue chaque variante seule, avec les
+preuves communes. La pièce est prouvée si toutes les variantes qui la prouvent
+s'accordent sur ses montants, et ambiguë sinon. Pour la facture :
+
+- `ttc_avec_timbre` : le timbre est compris dans le TTC (P04) ;
+- `ttc_hors_timbre` : le TTC est imprimé avant le timbre, et le net à payer
+  après lui (M03, M04).
+
+Dans ce second cas, la chaîne reçoit le net à payer comme TTC : c'est lui qui
+ferme HT + TVA + droits.
+
 **Asymétrie de tolérance** (mesurée, non négociable) : les sommes et les égalités
 sont exactes ; seuls `produit`, `taux` et `charge` à taux arrondissent, d'au plus
 la tolérance du pack (une unité mineure).
@@ -153,11 +166,24 @@ même code que la branche :
 | Issue                                     | Pièces                                                                          |
 | ----------------------------------------- | ------------------------------------------------------------------------------- |
 | Prouvées, identiques à la chaîne          | 344, dont les 132 dont l'écriture est inscrite                                  |
-| Prouvées, la chaîne n'avait pas de totaux | 43                                                                              |
+| Prouvées, la chaîne n'avait pas de totaux | 43 (44 avec les variantes)                                                      |
 | Prouvées, différentes de la chaîne        | 1 — le HT de la chaîne ne ferme pas sa propre arithmétique ; le sudoku la ferme |
 | Non prouvées, rendues à la chaîne         | 69                                                                              |
 
 Moteur : 0,7 ms par pièce.
+
+**Les deux jeux de factures fictives du dirigeant** (31 octobre 2026), avec la
+couche de texte du PDF, le recollage, le lecteur de montants et la grille en base :
+
+| Jeu                                                                 | Factures lues | Prouvées justes           | Fausses preuves |
+| ------------------------------------------------------------------- | ------------- | ------------------------- | --------------- |
+| 100 pièces en 5 lots (socle, fiscalité, nature, pièges, manuscrits) | 86            | 63 (4 sans les variantes) | 0               |
+| 50 achats                                                           | 36            | 24                        | 0               |
+
+Restent signalées, sans faux positif : la retenue à la source, l'acompte, la TVA
+suspendue ou exonérée, l'avoir, les débours, les totaux volontairement faux, le
+timbre de 2,000 (INCERTAIN : il n'est pas dans le pack) et les imprimés
+manuscrits. Seize pièces sans couche de texte demandent un OCR.
 
 Moteur seul (`cargo test`, grille d'essai) : 60/60, 0 fausse preuve,
 0,45 ms médian par facture.

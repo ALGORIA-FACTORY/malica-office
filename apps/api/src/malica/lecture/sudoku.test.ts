@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
-import { moteurDisponible, resoudre, type SortieDuSudoku } from "@malica/sudoku";
+import { moteurDisponible, type SortieDuSudoku } from "@malica/sudoku";
 
 import { deviseDEssai, devisesDEssai } from "../../scan/devise-d-essai.ts";
 import { JEU_D_OR } from "./jeu-d-or.ts";
@@ -17,6 +17,7 @@ import {
   GRILLE_DE_LA_LECTURE_CITEE,
   jetonsDuSudoku,
   lireLeContexteDuSudoku,
+  resoudreLaPiece,
   selectionParLeSudoku,
   type ContexteDuSudoku,
 } from "./sudoku.ts";
@@ -255,11 +256,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
   });
 
   const jouer = (plan: readonly PageToken[]) =>
-    resoudre({
-      jetons: jetonsDuSudoku(plan, devise),
-      grille: contexte.grille,
-      pack: contexte.pack,
-    });
+    resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte);
 
   const valeur = (o: SortieDuSudoku, champ: string) => Number(o.champs[champ]?.valeur ?? 0);
   const pourMille = (code: string) =>
@@ -346,6 +343,49 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
     const designe = await essayer(true);
     assert.notEqual(designe.rendue, lecture, "branché, la désignation prouvée remplace");
     assert.deepEqual(designe.rendue.selection.totals.ttc, { page: 1, ordinal: 114 });
+  });
+
+  it("le TTC imprimé AVANT le timbre : prouvé par sa variante, et la chaîne reçoit le net", () => {
+    // La forme du jeu de 100 factures de l'utilisateur (A-01, montants fictifs) :
+    // « Total TTC » sans le timbre, puis « NET À PAYER » avec lui.
+    const ligne = (ordinal: number, y: number, x: number, text: string): PageToken => ({
+      page: 1,
+      ordinal,
+      text,
+      x0: x,
+      y0: y,
+      x1: x + 0.05,
+      y1: y + 0.015,
+    });
+    const plan: PageToken[] = [
+      ligne(0, 0.38, 0.54, "Total"),
+      ligne(1, 0.38, 0.58, "HT"),
+      ligne(2, 0.38, 0.84, "9 835,000"),
+      ligne(3, 0.4, 0.54, "TVA"),
+      ligne(4, 0.4, 0.57, "19 %"),
+      ligne(5, 0.4, 0.84, "1 868,650"),
+      ligne(6, 0.42, 0.54, "Total"),
+      ligne(7, 0.42, 0.58, "TTC"),
+      ligne(8, 0.42, 0.84, "11 703,650"),
+      ligne(9, 0.44, 0.54, "Timbre"),
+      ligne(10, 0.44, 0.87, "1,000"),
+      ligne(11, 0.46, 0.54, "Net"),
+      ligne(12, 0.46, 0.57, "à"),
+      ligne(13, 0.46, 0.59, "payer"),
+      ligne(14, 0.46, 0.83, "11 704,650"),
+    ];
+    const o = resoudreLaPiece(jetonsDuSudoku(plan, devise), contexte);
+    assert.equal(o.issue, "prouvee", o.raison ?? "");
+    assert.equal(o.variante, "ttc_hors_timbre");
+    assert.equal(valeur(o, "total_ht"), 9_835_000);
+    assert.equal(valeur(o, "droit_timbre"), 1_000);
+    const sel = selectionParLeSudoku(
+      JEU_D_OR[0]!.designation,
+      o,
+      contexte.pack.charges.map((c) => c.code),
+      champsDesCharges(contexte.grille),
+    );
+    assert.deepEqual(sel.totals.ttc, { page: 1, ordinal: 14 }, "la chaîne reçoit le net à payer");
   });
 
   it("banc 3 : 59/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {
