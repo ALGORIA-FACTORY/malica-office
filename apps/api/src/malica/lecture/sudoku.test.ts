@@ -13,6 +13,7 @@ import {
   champsDesCharges,
   champsLusAInscrire,
   creerLeSudoku,
+  type ChampsLusAInscrire,
   GRILLE_DE_LA_LECTURE_CITEE,
   jetonsDuSudoku,
   lireLeContexteDuSudoku,
@@ -175,7 +176,7 @@ describe("sudoku — la sélection rendue", () => {
         throw new Error("hors base");
       },
     };
-    const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise });
+    const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise }, { designe: true });
     const lecture = { tokens: [], selection: cas.designation } as unknown as VisionRead;
     // Le contexte est illisible : la lecture ressort à l'identique, rien ne s'inscrit.
     assert.equal(await sudoku.lire(lecture), lecture);
@@ -311,6 +312,40 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         JSON.stringify({ t: x["totals"], l: x["lines"], c: x["other_charges"] });
       assert.equal(montants(extrait(sel)), montants(extrait(cas.designation)));
     }
+  });
+
+  it("observe par défaut : la lecture ressort à l'identique, et ce qu'il a lu s'inscrit", async () => {
+    const cas = JEU_D_OR[0]!;
+    const lecture = {
+      tokens: recollerLesMilliers(cas.tokens),
+      selection: cas.designation,
+    } as unknown as VisionRead;
+    const essayer = async (designe: boolean) => {
+      const inscrits: unknown[] = [];
+      const api = {
+        async rpc<T>(_depot: string, methode: string, args: unknown[] = []): Promise<T> {
+          if (methode === "contexteSudoku") return contexte as T;
+          inscrits.push(args[0]);
+          return undefined as T;
+        },
+        async contenu(): Promise<never> {
+          throw new Error("hors base");
+        },
+      };
+      const sudoku = creerLeSudoku(api, { pieceId: "p", packId: "k", devise }, { designe });
+      const rendue = await sudoku.lire(lecture);
+      await sudoku.inscrire(rendue);
+      return { rendue, inscrits: inscrits as ChampsLusAInscrire[] };
+    };
+
+    const observe = await essayer(false);
+    assert.equal(observe.rendue, lecture, "en observation, la lecture n'est pas touchée");
+    assert.equal(observe.inscrits.length, 1);
+    assert.equal(observe.inscrits[0]!.issue, "prouvee");
+
+    const designe = await essayer(true);
+    assert.notEqual(designe.rendue, lecture, "branché, la désignation prouvée remplace");
+    assert.deepEqual(designe.rendue.selection.totals.ttc, { page: 1, ordinal: 114 });
   });
 
   it("banc 3 : 59/60 factures prouvées justes, zéro fausse preuve, aucun ticket prouvé", () => {

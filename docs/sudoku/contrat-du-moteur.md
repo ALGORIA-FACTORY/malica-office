@@ -119,7 +119,11 @@ Dans cette première livraison (`apps/api/src/malica/lecture/sudoku.ts`) :
 - la lecture citée lit des factures : elle joue la grille `facture`. Les autres
   grilles sont en base avec leurs preuves traduites ; leur routage par type de
   document vient famille par famille, chacune avec son banc ;
-- quand la pièce est prouvée, le sudoku remplace la désignation des **montants**
+- **par défaut, il observe** : il lit chaque pièce et inscrit ce qu'il a lu dans
+  `capture.champs_lus`, mais la lecture de la chaîne ressort à l'identique. Rien ne
+  change pour personne tant que le dirigeant ne le branche pas ;
+- **branché** (`SUDOKU_DESIGNE=1` dans l'environnement de l'API, comme `OCR_URL`
+  branche PaddleOCR), quand la pièce est prouvée, il remplace la désignation des **montants**
   (totaux, lignes de TVA, droits que la grille prouve). L'émetteur, la date et le
   sens restent désignés par la chaîne : aucune arithmétique ne les prouve ;
 - non prouvée, la lecture ressort à l'identique. Un échec du sudoku (moteur

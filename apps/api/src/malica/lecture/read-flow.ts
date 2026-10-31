@@ -226,18 +226,23 @@ export async function readPieceFlow(
   /*
    * ================================================== LE SUDOKU, APRÈS LA DÉSIGNATION
    *
-   * Chaque lecture — la première comme le rattrapage — passe par le sudoku :
-   * quand l'arithmétique de la pièce désigne ses montants d'une seule façon,
-   * cette désignation PROUVÉE remplace celle de la chaîne pour les totaux, les
-   * lignes de TVA et les droits. Sinon la lecture ressort inchangée. Il rend un
-   * `VisionRead` : tout l'aval — relecture dans le plan, contrôles,
-   * persistance — est celui d'avant. Voir `sudoku.ts`.
+   * Chaque lecture — la première comme le rattrapage — passe par le sudoku.
+   * Par défaut il OBSERVE : il inscrit ce qu'il a lu, et la lecture de la
+   * chaîne ressort à l'identique. Branché (`SUDOKU_DESIGNE=1`), la
+   * désignation PROUVÉE remplace celle de la chaîne pour les totaux, les
+   * lignes de TVA et les droits. Il rend un `VisionRead` : tout l'aval —
+   * relecture dans le plan, contrôles, persistance — est celui d'avant.
+   * Voir `sudoku.ts`.
    */
-  const sudoku = creerLeSudoku(api, {
-    pieceId,
-    packId: contexte.packId,
-    devise: { decimales: contexte.moneyDecimals, marques: contexte.marquesDevise },
-  });
+  const sudoku = creerLeSudoku(
+    api,
+    {
+      pieceId,
+      packId: contexte.packId,
+      devise: { decimales: contexte.moneyDecimals, marques: contexte.marquesDevise },
+    },
+    { designe: process.env["SUDOKU_DESIGNE"] === "1" },
+  );
   const lire = async (p: Parameters<Lecteurs["lire"]>[0]) => sudoku.lire(await lecteurs.lire(p));
 
   const premiereLecture = await lire(parametres);
