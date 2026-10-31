@@ -124,6 +124,19 @@ export function refusLisible(erreur: unknown): string | null {
   if (e.code === "42501" && /row-level security|sécurité au niveau ligne/i.test(e.message ?? ""))
     return "ce geste ne vous est pas permis sur ce dossier";
 
+  /*
+   * Un DROIT refusé sur une table ou une vue n'est pas un refus adressé à
+   * l'appelant : aucun client n'écrit plus une table en direct (lot 6, toute
+   * écriture par une porte), et une requête qui bute sur un droit est un
+   * chemin de l'API qui a oublié sa porte. C'est une panne : elle va au
+   * journal, et la phrase du moteur — qui nomme la table — ne sort pas.
+   */
+  if (
+    e.code === "42501" &&
+    /^(permission denied for|droit refusé pour|permission refusée pour) /i.test(e.message ?? "")
+  )
+    return null;
+
   // Deux gestes simultanés : notre `raise` dit lequel ; celui du moteur nomme
   // ses verrous, et ne se montre pas.
   if (e.code === "40001" && !/recommencez/.test(e.message ?? ""))

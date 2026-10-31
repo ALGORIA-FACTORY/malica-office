@@ -232,6 +232,17 @@ jobs:
         env:
           MALICA_BASE: http://localhost:8080
 
+      # Aucun client n'écrit une table en direct (lot 6) : un chemin de l'API
+      # qui aurait oublié sa porte bute sur un droit, et `refus.ts` le traite en
+      # panne, donc au journal. Après le jeu de données, les épreuves et le
+      # navigateur, le journal de l'API n'en porte aucun.
+      - name: Aucun droit refusé au journal de l'API
+        run: |
+          if grep -nE "permission denied for|droit refusé pour|permission refusée pour" api.log; then
+            echo "::error::l'API a buté sur un droit refusé : un chemin écrit sans sa porte"
+            exit 1
+          fi
+
       - name: Journaux des serveurs
         if: failure()
         run: |
@@ -247,4 +258,3 @@ jobs:
             apps/web/e2e/sortie-rapport
             !apps/web/e2e/sortie/session-*.json
           retention-days: 7
-
