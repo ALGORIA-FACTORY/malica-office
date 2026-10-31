@@ -495,12 +495,18 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     const decD = (m) => versDecimal(m, exposantDossier);
     // Les bases, par compte principal ; la TVA, par code ; les droits, par compte.
     const bases = new Map();
+    // Le régime de chaque base : une base sans TVA (exonérée, export) dit son
+    // code, sans quoi elle manque à la déclaration — la règle du forçage
+    // (`refus.ecriture.taxe_sans_tva`, revue de #140) ; découvert par la
+    // recette sur le staging (1er novembre 2026).
+    const codesDesBases = new Map();
     for (const l of parTaux) {
       const compte =
         scenario === "achat_immobilisation" && !enCharge
           ? COMPLEMENT.immobilisation.compte
           : imputation(sens, l.code).mainAccount;
       bases.set(compte, (bases.get(compte) ?? 0n) + conv(l.baseHt));
+      codesDesBases.set(compte, [...(codesDesBases.get(compte) ?? []), l.code]);
     }
     const tvas = parTaux.map((l) => ({
       code: l.code,
@@ -531,7 +537,11 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       if (m === 0n) return;
       lignes.push(debit ? [compte, decD(m), "0", code] : [compte, "0", decD(m), code]);
     };
-    for (const [compte, m] of bases) posePiece(compte, m);
+    const sansTva = tvas.every((t) => t.m === 0n);
+    for (const [compte, m] of bases) {
+      const codes = [...new Set(codesDesBases.get(compte))];
+      posePiece(compte, m, sansTva && codes.length === 1 ? codes[0] : undefined);
+    }
     for (const t of tvas) posePiece(t.compte, t.m, t.code);
     for (const d of lesDroits) posePiece(d.compte, d.m);
     lignes.push(

@@ -228,6 +228,17 @@ export function computePivot(input: PivotInput): PivotV1 {
   // recopie jamais un TTC dont l'écart ne serait pas justifié.
   const counterparty = totalHT.plus(totalVAT).plus(totalCharges);
 
+  /*
+   * Une base sans TVA (exonérée, export) dit son régime : sans son code, elle
+   * manque à la déclaration du mois, et le forçage la refuse pour cette
+   * raison (`refus.ecriture.taxe_sans_tva`, revue de #140). La proposition
+   * suit la même règle. Découvert par la recette sur le staging (1er novembre
+   * 2026) : une vente à l'export se proposait sans code EXPORT.
+   */
+  const codesDesLignes = [...new Set(perLineRate.map(({ line }) => line.tax_code))];
+  const codeDeLaBase =
+    totalVAT.isZero() && codesDesLignes.length === 1 ? codesDesLignes[0] : undefined;
+
   const lines: JournalLineV1[] = [];
   if (extract.document_kind === "facture_achat") {
     lines.push({
@@ -235,6 +246,7 @@ export function computePivot(input: PivotInput): PivotV1 {
       label: extract.issuer,
       debit: round(totalHT.toString()),
       credit: "0",
+      ...(codeDeLaBase ? { tax_code: codeDeLaBase } : {}),
     });
     for (const v of vatParCode) {
       lines.push({
@@ -275,6 +287,7 @@ export function computePivot(input: PivotInput): PivotV1 {
       label: extract.issuer,
       debit: "0",
       credit: round(totalHT.toString()),
+      ...(codeDeLaBase ? { tax_code: codeDeLaBase } : {}),
     });
     for (const c of charges) {
       lines.push({ account_code: c.account_code, label: c.label, debit: "0", credit: c.amount });

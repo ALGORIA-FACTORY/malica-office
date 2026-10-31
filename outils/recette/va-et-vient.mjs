@@ -36,31 +36,20 @@ const JEU = join(ICI, "..", "jeu-synthetique");
 const e = creerEpreuve("le va-et-vient PME ↔ cabinet", process.env["MALICA_BASE"]);
 const PAR_DOSSIER = Number(process.argv[2] ?? 8);
 
-const compte = (local, nom) => ({
+const SCENARIOS = JSON.parse(readFileSync(join(ICI, "scenarios.json"), "utf8"));
+const compte = ({ local, nom }) => ({
   email: `${local}@recette.essai.local`,
   motDePasse: MDP_EPREUVE,
   nom,
 });
-const EXPERT = compte("expert.recette", "Hela Recette");
-const CABINET = { name: "CABINET RECETTE D'ESSAI", legalId: "8822001R/A/M/000" };
-
-/** Les trois dossiers du jeu synthétique, une offre chacun. */
-const DOSSIERS = [
-  {
-    cle: "team",
-    offre: "team",
-    dirigeant: compte("dirigeant.nervane", "Sami Nervane"),
-    siege: compte("siege.nervane", "Rim Siège"),
-  },
-  {
-    cle: "premium",
-    offre: "premium",
-    dirigeant: compte("dirigeant.qirwane", "Nadia Qirwane"),
-    siege: compte("siege.qirwane", "Omar Siège"),
-    secondeSociete: { name: "QIRWANE SERVICES D'ESSAI SARL", legalId: "4794099V/A/M/000" },
-  },
-  { cle: "basic", offre: "basic", dirigeant: compte("dirigeant.sidrane", "Karim Sidrane") },
-];
+const EXPERT = compte(SCENARIOS.cabinet.expert);
+const CABINET = { name: SCENARIOS.cabinet.name, legalId: SCENARIOS.cabinet.legalId };
+/** Les trois dossiers du jeu synthétique, une offre chacun (scenarios.json). */
+const DOSSIERS = SCENARIOS.dossiers.map((d) => ({
+  ...d,
+  dirigeant: compte(d.dirigeant),
+  ...(d.siege ? { siege: compte(d.siege) } : {}),
+}));
 
 const cas = Array.from({ length: 100 }, (_, i) => {
   const id = String(i + 1).padStart(3, "0");
@@ -98,9 +87,16 @@ async function organisation(kind, nom, legalId, extra = {}) {
     (o) => o.kind === kind && (o.legalId ?? o.legal_id) === legalId,
   );
   if (org) return org;
-  const pack = await e.rpc("referentiel", "activePack", ["TN"]);
+  const pack = await e.rpc("referentiel", "activePack", [SCENARIOS.juridiction]);
   const id = await e.rpc("identite", "createOrganization", [
-    { kind, name: nom, legalId, jurisdiction: "TN", currency: pack?.currency ?? "TND", ...extra },
+    {
+      kind,
+      name: nom,
+      legalId,
+      jurisdiction: SCENARIOS.juridiction,
+      currency: pack.currency,
+      ...extra,
+    },
   ]);
   org = (await mesOrganisations()).find((o) => o.id === id);
   return org;
@@ -120,10 +116,7 @@ e.section("2. Les PME, leurs offres, leurs places");
 for (const d of DOSSIERS) {
   await e.inscrireOuConnecter(d.dirigeant, d.dirigeant.nom);
   const org = await etape(`${d.nom} existe`, () =>
-    organisation("pme", d.nom, d.legalId, {
-      validationMode: "mandate",
-      defaultEntityName: "Siège",
-    }),
+    organisation("pme", d.nom, d.legalId, SCENARIOS.organisation),
   );
   if (!org) continue;
   d.org = org;
@@ -146,10 +139,7 @@ for (const d of DOSSIERS) {
 
   if (d.secondeSociete) {
     const deux = await etape(`${d.nom} : seconde société de la licence`, () =>
-      organisation("pme", d.secondeSociete.name, d.secondeSociete.legalId, {
-        validationMode: "mandate",
-        defaultEntityName: "Siège",
-      }),
+      organisation("pme", d.secondeSociete.name, d.secondeSociete.legalId, SCENARIOS.organisation),
     );
     const orgs = await etape("organisations de la licence", () =>
       e.rpc("facturation", "organisations"),
@@ -348,9 +338,19 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
 
     if (prop?.ok) {
       const exacte = lignesEgales(prop.proposition.lignes, attendu.ecriture.lignes);
+      // Une question que le Socle ne tranche pas (une immobilisation) : la
+      // proposition porte la réserve qui la nomme, et c'est la réponse juste.
+      const aTrancher =
+        !exacte &&
+        attendu.aTrancher &&
+        JSON.stringify(prop).includes(attendu.aTrancher.reserve) &&
+        lignesEgales(prop.proposition.lignes, attendu.aTrancher.ecriture.lignes);
       p.exacte = exacte;
-      e.verdict(`${p.cas} : proposition exacte`, exacte);
-      if (!exacte)
+      p.aTrancher = Boolean(aTrancher);
+      if (aTrancher)
+        e.verdict(`${p.cas} : proposée avec la réserve « ${attendu.aTrancher.reserve} »`, true);
+      else e.verdict(`${p.cas} : proposition exacte`, exacte);
+      if (!exacte && !aTrancher)
         ecart("proposition fausse", {
           cas: p.cas,
           proposee: prop.proposition.lignes.map((l) => [l.account_code, l.debit, l.credit]),
@@ -361,16 +361,16 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
     }
 
     // Une pièce sur quatre est retournée au client avant d'être prise en charge.
-    if (rang % 4 === 1 && motifRetour) {
+    if (rang % SCENARIOS.retourUneSur === 1 && motifRetour) {
       const r = await etape(`${p.cas} : retour au client`, () =>
         e.rpc("supervision", "retourner", [
-          { pieceId: p.id, motifId: motifRetour.id, note: "Recette : merci de confirmer." },
+          { pieceId: p.id, motifId: motifRetour.id, note: SCENARIOS.noteDeRetour },
         ]),
       );
       if (r !== null) {
         await e.connecter(d.dirigeant);
         await etape(`${p.cas} : le client répond`, () =>
-          e.rpc("capture", "repondreAuCabinet", [p.id, "Confirmé, la pièce est correcte."]),
+          e.rpc("capture", "repondreAuCabinet", [p.id, SCENARIOS.reponseDuClient]),
         );
         await etape(`${p.cas} : le client renvoie`, () => e.rpc("capture", "renvoyer", [p.id]));
         await e.connecter(EXPERT);
@@ -422,7 +422,7 @@ for (const d of DOSSIERS.filter((x) => x.org)) {
     const vue = liste.find((x) => x.id === p.id);
     e.verdict(
       `${p.cas} : la PME la voit prise en charge`,
-      /prise|valid|forc|comptab/i.test(JSON.stringify(vue ?? {})),
+      /supervisee|prise|valid|forc|comptab/i.test(JSON.stringify(vue ?? {})),
       JSON.stringify(vue?.statut ?? vue?.status ?? "absente"),
     );
   }
