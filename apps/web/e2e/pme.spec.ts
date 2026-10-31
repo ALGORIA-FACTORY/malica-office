@@ -67,7 +67,7 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
 
   // Et on en revient par la barre du bas, qui reste rendue sur cet écran.
   const nav = page.getByRole("navigation", { name: "Navigation principale" });
-  await nav.getByText("Accueil").click();
+  await nav.getByText("Société").click();
   await expect(page).toHaveURL(/\/pme$/);
   await expect(page.getByText(/^TVA · /)).toBeVisible();
 });
@@ -76,9 +76,9 @@ test("la barre basse porte l'obturateur, l'accueil et l'espace", async ({ page }
   await page.goto("/pme");
   const nav = page.getByRole("navigation", { name: "Navigation principale" });
   await expect(nav.getByRole("button", { name: "Ajouter une pièce" })).toBeEnabled();
-  await nav.getByText("Mon espace").click();
+  await nav.getByText("Privé").click();
   await expect(page).toHaveURL(/\/pme\/coffre$/);
-  await nav.getByText("Accueil").click();
+  await nav.getByText("Société").click();
   await expect(page).toHaveURL(/\/pme$/);
 });
 

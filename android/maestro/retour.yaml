@@ -5,10 +5,10 @@ androidWebViewHierarchy: devtools
 ---
 - launchApp
 - runFlow: connexion.yaml
-- tapOn: "Mon espace"
+- tapOn: "Privé"
 # Le titre de « Mon espace » depuis le 21 octobre 2026 (« Visible par vous
 # seul » a disparu de l'écran).
-- assertVisible: "Vos papiers"
+- assertVisible: "Mon espace privé"
 - back
 # L'accueil du 23 octobre 2026 s'ouvre sur le chiffre du mois (« TVA · <mois> »).
 - assertVisible: "TVA · .*"

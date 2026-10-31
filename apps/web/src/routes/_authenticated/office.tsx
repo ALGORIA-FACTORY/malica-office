@@ -17,13 +17,13 @@ import { office } from "@/verticals/malica-office/composition";
 export const Route = createFileRoute("/_authenticated/office")({
   head: () => ({
     meta: [
-      { title: "Mon espace — Malica Office" },
+      { title: "Choisir un espace — Malica Office" },
       {
         name: "description",
         content:
           "Vos organisations, établissements et référentiel fiscal en vigueur dans Malica Office.",
       },
-      { property: "og:title", content: "Mon espace — Malica Office" },
+      { property: "og:title", content: "Choisir un espace — Malica Office" },
       {
         property: "og:description",
         content: "Organisations, établissements et référentiel fiscal en vigueur.",
