@@ -590,6 +590,61 @@ describe("le sens de la pièce, confronté à ce qu'elle porte", () => {
     );
     assert.equal(c.statut, "conforme");
   });
+
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 046, 052) : une vente arabe, émise
+   * par le dossier à son matricule, refusée parce que le NOM arabe ne se
+   * compare pas au nom français de la fiche. Le matricule est l'identifiant
+   * légal : il décide d'abord ; le nom ne décide que sans lui, et le
+   * contredit quand il se compare (l'inversion du 5 octobre, plus haut).
+   */
+  it("une vente au nom arabe, émise au matricule du dossier : conforme", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "شركة نرفان التجريبية", identifiantFiscal: "1856324K/A/M/000" },
+        destinataire: { nom: "عميل", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "conforme", c.motif);
+    assert.match(c.motif, /matricule/);
+  });
+
+  it("une vente au nom arabe, émise à un autre matricule : contradiction", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "شركة أخرى", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+
+  it("un achat au nom arabe, émis au matricule du dossier : contradiction", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_achat",
+        emetteur: { nom: "شركة نرفان التجريبية", identifiantFiscal: "1856324K/A/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+
+  it("un nom lisible qui contredit le matricule reste une contradiction", () => {
+    // Le matricule du dossier, le nom d'un tiers : c'est la lecture qui se
+    // contredit, aucun des deux ne l'emporte.
+    const c = statut(
+      facture({
+        documentKind: "facture_achat",
+        emetteur: { nom: "FOURNISSEUR SA", identifiantFiscal: "1856324K/A/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
 });
 
 describe("doublon", () => {

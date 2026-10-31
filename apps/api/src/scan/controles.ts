@@ -559,6 +559,14 @@ function motsDuNom(nom: string): Set<string> {
   );
 }
 
+/**
+ * Deux noms se comparent-ils ? Un nom arabe (ou perdu) n'a aucun mot latin :
+ * il ne dit ni oui ni non face au nom français de la fiche.
+ */
+function nomsComparables(a: string | null, b: string | null): boolean {
+  return !!a && !!b && motsDuNom(a).size > 0 && motsDuNom(b).size > 0;
+}
+
 /** Deux noms désignent-ils la même entreprise ? */
 function memeEntreprise(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
@@ -610,7 +618,26 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
       motif: "Le sens de la pièce n'est pas déterminé : il reste à confirmer.",
       preuves: { documentKind: p.documentKind },
     };
-  if (!p.emetteur.nom)
+  /*
+   * ============================== LE MATRICULE D'ABORD (31 octobre 2026)
+   *
+   * Jeu synthétique, cas 046 et 052 : une vente arabe, émise par le dossier
+   * à son matricule, refusée parce que son nom arabe ne se compare pas au
+   * nom français de la fiche. Le matricule est l'identifiant LÉGAL : lu des
+   * deux côtés, il décide. Le nom ne décide que sans lui — et, quand il se
+   * compare (mêmes écritures), il peut le CONTREDIRE : l'inversion du
+   * 5 octobre (le matricule du dossier, le nom d'un tiers) reste une
+   * contradiction, aucun des deux ne l'emporte.
+   */
+  const parMatricule =
+    normaliserMatricule(p.emetteur.identifiantFiscal).cle &&
+    normaliserMatricule(ctx.tenant.identifiantFiscal).cle
+      ? memeMatricule(p.emetteur.identifiantFiscal, ctx.tenant.identifiantFiscal)
+      : null;
+  const parLeNom = nomsComparables(p.emetteur.nom, ctx.tenant.nom)
+    ? memeEntreprise(p.emetteur.nom, ctx.tenant.nom)
+    : null;
+  if (parMatricule === null && !p.emetteur.nom)
     return {
       code: "sens_de_la_piece",
       statut: "non_evaluable",
@@ -618,15 +645,26 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
       preuves: {},
     };
 
-  const emetteurEstLeDossier = memeEntreprise(p.emetteur.nom, ctx.tenant.nom);
-  if (vente === emetteurEstLeDossier)
+  const emetteurEstLeDossier =
+    parMatricule !== null && (parLeNom === null || parLeNom === parMatricule)
+      ? parMatricule
+      : parMatricule === null
+        ? (parLeNom ?? false)
+        : null;
+  if (emetteurEstLeDossier !== null && vente === emetteurEstLeDossier)
     return {
       code: "sens_de_la_piece",
       statut: "conforme",
-      motif: vente
-        ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}.`
-        : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom}.`,
-      preuves: { documentKind: p.documentKind, emetteur: p.emetteur.nom },
+      motif:
+        (vente
+          ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}`
+          : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom ?? p.emetteur.identifiantFiscal}`) +
+        (parMatricule === null ? "." : ` (matricule ${p.emetteur.identifiantFiscal}).`),
+      preuves: {
+        documentKind: p.documentKind,
+        emetteur: p.emetteur.nom,
+        ...(parMatricule === null ? {} : { matricule: p.emetteur.identifiantFiscal }),
+      },
     };
 
   /*
@@ -649,13 +687,17 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
   return {
     code: "sens_de_la_piece",
     statut: "anomalie",
-    motif: vente
-      ? `La pièce est lue comme une VENTE, mais elle est émise par ${p.emetteur.nom}, et non par ${ctx.tenant.nom} : le sens est à confirmer.`
-      : `La pièce est lue comme un ACHAT, mais elle est émise par ${ctx.tenant.nom} : le sens est à confirmer.`,
+    motif:
+      emetteurEstLeDossier === null
+        ? `Le matricule de l'émetteur (${p.emetteur.identifiantFiscal}) ${parMatricule ? "est" : "n'est pas"} celui de ${ctx.tenant.nom}, mais son nom lu est « ${p.emetteur.nom} » : la lecture se contredit, le sens est à confirmer.`
+        : vente
+          ? `La pièce est lue comme une VENTE, mais elle est émise par ${p.emetteur.nom ?? p.emetteur.identifiantFiscal}, et non par ${ctx.tenant.nom} : le sens est à confirmer.`
+          : `La pièce est lue comme un ACHAT, mais elle est émise par ${ctx.tenant.nom} : le sens est à confirmer.`,
     preuves: {
       documentKind: p.documentKind,
       emetteur: p.emetteur.nom,
       dossier: ctx.tenant.nom,
+      ...(parMatricule === null ? {} : { matricule: p.emetteur.identifiantFiscal }),
     },
   };
 }

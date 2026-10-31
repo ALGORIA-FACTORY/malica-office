@@ -207,7 +207,7 @@
   "verdict": "non_mesuree",
   "champsFaux": 0,
   "diagnostic": {
-   "verdict": "refus_injuste",
+   "verdict": "exacte",
    "champsFaux": 2
   }
  },

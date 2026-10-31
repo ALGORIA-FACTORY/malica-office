@@ -59,10 +59,10 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
 
 | | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |
 |---|---|---|---|---|---|---|---|---|---|
-| **tous** | 27 | 27 | 560/618 (91 %) | 16/22 (73 %) | 2 | 0 | 5/5 (100 %) | 0 | 4 |
-| langue = ar | 13 | 13 | 232/290 (80 %) | 7/11 (64 %) | 0 | 0 | 2/2 (100 %) | 0 | 4 |
+| **tous** | 27 | 27 | 560/618 (91 %) | 17/22 (77 %) | 2 | 0 | 5/5 (100 %) | 0 | 3 |
+| langue = ar | 13 | 13 | 232/290 (80 %) | 8/11 (73 %) | 0 | 0 | 2/2 (100 %) | 0 | 3 |
 | langue = hybride | 14 | 14 | 328/328 (100 %) | 9/11 (82 %) | 2 | 0 | 3/3 (100 %) | 0 | 0 |
-| rendu = pdf | 27 | 27 | 560/618 (91 %) | 16/22 (73 %) | 2 | 0 | 5/5 (100 %) | 0 | 4 |
+| rendu = pdf | 27 | 27 | 560/618 (91 %) | 17/22 (77 %) | 2 | 0 | 5/5 (100 %) | 0 | 3 |
 | scenario = achat_13 | 2 | 2 | 41/42 (98 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_eur | 2 | 2 | 37/38 (97 %) | 2/2 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = achat_exonere | 2 | 2 | 26/42 (62 %) | 1/2 (50 %) | 0 | 0 | — | 0 | 1 |
@@ -74,9 +74,9 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
 | scenario = avoir_achat | 2 | 2 | 43/44 (98 %) | — | 0 | 0 | 2/2 (100 %) | 0 | 0 |
 | scenario = vente_plusieurs_taux | 1 | 1 | 33/33 (100 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
 | scenario = vente_un_taux | 3 | 3 | 59/75 (79 %) | 1/2 (50 %) | 0 | 0 | 1/1 (100 %) | 0 | 1 |
-| scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 0/1 (0 %) | 0 | 0 | — | 0 | 1 |
+| scenario = vente_usd_export | 1 | 1 | 17/19 (89 %) | 1/1 (100 %) | 0 | 0 | — | 0 | 0 |
 | defaut = montant_illisible | 1 | 1 | 27/27 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
-| defaut = null | 24 | 24 | 486/543 (90 %) | 16/22 (73 %) | 2 | 0 | 2/2 (100 %) | 0 | 4 |
+| defaut = null | 24 | 24 | 486/543 (90 %) | 17/22 (77 %) | 2 | 0 | 2/2 (100 %) | 0 | 3 |
 | defaut = total_faux | 1 | 1 | 26/27 (96 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 | defaut = tva_fausse | 1 | 1 | 21/21 (100 %) | — | 0 | 0 | 1/1 (100 %) | 0 | 0 |
 
@@ -103,7 +103,7 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ articles[0].total_ht : lu null, attendu "4387.269"
 - **045** (ar, pdf, achat_eur) — exacte
   - champ issuer : lu "ٮ\u0000 ﺎ ﻣ ﺪ \u0000 ﺤ ﻠ ﻟ \u0000 ٮ ﺮ \u0000 \u0000 \u0000 ﺮ ﻤ \u0000 \u0000", attendu "تمزيرت للخدمات"
-- **046** (ar, pdf, vente_usd_export) — refus_injuste : sens_de_la_piece
+- **046** (ar, pdf, vente_usd_export) — exacte
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٦٠٤٢", attendu "٢٠٢٦/٦٠٤٢"
 - **047** (ar, pdf, avoir_achat) — refus_juste : nature_piece
@@ -132,7 +132,7 @@ tout, à bon droit. Ce n'est pas une mesure de la chaîne.
   - champ references.numero : lu "٢٠٢٦ / ٩١٨٣", attendu "٢٠٢٦/٩١٨٣"
 - **051** (ar, pdf, achat_plusieurs_taux) — exacte
   - champ issuer : lu "ں\u0000 ﺎ \u0000 \u0000 ﻠ ﺳ \u0000 ﻪ ﻌ \u0000 \u0000 ﻄ ﻣ", attendu "مطبعة سلفان"
-- **052** (ar, pdf, vente_un_taux) — refus_injuste : coherence_arithmetique/taux_non_lu+sens_de_la_piece
+- **052** (ar, pdf, vente_un_taux) — refus_injuste : coherence_arithmetique/taux_non_lu
   - champ issuer : lu "ﻪ\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 ﺮ \u0000 ﺤ \u0000 \u0000 ﻟ ا \u0000 ں ﺎ \u0000 \u0000 ﺮ \u0000 \u0000 \u0000 ﻪ ﻛ ﺮ \u0000 ﺳ", attendu "شركة نرفان التجريبية"
   - champ references.numero : lu "٢٠٢٦ / ٣٥٤٢", attendu "٢٠٢٦/٣٥٤٢"
   - champ totals.base_ht : lu null, attendu "3229.094"
