@@ -1,0 +1,156 @@
+{
+  "id": "089",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "photo",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-19",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Menzra Conseil SUARL",
+      "nomAr": "منزرة للاستشارات",
+      "matricule": "8764010I/A/M/000",
+      "adresse": "52, rue de l'Olivier, Ariana",
+      "telephone": "00 378 310"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "5 %",
+      "brut": "2 694,723",
+      "montant": "134,736"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : trois mille quarante-sept dinars et trois cent quatre-vingt-cinq millimes.",
+    "imprime": {
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "14/09/2026",
+      "references.numero": "F-2026-6422",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "2 559,987",
+      "totals.vat": "486,398",
+      "totals.ttc": "3 047,385",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Cartouche d'encre noire",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "152,157",
+      "articles[0].total_ht": "152,157",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 204,423",
+      "articles[1].total_ht": "2 408,846",
+      "articles[2].designation": "Papier A4 80 g, ramette",
+      "articles[2].quantity": "10",
+      "articles[2].unit_price_ht": "13,372",
+      "articles[2].total_ht": "133,720"
+    }
+  },
+  "graineDuRendu": 728011919,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "2026-09-14",
+      "currency": "TND",
+      "references.numero": "F-2026-6422",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "2559.987",
+      "totals.vat": "486.398",
+      "totals.ttc": "3047.385",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "2559.987",
+      "lines[0].vat_amount": "486.398",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "152.157",
+      "articles[0].total_ht": "152.157",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "1204.423",
+      "articles[1].total_ht": "2408.846",
+      "articles[2].quantity": "10.000",
+      "articles[2].unit_price_ht": "13.372",
+      "articles[2].total_ht": "133.720"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2559.987",
+          "0"
+        ],
+        [
+          "4366",
+          "486.398",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3047.385"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

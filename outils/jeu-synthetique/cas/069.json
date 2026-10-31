@@ -1,0 +1,153 @@
+{
+  "id": "069",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-28",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "فنارة للخدمات اللوجستية",
+      "nomAr": "فنارة للخدمات اللوجستية",
+      "matricule": "2986008E/A/M/000",
+      "adresse": "44، نهج الزيتونة، القيروان",
+      "telephone": "00 852 583"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "ورق طباعة A4 رزمة",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "فنارة للخدمات اللوجستية",
+      "document_date": "2026/09/27",
+      "references.numero": "2026/6538",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3 920,99",
+      "totals.vat": "744,99",
+      "totals.ttc": "4 665,98",
+      "articles[0].designation": "ورق طباعة A4 رزمة",
+      "articles[0].quantity": "7",
+      "articles[0].unit_price_ht": "13,63",
+      "articles[0].total_ht": "95,41",
+      "articles[1].designation": "كراء رافعة شوكية",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 912,79",
+      "articles[1].total_ht": "3 825,58"
+    }
+  },
+  "graineDuRendu": 1395817612,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "فنارة للخدمات اللوجستية",
+      "document_date": "2026-09-27",
+      "currency": "EUR",
+      "references.numero": "2026/6538",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3920.99",
+      "totals.vat": "744.99",
+      "totals.ttc": "4665.98",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3920.99",
+      "lines[0].vat_amount": "744.99",
+      "articles[0].quantity": "7.00",
+      "articles[0].unit_price_ht": "13.63",
+      "articles[0].total_ht": "95.41",
+      "articles[1].quantity": "2.00",
+      "articles[1].unit_price_ht": "1912.79",
+      "articles[1].total_ht": "3825.58"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "13380.379",
+          "0"
+        ],
+        [
+          "4366",
+          "2542.278",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "15922.657"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "3920.99"
+        ],
+        [
+          "4366",
+          "744.99"
+        ],
+        [
+          "401",
+          "4665.98"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-09-27"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "écart d'arrondi de conversion 0.001 porté à la base 601 (change.ecart = base_la_plus_grande)",
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-09-27 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

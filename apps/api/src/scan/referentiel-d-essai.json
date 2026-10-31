@@ -127,25 +127,29 @@
       "code": "DROIT_TIMBRE",
       "documentKind": "facture_achat",
       "accountCode": "6654",
-      "fixedAmount": "1.000"
+      "fixedAmount": "1.000",
+      "taxable": false
     },
     {
       "code": "DROIT_TIMBRE",
       "documentKind": "facture_vente",
       "accountCode": "4371",
-      "fixedAmount": "1.000"
+      "fixedAmount": "1.000",
+      "taxable": false
     },
     {
       "code": "FODEC",
       "documentKind": "facture_achat",
       "accountCode": "6652",
-      "fixedAmount": null
+      "fixedAmount": null,
+      "taxable": true
     },
     {
       "code": "FODEC",
       "documentKind": "facture_vente",
       "accountCode": "4374",
-      "fixedAmount": null
+      "fixedAmount": null,
+      "taxable": true
     }
   ],
   "mentions": [
@@ -191,6 +195,62 @@
       "documentType": "avoir",
       "statut": "anomalie",
       "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+    },
+    {
+      "motif": "إشعار\\s+دائن",
+      "documentType": "avoir",
+      "statut": "anomalie",
+      "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
+    }
+  ],
+  "biensImmobilisables": [
+    {
+      "motif": "(?<!\\p{L})(ordinateurs?|serveurs?|photocopieu(r|rs|se|ses))(?!\\p{L})",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "آل(ة|ات)\\s+(ال)?نسخ",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "حاسو?ب",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "خادم",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "(?<!\\p{L})machines?[-\\s]outils?(?!\\p{L})",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})mat[ée]riels?\\s+(informatiques?|de\\s+bureau|de\\s+transport|industriels?|roulants?)(?!\\p{L})",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "معدات\\s+(إعلامية|مكتبية|نقل|صناعية)",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})mobiliers?(?!\\p{L})",
+      "famille": "MOBILIER"
+    },
+    {
+      "motif": "أثاث",
+      "famille": "MOBILIER"
+    },
+    {
+      "motif": "(?<!\\p{L})(v[ée]hicules?|voitures?|camions?|camionnettes?|fourgons?)(?!\\p{L})",
+      "famille": "VEHICULE"
+    },
+    {
+      "motif": "سيار(ة|ات)",
+      "famille": "VEHICULE"
+    },
+    {
+      "motif": "شاحن(ة|ات)",
+      "famille": "VEHICULE"
     }
   ],
   "change": {

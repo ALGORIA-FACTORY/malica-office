@@ -1,0 +1,178 @@
+{
+  "id": "093",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "photo",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-15",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Talvine Matériaux SA",
+      "nomAr": "تلفين لمواد البناء",
+      "matricule": "7039011T/A/M/000",
+      "adresse": "76, zone industrielle, lot, Mahdia",
+      "telephone": "00 382 139"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": "Arrêtée la présente facture à la somme de : cinq mille neuf cent vingt-deux euros et vingt et un centimes.",
+    "imprime": {
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "14-09-2026",
+      "references.numero": "F-2026-3780",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4 976,65",
+      "totals.vat": "945,56",
+      "totals.ttc": "5 922,21",
+      "articles[0].designation": "Papier A4 80 g, ramette",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "14,49",
+      "articles[0].total_ht": "28,98",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 100,08",
+      "articles[1].total_ht": "2 200,16",
+      "articles[2].designation": "Cartouche d'encre noire",
+      "articles[2].quantity": "11",
+      "articles[2].unit_price_ht": "163,13",
+      "articles[2].total_ht": "1 794,43",
+      "articles[3].designation": "Tôle galvanisée 2 mm",
+      "articles[3].quantity": "4",
+      "articles[3].unit_price_ht": "238,27",
+      "articles[3].total_ht": "953,08"
+    }
+  },
+  "graineDuRendu": 236055834,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "2026-09-14",
+      "currency": "EUR",
+      "references.numero": "F-2026-3780",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4976.65",
+      "totals.vat": "945.56",
+      "totals.ttc": "5922.21",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4976.65",
+      "lines[0].vat_amount": "945.56",
+      "articles[0].quantity": "2.00",
+      "articles[0].unit_price_ht": "14.49",
+      "articles[0].total_ht": "28.98",
+      "articles[1].quantity": "2.00",
+      "articles[1].unit_price_ht": "1100.08",
+      "articles[1].total_ht": "2200.16",
+      "articles[2].quantity": "11.00",
+      "articles[2].unit_price_ht": "163.13",
+      "articles[2].total_ht": "1794.43",
+      "articles[3].quantity": "4.00",
+      "articles[3].unit_price_ht": "238.27",
+      "articles[3].total_ht": "953.08"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "16982.818",
+          "0"
+        ],
+        [
+          "4366",
+          "3226.724",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "20209.542"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "4976.65"
+        ],
+        [
+          "4366",
+          "945.56"
+        ],
+        [
+          "401",
+          "5922.21"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-09-14"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-09-14 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

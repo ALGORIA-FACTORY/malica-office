@@ -27,6 +27,8 @@
 
 import { periodeDeTva } from "@malica/socle/exercice";
 import { memeMatricule, normaliserMatricule } from "@malica/socle/matricule";
+import { enChiffresLatins } from "@malica/socle/chiffres";
+import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
 
 import type { ChangeDuJugement } from "./cours-de-change.ts";
 import type { ResultatNormalisation } from "./normaliser-montants.ts";
@@ -45,7 +47,9 @@ export interface ResultatControle {
     /** Le sens lu contredit ce que la pièce porte (5 octobre 2026). */
     | "sens_de_la_piece"
     /** Une pièce en devise : le cours qui la convertit, ou celui qui manque (31 octobre 2026). */
-    | "cours_de_change";
+    | "cours_de_change"
+    /** Un achat qui désigne un bien susceptible d'être immobilisé : le cabinet tranche (31 octobre 2026). */
+    | "immobilisation_a_trancher";
   statut: Statut;
   motif: string;
   preuves: Record<string, unknown>;
@@ -68,6 +72,8 @@ export interface PieceAControler {
    * celui de la lecture. Facultatif : absent vaut « non confirmé ».
    */
   sensConfirme?: boolean;
+  /** Les désignations des articles lus, telles qu'imprimées. Absentes : aucune. */
+  designations?: readonly string[];
 }
 
 export interface ContexteControle {
@@ -85,6 +91,12 @@ export interface ContexteControle {
     statut: "rejet" | "anomalie";
     refus: string;
   }>;
+  /**
+   * Les mots qui désignent un bien SUSCEPTIBLE d'être immobilisé
+   * (`ref.biens_immobilisables`, datés) : le motif (expression régulière, lue
+   * sans casse et en Unicode) et la famille de biens qu'il reconnaît.
+   */
+  biensImmobilisables: Array<{ motif: string; famille: string }>;
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
@@ -169,7 +181,14 @@ const VERDICT_DU_RANG: Record<number, Verdict> = {
  * appelant de production.
  */
 
-const normNumero = (n: string | null) => (n ? n.toUpperCase().replace(/[^0-9A-Z]/g, "") : null);
+// Les chiffres arabes orientaux d'abord ramenés aux latins (`enChiffresLatins`) :
+// ils tombaient avec la ponctuation, et « ٢٠٢٦/٥٠٣٦ » n'avait pas de clé.
+const normNumero = (n: string | null) =>
+  n
+    ? enChiffresLatins(n)
+        .toUpperCase()
+        .replace(/[^0-9A-Z]/g, "")
+    : null;
 
 /** Un nom d'émetteur comparable : sans accents, sans ponctuation, en capitales. */
 const normNom = (n: string | null) =>
@@ -234,21 +253,26 @@ function arithmetique(p: PieceAControler): ResultatControle {
   const m = p.montants;
   const preuves = { etat: m.etat, conventions: m.conventions, confiance: m.confiance };
   switch (m.etat) {
-    case "tranche":
+    case "tranche": {
+      /*
+       * Chaque raison de réserve se DIT, et toutes se disent : une pièce
+       * décidée par la convention qui laisse aussi le FODEC hors de la base
+       * de la TVA porte les deux (31 octobre 2026 — la première taisait la
+       * seconde).
+       */
+      const reserves: Array<{ motif: string; preuves?: Record<string, unknown> }> = [];
       /*
        * Une valeur que la pièce n'a pas laissé lire, et que son arithmétique
        * prouve (30 octobre 2026). On comptabilise, et l'on dit laquelle, par
        * quelle formule : le cabinet voit pourquoi. Jamais en silence.
        */
       if (m.deduits.length > 0)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Déduit, non lu : ${m.deduits
             .map((d) => `${d.champ} = ${d.valeur} (${d.formule})`)
             .join(" ; ")}. À vérifier.`,
-          preuves: { ...preuves, deduits: m.deduits },
-        };
+          preuves: { deduits: m.deduits },
+        });
       /*
        * Le total imprimé n'a pas pu être lu, et la facture tient quand même —
        * sa TVA la vérifie. On comptabilise, et on le DIT.
@@ -258,35 +282,46 @@ function arithmetique(p: PieceAControler): ResultatControle {
        * réserve comptabilise et signale à la fois.
        */
       if (m.totalNonLu)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Le total imprimé « ${m.totalNonLu} » n'a pas pu être lu ; les montants retenus se vérifient entre eux — ${m.raison}.`,
-          preuves,
-        };
+        });
       /*
        * La base de la ligne ne se lisait pas ; celle du pied de facture, que
        * la facture entière vérifie, a été retenue (29 octobre 2026). Même
        * raisonnement : on comptabilise, et on le dit.
        */
       if (m.ligneNonLue)
-        return {
-          code: "coherence_arithmetique",
-          statut: "reserve",
+        reserves.push({
           motif: `Base retenue depuis le pied de facture : la ligne « ${m.ligneNonLue} » ne se lit pas. À vérifier.`,
-          preuves: { ...preuves, ligneNonLue: m.ligneNonLue },
-        };
+          preuves: { ligneNonLue: m.ligneNonLue },
+        });
+      /*
+       * Un droit que le référentiel dit taxable (le FODEC) et que la TVA
+       * imprimée laisse hors de sa base (31 octobre 2026). La pièce tient
+       * ainsi, et l'écriture suit ce qu'elle imprime ; mais la règle dit le
+       * contraire : le cabinet le voit.
+       */
+      if (m.droitsHorsAssiette)
+        reserves.push({
+          motif: `La TVA imprimée n'est pas assise sur ${m.droitsHorsAssiette.join(", ")}, que le référentiel fait entrer dans la base de la TVA : la facture tient ainsi — ${m.raison}. À vérifier.`,
+          preuves: { droitsHorsAssiette: m.droitsHorsAssiette },
+        });
       /*
        * La valeur n'est décidée que par le séparateur décimal de la devise :
        * lus autrement, les montants tiennent aussi (revue de la PR 144). On
        * comptabilise la lecture de la convention, et on le dit.
        */
       if (m.parConvention)
+        reserves.push({
+          motif: `Décidé par la convention : ${m.raison}. À vérifier.`,
+          preuves: { parConvention: true },
+        });
+      if (reserves.length > 0)
         return {
           code: "coherence_arithmetique",
           statut: "reserve",
-          motif: `Décidé par la convention : ${m.raison}. À vérifier.`,
-          preuves: { ...preuves, parConvention: true },
+          motif: reserves.map((r) => r.motif).join(" "),
+          preuves: Object.assign({ ...preuves }, ...reserves.map((r) => r.preuves ?? {})),
         };
       return {
         code: "coherence_arithmetique",
@@ -294,6 +329,7 @@ function arithmetique(p: PieceAControler): ResultatControle {
         motif: `Les montants vérifient HT × (1 + taux) + autres = TTC — ${m.raison}.`,
         preuves,
       };
+    }
     case "non_verifie":
       return {
         code: "coherence_arithmetique",
@@ -396,6 +432,26 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       motif: reconnu.refus.replaceAll("{titre}", titre),
       preuves: { titre, documentKind: p.documentKind, documentType: reconnu.documentType },
     };
+  /*
+   * ======================================= CE QU'ON N'A PAS LU NE DIT PAS « FACTURE »
+   *
+   * Jeu synthétique, 31 octobre 2026 (cas 047) : un avoir arabe recevait une
+   * écriture d'ACHAT. Son titre « إشعار دائن » est au référentiel ; mais la
+   * couche de texte l'avait perdu (glyphes sans correspondance Unicode), aucun
+   * titre ne s'y reconnaissait, et ce contrôle concluait « facture » — par
+   * défaut, en silence. Ne reconnaître aucun titre n'est une preuve que si le
+   * titre a été LU. Un haut de page perdu bloque : facture ou avoir, la pièce
+   * ne le dit pas, le cabinet tranche. Un haut de page absent se propose, mais
+   * en réserve : on le dit.
+   */
+  if (titre && texteSansUnicode(titre))
+    return {
+      code: "nature_piece",
+      statut: "anomalie",
+      motif:
+        "Le haut de la pièce ne se lit pas (texte sans correspondance Unicode) : on ne peut pas dire si c'est une facture ou un avoir. Le cabinet tranche.",
+      preuves: { titre, documentKind: p.documentKind },
+    };
   if (!p.documentKind)
     return {
       code: "nature_piece",
@@ -410,6 +466,13 @@ function nature(p: PieceAControler, ctx: ContexteControle): ResultatControle {
       statut: "rejet",
       motif: `Le type « ${p.documentKind} » ne porte pas d'écriture comptable selon le paramétrage.`,
       preuves: { documentKind: p.documentKind },
+    };
+  if (!titre)
+    return {
+      code: "nature_piece",
+      statut: "reserve",
+      motif: `Pièce de type « ${p.documentKind} », mais aucun titre n'a été relevé en haut de la pièce : facture ou avoir, à confirmer.`,
+      preuves: { documentKind: p.documentKind, titre: null },
     };
   return {
     code: "nature_piece",
@@ -504,6 +567,14 @@ function motsDuNom(nom: string): Set<string> {
   );
 }
 
+/**
+ * Deux noms se comparent-ils ? Un nom arabe (ou perdu) n'a aucun mot latin :
+ * il ne dit ni oui ni non face au nom français de la fiche.
+ */
+function nomsComparables(a: string | null, b: string | null): boolean {
+  return !!a && !!b && motsDuNom(a).size > 0 && motsDuNom(b).size > 0;
+}
+
 /** Deux noms désignent-ils la même entreprise ? */
 function memeEntreprise(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
@@ -555,7 +626,26 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
       motif: "Le sens de la pièce n'est pas déterminé : il reste à confirmer.",
       preuves: { documentKind: p.documentKind },
     };
-  if (!p.emetteur.nom)
+  /*
+   * ============================== LE MATRICULE D'ABORD (31 octobre 2026)
+   *
+   * Jeu synthétique, cas 046 et 052 : une vente arabe, émise par le dossier
+   * à son matricule, refusée parce que son nom arabe ne se compare pas au
+   * nom français de la fiche. Le matricule est l'identifiant LÉGAL : lu des
+   * deux côtés, il décide. Le nom ne décide que sans lui — et, quand il se
+   * compare (mêmes écritures), il peut le CONTREDIRE : l'inversion du
+   * 5 octobre (le matricule du dossier, le nom d'un tiers) reste une
+   * contradiction, aucun des deux ne l'emporte.
+   */
+  const parMatricule =
+    normaliserMatricule(p.emetteur.identifiantFiscal).cle &&
+    normaliserMatricule(ctx.tenant.identifiantFiscal).cle
+      ? memeMatricule(p.emetteur.identifiantFiscal, ctx.tenant.identifiantFiscal)
+      : null;
+  const parLeNom = nomsComparables(p.emetteur.nom, ctx.tenant.nom)
+    ? memeEntreprise(p.emetteur.nom, ctx.tenant.nom)
+    : null;
+  if (parMatricule === null && !p.emetteur.nom)
     return {
       code: "sens_de_la_piece",
       statut: "non_evaluable",
@@ -563,15 +653,26 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
       preuves: {},
     };
 
-  const emetteurEstLeDossier = memeEntreprise(p.emetteur.nom, ctx.tenant.nom);
-  if (vente === emetteurEstLeDossier)
+  const emetteurEstLeDossier =
+    parMatricule !== null && (parLeNom === null || parLeNom === parMatricule)
+      ? parMatricule
+      : parMatricule === null
+        ? (parLeNom ?? false)
+        : null;
+  if (emetteurEstLeDossier !== null && vente === emetteurEstLeDossier)
     return {
       code: "sens_de_la_piece",
       statut: "conforme",
-      motif: vente
-        ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}.`
-        : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom}.`,
-      preuves: { documentKind: p.documentKind, emetteur: p.emetteur.nom },
+      motif:
+        (vente
+          ? `Vente : la pièce est bien émise par ${ctx.tenant.nom}`
+          : `Achat : la pièce est émise par un tiers, ${p.emetteur.nom ?? p.emetteur.identifiantFiscal}`) +
+        (parMatricule === null ? "." : ` (matricule ${p.emetteur.identifiantFiscal}).`),
+      preuves: {
+        documentKind: p.documentKind,
+        emetteur: p.emetteur.nom,
+        ...(parMatricule === null ? {} : { matricule: p.emetteur.identifiantFiscal }),
+      },
     };
 
   /*
@@ -594,13 +695,17 @@ function sensDeLaPiece(p: PieceAControler, ctx: ContexteControle): ResultatContr
   return {
     code: "sens_de_la_piece",
     statut: "anomalie",
-    motif: vente
-      ? `La pièce est lue comme une VENTE, mais elle est émise par ${p.emetteur.nom}, et non par ${ctx.tenant.nom} : le sens est à confirmer.`
-      : `La pièce est lue comme un ACHAT, mais elle est émise par ${ctx.tenant.nom} : le sens est à confirmer.`,
+    motif:
+      emetteurEstLeDossier === null
+        ? `Le matricule de l'émetteur (${p.emetteur.identifiantFiscal}) ${parMatricule ? "est" : "n'est pas"} celui de ${ctx.tenant.nom}, mais son nom lu est « ${p.emetteur.nom} » : la lecture se contredit, le sens est à confirmer.`
+        : vente
+          ? `La pièce est lue comme une VENTE, mais elle est émise par ${p.emetteur.nom ?? p.emetteur.identifiantFiscal}, et non par ${ctx.tenant.nom} : le sens est à confirmer.`
+          : `La pièce est lue comme un ACHAT, mais elle est émise par ${ctx.tenant.nom} : le sens est à confirmer.`,
     preuves: {
       documentKind: p.documentKind,
       emetteur: p.emetteur.nom,
       dossier: ctx.tenant.nom,
+      ...(parMatricule === null ? {} : { matricule: p.emetteur.identifiantFiscal }),
     },
   };
 }
@@ -857,8 +962,73 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
   };
 }
 
+/**
+ * Un achat désigne-t-il un bien susceptible d'être immobilisé ?
+ *
+ * ================================================================= POURQUOI
+ *
+ * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : l'achat d'un serveur
+ * ou d'un photocopieur recevait l'écriture d'une charge (601), en silence —
+ * une écriture fausse qui ressemblait à une écriture juste. Le Socle ne
+ * tranche pas entre charge et immobilisation : la durée, le seuil et la
+ * politique du cabinet appartiennent à l'expert-comptable (R10), et aucune
+ * règle de capitalisation n'est écrite ici. Mais il DIT que la question se
+ * pose : une RÉSERVE nommée, qui cite l'article et la famille de biens que
+ * le référentiel reconnaît (`ref.biens_immobilisables`, INCERTAIN).
+ *
+ * Rien pour une vente, rien quand aucun article ne porte un de ces mots : le
+ * contrôle n'apparaît alors pas, comme celui du change.
+ */
+function immobilisationATrancher(
+  p: PieceAControler,
+  ctx: ContexteControle,
+): ResultatControle | null {
+  if (p.documentKind !== "facture_achat") return null;
+  const motifs = ctx.biensImmobilisables.map((b) => ({
+    ...b,
+    expression: new RegExp(b.motif, "iu"),
+  }));
+  const reconnus = (p.designations ?? []).flatMap((designation) => {
+    const familles = [
+      ...new Set(motifs.filter((m) => m.expression.test(designation)).map((m) => m.famille)),
+    ];
+    return familles.length > 0 ? [{ designation, familles }] : [];
+  });
+  /*
+   * Une désignation PERDUE (glyphes sans Unicode) ne se compare à rien : elle
+   * peut nommer un serveur. Jeu synthétique, 31 octobre 2026 (cas 044) : le
+   * serveur arabe partait en charge, sans un mot. Un texte perdu n'est pas un
+   * texte absent — la question se pose, et se dit.
+   */
+  const illisibles = (p.designations ?? []).filter((d) => texteSansUnicode(d));
+  if (reconnus.length === 0 && illisibles.length === 0) return null;
+  const phrases = [
+    ...(reconnus.length > 0
+      ? [
+          `Bien susceptible d'être immobilisé : ${reconnus.map((r) => `« ${r.designation} »`).join(", ")}.`,
+        ]
+      : []),
+    ...(illisibles.length > 0
+      ? [
+          `Désignation illisible (texte perdu) : ${illisibles.length === 1 ? "un article" : `${illisibles.length} articles`} dont la nature ne se vérifie pas.`,
+        ]
+      : []),
+  ];
+  return {
+    code: "immobilisation_a_trancher",
+    statut: "reserve",
+    motif: `${phrases.join(" ")} L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
+    preuves: {
+      articles: reconnus.map((r) => r.designation),
+      familles: [...new Set(reconnus.flatMap((r) => r.familles))].sort(),
+      ...(illisibles.length > 0 ? { illisibles } : {}),
+    },
+  };
+}
+
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
   const change = coursDeChange(p, ctx);
+  const immobilisation = immobilisationATrancher(p, ctx);
   return [
     arithmetique(p),
     mentions(p, ctx),
@@ -869,6 +1039,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     dates(p, ctx),
     confiance(p, ctx),
     ...(change ? [change] : []),
+    ...(immobilisation ? [immobilisation] : []),
   ];
 }
 

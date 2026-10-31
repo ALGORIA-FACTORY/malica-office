@@ -52,6 +52,9 @@ export const TYPES_D_ESSAI = RELEVE_D_ESSAI.typesQuiPortentUneEcriture.map((code
 /** Ce que le titre imprimé dit de la nature de la pièce (`ref.titres_de_piece`). */
 export const TITRES_D_ESSAI = RELEVE_D_ESSAI.titres;
 
+/** Les mots d'un bien susceptible d'être immobilisé (`ref.biens_immobilisables`). */
+export const BIENS_IMMOBILISABLES_D_ESSAI = RELEVE_D_ESSAI.biensImmobilisables;
+
 /** Les marques imprimées de chaque devise (`ref.devises`, `ref.devises_marques`). */
 export const MARQUES_D_ESSAI = RELEVE_D_ESSAI.marques;
 

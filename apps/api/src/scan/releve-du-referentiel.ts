@@ -16,7 +16,7 @@
 import type { Requete } from "../db.ts";
 import { referentiel } from "../depots/referentiel.ts";
 
-import { lireLesTitres, lireParametres } from "./analyse.ts";
+import { lireLesBiensImmobilisables, lireLesTitres, lireParametres } from "./analyse.ts";
 import { lireLaRegleDuPack } from "./cours-de-change.ts";
 
 /** Le jour du relevé : un référentiel daté se relève à une date fixe (R11). */
@@ -59,6 +59,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
       documentKind: d.documentKind,
       accountCode: d.accountCode,
       fixedAmount: d.fixedAmount,
+      taxable: d.taxable,
     }))
     .sort(par((d) => `${d.code}|${d.documentKind}`));
   const { rows: mentions } = await db.query<{ code: string }>(
@@ -93,6 +94,7 @@ export async function releverLeReferentiel(db: Requete, juridiction: string) {
     mentions: mentions.map((m) => m.code),
     typesQuiPortentUneEcriture: types.map((t) => t.code),
     titres: await lireLesTitres(db),
+    biensImmobilisables: await lireLesBiensImmobilisables(db, pack.id, JOUR_DU_RELEVE),
     // La règle de change du pack (`change.*`) ; les cours, eux, sont des
     // données, et chaque cas de mesure dit le sien.
     change: await lireLaRegleDuPack(db, pack.id, JOUR_DU_RELEVE),

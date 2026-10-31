@@ -1,0 +1,156 @@
+{
+  "id": "041",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-08",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "برجان للنسيج",
+      "nomAr": "برجان للنسيج",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "33، نهج البرتقال، قصر هلال",
+      "telephone": "00 358 635"
+    },
+    "client": {
+      "nom": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "المرسى"
+    },
+    "articles": [
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "10 %",
+      "brut": "7 099,966",
+      "montant": "709,997"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "برجان للنسيج",
+      "document_date": "2026/09/03",
+      "references.numero": "2026/8810",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "6 389,969",
+      "totals.vat": "1 214,094",
+      "totals.ttc": "7 605,063",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "خدمات صيانة",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "926,354",
+      "articles[0].total_ht": "926,354",
+      "articles[1].designation": "خرطوشة حبر أسود",
+      "articles[1].quantity": "4",
+      "articles[1].unit_price_ht": "104,945",
+      "articles[1].total_ht": "419,780",
+      "articles[2].designation": "صفائح مجلفنة 2 مم",
+      "articles[2].quantity": "21",
+      "articles[2].unit_price_ht": "273,992",
+      "articles[2].total_ht": "5 753,832"
+    }
+  },
+  "graineDuRendu": 499270217,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "برجان للنسيج",
+      "document_date": "2026-09-03",
+      "currency": "TND",
+      "references.numero": "2026/8810",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "6389.969",
+      "totals.vat": "1214.094",
+      "totals.ttc": "7605.063",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "6389.969",
+      "lines[0].vat_amount": "1214.094",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "926.354",
+      "articles[0].total_ht": "926.354",
+      "articles[1].quantity": "4.000",
+      "articles[1].unit_price_ht": "104.945",
+      "articles[1].total_ht": "419.780",
+      "articles[2].quantity": "21.000",
+      "articles[2].unit_price_ht": "273.992",
+      "articles[2].total_ht": "5753.832"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "6389.969",
+          "0"
+        ],
+        [
+          "4366",
+          "1214.094",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "7605.063"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

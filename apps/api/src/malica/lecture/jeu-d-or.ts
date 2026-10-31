@@ -40,6 +40,14 @@ export interface CasDOr {
   nom: string;
   /** D'où vient cette pièce : sans quoi le cas n'est pas vérifiable. */
   provenance: string;
+  /**
+   * Vrai pour une pièce FABRIQUÉE (`outils/jeu-synthetique/`), jamais pour une
+   * pièce réelle. Un cas synthétique ne compte pas pour la cible du jeu d'or
+   * (cinquante pièces réelles validées par un expert-comptable) : il mesure la
+   * chaîne sur des formes que les pièces réelles du dépôt ne couvrent pas
+   * encore — l'arabe, l'hybride, la devise, le FODEC, l'avoir.
+   */
+  synthetique?: true;
   /** Décimales de la devise de la pièce. */
   decimales: number;
   /**
@@ -66,6 +74,25 @@ export interface CasDOr {
    * dit vrai sans avoir la pièce sous les yeux.
    */
   imprime: Record<string, string>;
+}
+
+/**
+ * Lit un chemin « articles[0].total_ht » dans l'extrait rendu ; `null` quand
+ * rien n'y est. C'est par ce chemin que `attendu` désigne chaque champ.
+ */
+export function auChemin(extrait: Record<string, unknown>, chemin: string): unknown {
+  let courant: unknown = extrait;
+  for (const bout of chemin.split(".")) {
+    const indexe = bout.match(/^([A-Za-z_]+)\[(\d+)\]$/);
+    if (indexe) {
+      const tableau = (courant as Record<string, unknown>)?.[indexe[1]!];
+      courant = Array.isArray(tableau) ? tableau[Number(indexe[2])] : undefined;
+    } else {
+      courant = (courant as Record<string, unknown>)?.[bout];
+    }
+    if (courant === undefined || courant === null) return courant ?? null;
+  }
+  return courant;
 }
 
 const ref = (ordinal: number, ordinalEnd?: number) =>

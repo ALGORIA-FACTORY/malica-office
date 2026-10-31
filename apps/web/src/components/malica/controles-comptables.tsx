@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { CircleCheck, CircleHelp, TriangleAlert } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { libelleDuCode } from "@/lib/champ-lisible";
+import { libelleDuControle } from "@/lib/champ-lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 export function ControlesComptables({
@@ -47,7 +47,7 @@ export function ControlesComptables({
                   <TriangleAlert className="h-4 w-4 text-signal-warn" aria-hidden />
                 )}
                 <div>
-                  <strong>{libelleDuCode(c.code, t)}</strong>
+                  <strong>{libelleDuControle(c.code, t)}</strong>
                   <p>{c.motif}</p>
                 </div>
               </li>

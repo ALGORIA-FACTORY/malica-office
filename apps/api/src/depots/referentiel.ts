@@ -317,7 +317,7 @@ export const referentiel = {
    */
   async fiscalCharges(db: Requete, packId: string, locale = "fr", jour = aujourdhui()) {
     const { rows } = await db.query(
-      `select c.code, c.document_kind, c.account_code, c.fixed_amount,
+      `select c.code, c.document_kind, c.account_code, c.fixed_amount, c.taxable,
               c.legal_reference, c.valid_from, c.valid_to,
               coalesce(demandee.value, francais.value, c.label) as label
          from ref_fiscal_charges_v c
@@ -344,6 +344,7 @@ export const referentiel = {
           r["fixed_amount"] === null || r["fixed_amount"] === undefined
             ? null
             : decStr(r["fixed_amount"], exposant),
+        taxable: r["taxable"] === true,
         legalReference: (r["legal_reference"] as string | null) ?? null,
       }));
   },

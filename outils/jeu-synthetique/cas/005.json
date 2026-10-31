@@ -1,0 +1,165 @@
+{
+  "id": "005",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_fodec",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-21",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Borjane Textile SARL",
+      "nomAr": "برجان للنسيج",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "33, rue des Orangers, Ksar Hellal",
+      "telephone": "00 358 635"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : six mille cent trente et un dinars et huit cent quarante-trois millimes.",
+    "imprime": {
+      "issuer": "Borjane Textile SARL",
+      "document_date": "20/09/2026",
+      "references.numero": "F-2026-9655",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5 100,959",
+      "totals.vat": "978,874",
+      "totals.ttc": "6 131,843",
+      "other_charges[0].amount": "51,010",
+      "other_charges[1].amount": "1,000",
+      "lines[0].base_ht": "5 151,969",
+      "lines[0].vat_amount": "978,874",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "13",
+      "articles[0].unit_price_ht": "266,209",
+      "articles[0].total_ht": "3 460,717",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "1 522,522",
+      "articles[1].total_ht": "1 522,522",
+      "articles[2].designation": "Papier A4 80 g, ramette",
+      "articles[2].quantity": "10",
+      "articles[2].unit_price_ht": "11,772",
+      "articles[2].total_ht": "117,720"
+    }
+  },
+  "graineDuRendu": 1929143448,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Borjane Textile SARL",
+      "document_date": "2026-09-20",
+      "currency": "TND",
+      "references.numero": "F-2026-9655",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "5100.959",
+      "totals.vat": "978.874",
+      "totals.ttc": "6131.843",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "5151.969",
+      "lines[0].vat_amount": "978.874",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "51.010",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "13.000",
+      "articles[0].unit_price_ht": "266.209",
+      "articles[0].total_ht": "3460.717",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "1522.522",
+      "articles[1].total_ht": "1522.522",
+      "articles[2].quantity": "10.000",
+      "articles[2].unit_price_ht": "11.772",
+      "articles[2].total_ht": "117.720"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "5100.959",
+          "0"
+        ],
+        [
+          "4366",
+          "978.874",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6652",
+          "51.010",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "6131.843"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+    ]
+  }
+}

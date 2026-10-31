@@ -1,0 +1,156 @@
+{
+  "id": "036",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "manuscrit",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-10",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Borjane Textile SARL",
+      "nomAr": "برجان للنسيج",
+      "matricule": "1381012E/A/M/000",
+      "adresse": "33, rue des Orangers, Ksar Hellal",
+      "telephone": "00 358 635"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "10 %",
+      "brut": "4.068,083",
+      "montant": "406,808"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Borjane Textile SARL",
+      "document_date": "05-10-2026",
+      "references.numero": "F-2026-0394",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3.661,275",
+      "totals.vat": "695,642",
+      "totals.ttc": "4.357,917",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "832,967",
+      "articles[0].total_ht": "1.665,934",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "3",
+      "articles[1].unit_price_ht": "10,247",
+      "articles[1].total_ht": "30,741",
+      "articles[2].designation": "Tôle galvanisée 2 mm",
+      "articles[2].quantity": "8",
+      "articles[2].unit_price_ht": "296,426",
+      "articles[2].total_ht": "2.371,408"
+    }
+  },
+  "graineDuRendu": 689837618,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Borjane Textile SARL",
+      "document_date": "2026-10-05",
+      "currency": "TND",
+      "references.numero": "F-2026-0394",
+      "references.matricule_fiscal": "1381012E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "3661.275",
+      "totals.vat": "695.642",
+      "totals.ttc": "4357.917",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3661.275",
+      "lines[0].vat_amount": "695.642",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "832.967",
+      "articles[0].total_ht": "1665.934",
+      "articles[1].quantity": "3.000",
+      "articles[1].unit_price_ht": "10.247",
+      "articles[1].total_ht": "30.741",
+      "articles[2].quantity": "8.000",
+      "articles[2].unit_price_ht": "296.426",
+      "articles[2].total_ht": "2371.408"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3661.275",
+          "0"
+        ],
+        [
+          "4366",
+          "695.642",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "4357.917"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

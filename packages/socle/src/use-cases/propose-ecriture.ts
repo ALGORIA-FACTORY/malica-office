@@ -249,6 +249,7 @@ export function buildProposal(params: {
           account_code: c.accountCode,
           document_kind: c.documentKind,
           fixed_amount: options.droitsFixes ? c.fixedAmount : null,
+          taxable: c.taxable,
         })),
 
       /*

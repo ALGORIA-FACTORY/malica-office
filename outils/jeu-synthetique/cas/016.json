@@ -1,0 +1,143 @@
+{
+  "id": "016",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-27",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Oulmira Distribution SA",
+      "nomAr": "ولميرة للتوزيع",
+      "matricule": "6455007V/A/M/000",
+      "adresse": "9, avenue des Jasmins, Gabès",
+      "telephone": "00 119 627"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "5 %",
+      "brut": "4583,591",
+      "montant": "229,180"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Oulmira Distribution SA",
+      "document_date": "23 octobre 2026",
+      "references.numero": "F-2026-8553",
+      "references.matricule_fiscal": "6455007V/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "4354,411",
+      "totals.vat": "827,338",
+      "totals.ttc": "5182,749",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Prestation de maintenance",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "995,057",
+      "articles[0].total_ht": "1990,114",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "2593,477",
+      "articles[1].total_ht": "2593,477"
+    }
+  },
+  "graineDuRendu": 926285943,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Oulmira Distribution SA",
+      "document_date": "2026-10-23",
+      "currency": "TND",
+      "references.numero": "F-2026-8553",
+      "references.matricule_fiscal": "6455007V/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "4354.411",
+      "totals.vat": "827.338",
+      "totals.ttc": "5182.749",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4354.411",
+      "lines[0].vat_amount": "827.338",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "995.057",
+      "articles[0].total_ht": "1990.114",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "2593.477",
+      "articles[1].total_ht": "2593.477"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "4354.411",
+          "0"
+        ],
+        [
+          "4366",
+          "827.338",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "5182.749"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

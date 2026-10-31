@@ -1,0 +1,139 @@
+{
+  "id": "049",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-07",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "قصيرة للمكتبيات",
+      "nomAr": "قصيرة للمكتبيات",
+      "matricule": "2695006N/A/M/000",
+      "adresse": "94، نهج الزيتونة، المنستير",
+      "telephone": "00 478 234"
+    },
+    "client": {
+      "nom": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "تونس"
+    },
+    "articles": [
+      {
+        "designation": "نقل البضائع",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "إقامة بالنزل ليلة",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "قصيرة للمكتبيات",
+      "document_date": "04/09/2026",
+      "references.numero": "2026/0331",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "1 297,109",
+      "totals.vat": "168,624",
+      "totals.ttc": "1 466,733",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "نقل البضائع",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "692,169",
+      "articles[0].total_ht": "692,169",
+      "articles[1].designation": "إقامة بالنزل ليلة",
+      "articles[1].quantity": "5",
+      "articles[1].unit_price_ht": "120,988",
+      "articles[1].total_ht": "604,940"
+    }
+  },
+  "graineDuRendu": 1820800519,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "قصيرة للمكتبيات",
+      "document_date": "2026-09-04",
+      "currency": "TND",
+      "references.numero": "2026/0331",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "1297.109",
+      "totals.vat": "168.624",
+      "totals.ttc": "1466.733",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "1297.109",
+      "lines[0].vat_amount": "168.624",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "692.169",
+      "articles[0].total_ht": "692.169",
+      "articles[1].quantity": "5.000",
+      "articles[1].unit_price_ht": "120.988",
+      "articles[1].total_ht": "604.940"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "1297.109",
+          "0"
+        ],
+        [
+          "4366",
+          "168.624",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "1466.733"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

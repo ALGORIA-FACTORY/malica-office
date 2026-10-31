@@ -858,6 +858,12 @@ export interface FiscalCharge {
   documentKind: "facture_achat" | "facture_vente";
   accountCode: string;
   fixedAmount: string | null;
+  /**
+   * Le droit entre dans la BASE de la TVA (`ref.fiscal_charges.taxable` : le
+   * FODEC, Code de la TVA art. 6-I, cité par le référentiel). La lecture
+   * l'admet dans l'équation de la facture (`normaliser-montants.ts`).
+   */
+  taxable: boolean;
   legalReference: string | null;
 }
 

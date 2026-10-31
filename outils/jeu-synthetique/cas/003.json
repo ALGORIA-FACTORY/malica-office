@@ -1,0 +1,145 @@
+{
+  "id": "003",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_un_taux",
+  "defaut": "total_faux",
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-14",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Kessira Bureautique SARL",
+      "nomAr": "قصيرة للمكتبيات",
+      "matricule": "2695006N/A/M/000",
+      "adresse": "94, rue de l'Olivier, Monastir",
+      "telephone": "00 478 234"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : cinq mille cinq cent trente-cinq dinars et sept cent dix-sept millimes.",
+    "imprime": {
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "10-09-2026",
+      "references.numero": "F-2026-0215",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4 642,619",
+      "totals.vat": "882,098",
+      "totals.ttc": "5 535,717",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Prestation de maintenance",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1 349,334",
+      "articles[0].total_ht": "2 698,668",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "6",
+      "articles[1].unit_price_ht": "95,204",
+      "articles[1].total_ht": "571,224",
+      "articles[2].designation": "Tôle galvanisée 2 mm",
+      "articles[2].quantity": "7",
+      "articles[2].unit_price_ht": "159,271",
+      "articles[2].total_ht": "1 114,897",
+      "articles[3].designation": "Papier A4 80 g, ramette",
+      "articles[3].quantity": "23",
+      "articles[3].unit_price_ht": "11,210",
+      "articles[3].total_ht": "257,830"
+    }
+  },
+  "graineDuRendu": 1659462114,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "2026-09-10",
+      "currency": "TND",
+      "references.numero": "F-2026-0215",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "4642.619",
+      "totals.vat": "882.098",
+      "totals.ttc": "5535.717",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4642.619",
+      "lines[0].vat_amount": "882.098",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1349.334",
+      "articles[0].total_ht": "2698.668",
+      "articles[1].quantity": "6.000",
+      "articles[1].unit_price_ht": "95.204",
+      "articles[1].total_ht": "571.224",
+      "articles[2].quantity": "7.000",
+      "articles[2].unit_price_ht": "159.271",
+      "articles[2].total_ht": "1114.897",
+      "articles[3].quantity": "23.000",
+      "articles[3].unit_price_ht": "11.210",
+      "articles[3].total_ht": "257.830"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "coherence_arithmetique"
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "défaut délibéré « total_faux » : la pièce ne doit recevoir aucune écriture"
+    ]
+  }
+}

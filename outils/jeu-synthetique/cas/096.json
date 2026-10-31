@@ -1,0 +1,119 @@
+{
+  "id": "096",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "achat_un_taux",
+  "defaut": "tva_fausse",
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-18",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Menzra Conseil SUARL",
+      "nomAr": "منزرة للاستشارات",
+      "matricule": "8764010I/A/M/000",
+      "adresse": "52, rue de l'Olivier, Ariana",
+      "telephone": "00 378 310"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : neuf mille deux cent quatorze dinars et quatre-vingt-quinze millimes.",
+    "imprime": {
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "14-09-2026",
+      "references.numero": "F-2026-2365",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "7 737,895",
+      "totals.vat": "1 475,200",
+      "totals.ttc": "9 214,095",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "23",
+      "articles[0].unit_price_ht": "245,197",
+      "articles[0].total_ht": "5 639,531",
+      "articles[1].designation": "Location de chariot élévateur",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "2 098,364",
+      "articles[1].total_ht": "2 098,364"
+    }
+  },
+  "graineDuRendu": 60844667,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Menzra Conseil SUARL",
+      "document_date": "2026-09-14",
+      "currency": "TND",
+      "references.numero": "F-2026-2365",
+      "references.matricule_fiscal": "8764010I/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "7737.895",
+      "totals.vat": "1475.200",
+      "totals.ttc": "9214.095",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "7737.895",
+      "lines[0].vat_amount": "1475.200",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "23.000",
+      "articles[0].unit_price_ht": "245.197",
+      "articles[0].total_ht": "5639.531",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "2098.364",
+      "articles[1].total_ht": "2098.364"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "coherence_arithmetique"
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "défaut délibéré « tva_fausse » : la pièce ne doit recevoir aucune écriture"
+    ]
+  }
+}

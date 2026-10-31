@@ -1,0 +1,139 @@
+{
+  "id": "013",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-24",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Zarvane Équipements SARL",
+      "nomAr": "شركة زرفان للتجهيزات",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "103, rue des Orangers, Radès",
+      "telephone": "00 701 570"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : six mille quatre-vingt-dix-neuf dinars et cent dix millimes.",
+    "imprime": {
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "23 septembre 2026",
+      "references.numero": "F-2026-4566",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "5 124,462",
+      "totals.vat": "973,648",
+      "totals.ttc": "6 099,110",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 547,846",
+      "articles[0].total_ht": "1 547,846",
+      "articles[1].designation": "Prestation de maintenance",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 788,308",
+      "articles[1].total_ht": "3 576,616"
+    }
+  },
+  "graineDuRendu": 166257179,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "2026-09-23",
+      "currency": "TND",
+      "references.numero": "F-2026-4566",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "5124.462",
+      "totals.vat": "973.648",
+      "totals.ttc": "6099.110",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "5124.462",
+      "lines[0].vat_amount": "973.648",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1547.846",
+      "articles[0].total_ht": "1547.846",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "1788.308",
+      "articles[1].total_ht": "3576.616"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "5124.462",
+          "0"
+        ],
+        [
+          "4366",
+          "973.648",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "6099.110"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

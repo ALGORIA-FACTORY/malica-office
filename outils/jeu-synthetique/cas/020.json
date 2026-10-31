@@ -1,0 +1,157 @@
+{
+  "id": "020",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_immobilisation",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-13",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Kessira Bureautique SARL",
+      "nomAr": "قصيرة للمكتبيات",
+      "matricule": "2695006N/A/M/000",
+      "adresse": "94, rue de l'Olivier, Monastir",
+      "telephone": "00 478 234"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Serveur de stockage en baie",
+        "designationAr": "خادم تخزين في خزانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "10/10/2026",
+      "references.numero": "F-2026-3637",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "13.925,214",
+      "totals.vat": "2.645,791",
+      "totals.ttc": "16.572,005",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Serveur de stockage en baie",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "6.962,607",
+      "articles[0].total_ht": "13.925,214"
+    }
+  },
+  "graineDuRendu": 1264214722,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Kessira Bureautique SARL",
+      "document_date": "2026-10-10",
+      "currency": "TND",
+      "references.numero": "F-2026-3637",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "13925.214",
+      "totals.vat": "2645.791",
+      "totals.ttc": "16572.005",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "13925.214",
+      "lines[0].vat_amount": "2645.791",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "6962.607",
+      "articles[0].total_ht": "13925.214"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "2282",
+          "13925.214",
+          "0"
+        ],
+        [
+          "4366",
+          "2645.791",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "16572.005"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "aTrancher": {
+      "reserve": "immobilisation_a_trancher",
+      "ecriture": {
+        "journal": "ACH",
+        "lignes": [
+          [
+            "601",
+            "13925.214",
+            "0"
+          ],
+          [
+            "4366",
+            "2645.791",
+            "0",
+            "TVA19"
+          ],
+          [
+            "6654",
+            "1.000",
+            "0"
+          ],
+          [
+            "401",
+            "0",
+            "16572.005"
+          ]
+        ]
+      }
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."
+    ]
+  }
+}

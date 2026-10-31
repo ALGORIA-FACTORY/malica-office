@@ -1,0 +1,141 @@
+{
+  "id": "052",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "vente_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-09",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "شركة نرفان التجريبية",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71، شارع الياسمين، تونس",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "ولميرة للتوزيع",
+      "matricule": "6455007V/A/M/000",
+      "adresse": "قابس"
+    },
+    "articles": [
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "٠٥/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٣٥٤٢",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6455007V/A/M/000",
+      "totals.base_ht": "٣٢٢٩,٠٩٤",
+      "totals.vat": "٦١٣,٥٢٨",
+      "totals.ttc": "٣٨٤٣,٦٢٢",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "خدمات صيانة",
+      "articles[0].quantity": "٢",
+      "articles[0].unit_price_ht": "١٤٣١,٧٤١",
+      "articles[0].total_ht": "٢٨٦٣,٤٨٢",
+      "articles[1].designation": "صفائح مجلفنة 2 مم",
+      "articles[1].quantity": "٤",
+      "articles[1].unit_price_ht": "٩١,٤٠٣",
+      "articles[1].total_ht": "٣٦٥,٦١٢"
+    }
+  },
+  "graineDuRendu": 1661504759,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "شركة نرفان التجريبية",
+      "document_date": "2026-10-05",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٣٥٤٢",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "6455007V/A/M/000",
+      "totals.base_ht": "3229.094",
+      "totals.vat": "613.528",
+      "totals.ttc": "3843.622",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3229.094",
+      "lines[0].vat_amount": "613.528",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1431.741",
+      "articles[0].total_ht": "2863.482",
+      "articles[1].quantity": "4.000",
+      "articles[1].unit_price_ht": "91.403",
+      "articles[1].total_ht": "365.612"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "3229.094"
+        ],
+        [
+          "4367",
+          "0",
+          "613.528",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "3843.622",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

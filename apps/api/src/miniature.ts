@@ -179,21 +179,25 @@ function dimensionsDe(
 export const limitesDuRenduPdf = { delaiMs: 15_000, memoireMo: 512 };
 
 /**
- * La première page d'un PDF, rendue dans la boîte (`miniature-pdf.ts`, dans
- * un fil à part). `null` quand il n'en a pas à montrer, par nature — chiffré,
- * cassé, sans page — ou quand il dépasse ses bornes (`limitesDuRenduPdf`) :
- * le même PDF les dépasserait encore à la prochaine demande. Lève sur toute
- * autre erreur du rendu.
+ * Les premières pages d'un PDF, rendues chacune dans la boîte
+ * (`miniature-pdf.ts`, dans un fil à part) : la miniature en demande une, la
+ * lecture qui relit une page en image en demande plusieurs (`pdf-image.ts`).
+ * `null` quand il n'en a pas à montrer, par nature — chiffré, cassé, sans
+ * page — ou quand il dépasse ses bornes (`limitesDuRenduPdf`) : le même PDF
+ * les dépasserait encore à la prochaine demande. Lève sur toute autre erreur
+ * du rendu.
  */
-function premierePageDuPdf(octets: Uint8Array): Promise<Buffer | null> {
+export function pagesDuPdf(
+  octets: Uint8Array,
+  rendu: Pick<DemandeDeRendu, "boite" | "qualite" | "pages">,
+): Promise<Buffer[] | null> {
   // Une COPIE, transférée au fil : l'appelant garde ses octets intacts.
   const copie = new ArrayBuffer(octets.byteLength);
   new Uint8Array(copie).set(octets);
   const demande: DemandeDeRendu = {
     octets: new Uint8Array(copie),
-    boite: BOITE,
     plafondPixels: PLAFOND_PIXELS,
-    qualite: QUALITE,
+    ...rendu,
   };
   return new Promise((resoudre, rejeter) => {
     const fil = new Worker(new URL("./miniature-pdf.ts", import.meta.url), {
@@ -210,8 +214,8 @@ function premierePageDuPdf(octets: Uint8Array): Promise<Buffer | null> {
       suite();
     };
     const minuterie = setTimeout(() => regler(() => resoudre(null)), limitesDuRenduPdf.delaiMs);
-    fil.once("message", ({ jpeg }: RenduDePage) =>
-      regler(() => resoudre(jpeg ? Buffer.from(jpeg) : null)),
+    fil.once("message", ({ jpegs }: RenduDePage) =>
+      regler(() => resoudre(jpegs.length > 0 ? jpegs.map((j) => Buffer.from(j)) : null)),
     );
     fil.once("error", (erreur: Error & { code?: string }) =>
       regler(() => (erreur.code === "ERR_WORKER_OUT_OF_MEMORY" ? resoudre(null) : rejeter(erreur))),
@@ -231,7 +235,8 @@ export async function fabriquerMiniature(octets: Uint8Array): Promise<Buffer | n
   const format = formatDe(octets);
   if (!format) return null;
   // Un PDF sort du fil déjà rendu à la taille de la boîte.
-  if (format === "pdf") return premierePageDuPdf(octets);
+  if (format === "pdf")
+    return (await pagesDuPdf(octets, { boite: BOITE, qualite: QUALITE, pages: 1 }))?.[0] ?? null;
 
   const taille = dimensionsDe(octets, format);
   if (!taille || taille.largeur * taille.hauteur > PLAFOND_PIXELS) return null;

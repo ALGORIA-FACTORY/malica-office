@@ -1,0 +1,143 @@
+{
+  "id": "061",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "photo",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-29",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "قصيرة للمكتبيات",
+      "nomAr": "قصيرة للمكتبيات",
+      "matricule": "2695006N/A/M/000",
+      "adresse": "94، نهج الزيتونة، المنستير",
+      "telephone": "00 478 234"
+    },
+    "client": {
+      "nom": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "تونس"
+    },
+    "articles": [
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "5 %",
+      "brut": "٣٥٨٨,٩٦٣",
+      "montant": "١٧٩,٤٤٨"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "قصيرة للمكتبيات",
+      "document_date": "٢٥/١٠/٢٠٢٦",
+      "references.numero": "٢٠٢٦/٤٦٤٥",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "٣٤٠٩,٥١٥",
+      "totals.vat": "٦٤٧,٨٠٨",
+      "totals.ttc": "٤٠٥٨,٣٢٣",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "خدمات صيانة",
+      "articles[0].quantity": "١",
+      "articles[0].unit_price_ht": "١١٨٥,٥٥١",
+      "articles[0].total_ht": "١١٨٥,٥٥١",
+      "articles[1].designation": "كراء رافعة شوكية",
+      "articles[1].quantity": "١",
+      "articles[1].unit_price_ht": "٢٤٠٣,٤١٢",
+      "articles[1].total_ht": "٢٤٠٣,٤١٢"
+    }
+  },
+  "graineDuRendu": 1398657759,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "قصيرة للمكتبيات",
+      "document_date": "2026-10-25",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٤٦٤٥",
+      "references.matricule_fiscal": "2695006N/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3409.515",
+      "totals.vat": "647.808",
+      "totals.ttc": "4058.323",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3409.515",
+      "lines[0].vat_amount": "647.808",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1185.551",
+      "articles[0].total_ht": "1185.551",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "2403.412",
+      "articles[1].total_ht": "2403.412"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3409.515",
+          "0"
+        ],
+        [
+          "4366",
+          "647.808",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "4058.323"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "id": "015",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "pdf",
+  "scenario": "achat_un_taux",
+  "defaut": "date_absente",
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-10",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Comptoir Belkadra SA",
+      "nomAr": "متجر بلقادرة",
+      "matricule": "4935002Q/A/M/000",
+      "adresse": "35, avenue des Jasmins, Sousse",
+      "telephone": "00 263 352"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : quatorze mille sept cent vingt-six dinars et quatre cent trente-sept millimes.",
+    "imprime": {
+      "issuer": "Comptoir Belkadra SA",
+      "references.numero": "F-2026-5852",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "12 374,317",
+      "totals.vat": "2 351,120",
+      "totals.ttc": "14 726,437",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "1 415,839",
+      "articles[0].total_ht": "2 831,678",
+      "articles[1].designation": "Tôle galvanisée 2 mm",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "377,213",
+      "articles[1].total_ht": "8 675,899",
+      "articles[2].designation": "Prestation de maintenance",
+      "articles[2].quantity": "2",
+      "articles[2].unit_price_ht": "433,370",
+      "articles[2].total_ht": "866,740"
+    }
+  },
+  "graineDuRendu": 2053836083,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Comptoir Belkadra SA",
+      "document_date": null,
+      "currency": "TND",
+      "references.numero": "F-2026-5852",
+      "references.matricule_fiscal": "4935002Q/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "12374.317",
+      "totals.vat": "2351.120",
+      "totals.ttc": "14726.437",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "12374.317",
+      "lines[0].vat_amount": "2351.120",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1415.839",
+      "articles[0].total_ht": "2831.678",
+      "articles[1].quantity": "23.000",
+      "articles[1].unit_price_ht": "377.213",
+      "articles[1].total_ht": "8675.899",
+      "articles[2].quantity": "2.000",
+      "articles[2].unit_price_ht": "433.370",
+      "articles[2].total_ht": "866.740"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "mentions_obligatoires",
+        "coherence_dates",
+        "proposition/a_completer"
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "défaut délibéré « date_absente » : la pièce ne doit recevoir aucune écriture"
+    ]
+  }
+}

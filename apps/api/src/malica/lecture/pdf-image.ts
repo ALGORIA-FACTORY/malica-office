@@ -7,11 +7,16 @@
  * de dessiner : pdf.js décode déjà l'image, quel que soit son filtre (JPEG,
  * CCITT du fax, JPX). Il ne reste qu'à la réemballer en PNG.
  *
+ * Une page qu'il faut DESSINER — un PDF imprimé dont le texte est perdu —
+ * passe par le fil de rendu de la miniature (`pagesDessineesDuPdf`, en bas).
+ *
  * L'encodeur ci-dessous est volontairement minimal : aucune compression
  * d'image, aucun rééchantillonnage, aucune perte. Les pixels sortis de pdf.js
  * sont ceux qui partent chez le modèle. `CompressionStream` fait le deflate,
  * et il existe aussi bien sur Workers que sous Node.
  */
+
+import { pagesDuPdf } from "../../miniature.ts";
 
 /** Table CRC-32 du PNG, calculée une fois. */
 const CRC_TABLE = (() => {
@@ -234,4 +239,45 @@ export async function extrairePagesScannees(bytes: Uint8Array, maxPages = 5): Pr
   }
 
   return sortie;
+}
+
+/**
+ * La boîte où se rend une page à relire : une page A4 à 200 points par pouce.
+ * C'est la définition d'une bonne numérisation de bureau, celle que les deux
+ * lecteurs d'image (PaddleOCR, le modèle de vision) lisent sur les photos ;
+ * au-delà, on paierait des pixels qu'aucun d'eux ne lit mieux.
+ */
+const BOITE_DE_LECTURE = { largeur: 1654, hauteur: 2339 } as const;
+
+/** Qualité JPEG (0-100) d'une page à relire : le texte fin doit survivre. */
+const QUALITE_DE_LECTURE = 90;
+
+/**
+ * Les premières pages d'un PDF DESSINÉES, pour les relire en image.
+ *
+ * ================================================================= POURQUOI
+ *
+ * `extrairePagesScannees` ne sait sortir que l'image qu'un scan PORTE. Un
+ * PDF imprimé par un logiciel n'en porte aucune : ses mots sont du texte. Le
+ * jour où ce texte est perdu — des glyphes sans correspondance Unicode
+ * (`texteSansUnicode`), relevé le 31 octobre 2026 sur les PDF arabes imprimés
+ * par Chromium —, la page n'a plus qu'une lecture juste : la regarder. Elle
+ * se dessine alors dans le fil borné de la miniature (`pagesDuPdf`), et
+ * l'image va au lecteur d'image comme une photo.
+ *
+ * Rien, par nature (chiffré, cassé, sans page, bornes dépassées) : `[]`.
+ */
+export async function pagesDessineesDuPdf(
+  bytes: Uint8Array,
+  maxPages = 5,
+): Promise<Array<Pick<PageImage, "dataUrl" | "page">>> {
+  const jpegs = await pagesDuPdf(bytes, {
+    boite: BOITE_DE_LECTURE,
+    qualite: QUALITE_DE_LECTURE,
+    pages: maxPages,
+  });
+  return (jpegs ?? []).map((jpeg, i) => ({
+    dataUrl: `data:image/jpeg;base64,${jpeg.toString("base64")}`,
+    page: i + 1,
+  }));
 }

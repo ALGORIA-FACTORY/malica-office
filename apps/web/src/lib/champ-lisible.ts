@@ -286,6 +286,33 @@ export function libelleDuCode(code: string, t: T): string {
   return t(CODES[code] ?? "cab.code.autre");
 }
 
+/**
+ * Le nom d'un CONTRÔLE du jugement (`apps/api/src/scan/controles.ts`), dans
+ * la langue de l'écran.
+ *
+ * Le panneau des contrôles du cabinet passait ces codes à `libelleDuCode`,
+ * qui ne connaît que les drapeaux de la lecture : chaque contrôle s'y
+ * intitulait « Signalement de lecture. » — la réserve « immobilisation à
+ * trancher » (31 octobre 2026) comprise, qui doit dire la question qu'elle
+ * pose. Un code inconnu garde le repli des drapeaux plutôt que d'être tu.
+ */
+export function libelleDuControle(code: string, t: T): string {
+  const CONTROLES: Record<string, MessageKey> = {
+    coherence_arithmetique: "cab.controle.coherence_arithmetique",
+    mentions_obligatoires: "cab.controle.mentions_obligatoires",
+    nature_piece: "cab.controle.nature_piece",
+    destinataire: "cab.controle.destinataire",
+    sens_de_la_piece: "cab.controle.sens_de_la_piece",
+    doublon: "cab.controle.doublon",
+    coherence_dates: "cab.controle.coherence_dates",
+    confiance_lecture: "cab.controle.confiance_lecture",
+    cours_de_change: "cab.controle.cours_de_change",
+    immobilisation_a_trancher: "cab.controle.immobilisation_a_trancher",
+  };
+  const cle = CONTROLES[code];
+  return cle ? t(cle) : libelleDuCode(code, t);
+}
+
 type Payload = Readonly<Record<string, unknown>>;
 
 /**

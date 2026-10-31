@@ -21,7 +21,11 @@ import {
 } from "./controles.ts";
 import { normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
-import { DEVISE_D_ESSAI, TITRES_D_ESSAI } from "./referentiel-d-essai.ts";
+import {
+  BIENS_IMMOBILISABLES_D_ESSAI,
+  DEVISE_D_ESSAI,
+  TITRES_D_ESSAI,
+} from "./referentiel-d-essai.ts";
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
@@ -76,6 +80,7 @@ const CONTEXTE: ContexteControle = {
     { code: "bon_livraison", porteEcriture: false },
   ],
   titres: TITRES_D_ESSAI,
+  biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
   mentionsObligatoires: [
     { code: "IDENT_FISCAL_EMETTEUR", libelle: "Identifiant fiscal de l'émetteur" },
     { code: "IDENT_FISCAL_CLIENT", libelle: "Identifiant fiscal du client" },
@@ -190,6 +195,59 @@ describe("cohérence arithmétique", () => {
     assert.equal(c.statut, "reserve");
     assert.match(c.motif, /\+ 470,126/);
   });
+  it("un droit taxable dans la base de la TVA, comme le référentiel le dit : conforme", () => {
+    // Jeu synthétique, cas 005 : HT 5 100,959, FODEC 51,010, TVA 19 % de
+    // 5 151,969, timbre 1,000.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "5 100,959", taux: "0.19" }],
+        tva: "978,874",
+        autres: [{ brut: "51,010", taxable: true }, "1,000"],
+        ttc: "6 131,843",
+      },
+      P,
+    );
+    assert.equal(statut(facture({ montants: n }), "coherence_arithmetique").statut, "conforme");
+  });
+
+  it("un droit taxable laissé hors de la base de la TVA : réserve, qui nomme le droit", () => {
+    // La pièce tient ainsi, et ne se réécrit pas ; mais le référentiel dit le
+    // contraire (`ref.fiscal_charges.taxable`) : le cabinet doit le voir.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "7 620,000", taux: "0.19" }],
+        tva: "1 447,800",
+        autres: [{ brut: "71,200", taxable: true }, "1,000"],
+        ttc: "9 140,000",
+        chemins: { autre0: "other_charges[0].amount" },
+      },
+      P,
+    );
+    const c = statut(facture({ montants: n }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /other_charges\[0\]\.amount/);
+    assert.deepEqual(c.preuves["droitsHorsAssiette"], ["other_charges[0].amount"]);
+  });
+
+  it("deux raisons de réserve : les deux se disent, aucune ne tait l'autre", () => {
+    // Le témoin « le HT imprimé comprend un droit non fixé » : décidé par la
+    // convention, ET le FODEC laissé hors de la base de la TVA.
+    const n = normaliserMontants(
+      {
+        bases: [{ ht: "101,000", taux: "0.19" }],
+        tva: "19,000",
+        autres: [{ brut: "1,000", taxable: true }],
+        ttc: "120,000",
+      },
+      P,
+    );
+    const c = statut(facture({ montants: n }), "coherence_arithmetique");
+    assert.equal(c.statut, "reserve");
+    assert.equal(c.preuves["parConvention"], true);
+    assert.deepEqual(c.preuves["droitsHorsAssiette"], ["autre0"]);
+    assert.match(c.motif, /convention/);
+    assert.match(c.motif, /base de la TVA/);
+  });
 });
 
 describe("mentions obligatoires", () => {
@@ -270,6 +328,78 @@ describe("nature de la pièce", () => {
   });
   it("nature inconnue : réserve", () => {
     assert.equal(statut(facture({ documentKind: null }), "nature_piece").statut, "reserve");
+  });
+  it("un titre qu'on n'a pas pu lire ne fait pas une facture : anomalie, jamais un achat", () => {
+    // Le haut de l'avoir arabe du jeu synthétique (cas 047), tel que la couche
+    // de texte de Chromium le relève : des glyphes sans correspondance Unicode.
+    const c = statut(facture({ titre: "ﺎ\u0000 \u0000 ﻨ راعشإ\u0000" }), "nature_piece");
+    assert.equal(c.statut, "anomalie");
+    assert.match(c.motif, /facture ou (un )?avoir/);
+  });
+  it("un titre reconnu l'emporte, même à côté d'un texte perdu", () => {
+    assert.equal(
+      statut(facture({ titre: "FACTURE PROFORMA \u0000ﺢ" }), "nature_piece").statut,
+      "rejet",
+    );
+  });
+  it("aucun titre relevé : la nature se propose, mais en réserve, nommée", () => {
+    const c = statut(facture({ titre: null }), "nature_piece");
+    assert.equal(c.statut, "reserve");
+    assert.match(c.motif, /titre/);
+  });
+});
+
+describe("un bien susceptible d'être immobilisé", () => {
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : l'achat d'un
+   * serveur ou d'un photocopieur partait en charge (601), en silence. Le
+   * Socle ne tranche pas entre charge et immobilisation — l'expert le fait —,
+   * mais il doit DIRE que la question se pose (`ref.biens_immobilisables`).
+   */
+  const immo = (p: PieceAControler) =>
+    controlerPiece(p, CONTEXTE).find((c) => c.code === "immobilisation_a_trancher");
+
+  it("un serveur acheté : réserve nommée, l'article et sa famille dans les preuves", () => {
+    const c = immo(facture({ designations: ["Serveur de stockage en baie", "Câble RJ45"] }));
+    assert.equal(c?.statut, "reserve");
+    assert.match(c!.motif, /Serveur de stockage en baie/);
+    assert.match(c!.motif, /tranche/);
+    assert.deepEqual(c!.preuves["familles"], ["INFORMATIQUE"]);
+  });
+
+  it("en arabe aussi, article et pluriel soudés", () => {
+    assert.equal(immo(facture({ designations: ["آلة نسخ متعددة الوظائف A3"] }))?.statut, "reserve");
+    assert.equal(immo(facture({ designations: ["خادم تخزين في خزانة"] }))?.statut, "reserve");
+  });
+
+  it("un mot qui n'en contient qu'un autre ne déclenche rien", () => {
+    // « serveurs » au milieu d'un mot, la location d'un chariot : rien.
+    assert.equal(
+      immo(facture({ designations: ["Location de chariot élévateur", "Conserveurs"] })),
+      undefined,
+    );
+  });
+
+  it("une vente ne s'immobilise pas : rien à trancher", () => {
+    assert.equal(
+      immo(facture({ documentKind: "facture_vente", designations: ["Serveur de stockage"] })),
+      undefined,
+    );
+  });
+
+  it("un achat ordinaire, ou sans articles lus : rien", () => {
+    assert.equal(immo(facture({ designations: ["Papier A4 80 g, ramette"] })), undefined);
+    assert.equal(immo(facture()), undefined);
+  });
+  it("un article à la désignation perdue (glyphes sans Unicode) : la question se pose", () => {
+    // Jeu synthétique, 31 octobre 2026 (cas 044) : « خادم » relevé par la
+    // couche de texte en glyphes sans Unicode. Rien ne s'y reconnaissait, et
+    // le serveur partait en charge, sans un mot. Un texte perdu n'est pas un
+    // texte absent : on ne conclut rien de ce qu'il ne dit pas.
+    const c = immo(facture({ designations: ["ﻡ\u0000ﺩ\u0000ﺎﺧ"] }));
+    assert.equal(c?.statut, "reserve");
+    assert.match(c!.motif, /illisible/);
+    assert.deepEqual(c!.preuves["illisibles"], ["ﻡ\u0000ﺩ\u0000ﺎﺧ"]);
   });
 });
 
@@ -470,6 +600,61 @@ describe("le sens de la pièce, confronté à ce qu'elle porte", () => {
     );
     assert.equal(c.statut, "conforme");
   });
+
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 046, 052) : une vente arabe, émise
+   * par le dossier à son matricule, refusée parce que le NOM arabe ne se
+   * compare pas au nom français de la fiche. Le matricule est l'identifiant
+   * légal : il décide d'abord ; le nom ne décide que sans lui, et le
+   * contredit quand il se compare (l'inversion du 5 octobre, plus haut).
+   */
+  it("une vente au nom arabe, émise au matricule du dossier : conforme", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "شركة نرفان التجريبية", identifiantFiscal: "1856324K/A/M/000" },
+        destinataire: { nom: "عميل", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "conforme", c.motif);
+    assert.match(c.motif, /matricule/);
+  });
+
+  it("une vente au nom arabe, émise à un autre matricule : contradiction", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_vente",
+        emetteur: { nom: "شركة أخرى", identifiantFiscal: "1234567B/B/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+
+  it("un achat au nom arabe, émis au matricule du dossier : contradiction", () => {
+    const c = statut(
+      facture({
+        documentKind: "facture_achat",
+        emetteur: { nom: "شركة نرفان التجريبية", identifiantFiscal: "1856324K/A/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
+
+  it("un nom lisible qui contredit le matricule reste une contradiction", () => {
+    // Le matricule du dossier, le nom d'un tiers : c'est la lecture qui se
+    // contredit, aucun des deux ne l'emporte.
+    const c = statut(
+      facture({
+        documentKind: "facture_achat",
+        emetteur: { nom: "FOURNISSEUR SA", identifiantFiscal: "1856324K/A/M/000" },
+      }),
+      "sens_de_la_piece",
+    );
+    assert.equal(c.statut, "anomalie");
+  });
 });
 
 describe("doublon", () => {
@@ -526,6 +711,16 @@ describe("la clé de doublon", () => {
     assert.equal(
       cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567 B M 000" }).mf,
       cleDeDoublon({ ...lue, emetteurIdentifiantFiscal: "1234567B/B/M/000" }).mf,
+    );
+  });
+  it("un numéro en chiffres arabes orientaux a sa clé, la même qu'en chiffres latins", () => {
+    // Jeu synthétique, 31 octobre 2026 : « ٢٠٢٦/٥٠٣٦ » rendait une clé VIDE —
+    // les chiffres orientaux tombaient avec la ponctuation, et aucune facture
+    // arabe n'était jamais rapprochée d'un doublon.
+    assert.equal(cleDeDoublon({ ...lue, numero: "٢٠٢٦ / ٥٠٣٦" }).numero, "20265036");
+    assert.deepEqual(
+      cleDeDoublon({ ...lue, numero: "٢٠٢٦/٥٠٣٦" }),
+      cleDeDoublon({ ...lue, numero: "2026/5036" }),
     );
   });
   it("sans numéro lu, la clé est vide : rien n'est jamais signalé", () => {

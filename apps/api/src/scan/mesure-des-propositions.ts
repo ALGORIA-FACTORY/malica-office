@@ -38,6 +38,7 @@ import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
 import { jourDuCours, type CoursLu } from "./cours-de-change.ts";
 import {
+  BIENS_IMMOBILISABLES_D_ESSAI,
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
   DEVISES_D_ESSAI,
@@ -50,8 +51,8 @@ import {
   TYPES_D_ESSAI,
 } from "./referentiel-d-essai.ts";
 import { JEU_D_OR } from "../malica/lecture/jeu-d-or.ts";
-import { buildExtractFromTokenPlan } from "../malica/lecture/read-piece.ts";
-import { texteDuMontantCite } from "../malica/lecture/token-plan.ts";
+import { buildExtractFromTokenPlan, type BuiltRead } from "../malica/lecture/read-piece.ts";
+import { texteDuMontantCite, type PageToken } from "../malica/lecture/token-plan.ts";
 import { DEVISES_LUES_D_ESSAI, devisesDEssai } from "./devise-d-essai.ts";
 
 /** Une ligne d'écriture attendue : compte, débit, crédit, et le code de taxe d'une ligne de TVA. */
@@ -84,6 +85,17 @@ export interface CasDeMesure {
    * autre raison n'est pas juste (le cabinet ne saurait pas quoi faire).
    */
   refus?: string;
+  /**
+   * Une question que le Socle ne tranche PAS, et qu'il doit dire : l'écriture
+   * du paramétrage (`attendu`), proposée AVEC la réserve qui la nomme
+   * (`reserve`). Une immobilisation que le Socle impute en charge n'est pas
+   * fausse quand elle porte la réserve « à trancher » : elle est à trancher.
+   * Sans la réserve, elle redevient fausse ; avec une autre écriture aussi.
+   */
+  aTrancher?: {
+    reserve: string;
+    attendu: { journal: string; lignes: LigneAttendue[] };
+  };
   /**
    * Le cours que `app.cours_applicable` rendrait pour la devise de la pièce ;
    * absent : aucun cours. Un cours est une donnée : celui-ci est fictif.
@@ -178,6 +190,44 @@ function facture(f: Facture): LectureAJuger {
   };
 }
 
+/**
+ * Une lecture citée, telle que la base la porterait après `persisterLecture` :
+ * l'extraction relue au plan, le texte imprimé de chaque citation, le haut de
+ * la première page (le titre), la confiance de chaque champ.
+ *
+ * Partagée par le jeu d'or et le jeu synthétique (`jeu-synthetique.ts`) : les
+ * deux jugent une lecture construite par la MÊME relecture que la production.
+ */
+export function lectureCitee(
+  tokens: readonly PageToken[],
+  lu: BuiltRead,
+  confianceGlobale: number,
+  recueLe: string,
+): LectureAJuger {
+  // Le texte de chaque citation, comme `analyserPiece` le relit.
+  const textes = new Map<string, string[]>();
+  for (const c of lu.citations) {
+    const texte = texteDuMontantCite(tokens, c);
+    if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
+  }
+  const premiere = Math.min(...tokens.map((t) => t.page));
+  const haut = tokens
+    .filter((t) => t.page === premiere && t.y0 <= HAUT_DE_PAGE)
+    .sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)
+    .map((t) => t.text);
+  const extrait = lu.extract as LectureAJuger["payload"];
+  return {
+    payload: extrait,
+    imprime: (champ) => textes.get(champ)?.join(" ") ?? null,
+    titre: haut.join(" ") || null,
+    sensDit: null,
+    date: extrait.document_date ?? null,
+    recueLe,
+    confianceParChamp: confianceParChamp(lu.citations, tokens, confianceGlobale),
+    doublonDe: null,
+  };
+}
+
 /** Le jeu d'or, joué comme la production : désignation relue au plan, citations, confiance. */
 function depuisLeJeuDOr(): CasDeMesure[] {
   return JEU_D_OR.map((cas) => {
@@ -187,37 +237,17 @@ function depuisLeJeuDOr(): CasDeMesure[] {
       ...devisesDEssai(cas.decimales),
       matriculeDossier: cas.matriculeDossier,
     });
-    // Le texte de chaque citation, comme `analyserPiece` le relit.
-    const textes = new Map<string, string[]>();
-    for (const c of lu.citations) {
-      const texte = texteDuMontantCite(cas.tokens, c);
-      if (texte !== null) textes.set(c.field, [...(textes.get(c.field) ?? []), texte]);
-    }
-    const premiere = Math.min(...cas.tokens.map((t) => t.page));
-    const haut = cas.tokens
-      .filter((t) => t.page === premiere && t.y0 <= HAUT_DE_PAGE)
-      .sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0)
-      .map((t) => t.text);
-    const extrait = lu.extract as LectureAJuger["payload"];
     return {
       nom: `jeu d'or — ${cas.nom}`,
       provenance: cas.provenance,
       dossier: { nom: DOSSIER.nom, identifiantFiscal: cas.matriculeDossier ?? "" },
-      lecture: {
-        payload: extrait,
-        imprime: (champ) => textes.get(champ)?.join(" ") ?? null,
-        titre: haut.join(" ") || null,
-        sensDit: null,
-        date: extrait.document_date ?? null,
-        // Lue le 4 octobre 2026 (provenance du cas).
-        recueLe: "2026-10-04",
-        confianceParChamp: confianceParChamp(
-          lu.citations,
-          cas.tokens,
-          (cas.designation as { overall_confidence: number }).overall_confidence,
-        ),
-        doublonDe: null,
-      },
+      // Lue le 4 octobre 2026 (provenance du cas).
+      lecture: lectureCitee(
+        cas.tokens,
+        lu,
+        (cas.designation as { overall_confidence: number }).overall_confidence,
+        "2026-10-04",
+      ),
       // 3 020,000 HT, 573,800 TVA, 1,000 de timbre, 3 594,800 TTC (imprimés).
       attendu: {
         journal: "ACH",
@@ -647,6 +677,33 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     },
   },
   {
+    // Jeu synthétique, 31 octobre 2026 (cas 005, 017, 042, 081) : le FODEC
+    // entre dans la base de la TVA, comme le référentiel le dit
+    // (`ref.fiscal_charges.taxable`). L'équation l'ignorait : « incohérente ».
+    nom: "un FODEC dans la base de la TVA, comme le référentiel le dit",
+    provenance: "jeu synthétique, cas 005",
+    lecture: facture({
+      lignes: [{ code: "TVA19", ht: "1 000,000" }],
+      ht: "1 000,000",
+      tva: "191,900",
+      droits: [
+        { code: "FODEC", montant: "10,000" },
+        { code: "DROIT_TIMBRE", montant: "1,000" },
+      ],
+      ttc: "1 202,900",
+    }),
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["601", "1000.000", "0"],
+        ["4366", "191.900", "0", "TVA19"],
+        ["6652", "10.000", "0"],
+        ["6654", "1.000", "0"],
+        ["401", "0", "1202.900"],
+      ],
+    },
+  },
+  {
     // Négatif comptable, ou base entre parenthèses (« (base 514,700) », le
     // 15 octobre 2026) : le texte ne dit pas le signe, rien ne se propose.
     nom: "des montants entre parenthèses : le signe ne se devine pas",
@@ -665,6 +722,76 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     provenance: "revue indépendante de la PR 144",
     lecture: facture({ ...SIMPLE, titre: "AVOIR N° A-2026-0007" }),
     attendu: null,
+  },
+  {
+    /*
+     * Jeu synthétique, 31 octobre 2026 : un avoir arabe titré « إشعار دائن »
+     * se proposait en ACHAT — `ref.titres_de_piece` ne connaissait que des
+     * titres français. Le pire résultat : une écriture fausse, sans réserve.
+     */
+    nom: "titré « إشعار دائن » (avoir, en arabe), aux montants positifs : jamais un achat",
+    provenance: "jeu synthétique, cas 047 (outils/jeu-synthetique/cas/047.json)",
+    lecture: facture({ ...SIMPLE, titre: "إشعار دائن رقم 2026/0045" }),
+    attendu: null,
+    refus: "nature_piece",
+  },
+  {
+    /*
+     * Le même avoir, quand son titre est PERDU (31 octobre 2026) : la couche
+     * de texte d'un PDF imprimé par Chromium rend ses glyphes liés sans
+     * correspondance Unicode. Aucun titre ne s'y reconnaissait, et la pièce
+     * passait pour une facture, par défaut. Le haut de la pièce est relevé
+     * ici tel que la couche le rendait (cas 047), en échappements.
+     */
+    nom: "un titre perdu (glyphes sans Unicode) ne fait pas une facture : jamais un achat",
+    provenance: "jeu synthétique, cas 047 (outils/jeu-synthetique/rendus/047.pdf)",
+    lecture: facture({
+      ...SIMPLE,
+      titre: "ﺎ\u0000 \u0000 ﻨ راعشإ\u0000 2026/1524",
+    }),
+    attendu: null,
+    refus: "nature_piece",
+  },
+  {
+    /*
+     * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : un serveur
+     * acheté partait en charge, en silence. Le Socle ne tranche pas entre
+     * charge et immobilisation — aucune règle de capitalisation n'est écrite —,
+     * il propose l'imputation du paramétrage ET la réserve qui dit la
+     * question (`ref.biens_immobilisables`). L'écriture du comptable, si le
+     * cabinet immobilise, est au compte 2282 (INCERTAIN, référentiel
+     * complémentaire du jeu).
+     */
+    nom: "un serveur acheté : l'imputation du paramétrage, et la question à trancher",
+    provenance: "jeu synthétique, cas 007 (outils/jeu-synthetique/cas/007.json)",
+    lecture: {
+      ...facture(SIMPLE),
+      payload: {
+        ...facture(SIMPLE).payload,
+        articles: [{ designation: "Serveur de stockage en baie" }],
+      } as LectureAJuger["payload"],
+    },
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["2282", "1234.560", "0"],
+        ["4366", "234.566", "0", "TVA19"],
+        ["6654", "1.000", "0"],
+        ["401", "0", "1470.126"],
+      ],
+    },
+    aTrancher: {
+      reserve: "immobilisation_a_trancher",
+      attendu: {
+        journal: "ACH",
+        lignes: [
+          ["601", "1234.560", "0"],
+          ["4366", "234.566", "0", "TVA19"],
+          ["6654", "1.000", "0"],
+          ["401", "0", "1470.126"],
+        ],
+      },
+    },
   },
   {
     nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
@@ -1032,6 +1159,8 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
 
 export type Issue =
   | { type: "exacte" }
+  /** L'écriture du paramétrage, avec la réserve qui dit la question à trancher (`aTrancher`). */
+  | { type: "a_trancher"; reserve: string }
   | { type: "fausse"; cause: string }
   | { type: "refus_juste"; motif: string }
   | { type: "aucune"; motif: string };
@@ -1085,9 +1214,13 @@ export function juger(cas: CasDeMesure) {
         d.fixedAmount !== null && d.documentKind === sens ? [[d.code, d.fixedAmount] as const] : [],
       ),
     ),
+    droitsTaxables: new Set(
+      DROITS_D_ESSAI.filter((d) => d.taxable && d.documentKind === sens).map((d) => d.code),
+    ),
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,
     titres: TITRES_D_ESSAI,
+    biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,
@@ -1107,7 +1240,7 @@ export function juger(cas: CasDeMesure) {
 }
 
 /** Joue un cas sur la vraie chaîne, et compare à ce que la pièce imprime. */
-function jouer(cas: CasDeMesure): Issue {
+export function jouer(cas: CasDeMesure): Issue {
   const jugement = juger(cas);
   // L'exposant de la devise que le jugement a décidée, comme `propositionDePiece`.
   const decimales =
@@ -1175,13 +1308,26 @@ function jouer(cas: CasDeMesure): Issue {
     causes.push(`cours appliqué ≠ ${cas.cours.id}`);
   if (!cas.cours && e.lignes.some((l) => l.devise_origine))
     causes.push("une devise d'origine sans pièce en devise");
-  return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
+  if (causes.length === 0) return { type: "exacte" };
+  // La question que le Socle ne tranche pas : l'écriture du paramétrage, au
+  // millime, ET la réserve qui la nomme. Rien d'autre n'y passe.
+  const t = cas.aTrancher;
+  if (
+    t &&
+    e.journal === t.attendu.journal &&
+    lues.join() === t.attendu.lignes.map(cleDeLigne).sort().join() &&
+    jugement.motifs.some((m) => m.code === t.reserve && m.statut === "reserve")
+  )
+    return { type: "a_trancher", reserve: t.reserve };
+  return { type: "fausse", cause: causes.join(" · ") };
 }
 
 export interface Mesure {
   total: number;
   proposees: number;
   exactes: number;
+  /** Proposées avec la réserve qui dit la question à trancher (`aTrancher`). */
+  aTrancher: number;
   /** Les cas dont l'écriture attendue existe : la base du taux d'exactitude. */
   attendues: number;
   parCas: Record<string, Issue>;
@@ -1199,8 +1345,11 @@ export function mesurer(cas: readonly CasDeMesure[] = CAS_DE_MESURE): Mesure {
   const issues = Object.values(parCas);
   return {
     total: cas.length,
-    proposees: issues.filter((i) => i.type === "exacte" || i.type === "fausse").length,
+    proposees: issues.filter(
+      (i) => i.type === "exacte" || i.type === "a_trancher" || i.type === "fausse",
+    ).length,
     exactes: issues.filter((i) => i.type === "exacte").length,
+    aTrancher: issues.filter((i) => i.type === "a_trancher").length,
     attendues: cas.filter((c) => c.attendu !== null).length,
     parCas,
     motifs,
@@ -1235,6 +1384,7 @@ export function rapport(m: Mesure): string {
     `pièces : ${m.total}`,
     `proposées : ${pc(m.proposees, m.total)}`,
     `exactes (sur les pièces qui ont une écriture juste) : ${pc(m.exactes, m.attendues)}`,
+    `à trancher (l'écriture du paramétrage, et la réserve qui dit la question) : ${m.aTrancher}`,
     `issue juste (écriture exacte, ou refus juste) : ${pc(justes, m.total)}`,
     "motifs sans proposition :",
     ...Object.entries(m.motifs)
@@ -1243,7 +1393,7 @@ export function rapport(m: Mesure): string {
     "par pièce :",
     ...Object.entries(m.parCas).map(
       ([nom, i]) =>
-        `  ${i.type.padEnd(11)} ${nom}${"motif" in i ? ` — ${i.motif}` : ""}${"cause" in i ? ` — ${i.cause}` : ""}`,
+        `  ${i.type.padEnd(11)} ${nom}${"motif" in i ? ` — ${i.motif}` : ""}${"cause" in i ? ` — ${i.cause}` : ""}${"reserve" in i ? ` — réserve « ${i.reserve} »` : ""}`,
     ),
   ].join("\n");
 }

@@ -1,0 +1,193 @@
+{
+  "id": "091",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "photo",
+  "scenario": "vente_plusieurs_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-21",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Société Nervane d'Essai SARL",
+      "nomAr": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "71, avenue des Jasmins, Tunis",
+      "telephone": "00 657 510"
+    },
+    "client": {
+      "nom": "Imprimerie Selvane",
+      "matricule": "1719005D/A/M/000",
+      "adresse": "Nabeul"
+    },
+    "articles": [
+      {
+        "designation": "Médicament vétérinaire",
+        "designationAr": "دواء بيطري",
+        "codeTaxe": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Transport de marchandises",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Formation professionnelle agréée",
+        "designationAr": "تكوين مهني معتمد",
+        "codeTaxe": "EXO",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "EXO",
+        "tauxImprime": "0 %"
+      },
+      {
+        "code": "TVA07",
+        "tauxImprime": "7.000000000000001 %"
+      },
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : huit mille trois cent trente-trois dinars et deux cent soixante-quatorze millimes.",
+    "imprime": {
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "20 septembre 2026",
+      "references.numero": "F-2026-3789",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "1719005D/A/M/000",
+      "totals.base_ht": "7 648,798",
+      "totals.vat": "683,476",
+      "totals.ttc": "8 333,274",
+      "other_charges[0].amount": "1,000",
+      "lines[0].base_ht": "1 269,108",
+      "lines[0].vat_amount": "0,000",
+      "lines[1].base_ht": "2 431,390",
+      "lines[1].vat_amount": "170,197",
+      "lines[2].base_ht": "3 948,300",
+      "lines[2].vat_amount": "513,279",
+      "articles[0].designation": "Médicament vétérinaire",
+      "articles[0].quantity": "10",
+      "articles[0].unit_price_ht": "243,139",
+      "articles[0].total_ht": "2 431,390",
+      "articles[1].designation": "Hébergement en hôtel, nuitée",
+      "articles[1].quantity": "15",
+      "articles[1].unit_price_ht": "217,417",
+      "articles[1].total_ht": "3 261,255",
+      "articles[2].designation": "Transport de marchandises",
+      "articles[2].quantity": "1",
+      "articles[2].unit_price_ht": "687,045",
+      "articles[2].total_ht": "687,045",
+      "articles[3].designation": "Formation professionnelle agréée",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "634,554",
+      "articles[3].total_ht": "1 269,108"
+    }
+  },
+  "graineDuRendu": 233995125,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Société Nervane d'Essai SARL",
+      "document_date": "2026-09-20",
+      "currency": "TND",
+      "references.numero": "F-2026-3789",
+      "references.matricule_fiscal": "6443013U/A/M/000",
+      "references.matricule_fiscal_client": "1719005D/A/M/000",
+      "totals.base_ht": "7648.798",
+      "totals.vat": "683.476",
+      "totals.ttc": "8333.274",
+      "lines[0].tax_code": "EXO",
+      "lines[0].base_ht": "1269.108",
+      "lines[0].vat_amount": "0.000",
+      "lines[1].tax_code": "TVA07",
+      "lines[1].base_ht": "2431.390",
+      "lines[1].vat_amount": "170.197",
+      "lines[2].tax_code": "TVA13",
+      "lines[2].base_ht": "3948.300",
+      "lines[2].vat_amount": "513.279",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "10.000",
+      "articles[0].unit_price_ht": "243.139",
+      "articles[0].total_ht": "2431.390",
+      "articles[1].quantity": "15.000",
+      "articles[1].unit_price_ht": "217.417",
+      "articles[1].total_ht": "3261.255",
+      "articles[2].quantity": "1.000",
+      "articles[2].unit_price_ht": "687.045",
+      "articles[2].total_ht": "687.045",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "634.554",
+      "articles[3].total_ht": "1269.108"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "7648.798"
+        ],
+        [
+          "4367",
+          "0",
+          "170.197",
+          "TVA07"
+        ],
+        [
+          "4367",
+          "0",
+          "513.279",
+          "TVA13"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "8333.274",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

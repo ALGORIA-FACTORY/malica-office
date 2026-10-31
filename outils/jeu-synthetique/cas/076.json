@@ -1,0 +1,139 @@
+{
+  "id": "076",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-26",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": ".",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Dzirane Agro SARL",
+      "nomAr": "دزيران للفلاحة",
+      "matricule": "7325009S/A/M/000",
+      "adresse": "74, zone industrielle, lot, Béja",
+      "telephone": "00 846 598"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Transport de marchandises",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "Hébergement en hôtel, nuitée",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Dzirane Agro SARL",
+      "document_date": "24-10-2026",
+      "references.numero": "F-2026-7442",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "2.411,022",
+      "totals.vat": "313,433",
+      "totals.ttc": "2.725,455",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Transport de marchandises",
+      "articles[0].quantity": "2",
+      "articles[0].unit_price_ht": "357,987",
+      "articles[0].total_ht": "715,974",
+      "articles[1].designation": "Hébergement en hôtel, nuitée",
+      "articles[1].quantity": "12",
+      "articles[1].unit_price_ht": "141,254",
+      "articles[1].total_ht": "1.695,048"
+    }
+  },
+  "graineDuRendu": 1552548253,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Dzirane Agro SARL",
+      "document_date": "2026-10-24",
+      "currency": "TND",
+      "references.numero": "F-2026-7442",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "2411.022",
+      "totals.vat": "313.433",
+      "totals.ttc": "2725.455",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "2411.022",
+      "lines[0].vat_amount": "313.433",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "357.987",
+      "articles[0].total_ht": "715.974",
+      "articles[1].quantity": "12.000",
+      "articles[1].unit_price_ht": "141.254",
+      "articles[1].total_ht": "1695.048"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "2411.022",
+          "0"
+        ],
+        [
+          "4366",
+          "313.433",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "2725.455"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

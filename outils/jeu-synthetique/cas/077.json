@@ -1,0 +1,139 @@
+{
+  "id": "077",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "pdf",
+  "scenario": "achat_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-21",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Talvine Matériaux SA",
+      "nomAr": "تلفين لمواد البناء",
+      "matricule": "7039011T/A/M/000",
+      "adresse": "76, zone industrielle, lot, Mahdia",
+      "telephone": "00 382 139"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": "Arrêtée la présente facture à la somme de : trois mille neuf cent vingt-neuf dinars et huit cent quarante-neuf millimes.",
+    "imprime": {
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "16 septembre 2026",
+      "references.numero": "F-2026-9541",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "3 301,554",
+      "totals.vat": "627,295",
+      "totals.ttc": "3 929,849",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Cartouche d'encre noire",
+      "articles[0].quantity": "17",
+      "articles[0].unit_price_ht": "154,644",
+      "articles[0].total_ht": "2 628,948",
+      "articles[1].designation": "Prestation de maintenance",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "336,303",
+      "articles[1].total_ht": "672,606"
+    }
+  },
+  "graineDuRendu": 560885518,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Talvine Matériaux SA",
+      "document_date": "2026-09-16",
+      "currency": "TND",
+      "references.numero": "F-2026-9541",
+      "references.matricule_fiscal": "7039011T/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "3301.554",
+      "totals.vat": "627.295",
+      "totals.ttc": "3929.849",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3301.554",
+      "lines[0].vat_amount": "627.295",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "17.000",
+      "articles[0].unit_price_ht": "154.644",
+      "articles[0].total_ht": "2628.948",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "336.303",
+      "articles[1].total_ht": "672.606"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "3301.554",
+          "0"
+        ],
+        [
+          "4366",
+          "627.295",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "3929.849"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

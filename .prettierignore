@@ -8,3 +8,10 @@ bun.lock
 routeTree.gen.ts
 android
 .stockage
+# Le jeu synthétique : des fichiers ÉCRITS par ses outils (composer, rendre,
+# mesurer), qui se régénèrent à l'octet près. Les reformater les ferait
+# diverger de ce que l'outil réécrit.
+outils/jeu-synthetique/cas
+outils/jeu-synthetique/rendus
+outils/jeu-synthetique/mesure.json
+outils/jeu-synthetique/RAPPORT.md

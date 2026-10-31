@@ -4,6 +4,7 @@ import type { FieldCitation, PageToken, ReadFlag, TokenRef } from "@malica/socle
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
 
 import { treillisMontant, type Hypothese } from "./montants.ts";
+import type { Lecteur } from "./vision.ts";
 import { plageAmputee, TOLERANCE_DE_LIGNE } from "./recoller-les-milliers.ts";
 /**
  * Plan de tokens — R2 « zéro hallucination dès la lecture ».
@@ -157,10 +158,16 @@ export function normalizeDate(text: string): string | null {
   const rendre = (y: string, m: string, d: string): string | null =>
     dateReelle(y, m, d) ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
 
-  const iso = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  /*
+   * Le séparateur peut être entouré d'espaces : « ٢٠٢٦ / ١٠ / ٠٧ ». La couche
+   * de texte d'un PDF arabe rend chaque série de chiffres en jeton à part, et
+   * la plage désignée se relit espacée (jeu synthétique, 31 octobre 2026). Le
+   * séparateur reste exigé : l'espace seul ne fait pas une date.
+   */
+  const iso = s.match(/(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})/);
   if (iso) return rendre(iso[1]!, iso[2]!, iso[3]!);
 
-  const dmy = s.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+  const dmy = s.match(/(\d{1,2})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{2,4})/);
   if (dmy) {
     const yRaw = dmy[3]!;
     const y = yRaw.length === 2 ? `20${yRaw}` : yRaw;
@@ -397,6 +404,8 @@ export function lireMontantDuPlan(
   devise: DeviseLue,
   zone?: string | null,
   binding?: CitationBinding,
+  /** Qui a relevé les jetons : il décide des chiffres orientaux (`treillisMontant`). */
+  lecteur?: Lecteur,
 ): MontantLu {
   if (!ref) {
     return {
@@ -457,7 +466,7 @@ export function lireMontantDuPlan(
     };
   }
 
-  const hypotheses = treillisMontant(texte, devise);
+  const hypotheses = treillisMontant(texte, devise, lecteur);
 
   if (hypotheses.length === 0) {
     return {

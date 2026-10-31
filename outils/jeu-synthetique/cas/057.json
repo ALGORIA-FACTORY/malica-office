@@ -1,0 +1,139 @@
+{
+  "id": "057",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "photo",
+  "scenario": "achat_13",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-07",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "شركة زرفان للتجهيزات",
+      "nomAr": "شركة زرفان للتجهيزات",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "103، نهج البرتقال، رادس",
+      "telephone": "00 701 570"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "نقل البضائع",
+        "designationAr": "نقل البضائع",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      },
+      {
+        "designation": "إقامة بالنزل ليلة",
+        "designationAr": "إقامة بالنزل ليلة",
+        "codeTaxe": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA13",
+        "tauxImprime": "13 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "شركة زرفان للتجهيزات",
+      "document_date": "٢٠٢٦/١٠/٠٦",
+      "references.numero": "٢٠٢٦/١٧٠٠",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "٧٥٤٣,٩٠٤",
+      "totals.vat": "٩٨٠,٧٠٨",
+      "totals.ttc": "٨٥٢٥,٦١٢",
+      "other_charges[0].amount": "١,٠٠٠",
+      "articles[0].designation": "نقل البضائع",
+      "articles[0].quantity": "٢",
+      "articles[0].unit_price_ht": "١٣٩٩,٧٣٢",
+      "articles[0].total_ht": "٢٧٩٩,٤٦٤",
+      "articles[1].designation": "إقامة بالنزل ليلة",
+      "articles[1].quantity": "٢٠",
+      "articles[1].unit_price_ht": "٢٣٧,٢٢٢",
+      "articles[1].total_ht": "٤٧٤٤,٤٤٠"
+    }
+  },
+  "graineDuRendu": 1225553878,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "شركة زرفان للتجهيزات",
+      "document_date": "2026-10-06",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/١٧٠٠",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "7543.904",
+      "totals.vat": "980.708",
+      "totals.ttc": "8525.612",
+      "lines[0].tax_code": "TVA13",
+      "lines[0].base_ht": "7543.904",
+      "lines[0].vat_amount": "980.708",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "2.000",
+      "articles[0].unit_price_ht": "1399.732",
+      "articles[0].total_ht": "2799.464",
+      "articles[1].quantity": "20.000",
+      "articles[1].unit_price_ht": "237.222",
+      "articles[1].total_ht": "4744.440"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "7543.904",
+          "0"
+        ],
+        [
+          "4366",
+          "980.708",
+          "0",
+          "TVA13"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "8525.612"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

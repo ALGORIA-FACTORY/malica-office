@@ -1,0 +1,178 @@
+{
+  "id": "066",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "manuscrit",
+  "scenario": "achat_fodec",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-10-18",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "orientaux"
+    },
+    "emetteur": {
+      "nom": "فنارة للخدمات اللوجستية",
+      "nomAr": "فنارة للخدمات اللوجستية",
+      "matricule": "2986008E/A/M/000",
+      "adresse": "44، نهج الزيتونة، القيروان",
+      "telephone": "00 852 583"
+    },
+    "client": {
+      "nom": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "بن عروس"
+    },
+    "articles": [
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "ورق طباعة A4 رزمة",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": true,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "FODEC",
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "فنارة للخدمات اللوجستية",
+      "document_date": "٢٠٢٦/١٠/١٣",
+      "references.numero": "٢٠٢٦/٣٢١٩",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "٩٥٨٣,١١٦",
+      "totals.vat": "١٨٣٩,٠٠٠",
+      "totals.ttc": "١١٥١٨,٩٤٧",
+      "other_charges[0].amount": "٩٥,٨٣١",
+      "other_charges[1].amount": "١,٠٠٠",
+      "lines[0].base_ht": "٩٦٧٨,٩٤٧",
+      "lines[0].vat_amount": "١٨٣٩,٠٠٠",
+      "articles[0].designation": "صفائح مجلفنة 2 مم",
+      "articles[0].quantity": "١٦",
+      "articles[0].unit_price_ht": "٤٣٥,٩٤٣",
+      "articles[0].total_ht": "٦٩٧٥,٠٨٨",
+      "articles[1].designation": "كراء رافعة شوكية",
+      "articles[1].quantity": "١",
+      "articles[1].unit_price_ht": "٨٦٧,٢٤٠",
+      "articles[1].total_ht": "٨٦٧,٢٤٠",
+      "articles[2].designation": "خرطوشة حبر أسود",
+      "articles[2].quantity": "١٠",
+      "articles[2].unit_price_ht": "١٥٤,١٩٦",
+      "articles[2].total_ht": "١٥٤١,٩٦٠",
+      "articles[3].designation": "ورق طباعة A4 رزمة",
+      "articles[3].quantity": "٢١",
+      "articles[3].unit_price_ht": "٩,٤٦٨",
+      "articles[3].total_ht": "١٩٨,٨٢٨"
+    }
+  },
+  "graineDuRendu": 1140747541,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "فنارة للخدمات اللوجستية",
+      "document_date": "2026-10-13",
+      "currency": "TND",
+      "references.numero": "٢٠٢٦/٣٢١٩",
+      "references.matricule_fiscal": "2986008E/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "9583.116",
+      "totals.vat": "1839.000",
+      "totals.ttc": "11518.947",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "9678.947",
+      "lines[0].vat_amount": "1839.000",
+      "other_charges[0].code": "FODEC",
+      "other_charges[0].amount": "95.831",
+      "other_charges[1].code": "DROIT_TIMBRE",
+      "other_charges[1].amount": "1.000",
+      "articles[0].quantity": "16.000",
+      "articles[0].unit_price_ht": "435.943",
+      "articles[0].total_ht": "6975.088",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "867.240",
+      "articles[1].total_ht": "867.240",
+      "articles[2].quantity": "10.000",
+      "articles[2].unit_price_ht": "154.196",
+      "articles[2].total_ht": "1541.960",
+      "articles[3].quantity": "21.000",
+      "articles[3].unit_price_ht": "9.468",
+      "articles[3].total_ht": "198.828"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "9583.116",
+          "0"
+        ],
+        [
+          "4366",
+          "1839.000",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6652",
+          "95.831",
+          "0"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "11518.947"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA"
+    ]
+  }
+}

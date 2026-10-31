@@ -73,8 +73,12 @@ export interface EntreeMontants {
    *
    * `brut: null` : la lecture NOMME le droit, mais n'en a pas cité le montant.
    * Il ne se retient alors que si l'arithmétique le prouve (voir `deduits`).
+   *
+   * `taxable` : le référentiel dit que ce droit entre dans la BASE de la TVA
+   * (`ref.fiscal_charges.taxable` — le FODEC, Code de la TVA art. 6-I). Voir
+   * « un droit taxable » plus bas.
    */
-  autres?: Array<string | { brut: string | null; attendu?: number }>;
+  autres?: Array<string | { brut: string | null; attendu?: number; taxable?: boolean }>;
   /** Le TTC imprimé. */
   ttc?: string | null;
   /**
@@ -184,6 +188,14 @@ export interface ResultatNormalisation {
    * Absent des jugements posés avant le 30 octobre 2026 : un lecteur lit `?? false`.
    */
   parConvention: boolean;
+  /**
+   * Les droits que le référentiel dit TAXABLES (`autres[i].taxable`) et que
+   * la lecture retenue laisse HORS de la base de la TVA : la facture ne tient
+   * qu'ainsi, contre la règle (31 octobre 2026). Leurs chemins de citation
+   * (`chemins`) ; absent quand la règle est suivie, ou qu'aucun droit n'est
+   * taxable. Le contrôle arithmétique pose une réserve.
+   */
+  droitsHorsAssiette?: string[];
   /**
    * La devise de la pièce, décidée par `deviseDeLaPiece` (lue, imprimée, à
    * défaut celle du dossier) — null quand elle ne se décide pas. La
@@ -302,6 +314,15 @@ function arrondi(num: bigint, den: bigint): bigint {
 }
 
 const abs = (x: bigint) => (x < 0n ? -x : x);
+
+/** Ce que la base imprimée dit des droits taxables (« un droit taxable »). */
+type Assiette = "ajoutee" | "comprise" | "hors";
+
+const PHRASE_DE_L_ASSIETTE: Record<Exclude<Assiette, "hors">, string> = {
+  ajoutee: " ; les droits taxables entrent dans la base de la TVA",
+  comprise:
+    " ; la base imprimée est celle de la TVA, droits taxables compris : le HT en est le reste",
+};
 
 export function normaliserMontants(
   entree: EntreeMontants,
@@ -552,6 +573,33 @@ export function normaliserMontants(
   });
 
   const rats = entree.bases.map((b) => rationnel(b.taux));
+  /*
+   * ======================================== UN DROIT TAXABLE (31 octobre 2026)
+   *
+   * Jeu synthétique, cas 005, 017, 042, 081 : quatre achats avec FODEC
+   * refusés « incohérents ». Le référentiel dit le FODEC TAXABLE
+   * (`ref.fiscal_charges.taxable`, Code de la TVA art. 6-I : la base comprend
+   * « tous frais, droits et taxes ») ; l'équation ne le savait pas. Sur une
+   * facture à UNE base, trois lectures de l'assiette :
+   *
+   *   « ajoutée »  la base imprimée est le HT ; la TVA porte sur HT + droits
+   *                taxables (la règle) ;
+   *   « comprise » la base imprimée EST la base de la TVA, droits taxables
+   *                compris (la règle) ; le HT de l'écriture en est le reste.
+   *                Sans total lu, rien ne la distingue de la suivante ;
+   *   « hors »     la TVA porte sur la seule base imprimée — l'équation
+   *                d'avant. Contraire au texte, elle reste lue telle que la
+   *                pièce l'imprime (la facture réelle du 18 octobre 2026 en
+   *                est une), et se DIT (`droitsHorsAssiette`).
+   *
+   * Plusieurs taux : on ne sait pas à quelle base le droit se rattache, rien
+   * ne se répartit — seule l'équation d'avant s'essaie.
+   */
+  const taxables = (entree.autres ?? []).flatMap((a, i) =>
+    typeof a !== "string" && a.taxable ? [i] : [],
+  );
+  const assiettes: Assiette[] =
+    taxables.length > 0 && entree.bases.length === 1 ? ["ajoutee", "comprise", "hors"] : ["hors"];
   const tol = BigInt(p.toleranceMineure);
   // Un total qu'on n'a pas su lire ne vérifie rien : il ne compte plus ici.
   const aVerifier = lu("ttc") || lu("tva");
@@ -598,11 +646,12 @@ export function normaliserMontants(
   function combinaisonsValides(
     listes: readonly Candidat[][],
     autresCompris = false,
+    assiette: Assiette = "hors",
   ): Map<string, Candidat[]> {
     const distinctes = new Map<string, Candidat[]>();
     const combiner = (i: number, pris: Candidat[]) => {
       if (i === listes.length) {
-        if (verifie(pris, autresCompris))
+        if (verifie(pris, autresCompris, assiette))
           distinctes.set(pris.map((c) => c.mineur).join("|"), [...pris]);
         return;
       }
@@ -615,7 +664,16 @@ export function normaliserMontants(
     combiner(0, []);
     return distinctes;
   }
-  const distinctes = combinaisonsValides(lectures);
+  // Les lectures valides, toutes assiettes confondues, sans doublon de
+  // VALEURS RENDUES : deux assiettes qui rendent la même écriture n'en font
+  // qu'une ; deux qui en rendent deux sont une ambiguïté.
+  const parAssiette = new Map<string, { pris: Candidat[]; assiette: Assiette }>();
+  for (const assiette of assiettes)
+    for (const pris of combinaisonsValides(lectures, false, assiette).values()) {
+      const v = valeurs(pris, false, assiette);
+      parAssiette.set([...v.hts, v.tva, ...v.autres, v.ttc].join("|"), { pris, assiette });
+    }
+  const distinctes = new Map([...parAssiette].map(([cle, x]) => [cle, x.pris]));
 
   /*
    * ============================== LE HT QUI COMPREND DÉJÀ LE TIMBRE (26 octobre 2026)
@@ -694,11 +752,13 @@ export function normaliserMontants(
     );
   }
 
-  const [retenue] = [...distinctes.values()];
+  const [{ pris: retenue, assiette }] = [...parAssiette.values()] as [
+    { pris: Candidat[]; assiette: Assiette },
+  ];
   const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
   const deduite = tvaNonLue !== null || baseDeduite !== null || droitsDeduits.size > 0;
   return construire(
-    retenue!,
+    retenue,
     "tranche",
     // Vérifiée par la seule TVA, la lecture ne vaut pas celle que le total
     // confirme aussi : on ne lui donne pas la note pleine. Une valeur déduite
@@ -712,7 +772,11 @@ export function normaliserMontants(
         ? "lecture unique, vérifiée par la facture"
         : ancre
           ? "convention tranchée par l'arithmétique de la facture, l'échelle ancrée par un droit que fixe le paramétrage"
-          : "convention tranchée par l'arithmétique de la facture") + suffixe,
+          : "convention tranchée par l'arithmétique de la facture") +
+      (assiette === "hors" ? "" : PHRASE_DE_L_ASSIETTE[assiette]) +
+      suffixe,
+    false,
+    assiette,
   );
 
   /*
@@ -737,7 +801,7 @@ export function normaliserMontants(
    * reste d'arrondi, écrits à l'anglaise sans millimes) n'est pas mesurée ;
    * elle se lit sur les jugements posés (`capture.analyses`, `parConvention`).
    */
-  function decideeParLaConvention(autresCompris: boolean): boolean {
+  function decideeParLaConvention(autresCompris: boolean, assiette: Assiette): boolean {
     const avecLaConvention = lectures.map((l, i) => [
       ...l,
       ...(ancres.has(champs[i]!.nom) ? [] : (champs[i]!.ecartees ?? [])).map((mineur) => ({
@@ -747,7 +811,7 @@ export function normaliserMontants(
     ]);
     return (
       avecLaConvention.some((l, i) => l.length > lectures[i]!.length) &&
-      combinaisonsValides(avecLaConvention, autresCompris).size > 1
+      combinaisonsValides(avecLaConvention, autresCompris, assiette).size > 1
     );
   }
 
@@ -771,18 +835,32 @@ export function normaliserMontants(
   /**
    * `autresCompris` : le HT imprimé comprend les autres montants ; la base
    * taxable est HT − autres (une seule base, voir plus haut).
+   *
+   * `assiette` : ce que la base imprimée dit des droits taxables (« un droit
+   * taxable », plus haut). Comprise, le HT de l'écriture est la base moins
+   * ces droits. `enPlus` : ce qui s'ajoute à la base pour asseoir la TVA.
    */
-  function valeurs(pris: Candidat[], autresCompris = false) {
+  function valeurs(pris: Candidat[], autresCompris = false, assiette: Assiette = "hors") {
     const v = valeursImprimees(pris);
-    if (!autresCompris) return v;
-    const autres = v.autres.reduce((s, a) => s + a, 0n);
-    return { ...v, hts: v.hts.map((h) => h - autres) };
+    const somme = (rangs: readonly number[]) => rangs.reduce((s, i) => s + v.autres[i]!, 0n);
+    const tous = v.autres.map((_, i) => i);
+    const retires =
+      (autresCompris ? somme(tous) : 0n) + (assiette === "comprise" ? somme(taxables) : 0n);
+    return {
+      ...v,
+      hts: v.hts.map((h) => h - retires),
+      enPlus: assiette === "hors" ? 0n : somme(taxables),
+    };
   }
 
-  function verifie(pris: Candidat[], autresCompris = false): boolean {
-    const v = valeurs(pris, autresCompris);
+  function verifie(pris: Candidat[], autresCompris = false, assiette: Assiette = "hors"): boolean {
+    const v = valeurs(pris, autresCompris, assiette);
     if (v.hts.some((h) => h < 0n)) return false;
-    const tvaCalculee = v.hts.reduce((s, h, i) => s + arrondi(h * rats[i]![0], rats[i]![1]), 0n);
+    // Une seule base quand un droit s'y ajoute (`assiettes`) : il va à elle.
+    const tvaCalculee = v.hts.reduce(
+      (s, h, i) => s + arrondi((h + (i === 0 ? v.enPlus : 0n)) * rats[i]![0], rats[i]![1]),
+      0n,
+    );
     if (v.tva !== undefined && abs(v.tva - tvaCalculee) > tol) return false;
     if (v.ttc !== undefined) {
       const tva = v.tva ?? tvaCalculee;
@@ -806,8 +884,9 @@ export function normaliserMontants(
     lecturesValides: number,
     raison: string,
     autresCompris = false,
+    assiette: Assiette = "hors",
   ): ResultatNormalisation {
-    const parConvention = decideeParLaConvention(autresCompris);
+    const parConvention = decideeParLaConvention(autresCompris, assiette);
     const phrase =
       etat === "tranche"
         ? " ; décidé par la convention du séparateur décimal de la devise : lus à l'anglaise, les montants vérifient aussi la facture"
@@ -820,7 +899,7 @@ export function normaliserMontants(
     const confianceRendue = parConvention
       ? Math.min(confiance, CONFIANCE_VERIFIEE_SANS_LE_TOTAL)
       : confiance;
-    const v = valeurs(pris, autresCompris);
+    const v = valeurs(pris, autresCompris, assiette);
     const somme = (xs: bigint[]) => xs.reduce((s, x) => s + x, 0n);
     // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
     const tva =
@@ -875,6 +954,10 @@ export function normaliserMontants(
         .filter((c) => !droitsDeduits.has(c.nom))
         .map((c) => entree.chemins?.[c.nom] ?? c.nom),
       parConvention,
+      // Un droit taxable laissé hors de l'assiette se dit (« un droit taxable »).
+      ...(assiette === "hors" && taxables.length > 0
+        ? { droitsHorsAssiette: taxables.map((i) => entree.chemins?.[`autre${i}`] ?? `autre${i}`) }
+        : {}),
       devise: p.code,
       raison: raisonRendue,
     };

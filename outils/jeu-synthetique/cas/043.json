@@ -1,0 +1,145 @@
+{
+  "id": "043",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_un_taux",
+  "defaut": "total_faux",
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-28",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "دزيران للفلاحة",
+      "nomAr": "دزيران للفلاحة",
+      "matricule": "7325009S/A/M/000",
+      "adresse": "74، المنطقة الصناعية، مقسم، باجة",
+      "telephone": "00 846 598"
+    },
+    "client": {
+      "nom": "شركة نرفان التجريبية",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "تونس"
+    },
+    "articles": [
+      {
+        "designation": "خرطوشة حبر أسود",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "ورق طباعة A4 رزمة",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "كراء رافعة شوكية",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "دزيران للفلاحة",
+      "document_date": "23/09/2026",
+      "references.numero": "2026/4614",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3 835,280",
+      "totals.vat": "728,703",
+      "totals.ttc": "4 574,983",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "خرطوشة حبر أسود",
+      "articles[0].quantity": "14",
+      "articles[0].unit_price_ht": "119,816",
+      "articles[0].total_ht": "1 677,424",
+      "articles[1].designation": "صفائح مجلفنة 2 مم",
+      "articles[1].quantity": "5",
+      "articles[1].unit_price_ht": "111,752",
+      "articles[1].total_ht": "558,760",
+      "articles[2].designation": "ورق طباعة A4 رزمة",
+      "articles[2].quantity": "12",
+      "articles[2].unit_price_ht": "12,415",
+      "articles[2].total_ht": "148,980",
+      "articles[3].designation": "كراء رافعة شوكية",
+      "articles[3].quantity": "2",
+      "articles[3].unit_price_ht": "725,058",
+      "articles[3].total_ht": "1 450,116"
+    }
+  },
+  "graineDuRendu": 1183192481,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "دزيران للفلاحة",
+      "document_date": "2026-09-23",
+      "currency": "TND",
+      "references.numero": "2026/4614",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "3835.280",
+      "totals.vat": "728.703",
+      "totals.ttc": "4574.983",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "3835.280",
+      "lines[0].vat_amount": "728.703",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "14.000",
+      "articles[0].unit_price_ht": "119.816",
+      "articles[0].total_ht": "1677.424",
+      "articles[1].quantity": "5.000",
+      "articles[1].unit_price_ht": "111.752",
+      "articles[1].total_ht": "558.760",
+      "articles[2].quantity": "12.000",
+      "articles[2].unit_price_ht": "12.415",
+      "articles[2].total_ht": "148.980",
+      "articles[3].quantity": "2.000",
+      "articles[3].unit_price_ht": "725.058",
+      "articles[3].total_ht": "1450.116"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "coherence_arithmetique"
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "défaut délibéré « total_faux » : la pièce ne doit recevoir aucune écriture"
+    ]
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "id": "060",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "photo",
+  "scenario": "vente_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-03",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "مجمع سدران التجريبي",
+      "nomAr": "مجمع سدران التجريبي",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "77، نهج الزيتونة، بن عروس",
+      "telephone": "00 435 733"
+    },
+    "client": {
+      "nom": "مطبعة سلفان",
+      "matricule": "1719005D/A/M/000",
+      "adresse": "نابل"
+    },
+    "articles": [
+      {
+        "designation": "صفائح مجلفنة 2 مم",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "مجمع سدران التجريبي",
+      "document_date": "2026/09/01",
+      "references.numero": "2026/4952",
+      "references.matricule_fiscal": "3445015A/A/M/000",
+      "references.matricule_fiscal_client": "1719005D/A/M/000",
+      "totals.base_ht": "4 686,241",
+      "totals.vat": "890,386",
+      "totals.ttc": "5 577,627",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "صفائح مجلفنة 2 مم",
+      "articles[0].quantity": "20",
+      "articles[0].unit_price_ht": "147,942",
+      "articles[0].total_ht": "2 958,840",
+      "articles[1].designation": "خدمات صيانة",
+      "articles[1].quantity": "1",
+      "articles[1].unit_price_ht": "1 727,401",
+      "articles[1].total_ht": "1 727,401"
+    }
+  },
+  "graineDuRendu": 869260061,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "مجمع سدران التجريبي",
+      "document_date": "2026-09-01",
+      "currency": "TND",
+      "references.numero": "2026/4952",
+      "references.matricule_fiscal": "3445015A/A/M/000",
+      "references.matricule_fiscal_client": "1719005D/A/M/000",
+      "totals.base_ht": "4686.241",
+      "totals.vat": "890.386",
+      "totals.ttc": "5577.627",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "4686.241",
+      "lines[0].vat_amount": "890.386",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "20.000",
+      "articles[0].unit_price_ht": "147.942",
+      "articles[0].total_ht": "2958.840",
+      "articles[1].quantity": "1.000",
+      "articles[1].unit_price_ht": "1727.401",
+      "articles[1].total_ht": "1727.401"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "4686.241"
+        ],
+        [
+          "4367",
+          "0",
+          "890.386",
+          "TVA19"
+        ],
+        [
+          "4371",
+          "0",
+          "1.000"
+        ],
+        [
+          "411",
+          "5577.627",
+          "0"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

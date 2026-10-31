@@ -115,6 +115,7 @@ const lire = (
     other_charges: unknown[];
     totals: { base_ht?: TokenRef | null; vat?: TokenRef | null; ttc?: TokenRef | null };
   }>,
+  lecteur?: Parameters<typeof buildExtractFromTokenPlan>[0]["lecteur"],
 ) =>
   buildExtractFromTokenPlan({
     tokens,
@@ -133,6 +134,7 @@ const lire = (
     } as unknown as VisionSelection,
     ...devisesDEssai(3),
     matriculeDossier: MATRICULE_DOSSIER,
+    ...(lecteur ? { lecteur } : {}),
   });
 
 const drapeau = (r: ReturnType<typeof buildExtractFromTokenPlan>, champ: string) =>
@@ -510,5 +512,27 @@ describe("banc de l'amputation — les chiffres arabes orientaux restent refusé
   it("et la lecture se dit partielle, jamais complète", () => {
     assert.equal(lu.contract, "extract.v1.partiel");
     assert.equal(lu.valid, false);
+  });
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 044, 048, 052) : le refus tient au
+   * LECTEUR, pas au texte. La couche de texte d'un PDF porte les codes des
+   * chiffres eux-mêmes, dans l'ordre où ils s'écrivent : rien ne s'y inverse.
+   * Ses montants se lisent par le lecteur unique (`montant-imprime`) ; le
+   * modèle de vision et PaddleOCR (non mesuré sur ces chiffres) restent refusés.
+   */
+  const jetons = ligne(0, 0.7, [["٦٥٠٫٠٠٠", 0]]);
+  it("relevés par la couche de texte d'un PDF, ils se lisent", () => {
+    const parLaCouche = lire(jetons, { totals: { ttc: ref(0) } }, "pdf-text");
+    assert.equal(totaux(parLaCouche)["ttc"], "650.000");
+    assert.equal(drapeau(parLaCouche, "totals.ttc"), undefined);
+  });
+
+  it("relevés par la vision ou par PaddleOCR, ils restent refusés", () => {
+    for (const lecteur of ["vision", "paddle", "fourni"] as const)
+      assert.equal(
+        totaux(lire(jetons, { totals: { ttc: ref(0) } }, lecteur))["ttc"],
+        null,
+        lecteur,
+      );
   });
 });

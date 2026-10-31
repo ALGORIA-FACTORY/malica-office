@@ -1,0 +1,143 @@
+{
+  "id": "098",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "vente_usd_export",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_vente",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-09-29",
+    "devise": "USD",
+    "exposant": 2,
+    "format": {
+      "milliers": ",",
+      "decimal": ".",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "nomAr": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "76, rue des Orangers, La Marsa",
+      "telephone": "00 544 619"
+    },
+    "client": {
+      "nom": "Fennara Logistique SARL",
+      "matricule": "2986008E/A/M/000",
+      "adresse": "Kairouan"
+    },
+    "articles": [
+      {
+        "designation": "Huile d'olive en vrac, tonne",
+        "designationAr": "زيت زيتون سائب، طن",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      },
+      {
+        "designation": "Dattes Deglet Nour, carton",
+        "designationAr": "تمور دقلة نور، صندوق",
+        "codeTaxe": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "EXPORT",
+        "tauxImprime": "0 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": "Arrêtée la présente facture à la somme de : cinq mille cinq cent cinquante-trois dollars et deux centimes.",
+    "imprime": {
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "27/09/2026",
+      "references.numero": "F-2026-4717",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "2986008E/A/M/000",
+      "totals.base_ht": "5,553.02",
+      "totals.vat": "0.00",
+      "totals.ttc": "5,553.02",
+      "articles[0].designation": "Huile d'olive en vrac, tonne",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "5,194.57",
+      "articles[0].total_ht": "5,194.57",
+      "articles[1].designation": "Dattes Deglet Nour, carton",
+      "articles[1].quantity": "5",
+      "articles[1].unit_price_ht": "71.69",
+      "articles[1].total_ht": "358.45"
+    }
+  },
+  "graineDuRendu": 115007719,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_vente",
+      "issuer": "Laboratoire Qirwane d'Essai SA",
+      "document_date": "2026-09-27",
+      "currency": "USD",
+      "references.numero": "F-2026-4717",
+      "references.matricule_fiscal": "4794014V/A/M/000",
+      "references.matricule_fiscal_client": "2986008E/A/M/000",
+      "totals.base_ht": "5553.02",
+      "totals.vat": "0.00",
+      "totals.ttc": "5553.02",
+      "lines[0].tax_code": "EXPORT",
+      "lines[0].base_ht": "5553.02",
+      "lines[0].vat_amount": "0.00",
+      "articles[0].quantity": "1.00",
+      "articles[0].unit_price_ht": "5194.57",
+      "articles[0].total_ht": "5194.57",
+      "articles[1].quantity": "5.00",
+      "articles[1].unit_price_ht": "71.69",
+      "articles[1].total_ht": "358.45"
+    },
+    "ecriture": {
+      "journal": "VEN",
+      "lignes": [
+        [
+          "701",
+          "0",
+          "17254.344"
+        ],
+        [
+          "411",
+          "17254.344",
+          "0"
+        ]
+      ],
+      "origines": [
+        [
+          "701",
+          "5553.02"
+        ],
+        [
+          "411",
+          "5553.02"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "USD",
+      "taux": "3.1072",
+      "unite": 1,
+      "date": "2026-09-27"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "converti au cours FICTIF 3.1072 TND pour 1 USD, publié le 2026-09-27 (app.cours_applicable : date_facture, recul 5 jours)",
+      "INCERTAIN — compte de vente du paramétrage (701) pour des biens comme des services"
+    ]
+  }
+}

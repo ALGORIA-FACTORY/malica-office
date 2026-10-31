@@ -1,8 +1,9 @@
 /**
- * Le rendu de la première page d'un PDF, dans un fil à part.
+ * Le rendu des premières pages d'un PDF, dans un fil à part.
  *
  * `miniature.ts` n'en importe que les types : il lance ce fichier comme
- * `Worker`, une fois par miniature, et le termine. Pourquoi un fil, et pas un simple appel :
+ * `Worker`, une fois par rendu (la miniature, ou les pages qu'une lecture
+ * relit en image), et le termine. Pourquoi un fil, et pas un simple appel :
  * pdf.js, sous Node, fait tout son travail (lecture, décodage, dessin) dans
  * des microtâches du fil qui l'appelle. Une minuterie n'y a jamais la main :
  * un PDF pathologique (des millions d'opérations, une boucle de formes)
@@ -11,8 +12,8 @@
  * (`resourceLimits`).
  *
  * Il reçoit les octets et les limites (`workerData`), et répond un seul
- * message : `{ jpeg }`, ou `{ jpeg: null }` quand le PDF n'a pas de page à
- * montrer, par nature (chiffré, cassé, sans page). Toute autre erreur LÈVE,
+ * message : `{ jpegs }`, une image par page rendue, vide quand le PDF n'a pas
+ * de page à montrer, par nature (chiffré, cassé, sans page). Toute autre erreur LÈVE,
  * et l'appelant la tient pour passagère.
  */
 import { createRequire } from "node:module";
@@ -34,10 +35,13 @@ export interface DemandeDeRendu {
   /** Au-delà, pdf.js ne décode pas une image (`maxImageSize`). */
   plafondPixels: number;
   qualite: number;
+  /** Le nombre de premières pages à rendre : une pour la miniature. */
+  pages: number;
 }
 
 export interface RenduDePage {
-  jpeg: Uint8Array | null;
+  /** Une image par page rendue, dans l'ordre ; vide quand le PDF n'en a pas, par nature. */
+  jpegs: Uint8Array[];
 }
 
 /**
@@ -87,12 +91,41 @@ function elargirLesImagesRgb(objets: PDFPageProxy["objs"]): void {
   };
 }
 
+async function rendreUnePage(
+  page: PDFPageProxy,
+  boite: DemandeDeRendu["boite"],
+  qualite: number,
+): Promise<Uint8Array | null> {
+  // La taille de la page à l'échelle 1, rotation comprise ; puis l'échelle
+  // qui la fait tenir dans la boîte. Jamais plus grand que la boîte : on ne
+  // dessine pas une page de 14 400 points pour la réduire ensuite.
+  const naturelle = page.getViewport({ scale: 1 });
+  if (!(naturelle.width > 0 && naturelle.height > 0)) return null;
+  const echelle = Math.min(boite.largeur / naturelle.width, boite.hauteur / naturelle.height);
+  const vue = page.getViewport({ scale: echelle });
+  const largeur = Math.max(1, Math.min(boite.largeur, Math.round(vue.width)));
+  const hauteur = Math.max(1, Math.min(boite.hauteur, Math.round(vue.height)));
+  // Une image partagée entre pages vit dans les objets communs.
+  elargirLesImagesRgb(page.objs);
+  elargirLesImagesRgb(page.commonObjs);
+  const toile = createCanvas(largeur, hauteur);
+  // pdf.js pose d'abord la page sur du blanc (le JPEG n'a pas d'alpha).
+  await page.render({
+    // La toile de @napi-rs/canvas n'est pas celle du DOM, mais c'est celle
+    // que pdf.js emploie lui-même sous Node (`NodeCanvasFactory`).
+    canvas: toile as unknown as Parameters<typeof page.render>[0]["canvas"],
+    viewport: vue,
+  }).promise;
+  return new Uint8Array(await toile.encode("jpeg", qualite));
+}
+
 async function rendre({
   octets,
   boite,
   plafondPixels,
   qualite,
-}: DemandeDeRendu): Promise<Uint8Array | null> {
+  pages,
+}: DemandeDeRendu): Promise<Uint8Array[]> {
   const tache = getDocument({
     data: octets,
     maxImageSize: plafondPixels,
@@ -118,35 +151,25 @@ async function rendre({
       }
       throw erreur;
     });
-    if (!doc || doc.numPages < 1) return null;
-    const page = await doc.getPage(1);
-    // La taille de la page à l'échelle 1, rotation comprise ; puis l'échelle
-    // qui la fait tenir dans la boîte. Jamais plus grand que la boîte : on ne
-    // dessine pas une page de 14 400 points pour la réduire ensuite.
-    const naturelle = page.getViewport({ scale: 1 });
-    if (!(naturelle.width > 0 && naturelle.height > 0)) return null;
-    const echelle = Math.min(boite.largeur / naturelle.width, boite.hauteur / naturelle.height);
-    const vue = page.getViewport({ scale: echelle });
-    const largeur = Math.max(1, Math.min(boite.largeur, Math.round(vue.width)));
-    const hauteur = Math.max(1, Math.min(boite.hauteur, Math.round(vue.height)));
-    // Une image partagée entre pages vit dans les objets communs.
-    elargirLesImagesRgb(page.objs);
-    elargirLesImagesRgb(page.commonObjs);
-    const toile = createCanvas(largeur, hauteur);
-    // pdf.js pose d'abord la page sur du blanc (le JPEG n'a pas d'alpha).
-    await page.render({
-      // La toile de @napi-rs/canvas n'est pas celle du DOM, mais c'est celle
-      // que pdf.js emploie lui-même sous Node (`NodeCanvasFactory`).
-      canvas: toile as unknown as Parameters<typeof page.render>[0]["canvas"],
-      viewport: vue,
-    }).promise;
-    return new Uint8Array(await toile.encode("jpeg", qualite));
+    if (!doc) return [];
+    const jpegs: Uint8Array[] = [];
+    for (let numero = 1; numero <= Math.min(doc.numPages, pages); numero += 1) {
+      const jpeg = await rendreUnePage(await doc.getPage(numero), boite, qualite);
+      // Une page sans dimensions n'a rien à montrer : le rendu s'arrête là,
+      // une suite de pages trouée ferait lire la page 3 pour la page 2.
+      if (!jpeg) break;
+      jpegs.push(jpeg);
+    }
+    return jpegs;
   } finally {
     await tache.destroy();
   }
 }
 
 if (parentPort) {
-  const reponse: RenduDePage = { jpeg: await rendre(workerData as DemandeDeRendu) };
-  parentPort.postMessage(reponse, reponse.jpeg ? [reponse.jpeg.buffer as ArrayBuffer] : []);
+  const reponse: RenduDePage = { jpegs: await rendre(workerData as DemandeDeRendu) };
+  parentPort.postMessage(
+    reponse,
+    reponse.jpegs.map((j) => j.buffer as ArrayBuffer),
+  );
 }

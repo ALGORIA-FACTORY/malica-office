@@ -1,0 +1,153 @@
+{
+  "id": "097",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "hybride",
+  "rendu": "manuscrit",
+  "scenario": "achat_eur",
+  "defaut": null,
+  "dossier": {
+    "nom": "Société Nervane d'Essai SARL",
+    "identifiantFiscal": "6443013U/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE / فاتورة",
+    "recueLe": "2026-10-30",
+    "devise": "EUR",
+    "exposant": 2,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Tamzirt Services SUARL",
+      "nomAr": "تمزيرت للخدمات",
+      "matricule": "6560003I/A/M/000",
+      "adresse": "112, rue des Orangers, Sfax",
+      "telephone": "00 496 694"
+    },
+    "client": {
+      "nom": "Société Nervane d'Essai SARL",
+      "matricule": "6443013U/A/M/000",
+      "adresse": "Tunis"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "27 octobre 2026",
+      "references.numero": "F-2026-8767",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "6745,03",
+      "totals.vat": "1281,56",
+      "totals.ttc": "8026,59",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "12",
+      "articles[0].unit_price_ht": "297,26",
+      "articles[0].total_ht": "3567,12",
+      "articles[1].designation": "Cartouche d'encre noire",
+      "articles[1].quantity": "23",
+      "articles[1].unit_price_ht": "138,17",
+      "articles[1].total_ht": "3177,91"
+    }
+  },
+  "graineDuRendu": 1174985759,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Tamzirt Services SUARL",
+      "document_date": "2026-10-27",
+      "currency": "EUR",
+      "references.numero": "F-2026-8767",
+      "references.matricule_fiscal": "6560003I/A/M/000",
+      "references.matricule_fiscal_client": "6443013U/A/M/000",
+      "totals.base_ht": "6745.03",
+      "totals.vat": "1281.56",
+      "totals.ttc": "8026.59",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "6745.03",
+      "lines[0].vat_amount": "1281.56",
+      "articles[0].quantity": "12.00",
+      "articles[0].unit_price_ht": "297.26",
+      "articles[0].total_ht": "3567.12",
+      "articles[1].quantity": "23.00",
+      "articles[1].unit_price_ht": "138.17",
+      "articles[1].total_ht": "3177.91"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "23017.414",
+          "0"
+        ],
+        [
+          "4366",
+          "4373.324",
+          "0",
+          "TVA19"
+        ],
+        [
+          "401",
+          "0",
+          "27390.738"
+        ]
+      ],
+      "origines": [
+        [
+          "601",
+          "6745.03"
+        ],
+        [
+          "4366",
+          "1281.56"
+        ],
+        [
+          "401",
+          "8026.59"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture",
+      "reserve": "cours_de_change"
+    },
+    "cours": {
+      "devise": "EUR",
+      "taux": "3.4125",
+      "unite": 1,
+      "date": "2026-10-27"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "écart d'arrondi de conversion -0.001 porté à la base 601 (change.ecart = base_la_plus_grande)",
+      "converti au cours FICTIF 3.4125 TND pour 1 EUR, publié le 2026-10-27 (app.cours_applicable : date_facture, recul 5 jours)"
+    ]
+  }
+}

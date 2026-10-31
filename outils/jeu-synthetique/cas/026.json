@@ -1,0 +1,139 @@
+{
+  "id": "026",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_un_taux",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-10-12",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": "",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Imprimerie Selvane",
+      "nomAr": "مطبعة سلفان",
+      "matricule": "1719005D/A/M/000",
+      "adresse": "103, zone industrielle, lot, Nabeul",
+      "telephone": "00 605 230"
+    },
+    "client": {
+      "nom": "Laboratoire Qirwane d'Essai SA",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "La Marsa"
+    },
+    "articles": [
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Papier A4 80 g, ramette",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Imprimerie Selvane",
+      "document_date": "08/10/2026",
+      "references.numero": "F-2026-3858",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "477,232",
+      "totals.vat": "90,674",
+      "totals.ttc": "568,906",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Tôle galvanisée 2 mm",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "449,938",
+      "articles[0].total_ht": "449,938",
+      "articles[1].designation": "Papier A4 80 g, ramette",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "13,647",
+      "articles[1].total_ht": "27,294"
+    }
+  },
+  "graineDuRendu": 1366911840,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Imprimerie Selvane",
+      "document_date": "2026-10-08",
+      "currency": "TND",
+      "references.numero": "F-2026-3858",
+      "references.matricule_fiscal": "1719005D/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "477.232",
+      "totals.vat": "90.674",
+      "totals.ttc": "568.906",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "477.232",
+      "lines[0].vat_amount": "90.674",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "449.938",
+      "articles[0].total_ht": "449.938",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "13.647",
+      "articles[1].total_ht": "27.294"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "477.232",
+          "0"
+        ],
+        [
+          "4366",
+          "90.674",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "568.906"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

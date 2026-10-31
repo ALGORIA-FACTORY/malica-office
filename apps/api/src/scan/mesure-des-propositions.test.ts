@@ -70,6 +70,26 @@ describe("la mesure des propositions", () => {
     );
   });
 
+  it("les causes levées le 31 octobre (jeu synthétique) reçoivent une écriture exacte", () => {
+    const levees = ["un FODEC dans la base de la TVA, comme le référentiel le dit"];
+    assert.deepEqual(
+      levees.filter((nom) => m.parCas[nom]?.type !== "exacte"),
+      [],
+    );
+  });
+
+  it("un bien susceptible d'être immobilisé se propose à trancher, jamais en silence", () => {
+    // Jeu synthétique, 31 octobre 2026 : le serveur partait en charge sans un mot.
+    const aTrancher = CAS_DE_MESURE.filter((c) => c.aTrancher !== undefined);
+    assert.ok(aTrancher.length > 0);
+    assert.deepEqual(
+      aTrancher
+        .filter((c) => m.parCas[c.nom]?.type !== "a_trancher")
+        .map((c) => `${c.nom} : ${JSON.stringify(m.parCas[c.nom])}`),
+      [],
+    );
+  });
+
   it("chaque réserve attendue se pose, que la pièce soit proposée ou refusée", () => {
     // Revue de la PR 144 : une valeur que la seule convention décide se dit.
     const taisues = CAS_DE_MESURE.filter((c) => c.reserve !== undefined)

@@ -14,6 +14,8 @@
  * C'est ce qui le rend exécutable sur Cloudflare Workers.
  */
 
+import { texteSansUnicode } from "@malica/socle/texte-sans-unicode";
+
 import type { PageToken } from "./token-plan.ts";
 import { decouperEnMots } from "./mots.ts";
 
@@ -25,6 +27,13 @@ export interface PdfTextLayer {
   pages: number;
   /** Faux pour un PDF scanné : la lecture doit passer par l'œil. */
   exploitable: boolean;
+  /**
+   * Les pages dont la couche de texte a PERDU des mots : des glyphes sans
+   * correspondance Unicode (`texteSansUnicode`). Leur texte ne se croit pas —
+   * un titre « إشعار دائن » s'y relève en lettres détachées (31 octobre 2026) —
+   * et la pièce se relit en image (`relever`, `vision.ts`).
+   */
+  pagesSansUnicode: number[];
 }
 
 interface TextItemLike {
@@ -152,5 +161,8 @@ export async function readPdfTextLayer(bytes: Uint8Array): Promise<PdfTextLayer>
     tokens,
     pages,
     exploitable: tokens.length >= MIN_TOKENS_POUR_UNE_COUCHE,
+    pagesSansUnicode: [
+      ...new Set(tokens.filter((t) => texteSansUnicode(t.text)).map((t) => t.page)),
+    ].sort((a, b) => a - b),
   };
 }

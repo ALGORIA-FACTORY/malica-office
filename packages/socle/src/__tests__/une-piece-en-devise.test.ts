@@ -310,6 +310,7 @@ const timbre: FiscalCharge[] = [
     accountCode: "6654",
     documentKind: "facture_achat",
     fixedAmount: "1.000",
+    taxable: false,
     legalReference: null,
   },
 ];

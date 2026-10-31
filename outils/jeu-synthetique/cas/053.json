@@ -1,0 +1,143 @@
+{
+  "id": "053",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "ar",
+  "rendu": "pdf",
+  "scenario": "achat_remise",
+  "defaut": null,
+  "dossier": {
+    "nom": "Laboratoire Qirwane d'Essai SA",
+    "identifiantFiscal": "4794014V/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "فاتورة",
+    "recueLe": "2026-09-28",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "دزيران للفلاحة",
+      "nomAr": "دزيران للفلاحة",
+      "matricule": "7325009S/A/M/000",
+      "adresse": "74، المنطقة الصناعية، مقسم، باجة",
+      "telephone": "00 846 598"
+    },
+    "client": {
+      "nom": "مخبر قيروان التجريبي",
+      "matricule": "4794014V/A/M/000",
+      "adresse": "المرسى"
+    },
+    "articles": [
+      {
+        "designation": "خدمات صيانة",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "ورق طباعة A4 رزمة",
+        "designationAr": "ورق طباعة A4 رزمة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": {
+      "tauxImprime": "10 %",
+      "brut": "546,619",
+      "montant": "54,662"
+    },
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "دزيران للفلاحة",
+      "document_date": "2026/09/26",
+      "references.numero": "2026/0457",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "491,957",
+      "totals.vat": "93,472",
+      "totals.ttc": "586,429",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "خدمات صيانة",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "388,321",
+      "articles[0].total_ht": "388,321",
+      "articles[1].designation": "ورق طباعة A4 رزمة",
+      "articles[1].quantity": "14",
+      "articles[1].unit_price_ht": "11,307",
+      "articles[1].total_ht": "158,298"
+    }
+  },
+  "graineDuRendu": 1448074719,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "دزيران للفلاحة",
+      "document_date": "2026-09-26",
+      "currency": "TND",
+      "references.numero": "2026/0457",
+      "references.matricule_fiscal": "7325009S/A/M/000",
+      "references.matricule_fiscal_client": "4794014V/A/M/000",
+      "totals.base_ht": "491.957",
+      "totals.vat": "93.472",
+      "totals.ttc": "586.429",
+      "lines[0].tax_code": "TVA19",
+      "lines[0].base_ht": "491.957",
+      "lines[0].vat_amount": "93.472",
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "388.321",
+      "articles[0].total_ht": "388.321",
+      "articles[1].quantity": "14.000",
+      "articles[1].unit_price_ht": "11.307",
+      "articles[1].total_ht": "158.298"
+    },
+    "ecriture": {
+      "journal": "ACH",
+      "lignes": [
+        [
+          "601",
+          "491.957",
+          "0"
+        ],
+        [
+          "4366",
+          "93.472",
+          "0",
+          "TVA19"
+        ],
+        [
+          "6654",
+          "1.000",
+          "0"
+        ],
+        [
+          "401",
+          "0",
+          "586.429"
+        ]
+      ]
+    },
+    "issue": {
+      "type": "ecriture"
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": []
+  }
+}

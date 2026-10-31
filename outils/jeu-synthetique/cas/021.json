@@ -1,0 +1,146 @@
+{
+  "id": "021",
+  "synthetique": true,
+  "provenance": "jeu synthétique, composé par outils/jeu-synthetique/composer.mjs (graine 20261031) : facture inventée, aucune donnée réelle",
+  "langue": "fr",
+  "rendu": "photo",
+  "scenario": "achat_un_taux",
+  "defaut": "montant_illisible",
+  "dossier": {
+    "nom": "Groupe Sidrane d'Essai SUARL",
+    "identifiantFiscal": "3445015A/A/M/000"
+  },
+  "piece": {
+    "sens": "facture_achat",
+    "titre": "FACTURE",
+    "recueLe": "2026-09-26",
+    "devise": "TND",
+    "exposant": 3,
+    "format": {
+      "milliers": " ",
+      "decimal": ",",
+      "chiffres": "latins"
+    },
+    "emetteur": {
+      "nom": "Zarvane Équipements SARL",
+      "nomAr": "شركة زرفان للتجهيزات",
+      "matricule": "5037001K/A/M/000",
+      "adresse": "103, rue des Orangers, Radès",
+      "telephone": "00 701 570"
+    },
+    "client": {
+      "nom": "Groupe Sidrane d'Essai SUARL",
+      "matricule": "3445015A/A/M/000",
+      "adresse": "Ben Arous"
+    },
+    "articles": [
+      {
+        "designation": "Location de chariot élévateur",
+        "designationAr": "كراء رافعة شوكية",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Prestation de maintenance",
+        "designationAr": "خدمات صيانة",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Cartouche d'encre noire",
+        "designationAr": "خرطوشة حبر أسود",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      },
+      {
+        "designation": "Tôle galvanisée 2 mm",
+        "designationAr": "صفائح مجلفنة 2 مم",
+        "codeTaxe": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "tableauParTaux": false,
+    "parTaux": [
+      {
+        "code": "TVA19",
+        "tauxImprime": "19 %"
+      }
+    ],
+    "remise": null,
+    "droits": [
+      "DROIT_TIMBRE"
+    ],
+    "enLettres": null,
+    "imprime": {
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "25-09-2026",
+      "references.numero": "F-2026-9986",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "6 267,268",
+      "totals.vat": "# #9#,#8#",
+      "totals.ttc": "# #5#,#4#",
+      "other_charges[0].amount": "1,000",
+      "articles[0].designation": "Location de chariot élévateur",
+      "articles[0].quantity": "1",
+      "articles[0].unit_price_ht": "1 226,132",
+      "articles[0].total_ht": "1 226,132",
+      "articles[1].designation": "Prestation de maintenance",
+      "articles[1].quantity": "2",
+      "articles[1].unit_price_ht": "1 015,760",
+      "articles[1].total_ht": "2 031,520",
+      "articles[2].designation": "Cartouche d'encre noire",
+      "articles[2].quantity": "5",
+      "articles[2].unit_price_ht": "147,104",
+      "articles[2].total_ht": "735,520",
+      "articles[3].designation": "Tôle galvanisée 2 mm",
+      "articles[3].quantity": "11",
+      "articles[3].unit_price_ht": "206,736",
+      "articles[3].total_ht": "2 274,096"
+    }
+  },
+  "graineDuRendu": 2076201363,
+  "attendu": {
+    "champs": {
+      "document_kind": "facture_achat",
+      "issuer": "Zarvane Équipements SARL",
+      "document_date": "2026-09-25",
+      "currency": "TND",
+      "references.numero": "F-2026-9986",
+      "references.matricule_fiscal": "5037001K/A/M/000",
+      "references.matricule_fiscal_client": "3445015A/A/M/000",
+      "totals.base_ht": "6267.268",
+      "totals.vat": null,
+      "totals.ttc": null,
+      "lines[0].tax_code": null,
+      "lines[0].base_ht": null,
+      "lines[0].vat_amount": null,
+      "other_charges[0].code": "DROIT_TIMBRE",
+      "other_charges[0].amount": "1.000",
+      "articles[0].quantity": "1.000",
+      "articles[0].unit_price_ht": "1226.132",
+      "articles[0].total_ht": "1226.132",
+      "articles[1].quantity": "2.000",
+      "articles[1].unit_price_ht": "1015.760",
+      "articles[1].total_ht": "2031.520",
+      "articles[2].quantity": "5.000",
+      "articles[2].unit_price_ht": "147.104",
+      "articles[2].total_ht": "735.520",
+      "articles[3].quantity": "11.000",
+      "articles[3].unit_price_ht": "206.736",
+      "articles[3].total_ht": "2274.096"
+    },
+    "ecriture": null,
+    "issue": {
+      "type": "refus",
+      "motifs": [
+        "coherence_arithmetique",
+        "normalisation"
+      ]
+    },
+    "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
+    "notes": [
+      "défaut délibéré « montant_illisible » : la pièce ne doit recevoir aucune écriture"
+    ]
+  }
+}
