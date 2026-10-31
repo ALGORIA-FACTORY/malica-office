@@ -172,6 +172,28 @@ export async function lireLesTitres(db: Requete): Promise<ContexteControle["titr
   return rows;
 }
 
+/**
+ * Les mots qui désignent un bien SUSCEPTIBLE d'être immobilisé
+ * (`ref.biens_immobilisables`), en vigueur au jour de la pièce, dans un ordre
+ * total (binaire : l'ordre ne dépend pas de la langue de la base). Le
+ * contrôle `immobilisation_a_trancher` les lit ; aucun mot n'est écrit en
+ * TypeScript.
+ */
+export async function lireLesBiensImmobilisables(
+  db: Requete,
+  pack: string,
+  jour: string,
+): Promise<ContexteControle["biensImmobilisables"]> {
+  const { rows } = await db.query<ContexteControle["biensImmobilisables"][number]>(
+    `select motif, famille from ref.biens_immobilisables
+      where pack_version_id = $1 and valid_from <= $2::date
+        and (valid_to is null or valid_to >= $2::date)
+      order by famille collate "C", motif collate "C"`,
+    [pack, jour],
+  );
+  return rows;
+}
+
 export interface Analyse {
   id: string;
   verdict: string;
@@ -221,6 +243,8 @@ export interface ReferentielDuJugement {
   typesDocument: ContexteControle["typesDocument"];
   /** Ce que le titre imprimé dit de la nature de la pièce (`lireLesTitres`). */
   titres: ContexteControle["titres"];
+  /** Les mots d'un bien susceptible d'être immobilisé (`lireLesBiensImmobilisables`). */
+  biensImmobilisables: ContexteControle["biensImmobilisables"];
   mentionsObligatoires: ContexteControle["mentionsObligatoires"];
   doublonProbable: string | null;
   /** La règle de change et les cours applicables (`lireLeChange`). */
@@ -234,6 +258,7 @@ interface PayloadLu {
   document_kind?: string | null;
   currency?: string | null;
   lines?: Array<{ tax_code?: string | null }>;
+  articles?: Array<{ designation?: string | null }>;
   other_charges?: Array<{ code?: string | null }>;
   references?: Record<string, string>;
   totals?: { ttc?: string | null };
@@ -505,11 +530,15 @@ export function jugerLaLecture(
     // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
     // lecture ou la corrige : c'est lui qui est retenu (voir plus haut).
     sensConfirme: l.sensDit !== null,
+    designations: (l.payload.articles ?? []).flatMap((a) =>
+      a.designation?.trim() ? [a.designation] : [],
+    ),
   };
   const contexte: ContexteControle = {
     tenant: r.tenant,
     typesDocument: r.typesDocument,
     titres: r.titres,
+    biensImmobilisables: r.biensImmobilisables,
     mentionsObligatoires: r.mentionsObligatoires,
     seuilConfianceReserve: r.parametres["lecture.confiance_reserve"],
     seuilConfianceBloquant: r.parametres["lecture.confiance_bloquante"],
@@ -830,6 +859,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     // La devise de la PIÈCE se décide au jugement (`deviseDeLaPiece`).
     devises: await lireLesDevises(db),
     titres: await lireLesTitres(db),
+    biensImmobilisables: await lireLesBiensImmobilisables(db, pack, dateRef),
     taux: new Map(taux.map((t) => [t.code, t.rate])),
     deviseDuDossier: org.currency,
     droitsFixes: new Map(

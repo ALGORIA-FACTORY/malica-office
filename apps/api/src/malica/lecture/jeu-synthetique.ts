@@ -93,6 +93,8 @@ export interface CasSynthetique {
       origines?: Array<[string, string]>;
     } | null;
     issue: { type: "ecriture"; reserve?: string } | { type: "refus"; motifs: string[] };
+    /** L'écriture du paramétrage et la réserve qui dit la question à trancher (`CasDeMesure`). */
+    aTrancher?: { reserve: string; ecriture: { journal: string; lignes: LigneAttendue[] } };
     cours?: { devise: string; taux: string; unite: number; date: string };
   };
 }
@@ -282,7 +284,14 @@ function designationAttendue(
 
 /** L'issue d'un cas, rapportée à ce que le cas attend. */
 export type Verdict =
-  "exacte" | "fausse" | "refus_juste" | "refus_mal_nomme" | "refus_injuste" | "non_mesuree";
+  | "exacte"
+  /** L'écriture du paramétrage, avec la réserve qui dit la question à trancher. */
+  | "a_trancher"
+  | "fausse"
+  | "refus_juste"
+  | "refus_mal_nomme"
+  | "refus_injuste"
+  | "non_mesuree";
 
 export interface ResultatDuCas {
   id: string;
@@ -398,6 +407,9 @@ async function mesurerUnCas(cas: CasSynthetique, mode: ModeDeReleve): Promise<Re
     ...(attendu.issue.type === "ecriture" && attendu.issue.reserve
       ? { reserve: attendu.issue.reserve }
       : {}),
+    ...(attendu.aTrancher
+      ? { aTrancher: { reserve: attendu.aTrancher.reserve, attendu: attendu.aTrancher.ecriture } }
+      : {}),
     ...(cours ? { cours } : {}),
   };
   const issue: Issue = jouer(mesure);
@@ -405,9 +417,18 @@ async function mesurerUnCas(cas: CasSynthetique, mode: ModeDeReleve): Promise<Re
   let detail: string;
   if (attendu.issue.type === "ecriture") {
     verdict =
-      issue.type === "exacte" ? "exacte" : issue.type === "fausse" ? "fausse" : "refus_injuste";
-    detail = "cause" in issue ? issue.cause : "motif" in issue ? issue.motif : "";
-  } else if (issue.type === "fausse" || issue.type === "exacte") {
+      issue.type === "exacte" || issue.type === "a_trancher" || issue.type === "fausse"
+        ? issue.type
+        : "refus_injuste";
+    detail =
+      "cause" in issue
+        ? issue.cause
+        : "motif" in issue
+          ? issue.motif
+          : "reserve" in issue
+            ? `proposée avec la réserve « ${issue.reserve} » : à trancher par le cabinet`
+            : "";
+  } else if (issue.type === "fausse" || issue.type === "exacte" || issue.type === "a_trancher") {
     verdict = "fausse";
     detail = `proposée alors que le refus « ${attendu.issue.motifs.join(" ou ")} » était attendu`;
   } else {
@@ -448,6 +469,7 @@ interface Agregat {
   champsExacts: number;
   attendues: number;
   exactes: number;
+  aTrancher: number;
   fausses: number;
   refusAttendus: number;
   refusJustes: number;
@@ -465,6 +487,7 @@ function agreger(r: readonly ResultatDuCas[]): Agregat {
     champsExacts: m.reduce((s, x) => s + x.champs.exacts, 0),
     attendues: m.filter((x) => x.issueAttendue === "ecriture").length,
     exactes: n("exacte"),
+    aTrancher: n("a_trancher"),
     fausses: n("fausse"),
     refusAttendus: m.filter((x) => x.issueAttendue === "refus").length,
     refusJustes: n("refus_juste"),
@@ -476,14 +499,14 @@ function agreger(r: readonly ResultatDuCas[]): Agregat {
 const pc = (a: number, b: number) => (b === 0 ? "—" : `${a}/${b} (${Math.round((100 * a) / b)} %)`);
 
 function ligne(nom: string, a: Agregat): string {
-  return `| ${nom} | ${a.cas} | ${a.mesures} | ${pc(a.champsExacts, a.champs)} | ${pc(a.exactes, a.attendues)} | ${a.fausses} | ${pc(a.refusJustes, a.refusAttendus)} | ${a.refusMalNommes} | ${a.refusInjustes} |`;
+  return `| ${nom} | ${a.cas} | ${a.mesures} | ${pc(a.champsExacts, a.champs)} | ${pc(a.exactes, a.attendues)} | ${a.aTrancher} | ${a.fausses} | ${pc(a.refusJustes, a.refusAttendus)} | ${a.refusMalNommes} | ${a.refusInjustes} |`;
 }
 
 /** Le tableau de mesure, en Markdown : global, puis par langue, rendu et contenu. */
 export function tableau(r: readonly ResultatDuCas[]): string {
   const entete =
-    "| | cas | mesurés | champs exacts | écritures exactes | **fausses** | refus justes | refus mal nommés | refus injustes |\n" +
-    "|---|---|---|---|---|---|---|---|---|";
+    "| | cas | mesurés | champs exacts | écritures exactes | à trancher | **fausses** | refus justes | refus mal nommés | refus injustes |\n" +
+    "|---|---|---|---|---|---|---|---|---|---|";
   const par = <K extends keyof ResultatDuCas>(cle: K) =>
     [...new Set(r.map((x) => String(x[cle])))]
       .sort()

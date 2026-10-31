@@ -120,6 +120,35 @@
     "issue": {
       "type": "ecriture"
     },
+    "aTrancher": {
+      "reserve": "immobilisation_a_trancher",
+      "ecriture": {
+        "journal": "ACH",
+        "lignes": [
+          [
+            "601",
+            "13925.214",
+            "0"
+          ],
+          [
+            "4366",
+            "2645.791",
+            "0",
+            "TVA19"
+          ],
+          [
+            "6654",
+            "1.000",
+            "0"
+          ],
+          [
+            "401",
+            "0",
+            "16572.005"
+          ]
+        ]
+      }
+    },
     "referentiel": "pack TN, relevé au 2026-10-01 (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json",
     "notes": [
       "INCERTAIN — Le compte d'une immobilisation (2282 « Équipement de bureau » pour du matériel informatique) et la TVA qui la grève (4366 du paramétrage, ou 43662 « TVA sur immobilisations » du plan NC 01) sont à confirmer par un expert-comptable."

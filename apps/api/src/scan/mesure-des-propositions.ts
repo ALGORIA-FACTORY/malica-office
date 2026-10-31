@@ -38,6 +38,7 @@ import { HAUT_DE_PAGE, jugerLaLecture, type LectureAJuger } from "./analyse.ts";
 import { composerLaProposition } from "./proposition.ts";
 import { jourDuCours, type CoursLu } from "./cours-de-change.ts";
 import {
+  BIENS_IMMOBILISABLES_D_ESSAI,
   DROITS_D_ESSAI,
   DEVISE_D_ESSAI,
   DEVISES_D_ESSAI,
@@ -84,6 +85,17 @@ export interface CasDeMesure {
    * autre raison n'est pas juste (le cabinet ne saurait pas quoi faire).
    */
   refus?: string;
+  /**
+   * Une question que le Socle ne tranche PAS, et qu'il doit dire : l'écriture
+   * du paramétrage (`attendu`), proposée AVEC la réserve qui la nomme
+   * (`reserve`). Une immobilisation que le Socle impute en charge n'est pas
+   * fausse quand elle porte la réserve « à trancher » : elle est à trancher.
+   * Sans la réserve, elle redevient fausse ; avec une autre écriture aussi.
+   */
+  aTrancher?: {
+    reserve: string;
+    attendu: { journal: string; lignes: LigneAttendue[] };
+  };
   /**
    * Le cours que `app.cours_applicable` rendrait pour la devise de la pièce ;
    * absent : aucun cours. Un cours est une donnée : celui-ci est fictif.
@@ -714,6 +726,47 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     refus: "nature_piece",
   },
   {
+    /*
+     * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : un serveur
+     * acheté partait en charge, en silence. Le Socle ne tranche pas entre
+     * charge et immobilisation — aucune règle de capitalisation n'est écrite —,
+     * il propose l'imputation du paramétrage ET la réserve qui dit la
+     * question (`ref.biens_immobilisables`). L'écriture du comptable, si le
+     * cabinet immobilise, est au compte 2282 (INCERTAIN, référentiel
+     * complémentaire du jeu).
+     */
+    nom: "un serveur acheté : l'imputation du paramétrage, et la question à trancher",
+    provenance: "jeu synthétique, cas 007 (outils/jeu-synthetique/cas/007.json)",
+    lecture: {
+      ...facture(SIMPLE),
+      payload: {
+        ...facture(SIMPLE).payload,
+        articles: [{ designation: "Serveur de stockage en baie" }],
+      } as LectureAJuger["payload"],
+    },
+    attendu: {
+      journal: "ACH",
+      lignes: [
+        ["2282", "1234.560", "0"],
+        ["4366", "234.566", "0", "TVA19"],
+        ["6654", "1.000", "0"],
+        ["401", "0", "1470.126"],
+      ],
+    },
+    aTrancher: {
+      reserve: "immobilisation_a_trancher",
+      attendu: {
+        journal: "ACH",
+        lignes: [
+          ["601", "1234.560", "0"],
+          ["4366", "234.566", "0", "TVA19"],
+          ["6654", "1.000", "0"],
+          ["401", "0", "1470.126"],
+        ],
+      },
+    },
+  },
+  {
     nom: "un avoir aux montants négatifs : un avoir, pas une facture incohérente",
     provenance: "revue indépendante de la PR 144",
     lecture: facture({
@@ -1079,6 +1132,8 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
 
 export type Issue =
   | { type: "exacte" }
+  /** L'écriture du paramétrage, avec la réserve qui dit la question à trancher (`aTrancher`). */
+  | { type: "a_trancher"; reserve: string }
   | { type: "fausse"; cause: string }
   | { type: "refus_juste"; motif: string }
   | { type: "aucune"; motif: string };
@@ -1135,6 +1190,7 @@ export function juger(cas: CasDeMesure) {
     tenant: cas.dossier ?? DOSSIER,
     typesDocument: TYPES_D_ESSAI,
     titres: TITRES_D_ESSAI,
+    biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
     mentionsObligatoires: MENTIONS_D_ESSAI,
     doublonProbable: null,
     devises: DEVISES_LUES_D_ESSAI,
@@ -1222,13 +1278,26 @@ export function jouer(cas: CasDeMesure): Issue {
     causes.push(`cours appliqué ≠ ${cas.cours.id}`);
   if (!cas.cours && e.lignes.some((l) => l.devise_origine))
     causes.push("une devise d'origine sans pièce en devise");
-  return causes.length === 0 ? { type: "exacte" } : { type: "fausse", cause: causes.join(" · ") };
+  if (causes.length === 0) return { type: "exacte" };
+  // La question que le Socle ne tranche pas : l'écriture du paramétrage, au
+  // millime, ET la réserve qui la nomme. Rien d'autre n'y passe.
+  const t = cas.aTrancher;
+  if (
+    t &&
+    e.journal === t.attendu.journal &&
+    lues.join() === t.attendu.lignes.map(cleDeLigne).sort().join() &&
+    jugement.motifs.some((m) => m.code === t.reserve && m.statut === "reserve")
+  )
+    return { type: "a_trancher", reserve: t.reserve };
+  return { type: "fausse", cause: causes.join(" · ") };
 }
 
 export interface Mesure {
   total: number;
   proposees: number;
   exactes: number;
+  /** Proposées avec la réserve qui dit la question à trancher (`aTrancher`). */
+  aTrancher: number;
   /** Les cas dont l'écriture attendue existe : la base du taux d'exactitude. */
   attendues: number;
   parCas: Record<string, Issue>;
@@ -1246,8 +1315,11 @@ export function mesurer(cas: readonly CasDeMesure[] = CAS_DE_MESURE): Mesure {
   const issues = Object.values(parCas);
   return {
     total: cas.length,
-    proposees: issues.filter((i) => i.type === "exacte" || i.type === "fausse").length,
+    proposees: issues.filter(
+      (i) => i.type === "exacte" || i.type === "a_trancher" || i.type === "fausse",
+    ).length,
     exactes: issues.filter((i) => i.type === "exacte").length,
+    aTrancher: issues.filter((i) => i.type === "a_trancher").length,
     attendues: cas.filter((c) => c.attendu !== null).length,
     parCas,
     motifs,
@@ -1282,6 +1354,7 @@ export function rapport(m: Mesure): string {
     `pièces : ${m.total}`,
     `proposées : ${pc(m.proposees, m.total)}`,
     `exactes (sur les pièces qui ont une écriture juste) : ${pc(m.exactes, m.attendues)}`,
+    `à trancher (l'écriture du paramétrage, et la réserve qui dit la question) : ${m.aTrancher}`,
     `issue juste (écriture exacte, ou refus juste) : ${pc(justes, m.total)}`,
     "motifs sans proposition :",
     ...Object.entries(m.motifs)
@@ -1290,7 +1363,7 @@ export function rapport(m: Mesure): string {
     "par pièce :",
     ...Object.entries(m.parCas).map(
       ([nom, i]) =>
-        `  ${i.type.padEnd(11)} ${nom}${"motif" in i ? ` — ${i.motif}` : ""}${"cause" in i ? ` — ${i.cause}` : ""}`,
+        `  ${i.type.padEnd(11)} ${nom}${"motif" in i ? ` — ${i.motif}` : ""}${"cause" in i ? ` — ${i.cause}` : ""}${"reserve" in i ? ` — réserve « ${i.reserve} »` : ""}`,
     ),
   ].join("\n");
 }

@@ -46,7 +46,9 @@ export interface ResultatControle {
     /** Le sens lu contredit ce que la pièce porte (5 octobre 2026). */
     | "sens_de_la_piece"
     /** Une pièce en devise : le cours qui la convertit, ou celui qui manque (31 octobre 2026). */
-    | "cours_de_change";
+    | "cours_de_change"
+    /** Un achat qui désigne un bien susceptible d'être immobilisé : le cabinet tranche (31 octobre 2026). */
+    | "immobilisation_a_trancher";
   statut: Statut;
   motif: string;
   preuves: Record<string, unknown>;
@@ -69,6 +71,8 @@ export interface PieceAControler {
    * celui de la lecture. Facultatif : absent vaut « non confirmé ».
    */
   sensConfirme?: boolean;
+  /** Les désignations des articles lus, telles qu'imprimées. Absentes : aucune. */
+  designations?: readonly string[];
 }
 
 export interface ContexteControle {
@@ -86,6 +90,12 @@ export interface ContexteControle {
     statut: "rejet" | "anomalie";
     refus: string;
   }>;
+  /**
+   * Les mots qui désignent un bien SUSCEPTIBLE d'être immobilisé
+   * (`ref.biens_immobilisables`, datés) : le motif (expression régulière, lue
+   * sans casse et en Unicode) et la famille de biens qu'il reconnaît.
+   */
+  biensImmobilisables: Array<{ motif: string; famille: string }>;
   mentionsObligatoires: Array<{ code: string; libelle: string }>;
   seuilConfianceReserve: number;
   seuilConfianceBloquant: number;
@@ -885,8 +895,57 @@ function coursDeChange(p: PieceAControler, ctx: ContexteControle): ResultatContr
   };
 }
 
+/**
+ * Un achat désigne-t-il un bien susceptible d'être immobilisé ?
+ *
+ * ================================================================= POURQUOI
+ *
+ * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : l'achat d'un serveur
+ * ou d'un photocopieur recevait l'écriture d'une charge (601), en silence —
+ * une écriture fausse qui ressemblait à une écriture juste. Le Socle ne
+ * tranche pas entre charge et immobilisation : la durée, le seuil et la
+ * politique du cabinet appartiennent à l'expert-comptable (R10), et aucune
+ * règle de capitalisation n'est écrite ici. Mais il DIT que la question se
+ * pose : une RÉSERVE nommée, qui cite l'article et la famille de biens que
+ * le référentiel reconnaît (`ref.biens_immobilisables`, INCERTAIN).
+ *
+ * Rien pour une vente, rien quand aucun article ne porte un de ces mots : le
+ * contrôle n'apparaît alors pas, comme celui du change.
+ */
+function immobilisationATrancher(
+  p: PieceAControler,
+  ctx: ContexteControle,
+): ResultatControle | null {
+  if (p.documentKind !== "facture_achat") return null;
+  const motifs = ctx.biensImmobilisables.map((b) => ({
+    ...b,
+    expression: new RegExp(b.motif, "iu"),
+  }));
+  const reconnus = (p.designations ?? []).flatMap((designation) => {
+    const familles = [
+      ...new Set(motifs.filter((m) => m.expression.test(designation)).map((m) => m.famille)),
+    ];
+    return familles.length > 0 ? [{ designation, familles }] : [];
+  });
+  if (reconnus.length === 0) return null;
+  return {
+    code: "immobilisation_a_trancher",
+    statut: "reserve",
+    motif: `Bien susceptible d'être immobilisé : ${reconnus
+      .map((r) => `« ${r.designation} »`)
+      .join(
+        ", ",
+      )}. L'écriture proposée l'impute au compte du paramétrage (une charge) : immobilisation ou charge, le cabinet tranche.`,
+    preuves: {
+      articles: reconnus.map((r) => r.designation),
+      familles: [...new Set(reconnus.flatMap((r) => r.familles))].sort(),
+    },
+  };
+}
+
 export function controlerPiece(p: PieceAControler, ctx: ContexteControle): ResultatControle[] {
   const change = coursDeChange(p, ctx);
+  const immobilisation = immobilisationATrancher(p, ctx);
   return [
     arithmetique(p),
     mentions(p, ctx),
@@ -897,6 +956,7 @@ export function controlerPiece(p: PieceAControler, ctx: ContexteControle): Resul
     dates(p, ctx),
     confiance(p, ctx),
     ...(change ? [change] : []),
+    ...(immobilisation ? [immobilisation] : []),
   ];
 }
 

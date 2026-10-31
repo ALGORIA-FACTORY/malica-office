@@ -21,7 +21,11 @@ import {
 } from "./controles.ts";
 import { normaliserMontants } from "./normaliser-montants.ts";
 import { deviseDEssai } from "./devise-d-essai.ts";
-import { DEVISE_D_ESSAI, TITRES_D_ESSAI } from "./referentiel-d-essai.ts";
+import {
+  BIENS_IMMOBILISABLES_D_ESSAI,
+  DEVISE_D_ESSAI,
+  TITRES_D_ESSAI,
+} from "./referentiel-d-essai.ts";
 
 const P = { ...deviseDEssai(3), toleranceMineure: 1 };
 const montantsJustes = normaliserMontants(
@@ -76,6 +80,7 @@ const CONTEXTE: ContexteControle = {
     { code: "bon_livraison", porteEcriture: false },
   ],
   titres: TITRES_D_ESSAI,
+  biensImmobilisables: BIENS_IMMOBILISABLES_D_ESSAI,
   mentionsObligatoires: [
     { code: "IDENT_FISCAL_EMETTEUR", libelle: "Identifiant fiscal de l'émetteur" },
     { code: "IDENT_FISCAL_CLIENT", libelle: "Identifiant fiscal du client" },
@@ -288,6 +293,50 @@ describe("nature de la pièce", () => {
     const c = statut(facture({ titre: null }), "nature_piece");
     assert.equal(c.statut, "reserve");
     assert.match(c.motif, /titre/);
+  });
+});
+
+describe("un bien susceptible d'être immobilisé", () => {
+  /*
+   * Jeu synthétique, 31 octobre 2026 (cas 007, 071, 083) : l'achat d'un
+   * serveur ou d'un photocopieur partait en charge (601), en silence. Le
+   * Socle ne tranche pas entre charge et immobilisation — l'expert le fait —,
+   * mais il doit DIRE que la question se pose (`ref.biens_immobilisables`).
+   */
+  const immo = (p: PieceAControler) =>
+    controlerPiece(p, CONTEXTE).find((c) => c.code === "immobilisation_a_trancher");
+
+  it("un serveur acheté : réserve nommée, l'article et sa famille dans les preuves", () => {
+    const c = immo(facture({ designations: ["Serveur de stockage en baie", "Câble RJ45"] }));
+    assert.equal(c?.statut, "reserve");
+    assert.match(c!.motif, /Serveur de stockage en baie/);
+    assert.match(c!.motif, /tranche/);
+    assert.deepEqual(c!.preuves["familles"], ["INFORMATIQUE"]);
+  });
+
+  it("en arabe aussi, article et pluriel soudés", () => {
+    assert.equal(immo(facture({ designations: ["آلة نسخ متعددة الوظائف A3"] }))?.statut, "reserve");
+    assert.equal(immo(facture({ designations: ["خادم تخزين في خزانة"] }))?.statut, "reserve");
+  });
+
+  it("un mot qui n'en contient qu'un autre ne déclenche rien", () => {
+    // « serveurs » au milieu d'un mot, la location d'un chariot : rien.
+    assert.equal(
+      immo(facture({ designations: ["Location de chariot élévateur", "Conserveurs"] })),
+      undefined,
+    );
+  });
+
+  it("une vente ne s'immobilise pas : rien à trancher", () => {
+    assert.equal(
+      immo(facture({ documentKind: "facture_vente", designations: ["Serveur de stockage"] })),
+      undefined,
+    );
+  });
+
+  it("un achat ordinaire, ou sans articles lus : rien", () => {
+    assert.equal(immo(facture({ designations: ["Papier A4 80 g, ramette"] })), undefined);
+    assert.equal(immo(facture()), undefined);
   });
 });
 

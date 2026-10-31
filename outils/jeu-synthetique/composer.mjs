@@ -478,7 +478,10 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
 
   /* l'écriture juste — comptes du référentiel, montants de la spécification */
   const notes = [];
-  const ecritureDe = () => {
+  // `enCharge` : l'écriture du paramétrage, la base au compte de l'imputation
+  // — celle que le Socle propose à une immobilisation, avec la réserve qui
+  // dit la question (`aTrancher`, plus bas).
+  const ecritureDe = (enCharge = false) => {
     const lignes = [];
     const debit = sens === "facture_achat";
     const cours = devise === DEVISE_DU_DOSSIER ? null : coursDe(devise);
@@ -494,7 +497,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
     const bases = new Map();
     for (const l of parTaux) {
       const compte =
-        scenario === "achat_immobilisation"
+        scenario === "achat_immobilisation" && !enCharge
           ? COMPLEMENT.immobilisation.compte
           : imputation(sens, l.code).mainAccount;
       bases.set(compte, (bases.get(compte) ?? 0n) + conv(l.baseHt));
@@ -558,6 +561,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
   let ecriture = null;
   let issue;
   let ecritureDuComptable = null;
+  let aTrancher = null;
   if (defaut) {
     issue = { type: "refus", motifs: REFUS_DU_DEFAUT[defaut] };
     notes.push(`défaut délibéré « ${defaut} » : la pièce ne doit recevoir aucune écriture`);
@@ -579,8 +583,14 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       ...(devise !== DEVISE_DU_DOSSIER ? { reserve: "cours_de_change" } : {}),
     };
   }
-  if (scenario === "achat_immobilisation")
+  if (scenario === "achat_immobilisation") {
     notes.push(`INCERTAIN — ${COMPLEMENT.immobilisation.incertain}`);
+    // Le Socle ne tranche pas entre charge et immobilisation (R10) : il
+    // propose l'imputation du paramétrage AVEC la réserve qui dit la question
+    // (`ref.biens_immobilisables`). Cette issue n'est pas l'écriture exacte ;
+    // elle n'est pas fausse non plus : elle est à trancher, et se compte à part.
+    if (!defaut) aTrancher = { reserve: "immobilisation_a_trancher", ecriture: ecritureDe(true) };
+  }
   if (fodec > 0n)
     notes.push(
       "INCERTAIN — FODEC à l'achat imputé au compte du pack, et compris dans la base de la TVA",
@@ -649,6 +659,7 @@ function composer(rang, langue, rendu, j, scenario, defaut) {
       champs,
       ecriture,
       issue,
+      ...(aTrancher ? { aTrancher } : {}),
       ...(ecritureDuComptable ? { ecritureDuComptable } : {}),
       ...(cours ? { cours: { devise, taux: cours.taux, unite: cours.unite, date: dateIso } } : {}),
       referentiel: `pack ${REFERENTIEL.juridiction}, relevé au ${REFERENTIEL.jour} (apps/api/src/scan/referentiel-d-essai.json) et referentiel-complementaire.json`,

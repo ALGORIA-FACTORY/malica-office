@@ -199,6 +199,56 @@
       "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
     }
   ],
+  "biensImmobilisables": [
+    {
+      "motif": "(?<!\\p{L})(ordinateurs?|serveurs?|photocopieu(r|rs|se|ses))(?!\\p{L})",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "آل(ة|ات)\\s+(ال)?نسخ",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "حاسو?ب",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "خادم",
+      "famille": "INFORMATIQUE"
+    },
+    {
+      "motif": "(?<!\\p{L})machines?[-\\s]outils?(?!\\p{L})",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})mat[ée]riels?\\s+(informatiques?|de\\s+bureau|de\\s+transport|industriels?|roulants?)(?!\\p{L})",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "معدات\\s+(إعلامية|مكتبية|نقل|صناعية)",
+      "famille": "MATERIEL"
+    },
+    {
+      "motif": "(?<!\\p{L})mobiliers?(?!\\p{L})",
+      "famille": "MOBILIER"
+    },
+    {
+      "motif": "أثاث",
+      "famille": "MOBILIER"
+    },
+    {
+      "motif": "(?<!\\p{L})(v[ée]hicules?|voitures?|camions?|camionnettes?|fourgons?)(?!\\p{L})",
+      "famille": "VEHICULE"
+    },
+    {
+      "motif": "سيار(ة|ات)",
+      "famille": "VEHICULE"
+    },
+    {
+      "motif": "شاحن(ة|ات)",
+      "famille": "VEHICULE"
+    }
+  ],
   "change": {
     "source": "BCT",
     "dateRetenue": "date_facture",

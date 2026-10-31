@@ -4,6 +4,7 @@ import {
   libelleDeLAction,
   libelleDuChamp,
   libelleDuCode,
+  libelleDuControle,
   libelleDuRefus,
   motifDeLEtat,
   motifDeRefusConnu,
@@ -90,6 +91,16 @@ describe("codes et actions", () => {
     // l'un demande une confirmation, l'autre explique pourquoi il n'y en a pas.
     expect(libelleDuCode("SEPARATEUR_AMBIGU", t as never)).toBe("cab.code.separateur");
     expect(libelleDuCode("DECIDE_PAR_ARITHMETIQUE", t as never)).toBe("cab.code.arithmetique");
+  });
+
+  it("nomme chaque contrôle du jugement, jamais « Signalement de lecture »", () => {
+    // Le panneau du cabinet intitulait chaque contrôle « Signalement de
+    // lecture. » ; la réserve « immobilisation à trancher » doit dire sa question.
+    expect(libelleDuControle("immobilisation_a_trancher", t as never)).toBe(
+      "cab.controle.immobilisation_a_trancher",
+    );
+    expect(libelleDuControle("nature_piece", t as never)).toBe("cab.controle.nature_piece");
+    expect(libelleDuControle("inconnu", t as never)).toBe("cab.code.autre");
   });
 
   it("traduit une action d'audit et retombe sur une phrase générique", () => {

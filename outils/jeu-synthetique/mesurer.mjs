@@ -47,8 +47,10 @@ ${nonMesures.length > 0 ? `**${nonMesures.length} cas non mesurés** : ${raisons
 
 ${tableau(resultats)}
 
-« fausses » : une écriture proposée qui n'est pas l'écriture attendue, ou une écriture
-proposée là où un refus était attendu — le pire résultat. « refus mal nommés » : la pièce
+« à trancher » : l'écriture du paramétrage, proposée avec la réserve qui nomme la question
+que le Socle ne tranche pas (une immobilisation : \`immobilisation_a_trancher\`) — ni exacte, ni
+fausse, et jamais en silence. « fausses » : une écriture proposée qui n'est pas l'écriture
+attendue, ou une écriture proposée là où un refus était attendu — le pire résultat. « refus mal nommés » : la pièce
 est refusée, mais pas pour la raison attendue. « refus injustes » : aucune écriture,
 alors qu'une écriture juste était attendue.
 
