@@ -310,11 +310,15 @@ describe("une pièce ne s'inscrit qu'une fois", { skip: !BASE_CONFIGUREE }, () =
       await office.book(db, id);
       return id;
     });
-    const supprimees = await sousIdentite(dirigeant.id, async (db) => {
-      const r = await db.query(`delete from socle.ecritures where id = $1`, [ecr]);
-      return r.rowCount;
-    });
-    assert.equal(supprimees, 0);
+    // Aucun client n'efface une écriture : le droit même n'existe plus (lot 6).
+    await assert.rejects(
+      sousIdentite(dirigeant.id, (db) =>
+        db.query(`delete from socle.ecritures where id = $1`, [ecr]),
+      ),
+      /permission denied for table ecritures/,
+    );
+    const { rows } = await admin.query(`select 1 from socle.ecritures where id = $1`, [ecr]);
+    assert.equal(rows.length, 1);
   });
 
   it("ANO-007 : le FEC ne porte que le transmis, et ValidDate attend la supervision", async () => {

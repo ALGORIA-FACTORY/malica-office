@@ -6,7 +6,6 @@
     "lecture.confiance_bloquante": 0.4,
     "lecture.confiance_reserve": 0.7,
     "lecture.tolerance_arrondi_mineure": 1,
-    "money.decimals": 3,
     "piece.ecart_date_jours": 60
   },
   "taux": [
@@ -194,6 +193,12 @@
       "refus": "Avoir : à saisir par le cabinet (titre « {titre} »)."
     }
   ],
+  "change": {
+    "source": "BCT",
+    "dateRetenue": "date_facture",
+    "recul": 5,
+    "ecart": "base_la_plus_grande"
+  },
   "marques": [
     {
       "marque": "CFA",
@@ -272,6 +277,14 @@
       "devise": "TND"
     },
     {
+      "marque": "US$",
+      "devise": "USD"
+    },
+    {
+      "marque": "USD",
+      "devise": "USD"
+    },
+    {
       "marque": "XOF",
       "devise": "XOF"
     },
@@ -296,6 +309,10 @@
     "TND": {
       "exposant": 3,
       "separateurDecimal": ","
+    },
+    "USD": {
+      "exposant": 2,
+      "separateurDecimal": "."
     },
     "XOF": {
       "exposant": 0,

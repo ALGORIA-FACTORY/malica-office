@@ -27,9 +27,8 @@ describe("une pièce comptabilisée reste dans la société", { skip: !BASE_CONF
   const piece = (cle: string) =>
     sousIdentite(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key, created_by)
-         values ($1, 'pdf', 'entite', $2, $3, $4) returning id`,
-        [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`, dirigeant.id],
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'entite') as id`,
+        [pme, `essai/${marque}-${cle}.pdf`, `${marque}-${cle}`],
       );
       return rows[0]!.id;
     });

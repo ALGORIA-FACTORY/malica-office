@@ -32,7 +32,7 @@ import type {
 } from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
-import { analyserPiece, lireLesDevises, lireParametres } from "../scan/analyse.ts";
+import { analyserPiece, exposantDeLaDevise, lireLesDevises } from "../scan/analyse.ts";
 import { effacerContenu } from "../stockage.ts";
 
 import {
@@ -1477,28 +1477,10 @@ export const capture = {
       reference?: string | null;
     },
   ): Promise<string> {
-    const au = input.payeLe ?? new Date().toISOString().slice(0, 10);
-    const { rows: moyen } = await db.query<{ code: string }>(
-      `select code from ref_payment_means_v
-        where pack_version_id = $1 and code = $2
-          and valid_from <= $3::date and (valid_to is null or valid_to >= $3::date)`,
-      [input.packId, input.moyenCode, au],
-    );
-    if (moyen.length === 0) {
-      throw Object.assign(
-        new Error(`Ce moyen de paiement n'existe pas au paramétrage : ${input.moyenCode}`),
-        { code: "22023" },
-      );
-    }
-
+    // La porte vérifie le moyen au paramétrage du pack, à la date du règlement
+    // (ou du jour), et tire dossier, établissement et visibilité de la pièce.
     const { rows } = await db.query<{ id: string }>(
-      `insert into capture.paiements
-         (tenant_id, entity_id, vis, piece_id, moyen_code, pack_version_id,
-          montant_mineur, devise, paye_le, justificatif_piece_id, reference)
-       select p.tenant_id, p.entity_id, p.vis, p.id, $2, $3,
-              $4::bigint, $5, $6::date, $7, $8
-         from pieces_v p where p.id = $1
-       returning id`,
+      `select public.paiement_inscrire($1, $2, $3, $4::bigint, $5, $6::date, $7, $8) as id`,
       [
         input.pieceId,
         input.moyenCode,
@@ -1510,9 +1492,7 @@ export const capture = {
         input.reference ?? null,
       ],
     );
-    const id = rows[0]?.id;
-    if (!id) throw new Error("piece introuvable ou non autorisee");
-    return id;
+    return rows[0]!.id;
   },
 
   /**
@@ -1600,18 +1580,16 @@ export const capture = {
     );
     /*
      * La dette éteinte se lit par `app.dette_eteinte`, la même fonction que la
-     * proposition de règlement ; ses décimales par `lireParametres`, au
-     * paramétrage daté du jour du paiement, comme la proposition. Ces deux
-     * lectures étaient recopiées ici, et la copie des décimales relisait
-     * `ref.socle_params` à la main (24 octobre 2026).
+     * proposition de règlement ; ses décimales sont celles de la devise du
+     * paiement (`ref.devises`), comme la proposition (revue de #148 : une
+     * seule source d'exposant).
      */
-    const decimalesAu = new Map<string, Promise<number>>();
-    const decimales = (pack: string, jour: string) => {
-      const cle = `${pack}|${jour}`;
-      let d = decimalesAu.get(cle);
+    const decimalesDe = new Map<string, Promise<number>>();
+    const decimales = (devise: string) => {
+      let d = decimalesDe.get(devise);
       if (!d) {
-        d = lireParametres(db, pack, jour).then((p) => p["money.decimals"]);
-        decimalesAu.set(cle, d);
+        d = exposantDeLaDevise(db, devise);
+        decimalesDe.set(devise, d);
       }
       return d;
     };
@@ -1621,7 +1599,7 @@ export const capture = {
         const brut = r["brut"] as string | null;
         const jour = r["paye_le"] as string | null;
         if (brut == null || jour == null) return null;
-        const d = await decimales(r["pack_version_id"] as string, jour);
+        const d = await decimales(r["devise"] as string);
         return Number(enUnitesExactes(brut, d));
       }),
     );

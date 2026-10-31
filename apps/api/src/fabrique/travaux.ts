@@ -101,39 +101,21 @@ export async function enregistrerTravail(
     priorite?: number;
   },
 ): Promise<{ travailId: string; deja: boolean }> {
-  // Une priorité non dite n'est PAS écrite : la colonne prend le défaut du
-  // schéma, visible en base. C'est ainsi qu'aucun nombre ne vit ici (R4).
-  const avecPriorite = travail.priorite !== undefined;
-  const { rows } = await db.query<{ id: string }>(
-    `insert into fabrique.travaux
-       (tenant_id, piece_id, nature, cle_idempotence${avecPriorite ? ", priorite" : ""})
-     values ($1, $2, $3, $4${avecPriorite ? ", $5" : ""})
-     on conflict (tenant_id, cle_idempotence) do nothing
-     returning id`,
-    avecPriorite
-      ? [
-          travail.tenantId,
-          travail.pieceId,
-          travail.nature,
-          travail.cleIdempotence,
-          travail.priorite,
-        ]
-      : [travail.tenantId, travail.pieceId, travail.nature, travail.cleIdempotence],
+  // Une priorité non dite n'est PAS écrite : la porte laisse la colonne à
+  // son défaut, visible en base. C'est ainsi qu'aucun nombre ne vit ici (R4).
+  // Ni inscrit, ni lisible : la porte refuse, elle n'invente aucun identifiant.
+  const { rows } = await db.query<{ r: { travail_id: string; deja: boolean } }>(
+    `select fabrique.travail_inscrire($1, $2, $3, $4, $5) as r`,
+    [
+      travail.tenantId,
+      travail.pieceId,
+      travail.nature,
+      travail.cleIdempotence,
+      travail.priorite ?? null,
+    ],
   );
-  if (rows[0]) return { travailId: rows[0].id, deja: false };
-
-  const deja = await db.query<{ id: string }>(
-    `select id from fabrique.travaux where tenant_id = $1 and cle_idempotence = $2`,
-    [travail.tenantId, travail.cleIdempotence],
-  );
-  if (!deja.rows[0]) {
-    // Ni inséré, ni lisible : la politique a refusé l'écriture sans lever.
-    // On ne rend surtout pas un identifiant inventé.
-    throw new Error(
-      `travail non enregistré et non lisible — tenant ${travail.tenantId}, clé ${travail.cleIdempotence}`,
-    );
-  }
-  return { travailId: deja.rows[0].id, deja: true };
+  const r = rows[0]!.r;
+  return { travailId: r.travail_id, deja: r.deja };
 }
 
 /**
@@ -194,19 +176,14 @@ export async function inscrireIssue(
     detail?: Record<string, unknown>;
   },
 ): Promise<void> {
-  await db.query(
-    `insert into fabrique.travail_faits
-       (tenant_id, travail_id, tentative, nature, motif, detail)
-     values ($1, $2, $3, $4, $5, $6)`,
-    [
-      issue.tenantId,
-      issue.travailId,
-      issue.tentative,
-      issue.nature,
-      issue.motif ?? null,
-      issue.detail ? JSON.stringify(issue.detail) : null,
-    ],
-  );
+  await db.query(`select fabrique.issue_inscrire($1, $2, $3, $4, $5, $6::jsonb)`, [
+    issue.tenantId,
+    issue.travailId,
+    issue.tentative,
+    issue.nature,
+    issue.motif ?? null,
+    issue.detail ? JSON.stringify(issue.detail) : null,
+  ]);
 }
 
 /**

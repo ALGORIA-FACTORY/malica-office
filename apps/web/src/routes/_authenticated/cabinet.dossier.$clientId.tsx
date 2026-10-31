@@ -16,6 +16,7 @@ import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context"
 import { ecrireDossierCourant } from "@/components/malica/dossier-courant";
 import { Aide } from "@/components/malica/aide";
 import { ArreterLaDeclaration } from "@/components/malica/arreter-la-declaration";
+import { ArreterLaRegleDeChange } from "@/components/malica/arreter-la-regle-de-change";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
 import { useSyntheseClient } from "@/hooks/use-synthese-client";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -583,6 +584,19 @@ function CabinetClient() {
                 declaration={synthese.declaration}
               />
             </section>
+          ) : null}
+
+          {/*
+           * ---- la règle de change du dossier (R10 ; revue de #148) : le même
+           * geste que la déclaration, la même résolution dossier → cabinet → pack.
+           */}
+          {synthese.pack ? (
+            <ArreterLaRegleDeChange
+              cabinetId={org.id}
+              dossierId={clientId}
+              packId={synthese.pack.id}
+              periode={periode}
+            />
           ) : null}
 
           {/* ---- le briefing du dossier */}

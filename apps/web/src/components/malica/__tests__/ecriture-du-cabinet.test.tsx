@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   valider: vi.fn(),
   forcer: vi.fn(),
   trancherLeSens: vi.fn(),
+  saisirLeCoursDeLaPiece: vi.fn(),
   journal: vi.fn(),
 }));
 vi.mock("@/i18n", () => ({
@@ -31,7 +32,12 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
-    office: { valider: api.valider, forcer: api.forcer, trancherLeSens: api.trancherLeSens },
+    office: {
+      valider: api.valider,
+      forcer: api.forcer,
+      trancherLeSens: api.trancherLeSens,
+      saisirLeCoursDeLaPiece: api.saisirLeCoursDeLaPiece,
+    },
     referential: {
       journaux: async () => [
         { code: "ACH", libelle: "Journal des achats" },
@@ -91,6 +97,57 @@ const SENS_A_TRANCHER = {
   controlesEnDefaut: ["sens_de_la_piece"],
 } as PropositionDePiece;
 
+/** Une facture en euros sans cours : rien de proposé, le cours à saisir (31 octobre 2026). */
+const COURS_A_SAISIR = {
+  ok: false,
+  raison: "Aucune écriture ne se propose : taux EUR/TND du 2026-09-10 à saisir.",
+  raisonCode: "taux_de_change",
+  coursASaisir: { devise: "EUR", versDevise: "TND", jour: "2026-09-10", source: "BCT" },
+} as PropositionDePiece;
+
+/** La même, convertie au cours : chaque ligne garde son montant d'origine. */
+const CONVERTIE = {
+  ...PROPOSITION,
+  proposition: {
+    journal: "ACH",
+    libelle: "Achat en euros",
+    pivot: { entry_date: "2026-09-10" },
+    conversion: {
+      devise_origine: "EUR",
+      devise: "TND",
+      taux_unitaire: "3.3456",
+      cours: { id: "c1", date: "2026-09-10", source: "BCT", taux: "3.3456", unite: 1 },
+      regle_d_ecart: "base_la_plus_grande",
+      ecart: "0.000",
+      ligne_ajustee: null,
+    },
+    lignes: [
+      {
+        account_code: "601",
+        libelle: "Achats",
+        debit: "3345.600",
+        credit: "0",
+        tax_code: null,
+        devise_origine: "EUR",
+        montant_origine: "1000.00",
+        taux_de_change: "3.3456",
+        cours_id: "c1",
+      },
+      {
+        account_code: "401",
+        libelle: "Fournisseurs",
+        debit: "0",
+        credit: "3345.600",
+        tax_code: null,
+        devise_origine: "EUR",
+        montant_origine: "1000.00",
+        taux_de_change: "3.3456",
+        cours_id: "c1",
+      },
+    ],
+  },
+} as unknown as PropositionDePiece;
+
 const TAUX = [
   { code: "TVA07", label: "TVA 7 %" },
   { code: "TVA19", label: "TVA 19 %" },
@@ -102,7 +159,7 @@ function monter(
   illisible = false,
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+  const ecran = (p: PropositionDePiece) => (
     <QueryClientProvider client={client}>
       <EcritureDuCabinet
         pieceId="p1"
@@ -110,7 +167,7 @@ function monter(
         statut="vue"
         suivi={null}
         vivante={null}
-        proposition={proposition}
+        proposition={p}
         typeAEtablir={false}
         sens={sens}
         dateLue="2026-10-27"
@@ -122,8 +179,10 @@ function monter(
         illisible={illisible}
         onRetournee={vi.fn()}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const { rerender } = render(ecran(proposition));
+  return { relire: (p: PropositionDePiece) => rerender(ecran(p)) };
 }
 
 /**
@@ -142,6 +201,99 @@ const saisir = (libelle: string, valeur: string, rang = 0) =>
   );
 const nomDuChamp = (champ: string, rang: number) =>
   `cab.ecriture.ligne.champ ${JSON.stringify({ champ, n: rang + 1 })}`;
+
+describe("une pièce en devise, côté comptable", () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(cleanup);
+
+  it("sans cours : « Taux … à saisir », et le cours se saisit en un geste", async () => {
+    api.saisirLeCoursDeLaPiece.mockResolvedValue(CONVERTIE);
+    monter(COURS_A_SAISIR);
+    expect(screen.getByText(/^cab\.cours\.a_saisir/).textContent).toContain(
+      `cab.cours.a_saisir ${JSON.stringify({ devise: "EUR", vers: "TND", jour: "10/09/2026" })}`,
+    );
+    // Le message générique ne s'affiche pas : le geste est nommé.
+    expect(screen.queryByText("cab.ecriture.rien")).toBeNull();
+    const enregistrer = screen.getByRole("button", { name: "cab.cours.enregistrer" });
+    expect(enregistrer).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByRole("textbox", { name: /^cab\.cours\.taux/ }), {
+      target: { value: "3,3456" },
+    });
+    fireEvent.click(enregistrer);
+    // Sans motif : une saisie simple, qui cède devant le cours officiel importé.
+    await waitFor(() =>
+      expect(api.saisirLeCoursDeLaPiece).toHaveBeenCalledWith("p1", "3.3456", 1, null),
+    );
+  });
+
+  it("convertie : le cours appliqué se lit, et chaque ligne dit son montant d'origine", () => {
+    monter(CONVERTIE);
+    expect(screen.getByText(/^cab\.cours\.applique/).textContent).toContain('"source":"BCT"');
+    expect(screen.getAllByText(/EUR ×/)).toHaveLength(2);
+    // Corriger le taux ouvre le même formulaire.
+    fireEvent.click(screen.getByRole("button", { name: "cab.cours.corriger" }));
+    expect(screen.getByRole("button", { name: "cab.cours.enregistrer" })).toBeTruthy();
+  });
+
+  it("corriger un cours exige un motif, et dit pour qui la dérogation vaut (revue de #148)", async () => {
+    api.saisirLeCoursDeLaPiece.mockResolvedValue(CONVERTIE);
+    monter(CONVERTIE);
+    fireEvent.click(screen.getByRole("button", { name: "cab.cours.corriger" }));
+    const enregistrer = screen.getByRole("button", { name: "cab.cours.enregistrer" });
+    fireEvent.change(screen.getByRole("textbox", { name: /^cab\.cours\.taux/ }), {
+      target: { value: "3,40" },
+    });
+    // Un taux seul ne corrige rien : la correction dit pourquoi.
+    expect(enregistrer).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByRole("textbox", { name: "cab.cours.motif.exige" }), {
+      target: { value: "Cours de la banque du client" },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "cab.cours.portee" }), {
+      target: { value: "cabinet" },
+    });
+    fireEvent.click(enregistrer);
+    await waitFor(() =>
+      expect(api.saisirLeCoursDeLaPiece).toHaveBeenCalledWith("p1", "3.40", 1, {
+        motif: "Cours de la banque du client",
+        portee: "cabinet",
+      }),
+    );
+  });
+
+  it("le cours corrigé, la saisie repart de la nouvelle proposition : elle se valide, jamais forcée (revue de #148)", async () => {
+    api.valider.mockResolvedValue("e1");
+    const { relire } = monter(CONVERTIE);
+    const RECONVERTIE = {
+      ...CONVERTIE,
+      empreinte: "empreinte-au-nouveau-cours",
+      proposition: {
+        ...(CONVERTIE as { proposition: { lignes: Array<Record<string, string>> } }).proposition,
+        lignes: (
+          CONVERTIE as { proposition: { lignes: Array<Record<string, string>> } }
+        ).proposition.lignes.map((l) => ({
+          ...l,
+          debit: l["debit"] === "0" ? "0" : "3400.000",
+          credit: l["credit"] === "0" ? "0" : "3400.000",
+          taux_de_change: "3.4",
+        })),
+      },
+    } as unknown as PropositionDePiece;
+    relire(RECONVERTIE);
+    expect(screen.getAllByDisplayValue(/^3\s?400[,.]000$/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByDisplayValue(/^3\s?345[,.]600$/)).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "cab.ecriture.valider" }));
+    await waitFor(() =>
+      expect(api.valider).toHaveBeenCalledWith("p1", "empreinte-au-nouveau-cours"),
+    );
+    expect(api.forcer).not.toHaveBeenCalled();
+  });
+
+  it("une ligne changée n'est plus celle de la pièce en devise : son origine ne s'affiche plus", () => {
+    monter(CONVERTIE);
+    saisir("pme.journal.account", "622", 0);
+    expect(screen.queryAllByText(/EUR ×/)).toHaveLength(0);
+  });
+});
 
 describe("la pièce côté comptable", () => {
   beforeEach(() => vi.resetAllMocks());

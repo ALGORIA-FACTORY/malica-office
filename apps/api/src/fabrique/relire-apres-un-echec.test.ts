@@ -42,8 +42,7 @@ describe("relire après un échec", { skip: !BASE_CONFIGUREE }, () => {
       );
       pme = rows[0]!.org;
       const p = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'entite', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'entite') as id`,
         [pme, `essai/${marque}.pdf`, marque],
       );
       piece = p.rows[0]!.id;

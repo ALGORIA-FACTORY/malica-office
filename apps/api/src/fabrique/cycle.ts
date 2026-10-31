@@ -106,53 +106,26 @@ export async function inscrireUneCandidate(
   db: Requete,
   n: NaissanceDeRecette,
 ): Promise<{ recetteId: string; versionId: string; rang: number }> {
-  const { rows: existantes } = await db.query<{ id: string }>(
-    `select id from fabrique.recettes where tenant_id = $1 and signature_cle = $2`,
-    [n.tenantId, n.signatureCle],
-  );
-  let recetteId = existantes[0]?.id;
-  if (!recetteId) {
-    const { rows } = await db.query<{ id: string }>(
-      `insert into fabrique.recettes (tenant_id, libelle, signature_cle, portee)
-       values ($1, $2, $3, $4) returning id`,
-      [n.tenantId, n.libelle, n.signatureCle, n.portee],
-    );
-    recetteId = rows[0]!.id;
-  }
-
-  const { rows: versions } = await db.query<{ id: string; rang: number }>(
-    `insert into fabrique.recette_versions
-       (tenant_id, recette_id, rang, definition, empreinte, provenance)
-     select $1, $2, coalesce(max(v.rang), 0) + 1, $3, $4, $5
-       from fabrique.recette_versions v
-      where v.recette_id = $2
-     returning id, rang`,
+  // La porte prend la recette existante de cette signature ou la crée, puis
+  // la version au rang suivant, ses exemples et le fait « candidate ».
+  const { rows } = await db.query<{
+    r: { recette_id: string; version_id: string; rang: number };
+  }>(
+    `select fabrique.candidate_inscrire($1, $2, $3, $4, $5::jsonb, $6, $7::jsonb, $8::uuid[], $9) as r`,
     [
       n.tenantId,
-      recetteId,
+      n.libelle,
+      n.signatureCle,
+      n.portee,
       JSON.stringify(n.definition),
       n.empreinte,
       JSON.stringify(n.provenance),
+      n.exemples,
+      n.motif,
     ],
   );
-  const version = versions[0]!;
-
-  for (const exempleId of n.exemples) {
-    await db.query(
-      `insert into fabrique.recette_version_exemples
-         (tenant_id, recette_version_id, exemple_id, nourrit_une_recette, usage)
-       values ($1, $2, $3, true, 'apprentissage')`,
-      [n.tenantId, version.id, exempleId],
-    );
-  }
-
-  await db.query(
-    `insert into fabrique.promotions (tenant_id, recette_version_id, etat, motif)
-     values ($1, $2, 'candidate', $3)`,
-    [n.tenantId, version.id, n.motif],
-  );
-
-  return { recetteId, versionId: version.id, rang: Number(version.rang) };
+  const r = rows[0]!.r;
+  return { recetteId: r.recette_id, versionId: r.version_id, rang: Number(r.rang) };
 }
 
 /* ============================================ ② L'EXEMPLE QUALIFIÉ ======= */
@@ -218,9 +191,7 @@ export interface ExempleAQualifier {
  */
 export async function qualifierUnExemple(db: Requete, e: ExempleAQualifier): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
-    `insert into fabrique.exemples
-       (tenant_id, piece_id, signature_cle, provenance, qualification, usage, attendu, note)
-     values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+    `select fabrique.exemple_qualifier($1, $2, $3, $4, $5, $6, $7::jsonb, $8) as id`,
     [
       e.tenantId,
       e.pieceId,
@@ -395,20 +366,16 @@ export async function evaluerUneVersion(
       : "données d'évaluation insuffisantes — " + mesure.absentes.join(" ; ");
 
   const { rows } = await db.query<{ id: string }>(
-    `insert into fabrique.evaluations (tenant_id, recette_version_id, mesures, exemples_comptes)
-     values ($1, $2, $3, $4) returning id`,
-    [tenantId, recetteVersionId, JSON.stringify(mesure.mesures), mesure.exemplesComptes],
+    `select fabrique.evaluation_inscrire($1, $2, $3::jsonb, $4, $5::uuid[]) as id`,
+    [
+      tenantId,
+      recetteVersionId,
+      JSON.stringify(mesure.mesures),
+      mesure.exemplesComptes,
+      [...parExemple.keys()],
+    ],
   );
   const evaluationId = rows[0]!.id;
-
-  for (const exempleId of parExemple.keys()) {
-    await db.query(
-      `insert into fabrique.evaluation_exemples
-         (tenant_id, evaluation_id, exemple_id, usage)
-       values ($1, $2, $3, 'evaluation')`,
-      [tenantId, evaluationId, exempleId],
-    );
-  }
 
   return {
     evaluationId,
@@ -440,12 +407,13 @@ export async function promouvoir(
     motif: string;
   },
 ): Promise<void> {
-  await db.query(
-    `insert into fabrique.promotions
-       (tenant_id, recette_version_id, etat, evaluation_id, motif)
-     values ($1, $2, $3, $4, $5)`,
-    [p.tenantId, p.recetteVersionId, p.etat, p.evaluationId ?? null, p.motif],
-  );
+  await db.query(`select fabrique.promotion_inscrire($1, $2, $3, $4, $5)`, [
+    p.tenantId,
+    p.recetteVersionId,
+    p.etat,
+    p.evaluationId ?? null,
+    p.motif,
+  ]);
 }
 
 /** L'état COURANT d'une version : le dernier fait inscrit, jamais un stock. */
@@ -547,21 +515,17 @@ export async function surveiller(
     };
   }
 
-  await db.query(
-    `insert into fabrique.derives (tenant_id, recette_version_id, nature, mesure)
-     values ($1, $2, $3, $4)`,
-    [
-      tenantId,
-      recetteVersionId,
-      derive,
-      JSON.stringify({
-        executions,
-        abstentions,
-        taux_abstention: taux,
-        tolere,
-      }),
-    ],
-  );
+  await db.query(`select fabrique.derive_inscrire($1, $2, $3, $4::jsonb)`, [
+    tenantId,
+    recetteVersionId,
+    derive,
+    JSON.stringify({
+      executions,
+      abstentions,
+      taux_abstention: taux,
+      tolere,
+    }),
+  ]);
 
   /* On ne suspend que ce qui tourne. Une version déjà suspendue ou retirée
      n'a pas à recevoir une transition que la base refuserait de toute façon —

@@ -46,6 +46,19 @@ export interface PivotInput {
    */
   vat_accounts_by_tax_code?: Readonly<Record<string, string>>;
   tolerances: Tolerances;
+  /**
+   * La devise dans laquelle la cohérence base × taux = TVA a DÉJÀ été
+   * vérifiée, quand l'extrait reçu en est la conversion (31 octobre 2026).
+   *
+   * Une facture se vérifie dans la devise où elle s'imprime. Convertie, base
+   * et TVA sont arrondies chacune au cours : leur rapport ne tient plus qu'à
+   * l'arrondi de conversion près, qui dépasse l'unité de la devise du dossier
+   * (1 000,00 € à 19 % au cours 3,3456 : l'arrondi de l'euro vaut déjà
+   * 0,017 DT). La revérifier ici refuserait toute facture juste ; ne pas
+   * l'avoir vérifiée du tout laisserait passer une facture fausse. Le Socle
+   * la vérifie donc une fois, en devise (`buildProposal`), et le dit ici.
+   */
+  tva_verifiee_en?: string;
 }
 
 export function computePivot(input: PivotInput): PivotV1 {
@@ -70,9 +83,10 @@ export function computePivot(input: PivotInput): PivotV1 {
     }
   }
 
-  // 2) Vérifier cohérence taux ↔ montants (base × rate ≈ vat).
+  // 2) Vérifier cohérence taux ↔ montants (base × rate ≈ vat) — dans la
+  //    devise de la facture, une fois (`tva_verifiee_en`).
   for (const { line, rate } of perLineRate) {
-    if (!rate) continue;
+    if (!rate || input.tva_verifiee_en !== undefined) continue;
     const expected = D(line.base_ht).times(rate.rate);
     const diff = expected.minus(line.vat_amount).abs();
     if (diff.greaterThan(tolerances.rounding_tolerance)) {

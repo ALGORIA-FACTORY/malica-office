@@ -73,10 +73,7 @@ export const stocks = {
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into stocks_items_v
-         (tenant_id, entity_id, category_id, reference, designation, unite, methode,
-          account_stock, account_variation, devise, pack_version_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
+      `select public.stocks_article_creer($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) as id`,
       [
         input.tenantId,
         input.entityId,
@@ -98,11 +95,13 @@ export const stocks = {
     db: Requete,
     input: { id: string; designation: string; unite: string; methode: string; active: boolean },
   ): Promise<void> {
-    await db.query(
-      `update stocks_items_v set designation = $2, unite = $3, methode = $4, active = $5
-        where id = $1`,
-      [input.id, input.designation, input.unite, input.methode, input.active],
-    );
+    await db.query(`select public.stocks_article_modifier($1, $2, $3, $4, $5)`, [
+      input.id,
+      input.designation,
+      input.unite,
+      input.methode,
+      input.active,
+    ]);
   },
 
   async mouvements(db: Requete, tenantId: string, itemId?: string) {
@@ -141,9 +140,7 @@ export const stocks = {
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `insert into stocks_mouvements_v
-         (tenant_id, item_id, sens, at, quantite, cout_unitaire, reference, piece_id)
-       values ($1, $2, $3, $4, $5::numeric, $6::numeric, $7, $8) returning id`,
+      `select public.stocks_mouvement_inscrire($1, $2, $3, $4, $5::numeric, $6::numeric, $7, $8) as id`,
       [
         input.tenantId,
         input.itemId,

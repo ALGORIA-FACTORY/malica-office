@@ -12,8 +12,8 @@
  * sur l'accueil et dans la synthèse du cabinet, sans aucune erreur. Un
  * résultat plausible et faux, ce que R4 appelle la pire forme d'erreur.
  *
- * `ref.socle_params` porte `money.decimals` depuis le 25 août, et le dépôt
- * `referentiel.socleParams` LÈVE une erreur explicite quand il manque.
+ * Le dépôt `referentiel.socleParams` rend l'exposant de la devise du pack,
+ * lu dans `ref.devises` — la seule source des décimales d'une devise.
  *
  * ================================================== POURQUOI UN `null` ET PAS UN DÉFAUT
  *

@@ -18,6 +18,7 @@ import { after, before, describe, it } from "node:test";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, horsRlsAuthentificationSeule, sousIdentiteDuServeur } from "./db.ts";
+import { fermerLaPorte, sousLaPorte } from "./sous-la-porte-d-essai.ts";
 
 /** Sans base, la suite s'ignore au lieu d'échouer : un rouge permanent ne se lit plus. */
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -50,9 +51,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
       orgA = rows[0]!.create_organization;
 
       await db.query(
-        `insert into capture.pieces
-           (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'personnel', $2, $3)`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'personnel') as id`,
         [orgA, `essai/${marque}.pdf`, marque],
       );
     });
@@ -90,6 +89,7 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
         `[isolation] DATABASE_URL_ADMIN absente : l'organisation « ESSAI ${marque} » reste active.`,
       );
     }
+    await fermerLaPorte();
     await fermerLePool();
   });
 
@@ -152,16 +152,16 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
    * ne prouverait que ce que les autres tests prouvent déjà.
    */
   it("une conversation n'appartient qu'à son auteur", async () => {
+    // Le fil s'ouvre et la question s'y pose par leurs portes.
     const filA = await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into agents.conversations (tenant_id, titre)
-         values ($1, 'essai isolation') returning id`,
+        `select public.conversation_ouvrir($1) as id`,
         [orgA],
       );
       const id = rows[0]!.id;
+      await db.query(`select public.conversation_renommer($1, 'essai isolation')`, [id]);
       await db.query(
-        `insert into agents.conversation_messages (conversation_id, role, contenu)
-         values ($1, 'user', 'une question que personne d autre ne doit lire')`,
+        `select public.conversation_poser($1, 'une question que personne d autre ne doit lire')`,
         [id],
       );
       return id;
@@ -193,29 +193,63 @@ describe("isolation des tenants", { skip: !BASE_CONFIGUREE }, () => {
     });
     assert.equal(cible.length, 0, "connaître l'identifiant ne suffit pas");
 
-    // Et il ne se supprime pas non plus : `delete` ne trouve rien à effacer.
-    const efface = await sousIdentiteDuServeur(b.id, async (db) => {
-      const r = await db.query(`delete from agents.conversations where id = $1`, [filA]);
-      return r.rowCount;
-    });
-    assert.equal(efface, 0, "un tiers ne peut pas effacer le fil d'un autre");
+    // Et il ne se supprime pas non plus : la porte ne le trouve pas, et la
+    // table ne s'écrit pas en direct.
+    await assert.rejects(
+      sousIdentiteDuServeur(b.id, (db) =>
+        db.query(`select public.conversation_supprimer($1)`, [filA]),
+      ),
+      /conversation\.introuvable_ou_non_autorisee/,
+    );
+    await assert.rejects(
+      sousIdentiteDuServeur(b.id, (db) =>
+        db.query(`delete from agents.conversations where id = $1`, [filA]),
+      ),
+      /permission denied for table conversations/,
+    );
+    assert.equal(
+      (
+        await sousIdentiteDuServeur(a.id, (db) =>
+          db.query(`select id from agents.conversations where id = $1`, [filA]),
+        )
+      ).rows.length,
+      1,
+      "un tiers a effacé le fil d'un autre",
+    );
   });
 
   it("une conversation ne change ni d'auteur ni de dossier", async () => {
     await sousIdentiteDuServeur(a.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into agents.conversations (tenant_id) values ($1) returning id`,
+        `select public.conversation_ouvrir($1) as id`,
         [orgA],
       );
       const id = rows[0]!.id;
-      // Renommer est permis ; changer d'auteur ne l'est pas. Une politique ne
-      // voit pas OLD : c'est un déclencheur qui le refuse.
-      await db.query(`update agents.conversations set titre = 'renommé' where id = $1`, [id]);
+      // Renommer est permis, par sa porte ; changer d'auteur ne l'est pas.
+      await db.query(`select public.conversation_renommer($1, 'renommé')`, [id]);
       await assert.rejects(
         db.query(`update agents.conversations set created_by = $2 where id = $1`, [id, b.id]),
+        /permission denied for table conversations/,
         "changer l'auteur d'une conversation doit être refusé",
       );
+      return id;
     });
+    // Et même sous le rôle des portes, que la politique laisserait passer :
+    // une politique ne voit pas OLD, c'est un déclencheur qui le refuse.
+    const id = await sousIdentiteDuServeur(a.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.conversation_ouvrir($1) as id`,
+        [orgA],
+      );
+      return rows[0]!.id;
+    });
+    await assert.rejects(
+      sousLaPorte(a.id, (db) =>
+        db.query(`update agents.conversations set created_by = $2 where id = $1`, [id, b.id]),
+      ),
+      /une conversation ne change pas d'auteur/,
+      "changer l'auteur d'une conversation doit être refusé, même à une porte",
+    );
   });
 
   it("le rôle de connexion ne contourne pas la RLS", async () => {

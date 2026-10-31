@@ -95,8 +95,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     })) as string;
     piecEtrangere = await sousIdentite(autre.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3) returning id`,
+        `select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`,
         [autrePme, `essai/${marque}.pdf`, marque],
       );
       return rows[0]!.id;

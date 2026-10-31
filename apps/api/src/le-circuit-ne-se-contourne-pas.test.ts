@@ -168,13 +168,14 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
       }),
       /permission denied for table pieces/,
     );
-    // … et une pièce qui NAÎT partagée reste jugée : le réglage n'y fait rien.
+    // … et une pièce qui NAÎT partagée, par sa porte, reste jugée : le réglage
+    // n'y fait rien.
     await assert.rejects(
       sousIdentiteDuServeur(s.gens.sami.id, async (db) => {
         await db.query(`select set_config('malica.remplacement', $1, true)`, [id]);
         await db.query(
-          `insert into capture.pieces (tenant_id, vis, source, storage_path, idempotency_key)
-           values ($1, 'partage', 'photo', 'essai/remplacement', $2)`,
+          `select public.capture_piece_register($1, 'photo', 'essai/remplacement', $2, null,
+                                                'partage')`,
           [s.pme, `remplacement-${Date.now()}`],
         );
       }),

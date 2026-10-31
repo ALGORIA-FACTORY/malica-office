@@ -46,7 +46,7 @@ import type {
   TaxRate,
 } from "@malica/socle/ports/repositories";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
-import { EXTRAIT_ILLISIBLE, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
+import { HORS_DU_CALCUL, tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import type { TvaV1 } from "@malica/socle/contracts/tva.v1";
 import type { Fait, RaisonDEchec, ResultatRedaction } from "@malica/socle/ports/malica";
 
@@ -76,13 +76,14 @@ interface FicheCourante {
  * Revue de #145 : aucun montant de TVA n'est publié quand AUCUNE pièce n'a été
  * comptée — un « 0,000 » signé au PV dirait une TVA nulle qu'on ne connaît
  * pas. Les pièces hors du calcul sont celles dont l'extrait ne se lit pas
- * (`EXTRAIT_ILLISIBLE`) : un refus du moteur sur une ligne ne retire pas la
+ * (`EXTRAIT_ILLISIBLE`) ou reste dans une autre devise, faute de cours
+ * (`EXTRAIT_EN_DEVISE`) : un refus du moteur sur une ligne ne retire pas la
  * pièce, et une ligne n'est pas une pièce.
  */
 export function chiffresDeLaTva(tva: TvaV1, extraits: number, devise: string): PvChiffre[] {
   const horsCalcul = new Set(
     tva.refused
-      .filter((r) => r.reason.startsWith(`${EXTRAIT_ILLISIBLE}:`))
+      .filter((r) => HORS_DU_CALCUL.some((motif) => r.reason.startsWith(`${motif}:`)))
       .flatMap((r) => (r.item_id ? [r.item_id] : [])),
   ).size;
   const chiffres: PvChiffre[] = [];

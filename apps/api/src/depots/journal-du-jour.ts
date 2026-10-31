@@ -75,6 +75,18 @@ const COLONNES_JOURNAL_DU_JOUR = [
   "origine",
   "par",
   "changement",
+  // Une ligne convertie d'une pièce en devise (31 octobre 2026), en fin de
+  // ligne : un import qui lit les colonnes précédentes n'en est pas dérangé.
+  "devise_origine",
+  "montant_origine",
+  "taux_de_change",
+  "date_du_cours",
+  "source_du_cours",
+  // L'origine du cours (`ref.rangs_des_cours` : import, saisie, dérogation),
+  // en code stable, et le motif d'une dérogation ou d'une correction (revue
+  // de #148 : un cours saisi ne se lisait que « BCT », comme l'officiel).
+  "origine_du_cours",
+  "motif_du_cours",
 ] as const;
 type Colonne = (typeof COLONNES_JOURNAL_DU_JOUR)[number];
 
@@ -198,6 +210,14 @@ interface LigneLue {
   par: string | null;
   reverses_id: string | null;
   contre_passee_le: Date | null;
+  devise_origine: string | null;
+  montant_origine: string | null;
+  taux_de_change: string | null;
+  date_du_cours: string | null;
+  source_du_cours: string | null;
+  origine_du_cours: string | null;
+  libelle_origine_du_cours: string | null;
+  motif_du_cours: string | null;
 }
 
 /**
@@ -246,6 +266,19 @@ export function rangerLeJournal(
       compteLibelle: l.compte_libelle,
       debit: dec(l.debit, n),
       credit: dec(l.credit, n),
+      origine:
+        l.devise_origine === null
+          ? null
+          : {
+              devise: l.devise_origine,
+              montant: dec(l.montant_origine, exposantDe(exposants, l.devise_origine)),
+              taux: l.taux_de_change ?? "",
+              dateDuCours: l.date_du_cours ?? "",
+              source: l.source_du_cours ?? "",
+              origineDuCours: l.origine_du_cours ?? "",
+              libelleOrigineDuCours: l.libelle_origine_du_cours ?? l.origine_du_cours ?? "",
+              motifDuCours: l.motif_du_cours,
+            },
     });
   }
   return [...journaux.entries()].map(([code, j]) => {
@@ -314,6 +347,17 @@ export function contenuDuFichier(
           origine: { texte: e.origine },
           par: { texte: e.par ?? "" },
           changement: { texte: changement },
+          ...(l.origine
+            ? {
+                devise_origine: { texte: l.origine.devise },
+                montant_origine: { montant: l.origine.montant },
+                taux_de_change: { texte: l.origine.taux },
+                date_du_cours: { texte: l.origine.dateDuCours },
+                source_du_cours: { texte: l.origine.source },
+                origine_du_cours: { texte: l.origine.origineDuCours },
+                motif_du_cours: { texte: l.origine.motifDuCours ?? "" },
+              }
+            : {}),
         }),
       );
     }),
@@ -407,18 +451,38 @@ async function lireLeJournal(
             coalesce(demandee.value, francais.value, f.journal_libelle) as journal_libelle,
             f.piece_id, f.ecriture_libelle, f.ordinal, f.compte, f.compte_libelle,
             f.debit::text as debit, f.credit::text as credit, f.devise, f.origine,
-            f.inscrite_le, f.heure, f.par, f.reverses_id, f.contre_passee_le
+            f.inscrite_le, f.heure, f.par, f.reverses_id, f.contre_passee_le,
+            f.devise_origine, f.montant_origine::text as montant_origine,
+            f.taux_de_change::text as taux_de_change,
+            to_char(f.date_du_cours, 'YYYY-MM-DD') as date_du_cours, f.source_du_cours,
+            f.origine_du_cours,
+            coalesce(cours_demande.value, cours_fr.value, f.origine_du_cours)
+              as libelle_origine_du_cours,
+            f.motif_du_cours
        from public.journal_du_jour_lire($1, $2, $3::date) with ordinality as f
        left join ref_labels_v demandee
          on demandee.ns = 'journal' and demandee.key = f.journal and demandee.locale = $4
        left join ref_labels_v francais
          on francais.ns = 'journal' and francais.key = f.journal and francais.locale = 'fr'
+       left join ref_labels_v cours_demande
+         on cours_demande.ns = 'origine_du_cours' and cours_demande.key = f.origine_du_cours
+        and cours_demande.locale = $4
+       left join ref_labels_v cours_fr
+         on cours_fr.ns = 'origine_du_cours' and cours_fr.key = f.origine_du_cours
+        and cours_fr.locale = 'fr'
       order by f.ordinality`,
     [cabinetTenantId, clientTenantId, jour, locale],
   );
   const { rows: devises } = await db.query<{ code: string; exposant: number }>(
     `select code, exposant from ref.devises where code = any($1::text[])`,
-    [[...new Set(rows.map((r) => r.devise))]],
+    // Les devises des écritures, et celles d'origine des lignes converties.
+    [
+      [
+        ...new Set(
+          rows.flatMap((r) => [r.devise, ...(r.devise_origine ? [r.devise_origine] : [])]),
+        ),
+      ],
+    ],
   );
   const exposants: Exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
   return { journaux: rangerLeJournal(rows, exposants), exposants };

@@ -40,15 +40,15 @@ describe("un dossier garde toutes ses pièces", { skip: !BASE_CONFIGUREE }, () =
       );
       return rows[0]!.id;
     });
-    await sousIdentite(dirigeant.id, (db) =>
-      db.query(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
-                                     created_by, document_kind, document_kind_statut)
-         select $1, 'pdf', 'entite', $2 || n || '.pdf', $2 || n, $3,
-                'facture_achat', 'confirme'
-           from generate_series(1, $4::int) n`,
-        [pme, `essai/${marque}-`, dirigeant.id, PIECES],
-      ),
+    // Des pièces d'essai au type confirmé, posées par l'administration : aucun
+    // client n'écrit une pièce hors de sa porte (`capture_piece_register`).
+    await admin.query(
+      `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key,
+                                   created_by, document_kind, document_kind_statut)
+       select $1, 'pdf', 'entite', $2 || n || '.pdf', $2 || n, $3,
+              'facture_achat', 'confirme'
+         from generate_series(1, $4::int) n`,
+      [pme, `essai/${marque}-`, dirigeant.id, PIECES],
     );
   });
 

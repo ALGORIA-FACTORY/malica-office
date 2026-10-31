@@ -57,6 +57,38 @@ export function ecritureDeDepart(
   return { depart: "rien", journal: "", date: "", libelle: "", lignes: [] };
 }
 
+/** Ce qu'une ligne convertie garde de la pièce en devise (31 octobre 2026). */
+export interface OrigineDeLigne {
+  devise: string;
+  montant: string;
+  taux: string;
+}
+
+/**
+ * L'origine de chaque ligne de départ d'une pièce en devise — sa devise, son
+ * montant d'origine, son taux —, rang pour rang ; `null` pour une ligne qui
+ * n'en a pas. L'écran la montre sous la ligne, tant que la saisie n'a rien
+ * changé : modifiée, l'écriture est celle du comptable, en devise du dossier.
+ */
+export function originesDeDepart(
+  vivante: Ecriture | null,
+  proposition: PropositionDePiece | undefined,
+): Array<OrigineDeLigne | null> {
+  if (vivante)
+    return vivante.lines.map((l) =>
+      l.deviseOrigine && l.montantOrigine && l.tauxDeChange
+        ? { devise: l.deviseOrigine, montant: l.montantOrigine, taux: l.tauxDeChange }
+        : null,
+    );
+  if (proposition?.ok)
+    return proposition.proposition.lignes.map((l) =>
+      l.devise_origine && l.montant_origine && l.taux_de_change
+        ? { devise: l.devise_origine, montant: l.montant_origine, taux: l.taux_de_change }
+        : null,
+    );
+  return [];
+}
+
 /**
  * Les montants tapés, relus comme le Socle les recevra : « 1 234,500 »
  * devient « 1234.500 ». Ce qui ne se relit pas reste tel quel — le contrôle

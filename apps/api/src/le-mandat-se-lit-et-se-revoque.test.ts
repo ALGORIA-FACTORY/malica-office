@@ -59,11 +59,11 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
     pme = await creerOrganisation(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creerOrganisation(expert, "cabinet", `COMPTA ${marque}`, null);
     await sousIdentite(dirigeant.id, (db) =>
-      db.query(
-        `insert into capture.pieces (tenant_id, source, vis, storage_path, idempotency_key)
-         values ($1, 'pdf', 'partage', $2, $3)`,
-        [pme, `essai/${marque}.pdf`, marque],
-      ),
+      db.query(`select public.capture_piece_register($1, 'pdf', $2, $3, null, 'partage') as id`, [
+        pme,
+        `essai/${marque}.pdf`,
+        marque,
+      ]),
     );
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
   });

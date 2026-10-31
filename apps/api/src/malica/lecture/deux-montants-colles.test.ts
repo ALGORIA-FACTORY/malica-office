@@ -182,7 +182,7 @@ describe("les marques de devise viennent du référentiel, pour les deux lecteur
     ["TVA 19 %", []],
     ["N° 12.", []],
     ["Total 1 234,560", []],
-    ["1 234,560 USD", []],
+    ["1 234,560 XTS", []],
   ];
   for (const [texte, attendu] of cas) {
     it(`« ${texte} » : ${attendu.length ? attendu.join(" ou ") : "pas un montant"}`, () => {
